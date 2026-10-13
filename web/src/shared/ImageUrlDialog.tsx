@@ -96,7 +96,7 @@ export function ImageUrlDialog({ open, title, onOpenChange, onConfirm }: ImageUr
             />
             {error && <p className="text-label text-red">{error}</p>}
           </div>
-          <DialogFooter className="border-subtle bg-bg-tertiary/60 px-6 py-4">
+          <DialogFooter className="border-border-subtle bg-bg-tertiary/60 px-6 py-4">
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={checking}>
               <span>Cancelar</span>
             </Button>

@@ -26,7 +26,7 @@ export function CallChatToggleButton({ chatOpen, onToggleChat, hudVisible = true
           aria-label={chatOpen ? 'Fechar chat' : 'Abrir chat'}
           className={cn(
             buttonVariants({ variant: 'ghost', size: 'icon-lg' }),
-            'h-11 w-11 rounded-full border border-strong bg-bg-floating/90 shadow-popover backdrop-blur-xl',
+            'h-11 w-11 rounded-full border border-border-strong bg-bg-floating/90 shadow-popover backdrop-blur-xl',
             chatOpen ? 'text-text-primary' : 'text-text-secondary hover:text-text-primary'
           )}
         >
