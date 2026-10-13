@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Bell, CheckCheck, Trash2 } from 'lucide-react';
+import { CheckCheck, Trash2 } from 'lucide-react';
+import { BellIcon } from '@/shared/ui/icons/bell';
+import { useAnimatedIcon } from '@/shared/ui/icons/useAnimatedIcon';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/primitives/popover';
 import { buttonVariants } from '@/shared/ui/primitives/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
@@ -18,6 +20,7 @@ export function NotificationBell({ collapsed = false, onNavigate }: { collapsed?
   const { bump } = useFriends();
   const { unread, setUnread } = useUnreadNotifications();
   const [open, setOpen] = useState(false);
+  const bellIcon = useAnimatedIcon();
   const [error, setError] = useState(false);
 
   async function markAndSync(input: { ids: string[] } | { all: true }, optimisticUnread: number) {
@@ -61,12 +64,13 @@ export function NotificationBell({ collapsed = false, onNavigate }: { collapsed?
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
+        {...bellIcon.triggerProps}
         aria-label={label}
         className={collapsed
           ? 'relative grid size-11 place-items-center rounded-md text-text-muted transition-colors hover:bg-fill-hover hover:text-text-primary'
           : cn(buttonVariants({ variant: 'ghost', size: 'icon-sm' }), 'relative flex-none text-text-muted hover:text-text-primary')}
       >
-        <Bell size={collapsed ? 18 : 16} />
+        <BellIcon ref={bellIcon.ref} size={collapsed ? 18 : 16} aria-hidden />
         {unread > 0 && (
           <CountBadge decorative className="absolute -right-1 -top-1">
             {formatUnread(unread)}
