@@ -47,7 +47,7 @@ function GroupIdentity({ group, from }: { group: AdminGroupRow; from: { from: st
 
 /** A group with no owner is a condition, not a status: it gets its own mark so it can't be mistaken for a suspension. */
 function Owner({ group }: { group: AdminGroupRow }) {
-  if (!group.ownerId) return <span className="inline-flex rounded bg-yellow/15 px-1.5 py-0.5 text-[11px] font-medium text-yellow">Sem dono</span>;
+  if (!group.ownerId) return <span className="inline-flex rounded bg-yellow/15 px-1.5 py-0.5 text-micro font-medium text-yellow">Sem dono</span>;
   return <Link to={`/admin/users/${group.ownerId}`} className="block max-w-full truncate text-text-secondary hover:underline">@{group.ownerUsername}</Link>;
 }
 

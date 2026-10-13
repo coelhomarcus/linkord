@@ -95,7 +95,7 @@ function GroupDetail({ id }: { id: string }) {
         avatar={<GroupAvatar title={group.title} avatar={group.avatar} size={64} />}
         title={name}
         id={group.id}
-        badges={<>{!group.ownerId && <span className="inline-flex rounded bg-yellow/15 px-1.5 py-0.5 text-[11px] font-medium text-yellow">Sem dono</span>}<Badge value={group.status} /></>}
+        badges={<>{!group.ownerId && <span className="inline-flex rounded bg-yellow/15 px-1.5 py-0.5 text-micro font-medium text-yellow">Sem dono</span>}<Badge value={group.status} /></>}
       />
 
       <AdminDetailTabs<Tab>

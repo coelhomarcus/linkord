@@ -194,7 +194,7 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
             ) : (
               <span className="truncate text-body font-medium text-text-primary">{displayedName}</span>
             )}
-            <span className="flex-none text-[11px] text-text-muted">{formatTime(message.ts)}</span>
+            <span className="flex-none text-caption text-text-muted">{formatTime(message.ts)}</span>
           </div>
         )}
 

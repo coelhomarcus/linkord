@@ -20,7 +20,7 @@ export function UnsavedProfileChangesDialog({
     <Dialog open={open} onOpenChange={(next) => { if (!next) onContinueEditing(); }}>
       <DialogContent className="max-h-[90vh] max-w-[calc(100%-2rem)] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden bg-bg-modal p-0 sm:max-w-100">
         <DialogHeader className="px-6 pt-6 pr-12">
-          <DialogTitle className="text-title font-bold text-text-primary">Alterações não salvas</DialogTitle>
+          <DialogTitle className="text-title font-semibold text-text-primary">Alterações não salvas</DialogTitle>
         </DialogHeader>
         <div className="min-h-0 overflow-y-auto px-6 py-4">
           <DialogDescription className="select-none text-body text-text-secondary">

@@ -310,16 +310,16 @@ export function CommandPalette({
                     }
                     aria-autocomplete="list"
                     className={cn(
-                      "h-12 flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none",
+                      "h-12 flex-1 bg-transparent text-label text-foreground placeholder:text-muted-foreground outline-none",
                       // The palette focuses this field the moment it opens, and iOS
                       // zooms the page in on a focused field under 16px: the fixed
                       // overlay is magnified off-center — clipped leading edge, half
                       // an icon column — and the zoom outlives the palette. 16px on
                       // touch keeps the page at scale 1; pointer devices keep 14px.
-                      canTouch && "text-base",
+                      canTouch && "text-body",
                     )}
                   />
-                  <kbd className="hidden rounded border border-border bg-background px-1.5 py-0.5 text-[10px] text-muted-foreground sm:inline-block">
+                  <kbd className="hidden rounded border border-border bg-background px-1.5 py-0.5 text-micro text-muted-foreground sm:inline-block">
                     ESC
                   </kbd>
                 </div>
@@ -331,7 +331,7 @@ export function CommandPalette({
                   className="max-h-[60vh] overflow-y-auto overscroll-contain p-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                 >
                   {rows.length === 0 ? (
-                    <div className="p-8 text-center text-sm text-muted-foreground">
+                    <div className="p-8 text-center text-label text-muted-foreground">
                       {emptyMessage}
                     </div>
                   ) : (
@@ -339,7 +339,7 @@ export function CommandPalette({
                       <div key={group} className="mb-1 last:mb-0">
                         <div
                           aria-hidden
-                          className="px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground"
+                          className="px-2 py-1.5 text-micro font-semibold uppercase tracking-wider text-muted-foreground"
                         >
                           {group}
                         </div>
@@ -368,7 +368,7 @@ export function CommandPalette({
                                 }
                               }}
                               className={cn(
-                                "relative isolate flex w-full items-center gap-3 rounded-md px-2 py-2 text-left text-sm transition-colors",
+                                "relative isolate flex w-full items-center gap-3 rounded-md px-2 py-2 text-left text-label transition-colors",
                                 isActive
                                   ? "text-foreground"
                                   : "text-muted-foreground",
@@ -411,7 +411,7 @@ export function CommandPalette({
                               {it.stage ? (
                                 <ChevronRight className="relative z-10 h-3.5 w-3.5 flex-none text-muted-foreground" />
                               ) : it.hint ? (
-                                <kbd className="relative z-10 rounded border border-border bg-background px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                                <kbd className="relative z-10 rounded border border-border bg-background px-1.5 py-0.5 text-micro text-muted-foreground">
                                   {it.hint}
                                 </kbd>
                               ) : null}

@@ -110,8 +110,8 @@ function DefaultEmptyState() {
   return (
     <div className="flex h-full min-h-64 flex-col items-center justify-center px-6 text-center">
       <Inbox className="size-8 text-muted-foreground" aria-hidden="true" />
-      <p className="mt-3 text-sm font-medium text-foreground">No items yet</p>
-      <p className="mt-1 max-w-xs text-xs leading-5 text-muted-foreground">
+      <p className="mt-3 text-label font-medium text-foreground">No items yet</p>
+      <p className="mt-1 max-w-xs text-caption leading-5 text-muted-foreground">
         New items will appear here when they become available.
       </p>
     </div>
@@ -300,16 +300,16 @@ export function InfiniteMasonry<T>({
                   <div className="flex min-h-36 flex-col items-start justify-center rounded-2xl border border-destructive/20 bg-destructive/5 p-4">
                     <div className="flex items-center gap-2 text-destructive">
                       <AlertCircle className="size-4" aria-hidden="true" />
-                      <p className="text-sm font-medium">Couldn&apos;t load more</p>
+                      <p className="text-label font-medium">Couldn&apos;t load more</p>
                     </div>
-                    <div className="mt-2 text-xs leading-5 text-muted-foreground">
+                    <div className="mt-2 text-caption leading-5 text-muted-foreground">
                       {error}
                     </div>
                     {onRetry ? (
                       <button
                         type="button"
                         onClick={onRetry}
-                        className="mt-3 min-h-10 rounded-full border border-border bg-background px-4 text-xs font-medium text-foreground outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        className="mt-3 min-h-10 rounded-full border border-border bg-background px-4 text-caption font-medium text-foreground outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                       >
                         Try again
                       </button>
@@ -338,7 +338,7 @@ export function InfiniteMasonry<T>({
       </div>
 
       {!hasMore && items.length > 0 && endState ? (
-        <div className="py-4 text-center text-xs text-muted-foreground">
+        <div className="py-4 text-center text-caption text-muted-foreground">
           {endState}
         </div>
       ) : null}

@@ -57,7 +57,7 @@ export function ReasonDialog({ open, onOpenChange, title, description, confirmLa
     <Dialog open={open} onOpenChange={(next) => { if (!next) close(); }}>
       <DialogContent showCloseButton={!busy} className="max-w-[calc(100%-2rem)] gap-0 bg-bg-modal p-0 sm:max-w-md">
         <DialogHeader className="px-6 pt-6 pr-12">
-          <DialogTitle className="text-title font-bold text-text-primary">{title}</DialogTitle>
+          <DialogTitle className="text-title font-semibold text-text-primary">{title}</DialogTitle>
           <DialogDescription className="text-body text-text-secondary">{description}</DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-3 px-6 py-4">

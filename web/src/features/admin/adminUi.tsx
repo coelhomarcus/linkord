@@ -18,7 +18,7 @@ const LABELS: Record<string, string> = {
 };
 
 export function Badge({ value }: { value: string }) {
-  return <span className={cn('inline-flex flex-none rounded px-1.5 py-0.5 text-[11px] font-medium', TONES[value] ?? 'bg-fill-active text-text-muted')}>{LABELS[value] ?? value}</span>;
+  return <span className={cn('inline-flex flex-none rounded px-1.5 py-0.5 text-micro font-medium', TONES[value] ?? 'bg-fill-active text-text-muted')}>{LABELS[value] ?? value}</span>;
 }
 
 export function AuditList({ items, empty = 'Nenhuma ação registrada.' }: { items: AuditRow[]; empty?: string }) {
@@ -29,7 +29,7 @@ export function AuditList({ items, empty = 'Nenhuma ação registrada.' }: { ite
         <li key={row.id} className="flex flex-col gap-0.5 py-2.5 text-label">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-medium text-text-primary">{ACTION_LABELS[row.action] ?? row.action}</span>
-            {row.result === 'failed' && <span className="rounded bg-red/15 px-1.5 py-0.5 text-[11px] font-medium text-red-text">falhou</span>}
+            {row.result === 'failed' && <span className="rounded bg-red/15 px-1.5 py-0.5 text-micro font-medium text-red-text">falhou</span>}
             <span className="text-caption text-text-muted">{formatWhen(row.at)}</span>
           </div>
           <p className="text-caption text-text-muted">
