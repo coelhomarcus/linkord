@@ -81,7 +81,7 @@ export function AddFriendButton({ active, iconOnly }: { active: boolean; iconOnl
       to={friendsView('add')}
       aria-current={active ? 'page' : undefined}
       aria-label="Adicionar amigo"
-      className={cn(buttonVariants({ size: iconOnly ? 'icon-sm' : 'sm' }), active && 'ring-2 ring-primary/40')}
+      className={cn(buttonVariants({ size: iconOnly ? 'icon-sm' : 'default' }), active && 'ring-2 ring-primary/40')}
     >
       <UserPlus size={16} aria-hidden />
       {!iconOnly && <span>Adicionar amigo</span>}
