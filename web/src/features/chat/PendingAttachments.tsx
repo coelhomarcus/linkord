@@ -32,7 +32,7 @@ export function PendingAttachments({ attachments }: { attachments: OutboxAttachm
             <div
               key={attachment.localId}
               title={attachment.name}
-              className={cn('relative size-32 overflow-hidden rounded-xl border', attachment.failed ? 'border-red/50' : 'border-white/10')}
+              className={cn('relative size-32 overflow-hidden rounded-lg border', attachment.failed ? 'border-red/50' : 'border-border')}
             >
               <img src={attachment.previewUrl} alt={attachment.name} className={cn('size-full object-cover', !done && 'opacity-60')} />
               {attachment.failed ? (
@@ -50,7 +50,7 @@ export function PendingAttachments({ attachments }: { attachments: OutboxAttachm
           <div
             key={attachment.localId}
             style={{ maxWidth: FILE_CARD_MAX_WIDTH }}
-            className={cn('flex w-full flex-col gap-1.5 rounded-xl border bg-white/4 px-3 py-2.5', attachment.failed ? 'border-red/50' : 'border-white/10')}
+            className={cn('flex w-full flex-col gap-1.5 rounded-lg border bg-fill-subtle px-3 py-2.5', attachment.failed ? 'border-red/50' : 'border-border')}
           >
             <DocumentAttachmentCard name={attachment.name} size={attachment.size} mime={attachment.mime} />
             {/* stays visible even once this file is done: the message itself

@@ -11,7 +11,7 @@ function GroupLabel({ children }: { children: string }) {
  * section marked: NavLink matches by path prefix. */
 export function AdminSidebar() {
   return (
-    <nav aria-label="Administração" className="flex w-60 flex-none flex-col overflow-y-auto border-r border-white/10 p-3">
+    <nav aria-label="Administração" className="flex w-60 flex-none flex-col overflow-y-auto border-r border-border p-3">
       {ADMIN_GROUPS.map((group) => (
         <div key={group.label} className="flex flex-col gap-0.5 pt-4 first:pt-0">
           <GroupLabel>{group.label}</GroupLabel>
@@ -22,8 +22,8 @@ export function AdminSidebar() {
                 key={section.id}
                 to={adminSectionPath(section)}
                 className={({ isActive }) => cn(
-                  'flex h-10 items-center gap-2 rounded-lg px-2.5 text-body font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring',
-                  isActive ? 'bg-white/10 text-text-primary' : 'text-text-muted hover:bg-white/5 hover:text-text-secondary',
+                  'flex h-10 items-center gap-2 rounded-md px-2.5 text-body font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring',
+                  isActive ? 'bg-fill-active text-text-primary' : 'text-text-muted hover:bg-fill-subtle hover:text-text-secondary',
                 )}
               >
                 <Icon size={16} aria-hidden className="flex-none" />
@@ -51,7 +51,7 @@ export function AdminIndex() {
               <NavLink
                 key={section.id}
                 to={adminSectionPath(section)}
-                className="flex min-h-11 items-center gap-3 rounded-lg px-2.5 text-body font-medium text-text-primary outline-none transition-colors hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-ring"
+                className="flex min-h-11 items-center gap-3 rounded-md px-2.5 text-body font-medium text-text-primary outline-none transition-colors hover:bg-fill-subtle focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <Icon size={18} aria-hidden className="flex-none text-text-muted" />
                 <span className="min-w-0 flex-1 truncate">{section.label}</span>

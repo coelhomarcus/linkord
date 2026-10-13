@@ -53,7 +53,7 @@ function EmojiPickerSearch({
     >
       <SearchIcon className="size-4 shrink-0 opacity-50" />
       <EmojiPickerPrimitive.Search
-        className="outline-hidden placeholder:text-muted-foreground flex h-10 w-full rounded-md bg-transparent py-3 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+        className="outline-hidden placeholder:text-muted-foreground flex h-10 w-full rounded-md bg-transparent py-3 text-label disabled:cursor-not-allowed disabled:opacity-50"
         data-slot="emoji-picker-search"
         placeholder={placeholder}
         {...props}
@@ -105,7 +105,7 @@ function EmojiPickerCategoryHeader({
   return (
     <div
       {...props}
-      className="bg-popover text-muted-foreground px-3 pb-2 pt-3.5 text-xs leading-none"
+      className="bg-popover text-muted-foreground px-3 pb-2 pt-3.5 text-caption leading-none"
       data-slot="emoji-picker-category-header"
     >
       {category.label}
@@ -130,7 +130,7 @@ function EmojiPickerContent({
         <LoaderIcon className="size-4 animate-spin" />
       </EmojiPickerPrimitive.Loading>
       <EmojiPickerPrimitive.Empty
-        className="absolute inset-0 flex items-center justify-center text-muted-foreground text-sm"
+        className="absolute inset-0 flex items-center justify-center text-muted-foreground text-label"
         data-slot="emoji-picker-empty"
       >
         Nenhum emoji encontrado.
@@ -168,12 +168,12 @@ function EmojiPickerFooter({
               <div className="flex size-7 flex-none items-center justify-center text-lg">
                 {emoji.emoji}
               </div>
-              <span className="text-secondary-foreground truncate text-xs">
+              <span className="text-secondary-foreground truncate text-caption">
                 {emoji.label}
               </span>
             </>
           ) : (
-            <span className="text-muted-foreground ml-1.5 flex h-7 items-center truncate text-xs">
+            <span className="text-muted-foreground ml-1.5 flex h-7 items-center truncate text-caption">
               Select an emoji…
             </span>
           )

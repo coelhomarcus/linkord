@@ -1,14 +1,14 @@
 import { Avatar as AvatarRoot, AvatarFallback, AvatarImage } from '@/shared/ui/primitives/avatar';
 
 export const AVATAR_COLOR_OPTIONS = [
-  { value: 'blurple', label: 'Índigo', css: 'var(--color-blurple)' },
-  { value: 'green', label: 'Verde', css: 'var(--color-green)' },
-  { value: 'red', label: 'Vermelho', css: 'var(--color-red)' },
-  { value: 'fuchsia', label: 'Fuchsia', css: 'var(--color-fuchsia)' },
-  { value: 'orange', label: 'Laranja', css: 'var(--color-orange)' },
-  { value: 'purple', label: 'Roxo', css: 'var(--color-purple)' },
-  { value: 'teal', label: 'Verde-azulado', css: 'var(--color-teal)' },
-  { value: 'blue', label: 'Azul', css: 'var(--color-blue)' },
+  { value: 'blurple', label: 'Índigo', css: 'var(--color-avatar-indigo)' },
+  { value: 'green', label: 'Verde', css: 'var(--color-avatar-green)' },
+  { value: 'red', label: 'Vermelho', css: 'var(--color-avatar-red)' },
+  { value: 'fuchsia', label: 'Fuchsia', css: 'var(--color-avatar-fuchsia)' },
+  { value: 'orange', label: 'Laranja', css: 'var(--color-avatar-orange)' },
+  { value: 'purple', label: 'Roxo', css: 'var(--color-avatar-purple)' },
+  { value: 'teal', label: 'Verde-azulado', css: 'var(--color-avatar-teal)' },
+  { value: 'blue', label: 'Azul', css: 'var(--color-avatar-blue)' },
 ] as const;
 
 export type AvatarColorValue = (typeof AVATAR_COLOR_OPTIONS)[number]['value'];

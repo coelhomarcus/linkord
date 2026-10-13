@@ -66,7 +66,7 @@ export function FriendRequestList({ direction, search = '', headingId, onOpenPro
     );
   } else {
     body = (
-      <div className="flex flex-col divide-y divide-white/[0.06]">
+      <div className="flex flex-col divide-y divide-border-subtle">
         {list.items.map(({ user, at }) => {
           const busy = pending.isPending(user.id);
           return (

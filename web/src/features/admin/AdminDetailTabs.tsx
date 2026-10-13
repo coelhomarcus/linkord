@@ -16,7 +16,7 @@ export function AdminDetailTabs<T extends string>({ label, tabs, active, default
   const { pathname, state } = useLocation();
   return (
     <nav aria-label={label} className="-mx-1 overflow-x-auto px-1">
-      <ul className="flex min-w-max gap-1 border-b border-white/10">
+      <ul className="flex min-w-max gap-1 border-b border-border">
         {tabs.map((tab) => {
           const current = tab.id === active;
           return (

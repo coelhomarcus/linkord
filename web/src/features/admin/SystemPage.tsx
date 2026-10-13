@@ -27,7 +27,7 @@ function StorageMeter({ used, max }: { used: number; max: number }) {
   return (
     <div className="flex flex-col gap-1.5">
       <div
-        className="h-2 w-full overflow-hidden rounded-full bg-white/10"
+        className="h-2 w-full overflow-hidden rounded-full bg-fill-active"
         role="meter" aria-label="Armazenamento da instância" aria-valuemin={0} aria-valuemax={max} aria-valuenow={Math.min(used, max)}
         aria-valuetext={`${Math.round(pct)}% do limite em uso`}
       >
@@ -40,7 +40,7 @@ function StorageMeter({ used, max }: { used: number; max: number }) {
 
 function SweepCard({ title, result, tone }: { title: string; result: SweepResult; tone?: 'danger' }) {
   return (
-    <div className="flex flex-col gap-2 rounded-xl border border-white/10 bg-white/[0.03] p-4">
+    <div className="flex flex-col gap-2 rounded-lg border border-border bg-fill-subtle p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <p className="text-body font-medium text-text-primary">{title}</p>
         <p className="text-caption text-text-muted">em {formatWhen(result.at)}</p>

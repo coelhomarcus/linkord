@@ -8,15 +8,16 @@ import type { RecoveryIdentifier } from '@/shared/api/api';
 import { ErrorBanner } from '../../shared/ErrorBanner';
 import { ShaderBackground } from '@/shared/ui/motion/shader-background';
 import { Input } from '@/shared/ui/motion/input';
-import { Button } from '@/shared/ui/motion/button';
+import { Button } from '@/shared/ui/primitives/button';
 import { Tabs, TabsList, TabsTrigger } from '@/shared/ui/motion/tabs';
 import { EASE_OUT } from '@/shared/lib/ease';
 import { OTPInput, type OTPStatus } from '@/shared/ui/motion/otp-input';
 import { ERROR_CODES } from '@/shared/api/errorCodes';
 
-// A dark, on-brand mesh — background near-black, blurple/fuchsia/purple echo
-// the accent palette in index.css instead of arbitrary shader-demo colors.
-const MESH_COLORS = ['#0a0912', '#4f46e5', '#eb459e', '#1c1030'];
+// The shader takes literal colours, not CSS variables: these are the shell
+// surface, the orchid accent, a deep violet beside it and a dark plum, all
+// derived from the tokens in index.css. Update them together with the accent.
+const MESH_COLORS = ['#100b10', '#bc2ab6', '#4c1b82', '#290e28'];
 
 function PasswordToggle({ visible, onToggle }: { visible: boolean; onToggle: () => void }) {
   return (
@@ -68,7 +69,7 @@ function LoginForm({ onForgotPassword }: { onForgotPassword: () => void }) {
         value={password}
         onChange={setPassword}
       />
-      <Button type="submit" size="lg" className="mt-1 w-full" disabled={pending || !username || !password}>
+      <Button type="submit" size="lg" className="mt-1 h-11 w-full" disabled={pending || !username || !password}>
         {pending ? <Loader2 size={16} className="animate-spin" /> : <LogIn size={16} />}
         <span>{pending ? 'Entrando…' : 'Entrar'}</span>
         {!pending && <ArrowRight size={16} className="ml-auto" />}
@@ -179,7 +180,7 @@ function RegisterForm() {
         error={fieldErrors.code}
         reserveErrorLine
       />
-      <Button type="submit" size="lg" className="mt-1 w-full" disabled={pending || !username || !email || !password || !code}>
+      <Button type="submit" size="lg" className="mt-1 h-11 w-full" disabled={pending || !username || !email || !password || !code}>
         {pending ? <Loader2 size={16} className="animate-spin" /> : <UserPlus size={16} />}
         <span>{pending ? 'Criando conta…' : 'Criar conta'}</span>
         {!pending && <ArrowRight size={16} className="ml-auto" />}
@@ -244,9 +245,9 @@ function RecoveryForm({ onBack }: { onBack: () => void }) {
           onValueChange={(v) => { setIdentifierType(v as 'email' | 'username'); setIdentifierValue(''); }}
           variant="segment"
         >
-          <TabsList className="w-full grid grid-cols-2 rounded-xl border border-white/10 bg-black/25 p-1">
-            <TabsTrigger value="email" className="w-full rounded-lg">E-mail</TabsTrigger>
-            <TabsTrigger value="username" className="w-full rounded-lg">Usuário</TabsTrigger>
+          <TabsList className="w-full grid grid-cols-2 rounded-lg border border-border bg-black/25 p-1">
+            <TabsTrigger value="email" className="w-full rounded-md">E-mail</TabsTrigger>
+            <TabsTrigger value="username" className="w-full rounded-md">Usuário</TabsTrigger>
           </TabsList>
         </Tabs>
         {identifierType === 'email' ? (
@@ -254,7 +255,7 @@ function RecoveryForm({ onBack }: { onBack: () => void }) {
         ) : (
           <Input id="recoveryUsername" label="Usuário" autoFocus autoComplete="username" leftIcon={<User />} value={identifierValue} onChange={setIdentifierValue} />
         )}
-        <Button type="submit" size="lg" className="w-full" disabled={pending || !identifierValue}>
+        <Button type="submit" size="lg" className="h-11 w-full" disabled={pending || !identifierValue}>
           {pending ? <Loader2 size={16} className="animate-spin" /> : <Mail size={16} />}
           <span>{pending ? 'Enviando…' : 'Enviar código'}</span>
           {!pending && <ArrowRight size={16} className="ml-auto" />}
@@ -288,7 +289,7 @@ function RecoveryForm({ onBack }: { onBack: () => void }) {
         aria-label="Código de recuperação"
       />
       <Input id="recoveryPassword" label="Nova senha" type="password" autoComplete="new-password" leftIcon={<Lock />} value={password} onChange={setPassword} placeholder="Pelo menos 8 caracteres" />
-      <Button type="button" size="lg" className="w-full" disabled={pending || code.length !== 6 || password.length < 8} onClick={() => void submitReset()}>
+      <Button type="button" size="lg" className="h-11 w-full" disabled={pending || code.length !== 6 || password.length < 8} onClick={() => void submitReset()}>
         {pending ? <Loader2 size={16} className="animate-spin" /> : status === 'success' ? <CheckCircle2 size={16} /> : <Lock size={16} />}
         <span>{pending ? 'Salvando…' : status === 'success' ? 'Senha redefinida' : 'Redefinir senha'}</span>
       </Button>
@@ -332,11 +333,11 @@ export function AuthScreen() {
           </div>
         </div>
 
-        <motion.div layout={!reduce} className="w-full overflow-hidden rounded-2xl border border-white/10 bg-bg-floating/70 p-6 shadow-2xl backdrop-blur-2xl">
+        <motion.div layout={!reduce} className="w-full overflow-hidden rounded-xl border border-border bg-bg-floating/70 p-6 shadow-popover backdrop-blur-2xl">
           <Tabs value={tab} onValueChange={(v) => { setRecovery(false); setTab(v as 'login' | 'register'); }} variant="segment" className="flex w-full flex-col gap-5">
-            {!recovery && <TabsList className="w-full grid grid-cols-2 rounded-xl border border-white/10 bg-black/25 p-1">
-              <TabsTrigger value="login" className="w-full rounded-lg">Entrar</TabsTrigger>
-              <TabsTrigger value="register" className="w-full rounded-lg">Criar conta</TabsTrigger>
+            {!recovery && <TabsList className="w-full grid grid-cols-2 rounded-lg border border-border bg-black/25 p-1">
+              <TabsTrigger value="login" className="w-full rounded-md">Entrar</TabsTrigger>
+              <TabsTrigger value="register" className="w-full rounded-md">Criar conta</TabsTrigger>
             </TabsList>}
             {/* The card itself carries `layout` (above), so its height
                 animates smoothly frame-by-frame as the panel below swaps —

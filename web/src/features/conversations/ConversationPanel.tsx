@@ -1,4 +1,7 @@
-import { ArrowLeft, ImageIcon, Info, Phone, Search } from 'lucide-react';
+import { ArrowLeft, ImageIcon, Info, Phone } from 'lucide-react';
+import { AnimatedIconButton } from '@/shared/ui/icons/AnimatedIconButton';
+import { SearchIcon } from '@/shared/ui/icons/search';
+import { PhoneIcon } from '@/shared/ui/icons/phone';
 import { PageHeader } from '@/shared/PageHeader';
 import { useAnimatedSidebar } from '@/shared/ui/motion/animated-sidebar';
 import { Button } from '@/shared/ui/primitives/button';
@@ -54,7 +57,7 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, onO
     <main className="flex h-full min-w-0 flex-1 flex-col text-text-primary">
       {conversation ? (
         <>
-          <header className="flex h-16 flex-none items-center gap-3 border-b border-white/10 bg-[rgb(12_12_14)]/90 px-4 backdrop-blur">
+          <header className="flex h-16 flex-none items-center gap-3 border-b border-border bg-surface-panel/90 px-4 backdrop-blur">
             <Button type="button" variant="ghost" size="icon-sm" aria-label="Voltar" onClick={() => setOpenMobile(true)} className="-ml-1 md:hidden">
               <ArrowLeft size={18} />
             </Button>
@@ -71,7 +74,7 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, onO
               <button
                 type="button"
                 onClick={onOpenDetails}
-                className="transition-colors hover:border-white/20"
+                className="transition-colors hover:border-border-strong"
                 aria-label="Detalhes do grupo"
               >
                 <GroupAvatar title={title} avatar={conversation.avatar} size={40} />
@@ -89,10 +92,10 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, onO
               <Tooltip>
                 <TooltipTrigger render={<div className="flex flex-none items-center -space-x-2" />}>
                   {callParticipants.slice(0, 4).map((p) => (
-                    <Avatar key={p.id} id={p.id} name={p.displayName} avatar={p.avatar} avatarColor={p.avatarColor} size={28} className="ring-2 ring-[rgb(12_12_14)]" />
+                    <Avatar key={p.id} id={p.id} name={p.displayName} avatar={p.avatar} avatarColor={p.avatarColor} size={28} className="ring-2 ring-surface-panel" />
                   ))}
                   {callParticipants.length > 4 && (
-                    <span className="grid size-7 place-items-center rounded-full bg-bg-tertiary text-[11px] font-semibold text-text-secondary ring-2 ring-[rgb(12_12_14)]">
+                    <span className="grid size-7 place-items-center rounded-full bg-bg-tertiary text-micro font-semibold text-text-secondary ring-2 ring-surface-panel">
                       +{callParticipants.length - 4}
                     </span>
                   )}
@@ -103,9 +106,7 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, onO
             <Button type="button" variant="ghost" size="icon-sm" aria-label="Mídias e links" onClick={onOpenMedia} className="text-text-muted hover:text-text-primary">
               <ImageIcon size={16} />
             </Button>
-            <Button type="button" variant="ghost" size="icon-sm" aria-label="Buscar mensagens" onClick={onOpenSearch} className="text-text-muted hover:text-text-primary">
-              <Search size={16} />
-            </Button>
+            <AnimatedIconButton type="button" variant="ghost" size="icon-sm" aria-label="Buscar mensagens" onClick={onOpenSearch} className="text-text-muted hover:text-text-primary" icon={SearchIcon} />
             {conversation.type === 'group' && (
               <Button type="button" variant="ghost" size="icon-sm" aria-label="Detalhes do grupo" onClick={onOpenDetails} className="text-text-muted hover:text-text-primary">
                 <Info size={16} />
@@ -116,15 +117,13 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, onO
                 {/* a disabled button gets no pointer events, so the tooltip hangs off a wrapper */}
                 <TooltipTrigger render={<span tabIndex={0} className="inline-flex rounded-md focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50" />}>
                   <Button type="button" size="icon-sm" aria-label="Entrar na chamada" disabled className="bg-bg-tertiary text-text-muted">
-                    <Phone size={16} />
+                    <PhoneIcon size={16} aria-hidden />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom">{callBlockedReason}</TooltipContent>
               </Tooltip>
             ) : (
-              <Button type="button" size="icon-sm" aria-label="Entrar na chamada" disabled={conversation.status === 'suspended'} onClick={() => onOpenCall(conversation.id)} className="bg-green text-bg-primary hover:bg-green/90">
-                <Phone size={16} />
-              </Button>
+              <AnimatedIconButton type="button" size="icon-sm" aria-label="Entrar na chamada" disabled={conversation.status === 'suspended'} onClick={() => onOpenCall(conversation.id)} className="bg-green text-bg-primary hover:bg-green/90" icon={PhoneIcon} />
             )}
           </header>
           {callJoinError && (

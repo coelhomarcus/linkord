@@ -12,7 +12,7 @@ function EmbedFailedFallback({ url, className }: { url: string; className: strin
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className={`flex w-full max-w-sm items-center gap-2 rounded-md border border-white/10 bg-bg-tertiary px-3 py-2.5 text-label text-text-muted transition-colors hover:bg-bg-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 ${className}`}
+      className={`flex w-full max-w-sm items-center gap-2 rounded-md border border-border bg-bg-tertiary px-3 py-2.5 text-label text-text-muted transition-colors hover:bg-bg-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 ${className}`}
     >
       <ImageOff size={14} className="flex-none" />
       <span className="truncate">Não foi possível carregar a prévia. Abrir link</span>
@@ -53,11 +53,11 @@ export function LinkPreview({ embed, className = '', edgeToEdge, fitContainer }:
   if (failed) return <EmbedFailedFallback url={embed.url} className={className} />;
 
   if (embed.kind === 'video') {
-    return <VideoPlayer src={embed.url} className={edgeToEdge ? 'rounded-2xl border-0' : className} onError={() => setFailed(true)} />;
+    return <VideoPlayer src={embed.url} className={edgeToEdge ? 'rounded-lg border-0' : className} onError={() => setFailed(true)} />;
   }
 
   if (embed.kind === 'audio') {
-    return <AudioPlayer src={embed.url} className={edgeToEdge ? 'max-w-full rounded-2xl border-0 bg-transparent shadow-none' : className} onError={() => setFailed(true)} />;
+    return <AudioPlayer src={embed.url} className={edgeToEdge ? 'max-w-full rounded-lg border-0 bg-transparent shadow-none' : className} onError={() => setFailed(true)} />;
   }
 
   return (
@@ -69,7 +69,7 @@ export function LinkPreview({ embed, className = '', edgeToEdge, fitContainer }:
           loading="lazy"
           onError={() => setFailed(true)}
           style={fitContainer ? undefined : { maxWidth }}
-          className={`block h-auto max-h-70 max-w-full object-contain ${fitContainer ? 'w-full' : ''} ${edgeToEdge ? 'rounded-2xl' : 'rounded-md border border-white/10'}`}
+          className={`block h-auto max-h-70 max-w-full object-contain ${fitContainer ? 'w-full' : ''} ${edgeToEdge ? 'rounded-lg' : 'rounded-md border border-border'}`}
         />
       </button>
       <ImageLightbox src={embed.url} alt="" open={lightboxOpen} onOpenChange={setLightboxOpen} />

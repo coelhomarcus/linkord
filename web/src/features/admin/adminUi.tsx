@@ -8,9 +8,9 @@ import type { AdminDetailStatus } from './useAdminDetail';
 
 const TONES: Record<string, string> = {
   active: 'bg-green/15 text-green', suspended: 'bg-red/15 text-red-text',
-  open: 'bg-yellow/15 text-yellow', reviewing: 'bg-primary/15 text-primary',
-  resolved: 'bg-green/15 text-green', dismissed: 'bg-white/10 text-text-muted',
-  admin: 'bg-primary/15 text-primary', user: 'bg-white/10 text-text-muted',
+  open: 'bg-yellow/15 text-yellow', reviewing: 'bg-primary/15 text-accent-text',
+  resolved: 'bg-green/15 text-green', dismissed: 'bg-fill-active text-text-muted',
+  admin: 'bg-primary/15 text-accent-text', user: 'bg-fill-active text-text-muted',
 };
 const LABELS: Record<string, string> = {
   active: 'Ativo', suspended: 'Suspenso', open: 'Aberta', reviewing: 'Em análise', resolved: 'Resolvida', dismissed: 'Dispensada',
@@ -18,18 +18,18 @@ const LABELS: Record<string, string> = {
 };
 
 export function Badge({ value }: { value: string }) {
-  return <span className={cn('inline-flex flex-none rounded px-1.5 py-0.5 text-[11px] font-medium', TONES[value] ?? 'bg-white/10 text-text-muted')}>{LABELS[value] ?? value}</span>;
+  return <span className={cn('inline-flex flex-none rounded-sm px-1.5 py-0.5 text-micro font-medium', TONES[value] ?? 'bg-fill-active text-text-muted')}>{LABELS[value] ?? value}</span>;
 }
 
 export function AuditList({ items, empty = 'Nenhuma ação registrada.' }: { items: AuditRow[]; empty?: string }) {
   if (items.length === 0) return <p className="py-4 text-label text-text-muted">{empty}</p>;
   return (
-    <ul className="flex flex-col divide-y divide-white/5">
+    <ul className="flex flex-col divide-y divide-border-subtle">
       {items.map((row) => (
         <li key={row.id} className="flex flex-col gap-0.5 py-2.5 text-label">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-medium text-text-primary">{ACTION_LABELS[row.action] ?? row.action}</span>
-            {row.result === 'failed' && <span className="rounded bg-red/15 px-1.5 py-0.5 text-[11px] font-medium text-red-text">falhou</span>}
+            {row.result === 'failed' && <span className="rounded-sm bg-red/15 px-1.5 py-0.5 text-micro font-medium text-red-text">falhou</span>}
             <span className="text-caption text-text-muted">{formatWhen(row.at)}</span>
           </div>
           <p className="text-caption text-text-muted">

@@ -504,7 +504,7 @@ function MobileSidebar({
         }}
         className={cn(
           "pointer-events-auto fixed inset-y-0 flex h-dvh w-(--sidebar-width-mobile) max-w-[88vw] flex-col overflow-hidden",
-          "border-border bg-background pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] shadow-2xl will-change-transform",
+          "border-border bg-background pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] shadow-popover will-change-transform",
           side === "left" ? "left-0 border-r md:left-(--sidebar-overlay-offset,0px)" : "right-0 border-l",
           !context.openMobile && "pointer-events-none",
           className,
@@ -608,8 +608,8 @@ export const AnimatedSidebar = forwardRef<HTMLElement, AnimatedSidebarProps>(
             variant === "sidebar" &&
               (side === "left" ? "border-border border-r" : "border-border border-l"),
             variant === "floating" &&
-              "m-2 h-[calc(100svh-1rem)] rounded-2xl border border-border shadow-sm",
-            variant === "inset" && "m-2 h-[calc(100svh-1rem)] rounded-2xl",
+              "m-2 h-[calc(100svh-1rem)] rounded-xl border border-border shadow-panel",
+            variant === "inset" && "m-2 h-[calc(100svh-1rem)] rounded-xl",
             panelClassName,
           )}
         >
@@ -655,7 +655,7 @@ export const AnimatedSidebarTrigger = forwardRef<
         if (!event.defaultPrevented) context.toggleSidebar();
       }}
       className={cn(
-        "inline-flex size-10 shrink-0 items-center justify-center rounded-xl outline-none",
+        "inline-flex size-10 shrink-0 items-center justify-center rounded-md outline-none",
         "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         className,
       )}
@@ -688,7 +688,7 @@ export const AnimatedSidebarClose = forwardRef<
         else context.setOpen(false);
       }}
       className={cn(
-        "inline-flex size-10 shrink-0 items-center justify-center rounded-xl outline-none",
+        "inline-flex size-10 shrink-0 items-center justify-center rounded-md outline-none",
         "focus-visible:ring-2 focus-visible:ring-ring",
         className,
       )}
@@ -746,7 +746,7 @@ export const AnimatedSidebarInset = forwardRef<
       data-slot="sidebar-inset"
       className={cn(
         "relative flex min-h-svh min-w-0 flex-1 flex-col bg-background",
-        "md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-2xl md:peer-data-[variant=inset]:shadow-sm",
+        "md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow-panel",
         className,
       )}
     />
@@ -831,7 +831,7 @@ export const AnimatedSidebarGroupLabel = forwardRef<
       aria-hidden={collapsed}
       data-slot="sidebar-group-label"
       className={cn(
-        "mb-1 h-7 overflow-hidden px-2 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground transition-opacity",
+        "mb-1 h-7 overflow-hidden px-2 text-micro font-medium uppercase tracking-[0.14em] text-muted-foreground transition-opacity",
         collapsed ? "opacity-0" : "opacity-100",
         className,
       )}
@@ -871,7 +871,7 @@ export const AnimatedSidebarMenu = forwardRef<
       ref={forwardedRef as React.Ref<HTMLElement>}
       as="ul"
       inset={0}
-      pillClassName="rounded-xl bg-muted/70"
+      pillClassName="rounded-md bg-muted/70"
       pillContainerClassName="inset-y-auto top-0 h-9"
       data-slot="sidebar-menu"
       className={cn("flex w-full min-w-0 list-none flex-col gap-0.5", className)}
@@ -1007,7 +1007,7 @@ export function AnimatedSidebarMenuSubButton({
   );
 
   const interactiveClassName = cn(
-    "flex min-h-8 w-full min-w-0 items-center gap-2 rounded-lg px-2 text-left text-xs outline-none",
+    "flex min-h-8 w-full min-w-0 items-center gap-2 rounded-md px-2 text-left text-caption outline-none",
     "text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground",
     "focus-visible:bg-muted/70 focus-visible:ring-2 focus-visible:ring-ring",
     isActive && "bg-muted/70 text-foreground",
@@ -1109,7 +1109,7 @@ export function AnimatedSidebarMenuButton({
         <motion.span
           layoutId={context.layoutId}
           transition={context.reduce ? { duration: 0 } : SPRING_LAYOUT}
-          className="absolute inset-0 rounded-xl bg-muted"
+          className="absolute inset-0 rounded-md bg-muted"
         />
       ) : null}
       {icon ? (
@@ -1142,7 +1142,7 @@ export function AnimatedSidebarMenuButton({
         {children}
       </motion.span>
       {badge && !panel.collapsed ? (
-        <span className="relative z-10 shrink-0 text-xs text-muted-foreground">
+        <span className="relative z-10 shrink-0 text-caption text-muted-foreground">
           {badge}
         </span>
       ) : null}
@@ -1165,7 +1165,7 @@ export function AnimatedSidebarMenuButton({
   );
 
   const interactiveClassName = cn(
-    "relative flex min-h-9 w-full min-w-0 items-center gap-2.5 overflow-hidden rounded-xl px-3 text-left text-sm font-medium outline-none",
+    "relative flex min-h-9 w-full min-w-0 items-center gap-2.5 overflow-hidden rounded-md px-3 text-left text-label font-medium outline-none",
     "text-muted-foreground transition-colors hover:text-foreground",
     "focus-visible:bg-muted/70 focus-visible:ring-2 focus-visible:ring-ring",
     isActive && "text-foreground",

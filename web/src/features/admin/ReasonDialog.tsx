@@ -57,23 +57,23 @@ export function ReasonDialog({ open, onOpenChange, title, description, confirmLa
     <Dialog open={open} onOpenChange={(next) => { if (!next) close(); }}>
       <DialogContent showCloseButton={!busy} className="max-w-[calc(100%-2rem)] gap-0 bg-bg-modal p-0 sm:max-w-md">
         <DialogHeader className="px-6 pt-6 pr-12">
-          <DialogTitle className="text-title font-bold text-text-primary">{title}</DialogTitle>
+          <DialogTitle className="text-title font-semibold text-text-primary">{title}</DialogTitle>
           <DialogDescription className="text-body text-text-secondary">{description}</DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-3 px-6 py-4">
           <label className="flex flex-col gap-1.5 text-label text-text-muted">
             Motivo (fica registrado na auditoria)
-            <Textarea value={reason} onChange={(e) => setReason(e.target.value)} maxLength={REASON_MAX} rows={3} className="resize-none border-white/10 bg-white/[0.04]" />
+            <Textarea value={reason} onChange={(e) => setReason(e.target.value)} maxLength={REASON_MAX} rows={3} className="resize-none border-border bg-fill-subtle" />
           </label>
           {confirmText && (
             <label className="flex flex-col gap-1.5 text-label text-text-muted">
               <span>Para confirmar, digite <span className="font-medium text-text-primary">{confirmText}</span></span>
-              <Input value={confirm} onChange={(e) => setConfirm(e.target.value)} className="border-white/10 bg-white/[0.04]" />
+              <Input value={confirm} onChange={(e) => setConfirm(e.target.value)} className="border-border bg-fill-subtle" />
             </label>
           )}
           {error && <p role="alert" className="text-label text-red-text">{error}</p>}
         </div>
-        <DialogFooter className="border-subtle bg-bg-tertiary/60 px-6 py-4">
+        <DialogFooter className="border-border-subtle bg-bg-tertiary/60 px-6 py-4">
           <Button type="button" variant="ghost" disabled={busy} onClick={close}>Cancelar</Button>
           <Button type="button" variant={destructive ? 'destructive' : 'default'} disabled={!reasonOk || !confirmOk || busy} onClick={() => void submit()}>
             {busy ? 'Aguarde…' : confirmLabel}

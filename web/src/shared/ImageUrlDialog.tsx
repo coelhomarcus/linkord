@@ -82,7 +82,7 @@ export function ImageUrlDialog({ open, title, onOpenChange, onConfirm }: ImageUr
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] max-w-[calc(100%-2rem)] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden bg-bg-modal p-0 sm:max-w-100">
         <DialogHeader className="px-6 pt-6 pr-12">
-          <DialogTitle className="text-title font-bold text-text-primary">{title}</DialogTitle>
+          <DialogTitle className="text-title font-semibold text-text-primary">{title}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="flex min-h-0 flex-col gap-2 overflow-y-auto px-6 py-4">
@@ -96,7 +96,7 @@ export function ImageUrlDialog({ open, title, onOpenChange, onConfirm }: ImageUr
             />
             {error && <p className="text-label text-red">{error}</p>}
           </div>
-          <DialogFooter className="border-subtle bg-bg-tertiary/60 px-6 py-4">
+          <DialogFooter className="border-border-subtle bg-bg-tertiary/60 px-6 py-4">
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={checking}>
               <span>Cancelar</span>
             </Button>
