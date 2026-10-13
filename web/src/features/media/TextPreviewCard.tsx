@@ -92,7 +92,7 @@ export function TextPreviewCard({ attachment, maxWidth }: { attachment: ChatAtta
   }, [preview, markdown]);
 
   return (
-    <div ref={rootRef} style={{ maxWidth }} className="w-full overflow-hidden rounded-xl border border-border bg-bg-tertiary">
+    <div ref={rootRef} style={{ maxWidth }} className="w-full overflow-hidden rounded-lg border border-border bg-bg-tertiary">
       <FileAttachmentCard name={attachment.name} size={attachment.size} mime={attachment.mime} url={url} bordered={false} />
 
       {preview?.previewable && preview.content && (

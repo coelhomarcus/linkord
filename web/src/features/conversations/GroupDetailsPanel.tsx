@@ -349,7 +349,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
           </div>
 
           {addOpen && (
-            <div className="flex flex-col gap-2 rounded-md border border-border bg-fill-subtle p-2">
+            <div className="flex flex-col gap-2 rounded-lg border border-border bg-fill-subtle p-2">
               <p className="px-1 text-caption text-text-muted">Só entram no grupo ao aceitar o convite.</p>
               <FriendPicker selected={addSelected} onToggle={toggleAddCandidate} excludeIds={excludeIds} maxHeightClass="max-h-48" />
               <Button type="button" size="sm" onClick={() => void confirmInvite()} disabled={addSelected.size === 0 || inviting} className="mt-1">

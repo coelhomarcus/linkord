@@ -29,12 +29,12 @@ export function MessageMedia({ attachments }: { attachments: ChatAttachmentData[
     const attachment = visual[0]!;
     const box = singleImageBox(attachment);
     pictures = box ? (
-      <button type="button" aria-label={`Abrir ${attachment.name}`} onClick={() => openAt(0)} style={{ width: box.width, aspectRatio: box.aspectRatio }} className={cn(cellButton, 'rounded-xl')}>
+      <button type="button" aria-label={`Abrir ${attachment.name}`} onClick={() => openAt(0)} style={{ width: box.width, aspectRatio: box.aspectRatio }} className={cn(cellButton, 'rounded-lg')}>
         <MediaImage attachment={attachment} className="block size-full object-cover" />
       </button>
     ) : (
       // stored before dimensions existed: natural size, as it always was
-      <button type="button" aria-label={`Abrir ${attachment.name}`} onClick={() => openAt(0)} className={cn(cellButton, 'inline-block max-w-full rounded-xl')} style={{ maxWidth: `min(100%, ${MEDIA_MAX_WIDTH}px)` }}>
+      <button type="button" aria-label={`Abrir ${attachment.name}`} onClick={() => openAt(0)} className={cn(cellButton, 'inline-block max-w-full rounded-lg')} style={{ maxWidth: `min(100%, ${MEDIA_MAX_WIDTH}px)` }}>
         <MediaImage attachment={attachment} className="block h-auto max-h-80 max-w-full object-contain" />
       </button>
     );
@@ -42,7 +42,7 @@ export function MessageMedia({ attachments }: { attachments: ChatAttachmentData[
     const layout = mosaicLayout(visual.length);
     pictures = (
       <div
-        className="grid gap-0.5 overflow-hidden rounded-xl"
+        className="grid gap-0.5 overflow-hidden rounded-lg"
         style={{ width: `min(100%, ${MEDIA_MAX_WIDTH}px)`, aspectRatio: layout.aspectRatio, gridTemplateColumns: layout.columns, gridTemplateRows: layout.rows }}
       >
         {visual.map((attachment, index) => (

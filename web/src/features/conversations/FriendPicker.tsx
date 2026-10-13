@@ -38,7 +38,7 @@ export function FriendPicker({ selected, onToggle, excludeIds, inputId, maxHeigh
           className="h-9 min-w-0 flex-1 bg-transparent text-label outline-none placeholder:text-text-muted"
         />
       </div>
-      <div className={cn('overflow-y-auto rounded-md border border-border bg-black/20 p-1', maxHeightClass)}>
+      <div className={cn('overflow-y-auto rounded-lg border border-border bg-black/20 p-1', maxHeightClass)}>
         {list.status === 'loading' ? (
           <p className="px-3 py-8 text-center text-label text-text-muted">Carregando amigos…</p>
         ) : list.status === 'error' ? (

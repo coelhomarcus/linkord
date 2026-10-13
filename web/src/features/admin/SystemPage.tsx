@@ -40,7 +40,7 @@ function StorageMeter({ used, max }: { used: number; max: number }) {
 
 function SweepCard({ title, result, tone }: { title: string; result: SweepResult; tone?: 'danger' }) {
   return (
-    <div className="flex flex-col gap-2 rounded-xl border border-border bg-fill-subtle p-4">
+    <div className="flex flex-col gap-2 rounded-lg border border-border bg-fill-subtle p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <p className="text-body font-medium text-text-primary">{title}</p>
         <p className="text-caption text-text-muted">em {formatWhen(result.at)}</p>
@@ -99,7 +99,7 @@ export function SystemPage() {
           <Button type="button" variant="secondary" size="sm" disabled={refreshing} onClick={() => void refresh()}>{refreshing ? 'Atualizando…' : 'Atualizar'}</Button>
         </div>
         {refreshFailed && (
-          <p role="alert" className="rounded-md border border-yellow/30 bg-yellow/10 px-3 py-2 text-label text-text-primary">
+          <p role="alert" className="rounded-lg border border-yellow/30 bg-yellow/10 px-3 py-2 text-label text-text-primary">
             Não foi possível atualizar. Os valores abaixo são da leitura das {observed}.
           </p>
         )}

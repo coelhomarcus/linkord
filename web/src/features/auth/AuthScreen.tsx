@@ -245,7 +245,7 @@ function RecoveryForm({ onBack }: { onBack: () => void }) {
           onValueChange={(v) => { setIdentifierType(v as 'email' | 'username'); setIdentifierValue(''); }}
           variant="segment"
         >
-          <TabsList className="w-full grid grid-cols-2 rounded-xl border border-border bg-black/25 p-1">
+          <TabsList className="w-full grid grid-cols-2 rounded-lg border border-border bg-black/25 p-1">
             <TabsTrigger value="email" className="w-full rounded-md">E-mail</TabsTrigger>
             <TabsTrigger value="username" className="w-full rounded-md">Usuário</TabsTrigger>
           </TabsList>
@@ -335,7 +335,7 @@ export function AuthScreen() {
 
         <motion.div layout={!reduce} className="w-full overflow-hidden rounded-xl border border-border bg-bg-floating/70 p-6 shadow-popover backdrop-blur-2xl">
           <Tabs value={tab} onValueChange={(v) => { setRecovery(false); setTab(v as 'login' | 'register'); }} variant="segment" className="flex w-full flex-col gap-5">
-            {!recovery && <TabsList className="w-full grid grid-cols-2 rounded-xl border border-border bg-black/25 p-1">
+            {!recovery && <TabsList className="w-full grid grid-cols-2 rounded-lg border border-border bg-black/25 p-1">
               <TabsTrigger value="login" className="w-full rounded-md">Entrar</TabsTrigger>
               <TabsTrigger value="register" className="w-full rounded-md">Criar conta</TabsTrigger>
             </TabsList>}

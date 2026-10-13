@@ -79,7 +79,7 @@ export function ReportsPage() {
             </tbody>
           </AdminTable>
         ) : (
-          <ul className="flex flex-col divide-y divide-border-subtle rounded-xl border border-border">
+          <ul className="flex flex-col divide-y divide-border-subtle rounded-lg border border-border">
             {list.items.map((r) => (
               <li key={r.id} className="flex flex-col gap-2 p-3">
                 <ReportLink report={r} from={origin} />

@@ -84,7 +84,7 @@ export function ListChrome({ list, empty, emptyAction, children }: {
   return (
     <>
       {list.stale && (
-        <div role="alert" className="flex flex-wrap items-center gap-3 rounded-md border border-yellow/30 bg-yellow/10 px-3 py-2 text-label text-text-primary">
+        <div role="alert" className="flex flex-wrap items-center gap-3 rounded-lg border border-yellow/30 bg-yellow/10 px-3 py-2 text-label text-text-primary">
           <p className="min-w-0 flex-1">Não foi possível atualizar a lista. Estes dados podem estar desatualizados.</p>
           <Button type="button" variant="secondary" size="sm" disabled={list.refreshing} onClick={list.retry}>{list.refreshing ? 'Atualizando…' : 'Atualizar'}</Button>
         </div>
@@ -131,7 +131,7 @@ export function DetailStatusView({ status, missing, failed, backTo, backLabel, o
  * only the view is old — the retry is a read, never the mutation. */
 export function RefreshFailedNotice({ refreshing, onRetry }: { refreshing: boolean; onRetry: () => void }) {
   return (
-    <div role="alert" className="flex flex-wrap items-center gap-3 rounded-md border border-yellow/30 bg-yellow/10 px-3 py-2 text-label text-text-primary">
+    <div role="alert" className="flex flex-wrap items-center gap-3 rounded-lg border border-yellow/30 bg-yellow/10 px-3 py-2 text-label text-text-primary">
       <p className="min-w-0 flex-1">Ação concluída, mas não foi possível atualizar os dados. O que você vê pode estar desatualizado.</p>
       <Button type="button" variant="secondary" size="sm" disabled={refreshing} onClick={onRetry}>{refreshing ? 'Atualizando…' : 'Atualizar'}</Button>
     </div>

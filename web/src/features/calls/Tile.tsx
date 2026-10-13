@@ -161,7 +161,7 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
       tabIndex={0}
       aria-pressed={isFocused}
       aria-label={`${isFocused ? 'Desfazer destaque de' : 'Destacar'} ${name || 'participante'}`}
-      className={`tile-fullscreen-target relative h-full w-full cursor-pointer overflow-hidden rounded-xl border-[3.5px] bg-bg-tertiary transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 ${
+      className={`tile-fullscreen-target relative h-full w-full cursor-pointer overflow-hidden rounded-lg border-[3.5px] bg-bg-tertiary transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 ${
         showSpeakingBorder ? '' : 'border-transparent'
       }`}
       style={{

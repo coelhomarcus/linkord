@@ -6,7 +6,7 @@ import { cn } from '@/shared/lib/utils';
  * one presentation mounted at a time so assistive tech doesn't read both. */
 export function AdminTable({ caption, children, className }: { caption: string; children: ReactNode; className?: string }) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-border">
+    <div className="overflow-x-auto rounded-lg border border-border">
       <table className={cn('w-full min-w-[640px] border-collapse text-left', className)}>
         <caption className="sr-only">{caption}</caption>
         {children}
