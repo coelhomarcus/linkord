@@ -26,8 +26,8 @@ describe('colorFor', () => {
   });
 
   it('prioritizes the color chosen by the user when it is valid', () => {
-    expect(colorFor('any-id', 'green')).toBe('var(--color-green)');
-    expect(colorFor('any-id', 'fuchsia')).toBe('var(--color-fuchsia)');
+    expect(colorFor('any-id', 'green')).toBe('var(--color-avatar-green)');
+    expect(colorFor('any-id', 'fuchsia')).toBe('var(--color-avatar-fuchsia)');
   });
 
   it('normalizes only the allowed avatar color keys, or a valid hex', () => {
