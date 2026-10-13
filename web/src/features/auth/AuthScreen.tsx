@@ -14,9 +14,10 @@ import { EASE_OUT } from '@/shared/lib/ease';
 import { OTPInput, type OTPStatus } from '@/shared/ui/motion/otp-input';
 import { ERROR_CODES } from '@/shared/api/errorCodes';
 
-// A dark, on-brand mesh — background near-black, blurple/fuchsia/purple echo
-// the accent palette in index.css instead of arbitrary shader-demo colors.
-const MESH_COLORS = ['#0a0912', '#4f46e5', '#eb459e', '#1c1030'];
+// The shader takes literal colours, not CSS variables: these are the shell
+// surface, the orchid accent, a deep violet beside it and a dark plum, all
+// derived from the tokens in index.css. Update them together with the accent.
+const MESH_COLORS = ['#100b10', '#bc2ab6', '#4c1b82', '#290e28'];
 
 function PasswordToggle({ visible, onToggle }: { visible: boolean; onToggle: () => void }) {
   return (

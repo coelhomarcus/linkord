@@ -43,20 +43,19 @@
   --color-border-subtle: oklch(100% 0 0 / 0.06);
   --color-border-default: oklch(100% 0 0 / 0.10);
   --color-border-strong: oklch(100% 0 0 / 0.16);
-  --color-accent-primary: oklch(52.82% 0.2628 279.30);
-  /* the accent fails AA as text on these surfaces (3.5:1); links and
+  /* orchid: clear of the destructive red, the online/call green and the
+     mention yellow, so it never reads as a status. White text on it: 5.1:1 */
+  --color-accent-primary: oklch(57.00% 0.2300 330.00);
+  /* the accent itself is too dark to be text on these surfaces; links and
      mentions use this lighter step of the same hue instead */
-  --color-accent-text: oklch(74.00% 0.1400 279.30);
+  --color-accent-text: oklch(76.00% 0.1400 330.00);
   --color-border-accent: var(--color-accent-primary);
 
-  --color-blurple: var(--color-accent-primary);
-  --color-blurple-hover: oklch(46.00% 0.2628 279.30);
   --color-green: oklch(73.29% 0.1941 153.87);
   --color-red: oklch(59.40% 0.1973 27.69);
   --color-red-hover: oklch(52.00% 0.1973 27.69);
   --color-red-text: oklch(74.00% 0.1400 27.69);
   --color-yellow: oklch(82.03% 0.1392 79.40);
-  --color-input-focus: #00a8fc;
 
   /* one lightness and chroma, only the hue moves, so no colour shouts over
      another and white initials clear 4.5:1 on all of them (chroma is capped
@@ -227,7 +226,7 @@ button:not(:disabled) {
   --destructive-foreground: #ffffff;
   --border: var(--color-border-default);
   --input: var(--color-border-strong);
-  --ring: var(--color-blurple);
+  --ring: var(--color-accent-primary);
 }
 
 @layer base {
