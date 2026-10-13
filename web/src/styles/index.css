@@ -20,6 +20,9 @@
   --color-surface-panel: var(--color-surface-100);
   --color-surface-raised: var(--color-surface-200);
   --color-surface-overlay: var(--color-surface-300);
+  /* one step below the shell: the global icon rail reads as its own column,
+     not as part of the conversation list beside it */
+  --color-surface-rail: oklch(12.00% 0.0040 275.00);
 
   --color-bg-primary: var(--color-surface-app);
   --color-bg-secondary: var(--color-surface-raised);

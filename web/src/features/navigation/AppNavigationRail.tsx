@@ -84,7 +84,7 @@ export function AppNavigationRail({ onOpenProfile, onReturnToCall, className }: 
   const returnToCallLabel = callTitle ? `Voltar para ${callTitle}` : 'Voltar para a chamada';
 
   return (
-    <nav aria-label="Navegação principal" className={cn('flex w-16 flex-none flex-col items-center gap-1.5 bg-bg-primary py-3', className)}>
+    <nav aria-label="Navegação principal" className={cn('flex w-16 flex-none flex-col items-center gap-1.5 border-r border-border-subtle bg-surface-rail py-3', className)}>
       <RailLink to={ROUTES.conversations} label="Conversas" active={isConversationsPath(pathname)} onNavigate={afterNavigate}>
         <MessageCircle size={20} aria-hidden />
       </RailLink>
