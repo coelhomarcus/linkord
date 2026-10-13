@@ -22,7 +22,7 @@ export function MessageMedia({ attachments }: { attachments: ChatAttachmentData[
 
   const { visual, files } = splitAttachments(attachments);
   const openAt = (index: number) => viewer.open(visual.map((a) => ({ src: `/uploads/${a.id}`, name: a.name })), index);
-  const cellButton = 'block cursor-zoom-in overflow-hidden bg-white/[0.04] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-inset focus-visible:ring-ring/60';
+  const cellButton = 'block cursor-zoom-in overflow-hidden bg-fill-subtle focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-inset focus-visible:ring-ring/60';
 
   let pictures = null;
   if (visual.length === 1) {

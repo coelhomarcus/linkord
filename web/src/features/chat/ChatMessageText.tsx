@@ -46,7 +46,7 @@ function renderInline(nodes: Inline[], ctx: RenderContext): ReactNode[] {
   return nodes.map((node, index) => {
     switch (node.type) {
       case 'text': return node.text;
-      case 'code': return <code key={index} className="rounded bg-white/10 px-1 py-0.5 font-mono text-[0.875em]">{node.text}</code>;
+      case 'code': return <code key={index} className="rounded bg-fill-active px-1 py-0.5 font-mono text-[0.875em]">{node.text}</code>;
       case 'link': return <a key={index} href={node.url} target="_blank" rel="noopener noreferrer" className="break-all text-primary hover:underline">{node.url}</a>;
       case 'mention': return <Mention key={index} name={node.name} ctx={ctx} />;
       case 'bold': return <strong key={index} className="font-semibold text-text-primary">{renderInline(node.children, ctx)}</strong>;
@@ -77,7 +77,7 @@ function CodeBlock({ code, lang }: { code: string; lang: string | null }) {
     return () => { cancelled = true; };
   }, [cacheKey, code, lang]);
 
-  const frame = 'my-1 max-w-full overflow-x-auto rounded-md border border-white/10 bg-black/30 text-[0.875rem] leading-relaxed';
+  const frame = 'my-1 max-w-full overflow-x-auto rounded-md border border-border bg-black/30 text-[0.875rem] leading-relaxed';
   // shiki escapes the source itself; only its own fixed markup wraps it
   if (html) return <div className={cn(frame, '[&_pre]:bg-transparent! [&_pre]:p-3')} dangerouslySetInnerHTML={{ __html: html }} />;
   return <pre className={cn(frame, 'p-3 font-mono')}><code>{code}</code></pre>;
@@ -107,7 +107,7 @@ export function ChatMessageText({ text, mentionLookup, myUserId, onOpenProfile }
           case 'code':
             return <CodeBlock key={index} code={block.code} lang={block.lang} />;
           case 'quote':
-            return <blockquote key={index} className="my-0.5 whitespace-pre-wrap wrap-break-word border-l-4 border-white/20 pl-3 text-text-muted">{renderInline(block.children, ctx)}</blockquote>;
+            return <blockquote key={index} className="my-0.5 whitespace-pre-wrap wrap-break-word border-l-4 border-border-strong pl-3 text-text-muted">{renderInline(block.children, ctx)}</blockquote>;
           case 'list': {
             const List = block.ordered ? 'ol' : 'ul';
             return (

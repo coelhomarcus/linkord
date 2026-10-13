@@ -96,7 +96,7 @@ export function GroupsPage() {
             </tbody>
           </AdminTable>
         ) : (
-          <ul className="flex flex-col divide-y divide-white/5 rounded-xl border border-white/10">
+          <ul className="flex flex-col divide-y divide-border-subtle rounded-xl border border-border">
             {list.items.map((g) => (
               <li key={g.id} className="flex flex-col gap-2 p-3">
                 <div className="flex items-center gap-2">

@@ -16,7 +16,7 @@ export function AdminSection({ id, title, description, danger, children, classNa
 }) {
   const headingId = useId();
   return (
-    <section id={id} aria-labelledby={headingId} className={cn('flex scroll-mt-4 flex-col gap-3 border-t border-white/10 pt-6 first:border-t-0 first:pt-0', className)}>
+    <section id={id} aria-labelledby={headingId} className={cn('flex scroll-mt-4 flex-col gap-3 border-t border-border pt-6 first:border-t-0 first:pt-0', className)}>
       <div className="flex flex-col gap-0.5">
         <h3 id={headingId} className={cn('text-title font-semibold', danger ? 'text-red-text' : 'text-text-primary')}>{title}</h3>
         {description && <p className="text-label text-text-muted">{description}</p>}
@@ -28,7 +28,7 @@ export function AdminSection({ id, title, description, danger, children, classNa
 
 /** "label → value" rows: the metadata of an entity, aligned. */
 export function AdminFields({ children }: { children: ReactNode }) {
-  return <dl className="flex flex-col divide-y divide-white/5">{children}</dl>;
+  return <dl className="flex flex-col divide-y divide-border-subtle">{children}</dl>;
 }
 
 export function AdminFieldRow({ label, children }: { label: string; children: ReactNode }) {

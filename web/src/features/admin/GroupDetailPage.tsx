@@ -126,7 +126,7 @@ function GroupDetail({ id }: { id: string }) {
 
       {tab === 'members' && (
         <AdminSection title="Membros" description="Quem participa do grupo. Você consulta e administra sem entrar na conversa.">
-          <ul className="flex flex-col divide-y divide-white/5">
+          <ul className="flex flex-col divide-y divide-border-subtle">
             {members.map((m) => (
               <li key={m.user.id} className="flex items-center gap-3 py-2.5">
                 <Avatar id={m.user.id} name={m.user.displayName} avatar={m.user.avatar} avatarColor={m.user.avatarColor} size={32} />

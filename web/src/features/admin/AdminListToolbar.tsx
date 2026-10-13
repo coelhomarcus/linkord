@@ -4,7 +4,7 @@ import { ChevronDown, Search } from 'lucide-react';
 import { Button } from '@/shared/ui/primitives/button';
 import { cn } from '@/shared/lib/utils';
 
-const FIELD = 'h-9 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 text-label text-text-primary outline-none focus-visible:ring-2 focus-visible:ring-ring';
+const FIELD = 'h-9 rounded-lg border border-border bg-fill-subtle px-2.5 text-label text-text-primary outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
 export function AdminSelectField<T extends string>({ label, value, onChange, options }: {
   label: string;
@@ -53,7 +53,7 @@ export function AdminListToolbar({ search, filters, advanced, advancedActive, su
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-end gap-3">
         {search && (
-          <div className="flex h-9 min-w-56 flex-1 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3">
+          <div className="flex h-9 min-w-56 flex-1 items-center gap-2 rounded-lg border border-border bg-fill-subtle px-3">
             <Search size={15} aria-hidden className="flex-none text-text-muted" />
             <input
               value={search.value}

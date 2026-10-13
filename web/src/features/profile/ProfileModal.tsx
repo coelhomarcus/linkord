@@ -88,7 +88,7 @@ export function ProfileModal({ userId, onClose }: ProfileModalProps) {
               onBannerClick={user.banner ? () => setLightboxImage({ src: user.banner, kind: 'banner' }) : undefined}
               onAvatarClick={user.avatar ? () => setLightboxImage({ src: user.avatar, kind: 'avatar' }) : undefined}
             />
-            <div className="flex items-start justify-between gap-3 border-t border-white/10 px-6 py-4">
+            <div className="flex items-start justify-between gap-3 border-t border-border px-6 py-4">
               <div className="min-w-0 flex-1">
                 <ProfileActions userId={user.id} username={user.username} displayName={user.displayName} onNavigate={onClose} className="p-0" />
               </div>

@@ -71,7 +71,7 @@ export function ChatAttachment({ attachment, edgeToEdge }: ChatAttachmentProps) 
             style={{ maxWidth }}
             className={cn(
               'block h-auto max-h-80 max-w-full object-contain',
-              edgeToEdge ? 'rounded-2xl' : 'rounded-md border border-white/10'
+              edgeToEdge ? 'rounded-2xl' : 'rounded-md border border-border'
             )}
           />
         </button>

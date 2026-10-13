@@ -51,19 +51,19 @@ function ConversationRow({ conversation, active, onClick }: {
           // border and no accent color — the color is reserved for actual
           // brand moments, not "you are here" state.
           active
-            ? 'border-transparent bg-white/10 text-text-primary shadow-[inset_0_1px_0_rgb(255_255_255_/_0.06)]'
-            : 'border-transparent text-text-secondary hover:border-white/10 hover:bg-white/[0.045]'
+            ? 'cutout-active border-transparent bg-fill-active text-text-primary shadow-[inset_0_1px_0_rgb(255_255_255_/_0.06)]'
+            : 'cutout border-transparent text-text-secondary hover:cutout-subtle hover:border-border hover:bg-fill-subtle'
         )}
       >
         {conversation.type === 'direct' && other ? (
           <div className="relative flex-none">
             <Avatar id={other.id} name={other.displayName} avatar={other.avatar} avatarColor={other.avatarColor} size={44} />
-            <span className={cn('absolute -bottom-0.5 -right-0.5 size-3.5 rounded-full border-2 border-[rgb(14_14_16)]', online ? 'bg-green' : 'bg-text-muted')} />
+            <span className={cn('absolute -bottom-0.5 -right-0.5 size-3.5 rounded-full border-2 border-(--cutout)', online ? 'bg-green' : 'bg-text-muted')} />
           </div>
         ) : (
           <div className="relative flex-none">
             <GroupAvatar title={title} avatar={conversation.avatar} active={active} />
-            <span className="absolute -bottom-0.5 -right-0.5 grid size-4 place-items-center rounded-full border-2 border-[rgb(14_14_16)] bg-bg-tertiary text-text-secondary">
+            <span className="absolute -bottom-0.5 -right-0.5 grid size-4 place-items-center rounded-full border-2 border-(--cutout) bg-bg-tertiary text-text-secondary">
               <Users size={9} />
             </span>
           </div>
@@ -78,10 +78,10 @@ function ConversationRow({ conversation, active, onClick }: {
               <PhoneCall size={12} className="flex-none text-green" />
               <span className="flex items-center -space-x-1.5">
                 {callParticipants.slice(0, 4).map((p) => (
-                  <Avatar key={p.id} id={p.id} name={p.displayName} avatar={p.avatar} avatarColor={p.avatarColor} size={16} className="ring-2 ring-[rgb(14_14_16)]" />
+                  <Avatar key={p.id} id={p.id} name={p.displayName} avatar={p.avatar} avatarColor={p.avatarColor} size={16} className="ring-2 ring-(--cutout)" />
                 ))}
                 {callParticipants.length > 4 && (
-                  <span className="grid size-4 place-items-center rounded-full bg-bg-tertiary text-[9px] font-semibold text-text-secondary ring-2 ring-[rgb(14_14_16)]">
+                  <span className="grid size-4 place-items-center rounded-full bg-bg-tertiary text-[9px] font-semibold text-text-secondary ring-2 ring-(--cutout)">
                     +{callParticipants.length - 4}
                   </span>
                 )}
@@ -159,7 +159,7 @@ export function ConversationSidebar({ onOpenPalette, mobileRail }: ConversationS
             </div>
 
             <div className="flex min-h-0 flex-1 flex-col gap-3 pb-3 pl-3 pr-shell">
-              <div className="flex flex-none items-center gap-2 rounded-xl border border-white/10 bg-white/[0.045] px-3">
+              <div className="flex flex-none items-center gap-2 rounded-xl border border-border bg-fill-subtle px-3">
                 <Search size={15} className="text-text-muted" />
                 <input
                   value={query}
@@ -171,7 +171,7 @@ export function ConversationSidebar({ onOpenPalette, mobileRail }: ConversationS
                   type="button"
                   onClick={onOpenPalette}
                   aria-label={`Abrir busca rápida (${shortcutK})`}
-                  className="flex-none rounded border border-white/10 bg-black/20 px-1.5 py-0.5 text-[10px] font-medium text-text-muted transition-colors hover:text-text-secondary"
+                  className="flex-none rounded border border-border bg-black/20 px-1.5 py-0.5 text-[10px] font-medium text-text-muted transition-colors hover:text-text-secondary"
                 >
                   {shortcutK}
                 </button>

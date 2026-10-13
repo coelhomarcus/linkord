@@ -82,7 +82,7 @@ export function ChatSurface({ conversationId, onOpenProfile, surfaceId = 'main' 
       </ChatSurfaceWidthProvider>
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-0 bg-linear-to-t from-bg-primary to-transparent"
+        className="pointer-events-none absolute inset-x-0 bottom-0 bg-linear-to-t from-(--surface-base) to-transparent"
         style={{ height: composerHeight + STATUS_RAIL_HEIGHT + 24 }}
       />
       <div className="pointer-events-none absolute inset-x-0" style={{ bottom: composerHeight, height: STATUS_RAIL_HEIGHT }}>
@@ -94,7 +94,7 @@ export function ChatSurface({ conversationId, onOpenProfile, surfaceId = 'main' 
         </DirectComposerGate>
       </div>
       {dragActive && (
-        <div className="pointer-events-none absolute inset-0 z-10 m-2 flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-primary bg-bg-primary/90 text-text-primary">
+        <div className="pointer-events-none absolute inset-0 z-10 m-2 flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-primary bg-(--surface-base)/90 text-text-primary">
           <Upload size={28} className="text-primary" />
           <p className="text-body font-medium">Solte para anexar</p>
         </div>

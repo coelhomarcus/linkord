@@ -248,7 +248,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
 
   const content: ReactNode = conversation && (
     <>
-      <div className="flex flex-none items-center gap-2 border-b border-white/10 px-5 py-4">
+      <div className="flex flex-none items-center gap-2 border-b border-border px-5 py-4">
         <h2 className="flex-1 text-title font-semibold">Detalhes do grupo</h2>
         <CloseButton onClick={() => onOpenChange(false)} />
       </div>
@@ -271,7 +271,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
                     <button
                       type="button"
                       aria-label="Trocar foto do grupo"
-                      className="absolute -bottom-1 -right-1 grid size-6 place-items-center rounded-full border border-white/10 bg-[rgb(20_20_22)] text-text-secondary transition-colors hover:text-text-primary disabled:opacity-50"
+                      className="absolute -bottom-1 -right-1 grid size-6 place-items-center rounded-full border border-border bg-surface-overlay text-text-secondary transition-colors hover:text-text-primary disabled:opacity-50"
                     />
                   }
                 >
@@ -315,7 +315,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
                 onChange={(event) => setTitleDraft(event.target.value)}
                 onKeyDown={onTitleKeyDown}
                 maxLength={80}
-                className="border-white/10 bg-white/[0.04] text-center"
+                className="border-border bg-fill-subtle text-center"
               />
               <Button type="button" size="icon-sm" aria-label="Salvar nome" onClick={saveTitle} disabled={!titleDraft.trim()}>
                 <Check size={14} />
@@ -349,7 +349,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
           </div>
 
           {addOpen && (
-            <div className="flex flex-col gap-2 rounded-lg border border-white/10 bg-white/[0.03] p-2">
+            <div className="flex flex-col gap-2 rounded-lg border border-border bg-fill-subtle p-2">
               <p className="px-1 text-caption text-text-muted">Só entram no grupo ao aceitar o convite.</p>
               <FriendPicker selected={addSelected} onToggle={toggleAddCandidate} excludeIds={excludeIds} maxHeightClass="max-h-48" />
               <Button type="button" size="sm" onClick={() => void confirmInvite()} disabled={addSelected.size === 0 || inviting} className="mt-1">
@@ -364,11 +364,11 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
               const online = onlineUserIds.has(member.id);
               const isMe = member.id === state.me.userId;
               return (
-                <div key={member.id} className="group flex items-center gap-2.5 rounded-lg px-1.5 py-1.5 hover:bg-white/[0.04]">
+                <div key={member.id} className="group cutout flex items-center gap-2.5 rounded-lg px-1.5 py-1.5 hover:cutout-subtle hover:bg-fill-subtle">
                   <button type="button" onClick={() => onOpenProfile(member.id)} className="flex min-w-0 flex-1 items-center gap-2.5 text-left">
                     <div className="relative flex-none">
                       <Avatar id={member.id} name={member.displayName} avatar={member.avatar} avatarColor={member.avatarColor} size={34} />
-                      <span className={cn('absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2 border-[rgb(14_14_16)]', online ? 'bg-green' : 'bg-text-muted')} />
+                      <span className={cn('absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2 border-(--cutout)', online ? 'bg-green' : 'bg-text-muted')} />
                     </div>
                     <span className="min-w-0">
                       <span className="block truncate text-label font-medium">
@@ -424,7 +424,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
             <h3 className="text-label font-medium text-text-secondary">Convites enviados</h3>
             <div className="flex flex-col gap-1">
               {sent.items.map((entry) => (
-                <div key={entry.id} className="flex items-center gap-2.5 rounded-lg px-1.5 py-1.5 hover:bg-white/[0.04]">
+                <div key={entry.id} className="flex items-center gap-2.5 rounded-lg px-1.5 py-1.5 hover:bg-fill-subtle">
                   <Avatar id={entry.invitee.id} name={entry.invitee.displayName} avatar={entry.invitee.avatar} avatarColor={entry.invitee.avatarColor} size={34} />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-label font-medium">{entry.invitee.displayName}</span>
@@ -447,7 +447,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
         )}
       </div>
 
-      <div className="flex flex-none flex-col gap-2 border-t border-white/10 px-5 py-4">
+      <div className="flex flex-none flex-col gap-2 border-t border-border px-5 py-4">
         <Button type="button" variant="ghost" onClick={() => setConfirmLeave(true)} className="justify-start gap-2 text-text-secondary hover:text-text-primary">
           <LogOut size={15} />
           Sair do grupo
@@ -473,7 +473,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
           open={open && !!conversation}
           onOpenChange={onOpenChange}
           ariaLabel="Detalhes do grupo"
-          className="flex w-96 flex-col border-white/10 bg-[rgb(14_14_16)] text-text-primary"
+          className="flex w-96 flex-col text-text-primary"
         >
           {content}
         </Drawer>

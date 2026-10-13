@@ -44,7 +44,7 @@ export function NotificationList({ onSelect, onDismiss }: { onSelect: (entry: No
             type="button"
             onClick={() => onSelect(entry)}
             className={cn(
-              'flex w-full items-center gap-3 rounded-lg py-2 pl-2 pr-9 text-left transition-colors hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              'flex w-full items-center gap-3 rounded-lg py-2 pl-2 pr-9 text-left transition-colors hover:bg-fill-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
               !entry.read && 'bg-primary/[0.08]',
             )}
           >

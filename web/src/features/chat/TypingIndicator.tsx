@@ -38,7 +38,7 @@ export function TypingIndicator({ conversationId }: { conversationId: string }) 
           <TypingDots />
           <span className="flex flex-none items-center -space-x-1.5">
             {typingUsers.slice(0, MAX_AVATARS).map((user) => (
-              <Avatar key={user.id} id={user.id} name={user.displayName} avatar={user.avatar} avatarColor={user.avatarColor} size={16} className="ring-2 ring-[rgb(12_12_14)]" />
+              <Avatar key={user.id} id={user.id} name={user.displayName} avatar={user.avatar} avatarColor={user.avatarColor} size={16} className="ring-2 ring-surface-panel" />
             ))}
           </span>
           <span className="min-w-0 truncate">{label}</span>

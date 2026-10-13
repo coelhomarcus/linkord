@@ -170,7 +170,7 @@ function Shell() {
         onOpenChange={setSidebarOpen}
         openMobile={mobileShowSidebar}
         onOpenMobileChange={setMobileShowSidebar}
-        className="h-dvh bg-bg-primary text-text-primary"
+        className="h-dvh bg-bg-primary text-text-primary [--surface-base:var(--color-surface-app)]"
         style={{ '--sidebar-width': '20rem', '--sidebar-width-mobile': '24rem', '--sidebar-overlay-offset': '4rem' }}
       >
         <ReconnectBanner />
@@ -178,9 +178,9 @@ function Shell() {
         <AppNavigationRail onOpenProfile={setProfileUserId} onReturnToCall={handleReturnToCall} className="hidden md:flex" />
         <ConversationSidebar
           onOpenPalette={() => setPaletteOpen(true)}
-          mobileRail={<AppNavigationRail onOpenProfile={setProfileUserId} onReturnToCall={handleReturnToCall} className="border-r border-white/10" />}
+          mobileRail={<AppNavigationRail onOpenProfile={setProfileUserId} onReturnToCall={handleReturnToCall} className="border-r border-border" />}
         />
-        <AnimatedSidebarInset className="relative min-h-0 overflow-hidden bg-[rgb(10_10_12)] md:my-shell md:mr-shell md:rounded-2xl md:border md:border-white/10">
+        <AnimatedSidebarInset className="relative min-h-0 overflow-hidden bg-surface-panel [--surface-base:var(--color-surface-panel)] md:my-shell md:mr-shell md:rounded-2xl md:border md:border-border">
           <Routes>
             <Route
               path="/app/conversations/:conversationId?"
