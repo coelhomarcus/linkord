@@ -134,7 +134,7 @@ function GroupDetail({ id }: { id: string }) {
                   {m.user.displayName} <span className="text-text-muted">@{m.user.username}</span>
                 </Link>
                 {m.role === 'owner'
-                  ? <span className="text-caption text-primary">dono</span>
+                  ? <span className="text-caption text-accent-text">dono</span>
                   : <Button type="button" variant="ghost" size="xs" onClick={() => setDialog({ owner: m })}>Atribuir dono</Button>}
               </li>
             ))}

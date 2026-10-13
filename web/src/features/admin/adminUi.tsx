@@ -8,9 +8,9 @@ import type { AdminDetailStatus } from './useAdminDetail';
 
 const TONES: Record<string, string> = {
   active: 'bg-green/15 text-green', suspended: 'bg-red/15 text-red-text',
-  open: 'bg-yellow/15 text-yellow', reviewing: 'bg-primary/15 text-primary',
+  open: 'bg-yellow/15 text-yellow', reviewing: 'bg-primary/15 text-accent-text',
   resolved: 'bg-green/15 text-green', dismissed: 'bg-fill-active text-text-muted',
-  admin: 'bg-primary/15 text-primary', user: 'bg-fill-active text-text-muted',
+  admin: 'bg-primary/15 text-accent-text', user: 'bg-fill-active text-text-muted',
 };
 const LABELS: Record<string, string> = {
   active: 'Ativo', suspended: 'Suspenso', open: 'Aberta', reviewing: 'Em análise', resolved: 'Resolvida', dismissed: 'Dispensada',

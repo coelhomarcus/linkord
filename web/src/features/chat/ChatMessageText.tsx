@@ -32,7 +32,7 @@ function Mention({ name, ctx }: { name: string; ctx: RenderContext }) {
         // few px off the text baseline no matter how align-middle/a
         // manual translate tried to compensate.
         'inline-flex h-6 items-center gap-1 rounded px-1 align-middle font-medium',
-        isMe ? 'bg-yellow/25 text-yellow' : 'bg-primary/15 text-primary',
+        isMe ? 'bg-yellow/25 text-yellow' : 'bg-primary/15 text-accent-text',
         ctx.onOpenProfile && (isMe ? 'hover:bg-yellow/35' : 'hover:bg-primary/25')
       )}
     >
@@ -47,7 +47,7 @@ function renderInline(nodes: Inline[], ctx: RenderContext): ReactNode[] {
     switch (node.type) {
       case 'text': return node.text;
       case 'code': return <code key={index} className="rounded bg-fill-active px-1 py-0.5 font-mono text-[0.875em]">{node.text}</code>;
-      case 'link': return <a key={index} href={node.url} target="_blank" rel="noopener noreferrer" className="break-all text-primary hover:underline">{node.url}</a>;
+      case 'link': return <a key={index} href={node.url} target="_blank" rel="noopener noreferrer" className="break-all text-accent-text hover:underline">{node.url}</a>;
       case 'mention': return <Mention key={index} name={node.name} ctx={ctx} />;
       case 'bold': return <strong key={index} className="font-semibold text-text-primary">{renderInline(node.children, ctx)}</strong>;
       case 'italic': return <em key={index}>{renderInline(node.children, ctx)}</em>;
