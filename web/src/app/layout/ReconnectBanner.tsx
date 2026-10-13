@@ -8,7 +8,7 @@ export function ReconnectBanner() {
   const { state } = useRoom();
   if (!state.reconnecting) return null;
   return (
-    <div className="fixed bottom-4 left-4 z-60 flex max-w-[calc(100%-2rem)] select-none items-center gap-2 rounded-full border border-strong bg-bg-floating/90 py-2.5 pl-3 pr-4 text-label font-medium text-text-primary shadow-popover backdrop-blur-xl">
+    <div className="fixed bottom-4 left-4 z-60 flex max-w-[calc(100%-2rem)] select-none items-center gap-2 rounded-full border border-border-strong bg-bg-floating/90 py-2.5 pl-3 pr-4 text-label font-medium text-text-primary shadow-popover backdrop-blur-xl">
       <span className="relative flex size-2.5 flex-none">
         <span className="absolute inline-flex size-full animate-ping rounded-full bg-red opacity-75" />
         <span className="relative inline-flex size-2.5 rounded-full bg-red" />

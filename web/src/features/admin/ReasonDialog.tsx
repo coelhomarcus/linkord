@@ -73,7 +73,7 @@ export function ReasonDialog({ open, onOpenChange, title, description, confirmLa
           )}
           {error && <p role="alert" className="text-label text-red-text">{error}</p>}
         </div>
-        <DialogFooter className="border-subtle bg-bg-tertiary/60 px-6 py-4">
+        <DialogFooter className="border-border-subtle bg-bg-tertiary/60 px-6 py-4">
           <Button type="button" variant="ghost" disabled={busy} onClick={close}>Cancelar</Button>
           <Button type="button" variant={destructive ? 'destructive' : 'default'} disabled={!reasonOk || !confirmOk || busy} onClick={() => void submit()}>
             {busy ? 'Aguarde…' : confirmLabel}

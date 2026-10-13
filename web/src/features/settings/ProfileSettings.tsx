@@ -273,7 +273,7 @@ export function ProfileSettings() {
         </p>
 
         {conflict && (
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-strong bg-bg-tertiary px-4 py-3 text-label text-text-secondary">
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border-strong bg-bg-tertiary px-4 py-3 text-label text-text-secondary">
             <span>Este perfil foi atualizado em outro lugar enquanto você editava.</span>
             <Button type="button" variant="ghost" size="sm" onClick={applyIncoming}>
               <span>Usar valores salvos</span>
@@ -284,7 +284,7 @@ export function ProfileSettings() {
         {showBar && (
           <div
             className={cn(
-              '-mx-4 sticky flex flex-wrap items-center justify-between gap-3 border-t border-strong bg-bg-modal/95 px-4 pt-3 backdrop-blur @[520px]:-mx-6 @[520px]:px-6 @[960px]:-mx-8 @[960px]:px-8',
+              '-mx-4 sticky flex flex-wrap items-center justify-between gap-3 border-t border-border-strong bg-bg-modal/95 px-4 pt-3 backdrop-blur @[520px]:-mx-6 @[520px]:px-6 @[960px]:-mx-8 @[960px]:px-8',
               // pb instead of py: the safe-area addition only belongs on the
               // edge that's actually near the device's bottom inset.
               'pb-[max(0.75rem,env(safe-area-inset-bottom))]',

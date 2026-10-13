@@ -72,7 +72,7 @@ export function ImageCropDialog({ open, imageSrc, aspect, cropShape, title, onCa
           </div>
         </div>
 
-        <DialogFooter className="border-subtle bg-bg-tertiary/60 px-6 py-4">
+        <DialogFooter className="border-border-subtle bg-bg-tertiary/60 px-6 py-4">
           <Button type="button" variant="ghost" onClick={onCancel}>
             <span>Cancelar</span>
           </Button>

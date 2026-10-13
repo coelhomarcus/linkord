@@ -30,7 +30,7 @@ export function ConfirmDialog({
         <div className="min-h-0 overflow-y-auto px-6 py-4">
           <DialogDescription className="select-none text-body text-text-secondary">{description}</DialogDescription>
         </div>
-        <DialogFooter className="border-subtle bg-bg-tertiary/60 px-6 py-4">
+        <DialogFooter className="border-border-subtle bg-bg-tertiary/60 px-6 py-4">
           <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
             <span>{cancelLabel}</span>
           </Button>

@@ -34,7 +34,7 @@ export function UnsavedProfileChangesDialog({
             just the base flex-col (a plain flex-col here left sm:flex-row
             winning at anything sm-and-up and silently squashing/hiding two
             of the three buttons — caught only by looking at a screenshot). */}
-        <DialogFooter className="flex-col gap-2 border-subtle bg-bg-tertiary/60 px-6 py-4 sm:flex-col sm:justify-start">
+        <DialogFooter className="flex-col gap-2 border-border-subtle bg-bg-tertiary/60 px-6 py-4 sm:flex-col sm:justify-start">
           <Button type="button" className="w-full" onClick={onSaveAndLeave} disabled={saving}>
             <span>{saving ? 'Salvando…' : 'Salvar e sair'}</span>
           </Button>

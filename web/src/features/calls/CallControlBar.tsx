@@ -77,12 +77,12 @@ export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(fu
       )}
     >
       {reconnecting && (
-        <div className="rounded-md border border-strong bg-bg-floating px-3 py-2 text-label text-text-secondary shadow-popover">
+        <div className="rounded-md border border-border-strong bg-bg-floating px-3 py-2 text-label text-text-secondary shadow-popover">
           Reconectando à chamada…
         </div>
       )}
       {state.shareError && (
-        <div className="flex max-w-[calc(100vw-2rem)] items-start gap-2 rounded-md border border-strong bg-bg-floating px-3 py-2 text-label text-text-secondary shadow-popover md:max-w-100">
+        <div className="flex max-w-[calc(100vw-2rem)] items-start gap-2 rounded-md border border-border-strong bg-bg-floating px-3 py-2 text-label text-text-secondary shadow-popover md:max-w-100">
           <span className="min-w-0 flex-1">{state.shareError}</span>
           <CloseButton size="xs" label="Dispensar aviso" onClick={() => dispatch({ type: 'SET_SHARE_ERROR', message: null })} />
         </div>
