@@ -12,7 +12,7 @@ export interface SettingsIconHandle {
 }
 
 interface SettingsIconProps extends HTMLAttributes<HTMLSpanElement> {
-  size?: number;
+  size?: number | string;
 }
 
 const SettingsIcon = forwardRef<SettingsIconHandle, SettingsIconProps>(

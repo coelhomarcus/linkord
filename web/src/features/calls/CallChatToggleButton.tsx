@@ -1,4 +1,4 @@
-import { MessageCircle } from 'lucide-react';
+import { MessageCircle } from '@/shared/ui/icons';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
 import { buttonVariants } from '@/shared/ui/primitives/button';
 import { cn } from '@/shared/lib/utils';

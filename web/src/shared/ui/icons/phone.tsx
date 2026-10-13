@@ -11,7 +11,7 @@ export interface PhoneIconHandle {
 }
 
 interface PhoneIconProps extends HTMLAttributes<HTMLSpanElement> {
-  size?: number;
+  size?: number | string;
 }
 
 const PHONE_VARIANTS: Variants = {

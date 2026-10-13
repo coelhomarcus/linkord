@@ -1,4 +1,4 @@
-import { Plus } from 'lucide-react';
+import { Plus } from '@/shared/ui/icons';
 import { cn } from '@/shared/lib/utils';
 
 // A short fixed set shown first, instead of mounting the full picker (and

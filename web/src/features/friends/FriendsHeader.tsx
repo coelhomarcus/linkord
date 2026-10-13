@@ -1,6 +1,5 @@
 import { Link, useNavigate } from 'react-router';
-import { UserPlusIcon } from '@/shared/ui/icons/user-plus';
-import { useAnimatedIcon } from '@/shared/ui/icons/useAnimatedIcon';
+import { UserPlus } from '@/shared/ui/icons';
 import { buttonVariants } from '@/shared/ui/primitives/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/primitives/select';
 import { friendsView } from '@/shared/lib/routes';
@@ -77,16 +76,14 @@ export function FriendsModeSelect({ view }: { view: FriendsView }) {
 }
 
 export function AddFriendButton({ active, iconOnly }: { active: boolean; iconOnly?: boolean }) {
-  const { ref, triggerProps } = useAnimatedIcon();
   return (
     <Link
-      {...triggerProps}
       to={friendsView('add')}
       aria-current={active ? 'page' : undefined}
       aria-label="Adicionar amigo"
       className={cn(buttonVariants({ size: iconOnly ? 'icon-sm' : 'default' }), active && 'ring-2 ring-primary/40')}
     >
-      <UserPlusIcon ref={ref} size={16} aria-hidden />
+      <UserPlus size={16} aria-hidden />
       {!iconOnly && <span>Adicionar amigo</span>}
     </Link>
   );

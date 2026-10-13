@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Ban, Loader2, MessageCircle, MoreHorizontal, Pencil, UserCheck, UserPlus } from 'lucide-react';
+import { Ban, Loader2, MoreHorizontal, Pencil, UserCheck } from 'lucide-react';
+import { MessageCircle, UserPlus } from '@/shared/ui/icons';
 import { useRoom } from '@/state/RoomContext';
 import {
   acceptFriendRequest, blockUser, cancelFriendRequest, declineFriendRequest, removeFriend, sendFriendRequest, unblockUser,

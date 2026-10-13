@@ -2,7 +2,8 @@
 // beui.dev/components/blocks/command-palette
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { ArrowLeft, ChevronRight, Search, type LucideIcon } from "lucide-react";
+import { ArrowLeft, ChevronRight, Search } from "lucide-react";
+import type { IconComponent } from "@/shared/ui/icons";
 import {
   type ReactNode,
   useCallback,
@@ -27,7 +28,7 @@ export type CommandItem = {
   group?: string;
   hint?: string;
   keywords?: string[];
-  icon?: LucideIcon;
+  icon?: IconComponent;
   /** A richer leading visual (a user/group avatar) instead of `icon` — takes
    * precedence over it when both are given. Expected to already be sized for
    * the row (see the h-5 w-5 wrapper below); callers own their own shape/fit. */
@@ -396,7 +397,7 @@ export function CommandPalette({
                                   {it.avatar}
                                 </span>
                               ) : Icon ? (
-                                <Icon className="relative z-10 h-4 w-4 flex-none" />
+                                <Icon size={16} className="relative z-10 flex-none" />
                               ) : hasIcons ? (
                                 <span className="relative z-10 h-4 w-4 flex-none" />
                               ) : null}

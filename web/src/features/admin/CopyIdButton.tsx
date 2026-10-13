@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Check, Copy } from 'lucide-react';
+import { Check, Copy } from '@/shared/ui/icons';
 import { Button } from '@/shared/ui/primitives/button';
 
 /** Copies an entity id. Its own button (never inside a link): the row link opens

@@ -2,10 +2,9 @@ import { useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { Pin, Search, Users, PhoneCall } from 'lucide-react';
+import { PanelLeftClose, Plus } from '@/shared/ui/icons';
 import { AnimatedSidebar, useAnimatedSidebar } from '@/shared/ui/motion/animated-sidebar';
-import { AnimatedIconButton } from '@/shared/ui/icons/AnimatedIconButton';
-import { PlusIcon } from '@/shared/ui/icons/plus';
-import { PanelLeftCloseIcon } from '@/shared/ui/icons/panel-left-close';
+import { Button } from '@/shared/ui/primitives/button';
 import { Avatar } from '@/shared/Avatar';
 import { cn } from '@/shared/lib/utils';
 import { shortcutHint } from '@/shared/lib/platform';
@@ -150,9 +149,13 @@ export function ConversationSidebar({ onOpenPalette, mobileRail }: ConversationS
           <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
             <div className="flex flex-none items-center gap-2 px-4 py-4">
               <h1 className="min-w-0 flex-1 truncate text-title font-semibold">Conversas</h1>
-              <AnimatedIconButton type="button" size="icon-sm" aria-label="Criar grupo" onClick={() => setGroupOpen(true)} className="flex-none" icon={PlusIcon} />
+              <Button type="button" size="icon-sm" aria-label="Criar grupo" onClick={() => setGroupOpen(true)} className="flex-none">
+                <Plus size={16} />
+              </Button>
               {!isOverlay && (
-                <AnimatedIconButton type="button" variant="ghost" size="icon-sm" aria-label="Ocultar lista de conversas" onClick={toggleSidebar} className="flex-none text-text-muted hover:text-text-primary" icon={PanelLeftCloseIcon} />
+                <Button type="button" variant="ghost" size="icon-sm" aria-label="Ocultar lista de conversas" onClick={toggleSidebar} className="flex-none text-text-muted hover:text-text-primary">
+                  <PanelLeftClose size={16} />
+                </Button>
               )}
             </div>
 

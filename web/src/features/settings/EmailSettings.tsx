@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Check, CheckCircle2, Loader2, Mail } from 'lucide-react';
+import { CheckCircle2, Loader2, Mail } from 'lucide-react';
+import { Check } from '@/shared/ui/icons';
 import { useAuth } from '@/state/AuthContext';
 import { Label } from '@/shared/ui/primitives/label';
 import { Button } from '@/shared/ui/primitives/button';
