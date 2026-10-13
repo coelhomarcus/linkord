@@ -23,6 +23,7 @@ import { messagePermissions } from './messageActions';
 import { MessageReactions } from './MessageReactions';
 import { withPendingReactions } from './reactionState';
 import { CloseButton } from '@/shared/ui/primitives/close-button';
+import { useMessageDeleteConfirm } from './useMessageDeleteConfirm';
 
 const DELETED_AUTHOR_NAME = 'Usuário apagado';
 
@@ -94,13 +95,14 @@ function PendingStatus({ entry, offline, onRetry, onDiscard }: { entry: OutboxEn
 
 export function MessageRow({ message, showHeader, highlighted, allUsers, mentionLookup, onOpenProfile, onReply, onJumpTo, pending }: MessageRowProps) {
   const {
-    state, deleteChatMessage, editChatMessage, reactToChatMessage, editingMsgId, setEditingMsgId, retryPendingMessage, discardPendingMessage,
+    state, editChatMessage, reactToChatMessage, editingMsgId, setEditingMsgId, retryPendingMessage, discardPendingMessage,
     deletingMsgIds, messageActionErrors, dismissMessageActionError, pendingReactions, openReactionParticipants,
   } = useRoom();
   const [editText, setEditText] = useState(message.text);
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
+  const { requestDelete, confirmDialog } = useMessageDeleteConfirm();
   const isMine = message.id === state.me.userId;
   const can = messagePermissions(message, { userId: state.me.userId, role: state.me.role });
   const canDelete = can.delete;
@@ -301,7 +303,7 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
           </Button>
         )}
         {canDelete && (
-          <Button type="button" variant="ghost" size="icon-xs" aria-label="Apagar" disabled={deleting} onClick={() => void deleteChatMessage(message.msgId)} className="hover:bg-red/10 hover:text-red">
+          <Button type="button" variant="ghost" size="icon-xs" aria-label="Apagar" disabled={deleting} onClick={(event) => requestDelete(message.msgId, event.shiftKey)} className="hover:bg-red/10 hover:text-red">
             <Trash2 size={13} />
           </Button>
         )}
@@ -325,10 +327,11 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
             {can.copy && <DropdownMenuItem onClick={copyText}><Copy size={14} />Copiar texto</DropdownMenuItem>}
             {can.edit && <DropdownMenuItem onClick={startEdit}><Pencil size={14} />Editar</DropdownMenuItem>}
             {canReport && <DropdownMenuItem onClick={() => setReportOpen(true)}><Flag size={14} />Denunciar</DropdownMenuItem>}
-            {canDelete && <DropdownMenuItem variant="destructive" disabled={deleting} onClick={() => void deleteChatMessage(message.msgId)}><Trash2 size={14} />Apagar</DropdownMenuItem>}
+            {canDelete && <DropdownMenuItem variant="destructive" disabled={deleting} onClick={(event) => requestDelete(message.msgId, event.shiftKey)}><Trash2 size={14} />Apagar</DropdownMenuItem>}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>}
+      {confirmDialog}
       {reportOpen && (
         <ReportDialog target={{ type: 'message', id: String(message.msgId), label: `mensagem de ${displayedName}` }} open onOpenChange={setReportOpen} />
       )}

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, screen } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { initialRoomState } from '@/state/roomReducer';
 import { renderWithRoom } from '@tests/fixtures/roomContextFixture';
@@ -86,7 +86,61 @@ describe('MessageRow', () => {
 
     expect(screen.getByRole('button', { name: 'Editar' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Apagar' }));
+    expect(deleteChatMessage).not.toHaveBeenCalled();
+    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Apagar' }));
     expect(deleteChatMessage).toHaveBeenCalledWith(1);
+  });
+
+  it('shift-clicking delete skips the confirmation', async () => {
+    const user = userEvent.setup();
+    const deleteChatMessage = vi.fn();
+    const message = makeMessage({ id: 'user-1' });
+    const state = { ...initialRoomState, me: { ...initialRoomState.me, userId: 'user-1' } };
+
+    renderWithRoom(
+      <MessageRow
+        message={message}
+        showHeader
+        highlighted={false}
+        allUsers={new Map()}
+        mentionLookup={new Map()}
+        onOpenProfile={noop}
+        onReply={noop}
+        onJumpTo={noop}
+      />,
+      { state, deleteChatMessage }
+    );
+
+    await user.keyboard('{Shift>}');
+    await user.click(screen.getByRole('button', { name: 'Apagar' }));
+    await user.keyboard('{/Shift}');
+    expect(deleteChatMessage).toHaveBeenCalledWith(1);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('cancelling the confirmation keeps the message', async () => {
+    const user = userEvent.setup();
+    const deleteChatMessage = vi.fn();
+    const message = makeMessage({ id: 'user-1' });
+    const state = { ...initialRoomState, me: { ...initialRoomState.me, userId: 'user-1' } };
+
+    renderWithRoom(
+      <MessageRow
+        message={message}
+        showHeader
+        highlighted={false}
+        allUsers={new Map()}
+        mentionLookup={new Map()}
+        onOpenProfile={noop}
+        onReply={noop}
+        onJumpTo={noop}
+      />,
+      { state, deleteChatMessage }
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Apagar' }));
+    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Cancelar' }));
+    expect(deleteChatMessage).not.toHaveBeenCalled();
   });
 
   it('clicking reply calls onReply', async () => {
