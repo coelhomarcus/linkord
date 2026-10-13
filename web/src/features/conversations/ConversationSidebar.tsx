@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router';
-import { PanelLeftClose, Pin, Plus, Search, Users, PhoneCall } from 'lucide-react';
+import { Pin, Search, Users, PhoneCall } from 'lucide-react';
 import { AnimatedSidebar, useAnimatedSidebar } from '@/shared/ui/motion/animated-sidebar';
-import { Button } from '@/shared/ui/primitives/button';
+import { AnimatedIconButton } from '@/shared/ui/icons/AnimatedIconButton';
+import { PlusIcon } from '@/shared/ui/icons/plus';
+import { PanelLeftCloseIcon } from '@/shared/ui/icons/panel-left-close';
 import { Avatar } from '@/shared/Avatar';
 import { cn } from '@/shared/lib/utils';
 import { shortcutHint } from '@/shared/lib/platform';
@@ -148,13 +150,9 @@ export function ConversationSidebar({ onOpenPalette, mobileRail }: ConversationS
           <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
             <div className="flex flex-none items-center gap-2 px-4 py-4">
               <h1 className="min-w-0 flex-1 truncate text-title font-semibold">Conversas</h1>
-              <Button type="button" size="icon-sm" aria-label="Criar grupo" onClick={() => setGroupOpen(true)} className="flex-none">
-                <Plus size={16} />
-              </Button>
+              <AnimatedIconButton type="button" size="icon-sm" aria-label="Criar grupo" onClick={() => setGroupOpen(true)} className="flex-none" icon={PlusIcon} />
               {!isOverlay && (
-                <Button type="button" variant="ghost" size="icon-sm" aria-label="Ocultar lista de conversas" onClick={toggleSidebar} className="flex-none text-text-muted hover:text-text-primary">
-                  <PanelLeftClose size={16} />
-                </Button>
+                <AnimatedIconButton type="button" variant="ghost" size="icon-sm" aria-label="Ocultar lista de conversas" onClick={toggleSidebar} className="flex-none text-text-muted hover:text-text-primary" icon={PanelLeftCloseIcon} />
               )}
             </div>
 
