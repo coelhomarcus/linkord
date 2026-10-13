@@ -56,12 +56,19 @@
   --color-red-hover: oklch(52.00% 0.1973 27.69);
   --color-red-text: oklch(74.00% 0.1400 27.69);
   --color-yellow: oklch(82.03% 0.1392 79.40);
-  --color-fuchsia: #eb459e;
-  --color-orange: #e67e22;
-  --color-purple: #9b59b6;
-  --color-teal: #11806a;
-  --color-blue: #206694;
   --color-input-focus: #00a8fc;
+
+  /* one lightness and chroma, only the hue moves, so no colour shouts over
+     another and white initials clear 4.5:1 on all of them (chroma is capped
+     where a hue runs out of sRGB gamut) */
+  --color-avatar-indigo: oklch(55% 0.150 275);
+  --color-avatar-green: oklch(55% 0.150 150);
+  --color-avatar-red: oklch(55% 0.150 25);
+  --color-avatar-fuchsia: oklch(55% 0.150 345);
+  --color-avatar-orange: oklch(55% 0.144 50);
+  --color-avatar-purple: oklch(55% 0.150 310);
+  --color-avatar-teal: oklch(55% 0.094 190);
+  --color-avatar-blue: oklch(55% 0.138 245);
 
   /* badges and keyboard hints only: below this nothing is comfortably readable */
   --text-micro: 0.6875rem;
