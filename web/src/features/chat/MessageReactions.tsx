@@ -36,7 +36,7 @@ export function MessageReactions({ reactions, myUserId, allUsers, onToggle }: Me
                   onClick={() => onToggle(emoji)}
                   className={cn(
                     'flex h-6 items-center gap-1 rounded-full border px-1.5 text-label transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50',
-                    mine ? 'border-primary/50 bg-primary/15 text-text-primary' : 'border-white/10 bg-white/[0.04] text-text-secondary hover:bg-white/[0.08]'
+                    mine ? 'border-primary/50 bg-primary/15 text-text-primary' : 'border-border bg-fill-subtle text-text-secondary hover:bg-fill-hover'
                   )}
                 />
               }

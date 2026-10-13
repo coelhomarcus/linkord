@@ -54,8 +54,8 @@ export function ReportDialog({ target, open, onOpenChange }: {
 
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!next) close(); }}>
-      <DialogContent className="max-w-md border-white/10 bg-[rgb(18_18_20)] p-0 text-text-primary">
-        <DialogHeader className="border-b border-white/10 px-5 py-4">
+      <DialogContent className="max-w-md p-0 text-text-primary">
+        <DialogHeader className="border-b border-border px-5 py-4">
           <DialogTitle className="flex items-center gap-2 text-title">
             <Flag size={17} />
             Denunciar {noun}
@@ -82,10 +82,10 @@ export function ReportDialog({ target, open, onOpenChange }: {
                   onClick={() => setCategory(option.value)}
                   className={cn(
                     'flex items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-label transition-colors',
-                    category === option.value ? 'bg-primary/12 text-text-primary' : 'text-text-secondary hover:bg-white/[0.05]',
+                    category === option.value ? 'bg-primary/12 text-text-primary' : 'text-text-secondary hover:bg-fill-hover',
                   )}
                 >
-                  <span className={cn('grid size-4 place-items-center rounded-full border', category === option.value ? 'border-primary' : 'border-white/20')}>
+                  <span className={cn('grid size-4 place-items-center rounded-full border', category === option.value ? 'border-primary' : 'border-border-strong')}>
                     {category === option.value && <span className="size-2 rounded-full bg-primary" />}
                   </span>
                   {option.label}
@@ -99,12 +99,12 @@ export function ReportDialog({ target, open, onOpenChange }: {
               rows={3}
               placeholder="Detalhes (opcional)"
               aria-label="Detalhes"
-              className="resize-none border-white/10 bg-white/[0.04]"
+              className="resize-none border-border bg-fill-subtle"
             />
             {error && <p role="alert" className="text-label text-red-text">{error}</p>}
           </div>
         )}
-        <DialogFooter className="border-t border-white/10 px-5 py-4">
+        <DialogFooter className="border-t border-border px-5 py-4">
           {status === 'sent' ? (
             <Button type="button" onClick={close}>Fechar</Button>
           ) : (

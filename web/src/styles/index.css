@@ -3,32 +3,44 @@
 @import "shadcn/tailwind.css";
 
 @theme {
-  --color-surface-000: oklch(7.20% 0.0040 275.00);
-  --color-surface-100: oklch(10.80% 0.0040 275.00);
-  --color-surface-200: oklch(14.80% 0.0040 275.00);
-  --color-surface-300: oklch(18.70% 0.0040 275.00);
-  --color-surface-400: oklch(23.50% 0.0040 275.00);
-  --color-surface-500: oklch(30.00% 0.0040 275.00);
+  /* evenly spaced steps that stay apart on a dim screen; the base stays off
+     pure black so near-white text doesn't halo against it */
+  --color-surface-000: oklch(16.00% 0.0040 275.00);
+  --color-surface-100: oklch(19.50% 0.0040 275.00);
+  --color-surface-200: oklch(23.00% 0.0040 275.00);
+  --color-surface-300: oklch(26.50% 0.0040 275.00);
+  --color-surface-400: oklch(31.00% 0.0040 275.00);
+  --color-surface-500: oklch(37.00% 0.0040 275.00);
 
-  --color-surface-main: var(--color-surface-000);
-  --color-surface-selected: var(--color-surface-400);
+  /* elevation by role: the shell lowest, the content panel on it, cards and
+     fields on that, menus and popovers above everything */
+  --color-surface-app: var(--color-surface-000);
+  --color-surface-panel: var(--color-surface-100);
+  --color-surface-raised: var(--color-surface-200);
+  --color-surface-overlay: var(--color-surface-300);
 
-  --color-bg-primary: var(--color-surface-main);
-  --color-bg-secondary: var(--color-surface-200);
-  --color-bg-tertiary: var(--color-surface-300);
-  --color-bg-textarea: var(--color-surface-200);
-  --color-bg-floating: var(--color-surface-300);
-  --color-bg-modal: var(--color-surface-200);
+  --color-bg-primary: var(--color-surface-app);
+  --color-bg-secondary: var(--color-surface-raised);
+  --color-bg-tertiary: var(--color-surface-overlay);
+  --color-bg-textarea: var(--color-surface-raised);
+  --color-bg-floating: var(--color-surface-overlay);
+  --color-bg-modal: var(--color-surface-raised);
   --color-bg-hover: var(--color-surface-400);
-  --color-bg-selected: var(--color-surface-selected);
+  --color-bg-selected: var(--color-surface-400);
   --color-bg-call: #000000;
 
-  --color-text-primary: oklch(99.11% 0.0015 279.30);
-  --color-text-secondary: oklch(84.80% 0.0023 279.30);
-  --color-text-muted: oklch(70.50% 0.0030 279.30);
+  /* translucent so one hover/selected state reads the same on every surface */
+  --color-fill-subtle: oklch(100% 0 0 / 0.035);
+  --color-fill-hover: oklch(100% 0 0 / 0.06);
+  --color-fill-active: oklch(100% 0 0 / 0.10);
 
-  --color-border-subtle: oklch(22.00% 0.0040 275.00);
-  --color-border-strong: oklch(28.00% 0.0040 275.00);
+  --color-text-primary: oklch(95.00% 0.0020 279.30);
+  --color-text-secondary: oklch(83.00% 0.0020 279.30);
+  --color-text-muted: oklch(71.00% 0.0020 279.30);
+
+  --color-border-subtle: oklch(100% 0 0 / 0.06);
+  --color-border-default: oklch(100% 0 0 / 0.10);
+  --color-border-strong: oklch(100% 0 0 / 0.16);
   --color-accent-primary: oklch(52.82% 0.2628 279.30);
   --color-border-accent: var(--color-accent-primary);
 
@@ -91,6 +103,21 @@
 @keyframes typing-dot {
   0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
   30% { transform: translateY(-2px); opacity: 1; }
+}
+
+/* A status dot's cutout ring has to match the row behind it, and a row's
+   hover/selected tint is translucent. These give the same tint, opaque, over
+   the surface a container names in --surface-base;
+   the dot then draws its ring in var(--cutout). Keep the percentages in step
+   with --color-fill-subtle / --color-fill-active. */
+@utility cutout {
+  --cutout: var(--surface-base);
+}
+@utility cutout-subtle {
+  --cutout: color-mix(in srgb, var(--surface-base), white 3.5%);
+}
+@utility cutout-active {
+  --cutout: color-mix(in srgb, var(--surface-base), white 10%);
 }
 
 html, body {
@@ -175,7 +202,7 @@ button:not(:disabled) {
   --accent-foreground: var(--color-text-primary);
   --destructive: var(--color-red);
   --destructive-foreground: #ffffff;
-  --border: var(--color-border-subtle);
+  --border: var(--color-border-default);
   --input: var(--color-border-strong);
   --ring: var(--color-blurple);
 }

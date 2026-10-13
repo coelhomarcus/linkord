@@ -58,11 +58,11 @@ export function GroupInvitationsView({ query, onQueryChange, onOpenProfile }: { 
     body = <p className="py-10 text-center text-label text-text-muted">{search ? 'Nenhum resultado para esta busca.' : 'Nenhum convite de grupo pendente.'}</p>;
   } else {
     body = (
-      <div className="flex flex-col divide-y divide-white/[0.06]">
+      <div className="flex flex-col divide-y divide-border-subtle">
         {list.items.map((entry) => {
           const busy = pending.isPending(entry.id);
           return (
-            <div key={entry.id} className="flex flex-wrap items-center gap-3 rounded-lg px-3 py-3 transition-colors hover:bg-white/[0.04]">
+            <div key={entry.id} className="flex flex-wrap items-center gap-3 rounded-lg px-3 py-3 transition-colors hover:bg-fill-subtle">
               <GroupAvatar title={entry.group.title} avatar={entry.group.avatar} size={40} />
               <div className="min-w-0 flex-1 basis-48">
                 <p className="truncate text-body font-medium text-text-primary">{entry.group.title}</p>

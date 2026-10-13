@@ -29,9 +29,9 @@ const MARKDOWN_STYLES = [
   '[&_a]:text-primary [&_a]:underline [&_a]:underline-offset-2',
   '[&_code]:rounded [&_code]:bg-black/30 [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[0.9em]',
   '[&_pre]:my-1 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-black/30 [&_pre]:p-2 [&_pre_code]:bg-transparent [&_pre_code]:p-0',
-  '[&_blockquote]:my-1 [&_blockquote]:border-l-2 [&_blockquote]:border-white/20 [&_blockquote]:pl-2 [&_blockquote]:text-text-muted',
-  '[&_table]:my-1 [&_table]:w-full [&_th]:text-left [&_td]:border-t [&_td]:border-white/10 [&_td]:py-1 [&_th]:py-1',
-  '[&_hr]:my-2 [&_hr]:border-white/10',
+  '[&_blockquote]:my-1 [&_blockquote]:border-l-2 [&_blockquote]:border-border-strong [&_blockquote]:pl-2 [&_blockquote]:text-text-muted',
+  '[&_table]:my-1 [&_table]:w-full [&_th]:text-left [&_td]:border-t [&_td]:border-border [&_td]:py-1 [&_th]:py-1',
+  '[&_hr]:my-2 [&_hr]:border-border',
 ].join(' ');
 
 function isMarkdownFile(name: string): boolean {
@@ -92,11 +92,11 @@ export function TextPreviewCard({ attachment, maxWidth }: { attachment: ChatAtta
   }, [preview, markdown]);
 
   return (
-    <div ref={rootRef} style={{ maxWidth }} className="w-full overflow-hidden rounded-xl border border-white/10 bg-bg-tertiary">
+    <div ref={rootRef} style={{ maxWidth }} className="w-full overflow-hidden rounded-xl border border-border bg-bg-tertiary">
       <FileAttachmentCard name={attachment.name} size={attachment.size} mime={attachment.mime} url={url} bordered={false} />
 
       {preview?.previewable && preview.content && (
-        <div className="border-t border-white/10">
+        <div className="border-t border-border">
           <div className="relative overflow-hidden px-3 py-2" style={{ maxHeight: expanded ? undefined : COLLAPSED_MAX_HEIGHT }}>
             {markdown ? (
               <Suspense fallback={<pre className="whitespace-pre-wrap wrap-break-word font-mono text-caption text-text-secondary">{preview.content}</pre>}>
@@ -114,7 +114,7 @@ export function TextPreviewCard({ attachment, maxWidth }: { attachment: ChatAtta
               <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-linear-to-t from-bg-tertiary to-transparent" />
             )}
           </div>
-          <div className="flex items-center justify-between gap-3 border-t border-white/10 px-3 py-1.5 text-caption text-text-muted">
+          <div className="flex items-center justify-between gap-3 border-t border-border px-3 py-1.5 text-caption text-text-muted">
             <button type="button" onClick={() => setExpanded((v) => !v)} className="flex items-center gap-1 hover:text-text-primary">
               {expanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
               {expanded ? 'Mostrar menos' : 'Mostrar mais'}

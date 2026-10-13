@@ -51,7 +51,7 @@ export function ReactionParticipantsDialog() {
                   role="tab"
                   aria-selected={emoji === shownEmoji}
                   onClick={() => setActiveEmoji(emoji)}
-                  className={cn('flex items-center gap-1 rounded-full border px-2 py-0.5 text-label', emoji === shownEmoji ? 'border-primary/50 bg-primary/15' : 'border-white/10 hover:bg-white/[0.06]')}
+                  className={cn('flex items-center gap-1 rounded-full border px-2 py-0.5 text-label', emoji === shownEmoji ? 'border-primary/50 bg-primary/15' : 'border-border hover:bg-fill-hover')}
                 >
                   <span>{emoji}</span><span className="tabular-nums">{userIds.length}</span>
                 </button>

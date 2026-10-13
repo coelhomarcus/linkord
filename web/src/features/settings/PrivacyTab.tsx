@@ -55,7 +55,7 @@ export function PrivacyTab({ onOpenProfile }: { onOpenProfile: (userId: string) 
         <p className="py-4 text-center text-label text-text-muted">Você não bloqueou ninguém.</p>
       )}
 
-      <div className="flex flex-col divide-y divide-white/10">
+      <div className="flex flex-col divide-y divide-border">
         {list.items.map(({ user }) => (
           <SocialUserRow key={user.id} user={user} onOpenProfile={() => onOpenProfile(user.id)}>
             <Button type="button" variant="secondary" size="sm" disabled={pending.isPending(user.id)} onClick={() => void handleUnblock(user.id)}>

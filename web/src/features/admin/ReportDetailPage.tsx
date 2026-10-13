@@ -77,7 +77,7 @@ function ReportDetail({ id }: { id: string }) {
       {refreshFailed && <RefreshFailedNotice refreshing={refreshing} onRetry={() => void refresh()} />}
 
       <AdminEntityHeader
-        avatar={<span className="flex size-16 items-center justify-center rounded-full bg-white/10 text-text-muted"><Flag size={26} aria-hidden /></span>}
+        avatar={<span className="flex size-16 items-center justify-center rounded-full bg-fill-active text-text-muted"><Flag size={26} aria-hidden /></span>}
         title={report.targetLabel || report.targetId}
         subtitle={`${REPORT_TARGET_LABEL[report.targetType]} · ${categoryLabel(report.category)}`}
         id={report.id}
@@ -136,7 +136,7 @@ function ReportDetail({ id }: { id: string }) {
           <fieldset className="flex flex-col gap-1 py-2">
             <legend className="mb-1 text-body font-medium text-text-primary">Desfecho</legend>
             {outcomes.map((outcome) => (
-              <label key={outcome.id} className="flex cursor-pointer items-start gap-3 rounded-lg px-2 py-2 hover:bg-white/5 has-[:checked]:bg-white/[0.06] has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring">
+              <label key={outcome.id} className="flex cursor-pointer items-start gap-3 rounded-lg px-2 py-2 hover:bg-fill-subtle has-[:checked]:bg-fill-hover has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring">
                 <input type="radio" name="outcome" value={outcome.id} checked={selected === outcome.id} onChange={() => setSelected(outcome.id)} className="mt-1" />
                 <span className="min-w-0">
                   <span className="block text-label font-medium text-text-primary">{outcome.label}</span>

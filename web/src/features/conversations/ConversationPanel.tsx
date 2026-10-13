@@ -54,7 +54,7 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, onO
     <main className="flex h-full min-w-0 flex-1 flex-col text-text-primary">
       {conversation ? (
         <>
-          <header className="flex h-16 flex-none items-center gap-3 border-b border-white/10 bg-[rgb(12_12_14)]/90 px-4 backdrop-blur">
+          <header className="flex h-16 flex-none items-center gap-3 border-b border-border bg-surface-panel/90 px-4 backdrop-blur">
             <Button type="button" variant="ghost" size="icon-sm" aria-label="Voltar" onClick={() => setOpenMobile(true)} className="-ml-1 md:hidden">
               <ArrowLeft size={18} />
             </Button>
@@ -71,7 +71,7 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, onO
               <button
                 type="button"
                 onClick={onOpenDetails}
-                className="transition-colors hover:border-white/20"
+                className="transition-colors hover:border-border-strong"
                 aria-label="Detalhes do grupo"
               >
                 <GroupAvatar title={title} avatar={conversation.avatar} size={40} />
@@ -89,10 +89,10 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, onO
               <Tooltip>
                 <TooltipTrigger render={<div className="flex flex-none items-center -space-x-2" />}>
                   {callParticipants.slice(0, 4).map((p) => (
-                    <Avatar key={p.id} id={p.id} name={p.displayName} avatar={p.avatar} avatarColor={p.avatarColor} size={28} className="ring-2 ring-[rgb(12_12_14)]" />
+                    <Avatar key={p.id} id={p.id} name={p.displayName} avatar={p.avatar} avatarColor={p.avatarColor} size={28} className="ring-2 ring-surface-panel" />
                   ))}
                   {callParticipants.length > 4 && (
-                    <span className="grid size-7 place-items-center rounded-full bg-bg-tertiary text-[11px] font-semibold text-text-secondary ring-2 ring-[rgb(12_12_14)]">
+                    <span className="grid size-7 place-items-center rounded-full bg-bg-tertiary text-[11px] font-semibold text-text-secondary ring-2 ring-surface-panel">
                       +{callParticipants.length - 4}
                     </span>
                   )}

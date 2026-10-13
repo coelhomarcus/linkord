@@ -22,7 +22,7 @@ export function DirectComposerGate({ conversationId, children }: { conversationI
   const peer = allUsers.get(peerId);
   const blocked = relationship.value.relation === 'blocked';
   return (
-    <div className="mx-3 mb-3 rounded-xl border border-white/10 bg-bg-secondary p-3 md:mx-4 md:mb-4">
+    <div className="mx-3 mb-3 rounded-xl border border-border bg-bg-secondary p-3 md:mx-4 md:mb-4">
       <p className="px-4 pt-1 pb-2 text-label text-text-muted">
         {blocked
           ? 'Você não pode enviar mensagens nem ligar enquanto essa pessoa estiver bloqueada. O histórico continua disponível.'

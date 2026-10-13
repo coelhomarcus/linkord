@@ -28,7 +28,7 @@ export function FriendPicker({ selected, onToggle, excludeIds, inputId, maxHeigh
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3">
+      <div className="flex items-center gap-2 rounded-lg border border-border bg-fill-subtle px-3">
         <Search size={15} className="text-text-muted" />
         <input
           id={inputId}
@@ -38,7 +38,7 @@ export function FriendPicker({ selected, onToggle, excludeIds, inputId, maxHeigh
           className="h-9 min-w-0 flex-1 bg-transparent text-label outline-none placeholder:text-text-muted"
         />
       </div>
-      <div className={cn('overflow-y-auto rounded-lg border border-white/10 bg-black/20 p-1', maxHeightClass)}>
+      <div className={cn('overflow-y-auto rounded-lg border border-border bg-black/20 p-1', maxHeightClass)}>
         {list.status === 'loading' ? (
           <p className="px-3 py-8 text-center text-label text-text-muted">Carregando amigos…</p>
         ) : list.status === 'error' ? (
@@ -61,7 +61,7 @@ export function FriendPicker({ selected, onToggle, excludeIds, inputId, maxHeigh
                 onClick={() => onToggle(user)}
                 className={cn(
                   'flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-left transition-colors',
-                  checked ? 'bg-primary/12 text-text-primary' : 'text-text-secondary hover:bg-white/[0.05]',
+                  checked ? 'bg-primary/12 text-text-primary' : 'text-text-secondary hover:bg-fill-hover',
                 )}
               >
                 <Avatar id={user.id} name={user.displayName} avatar={user.avatar} avatarColor={user.avatarColor} size={34} />
@@ -71,7 +71,7 @@ export function FriendPicker({ selected, onToggle, excludeIds, inputId, maxHeigh
                 </span>
                 <span className={cn(
                   'grid size-5 place-items-center rounded-full border text-[11px]',
-                  checked ? 'border-primary bg-primary text-primary-foreground' : 'border-white/15',
+                  checked ? 'border-primary bg-primary text-primary-foreground' : 'border-border-strong',
                 )}>
                   {checked ? <Check size={12} /> : null}
                 </span>

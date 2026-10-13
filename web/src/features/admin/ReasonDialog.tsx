@@ -63,12 +63,12 @@ export function ReasonDialog({ open, onOpenChange, title, description, confirmLa
         <div className="flex flex-col gap-3 px-6 py-4">
           <label className="flex flex-col gap-1.5 text-label text-text-muted">
             Motivo (fica registrado na auditoria)
-            <Textarea value={reason} onChange={(e) => setReason(e.target.value)} maxLength={REASON_MAX} rows={3} className="resize-none border-white/10 bg-white/[0.04]" />
+            <Textarea value={reason} onChange={(e) => setReason(e.target.value)} maxLength={REASON_MAX} rows={3} className="resize-none border-border bg-fill-subtle" />
           </label>
           {confirmText && (
             <label className="flex flex-col gap-1.5 text-label text-text-muted">
               <span>Para confirmar, digite <span className="font-medium text-text-primary">{confirmText}</span></span>
-              <Input value={confirm} onChange={(e) => setConfirm(e.target.value)} className="border-white/10 bg-white/[0.04]" />
+              <Input value={confirm} onChange={(e) => setConfirm(e.target.value)} className="border-border bg-fill-subtle" />
             </label>
           )}
           {error && <p role="alert" className="text-label text-red-text">{error}</p>}

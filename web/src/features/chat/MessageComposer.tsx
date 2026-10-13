@@ -286,9 +286,9 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
       <input ref={fileInputRef} type="file" multiple hidden onChange={handleFileChange} />
       <input ref={imageInputRef} type="file" accept="image/*" multiple hidden onChange={handleFileChange} />
 
-      <div className="relative flex flex-col rounded-2xl border border-white/10 bg-[rgb(18_18_20)] focus-within:border-white/20">
+      <div className="relative flex flex-col rounded-2xl border border-border bg-surface-raised focus-within:border-border-strong">
         {mentionQuery && mentionCandidates.length > 0 && (
-          <div className="absolute inset-x-0 bottom-full z-20 mb-1 max-h-56 overflow-y-auto rounded-xl border border-white/10 bg-[rgb(24_24_27)] py-1 shadow-popover">
+          <div className="absolute inset-x-0 bottom-full z-20 mb-1 max-h-56 overflow-y-auto rounded-xl border border-border bg-surface-overlay py-1 shadow-popover">
             <p className="select-none px-3 pb-1 pt-0.5 text-caption font-semibold uppercase text-text-muted">Mencionar alguém</p>
             {mentionCandidates.map((user, i) => (
               <button
@@ -301,7 +301,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
                 onMouseDown={(event) => { event.preventDefault(); selectMention(user); }}
                 className={cn(
                   'flex w-full items-center gap-2 px-3 py-1.5 text-left',
-                  i === mentionSelectedIndex ? 'bg-white/8 text-text-primary' : 'text-text-secondary hover:bg-white/5'
+                  i === mentionSelectedIndex ? 'bg-fill-hover text-text-primary' : 'text-text-secondary hover:bg-fill-subtle'
                 )}
               >
                 <Avatar id={user.id} name={user.displayName} avatar={user.avatar} avatarColor={user.avatarColor} size={24} />
@@ -315,7 +315,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
         )}
 
         {replyingTo && (
-          <div className="flex items-center gap-2 border-b border-white/8 py-1.5 pl-3 pr-1.5 text-label">
+          <div className="flex items-center gap-2 border-b border-border-subtle py-1.5 pl-3 pr-1.5 text-label">
             <Reply size={14} className="flex-none text-text-muted" />
             <span className="min-w-0 flex-1 truncate text-text-muted">
               Respondendo a <span className="font-medium text-text-secondary">{replyName}</span>

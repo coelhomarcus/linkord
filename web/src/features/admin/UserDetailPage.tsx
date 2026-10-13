@@ -117,7 +117,7 @@ function UserDetail({ id }: { id: string }) {
       {tab === 'groups' && (
         <AdminSection title="Grupos" description="Os grupos de que a conta participa e o papel dela em cada um.">
           {groups.length === 0 ? <p className="text-label text-text-muted">Não participa de nenhum grupo.</p> : (
-            <ul className="flex flex-col divide-y divide-white/5">
+            <ul className="flex flex-col divide-y divide-border-subtle">
               {groups.map((g) => (
                 <li key={g.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5">
                   <Link to={`/admin/groups/${g.id}`} className="min-w-0 flex-1 basis-48 truncate text-body text-text-primary hover:underline">{g.title || 'Grupo sem nome'}</Link>
@@ -133,7 +133,7 @@ function UserDetail({ id }: { id: string }) {
       {tab === 'moderation' && (
         <>
           <AdminSection title="Acesso" description="O que a conta consegue fazer na instância. Toda ação pede um motivo e fica registrada.">
-            <div className="flex flex-col divide-y divide-white/5">
+            <div className="flex flex-col divide-y divide-border-subtle">
               {suspended ? (
                 <AdminActionRow title="Conta suspensa" description={`Suspensa em ${formatWhen(user.statusChangedAt)} — “${user.statusReason}”. Não consegue entrar.`}>
                   <Button type="button" size="sm" onClick={() => setDialog('reactivate')}>Reativar conta</Button>

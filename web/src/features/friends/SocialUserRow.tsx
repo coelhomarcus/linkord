@@ -11,7 +11,7 @@ export function SocialUserRow({ user, online, subtitle, onOpenProfile, children 
   children?: ReactNode;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-lg px-3 py-3 transition-colors hover:bg-white/[0.04]">
+    <div className="cutout flex items-center gap-3 rounded-lg px-3 py-3 transition-colors hover:cutout-subtle hover:bg-fill-subtle">
       <button
         type="button"
         onClick={onOpenProfile}
@@ -23,7 +23,7 @@ export function SocialUserRow({ user, online, subtitle, onOpenProfile, children 
           {online !== undefined && (
             <span
               aria-hidden
-              className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-bg-primary ${online ? 'bg-green' : 'bg-text-muted'}`}
+              className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-(--cutout) ${online ? 'bg-green' : 'bg-text-muted'}`}
             />
           )}
         </div>

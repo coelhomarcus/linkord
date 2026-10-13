@@ -9,7 +9,7 @@ import { Button } from '@/shared/ui/primitives/button';
 export function PageHeader({ title, subtitle, actions, leading, middle }: { title: string; subtitle?: string; actions?: ReactNode; leading?: ReactNode; middle?: ReactNode }) {
   const { isMobile, setOpenMobile } = useAnimatedSidebar();
   return (
-    <header className="flex flex-none items-center gap-3 border-b border-white/10 px-4 py-3 md:px-6">
+    <header className="flex flex-none items-center gap-3 border-b border-border px-4 py-3 md:px-6">
       {isMobile && (
         <Button type="button" variant="ghost" size="icon-sm" aria-label="Abrir lista de conversas" onClick={() => setOpenMobile(true)}>
           <PanelLeft size={18} />

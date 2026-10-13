@@ -88,8 +88,8 @@ function WideRow({ row }: { row: AuditRow }) {
         <AdminTd><Result row={row} /></AdminTd>
       </AdminTr>
       {open && (
-        <tr id={detailsId} className="bg-white/[0.02]">
-          <td colSpan={5} className="border-b border-white/5 px-6 py-3"><AuditRowDetails row={row} /></td>
+        <tr id={detailsId} className="bg-fill-subtle">
+          <td colSpan={5} className="border-b border-border-subtle px-6 py-3"><AuditRowDetails row={row} /></td>
         </tr>
       )}
     </>
@@ -110,7 +110,7 @@ function CompactRow({ row }: { row: AuditRow }) {
         <span>alvo: <Target row={row} inline /></span>
       </div>
       <Toggle row={row} open={open} onToggle={() => setOpen((v) => !v)} controls={detailsId} />
-      {open && <div id={detailsId} className="rounded-lg bg-white/[0.03] p-3"><AuditRowDetails row={row} /></div>}
+      {open && <div id={detailsId} className="rounded-lg bg-fill-subtle p-3"><AuditRowDetails row={row} /></div>}
     </li>
   );
 }
@@ -135,7 +135,7 @@ export function AuditPage() {
 
   // a code the labels don't know (a link, an older record) is kept, not silently reset
   const actionOptions = [{ value: '', label: 'Todas as ações' }, ...(action && !ACTION_LABELS[action] ? [{ value: action, label: `${action} (código desconhecido)` }] : []), ...ACTION_OPTIONS];
-  const field = 'h-9 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 text-label text-text-primary outline-none focus-visible:ring-2 focus-visible:ring-ring';
+  const field = 'h-9 rounded-lg border border-border bg-fill-subtle px-2.5 text-label text-text-primary outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
   return (
     <div className="flex flex-col gap-4">
@@ -177,7 +177,7 @@ export function AuditPage() {
             <tbody>{list.items.map((row) => <WideRow key={row.id} row={row} />)}</tbody>
           </AdminTable>
         ) : (
-          <ul className="flex flex-col divide-y divide-white/5 rounded-xl border border-white/10">{list.items.map((row) => <CompactRow key={row.id} row={row} />)}</ul>
+          <ul className="flex flex-col divide-y divide-border-subtle rounded-xl border border-border">{list.items.map((row) => <CompactRow key={row.id} row={row} />)}</ul>
         )}
       </ListChrome>
     </div>

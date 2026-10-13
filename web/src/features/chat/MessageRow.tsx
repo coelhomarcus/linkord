@@ -165,7 +165,7 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
       className={cn(
         'group/row relative flex gap-3 rounded-md px-4 py-0.5 transition-colors duration-500',
         showHeader ? 'mt-[17px]' : 'mt-0',
-        'hover:bg-white/[0.03]',
+        'hover:bg-fill-subtle',
         mentionsMe && 'border-l-2 border-yellow/50 bg-yellow/[0.06] pl-[calc(1rem-2px)] hover:bg-yellow/[0.08]',
         highlighted && 'bg-primary/10',
         deleting && 'opacity-50'
@@ -231,7 +231,7 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
                 onKeyDown={handleEditKeyDown}
                 autoFocus
                 rows={1}
-                className="min-h-9 resize-none border-white/15 bg-black/20 text-body"
+                className="min-h-9 resize-none border-border-strong bg-black/20 text-body"
               />
               {editError && <p role="alert" className="text-caption text-red">{editError}</p>}
               <p className="text-caption text-text-muted">
@@ -283,7 +283,7 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
           moment the mouse leaves the row (e.g. to move onto the open emoji
           picker, which is portaled outside this row), snapping the open
           popover to the viewport's top-left corner. */}
-      {!pending && <div className="absolute right-3 top-0 hidden -translate-y-1/2 items-center gap-0.5 rounded-full border border-white/10 bg-[rgb(20_20_23)] p-0.5 opacity-0 shadow-popover transition-opacity pointer-events-none group-hover/row:opacity-100 group-hover/row:pointer-events-auto group-focus-within/row:opacity-100 group-focus-within/row:pointer-events-auto md:flex">
+      {!pending && <div className="absolute right-3 top-0 hidden -translate-y-1/2 items-center gap-0.5 rounded-full border border-border bg-surface-overlay p-0.5 opacity-0 shadow-popover transition-opacity pointer-events-none group-hover/row:opacity-100 group-hover/row:pointer-events-auto group-focus-within/row:opacity-100 group-focus-within/row:pointer-events-auto md:flex">
         {can.react && <ReactionButton onPick={(emoji) => reactToChatMessage(message.msgId, emoji)} />}
         {can.reply && (
           <Button type="button" variant="ghost" size="icon-xs" aria-label="Responder" onClick={onReply}>

@@ -111,7 +111,7 @@ export function UsersPage() {
             </tbody>
           </AdminTable>
         ) : (
-          <ul className="flex flex-col divide-y divide-white/5 rounded-xl border border-white/10">
+          <ul className="flex flex-col divide-y divide-border-subtle rounded-xl border border-border">
             {list.items.map((u) => (
               <li key={u.id} className="flex flex-col gap-2 p-3">
                 <div className="flex items-center gap-2">
