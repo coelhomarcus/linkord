@@ -13,7 +13,7 @@ export interface UserPlusIconHandle {
 }
 
 interface UserPlusIconProps extends HTMLAttributes<HTMLSpanElement> {
-  size?: number;
+  size?: number | string;
 }
 
 const PLUS_VARIANTS: Variants = {

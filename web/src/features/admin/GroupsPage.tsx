@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { Link, useLocation } from 'react-router';
-import { History } from 'lucide-react';
+import { History } from '@/shared/ui/icons';
 import { GroupAvatar } from '@/features/conversations/GroupAvatar';
 import { buttonVariants } from '@/shared/ui/primitives/button';
 import { useUrlSearch } from '@/shared/hooks/useUrlSearch';

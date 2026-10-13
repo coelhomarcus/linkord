@@ -1,5 +1,5 @@
 import { Dialog as DialogPrimitive } from '@base-ui/react/dialog';
-import { ChevronLeft, ChevronRight, Download } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download } from '@/shared/ui/icons';
 import { CloseButton } from '@/shared/ui/primitives/close-button';
 
 export interface ViewerItem {

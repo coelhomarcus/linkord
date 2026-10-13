@@ -1,4 +1,4 @@
-import { Download } from 'lucide-react';
+import { Download } from '@/shared/ui/icons';
 import { cn } from '@/shared/lib/utils';
 import { DocumentAttachmentCard } from './DocumentAttachmentCard';
 

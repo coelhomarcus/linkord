@@ -12,7 +12,7 @@ export interface SearchIconHandle {
 }
 
 interface SearchIconProps extends HTMLAttributes<HTMLSpanElement> {
-  size?: number;
+  size?: number | string;
 }
 
 const SearchIcon = forwardRef<SearchIconHandle, SearchIconProps>(

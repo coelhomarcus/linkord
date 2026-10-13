@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp } from '@/shared/ui/icons';
 import type { ChatAttachment as ChatAttachmentData } from '@/shared/types/protocol';
 import { FileAttachmentCard } from './FileAttachmentCard';
 import { downloadFile } from '@/shared/lib/download';

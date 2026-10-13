@@ -13,7 +13,7 @@ export interface MessageCircleIconHandle {
 }
 
 interface MessageCircleIconProps extends HTMLAttributes<HTMLSpanElement> {
-  size?: number;
+  size?: number | string;
 }
 
 const ICON_VARIANTS: Variants = {

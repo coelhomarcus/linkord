@@ -13,7 +13,7 @@ export interface SmileIconHandle {
 }
 
 interface SmileIconProps extends HTMLAttributes<HTMLSpanElement> {
-  size?: number;
+  size?: number | string;
 }
 
 const SmileIcon = forwardRef<SmileIconHandle, SmileIconProps>(

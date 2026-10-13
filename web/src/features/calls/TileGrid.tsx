@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp } from '@/shared/ui/icons';
 import { useRoom } from '../../state/RoomContext';
 import { Tile } from './Tile';
 import { fitGrid, gridGap } from './callLayoutMetrics';

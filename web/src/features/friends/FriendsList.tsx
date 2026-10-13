@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Check, Copy, MessageCircle, MoreHorizontal, UserPlus, UserRound } from 'lucide-react';
+import { MoreHorizontal, UserRound } from 'lucide-react';
+import { Check, Copy, MessageCircle, UserPlus } from '@/shared/ui/icons';
 import { useRoom } from '@/state/RoomContext';
 import { blockUser, fetchFriends, removeFriend } from '@/shared/api/api';
 import type { SocialEntry, SocialUser } from '@/shared/api/api';
