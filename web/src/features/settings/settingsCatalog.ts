@@ -1,5 +1,6 @@
-import { Bell, IdCard, Lock, Settings2, ShieldCheck, SlidersHorizontal, User } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
+import { Settings2 } from 'lucide-react';
+import { Bell, IdCard, Lock, ShieldCheck, SlidersHorizontal, User } from '@/shared/ui/icons';
+import type { IconComponent } from '@/shared/ui/icons';
 import type { SettingsTab } from '@/shared/lib/routes';
 
 export interface SettingsCategory {
@@ -7,7 +8,7 @@ export interface SettingsCategory {
   label: string;
   /** one line under the page title */
   description: string;
-  icon: LucideIcon;
+  icon: IconComponent;
   adminOnly?: boolean;
 }
 

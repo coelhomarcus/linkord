@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef } from 'react';
-import { AtSign, BadgeCheck, Camera, Check, ExternalLink, Link2, Loader2, Palette, Plus, Trash2, Upload } from 'lucide-react';
+import { AtSign, BadgeCheck, Camera, Loader2, Palette, Trash2 } from 'lucide-react';
+import { Check, ExternalLink, Link2, Plus, Upload } from '@/shared/ui/icons';
 import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { Avatar, AVATAR_COLOR_OPTIONS } from '@/shared/Avatar';
 import { BANNER_ASPECT_RATIO, BrandIcon, bannerStyle, linkInfo } from '@/features/profile/profileLinks';

@@ -12,7 +12,7 @@ export interface PlusIconHandle {
 }
 
 interface PlusIconProps extends HTMLAttributes<HTMLSpanElement> {
-  size?: number;
+  size?: number | string;
 }
 
 const PlusIcon = forwardRef<PlusIconHandle, PlusIconProps>(

@@ -13,7 +13,7 @@ export interface PanelLeftOpenIconHandle {
 }
 
 interface PanelLeftOpenIconProps extends HTMLAttributes<HTMLSpanElement> {
-  size?: number;
+  size?: number | string;
 }
 
 const DEFAULT_TRANSITION: Transition = {

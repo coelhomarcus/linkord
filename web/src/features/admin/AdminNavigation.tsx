@@ -1,4 +1,4 @@
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight } from '@/shared/ui/icons';
 import { NavLink } from 'react-router';
 import { cn } from '@/shared/lib/utils';
 import { ADMIN_GROUPS, adminSectionPath } from './adminCatalog';

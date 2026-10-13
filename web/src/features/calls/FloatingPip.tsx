@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from '@/shared/ui/icons';
 import { useRoom } from '../../state/RoomContext';
 import { useCallTiles } from './useCallTiles';
 import { Tile } from './Tile';

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
-import { Check, Copy } from 'lucide-react';
+import { Check, Copy } from '@/shared/ui/icons';
 import { useRoom } from '@/state/RoomContext';
 import { Button } from '@/shared/ui/primitives/button';
 import { friendsSection } from '@/shared/lib/routes';

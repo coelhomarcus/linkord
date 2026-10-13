@@ -1,4 +1,6 @@
+import type { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router';
+import { MessageCircle, PanelLeftOpen, PhoneCall, Settings, ShieldCheck, UsersRound } from '@/shared/ui/icons';
 import { Avatar } from '@/shared/Avatar';
 import { useAnimatedSidebar } from '@/shared/ui/motion/animated-sidebar';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
@@ -9,13 +11,6 @@ import { useFriends } from '@/features/friends/FriendsContext';
 import { NotificationBell } from '@/features/notifications/NotificationBell';
 import { conversationTitle } from '@/features/conversations/conversationUtils';
 import { CountBadge } from '@/shared/CountBadge';
-import { useAnimatedIcon, type AnimatedIcon } from '@/shared/ui/icons/useAnimatedIcon';
-import { MessageCircleIcon } from '@/shared/ui/icons/message-circle';
-import { UsersRoundIcon } from '@/shared/ui/icons/users-round';
-import { PhoneCallIcon } from '@/shared/ui/icons/phone-call';
-import { PanelLeftOpenIcon } from '@/shared/ui/icons/panel-left-open';
-import { ShieldCheckIcon } from '@/shared/ui/icons/shield-check';
-import { SettingsIcon } from '@/shared/ui/icons/settings';
 
 const itemClass = 'relative grid size-11 place-items-center rounded-md outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring';
 
@@ -36,42 +31,22 @@ function RailBadge({ count }: { count: number }) {
   );
 }
 
-function RailLink({ to, label, active, badge, onNavigate, icon: Icon }: {
+function RailLink({ to, label, active, badge, onNavigate, children }: {
   to: string;
   label: string;
   active: boolean;
   badge?: number;
   onNavigate: () => void;
-  icon: AnimatedIcon;
+  children: ReactNode;
 }) {
-  const { ref, triggerProps } = useAnimatedIcon();
   return (
     <Tooltip>
       <TooltipTrigger
-        {...triggerProps}
         render={<Link to={to} onClick={onNavigate} aria-current={active ? 'page' : undefined} aria-label={label} className={cn(itemClass, stateClass(active))} />}
       >
         {active && <ActiveMarker />}
-        <Icon ref={ref} size={20} aria-hidden />
+        {children}
         {!!badge && <RailBadge count={badge} />}
-      </TooltipTrigger>
-      <TooltipContent side="right">{label}</TooltipContent>
-    </Tooltip>
-  );
-}
-
-function RailButton({ label, onClick, className, icon: Icon, ...rest }: {
-  label: string;
-  onClick: () => void;
-  className: string;
-  icon: AnimatedIcon;
-  'aria-expanded'?: boolean;
-}) {
-  const { ref, triggerProps } = useAnimatedIcon();
-  return (
-    <Tooltip>
-      <TooltipTrigger {...triggerProps} {...rest} onClick={onClick} aria-label={label} className={cn(itemClass, className)}>
-        <Icon ref={ref} size={20} aria-hidden />
       </TooltipTrigger>
       <TooltipContent side="right">{label}</TooltipContent>
     </Tooltip>
@@ -110,34 +85,50 @@ export function AppNavigationRail({ onOpenProfile, onReturnToCall, className }: 
 
   return (
     <nav aria-label="Navegação principal" className={cn('flex w-16 flex-none flex-col items-center gap-1.5 border-r border-border-subtle bg-surface-rail py-3', className)}>
-      <RailLink to={ROUTES.conversations} label="Conversas" active={isConversationsPath(pathname)} onNavigate={afterNavigate} icon={MessageCircleIcon} />
-      <RailLink to={ROUTES.friends} label={friendsLabel} active={pathname === ROUTES.friends} badge={pendingIncomingCount} onNavigate={afterNavigate} icon={UsersRoundIcon} />
+      <RailLink to={ROUTES.conversations} label="Conversas" active={isConversationsPath(pathname)} onNavigate={afterNavigate}>
+        <MessageCircle size={20} aria-hidden />
+      </RailLink>
+      <RailLink to={ROUTES.friends} label={friendsLabel} active={pathname === ROUTES.friends} badge={pendingIncomingCount} onNavigate={afterNavigate}>
+        <UsersRound size={20} aria-hidden />
+      </RailLink>
       <NotificationBell collapsed onNavigate={afterNavigate} />
 
       {inCall && (
-        <RailButton
-          label={returnToCallLabel}
-          onClick={() => { onReturnToCall?.(); afterNavigate(); }}
-          className="text-green hover:bg-green/12"
-          icon={PhoneCallIcon}
-        />
+        <Tooltip>
+          <TooltipTrigger
+            onClick={() => { onReturnToCall?.(); afterNavigate(); }}
+            aria-label={returnToCallLabel}
+            className={cn(itemClass, 'text-green hover:bg-green/12')}
+          >
+            <PhoneCall size={20} aria-hidden />
+          </TooltipTrigger>
+          <TooltipContent side="right">{returnToCallLabel}</TooltipContent>
+        </Tooltip>
       )}
 
       <div className="flex-1" />
 
       {showListToggle && (
-        <RailButton
-          label="Mostrar lista de conversas"
-          onClick={toggleSidebar}
-          aria-expanded={listExpanded}
-          className={stateClass(false)}
-          icon={PanelLeftOpenIcon}
-        />
+        <Tooltip>
+          <TooltipTrigger
+            onClick={toggleSidebar}
+            aria-label="Mostrar lista de conversas"
+            aria-expanded={listExpanded}
+            className={cn(itemClass, stateClass(false))}
+          >
+            <PanelLeftOpen size={20} aria-hidden />
+          </TooltipTrigger>
+          <TooltipContent side="right">Mostrar lista de conversas</TooltipContent>
+        </Tooltip>
       )}
       {isAdmin && (
-        <RailLink to={ROUTES.admin} label="Área administrativa" active={onAdmin} onNavigate={afterNavigate} icon={ShieldCheckIcon} />
+        <RailLink to={ROUTES.admin} label="Área administrativa" active={onAdmin} onNavigate={afterNavigate}>
+          <ShieldCheck size={20} aria-hidden />
+        </RailLink>
       )}
-      <RailLink to={ROUTES.settings} label="Ajustes" active={onSettings} onNavigate={afterNavigate} icon={SettingsIcon} />
+      <RailLink to={ROUTES.settings} label="Ajustes" active={onSettings} onNavigate={afterNavigate}>
+        <Settings size={20} aria-hidden />
+      </RailLink>
       <Tooltip>
         <TooltipTrigger
           onClick={() => { if (state.me.userId) onOpenProfile(state.me.userId); afterNavigate(); }}

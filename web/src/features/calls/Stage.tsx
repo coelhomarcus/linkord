@@ -1,5 +1,6 @@
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
-import { ArrowLeft, VideoOff } from 'lucide-react';
+import { VideoOff } from 'lucide-react';
+import { ArrowLeft } from '@/shared/ui/icons';
 import { useAnimatedSidebar } from '@/shared/ui/motion/animated-sidebar';
 import { useRoom } from '../../state/RoomContext';
 import { useCallTiles } from './useCallTiles';

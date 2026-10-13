@@ -13,7 +13,7 @@ export interface ShieldCheckIconHandle {
 }
 
 interface ShieldCheckIconProps extends HTMLAttributes<HTMLSpanElement> {
-  size?: number;
+  size?: number | string;
 }
 
 const PATH_VARIANTS: Variants = {

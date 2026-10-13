@@ -1,4 +1,5 @@
-import { ChevronRight, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
+import { ChevronRight } from '@/shared/ui/icons';
 import { Link } from 'react-router';
 import { ROUTES } from '@/shared/lib/routes';
 import type { SettingsTab } from '@/shared/lib/routes';

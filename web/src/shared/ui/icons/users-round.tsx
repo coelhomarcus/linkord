@@ -11,7 +11,7 @@ export interface UsersRoundIconHandle {
 }
 
 interface UsersRoundIconProps extends HTMLAttributes<HTMLSpanElement> {
-  size?: number;
+  size?: number | string;
 }
 
 const PATH_VARIANTS: Variants = {

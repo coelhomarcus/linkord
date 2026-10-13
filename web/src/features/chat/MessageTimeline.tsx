@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { defaultRangeExtractor, useVirtualizer, type Range } from '@tanstack/react-virtual';
-import { ArrowDown } from 'lucide-react';
+import { ArrowDown } from '@/shared/ui/icons';
 import { buildMentionLookup } from '@/shared/lib/mentions';
 import { useRoom } from '@/state/RoomContext';
 import type { ChatMessage } from '@/shared/types/protocol';

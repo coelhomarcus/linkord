@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router';
-import { ChevronDown, FlipHorizontal, Pause, Play, RefreshCw, Settings } from 'lucide-react';
+import { FlipHorizontal } from 'lucide-react';
+import { ChevronDown, Pause, Play, RefreshCw, Settings } from '@/shared/ui/icons';
 import type { Room } from 'livekit-client';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel,

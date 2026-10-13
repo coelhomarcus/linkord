@@ -1,5 +1,6 @@
 import { forwardRef, useState } from 'react';
-import { Headphones, HeadphoneOff, Maximize2, Mic, MicOff, Minimize2, Monitor, MonitorX, PhoneOff, Smile, Video, VideoOff } from 'lucide-react';
+import { Headphones, HeadphoneOff, Maximize2, Minimize2, Monitor, MonitorX, Video, VideoOff } from 'lucide-react';
+import { Mic, MicOff, PhoneOff, Smile } from '@/shared/ui/icons';
 import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { useRoom } from '../../state/RoomContext';
 import type { MicProblem } from '@/state/roomReducer';
@@ -100,7 +101,7 @@ export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(fu
             aria-label="Reagir"
             className={cn(BAR_BUTTON, reactionsOpen ? 'bg-white/12 text-white' : BAR_BUTTON_NEUTRAL)}
           >
-            <Smile className={BAR_ICON} />
+            <Smile size="100%" className={BAR_ICON} />
           </PopoverTrigger>
           <PopoverContent className="w-auto p-1.5" side="top" container={fullscreenElement ?? undefined}>
             <div className="flex gap-1">
@@ -125,7 +126,7 @@ export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(fu
               aria-label={micLabel}
               className={cn(BAR_BUTTON, 'relative', myMedia.micMuted || micProblem ? BAR_BUTTON_RED : BAR_BUTTON_NEUTRAL)}
             >
-              {myMedia.micMuted ? <MicOff className={BAR_ICON} /> : <Mic className={BAR_ICON} />}
+              {myMedia.micMuted ? <MicOff size="100%" className={BAR_ICON} /> : <Mic size="100%" className={BAR_ICON} />}
               {micProblem && <span aria-hidden className="absolute right-0.5 top-0.5 h-2.5 w-2.5 rounded-full border-2 border-black bg-red" />}
             </TooltipTrigger>
             <TooltipContent>{micLabel}</TooltipContent>
@@ -194,7 +195,7 @@ export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(fu
             aria-label="Sair da chamada"
             className={cn(BAR_BUTTON, 'bg-red text-white hover:bg-red-hover')}
           >
-            <PhoneOff className={BAR_ICON} />
+            <PhoneOff size="100%" className={BAR_ICON} />
           </TooltipTrigger>
           <TooltipContent>Sair da chamada</TooltipContent>
         </Tooltip>

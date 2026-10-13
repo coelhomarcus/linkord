@@ -1,5 +1,6 @@
 import { Link } from 'react-router';
-import { LogOut, ShieldCheck } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
+import { LogOut } from '@/shared/ui/icons';
 import { useAuth } from '@/state/AuthContext';
 import { useRoom } from '@/state/RoomContext';
 import { Button, buttonVariants } from '@/shared/ui/primitives/button';

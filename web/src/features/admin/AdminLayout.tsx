@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft } from '@/shared/ui/icons';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router';
 import { PageHeader } from '@/shared/PageHeader';
 import { Button, buttonVariants } from '@/shared/ui/primitives/button';
