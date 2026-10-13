@@ -46,7 +46,7 @@ function ConversationRow({ conversation, active, onClick }: {
         type="button"
         onClick={onClick}
         className={cn(
-          'flex w-full items-center gap-3 rounded-md border px-3 py-2.5 text-left transition-colors',
+          'flex w-full items-center gap-2.5 rounded-md border px-2.5 py-1.5 text-left transition-colors',
           // Discord/Fluxer: the active row is a plain light-gray wash, no
           // border and no accent color — the color is reserved for actual
           // brand moments, not "you are here" state.
@@ -57,12 +57,12 @@ function ConversationRow({ conversation, active, onClick }: {
       >
         {conversation.type === 'direct' && other ? (
           <div className="relative flex-none">
-            <Avatar id={other.id} name={other.displayName} avatar={other.avatar} avatarColor={other.avatarColor} size={44} />
-            <span className={cn('absolute -bottom-0.5 -right-0.5 size-3.5 rounded-full border-2 border-(--cutout)', online ? 'bg-green' : 'bg-text-muted')} />
+            <Avatar id={other.id} name={other.displayName} avatar={other.avatar} avatarColor={other.avatarColor} size={36} />
+            <span className={cn('absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2 border-(--cutout)', online ? 'bg-green' : 'bg-text-muted')} />
           </div>
         ) : (
           <div className="relative flex-none">
-            <GroupAvatar title={title} avatar={conversation.avatar} active={active} />
+            <GroupAvatar title={title} avatar={conversation.avatar} active={active} size={36} />
             <span className="absolute -bottom-0.5 -right-0.5 grid size-4 place-items-center rounded-full border-2 border-(--cutout) bg-bg-tertiary text-text-secondary">
               <Users size={9} />
             </span>
