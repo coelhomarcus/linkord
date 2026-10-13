@@ -129,17 +129,18 @@
 
 /* A status dot's cutout ring has to match the row behind it, and a row's
    hover/selected tint is translucent. These give the same tint, opaque, over
-   the surface a container names in --surface-base;
+   the surface a container names in --surface-base (the shell when none
+   does: the mobile sheet renders outside every container that sets it);
    the dot then draws its ring in var(--cutout). Keep the percentages in step
    with --color-fill-subtle / --color-fill-active. */
 @utility cutout {
-  --cutout: var(--surface-base);
+  --cutout: var(--surface-base, var(--color-surface-app));
 }
 @utility cutout-subtle {
-  --cutout: color-mix(in srgb, var(--surface-base), white 3.5%);
+  --cutout: color-mix(in srgb, var(--surface-base, var(--color-surface-app)), white 3.5%);
 }
 @utility cutout-active {
-  --cutout: color-mix(in srgb, var(--surface-base), white 10%);
+  --cutout: color-mix(in srgb, var(--surface-base, var(--color-surface-app)), white 10%);
 }
 
 html, body {
