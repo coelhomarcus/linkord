@@ -327,7 +327,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
               onClick={isOwner ? startEditTitle : undefined}
               className={cn(
                 'flex items-center gap-1.5 text-title font-semibold',
-                isOwner && 'transition-colors hover:text-primary'
+                isOwner && 'transition-colors hover:text-accent-text'
               )}
             >
               {conversation.title || 'Grupo'}
@@ -373,7 +373,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
                     <span className="min-w-0">
                       <span className="block truncate text-label font-medium">
                         {member.displayName}{isMe ? ' (você)' : ''}
-                        {role === 'owner' && <span className="ml-1.5 rounded bg-primary/15 px-1 py-px align-middle text-[10px] font-medium text-primary">dono</span>}
+                        {role === 'owner' && <span className="ml-1.5 rounded bg-primary/15 px-1 py-px align-middle text-[10px] font-medium text-accent-text">dono</span>}
                       </span>
                       <span className="block truncate text-caption text-text-muted">@{member.username}</span>
                     </span>
@@ -386,7 +386,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
                         size="icon-xs"
                         aria-label={`Transferir propriedade para ${member.displayName}`}
                         onClick={() => setTransferTarget(member)}
-                        className="flex-none text-text-muted opacity-0 transition-opacity hover:text-primary group-hover:opacity-100"
+                        className="flex-none text-text-muted opacity-0 transition-opacity hover:text-accent-text group-hover:opacity-100"
                       >
                         <Crown size={14} />
                       </Button>

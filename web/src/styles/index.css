@@ -42,6 +42,9 @@
   --color-border-default: oklch(100% 0 0 / 0.10);
   --color-border-strong: oklch(100% 0 0 / 0.16);
   --color-accent-primary: oklch(52.82% 0.2628 279.30);
+  /* the accent fails AA as text on these surfaces (3.5:1); links and
+     mentions use this lighter step of the same hue instead */
+  --color-accent-text: oklch(74.00% 0.1400 279.30);
   --color-border-accent: var(--color-accent-primary);
 
   --color-blurple: var(--color-accent-primary);

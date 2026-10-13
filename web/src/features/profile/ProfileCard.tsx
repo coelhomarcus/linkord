@@ -270,7 +270,7 @@ export function ProfileCard({
               <span className="truncate">{user.username}</span>
             </p>
             {user.role === 'admin' && (
-              <span className="flex flex-none items-center gap-1 rounded-sm bg-primary/15 px-1.5 py-0.5 text-caption font-medium text-primary">
+              <span className="flex flex-none items-center gap-1 rounded-sm bg-primary/15 px-1.5 py-0.5 text-caption font-medium text-accent-text">
                 <BadgeCheck size={13} /> Admin
               </span>
             )}

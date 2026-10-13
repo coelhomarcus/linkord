@@ -24,7 +24,7 @@ export function AccountSettings() {
         <SettingsRow label="Nome de usuário" description="Fixo, não pode ser trocado.">
           <span className="break-all text-body text-text-primary">@{state.me.name}</span>
           {state.me.role === 'admin' && (
-            <span className="flex w-fit items-center gap-1 rounded-sm bg-primary/15 px-1.5 py-0.5 text-caption font-medium text-primary">
+            <span className="flex w-fit items-center gap-1 rounded-sm bg-primary/15 px-1.5 py-0.5 text-caption font-medium text-accent-text">
               <ShieldCheck size={14} aria-hidden /> Admin
             </span>
           )}
