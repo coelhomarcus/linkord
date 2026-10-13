@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import {
-  Crosshair, Eye, EyeOff, FlipHorizontal, Gauge, Maximize2, MonitorX, Pause, PictureInPicture2, Play,
-  RefreshCw, User, UserX, VideoOff, Volume2, VolumeX,
-} from 'lucide-react';
+import { Crosshair, FlipHorizontal, MonitorX, PictureInPicture2, UserX, VideoOff, Volume2, VolumeX } from 'lucide-react';
+import { Eye, EyeOff, Gauge, Maximize2, Pause, Play, RefreshCw, User } from '@/shared/ui/icons';
 import type { Track as LKTrack } from 'livekit-client';
 import { useRoom } from '../../state/RoomContext';
 import type { AnchorRect } from '../../state/RoomContext';

@@ -1,11 +1,7 @@
 import { forwardRef, useEffect, useId, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, ClipboardEvent, KeyboardEvent as ReactKeyboardEvent, SyntheticEvent } from 'react';
 import { ImagePlus, Paperclip, Reply } from 'lucide-react';
-import { useAnimatedIcon } from '@/shared/ui/icons/useAnimatedIcon';
-import { AnimatedIconButton } from '@/shared/ui/icons/AnimatedIconButton';
-import { PlusIcon } from '@/shared/ui/icons/plus';
-import { SmileIcon } from '@/shared/ui/icons/smile';
-import { ArrowUpIcon } from '@/shared/ui/icons/arrow-up';
+import { ArrowUp, Plus, Smile } from '@/shared/ui/icons';
 import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { Button } from '@/shared/ui/primitives/button';
 import { EmojiPicker, EmojiPickerContent, EmojiPickerSearch } from '@/shared/ui/primitives/emoji-picker';
@@ -59,8 +55,6 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
   const setText = (next: string) => updateDraft(() => ({ text: next }));
   const [compressImages, setCompressImages] = useState(compressImagesDefault);
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
-  const addIcon = useAnimatedIcon();
-  const emojiIcon = useAnimatedIcon();
   // once opened, keeps the picker mounted (hidden) instead of paying its
   // dataset fetch/measure cost again on every open — see useKeepPopoverWarm.
   const emojiPickerWarmed = useKeepPopoverWarm(emojiPickerOpen);
@@ -339,10 +333,9 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
         <div className="flex items-end gap-1 p-1.5">
           <DropdownMenu>
             <DropdownMenuTrigger
-              {...addIcon.triggerProps}
               render={<Button type="button" variant="ghost" size="icon" aria-label="Adicionar" disabled={disabled} className={iconButton} />}
             >
-              <PlusIcon ref={addIcon.ref} size={20} aria-hidden />
+              <Plus size={20} />
             </DropdownMenuTrigger>
             <DropdownMenuContent side="top" align="start" className="w-64">
               <DropdownMenuItem onClick={() => fileInputRef.current?.click()}><Paperclip size={14} />Anexar arquivos</DropdownMenuItem>
@@ -392,10 +385,9 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
           </Button>
           <Popover open={emojiPickerOpen} onOpenChange={setEmojiPickerOpen}>
             <PopoverTrigger
-              {...emojiIcon.triggerProps}
               render={<Button type="button" variant="ghost" size="icon" aria-label="Inserir emoji" disabled={disabled} className={iconButton} />}
             >
-              <SmileIcon ref={emojiIcon.ref} size={18} aria-hidden />
+              <Smile size={18} />
             </PopoverTrigger>
             <PopoverContent keepMounted={emojiPickerWarmed} className="w-75 p-0" side="top" align="end">
               <EmojiPicker className="h-80 w-full" onEmojiSelect={({ emoji }) => insertEmoji(emoji)}>
@@ -404,16 +396,16 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
               </EmojiPicker>
             </PopoverContent>
           </Popover>
-          <AnimatedIconButton
+          <Button
             type="button"
             size="icon"
             aria-label="Enviar mensagem"
             disabled={!canSubmit}
             onClick={() => void submit()}
             className="flex-none rounded-full"
-            icon={ArrowUpIcon}
-            iconSize={18}
-          />
+          >
+            <ArrowUp size={18} />
+          </Button>
         </div>
       </div>
     </div>

@@ -13,7 +13,7 @@ export interface BellIconHandle {
 }
 
 interface BellIconProps extends HTMLAttributes<HTMLSpanElement> {
-  size?: number;
+  size?: number | string;
 }
 
 const SVG_VARIANTS: Variants = {

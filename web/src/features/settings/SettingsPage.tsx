@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft } from '@/shared/ui/icons';
 import { Navigate, useLocation, useNavigate, useParams } from 'react-router';
 import { useRoom } from '@/state/RoomContext';
 import { PageHeader } from '@/shared/PageHeader';

@@ -1,11 +1,12 @@
-import { Flag, ScrollText, Server, Users, UsersRound } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
+import { Flag, ScrollText } from 'lucide-react';
+import { Server, Users, UsersRound } from '@/shared/ui/icons';
+import type { IconComponent } from '@/shared/ui/icons';
 
 export interface AdminSection {
   /** first path segment under /admin */
   id: 'users' | 'groups' | 'reports' | 'audit' | 'system';
   label: string;
-  icon: LucideIcon;
+  icon: IconComponent;
 }
 
 export interface AdminGroup {

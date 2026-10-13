@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import ReactPlayer from 'react-player';
-import { ExternalLink, Play } from 'lucide-react';
+import { Play } from 'lucide-react';
+import { ExternalLink } from '@/shared/ui/icons';
 import type { DetectedEmbed } from '@/shared/lib/chatEmbeds';
 import { getCachedLinkPreview, loadLinkPreview } from '@/shared/lib/linkPreviewCache';
 import { useNearViewport } from './useNearViewport';

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { ContextMenuRootActions } from '@base-ui/react/context-menu';
-import { Copy, Download, Flag, Pencil, Pin, PinOff, Reply, Trash2, UsersRound, X } from 'lucide-react';
+import { Flag, Pencil, Pin, PinOff, Reply, Trash2 } from 'lucide-react';
+import { Copy, Download, UsersRound, X } from '@/shared/ui/icons';
 import { ReportDialog } from '@/features/reports/ReportDialog';
 import type { ReportTarget } from '@/features/reports/reportCategories';
 import { ContextMenu, ContextMenuCheckboxItem, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from '@/shared/ui/primitives/context-menu';

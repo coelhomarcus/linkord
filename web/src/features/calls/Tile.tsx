@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent } from 'react';
 import { ConnectionQuality } from 'livekit-client';
-import { EyeOff, HeadphoneOff, Loader2, MicOff, MonitorOff, MonitorPause, Settings, SignalLow, SignalZero, VolumeX } from 'lucide-react';
+import { EyeOff, HeadphoneOff, Loader2, MicOff, MonitorOff, MonitorPause, SignalLow, SignalZero, VolumeX } from 'lucide-react';
+import { Settings } from '@/shared/ui/icons';
 import { useRoom } from '../../state/RoomContext';
 import { useParticipantMedia, useAttachTrack, useIsSpeaking, useConnectionQuality, useWatchScreenShare } from './useLiveKitTrack';
 import { useMuteForMe } from './useMuteForMe';

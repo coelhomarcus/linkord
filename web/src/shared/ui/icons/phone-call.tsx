@@ -11,7 +11,7 @@ export interface PhoneCallIconHandle {
 }
 
 interface PhoneCallIconProps extends HTMLAttributes<HTMLSpanElement> {
-  size?: number;
+  size?: number | string;
 }
 
 const PHONE_CALL_VARIANTS: Variants = {

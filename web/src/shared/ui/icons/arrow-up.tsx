@@ -13,7 +13,7 @@ export interface ArrowUpIconHandle {
 }
 
 interface ArrowUpIconProps extends HTMLAttributes<HTMLSpanElement> {
-  size?: number;
+  size?: number | string;
 }
 
 const PATH_VARIANTS: Variants = {

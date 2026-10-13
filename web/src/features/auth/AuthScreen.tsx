@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { ArrowLeft, ArrowRight, CheckCircle2, Eye, EyeOff, KeyRound, Loader2, Lock, LogIn, Mail, User, UserPlus } from 'lucide-react';
+import { KeyRound, Loader2, Lock, LogIn, Mail, User } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle2, Eye, EyeOff, UserPlus } from '@/shared/ui/icons';
 import { useAuth } from '../../state/AuthContext';
 import { ApiError, requestPasswordRecovery, resetPassword } from '@/shared/api/api';
 import type { RecoveryIdentifier } from '@/shared/api/api';

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
-import { Copy, Flag, MoreHorizontal, Pencil, Reply, SmilePlus, Trash2, Users } from 'lucide-react';
+import { Flag, MoreHorizontal, Pencil, Reply, Trash2 } from 'lucide-react';
+import { Copy, SmilePlus, Users } from '@/shared/ui/icons';
 import { Avatar } from '@/shared/Avatar';
 import { MessageMedia } from './MessageMedia';
 import { InviteCard } from '@/features/chat/InviteCard';
