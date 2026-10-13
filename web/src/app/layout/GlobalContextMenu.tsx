@@ -9,6 +9,7 @@ import { ReactionEmojiPicker } from '@/features/chat/ReactionEmojiPicker';
 import { ReactionParticipantsDialog } from '@/features/chat/ReactionParticipantsDialog';
 import { useKeepPopoverWarm } from '@/shared/hooks/useKeepPopoverWarm';
 import { messagePermissions } from '@/features/chat/messageActions';
+import { useMessageDeleteConfirm } from '@/features/chat/useMessageDeleteConfirm';
 import { useRoom } from '@/state/RoomContext';
 import { downloadFile } from '@/shared/lib/download';
 
@@ -28,12 +29,13 @@ function isEditableTarget(target: EventTarget | null): boolean {
 export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenuProps) {
   const {
     state, hideAudioOnlyTiles, setHideAudioOnlyTiles,
-    activeConversationId, messagesByConversation, reactToChatMessage, deleteChatMessage, setReplyingTo, setEditingMsgId,
+    activeConversationId, messagesByConversation, reactToChatMessage, setReplyingTo, setEditingMsgId,
     conversations, closeConversation, pinConversation, openReactionParticipants,
   } = useRoom();
   const [hasSelection, setHasSelection] = useState(false);
   const [stageTarget, setStageTarget] = useState(false);
   const [downloadTarget, setDownloadTarget] = useState<{ url: string; name: string } | null>(null);
+  const { requestDelete, confirmDialog } = useMessageDeleteConfirm();
   const [messageTarget, setMessageTarget] = useState<number | null>(null);
   const [conversationTarget, setConversationTarget] = useState<string | null>(null);
   const [userTarget, setUserTarget] = useState<string | null>(null);
@@ -189,7 +191,7 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
                 </ContextMenuItem>
               )}
               {can?.delete && (
-                <ContextMenuItem variant="destructive" onClick={() => void deleteChatMessage(targetMessage.msgId)}>
+                <ContextMenuItem variant="destructive" onClick={(event) => requestDelete(targetMessage.msgId, event.shiftKey)}>
                   <Trash2 size={14} />
                   <span>Apagar</span>
                 </ContextMenuItem>
@@ -250,6 +252,7 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
       </ContextMenu>
       <ReportDialog target={reportTarget} open={!!reportTarget} onOpenChange={(open) => { if (!open) setReportTarget(null); }} />
       <ReactionParticipantsDialog />
+      {confirmDialog}
     </>
   );
 }
