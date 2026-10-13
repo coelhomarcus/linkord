@@ -32,7 +32,7 @@ const MIC_PROBLEM_NOTICE = {
 // app's own light/dark theme, matching the Fluxer reference. Sizes shrink
 // at 480/360px (viewport width, not the stage's own measured width — the
 // stage doesn't expose that yet; see the calls redesign plan's E5/E10).
-const BAR_BUTTON = 'grid size-11 flex-none place-items-center rounded-2xl transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-white/50 active:translate-y-px max-[480px]:size-10 max-[480px]:rounded-[14px] max-[360px]:size-9 max-[360px]:rounded-[13px]';
+const BAR_BUTTON = 'grid size-11 flex-none place-items-center rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-white/50 active:translate-y-px max-[480px]:size-10 max-[480px]:rounded-[14px] max-[360px]:size-9 max-[360px]:rounded-[13px]';
 const BAR_BUTTON_NEUTRAL = 'bg-white/5 text-white/90 hover:bg-white/12';
 const BAR_BUTTON_RED = 'bg-red/16 text-red hover:bg-red/24';
 const BAR_BUTTON_GREEN = 'bg-green/16 text-green hover:bg-green/24';
@@ -77,12 +77,12 @@ export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(fu
       )}
     >
       {reconnecting && (
-        <div className="rounded-md border border-strong bg-bg-floating px-3 py-2 text-label text-text-secondary shadow-popover">
+        <div className="rounded-md border border-border-strong bg-bg-floating px-3 py-2 text-label text-text-secondary shadow-popover">
           Reconectando à chamada…
         </div>
       )}
       {state.shareError && (
-        <div className="flex max-w-[calc(100vw-2rem)] items-start gap-2 rounded-md border border-strong bg-bg-floating px-3 py-2 text-label text-text-secondary shadow-popover md:max-w-100">
+        <div className="flex max-w-[calc(100vw-2rem)] items-start gap-2 rounded-md border border-border-strong bg-bg-floating px-3 py-2 text-label text-text-secondary shadow-popover md:max-w-100">
           <span className="min-w-0 flex-1">{state.shareError}</span>
           <CloseButton size="xs" label="Dispensar aviso" onClick={() => dispatch({ type: 'SET_SHARE_ERROR', message: null })} />
         </div>
@@ -94,7 +94,7 @@ export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(fu
           <CloseButton size="xs" label="Dispensar aviso" onClick={() => setDismissedMicProblem(micProblem)} />
         </div>
       )}
-      <div className="flex items-center gap-1 rounded-3xl border border-white/10 bg-black p-1.5 shadow-[0_8px_24px_rgba(0,0,0,0.45)] max-[480px]:gap-0.75 max-[480px]:p-1.25 max-[360px]:gap-0.5 max-[360px]:p-1">
+      <div className="flex items-center gap-1 rounded-3xl border border-white/10 bg-black p-1.5 shadow-popover max-[480px]:gap-0.75 max-[480px]:p-1.25 max-[360px]:gap-0.5 max-[360px]:p-1">
         <Popover open={reactionsOpen} onOpenChange={setReactionsOpen}>
           <PopoverTrigger
             aria-label="Reagir"

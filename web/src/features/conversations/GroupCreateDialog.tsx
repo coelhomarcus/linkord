@@ -71,8 +71,8 @@ export function GroupCreateDialog({ open, onOpenChange, onCreated }: GroupCreate
 
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!next) reset(); onOpenChange(next); }}>
-      <DialogContent className="max-w-lg border-white/10 bg-[rgb(18_18_20)] p-0 text-text-primary">
-        <DialogHeader className="border-b border-white/10 px-5 py-4">
+      <DialogContent className="max-w-lg p-0 text-text-primary">
+        <DialogHeader className="border-b border-border px-5 py-4">
           <DialogTitle className="flex items-center gap-2 text-title">
             <UsersRound size={18} />
             {failures ? 'Grupo criado' : 'Novo grupo'}
@@ -97,7 +97,7 @@ export function GroupCreateDialog({ open, onOpenChange, onCreated }: GroupCreate
                 onChange={(event) => setTitle(event.target.value)}
                 maxLength={80}
                 placeholder="Ex: Produto, familia, squad"
-                className="border-white/10 bg-white/[0.04]"
+                className="border-border bg-fill-subtle"
               />
             </div>
 
@@ -109,7 +109,7 @@ export function GroupCreateDialog({ open, onOpenChange, onCreated }: GroupCreate
             {error && <p role="alert" className="text-label text-red-text">{error}</p>}
           </div>
         )}
-        <DialogFooter className="border-t border-white/10 px-5 py-4">
+        <DialogFooter className="border-t border-border px-5 py-4">
           {failures ? (
             <Button type="button" onClick={close}>Fechar</Button>
           ) : (

@@ -40,7 +40,7 @@ function UploadItemCard({ item, onOpenImage }: { item: MediaItem; onOpenImage: (
       <button
         type="button"
         onClick={() => onOpenImage(url, attachment.name)}
-        className="block w-full cursor-zoom-in overflow-hidden rounded-xl border border-white/10 bg-bg-tertiary transition-opacity hover:opacity-90"
+        className="block w-full cursor-zoom-in overflow-hidden rounded-lg border border-border bg-bg-tertiary transition-opacity hover:opacity-90"
       >
         {/* Fixed aspect ratio (not h-auto/intrinsic) — InfiniteMasonry
             positions items via an estimated height that gets corrected once
@@ -61,7 +61,7 @@ function UploadItemCard({ item, onOpenImage }: { item: MediaItem; onOpenImage: (
         href={url}
         target="_blank"
         rel="noopener noreferrer"
-        className="group relative block aspect-video w-full overflow-hidden rounded-xl border border-white/10 bg-black"
+        className="group relative block aspect-video w-full overflow-hidden rounded-lg border border-border bg-black"
       >
         <video src={`${url}#t=0.1`} muted preload="metadata" playsInline className="pointer-events-none block h-full w-full object-cover" />
         <span className="absolute inset-0 flex items-center justify-center bg-black/25 transition-colors group-hover:bg-black/40">
@@ -79,7 +79,7 @@ function UploadItemCard({ item, onOpenImage }: { item: MediaItem; onOpenImage: (
       target="_blank"
       rel="noopener noreferrer"
       download={attachment.name}
-      className="flex w-full items-center rounded-xl border border-white/10 bg-bg-tertiary px-3 py-3 transition-colors hover:bg-bg-hover"
+      className="flex w-full items-center rounded-lg border border-border bg-bg-tertiary px-3 py-3 transition-colors hover:bg-bg-hover"
     >
       <DocumentAttachmentCard name={attachment.name} size={attachment.size} mime={attachment.mime} className="min-w-0 flex-1" />
     </a>
@@ -129,7 +129,7 @@ export function ConversationMediaPanel({ conversationId, open, onOpenChange }: C
 
   const content = conversationId && (
     <>
-      <div className="flex flex-none items-center gap-2 border-b border-white/10 px-5 py-4">
+      <div className="flex flex-none items-center gap-2 border-b border-border px-5 py-4">
         <h2 className="flex-1 text-title font-semibold">Mídias e links</h2>
         <CloseButton onClick={() => onOpenChange(false)} />
       </div>
@@ -190,7 +190,7 @@ export function ConversationMediaPanel({ conversationId, open, onOpenChange }: C
           open={open && !!conversationId}
           onOpenChange={onOpenChange}
           ariaLabel="Mídias e links"
-          className="flex w-96 flex-col border-white/10 bg-[rgb(14_14_16)] text-text-primary"
+          className="flex w-96 flex-col text-text-primary"
         >
           {content}
         </Drawer>

@@ -54,8 +54,8 @@ export function FriendsPage({ onOpenProfile }: { onOpenProfile: (userId: string)
         middle={layout === 'inline' ? <FriendsModeNav view={view} className="ml-2" /> : undefined}
         actions={<AddFriendButton active={view === 'add'} iconOnly={layout === 'select'} />}
       />
-      {layout === 'row' && <FriendsModeNav view={view} className="flex-none border-b border-white/10 px-4 py-2 md:px-6" />}
-      {layout === 'select' && <div className="flex-none border-b border-white/10 px-4 py-2"><FriendsModeSelect view={view} /></div>}
+      {layout === 'row' && <FriendsModeNav view={view} className="flex-none border-b border-border px-4 py-2 md:px-6" />}
+      {layout === 'select' && <div className="flex-none border-b border-border px-4 py-2"><FriendsModeSelect view={view} /></div>}
       <main aria-label="Amigos" className="min-h-0 flex-1 overflow-y-auto px-4 py-4 md:px-6">
         {(view === 'all' || view === 'online') && (
           <FriendsList key={view} view={view} query={query} onQueryChange={setQuery} onOpenProfile={onOpenProfile} />

@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router';
-import { PanelLeftClose, Pin, Plus, Search, Users, PhoneCall } from 'lucide-react';
+import { Pin, Search, Users, PhoneCall } from 'lucide-react';
 import { AnimatedSidebar, useAnimatedSidebar } from '@/shared/ui/motion/animated-sidebar';
-import { Button } from '@/shared/ui/primitives/button';
+import { AnimatedIconButton } from '@/shared/ui/icons/AnimatedIconButton';
+import { PlusIcon } from '@/shared/ui/icons/plus';
+import { PanelLeftCloseIcon } from '@/shared/ui/icons/panel-left-close';
 import { Avatar } from '@/shared/Avatar';
 import { cn } from '@/shared/lib/utils';
 import { shortcutHint } from '@/shared/lib/platform';
@@ -46,24 +48,24 @@ function ConversationRow({ conversation, active, onClick }: {
         type="button"
         onClick={onClick}
         className={cn(
-          'flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors',
+          'flex w-full items-center gap-2.5 rounded-md border px-2.5 py-1.5 text-left transition-colors',
           // Discord/Fluxer: the active row is a plain light-gray wash, no
           // border and no accent color — the color is reserved for actual
           // brand moments, not "you are here" state.
           active
-            ? 'border-transparent bg-white/10 text-text-primary shadow-[inset_0_1px_0_rgb(255_255_255_/_0.06)]'
-            : 'border-transparent text-text-secondary hover:border-white/10 hover:bg-white/[0.045]'
+            ? 'cutout-active border-transparent bg-fill-active text-text-primary shadow-highlight'
+            : 'cutout border-transparent text-text-secondary hover:cutout-subtle hover:border-border hover:bg-fill-subtle'
         )}
       >
         {conversation.type === 'direct' && other ? (
           <div className="relative flex-none">
-            <Avatar id={other.id} name={other.displayName} avatar={other.avatar} avatarColor={other.avatarColor} size={44} />
-            <span className={cn('absolute -bottom-0.5 -right-0.5 size-3.5 rounded-full border-2 border-[rgb(14_14_16)]', online ? 'bg-green' : 'bg-text-muted')} />
+            <Avatar id={other.id} name={other.displayName} avatar={other.avatar} avatarColor={other.avatarColor} size={36} />
+            <span className={cn('absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2 border-(--cutout)', online ? 'bg-green' : 'bg-text-muted')} />
           </div>
         ) : (
           <div className="relative flex-none">
-            <GroupAvatar title={title} avatar={conversation.avatar} active={active} />
-            <span className="absolute -bottom-0.5 -right-0.5 grid size-4 place-items-center rounded-full border-2 border-[rgb(14_14_16)] bg-bg-tertiary text-text-secondary">
+            <GroupAvatar title={title} avatar={conversation.avatar} active={active} size={36} />
+            <span className="absolute -bottom-0.5 -right-0.5 grid size-4 place-items-center rounded-full border-2 border-(--cutout) bg-bg-tertiary text-text-secondary">
               <Users size={9} />
             </span>
           </div>
@@ -78,10 +80,10 @@ function ConversationRow({ conversation, active, onClick }: {
               <PhoneCall size={12} className="flex-none text-green" />
               <span className="flex items-center -space-x-1.5">
                 {callParticipants.slice(0, 4).map((p) => (
-                  <Avatar key={p.id} id={p.id} name={p.displayName} avatar={p.avatar} avatarColor={p.avatarColor} size={16} className="ring-2 ring-[rgb(14_14_16)]" />
+                  <Avatar key={p.id} id={p.id} name={p.displayName} avatar={p.avatar} avatarColor={p.avatarColor} size={16} className="ring-2 ring-(--cutout)" />
                 ))}
                 {callParticipants.length > 4 && (
-                  <span className="grid size-4 place-items-center rounded-full bg-bg-tertiary text-[9px] font-semibold text-text-secondary ring-2 ring-[rgb(14_14_16)]">
+                  <span className="grid size-4 place-items-center rounded-full bg-bg-tertiary text-[9px] font-semibold text-text-secondary ring-2 ring-(--cutout)">
                     +{callParticipants.length - 4}
                   </span>
                 )}
@@ -96,7 +98,7 @@ function ConversationRow({ conversation, active, onClick }: {
             </span>
           )}
           {unread > 0 && (
-            <CountBadge className="h-5 min-w-5 px-1.5 text-[11px]">
+            <CountBadge className="h-5 min-w-5 px-1.5 text-micro">
               {unread > 99 ? '99+' : unread}
             </CountBadge>
           )}
@@ -148,18 +150,14 @@ export function ConversationSidebar({ onOpenPalette, mobileRail }: ConversationS
           <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
             <div className="flex flex-none items-center gap-2 px-4 py-4">
               <h1 className="min-w-0 flex-1 truncate text-title font-semibold">Conversas</h1>
-              <Button type="button" size="icon-sm" aria-label="Criar grupo" onClick={() => setGroupOpen(true)} className="flex-none">
-                <Plus size={16} />
-              </Button>
+              <AnimatedIconButton type="button" size="icon-sm" aria-label="Criar grupo" onClick={() => setGroupOpen(true)} className="flex-none" icon={PlusIcon} />
               {!isOverlay && (
-                <Button type="button" variant="ghost" size="icon-sm" aria-label="Ocultar lista de conversas" onClick={toggleSidebar} className="flex-none text-text-muted hover:text-text-primary">
-                  <PanelLeftClose size={16} />
-                </Button>
+                <AnimatedIconButton type="button" variant="ghost" size="icon-sm" aria-label="Ocultar lista de conversas" onClick={toggleSidebar} className="flex-none text-text-muted hover:text-text-primary" icon={PanelLeftCloseIcon} />
               )}
             </div>
 
             <div className="flex min-h-0 flex-1 flex-col gap-3 pb-3 pl-3 pr-shell">
-              <div className="flex flex-none items-center gap-2 rounded-xl border border-white/10 bg-white/[0.045] px-3">
+              <div className="flex flex-none items-center gap-2 rounded-md border border-border bg-fill-subtle px-3">
                 <Search size={15} className="text-text-muted" />
                 <input
                   value={query}
@@ -171,7 +169,7 @@ export function ConversationSidebar({ onOpenPalette, mobileRail }: ConversationS
                   type="button"
                   onClick={onOpenPalette}
                   aria-label={`Abrir busca rápida (${shortcutK})`}
-                  className="flex-none rounded border border-white/10 bg-black/20 px-1.5 py-0.5 text-[10px] font-medium text-text-muted transition-colors hover:text-text-secondary"
+                  className="flex-none rounded-sm border border-border bg-black/20 px-1.5 py-0.5 text-micro font-medium text-text-muted transition-colors hover:text-text-secondary"
                 >
                   {shortcutK}
                 </button>

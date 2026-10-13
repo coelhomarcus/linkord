@@ -14,7 +14,7 @@ function GroupLabel({ children }: { children: string }) {
 
 function SettingsSearchField({ query, onChange, onClear }: { query: string; onChange: (value: string) => void; onClear: () => void }) {
   return (
-    <div className="mb-3 flex flex-none items-center gap-2 rounded-xl border border-white/10 bg-white/[0.045] px-3">
+    <div className="mb-3 flex flex-none items-center gap-2 rounded-md border border-border bg-fill-subtle px-3">
       <Search size={15} className="flex-none text-text-muted" aria-hidden />
       <input
         value={query}
@@ -44,7 +44,7 @@ function SettingsSearchResults({ results, query }: { results: SettingsSearchResu
           <Link
             key={`${entry.categoryId}-${entry.sectionId ?? ''}`}
             to={to}
-            className="flex min-h-11 items-center gap-3 rounded-lg px-2.5 text-body font-medium text-text-primary outline-none transition-colors hover:bg-white/[0.05] focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex min-h-11 items-center gap-3 rounded-md px-2.5 text-body font-medium text-text-primary outline-none transition-colors hover:bg-fill-hover focus-visible:ring-2 focus-visible:ring-ring"
           >
             <Icon size={16} aria-hidden className="flex-none text-text-muted" />
             <span className="min-w-0 flex-1">
@@ -62,7 +62,7 @@ function SettingsSearchResults({ results, query }: { results: SettingsSearchResu
 export function SettingsSidebar({ active, isAdmin }: { active: SettingsTab; isAdmin: boolean }) {
   const { query, setQuery, results } = useSettingsSearch(isAdmin);
   return (
-    <nav aria-label="Categorias de ajustes" className="flex w-64 flex-none flex-col overflow-y-auto border-r border-white/10 p-3">
+    <nav aria-label="Categorias de ajustes" className="flex w-64 flex-none flex-col overflow-y-auto border-r border-border p-3">
       <SettingsSearchField query={query} onChange={setQuery} onClear={() => setQuery('')} />
       {query ? (
         <SettingsSearchResults results={results} query={query} />
@@ -80,10 +80,10 @@ export function SettingsSidebar({ active, isAdmin }: { active: SettingsTab; isAd
                     to={ROUTES.settingsTab(category.id)}
                     aria-current={current ? 'page' : undefined}
                     className={cn(
-                      'flex h-9 items-center gap-2 rounded-lg px-2.5 text-body font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring',
+                      'flex h-9 items-center gap-2 rounded-md px-2.5 text-body font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring',
                       // Discord/Fluxer: a plain light-gray wash for the
                       // active item, no accent color.
-                      current ? 'bg-white/10 text-text-primary' : 'text-text-muted hover:bg-white/[0.05] hover:text-text-secondary',
+                      current ? 'bg-fill-active text-text-primary' : 'text-text-muted hover:bg-fill-hover hover:text-text-secondary',
                     )}
                   >
                     <Icon size={16} aria-hidden className="flex-none" />
@@ -120,7 +120,7 @@ export function SettingsIndex({ isAdmin }: { isAdmin: boolean }) {
                     key={category.id}
                     to={ROUTES.settingsTab(category.id)}
                     state={FROM_INDEX_STATE}
-                    className="flex min-h-11 items-center gap-3 rounded-lg px-2.5 text-body font-medium text-text-primary outline-none transition-colors hover:bg-white/[0.05] focus-visible:ring-2 focus-visible:ring-ring"
+                    className="flex min-h-11 items-center gap-3 rounded-md px-2.5 text-body font-medium text-text-primary outline-none transition-colors hover:bg-fill-hover focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <Icon size={18} aria-hidden className="flex-none text-text-muted" />
                     <span className="min-w-0 flex-1 truncate">{category.label}</span>

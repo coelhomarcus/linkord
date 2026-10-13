@@ -95,7 +95,7 @@ function GroupDetail({ id }: { id: string }) {
         avatar={<GroupAvatar title={group.title} avatar={group.avatar} size={64} />}
         title={name}
         id={group.id}
-        badges={<>{!group.ownerId && <span className="inline-flex rounded bg-yellow/15 px-1.5 py-0.5 text-[11px] font-medium text-yellow">Sem dono</span>}<Badge value={group.status} /></>}
+        badges={<>{!group.ownerId && <span className="inline-flex rounded-sm bg-yellow/15 px-1.5 py-0.5 text-micro font-medium text-yellow">Sem dono</span>}<Badge value={group.status} /></>}
       />
 
       <AdminDetailTabs<Tab>
@@ -126,7 +126,7 @@ function GroupDetail({ id }: { id: string }) {
 
       {tab === 'members' && (
         <AdminSection title="Membros" description="Quem participa do grupo. Você consulta e administra sem entrar na conversa.">
-          <ul className="flex flex-col divide-y divide-white/5">
+          <ul className="flex flex-col divide-y divide-border-subtle">
             {members.map((m) => (
               <li key={m.user.id} className="flex items-center gap-3 py-2.5">
                 <Avatar id={m.user.id} name={m.user.displayName} avatar={m.user.avatar} avatarColor={m.user.avatarColor} size={32} />
@@ -134,7 +134,7 @@ function GroupDetail({ id }: { id: string }) {
                   {m.user.displayName} <span className="text-text-muted">@{m.user.username}</span>
                 </Link>
                 {m.role === 'owner'
-                  ? <span className="text-caption text-primary">dono</span>
+                  ? <span className="text-caption text-accent-text">dono</span>
                   : <Button type="button" variant="ghost" size="xs" onClick={() => setDialog({ owner: m })}>Atribuir dono</Button>}
               </li>
             ))}

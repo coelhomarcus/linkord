@@ -1,73 +1,110 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+/* bundled rather than fetched: a self-hosted install shouldn't reach out to a font CDN */
+@import "@fontsource-variable/figtree";
 
 @theme {
-  --color-surface-000: oklch(7.20% 0.0040 275.00);
-  --color-surface-100: oklch(10.80% 0.0040 275.00);
-  --color-surface-200: oklch(14.80% 0.0040 275.00);
-  --color-surface-300: oklch(18.70% 0.0040 275.00);
-  --color-surface-400: oklch(23.50% 0.0040 275.00);
-  --color-surface-500: oklch(30.00% 0.0040 275.00);
+  /* evenly spaced steps that stay apart on a dim screen; the base stays off
+     pure black so near-white text doesn't halo against it */
+  --color-surface-000: oklch(16.00% 0.0040 275.00);
+  --color-surface-100: oklch(19.50% 0.0040 275.00);
+  --color-surface-200: oklch(23.00% 0.0040 275.00);
+  --color-surface-300: oklch(26.50% 0.0040 275.00);
+  --color-surface-400: oklch(31.00% 0.0040 275.00);
+  --color-surface-500: oklch(37.00% 0.0040 275.00);
 
-  --color-surface-main: var(--color-surface-000);
-  --color-surface-selected: var(--color-surface-400);
+  /* elevation by role: the shell lowest, the content panel on it, cards and
+     fields on that, menus and popovers above everything */
+  --color-surface-app: var(--color-surface-000);
+  --color-surface-panel: var(--color-surface-100);
+  --color-surface-raised: var(--color-surface-200);
+  --color-surface-overlay: var(--color-surface-300);
+  /* one step below the shell: the global icon rail reads as its own column,
+     not as part of the conversation list beside it */
+  --color-surface-rail: oklch(12.00% 0.0040 275.00);
 
-  --color-bg-primary: var(--color-surface-main);
-  --color-bg-secondary: var(--color-surface-200);
-  --color-bg-tertiary: var(--color-surface-300);
-  --color-bg-textarea: var(--color-surface-200);
-  --color-bg-floating: var(--color-surface-300);
-  --color-bg-modal: var(--color-surface-200);
+  --color-bg-primary: var(--color-surface-app);
+  --color-bg-secondary: var(--color-surface-raised);
+  --color-bg-tertiary: var(--color-surface-overlay);
+  --color-bg-textarea: var(--color-surface-raised);
+  --color-bg-floating: var(--color-surface-overlay);
+  --color-bg-modal: var(--color-surface-raised);
   --color-bg-hover: var(--color-surface-400);
-  --color-bg-selected: var(--color-surface-selected);
+  --color-bg-selected: var(--color-surface-400);
   --color-bg-call: #000000;
 
-  --color-text-primary: oklch(99.11% 0.0015 279.30);
-  --color-text-secondary: oklch(84.80% 0.0023 279.30);
-  --color-text-muted: oklch(70.50% 0.0030 279.30);
+  /* translucent so one hover/selected state reads the same on every surface */
+  --color-fill-subtle: oklch(100% 0 0 / 0.035);
+  --color-fill-hover: oklch(100% 0 0 / 0.06);
+  --color-fill-active: oklch(100% 0 0 / 0.10);
 
-  --color-border-subtle: oklch(22.00% 0.0040 275.00);
-  --color-border-strong: oklch(28.00% 0.0040 275.00);
-  --color-accent-primary: oklch(52.82% 0.2628 279.30);
+  --color-text-primary: oklch(95.00% 0.0020 279.30);
+  --color-text-secondary: oklch(83.00% 0.0020 279.30);
+  --color-text-muted: oklch(71.00% 0.0020 279.30);
+
+  --color-border-subtle: oklch(100% 0 0 / 0.06);
+  --color-border-default: oklch(100% 0 0 / 0.10);
+  --color-border-strong: oklch(100% 0 0 / 0.16);
+  /* orchid: clear of the destructive red, the online/call green and the
+     mention yellow, so it never reads as a status. White text on it: 5.1:1 */
+  --color-accent-primary: oklch(57.00% 0.2300 330.00);
+  /* the accent itself is too dark to be text on these surfaces; links and
+     mentions use this lighter step of the same hue instead */
+  --color-accent-text: oklch(76.00% 0.1400 330.00);
   --color-border-accent: var(--color-accent-primary);
 
-  --color-blurple: var(--color-accent-primary);
-  --color-blurple-hover: oklch(46.00% 0.2628 279.30);
   --color-green: oklch(73.29% 0.1941 153.87);
   --color-red: oklch(59.40% 0.1973 27.69);
   --color-red-hover: oklch(52.00% 0.1973 27.69);
   --color-red-text: oklch(74.00% 0.1400 27.69);
   --color-yellow: oklch(82.03% 0.1392 79.40);
-  --color-fuchsia: #eb459e;
-  --color-orange: #e67e22;
-  --color-purple: #9b59b6;
-  --color-teal: #11806a;
-  --color-blue: #206694;
-  --color-input-focus: #00a8fc;
 
+  /* one lightness and chroma, only the hue moves, so no colour shouts over
+     another and white initials clear 4.5:1 on all of them (chroma is capped
+     where a hue runs out of sRGB gamut) */
+  --color-avatar-indigo: oklch(55% 0.150 275);
+  --color-avatar-green: oklch(55% 0.150 150);
+  --color-avatar-red: oklch(55% 0.150 25);
+  --color-avatar-fuchsia: oklch(55% 0.150 345);
+  --color-avatar-orange: oklch(55% 0.144 50);
+  --color-avatar-purple: oklch(55% 0.150 310);
+  --color-avatar-teal: oklch(55% 0.094 190);
+  --color-avatar-blue: oklch(55% 0.138 245);
+
+  /* badges and keyboard hints only: below this nothing is comfortably readable */
+  --text-micro: 0.6875rem;
+  --text-micro--line-height: 1.2;
   --text-caption: 0.75rem;
   --text-caption--line-height: 1.4;
   --text-label: 0.875rem;
   --text-label--line-height: 1.45;
   --text-body: 1rem;
   --text-body--line-height: 1.5;
-  --text-title: 1.0625rem;
+  --text-title: 1.125rem;
   --text-title--line-height: 1.35;
-  --text-display: 1.375rem;
+  --text-display: 1.5rem;
   --text-display--line-height: 1.25;
 
   /* the one gap between the shell's surfaces (the content panel's margins, the conversation list's inner edge) so they stay equal */
   --spacing-shell: 0.5rem;
 
-  --font-sans: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Roboto, Arial, sans-serif;
+  --font-sans: "Figtree Variable", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
 
+  /* sm: chips, badges, inline code · md: controls, list rows, menu items ·
+     lg: cards, media, and menus (which hold md items) · xl: dialogs, the
+     composer, the content panel. A nested shape takes its parent's radius
+     minus the padding between them. */
   --radius-sm: 4px;
   --radius-md: 8px;
+  --radius-lg: 12px;
   --radius-xl: 16px;
 
   --shadow-panel: 0 1px 2px rgb(0 0 0 / 0.35);
+  /* everything that floats: menus, popovers, dialogs, drawers, toolbars */
   --shadow-popover: 0 18px 60px rgb(0 0 0 / 0.5);
+  /* the top-edge sheen on a selected item in a list or the rail */
+  --shadow-highlight: inset 0 1px 0 oklch(100% 0 0 / 0.06);
 
   --default-transition-duration: 150ms;
 
@@ -91,6 +128,22 @@
 @keyframes typing-dot {
   0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
   30% { transform: translateY(-2px); opacity: 1; }
+}
+
+/* A status dot's cutout ring has to match the row behind it, and a row's
+   hover/selected tint is translucent. These give the same tint, opaque, over
+   the surface a container names in --surface-base (the shell when none
+   does: the mobile sheet renders outside every container that sets it);
+   the dot then draws its ring in var(--cutout). Keep the percentages in step
+   with --color-fill-subtle / --color-fill-active. */
+@utility cutout {
+  --cutout: var(--surface-base, var(--color-surface-app));
+}
+@utility cutout-subtle {
+  --cutout: color-mix(in srgb, var(--surface-base, var(--color-surface-app)), white 3.5%);
+}
+@utility cutout-active {
+  --cutout: color-mix(in srgb, var(--surface-base, var(--color-surface-app)), white 10%);
 }
 
 html, body {
@@ -175,9 +228,9 @@ button:not(:disabled) {
   --accent-foreground: var(--color-text-primary);
   --destructive: var(--color-red);
   --destructive-foreground: #ffffff;
-  --border: var(--color-border-subtle);
+  --border: var(--color-border-default);
   --input: var(--color-border-strong);
-  --ring: var(--color-blurple);
+  --ring: var(--color-accent-primary);
 }
 
 @layer base {

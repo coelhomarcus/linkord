@@ -124,7 +124,7 @@ export function TileGrid({ descriptors, focusedId, minTileWidth = DEFAULT_MIN_TI
             onClick={() => setThumbsCollapsed((v) => !v)}
             aria-expanded={!thumbsCollapsed}
             aria-label={thumbsCollapsed ? 'Mostrar participantes' : 'Ocultar participantes'}
-            className="flex items-center gap-1 rounded-full px-2 py-0.5 text-caption text-text-muted transition-colors hover:bg-white/5 hover:text-text-secondary"
+            className="flex items-center gap-1 rounded-full px-2 py-0.5 text-caption text-text-muted transition-colors hover:bg-fill-subtle hover:text-text-secondary"
           >
             {thumbsCollapsed ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
             {thumbs.length} participante{thumbs.length === 1 ? '' : 's'}

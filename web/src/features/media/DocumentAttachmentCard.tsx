@@ -18,10 +18,10 @@ export function DocumentAttachmentCard({ name, size, mime, className }: Document
   const { icon: Icon, iconBgClassName, iconTextClassName, badge, typeLabel, baseName, extension } = presentFile(name, mime);
   return (
     <div className={cn('flex min-w-0 items-center gap-3', className)}>
-      <div className={cn('relative grid size-10 flex-none place-items-center rounded-lg', iconBgClassName)}>
+      <div className={cn('relative grid size-10 flex-none place-items-center rounded-md', iconBgClassName)}>
         <Icon size={20} className={iconTextClassName} />
         {badge && (
-          <span className="absolute -bottom-1 -right-1 rounded bg-red px-1 text-[9px] font-bold leading-3.5 text-white">
+          <span className="absolute -bottom-1 -right-1 rounded-sm bg-red px-1 text-[9px] font-bold leading-3.5 text-white">
             {badge}
           </span>
         )}

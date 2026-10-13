@@ -1,5 +1,6 @@
 import { Link, useNavigate } from 'react-router';
-import { UserPlus } from 'lucide-react';
+import { UserPlusIcon } from '@/shared/ui/icons/user-plus';
+import { useAnimatedIcon } from '@/shared/ui/icons/useAnimatedIcon';
 import { buttonVariants } from '@/shared/ui/primitives/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/primitives/select';
 import { friendsView } from '@/shared/lib/routes';
@@ -44,8 +45,8 @@ export function FriendsModeNav({ view, className }: { view: FriendsView; classNa
             to={friendsView(mode.view)}
             aria-current={current ? 'page' : undefined}
             className={cn(
-              'flex h-8 items-center gap-1.5 rounded-lg px-3 text-label font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring',
-              current ? 'bg-white/[0.08] text-text-primary' : 'text-text-muted hover:bg-white/[0.05] hover:text-text-primary',
+              'flex h-8 items-center gap-1.5 rounded-md px-3 text-label font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring',
+              current ? 'bg-fill-active text-text-primary' : 'text-text-muted hover:bg-fill-hover hover:text-text-primary',
             )}
           >
             <span>{mode.label}</span>
@@ -76,14 +77,16 @@ export function FriendsModeSelect({ view }: { view: FriendsView }) {
 }
 
 export function AddFriendButton({ active, iconOnly }: { active: boolean; iconOnly?: boolean }) {
+  const { ref, triggerProps } = useAnimatedIcon();
   return (
     <Link
+      {...triggerProps}
       to={friendsView('add')}
       aria-current={active ? 'page' : undefined}
       aria-label="Adicionar amigo"
-      className={cn(buttonVariants({ size: iconOnly ? 'icon-sm' : 'sm' }), active && 'ring-2 ring-primary/40')}
+      className={cn(buttonVariants({ size: iconOnly ? 'icon-sm' : 'default' }), active && 'ring-2 ring-primary/40')}
     >
-      <UserPlus size={16} aria-hidden />
+      <UserPlusIcon ref={ref} size={16} aria-hidden />
       {!iconOnly && <span>Adicionar amigo</span>}
     </Link>
   );

@@ -127,7 +127,7 @@ export function FriendsList({ view, query, onQueryChange, onOpenProfile }: {
                 : view === 'online' ? 'Nenhum amigo online agora.' : 'Nenhum amigo encontrado.'}
             </p>
           ) : (
-            <div className="flex flex-col divide-y divide-white/[0.06]">
+            <div className="flex flex-col divide-y divide-border-subtle">
               {visible.map(({ user }) => (
                 <SocialUserRow key={user.id} user={user} online={onlineUserIds.has(user.id)} onOpenProfile={() => onOpenProfile(user.id)}>
                   <Button type="button" variant="secondary" size="sm" onClick={() => handleMessage(user)} aria-label={`Enviar mensagem para ${user.displayName}`}>

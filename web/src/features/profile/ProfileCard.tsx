@@ -37,7 +37,7 @@ interface ProfileCardProps {
   onBannerRemove?: () => void;
   bannerUploading?: boolean;
   className?: string;
-  /** no border or rounded corners of its own — for a container that already has an edge (the profile modal) */
+  /** no border or rounded-sm corners of its own — for a container that already has an edge (the profile modal) */
   bare?: boolean;
   /** Makes the display name an inline text field instead of a heading —
    * editing happens right where the value is shown, Twitter-style. */
@@ -97,7 +97,7 @@ export function ProfileCard({
   const isCustomAvatarColor = !AVATAR_COLOR_OPTIONS.some((option) => option.value === user.avatarColor);
 
   return (
-    <div className={cn('overflow-hidden bg-bg-modal', !bare && 'rounded-xl border border-strong', className)}>
+    <div className={cn('overflow-hidden bg-bg-modal', !bare && 'rounded-lg border border-border-strong', className)}>
       {onBannerUpload ? (
         <div className="group relative w-full" style={{ ...bannerStyle(user), aspectRatio: BANNER_ASPECT_RATIO }}>
           <DropdownMenu>
@@ -214,7 +214,7 @@ export function ProfileCard({
                           onClick={() => onAvatarColorChange(option.value)}
                           className={cn(
                             'relative h-5 w-5 rounded-full border transition focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60',
-                            selected ? 'border-text-primary ring-2 ring-ring/40 ring-offset-1 ring-offset-bg-modal' : 'border-strong hover:border-text-muted'
+                            selected ? 'border-text-primary ring-2 ring-ring/40 ring-offset-1 ring-offset-bg-modal' : 'border-border-strong hover:border-text-muted'
                           )}
                           style={{ background: option.css }}
                         />
@@ -230,7 +230,7 @@ export function ProfileCard({
                 title="Cor personalizada"
                 className={cn(
                   'relative flex h-5 w-5 items-center justify-center rounded-full border transition focus-within:outline-none focus-within:ring-3 focus-within:ring-ring/40',
-                  isCustomAvatarColor ? 'border-text-primary ring-2 ring-ring/40 ring-offset-1 ring-offset-bg-modal' : 'border-strong hover:border-text-muted'
+                  isCustomAvatarColor ? 'border-text-primary ring-2 ring-ring/40 ring-offset-1 ring-offset-bg-modal' : 'border-border-strong hover:border-text-muted'
                 )}
               >
                 <input
@@ -270,7 +270,7 @@ export function ProfileCard({
               <span className="truncate">{user.username}</span>
             </p>
             {user.role === 'admin' && (
-              <span className="flex flex-none items-center gap-1 rounded-sm bg-primary/15 px-1.5 py-0.5 text-caption font-medium text-primary">
+              <span className="flex flex-none items-center gap-1 rounded-sm bg-primary/15 px-1.5 py-0.5 text-caption font-medium text-accent-text">
                 <BadgeCheck size={13} /> Admin
               </span>
             )}
@@ -289,7 +289,7 @@ export function ProfileCard({
               const info = linkInfo(link);
               return (
                 <div key={index} className="flex items-center gap-2">
-                  <span className="flex size-8 flex-none items-center justify-center rounded-full border border-strong bg-bg-tertiary text-text-muted">
+                  <span className="flex size-8 flex-none items-center justify-center rounded-full border border-border-strong bg-bg-tertiary text-text-muted">
                     {info ? <BrandIcon kind={info.kind} /> : <Link2 size={15} />}
                   </span>
                   <input
@@ -329,7 +329,7 @@ export function ProfileCard({
                         target="_blank"
                         rel="noreferrer"
                         aria-label={`Abrir ${link.label}`}
-                        className="flex h-9 w-9 items-center justify-center rounded-md border border-strong bg-bg-tertiary text-text-primary transition-colors hover:bg-bg-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                        className="flex h-9 w-9 items-center justify-center rounded-md border border-border-strong bg-bg-tertiary text-text-primary transition-colors hover:bg-bg-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
                       />
                     }
                   >

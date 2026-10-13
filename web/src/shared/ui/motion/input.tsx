@@ -111,7 +111,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         <label
           htmlFor={id}
           className={cn(
-            "px-1 text-sm font-medium text-foreground",
+            "px-1 text-label font-medium text-foreground",
             classNames?.label,
           )}
         >
@@ -131,8 +131,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
                 : "idle"
         }
         className={cn(
-          "relative h-11 overflow-hidden rounded-full border bg-black/20 transition-colors duration-200",
-          "border-white/15",
+          "relative h-11 overflow-hidden rounded-md border bg-black/20 transition-colors duration-200",
+          "border-border-strong",
           focused && !hasError && "border-foreground/50 ring-2 ring-ring/40",
           hasError && "border-destructive ring-2 ring-destructive/25",
           disabled && "opacity-60",
@@ -169,7 +169,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
             onBlur?.(event);
           }}
           className={cn(
-            "peer h-full w-full bg-transparent text-base leading-6 text-foreground caret-foreground outline-none",
+            "peer h-full w-full bg-transparent text-body leading-6 text-foreground caret-foreground outline-none",
             "placeholder:text-muted-foreground/60",
             leftIcon ? "pl-10" : "pl-3.5",
             rightSlot || success ? "pr-10" : "pr-3.5",
@@ -229,7 +229,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
               }
               transition={{ duration: 0.2 }}
               className={cn(
-                "px-1 text-xs text-destructive",
+                "px-1 text-caption text-destructive",
                 classNames?.errorMessage,
               )}
             >

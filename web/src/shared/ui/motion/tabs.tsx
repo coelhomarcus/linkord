@@ -89,7 +89,7 @@ export function Tabs({
 const listClasses: Record<Variant, string> = {
   pill: "inline-flex items-center gap-1 rounded-full bg-card p-1",
   underline: "inline-flex items-center gap-1 border-b border-border",
-  segment: "inline-flex items-center gap-0 rounded-lg bg-card p-0.5",
+  segment: "inline-flex items-center gap-0 rounded-md bg-card p-0.5",
 };
 
 export function TabsList({ children, className }: { children: ReactNode; className?: string }) {
@@ -123,7 +123,7 @@ export function TabsTrigger({
         aria-selected={active}
         onClick={() => setValue(value)}
         className={cn(
-          "relative isolate px-3 pb-2.5 pt-1 -mb-px text-sm font-medium transition-colors min-h-[44px] inline-flex items-center",
+          "relative isolate px-3 pb-2.5 pt-1 -mb-px text-label font-medium transition-colors min-h-[44px] inline-flex items-center",
           active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
           className,
         )}
@@ -165,7 +165,7 @@ export function TabsTrigger({
         aria-selected={active}
         onClick={() => setValue(value)}
         className={cn(
-          "relative z-10 inline-flex items-center justify-center whitespace-nowrap bg-transparent px-3.5 py-1.5 text-sm font-medium outline-none",
+          "relative z-10 inline-flex items-center justify-center whitespace-nowrap bg-transparent px-3.5 py-1.5 text-label font-medium outline-none",
           "transition-colors",
           active
             ? "text-primary-foreground"

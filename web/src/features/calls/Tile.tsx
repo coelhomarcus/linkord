@@ -161,7 +161,7 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
       tabIndex={0}
       aria-pressed={isFocused}
       aria-label={`${isFocused ? 'Desfazer destaque de' : 'Destacar'} ${name || 'participante'}`}
-      className={`tile-fullscreen-target relative h-full w-full cursor-pointer overflow-hidden rounded-xl border-[3.5px] bg-bg-tertiary transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 ${
+      className={`tile-fullscreen-target relative h-full w-full cursor-pointer overflow-hidden rounded-lg border-[3.5px] bg-bg-tertiary transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 ${
         showSpeakingBorder ? '' : 'border-transparent'
       }`}
       style={{
@@ -242,7 +242,7 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
 
       {/* one grouped pill for tile-level actions, not separate floating
           buttons — a thin divider only appears when there's more than one */}
-      <div className="absolute left-1.5 top-1.5 flex h-6 items-stretch divide-x divide-white/10 overflow-hidden rounded-lg border border-white/10 bg-black/85">
+      <div className="absolute left-1.5 top-1.5 flex h-6 items-stretch divide-x divide-white/10 overflow-hidden rounded-md border border-white/10 bg-black/85">
         {hasMutableAudio && mutedForMe && (
           <Button
             type="button"

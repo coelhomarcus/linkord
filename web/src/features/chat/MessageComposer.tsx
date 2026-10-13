@@ -1,6 +1,11 @@
 import { forwardRef, useEffect, useId, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, ClipboardEvent, KeyboardEvent as ReactKeyboardEvent, SyntheticEvent } from 'react';
-import { ArrowUp, ImagePlus, Paperclip, Plus, Reply, Smile } from 'lucide-react';
+import { ImagePlus, Paperclip, Reply } from 'lucide-react';
+import { useAnimatedIcon } from '@/shared/ui/icons/useAnimatedIcon';
+import { AnimatedIconButton } from '@/shared/ui/icons/AnimatedIconButton';
+import { PlusIcon } from '@/shared/ui/icons/plus';
+import { SmileIcon } from '@/shared/ui/icons/smile';
+import { ArrowUpIcon } from '@/shared/ui/icons/arrow-up';
 import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { Button } from '@/shared/ui/primitives/button';
 import { EmojiPicker, EmojiPickerContent, EmojiPickerSearch } from '@/shared/ui/primitives/emoji-picker';
@@ -54,6 +59,8 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
   const setText = (next: string) => updateDraft(() => ({ text: next }));
   const [compressImages, setCompressImages] = useState(compressImagesDefault);
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
+  const addIcon = useAnimatedIcon();
+  const emojiIcon = useAnimatedIcon();
   // once opened, keeps the picker mounted (hidden) instead of paying its
   // dataset fetch/measure cost again on every open — see useKeepPopoverWarm.
   const emojiPickerWarmed = useKeepPopoverWarm(emojiPickerOpen);
@@ -286,9 +293,9 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
       <input ref={fileInputRef} type="file" multiple hidden onChange={handleFileChange} />
       <input ref={imageInputRef} type="file" accept="image/*" multiple hidden onChange={handleFileChange} />
 
-      <div className="relative flex flex-col rounded-2xl border border-white/10 bg-[rgb(18_18_20)] focus-within:border-white/20">
+      <div className="relative flex flex-col rounded-xl border border-border bg-surface-raised focus-within:border-border-strong">
         {mentionQuery && mentionCandidates.length > 0 && (
-          <div className="absolute inset-x-0 bottom-full z-20 mb-1 max-h-56 overflow-y-auto rounded-xl border border-white/10 bg-[rgb(24_24_27)] py-1 shadow-popover">
+          <div className="absolute inset-x-0 bottom-full z-20 mb-1 max-h-56 overflow-y-auto rounded-lg border border-border bg-surface-overlay py-1 shadow-popover">
             <p className="select-none px-3 pb-1 pt-0.5 text-caption font-semibold uppercase text-text-muted">Mencionar alguém</p>
             {mentionCandidates.map((user, i) => (
               <button
@@ -301,7 +308,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
                 onMouseDown={(event) => { event.preventDefault(); selectMention(user); }}
                 className={cn(
                   'flex w-full items-center gap-2 px-3 py-1.5 text-left',
-                  i === mentionSelectedIndex ? 'bg-white/8 text-text-primary' : 'text-text-secondary hover:bg-white/5'
+                  i === mentionSelectedIndex ? 'bg-fill-hover text-text-primary' : 'text-text-secondary hover:bg-fill-subtle'
                 )}
               >
                 <Avatar id={user.id} name={user.displayName} avatar={user.avatar} avatarColor={user.avatarColor} size={24} />
@@ -315,7 +322,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
         )}
 
         {replyingTo && (
-          <div className="flex items-center gap-2 border-b border-white/8 py-1.5 pl-3 pr-1.5 text-label">
+          <div className="flex items-center gap-2 border-b border-border-subtle py-1.5 pl-3 pr-1.5 text-label">
             <Reply size={14} className="flex-none text-text-muted" />
             <span className="min-w-0 flex-1 truncate text-text-muted">
               Respondendo a <span className="font-medium text-text-secondary">{replyName}</span>
@@ -327,14 +334,15 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
 
         <ComposerAttachmentTray files={pendingFiles} onRemove={removeFile} fallbackFocusRef={textareaRef} />
 
-        {attachError && <p role="alert" className="mx-2 mt-2 rounded-lg border border-red/20 bg-red/10 px-3 py-2 text-label text-red">{attachError}</p>}
+        {attachError && <p role="alert" className="mx-2 mt-2 rounded-md border border-red/20 bg-red/10 px-3 py-2 text-label text-red">{attachError}</p>}
 
         <div className="flex items-end gap-1 p-1.5">
           <DropdownMenu>
             <DropdownMenuTrigger
+              {...addIcon.triggerProps}
               render={<Button type="button" variant="ghost" size="icon" aria-label="Adicionar" disabled={disabled} className={iconButton} />}
             >
-              <Plus size={20} />
+              <PlusIcon ref={addIcon.ref} size={20} aria-hidden />
             </DropdownMenuTrigger>
             <DropdownMenuContent side="top" align="start" className="w-64">
               <DropdownMenuItem onClick={() => fileInputRef.current?.click()}><Paperclip size={14} />Anexar arquivos</DropdownMenuItem>
@@ -384,9 +392,10 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
           </Button>
           <Popover open={emojiPickerOpen} onOpenChange={setEmojiPickerOpen}>
             <PopoverTrigger
+              {...emojiIcon.triggerProps}
               render={<Button type="button" variant="ghost" size="icon" aria-label="Inserir emoji" disabled={disabled} className={iconButton} />}
             >
-              <Smile size={18} />
+              <SmileIcon ref={emojiIcon.ref} size={18} aria-hidden />
             </PopoverTrigger>
             <PopoverContent keepMounted={emojiPickerWarmed} className="w-75 p-0" side="top" align="end">
               <EmojiPicker className="h-80 w-full" onEmojiSelect={({ emoji }) => insertEmoji(emoji)}>
@@ -395,16 +404,16 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
               </EmojiPicker>
             </PopoverContent>
           </Popover>
-          <Button
+          <AnimatedIconButton
             type="button"
             size="icon"
             aria-label="Enviar mensagem"
             disabled={!canSubmit}
             onClick={() => void submit()}
             className="flex-none rounded-full"
-          >
-            <ArrowUp size={18} />
-          </Button>
+            icon={ArrowUpIcon}
+            iconSize={18}
+          />
         </div>
       </div>
     </div>

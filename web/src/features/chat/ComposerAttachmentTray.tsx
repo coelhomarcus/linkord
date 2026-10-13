@@ -60,7 +60,7 @@ export function ComposerAttachmentTray({ files, onRemove, fallbackFocusRef }: Co
                 key={item.id}
                 layout
                 className={cn(
-                  'relative flex-none overflow-hidden rounded-xl border border-white/10 bg-white/4',
+                  'relative flex-none overflow-hidden rounded-lg border border-border bg-fill-subtle',
                   item.previewUrl ? 'size-18' : 'flex w-65 max-w-full items-center gap-1 py-2.5 pl-2.5 pr-2'
                 )}
               >

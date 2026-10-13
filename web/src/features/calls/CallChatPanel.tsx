@@ -28,7 +28,7 @@ export function CallChatPanel({ conversationId, open, onOpenChange, onOpenProfil
 
   const content = conversation && (
     <>
-      <div className="flex flex-none items-center gap-2 border-b border-white/10 px-4 py-4">
+      <div className="flex flex-none items-center gap-2 border-b border-border px-4 py-4">
         <MessageCircle size={18} className="flex-none text-text-muted" />
         <h2 className="min-w-0 flex-1 truncate text-title font-semibold">{title}</h2>
         <CloseButton label="Fechar chat" onClick={() => onOpenChange(false)} />
@@ -42,7 +42,7 @@ export function CallChatPanel({ conversationId, open, onOpenChange, onOpenProfil
       open={open && !!conversation}
       onOpenChange={onOpenChange}
       ariaLabel="Chat da chamada"
-      className="flex w-96 flex-col border-white/10 bg-[rgb(14_14_16)] text-text-primary"
+      className="flex w-96 flex-col text-text-primary"
     >
       {content}
     </Drawer>

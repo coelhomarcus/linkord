@@ -41,7 +41,7 @@ export function ImageCropDialog({ open, imageSrc, aspect, cropShape, title, onCa
     <Dialog open={open} onOpenChange={(next) => { if (!next) onCancel(); }}>
       <DialogContent className="max-h-[90vh] max-w-[calc(100%-2rem)] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden bg-bg-modal p-0 sm:max-w-125">
         <DialogHeader className="px-6 pt-6 pr-12">
-          <DialogTitle className="text-title font-bold text-text-primary">{title}</DialogTitle>
+          <DialogTitle className="text-title font-semibold text-text-primary">{title}</DialogTitle>
         </DialogHeader>
 
         <div className="flex min-h-0 flex-col gap-4 overflow-y-auto px-6 py-4">
@@ -72,7 +72,7 @@ export function ImageCropDialog({ open, imageSrc, aspect, cropShape, title, onCa
           </div>
         </div>
 
-        <DialogFooter className="border-subtle bg-bg-tertiary/60 px-6 py-4">
+        <DialogFooter className="border-border-subtle bg-bg-tertiary/60 px-6 py-4">
           <Button type="button" variant="ghost" onClick={onCancel}>
             <span>Cancelar</span>
           </Button>
