@@ -70,7 +70,7 @@ export function FriendPicker({ selected, onToggle, excludeIds, inputId, maxHeigh
                   <span className="block truncate text-caption text-text-muted">@{user.username}</span>
                 </span>
                 <span className={cn(
-                  'grid size-5 place-items-center rounded-full border text-[11px]',
+                  'grid size-5 place-items-center rounded-full border text-micro',
                   checked ? 'border-primary bg-primary text-primary-foreground' : 'border-border-strong',
                 )}>
                   {checked ? <Check size={12} /> : null}

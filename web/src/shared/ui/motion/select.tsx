@@ -236,7 +236,7 @@ export function SelectTrigger({ className, children }: SelectTriggerProps) {
         borderBottomRightRadius: isTop ? INSTANT_TRANSITION : kfT,
       }}
       className={cn(
-        "relative z-10 flex w-full items-center justify-between gap-2 rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition-colors",
+        "relative z-10 flex w-full items-center justify-between gap-2 rounded-xl border border-border bg-background px-3 py-2 text-label text-foreground outline-none transition-colors",
         "hover:border-(--color-border-strong) focus-visible:ring-2 focus-visible:ring-foreground/20",
         "disabled:pointer-events-none disabled:opacity-50",
         className,
@@ -424,7 +424,7 @@ export function SelectItem({
         disabled={disabled}
         onClick={() => ctx.select(value)}
         className={cn(
-          "flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm outline-none transition-colors",
+          "flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-label outline-none transition-colors",
           selected
             ? "bg-muted text-foreground"
             : "text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:bg-muted",

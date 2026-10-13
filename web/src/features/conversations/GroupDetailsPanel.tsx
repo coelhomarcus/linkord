@@ -373,7 +373,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
                     <span className="min-w-0">
                       <span className="block truncate text-label font-medium">
                         {member.displayName}{isMe ? ' (você)' : ''}
-                        {role === 'owner' && <span className="ml-1.5 rounded bg-primary/15 px-1 py-px align-middle text-[10px] font-medium text-accent-text">dono</span>}
+                        {role === 'owner' && <span className="ml-1.5 rounded bg-primary/15 px-1 py-px align-middle text-micro font-medium text-accent-text">dono</span>}
                       </span>
                       <span className="block truncate text-caption text-text-muted">@{member.username}</span>
                     </span>

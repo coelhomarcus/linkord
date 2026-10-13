@@ -831,7 +831,7 @@ export const AnimatedSidebarGroupLabel = forwardRef<
       aria-hidden={collapsed}
       data-slot="sidebar-group-label"
       className={cn(
-        "mb-1 h-7 overflow-hidden px-2 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground transition-opacity",
+        "mb-1 h-7 overflow-hidden px-2 text-micro font-medium uppercase tracking-[0.14em] text-muted-foreground transition-opacity",
         collapsed ? "opacity-0" : "opacity-100",
         className,
       )}
@@ -1007,7 +1007,7 @@ export function AnimatedSidebarMenuSubButton({
   );
 
   const interactiveClassName = cn(
-    "flex min-h-8 w-full min-w-0 items-center gap-2 rounded-lg px-2 text-left text-xs outline-none",
+    "flex min-h-8 w-full min-w-0 items-center gap-2 rounded-lg px-2 text-left text-caption outline-none",
     "text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground",
     "focus-visible:bg-muted/70 focus-visible:ring-2 focus-visible:ring-ring",
     isActive && "bg-muted/70 text-foreground",
@@ -1142,7 +1142,7 @@ export function AnimatedSidebarMenuButton({
         {children}
       </motion.span>
       {badge && !panel.collapsed ? (
-        <span className="relative z-10 shrink-0 text-xs text-muted-foreground">
+        <span className="relative z-10 shrink-0 text-caption text-muted-foreground">
           {badge}
         </span>
       ) : null}
@@ -1165,7 +1165,7 @@ export function AnimatedSidebarMenuButton({
   );
 
   const interactiveClassName = cn(
-    "relative flex min-h-9 w-full min-w-0 items-center gap-2.5 overflow-hidden rounded-xl px-3 text-left text-sm font-medium outline-none",
+    "relative flex min-h-9 w-full min-w-0 items-center gap-2.5 overflow-hidden rounded-xl px-3 text-left text-label font-medium outline-none",
     "text-muted-foreground transition-colors hover:text-foreground",
     "focus-visible:bg-muted/70 focus-visible:ring-2 focus-visible:ring-ring",
     isActive && "text-foreground",

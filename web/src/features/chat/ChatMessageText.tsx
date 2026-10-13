@@ -77,7 +77,7 @@ function CodeBlock({ code, lang }: { code: string; lang: string | null }) {
     return () => { cancelled = true; };
   }, [cacheKey, code, lang]);
 
-  const frame = 'my-1 max-w-full overflow-x-auto rounded-md border border-border bg-black/30 text-[0.875rem] leading-relaxed';
+  const frame = 'my-1 max-w-full overflow-x-auto rounded-md border border-border bg-black/30 text-label leading-relaxed';
   // shiki escapes the source itself; only its own fixed markup wraps it
   if (html) return <div className={cn(frame, '[&_pre]:bg-transparent! [&_pre]:p-3')} dangerouslySetInnerHTML={{ __html: html }} />;
   return <pre className={cn(frame, 'p-3 font-mono')}><code>{code}</code></pre>;

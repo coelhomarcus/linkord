@@ -92,7 +92,7 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, onO
                     <Avatar key={p.id} id={p.id} name={p.displayName} avatar={p.avatar} avatarColor={p.avatarColor} size={28} className="ring-2 ring-surface-panel" />
                   ))}
                   {callParticipants.length > 4 && (
-                    <span className="grid size-7 place-items-center rounded-full bg-bg-tertiary text-[11px] font-semibold text-text-secondary ring-2 ring-surface-panel">
+                    <span className="grid size-7 place-items-center rounded-full bg-bg-tertiary text-micro font-semibold text-text-secondary ring-2 ring-surface-panel">
                       +{callParticipants.length - 4}
                     </span>
                   )}

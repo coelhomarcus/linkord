@@ -96,7 +96,7 @@ function ConversationRow({ conversation, active, onClick }: {
             </span>
           )}
           {unread > 0 && (
-            <CountBadge className="h-5 min-w-5 px-1.5 text-[11px]">
+            <CountBadge className="h-5 min-w-5 px-1.5 text-micro">
               {unread > 99 ? '99+' : unread}
             </CountBadge>
           )}
@@ -171,7 +171,7 @@ export function ConversationSidebar({ onOpenPalette, mobileRail }: ConversationS
                   type="button"
                   onClick={onOpenPalette}
                   aria-label={`Abrir busca rápida (${shortcutK})`}
-                  className="flex-none rounded border border-border bg-black/20 px-1.5 py-0.5 text-[10px] font-medium text-text-muted transition-colors hover:text-text-secondary"
+                  className="flex-none rounded border border-border bg-black/20 px-1.5 py-0.5 text-micro font-medium text-text-muted transition-colors hover:text-text-secondary"
                 >
                   {shortcutK}
                 </button>

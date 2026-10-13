@@ -40,8 +40,8 @@ function entityHref(type: string, id: string, action: string): string | null {
 
 function Result({ row }: { row: AuditRow }) {
   return row.result === 'failed'
-    ? <span className="inline-flex rounded bg-red/15 px-1.5 py-0.5 text-[11px] font-medium text-red-text">Falhou</span>
-    : <span className="inline-flex rounded bg-green/15 px-1.5 py-0.5 text-[11px] font-medium text-green">Concluída</span>;
+    ? <span className="inline-flex rounded bg-red/15 px-1.5 py-0.5 text-micro font-medium text-red-text">Falhou</span>
+    : <span className="inline-flex rounded bg-green/15 px-1.5 py-0.5 text-micro font-medium text-green">Concluída</span>;
 }
 
 function Actor({ row }: { row: AuditRow }) {
