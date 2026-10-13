@@ -14,7 +14,7 @@ function GroupLabel({ children }: { children: string }) {
 
 function SettingsSearchField({ query, onChange, onClear }: { query: string; onChange: (value: string) => void; onClear: () => void }) {
   return (
-    <div className="mb-3 flex flex-none items-center gap-2 rounded-xl border border-border bg-fill-subtle px-3">
+    <div className="mb-3 flex flex-none items-center gap-2 rounded-md border border-border bg-fill-subtle px-3">
       <Search size={15} className="flex-none text-text-muted" aria-hidden />
       <input
         value={query}

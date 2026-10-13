@@ -40,7 +40,7 @@ function UploadItemCard({ item, onOpenImage }: { item: MediaItem; onOpenImage: (
       <button
         type="button"
         onClick={() => onOpenImage(url, attachment.name)}
-        className="block w-full cursor-zoom-in overflow-hidden rounded-xl border border-border bg-bg-tertiary transition-opacity hover:opacity-90"
+        className="block w-full cursor-zoom-in overflow-hidden rounded-lg border border-border bg-bg-tertiary transition-opacity hover:opacity-90"
       >
         {/* Fixed aspect ratio (not h-auto/intrinsic) — InfiniteMasonry
             positions items via an estimated height that gets corrected once
@@ -61,7 +61,7 @@ function UploadItemCard({ item, onOpenImage }: { item: MediaItem; onOpenImage: (
         href={url}
         target="_blank"
         rel="noopener noreferrer"
-        className="group relative block aspect-video w-full overflow-hidden rounded-xl border border-border bg-black"
+        className="group relative block aspect-video w-full overflow-hidden rounded-lg border border-border bg-black"
       >
         <video src={`${url}#t=0.1`} muted preload="metadata" playsInline className="pointer-events-none block h-full w-full object-cover" />
         <span className="absolute inset-0 flex items-center justify-center bg-black/25 transition-colors group-hover:bg-black/40">
@@ -79,7 +79,7 @@ function UploadItemCard({ item, onOpenImage }: { item: MediaItem; onOpenImage: (
       target="_blank"
       rel="noopener noreferrer"
       download={attachment.name}
-      className="flex w-full items-center rounded-xl border border-border bg-bg-tertiary px-3 py-3 transition-colors hover:bg-bg-hover"
+      className="flex w-full items-center rounded-lg border border-border bg-bg-tertiary px-3 py-3 transition-colors hover:bg-bg-hover"
     >
       <DocumentAttachmentCard name={attachment.name} size={attachment.size} mime={attachment.mime} className="min-w-0 flex-1" />
     </a>

@@ -12,7 +12,7 @@ import { NotificationBell } from '@/features/notifications/NotificationBell';
 import { conversationTitle } from '@/features/conversations/conversationUtils';
 import { CountBadge } from '@/shared/CountBadge';
 
-const itemClass = 'relative grid size-11 place-items-center rounded-xl outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring';
+const itemClass = 'relative grid size-11 place-items-center rounded-md outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring';
 
 function stateClass(active: boolean): string {
   return active ? 'bg-fill-active text-text-primary shadow-highlight' :'text-text-muted hover:bg-fill-hover hover:text-text-primary';

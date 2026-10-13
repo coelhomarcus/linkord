@@ -29,7 +29,7 @@ export function FileAttachmentCard({ name, size, mime, url, maxWidth, bordered =
       style={maxWidth ? { maxWidth } : undefined}
       className={cn(
         'flex w-full min-w-0 items-center gap-2 px-3 py-2.5',
-        bordered ? 'rounded-xl border border-border bg-bg-tertiary' : 'transition-colors hover:bg-bg-hover',
+        bordered ? 'rounded-lg border border-border bg-bg-tertiary' : 'transition-colors hover:bg-bg-hover',
         className
       )}
     >

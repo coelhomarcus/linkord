@@ -19,7 +19,7 @@ const STATUS_LABEL: Record<Exclude<InvitationStatus, 'pending'>, string> = {
 export function InviteCard({ invitation }: { invitation: InvitationCard | null | undefined }) {
   if (!invitation) {
     return (
-      <div className="mt-1 max-w-[380px] rounded-xl border border-border bg-fill-subtle px-4 py-3 text-label text-text-muted">
+      <div className="mt-1 max-w-[380px] rounded-lg border border-border bg-fill-subtle px-4 py-3 text-label text-text-muted">
         Convite indisponível — o grupo não existe mais.
       </div>
     );
@@ -94,7 +94,7 @@ function LiveInviteCard({ invitation }: { invitation: InvitationCard }) {
   }
 
   return (
-    <div className="mt-1 max-w-[380px] rounded-xl border border-border bg-fill-subtle p-3" data-invite-status={status}>
+    <div className="mt-1 max-w-[380px] rounded-lg border border-border bg-fill-subtle p-3" data-invite-status={status}>
       <p className="mb-2 text-caption uppercase tracking-wide text-text-muted">Convite para grupo</p>
       <div className="mb-3 flex items-center gap-3">
         <GroupAvatar title={invitation.groupTitle} avatar={invitation.groupAvatar} size={44} />

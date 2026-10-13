@@ -46,7 +46,7 @@ function ConversationRow({ conversation, active, onClick }: {
         type="button"
         onClick={onClick}
         className={cn(
-          'flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors',
+          'flex w-full items-center gap-3 rounded-md border px-3 py-2.5 text-left transition-colors',
           // Discord/Fluxer: the active row is a plain light-gray wash, no
           // border and no accent color — the color is reserved for actual
           // brand moments, not "you are here" state.
@@ -159,7 +159,7 @@ export function ConversationSidebar({ onOpenPalette, mobileRail }: ConversationS
             </div>
 
             <div className="flex min-h-0 flex-1 flex-col gap-3 pb-3 pl-3 pr-shell">
-              <div className="flex flex-none items-center gap-2 rounded-xl border border-border bg-fill-subtle px-3">
+              <div className="flex flex-none items-center gap-2 rounded-md border border-border bg-fill-subtle px-3">
                 <Search size={15} className="text-text-muted" />
                 <input
                   value={query}

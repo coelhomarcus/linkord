@@ -71,7 +71,7 @@ export function ChatAttachment({ attachment, edgeToEdge }: ChatAttachmentProps) 
             style={{ maxWidth }}
             className={cn(
               'block h-auto max-h-80 max-w-full object-contain',
-              edgeToEdge ? 'rounded-xl' : 'rounded-md border border-border'
+              edgeToEdge ? 'rounded-lg' : 'rounded-md border border-border'
             )}
           />
         </button>
@@ -85,7 +85,7 @@ export function ChatAttachment({ attachment, edgeToEdge }: ChatAttachmentProps) 
       <VideoPlayer
         src={url}
         title={attachment.name}
-        className={edgeToEdge ? 'rounded-xl border-0' : undefined}
+        className={edgeToEdge ? 'rounded-lg border-0' : undefined}
       />
     );
   }
@@ -95,7 +95,7 @@ export function ChatAttachment({ attachment, edgeToEdge }: ChatAttachmentProps) 
       <AudioPlayer
         src={url}
         title={attachment.name}
-        className={edgeToEdge ? 'max-w-full rounded-xl border-0 bg-transparent shadow-none' : undefined}
+        className={edgeToEdge ? 'max-w-full rounded-lg border-0 bg-transparent shadow-none' : undefined}
       />
     );
   }

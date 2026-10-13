@@ -288,7 +288,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
 
       <div className="relative flex flex-col rounded-xl border border-border bg-surface-raised focus-within:border-border-strong">
         {mentionQuery && mentionCandidates.length > 0 && (
-          <div className="absolute inset-x-0 bottom-full z-20 mb-1 max-h-56 overflow-y-auto rounded-xl border border-border bg-surface-overlay py-1 shadow-popover">
+          <div className="absolute inset-x-0 bottom-full z-20 mb-1 max-h-56 overflow-y-auto rounded-lg border border-border bg-surface-overlay py-1 shadow-popover">
             <p className="select-none px-3 pb-1 pt-0.5 text-caption font-semibold uppercase text-text-muted">Mencionar alguém</p>
             {mentionCandidates.map((user, i) => (
               <button

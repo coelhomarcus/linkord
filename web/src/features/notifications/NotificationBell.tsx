@@ -63,7 +63,7 @@ export function NotificationBell({ collapsed = false, onNavigate }: { collapsed?
       <PopoverTrigger
         aria-label={label}
         className={collapsed
-          ? 'relative grid size-11 place-items-center rounded-xl text-text-muted transition-colors hover:bg-fill-hover hover:text-text-primary'
+          ? 'relative grid size-11 place-items-center rounded-md text-text-muted transition-colors hover:bg-fill-hover hover:text-text-primary'
           : cn(buttonVariants({ variant: 'ghost', size: 'icon-sm' }), 'relative flex-none text-text-muted hover:text-text-primary')}
       >
         <Bell size={collapsed ? 18 : 16} />

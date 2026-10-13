@@ -177,7 +177,7 @@ export function AuditPage() {
             <tbody>{list.items.map((row) => <WideRow key={row.id} row={row} />)}</tbody>
           </AdminTable>
         ) : (
-          <ul className="flex flex-col divide-y divide-border-subtle rounded-xl border border-border">{list.items.map((row) => <CompactRow key={row.id} row={row} />)}</ul>
+          <ul className="flex flex-col divide-y divide-border-subtle rounded-lg border border-border">{list.items.map((row) => <CompactRow key={row.id} row={row} />)}</ul>
         )}
       </ListChrome>
     </div>

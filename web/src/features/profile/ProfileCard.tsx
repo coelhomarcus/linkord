@@ -97,7 +97,7 @@ export function ProfileCard({
   const isCustomAvatarColor = !AVATAR_COLOR_OPTIONS.some((option) => option.value === user.avatarColor);
 
   return (
-    <div className={cn('overflow-hidden bg-bg-modal', !bare && 'rounded-xl border border-border-strong', className)}>
+    <div className={cn('overflow-hidden bg-bg-modal', !bare && 'rounded-lg border border-border-strong', className)}>
       {onBannerUpload ? (
         <div className="group relative w-full" style={{ ...bannerStyle(user), aspectRatio: BANNER_ASPECT_RATIO }}>
           <DropdownMenu>
