@@ -40,8 +40,8 @@ function entityHref(type: string, id: string, action: string): string | null {
 
 function Result({ row }: { row: AuditRow }) {
   return row.result === 'failed'
-    ? <span className="inline-flex rounded bg-red/15 px-1.5 py-0.5 text-micro font-medium text-red-text">Falhou</span>
-    : <span className="inline-flex rounded bg-green/15 px-1.5 py-0.5 text-micro font-medium text-green">Concluída</span>;
+    ? <span className="inline-flex rounded-sm bg-red/15 px-1.5 py-0.5 text-micro font-medium text-red-text">Falhou</span>
+    : <span className="inline-flex rounded-sm bg-green/15 px-1.5 py-0.5 text-micro font-medium text-green">Concluída</span>;
 }
 
 function Actor({ row }: { row: AuditRow }) {
@@ -67,7 +67,7 @@ function Target({ row, inline }: { row: AuditRow; inline?: boolean }) {
 
 function Toggle({ row, open, onToggle, controls }: { row: AuditRow; open: boolean; onToggle: () => void; controls: string }) {
   return (
-    <button type="button" aria-expanded={open} aria-controls={controls} onClick={onToggle} className="flex items-center gap-1.5 rounded text-left outline-none focus-visible:ring-2 focus-visible:ring-ring">
+    <button type="button" aria-expanded={open} aria-controls={controls} onClick={onToggle} className="flex items-center gap-1.5 rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-ring">
       {open ? <ChevronDown size={14} aria-hidden className="flex-none text-text-muted" /> : <ChevronRight size={14} aria-hidden className="flex-none text-text-muted" />}
       <span>{formatWhenShort(row.at)}</span>
       <span className="sr-only">: detalhes de {ACTION_LABELS[row.action] ?? row.action}</span>
@@ -110,7 +110,7 @@ function CompactRow({ row }: { row: AuditRow }) {
         <span>alvo: <Target row={row} inline /></span>
       </div>
       <Toggle row={row} open={open} onToggle={() => setOpen((v) => !v)} controls={detailsId} />
-      {open && <div id={detailsId} className="rounded-lg bg-fill-subtle p-3"><AuditRowDetails row={row} /></div>}
+      {open && <div id={detailsId} className="rounded-md bg-fill-subtle p-3"><AuditRowDetails row={row} /></div>}
     </li>
   );
 }
@@ -135,7 +135,7 @@ export function AuditPage() {
 
   // a code the labels don't know (a link, an older record) is kept, not silently reset
   const actionOptions = [{ value: '', label: 'Todas as ações' }, ...(action && !ACTION_LABELS[action] ? [{ value: action, label: `${action} (código desconhecido)` }] : []), ...ACTION_OPTIONS];
-  const field = 'h-9 rounded-lg border border-border bg-fill-subtle px-2.5 text-label text-text-primary outline-none focus-visible:ring-2 focus-visible:ring-ring';
+  const field = 'h-9 rounded-md border border-border bg-fill-subtle px-2.5 text-label text-text-primary outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
   return (
     <div className="flex flex-col gap-4">

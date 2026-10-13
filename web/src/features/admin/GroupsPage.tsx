@@ -38,7 +38,7 @@ function RowActions({ group }: { group: AdminGroupRow }) {
 
 function GroupIdentity({ group, from }: { group: AdminGroupRow; from: { from: string } }) {
   return (
-    <Link to={`/admin/groups/${group.id}`} state={from} className="flex min-w-0 items-center gap-3 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring">
+    <Link to={`/admin/groups/${group.id}`} state={from} className="flex min-w-0 items-center gap-3 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring">
       <GroupAvatar title={group.title} avatar={group.avatar} size={36} />
       <span className="block min-w-0 truncate text-body font-medium text-text-primary">{group.title || 'Grupo sem nome'}</span>
     </Link>
@@ -47,7 +47,7 @@ function GroupIdentity({ group, from }: { group: AdminGroupRow; from: { from: st
 
 /** A group with no owner is a condition, not a status: it gets its own mark so it can't be mistaken for a suspension. */
 function Owner({ group }: { group: AdminGroupRow }) {
-  if (!group.ownerId) return <span className="inline-flex rounded bg-yellow/15 px-1.5 py-0.5 text-micro font-medium text-yellow">Sem dono</span>;
+  if (!group.ownerId) return <span className="inline-flex rounded-sm bg-yellow/15 px-1.5 py-0.5 text-micro font-medium text-yellow">Sem dono</span>;
   return <Link to={`/admin/users/${group.ownerId}`} className="block max-w-full truncate text-text-secondary hover:underline">@{group.ownerUsername}</Link>;
 }
 

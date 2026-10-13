@@ -99,7 +99,7 @@ export function SystemPage() {
           <Button type="button" variant="secondary" size="sm" disabled={refreshing} onClick={() => void refresh()}>{refreshing ? 'Atualizando…' : 'Atualizar'}</Button>
         </div>
         {refreshFailed && (
-          <p role="alert" className="rounded-lg border border-yellow/30 bg-yellow/10 px-3 py-2 text-label text-text-primary">
+          <p role="alert" className="rounded-md border border-yellow/30 bg-yellow/10 px-3 py-2 text-label text-text-primary">
             Não foi possível atualizar. Os valores abaixo são da leitura das {observed}.
           </p>
         )}

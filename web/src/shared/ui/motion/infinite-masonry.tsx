@@ -96,7 +96,7 @@ function DefaultLoadingItem({ index }: { index: number }) {
   return (
     <div
       aria-hidden="true"
-      className="animate-pulse rounded-2xl border border-border bg-card p-3"
+      className="animate-pulse rounded-xl border border-border bg-card p-3"
       style={{ minHeight: 144 + (index % 3) * 36 }}
     >
       <div className="h-3 w-2/3 rounded-full bg-muted" />
@@ -297,7 +297,7 @@ export function InfiniteMasonry<T>({
             >
               {isTail ? (
                 hasError ? (
-                  <div className="flex min-h-36 flex-col items-start justify-center rounded-2xl border border-destructive/20 bg-destructive/5 p-4">
+                  <div className="flex min-h-36 flex-col items-start justify-center rounded-xl border border-destructive/20 bg-destructive/5 p-4">
                     <div className="flex items-center gap-2 text-destructive">
                       <AlertCircle className="size-4" aria-hidden="true" />
                       <p className="text-label font-medium">Couldn&apos;t load more</p>

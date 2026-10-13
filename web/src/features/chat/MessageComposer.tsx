@@ -286,7 +286,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
       <input ref={fileInputRef} type="file" multiple hidden onChange={handleFileChange} />
       <input ref={imageInputRef} type="file" accept="image/*" multiple hidden onChange={handleFileChange} />
 
-      <div className="relative flex flex-col rounded-2xl border border-border bg-surface-raised focus-within:border-border-strong">
+      <div className="relative flex flex-col rounded-xl border border-border bg-surface-raised focus-within:border-border-strong">
         {mentionQuery && mentionCandidates.length > 0 && (
           <div className="absolute inset-x-0 bottom-full z-20 mb-1 max-h-56 overflow-y-auto rounded-xl border border-border bg-surface-overlay py-1 shadow-popover">
             <p className="select-none px-3 pb-1 pt-0.5 text-caption font-semibold uppercase text-text-muted">Mencionar alguém</p>
@@ -327,7 +327,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
 
         <ComposerAttachmentTray files={pendingFiles} onRemove={removeFile} fallbackFocusRef={textareaRef} />
 
-        {attachError && <p role="alert" className="mx-2 mt-2 rounded-lg border border-red/20 bg-red/10 px-3 py-2 text-label text-red">{attachError}</p>}
+        {attachError && <p role="alert" className="mx-2 mt-2 rounded-md border border-red/20 bg-red/10 px-3 py-2 text-label text-red">{attachError}</p>}
 
         <div className="flex items-end gap-1 p-1.5">
           <DropdownMenu>

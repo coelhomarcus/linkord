@@ -22,7 +22,7 @@ export function AdminSidebar() {
                 key={section.id}
                 to={adminSectionPath(section)}
                 className={({ isActive }) => cn(
-                  'flex h-10 items-center gap-2 rounded-lg px-2.5 text-body font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring',
+                  'flex h-10 items-center gap-2 rounded-md px-2.5 text-body font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring',
                   isActive ? 'bg-fill-active text-text-primary' : 'text-text-muted hover:bg-fill-subtle hover:text-text-secondary',
                 )}
               >
@@ -51,7 +51,7 @@ export function AdminIndex() {
               <NavLink
                 key={section.id}
                 to={adminSectionPath(section)}
-                className="flex min-h-11 items-center gap-3 rounded-lg px-2.5 text-body font-medium text-text-primary outline-none transition-colors hover:bg-fill-subtle focus-visible:ring-2 focus-visible:ring-ring"
+                className="flex min-h-11 items-center gap-3 rounded-md px-2.5 text-body font-medium text-text-primary outline-none transition-colors hover:bg-fill-subtle focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <Icon size={18} aria-hidden className="flex-none text-text-muted" />
                 <span className="min-w-0 flex-1 truncate">{section.label}</span>

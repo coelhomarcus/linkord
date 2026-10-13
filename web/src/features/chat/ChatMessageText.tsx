@@ -31,7 +31,7 @@ function Mention({ name, ctx }: { name: string; ctx: RenderContext }) {
         // avatar) came out shorter than that, so the chip always sat a
         // few px off the text baseline no matter how align-middle/a
         // manual translate tried to compensate.
-        'inline-flex h-6 items-center gap-1 rounded px-1 align-middle font-medium',
+        'inline-flex h-6 items-center gap-1 rounded-sm px-1 align-middle font-medium',
         isMe ? 'bg-yellow/25 text-yellow' : 'bg-primary/15 text-accent-text',
         ctx.onOpenProfile && (isMe ? 'hover:bg-yellow/35' : 'hover:bg-primary/25')
       )}
@@ -46,7 +46,7 @@ function renderInline(nodes: Inline[], ctx: RenderContext): ReactNode[] {
   return nodes.map((node, index) => {
     switch (node.type) {
       case 'text': return node.text;
-      case 'code': return <code key={index} className="rounded bg-fill-active px-1 py-0.5 font-mono text-[0.875em]">{node.text}</code>;
+      case 'code': return <code key={index} className="rounded-sm bg-fill-active px-1 py-0.5 font-mono text-[0.875em]">{node.text}</code>;
       case 'link': return <a key={index} href={node.url} target="_blank" rel="noopener noreferrer" className="break-all text-accent-text hover:underline">{node.url}</a>;
       case 'mention': return <Mention key={index} name={node.name} ctx={ctx} />;
       case 'bold': return <strong key={index} className="font-semibold text-text-primary">{renderInline(node.children, ctx)}</strong>;

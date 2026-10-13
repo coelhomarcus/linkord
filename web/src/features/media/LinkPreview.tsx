@@ -53,11 +53,11 @@ export function LinkPreview({ embed, className = '', edgeToEdge, fitContainer }:
   if (failed) return <EmbedFailedFallback url={embed.url} className={className} />;
 
   if (embed.kind === 'video') {
-    return <VideoPlayer src={embed.url} className={edgeToEdge ? 'rounded-2xl border-0' : className} onError={() => setFailed(true)} />;
+    return <VideoPlayer src={embed.url} className={edgeToEdge ? 'rounded-xl border-0' : className} onError={() => setFailed(true)} />;
   }
 
   if (embed.kind === 'audio') {
-    return <AudioPlayer src={embed.url} className={edgeToEdge ? 'max-w-full rounded-2xl border-0 bg-transparent shadow-none' : className} onError={() => setFailed(true)} />;
+    return <AudioPlayer src={embed.url} className={edgeToEdge ? 'max-w-full rounded-xl border-0 bg-transparent shadow-none' : className} onError={() => setFailed(true)} />;
   }
 
   return (
@@ -69,7 +69,7 @@ export function LinkPreview({ embed, className = '', edgeToEdge, fitContainer }:
           loading="lazy"
           onError={() => setFailed(true)}
           style={fitContainer ? undefined : { maxWidth }}
-          className={`block h-auto max-h-70 max-w-full object-contain ${fitContainer ? 'w-full' : ''} ${edgeToEdge ? 'rounded-2xl' : 'rounded-md border border-border'}`}
+          className={`block h-auto max-h-70 max-w-full object-contain ${fitContainer ? 'w-full' : ''} ${edgeToEdge ? 'rounded-xl' : 'rounded-md border border-border'}`}
         />
       </button>
       <ImageLightbox src={embed.url} alt="" open={lightboxOpen} onOpenChange={setLightboxOpen} />

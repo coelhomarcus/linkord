@@ -51,7 +51,7 @@ function ConversationRow({ conversation, active, onClick }: {
           // border and no accent color — the color is reserved for actual
           // brand moments, not "you are here" state.
           active
-            ? 'cutout-active border-transparent bg-fill-active text-text-primary shadow-[inset_0_1px_0_rgb(255_255_255_/_0.06)]'
+            ? 'cutout-active border-transparent bg-fill-active text-text-primary shadow-highlight'
             : 'cutout border-transparent text-text-secondary hover:cutout-subtle hover:border-border hover:bg-fill-subtle'
         )}
       >
@@ -171,7 +171,7 @@ export function ConversationSidebar({ onOpenPalette, mobileRail }: ConversationS
                   type="button"
                   onClick={onOpenPalette}
                   aria-label={`Abrir busca rápida (${shortcutK})`}
-                  className="flex-none rounded border border-border bg-black/20 px-1.5 py-0.5 text-micro font-medium text-text-muted transition-colors hover:text-text-secondary"
+                  className="flex-none rounded-sm border border-border bg-black/20 px-1.5 py-0.5 text-micro font-medium text-text-muted transition-colors hover:text-text-secondary"
                 >
                   {shortcutK}
                 </button>

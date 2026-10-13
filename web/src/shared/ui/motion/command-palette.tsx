@@ -281,7 +281,7 @@ export function CommandPalette({
                 transition={reduce ? { duration: 0.1 } : PANEL_SPRING}
                 {...gate}
                 onKeyDown={onKeyDown}
-                className="pointer-events-auto w-full max-w-xl overflow-hidden rounded-2xl border border-border bg-card shadow-2xl will-change-transform"
+                className="pointer-events-auto w-full max-w-xl overflow-hidden rounded-xl border border-border bg-card shadow-popover will-change-transform"
               >
                 <div className="flex items-center gap-3 border-b border-border px-4">
                   {stagePath.length > 0 ? (
@@ -319,7 +319,7 @@ export function CommandPalette({
                       canTouch && "text-body",
                     )}
                   />
-                  <kbd className="hidden rounded border border-border bg-background px-1.5 py-0.5 text-micro text-muted-foreground sm:inline-block">
+                  <kbd className="hidden rounded-sm border border-border bg-background px-1.5 py-0.5 text-micro text-muted-foreground sm:inline-block">
                     ESC
                   </kbd>
                 </div>
@@ -411,7 +411,7 @@ export function CommandPalette({
                               {it.stage ? (
                                 <ChevronRight className="relative z-10 h-3.5 w-3.5 flex-none text-muted-foreground" />
                               ) : it.hint ? (
-                                <kbd className="relative z-10 rounded border border-border bg-background px-1.5 py-0.5 text-micro text-muted-foreground">
+                                <kbd className="relative z-10 rounded-sm border border-border bg-background px-1.5 py-0.5 text-micro text-muted-foreground">
                                   {it.hint}
                                 </kbd>
                               ) : null}

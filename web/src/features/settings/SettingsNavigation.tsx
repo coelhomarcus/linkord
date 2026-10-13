@@ -44,7 +44,7 @@ function SettingsSearchResults({ results, query }: { results: SettingsSearchResu
           <Link
             key={`${entry.categoryId}-${entry.sectionId ?? ''}`}
             to={to}
-            className="flex min-h-11 items-center gap-3 rounded-lg px-2.5 text-body font-medium text-text-primary outline-none transition-colors hover:bg-fill-hover focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex min-h-11 items-center gap-3 rounded-md px-2.5 text-body font-medium text-text-primary outline-none transition-colors hover:bg-fill-hover focus-visible:ring-2 focus-visible:ring-ring"
           >
             <Icon size={16} aria-hidden className="flex-none text-text-muted" />
             <span className="min-w-0 flex-1">
@@ -80,7 +80,7 @@ export function SettingsSidebar({ active, isAdmin }: { active: SettingsTab; isAd
                     to={ROUTES.settingsTab(category.id)}
                     aria-current={current ? 'page' : undefined}
                     className={cn(
-                      'flex h-9 items-center gap-2 rounded-lg px-2.5 text-body font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring',
+                      'flex h-9 items-center gap-2 rounded-md px-2.5 text-body font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring',
                       // Discord/Fluxer: a plain light-gray wash for the
                       // active item, no accent color.
                       current ? 'bg-fill-active text-text-primary' : 'text-text-muted hover:bg-fill-hover hover:text-text-secondary',
@@ -120,7 +120,7 @@ export function SettingsIndex({ isAdmin }: { isAdmin: boolean }) {
                     key={category.id}
                     to={ROUTES.settingsTab(category.id)}
                     state={FROM_INDEX_STATE}
-                    className="flex min-h-11 items-center gap-3 rounded-lg px-2.5 text-body font-medium text-text-primary outline-none transition-colors hover:bg-fill-hover focus-visible:ring-2 focus-visible:ring-ring"
+                    className="flex min-h-11 items-center gap-3 rounded-md px-2.5 text-body font-medium text-text-primary outline-none transition-colors hover:bg-fill-hover focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <Icon size={18} aria-hidden className="flex-none text-text-muted" />
                     <span className="min-w-0 flex-1 truncate">{category.label}</span>
