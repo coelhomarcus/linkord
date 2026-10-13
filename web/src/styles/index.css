@@ -80,12 +80,20 @@
 
   --font-sans: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Roboto, Arial, sans-serif;
 
+  /* sm: chips, badges, inline code · md: controls, list rows, menu items ·
+     lg: cards, media, and menus (which hold md items) · xl: dialogs, the
+     composer, the content panel. A nested shape takes its parent's radius
+     minus the padding between them. */
   --radius-sm: 4px;
   --radius-md: 8px;
+  --radius-lg: 12px;
   --radius-xl: 16px;
 
   --shadow-panel: 0 1px 2px rgb(0 0 0 / 0.35);
+  /* everything that floats: menus, popovers, dialogs, drawers, toolbars */
   --shadow-popover: 0 18px 60px rgb(0 0 0 / 0.5);
+  /* the top-edge sheen on a selected item in a list or the rail */
+  --shadow-highlight: inset 0 1px 0 oklch(100% 0 0 / 0.06);
 
   --default-transition-duration: 150ms;
 

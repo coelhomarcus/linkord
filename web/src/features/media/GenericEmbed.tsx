@@ -61,7 +61,7 @@ function TwitchPlayer({ embed }: { embed: DetectedEmbed }) {
 }
 
 export function GenericEmbed({ embed, className = '', edgeToEdge }: GenericEmbedProps) {
-  const cardBorderClass = edgeToEdge ? 'rounded-2xl border-0' : 'rounded-md border border-border';
+  const cardBorderClass = edgeToEdge ? 'rounded-xl border-0' : 'rounded-md border border-border';
   const surfaceWidth = useChatSurfaceWidth(384 + 120);
   const maxWidth = availableAttachmentWidth(surfaceWidth, 384);
   const { url } = embed;

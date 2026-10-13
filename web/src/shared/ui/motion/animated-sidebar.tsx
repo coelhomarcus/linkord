@@ -504,7 +504,7 @@ function MobileSidebar({
         }}
         className={cn(
           "pointer-events-auto fixed inset-y-0 flex h-dvh w-(--sidebar-width-mobile) max-w-[88vw] flex-col overflow-hidden",
-          "border-border bg-background pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] shadow-2xl will-change-transform",
+          "border-border bg-background pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] shadow-popover will-change-transform",
           side === "left" ? "left-0 border-r md:left-(--sidebar-overlay-offset,0px)" : "right-0 border-l",
           !context.openMobile && "pointer-events-none",
           className,
@@ -608,8 +608,8 @@ export const AnimatedSidebar = forwardRef<HTMLElement, AnimatedSidebarProps>(
             variant === "sidebar" &&
               (side === "left" ? "border-border border-r" : "border-border border-l"),
             variant === "floating" &&
-              "m-2 h-[calc(100svh-1rem)] rounded-2xl border border-border shadow-sm",
-            variant === "inset" && "m-2 h-[calc(100svh-1rem)] rounded-2xl",
+              "m-2 h-[calc(100svh-1rem)] rounded-xl border border-border shadow-panel",
+            variant === "inset" && "m-2 h-[calc(100svh-1rem)] rounded-xl",
             panelClassName,
           )}
         >
@@ -746,7 +746,7 @@ export const AnimatedSidebarInset = forwardRef<
       data-slot="sidebar-inset"
       className={cn(
         "relative flex min-h-svh min-w-0 flex-1 flex-col bg-background",
-        "md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-2xl md:peer-data-[variant=inset]:shadow-sm",
+        "md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow-panel",
         className,
       )}
     />
@@ -1007,7 +1007,7 @@ export function AnimatedSidebarMenuSubButton({
   );
 
   const interactiveClassName = cn(
-    "flex min-h-8 w-full min-w-0 items-center gap-2 rounded-lg px-2 text-left text-caption outline-none",
+    "flex min-h-8 w-full min-w-0 items-center gap-2 rounded-md px-2 text-left text-caption outline-none",
     "text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground",
     "focus-visible:bg-muted/70 focus-visible:ring-2 focus-visible:ring-ring",
     isActive && "bg-muted/70 text-foreground",

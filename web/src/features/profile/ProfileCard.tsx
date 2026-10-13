@@ -37,7 +37,7 @@ interface ProfileCardProps {
   onBannerRemove?: () => void;
   bannerUploading?: boolean;
   className?: string;
-  /** no border or rounded corners of its own — for a container that already has an edge (the profile modal) */
+  /** no border or rounded-sm corners of its own — for a container that already has an edge (the profile modal) */
   bare?: boolean;
   /** Makes the display name an inline text field instead of a heading —
    * editing happens right where the value is shown, Twitter-style. */

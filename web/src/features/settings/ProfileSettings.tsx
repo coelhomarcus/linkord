@@ -273,7 +273,7 @@ export function ProfileSettings() {
         </p>
 
         {conflict && (
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-strong bg-bg-tertiary px-4 py-3 text-label text-text-secondary">
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-strong bg-bg-tertiary px-4 py-3 text-label text-text-secondary">
             <span>Este perfil foi atualizado em outro lugar enquanto você editava.</span>
             <Button type="button" variant="ghost" size="sm" onClick={applyIncoming}>
               <span>Usar valores salvos</span>

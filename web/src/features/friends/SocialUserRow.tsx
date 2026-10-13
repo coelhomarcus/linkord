@@ -11,7 +11,7 @@ export function SocialUserRow({ user, online, subtitle, onOpenProfile, children 
   children?: ReactNode;
 }) {
   return (
-    <div className="cutout flex items-center gap-3 rounded-lg px-3 py-3 transition-colors hover:cutout-subtle hover:bg-fill-subtle">
+    <div className="cutout flex items-center gap-3 rounded-md px-3 py-3 transition-colors hover:cutout-subtle hover:bg-fill-subtle">
       <button
         type="button"
         onClick={onOpenProfile}

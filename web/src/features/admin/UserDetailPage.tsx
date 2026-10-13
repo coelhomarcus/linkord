@@ -71,7 +71,7 @@ function UserDetail({ id }: { id: string }) {
       <Link to={back} state={RESTORE_LIST} className="w-fit text-caption text-text-muted underline">← Usuários</Link>
       {refreshFailed && <RefreshFailedNotice refreshing={refreshing} onRetry={() => void refresh()} />}
       {ownSessionsEnded && (
-        <p role="status" className="rounded-lg border border-yellow/30 bg-yellow/10 px-3 py-2 text-label text-text-primary">
+        <p role="status" className="rounded-md border border-yellow/30 bg-yellow/10 px-3 py-2 text-label text-text-primary">
           Suas sessões foram encerradas. Entre de novo para continuar.
         </p>
       )}

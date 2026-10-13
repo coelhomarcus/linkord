@@ -349,7 +349,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
           </div>
 
           {addOpen && (
-            <div className="flex flex-col gap-2 rounded-lg border border-border bg-fill-subtle p-2">
+            <div className="flex flex-col gap-2 rounded-md border border-border bg-fill-subtle p-2">
               <p className="px-1 text-caption text-text-muted">Só entram no grupo ao aceitar o convite.</p>
               <FriendPicker selected={addSelected} onToggle={toggleAddCandidate} excludeIds={excludeIds} maxHeightClass="max-h-48" />
               <Button type="button" size="sm" onClick={() => void confirmInvite()} disabled={addSelected.size === 0 || inviting} className="mt-1">
@@ -364,7 +364,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
               const online = onlineUserIds.has(member.id);
               const isMe = member.id === state.me.userId;
               return (
-                <div key={member.id} className="group cutout flex items-center gap-2.5 rounded-lg px-1.5 py-1.5 hover:cutout-subtle hover:bg-fill-subtle">
+                <div key={member.id} className="group cutout flex items-center gap-2.5 rounded-md px-1.5 py-1.5 hover:cutout-subtle hover:bg-fill-subtle">
                   <button type="button" onClick={() => onOpenProfile(member.id)} className="flex min-w-0 flex-1 items-center gap-2.5 text-left">
                     <div className="relative flex-none">
                       <Avatar id={member.id} name={member.displayName} avatar={member.avatar} avatarColor={member.avatarColor} size={34} />
@@ -373,7 +373,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
                     <span className="min-w-0">
                       <span className="block truncate text-label font-medium">
                         {member.displayName}{isMe ? ' (você)' : ''}
-                        {role === 'owner' && <span className="ml-1.5 rounded bg-primary/15 px-1 py-px align-middle text-micro font-medium text-accent-text">dono</span>}
+                        {role === 'owner' && <span className="ml-1.5 rounded-sm bg-primary/15 px-1 py-px align-middle text-micro font-medium text-accent-text">dono</span>}
                       </span>
                       <span className="block truncate text-caption text-text-muted">@{member.username}</span>
                     </span>
@@ -424,7 +424,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
             <h3 className="text-label font-medium text-text-secondary">Convites enviados</h3>
             <div className="flex flex-col gap-1">
               {sent.items.map((entry) => (
-                <div key={entry.id} className="flex items-center gap-2.5 rounded-lg px-1.5 py-1.5 hover:bg-fill-subtle">
+                <div key={entry.id} className="flex items-center gap-2.5 rounded-md px-1.5 py-1.5 hover:bg-fill-subtle">
                   <Avatar id={entry.invitee.id} name={entry.invitee.displayName} avatar={entry.invitee.avatar} avatarColor={entry.invitee.avatarColor} size={34} />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-label font-medium">{entry.invitee.displayName}</span>

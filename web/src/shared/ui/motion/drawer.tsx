@@ -92,7 +92,7 @@ export function Drawer({
               }
               {...gate}
               className={cn(
-                "fixed inset-y-0 z-50 flex w-80 max-w-[85vw] flex-col bg-surface-panel shadow-2xl [--surface-base:var(--color-surface-panel)]",
+                "fixed inset-y-0 z-50 flex w-80 max-w-[85vw] flex-col bg-surface-panel shadow-popover [--surface-base:var(--color-surface-panel)]",
                 side === "right"
                   ? "right-0 border-l border-border"
                   : "left-0 border-r border-border",

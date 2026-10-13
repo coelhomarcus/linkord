@@ -28,7 +28,7 @@ export function FriendPicker({ selected, onToggle, excludeIds, inputId, maxHeigh
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-2 rounded-lg border border-border bg-fill-subtle px-3">
+      <div className="flex items-center gap-2 rounded-md border border-border bg-fill-subtle px-3">
         <Search size={15} className="text-text-muted" />
         <input
           id={inputId}
@@ -38,7 +38,7 @@ export function FriendPicker({ selected, onToggle, excludeIds, inputId, maxHeigh
           className="h-9 min-w-0 flex-1 bg-transparent text-label outline-none placeholder:text-text-muted"
         />
       </div>
-      <div className={cn('overflow-y-auto rounded-lg border border-border bg-black/20 p-1', maxHeightClass)}>
+      <div className={cn('overflow-y-auto rounded-md border border-border bg-black/20 p-1', maxHeightClass)}>
         {list.status === 'loading' ? (
           <p className="px-3 py-8 text-center text-label text-text-muted">Carregando amigos…</p>
         ) : list.status === 'error' ? (

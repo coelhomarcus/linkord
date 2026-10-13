@@ -38,7 +38,7 @@ export function FileAttachmentCard({ name, size, mime, url, maxWidth, bordered =
         href={url}
         download={name}
         aria-label={`Baixar ${name}`}
-        className="grid size-11 flex-none place-items-center rounded-lg text-text-muted transition-colors hover:bg-fill-hover hover:text-text-primary focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+        className="grid size-11 flex-none place-items-center rounded-md text-text-muted transition-colors hover:bg-fill-hover hover:text-text-primary focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
       >
         <Download size={18} />
       </a>

@@ -23,7 +23,7 @@ const QUERY: QuerySchema<'status' | 'targetType'> = {
 
 function ReportLink({ report, from }: { report: AdminReportRow; from: { from: string } }) {
   return (
-    <Link to={`/admin/reports/${report.id}`} state={from} className="block min-w-0 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring">
+    <Link to={`/admin/reports/${report.id}`} state={from} className="block min-w-0 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring">
       <span className="block truncate text-body font-medium text-text-primary">{report.targetLabel || report.targetId}</span>
       <span className="block truncate text-caption text-text-muted">{REPORT_TARGET_LABEL[report.targetType]}</span>
     </Link>
