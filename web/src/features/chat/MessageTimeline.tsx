@@ -127,6 +127,9 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
   }, [retainedIndexes]);
 
   const virtualizer = useVirtualizer({
+    // rows are measured from ref callbacks, during React's commit, where a
+    // flushSync re-render is not allowed (React 19 warns and defers it anyway)
+    useFlushSync: false,
     count: items.length,
     getScrollElement: () => scrollRef.current,
     estimateSize: (index) => estimateSize(items[index]),
