@@ -105,8 +105,13 @@ export async function sweepOrphans(opts: { dryRun: boolean; actor: AuditActor | 
  * disappearing into the log. */
 async function runSweep(opts: { dryRun: boolean; actor: AuditActor | null; requestId?: string; reason?: string }): Promise<SweepResult> {
   const files = await listDiskFiles();
-  // a staged file has no attachments row yet but is very much in use
-  const dbIds = new Set([...(await db.select({ id: attachments.id }).from(attachments)).map((r) => r.id), ...(await stagedFileIds())]);
+  // A staged file has no attachments row yet but is very much in use. Staged
+  // first, attachments second, on purpose: publishing moves a file from one to
+  // the other in a single transaction, so reading in this order always finds it
+  // in at least one. Attachments first would miss a file published between the
+  // two reads — in neither list, and old enough to be collected.
+  const staged = await stagedFileIds();
+  const dbIds = new Set([...staged, ...(await db.select({ id: attachments.id }).from(attachments)).map((r) => r.id)]);
   const { orphans, recent, missingFiles } = classifyOrphans({ files, dbIds, now: Date.now(), graceMs: config.ORPHAN_GRACE_MS });
 
   let deleted = 0;
