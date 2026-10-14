@@ -69,7 +69,7 @@ function SettingsShortcutItem() {
 }
 
 export function MicQuickMenu({ className }: { className?: string }) {
-  const { livekitRoom, noiseSuppressionEnabled, setNoiseSuppressionEnabled, noiseSuppressionPending, fullscreenElement } = useRoom();
+  const { livekitRoom, fullscreenElement } = useRoom();
   return (
     <DropdownMenu>
       <DropdownMenuTrigger aria-label="Configurações do microfone" className={cn(CORNER_TRIGGER, className)}>
@@ -77,14 +77,6 @@ export function MicQuickMenu({ className }: { className?: string }) {
       </DropdownMenuTrigger>
       <DropdownMenuContent side="top" align="start" container={fullscreenElement ?? undefined} className={MENU_CONTENT}>
         <DeviceRadioList room={livekitRoom} kind="audioinput" heading="Entrada de áudio" label="Microfone" />
-        <DropdownMenuSeparator />
-        <DropdownMenuSwitchItem
-          checked={noiseSuppressionEnabled}
-          disabled={noiseSuppressionPending}
-          onCheckedChange={(value) => void setNoiseSuppressionEnabled(value)}
-        >
-          Supressão de ruído
-        </DropdownMenuSwitchItem>
         <DropdownMenuSeparator />
         <SettingsShortcutItem />
       </DropdownMenuContent>

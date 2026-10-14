@@ -3,23 +3,19 @@ import { loadShowStats, saveShowStats, loadNotifyVolume, saveNotifyVolume } from
 import { loadHideAudioOnlyTiles, saveHideAudioOnlyTiles } from './useStageViewPreference';
 import { loadShowTileBanners, saveShowTileBanners } from './useTileBannerPreference';
 import { loadCompressImages, saveCompressImages } from './useCompressImagesPreference';
-import { loadNoiseSuppression, saveNoiseSuppression } from './useNoiseSuppressionPreference';
 import { loadMirrorCameraPreview, saveMirrorCameraPreview } from './useCameraMirrorPreference';
 import { loadShareQuality, saveShareQuality } from './useShareQualityPreference';
 import type { ShareQualityId } from '@/features/calls/shareQualityPresets';
 import { setVolume } from '@/shared/sounds';
 import { setNotificationsModuleEnabled, loadNotificationsEnabled, saveNotificationsEnabled } from '@/shared/notifications';
-import type { NoiseSuppressionResult } from '@/features/calls/useMicrophone';
 
 /** The 8 user-facing toggles/sliders under Ajustes — each backed by its own
  * `features/settings/useXPreference.ts` localStorage pair, wired up here
  * into React state with a setter that persists on change. `notifyVolume`
  * and `notificationsEnabled` also keep the `shared/sounds`/`shared/notifications`
  * module-level singletons in sync, since those modules can't read React
- * state themselves. `applyNoiseSuppression` comes from `useMicrophone` —
- * flipping the toggle has to reach the actual LiveKit audio track, not just
- * persist a preference. */
-export function useRoomSettings(applyNoiseSuppression: (enabled: boolean) => Promise<NoiseSuppressionResult>) {
+ * state themselves. */
+export function useRoomSettings() {
   const [showStats, setShowStatsState] = useState(loadShowStats);
   const setShowStats = useCallback((value: boolean) => {
     setShowStatsState(value);
@@ -70,30 +66,6 @@ export function useRoomSettings(applyNoiseSuppression: (enabled: boolean) => Pro
     saveShareQuality(value);
   }, []);
 
-  const [noiseSuppressionEnabled, setNoiseSuppressionEnabledState] = useState(loadNoiseSuppression);
-  const [noiseSuppressionPending, setNoiseSuppressionPending] = useState(false);
-  const [noiseSuppressionError, setNoiseSuppressionError] = useState<string | null>(null);
-  // Applies first, only marks the switch (and persists) once it's actually
-  // confirmed — a failed apply must not leave the switch claiming success
-  // it never had.
-  const setNoiseSuppressionEnabled = useCallback(async (value: boolean) => {
-    setNoiseSuppressionError(null);
-    setNoiseSuppressionPending(true);
-    try {
-      const result = await applyNoiseSuppression(value);
-      if (result === 'failed') {
-        setNoiseSuppressionError(value
-          ? 'Não foi possível ativar a supressão de ruído agora.'
-          : 'Não foi possível desativar a supressão de ruído agora.');
-        return;
-      }
-      setNoiseSuppressionEnabledState(value);
-      saveNoiseSuppression(value);
-    } finally {
-      setNoiseSuppressionPending(false);
-    }
-  }, [applyNoiseSuppression]);
-
   useEffect(() => {
     setVolume(notifyVolume);
   }, [notifyVolume]);
@@ -111,6 +83,5 @@ export function useRoomSettings(applyNoiseSuppression: (enabled: boolean) => Pro
     compressImagesDefault, setCompressImagesDefault,
     mirrorCameraPreview, setMirrorCameraPreview,
     shareQuality, setShareQuality,
-    noiseSuppressionEnabled, setNoiseSuppressionEnabled, noiseSuppressionPending, noiseSuppressionError,
   };
 }
