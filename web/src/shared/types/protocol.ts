@@ -86,6 +86,8 @@ export interface ChatAttachment {
   // row reserve the final box before the pixels arrive.
   width?: number;
   height?: number;
+  // base64 ThumbHash: a blurred stand-in to paint while the image loads
+  placeholder?: string;
 }
 export const MAX_ATTACHMENT_BYTES = 2 * 1024 * 1024 * 1024;
 export const MAX_ATTACHMENTS_PER_MESSAGE = 4;
