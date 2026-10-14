@@ -55,6 +55,9 @@ export function Masonry<T>({
   const tail = error ? 1 : loading ? columns : 0;
 
   const virtualizer = useVirtualizer({
+    // rows are measured from ref callbacks, during React's commit, where a
+    // flushSync re-render is not allowed (React 19 warns and defers it anyway)
+    useFlushSync: false,
     count: items.length + tail,
     getScrollElement: () => scrollRef.current,
     getItemKey: (index) => (index < items.length ? getKey(items[index]!) : `tail-${index - items.length}`),
