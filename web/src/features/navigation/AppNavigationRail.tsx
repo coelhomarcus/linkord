@@ -1,11 +1,13 @@
 import type { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { MessageCircle, PanelLeftOpen, PhoneCall, Settings, ShieldCheck, UsersRound } from '@/shared/ui/icons';
 import { Avatar } from '@/shared/Avatar';
 import { useAnimatedSidebar } from '@/shared/ui/motion/animated-sidebar';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
 import { ROUTES, isConversationsPath } from '@/shared/lib/routes';
 import { cn } from '@/shared/lib/utils';
+import { SPRING_LAYOUT } from '@/shared/lib/ease';
 import { useRoom } from '@/state/RoomContext';
 import { useFriends } from '@/features/friends/FriendsContext';
 import { NotificationBell } from '@/features/notifications/NotificationBell';
@@ -28,6 +30,31 @@ function RailBadge({ count }: { count: number }) {
     <CountBadge decorative className="absolute -right-0.5 -top-0.5">
       {count > 99 ? '99+' : count}
     </CountBadge>
+  );
+}
+
+// the rail's flex gap (gap-1.5): a closed slot pulls it back so it takes no room at all
+const COLLAPSED_SLOT = { height: 0, marginBottom: -6, opacity: 0, scale: 0.6, overflow: 'hidden' } as const;
+
+/** An item that comes and goes with the conversation list grows into its slot,
+ * so the items below glide down instead of jumping a whole slot at once. */
+function RailSlot({ show, children }: { show: boolean; children: ReactNode }) {
+  const reduce = useReducedMotion();
+  return (
+    <AnimatePresence initial={false}>
+      {show && (
+        <motion.div
+          initial={COLLAPSED_SLOT}
+          // clipped only while it moves: at rest the focus ring and a badge reach past the slot
+          animate={{ height: 'auto', marginBottom: 0, opacity: 1, scale: 1, transitionEnd: { overflow: 'visible' } }}
+          exit={COLLAPSED_SLOT}
+          transition={reduce ? { duration: 0 } : SPRING_LAYOUT}
+          className="flex flex-none flex-col items-center self-stretch"
+        >
+          {children}
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 
@@ -54,8 +81,8 @@ function RailLink({ to, label, active, badge, onNavigate, children }: {
 }
 
 /** The global navigation: where you can go from anywhere. What belongs to one
- * conversation (search, creating a group, the list) stays in the conversations
- * sidebar beside it. On a narrow screen the same rail is drawn inside the
+ * conversation (search, creating a group, the list) and the notifications bell
+ * stay in the conversations sidebar beside it. On a narrow screen the same rail is drawn inside the
  * navigation sheet, so nothing here is reachable only on desktop. */
 export function AppNavigationRail({ onOpenProfile, onReturnToCall, className }: {
   onOpenProfile: (userId: string) => void;
@@ -73,6 +100,8 @@ export function AppNavigationRail({ onOpenProfile, onReturnToCall, className }: 
   // (on a phone the rail already sits inside that drawer, so the button would only close it)
   const showListToggle = isOverlay ? !isMobile : !listOpen;
   const listExpanded = isOverlay ? openMobile : listOpen;
+  // the bell lives in the list's header, so it moves here only while that header is off screen
+  const showBell = !isMobile && !listExpanded;
   const onSettings = pathname.startsWith(ROUTES.settings);
   const onAdmin = pathname.startsWith('/admin');
   const isAdmin = state.me.role === 'admin';
@@ -85,13 +114,28 @@ export function AppNavigationRail({ onOpenProfile, onReturnToCall, className }: 
 
   return (
     <nav aria-label="Navegação principal" className={cn('flex w-16 flex-none flex-col items-center gap-1.5 border-r border-border-subtle bg-surface-rail py-3', className)}>
+      <RailSlot show={showListToggle}>
+        <Tooltip>
+          <TooltipTrigger
+            onClick={toggleSidebar}
+            aria-label="Mostrar lista de conversas"
+            aria-expanded={listExpanded}
+            className={cn(itemClass, stateClass(false))}
+          >
+            <PanelLeftOpen size={20} aria-hidden />
+          </TooltipTrigger>
+          <TooltipContent side="right">Mostrar lista de conversas</TooltipContent>
+        </Tooltip>
+      </RailSlot>
       <RailLink to={ROUTES.conversations} label="Conversas" active={isConversationsPath(pathname)} onNavigate={afterNavigate}>
         <MessageCircle size={20} aria-hidden />
       </RailLink>
       <RailLink to={ROUTES.friends} label={friendsLabel} active={pathname === ROUTES.friends} badge={pendingIncomingCount} onNavigate={afterNavigate}>
         <UsersRound size={20} aria-hidden />
       </RailLink>
-      <NotificationBell collapsed onNavigate={afterNavigate} />
+      <RailSlot show={showBell}>
+        <NotificationBell collapsed onNavigate={afterNavigate} />
+      </RailSlot>
 
       {inCall && (
         <Tooltip>
@@ -108,19 +152,6 @@ export function AppNavigationRail({ onOpenProfile, onReturnToCall, className }: 
 
       <div className="flex-1" />
 
-      {showListToggle && (
-        <Tooltip>
-          <TooltipTrigger
-            onClick={toggleSidebar}
-            aria-label="Mostrar lista de conversas"
-            aria-expanded={listExpanded}
-            className={cn(itemClass, stateClass(false))}
-          >
-            <PanelLeftOpen size={20} aria-hidden />
-          </TooltipTrigger>
-          <TooltipContent side="right">Mostrar lista de conversas</TooltipContent>
-        </Tooltip>
-      )}
       {isAdmin && (
         <RailLink to={ROUTES.admin} label="Área administrativa" active={onAdmin} onNavigate={afterNavigate}>
           <ShieldCheck size={20} aria-hidden />

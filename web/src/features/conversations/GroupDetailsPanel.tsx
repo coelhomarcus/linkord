@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, KeyboardEvent, ReactNode } from 'react';
 import type { Area } from 'react-easy-crop';
-import { motion } from 'motion/react';
 import { Camera, Crown, Flag, Pencil, Trash2 } from 'lucide-react';
 import { Check, Link2, LogOut, Upload, UserPlus } from '@/shared/ui/icons';
 import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { useAnimatedSidebar } from '@/shared/ui/motion/animated-sidebar';
 import { Drawer } from '@/shared/ui/motion/drawer';
+import { SidePanel } from '@/shared/ui/motion/side-panel';
 import { Button } from '@/shared/ui/primitives/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/primitives/dropdown-menu';
 import { Input } from '@/shared/ui/primitives/input';
@@ -16,7 +16,6 @@ import { ConfirmDialog } from '@/shared/ConfirmDialog';
 import { ImageUrlDialog } from '@/shared/ImageUrlDialog';
 import { UploadProgressBar } from '@/shared/UploadProgressBar';
 import { formatMB } from '@/shared/lib/formatBytes';
-import { SPRING_LAYOUT } from '@/shared/lib/ease';
 import { uploadWithProgress } from '@/shared/lib/uploadWithProgress';
 import { cn } from '@/shared/lib/utils';
 import { useRoom } from '@/state/RoomContext';
@@ -479,18 +478,9 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
           {content}
         </Drawer>
       ) : (
-        <motion.aside
-          aria-label="Detalhes do grupo"
-          aria-hidden={!open || !conversation}
-          initial={false}
-          animate={{ width: open && conversation ? PANEL_WIDTH : 0, opacity: open && conversation ? 1 : 0 }}
-          transition={SPRING_LAYOUT}
-          className="flex-none overflow-hidden bg-bg-primary text-text-primary will-change-[width]"
-        >
-          <div className="flex h-full flex-col" style={{ width: PANEL_WIDTH }}>
-            {content}
-          </div>
-        </motion.aside>
+        <SidePanel open={open && !!conversation} width={PANEL_WIDTH} ariaLabel="Detalhes do grupo" className="bg-bg-primary text-text-primary">
+          {content}
+        </SidePanel>
       )}
 
       <ImageCropDialog

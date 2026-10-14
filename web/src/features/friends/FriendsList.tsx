@@ -17,10 +17,12 @@ import { SocialConfirmDialog } from './SocialConfirmDialog';
 import type { SocialConfirm } from './SocialConfirmDialog';
 import { SocialUserRow } from './SocialUserRow';
 import { useFriends } from './FriendsContext';
-import { useCursorList } from '@/shared/hooks/useCursorList';
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
 import { usePendingIds } from './usePendingIds';
 import { useUrlSearch } from '@/shared/hooks/useUrlSearch';
+import { FadeIn, RevealList, RevealRow, SocialRowsSkeleton } from './listReveal';
+import { useLoadingPhase } from './useLoadingPhase';
+import { useRememberedList } from './useRememberedList';
 
 const friendKey = (entry: SocialEntry) => entry.user.id;
 
@@ -50,10 +52,11 @@ export function FriendsList({ view, query, onQueryChange, onOpenProfile }: {
     (cursor: string | null) => fetchFriends(cursor, search, view === 'online' ? 'online' : undefined),
     [search, view],
   );
-  const list = useCursorList(fetchPage, `${view}|${search}`, { revision: `${revision}|${presenceKey}`, getKey: friendKey });
+  const list = useRememberedList(fetchPage, `${view}|${search}`, { revision: `${revision}|${presenceKey}`, getKey: friendKey });
   const visible = list.items;
+  const phase = useLoadingPhase(list.status === 'loading');
   // only the unfiltered list can say "no friends at all"; an empty Online view just means nobody is on now
-  const isEmptyAccount = view === 'all' && list.status === 'ready' && list.items.length === 0 && !search;
+  const isEmptyAccount = view === 'all' && phase === 'content' && list.status === 'ready' && list.items.length === 0 && !search;
 
   async function runAction(userId: string, action: () => Promise<unknown>) {
     setFeedback(null);
@@ -94,9 +97,9 @@ export function FriendsList({ view, query, onQueryChange, onOpenProfile }: {
 
       <ActionFeedback feedback={feedback} onClear={clearFeedback} />
 
-      {list.status === 'loading' && <p className="py-8 text-center text-label text-text-muted">Carregando amigos…</p>}
+      {phase === 'skeleton' && <SocialRowsSkeleton label="Carregando amigos…" />}
 
-      {list.status === 'error' && (
+      {phase === 'content' && list.status === 'error' && (
         <div className="flex flex-col items-center gap-3 py-8 text-center">
           <p className="text-body text-text-muted">Não foi possível carregar seus amigos.</p>
           <Button type="button" variant="secondary" size="sm" onClick={list.retry}>Tentar de novo</Button>
@@ -104,7 +107,7 @@ export function FriendsList({ view, query, onQueryChange, onOpenProfile }: {
       )}
 
       {isEmptyAccount && (
-        <div className="flex flex-col items-center gap-3 py-10 text-center">
+        <FadeIn className="flex flex-col items-center gap-3 py-10 text-center">
           <UserRound size={32} className="text-text-muted" />
           <p className="text-body font-medium text-text-primary">Adicione amigos para começar uma conversa</p>
           <p className="max-w-sm text-label text-text-muted">Peça o @nome de usuário de quem você quer conversar, ou compartilhe o seu.</p>
@@ -115,50 +118,54 @@ export function FriendsList({ view, query, onQueryChange, onOpenProfile }: {
               <span>{copied ? 'Copiado' : `Copiar @${state.me.name}`}</span>
             </Button>
           </div>
-        </div>
+        </FadeIn>
       )}
 
-      {list.status === 'ready' && !isEmptyAccount && (
+      {phase === 'content' && list.status === 'ready' && !isEmptyAccount && (
         <section aria-labelledby="friends-list-title">
-          <ListSectionHeader id="friends-list-title" title={view === 'online' ? 'Online' : 'Todos os amigos'} count={countText} />
+          <FadeIn skip={list.restored}><ListSectionHeader id="friends-list-title" title={view === 'online' ? 'Online' : 'Todos os amigos'} count={countText} /></FadeIn>
           {visible.length === 0 ? (
-            <p className="py-8 text-center text-label text-text-muted">
-              {search
-                ? 'Nenhum resultado para esta busca.'
-                : view === 'online' ? 'Nenhum amigo online agora.' : 'Nenhum amigo encontrado.'}
-            </p>
+            <FadeIn skip={list.restored}>
+              <p className="py-8 text-center text-label text-text-muted">
+                {search
+                  ? 'Nenhum resultado para esta busca.'
+                  : view === 'online' ? 'Nenhum amigo online agora.' : 'Nenhum amigo encontrado.'}
+              </p>
+            </FadeIn>
           ) : (
-            <div className="flex flex-col divide-y divide-border-subtle">
+            <RevealList restored={list.restored}>
               {visible.map(({ user }) => (
-                <SocialUserRow key={user.id} user={user} online={onlineUserIds.has(user.id)} onOpenProfile={() => onOpenProfile(user.id)}>
-                  <Button type="button" variant="secondary" size="sm" onClick={() => handleMessage(user)} aria-label={`Enviar mensagem para ${user.displayName}`}>
-                    <MessageCircle size={15} />
-                    <span className="hidden sm:inline">Mensagem</span>
-                  </Button>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger
-                      render={<Button type="button" variant="ghost" size="icon-sm" disabled={pending.isPending(user.id)} aria-label={`Mais ações para ${user.displayName}`} />}
-                    >
-                      <MoreHorizontal size={16} />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-max min-w-0">
-                      <DropdownMenuItem onClick={() => onOpenProfile(user.id)}>Ver perfil</DropdownMenuItem>
-                      <DropdownMenuItem variant="destructive" onClick={() => setConfirm({ kind: 'remove', userId: user.id, displayName: user.displayName })}>
-                        Remover amizade
-                      </DropdownMenuItem>
-                      <DropdownMenuItem variant="destructive" onClick={() => setConfirm({ kind: 'block', userId: user.id, displayName: user.displayName })}>
-                        Bloquear
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </SocialUserRow>
+                <RevealRow key={user.id}>
+                  <SocialUserRow user={user} online={onlineUserIds.has(user.id)} onOpenProfile={() => onOpenProfile(user.id)}>
+                    <Button type="button" variant="secondary" size="sm" onClick={() => handleMessage(user)} aria-label={`Enviar mensagem para ${user.displayName}`}>
+                      <MessageCircle size={15} />
+                      <span className="hidden sm:inline">Mensagem</span>
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger
+                        render={<Button type="button" variant="ghost" size="icon-sm" disabled={pending.isPending(user.id)} aria-label={`Mais ações para ${user.displayName}`} />}
+                      >
+                        <MoreHorizontal size={16} />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-max min-w-0">
+                        <DropdownMenuItem onClick={() => onOpenProfile(user.id)}>Ver perfil</DropdownMenuItem>
+                        <DropdownMenuItem variant="destructive" onClick={() => setConfirm({ kind: 'remove', userId: user.id, displayName: user.displayName })}>
+                          Remover amizade
+                        </DropdownMenuItem>
+                        <DropdownMenuItem variant="destructive" onClick={() => setConfirm({ kind: 'block', userId: user.id, displayName: user.displayName })}>
+                          Bloquear
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </SocialUserRow>
+                </RevealRow>
               ))}
-            </div>
+            </RevealList>
           )}
         </section>
       )}
 
-      {list.status === 'ready' && <LoadMoreFooter list={list} />}
+      {phase === 'content' && list.status === 'ready' && <LoadMoreFooter list={list} />}
 
       <SocialConfirmDialog
         target={confirm}

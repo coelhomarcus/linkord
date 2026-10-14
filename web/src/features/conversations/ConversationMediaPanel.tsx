@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
-import { motion } from 'motion/react';
 import { Play } from 'lucide-react';
 import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { useAnimatedSidebar } from '@/shared/ui/motion/animated-sidebar';
 import { Drawer } from '@/shared/ui/motion/drawer';
+import { SidePanel } from '@/shared/ui/motion/side-panel';
 import { InfiniteMasonry } from '@/shared/ui/motion/infinite-masonry';
 import { Tabs, TabsList, TabsIndicator, TabsTrigger } from '@/shared/ui/primitives/tabs';
 import { DocumentAttachmentCard } from '@/features/media/DocumentAttachmentCard';
@@ -11,7 +11,6 @@ import { ImageLightbox } from '@/features/media/ImageLightbox';
 import { LinkPreview } from '@/features/media/LinkPreview';
 import { fetchMedia, ApiError } from '@/shared/api/api';
 import type { MediaItem, MediaKind } from '@/shared/api/api';
-import { SPRING_LAYOUT } from '@/shared/lib/ease';
 import { useCachedImageSrc } from '@/shared/hooks/useCachedImageSrc';
 import { IMAGE_MIME_TYPES, VIDEO_MIME_TYPES } from '../chat/ChatAttachment';
 
@@ -195,18 +194,9 @@ export function ConversationMediaPanel({ conversationId, open, onOpenChange }: C
           {content}
         </Drawer>
       ) : (
-        <motion.aside
-          aria-label="Mídias e links"
-          aria-hidden={!open || !conversationId}
-          initial={false}
-          animate={{ width: open && conversationId ? PANEL_WIDTH : 0, opacity: open && conversationId ? 1 : 0 }}
-          transition={SPRING_LAYOUT}
-          className="flex-none overflow-hidden bg-bg-primary text-text-primary will-change-[width]"
-        >
-          <div className="flex h-full flex-col" style={{ width: PANEL_WIDTH }}>
-            {content}
-          </div>
-        </motion.aside>
+        <SidePanel open={open && !!conversationId} width={PANEL_WIDTH} ariaLabel="Mídias e links" className="bg-bg-primary text-text-primary">
+          {content}
+        </SidePanel>
       )}
 
       <ImageLightbox

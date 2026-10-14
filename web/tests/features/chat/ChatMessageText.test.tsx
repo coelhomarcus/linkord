@@ -16,6 +16,13 @@ describe('ChatMessageText', () => {
     expect(container.querySelector('p')?.textContent).toBe('linha 1\nlinha 2');
   });
 
+  it('a message that is only a KLIPY URL shows the GIF itself, not the link', () => {
+    const url = 'https://static.klipy.com/ii/abc/md.webp';
+    const { container } = render(<ChatMessageText text={url} />);
+    expect(screen.getByRole('img', { name: 'GIF' })).toHaveAttribute('src', url);
+    expect(container.querySelector('a')).toBeNull();
+  });
+
   it('empty message renders no paragraph at all', () => {
     const { container } = render(<ChatMessageText text="" />);
     expect(container.querySelector('p')).toBeNull();

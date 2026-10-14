@@ -31,6 +31,7 @@ import {
   EASE_OUT,
   SPRING_LAYOUT,
   SPRING_PRESS,
+  SPRING_SIDEBAR,
 } from "@/shared/lib/ease";
 import { cn } from "@/shared/lib/utils";
 
@@ -49,16 +50,6 @@ const SIDEBAR_KEYBOARD_SHORTCUT = "b";
 const PANEL_TRANSITION = {
   duration: 0.36,
   ease: EASE_DRAWER,
-} as const;
-
-// The desktop rail settles at a hard zero-width boundary. Keep the spring
-// critically damped so it cannot overshoot, pause against that boundary, and
-// then snap back during the final frame.
-const SIDEBAR_MORPH_TRANSITION = {
-  type: "spring",
-  stiffness: 380,
-  damping: 35,
-  mass: 0.75,
 } as const;
 
 const LABEL_ENTER_TRANSITION = {
@@ -580,28 +571,25 @@ export const AnimatedSidebar = forwardRef<HTMLElement, AnimatedSidebarProps>(
         data-side={side}
         animate={{ width }}
         transition={
-          context.reduce ? { duration: 0 } : SIDEBAR_MORPH_TRANSITION
+          context.reduce ? { duration: 0 } : SPRING_SIDEBAR
         }
         style={style}
         className={cn(
-          "group/sidebar relative hidden h-auto shrink-0 lg:block will-change-[width]",
+          // clipped, so the panel never slides across whatever sits beside it
+          "group/sidebar relative hidden h-auto shrink-0 overflow-hidden lg:block will-change-[width]",
           "peer",
           side === "right" && "order-last",
           className,
         )}
       >
-        <motion.div
-          initial={false}
+        {/* Pinned to the edge facing the content: as the aside's width springs
+            shut, the panel is carried out with it, so one spring drives both the
+            slide and the content's reflow and the two can never drift apart. */}
+        <div
           inert={offcanvas}
-          animate={{
-            opacity: offcanvas ? 0 : 1,
-            x: offcanvas ? (side === "left" ? "-100%" : "100%") : "0%",
-          }}
-          transition={
-            context.reduce ? REDUCED_TRANSITION : PANEL_TRANSITION
-          }
           className={cn(
-            "sticky top-0 flex h-svh w-full flex-col overflow-hidden bg-background",
+            "absolute inset-y-0 flex w-full flex-col overflow-hidden bg-background",
+            side === "left" ? "right-0" : "left-0",
             collapsible === "offcanvas" && "w-[var(--sidebar-width)]",
             // slid away but still (sidebar-width) wide: it must not catch clicks or focus
             offcanvas && "pointer-events-none",
@@ -618,7 +606,7 @@ export const AnimatedSidebar = forwardRef<HTMLElement, AnimatedSidebarProps>(
           >
             {children}
           </AnimatedSidebarPanelContext.Provider>
-        </motion.div>
+        </div>
       </motion.aside>
     );
   },

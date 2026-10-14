@@ -1,5 +1,4 @@
-import { ImageIcon, Info } from 'lucide-react';
-import { ArrowLeft, Phone, Search } from '@/shared/ui/icons';
+import { ArrowLeft, ImageIcon, Info, Phone, Search } from 'lucide-react';
 import { PageHeader } from '@/shared/PageHeader';
 import { useAnimatedSidebar } from '@/shared/ui/motion/animated-sidebar';
 import { Button } from '@/shared/ui/primitives/button';
@@ -12,15 +11,24 @@ import { ChatSurface } from '@/features/chat/ChatSurface';
 import { useRelationship } from '@/features/friends/useRelationship';
 import { CloseButton } from '@/shared/ui/primitives/close-button';
 
+function panelToggleClass(open: boolean): string {
+  return open ? 'bg-fill-active text-text-primary' : 'text-text-muted hover:text-text-primary';
+}
+
 interface ConversationPanelProps {
   onOpenProfile: (userId: string) => void;
   onOpenCall: (conversationId: string) => void;
   onOpenSearch: () => void;
+  /** whether each right panel is showing, so its header button reads as pressed */
+  detailsOpen: boolean;
+  mediaOpen: boolean;
+  /** the avatar and title: they only ever open the details */
   onOpenDetails: () => void;
-  onOpenMedia: () => void;
+  onToggleDetails: () => void;
+  onToggleMedia: () => void;
 }
 
-export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, onOpenDetails, onOpenMedia }: ConversationPanelProps) {
+export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, detailsOpen, mediaOpen, onOpenDetails, onToggleDetails, onToggleMedia }: ConversationPanelProps) {
   const { state, dispatch, conversations, activeConversationId, allUsers, onlineUserIds, activeCallConversationId } = useRoom();
   const { setOpenMobile } = useAnimatedSidebar();
   const conversation = conversations.find((item) => item.id === activeConversationId) ?? null;
@@ -101,14 +109,14 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, onO
                 <TooltipContent side="bottom">Na chamada</TooltipContent>
               </Tooltip>
             )}
-            <Button type="button" variant="ghost" size="icon-sm" aria-label="Mídias e links" onClick={onOpenMedia} className="text-text-muted hover:text-text-primary">
+            <Button type="button" variant="ghost" size="icon-sm" aria-label="Mídias e links" aria-pressed={mediaOpen} onClick={onToggleMedia} className={panelToggleClass(mediaOpen)}>
               <ImageIcon size={16} />
             </Button>
             <Button type="button" variant="ghost" size="icon-sm" aria-label="Buscar mensagens" onClick={onOpenSearch} className="text-text-muted hover:text-text-primary">
               <Search size={16} />
             </Button>
             {conversation.type === 'group' && (
-              <Button type="button" variant="ghost" size="icon-sm" aria-label="Detalhes do grupo" onClick={onOpenDetails} className="text-text-muted hover:text-text-primary">
+              <Button type="button" variant="ghost" size="icon-sm" aria-label="Detalhes do grupo" aria-pressed={detailsOpen} onClick={onToggleDetails} className={panelToggleClass(detailsOpen)}>
                 <Info size={16} />
               </Button>
             )}
@@ -123,7 +131,7 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, onO
                 <TooltipContent side="bottom">{callBlockedReason}</TooltipContent>
               </Tooltip>
             ) : (
-              <Button type="button" size="icon-sm" aria-label="Entrar na chamada" disabled={conversation.status === 'suspended'} onClick={() => onOpenCall(conversation.id)} className="bg-green text-bg-primary hover:bg-green/90">
+              <Button type="button" size="icon-sm" aria-label="Entrar na chamada" disabled={conversation.status === 'suspended'} onClick={() => onOpenCall(conversation.id)} className="bg-green/16 text-green hover:bg-green/24">
                 <Phone size={16} />
               </Button>
             )}

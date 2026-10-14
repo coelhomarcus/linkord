@@ -1,9 +1,12 @@
+import { useId } from 'react';
 import { Search } from 'lucide-react';
+import { motion } from 'motion/react';
 import { ChevronRight } from '@/shared/ui/icons';
 import { Link } from 'react-router';
 import { ROUTES } from '@/shared/lib/routes';
 import type { SettingsTab } from '@/shared/lib/routes';
 import { cn } from '@/shared/lib/utils';
+import { ActiveWash } from '@/shared/ui/motion/active-wash';
 import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { FROM_INDEX_STATE, findCategory, visibleGroups } from './settingsCatalog';
 import { useSettingsSearch } from './useSettingsSearch';
@@ -62,8 +65,10 @@ function SettingsSearchResults({ results, query }: { results: SettingsSearchResu
 /** The permanent category sidebar of a wide settings area. */
 export function SettingsSidebar({ active, isAdmin }: { active: SettingsTab; isAdmin: boolean }) {
   const { query, setQuery, results } = useSettingsSearch(isAdmin);
+  const washId = useId();
   return (
-    <nav aria-label="Categorias de ajustes" className="flex w-64 flex-none flex-col overflow-y-auto border-r border-border p-3">
+    // layoutScroll: the nav scrolls itself, so the sliding wash has to account for its offset
+    <motion.nav layoutScroll aria-label="Categorias de ajustes" className="flex w-64 flex-none flex-col overflow-y-auto border-r border-border p-3">
       <SettingsSearchField query={query} onChange={setQuery} onClear={() => setQuery('')} />
       {query ? (
         <SettingsSearchResults results={results} query={query} />
@@ -81,12 +86,12 @@ export function SettingsSidebar({ active, isAdmin }: { active: SettingsTab; isAd
                     to={ROUTES.settingsTab(category.id)}
                     aria-current={current ? 'page' : undefined}
                     className={cn(
-                      'flex h-9 items-center gap-2 rounded-md px-2.5 text-body font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring',
-                      // Discord/Fluxer: a plain light-gray wash for the
-                      // active item, no accent color.
-                      current ? 'bg-fill-active text-text-primary' : 'text-text-muted hover:bg-fill-hover hover:text-text-secondary',
+                      'relative isolate flex h-9 items-center gap-2 rounded-md px-2.5 text-body font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring',
+                      current ? 'text-text-primary' : 'text-text-muted hover:bg-fill-hover hover:text-text-secondary',
                     )}
                   >
+                    {/* Discord/Fluxer: a plain light-gray wash for the active item, no accent color */}
+                    {current && <ActiveWash layoutId={washId} />}
                     <Icon size={16} aria-hidden className="flex-none" />
                     <span className="truncate">{category.label}</span>
                   </Link>
@@ -96,7 +101,7 @@ export function SettingsSidebar({ active, isAdmin }: { active: SettingsTab; isAd
           ))}
         </div>
       )}
-    </nav>
+    </motion.nav>
   );
 }
 
