@@ -180,7 +180,7 @@ function Shell() {
           onOpenPalette={() => setPaletteOpen(true)}
           mobileRail={<AppNavigationRail onOpenProfile={setProfileUserId} onReturnToCall={handleReturnToCall} />}
         />
-        <AnimatedSidebarInset className="relative min-h-0 overflow-hidden bg-surface-panel [--surface-base:var(--color-surface-panel)] md:my-shell md:mr-shell md:rounded-xl md:border md:border-border">
+        <AnimatedSidebarInset className="relative min-h-0 overflow-hidden bg-surface-panel [--surface-base:var(--color-surface-panel)] md:m-shell md:rounded-xl md:border md:border-border">
           <Routes>
             <Route
               path="/app/conversations/:conversationId?"

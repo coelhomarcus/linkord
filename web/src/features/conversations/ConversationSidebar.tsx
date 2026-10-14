@@ -161,7 +161,8 @@ export function ConversationSidebar({ onOpenPalette, mobileRail }: ConversationS
               )}
             </div>
 
-            <div className="flex min-h-0 flex-1 flex-col gap-3 pb-3 pl-3 pr-shell">
+            {/* as a column, the gap to the content is the content card's own margin, which stays when the list is hidden */}
+            <div className="flex min-h-0 flex-1 flex-col gap-3 pb-3 pl-3 pr-shell lg:pr-0">
               <div className="flex flex-none items-center gap-2 rounded-md border border-border bg-fill-subtle px-3">
                 <Search size={15} className="text-text-muted" />
                 <input
