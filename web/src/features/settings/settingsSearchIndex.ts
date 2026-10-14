@@ -22,7 +22,6 @@ export const SETTINGS_SEARCH_INDEX: SearchEntry[] = [
   { categoryId: 'account', sectionId: 'session', title: 'Sessão', keywords: ['sair', 'logout', 'encerrar sessão'] },
   { categoryId: 'privacy', sectionId: 'blocked', title: 'Pessoas bloqueadas', keywords: ['bloqueado', 'desbloquear', 'bloquear'] },
   { categoryId: 'av', sectionId: 'microphone', title: 'Microfone', keywords: ['mic', 'entrada de áudio', 'dispositivo'] },
-  { categoryId: 'av', sectionId: 'voice-processing', title: 'Supressão de ruído', keywords: ['ruído', 'processamento de voz', 'rnnoise'] },
   { categoryId: 'av', sectionId: 'speaker', title: 'Alto-falante', keywords: ['saída de áudio', 'som', 'fone'] },
   { categoryId: 'av', sectionId: 'camera', title: 'Câmera', keywords: ['vídeo', 'webcam'] },
   { categoryId: 'notifications', sectionId: 'system', title: 'Notificações do sistema', keywords: ['permissão', 'avisos', 'mensagens'] },
