@@ -137,6 +137,14 @@ export interface LinkPreviewData {
   themeColor: string | null;
 }
 
+/** The KLIPY key and this account's customer id, for the GIF picker to call
+ * KLIPY from the browser (their terms rule out proxying it through us). */
+export type GifConfig = { enabled: false } | { enabled: true; apiKey: string; customerId: string };
+
+export function fetchGifConfig(): Promise<GifConfig> {
+  return apiFetch('/api/gifs/config');
+}
+
 export function fetchLinkPreview(url: string): Promise<LinkPreviewData> {
   return apiFetch(`/api/link-preview?url=${encodeURIComponent(url)}`);
 }

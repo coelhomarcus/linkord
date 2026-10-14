@@ -77,13 +77,14 @@ describe('MessageComposer', () => {
     clickSpy.mockRestore();
   });
 
-  it('the image shortcut opens an images-only picker', async () => {
+  it('sending images from the + menu opens an images-only picker', async () => {
     const user = userEvent.setup();
     renderWithRoom(<MessageComposer conversationId="conv-1" />, { state: joinedState });
     const clicked: HTMLInputElement[] = [];
     const clickSpy = vi.spyOn(HTMLInputElement.prototype, 'click').mockImplementation(function (this: HTMLInputElement) { clicked.push(this); });
 
-    await user.click(screen.getByRole('button', { name: 'Enviar imagens' }));
+    await user.click(screen.getByRole('button', { name: 'Adicionar' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Enviar imagens' }));
 
     expect(clicked.map((el) => el.accept)).toEqual(['image/*']);
     clickSpy.mockRestore();
