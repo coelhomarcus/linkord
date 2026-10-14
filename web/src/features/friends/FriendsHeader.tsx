@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { UserPlus } from '@/shared/ui/icons';
 import { buttonVariants } from '@/shared/ui/primitives/button';
@@ -5,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { friendsView } from '@/shared/lib/routes';
 import type { FriendsView } from '@/shared/lib/routes';
 import { cn } from '@/shared/lib/utils';
+import { ActiveWash } from '@/shared/ui/motion/active-wash';
 import { CountBadge } from '@/shared/CountBadge';
 import { useFriends } from './FriendsContext';
 
@@ -33,6 +35,7 @@ const BADGE_LABEL: Partial<Record<FriendsView, string>> = { pending: 'solicitaç
  * shared links mean the same view. */
 export function FriendsModeNav({ view, className }: { view: FriendsView; className?: string }) {
   const counts = useModeCounts();
+  const washId = useId();
   return (
     <nav aria-label="Visualização de Amigos" className={cn('flex items-center gap-1', className)}>
       {MODES.map((mode) => {
@@ -44,10 +47,11 @@ export function FriendsModeNav({ view, className }: { view: FriendsView; classNa
             to={friendsView(mode.view)}
             aria-current={current ? 'page' : undefined}
             className={cn(
-              'flex h-8 items-center gap-1.5 rounded-md px-3 text-label font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring',
-              current ? 'bg-fill-active text-text-primary' : 'text-text-muted hover:bg-fill-hover hover:text-text-primary',
+              'relative isolate flex h-8 items-center gap-1.5 rounded-md px-3 text-label font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring',
+              current ? 'text-text-primary' : 'text-text-muted hover:bg-fill-hover hover:text-text-primary',
             )}
           >
+            {current && <ActiveWash layoutId={washId} />}
             <span>{mode.label}</span>
             {count > 0 && <ModeBadge count={count} label={BADGE_LABEL[mode.view] ?? ''} />}
           </Link>
