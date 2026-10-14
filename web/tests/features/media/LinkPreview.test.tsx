@@ -87,3 +87,54 @@ describe('LinkPreview — link preview only near the screen', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('LinkPreview — size measured by the server', () => {
+  afterEach(() => { vi.unstubAllGlobals(); __resetLinkPreviewCacheForTests(); });
+
+  const previewJson = (over: Record<string, unknown>) => JSON.stringify({ url: 'https://ex.com', title: 'Exemplo', description: null, image: null, video: null, favicon: null, siteName: 'ex.com', themeColor: null, ...over });
+  const respond = (body: string) => vi.fn(async () => new Response(body, { status: 200, headers: { 'Content-Type': 'application/json' } }));
+
+  it('a direct image url takes the proportions the server measured, replacing the fallback box', async () => {
+    vi.stubGlobal('fetch', respond(previewJson({ image: 'https://cdn.example.com/wide.png', imageWidth: 1000, imageHeight: 500 })));
+    const { container } = render(<LinkPreview embed={{ kind: 'image', url: 'https://cdn.example.com/wide.png' }} />);
+    const box = container.querySelector('img')!.closest('button')!;
+    expect(box.style.height).toBe('280px'); // until the size arrives
+
+    await vi.waitFor(() => expect(box.style.height).not.toBe('280px'));
+    expect(parseFloat(box.style.width) / parseFloat(box.style.height)).toBeCloseTo(2, 1);
+  });
+
+  it('keeps the fallback box when the server could not measure the picture', async () => {
+    const fetchMock = respond(previewJson({ image: 'https://cdn.example.com/x.png', imageWidth: null, imageHeight: null }));
+    vi.stubGlobal('fetch', fetchMock);
+    const { container } = render(<LinkPreview embed={{ kind: 'image', url: 'https://cdn.example.com/x.png' }} />);
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    await new Promise((r) => setTimeout(r, 20));
+    expect(container.querySelector('img')!.closest('button')!.style.height).toBe('280px');
+  });
+
+  it('does not ask the server in the media grid, which sizes its own cells', async () => {
+    const fetchMock = respond(previewJson({}));
+    vi.stubGlobal('fetch', fetchMock);
+    render(<LinkPreview embed={{ kind: 'image', url: 'https://cdn.example.com/x.png' }} fitContainer />);
+    await new Promise((r) => setTimeout(r, 20));
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('a link card reserves its picture at the measured proportions from the first frame of the card', async () => {
+    vi.stubGlobal('fetch', respond(previewJson({ image: 'https://ex.com/og.png', imageWidth: 1200, imageHeight: 630 })));
+    const { container } = render(<LinkPreview embed={{ kind: 'link', url: 'https://ex.com' }} />);
+    await screen.findByText('Exemplo');
+    const frame = container.querySelector('img[src="https://ex.com/og.png"]')!.parentElement!;
+    expect(frame.style.aspectRatio).toBe('1200 / 630');
+  });
+
+  it('a link card whose picture has no known size falls back to the fixed height', async () => {
+    vi.stubGlobal('fetch', respond(previewJson({ image: 'https://ex.com/og.png' })));
+    const { container } = render(<LinkPreview embed={{ kind: 'link', url: 'https://ex.com' }} />);
+    await screen.findByText('Exemplo');
+    const frame = container.querySelector('img[src="https://ex.com/og.png"]')!.parentElement!;
+    expect(frame.style.aspectRatio).toBe('');
+    expect(frame.className.split(/\s+/)).toContain('h-70');
+  });
+});

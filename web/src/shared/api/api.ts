@@ -135,6 +135,9 @@ export interface LinkPreviewData {
   favicon: string | null;
   siteName: string;
   themeColor: string | null;
+  /** pixel size of `image` as the server measured it; absent or null when unknown */
+  imageWidth?: number | null;
+  imageHeight?: number | null;
 }
 
 /** The KLIPY key and this account's customer id, for the GIF picker to call

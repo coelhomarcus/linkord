@@ -1,15 +1,31 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import type { RefObject } from 'react';
 import { ImageOff } from 'lucide-react';
 import type { DetectedEmbed } from '@/shared/lib/chatEmbeds';
 import { ImageLightbox } from './ImageLightbox';
 import { GenericEmbed } from './GenericEmbed';
 import { AudioPlayer, VideoPlayer } from './MediaPlayers';
 import { availableAttachmentWidth, useChatSurfaceWidth } from '@/shared/lib/chatSurfaceWidth';
+import { getCachedLinkPreview, loadLinkPreview } from '@/shared/lib/linkPreviewCache';
+import { embedImageBox, previewImageSize, type ImageSize } from './embedImageBox';
+import { useNearViewport } from './useNearViewport';
 
-// A picture from an arbitrary URL has no known size, so it gets a box of fixed
-// height (and a px width) that it is fitted into: loading it then changes
-// nothing in the row, instead of growing it from zero under the reader.
-const EMBED_IMAGE_BOX_HEIGHT = 280;
+/** The server's measurement of a picture behind an arbitrary URL, asked for
+ * shortly before it scrolls into view. Until it answers (or if it can't
+ * tell), the box keeps its fixed fallback size. */
+function useRemoteImageSize(url: string, ref: RefObject<HTMLElement | null>, enabled: boolean): ImageSize | null {
+  const near = useNearViewport(ref);
+  const [size, setSize] = useState<ImageSize | null>(() => (enabled ? previewImageSize(getCachedLinkPreview(url)) : null));
+  useEffect(() => {
+    if (!enabled || !near) return;
+    let cancelled = false;
+    loadLinkPreview(url)
+      .then((data) => { if (!cancelled) setSize(previewImageSize(data)); })
+      .catch(() => { /* no size: the fallback box stays */ });
+    return () => { cancelled = true; };
+  }, [url, near, enabled]);
+  return size;
+}
 
 function EmbedFailedFallback({ url, className }: { url: string; className: string }) {
   return (
@@ -50,6 +66,8 @@ export function LinkPreview({ embed, className = '', edgeToEdge, fitContainer }:
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const surfaceWidth = useChatSurfaceWidth(384 + 120);
   const maxWidth = availableAttachmentWidth(surfaceWidth, 384);
+  const boxRef = useRef<HTMLButtonElement | null>(null);
+  const remoteSize = useRemoteImageSize(embed.url, boxRef, embed.kind === 'image' && !fitContainer);
 
   if (embed.kind === 'youtube' || embed.kind === 'twitch-channel' || embed.kind === 'twitch-vod' || embed.kind === 'twitch-clip' || embed.kind === 'link') {
     return <GenericEmbed key={embed.url} embed={embed} className={className} edgeToEdge={edgeToEdge} />;
@@ -66,12 +84,14 @@ export function LinkPreview({ embed, className = '', edgeToEdge, fitContainer }:
   }
 
   const rounding = edgeToEdge ? 'rounded-lg' : 'rounded-md border border-border';
+  const box = embedImageBox(remoteSize, maxWidth);
   return (
     <>
       <button
+        ref={boxRef}
         type="button"
         onClick={() => setLightboxOpen(true)}
-        style={fitContainer ? undefined : { width: maxWidth, maxWidth: '100%', height: EMBED_IMAGE_BOX_HEIGHT }}
+        style={fitContainer ? undefined : { width: box.width, maxWidth: '100%', height: box.height }}
         className={`block max-w-full cursor-zoom-in ${fitContainer ? '' : `overflow-hidden bg-fill-subtle ${rounding}`} ${className}`}
       >
         <img
