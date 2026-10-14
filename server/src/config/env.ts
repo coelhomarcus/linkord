@@ -100,6 +100,11 @@ const LIVEKIT_ROOM_NAME = process.env.LIVEKIT_ROOM_NAME || 'linkord-room';
 // an old token (removal also evicts live connections, see evictFromCall).
 const LIVEKIT_TOKEN_TTL_SECONDS = Number(process.env.LIVEKIT_TOKEN_TTL_SECONDS || 300);
 
+// KLIPY (GIFs). Their terms want API calls made from the user's browser, so
+// this key is handed to signed-in clients (modules/gifs) rather than used here;
+// empty turns the GIF picker off.
+const KLIPY_API_KEY = (process.env.KLIPY_API_KEY || '').trim();
+
 // optional, dev convenience only: when DATABASE_URL points at the same DB a
 // deployed instance uses, `attachments` rows exist locally but the actual
 // FILES only live on that instance's disk (UPLOAD_DIR is always local, never
@@ -145,7 +150,7 @@ export const config = {
   MIN_USERNAME_LEN, MAX_USERNAME_LEN, MAX_DISPLAY_NAME_LEN, MIN_PASSWORD_LEN, MAX_PASSWORD_LEN,
   RESEND_API_KEY, RESEND_FROM_EMAIL, APP_URL, AUTH_CODE_TTL_MS, AUTH_CODE_MAX_ATTEMPTS,
   LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET, LIVEKIT_ROOM_NAME, LIVEKIT_TOKEN_TTL_SECONDS,
-  UPLOADS_REMOTE_URL,
+  UPLOADS_REMOTE_URL, KLIPY_API_KEY,
   REGISTRATIONS_PER_IP_PER_HOUR, MAX_NEW_ACCOUNTS_PER_HOUR, MAX_CONNECTIONS_PER_USER,
   MAX_USER_STORAGE_BYTES, MAX_OWNED_GROUPS_PER_USER, MAX_GROUP_MEMBERSHIPS_PER_USER, MAX_FRIENDS, MAX_PENDING_OUTGOING_REQUESTS,
   ALLOWED_ORIGINS, IS_DEV, ORPHAN_GRACE_MS, ORPHAN_SWEEP_DRY_RUN,
