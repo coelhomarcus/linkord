@@ -208,7 +208,7 @@ describe('media dimensions (real Postgres)', () => {
     const { uploadId } = init.json() as { uploadId: string };
     await app.inject({ method: 'POST', url: `/api/attachments/${uploadId}/chunk/0`, headers: { cookie, 'content-type': 'application/octet-stream' }, payload: buffer });
     const complete = await app.inject({ method: 'POST', url: `/api/attachments/${uploadId}/complete`, headers: { cookie }, payload: {} });
-    return (complete.json() as { staged: { id: string; width?: number; height?: number; thumbId?: string } }).staged;
+    return (complete.json() as { staged: { id: string; width?: number; height?: number; placeholder?: string; thumbId?: string } }).staged;
   }
 
   it('a staged image reports width/height and so does the published message', async () => {
@@ -217,6 +217,7 @@ describe('media dimensions (real Postgres)', () => {
     const cookie = await sessionFor(owner.id);
     const staged = await stageBuffer(cookie, conversationId, bigPng, 'landscape.png', 'image/png');
     assert.deepEqual([staged.width, staged.height], [1200, 900]);
+    assert.ok(staged.placeholder && staged.placeholder.length < 80, 'a staged image carries a compact placeholder');
 
     const { socket, sent, participant } = joinNew(owner);
     try {
@@ -228,6 +229,8 @@ describe('media dimensions (real Postgres)', () => {
     assert.deepEqual([result.message.attachments[0].width, result.message.attachments[0].height], [1200, 900]);
     const [row] = await db.select().from(attachmentsTable).where(eq(attachmentsTable.id, staged.id));
     assert.deepEqual([row!.width, row!.height], [1200, 900]);
+    assert.equal(result.message.attachments[0].placeholder, staged.placeholder);
+    assert.equal(row!.placeholder, staged.placeholder);
   });
 
   it('photo rotated by EXIF: display and thumbnail dimensions come out portrait', async () => {
@@ -247,5 +250,6 @@ describe('media dimensions (real Postgres)', () => {
     const conversationId = await makeGroupWithMembers(owner.id, []);
     const staged = await stageBuffer(await sessionFor(owner.id), conversationId, Buffer.from('%PDF-1.4 x'), 'doc.pdf', 'application/pdf');
     assert.equal(staged.width, undefined);
+    assert.equal(staged.placeholder, undefined);
   });
 });
