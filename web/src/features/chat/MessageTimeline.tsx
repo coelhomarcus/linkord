@@ -20,6 +20,10 @@ const AT_END_THRESHOLD = 80;
 const PAGE_TRIGGER_ROWS = 3;
 const HIGHLIGHT_MS = 1500;
 const PREPEND_SETTLE_FRAMES = 3;
+// The initial placement is done once position and content height hold for
+// this many frames in a row — and gives up waiting after the cap.
+const PLACEMENT_STABLE_FRAMES = 2;
+const PLACEMENT_MAX_FRAMES = 30;
 
 /** First guess at a row's height before it's measured; only affects how
  * far off the scrollbar is until then. */
@@ -167,6 +171,13 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
   // the jump target when there is one, at the present otherwise. Paging
   // waits for it, or the first render — sitting at the top before this
   // scroll — would fetch history nobody asked for.
+  //
+  // Rows only get their real heights as they are measured, a frame or more
+  // after the first scroll, so a single placement lands on estimates and the
+  // list visibly jumped to the wrong place and back. The placement is applied
+  // again every frame until the position and the content height have held
+  // still, and the list stays invisible until then: nothing is painted
+  // anywhere but where it ends up.
   const [ready, setReady] = useState(false);
   // the scroll listener must not record the jumps of the initial placement
   const readyRef = useRef(false);
@@ -175,27 +186,39 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
     if (ready || !items.length) return;
     const saved = jumpIndex < 0 ? readingPositionFor(surfaceId, conversationId) : undefined;
     const savedIndex = saved && !saved.atEnd ? items.findIndex((item) => item.key === saved.key) : -1;
-    if (jumpIndex >= 0) {
-      // the jump effect below centers it again once rows are measured, and
-      // highlights it
-      virtualizer.scrollToIndex(jumpIndex, { align: 'center' });
-    } else if (savedIndex >= 0) {
-      virtualizer.scrollToIndex(savedIndex, { align: 'start' });
-    } else {
-      virtualizer.scrollToIndex(items.length - 1, { align: 'end' });
-    }
-    const frame = requestAnimationFrame(() => {
-      // back where the reader left it: the same row, the same distance in
-      if (savedIndex >= 0 && saved) {
-        const start = virtualizer.measurementsCache[savedIndex]?.start;
+    const place = (measured: boolean) => {
+      if (jumpIndex >= 0) {
+        // the jump effect below centers it again once ready, and highlights it
+        virtualizer.scrollToIndex(jumpIndex, { align: 'center' });
+      } else if (savedIndex >= 0 && saved) {
+        // back where the reader left it: the same row, the same distance in
+        const start = measured ? virtualizer.measurementsCache[savedIndex]?.start : undefined;
         if (start !== undefined) virtualizer.scrollToOffset(start + saved.offset);
+        else virtualizer.scrollToIndex(savedIndex, { align: 'start' });
+      } else {
+        virtualizer.scrollToIndex(items.length - 1, { align: 'end' });
       }
-      // the ref too, right away: a scroll landing before the effect below
+    };
+    place(false);
+    let frames = 0;
+    let stableFrames = 0;
+    let last = '';
+    let handle = requestAnimationFrame(function settle() {
+      place(true);
+      const el = scrollRef.current;
+      const now = `${el?.scrollTop}:${el?.scrollHeight}`;
+      stableFrames = now === last ? stableFrames + 1 : 0;
+      last = now;
+      if (stableFrames < PLACEMENT_STABLE_FRAMES && ++frames < PLACEMENT_MAX_FRAMES) {
+        handle = requestAnimationFrame(settle);
+        return;
+      }
+      // the ref too, right away: a scroll landing before the effect above
       // syncs it would otherwise still be ignored as part of the placement
       readyRef.current = true;
       setReady(true);
     });
-    return () => cancelAnimationFrame(frame);
+    return () => cancelAnimationFrame(handle);
   }, [ready, items, jumpIndex, virtualizer, surfaceId, conversationId]);
 
   // Your own send brings you back to the present, even from old history.
@@ -358,7 +381,7 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
             )}
           </div>
         ) : (
-          <div role="log" aria-label="Mensagens" className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
+          <div role="log" aria-label="Mensagens" className="relative w-full" style={{ height: virtualizer.getTotalSize(), visibility: ready ? undefined : 'hidden' }}>
             {virtualItems.map((virtualItem) => {
               const item = items[virtualItem.index]!;
               return (

@@ -7,7 +7,7 @@ import { mentionsUsername } from '@/shared/lib/mentions';
 import { useMessageOutbox } from './useMessageOutbox';
 import { useMessageActionRequests } from './useMessageActionRequests';
 import { useReactionIntents } from './useReactionIntents';
-import { MAX_WINDOW, withNewerMessages, withOlderPage } from './historyWindow';
+import { MAX_WINDOW, withNewerMessages, withOlderPage, withPresentPage } from './historyWindow';
 import { markArrival } from './arrivals';
 import type { ReactionParticipantsTarget } from './reactionParticipants';
 import type { ChatMessage, ClientMessage, Conversation, PublicUser, ReactionEmoji, ServerMessage } from '@/shared/types/protocol';
@@ -310,13 +310,28 @@ export function useChatMessages(deps: ChatMessagesDeps) {
     reactWithIntent(msgId, emoji, mineOnServer);
   }, [reactWithIntent, myUserIdRef]);
 
+  // Opening a conversation always answers with its latest page. When that
+  // conversation's present is already on screen (reopened from memory), the
+  // page is merged in rather than replacing the window: restarting the
+  // timeline there remounted it under the reader, replaying its placement —
+  // the list visibly jumped away and back.
   const onConversationHistory = useCallback((m: Extract<ServerMessage, { t: 'conversation-history' }>) => {
-    resetPages(m.conversationId);
-    bumpWindow(m.conversationId);
-    touchConversationCache(m.conversationId);
-    setMessagesByConversation((prev) => new Map(prev).set(m.conversationId, m.messages));
-    setHasMoreByConversation((prev) => new Map(prev).set(m.conversationId, m.hasMore));
-    setHasMoreAfterByConversation((prev) => new Map(prev).set(m.conversationId, false));
+    const conversationId = m.conversationId;
+    const loaded = messagesByConversationRef.current.get(conversationId);
+    const atPresent = hasMoreAfterRef.current.get(conversationId) !== true;
+    const update = loaded && atPresent ? withPresentPage(loaded, m.messages) : null;
+    resetPages(conversationId);
+    touchConversationCache(conversationId);
+    if (!update || update.restart) {
+      bumpWindow(conversationId);
+      setMessagesByConversation((prev) => new Map(prev).set(conversationId, m.messages));
+      setHasMoreByConversation((prev) => new Map(prev).set(conversationId, m.hasMore));
+    } else {
+      setMessagesByConversation((prev) => new Map(prev).set(conversationId, update.messages));
+      const hasMore = update.trimmedOldest || (update.keptOlder ? hasMoreByConversationRef.current.get(conversationId) !== false : m.hasMore);
+      setHasMoreByConversation((prev) => new Map(prev).set(conversationId, hasMore));
+    }
+    setHasMoreAfterByConversation((prev) => new Map(prev).set(conversationId, false));
   }, [resetPages, bumpWindow, touchConversationCache]);
 
   const onConversationHistoryAround = useCallback((m: Extract<ServerMessage, { t: 'conversation-history-around' }>) => {
