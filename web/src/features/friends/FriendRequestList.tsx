@@ -9,6 +9,8 @@ import { SocialUserRow } from './SocialUserRow';
 import { useFriends } from './FriendsContext';
 import { useCursorList } from '@/shared/hooks/useCursorList';
 import { usePendingIds } from './usePendingIds';
+import { FadeIn, RevealList, RevealRow, SocialRowsSkeleton } from './listReveal';
+import { useLoadingPhase } from './useLoadingPhase';
 
 export type RequestDirection = 'incoming' | 'outgoing';
 
@@ -32,6 +34,7 @@ export function FriendRequestList({ direction, search = '', headingId, onOpenPro
   const clearFeedback = useCallback(() => setFeedback(null), []);
   const fetchPage = useCallback((cursor: string | null) => fetchFriendRequests(direction, cursor, search), [direction, search]);
   const list = useCursorList(fetchPage, `${direction}|${search}`, { revision, getKey: entryKey });
+  const phase = useLoadingPhase(list.status === 'loading');
 
   async function act(userId: string, action: (id: string) => Promise<unknown>, success: string) {
     setFeedback(null);
@@ -49,8 +52,10 @@ export function FriendRequestList({ direction, search = '', headingId, onOpenPro
   }
 
   let body;
-  if (list.status === 'loading') {
-    body = <p className="py-8 text-center text-label text-text-muted">Carregando solicitações…</p>;
+  if (phase === 'wait') {
+    body = null;
+  } else if (phase === 'skeleton') {
+    body = <SocialRowsSkeleton label="Carregando solicitações…" rows={2} />;
   } else if (list.status === 'error') {
     body = (
       <div className="flex flex-col items-center gap-3 py-8 text-center">
@@ -60,29 +65,33 @@ export function FriendRequestList({ direction, search = '', headingId, onOpenPro
     );
   } else if (list.items.length === 0) {
     body = (
-      <p className="py-10 text-center text-label text-text-muted">
-        {search ? 'Nenhum resultado para esta busca.' : direction === 'incoming' ? 'Nenhuma solicitação recebida.' : 'Você não tem solicitações enviadas.'}
-      </p>
+      <FadeIn>
+        <p className="py-10 text-center text-label text-text-muted">
+          {search ? 'Nenhum resultado para esta busca.' : direction === 'incoming' ? 'Nenhuma solicitação recebida.' : 'Você não tem solicitações enviadas.'}
+        </p>
+      </FadeIn>
     );
   } else {
     body = (
-      <div className="flex flex-col divide-y divide-border-subtle">
-        {list.items.map(({ user, at }) => {
+      <RevealList>
+        {list.items.map(({ user, at }, index) => {
           const busy = pending.isPending(user.id);
           return (
-            <SocialUserRow key={user.id} user={user} subtitle={formatWhen(at)} onOpenProfile={() => onOpenProfile(user.id)}>
-              {direction === 'incoming' ? (
-                <>
-                  <Button type="button" size="sm" disabled={busy} onClick={() => void act(user.id, acceptFriendRequest, 'Solicitação aceita.')}>Aceitar</Button>
-                  <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={() => void act(user.id, declineFriendRequest, 'Solicitação recusada.')}>Recusar</Button>
-                </>
-              ) : (
-                <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={() => void act(user.id, cancelFriendRequest, 'Solicitação cancelada.')}>Cancelar</Button>
-              )}
-            </SocialUserRow>
+            <RevealRow key={user.id} index={index}>
+              <SocialUserRow user={user} subtitle={formatWhen(at)} onOpenProfile={() => onOpenProfile(user.id)}>
+                {direction === 'incoming' ? (
+                  <>
+                    <Button type="button" size="sm" disabled={busy} onClick={() => void act(user.id, acceptFriendRequest, 'Solicitação aceita.')}>Aceitar</Button>
+                    <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={() => void act(user.id, declineFriendRequest, 'Solicitação recusada.')}>Recusar</Button>
+                  </>
+                ) : (
+                  <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={() => void act(user.id, cancelFriendRequest, 'Solicitação cancelada.')}>Cancelar</Button>
+                )}
+              </SocialUserRow>
+            </RevealRow>
           );
         })}
-      </div>
+      </RevealList>
     );
   }
 
@@ -90,7 +99,7 @@ export function FriendRequestList({ direction, search = '', headingId, onOpenPro
     <div className="flex flex-col gap-2">
       <ActionFeedback feedback={feedback} onClear={clearFeedback} />
       {body}
-      {list.status === 'ready' && <LoadMoreFooter list={list} className="pt-2" />}
+      {phase === 'content' && list.status === 'ready' && <LoadMoreFooter list={list} className="pt-2" />}
     </div>
   );
 }
