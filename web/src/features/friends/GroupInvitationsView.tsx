@@ -11,9 +11,11 @@ import { useFriends } from './FriendsContext';
 import { ListSearch } from './ListSearch';
 import { ListSectionHeader } from './ListSectionHeader';
 import { LoadMoreFooter } from './LoadMoreFooter';
-import { useCursorList } from '@/shared/hooks/useCursorList';
 import { usePendingIds } from './usePendingIds';
 import { useUrlSearch } from '@/shared/hooks/useUrlSearch';
+import { FadeIn, RevealList, RevealRow, SocialRowsSkeleton } from './listReveal';
+import { useLoadingPhase } from './useLoadingPhase';
+import { useRememberedList } from './useRememberedList';
 
 const HEADING_ID = 'invitations-title';
 const invitationKey = (entry: ReceivedInvitationEntry) => entry.id;
@@ -25,7 +27,8 @@ export function GroupInvitationsView({ query, onQueryChange, onOpenProfile }: { 
   const clearFeedback = useCallback(() => setFeedback(null), []);
   const { value, setValue, search } = useUrlSearch(query, onQueryChange);
   const fetchPage = useCallback((cursor: string | null) => fetchReceivedInvitations(cursor, search), [search]);
-  const list = useCursorList(fetchPage, `invitations|${search}`, { revision, getKey: invitationKey });
+  const list = useRememberedList(fetchPage, `invitations|${search}`, { revision, getKey: invitationKey });
+  const phase = useLoadingPhase(list.status === 'loading');
 
   async function act(id: string, action: (id: string) => Promise<unknown>, success: string) {
     setFeedback(null);
@@ -45,8 +48,10 @@ export function GroupInvitationsView({ query, onQueryChange, onOpenProfile }: { 
   }
 
   let body: ReactNode;
-  if (list.status === 'loading') {
-    body = <p className="py-8 text-center text-label text-text-muted">Carregando convites…</p>;
+  if (phase === 'wait') {
+    body = null;
+  } else if (phase === 'skeleton') {
+    body = <SocialRowsSkeleton label="Carregando convites…" rows={2} />;
   } else if (list.status === 'error') {
     body = (
       <div className="flex flex-col items-center gap-3 py-8 text-center">
@@ -55,31 +60,33 @@ export function GroupInvitationsView({ query, onQueryChange, onOpenProfile }: { 
       </div>
     );
   } else if (list.items.length === 0) {
-    body = <p className="py-10 text-center text-label text-text-muted">{search ? 'Nenhum resultado para esta busca.' : 'Nenhum convite de grupo pendente.'}</p>;
+    body = <FadeIn skip={list.restored}><p className="py-10 text-center text-label text-text-muted">{search ? 'Nenhum resultado para esta busca.' : 'Nenhum convite de grupo pendente.'}</p></FadeIn>;
   } else {
     body = (
-      <div className="flex flex-col divide-y divide-border-subtle">
+      <RevealList restored={list.restored}>
         {list.items.map((entry) => {
           const busy = pending.isPending(entry.id);
           return (
-            <div key={entry.id} className="flex flex-wrap items-center gap-3 rounded-md px-3 py-3 transition-colors hover:bg-fill-subtle">
-              <GroupAvatar title={entry.group.title} avatar={entry.group.avatar} size={40} />
-              <div className="min-w-0 flex-1 basis-48">
-                <p className="truncate text-body font-medium text-text-primary">{entry.group.title}</p>
-                <p className="truncate text-caption text-text-muted">
-                  de{' '}
-                  <button type="button" onClick={() => onOpenProfile(entry.inviter.id)} className="hover:underline">{entry.inviter.displayName}</button>
-                  {` · ${entry.group.memberCount} ${entry.group.memberCount === 1 ? 'membro' : 'membros'}`}
-                </p>
+            <RevealRow key={entry.id}>
+              <div className="flex flex-wrap items-center gap-3 rounded-md px-3 py-3 transition-colors hover:bg-fill-subtle">
+                <GroupAvatar title={entry.group.title} avatar={entry.group.avatar} size={40} />
+                <div className="min-w-0 flex-1 basis-48">
+                  <p className="truncate text-body font-medium text-text-primary">{entry.group.title}</p>
+                  <p className="truncate text-caption text-text-muted">
+                    de{' '}
+                    <button type="button" onClick={() => onOpenProfile(entry.inviter.id)} className="hover:underline">{entry.inviter.displayName}</button>
+                    {` · ${entry.group.memberCount} ${entry.group.memberCount === 1 ? 'membro' : 'membros'}`}
+                  </p>
+                </div>
+                <div className="flex flex-none items-center gap-1.5">
+                  <Button type="button" size="sm" disabled={busy} onClick={() => void act(entry.id, acceptInvitation, 'Você entrou no grupo.')}>Entrar</Button>
+                  <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={() => void act(entry.id, declineInvitation, 'Convite recusado.')}>Recusar</Button>
+                </div>
               </div>
-              <div className="flex flex-none items-center gap-1.5">
-                <Button type="button" size="sm" disabled={busy} onClick={() => void act(entry.id, acceptInvitation, 'Você entrou no grupo.')}>Entrar</Button>
-                <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={() => void act(entry.id, declineInvitation, 'Convite recusado.')}>Recusar</Button>
-              </div>
-            </div>
+            </RevealRow>
           );
         })}
-      </div>
+      </RevealList>
     );
   }
 
@@ -90,7 +97,7 @@ export function GroupInvitationsView({ query, onQueryChange, onOpenProfile }: { 
         <ListSectionHeader id={HEADING_ID} title="Convites de grupo" />
         <ActionFeedback feedback={feedback} onClear={clearFeedback} />
         {body}
-        {list.status === 'ready' && <LoadMoreFooter list={list} className="pt-2" />}
+        {phase === 'content' && list.status === 'ready' && <LoadMoreFooter list={list} className="pt-2" />}
       </section>
     </div>
   );

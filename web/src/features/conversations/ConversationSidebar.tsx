@@ -15,6 +15,7 @@ import { ROUTES, conversationNav, isConversationsPath } from '@/shared/lib/route
 import { conversationTitle, directUser } from './conversationUtils';
 import { GroupAvatar } from './GroupAvatar';
 import { GroupCreateDialog } from './GroupCreateDialog';
+import { NotificationBell } from '@/features/notifications/NotificationBell';
 
 interface ConversationSidebarProps {
   onOpenPalette: () => void;
@@ -152,6 +153,7 @@ export function ConversationSidebar({ onOpenPalette, mobileRail }: ConversationS
               <Button type="button" size="icon-sm" aria-label="Criar grupo" onClick={() => setGroupOpen(true)} className="flex-none">
                 <Plus size={16} />
               </Button>
+              <NotificationBell onNavigate={() => { if (isOverlay) setOpenMobile(false); }} />
               {!isOverlay && (
                 <Button type="button" variant="ghost" size="icon-sm" aria-label="Ocultar lista de conversas" onClick={toggleSidebar} className="flex-none text-text-muted hover:text-text-primary">
                   <PanelLeftClose size={16} />
@@ -159,7 +161,8 @@ export function ConversationSidebar({ onOpenPalette, mobileRail }: ConversationS
               )}
             </div>
 
-            <div className="flex min-h-0 flex-1 flex-col gap-3 pb-3 pl-3 pr-shell">
+            {/* as a column, the gap to the content is the content card's own margin, which stays when the list is hidden */}
+            <div className="flex min-h-0 flex-1 flex-col gap-3 pb-3 pl-3 pr-shell lg:pr-0">
               <div className="flex flex-none items-center gap-2 rounded-md border border-border bg-fill-subtle px-3">
                 <Search size={15} className="text-text-muted" />
                 <input

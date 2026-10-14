@@ -134,6 +134,9 @@ function Shell() {
   const showStage = onConversations && activeView === 'call' && inCall;
 
   const activeConversation = conversations.find((conversation) => conversation.id === activeConversationId);
+  // the right panels open only where they make sense, whatever their saved flag says
+  const detailsVisible = detailsOpen && onConversations && activeConversation?.type === 'group' && activeView !== 'call';
+  const mediaVisible = mediaOpen && onConversations && !!activeConversation && activeView !== 'call';
   const activeConversationName = conversationTitle(activeConversation, state.me.userId, allUsers);
 
   useEffect(() => {
@@ -180,7 +183,7 @@ function Shell() {
           onOpenPalette={() => setPaletteOpen(true)}
           mobileRail={<AppNavigationRail onOpenProfile={setProfileUserId} onReturnToCall={handleReturnToCall} />}
         />
-        <AnimatedSidebarInset className="relative min-h-0 overflow-hidden bg-surface-panel [--surface-base:var(--color-surface-panel)] md:my-shell md:mr-shell md:rounded-xl md:border md:border-border">
+        <AnimatedSidebarInset className="relative min-h-0 overflow-hidden bg-surface-panel [--surface-base:var(--color-surface-panel)] md:m-shell md:rounded-xl md:border md:border-border">
           <Routes>
             <Route
               path="/app/conversations/:conversationId?"
@@ -191,8 +194,11 @@ function Shell() {
                   onOpenProfile={setProfileUserId}
                   onOpenCall={handleOpenCall}
                   onOpenSearch={() => setSearchOpen(true)}
+                  detailsOpen={detailsVisible}
+                  mediaOpen={mediaVisible}
                   onOpenDetails={() => { setMediaOpen(false); setDetailsOpen(true); }}
-                  onOpenMedia={() => { setDetailsOpen(false); setMediaOpen(true); }}
+                  onToggleDetails={() => { setMediaOpen(false); setDetailsOpen(!detailsVisible); }}
+                  onToggleMedia={() => { setDetailsOpen(false); setMediaOpen(!mediaVisible); }}
                 />
               )}
             />
@@ -213,13 +219,13 @@ function Shell() {
         </AnimatedSidebarInset>
         <GroupDetailsPanel
           conversationId={activeConversation?.type === 'group' ? activeConversation.id : null}
-          open={detailsOpen && onConversations && activeConversation?.type === 'group' && activeView !== 'call'}
+          open={detailsVisible}
           onOpenChange={setDetailsOpen}
           onOpenProfile={setProfileUserId}
         />
         <ConversationMediaPanel
           conversationId={activeConversation?.id ?? null}
-          open={mediaOpen && onConversations && !!activeConversation && activeView !== 'call'}
+          open={mediaVisible}
           onOpenChange={setMediaOpen}
         />
         <CallChatPanel

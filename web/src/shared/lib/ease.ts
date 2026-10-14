@@ -37,6 +37,16 @@ export const SPRING_LAYOUT = {
   mass: 0.6,
 } as const;
 
+/** A sidebar opening or closing beside the content. Critically damped: the
+ * panel settles against a hard edge (zero width), so any overshoot would pause
+ * against it and then snap back during the final frame. */
+export const SPRING_SIDEBAR = {
+  type: "spring",
+  stiffness: 380,
+  damping: 35,
+  mass: 0.75,
+} as const;
+
 /** Cursor-follow physics for decorative mouse tracking (magnetic, tilt, dock). */
 export const SPRING_MOUSE = {
   stiffness: 200,

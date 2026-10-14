@@ -31,7 +31,7 @@ describe('ConversationPanel — call button', () => {
     const onOpenCall = vi.fn();
     renderSocial(
       <AnimatedSidebarProvider>
-        <ConversationPanel onOpenProfile={() => {}} onOpenCall={onOpenCall} onOpenSearch={() => {}} onOpenDetails={() => {}} onOpenMedia={() => {}} />
+        <ConversationPanel onOpenProfile={() => {}} onOpenCall={onOpenCall} onOpenSearch={() => {}} detailsOpen={false} mediaOpen={false} onOpenDetails={() => {}} onToggleDetails={() => {}} onToggleMedia={() => {}} />
       </AnimatedSidebarProvider>,
       { room: { state: me, conversations: [direct], activeConversationId: 'c1', ...room } },
     );
@@ -73,5 +73,44 @@ describe('ConversationPanel — call button', () => {
     mockedApi.fetchRelationship.mockResolvedValue({ relation: 'friends', retryAfter: null });
     renderPanel({ state: { ...me, callJoinError: { conversationId: 'outra', message: 'falhou' } } });
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+});
+
+describe('ConversationPanel — right panel buttons', () => {
+  const group: Conversation = {
+    id: 'g1', type: 'group', title: 'Time', avatar: '', createdBy: 'me', memberIds: ['me', 'peer'],
+    lastMessageAt: null, createdAt: 0, updatedAt: 0, pinnedAt: null, myRole: 'owner', ownerId: 'me', memberCount: 2,
+  };
+  const me = { ...joinedState, me: { ...initialRoomState.me, userId: 'me' } };
+
+  function renderGroup(detailsOpen: boolean) {
+    const onToggleDetails = vi.fn();
+    const onOpenDetails = vi.fn();
+    renderSocial(
+      <AnimatedSidebarProvider>
+        <ConversationPanel onOpenProfile={() => {}} onOpenCall={() => {}} onOpenSearch={() => {}} detailsOpen={detailsOpen} mediaOpen={false} onOpenDetails={onOpenDetails} onToggleDetails={onToggleDetails} onToggleMedia={() => {}} />
+      </AnimatedSidebarProvider>,
+      { room: { state: me, conversations: [group], activeConversationId: 'g1' } },
+    );
+    // the avatar opens the details too; the header's toggle is the pressable one
+    const toggle = screen.getAllByRole('button', { name: 'Detalhes do grupo' }).find((button) => button.hasAttribute('aria-pressed'))!;
+    return { toggle, onToggleDetails, onOpenDetails };
+  }
+
+  afterEach(() => { vi.clearAllMocks(); });
+
+  it('the details button toggles instead of only opening, and reads as pressed while the panel shows', () => {
+    mockedApi.fetchRequestSummary.mockResolvedValue({ incoming: 0, invitations: 0 });
+    const { toggle, onToggleDetails, onOpenDetails } = renderGroup(true);
+    expect(toggle).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(toggle);
+    expect(onToggleDetails).toHaveBeenCalledTimes(1);
+    expect(onOpenDetails).not.toHaveBeenCalled();
+  });
+
+  it('closed, the details button is not pressed', () => {
+    mockedApi.fetchRequestSummary.mockResolvedValue({ incoming: 0, invitations: 0 });
+    const { toggle } = renderGroup(false);
+    expect(toggle).toHaveAttribute('aria-pressed', 'false');
   });
 });

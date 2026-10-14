@@ -21,6 +21,7 @@ import { registerLimitsRoutes } from '../modules/limits/limitsRoutes.js';
 import { registerReportRoutes } from '../modules/reports/reports.js';
 import { registerAdminRoutes } from '../modules/admin/adminRoutes.js';
 import { registerGroupMemberRoutes } from '../modules/conversations/groupMembers.js';
+import { registerGifRoutes } from '../modules/gifs/gifs.js';
 import { logger } from '../lib/logger.js';
 
 const log = logger.child({ component: 'http' });
@@ -91,6 +92,7 @@ export function createApp(): FastifyInstance {
   registerProfileRoutes(fastify);
   registerMediaRoutes(fastify);
   registerLinkPreviewRoutes(fastify);
+  registerGifRoutes(fastify);
   registerFriendshipRoutes(fastify, { onlineUserIds: listOnlineUserIds });
   registerBlockRoutes(fastify);
   registerUserRoutes(fastify);

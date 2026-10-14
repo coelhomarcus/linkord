@@ -1,9 +1,8 @@
-import { motion } from 'motion/react';
 import { MessageCircle } from 'lucide-react';
 import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { useAnimatedSidebar } from '@/shared/ui/motion/animated-sidebar';
 import { Drawer } from '@/shared/ui/motion/drawer';
-import { SPRING_LAYOUT } from '@/shared/lib/ease';
+import { SidePanel } from '@/shared/ui/motion/side-panel';
 import { useRoom } from '@/state/RoomContext';
 import { conversationTitle } from '@/features/conversations/conversationUtils';
 import { ChatSurface } from '@/features/chat/ChatSurface';
@@ -47,17 +46,8 @@ export function CallChatPanel({ conversationId, open, onOpenChange, onOpenProfil
       {content}
     </Drawer>
   ) : (
-    <motion.aside
-      aria-label="Chat da chamada"
-      aria-hidden={!open || !conversation}
-      initial={false}
-      animate={{ width: open && conversation ? PANEL_WIDTH : 0, opacity: open && conversation ? 1 : 0 }}
-      transition={SPRING_LAYOUT}
-      className="flex-none overflow-hidden bg-bg-primary text-text-primary will-change-[width]"
-    >
-      <div className="flex h-full flex-col" style={{ width: PANEL_WIDTH }}>
-        {content}
-      </div>
-    </motion.aside>
+    <SidePanel open={open && !!conversation} width={PANEL_WIDTH} ariaLabel="Chat da chamada" className="bg-bg-primary text-text-primary">
+      {content}
+    </SidePanel>
   );
 }
