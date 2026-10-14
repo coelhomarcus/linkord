@@ -3,7 +3,7 @@ import type { RefObject } from 'react';
 
 // Within this distance of the visible area the card starts loading, so it
 // is usually ready by the time it scrolls in.
-const NEAR_MARGIN = '600px 0px';
+const NEAR_MARGIN = '1500px 0px';
 
 /** True once `ref` comes near the visible part of its scroll container (the
  * chat list, marked data-scroll-root; the viewport otherwise). Stays true:
