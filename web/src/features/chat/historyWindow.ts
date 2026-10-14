@@ -30,3 +30,30 @@ export function withNewerMessages(existing: ChatMessage[], incoming: ChatMessage
   if (next.length <= max) return { messages: next, trimmedOldest: false, trimmedNewest: false };
   return { messages: next.slice(next.length - max), trimmedOldest: true, trimmedNewest: false };
 }
+
+export interface PresentPageUpdate extends WindowUpdate {
+  /** the window was replaced, not extended: the timeline has to start over */
+  restart: boolean;
+  /** older messages already loaded were kept above the page */
+  keptOlder: boolean;
+}
+
+/** The latest page arrived (opening a conversation sends it every time) for a
+ * conversation whose present window is already loaded. Inside the page's
+ * range the page is the authority (edits show, deletions go); older messages
+ * already loaded stay above it and live ones newer than it stay below, so the
+ * timeline keeps its rows and its scroll position instead of starting over.
+ * Only when nothing overlaps (there may be a gap in between) is the window
+ * replaced. */
+export function withPresentPage(existing: ChatMessage[], page: ChatMessage[], max = MAX_WINDOW): PresentPageUpdate {
+  const first = page[0]?.msgId;
+  const last = page[page.length - 1]?.msgId;
+  const overlaps = first !== undefined && last !== undefined && existing.some((msg) => msg.msgId >= first && msg.msgId <= last);
+  if (!overlaps) return { messages: page, trimmedOldest: false, trimmedNewest: false, restart: true, keptOlder: false };
+  const older = existing.filter((msg) => msg.msgId < first!);
+  const newer = existing.filter((msg) => msg.msgId > last!);
+  const next = [...older, ...page, ...newer];
+  if (next.length <= max) return { messages: next, trimmedOldest: false, trimmedNewest: false, restart: false, keptOlder: older.length > 0 };
+  const trimmed = next.slice(next.length - max);
+  return { messages: trimmed, trimmedOldest: true, trimmedNewest: false, restart: false, keptOlder: trimmed[0]!.msgId < first! };
+}
