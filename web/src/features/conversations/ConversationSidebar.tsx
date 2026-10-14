@@ -3,7 +3,8 @@ import type { ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { Pin, Search, Users, PhoneCall } from 'lucide-react';
 import { PanelLeftClose, Plus } from '@/shared/ui/icons';
-import { AnimatedSidebar, useAnimatedSidebar } from '@/shared/ui/motion/animated-sidebar';
+import { Sidebar } from '@/shared/ui/motion/sidebar';
+import { useSidebar } from '@/shared/ui/motion/sidebar-context';
 import { Button } from '@/shared/ui/primitives/button';
 import { Avatar } from '@/shared/Avatar';
 import { cn } from '@/shared/lib/utils';
@@ -110,7 +111,7 @@ function ConversationRow({ conversation, active, onClick }: {
 
 export function ConversationSidebar({ onOpenPalette, mobileRail }: ConversationSidebarProps) {
   const { state, conversations, activeConversationId, openConversation, allUsers, requestChatView } = useRoom();
-  const { isMobile, isOverlay, setOpenMobile, toggleSidebar } = useAnimatedSidebar();
+  const { isMobile, isOverlay, setOpenMobile, toggleSidebar } = useSidebar();
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const shortcutK = shortcutHint('K');
@@ -137,13 +138,7 @@ export function ConversationSidebar({ onOpenPalette, mobileRail }: ConversationS
 
   return (
     <>
-      <AnimatedSidebar
-        variant="sidebar"
-        collapsible="offcanvas"
-        ariaLabel="Conversas"
-        className="text-text-primary"
-        panelClassName="border-r-0 bg-bg-primary"
-      >
+      <Sidebar ariaLabel="Conversas" className="text-text-primary" panelClassName="bg-bg-primary">
         <div className="flex h-full min-h-0">
           {/* on a phone the rail lives in the drawer; from 768px it stays on screen beside it */}
           {isMobile && mobileRail}
@@ -198,7 +193,7 @@ export function ConversationSidebar({ onOpenPalette, mobileRail }: ConversationS
             </div>
           </div>
         </div>
-      </AnimatedSidebar>
+      </Sidebar>
       <GroupCreateDialog
         open={groupOpen}
         onOpenChange={setGroupOpen}

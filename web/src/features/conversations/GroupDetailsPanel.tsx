@@ -4,8 +4,8 @@ import type { Area } from 'react-easy-crop';
 import { Camera, Crown, Flag, Pencil, Trash2 } from 'lucide-react';
 import { Check, Link2, LogOut, Upload, UserPlus } from '@/shared/ui/icons';
 import { CloseButton } from '@/shared/ui/primitives/close-button';
-import { useAnimatedSidebar } from '@/shared/ui/motion/animated-sidebar';
-import { Drawer } from '@/shared/ui/motion/drawer';
+import { useSidebar } from '@/shared/ui/motion/sidebar-context';
+import { Sheet } from '@/shared/ui/motion/sheet';
 import { SidePanel } from '@/shared/ui/motion/side-panel';
 import { Button } from '@/shared/ui/primitives/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/primitives/dropdown-menu';
@@ -46,7 +46,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
     updateGroupTitle, updateGroupAvatar, removeGroupMember, deleteGroup, transferGroupOwnership,
     groupActionError, clearGroupActionError,
   } = useRoom();
-  const { isMobile } = useAnimatedSidebar();
+  const { isMobile } = useSidebar();
   const conversation = conversationId ? conversations.find((c) => c.id === conversationId) ?? null : null;
   // real per-group ownership, not the account's global instance role — see
   // conversationsRepository.ts#canManageGroup on the server.
@@ -469,14 +469,15 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
   return (
     <>
       {isMobile ? (
-        <Drawer
+        <Sheet
+          side="right"
           open={open && !!conversation}
           onOpenChange={onOpenChange}
           ariaLabel="Detalhes do grupo"
           className="flex w-96 flex-col text-text-primary"
         >
           {content}
-        </Drawer>
+        </Sheet>
       ) : (
         <SidePanel open={open && !!conversation} width={PANEL_WIDTH} ariaLabel="Detalhes do grupo" className="bg-bg-primary text-text-primary">
           {content}

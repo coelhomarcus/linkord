@@ -5,7 +5,7 @@ import { initialRoomState } from '@/state/roomReducer';
 import { RoomContext } from '@/state/RoomContext';
 import type { RoomContextValue } from '@/state/RoomContext';
 import { createFakeRoomContextValue } from '@tests/fixtures/roomContextFixture';
-import { AnimatedSidebarProvider } from '@/shared/ui/motion/animated-sidebar';
+import { SidebarProvider } from '@/shared/ui/motion/sidebar';
 import { Stage } from '@/features/calls/Stage';
 
 vi.mock('@/features/calls/CallControlBar', () => ({
@@ -37,9 +37,9 @@ function lastOnCapacityChange(): (meetsMinimum: boolean, key: string | null) => 
 function renderStage(props: { allIds: string[]; chatOpen: boolean; onToggleChat: () => void }, overrides: Partial<RoomContextValue> = {}) {
   return render(
     <RoomContext.Provider value={createFakeRoomContextValue(overrides)}>
-      <AnimatedSidebarProvider>
+      <SidebarProvider>
         <Stage {...props} />
-      </AnimatedSidebarProvider>
+      </SidebarProvider>
     </RoomContext.Provider>
   );
 }
