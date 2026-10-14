@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ChatMessageText } from '@/features/chat/ChatMessageText';
@@ -124,5 +124,43 @@ describe('ChatMessageText — formatting', () => {
     render(<ChatMessageText text="https://exemplo.com/pagina" />);
     expect(screen.getByRole('link', { name: 'https://exemplo.com/pagina' })).toHaveAttribute('href', 'https://exemplo.com/pagina');
     vi.unstubAllGlobals();
+  });
+});
+
+describe('ChatMessageText — link previews sent with the message', () => {
+  afterEach(() => { vi.unstubAllGlobals(); });
+
+  const preview = (url: string, over: Record<string, unknown> = {}) => ({
+    url, title: `Título de ${url}`, description: null, image: `${url}/og.png`, video: null, favicon: null,
+    siteName: 'ex.com', themeColor: null, imageWidth: 1200, imageHeight: 630, ...over,
+  });
+
+  it('draws the card complete from the first render, at its final size, without asking the server', () => {
+    const fetchMock = vi.fn(() => new Promise(() => {}));
+    vi.stubGlobal('fetch', fetchMock);
+    const { container } = render(<ChatMessageText text="olha https://ex.com/a" embeds={[preview('https://ex.com/a')]} />);
+
+    expect(screen.getByText('Título de https://ex.com/a')).toBeInTheDocument();
+    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect((container.querySelector('img[src="https://ex.com/a/og.png"]')!.parentElement as HTMLElement).style.aspectRatio).toBe('1200 / 630');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('each card takes the preview of its own link; a link without one still fetches it', () => {
+    const fetchMock = vi.fn(() => new Promise(() => {}));
+    vi.stubGlobal('fetch', fetchMock);
+    render(<ChatMessageText text="https://ex.com/a https://ex.com/b" embeds={[preview('https://ex.com/b')]} />);
+    expect(screen.getByText('Título de https://ex.com/b')).toBeInTheDocument();
+    expect(screen.queryByText('Título de https://ex.com/a')).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('a direct image link gets its box from the stored size at once', () => {
+    vi.stubGlobal('fetch', vi.fn(() => new Promise(() => {})));
+    const url = 'https://cdn.example.com/wide.png';
+    const { container } = render(<ChatMessageText text={url} embeds={[preview(url, { image: url, title: null, imageWidth: 1000, imageHeight: 500 })]} />);
+    const box = container.querySelector(`img[src="${url}"]`)!.closest('button')!;
+    expect(box.style.height).not.toBe('280px');
+    expect(parseFloat(box.style.width) / parseFloat(box.style.height)).toBeCloseTo(2, 1);
   });
 });

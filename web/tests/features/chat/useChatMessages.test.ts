@@ -191,6 +191,26 @@ describe('useChatMessages — reopening a conversation already in memory', () =>
   });
 });
 
+describe('useChatMessages — link previews arriving after the message', () => {
+  it('chat-embeds sets the previews on that message only', () => {
+    const { result } = setup();
+    act(() => result.current.onConversationHistory({ t: 'conversation-history', conversationId: 'dm', hasMore: false, messages: [message(1), message(2, { text: 'https://ex.com' })] }));
+    const embeds = [{ url: 'https://ex.com', title: 'Ex', description: null, image: null, video: null, favicon: null, siteName: 'ex.com', themeColor: null }];
+    act(() => result.current.onChatEmbeds({ t: 'chat-embeds', conversationId: 'dm', msgId: 2, embeds }));
+    const list = result.current.messagesByConversation.get('dm')!;
+    expect(list[1]!.embeds).toEqual(embeds);
+    expect(list[0]!.embeds).toBeUndefined();
+  });
+
+  it('a message not loaded here is ignored without touching state', () => {
+    const { result } = setup();
+    act(() => result.current.onConversationHistory({ t: 'conversation-history', conversationId: 'dm', hasMore: false, messages: [message(1)] }));
+    const before = result.current.messagesByConversation;
+    act(() => result.current.onChatEmbeds({ t: 'chat-embeds', conversationId: 'dm', msgId: 99, embeds: [] }));
+    expect(result.current.messagesByConversation).toBe(before);
+  });
+});
+
 describe('useChatMessages — memory', () => {
   it('keeps history only for the 5 most recently opened conversations', () => {
     const ref = <T,>(current: T) => ({ current });

@@ -18,6 +18,8 @@ interface GenericEmbedProps {
    * border/rounding so the card fills the bubble instead of sitting in a
    * second frame nested inside it. */
   edgeToEdge?: boolean;
+  /** stored with the message by the server: drawn at once, never fetched */
+  preview?: LinkPreviewData;
 }
 
 const KNOWN_SITE: Partial<Record<DetectedEmbed['kind'], { name: string; favicon: string }>> = {
@@ -62,14 +64,15 @@ function TwitchPlayer({ embed }: { embed: DetectedEmbed }) {
   );
 }
 
-export function GenericEmbed({ embed, className = '', edgeToEdge }: GenericEmbedProps) {
+export function GenericEmbed({ embed, className = '', edgeToEdge, preview }: GenericEmbedProps) {
   const cardBorderClass = edgeToEdge ? 'rounded-lg border-0' : 'rounded-md border border-border';
   const surfaceWidth = useChatSurfaceWidth(384 + 120);
   const maxWidth = availableAttachmentWidth(surfaceWidth, 384);
   const { url } = embed;
   // a remount (conversation switch, scrolling back) paints from the cache
   // at once instead of flashing the skeleton
-  const [data, setData] = useState<LinkPreviewData | null>(() => getCachedLinkPreview(url) ?? null);
+  const [fetched, setData] = useState<LinkPreviewData | null>(() => getCachedLinkPreview(url) ?? null);
+  const data = preview ?? fetched;
   const skeletonRef = useRef<HTMLDivElement | null>(null);
   const near = useNearViewport(skeletonRef);
   const [imageFailed, setImageFailed] = useState(false);
@@ -79,7 +82,7 @@ export function GenericEmbed({ embed, className = '', edgeToEdge }: GenericEmbed
   useEffect(() => {
     // fetched only when the card is about to be seen: a long history full
     // of links doesn't fire a request per link on open
-    if (!near) return;
+    if (!near || preview) return;
     let cancelled = false;
     setData(getCachedLinkPreview(url) ?? null);
     setImageFailed(false);
@@ -89,7 +92,7 @@ export function GenericEmbed({ embed, className = '', edgeToEdge }: GenericEmbed
       .then((d) => { if (!cancelled) setData(d); })
       .catch(() => { if (!cancelled) setData({ url, title: null, description: null, image: null, video: null, favicon: null, siteName: url, themeColor: null }); });
     return () => { cancelled = true; };
-  }, [url, near]);
+  }, [url, near, preview]);
 
   const known = KNOWN_SITE[embed.kind];
   const hasKnownPlayer = !!known;
