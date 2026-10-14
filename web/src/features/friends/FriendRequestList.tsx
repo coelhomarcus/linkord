@@ -52,9 +52,7 @@ export function FriendRequestList({ direction, search = '', headingId, onOpenPro
   }
 
   let body;
-  if (phase === 'wait') {
-    body = null;
-  } else if (phase === 'skeleton') {
+  if (phase === 'skeleton') {
     body = <SocialRowsSkeleton label="Carregando solicitações…" rows={2} />;
   } else if (list.status === 'error') {
     body = (

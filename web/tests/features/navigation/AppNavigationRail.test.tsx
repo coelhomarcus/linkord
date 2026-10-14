@@ -3,7 +3,7 @@ import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { initialRoomState } from '@/state/roomReducer';
 import { renderSocial } from '@tests/fixtures/socialFixture';
-import { AnimatedSidebarProvider } from '@/shared/ui/motion/animated-sidebar';
+import { SidebarProvider } from '@/shared/ui/motion/sidebar';
 import { TooltipProvider } from '@/shared/ui/primitives/tooltip';
 import { AppNavigationRail } from '@/features/navigation/AppNavigationRail';
 import * as api from '@/shared/api/api';
@@ -34,9 +34,9 @@ function renderRail(path = '/app/conversations', open = true, openMobile = false
   const onReturnToCall = vi.fn();
   renderSocial(
     <TooltipProvider>
-      <AnimatedSidebarProvider open={open} onOpenChange={onOpenChange} openMobile={openMobile} onOpenMobileChange={onOpenMobileChange}>
+      <SidebarProvider open={open} onOpenChange={onOpenChange} openMobile={openMobile} onOpenMobileChange={onOpenMobileChange}>
         <AppNavigationRail onOpenProfile={onOpenProfile} onReturnToCall={onReturnToCall} />
-      </AnimatedSidebarProvider>
+      </SidebarProvider>
     </TooltipProvider>,
     { room: { state: me, ...roomOverrides }, path },
   );

@@ -4,8 +4,8 @@ import type { Area } from 'react-easy-crop';
 import { Camera, Crown, Flag, Pencil, Trash2 } from 'lucide-react';
 import { Check, Link2, LogOut, Upload, UserPlus } from '@/shared/ui/icons';
 import { CloseButton } from '@/shared/ui/primitives/close-button';
-import { useAnimatedSidebar } from '@/shared/ui/motion/animated-sidebar';
-import { Drawer } from '@/shared/ui/motion/drawer';
+import { useSidebar } from '@/shared/ui/motion/sidebar-context';
+import { Sheet } from '@/shared/ui/motion/sheet';
 import { SidePanel } from '@/shared/ui/motion/side-panel';
 import { Button } from '@/shared/ui/primitives/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/primitives/dropdown-menu';
@@ -46,7 +46,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
     updateGroupTitle, updateGroupAvatar, removeGroupMember, deleteGroup, transferGroupOwnership,
     groupActionError, clearGroupActionError,
   } = useRoom();
-  const { isMobile } = useAnimatedSidebar();
+  const { isMobile } = useSidebar();
   const conversation = conversationId ? conversations.find((c) => c.id === conversationId) ?? null : null;
   // real per-group ownership, not the account's global instance role — see
   // conversationsRepository.ts#canManageGroup on the server.
@@ -78,21 +78,30 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
     if (open && conversationId && !conversation) onOpenChange(false);
   }, [open, conversationId, conversation, onOpenChange]);
 
+  // Closing resets the panel's local state. It is done while rendering rather
+  // than in an effect so the stale state never paints for a frame on reopen.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (wasOpen !== open) {
+    setWasOpen(open);
+    if (!open) {
+      setEditingTitle(false);
+      setAddOpen(false);
+      setAddSelected(new Map());
+      setInviteMessage(null);
+      setAvatarError(null);
+      setUrlDialogOpen(false);
+      setTransferTarget(null);
+      setCropTarget(null);
+    }
+  }
+
   useEffect(() => {
-    if (open) return;
-    setEditingTitle(false);
-    setAddOpen(false);
-    setAddSelected(new Map());
-    setInviteMessage(null);
-    setAvatarError(null);
-    setUrlDialogOpen(false);
-    setTransferTarget(null);
-    clearGroupActionError();
-    setCropTarget((prev) => {
-      if (prev?.kind === 'file') URL.revokeObjectURL(prev.src);
-      return null;
-    });
+    if (!open) clearGroupActionError();
   }, [open, clearGroupActionError]);
+
+  useEffect(() => () => {
+    if (cropTarget?.kind === 'file') URL.revokeObjectURL(cropTarget.src);
+  }, [cropTarget]);
 
   // Paged from the server (§6.3). The membership snapshot in the summary is
   // only used as a reset key: any join/leave/ownership change alters it.
@@ -217,10 +226,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
   }
 
   function closeCropDialog() {
-    setCropTarget((prev) => {
-      if (prev?.kind === 'file') URL.revokeObjectURL(prev.src);
-      return null;
-    });
+    setCropTarget(null);
   }
 
   async function handleAvatarCropConfirm(crop: Area) {
@@ -469,14 +475,15 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
   return (
     <>
       {isMobile ? (
-        <Drawer
+        <Sheet
+          side="right"
           open={open && !!conversation}
           onOpenChange={onOpenChange}
           ariaLabel="Detalhes do grupo"
           className="flex w-96 flex-col text-text-primary"
         >
           {content}
-        </Drawer>
+        </Sheet>
       ) : (
         <SidePanel open={open && !!conversation} width={PANEL_WIDTH} ariaLabel="Detalhes do grupo" className="bg-bg-primary text-text-primary">
           {content}

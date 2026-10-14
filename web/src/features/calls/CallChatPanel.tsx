@@ -1,7 +1,7 @@
 import { MessageCircle } from 'lucide-react';
 import { CloseButton } from '@/shared/ui/primitives/close-button';
-import { useAnimatedSidebar } from '@/shared/ui/motion/animated-sidebar';
-import { Drawer } from '@/shared/ui/motion/drawer';
+import { useSidebar } from '@/shared/ui/motion/sidebar-context';
+import { Sheet } from '@/shared/ui/motion/sheet';
 import { SidePanel } from '@/shared/ui/motion/side-panel';
 import { useRoom } from '@/state/RoomContext';
 import { conversationTitle } from '@/features/conversations/conversationUtils';
@@ -21,7 +21,7 @@ interface CallChatPanelProps {
  * the app's right-sidebar convention instead of replacing the call. */
 export function CallChatPanel({ conversationId, open, onOpenChange, onOpenProfile }: CallChatPanelProps) {
   const { state, conversations, allUsers } = useRoom();
-  const { isMobile } = useAnimatedSidebar();
+  const { isMobile } = useSidebar();
   const conversation = conversationId ? conversations.find((c) => c.id === conversationId) ?? null : null;
   const title = conversationTitle(conversation, state.me.userId, allUsers);
 
@@ -37,14 +37,15 @@ export function CallChatPanel({ conversationId, open, onOpenChange, onOpenProfil
   );
 
   return isMobile ? (
-    <Drawer
+    <Sheet
+      side="right"
       open={open && !!conversation}
       onOpenChange={onOpenChange}
       ariaLabel="Chat da chamada"
       className="flex w-96 flex-col text-text-primary"
     >
       {content}
-    </Drawer>
+    </Sheet>
   ) : (
     <SidePanel open={open && !!conversation} width={PANEL_WIDTH} ariaLabel="Chat da chamada" className="bg-bg-primary text-text-primary">
       {content}

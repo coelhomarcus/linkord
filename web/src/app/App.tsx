@@ -31,7 +31,8 @@ import { RequestsRedirect } from '@/features/friends/RequestsRedirect';
 import { SettingsPage } from '@/features/settings/SettingsPage';
 import { AWAITING_OPEN, ROUTES, conversationNav, isConversationsPath } from '@/shared/lib/routes';
 import { useConversationRouteSync } from '@/app/useConversationRouteSync';
-import { AnimatedSidebarInset, AnimatedSidebarProvider, useAnimatedSidebar } from '@/shared/ui/motion/animated-sidebar';
+import { SidebarInset, SidebarProvider } from '@/shared/ui/motion/sidebar';
+import { useSidebar } from '@/shared/ui/motion/sidebar-context';
 import { CommandPalette } from '@/shared/ui/motion/command-palette';
 import { buildCommandItems } from '@/features/conversations/commandPaletteItems';
 import { loadSidebarCollapsed, saveSidebarCollapsed } from '@/shared/hooks/useSidebarCollapsedPreference';
@@ -168,7 +169,7 @@ function Shell() {
 
   return (
     <GlobalContextMenu onOpenProfile={setProfileUserId}>
-      <AnimatedSidebarProvider
+      <SidebarProvider
         open={sidebarOpen}
         onOpenChange={setSidebarOpen}
         openMobile={mobileShowSidebar}
@@ -183,7 +184,7 @@ function Shell() {
           onOpenPalette={() => setPaletteOpen(true)}
           mobileRail={<AppNavigationRail onOpenProfile={setProfileUserId} onReturnToCall={handleReturnToCall} />}
         />
-        <AnimatedSidebarInset className="relative min-h-0 overflow-hidden bg-surface-panel [--surface-base:var(--color-surface-panel)] md:m-shell md:rounded-xl md:border md:border-border">
+        <SidebarInset className="relative min-h-0 overflow-hidden bg-surface-panel [--surface-base:var(--color-surface-panel)] md:m-shell md:rounded-xl md:border md:border-border">
           <Routes>
             <Route
               path="/app/conversations/:conversationId?"
@@ -216,7 +217,7 @@ function Shell() {
             />
           )}
           <ReactionsOverlay />
-        </AnimatedSidebarInset>
+        </SidebarInset>
         <GroupDetailsPanel
           conversationId={activeConversation?.type === 'group' ? activeConversation.id : null}
           open={detailsVisible}
@@ -249,15 +250,15 @@ function Shell() {
           activeConversationId={activeConversationId}
           activeConversationName={activeConversationName}
         />
-      </AnimatedSidebarProvider>
+      </SidebarProvider>
     </GlobalContextMenu>
   );
 }
 
-/** Split out from Shell only because it needs `useAnimatedSidebar()` (for
+/** Split out from Shell only because it needs `useSidebar()` (for
  * `isMobile`, to close the mobile sidebar sheet after a palette selection,
  * same as ConversationSidebar's own row clicks) — a hook that only works
- * inside the AnimatedSidebarProvider Shell itself renders, so Shell (the
+ * inside the SidebarProvider Shell itself renders, so Shell (the
  * provider's parent, not a descendant of it) can't call it directly. */
 function CommandPaletteMount({ open, onOpenChange, onCall, onMobileNavigated, onOpenProfile }: {
   open: boolean;
@@ -268,7 +269,7 @@ function CommandPaletteMount({ open, onOpenChange, onCall, onMobileNavigated, on
 }) {
   const { state, conversations, allUsers, friendUserIds, activeCallConversationId, openConversation, openDirect, requestChatView } = useRoom();
   const { pendingFriendRequestCount, pendingInvitationCount } = useFriends();
-  const { isOverlay } = useAnimatedSidebar();
+  const { isOverlay } = useSidebar();
   const navigate = useNavigate();
   const isAdmin = state.me.role === 'admin';
 
