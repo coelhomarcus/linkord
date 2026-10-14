@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { Pin, Search, Users, PhoneCall } from 'lucide-react';
 import { PanelLeftClose, Plus } from '@/shared/ui/icons';
+import { ActiveWash } from '@/shared/ui/motion/active-wash';
 import { Sidebar } from '@/shared/ui/motion/sidebar';
 import { useSidebar } from '@/shared/ui/motion/sidebar-context';
 import { Button } from '@/shared/ui/primitives/button';
@@ -24,9 +25,11 @@ interface ConversationSidebarProps {
   mobileRail: ReactNode;
 }
 
-function ConversationRow({ conversation, active, onClick }: {
+function ConversationRow({ conversation, active, washId, onClick }: {
   conversation: Conversation;
   active: boolean;
+  /** shared by every row: there is one wash, and it slides to the active row */
+  washId: string;
   onClick: () => void;
 }) {
   const { state, allUsers, onlineUserIds, unreadByConversation, activeCallConversationId } = useRoom();
@@ -49,24 +52,25 @@ function ConversationRow({ conversation, active, onClick }: {
         type="button"
         onClick={onClick}
         className={cn(
-          'flex w-full items-center gap-2.5 rounded-md border px-2.5 py-1.5 text-left transition-colors',
-          // Discord/Fluxer: the active row is a plain light-gray wash, no
-          // border and no accent color — the color is reserved for actual
-          // brand moments, not "you are here" state.
+          'relative isolate flex w-full items-center gap-2.5 rounded-md border px-2.5 py-1.5 text-left transition-colors',
           active
-            ? 'cutout-active border-transparent bg-fill-active text-text-primary shadow-highlight'
+            ? 'cutout-active border-transparent text-text-primary'
             : 'cutout border-transparent text-text-secondary hover:cutout-subtle hover:border-border hover:bg-fill-subtle'
         )}
       >
+        {/* Discord/Fluxer: the active row is a plain light-gray wash, no border
+            and no accent color — the color is reserved for actual brand
+            moments, not "you are here" state */}
+        {active && <ActiveWash layoutId={washId} className="shadow-highlight" />}
         {conversation.type === 'direct' && other ? (
           <div className="relative flex-none">
             <Avatar id={other.id} name={other.displayName} avatar={other.avatar} avatarColor={other.avatarColor} size={36} />
-            <span className={cn('absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2 border-(--cutout)', online ? 'bg-green' : 'bg-text-muted')} />
+            <span className={cn('absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2 border-(--cutout) transition-[border-color] duration-300', online ? 'bg-green' : 'bg-text-muted')} />
           </div>
         ) : (
           <div className="relative flex-none">
             <GroupAvatar title={title} avatar={conversation.avatar} active={active} size={36} />
-            <span className="absolute -bottom-0.5 -right-0.5 grid size-4 place-items-center rounded-full border-2 border-(--cutout) bg-bg-tertiary text-text-secondary">
+            <span className="absolute -bottom-0.5 -right-0.5 grid size-4 place-items-center rounded-full border-2 border-(--cutout) bg-bg-tertiary text-text-secondary transition-[border-color] duration-300">
               <Users size={9} />
             </span>
           </div>
@@ -81,10 +85,10 @@ function ConversationRow({ conversation, active, onClick }: {
               <PhoneCall size={12} className="flex-none text-green" />
               <span className="flex items-center -space-x-1.5">
                 {callParticipants.slice(0, 4).map((p) => (
-                  <Avatar key={p.id} id={p.id} name={p.displayName} avatar={p.avatar} avatarColor={p.avatarColor} size={16} className="ring-2 ring-(--cutout)" />
+                  <Avatar key={p.id} id={p.id} name={p.displayName} avatar={p.avatar} avatarColor={p.avatarColor} size={16} className="ring-2 ring-(--cutout) transition-[box-shadow] duration-300" />
                 ))}
                 {callParticipants.length > 4 && (
-                  <span className="grid size-4 place-items-center rounded-full bg-bg-tertiary text-[9px] font-semibold text-text-secondary ring-2 ring-(--cutout)">
+                  <span className="grid size-4 place-items-center rounded-full bg-bg-tertiary text-[9px] font-semibold text-text-secondary ring-2 ring-(--cutout) transition-[box-shadow] duration-300">
                     +{callParticipants.length - 4}
                   </span>
                 )}
@@ -117,6 +121,7 @@ export function ConversationSidebar({ onOpenPalette, mobileRail }: ConversationS
   const shortcutK = shortcutHint('K');
   const [query, setQuery] = useState('');
   const [groupOpen, setGroupOpen] = useState(false);
+  const washId = useId();
   const normalized = query.trim().toLowerCase();
 
   const filteredConversations = useMemo(() => (
@@ -185,6 +190,7 @@ export function ConversationSidebar({ onOpenPalette, mobileRail }: ConversationS
                       key={conversation.id}
                       conversation={conversation}
                       active={onConversations && conversation.id === activeConversationId}
+                      washId={washId}
                       onClick={() => selectConversation(conversation.id)}
                     />
                   ))}
