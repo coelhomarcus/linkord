@@ -118,7 +118,13 @@ export function ConversationMediaPanel({ conversationId, open, onOpenChange }: C
       setLoading(true);
     }
   }
-  if (!open && kind !== 'uploads') setKind('uploads');
+  // The tab resets when the panel opens, not when it closes: closing changing
+  // it would swap the visible tab under the rows while it animates out.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (wasOpen !== open) {
+    setWasOpen(open);
+    if (open) setKind('uploads');
+  }
 
   // `cancelled` drops a response that lands after the tab or conversation
   // changed, which would otherwise replace the rows of the new request.
