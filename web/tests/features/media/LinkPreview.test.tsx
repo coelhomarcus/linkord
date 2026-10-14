@@ -104,6 +104,17 @@ describe('LinkPreview — size measured by the server', () => {
     expect(parseFloat(box.style.width) / parseFloat(box.style.height)).toBeCloseTo(2, 1);
   });
 
+  it('fills the box once its size is known (the box already has the picture\'s proportions) and only fits it inside while unknown', async () => {
+    vi.stubGlobal('fetch', respond(previewJson({ image: 'https://cdn.example.com/wide.png', imageWidth: 1000, imageHeight: 500 })));
+    const { container } = render(<LinkPreview embed={{ kind: 'image', url: 'https://cdn.example.com/wide.png' }} />);
+    const img = container.querySelector('img')!;
+    // unknown: whatever the shape, the whole picture must be visible in the fallback box
+    expect(img.className.split(/\s+/)).toContain('object-contain');
+
+    await vi.waitFor(() => expect(img.className.split(/\s+/)).toContain('object-cover'));
+    expect(img.className.split(/\s+/)).not.toContain('object-contain');
+  });
+
   it('keeps the fallback box when the server could not measure the picture', async () => {
     const fetchMock = respond(previewJson({ image: 'https://cdn.example.com/x.png', imageWidth: null, imageHeight: null }));
     vi.stubGlobal('fetch', fetchMock);

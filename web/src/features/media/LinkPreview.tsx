@@ -99,7 +99,10 @@ export function LinkPreview({ embed, className = '', edgeToEdge, fitContainer }:
           alt=""
           loading="lazy"
           onError={() => setFailed(true)}
-          className={fitContainer ? `block h-auto max-h-70 max-w-full w-full object-contain ${rounding}` : 'block size-full object-contain'}
+          // a known size means the box has the picture's own proportions, so it
+          // is filled (a pixel of rounding cropped at most); an unknown one is
+          // only fitted inside the fallback box, whatever shape it turns out to be
+          className={fitContainer ? `block h-auto max-h-70 max-w-full w-full object-contain ${rounding}` : `block size-full ${remoteSize ? 'object-cover' : 'object-contain'}`}
         />
       </button>
       <ImageLightbox src={embed.url} alt="" open={lightboxOpen} onOpenChange={setLightboxOpen} />
