@@ -21,6 +21,7 @@ import * as attachments from '../attachments/attachments.js';
 import { deleteForMessage } from '../attachments/attachmentCleanup.js';
 import * as reactions from './reactions.js';
 import { buildReplyRef, normalizeReplyRef, type ReplyRef } from './replyRef.js';
+import { warmLinkPreview } from '../link-preview/linkPreview.js';
 import { insertMessageOnce, isValidClientMessageId, sendPayloadHash } from './sendOperations.js';
 import { publishStaged, StagedUnavailableError } from '../attachments/stagedAttachments.js';
 import { ERROR_CODES, type ErrorCode } from '../../http/errors.js';
@@ -74,7 +75,7 @@ interface ChatMessagePayload {
   editedAt?: number;
   replyTo?: ReplyRef;
   reactions?: Record<string, string[]>;
-  attachments?: { id: string; name: string; mime: string; size: number; thumbId?: string; width?: number; height?: number }[];
+  attachments?: { id: string; name: string; mime: string; size: number; thumbId?: string; width?: number; height?: number; placeholder?: string }[];
   // the author's send key, echoed back so their client can reconcile its
   // pending copy with the stored message
   clientMessageId?: string;
@@ -168,6 +169,7 @@ function rowToMessage(row: MessageWithAuthor, attachments?: Attachment[], reacti
     out.attachments = attachments.map((a) => ({
       id: a.id, name: a.fileName, mime: a.mimeType, size: a.size, ...(a.thumbId ? { thumbId: a.thumbId } : {}),
       ...(a.width && a.height ? { width: a.width, height: a.height } : {}),
+      ...(a.placeholder ? { placeholder: a.placeholder } : {}),
     }));
   }
   return out;
@@ -495,6 +497,7 @@ async function handleChat(socket: AppSocket, msg: ChatSendRequest): Promise<void
     sendChatResult(socket, msg, { message });
     await touchConversation(conversationId, outcome.row.createdAt);
     await broadcastToConversationMembers(conversationId, { t: 'chat', message });
+    void warmLinkPreview(rawText, p.userId);
   } catch (err) {
     log.error('correlated chat send failed', err, { userId: p.userId });
     fail('internal_error', 'Não foi possível enviar agora.');
@@ -542,6 +545,7 @@ async function editMessage(p: Participant, msg: { msgId?: unknown; text?: string
   ]);
   await recordConversationActivity(existing.conversationId);
   await broadcastToConversationMembers(existing.conversationId, { t: 'chat-edited', message: rowToMessage(rowWithParticipant(updated!, p), attachment, reactionsByEmoji) });
+  void warmLinkPreview(text, p.userId);
   return null;
 }
 

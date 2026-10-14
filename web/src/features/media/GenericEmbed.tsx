@@ -9,6 +9,7 @@ import { useNearViewport } from './useNearViewport';
 import type { LinkPreviewData } from '@/shared/api/api';
 import { availableAttachmentWidth, useChatSurfaceWidth } from '@/shared/lib/chatSurfaceWidth';
 import { VideoPlayer } from './MediaPlayers';
+import { embedImageAspect, previewImageSize } from './embedImageBox';
 
 interface GenericEmbedProps {
   embed: DetectedEmbed;
@@ -121,6 +122,7 @@ export function GenericEmbed({ embed, className = '', edgeToEdge }: GenericEmbed
   const favicon = !faviconFailed ? (data.favicon || known?.favicon) : null;
   const playableVideo = !!data.video && !videoFailed;
 
+  const aspect = embedImageAspect(previewImageSize(data));
   let media: ReactNode = null;
   if (embed.kind === 'youtube') {
     media = (
@@ -147,13 +149,20 @@ export function GenericEmbed({ embed, className = '', edgeToEdge }: GenericEmbed
     );
   } else if (data.image && !imageFailed) {
     media = (
-      <img
-        src={data.image}
-        alt=""
-        loading="lazy"
-        onError={() => setImageFailed(true)}
-        className="max-h-70 w-full object-cover"
-      />
+      // the frame is sized before the picture arrives (its measured
+      // proportions, or a fixed height when unknown): the card must not grow
+      <div
+        className={`w-full bg-fill-subtle ${aspect ? '' : 'h-70'}`}
+        style={aspect ? { aspectRatio: aspect, maxHeight: 280 } : undefined}
+      >
+        <img
+          src={data.image}
+          alt=""
+          loading="lazy"
+          onError={() => setImageFailed(true)}
+          className="size-full object-cover"
+        />
+      </div>
     );
   }
 

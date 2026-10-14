@@ -84,8 +84,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
   // why it's split this way). Construction order matters in a couple of
   // spots: presence before chatMessages (chatMessages reads its allUsersRef),
   // and the camera/screen-share/mic hooks before useCallLifecycle (it
-  // composes their leave/mute functions) and before useRoomSettings (it
-  // needs useMicrophone's setNoiseSuppressionEnabled).
+  // composes their leave/mute functions).
   const conversationsList = useConversationsList(sendWs);
   const presence = usePresence();
   const typingIndicator = useTypingIndicator(sendWs, myUserIdRef);
@@ -106,9 +105,9 @@ export function RoomProvider({ children }: { children: ReactNode }) {
 
   const { startSharing, stopSharing, changeSource, pauseSharePreview, resumeSharePreview } = useScreenShare(livekitRoom, dispatch);
   const { startCamera, stopCamera } = useCamera(livekitRoom, dispatch);
-  const { activateMic, toggleMicMuted, setMicMuted, leaveMic, setNoiseSuppressionEnabled: applyNoiseSuppression } = useMicrophone(livekitRoom, dispatch);
+  const { activateMic, toggleMicMuted, setMicMuted, leaveMic } = useMicrophone(livekitRoom, dispatch);
 
-  const roomSettings = useRoomSettings(applyNoiseSuppression);
+  const roomSettings = useRoomSettings();
 
   const callLifecycle = useCallLifecycle({
     livekitRoom, dispatch, sendWs, stopCamera, stopSharing, activateMic, setMicMuted, leaveMic,
@@ -372,8 +371,6 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         hideAudioOnlyTiles: roomSettings.hideAudioOnlyTiles, setHideAudioOnlyTiles: roomSettings.setHideAudioOnlyTiles,
         showTileBanners: roomSettings.showTileBanners, setShowTileBanners: roomSettings.setShowTileBanners,
         compressImagesDefault: roomSettings.compressImagesDefault, setCompressImagesDefault: roomSettings.setCompressImagesDefault,
-        noiseSuppressionEnabled: roomSettings.noiseSuppressionEnabled, setNoiseSuppressionEnabled: roomSettings.setNoiseSuppressionEnabled,
-        noiseSuppressionPending: roomSettings.noiseSuppressionPending, noiseSuppressionError: roomSettings.noiseSuppressionError,
         mirrorCameraPreview: roomSettings.mirrorCameraPreview, setMirrorCameraPreview: roomSettings.setMirrorCameraPreview,
         conversations: conversationsList.conversations, activeConversationId: conversationsList.activeConversationId,
         openConversation, openDirect: conversationsList.openDirect, closeConversation, pinConversation: conversationsList.pinConversation,

@@ -1,16 +1,59 @@
+import { useState } from 'react';
 import type { ChatAttachment as ChatAttachmentData } from '@/shared/types/protocol';
 import { useCachedImageSrc } from '@/shared/hooks/useCachedImageSrc';
 import { cn } from '@/shared/lib/utils';
 import { ChatAttachment } from './ChatAttachment';
+import { placeholderDataUrl } from './placeholderImage';
 import { MEDIA_MAX_WIDTH, mosaicLayout, singleImageBox, splitAttachments } from './mediaLayout';
 import { MediaViewerProvider } from './MediaViewerProvider';
 import { useMediaViewer } from './useMediaViewer';
 
-function MediaImage({ attachment, className }: { attachment: ChatAttachmentData; className?: string }) {
+// the old natural-size rule capped height at max-h-80
+const LEGACY_IMAGE_BOX_HEIGHT = 320;
+
+function MediaImage({ attachment, className, onNaturalSize }: { attachment: ChatAttachmentData; className?: string; onNaturalSize?: (size: { width: number; height: number }) => void }) {
   // Left unset (not the raw url) while the cache warms — see
   // useCachedImageSrc: a fallback src would fire a second request.
   const src = useCachedImageSrc(`/uploads/${attachment.thumbId ?? attachment.id}`);
-  return <img src={src ?? undefined} alt={attachment.name} loading="lazy" className={className} />;
+  const [loaded, setLoaded] = useState(false);
+  const placeholder = loaded ? null : placeholderDataUrl(attachment.placeholder);
+  // The blurred placeholder fills the box until the picture is there, then
+  // goes: left behind, it would show through a transparent PNG.
+  return (
+    <img
+      src={src ?? undefined}
+      // empty until loaded: with no pixels yet, alt text and the broken-image
+      // icon would be drawn over the placeholder (the button carries the name)
+      alt={loaded ? attachment.name : ''}
+      loading="lazy"
+      onLoad={(event) => {
+        setLoaded(true);
+        const { naturalWidth: width, naturalHeight: height } = event.currentTarget;
+        if (width > 0 && height > 0) onNaturalSize?.({ width, height });
+      }}
+      style={placeholder ? { backgroundImage: `url(${placeholder})`, backgroundSize: 'cover' } : undefined}
+      className={className}
+    />
+  );
+}
+
+/** An image stored before dimensions existed: its size is unknown, so a box of
+ * fixed height holds it while it loads, then takes the picture's own
+ * proportions once the browser reports them (no bars around an odd shape). */
+function LegacyImageButton({ attachment, onOpen, className }: { attachment: ChatAttachmentData; onOpen: () => void; className: string }) {
+  const [natural, setNatural] = useState<{ width: number; height: number } | null>(null);
+  const box = natural ? singleImageBox(natural) : null;
+  return (
+    <button
+      type="button"
+      aria-label={`Abrir ${attachment.name}`}
+      onClick={onOpen}
+      className={className}
+      style={box ? { width: box.width, aspectRatio: box.aspectRatio } : { width: `min(100%, ${MEDIA_MAX_WIDTH}px)`, height: LEGACY_IMAGE_BOX_HEIGHT }}
+    >
+      <MediaImage attachment={attachment} onNaturalSize={setNatural} className={cn('block size-full', box ? 'object-cover' : 'object-contain')} />
+    </button>
+  );
 }
 
 /** The pictures of a message as one unit (a lone image at its own shape, or
@@ -33,10 +76,7 @@ export function MessageMedia({ attachments }: { attachments: ChatAttachmentData[
         <MediaImage attachment={attachment} className="block size-full object-cover" />
       </button>
     ) : (
-      // stored before dimensions existed: natural size, as it always was
-      <button type="button" aria-label={`Abrir ${attachment.name}`} onClick={() => openAt(0)} className={cn(cellButton, 'inline-block max-w-full rounded-lg')} style={{ maxWidth: `min(100%, ${MEDIA_MAX_WIDTH}px)` }}>
-        <MediaImage attachment={attachment} className="block h-auto max-h-80 max-w-full object-contain" />
-      </button>
+      <LegacyImageButton attachment={attachment} onOpen={() => openAt(0)} className={cn(cellButton, 'rounded-lg')} />
     );
   } else if (visual.length > 1) {
     const layout = mosaicLayout(visual.length);
