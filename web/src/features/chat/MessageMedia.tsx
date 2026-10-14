@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import type { ChatAttachment as ChatAttachmentData } from '@/shared/types/protocol';
 import { useCachedImageSrc } from '@/shared/hooks/useCachedImageSrc';
 import { cn } from '@/shared/lib/utils';
 import { ChatAttachment } from './ChatAttachment';
+import { placeholderDataUrl } from './placeholderImage';
 import { MEDIA_MAX_WIDTH, mosaicLayout, singleImageBox, splitAttachments } from './mediaLayout';
 import { MediaViewerProvider } from './MediaViewerProvider';
 import { useMediaViewer } from './useMediaViewer';
@@ -13,7 +15,22 @@ function MediaImage({ attachment, className }: { attachment: ChatAttachmentData;
   // Left unset (not the raw url) while the cache warms — see
   // useCachedImageSrc: a fallback src would fire a second request.
   const src = useCachedImageSrc(`/uploads/${attachment.thumbId ?? attachment.id}`);
-  return <img src={src ?? undefined} alt={attachment.name} loading="lazy" className={className} />;
+  const [loaded, setLoaded] = useState(false);
+  const placeholder = loaded ? null : placeholderDataUrl(attachment.placeholder);
+  // The blurred placeholder fills the box until the picture is there, then
+  // goes: left behind, it would show through a transparent PNG.
+  return (
+    <img
+      src={src ?? undefined}
+      // empty until loaded: with no pixels yet, alt text and the broken-image
+      // icon would be drawn over the placeholder (the button carries the name)
+      alt={loaded ? attachment.name : ''}
+      loading="lazy"
+      onLoad={() => setLoaded(true)}
+      style={placeholder ? { backgroundImage: `url(${placeholder})`, backgroundSize: 'cover' } : undefined}
+      className={className}
+    />
+  );
 }
 
 /** The pictures of a message as one unit (a lone image at its own shape, or
