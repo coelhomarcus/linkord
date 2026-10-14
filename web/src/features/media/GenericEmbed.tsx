@@ -147,13 +147,16 @@ export function GenericEmbed({ embed, className = '', edgeToEdge }: GenericEmbed
     );
   } else if (data.image && !imageFailed) {
     media = (
-      <img
-        src={data.image}
-        alt=""
-        loading="lazy"
-        onError={() => setImageFailed(true)}
-        className="max-h-70 w-full object-cover"
-      />
+      // fixed height: the card must not grow when the picture arrives
+      <div className="h-70 w-full bg-fill-subtle">
+        <img
+          src={data.image}
+          alt=""
+          loading="lazy"
+          onError={() => setImageFailed(true)}
+          className="size-full object-cover"
+        />
+      </div>
     );
   }
 

@@ -6,6 +6,11 @@ import { GenericEmbed } from './GenericEmbed';
 import { AudioPlayer, VideoPlayer } from './MediaPlayers';
 import { availableAttachmentWidth, useChatSurfaceWidth } from '@/shared/lib/chatSurfaceWidth';
 
+// A picture from an arbitrary URL has no known size, so it gets a box of fixed
+// height (and a px width) that it is fitted into: loading it then changes
+// nothing in the row, instead of growing it from zero under the reader.
+const EMBED_IMAGE_BOX_HEIGHT = 280;
+
 function EmbedFailedFallback({ url, className }: { url: string; className: string }) {
   return (
     <a
@@ -60,16 +65,21 @@ export function LinkPreview({ embed, className = '', edgeToEdge, fitContainer }:
     return <AudioPlayer src={embed.url} className={edgeToEdge ? 'max-w-full rounded-lg border-0 bg-transparent shadow-none' : className} onError={() => setFailed(true)} />;
   }
 
+  const rounding = edgeToEdge ? 'rounded-lg' : 'rounded-md border border-border';
   return (
     <>
-      <button type="button" onClick={() => setLightboxOpen(true)} className={`block max-w-full cursor-zoom-in ${className}`}>
+      <button
+        type="button"
+        onClick={() => setLightboxOpen(true)}
+        style={fitContainer ? undefined : { width: maxWidth, maxWidth: '100%', height: EMBED_IMAGE_BOX_HEIGHT }}
+        className={`block max-w-full cursor-zoom-in ${fitContainer ? '' : `overflow-hidden bg-fill-subtle ${rounding}`} ${className}`}
+      >
         <img
           src={embed.url}
           alt=""
           loading="lazy"
           onError={() => setFailed(true)}
-          style={fitContainer ? undefined : { maxWidth }}
-          className={`block h-auto max-h-70 max-w-full object-contain ${fitContainer ? 'w-full' : ''} ${edgeToEdge ? 'rounded-lg' : 'rounded-md border border-border'}`}
+          className={fitContainer ? `block h-auto max-h-70 max-w-full w-full object-contain ${rounding}` : 'block size-full object-contain'}
         />
       </button>
       <ImageLightbox src={embed.url} alt="" open={lightboxOpen} onOpenChange={setLightboxOpen} />

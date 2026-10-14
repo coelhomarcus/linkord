@@ -19,6 +19,12 @@ describe('MessageMedia', () => {
     expect(button.style.aspectRatio).toBe('1600 / 900');
   });
 
+  it('a single image without stored dimensions still reserves a fixed-height box', () => {
+    vi.stubGlobal('fetch', vi.fn(() => new Promise(() => {})));
+    render(<MessageMedia attachments={[img('old')]} />);
+    expect(screen.getByRole('button', { name: 'Abrir old.png' }).style.height).toBe('320px');
+  });
+
   it('mixed batch: images grouped in the mosaic and the document after', () => {
     vi.stubGlobal('fetch', vi.fn(() => new Promise(() => {})));
     const { container } = render(<MessageMedia attachments={[img('a', 10, 10), { id: 'd', name: 'rel.pdf', mime: 'application/pdf', size: 5 }, img('b', 10, 10), img('c', 10, 10)]} />);

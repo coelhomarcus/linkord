@@ -6,6 +6,9 @@ import { MEDIA_MAX_WIDTH, mosaicLayout, singleImageBox, splitAttachments } from 
 import { MediaViewerProvider } from './MediaViewerProvider';
 import { useMediaViewer } from './useMediaViewer';
 
+// the old natural-size rule capped height at max-h-80
+const LEGACY_IMAGE_BOX_HEIGHT = 320;
+
 function MediaImage({ attachment, className }: { attachment: ChatAttachmentData; className?: string }) {
   // Left unset (not the raw url) while the cache warms — see
   // useCachedImageSrc: a fallback src would fire a second request.
@@ -33,9 +36,10 @@ export function MessageMedia({ attachments }: { attachments: ChatAttachmentData[
         <MediaImage attachment={attachment} className="block size-full object-cover" />
       </button>
     ) : (
-      // stored before dimensions existed: natural size, as it always was
-      <button type="button" aria-label={`Abrir ${attachment.name}`} onClick={() => openAt(0)} className={cn(cellButton, 'inline-block max-w-full rounded-lg')} style={{ maxWidth: `min(100%, ${MEDIA_MAX_WIDTH}px)` }}>
-        <MediaImage attachment={attachment} className="block h-auto max-h-80 max-w-full object-contain" />
+      // stored before dimensions existed: the size is unknown, so a box of
+      // fixed height holds it while it loads
+      <button type="button" aria-label={`Abrir ${attachment.name}`} onClick={() => openAt(0)} className={cn(cellButton, 'rounded-lg')} style={{ width: `min(100%, ${MEDIA_MAX_WIDTH}px)`, height: LEGACY_IMAGE_BOX_HEIGHT }}>
+        <MediaImage attachment={attachment} className="block size-full object-contain" />
       </button>
     );
   } else if (visual.length > 1) {
