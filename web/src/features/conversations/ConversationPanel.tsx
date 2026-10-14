@@ -1,5 +1,4 @@
-import { ImageIcon, Info } from 'lucide-react';
-import { ArrowLeft, Phone, Search } from '@/shared/ui/icons';
+import { ArrowLeft, ImageIcon, Info, Phone, Search } from 'lucide-react';
 import { PageHeader } from '@/shared/PageHeader';
 import { useAnimatedSidebar } from '@/shared/ui/motion/animated-sidebar';
 import { Button } from '@/shared/ui/primitives/button';
@@ -123,7 +122,7 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, onO
                 <TooltipContent side="bottom">{callBlockedReason}</TooltipContent>
               </Tooltip>
             ) : (
-              <Button type="button" size="icon-sm" aria-label="Entrar na chamada" disabled={conversation.status === 'suspended'} onClick={() => onOpenCall(conversation.id)} className="bg-green text-bg-primary hover:bg-green/90">
+              <Button type="button" size="icon-sm" aria-label="Entrar na chamada" disabled={conversation.status === 'suspended'} onClick={() => onOpenCall(conversation.id)} className="bg-green/16 text-green hover:bg-green/24">
                 <Phone size={16} />
               </Button>
             )}
