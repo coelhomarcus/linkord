@@ -20,8 +20,5 @@
     "hooks": "@/shared/hooks"
   },
   "menuColor": "default",
-  "menuAccent": "subtle",
-  "registries": {
-    "@beui": "https://beui.dev/r/{name}.json"
-  }
+  "menuAccent": "subtle"
 }
