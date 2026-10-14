@@ -250,6 +250,9 @@ export function RoomProvider({ children }: { children: ReactNode }) {
       case 'chat-edited':
         chatMessages.onChatEdited(m);
         break;
+      case 'chat-embeds':
+        chatMessages.onChatEmbeds(m);
+        break;
       case 'role-updated':
         // an administrator granted or removed this account's admin role while it is connected
         dispatch({ type: 'SET_ROLE', role: m.role });

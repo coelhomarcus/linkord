@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { detectEmbed } from '@/shared/lib/chatEmbeds';
 import { highlightCode } from '@/shared/lib/highlightCode';
 import type { PublicUser } from '@/shared/types/protocol';
+import type { LinkPreviewData } from '@/shared/api/api';
 import { Avatar } from '@/shared/Avatar';
 import { cn } from '@/shared/lib/utils';
 import { isSingleEmoji } from '@/shared/lib/isSingleEmoji';
@@ -92,9 +93,11 @@ interface ChatMessageTextProps {
   /** Opens the mentioned user's profile modal when their @mention chip is
    * clicked — no-op (chip renders disabled) when not provided. */
   onOpenProfile?: (userId: string) => void;
+  /** previews the server stored for the message's links (each card takes its own) */
+  embeds?: LinkPreviewData[];
 }
 
-export function ChatMessageText({ text, mentionLookup, myUserId, onOpenProfile }: ChatMessageTextProps) {
+export function ChatMessageText({ text, mentionLookup, myUserId, onOpenProfile, embeds: previews }: ChatMessageTextProps) {
   const blocks = useMemo(() => parseMessage(text), [text]);
   const embeds = useMemo(() => previewableLinks(blocks).flatMap((url) => detectEmbed(url) ?? []), [blocks]);
   const singleEmoji = isSingleEmoji(text);
@@ -123,7 +126,7 @@ export function ChatMessageText({ text, mentionLookup, myUserId, onOpenProfile }
           }
         }
       })}
-      {embeds.map((embed) => <ChatEmbed key={embed.url} embed={embed} />)}
+      {embeds.map((embed) => <ChatEmbed key={embed.url} embed={embed} preview={previews?.find((preview) => preview.url === embed.url)} />)}
     </>
   );
 }

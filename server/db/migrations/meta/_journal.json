@@ -218,6 +218,13 @@
       "when": 1791988761930,
       "tag": "0030_media_placeholder",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1792009696243,
+      "tag": "0031_message_embeds",
+      "breakpoints": true
     }
   ]
 }

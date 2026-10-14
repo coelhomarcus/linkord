@@ -408,6 +408,18 @@ export function useChatMessages(deps: ChatMessagesDeps) {
     });
   }, []);
 
+  // a message's link previews, stored by the server after the message went out
+  const onChatEmbeds = useCallback((m: Extract<ServerMessage, { t: 'chat-embeds' }>) => {
+    setMessagesByConversation((prev) => {
+      const list = prev.get(m.conversationId);
+      const index = list ? list.findIndex((msg) => msg.msgId === m.msgId) : -1;
+      if (!list || index < 0) return prev;
+      const next = [...list];
+      next[index] = { ...list[index]!, embeds: m.embeds };
+      return new Map(prev).set(m.conversationId, next);
+    });
+  }, []);
+
   const onChatEdited = useCallback((m: Extract<ServerMessage, { t: 'chat-edited' }>) => {
     const conversationId = m.message.conversationId;
     setMessagesByConversation((prev) => {
@@ -491,6 +503,6 @@ export function useChatMessages(deps: ChatMessagesDeps) {
     reactionParticipantsTarget, openReactionParticipants, closeReactionParticipants,
     onConversationHistory, onConversationHistoryAround, onConversationHistoryMore, onConversationHistoryNewer,
     loadNewerMessages, loadingNewerByConversation, newerCountByConversation, windowGenerationByConversation,
-    onChat, onChatDeleted, onChatEdited, onInvitationUpdated, onChatAttachmentAdded, onChatReactionUpdated, onConversationDeleted, onConversationRead,
+    onChat, onChatDeleted, onChatEdited, onChatEmbeds, onInvitationUpdated, onChatAttachmentAdded, onChatReactionUpdated, onConversationDeleted, onConversationRead,
   };
 }
