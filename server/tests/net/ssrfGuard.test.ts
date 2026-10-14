@@ -63,3 +63,17 @@ describe('isBlockedIp — SSRF protection', () => {
     });
   });
 });
+
+describe('isBlockedIp — IPv4 mapped into IPv6', () => {
+  // URL normalises [::ffff:127.0.0.1] to the hex form, which is the one a
+  // check on the host of a parsed URL actually sees
+  test('blocks the hex form of a mapped private address', () => {
+    assert.equal(isBlockedIp('::ffff:7f00:1', 6), true); // 127.0.0.1
+    assert.equal(isBlockedIp('::ffff:a00:5', 6), true); // 10.0.0.5
+    assert.equal(isBlockedIp('::ffff:a9fe:a9fe', 6), true); // 169.254.169.254
+  });
+
+  test('allows the hex form of a mapped public address', () => {
+    assert.equal(isBlockedIp('::ffff:808:808', 6), false); // 8.8.8.8
+  });
+});

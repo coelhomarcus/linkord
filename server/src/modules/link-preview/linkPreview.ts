@@ -1,31 +1,23 @@
-import http from 'node:http';
-import https from 'node:https';
-import dns from 'node:dns';
-import type { LookupOptions, LookupAddress } from 'node:dns';
-import type { IncomingMessage } from 'node:http';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { config } from '../../config/env.js';
 import { sendJson, sendError } from '../../http/respond.js';
 import { parseCookies } from '../../http/cookies.js';
 import { resolveSession } from '../auth/session.js';
-import { isBlockedIp } from '../../net/ssrfGuard.js';
+import { requestSafe } from '../../net/safeRequest.js';
 
 // GET /api/link-preview?url=<url> — server-side fetch (avoids CORS) for a
 // generic link's Open Graph tags. This means the server fetches a URL
 // chosen by whoever sends the chat message — classic SSRF risk. Defense:
-// the IP is validated at CONNECTION time (see fetchSafe/safeLookup), not
-// just an upfront DNS lookup (which DNS rebinding would bypass); redirects
-// are followed manually with revalidation on each hop (capped at 3); the
+// every outbound request goes through net/safeRequest.ts (IP validated at
+// CONNECTION time, redirects revalidated on each hop, capped at 3); the
 // body read has byte and time caps.
 
-const FETCH_TIMEOUT_MS = 5000;
 // safety net for a malformed page with no `</head>` — the real cutoff is
 // semantic; YouTube's head alone can be ~700KB before the first OG tag.
 const MAX_BODY_BYTES = 1.5 * 1024 * 1024;
 const MAX_REDIRECTS = 3;
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6h — same link, same preview for everyone
 const CACHE_MAX_ENTRIES = 500;
-const USER_AGENT = 'Mozilla/5.0 (compatible; LinkordBot/1.0; +link preview)';
 const HEAD_CLOSE_RE = /<\/head/i;
 
 export interface LinkPreviewResult {
@@ -82,83 +74,33 @@ export function isRateLimited(userId: string): boolean {
   return entry.count > RATE_LIMIT_MAX;
 }
 
-/** Custom `lookup` passed to http/https.request — called by Node on EVERY
- * connection attempt (including after a redirect), so it validates the
- * actual IP being used, not just an upfront DNS lookup. */
-function safeLookup(
-  hostname: string,
-  options: LookupOptions,
-  callback: (err: NodeJS.ErrnoException | null, address: string | LookupAddress[], family?: number) => void,
-): void {
-  dns.lookup(hostname, { all: true }, (err, addresses) => {
-    if (err) return callback(err, '');
-    const list = Array.isArray(addresses) ? addresses : [addresses];
-    const safe = list.find((a) => !isBlockedIp(a.address, a.family));
-    if (!safe) return callback(new Error('destino bloqueado (IP privado/reservado)'), '');
-    if (options.all) return callback(null, [safe]);
-    callback(null, safe.address, safe.family);
-  });
-}
-
 function fetchSafe(targetUrl: string, redirectsLeft: number): Promise<{ html: string; finalUrl: string }> {
-  return new Promise((resolve, reject) => {
-    let parsed: URL;
-    try { parsed = new URL(targetUrl); } catch { return reject(new Error('URL inválida')); }
-    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-      return reject(new Error('protocolo não suportado'));
+  return requestSafe(targetUrl, redirectsLeft, 'text/html,*/*;q=0.5', (res, finalUrl, resolve, reject) => {
+    const contentType = String(res.headers['content-type'] || '');
+    if (!contentType.includes('text/html')) {
+      res.resume();
+      return resolve({ html: '', finalUrl });
     }
 
-    const client = parsed.protocol === 'https:' ? https : http;
-    const req = client.request(parsed, {
-      method: 'GET',
-      lookup: safeLookup,
-      headers: { 'User-Agent': USER_AGENT, Accept: 'text/html,*/*;q=0.5' },
-      timeout: FETCH_TIMEOUT_MS,
-    }, (res: IncomingMessage) => {
-      const status = res.statusCode || 0;
-
-      if (status >= 300 && status < 400 && res.headers.location) {
-        res.resume();
-        if (redirectsLeft <= 0) return reject(new Error('redirecionamentos demais'));
-        let nextUrl: string;
-        try { nextUrl = new URL(res.headers.location, parsed).toString(); } catch { return reject(new Error('redirecionamento inválido')); }
-        return resolve(fetchSafe(nextUrl, redirectsLeft - 1));
+    let body = '';
+    let bytes = 0;
+    let settled = false;
+    res.setEncoding('utf8');
+    res.on('data', (chunk: string) => {
+      if (settled) return;
+      bytes += Buffer.byteLength(chunk);
+      body += chunk;
+      // stop once </head> closes (all OG meta tags live there, never in
+      // <body>), or at the byte cap as a safety net for a page with no
+      // normal head.
+      if (HEAD_CLOSE_RE.test(body) || bytes >= MAX_BODY_BYTES) {
+        settled = true;
+        res.destroy();
+        resolve({ html: body, finalUrl });
       }
-      if (status < 200 || status >= 300) {
-        res.resume();
-        return reject(Object.assign(new Error(`status ${status}`), { httpStatus: status }));
-      }
-
-      const contentType = String(res.headers['content-type'] || '');
-      if (!contentType.includes('text/html')) {
-        res.resume();
-        return resolve({ html: '', finalUrl: parsed.toString() });
-      }
-
-      let body = '';
-      let bytes = 0;
-      let settled = false;
-      res.setEncoding('utf8');
-      res.on('data', (chunk: string) => {
-        if (settled) return;
-        bytes += Buffer.byteLength(chunk);
-        body += chunk;
-        // stop once </head> closes (all OG meta tags live there, never in
-        // <body>), or at the byte cap as a safety net for a page with no
-        // normal head.
-        if (HEAD_CLOSE_RE.test(body) || bytes >= MAX_BODY_BYTES) {
-          settled = true;
-          res.destroy();
-          resolve({ html: body, finalUrl: parsed.toString() });
-        }
-      });
-      res.on('end', () => { if (!settled) resolve({ html: body, finalUrl: parsed.toString() }); });
-      res.on('error', (err) => { if (!settled) reject(err); });
     });
-
-    req.on('timeout', () => req.destroy(new Error('tempo esgotado')));
-    req.on('error', reject);
-    req.end();
+    res.on('end', () => { if (!settled) resolve({ html: body, finalUrl }); });
+    res.on('error', (err) => { if (!settled) reject(err); });
   });
 }
 
