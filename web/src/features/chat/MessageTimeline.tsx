@@ -203,11 +203,19 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
     let frames = 0;
     let stableFrames = 0;
     let last = '';
+    const atEndPlacement = jumpIndex < 0 && savedIndex < 0;
     let handle = requestAnimationFrame(function settle() {
       place(true);
       const el = scrollRef.current;
+      // "Still" is not enough at the end: WebKit can apply the virtualizer's
+      // scroll a frame late, holding a few pixels short for two frames — the
+      // list then appeared and slid down. The end is checked for real, and
+      // written directly when it isn't there yet.
+      const maxTop = el ? el.scrollHeight - el.clientHeight : 0;
+      const reached = !atEndPlacement || !el || Math.abs(el.scrollTop - maxTop) <= 1;
+      if (!reached && el) el.scrollTop = maxTop;
       const now = `${el?.scrollTop}:${el?.scrollHeight}`;
-      stableFrames = now === last ? stableFrames + 1 : 0;
+      stableFrames = reached && now === last ? stableFrames + 1 : 0;
       last = now;
       if (stableFrames < PLACEMENT_STABLE_FRAMES && ++frames < PLACEMENT_MAX_FRAMES) {
         handle = requestAnimationFrame(settle);

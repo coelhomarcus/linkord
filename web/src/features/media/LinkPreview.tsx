@@ -7,24 +7,26 @@ import { GenericEmbed } from './GenericEmbed';
 import { AudioPlayer, VideoPlayer } from './MediaPlayers';
 import { availableAttachmentWidth, useChatSurfaceWidth } from '@/shared/lib/chatSurfaceWidth';
 import { getCachedLinkPreview, loadLinkPreview } from '@/shared/lib/linkPreviewCache';
+import type { LinkPreviewData } from '@/shared/api/api';
 import { embedImageBox, previewImageSize, type ImageSize } from './embedImageBox';
 import { useNearViewport } from './useNearViewport';
 
 /** The server's measurement of a picture behind an arbitrary URL, asked for
  * shortly before it scrolls into view. Until it answers (or if it can't
  * tell), the box keeps its fixed fallback size. */
-function useRemoteImageSize(url: string, ref: RefObject<HTMLElement | null>, enabled: boolean): ImageSize | null {
+function useRemoteImageSize(url: string, ref: RefObject<HTMLElement | null>, enabled: boolean, stored: LinkPreviewData | undefined): ImageSize | null {
   const near = useNearViewport(ref);
   const [size, setSize] = useState<ImageSize | null>(() => (enabled ? previewImageSize(getCachedLinkPreview(url)) : null));
   useEffect(() => {
-    if (!enabled || !near) return;
+    // the size came with the message: nothing to ask
+    if (!enabled || !near || stored) return;
     let cancelled = false;
     loadLinkPreview(url)
       .then((data) => { if (!cancelled) setSize(previewImageSize(data)); })
       .catch(() => { /* no size: the fallback box stays */ });
     return () => { cancelled = true; };
-  }, [url, near, enabled]);
-  return size;
+  }, [url, near, enabled, stored]);
+  return (enabled && previewImageSize(stored)) || size;
 }
 
 function EmbedFailedFallback({ url, className }: { url: string; className: string }) {
@@ -59,22 +61,25 @@ interface LinkPreviewProps {
    * fixed px cap there instead only made the image wider than its column,
    * overlapping the next one. */
   fitContainer?: boolean;
+  /** the preview the server stored with the message, when there is one: the
+   * card is drawn from it at once instead of fetched */
+  preview?: LinkPreviewData;
 }
 
-export function LinkPreview({ embed, className = '', edgeToEdge, fitContainer }: LinkPreviewProps) {
+export function LinkPreview({ embed, className = '', edgeToEdge, fitContainer, preview }: LinkPreviewProps) {
   const [failed, setFailed] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const surfaceWidth = useChatSurfaceWidth(384 + 120);
   const maxWidth = availableAttachmentWidth(surfaceWidth, 384);
   const boxRef = useRef<HTMLButtonElement | null>(null);
-  const remoteSize = useRemoteImageSize(embed.url, boxRef, embed.kind === 'image' && !fitContainer);
+  const remoteSize = useRemoteImageSize(embed.url, boxRef, embed.kind === 'image' && !fitContainer, preview);
   // When the server could not measure it, the picture itself reports its size
   // as it loads, and the box is fitted to that: no bars around an odd shape.
   const [loadedSize, setLoadedSize] = useState<ImageSize | null>(null);
   const knownSize = remoteSize ?? loadedSize;
 
   if (embed.kind === 'youtube' || embed.kind === 'twitch-channel' || embed.kind === 'twitch-vod' || embed.kind === 'twitch-clip' || embed.kind === 'link') {
-    return <GenericEmbed key={embed.url} embed={embed} className={className} edgeToEdge={edgeToEdge} />;
+    return <GenericEmbed key={embed.url} embed={embed} className={className} edgeToEdge={edgeToEdge} preview={preview} />;
   }
 
   if (failed) return <EmbedFailedFallback url={embed.url} className={className} />;

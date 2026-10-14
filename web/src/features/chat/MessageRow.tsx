@@ -249,7 +249,7 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
             ) : (
             <>
               <div className={cn('text-body leading-[1.375rem] text-text-secondary', pending && pending.state !== 'failed' && 'opacity-60')}>
-                <ChatMessageText text={message.text} mentionLookup={mentionLookup} myUserId={state.me.userId} onOpenProfile={onOpenProfile} />
+                <ChatMessageText text={message.text} mentionLookup={mentionLookup} myUserId={state.me.userId} onOpenProfile={onOpenProfile} embeds={message.embeds} />
                 {message.editedAt && <span className="ml-1 text-caption text-text-muted">(editado)</span>}
               </div>
               {message.attachments?.length ? <MessageMedia attachments={message.attachments} /> : null}

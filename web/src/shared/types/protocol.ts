@@ -1,3 +1,4 @@
+import type { LinkPreviewData } from '@/shared/api/api';
 
 export interface Participant {
   id: string;
@@ -71,6 +72,9 @@ export interface ChatMessage {
   // the author's send key, present when the send was correlated — lets the
   // author's client swap its pending copy for this one without remounting
   clientMessageId?: string;
+  // previews of the message's link cards, stored by the server so a card is
+  // drawn at its final size at once; missing ones are fetched as before
+  embeds?: LinkPreviewData[];
 }
 
 export interface ChatAttachment {
@@ -223,6 +227,7 @@ export type ServerMessage =
   | { t: 'chat-send-result'; requestId: string; clientMessageId: string; message?: ChatMessage; error?: { code: string; message: string } }
   | { t: 'chat-deleted'; conversationId: string; msgId: number }
   | { t: 'chat-edited'; message: ChatMessage }
+  | { t: 'chat-embeds'; conversationId: string; msgId: number; embeds: LinkPreviewData[] }
   | { t: 'chat-action-result'; requestId: string; error?: { code: string; message: string } }
   | { t: 'invitation-updated'; invitation: InvitationCard }
   | { t: 'role-updated'; role: 'user' | 'admin' }

@@ -237,6 +237,13 @@ export const messages = pgTable('messages', {
   // down to group_invitations), the card stays in the DM as a tombstone —
   // "Convite indisponível" — instead of vanishing.
   groupInvitationId: text('group_invitation_id').references(() => groupInvitations.id, { onDelete: 'set null' }),
+  // The link previews of the message's cards (one per previewable link, see
+  // modules/link-preview/messageLinks.ts), fetched once after it is sent
+  // (modules/messages/messageEmbeds.ts) so history ships each card at its
+  // final size instead of every reader fetching it after it is already on
+  // screen. Null until fetched; an entry only shows while its `url` is still
+  // one of the message's links (an edit can change them).
+  embeds: jsonb('embeds'),
   // Postgres computes/maintains this itself (GENERATED ALWAYS AS ... STORED)
   // on every insert/update of `text` — never set from the app. 'portuguese'
   // config for stemming (a search for "mensagem" should also find
