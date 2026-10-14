@@ -89,16 +89,14 @@ export function NotificationBell({ collapsed = false, onNavigate }: { collapsed?
               </TooltipTrigger>
               <TooltipContent side="bottom">Marcar todas como lidas</TooltipContent>
             </Tooltip>
-            <Tooltip>
-              <TooltipTrigger
-                aria-label="Limpar tudo"
-                onClick={() => void removeFromList(clearNotifications, 0)}
-                className={cn(buttonVariants({ variant: 'ghost', size: 'icon-sm' }), 'text-text-muted hover:text-red')}
-              >
-                <Trash2 size={16} />
-              </TooltipTrigger>
-              <TooltipContent side="bottom">Limpar tudo</TooltipContent>
-            </Tooltip>
+            <button
+              type="button"
+              aria-label="Limpar tudo"
+              onClick={() => void removeFromList(clearNotifications, 0)}
+              className={cn(buttonVariants({ variant: 'ghost', size: 'icon-sm' }), 'text-text-muted hover:text-red')}
+            >
+              <Trash2 size={16} />
+            </button>
           </div>
         </div>
         {error && <p role="alert" className="rounded-md bg-red/12 px-2.5 py-1.5 text-label text-red-text">Não foi possível atualizar. Tente de novo.</p>}
