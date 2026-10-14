@@ -160,6 +160,37 @@ describe('useChatMessages — history window', () => {
   });
 });
 
+describe('useChatMessages — reopening a conversation already in memory', () => {
+  const history = (msgIds: number[], hasMore = false) => ({ t: 'conversation-history' as const, conversationId: 'dm', hasMore, messages: msgIds.map((id) => message(id)) });
+
+  it('the first history starts the window; the same present arriving again does not restart the timeline', () => {
+    const { result } = setup();
+    act(() => result.current.onConversationHistory(history([1, 2, 3])));
+    const generation = result.current.windowGenerationByConversation.get('dm');
+
+    act(() => result.current.onConversationHistory(history([2, 3, 4])));
+    expect(result.current.windowGenerationByConversation.get('dm')).toBe(generation);
+    expect(result.current.messagesByConversation.get('dm')!.map((m) => m.msgId)).toEqual([1, 2, 3, 4]);
+  });
+
+  it('keeps "has more" from the older messages it kept, not from the shorter page', () => {
+    const { result } = setup();
+    act(() => result.current.onConversationHistory(history([1, 2, 3], false)));
+    act(() => result.current.onConversationHistory(history([2, 3, 4], true)));
+    expect(result.current.hasMoreByConversation.get('dm')).toBe(false);
+  });
+
+  it('a page that does not overlap what is loaded replaces it and restarts the timeline', () => {
+    const { result } = setup();
+    act(() => result.current.onConversationHistory(history([1, 2, 3])));
+    const generation = result.current.windowGenerationByConversation.get('dm') ?? 0;
+    act(() => result.current.onConversationHistory(history([40, 41], true)));
+    expect(result.current.windowGenerationByConversation.get('dm')).toBe(generation + 1);
+    expect(result.current.messagesByConversation.get('dm')!.map((m) => m.msgId)).toEqual([40, 41]);
+    expect(result.current.hasMoreByConversation.get('dm')).toBe(true);
+  });
+});
+
 describe('useChatMessages — memory', () => {
   it('keeps history only for the 5 most recently opened conversations', () => {
     const ref = <T,>(current: T) => ({ current });

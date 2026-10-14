@@ -124,6 +124,8 @@ describe('MessageTimeline — jump to message', { timeout: HEAVY_RENDER_TIMEOUT 
     const callRoot = callSurface.querySelector('[data-scroll-root]')!;
     const mainRoot = container.querySelector('[data-surface="0"] [data-scroll-root]')!;
     await waitFor(() => expect(within(callSurface as HTMLElement).getAllByText('original').length).toBeGreaterThan(0));
+    // both placements done: until then each list is invisible (nothing to click) and still scrolling itself
+    await waitFor(() => { expect(callRoot).toHaveAttribute('data-settled'); expect(mainRoot).toHaveAttribute('data-settled'); });
     scrolled.length = 0;
 
     const quote = within(callSurface as HTMLElement).getAllByText('original').find((el) => el.closest('[data-msg-id="2"]'))!;
@@ -155,6 +157,21 @@ describe('MessageTimeline — jump to message', { timeout: HEAVY_RENDER_TIMEOUT 
     const quote = await screen.findByText('antiga');
     fireEvent.click(quote);
     expect(jumpToMessage).toHaveBeenCalledWith('conv-1', 7);
+  });
+});
+
+describe('MessageTimeline — initial placement', () => {
+  it('stays invisible until its placement has settled, so no frame shows it in the wrong place', async () => {
+    const messages = Array.from({ length: 50 }, (_, i) => message(i + 1));
+    const { container } = renderTimeline({ messagesByConversation: new Map([['conv-1', messages]]) });
+    const log = () => container.querySelector('[role="log"]') as HTMLElement;
+    const root = () => container.querySelector('[data-scroll-root]') as HTMLElement;
+
+    expect(log().style.visibility).toBe('hidden');
+    expect(root()).not.toHaveAttribute('data-settled');
+
+    await waitFor(() => expect(root()).toHaveAttribute('data-settled'));
+    expect(log().style.visibility).toBe('');
   });
 });
 
