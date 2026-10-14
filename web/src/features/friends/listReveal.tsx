@@ -22,13 +22,14 @@ export function SocialRowsSkeleton({ label, rows = 4 }: { label: string; rows?: 
   );
 }
 
-export function FadeIn({ children, className }: { children: ReactNode; className?: string }) {
+/** `skip`: content restored from memory is already in place, so it doesn't fade in again. */
+export function FadeIn({ children, className, skip = false }: { children: ReactNode; className?: string; skip?: boolean }) {
   const reduce = useReducedMotion();
   return (
     <motion.div
-      initial={reduce ? false : { opacity: 0 }}
+      initial={reduce || skip ? false : { opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.2, ease: EASE_OUT }}
+      transition={{ duration: 0.15, ease: EASE_OUT }}
       className={className}
     >
       {children}
@@ -36,25 +37,24 @@ export function FadeIn({ children, className }: { children: ReactNode; className
   );
 }
 
-/** The rows of a list. They enter with a short stagger and collapse when they
- * leave (an accepted request, a removed friend), so the rows below glide up. */
-export function RevealList({ children, className }: { children: ReactNode; className?: string }) {
+/** The rows of a list. The first rows arrive with the list (its FadeIn), all at
+ * once: staggering them read as the page still settling into place. Only a row
+ * that turns up later fades in on its own, and a row that leaves (an accepted
+ * request, a removed friend) collapses so the rows below glide up. */
+export function RevealList({ children, restored = false, className }: { children: ReactNode; restored?: boolean; className?: string }) {
   return (
-    <div className={cn('flex flex-col divide-y divide-border-subtle', className)}>
-      <AnimatePresence initial>{children}</AnimatePresence>
-    </div>
+    <FadeIn skip={restored} className={cn('flex flex-col divide-y divide-border-subtle', className)}>
+      <AnimatePresence initial={false}>{children}</AnimatePresence>
+    </FadeIn>
   );
 }
 
-// past the first screenful a longer stagger is only a wait
-const MAX_STAGGERED = 8;
-
-export function RevealRow({ index, children }: { index: number; children: ReactNode }) {
+export function RevealRow({ children }: { children: ReactNode }) {
   const reduce = useReducedMotion();
   return (
     <motion.div
-      initial={reduce ? false : { opacity: 0, y: 6 }}
-      animate={{ opacity: 1, y: 0, transition: { duration: 0.24, ease: EASE_OUT, delay: Math.min(index, MAX_STAGGERED) * 0.03 } }}
+      initial={reduce ? false : { opacity: 0 }}
+      animate={{ opacity: 1, transition: { duration: 0.2, ease: EASE_OUT } }}
       exit={reduce ? { opacity: 0, transition: { duration: 0 } } : { opacity: 0, height: 0, transition: { duration: 0.2, ease: EASE_OUT } }}
       // clips the row as its height collapses on the way out
       className="overflow-hidden"

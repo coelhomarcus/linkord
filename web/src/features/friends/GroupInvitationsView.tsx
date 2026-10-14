@@ -11,11 +11,11 @@ import { useFriends } from './FriendsContext';
 import { ListSearch } from './ListSearch';
 import { ListSectionHeader } from './ListSectionHeader';
 import { LoadMoreFooter } from './LoadMoreFooter';
-import { useCursorList } from '@/shared/hooks/useCursorList';
 import { usePendingIds } from './usePendingIds';
 import { useUrlSearch } from '@/shared/hooks/useUrlSearch';
 import { FadeIn, RevealList, RevealRow, SocialRowsSkeleton } from './listReveal';
 import { useLoadingPhase } from './useLoadingPhase';
+import { useRememberedList } from './useRememberedList';
 
 const HEADING_ID = 'invitations-title';
 const invitationKey = (entry: ReceivedInvitationEntry) => entry.id;
@@ -27,7 +27,7 @@ export function GroupInvitationsView({ query, onQueryChange, onOpenProfile }: { 
   const clearFeedback = useCallback(() => setFeedback(null), []);
   const { value, setValue, search } = useUrlSearch(query, onQueryChange);
   const fetchPage = useCallback((cursor: string | null) => fetchReceivedInvitations(cursor, search), [search]);
-  const list = useCursorList(fetchPage, `invitations|${search}`, { revision, getKey: invitationKey });
+  const list = useRememberedList(fetchPage, `invitations|${search}`, { revision, getKey: invitationKey });
   const phase = useLoadingPhase(list.status === 'loading');
 
   async function act(id: string, action: (id: string) => Promise<unknown>, success: string) {
@@ -60,14 +60,14 @@ export function GroupInvitationsView({ query, onQueryChange, onOpenProfile }: { 
       </div>
     );
   } else if (list.items.length === 0) {
-    body = <FadeIn><p className="py-10 text-center text-label text-text-muted">{search ? 'Nenhum resultado para esta busca.' : 'Nenhum convite de grupo pendente.'}</p></FadeIn>;
+    body = <FadeIn skip={list.restored}><p className="py-10 text-center text-label text-text-muted">{search ? 'Nenhum resultado para esta busca.' : 'Nenhum convite de grupo pendente.'}</p></FadeIn>;
   } else {
     body = (
-      <RevealList>
-        {list.items.map((entry, index) => {
+      <RevealList restored={list.restored}>
+        {list.items.map((entry) => {
           const busy = pending.isPending(entry.id);
           return (
-            <RevealRow key={entry.id} index={index}>
+            <RevealRow key={entry.id}>
               <div className="flex flex-wrap items-center gap-3 rounded-md px-3 py-3 transition-colors hover:bg-fill-subtle">
                 <GroupAvatar title={entry.group.title} avatar={entry.group.avatar} size={40} />
                 <div className="min-w-0 flex-1 basis-48">

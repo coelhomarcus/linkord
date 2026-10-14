@@ -7,10 +7,10 @@ import type { Feedback } from './ActionFeedback';
 import { LoadMoreFooter } from './LoadMoreFooter';
 import { SocialUserRow } from './SocialUserRow';
 import { useFriends } from './FriendsContext';
-import { useCursorList } from '@/shared/hooks/useCursorList';
 import { usePendingIds } from './usePendingIds';
 import { FadeIn, RevealList, RevealRow, SocialRowsSkeleton } from './listReveal';
 import { useLoadingPhase } from './useLoadingPhase';
+import { useRememberedList } from './useRememberedList';
 
 export type RequestDirection = 'incoming' | 'outgoing';
 
@@ -33,7 +33,7 @@ export function FriendRequestList({ direction, search = '', headingId, onOpenPro
   const [feedback, setFeedback] = useState<Feedback>(null);
   const clearFeedback = useCallback(() => setFeedback(null), []);
   const fetchPage = useCallback((cursor: string | null) => fetchFriendRequests(direction, cursor, search), [direction, search]);
-  const list = useCursorList(fetchPage, `${direction}|${search}`, { revision, getKey: entryKey });
+  const list = useRememberedList(fetchPage, `${direction}|${search}`, { revision, getKey: entryKey });
   const phase = useLoadingPhase(list.status === 'loading');
 
   async function act(userId: string, action: (id: string) => Promise<unknown>, success: string) {
@@ -65,7 +65,7 @@ export function FriendRequestList({ direction, search = '', headingId, onOpenPro
     );
   } else if (list.items.length === 0) {
     body = (
-      <FadeIn>
+      <FadeIn skip={list.restored}>
         <p className="py-10 text-center text-label text-text-muted">
           {search ? 'Nenhum resultado para esta busca.' : direction === 'incoming' ? 'Nenhuma solicitação recebida.' : 'Você não tem solicitações enviadas.'}
         </p>
@@ -73,11 +73,11 @@ export function FriendRequestList({ direction, search = '', headingId, onOpenPro
     );
   } else {
     body = (
-      <RevealList>
-        {list.items.map(({ user, at }, index) => {
+      <RevealList restored={list.restored}>
+        {list.items.map(({ user, at }) => {
           const busy = pending.isPending(user.id);
           return (
-            <RevealRow key={user.id} index={index}>
+            <RevealRow key={user.id}>
               <SocialUserRow user={user} subtitle={formatWhen(at)} onOpenProfile={() => onOpenProfile(user.id)}>
                 {direction === 'incoming' ? (
                   <>

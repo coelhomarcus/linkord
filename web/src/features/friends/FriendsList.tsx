@@ -17,12 +17,12 @@ import { SocialConfirmDialog } from './SocialConfirmDialog';
 import type { SocialConfirm } from './SocialConfirmDialog';
 import { SocialUserRow } from './SocialUserRow';
 import { useFriends } from './FriendsContext';
-import { useCursorList } from '@/shared/hooks/useCursorList';
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
 import { usePendingIds } from './usePendingIds';
 import { useUrlSearch } from '@/shared/hooks/useUrlSearch';
 import { FadeIn, RevealList, RevealRow, SocialRowsSkeleton } from './listReveal';
 import { useLoadingPhase } from './useLoadingPhase';
+import { useRememberedList } from './useRememberedList';
 
 const friendKey = (entry: SocialEntry) => entry.user.id;
 
@@ -52,7 +52,7 @@ export function FriendsList({ view, query, onQueryChange, onOpenProfile }: {
     (cursor: string | null) => fetchFriends(cursor, search, view === 'online' ? 'online' : undefined),
     [search, view],
   );
-  const list = useCursorList(fetchPage, `${view}|${search}`, { revision: `${revision}|${presenceKey}`, getKey: friendKey });
+  const list = useRememberedList(fetchPage, `${view}|${search}`, { revision: `${revision}|${presenceKey}`, getKey: friendKey });
   const visible = list.items;
   const phase = useLoadingPhase(list.status === 'loading');
   // only the unfiltered list can say "no friends at all"; an empty Online view just means nobody is on now
@@ -123,9 +123,9 @@ export function FriendsList({ view, query, onQueryChange, onOpenProfile }: {
 
       {phase === 'content' && list.status === 'ready' && !isEmptyAccount && (
         <section aria-labelledby="friends-list-title">
-          <FadeIn><ListSectionHeader id="friends-list-title" title={view === 'online' ? 'Online' : 'Todos os amigos'} count={countText} /></FadeIn>
+          <FadeIn skip={list.restored}><ListSectionHeader id="friends-list-title" title={view === 'online' ? 'Online' : 'Todos os amigos'} count={countText} /></FadeIn>
           {visible.length === 0 ? (
-            <FadeIn>
+            <FadeIn skip={list.restored}>
               <p className="py-8 text-center text-label text-text-muted">
                 {search
                   ? 'Nenhum resultado para esta busca.'
@@ -133,9 +133,9 @@ export function FriendsList({ view, query, onQueryChange, onOpenProfile }: {
               </p>
             </FadeIn>
           ) : (
-            <RevealList>
-              {visible.map(({ user }, index) => (
-                <RevealRow key={user.id} index={index}>
+            <RevealList restored={list.restored}>
+              {visible.map(({ user }) => (
+                <RevealRow key={user.id}>
                   <SocialUserRow user={user} online={onlineUserIds.has(user.id)} onOpenProfile={() => onOpenProfile(user.id)}>
                     <Button type="button" variant="secondary" size="sm" onClick={() => handleMessage(user)} aria-label={`Enviar mensagem para ${user.displayName}`}>
                       <MessageCircle size={15} />
