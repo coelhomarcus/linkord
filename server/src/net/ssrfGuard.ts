@@ -16,6 +16,13 @@ export function isBlockedIp(address: string, family: number): boolean {
     if (a.startsWith('fe80:') || a.startsWith('fc') || a.startsWith('fd')) return true;
     const mapped = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/i.exec(a);
     if (mapped) return isBlockedIp(mapped[1]!, 4);
+    // the same address in the hex form URL normalises to (::ffff:7f00:1)
+    const mappedHex = /^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/i.exec(a);
+    if (mappedHex) {
+      const high = parseInt(mappedHex[1]!, 16);
+      const low = parseInt(mappedHex[2]!, 16);
+      return isBlockedIp(`${high >> 8}.${high & 255}.${low >> 8}.${low & 255}`, 4);
+    }
     return false;
   }
   const parts = address.split('.').map(Number);
