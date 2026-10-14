@@ -3,7 +3,7 @@ import http from 'node:http';
 import type { AddressInfo, LookupFunction } from 'node:net';
 import sharp from 'sharp';
 import assert from 'node:assert/strict';
-import { extractMetaTags, extractFavicon, safeResolve, decodeHtmlEntities, emptyResult, isRateLimited, RATE_LIMIT_MAX, fetchLinkPreviewData } from '../../../src/modules/link-preview/linkPreview.js';
+import { extractMetaTags, extractFavicon, safeResolve, decodeHtmlEntities, emptyResult, isRateLimited, RATE_LIMIT_MAX, fetchLinkPreviewData, warmLinkPreview } from '../../../src/modules/link-preview/linkPreview.js';
 
 describe('extractMetaTags / extractFavicon', () => {
   const html = `<html><head>
@@ -193,5 +193,50 @@ describe('fetchLinkPreviewData — image size', () => {
   test('emptyResult carries no size', () => {
     const out = emptyResult('https://example.com/x');
     assert.deepEqual([out.imageWidth, out.imageHeight], [null, null]);
+  });
+});
+
+describe('warmLinkPreview', () => {
+  const allowLoopback: LookupFunction = (_host, options, callback) => {
+    if (options.all) return (callback as unknown as (e: null, a: { address: string; family: number }[]) => void)(null, [{ address: '127.0.0.1', family: 4 }]);
+    callback(null, '127.0.0.1', 4);
+  };
+  const refuse: LookupFunction = (_host, _options, callback) => callback(new Error('lookup must not run'), '');
+  let server: http.Server;
+  let base: string;
+  let hits: string[];
+
+  before(async () => {
+    hits = [];
+    server = http.createServer((req, res) => {
+      hits.push(req.url ?? '');
+      res.setHeader('content-type', 'text/html');
+      res.end('<html><head><title>Aquecido</title></head></html>');
+    });
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    base = `http://localhost:${(server.address() as AddressInfo).port}`;
+  });
+  after(() => { server.close(); server.closeAllConnections(); });
+
+  test('fetches the first link of a message so the first reader gets it from the cache', async () => {
+    await warmLinkPreview(`olha isso ${base}/warm-a e também ${base}/warm-b`, 'warm-user-1', allowLoopback);
+    assert.deepEqual(hits.filter((h) => h.startsWith('/warm-')), ['/warm-a']);
+    // the reader's own request must not need the network at all
+    const cached = await fetchLinkPreviewData(`${base}/warm-a`, 'someone-else', refuse);
+    assert.equal(cached.title, 'Aquecido');
+  });
+
+  test('leaves video, audio and plain text alone', async () => {
+    const before = hits.length;
+    await warmLinkPreview(`${base}/clip.mp4`, 'warm-user-2', allowLoopback);
+    await warmLinkPreview(`${base}/song.mp3`, 'warm-user-2', allowLoopback);
+    await warmLinkPreview('sem link nenhum', 'warm-user-2', allowLoopback);
+    assert.equal(hits.length, before);
+  });
+
+  test('never throws, even when the sender is rate limited or the lookup fails', async () => {
+    for (let i = 0; i <= RATE_LIMIT_MAX; i++) isRateLimited('warm-user-3');
+    await warmLinkPreview(`${base}/limited`, 'warm-user-3', allowLoopback);
+    await warmLinkPreview('https://nao-existe.invalid/x', 'warm-user-4', refuse);
   });
 });

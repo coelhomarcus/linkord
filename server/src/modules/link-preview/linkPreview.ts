@@ -5,6 +5,7 @@ import { sendJson, sendError } from '../../http/respond.js';
 import { parseCookies } from '../../http/cookies.js';
 import { resolveSession } from '../auth/session.js';
 import { requestSafe } from '../../net/safeRequest.js';
+import { firstEmbed } from './embeds.js';
 import { readImageDimensions } from '../attachments/attachmentThumbnails.js';
 
 // GET /api/link-preview?url=<url> — server-side fetch (avoids CORS) for a
@@ -277,6 +278,18 @@ export async function fetchLinkPreviewData(rawUrl: string, userId: string, looku
 
   cacheSet(rawUrl, result);
   return result;
+}
+
+/** Fills the cache for the link a just-sent message carries, so the first
+ * person to open it gets the card (and the picture's size) in milliseconds
+ * instead of waiting on the server to fetch the page and the image. Only the
+ * kinds the client asks link-preview for; best-effort, so it never throws. */
+export async function warmLinkPreview(text: string, userId: string, lookup?: Lookup): Promise<void> {
+  const embed = firstEmbed(text);
+  if (!embed || embed.kind === 'video' || embed.kind === 'audio') return;
+  try {
+    await fetchLinkPreviewData(embed.url, userId, lookup);
+  } catch { /* rate limited, or the fetch failed: the reader's own request tries again */ }
 }
 
 async function handleLinkPreview(request: FastifyRequest, reply: FastifyReply): Promise<void> {
