@@ -6,8 +6,8 @@ import { cn } from '@/shared/lib/utils';
 import { ActiveWash } from '@/shared/ui/motion/active-wash';
 import { Button } from '@/shared/ui/primitives/button';
 import { CloseButton } from '@/shared/ui/primitives/close-button';
-import { fetchGifCategories, fetchRecentGifs, fetchTrendingGifs, searchGifs } from './klipy';
-import type { Gif, GifCategory, GifPage } from './klipy';
+import { fetchRecentGifs, fetchTrendingGifs, searchGifs } from './klipy';
+import type { Gif, GifPage } from './klipy';
 
 type EnabledConfig = Extract<GifConfig, { enabled: true }>;
 type Tab = 'trending' | 'recent';
@@ -105,17 +105,10 @@ export function GifPicker({ config, onPick }: { config: EnabledConfig; onPick: (
   const [tab, setTab] = useState<Tab>('trending');
   const query = useDebouncedValue(input.trim(), SEARCH_DEBOUNCE_MS);
   const { feed, loadMore, retry } = useGifFeed(config, tab, query);
-  const [categories, setCategories] = useState<GifCategory[]>([]);
   const scrollerRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const columns = useMemo(() => intoColumns(feed.items), [feed.items]);
   const washId = useId();
-
-  useEffect(() => {
-    let cancelled = false;
-    fetchGifCategories(config).then((list) => { if (!cancelled) setCategories(list); }).catch(() => {});
-    return () => { cancelled = true; };
-  }, [config]);
 
   // a new list starts at its top, not wherever the last one was scrolled to
   useEffect(() => { scrollerRef.current?.scrollTo?.({ top: 0 }); }, [tab, query]);
@@ -152,39 +145,23 @@ export function GifPicker({ config, onPick }: { config: EnabledConfig; onPick: (
       </div>
 
       {!searching && (
-        <div className="flex flex-none flex-col gap-2 px-2 pb-2">
-          <div role="tablist" aria-label="GIFs" className="flex gap-1">
-            {(['trending', 'recent'] as const).map((id) => (
-              <button
-                key={id}
-                type="button"
-                role="tab"
-                aria-selected={tab === id}
-                onClick={() => setTab(id)}
-                className={cn(
-                  'relative isolate flex h-7 items-center rounded-md px-2.5 text-label font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring',
-                  tab === id ? 'text-text-primary' : 'text-text-muted hover:bg-fill-hover hover:text-text-primary',
-                )}
-              >
-                {tab === id && <ActiveWash layoutId={washId} />}
-                {id === 'trending' ? 'Em alta' : 'Recentes'}
-              </button>
-            ))}
-          </div>
-          {tab === 'trending' && categories.length > 0 && (
-            <div className="-mx-2 flex gap-1.5 overflow-x-auto px-2 pb-0.5 [scrollbar-width:none]">
-              {categories.map((category) => (
-                <button
-                  key={category.query}
-                  type="button"
-                  onClick={() => setInput(category.query)}
-                  className="flex-none rounded-full border border-border px-2.5 py-1 text-caption text-text-secondary outline-none transition-colors hover:bg-fill-hover hover:text-text-primary focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  {category.label}
-                </button>
-              ))}
-            </div>
-          )}
+        <div role="tablist" aria-label="GIFs" className="flex flex-none gap-1 px-2 pb-2">
+          {(['trending', 'recent'] as const).map((id) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={tab === id}
+              onClick={() => setTab(id)}
+              className={cn(
+                'relative isolate flex h-7 items-center rounded-md px-2.5 text-label font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring',
+                tab === id ? 'text-text-primary' : 'text-text-muted hover:bg-fill-hover hover:text-text-primary',
+              )}
+            >
+              {tab === id && <ActiveWash layoutId={washId} />}
+              {id === 'trending' ? 'Em alta' : 'Recentes'}
+            </button>
+          ))}
         </div>
       )}
 

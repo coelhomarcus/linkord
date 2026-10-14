@@ -33,8 +33,6 @@ export interface Gif {
 
 export interface GifPage { items: Gif[]; page: number; hasNext: boolean }
 
-export interface GifCategory { label: string; query: string; previewUrl: string }
-
 function pick(size: KlipySize | undefined): GifMedia | null {
   const file = size?.webp ?? size?.gif;
   return file?.url ? { url: file.url, width: file.width, height: file.height } : null;
@@ -89,23 +87,6 @@ export async function searchGifs(config: EnabledConfig, query: string, page: num
 
 export async function fetchRecentGifs(config: EnabledConfig, page: number, signal?: AbortSignal): Promise<GifPage> {
   return toPage(await getJson<KlipyPage>(endpoint(config, `recent/${encodeURIComponent(config.customerId)}`, { page, per_page: PER_PAGE }), signal));
-}
-
-// categories barely change: one read per page load, not one per picker opening
-// (a test key only gets 100 requests an hour)
-const categoriesCache = new Map<string, Promise<GifCategory[]>>();
-
-export function fetchGifCategories(config: EnabledConfig): Promise<GifCategory[]> {
-  const locale = klipyLocale();
-  const key = `${config.apiKey}|${locale}`;
-  let pending = categoriesCache.get(key);
-  if (!pending) {
-    pending = getJson<{ data: { categories?: { category: string; query: string; preview_url: string }[] } }>(endpoint(config, 'categories', { locale }))
-      .then((body) => (body.data.categories ?? []).map((c) => ({ label: c.category, query: c.query, previewUrl: c.preview_url })));
-    pending.catch(() => categoriesCache.delete(key));
-    categoriesCache.set(key, pending);
-  }
-  return pending;
 }
 
 /** Tells KLIPY a GIF was sent: it feeds their ranking and this user's recents.
