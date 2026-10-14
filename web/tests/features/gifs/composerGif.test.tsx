@@ -12,7 +12,7 @@ const config = vi.hoisted(() => ({ current: null as GifConfig | null }));
 vi.mock('@/features/gifs/useGifConfig', () => ({ useGifConfig: () => config.current }));
 vi.mock('@/features/gifs/klipy', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/features/gifs/klipy')>()),
-  fetchTrendingGifs: vi.fn(), fetchGifCategories: vi.fn(), reportGifShared: vi.fn(),
+  fetchTrendingGifs: vi.fn(), reportGifShared: vi.fn(),
 }));
 const mocked = vi.mocked(klipy);
 
@@ -30,7 +30,6 @@ describe('MessageComposer — GIFs', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocked.fetchTrendingGifs.mockResolvedValue({ items: [gif], page: 1, hasNext: false });
-    mocked.fetchGifCategories.mockResolvedValue([]);
   });
 
   it('without a KLIPY key on the server there is no GIF button', () => {
