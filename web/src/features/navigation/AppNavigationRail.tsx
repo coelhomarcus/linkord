@@ -54,8 +54,8 @@ function RailLink({ to, label, active, badge, onNavigate, children }: {
 }
 
 /** The global navigation: where you can go from anywhere. What belongs to one
- * conversation (search, creating a group, the list) stays in the conversations
- * sidebar beside it. On a narrow screen the same rail is drawn inside the
+ * conversation (search, creating a group, the list) and the notifications bell
+ * stay in the conversations sidebar beside it. On a narrow screen the same rail is drawn inside the
  * navigation sheet, so nothing here is reachable only on desktop. */
 export function AppNavigationRail({ onOpenProfile, onReturnToCall, className }: {
   onOpenProfile: (userId: string) => void;
@@ -73,6 +73,8 @@ export function AppNavigationRail({ onOpenProfile, onReturnToCall, className }: 
   // (on a phone the rail already sits inside that drawer, so the button would only close it)
   const showListToggle = isOverlay ? !isMobile : !listOpen;
   const listExpanded = isOverlay ? openMobile : listOpen;
+  // the bell lives in the list's header, so it moves here only while that header is off screen
+  const showBell = !isMobile && !listExpanded;
   const onSettings = pathname.startsWith(ROUTES.settings);
   const onAdmin = pathname.startsWith('/admin');
   const isAdmin = state.me.role === 'admin';
@@ -85,13 +87,26 @@ export function AppNavigationRail({ onOpenProfile, onReturnToCall, className }: 
 
   return (
     <nav aria-label="Navegação principal" className={cn('flex w-16 flex-none flex-col items-center gap-1.5 border-r border-border-subtle bg-surface-rail py-3', className)}>
+      {showListToggle && (
+        <Tooltip>
+          <TooltipTrigger
+            onClick={toggleSidebar}
+            aria-label="Mostrar lista de conversas"
+            aria-expanded={listExpanded}
+            className={cn(itemClass, stateClass(false))}
+          >
+            <PanelLeftOpen size={20} aria-hidden />
+          </TooltipTrigger>
+          <TooltipContent side="right">Mostrar lista de conversas</TooltipContent>
+        </Tooltip>
+      )}
       <RailLink to={ROUTES.conversations} label="Conversas" active={isConversationsPath(pathname)} onNavigate={afterNavigate}>
         <MessageCircle size={20} aria-hidden />
       </RailLink>
       <RailLink to={ROUTES.friends} label={friendsLabel} active={pathname === ROUTES.friends} badge={pendingIncomingCount} onNavigate={afterNavigate}>
         <UsersRound size={20} aria-hidden />
       </RailLink>
-      <NotificationBell collapsed onNavigate={afterNavigate} />
+      {showBell && <NotificationBell collapsed onNavigate={afterNavigate} />}
 
       {inCall && (
         <Tooltip>
@@ -108,19 +123,6 @@ export function AppNavigationRail({ onOpenProfile, onReturnToCall, className }: 
 
       <div className="flex-1" />
 
-      {showListToggle && (
-        <Tooltip>
-          <TooltipTrigger
-            onClick={toggleSidebar}
-            aria-label="Mostrar lista de conversas"
-            aria-expanded={listExpanded}
-            className={cn(itemClass, stateClass(false))}
-          >
-            <PanelLeftOpen size={20} aria-hidden />
-          </TooltipTrigger>
-          <TooltipContent side="right">Mostrar lista de conversas</TooltipContent>
-        </Tooltip>
-      )}
       {isAdmin && (
         <RailLink to={ROUTES.admin} label="Área administrativa" active={onAdmin} onNavigate={afterNavigate}>
           <ShieldCheck size={20} aria-hidden />
