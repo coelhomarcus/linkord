@@ -35,16 +35,20 @@ describe('LinkPreview', () => {
   });
 
   describe('direct image embed', () => {
-    it('without fitContainer (chat message): uses the px width cap computed via JS', () => {
+    it('without fitContainer (chat message): sits in a box of fixed height and px width, so loading cannot move the history', () => {
       const { container } = render(<LinkPreview embed={{ kind: 'image', url: 'https://cdn.example.com/foto.png' }} />);
 
       const img = container.querySelector('img');
       expect(img).toHaveAttribute('src', 'https://cdn.example.com/foto.png');
-      // inline max-width in px — without it the image has no reliable width
-      // ceiling inside the chat's flex container, which shrinks to fit its
-      // own content (see the comment in chatSurfaceWidth.tsx).
-      expect(img?.style.maxWidth).not.toBe('');
-      expect(img?.className.split(/\s+/)).not.toContain('w-full');
+      const box = img!.closest('button')!;
+      // the height is what keeps the row from growing when the pixels arrive
+      expect(box.style.height).toBe('280px');
+      // a px width: a percentage has nothing to resolve against inside the
+      // chat's flex container, which shrinks to fit its own content (see the
+      // comment in chatSurfaceWidth.tsx)
+      expect(box.style.width).toMatch(/px$/);
+      expect(box.style.maxWidth).toBe('100%');
+      expect(img?.className.split(/\s+/)).toContain('object-contain');
     });
 
     it('with fitContainer (media grid): fills the real container via w-full, without the px cap', () => {
