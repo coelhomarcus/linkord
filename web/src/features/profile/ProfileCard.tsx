@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef } from 'react';
-import { AtSign, BadgeCheck, Camera, Loader2, Palette, Trash2 } from 'lucide-react';
-import { Check, ExternalLink, Link2, Plus, Upload } from '@/shared/ui/icons';
+import { AtSign, BadgeCheck, Camera, Check, Loader2, Palette, Trash2 } from 'lucide-react';
+import { ExternalLink, Link2, Plus, Upload } from '@/shared/ui/icons';
 import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { Avatar, AVATAR_COLOR_OPTIONS } from '@/shared/Avatar';
 import { BANNER_ASPECT_RATIO, BrandIcon, bannerStyle, linkInfo } from '@/features/profile/profileLinks';
@@ -214,14 +214,14 @@ export function ProfileCard({
                           disabled={fieldsDisabled}
                           onClick={() => onAvatarColorChange(option.value)}
                           className={cn(
-                            'relative h-5 w-5 rounded-full border transition focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60',
+                            'grid h-5 w-5 place-items-center rounded-full border transition focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60',
                             selected ? 'border-text-primary ring-2 ring-ring/40 ring-offset-1 ring-offset-bg-modal' : 'border-border-strong hover:border-text-muted'
                           )}
                           style={{ background: option.css }}
                         />
                       }
                     >
-                      {selected && <Check size={11} className="pointer-events-none absolute inset-0 m-auto text-white drop-shadow" />}
+                      {selected && <Check size={11} strokeWidth={3} className="pointer-events-none text-white drop-shadow" />}
                     </TooltipTrigger>
                     <TooltipContent side="top">{option.label}</TooltipContent>
                   </Tooltip>
@@ -244,7 +244,7 @@ export function ProfileCard({
                   className="avatar-color-custom-input h-5 w-5 cursor-pointer disabled:cursor-default disabled:opacity-60"
                 />
                 <span className="pointer-events-none absolute inset-0 m-auto flex h-2.5 w-2.5 items-center justify-center">
-                  {isCustomAvatarColor ? <Check size={10} className="text-white drop-shadow" /> : <Palette size={9} className="text-white/90 drop-shadow" />}
+                  {isCustomAvatarColor ? <Check size={10} strokeWidth={3} className="text-white drop-shadow" /> : <Palette size={9} className="text-white/90 drop-shadow" />}
                 </span>
               </label>
             </div>
