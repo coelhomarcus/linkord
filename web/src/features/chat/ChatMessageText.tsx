@@ -7,6 +7,8 @@ import { Avatar } from '@/shared/Avatar';
 import { cn } from '@/shared/lib/utils';
 import { isSingleEmoji } from '@/shared/lib/isSingleEmoji';
 import { ChatEmbed } from './ChatEmbed';
+import { GifMessage } from '@/features/gifs/GifMessage';
+import { gifMessageUrl } from '@/features/gifs/klipyMedia';
 import { parseMessage, previewableLinks, type Inline } from './messageMarkup';
 
 interface RenderContext {
@@ -97,6 +99,9 @@ export function ChatMessageText({ text, mentionLookup, myUserId, onOpenProfile }
   const embeds = useMemo(() => previewableLinks(blocks).flatMap((url) => detectEmbed(url) ?? []), [blocks]);
   const singleEmoji = isSingleEmoji(text);
   const ctx: RenderContext = { mentionLookup, myUserId, onOpenProfile };
+  // a GIF message is only its KLIPY URL: show the GIF, not the link and a preview of it
+  const gifUrl = gifMessageUrl(text);
+  if (gifUrl) return <GifMessage url={gifUrl} />;
 
   return (
     <>

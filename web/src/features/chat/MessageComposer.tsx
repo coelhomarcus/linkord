@@ -17,6 +17,10 @@ import { useRoom } from '@/state/RoomContext';
 import { readDraft, useConversationDraft, type PendingAttachment } from './conversationDrafts';
 import { MAX_ATTACHMENT_BYTES, MAX_ATTACHMENTS_PER_MESSAGE } from '@/shared/types/protocol';
 import type { PublicUser } from '@/shared/types/protocol';
+import { GifPicker } from '@/features/gifs/GifPicker';
+import { reportGifShared } from '@/features/gifs/klipy';
+import type { Gif } from '@/features/gifs/klipy';
+import { useGifConfig } from '@/features/gifs/useGifConfig';
 
 // How often notifyTyping actually emits typing:true while the user keeps
 // typing (leading-edge: fires right away after being idle, then throttles),
@@ -55,6 +59,8 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
   const setText = (next: string) => updateDraft(() => ({ text: next }));
   const [compressImages, setCompressImages] = useState(compressImagesDefault);
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
+  const [gifPickerOpen, setGifPickerOpen] = useState(false);
+  const gifConfig = useGifConfig();
   // once opened, keeps the picker mounted (hidden) instead of paying its
   // dataset fetch/measure cost again on every open — see useKeepPopoverWarm.
   const emojiPickerWarmed = useKeepPopoverWarm(emojiPickerOpen);
@@ -228,6 +234,17 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
     clearReplyIfStillHere();
   }
 
+  // a GIF goes out as its own message right away, like a sticker: whatever is
+  // being typed stays in the field, and only the reply target is used up
+  function sendGif(gif: Gif, query: string) {
+    if (!state.joined || gifConfig?.enabled !== true) return;
+    setGifPickerOpen(false);
+    sendChatMessage(conversationId, gif.full.url, replyingTo?.msgId);
+    setReplyingTo(null);
+    reportGifShared(gifConfig, gif.slug, query);
+    textareaRef.current?.focus();
+  }
+
   function handleKeyDown(event: ReactKeyboardEvent<HTMLTextAreaElement>) {
     // the mention dropdown intercepts navigation/confirm keys FIRST — while
     // it's open, Enter picks a mention instead of sending the message, and
@@ -371,18 +388,18 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
               {remaining}
             </span>
           )}
-          {/* below ~480px it moves into "+" so the text field keeps its room */}
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            aria-label="Enviar imagens"
-            disabled={disabled}
-            onClick={() => imageInputRef.current?.click()}
-            className={cn(iconButton, 'hidden @min-[480px]/chat:inline-flex')}
-          >
-            <ImagePlus size={18} />
-          </Button>
+          {gifConfig?.enabled && (
+            <Popover open={gifPickerOpen} onOpenChange={setGifPickerOpen}>
+              <PopoverTrigger
+                render={<Button type="button" variant="ghost" size="icon" aria-label="Enviar GIF" disabled={disabled} className={iconButton} />}
+              >
+                <span aria-hidden className="rounded-[4px] border-[1.5px] border-current px-[3px] py-px text-[9px] font-bold leading-none tracking-wide">GIF</span>
+              </PopoverTrigger>
+              <PopoverContent className="w-[22rem] max-w-[calc(100vw-1.5rem)] p-0" side="top" align="end">
+                <GifPicker config={gifConfig} onPick={sendGif} />
+              </PopoverContent>
+            </Popover>
+          )}
           <Popover open={emojiPickerOpen} onOpenChange={setEmojiPickerOpen}>
             <PopoverTrigger
               render={<Button type="button" variant="ghost" size="icon" aria-label="Inserir emoji" disabled={disabled} className={iconButton} />}
