@@ -181,6 +181,9 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
         const start = virtualizer.measurementsCache[savedIndex]?.start;
         if (start !== undefined) virtualizer.scrollToOffset(start + saved.offset);
       }
+      // the ref too, right away: a scroll landing before the effect below
+      // syncs it would otherwise still be ignored as part of the placement
+      readyRef.current = true;
       setReady(true);
     });
     return () => cancelAnimationFrame(frame);
@@ -334,7 +337,9 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
     <div className="relative min-h-0 flex-1">
       {/* overflow-anchor off: the virtualizer already keeps the reading
           position; the browser's own anchoring would compensate twice */}
-      <div ref={scrollRef} data-scroll-root className="h-full overflow-y-auto px-2 [overflow-anchor:none]">
+      {/* data-settled: the initial placement is done and scrolls now count as
+          reading — what anything waiting on the timeline should wait for */}
+      <div ref={scrollRef} data-scroll-root data-settled={ready || undefined} className="h-full overflow-y-auto px-2 [overflow-anchor:none]">
         {isLoadingOlder && <p className="absolute inset-x-0 top-2 z-10 text-center text-label text-text-muted">Carregando mensagens anteriores...</p>}
         {items.length === 0 ? (
           <div className="flex min-h-[45vh] items-center justify-center px-6 text-center text-label text-text-muted">
