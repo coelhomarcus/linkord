@@ -66,6 +66,9 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
   const highlightTimeoutRef = useRef<number | null>(null);
   const mentionLookup = useMemo(() => buildMentionLookup(allUsers), [allUsers]);
   const messages = messagesByConversation.get(conversationId) ?? EMPTY_MESSAGES;
+  // no entry yet = its history hasn't arrived (any message, even a live one,
+  // creates the entry), so an empty list here is not yet "no messages"
+  const historyArrived = messagesByConversation.has(conversationId);
   const hasMoreBefore = hasMoreByConversation.get(conversationId) !== false;
   const hasMoreAfter = hasMoreAfterByConversation.get(conversationId) === true;
   const isLoadingOlder = loadingOlderByConversation.has(conversationId);
@@ -332,7 +335,10 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
         {isLoadingOlder && <p className="absolute inset-x-0 top-2 z-10 text-center text-label text-text-muted">Carregando mensagens anteriores...</p>}
         {items.length === 0 ? (
           <div className="flex min-h-[45vh] items-center justify-center px-6 text-center text-label text-text-muted">
-            Nenhuma mensagem ainda.
+            {historyArrived ? 'Nenhuma mensagem ainda.' : (
+              // only shown if the history is slow: a quick one would flash it for a frame
+              <span role="status" className="animate-in fade-in-0 duration-200 [animation-delay:300ms] [animation-fill-mode:both]">Carregando mensagens…</span>
+            )}
           </div>
         ) : (
           <div role="log" aria-label="Mensagens" className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
