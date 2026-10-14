@@ -5,7 +5,6 @@ import { sendJson, sendError } from '../../http/respond.js';
 import { parseCookies } from '../../http/cookies.js';
 import { resolveSession } from '../auth/session.js';
 import { requestSafe } from '../../net/safeRequest.js';
-import { firstEmbed } from './embeds.js';
 import { readImageDimensions } from '../attachments/attachmentThumbnails.js';
 
 // GET /api/link-preview?url=<url> — server-side fetch (avoids CORS) for a
@@ -237,15 +236,27 @@ export function emptyResult(rawUrl: string): LinkPreviewResult {
   return { url: rawUrl, title: null, description: null, image: null, video: null, favicon: null, siteName: hostname, themeColor: null, imageWidth: null, imageHeight: null };
 }
 
+// a fetch already under way for a url: a second caller (a reader and the
+// server filling in a stored preview, say) joins it instead of fetching again
+const inFlight = new Map<string, Promise<LinkPreviewResult>>();
+
 /** `lookup` is a seam for tests, which can only reach loopback. */
 export async function fetchLinkPreviewData(rawUrl: string, userId: string, lookup?: Lookup): Promise<LinkPreviewResult> {
   const cached = cacheGet(rawUrl);
   if (cached !== undefined) return cached;
+  const pending = inFlight.get(rawUrl);
+  if (pending) return pending;
 
   if (isRateLimited(userId)) {
     throw Object.assign(new Error('Muitos links novos em pouco tempo, tenta de novo daqui a pouco.'), { status: 429, code: 'rate_limited' });
   }
 
+  const fetching = scrapeLinkPreview(rawUrl, lookup).finally(() => inFlight.delete(rawUrl));
+  inFlight.set(rawUrl, fetching);
+  return fetching;
+}
+
+async function scrapeLinkPreview(rawUrl: string, lookup?: Lookup): Promise<LinkPreviewResult> {
   let result: LinkPreviewResult;
   try {
     const { html, finalUrl, picture } = await fetchPage(rawUrl, lookup);
@@ -278,18 +289,6 @@ export async function fetchLinkPreviewData(rawUrl: string, userId: string, looku
 
   cacheSet(rawUrl, result);
   return result;
-}
-
-/** Fills the cache for the link a just-sent message carries, so the first
- * person to open it gets the card (and the picture's size) in milliseconds
- * instead of waiting on the server to fetch the page and the image. Only the
- * kinds the client asks link-preview for; best-effort, so it never throws. */
-export async function warmLinkPreview(text: string, userId: string, lookup?: Lookup): Promise<void> {
-  const embed = firstEmbed(text);
-  if (!embed || embed.kind === 'video' || embed.kind === 'audio') return;
-  try {
-    await fetchLinkPreviewData(embed.url, userId, lookup);
-  } catch { /* rate limited, or the fetch failed: the reader's own request tries again */ }
 }
 
 async function handleLinkPreview(request: FastifyRequest, reply: FastifyReply): Promise<void> {

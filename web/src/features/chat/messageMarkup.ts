@@ -3,6 +3,9 @@
 // that happened to start with "#" keeps reading as it was written. One parser
 // feeds both rendering and link previews, so a URL or @name inside code is
 // never linked, mentioned or previewed.
+//
+// server/src/modules/link-preview/messageLinks.ts mirrors the link part of
+// this (which links get a preview card): change both together.
 
 export type Inline =
   | { type: 'text'; text: string }

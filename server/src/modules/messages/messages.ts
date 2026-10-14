@@ -21,7 +21,8 @@ import * as attachments from '../attachments/attachments.js';
 import { deleteForMessage } from '../attachments/attachmentCleanup.js';
 import * as reactions from './reactions.js';
 import { buildReplyRef, normalizeReplyRef, type ReplyRef } from './replyRef.js';
-import { warmLinkPreview } from '../link-preview/linkPreview.js';
+import type { LinkPreviewResult } from '../link-preview/linkPreview.js';
+import { backfillEmbeds, needsEmbeds, storedEmbedsFor, unfurlMessage } from './messageEmbeds.js';
 import { insertMessageOnce, isValidClientMessageId, sendPayloadHash } from './sendOperations.js';
 import { publishStaged, StagedUnavailableError } from '../attachments/stagedAttachments.js';
 import { ERROR_CODES, type ErrorCode } from '../../http/errors.js';
@@ -84,6 +85,8 @@ interface ChatMessagePayload {
   // the invitation's CURRENT state, resolved at read time so a card is right
   // after a refresh; null is the tombstone (its group was deleted)
   invitation?: InvitationCard | null;
+  // the stored previews of the message's link cards (see messageEmbeds.ts)
+  embeds?: LinkPreviewResult[];
 }
 
 interface MessageWithAuthor {
@@ -99,6 +102,7 @@ interface MessageWithAuthor {
   replyTo: unknown;
   kind: string;
   groupInvitationId: string | null;
+  embeds: unknown;
 }
 
 function sanitizeChatText(text: unknown): string {
@@ -118,6 +122,7 @@ const messageWithAuthorSelect = {
   replyTo: messages.replyTo,
   kind: messages.kind,
   groupInvitationId: messages.groupInvitationId,
+  embeds: messages.embeds,
 };
 
 function rowWithParticipant(row: Message, participant: Participant): MessageWithAuthor {
@@ -134,6 +139,7 @@ function rowWithParticipant(row: Message, participant: Participant): MessageWith
     replyTo: row.replyTo,
     kind: row.kind,
     groupInvitationId: row.groupInvitationId,
+    embeds: row.embeds,
   };
 }
 
@@ -158,6 +164,8 @@ function rowToMessage(row: MessageWithAuthor, attachments?: Attachment[], reacti
     ts: row.createdAt.getTime(),
   };
   if (row.editedAt) out.editedAt = row.editedAt.getTime();
+  const embeds = storedEmbedsFor(row.text, row.embeds);
+  if (embeds.length) out.embeds = embeds;
   if (row.kind === 'group_invite') {
     out.kind = 'group_invite';
     out.invitation = invitation ?? null;
@@ -217,6 +225,7 @@ async function handleConversationOpen(socket: AppSocket, msg: { conversationId?:
     messages: payloads,
     hasMore: rows.length === config.CHAT_HISTORY_LIMIT,
   });
+  void backfillEmbeds(rows, p.userId);
 
   // Opening a conversation means "I've seen everything up to its newest
   // message" — record that and let the user's OTHER tabs/devices know, so
@@ -265,6 +274,7 @@ async function handleLoadMoreMessages(socket: AppSocket, msg: { conversationId?:
     hasMore: rows.length === config.CHAT_HISTORY_LIMIT,
     ...pageRequestId(msg),
   });
+  void backfillEmbeds(rows, p.userId);
 }
 
 /** Newer than X: lets a window opened on old history (a search result, a
@@ -289,6 +299,7 @@ async function handleLoadMessagesAfter(socket: AppSocket, msg: { conversationId?
     hasMoreAfter: rows.length === config.CHAT_HISTORY_LIMIT,
     ...pageRequestId(msg),
   });
+  void backfillEmbeds(rows, p.userId);
 }
 
 /** Search-result click target: a window of history CENTERED on `msgId`,
@@ -334,6 +345,7 @@ async function handleLoadMessagesAround(socket: AppSocket, msg: { conversationId
     hasMoreAfter: afterRows.length === AROUND_AFTER_LIMIT,
     ...pageRequestId(msg),
   });
+  void backfillEmbeds(rows, p.userId);
 }
 
 /** Full-text search — `conversationId` omitted searches every accessible
@@ -497,7 +509,7 @@ async function handleChat(socket: AppSocket, msg: ChatSendRequest): Promise<void
     sendChatResult(socket, msg, { message });
     await touchConversation(conversationId, outcome.row.createdAt);
     await broadcastToConversationMembers(conversationId, { t: 'chat', message });
-    void warmLinkPreview(rawText, p.userId);
+    void unfurlMessage(outcome.row, p.userId);
   } catch (err) {
     log.error('correlated chat send failed', err, { userId: p.userId });
     fail('internal_error', 'Não foi possível enviar agora.');
@@ -535,7 +547,9 @@ async function editMessage(p: Participant, msg: { msgId?: unknown; text?: string
   // reason edit (not delete) is restricted here.
   const peerId = await getDirectPeerId(existing.conversationId, p.userId);
   if (peerId && !(await canSendDirectMessage(p.userId, peerId))) return { code: ERROR_CODES.relationshipRequired, message: 'Vocês precisam ser amigos pra conversar por aqui.' };
-  const [updated] = await db.update(messages).set({ text, editedAt: new Date() }).where(eq(messages.id, msgId)).returning();
+  // previews of links the edit removed are dropped; new links are fetched below
+  const keptEmbeds = storedEmbedsFor(text, existing.embeds);
+  const [updated] = await db.update(messages).set({ text, editedAt: new Date(), embeds: keptEmbeds.length ? keptEmbeds : null }).where(eq(messages.id, msgId)).returning();
   // without these, editing a caption on a message WITH an attachment or a
   // reaction made it disappear for everyone (the client replaces the whole
   // message with what arrives in 'chat-edited', see RoomProvider.tsx).
@@ -545,7 +559,7 @@ async function editMessage(p: Participant, msg: { msgId?: unknown; text?: string
   ]);
   await recordConversationActivity(existing.conversationId);
   await broadcastToConversationMembers(existing.conversationId, { t: 'chat-edited', message: rowToMessage(rowWithParticipant(updated!, p), attachment, reactionsByEmoji) });
-  void warmLinkPreview(text, p.userId);
+  if (needsEmbeds(updated!)) void unfurlMessage(updated!, p.userId);
   return null;
 }
 
