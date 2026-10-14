@@ -15,6 +15,7 @@ import { ROUTES, conversationNav, isConversationsPath } from '@/shared/lib/route
 import { conversationTitle, directUser } from './conversationUtils';
 import { GroupAvatar } from './GroupAvatar';
 import { GroupCreateDialog } from './GroupCreateDialog';
+import { NotificationBell } from '@/features/notifications/NotificationBell';
 
 interface ConversationSidebarProps {
   onOpenPalette: () => void;
@@ -149,6 +150,7 @@ export function ConversationSidebar({ onOpenPalette, mobileRail }: ConversationS
           <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
             <div className="flex flex-none items-center gap-2 px-4 py-4">
               <h1 className="min-w-0 flex-1 truncate text-title font-semibold">Conversas</h1>
+              <NotificationBell onNavigate={() => { if (isOverlay) setOpenMobile(false); }} />
               <Button type="button" size="icon-sm" aria-label="Criar grupo" onClick={() => setGroupOpen(true)} className="flex-none">
                 <Plus size={16} />
               </Button>
