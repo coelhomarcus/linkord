@@ -150,10 +150,10 @@ export function ConversationSidebar({ onOpenPalette, mobileRail }: ConversationS
           <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
             <div className="flex flex-none items-center gap-2 px-4 py-4">
               <h1 className="min-w-0 flex-1 truncate text-title font-semibold">Conversas</h1>
-              <NotificationBell onNavigate={() => { if (isOverlay) setOpenMobile(false); }} />
               <Button type="button" size="icon-sm" aria-label="Criar grupo" onClick={() => setGroupOpen(true)} className="flex-none">
                 <Plus size={16} />
               </Button>
+              <NotificationBell onNavigate={() => { if (isOverlay) setOpenMobile(false); }} />
               {!isOverlay && (
                 <Button type="button" variant="ghost" size="icon-sm" aria-label="Ocultar lista de conversas" onClick={toggleSidebar} className="flex-none text-text-muted hover:text-text-primary">
                   <PanelLeftClose size={16} />
