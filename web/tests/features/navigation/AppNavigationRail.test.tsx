@@ -73,7 +73,7 @@ describe('AppNavigationRail', () => {
     renderRail('/app/conversations', false);
     expect(screen.getByRole('button', { name: /Notificações/ })).toBeInTheDocument();
     const nav = screen.getByRole('navigation', { name: 'Navegação principal' });
-    expect(nav.firstElementChild).toHaveAccessibleName('Mostrar lista de conversas');
+    expect(nav.querySelector('a, button')).toHaveAccessibleName('Mostrar lista de conversas');
   });
 
   it.each([

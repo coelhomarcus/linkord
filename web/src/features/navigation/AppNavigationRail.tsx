@@ -1,11 +1,13 @@
 import type { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { MessageCircle, PanelLeftOpen, PhoneCall, Settings, ShieldCheck, UsersRound } from '@/shared/ui/icons';
 import { Avatar } from '@/shared/Avatar';
 import { useAnimatedSidebar } from '@/shared/ui/motion/animated-sidebar';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
 import { ROUTES, isConversationsPath } from '@/shared/lib/routes';
 import { cn } from '@/shared/lib/utils';
+import { SPRING_LAYOUT } from '@/shared/lib/ease';
 import { useRoom } from '@/state/RoomContext';
 import { useFriends } from '@/features/friends/FriendsContext';
 import { NotificationBell } from '@/features/notifications/NotificationBell';
@@ -28,6 +30,31 @@ function RailBadge({ count }: { count: number }) {
     <CountBadge decorative className="absolute -right-0.5 -top-0.5">
       {count > 99 ? '99+' : count}
     </CountBadge>
+  );
+}
+
+// the rail's flex gap (gap-1.5): a closed slot pulls it back so it takes no room at all
+const COLLAPSED_SLOT = { height: 0, marginBottom: -6, opacity: 0, scale: 0.6, overflow: 'hidden' } as const;
+
+/** An item that comes and goes with the conversation list grows into its slot,
+ * so the items below glide down instead of jumping a whole slot at once. */
+function RailSlot({ show, children }: { show: boolean; children: ReactNode }) {
+  const reduce = useReducedMotion();
+  return (
+    <AnimatePresence initial={false}>
+      {show && (
+        <motion.div
+          initial={COLLAPSED_SLOT}
+          // clipped only while it moves: at rest the focus ring and a badge reach past the slot
+          animate={{ height: 'auto', marginBottom: 0, opacity: 1, scale: 1, transitionEnd: { overflow: 'visible' } }}
+          exit={COLLAPSED_SLOT}
+          transition={reduce ? { duration: 0 } : SPRING_LAYOUT}
+          className="flex flex-none flex-col items-center self-stretch"
+        >
+          {children}
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 
@@ -87,7 +114,7 @@ export function AppNavigationRail({ onOpenProfile, onReturnToCall, className }: 
 
   return (
     <nav aria-label="Navegação principal" className={cn('flex w-16 flex-none flex-col items-center gap-1.5 border-r border-border-subtle bg-surface-rail py-3', className)}>
-      {showListToggle && (
+      <RailSlot show={showListToggle}>
         <Tooltip>
           <TooltipTrigger
             onClick={toggleSidebar}
@@ -99,14 +126,16 @@ export function AppNavigationRail({ onOpenProfile, onReturnToCall, className }: 
           </TooltipTrigger>
           <TooltipContent side="right">Mostrar lista de conversas</TooltipContent>
         </Tooltip>
-      )}
+      </RailSlot>
       <RailLink to={ROUTES.conversations} label="Conversas" active={isConversationsPath(pathname)} onNavigate={afterNavigate}>
         <MessageCircle size={20} aria-hidden />
       </RailLink>
       <RailLink to={ROUTES.friends} label={friendsLabel} active={pathname === ROUTES.friends} badge={pendingIncomingCount} onNavigate={afterNavigate}>
         <UsersRound size={20} aria-hidden />
       </RailLink>
-      {showBell && <NotificationBell collapsed onNavigate={afterNavigate} />}
+      <RailSlot show={showBell}>
+        <NotificationBell collapsed onNavigate={afterNavigate} />
+      </RailSlot>
 
       {inCall && (
         <Tooltip>
