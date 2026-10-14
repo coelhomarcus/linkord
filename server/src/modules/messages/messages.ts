@@ -75,7 +75,7 @@ interface ChatMessagePayload {
   editedAt?: number;
   replyTo?: ReplyRef;
   reactions?: Record<string, string[]>;
-  attachments?: { id: string; name: string; mime: string; size: number; thumbId?: string; width?: number; height?: number }[];
+  attachments?: { id: string; name: string; mime: string; size: number; thumbId?: string; width?: number; height?: number; placeholder?: string }[];
   // the author's send key, echoed back so their client can reconcile its
   // pending copy with the stored message
   clientMessageId?: string;
@@ -169,6 +169,7 @@ function rowToMessage(row: MessageWithAuthor, attachments?: Attachment[], reacti
     out.attachments = attachments.map((a) => ({
       id: a.id, name: a.fileName, mime: a.mimeType, size: a.size, ...(a.thumbId ? { thumbId: a.thumbId } : {}),
       ...(a.width && a.height ? { width: a.width, height: a.height } : {}),
+      ...(a.placeholder ? { placeholder: a.placeholder } : {}),
     }));
   }
   return out;
