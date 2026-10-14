@@ -78,21 +78,30 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
     if (open && conversationId && !conversation) onOpenChange(false);
   }, [open, conversationId, conversation, onOpenChange]);
 
+  // Closing resets the panel's local state. It is done while rendering rather
+  // than in an effect so the stale state never paints for a frame on reopen.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (wasOpen !== open) {
+    setWasOpen(open);
+    if (!open) {
+      setEditingTitle(false);
+      setAddOpen(false);
+      setAddSelected(new Map());
+      setInviteMessage(null);
+      setAvatarError(null);
+      setUrlDialogOpen(false);
+      setTransferTarget(null);
+      setCropTarget(null);
+    }
+  }
+
   useEffect(() => {
-    if (open) return;
-    setEditingTitle(false);
-    setAddOpen(false);
-    setAddSelected(new Map());
-    setInviteMessage(null);
-    setAvatarError(null);
-    setUrlDialogOpen(false);
-    setTransferTarget(null);
-    clearGroupActionError();
-    setCropTarget((prev) => {
-      if (prev?.kind === 'file') URL.revokeObjectURL(prev.src);
-      return null;
-    });
+    if (!open) clearGroupActionError();
   }, [open, clearGroupActionError]);
+
+  useEffect(() => () => {
+    if (cropTarget?.kind === 'file') URL.revokeObjectURL(cropTarget.src);
+  }, [cropTarget]);
 
   // Paged from the server (§6.3). The membership snapshot in the summary is
   // only used as a reset key: any join/leave/ownership change alters it.
@@ -217,10 +226,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
   }
 
   function closeCropDialog() {
-    setCropTarget((prev) => {
-      if (prev?.kind === 'file') URL.revokeObjectURL(prev.src);
-      return null;
-    });
+    setCropTarget(null);
   }
 
   async function handleAvatarCropConfirm(crop: Area) {
