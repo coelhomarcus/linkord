@@ -69,6 +69,18 @@ describe('useCursorList', () => {
     expect(result.current.stale).toBe(false);
   });
 
+  it('a revision during the FIRST load restarts it instead of leaving the list loading forever', async () => {
+    const { calls, fetchPage } = controlled();
+    const { result, rerender } = renderHook(({ rev }) => useCursorList(fetchPage, 'q', { revision: rev, getKey: key }), { initialProps: { rev: 0 } });
+    rerender({ rev: 1 }); // e.g. presence changed before the first answer came back
+    await waitFor(() => expect(calls.length).toBe(2));
+    await act(async () => calls[0]!.resolve({ items: rows('old'), nextCursor: null })); // superseded
+    expect(result.current.status).toBe('loading');
+    await act(async () => calls[1]!.resolve({ items: rows('a'), nextCursor: null }));
+    expect(result.current.status).toBe('ready');
+    expect(result.current.items).toEqual(rows('a'));
+  });
+
   it('a refresh failure keeps the previous window, marked as stale, and allows retrying', async () => {
     const { calls, fetchPage } = controlled();
     const { result, rerender } = renderHook(({ rev }) => useCursorList(fetchPage, 'q', { revision: rev, getKey: key }), { initialProps: { rev: 0 } });
