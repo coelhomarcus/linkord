@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Play } from 'lucide-react';
 import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { useSidebar } from '@/shared/ui/motion/sidebar-context';
@@ -91,6 +91,8 @@ function estimateMediaHeight(item: MediaItem, columnWidth: number): number {
   return 64;
 }
 
+const errorMessage = (err: unknown) => (err instanceof ApiError ? err.message : 'Não foi possível carregar.');
+
 export function ConversationMediaPanel({ conversationId, open, onOpenChange }: ConversationMediaPanelProps) {
   const { isMobile } = useSidebar();
   const [kind, setKind] = useState<MediaKind>('uploads');
@@ -102,31 +104,51 @@ export function ConversationMediaPanel({ conversationId, open, onOpenChange }: C
   const [error, setError] = useState<string | null>(null);
   const [lightbox, setLightbox] = useState<{ src: string; alt: string } | null>(null);
 
-  const load = useCallback(async (targetConversationId: string, targetKind: MediaKind, before: number | null, replace: boolean) => {
+  // The previous request's rows are dropped while rendering, not in an effect,
+  // so a stale list never paints for a frame under the new conversation or tab.
+  // Closing keeps them: the panel is still on screen while it animates out.
+  const requestKey = `${open}|${conversationId}|${kind}`;
+  const [seenRequestKey, setSeenRequestKey] = useState(requestKey);
+  if (seenRequestKey !== requestKey) {
+    setSeenRequestKey(requestKey);
+    if (open && conversationId) {
+      setItems([]);
+      setNextBefore(null);
+      setError(null);
+      setLoading(true);
+    }
+  }
+  if (!open && kind !== 'uploads') setKind('uploads');
+
+  // `cancelled` drops a response that lands after the tab or conversation
+  // changed, which would otherwise replace the rows of the new request.
+  useEffect(() => {
+    if (!open || !conversationId) return;
+    let cancelled = false;
+    fetchMedia(kind, null, conversationId)
+      .then((page) => {
+        if (cancelled) return;
+        setItems(page.items);
+        setNextBefore(page.nextBefore);
+      })
+      .catch((err) => { if (!cancelled) setError(errorMessage(err)); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [open, conversationId, kind]);
+
+  async function loadMore(targetConversationId: string) {
     setLoading(true);
     setError(null);
     try {
-      const page = await fetchMedia(targetKind, before, targetConversationId);
-      setItems((prev) => (replace ? page.items : [...prev, ...page.items]));
+      const page = await fetchMedia(kind, nextBefore, targetConversationId);
+      setItems((prev) => [...prev, ...page.items]);
       setNextBefore(page.nextBefore);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Não foi possível carregar.');
+      setError(errorMessage(err));
     } finally {
       setLoading(false);
     }
-  }, []);
-
-  useEffect(() => {
-    if (!open || !conversationId) return;
-    setItems([]);
-    setNextBefore(null);
-    setError(null);
-    load(conversationId, kind, null, true);
-  }, [open, conversationId, kind, load]);
-
-  useEffect(() => {
-    if (!open) setKind('uploads');
-  }, [open]);
+  }
 
   const content = conversationId && (
     <>
@@ -160,11 +182,11 @@ export function ConversationMediaPanel({ conversationId, open, onOpenChange }: C
             ) : null
           )}
           estimateHeight={estimateMediaHeight}
-          onLoadMore={() => { if (conversationId && nextBefore != null) void load(conversationId, kind, nextBefore, false); }}
+          onLoadMore={() => { if (conversationId && nextBefore != null) void loadMore(conversationId); }}
           hasMore={nextBefore != null}
           loading={loading}
           error={error}
-          onRetry={() => { if (conversationId) void load(conversationId, kind, nextBefore, false); }}
+          onRetry={() => { if (conversationId) void loadMore(conversationId); }}
           className="h-full"
           emptyState={
             <div className="flex h-full min-h-48 flex-col items-center justify-center px-6 text-center">
