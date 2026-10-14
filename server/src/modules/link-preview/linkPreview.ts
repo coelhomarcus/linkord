@@ -1,9 +1,11 @@
+import type { IncomingMessage } from 'node:http';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { config } from '../../config/env.js';
 import { sendJson, sendError } from '../../http/respond.js';
 import { parseCookies } from '../../http/cookies.js';
 import { resolveSession } from '../auth/session.js';
 import { requestSafe } from '../../net/safeRequest.js';
+import { readImageDimensions } from '../attachments/attachmentThumbnails.js';
 
 // GET /api/link-preview?url=<url> — server-side fetch (avoids CORS) for a
 // generic link's Open Graph tags. This means the server fetches a URL
@@ -12,6 +14,13 @@ import { requestSafe } from '../../net/safeRequest.js';
 // CONNECTION time, redirects revalidated on each hop, capped at 3); the
 // body read has byte and time caps.
 
+const IMAGE_PROBE_TIMEOUT_MS = 3000;
+// A picture's size is in its first bytes; this much is read, never more
+const IMAGE_PROBE_MAX_BYTES = 256 * 1024;
+// the first attempt to read the size, then every 4x until the cap
+const IMAGE_PROBE_FIRST_TRY_BYTES = 16 * 1024;
+// the formats sharp reads a size from here; an SVG is code, not worth parsing
+const PROBED_IMAGE_TYPES = /^image\/(png|jpe?g|gif|webp|avif)\b/i;
 // safety net for a malformed page with no `</head>` — the real cutoff is
 // semantic; YouTube's head alone can be ~700KB before the first OG tag.
 const MAX_BODY_BYTES = 1.5 * 1024 * 1024;
@@ -29,6 +38,10 @@ export interface LinkPreviewResult {
   favicon: string | null;
   siteName: string;
   themeColor: string | null;
+  /** Pixel size of `image` (as displayed), so the client can reserve the
+   * box before it loads; null when it could not be read. */
+  imageWidth: number | null;
+  imageHeight: number | null;
 }
 
 interface CacheEntry {
@@ -74,11 +87,75 @@ export function isRateLimited(userId: string): boolean {
   return entry.count > RATE_LIMIT_MAX;
 }
 
-function fetchSafe(targetUrl: string, redirectsLeft: number): Promise<{ html: string; finalUrl: string }> {
-  return requestSafe(targetUrl, redirectsLeft, 'text/html,*/*;q=0.5', (res, finalUrl, resolve, reject) => {
+type Lookup = Parameters<typeof requestSafe>[4];
+type ImageSize = { width: number; height: number };
+
+/** Reads just enough of an image response to know its size, then stops. Tries
+ * early and again as more arrives, so a small picture costs one short read
+ * and a big one never costs more than the cap. */
+function probeImageBody(res: IncomingMessage, done: (size: ImageSize | null) => void): void {
+  const chunks: Buffer[] = [];
+  let length = 0;
+  let nextTryAt = IMAGE_PROBE_FIRST_TRY_BYTES;
+  let trying = false;
+  let ended = false;
+  let finished = false;
+  const finish = (size: ImageSize | null) => {
+    if (finished) return;
+    finished = true;
+    res.destroy();
+    done(size);
+  };
+  const attempt = async () => {
+    trying = true;
+    const size = await readImageDimensions(Buffer.concat(chunks, length));
+    trying = false;
+    if (finished) return;
+    if (size) return finish(size);
+    if (ended || length >= IMAGE_PROBE_MAX_BYTES) return finish(null);
+    if (length >= nextTryAt) { nextTryAt *= 4; void attempt(); }
+  };
+  res.on('data', (chunk: Buffer) => {
+    if (finished) return;
+    chunks.push(chunk);
+    length += chunk.length;
+    if (!trying && (length >= nextTryAt || length >= IMAGE_PROBE_MAX_BYTES)) { nextTryAt *= 4; void attempt(); }
+  });
+  res.on('end', () => { ended = true; if (!finished && !trying) void attempt(); });
+  res.on('error', () => finish(null));
+}
+
+/** The size of a remote picture, or null. Never throws: a missing size only
+ * means the client falls back to a fixed box. */
+async function probeImageSize(imageUrl: string, lookup?: Lookup): Promise<ImageSize | null> {
+  try {
+    return await requestSafe<ImageSize | null>(imageUrl, MAX_REDIRECTS, 'image/*', (res, _finalUrl, resolve) => {
+      if (!PROBED_IMAGE_TYPES.test(String(res.headers['content-type'] || ''))) { res.destroy(); return resolve(null); }
+      probeImageBody(res, resolve);
+    }, lookup, IMAGE_PROBE_TIMEOUT_MS);
+  } catch {
+    return null;
+  }
+}
+
+interface FetchedPage {
+  html: string;
+  finalUrl: string;
+  /** set when the URL turned out to be a picture itself, not a page */
+  picture?: { size: ImageSize | null };
+}
+
+function fetchPage(targetUrl: string, lookup?: Lookup): Promise<FetchedPage> {
+  return requestSafe<FetchedPage>(targetUrl, MAX_REDIRECTS, 'text/html,image/*;q=0.8,*/*;q=0.5', (res, finalUrl, resolve, reject) => {
     const contentType = String(res.headers['content-type'] || '');
+
+    if (PROBED_IMAGE_TYPES.test(contentType)) {
+      return probeImageBody(res, (size) => resolve({ html: '', finalUrl, picture: { size } }));
+    }
     if (!contentType.includes('text/html')) {
-      res.resume();
+      // not a page and not a picture worth sizing: nothing to read, so don't
+      // download it (it can be arbitrarily large)
+      res.destroy();
       return resolve({ html: '', finalUrl });
     }
 
@@ -101,7 +178,7 @@ function fetchSafe(targetUrl: string, redirectsLeft: number): Promise<{ html: st
     });
     res.on('end', () => { if (!settled) resolve({ html: body, finalUrl }); });
     res.on('error', (err) => { if (!settled) reject(err); });
-  });
+  }, lookup);
 }
 
 const HTML_ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
@@ -156,10 +233,11 @@ export function safeResolve(raw: string | null | undefined, base: string): strin
 export function emptyResult(rawUrl: string): LinkPreviewResult {
   let hostname = rawUrl;
   try { hostname = new URL(rawUrl).hostname.replace(/^www\./, ''); } catch { /* keep the raw url */ }
-  return { url: rawUrl, title: null, description: null, image: null, video: null, favicon: null, siteName: hostname, themeColor: null };
+  return { url: rawUrl, title: null, description: null, image: null, video: null, favicon: null, siteName: hostname, themeColor: null, imageWidth: null, imageHeight: null };
 }
 
-async function fetchLinkPreviewData(rawUrl: string, userId: string): Promise<LinkPreviewResult> {
+/** `lookup` is a seam for tests, which can only reach loopback. */
+export async function fetchLinkPreviewData(rawUrl: string, userId: string, lookup?: Lookup): Promise<LinkPreviewResult> {
   const cached = cacheGet(rawUrl);
   if (cached !== undefined) return cached;
 
@@ -169,7 +247,13 @@ async function fetchLinkPreviewData(rawUrl: string, userId: string): Promise<Lin
 
   let result: LinkPreviewResult;
   try {
-    const { html, finalUrl } = await fetchSafe(rawUrl, MAX_REDIRECTS);
+    const { html, finalUrl, picture } = await fetchPage(rawUrl, lookup);
+    if (picture) {
+      // a bare image link: no page to read, but the card can still reserve its size
+      const pictureResult = { ...emptyResult(rawUrl), image: finalUrl, imageWidth: picture.size?.width ?? null, imageHeight: picture.size?.height ?? null };
+      cacheSet(rawUrl, pictureResult);
+      return pictureResult;
+    }
     const metas = extractMetaTags(html);
     const titleTagM = /<title[^>]*>([^<]*)<\/title>/i.exec(html);
 
@@ -181,7 +265,9 @@ async function fetchLinkPreviewData(rawUrl: string, userId: string): Promise<Lin
     const siteName = (metas['og:site_name'] || '').trim() || new URL(finalUrl).hostname.replace(/^www\./, '');
     const themeColor = (metas['theme-color'] || '').trim() || null;
 
-    result = { url: rawUrl, title, description, image, video, favicon, siteName, themeColor };
+    const size = image ? await probeImageSize(image, lookup) : null;
+
+    result = { url: rawUrl, title, description, image, video, favicon, siteName, themeColor, imageWidth: size?.width ?? null, imageHeight: size?.height ?? null };
   } catch {
     // scraping failed (blocked, timeout, site down, SSRF blocked) — still
     // return something renderable: a minimal card with just the domain,
