@@ -584,24 +584,21 @@ export const AnimatedSidebar = forwardRef<HTMLElement, AnimatedSidebarProps>(
         }
         style={style}
         className={cn(
-          "group/sidebar relative hidden h-auto shrink-0 lg:block will-change-[width]",
+          // clipped, so the panel never slides across whatever sits beside it
+          "group/sidebar relative hidden h-auto shrink-0 overflow-hidden lg:block will-change-[width]",
           "peer",
           side === "right" && "order-last",
           className,
         )}
       >
-        <motion.div
-          initial={false}
+        {/* Pinned to the edge facing the content: as the aside's width springs
+            shut, the panel is carried out with it, so one spring drives both the
+            slide and the content's reflow and the two can never drift apart. */}
+        <div
           inert={offcanvas}
-          animate={{
-            opacity: offcanvas ? 0 : 1,
-            x: offcanvas ? (side === "left" ? "-100%" : "100%") : "0%",
-          }}
-          transition={
-            context.reduce ? REDUCED_TRANSITION : PANEL_TRANSITION
-          }
           className={cn(
-            "sticky top-0 flex h-svh w-full flex-col overflow-hidden bg-background",
+            "absolute inset-y-0 flex w-full flex-col overflow-hidden bg-background",
+            side === "left" ? "right-0" : "left-0",
             collapsible === "offcanvas" && "w-[var(--sidebar-width)]",
             // slid away but still (sidebar-width) wide: it must not catch clicks or focus
             offcanvas && "pointer-events-none",
@@ -618,7 +615,7 @@ export const AnimatedSidebar = forwardRef<HTMLElement, AnimatedSidebarProps>(
           >
             {children}
           </AnimatedSidebarPanelContext.Provider>
-        </motion.div>
+        </div>
       </motion.aside>
     );
   },
