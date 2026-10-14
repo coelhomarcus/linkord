@@ -56,10 +56,11 @@ export function useCursorList<T>(fetchPage: (cursor: string | null) => Promise<P
   const pagesLoaded = useRef(restored.current?.pages ?? 0);
   const cursorRef = useRef<string | null>(restored.current?.nextCursor ?? null);
   const itemsRef = useRef(items);
+  const statusRef = useRef(status);
   const fetchRef = useRef(fetchPage);
   const getKeyRef = useRef(options.getKey);
   const seen = useRef<{ identity: string; revision: string | number } | null>(null);
-  useEffect(() => { fetchRef.current = fetchPage; getKeyRef.current = options.getKey; itemsRef.current = items; });
+  useEffect(() => { fetchRef.current = fetchPage; getKeyRef.current = options.getKey; itemsRef.current = items; statusRef.current = status; });
 
   const dedupe = useCallback((rows: T[]): T[] => {
     const key = getKeyRef.current;
@@ -132,7 +133,10 @@ export function useCursorList<T>(fetchPage: (cursor: string | null) => Promise<P
       pagesLoaded.current = 0;
       loadFirst();
     } else if (previous.revision !== revision) {
-      refresh();
+      // a refresh supersedes the first load's answer but never leaves `loading`
+      // itself, so while nothing has loaded yet the first load starts over
+      if (statusRef.current === 'loading') loadFirst();
+      else refresh();
     }
   }, [identity, revision, loadFirst, refresh]);
 
