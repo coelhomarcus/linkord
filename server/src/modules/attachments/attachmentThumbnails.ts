@@ -22,9 +22,9 @@ const THUMBNAIL_MAX_DIMENSION = 640;
 /** The size an image is DISPLAYED at — EXIF orientations 5–8 swap width
  * and height — so the client can reserve the right box before it loads.
  * One frame's height for an animation. Null when it can't be read. */
-export async function readImageDimensions(srcPath: string): Promise<{ width: number; height: number } | null> {
+export async function readImageDimensions(src: string | Buffer): Promise<{ width: number; height: number } | null> {
   try {
-    const meta = await sharp(srcPath, { animated: true }).metadata();
+    const meta = await sharp(src, { animated: true }).metadata();
     const width = meta.width ?? 0;
     const height = meta.pageHeight ?? meta.height ?? 0;
     if (!width || !height) return null;
