@@ -38,6 +38,21 @@ describe('MessageMedia', () => {
     expect(picture.style.backgroundImage).toBe('');
   });
 
+  it('an image stored without dimensions takes its own proportions once it has loaded', () => {
+    vi.stubGlobal('fetch', vi.fn(() => new Promise(() => {})));
+    render(<MessageMedia attachments={[img('old')]} />);
+    const button = screen.getByRole('button', { name: 'Abrir old.png' });
+    const picture = button.querySelector('img')!;
+    expect(button.style.height).toBe('320px');
+
+    Object.defineProperty(picture, 'naturalWidth', { value: 800, configurable: true });
+    Object.defineProperty(picture, 'naturalHeight', { value: 400, configurable: true });
+    fireEvent.load(picture);
+
+    expect(button.style.aspectRatio).toBe('800 / 400');
+    expect(button.style.height).toBe('');
+  });
+
   it('shows no alt text over the placeholder: the image is named by its button, and by its alt once loaded', () => {
     vi.stubGlobal('fetch', vi.fn(() => new Promise(() => {})));
     render(<MessageMedia attachments={[img('a', 1600, 900, placeholderOf(200, 30, 30))]} />);

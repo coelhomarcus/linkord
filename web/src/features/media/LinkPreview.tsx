@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { RefObject } from 'react';
+import type { RefObject, SyntheticEvent } from 'react';
 import { ImageOff } from 'lucide-react';
 import type { DetectedEmbed } from '@/shared/lib/chatEmbeds';
 import { ImageLightbox } from './ImageLightbox';
@@ -68,6 +68,10 @@ export function LinkPreview({ embed, className = '', edgeToEdge, fitContainer }:
   const maxWidth = availableAttachmentWidth(surfaceWidth, 384);
   const boxRef = useRef<HTMLButtonElement | null>(null);
   const remoteSize = useRemoteImageSize(embed.url, boxRef, embed.kind === 'image' && !fitContainer);
+  // When the server could not measure it, the picture itself reports its size
+  // as it loads, and the box is fitted to that: no bars around an odd shape.
+  const [loadedSize, setLoadedSize] = useState<ImageSize | null>(null);
+  const knownSize = remoteSize ?? loadedSize;
 
   if (embed.kind === 'youtube' || embed.kind === 'twitch-channel' || embed.kind === 'twitch-vod' || embed.kind === 'twitch-clip' || embed.kind === 'link') {
     return <GenericEmbed key={embed.url} embed={embed} className={className} edgeToEdge={edgeToEdge} />;
@@ -84,7 +88,7 @@ export function LinkPreview({ embed, className = '', edgeToEdge, fitContainer }:
   }
 
   const rounding = edgeToEdge ? 'rounded-lg' : 'rounded-md border border-border';
-  const box = embedImageBox(remoteSize, maxWidth);
+  const box = embedImageBox(knownSize, maxWidth);
   return (
     <>
       <button
@@ -99,10 +103,14 @@ export function LinkPreview({ embed, className = '', edgeToEdge, fitContainer }:
           alt=""
           loading="lazy"
           onError={() => setFailed(true)}
+          onLoad={fitContainer ? undefined : (event: SyntheticEvent<HTMLImageElement>) => {
+            const { naturalWidth: width, naturalHeight: height } = event.currentTarget;
+            if (width > 0 && height > 0) setLoadedSize({ width, height });
+          }}
           // a known size means the box has the picture's own proportions, so it
           // is filled (a pixel of rounding cropped at most); an unknown one is
           // only fitted inside the fallback box, whatever shape it turns out to be
-          className={fitContainer ? `block h-auto max-h-70 max-w-full w-full object-contain ${rounding}` : `block size-full ${remoteSize ? 'object-cover' : 'object-contain'}`}
+          className={fitContainer ? `block h-auto max-h-70 max-w-full w-full object-contain ${rounding}` : `block size-full ${knownSize ? 'object-cover' : 'object-contain'}`}
         />
       </button>
       <ImageLightbox src={embed.url} alt="" open={lightboxOpen} onOpenChange={setLightboxOpen} />
