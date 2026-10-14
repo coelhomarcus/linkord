@@ -55,26 +55,14 @@ describe('MicQuickMenu', () => {
     expect(Room.getLocalDevices).toHaveBeenCalledWith('audioinput', false);
   });
 
-  it('noise suppression: shows the current state and triggers the room setter', async () => {
+  it('offers no noise suppression switch: the browser and LiveKit defaults apply', async () => {
     const user = userEvent.setup();
     vi.spyOn(Room, 'getLocalDevices').mockResolvedValue([{ deviceId: 'd1', label: 'Mic', kind: 'audioinput' } as MediaDeviceInfo]);
-    const setNoiseSuppressionEnabled = vi.fn(async () => {});
-    renderWithRoom(<MicQuickMenu />, { livekitRoom: fakeLivekitRoom('d1'), noiseSuppressionEnabled: false, setNoiseSuppressionEnabled });
+    renderWithRoom(<MicQuickMenu />, { livekitRoom: fakeLivekitRoom('d1') });
 
     await user.click(screen.getByRole('button', { name: 'Configurações do microfone' }));
-    const toggle = await screen.findByText('Supressão de ruído');
-    await user.click(toggle);
-
-    expect(setNoiseSuppressionEnabled).toHaveBeenCalledWith(true);
-  });
-
-  it('noise suppression row exposes its on/off state to assistive tech', async () => {
-    const user = userEvent.setup();
-    vi.spyOn(Room, 'getLocalDevices').mockResolvedValue([{ deviceId: 'd1', label: 'Mic', kind: 'audioinput' } as MediaDeviceInfo]);
-    renderWithRoom(<MicQuickMenu />, { livekitRoom: fakeLivekitRoom('d1'), noiseSuppressionEnabled: true });
-
-    await user.click(screen.getByRole('button', { name: 'Configurações do microfone' }));
-    expect(await screen.findByRole('menuitemcheckbox', { name: 'Supressão de ruído' })).toHaveAttribute('aria-checked', 'true');
+    await screen.findByText('Mic');
+    expect(screen.queryByText('Supressão de ruído')).not.toBeInTheDocument();
   });
 
   it('full settings shortcut navigates to the audio and video tab', async () => {

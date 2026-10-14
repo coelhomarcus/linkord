@@ -7,7 +7,7 @@ import { resolveSession } from '../auth/session.js';
 import { conversationExistsForUser, getDirectPeerId } from '../conversations/conversationsRepository.js';
 import { canSendDirectMessage } from '../friendships/friendshipsRepository.js';
 import { newId, filePathFor } from './attachmentStorage.js';
-import { generateThumbnail, readImageDimensions, THUMBNAIL_SOURCE_MIME_TYPES } from './attachmentThumbnails.js';
+import { generateThumbnail, readImageDimensions, readImagePlaceholder, THUMBNAIL_SOURCE_MIME_TYPES } from './attachmentThumbnails.js';
 import { discardStaged, findOwnedStaged, stageFile } from './stagedAttachments.js';
 import type { StagedAttachment } from '../../db/schema.js';
 import { getUsage, sendUsageToUser } from './attachmentQuota.js';
@@ -193,6 +193,7 @@ function stagedPayload(row: StagedAttachment) {
   return {
     id: row.id, name: row.fileName, mime: row.mimeType, size: row.size, ...(row.thumbId ? { thumbId: row.thumbId } : {}),
     ...(row.width && row.height ? { width: row.width, height: row.height } : {}),
+    ...(row.placeholder ? { placeholder: row.placeholder } : {}),
   };
 }
 
@@ -203,11 +204,13 @@ async function completeStaged(reply: FastifyReply, manifest: UploadManifest, use
   const destPath = filePathFor(uploadId);
   let thumb: { id: string; mime: string; size: number } | null = null;
   let dims: { width: number; height: number } | null = null;
+  let placeholder: string | null = null;
   let staged: StagedAttachment;
   try {
     await assembleChunks(uploadId, manifest, destPath);
     if (THUMBNAIL_SOURCE_MIME_TYPES.has(manifest.mimeType)) {
       dims = await readImageDimensions(destPath);
+      placeholder = await readImagePlaceholder(destPath);
       const generated = await generateThumbnail(destPath);
       if (generated) {
         const thumbId = newId();
@@ -224,7 +227,7 @@ async function completeStaged(reply: FastifyReply, manifest: UploadManifest, use
       id: uploadId, ownerId: userId, conversationId: manifest.conversationId,
       fileName: manifest.fileName, mimeType: manifest.mimeType, size: manifest.totalSize,
       thumbId: thumb?.id ?? null, thumbMimeType: thumb?.mime ?? null, thumbSize: thumb?.size ?? null,
-      width: dims?.width ?? null, height: dims?.height ?? null,
+      width: dims?.width ?? null, height: dims?.height ?? null, placeholder,
     });
   } catch (err) {
     // chunks stay, so complete can be retried without re-uploading

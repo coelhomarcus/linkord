@@ -71,7 +71,7 @@ interface MediaBase {
 }
 
 interface UploadItem extends MediaBase {
-  attachment: { id: string; name: string; mime: string; size: number; thumbId?: string; width?: number; height?: number };
+  attachment: { id: string; name: string; mime: string; size: number; thumbId?: string; width?: number; height?: number; placeholder?: string };
 }
 
 interface EmbedItem extends MediaBase {
@@ -120,6 +120,7 @@ async function fetchUploadsPage(viewerId: string, before: number | null, limit: 
       thumbId: attachmentsTable.thumbId,
       width: attachmentsTable.width,
       height: attachmentsTable.height,
+      placeholder: attachmentsTable.placeholder,
     })
     .from(messages)
     // innerJoin (not left) on attachments.message_id=messages.id already
@@ -155,6 +156,7 @@ async function fetchUploadsPage(viewerId: string, before: number | null, limit: 
       id: row.attachmentId, name: row.fileName, mime: row.mimeType, size: row.size,
       ...(row.thumbId ? { thumbId: row.thumbId } : {}),
       ...(row.width && row.height ? { width: row.width, height: row.height } : {}),
+      ...(row.placeholder ? { placeholder: row.placeholder } : {}),
     },
   }));
   return { items, nextBefore: rows.length === limit ? rows[rows.length - 1]!.msgId : null };

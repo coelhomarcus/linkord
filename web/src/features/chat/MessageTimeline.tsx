@@ -9,6 +9,7 @@ import { ArrivalMotion } from './ArrivalMotion';
 import { buildTimelineItems, type TimelineItem } from './messageTimelineItems';
 import type { OutboxEntry } from './useMessageOutbox';
 import { readingPositionFor, saveReadingPosition } from './readingPositions';
+import { shouldCompensateResize } from './scrollCompensation';
 
 const EMPTY_MESSAGES: ChatMessage[] = [];
 const EMPTY_PENDING: OutboxEntry[] = [];
@@ -148,6 +149,14 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
     rangeExtractor,
     useAnimationFrameWithResizeObserver: true,
   });
+  useLayoutEffect(() => {
+    virtualizer.shouldAdjustScrollPositionOnItemSizeChange = (item, _delta, instance) => shouldCompensateResize({
+      itemStart: item.start,
+      itemEnd: item.end,
+      isFirstMeasure: !instance.itemSizeCache.has(item.key),
+      scrollOffset: (instance.scrollOffset ?? 0) + instance.scrollAdjustments,
+    });
+  }, [virtualizer]);
   const virtualItems = virtualizer.getVirtualItems();
 
   const jumpIndex = pendingJumpTarget && pendingJumpTarget.conversationId === conversationId

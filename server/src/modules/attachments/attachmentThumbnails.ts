@@ -1,4 +1,5 @@
 import sharp from 'sharp';
+import { rgbaToThumbHash } from 'thumbhash';
 import { logger } from '../../lib/logger.js';
 
 const log = logger.child({ component: 'attachments' });
@@ -22,13 +23,35 @@ const THUMBNAIL_MAX_DIMENSION = 640;
 /** The size an image is DISPLAYED at — EXIF orientations 5–8 swap width
  * and height — so the client can reserve the right box before it loads.
  * One frame's height for an animation. Null when it can't be read. */
-export async function readImageDimensions(srcPath: string): Promise<{ width: number; height: number } | null> {
+export async function readImageDimensions(src: string | Buffer): Promise<{ width: number; height: number } | null> {
   try {
-    const meta = await sharp(srcPath, { animated: true }).metadata();
+    const meta = await sharp(src, { animated: true }).metadata();
     const width = meta.width ?? 0;
     const height = meta.pageHeight ?? meta.height ?? 0;
     if (!width || !height) return null;
     return (meta.orientation ?? 1) >= 5 ? { width: height, height: width } : { width, height };
+  } catch {
+    return null;
+  }
+}
+
+// ThumbHash reads at most 100x100 pixels
+const PLACEHOLDER_MAX_DIMENSION = 100;
+
+/** A blurred stand-in for an image (base64 ThumbHash, a few dozen bytes), for
+ * the box to show while the real pixels load. Drawn from the picture as
+ * displayed (EXIF orientation applied) and its first frame, with transparency
+ * kept so a see-through image isn't painted over a solid colour. Null — never
+ * a throw — when it can't be made: the box just stays plain. */
+export async function readImagePlaceholder(src: string | Buffer): Promise<string | null> {
+  try {
+    const { data, info } = await sharp(src, { animated: false })
+      .rotate()
+      .resize(PLACEHOLDER_MAX_DIMENSION, PLACEHOLDER_MAX_DIMENSION, { fit: 'inside' })
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    return Buffer.from(rgbaToThumbHash(info.width, info.height, data)).toString('base64');
   } catch {
     return null;
   }

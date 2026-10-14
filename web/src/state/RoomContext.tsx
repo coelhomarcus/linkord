@@ -112,10 +112,6 @@ export interface RoomContextValue {
   setShowTileBanners: (value: boolean) => void;
   compressImagesDefault: boolean;
   setCompressImagesDefault: (value: boolean) => void;
-  noiseSuppressionEnabled: boolean;
-  setNoiseSuppressionEnabled: (value: boolean) => Promise<void>;
-  noiseSuppressionPending: boolean;
-  noiseSuppressionError: string | null;
   /** Local self-view only — never flips the track actually sent. */
   mirrorCameraPreview: boolean;
   setMirrorCameraPreview: (value: boolean) => void;

@@ -358,6 +358,9 @@ export const attachments = pgTable('attachments', {
   // types, for files that couldn't be read, and for rows from before this.
   width: integer('width'),
   height: integer('height'),
+  // A few dozen bytes (base64 ThumbHash) of a blurred stand-in for the image,
+  // so its box is not empty while the pixels load. Same nulls as width/height.
+  placeholder: text('placeholder'),
 }, (t) => [
   index('attachments_message_id_idx').on(t.messageId),
 ]);
@@ -380,6 +383,7 @@ export const stagedAttachments = pgTable('staged_attachments', {
   thumbSize: bigint('thumb_size', { mode: 'number' }),
   width: integer('width'),
   height: integer('height'),
+  placeholder: text('placeholder'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
 }, (t) => [
