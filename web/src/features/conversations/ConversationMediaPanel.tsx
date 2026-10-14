@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Play } from 'lucide-react';
 import { CloseButton } from '@/shared/ui/primitives/close-button';
-import { useAnimatedSidebar } from '@/shared/ui/motion/animated-sidebar';
-import { Drawer } from '@/shared/ui/motion/drawer';
+import { useSidebar } from '@/shared/ui/motion/sidebar-context';
+import { Sheet } from '@/shared/ui/motion/sheet';
 import { SidePanel } from '@/shared/ui/motion/side-panel';
 import { InfiniteMasonry } from '@/shared/ui/motion/infinite-masonry';
 import { Tabs, TabsList, TabsIndicator, TabsTrigger } from '@/shared/ui/primitives/tabs';
@@ -86,7 +86,7 @@ function UploadItemCard({ item, onOpenImage }: { item: MediaItem; onOpenImage: (
 }
 
 export function ConversationMediaPanel({ conversationId, open, onOpenChange }: ConversationMediaPanelProps) {
-  const { isMobile } = useAnimatedSidebar();
+  const { isMobile } = useSidebar();
   const [kind, setKind] = useState<MediaKind>('uploads');
   const [items, setItems] = useState<MediaItem[]>([]);
   const [nextBefore, setNextBefore] = useState<number | null>(null);
@@ -185,14 +185,15 @@ export function ConversationMediaPanel({ conversationId, open, onOpenChange }: C
   return (
     <>
       {isMobile ? (
-        <Drawer
+        <Sheet
+          side="right"
           open={open && !!conversationId}
           onOpenChange={onOpenChange}
           ariaLabel="Mídias e links"
           className="flex w-96 flex-col text-text-primary"
         >
           {content}
-        </Drawer>
+        </Sheet>
       ) : (
         <SidePanel open={open && !!conversationId} width={PANEL_WIDTH} ariaLabel="Mídias e links" className="bg-bg-primary text-text-primary">
           {content}

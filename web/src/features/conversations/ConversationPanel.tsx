@@ -1,6 +1,6 @@
 import { ArrowLeft, ImageIcon, Info, Phone, Search } from 'lucide-react';
 import { PageHeader } from '@/shared/PageHeader';
-import { useAnimatedSidebar } from '@/shared/ui/motion/animated-sidebar';
+import { useSidebar } from '@/shared/ui/motion/sidebar-context';
 import { Button } from '@/shared/ui/primitives/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
 import { Avatar } from '@/shared/Avatar';
@@ -30,7 +30,7 @@ interface ConversationPanelProps {
 
 export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, detailsOpen, mediaOpen, onOpenDetails, onToggleDetails, onToggleMedia }: ConversationPanelProps) {
   const { state, dispatch, conversations, activeConversationId, allUsers, onlineUserIds, activeCallConversationId } = useRoom();
-  const { setOpenMobile } = useAnimatedSidebar();
+  const { setOpenMobile } = useSidebar();
   const conversation = conversations.find((item) => item.id === activeConversationId) ?? null;
   const title = conversationTitle(conversation, state.me.userId, allUsers);
   const other = directUser(conversation, state.me.userId, allUsers);

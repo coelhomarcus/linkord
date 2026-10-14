@@ -1,7 +1,7 @@
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { VideoOff } from 'lucide-react';
 import { ArrowLeft } from '@/shared/ui/icons';
-import { useAnimatedSidebar } from '@/shared/ui/motion/animated-sidebar';
+import { useSidebar } from '@/shared/ui/motion/sidebar-context';
 import { useRoom } from '../../state/RoomContext';
 import { useCallTiles } from './useCallTiles';
 import { useAutoFocusScreenShare } from './useAutoFocusScreenShare';
@@ -27,7 +27,7 @@ const BAR_GRID_GAP = 24;
 
 export function Stage({ allIds, chatOpen, onToggleChat }: StageProps) {
   const { state, dispatch, hideAudioOnlyTiles, setHideAudioOnlyTiles, callStageRef, reconnecting, menuTarget } = useRoom();
-  const { setOpenMobile } = useAnimatedSidebar();
+  const { setOpenMobile } = useSidebar();
   const allDescriptors = useCallTiles(allIds);
   const descriptors = hideAudioOnlyTiles ? allDescriptors.filter((d) => d.kind !== 'avatar') : allDescriptors;
   const focusScreenShare = useCallback((key: string) => dispatch({ type: 'SET_FOCUSED', id: key, origin: 'automatic' }), [dispatch]);

@@ -4,7 +4,7 @@ import { initialRoomState } from '@/state/roomReducer';
 import type { RoomContextValue } from '@/state/RoomContext';
 import { ConversationPanel } from '@/features/conversations/ConversationPanel';
 import type { Conversation } from '@/shared/types/protocol';
-import { AnimatedSidebarProvider } from '@/shared/ui/motion/animated-sidebar';
+import { SidebarProvider } from '@/shared/ui/motion/sidebar';
 import { renderSocial } from '@tests/fixtures/socialFixture';
 import * as api from '@/shared/api/api';
 
@@ -30,9 +30,9 @@ describe('ConversationPanel — call button', () => {
   function renderPanel(room: Partial<RoomContextValue>) {
     const onOpenCall = vi.fn();
     renderSocial(
-      <AnimatedSidebarProvider>
+      <SidebarProvider>
         <ConversationPanel onOpenProfile={() => {}} onOpenCall={onOpenCall} onOpenSearch={() => {}} detailsOpen={false} mediaOpen={false} onOpenDetails={() => {}} onToggleDetails={() => {}} onToggleMedia={() => {}} />
-      </AnimatedSidebarProvider>,
+      </SidebarProvider>,
       { room: { state: me, conversations: [direct], activeConversationId: 'c1', ...room } },
     );
     return { onOpenCall };
@@ -87,9 +87,9 @@ describe('ConversationPanel — right panel buttons', () => {
     const onToggleDetails = vi.fn();
     const onOpenDetails = vi.fn();
     renderSocial(
-      <AnimatedSidebarProvider>
+      <SidebarProvider>
         <ConversationPanel onOpenProfile={() => {}} onOpenCall={() => {}} onOpenSearch={() => {}} detailsOpen={detailsOpen} mediaOpen={false} onOpenDetails={onOpenDetails} onToggleDetails={onToggleDetails} onToggleMedia={() => {}} />
-      </AnimatedSidebarProvider>,
+      </SidebarProvider>,
       { room: { state: me, conversations: [group], activeConversationId: 'g1' } },
     );
     // the avatar opens the details too; the header's toggle is the pressable one

@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { MessageCircle, PanelLeftOpen, PhoneCall, Settings, ShieldCheck, UsersRound } from '@/shared/ui/icons';
 import { Avatar } from '@/shared/Avatar';
-import { useAnimatedSidebar } from '@/shared/ui/motion/animated-sidebar';
+import { useSidebar } from '@/shared/ui/motion/sidebar-context';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
 import { ROUTES, isConversationsPath } from '@/shared/lib/routes';
 import { cn } from '@/shared/lib/utils';
@@ -94,7 +94,7 @@ export function AppNavigationRail({ onOpenProfile, onReturnToCall, className }: 
   const { state, conversations, activeCallConversationId, allUsers } = useRoom();
   const { pendingIncomingCount } = useFriends();
   const { pathname } = useLocation();
-  const { isMobile, isOverlay, open: listOpen, openMobile, setOpenMobile, toggleSidebar } = useAnimatedSidebar();
+  const { isMobile, isOverlay, open: listOpen, openMobile, setOpenMobile, toggleSidebar } = useSidebar();
   const afterNavigate = () => { if (isOverlay) setOpenMobile(false); };
   // as a drawer the list is opened from here; as a column it can be hidden from its own header, so this is only the way back
   // (on a phone the rail already sits inside that drawer, so the button would only close it)

@@ -1,13 +1,13 @@
 import type { ReactNode } from 'react';
 import { PanelLeft } from 'lucide-react';
-import { useAnimatedSidebar } from '@/shared/ui/motion/animated-sidebar';
+import { useSidebar } from '@/shared/ui/motion/sidebar-context';
 import { Button } from '@/shared/ui/primitives/button';
 
 /** Header of a full-page screen (friends, requests, settings). On mobile the
  * sidebar is a sheet, so a page has no other way back to the conversation
  * list — the header carries the button that reopens it. */
 export function PageHeader({ title, subtitle, actions, leading, middle }: { title: string; subtitle?: string; actions?: ReactNode; leading?: ReactNode; middle?: ReactNode }) {
-  const { isMobile, setOpenMobile } = useAnimatedSidebar();
+  const { isMobile, setOpenMobile } = useSidebar();
   return (
     <header className="flex flex-none items-center gap-3 border-b border-border px-4 py-3 md:px-6">
       {isMobile && (

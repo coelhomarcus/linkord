@@ -3,7 +3,7 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { initialRoomState } from '@/state/roomReducer';
 import { renderSocial, ana, bea } from '@tests/fixtures/socialFixture';
-import { AnimatedSidebarProvider } from '@/shared/ui/motion/animated-sidebar';
+import { SidebarProvider } from '@/shared/ui/motion/sidebar';
 import { GroupDetailsPanel } from '@/features/conversations/GroupDetailsPanel';
 import * as api from '@/shared/api/api';
 import type { Conversation, PublicUser } from '@/shared/types/protocol';
@@ -38,9 +38,9 @@ beforeEach(() => {
 function setup(myRole: 'owner' | 'member') {
   const state = { ...initialRoomState, me: { ...initialRoomState.me, userId: 'me' } };
   return renderSocial(
-    <AnimatedSidebarProvider>
+    <SidebarProvider>
       <GroupDetailsPanel conversationId="g1" open onOpenChange={vi.fn()} onOpenProfile={vi.fn()} />
-    </AnimatedSidebarProvider>,
+    </SidebarProvider>,
     { room: { state, conversations: [group(myRole)], allUsers: new Map([['u-ana', pub(ana)], ['me', { ...pub(ana), id: 'me', username: 'eu', displayName: 'Eu' }]]) } },
   );
 }
