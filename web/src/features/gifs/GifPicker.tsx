@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { Search } from 'lucide-react';
 import type { GifConfig } from '@/shared/api/api';
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
 import { cn } from '@/shared/lib/utils';
 import { ActiveWash } from '@/shared/ui/motion/active-wash';
-import { Button } from '@/shared/ui/primitives/button';
 import { CloseButton } from '@/shared/ui/primitives/close-button';
+import { Masonry } from '@/shared/ui/primitives/masonry';
 import { fetchRecentGifs, fetchTrendingGifs, searchGifs } from './klipy';
 import type { Gif, GifPage } from './klipy';
 
@@ -13,7 +13,6 @@ type EnabledConfig = Extract<GifConfig, { enabled: true }>;
 type Tab = 'trending' | 'recent';
 
 const SEARCH_DEBOUNCE_MS = 300;
-const COLUMNS = 2;
 
 interface Feed { items: Gif[]; page: number; hasNext: boolean; status: 'loading' | 'ready' | 'error'; loadingMore: boolean }
 const EMPTY_FEED: Feed = { items: [], page: 0, hasNext: false, status: 'loading', loadingMore: false };
@@ -62,19 +61,6 @@ function useGifFeed(config: EnabledConfig, tab: Tab, query: string) {
   return { feed, loadMore, retry: () => setAttempt((n) => n + 1) };
 }
 
-/** Deals the GIFs into columns, each one onto the shortest so far, so the grid
- * keeps KLIPY's order while every GIF keeps its own shape. */
-function intoColumns(items: Gif[]): Gif[][] {
-  const columns: Gif[][] = Array.from({ length: COLUMNS }, () => []);
-  const heights = new Array<number>(COLUMNS).fill(0);
-  for (const gif of items) {
-    const shortest = heights.indexOf(Math.min(...heights));
-    columns[shortest]!.push(gif);
-    heights[shortest]! += gif.preview.height / Math.max(1, gif.preview.width);
-  }
-  return columns;
-}
-
 function GifTile({ gif, onPick }: { gif: Gif; onPick: (gif: Gif) => void }) {
   return (
     <button
@@ -90,39 +76,12 @@ function GifTile({ gif, onPick }: { gif: Gif; onPick: (gif: Gif) => void }) {
   );
 }
 
-function GridSkeleton() {
-  return (
-    <div aria-hidden className="grid animate-pulse grid-cols-2 gap-1.5">
-      {[96, 128, 112, 80, 120, 100].map((height, index) => (
-        <div key={index} className="rounded-md bg-fill-subtle" style={{ height }} />
-      ))}
-    </div>
-  );
-}
-
 export function GifPicker({ config, onPick }: { config: EnabledConfig; onPick: (gif: Gif, query: string) => void }) {
   const [input, setInput] = useState('');
   const [tab, setTab] = useState<Tab>('trending');
   const query = useDebouncedValue(input.trim(), SEARCH_DEBOUNCE_MS);
   const { feed, loadMore, retry } = useGifFeed(config, tab, query);
-  const scrollerRef = useRef<HTMLDivElement>(null);
-  const sentinelRef = useRef<HTMLDivElement>(null);
-  const columns = useMemo(() => intoColumns(feed.items), [feed.items]);
   const washId = useId();
-
-  // a new list starts at its top, not wherever the last one was scrolled to
-  useEffect(() => { scrollerRef.current?.scrollTo?.({ top: 0 }); }, [tab, query]);
-
-  useEffect(() => {
-    const sentinel = sentinelRef.current;
-    if (!sentinel || typeof IntersectionObserver === 'undefined') return;
-    const observer = new IntersectionObserver((entries) => { if (entries.some((entry) => entry.isIntersecting)) loadMore(); }, {
-      root: scrollerRef.current,
-      rootMargin: '0px 0px 240px 0px',
-    });
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, [loadMore]);
 
   const searching = query.length > 0;
 
@@ -165,31 +124,28 @@ export function GifPicker({ config, onPick }: { config: EnabledConfig; onPick: (
         </div>
       )}
 
-      <div ref={scrollerRef} className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
-        {feed.status === 'loading' && <GridSkeleton />}
-        {feed.status === 'error' && (
-          <div role="alert" className="flex flex-col items-center gap-2 py-10 text-center">
-            <p className="text-label text-text-muted">Não foi possível carregar os GIFs.</p>
-            <Button type="button" variant="secondary" size="sm" onClick={retry}>Tentar de novo</Button>
-          </div>
-        )}
-        {feed.status === 'ready' && feed.items.length === 0 && (
+      <Masonry
+        // a new list starts at its top, not where the last one was scrolled to
+        key={`${tab}|${query}`}
+        items={feed.items}
+        getKey={(gif) => gif.slug}
+        renderItem={(gif) => <GifTile gif={gif} onPick={(picked) => onPick(picked, query)} />}
+        estimateHeight={(gif, columnWidth) => (columnWidth * gif.preview.height) / Math.max(1, gif.preview.width)}
+        hasMore={feed.hasNext}
+        onLoadMore={loadMore}
+        loading={feed.status === 'loading' || feed.loadingMore}
+        error={feed.status === 'error' ? 'Não foi possível carregar os GIFs.' : null}
+        onRetry={retry}
+        emptyState={
           <p className="py-10 text-center text-label text-text-muted">
             {searching ? 'Nenhum GIF encontrado.' : tab === 'recent' ? 'Os GIFs que você enviar aparecem aqui.' : 'Nenhum GIF por enquanto.'}
           </p>
-        )}
-        {feed.status === 'ready' && feed.items.length > 0 && (
-          <div className="flex gap-1.5">
-            {columns.map((column, index) => (
-              <div key={index} className="flex min-w-0 flex-1 flex-col gap-1.5">
-                {column.map((gif) => <GifTile key={gif.slug} gif={gif} onPick={(picked) => onPick(picked, query)} />)}
-              </div>
-            ))}
-          </div>
-        )}
-        <div ref={sentinelRef} aria-hidden className="h-px" />
-        {feed.loadingMore && <p className="py-2 text-center text-caption text-text-muted">Carregando…</p>}
-      </div>
+        }
+        minColumnWidth={140}
+        gap={6}
+        ariaLabel="GIFs"
+        className="flex-1 px-2 pb-2"
+      />
 
       {/* KLIPY's attribution rules: a visible mark wherever their content shows */}
       <p className="flex-none border-t border-border px-3 py-1.5 text-right text-micro font-medium text-text-muted">Powered by KLIPY</p>
