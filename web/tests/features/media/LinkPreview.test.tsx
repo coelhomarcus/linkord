@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { act, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { __resetLinkPreviewCacheForTests } from '@/shared/lib/linkPreviewCache';
 import userEvent from '@testing-library/user-event';
 import { LinkPreview } from '@/features/media/LinkPreview';
@@ -113,6 +113,32 @@ describe('LinkPreview — size measured by the server', () => {
 
     await vi.waitFor(() => expect(img.className.split(/\s+/)).toContain('object-cover'));
     expect(img.className.split(/\s+/)).not.toContain('object-contain');
+  });
+
+  it('when the server could not measure it, the box takes the picture\'s own proportions once it has loaded', async () => {
+    vi.stubGlobal('fetch', respond(previewJson({ image: 'https://cdn.example.com/x.png', imageWidth: null, imageHeight: null })));
+    const { container } = render(<LinkPreview embed={{ kind: 'image', url: 'https://cdn.example.com/x.png' }} />);
+    const img = container.querySelector('img')!;
+    const box = img.closest('button')!;
+    expect(box.style.height).toBe('280px');
+
+    // jsdom decodes nothing: the browser's answer is stood in for
+    Object.defineProperty(img, 'naturalWidth', { value: 300, configurable: true });
+    Object.defineProperty(img, 'naturalHeight', { value: 900, configurable: true });
+    fireEvent.load(img);
+
+    await vi.waitFor(() => expect(box.style.height).toBe('280px')); // 300x900 fits at 93x280
+    expect(box.style.width).toBe('93px');
+    expect(img.className.split(/\s+/)).toContain('object-cover');
+  });
+
+  it('ignores a load that reports no size (an SVG with no intrinsic dimensions)', () => {
+    vi.stubGlobal('fetch', respond(previewJson({})));
+    const { container } = render(<LinkPreview embed={{ kind: 'image', url: 'https://cdn.example.com/logo.svg' }} />);
+    const img = container.querySelector('img')!;
+    fireEvent.load(img); // naturalWidth is 0
+    expect(img.closest('button')!.style.height).toBe('280px');
+    expect(img.className.split(/\s+/)).toContain('object-contain');
   });
 
   it('keeps the fallback box when the server could not measure the picture', async () => {
