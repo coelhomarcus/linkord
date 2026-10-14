@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Play } from 'lucide-react';
 import { CloseButton } from '@/shared/ui/primitives/close-button';
-import { useAnimatedSidebar } from '@/shared/ui/motion/animated-sidebar';
-import { Drawer } from '@/shared/ui/motion/drawer';
+import { useSidebar } from '@/shared/ui/motion/sidebar-context';
+import { Sheet } from '@/shared/ui/motion/sheet';
 import { SidePanel } from '@/shared/ui/motion/side-panel';
-import { InfiniteMasonry } from '@/shared/ui/motion/infinite-masonry';
+import { Masonry } from '@/shared/ui/primitives/masonry';
 import { Tabs, TabsList, TabsIndicator, TabsTrigger } from '@/shared/ui/primitives/tabs';
 import { DocumentAttachmentCard } from '@/features/media/DocumentAttachmentCard';
 import { ImageLightbox } from '@/features/media/ImageLightbox';
@@ -12,7 +12,7 @@ import { LinkPreview } from '@/features/media/LinkPreview';
 import { fetchMedia, ApiError } from '@/shared/api/api';
 import type { MediaItem, MediaKind } from '@/shared/api/api';
 import { useCachedImageSrc } from '@/shared/hooks/useCachedImageSrc';
-import { IMAGE_MIME_TYPES, VIDEO_MIME_TYPES } from '../chat/ChatAttachment';
+import { IMAGE_MIME_TYPES, VIDEO_MIME_TYPES } from '@/features/chat/ChatAttachment';
 
 const PANEL_WIDTH = 360;
 
@@ -41,14 +41,11 @@ function UploadItemCard({ item, onOpenImage }: { item: MediaItem; onOpenImage: (
         onClick={() => onOpenImage(url, attachment.name)}
         className="block w-full cursor-zoom-in overflow-hidden rounded-lg border border-border bg-bg-tertiary transition-opacity hover:opacity-90"
       >
-        {/* Fixed aspect ratio (not h-auto/intrinsic) — InfiniteMasonry
-            positions items via an estimated height that gets corrected once
-            the real element is measured, but an <img> with intrinsic sizing
-            reports height 0 until its bytes finish loading, so the
-            correction lands late and the row below (already positioned
-            against the 0-height guess) ends up overlapping it. A fixed
-            ratio makes the box's real height known at layout time, same
-            fix already applied to the video card's aspect-video below. */}
+        {/* Fixed aspect ratio (not h-auto/intrinsic): the masonry places each
+            item from its measured height, and an <img> sized by its content
+            measures 0 until its bytes arrive, so the item below would be
+            placed on top of it. A fixed ratio is known at layout time, same
+            as the video card's aspect-video below. */}
         <img src={cachedThumbUrl ?? undefined} alt={attachment.name} loading="lazy" className="block aspect-square w-full object-cover" />
       </button>
     );
@@ -85,46 +82,79 @@ function UploadItemCard({ item, onOpenImage }: { item: MediaItem; onOpenImage: (
   );
 }
 
+/** Close to the card's real height, so little moves once it is measured. */
+function estimateMediaHeight(item: MediaItem, columnWidth: number): number {
+  const mime = item.attachment?.mime;
+  if (!mime) return 220; // an embed: its preview card
+  if (IMAGE_MIME_TYPES.has(mime)) return columnWidth;
+  if (VIDEO_MIME_TYPES.has(mime)) return (columnWidth * 9) / 16;
+  return 64;
+}
+
+const errorMessage = (err: unknown) => (err instanceof ApiError ? err.message : 'Não foi possível carregar.');
+
 export function ConversationMediaPanel({ conversationId, open, onOpenChange }: ConversationMediaPanelProps) {
-  const { isMobile } = useAnimatedSidebar();
+  const { isMobile } = useSidebar();
   const [kind, setKind] = useState<MediaKind>('uploads');
   const [items, setItems] = useState<MediaItem[]>([]);
   const [nextBefore, setNextBefore] = useState<number | null>(null);
-  // Starts true (not false) so InfiniteMasonry's very first render already
-  // takes its virtualized branch instead of the empty-state one — the
-  // empty-state branch never mounts the ref it measures its column width
-  // from, and that ref is wired up in an effect keyed on the ref object
-  // itself, which doesn't re-fire once a later render swaps in the real,
-  // ref-holding element. Mounting straight into "loading" sidesteps it.
+  // true from the start: the first load only begins in an effect, after a
+  // render that would otherwise flash the "nothing here yet" state
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lightbox, setLightbox] = useState<{ src: string; alt: string } | null>(null);
 
-  const load = useCallback(async (targetConversationId: string, targetKind: MediaKind, before: number | null, replace: boolean) => {
+  // The previous request's rows are dropped while rendering, not in an effect,
+  // so a stale list never paints for a frame under the new conversation or tab.
+  // Closing keeps them: the panel is still on screen while it animates out.
+  const requestKey = `${open}|${conversationId}|${kind}`;
+  const [seenRequestKey, setSeenRequestKey] = useState(requestKey);
+  if (seenRequestKey !== requestKey) {
+    setSeenRequestKey(requestKey);
+    if (open && conversationId) {
+      setItems([]);
+      setNextBefore(null);
+      setError(null);
+      setLoading(true);
+    }
+  }
+  // The tab resets when the panel opens, not when it closes: closing changing
+  // it would swap the visible tab under the rows while it animates out.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (wasOpen !== open) {
+    setWasOpen(open);
+    if (open) setKind('uploads');
+  }
+
+  // `cancelled` drops a response that lands after the tab or conversation
+  // changed, which would otherwise replace the rows of the new request.
+  useEffect(() => {
+    if (!open || !conversationId) return;
+    let cancelled = false;
+    fetchMedia(kind, null, conversationId)
+      .then((page) => {
+        if (cancelled) return;
+        setItems(page.items);
+        setNextBefore(page.nextBefore);
+      })
+      .catch((err) => { if (!cancelled) setError(errorMessage(err)); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [open, conversationId, kind]);
+
+  async function loadMore(targetConversationId: string) {
     setLoading(true);
     setError(null);
     try {
-      const page = await fetchMedia(targetKind, before, targetConversationId);
-      setItems((prev) => (replace ? page.items : [...prev, ...page.items]));
+      const page = await fetchMedia(kind, nextBefore, targetConversationId);
+      setItems((prev) => [...prev, ...page.items]);
       setNextBefore(page.nextBefore);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Não foi possível carregar.');
+      setError(errorMessage(err));
     } finally {
       setLoading(false);
     }
-  }, []);
-
-  useEffect(() => {
-    if (!open || !conversationId) return;
-    setItems([]);
-    setNextBefore(null);
-    setError(null);
-    load(conversationId, kind, null, true);
-  }, [open, conversationId, kind, load]);
-
-  useEffect(() => {
-    if (!open) setKind('uploads');
-  }, [open]);
+  }
 
   const content = conversationId && (
     <>
@@ -144,14 +174,12 @@ export function ConversationMediaPanel({ conversationId, open, onOpenChange }: C
       </div>
 
       <div className="min-h-0 flex-1 px-4 pb-4 pt-3">
-        <InfiniteMasonry
+        <Masonry
           items={items}
           // attachment.id, not msgId — a message can carry more than one
-          // attachment (e.g. the 4-image grid), and the uploads query
-          // returns one row per attachment, so msgId alone collides. A
-          // duplicate key breaks the virtualizer's lane bookkeeping, which
-          // is exactly what showed up as every image stacking at (0,0).
-          getItemKey={(item) => `${item.msgId}:${item.attachment?.id ?? 'embed'}`}
+          // attachment (the 4-image grid) and the uploads query returns one
+          // row per attachment, so msgId alone collides
+          getKey={(item) => `${item.msgId}:${item.attachment?.id ?? 'embed'}`}
           renderItem={(item) => (
             kind === 'uploads' ? (
               <UploadItemCard item={item} onOpenImage={(src, alt) => setLightbox({ src, alt })} />
@@ -159,16 +187,13 @@ export function ConversationMediaPanel({ conversationId, open, onOpenChange }: C
               <LinkPreview embed={item.embed} className="w-full max-w-full" fitContainer />
             ) : null
           )}
-          onLoadMore={() => { if (conversationId && nextBefore != null) load(conversationId, kind, nextBefore, false); }}
+          estimateHeight={estimateMediaHeight}
+          onLoadMore={() => { if (conversationId && nextBefore != null) void loadMore(conversationId); }}
           hasMore={nextBefore != null}
           loading={loading}
           error={error}
-          onRetry={() => { if (conversationId) load(conversationId, kind, nextBefore, false); }}
-          estimateSize={() => (kind === 'uploads' ? 180 : 220)}
-          minColumnWidth={140}
-          maxColumns={2}
-          gap={10}
-          className="h-full border-0 rounded-none bg-transparent p-0"
+          onRetry={() => { if (conversationId) void loadMore(conversationId); }}
+          className="h-full"
           emptyState={
             <div className="flex h-full min-h-48 flex-col items-center justify-center px-6 text-center">
               <p className="select-none text-label text-text-muted">
@@ -185,14 +210,15 @@ export function ConversationMediaPanel({ conversationId, open, onOpenChange }: C
   return (
     <>
       {isMobile ? (
-        <Drawer
+        <Sheet
+          side="right"
           open={open && !!conversationId}
           onOpenChange={onOpenChange}
           ariaLabel="Mídias e links"
           className="flex w-96 flex-col text-text-primary"
         >
           {content}
-        </Drawer>
+        </Sheet>
       ) : (
         <SidePanel open={open && !!conversationId} width={PANEL_WIDTH} ariaLabel="Mídias e links" className="bg-bg-primary text-text-primary">
           {content}

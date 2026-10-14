@@ -1,6 +1,3 @@
-"use client";
-// beui.dev/components/blocks/command-palette
-
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ArrowLeft, ChevronRight, Search } from "lucide-react";
 import type { IconComponent } from "@/shared/ui/icons";
@@ -70,8 +67,8 @@ const PANEL_SPRING = {
 export function CommandPalette({
   items,
   shortcut = "k",
-  placeholder = "Type a command or search…",
-  emptyMessage = "No results found.",
+  placeholder = "Buscar…",
+  emptyMessage = "Nada encontrado.",
   open: controlledOpen,
   onOpenChange,
 }: CommandPaletteProps) {
@@ -95,9 +92,6 @@ export function CommandPalette({
     setStagePath((path) => path.slice(0, -1));
     setQuery("");
   }, []);
-  // Portal target only exists client-side; render nothing during SSR/hydration.
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
   const uid = useId();
   const reduce = useReducedMotion();
   const canTouch = useTouchCapable();
@@ -152,7 +146,7 @@ export function CommandPalette({
   const grouped = useMemo(() => {
     const map = new Map<string, CommandItem[]>();
     filtered.forEach((it) => {
-      const g = it.group ?? "Results";
+      const g = it.group ?? "Resultados";
       const groupItems = map.get(g) ?? [];
       groupItems.push(it);
       map.set(g, groupItems);
@@ -222,8 +216,6 @@ export function CommandPalette({
     el?.scrollIntoView({ block: "nearest" });
   }, [active, open]);
 
-  if (!mounted) return null;
-
   // Portaled to <body> so ancestors with transforms, filters, or fixed
   // positioning can't trap the overlay in their stacking context, and mounted
   // only while open. The chrome is two fixed siblings rather than one wrapper:
@@ -238,7 +230,7 @@ export function CommandPalette({
           {({ gate }) => (
             <motion.button
               type="button"
-              aria-label="Close command palette"
+              aria-label="Fechar busca rápida"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{
@@ -266,7 +258,7 @@ export function CommandPalette({
               <motion.div
                 role="dialog"
                 aria-modal="true"
-                aria-label="Command palette"
+                aria-label="Busca rápida"
                 initial={{
                   opacity: 0,
                   y: reduce ? 0 : -8,
@@ -328,7 +320,7 @@ export function CommandPalette({
                   ref={listRef}
                   id={`${uid}-list`}
                   role="listbox"
-                  aria-label="Commands"
+                  aria-label="Resultados"
                   className="max-h-[60vh] overflow-y-auto overscroll-contain p-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                 >
                   {rows.length === 0 ? (

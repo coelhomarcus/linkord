@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import { renderSocial } from '@tests/fixtures/socialFixture';
-import { AnimatedSidebarProvider } from '@/shared/ui/motion/animated-sidebar';
+import { SidebarProvider } from '@/shared/ui/motion/sidebar';
 import { ConversationSidebar } from '@/features/conversations/ConversationSidebar';
 import { initialRoomState } from '@/state/roomReducer';
 import type { Conversation, ChatMessage, Participant, PublicUser } from '@/shared/types/protocol';
@@ -40,9 +40,9 @@ function renderSidebar(overrides: { activeCallConversationId?: string | null; pa
   const dm = directConversation();
   const group = groupConversation();
   return renderSocial(
-    <AnimatedSidebarProvider open onOpenChange={vi.fn()} openMobile={false} onOpenMobileChange={vi.fn()}>
+    <SidebarProvider open onOpenChange={vi.fn()} openMobile={false} onOpenMobileChange={vi.fn()}>
       <ConversationSidebar onOpenPalette={vi.fn()} mobileRail={null} />
-    </AnimatedSidebarProvider>,
+    </SidebarProvider>,
     {
       room: {
         state: { ...meState, participants: overrides.participants ?? new Map() },

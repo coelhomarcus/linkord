@@ -17,6 +17,9 @@ let originalOffsetHeight: PropertyDescriptor | undefined;
 let originalScrollHeight: PropertyDescriptor | undefined;
 let originalClientHeight: PropertyDescriptor | undefined;
 const isRoot = (el: Element) => el.hasAttribute('data-scroll-root');
+// these render hundreds of rows in jsdom: well under a second alone, but past
+// the 5s default when the machine is busy (a full parallel run, a loaded CI)
+const HEAVY_RENDER_TIMEOUT = 15_000;
 
 beforeEach(() => {
   scrolled.length = 0;
@@ -68,7 +71,7 @@ function renderTimeline(overrides: Partial<RoomContextValue>, surfaces = 1) {
   );
 }
 
-describe('MessageTimeline — virtualization', () => {
+describe('MessageTimeline — virtualization', { timeout: HEAVY_RENDER_TIMEOUT }, () => {
   it('with 1000 messages, only the visible ones (plus a buffer) stay in the DOM', async () => {
     const messages = Array.from({ length: 1000 }, (_, i) => message(i + 1));
     const { container } = renderTimeline({ messagesByConversation: new Map([['conv-1', messages]]) });
@@ -112,7 +115,7 @@ describe('MessageTimeline — virtualization', () => {
   });
 });
 
-describe('MessageTimeline — jump to message', () => {
+describe('MessageTimeline — jump to message', { timeout: HEAVY_RENDER_TIMEOUT }, () => {
   it('with the same conversation on two surfaces, the jump only scrolls the list that requested it', async () => {
     const original = message(1, { text: 'original' });
     const reply = message(2, { text: 'resposta', replyTo: { msgId: 1, authorId: 'u1', text: 'original' } });
@@ -155,7 +158,7 @@ describe('MessageTimeline — jump to message', () => {
   });
 });
 
-describe('MessageTimeline — reading position and active media', () => {
+describe('MessageTimeline — reading position and active media', { timeout: HEAVY_RENDER_TIMEOUT }, () => {
   const scrollRootOf = (container: HTMLElement) => container.querySelector('[data-scroll-root]') as HTMLElement;
   const scrollRootTo = (root: HTMLElement, top: number) => { root.scrollTo({ top }); };
 
@@ -163,7 +166,8 @@ describe('MessageTimeline — reading position and active media', () => {
     const messages = Array.from({ length: 300 }, (_, i) => message(i + 1));
     const first = renderTimeline({ messagesByConversation: new Map([['conv-1', messages]]) });
     await waitFor(() => expect(first.container.querySelector('[data-msg-id="300"]')).not.toBeNull());
-    await new Promise((r) => setTimeout(r, 50));
+    // a scroll before the initial placement settles isn't reading yet
+    await waitFor(() => expect(scrollRootOf(first.container)).toHaveAttribute('data-settled'));
     scrollRootTo(scrollRootOf(first.container), 4000);
     const saved = readingPositionFor('main', 'conv-1')!;
     expect(saved).toMatchObject({ atEnd: false });
@@ -215,5 +219,18 @@ describe('MessageTimeline — arrival animation', () => {
     const second = renderTimeline({ messagesByConversation: new Map([['conv-1', messages]]) });
     await waitFor(() => expect(second.container.querySelector('[data-msg-id="2"]')).not.toBeNull());
     expect(animated(second.container, 2)).toBe(false);
+  });
+});
+
+describe('MessageTimeline — before the history arrives', () => {
+  it('a conversation whose history has not come back yet does not claim to be empty', () => {
+    renderTimeline({ messagesByConversation: new Map() });
+    expect(screen.queryByText('Nenhuma mensagem ainda.')).not.toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('Carregando mensagens…');
+  });
+
+  it('once an empty history arrives, it says so', () => {
+    renderTimeline({ messagesByConversation: new Map([['conv-1', []]]) });
+    expect(screen.getByText('Nenhuma mensagem ainda.')).toBeInTheDocument();
   });
 });

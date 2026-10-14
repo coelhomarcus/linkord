@@ -1,30 +1,27 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
-// A fast answer never shows a placeholder: it would only flash for a frame or
-// two before the rows replace it. A slow one shows the skeleton long enough to
-// read as a state rather than a flicker.
-const SKELETON_DELAY_MS = 200;
-const SKELETON_MIN_MS = 450;
+// Long enough to read as a state: a skeleton swapped out after a frame or two
+// would only flicker. A quick answer waits out the rest of this, no more.
+const SKELETON_MIN_MS = 300;
 
-export type LoadingPhase = 'wait' | 'skeleton' | 'content';
+export type LoadingPhase = 'skeleton' | 'content';
 
-/** `wait`: still loading, too soon to show anything. `skeleton`: loading for a
- * while, or the data landed while the skeleton is still within its minimum time.
- * `content`: render the list (or its error). */
+/** The skeleton from the first frame of a load, kept for at least
+ * SKELETON_MIN_MS; then the content (or its error). */
 export function useLoadingPhase(loading: boolean): LoadingPhase {
-  const [skeletonSince, setSkeletonSince] = useState<number | null>(null);
+  // starts held when the view opens already loading, so its first frame is the skeleton
+  const [held, setHeld] = useState(loading);
+  const startedAt = useRef(0);
 
   useEffect(() => {
     if (loading) {
-      if (skeletonSince !== null) return;
-      const timer = setTimeout(() => setSkeletonSince(Date.now()), SKELETON_DELAY_MS);
+      startedAt.current = performance.now();
+      const timer = setTimeout(() => setHeld(true));
       return () => clearTimeout(timer);
     }
-    if (skeletonSince === null) return;
-    const timer = setTimeout(() => setSkeletonSince(null), Math.max(0, SKELETON_MIN_MS - (Date.now() - skeletonSince)));
+    const timer = setTimeout(() => setHeld(false), Math.max(0, SKELETON_MIN_MS - (performance.now() - startedAt.current)));
     return () => clearTimeout(timer);
-  }, [loading, skeletonSince]);
+  }, [loading]);
 
-  if (skeletonSince !== null) return 'skeleton';
-  return loading ? 'wait' : 'content';
+  return loading || held ? 'skeleton' : 'content';
 }

@@ -24,7 +24,18 @@ const gif = {
   full: { url: 'https://static.klipy.com/ii/a/md.webp', width: 498, height: 280 },
 };
 
-afterEach(() => clearAllDrafts());
+// jsdom has no layout: give elements a size, the way the picker's virtualized
+// grid reads it, or it would draw no GIFs at all
+const sizes = ['offsetHeight', 'offsetWidth'] as const;
+const originals = sizes.map((key) => Object.getOwnPropertyDescriptor(HTMLElement.prototype, key));
+beforeEach(() => {
+  Object.defineProperty(HTMLElement.prototype, 'offsetHeight', { configurable: true, get: () => 400 });
+  Object.defineProperty(HTMLElement.prototype, 'offsetWidth', { configurable: true, get: () => 320 });
+});
+afterEach(() => {
+  clearAllDrafts();
+  sizes.forEach((key, index) => { if (originals[index]) Object.defineProperty(HTMLElement.prototype, key, originals[index]!); });
+});
 
 describe('MessageComposer — GIFs', () => {
   beforeEach(() => {

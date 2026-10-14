@@ -66,6 +66,9 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
   const highlightTimeoutRef = useRef<number | null>(null);
   const mentionLookup = useMemo(() => buildMentionLookup(allUsers), [allUsers]);
   const messages = messagesByConversation.get(conversationId) ?? EMPTY_MESSAGES;
+  // no entry yet = its history hasn't arrived (any message, even a live one,
+  // creates the entry), so an empty list here is not yet "no messages"
+  const historyArrived = messagesByConversation.has(conversationId);
   const hasMoreBefore = hasMoreByConversation.get(conversationId) !== false;
   const hasMoreAfter = hasMoreAfterByConversation.get(conversationId) === true;
   const isLoadingOlder = loadingOlderByConversation.has(conversationId);
@@ -124,6 +127,9 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
   }, [retainedIndexes]);
 
   const virtualizer = useVirtualizer({
+    // rows are measured from ref callbacks, during React's commit, where a
+    // flushSync re-render is not allowed (React 19 warns and defers it anyway)
+    useFlushSync: false,
     count: items.length,
     getScrollElement: () => scrollRef.current,
     estimateSize: (index) => estimateSize(items[index]),
@@ -175,6 +181,9 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
         const start = virtualizer.measurementsCache[savedIndex]?.start;
         if (start !== undefined) virtualizer.scrollToOffset(start + saved.offset);
       }
+      // the ref too, right away: a scroll landing before the effect below
+      // syncs it would otherwise still be ignored as part of the placement
+      readyRef.current = true;
       setReady(true);
     });
     return () => cancelAnimationFrame(frame);
@@ -328,11 +337,16 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
     <div className="relative min-h-0 flex-1">
       {/* overflow-anchor off: the virtualizer already keeps the reading
           position; the browser's own anchoring would compensate twice */}
-      <div ref={scrollRef} data-scroll-root className="h-full overflow-y-auto px-2 [overflow-anchor:none]">
+      {/* data-settled: the initial placement is done and scrolls now count as
+          reading — what anything waiting on the timeline should wait for */}
+      <div ref={scrollRef} data-scroll-root data-settled={ready || undefined} className="h-full overflow-y-auto px-2 [overflow-anchor:none]">
         {isLoadingOlder && <p className="absolute inset-x-0 top-2 z-10 text-center text-label text-text-muted">Carregando mensagens anteriores...</p>}
         {items.length === 0 ? (
           <div className="flex min-h-[45vh] items-center justify-center px-6 text-center text-label text-text-muted">
-            Nenhuma mensagem ainda.
+            {historyArrived ? 'Nenhuma mensagem ainda.' : (
+              // only shown if the history is slow: a quick one would flash it for a frame
+              <span role="status" className="animate-in fade-in-0 duration-200 [animation-delay:300ms] [animation-fill-mode:both]">Carregando mensagens…</span>
+            )}
           </div>
         ) : (
           <div role="log" aria-label="Mensagens" className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>

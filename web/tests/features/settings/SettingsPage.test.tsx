@@ -12,7 +12,7 @@ vi.mock('@/state/AuthContext', () => ({
   useAuth: () => ({ logout: vi.fn() }),
 }));
 
-// the page header needs the animated-sidebar provider and the privacy tab
+// the page header needs the sidebar provider and the privacy tab
 // needs the friends provider — neither is what these tests are about
 vi.mock('@/shared/PageHeader', () => ({
   PageHeader: ({ title, leading }: { title: string; leading?: React.ReactNode }) => <header>{leading}<h1>{title}</h1></header>,

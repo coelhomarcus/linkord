@@ -60,7 +60,8 @@ describe('FriendsPage', () => {
     await screen.findByText('Bea');
     await user.click(screen.getByRole('link', { name: 'Online' }));
     await waitFor(() => expect(screen.queryByText('Bea')).not.toBeInTheDocument());
-    expect(screen.getByText('Ana')).toBeInTheDocument();
+    // the skeleton holds its minimum time before the online list replaces it
+    expect(await screen.findByText('Ana')).toBeInTheDocument();
     expect(mocked.fetchFriends).toHaveBeenCalledWith(null, '', 'online');
   });
 

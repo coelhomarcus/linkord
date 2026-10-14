@@ -92,6 +92,13 @@ interface StoreEntry<T> {
  * `useParticipantMedia` again internally, TileMenu re-reading it while
  * open) — this is the "reduzir duplicação por participante" from the
  * calls redesign plan §11.2, not a hypothetical future need. */
+function shallowEqual<T>(a: T, b: T): boolean {
+  if (Object.is(a, b)) return true;
+  if (typeof a !== 'object' || typeof b !== 'object' || a === null || b === null) return false;
+  const keys = Object.keys(a) as (keyof T)[];
+  return keys.length === Object.keys(b).length && keys.every((key) => Object.is(a[key], b[key]));
+}
+
 function createPerIdentityStore<T>(compute: (room: Room, identity: string) => T, events: RoomEvent[]) {
   const byRoom = new WeakMap<Room, Map<string, StoreEntry<T>>>();
 
@@ -121,11 +128,25 @@ function createPerIdentityStore<T>(compute: (room: Room, identity: string) => T,
     };
   }
 
+  // Reads with no subscriber yet — a component's first render, before React
+  // calls `subscribe` — still have to return the same value for the same
+  // state: React asks twice to check, and a fresh object each time is what it
+  // warns about (and, if the snapshot truly changed every call, would loop on).
+  const unsubscribed = new WeakMap<Room, Map<string, T>>();
+
   // Never creates the room-level subscription itself (that's `subscribe`'s
-  // job alone) — a pure read, falling back to a one-off compute when no
-  // subscriber has registered yet.
+  // job alone) — a pure read, falling back to a compute when no subscriber
+  // has registered yet.
   function getSnapshot(room: Room, identity: string): T {
-    return byRoom.get(room)?.get(identity)?.value ?? compute(room, identity);
+    const live = byRoom.get(room)?.get(identity);
+    if (live) return live.value;
+    let byIdentity = unsubscribed.get(room);
+    if (!byIdentity) { byIdentity = new Map(); unsubscribed.set(room, byIdentity); }
+    const previous = byIdentity.get(identity);
+    const next = compute(room, identity);
+    if (previous !== undefined && shallowEqual(previous, next)) return previous;
+    byIdentity.set(identity, next);
+    return next;
   }
 
   return { subscribe, getSnapshot };

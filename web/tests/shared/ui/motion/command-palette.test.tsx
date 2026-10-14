@@ -82,3 +82,15 @@ describe('CommandPalette — stages (CommandItem.stage)', () => {
     expect(screen.queryByText('Ana')).not.toBeInTheDocument();
   });
 });
+
+describe('CommandPalette — labels', () => {
+  it('everything it names itself is in Portuguese, and an ungrouped item lands under "Resultados"', async () => {
+    const onOpenChange = vi.fn();
+    render(<CommandPalette items={buildItems(vi.fn())} open onOpenChange={onOpenChange} />);
+    expect(await screen.findByRole('dialog', { name: 'Busca rápida' })).toBeInTheDocument();
+    expect(screen.getByRole('listbox', { name: 'Resultados' })).toBeInTheDocument();
+    expect(screen.getByText('Resultados')).toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Fechar busca rápida' }));
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+});

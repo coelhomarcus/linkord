@@ -3,14 +3,14 @@ import type { FormEvent } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { KeyRound, Loader2, Lock, LogIn, Mail, User } from 'lucide-react';
 import { ArrowLeft, ArrowRight, CheckCircle2, Eye, EyeOff, UserPlus } from '@/shared/ui/icons';
-import { useAuth } from '../../state/AuthContext';
+import { useAuth } from '@/state/AuthContext';
 import { ApiError, requestPasswordRecovery, resetPassword } from '@/shared/api/api';
 import type { RecoveryIdentifier } from '@/shared/api/api';
-import { ErrorBanner } from '../../shared/ErrorBanner';
-import { ShaderBackground } from '@/shared/ui/motion/shader-background';
-import { Input } from '@/shared/ui/motion/input';
+import { ErrorBanner } from '@/shared/ErrorBanner';
+import { MeshGradient } from '@paper-design/shaders-react';
+import { AuthField } from './AuthField';
 import { Button } from '@/shared/ui/primitives/button';
-import { Tabs, TabsList, TabsTrigger } from '@/shared/ui/motion/tabs';
+import { SegmentedTabs } from './SegmentedTabs';
 import { EASE_OUT } from '@/shared/lib/ease';
 import { OTPInput, type OTPStatus } from '@/shared/ui/motion/otp-input';
 import { ERROR_CODES } from '@/shared/api/errorCodes';
@@ -51,7 +51,7 @@ function LoginForm({ onForgotPassword }: { onForgotPassword: () => void }) {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3.5">
-      <Input
+      <AuthField
         id="loginUsername"
         label="Usuário"
         autoFocus
@@ -60,13 +60,13 @@ function LoginForm({ onForgotPassword }: { onForgotPassword: () => void }) {
         value={username}
         onChange={setUsername}
       />
-      <Input
+      <AuthField
         id="loginPassword"
         label="Senha"
         type={showPassword ? 'text' : 'password'}
         autoComplete="current-password"
         leftIcon={<Lock />}
-        rightIcon={<PasswordToggle visible={showPassword} onToggle={() => setShowPassword((v) => !v)} />}
+        rightSlot={<PasswordToggle visible={showPassword} onToggle={() => setShowPassword((v) => !v)} />}
         value={password}
         onChange={setPassword}
       />
@@ -134,7 +134,7 @@ function RegisterForm() {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3.5">
-      <Input
+      <AuthField
         id="registerUsername"
         label="Usuário"
         autoFocus
@@ -147,7 +147,7 @@ function RegisterForm() {
         error={fieldErrors.username}
         reserveErrorLine
       />
-      <Input
+      <AuthField
         id="registerEmail"
         label="E-mail"
         type="email"
@@ -159,20 +159,20 @@ function RegisterForm() {
         error={fieldErrors.email}
         reserveErrorLine
       />
-      <Input
+      <AuthField
         id="registerPassword"
         label="Senha"
         type={showPassword ? 'text' : 'password'}
         autoComplete="new-password"
         placeholder="Pelo menos 8 caracteres"
         leftIcon={<Lock />}
-        rightIcon={<PasswordToggle visible={showPassword} onToggle={() => setShowPassword((v) => !v)} />}
+        rightSlot={<PasswordToggle visible={showPassword} onToggle={() => setShowPassword((v) => !v)} />}
         value={password}
         onChange={setPassword}
         error={fieldErrors.password}
         reserveErrorLine
       />
-      <Input
+      <AuthField
         id="registerCode"
         label="Código de convite"
         leftIcon={<KeyRound />}
@@ -241,20 +241,16 @@ function RecoveryForm({ onBack }: { onBack: () => void }) {
           <h2 className="text-title font-semibold text-text-primary">Recuperar conta</h2>
           <p className="text-label text-text-muted">Informe seu usuário ou e-mail para receber um código de recuperação.</p>
         </div>
-        <Tabs
+        <SegmentedTabs
+          ariaLabel="Recuperar pelo"
           value={identifierType}
-          onValueChange={(v) => { setIdentifierType(v as 'email' | 'username'); setIdentifierValue(''); }}
-          variant="segment"
-        >
-          <TabsList className="w-full grid grid-cols-2 rounded-lg border border-border bg-black/25 p-1">
-            <TabsTrigger value="email" className="w-full rounded-md">E-mail</TabsTrigger>
-            <TabsTrigger value="username" className="w-full rounded-md">Usuário</TabsTrigger>
-          </TabsList>
-        </Tabs>
+          onChange={(next) => { setIdentifierType(next); setIdentifierValue(''); }}
+          options={[{ value: 'email', label: 'E-mail' }, { value: 'username', label: 'Usuário' }]}
+        />
         {identifierType === 'email' ? (
-          <Input id="recoveryEmail" label="E-mail" type="email" autoFocus autoComplete="email" leftIcon={<Mail />} value={identifierValue} onChange={setIdentifierValue} />
+          <AuthField id="recoveryEmail" label="E-mail" type="email" autoFocus autoComplete="email" leftIcon={<Mail />} value={identifierValue} onChange={setIdentifierValue} />
         ) : (
-          <Input id="recoveryUsername" label="Usuário" autoFocus autoComplete="username" leftIcon={<User />} value={identifierValue} onChange={setIdentifierValue} />
+          <AuthField id="recoveryUsername" label="Usuário" autoFocus autoComplete="username" leftIcon={<User />} value={identifierValue} onChange={setIdentifierValue} />
         )}
         <Button type="submit" size="lg" className="h-11 w-full" disabled={pending || !identifierValue}>
           {pending ? <Loader2 size={16} className="animate-spin" /> : <Mail size={16} />}
@@ -289,7 +285,7 @@ function RecoveryForm({ onBack }: { onBack: () => void }) {
         autoFocus
         aria-label="Código de recuperação"
       />
-      <Input id="recoveryPassword" label="Nova senha" type="password" autoComplete="new-password" leftIcon={<Lock />} value={password} onChange={setPassword} placeholder="Pelo menos 8 caracteres" />
+      <AuthField id="recoveryPassword" label="Nova senha" type="password" autoComplete="new-password" leftIcon={<Lock />} value={password} onChange={setPassword} placeholder="Pelo menos 8 caracteres" />
       <Button type="button" size="lg" className="h-11 w-full" disabled={pending || code.length !== 6 || password.length < 8} onClick={() => void submitReset()}>
         {pending ? <Loader2 size={16} className="animate-spin" /> : status === 'success' ? <CheckCircle2 size={16} /> : <Lock size={16} />}
         <span>{pending ? 'Salvando…' : status === 'success' ? 'Senha redefinida' : 'Redefinir senha'}</span>
@@ -314,13 +310,12 @@ export function AuthScreen() {
   return (
     <div className="relative flex h-dvh items-center justify-center overflow-hidden bg-bg-primary p-4">
       <div className="absolute inset-0">
-        <ShaderBackground
-          variant="mesh-gradient"
+        <MeshGradient
           colors={MESH_COLORS}
           distortion={0.85}
           swirl={0.35}
-          speed={0.25}
-          className="absolute inset-0"
+          speed={reduce ? 0 : 0.25}
+          className="absolute inset-0 size-full"
         />
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/10 via-black/25 to-black/60" />
       </div>
@@ -335,11 +330,15 @@ export function AuthScreen() {
         </div>
 
         <motion.div layout={!reduce} className="w-full overflow-hidden rounded-xl border border-border bg-bg-floating/70 p-6 shadow-popover backdrop-blur-2xl">
-          <Tabs value={tab} onValueChange={(v) => { setRecovery(false); setTab(v as 'login' | 'register'); }} variant="segment" className="flex w-full flex-col gap-5">
-            {!recovery && <TabsList className="w-full grid grid-cols-2 rounded-lg border border-border bg-black/25 p-1">
-              <TabsTrigger value="login" className="w-full rounded-md">Entrar</TabsTrigger>
-              <TabsTrigger value="register" className="w-full rounded-md">Criar conta</TabsTrigger>
-            </TabsList>}
+          <div className="flex w-full flex-col gap-5">
+            {!recovery && (
+              <SegmentedTabs
+                ariaLabel="Entrar ou criar conta"
+                value={tab}
+                onChange={(next) => { setRecovery(false); setTab(next); }}
+                options={[{ value: 'login', label: 'Entrar' }, { value: 'register', label: 'Criar conta' }]}
+              />
+            )}
             {/* The card itself carries `layout` (above), so its height
                 animates smoothly frame-by-frame as the panel below swaps —
                 that's what keeps the tab pill's own slide animation and the
@@ -361,7 +360,7 @@ export function AuthScreen() {
                 </motion.div>
               )}
             </AnimatePresence>
-          </Tabs>
+          </div>
         </motion.div>
       </div>
     </div>

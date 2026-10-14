@@ -48,9 +48,7 @@ export function GroupInvitationsView({ query, onQueryChange, onOpenProfile }: { 
   }
 
   let body: ReactNode;
-  if (phase === 'wait') {
-    body = null;
-  } else if (phase === 'skeleton') {
+  if (phase === 'skeleton') {
     body = <SocialRowsSkeleton label="Carregando convites…" rows={2} />;
   } else if (list.status === 'error') {
     body = (

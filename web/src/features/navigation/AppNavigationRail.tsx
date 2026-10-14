@@ -1,28 +1,44 @@
+import { useId } from 'react';
 import type { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { MessageCircle, PanelLeftOpen, PhoneCall, Settings, ShieldCheck, UsersRound } from '@/shared/ui/icons';
 import { Avatar } from '@/shared/Avatar';
-import { useAnimatedSidebar } from '@/shared/ui/motion/animated-sidebar';
+import { useSidebar } from '@/shared/ui/motion/sidebar-context';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
 import { ROUTES, isConversationsPath } from '@/shared/lib/routes';
 import { cn } from '@/shared/lib/utils';
 import { SPRING_LAYOUT } from '@/shared/lib/ease';
+import { ActiveWash } from '@/shared/ui/motion/active-wash';
 import { useRoom } from '@/state/RoomContext';
 import { useFriends } from '@/features/friends/FriendsContext';
 import { NotificationBell } from '@/features/notifications/NotificationBell';
 import { conversationTitle } from '@/features/conversations/conversationUtils';
 import { CountBadge } from '@/shared/CountBadge';
 
-const itemClass = 'relative grid size-11 place-items-center rounded-md outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring';
+const itemClass = 'relative isolate grid size-11 place-items-center rounded-md outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring';
 
+// the active item's look comes from the wash and marker below, which slide
+// between items instead of fading out on one and in on another
 function stateClass(active: boolean): string {
-  return active ? 'bg-fill-active text-text-primary shadow-highlight' :'text-text-muted hover:bg-fill-hover hover:text-text-primary';
+  return active ? 'text-text-primary' : 'text-text-muted hover:bg-fill-hover hover:text-text-primary';
 }
 
+/** The ids shared by every item of one rail, so its wash and marker are one of
+ * each, travelling from item to item. */
+interface RailIndicatorIds { wash: string; marker: string }
+
 /** A short bar on the edge: the selected destination isn't told by colour alone. */
-function ActiveMarker() {
-  return <span aria-hidden className="absolute -left-2.5 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-primary" />;
+function ActiveMarker({ layoutId }: { layoutId: string }) {
+  const reduce = useReducedMotion();
+  return (
+    <motion.span
+      layoutId={layoutId}
+      aria-hidden
+      transition={reduce ? { duration: 0 } : SPRING_LAYOUT}
+      className="absolute -left-2.5 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-primary"
+    />
+  );
 }
 
 function RailBadge({ count }: { count: number }) {
@@ -58,12 +74,13 @@ function RailSlot({ show, children }: { show: boolean; children: ReactNode }) {
   );
 }
 
-function RailLink({ to, label, active, badge, onNavigate, children }: {
+function RailLink({ to, label, active, badge, onNavigate, indicators, children }: {
   to: string;
   label: string;
   active: boolean;
   badge?: number;
   onNavigate: () => void;
+  indicators: RailIndicatorIds;
   children: ReactNode;
 }) {
   return (
@@ -71,7 +88,8 @@ function RailLink({ to, label, active, badge, onNavigate, children }: {
       <TooltipTrigger
         render={<Link to={to} onClick={onNavigate} aria-current={active ? 'page' : undefined} aria-label={label} className={cn(itemClass, stateClass(active))} />}
       >
-        {active && <ActiveMarker />}
+        {active && <ActiveWash layoutId={indicators.wash} className="shadow-highlight" />}
+        {active && <ActiveMarker layoutId={indicators.marker} />}
         {children}
         {!!badge && <RailBadge count={badge} />}
       </TooltipTrigger>
@@ -94,7 +112,7 @@ export function AppNavigationRail({ onOpenProfile, onReturnToCall, className }: 
   const { state, conversations, activeCallConversationId, allUsers } = useRoom();
   const { pendingIncomingCount } = useFriends();
   const { pathname } = useLocation();
-  const { isMobile, isOverlay, open: listOpen, openMobile, setOpenMobile, toggleSidebar } = useAnimatedSidebar();
+  const { isMobile, isOverlay, open: listOpen, openMobile, setOpenMobile, toggleSidebar } = useSidebar();
   const afterNavigate = () => { if (isOverlay) setOpenMobile(false); };
   // as a drawer the list is opened from here; as a column it can be hidden from its own header, so this is only the way back
   // (on a phone the rail already sits inside that drawer, so the button would only close it)
@@ -111,6 +129,8 @@ export function AppNavigationRail({ onOpenProfile, onReturnToCall, className }: 
     ? conversationTitle(conversations.find((c) => c.id === activeCallConversationId) ?? null, state.me.userId, allUsers)
     : '';
   const returnToCallLabel = callTitle ? `Voltar para ${callTitle}` : 'Voltar para a chamada';
+  const indicatorId = useId();
+  const indicators: RailIndicatorIds = { wash: `${indicatorId}-wash`, marker: `${indicatorId}-marker` };
 
   return (
     <nav aria-label="Navegação principal" className={cn('flex w-16 flex-none flex-col items-center gap-1.5 border-r border-border-subtle bg-surface-rail py-3', className)}>
@@ -127,10 +147,10 @@ export function AppNavigationRail({ onOpenProfile, onReturnToCall, className }: 
           <TooltipContent side="right">Mostrar lista de conversas</TooltipContent>
         </Tooltip>
       </RailSlot>
-      <RailLink to={ROUTES.conversations} label="Conversas" active={isConversationsPath(pathname)} onNavigate={afterNavigate}>
+      <RailLink to={ROUTES.conversations} label="Conversas" active={isConversationsPath(pathname)} onNavigate={afterNavigate} indicators={indicators}>
         <MessageCircle size={20} aria-hidden />
       </RailLink>
-      <RailLink to={ROUTES.friends} label={friendsLabel} active={pathname === ROUTES.friends} badge={pendingIncomingCount} onNavigate={afterNavigate}>
+      <RailLink to={ROUTES.friends} label={friendsLabel} active={pathname === ROUTES.friends} badge={pendingIncomingCount} onNavigate={afterNavigate} indicators={indicators}>
         <UsersRound size={20} aria-hidden />
       </RailLink>
       <RailSlot show={showBell}>
@@ -153,11 +173,11 @@ export function AppNavigationRail({ onOpenProfile, onReturnToCall, className }: 
       <div className="flex-1" />
 
       {isAdmin && (
-        <RailLink to={ROUTES.admin} label="Área administrativa" active={onAdmin} onNavigate={afterNavigate}>
+        <RailLink to={ROUTES.admin} label="Área administrativa" active={onAdmin} onNavigate={afterNavigate} indicators={indicators}>
           <ShieldCheck size={20} aria-hidden />
         </RailLink>
       )}
-      <RailLink to={ROUTES.settings} label="Ajustes" active={onSettings} onNavigate={afterNavigate}>
+      <RailLink to={ROUTES.settings} label="Ajustes" active={onSettings} onNavigate={afterNavigate} indicators={indicators}>
         <Settings size={20} aria-hidden />
       </RailLink>
       <Tooltip>

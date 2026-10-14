@@ -6,6 +6,10 @@ import { useReducedMotion } from 'motion/react';
 // adapted to this repo: `cn` import path, a <span> root so they are valid
 // inside a <button>, inline-flex so they sit centred like lucide's, and a
 // string `size` ("100%") for when a class sizes the icon instead.
+// A path that animates its `d` (the arrows) also needs `initial="normal"`:
+// without it motion has no starting value of its own for `d`, and the first
+// animation of an icon mounted inside an entering AnimatePresence child
+// writes d="undefined".
 export interface AnimatedIconHandle {
   startAnimation: () => void;
   stopAnimation: () => void;

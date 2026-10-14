@@ -13,7 +13,7 @@ export function GroupAvatar({ title, avatar, active, size = 44, className }: Gro
   return (
     <div
       className={cn(
-        'grid flex-none place-items-center overflow-hidden rounded-full border font-semibold',
+        'grid flex-none place-items-center overflow-hidden rounded-full border font-semibold transition-colors duration-300',
         active ? 'border-primary/50 bg-primary/20 text-text-primary' : 'border-border bg-fill-hover text-text-secondary',
         className
       )}
