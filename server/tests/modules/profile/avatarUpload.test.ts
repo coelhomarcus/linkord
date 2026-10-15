@@ -7,7 +7,7 @@ import sharp from 'sharp';
 import { config } from '../../../src/config/env.js';
 import { db } from '../../../src/db/client.js';
 import { filePathFor } from '../../../src/modules/attachments/attachmentStorage.js';
-import { encodeAndStoreProfileImage } from '../../../src/modules/profile/avatarUpload.js';
+import { encodeAndStoreProfileImage, parseCropRect } from '../../../src/modules/profile/avatarUpload.js';
 
 let uploadDir: string;
 let previousUploadDir: string;
@@ -67,6 +67,18 @@ describe('encodeAndStoreProfileImage', () => {
     assert.equal(posterMetadata.height, 2);
   });
 
+  test('downscales a crop larger than the output ceiling instead of storing it full size', async () => {
+    const input = await sharp({
+      create: { width: 6016, height: 4000, channels: 3, background: { r: 80, g: 140, b: 220 } },
+    }).jpeg().toBuffer();
+    const result = await encodeAndStoreProfileImage(input, { left: 0, top: 316, width: 6016, height: 3384 }, UPLOADER_ID);
+    const id = result.avatar.split('/').pop()!;
+    const metadata = await sharp(await fs.readFile(filePathFor(id))).metadata();
+
+    assert.equal(metadata.width, 4096);
+    assert.equal(metadata.height, 2304);
+  });
+
   test('rejects a crop outside the image bounds', async () => {
     const input = await staticPng();
     await assert.rejects(
@@ -82,5 +94,18 @@ describe('encodeAndStoreProfileImage', () => {
     const input = await staticPng();
     await assert.rejects(() => encodeAndStoreProfileImage(input, { left: 0, top: 0, width: 8, height: 5 }, UPLOADER_ID), /db offline/);
     assert.deepEqual(await fs.readdir(uploadDir), []);
+  });
+});
+
+describe('parseCropRect', () => {
+  test('accepts a crop from a photo wider than 4096px', () => {
+    const raw = JSON.stringify({ width: 6016, height: 3384, x: 0, y: 1316 });
+    assert.deepEqual(parseCropRect(raw), { left: 0, top: 1316, width: 6016, height: 3384 });
+  });
+
+  test('rejects negative or empty rects', () => {
+    assert.equal(parseCropRect(JSON.stringify({ width: 0, height: 10, x: 0, y: 0 })), null);
+    assert.equal(parseCropRect(JSON.stringify({ width: 10, height: 10, x: -1, y: 0 })), null);
+    assert.equal(parseCropRect('not json'), null);
   });
 });
