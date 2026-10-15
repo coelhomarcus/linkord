@@ -15,7 +15,12 @@ import { logger } from '../../lib/logger.js';
 
 const log = logger.child({ component: 'avatar' });
 
-const MAX_CROP_DIMENSION = 4096; // sane ceiling, well under sharp's own decompression-bomb guard
+// The crop rect is in the source photo's own pixels, so capping IT rejected
+// any modern camera photo (6000px+ wide). The ceiling applies to what gets
+// stored instead; the input is already bounded by the body limit, the
+// image-bounds check below and sharp's own decompression-bomb guard.
+const MAX_OUTPUT_DIMENSION = 4096;
+const FIT_OUTPUT = { width: MAX_OUTPUT_DIMENSION, height: MAX_OUTPUT_DIMENSION, fit: 'inside', withoutEnlargement: true } as const;
 
 // This route had NO cap of any kind before — neither a per-request check nor
 // a request-rate one — so a compromised account could hammer it (each hit
@@ -47,7 +52,7 @@ export function parseCropRect(raw: string | undefined): CropRect | null {
   const { x, y, width, height } = parsed as Record<string, unknown>;
   if (typeof x !== 'number' || typeof y !== 'number' || typeof width !== 'number' || typeof height !== 'number'
     || !Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(width) || !Number.isFinite(height)) return null;
-  if (width <= 0 || height <= 0 || x < 0 || y < 0 || width > MAX_CROP_DIMENSION || height > MAX_CROP_DIMENSION) return null;
+  if (width <= 0 || height <= 0 || x < 0 || y < 0) return null;
   return { left: Math.round(x), top: Math.round(y), width: Math.round(width), height: Math.round(height) };
 }
 
@@ -74,7 +79,7 @@ export async function encodeAndStoreProfileImage(
       throw new ProfileImageProcessingError('invalid_crop', 'Recorte fora dos limites da imagem.');
     }
 
-    const extracted = image.extract(cropRect);
+    const extracted = image.extract(cropRect).resize(FIT_OUTPUT);
     animated = (meta.pages ?? 1) > 1;
     if (animated) {
       // animated: keep WebP inputs as WebP (better quality than GIF's
@@ -116,7 +121,7 @@ export async function encodeAndStoreProfileImage(
   if (animated) {
     const posterId = newId();
     try {
-      const posterBuffer = await sharp(buffer, { animated: false }).extract(cropRect).jpeg({ quality: 88 }).toBuffer();
+      const posterBuffer = await sharp(buffer, { animated: false }).extract(cropRect).resize(FIT_OUTPUT).jpeg({ quality: 88 }).toBuffer();
       await fs.writeFile(filePathFor(posterId), posterBuffer);
       try {
         await db.insert(attachmentsTable).values({ id: posterId, messageId: null, uploaderId, fileName: 'avatar-poster', mimeType: 'image/jpeg', size: posterBuffer.length });
