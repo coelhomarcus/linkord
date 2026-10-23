@@ -3,7 +3,17 @@ import { config } from '../config/env.js';
 import { hostOf, isOriginAllowed } from './originGuard.js';
 
 const ALLOWED_METHODS = 'GET, POST, PUT, PATCH, DELETE, OPTIONS';
-const ALLOWED_HEADERS = 'Content-Type';
+// Authorization is how a native shell sends its session (see
+// sessionTokenFromHeaders) — without it listed here, a browser's preflight
+// blocks every authenticated cross-origin call before it's even sent.
+const ALLOWED_HEADERS = 'Content-Type, Authorization';
+
+/** /api/* and /uploads/* are the only paths a trusted app shell ever calls
+ * cross-origin; everything else is either static web assets (irrelevant to
+ * a native build, which ships its own) or the SPA fallback. */
+export function isCorsEligible(url: string): boolean {
+  return url.startsWith('/api/') || url.startsWith('/uploads/');
+}
 
 /** True for a request from one of our own trusted app shells (the Tauri
  * desktop app, the React Native app) — these run from their own origin
@@ -19,11 +29,11 @@ export function isTrustedCrossOrigin(origin: string | undefined, requestHost: st
 }
 
 /** Fastify `onRequest` hook: answers the preflight and tags the real
- * response with CORS headers for /api/* calls from a trusted app shell.
- * Registered ahead of originGuard — OPTIONS is already a "safe" method
- * that guard skips, so there's no ordering conflict. */
+ * response with CORS headers for /api/* and /uploads/* calls from a
+ * trusted app shell. Registered ahead of originGuard — OPTIONS is already
+ * a "safe" method that guard skips, so there's no ordering conflict. */
 export async function corsHeaders(request: FastifyRequest, reply: FastifyReply): Promise<void> {
-  if (!request.url.startsWith('/api/')) return;
+  if (!isCorsEligible(request.url)) return;
   const origin = typeof request.headers.origin === 'string' ? request.headers.origin : undefined;
   if (!isTrustedCrossOrigin(origin, request.headers.host)) return;
 
