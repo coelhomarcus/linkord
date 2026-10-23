@@ -6,6 +6,7 @@ import { config } from '../config/env.js';
 import { listOnlineUserIds, participants } from '../modules/presence/participants.js';
 import { sendError, sendJson } from './respond.js';
 import { originGuard } from './originGuard.js';
+import { corsHeaders } from './cors.js';
 import { registerAuthRoutes } from '../modules/auth/routes.js';
 import { registerAttachmentRoutes } from '../modules/attachments/attachments.js';
 import { registerProfileRoutes } from '../modules/profile/profile.js';
@@ -79,6 +80,7 @@ export function createApp(): FastifyInstance {
   // static/JSON responses, which previously relied on a CDN's own gzip.
   fastify.register(fastifyCompress);
 
+  fastify.addHook('onRequest', corsHeaders);
   fastify.addHook('onRequest', originGuard);
   // correlation id: the same value the request lines and errors carry, so a
   // report from the client ("x-request-id: req-7") finds the server side

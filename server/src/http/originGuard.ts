@@ -15,7 +15,7 @@ const log = logger.child({ component: 'http' });
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 const DEV_ORIGINS = ['http://localhost:5173', 'http://127.0.0.1:5173'];
 
-const hostOf = (origin: string): string | null => {
+export const hostOf = (origin: string): string | null => {
   try { return new URL(origin).host.toLowerCase(); } catch { return null; }
 };
 

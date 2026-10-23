@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 import { config } from '../../config/env.js';
 import { sendJson, sendError, jsonBody } from '../../http/respond.js';
 import { parseCookies, serializeCookie, clearCookie, isSecureRequest } from '../../http/cookies.js';
+import { isTrustedCrossOrigin } from '../../http/cors.js';
 import { hashPassword, verifyPassword, needsRehash, DUMMY_HASH } from './password.js';
 import { createSession, resolveSession, destroyAllSessionsForUser, destroySession } from './session.js';
 import { findByEmailLower, findByUsernameLower, isValidEmail, normalizeEmail, privateUser } from '../users/users.js';
@@ -46,10 +47,20 @@ function safeCompare(a: unknown, b: unknown): boolean {
   return crypto.timingSafeEqual(bufA, bufB);
 }
 
+/** SameSite=None for a trusted cross-origin app shell (Tauri, React Native) —
+ * SameSite=Lax cookies are never sent on a cross-site fetch/XHR at all, so
+ * those apps would otherwise look logged-out on every request. Ordinary
+ * same-origin web traffic keeps SameSite=Lax exactly as before. */
+function sessionCookieSameSite(request: FastifyRequest): 'Lax' | 'None' {
+  const origin = typeof request.headers.origin === 'string' ? request.headers.origin : undefined;
+  return isTrustedCrossOrigin(origin, request.headers.host) ? 'None' : 'Lax';
+}
+
 function setSessionCookie(request: FastifyRequest, reply: FastifyReply, rawToken: string): void {
   const cookie = serializeCookie(config.SESSION_COOKIE, rawToken, {
     maxAgeSec: config.SESSION_TTL_DAYS * 24 * 60 * 60,
     secure: isSecureRequest(request.raw),
+    sameSite: sessionCookieSameSite(request),
   });
   reply.header('Set-Cookie', cookie);
 }
@@ -187,7 +198,7 @@ async function handleLogin(request: FastifyRequest, reply: FastifyReply): Promis
 async function handleLogout(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   const cookies = parseCookies(request.headers.cookie || '');
   await destroySession(cookies[config.SESSION_COOKIE]);
-  reply.header('Set-Cookie', clearCookie(config.SESSION_COOKIE, { secure: isSecureRequest(request.raw) }));
+  reply.header('Set-Cookie', clearCookie(config.SESSION_COOKIE, { secure: isSecureRequest(request.raw), sameSite: sessionCookieSameSite(request) }));
   reply.code(204).header('Cache-Control', 'no-store').send();
 }
 
