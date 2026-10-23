@@ -3,7 +3,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { eq } from 'drizzle-orm';
 import { config } from '../../config/env.js';
 import { sendJson, sendError, jsonBody } from '../../http/respond.js';
-import { parseCookies, serializeCookie, clearCookie, isSecureRequest } from '../../http/cookies.js';
+import { sessionTokenFromHeaders, serializeCookie, clearCookie, isSecureRequest } from '../../http/cookies.js';
 import { isTrustedCrossOrigin } from '../../http/cors.js';
 import { hashPassword, verifyPassword, needsRehash, DUMMY_HASH } from './password.js';
 import { createSession, resolveSession, destroyAllSessionsForUser, destroySession } from './session.js';
@@ -47,13 +47,30 @@ function safeCompare(a: unknown, b: unknown): boolean {
   return crypto.timingSafeEqual(bufA, bufB);
 }
 
+/** True for one of our own native app shells (Tauri desktop, React Native),
+ * which serve their UI from their own origin instead of the server's. */
+function isNativeShell(request: FastifyRequest): boolean {
+  const origin = typeof request.headers.origin === 'string' ? request.headers.origin : undefined;
+  return isTrustedCrossOrigin(origin, request.headers.host);
+}
+
 /** SameSite=None for a trusted cross-origin app shell (Tauri, React Native) —
  * SameSite=Lax cookies are never sent on a cross-site fetch/XHR at all, so
  * those apps would otherwise look logged-out on every request. Ordinary
  * same-origin web traffic keeps SameSite=Lax exactly as before. */
 function sessionCookieSameSite(request: FastifyRequest): 'Lax' | 'None' {
-  const origin = typeof request.headers.origin === 'string' ? request.headers.origin : undefined;
-  return isTrustedCrossOrigin(origin, request.headers.host) ? 'None' : 'Lax';
+  return isNativeShell(request) ? 'None' : 'Lax';
+}
+
+/** The body for a request that just created a session. A native shell also
+ * gets the raw token: WebKit hands a tauri:// page no cross-site cookie jar
+ * at all, so a Bearer token is its only way to authenticate the next call.
+ * A same-origin browser never sees this field, so the web app keeps its
+ * cookie-only posture — an XSS there still cannot read the session. */
+function sessionPayload(request: FastifyRequest, user: User, rawToken: string): Record<string, unknown> {
+  const body: Record<string, unknown> = { user: privateUser(user) };
+  if (isNativeShell(request)) body.token = rawToken;
+  return body;
 }
 
 function setSessionCookie(request: FastifyRequest, reply: FastifyReply, rawToken: string): void {
@@ -139,7 +156,7 @@ async function handleRegister(request: FastifyRequest, reply: FastifyReply): Pro
   // account has zero friends and zero shared conversations by definition,
   // so its knownPeerIds is empty on every side; the event would reach
   // nobody anyway (see participants.ts#broadcastToKnownPeers).
-  sendJson(reply, 201, { user: privateUser(user) });
+  sendJson(reply, 201, sessionPayload(request, user, rawToken));
 }
 
 async function handleLogin(request: FastifyRequest, reply: FastifyReply): Promise<void> {
@@ -192,19 +209,17 @@ async function handleLogin(request: FastifyRequest, reply: FastifyReply): Promis
   const { rawToken } = await createSession(user.id);
   setSessionCookie(request, reply, rawToken);
   log.info('login', { userId: user.id, username: user.username });
-  sendJson(reply, 200, { user: privateUser(user) });
+  sendJson(reply, 200, sessionPayload(request, user, rawToken));
 }
 
 async function handleLogout(request: FastifyRequest, reply: FastifyReply): Promise<void> {
-  const cookies = parseCookies(request.headers.cookie || '');
-  await destroySession(cookies[config.SESSION_COOKIE]);
+  await destroySession(sessionTokenFromHeaders(request.headers));
   reply.header('Set-Cookie', clearCookie(config.SESSION_COOKIE, { secure: isSecureRequest(request.raw), sameSite: sessionCookieSameSite(request) }));
   reply.code(204).header('Cache-Control', 'no-store').send();
 }
 
 async function handleMe(request: FastifyRequest, reply: FastifyReply): Promise<void> {
-  const cookies = parseCookies(request.headers.cookie || '');
-  const sess = await resolveSession(cookies[config.SESSION_COOKIE]);
+  const sess = await resolveSession(sessionTokenFromHeaders(request.headers));
   if (!sess) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
   sendJson(reply, 200, {
     user: {
@@ -232,8 +247,7 @@ function purposeError(reply: FastifyReply, reason: 'invalid_code' | 'code_expire
 }
 
 function sessionForRequest(request: FastifyRequest) {
-  const cookies = parseCookies(request.headers.cookie || '');
-  return resolveSession(cookies[config.SESSION_COOKIE]);
+  return resolveSession(sessionTokenFromHeaders(request.headers));
 }
 
 async function issueAndSendCode(userId: string, email: string, username: string, purpose: AuthCodePurpose): Promise<void> {

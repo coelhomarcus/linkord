@@ -16,7 +16,7 @@ import { canSendDirectMessage } from '../modules/friendships/friendshipsReposito
 import { ERROR_CODES, type ErrorCode } from '../http/errors.js';
 import { getUserUsage } from '../modules/attachments/attachmentQuota.js';
 import * as moderation from '../modules/moderation/moderation.js';
-import { parseCookies } from '../http/cookies.js';
+import { sessionTokenFromHeaders } from '../http/cookies.js';
 import { resolveSession } from '../modules/auth/session.js';
 import { isSocketOriginAllowed } from '../http/originGuard.js';
 import { isClientCompatible, PROTOCOL_VERSION } from './protocolVersion.js';
@@ -197,8 +197,15 @@ export function createWsServer(httpServer: HttpServer): Server {
       return next(Object.assign(new Error('Origem não permitida.'), { data: { code: 'forbidden_origin' satisfies ErrorCode } }));
     }
     try {
-      const cookies = parseCookies(socket.handshake.headers.cookie || '');
-      const sess = await resolveSession(cookies[config.SESSION_COOKIE]);
+      // `auth.token` is how the native shells authenticate: a browser can't
+      // put an Authorization header on a WebSocket, and their webview has no
+      // cross-site cookie to send either (see sessionTokenFromHeaders). The
+      // web app sends neither and is resolved from the handshake cookie.
+      const handshakeToken = (socket.handshake.auth as { token?: unknown } | undefined)?.token;
+      const sess = await resolveSession(
+        sessionTokenFromHeaders(socket.handshake.headers)
+          ?? (typeof handshakeToken === 'string' ? handshakeToken : undefined),
+      );
       if (!sess) return next(Object.assign(new Error('Sessão inválida ou expirada.'), { data: { code: 'unauthorized' satisfies ErrorCode } }));
       (socket as AppSocket).user = sess;
       next();

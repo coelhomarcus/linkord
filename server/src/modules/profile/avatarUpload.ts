@@ -5,7 +5,7 @@ import { config } from '../../config/env.js';
 import { db } from '../../db/client.js';
 import { attachments as attachmentsTable } from '../../db/schema.js';
 import { sendJson, sendError } from '../../http/respond.js';
-import { parseCookies } from '../../http/cookies.js';
+import { sessionTokenFromHeaders } from '../../http/cookies.js';
 import { resolveSession } from '../auth/session.js';
 import { newId, filePathFor } from '../attachments/attachmentStorage.js';
 import { getUsage } from '../attachments/attachmentQuota.js';
@@ -158,8 +158,7 @@ export async function encodeAndStoreProfileImage(
  * server-side first (see imageFetch.ts#fetchImageFromUrl) and then goes
  * through the exact same crop/encode path below. */
 export async function handleAvatarUpload(request: FastifyRequest, reply: FastifyReply): Promise<void> {
-  const cookies = parseCookies(request.headers.cookie || '');
-  const sess = await resolveSession(cookies[config.SESSION_COOKIE]);
+  const sess = await resolveSession(sessionTokenFromHeaders(request.headers));
   if (!sess) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
 
   if (!floodControl.allow(`avatar:${sess.userId}`, AVATAR_UPLOAD_LIMIT)) {

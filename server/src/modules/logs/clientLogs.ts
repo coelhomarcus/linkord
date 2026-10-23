@@ -1,7 +1,6 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { config } from '../../config/env.js';
 import { logger, type LogFields } from '../../lib/logger.js';
-import { parseCookies } from '../../http/cookies.js';
+import { sessionTokenFromHeaders } from '../../http/cookies.js';
 import { jsonBody, sendError } from '../../http/respond.js';
 import * as floodControl from '../../realtime/floodControl.js';
 import { resolveSession } from '../auth/session.js';
@@ -47,8 +46,7 @@ export function parseClientLog(body: Record<string, unknown>): ClientLogEntry | 
 }
 
 async function handleClientLog(request: FastifyRequest, reply: FastifyReply): Promise<void> {
-  const cookies = parseCookies(request.headers.cookie || '');
-  const sess = await resolveSession(cookies[config.SESSION_COOKIE]);
+  const sess = await resolveSession(sessionTokenFromHeaders(request.headers));
   // by IP and by account: a signed-out page can report too, but cannot flood
   if (!floodControl.allow(`client-log:${request.ip}`, { windowMs: 60_000, max: 30 })) return void reply.code(204).send();
   const entry = parseClientLog(jsonBody(request.body));

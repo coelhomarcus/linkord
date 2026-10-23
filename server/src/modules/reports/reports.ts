@@ -1,15 +1,13 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { config } from '../../config/env.js';
 import { sendJson, sendError, jsonBody } from '../../http/respond.js';
-import { parseCookies } from '../../http/cookies.js';
+import { sessionTokenFromHeaders } from '../../http/cookies.js';
 import { resolveSession } from '../auth/session.js';
 import * as floodControl from '../../realtime/floodControl.js';
 import { createReport } from './reportsRepository.js';
 import { parseReportInput } from './reportsPolicy.js';
 
 async function handleCreateReport(request: FastifyRequest, reply: FastifyReply): Promise<void> {
-  const cookies = parseCookies(request.headers.cookie || '');
-  const sess = await resolveSession(cookies[config.SESSION_COOKIE]);
+  const sess = await resolveSession(sessionTokenFromHeaders(request.headers));
   if (!sess) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
   if (!floodControl.allow(`report:${sess.userId}`, { windowMs: 10 * 60_000, max: 10 })) {
     return sendError(reply, 429, 'rate_limited', 'Você enviou muitas denúncias. Espere um pouco.');

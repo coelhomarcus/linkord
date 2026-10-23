@@ -1,10 +1,9 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { and, asc, eq, sql } from 'drizzle-orm';
-import { config } from '../../config/env.js';
 import { db } from '../../db/client.js';
 import { conversationMembers, conversations, users } from '../../db/schema.js';
 import { sendJson, sendError } from '../../http/respond.js';
-import { parseCookies } from '../../http/cookies.js';
+import { sessionTokenFromHeaders } from '../../http/cookies.js';
 import { resolveSession } from '../auth/session.js';
 import { toSocialUser, type SocialUser } from '../users/users.js';
 import { SOCIAL_PAGE_SIZE, decodeTimeCursor, encodeTimeCursor } from '../friendships/cursor.js';
@@ -53,8 +52,7 @@ export async function pageGroupMembers(
 }
 
 async function handleListMembers(request: FastifyRequest<{ Params: { conversationId: string }; Querystring: { cursor?: string } }>, reply: FastifyReply): Promise<void> {
-  const cookies = parseCookies(request.headers.cookie || '');
-  const sess = await resolveSession(cookies[config.SESSION_COOKIE]);
+  const sess = await resolveSession(sessionTokenFromHeaders(request.headers));
   if (!sess) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
   const page = await listGroupMembers(sess.userId, String(request.params.conversationId || ''), request.query.cursor);
   if (page === 'not_found') return sendError(reply, 404, 'not_found', 'Grupo não encontrado.');
