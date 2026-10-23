@@ -1,11 +1,10 @@
 import { eq, and, lt, desc, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { config } from '../../config/env.js';
 import { db } from '../../db/client.js';
 import { messages, conversations, conversationMembers, users, attachments as attachmentsTable } from '../../db/schema.js';
 import { sendJson, sendError } from '../../http/respond.js';
-import { parseCookies } from '../../http/cookies.js';
+import { sessionTokenFromHeaders } from '../../http/cookies.js';
 import { resolveSession } from '../auth/session.js';
 import { resolveDisplayName } from '../users/users.js';
 import { firstEmbed, type DetectedEmbed } from '../link-preview/embeds.js';
@@ -231,8 +230,7 @@ async function fetchEmbedsPage(viewerId: string, before: number | null, limit: n
 }
 
 async function handleMedia(request: FastifyRequest, reply: FastifyReply): Promise<void> {
-  const cookies = parseCookies(request.headers.cookie || '');
-  const sess = await resolveSession(cookies[config.SESSION_COOKIE]);
+  const sess = await resolveSession(sessionTokenFromHeaders(request.headers));
   if (!sess) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
 
   const query = request.query as Record<string, string | undefined>;

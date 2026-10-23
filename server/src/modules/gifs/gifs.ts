@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { config } from '../../config/env.js';
-import { parseCookies } from '../../http/cookies.js';
+import { sessionTokenFromHeaders } from '../../http/cookies.js';
 import { sendError, sendJson } from '../../http/respond.js';
 import { resolveSession } from '../auth/session.js';
 
@@ -23,8 +23,7 @@ export function gifConfigFor(userId: string, apiKey: string = config.KLIPY_API_K
 // through our servers, so this hands the key to signed-in users only (it stays
 // out of the bundle and the repo) instead of proxying the requests.
 async function handleGifConfig(request: FastifyRequest, reply: FastifyReply): Promise<void> {
-  const cookies = parseCookies(request.headers.cookie || '');
-  const sess = await resolveSession(cookies[config.SESSION_COOKIE]);
+  const sess = await resolveSession(sessionTokenFromHeaders(request.headers));
   if (!sess) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
   reply.header('Cache-Control', 'no-store');
   sendJson(reply, 200, gifConfigFor(sess.userId));

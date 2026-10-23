@@ -7,7 +7,7 @@ import { config } from '../../config/env.js';
 import { db } from '../../db/client.js';
 import { attachments as attachmentsTable, messages, type Attachment } from '../../db/schema.js';
 import { sendJson, sendError } from '../../http/respond.js';
-import { parseCookies } from '../../http/cookies.js';
+import { sessionTokenFromHeaders } from '../../http/cookies.js';
 import { resolveSession } from '../auth/session.js';
 import { conversationExistsForUser } from '../conversations/conversationsRepository.js';
 import { filePathFor } from './attachmentStorage.js';
@@ -116,8 +116,7 @@ async function tryCacheFromRemote(id: string, cookieHeader: string): Promise<boo
 }
 
 export async function serveUpload(request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply): Promise<FastifyReply> {
-  const cookies = parseCookies(request.headers.cookie || '');
-  const sess = await resolveSession(cookies[config.SESSION_COOKIE]);
+  const sess = await resolveSession(sessionTokenFromHeaders(request.headers));
   if (!sess) return reply.code(401).send('não autenticado');
 
   const id = request.params.id;
@@ -227,8 +226,7 @@ export function decodeUtf8Prefix(buffer: Buffer): string | null {
  * MAX_ATTACHMENT_BYTES = 2GiB) and no binary-sniffing — both of which matter
  * here but would be out of place bolted onto the real-download path. */
 export async function handleAttachmentPreview(request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply): Promise<void> {
-  const cookies = parseCookies(request.headers.cookie || '');
-  const sess = await resolveSession(cookies[config.SESSION_COOKIE]);
+  const sess = await resolveSession(sessionTokenFromHeaders(request.headers));
   if (!sess) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
 
   const id = request.params.id;

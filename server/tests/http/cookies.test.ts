@@ -1,7 +1,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import type { IncomingMessage } from 'node:http';
-import { parseCookies, serializeCookie, clearCookie, isSecureRequest } from '../../src/http/cookies.js';
+import { parseCookies, serializeCookie, clearCookie, isSecureRequest, sessionTokenFromHeaders } from '../../src/http/cookies.js';
 
 describe('parseCookies', () => {
   test('no header, returns an empty object', () => {
@@ -52,6 +52,44 @@ describe('serializeCookie / clearCookie', () => {
   test('clearCookie zeroes the value and Max-Age=0, preserving the requested secure attribute', () => {
     const cookie = clearCookie('ss_session', { secure: true });
     assert.match(cookie, /^ss_session=; Path=\/; HttpOnly; SameSite=Lax; Max-Age=0; Secure$/);
+  });
+});
+
+describe('sessionTokenFromHeaders', () => {
+  test('reads the session cookie (how the web app authenticates)', () => {
+    assert.equal(sessionTokenFromHeaders({ cookie: 'ss_session=tok123' }), 'tok123');
+  });
+
+  test('reads a Bearer token (how the native app shells authenticate)', () => {
+    assert.equal(sessionTokenFromHeaders({ authorization: 'Bearer tok123' }), 'tok123');
+  });
+
+  test('the scheme is matched case-insensitively', () => {
+    assert.equal(sessionTokenFromHeaders({ authorization: 'bearer tok123' }), 'tok123');
+  });
+
+  // A browser attaches the cookie on its own; an Authorization header is
+  // attacker-settable from page JS. Preferring the cookie means a forged
+  // header can never downgrade a real session to someone else's.
+  test('the cookie wins when a request carries both', () => {
+    assert.equal(sessionTokenFromHeaders({ cookie: 'ss_session=fromCookie', authorization: 'Bearer fromHeader' }), 'fromCookie');
+  });
+
+  test('another auth scheme is not a session token', () => {
+    assert.equal(sessionTokenFromHeaders({ authorization: 'Basic dXNlcjpwYXNz' }), undefined);
+  });
+
+  test('an empty Bearer value is not a token', () => {
+    assert.equal(sessionTokenFromHeaders({ authorization: 'Bearer ' }), undefined);
+    assert.equal(sessionTokenFromHeaders({ authorization: 'Bearer' }), undefined);
+  });
+
+  test('no cookie and no header at all', () => {
+    assert.equal(sessionTokenFromHeaders({}), undefined);
+  });
+
+  test('a cookie header without our session cookie falls through to the header', () => {
+    assert.equal(sessionTokenFromHeaders({ cookie: 'other=1', authorization: 'Bearer tok123' }), 'tok123');
   });
 });
 

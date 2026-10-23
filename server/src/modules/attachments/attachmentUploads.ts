@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { config } from '../../config/env.js';
 import { sendJson, sendError, jsonBody } from '../../http/respond.js';
-import { parseCookies } from '../../http/cookies.js';
+import { sessionTokenFromHeaders } from '../../http/cookies.js';
 import { resolveSession } from '../auth/session.js';
 import { conversationExistsForUser, getDirectPeerId } from '../conversations/conversationsRepository.js';
 import { canSendDirectMessage } from '../friendships/friendshipsRepository.js';
@@ -41,8 +41,7 @@ const ATTACHMENT_INIT_LIMIT = { windowMs: 60_000, max: 20 };
  * conversation/quota/size fails fast. Server decides chunkSize; the client
  * never hardcodes it. */
 export async function handleAttachmentInit(request: FastifyRequest, reply: FastifyReply): Promise<void> {
-  const cookies = parseCookies(request.headers.cookie || '');
-  const sess = await resolveSession(cookies[config.SESSION_COOKIE]);
+  const sess = await resolveSession(sessionTokenFromHeaders(request.headers));
   if (!sess) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
 
   if (!floodControl.allow(`attachment-init:${sess.userId}`, ATTACHMENT_INIT_LIMIT)) {
@@ -119,8 +118,7 @@ export async function handleAttachmentInit(request: FastifyRequest, reply: Fasti
 export async function handleAttachmentChunk(request: FastifyRequest<{ Params: { id: string; index: string } }>, reply: FastifyReply): Promise<void> {
   const uploadId = request.params.id;
   const index = Number(request.params.index);
-  const cookies = parseCookies(request.headers.cookie || '');
-  const sess = await resolveSession(cookies[config.SESSION_COOKIE]);
+  const sess = await resolveSession(sessionTokenFromHeaders(request.headers));
   if (!sess) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
 
   const manifest = await readManifest(uploadId);
@@ -147,8 +145,7 @@ export async function handleAttachmentChunk(request: FastifyRequest<{ Params: { 
  * with the whole batch, by a correlated `chat` send (messages.ts). */
 export async function handleAttachmentComplete(request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply): Promise<void> {
   const uploadId = request.params.id;
-  const cookies = parseCookies(request.headers.cookie || '');
-  const sess = await resolveSession(cookies[config.SESSION_COOKIE]);
+  const sess = await resolveSession(sessionTokenFromHeaders(request.headers));
   if (!sess) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
 
   const manifest = await readManifest(uploadId);
@@ -247,8 +244,7 @@ async function completeStaged(reply: FastifyReply, manifest: UploadManifest, use
  * instead of waiting for the sweep. Idempotent. */
 export async function handleAttachmentCancel(request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply): Promise<void> {
   const uploadId = request.params.id;
-  const cookies = parseCookies(request.headers.cookie || '');
-  const sess = await resolveSession(cookies[config.SESSION_COOKIE]);
+  const sess = await resolveSession(sessionTokenFromHeaders(request.headers));
   if (!sess) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
 
   const manifest = await readManifest(uploadId);

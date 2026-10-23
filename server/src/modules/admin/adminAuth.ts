@@ -1,10 +1,9 @@
 import { eq } from 'drizzle-orm';
 import type { FastifyReply, FastifyRequest } from 'fastify';
-import { config } from '../../config/env.js';
 import { db } from '../../db/client.js';
 import { users } from '../../db/schema.js';
 import { sendError } from '../../http/respond.js';
-import { parseCookies } from '../../http/cookies.js';
+import { sessionTokenFromHeaders } from '../../http/cookies.js';
 import { resolveSession } from '../auth/session.js';
 import type { AuditActor } from './auditLog.js';
 
@@ -20,8 +19,7 @@ export async function isActiveAdmin(userId: string): Promise<boolean> {
 /** HTTP guard for /api/admin/*. 401 without a session, 403 for anyone who is
  * not an active admin RIGHT NOW. */
 export async function requireAdmin(request: FastifyRequest, reply: FastifyReply): Promise<AuditActor | null> {
-  const cookies = parseCookies(request.headers.cookie || '');
-  const sess = await resolveSession(cookies[config.SESSION_COOKIE]);
+  const sess = await resolveSession(sessionTokenFromHeaders(request.headers));
   if (!sess) {
     sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
     return null;

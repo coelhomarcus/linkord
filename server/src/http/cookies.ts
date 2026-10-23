@@ -20,6 +20,23 @@ export function parseCookies(header: string): Record<string, string> {
   return out;
 }
 
+/** The raw session token for a request. The web app sends it as the session
+ * cookie; the native app shells (Tauri desktop, React Native) send it as a
+ * Bearer token, because a webview loading its UI from a non-http origin
+ * (tauri://localhost) is never given a cross-site cookie jar by WebKit — the
+ * cookie is silently dropped no matter what SameSite says. Cookie first, so
+ * a browser can't be talked into authenticating as someone else by a
+ * forged Authorization header. */
+export function sessionTokenFromHeaders(headers: { cookie?: string; authorization?: string }): string | undefined {
+  const fromCookie = parseCookies(headers.cookie || '')[config.SESSION_COOKIE];
+  if (fromCookie) return fromCookie;
+  const auth = headers.authorization;
+  if (!auth) return undefined;
+  const [scheme, token] = auth.split(' ');
+  if (scheme?.toLowerCase() !== 'bearer') return undefined;
+  return token?.trim() || undefined;
+}
+
 /** Decides the cookie's Secure attribute. 'auto' (default) trusts
  * X-Forwarded-Proto when TRUST_PROXY is on — the deploy's Caddyfile/
  * nginx.conf already send that header. Without it, the Secure cookie just

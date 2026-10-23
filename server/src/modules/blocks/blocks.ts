@@ -1,7 +1,6 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { config } from '../../config/env.js';
 import { sendJson, sendError } from '../../http/respond.js';
-import { parseCookies } from '../../http/cookies.js';
+import { sessionTokenFromHeaders } from '../../http/cookies.js';
 import { resolveSession } from '../auth/session.js';
 import { findById } from '../users/users.js';
 import { blockUser, unblockUser, listBlocks } from './blocksRepository.js';
@@ -12,8 +11,7 @@ import { revokeDirectCallAccess } from '../calls/callAccess.js';
 type Params = { userId: string };
 
 async function handleBlock(request: FastifyRequest<{ Params: Params }>, reply: FastifyReply): Promise<void> {
-  const cookies = parseCookies(request.headers.cookie || '');
-  const sess = await resolveSession(cookies[config.SESSION_COOKIE]);
+  const sess = await resolveSession(sessionTokenFromHeaders(request.headers));
   if (!sess) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
 
   const targetId = String(request.params.userId || '');
@@ -28,8 +26,7 @@ async function handleBlock(request: FastifyRequest<{ Params: Params }>, reply: F
 }
 
 async function handleUnblock(request: FastifyRequest<{ Params: Params }>, reply: FastifyReply): Promise<void> {
-  const cookies = parseCookies(request.headers.cookie || '');
-  const sess = await resolveSession(cookies[config.SESSION_COOKIE]);
+  const sess = await resolveSession(sessionTokenFromHeaders(request.headers));
   if (!sess) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
 
   const targetId = String(request.params.userId || '');
@@ -40,8 +37,7 @@ async function handleUnblock(request: FastifyRequest<{ Params: Params }>, reply:
 }
 
 async function handleListBlocks(request: FastifyRequest<{ Querystring: { cursor?: string } }>, reply: FastifyReply): Promise<void> {
-  const cookies = parseCookies(request.headers.cookie || '');
-  const sess = await resolveSession(cookies[config.SESSION_COOKIE]);
+  const sess = await resolveSession(sessionTokenFromHeaders(request.headers));
   if (!sess) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
 
   const page = await listBlocks(sess.userId, request.query.cursor);
