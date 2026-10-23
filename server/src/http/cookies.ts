@@ -32,13 +32,17 @@ export function isSecureRequest(req: IncomingMessage): boolean {
   return false;
 }
 
-export function serializeCookie(name: string, value: string, { maxAgeSec, secure }: { maxAgeSec?: number; secure: boolean }): string {
-  const parts = [`${name}=${encodeURIComponent(value)}`, 'Path=/', 'HttpOnly', 'SameSite=Lax'];
+export function serializeCookie(
+  name: string,
+  value: string,
+  { maxAgeSec, secure, sameSite = 'Lax' }: { maxAgeSec?: number; secure: boolean; sameSite?: 'Lax' | 'None' },
+): string {
+  const parts = [`${name}=${encodeURIComponent(value)}`, 'Path=/', 'HttpOnly', `SameSite=${sameSite}`];
   if (typeof maxAgeSec === 'number') parts.push(`Max-Age=${Math.max(0, Math.floor(maxAgeSec))}`);
   if (secure) parts.push('Secure');
   return parts.join('; ');
 }
 
-export function clearCookie(name: string, { secure }: { secure: boolean }): string {
-  return serializeCookie(name, '', { maxAgeSec: 0, secure });
+export function clearCookie(name: string, { secure, sameSite = 'Lax' }: { secure: boolean; sameSite?: 'Lax' | 'None' }): string {
+  return serializeCookie(name, '', { maxAgeSec: 0, secure, sameSite });
 }
