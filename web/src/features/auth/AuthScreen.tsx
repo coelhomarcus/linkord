@@ -7,18 +7,12 @@ import { useAuth } from '@/state/AuthContext';
 import { ApiError, requestPasswordRecovery, resetPassword } from '@/shared/api/api';
 import type { RecoveryIdentifier } from '@/shared/api/api';
 import { ErrorBanner } from '@/shared/ErrorBanner';
-import { MeshGradient } from '@paper-design/shaders-react';
 import { AuthField } from './AuthField';
 import { Button } from '@/shared/ui/primitives/button';
 import { SegmentedTabs } from './SegmentedTabs';
 import { EASE_OUT } from '@/shared/lib/ease';
 import { OTPInput, type OTPStatus } from '@/shared/ui/motion/otp-input';
 import { ERROR_CODES } from '@/shared/api/errorCodes';
-
-// The shader takes literal colours, not CSS variables: these are the shell
-// surface, the orchid accent, a deep violet beside it and a dark plum, all
-// derived from the tokens in index.css. Update them together with the accent.
-const MESH_COLORS = ['#100b10', '#bc2ab6', '#4c1b82', '#290e28'];
 
 function PasswordToggle({ visible, onToggle }: { visible: boolean; onToggle: () => void }) {
   return (
@@ -308,28 +302,17 @@ export function AuthScreen() {
   const panelTransition = reduce ? { duration: 0 } : { duration: 0.15, ease: EASE_OUT };
 
   return (
-    <div className="relative flex h-dvh items-center justify-center overflow-hidden bg-bg-primary p-4">
-      <div className="absolute inset-0">
-        <MeshGradient
-          colors={MESH_COLORS}
-          distortion={0.85}
-          swirl={0.35}
-          speed={reduce ? 0 : 0.25}
-          className="absolute inset-0 size-full"
-        />
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/10 via-black/25 to-black/60" />
-      </div>
-
-      <div className="relative z-10 flex w-full max-w-100 flex-col items-center gap-6">
+    <div className="flex h-dvh items-center justify-center bg-bg-primary p-4">
+      <div className="flex w-full max-w-100 flex-col items-center gap-6">
         <div className="flex flex-col items-center gap-2 text-center">
-          <img src="/logo.svg" alt="" className="h-12 w-12 drop-shadow-[0_4px_16px_rgba(0,0,0,0.45)]" />
+          <img src="/logo.svg" alt="" className="h-12 w-12" />
           <div>
-            <h1 className="text-display font-bold tracking-tight text-white drop-shadow-sm">Linkord</h1>
-            <p className="text-label text-white/70">Converse e faça chamadas com seu grupo</p>
+            <h1 className="text-display font-bold tracking-tight text-text-primary">Linkord</h1>
+            <p className="text-label text-text-muted">Converse e faça chamadas com seu grupo</p>
           </div>
         </div>
 
-        <motion.div layout={!reduce} className="w-full overflow-hidden rounded-xl border border-border bg-bg-floating/70 p-6 shadow-popover backdrop-blur-2xl">
+        <motion.div layout={!reduce} className="w-full overflow-hidden rounded-xl border border-border bg-surface-panel p-6 shadow-panel">
           <div className="flex w-full flex-col gap-5">
             {!recovery && (
               <SegmentedTabs
