@@ -125,20 +125,20 @@ function fakeLivekitRoomForShare(screenPub?: { isMuted: boolean; track: object }
 }
 
 describe('ScreenShareQuickMenu', () => {
-  it('lists the 3 quality options and switches the preference when picking another', async () => {
+  it('lists the quality options and switches the preference when picking another', async () => {
     const user = userEvent.setup();
     const setShareQuality = vi.fn();
     renderWithRoom(<ScreenShareQuickMenu />, {
       state: { ...initialRoomState, me: { ...initialRoomState.me, id: 'p-1' } },
       livekitRoom: fakeLivekitRoomForShare(),
-      shareQuality: 'standard',
+      shareQuality: 'game',
       setShareQuality,
     });
 
     await user.click(screen.getByRole('button', { name: 'Configurações de compartilhamento de tela' }));
-    await user.click(await screen.findByText('Fluida (720p, 30 fps)'));
+    await user.click(await screen.findByText('Tela (1080p, 30 fps)'));
 
-    expect(setShareQuality).toHaveBeenCalledWith('smooth');
+    expect(setShareQuality).toHaveBeenCalledWith('screen');
   });
 
   it('with no active share, does not show change source or pause preview', async () => {
