@@ -67,9 +67,17 @@ export function useScreenShare(room: Room, dispatch: Dispatch<RoomAction>): Scre
         {
           audio: audioConstraints,
           resolution: quality.resolution,
+          contentHint: quality.contentHint,
           selfBrowserSurface: 'exclude',
         },
-        { videoEncoding: quality.encoding },
+        {
+          // `videoEncoding` is the camera field; screen share only honors
+          // `screenShareEncoding`. One layer: a simulcast half-res layer is
+          // what a game tile would actually subscribe to.
+          screenShareEncoding: quality.encoding,
+          degradationPreference: quality.degradationPreference,
+          simulcast: false,
+        },
       );
     } catch (err) {
       const name = (err as DOMException)?.name;

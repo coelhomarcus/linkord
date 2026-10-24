@@ -26,32 +26,42 @@ describe('useScreenShare — quality applied to the capture', () => {
     localStorage.clear();
   });
 
-  it('without a saved preference, uses the default preset (1080p/30) — same as previous behavior', async () => {
+  it('without a saved preference, publishes the game preset on the screen-share encoding', async () => {
     const setScreenShareEnabled = vi.fn(async () => undefined);
     const room = fakeRoom({ setScreenShareEnabled });
     const { result } = renderHook(() => useScreenShare(room, vi.fn()));
 
     await result.current.startSharing();
 
+    const game = SHARE_QUALITY_PRESETS.game;
     expect(setScreenShareEnabled).toHaveBeenCalledWith(
       true,
-      expect.objectContaining({ resolution: SHARE_QUALITY_PRESETS.standard.resolution }),
-      { videoEncoding: SHARE_QUALITY_PRESETS.standard.encoding },
+      expect.objectContaining({ resolution: game.resolution, contentHint: game.contentHint }),
+      {
+        screenShareEncoding: game.encoding,
+        degradationPreference: game.degradationPreference,
+        simulcast: false,
+      },
     );
   });
 
   it('with a saved quality preference, the next capture uses the chosen preset', async () => {
-    saveShareQuality('smooth');
+    saveShareQuality('screen');
     const setScreenShareEnabled = vi.fn(async () => undefined);
     const room = fakeRoom({ setScreenShareEnabled });
     const { result } = renderHook(() => useScreenShare(room, vi.fn()));
 
     await result.current.startSharing();
 
+    const screenPreset = SHARE_QUALITY_PRESETS.screen;
     expect(setScreenShareEnabled).toHaveBeenCalledWith(
       true,
-      expect.objectContaining({ resolution: SHARE_QUALITY_PRESETS.smooth.resolution }),
-      { videoEncoding: SHARE_QUALITY_PRESETS.smooth.encoding },
+      expect.objectContaining({ resolution: screenPreset.resolution, contentHint: screenPreset.contentHint }),
+      {
+        screenShareEncoding: screenPreset.encoding,
+        degradationPreference: screenPreset.degradationPreference,
+        simulcast: false,
+      },
     );
   });
 });
