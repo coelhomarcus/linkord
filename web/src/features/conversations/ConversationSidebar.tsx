@@ -10,7 +10,6 @@ import { Button } from '@/shared/ui/primitives/button';
 import { Tabs, TabsIndicator, TabsList, TabsTrigger } from '@/shared/ui/primitives/tabs';
 import { Avatar } from '@/shared/Avatar';
 import { cn } from '@/shared/lib/utils';
-import { shortcutHint } from '@/shared/lib/platform';
 import { CountBadge } from '@/shared/CountBadge';
 import { useRoom } from '@/state/RoomContext';
 import type { Conversation } from '@/shared/types/protocol';
@@ -28,7 +27,6 @@ import { NotificationBell } from '@/features/notifications/NotificationBell';
 import { CallDock } from '@/features/calls/CallDock';
 
 interface ConversationSidebarProps {
-  onOpenPalette: () => void;
   onReturnToCall: () => void;
   onOpenProfile: (userId: string) => void;
   showReturnToCall: boolean;
@@ -82,7 +80,7 @@ function ConversationRow({ conversation, active, washId, onClick }: {
           <div className="relative flex-none">
             <GroupAvatar title={title} avatar={conversation.avatar} active={active} size={44} />
             <span className="absolute -bottom-0.5 -right-0.5 grid size-5 place-items-center rounded-full border-2 border-(--cutout) bg-bg-tertiary text-text-secondary transition-[border-color] duration-300">
-              <UsersIcon size={12} />
+              <UsersIcon size={14} weight="fill" />
             </span>
           </div>
         )}
@@ -93,7 +91,7 @@ function ConversationRow({ conversation, active, washId, onClick }: {
               call right now, same spot the time used to sit in. */}
           {hasActiveCall && (
             <span className="mt-0.5 flex items-center gap-1.5">
-              <PhoneIcon size={12} className="flex-none text-green" />
+              <PhoneIcon size={14} weight="fill" className="flex-none text-green" />
               <span className="flex items-center -space-x-1.5">
                 {callParticipants.slice(0, 4).map((p) => (
                   <Avatar key={p.id} id={p.id} name={p.displayName} avatar={p.avatar} avatarColor={p.avatarColor} size={16} className="ring-2 ring-(--cutout) transition-[box-shadow] duration-300" />
@@ -110,7 +108,7 @@ function ConversationRow({ conversation, active, washId, onClick }: {
         <span className="flex flex-none flex-col items-end gap-1">
           {!!conversation.pinnedAt && (
             <span className="flex items-center">
-              <PushPinIcon size={11} weight="fill" className="text-text-muted" />
+              <PushPinIcon size={14} weight="fill" className="text-text-muted" />
             </span>
           )}
           {unread > 0 && (
@@ -129,12 +127,11 @@ function tabForConversation(conversations: Conversation[], conversationId: strin
   return conversation?.type === 'group' ? 'group' : 'direct';
 }
 
-export function ConversationSidebar({ onOpenPalette, onReturnToCall, onOpenProfile, showReturnToCall, mobileRail }: ConversationSidebarProps) {
+export function ConversationSidebar({ onReturnToCall, onOpenProfile, showReturnToCall, mobileRail }: ConversationSidebarProps) {
   const { state, conversations, activeConversationId, openConversation, allUsers, unreadByConversation, requestChatView } = useRoom();
   const { isMobile, isOverlay, setOpenMobile, toggleSidebar } = useSidebar();
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const shortcutK = shortcutHint('K');
   const [query, setQuery] = useState('');
   const [groupOpen, setGroupOpen] = useState(false);
   const [tab, setTab] = useState<ConversationListTab>(() => tabForConversation(conversations, activeConversationId));
@@ -179,12 +176,12 @@ export function ConversationSidebar({ onOpenPalette, onReturnToCall, onOpenProfi
             <div className="flex flex-none items-center gap-2 px-4 py-4">
               <h1 className="min-w-0 flex-1 truncate text-title font-semibold">Conversas</h1>
               <Button type="button" size="icon-sm" aria-label="Criar grupo" onClick={() => setGroupOpen(true)} className="flex-none">
-                <PlusIcon size={16} />
+                <PlusIcon size={20} />
               </Button>
               <NotificationBell onNavigate={() => { if (isOverlay) setOpenMobile(false); }} />
               {!isOverlay && (
                 <Button type="button" variant="ghost" size="icon-sm" aria-label="Ocultar lista de conversas" onClick={toggleSidebar} className="flex-none text-text-muted hover:text-text-primary">
-                  <SidebarSimpleIcon size={16} />
+                  <SidebarSimpleIcon size={20} />
                 </Button>
               )}
             </div>
@@ -192,21 +189,13 @@ export function ConversationSidebar({ onOpenPalette, onReturnToCall, onOpenProfi
             {/* as a column, the gap to the content is the content card's own margin, which stays when the list is hidden */}
             <div className="flex min-h-0 flex-1 flex-col gap-3 pb-3 pl-3 pr-shell lg:pr-0">
               <div className="flex flex-none items-center gap-2 rounded-md border border-border bg-fill-subtle px-3">
-                <MagnifyingGlassIcon size={15} className="text-text-muted" />
+                <MagnifyingGlassIcon size={20} className="text-text-muted" />
                 <input
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                   placeholder={tab === 'group' ? 'Buscar grupos' : 'Buscar amigos'}
                   className="h-10 min-w-0 flex-1 bg-transparent text-label outline-none placeholder:text-text-muted"
                 />
-                <button
-                  type="button"
-                  onClick={onOpenPalette}
-                  aria-label={`Abrir busca rápida (${shortcutK})`}
-                  className="flex-none rounded-sm border border-border bg-black/20 px-1.5 py-0.5 text-micro font-medium text-text-muted transition-colors hover:text-text-secondary"
-                >
-                  {shortcutK}
-                </button>
               </div>
 
               <Tabs
