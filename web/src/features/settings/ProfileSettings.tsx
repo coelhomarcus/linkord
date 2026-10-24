@@ -1,4 +1,3 @@
-import { CheckIcon } from '@phosphor-icons/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import type { Area } from 'react-easy-crop';
@@ -209,19 +208,18 @@ export function ProfileSettings() {
     }
   }
 
-  const showBar = dirty || saveState !== 'idle' || justSaved;
-  // justSaved wins even over a `dirty` that's only true because this test/
-  // fixture render never round-trips state.me back through the reducer —
-  // in the real app the baseline catches up in the same tick save() resolves.
+  const showBar = dirty || saveState === 'saving' || saveState === 'error';
   const barStatusText = saveState === 'error' ? saveError
     : saving ? 'Salvando…'
-    : justSaved ? 'Perfil salvo.'
     : dirty ? 'Você tem alterações não salvas.'
     : '';
 
   return (
     <div className="flex flex-col gap-4">
-      <form onSubmit={handleFormSubmit} className="flex max-w-120 flex-col gap-3">
+      <form
+        onSubmit={handleFormSubmit}
+        className={cn('flex max-w-120 flex-col gap-3', showBar && 'pb-24')}
+      >
         <ProfileCard
           user={{
             id: state.me.id || 'preview',
@@ -272,7 +270,13 @@ export function ProfileSettings() {
           PNG, JPEG, GIF ou WEBP, até {formatMB(MAX_AVATAR_BYTES)}. Foto e banner valem assim que você confirma o recorte; nome, cor, bio e links só depois de salvar.
         </p>
 
-        {conflict && (
+        {justSaved && (
+          <p role="status" className="text-label font-medium text-green">
+            Perfil salvo.
+          </p>
+        )}
+
+        {conflict && dirty && (
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border-strong bg-bg-tertiary px-4 py-3 text-label text-text-secondary">
             <span>Este perfil foi atualizado em outro lugar enquanto você editava.</span>
             <Button type="button" variant="ghost" size="sm" onClick={applyIncoming}>
@@ -283,26 +287,24 @@ export function ProfileSettings() {
 
         {showBar && (
           <div
+            role="region"
+            aria-label="Salvar alterações do perfil"
             className={cn(
-              '-mx-4 sticky flex flex-wrap items-center justify-between gap-3 border-t border-border-strong bg-bg-modal/95 px-4 pt-3 backdrop-blur @[520px]:-mx-6 @[520px]:px-6 @[960px]:-mx-8 @[960px]:px-8',
-              // pb instead of py: the safe-area addition only belongs on the
-              // edge that's actually near the device's bottom inset.
-              'pb-[max(0.75rem,env(safe-area-inset-bottom))]',
-              inCall ? 'bottom-20' : 'bottom-0',
+              'fixed left-1/2 z-50 flex w-[min(100%,28rem)] max-w-[calc(100vw-2rem)] -translate-x-1/2 flex-wrap items-center justify-between gap-3 rounded-xl border border-border-strong bg-bg-floating/95 px-4 py-3 shadow-popover backdrop-blur-xl',
+              inCall ? 'bottom-20' : 'bottom-[max(1rem,env(safe-area-inset-bottom))]',
             )}
           >
             <p role={saveState === 'error' ? 'alert' : undefined} className={saveState === 'error' ? 'text-label text-red' : 'text-label text-text-muted'}>
               {barStatusText}
             </p>
             <div className="flex gap-2">
-              {dirty && !justSaved && (
+              {dirty && (
                 <Button type="button" variant="ghost" size="sm" disabled={saving} onClick={discard}>
                   <span>Descartar</span>
                 </Button>
               )}
               <Button type="submit" size="sm" disabled={saving}>
-                {justSaved && <CheckIcon size={15} />}
-                <span>{saving ? 'Salvando…' : justSaved ? 'Perfil salvo' : 'Salvar perfil'}</span>
+                <span>{saving ? 'Salvando…' : 'Salvar perfil'}</span>
               </Button>
             </div>
           </div>

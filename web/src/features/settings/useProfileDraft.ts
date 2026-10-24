@@ -25,6 +25,22 @@ function fieldsEqual(a: ProfileDraftFields, b: ProfileDraftFields): boolean {
     && na.profileLinks.every((link, i) => link === nb.profileLinks[i]);
 }
 
+/** Map a confirmed profile-result (or the current draft on a void mock) into
+ * draft fields, keeping the editor's trailing empty link row when needed. */
+function draftFromSaveResult(result: unknown, sent: ProfileDraftFields): ProfileDraftFields {
+  if (!result || typeof result !== 'object') return sent;
+  const patch = result as Record<string, unknown>;
+  const links = Array.isArray(patch.profileLinks)
+    ? patch.profileLinks.map((link) => String(link))
+    : sent.profileLinks;
+  return {
+    displayName: typeof patch.displayName === 'string' ? patch.displayName : sent.displayName,
+    avatarColor: typeof patch.avatarColor === 'string' ? patch.avatarColor : sent.avatarColor,
+    bio: typeof patch.bio === 'string' ? patch.bio : sent.bio,
+    profileLinks: links.length ? links : [''],
+  };
+}
+
 export type ProfileDraftSaveState = 'idle' | 'saving' | 'error';
 
 interface UseProfileDraftOptions {
@@ -55,8 +71,12 @@ export function useProfileDraft({ baseline, save: doSave }: UseProfileDraftOptio
     const prevBaseline = baselineRef.current;
     baselineRef.current = baseline;
     if (fieldsEqual(prevBaseline, baseline)) return;
-    if (fieldsEqual(draftRef.current, prevBaseline)) {
-      setDraft(baseline);
+    if (fieldsEqual(draftRef.current, baseline)) {
+      setDraft({ ...baseline, profileLinks: baseline.profileLinks.length ? baseline.profileLinks : [''] });
+      setConflict(false);
+    } else if (fieldsEqual(draftRef.current, prevBaseline)) {
+      setDraft({ ...baseline, profileLinks: baseline.profileLinks.length ? baseline.profileLinks : [''] });
+      setConflict(false);
     } else {
       setConflict(true);
     }
@@ -72,7 +92,8 @@ export function useProfileDraft({ baseline, save: doSave }: UseProfileDraftOptio
     setSaveState('saving');
     setError(null);
     try {
-      await doSave(draft);
+      const result = await doSave(draft);
+      setDraft(draftFromSaveResult(result, draft));
       setSaveState('idle');
       setConflict(false);
     } catch (err) {

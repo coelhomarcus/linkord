@@ -1,9 +1,11 @@
+import { useMemo, useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { RouterProvider, createMemoryRouter, useLocation } from 'react-router';
 import userEvent from '@testing-library/user-event';
 import { initialRoomState } from '@/state/roomReducer';
-import { renderWithRoom } from '@tests/fixtures/roomContextFixture';
+import { createFakeRoomContextValue, renderWithRoom } from '@tests/fixtures/roomContextFixture';
+import { RoomContext } from '@/state/RoomContext';
 import type { RoomContextValue } from '@/state/RoomContext';
 import { SettingsPage } from '@/features/settings/SettingsPage';
 import { ProfileSaveRefused } from '@/features/profile/useProfileUpdate';
@@ -60,7 +62,7 @@ describe('SettingsPage — profile', () => {
 
     await user.click(screen.getByRole('button', { name: 'Usar Fuchsia' }));
     await user.click(screen.getByRole('button', { name: 'Salvar perfil' }));
-    expect(screen.getByRole('button', { name: 'Perfil salvo' })).toBeInTheDocument();
+    expect(await screen.findByRole('status')).toHaveTextContent('Perfil salvo.');
 
     expect(updateProfile).toHaveBeenCalledWith({
       avatar: '',
@@ -235,8 +237,69 @@ describe('SettingsPage — profile', () => {
     await user.type(screen.getByLabelText('Bio'), 'edição pendente');
     await user.click(screen.getByRole('button', { name: 'Salvar perfil' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Você está enviando rápido demais.');
-    expect(screen.queryByRole('button', { name: 'Perfil salvo' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Perfil salvo.')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Salvar perfil' })).toBeEnabled();
+  });
+
+  it('does not show the conflict banner after a successful save updates state.me', async () => {
+    const user = userEvent.setup();
+    const baseMe = {
+      ...initialRoomState.me,
+      id: 'conn-1',
+      userId: 'user-1',
+      name: 'Fulana',
+      displayName: 'Fulana',
+      avatar: '',
+      avatarColor: 'green',
+      bio: '',
+      profileLinks: [] as string[],
+    };
+
+    function Harness() {
+      const [me, setMe] = useState(baseMe);
+      const room = useMemo(() => {
+        const updateProfile = async (profile: {
+          avatar: string; avatarPoster: string; avatarColor: string; displayName: string;
+          banner: string; bannerPoster: string; bio: string; profileLinks: string[];
+        }) => {
+          let next = baseMe;
+          setMe((prev) => {
+            next = {
+              ...prev,
+              displayName: profile.displayName,
+              avatarColor: profile.avatarColor,
+              bio: profile.bio,
+              profileLinks: profile.profileLinks,
+            };
+            return next;
+          });
+          return {
+            displayName: profile.displayName,
+            avatarColor: profile.avatarColor,
+            bio: profile.bio,
+            profileLinks: profile.profileLinks,
+          };
+        };
+        return createFakeRoomContextValue({ state: { ...initialRoomState, me }, updateProfile });
+      }, [me]);
+      const router = createMemoryRouter(
+        [{ path: '/app/settings/:tab?', element: <SettingsPage onOpenProfile={vi.fn()} /> }],
+        { initialEntries: ['/app/settings/profile'] },
+      );
+      return (
+        <RoomContext.Provider value={room}>
+          <RouterProvider router={router} />
+        </RoomContext.Provider>
+      );
+    }
+
+    render(<Harness />);
+    await user.type(screen.getByLabelText('Bio'), 'Bio nova');
+    await user.click(screen.getByRole('button', { name: 'Salvar perfil' }));
+
+    expect(await screen.findByRole('status')).toHaveTextContent('Perfil salvo.');
+    expect(screen.queryByText('Usar valores salvos')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Salvar perfil' })).not.toBeInTheDocument();
   });
 
   it('with no edits, the save bar stays hidden', () => {
@@ -252,23 +315,21 @@ describe('SettingsPage — profile', () => {
     renderSettings({ state, activeCallConversationId: 'conv-1' });
 
     await user.type(screen.getByLabelText('Bio'), 'editando durante a chamada');
-    // button -> the "flex gap-2" buttons row -> the bar itself
-    const bar = screen.getByRole('button', { name: 'Salvar perfil' }).parentElement?.parentElement;
-    // FloatingPip sits fixed at the viewport's bottom-4 left-4 corner —
-    // bottom-0 would put this bar's own buttons right under it.
-    expect(bar?.className).toContain('bottom-20');
-    expect(bar?.className).not.toContain('bottom-0');
+    const bar = screen.getByRole('region', { name: 'Salvar alterações do perfil' });
+    // FloatingPip sits fixed at the viewport's bottom-left — lift the save pill so it stays tappable.
+    expect(bar.className).toContain('bottom-20');
   });
 
-  it('with no active call, the save bar stays in the normal footer', async () => {
+  it('with no active call, the save bar floats above the bottom inset', async () => {
     const user = userEvent.setup();
     const state = { ...initialRoomState, me: { ...initialRoomState.me, id: 'conn-1', userId: 'user-1', name: 'Fulana', displayName: 'Fulana' } };
     renderSettings({ state, activeCallConversationId: null });
 
     await user.type(screen.getByLabelText('Bio'), 'editando sem chamada');
-    const bar = screen.getByRole('button', { name: 'Salvar perfil' }).parentElement?.parentElement;
-    expect(bar?.className).toContain('bottom-0');
-    expect(bar?.className).not.toContain('bottom-20');
+    const bar = screen.getByRole('region', { name: 'Salvar alterações do perfil' });
+    expect(bar.className).toContain('fixed');
+    expect(bar.className).toContain('bottom-[max(1rem,env(safe-area-inset-bottom))]');
+    expect(bar.className).not.toContain('bottom-20');
   });
 
   it('discarding reverts fields to the last confirmed values and hides the bar', async () => {
