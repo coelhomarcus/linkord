@@ -88,6 +88,34 @@ describe('useProfileDraft', () => {
     expect(result.current.error).toBeNull();
   });
 
+  it('after save, a baseline echo matching the draft does not raise conflict', async () => {
+    const saved: ProfileDraftFields = { ...baselineA, bio: 'new bio', profileLinks: [''] };
+    const save = vi.fn().mockResolvedValue({
+      displayName: saved.displayName,
+      avatarColor: saved.avatarColor,
+      bio: saved.bio,
+      profileLinks: [],
+    });
+    const { result, rerender } = setup(baselineA, save);
+    act(() => result.current.setField('bio', 'new bio'));
+
+    await act(async () => { await result.current.save(); });
+    rerender({ baseline: saved });
+
+    expect(result.current.conflict).toBe(false);
+    expect(result.current.dirty).toBe(false);
+  });
+
+  it('when the draft already matches a new baseline, syncs without conflict', () => {
+    const { result, rerender } = setup(baselineA);
+    act(() => result.current.setField('bio', 'new bio'));
+    rerender({ baseline: { ...baselineA, bio: 'new bio' } });
+
+    expect(result.current.conflict).toBe(false);
+    expect(result.current.dirty).toBe(false);
+    expect(result.current.draft.bio).toBe('new bio');
+  });
+
   it('a failed save keeps the error message and preserves the edited draft', async () => {
     const save = vi.fn().mockRejectedValue(new Error('failed'));
     const { result } = setup(baselineA, save);
