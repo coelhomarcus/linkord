@@ -150,6 +150,7 @@ export interface PublicUser {
   bio: string;
   profileLinks: string[];
   role: 'user' | 'admin';
+  lastSeenAt?: string | null;
 }
 
 /** Only the fields present are changed — everything else keeps its last
@@ -241,7 +242,7 @@ export type ServerMessage =
   // (same shape the welcome carries)
   | { t: 'presence-sync'; knownUsers: PublicUser[]; participants: Participant[]; onlineUserIds: string[]; friendIds: string[] }
   | { t: 'user-online'; userId: string }
-  | { t: 'user-offline'; userId: string }
+  | { t: 'user-offline'; userId: string; lastSeenAt?: string | null }
   | { t: 'user-deleted'; userId: string }
   | ({ t: 'storage-usage' } & StorageUsage)
   // answers the `profile` patch of the same requestId, once the server has

@@ -2,7 +2,7 @@ import { and, asc, desc, eq, sql } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { attachments, conversationMembers, conversations, messages, users } from '../../db/schema.js';
 import { destroyAllSessionsForUser, invalidateSessionsForUser } from '../auth/session.js';
-import { broadcastToKnownPeers, participants, sendToUser } from '../presence/participants.js';
+import { broadcastToKnownPeers, listOnlineUserIds, participants, sendToUser } from '../presence/participants.js';
 import { deleteAvatarFile } from '../attachments/attachmentCleanup.js';
 import { reconcileGroupMembership, sendConversationUpdateToMembers } from '../conversations/conversationsRepository.js';
 import { announceRevocations } from '../conversations/invitationsRepository.js';
@@ -197,6 +197,8 @@ const createdAtIso = sql<string>`to_char(${users.createdAt} at time zone 'UTC', 
 export interface AdminUserRow {
   id: string; username: string; displayName: string; avatar: string; avatarColor: string;
   role: string; status: string; createdAt: string;
+  lastSeenAt: string | null;
+  online: boolean;
 }
 
 export interface AdminUserFilters { q?: string; status?: string; role?: string; from?: string; to?: string }
@@ -229,10 +231,13 @@ export async function listAdminUsers(filters: AdminUserFilters, cursorRaw?: stri
     .limit(SOCIAL_PAGE_SIZE + 1);
   const page = rows.slice(0, SOCIAL_PAGE_SIZE);
   const last = page[page.length - 1];
+  const onlineIds = new Set(listOnlineUserIds());
   return {
     items: page.map(({ user: u, ts }) => ({
       id: u.id, username: u.username, displayName: u.displayName.trim() || u.username, avatar: u.avatar, avatarColor: u.avatarColor,
       role: u.role, status: u.status, createdAt: ts,
+      lastSeenAt: u.lastSeenAt ? u.lastSeenAt.toISOString() : null,
+      online: onlineIds.has(u.id),
     })),
     nextCursor: rows.length > SOCIAL_PAGE_SIZE && last ? encodeTimeCursor(last.ts, last.user.id) : null,
   };
@@ -263,6 +268,8 @@ export async function getAdminUser(userId: string) {
       id: u.id, username: u.username, displayName: u.displayName.trim() || u.username, email: u.email, avatar: u.avatar, avatarColor: u.avatarColor,
       role: u.role, status: u.status, statusReason: u.statusReason,
       statusChangedAt: u.statusChangedAt ? u.statusChangedAt.toISOString() : null, createdAt: row.ts,
+      lastSeenAt: u.lastSeenAt ? u.lastSeenAt.toISOString() : null,
+      online: listOnlineUserIds().includes(u.id),
     },
     groups,
     storage: { bytes: usage?.bytes ?? 0, files: usage?.files ?? 0 },

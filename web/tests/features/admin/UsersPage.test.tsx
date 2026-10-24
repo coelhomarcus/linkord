@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { renderAdmin } from './adminFixture';
+import { chooseAdminSelect, renderAdmin } from './adminFixture';
 import { UsersPage } from '@/features/admin/UsersPage';
 import * as adminApi from '@/features/admin/adminApi';
 
 vi.mock('@/features/admin/adminApi');
 const mocked = vi.mocked(adminApi);
 const user = (over: Partial<adminApi.AdminUserRow> = {}): adminApi.AdminUserRow => ({
-  id: 'u1', username: 'ana', displayName: 'Ana', avatar: '', avatarColor: 'blurple', role: 'user', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', ...over,
+  id: 'u1', username: 'ana', displayName: 'Ana', avatar: '', avatarColor: 'blurple', role: 'user', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', lastSeenAt: null, online: false, ...over,
 });
 
 beforeEach(() => {
@@ -26,15 +26,24 @@ describe('UsersPage', () => {
     expect(mocked.fetchAdminUsers).toHaveBeenCalledWith({ q: '', status: undefined, role: undefined }, null);
   });
 
+  it('the last-seen column says Online for a connected account', async () => {
+    mocked.fetchAdminUsers.mockResolvedValue({
+      items: [user({ lastSeenAt: '2026-10-24T14:32:00.000Z', online: true })],
+      nextCursor: null,
+    });
+    renderAdmin(<UsersPage />, { path: '/admin/users', pattern: '/admin/users' });
+    expect(await screen.findByText('Online')).toBeInTheDocument();
+  });
+
   it('the status and role filters reach the server', async () => {
     const u = userEvent.setup();
     renderAdmin(<UsersPage />, { path: '/admin/users', pattern: '/admin/users' });
     await screen.findByText('Ana');
-    await u.selectOptions(screen.getByLabelText('Situação'), 'suspended');
+    await chooseAdminSelect(u, 'Situação', 'Suspensas');
     await waitFor(() => expect(mocked.fetchAdminUsers).toHaveBeenLastCalledWith({ q: '', status: 'suspended', role: undefined }, null));
-    await u.selectOptions(screen.getByLabelText('Papel'), 'admin');
+    await chooseAdminSelect(u, 'Papel', 'Administradores');
     await waitFor(() => expect(mocked.fetchAdminUsers).toHaveBeenLastCalledWith({ q: '', status: 'suspended', role: 'admin' }, null));
-    await u.selectOptions(screen.getByLabelText('Papel'), 'user');
+    await chooseAdminSelect(u, 'Papel', 'Usuários comuns');
     await waitFor(() => expect(mocked.fetchAdminUsers).toHaveBeenLastCalledWith({ q: '', status: 'suspended', role: 'user' }, null));
   });
 

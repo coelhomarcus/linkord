@@ -6,6 +6,7 @@ import { Button } from '@/shared/ui/primitives/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
 import { Avatar } from '@/shared/Avatar';
 import { useRoom } from '@/state/RoomContext';
+import { formatLastSeen } from '@/shared/lib/formatLastSeen';
 import { conversationTitle, directUser, groupMembers } from './conversationUtils';
 import { GroupAvatar } from './GroupAvatar';
 import { ChatSurface } from '@/features/chat/ChatSurface';
@@ -39,7 +40,7 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
   const online = other ? onlineUserIds.has(other.id) : false;
   const subtitle = conversation?.type === 'group'
     ? `${members.length} membros`
-    : other ? (online ? 'Online' : 'Offline') : '';
+    : other ? (online ? 'Online' : formatLastSeen(other.lastSeenAt)) : '';
   // `state.participants` only ever holds OTHER people (the server excludes
   // yourself from it) — my own row in this list has to come from `state.me`
   // instead, gated on whether I'm actually the one in this call.

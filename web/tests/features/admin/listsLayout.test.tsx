@@ -16,7 +16,7 @@ vi.mock('@/features/admin/useAdminMode', async (importOriginal) => ({
 const mocked = vi.mocked(adminApi);
 
 const user = (over: Partial<adminApi.AdminUserRow> = {}): adminApi.AdminUserRow => ({
-  id: 'u1', username: 'ana', displayName: 'Ana', avatar: '', avatarColor: 'blurple', role: 'user', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', ...over,
+  id: 'u1', username: 'ana', displayName: 'Ana', avatar: '', avatarColor: 'blurple', role: 'user', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', lastSeenAt: null, online: false, ...over,
 });
 const group = (over: Partial<adminApi.AdminGroupRow> = {}): adminApi.AdminGroupRow => ({
   id: 'g1', title: 'Squad', avatar: '', status: 'active', memberCount: 3, ownerId: 'u1', ownerUsername: 'ana', createdBy: 'u1', createdAt: '2026-01-01T00:00:00.000Z', lastMessageAt: null, ...over,
@@ -33,7 +33,7 @@ describe('UsersPage layout', () => {
   it('wide: a real table with a column per attribute and a count of what is loaded', async () => {
     renderAdmin(<UsersPage />, { path: '/admin/users', pattern: '/admin/users' });
     const table = await screen.findByRole('table', { name: 'Contas' });
-    expect(within(table).getAllByRole('columnheader').map((th) => th.textContent)).toEqual(['Usuário', 'Situação', 'Papel', 'Criada em', 'Ações']);
+    expect(within(table).getAllByRole('columnheader').map((th) => th.textContent)).toEqual(['Usuário', 'Situação', 'Papel', 'Criada em', 'Última vez', 'Ações']);
     expect(within(table).getAllByRole('row')).toHaveLength(3);
     expect(screen.getByText('2 contas carregadas')).toBeInTheDocument();
   });

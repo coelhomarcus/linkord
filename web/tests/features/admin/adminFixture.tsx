@@ -1,6 +1,8 @@
 import type { ReactElement } from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router';
+import { screen } from '@testing-library/react';
 import type { RenderResult } from '@testing-library/react';
+import type { UserEvent } from '@testing-library/user-event';
 import type { RoomContextValue } from '@/state/RoomContext';
 import { initialRoomState } from '@/state/roomReducer';
 import { invalidateAdminLists } from '@/features/admin/adminListCache';
@@ -24,6 +26,11 @@ export function renderAdmin(ui: ReactElement, { path, pattern, room = adminRoom(
     </MemoryRouter>,
     room,
   );
+}
+
+export async function chooseAdminSelect(user: UserEvent, label: string, option: string): Promise<void> {
+  await user.click(screen.getByRole('combobox', { name: label }));
+  await user.click(await screen.findByRole('option', { name: option }));
 }
 
 export const auditRow = (over: Record<string, unknown> = {}) => ({

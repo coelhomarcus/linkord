@@ -309,11 +309,15 @@ describe('self-reported media state (mic-state / camera / screen-share / speakin
 });
 
 describe('broadcastToKnownPeers (Etapa 7 — presence scoping)', () => {
-  function fakeSocketWithSpy(userId: string): { socket: AppSocket; emitted: string[] } {
+  function fakeSocketWithSpy(userId: string): { socket: AppSocket; emitted: string[]; payloads: Array<{ t: string; [key: string]: unknown }> } {
     const emitted: string[] = [];
+    const payloads: Array<{ t: string; [key: string]: unknown }> = [];
     const socket = fakeSocket(userId);
-    (socket as unknown as { emit: (t: string) => void }).emit = (t: string) => { emitted.push(t); };
-    return { socket, emitted };
+    (socket as unknown as { emit: (t: string, obj: { t: string; [key: string]: unknown }) => void }).emit = (t, obj) => {
+      emitted.push(t);
+      payloads.push(obj);
+    };
+    return { socket, emitted, payloads };
   }
 
   test('delivers only to those who have the subject in their own knownPeerIds', () => {
@@ -364,6 +368,25 @@ describe('broadcastToKnownPeers (Etapa 7 — presence scoping)', () => {
 
     assert.ok(friendConn.emitted.includes('participant-updated'));
     assert.equal(blockedConn.emitted.includes('participant-updated'), false);
+  });
+
+  test('user-offline includes lastSeenAt when the last connection leaves', () => {
+    const subjectId = `u-${Math.random()}`;
+    const knowerConn = fakeSocketWithSpy(`u-${Math.random()}`);
+    const knower = joinP(knowerConn.socket, {})!;
+    createdIds.push(knower.id);
+    knower.knownPeerIds.add(subjectId);
+
+    const subject = joinP(fakeSocket(subjectId), {})!;
+    knowerConn.emitted.length = 0;
+    knowerConn.payloads.length = 0;
+    removeParticipant(subject);
+
+    const offline = knowerConn.payloads.find((p) => p.t === 'user-offline');
+    assert.ok(offline);
+    assert.equal(offline.userId, subjectId);
+    assert.equal(typeof offline.lastSeenAt, 'string');
+    assert.match(String(offline.lastSeenAt), /^\d{4}-\d{2}-\d{2}T/);
   });
 
   test('always delivers to other tabs of the SAME account, even without knownPeerIds', () => {
