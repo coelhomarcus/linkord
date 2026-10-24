@@ -3,7 +3,7 @@ import { fireEvent, screen } from '@testing-library/react';
 import { initialRoomState } from '@/state/roomReducer';
 import type { RoomContextValue } from '@/state/RoomContext';
 import { ConversationPanel } from '@/features/conversations/ConversationPanel';
-import type { Conversation } from '@/shared/types/protocol';
+import type { Conversation, PublicUser } from '@/shared/types/protocol';
 import { SidebarProvider } from '@/shared/ui/motion/sidebar';
 import { renderSocial } from '@tests/fixtures/socialFixture';
 import * as api from '@/shared/api/api';
@@ -82,6 +82,52 @@ describe('ConversationPanel — call button', () => {
     mockedApi.fetchRelationship.mockResolvedValue({ relation: 'friends', retryAfter: null });
     renderPanel({ state: { ...me, callJoinError: { conversationId: 'outra', message: 'falhou' } } });
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+});
+
+describe('ConversationPanel — DM subtitle', () => {
+  const direct: Conversation = {
+    id: 'c1', type: 'direct', title: '', avatar: '', createdBy: null, memberIds: ['me', 'peer'],
+    lastMessageAt: null, createdAt: 0, updatedAt: 0, pinnedAt: null, myRole: 'member', ownerId: null, memberCount: 0,
+  };
+  const peer: PublicUser = {
+    id: 'peer', username: 'peer', displayName: 'Peer', avatar: '', avatarColor: 'blurple',
+    banner: '', bio: '', profileLinks: [], role: 'user', lastSeenAt: new Date(2026, 9, 24, 14, 32).toISOString(),
+  };
+  const me = { ...joinedState, me: { ...initialRoomState.me, userId: 'me' } };
+
+  function renderDm(online: boolean, lastSeenAt: string | null) {
+    mockedApi.fetchRequestSummary.mockResolvedValue({ incoming: 0, invitations: 0 });
+    mockedApi.fetchRelationship.mockResolvedValue({ relation: 'friends', retryAfter: null });
+    renderSocial(
+      <SidebarProvider>
+        <ConversationPanel onOpenProfile={() => {}} onOpenCall={() => {}} onOpenSearch={() => {}} detailsOpen={false} mediaOpen={false} onOpenDetails={() => {}} onToggleDetails={() => {}} onToggleMedia={() => {}} />
+      </SidebarProvider>,
+      {
+        room: {
+          state: me, conversations: [direct], activeConversationId: 'c1',
+          allUsers: new Map([['peer', { ...peer, lastSeenAt }]]),
+          onlineUserIds: new Set(online ? ['peer'] : []),
+        },
+      },
+    );
+  }
+
+  afterEach(() => { vi.clearAllMocks(); });
+
+  it('shows Online when the peer is connected', () => {
+    renderDm(true, peer.lastSeenAt ?? null);
+    expect(screen.getByText('Online')).toBeInTheDocument();
+  });
+
+  it('shows last seen when the peer is offline', () => {
+    renderDm(false, new Date(2026, 9, 24, 14, 32).toISOString());
+    expect(screen.getByText(/^Última vez online /)).toBeInTheDocument();
+  });
+
+  it('falls back to Offline without a timestamp', () => {
+    renderDm(false, null);
+    expect(screen.getByText('Offline')).toBeInTheDocument();
   });
 });
 

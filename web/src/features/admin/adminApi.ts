@@ -42,6 +42,7 @@ const post = <T = { ok: true }>(path: string, body: Record<string, unknown>) => 
 export interface AdminUserRow {
   id: string; username: string; displayName: string; avatar: string; avatarColor: string;
   role: 'user' | 'admin'; status: 'active' | 'suspended'; createdAt: string;
+  lastSeenAt: string | null; online: boolean;
 }
 export interface AuditRow {
   id: string; at: string; actorId: string | null; actorLabel: string; action: string; targetType: string;

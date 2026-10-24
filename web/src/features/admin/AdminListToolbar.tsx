@@ -3,6 +3,7 @@ import { useId, useState } from 'react';
 import type { ReactNode } from 'react';
 
 import { Button } from '@/shared/ui/primitives/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/primitives/select';
 import { cn } from '@/shared/lib/utils';
 
 const FIELD = 'h-9 rounded-md border border-border bg-fill-subtle px-2.5 text-label text-text-primary outline-none focus-visible:ring-2 focus-visible:ring-ring';
@@ -13,12 +14,20 @@ export function AdminSelectField<T extends string>({ label, value, onChange, opt
   onChange: (next: T) => void;
   options: { value: T; label: string }[];
 }) {
+  const selected = options.find((option) => option.value === value)?.label ?? value;
   return (
     <label className="flex min-w-0 flex-col gap-1 text-caption text-text-muted">
       {label}
-      <select value={value} onChange={(event) => onChange(event.target.value as T)} className={cn(FIELD, 'text-text-primary')}>
-        {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-      </select>
+      <Select value={value} onValueChange={(next) => { if (next) onChange(next as T); }}>
+        <SelectTrigger aria-label={label} className="w-full min-w-36">
+          <SelectValue>{() => selected}</SelectValue>
+        </SelectTrigger>
+        <SelectContent align="start">
+          {options.map((option) => (
+            <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </label>
   );
 }

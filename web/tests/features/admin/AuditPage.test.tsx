@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { renderAdmin, auditRow } from './adminFixture';
+import { auditRow, chooseAdminSelect, renderAdmin } from './adminFixture';
 import { AuditPage } from '@/features/admin/AuditPage';
 import { useAdminTableFits } from '@/features/admin/useAdminMode';
 import * as adminApi from '@/features/admin/adminApi';
@@ -68,15 +68,14 @@ describe('AuditPage', () => {
     const u = userEvent.setup();
     open();
     await screen.findByRole('table');
-    await u.selectOptions(screen.getByLabelText('Ação'), 'Conta suspensa');
+    await chooseAdminSelect(u, 'Ação', 'Conta suspensa');
     await waitFor(() => expect(mocked.fetchAudit).toHaveBeenLastCalledWith(expect.objectContaining({ action: 'user.suspend' }), null));
   });
 
   it('an action code the labels do not know is kept from the URL, not reset', async () => {
     open('/admin/audit?action=custom.thing');
     await screen.findByRole('table');
-    expect(screen.getByLabelText('Ação')).toHaveValue('custom.thing');
-    expect(screen.getByRole('option', { name: 'custom.thing (código desconhecido)' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Ação' })).toHaveTextContent('custom.thing (código desconhecido)');
     expect(mocked.fetchAudit).toHaveBeenCalledWith(expect.objectContaining({ action: 'custom.thing' }), null);
   });
 
@@ -85,7 +84,7 @@ describe('AuditPage', () => {
     open();
     await screen.findByRole('table');
     expect(screen.queryByRole('button', { name: 'Limpar filtros' })).not.toBeInTheDocument();
-    await u.selectOptions(screen.getByLabelText('Tipo de alvo'), 'group');
+    await chooseAdminSelect(u, 'Tipo de alvo', 'Grupo');
     await u.type(screen.getByLabelText('Administrador'), 'lune');
     await u.type(screen.getByLabelText('ID do alvo'), 'g1');
     await waitFor(() => expect(mocked.fetchAudit).toHaveBeenLastCalledWith(expect.objectContaining({ targetType: 'group', actor: 'lune', targetId: 'g1' }), null));

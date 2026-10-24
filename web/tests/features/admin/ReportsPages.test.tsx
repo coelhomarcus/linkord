@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { renderAdmin } from './adminFixture';
+import { chooseAdminSelect, renderAdmin } from './adminFixture';
 import { ApiError } from '@/shared/api/api';
 import { useAdminTableFits } from '@/features/admin/useAdminMode';
 import { ReportsPage } from '@/features/admin/ReportsPage';
@@ -46,9 +46,9 @@ describe('ReportsPage', () => {
     const u = userEvent.setup();
     renderAdmin(<ReportsPage />, { path: '/admin/reports', pattern: '/admin/reports' });
     await screen.findByRole('table');
-    await u.selectOptions(screen.getByLabelText('Fila'), 'closed');
+    await chooseAdminSelect(u, 'Fila', 'Encerradas');
     await waitFor(() => expect(mocked.fetchAdminReports).toHaveBeenLastCalledWith({ status: 'closed', targetType: undefined }, null));
-    await u.selectOptions(screen.getByLabelText('Tipo de alvo'), 'group');
+    await chooseAdminSelect(u, 'Tipo de alvo', 'Grupos');
     await waitFor(() => expect(mocked.fetchAdminReports).toHaveBeenLastCalledWith({ status: 'closed', targetType: 'group' }, null));
   });
 

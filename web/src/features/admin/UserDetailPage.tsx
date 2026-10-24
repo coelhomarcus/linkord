@@ -11,7 +11,7 @@ import { AdminEntityHeader } from './AdminEntityHeader';
 import { AdminActionRow, AdminFieldRow, AdminFields, AdminSection } from './AdminSection';
 import { ReasonDialog } from './ReasonDialog';
 import { formatWhen } from './adminFormat';
-import { AuditList, Badge, DetailStatusView, ListChrome, RefreshFailedNotice } from './adminUi';
+import { AdminTextLink, AuditList, Badge, DetailStatusView, ListChrome, RefreshFailedNotice } from './adminUi';
 import { RESTORE_LIST, useAdminBack } from './useAdminBack';
 import { useAdminDetail } from './useAdminDetail';
 import { useAdminQuery } from './useAdminQuery';
@@ -52,7 +52,7 @@ function UserDetail({ id }: { id: string }) {
   const [deleted, setDeleted] = useState(false);
   const [ownSessionsEnded, setOwnSessionsEnded] = useState(false);
 
-  if (deleted) return <p className="py-8 text-center text-label text-text-muted">Conta excluída. <Link to={back} className="underline">Voltar à lista</Link></p>;
+  if (deleted) return <p className="py-8 text-center text-label text-text-muted">Conta excluída. <AdminTextLink to={back}>Voltar à lista</AdminTextLink></p>;
   if (!detail) return <DetailStatusView status={status} missing="Conta não encontrada." failed="Não foi possível carregar a conta." backTo={back} backLabel="Voltar" onRetry={reload} />;
 
   const { user, groups, storage } = detail;
@@ -68,7 +68,7 @@ function UserDetail({ id }: { id: string }) {
 
   return (
     <div className="flex flex-col gap-5">
-      <Link to={back} state={RESTORE_LIST} className="w-fit text-caption text-text-muted underline">← Usuários</Link>
+      <AdminTextLink to={back} state={RESTORE_LIST} className="w-fit text-caption text-text-muted">← Usuários</AdminTextLink>
       {refreshFailed && <RefreshFailedNotice refreshing={refreshing} onRetry={() => void refresh()} />}
       {ownSessionsEnded && (
         <p role="status" className="rounded-lg border border-yellow/30 bg-yellow/10 px-3 py-2 text-label text-text-primary">
@@ -101,15 +101,16 @@ function UserDetail({ id }: { id: string }) {
           <AdminFields>
             <AdminFieldRow label="E-mail">{user.email ?? '—'}</AdminFieldRow>
             <AdminFieldRow label="Criada em">{formatWhen(user.createdAt)}</AdminFieldRow>
+            <AdminFieldRow label="Última vez online">{user.online ? 'Online agora' : formatWhen(user.lastSeenAt)}</AdminFieldRow>
             <AdminFieldRow label="Situação">
               {suspended ? `Suspensa em ${formatWhen(user.statusChangedAt)} — “${user.statusReason}”` : 'Ativa'}
             </AdminFieldRow>
             <AdminFieldRow label="Papel">{isAdmin ? 'Administradora' : 'Conta comum'}</AdminFieldRow>
             <AdminFieldRow label="Armazenamento atribuível">{formatFileSize(storage.bytes)} em {storage.files} arquivo(s)</AdminFieldRow>
             <AdminFieldRow label="Grupos">
-              {groups.length === 0 ? 'Não participa de nenhum grupo.' : <Link to={{ search: '?tab=groups' }} className="underline">Ver os {groups.length} grupo(s)</Link>}
+              {groups.length === 0 ? 'Não participa de nenhum grupo.' : <AdminTextLink to={{ search: '?tab=groups' }}>Ver os {groups.length} grupo(s)</AdminTextLink>}
             </AdminFieldRow>
-            <AdminFieldRow label="Histórico"><Link to={{ search: '?tab=history' }} className="underline">Ver ações registradas sobre esta conta</Link></AdminFieldRow>
+            <AdminFieldRow label="Histórico"><AdminTextLink to={{ search: '?tab=history' }}>Ver ações registradas sobre esta conta</AdminTextLink></AdminFieldRow>
           </AdminFields>
         </AdminSection>
       )}

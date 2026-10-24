@@ -48,7 +48,7 @@ describe('the bare /admin entry, with the real measurement', () => {
 
 describe('table or stacked rows follows the CONTENT column, not the area', () => {
   it('a wide area whose content column is narrow (conversation list open on a laptop) stacks the rows — no cut-off columns', async () => {
-    mocked.fetchAdminUsers.mockResolvedValue({ items: [{ id: 'u1', username: 'ana', displayName: 'Ana', avatar: '', avatarColor: 'blurple', role: 'user', status: 'active', createdAt: '2026-01-01T00:00:00.000Z' }], nextCursor: null });
+    mocked.fetchAdminUsers.mockResolvedValue({ items: [{ id: 'u1', username: 'ana', displayName: 'Ana', avatar: '', avatarColor: 'blurple', role: 'user', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', lastSeenAt: null, online: false }], nextCursor: null });
     withWidths(972, 732);
     renderAdmin(<AdminArea />, { path: '/admin/users', pattern: '/admin/*' });
     expect(await screen.findByText('Ana')).toBeInTheDocument();
@@ -58,7 +58,7 @@ describe('table or stacked rows follows the CONTENT column, not the area', () =>
   });
 
   it('a wide content column gets the table', async () => {
-    mocked.fetchAdminUsers.mockResolvedValue({ items: [{ id: 'u1', username: 'ana', displayName: 'Ana', avatar: '', avatarColor: 'blurple', role: 'user', status: 'active', createdAt: '2026-01-01T00:00:00.000Z' }], nextCursor: null });
+    mocked.fetchAdminUsers.mockResolvedValue({ items: [{ id: 'u1', username: 'ana', displayName: 'Ana', avatar: '', avatarColor: 'blurple', role: 'user', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', lastSeenAt: null, online: false }], nextCursor: null });
     withWidths(1300, 1060);
     renderAdmin(<AdminArea />, { path: '/admin/users', pattern: '/admin/*' });
     expect(await screen.findByRole('table', { name: 'Contas' })).toBeInTheDocument();

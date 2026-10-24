@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Link } from 'react-router';
 import { Button } from '@/shared/ui/primitives/button';
 import { formatFileSize } from '@/shared/lib/formatBytes';
 import { fetchSystem, sweepOrphans } from './adminApi';
@@ -8,7 +7,7 @@ import { AdminFieldRow, AdminFields, AdminSection } from './AdminSection';
 import { ReasonDialog } from './ReasonDialog';
 import { describeAdminError } from './adminErrors';
 import { formatWhen } from './adminFormat';
-import { DetailStatusView } from './adminUi';
+import { AdminTextLink, DetailStatusView } from './adminUi';
 import { useAdminDetail } from './useAdminDetail';
 
 const AUDIT_SWEEP_FAILURES = '/admin/audit?action=storage.orphan_delete';
@@ -162,7 +161,7 @@ export function SystemPage() {
             <SweepCard title="Coleta executada" result={executed} tone={executed.failed > 0 ? 'danger' : undefined} />
             {executed.failed > 0 && (
               <p role="alert" className="text-label text-red-text">
-                {executed.failed} arquivo(s) não puderam ser apagados. <Link to={AUDIT_SWEEP_FAILURES} className="underline">Ver as falhas na auditoria</Link>
+                {executed.failed} arquivo(s) não puderam ser apagados. <AdminTextLink to={AUDIT_SWEEP_FAILURES}>Ver as falhas na auditoria</AdminTextLink>
               </p>
             )}
           </>

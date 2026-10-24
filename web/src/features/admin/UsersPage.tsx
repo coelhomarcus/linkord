@@ -7,7 +7,7 @@ import { buttonVariants } from '@/shared/ui/primitives/button';
 import { useUrlSearch } from '@/shared/hooks/useUrlSearch';
 import { fetchAdminUsers } from './adminApi';
 import type { AdminUserRow } from './adminApi';
-import { dayStartIso, formatDateShort, formatWhen, nextDayStartIso } from './adminFormat';
+import { dayStartIso, formatDateShort, formatWhen, formatWhenShort, nextDayStartIso } from './adminFormat';
 import { AdminDateField, AdminListToolbar, AdminSelectField } from './AdminListToolbar';
 import { AdminTable, AdminTd, AdminTh, AdminTr } from './AdminTable';
 import { Badge, ListChrome } from './adminUi';
@@ -28,6 +28,10 @@ const QUERY: QuerySchema<'q' | 'status' | 'role' | 'from' | 'to'> = {
   from: { default: '' },
   to: { default: '' },
 };
+
+function lastSeenLabel(user: AdminUserRow): string {
+  return user.online ? 'Online' : formatWhenShort(user.lastSeenAt);
+}
 
 function RowActions({ user }: { user: AdminUserRow }) {
   return (
@@ -96,7 +100,7 @@ export function UsersPage() {
           <AdminTable caption="Contas">
             <thead>
               <tr>
-                <AdminTh className="min-w-52">Usuário</AdminTh><AdminTh>Situação</AdminTh><AdminTh>Papel</AdminTh><AdminTh>Criada em</AdminTh><AdminTh className="text-right">Ações</AdminTh>
+                <AdminTh className="min-w-52">Usuário</AdminTh><AdminTh>Situação</AdminTh><AdminTh>Papel</AdminTh><AdminTh>Criada em</AdminTh><AdminTh>Última vez</AdminTh><AdminTh className="text-right">Ações</AdminTh>
               </tr>
             </thead>
             <tbody>
@@ -106,6 +110,7 @@ export function UsersPage() {
                   <AdminTd><Badge value={u.status} /></AdminTd>
                   <AdminTd><Badge value={u.role} /></AdminTd>
                   <AdminTd className="whitespace-nowrap">{formatDateShort(u.createdAt)}</AdminTd>
+                  <AdminTd className="whitespace-nowrap">{lastSeenLabel(u)}</AdminTd>
                   <AdminTd><RowActions user={u} /></AdminTd>
                 </AdminTr>
               ))}
@@ -123,6 +128,7 @@ export function UsersPage() {
                   <Badge value={u.status} />
                   <Badge value={u.role} />
                   <span>criada em {formatWhen(u.createdAt)}</span>
+                  <span>{u.online ? 'Online' : `última vez ${formatWhenShort(u.lastSeenAt)}`}</span>
                 </div>
               </li>
             ))}

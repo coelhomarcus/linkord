@@ -4,6 +4,7 @@ import { config } from '../../config/env.js';
 import { updateProfile } from '../profile/profileRepository.js';
 import { sanitizeAvatar, sanitizeBanner, sanitizeAvatarColor, sanitizeDisplayName, sanitizeBio, sanitizeProfileLinks } from '../profile/sanitize.js';
 import { deleteAvatarFile, isOwnedProfileImage } from '../attachments/attachmentCleanup.js';
+import { recordUserLastSeen } from '../users/users.js';
 import { runSerialized } from './profileQueue.js';
 import type { AppSocket, HandlerTable, Participant, PublicParticipant } from '../../types.js';
 import { logger } from '../../lib/logger.js';
@@ -116,7 +117,13 @@ export function removeParticipant(p: Participant): void {
   broadcastToKnownPeers(p.userId, { t: 'participant-left', id: p.id });
   // only here (not handleClose) to respect the same grace window as
   // 'participant-left' — a brief network drop shouldn't flicker offline.
-  if (!isUserOnline(p.userId)) broadcastToKnownPeers(p.userId, { t: 'user-offline', userId: p.userId });
+  if (!isUserOnline(p.userId)) {
+    const lastSeenAt = new Date();
+    void recordUserLastSeen(p.userId, lastSeenAt).catch((err) => {
+      log.error('failed to persist lastSeenAt', err, { userId: p.userId });
+    });
+    broadcastToKnownPeers(p.userId, { t: 'user-offline', userId: p.userId, lastSeenAt: lastSeenAt.toISOString() });
+  }
 }
 
 function countConnectionsOf(userId: string): number {

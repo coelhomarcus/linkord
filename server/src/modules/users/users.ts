@@ -17,6 +17,7 @@ export interface PublicUser {
   bio: string;
   profileLinks: string[];
   role: Role;
+  lastSeenAt: string | null;
 }
 
 export interface PrivateUser extends PublicUser {
@@ -36,7 +37,15 @@ export function publicUser(u: User): PublicUser {
     avatar: u.avatar, avatarColor: u.avatarColor, banner: u.banner, bio: u.bio,
     profileLinks: Array.isArray(u.profileLinks) ? u.profileLinks : [],
     role: u.role as Role,
+    lastSeenAt: u.lastSeenAt ? u.lastSeenAt.toISOString() : null,
   };
+}
+
+/** Marks when the account's last live socket went away. Fire-and-forget from
+ * presence so a brief network blip that already passed the grace window is
+ * what peers (and admin) see as last seen — not every join. */
+export async function recordUserLastSeen(userId: string, at: Date): Promise<void> {
+  await db.update(users).set({ lastSeenAt: at }).where(eq(users.id, userId));
 }
 
 export function privateUser(u: User): PrivateUser {

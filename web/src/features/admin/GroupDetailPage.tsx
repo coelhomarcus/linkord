@@ -11,7 +11,7 @@ import { AdminEntityHeader } from './AdminEntityHeader';
 import { AdminActionRow, AdminFieldRow, AdminFields, AdminSection } from './AdminSection';
 import { ReasonDialog } from './ReasonDialog';
 import { formatWhen } from './adminFormat';
-import { AuditList, Badge, DetailStatusView, ListChrome, RefreshFailedNotice } from './adminUi';
+import { AdminTextLink, AuditList, Badge, DetailStatusView, ListChrome, RefreshFailedNotice } from './adminUi';
 import { RESTORE_LIST, useAdminBack } from './useAdminBack';
 import { useAdminDetail } from './useAdminDetail';
 import { useAdminQuery } from './useAdminQuery';
@@ -75,7 +75,7 @@ function GroupDetail({ id }: { id: string }) {
     }
   }
 
-  if (deleted) return <p className="py-8 text-center text-label text-text-muted">Grupo excluído. <Link to={back} className="underline">Voltar à lista</Link></p>;
+  if (deleted) return <p className="py-8 text-center text-label text-text-muted">Grupo excluído. <AdminTextLink to={back}>Voltar à lista</AdminTextLink></p>;
   if (!detail) return <DetailStatusView status={status} missing="Grupo não encontrado." failed="Não foi possível carregar o grupo." backTo={back} backLabel="Voltar" onRetry={reload} />;
 
   const { group } = detail;
@@ -88,7 +88,7 @@ function GroupDetail({ id }: { id: string }) {
 
   return (
     <div className="flex flex-col gap-5">
-      <Link to={back} state={RESTORE_LIST} className="w-fit text-caption text-text-muted underline">← Grupos</Link>
+      <AdminTextLink to={back} state={RESTORE_LIST} className="w-fit text-caption text-text-muted">← Grupos</AdminTextLink>
       {refreshFailed && <RefreshFailedNotice refreshing={refreshing} onRetry={() => void refresh()} />}
 
       <AdminEntityHeader

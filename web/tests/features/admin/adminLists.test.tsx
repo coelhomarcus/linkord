@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
-import { adminRoom, renderAdmin } from './adminFixture';
+import { adminRoom, chooseAdminSelect, renderAdmin } from './adminFixture';
 import { renderWithRoom } from '@tests/fixtures/roomContextFixture';
 import { UsersPage } from '@/features/admin/UsersPage';
 import { UserDetailPage } from '@/features/admin/UserDetailPage';
@@ -16,7 +16,7 @@ vi.mock('@/features/admin/adminApi');
 const mocked = vi.mocked(adminApi);
 
 const user = (over: Partial<adminApi.AdminUserRow> = {}): adminApi.AdminUserRow => ({
-  id: 'u1', username: 'ana', displayName: 'Ana', avatar: '', avatarColor: 'blurple', role: 'user', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', ...over,
+  id: 'u1', username: 'ana', displayName: 'Ana', avatar: '', avatarColor: 'blurple', role: 'user', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', lastSeenAt: null, online: false, ...over,
 });
 
 function Where() {
@@ -40,8 +40,8 @@ describe('filters live in the URL', () => {
     await screen.findByText('Ana');
     expect(mocked.fetchAdminUsers).toHaveBeenCalledWith({ q: 'bia', status: 'suspended', role: 'admin' }, null);
     expect(screen.getByLabelText('Buscar usuários')).toHaveValue('bia');
-    expect(screen.getByLabelText('Situação')).toHaveValue('suspended');
-    expect(screen.getByLabelText('Papel')).toHaveValue('admin');
+    expect(screen.getByRole('combobox', { name: 'Situação' })).toHaveTextContent('Suspensas');
+    expect(screen.getByRole('combobox', { name: 'Papel' })).toHaveTextContent('Administradores');
   });
 
   it('an unknown filter value in the URL is ignored instead of breaking the list', async () => {
@@ -59,7 +59,7 @@ describe('filters live in the URL', () => {
     );
     await screen.findByText('Nenhuma conta encontrada.');
     expect(screen.queryByRole('button', { name: 'Limpar filtros' })).not.toBeInTheDocument();
-    await u.selectOptions(screen.getByLabelText('Situação'), 'suspended');
+    await chooseAdminSelect(u, 'Situação', 'Suspensas');
     expect(screen.getByLabelText('location')).toHaveTextContent('/admin/users?status=suspended');
     await u.click(await screen.findByRole('button', { name: 'Limpar filtros' }));
     expect(screen.getByLabelText('location')).toHaveTextContent(/^\/admin\/users$/);

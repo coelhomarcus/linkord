@@ -13,7 +13,7 @@ vi.mock('@/features/admin/adminApi');
 const mocked = vi.mocked(adminApi);
 
 const user = (id: string): adminApi.AdminUserRow => ({
-  id, username: id, displayName: id.toUpperCase(), avatar: '', avatarColor: 'blurple', role: 'user', status: 'active', createdAt: '2026-01-01T00:00:00.000Z',
+  id, username: id, displayName: id.toUpperCase(), avatar: '', avatarColor: 'blurple', role: 'user', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', lastSeenAt: null, online: false,
 });
 const detail = (id: string): adminApi.AdminUserDetail => ({
   user: { ...user(id), email: `${id}@example.com`, statusReason: '', statusChangedAt: null },

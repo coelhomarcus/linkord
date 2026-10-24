@@ -37,6 +37,10 @@ export const users = pgTable('users', {
   status: varchar('status', { length: 16 }).notNull().default('active'),
   statusReason: text('status_reason').notNull().default(''),
   statusChangedAt: timestamp('status_changed_at', { withTimezone: true }),
+  // Last time the account actually went offline (last live socket gone,
+  // after the reconnect grace). Null until the first disconnect after this
+  // column existed — the migration backfills from sessions.last_seen_at.
+  lastSeenAt: timestamp('last_seen_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [

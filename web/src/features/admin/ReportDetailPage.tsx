@@ -10,7 +10,7 @@ import { AdminEntityHeader } from './AdminEntityHeader';
 import { AdminActionRow, AdminFieldRow, AdminFields, AdminSection } from './AdminSection';
 import { ReasonDialog } from './ReasonDialog';
 import { REPORT_RESOLUTION_LABEL, REPORT_TARGET_LABEL, formatWhen } from './adminFormat';
-import { AuditList, Badge, DetailStatusView, RefreshFailedNotice } from './adminUi';
+import { AdminTextLink, AuditList, Badge, DetailStatusView, RefreshFailedNotice } from './adminUi';
 import { RESTORE_LIST, useAdminBack } from './useAdminBack';
 import { useAdminDetail } from './useAdminDetail';
 
@@ -74,7 +74,7 @@ function ReportDetail({ id }: { id: string }) {
 
   return (
     <div className="flex flex-col gap-5">
-      <Link to={back} state={RESTORE_LIST} className="w-fit text-caption text-text-muted underline">← Denúncias</Link>
+      <AdminTextLink to={back} state={RESTORE_LIST} className="w-fit text-caption text-text-muted">← Denúncias</AdminTextLink>
       {refreshFailed && <RefreshFailedNotice refreshing={refreshing} onRetry={() => void refresh()} />}
 
       <AdminEntityHeader
@@ -105,7 +105,7 @@ function ReportDetail({ id }: { id: string }) {
             <AdminFieldRow label="Tipo">{REPORT_TARGET_LABEL[report.targetType]}</AdminFieldRow>
             <AdminFieldRow label="Nome">{report.targetLabel || '—'}</AdminFieldRow>
             <AdminFieldRow label="ID"><span className="break-all font-mono text-caption">{report.targetId}</span></AdminFieldRow>
-            {targetHref && <AdminFieldRow label="Administração"><Link to={targetHref} className="underline">Abrir no admin</Link></AdminFieldRow>}
+            {targetHref && <AdminFieldRow label="Administração"><AdminTextLink to={targetHref}>Abrir no admin</AdminTextLink></AdminFieldRow>}
           </AdminFields>
         </AdminSection>
       )}

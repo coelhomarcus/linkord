@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Link } from 'react-router';
+import { Link, type LinkProps } from 'react-router';
 import { Button } from '@/shared/ui/primitives/button';
 import { cn } from '@/shared/lib/utils';
 import type { AuditRow } from './adminApi';
@@ -16,6 +16,20 @@ const LABELS: Record<string, string> = {
   active: 'Ativo', suspended: 'Suspenso', open: 'Aberta', reviewing: 'Em análise', resolved: 'Resolvida', dismissed: 'Dispensada',
   admin: 'Admin', user: 'Usuário',
 };
+
+/** In-flow navigation that used to be a raw underlined `<Link>`. */
+export function AdminTextLink({ to, state, children, className }: {
+  to: LinkProps['to'];
+  state?: unknown;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <Button variant="link" size="sm" className={cn('h-auto px-0', className)} render={<Link to={to} state={state} />}>
+      {children}
+    </Button>
+  );
+}
 
 export function Badge({ value }: { value: string }) {
   return <span className={cn('inline-flex flex-none rounded-sm px-1.5 py-0.5 text-micro font-medium', TONES[value] ?? 'bg-fill-active text-text-muted')}>{LABELS[value] ?? value}</span>;
@@ -114,7 +128,7 @@ export function DetailStatusView({ status, missing, failed, backTo, backLabel, o
 }) {
   if (status === 'loading') return <p className="py-8 text-center text-label text-text-muted">Carregando…</p>;
   if (status === 'missing') {
-    return <p className="py-8 text-center text-label text-text-muted">{missing} <Link to={backTo} className="underline">{backLabel}</Link></p>;
+    return <p className="py-8 text-center text-label text-text-muted">{missing} <AdminTextLink to={backTo}>{backLabel}</AdminTextLink></p>;
   }
   if (status === 'error') {
     return (

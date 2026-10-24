@@ -63,6 +63,14 @@ export function usePresence() {
       next.delete(m.userId);
       return next;
     });
+    if (!m.lastSeenAt) return;
+    setAllUsers((prev) => {
+      const existing = prev.get(m.userId);
+      if (!existing || existing.lastSeenAt === m.lastSeenAt) return prev;
+      const next = new Map(prev);
+      next.set(m.userId, { ...existing, lastSeenAt: m.lastSeenAt });
+      return next;
+    });
   }, []);
   const onUserDeleted = useCallback((m: Extract<ServerMessage, { t: 'user-deleted' }>) => {
     setAllUsers((prev) => {

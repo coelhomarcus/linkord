@@ -12,7 +12,7 @@ vi.mock('@/features/admin/adminApi');
 const mocked = vi.mocked(adminApi);
 
 const detail = (over: Partial<adminApi.AdminUserDetail['user']> = {}): adminApi.AdminUserDetail => ({
-  user: { id: 'u1', username: 'ana', displayName: 'Ana', avatar: '', avatarColor: 'blurple', role: 'user', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', email: 'ana@example.com', statusReason: '', statusChangedAt: null, ...over },
+  user: { id: 'u1', username: 'ana', displayName: 'Ana', avatar: '', avatarColor: 'blurple', role: 'user', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', lastSeenAt: null, online: false, email: 'ana@example.com', statusReason: '', statusChangedAt: null, ...over },
   groups: [{ id: 'g1', title: 'Squad', status: 'active', role: 'owner' }],
   storage: { bytes: 2048, files: 2 },
   history: [auditRow()],
@@ -34,6 +34,13 @@ describe('UserDetailPage', () => {
     expect(screen.getByRole('heading', { name: 'Ana' })).toBeInTheDocument();
     expect(screen.getByText('u1')).toBeInTheDocument();
     expect(screen.getByText('Ativa')).toBeInTheDocument();
+    expect(screen.getByText('Última vez online').parentElement).toHaveTextContent('—');
+  });
+
+  it('shows Online agora when the account is connected', async () => {
+    mocked.fetchAdminUser.mockResolvedValue(detail({ online: true, lastSeenAt: '2026-10-24T14:32:00.000Z' }));
+    open();
+    expect(await screen.findByText('Online agora')).toBeInTheDocument();
   });
 
   it('the groups tab lists the groups with the role of the account in each', async () => {
