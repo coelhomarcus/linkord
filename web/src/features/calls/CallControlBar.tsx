@@ -74,7 +74,7 @@ export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(fu
     <div
       ref={ref}
       className={cn(
-        'absolute bottom-[calc(1.5rem+env(safe-area-inset-bottom))] left-1/2 z-20 flex -translate-x-1/2 flex-col items-center gap-2 transition-opacity duration-200 motion-reduce:transition-none',
+        'absolute bottom-[calc(0.75rem+env(safe-area-inset-bottom))] left-1/2 z-20 flex -translate-x-1/2 flex-col items-center gap-2 transition-opacity duration-200 motion-reduce:transition-none',
         hudVisible ? 'opacity-100' : 'pointer-events-none opacity-0'
       )}
     >
