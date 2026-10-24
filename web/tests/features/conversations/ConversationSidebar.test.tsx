@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { renderSocial } from '@tests/fixtures/socialFixture';
 import { SidebarProvider } from '@/shared/ui/motion/sidebar';
 import { ConversationSidebar } from '@/features/conversations/ConversationSidebar';
@@ -36,7 +37,12 @@ function callParticipant(): Participant {
   };
 }
 
-function renderSidebar(overrides: { activeCallConversationId?: string | null; participants?: Map<string, Participant> } = {}) {
+function renderSidebar(overrides: {
+  activeCallConversationId?: string | null;
+  participants?: Map<string, Participant>;
+  activeConversationId?: string | null;
+  unreadByConversation?: Map<string, number>;
+} = {}) {
   const dm = directConversation();
   const group = groupConversation();
   return renderSocial(
@@ -50,10 +56,18 @@ function renderSidebar(overrides: { activeCallConversationId?: string | null; pa
         allUsers: new Map([['u-bea', bea]]),
         messagesByConversation: new Map([['conv-dm', [lastMessage('conv-dm')]]]),
         activeCallConversationId: overrides.activeCallConversationId ?? null,
+        activeConversationId: overrides.activeConversationId ?? null,
+        unreadByConversation: overrides.unreadByConversation ?? new Map(),
       },
       path: '/app/conversations',
     },
   );
+}
+
+async function openGroupsTab() {
+  const user = userEvent.setup();
+  await user.click(screen.getByRole('tab', { name: 'Grupos' }));
+  return user;
 }
 
 describe('ConversationSidebar — the conversation row only shows the name (no @, no preview, no "members")', () => {
@@ -64,8 +78,9 @@ describe('ConversationSidebar — the conversation row only shows the name (no @
     expect(screen.queryByText(/@bea/)).not.toBeInTheDocument();
   });
 
-  it('group with no message: shows only the title, not the member count', () => {
+  it('group with no message: shows only the title, not the member count', async () => {
     renderSidebar();
+    await openGroupsTab();
     expect(screen.getByText('os xerecas')).toBeInTheDocument();
     expect(screen.queryByText(/membros/)).not.toBeInTheDocument();
   });
@@ -76,22 +91,67 @@ describe('ConversationSidebar — the conversation row only shows the name (no @
     expect(screen.queryByText(/^\d{1,2}:\d{2}$/)).not.toBeInTheDocument();
   });
 
-  it('no active call: the conversation row has only one line (the name), nothing below', () => {
+  it('no active call: the conversation row has only one line (the name), nothing below', async () => {
     renderSidebar();
+    await openGroupsTab();
     const title = screen.getByText('os xerecas');
     // title's own wrapping <span> has no sibling below it (no second line) —
     // the row only grows a second line when there's a call to show.
     expect(title.parentElement?.children).toHaveLength(1);
   });
 
-  it('group with an active call: a second line appears with who is on the call, in the slot where the date used to be', () => {
+  it('group with an active call: a second line appears with who is on the call, in the slot where the date used to be', async () => {
     const participants = new Map([['p-bea', callParticipant()]]);
     renderSidebar({ participants });
+    await openGroupsTab();
     const title = screen.getByText('os xerecas');
     // title's row now has a sibling block below it — the call indicator, in
     // the exact slot the removed timestamp used to occupy.
     expect(title.parentElement?.children).toHaveLength(2);
     expect(title.nextElementSibling).not.toBeNull();
     expect(title.nextElementSibling?.textContent).not.toContain('os xerecas');
+  });
+});
+
+describe('ConversationSidebar — Amigos / Grupos tabs', () => {
+  it('defaults to Amigos: shows the DM and hides the group', () => {
+    renderSidebar();
+    expect(screen.getByText('Bea')).toBeInTheDocument();
+    expect(screen.queryByText('os xerecas')).not.toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Amigos' })).toHaveAttribute('data-active');
+  });
+
+  it('clicking Grupos shows the group and hides the DM', async () => {
+    renderSidebar();
+    await openGroupsTab();
+    expect(screen.getByText('os xerecas')).toBeInTheDocument();
+    expect(screen.queryByText('Bea')).not.toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Grupos' })).toHaveAttribute('data-active');
+  });
+
+  it('search only filters the active tab', async () => {
+    const user = userEvent.setup();
+    renderSidebar();
+    await user.type(screen.getByPlaceholderText('Buscar amigos'), 'xerecas');
+    expect(screen.getByText('Nenhuma conversa.')).toBeInTheDocument();
+    expect(screen.queryByText('os xerecas')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('tab', { name: 'Grupos' }));
+    expect(screen.getByPlaceholderText('Buscar grupos')).toBeInTheDocument();
+    expect(screen.getByText('os xerecas')).toBeInTheDocument();
+    expect(screen.queryByText('Nenhuma conversa.')).not.toBeInTheDocument();
+  });
+
+  it('shows an unread count on the Grupos tab when a group has unread', () => {
+    renderSidebar({ unreadByConversation: new Map([['conv-group', 3]]) });
+    expect(screen.getByRole('tab', { name: 'Grupos' })).toHaveTextContent('3');
+    expect(screen.getByRole('tab', { name: 'Amigos' })).not.toHaveTextContent('3');
+  });
+
+  it('opens on Grupos when the active conversation is a group', () => {
+    renderSidebar({ activeConversationId: 'conv-group' });
+    expect(screen.getByText('os xerecas')).toBeInTheDocument();
+    expect(screen.queryByText('Bea')).not.toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Grupos' })).toHaveAttribute('data-active');
   });
 });
