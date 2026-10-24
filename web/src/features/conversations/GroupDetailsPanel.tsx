@@ -16,7 +16,7 @@ import { ConfirmDialog } from '@/shared/ConfirmDialog';
 import { ImageUrlDialog } from '@/shared/ImageUrlDialog';
 import { UploadProgressBar } from '@/shared/UploadProgressBar';
 import { formatMB } from '@/shared/lib/formatBytes';
-import { uploadWithProgress } from '@/shared/lib/uploadWithProgress';
+import { uploadCroppedProfileImage } from '@/features/settings/uploadCroppedProfileImage';
 import { cn } from '@/shared/lib/utils';
 import { useRoom } from '@/state/RoomContext';
 import { AVATAR_MIME_TYPES, MAX_AVATAR_BYTES } from '@/shared/types/protocol';
@@ -238,12 +238,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
     setUploadingAvatar(true);
     closeCropDialog();
     try {
-      const body = await uploadWithProgress<{ avatar: string }>({
-        url: `/api/avatar?crop=${encodeURIComponent(JSON.stringify(crop))}`,
-        file: target.file,
-        headers: { 'Content-Type': target.file.type || 'application/octet-stream' },
-        onProgress: setAvatarUploadProgress,
-      });
+      const body = await uploadCroppedProfileImage(target.file, crop, setAvatarUploadProgress);
       updateGroupAvatar(conversationId, body.avatar);
     } catch (err) {
       setAvatarError(err instanceof Error ? err.message : 'Falha ao enviar a foto.');

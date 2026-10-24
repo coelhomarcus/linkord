@@ -3,7 +3,7 @@ import { afterEach } from 'vitest';
 import { cleanup } from '@testing-library/react';
 
 afterEach(() => {
-  cleanup();
+  if (typeof document !== 'undefined') cleanup();
 });
 
 if (typeof globalThis.ResizeObserver === 'undefined') {
@@ -34,14 +34,14 @@ if (typeof globalThis.IntersectionObserver === 'undefined') {
     thresholds: ReadonlyArray<number> = [];
   } as unknown as typeof IntersectionObserver;
 }
-if (typeof Element.prototype.scrollIntoView === 'undefined') {
+if (typeof Element !== 'undefined' && typeof Element.prototype.scrollIntoView === 'undefined') {
   Element.prototype.scrollIntoView = () => {};
 }
 if (typeof URL.createObjectURL === 'undefined') {
   URL.createObjectURL = () => 'blob:mock';
   URL.revokeObjectURL = () => {};
 }
-if (typeof window.matchMedia === 'undefined') {
+if (typeof window !== 'undefined' && typeof window.matchMedia === 'undefined') {
   window.matchMedia = (query: string) => ({
     matches: false,
     media: query,

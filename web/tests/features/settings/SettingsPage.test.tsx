@@ -41,6 +41,11 @@ vi.mock('@/features/settings/ImageCropDialog', () => ({
     ) : null,
 }));
 
+vi.mock('@/shared/ImageUrlDialog', () => ({
+  ImageUrlDialog: ({ open, onConfirm }: { open: boolean; onConfirm: (url: string) => void }) =>
+    open ? <button type="button" onClick={() => void onConfirm('https://example.com/foto.png')}>Confirmar URL</button> : null,
+}));
+
 describe('SettingsPage — profile', () => {
   it('saves the chosen color for the avatar background', async () => {
     const user = userEvent.setup();
@@ -209,6 +214,25 @@ describe('SettingsPage — profile', () => {
     // whatever is currently typed into displayName/bio/color/links
     expect(uploadProfileImage).toHaveBeenCalledWith('avatar', file, { x: 0, y: 0, width: 10, height: 10 }, expect.any(Function));
     expect(uploadProfileImage).not.toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.anything(), expect.anything(), expect.anything());
+  });
+
+  it('applies a profile photo URL without opening the crop dialog', async () => {
+    const user = userEvent.setup();
+    const applyImagePatch = vi.fn().mockResolvedValue({});
+    const uploadProfileImage = vi.fn();
+    const state = {
+      ...initialRoomState,
+      me: { ...initialRoomState.me, id: 'conn-1', userId: 'user-1', name: 'Fulana', displayName: 'Fulana', avatar: '', avatarColor: 'green' },
+    };
+    renderSettings({ state, applyImagePatch, uploadProfileImage });
+
+    await user.click(screen.getByRole('button', { name: 'Alterar foto de perfil' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Usar URL' }));
+    await user.click(screen.getByRole('button', { name: 'Confirmar URL' }));
+
+    expect(applyImagePatch).toHaveBeenCalledWith('avatar', 'https://example.com/foto.png', '');
+    expect(uploadProfileImage).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: 'Confirmar recorte' })).not.toBeInTheDocument();
   });
 
   it('removes the profile photo via an isolated request (not through the form\'s updateProfile)', async () => {

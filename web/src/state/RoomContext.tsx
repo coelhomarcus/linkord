@@ -94,9 +94,11 @@ export interface RoomContextValue {
    * `ProfileSaveOffline` (see features/profile/useProfileUpdate.ts) otherwise
    * — a caller must never show "salvo" just because this was called. */
   updateProfile: (profile: { avatar: string; avatarPoster: string; avatarColor: string; displayName: string; banner: string; bannerPoster: string; bio: string; profileLinks: string[] }) => Promise<unknown>;
-  /** Uploads the file, then persists ONLY that image field — never whatever
-   * else happens to be typed in the profile form right now. */
+  /** Crops locally, uploads the result, then persists ONLY that image
+   * field — never whatever else happens to be typed in the profile form. */
   uploadProfileImage: (field: 'avatar' | 'banner', file: Blob, crop: CropRect, onProgress?: (fraction: number) => void) => Promise<string>;
+  /** Sets avatar/banner to an already-public URL (the "Usar URL" path). */
+  applyImagePatch: (field: 'avatar' | 'banner', url: string, posterUrl: string) => Promise<unknown>;
   /** Same isolation as `uploadProfileImage`, for "remover foto/banner". */
   removeProfileImage: (field: 'avatar' | 'banner') => Promise<unknown>;
   menuTarget: { key: string; participantId: string; kind: TileKind; rect: AnchorRect } | null;

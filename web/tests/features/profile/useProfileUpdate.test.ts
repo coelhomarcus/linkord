@@ -5,6 +5,10 @@ import {
   ProfileSaveOffline, ProfileSaveRefused, ProfileSaveTimeout, describeProfileSaveError, useProfileUpdate,
 } from '@/features/profile/useProfileUpdate';
 
+vi.mock('@/features/settings/uploadCroppedProfileImage', () => ({
+  uploadCroppedProfileImage: vi.fn(async () => ({ avatar: '/uploads/novo', avatarPoster: '/uploads/poster' })),
+}));
+
 const fullProfile = { avatar: '', avatarPoster: '', avatarColor: 'blurple', displayName: 'Fulana', banner: '', bannerPoster: '', bio: '', profileLinks: [] };
 
 function setup(isConnected = () => true) {
@@ -37,24 +41,9 @@ describe('useProfileUpdate', () => {
   });
 
   it('uploadProfileImage never includes displayName/bio/color/links — only the image fields', async () => {
-    // uploadWithProgress.ts drives a raw XMLHttpRequest (property assignment,
-    // not addEventListener) — this fake matches exactly that shape.
-    class FakeXHR {
-      upload = { onprogress: null as (() => void) | null };
-      onload: (() => void) | null = null;
-      onerror: (() => void) | null = null;
-      open = vi.fn();
-      setRequestHeader = vi.fn();
-      status = 200;
-      responseText = JSON.stringify({ avatar: '/uploads/novo', avatarPoster: '/uploads/poster' });
-      send = vi.fn(() => { queueMicrotask(() => this.onload?.()); });
-    }
-    // @ts-expect-error test double, not the real constructor signature
-    global.XMLHttpRequest = FakeXHR;
-
     const { result, sent } = setup();
     const uploadPromise = result.current.uploadProfileImage('avatar', new Blob(['x']), { x: 0, y: 0, width: 1, height: 1 });
-    await act(async () => { await Promise.resolve(); await Promise.resolve(); });
+    await act(async () => { await Promise.resolve(); });
     expect(sent).toHaveLength(1);
     const patch = sent[0] as any;
     expect(patch).toMatchObject({ t: 'profile', avatar: '/uploads/novo', avatarPoster: '/uploads/poster' });
