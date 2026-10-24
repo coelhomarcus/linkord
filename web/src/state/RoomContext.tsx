@@ -7,6 +7,7 @@ import type { TileKind } from '../features/calls/tileTypes';
 import type { OutboxEntry } from '@/features/chat/useMessageOutbox';
 import type { ReactionParticipantsTarget } from '@/features/chat/reactionParticipants';
 import type { ShareQualityId } from '@/features/calls/shareQualityPresets';
+import type { ColorThemeId } from '@/features/settings/useColorThemePreference';
 
 export interface ReactionEvent {
   key: number;
@@ -115,6 +116,8 @@ export interface RoomContextValue {
   setShowTileBanners: (value: boolean) => void;
   compressImagesDefault: boolean;
   setCompressImagesDefault: (value: boolean) => void;
+  colorTheme: ColorThemeId;
+  setColorTheme: (value: ColorThemeId) => void;
   /** Local self-view only — never flips the track actually sent. */
   mirrorCameraPreview: boolean;
   setMirrorCameraPreview: (value: boolean) => void;

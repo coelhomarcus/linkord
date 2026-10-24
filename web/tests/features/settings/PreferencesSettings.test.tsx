@@ -14,13 +14,33 @@ function renderPreferences(overrides: Parameters<typeof createFakeRoomContextVal
 }
 
 describe('PreferencesSettings', () => {
-  it('shows all 4 controls from the plan table, with each one\'s real state', () => {
-    renderPreferences({ showTileBanners: true, hideAudioOnlyTiles: true, showStats: false, compressImagesDefault: false });
+  it('shows theme choices and call/upload toggles with each control\'s real state', () => {
+    renderPreferences({
+      colorTheme: 'whatsapp',
+      showTileBanners: true,
+      hideAudioOnlyTiles: true,
+      showStats: false,
+      compressImagesDefault: false,
+    });
 
+    expect(screen.getByRole('combobox', { name: 'Tema de cores' })).toHaveTextContent('Meia-noite');
     expect(screen.getByRole('switch', { name: 'Mostrar banners nos tiles' })).toBeChecked();
     expect(screen.getByRole('switch', { name: 'Ocultar participantes sem vídeo' })).toBeChecked();
     expect(screen.getByRole('switch', { name: 'Mostrar estatísticas' })).not.toBeChecked();
     expect(screen.getByRole('switch', { name: 'Compactar imagens por padrão' })).not.toBeChecked();
+  });
+
+  it('selecting a color theme calls setColorTheme and updates data-theme', async () => {
+    const setColorTheme = vi.fn((id: string) => {
+      document.documentElement.dataset.theme = id;
+    });
+    const user = userEvent.setup();
+    renderPreferences({ colorTheme: 'linkord', setColorTheme });
+
+    await user.click(screen.getByRole('combobox', { name: 'Tema de cores' }));
+    await user.click(await screen.findByRole('option', { name: 'Grafite' }));
+    expect(setColorTheme).toHaveBeenCalledWith('discord');
+    expect(document.documentElement.dataset.theme).toBe('discord');
   });
 
   it('hiding audio-only participants calls the room settings setter', async () => {
