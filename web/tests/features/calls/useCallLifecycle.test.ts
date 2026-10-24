@@ -4,6 +4,12 @@ import { DisconnectReason, RoomEvent } from 'livekit-client';
 import type { Room } from 'livekit-client';
 import { useCallLifecycle } from '@/features/calls/useCallLifecycle';
 
+vi.mock('@/shared/sounds', () => ({
+  playSound: vi.fn(),
+  preloadSounds: vi.fn(),
+  setVolume: vi.fn(),
+}));
+
 function fakeRoom(connect: () => Promise<void>) {
   const listeners = new Map<string, Set<(...args: unknown[]) => void>>();
   return {
@@ -16,17 +22,22 @@ function fakeRoom(connect: () => Promise<void>) {
   } as unknown as Room & { emit: (event: string, ...args: unknown[]) => void };
 }
 
-function setup(connect: () => Promise<void> = async () => undefined) {
+function setup(connect: () => Promise<void> = async () => undefined, extras: {
+  activateMic?: () => Promise<void>;
+  setMicMuted?: (muted: boolean) => Promise<void>;
+} = {}) {
   const dispatch = vi.fn();
   const sendWs = vi.fn();
   const livekitRoom = fakeRoom(connect);
+  const activateMic = vi.fn(extras.activateMic ?? (async () => undefined));
+  const setMicMuted = vi.fn(extras.setMicMuted ?? (async (_muted: boolean) => undefined));
   const { result } = renderHook(() => useCallLifecycle({
     livekitRoom, dispatch, sendWs,
     stopCamera: vi.fn(), stopSharing: vi.fn(),
-    activateMic: vi.fn(async () => undefined), setMicMuted: vi.fn(async () => undefined), leaveMic: vi.fn(async () => undefined),
+    activateMic, setMicMuted, leaveMic: vi.fn(async () => undefined),
     cameraOn: false, sharing: false,
   }));
-  return { result, dispatch, sendWs, livekitRoom };
+  return { result, dispatch, sendWs, livekitRoom, activateMic, setMicMuted };
 }
 
 const token = { conversationId: 'c1', livekitUrl: 'wss://lk', livekitToken: 't' };
@@ -82,5 +93,41 @@ describe('useCallLifecycle — call that failed to start', () => {
     await act(async () => { rejectConnect(new Error('Client initiated disconnect')); });
 
     expect(dispatch).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'SET_CALL_JOIN_ERROR', error: expect.anything() }));
+  });
+});
+
+describe('useCallLifecycle — preferMuted', () => {
+  it('remembers the mute preference before a call exists', () => {
+    const { result } = setup();
+    expect(result.current.preferMuted).toBe(false);
+    act(() => { result.current.setPreferMuted(true); });
+    expect(result.current.preferMuted).toBe(true);
+  });
+
+  it('mutes the microphone after join when preferMuted is on', async () => {
+    const { result, activateMic, setMicMuted } = setup();
+    act(() => { result.current.setPreferMuted(true); });
+    await act(async () => { await result.current.joinCall('c1'); });
+    await act(async () => { result.current.onCallToken(token); });
+    await vi.waitFor(() => expect(activateMic).toHaveBeenCalled());
+    expect(setMicMuted).toHaveBeenCalledWith(true);
+  });
+
+  it('leaves the microphone open after join when preferMuted is off', async () => {
+    const { result, activateMic, setMicMuted } = setup();
+    await act(async () => { await result.current.joinCall('c1'); });
+    await act(async () => { result.current.onCallToken(token); });
+    await vi.waitFor(() => expect(activateMic).toHaveBeenCalled());
+    expect(setMicMuted).not.toHaveBeenCalled();
+  });
+
+  it('mutes after join when deafened even if preferMuted is off', async () => {
+    const { result, activateMic, setMicMuted } = setup();
+    act(() => { result.current.toggleDeafened(); });
+    setMicMuted.mockClear();
+    await act(async () => { await result.current.joinCall('c1'); });
+    await act(async () => { result.current.onCallToken(token); });
+    await vi.waitFor(() => expect(activateMic).toHaveBeenCalled());
+    expect(setMicMuted).toHaveBeenCalledWith(true);
   });
 });

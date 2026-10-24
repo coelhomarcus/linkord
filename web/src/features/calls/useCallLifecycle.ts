@@ -48,6 +48,15 @@ export function useCallLifecycle(deps: CallLifecycleDeps) {
   }, [audioUnlocked]);
 
   const [deafened, setDeafened] = useState(false);
+  const deafenedRef = useRef(false);
+  useEffect(() => { deafenedRef.current = deafened; }, [deafened]);
+
+  const [preferMuted, setPreferMutedState] = useState(false);
+  const preferMutedRef = useRef(false);
+  const setPreferMuted = useCallback((muted: boolean) => {
+    preferMutedRef.current = muted;
+    setPreferMutedState(muted);
+  }, []);
 
   // LiveKit retries the connection on its own on a network hiccup — this just
   // surfaces that it's happening, distinct from RoomEvent.Disconnected below
@@ -108,7 +117,10 @@ export function useCallLifecycle(deps: CallLifecycleDeps) {
   const onCallToken = useCallback((m: { conversationId: string; livekitUrl: string; livekitToken: string }) => {
     if (m.conversationId !== pendingCallConversationIdRef.current) return;
     livekitRoom.connect(m.livekitUrl, m.livekitToken)
-      .then(() => activateMic())
+      .then(async () => {
+        await activateMic();
+        if (preferMutedRef.current || deafenedRef.current) await setMicMuted(true);
+      })
       .catch((err) => {
         log.error('LiveKit connect failed', err, { conversationId: m.conversationId });
         // Already left (or switched calls) while connecting — that rejection
@@ -125,7 +137,7 @@ export function useCallLifecycle(deps: CallLifecycleDeps) {
         dispatch({ type: 'SET_CALL_JOIN_ERROR', error: { conversationId: m.conversationId, message: 'Não foi possível conectar à chamada. Verifique sua conexão e tente de novo.' } });
       });
     setActiveCallConversationId(m.conversationId);
-  }, [livekitRoom, activateMic, setActiveCallConversationId, sendWs, dispatch]);
+  }, [livekitRoom, activateMic, setMicMuted, setActiveCallConversationId, sendWs, dispatch]);
 
   /** If a conversation currently in a call gets deleted out from under us
    * (admin action), leave it — same as clicking "leave call" ourselves. */
@@ -225,7 +237,7 @@ export function useCallLifecycle(deps: CallLifecycleDeps) {
   }, [isSpeakingLocal, sendWs]);
 
   return {
-    audioUnlocked, deafened, toggleDeafened, reconnecting,
+    audioUnlocked, deafened, toggleDeafened, preferMuted, setPreferMuted, reconnecting,
     activeCallConversationId, joinCall, leaveCall, kickFromCall,
     onCallToken, onConversationDeleted, onCallJoinRejected,
   };

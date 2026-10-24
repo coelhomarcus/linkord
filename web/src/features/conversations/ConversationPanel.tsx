@@ -58,6 +58,8 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
         ? 'Vocês precisam ser amigos para fazer chamadas.'
         : null;
   const callJoinError = state.callJoinError && state.callJoinError.conversationId === conversation?.id ? state.callJoinError.message : null;
+  const inThisCall = !!conversation && activeCallConversationId === conversation.id;
+  const callActionLabel = inThisCall ? 'Voltar à chamada' : 'Entrar na chamada';
 
   return (
     <main className="flex h-full min-w-0 flex-1 flex-col text-text-primary">
@@ -124,15 +126,17 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
               <Tooltip>
                 {/* a disabled button gets no pointer events, so the tooltip hangs off a wrapper */}
                 <TooltipTrigger render={<span tabIndex={0} className="inline-flex rounded-md focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50" />}>
-                  <Button type="button" size="icon-sm" aria-label="Entrar na chamada" disabled className="bg-bg-tertiary text-text-muted">
+                  <Button type="button" size="sm" disabled className="bg-bg-tertiary text-text-muted">
                     <Phone size={16} />
+                    Entrar na chamada
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom">{callBlockedReason}</TooltipContent>
               </Tooltip>
             ) : (
-              <Button type="button" size="icon-sm" aria-label="Entrar na chamada" disabled={conversation.status === 'suspended'} onClick={() => onOpenCall(conversation.id)} className="bg-green/16 text-green hover:bg-green/24">
+              <Button type="button" size="sm" disabled={conversation.status === 'suspended'} onClick={() => onOpenCall(conversation.id)} className="bg-green/16 text-green hover:bg-green/24">
                 <Phone size={16} />
+                {callActionLabel}
               </Button>
             )}
           </header>

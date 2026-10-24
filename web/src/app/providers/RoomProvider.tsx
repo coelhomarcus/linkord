@@ -358,6 +358,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         state, dispatch, sendWs, tileDomRegistry, audioRegistry,
         callStageRef, isCallFullscreen, toggleCallFullscreen, fullscreenElement,
         audioUnlocked: callLifecycle.audioUnlocked, deafened: callLifecycle.deafened, toggleDeafened: callLifecycle.toggleDeafened,
+        preferMuted: callLifecycle.preferMuted, setPreferMuted: callLifecycle.setPreferMuted,
         reconnecting: callLifecycle.reconnecting,
         livekitRoom, notifyActiveView,
         registerRequestChatView, requestChatView,

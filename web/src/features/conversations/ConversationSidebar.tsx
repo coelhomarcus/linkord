@@ -25,9 +25,13 @@ import {
 import { GroupAvatar } from './GroupAvatar';
 import { GroupCreateDialog } from './GroupCreateDialog';
 import { NotificationBell } from '@/features/notifications/NotificationBell';
+import { CallDock } from '@/features/calls/CallDock';
 
 interface ConversationSidebarProps {
   onOpenPalette: () => void;
+  onReturnToCall: () => void;
+  onOpenProfile: (userId: string) => void;
+  showReturnToCall: boolean;
   /** the global rail, drawn inside the sheet on a narrow screen (on desktop it sits beside the sidebar) */
   mobileRail: ReactNode;
 }
@@ -125,7 +129,7 @@ function tabForConversation(conversations: Conversation[], conversationId: strin
   return conversation?.type === 'group' ? 'group' : 'direct';
 }
 
-export function ConversationSidebar({ onOpenPalette, mobileRail }: ConversationSidebarProps) {
+export function ConversationSidebar({ onOpenPalette, onReturnToCall, onOpenProfile, showReturnToCall, mobileRail }: ConversationSidebarProps) {
   const { state, conversations, activeConversationId, openConversation, allUsers, unreadByConversation, requestChatView } = useRoom();
   const { isMobile, isOverlay, setOpenMobile, toggleSidebar } = useSidebar();
   const navigate = useNavigate();
@@ -243,6 +247,7 @@ export function ConversationSidebar({ onOpenPalette, mobileRail }: ConversationS
                   </div>
                 </div>
               </Tabs>
+              <CallDock onReturnToCall={onReturnToCall} onOpenProfile={onOpenProfile} showReturnToCall={showReturnToCall} />
             </div>
           </div>
         </div>
