@@ -25,16 +25,13 @@ import { TileMenu } from '@/features/calls/TileMenu';
 import { ReactionsOverlay } from '@/features/reactions/ReactionsOverlay';
 import { GlobalContextMenu } from '@/app/layout/GlobalContextMenu';
 import { ProfileModal } from '@/features/profile/ProfileModal';
-import { FriendsProvider, useFriends } from '@/features/friends/FriendsContext';
+import { FriendsProvider } from '@/features/friends/FriendsContext';
 import { FriendsPage } from '@/features/friends/FriendsPage';
 import { RequestsRedirect } from '@/features/friends/RequestsRedirect';
 import { SettingsPage } from '@/features/settings/SettingsPage';
 import { AWAITING_OPEN, ROUTES, conversationNav, isConversationsPath } from '@/shared/lib/routes';
 import { useConversationRouteSync } from '@/app/useConversationRouteSync';
 import { SidebarInset, SidebarProvider } from '@/shared/ui/motion/sidebar';
-import { useSidebar } from '@/shared/ui/motion/sidebar-context';
-import { CommandPalette } from '@/shared/ui/motion/command-palette';
-import { buildCommandItems } from '@/features/conversations/commandPaletteItems';
 import { loadSidebarCollapsed, saveSidebarCollapsed } from '@/shared/hooks/useSidebarCollapsedPreference';
 import { TooltipProvider } from '@/shared/ui/primitives/tooltip';
 
@@ -64,7 +61,6 @@ function Shell() {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [mediaOpen, setMediaOpen] = useState(false);
   const [callChatOpen, setCallChatOpen] = useState(false);
-  const [paletteOpen, setPaletteOpen] = useState(false);
 
   const [sidebarOpen, setSidebarOpenState] = useState(() => !loadSidebarCollapsed());
   const setSidebarOpen = useCallback((next: boolean) => {
@@ -94,8 +90,8 @@ function Shell() {
 
   useConversationRouteSync();
 
-  // "Show me the chat": from a notification click or the palette, possibly
-  // while on the friends/settings page. window.location (not the hook's
+  // "Show me the chat": from a notification click, possibly while on the
+  // friends/settings page. window.location (not the hook's
   // pathname) on purpose — callers navigate() explicitly in the same handler
   // just before this, and only the real location is already up to date then.
   useEffect(() => {
@@ -181,7 +177,6 @@ function Shell() {
         <AccessNotice />
         <AppNavigationRail className="hidden md:flex" />
         <ConversationSidebar
-          onOpenPalette={() => setPaletteOpen(true)}
           onReturnToCall={handleReturnToCall}
           onOpenProfile={setProfileUserId}
           showReturnToCall={!showStage}
@@ -240,13 +235,6 @@ function Shell() {
         />
         <TileMenu onOpenProfile={setProfileUserId} />
         <ProfileModal userId={profileUserId} onClose={() => setProfileUserId(null)} />
-        <CommandPaletteMount
-          open={paletteOpen}
-          onOpenChange={setPaletteOpen}
-          onCall={handleOpenCall}
-          onMobileNavigated={() => setMobileShowSidebar(false)}
-          onOpenProfile={setProfileUserId}
-        />
         <ChatSearchDialog
           open={searchOpen}
           onOpenChange={setSearchOpen}
@@ -255,71 +243,6 @@ function Shell() {
         />
       </SidebarProvider>
     </GlobalContextMenu>
-  );
-}
-
-/** Split out from Shell only because it needs `useSidebar()` (for
- * `isMobile`, to close the mobile sidebar sheet after a palette selection,
- * same as ConversationSidebar's own row clicks) — a hook that only works
- * inside the SidebarProvider Shell itself renders, so Shell (the
- * provider's parent, not a descendant of it) can't call it directly. */
-function CommandPaletteMount({ open, onOpenChange, onCall, onMobileNavigated, onOpenProfile }: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onCall: (conversationId: string) => void;
-  onMobileNavigated: () => void;
-  onOpenProfile: (userId: string) => void;
-}) {
-  const { state, conversations, allUsers, friendUserIds, activeCallConversationId, openConversation, openDirect, requestChatView } = useRoom();
-  const { pendingFriendRequestCount, pendingInvitationCount } = useFriends();
-  const { isOverlay } = useSidebar();
-  const navigate = useNavigate();
-  const isAdmin = state.me.role === 'admin';
-
-  const commandItems = useMemo(() => buildCommandItems(
-    conversations, allUsers, state.me.userId, state.participants, activeCallConversationId,
-    friendUserIds,
-    { pendingFriendRequestCount, pendingInvitationCount },
-    isAdmin,
-    {
-      onOpenConversation: (id) => {
-        openConversation(id);
-        navigate(ROUTES.conversations, conversationNav(id));
-        requestChatView();
-        if (isOverlay) onMobileNavigated();
-      },
-      onMessageUser: (userId) => {
-        openDirect(userId);
-        requestChatView();
-        if (isOverlay) onMobileNavigated();
-      },
-      onCall: (id) => {
-        openConversation(id);
-        onCall(id);
-      },
-      onNavigate: (path) => {
-        navigate(path);
-        if (isOverlay) onMobileNavigated();
-      },
-      onOpenProfile: (userId) => {
-        onOpenProfile(userId);
-        if (isOverlay) onMobileNavigated();
-      },
-    }
-  ), [
-    conversations, allUsers, state.me.userId, state.participants, activeCallConversationId, friendUserIds,
-    pendingFriendRequestCount, pendingInvitationCount, isAdmin,
-    isOverlay, openConversation, openDirect, requestChatView, onCall, onMobileNavigated, onOpenProfile, navigate,
-  ]);
-
-  return (
-    <CommandPalette
-      items={commandItems}
-      open={open}
-      onOpenChange={onOpenChange}
-      placeholder="Buscar conversas ou uma ação…"
-      emptyMessage="Nada encontrado."
-    />
   );
 }
 

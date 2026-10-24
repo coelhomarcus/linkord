@@ -5,7 +5,7 @@ import { ROUTES, conversationIdFromPath, conversationIdFromState, conversationNa
 
 /** Keeps the conversation named by the history entry and the room's
  * `activeConversationId` in agreement without either one being "the" source of
- * truth — the active conversation is opened from many places (sidebar, palette,
+ * truth — the active conversation is opened from many places (sidebar,
  * notifications, a group just created) that know nothing about history.
  *
  * The id lives in the entry's `state`, never in the path (which stays

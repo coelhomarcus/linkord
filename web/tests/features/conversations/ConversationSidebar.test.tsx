@@ -52,7 +52,7 @@ function renderSidebar(overrides: {
   const onOpenProfile = overrides.onOpenProfile ?? vi.fn();
   return renderSocial(
     <SidebarProvider open onOpenChange={vi.fn()} openMobile={false} onOpenMobileChange={vi.fn()}>
-      <ConversationSidebar onOpenPalette={vi.fn()} onReturnToCall={onReturnToCall} onOpenProfile={onOpenProfile} showReturnToCall={overrides.showReturnToCall ?? true} mobileRail={null} />
+      <ConversationSidebar onReturnToCall={onReturnToCall} onOpenProfile={onOpenProfile} showReturnToCall={overrides.showReturnToCall ?? true} mobileRail={null} />
     </SidebarProvider>,
     {
       room: {
