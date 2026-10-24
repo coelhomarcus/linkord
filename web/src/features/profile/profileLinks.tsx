@@ -1,5 +1,6 @@
+import { LinkIcon } from '@phosphor-icons/react';
 import type { ComponentType, CSSProperties } from 'react';
-import { Link2 } from 'lucide-react';
+
 import {
   SiBehance, SiBluesky, SiDiscord, SiDribbble, SiEpicgames, SiFacebook, SiGithub, SiInstagram,
   SiKick, SiPinterest, SiReddit, SiSnapchat, SiSoundcloud, SiSpotify, SiSteam, SiTelegram,
@@ -91,7 +92,7 @@ const BRAND_ICONS: Record<Exclude<LinkKind, 'generic'>, ComponentType<{ size?: n
 };
 
 export function BrandIcon({ kind }: { kind: LinkKind }) {
-  if (kind === 'generic') return <Link2 aria-hidden="true" size={17} />;
+  if (kind === 'generic') return <LinkIcon aria-hidden="true" size={17} />;
   const Icon = BRAND_ICONS[kind];
   return <Icon size={17} />;
 }

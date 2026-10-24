@@ -1,8 +1,8 @@
+import { ArrowSquareOutIcon, PlayIcon } from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import ReactPlayer from 'react-player';
-import { Play } from 'lucide-react';
-import { ExternalLink } from '@/shared/ui/icons';
+
 import type { DetectedEmbed } from '@/shared/lib/chatEmbeds';
 import { getCachedLinkPreview, loadLinkPreview } from '@/shared/lib/linkPreviewCache';
 import { useNearViewport } from './useNearViewport';
@@ -45,7 +45,7 @@ function TwitchPlayer({ embed }: { embed: DetectedEmbed }) {
         className="flex aspect-video w-full items-center justify-center gap-2.5 bg-black/40 text-left transition-colors hover:bg-black/55 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
       >
         <span className="flex h-12 w-12 flex-none items-center justify-center rounded-full bg-[#9146FF] text-white">
-          <Play size={18} fill="currentColor" />
+          <PlayIcon size={18} fill="currentColor" />
         </span>
         <span className="text-label text-text-secondary">{label} — clique pra carregar o player</span>
       </button>
@@ -115,7 +115,7 @@ export function GenericEmbed({ embed, className = '', edgeToEdge, preview }: Gen
         style={{ maxWidth }}
         className={`flex w-full items-center gap-2 ${cardBorderClass} bg-bg-tertiary px-3 py-2.5 text-label text-text-muted transition-colors hover:bg-bg-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 ${className}`}
       >
-        <ExternalLink size={14} className="flex-none" />
+        <ArrowSquareOutIcon size={14} className="flex-none" />
         <span className="truncate">{data.siteName}</span>
       </a>
     );
@@ -138,7 +138,7 @@ export function GenericEmbed({ embed, className = '', edgeToEdge, preview }: Gen
           height="100%"
           playIcon={
             <span className="flex h-12 w-12 items-center justify-center rounded-full bg-red text-white">
-              <Play size={18} fill="currentColor" />
+              <PlayIcon size={18} fill="currentColor" />
             </span>
           }
         />

@@ -1,6 +1,7 @@
+import { ClockCounterClockwiseIcon } from '@phosphor-icons/react';
 import { useCallback } from 'react';
 import { Link, useLocation } from 'react-router';
-import { History } from '@/shared/ui/icons';
+
 import { Avatar } from '@/shared/Avatar';
 import { buttonVariants } from '@/shared/ui/primitives/button';
 import { useUrlSearch } from '@/shared/hooks/useUrlSearch';
@@ -33,7 +34,7 @@ function RowActions({ user }: { user: AdminUserRow }) {
     <div className="flex items-center justify-end gap-0.5">
       <CopyIdButton id={user.id} label={`Copiar ID de ${user.displayName}`} />
       <Link to={`/admin/audit?targetId=${encodeURIComponent(user.id)}`} aria-label={`Ver histórico de ${user.displayName}`} title="Ver histórico" className={buttonVariants({ variant: 'ghost', size: 'icon-sm' })}>
-        <History size={15} aria-hidden />
+        <ClockCounterClockwiseIcon size={15} aria-hidden />
       </Link>
     </div>
   );

@@ -1,6 +1,7 @@
+import { CheckIcon, CopyIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
 import { Link } from 'react-router';
-import { Check, Copy } from '@/shared/ui/icons';
+
 import { useRoom } from '@/state/RoomContext';
 import { Button } from '@/shared/ui/primitives/button';
 import { friendsSection } from '@/shared/lib/routes';
@@ -34,7 +35,7 @@ export function AddFriendView() {
         <div className="flex flex-wrap items-center justify-between gap-3 pt-3">
           <p className="break-all text-body text-text-primary">@{state.me.name}</p>
           <Button type="button" variant="secondary" size="sm" onClick={() => void handleCopyUsername()}>
-            {copied ? <Check size={16} /> : <Copy size={16} />}
+            {copied ? <CheckIcon size={16} /> : <CopyIcon size={16} />}
             <span>{copied ? 'Copiado' : `Copiar @${state.me.name}`}</span>
           </Button>
         </div>

@@ -1,6 +1,7 @@
+import { ImageBrokenIcon } from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
 import type { RefObject, SyntheticEvent } from 'react';
-import { ImageOff } from 'lucide-react';
+
 import type { DetectedEmbed } from '@/shared/lib/chatEmbeds';
 import { ImageLightbox } from './ImageLightbox';
 import { GenericEmbed } from './GenericEmbed';
@@ -37,7 +38,7 @@ function EmbedFailedFallback({ url, className }: { url: string; className: strin
       rel="noopener noreferrer"
       className={`flex w-full max-w-sm items-center gap-2 rounded-md border border-border bg-bg-tertiary px-3 py-2.5 text-label text-text-muted transition-colors hover:bg-bg-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 ${className}`}
     >
-      <ImageOff size={14} className="flex-none" />
+      <ImageBrokenIcon size={14} className="flex-none" />
       <span className="truncate">Não foi possível carregar a prévia. Abrir link</span>
     </a>
   );

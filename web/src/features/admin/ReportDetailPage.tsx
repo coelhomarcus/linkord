@@ -1,5 +1,6 @@
+import { FlagIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
-import { Flag } from 'lucide-react';
+
 import { Link, useParams } from 'react-router';
 import { Button } from '@/shared/ui/primitives/button';
 import { categoryLabel } from '@/features/reports/reportCategories';
@@ -77,7 +78,7 @@ function ReportDetail({ id }: { id: string }) {
       {refreshFailed && <RefreshFailedNotice refreshing={refreshing} onRetry={() => void refresh()} />}
 
       <AdminEntityHeader
-        avatar={<span className="flex size-16 items-center justify-center rounded-full bg-fill-active text-text-muted"><Flag size={26} aria-hidden /></span>}
+        avatar={<span className="flex size-16 items-center justify-center rounded-full bg-fill-active text-text-muted"><FlagIcon size={26} aria-hidden /></span>}
         title={report.targetLabel || report.targetId}
         subtitle={`${REPORT_TARGET_LABEL[report.targetType]} · ${categoryLabel(report.category)}`}
         id={report.id}

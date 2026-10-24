@@ -1,6 +1,6 @@
+import { ArrowSquareOutIcon, AtIcon, CameraIcon, CheckIcon, CircleNotchIcon, LinkIcon, PaletteIcon, PlusIcon, SealCheckIcon, TrashIcon, UploadSimpleIcon } from '@phosphor-icons/react';
 import { useLayoutEffect, useRef } from 'react';
-import { AtSign, BadgeCheck, Camera, Check, Loader2, Palette, Trash2 } from 'lucide-react';
-import { ExternalLink, Link2, Plus, Upload } from '@/shared/ui/icons';
+
 import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { Avatar, AVATAR_COLOR_OPTIONS } from '@/shared/Avatar';
 import { BANNER_ASPECT_RATIO, BrandIcon, bannerStyle, linkInfo } from '@/features/profile/profileLinks';
@@ -112,22 +112,22 @@ export function ProfileCard({
                 />
               }
             >
-              {bannerUploading ? <Loader2 size={24} className="animate-spin" /> : <Camera size={24} />}
+              {bannerUploading ? <CircleNotchIcon size={24} className="animate-spin" /> : <CameraIcon size={24} />}
             </DropdownMenuTrigger>
             <DropdownMenuContent align="center" className="w-max min-w-0">
               <DropdownMenuItem onClick={onBannerUpload}>
-                <Upload size={14} />
+                <UploadSimpleIcon size={14} />
                 <span>Enviar do computador</span>
               </DropdownMenuItem>
               {onBannerUploadUrl && (
                 <DropdownMenuItem onClick={onBannerUploadUrl}>
-                  <Link2 size={14} />
+                  <LinkIcon size={14} />
                   <span>Usar URL</span>
                 </DropdownMenuItem>
               )}
               {user.banner && onBannerRemove && (
                 <DropdownMenuItem variant="destructive" onClick={onBannerRemove}>
-                  <Trash2 size={14} />
+                  <TrashIcon size={14} />
                   <span>Remover banner</span>
                 </DropdownMenuItem>
               )}
@@ -162,22 +162,22 @@ export function ProfileCard({
                       />
                     }
                   >
-                    {avatarUploading ? <Loader2 size={20} className="animate-spin" /> : <Camera size={20} />}
+                    {avatarUploading ? <CircleNotchIcon size={20} className="animate-spin" /> : <CameraIcon size={20} />}
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" className="w-max min-w-0">
                     <DropdownMenuItem onClick={onAvatarUpload}>
-                      <Upload size={14} />
+                      <UploadSimpleIcon size={14} />
                       <span>Enviar do computador</span>
                     </DropdownMenuItem>
                     {onAvatarUploadUrl && (
                       <DropdownMenuItem onClick={onAvatarUploadUrl}>
-                        <Link2 size={14} />
+                        <LinkIcon size={14} />
                         <span>Usar URL</span>
                       </DropdownMenuItem>
                     )}
                     {user.avatar && onAvatarRemove && (
                       <DropdownMenuItem variant="destructive" onClick={onAvatarRemove}>
-                        <Trash2 size={14} />
+                        <TrashIcon size={14} />
                         <span>Remover foto</span>
                       </DropdownMenuItem>
                     )}
@@ -221,7 +221,7 @@ export function ProfileCard({
                         />
                       }
                     >
-                      {selected && <Check size={11} strokeWidth={3} className="pointer-events-none text-white drop-shadow" />}
+                      {selected && <CheckIcon size={11} weight="bold" className="pointer-events-none text-white drop-shadow" />}
                     </TooltipTrigger>
                     <TooltipContent side="top">{option.label}</TooltipContent>
                   </Tooltip>
@@ -244,7 +244,7 @@ export function ProfileCard({
                   className="avatar-color-custom-input h-5 w-5 cursor-pointer disabled:cursor-default disabled:opacity-60"
                 />
                 <span className="pointer-events-none absolute inset-0 m-auto flex h-2.5 w-2.5 items-center justify-center">
-                  {isCustomAvatarColor ? <Check size={10} strokeWidth={3} className="text-white drop-shadow" /> : <Palette size={9} className="text-white/90 drop-shadow" />}
+                  {isCustomAvatarColor ? <CheckIcon size={10} weight="bold" className="text-white drop-shadow" /> : <PaletteIcon size={9} className="text-white/90 drop-shadow" />}
                 </span>
               </label>
             </div>
@@ -267,12 +267,12 @@ export function ProfileCard({
           )}
           <div className="flex min-w-0 items-center gap-2">
             <p className="flex min-w-0 items-center gap-0.5 truncate text-label text-text-muted">
-              <AtSign size={14} className="flex-none" />
+              <AtIcon size={14} className="flex-none" />
               <span className="truncate">{user.username}</span>
             </p>
             {user.role === 'admin' && (
               <span className="flex flex-none items-center gap-1 rounded-sm bg-primary/15 px-1.5 py-0.5 text-caption font-medium text-accent-text">
-                <BadgeCheck size={13} /> Admin
+                <SealCheckIcon size={13} /> Admin
               </span>
             )}
           </div>
@@ -291,7 +291,7 @@ export function ProfileCard({
               return (
                 <div key={index} className="flex items-center gap-2">
                   <span className="flex size-8 flex-none items-center justify-center rounded-full border border-border-strong bg-bg-tertiary text-text-muted">
-                    {info ? <BrandIcon kind={info.kind} /> : <Link2 size={15} />}
+                    {info ? <BrandIcon kind={info.kind} /> : <LinkIcon size={15} />}
                   </span>
                   <input
                     aria-label={`Link ${index + 1}`}
@@ -314,7 +314,7 @@ export function ProfileCard({
               disabled={fieldsDisabled || editableLinks!.length >= MAX_PROFILE_LINKS}
               onClick={onAddLink}
             >
-              <Plus size={14} />
+              <PlusIcon size={14} />
               <span>Adicionar link</span>
             </Button>
           </div>
@@ -338,7 +338,7 @@ export function ProfileCard({
                   </TooltipTrigger>
                   <TooltipContent side="bottom" className="flex items-center gap-1.5">
                     <span>{link.label}</span>
-                    <ExternalLink size={12} />
+                    <ArrowSquareOutIcon size={12} />
                   </TooltipContent>
                 </Tooltip>
               ))}

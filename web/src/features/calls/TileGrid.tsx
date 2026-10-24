@@ -1,5 +1,6 @@
+import { CaretDownIcon, CaretUpIcon } from '@phosphor-icons/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, ChevronUp } from '@/shared/ui/icons';
+
 import { useRoom } from '../../state/RoomContext';
 import { Tile } from './Tile';
 import { fitGrid, gridGap } from './callLayoutMetrics';
@@ -126,7 +127,7 @@ export function TileGrid({ descriptors, focusedId, minTileWidth = DEFAULT_MIN_TI
             aria-label={thumbsCollapsed ? 'Mostrar participantes' : 'Ocultar participantes'}
             className="flex items-center gap-1 rounded-full px-2 py-0.5 text-caption text-text-muted transition-colors hover:bg-fill-subtle hover:text-text-secondary"
           >
-            {thumbsCollapsed ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+            {thumbsCollapsed ? <CaretUpIcon size={12} /> : <CaretDownIcon size={12} />}
             {thumbs.length} participante{thumbs.length === 1 ? '' : 's'}
           </button>
           {!thumbsCollapsed && (

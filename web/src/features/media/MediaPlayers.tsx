@@ -1,9 +1,9 @@
+import { ArrowsOutIcon, DownloadSimpleIcon, PauseIcon, PlayIcon, SpeakerHighIcon, SpeakerSlashIcon } from '@phosphor-icons/react';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode, RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import { Dialog as DialogPrimitive } from '@base-ui/react/dialog';
-import { Pause, Play, Volume2, VolumeX } from 'lucide-react';
-import { Download, Maximize2 } from '@/shared/ui/icons';
+
 import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { Button } from '@/shared/ui/primitives/button';
 import { Slider } from '@/shared/ui/primitives/slider';
@@ -246,7 +246,7 @@ function VideoChrome({
           onClick={togglePlay}
           className="absolute left-1/2 top-1/2 flex size-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-black/65 text-white shadow-popover transition-colors hover:bg-primary focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
         >
-          <Play size={22} fill="currentColor" className="ml-0.5" />
+          <PlayIcon size={22} fill="currentColor" className="ml-0.5" />
         </button>
       )}
 
@@ -262,14 +262,14 @@ function VideoChrome({
         />
         <div className="flex min-w-0 items-center gap-0.5 text-text-secondary [&_button:hover]:bg-white/10 [&_button:hover]:text-white">
           <MediaButton label={playing ? 'Pausar' : 'Reproduzir'} onClick={togglePlay}>
-            {playing ? <Pause size={15} fill="currentColor" /> : <Play size={15} fill="currentColor" />}
+            {playing ? <PauseIcon size={15} fill="currentColor" /> : <PlayIcon size={15} fill="currentColor" />}
           </MediaButton>
           <span className="ml-1 hidden flex-none select-none text-caption tabular-nums text-text-muted @[15rem]/player:block">
             {formatTime(currentTime)} / {formatTime(duration)}
           </span>
           <div className="ml-auto flex flex-none items-center gap-0.5">
             <MediaButton label={muted || volume === 0 ? 'Desmutar' : 'Mutar'} onClick={toggleMute}>
-              {muted || volume === 0 ? <VolumeX size={15} /> : <Volume2 size={15} />}
+              {muted || volume === 0 ? <SpeakerSlashIcon size={15} /> : <SpeakerHighIcon size={15} />}
             </MediaButton>
             <VolumeSlider
               muted={muted}
@@ -278,11 +278,11 @@ function VideoChrome({
               className="mr-1 hidden @[19rem]/player:block [&_[data-slot=slider-range]]:bg-white/80 [&_[data-slot=slider-track]]:bg-white/25"
             />
             <MediaButton label="Baixar" onClick={() => downloadFile(src, title || 'video')}>
-              <Download size={15} />
+              <DownloadSimpleIcon size={15} />
             </MediaButton>
             {onExpand && (
               <MediaButton label="Tela cheia" onClick={onExpand}>
-                <Maximize2 size={15} />
+                <ArrowsOutIcon size={15} />
               </MediaButton>
             )}
           </div>
@@ -492,7 +492,7 @@ function AudioPlayerInner({ src, title, className, onError }: AudioPlayerProps) 
           onClick={togglePlay}
           className="flex size-8 flex-none items-center justify-center rounded-full bg-primary text-white transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
         >
-          {playing ? <Pause size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" className="ml-0.5" />}
+          {playing ? <PauseIcon size={14} fill="currentColor" /> : <PlayIcon size={14} fill="currentColor" className="ml-0.5" />}
         </button>
 
         <Slider
@@ -511,7 +511,7 @@ function AudioPlayerInner({ src, title, className, onError }: AudioPlayerProps) 
             onClick={toggleMute}
             className="text-text-muted hover:text-text-primary"
           >
-            {muted || volume === 0 ? <VolumeX size={15} /> : <Volume2 size={15} />}
+            {muted || volume === 0 ? <SpeakerSlashIcon size={15} /> : <SpeakerHighIcon size={15} />}
           </MediaButton>
           <VolumeSlider
             muted={muted}
@@ -524,7 +524,7 @@ function AudioPlayerInner({ src, title, className, onError }: AudioPlayerProps) 
             onClick={() => downloadFile(src, title || 'audio')}
             className="text-text-muted hover:text-text-primary"
           >
-            <Download size={15} />
+            <DownloadSimpleIcon size={15} />
           </MediaButton>
         </div>
       </div>

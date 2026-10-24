@@ -1,4 +1,5 @@
-import { CircleUserRound, Inbox, Mail, MessageCirclePlus, Phone, Settings, ShieldCheck, UserPlus, Users, Wifi } from 'lucide-react';
+import { ChatCircleIcon, EnvelopeIcon, GearIcon, PhoneIcon, ShieldCheckIcon, TrayIcon, UserCircleIcon, UserPlusIcon, UsersIcon, WifiHighIcon } from '@phosphor-icons/react';
+
 import type { CommandItem } from '@/shared/ui/motion/command-palette';
 import { Avatar } from '@/shared/Avatar';
 import { CountBadge } from '@/shared/CountBadge';
@@ -119,19 +120,19 @@ export function buildCommandItems(
   // (web/src/shared/lib/routes.ts#FRIENDS_VIEWS), so this is a shortcut to
   // navigate there, not a second implementation of anything.
   const friendsStageItems: CommandItem[] = [
-    { id: 'friends:all', label: 'Todos os amigos', icon: Users, onSelect: () => actions.onNavigate(friendsView('all')) },
-    { id: 'friends:online', label: 'Amigos online', icon: Wifi, onSelect: () => actions.onNavigate(friendsView('online')) },
+    { id: 'friends:all', label: 'Todos os amigos', icon: UsersIcon, onSelect: () => actions.onNavigate(friendsView('all')) },
+    { id: 'friends:online', label: 'Amigos online', icon: WifiHighIcon, onSelect: () => actions.onNavigate(friendsView('online')) },
     {
-      id: 'friends:pending', label: 'Solicitações de amizade', icon: Inbox,
+      id: 'friends:pending', label: 'Solicitações de amizade', icon: TrayIcon,
       badge: countBadge(friends.pendingFriendRequestCount),
       onSelect: () => actions.onNavigate(friendsView('pending')),
     },
     {
-      id: 'friends:invitations', label: 'Convites de grupo', icon: Mail,
+      id: 'friends:invitations', label: 'Convites de grupo', icon: EnvelopeIcon,
       badge: countBadge(friends.pendingInvitationCount),
       onSelect: () => actions.onNavigate(friendsView('invitations')),
     },
-    { id: 'friends:add', label: 'Adicionar amigo', icon: UserPlus, onSelect: () => actions.onNavigate(friendsView('add')) },
+    { id: 'friends:add', label: 'Adicionar amigo', icon: UserPlusIcon, onSelect: () => actions.onNavigate(friendsView('add')) },
   ];
   // "Ajustes" stage — same catalog (and the same admin-only filtering) as
   // the settings sidebar/index, see settingsCatalog.ts.
@@ -148,21 +149,21 @@ export function buildCommandItems(
     id: 'action:call',
     label: 'Ligar para…',
     group: 'Ações',
-    icon: Phone,
+    icon: PhoneIcon,
     stage: { items: callStageItems, placeholder: 'Ligar pra quem?' },
   });
   items.push({
     id: 'action:message',
     label: 'Conversar com…',
     group: 'Ações',
-    icon: MessageCirclePlus,
+    icon: ChatCircleIcon,
     stage: { items: messageStageItems, placeholder: 'Conversar com quem?' },
   });
   items.push({
     id: 'action:friends',
     label: 'Amigos',
     group: 'Ações',
-    icon: Users,
+    icon: UsersIcon,
     badge: countBadge(friends.pendingFriendRequestCount + friends.pendingInvitationCount),
     stage: { items: friendsStageItems, placeholder: 'Amigos' },
   });
@@ -170,14 +171,14 @@ export function buildCommandItems(
     id: 'action:settings',
     label: 'Ajustes',
     group: 'Ações',
-    icon: Settings,
+    icon: GearIcon,
     stage: { items: settingsStageItems, placeholder: 'Buscar em ajustes' },
   });
   items.push({
     id: 'action:profile',
     label: 'Meu perfil',
     group: 'Ações',
-    icon: CircleUserRound,
+    icon: UserCircleIcon,
     onSelect: () => { if (meUserId) actions.onOpenProfile(meUserId); },
   });
   if (isAdmin) {
@@ -185,7 +186,7 @@ export function buildCommandItems(
       id: 'action:admin',
       label: 'Área administrativa',
       group: 'Ações',
-      icon: ShieldCheck,
+      icon: ShieldCheckIcon,
       onSelect: () => actions.onNavigate(ROUTES.admin),
     });
   }

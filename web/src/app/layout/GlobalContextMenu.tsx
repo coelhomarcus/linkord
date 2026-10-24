@@ -1,8 +1,8 @@
+import { ArrowBendUpLeftIcon, CopyIcon, DownloadSimpleIcon, FlagIcon, PencilSimpleIcon, PushPinIcon, PushPinSlashIcon, TrashIcon, UsersIcon, XIcon } from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { ContextMenuRootActions } from '@base-ui/react/context-menu';
-import { Flag, Pencil, Pin, PinOff, Reply, Trash2 } from 'lucide-react';
-import { Copy, Download, UsersRound, X } from '@/shared/ui/icons';
+
 import { ReportDialog } from '@/features/reports/ReportDialog';
 import type { ReportTarget } from '@/features/reports/reportCategories';
 import { ContextMenu, ContextMenuCheckboxItem, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from '@/shared/ui/primitives/context-menu';
@@ -162,38 +162,38 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
                   />
                   <ContextMenuSeparator />
                   <ContextMenuItem onClick={() => setReplyingTo(targetMessage)}>
-                    <Reply size={14} />
+                    <ArrowBendUpLeftIcon size={14} />
                     <span>Responder</span>
                   </ContextMenuItem>
                 </>
               )}
               {hasReactions && (
                 <ContextMenuItem onClick={() => openReactionParticipants({ conversationId: targetMessage.conversationId, msgId: targetMessage.msgId })}>
-                  <UsersRound size={14} />
+                  <UsersIcon size={14} />
                   <span>Ver todas as reações</span>
                 </ContextMenuItem>
               )}
               {can?.copy && (
                 <ContextMenuItem onClick={handleCopyMessageText}>
-                  <Copy size={14} />
+                  <CopyIcon size={14} />
                   <span>Copiar texto</span>
                 </ContextMenuItem>
               )}
               {can?.report && (
                 <ContextMenuItem onClick={() => setReportTarget({ type: 'message', id: String(targetMessage.msgId), label: `mensagem de ${targetMessage.name}` })}>
-                  <Flag size={14} />
+                  <FlagIcon size={14} />
                   <span>Denunciar</span>
                 </ContextMenuItem>
               )}
               {can?.edit && (
                 <ContextMenuItem onClick={() => setEditingMsgId(targetMessage.msgId)}>
-                  <Pencil size={14} />
+                  <PencilSimpleIcon size={14} />
                   <span>Editar</span>
                 </ContextMenuItem>
               )}
               {can?.delete && (
                 <ContextMenuItem variant="destructive" onClick={(event) => requestDelete(targetMessage.msgId, event.shiftKey)}>
-                  <Trash2 size={14} />
+                  <TrashIcon size={14} />
                   <span>Apagar</span>
                 </ContextMenuItem>
               )}
@@ -203,7 +203,7 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
           {showDownloadBlock && (
             <>
               <ContextMenuItem onClick={handleDownload}>
-                <Download size={14} />
+                <DownloadSimpleIcon size={14} />
                 <span>Baixar</span>
               </ContextMenuItem>
               {(showSelectionBlock || showStageBlock) && <ContextMenuSeparator />}
@@ -212,7 +212,7 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
           {showSelectionBlock && (
             <>
               <ContextMenuItem onClick={handleCopy}>
-                <Copy size={14} />
+                <CopyIcon size={14} />
                 <span>Copiar</span>
               </ContextMenuItem>
               {showStageBlock && <ContextMenuSeparator />}
@@ -229,7 +229,7 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
           {showUserBlock && userTarget && (
             <>
               <ContextMenuItem onClick={() => onOpenProfile(userTarget)}>
-                <UsersRound size={14} />
+                <UsersIcon size={14} />
                 <span>Ver perfil</span>
               </ContextMenuItem>
               {showConversationBlock && <ContextMenuSeparator />}
@@ -238,12 +238,12 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
           {showConversationBlock && targetConversation && (
             <>
               <ContextMenuItem onClick={() => pinConversation(targetConversation.id, !targetConversation.pinnedAt)}>
-                {targetConversation.pinnedAt ? <PinOff size={14} /> : <Pin size={14} />}
+                {targetConversation.pinnedAt ? <PushPinSlashIcon size={14} /> : <PushPinIcon size={14} />}
                 <span>{targetConversation.pinnedAt ? 'Desafixar conversa' : 'Fixar conversa'}</span>
               </ContextMenuItem>
               {targetConversation.type === 'direct' && (
                 <ContextMenuItem onClick={() => closeConversation(targetConversation.id)}>
-                  <X size={14} />
+                  <XIcon size={14} />
                   <span>Fechar conversa</span>
                 </ContextMenuItem>
               )}

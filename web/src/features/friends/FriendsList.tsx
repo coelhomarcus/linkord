@@ -1,7 +1,7 @@
+import { ChatCircleIcon, CheckIcon, CopyIcon, DotsThreeIcon, UserIcon, UserPlusIcon } from '@phosphor-icons/react';
 import { useCallback, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { MoreHorizontal, UserRound } from 'lucide-react';
-import { Check, Copy, MessageCircle, UserPlus } from '@/shared/ui/icons';
+
 import { useRoom } from '@/state/RoomContext';
 import { blockUser, fetchFriends, removeFriend } from '@/shared/api/api';
 import type { SocialEntry, SocialUser } from '@/shared/api/api';
@@ -108,13 +108,13 @@ export function FriendsList({ view, query, onQueryChange, onOpenProfile }: {
 
       {isEmptyAccount && (
         <FadeIn className="flex flex-col items-center gap-3 py-10 text-center">
-          <UserRound size={32} className="text-text-muted" />
+          <UserIcon size={32} className="text-text-muted" />
           <p className="text-body font-medium text-text-primary">Adicione amigos para começar uma conversa</p>
           <p className="max-w-sm text-label text-text-muted">Peça o @nome de usuário de quem você quer conversar, ou compartilhe o seu.</p>
           <div className="flex flex-wrap justify-center gap-2">
-            <Button type="button" size="sm" onClick={() => navigate(friendsView('add'))}><UserPlus size={16} /><span>Adicionar amigo</span></Button>
+            <Button type="button" size="sm" onClick={() => navigate(friendsView('add'))}><UserPlusIcon size={16} /><span>Adicionar amigo</span></Button>
             <Button type="button" variant="secondary" size="sm" onClick={() => void handleCopyUsername()}>
-              {copied ? <Check size={16} /> : <Copy size={16} />}
+              {copied ? <CheckIcon size={16} /> : <CopyIcon size={16} />}
               <span>{copied ? 'Copiado' : `Copiar @${state.me.name}`}</span>
             </Button>
           </div>
@@ -138,14 +138,14 @@ export function FriendsList({ view, query, onQueryChange, onOpenProfile }: {
                 <RevealRow key={user.id}>
                   <SocialUserRow user={user} online={onlineUserIds.has(user.id)} onOpenProfile={() => onOpenProfile(user.id)}>
                     <Button type="button" variant="secondary" size="sm" onClick={() => handleMessage(user)} aria-label={`Enviar mensagem para ${user.displayName}`}>
-                      <MessageCircle size={15} />
+                      <ChatCircleIcon size={15} />
                       <span className="hidden sm:inline">Mensagem</span>
                     </Button>
                     <DropdownMenu>
                       <DropdownMenuTrigger
                         render={<Button type="button" variant="ghost" size="icon-sm" disabled={pending.isPending(user.id)} aria-label={`Mais ações para ${user.displayName}`} />}
                       >
-                        <MoreHorizontal size={16} />
+                        <DotsThreeIcon size={16} />
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-max min-w-0">
                         <DropdownMenuItem onClick={() => onOpenProfile(user.id)}>Ver perfil</DropdownMenuItem>

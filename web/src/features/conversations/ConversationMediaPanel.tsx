@@ -1,5 +1,6 @@
+import { PlayIcon } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
-import { Play } from 'lucide-react';
+
 import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { useSidebar } from '@/shared/ui/motion/sidebar-context';
 import { Sheet } from '@/shared/ui/motion/sheet';
@@ -62,7 +63,7 @@ function UploadItemCard({ item, onOpenImage }: { item: MediaItem; onOpenImage: (
         <video src={`${url}#t=0.1`} muted preload="metadata" playsInline className="pointer-events-none block h-full w-full object-cover" />
         <span className="absolute inset-0 flex items-center justify-center bg-black/25 transition-colors group-hover:bg-black/40">
           <span className="grid size-10 place-items-center rounded-full bg-black/60 text-white">
-            <Play size={18} fill="currentColor" className="ml-0.5" />
+            <PlayIcon size={18} fill="currentColor" className="ml-0.5" />
           </span>
         </span>
       </a>

@@ -1,5 +1,6 @@
+import { UsersIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
-import { Users } from 'lucide-react';
+
 import { GroupAvatar } from '@/features/conversations/GroupAvatar';
 import { Button } from '@/shared/ui/primitives/button';
 import { acceptInvitation, ApiError, declineInvitation, revokeInvitation } from '@/shared/api/api';
@@ -101,7 +102,7 @@ function LiveInviteCard({ invitation }: { invitation: InvitationCard }) {
         <div className="min-w-0">
           <p className="truncate text-body font-medium text-text-primary">{invitation.groupTitle}</p>
           <p className="flex items-center gap-1 text-caption text-text-muted">
-            <Users size={12} />
+            <UsersIcon size={12} />
             {invitation.memberCount} {invitation.memberCount === 1 ? 'membro' : 'membros'}
           </p>
         </div>

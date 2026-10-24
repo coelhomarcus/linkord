@@ -1,6 +1,6 @@
+import { CheckCircleIcon, CheckIcon, CircleNotchIcon, EnvelopeIcon } from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
-import { CheckCircle2, Loader2, Mail } from 'lucide-react';
-import { Check } from '@/shared/ui/icons';
+
 import { useAuth } from '@/state/AuthContext';
 import { Label } from '@/shared/ui/primitives/label';
 import { Button } from '@/shared/ui/primitives/button';
@@ -122,7 +122,7 @@ export function EmailSettings({ currentEmail }: { currentEmail: string | null })
   if (phase === 'success') {
     return (
       <p className="flex items-center gap-1.5 text-label text-green">
-        <CheckCircle2 size={15} aria-hidden /> E-mail alterado para {targetEmail}.
+        <CheckCircleIcon size={15} aria-hidden /> E-mail alterado para {targetEmail}.
       </p>
     );
   }
@@ -156,7 +156,7 @@ export function EmailSettings({ currentEmail }: { currentEmail: string | null })
             />
           </div>
           <Button type="button" size="sm" disabled={pending} onClick={() => void handleRequest()}>
-            {pending ? <Loader2 size={15} className="animate-spin" /> : <Mail size={15} />}
+            {pending ? <CircleNotchIcon size={15} className="animate-spin" /> : <EnvelopeIcon size={15} />}
             <span>{pending ? 'Enviando…' : 'Enviar código'}</span>
           </Button>
         </div>
@@ -185,7 +185,7 @@ export function EmailSettings({ currentEmail }: { currentEmail: string | null })
       />
       <div className="flex flex-wrap items-center gap-2">
         <Button type="button" size="sm" disabled={pending || code.length !== 6} onClick={() => void handleConfirm()}>
-          {pending ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
+          {pending ? <CircleNotchIcon size={15} className="animate-spin" /> : <CheckIcon size={15} />}
           <span>{pending ? 'Confirmando…' : 'Confirmar e-mail'}</span>
         </Button>
         <Button type="button" variant="ghost" size="sm" disabled={pending} onClick={() => void handleResend()}>

@@ -1,4 +1,5 @@
-import { Plus } from '@/shared/ui/icons';
+import { PlusIcon } from '@phosphor-icons/react';
+
 import { cn } from '@/shared/lib/utils';
 
 // A short fixed set shown first, instead of mounting the full picker (and
@@ -27,7 +28,7 @@ export function QuickReactionRow({ onPick, onMore, className }: { onPick: (emoji
         aria-label="Mais emojis"
         className="rounded-md p-1.5 text-text-muted transition-colors hover:bg-muted hover:text-text-primary focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
       >
-        <Plus size={18} />
+        <PlusIcon size={18} />
       </button>
     </div>
   );

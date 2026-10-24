@@ -1,7 +1,7 @@
+import { CaretDownIcon, MagnifyingGlassIcon } from '@phosphor-icons/react';
 import { useId, useState } from 'react';
 import type { ReactNode } from 'react';
-import { Search } from 'lucide-react';
-import { ChevronDown } from '@/shared/ui/icons';
+
 import { Button } from '@/shared/ui/primitives/button';
 import { cn } from '@/shared/lib/utils';
 
@@ -55,7 +55,7 @@ export function AdminListToolbar({ search, filters, advanced, advancedActive, su
       <div className="flex flex-wrap items-end gap-3">
         {search && (
           <div className="flex h-9 min-w-56 flex-1 items-center gap-2 rounded-md border border-border bg-fill-subtle px-3">
-            <Search size={15} aria-hidden className="flex-none text-text-muted" />
+            <MagnifyingGlassIcon size={15} aria-hidden className="flex-none text-text-muted" />
             <input
               value={search.value}
               onChange={(event) => search.onChange(event.target.value)}
@@ -69,7 +69,7 @@ export function AdminListToolbar({ search, filters, advanced, advancedActive, su
         {advanced && (
           <Button type="button" variant="secondary" size="sm" className="h-9" aria-expanded={open} aria-controls={panelId} onClick={() => setAdvancedOpen((v) => !v)}>
             Mais filtros
-            <ChevronDown size={14} aria-hidden className={cn('transition-transform', open && 'rotate-180')} />
+            <CaretDownIcon size={14} aria-hidden className={cn('transition-transform', open && 'rotate-180')} />
           </Button>
         )}
       </div>

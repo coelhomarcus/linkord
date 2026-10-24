@@ -1,6 +1,6 @@
+import { ArrowLeftIcon, VideoCameraSlashIcon } from '@phosphor-icons/react';
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
-import { VideoOff } from 'lucide-react';
-import { ArrowLeft } from '@/shared/ui/icons';
+
 import { useSidebar } from '@/shared/ui/motion/sidebar-context';
 import { useRoom } from '../../state/RoomContext';
 import { useCallTiles } from './useCallTiles';
@@ -87,11 +87,11 @@ export function Stage({ allIds, chatOpen, onToggleChat }: StageProps) {
         onClick={() => setOpenMobile(true)}
         className="absolute left-2 top-2 z-20 bg-bg-tertiary/80 text-text-secondary hover:bg-bg-hover md:hidden"
       >
-        <ArrowLeft size={18} />
+        <ArrowLeftIcon size={18} />
       </Button>
       {allHiddenByFilter ? (
         <div className="flex flex-col items-center gap-3 px-6 text-center text-text-muted">
-          <VideoOff size={28} />
+          <VideoCameraSlashIcon size={28} />
           <p className="text-body">
             Ninguém está com a câmera ligada agora.<br />
             A opção <span className="font-medium text-text-secondary">"Ocultar sem vídeo"</span> está ativada.

@@ -1,8 +1,8 @@
+import { MagnifyingGlassIcon, PhoneIcon, PlusIcon, PushPinIcon, SidebarSimpleIcon, UsersIcon } from '@phosphor-icons/react';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router';
-import { Pin, Search, Users, PhoneCall } from 'lucide-react';
-import { PanelLeftClose, Plus } from '@/shared/ui/icons';
+
 import { ActiveWash } from '@/shared/ui/motion/active-wash';
 import { Sidebar } from '@/shared/ui/motion/sidebar';
 import { useSidebar } from '@/shared/ui/motion/sidebar-context';
@@ -82,7 +82,7 @@ function ConversationRow({ conversation, active, washId, onClick }: {
           <div className="relative flex-none">
             <GroupAvatar title={title} avatar={conversation.avatar} active={active} size={44} />
             <span className="absolute -bottom-0.5 -right-0.5 grid size-5 place-items-center rounded-full border-2 border-(--cutout) bg-bg-tertiary text-text-secondary transition-[border-color] duration-300">
-              <Users size={12} />
+              <UsersIcon size={12} />
             </span>
           </div>
         )}
@@ -93,7 +93,7 @@ function ConversationRow({ conversation, active, washId, onClick }: {
               call right now, same spot the time used to sit in. */}
           {hasActiveCall && (
             <span className="mt-0.5 flex items-center gap-1.5">
-              <PhoneCall size={12} className="flex-none text-green" />
+              <PhoneIcon size={12} className="flex-none text-green" />
               <span className="flex items-center -space-x-1.5">
                 {callParticipants.slice(0, 4).map((p) => (
                   <Avatar key={p.id} id={p.id} name={p.displayName} avatar={p.avatar} avatarColor={p.avatarColor} size={16} className="ring-2 ring-(--cutout) transition-[box-shadow] duration-300" />
@@ -110,7 +110,7 @@ function ConversationRow({ conversation, active, washId, onClick }: {
         <span className="flex flex-none flex-col items-end gap-1">
           {!!conversation.pinnedAt && (
             <span className="flex items-center">
-              <Pin size={11} className="fill-text-muted text-text-muted" />
+              <PushPinIcon size={11} weight="fill" className="text-text-muted" />
             </span>
           )}
           {unread > 0 && (
@@ -179,12 +179,12 @@ export function ConversationSidebar({ onOpenPalette, onReturnToCall, onOpenProfi
             <div className="flex flex-none items-center gap-2 px-4 py-4">
               <h1 className="min-w-0 flex-1 truncate text-title font-semibold">Conversas</h1>
               <Button type="button" size="icon-sm" aria-label="Criar grupo" onClick={() => setGroupOpen(true)} className="flex-none">
-                <Plus size={16} />
+                <PlusIcon size={16} />
               </Button>
               <NotificationBell onNavigate={() => { if (isOverlay) setOpenMobile(false); }} />
               {!isOverlay && (
                 <Button type="button" variant="ghost" size="icon-sm" aria-label="Ocultar lista de conversas" onClick={toggleSidebar} className="flex-none text-text-muted hover:text-text-primary">
-                  <PanelLeftClose size={16} />
+                  <SidebarSimpleIcon size={16} />
                 </Button>
               )}
             </div>
@@ -192,7 +192,7 @@ export function ConversationSidebar({ onOpenPalette, onReturnToCall, onOpenProfi
             {/* as a column, the gap to the content is the content card's own margin, which stays when the list is hidden */}
             <div className="flex min-h-0 flex-1 flex-col gap-3 pb-3 pl-3 pr-shell lg:pr-0">
               <div className="flex flex-none items-center gap-2 rounded-md border border-border bg-fill-subtle px-3">
-                <Search size={15} className="text-text-muted" />
+                <MagnifyingGlassIcon size={15} className="text-text-muted" />
                 <input
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}

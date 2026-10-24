@@ -1,8 +1,8 @@
+import { CameraIcon, CheckIcon, CrownIcon, FlagIcon, LinkIcon, PencilSimpleIcon, SignOutIcon, TrashIcon, UploadSimpleIcon, UserPlusIcon } from '@phosphor-icons/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, KeyboardEvent, ReactNode } from 'react';
 import type { Area } from 'react-easy-crop';
-import { Camera, Crown, Flag, Pencil, Trash2 } from 'lucide-react';
-import { Check, Link2, LogOut, Upload, UserPlus } from '@/shared/ui/icons';
+
 import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { useSidebar } from '@/shared/ui/motion/sidebar-context';
 import { Sheet } from '@/shared/ui/motion/sheet';
@@ -281,15 +281,15 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
                     />
                   }
                 >
-                  <Camera size={12} />
+                  <CameraIcon size={12} />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="center">
                   <DropdownMenuItem onClick={() => avatarFileInputRef.current?.click()}>
-                    <Upload size={14} />
+                    <UploadSimpleIcon size={14} />
                     <span>Enviar do computador</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setUrlDialogOpen(true)}>
-                    <Link2 size={14} />
+                    <LinkIcon size={14} />
                     <span>Usar URL</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -324,7 +324,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
                 className="border-border bg-fill-subtle text-center"
               />
               <Button type="button" size="icon-sm" aria-label="Salvar nome" onClick={saveTitle} disabled={!titleDraft.trim()}>
-                <Check size={14} />
+                <CheckIcon size={14} />
               </Button>
             </div>
           ) : (
@@ -337,7 +337,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
               )}
             >
               {conversation.title || 'Grupo'}
-              {isOwner && <Pencil size={13} className="text-text-muted" />}
+              {isOwner && <PencilSimpleIcon size={13} className="text-text-muted" />}
             </button>
           )}
           <p className="text-caption text-text-muted">{conversation.memberCount} {conversation.memberCount === 1 ? 'membro' : 'membros'}</p>
@@ -348,7 +348,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
             <h3 className="text-label font-medium text-text-secondary">Membros</h3>
             {isOwner && (
               <Button type="button" variant="ghost" size="sm" onClick={() => setAddOpen((v) => !v)} className="gap-1.5 text-text-muted hover:text-text-primary">
-                <UserPlus size={14} />
+                <UserPlusIcon size={14} />
                 Convidar amigos
               </Button>
             )}
@@ -394,7 +394,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
                         onClick={() => setTransferTarget(member)}
                         className="flex-none text-text-muted opacity-0 transition-opacity hover:text-accent-text group-hover:opacity-100"
                       >
-                        <Crown size={14} />
+                        <CrownIcon size={14} />
                       </Button>
                       <CloseButton
                         variant="danger"
@@ -455,16 +455,16 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
 
       <div className="flex flex-none flex-col gap-2 border-t border-border px-5 py-4">
         <Button type="button" variant="ghost" onClick={() => setConfirmLeave(true)} className="justify-start gap-2 text-text-secondary hover:text-text-primary">
-          <LogOut size={15} />
+          <SignOutIcon size={15} />
           Sair do grupo
         </Button>
         <Button type="button" variant="ghost" onClick={() => setReportOpen(true)} className="justify-start gap-2 text-text-muted hover:text-text-primary">
-          <Flag size={15} />
+          <FlagIcon size={15} />
           Denunciar grupo
         </Button>
         {isOwner && (
           <Button type="button" variant="ghost" onClick={() => setConfirmDelete(true)} className="justify-start gap-2 text-red-text hover:bg-red/10 hover:text-red-text">
-            <Trash2 size={15} />
+            <TrashIcon size={15} />
             Excluir grupo
           </Button>
         )}

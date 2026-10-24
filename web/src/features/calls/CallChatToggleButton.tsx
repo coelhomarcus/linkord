@@ -1,4 +1,5 @@
-import { MessageCircle } from '@/shared/ui/icons';
+import { ChatCircleIcon } from '@phosphor-icons/react';
+
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
 import { buttonVariants } from '@/shared/ui/primitives/button';
 import { cn } from '@/shared/lib/utils';
@@ -30,7 +31,7 @@ export function CallChatToggleButton({ chatOpen, onToggleChat, hudVisible = true
             chatOpen ? 'text-text-primary' : 'text-text-secondary hover:text-text-primary'
           )}
         >
-          <MessageCircle size={18} />
+          <ChatCircleIcon size={18} />
         </TooltipTrigger>
         <TooltipContent side="left">{chatOpen ? 'Fechar chat' : 'Abrir chat'}</TooltipContent>
       </Tooltip>

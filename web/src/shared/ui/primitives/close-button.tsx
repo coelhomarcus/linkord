@@ -1,11 +1,11 @@
+import { XIcon } from '@phosphor-icons/react';
 import { forwardRef } from "react"
 import { Button as ButtonPrimitive } from "@base-ui/react/button"
 import { cva, type VariantProps } from "class-variance-authority"
-import { X } from "@/shared/ui/icons";
 
 import { cn } from "@/shared/lib/utils"
 
-// The one X of the app: closing a modal or panel, dismissing a notice, removing
+// The one close control of the app: a modal or panel, dismissing a notice, removing
 // an item. `overlay` is for sitting on top of an image or banner, where a bare
 // icon can vanish into the picture.
 const closeButtonVariants = cva(
@@ -41,7 +41,7 @@ const CloseButton = forwardRef<
       className={cn(closeButtonVariants({ variant, size }), className)}
       {...props}
     >
-      <X size={ICON_SIZE[size ?? "sm"]} aria-hidden />
+      <XIcon size={ICON_SIZE[size ?? "sm"]} aria-hidden />
     </ButtonPrimitive>
   )
 })

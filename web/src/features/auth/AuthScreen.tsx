@@ -1,8 +1,8 @@
+import { ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon, CircleNotchIcon, EnvelopeIcon, EyeIcon, EyeSlashIcon, KeyIcon, LockIcon, SignInIcon, UserIcon, UserPlusIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { KeyRound, Loader2, Lock, LogIn, Mail, User } from 'lucide-react';
-import { ArrowLeft, ArrowRight, CheckCircle2, Eye, EyeOff, UserPlus } from '@/shared/ui/icons';
+
 import { useAuth } from '@/state/AuthContext';
 import { ApiError, requestPasswordRecovery, resetPassword } from '@/shared/api/api';
 import type { RecoveryIdentifier } from '@/shared/api/api';
@@ -23,7 +23,7 @@ const MESH_COLORS = ['#100b10', '#bc2ab6', '#4c1b82', '#290e28'];
 function PasswordToggle({ visible, onToggle }: { visible: boolean; onToggle: () => void }) {
   return (
     <button type="button" onClick={onToggle} aria-label={visible ? 'Ocultar senha' : 'Mostrar senha'}>
-      {visible ? <EyeOff /> : <Eye />}
+      {visible ? <EyeSlashIcon size={16} /> : <EyeIcon size={16} />}
     </button>
   );
 }
@@ -56,7 +56,7 @@ function LoginForm({ onForgotPassword }: { onForgotPassword: () => void }) {
         label="Usuário"
         autoFocus
         autoComplete="username"
-        leftIcon={<User />}
+        leftIcon={<UserIcon size={16} />}
         value={username}
         onChange={setUsername}
       />
@@ -65,15 +65,15 @@ function LoginForm({ onForgotPassword }: { onForgotPassword: () => void }) {
         label="Senha"
         type={showPassword ? 'text' : 'password'}
         autoComplete="current-password"
-        leftIcon={<Lock />}
+        leftIcon={<LockIcon size={16} />}
         rightSlot={<PasswordToggle visible={showPassword} onToggle={() => setShowPassword((v) => !v)} />}
         value={password}
         onChange={setPassword}
       />
       <Button type="submit" size="lg" className="mt-1 h-11 w-full" disabled={pending || !username || !password}>
-        {pending ? <Loader2 size={16} className="animate-spin" /> : <LogIn size={16} />}
+        {pending ? <CircleNotchIcon size={16} className="animate-spin" /> : <SignInIcon size={16} />}
         <span>{pending ? 'Entrando…' : 'Entrar'}</span>
-        {!pending && <ArrowRight size={16} className="ml-auto" />}
+        {!pending && <ArrowRightIcon size={16} className="ml-auto" />}
       </Button>
       <button type="button" onClick={onForgotPassword} className="self-center text-label text-text-muted transition-colors hover:text-text-primary">
         Esqueci minha senha
@@ -141,7 +141,7 @@ function RegisterForm() {
         autoComplete="username"
         maxLength={20}
         placeholder="3 a 20 caracteres"
-        leftIcon={<User />}
+        leftIcon={<UserIcon size={16} />}
         value={username}
         onChange={setUsername}
         error={fieldErrors.username}
@@ -153,7 +153,7 @@ function RegisterForm() {
         type="email"
         autoComplete="email"
         placeholder="voce@exemplo.com"
-        leftIcon={<Mail />}
+        leftIcon={<EnvelopeIcon size={16} />}
         value={email}
         onChange={setEmail}
         error={fieldErrors.email}
@@ -165,7 +165,7 @@ function RegisterForm() {
         type={showPassword ? 'text' : 'password'}
         autoComplete="new-password"
         placeholder="Pelo menos 8 caracteres"
-        leftIcon={<Lock />}
+        leftIcon={<LockIcon size={16} />}
         rightSlot={<PasswordToggle visible={showPassword} onToggle={() => setShowPassword((v) => !v)} />}
         value={password}
         onChange={setPassword}
@@ -175,16 +175,16 @@ function RegisterForm() {
       <AuthField
         id="registerCode"
         label="Código de convite"
-        leftIcon={<KeyRound />}
+        leftIcon={<KeyIcon size={16} />}
         value={code}
         onChange={setCode}
         error={fieldErrors.code}
         reserveErrorLine
       />
       <Button type="submit" size="lg" className="mt-1 h-11 w-full" disabled={pending || !username || !email || !password || !code}>
-        {pending ? <Loader2 size={16} className="animate-spin" /> : <UserPlus size={16} />}
+        {pending ? <CircleNotchIcon size={16} className="animate-spin" /> : <UserPlusIcon size={16} />}
         <span>{pending ? 'Criando conta…' : 'Criar conta'}</span>
-        {!pending && <ArrowRight size={16} className="ml-auto" />}
+        {!pending && <ArrowRightIcon size={16} className="ml-auto" />}
       </Button>
       {formError && <ErrorBanner>{formError}</ErrorBanner>}
     </form>
@@ -248,17 +248,17 @@ function RecoveryForm({ onBack }: { onBack: () => void }) {
           options={[{ value: 'email', label: 'E-mail' }, { value: 'username', label: 'Usuário' }]}
         />
         {identifierType === 'email' ? (
-          <AuthField id="recoveryEmail" label="E-mail" type="email" autoFocus autoComplete="email" leftIcon={<Mail />} value={identifierValue} onChange={setIdentifierValue} />
+          <AuthField id="recoveryEmail" label="E-mail" type="email" autoFocus autoComplete="email" leftIcon={<EnvelopeIcon size={16} />} value={identifierValue} onChange={setIdentifierValue} />
         ) : (
-          <AuthField id="recoveryUsername" label="Usuário" autoFocus autoComplete="username" leftIcon={<User />} value={identifierValue} onChange={setIdentifierValue} />
+          <AuthField id="recoveryUsername" label="Usuário" autoFocus autoComplete="username" leftIcon={<UserIcon size={16} />} value={identifierValue} onChange={setIdentifierValue} />
         )}
         <Button type="submit" size="lg" className="h-11 w-full" disabled={pending || !identifierValue}>
-          {pending ? <Loader2 size={16} className="animate-spin" /> : <Mail size={16} />}
+          {pending ? <CircleNotchIcon size={16} className="animate-spin" /> : <EnvelopeIcon size={16} />}
           <span>{pending ? 'Enviando…' : 'Enviar código'}</span>
-          {!pending && <ArrowRight size={16} className="ml-auto" />}
+          {!pending && <ArrowRightIcon size={16} className="ml-auto" />}
         </Button>
         {message && <ErrorBanner>{message}</ErrorBanner>}
-        <button type="button" onClick={onBack} className="flex items-center justify-center gap-1.5 text-label text-text-muted hover:text-text-primary"><ArrowLeft size={14} /> Voltar para entrar</button>
+        <button type="button" onClick={onBack} className="flex items-center justify-center gap-1.5 text-label text-text-muted hover:text-text-primary"><ArrowLeftIcon size={14} /> Voltar para entrar</button>
       </form>
     );
   }
@@ -285,9 +285,9 @@ function RecoveryForm({ onBack }: { onBack: () => void }) {
         autoFocus
         aria-label="Código de recuperação"
       />
-      <AuthField id="recoveryPassword" label="Nova senha" type="password" autoComplete="new-password" leftIcon={<Lock />} value={password} onChange={setPassword} placeholder="Pelo menos 8 caracteres" />
+      <AuthField id="recoveryPassword" label="Nova senha" type="password" autoComplete="new-password" leftIcon={<LockIcon size={16} />} value={password} onChange={setPassword} placeholder="Pelo menos 8 caracteres" />
       <Button type="button" size="lg" className="h-11 w-full" disabled={pending || code.length !== 6 || password.length < 8} onClick={() => void submitReset()}>
-        {pending ? <Loader2 size={16} className="animate-spin" /> : status === 'success' ? <CheckCircle2 size={16} /> : <Lock size={16} />}
+        {pending ? <CircleNotchIcon size={16} className="animate-spin" /> : status === 'success' ? <CheckCircleIcon size={16} /> : <LockIcon size={16} />}
         <span>{pending ? 'Salvando…' : status === 'success' ? 'Senha redefinida' : 'Redefinir senha'}</span>
       </Button>
       {status === 'success' ? (

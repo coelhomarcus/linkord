@@ -84,9 +84,7 @@ describe('presentFile', () => {
       presentFile('a.ts', 'application/octet-stream').icon,
       presentFile('a.xyz', 'application/octet-stream').icon,
     ]);
-    // pdf and document share FileText on purpose (the PDF badge is what
-    // tells them apart); every other family gets its own shape
-    expect(icons.size).toBe(6);
+    expect(icons.size).toBe(7);
   });
 
   it('a name diverging from the MIME does not unlock a binary preview: it only swaps the visual identity', () => {

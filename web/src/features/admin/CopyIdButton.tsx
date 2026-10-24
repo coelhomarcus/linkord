@@ -1,5 +1,6 @@
+import { CheckIcon, CopyIcon } from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
-import { Check, Copy } from '@/shared/ui/icons';
+
 import { Button } from '@/shared/ui/primitives/button';
 
 /** Copies an entity id. Its own button (never inside a link): the row link opens
@@ -22,7 +23,7 @@ export function CopyIdButton({ id, label }: { id: string; label: string }) {
 
   return (
     <Button type="button" variant="ghost" size="icon-sm" aria-label={copied ? 'ID copiado' : label} title={copied ? 'ID copiado' : label} onClick={() => void copy()}>
-      {copied ? <Check size={15} aria-hidden /> : <Copy size={15} aria-hidden />}
+      {copied ? <CheckIcon size={15} aria-hidden /> : <CopyIcon size={15} aria-hidden />}
     </Button>
   );
 }
