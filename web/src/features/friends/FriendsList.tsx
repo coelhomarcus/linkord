@@ -112,9 +112,9 @@ export function FriendsList({ view, query, onQueryChange, onOpenProfile }: {
           <p className="text-body font-medium text-text-primary">Adicione amigos para começar uma conversa</p>
           <p className="max-w-sm text-label text-text-muted">Peça o @nome de usuário de quem você quer conversar, ou compartilhe o seu.</p>
           <div className="flex flex-wrap justify-center gap-2">
-            <Button type="button" size="sm" onClick={() => navigate(friendsView('add'))}><UserPlusIcon size={16} /><span>Adicionar amigo</span></Button>
+            <Button type="button" size="sm" onClick={() => navigate(friendsView('add'))}><UserPlusIcon size={20} /><span>Adicionar amigo</span></Button>
             <Button type="button" variant="secondary" size="sm" onClick={() => void handleCopyUsername()}>
-              {copied ? <CheckIcon size={16} /> : <CopyIcon size={16} />}
+              {copied ? <CheckIcon size={20} /> : <CopyIcon size={20} />}
               <span>{copied ? 'Copiado' : `Copiar @${state.me.name}`}</span>
             </Button>
           </div>
@@ -138,7 +138,7 @@ export function FriendsList({ view, query, onQueryChange, onOpenProfile }: {
                 <RevealRow key={user.id}>
                   <SocialUserRow user={user} online={onlineUserIds.has(user.id)} onOpenProfile={() => onOpenProfile(user.id)}>
                     <Button type="button" variant="secondary" size="sm" onClick={() => handleMessage(user)} aria-label={`Enviar mensagem para ${user.displayName}`}>
-                      <ChatCircleIcon size={15} />
+                      <ChatCircleIcon size={20} />
                       <span className="hidden sm:inline">Mensagem</span>
                     </Button>
                     <DropdownMenu>

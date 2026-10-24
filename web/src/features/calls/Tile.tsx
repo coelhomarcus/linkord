@@ -1,4 +1,4 @@
-import { CellSignalLowIcon, CellSignalNoneIcon, CircleNotchIcon, EarSlashIcon, EyeSlashIcon, GearIcon, MicrophoneSlashIcon, MonitorIcon, MonitorPlayIcon, SpeakerSlashIcon } from '@phosphor-icons/react';
+import { CellSignalLowIcon, CellSignalNoneIcon, CircleNotchIcon, EyeSlashIcon, GearIcon, MicrophoneSlashIcon, MonitorIcon, MonitorPlayIcon, SpeakerSlashIcon } from '@phosphor-icons/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent } from 'react';
 import { ConnectionQuality } from 'livekit-client';
@@ -189,12 +189,12 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
         <div className="relative flex h-full w-full flex-col items-center justify-center gap-2 bg-bg-call">
           {notWatching ? (
             <span className="flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 text-caption text-text-muted">
-              <MonitorIcon size={14} />
+              <MonitorIcon size={16} />
               Você parou de assistir
             </span>
           ) : (
             <span className="flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 text-caption text-text-muted">
-              <MonitorPlayIcon size={14} />
+              <MonitorPlayIcon size={16} />
               Prévia pausada
             </span>
           )}
@@ -227,17 +227,17 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
         {showsVideo && <Avatar id={participantId} name={name} avatar={avatar} poster={avatarPoster} frozen={!isSpeaking} avatarColor={avatarColor} size={20} />}
         <span className={cn('select-none truncate font-medium text-text-primary', nameSize === 'label' ? 'text-label' : 'text-caption')}>{name}</span>
         {isDeafened ? (
-          <EarSlashIcon size={14} weight="fill" className="flex-none text-red" />
+          <SpeakerSlashIcon size={16} weight="fill" className="flex-none text-red" />
         ) : (
           kind !== 'screen' && media.micMuted && (
-            <MicrophoneSlashIcon size={14} weight="fill" className="flex-none text-red" />
+            <MicrophoneSlashIcon size={16} weight="fill" className="flex-none text-red" />
           )
         )}
         {kind !== 'screen' && connectionQuality === ConnectionQuality.Poor && (
-          <CellSignalLowIcon size={14} className="flex-none text-yellow" />
+          <CellSignalLowIcon size={16} className="flex-none text-yellow" />
         )}
         {kind !== 'screen' && connectionQuality === ConnectionQuality.Lost && (
-          <CellSignalNoneIcon size={14} className="flex-none text-red" />
+          <CellSignalNoneIcon size={16} className="flex-none text-red" />
         )}
       </div>
 
@@ -253,7 +253,7 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
             onClick={handleUnmuteClick}
             className="h-full w-7 rounded-none text-red hover:bg-white/10 hover:text-red"
           >
-            <SpeakerSlashIcon size={14} weight="fill" />
+            <SpeakerSlashIcon size={16} weight="fill" />
           </Button>
         )}
         <Button
@@ -264,7 +264,7 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
           onClick={handleGearClick}
           className="h-full w-7 rounded-none text-white/90 hover:bg-white/10 hover:text-white"
         >
-          <GearIcon size={14} />
+          <GearIcon size={16} />
         </Button>
       </div>
     </div>

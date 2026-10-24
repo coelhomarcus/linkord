@@ -1,4 +1,4 @@
-import { ArrowsInIcon, ArrowsOutIcon, EarSlashIcon, HeadphonesIcon, MicrophoneIcon, MicrophoneSlashIcon, MonitorIcon, PhoneDisconnectIcon, ScreencastIcon, SmileyIcon, VideoCameraIcon, VideoCameraSlashIcon } from '@phosphor-icons/react';
+import { ArrowsInIcon, ArrowsOutIcon, MicrophoneIcon, MicrophoneSlashIcon, MonitorIcon, PhoneSlashIcon, SmileyIcon, SpeakerHighIcon, SpeakerSlashIcon, VideoCameraIcon, VideoCameraSlashIcon } from '@phosphor-icons/react';
 import { forwardRef, useState } from 'react';
 import { iconWeight } from '@/shared/ui/icons';
 
@@ -142,7 +142,7 @@ export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(fu
               aria-label={deafened ? 'Voltar a ouvir' : 'Parar de ouvir'}
               className={cn(BAR_BUTTON, deafened ? BAR_BUTTON_RED : BAR_BUTTON_NEUTRAL)}
             >
-              {deafened ? <EarSlashIcon size={22} weight={iconWeight(true)} className={BAR_ICON} /> : <HeadphonesIcon size={22} className={BAR_ICON} />}
+              {deafened ? <SpeakerSlashIcon size={22} weight={iconWeight(true)} className={BAR_ICON} /> : <SpeakerHighIcon size={22} className={BAR_ICON} />}
             </TooltipTrigger>
             <TooltipContent>{deafened ? 'Voltar a ouvir' : 'Parar de ouvir'}</TooltipContent>
           </Tooltip>
@@ -170,7 +170,7 @@ export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(fu
               aria-label={sharing ? 'Parar compartilhamento' : 'Compartilhar tela'}
               className={cn(BAR_BUTTON, sharing ? BAR_BUTTON_GREEN : BAR_BUTTON_NEUTRAL)}
             >
-              {sharing ? <ScreencastIcon size={22} weight={iconWeight(true)} className={BAR_ICON} /> : <MonitorIcon size={22} className={BAR_ICON} />}
+              <MonitorIcon size={22} weight={iconWeight(sharing)} className={BAR_ICON} />
             </TooltipTrigger>
             <TooltipContent>{sharing ? 'Parar compartilhamento' : 'Compartilhar tela'}</TooltipContent>
           </Tooltip>
@@ -196,7 +196,7 @@ export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(fu
             aria-label="Sair da chamada"
             className={cn(BAR_BUTTON, 'bg-red text-white hover:bg-red-hover')}
           >
-            <PhoneDisconnectIcon size="100%" className={BAR_ICON} />
+            <PhoneSlashIcon size="100%" weight="fill" className={BAR_ICON} />
           </TooltipTrigger>
           <TooltipContent>Sair da chamada</TooltipContent>
         </Tooltip>

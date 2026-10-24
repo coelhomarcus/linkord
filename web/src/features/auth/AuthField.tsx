@@ -39,7 +39,7 @@ export function AuthField({ id, label, value, onChange, leftIcon, rightSlot, err
           disabled && 'opacity-60',
         )}
       >
-        <span aria-hidden className="pointer-events-none absolute left-3 top-1/2 flex -translate-y-1/2 items-center text-text-muted [&_svg]:size-4">
+        <span aria-hidden className="pointer-events-none absolute left-3 top-1/2 flex -translate-y-1/2 items-center text-text-muted [&_svg]:size-5">
           {leftIcon}
         </span>
         <input
@@ -51,13 +51,13 @@ export function AuthField({ id, label, value, onChange, leftIcon, rightSlot, err
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? errorId : undefined}
           className={cn(
-            'size-full bg-transparent pl-10 text-body text-text-primary caret-text-primary outline-none placeholder:text-text-muted/60',
+            'size-full bg-transparent pl-11 text-body text-text-primary caret-text-primary outline-none placeholder:text-text-muted/60',
             rightSlot ? 'pr-11' : 'pr-3.5',
             disabled && 'cursor-not-allowed',
           )}
         />
         {rightSlot && (
-          <span className="absolute inset-y-0 right-0 flex items-center text-text-muted [&_button]:grid [&_button]:size-11 [&_button]:place-items-center [&_svg]:size-4">
+          <span className="absolute inset-y-0 right-0 flex items-center text-text-muted [&_button]:grid [&_button]:size-11 [&_button]:place-items-center [&_svg]:size-5">
             {rightSlot}
           </span>
         )}

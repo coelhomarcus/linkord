@@ -21,7 +21,7 @@ function GroupLabel({ children }: { children: string }) {
 function SettingsSearchField({ query, onChange, onClear }: { query: string; onChange: (value: string) => void; onClear: () => void }) {
   return (
     <div className="mb-3 flex flex-none items-center gap-2 rounded-md border border-border bg-fill-subtle px-3">
-      <MagnifyingGlassIcon size={15} className="flex-none text-text-muted" aria-hidden />
+      <MagnifyingGlassIcon size={20} className="flex-none text-text-muted" aria-hidden />
       <input
         value={query}
         onChange={(event) => onChange(event.target.value)}
@@ -52,7 +52,7 @@ function SettingsSearchResults({ results, query }: { results: SettingsSearchResu
             to={to}
             className="flex min-h-11 items-center gap-3 rounded-md px-2.5 text-body font-medium text-text-primary outline-none transition-colors hover:bg-fill-hover focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <Icon size={16} aria-hidden className="flex-none text-text-muted" />
+            <Icon size={20} aria-hidden className="flex-none text-text-muted" />
             <span className="min-w-0 flex-1">
               <span className="block truncate">{entry.title}</span>
               <span className="block truncate text-caption text-text-muted">{categoryLabel}</span>
@@ -94,7 +94,7 @@ export function SettingsSidebar({ active, isAdmin }: { active: SettingsTab; isAd
                   >
                     {/* Discord/Fluxer: a plain light-gray wash for the active item, no accent color */}
                     {current && <ActiveWash layoutId={washId} />}
-                    <Icon size={16} weight={iconWeight(current)} aria-hidden className="flex-none" />
+                    <Icon size={20} weight={iconWeight(current)} aria-hidden className="flex-none" />
                     <span className="truncate">{category.label}</span>
                   </Link>
                 );
@@ -130,7 +130,7 @@ export function SettingsIndex({ isAdmin }: { isAdmin: boolean }) {
                     state={FROM_INDEX_STATE}
                     className="flex min-h-11 items-center gap-3 rounded-md px-2.5 text-body font-medium text-text-primary outline-none transition-colors hover:bg-fill-hover focus-visible:ring-2 focus-visible:ring-ring"
                   >
-                    <Icon size={18} aria-hidden className="flex-none text-text-muted" />
+                    <Icon size={20} aria-hidden className="flex-none text-text-muted" />
                     <span className="min-w-0 flex-1 truncate">{category.label}</span>
                     <CaretRightIcon size={16} aria-hidden className="flex-none text-text-muted" />
                   </Link>

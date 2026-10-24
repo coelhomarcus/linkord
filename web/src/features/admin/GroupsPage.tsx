@@ -31,7 +31,7 @@ function RowActions({ group }: { group: AdminGroupRow }) {
     <div className="flex items-center justify-end gap-0.5">
       <CopyIdButton id={group.id} label={`Copiar ID de ${name}`} />
       <Link to={`/admin/audit?targetId=${encodeURIComponent(group.id)}`} aria-label={`Ver histórico de ${name}`} title="Ver histórico" className={buttonVariants({ variant: 'ghost', size: 'icon-sm' })}>
-        <ClockCounterClockwiseIcon size={15} aria-hidden />
+        <ClockCounterClockwiseIcon size={16} aria-hidden />
       </Link>
     </div>
   );

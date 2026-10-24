@@ -122,7 +122,7 @@ export function EmailSettings({ currentEmail }: { currentEmail: string | null })
   if (phase === 'success') {
     return (
       <p className="flex items-center gap-1.5 text-label text-green">
-        <CheckCircleIcon size={15} aria-hidden /> E-mail alterado para {targetEmail}.
+        <CheckCircleIcon size={16} aria-hidden /> E-mail alterado para {targetEmail}.
       </p>
     );
   }
@@ -156,7 +156,7 @@ export function EmailSettings({ currentEmail }: { currentEmail: string | null })
             />
           </div>
           <Button type="button" size="sm" disabled={pending} onClick={() => void handleRequest()}>
-            {pending ? <CircleNotchIcon size={15} className="animate-spin" /> : <EnvelopeIcon size={15} />}
+            {pending ? <CircleNotchIcon size={20} className="animate-spin" /> : <EnvelopeIcon size={20} />}
             <span>{pending ? 'Enviando…' : 'Enviar código'}</span>
           </Button>
         </div>
@@ -185,7 +185,7 @@ export function EmailSettings({ currentEmail }: { currentEmail: string | null })
       />
       <div className="flex flex-wrap items-center gap-2">
         <Button type="button" size="sm" disabled={pending || code.length !== 6} onClick={() => void handleConfirm()}>
-          {pending ? <CircleNotchIcon size={15} className="animate-spin" /> : <CheckIcon size={15} />}
+          {pending ? <CircleNotchIcon size={20} className="animate-spin" /> : <CheckIcon size={20} />}
           <span>{pending ? 'Confirmando…' : 'Confirmar e-mail'}</span>
         </Button>
         <Button type="button" variant="ghost" size="sm" disabled={pending} onClick={() => void handleResend()}>

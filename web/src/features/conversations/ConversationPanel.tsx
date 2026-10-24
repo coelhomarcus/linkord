@@ -68,7 +68,7 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
         <>
           <header className="flex h-16 flex-none items-center gap-3 border-b border-border bg-surface-panel/90 px-4 backdrop-blur">
             <Button type="button" variant="ghost" size="icon-sm" aria-label="Voltar" onClick={() => setOpenMobile(true)} className="-ml-1 md:hidden">
-              <ArrowLeftIcon size={18} />
+              <ArrowLeftIcon size={20} />
             </Button>
             {conversation.type === 'direct' && other ? (
               <button
@@ -113,14 +113,14 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
               </Tooltip>
             )}
             <Button type="button" variant="ghost" size="icon-sm" aria-label="Mídias e links" aria-pressed={mediaOpen} onClick={onToggleMedia} className={panelToggleClass(mediaOpen)}>
-              <ImageIcon size={16} />
+              <ImageIcon size={20} />
             </Button>
             <Button type="button" variant="ghost" size="icon-sm" aria-label="Buscar mensagens" onClick={onOpenSearch} className="text-text-muted hover:text-text-primary">
-              <MagnifyingGlassIcon size={16} />
+              <MagnifyingGlassIcon size={20} />
             </Button>
             {conversation.type === 'group' && (
               <Button type="button" variant="ghost" size="icon-sm" aria-label="Detalhes do grupo" aria-pressed={detailsOpen} onClick={onToggleDetails} className={panelToggleClass(detailsOpen)}>
-                <InfoIcon size={16} />
+                <InfoIcon size={20} />
               </Button>
             )}
             {callBlockedReason ? (
@@ -128,7 +128,7 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
                 {/* a disabled button gets no pointer events, so the tooltip hangs off a wrapper */}
                 <TooltipTrigger render={<span tabIndex={0} className="inline-flex rounded-md focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50" />}>
                   <Button type="button" size="sm" disabled className="bg-bg-tertiary text-text-muted">
-                    <PhoneIcon size={16} weight="fill" />
+                    <PhoneIcon size={20} weight="fill" />
                     Entrar na chamada
                   </Button>
                 </TooltipTrigger>
@@ -136,14 +136,14 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
               </Tooltip>
             ) : (
               <Button type="button" size="sm" disabled={conversation.status === 'suspended'} onClick={() => onOpenCall(conversation.id)} className="bg-green-solid text-white hover:bg-green-hover">
-                <PhoneIcon size={16} weight="fill" />
+                <PhoneIcon size={20} weight="fill" />
                 {callActionLabel}
               </Button>
             )}
           </header>
           {callJoinError && (
             <div role="alert" className="mx-3 mt-3 flex items-start gap-2 rounded-md border border-red/40 bg-bg-floating px-3 py-2 text-label text-text-secondary shadow-popover md:mx-4">
-              <PhoneIcon size={16} className="mt-0.5 flex-none text-red" />
+              <PhoneIcon size={20} className="mt-0.5 flex-none text-red" />
               <span className="min-w-0 flex-1">{callJoinError}</span>
               <CloseButton size="xs" label="Dispensar aviso" onClick={() => dispatch({ type: 'SET_CALL_JOIN_ERROR', error: null })} />
             </div>

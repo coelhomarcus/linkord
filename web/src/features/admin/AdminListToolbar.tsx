@@ -55,7 +55,7 @@ export function AdminListToolbar({ search, filters, advanced, advancedActive, su
       <div className="flex flex-wrap items-end gap-3">
         {search && (
           <div className="flex h-9 min-w-56 flex-1 items-center gap-2 rounded-md border border-border bg-fill-subtle px-3">
-            <MagnifyingGlassIcon size={15} aria-hidden className="flex-none text-text-muted" />
+            <MagnifyingGlassIcon size={20} aria-hidden className="flex-none text-text-muted" />
             <input
               value={search.value}
               onChange={(event) => search.onChange(event.target.value)}
@@ -69,7 +69,7 @@ export function AdminListToolbar({ search, filters, advanced, advancedActive, su
         {advanced && (
           <Button type="button" variant="secondary" size="sm" className="h-9" aria-expanded={open} aria-controls={panelId} onClick={() => setAdvancedOpen((v) => !v)}>
             Mais filtros
-            <CaretDownIcon size={14} aria-hidden className={cn('transition-transform', open && 'rotate-180')} />
+            <CaretDownIcon size={16} aria-hidden className={cn('transition-transform', open && 'rotate-180')} />
           </Button>
         )}
       </div>

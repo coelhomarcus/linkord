@@ -35,7 +35,7 @@ export function AddFriendView() {
         <div className="flex flex-wrap items-center justify-between gap-3 pt-3">
           <p className="break-all text-body text-text-primary">@{state.me.name}</p>
           <Button type="button" variant="secondary" size="sm" onClick={() => void handleCopyUsername()}>
-            {copied ? <CheckIcon size={16} /> : <CopyIcon size={16} />}
+            {copied ? <CheckIcon size={20} /> : <CopyIcon size={20} />}
             <span>{copied ? 'Copiado' : `Copiar @${state.me.name}`}</span>
           </Button>
         </div>

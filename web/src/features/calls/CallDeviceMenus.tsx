@@ -62,7 +62,7 @@ function SettingsShortcutItem() {
   // (see App.tsx's showStage/inCall split), same as opening any other page.
   return (
     <DropdownMenuItem className="px-2 py-2 text-text-secondary" onClick={() => navigate(ROUTES.settingsTab('av'))}>
-      <GearIcon size={14} />
+      <GearIcon size={16} />
       Configurações completas
     </DropdownMenuItem>
   );
@@ -122,11 +122,11 @@ export function ScreenShareQuickMenu({ className }: { className?: string }) {
           <>
             <DropdownMenuSeparator />
             <DropdownMenuItem className="px-2 py-2" onClick={() => void changeSource()}>
-              <ArrowsClockwiseIcon size={14} />
+              <ArrowsClockwiseIcon size={16} />
               Trocar fonte
             </DropdownMenuItem>
             <DropdownMenuItem className="px-2 py-2" onClick={() => void (myMedia.screenPaused ? resumeSharePreview() : pauseSharePreview())}>
-              {myMedia.screenPaused ? <PlayIcon size={14} /> : <PauseIcon size={14} />}
+              {myMedia.screenPaused ? <PlayIcon size={16} /> : <PauseIcon size={16} />}
               {myMedia.screenPaused ? 'Retomar prévia' : 'Pausar prévia'}
             </DropdownMenuItem>
           </>
@@ -149,7 +149,7 @@ export function CameraQuickMenu({ className }: { className?: string }) {
         <DeviceRadioList room={livekitRoom} kind="videoinput" heading="Câmera" label="Câmera" />
         <DropdownMenuSeparator />
         <DropdownMenuSwitchItem checked={mirrorCameraPreview} onCheckedChange={setMirrorCameraPreview}>
-          <FlipHorizontalIcon size={14} />
+          <FlipHorizontalIcon size={16} />
           Espelhar minha prévia
         </DropdownMenuSwitchItem>
         <DropdownMenuSeparator />

@@ -29,7 +29,7 @@ export function AdminSidebar() {
               >
                 {({ isActive }) => (
                   <>
-                    <Icon size={16} weight={iconWeight(isActive)} aria-hidden className="flex-none" />
+                    <Icon size={20} weight={iconWeight(isActive)} aria-hidden className="flex-none" />
                     <span className="truncate">{section.label}</span>
                   </>
                 )}
@@ -58,7 +58,7 @@ export function AdminIndex() {
                 to={adminSectionPath(section)}
                 className="flex min-h-11 items-center gap-3 rounded-md px-2.5 text-body font-medium text-text-primary outline-none transition-colors hover:bg-fill-subtle focus-visible:ring-2 focus-visible:ring-ring"
               >
-                <Icon size={18} aria-hidden className="flex-none text-text-muted" />
+                <Icon size={20} aria-hidden className="flex-none text-text-muted" />
                 <span className="min-w-0 flex-1 truncate">{section.label}</span>
                 <CaretRightIcon size={16} aria-hidden className="flex-none text-text-muted" />
               </NavLink>

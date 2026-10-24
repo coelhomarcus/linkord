@@ -133,16 +133,16 @@ export function AppNavigationRail({ className }: {
             aria-expanded={listExpanded}
             className={cn(itemClass, stateClass(false))}
           >
-            <SidebarSimpleIcon size={20} aria-hidden />
+            <SidebarSimpleIcon size={24} aria-hidden />
           </TooltipTrigger>
           <TooltipContent side="right">Mostrar lista de conversas</TooltipContent>
         </Tooltip>
       </RailSlot>
       <RailLink to={ROUTES.conversations} label="Conversas" active={isConversationsPath(pathname)} onNavigate={afterNavigate} indicators={indicators}>
-        <ChatCircleIcon size={20} weight={iconWeight(isConversationsPath(pathname))} aria-hidden />
+        <ChatCircleIcon size={24} weight={iconWeight(isConversationsPath(pathname))} aria-hidden />
       </RailLink>
       <RailLink to={ROUTES.friends} label={friendsLabel} active={pathname === ROUTES.friends} badge={pendingIncomingCount} onNavigate={afterNavigate} indicators={indicators}>
-        <UsersIcon size={20} weight={iconWeight(pathname === ROUTES.friends)} aria-hidden />
+        <UsersIcon size={24} weight={iconWeight(pathname === ROUTES.friends)} aria-hidden />
       </RailLink>
       <RailSlot show={showBell}>
         <NotificationBell collapsed onNavigate={afterNavigate} />
@@ -152,11 +152,11 @@ export function AppNavigationRail({ className }: {
 
       {isAdmin && (
         <RailLink to={ROUTES.admin} label="Área administrativa" active={onAdmin} onNavigate={afterNavigate} indicators={indicators}>
-          <ShieldCheckIcon size={20} weight={iconWeight(onAdmin)} aria-hidden />
+          <ShieldCheckIcon size={24} weight={iconWeight(onAdmin)} aria-hidden />
         </RailLink>
       )}
       <RailLink to={ROUTES.settings} label="Ajustes" active={onSettings} onNavigate={afterNavigate} indicators={indicators}>
-        <GearIcon size={20} weight={iconWeight(onSettings)} aria-hidden />
+        <GearIcon size={24} weight={iconWeight(onSettings)} aria-hidden />
       </RailLink>
     </nav>
   );

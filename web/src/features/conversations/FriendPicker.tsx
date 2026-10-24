@@ -30,7 +30,7 @@ export function FriendPicker({ selected, onToggle, excludeIds, inputId, maxHeigh
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-2 rounded-md border border-border bg-fill-subtle px-3">
-        <MagnifyingGlassIcon size={15} className="text-text-muted" />
+        <MagnifyingGlassIcon size={20} className="text-text-muted" />
         <input
           id={inputId}
           value={query}

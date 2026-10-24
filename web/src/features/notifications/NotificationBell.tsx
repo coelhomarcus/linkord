@@ -67,7 +67,7 @@ export function NotificationBell({ collapsed = false, onNavigate }: { collapsed?
           ? 'relative grid size-11 place-items-center rounded-md text-text-muted transition-colors hover:bg-fill-hover hover:text-text-primary'
           : cn(buttonVariants({ variant: 'ghost', size: 'icon-sm' }), 'relative flex-none text-text-muted hover:text-text-primary')}
       >
-        <BellIcon size={collapsed ? 18 : 16} />
+        <BellIcon size={20} />
         {unread > 0 && (
           <CountBadge decorative className="absolute -right-1 -top-1">
             {formatUnread(unread)}

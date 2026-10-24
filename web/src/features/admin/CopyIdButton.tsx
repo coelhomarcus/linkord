@@ -23,7 +23,7 @@ export function CopyIdButton({ id, label }: { id: string; label: string }) {
 
   return (
     <Button type="button" variant="ghost" size="icon-sm" aria-label={copied ? 'ID copiado' : label} title={copied ? 'ID copiado' : label} onClick={() => void copy()}>
-      {copied ? <CheckIcon size={15} aria-hidden /> : <CopyIcon size={15} aria-hidden />}
+      {copied ? <CheckIcon size={16} aria-hidden /> : <CopyIcon size={16} aria-hidden />}
     </Button>
   );
 }
