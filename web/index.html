@@ -7,13 +7,20 @@
     <meta name="description" content="Linkord: compartilhamento de tela e chat em tempo real, sem cadastro e sem link." />
     <meta name="robots" content="noindex" />
     <meta name="theme-color" content="#0d0d0f" />
-    <!-- favicon.svg adapts to light/dark automatically via its own embedded
-         prefers-color-scheme media query (see web/public/favicon.svg) — the
-         `media` attribute on this link isn't reliably honored by browsers,
-         so there's no need for a second <link> here. -->
+    <script>
+      (function () {
+        var key = 'linkord.colorTheme';
+        var raw = localStorage.getItem(key);
+        var id = raw === 'whatsapp' || raw === 'discord' ? raw : 'linkord';
+        document.documentElement.dataset.theme = id;
+        var bg = id === 'whatsapp' ? '#111b21' : id === 'discord' ? '#202225' : '#0d0d0f';
+        var style = document.createElement('style');
+        style.textContent = 'html,body{background:' + bg + '}';
+        document.head.appendChild(style);
+      })();
+    </script>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <style>html,body{background:#0d0d0f}</style>
   </head>
   <body>
     <div id="root"></div>

@@ -375,6 +375,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         hideAudioOnlyTiles: roomSettings.hideAudioOnlyTiles, setHideAudioOnlyTiles: roomSettings.setHideAudioOnlyTiles,
         showTileBanners: roomSettings.showTileBanners, setShowTileBanners: roomSettings.setShowTileBanners,
         compressImagesDefault: roomSettings.compressImagesDefault, setCompressImagesDefault: roomSettings.setCompressImagesDefault,
+        colorTheme: roomSettings.colorTheme, setColorTheme: roomSettings.setColorTheme,
         mirrorCameraPreview: roomSettings.mirrorCameraPreview, setMirrorCameraPreview: roomSettings.setMirrorCameraPreview,
         conversations: conversationsList.conversations, activeConversationId: conversationsList.activeConversationId,
         openConversation, openDirect: conversationsList.openDirect, closeConversation, pinConversation: conversationsList.pinConversation,

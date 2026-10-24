@@ -1,0 +1,79 @@
+/* Inspired palettes — semantic tokens only; Linkord defaults stay in index.css @theme. */
+
+html[data-theme="whatsapp"] {
+  --color-surface-000: #111b21;
+  --color-surface-100: #111b21;
+  /* Track/composer sit below the selected pill — #2a3942 used to be both. */
+  --color-surface-200: #1a252c;
+  --color-surface-300: #202c33;
+  --color-surface-400: #2a3942;
+  --color-surface-500: #313d45;
+  --color-surface-rail: #0b141a;
+
+  --color-surface-app: var(--color-surface-000);
+  --color-surface-panel: var(--color-surface-100);
+  --color-surface-raised: var(--color-surface-200);
+  --color-surface-overlay: var(--color-surface-300);
+
+  --color-text-primary: #e9edef;
+  --color-text-secondary: #aebac1;
+  --color-text-muted: #8696a0;
+
+  --color-border-subtle: rgb(34 45 52 / 0.65);
+  --color-border-default: #222d34;
+  --color-border-strong: rgb(255 255 255 / 0.14);
+
+  --color-accent-primary: #25d366;
+  --color-accent-text: #53bdeb;
+  --color-border-accent: #25d366;
+
+  --color-green: #25d366;
+  --color-green-solid: #1f9d55;
+  --color-green-hover: #1da851;
+
+  --color-fill-subtle: rgb(255 255 255 / 0.05);
+  --color-fill-hover: rgb(255 255 255 / 0.08);
+  --color-fill-active: rgb(255 255 255 / 0.14);
+
+  --shadow-panel: 0 1px 2px rgb(0 0 0 / 0.45);
+  --shadow-highlight: inset 0 1px 0 rgb(255 255 255 / 0.05);
+}
+
+html[data-theme="discord"] {
+  --color-surface-000: #2f3136;
+  --color-surface-100: #36393f;
+  /* Composer/tabs sit darker than the chat panel, not lighter. */
+  --color-surface-200: #2b2d31;
+  --color-surface-300: #1e1f22;
+  --color-surface-400: #404249;
+  --color-surface-500: #4f545c;
+  --color-surface-rail: #202225;
+
+  --color-surface-app: var(--color-surface-000);
+  --color-surface-panel: var(--color-surface-100);
+  --color-surface-raised: var(--color-surface-200);
+  --color-surface-overlay: var(--color-surface-300);
+
+  --color-text-primary: #dbdee1;
+  --color-text-secondary: #b5bac1;
+  --color-text-muted: #949ba4;
+
+  --color-border-subtle: rgb(79 84 92 / 0.45);
+  --color-border-default: rgb(255 255 255 / 0.08);
+  --color-border-strong: rgb(255 255 255 / 0.14);
+
+  --color-accent-primary: #5865f2;
+  --color-accent-text: #00b0f4;
+  --color-border-accent: #5865f2;
+
+  --color-green: #3ba55c;
+  --color-green-solid: #3ba55c;
+  --color-green-hover: #2d7d46;
+
+  --color-fill-subtle: rgb(255 255 255 / 0.05);
+  --color-fill-hover: rgb(255 255 255 / 0.08);
+  --color-fill-active: rgb(255 255 255 / 0.14);
+
+  --shadow-panel: 0 1px 2px rgb(0 0 0 / 0.35);
+  --shadow-highlight: inset 0 1px 0 rgb(255 255 255 / 0.06);
+}

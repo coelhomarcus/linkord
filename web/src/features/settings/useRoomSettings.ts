@@ -8,6 +8,8 @@ import { loadShareQuality, saveShareQuality } from './useShareQualityPreference'
 import type { ShareQualityId } from '@/features/calls/shareQualityPresets';
 import { setVolume } from '@/shared/sounds';
 import { setNotificationsModuleEnabled, loadNotificationsEnabled, saveNotificationsEnabled } from '@/shared/notifications';
+import { applyColorTheme } from './applyColorTheme';
+import { loadColorTheme, saveColorTheme, type ColorThemeId } from './useColorThemePreference';
 
 /** The 8 user-facing toggles/sliders under Ajustes — each backed by its own
  * `features/settings/useXPreference.ts` localStorage pair, wired up here
@@ -66,6 +68,13 @@ export function useRoomSettings() {
     saveShareQuality(value);
   }, []);
 
+  const [colorTheme, setColorThemeState] = useState(loadColorTheme);
+  const setColorTheme = useCallback((value: ColorThemeId) => {
+    setColorThemeState(value);
+    saveColorTheme(value);
+    applyColorTheme(value);
+  }, []);
+
   useEffect(() => {
     setVolume(notifyVolume);
   }, [notifyVolume]);
@@ -83,5 +92,6 @@ export function useRoomSettings() {
     compressImagesDefault, setCompressImagesDefault,
     mirrorCameraPreview, setMirrorCameraPreview,
     shareQuality, setShareQuality,
+    colorTheme, setColorTheme,
   };
 }
