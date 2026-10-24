@@ -1,6 +1,7 @@
+import { UploadSimpleIcon } from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
 import type { DragEvent } from 'react';
-import { Upload } from 'lucide-react';
+
 import { ChatSurfaceWidthProvider, useMeasuredWidth } from '@/shared/lib/chatSurfaceWidth';
 import { useRoom } from '@/state/RoomContext';
 import { DirectComposerGate } from '@/features/friends/DirectComposerGate';
@@ -95,7 +96,7 @@ export function ChatSurface({ conversationId, onOpenProfile, surfaceId = 'main' 
       </div>
       {dragActive && (
         <div className="pointer-events-none absolute inset-0 z-10 m-2 flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-primary bg-(--surface-base)/90 text-text-primary">
-          <Upload size={28} className="text-primary" />
+          <UploadSimpleIcon size={28} className="text-primary" />
           <p className="text-body font-medium">Solte para anexar</p>
         </div>
       )}

@@ -1,7 +1,7 @@
+import { BellIcon, ChecksIcon, TrashIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Trash2 } from 'lucide-react';
-import { Bell, CheckCheck } from '@/shared/ui/icons';
+
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/primitives/popover';
 import { buttonVariants } from '@/shared/ui/primitives/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
@@ -67,7 +67,7 @@ export function NotificationBell({ collapsed = false, onNavigate }: { collapsed?
           ? 'relative grid size-11 place-items-center rounded-md text-text-muted transition-colors hover:bg-fill-hover hover:text-text-primary'
           : cn(buttonVariants({ variant: 'ghost', size: 'icon-sm' }), 'relative flex-none text-text-muted hover:text-text-primary')}
       >
-        <Bell size={collapsed ? 18 : 16} />
+        <BellIcon size={collapsed ? 18 : 16} />
         {unread > 0 && (
           <CountBadge decorative className="absolute -right-1 -top-1">
             {formatUnread(unread)}
@@ -85,7 +85,7 @@ export function NotificationBell({ collapsed = false, onNavigate }: { collapsed?
                 onClick={() => void markAndSync({ all: true }, 0)}
                 className={cn(buttonVariants({ variant: 'ghost', size: 'icon-sm' }), 'text-text-muted hover:text-text-primary')}
               >
-                <CheckCheck size={16} />
+                <ChecksIcon size={16} />
               </TooltipTrigger>
               <TooltipContent side="bottom">Marcar todas como lidas</TooltipContent>
             </Tooltip>
@@ -95,7 +95,7 @@ export function NotificationBell({ collapsed = false, onNavigate }: { collapsed?
               onClick={() => void removeFromList(clearNotifications, 0)}
               className={cn(buttonVariants({ variant: 'ghost', size: 'icon-sm' }), 'text-text-muted hover:text-red')}
             >
-              <Trash2 size={16} />
+              <TrashIcon size={16} />
             </button>
           </div>
         </div>

@@ -1,6 +1,7 @@
+import { ArrowDownIcon } from '@phosphor-icons/react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { defaultRangeExtractor, useVirtualizer, type Range } from '@tanstack/react-virtual';
-import { ArrowDown } from '@/shared/ui/icons';
+
 import { buildMentionLookup } from '@/shared/lib/mentions';
 import { useRoom } from '@/state/RoomContext';
 import type { ChatMessage } from '@/shared/types/protocol';
@@ -434,7 +435,7 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
           style={{ bottom: bottomPadding + 16 }}
           className="absolute left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-label font-medium text-primary-foreground shadow-popover"
         >
-          <ArrowDown size={14} />
+          <ArrowDownIcon size={14} />
           {pill.label}
         </button>
       )}

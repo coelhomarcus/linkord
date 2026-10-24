@@ -1,7 +1,7 @@
+import { ArrowBendUpLeftIcon, ArrowUpIcon, ImageSquareIcon, PaperclipIcon, PlusIcon, SmileyIcon } from '@phosphor-icons/react';
 import { forwardRef, useEffect, useId, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, ClipboardEvent, KeyboardEvent as ReactKeyboardEvent, SyntheticEvent } from 'react';
-import { ImagePlus, Paperclip, Reply } from 'lucide-react';
-import { ArrowUp, Plus, Smile } from '@/shared/ui/icons';
+
 import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { Button } from '@/shared/ui/primitives/button';
 import { EmojiPicker, EmojiPickerContent, EmojiPickerSearch } from '@/shared/ui/primitives/emoji-picker';
@@ -85,7 +85,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
   const canSubmit = !disabled && !tooLong && (text.trim().length > 0 || pendingFiles.length > 0);
 
   // Keeps the arrow-key-highlighted mention option visible — without this,
-  // ArrowDown/ArrowUp move mentionSelectedIndex past the dropdown's visible
+  // ArrowDown/ArrowUpIcon move mentionSelectedIndex past the dropdown's visible
   // rows (it's capped at max-h-56) with no compensating scroll.
   useEffect(() => {
     mentionOptionRefs.current[mentionSelectedIndex]?.scrollIntoView({ block: 'nearest' });
@@ -251,7 +251,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
     // arrows move the selection instead of the caret.
     if (mentionQuery && mentionCandidates.length) {
       if (event.key === 'ArrowDown') { event.preventDefault(); setMentionSelectedIndex((i) => (i + 1) % mentionCandidates.length); return; }
-      if (event.key === 'ArrowUp') { event.preventDefault(); setMentionSelectedIndex((i) => (i - 1 + mentionCandidates.length) % mentionCandidates.length); return; }
+      if (event.key === 'ArrowUpIcon') { event.preventDefault(); setMentionSelectedIndex((i) => (i - 1 + mentionCandidates.length) % mentionCandidates.length); return; }
       if (event.key === 'Enter' || event.key === 'Tab') { event.preventDefault(); selectMention(mentionCandidates[mentionSelectedIndex]!); return; }
       if (event.key === 'Escape') { event.preventDefault(); setMentionQuery(null); return; }
     }
@@ -334,7 +334,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
 
         {replyingTo && (
           <div className="flex items-center gap-2 border-b border-border-subtle py-1.5 pl-3 pr-1.5 text-label">
-            <Reply size={14} className="flex-none text-text-muted" />
+            <ArrowBendUpLeftIcon size={14} className="flex-none text-text-muted" />
             <span className="min-w-0 flex-1 truncate text-text-muted">
               Respondendo a <span className="font-medium text-text-secondary">{replyName}</span>
               {replyingTo.text ? <span> - {replyingTo.text}</span> : null}
@@ -352,11 +352,11 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
             <DropdownMenuTrigger
               render={<Button type="button" variant="ghost" size="icon" aria-label="Adicionar" disabled={disabled} className={iconButton} />}
             >
-              <Plus size={20} />
+              <PlusIcon size={20} />
             </DropdownMenuTrigger>
             <DropdownMenuContent side="top" align="start" className="w-64">
-              <DropdownMenuItem onClick={() => fileInputRef.current?.click()}><Paperclip size={14} />Anexar arquivos</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => imageInputRef.current?.click()}><ImagePlus size={14} />Enviar imagens</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => fileInputRef.current?.click()}><PaperclipIcon size={14} />Anexar arquivos</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => imageInputRef.current?.click()}><ImageSquareIcon size={14} />Enviar imagens</DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuCheckboxItem checked={compressImages} onCheckedChange={toggleCompress}>
                 Compactar imagens (WebP)
@@ -404,7 +404,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
             <PopoverTrigger
               render={<Button type="button" variant="ghost" size="icon" aria-label="Inserir emoji" disabled={disabled} className={iconButton} />}
             >
-              <Smile size={18} />
+              <SmileyIcon size={18} />
             </PopoverTrigger>
             <PopoverContent keepMounted={emojiPickerWarmed} className="w-75 p-0" side="top" align="end">
               <EmojiPicker className="h-80 w-full" onEmojiSelect={({ emoji }) => insertEmoji(emoji)}>
@@ -421,7 +421,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
             onClick={() => void submit()}
             className="flex-none rounded-full"
           >
-            <ArrowUp size={18} />
+            <ArrowUpIcon size={18} />
           </Button>
         </div>
       </div>

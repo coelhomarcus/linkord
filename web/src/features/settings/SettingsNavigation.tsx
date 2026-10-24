@@ -1,7 +1,9 @@
+import { CaretRightIcon, MagnifyingGlassIcon } from '@phosphor-icons/react';
 import { useId } from 'react';
-import { Search } from 'lucide-react';
+import { iconWeight } from '@/shared/ui/icons';
+
 import { motion } from 'motion/react';
-import { ChevronRight } from '@/shared/ui/icons';
+
 import { Link } from 'react-router';
 import { ROUTES } from '@/shared/lib/routes';
 import type { SettingsTab } from '@/shared/lib/routes';
@@ -19,7 +21,7 @@ function GroupLabel({ children }: { children: string }) {
 function SettingsSearchField({ query, onChange, onClear }: { query: string; onChange: (value: string) => void; onClear: () => void }) {
   return (
     <div className="mb-3 flex flex-none items-center gap-2 rounded-md border border-border bg-fill-subtle px-3">
-      <Search size={15} className="flex-none text-text-muted" aria-hidden />
+      <MagnifyingGlassIcon size={15} className="flex-none text-text-muted" aria-hidden />
       <input
         value={query}
         onChange={(event) => onChange(event.target.value)}
@@ -92,7 +94,7 @@ export function SettingsSidebar({ active, isAdmin }: { active: SettingsTab; isAd
                   >
                     {/* Discord/Fluxer: a plain light-gray wash for the active item, no accent color */}
                     {current && <ActiveWash layoutId={washId} />}
-                    <Icon size={16} aria-hidden className="flex-none" />
+                    <Icon size={16} weight={iconWeight(current)} aria-hidden className="flex-none" />
                     <span className="truncate">{category.label}</span>
                   </Link>
                 );
@@ -130,7 +132,7 @@ export function SettingsIndex({ isAdmin }: { isAdmin: boolean }) {
                   >
                     <Icon size={18} aria-hidden className="flex-none text-text-muted" />
                     <span className="min-w-0 flex-1 truncate">{category.label}</span>
-                    <ChevronRight size={16} aria-hidden className="flex-none text-text-muted" />
+                    <CaretRightIcon size={16} aria-hidden className="flex-none text-text-muted" />
                   </Link>
                 );
               })}

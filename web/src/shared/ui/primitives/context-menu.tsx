@@ -1,6 +1,5 @@
+import { CheckIcon } from '@phosphor-icons/react';
 import { ContextMenu as ContextMenuPrimitive } from "@base-ui/react/context-menu"
-import { CheckIcon } from "lucide-react"
-
 import { cn } from "@/shared/lib/utils"
 
 function ContextMenu({ ...props }: ContextMenuPrimitive.Root.Props) {
@@ -78,7 +77,7 @@ function ContextMenuCheckboxItem({
         data-slot="context-menu-checkbox-item-indicator"
       >
         <ContextMenuPrimitive.CheckboxItemIndicator>
-          <CheckIcon />
+          <CheckIcon size={16} />
         </ContextMenuPrimitive.CheckboxItemIndicator>
       </span>
       {children}

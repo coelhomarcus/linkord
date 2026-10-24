@@ -1,6 +1,7 @@
+import { CaretDownIcon, CaretRightIcon } from '@phosphor-icons/react';
 import { useCallback, useState } from 'react';
 import { Link } from 'react-router';
-import { ChevronDown, ChevronRight } from '@/shared/ui/icons';
+
 import { useUrlSearch } from '@/shared/hooks/useUrlSearch';
 import { fetchAudit } from './adminApi';
 import type { AuditRow } from './adminApi';
@@ -68,7 +69,7 @@ function Target({ row, inline }: { row: AuditRow; inline?: boolean }) {
 function Toggle({ row, open, onToggle, controls }: { row: AuditRow; open: boolean; onToggle: () => void; controls: string }) {
   return (
     <button type="button" aria-expanded={open} aria-controls={controls} onClick={onToggle} className="flex items-center gap-1.5 rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-ring">
-      {open ? <ChevronDown size={14} aria-hidden className="flex-none text-text-muted" /> : <ChevronRight size={14} aria-hidden className="flex-none text-text-muted" />}
+      {open ? <CaretDownIcon size={14} aria-hidden className="flex-none text-text-muted" /> : <CaretRightIcon size={14} aria-hidden className="flex-none text-text-muted" />}
       <span>{formatWhenShort(row.at)}</span>
       <span className="sr-only">: detalhes de {ACTION_LABELS[row.action] ?? row.action}</span>
     </button>

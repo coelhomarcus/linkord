@@ -1,6 +1,7 @@
+import { ArrowsInIcon, ArrowsOutIcon, EarSlashIcon, HeadphonesIcon, MicrophoneIcon, MicrophoneSlashIcon, MonitorIcon, PhoneDisconnectIcon, ScreencastIcon, SmileyIcon, VideoCameraIcon, VideoCameraSlashIcon } from '@phosphor-icons/react';
 import { forwardRef, useState } from 'react';
-import { Headphones, HeadphoneOff, Maximize2, Minimize2, Monitor, MonitorX, Video, VideoOff } from 'lucide-react';
-import { Mic, MicOff, PhoneOff, Smile } from '@/shared/ui/icons';
+import { iconWeight } from '@/shared/ui/icons';
+
 import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { useRoom } from '../../state/RoomContext';
 import type { MicProblem } from '@/state/roomReducer';
@@ -90,7 +91,7 @@ export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(fu
       )}
       {micProblem && micProblem !== dismissedMicProblem && (
         <div role="status" className="flex max-w-[calc(100vw-2rem)] items-start gap-2 rounded-md border border-red/40 bg-bg-floating px-3 py-2 text-label text-text-secondary shadow-popover md:max-w-100">
-          <MicOff size={16} className="mt-0.5 flex-none text-red" />
+          <MicrophoneSlashIcon size={16} className="mt-0.5 flex-none text-red" />
           <span className="min-w-0 flex-1">{MIC_PROBLEM_NOTICE[micProblem]}</span>
           <CloseButton size="xs" label="Dispensar aviso" onClick={() => setDismissedMicProblem(micProblem)} />
         </div>
@@ -101,7 +102,7 @@ export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(fu
             aria-label="Reagir"
             className={cn(BAR_BUTTON, reactionsOpen ? 'bg-white/12 text-white' : BAR_BUTTON_NEUTRAL)}
           >
-            <Smile size="100%" className={BAR_ICON} />
+            <SmileyIcon size="100%" className={BAR_ICON} />
           </PopoverTrigger>
           <PopoverContent className="w-auto p-1.5" side="top" container={fullscreenElement ?? undefined}>
             <div className="flex gap-1">
@@ -126,7 +127,7 @@ export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(fu
               aria-label={micLabel}
               className={cn(BAR_BUTTON, 'relative', myMedia.micMuted || micProblem ? BAR_BUTTON_RED : BAR_BUTTON_NEUTRAL)}
             >
-              {myMedia.micMuted ? <MicOff size="100%" className={BAR_ICON} /> : <Mic size="100%" className={BAR_ICON} />}
+              {myMedia.micMuted ? <MicrophoneSlashIcon size="100%" weight={iconWeight(true)} className={BAR_ICON} /> : <MicrophoneIcon size="100%" className={BAR_ICON} />}
               {micProblem && <span aria-hidden className="absolute right-0.5 top-0.5 h-2.5 w-2.5 rounded-full border-2 border-black bg-red" />}
             </TooltipTrigger>
             <TooltipContent>{micLabel}</TooltipContent>
@@ -141,7 +142,7 @@ export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(fu
               aria-label={deafened ? 'Voltar a ouvir' : 'Parar de ouvir'}
               className={cn(BAR_BUTTON, deafened ? BAR_BUTTON_RED : BAR_BUTTON_NEUTRAL)}
             >
-              {deafened ? <HeadphoneOff className={BAR_ICON} /> : <Headphones className={BAR_ICON} />}
+              {deafened ? <EarSlashIcon size={22} weight={iconWeight(true)} className={BAR_ICON} /> : <HeadphonesIcon size={22} className={BAR_ICON} />}
             </TooltipTrigger>
             <TooltipContent>{deafened ? 'Voltar a ouvir' : 'Parar de ouvir'}</TooltipContent>
           </Tooltip>
@@ -155,7 +156,7 @@ export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(fu
               aria-label={cameraOn ? 'Parar câmera' : 'Ligar câmera'}
               className={cn(BAR_BUTTON, cameraOn ? BAR_BUTTON_GREEN : BAR_BUTTON_NEUTRAL)}
             >
-              {cameraOn ? <Video className={BAR_ICON} /> : <VideoOff className={BAR_ICON} />}
+              {cameraOn ? <VideoCameraIcon size={22} weight={iconWeight(true)} className={BAR_ICON} /> : <VideoCameraSlashIcon size={22} className={BAR_ICON} />}
             </TooltipTrigger>
             <TooltipContent>{cameraOn ? 'Parar câmera' : 'Ligar câmera'}</TooltipContent>
           </Tooltip>
@@ -169,7 +170,7 @@ export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(fu
               aria-label={sharing ? 'Parar compartilhamento' : 'Compartilhar tela'}
               className={cn(BAR_BUTTON, sharing ? BAR_BUTTON_GREEN : BAR_BUTTON_NEUTRAL)}
             >
-              {sharing ? <MonitorX className={BAR_ICON} /> : <Monitor className={BAR_ICON} />}
+              {sharing ? <ScreencastIcon size={22} weight={iconWeight(true)} className={BAR_ICON} /> : <MonitorIcon size={22} className={BAR_ICON} />}
             </TooltipTrigger>
             <TooltipContent>{sharing ? 'Parar compartilhamento' : 'Compartilhar tela'}</TooltipContent>
           </Tooltip>
@@ -182,7 +183,7 @@ export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(fu
             aria-label={isCallFullscreen ? 'Sair da tela cheia' : 'Tela cheia'}
             className={cn(BAR_BUTTON, BAR_BUTTON_NEUTRAL)}
           >
-            {isCallFullscreen ? <Minimize2 className={BAR_ICON} /> : <Maximize2 className={BAR_ICON} />}
+            {isCallFullscreen ? <ArrowsInIcon size={22} className={BAR_ICON} /> : <ArrowsOutIcon size={22} className={BAR_ICON} />}
           </TooltipTrigger>
           <TooltipContent>{isCallFullscreen ? 'Sair da tela cheia' : 'Tela cheia'}</TooltipContent>
         </Tooltip>
@@ -195,7 +196,7 @@ export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(fu
             aria-label="Sair da chamada"
             className={cn(BAR_BUTTON, 'bg-red text-white hover:bg-red-hover')}
           >
-            <PhoneOff size="100%" className={BAR_ICON} />
+            <PhoneDisconnectIcon size="100%" className={BAR_ICON} />
           </TooltipTrigger>
           <TooltipContent>Sair da chamada</TooltipContent>
         </Tooltip>

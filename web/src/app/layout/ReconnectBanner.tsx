@@ -1,4 +1,5 @@
-import { WifiOff } from 'lucide-react';
+import { WifiSlashIcon } from '@phosphor-icons/react';
+
 import { useRoom } from '@/state/RoomContext';
 
 // Same floating-pill treatment and corner as FloatingPip's audio-only call
@@ -13,7 +14,7 @@ export function ReconnectBanner() {
         <span className="absolute inline-flex size-full animate-ping rounded-full bg-red opacity-75" />
         <span className="relative inline-flex size-2.5 rounded-full bg-red" />
       </span>
-      <WifiOff size={15} className="flex-none" />
+      <WifiSlashIcon size={15} className="flex-none" />
       <span className="min-w-0 truncate">A conexão com o servidor caiu. Reconectando...</span>
     </div>
   );

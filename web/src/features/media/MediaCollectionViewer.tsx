@@ -1,5 +1,6 @@
+import { CaretLeftIcon, CaretRightIcon, DownloadSimpleIcon } from '@phosphor-icons/react';
 import { Dialog as DialogPrimitive } from '@base-ui/react/dialog';
-import { ChevronLeft, ChevronRight, Download } from '@/shared/ui/icons';
+
 import { CloseButton } from '@/shared/ui/primitives/close-button';
 
 export interface ViewerItem {
@@ -53,7 +54,7 @@ export function MediaCollectionViewer({ items, index, open, onIndexChange, onOpe
                   aria-label="Baixar original"
                   className="grid size-9 flex-none place-items-center rounded-full text-white/80 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/60"
                 >
-                  <Download size={18} />
+                  <DownloadSimpleIcon size={18} />
                 </a>
                 <DialogPrimitive.Close render={<CloseButton variant="overlay" size="md" />} />
               </div>
@@ -70,10 +71,10 @@ export function MediaCollectionViewer({ items, index, open, onIndexChange, onOpe
                 {items.length > 1 && (
                   <>
                     <button type="button" aria-label="Anterior" disabled={!hasPrev} onClick={(e) => { e.stopPropagation(); onIndexChange(index - 1); }} className={`${navButton} absolute left-2 top-1/2 -translate-y-1/2 sm:left-4`}>
-                      <ChevronLeft size={22} />
+                      <CaretLeftIcon size={22} />
                     </button>
                     <button type="button" aria-label="Próxima" disabled={!hasNext} onClick={(e) => { e.stopPropagation(); onIndexChange(index + 1); }} className={`${navButton} absolute right-2 top-1/2 -translate-y-1/2 sm:right-4`}>
-                      <ChevronRight size={22} />
+                      <CaretRightIcon size={22} />
                     </button>
                   </>
                 )}

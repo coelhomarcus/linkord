@@ -1,4 +1,5 @@
-import { ChevronRight } from '@/shared/ui/icons';
+import { CaretRightIcon } from '@phosphor-icons/react';
+import { iconWeight } from '@/shared/ui/icons';
 import { NavLink } from 'react-router';
 import { cn } from '@/shared/lib/utils';
 import { ADMIN_GROUPS, adminSectionPath } from './adminCatalog';
@@ -26,8 +27,12 @@ export function AdminSidebar() {
                   isActive ? 'bg-fill-active text-text-primary' : 'text-text-muted hover:bg-fill-subtle hover:text-text-secondary',
                 )}
               >
-                <Icon size={16} aria-hidden className="flex-none" />
-                <span className="truncate">{section.label}</span>
+                {({ isActive }) => (
+                  <>
+                    <Icon size={16} weight={iconWeight(isActive)} aria-hidden className="flex-none" />
+                    <span className="truncate">{section.label}</span>
+                  </>
+                )}
               </NavLink>
             );
           })}
@@ -55,7 +60,7 @@ export function AdminIndex() {
               >
                 <Icon size={18} aria-hidden className="flex-none text-text-muted" />
                 <span className="min-w-0 flex-1 truncate">{section.label}</span>
-                <ChevronRight size={16} aria-hidden className="flex-none text-text-muted" />
+                <CaretRightIcon size={16} aria-hidden className="flex-none text-text-muted" />
               </NavLink>
             );
           })}

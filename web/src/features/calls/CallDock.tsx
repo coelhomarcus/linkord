@@ -1,5 +1,5 @@
-import { Headphones, HeadphoneOff, Monitor, MonitorX, Phone, Video, VideoOff } from 'lucide-react';
-import { Mic, MicOff, PhoneOff } from '@/shared/ui/icons';
+import { EarSlashIcon, HeadphonesIcon, MicrophoneIcon, MicrophoneSlashIcon, MonitorIcon, PhoneDisconnectIcon, PhoneIcon, ScreencastIcon, VideoCameraIcon, VideoCameraSlashIcon } from '@phosphor-icons/react';
+import { iconWeight } from '@/shared/ui/icons';
 import { Avatar } from '@/shared/Avatar';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
 import { useRoom } from '@/state/RoomContext';
@@ -74,7 +74,7 @@ export function CallDock({ onReturnToCall, onOpenProfile, showReturnToCall }: Ca
                 aria-label="Sair da chamada"
                 className={cn(DOCK_BUTTON, 'bg-red text-white hover:bg-red-hover')}
               >
-                <PhoneOff size={16} />
+                <PhoneDisconnectIcon size={16} />
               </TooltipTrigger>
               <TooltipContent>Sair da chamada</TooltipContent>
             </Tooltip>
@@ -85,7 +85,7 @@ export function CallDock({ onReturnToCall, onOpenProfile, showReturnToCall }: Ca
               onClick={onReturnToCall}
               className="flex h-8 w-full items-center justify-center gap-1.5 rounded-md bg-green/16 text-label font-semibold text-green transition-colors hover:bg-green/24"
             >
-              <Phone size={14} />
+              <PhoneIcon size={14} />
               Voltar à chamada
             </button>
           )}
@@ -107,7 +107,7 @@ export function CallDock({ onReturnToCall, onOpenProfile, showReturnToCall }: Ca
             aria-label={micLabel}
             className={cn(DOCK_BUTTON, micMuted ? DOCK_RED : DOCK_NEUTRAL)}
           >
-            {micMuted ? <MicOff size={16} /> : <Mic size={16} />}
+            {micMuted ? <MicrophoneSlashIcon size={16} weight={iconWeight(true)} /> : <MicrophoneIcon size={16} />}
           </TooltipTrigger>
           <TooltipContent>{micLabel}</TooltipContent>
         </Tooltip>
@@ -117,7 +117,7 @@ export function CallDock({ onReturnToCall, onOpenProfile, showReturnToCall }: Ca
             aria-label={deafened ? 'Voltar a ouvir' : 'Parar de ouvir'}
             className={cn(DOCK_BUTTON, deafened ? DOCK_RED : DOCK_NEUTRAL)}
           >
-            {deafened ? <HeadphoneOff size={16} /> : <Headphones size={16} />}
+            {deafened ? <EarSlashIcon size={16} weight={iconWeight(true)} /> : <HeadphonesIcon size={16} />}
           </TooltipTrigger>
           <TooltipContent>{deafened ? 'Voltar a ouvir' : 'Parar de ouvir'}</TooltipContent>
         </Tooltip>
@@ -129,7 +129,7 @@ export function CallDock({ onReturnToCall, onOpenProfile, showReturnToCall }: Ca
                 aria-label={cameraOn ? 'Parar câmera' : 'Ligar câmera'}
                 className={cn(DOCK_BUTTON, cameraOn ? DOCK_GREEN : DOCK_NEUTRAL)}
               >
-                {cameraOn ? <Video size={16} /> : <VideoOff size={16} />}
+                {cameraOn ? <VideoCameraIcon size={16} weight={iconWeight(true)} /> : <VideoCameraSlashIcon size={16} />}
               </TooltipTrigger>
               <TooltipContent>{cameraOn ? 'Parar câmera' : 'Ligar câmera'}</TooltipContent>
             </Tooltip>
@@ -139,7 +139,7 @@ export function CallDock({ onReturnToCall, onOpenProfile, showReturnToCall }: Ca
                 aria-label={sharing ? 'Parar compartilhamento' : 'Compartilhar tela'}
                 className={cn(DOCK_BUTTON, sharing ? DOCK_GREEN : DOCK_NEUTRAL)}
               >
-                {sharing ? <MonitorX size={16} /> : <Monitor size={16} />}
+                {sharing ? <ScreencastIcon size={16} weight={iconWeight(true)} /> : <MonitorIcon size={16} />}
               </TooltipTrigger>
               <TooltipContent>{sharing ? 'Parar compartilhamento' : 'Compartilhar tela'}</TooltipContent>
             </Tooltip>

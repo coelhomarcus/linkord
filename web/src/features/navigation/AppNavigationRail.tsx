@@ -1,8 +1,9 @@
+import { ChatCircleIcon, GearIcon, ShieldCheckIcon, SidebarSimpleIcon, UsersIcon } from '@phosphor-icons/react';
 import { useId } from 'react';
 import type { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { MessageCircle, PanelLeftOpen, Settings, ShieldCheck, UsersRound } from '@/shared/ui/icons';
+
 import { useSidebar } from '@/shared/ui/motion/sidebar-context';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
 import { ROUTES, isConversationsPath } from '@/shared/lib/routes';
@@ -13,6 +14,7 @@ import { useRoom } from '@/state/RoomContext';
 import { useFriends } from '@/features/friends/FriendsContext';
 import { NotificationBell } from '@/features/notifications/NotificationBell';
 import { CountBadge } from '@/shared/CountBadge';
+import { iconWeight } from '@/shared/ui/icons';
 
 const itemClass = 'relative isolate grid size-11 place-items-center rounded-md outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring';
 
@@ -131,16 +133,16 @@ export function AppNavigationRail({ className }: {
             aria-expanded={listExpanded}
             className={cn(itemClass, stateClass(false))}
           >
-            <PanelLeftOpen size={20} aria-hidden />
+            <SidebarSimpleIcon size={20} aria-hidden />
           </TooltipTrigger>
           <TooltipContent side="right">Mostrar lista de conversas</TooltipContent>
         </Tooltip>
       </RailSlot>
       <RailLink to={ROUTES.conversations} label="Conversas" active={isConversationsPath(pathname)} onNavigate={afterNavigate} indicators={indicators}>
-        <MessageCircle size={20} aria-hidden />
+        <ChatCircleIcon size={20} weight={iconWeight(isConversationsPath(pathname))} aria-hidden />
       </RailLink>
       <RailLink to={ROUTES.friends} label={friendsLabel} active={pathname === ROUTES.friends} badge={pendingIncomingCount} onNavigate={afterNavigate} indicators={indicators}>
-        <UsersRound size={20} aria-hidden />
+        <UsersIcon size={20} weight={iconWeight(pathname === ROUTES.friends)} aria-hidden />
       </RailLink>
       <RailSlot show={showBell}>
         <NotificationBell collapsed onNavigate={afterNavigate} />
@@ -150,11 +152,11 @@ export function AppNavigationRail({ className }: {
 
       {isAdmin && (
         <RailLink to={ROUTES.admin} label="Área administrativa" active={onAdmin} onNavigate={afterNavigate} indicators={indicators}>
-          <ShieldCheck size={20} aria-hidden />
+          <ShieldCheckIcon size={20} weight={iconWeight(onAdmin)} aria-hidden />
         </RailLink>
       )}
       <RailLink to={ROUTES.settings} label="Ajustes" active={onSettings} onNavigate={afterNavigate} indicators={indicators}>
-        <Settings size={20} aria-hidden />
+        <GearIcon size={20} weight={iconWeight(onSettings)} aria-hidden />
       </RailLink>
     </nav>
   );

@@ -1,5 +1,6 @@
-import { Archive, File, FileCode, FileImage, FileMusic, FileSpreadsheet, FileText, FileVideo2, Presentation } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
+import { FileArchiveIcon, FileAudioIcon, FileCodeIcon, FileIcon, FileImageIcon, FilePdfIcon, FilePptIcon, FileTextIcon, FileVideoIcon, FileXlsIcon } from '@phosphor-icons/react';
+
+import type { Icon } from '@phosphor-icons/react';
 
 export type FileFamily = 'pdf' | 'document' | 'spreadsheet' | 'presentation' | 'archive' | 'text-code' | 'image' | 'audio' | 'video' | 'unknown';
 
@@ -7,7 +8,7 @@ export interface FilePresentation {
   family: FileFamily;
   /** The word shown next to the size, e.g. "Documento PDF" — never the raw MIME. */
   typeLabel: string;
-  icon: LucideIcon;
+  icon: Icon;
   /** Small corner marker on the icon — only PDF gets one; every other family
    * relies on its own icon shape, not color, to read as distinct (see the
    * plan's "diferenciáveis sem depender de cor" requirement). */
@@ -79,17 +80,17 @@ const FAMILY_LABEL: Record<FileFamily, string> = {
   unknown: 'Arquivo',
 };
 
-const FAMILY_ICON: Record<FileFamily, LucideIcon> = {
-  pdf: FileText,
-  document: FileText,
-  spreadsheet: FileSpreadsheet,
-  presentation: Presentation,
-  archive: Archive,
-  'text-code': FileCode,
-  image: FileImage,
-  audio: FileMusic,
-  video: FileVideo2,
-  unknown: File,
+const FAMILY_ICON: Record<FileFamily, Icon> = {
+  pdf: FilePdfIcon,
+  document: FileTextIcon,
+  spreadsheet: FileXlsIcon,
+  presentation: FilePptIcon,
+  archive: FileArchiveIcon,
+  'text-code': FileCodeIcon,
+  image: FileImageIcon,
+  audio: FileAudioIcon,
+  video: FileVideoIcon,
+  unknown: FileIcon,
 };
 
 // Reinforcement only (rule: "usar cor apenas como reforço") — every family

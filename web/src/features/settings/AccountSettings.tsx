@@ -1,6 +1,6 @@
+import { ShieldCheckIcon, SignOutIcon } from '@phosphor-icons/react';
 import { Link } from 'react-router';
-import { ShieldCheck } from 'lucide-react';
-import { LogOut } from '@/shared/ui/icons';
+
 import { useAuth } from '@/state/AuthContext';
 import { useRoom } from '@/state/RoomContext';
 import { Button, buttonVariants } from '@/shared/ui/primitives/button';
@@ -26,7 +26,7 @@ export function AccountSettings() {
           <span className="break-all text-body text-text-primary">@{state.me.name}</span>
           {state.me.role === 'admin' && (
             <span className="flex w-fit items-center gap-1 rounded-sm bg-primary/15 px-1.5 py-0.5 text-caption font-medium text-accent-text">
-              <ShieldCheck size={14} aria-hidden /> Admin
+              <ShieldCheckIcon size={14} aria-hidden /> Admin
             </span>
           )}
         </SettingsRow>
@@ -62,7 +62,7 @@ export function AccountSettings() {
           description={inCall ? 'Encerra a sessão neste navegador e também sai da chamada em andamento.' : 'Encerra a sessão neste navegador.'}
         >
           <Button type="button" variant="outline" size="sm" className="text-red hover:bg-red/12" onClick={logout}>
-            <LogOut size={14} aria-hidden />
+            <SignOutIcon size={14} aria-hidden />
             <span>Sair da conta</span>
           </Button>
         </SettingsRow>

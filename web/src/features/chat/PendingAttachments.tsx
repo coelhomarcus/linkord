@@ -1,4 +1,5 @@
-import { AlertCircle } from 'lucide-react';
+import { WarningCircleIcon } from '@phosphor-icons/react';
+
 import { DocumentAttachmentCard } from '@/features/media/DocumentAttachmentCard';
 import { FILE_CARD_MAX_WIDTH } from '@/features/media/FileAttachmentCard';
 import { UploadProgressBar } from '@/shared/UploadProgressBar';
@@ -37,7 +38,7 @@ export function PendingAttachments({ attachments }: { attachments: OutboxAttachm
               <img src={attachment.previewUrl} alt={attachment.name} className={cn('size-full object-cover', !done && 'opacity-60')} />
               {attachment.failed ? (
                 <span className="absolute right-1.5 top-1.5 rounded-full bg-bg-primary/80 p-0.5 text-red" aria-label="Falhou">
-                  <AlertCircle size={16} />
+                  <WarningCircleIcon size={16} />
                 </span>
               ) : !done && (
                 <div className="absolute inset-x-1.5 bottom-1.5"><UploadProgressBar progress={attachment.progress} /></div>

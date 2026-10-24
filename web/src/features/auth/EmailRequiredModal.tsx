@@ -1,6 +1,7 @@
+import { CircleNotchIcon, EnvelopeIcon, SignOutIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { Loader2, Mail, LogOut } from 'lucide-react';
+
 import { useAuth } from '../../state/AuthContext';
 import { ApiError } from '@/shared/api/api';
 import { Button } from '@/shared/ui/primitives/button';
@@ -47,11 +48,11 @@ export function EmailRequiredModal() {
           />
           {error && <p className="text-label text-red">{error}</p>}
           <Button type="submit" disabled={pending || !email}>
-            {pending ? <Loader2 size={16} className="animate-spin" /> : <Mail size={16} />}
+            {pending ? <CircleNotchIcon size={16} className="animate-spin" /> : <EnvelopeIcon size={16} />}
             {pending ? 'Salvando…' : 'Vincular e-mail'}
           </Button>
           <Button type="button" variant="ghost" onClick={() => void logout()}>
-            <LogOut size={16} />
+            <SignOutIcon size={16} />
             Sair da conta
           </Button>
         </form>

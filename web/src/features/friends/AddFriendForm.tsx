@@ -1,8 +1,8 @@
+import { CircleNotchIcon, UserPlusIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link } from 'react-router';
-import { Loader2 } from 'lucide-react';
-import { UserPlus } from '@/shared/ui/icons';
+
 import { sendFriendRequest } from '@/shared/api/api';
 import { Button } from '@/shared/ui/primitives/button';
 import { Input } from '@/shared/ui/primitives/input';
@@ -56,7 +56,7 @@ export function AddFriendForm({ onSent, autoFocus }: { onSent: () => void; autoF
           className="border-input"
         />
         <Button type="submit" disabled={pending || !normalizeUsernameInput(value)} className="flex-none">
-          {pending ? <Loader2 size={16} className="animate-spin" /> : <UserPlus size={16} />}
+          {pending ? <CircleNotchIcon size={16} className="animate-spin" /> : <UserPlusIcon size={16} />}
           <span>Enviar</span>
         </Button>
       </div>

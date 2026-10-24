@@ -1,5 +1,6 @@
+import { ArrowLeftIcon } from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft } from '@/shared/ui/icons';
+
 import { Link, Outlet, useLocation, useNavigate } from 'react-router';
 import { PageHeader } from '@/shared/PageHeader';
 import { Button, buttonVariants } from '@/shared/ui/primitives/button';
@@ -85,7 +86,7 @@ export function AdminLayout() {
         subtitle={mode === 'wide' ? section?.label : undefined}
         leading={compactSection ? (
           <Link to={ADMIN_PATH} aria-label="Voltar à administração" className={buttonVariants({ variant: 'ghost', size: 'icon-sm' })}>
-            <ArrowLeft size={18} aria-hidden />
+            <ArrowLeftIcon size={18} aria-hidden />
           </Link>
         ) : undefined}
       />

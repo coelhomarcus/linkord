@@ -1,7 +1,8 @@
+import { CaretLeftIcon, CaretRightIcon } from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronLeft, ChevronRight } from '@/shared/ui/icons';
+
 import { useRoom } from '../../state/RoomContext';
 import { useCallTiles } from './useCallTiles';
 import { Tile } from './Tile';
@@ -126,7 +127,7 @@ export function FloatingPip({ allIds, onExpand }: FloatingPipProps) {
             }}
             className="absolute left-1 top-1/2 -translate-y-1/2 bg-bg-tertiary/75 text-text-primary hover:bg-primary"
           >
-            <ChevronLeft size={14} />
+            <CaretLeftIcon size={14} />
           </Button>
           <Button
             type="button"
@@ -140,7 +141,7 @@ export function FloatingPip({ allIds, onExpand }: FloatingPipProps) {
             }}
             className="absolute right-1 top-1/2 -translate-y-1/2 bg-bg-tertiary/75 text-text-primary hover:bg-primary"
           >
-            <ChevronRight size={14} />
+            <CaretRightIcon size={14} />
           </Button>
         </>
       )}

@@ -1,6 +1,7 @@
+import { ArrowLeftIcon, CaretRightIcon, MagnifyingGlassIcon } from '@phosphor-icons/react';
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { ArrowLeft, ChevronRight, Search } from "lucide-react";
-import type { IconComponent } from "@/shared/ui/icons";
+
+import type { IconComponent } from '@/shared/ui/icons';
 import {
   type ReactNode,
   useCallback,
@@ -284,10 +285,10 @@ export function CommandPalette({
                       onClick={popStage}
                       className="flex-none text-muted-foreground transition-colors hover:text-foreground"
                     >
-                      <ArrowLeft className="h-4 w-4" />
+                      <ArrowLeftIcon size={16} className="h-4 w-4" />
                     </button>
                   ) : (
-                    <Search className="h-4 w-4 flex-none text-muted-foreground" />
+                    <MagnifyingGlassIcon size={16} className="h-4 w-4 flex-none text-muted-foreground" />
                   )}
                   <input
                     ref={inputRef}
@@ -402,7 +403,7 @@ export function CommandPalette({
                                 </span>
                               ) : null}
                               {it.stage ? (
-                                <ChevronRight className="relative z-10 h-3.5 w-3.5 flex-none text-muted-foreground" />
+                                <CaretRightIcon size={14} className="relative z-10 h-3.5 w-3.5 flex-none text-muted-foreground" />
                               ) : it.hint ? (
                                 <kbd className="relative z-10 rounded-sm border border-border bg-background px-1.5 py-0.5 text-micro text-muted-foreground">
                                   {it.hint}

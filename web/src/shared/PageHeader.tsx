@@ -1,5 +1,6 @@
+import { SidebarSimpleIcon } from '@phosphor-icons/react';
 import type { ReactNode } from 'react';
-import { PanelLeft } from 'lucide-react';
+
 import { useSidebar } from '@/shared/ui/motion/sidebar-context';
 import { Button } from '@/shared/ui/primitives/button';
 
@@ -12,7 +13,7 @@ export function PageHeader({ title, subtitle, actions, leading, middle }: { titl
     <header className="flex flex-none items-center gap-3 border-b border-border px-4 py-3 md:px-6">
       {isMobile && (
         <Button type="button" variant="ghost" size="icon-sm" aria-label="Abrir lista de conversas" onClick={() => setOpenMobile(true)}>
-          <PanelLeft size={18} />
+          <SidebarSimpleIcon size={18} />
         </Button>
       )}
       {leading}

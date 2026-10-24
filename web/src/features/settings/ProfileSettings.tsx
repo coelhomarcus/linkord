@@ -1,7 +1,8 @@
+import { CheckIcon } from '@phosphor-icons/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import type { Area } from 'react-easy-crop';
-import { Check } from 'lucide-react';
+
 import { useBlocker } from 'react-router';
 import { ImageCropDialog } from './ImageCropDialog';
 import { ImageUrlDialog } from '@/shared/ImageUrlDialog';
@@ -28,7 +29,6 @@ type ProfileCropTarget =
   // it never reads pixels into a <canvas>, so an external image never hits
   // a CORS/tainted-canvas issue (see ImageCropDialog.tsx's own comment).
   | { field: 'avatar' | 'banner'; kind: 'url'; url: string };
-
 
 export function ProfileSettings() {
   const { state, updateProfile, uploadProfileImage, removeProfileImage, activeCallConversationId } = useRoom();
@@ -301,7 +301,7 @@ export function ProfileSettings() {
                 </Button>
               )}
               <Button type="submit" size="sm" disabled={saving}>
-                {justSaved && <Check size={15} />}
+                {justSaved && <CheckIcon size={15} />}
                 <span>{saving ? 'Salvando…' : justSaved ? 'Perfil salvo' : 'Salvar perfil'}</span>
               </Button>
             </div>

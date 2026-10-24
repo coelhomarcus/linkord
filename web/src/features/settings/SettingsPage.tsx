@@ -1,5 +1,6 @@
+import { ArrowLeftIcon } from '@phosphor-icons/react';
 import { useEffect, useRef } from 'react';
-import { ArrowLeft } from '@/shared/ui/icons';
+
 import { Navigate, useLocation, useNavigate, useParams } from 'react-router';
 import { useRoom } from '@/state/RoomContext';
 import { PageHeader } from '@/shared/PageHeader';
@@ -93,7 +94,7 @@ export function SettingsPage({ onOpenProfile }: SettingsPageProps) {
             aria-label="Voltar às configurações"
             onClick={() => (fromIndex ? navigate(-1) : navigate(ROUTES.settings))}
           >
-            <ArrowLeft size={18} aria-hidden />
+            <ArrowLeftIcon size={18} aria-hidden />
           </Button>
         ) : undefined}
       />

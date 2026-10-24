@@ -1,5 +1,6 @@
+import { UsersIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
-import { UsersRound } from 'lucide-react';
+
 import { Button } from '@/shared/ui/primitives/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/primitives/dialog';
 import { Input } from '@/shared/ui/primitives/input';
@@ -74,7 +75,7 @@ export function GroupCreateDialog({ open, onOpenChange, onCreated }: GroupCreate
       <DialogContent className="max-w-lg p-0 text-text-primary">
         <DialogHeader className="border-b border-border px-5 py-4">
           <DialogTitle className="flex items-center gap-2 text-title">
-            <UsersRound size={18} />
+            <UsersIcon size={18} />
             {failures ? 'Grupo criado' : 'Novo grupo'}
           </DialogTitle>
         </DialogHeader>

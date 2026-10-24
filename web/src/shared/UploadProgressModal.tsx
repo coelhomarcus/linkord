@@ -1,4 +1,5 @@
-import { Loader2 } from 'lucide-react';
+import { CircleNotchIcon } from '@phosphor-icons/react';
+
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/ui/primitives/dialog';
 import { UploadProgressBar } from './UploadProgressBar';
 
@@ -23,7 +24,7 @@ export function UploadProgressModal({ open, title, description, progress }: Uplo
       <DialogContent showCloseButton={false} className="max-w-sm bg-bg-modal">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Loader2 size={16} className="flex-none animate-spin text-primary" />
+            <CircleNotchIcon size={16} className="flex-none animate-spin text-primary" />
             <span>{title}</span>
           </DialogTitle>
           {description && <DialogDescription>{description}</DialogDescription>}

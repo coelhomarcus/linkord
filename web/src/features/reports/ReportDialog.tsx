@@ -1,5 +1,6 @@
+import { FlagIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
-import { Flag } from 'lucide-react';
+
 import { Button } from '@/shared/ui/primitives/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/primitives/dialog';
 import { Textarea } from '@/shared/ui/primitives/textarea';
@@ -57,7 +58,7 @@ export function ReportDialog({ target, open, onOpenChange }: {
       <DialogContent className="max-w-md p-0 text-text-primary">
         <DialogHeader className="border-b border-border px-5 py-4">
           <DialogTitle className="flex items-center gap-2 text-title">
-            <Flag size={17} />
+            <FlagIcon size={17} />
             Denunciar {noun}
           </DialogTitle>
         </DialogHeader>

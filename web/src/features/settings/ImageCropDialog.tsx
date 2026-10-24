@@ -1,7 +1,8 @@
+import { MagnifyingGlassPlusIcon } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
 import Cropper from 'react-easy-crop';
 import type { Area, Point } from 'react-easy-crop';
-import { ZoomIn } from 'lucide-react';
+
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/primitives/dialog';
 import { Button } from '@/shared/ui/primitives/button';
 import { Slider } from '@/shared/ui/primitives/slider';
@@ -61,7 +62,7 @@ export function ImageCropDialog({ open, imageSrc, aspect, cropShape, title, onCa
           )}
 
           <div className="flex items-center gap-3">
-            <ZoomIn size={16} className="flex-none text-text-muted" />
+            <MagnifyingGlassPlusIcon size={16} className="flex-none text-text-muted" />
             <Slider
               value={[zoom]}
               onValueChange={(v) => setZoom(Array.isArray(v) ? (v[0] ?? 1) : (v as number))}

@@ -1,5 +1,6 @@
+import { CheckIcon, MagnifyingGlassIcon } from '@phosphor-icons/react';
 import { useCallback, useState } from 'react';
-import { Check, Search } from 'lucide-react';
+
 import { Avatar } from '@/shared/Avatar';
 import { Button } from '@/shared/ui/primitives/button';
 import { cn } from '@/shared/lib/utils';
@@ -29,7 +30,7 @@ export function FriendPicker({ selected, onToggle, excludeIds, inputId, maxHeigh
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-2 rounded-md border border-border bg-fill-subtle px-3">
-        <Search size={15} className="text-text-muted" />
+        <MagnifyingGlassIcon size={15} className="text-text-muted" />
         <input
           id={inputId}
           value={query}
@@ -73,7 +74,7 @@ export function FriendPicker({ selected, onToggle, excludeIds, inputId, maxHeigh
                   'grid size-5 place-items-center rounded-full border text-micro',
                   checked ? 'border-primary bg-primary text-primary-foreground' : 'border-border-strong',
                 )}>
-                  {checked ? <Check size={12} /> : null}
+                  {checked ? <CheckIcon size={12} /> : null}
                 </span>
               </button>
             );

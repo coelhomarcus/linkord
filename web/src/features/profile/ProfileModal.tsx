@@ -1,3 +1,4 @@
+import { FlagIcon } from '@phosphor-icons/react';
 import { useCallback, useEffect, useState } from 'react';
 import { useRoom } from '@/state/RoomContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/primitives/dialog';
@@ -9,7 +10,6 @@ import type { PublicUser } from '@/shared/types/protocol';
 import { ProfileActions } from '@/features/friends/ProfileActions';
 import { ProfileCard } from './ProfileCard';
 import { ReportDialog } from '@/features/reports/ReportDialog';
-import { Flag } from 'lucide-react';
 
 interface ProfileModalProps {
   userId: string | null;
@@ -94,7 +94,7 @@ export function ProfileModal({ userId, onClose }: ProfileModalProps) {
               </div>
               {user.id !== state.me.userId && (
                 <Button type="button" variant="ghost" size="sm" onClick={() => setReportOpen(true)} className="flex-none text-text-muted hover:text-red-text">
-                  <Flag size={14} /><span>Denunciar</span>
+                  <FlagIcon size={14} /><span>Denunciar</span>
                 </Button>
               )}
             </div>

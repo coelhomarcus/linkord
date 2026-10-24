@@ -1,8 +1,8 @@
+import { CellSignalLowIcon, CellSignalNoneIcon, CircleNotchIcon, EarSlashIcon, EyeSlashIcon, GearIcon, MicrophoneSlashIcon, MonitorIcon, MonitorPlayIcon, SpeakerSlashIcon } from '@phosphor-icons/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent } from 'react';
 import { ConnectionQuality } from 'livekit-client';
-import { EyeOff, HeadphoneOff, Loader2, MicOff, MonitorOff, MonitorPause, SignalLow, SignalZero, VolumeX } from 'lucide-react';
-import { Settings } from '@/shared/ui/icons';
+
 import { useRoom } from '../../state/RoomContext';
 import { useParticipantMedia, useAttachTrack, useIsSpeaking, useConnectionQuality, useWatchScreenShare } from './useLiveKitTrack';
 import { useMuteForMe } from './useMuteForMe';
@@ -189,12 +189,12 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
         <div className="relative flex h-full w-full flex-col items-center justify-center gap-2 bg-bg-call">
           {notWatching ? (
             <span className="flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 text-caption text-text-muted">
-              <MonitorOff size={14} />
+              <MonitorIcon size={14} />
               Você parou de assistir
             </span>
           ) : (
             <span className="flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 text-caption text-text-muted">
-              <MonitorPause size={14} />
+              <MonitorPlayIcon size={14} />
               Prévia pausada
             </span>
           )}
@@ -206,14 +206,14 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
               (still subscribing); a plain avatar would read as "camera off" */}
           {loading && (
             <span aria-hidden className="absolute" style={{ width: avatarSize, height: avatarSize }}>
-              <Loader2 size={Math.max(20, avatarSize / 3)} className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 animate-spin text-text-muted" />
+              <CircleNotchIcon size={Math.max(20, avatarSize / 3)} className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 animate-spin text-text-muted" />
             </span>
           )}
           {/* distinct from "camera off": their camera is on, this viewer just
               chose not to see it — TileMenu's "Ocultar vídeo para mim" */}
           {hiddenForMe && (
             <span className="flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 text-caption text-text-muted">
-              <EyeOff size={12} />
+              <EyeSlashIcon size={12} />
               Vídeo oculto
             </span>
           )}
@@ -227,17 +227,17 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
         {showsVideo && <Avatar id={participantId} name={name} avatar={avatar} poster={avatarPoster} frozen={!isSpeaking} avatarColor={avatarColor} size={20} />}
         <span className={cn('select-none truncate font-medium text-text-primary', nameSize === 'label' ? 'text-label' : 'text-caption')}>{name}</span>
         {isDeafened ? (
-          <HeadphoneOff size={14} className="flex-none text-red" />
+          <EarSlashIcon size={14} weight="fill" className="flex-none text-red" />
         ) : (
           kind !== 'screen' && media.micMuted && (
-            <MicOff size={14} className="flex-none text-red" />
+            <MicrophoneSlashIcon size={14} weight="fill" className="flex-none text-red" />
           )
         )}
         {kind !== 'screen' && connectionQuality === ConnectionQuality.Poor && (
-          <SignalLow size={14} className="flex-none text-yellow" />
+          <CellSignalLowIcon size={14} className="flex-none text-yellow" />
         )}
         {kind !== 'screen' && connectionQuality === ConnectionQuality.Lost && (
-          <SignalZero size={14} className="flex-none text-red" />
+          <CellSignalNoneIcon size={14} className="flex-none text-red" />
         )}
       </div>
 
@@ -253,7 +253,7 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
             onClick={handleUnmuteClick}
             className="h-full w-7 rounded-none text-red hover:bg-white/10 hover:text-red"
           >
-            <VolumeX size={14} />
+            <SpeakerSlashIcon size={14} weight="fill" />
           </Button>
         )}
         <Button
@@ -264,7 +264,7 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
           onClick={handleGearClick}
           className="h-full w-7 rounded-none text-white/90 hover:bg-white/10 hover:text-white"
         >
-          <Settings size={14} />
+          <GearIcon size={14} />
         </Button>
       </div>
     </div>

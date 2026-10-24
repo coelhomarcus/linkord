@@ -1,5 +1,5 @@
-import { Settings2 } from 'lucide-react';
-import { Bell, IdCard, Lock, ShieldCheck, SlidersHorizontal, User } from '@/shared/ui/icons';
+import { BellIcon, IdentificationCardIcon, LockIcon, ShieldCheckIcon, SlidersIcon, UserIcon } from '@phosphor-icons/react';
+
 import type { IconComponent } from '@/shared/ui/icons';
 import type { SettingsTab } from '@/shared/lib/routes';
 
@@ -24,23 +24,23 @@ export const SETTINGS_GROUPS: SettingsGroup[] = [
   {
     label: 'Você',
     categories: [
-      { id: 'profile', label: 'Perfil', description: 'Edite direto no seu perfil — o que você vê aqui é exatamente o que os outros vão ver.', icon: User },
-      { id: 'account', label: 'Minha conta', description: 'Identificação, e-mail, armazenamento e sessão.', icon: IdCard },
-      { id: 'privacy', label: 'Privacidade', description: 'Quem você bloqueou e o que isso muda.', icon: Lock },
+      { id: 'profile', label: 'Perfil', description: 'Edite direto no seu perfil — o que você vê aqui é exatamente o que os outros vão ver.', icon: UserIcon },
+      { id: 'account', label: 'Minha conta', description: 'Identificação, e-mail, armazenamento e sessão.', icon: IdentificationCardIcon },
+      { id: 'privacy', label: 'Privacidade', description: 'Quem você bloqueou e o que isso muda.', icon: LockIcon },
     ],
   },
   {
     label: 'Aplicativo',
     categories: [
-      { id: 'av', label: 'Áudio e vídeo', description: 'Dispositivos e o processamento do seu microfone.', icon: SlidersHorizontal },
-      { id: 'notifications', label: 'Notificações', description: 'Avisos do sistema e sons do app.', icon: Bell },
-      { id: 'prefs', label: 'Preferências', description: 'Como a chamada aparece e como imagens são enviadas — só neste navegador, não acompanha a conta entre dispositivos.', icon: Settings2 },
+      { id: 'av', label: 'Áudio e vídeo', description: 'Dispositivos e o processamento do seu microfone.', icon: SlidersIcon },
+      { id: 'notifications', label: 'Notificações', description: 'Avisos do sistema e sons do app.', icon: BellIcon },
+      { id: 'prefs', label: 'Preferências', description: 'Como a chamada aparece e como imagens são enviadas — só neste navegador, não acompanha a conta entre dispositivos.', icon: SlidersIcon },
     ],
   },
   {
     label: 'Administração',
     categories: [
-      { id: 'moderation', label: 'Administração', description: 'Acesso à área administrativa da instância.', icon: ShieldCheck, adminOnly: true },
+      { id: 'moderation', label: 'Administração', description: 'Acesso à área administrativa da instância.', icon: ShieldCheckIcon, adminOnly: true },
     ],
   },
 ];

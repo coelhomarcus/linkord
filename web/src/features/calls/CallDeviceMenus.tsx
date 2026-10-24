@@ -1,6 +1,6 @@
+import { ArrowsClockwiseIcon, CaretDownIcon, FlipHorizontalIcon, GearIcon, PauseIcon, PlayIcon } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router';
-import { FlipHorizontal } from 'lucide-react';
-import { ChevronDown, Pause, Play, RefreshCw, Settings } from '@/shared/ui/icons';
+
 import type { Room } from 'livekit-client';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel,
@@ -62,7 +62,7 @@ function SettingsShortcutItem() {
   // (see App.tsx's showStage/inCall split), same as opening any other page.
   return (
     <DropdownMenuItem className="px-2 py-2 text-text-secondary" onClick={() => navigate(ROUTES.settingsTab('av'))}>
-      <Settings size={14} />
+      <GearIcon size={14} />
       Configurações completas
     </DropdownMenuItem>
   );
@@ -73,7 +73,7 @@ export function MicQuickMenu({ className }: { className?: string }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger aria-label="Configurações do microfone" className={cn(CORNER_TRIGGER, className)}>
-        <ChevronDown size={10} />
+        <CaretDownIcon size={10} />
       </DropdownMenuTrigger>
       <DropdownMenuContent side="top" align="start" container={fullscreenElement ?? undefined} className={MENU_CONTENT}>
         <DeviceRadioList room={livekitRoom} kind="audioinput" heading="Entrada de áudio" label="Microfone" />
@@ -89,7 +89,7 @@ export function SpeakerQuickMenu({ className }: { className?: string }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger aria-label="Configurações de saída de áudio" className={cn(CORNER_TRIGGER, className)}>
-        <ChevronDown size={10} />
+        <CaretDownIcon size={10} />
       </DropdownMenuTrigger>
       <DropdownMenuContent side="top" align="start" container={fullscreenElement ?? undefined} className={MENU_CONTENT}>
         <DeviceRadioList room={livekitRoom} kind="audiooutput" heading="Saída de áudio" label="Alto-falante" />
@@ -107,7 +107,7 @@ export function ScreenShareQuickMenu({ className }: { className?: string }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger aria-label="Configurações de compartilhamento de tela" className={cn(CORNER_TRIGGER, className)}>
-        <ChevronDown size={10} />
+        <CaretDownIcon size={10} />
       </DropdownMenuTrigger>
       <DropdownMenuContent side="top" align="start" container={fullscreenElement ?? undefined} className={MENU_CONTENT}>
         <DropdownMenuGroup>
@@ -122,11 +122,11 @@ export function ScreenShareQuickMenu({ className }: { className?: string }) {
           <>
             <DropdownMenuSeparator />
             <DropdownMenuItem className="px-2 py-2" onClick={() => void changeSource()}>
-              <RefreshCw size={14} />
+              <ArrowsClockwiseIcon size={14} />
               Trocar fonte
             </DropdownMenuItem>
             <DropdownMenuItem className="px-2 py-2" onClick={() => void (myMedia.screenPaused ? resumeSharePreview() : pauseSharePreview())}>
-              {myMedia.screenPaused ? <Play size={14} /> : <Pause size={14} />}
+              {myMedia.screenPaused ? <PlayIcon size={14} /> : <PauseIcon size={14} />}
               {myMedia.screenPaused ? 'Retomar prévia' : 'Pausar prévia'}
             </DropdownMenuItem>
           </>
@@ -143,13 +143,13 @@ export function CameraQuickMenu({ className }: { className?: string }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger aria-label="Configurações da câmera" className={cn(CORNER_TRIGGER, className)}>
-        <ChevronDown size={10} />
+        <CaretDownIcon size={10} />
       </DropdownMenuTrigger>
       <DropdownMenuContent side="top" align="start" container={fullscreenElement ?? undefined} className={MENU_CONTENT}>
         <DeviceRadioList room={livekitRoom} kind="videoinput" heading="Câmera" label="Câmera" />
         <DropdownMenuSeparator />
         <DropdownMenuSwitchItem checked={mirrorCameraPreview} onCheckedChange={setMirrorCameraPreview}>
-          <FlipHorizontal size={14} />
+          <FlipHorizontalIcon size={14} />
           Espelhar minha prévia
         </DropdownMenuSwitchItem>
         <DropdownMenuSeparator />

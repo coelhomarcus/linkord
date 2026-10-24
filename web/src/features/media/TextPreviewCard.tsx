@@ -1,5 +1,6 @@
+import { CaretDownIcon, CaretUpIcon } from '@phosphor-icons/react';
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
-import { ChevronDown, ChevronUp } from '@/shared/ui/icons';
+
 import type { ChatAttachment as ChatAttachmentData } from '@/shared/types/protocol';
 import { FileAttachmentCard } from './FileAttachmentCard';
 import { downloadFile } from '@/shared/lib/download';
@@ -116,7 +117,7 @@ export function TextPreviewCard({ attachment, maxWidth }: { attachment: ChatAtta
           </div>
           <div className="flex items-center justify-between gap-3 border-t border-border px-3 py-1.5 text-caption text-text-muted">
             <button type="button" onClick={() => setExpanded((v) => !v)} className="flex items-center gap-1 hover:text-text-primary">
-              {expanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+              {expanded ? <CaretUpIcon size={12} /> : <CaretDownIcon size={12} />}
               {expanded ? 'Mostrar menos' : 'Mostrar mais'}
             </button>
             {preview.truncated && (

@@ -1,6 +1,7 @@
+import { UserPlusIcon } from '@phosphor-icons/react';
 import { useId } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { UserPlus } from '@/shared/ui/icons';
+
 import { buttonVariants } from '@/shared/ui/primitives/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/primitives/select';
 import { friendsView } from '@/shared/lib/routes';
@@ -87,7 +88,7 @@ export function AddFriendButton({ active, iconOnly }: { active: boolean; iconOnl
       aria-label="Adicionar amigo"
       className={cn(buttonVariants({ size: iconOnly ? 'icon-sm' : 'default' }), active && 'ring-2 ring-primary/40')}
     >
-      <UserPlus size={16} aria-hidden />
+      <UserPlusIcon size={16} aria-hidden />
       {!iconOnly && <span>Adicionar amigo</span>}
     </Link>
   );

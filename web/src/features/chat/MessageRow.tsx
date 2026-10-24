@@ -1,7 +1,7 @@
+import { ArrowBendUpLeftIcon, CopyIcon, DotsThreeIcon, FlagIcon, PencilSimpleIcon, SmileyIcon, TrashIcon, UsersIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
-import { Flag, MoreHorizontal, Pencil, Reply, Trash2 } from 'lucide-react';
-import { Copy, SmilePlus, Users } from '@/shared/ui/icons';
+
 import { Avatar } from '@/shared/Avatar';
 import { MessageMedia } from './MessageMedia';
 import { InviteCard } from '@/features/chat/InviteCard';
@@ -51,7 +51,7 @@ function ReactionButton({ onPick }: { onPick: (emoji: string) => void }) {
       }}
     >
       <PopoverTrigger render={<Button type="button" variant="ghost" size="icon-xs" aria-label="Reagir" />}>
-        <SmilePlus size={13} />
+        <SmileyIcon size={13} />
       </PopoverTrigger>
       <PopoverContent
         keepMounted={warmed}
@@ -208,7 +208,7 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
               onClick={() => onJumpTo(message.replyTo!.msgId)}
               className="mb-1 flex max-w-full items-center gap-1.5 truncate text-caption text-text-muted hover:text-text-secondary"
             >
-              <Reply size={12} className="flex-none -scale-x-100" />
+              <ArrowBendUpLeftIcon size={12} className="flex-none -scale-x-100" />
               {message.replyTo.authorId && (
                 <Avatar
                   id={message.replyTo.authorId}
@@ -290,22 +290,22 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
         {can.react && <ReactionButton onPick={(emoji) => reactToChatMessage(message.msgId, emoji)} />}
         {can.reply && (
           <Button type="button" variant="ghost" size="icon-xs" aria-label="Responder" onClick={onReply}>
-            <Reply size={13} />
+            <ArrowBendUpLeftIcon size={13} />
           </Button>
         )}
         {can.edit && (
           <Button type="button" variant="ghost" size="icon-xs" aria-label="Editar" onClick={startEdit}>
-            <Pencil size={13} />
+            <PencilSimpleIcon size={13} />
           </Button>
         )}
         {canReport && (
           <Button type="button" variant="ghost" size="icon-xs" aria-label="Denunciar" onClick={() => setReportOpen(true)}>
-            <Flag size={13} />
+            <FlagIcon size={13} />
           </Button>
         )}
         {canDelete && (
           <Button type="button" variant="ghost" size="icon-xs" aria-label="Apagar" disabled={deleting} onClick={(event) => requestDelete(message.msgId, event.shiftKey)} className="hover:bg-red/10 hover:text-red">
-            <Trash2 size={13} />
+            <TrashIcon size={13} />
           </Button>
         )}
       </div>}
@@ -316,19 +316,19 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
         {can.react && <ReactionButton onPick={(emoji) => reactToChatMessage(message.msgId, emoji)} />}
         <DropdownMenu>
           <DropdownMenuTrigger render={<Button type="button" variant="ghost" size="icon-xs" aria-label="Acoes" />}>
-            <MoreHorizontal size={13} />
+            <DotsThreeIcon size={13} />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            {can.reply && <DropdownMenuItem onClick={onReply}><Reply size={14} />Responder</DropdownMenuItem>}
+            {can.reply && <DropdownMenuItem onClick={onReply}><ArrowBendUpLeftIcon size={14} />Responder</DropdownMenuItem>}
             {hasReactions && (
               <DropdownMenuItem onClick={() => openReactionParticipants({ conversationId: message.conversationId, msgId: message.msgId })}>
-                <Users size={14} />Ver todas as reações
+                <UsersIcon size={14} />Ver todas as reações
               </DropdownMenuItem>
             )}
-            {can.copy && <DropdownMenuItem onClick={copyText}><Copy size={14} />Copiar texto</DropdownMenuItem>}
-            {can.edit && <DropdownMenuItem onClick={startEdit}><Pencil size={14} />Editar</DropdownMenuItem>}
-            {canReport && <DropdownMenuItem onClick={() => setReportOpen(true)}><Flag size={14} />Denunciar</DropdownMenuItem>}
-            {canDelete && <DropdownMenuItem variant="destructive" disabled={deleting} onClick={(event) => requestDelete(message.msgId, event.shiftKey)}><Trash2 size={14} />Apagar</DropdownMenuItem>}
+            {can.copy && <DropdownMenuItem onClick={copyText}><CopyIcon size={14} />Copiar texto</DropdownMenuItem>}
+            {can.edit && <DropdownMenuItem onClick={startEdit}><PencilSimpleIcon size={14} />Editar</DropdownMenuItem>}
+            {canReport && <DropdownMenuItem onClick={() => setReportOpen(true)}><FlagIcon size={14} />Denunciar</DropdownMenuItem>}
+            {canDelete && <DropdownMenuItem variant="destructive" disabled={deleting} onClick={(event) => requestDelete(message.msgId, event.shiftKey)}><TrashIcon size={14} />Apagar</DropdownMenuItem>}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>}

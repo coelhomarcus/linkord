@@ -1,5 +1,5 @@
-import { Flag, ScrollText } from 'lucide-react';
-import { Server, Users, UsersRound } from '@/shared/ui/icons';
+import { FlagIcon, HardDrivesIcon, ScrollIcon, UsersIcon } from '@phosphor-icons/react';
+
 import type { IconComponent } from '@/shared/ui/icons';
 
 export interface AdminSection {
@@ -20,19 +20,19 @@ export const ADMIN_GROUPS: AdminGroup[] = [
   {
     label: 'Gestão',
     sections: [
-      { id: 'users', label: 'Usuários', icon: Users },
-      { id: 'groups', label: 'Grupos', icon: UsersRound },
+      { id: 'users', label: 'Usuários', icon: UsersIcon },
+      { id: 'groups', label: 'Grupos', icon: UsersIcon },
     ],
   },
   {
     label: 'Moderação',
-    sections: [{ id: 'reports', label: 'Denúncias', icon: Flag }],
+    sections: [{ id: 'reports', label: 'Denúncias', icon: FlagIcon }],
   },
   {
     label: 'Operação',
     sections: [
-      { id: 'audit', label: 'Auditoria', icon: ScrollText },
-      { id: 'system', label: 'Sistema', icon: Server },
+      { id: 'audit', label: 'Auditoria', icon: ScrollIcon },
+      { id: 'system', label: 'Sistema', icon: HardDrivesIcon },
     ],
   },
 ];

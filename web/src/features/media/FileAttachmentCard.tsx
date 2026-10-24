@@ -1,4 +1,5 @@
-import { Download } from '@/shared/ui/icons';
+import { DownloadSimpleIcon } from '@phosphor-icons/react';
+
 import { cn } from '@/shared/lib/utils';
 import { DocumentAttachmentCard } from './DocumentAttachmentCard';
 
@@ -40,7 +41,7 @@ export function FileAttachmentCard({ name, size, mime, url, maxWidth, bordered =
         aria-label={`Baixar ${name}`}
         className="grid size-11 flex-none place-items-center rounded-md text-text-muted transition-colors hover:bg-fill-hover hover:text-text-primary focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
       >
-        <Download size={18} />
+        <DownloadSimpleIcon size={18} />
       </a>
     </div>
   );
