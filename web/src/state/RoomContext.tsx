@@ -8,6 +8,7 @@ import type { OutboxEntry } from '@/features/chat/useMessageOutbox';
 import type { ReactionParticipantsTarget } from '@/features/chat/reactionParticipants';
 import type { ShareQualityId } from '@/features/calls/shareQualityPresets';
 import type { ColorThemeId } from '@/features/settings/useColorThemePreference';
+import type { ProfileImageUploadPhase } from '@/features/settings/uploadCroppedProfileImage';
 
 export interface ReactionEvent {
   key: number;
@@ -96,7 +97,7 @@ export interface RoomContextValue {
   updateProfile: (profile: { avatar: string; avatarPoster: string; avatarColor: string; displayName: string; banner: string; bannerPoster: string; bio: string; profileLinks: string[] }) => Promise<unknown>;
   /** Crops locally, uploads the result, then persists ONLY that image
    * field — never whatever else happens to be typed in the profile form. */
-  uploadProfileImage: (field: 'avatar' | 'banner', file: Blob, crop: CropRect, onProgress?: (fraction: number) => void) => Promise<string>;
+  uploadProfileImage: (field: 'avatar' | 'banner', file: Blob, crop: CropRect, onProgress?: (fraction: number) => void, onPhaseChange?: (phase: ProfileImageUploadPhase) => void) => Promise<string>;
   /** Sets avatar/banner to an already-public URL (the "Usar URL" path). */
   applyImagePatch: (field: 'avatar' | 'banner', url: string, posterUrl: string) => Promise<unknown>;
   /** Same isolation as `uploadProfileImage`, for "remover foto/banner". */

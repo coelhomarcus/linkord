@@ -15,6 +15,7 @@ import { formatMB } from '@/shared/lib/formatBytes';
 import { AVATAR_MIME_TYPES, MAX_AVATAR_BYTES } from '@/shared/types/protocol';
 import { Button } from '@/shared/ui/primitives/button';
 import { describeProfileSaveError } from '@/features/profile/useProfileUpdate';
+import type { ProfileImageUploadPhase } from './uploadCroppedProfileImage';
 import { useProfileDraft, normalizeProfileDraftFields } from './useProfileDraft';
 import { UnsavedProfileChangesDialog } from './UnsavedProfileChangesDialog';
 
@@ -42,9 +43,9 @@ export function ProfileSettings() {
   const bannerFileInputRef = useRef<HTMLInputElement | null>(null);
   const [cropTarget, setCropTarget] = useState<ProfileCropTarget | null>(null);
   const [urlDialogField, setUrlDialogField] = useState<'avatar' | 'banner' | null>(null);
-  // Set for the duration of the upload (cropTarget itself is cleared right
-  // away, see handleCropConfirm) — drives the blocking UploadProgressModal.
-  const [activeUpload, setActiveUpload] = useState<'avatar' | 'banner' | null>(null);
+  // The crop dialog stays mounted during WASM processing, then gives way to
+  // the blocking upload modal when the encoded blob is ready.
+  const [activeUpload, setActiveUpload] = useState<{ field: 'avatar' | 'banner'; phase: ProfileImageUploadPhase } | null>(null);
 
   // Avatar/banner apply immediately (E2) and never join this draft — only
   // name/color/bio/links go through baseline/draft/saveState (plano
@@ -171,14 +172,16 @@ export function ProfileSettings() {
     setError(null);
     setProgress(0);
     setUploading(true);
-    setActiveUpload(field);
-    closeCropDialog();
+    setActiveUpload({ field, phase: 'processing' });
     try {
       // Sends only avatar/avatarPoster (or banner/bannerPoster) — never the
       // profile draft, whatever it currently holds. The preview below
       // updates once the server confirms it (via state.me, picked up by the
       // sync effect above), not from this call.
-      await uploadProfileImage(field, target.file, crop, setProgress);
+      await uploadProfileImage(field, target.file, crop, setProgress, (phase) => {
+        setActiveUpload({ field, phase });
+        if (phase === 'uploading') closeCropDialog();
+      });
     } catch (err) {
       setError(describeProfileSaveError(err, `Falha ao enviar ${field === 'avatar' ? 'a foto' : 'o banner'}.`));
     } finally {
@@ -312,6 +315,8 @@ export function ProfileSettings() {
       <ImageCropDialog
         open={!!cropTarget}
         imageSrc={cropTarget?.src ?? null}
+        processing={activeUpload?.phase === 'processing'}
+        error={cropTarget?.field === 'banner' ? bannerError : avatarError}
         aspect={cropTarget?.field === 'banner' ? BANNER_ASPECT_RATIO : 1}
         cropShape={cropTarget?.field === 'banner' ? 'rect' : 'round'}
         title={cropTarget?.field === 'banner' ? 'Recortar banner' : 'Recortar foto de perfil'}
@@ -327,9 +332,9 @@ export function ProfileSettings() {
       />
 
       <UploadProgressModal
-        open={activeUpload !== null}
-        title={`Enviando ${activeUpload === 'banner' ? 'o banner' : 'a foto de perfil'}…`}
-        progress={activeUpload === 'banner' ? bannerUploadProgress : avatarUploadProgress}
+        open={activeUpload?.phase === 'uploading'}
+        title={`Enviando ${activeUpload?.field === 'banner' ? 'o banner' : 'a foto de perfil'}…`}
+        progress={activeUpload?.field === 'banner' ? bannerUploadProgress : avatarUploadProgress}
       />
     </div>
   );

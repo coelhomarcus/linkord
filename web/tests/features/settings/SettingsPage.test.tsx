@@ -32,11 +32,12 @@ function renderSettings(overrides: Partial<RoomContextValue> = {}, path = '/app/
 }
 
 vi.mock('@/features/settings/ImageCropDialog', () => ({
-  ImageCropDialog: ({ open, onConfirm, onCancel }: { open: boolean; onConfirm: (crop: { x: number; y: number; width: number; height: number }) => void; onCancel: () => void }) =>
+  ImageCropDialog: ({ open, processing, onConfirm, onCancel }: { open: boolean; processing?: boolean; onConfirm: (crop: { x: number; y: number; width: number; height: number }) => void; onCancel: () => void }) =>
     open ? (
       <div>
-        <button type="button" onClick={() => onConfirm({ x: 0, y: 0, width: 10, height: 10 })}>Confirmar recorte</button>
-        <button type="button" onClick={onCancel}>Cancelar recorte</button>
+        {processing && <p role="status">Processando imagem…</p>}
+        <button type="button" disabled={processing} onClick={() => onConfirm({ x: 0, y: 0, width: 10, height: 10 })}>Confirmar recorte</button>
+        <button type="button" disabled={processing} onClick={onCancel}>Cancelar recorte</button>
       </div>
     ) : null,
 }));
@@ -210,10 +211,44 @@ describe('SettingsPage — profile', () => {
     await user.upload(screen.getByLabelText('Selecionar foto de perfil'), file);
     await user.click(screen.getByRole('button', { name: 'Confirmar recorte' }));
 
-    // no 5th "current draft" argument — an avatar upload can never carry
-    // whatever is currently typed into displayName/bio/color/links
-    expect(uploadProfileImage).toHaveBeenCalledWith('avatar', file, { x: 0, y: 0, width: 10, height: 10 }, expect.any(Function));
-    expect(uploadProfileImage).not.toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.anything(), expect.anything(), expect.anything());
+    // The only extra argument is the phase callback — an avatar upload can
+    // never carry whatever is currently typed into the profile form.
+    expect(uploadProfileImage).toHaveBeenCalledWith('avatar', file, { x: 0, y: 0, width: 10, height: 10 }, expect.any(Function), expect.any(Function));
+    expect(uploadProfileImage).not.toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.anything(), expect.anything(), expect.anything(), expect.anything());
+  });
+
+  it('shows processing before switching to the upload progress modal', async () => {
+    const user = userEvent.setup();
+    let finishUpload: (() => void) | undefined;
+    let resolveUpload: ((value: string) => void) | undefined;
+    const uploadProfileImage = vi.fn((
+      _field: string,
+      _file: Blob,
+      _crop: { x: number; y: number; width: number; height: number },
+      _onProgress: ((fraction: number) => void) | undefined,
+      onPhaseChange?: (phase: 'processing' | 'uploading') => void,
+    ) => new Promise<string>((resolve) => {
+      resolveUpload = resolve;
+      onPhaseChange?.('processing');
+      finishUpload = () => {
+        onPhaseChange?.('uploading');
+      };
+    }));
+    const state = {
+      ...initialRoomState,
+      me: { ...initialRoomState.me, id: 'conn-1', userId: 'user-1', name: 'Fulana', displayName: 'Fulana', avatar: '', avatarColor: 'green' },
+    };
+    renderSettings({ state, uploadProfileImage });
+
+    await user.upload(screen.getByLabelText('Selecionar foto de perfil'), new File(['conteudo'], 'foto.gif', { type: 'image/gif' }));
+    await user.click(screen.getByRole('button', { name: 'Confirmar recorte' }));
+
+    expect(await screen.findByRole('status')).toHaveTextContent('Processando imagem…');
+    expect(screen.queryByText('Enviando a foto de perfil…')).not.toBeInTheDocument();
+
+    finishUpload?.();
+    expect(await screen.findByText('Enviando a foto de perfil…')).toBeInTheDocument();
+    resolveUpload?.('/uploads/novo-avatar');
   });
 
   it('applies a profile photo URL without opening the crop dialog', async () => {

@@ -14,9 +14,10 @@ import { ImageCropDialog } from '@/features/settings/ImageCropDialog';
 import { Avatar } from '@/shared/Avatar';
 import { ConfirmDialog } from '@/shared/ConfirmDialog';
 import { ImageUrlDialog } from '@/shared/ImageUrlDialog';
-import { UploadProgressBar } from '@/shared/UploadProgressBar';
+import { UploadProgressModal } from '@/shared/UploadProgressModal';
 import { formatMB } from '@/shared/lib/formatBytes';
 import { uploadCroppedProfileImage } from '@/features/settings/uploadCroppedProfileImage';
+import type { ProfileImageUploadPhase } from '@/features/settings/uploadCroppedProfileImage';
 import { cn } from '@/shared/lib/utils';
 import { useRoom } from '@/state/RoomContext';
 import { AVATAR_MIME_TYPES, MAX_AVATAR_BYTES } from '@/shared/types/protocol';
@@ -70,6 +71,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
   const [urlDialogOpen, setUrlDialogOpen] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [avatarUploadProgress, setAvatarUploadProgress] = useState(0);
+  const [avatarUploadPhase, setAvatarUploadPhase] = useState<ProfileImageUploadPhase | null>(null);
   const [avatarError, setAvatarError] = useState<string | null>(null);
 
   // the group can disappear out from under an open panel (deleted, or the
@@ -89,6 +91,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
       setAddSelected(new Map());
       setInviteMessage(null);
       setAvatarError(null);
+      setAvatarUploadPhase(null);
       setUrlDialogOpen(false);
       setTransferTarget(null);
       setCropTarget(null);
@@ -236,14 +239,18 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
     setAvatarError(null);
     setAvatarUploadProgress(0);
     setUploadingAvatar(true);
-    closeCropDialog();
+    setAvatarUploadPhase('processing');
     try {
-      const body = await uploadCroppedProfileImage(target.file, crop, setAvatarUploadProgress);
+      const body = await uploadCroppedProfileImage(target.file, crop, setAvatarUploadProgress, (phase) => {
+        setAvatarUploadPhase(phase);
+        if (phase === 'uploading') closeCropDialog();
+      });
       updateGroupAvatar(conversationId, body.avatar);
     } catch (err) {
       setAvatarError(err instanceof Error ? err.message : 'Falha ao enviar a foto.');
     } finally {
       setUploadingAvatar(false);
+      setAvatarUploadPhase(null);
     }
   }
 
@@ -300,12 +307,6 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
               aria-label="Selecionar foto do grupo"
               onChange={handleAvatarFilePicked}
             />
-          )}
-          {uploadingAvatar && (
-            <div className="flex w-full max-w-40 items-center gap-2">
-              <UploadProgressBar progress={avatarUploadProgress} />
-              <span className="flex-none text-caption tabular-nums text-text-muted">{Math.round(avatarUploadProgress * 100)}%</span>
-            </div>
           )}
           {avatarError && <p className="text-label text-red">{avatarError}</p>}
           {editingTitle ? (
@@ -488,11 +489,19 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
       <ImageCropDialog
         open={!!cropTarget}
         imageSrc={cropTarget?.src ?? null}
+        processing={avatarUploadPhase === 'processing'}
+        error={avatarError}
         aspect={1}
         cropShape="rect"
         title="Recortar foto do grupo"
         onCancel={closeCropDialog}
         onConfirm={handleAvatarCropConfirm}
+      />
+
+      <UploadProgressModal
+        open={avatarUploadPhase === 'uploading'}
+        title="Enviando a foto do grupo…"
+        progress={avatarUploadProgress}
       />
 
       <ImageUrlDialog

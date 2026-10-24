@@ -58,6 +58,15 @@ describe('uploadCroppedProfileImage', () => {
     expect(await getProfileImageDraft(profileImageDraftKey(file, crop))).toBeUndefined();
   });
 
+  it('reports processing before uploading', async () => {
+    const phases: string[] = [];
+    uploadWithProgress.mockResolvedValue({ avatar: '/uploads/novo' });
+
+    await uploadCroppedProfileImage(file, crop, undefined, (phase) => phases.push(phase));
+
+    expect(phases).toEqual(['processing', 'uploading']);
+  });
+
   it('reuses the IndexedDB draft on retry and skips ImageMagick', async () => {
     uploadWithProgress
       .mockRejectedValueOnce(new ApiError(500, 'unknown_error', 'falhou'))
@@ -70,6 +79,18 @@ describe('uploadCroppedProfileImage', () => {
     await expect(uploadCroppedProfileImage(file, crop)).resolves.toEqual({ avatar: '/uploads/novo' });
     expect(cropProfileImage).toHaveBeenCalledOnce();
     expect(await getProfileImageDraft(profileImageDraftKey(file, crop))).toBeUndefined();
+  });
+
+  it('keeps the crop selection retryable when WASM processing fails', async () => {
+    const phases: string[] = [];
+    cropProfileImage.mockRejectedValueOnce(new Error('WASM failed')).mockResolvedValueOnce(cropped);
+    uploadWithProgress.mockResolvedValue({ avatar: '/uploads/novo' });
+
+    await expect(uploadCroppedProfileImage(file, crop, undefined, (phase) => phases.push(phase))).rejects.toThrow('WASM failed');
+    await expect(uploadCroppedProfileImage(file, crop, undefined, (phase) => phases.push(phase))).resolves.toEqual({ avatar: '/uploads/novo' });
+
+    expect(cropProfileImage).toHaveBeenCalledTimes(2);
+    expect(phases).toEqual(['processing', 'processing', 'uploading']);
   });
 
   it('can drop a leftover draft', async () => {

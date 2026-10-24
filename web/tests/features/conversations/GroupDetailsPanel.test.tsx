@@ -8,6 +8,24 @@ import { GroupDetailsPanel } from '@/features/conversations/GroupDetailsPanel';
 import * as api from '@/shared/api/api';
 import type { Conversation, PublicUser } from '@/shared/types/protocol';
 
+const uploadCroppedProfileImage = vi.hoisted(() => vi.fn());
+
+vi.mock('@/features/settings/uploadCroppedProfileImage', () => ({
+  uploadCroppedProfileImage,
+}));
+
+vi.mock('@/features/settings/ImageCropDialog', () => ({
+  ImageCropDialog: ({ open, processing, onConfirm, onCancel }: { open: boolean; processing?: boolean; onConfirm: (crop: { x: number; y: number; width: number; height: number }) => void; onCancel: () => void }) => (
+    open ? (
+      <div>
+        {processing && <p role="status">Processando imagem…</p>}
+        <button type="button" disabled={processing} onClick={() => onConfirm({ x: 0, y: 0, width: 10, height: 10 })}>Confirmar recorte</button>
+        <button type="button" disabled={processing} onClick={onCancel}>Cancelar recorte</button>
+      </div>
+    ) : null
+  ),
+}));
+
 vi.mock('@/shared/api/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/shared/api/api')>()),
   fetchFriends: vi.fn(), fetchGroupMembers: vi.fn(), fetchRequestSummary: vi.fn(), fetchGroupInvitations: vi.fn(), inviteToGroup: vi.fn(), revokeInvitation: vi.fn(),
@@ -115,6 +133,37 @@ describe('GroupDetailsPanel — invitations', () => {
 
     expect(await screen.findByRole('menu')).toHaveClass('w-max');
     expect(screen.getByRole('menuitem', { name: 'Enviar do computador' })).toHaveClass('whitespace-nowrap');
+  });
+
+  it('shows processing before switching to the group upload modal', async () => {
+    const user = userEvent.setup();
+    let finishUpload: (() => void) | undefined;
+    let resolveUpload: ((value: { avatar: string }) => void) | undefined;
+    uploadCroppedProfileImage.mockImplementation((
+      _file: Blob,
+      _crop: { x: number; y: number; width: number; height: number },
+      _onProgress: ((fraction: number) => void) | undefined,
+      onPhaseChange?: (phase: 'processing' | 'uploading') => void,
+    ) => new Promise((resolve) => {
+      resolveUpload = resolve;
+      onPhaseChange?.('processing');
+      finishUpload = () => {
+        onPhaseChange?.('uploading');
+      };
+    }));
+    setup('owner');
+
+    await user.click(await screen.findByRole('button', { name: 'Trocar foto do grupo' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Enviar do computador' }));
+    await user.upload(screen.getByLabelText('Selecionar foto do grupo'), new File(['gif'], 'foto.gif', { type: 'image/gif' }));
+    await user.click(screen.getByRole('button', { name: 'Confirmar recorte' }));
+
+    expect(await screen.findByRole('status')).toHaveTextContent('Processando imagem…');
+    expect(screen.queryByText('Enviando a foto do grupo…')).not.toBeInTheDocument();
+
+    finishUpload?.();
+    expect(await screen.findByText('Enviando a foto do grupo…')).toBeInTheDocument();
+    resolveUpload?.({ avatar: '/uploads/group-avatar' });
   });
 
   it('owner sees transfer/remove on others; a regular member sees no management controls', async () => {

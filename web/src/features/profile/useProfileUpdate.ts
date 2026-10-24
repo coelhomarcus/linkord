@@ -7,6 +7,7 @@ import { MAX_BANNER_LEN, MAX_PROFILE_BIO_LEN, MAX_PROFILE_LINK_LEN, MAX_PROFILE_
 import type { RoomAction } from '@/state/roomReducer';
 import type { CropRect } from '@/state/RoomContext';
 import { uploadCroppedProfileImage } from '@/features/settings/uploadCroppedProfileImage';
+import type { ProfileImageUploadPhase } from '@/features/settings/uploadCroppedProfileImage';
 
 const PROFILE_SAVE_TIMEOUT_MS = 15_000;
 
@@ -173,8 +174,9 @@ export function useProfileUpdate(deps: ProfileUpdateDeps) {
     body: Blob,
     crop: CropRect,
     onProgress?: (fraction: number) => void,
+    onPhaseChange?: (phase: ProfileImageUploadPhase) => void,
   ): Promise<string> => {
-    const res = await uploadCroppedProfileImage(body, crop, onProgress);
+    const res = await uploadCroppedProfileImage(body, crop, onProgress, onPhaseChange);
     await applyImagePatch(field, res.avatar, res.avatarPoster ?? '');
     return res.avatar;
   }, [applyImagePatch]);
