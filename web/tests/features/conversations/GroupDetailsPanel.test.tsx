@@ -107,6 +107,16 @@ describe('GroupDetailsPanel — invitations', () => {
     expect(screen.queryByRole('button', { name: 'Carregar mais' })).not.toBeInTheDocument();
   });
 
+  it('keeps avatar actions on one line', async () => {
+    const user = userEvent.setup();
+    setup('owner');
+
+    await user.click(await screen.findByRole('button', { name: 'Trocar foto do grupo' }));
+
+    expect(await screen.findByRole('menu')).toHaveClass('w-max');
+    expect(screen.getByRole('menuitem', { name: 'Enviar do computador' })).toHaveClass('whitespace-nowrap');
+  });
+
   it('owner sees transfer/remove on others; a regular member sees no management controls', async () => {
     const { unmount } = setup('owner');
     expect(await screen.findByRole('button', { name: 'Remover Ana' })).toBeInTheDocument();
