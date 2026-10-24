@@ -7,10 +7,7 @@ interface UploadProgressModalProps {
   open: boolean;
   title: string;
   description?: string;
-  /** Omit for an indeterminate operation (e.g. a "usar URL" upload — the XHR
-   * body is a tiny JSON blob that finishes uploading almost instantly, so a
-   * percentage here would sit at ~100% while the server is still downloading
-   * and processing the actual image, looking stuck instead of honest). */
+  /** Omit when the operation has no meaningful client-side percentage. */
   progress?: number;
 }
 
