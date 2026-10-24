@@ -14,7 +14,7 @@ export function SegmentedTabs<T extends string>({ value, onChange, options, aria
     <div
       role="tablist"
       aria-label={ariaLabel}
-      className="grid w-full rounded-lg border border-border bg-black/25 p-1"
+      className="grid w-full rounded-lg border border-border bg-bg-secondary p-1"
       style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}
     >
       {options.map((option) => {
