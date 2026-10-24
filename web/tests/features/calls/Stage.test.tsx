@@ -119,7 +119,7 @@ describe('Stage — dynamic space reservation for the bar (no fixed pb-32)', () 
     try {
       renderStage({ allIds: [], chatOpen: false, onToggleChat: vi.fn() });
       const stage = document.querySelector('[data-stage]') as HTMLElement;
-      expect(stage.style.paddingBottom).toBe('84px');
+      expect(stage.style.paddingBottom).toBe('72px');
     } finally {
       getRect.mockRestore();
     }

@@ -20,10 +20,10 @@ interface StageProps {
 // Matches the old fixed `pb-32` (8rem) until the control bar's real height
 // is measured — same reasoning as useCallFullscreen's graceful fallback:
 // never a visible jump, just a brief window before the first real value.
-const FALLBACK_RESERVED_BOTTOM = 128;
-// The gap between the tile grid and the bar itself — same 1.5rem the bar
+const FALLBACK_RESERVED_BOTTOM = 116;
+// The gap between the tile grid and the bar itself — same 0.75rem the bar
 // already uses for its own distance from the true bottom edge.
-const BAR_GRID_GAP = 24;
+const BAR_GRID_GAP = 12;
 
 export function Stage({ allIds, chatOpen, onToggleChat }: StageProps) {
   const { state, dispatch, hideAudioOnlyTiles, setHideAudioOnlyTiles, callStageRef, reconnecting, menuTarget } = useRoom();
