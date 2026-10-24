@@ -5,7 +5,7 @@ import type { ContextMenuRootActions } from '@base-ui/react/context-menu';
 
 import { ReportDialog } from '@/features/reports/ReportDialog';
 import type { ReportTarget } from '@/features/reports/reportCategories';
-import { ContextMenu, ContextMenuCheckboxItem, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from '@/shared/ui/primitives/context-menu';
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from '@/shared/ui/primitives/context-menu';
 import { ReactionEmojiPicker } from '@/features/chat/ReactionEmojiPicker';
 import { ReactionParticipantsDialog } from '@/features/chat/ReactionParticipantsDialog';
 import { useKeepPopoverWarm } from '@/shared/hooks/useKeepPopoverWarm';
@@ -29,12 +29,11 @@ function isEditableTarget(target: EventTarget | null): boolean {
 
 export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenuProps) {
   const {
-    state, hideAudioOnlyTiles, setHideAudioOnlyTiles,
+    state,
     activeConversationId, messagesByConversation, reactToChatMessage, setReplyingTo, setEditingMsgId,
     conversations, closeConversation, pinConversation, openReactionParticipants,
   } = useRoom();
   const [hasSelection, setHasSelection] = useState(false);
-  const [stageTarget, setStageTarget] = useState(false);
   const [downloadTarget, setDownloadTarget] = useState<{ url: string; name: string } | null>(null);
   const { requestDelete, confirmDialog } = useMessageDeleteConfirm();
   const [messageTarget, setMessageTarget] = useState<number | null>(null);
@@ -60,7 +59,6 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
   const showMessageBlock = !!targetMessage;
   const showDownloadBlock = !!downloadTarget;
   const showSelectionBlock = hasSelection;
-  const showStageBlock = stageTarget;
   const showConversationBlock = !!targetConversation;
   const showUserBlock = !!userTarget;
 
@@ -68,7 +66,6 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
     function captureTarget(e: MouseEvent) {
       const element = e.target instanceof Element ? e.target : null;
       const wantsNativeMenu = isEditableTarget(e.target) || e.shiftKey;
-      const nextStageTarget = !!element?.closest('[data-stage]');
       const downloadEl = element?.closest<HTMLElement>('[data-download-url]') ?? null;
       const messageEl = element?.closest<HTMLElement>('[data-message-id]') ?? null;
       const nextMessageTarget = messageEl ? Number(messageEl.dataset.messageId) : null;
@@ -78,7 +75,6 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
       const nextUserTarget = userEl?.dataset.userId ?? null;
       const nextHasSelection = !wantsNativeMenu && !!window.getSelection()?.toString();
 
-      setStageTarget(nextStageTarget);
       setDownloadTarget(downloadEl ? { url: downloadEl.dataset.downloadUrl!, name: downloadEl.dataset.downloadName || '' } : null);
       setMessageTarget(nextMessageTarget);
       setConversationTarget(nextConversationTarget);
@@ -92,7 +88,6 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
       const hasVisibleItems = nextHasMessageBlock
         || !!downloadEl
         || nextHasSelection
-        || nextStageTarget
         || !!nextConversationTarget
         || !!nextUserTarget;
 
@@ -162,74 +157,65 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
                   />
                   <ContextMenuSeparator />
                   <ContextMenuItem onClick={() => setReplyingTo(targetMessage)}>
-                    <ArrowBendUpLeftIcon size={14} />
+                    <ArrowBendUpLeftIcon size={16} />
                     <span>Responder</span>
                   </ContextMenuItem>
                 </>
               )}
               {hasReactions && (
                 <ContextMenuItem onClick={() => openReactionParticipants({ conversationId: targetMessage.conversationId, msgId: targetMessage.msgId })}>
-                  <UsersIcon size={14} />
+                  <UsersIcon size={16} />
                   <span>Ver todas as reações</span>
                 </ContextMenuItem>
               )}
               {can?.copy && (
                 <ContextMenuItem onClick={handleCopyMessageText}>
-                  <CopyIcon size={14} />
+                  <CopyIcon size={16} />
                   <span>Copiar texto</span>
                 </ContextMenuItem>
               )}
               {can?.report && (
                 <ContextMenuItem onClick={() => setReportTarget({ type: 'message', id: String(targetMessage.msgId), label: `mensagem de ${targetMessage.name}` })}>
-                  <FlagIcon size={14} />
+                  <FlagIcon size={16} />
                   <span>Denunciar</span>
                 </ContextMenuItem>
               )}
               {can?.edit && (
                 <ContextMenuItem onClick={() => setEditingMsgId(targetMessage.msgId)}>
-                  <PencilSimpleIcon size={14} />
+                  <PencilSimpleIcon size={16} />
                   <span>Editar</span>
                 </ContextMenuItem>
               )}
               {can?.delete && (
                 <ContextMenuItem variant="destructive" onClick={(event) => requestDelete(targetMessage.msgId, event.shiftKey)}>
-                  <TrashIcon size={14} />
+                  <TrashIcon size={16} />
                   <span>Apagar</span>
                 </ContextMenuItem>
               )}
-              {(showDownloadBlock || showSelectionBlock || showStageBlock) && <ContextMenuSeparator />}
+              {(showDownloadBlock || showSelectionBlock) && <ContextMenuSeparator />}
             </>
           )}
           {showDownloadBlock && (
             <>
               <ContextMenuItem onClick={handleDownload}>
-                <DownloadSimpleIcon size={14} />
+                <DownloadSimpleIcon size={16} />
                 <span>Baixar</span>
               </ContextMenuItem>
-              {(showSelectionBlock || showStageBlock) && <ContextMenuSeparator />}
+              {showSelectionBlock && <ContextMenuSeparator />}
             </>
           )}
           {showSelectionBlock && (
             <>
               <ContextMenuItem onClick={handleCopy}>
-                <CopyIcon size={14} />
+                <CopyIcon size={16} />
                 <span>Copiar</span>
               </ContextMenuItem>
-              {showStageBlock && <ContextMenuSeparator />}
             </>
-          )}
-          {showStageBlock && (
-            <ContextMenuCheckboxItem
-              checked={hideAudioOnlyTiles}
-              onCheckedChange={setHideAudioOnlyTiles}
-            >
-              <span>Ocultar sem vídeo</span>
-            </ContextMenuCheckboxItem>
           )}
           {showUserBlock && userTarget && (
             <>
               <ContextMenuItem onClick={() => onOpenProfile(userTarget)}>
-                <UsersIcon size={14} />
+                <UsersIcon size={16} />
                 <span>Ver perfil</span>
               </ContextMenuItem>
               {showConversationBlock && <ContextMenuSeparator />}
@@ -238,12 +224,12 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
           {showConversationBlock && targetConversation && (
             <>
               <ContextMenuItem onClick={() => pinConversation(targetConversation.id, !targetConversation.pinnedAt)}>
-                {targetConversation.pinnedAt ? <PushPinSlashIcon size={14} /> : <PushPinIcon size={14} />}
+                {targetConversation.pinnedAt ? <PushPinSlashIcon size={16} /> : <PushPinIcon size={16} />}
                 <span>{targetConversation.pinnedAt ? 'Desafixar conversa' : 'Fixar conversa'}</span>
               </ContextMenuItem>
               {targetConversation.type === 'direct' && (
                 <ContextMenuItem onClick={() => closeConversation(targetConversation.id)}>
-                  <XIcon size={14} />
+                  <XIcon size={16} />
                   <span>Fechar conversa</span>
                 </ContextMenuItem>
               )}
