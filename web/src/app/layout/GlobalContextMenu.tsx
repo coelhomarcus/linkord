@@ -27,6 +27,11 @@ function isEditableTarget(target: EventTarget | null): boolean {
   );
 }
 
+/** Call stage / tiles open TileMenu locally — the global menu must not swallow their contextmenu. */
+function isDelegatedContextMenuTarget(element: Element | null): boolean {
+  return !!element?.closest('[data-stage]') || !!element?.closest('[data-tile-kind]');
+}
+
 export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenuProps) {
   const {
     state,
@@ -48,6 +53,8 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
   // proliferation risk in keeping it warm. See useKeepPopoverWarm.
   const emojiPickerWarmed = useKeepPopoverWarm(fullEmojiPicker);
   const contextMenuActionsRef = useRef<ContextMenuRootActions | null>(null);
+  const delegatedContextMenuRef = useRef(false);
+  const [contextMenuOpen, setContextMenuOpen] = useState(false);
   const targetMessage = messageTarget != null
     ? activeConversationId ? messagesByConversation.get(activeConversationId)?.find((m) => m.msgId === messageTarget) : undefined
     : undefined;
@@ -65,6 +72,13 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
   useEffect(() => {
     function captureTarget(e: MouseEvent) {
       const element = e.target instanceof Element ? e.target : null;
+      if (isDelegatedContextMenuTarget(element)) {
+        delegatedContextMenuRef.current = true;
+        setContextMenuOpen(false);
+        contextMenuActionsRef.current?.close();
+        return;
+      }
+      delegatedContextMenuRef.current = false;
       const wantsNativeMenu = isEditableTarget(e.target) || e.shiftKey;
       const downloadEl = element?.closest<HTMLElement>('[data-download-url]') ?? null;
       const messageEl = element?.closest<HTMLElement>('[data-message-id]') ?? null;
@@ -135,8 +149,19 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
   return (
     <>
       <ContextMenu
+        open={contextMenuOpen}
         actionsRef={contextMenuActionsRef}
-        onOpenChange={(open) => { if (open) { setHasSelection(!!window.getSelection()?.toString()); setFullEmojiPicker(false); } }}
+        onOpenChange={(open) => {
+          if (open && delegatedContextMenuRef.current) {
+            delegatedContextMenuRef.current = false;
+            setContextMenuOpen(false);
+            return;
+          }
+          setContextMenuOpen(open);
+          if (!open) return;
+          setHasSelection(!!window.getSelection()?.toString());
+          setFullEmojiPicker(false);
+        }}
       >
         <ContextMenuTrigger className="contents">{children}</ContextMenuTrigger>
         {/* The message block is fixed at picker width so the menu doesn't
