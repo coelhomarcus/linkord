@@ -86,7 +86,7 @@ export function AdminLayout() {
         subtitle={mode === 'wide' ? section?.label : undefined}
         leading={compactSection ? (
           <Link to={ADMIN_PATH} aria-label="Voltar à administração" className={buttonVariants({ variant: 'ghost', size: 'icon-sm' })}>
-            <ArrowLeftIcon size={18} aria-hidden />
+            <ArrowLeftIcon size={20} aria-hidden />
           </Link>
         ) : undefined}
       />

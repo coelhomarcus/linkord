@@ -75,7 +75,7 @@ export function GroupCreateDialog({ open, onOpenChange, onCreated }: GroupCreate
       <DialogContent className="max-w-lg p-0 text-text-primary">
         <DialogHeader className="border-b border-border px-5 py-4">
           <DialogTitle className="flex items-center gap-2 text-title">
-            <UsersIcon size={18} />
+            <UsersIcon size={20} />
             {failures ? 'Grupo criado' : 'Novo grupo'}
           </DialogTitle>
         </DialogHeader>

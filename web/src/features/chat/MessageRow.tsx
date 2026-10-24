@@ -319,16 +319,16 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
             <DotsThreeIcon size={13} />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            {can.reply && <DropdownMenuItem onClick={onReply}><ArrowBendUpLeftIcon size={14} />Responder</DropdownMenuItem>}
+            {can.reply && <DropdownMenuItem onClick={onReply}><ArrowBendUpLeftIcon size={16} />Responder</DropdownMenuItem>}
             {hasReactions && (
               <DropdownMenuItem onClick={() => openReactionParticipants({ conversationId: message.conversationId, msgId: message.msgId })}>
-                <UsersIcon size={14} />Ver todas as reações
+                <UsersIcon size={16} />Ver todas as reações
               </DropdownMenuItem>
             )}
-            {can.copy && <DropdownMenuItem onClick={copyText}><CopyIcon size={14} />Copiar texto</DropdownMenuItem>}
-            {can.edit && <DropdownMenuItem onClick={startEdit}><PencilSimpleIcon size={14} />Editar</DropdownMenuItem>}
-            {canReport && <DropdownMenuItem onClick={() => setReportOpen(true)}><FlagIcon size={14} />Denunciar</DropdownMenuItem>}
-            {canDelete && <DropdownMenuItem variant="destructive" disabled={deleting} onClick={(event) => requestDelete(message.msgId, event.shiftKey)}><TrashIcon size={14} />Apagar</DropdownMenuItem>}
+            {can.copy && <DropdownMenuItem onClick={copyText}><CopyIcon size={16} />Copiar texto</DropdownMenuItem>}
+            {can.edit && <DropdownMenuItem onClick={startEdit}><PencilSimpleIcon size={16} />Editar</DropdownMenuItem>}
+            {canReport && <DropdownMenuItem onClick={() => setReportOpen(true)}><FlagIcon size={16} />Denunciar</DropdownMenuItem>}
+            {canDelete && <DropdownMenuItem variant="destructive" disabled={deleting} onClick={(event) => requestDelete(message.msgId, event.shiftKey)}><TrashIcon size={16} />Apagar</DropdownMenuItem>}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>}

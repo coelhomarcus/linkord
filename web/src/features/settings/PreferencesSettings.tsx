@@ -14,7 +14,7 @@ export function PreferencesSettings() {
         <SettingsRow label="Mostrar banners dos participantes" description="Exibe o banner do perfil como fundo dos cartões da chamada.">
           <Switch checked={showTileBanners} onCheckedChange={setShowTileBanners} aria-label="Mostrar banners nos tiles" />
         </SettingsRow>
-        <SettingsRow label="Ocultar participantes sem vídeo" description="Some com os cartões de quem só está no áudio, deixando o palco só para quem está com câmera ou tela ligada. O mesmo atalho existe no menu de contexto do palco.">
+        <SettingsRow label="Ocultar participantes sem vídeo" description="Some com os cartões de quem só está no áudio, deixando o palco só para quem está com câmera ou tela ligada.">
           <Switch checked={hideAudioOnlyTiles} onCheckedChange={setHideAudioOnlyTiles} aria-label="Ocultar participantes sem vídeo" />
         </SettingsRow>
         <SettingsRow label="Mostrar estatísticas" description="Bitrate e tempo no ar no menu de cada transmissão.">

@@ -23,7 +23,7 @@ const MESH_COLORS = ['#100b10', '#bc2ab6', '#4c1b82', '#290e28'];
 function PasswordToggle({ visible, onToggle }: { visible: boolean; onToggle: () => void }) {
   return (
     <button type="button" onClick={onToggle} aria-label={visible ? 'Ocultar senha' : 'Mostrar senha'}>
-      {visible ? <EyeSlashIcon size={16} /> : <EyeIcon size={16} />}
+      {visible ? <EyeSlashIcon size={20} /> : <EyeIcon size={20} />}
     </button>
   );
 }
@@ -56,7 +56,7 @@ function LoginForm({ onForgotPassword }: { onForgotPassword: () => void }) {
         label="Usuário"
         autoFocus
         autoComplete="username"
-        leftIcon={<UserIcon size={16} />}
+        leftIcon={<UserIcon size={20} />}
         value={username}
         onChange={setUsername}
       />
@@ -65,15 +65,15 @@ function LoginForm({ onForgotPassword }: { onForgotPassword: () => void }) {
         label="Senha"
         type={showPassword ? 'text' : 'password'}
         autoComplete="current-password"
-        leftIcon={<LockIcon size={16} />}
+        leftIcon={<LockIcon size={20} />}
         rightSlot={<PasswordToggle visible={showPassword} onToggle={() => setShowPassword((v) => !v)} />}
         value={password}
         onChange={setPassword}
       />
       <Button type="submit" size="lg" className="mt-1 h-11 w-full" disabled={pending || !username || !password}>
-        {pending ? <CircleNotchIcon size={16} className="animate-spin" /> : <SignInIcon size={16} />}
+        {pending ? <CircleNotchIcon size={20} className="animate-spin" /> : <SignInIcon size={20} />}
         <span>{pending ? 'Entrando…' : 'Entrar'}</span>
-        {!pending && <ArrowRightIcon size={16} className="ml-auto" />}
+        {!pending && <ArrowRightIcon size={20} className="ml-auto" />}
       </Button>
       <button type="button" onClick={onForgotPassword} className="self-center text-label text-text-muted transition-colors hover:text-text-primary">
         Esqueci minha senha
@@ -141,7 +141,7 @@ function RegisterForm() {
         autoComplete="username"
         maxLength={20}
         placeholder="3 a 20 caracteres"
-        leftIcon={<UserIcon size={16} />}
+        leftIcon={<UserIcon size={20} />}
         value={username}
         onChange={setUsername}
         error={fieldErrors.username}
@@ -153,7 +153,7 @@ function RegisterForm() {
         type="email"
         autoComplete="email"
         placeholder="voce@exemplo.com"
-        leftIcon={<EnvelopeIcon size={16} />}
+        leftIcon={<EnvelopeIcon size={20} />}
         value={email}
         onChange={setEmail}
         error={fieldErrors.email}
@@ -165,7 +165,7 @@ function RegisterForm() {
         type={showPassword ? 'text' : 'password'}
         autoComplete="new-password"
         placeholder="Pelo menos 8 caracteres"
-        leftIcon={<LockIcon size={16} />}
+        leftIcon={<LockIcon size={20} />}
         rightSlot={<PasswordToggle visible={showPassword} onToggle={() => setShowPassword((v) => !v)} />}
         value={password}
         onChange={setPassword}
@@ -175,16 +175,16 @@ function RegisterForm() {
       <AuthField
         id="registerCode"
         label="Código de convite"
-        leftIcon={<KeyIcon size={16} />}
+        leftIcon={<KeyIcon size={20} />}
         value={code}
         onChange={setCode}
         error={fieldErrors.code}
         reserveErrorLine
       />
       <Button type="submit" size="lg" className="mt-1 h-11 w-full" disabled={pending || !username || !email || !password || !code}>
-        {pending ? <CircleNotchIcon size={16} className="animate-spin" /> : <UserPlusIcon size={16} />}
+        {pending ? <CircleNotchIcon size={20} className="animate-spin" /> : <UserPlusIcon size={20} />}
         <span>{pending ? 'Criando conta…' : 'Criar conta'}</span>
-        {!pending && <ArrowRightIcon size={16} className="ml-auto" />}
+        {!pending && <ArrowRightIcon size={20} className="ml-auto" />}
       </Button>
       {formError && <ErrorBanner>{formError}</ErrorBanner>}
     </form>
@@ -248,17 +248,17 @@ function RecoveryForm({ onBack }: { onBack: () => void }) {
           options={[{ value: 'email', label: 'E-mail' }, { value: 'username', label: 'Usuário' }]}
         />
         {identifierType === 'email' ? (
-          <AuthField id="recoveryEmail" label="E-mail" type="email" autoFocus autoComplete="email" leftIcon={<EnvelopeIcon size={16} />} value={identifierValue} onChange={setIdentifierValue} />
+          <AuthField id="recoveryEmail" label="E-mail" type="email" autoFocus autoComplete="email" leftIcon={<EnvelopeIcon size={20} />} value={identifierValue} onChange={setIdentifierValue} />
         ) : (
-          <AuthField id="recoveryUsername" label="Usuário" autoFocus autoComplete="username" leftIcon={<UserIcon size={16} />} value={identifierValue} onChange={setIdentifierValue} />
+          <AuthField id="recoveryUsername" label="Usuário" autoFocus autoComplete="username" leftIcon={<UserIcon size={20} />} value={identifierValue} onChange={setIdentifierValue} />
         )}
         <Button type="submit" size="lg" className="h-11 w-full" disabled={pending || !identifierValue}>
-          {pending ? <CircleNotchIcon size={16} className="animate-spin" /> : <EnvelopeIcon size={16} />}
+          {pending ? <CircleNotchIcon size={20} className="animate-spin" /> : <EnvelopeIcon size={20} />}
           <span>{pending ? 'Enviando…' : 'Enviar código'}</span>
-          {!pending && <ArrowRightIcon size={16} className="ml-auto" />}
+          {!pending && <ArrowRightIcon size={20} className="ml-auto" />}
         </Button>
         {message && <ErrorBanner>{message}</ErrorBanner>}
-        <button type="button" onClick={onBack} className="flex items-center justify-center gap-1.5 text-label text-text-muted hover:text-text-primary"><ArrowLeftIcon size={14} /> Voltar para entrar</button>
+        <button type="button" onClick={onBack} className="flex items-center justify-center gap-1.5 text-label text-text-muted hover:text-text-primary"><ArrowLeftIcon size={16} /> Voltar para entrar</button>
       </form>
     );
   }
@@ -285,9 +285,9 @@ function RecoveryForm({ onBack }: { onBack: () => void }) {
         autoFocus
         aria-label="Código de recuperação"
       />
-      <AuthField id="recoveryPassword" label="Nova senha" type="password" autoComplete="new-password" leftIcon={<LockIcon size={16} />} value={password} onChange={setPassword} placeholder="Pelo menos 8 caracteres" />
+      <AuthField id="recoveryPassword" label="Nova senha" type="password" autoComplete="new-password" leftIcon={<LockIcon size={20} />} value={password} onChange={setPassword} placeholder="Pelo menos 8 caracteres" />
       <Button type="button" size="lg" className="h-11 w-full" disabled={pending || code.length !== 6 || password.length < 8} onClick={() => void submitReset()}>
-        {pending ? <CircleNotchIcon size={16} className="animate-spin" /> : status === 'success' ? <CheckCircleIcon size={16} /> : <LockIcon size={16} />}
+        {pending ? <CircleNotchIcon size={20} className="animate-spin" /> : status === 'success' ? <CheckCircleIcon size={20} /> : <LockIcon size={20} />}
         <span>{pending ? 'Salvando…' : status === 'success' ? 'Senha redefinida' : 'Redefinir senha'}</span>
       </Button>
       {status === 'success' ? (

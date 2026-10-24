@@ -64,14 +64,14 @@ export function ProfileActions({ userId, username, displayName, onNavigate, clas
   }
 
   const { relation, retryAfter } = state.value;
-  const spinner = pending ? <CircleNotchIcon size={15} className="animate-spin" /> : null;
+  const spinner = pending ? <CircleNotchIcon size={20} className="animate-spin" /> : null;
 
   let actions;
   switch (relation) {
     case 'self':
       actions = (
         <Button type="button" variant="secondary" size="sm" onClick={() => { navigate(ROUTES.settings); onNavigate?.(); }}>
-          <PencilSimpleIcon size={15} /><span>Editar perfil</span>
+          <PencilSimpleIcon size={20} /><span>Editar perfil</span>
         </Button>
       );
       break;
@@ -79,7 +79,7 @@ export function ProfileActions({ userId, username, displayName, onNavigate, clas
       actions = (
         <>
           <Button type="button" size="sm" onClick={() => { openDirect(userId); requestChatView(); navigate(ROUTES.conversations); onNavigate?.(); }}>
-            <ChatCircleIcon size={15} /><span>Mensagem</span>
+            <ChatCircleIcon size={20} /><span>Mensagem</span>
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger render={<Button type="button" variant="ghost" size="icon-sm" aria-label="Mais ações" />}>
@@ -96,7 +96,7 @@ export function ProfileActions({ userId, username, displayName, onNavigate, clas
     case 'outgoing':
       actions = (
         <>
-          <span className="flex items-center gap-1.5 text-label text-text-muted"><UserCheckIcon size={15} />Solicitação enviada</span>
+          <span className="flex items-center gap-1.5 text-label text-text-muted"><UserCheckIcon size={16} />Solicitação enviada</span>
           <Button type="button" variant="ghost" size="sm" disabled={pending} onClick={() => void run(() => cancelFriendRequest(userId))}>{spinner}<span>Cancelar</span></Button>
         </>
       );
@@ -112,7 +112,7 @@ export function ProfileActions({ userId, username, displayName, onNavigate, clas
     case 'blocked':
       actions = (
         <>
-          <span className="flex items-center gap-1.5 text-label text-text-muted"><ProhibitIcon size={15} />Você bloqueou essa pessoa</span>
+          <span className="flex items-center gap-1.5 text-label text-text-muted"><ProhibitIcon size={16} />Você bloqueou essa pessoa</span>
           <Button type="button" variant="secondary" size="sm" disabled={pending} onClick={() => void run(() => unblockUser(userId))}>{spinner}<span>Desbloquear</span></Button>
         </>
       );
@@ -122,7 +122,7 @@ export function ProfileActions({ userId, username, displayName, onNavigate, clas
         <span className="text-label text-text-muted">Você poderá enviar uma nova solicitação a partir de {formatRetryAfter(retryAfter)}.</span>
       ) : (
         <Button type="button" size="sm" disabled={pending} onClick={() => void run(() => sendFriendRequest(username), 'send')}>
-          {spinner ?? <UserPlusIcon size={15} />}<span>Adicionar amigo</span>
+          {spinner ?? <UserPlusIcon size={20} />}<span>Adicionar amigo</span>
         </Button>
       );
   }

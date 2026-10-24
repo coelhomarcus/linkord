@@ -76,7 +76,7 @@ describe('useConversationRouteSync', () => {
     expect(path()).toBe('/app/friends');
   });
 
-  it('a LATER open (palette, notification, group created) navigates to the conversation', () => {
+  it('a LATER open (notification, sidebar, group created) navigates to the conversation', () => {
     const room = (active: string) => createFakeRoomContextValue({ state: joined, conversations: [conv('c1'), conv('c2')], activeConversationId: active });
     const view = (active: string) => (
       <RoomContext.Provider value={room(active)}>

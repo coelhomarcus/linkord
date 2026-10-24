@@ -56,7 +56,7 @@ export function AddFriendForm({ onSent, autoFocus }: { onSent: () => void; autoF
           className="border-input"
         />
         <Button type="submit" disabled={pending || !normalizeUsernameInput(value)} className="flex-none">
-          {pending ? <CircleNotchIcon size={16} className="animate-spin" /> : <UserPlusIcon size={16} />}
+          {pending ? <CircleNotchIcon size={20} className="animate-spin" /> : <UserPlusIcon size={20} />}
           <span>Enviar</span>
         </Button>
       </div>

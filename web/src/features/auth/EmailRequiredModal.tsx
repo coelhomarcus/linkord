@@ -48,11 +48,11 @@ export function EmailRequiredModal() {
           />
           {error && <p className="text-label text-red">{error}</p>}
           <Button type="submit" disabled={pending || !email}>
-            {pending ? <CircleNotchIcon size={16} className="animate-spin" /> : <EnvelopeIcon size={16} />}
+            {pending ? <CircleNotchIcon size={20} className="animate-spin" /> : <EnvelopeIcon size={20} />}
             {pending ? 'Salvando…' : 'Vincular e-mail'}
           </Button>
           <Button type="button" variant="ghost" onClick={() => void logout()}>
-            <SignOutIcon size={16} />
+            <SignOutIcon size={20} />
             Sair da conta
           </Button>
         </form>

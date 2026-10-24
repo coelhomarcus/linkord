@@ -94,7 +94,7 @@ export function SettingsPage({ onOpenProfile }: SettingsPageProps) {
             aria-label="Voltar às configurações"
             onClick={() => (fromIndex ? navigate(-1) : navigate(ROUTES.settings))}
           >
-            <ArrowLeftIcon size={18} aria-hidden />
+            <ArrowLeftIcon size={20} aria-hidden />
           </Button>
         ) : undefined}
       />

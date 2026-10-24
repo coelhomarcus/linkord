@@ -86,7 +86,7 @@ export function ChatSearchDialog({ open, onOpenChange, activeConversationId, act
 
         <div className="flex min-h-0 flex-col gap-3 overflow-y-auto px-4 pb-4 pt-3">
           <div className="relative flex-none">
-            <MagnifyingGlassIcon size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+            <MagnifyingGlassIcon size={20} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
             {/* eslint-disable-next-line jsx-a11y/no-autofocus -- opening the
                 dialog IS the user asking to type a search query */}
             <Input
@@ -94,7 +94,7 @@ export function ChatSearchDialog({ open, onOpenChange, activeConversationId, act
               placeholder="Buscar mensagens..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="pl-9"
+              className="pl-10"
             />
           </div>
 

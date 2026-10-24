@@ -23,7 +23,7 @@ describe('PreferencesSettings', () => {
     expect(screen.getByRole('switch', { name: 'Compactar imagens por padrão' })).not.toBeChecked();
   });
 
-  it('hiding audio-only participants uses the same state source as the context-menu shortcut', async () => {
+  it('hiding audio-only participants calls the room settings setter', async () => {
     const setHideAudioOnlyTiles = vi.fn();
     const user = userEvent.setup();
     renderPreferences({ hideAudioOnlyTiles: false, setHideAudioOnlyTiles });

@@ -37,7 +37,7 @@ export function usePresence() {
   // The friend subset of allUsers — allUsers also carries co-members of a
   // shared conversation who aren't friends (their profile/presence is
   // needed to render that conversation), so anything that should be
-  // friends-only (the command palette's "Conversar com…", say) filters
+  // friends-only (e.g. the friends list) filters
   // against this instead of allUsers directly.
   const [friendUserIds, setFriendUserIds] = useState<Set<string>>(new Set());
 

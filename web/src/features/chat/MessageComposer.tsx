@@ -334,7 +334,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
 
         {replyingTo && (
           <div className="flex items-center gap-2 border-b border-border-subtle py-1.5 pl-3 pr-1.5 text-label">
-            <ArrowBendUpLeftIcon size={14} className="flex-none text-text-muted" />
+            <ArrowBendUpLeftIcon size={16} className="flex-none text-text-muted" />
             <span className="min-w-0 flex-1 truncate text-text-muted">
               Respondendo a <span className="font-medium text-text-secondary">{replyName}</span>
               {replyingTo.text ? <span> - {replyingTo.text}</span> : null}
@@ -355,8 +355,8 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
               <PlusIcon size={20} />
             </DropdownMenuTrigger>
             <DropdownMenuContent side="top" align="start" className="w-64">
-              <DropdownMenuItem onClick={() => fileInputRef.current?.click()}><PaperclipIcon size={14} />Anexar arquivos</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => imageInputRef.current?.click()}><ImageSquareIcon size={14} />Enviar imagens</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => fileInputRef.current?.click()}><PaperclipIcon size={16} />Anexar arquivos</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => imageInputRef.current?.click()}><ImageSquareIcon size={16} />Enviar imagens</DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuCheckboxItem checked={compressImages} onCheckedChange={toggleCompress}>
                 Compactar imagens (WebP)
@@ -404,7 +404,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
             <PopoverTrigger
               render={<Button type="button" variant="ghost" size="icon" aria-label="Inserir emoji" disabled={disabled} className={iconButton} />}
             >
-              <SmileyIcon size={18} />
+              <SmileyIcon size={20} />
             </PopoverTrigger>
             <PopoverContent keepMounted={emojiPickerWarmed} className="w-75 p-0" side="top" align="end">
               <EmojiPicker className="h-80 w-full" onEmojiSelect={({ emoji }) => insertEmoji(emoji)}>
@@ -421,7 +421,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
             onClick={() => void submit()}
             className="flex-none rounded-full"
           >
-            <ArrowUpIcon size={18} />
+            <ArrowUpIcon size={20} />
           </Button>
         </div>
       </div>

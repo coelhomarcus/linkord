@@ -90,7 +90,7 @@ export function GifPicker({ config, onPick }: { config: EnabledConfig; onPick: (
     <div className="flex h-[26rem] w-full flex-col">
       <div className="flex-none p-2 pb-1.5">
         <div className="flex items-center gap-2 rounded-md border border-border bg-fill-subtle px-2.5">
-          <MagnifyingGlassIcon size={15} aria-hidden className="flex-none text-text-muted" />
+          <MagnifyingGlassIcon size={20} aria-hidden className="flex-none text-text-muted" />
           <input
             autoFocus
             value={input}
