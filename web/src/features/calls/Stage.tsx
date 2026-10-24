@@ -33,8 +33,8 @@ export function Stage({ allIds, chatOpen, onToggleChat }: StageProps) {
   const focusScreenShare = useCallback((key: string) => dispatch({ type: 'SET_FOCUSED', id: key, origin: 'automatic' }), [dispatch]);
   useAutoFocusScreenShare(allDescriptors, state.focusOrigin, focusScreenShare);
   // "Ocultar sem vídeo" filtering everyone out reads as a black-screen bug
-  // otherwise — nothing on stage explains why, since the option lives in a
-  // right-click menu, not a visible toggle.
+  // otherwise — the option lives in Preferences, so the empty stage has to
+  // say why it's empty and offer a way back.
   const allHiddenByFilter = allDescriptors.length > 0 && descriptors.length === 0;
 
   // A tile menu open, reconnecting, or an actionable error keeps the HUD

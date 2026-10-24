@@ -10,6 +10,20 @@ const userState = {
 };
 
 describe('GlobalContextMenu', () => {
+  it('does not offer hide-audio-only on the call stage', () => {
+    renderWithRoom(
+      <GlobalContextMenu onOpenProfile={vi.fn()}>
+        <main data-stage data-testid="stage" />
+      </GlobalContextMenu>,
+      { state: userState }
+    );
+
+    fireEvent.contextMenu(screen.getByTestId('stage'));
+
+    expect(screen.queryByText('Ocultar sem vídeo')).not.toBeInTheDocument();
+    expect(document.querySelector('[data-slot="context-menu-content"]')).not.toBeInTheDocument();
+  });
+
   it('does not open an empty popup when the target has no actions', () => {
     renderWithRoom(
       <GlobalContextMenu onOpenProfile={vi.fn()}>
@@ -26,34 +40,34 @@ describe('GlobalContextMenu', () => {
   it('still opens when the target has visible actions', async () => {
     renderWithRoom(
       <GlobalContextMenu onOpenProfile={vi.fn()}>
-        <main data-stage data-testid="stage" />
+        <div data-user-id="u-1" data-testid="user-row">Fulana</div>
       </GlobalContextMenu>,
-      { state: userState, setHideAudioOnlyTiles: vi.fn() }
+      { state: userState }
     );
 
-    fireEvent.contextMenu(screen.getByTestId('stage'));
+    fireEvent.contextMenu(screen.getByTestId('user-row'));
 
-    expect(await screen.findByText('Ocultar sem vídeo')).toBeInTheDocument();
+    expect(await screen.findByText('Ver perfil')).toBeInTheDocument();
   });
 
   it('closes the open menu when the next target has no actions', async () => {
     renderWithRoom(
       <GlobalContextMenu onOpenProfile={vi.fn()}>
         <div>
-          <main data-stage data-testid="stage" />
+          <div data-user-id="u-1" data-testid="user-row">Fulana</div>
           <div data-testid="empty-area">no actions</div>
         </div>
       </GlobalContextMenu>,
-      { state: userState, setHideAudioOnlyTiles: vi.fn() }
+      { state: userState }
     );
 
-    fireEvent.contextMenu(screen.getByTestId('stage'));
-    expect(await screen.findByText('Ocultar sem vídeo')).toBeInTheDocument();
+    fireEvent.contextMenu(screen.getByTestId('user-row'));
+    expect(await screen.findByText('Ver perfil')).toBeInTheDocument();
 
     fireEvent.contextMenu(screen.getByTestId('empty-area'));
 
     await waitFor(() => {
-    expect(screen.queryByText('Ocultar sem vídeo')).not.toBeInTheDocument();
+    expect(screen.queryByText('Ver perfil')).not.toBeInTheDocument();
     });
   });
 
