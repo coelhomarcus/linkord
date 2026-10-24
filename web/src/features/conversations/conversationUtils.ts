@@ -1,5 +1,7 @@
 import type { Conversation, Participant, PublicUser } from '@/shared/types/protocol';
 
+export type ConversationListTab = 'direct' | 'group';
+
 export function conversationTitle(conversation: Conversation | null | undefined, meUserId: string | null, users: Map<string, PublicUser>): string {
   if (!conversation) return 'Conversa';
   if (conversation.type === 'group') return conversation.title || 'Grupo';
@@ -26,6 +28,30 @@ export function groupMembers(conversation: Conversation | null | undefined, user
     .map((id) => users.get(id))
     .filter((user): user is PublicUser => !!user)
     .sort((a, b) => a.displayName.localeCompare(b.displayName) || a.username.localeCompare(b.username));
+}
+
+export function conversationMatchesQuery(
+  conversation: Conversation,
+  query: string,
+  meUserId: string | null,
+  users: Map<string, PublicUser>,
+): boolean {
+  const normalized = query.trim().toLowerCase();
+  if (!normalized) return true;
+  return conversationTitle(conversation, meUserId, users).toLowerCase().includes(normalized);
+}
+
+export function unreadCountForTab(
+  conversations: Conversation[],
+  unreadByConversation: Map<string, number>,
+  tab: ConversationListTab,
+): number {
+  let total = 0;
+  for (const conversation of conversations) {
+    if (conversation.type !== tab) continue;
+    total += unreadByConversation.get(conversation.id) ?? 0;
+  }
+  return total;
 }
 
 export function callParticipantIds(meParticipantId: string | null, participants: Map<string, Participant>, conversationId: string | null): string[] {

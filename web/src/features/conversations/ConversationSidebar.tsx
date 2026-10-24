@@ -1,4 +1,4 @@
-import { useId, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { Pin, Search, Users, PhoneCall } from 'lucide-react';
@@ -7,6 +7,7 @@ import { ActiveWash } from '@/shared/ui/motion/active-wash';
 import { Sidebar } from '@/shared/ui/motion/sidebar';
 import { useSidebar } from '@/shared/ui/motion/sidebar-context';
 import { Button } from '@/shared/ui/primitives/button';
+import { Tabs, TabsIndicator, TabsList, TabsTrigger } from '@/shared/ui/primitives/tabs';
 import { Avatar } from '@/shared/Avatar';
 import { cn } from '@/shared/lib/utils';
 import { shortcutHint } from '@/shared/lib/platform';
@@ -14,7 +15,13 @@ import { CountBadge } from '@/shared/CountBadge';
 import { useRoom } from '@/state/RoomContext';
 import type { Conversation } from '@/shared/types/protocol';
 import { ROUTES, conversationNav, isConversationsPath } from '@/shared/lib/routes';
-import { conversationTitle, directUser } from './conversationUtils';
+import {
+  conversationMatchesQuery,
+  conversationTitle,
+  directUser,
+  unreadCountForTab,
+  type ConversationListTab,
+} from './conversationUtils';
 import { GroupAvatar } from './GroupAvatar';
 import { GroupCreateDialog } from './GroupCreateDialog';
 import { NotificationBell } from '@/features/notifications/NotificationBell';
@@ -52,7 +59,7 @@ function ConversationRow({ conversation, active, washId, onClick }: {
         type="button"
         onClick={onClick}
         className={cn(
-          'relative isolate flex w-full items-center gap-2.5 rounded-md border px-2.5 py-1.5 text-left transition-colors',
+          'relative isolate flex w-full items-center gap-2.5 rounded-md border px-2.5 py-2 text-left transition-colors',
           active
             ? 'cutout-active border-transparent text-text-primary'
             : 'cutout border-transparent text-text-secondary hover:cutout-subtle hover:border-border hover:bg-fill-subtle'
@@ -64,14 +71,14 @@ function ConversationRow({ conversation, active, washId, onClick }: {
         {active && <ActiveWash layoutId={washId} className="shadow-highlight" />}
         {conversation.type === 'direct' && other ? (
           <div className="relative flex-none">
-            <Avatar id={other.id} name={other.displayName} avatar={other.avatar} avatarColor={other.avatarColor} size={36} />
-            <span className={cn('absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2 border-(--cutout) transition-[border-color] duration-300', online ? 'bg-green' : 'bg-text-muted')} />
+            <Avatar id={other.id} name={other.displayName} avatar={other.avatar} avatarColor={other.avatarColor} size={44} />
+            <span className={cn('absolute -bottom-0.5 -right-0.5 size-4 rounded-full border-2 border-(--cutout) transition-[border-color] duration-300', online ? 'bg-green' : 'bg-text-muted')} />
           </div>
         ) : (
           <div className="relative flex-none">
-            <GroupAvatar title={title} avatar={conversation.avatar} active={active} size={36} />
-            <span className="absolute -bottom-0.5 -right-0.5 grid size-4 place-items-center rounded-full border-2 border-(--cutout) bg-bg-tertiary text-text-secondary transition-[border-color] duration-300">
-              <Users size={9} />
+            <GroupAvatar title={title} avatar={conversation.avatar} active={active} size={44} />
+            <span className="absolute -bottom-0.5 -right-0.5 grid size-5 place-items-center rounded-full border-2 border-(--cutout) bg-bg-tertiary text-text-secondary transition-[border-color] duration-300">
+              <Users size={12} />
             </span>
           </div>
         )}
@@ -113,20 +120,37 @@ function ConversationRow({ conversation, active, washId, onClick }: {
   );
 }
 
+function tabForConversation(conversations: Conversation[], conversationId: string | null): ConversationListTab {
+  const conversation = conversationId ? conversations.find((item) => item.id === conversationId) : undefined;
+  return conversation?.type === 'group' ? 'group' : 'direct';
+}
+
 export function ConversationSidebar({ onOpenPalette, mobileRail }: ConversationSidebarProps) {
-  const { state, conversations, activeConversationId, openConversation, allUsers, requestChatView } = useRoom();
+  const { state, conversations, activeConversationId, openConversation, allUsers, unreadByConversation, requestChatView } = useRoom();
   const { isMobile, isOverlay, setOpenMobile, toggleSidebar } = useSidebar();
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const shortcutK = shortcutHint('K');
   const [query, setQuery] = useState('');
   const [groupOpen, setGroupOpen] = useState(false);
+  const [tab, setTab] = useState<ConversationListTab>(() => tabForConversation(conversations, activeConversationId));
+  const prevActiveId = useRef(activeConversationId);
   const washId = useId();
-  const normalized = query.trim().toLowerCase();
+  const searching = query.trim().length > 0;
+
+  useEffect(() => {
+    if (activeConversationId && activeConversationId !== prevActiveId.current) {
+      setTab(tabForConversation(conversations, activeConversationId));
+    }
+    prevActiveId.current = activeConversationId;
+  }, [activeConversationId, conversations]);
 
   const filteredConversations = useMemo(() => (
-    conversations.filter((conversation) => conversationTitle(conversation, state.me.userId, allUsers).toLowerCase().includes(normalized))
-  ), [allUsers, conversations, normalized, state.me.userId]);
+    conversations.filter((conversation) => conversation.type === tab && conversationMatchesQuery(conversation, query, state.me.userId, allUsers))
+  ), [allUsers, conversations, query, state.me.userId, tab]);
+
+  const friendsUnread = useMemo(() => unreadCountForTab(conversations, unreadByConversation, 'direct'), [conversations, unreadByConversation]);
+  const groupsUnread = useMemo(() => unreadCountForTab(conversations, unreadByConversation, 'group'), [conversations, unreadByConversation]);
 
   function selectConversation(conversationId: string) {
     openConversation(conversationId);
@@ -168,7 +192,7 @@ export function ConversationSidebar({ onOpenPalette, mobileRail }: ConversationS
                 <input
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Buscar conversas"
+                  placeholder={tab === 'group' ? 'Buscar grupos' : 'Buscar amigos'}
                   className="h-10 min-w-0 flex-1 bg-transparent text-label outline-none placeholder:text-text-muted"
                 />
                 <button
@@ -181,21 +205,44 @@ export function ConversationSidebar({ onOpenPalette, mobileRail }: ConversationS
                 </button>
               </div>
 
-              <div className="min-h-0 flex-1 overflow-y-auto">
-                <div className="flex flex-col gap-1">
-                  {filteredConversations.length === 0 ? (
-                    <p className="px-3 py-8 text-center text-label text-text-muted">Nenhuma conversa.</p>
-                  ) : filteredConversations.map((conversation) => (
-                    <ConversationRow
-                      key={conversation.id}
-                      conversation={conversation}
-                      active={onConversations && conversation.id === activeConversationId}
-                      washId={washId}
-                      onClick={() => selectConversation(conversation.id)}
-                    />
-                  ))}
+              <Tabs
+                value={tab}
+                onValueChange={(value) => { if (value === 'direct' || value === 'group') setTab(value); }}
+                className="flex min-h-0 w-full flex-1 flex-col items-stretch gap-3"
+              >
+                <TabsList className="flex h-10 w-full flex-none" aria-label="Tipo de conversa">
+                  <TabsIndicator />
+                  <TabsTrigger value="direct" className="flex-1">
+                    Amigos
+                    {friendsUnread > 0 && (
+                      <CountBadge decorative>{friendsUnread > 99 ? '99+' : friendsUnread}</CountBadge>
+                    )}
+                  </TabsTrigger>
+                  <TabsTrigger value="group" className="flex-1">
+                    Grupos
+                    {groupsUnread > 0 && (
+                      <CountBadge decorative>{groupsUnread > 99 ? '99+' : groupsUnread}</CountBadge>
+                    )}
+                  </TabsTrigger>
+                </TabsList>
+                <div className="min-h-0 flex-1 overflow-y-auto">
+                  <div className="flex flex-col gap-1">
+                    {filteredConversations.length === 0 ? (
+                      <p className="px-3 py-8 text-center text-label text-text-muted">
+                        {searching || tab === 'direct' ? 'Nenhuma conversa.' : 'Nenhum grupo.'}
+                      </p>
+                    ) : filteredConversations.map((conversation) => (
+                      <ConversationRow
+                        key={conversation.id}
+                        conversation={conversation}
+                        active={onConversations && conversation.id === activeConversationId}
+                        washId={washId}
+                        onClick={() => selectConversation(conversation.id)}
+                      />
+                    ))}
+                  </div>
                 </div>
-              </div>
+              </Tabs>
             </div>
           </div>
         </div>
