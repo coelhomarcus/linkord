@@ -128,15 +128,15 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
                 {/* a disabled button gets no pointer events, so the tooltip hangs off a wrapper */}
                 <TooltipTrigger render={<span tabIndex={0} className="inline-flex rounded-md focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50" />}>
                   <Button type="button" size="sm" disabled className="bg-bg-tertiary text-text-muted">
-                    <PhoneIcon size={16} />
+                    <PhoneIcon size={16} weight="fill" />
                     Entrar na chamada
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom">{callBlockedReason}</TooltipContent>
               </Tooltip>
             ) : (
-              <Button type="button" size="sm" disabled={conversation.status === 'suspended'} onClick={() => onOpenCall(conversation.id)} className="bg-green/16 text-green hover:bg-green/24">
-                <PhoneIcon size={16} />
+              <Button type="button" size="sm" disabled={conversation.status === 'suspended'} onClick={() => onOpenCall(conversation.id)} className="bg-green-solid text-white hover:bg-green-hover">
+                <PhoneIcon size={16} weight="fill" />
                 {callActionLabel}
               </Button>
             )}
