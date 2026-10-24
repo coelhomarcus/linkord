@@ -42,12 +42,17 @@ function renderSidebar(overrides: {
   participants?: Map<string, Participant>;
   activeConversationId?: string | null;
   unreadByConversation?: Map<string, number>;
+  onReturnToCall?: () => void;
+  onOpenProfile?: (userId: string) => void;
+  showReturnToCall?: boolean;
 } = {}) {
   const dm = directConversation();
   const group = groupConversation();
+  const onReturnToCall = overrides.onReturnToCall ?? vi.fn();
+  const onOpenProfile = overrides.onOpenProfile ?? vi.fn();
   return renderSocial(
     <SidebarProvider open onOpenChange={vi.fn()} openMobile={false} onOpenMobileChange={vi.fn()}>
-      <ConversationSidebar onOpenPalette={vi.fn()} mobileRail={null} />
+      <ConversationSidebar onOpenPalette={vi.fn()} onReturnToCall={onReturnToCall} onOpenProfile={onOpenProfile} showReturnToCall={overrides.showReturnToCall ?? true} mobileRail={null} />
     </SidebarProvider>,
     {
       room: {
@@ -153,5 +158,35 @@ describe('ConversationSidebar — Amigos / Grupos tabs', () => {
     expect(screen.getByText('os xerecas')).toBeInTheDocument();
     expect(screen.queryByText('Bea')).not.toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Grupos' })).toHaveAttribute('data-active');
+  });
+});
+
+describe('ConversationSidebar — call dock', () => {
+  it('always shows the user dock, even without an active call', () => {
+    renderSidebar();
+    expect(screen.getByRole('button', { name: 'Meu perfil' })).toHaveTextContent('Fulana');
+    expect(screen.queryByText('Em chamada')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Voltar à chamada' })).not.toBeInTheDocument();
+  });
+
+  it('opens the account profile from the dock', async () => {
+    const onOpenProfile = vi.fn();
+    renderSidebar({ onOpenProfile });
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Meu perfil' }));
+    expect(onOpenProfile).toHaveBeenCalledWith('me');
+  });
+
+  it('shows the active call on the dock and returns to the stage from it', async () => {
+    const onReturnToCall = vi.fn();
+    renderSidebar({ activeCallConversationId: 'conv-group', onReturnToCall });
+    expect(screen.getByText('Em chamada')).toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Voltar à chamada' }));
+    expect(onReturnToCall).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not offer Voltar à chamada while the stage is already in focus', () => {
+    renderSidebar({ activeCallConversationId: 'conv-group', showReturnToCall: false });
+    expect(screen.getByText('Em chamada')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Voltar à chamada' })).not.toBeInTheDocument();
   });
 });

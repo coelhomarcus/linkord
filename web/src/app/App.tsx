@@ -124,7 +124,7 @@ function Shell() {
   }
 
   // Jump back to the Stage from wherever you wandered off to — used by both
-  // FloatingPip (clicking it) and the rail's own "in a call" indicator.
+  // FloatingPip (clicking it) and the sidebar CallDock title.
   function handleReturnToCall() {
     setActiveView('call');
     if (!onConversations) navigate(ROUTES.conversations, activeCallConversationId ? conversationNav(activeCallConversationId) : undefined);
@@ -179,10 +179,13 @@ function Shell() {
       >
         <ReconnectBanner />
         <AccessNotice />
-        <AppNavigationRail onOpenProfile={setProfileUserId} onReturnToCall={handleReturnToCall} className="hidden md:flex" />
+        <AppNavigationRail className="hidden md:flex" />
         <ConversationSidebar
           onOpenPalette={() => setPaletteOpen(true)}
-          mobileRail={<AppNavigationRail onOpenProfile={setProfileUserId} onReturnToCall={handleReturnToCall} />}
+          onReturnToCall={handleReturnToCall}
+          onOpenProfile={setProfileUserId}
+          showReturnToCall={!showStage}
+          mobileRail={<AppNavigationRail />}
         />
         <SidebarInset className="relative min-h-0 overflow-hidden bg-surface-panel [--surface-base:var(--color-surface-panel)] md:m-shell md:rounded-xl md:border md:border-border">
           <Routes>

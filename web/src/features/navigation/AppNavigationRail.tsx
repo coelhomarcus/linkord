@@ -2,8 +2,7 @@ import { useId } from 'react';
 import type { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { MessageCircle, PanelLeftOpen, PhoneCall, Settings, ShieldCheck, UsersRound } from '@/shared/ui/icons';
-import { Avatar } from '@/shared/Avatar';
+import { MessageCircle, PanelLeftOpen, Settings, ShieldCheck, UsersRound } from '@/shared/ui/icons';
 import { useSidebar } from '@/shared/ui/motion/sidebar-context';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
 import { ROUTES, isConversationsPath } from '@/shared/lib/routes';
@@ -13,7 +12,6 @@ import { ActiveWash } from '@/shared/ui/motion/active-wash';
 import { useRoom } from '@/state/RoomContext';
 import { useFriends } from '@/features/friends/FriendsContext';
 import { NotificationBell } from '@/features/notifications/NotificationBell';
-import { conversationTitle } from '@/features/conversations/conversationUtils';
 import { CountBadge } from '@/shared/CountBadge';
 
 const itemClass = 'relative isolate grid size-11 place-items-center rounded-md outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring';
@@ -102,14 +100,10 @@ function RailLink({ to, label, active, badge, onNavigate, indicators, children }
  * conversation (search, creating a group, the list) and the notifications bell
  * stay in the conversations sidebar beside it. On a narrow screen the same rail is drawn inside the
  * navigation sheet, so nothing here is reachable only on desktop. */
-export function AppNavigationRail({ onOpenProfile, onReturnToCall, className }: {
-  onOpenProfile: (userId: string) => void;
-  /** Present whenever a call is running, regardless of which page is open —
-   * same "jump back to the Stage" action FloatingPip's own onExpand does. */
-  onReturnToCall?: () => void;
+export function AppNavigationRail({ className }: {
   className?: string;
 }) {
-  const { state, conversations, activeCallConversationId, allUsers } = useRoom();
+  const { state } = useRoom();
   const { pendingIncomingCount } = useFriends();
   const { pathname } = useLocation();
   const { isMobile, isOverlay, open: listOpen, openMobile, setOpenMobile, toggleSidebar } = useSidebar();
@@ -124,11 +118,6 @@ export function AppNavigationRail({ onOpenProfile, onReturnToCall, className }: 
   const onAdmin = pathname.startsWith('/admin');
   const isAdmin = state.me.role === 'admin';
   const friendsLabel = pendingIncomingCount > 0 ? `Amigos, ${pendingIncomingCount} aguardando resposta` : 'Amigos';
-  const inCall = activeCallConversationId !== null;
-  const callTitle = inCall
-    ? conversationTitle(conversations.find((c) => c.id === activeCallConversationId) ?? null, state.me.userId, allUsers)
-    : '';
-  const returnToCallLabel = callTitle ? `Voltar para ${callTitle}` : 'Voltar para a chamada';
   const indicatorId = useId();
   const indicators: RailIndicatorIds = { wash: `${indicatorId}-wash`, marker: `${indicatorId}-marker` };
 
@@ -157,19 +146,6 @@ export function AppNavigationRail({ onOpenProfile, onReturnToCall, className }: 
         <NotificationBell collapsed onNavigate={afterNavigate} />
       </RailSlot>
 
-      {inCall && (
-        <Tooltip>
-          <TooltipTrigger
-            onClick={() => { onReturnToCall?.(); afterNavigate(); }}
-            aria-label={returnToCallLabel}
-            className={cn(itemClass, 'text-green hover:bg-green/12')}
-          >
-            <PhoneCall size={20} aria-hidden />
-          </TooltipTrigger>
-          <TooltipContent side="right">{returnToCallLabel}</TooltipContent>
-        </Tooltip>
-      )}
-
       <div className="flex-1" />
 
       {isAdmin && (
@@ -180,16 +156,6 @@ export function AppNavigationRail({ onOpenProfile, onReturnToCall, className }: 
       <RailLink to={ROUTES.settings} label="Ajustes" active={onSettings} onNavigate={afterNavigate} indicators={indicators}>
         <Settings size={20} aria-hidden />
       </RailLink>
-      <Tooltip>
-        <TooltipTrigger
-          onClick={() => { if (state.me.userId) onOpenProfile(state.me.userId); afterNavigate(); }}
-          aria-label="Meu perfil"
-          className={cn(itemClass, stateClass(false))}
-        >
-          <Avatar id={state.me.userId ?? state.me.id ?? 'me'} name={state.me.displayName} avatar={state.me.avatar} avatarColor={state.me.avatarColor} size={32} />
-        </TooltipTrigger>
-        <TooltipContent side="right">Meu perfil</TooltipContent>
-      </Tooltip>
     </nav>
   );
 }

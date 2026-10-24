@@ -28,19 +28,17 @@ function setViewport(width: number) {
 const originalMatchMedia = window.matchMedia;
 
 function renderRail(path = '/app/conversations', open = true, openMobile = false, roomOverrides: Partial<import('@/state/RoomContext').RoomContextValue> = {}) {
-  const onOpenProfile = vi.fn();
   const onOpenChange = vi.fn();
   const onOpenMobileChange = vi.fn();
-  const onReturnToCall = vi.fn();
   renderSocial(
     <TooltipProvider>
       <SidebarProvider open={open} onOpenChange={onOpenChange} openMobile={openMobile} onOpenMobileChange={onOpenMobileChange}>
-        <AppNavigationRail onOpenProfile={onOpenProfile} onReturnToCall={onReturnToCall} />
+        <AppNavigationRail />
       </SidebarProvider>
     </TooltipProvider>,
     { room: { state: me, ...roomOverrides }, path },
   );
-  return { onOpenProfile, onOpenChange, onOpenMobileChange, onReturnToCall };
+  return { onOpenChange, onOpenMobileChange };
 }
 
 afterEach(() => { window.matchMedia = originalMatchMedia; });
@@ -60,7 +58,7 @@ describe('AppNavigationRail', () => {
     expect(screen.getByRole('link', { name: 'Conversas' })).toHaveAttribute('href', '/app/conversations');
     expect(screen.getByRole('link', { name: 'Amigos' })).toHaveAttribute('href', '/app/friends');
     expect(screen.getByRole('link', { name: 'Ajustes' })).toHaveAttribute('href', '/app/settings');
-    expect(screen.getByRole('button', { name: 'Meu perfil' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Meu perfil' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /Solicitações/ })).not.toBeInTheDocument();
   });
 
@@ -97,12 +95,6 @@ describe('AppNavigationRail', () => {
     expect(await screen.findByRole('link', { name: 'Amigos, 3 aguardando resposta' })).toBeInTheDocument();
   });
 
-  it("Meu perfil opens the account's own profile", async () => {
-    const { onOpenProfile } = renderRail();
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Meu perfil' }));
-    expect(onOpenProfile).toHaveBeenCalledWith('me');
-  });
-
   it('with the list open, the rail does not repeat the hide button (it stays in the list header)', () => {
     renderRail('/app/conversations', true);
     expect(screen.queryByRole('button', { name: /lista de conversas/ })).not.toBeInTheDocument();
@@ -116,21 +108,14 @@ describe('AppNavigationRail', () => {
     expect(onOpenChange).toHaveBeenCalledWith(true);
   });
 
-  it('no active call, no icon to return to a call', () => {
-    renderRail();
-    expect(screen.queryByRole('button', { name: /Voltar para/ })).not.toBeInTheDocument();
-  });
-
-  it('with an active call, the green icon shows the conversation title and calls onReturnToCall', async () => {
+  it('does not put a return-to-call control on the rail, even during an active call', () => {
     const group = {
       id: 'conv-1', type: 'group' as const, title: 'os xerecas', avatar: '', createdBy: 'me', memberIds: ['me'],
       lastMessageAt: null, createdAt: 0, updatedAt: 0, pinnedAt: null, myRole: 'owner' as const, ownerId: 'me', memberCount: 1,
     };
-    const { onReturnToCall } = renderRail('/app/conversations', true, false, { activeCallConversationId: 'conv-1', conversations: [group] });
-    const button = screen.getByRole('button', { name: 'Voltar para os xerecas' });
-    expect(button).toBeInTheDocument();
-    await userEvent.setup().click(button);
-    expect(onReturnToCall).toHaveBeenCalledTimes(1);
+    renderRail('/app/conversations', true, false, { activeCallConversationId: 'conv-1', conversations: [group] });
+    expect(screen.queryByRole('button', { name: /Voltar para/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Voltar à chamada/ })).not.toBeInTheDocument();
   });
 
   it('when not an admin, no admin area shortcut', () => {

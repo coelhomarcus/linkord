@@ -61,6 +61,9 @@ export interface RoomContextValue {
   audioUnlocked: boolean;
   deafened: boolean;
   toggleDeafened: () => void;
+  /** Mute the next join even before a LiveKit mic track exists. */
+  preferMuted: boolean;
+  setPreferMuted: (muted: boolean) => void;
   reconnecting: boolean;
   livekitRoom: Room;
   notifyActiveView: (view: 'chat' | 'call') => void;

@@ -45,7 +45,16 @@ describe('ConversationPanel — call button', () => {
     mockedApi.fetchRelationship.mockResolvedValue({ relation: 'friends', retryAfter: null });
     const { onOpenCall } = renderPanel({});
     await vi.waitFor(() => expect(mockedApi.fetchRelationship).toHaveBeenCalled());
-    fireEvent.click(screen.getByLabelText('Entrar na chamada'));
+    fireEvent.click(screen.getByRole('button', { name: 'Entrar na chamada' }));
+    expect(onOpenCall).toHaveBeenCalledWith('c1');
+  });
+
+  it('already in this call: the button says Voltar à chamada and still opens the stage', async () => {
+    mockedApi.fetchRequestSummary.mockResolvedValue({ incoming: 0, invitations: 0 });
+    mockedApi.fetchRelationship.mockResolvedValue({ relation: 'friends', retryAfter: null });
+    const { onOpenCall } = renderPanel({ activeCallConversationId: 'c1' });
+    await vi.waitFor(() => expect(screen.getByRole('button', { name: 'Voltar à chamada' })).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Voltar à chamada' }));
     expect(onOpenCall).toHaveBeenCalledWith('c1');
   });
 
@@ -53,8 +62,8 @@ describe('ConversationPanel — call button', () => {
     mockedApi.fetchRequestSummary.mockResolvedValue({ incoming: 0, invitations: 0 });
     mockedApi.fetchRelationship.mockResolvedValue({ relation: 'none', retryAfter: null });
     const { onOpenCall } = renderPanel({});
-    await vi.waitFor(() => expect(screen.getByLabelText('Entrar na chamada')).toBeDisabled());
-    fireEvent.click(screen.getByLabelText('Entrar na chamada'));
+    await vi.waitFor(() => expect(screen.getByRole('button', { name: 'Entrar na chamada' })).toBeDisabled());
+    fireEvent.click(screen.getByRole('button', { name: 'Entrar na chamada' }));
     expect(onOpenCall).not.toHaveBeenCalled();
   });
 
