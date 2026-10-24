@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef } from 'react';
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
-import { uploadWithProgress } from '@/shared/lib/uploadWithProgress';
 import { DEFAULT_AVATAR_COLOR, normalizeAvatarColor } from '@/shared/Avatar';
 import { sanitizeDisplayName } from '@/shared/lib/displayName';
 import type { ClientMessage, ProfilePatch, PublicUser, ServerMessage } from '@/shared/types/protocol';
 import { MAX_BANNER_LEN, MAX_PROFILE_BIO_LEN, MAX_PROFILE_LINK_LEN, MAX_PROFILE_LINKS } from '@/shared/types/protocol';
 import type { RoomAction } from '@/state/roomReducer';
 import type { CropRect } from '@/state/RoomContext';
+import { uploadCroppedProfileImage } from '@/features/settings/uploadCroppedProfileImage';
 
 const PROFILE_SAVE_TIMEOUT_MS = 15_000;
 
@@ -174,17 +174,12 @@ export function useProfileUpdate(deps: ProfileUpdateDeps) {
     crop: CropRect,
     onProgress?: (fraction: number) => void,
   ): Promise<string> => {
-    const res = await uploadWithProgress<{ avatar: string; avatarPoster?: string }>({
-      url: `/api/avatar?crop=${encodeURIComponent(JSON.stringify(crop))}`,
-      file: body,
-      headers: { 'Content-Type': body.type || 'application/octet-stream' },
-      onProgress,
-    });
+    const res = await uploadCroppedProfileImage(body, crop, onProgress);
     await applyImagePatch(field, res.avatar, res.avatarPoster ?? '');
     return res.avatar;
   }, [applyImagePatch]);
 
   const removeProfileImage = useCallback((field: 'avatar' | 'banner') => applyImagePatch(field, '', ''), [applyImagePatch]);
 
-  return { updateProfile, uploadProfileImage, removeProfileImage, handleProfileResult };
+  return { updateProfile, uploadProfileImage, applyImagePatch, removeProfileImage, handleProfileResult };
 }

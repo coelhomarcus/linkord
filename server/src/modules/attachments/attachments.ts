@@ -16,8 +16,8 @@ import { serveUpload, handleAttachmentPreview } from './attachmentServing.js';
 // moderation.ts all need it, and it has to stay a leaf module (no dependency
 // on this file or its attachmentUploads.js/attachmentServing.js imports) so
 // those 4 callers can import it statically without a cycle. Avatar upload
-// and its SSRF-guarded image fetch live in modules/profile/ instead — a
-// different domain that happens to share this table's storage.
+// lives in modules/profile/ instead — a different domain that happens to
+// share this table's storage.
 
 /** One query for all messages' attachments (avoids N+1). Up to
  * MAX_ATTACHMENTS_PER_MESSAGE rows per message now (see
@@ -50,10 +50,7 @@ export function registerAttachmentRoutes(fastify: FastifyInstance): void {
 
   // raw Buffer body, not JSON — scoped plugin for just this route: swapping
   // addContentTypeParser on the root instance would break JSON parsing for
-  // every other /api/* route. Chunk uploads are always binary, never
-  // application/json, so the wildcard '*' alone is enough here (contrast
-  // modules/profile/profile.ts's /api/avatar, which also needs a JSON
-  // override for its "usar URL" flow).
+  // every other /api/* route. Chunk uploads are always binary.
   fastify.register(async (scoped) => {
     scoped.addContentTypeParser('*', { parseAs: 'buffer' }, (_req, payload, done) => done(null, payload));
     scoped.post('/api/attachments/:id/chunk/:index', { bodyLimit: config.UPLOAD_CHUNK_BYTES }, handleAttachmentChunk);

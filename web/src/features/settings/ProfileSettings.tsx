@@ -18,19 +18,10 @@ import { describeProfileSaveError } from '@/features/profile/useProfileUpdate';
 import { useProfileDraft, normalizeProfileDraftFields } from './useProfileDraft';
 import { UnsavedProfileChangesDialog } from './UnsavedProfileChangesDialog';
 
-type ProfileCropTarget =
-  | { field: 'avatar' | 'banner'; kind: 'file'; file: File; src: string }
-  // A URL picked via "Usar URL" — routed through this SAME crop dialog
-  // (instead of being applied directly) so it also goes through the
-  // server's crop/animate-detect pipeline (see uploadProfileImage below),
-  // which is what generates the freeze-until-speaking poster for an
-  // animated GIF/WebP. react-easy-crop only reports crop coordinates here,
-  // it never reads pixels into a <canvas>, so an external image never hits
-  // a CORS/tainted-canvas issue (see ImageCropDialog.tsx's own comment).
-  | { field: 'avatar' | 'banner'; kind: 'url'; url: string };
+type ProfileCropTarget = { field: 'avatar' | 'banner'; file: File; src: string };
 
 export function ProfileSettings() {
-  const { state, updateProfile, uploadProfileImage, removeProfileImage, activeCallConversationId } = useRoom();
+  const { state, updateProfile, uploadProfileImage, applyImagePatch, removeProfileImage, activeCallConversationId } = useRoom();
   // FloatingPip (a call kept running while browsing elsewhere) sits fixed at
   // the viewport's bottom-left, on top of whatever's there — on a narrow
   // screen that's exactly where this bar's own Descartar button lands,
@@ -52,11 +43,8 @@ export function ProfileSettings() {
   const [cropTarget, setCropTarget] = useState<ProfileCropTarget | null>(null);
   const [urlDialogField, setUrlDialogField] = useState<'avatar' | 'banner' | null>(null);
   // Set for the duration of the upload (cropTarget itself is cleared right
-  // away, see handleCropConfirm) — drives the blocking UploadProgressModal
-  // below so its title/description can tell a file upload (real byte
-  // progress) apart from a "usar URL" one (server downloads it, so the
-  // client-side progress stays indeterminate).
-  const [activeUpload, setActiveUpload] = useState<{ field: 'avatar' | 'banner'; kind: 'file' | 'url' } | null>(null);
+  // away, see handleCropConfirm) — drives the blocking UploadProgressModal.
+  const [activeUpload, setActiveUpload] = useState<'avatar' | 'banner' | null>(null);
 
   // Avatar/banner apply immediately (E2) and never join this draft — only
   // name/color/bio/links go through baseline/draft/saveState (plano
@@ -150,18 +138,26 @@ export function ProfileSettings() {
       return;
     }
     setError(null);
-    setCropTarget({ field, kind: 'file', file, src: URL.createObjectURL(file) });
+    setCropTarget({ field, file, src: URL.createObjectURL(file) });
   }
 
-  function handleUrlPicked(field: 'avatar' | 'banner', url: string) {
+  async function handleUrlPicked(field: 'avatar' | 'banner', url: string) {
     setUrlDialogField(null);
-    // Routed through the crop dialog like a file upload (not applied
-    // directly) — see handleCropConfirm below for why.
-    setCropTarget({ field, kind: 'url', url });
+    const setUploading = field === 'avatar' ? setUploadingAvatar : setUploadingBanner;
+    const setError = field === 'avatar' ? setAvatarError : setBannerError;
+    setError(null);
+    setUploading(true);
+    try {
+      await applyImagePatch(field, url, '');
+    } catch (err) {
+      setError(describeProfileSaveError(err, `Falha ao aplicar ${field === 'avatar' ? 'a foto' : 'o banner'}.`));
+    } finally {
+      setUploading(false);
+    }
   }
 
   function closeCropDialog() {
-    if (cropTarget?.kind === 'file') URL.revokeObjectURL(cropTarget.src);
+    if (cropTarget) URL.revokeObjectURL(cropTarget.src);
     setCropTarget(null);
   }
 
@@ -175,21 +171,14 @@ export function ProfileSettings() {
     setError(null);
     setProgress(0);
     setUploading(true);
-    setActiveUpload({ field, kind: target.kind });
+    setActiveUpload(field);
     closeCropDialog();
     try {
-      // A picked URL is sent as a JSON body instead of raw file bytes —
-      // uploadProfileImage/the server (/api/avatar) already accepts either
-      // one identically, downloading the URL itself before the same
-      // crop/animate-detect/poster pipeline a file upload goes through.
-      const body = target.kind === 'file'
-        ? target.file
-        : new Blob([JSON.stringify({ url: target.url })], { type: 'application/json' });
       // Sends only avatar/avatarPoster (or banner/bannerPoster) — never the
       // profile draft, whatever it currently holds. The preview below
       // updates once the server confirms it (via state.me, picked up by the
       // sync effect above), not from this call.
-      await uploadProfileImage(field, body, crop, setProgress);
+      await uploadProfileImage(field, target.file, crop, setProgress);
     } catch (err) {
       setError(describeProfileSaveError(err, `Falha ao enviar ${field === 'avatar' ? 'a foto' : 'o banner'}.`));
     } finally {
@@ -322,7 +311,7 @@ export function ProfileSettings() {
 
       <ImageCropDialog
         open={!!cropTarget}
-        imageSrc={cropTarget ? (cropTarget.kind === 'file' ? cropTarget.src : cropTarget.url) : null}
+        imageSrc={cropTarget?.src ?? null}
         aspect={cropTarget?.field === 'banner' ? BANNER_ASPECT_RATIO : 1}
         cropShape={cropTarget?.field === 'banner' ? 'rect' : 'round'}
         title={cropTarget?.field === 'banner' ? 'Recortar banner' : 'Recortar foto de perfil'}
@@ -339,13 +328,8 @@ export function ProfileSettings() {
 
       <UploadProgressModal
         open={activeUpload !== null}
-        title={
-          activeUpload?.kind === 'url'
-            ? `Baixando ${activeUpload.field === 'banner' ? 'o banner' : 'a foto de perfil'}…`
-            : `Enviando ${activeUpload?.field === 'banner' ? 'o banner' : 'a foto de perfil'}…`
-        }
-        description={activeUpload?.kind === 'url' ? 'Baixando e processando a imagem da URL — pode levar alguns segundos.' : undefined}
-        progress={activeUpload?.kind === 'file' ? (activeUpload.field === 'banner' ? bannerUploadProgress : avatarUploadProgress) : undefined}
+        title={`Enviando ${activeUpload === 'banner' ? 'o banner' : 'a foto de perfil'}…`}
+        progress={activeUpload === 'banner' ? bannerUploadProgress : avatarUploadProgress}
       />
     </div>
   );

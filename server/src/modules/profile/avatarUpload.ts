@@ -9,92 +9,59 @@ import { parseCookies } from '../../http/cookies.js';
 import { resolveSession } from '../auth/session.js';
 import { newId, filePathFor } from '../attachments/attachmentStorage.js';
 import { getUsage } from '../attachments/attachmentQuota.js';
-import { fetchImageFromUrl, AVATAR_MIME_TYPES } from './imageFetch.js';
 import * as floodControl from '../../realtime/floodControl.js';
 import { logger } from '../../lib/logger.js';
 
 const log = logger.child({ component: 'avatar' });
 
-// The crop rect is in the source photo's own pixels, so capping IT rejected
-// any modern camera photo (6000px+ wide). The ceiling applies to what gets
-// stored instead; the input is already bounded by the body limit, the
-// image-bounds check below and sharp's own decompression-bomb guard.
-const MAX_OUTPUT_DIMENSION = 4096;
-const FIT_OUTPUT = { width: MAX_OUTPUT_DIMENSION, height: MAX_OUTPUT_DIMENSION, fit: 'inside', withoutEnlargement: true } as const;
+const AVATAR_MIME_TYPES = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp']);
+
+const FORMAT_MIME: Record<string, string> = {
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  gif: 'image/gif',
+  webp: 'image/webp',
+};
 
 // This route had NO cap of any kind before — neither a per-request check nor
 // a request-rate one — so a compromised account could hammer it (each hit
-// doing real disk I/O, and for the "usar URL" flow a real outbound fetch)
-// with nothing to stop it. 5/min is generous for an actual person picking a
-// photo (including a few crop retries) and pointless to raise further —
-// nobody legitimately changes their avatar faster than that.
+// doing real disk I/O) with nothing to stop it. 5/min is generous for an
+// actual person picking a photo (including a few crop retries).
 const AVATAR_UPLOAD_LIMIT = { windowMs: 60_000, max: 5 };
 
-export type CropRect = { left: number; top: number; width: number; height: number };
-
 export class ProfileImageProcessingError extends Error {
-  readonly code: 'invalid_crop' | 'crop_failed';
+  readonly code: 'crop_failed';
 
-  constructor(code: 'invalid_crop' | 'crop_failed', message: string) {
+  constructor(code: 'crop_failed', message: string) {
     super(message);
     this.name = 'ProfileImageProcessingError';
     this.code = code;
   }
 }
 
-/** Parses the `?crop=` query param (JSON `{x,y,width,height}`, same shape as
- * react-easy-crop's `Area`) into the rect handleAvatarUpload extracts. */
-export function parseCropRect(raw: string | undefined): CropRect | null {
-  if (!raw) return null;
-  let parsed: unknown;
-  try { parsed = JSON.parse(raw); } catch { return null; }
-  if (!parsed || typeof parsed !== 'object') return null;
-  const { x, y, width, height } = parsed as Record<string, unknown>;
-  if (typeof x !== 'number' || typeof y !== 'number' || typeof width !== 'number' || typeof height !== 'number'
-    || !Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(width) || !Number.isFinite(height)) return null;
-  if (width <= 0 || height <= 0 || x < 0 || y < 0) return null;
-  return { left: Math.round(x), top: Math.round(y), width: Math.round(width), height: Math.round(height) };
+function mimeForFormat(format: string | undefined): string | null {
+  return format ? FORMAT_MIME[format] ?? null : null;
 }
 
-/** Encodes and stores a profile image, extracted out of handleAvatarUpload
- * so the sharp pipeline itself (crop bounds, animation detection, poster
- * generation) is unit-testable without going through Fastify. `uploaderId`
- * is who gets to later claim this as their own avatar/banner/group avatar
- * (handleProfile/handleGroupUpdate check it) — see schema.ts#attachments. */
+/** Stores a client-cropped profile image. Sharp only reads metadata (the
+ * decompression-bomb guard) and, when the file is animated, freezes the
+ * first frame as a JPEG poster for the call UI. `uploaderId` is who gets
+ * to later claim this as their own avatar/banner/group avatar. */
 export async function encodeAndStoreProfileImage(
   buffer: Buffer,
-  cropRect: CropRect,
   uploaderId: string,
 ): Promise<{ avatar: string; avatarPoster: string | undefined }> {
-  let outBuffer: Buffer;
   let outMime: string;
   let animated = false;
   try {
-    const image = sharp(buffer, { animated: true });
-    const meta = await image.metadata();
+    const meta = await sharp(buffer, { animated: true }).metadata();
     const frameHeight = meta.pageHeight ?? meta.height ?? 0;
-    if (!meta.width || !frameHeight
-      || cropRect.left + cropRect.width > meta.width
-      || cropRect.top + cropRect.height > frameHeight) {
-      throw new ProfileImageProcessingError('invalid_crop', 'Recorte fora dos limites da imagem.');
+    const mime = mimeForFormat(meta.format);
+    if (!meta.width || !frameHeight || !mime) {
+      throw new ProfileImageProcessingError('crop_failed', 'Não foi possível processar a imagem.');
     }
-
-    const extracted = image.extract(cropRect).resize(FIT_OUTPUT);
     animated = (meta.pages ?? 1) > 1;
-    if (animated) {
-      // animated: keep WebP inputs as WebP (better quality than GIF's
-      // 256-color palette); anything else animated (GIF today) stays GIF.
-      if (meta.format === 'webp') {
-        outBuffer = await extracted.webp({ quality: 90 }).toBuffer();
-        outMime = 'image/webp';
-      } else {
-        outBuffer = await extracted.gif().toBuffer();
-        outMime = 'image/gif';
-      }
-    } else {
-      outBuffer = await extracted.jpeg({ quality: 92 }).toBuffer();
-      outMime = 'image/jpeg';
-    }
+    outMime = mime;
   } catch (err) {
     if (err instanceof ProfileImageProcessingError) throw err;
     throw new ProfileImageProcessingError(
@@ -104,9 +71,9 @@ export async function encodeAndStoreProfileImage(
   }
 
   const id = newId();
-  await fs.writeFile(filePathFor(id), outBuffer);
+  await fs.writeFile(filePathFor(id), buffer);
   try {
-    await db.insert(attachmentsTable).values({ id, messageId: null, uploaderId, fileName: 'avatar', mimeType: outMime, size: outBuffer.length });
+    await db.insert(attachmentsTable).values({ id, messageId: null, uploaderId, fileName: 'avatar', mimeType: outMime, size: buffer.length });
   } catch (err) {
     await fs.unlink(filePathFor(id)).catch(() => {});
     throw err;
@@ -121,7 +88,7 @@ export async function encodeAndStoreProfileImage(
   if (animated) {
     const posterId = newId();
     try {
-      const posterBuffer = await sharp(buffer, { animated: false }).extract(cropRect).resize(FIT_OUTPUT).jpeg({ quality: 88 }).toBuffer();
+      const posterBuffer = await sharp(buffer, { animated: false }).jpeg({ quality: 88 }).toBuffer();
       await fs.writeFile(filePathFor(posterId), posterBuffer);
       try {
         await db.insert(attachmentsTable).values({ id: posterId, messageId: null, uploaderId, fileName: 'avatar-poster', mimeType: 'image/jpeg', size: posterBuffer.length });
@@ -140,23 +107,11 @@ export async function encodeAndStoreProfileImage(
 
 /** Avatar upload — same storage/serving route as chat attachments
  * (`/uploads/<id>`), but the row is born with `messageId: null` (marks it
- * as an avatar, see schema.ts/getUsage) and skips the 30GB quota. Client
- * sends the ORIGINAL (uncropped) image bytes plus a `?crop=` rect (the
- * react-easy-crop pixel area) — the crop itself happens here via sharp, not
- * client-side canvas, so an animated GIF/WebP survives as an animated
- * GIF/WebP instead of being flattened to one frame (`{ animated: true }`
- * makes sharp treat every frame as one page of a stacked canvas; `.extract()`
- * with a rect against ONE frame's bounds applies that same rect to every
- * page). Static images keep today's behavior (re-encoded to JPEG). Applying
- * the result as the
- * account's avatar happens in the existing `profile` websocket flow
- * (realtime/participants.ts), which also cleans up the old file (see
- * attachments.ts#deleteAvatarFile).
- *
- * Instead of raw image bytes, the client may POST `application/json`
- * `{ url }` — the "usar URL" flow — in which case the image is downloaded
- * server-side first (see imageFetch.ts#fetchImageFromUrl) and then goes
- * through the exact same crop/encode path below. */
+ * as an avatar, see schema.ts/getUsage). The client already cropped and
+ * encoded the bytes (see web cropProfileImage.ts); this route only stores
+ * them and, for animations, builds the freeze-until-speaking poster.
+ * Applying the result as the account's avatar happens in the existing
+ * `profile` websocket flow, which also cleans up the old file. */
 export async function handleAvatarUpload(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   const cookies = parseCookies(request.headers.cookie || '');
   const sess = await resolveSession(cookies[config.SESSION_COOKIE]);
@@ -167,36 +122,13 @@ export async function handleAvatarUpload(request: FastifyRequest, reply: Fastify
   }
 
   const mimeType = String(request.headers['content-type'] || '').split(';')[0]!.trim();
-
-  let buffer: Buffer;
-  if (mimeType === 'application/json') {
-    let payload: unknown;
-    try {
-      payload = JSON.parse((request.body as Buffer).toString('utf8'));
-    } catch {
-      return sendError(reply, 400, 'invalid_body', 'Corpo inválido.');
-    }
-    const sourceUrl = payload && typeof payload === 'object' ? (payload as Record<string, unknown>).url : undefined;
-    if (typeof sourceUrl !== 'string' || !sourceUrl.trim()) {
-      return sendError(reply, 400, 'invalid_url', 'URL inválida.');
-    }
-    const fetched = await fetchImageFromUrl(sourceUrl.trim(), config.MAX_AVATAR_BYTES);
-    if ('error' in fetched) return sendError(reply, 400, fetched.error === '__redirect__' ? 'fetch_failed' : fetched.error, fetched.message);
-    buffer = fetched.buffer;
-  } else {
-    if (!AVATAR_MIME_TYPES.has(mimeType)) {
-      return sendError(reply, 400, 'invalid_type', 'Formato inválido. Use PNG, JPEG, GIF ou WEBP.');
-    }
-    buffer = request.body as Buffer;
-    if (buffer.length === 0) return sendError(reply, 400, 'empty_file', 'Arquivo vazio.');
+  if (!AVATAR_MIME_TYPES.has(mimeType)) {
+    return sendError(reply, 400, 'invalid_type', 'Formato inválido. Use PNG, JPEG, GIF ou WEBP.');
   }
 
-  const cropRect = parseCropRect((request.query as Record<string, string | undefined>).crop);
-  if (!cropRect) return sendError(reply, 400, 'invalid_crop', 'Recorte inválido.');
+  const buffer = request.body as Buffer;
+  if (!buffer || buffer.length === 0) return sendError(reply, 400, 'empty_file', 'Arquivo vazio.');
 
-  // The instance-wide cap now includes avatars/banners too (see
-  // attachmentQuota.ts#getUsage) — checked against the pre-encode buffer,
-  // which is never smaller than what actually gets written to disk.
   const usage = await getUsage();
   if (usage.totalBytes + buffer.length > config.MAX_STORAGE_BYTES) {
     log.warn('avatar upload refused: instance storage is full', { userId: sess.userId, size: buffer.length });
@@ -204,14 +136,14 @@ export async function handleAvatarUpload(request: FastifyRequest, reply: Fastify
   }
 
   try {
-    const result = await encodeAndStoreProfileImage(buffer, cropRect, sess.userId);
+    const result = await encodeAndStoreProfileImage(buffer, sess.userId);
     return sendJson(reply, 201, result);
   } catch (err) {
     if (err instanceof ProfileImageProcessingError) {
-      log.warn('failed to crop avatar', { err: err.message });
+      log.warn('failed to store avatar', { err: err.message });
       return sendError(reply, 400, err.code, err.message);
     }
-    log.warn('failed to crop avatar', { err: err instanceof Error ? err.message : String(err) });
+    log.warn('failed to store avatar', { err: err instanceof Error ? err.message : String(err) });
     throw err;
   }
 }

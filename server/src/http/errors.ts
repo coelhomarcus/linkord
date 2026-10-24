@@ -20,7 +20,6 @@ export const ERROR_REGISTRY = {
   internal_error: { statuses: [500], channel: 'both' },
   invalid_json: { statuses: [400], channel: 'http' },
   invalid_request: { statuses: [400], channel: 'http' },
-  invalid_body: { statuses: [400], channel: 'http' },
   invalid_id: { statuses: [400], channel: 'http' },
   invalid_cursor: { statuses: [400], channel: 'http' },
   invalid_direction: { statuses: [400], channel: 'http' },
@@ -76,11 +75,7 @@ export const ERROR_REGISTRY = {
   chunk_size_mismatch: { statuses: [400], channel: 'http' },
   size_mismatch: { statuses: [400], channel: 'http' },
   empty_file: { statuses: [400], channel: 'http' },
-  invalid_crop: { statuses: [400], channel: 'http' },
   crop_failed: { statuses: [400], channel: 'http' },
-  fetch_failed: { statuses: [400], channel: 'http' },
-  file_too_large: { statuses: [400], channel: 'http' },
-  too_many_redirects: { statuses: [400], channel: 'http' },
   invalid_report: { statuses: [400], channel: 'http' },
 
   // admin actions (docs/plano-rede-social.md §9)
