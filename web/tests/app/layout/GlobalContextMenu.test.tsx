@@ -10,7 +10,26 @@ const userState = {
 };
 
 describe('GlobalContextMenu', () => {
-  it('does not offer hide-audio-only on the call stage', () => {
+  it('does not block contextmenu on the call stage so local handlers (e.g. TileMenu) can run', async () => {
+    const onTileMenu = vi.fn();
+    renderWithRoom(
+      <GlobalContextMenu onOpenProfile={vi.fn()}>
+        <main data-stage data-testid="stage">
+          <div data-tile-kind="camera" data-testid="tile" onContextMenu={onTileMenu} />
+        </main>
+      </GlobalContextMenu>,
+      { state: userState },
+    );
+
+    fireEvent.contextMenu(screen.getByTestId('tile'));
+
+    expect(onTileMenu).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(document.querySelector('[data-slot="context-menu-content"][data-open]')).not.toBeInTheDocument();
+    });
+  });
+
+  it('does not offer hide-audio-only on the call stage', async () => {
     renderWithRoom(
       <GlobalContextMenu onOpenProfile={vi.fn()}>
         <main data-stage data-testid="stage" />
@@ -21,7 +40,9 @@ describe('GlobalContextMenu', () => {
     fireEvent.contextMenu(screen.getByTestId('stage'));
 
     expect(screen.queryByText('Ocultar sem vídeo')).not.toBeInTheDocument();
-    expect(document.querySelector('[data-slot="context-menu-content"]')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(document.querySelector('[data-slot="context-menu-content"][data-open]')).not.toBeInTheDocument();
+    });
   });
 
   it('does not open an empty popup when the target has no actions', () => {
