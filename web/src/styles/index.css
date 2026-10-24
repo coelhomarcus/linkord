@@ -55,6 +55,10 @@
   --color-border-accent: var(--color-accent-primary);
 
   --color-green: oklch(73.29% 0.1941 153.87);
+  /* darker than --color-green so white text on a join/return button clears contrast;
+     --color-green stays the status/label tone */
+  --color-green-solid: oklch(62% 0.17 153);
+  --color-green-hover: oklch(56% 0.17 153);
   --color-red: oklch(59.40% 0.1973 27.69);
   --color-red-hover: oklch(52.00% 0.1973 27.69);
   --color-red-text: oklch(74.00% 0.1400 27.69);

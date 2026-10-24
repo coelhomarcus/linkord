@@ -16,7 +16,8 @@ const MIC_PROBLEM_LABEL = {
 const DOCK_BUTTON = 'grid size-8 flex-none place-items-center rounded-md transition-colors';
 const DOCK_NEUTRAL = 'text-text-secondary hover:bg-fill-hover hover:text-text-primary';
 const DOCK_RED = 'bg-red/16 text-red hover:bg-red/24';
-const DOCK_GREEN = 'bg-green/16 text-green hover:bg-green/24';
+const DOCK_GREEN = 'bg-green-solid text-white hover:bg-green-hover';
+const CALL_JOIN = 'flex h-8 w-full items-center justify-center gap-1.5 rounded-md bg-green-solid text-label font-semibold text-white transition-colors hover:bg-green-hover';
 
 interface CallDockProps {
   onReturnToCall: () => void;
@@ -63,6 +64,12 @@ export function CallDock({ onReturnToCall, onOpenProfile, showReturnToCall }: Ca
     <div className="flex flex-none flex-col gap-2 border-t border-border pt-3">
       {inCall && (
         <div className="flex flex-col gap-2 px-1">
+          {showReturnToCall && (
+            <button type="button" onClick={onReturnToCall} className={CALL_JOIN}>
+              <PhoneIcon size={14} weight="fill" />
+              Voltar à chamada
+            </button>
+          )}
           <div className="flex items-center gap-2">
             <div className="min-w-0 flex-1">
               <p className="text-caption font-semibold text-green">Em chamada</p>
@@ -79,16 +86,6 @@ export function CallDock({ onReturnToCall, onOpenProfile, showReturnToCall }: Ca
               <TooltipContent>Sair da chamada</TooltipContent>
             </Tooltip>
           </div>
-          {showReturnToCall && (
-            <button
-              type="button"
-              onClick={onReturnToCall}
-              className="flex h-8 w-full items-center justify-center gap-1.5 rounded-md bg-green/16 text-label font-semibold text-green transition-colors hover:bg-green/24"
-            >
-              <PhoneIcon size={14} />
-              Voltar à chamada
-            </button>
-          )}
         </div>
       )}
       <div className="flex items-center gap-1 px-1">
