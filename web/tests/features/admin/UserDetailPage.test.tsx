@@ -34,7 +34,7 @@ describe('UserDetailPage', () => {
     expect(screen.getByRole('heading', { name: 'Ana' })).toBeInTheDocument();
     expect(screen.getByText('u1')).toBeInTheDocument();
     expect(screen.getByText('Ativa')).toBeInTheDocument();
-    expect(screen.getByText('Última vez online').parentElement).toHaveTextContent('—');
+    expect(screen.getByText('Última vez online').parentElement).toHaveTextContent('-');
   });
 
   it('shows Online agora when the account is connected', async () => {

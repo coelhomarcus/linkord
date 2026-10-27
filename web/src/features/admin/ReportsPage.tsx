@@ -30,7 +30,7 @@ function ReportLink({ report, from }: { report: AdminReportRow; from: { from: st
   );
 }
 
-const assignee = (report: AdminReportRow) => (report.assignee ? `@${report.assignee}` : '—');
+const assignee = (report: AdminReportRow) => (report.assignee ? `@${report.assignee}` : '-');
 
 export function ReportsPage() {
   const { filters, update, clear, active, identity } = useAdminQuery(QUERY);
@@ -55,7 +55,7 @@ export function ReportsPage() {
               options={[{ value: 'all', label: 'Todos' }, { value: 'user', label: 'Contas' }, { value: 'group', label: 'Grupos' }, { value: 'message', label: 'Mensagens' }]} />
           </>
         )}
-        summary={list.status === 'ready' && list.items.length > 0 ? `${list.items.length} ${list.items.length === 1 ? 'denúncia carregada' : 'denúncias carregadas'}${list.hasMore ? ' — há mais resultados' : ''}` : undefined}
+        summary={list.status === 'ready' && list.items.length > 0 ? `${list.items.length} ${list.items.length === 1 ? 'denúncia carregada' : 'denúncias carregadas'}${list.hasMore ? ' (há mais resultados)' : ''}` : undefined}
         onClear={active ? clear : undefined}
       />
       <ListChrome list={list} empty="Nenhuma denúncia nesta fila.">

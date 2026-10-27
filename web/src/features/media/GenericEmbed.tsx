@@ -47,7 +47,7 @@ function TwitchPlayer({ embed }: { embed: DetectedEmbed }) {
         <span className="flex h-12 w-12 flex-none items-center justify-center rounded-full bg-[#9146FF] text-white">
           <PlayIcon size={18} fill="currentColor" />
         </span>
-        <span className="text-label text-text-secondary">{label} — clique pra carregar o player</span>
+        <span className="text-label text-text-secondary">{label}: clique pra carregar o player</span>
       </button>
     );
   }

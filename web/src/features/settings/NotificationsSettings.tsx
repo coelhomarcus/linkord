@@ -9,7 +9,7 @@ import { Button } from '@/shared/ui/primitives/button';
 import { SettingsRow, SettingsSection, SettingsSections } from './SettingsLayout';
 
 const STATUS_TEXT: Record<Exclude<NotificationPermissionState, 'granted'>, string> = {
-  default: 'Permissão necessária — o navegador vai perguntar quando você ativar.',
+  default: 'Permissão necessária. O navegador vai perguntar quando você ativar.',
   denied: 'Bloqueadas no navegador. Permita o acesso nas configurações do navegador pra este site.',
   unsupported: 'Não disponíveis neste navegador.',
 };

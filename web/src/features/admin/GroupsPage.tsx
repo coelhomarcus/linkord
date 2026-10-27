@@ -72,7 +72,7 @@ export function GroupsPage() {
           <AdminSelectField<StatusFilter> label="Estado" value={filter} onChange={(next) => update({ filter: next })}
             options={[{ value: 'all', label: 'Todos' }, { value: 'active', label: 'Ativos' }, { value: 'suspended', label: 'Suspensos' }, { value: 'orphan', label: 'Sem dono' }]} />
         )}
-        summary={list.status === 'ready' && list.items.length > 0 ? `${list.items.length} ${list.items.length === 1 ? 'grupo carregado' : 'grupos carregados'}${list.hasMore ? ' — há mais resultados' : ''}` : undefined}
+        summary={list.status === 'ready' && list.items.length > 0 ? `${list.items.length} ${list.items.length === 1 ? 'grupo carregado' : 'grupos carregados'}${list.hasMore ? ' (há mais resultados)' : ''}` : undefined}
         onClear={active ? clear : undefined}
       />
       <ListChrome list={list} empty="Nenhum grupo encontrado.">

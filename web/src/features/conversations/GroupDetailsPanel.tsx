@@ -545,7 +545,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
         open={!!transferTarget}
         onOpenChange={(next) => { if (!next) setTransferTarget(null); }}
         title="Transferir propriedade"
-        description={`${transferTarget?.displayName ?? ''} passa a ser o dono de "${conversation?.title || 'grupo'}" — você perde os controles de gestão do grupo.`}
+        description={`${transferTarget?.displayName ?? ''} passa a ser o dono de "${conversation?.title || 'grupo'}". Você perde os controles de gestão do grupo.`}
         confirmLabel="Transferir"
         destructive
         onConfirm={handleTransferOwnership}

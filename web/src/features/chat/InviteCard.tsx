@@ -21,7 +21,7 @@ export function InviteCard({ invitation }: { invitation: InvitationCard | null |
   if (!invitation) {
     return (
       <div className="mt-1 max-w-[380px] rounded-lg border border-border bg-fill-subtle px-4 py-3 text-label text-text-muted">
-        Convite indisponível — o grupo não existe mais.
+        Convite indisponível: o grupo não existe mais.
       </div>
     );
   }
@@ -59,7 +59,7 @@ function LiveInviteCard({ invitation }: { invitation: InvitationCard }) {
 
   let footer: React.ReactNode;
   if (status === 'pending' && outcome === 'group_full') {
-    footer = <p className="text-label text-text-muted">Limite atingido — o grupo está cheio.</p>;
+    footer = <p className="text-label text-text-muted">Limite atingido: o grupo está cheio.</p>;
   } else if (status === 'pending' && isInvitee && isMember) {
     footer = <p className="text-label text-text-muted">Você já participa deste grupo.</p>;
   } else if (status === 'pending' && isInvitee) {

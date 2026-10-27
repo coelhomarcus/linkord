@@ -115,7 +115,7 @@ describe.skip('SystemPage', () => {
 
       await u.click(screen.getByRole('button', { name: 'Verificar órfãos' }));
       expect(mocked.sweepOrphans).toHaveBeenCalledWith({ dryRun: true });
-      expect(await screen.findByText('Prévia — nada foi apagado')).toBeInTheDocument();
+      expect(await screen.findByText('Prévia: nada foi apagado')).toBeInTheDocument();
       expect(screen.getByText(/3 arquivo\(s\) órfão\(s\)/)).toBeInTheDocument();
       expect(apagar).toBeEnabled();
 
@@ -127,7 +127,7 @@ describe.skip('SystemPage', () => {
       expect(await screen.findByText('Coleta executada')).toBeInTheDocument();
       expect(screen.getByText(/2 apagado\(s\), 0 falha\(s\)/)).toBeInTheDocument();
       // the preview described a disk that changed: gone, and delete is locked again until a new check
-      expect(screen.queryByText('Prévia — nada foi apagado')).not.toBeInTheDocument();
+      expect(screen.queryByText('Prévia: nada foi apagado')).not.toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Apagar órfãos' })).toBeDisabled();
     });
 
