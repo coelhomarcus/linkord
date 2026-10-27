@@ -15,11 +15,11 @@ const MIC_PROBLEM_LABEL = {
   unavailable: 'Microfone indisponível',
 } as const;
 
-const DOCK_BUTTON = 'grid size-8 flex-none place-items-center rounded-md transition-colors';
+const DOCK_BUTTON = 'grid size-9 flex-none place-items-center rounded-md transition-colors';
 const DOCK_NEUTRAL = 'text-text-secondary hover:bg-fill-hover hover:text-text-primary';
 const DOCK_RED = 'bg-red/16 text-red hover:bg-red/24';
 const DOCK_GREEN = 'bg-green-solid text-white hover:bg-green-hover';
-const CALL_JOIN = 'flex h-8 w-full items-center justify-center gap-1.5 rounded-md bg-green-solid text-label font-semibold text-white transition-colors hover:bg-green-hover';
+const CALL_JOIN = 'flex h-9 w-full items-center justify-center gap-1.5 rounded-md bg-green-solid text-label font-semibold text-white transition-colors hover:bg-green-hover';
 
 interface CallDockProps {
   onReturnToCall: () => void;
@@ -37,7 +37,7 @@ export function CallDock({ onReturnToCall, onOpenProfile, showReturnToCall, layo
   const {
     state, conversations, allUsers, activeCallConversationId,
     startCamera, stopCamera, startSharing, stopSharing, activateMic, toggleMicMuted,
-    deafened, toggleDeafened, leaveCall, preferMuted, setPreferMuted,
+    deafened, toggleDeafened, leaveCall, preferMuted, setPreferMuted, reconnecting,
   } = useRoom();
   const { pathname } = useLocation();
   const compact = layout === 'compact';
@@ -101,8 +101,9 @@ export function CallDock({ onReturnToCall, onOpenProfile, showReturnToCall, layo
 
   return (
     <div className={cn(
-      'flex flex-col gap-2 rounded-xl border border-border bg-bg-secondary p-1.5 shadow-panel',
-      compact && 'items-center',
+      'flex flex-col gap-2 rounded-xl border border-border bg-bg-secondary shadow-panel',
+      // the compact card is 48px wide: its buttons only fit with a thinner edge
+      compact ? 'items-center p-1' : 'p-2',
     )}>
       {inCall && (compact ? (
         <div className="flex flex-col items-center gap-1">
@@ -131,7 +132,11 @@ export function CallDock({ onReturnToCall, onOpenProfile, showReturnToCall, layo
             compact ? 'p-0.5' : 'min-w-0 flex-1 px-1 py-0.5',
           )}
         >
-          <Avatar id={state.me.userId ?? state.me.id ?? 'me'} name={state.me.displayName} avatar={state.me.avatar} avatarColor={state.me.avatarColor} size={32} />
+          <span className="relative flex-none">
+            <Avatar id={state.me.userId ?? state.me.id ?? 'me'} name={state.me.displayName} avatar={state.me.avatar} avatarColor={state.me.avatarColor} size={36} />
+            {/* you are online while this is on screen; gray while the connection is being re-established */}
+            <span aria-hidden data-status={reconnecting ? 'reconnecting' : 'online'} className={cn('absolute -bottom-0.5 -right-0.5 size-3.5 rounded-full border-2 border-bg-secondary', reconnecting ? 'bg-text-muted' : 'bg-green')} />
+          </span>
           {!compact && <span className="min-w-0 truncate text-label font-semibold text-text-primary">{state.me.displayName}</span>}
         </button>
         <Tooltip>

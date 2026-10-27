@@ -72,6 +72,25 @@ describe('CallDock — idle', () => {
   });
 });
 
+describe('CallDock — online status', () => {
+  const status = () => document.querySelector('[data-status]');
+
+  it('shows the green online dot on the avatar, in both layouts', () => {
+    const { unmount } = renderDock();
+    expect(status()).toHaveAttribute('data-status', 'online');
+    expect(status()).toHaveClass('bg-green');
+    unmount();
+    renderDock({}, { layout: 'compact' });
+    expect(status()).toHaveAttribute('data-status', 'online');
+  });
+
+  it('turns the dot gray while the connection is being re-established', () => {
+    renderDock({ reconnecting: true });
+    expect(status()).toHaveAttribute('data-status', 'reconnecting');
+    expect(status()).not.toHaveClass('bg-green');
+  });
+});
+
 describe('CallDock — settings', () => {
   it('has the settings gear, linking to the settings page', () => {
     renderDock();
