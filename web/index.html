@@ -11,7 +11,7 @@
       (function () {
         var key = 'linkord.colorTheme';
         var raw = localStorage.getItem(key);
-        var shells = { linkord: '#0d0d0f', light: '#edeef1', discord: '#202225', black: '#000000' };
+        var shells = { linkord: '#0d0d0f', black: '#000000', discord: '#202225' };
         var id = Object.prototype.hasOwnProperty.call(shells, raw) ? raw : 'linkord';
         document.documentElement.dataset.theme = id;
         var bg = shells[id];

@@ -2,8 +2,8 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "./themes.css";
-/* code colors: light by default, dark under a `dark` class (see applyColorTheme) */
-@import "@twinkleplop/theme-github";
+/* code colors (every theme is dark) */
+@import "@twinkleplop/theme-github/dark";
 /* bundled rather than fetched: a self-hosted install shouldn't reach out to a font CDN */
 @import "@fontsource-variable/figtree";
 
@@ -148,18 +148,14 @@
    does: the mobile sheet renders outside every container that sets it);
    the dot then draws its ring in var(--cutout). Keep the percentages in step
    with --color-fill-subtle / --color-fill-active. */
-/* the mark is drawn white for the dark surfaces; a light theme inverts it */
-@utility logo-mark {
-  filter: var(--logo-filter, none);
-}
 @utility cutout {
   --cutout: var(--surface-base, var(--color-surface-app));
 }
 @utility cutout-subtle {
-  --cutout: color-mix(in srgb, var(--surface-base, var(--color-surface-app)), var(--cutout-tint, white) 3.5%);
+  --cutout: color-mix(in srgb, var(--surface-base, var(--color-surface-app)), white 3.5%);
 }
 @utility cutout-active {
-  --cutout: color-mix(in srgb, var(--surface-base, var(--color-surface-app)), var(--cutout-tint, white) 10%);
+  --cutout: color-mix(in srgb, var(--surface-base, var(--color-surface-app)), white 10%);
 }
 
 html, body {

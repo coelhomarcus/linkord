@@ -16,14 +16,14 @@ function renderPreferences(overrides: Parameters<typeof createFakeRoomContextVal
 describe('PreferencesSettings', () => {
   it('shows theme choices and call/upload toggles with each control\'s real state', () => {
     renderPreferences({
-      colorTheme: 'light',
+      colorTheme: 'black',
       showTileBanners: true,
       hideAudioOnlyTiles: true,
       showStats: false,
       compressImagesDefault: false,
     });
 
-    expect(screen.getByRole('combobox', { name: 'Tema de cores' })).toHaveTextContent('Claro');
+    expect(screen.getByRole('combobox', { name: 'Tema de cores' })).toHaveTextContent('Preto');
     expect(screen.getByRole('switch', { name: 'Mostrar banners nos tiles' })).toBeChecked();
     expect(screen.getByRole('switch', { name: 'Ocultar participantes sem vídeo' })).toBeChecked();
     expect(screen.getByRole('switch', { name: 'Mostrar estatísticas' })).not.toBeChecked();
