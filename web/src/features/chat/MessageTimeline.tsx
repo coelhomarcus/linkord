@@ -10,7 +10,6 @@ import { ArrivalMotion } from './ArrivalMotion';
 import { buildTimelineItems, type TimelineItem } from './messageTimelineItems';
 import type { OutboxEntry } from './useMessageOutbox';
 import { readingPositionFor, saveReadingPosition } from './readingPositions';
-import { shouldCompensateResize } from './scrollCompensation';
 
 const EMPTY_MESSAGES: ChatMessage[] = [];
 const EMPTY_PENDING: OutboxEntry[] = [];
@@ -154,13 +153,13 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
     rangeExtractor,
     useAnimationFrameWithResizeObserver: true,
   });
+  // The library's own compensation is off: it writes scrollTop inside the
+  // measuring callback, a frame before the render that moves the rows (the
+  // single paint it relies on needs flushSync, off above). The reader's
+  // row then showed shifted by the resize for a frame and snapped back. The
+  // layout effect below compensates in the commit that moves the rows.
   useLayoutEffect(() => {
-    virtualizer.shouldAdjustScrollPositionOnItemSizeChange = (item, _delta, instance) => shouldCompensateResize({
-      itemStart: item.start,
-      itemEnd: item.end,
-      isFirstMeasure: !instance.itemSizeCache.has(item.key),
-      scrollOffset: (instance.scrollOffset ?? 0) + instance.scrollAdjustments,
-    });
+    virtualizer.shouldAdjustScrollPositionOnItemSizeChange = () => false;
   }, [virtualizer]);
   const virtualItems = virtualizer.getVirtualItems();
 
@@ -266,6 +265,27 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
   // leading date divider's key unchanged
   const firstKey = items.find((item) => item.type === 'message')?.key;
   const prevFirstKeyRef = useRef(firstKey);
+
+  // Rows resizing above the reader (an estimate corrected on first measure,
+  // an image loading) move everything below them; the row at the top of the
+  // view is followed by key and scrollTop takes its shift, written in the
+  // same commit as the new transforms. Skipped when the first message
+  // changed: a prepend is the library's and the settle loop's business.
+  const indexByKey = useMemo(() => new Map(items.map((item, index) => [item.key, index])), [items]);
+  const followedRowRef = useRef<{ key: string; start: number; firstKey: string | undefined } | null>(null);
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    if (!el || !ready) { followedRowRef.current = null; return; }
+    const prev = followedRowRef.current;
+    if (prev && prev.firstKey === firstKey) {
+      const index = indexByKey.get(prev.key);
+      const start = index === undefined ? undefined : virtualizer.measurementsCache[index]?.start;
+      if (start !== undefined && Math.abs(start - prev.start) >= 1) el.scrollTop += start - prev.start;
+    }
+    const top = virtualizer.getVirtualItemForOffset(el.scrollTop);
+    followedRowRef.current = top ? { key: String(top.key), start: top.start, firstKey } : null;
+  });
+
   const [settlingPrepend, setSettlingPrepend] = useState(false);
   const settlingRef = useRef(false);
   useEffect(() => { settlingRef.current = settlingPrepend; }, [settlingPrepend]);
