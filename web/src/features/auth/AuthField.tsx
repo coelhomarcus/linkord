@@ -33,7 +33,7 @@ export function AuthField({ id, label, value, onChange, leftIcon, rightSlot, err
       <div
         ref={fieldRef}
         className={cn(
-          'relative h-11 overflow-hidden rounded-md border border-transparent bg-bg-textarea transition-colors duration-200',
+          'relative h-11 overflow-hidden rounded-md border border-border-field bg-bg-textarea transition-colors duration-200',
           'focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/40',
           error && 'border-red ring-3 ring-red/25 focus-within:border-red focus-within:ring-red/25',
           disabled && 'opacity-60',

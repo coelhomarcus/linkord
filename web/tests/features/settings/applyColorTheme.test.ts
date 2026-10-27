@@ -21,4 +21,11 @@ describe('applyColorTheme', () => {
     expect(document.documentElement.dataset.theme).toBe('discord');
     expect(document.querySelector('meta[name="theme-color"]')?.getAttribute('content')).toBe('#202225');
   });
+
+  it('paints the browser chrome with each theme\'s shell color', () => {
+    applyColorTheme('light');
+    expect(document.querySelector('meta[name="theme-color"]')?.getAttribute('content')).toBe('#edeef1');
+    applyColorTheme('black');
+    expect(document.querySelector('meta[name="theme-color"]')?.getAttribute('content')).toBe('#000000');
+  });
 });

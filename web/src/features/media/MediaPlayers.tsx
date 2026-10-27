@@ -459,7 +459,7 @@ function AudioPlayerInner({ src, title, className, onError }: AudioPlayerProps) 
 
   return (
     <div
-      className={cn('@container/audio flex min-w-0 max-w-full flex-col gap-1.5 rounded-md border border-white/10 bg-bg-tertiary px-2.5 py-2', className)}
+      className={cn('@container/audio flex min-w-0 max-w-full flex-col gap-1.5 rounded-md border border-border-default bg-bg-tertiary px-2.5 py-2', className)}
       style={{ width }}
       data-download-url={src}
       data-download-name={title || 'audio'}

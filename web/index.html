@@ -11,9 +11,10 @@
       (function () {
         var key = 'linkord.colorTheme';
         var raw = localStorage.getItem(key);
-        var id = raw === 'whatsapp' || raw === 'discord' ? raw : 'linkord';
+        var shells = { linkord: '#0d0d0f', light: '#edeef1', discord: '#202225', black: '#000000' };
+        var id = Object.prototype.hasOwnProperty.call(shells, raw) ? raw : 'linkord';
         document.documentElement.dataset.theme = id;
-        var bg = id === 'whatsapp' ? '#111b21' : id === 'discord' ? '#202225' : '#0d0d0f';
+        var bg = shells[id];
         var style = document.createElement('style');
         style.textContent = 'html,body{background:' + bg + '}';
         document.head.appendChild(style);
