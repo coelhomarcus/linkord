@@ -23,7 +23,7 @@ describe('PreferencesSettings', () => {
       compressImagesDefault: false,
     });
 
-    expect(screen.getByRole('combobox', { name: 'Tema de cores' })).toHaveTextContent('Meia-noite');
+    expect(screen.getByRole('combobox', { name: 'Tema de cores' })).toHaveTextContent('Esmeralda');
     expect(screen.getByRole('switch', { name: 'Mostrar banners nos tiles' })).toBeChecked();
     expect(screen.getByRole('switch', { name: 'Ocultar participantes sem vídeo' })).toBeChecked();
     expect(screen.getByRole('switch', { name: 'Mostrar estatísticas' })).not.toBeChecked();
