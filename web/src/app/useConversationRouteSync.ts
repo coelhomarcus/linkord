@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router';
 import { useRoom } from '@/state/RoomContext';
 import { ROUTES, conversationIdFromPath, conversationIdFromState, conversationNav, isAwaitingOpen } from '@/shared/lib/routes';
 
-/** Keeps the conversation named by the history entry and the room's
+/** Keeps the conversation named by the router entry and the room's
  * `activeConversationId` in agreement without either one being "the" source of
  * truth — the active conversation is opened from many places (sidebar,
  * notifications, a group just created) that know nothing about history.
@@ -13,7 +13,7 @@ import { ROUTES, conversationIdFromPath, conversationIdFromState, conversationNa
  * to that shape. Each direction reacts ONLY to its own source changing, and
  * each one is a no-op when both already agree — that is what prevents the two
  * from fighting:
- *   entry → state : the entry's id changed (legacy link, back/forward, refresh)
+ *   entry → state : the entry's id changed (a legacy path, navigating back)
  *   state → entry : the active conversation changed
  *   bare entry    : /app/conversations with an active conversation gets its id */
 export function useConversationRouteSync(): void {

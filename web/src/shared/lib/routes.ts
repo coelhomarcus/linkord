@@ -1,6 +1,8 @@
-// URL contract of the app (docs/plano-rede-social.md §5.2). Lives in shared/
-// because both app/ (which owns the router) and features (sidebar links,
-// profile actions) need the same paths, and features must never import app/.
+// Route contract of the app (docs/plano-rede-social.md §5.2). The router is in
+// memory, so these paths never reach the address bar: they are how the app
+// names its pages to itself. Lives in shared/ because both app/ (which owns the
+// router) and features (sidebar links, profile actions) need the same paths,
+// and features must never import app/.
 
 export const SETTINGS_TABS = ['profile', 'account', 'av', 'notifications', 'prefs', 'privacy', 'moderation'] as const;
 export type SettingsTab = (typeof SETTINGS_TABS)[number];
@@ -54,7 +56,7 @@ export function friendsSection(section: FriendsSection): string {
 
 /** The conversation id in a legacy `/app/conversations/:id` path (an old
  * bookmark or link), or null on any other page (or on the bare list route).
- * The app itself no longer writes ids into the URL — see `conversationNav`. */
+ * The app itself no longer writes ids into the path, see `conversationNav`. */
 export function conversationIdFromPath(pathname: string): string | null {
   const match = /^\/app\/conversations\/([^/]+)\/?$/.exec(pathname);
   if (!match) return null;
@@ -65,10 +67,10 @@ export function isConversationsPath(pathname: string): boolean {
   return pathname === ROUTES.conversations || pathname.startsWith(`${ROUTES.conversations}/`);
 }
 
-/** Which conversation is open lives in the history entry's state, not in the
- * path: the URL stays `/app/conversations` like WhatsApp Web, while back/forward
- * and a refresh still land on the right conversation (the browser keeps the
- * state of each entry). */
+/** Which conversation is open lives in the router entry's state, not in the
+ * path: the page stays `/app/conversations`, while going back to an entry (a
+ * modal closing over it, an in-app back) still lands on the right conversation,
+ * because each entry keeps its own state. */
 export function conversationNav(conversationId: string) {
   return { state: { conversationId } };
 }
