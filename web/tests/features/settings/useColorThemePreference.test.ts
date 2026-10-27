@@ -19,8 +19,10 @@ describe('useColorThemePreference', () => {
   });
 
   it('falls back to linkord for a theme that was removed', () => {
-    localStorage.setItem(KEY, 'whatsapp');
-    expect(loadColorTheme()).toBe('linkord');
+    for (const removed of ['whatsapp', 'light']) {
+      localStorage.setItem(KEY, removed);
+      expect(loadColorTheme(), removed).toBe('linkord');
+    }
   });
 
   it('falls back to linkord for unknown stored values', () => {
