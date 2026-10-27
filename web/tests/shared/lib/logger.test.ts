@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createLogger, installGlobalErrorHandlers } from '@/shared/lib/logger';
+import { createLogger, installGlobalErrorHandlers, setLogRoute } from '@/shared/lib/logger';
 import type { ClientLogPayload } from '@/shared/lib/logger';
 
 function setup(over: { level?: 'debug' | 'warn' } = {}) {
@@ -109,5 +109,19 @@ describe('installGlobalErrorHandlers', () => {
     installGlobalErrorHandlers(target, log);
     handlers.get('error')!({ message: 'ResizeObserver loop completed with undelivered notifications.' });
     expect(send).not.toHaveBeenCalled();
+  });
+});
+
+describe('logger — route of a report', () => {
+  it('names the in-app route when one is set, since the address bar never changes', () => {
+    const send = vi.fn<(p: ClientLogPayload) => void>();
+    const log = createLogger({ level: 'debug', send, print: vi.fn() });
+    setLogRoute(() => '/app/friends');
+    try {
+      log.error('boom', new Error('x'));
+      expect(send.mock.calls[0]![0].route).toBe('/app/friends');
+    } finally {
+      setLogRoute(null);
+    }
   });
 });

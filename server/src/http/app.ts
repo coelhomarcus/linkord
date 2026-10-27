@@ -124,8 +124,8 @@ export function createApp(): FastifyInstance {
   });
 
   // any unmatched GET (that isn't /api/* or /uploads/*) falls through to
-  // index.html — SPA fallback, otherwise a hard refresh on a deep frontend
-  // route (client-side routing) would 404 instead of loading the page.
+  // index.html. The app keeps its address at the bare origin, but an old link
+  // or bookmark to one of its pages (/app/friends) must still load it, not 404.
   fastify.setNotFoundHandler((request, reply) => {
     if (request.method !== 'GET' || request.url.startsWith('/api/') || request.url.startsWith('/uploads/')) {
       return sendError(reply, 404, 'not_found', 'Rota não encontrada.');

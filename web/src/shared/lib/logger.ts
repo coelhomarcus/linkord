@@ -65,6 +65,13 @@ export interface Logger {
   recent(): readonly LogRecord[];
 }
 
+let routeProvider: (() => string) | null = null;
+
+/** Names the route reports carry, for an app whose address bar never changes. */
+export function setLogRoute(provider: (() => string) | null): void {
+  routeProvider = provider;
+}
+
 export function createLogger(deps: LoggerDeps = {}, base: LogFields = {}, shared?: { buffer: LogRecord[]; seen: Map<string, number>; reports: number[] }): Logger {
   const state = shared ?? { buffer: [] as LogRecord[], seen: new Map<string, number>(), reports: [] as number[] };
   const dev = typeof import.meta !== 'undefined' && !!import.meta.env?.DEV;
@@ -72,7 +79,7 @@ export function createLogger(deps: LoggerDeps = {}, base: LogFields = {}, shared
   const now = deps.now ?? Date.now;
   const print = deps.print ?? defaultPrint;
   const send = deps.send ?? defaultSend;
-  const route = deps.route ?? (() => (typeof location !== 'undefined' ? location.pathname : ''));
+  const route = deps.route ?? (() => (routeProvider ? routeProvider() : typeof location !== 'undefined' ? location.pathname : ''));
 
   function shouldReport(key: string): boolean {
     const t = now();

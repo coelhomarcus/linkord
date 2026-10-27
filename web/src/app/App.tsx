@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Navigate, Route, Routes, createBrowserRouter, RouterProvider, useLocation, useNavigate } from 'react-router';
+import { Navigate, Route, Routes, RouterProvider, useLocation, useNavigate } from 'react-router';
 import type { Location } from 'react-router';
 import { RoomProvider } from '@/app/providers/RoomProvider';
 import { useRoom } from '@/state/RoomContext';
@@ -33,6 +33,8 @@ import { RequestsRedirect } from '@/features/friends/RequestsRedirect';
 import { AppModals } from '@/app/layout/AppModals';
 import { AWAITING_OPEN, ROUTES, conversationNav, isConversationsPath, modalForPath } from '@/shared/lib/routes';
 import { ContentLocationProvider } from '@/shared/lib/contentLocation';
+import { createAppRouter } from '@/app/appRouter';
+import { setLogRoute } from '@/shared/lib/logger';
 import { useConversationRouteSync } from '@/app/useConversationRouteSync';
 import { SidebarInset, SidebarProvider } from '@/shared/ui/motion/sidebar';
 import { loadSidebarCollapsed, saveSidebarCollapsed } from '@/shared/hooks/useSidebarCollapsedPreference';
@@ -42,11 +44,11 @@ import { TooltipProvider } from '@/shared/ui/primitives/tooltip';
 // (a refresh on /app/settings/av): behind it, the conversations
 const DEFAULT_CONTENT_LOCATION: Location = { pathname: ROUTES.conversations, search: '', hash: '', state: null, key: 'default' };
 
-/** Position of the current entry in this tab's history (react-router keeps it
- * in the entry's state), or null when it cannot be read. */
-function historyIndex(): number | null {
-  const idx = (window.history.state as { idx?: unknown } | null)?.idx;
-  return typeof idx === 'number' ? idx : null;
+/** The route the app is on right now. Read from the router, not from the
+ * address bar (which never changes), and up to date as soon as a navigate()
+ * has run, which is what the handlers that navigate and then ask need. */
+function currentPath(): string {
+  return router.state.location.pathname;
 }
 
 function Shell() {
@@ -62,25 +64,16 @@ function Shell() {
   // URL names it, and the page underneath stays the last real page, so the
   // conversation, a running call's stage and the rail do not change behind it.
   const modal = modalForPath(location.pathname);
-  const [lastContent, setLastContent] = useState<{ location: Location; index: number | null } | null>(null);
-  if (!modal && lastContent?.location !== location) setLastContent({ location, index: historyIndex() });
-  const contentLocation = modal ? (lastContent?.location ?? DEFAULT_CONTENT_LOCATION) : location;
-  const contentIndex = lastContent?.index ?? null;
-  // Closing walks back to the page the modal was opened over, so the browser's
-  // back button goes to the page before it instead of reopening the modal. When
-  // the modal is the first thing in this history (a link, a refresh) there is
-  // nothing to walk back to: the entry is replaced by the page behind it.
+  const [lastContent, setLastContent] = useState<Location | null>(null);
+  if (!modal && lastContent !== location) setLastContent(location);
+  const contentLocation = modal ? (lastContent ?? DEFAULT_CONTENT_LOCATION) : location;
+  // closing puts the page behind the modal back in the modal's place
   const closeModal = useCallback(() => {
-    const here = historyIndex();
-    if (contentIndex !== null && here !== null && here > contentIndex) {
-      navigate(contentIndex - here);
-      return;
-    }
     navigate(
       { pathname: contentLocation.pathname, search: contentLocation.search, hash: contentLocation.hash },
       { replace: true, state: contentLocation.state },
     );
-  }, [navigate, contentLocation, contentIndex]);
+  }, [navigate, contentLocation]);
   const onConversations = isConversationsPath(contentLocation.pathname);
   const [profileUserId, setProfileUserId] = useState<string | null>(null);
   // Landing straight on a page (a deep link, a refresh on /app/friends) should
@@ -88,7 +81,7 @@ function Shell() {
   // names no page at all.
   // only on a phone: from 768px the rail is on screen and the drawer opens on demand
   const [mobileShowSidebar, setMobileShowSidebar] = useState(() => {
-    const path = window.location.pathname.replace(/\/$/, '');
+    const path = currentPath().replace(/\/$/, '');
     return window.matchMedia('(max-width: 767px)').matches && (path === '' || path === '/app' || path === ROUTES.conversations);
   });
   const [searchOpen, setSearchOpen] = useState(false);
@@ -125,13 +118,13 @@ function Shell() {
   useConversationRouteSync();
 
   // "Show me the chat": from a notification click, possibly while on the
-  // friends/settings page. window.location (not the hook's
-  // pathname) on purpose — callers navigate() explicitly in the same handler
-  // just before this, and only the real location is already up to date then.
+  // friends/settings page. The router's current path (not the hook's
+  // pathname) on purpose: callers navigate() explicitly in the same handler
+  // just before this, and only the router's own state is already up to date then.
   useEffect(() => {
     registerRequestChatView(() => {
       setActiveView('chat');
-      if (!isConversationsPath(window.location.pathname)) navigate(ROUTES.conversations, AWAITING_OPEN);
+      if (!isConversationsPath(currentPath())) navigate(ROUTES.conversations, AWAITING_OPEN);
     });
   }, [registerRequestChatView, navigate]);
 
@@ -150,7 +143,7 @@ function Shell() {
     joinCall(conversationId);
     setActiveView('call');
     setMobileShowSidebar(false);
-    if (!isConversationsPath(window.location.pathname)) navigate(ROUTES.conversations, conversationNav(conversationId));
+    if (!isConversationsPath(currentPath())) navigate(ROUTES.conversations, conversationNav(conversationId));
   }
 
   // Jump back to the Stage from wherever you wandered off to — used by both
@@ -315,11 +308,14 @@ function AppProviders() {
 }
 
 // A single splat route whose element owns its own nested <Routes> (in Shell).
-// This "descendant routes" setup is the smallest step from BrowserRouter to a
+// This "descendant routes" setup is the smallest step from a plain router to a
 // data router: every route, guard and provider lifecycle stays identical —
 // the only reason to make the change at all is that useBlocker (settings'
 // unsaved-changes guard) requires a data router to exist somewhere above it.
-const router = createBrowserRouter([{ path: '*', element: <AppProviders /> }]);
+// It is an in-memory one (see createAppRouter): the URL never changes.
+const router = createAppRouter([{ path: '*', element: <AppProviders /> }]);
+// client error reports name the route the app is on; the address bar never does
+setLogRoute(currentPath);
 
 export function App() {
   return <RouterProvider router={router} />;
