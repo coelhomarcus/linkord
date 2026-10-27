@@ -111,7 +111,7 @@ export function CallDock({ onReturnToCall, onOpenProfile, showReturnToCall, layo
           {leaveButton}
         </div>
       ) : (
-        <div className="flex flex-col gap-2 px-1 pt-0.5">
+        <div className="flex flex-col gap-2 px-0.5 pt-0.5">
           {returnButton}
           <div className="flex items-center gap-2">
             <div className="min-w-0 flex-1">
