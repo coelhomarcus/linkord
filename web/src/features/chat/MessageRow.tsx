@@ -234,7 +234,7 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
                 onKeyDown={handleEditKeyDown}
                 autoFocus
                 rows={1}
-                className="min-h-9 resize-none border-border-strong bg-black/20 text-body"
+                className="min-h-9 resize-none border-border-strong bg-fill-inset text-body"
               />
               {editError && <p role="alert" className="text-caption text-red">{editError}</p>}
               <p className="text-caption text-text-muted">

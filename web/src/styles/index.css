@@ -39,6 +39,8 @@
   --color-fill-subtle: oklch(100% 0 0 / 0.035);
   --color-fill-hover: oklch(100% 0 0 / 0.06);
   --color-fill-active: oklch(100% 0 0 / 0.10);
+  /* a field or code block sunk into its surface: darker than what it sits on */
+  --color-fill-inset: oklch(0% 0 0 / 0.25);
 
   --color-text-primary: oklch(95.00% 0.0020 279.30);
   --color-text-secondary: oklch(83.00% 0.0020 279.30);
@@ -54,6 +56,9 @@
      mentions use this lighter step of the same hue instead */
   --color-accent-text: oklch(76.00% 0.1400 330.00);
   --color-border-accent: var(--color-accent-primary);
+  /* fields sit on --color-bg-textarea and need no outline until a theme
+     makes that surface the same color as everything around it */
+  --color-border-field: transparent;
 
   --color-green: oklch(73.29% 0.1941 153.87);
   /* darker than --color-green so white text on a join/return button clears contrast;
@@ -141,14 +146,27 @@
    does: the mobile sheet renders outside every container that sets it);
    the dot then draws its ring in var(--cutout). Keep the percentages in step
    with --color-fill-subtle / --color-fill-active. */
+/* the mark is drawn white for the dark surfaces; a light theme inverts it */
+@utility logo-mark {
+  filter: var(--logo-filter, none);
+}
 @utility cutout {
   --cutout: var(--surface-base, var(--color-surface-app));
 }
 @utility cutout-subtle {
-  --cutout: color-mix(in srgb, var(--surface-base, var(--color-surface-app)), white 3.5%);
+  --cutout: color-mix(in srgb, var(--surface-base, var(--color-surface-app)), var(--cutout-tint, white) 3.5%);
 }
 @utility cutout-active {
-  --cutout: color-mix(in srgb, var(--surface-base, var(--color-surface-app)), white 10%);
+  --cutout: color-mix(in srgb, var(--surface-base, var(--color-surface-app)), var(--cutout-tint, white) 10%);
+}
+
+/* shiki emits both palettes as variables on each token (see highlightCode) */
+.shiki, .shiki span {
+  color: var(--shiki-dark);
+}
+html[data-theme="light"] .shiki,
+html[data-theme="light"] .shiki span {
+  color: var(--shiki-light);
 }
 
 html, body {

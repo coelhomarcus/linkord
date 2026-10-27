@@ -1,9 +1,12 @@
 import type { ColorThemeId } from './useColorThemePreference';
 
+// Keep in step with the inline map in index.html, which paints the same
+// colors before this bundle loads.
 const SHELL_BACKGROUND: Record<ColorThemeId, string> = {
   linkord: '#0d0d0f',
-  whatsapp: '#111b21',
+  light: '#edeef1',
   discord: '#202225',
+  black: '#000000',
 };
 
 export function applyColorTheme(id: ColorThemeId): void {

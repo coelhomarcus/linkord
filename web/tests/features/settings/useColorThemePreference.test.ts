@@ -13,9 +13,14 @@ describe('useColorThemePreference', () => {
   });
 
   it('persists a valid theme id', () => {
-    saveColorTheme('whatsapp');
-    expect(localStorage.getItem(KEY)).toBe('whatsapp');
-    expect(loadColorTheme()).toBe('whatsapp');
+    saveColorTheme('black');
+    expect(localStorage.getItem(KEY)).toBe('black');
+    expect(loadColorTheme()).toBe('black');
+  });
+
+  it('falls back to linkord for a theme that was removed', () => {
+    localStorage.setItem(KEY, 'whatsapp');
+    expect(loadColorTheme()).toBe('linkord');
   });
 
   it('falls back to linkord for unknown stored values', () => {

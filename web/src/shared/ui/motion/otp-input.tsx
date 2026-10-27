@@ -198,7 +198,7 @@ export function OTPInput({
                 data-active={isActive}
                 data-filled={char !== ""}
                 className={cn(
-                  "relative grid h-14 w-12 place-items-center overflow-hidden rounded-lg border bg-black/20 text-display font-semibold tabular-nums transition-colors duration-200",
+                  "relative grid h-14 w-12 place-items-center overflow-hidden rounded-lg border bg-fill-inset text-display font-semibold tabular-nums transition-colors duration-200",
                   showSuccess ? "border-emerald-500/60 text-foreground" : status === "error" ? "border-destructive text-foreground" : char ? "border-border-strong text-foreground" : "border-border-strong text-muted-foreground",
                   showSuccess && "ring-2 ring-emerald-500/25",
                   status === "error" && "ring-2 ring-destructive/25",

@@ -13,7 +13,7 @@ const closeButtonVariants = cva(
   {
     variants: {
       variant: {
-        ghost: "text-text-muted hover:bg-white/10 hover:text-text-primary",
+        ghost: "text-text-muted hover:bg-fill-hover hover:text-text-primary",
         danger: "text-text-muted hover:bg-red/12 hover:text-red-text",
         overlay: "bg-black/60 text-white ring-1 ring-white/25 backdrop-blur-sm hover:bg-black/80",
       },

@@ -50,7 +50,7 @@ function RawJson({ value }: { value: Record<string, unknown> }) {
   return (
     <details className="text-caption text-text-muted">
       <summary className="cursor-pointer select-none py-1">Ver dados brutos</summary>
-      <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-all rounded-md bg-black/30 p-3 font-mono text-text-secondary">{cut ? `${text.slice(0, JSON_LIMIT)}\n…` : text}</pre>
+      <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-all rounded-md bg-fill-inset p-3 font-mono text-text-secondary">{cut ? `${text.slice(0, JSON_LIMIT)}\n…` : text}</pre>
       {cut && <p className="mt-1">Mostrando os primeiros {JSON_LIMIT} caracteres.</p>}
     </details>
   );

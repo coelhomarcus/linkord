@@ -87,7 +87,7 @@ function ReportDetail({ id }: { id: string }) {
 
       {report.targetType === 'message' ? (
         <AdminSection title="Evidência" description="O texto como estava quando a denúncia foi enviada. Não é a conversa atual.">
-          <p className="whitespace-pre-wrap break-words rounded-md bg-black/30 p-3 text-label text-text-primary">{snapshotText ?? '-'}</p>
+          <p className="whitespace-pre-wrap break-words rounded-md bg-fill-inset p-3 text-label text-text-primary">{snapshotText ?? '-'}</p>
           {snapshot.truncated === true && (
             <p className="text-caption text-yellow">O texto foi truncado ao ser guardado; o original completo não está disponível aqui.</p>
           )}
