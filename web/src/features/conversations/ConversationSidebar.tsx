@@ -1,7 +1,7 @@
 import { MagnifyingGlassIcon, PhoneIcon, PlusIcon, PushPinIcon, SidebarSimpleIcon, UsersIcon } from '@phosphor-icons/react';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { useLocation, useNavigate } from 'react-router';
+import { useNavigate } from 'react-router';
 
 import { ActiveWash } from '@/shared/ui/motion/active-wash';
 import { Sidebar } from '@/shared/ui/motion/sidebar';
@@ -10,6 +10,7 @@ import { Button } from '@/shared/ui/primitives/button';
 import { Tabs, TabsIndicator, TabsList, TabsTrigger } from '@/shared/ui/primitives/tabs';
 import { Avatar } from '@/shared/Avatar';
 import { cn } from '@/shared/lib/utils';
+import { useContentLocation } from '@/shared/lib/contentLocation';
 import { CountBadge } from '@/shared/CountBadge';
 import { useRoom } from '@/state/RoomContext';
 import type { Conversation } from '@/shared/types/protocol';
@@ -131,7 +132,7 @@ export function ConversationSidebar({ onReturnToCall, onOpenProfile, showReturnT
   const { state, conversations, activeConversationId, openConversation, allUsers, unreadByConversation, requestChatView } = useRoom();
   const { isMobile, isOverlay, setOpenMobile, toggleSidebar } = useSidebar();
   const navigate = useNavigate();
-  const { pathname } = useLocation();
+  const { pathname } = useContentLocation();
   const [query, setQuery] = useState('');
   const [groupOpen, setGroupOpen] = useState(false);
   const [tab, setTab] = useState<ConversationListTab>(() => tabForConversation(conversations, activeConversationId));

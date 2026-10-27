@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  conversationIdFromPath, conversationIdFromState, conversationNav, friendsSection, friendsView, isAwaitingOpen, isConversationsPath, isSettingsTab, parseFriendsView,
+  conversationIdFromPath, conversationIdFromState, conversationNav, friendsSection, friendsView, isAwaitingOpen, isConversationsPath, isSettingsTab, modalForPath, parseFriendsView,
 } from '@/shared/lib/routes';
 
 describe('conversationIdFromPath', () => {
@@ -90,5 +90,24 @@ describe('Friends routes', () => {
     expect(parseFriendsView('')).toBe('all');
     expect(parseFriendsView('pending')).toBe('pending');
     expect(parseFriendsView('add')).toBe('add');
+  });
+});
+
+describe('modalForPath', () => {
+  it('settings and its tabs open the settings modal', () => {
+    expect(modalForPath('/app/settings')).toBe('settings');
+    expect(modalForPath('/app/settings/av')).toBe('settings');
+  });
+
+  it('every administration page opens the admin modal', () => {
+    expect(modalForPath('/admin')).toBe('admin');
+    expect(modalForPath('/admin/users')).toBe('admin');
+    expect(modalForPath('/admin/users/abc')).toBe('admin');
+  });
+
+  it('other pages, and look-alike paths, are not modals', () => {
+    for (const path of ['/app/conversations', '/app/friends', '/app/settingsx', '/administrator', '/']) {
+      expect(modalForPath(path), path).toBeNull();
+    }
   });
 });
