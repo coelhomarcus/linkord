@@ -1,4 +1,5 @@
 import { fireEvent, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 import { Room, Track } from 'livekit-client';
 import { initialRoomState } from '@/state/roomReducer';
@@ -17,9 +18,19 @@ function renderDock(room: Parameters<typeof renderWithRoom>[1] = {}, {
   onReturnToCall = vi.fn(),
   onOpenProfile = vi.fn(),
   showReturnToCall = true,
-}: { onReturnToCall?: () => void; onOpenProfile?: (userId: string) => void; showReturnToCall?: boolean } = {}) {
+  layout = 'wide',
+  path = '/app/conversations',
+}: {
+  onReturnToCall?: () => void;
+  onOpenProfile?: (userId: string) => void;
+  showReturnToCall?: boolean;
+  layout?: 'wide' | 'compact';
+  path?: string;
+} = {}) {
   const result = renderWithRoom(
-    <CallDock onReturnToCall={onReturnToCall} onOpenProfile={onOpenProfile} showReturnToCall={showReturnToCall} />,
+    <MemoryRouter initialEntries={[path]}>
+      <CallDock onReturnToCall={onReturnToCall} onOpenProfile={onOpenProfile} showReturnToCall={showReturnToCall} layout={layout} />
+    </MemoryRouter>,
     {
       state: me,
       conversations: [group],
@@ -58,6 +69,41 @@ describe('CallDock — idle', () => {
   it('shows the stored mute preference as already muted', () => {
     renderDock({ preferMuted: true });
     expect(screen.getByLabelText('Desmutar')).toBeInTheDocument();
+  });
+});
+
+describe('CallDock — settings', () => {
+  it('has the settings gear, linking to the settings page', () => {
+    renderDock();
+    expect(screen.getByRole('link', { name: 'Ajustes' })).toHaveAttribute('href', '/app/settings');
+    expect(screen.getByRole('link', { name: 'Ajustes' })).not.toHaveAttribute('aria-current');
+  });
+
+  it('marks the gear as the current page inside settings', () => {
+    renderDock({}, { path: '/app/settings/av' });
+    expect(screen.getByRole('link', { name: 'Ajustes' })).toHaveAttribute('aria-current', 'page');
+  });
+});
+
+describe('CallDock — compact layout (only the rail is on screen)', () => {
+  it('keeps every control but drops the name, which stays as the profile button label', () => {
+    renderDock({}, { layout: 'compact' });
+    const profile = screen.getByRole('button', { name: 'Meu perfil' });
+    expect(profile).not.toHaveTextContent('Fulana');
+    expect(screen.getByLabelText('Mutar')).toBeInTheDocument();
+    expect(screen.getByLabelText('Parar de ouvir')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Ajustes' })).toBeInTheDocument();
+  });
+
+  it('in a call, returns to the stage and leaves it through icon buttons', () => {
+    const onReturnToCall = vi.fn();
+    renderDock({ activeCallConversationId: 'conv-1' }, { layout: 'compact', onReturnToCall });
+    expect(screen.queryByText('Em chamada')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Voltar à chamada' }));
+    expect(onReturnToCall).toHaveBeenCalledTimes(1);
+    expect(screen.getByLabelText('Sair da chamada')).toBeInTheDocument();
+    expect(screen.getByLabelText('Ligar câmera')).toBeInTheDocument();
+    expect(screen.getByLabelText('Compartilhar tela')).toBeInTheDocument();
   });
 });
 

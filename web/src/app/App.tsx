@@ -12,6 +12,7 @@ import { ReconnectBanner } from '@/app/layout/ReconnectBanner';
 import { AccessNotice } from '@/app/layout/AccessNotice';
 import { ConversationSidebar } from '@/features/conversations/ConversationSidebar';
 import { AppNavigationRail } from '@/features/navigation/AppNavigationRail';
+import { FloatingUserDock } from '@/features/navigation/FloatingUserDock';
 import { ConversationPanel } from '@/features/conversations/ConversationPanel';
 import { GroupDetailsPanel } from '@/features/conversations/GroupDetailsPanel';
 import { ConversationMediaPanel } from '@/features/conversations/ConversationMediaPanel';
@@ -170,7 +171,7 @@ function Shell() {
         onOpenChange={setSidebarOpen}
         openMobile={mobileShowSidebar}
         onOpenMobileChange={setMobileShowSidebar}
-        className="h-dvh bg-bg-primary text-text-primary [--surface-base:var(--color-surface-app)]"
+        className="relative h-dvh bg-bg-primary text-text-primary [--surface-base:var(--color-surface-app)]"
         style={{ '--sidebar-width': '20rem', '--sidebar-width-mobile': '24rem', '--sidebar-overlay-offset': '4rem' }}
       >
         <ReconnectBanner />
@@ -181,6 +182,12 @@ function Shell() {
           onOpenProfile={setProfileUserId}
           showReturnToCall={!showStage}
           mobileRail={<AppNavigationRail />}
+        />
+        <FloatingUserDock
+          placement="shell"
+          onReturnToCall={handleReturnToCall}
+          onOpenProfile={setProfileUserId}
+          showReturnToCall={!showStage}
         />
         <SidebarInset className="relative min-h-0 overflow-hidden bg-surface-panel [--surface-base:var(--color-surface-panel)] md:m-shell md:rounded-xl md:border md:border-border">
           <Routes>

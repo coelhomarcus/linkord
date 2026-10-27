@@ -1,4 +1,4 @@
-import { ChatCircleIcon, GearIcon, ShieldCheckIcon, SidebarSimpleIcon, UsersIcon } from '@phosphor-icons/react';
+import { ChatCircleIcon, SidebarSimpleIcon, UsersIcon } from '@phosphor-icons/react';
 import { useId } from 'react';
 import type { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router';
@@ -10,7 +10,6 @@ import { ROUTES, isConversationsPath } from '@/shared/lib/routes';
 import { cn } from '@/shared/lib/utils';
 import { SPRING_LAYOUT } from '@/shared/lib/ease';
 import { ActiveWash } from '@/shared/ui/motion/active-wash';
-import { useRoom } from '@/state/RoomContext';
 import { useFriends } from '@/features/friends/FriendsContext';
 import { NotificationBell } from '@/features/notifications/NotificationBell';
 import { CountBadge } from '@/shared/CountBadge';
@@ -100,12 +99,12 @@ function RailLink({ to, label, active, badge, onNavigate, indicators, children }
 
 /** The global navigation: where you can go from anywhere. What belongs to one
  * conversation (search, creating a group, the list) and the notifications bell
- * stay in the conversations sidebar beside it. On a narrow screen the same rail is drawn inside the
- * navigation sheet, so nothing here is reachable only on desktop. */
+ * stay in the conversations sidebar beside it. Settings, and the administration inside it, are
+ * reached from the user dock laid over its bottom. On a narrow screen the same rail is drawn
+ * inside the navigation sheet, so nothing here is reachable only on desktop. */
 export function AppNavigationRail({ className }: {
   className?: string;
 }) {
-  const { state } = useRoom();
   const { pendingIncomingCount } = useFriends();
   const { pathname } = useLocation();
   const { isMobile, isOverlay, open: listOpen, openMobile, setOpenMobile, toggleSidebar } = useSidebar();
@@ -116,15 +115,12 @@ export function AppNavigationRail({ className }: {
   const listExpanded = isOverlay ? openMobile : listOpen;
   // the bell lives in the list's header, so it moves here only while that header is off screen
   const showBell = !isMobile && !listExpanded;
-  const onSettings = pathname.startsWith(ROUTES.settings);
-  const onAdmin = pathname.startsWith('/admin');
-  const isAdmin = state.me.role === 'admin';
   const friendsLabel = pendingIncomingCount > 0 ? `Amigos, ${pendingIncomingCount} aguardando resposta` : 'Amigos';
   const indicatorId = useId();
   const indicators: RailIndicatorIds = { wash: `${indicatorId}-wash`, marker: `${indicatorId}-marker` };
 
   return (
-    <nav aria-label="Navegação principal" className={cn('flex w-16 flex-none flex-col items-center gap-1.5 border-r border-border-subtle bg-surface-rail py-3', className)}>
+    <nav aria-label="Navegação principal" className={cn('flex w-16 flex-none flex-col items-center gap-1.5 border-r border-border-subtle bg-surface-rail pt-3 pb-[max(0.75rem,var(--dock-clearance,0px))]', className)}>
       <RailSlot show={showListToggle}>
         <Tooltip>
           <TooltipTrigger
@@ -148,16 +144,6 @@ export function AppNavigationRail({ className }: {
         <NotificationBell collapsed onNavigate={afterNavigate} />
       </RailSlot>
 
-      <div className="flex-1" />
-
-      {isAdmin && (
-        <RailLink to={ROUTES.admin} label="Área administrativa" active={onAdmin} onNavigate={afterNavigate} indicators={indicators}>
-          <ShieldCheckIcon size={24} weight={iconWeight(onAdmin)} aria-hidden />
-        </RailLink>
-      )}
-      <RailLink to={ROUTES.settings} label="Ajustes" active={onSettings} onNavigate={afterNavigate} indicators={indicators}>
-        <GearIcon size={24} weight={iconWeight(onSettings)} aria-hidden />
-      </RailLink>
     </nav>
   );
 }

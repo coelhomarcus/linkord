@@ -24,7 +24,7 @@ import {
 import { GroupAvatar } from './GroupAvatar';
 import { GroupCreateDialog } from './GroupCreateDialog';
 import { NotificationBell } from '@/features/notifications/NotificationBell';
-import { CallDock } from '@/features/calls/CallDock';
+import { FloatingUserDock } from '@/features/navigation/FloatingUserDock';
 
 interface ConversationSidebarProps {
   onReturnToCall: () => void;
@@ -169,7 +169,7 @@ export function ConversationSidebar({ onReturnToCall, onOpenProfile, showReturnT
   return (
     <>
       <Sidebar ariaLabel="Conversas" className="text-text-primary" panelClassName="bg-bg-primary">
-        <div className="flex h-full min-h-0">
+        <div className="relative flex h-full min-h-0">
           {/* on a phone the rail lives in the drawer; from 768px it stays on screen beside it */}
           {isMobile && mobileRail}
           <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
@@ -187,7 +187,7 @@ export function ConversationSidebar({ onReturnToCall, onOpenProfile, showReturnT
             </div>
 
             {/* as a column, the gap to the content is the content card's own margin, which stays when the list is hidden */}
-            <div className="flex min-h-0 flex-1 flex-col gap-3 pb-3 pl-3 pr-shell lg:pr-0">
+            <div className="flex min-h-0 flex-1 flex-col gap-3 pb-[max(0.75rem,var(--dock-list-clearance,0px))] pl-3 pr-shell lg:pr-0">
               <div className="flex flex-none items-center gap-2 rounded-md border border-border bg-fill-subtle px-3">
                 <MagnifyingGlassIcon size={20} className="text-text-muted" />
                 <input
@@ -236,9 +236,18 @@ export function ConversationSidebar({ onReturnToCall, onOpenProfile, showReturnT
                   </div>
                 </div>
               </Tabs>
-              <CallDock onReturnToCall={onReturnToCall} onOpenProfile={onOpenProfile} showReturnToCall={showReturnToCall} />
             </div>
           </div>
+          {/* from 768px the dock floats over the rail and the list from the shell; on a phone they share this drawer */}
+          {isMobile && (
+            <FloatingUserDock
+              placement="drawer"
+              onReturnToCall={onReturnToCall}
+              onOpenProfile={onOpenProfile}
+              showReturnToCall={showReturnToCall}
+              onNavigate={() => setOpenMobile(false)}
+            />
+          )}
         </div>
       </Sidebar>
       <GroupCreateDialog
