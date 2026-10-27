@@ -60,7 +60,7 @@ function renderInline(nodes: Inline[], ctx: RenderContext): ReactNode[] {
 }
 
 // Highlighted HTML by language+source: remounting a row (switching
-// conversations, scrolling back) must not run shiki again.
+// conversations, scrolling back) must not run the highlighter again.
 const highlightCache = new Map<string, string | null>();
 const MAX_HIGHLIGHTS = 100;
 
@@ -81,7 +81,7 @@ function CodeBlock({ code, lang }: { code: string; lang: string | null }) {
   }, [cacheKey, code, lang]);
 
   const frame = 'my-1 max-w-full overflow-x-auto rounded-md border border-border bg-fill-inset text-label leading-relaxed';
-  // shiki escapes the source itself; only its own fixed markup wraps it
+  // the highlighter escapes the source itself; only its own fixed markup wraps it
   if (html) return <div className={cn(frame, '[&_pre]:bg-transparent! [&_pre]:p-3')} dangerouslySetInnerHTML={{ __html: html }} />;
   return <pre className={cn(frame, 'p-3 font-mono')}><code>{code}</code></pre>;
 }

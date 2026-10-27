@@ -11,5 +11,7 @@ const SHELL_BACKGROUND: Record<ColorThemeId, string> = {
 
 export function applyColorTheme(id: ColorThemeId): void {
   document.documentElement.dataset.theme = id;
+  // the code-highlight palette switches on this class; every theme but Claro is dark
+  document.documentElement.classList.toggle('dark', id !== 'light');
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', SHELL_BACKGROUND[id]);
 }

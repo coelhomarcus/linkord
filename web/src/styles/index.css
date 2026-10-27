@@ -2,6 +2,8 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "./themes.css";
+/* code colors: light by default, dark under a `dark` class (see applyColorTheme) */
+@import "@twinkleplop/theme-github";
 /* bundled rather than fetched: a self-hosted install shouldn't reach out to a font CDN */
 @import "@fontsource-variable/figtree";
 
@@ -158,15 +160,6 @@
 }
 @utility cutout-active {
   --cutout: color-mix(in srgb, var(--surface-base, var(--color-surface-app)), var(--cutout-tint, white) 10%);
-}
-
-/* shiki emits both palettes as variables on each token (see highlightCode) */
-.shiki, .shiki span {
-  color: var(--shiki-dark);
-}
-html[data-theme="light"] .shiki,
-html[data-theme="light"] .shiki span {
-  color: var(--shiki-light);
 }
 
 html, body {

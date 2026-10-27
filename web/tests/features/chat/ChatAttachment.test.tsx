@@ -5,7 +5,7 @@ import { ChatAttachment } from '@/features/chat/ChatAttachment';
 import { __resetCachedImageSrcForTests } from '@/shared/hooks/useCachedImageSrc';
 import { __resetPreviewCacheForTests } from '@/features/media/TextPreviewCard';
 
-// Keeps this test off the real shiki/WASM init path — highlightCode's own
+// Keeps this test off the real grammar loading — highlightCode's own
 // correctness isn't this file's concern, just that ChatAttachment routes to
 // TextPreviewCard and the fetched content ends up on screen.
 vi.mock('@/shared/lib/highlightCode', () => ({ highlightCode: vi.fn(async () => null) }));
