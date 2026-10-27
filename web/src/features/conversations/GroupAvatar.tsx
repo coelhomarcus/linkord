@@ -14,7 +14,8 @@ export function GroupAvatar({ title, avatar, active, size = 44, className }: Gro
     <div
       className={cn(
         'grid flex-none place-items-center overflow-hidden rounded-full border font-semibold transition-colors duration-300',
-        active ? 'border-primary/50 bg-primary/20 text-text-primary' : 'border-border bg-fill-hover text-text-secondary',
+        // the selected row already says it is selected; the ring stays neutral instead of taking the accent
+        active ? 'border-border bg-primary/20 text-text-primary' : 'border-border bg-fill-hover text-text-secondary',
         className
       )}
       style={{ width: size, height: size, fontSize: Math.round(size * 0.32) }}
