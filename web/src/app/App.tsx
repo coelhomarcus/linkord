@@ -1,5 +1,6 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, Route, Routes, createBrowserRouter, RouterProvider, useLocation, useNavigate } from 'react-router';
+import type { Location } from 'react-router';
 import { RoomProvider } from '@/app/providers/RoomProvider';
 import { useRoom } from '@/state/RoomContext';
 import { AuthProvider, useAuth } from '@/state/AuthContext';
@@ -29,15 +30,24 @@ import { ProfileModal } from '@/features/profile/ProfileModal';
 import { FriendsProvider } from '@/features/friends/FriendsContext';
 import { FriendsPage } from '@/features/friends/FriendsPage';
 import { RequestsRedirect } from '@/features/friends/RequestsRedirect';
-import { SettingsPage } from '@/features/settings/SettingsPage';
-import { AWAITING_OPEN, ROUTES, conversationNav, isConversationsPath } from '@/shared/lib/routes';
+import { AppModals } from '@/app/layout/AppModals';
+import { AWAITING_OPEN, ROUTES, conversationNav, isConversationsPath, modalForPath } from '@/shared/lib/routes';
+import { ContentLocationProvider } from '@/shared/lib/contentLocation';
 import { useConversationRouteSync } from '@/app/useConversationRouteSync';
 import { SidebarInset, SidebarProvider } from '@/shared/ui/motion/sidebar';
 import { loadSidebarCollapsed, saveSidebarCollapsed } from '@/shared/hooks/useSidebarCollapsedPreference';
 import { TooltipProvider } from '@/shared/ui/primitives/tooltip';
 
-// the administrative area is its own chunk: ordinary users never download it
-const AdminArea = lazy(() => import('@/features/admin/AdminArea'));
+// where the content area sits when the very first URL already names a modal
+// (a refresh on /app/settings/av): behind it, the conversations
+const DEFAULT_CONTENT_LOCATION: Location = { pathname: ROUTES.conversations, search: '', hash: '', state: null, key: 'default' };
+
+/** Position of the current entry in this tab's history (react-router keeps it
+ * in the entry's state), or null when it cannot be read. */
+function historyIndex(): number | null {
+  const idx = (window.history.state as { idx?: unknown } | null)?.idx;
+  return typeof idx === 'number' ? idx : null;
+}
 
 function Shell() {
   const {
@@ -47,8 +57,31 @@ function Shell() {
   const [activeView, setActiveView] = useState<'chat' | 'call'>('chat');
   const roomError = state.roomError;
   const navigate = useNavigate();
-  const { pathname } = useLocation();
-  const onConversations = isConversationsPath(pathname);
+  const location = useLocation();
+  // Settings and administration are modals over the app: while one is open the
+  // URL names it, and the page underneath stays the last real page, so the
+  // conversation, a running call's stage and the rail do not change behind it.
+  const modal = modalForPath(location.pathname);
+  const [lastContent, setLastContent] = useState<{ location: Location; index: number | null } | null>(null);
+  if (!modal && lastContent?.location !== location) setLastContent({ location, index: historyIndex() });
+  const contentLocation = modal ? (lastContent?.location ?? DEFAULT_CONTENT_LOCATION) : location;
+  const contentIndex = lastContent?.index ?? null;
+  // Closing walks back to the page the modal was opened over, so the browser's
+  // back button goes to the page before it instead of reopening the modal. When
+  // the modal is the first thing in this history (a link, a refresh) there is
+  // nothing to walk back to: the entry is replaced by the page behind it.
+  const closeModal = useCallback(() => {
+    const here = historyIndex();
+    if (contentIndex !== null && here !== null && here > contentIndex) {
+      navigate(contentIndex - here);
+      return;
+    }
+    navigate(
+      { pathname: contentLocation.pathname, search: contentLocation.search, hash: contentLocation.hash },
+      { replace: true, state: contentLocation.state },
+    );
+  }, [navigate, contentLocation, contentIndex]);
+  const onConversations = isConversationsPath(contentLocation.pathname);
   const [profileUserId, setProfileUserId] = useState<string | null>(null);
   // Landing straight on a page (a deep link, a refresh on /app/friends) should
   // show that page — the sidebar sheet is only the landing screen when the URL
@@ -166,6 +199,7 @@ function Shell() {
 
   return (
     <GlobalContextMenu onOpenProfile={setProfileUserId}>
+      <ContentLocationProvider value={contentLocation}>
       <SidebarProvider
         open={sidebarOpen}
         onOpenChange={setSidebarOpen}
@@ -190,7 +224,7 @@ function Shell() {
           showReturnToCall={!showStage}
         />
         <SidebarInset className="relative min-h-0 overflow-hidden bg-surface-panel [--surface-base:var(--color-surface-panel)] md:m-shell md:rounded-xl md:border md:border-border">
-          <Routes>
+          <Routes location={contentLocation}>
             <Route
               path="/app/conversations/:conversationId?"
               element={showStage ? (
@@ -210,8 +244,6 @@ function Shell() {
             />
             <Route path={ROUTES.friends} element={<FriendsPage onOpenProfile={setProfileUserId} />} />
             <Route path={ROUTES.requests} element={<RequestsRedirect />} />
-            <Route path="/admin/*" element={<Suspense fallback={<p className="p-6 text-label text-text-muted">Carregando…</p>}><AdminArea /></Suspense>} />
-            <Route path="/app/settings/:tab?" element={<SettingsPage onOpenProfile={setProfileUserId} />} />
             <Route path="*" element={<Navigate to={ROUTES.conversations} replace />} />
           </Routes>
           {inCall && <ParticipantAudioLayer participantIds={callIds} />}
@@ -242,6 +274,7 @@ function Shell() {
         />
         <TileMenu onOpenProfile={setProfileUserId} />
         <ProfileModal userId={profileUserId} onClose={() => setProfileUserId(null)} />
+        <AppModals modal={modal} onClose={closeModal} onOpenProfile={setProfileUserId} />
         <ChatSearchDialog
           open={searchOpen}
           onOpenChange={setSearchOpen}
@@ -249,6 +282,7 @@ function Shell() {
           activeConversationName={activeConversationName}
         />
       </SidebarProvider>
+      </ContentLocationProvider>
     </GlobalContextMenu>
   );
 }

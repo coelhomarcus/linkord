@@ -1,13 +1,14 @@
 import { ChatCircleIcon, SidebarSimpleIcon, UsersIcon } from '@phosphor-icons/react';
 import { useId } from 'react';
 import type { ReactNode } from 'react';
-import { Link, useLocation } from 'react-router';
+import { Link } from 'react-router';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 
 import { useSidebar } from '@/shared/ui/motion/sidebar-context';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
 import { ROUTES, isConversationsPath } from '@/shared/lib/routes';
 import { cn } from '@/shared/lib/utils';
+import { useContentLocation } from '@/shared/lib/contentLocation';
 import { SPRING_LAYOUT } from '@/shared/lib/ease';
 import { ActiveWash } from '@/shared/ui/motion/active-wash';
 import { useFriends } from '@/features/friends/FriendsContext';
@@ -106,7 +107,7 @@ export function AppNavigationRail({ className }: {
   className?: string;
 }) {
   const { pendingIncomingCount } = useFriends();
-  const { pathname } = useLocation();
+  const { pathname } = useContentLocation();
   const { isMobile, isOverlay, open: listOpen, openMobile, setOpenMobile, toggleSidebar } = useSidebar();
   const afterNavigate = () => { if (isOverlay) setOpenMobile(false); };
   // as a drawer the list is opened from here; as a column it can be hidden from its own header, so this is only the way back

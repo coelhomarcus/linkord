@@ -30,6 +30,16 @@ export const ROUTES = {
   settingsTab: (tab: SettingsTab) => `/app/settings/${tab}`,
 } as const;
 
+/** Settings and administration open as modals over the app: their URLs name
+ * the modal, and the page underneath stays the last real page. */
+export type ModalKind = 'settings' | 'admin';
+
+export function modalForPath(pathname: string): ModalKind | null {
+  if (pathname === ROUTES.settings || pathname.startsWith(`${ROUTES.settings}/`)) return 'settings';
+  if (pathname === '/admin' || pathname.startsWith('/admin/')) return 'admin';
+  return null;
+}
+
 export function friendsView(view: FriendsView, query?: string): string {
   const params = new URLSearchParams();
   if (view !== 'all') params.set('tab', view);
