@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderSocial } from '@tests/fixtures/socialFixture';
@@ -45,13 +45,14 @@ function renderSidebar(overrides: {
   onReturnToCall?: () => void;
   onOpenProfile?: (userId: string) => void;
   showReturnToCall?: boolean;
+  openMobile?: boolean;
 } = {}) {
   const dm = directConversation();
   const group = groupConversation();
   const onReturnToCall = overrides.onReturnToCall ?? vi.fn();
   const onOpenProfile = overrides.onOpenProfile ?? vi.fn();
   return renderSocial(
-    <SidebarProvider open onOpenChange={vi.fn()} openMobile={false} onOpenMobileChange={vi.fn()}>
+    <SidebarProvider open onOpenChange={vi.fn()} openMobile={overrides.openMobile ?? false} onOpenMobileChange={vi.fn()}>
       <ConversationSidebar onReturnToCall={onReturnToCall} onOpenProfile={onOpenProfile} showReturnToCall={overrides.showReturnToCall ?? true} mobileRail={null} />
     </SidebarProvider>,
     {
@@ -161,32 +162,35 @@ describe('ConversationSidebar — Amigos / Grupos tabs', () => {
   });
 });
 
-describe('ConversationSidebar — call dock', () => {
-  it('always shows the user dock, even without an active call', () => {
+/** Pretends the window is `width` wide for the `(max-width: Npx)` queries the sidebar reads. */
+function setViewport(width: number) {
+  window.matchMedia = ((query: string) => {
+    const max = /max-width:\s*(\d+)px/.exec(query);
+    return {
+      matches: max ? width <= Number(max[1]) : false, media: query, onchange: null,
+      addListener: () => {}, removeListener: () => {}, addEventListener: () => {}, removeEventListener: () => {}, dispatchEvent: () => false,
+    } as unknown as MediaQueryList;
+  }) as typeof window.matchMedia;
+}
+
+describe('ConversationSidebar — user dock', () => {
+  const originalMatchMedia = window.matchMedia;
+  afterEach(() => { window.matchMedia = originalMatchMedia; });
+
+  it('does not draw the dock in the column: from 768px it floats over the rail and the list, drawn by the shell', () => {
     renderSidebar();
-    expect(screen.getByRole('button', { name: 'Meu perfil' })).toHaveTextContent('Fulana');
-    expect(screen.queryByText('Em chamada')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Voltar à chamada' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Meu perfil' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Ajustes' })).not.toBeInTheDocument();
   });
 
-  it('opens the account profile from the dock', async () => {
-    const onOpenProfile = vi.fn();
-    renderSidebar({ onOpenProfile });
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Meu perfil' }));
-    expect(onOpenProfile).toHaveBeenCalledWith('me');
-  });
-
-  it('shows the active call on the dock and returns to the stage from it', async () => {
+  it('on a phone the drawer carries the dock, with the account, settings and the active call', async () => {
+    setViewport(390);
     const onReturnToCall = vi.fn();
-    renderSidebar({ activeCallConversationId: 'conv-group', onReturnToCall });
+    renderSidebar({ openMobile: true, activeCallConversationId: 'conv-group', onReturnToCall });
+    expect(screen.getByRole('button', { name: 'Meu perfil' })).toHaveTextContent('Fulana');
+    expect(screen.getByRole('link', { name: 'Ajustes' })).toHaveAttribute('href', '/app/settings');
     expect(screen.getByText('Em chamada')).toBeInTheDocument();
     await userEvent.setup().click(screen.getByRole('button', { name: 'Voltar à chamada' }));
     expect(onReturnToCall).toHaveBeenCalledTimes(1);
-  });
-
-  it('does not offer Voltar à chamada while the stage is already in focus', () => {
-    renderSidebar({ activeCallConversationId: 'conv-group', showReturnToCall: false });
-    expect(screen.getByText('Em chamada')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Voltar à chamada' })).not.toBeInTheDocument();
   });
 });

@@ -57,7 +57,7 @@ describe('AppNavigationRail', () => {
     expect(nav).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Conversas' })).toHaveAttribute('href', '/app/conversations');
     expect(screen.getByRole('link', { name: 'Amigos' })).toHaveAttribute('href', '/app/friends');
-    expect(screen.getByRole('link', { name: 'Ajustes' })).toHaveAttribute('href', '/app/settings');
+    expect(screen.queryByRole('link', { name: 'Ajustes' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Meu perfil' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /Solicitações/ })).not.toBeInTheDocument();
   });
@@ -77,16 +77,15 @@ describe('AppNavigationRail', () => {
   it.each([
     ['/app/conversations/abc', 'Conversas'],
     ['/app/friends?tab=pending', 'Amigos'],
-    ['/app/settings/av', 'Ajustes'],
   ])('at %s only "%s" is marked as the current page', (path, current) => {
     renderRail(path);
     const marked = screen.getAllByRole('link').filter((link) => link.getAttribute('aria-current') === 'page').map((link) => link.getAttribute('aria-label'));
     expect(marked).toEqual([current]);
   });
 
-  it('/admin/users does not mark Ajustes as the current page (separate categories)', () => {
-    renderRail('/admin/users');
-    expect(screen.getByRole('link', { name: 'Ajustes' })).not.toHaveAttribute('aria-current');
+  it.each(['/app/settings/av', '/admin/users'])('at %s no rail item is marked as the current page', (path) => {
+    renderRail(path);
+    expect(screen.getAllByRole('link').filter((link) => link.getAttribute('aria-current') === 'page')).toEqual([]);
   });
 
   it('the Amigos badge sums requests and received invitations, and the accessible name says what counts', async () => {
@@ -118,24 +117,10 @@ describe('AppNavigationRail', () => {
     expect(screen.queryByRole('button', { name: /Voltar à chamada/ })).not.toBeInTheDocument();
   });
 
-  it('when not an admin, no admin area shortcut', () => {
-    renderRail();
+  it('has no settings or administration shortcut, not even for an admin (both live in the user dock and in settings)', () => {
+    renderRail('/app/conversations', true, false, { state: { ...me, me: { ...me.me, role: 'admin' as const } } });
+    expect(screen.queryByRole('link', { name: 'Ajustes' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Área administrativa' })).not.toBeInTheDocument();
-  });
-});
-
-describe('AppNavigationRail — admin', () => {
-  const admin = { ...me, me: { ...me.me, role: 'admin' as const } };
-
-  it('an admin sees the admin area shortcut, going straight to /admin/users', () => {
-    renderRail('/app/conversations', true, false, { state: admin });
-    expect(screen.getByRole('link', { name: 'Área administrativa' })).toHaveAttribute('href', '/admin/users');
-  });
-
-  it('at /admin/users, only Area administrativa is marked (not Ajustes)', () => {
-    renderRail('/admin/users', true, false, { state: admin });
-    const marked = screen.getAllByRole('link').filter((link) => link.getAttribute('aria-current') === 'page').map((link) => link.getAttribute('aria-label'));
-    expect(marked).toEqual(['Área administrativa']);
   });
 });
 

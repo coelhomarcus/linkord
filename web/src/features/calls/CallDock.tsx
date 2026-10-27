@@ -1,4 +1,5 @@
-import { MicrophoneIcon, MicrophoneSlashIcon, MonitorIcon, PhoneIcon, PhoneSlashIcon, SpeakerHighIcon, SpeakerSlashIcon, VideoCameraIcon, VideoCameraSlashIcon } from '@phosphor-icons/react';
+import { GearIcon, MicrophoneIcon, MicrophoneSlashIcon, MonitorIcon, PhoneIcon, PhoneSlashIcon, SpeakerHighIcon, SpeakerSlashIcon, VideoCameraIcon, VideoCameraSlashIcon } from '@phosphor-icons/react';
+import { Link, useLocation } from 'react-router';
 import { iconWeight } from '@/shared/ui/icons';
 import { Avatar } from '@/shared/Avatar';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
@@ -6,6 +7,7 @@ import { useRoom } from '@/state/RoomContext';
 import { conversationTitle } from '@/features/conversations/conversationUtils';
 import { useParticipantMedia } from './useLiveKitTrack';
 import { cn } from '@/shared/lib/utils';
+import { ROUTES } from '@/shared/lib/routes';
 
 const MIC_PROBLEM_LABEL = {
   'not-found': 'Nenhum microfone encontrado',
@@ -22,16 +24,24 @@ const CALL_JOIN = 'flex h-8 w-full items-center justify-center gap-1.5 rounded-m
 interface CallDockProps {
   onReturnToCall: () => void;
   onOpenProfile: (userId: string) => void;
-  /** False while the stage is already on screen — no point offering a way back. */
+  /** False while the stage is already on screen, no point offering a way back. */
   showReturnToCall: boolean;
+  /** wide: one row with the name, across the rail and the list; compact: a
+   * column of icons, for when only the rail is on screen */
+  layout?: 'wide' | 'compact';
+  /** a navigation from the dock (settings) — the drawer closes itself on it */
+  onNavigate?: () => void;
 }
 
-export function CallDock({ onReturnToCall, onOpenProfile, showReturnToCall }: CallDockProps) {
+export function CallDock({ onReturnToCall, onOpenProfile, showReturnToCall, layout = 'wide', onNavigate }: CallDockProps) {
   const {
     state, conversations, allUsers, activeCallConversationId,
     startCamera, stopCamera, startSharing, stopSharing, activateMic, toggleMicMuted,
     deafened, toggleDeafened, leaveCall, preferMuted, setPreferMuted,
   } = useRoom();
+  const { pathname } = useLocation();
+  const compact = layout === 'compact';
+  const onSettings = pathname.startsWith(ROUTES.settings);
   const inCall = !!activeCallConversationId;
   const myMedia = useParticipantMedia(state.me.id ?? '');
   const cameraOn = state.me.cameraOn;
@@ -60,43 +70,69 @@ export function CallDock({ onReturnToCall, onOpenProfile, showReturnToCall }: Ca
     void activateMic();
   }
 
+  const returnButton = inCall && showReturnToCall && (
+    compact ? (
+      <Tooltip>
+        <TooltipTrigger onClick={onReturnToCall} aria-label="Voltar à chamada" className={cn(DOCK_BUTTON, DOCK_GREEN)}>
+          <PhoneIcon size={20} weight="fill" />
+        </TooltipTrigger>
+        <TooltipContent side="right">Voltar à chamada</TooltipContent>
+      </Tooltip>
+    ) : (
+      <button type="button" onClick={onReturnToCall} className={CALL_JOIN}>
+        <PhoneIcon size={20} weight="fill" />
+        Voltar à chamada
+      </button>
+    )
+  );
+  const leaveButton = (
+    <Tooltip>
+      <TooltipTrigger
+        onClick={() => void leaveCall()}
+        aria-label="Sair da chamada"
+        className={cn(DOCK_BUTTON, 'bg-red text-white hover:bg-red-hover')}
+      >
+        <PhoneSlashIcon size={20} weight="fill" />
+      </TooltipTrigger>
+      <TooltipContent side={compact ? 'right' : 'top'}>Sair da chamada</TooltipContent>
+    </Tooltip>
+  );
+  const tipSide = compact ? 'right' : 'top';
+
   return (
-    <div className="flex flex-none flex-col gap-2 border-t border-border pt-3">
-      {inCall && (
-        <div className="flex flex-col gap-2 px-1">
-          {showReturnToCall && (
-            <button type="button" onClick={onReturnToCall} className={CALL_JOIN}>
-              <PhoneIcon size={20} weight="fill" />
-              Voltar à chamada
-            </button>
-          )}
+    <div className={cn(
+      'flex flex-col gap-2 rounded-xl border border-border bg-bg-secondary p-1.5 shadow-panel',
+      compact && 'items-center',
+    )}>
+      {inCall && (compact ? (
+        <div className="flex flex-col items-center gap-1">
+          {returnButton}
+          {leaveButton}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2 px-1 pt-0.5">
+          {returnButton}
           <div className="flex items-center gap-2">
             <div className="min-w-0 flex-1">
               <p className="text-caption font-semibold text-green">Em chamada</p>
               <p className="truncate text-label font-semibold text-text-primary">{title}</p>
             </div>
-            <Tooltip>
-              <TooltipTrigger
-                onClick={() => void leaveCall()}
-                aria-label="Sair da chamada"
-                className={cn(DOCK_BUTTON, 'bg-red text-white hover:bg-red-hover')}
-              >
-                <PhoneSlashIcon size={20} weight="fill" />
-              </TooltipTrigger>
-              <TooltipContent>Sair da chamada</TooltipContent>
-            </Tooltip>
+            {leaveButton}
           </div>
         </div>
-      )}
-      <div className="flex items-center gap-1 px-1">
+      ))}
+      <div className={cn('flex items-center gap-1', compact ? 'flex-col' : 'px-0.5')}>
         <button
           type="button"
           onClick={() => { if (state.me.userId) onOpenProfile(state.me.userId); }}
           aria-label="Meu perfil"
-          className="flex min-w-0 flex-1 items-center gap-2 rounded-md px-1 py-0.5 text-left transition-colors hover:bg-fill-hover"
+          className={cn(
+            'flex items-center gap-2 rounded-md text-left transition-colors hover:bg-fill-hover',
+            compact ? 'p-0.5' : 'min-w-0 flex-1 px-1 py-0.5',
+          )}
         >
           <Avatar id={state.me.userId ?? state.me.id ?? 'me'} name={state.me.displayName} avatar={state.me.avatar} avatarColor={state.me.avatarColor} size={32} />
-          <span className="min-w-0 truncate text-label font-semibold text-text-primary">{state.me.displayName}</span>
+          {!compact && <span className="min-w-0 truncate text-label font-semibold text-text-primary">{state.me.displayName}</span>}
         </button>
         <Tooltip>
           <TooltipTrigger
@@ -106,7 +142,7 @@ export function CallDock({ onReturnToCall, onOpenProfile, showReturnToCall }: Ca
           >
             {micMuted ? <MicrophoneSlashIcon size={20} weight={iconWeight(true)} /> : <MicrophoneIcon size={20} />}
           </TooltipTrigger>
-          <TooltipContent>{micLabel}</TooltipContent>
+          <TooltipContent side={tipSide}>{micLabel}</TooltipContent>
         </Tooltip>
         <Tooltip>
           <TooltipTrigger
@@ -116,7 +152,7 @@ export function CallDock({ onReturnToCall, onOpenProfile, showReturnToCall }: Ca
           >
             {deafened ? <SpeakerSlashIcon size={20} weight={iconWeight(true)} /> : <SpeakerHighIcon size={20} />}
           </TooltipTrigger>
-          <TooltipContent>{deafened ? 'Voltar a ouvir' : 'Parar de ouvir'}</TooltipContent>
+          <TooltipContent side={tipSide}>{deafened ? 'Voltar a ouvir' : 'Parar de ouvir'}</TooltipContent>
         </Tooltip>
         {inCall && (
           <>
@@ -128,7 +164,7 @@ export function CallDock({ onReturnToCall, onOpenProfile, showReturnToCall }: Ca
               >
                 {cameraOn ? <VideoCameraIcon size={20} weight={iconWeight(true)} /> : <VideoCameraSlashIcon size={20} />}
               </TooltipTrigger>
-              <TooltipContent>{cameraOn ? 'Parar câmera' : 'Ligar câmera'}</TooltipContent>
+              <TooltipContent side={tipSide}>{cameraOn ? 'Parar câmera' : 'Ligar câmera'}</TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger
@@ -138,10 +174,19 @@ export function CallDock({ onReturnToCall, onOpenProfile, showReturnToCall }: Ca
               >
                 <MonitorIcon size={20} weight={iconWeight(sharing)} />
               </TooltipTrigger>
-              <TooltipContent>{sharing ? 'Parar compartilhamento' : 'Compartilhar tela'}</TooltipContent>
+              <TooltipContent side={tipSide}>{sharing ? 'Parar compartilhamento' : 'Compartilhar tela'}</TooltipContent>
             </Tooltip>
           </>
         )}
+        <Tooltip>
+          <TooltipTrigger
+            render={<Link to={ROUTES.settings} onClick={onNavigate} aria-current={onSettings ? 'page' : undefined} aria-label="Ajustes" />}
+            className={cn(DOCK_BUTTON, onSettings ? 'bg-fill-active text-text-primary' : DOCK_NEUTRAL)}
+          >
+            <GearIcon size={20} weight={iconWeight(onSettings)} aria-hidden />
+          </TooltipTrigger>
+          <TooltipContent side={tipSide}>Ajustes</TooltipContent>
+        </Tooltip>
       </div>
     </div>
   );
