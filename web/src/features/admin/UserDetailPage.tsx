@@ -99,11 +99,11 @@ function UserDetail({ id }: { id: string }) {
       {tab === 'overview' && (
         <AdminSection title="Conta">
           <AdminFields>
-            <AdminFieldRow label="E-mail">{user.email ?? '—'}</AdminFieldRow>
+            <AdminFieldRow label="E-mail">{user.email ?? '-'}</AdminFieldRow>
             <AdminFieldRow label="Criada em">{formatWhen(user.createdAt)}</AdminFieldRow>
             <AdminFieldRow label="Última vez online">{user.online ? 'Online agora' : formatWhen(user.lastSeenAt)}</AdminFieldRow>
             <AdminFieldRow label="Situação">
-              {suspended ? `Suspensa em ${formatWhen(user.statusChangedAt)} — “${user.statusReason}”` : 'Ativa'}
+              {suspended ? `Suspensa em ${formatWhen(user.statusChangedAt)}: “${user.statusReason}”` : 'Ativa'}
             </AdminFieldRow>
             <AdminFieldRow label="Papel">{isAdmin ? 'Administradora' : 'Conta comum'}</AdminFieldRow>
             <AdminFieldRow label="Armazenamento atribuível">{formatFileSize(storage.bytes)} em {storage.files} arquivo(s)</AdminFieldRow>
@@ -136,7 +136,7 @@ function UserDetail({ id }: { id: string }) {
           <AdminSection title="Acesso" description="O que a conta consegue fazer na instância. Toda ação pede um motivo e fica registrada.">
             <div className="flex flex-col divide-y divide-border-subtle">
               {suspended ? (
-                <AdminActionRow title="Conta suspensa" description={`Suspensa em ${formatWhen(user.statusChangedAt)} — “${user.statusReason}”. Não consegue entrar.`}>
+                <AdminActionRow title="Conta suspensa" description={`Suspensa em ${formatWhen(user.statusChangedAt)}: “${user.statusReason}”. Não consegue entrar.`}>
                   <Button type="button" size="sm" onClick={() => setDialog('reactivate')}>Reativar conta</Button>
                 </AdminActionRow>
               ) : (

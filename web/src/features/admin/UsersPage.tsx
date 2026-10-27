@@ -92,7 +92,7 @@ export function UsersPage() {
           </>
         )}
         advancedActive={filters.from !== '' || filters.to !== ''}
-        summary={list.status === 'ready' && list.items.length > 0 ? `${list.items.length} ${list.items.length === 1 ? 'conta carregada' : 'contas carregadas'}${list.hasMore ? ' — há mais resultados' : ''}` : undefined}
+        summary={list.status === 'ready' && list.items.length > 0 ? `${list.items.length} ${list.items.length === 1 ? 'conta carregada' : 'contas carregadas'}${list.hasMore ? ' (há mais resultados)' : ''}` : undefined}
         onClear={active ? clear : undefined}
       />
       <ListChrome list={list} empty="Nenhuma conta encontrada.">

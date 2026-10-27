@@ -56,7 +56,7 @@ describe('ReportsPage', () => {
     mocked.fetchAdminReports.mockResolvedValue({ items: [row({ assignee: 'lune', status: 'reviewing' }), row({ id: 'r2', assignee: null })], nextCursor: null });
     renderAdmin(<ReportsPage />, { path: '/admin/reports?status=reviewing', pattern: '/admin/reports' });
     expect(await screen.findByText('@lune')).toBeInTheDocument();
-    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.getByText('-')).toBeInTheDocument();
   });
 
   it('compact: stacked rows only', async () => {

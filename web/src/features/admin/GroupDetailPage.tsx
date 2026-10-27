@@ -116,10 +116,10 @@ function GroupDetail({ id }: { id: string }) {
             <AdminFieldRow label="Dono atual">
               {group.ownerId ? <Link to={`/admin/users/${group.ownerId}`} className="hover:underline">@{group.ownerUsername}</Link> : 'nenhum (grupo sem dono)'}
             </AdminFieldRow>
-            <AdminFieldRow label="Situação">{suspended ? `Suspenso — “${group.statusReason}”` : 'Ativo'}</AdminFieldRow>
+            <AdminFieldRow label="Situação">{suspended ? `Suspenso: “${group.statusReason}”` : 'Ativo'}</AdminFieldRow>
             <AdminFieldRow label="Criado em">{formatWhen(group.createdAt)}</AdminFieldRow>
             <AdminFieldRow label="Membros">{group.memberCount}</AdminFieldRow>
-            <AdminFieldRow label="Última mensagem">{group.lastMessageAt ? formatWhen(new Date(group.lastMessageAt).toISOString()) : '—'}</AdminFieldRow>
+            <AdminFieldRow label="Última mensagem">{group.lastMessageAt ? formatWhen(new Date(group.lastMessageAt).toISOString()) : '-'}</AdminFieldRow>
           </AdminFields>
         </AdminSection>
       )}

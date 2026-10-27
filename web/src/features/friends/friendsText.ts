@@ -22,7 +22,7 @@ export function describeSendError(err: unknown): string {
     if (err.code === ERROR_CODES.user_unavailable) return 'Não foi possível enviar a solicitação. Confira o nome de usuário.';
     if (err.code === ERROR_CODES.cooldown) {
       const when = err.retryAfter ? formatRetryAfter(err.retryAfter) : '';
-      return when ? `Aguarde para tentar de novo — disponível a partir de ${when}.` : 'Aguarde um pouco antes de tentar de novo.';
+      return when ? `Aguarde para tentar de novo. Disponível a partir de ${when}.` : 'Aguarde um pouco antes de tentar de novo.';
     }
     if (err.code === ERROR_CODES.rate_limited || err.code === ERROR_CODES.quota_exceeded) return err.message;
   }
@@ -33,7 +33,7 @@ export function describeOutcome(outcome: FriendRequestOutcome, username: string)
   switch (outcome) {
     case 'created': return { text: `Solicitação enviada para @${username}.`, tone: 'success' };
     case 'already_pending': return { text: `Você já enviou uma solicitação para @${username}.`, tone: 'info' };
-    case 'pending_received': return { text: `@${username} já te enviou uma solicitação — aceite em Solicitações.`, tone: 'info' };
+    case 'pending_received': return { text: `@${username} já te enviou uma solicitação. Aceite em Solicitações.`, tone: 'info' };
     case 'already_friends': return { text: `Você e @${username} já são amigos.`, tone: 'info' };
   }
 }

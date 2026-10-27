@@ -86,8 +86,8 @@ function ReportDetail({ id }: { id: string }) {
       />
 
       {report.targetType === 'message' ? (
-        <AdminSection title="Evidência" description="O texto como estava quando a denúncia foi enviada — não é a conversa atual.">
-          <p className="whitespace-pre-wrap break-words rounded-md bg-black/30 p-3 text-label text-text-primary">{snapshotText ?? '—'}</p>
+        <AdminSection title="Evidência" description="O texto como estava quando a denúncia foi enviada. Não é a conversa atual.">
+          <p className="whitespace-pre-wrap break-words rounded-md bg-black/30 p-3 text-label text-text-primary">{snapshotText ?? '-'}</p>
           {snapshot.truncated === true && (
             <p className="text-caption text-yellow">O texto foi truncado ao ser guardado; o original completo não está disponível aqui.</p>
           )}
@@ -95,7 +95,7 @@ function ReportDetail({ id }: { id: string }) {
             <AdminFieldRow label="Autor">
               {authorId ? <Link to={`/admin/users/${authorId}`} className="hover:underline">@{String(snapshot.authorUsername ?? authorId)}</Link> : 'conta apagada'}
             </AdminFieldRow>
-            <AdminFieldRow label="Conversa">{String(snapshot.conversationTitle ?? '—')}</AdminFieldRow>
+            <AdminFieldRow label="Conversa">{String(snapshot.conversationTitle ?? '-')}</AdminFieldRow>
             <AdminFieldRow label="Enviada em">{formatWhen(String(snapshot.sentAt ?? ''))}</AdminFieldRow>
           </AdminFields>
         </AdminSection>
@@ -103,7 +103,7 @@ function ReportDetail({ id }: { id: string }) {
         <AdminSection title="Alvo" description="Esta denúncia não guarda conteúdo: o alvo é identificado pelo nome e pelo ID.">
           <AdminFields>
             <AdminFieldRow label="Tipo">{REPORT_TARGET_LABEL[report.targetType]}</AdminFieldRow>
-            <AdminFieldRow label="Nome">{report.targetLabel || '—'}</AdminFieldRow>
+            <AdminFieldRow label="Nome">{report.targetLabel || '-'}</AdminFieldRow>
             <AdminFieldRow label="ID"><span className="break-all font-mono text-caption">{report.targetId}</span></AdminFieldRow>
             {targetHref && <AdminFieldRow label="Administração"><AdminTextLink to={targetHref}>Abrir no admin</AdminTextLink></AdminFieldRow>}
           </AdminFields>
@@ -115,7 +115,7 @@ function ReportDetail({ id }: { id: string }) {
           <AdminFieldRow label="Relato">{report.details ? <span className="whitespace-pre-wrap">{report.details}</span> : 'Sem relato.'}</AdminFieldRow>
           <AdminFieldRow label="Denunciante (só a administração vê)">{report.reporter ? `@${report.reporter}` : 'conta apagada'}</AdminFieldRow>
           <AdminFieldRow label="Enviada em">{formatWhen(report.createdAt)}</AdminFieldRow>
-          <AdminFieldRow label="Responsável">{report.assignee ? `@${report.assignee}` : '—'}</AdminFieldRow>
+          <AdminFieldRow label="Responsável">{report.assignee ? `@${report.assignee}` : '-'}</AdminFieldRow>
         </AdminFields>
       </AdminSection>
 

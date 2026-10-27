@@ -104,7 +104,7 @@ export function SystemPage() {
         )}
         <AdminFields>
           <AdminFieldRow label="Conexões ao vivo">{connections.live} de {connections.max} (até {connections.perAccountMax} por conta)</AdminFieldRow>
-          <AdminFieldRow label="Contas online">{connections.onlineAccounts} <span className="text-text-muted">— pessoas, não conexões: uma conta pode ter várias abas</span></AdminFieldRow>
+          <AdminFieldRow label="Contas online">{connections.onlineAccounts} <span className="text-text-muted">(pessoas, não conexões: uma conta pode ter várias abas)</span></AdminFieldRow>
         </AdminFields>
       </AdminSection>
 
@@ -123,13 +123,13 @@ export function SystemPage() {
         {signupsPaused && <p role="alert" className="text-label text-red-text">Cadastros pausados: as {accounts.newPerHourCap} novas contas permitidas por hora já foram criadas.</p>}
       </AdminSection>
 
-      <AdminSection id="services" title="Serviços" description="O que está configurado e o que está represado — não é um teste de saúde.">
+      <AdminSection id="services" title="Serviços" description="O que está configurado e o que está represado. Não é um teste de saúde.">
         <AdminFields>
           <AdminFieldRow label="Chamadas (LiveKit)">
-            {info.livekit.configured ? 'Configurado' : 'Não configurado'} <span className="text-text-muted">— a configuração existe; o painel não testa a conexão</span>
+            {info.livekit.configured ? 'Configurado' : 'Não configurado'} <span className="text-text-muted">(a configuração existe; o painel não testa a conexão)</span>
           </AdminFieldRow>
           <AdminFieldRow label="Fila de eventos (outbox)">{outbox.pending} pendente(s), {outbox.failed} com falha</AdminFieldRow>
-          <AdminFieldRow label="Notificações não lidas">{info.notifications.unread} <span className="text-text-muted">— uma contagem de uso, não de problemas</span></AdminFieldRow>
+          <AdminFieldRow label="Notificações não lidas">{info.notifications.unread} <span className="text-text-muted">(uma contagem de uso, não de problemas)</span></AdminFieldRow>
         </AdminFields>
         {outbox.failed > 0 && <p role="alert" className="text-label text-red-text">Há eventos que esgotaram as tentativas de entrega.</p>}
       </AdminSection>
@@ -145,7 +145,7 @@ export function SystemPage() {
             <p className="text-label text-text-muted">Procura os órfãos sem apagar nada. Percorre o disco, então rode só quando precisar.</p>
             <div><Button type="button" size="sm" variant="secondary" disabled={previewing} onClick={() => void runPreview()}>{previewing ? 'Verificando…' : 'Verificar órfãos'}</Button></div>
             {previewError && <p role="alert" className="text-label text-red-text">{previewError}</p>}
-            {preview && <SweepCard title="Prévia — nada foi apagado" result={preview} />}
+            {preview && <SweepCard title="Prévia: nada foi apagado" result={preview} />}
           </li>
           <li className="flex flex-col gap-2">
             <p className="text-body font-medium text-text-primary">2. Revisar e apagar</p>
@@ -170,7 +170,7 @@ export function SystemPage() {
       </AdminSection>
 
       <ReasonDialog open={confirmOpen} onOpenChange={setConfirmOpen} title="Apagar arquivos órfãos"
-        description={`A prévia de ${preview ? formatWhen(preview.at) : '—'} achou ${preview?.orphanCount ?? 0} arquivo(s) (${formatFileSize(preview?.orphanBytes ?? 0)}). Ao confirmar, o servidor faz uma nova varredura e apaga o que encontrar — não há como desfazer.`}
+        description={`A prévia de ${preview ? formatWhen(preview.at) : '-'} achou ${preview?.orphanCount ?? 0} arquivo(s) (${formatFileSize(preview?.orphanBytes ?? 0)}). Ao confirmar, o servidor faz uma nova varredura e apaga o que encontrar. Não há como desfazer.`}
         confirmLabel="Apagar" destructive
         onSubmit={async (reason) => {
           const { result } = await sweepOrphans({ dryRun: false, reason });

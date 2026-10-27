@@ -27,8 +27,8 @@ export function describeAdminError(err: unknown): string {
       case ERROR_CODES.already_admin: return 'Essa conta já é administradora.';
       case ERROR_CODES.not_admin: return 'Essa conta não é administradora.';
       case ERROR_CODES.target_inactive: return 'Só uma conta ativa pode virar administradora.';
-      case ERROR_CODES.already_suspended: return 'Já estava suspenso — o estado mudou antes da sua ação. Os dados foram atualizados.';
-      case ERROR_CODES.not_suspended: return 'Já estava ativo — o estado mudou antes da sua ação. Os dados foram atualizados.';
+      case ERROR_CODES.already_suspended: return 'Já estava suspenso: o estado mudou antes da sua ação. Os dados foram atualizados.';
+      case ERROR_CODES.not_suspended: return 'Já estava ativo: o estado mudou antes da sua ação. Os dados foram atualizados.';
       case ERROR_CODES.already_closed: return 'Essa denúncia já foi encerrada por outra pessoa. Os dados foram atualizados.';
       case ERROR_CODES.not_open: return 'Essa denúncia já está em análise. Os dados foram atualizados.';
       case ERROR_CODES.invalid_action: return 'Essa ação não se aplica a esse tipo de denúncia.';

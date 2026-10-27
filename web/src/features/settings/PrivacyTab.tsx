@@ -41,7 +41,7 @@ export function PrivacyTab({ onOpenProfile }: { onOpenProfile: (userId: string) 
     <SettingsSection
       id="blocked"
       title="Pessoas bloqueadas"
-      description="Quem você bloqueia não consegue te enviar mensagens nem te ligar em conversa privada. Desbloquear não devolve a amizade — vocês precisam se adicionar de novo."
+      description="Quem você bloqueia não consegue te enviar mensagens nem te ligar em conversa privada. Desbloquear não devolve a amizade: vocês precisam se adicionar de novo."
     >
       <ActionFeedback feedback={feedback} onClear={clearFeedback} />
       {list.status === 'loading' && <p className="py-4 text-center text-label text-text-muted">Carregando…</p>}

@@ -55,7 +55,7 @@ function Actor({ row }: { row: AuditRow }) {
 
 function Target({ row, inline }: { row: AuditRow; inline?: boolean }) {
   const href = entityHref(row.targetType, row.targetId, row.action);
-  const label = row.targetLabel || row.targetId || '—';
+  const label = row.targetLabel || row.targetId || '-';
   const name = href ? <Link to={href} className="hover:underline">{label}</Link> : <span>{label}</span>;
   if (inline) return <span className="min-w-0 break-words">{TARGET_TYPE_LABEL[row.targetType] ?? row.targetType}: {name}</span>;
   return (
@@ -164,7 +164,7 @@ export function AuditPage() {
           </>
         )}
         advancedActive={from !== '' || to !== ''}
-        summary={list.status === 'ready' && list.items.length > 0 ? `${list.items.length} ${list.items.length === 1 ? 'registro carregado' : 'registros carregados'}${list.hasMore ? ' — há mais registros' : ''}` : undefined}
+        summary={list.status === 'ready' && list.items.length > 0 ? `${list.items.length} ${list.items.length === 1 ? 'registro carregado' : 'registros carregados'}${list.hasMore ? ' (há mais registros)' : ''}` : undefined}
         onClear={active ? clear : undefined}
       />
       <ListChrome list={list} empty="Nenhum registro para esses filtros.">

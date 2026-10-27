@@ -21,7 +21,7 @@ type Primitive = string | number | boolean;
 const isPrimitive = (value: unknown): value is Primitive => ['string', 'number', 'boolean'].includes(typeof value);
 
 function renderValue(key: string, value: Primitive | Primitive[]): ReactNode {
-  if (Array.isArray(value)) return value.length === 0 ? '—' : <span className="break-all">{value.join(', ')}</span>;
+  if (Array.isArray(value)) return value.length === 0 ? '-' : <span className="break-all">{value.join(', ')}</span>;
   if (key === 'resolution' && typeof value === 'string') return REPORT_RESOLUTION_LABEL[value] ?? value;
   if (key === 'orphanBytes' && typeof value === 'number') return formatFileSize(value);
   if (typeof value === 'boolean') return value ? 'sim' : 'não';
@@ -62,10 +62,10 @@ export function AuditRowDetails({ row }: { row: AuditRow }) {
   return (
     <div className="flex flex-col gap-2">
       <AdminFields>
-        <AdminFieldRow label="Motivo">{row.reason || '—'}</AdminFieldRow>
+        <AdminFieldRow label="Motivo">{row.reason || '-'}</AdminFieldRow>
         <AdminFieldRow label="Código da ação"><span className="font-mono text-caption">{row.action}</span>{ACTION_LABELS[row.action] ? '' : ' (sem rótulo conhecido)'}</AdminFieldRow>
-        <AdminFieldRow label="ID do alvo"><span className="break-all font-mono text-caption">{row.targetId || '—'}</span></AdminFieldRow>
-        <AdminFieldRow label="ID da requisição"><span className="break-all font-mono text-caption">{row.requestId || '—'}</span></AdminFieldRow>
+        <AdminFieldRow label="ID do alvo"><span className="break-all font-mono text-caption">{row.targetId || '-'}</span></AdminFieldRow>
+        <AdminFieldRow label="ID da requisição"><span className="break-all font-mono text-caption">{row.requestId || '-'}</span></AdminFieldRow>
         {pairs.map((pair) => <AdminFieldRow key={pair.key} label={pair.label}>{pair.value}</AdminFieldRow>)}
       </AdminFields>
       {rest && <RawJson value={rest} />}

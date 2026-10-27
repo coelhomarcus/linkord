@@ -40,7 +40,7 @@ describe('CallControlBar', () => {
   it('with no mic connected, warns on the button and with a notice that only disappears when dismissed', () => {
     renderWithRoom(<CallControlBar />, { state: { ...initialRoomState, micProblem: 'not-found' } });
     expect(screen.getByLabelText('Nenhum microfone encontrado')).toBeInTheDocument();
-    expect(screen.getByRole('status')).toHaveTextContent('conecte um microfone');
+    expect(screen.getByRole('status')).toHaveTextContent('Conecte um microfone');
     fireEvent.click(screen.getByLabelText('Dispensar aviso'));
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
     // the button keeps saying it even after the notice is dismissed

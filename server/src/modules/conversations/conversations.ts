@@ -192,7 +192,7 @@ async function handleGroupUpdate(socket: AppSocket, msg: { conversationId?: stri
  * client that still sends this gets a clear refusal instead of silence —
  * nothing here writes to conversation_members. */
 async function handleGroupMembersAdd(socket: AppSocket): Promise<void> {
-  sendSocketError(socket, ERROR_CODES.forbidden, 'Convide amigos para o grupo — eles entram ao aceitar o convite.');
+  sendSocketError(socket, ERROR_CODES.forbidden, 'Convide amigos para o grupo. Eles entram ao aceitar o convite.');
 }
 
 /** Owner-only. Hands the group to an existing member and demotes the

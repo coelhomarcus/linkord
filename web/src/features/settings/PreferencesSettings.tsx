@@ -46,7 +46,7 @@ export function PreferencesSettings() {
       </SettingsSection>
 
       <SettingsSection id="image-uploads" title="Envio de imagens">
-        <SettingsRow label="Compactar imagens por padrão" description="Reduz o tamanho antes de enviar. Vale para novos anexos a partir de agora — um que você já preparou não é reprocessado.">
+        <SettingsRow label="Compactar imagens por padrão" description="Reduz o tamanho antes de enviar. Vale para novos anexos a partir de agora. Um que você já preparou não é reprocessado.">
           <Switch checked={compressImagesDefault} onCheckedChange={setCompressImagesDefault} aria-label="Compactar imagens por padrão" />
         </SettingsRow>
       </SettingsSection>

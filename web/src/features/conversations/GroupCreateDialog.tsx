@@ -84,7 +84,7 @@ export function GroupCreateDialog({ open, onOpenChange, onCreated }: GroupCreate
             <p className="text-label text-text-secondary">O grupo foi criado, mas alguns convites não foram enviados:</p>
             <ul className="flex flex-col gap-1 text-label text-text-muted">
               {failures.map(({ user, text }) => (
-                <li key={user.id}><span className="font-medium text-text-secondary">{user.displayName}</span> — {text}</li>
+                <li key={user.id}><span className="font-medium text-text-secondary">{user.displayName}</span>: {text}</li>
               ))}
             </ul>
           </div>

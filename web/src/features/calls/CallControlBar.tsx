@@ -24,9 +24,9 @@ const MIC_PROBLEM_LABEL = {
 } as const;
 
 const MIC_PROBLEM_NOTICE = {
-  'not-found': 'Nenhum microfone encontrado. Você está na chamada, mas ninguém te ouve — conecte um microfone e ele será ativado sozinho.',
-  denied: 'O navegador bloqueou o microfone. Você está na chamada, mas ninguém te ouve — libere o microfone nas permissões do site e clique no botão do microfone.',
-  unavailable: 'Não foi possível iniciar o microfone — ele pode estar em uso por outro aplicativo. Você está na chamada, mas ninguém te ouve; clique no botão do microfone para tentar de novo.',
+  'not-found': 'Nenhum microfone encontrado. Você está na chamada, mas ninguém te ouve. Conecte um microfone e ele será ativado sozinho.',
+  denied: 'O navegador bloqueou o microfone. Você está na chamada, mas ninguém te ouve. Libere o microfone nas permissões do site e clique no botão do microfone.',
+  unavailable: 'Não foi possível iniciar o microfone. Ele pode estar em uso por outro aplicativo. Você está na chamada, mas ninguém te ouve; clique no botão do microfone para tentar de novo.',
 } as const;
 
 // The bar is intentionally theme-independent (black material, white-based
