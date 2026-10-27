@@ -5,7 +5,7 @@ export type ColorThemeId = (typeof COLOR_THEME_IDS)[number];
 
 export const COLOR_THEME_LABELS: Record<ColorThemeId, string> = {
   linkord: 'Padrão',
-  whatsapp: 'Meia-noite',
+  whatsapp: 'Esmeralda',
   discord: 'Grafite',
 };
 
