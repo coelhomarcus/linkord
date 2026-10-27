@@ -6,13 +6,13 @@
     <title>Linkord</title>
     <meta name="description" content="Linkord: compartilhamento de tela e chat em tempo real, sem cadastro e sem link." />
     <meta name="robots" content="noindex" />
-    <meta name="theme-color" content="#0d0d0f" />
+    <meta name="theme-color" content="#000000" />
     <script>
       (function () {
         var key = 'linkord.colorTheme';
         var raw = localStorage.getItem(key);
-        var shells = { linkord: '#0d0d0f', black: '#000000', discord: '#202225' };
-        var id = Object.prototype.hasOwnProperty.call(shells, raw) ? raw : 'linkord';
+        var shells = { black: '#000000', linkord: '#0d0d0f', discord: '#202225' };
+        var id = Object.prototype.hasOwnProperty.call(shells, raw) ? raw : 'black';
         document.documentElement.dataset.theme = id;
         var bg = shells[id];
         var style = document.createElement('style');

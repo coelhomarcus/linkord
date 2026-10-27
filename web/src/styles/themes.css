@@ -1,6 +1,7 @@
-/* Alternative palettes — semantic tokens only; Linkord defaults stay in index.css @theme. */
+/* Palettes — semantic tokens only. The Old theme is the base palette in
+   index.css @theme, so it needs no block here. */
 
-/* Preto: every surface is the same black, so the borders alone draw the
+/* Black: every surface is the same black, so the borders alone draw the
    layout. Hover and selected states stay readable through the translucent
    fills; menus are told apart by a strong border, not by a lighter fill. */
 html[data-theme="black"] {
@@ -37,7 +38,7 @@ html[data-theme="black"] {
   --shadow-highlight: none;
 }
 
-/* Grafite: neutral slate; fields sink below the panel, menus rise above it */
+/* Graphite: neutral slate; fields sink below the panel, menus rise above it */
 html[data-theme="discord"] {
   --color-surface-rail: oklch(19.00% 0.0060 265.00);
   --color-surface-000: oklch(25.00% 0.0070 265.00);
