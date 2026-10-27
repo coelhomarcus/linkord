@@ -17,7 +17,8 @@ function TabsList({ className, ...props }: TabsPrimitive.List.Props) {
     <TabsPrimitive.List
       data-slot="tabs-list"
       className={cn(
-        "relative inline-flex h-10 items-center gap-1 rounded-md bg-bg-secondary p-1",
+        // the 1px border (see --color-border-field) is taken out of the padding, so the track keeps its size
+        "relative inline-flex h-10 items-center gap-1 rounded-md border border-border-field bg-bg-secondary p-[3px]",
         className
       )}
       {...props}
@@ -31,8 +32,8 @@ function TabsIndicator({ className, ...props }: TabsPrimitive.Indicator.Props) {
       data-slot="tabs-indicator"
       className={cn(
         "absolute rounded-sm bg-bg-selected transition-all duration-200 ease-out",
-        "left-(--active-tab-left) top-1 bottom-1 w-(--active-tab-width)",
-        "data-[orientation=vertical]:left-1 data-[orientation=vertical]:right-1 data-[orientation=vertical]:top-(--active-tab-top) data-[orientation=vertical]:h-(--active-tab-height) data-[orientation=vertical]:w-auto data-[orientation=vertical]:bottom-auto",
+        "left-(--active-tab-left) top-[3px] bottom-[3px] w-(--active-tab-width)",
+        "data-[orientation=vertical]:left-[3px] data-[orientation=vertical]:right-[3px] data-[orientation=vertical]:top-(--active-tab-top) data-[orientation=vertical]:h-(--active-tab-height) data-[orientation=vertical]:w-auto data-[orientation=vertical]:bottom-auto",
         className
       )}
       {...props}
