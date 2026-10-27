@@ -110,13 +110,13 @@ html[data-theme="black"] {
   --color-fill-active: oklch(100% 0 0 / 0.14);
   --color-fill-inset: oklch(100% 0 0 / 0.03);
 
-  --color-border-subtle: oklch(100% 0 0 / 0.18);
-  --color-border-default: oklch(100% 0 0 / 0.28);
-  --color-border-strong: oklch(100% 0 0 / 0.42);
+  --color-border-subtle: oklch(100% 0 0 / 0.09);
+  --color-border-default: oklch(100% 0 0 / 0.15);
+  --color-border-strong: oklch(100% 0 0 / 0.25);
   --color-border-field: var(--color-border-default);
 
   /* a shadow disappears on black; the border carries the elevation */
   --shadow-panel: none;
-  --shadow-popover: 0 0 0 1px oklch(100% 0 0 / 0.42);
+  --shadow-popover: 0 0 0 1px oklch(100% 0 0 / 0.25);
   --shadow-highlight: none;
 }
