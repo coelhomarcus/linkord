@@ -23,7 +23,7 @@ describe('PreferencesSettings', () => {
       compressImagesDefault: false,
     });
 
-    expect(screen.getByRole('combobox', { name: 'Tema de cores' })).toHaveTextContent('Preto');
+    expect(screen.getByRole('combobox', { name: 'Tema de cores' })).toHaveTextContent('Black');
     expect(screen.getByRole('switch', { name: 'Mostrar banners nos tiles' })).toBeChecked();
     expect(screen.getByRole('switch', { name: 'Ocultar participantes sem vídeo' })).toBeChecked();
     expect(screen.getByRole('switch', { name: 'Mostrar estatísticas' })).not.toBeChecked();
@@ -38,7 +38,7 @@ describe('PreferencesSettings', () => {
     renderPreferences({ colorTheme: 'linkord', setColorTheme });
 
     await user.click(screen.getByRole('combobox', { name: 'Tema de cores' }));
-    await user.click(await screen.findByRole('option', { name: 'Grafite' }));
+    await user.click(await screen.findByRole('option', { name: 'Graphite' }));
     expect(setColorTheme).toHaveBeenCalledWith('discord');
     expect(document.documentElement.dataset.theme).toBe('discord');
   });

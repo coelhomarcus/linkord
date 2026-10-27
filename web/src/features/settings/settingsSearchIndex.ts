@@ -26,7 +26,7 @@ export const SETTINGS_SEARCH_INDEX: SearchEntry[] = [
   { categoryId: 'av', sectionId: 'camera', title: 'Câmera', keywords: ['vídeo', 'webcam'] },
   { categoryId: 'notifications', sectionId: 'system', title: 'Notificações do sistema', keywords: ['permissão', 'avisos', 'mensagens'] },
   { categoryId: 'notifications', sectionId: 'sounds', title: 'Sons', keywords: ['volume', 'som', 'testar som', 'mudo'] },
-  { categoryId: 'prefs', sectionId: 'app-appearance', title: 'Aparência do app', keywords: ['tema', 'cores', 'padrão', 'preto', 'grafite', 'aparência'] },
+  { categoryId: 'prefs', sectionId: 'app-appearance', title: 'Aparência do app', keywords: ['tema', 'cores', 'black', 'preto', 'old', 'antigo', 'graphite', 'grafite', 'aparência'] },
   { categoryId: 'prefs', sectionId: 'call-appearance', title: 'Aparência da chamada', keywords: ['banner', 'estatísticas', 'ocultar participantes', 'tiles'] },
   { categoryId: 'prefs', sectionId: 'image-uploads', title: 'Envio de imagens', keywords: ['compactar', 'imagem', 'anexo'] },
   { categoryId: 'moderation', sectionId: 'admin-area', title: 'Área administrativa', keywords: ['admin', 'denúncia', 'auditoria', 'usuários', 'grupos'], adminOnly: true },

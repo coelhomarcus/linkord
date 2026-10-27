@@ -64,7 +64,7 @@ export function createFakeRoomContextValue(overrides: Partial<RoomContextValue> 
     setShowTileBanners: noop,
     compressImagesDefault: true,
     setCompressImagesDefault: noop,
-    colorTheme: 'linkord',
+    colorTheme: 'black',
     setColorTheme: noop,
     mirrorCameraPreview: true,
     setMirrorCameraPreview: noop,
