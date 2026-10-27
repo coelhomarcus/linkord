@@ -270,14 +270,16 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
   // an image loading) move everything below them; the row at the top of the
   // view is followed by key and scrollTop takes its shift, written in the
   // same commit as the new transforms. Skipped when the first message
-  // changed: a prepend is the library's and the settle loop's business.
+  // changed (a prepend is the library's and the settle loop's business) and
+  // near the end, where the library already follows every resize with the
+  // same threshold: compensating there too would count it twice.
   const indexByKey = useMemo(() => new Map(items.map((item, index) => [item.key, index])), [items]);
   const followedRowRef = useRef<{ key: string; start: number; firstKey: string | undefined } | null>(null);
   useLayoutEffect(() => {
     const el = scrollRef.current;
     if (!el || !ready) { followedRowRef.current = null; return; }
     const prev = followedRowRef.current;
-    if (prev && prev.firstKey === firstKey) {
+    if (prev && prev.firstKey === firstKey && virtualizer.getDistanceFromEnd() > AT_END_THRESHOLD) {
       const index = indexByKey.get(prev.key);
       const start = index === undefined ? undefined : virtualizer.measurementsCache[index]?.start;
       if (start !== undefined && Math.abs(start - prev.start) >= 1) el.scrollTop += start - prev.start;
