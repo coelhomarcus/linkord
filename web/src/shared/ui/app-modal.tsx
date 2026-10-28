@@ -22,9 +22,11 @@ export function AppModal({ label, onClose, size = 'lg', children }: {
   /** the accessible name of the dialog */
   label: string;
   onClose: () => void;
-  /** lg: a whole area (settings, administration, media); md: one thing's
-   * details, which would drown in that much space */
-  size?: 'lg' | 'md';
+  /** lg: a whole area (administration, media); form: a navigation column
+   * beside one 760px page of fields (settings), where more width is only an
+   * empty strip on the right; md: one thing's details, which would drown in
+   * that much space */
+  size?: 'lg' | 'form' | 'md';
   children: ReactNode;
 }) {
   return (
@@ -34,9 +36,9 @@ export function AppModal({ label, onClose, size = 'lg', children }: {
         aria-label={label}
         className={cn(
           'top-1/2 left-1/2 max-w-none gap-0 overflow-hidden border border-border bg-surface-panel p-0 text-text-primary [--surface-base:var(--color-surface-panel)] sm:max-w-none max-sm:h-dvh max-sm:w-screen max-sm:rounded-none',
-          size === 'md'
-            ? 'h-[min(40rem,calc(100dvh-3rem))] w-[min(56rem,calc(100vw-3rem))]'
-            : 'h-[min(54rem,calc(100dvh-3rem))] w-[min(76rem,calc(100vw-3rem))]',
+          size === 'md' && 'h-[min(40rem,calc(100dvh-3rem))] w-[min(56rem,calc(100vw-3rem))]',
+          size === 'form' && 'h-[min(54rem,calc(100dvh-3rem))] w-[min(64rem,calc(100vw-3rem))]',
+          size === 'lg' && 'h-[min(54rem,calc(100dvh-3rem))] w-[min(76rem,calc(100vw-3rem))]',
         )}
       >
         <AppModalContext.Provider value={onClose}>

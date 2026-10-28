@@ -176,7 +176,7 @@ export function ConversationSidebar({ onReturnToCall, onOpenProfile, showReturnT
           <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
             <div className="flex flex-none items-center gap-2 px-4 py-4">
               <h1 className="min-w-0 flex-1 truncate text-title font-semibold">Conversas</h1>
-              <Button type="button" size="icon-sm" aria-label="Criar grupo" onClick={() => setGroupOpen(true)} className="flex-none">
+              <Button type="button" variant="ghost" size="icon-sm" aria-label="Criar grupo" onClick={() => setGroupOpen(true)} className="flex-none text-text-muted hover:text-text-primary">
                 <PlusIcon size={20} />
               </Button>
               <NotificationBell onNavigate={() => { if (isOverlay) setOpenMobile(false); }} />
