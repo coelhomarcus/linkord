@@ -1,4 +1,3 @@
-import { FlagIcon } from '@phosphor-icons/react';
 import { useCallback, useEffect, useState } from 'react';
 import { useRoom } from '@/state/RoomContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/primitives/dialog';
@@ -11,6 +10,7 @@ import { ProfileActions } from '@/features/friends/ProfileActions';
 import { ProfileCard } from './ProfileCard';
 import { ReportDialog } from '@/features/reports/ReportDialog';
 import { cn } from '@/shared/lib/utils';
+import { ProfileConnections } from './ProfileConnections';
 import { ProfileMutuals } from './ProfileMutuals';
 import { formatProfileDate, useProfileDetails } from './useProfileDetails';
 
@@ -112,31 +112,37 @@ export function ProfileModal({ userId, onClose, onOpenProfile }: ProfileModalPro
                 online={onlineUserIds.has(user.id)}
                 onBannerClick={user.banner ? () => setLightboxImage({ src: user.banner, kind: 'banner' }) : undefined}
                 onAvatarClick={user.avatar ? () => setLightboxImage({ src: user.avatar, kind: 'avatar' }) : undefined}
-              />
-              <div className="flex items-start justify-between gap-3 border-t border-border px-6 py-4">
-                <div className="min-w-0 flex-1">
-                  <ProfileActions userId={user.id} username={user.username} displayName={user.displayName} onNavigate={onClose} className="p-0" />
-                </div>
-                {user.id !== state.me.userId && (
-                  <Button type="button" variant="ghost" size="sm" onClick={() => setReportOpen(true)} className="flex-none text-text-muted hover:text-red-text">
-                    <FlagIcon size={14} /><span>Denunciar</span>
-                  </Button>
-                )}
-              </div>
-              {details.details && (
-                <dl className="flex flex-col gap-4 border-t border-border px-6 py-4">
-                  <div>
-                    <dt className="text-caption font-medium text-text-muted">Membro desde</dt>
-                    <dd className="mt-1 text-label text-text-primary">{formatProfileDate(details.details.memberSince)}</dd>
+                actions={
+                  <ProfileActions
+                    userId={user.id}
+                    username={user.username}
+                    displayName={user.displayName}
+                    onNavigate={onClose}
+                    onReport={user.id !== state.me.userId ? () => setReportOpen(true) : undefined}
+                    className="p-0"
+                  />
+                }
+                hideLinks
+                footer={(details.details || (user.profileLinks ?? []).length > 0) && (
+                  <div className="mt-6 flex flex-col gap-5">
+                    {details.details && (
+                      <dl className="flex flex-col gap-5">
+                        <div>
+                          <dt className="text-label font-medium text-text-muted">Membro desde</dt>
+                          <dd className="mt-1 text-body text-text-primary">{formatProfileDate(details.details.memberSince)}</dd>
+                        </div>
+                        {details.details.friendsSince && (
+                          <div>
+                            <dt className="text-label font-medium text-text-muted">Amigos desde</dt>
+                            <dd className="mt-1 text-body text-text-primary">{formatProfileDate(details.details.friendsSince)}</dd>
+                          </div>
+                        )}
+                      </dl>
+                    )}
+                    <ProfileConnections links={user.profileLinks ?? []} />
                   </div>
-                  {details.details.friendsSince && (
-                    <div>
-                      <dt className="text-caption font-medium text-text-muted">Amigos desde</dt>
-                      <dd className="mt-1 text-label text-text-primary">{formatProfileDate(details.details.friendsSince)}</dd>
-                    </div>
-                  )}
-                </dl>
-              )}
+                )}
+              />
             </div>
             {showMutuals && (
               <div className="flex min-h-0 flex-col border-t border-border md:border-t-0">

@@ -60,16 +60,37 @@ describe('ProfileActions — what shows up only depends on the relationship', ()
     expect(mocked.declineFriendRequest).toHaveBeenCalledWith('u-ana');
   });
 
-  it('friends: Mensagem (closes the modal) and a menu with Remover/Bloquear', async () => {
+  it('friends: Mensagem (closes the modal), a friendship menu with Remover and a "more" menu with Bloquear', async () => {
     const user = userEvent.setup();
     const onNavigate = vi.fn();
     renderActions('friends', null, onNavigate);
 
     await user.click(await screen.findByRole('button', { name: 'Mensagem' }));
     expect(onNavigate).toHaveBeenCalled();
-    await user.click(screen.getByRole('button', { name: 'Mais ações' }));
+    await user.click(screen.getByRole('button', { name: 'Amizade' }));
     expect(await screen.findByRole('menuitem', { name: 'Remover amizade' })).toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: 'Bloquear' })).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    await user.click(screen.getByRole('button', { name: 'Mais ações' }));
+    expect(await screen.findByRole('menuitem', { name: 'Bloquear' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Denunciar' })).not.toBeInTheDocument();
+  });
+
+  it('Denunciar sits in the "more" menu when the parent can report, for friends and strangers alike', async () => {
+    const user = userEvent.setup();
+    const onReport = vi.fn();
+    mocked.fetchRelationship.mockResolvedValue({ relation: 'none', retryAfter: null });
+    renderSocial(<ProfileActions userId="u-ana" username="ana" displayName="Ana" onReport={onReport} />);
+
+    await user.click(await screen.findByRole('button', { name: 'Mais ações' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Denunciar' }));
+    expect(onReport).toHaveBeenCalled();
+  });
+
+  it('your own profile has no "more" menu to report yourself', async () => {
+    mocked.fetchRelationship.mockResolvedValue({ relation: 'self', retryAfter: null });
+    renderSocial(<ProfileActions userId="me" username="eu" displayName="Eu" onReport={vi.fn()} />);
+    expect(await screen.findByRole('button', { name: 'Editar perfil' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Mais ações' })).not.toBeInTheDocument();
   });
 
   it('blocked by me: only Desbloquear', async () => {

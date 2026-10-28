@@ -1,4 +1,5 @@
 import { ChatCircleIcon, CircleNotchIcon, DotsThreeIcon, PencilSimpleIcon, ProhibitIcon, UserCheckIcon, UserPlusIcon } from '@phosphor-icons/react';
+import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 
@@ -20,12 +21,14 @@ import { useRelationship } from './useRelationship';
  * the viewer's relation to them (docs/plano-rede-social.md §5.4). Composed
  * next to ProfileCard rather than inside it, so a card drawn elsewhere (the
  * settings preview) never grows relationship rules. */
-export function ProfileActions({ userId, username, displayName, onNavigate, className }: {
+export function ProfileActions({ userId, username, displayName, onNavigate, onReport, className }: {
   userId: string;
   username: string;
   displayName: string;
   /** called when an action moves the user to another page, so the modal can close */
   onNavigate?: () => void;
+  /** offers "Denunciar" in the "more" menu, for whoever is not you */
+  onReport?: () => void;
   /** overrides the default padding (`px-4 pb-4`) when the parent lays it out */
   className?: string;
 }) {
@@ -66,6 +69,20 @@ export function ProfileActions({ userId, username, displayName, onNavigate, clas
   const { relation, retryAfter } = state.value;
   const spinner = pending ? <CircleNotchIcon size={20} className="animate-spin" /> : null;
 
+  // the menu behind the "…" button: what is rarely wanted and not a friendship
+  // state. Without anything to put in it, no button.
+  function moreMenu(items: ReactNode): ReactNode {
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger render={<Button type="button" variant="outline" size="icon-sm" aria-label="Mais ações" />}>
+          <DotsThreeIcon size={16} />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-max min-w-0">{items}</DropdownMenuContent>
+      </DropdownMenu>
+    );
+  }
+  const reportItem = onReport && <DropdownMenuItem variant="destructive" onClick={onReport}>Denunciar</DropdownMenuItem>;
+
   let actions;
   switch (relation) {
     case 'self':
@@ -82,14 +99,19 @@ export function ProfileActions({ userId, username, displayName, onNavigate, clas
             <ChatCircleIcon size={20} /><span>Mensagem</span>
           </Button>
           <DropdownMenu>
-            <DropdownMenuTrigger render={<Button type="button" variant="ghost" size="icon-sm" aria-label="Mais ações" />}>
-              <DotsThreeIcon size={16} />
+            <DropdownMenuTrigger render={<Button type="button" variant="outline" size="icon-sm" aria-label="Amizade" />}>
+              <UserCheckIcon size={16} />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-max min-w-0">
               <DropdownMenuItem variant="destructive" onClick={() => setConfirm({ kind: 'remove', userId, displayName })}>Remover amizade</DropdownMenuItem>
-              <DropdownMenuItem variant="destructive" onClick={() => setConfirm({ kind: 'block', userId, displayName })}>Bloquear</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          {moreMenu(
+            <>
+              <DropdownMenuItem variant="destructive" onClick={() => setConfirm({ kind: 'block', userId, displayName })}>Bloquear</DropdownMenuItem>
+              {reportItem}
+            </>,
+          )}
         </>
       );
       break;
@@ -129,7 +151,10 @@ export function ProfileActions({ userId, username, displayName, onNavigate, clas
 
   return (
     <div className={cn('flex flex-col gap-2 px-4 pb-4', className)}>
-      <div className="flex flex-wrap items-center gap-2">{actions}</div>
+      <div className="flex flex-wrap items-center gap-2">
+        {actions}
+        {relation !== 'self' && relation !== 'friends' && reportItem && moreMenu(reportItem)}
+      </div>
       {error && <p role="alert" className="text-label text-red">{error}</p>}
       <SocialConfirmDialog
         target={confirm}
