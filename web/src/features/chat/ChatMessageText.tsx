@@ -50,7 +50,7 @@ function renderInline(nodes: Inline[], ctx: RenderContext): ReactNode[] {
   return nodes.map((node, index) => {
     switch (node.type) {
       case 'text': return node.text;
-      case 'code': return <code key={index} className="rounded-sm bg-fill-active px-1 py-0.5 font-mono text-[0.875em]">{node.text}</code>;
+      case 'code': return <code key={index} className="rounded-sm bg-fill-code px-1 py-0.5 font-mono text-[0.875em]">{node.text}</code>;
       case 'link': return <a key={index} href={node.url} target="_blank" rel="noopener noreferrer" className="break-all text-link hover:underline">{node.url}</a>;
       case 'mention': return <Mention key={index} name={node.name} ctx={ctx} />;
       case 'bold': return <strong key={index} className="font-semibold text-text-primary">{renderInline(node.children, ctx)}</strong>;
@@ -81,7 +81,7 @@ function CodeBlock({ code, lang }: { code: string; lang: string | null }) {
     return () => { cancelled = true; };
   }, [cacheKey, code, lang]);
 
-  const frame = 'my-1 max-w-full overflow-x-auto rounded-md border border-border bg-fill-inset text-label leading-relaxed';
+  const frame = 'my-1 max-w-full overflow-x-auto rounded-md border border-border bg-fill-code text-label leading-relaxed';
   // the highlighter escapes the source itself; only its own fixed markup wraps it
   if (html) return <div className={cn(frame, '[&_pre]:bg-transparent! [&_pre]:p-3')} dangerouslySetInnerHTML={{ __html: html }} />;
   return <pre className={cn(frame, 'p-3 font-mono')}><code>{code}</code></pre>;
