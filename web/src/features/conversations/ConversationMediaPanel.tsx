@@ -1,10 +1,8 @@
 import { PlayIcon } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
 
-import { CloseButton } from '@/shared/ui/primitives/close-button';
-import { useSidebar } from '@/shared/ui/motion/sidebar-context';
-import { Sheet } from '@/shared/ui/motion/sheet';
-import { SidePanel } from '@/shared/ui/motion/side-panel';
+import { AppModal } from '@/shared/ui/app-modal';
+import { PageHeader } from '@/shared/PageHeader';
 import { Masonry } from '@/shared/ui/primitives/masonry';
 import { Tabs, TabsList, TabsIndicator, TabsTrigger } from '@/shared/ui/primitives/tabs';
 import { DocumentAttachmentCard } from '@/features/media/DocumentAttachmentCard';
@@ -14,8 +12,6 @@ import { fetchMedia, ApiError } from '@/shared/api/api';
 import type { MediaItem, MediaKind } from '@/shared/api/api';
 import { useCachedImageSrc } from '@/shared/hooks/useCachedImageSrc';
 import { IMAGE_MIME_TYPES, VIDEO_MIME_TYPES } from '@/features/chat/ChatAttachment';
-
-const PANEL_WIDTH = 360;
 
 interface ConversationMediaPanelProps {
   conversationId: string | null;
@@ -95,7 +91,6 @@ function estimateMediaHeight(item: MediaItem, columnWidth: number): number {
 const errorMessage = (err: unknown) => (err instanceof ApiError ? err.message : 'Não foi possível carregar.');
 
 export function ConversationMediaPanel({ conversationId, open, onOpenChange }: ConversationMediaPanelProps) {
-  const { isMobile } = useSidebar();
   const [kind, setKind] = useState<MediaKind>('uploads');
   const [items, setItems] = useState<MediaItem[]>([]);
   const [nextBefore, setNextBefore] = useState<number | null>(null);
@@ -159,12 +154,9 @@ export function ConversationMediaPanel({ conversationId, open, onOpenChange }: C
 
   const content = conversationId && (
     <>
-      <div className="flex flex-none items-center gap-2 border-b border-border px-5 py-4">
-        <h2 className="flex-1 text-title font-semibold">Mídias e links</h2>
-        <CloseButton onClick={() => onOpenChange(false)} />
-      </div>
+      <PageHeader title="Mídias e links" />
 
-      <div className="flex flex-none items-center px-5 pt-4">
+      <div className="flex flex-none items-center px-5 pt-4 md:px-6">
         <Tabs value={kind} onValueChange={(v) => v && setKind(v as MediaKind)} className="w-fit">
           <TabsList>
             <TabsIndicator />
@@ -174,8 +166,11 @@ export function ConversationMediaPanel({ conversationId, open, onOpenChange }: C
         </Tabs>
       </div>
 
-      <div className="min-h-0 flex-1 px-4 pb-4 pt-3">
+      <div className="min-h-0 flex-1 px-4 pb-4 pt-3 md:px-5">
         <Masonry
+          // a modal has room for more than the two columns the side panel had
+          maxColumns={4}
+          minColumnWidth={180}
           items={items}
           // attachment.id, not msgId — a message can carry more than one
           // attachment (the 4-image grid) and the uploads query returns one
@@ -210,20 +205,10 @@ export function ConversationMediaPanel({ conversationId, open, onOpenChange }: C
 
   return (
     <>
-      {isMobile ? (
-        <Sheet
-          side="right"
-          open={open && !!conversationId}
-          onOpenChange={onOpenChange}
-          ariaLabel="Mídias e links"
-          className="flex w-96 flex-col text-text-primary"
-        >
+      {open && conversationId && (
+        <AppModal label="Mídias e links" onClose={() => onOpenChange(false)}>
           {content}
-        </Sheet>
-      ) : (
-        <SidePanel open={open && !!conversationId} width={PANEL_WIDTH} ariaLabel="Mídias e links" className="bg-bg-primary text-text-primary">
-          {content}
-        </SidePanel>
+        </AppModal>
       )}
 
       <ImageLightbox
