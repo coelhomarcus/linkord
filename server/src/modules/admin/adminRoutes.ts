@@ -13,6 +13,7 @@ import {
   assignGroupOwner, deleteGroupAsAdmin, getAdminGroup, listAdminGroups, reactivateGroup, suspendGroup,
   type GroupActionResult,
 } from './adminGroups.js';
+import { getAdminBot, listAdminBots, revokeBotWebhook, type BotWebhookActionResult } from './adminBots.js';
 import { claimReport, getAdminReport, listAdminReports, resolveReport, type ReportActionResult } from './adminReports.js';
 import type { AuditActor } from './auditLog.js';
 import { getSystemInfo } from './adminSystem.js';
@@ -50,7 +51,7 @@ async function runSweep(reply: FastifyReply, opts: Parameters<typeof sweepOrphan
   }
 }
 
-function respond(reply: FastifyReply, result: UserActionResult | GroupActionResult | ReportActionResult | AdminRoleResult): void {
+function respond(reply: FastifyReply, result: UserActionResult | GroupActionResult | BotWebhookActionResult | ReportActionResult | AdminRoleResult): void {
   if (result.code === 'ok') return sendJson(reply, 200, { ok: true });
   const [status, code, message] = ERRORS[result.code] ?? [500, 'internal_error', 'Erro interno.'];
   sendError(reply, status, code, message);
@@ -137,6 +138,36 @@ export function registerAdminRoutes(fastify: FastifyInstance): void {
   fastify.delete('/api/admin/groups/:id', async (request: FastifyRequest<{ Params: IdParams }>, reply) => {
     const m = await mutating(request, reply);
     if (m) respond(reply, await deleteGroupAsAdmin({ actor: m.actor, reason: m.reason, requestId: request.id }, request.params.id));
+  });
+
+  // a bot is moderated with the group actions (kind 'bot'), plus cutting off its webhook
+  fastify.get('/api/admin/bots', (request: FastifyRequest<{ Querystring: Query }>, reply) => reading(request, reply, () => {
+    const { q, status, orphan, cursor } = request.query;
+    return listAdminBots({ q, status, orphan: orphan === '1' }, cursor);
+  }));
+  fastify.get('/api/admin/bots/:id', (request: FastifyRequest<{ Params: IdParams; Querystring: Query }>, reply) => reading(request, reply, () => getAdminBot(request.params.id, request.query.cursor)));
+  fastify.post('/api/admin/bots/:id/suspend', async (request: FastifyRequest<{ Params: IdParams }>, reply) => {
+    const m = await mutating(request, reply);
+    if (m) respond(reply, await suspendGroup({ actor: m.actor, reason: m.reason, requestId: request.id }, request.params.id, 'bot'));
+  });
+  fastify.post('/api/admin/bots/:id/reactivate', async (request: FastifyRequest<{ Params: IdParams }>, reply) => {
+    const m = await mutating(request, reply);
+    if (m) respond(reply, await reactivateGroup({ actor: m.actor, reason: m.reason, requestId: request.id }, request.params.id, 'bot'));
+  });
+  fastify.post('/api/admin/bots/:id/owner', async (request: FastifyRequest<{ Params: IdParams }>, reply) => {
+    const m = await mutating(request, reply);
+    if (!m) return;
+    const userId = String(m.body.userId ?? '');
+    if (!userId) return sendError(reply, 400, 'invalid_request', 'Informe o novo dono.');
+    respond(reply, await assignGroupOwner({ actor: m.actor, reason: m.reason, requestId: request.id }, request.params.id, userId, 'bot'));
+  });
+  fastify.post('/api/admin/bots/:id/revoke-webhook', async (request: FastifyRequest<{ Params: IdParams }>, reply) => {
+    const m = await mutating(request, reply);
+    if (m) respond(reply, await revokeBotWebhook({ actor: m.actor, reason: m.reason, requestId: request.id }, request.params.id));
+  });
+  fastify.delete('/api/admin/bots/:id', async (request: FastifyRequest<{ Params: IdParams }>, reply) => {
+    const m = await mutating(request, reply);
+    if (m) respond(reply, await deleteGroupAsAdmin({ actor: m.actor, reason: m.reason, requestId: request.id }, request.params.id, 'bot'));
   });
 
   fastify.get('/api/admin/reports', (request: FastifyRequest<{ Querystring: Query }>, reply) => reading(request, reply, () => {

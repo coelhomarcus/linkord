@@ -17,6 +17,11 @@ interface Ctx { actor: AuditActor; reason: string; requestId: string }
 
 export type GroupActionResult = { code: 'ok' } | { code: 'not_found' | 'already_suspended' | 'not_suspended' | 'not_member' };
 
+// The moderation actions below serve bots too (modules/admin/adminBots.ts): a
+// bot is a group in everything they touch. `kind` keeps one from acting on the
+// other and names the audit trail after what was actually acted on.
+export type GroupKind = 'group' | 'bot';
+
 const createdAtIso = sql<string>`to_char(${conversations.createdAt} at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')`;
 const ownerOf = sql<string | null>`(select m.user_id from conversation_members m where m.conversation_id = ${conversations.id} and m.role = 'owner' limit 1)`;
 const memberCountOf = sql<number>`(select count(*)::int from conversation_members m where m.conversation_id = ${conversations.id})`;
@@ -28,12 +33,12 @@ export interface AdminGroupRow {
 
 export interface AdminGroupFilters { q?: string; status?: string; orphan?: boolean }
 
-const groupSelect = {
+export const groupSelect = {
   group: conversations, ts: createdAtIso, ownerId: ownerOf, memberCount: memberCountOf,
   ownerUsername: sql<string | null>`(select u.username from users u where u.id = ${ownerOf})`,
 };
 
-function toRow(r: { group: typeof conversations.$inferSelect; ts: string; ownerId: string | null; memberCount: number; ownerUsername: string | null }): AdminGroupRow {
+export function toRow(r: { group: typeof conversations.$inferSelect; ts: string; ownerId: string | null; memberCount: number; ownerUsername: string | null }): AdminGroupRow {
   return {
     id: r.group.id, title: r.group.title, avatar: r.group.avatar, status: r.group.status, memberCount: r.memberCount,
     ownerId: r.ownerId, ownerUsername: r.ownerUsername, createdBy: r.group.createdBy, createdAt: r.ts,
@@ -88,32 +93,32 @@ async function memberIdsOf(groupId: string): Promise<string[]> {
   return (await db.select({ userId: conversationMembers.userId }).from(conversationMembers).where(eq(conversationMembers.conversationId, groupId))).map((r) => r.userId);
 }
 
-export async function suspendGroup(ctx: Ctx, groupId: string): Promise<GroupActionResult> {
+export async function suspendGroup(ctx: Ctx, groupId: string, kind: GroupKind = 'group'): Promise<GroupActionResult> {
   const outcome = await db.transaction(async (tx): Promise<GroupActionResult & { title?: string }> => {
-    const locked = (await tx.execute(sql`select id, title, status from conversations where id = ${groupId} and type = 'group' for update`)).rows as { id: string; title: string; status: string }[];
+    const locked = (await tx.execute(sql`select id, title, status from conversations where id = ${groupId} and type = ${kind} for update`)).rows as { id: string; title: string; status: string }[];
     const group = locked[0];
     if (!group) return { code: 'not_found' };
     if (group.status === 'suspended') return { code: 'already_suspended' };
     await tx.update(conversations).set({ status: 'suspended', statusReason: ctx.reason, updatedAt: new Date() }).where(eq(conversations.id, groupId));
-    await recordAudit({ actor: ctx.actor, action: 'group.suspend', targetType: 'group', targetId: groupId, targetLabel: group.title, reason: ctx.reason, requestId: ctx.requestId }, tx);
+    await recordAudit({ actor: ctx.actor, action: `${kind}.suspend`, targetType: kind, targetId: groupId, targetLabel: group.title, reason: ctx.reason, requestId: ctx.requestId }, tx);
     return { code: 'ok', title: group.title };
   });
   if (outcome.code !== 'ok') return outcome;
   await announceGroup(groupId);
   // no access includes the call: cut every member's media connection
   for (const userId of await memberIdsOf(groupId)) void revokeCallAccess(userId, groupId);
-  log.warn('group suspended', { actorId: ctx.actor.id, groupId, reason: ctx.reason });
+  log.warn(`${kind} suspended`, { actorId: ctx.actor.id, groupId, reason: ctx.reason });
   return { code: 'ok' };
 }
 
-export async function reactivateGroup(ctx: Ctx, groupId: string): Promise<GroupActionResult> {
+export async function reactivateGroup(ctx: Ctx, groupId: string, kind: GroupKind = 'group'): Promise<GroupActionResult> {
   const outcome = await db.transaction(async (tx): Promise<GroupActionResult> => {
-    const locked = (await tx.execute(sql`select id, title, status from conversations where id = ${groupId} and type = 'group' for update`)).rows as { id: string; title: string; status: string }[];
+    const locked = (await tx.execute(sql`select id, title, status from conversations where id = ${groupId} and type = ${kind} for update`)).rows as { id: string; title: string; status: string }[];
     const group = locked[0];
     if (!group) return { code: 'not_found' };
     if (group.status !== 'suspended') return { code: 'not_suspended' };
     await tx.update(conversations).set({ status: 'active', statusReason: '', updatedAt: new Date() }).where(eq(conversations.id, groupId));
-    await recordAudit({ actor: ctx.actor, action: 'group.reactivate', targetType: 'group', targetId: groupId, targetLabel: group.title, reason: ctx.reason, requestId: ctx.requestId }, tx);
+    await recordAudit({ actor: ctx.actor, action: `${kind}.reactivate`, targetType: kind, targetId: groupId, targetLabel: group.title, reason: ctx.reason, requestId: ctx.requestId }, tx);
     return { code: 'ok' };
   });
   if (outcome.code === 'ok') await announceGroup(groupId);
@@ -123,9 +128,9 @@ export async function reactivateGroup(ctx: Ctx, groupId: string): Promise<GroupA
 /** Recovery for an ownerless (or unwanted-owner) group: the chosen MEMBER
  * becomes the one owner, whoever held the role before is demoted, in one
  * transaction under the group lock. The admin never becomes a member. */
-export async function assignGroupOwner(ctx: Ctx, groupId: string, newOwnerId: string): Promise<GroupActionResult> {
+export async function assignGroupOwner(ctx: Ctx, groupId: string, newOwnerId: string, kind: GroupKind = 'group'): Promise<GroupActionResult> {
   const outcome = await db.transaction(async (tx): Promise<GroupActionResult & { revoked?: string[] }> => {
-    const locked = (await tx.execute(sql`select id, title from conversations where id = ${groupId} and type = 'group' for update`)).rows as { id: string; title: string }[];
+    const locked = (await tx.execute(sql`select id, title from conversations where id = ${groupId} and type = ${kind} for update`)).rows as { id: string; title: string }[];
     const group = locked[0];
     if (!group) return { code: 'not_found' };
     const [member] = await tx.select({ userId: conversationMembers.userId }).from(conversationMembers)
@@ -139,7 +144,7 @@ export async function assignGroupOwner(ctx: Ctx, groupId: string, newOwnerId: st
       .where(and(eq(conversationMembers.conversationId, groupId), eq(conversationMembers.userId, newOwnerId)));
     const revoked = await revokePendingForGroup(tx, groupId);
     await recordAudit({
-      actor: ctx.actor, action: 'group.assign_owner', targetType: 'group', targetId: groupId, targetLabel: group.title, reason: ctx.reason,
+      actor: ctx.actor, action: `${kind}.assign_owner`, targetType: kind, targetId: groupId, targetLabel: group.title, reason: ctx.reason,
       detail: { newOwnerId, previousOwnerIds: previous.map((p) => p.userId) }, requestId: ctx.requestId,
     }, tx);
     return { code: 'ok', revoked };
@@ -147,21 +152,21 @@ export async function assignGroupOwner(ctx: Ctx, groupId: string, newOwnerId: st
   if (outcome.code !== 'ok') return outcome;
   await announceGroup(groupId);
   await announceRevocations(outcome.revoked ?? []);
-  log.warn('group owner assigned by an admin', { actorId: ctx.actor.id, groupId, newOwnerId });
+  log.warn(`${kind} owner assigned by an admin`, { actorId: ctx.actor.id, groupId, newOwnerId });
   return { code: 'ok' };
 }
 
-export async function deleteGroupAsAdmin(ctx: Ctx, groupId: string): Promise<GroupActionResult> {
-  const [group] = await db.select({ title: conversations.title }).from(conversations).where(and(eq(conversations.id, groupId), eq(conversations.type, 'group'))).limit(1);
+export async function deleteGroupAsAdmin(ctx: Ctx, groupId: string, kind: GroupKind = 'group'): Promise<GroupActionResult> {
+  const [group] = await db.select({ title: conversations.title }).from(conversations).where(and(eq(conversations.id, groupId), eq(conversations.type, kind))).limit(1);
   if (!group) return { code: 'not_found' };
   // audit first, in its own row: the group (and its files) are about to stop existing
-  await recordAudit({ actor: ctx.actor, action: 'group.delete', targetType: 'group', targetId: groupId, targetLabel: group.title, reason: ctx.reason, requestId: ctx.requestId });
+  await recordAudit({ actor: ctx.actor, action: `${kind}.delete`, targetType: kind, targetId: groupId, targetLabel: group.title, reason: ctx.reason, requestId: ctx.requestId });
   try {
     const deleted = await deleteGroupCompletely(groupId);
     if (!deleted) return { code: 'not_found' };
-    log.warn('group deleted by an admin', { actorId: ctx.actor.id, groupId, members: deleted.memberIds.length });
+    log.warn(`${kind} deleted by an admin`, { actorId: ctx.actor.id, groupId, members: deleted.memberIds.length });
   } catch (err) {
-    await recordAuditFailure({ actor: ctx.actor, action: 'group.delete', targetType: 'group', targetId: groupId, targetLabel: group.title, reason: ctx.reason, requestId: ctx.requestId }, err);
+    await recordAuditFailure({ actor: ctx.actor, action: `${kind}.delete`, targetType: kind, targetId: groupId, targetLabel: group.title, reason: ctx.reason, requestId: ctx.requestId }, err);
     throw err;
   }
   return { code: 'ok' };

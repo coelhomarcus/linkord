@@ -88,6 +88,27 @@ export const assignGroupOwner = (id: string, userId: string, reason: string) => 
 export const deleteGroup = (id: string, reason: string) =>
   adminFetch<{ ok: true }>(`/api/admin/groups/${encodeURIComponent(id)}`, { method: 'DELETE', body: JSON.stringify({ reason }) });
 
+// ---- bots --------------------------------------------------------------------
+
+export interface AdminBotRow extends AdminGroupRow { messageCount: number; webhookLastUsedAt: string | null }
+export interface AdminBotWebhook { id: string; createdAt: string; tokenRotatedAt: string; lastUsedAt: string | null }
+export interface AdminBotDetail {
+  bot: AdminBotRow & { statusReason: string; messagesLast24h: number };
+  webhook: AdminBotWebhook | null;
+  members: Page<AdminGroupMember>;
+  history: AuditRow[];
+}
+
+export const fetchAdminBots = (filters: { q?: string; status?: string; orphan?: boolean }, cursor: string | null) =>
+  adminFetch<Page<AdminBotRow>>(`/api/admin/bots${qs({ ...filters, cursor })}`);
+export const fetchAdminBot = (id: string, cursor?: string | null) => adminFetch<AdminBotDetail>(`/api/admin/bots/${encodeURIComponent(id)}${qs({ cursor })}`);
+export const suspendBot = (id: string, reason: string) => post(`/api/admin/bots/${encodeURIComponent(id)}/suspend`, { reason });
+export const reactivateBot = (id: string, reason: string) => post(`/api/admin/bots/${encodeURIComponent(id)}/reactivate`, { reason });
+export const assignBotOwner = (id: string, userId: string, reason: string) => post(`/api/admin/bots/${encodeURIComponent(id)}/owner`, { userId, reason });
+export const revokeBotWebhook = (id: string, reason: string) => post(`/api/admin/bots/${encodeURIComponent(id)}/revoke-webhook`, { reason });
+export const deleteBot = (id: string, reason: string) =>
+  adminFetch<{ ok: true }>(`/api/admin/bots/${encodeURIComponent(id)}`, { method: 'DELETE', body: JSON.stringify({ reason }) });
+
 // ---- reports -----------------------------------------------------------------
 
 export interface AdminReportRow {
