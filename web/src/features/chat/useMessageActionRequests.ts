@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import type { ClientMessage, ServerMessage } from '@/shared/types/protocol';
 
-type ActionMessage = Extract<ClientMessage, { t: 'chat-edit' } | { t: 'chat-delete' } | { t: 'chat-react' }>;
+type ActionMessage = Extract<ClientMessage, { t: 'chat-edit' } | { t: 'chat-delete' } | { t: 'chat-react' } | { t: 'chat-remove-attachment' } | { t: 'chat-suppress-embed' }>;
 
 // Edits and deletes are idempotent on the server (same text; already gone
 // counts as done), so a lost answer only costs the user a retry click.

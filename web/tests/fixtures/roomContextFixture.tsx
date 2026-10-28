@@ -106,6 +106,8 @@ export function createFakeRoomContextValue(overrides: Partial<RoomContextValue> 
     queueMessageWithFiles: noop,
     deleteChatMessage: asyncNoop,
     editChatMessage: asyncNoop,
+    removeChatAttachment: asyncNoop,
+    suppressChatEmbed: asyncNoop,
     deletingMsgIds: new Set(),
     messageActionErrors: new Map(),
     dismissMessageActionError: noop,

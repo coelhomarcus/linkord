@@ -62,6 +62,8 @@ const ACTION_LIMITS: Record<string, { windowMs: number; max: number }> = {
   chat: { windowMs: 10_000, max: 10 },
   'chat-edit': { windowMs: 10_000, max: 10 },
   'chat-delete': { windowMs: 10_000, max: 10 },
+  'chat-remove-attachment': { windowMs: 10_000, max: 10 },
+  'chat-suppress-embed': { windowMs: 10_000, max: 10 },
   'chat-react': { windowMs: 10_000, max: 20 },
   reaction: { windowMs: 10_000, max: 20 },
   profile: { windowMs: 60_000, max: 10 },

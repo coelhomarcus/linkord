@@ -295,6 +295,21 @@ export function useChatMessages(deps: ChatMessagesDeps) {
     }
   }, [requestAction, dismissMessageActionError]);
 
+  /** Takes one attachment out of the author's message, or the card of one of
+   * its links. The server answers with the whole message ('chat-edited'); a
+   * refusal stays visible on the row, like a failed delete. */
+  const removeFromMessage = useCallback(async (msgId: number, action: { t: 'chat-remove-attachment'; attachmentId: string } | { t: 'chat-suppress-embed'; url: string }): Promise<void> => {
+    dismissMessageActionError(msgId);
+    try {
+      await requestAction({ ...action, msgId });
+    } catch (err) {
+      const what = action.t === 'chat-remove-attachment' ? 'o anexo' : 'a incorporação';
+      setMessageActionErrors((prev) => new Map(prev).set(msgId, `Não foi possível remover ${what}: ${err instanceof Error ? err.message : 'erro desconhecido'}`));
+    }
+  }, [requestAction, dismissMessageActionError]);
+  const removeChatAttachment = useCallback((msgId: number, attachmentId: string) => removeFromMessage(msgId, { t: 'chat-remove-attachment', attachmentId }), [removeFromMessage]);
+  const suppressChatEmbed = useCallback((msgId: number, url: string) => removeFromMessage(msgId, { t: 'chat-suppress-embed', url }), [removeFromMessage]);
+
   /** Rejects with the server's reason, so the editor can stay open with it. */
   const editChatMessage = useCallback(async (msgId: number, text: string): Promise<void> => {
     const trimmed = text.trim();
@@ -492,7 +507,7 @@ export function useChatMessages(deps: ChatMessagesDeps) {
   return {
     messagesByConversation, hasMoreByConversation, hasMoreAfterByConversation, loadingOlderByConversation, unreadByConversation,
     clearUnread, loadOlderMessages, pendingJumpTarget, clearPendingJumpTarget, cancelPendingJump, jumpToMessage,
-    sendChatMessage, deleteChatMessage, editChatMessage, reactToChatMessage,
+    sendChatMessage, deleteChatMessage, editChatMessage, reactToChatMessage, removeChatAttachment, suppressChatEmbed,
     onWelcome, onChatSendResult: outbox.onChatSendResult, queueMessageWithFiles,
     onChatActionResult: actionRequests.onChatActionResult,
     deletingMsgIds, messageActionErrors, dismissMessageActionError,

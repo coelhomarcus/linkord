@@ -75,6 +75,8 @@ export interface ChatMessage {
   // previews of the message's link cards, stored by the server so a card is
   // drawn at its final size at once; missing ones are fetched as before
   embeds?: LinkPreviewData[];
+  // links whose card the author removed: they stay plain links
+  suppressedEmbeds?: string[];
 }
 
 export interface ChatAttachment {
@@ -186,6 +188,8 @@ export type ClientMessage =
   | { t: 'chat'; conversationId: string; text: string; replyTo?: number; requestId?: string; clientMessageId?: string; attachmentIds?: string[] }
   | { t: 'chat-delete'; msgId: number; requestId?: string }
   | { t: 'chat-edit'; msgId: number; text: string; requestId?: string }
+  | { t: 'chat-remove-attachment'; msgId: number; attachmentId: string; requestId?: string }
+  | { t: 'chat-suppress-embed'; msgId: number; url: string; requestId?: string }
   | { t: 'chat-react'; msgId: number; emoji: ReactionEmoji; present?: boolean; requestId?: string }
   | { t: 'typing'; conversationId: string; value: boolean }
   | { t: 'call-join'; conversationId: string }

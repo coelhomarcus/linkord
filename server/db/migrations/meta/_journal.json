@@ -232,6 +232,13 @@
       "when": 1792822927262,
       "tag": "0032_young_lizard",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1793166920418,
+      "tag": "0033_message_suppressed_embeds",
+      "breakpoints": true
     }
   ]
 }

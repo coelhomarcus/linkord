@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { ReactNode } from 'react';
 import type { ChatAttachment as ChatAttachmentData } from '@/shared/types/protocol';
 import { useCachedImageSrc } from '@/shared/hooks/useCachedImageSrc';
 import { cn } from '@/shared/lib/utils';
@@ -6,6 +7,8 @@ import { ChatAttachment } from './ChatAttachment';
 import { placeholderDataUrl } from './placeholderImage';
 import { MEDIA_MAX_WIDTH, mosaicLayout, singleImageBox, splitAttachments } from './mediaLayout';
 import { MediaViewerProvider } from './MediaViewerProvider';
+import { RemoveCorner } from './RemoveCorner';
+import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { useMediaViewer } from './useMediaViewer';
 
 // the old natural-size rule capped height at max-h-80
@@ -59,9 +62,17 @@ function LegacyImageButton({ attachment, onOpen, className }: { attachment: Chat
 /** The pictures of a message as one unit (a lone image at its own shape, or
  * a 2–4 mosaic), followed by its other files. Every box is sized before the
  * pixels arrive, so loading doesn't move the history. */
-export function MessageMedia({ attachments }: { attachments: ChatAttachmentData[] }) {
+export function MessageMedia({ attachments, onRemove }: {
+  attachments: ChatAttachmentData[];
+  /** the author's own message, when it would still have something left: each
+   * attachment can be taken out of it */
+  onRemove?: (attachment: ChatAttachmentData) => void;
+}) {
   const viewer = useMediaViewer();
-  if (!viewer) return <MediaViewerProvider><MessageMedia attachments={attachments} /></MediaViewerProvider>;
+  if (!viewer) return <MediaViewerProvider><MessageMedia attachments={attachments} onRemove={onRemove} /></MediaViewerProvider>;
+  const removable = (attachment: ChatAttachmentData, node: ReactNode, key?: string) => (
+    onRemove ? <RemoveCorner key={key} label={`Remover ${attachment.name}`} onRemove={() => onRemove(attachment)}>{node}</RemoveCorner> : node
+  );
 
   const { visual, files } = splitAttachments(attachments);
   const openAt = (index: number) => viewer.open(visual.map((a) => ({ src: `/uploads/${a.id}`, name: a.name })), index);
@@ -71,13 +82,13 @@ export function MessageMedia({ attachments }: { attachments: ChatAttachmentData[
   if (visual.length === 1) {
     const attachment = visual[0]!;
     const box = singleImageBox(attachment);
-    pictures = box ? (
+    pictures = removable(attachment, box ? (
       <button type="button" aria-label={`Abrir ${attachment.name}`} onClick={() => openAt(0)} style={{ width: box.width, aspectRatio: box.aspectRatio }} className={cn(cellButton, 'rounded-lg')}>
         <MediaImage attachment={attachment} className="block size-full object-cover" />
       </button>
     ) : (
       <LegacyImageButton attachment={attachment} onOpen={() => openAt(0)} className={cn(cellButton, 'rounded-lg')} />
-    );
+    ));
   } else if (visual.length > 1) {
     const layout = mosaicLayout(visual.length);
     pictures = (
@@ -86,16 +97,26 @@ export function MessageMedia({ attachments }: { attachments: ChatAttachmentData[
         style={{ width: `min(100%, ${MEDIA_MAX_WIDTH}px)`, aspectRatio: layout.aspectRatio, gridTemplateColumns: layout.columns, gridTemplateRows: layout.rows }}
       >
         {visual.map((attachment, index) => (
-          <button
-            key={attachment.id}
-            type="button"
-            aria-label={`Abrir ${attachment.name} (${index + 1} de ${visual.length})`}
-            onClick={() => openAt(index)}
-            style={{ gridArea: layout.areas[index] }}
-            className={cn(cellButton, 'min-h-0 min-w-0')}
-          >
-            <MediaImage attachment={attachment} className="block size-full object-cover" />
-          </button>
+          // the cell is the grid item: its corner is the picture's corner
+          <div key={attachment.id} style={{ gridArea: layout.areas[index] }} className="group/cell relative min-h-0 min-w-0">
+            <button
+              type="button"
+              aria-label={`Abrir ${attachment.name} (${index + 1} de ${visual.length})`}
+              onClick={() => openAt(index)}
+              className={cn(cellButton, 'size-full')}
+            >
+              <MediaImage attachment={attachment} className="block size-full object-cover" />
+            </button>
+            {onRemove && (
+              <CloseButton
+                variant="overlay"
+                size="xs"
+                label={`Remover ${attachment.name}`}
+                onClick={() => onRemove(attachment)}
+                className="absolute top-1.5 right-1.5 z-10 opacity-0 transition-opacity group-hover/cell:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100"
+              />
+            )}
+          </div>
         ))}
       </div>
     );
@@ -104,7 +125,9 @@ export function MessageMedia({ attachments }: { attachments: ChatAttachmentData[
   return (
     <div className="mt-1.5 flex flex-col gap-1.5">
       {pictures}
-      {files.map((attachment) => <ChatAttachment key={attachment.id} attachment={attachment} />)}
+      {files.map((attachment) => (onRemove
+        ? removable(attachment, <ChatAttachment attachment={attachment} />, attachment.id)
+        : <ChatAttachment key={attachment.id} attachment={attachment} />))}
     </div>
   );
 }
