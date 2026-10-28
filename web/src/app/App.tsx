@@ -277,7 +277,8 @@ function Shell() {
           open={detailsVisible}
           onOpenChange={setDetailsOpen}
           onOpenProfile={setProfileUserId}
-          onOpenMedia={() => { setDetailsOpen(false); setMediaOpen(true); }}
+          // over the details, not instead of them: closing the media goes back to them
+          onOpenMedia={() => setMediaOpen(true)}
           onOpenSearch={() => { setDetailsOpen(false); setSearchOpen(true); }}
         />
         <ConversationMediaPanel
