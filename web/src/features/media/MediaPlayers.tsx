@@ -250,7 +250,7 @@ function VideoChrome({
         </button>
       )}
 
-      <div className="absolute inset-x-0 bottom-0 flex flex-col gap-1.5 bg-gradient-to-t from-black/90 via-black/70 to-transparent px-2.5 pb-2 pt-8 transition-opacity md:pointer-events-none md:opacity-0 md:group-hover/player:pointer-events-auto md:group-hover/player:opacity-100 md:group-focus-within/player:pointer-events-auto md:group-focus-within/player:opacity-100">
+      <div className="absolute inset-x-0 bottom-0 flex flex-col gap-1.5 bg-gradient-to-t from-black/90 via-black/70 to-transparent px-2.5 pb-2 pt-8 transition-opacity md:pointer-events-none md:opacity-0 md:group-hover/player:pointer-events-auto md:group-hover/player:opacity-100 md:group-has-[:focus-visible]/player:pointer-events-auto md:group-has-[:focus-visible]/player:opacity-100">
         <Slider
           value={[duration ? currentTime : 0]}
           min={0}
