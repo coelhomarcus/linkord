@@ -28,18 +28,24 @@ interface ConversationPanelProps {
   onOpenDetails: () => void;
   onToggleDetails: () => void;
   onToggleMedia: () => void;
+  /** which page this panel is on: each shows only its own kind of conversation */
+  page?: 'conversations' | 'bots';
 }
 
-export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, detailsOpen, mediaOpen, onOpenDetails, onToggleDetails, onToggleMedia }: ConversationPanelProps) {
+export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, detailsOpen, mediaOpen, onOpenDetails, onToggleDetails, onToggleMedia, page = 'conversations' }: ConversationPanelProps) {
   const { state, dispatch, conversations, activeConversationId, allUsers, onlineUserIds, activeCallConversationId } = useRoom();
   const { setOpenMobile } = useSidebar();
-  const conversation = conversations.find((item) => item.id === activeConversationId) ?? null;
+  const active = conversations.find((item) => item.id === activeConversationId) ?? null;
+  const onBots = page === 'bots';
+  const conversation = active && (active.type === 'bot') === onBots ? active : null;
+  const isBot = conversation?.type === 'bot';
+  const hasDetails = conversation?.type === 'group' || isBot;
   const title = conversationTitle(conversation, state.me.userId, allUsers);
   const other = directUser(conversation, state.me.userId, allUsers);
   const members = groupMembers(conversation, allUsers);
   const online = other ? onlineUserIds.has(other.id) : false;
-  const subtitle = conversation?.type === 'group'
-    ? `${members.length} membros`
+  const subtitle = hasDetails
+    ? `${members.length} ${members.length === 1 ? 'membro' : 'membros'}`
     : other ? (online ? 'Online' : formatLastSeen(other.lastSeenAt)) : '';
   // `state.participants` only ever holds OTHER people (the server excludes
   // yourself from it) — my own row in this list has to come from `state.me`
@@ -85,14 +91,14 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
                 type="button"
                 onClick={onOpenDetails}
                 className="transition-colors hover:border-border-strong"
-                aria-label="Detalhes do grupo"
+                aria-label={isBot ? 'Detalhes do bot' : 'Detalhes do grupo'}
               >
                 <GroupAvatar id={conversation.id} title={title} avatar={conversation.avatar} size={40} />
               </button>
             )}
             <button
               type="button"
-              onClick={conversation.type === 'group' ? onOpenDetails : (other ? () => onOpenProfile(other.id) : undefined)}
+              onClick={hasDetails ? onOpenDetails : (other ? () => onOpenProfile(other.id) : undefined)}
               className="min-w-0 flex-1 text-left"
             >
               <h2 className="truncate text-title font-semibold">{title}</h2>
@@ -119,12 +125,13 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
             <Button type="button" variant="ghost" size="icon-sm" aria-label="Buscar mensagens" onClick={onOpenSearch} className="text-text-muted hover:text-text-primary">
               <MagnifyingGlassIcon size={20} />
             </Button>
-            {conversation.type === 'group' && (
-              <Button type="button" variant="ghost" size="icon-sm" aria-label="Detalhes do grupo" aria-pressed={detailsOpen} onClick={onToggleDetails} className={panelToggleClass(detailsOpen)}>
+            {hasDetails && (
+              <Button type="button" variant="ghost" size="icon-sm" aria-label={isBot ? 'Detalhes do bot' : 'Detalhes do grupo'} aria-pressed={detailsOpen} onClick={onToggleDetails} className={panelToggleClass(detailsOpen)}>
                 <InfoIcon size={20} />
               </Button>
             )}
-            {callBlockedReason ? (
+            {/* a bot has nobody to call */}
+            {isBot ? null : callBlockedReason ? (
               <Tooltip>
                 {/* a disabled button gets no pointer events, so the tooltip hangs off a wrapper */}
                 <TooltipTrigger render={<span tabIndex={0} className="inline-flex rounded-md focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50" />}>
@@ -152,8 +159,8 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
           {conversation.status === 'suspended' ? (
               <div role="status" className="grid flex-1 place-items-center px-6 text-center">
                 <div>
-                  <p className="text-title font-semibold text-text-primary">Grupo suspenso</p>
-                  <p className="mt-1 max-w-sm text-label text-text-muted">A administração suspendeu este grupo. Enquanto durar, ninguém lê, escreve ou entra em chamada.</p>
+                  <p className="text-title font-semibold text-text-primary">{isBot ? 'Bot suspenso' : 'Grupo suspenso'}</p>
+                  <p className="mt-1 max-w-sm text-label text-text-muted">{isBot ? 'A administração suspendeu este bot. Enquanto durar, ninguém lê os avisos e ele não recebe novos.' : 'A administração suspendeu este grupo. Enquanto durar, ninguém lê, escreve ou entra em chamada.'}</p>
                 </div>
               </div>
             ) : (
@@ -163,12 +170,19 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
       ) : (
         <>
           {/* the header carries the button that reopens the drawer on a phone, where nothing else can */}
-          <PageHeader title="Conversas" />
+          <PageHeader title={onBots ? 'Bots' : 'Conversas'} />
           <div className="grid flex-1 place-items-center px-6 text-center">
-            <div>
-              <p className="text-title font-semibold text-text-primary">Abra uma conversa</p>
-              <p className="mt-1 text-label text-text-muted">Escolha uma pessoa ou grupo na sidebar.</p>
-            </div>
+            {onBots ? (
+              <div>
+                <p className="text-title font-semibold text-text-primary">Avisos dos seus sistemas</p>
+                <p className="mt-1 max-w-sm text-label text-text-muted">Um bot recebe mensagens por webhook — de um deploy, um monitor, uma automação — e mostra aqui para quem você convidar. Crie um no + da sidebar.</p>
+              </div>
+            ) : (
+              <div>
+                <p className="text-title font-semibold text-text-primary">Abra uma conversa</p>
+                <p className="mt-1 text-label text-text-muted">Escolha uma pessoa ou grupo na sidebar.</p>
+              </div>
+            )}
           </div>
         </>
       )}

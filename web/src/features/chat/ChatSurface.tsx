@@ -1,4 +1,4 @@
-import { UploadSimpleIcon } from '@phosphor-icons/react';
+import { RobotIcon, UploadSimpleIcon } from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
 import type { DragEvent } from 'react';
 
@@ -20,7 +20,9 @@ function hasFiles(e: DragEvent<HTMLDivElement>): boolean {
 }
 
 export function ChatSurface({ conversationId, onOpenProfile, surfaceId = 'main' }: { conversationId: string; onOpenProfile: (userId: string) => void; surfaceId?: 'main' | 'call' }) {
-  const { state, setReplyingTo, windowGenerationByConversation } = useRoom();
+  const { state, setReplyingTo, windowGenerationByConversation, conversations } = useRoom();
+  // only its webhook posts in a bot: no composer, no typing, nothing to drop files into
+  const readOnly = conversations.find((c) => c.id === conversationId)?.type === 'bot';
   const composerRef = useRef<MessageComposerHandle>(null);
   const composerWrapRef = useRef<HTMLDivElement | null>(null);
   const [composerHeight, setComposerHeight] = useState(0);
@@ -43,13 +45,13 @@ export function ChatSurface({ conversationId, onOpenProfile, surfaceId = 'main' 
   }, []);
 
   function handleDragEnter(e: DragEvent<HTMLDivElement>) {
-    if (!state.joined || !hasFiles(e)) return;
+    if (readOnly || !state.joined || !hasFiles(e)) return;
     e.preventDefault();
     dragDepthRef.current += 1;
     setDragActive(true);
   }
   function handleDragOver(e: DragEvent<HTMLDivElement>) {
-    if (!state.joined || !hasFiles(e)) return;
+    if (readOnly || !state.joined || !hasFiles(e)) return;
     e.preventDefault();
   }
   function handleDragLeave(e: DragEvent<HTMLDivElement>) {
@@ -90,9 +92,16 @@ export function ChatSurface({ conversationId, onOpenProfile, surfaceId = 'main' 
         <TypingIndicator conversationId={conversationId} />
       </div>
       <div ref={composerWrapRef} className="absolute inset-x-0 bottom-0">
-        <DirectComposerGate conversationId={conversationId}>
-          <MessageComposer ref={composerRef} conversationId={conversationId} />
-        </DirectComposerGate>
+        {readOnly ? (
+          <p role="note" className="mx-3 mb-3 flex items-center justify-center gap-2 rounded-lg border border-border bg-fill-subtle px-3 py-2.5 text-label text-text-muted md:mx-4">
+            <RobotIcon size={16} className="flex-none" />
+            Só o bot envia mensagens aqui.
+          </p>
+        ) : (
+          <DirectComposerGate conversationId={conversationId}>
+            <MessageComposer ref={composerRef} conversationId={conversationId} />
+          </DirectComposerGate>
+        )}
       </div>
       {dragActive && (
         <div className="pointer-events-none absolute inset-0 z-10 m-2 flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-primary bg-(--surface-base)/90 text-text-primary">

@@ -272,7 +272,8 @@ export interface InviteResult { userId: string; outcome: InviteOutcome; invitati
 export interface ReceivedInvitationEntry {
   id: string;
   at: string;
-  group: { id: string; title: string; avatar: string; memberCount: number };
+  // `type` is absent from servers before bots
+  group: { id: string; type?: 'group' | 'bot'; title: string; avatar: string; memberCount: number };
   inviter: SocialUser;
 }
 export interface SentInvitationEntry { id: string; at: string; invitee: SocialUser }

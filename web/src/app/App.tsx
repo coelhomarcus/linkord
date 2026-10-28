@@ -31,7 +31,7 @@ import { FriendsProvider } from '@/features/friends/FriendsContext';
 import { FriendsPage } from '@/features/friends/FriendsPage';
 import { RequestsRedirect } from '@/features/friends/RequestsRedirect';
 import { AppModals } from '@/app/layout/AppModals';
-import { AWAITING_OPEN, ROUTES, conversationNav, isConversationsPath, modalForPath } from '@/shared/lib/routes';
+import { AWAITING_OPEN, ROUTES, conversationNav, isBotsPath, isConversationsPath, modalForPath } from '@/shared/lib/routes';
 import { ContentLocationProvider } from '@/shared/lib/contentLocation';
 import { createAppRouter } from '@/app/appRouter';
 import { setLogRoute } from '@/shared/lib/logger';
@@ -75,6 +75,7 @@ function Shell() {
     );
   }, [navigate, contentLocation]);
   const onConversations = isConversationsPath(contentLocation.pathname);
+  const onBots = isBotsPath(contentLocation.pathname);
   const [profileUserId, setProfileUserId] = useState<string | null>(null);
   // Landing straight on a page (a deep link, a refresh on /app/friends) should
   // show that page — the sidebar sheet is only the landing screen when the URL
@@ -157,10 +158,14 @@ function Shell() {
   // call keeps running (audio, PiP) — navigating never ends it.
   const showStage = onConversations && activeView === 'call' && inCall;
 
-  const activeConversation = conversations.find((conversation) => conversation.id === activeConversationId);
+  const active = conversations.find((conversation) => conversation.id === activeConversationId);
+  // each page only ever shows its own kind of conversation (see ConversationPanel)
+  const activeConversation = active && (active.type === 'bot') === onBots ? active : undefined;
+  const onChatPage = onConversations || onBots;
+  const hasDetails = activeConversation?.type === 'group' || activeConversation?.type === 'bot';
   // the right panels open only where they make sense, whatever their saved flag says
-  const detailsVisible = detailsOpen && onConversations && activeConversation?.type === 'group' && activeView !== 'call';
-  const mediaVisible = mediaOpen && onConversations && !!activeConversation && activeView !== 'call';
+  const detailsVisible = detailsOpen && onChatPage && hasDetails && activeView !== 'call';
+  const mediaVisible = mediaOpen && onChatPage && !!activeConversation && activeView !== 'call';
   const activeConversationName = conversationTitle(activeConversation, state.me.userId, allUsers);
 
   useEffect(() => {
@@ -235,6 +240,22 @@ function Shell() {
                 />
               )}
             />
+            <Route
+              path={ROUTES.bots}
+              element={(
+                <ConversationPanel
+                  page="bots"
+                  onOpenProfile={setProfileUserId}
+                  onOpenCall={handleOpenCall}
+                  onOpenSearch={() => setSearchOpen(true)}
+                  detailsOpen={detailsVisible}
+                  mediaOpen={mediaVisible}
+                  onOpenDetails={() => { setMediaOpen(false); setDetailsOpen(true); }}
+                  onToggleDetails={() => { setMediaOpen(false); setDetailsOpen(!detailsVisible); }}
+                  onToggleMedia={() => { setDetailsOpen(false); setMediaOpen(!mediaVisible); }}
+                />
+              )}
+            />
             <Route path={ROUTES.friends} element={<FriendsPage onOpenProfile={setProfileUserId} />} />
             <Route path={ROUTES.requests} element={<RequestsRedirect />} />
             <Route path="*" element={<Navigate to={ROUTES.conversations} replace />} />
@@ -249,7 +270,7 @@ function Shell() {
           <ReactionsOverlay />
         </SidebarInset>
         <GroupDetailsPanel
-          conversationId={activeConversation?.type === 'group' ? activeConversation.id : null}
+          conversationId={hasDetails && activeConversation ? activeConversation.id : null}
           open={detailsVisible}
           onOpenChange={setDetailsOpen}
           onOpenProfile={setProfileUserId}

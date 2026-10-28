@@ -46,6 +46,13 @@ describe('InviteCard', () => {
     expect(screen.getByRole('button', { name: 'Recusar' })).toBeInTheDocument();
   });
 
+  it('an invitation to a bot says so', () => {
+    render(card({ groupType: 'bot', groupTitle: 'Deploys' }));
+    expect(screen.getByText('Convite para bot')).toBeInTheDocument();
+    expect(screen.getByText(/receber os avisos deste bot/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Entrar no bot' })).toBeInTheDocument();
+  });
+
   it('declining calls the decline endpoint', async () => {
     const user = userEvent.setup();
     mocked.declineInvitation.mockResolvedValue({ invitation: card({ status: 'declined' }) });

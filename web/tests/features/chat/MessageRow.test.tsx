@@ -23,6 +23,15 @@ function makeMessage(overrides: Partial<ChatMessage> = {}): ChatMessage {
 const noop = () => {};
 
 describe('MessageRow', () => {
+  it("a bot's message carries its name, a BOT tag and no profile to open", () => {
+    renderWithRoom(
+      <MessageRow message={makeMessage({ id: null, name: 'Deploys', bot: true })} showHeader highlighted={false} allUsers={new Map()} mentionLookup={new Map()} onOpenProfile={noop} onReply={noop} onJumpTo={noop} />
+    );
+    expect(screen.getByText('Deploys')).toBeInTheDocument();
+    expect(screen.getByText('Bot')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Deploys' })).not.toBeInTheDocument();
+  });
+
   it('shows avatar and name when showHeader, without right-aligning the message', () => {
     const message = makeMessage();
     renderWithRoom(

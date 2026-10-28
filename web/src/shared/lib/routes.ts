@@ -24,6 +24,7 @@ export function parseFriendsView(raw: string | null | undefined): FriendsView {
 
 export const ROUTES = {
   conversations: '/app/conversations',
+  bots: '/app/bots',
   friends: '/app/friends',
   /** legacy: redirects to the pending view of Friends; new links use friendsView/friendsSection */
   requests: '/app/requests',
@@ -65,6 +66,15 @@ export function conversationIdFromPath(pathname: string): string | null {
 
 export function isConversationsPath(pathname: string): boolean {
   return pathname === ROUTES.conversations || pathname.startsWith(`${ROUTES.conversations}/`);
+}
+
+export function isBotsPath(pathname: string): boolean {
+  return pathname === ROUTES.bots || pathname === `${ROUTES.bots}/`;
+}
+
+/** The page a conversation opens on: bots have their own, everything else is a conversation. */
+export function homeFor(conversation: { type: string } | null | undefined): typeof ROUTES.conversations | typeof ROUTES.bots {
+  return conversation?.type === 'bot' ? ROUTES.bots : ROUTES.conversations;
 }
 
 /** Which conversation is open lives in the router entry's state, not in the

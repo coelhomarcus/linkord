@@ -79,6 +79,8 @@ export interface ChatMessage {
   embeds?: LinkPreviewData[];
   // links whose card the author removed: they stay plain links
   suppressedEmbeds?: string[];
+  // posted by the conversation's bot: `id` is null, name/avatar are the bot's
+  bot?: true;
 }
 
 export interface ChatAttachment {
@@ -125,7 +127,8 @@ export interface StorageUsage {
 
 export interface Conversation {
   id: string;
-  type: 'direct' | 'group';
+  // 'bot': a group only its webhook posts in — members read, react and manage it
+  type: 'direct' | 'group' | 'bot';
   title: string;
   avatar: string;
   createdBy: string | null;
