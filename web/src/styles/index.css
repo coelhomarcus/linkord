@@ -105,14 +105,15 @@
 
   --font-sans: "Figtree Variable", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
 
-  /* sm: chips, badges, inline code · md: controls, list rows, menu items ·
-     lg: cards, media, and menus (which hold md items) · xl: dialogs, the
-     composer, the content panel. A nested shape takes its parent's radius
-     minus the padding between them. */
+  /* One radius for every container, the input's 8px: controls, rows, cards,
+     embeds and media, menus, tooltips, the composer, the user dock, dialogs and
+     the content panel. lg and xl stay as names for those bigger shapes but no
+     longer grow past it. sm: chips, badges, inline code. Round things (avatars,
+     pills, dots) use rounded-full. */
   --radius-sm: 4px;
   --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
+  --radius-lg: 8px;
+  --radius-xl: 8px;
 
   --shadow-panel: 0 1px 2px rgb(0 0 0 / 0.35);
   /* everything that floats: menus, popovers, dialogs, drawers, toolbars */
