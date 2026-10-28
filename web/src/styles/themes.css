@@ -31,6 +31,9 @@ html[data-theme="black"] {
   --color-fill-hover: oklch(100% 0 0 / 0.08);
   --color-fill-active: oklch(100% 0 0 / 0.14);
   --color-fill-inset: oklch(100% 0 0 / 0.03);
+  /* solid and a step above the message hover (#121213), so code still stands
+     out on a hovered message */
+  --color-fill-code: oklch(22% 0 0);
 
   --color-border-subtle: oklch(100% 0 0 / 0.09);
   --color-border-default: oklch(100% 0 0 / 0.15);
