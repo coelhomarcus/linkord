@@ -66,8 +66,8 @@ export function ProfileMutuals({ status, details, onRetry, onOpenProfile, onOpen
       className="flex min-h-0 flex-col items-stretch gap-3 p-4 md:p-5"
     >
       {/* underlined text tabs over a full-width rule, the active one bold with a
-          bar; kept clear of the dialog's buttons in the corner */}
-      <TabsList aria-label="Em comum" className="flex h-auto w-full flex-none justify-start gap-6 rounded-none border-0 border-b border-border bg-transparent p-0 md:w-[calc(100%-4.5rem)]">
+          bar; kept clear of the dialog's close button in the corner */}
+      <TabsList aria-label="Em comum" className="flex h-auto w-full flex-none justify-start gap-6 rounded-none border-0 border-b border-border bg-transparent p-0 md:w-[calc(100%-2rem)]">
         <TabsIndicator className="top-auto -bottom-px h-0.5 rounded-full bg-text-primary" />
         <TabsTrigger value="friends" className={TAB}>
           {friends ? count(friends.total, 'amigo mútuo', 'amigos mútuos') : 'Amigos mútuos'}
