@@ -38,7 +38,7 @@ interface GroupDetailsPanelProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onOpenProfile: (userId: string) => void;
-  /** shortcuts to what the group does: they close this modal and open theirs */
+  /** shortcuts to what the group does: the media opens over this modal, the search in its place */
   onOpenMedia: () => void;
   onOpenSearch: () => void;
 }
