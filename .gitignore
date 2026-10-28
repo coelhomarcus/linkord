@@ -34,4 +34,6 @@ npm-debug.log*
 bun.lock
 
 PLAN.md
-docs/
+docs/*
+# the webhook integration guide is the one doc meant for whoever integrates
+!docs/WEBHOOK.md
