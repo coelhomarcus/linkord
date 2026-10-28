@@ -253,6 +253,13 @@
       "when": 1793211174276,
       "tag": "0035_webhook_delivery_key",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1793212985530,
+      "tag": "0036_rich_embeds",
+      "breakpoints": true
     }
   ]
 }

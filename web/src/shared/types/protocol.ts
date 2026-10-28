@@ -81,6 +81,23 @@ export interface ChatMessage {
   suppressedEmbeds?: string[];
   // posted by the conversation's bot: `id` is null, name/avatar are the bot's
   bot?: true;
+  // structured cards the bot sent with the message
+  richEmbeds?: RichEmbed[];
+}
+
+export interface RichEmbedField { name: string; value: string; inline: boolean }
+
+/** A bot's card, as the server normalized it (see server/src/modules/bots/richEmbeds.ts). */
+export interface RichEmbed {
+  title?: string;
+  description?: string;
+  url?: string;
+  // 0xRRGGBB
+  color?: number;
+  fields?: RichEmbedField[];
+  footer?: string;
+  // ISO 8601
+  timestamp?: string;
 }
 
 export interface ChatAttachment {

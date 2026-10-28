@@ -249,6 +249,9 @@ export const messages = pgTable('messages', {
   // The sender's Idempotency-Key: a retry of the same delivery finds this row
   // instead of posting twice. Unique per webhook, null when none was sent.
   webhookDeliveryKey: varchar('webhook_delivery_key', { length: 128 }),
+  // The structured cards a bot posted with the message (modules/bots/richEmbeds.ts),
+  // normalized before storing. Null on every message an account wrote.
+  richEmbeds: jsonb('rich_embeds').$type<unknown[]>(),
   // The link previews of the message's cards (one per previewable link, see
   // modules/link-preview/messageLinks.ts), fetched once after it is sent
   // (modules/messages/messageEmbeds.ts) so history ships each card at its

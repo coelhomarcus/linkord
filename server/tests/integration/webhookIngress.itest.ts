@@ -104,6 +104,25 @@ describe('webhook ingress (real Postgres)', () => {
     assert.deepEqual({ status: badKey.status, code: badKey.body.error.code }, { status: 400, code: 'invalid_request' });
   });
 
+  it('carries rich embeds, normalized, with or without text, live and in history', async () => {
+    const bot = await makeBot();
+    const { socket, sent, participant } = joinNew(bot.owner);
+    try {
+      const reply = await post(pathOf(bot), { embeds: [{ title: 'CPU alta', color: 'red', fields: [{ name: 'Host', value: 'api-1', inline: true }] }] });
+      assert.equal(reply.status, 201);
+      const expected = [{ title: 'CPU alta', color: 0xed4245, fields: [{ name: 'Host', value: 'api-1', inline: true }] }];
+      assert.deepEqual(sent.find((s) => s.event === 'chat')?.payload.message.richEmbeds, expected);
+      await chatHandlers['conversation-open']!(socket, { conversationId: bot.conversationId });
+      const [stored] = sent.find((s) => s.event === 'conversation-history')?.payload.messages;
+      assert.deepEqual({ text: stored.text, richEmbeds: stored.richEmbeds }, { text: '', richEmbeds: expected });
+    } finally {
+      cleanupParticipant(participant);
+    }
+    const bad = await post(pathOf(bot), { content: 'x', embeds: [{ title: 'a', url: 'ftp://x' }] });
+    assert.deepEqual({ status: bad.status, code: bad.body.error.code }, { status: 400, code: 'invalid_message' });
+    assert.match(bad.body.error.message, /http/);
+  });
+
   it('refuses an empty or oversized message instead of cutting it', async () => {
     const bot = await makeBot();
     for (const [payload, code] of [[{ content: '   ' }, 'invalid_message'], [{ text: 'wrong field' }, 'invalid_message'], [{ content: 'x'.repeat(config.MAX_CHAT_LEN + 1) }, 'message_too_long']] as const) {

@@ -1,0 +1,1 @@
+ALTER TABLE "messages" ADD COLUMN "rich_embeds" jsonb;
