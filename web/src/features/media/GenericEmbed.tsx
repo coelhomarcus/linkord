@@ -181,7 +181,7 @@ export function GenericEmbed({ embed, className = '', edgeToEdge, preview }: Gen
             href={url}
             target="_blank"
             rel="noopener noreferrer"
-            className="line-clamp-2 text-body font-medium text-accent-text hover:underline"
+            className="line-clamp-2 text-body font-medium text-link hover:underline"
           >
             {data.title}
           </a>
