@@ -1,4 +1,4 @@
-import { FlagIcon } from '@phosphor-icons/react';
+import { FlagIcon, SidebarSimpleIcon } from '@phosphor-icons/react';
 import { useCallback, useEffect, useState } from 'react';
 import { useRoom } from '@/state/RoomContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/primitives/dialog';
@@ -13,6 +13,8 @@ import { ReportDialog } from '@/features/reports/ReportDialog';
 import { cn } from '@/shared/lib/utils';
 import { ProfileMutuals } from './ProfileMutuals';
 import { formatProfileDate, useProfileDetails } from './useProfileDetails';
+import { loadMutualsPanelHidden, saveMutualsPanelHidden } from './mutualsPanelPreference';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
 
 interface ProfileModalProps {
   userId: string | null;
@@ -58,7 +60,16 @@ export function ProfileModal({ userId, onClose, onOpenProfile }: ProfileModalPro
   const open = !!userId && (!!user || fetchStatus !== 'idle');
   const details = useProfileDetails(open ? userId : null);
   // your own profile has nothing in common to list: it stays one column
-  const showMutuals = !!user && user.id !== state.me.userId;
+  const hasMutuals = !!user && user.id !== state.me.userId;
+  const [mutualsHidden, setMutualsHidden] = useState(loadMutualsPanelHidden);
+  const showMutuals = hasMutuals && !mutualsHidden;
+  function toggleMutuals() {
+    setMutualsHidden((hidden) => {
+      saveMutualsPanelHidden(!hidden);
+      return !hidden;
+    });
+  }
+  const toggleLabel = mutualsHidden ? 'Mostrar amigos e grupos em comum' : 'Ocultar amigos e grupos em comum';
 
   // the same way a notification opens a conversation: from any page, the chat comes forward
   function openGroup(conversationId: string) {
@@ -103,6 +114,21 @@ export function ProfileModal({ userId, onClose, onOpenProfile }: ProfileModalPro
           <DialogHeader className="sr-only">
             <DialogTitle>Perfil de {user.displayName}</DialogTitle>
           </DialogHeader>
+          {hasMutuals && (
+            <Tooltip>
+              <TooltipTrigger
+                onClick={toggleMutuals}
+                aria-label={toggleLabel}
+                aria-expanded={!mutualsHidden}
+                // beside the close button, and styled like it: legible over the banner too
+                className="absolute top-2.5 right-12 z-10 inline-flex size-8 items-center justify-center rounded-full bg-black/60 text-white ring-1 ring-white/25 backdrop-blur-sm transition-colors outline-none hover:bg-black/80 focus-visible:ring-3 focus-visible:ring-ring/50"
+              >
+                {/* the panel opens on the right, so the icon's bar is on the right */}
+                <SidebarSimpleIcon size={16} weight={mutualsHidden ? 'regular' : 'fill'} className="-scale-x-100" aria-hidden />
+              </TooltipTrigger>
+              <TooltipContent side="bottom">{toggleLabel}</TooltipContent>
+            </Tooltip>
+          )}
           {/* side by side from md, each column scrolling on its own; stacked below, scrolling as one */}
           <div className={cn('min-h-0 overflow-y-auto', showMutuals && 'md:grid md:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] md:grid-rows-[minmax(0,1fr)] md:overflow-hidden')}>
             <div className={cn(showMutuals && 'md:min-h-0 md:overflow-y-auto md:border-r md:border-border')}>
