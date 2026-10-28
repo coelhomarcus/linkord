@@ -1,4 +1,5 @@
 import { Dialog as DialogPrimitive } from '@base-ui/react/dialog';
+import { useState } from 'react';
 import { CloseButton } from '@/shared/ui/primitives/close-button';
 
 interface ImageLightboxProps {
@@ -10,7 +11,16 @@ interface ImageLightboxProps {
   aspectRatio?: number;
 }
 
-export function ImageLightbox({ src, alt, open, onOpenChange, variant = 'default', aspectRatio = 1 }: ImageLightboxProps) {
+export function ImageLightbox({ src: srcProp, alt: altProp, open, onOpenChange, variant = 'default', aspectRatio: aspectRatioProp = 1 }: ImageLightboxProps) {
+  // Callers clear src (and reset the ratio) the moment they close it, but the
+  // popup is still fading out: without the last image kept here it would
+  // flash a broken image with its alt text before it disappears.
+  const [last, setLast] = useState({ src: srcProp, alt: altProp, aspectRatio: aspectRatioProp });
+  if (srcProp && (last.src !== srcProp || last.alt !== altProp || last.aspectRatio !== aspectRatioProp)) {
+    setLast({ src: srcProp, alt: altProp, aspectRatio: aspectRatioProp });
+  }
+  const { src, alt, aspectRatio } = srcProp ? { src: srcProp, alt: altProp, aspectRatio: aspectRatioProp } : last;
+
   const isProfile = variant === 'profile';
   const profileFrameStyle = isProfile ? {
     width: '80vw',
