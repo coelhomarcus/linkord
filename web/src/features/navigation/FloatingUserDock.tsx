@@ -22,7 +22,8 @@ interface FloatingUserDockProps {
  * to the list. With the list hidden or drawn as a drawer only the rail is on
  * screen, so the card narrows to a column of icons beside it. The space it
  * takes is published as CSS variables for the rail and the list to keep clear
- * of it. */
+ * of it and, from the shell, on the root for whatever else floats in that corner
+ * (the call's picture-in-picture). */
 export function FloatingUserDock({ placement, onReturnToCall, onOpenProfile, showReturnToCall, onNavigate }: FloatingUserDockProps) {
   const { isMobile, isOverlay, open } = useSidebar();
   const ref = useRef<HTMLDivElement | null>(null);
@@ -33,9 +34,12 @@ export function FloatingUserDock({ placement, onReturnToCall, onOpenProfile, sho
     const el = ref.current;
     const host = el?.parentElement;
     if (!el || !host) return;
+    // outside the shell's tree (the PiP is portaled to the body), so on the root
+    const root = placement === 'shell' ? document.documentElement : null;
     const publish = () => {
       const clearance = `${Math.ceil(el.getBoundingClientRect().height) + EDGE * 2}px`;
       host.style.setProperty('--dock-clearance', clearance);
+      root?.style.setProperty('--user-dock-clearance', clearance);
       // the list only needs room under a dock that is as wide as the list
       host.style.setProperty('--dock-list-clearance', wide ? clearance : '0px');
     };
@@ -45,9 +49,10 @@ export function FloatingUserDock({ placement, onReturnToCall, onOpenProfile, sho
     return () => {
       observer.disconnect();
       host.style.removeProperty('--dock-clearance');
+      root?.style.removeProperty('--user-dock-clearance');
       host.style.removeProperty('--dock-list-clearance');
     };
-  }, [wide, hidden]);
+  }, [wide, hidden, placement]);
 
   if (hidden) return null;
   return (

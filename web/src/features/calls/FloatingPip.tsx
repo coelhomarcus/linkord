@@ -101,9 +101,13 @@ export function FloatingPip({ allIds, onExpand }: FloatingPipProps) {
       ref={boxRef}
       className={cn(
         'fixed z-30 aspect-video w-36 overflow-hidden rounded-lg shadow-popover ring-1 ring-foreground/10 md:w-64',
-        !dragPos && (state.reconnecting ? 'bottom-20 left-4' : 'bottom-4 left-4')
+        !dragPos && 'left-4'
       )}
-      style={dragPos ? { left: dragPos.x, top: dragPos.y } : undefined}
+      // It appears above the user dock that floats in the same corner, not over
+      // it (the dock publishes the room it takes; with no dock on screen, a
+      // phone, it is the plain 1rem), and above the reconnect notice. Once
+      // dragged, it stays wherever it was put.
+      style={dragPos ? { left: dragPos.x, top: dragPos.y } : { bottom: `max(var(--user-dock-clearance, 1rem), ${state.reconnecting ? '5rem' : '1rem'})` }}
     >
       <div className="pointer-events-none absolute inset-0">
         {/* cover, not the new contain default: this wrapper doesn't center a
