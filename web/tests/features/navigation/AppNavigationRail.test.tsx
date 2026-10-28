@@ -55,8 +55,8 @@ describe('AppNavigationRail', () => {
     renderRail();
     const nav = screen.getByRole('navigation', { name: 'Navegação principal' });
     expect(nav).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Conversas' })).toHaveAttribute('href', '/app/conversations');
-    expect(screen.getByRole('link', { name: 'Amigos' })).toHaveAttribute('href', '/app/friends');
+    expect(screen.getByRole('link', { name: 'Conversas' })).toHaveAttribute('data-to', '/app/conversations');
+    expect(screen.getByRole('link', { name: 'Amigos' })).toHaveAttribute('data-to', '/app/friends');
     expect(screen.queryByRole('link', { name: 'Ajustes' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Meu perfil' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /Solicitações/ })).not.toBeInTheDocument();

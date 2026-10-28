@@ -1,7 +1,7 @@
 import { ChatCircleIcon, SidebarSimpleIcon, UsersIcon } from '@phosphor-icons/react';
 import { useId } from 'react';
 import type { ReactNode } from 'react';
-import { Link } from 'react-router';
+
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 
 import { useSidebar } from '@/shared/ui/motion/sidebar-context';
@@ -14,6 +14,7 @@ import { ActiveWash } from '@/shared/ui/motion/active-wash';
 import { useFriends } from '@/features/friends/FriendsContext';
 import { CountBadge } from '@/shared/CountBadge';
 import { iconWeight } from '@/shared/ui/icons';
+import { AppLink } from '@/shared/ui/app-link';
 
 const itemClass = 'relative isolate grid size-11 place-items-center rounded-md outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring';
 
@@ -85,7 +86,7 @@ function RailLink({ to, label, active, badge, onNavigate, indicators, children }
   return (
     <Tooltip>
       <TooltipTrigger
-        render={<Link to={to} onClick={onNavigate} aria-current={active ? 'page' : undefined} aria-label={label} className={cn(itemClass, stateClass(active))} />}
+        render={<AppLink to={to} onClick={onNavigate} aria-current={active ? 'page' : undefined} aria-label={label} className={cn(itemClass, stateClass(active))} />}
       >
         {active && <ActiveWash layoutId={indicators.wash} className="shadow-highlight" />}
         {active && <ActiveMarker layoutId={indicators.marker} />}

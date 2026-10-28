@@ -1,5 +1,4 @@
 import { ShieldCheckIcon, SignOutIcon } from '@phosphor-icons/react';
-import { Link } from 'react-router';
 
 import { useAuth } from '@/state/AuthContext';
 import { useRoom } from '@/state/RoomContext';
@@ -8,6 +7,7 @@ import { ROUTES } from '@/shared/lib/routes';
 import { cn } from '@/shared/lib/utils';
 import { EmailSettings } from './EmailSettings';
 import { SettingsRow, SettingsSection, SettingsSections } from './SettingsLayout';
+import { AppLink } from '@/shared/ui/app-link';
 
 function formatGB(bytes: number): string {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
@@ -32,7 +32,7 @@ export function AccountSettings() {
         </SettingsRow>
         <SettingsRow label="Nome de exibição" description="É o que aparece para todo mundo.">
           <span className="break-words text-body text-text-primary">{state.me.displayName}</span>
-          <Link to={ROUTES.settingsTab('profile')} className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }))}>Editar perfil</Link>
+          <AppLink to={ROUTES.settingsTab('profile')} className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }))}>Editar perfil</AppLink>
         </SettingsRow>
       </SettingsSection>
 

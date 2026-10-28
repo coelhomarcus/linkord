@@ -29,7 +29,7 @@ describe('GroupDetailPage', () => {
   it('shows owner and members, with no way to open the conversation', async () => {
     open('members');
     expect((await screen.findAllByText('@ana')).length).toBeGreaterThan(0);
-    expect(screen.getByRole('link', { name: /BIA/ })).toHaveAttribute('href', '/admin/users/bia');
+    expect(screen.getByRole('link', { name: /BIA/ })).toHaveAttribute('data-to', '/admin/users/bia');
     expect(screen.queryByRole('link', { name: /entrar|abrir/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /entrar|abrir/i })).not.toBeInTheDocument();
   });
@@ -98,7 +98,7 @@ describe('GroupDetailPage', () => {
 
   it('overview shows who owns the group (a group with no owner says so), with the id in the header', async () => {
     const { unmount } = open();
-    expect(await screen.findByRole('link', { name: '@ana' })).toHaveAttribute('href', '/admin/users/ana');
+    expect(await screen.findByRole('link', { name: '@ana' })).toHaveAttribute('data-to', '/admin/users/ana');
     expect(screen.getByRole('heading', { name: 'Squad' })).toBeInTheDocument();
     expect(screen.getByText('g1')).toBeInTheDocument();
     unmount();
@@ -158,7 +158,7 @@ describe('GroupDetailPage', () => {
   it('tabs are links with their own URL; the admin never gets a way into the conversation', async () => {
     open();
     await screen.findByRole('heading', { name: 'Squad' });
-    expect(screen.getByRole('link', { name: 'Membros (2)' })).toHaveAttribute('href', '/admin/groups/g1?tab=members');
+    expect(screen.getByRole('link', { name: 'Membros (2)' })).toHaveAttribute('data-to', '/admin/groups/g1?tab=members');
     expect(screen.queryByRole('link', { name: /entrar|abrir/i })).not.toBeInTheDocument();
   });
 });

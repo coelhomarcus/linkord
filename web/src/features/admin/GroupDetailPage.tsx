@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { Link, useParams } from 'react-router';
+import { useParams } from 'react-router';
 import { Avatar } from '@/shared/Avatar';
 import { Button } from '@/shared/ui/primitives/button';
 import { useCursorList } from '@/shared/hooks/useCursorList';
@@ -16,6 +16,7 @@ import { RESTORE_LIST, useAdminBack } from './useAdminBack';
 import { useAdminDetail } from './useAdminDetail';
 import { useAdminQuery } from './useAdminQuery';
 import type { QuerySchema } from './useAdminQuery';
+import { AppLink } from '@/shared/ui/app-link';
 
 type Dialog = 'suspend' | 'reactivate' | 'delete' | { owner: AdminGroupMember } | null;
 
@@ -114,7 +115,7 @@ function GroupDetail({ id }: { id: string }) {
         <AdminSection title="Grupo">
           <AdminFields>
             <AdminFieldRow label="Dono atual">
-              {group.ownerId ? <Link to={`/admin/users/${group.ownerId}`} className="hover:underline">@{group.ownerUsername}</Link> : 'nenhum (grupo sem dono)'}
+              {group.ownerId ? <AppLink to={`/admin/users/${group.ownerId}`} className="hover:underline">@{group.ownerUsername}</AppLink> : 'nenhum (grupo sem dono)'}
             </AdminFieldRow>
             <AdminFieldRow label="Situação">{suspended ? `Suspenso: “${group.statusReason}”` : 'Ativo'}</AdminFieldRow>
             <AdminFieldRow label="Criado em">{formatWhen(group.createdAt)}</AdminFieldRow>
@@ -130,9 +131,9 @@ function GroupDetail({ id }: { id: string }) {
             {members.map((m) => (
               <li key={m.user.id} className="flex items-center gap-3 py-2.5">
                 <Avatar id={m.user.id} name={m.user.displayName} avatar={m.user.avatar} avatarColor={m.user.avatarColor} size={32} />
-                <Link to={`/admin/users/${m.user.id}`} className="min-w-0 flex-1 truncate text-label text-text-primary hover:underline">
+                <AppLink to={`/admin/users/${m.user.id}`} className="min-w-0 flex-1 truncate text-label text-text-primary hover:underline">
                   {m.user.displayName} <span className="text-text-muted">@{m.user.username}</span>
-                </Link>
+                </AppLink>
                 {m.role === 'owner'
                   ? <span className="text-caption text-accent-text">dono</span>
                   : <Button type="button" variant="ghost" size="xs" onClick={() => setDialog({ owner: m })}>Atribuir dono</Button>}

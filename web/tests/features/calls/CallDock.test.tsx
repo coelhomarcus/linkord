@@ -92,15 +92,17 @@ describe('CallDock — online status', () => {
 });
 
 describe('CallDock — settings', () => {
-  it('has the settings gear, linking to the settings page', () => {
+  it('has the settings gear: a button that opens the settings dialog, not a link', () => {
     renderDock();
-    expect(screen.getByRole('link', { name: 'Ajustes' })).toHaveAttribute('href', '/app/settings');
-    expect(screen.getByRole('link', { name: 'Ajustes' })).not.toHaveAttribute('aria-current');
+    const gear = screen.getByRole('button', { name: 'Ajustes' });
+    expect(gear).not.toHaveAttribute('href');
+    expect(gear).toHaveAttribute('aria-haspopup', 'dialog');
+    expect(gear).toHaveAttribute('aria-expanded', 'false');
   });
 
-  it('marks the gear as the current page inside settings', () => {
+  it('marks the gear as open while settings are', () => {
     renderDock({}, { path: '/app/settings/av' });
-    expect(screen.getByRole('link', { name: 'Ajustes' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: 'Ajustes' })).toHaveAttribute('aria-expanded', 'true');
   });
 });
 
@@ -111,7 +113,7 @@ describe('CallDock — compact layout (only the rail is on screen)', () => {
     expect(profile).not.toHaveTextContent('Fulana');
     expect(screen.getByLabelText('Mutar')).toBeInTheDocument();
     expect(screen.getByLabelText('Parar de ouvir')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Ajustes' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ajustes' })).toBeInTheDocument();
   });
 
   it('in a call, returns to the stage and leaves it through icon buttons', () => {

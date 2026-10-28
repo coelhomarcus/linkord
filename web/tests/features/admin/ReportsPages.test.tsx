@@ -35,7 +35,7 @@ describe('ReportsPage', () => {
   it('lists the open queue as a table, the report opening its own page', async () => {
     renderAdmin(<ReportsPage />, { path: '/admin/reports', pattern: '/admin/reports' });
     const link = await screen.findByRole('link', { name: /mensagem de bia/ });
-    expect(link).toHaveAttribute('href', '/admin/reports/r1');
+    expect(link).toHaveAttribute('data-to', '/admin/reports/r1');
     expect(mocked.fetchAdminReports).toHaveBeenCalledWith({ status: 'open', targetType: undefined }, null);
     const table = screen.getByRole('table', { name: 'Denúncias' });
     expect(within(table).getAllByRole('columnheader').map((th) => th.textContent)).toEqual(['Alvo', 'Categoria', 'Situação', 'Responsável', 'Recebida em']);
@@ -90,7 +90,7 @@ describe('ReportDetailPage', () => {
     expect(screen.getByText('@ana')).toBeInTheDocument();
     expect(screen.getByText('foi ofensivo')).toBeInTheDocument();
     expect(screen.getByText(/foi truncado ao ser guardado/)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: '@bia' })).toHaveAttribute('href', '/admin/users/u9');
+    expect(screen.getByRole('link', { name: '@bia' })).toHaveAttribute('data-to', '/admin/users/u9');
   });
 
   it('the evidence is inert text: a URL inside it is not a link and nothing is fetched for it', async () => {
@@ -125,7 +125,7 @@ describe('ReportDetailPage', () => {
     await screen.findByRole('radio', { name: /Suspender o grupo/ });
     expect(screen.queryByRole('radio', { name: /Apagar a mensagem/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('radio', { name: /Suspender a conta/ })).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Abrir no admin' })).toHaveAttribute('href', '/admin/groups/g1');
+    expect(screen.getByRole('link', { name: 'Abrir no admin' })).toHaveAttribute('data-to', '/admin/groups/g1');
     unmount();
 
     mocked.fetchAdminReport.mockResolvedValue(detail({ targetType: 'user', targetId: 'u1', targetLabel: 'ana', snapshot: {} }));

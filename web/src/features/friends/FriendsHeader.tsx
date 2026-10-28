@@ -1,6 +1,6 @@
 import { UserPlusIcon } from '@phosphor-icons/react';
 import { useId } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { useNavigate } from 'react-router';
 
 import { buttonVariants } from '@/shared/ui/primitives/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/primitives/select';
@@ -10,6 +10,7 @@ import { cn } from '@/shared/lib/utils';
 import { ActiveWash } from '@/shared/ui/motion/active-wash';
 import { CountBadge } from '@/shared/CountBadge';
 import { useFriends } from './FriendsContext';
+import { AppLink } from '@/shared/ui/app-link';
 
 export type FriendsHeaderLayout = 'inline' | 'row' | 'select';
 
@@ -43,7 +44,7 @@ export function FriendsModeNav({ view, className }: { view: FriendsView; classNa
         const count = counts[mode.view] ?? 0;
         const current = mode.view === view;
         return (
-          <Link
+          <AppLink
             key={mode.view}
             to={friendsView(mode.view)}
             aria-current={current ? 'page' : undefined}
@@ -55,7 +56,7 @@ export function FriendsModeNav({ view, className }: { view: FriendsView; classNa
             {current && <ActiveWash layoutId={washId} />}
             <span>{mode.label}</span>
             {count > 0 && <ModeBadge count={count} label={BADGE_LABEL[mode.view] ?? ''} />}
-          </Link>
+          </AppLink>
         );
       })}
     </nav>
@@ -82,7 +83,7 @@ export function FriendsModeSelect({ view }: { view: FriendsView }) {
 
 export function AddFriendButton({ active, iconOnly }: { active: boolean; iconOnly?: boolean }) {
   return (
-    <Link
+    <AppLink
       to={friendsView('add')}
       aria-current={active ? 'page' : undefined}
       aria-label="Adicionar amigo"
@@ -90,6 +91,6 @@ export function AddFriendButton({ active, iconOnly }: { active: boolean; iconOnl
     >
       <UserPlusIcon size={20} aria-hidden />
       {!iconOnly && <span>Adicionar amigo</span>}
-    </Link>
+    </AppLink>
   );
 }

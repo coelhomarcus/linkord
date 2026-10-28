@@ -1,7 +1,7 @@
 import { FlagIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
 
-import { Link, useParams } from 'react-router';
+import { useParams } from 'react-router';
 import { Button } from '@/shared/ui/primitives/button';
 import { categoryLabel } from '@/features/reports/reportCategories';
 import { claimReport, fetchAdminReport, resolveReport } from './adminApi';
@@ -13,6 +13,7 @@ import { REPORT_RESOLUTION_LABEL, REPORT_TARGET_LABEL, formatWhen } from './admi
 import { AdminTextLink, AuditList, Badge, DetailStatusView, RefreshFailedNotice } from './adminUi';
 import { RESTORE_LIST, useAdminBack } from './useAdminBack';
 import { useAdminDetail } from './useAdminDetail';
+import { AppLink } from '@/shared/ui/app-link';
 
 /** What the admin picked in the decision form: close with an action on the
  * target, close without one, or dismiss. */
@@ -93,7 +94,7 @@ function ReportDetail({ id }: { id: string }) {
           )}
           <AdminFields>
             <AdminFieldRow label="Autor">
-              {authorId ? <Link to={`/admin/users/${authorId}`} className="hover:underline">@{String(snapshot.authorUsername ?? authorId)}</Link> : 'conta apagada'}
+              {authorId ? <AppLink to={`/admin/users/${authorId}`} className="hover:underline">@{String(snapshot.authorUsername ?? authorId)}</AppLink> : 'conta apagada'}
             </AdminFieldRow>
             <AdminFieldRow label="Conversa">{String(snapshot.conversationTitle ?? '-')}</AdminFieldRow>
             <AdminFieldRow label="Enviada em">{formatWhen(String(snapshot.sentAt ?? ''))}</AdminFieldRow>

@@ -1,6 +1,6 @@
 import { ClockCounterClockwiseIcon } from '@phosphor-icons/react';
 import { useCallback } from 'react';
-import { Link, useLocation } from 'react-router';
+import { useLocation } from 'react-router';
 
 import { Avatar } from '@/shared/Avatar';
 import { buttonVariants } from '@/shared/ui/primitives/button';
@@ -17,6 +17,7 @@ import { useAdminList } from './useAdminList';
 import { useAdminTableFits } from './useAdminMode';
 import { useAdminQuery } from './useAdminQuery';
 import type { QuerySchema } from './useAdminQuery';
+import { AppLink } from '@/shared/ui/app-link';
 
 type StatusFilter = 'all' | 'active' | 'suspended';
 type RoleFilter = 'all' | 'admin' | 'user';
@@ -37,22 +38,22 @@ function RowActions({ user }: { user: AdminUserRow }) {
   return (
     <div className="flex items-center justify-end gap-0.5">
       <CopyIdButton id={user.id} label={`Copiar ID de ${user.displayName}`} />
-      <Link to={`/admin/audit?targetId=${encodeURIComponent(user.id)}`} aria-label={`Ver histórico de ${user.displayName}`} title="Ver histórico" className={buttonVariants({ variant: 'ghost', size: 'icon-sm' })}>
+      <AppLink to={`/admin/audit?targetId=${encodeURIComponent(user.id)}`} aria-label={`Ver histórico de ${user.displayName}`} title="Ver histórico" className={buttonVariants({ variant: 'ghost', size: 'icon-sm' })}>
         <ClockCounterClockwiseIcon size={16} aria-hidden />
-      </Link>
+      </AppLink>
     </div>
   );
 }
 
 function UserIdentity({ user, from }: { user: AdminUserRow; from: { from: string } }) {
   return (
-    <Link to={`/admin/users/${user.id}`} state={from} className="flex min-w-0 items-center gap-3 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring">
+    <AppLink to={`/admin/users/${user.id}`} state={from} className="flex min-w-0 items-center gap-3 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring">
       <Avatar id={user.id} name={user.displayName} avatar={user.avatar} avatarColor={user.avatarColor} size={36} />
       <span className="min-w-0">
         <span className="block truncate text-body font-medium text-text-primary">{user.displayName}</span>
         <span className="block truncate text-caption text-text-muted">@{user.username}</span>
       </span>
-    </Link>
+    </AppLink>
   );
 }
 

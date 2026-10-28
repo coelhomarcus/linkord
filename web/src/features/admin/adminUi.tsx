@@ -1,10 +1,11 @@
 import type { ReactNode } from 'react';
-import { Link, type LinkProps } from 'react-router';
+import { type LinkProps } from 'react-router';
 import { Button } from '@/shared/ui/primitives/button';
 import { cn } from '@/shared/lib/utils';
 import type { AuditRow } from './adminApi';
 import { ACTION_LABELS, formatWhen } from './adminFormat';
 import type { AdminDetailStatus } from './useAdminDetail';
+import { AppLink } from '@/shared/ui/app-link';
 
 const TONES: Record<string, string> = {
   active: 'bg-green/15 text-green', suspended: 'bg-red/15 text-red-text',
@@ -17,7 +18,7 @@ const LABELS: Record<string, string> = {
   admin: 'Admin', user: 'Usuário',
 };
 
-/** In-flow navigation that used to be a raw underlined `<Link>`. */
+/** In-flow navigation that used to be a raw underlined `<AppLink>`. */
 export function AdminTextLink({ to, state, children, className }: {
   to: LinkProps['to'];
   state?: unknown;
@@ -25,7 +26,7 @@ export function AdminTextLink({ to, state, children, className }: {
   className?: string;
 }) {
   return (
-    <Button variant="link" size="sm" className={cn('h-auto px-0', className)} render={<Link to={to} state={state} />}>
+    <Button variant="link" size="sm" className={cn('h-auto px-0', className)} render={<AppLink to={to} state={state} />}>
       {children}
     </Button>
   );

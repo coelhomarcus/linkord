@@ -1,7 +1,7 @@
 import { ArrowLeftIcon } from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
 
-import { Link, Outlet, useLocation, useNavigate } from 'react-router';
+import { Outlet, useLocation, useNavigate } from 'react-router';
 import { PageHeader } from '@/shared/PageHeader';
 import { Button, buttonVariants } from '@/shared/ui/primitives/button';
 import { ROUTES } from '@/shared/lib/routes';
@@ -14,6 +14,7 @@ import { ADMIN_PATH, sectionForPath } from './adminCatalog';
 import { AdminSidebar } from './AdminNavigation';
 import { useAdminLayout } from './useAdminLayout';
 import type { AdminOutletContext } from './useAdminMode';
+import { AppLink } from '@/shared/ui/app-link';
 
 /** Width of the content column below which a 5–6 column table would cut its last columns. */
 export const ADMIN_TABLE_MIN = 820;
@@ -85,9 +86,9 @@ export function AdminLayout() {
         title={compactSection ? section.label : 'Administração'}
         subtitle={mode === 'wide' ? section?.label : undefined}
         leading={compactSection ? (
-          <Link to={ADMIN_PATH} aria-label="Voltar à administração" className={buttonVariants({ variant: 'ghost', size: 'icon-sm' })}>
+          <AppLink to={ADMIN_PATH} aria-label="Voltar à administração" className={buttonVariants({ variant: 'ghost', size: 'icon-sm' })}>
             <ArrowLeftIcon size={20} aria-hidden />
-          </Link>
+          </AppLink>
         ) : undefined}
       />
       <div ref={areaRef} className="@container flex min-h-0 min-w-0 flex-1">
