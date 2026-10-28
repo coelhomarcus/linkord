@@ -10,6 +10,7 @@ import type { ProfileDetails } from '@/shared/api/api';
 
 type Tab = 'friends' | 'groups';
 
+const TAB = 'h-11 rounded-none px-0 text-body font-semibold text-text-muted hover:text-text-secondary data-active:text-text-primary';
 const ROW = 'flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-fill-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
 function count(total: number, one: string, many: string): string {
@@ -64,13 +65,14 @@ export function ProfileMutuals({ status, details, onRetry, onOpenProfile, onOpen
       onValueChange={(value) => { if (value === 'friends' || value === 'groups') setTab(value); }}
       className="flex min-h-0 flex-col items-stretch gap-3 p-4 md:p-5"
     >
-      {/* clear of the dialog's close button in the corner */}
-      <TabsList aria-label="Em comum" className="flex w-full flex-none md:mr-10 md:w-auto md:self-start">
-        <TabsIndicator />
-        <TabsTrigger value="friends" className="flex-1 md:flex-none">
+      {/* underlined text tabs over a full-width rule, the active one bold with a
+          bar; kept clear of the dialog's buttons in the corner */}
+      <TabsList aria-label="Em comum" className="flex h-auto w-full flex-none justify-start gap-6 rounded-none border-0 border-b border-border bg-transparent p-0 md:w-[calc(100%-4.5rem)]">
+        <TabsIndicator className="top-auto -bottom-px h-0.5 rounded-full bg-text-primary" />
+        <TabsTrigger value="friends" className={TAB}>
           {friends ? count(friends.total, 'amigo mútuo', 'amigos mútuos') : 'Amigos mútuos'}
         </TabsTrigger>
-        <TabsTrigger value="groups" className="flex-1 md:flex-none">
+        <TabsTrigger value="groups" className={TAB}>
           {groups ? count(groups.total, 'grupo mútuo', 'grupos mútuos') : 'Grupos mútuos'}
         </TabsTrigger>
       </TabsList>

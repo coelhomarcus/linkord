@@ -21,7 +21,10 @@ const NOTHING: ProfileDetails = {
   memberSince: '2023-05-04T12:00:00.000Z', friendsSince: null,
   mutualFriends: { items: [], total: 0 }, mutualGroups: { items: [], total: 0 },
 };
-beforeEach(() => { mocked.fetchProfileDetails.mockReset().mockResolvedValue(NOTHING); });
+beforeEach(() => {
+  mocked.fetchProfileDetails.mockReset().mockResolvedValue(NOTHING);
+  localStorage.removeItem('linkord.profileMutualsHidden');
+});
 
 const user: PublicUser = {
   id: 'u1',
@@ -156,5 +159,39 @@ describe('ProfileModal — since when and what you have in common', () => {
     const retry = await screen.findByRole('button', { name: 'Tentar de novo' });
     await userEvent.setup().click(retry);
     expect(await screen.findByRole('tab', { name: '1 amigo mútuo' })).toBeInTheDocument();
+  });
+
+  it('a button beside the close button hides the side panel and shows it again, and the choice is remembered', async () => {
+    mocked.fetchProfileDetails.mockResolvedValue(details);
+    renderProfile();
+    const interaction = userEvent.setup();
+    expect(await screen.findByRole('tab', { name: '1 amigo mútuo' })).toBeInTheDocument();
+
+    const hide = screen.getByRole('button', { name: 'Ocultar amigos e grupos em comum' });
+    expect(hide).toHaveAttribute('aria-expanded', 'true');
+    await interaction.click(hide);
+    expect(screen.queryByRole('tab', { name: /mútuo/ })).not.toBeInTheDocument();
+    // the profile card itself stays
+    expect(screen.getByText('Membro desde')).toBeInTheDocument();
+    expect(localStorage.getItem('linkord.profileMutualsHidden')).toBe('1');
+
+    await interaction.click(screen.getByRole('button', { name: 'Mostrar amigos e grupos em comum' }));
+    expect(screen.getByRole('tab', { name: '1 amigo mútuo' })).toBeInTheDocument();
+    expect(localStorage.getItem('linkord.profileMutualsHidden')).toBe('0');
+  });
+
+  it('opens with the side panel hidden when it was last left hidden', async () => {
+    localStorage.setItem('linkord.profileMutualsHidden', '1');
+    mocked.fetchProfileDetails.mockResolvedValue(details);
+    renderProfile();
+    expect(await screen.findByText('Membro desde')).toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: /mútuo/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Mostrar amigos e grupos em comum' })).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('your own profile has no panel to toggle', async () => {
+    renderProfile({ state: { ...initialRoomState, me: { ...initialRoomState.me, userId: 'u1' } } });
+    expect(await screen.findByText('Membro desde')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /amigos e grupos em comum/ })).not.toBeInTheDocument();
   });
 });
