@@ -18,6 +18,8 @@ export interface InvitationCard {
   id: string;
   status: InvitationStatus;
   groupId: string;
+  // a bot is joined through the same invitation, but the card says what it is
+  groupType: 'group' | 'bot';
   groupTitle: string;
   groupAvatar: string;
   memberCount: number;
@@ -37,7 +39,7 @@ export async function loadInvitationCards(ids: string[]): Promise<Map<string, In
       id: groupInvitations.id, status: groupInvitations.status,
       conversationId: groupInvitations.conversationId, inviterId: groupInvitations.inviterId,
       inviteeId: groupInvitations.inviteeId, version: groupInvitations.version,
-      groupTitle: conversations.title, groupAvatar: conversations.avatar,
+      groupType: conversations.type, groupTitle: conversations.title, groupAvatar: conversations.avatar,
       memberCount: sql<number>`(select count(*)::int from conversation_members m where m.conversation_id = ${groupInvitations.conversationId})`,
     })
     .from(groupInvitations)
@@ -45,7 +47,7 @@ export async function loadInvitationCards(ids: string[]): Promise<Map<string, In
     .where(inArray(groupInvitations.id, ids));
   for (const r of rows) {
     cards.set(r.id, {
-      id: r.id, status: r.status as InvitationStatus, groupId: r.conversationId,
+      id: r.id, status: r.status as InvitationStatus, groupId: r.conversationId, groupType: r.groupType === 'bot' ? 'bot' : 'group',
       groupTitle: r.groupTitle, groupAvatar: r.groupAvatar, memberCount: r.memberCount,
       inviterId: r.inviterId, inviteeId: r.inviteeId, version: r.version,
     });

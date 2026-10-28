@@ -1,10 +1,10 @@
-import { and, asc, desc, eq, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { attachments, conversationMembers, conversations, messages, users } from '../../db/schema.js';
 import { destroyAllSessionsForUser, invalidateSessionsForUser } from '../auth/session.js';
 import { broadcastToKnownPeers, listOnlineUserIds, participants, sendToUser } from '../presence/participants.js';
 import { deleteAvatarFile } from '../attachments/attachmentCleanup.js';
-import { reconcileGroupMembership, sendConversationUpdateToMembers } from '../conversations/conversationsRepository.js';
+import { GROUP_LIKE_TYPES, reconcileGroupMembership, sendConversationUpdateToMembers } from '../conversations/conversationsRepository.js';
 import { announceRevocations } from '../conversations/invitationsRepository.js';
 import { revokePendingForUser } from '../conversations/invitationRevocation.js';
 import { SOCIAL_PAGE_SIZE, decodeTimeCursor, encodeTimeCursor } from '../friendships/cursor.js';
@@ -134,7 +134,8 @@ export async function deleteUserAccount(ctx: Ctx, targetId: string, confirm: str
     const memberships = await tx.select({ conversationId: conversationMembers.conversationId, role: conversationMembers.role })
       .from(conversationMembers)
       .innerJoin(conversations, eq(conversations.id, conversationMembers.conversationId))
-      .where(and(eq(conversationMembers.userId, targetId), eq(conversations.type, 'group')))
+      // a bot needs a successor just as much as a group does
+      .where(and(eq(conversationMembers.userId, targetId), inArray(conversations.type, [...GROUP_LIKE_TYPES])))
       .orderBy(asc(conversationMembers.conversationId));
 
     const successions: { groupId: string; newOwnerId: string }[] = [];

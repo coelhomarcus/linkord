@@ -102,7 +102,9 @@ export const authCodes = pgTable('auth_codes', {
  * as the sort key the way `lastMessageAt` used to. */
 export const conversations = pgTable('conversations', {
   id: text('id').primaryKey(),
-  type: varchar('type', { length: 12 }).notNull(), // 'direct' | 'group'
+  // 'bot' is a group whose only voice is its webhook: members read, react
+  // and manage it like a group, but no human ever posts in it
+  type: varchar('type', { length: 12 }).notNull(), // 'direct' | 'group' | 'bot'
   title: varchar('title', { length: 80 }).notNull().default(''),
   avatar: text('avatar').notNull().default(''),
   createdBy: text('created_by').references(() => users.id, { onDelete: 'set null' }),
@@ -241,6 +243,9 @@ export const messages = pgTable('messages', {
   // down to group_invitations), the card stays in the DM as a tombstone —
   // "Convite indisponível" — instead of vanishing.
   groupInvitationId: text('group_invitation_id').references(() => groupInvitations.id, { onDelete: 'set null' }),
+  // Set (with authorId null) on a message a bot's webhook posted. SET NULL so
+  // a deleted webhook leaves its history behind instead of taking it along.
+  webhookId: text('webhook_id').references(() => webhooks.id, { onDelete: 'set null' }),
   // The link previews of the message's cards (one per previewable link, see
   // modules/link-preview/messageLinks.ts), fetched once after it is sent
   // (modules/messages/messageEmbeds.ts) so history ships each card at its
@@ -262,7 +267,23 @@ export const messages = pgTable('messages', {
   index('messages_conversation_id_idx').on(t.conversationId),
   index('messages_search_vector_idx').using('gin', t.searchVector),
   index('messages_group_invitation_id_idx').on(t.groupInvitationId),
+  index('messages_webhook_id_idx').on(t.webhookId),
   check('messages_kind_reference_check', sql`(${t.kind} = 'text' AND ${t.groupInvitationId} IS NULL) OR (${t.kind} = 'group_invite')`),
+]);
+
+/** The credential an outside system posts into a bot conversation with. Only
+ * a sha256 of the token is kept: whoever can read the database still can't
+ * post as the bot, and the token is shown once, when created or rotated. */
+export const webhooks = pgTable('webhooks', {
+  id: text('id').primaryKey(),
+  conversationId: text('conversation_id').notNull().references(() => conversations.id, { onDelete: 'cascade' }),
+  tokenHash: text('token_hash').notNull(),
+  createdBy: text('created_by').references(() => users.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  tokenRotatedAt: timestamp('token_rotated_at', { withTimezone: true }).notNull().defaultNow(),
+  lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
+}, (t) => [
+  index('webhooks_conversation_id_idx').on(t.conversationId),
 ]);
 
 // One row per send intent (the client's clientMessageId), so a retry after a
@@ -466,6 +487,7 @@ export type MessageReaction = typeof messageReactions.$inferSelect;
 export type Friendship = typeof friendships.$inferSelect;
 export type UserBlock = typeof userBlocks.$inferSelect;
 export type GroupInvitation = typeof groupInvitations.$inferSelect;
+export type Webhook = typeof webhooks.$inferSelect;
 export type Notification = typeof notifications.$inferSelect;
 export type OutboxEvent = typeof outboxEvents.$inferSelect;
 

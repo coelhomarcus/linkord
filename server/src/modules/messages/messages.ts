@@ -8,9 +8,12 @@ import { messages, conversationMembers, users, type Message, type Attachment } f
 import { participants, send, sendSocketError } from '../presence/participants.js';
 import { isSingleEmoji } from './emoji.js';
 import {
+  acceptsHumanMessages,
   broadcastToConversationMembers,
+  canManageGroup,
   conversationDisplayName,
   conversationExistsForUser,
+  getConversationForUser,
   getDirectPeerId,
   markReadUpTo,
   touchConversation,
@@ -499,7 +502,9 @@ async function handleChat(socket: AppSocket, msg: ChatSendRequest): Promise<void
     if (!conversationId || (!rawText && !attachmentIds.length)) return fail('invalid_message', 'Mensagem vazia.');
     // never cut it silently: the client shows a counter instead
     if (rawText.length > config.MAX_CHAT_LEN) return fail('message_too_long', `A mensagem passa de ${config.MAX_CHAT_LEN} caracteres.`);
-    if (!(await conversationExistsForUser(conversationId, p.userId))) return fail('conversation_not_found', 'Conversa não encontrada.');
+    const conversation = await getConversationForUser(conversationId, p.userId);
+    if (!conversation) return fail('conversation_not_found', 'Conversa não encontrada.');
+    if (!acceptsHumanMessages(conversation)) return fail(ERROR_CODES.forbidden, 'Só o bot envia mensagens aqui.');
     const peerId = await getDirectPeerId(conversationId, p.userId);
     if (peerId && !(await canSendDirectMessage(p.userId, peerId))) {
       return fail(ERROR_CODES.relationshipRequired, 'Vocês precisam ser amigos pra conversar por aqui.');
@@ -743,10 +748,14 @@ async function deleteMessage(p: Participant, msg: { msgId?: unknown }): Promise<
     .limit(1);
   // already gone is the outcome a delete wanted: not an error to show
   if (!existing) return null;
-  if (!(await conversationExistsForUser(existing.conversationId, p.userId))) return { code: 'conversation_not_found', message: 'Conversa não encontrada.' };
+  const conversation = await getConversationForUser(existing.conversationId, p.userId);
+  if (!conversation) return { code: 'conversation_not_found', message: 'Conversa não encontrada.' };
   const isAuthor = existing.authorId === p.userId;
+  // nobody authors a bot's messages, so whoever owns the bot keeps it tidy —
+  // that's running their own bot, not moderation, so it isn't audited
+  const isBotOwner = !acceptsHumanMessages(conversation) && await canManageGroup(conversation.id, p.userId);
   // admin authority is re-read, not taken from the connection's frozen role (§7.5)
-  if (!isAuthor && !(await isActiveAdmin(p.userId))) return { code: 'forbidden', message: 'Você só pode apagar as suas mensagens.' };
+  if (!isAuthor && !isBotOwner && !(await isActiveAdmin(p.userId))) return { code: 'forbidden', message: 'Você só pode apagar as suas mensagens.' };
   // before the row goes: a card that vanished while its invitation stayed
   // acceptable is exactly the desync this prevents
   if (existing.kind === 'group_invite' && existing.groupInvitationId) {
@@ -760,7 +769,7 @@ async function deleteMessage(p: Participant, msg: { msgId?: unknown }): Promise<
   // the author's quota just got room back
   if (existing.authorId) void sendUsageToUser(existing.authorId).catch(() => {});
   await recordConversationActivity(existing.conversationId);
-  if (!isAuthor) {
+  if (!isAuthor && !isBotOwner) {
     // moderation, so it leaves a trail — ids only, never the message body
     await recordAudit({
       actor: { id: p.userId, username: p.name }, action: 'message.delete', targetType: 'message', targetId: String(msgId),
@@ -789,7 +798,9 @@ async function handleTyping(socket: AppSocket, msg: { conversationId?: string; v
   const p = participants.get(socket.participantId ?? '');
   if (!p || p.socket !== socket) return;
   const conversationId = conversationIdFrom(msg);
-  if (!conversationId || !(await conversationExistsForUser(conversationId, p.userId))) return;
+  if (!conversationId) return;
+  const conversation = await getConversationForUser(conversationId, p.userId);
+  if (!conversation || !acceptsHumanMessages(conversation)) return;
   if (!(await assertCanWriteToConversation(socket, conversationId, p.userId))) return;
   await broadcastToConversationMembers(conversationId, {
     t: 'typing',

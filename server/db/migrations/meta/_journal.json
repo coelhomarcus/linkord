@@ -239,6 +239,13 @@
       "when": 1793166920418,
       "tag": "0033_message_suppressed_embeds",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1793210540984,
+      "tag": "0034_bot_webhooks",
+      "breakpoints": true
     }
   ]
 }

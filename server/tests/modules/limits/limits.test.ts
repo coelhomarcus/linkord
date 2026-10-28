@@ -22,6 +22,7 @@ describe('exceedsLimit', () => {
 describe('limitMax', () => {
   it('reads each ceiling from the config', () => {
     assert.equal(limitMax('ownedGroups'), config.MAX_OWNED_GROUPS_PER_USER);
+    assert.equal(limitMax('ownedBots'), config.MAX_OWNED_BOTS_PER_USER);
     assert.equal(limitMax('groupMemberships'), config.MAX_GROUP_MEMBERSHIPS_PER_USER);
     assert.equal(limitMax('friends'), config.MAX_FRIENDS);
     assert.equal(limitMax('pendingRequests'), config.MAX_PENDING_OUTGOING_REQUESTS);

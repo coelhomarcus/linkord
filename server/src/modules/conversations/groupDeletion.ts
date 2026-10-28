@@ -5,6 +5,7 @@ import { sendToUser } from '../presence/participants.js';
 import { refreshKnownPeers } from '../presence/knownPeers.js';
 import { deleteForConversation } from '../attachments/attachmentCleanup.js';
 import { revokeCallAccess } from '../calls/callAccess.js';
+import { isGroupLike } from './conversationsRepository.js';
 
 /** Deletes a group for good — files first (the rows that name them go with the
  * group), then the group, then tells every member and cuts their calls.
@@ -12,7 +13,7 @@ import { revokeCallAccess } from '../calls/callAccess.js';
  * caller has already authorized it. Returns null when there is no such group. */
 export async function deleteGroupCompletely(conversationId: string): Promise<{ memberIds: string[]; title: string } | null> {
   const [conversation] = await db.select().from(conversations).where(eq(conversations.id, conversationId)).limit(1);
-  if (!conversation || conversation.type !== 'group') return null;
+  if (!conversation || !isGroupLike(conversation.type)) return null;
   const memberRows = await db.select({ userId: conversationMembers.userId }).from(conversationMembers).where(eq(conversationMembers.conversationId, conversationId));
   await deleteForConversation(conversationId);
   await db.delete(conversations).where(eq(conversations.id, conversationId));

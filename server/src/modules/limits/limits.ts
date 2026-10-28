@@ -9,12 +9,13 @@ import { stagedBytes } from '../attachments/stagedAttachments.js';
 // live in config (initial guesses, tunable); this module is the one place
 // that says what is counted and when something is over.
 
-export type LimitKind = 'storage' | 'ownedGroups' | 'groupMemberships' | 'friends' | 'pendingRequests';
+export type LimitKind = 'storage' | 'ownedGroups' | 'ownedBots' | 'groupMemberships' | 'friends' | 'pendingRequests';
 
 export const limitMax = (kind: LimitKind, cfg = config): number => {
   switch (kind) {
     case 'storage': return cfg.MAX_USER_STORAGE_BYTES;
     case 'ownedGroups': return cfg.MAX_OWNED_GROUPS_PER_USER;
+    case 'ownedBots': return cfg.MAX_OWNED_BOTS_PER_USER;
     case 'groupMemberships': return cfg.MAX_GROUP_MEMBERSHIPS_PER_USER;
     case 'friends': return cfg.MAX_FRIENDS;
     case 'pendingRequests': return cfg.MAX_PENDING_OUTGOING_REQUESTS;
@@ -29,11 +30,19 @@ export function exceedsLimit(used: number, max: number, adding = 1): boolean {
 
 type Executor = Tx | typeof db;
 
-export async function countOwnedGroups(userId: string, executor: Executor = db): Promise<number> {
+async function countOwned(userId: string, type: 'group' | 'bot', executor: Executor): Promise<number> {
   const [row] = await executor.select({ n: sql<number>`count(*)::int` }).from(conversationMembers)
     .innerJoin(conversations, eq(conversations.id, conversationMembers.conversationId))
-    .where(and(eq(conversationMembers.userId, userId), eq(conversationMembers.role, 'owner'), eq(conversations.type, 'group')));
+    .where(and(eq(conversationMembers.userId, userId), eq(conversationMembers.role, 'owner'), eq(conversations.type, type)));
   return row?.n ?? 0;
+}
+
+export async function countOwnedGroups(userId: string, executor: Executor = db): Promise<number> {
+  return countOwned(userId, 'group', executor);
+}
+
+export async function countOwnedBots(userId: string, executor: Executor = db): Promise<number> {
+  return countOwned(userId, 'bot', executor);
 }
 
 export async function countGroupMemberships(userId: string, executor: Executor = db): Promise<number> {
@@ -93,4 +102,8 @@ export async function groupCreationBlockedBy(userId: string): Promise<'ownedGrou
   if (exceedsLimit(await countOwnedGroups(userId), limitMax('ownedGroups'))) return 'ownedGroups';
   if (exceedsLimit(await countGroupMemberships(userId), limitMax('groupMemberships'))) return 'groupMemberships';
   return null;
+}
+
+export async function botCreationBlocked(userId: string): Promise<boolean> {
+  return exceedsLimit(await countOwnedBots(userId), limitMax('ownedBots'));
 }

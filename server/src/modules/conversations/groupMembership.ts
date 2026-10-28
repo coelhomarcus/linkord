@@ -28,7 +28,7 @@ export type RemoveMemberResult =
  * order matches the rest of the group operations (group row first). */
 export async function removeMember(conversationId: string, actorId: string, targetId: string): Promise<RemoveMemberResult> {
   return db.transaction(async (tx): Promise<RemoveMemberResult> => {
-    const locked = await tx.execute(sql`select id from conversations where id = ${conversationId} and type = 'group' for update`);
+    const locked = await tx.execute(sql`select id from conversations where id = ${conversationId} and type in ('group', 'bot') for update`);
     if (locked.rows.length === 0) return { code: 'not_found' };
 
     const members = await tx.select({ userId: conversationMembers.userId, role: conversationMembers.role })
@@ -67,7 +67,7 @@ export type TransferResult =
  * with no owner (§4.2.1). */
 export async function transferOwnership(conversationId: string, actorId: string, newOwnerId: string): Promise<TransferResult> {
   return db.transaction(async (tx): Promise<TransferResult> => {
-    const locked = await tx.execute(sql`select id from conversations where id = ${conversationId} and type = 'group' for update`);
+    const locked = await tx.execute(sql`select id from conversations where id = ${conversationId} and type in ('group', 'bot') for update`);
     if (locked.rows.length === 0) return { code: 'not_found' };
 
     const members = await tx.select({ userId: conversationMembers.userId, role: conversationMembers.role })

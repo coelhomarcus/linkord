@@ -12,6 +12,7 @@ import {
   createGroup,
   getOrCreateDirect,
   getConversationForUser,
+  isGroupLike,
   reconcileGroupMembership,
   rowToSummary,
   sanitizeConversationTitle,
@@ -157,7 +158,7 @@ async function handleGroupUpdate(socket: AppSocket, msg: { conversationId?: stri
     return;
   }
   const [conversation] = await db.select().from(conversations).where(eq(conversations.id, conversationId)).limit(1);
-  if (!conversation || conversation.type !== 'group') return;
+  if (!conversation || !isGroupLike(conversation.type)) return;
 
   const updates: { title?: string; avatar?: string; updatedAt: Date } = { updatedAt: new Date() };
   if (msg.title !== undefined) {
