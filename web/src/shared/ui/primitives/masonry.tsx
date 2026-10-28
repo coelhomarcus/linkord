@@ -86,7 +86,12 @@ export function Masonry<T>({
   const empty = items.length === 0 && !loading && !error && !hasMore;
 
   return (
-    <div ref={scrollRef} aria-label={ariaLabel} aria-busy={loading} role="region" className={cn('min-h-0 overflow-y-auto [overflow-anchor:none]', className)}>
+    // relative: the live region below is absolute, and it must be placed (and
+    // clipped) by this scroller. Placed by whatever ancestor is positioned, it
+    // sat past the end of the virtualized list, outside the scroller, and made
+    // the whole page scrollable. overscroll-contain: a wheel that reaches the
+    // end of the list stays here instead of scrolling what is behind it.
+    <div ref={scrollRef} aria-label={ariaLabel} aria-busy={loading} role="region" className={cn('relative min-h-0 overflow-y-auto overscroll-contain [overflow-anchor:none]', className)}>
       <div ref={contentRef} className="relative w-full" style={{ height: empty ? undefined : virtualizer.getTotalSize() }}>
         {empty ? emptyState : virtualItems.map((virtualItem) => {
           const isTail = virtualItem.index >= items.length;
@@ -110,7 +115,7 @@ export function Masonry<T>({
           );
         })}
       </div>
-      <span className="sr-only" aria-live="polite">{loading ? 'Carregando mais itens' : null}</span>
+      <span className="sr-only top-0 left-0" aria-live="polite">{loading ? 'Carregando mais itens' : null}</span>
     </div>
   );
 }
