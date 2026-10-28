@@ -73,6 +73,22 @@ describe('removing an attachment', () => {
     expect(screen.queryByRole('button', { name: 'Remover f1.png' })).not.toBeInTheDocument();
   });
 
+  it("an admin removes an attachment from someone else's message, but not its link cards", async () => {
+    const admin = { ...me, me: { ...me.me, role: 'admin' as const } };
+    const { removeChatAttachment } = renderRow({ id: 'other', name: 'Outro', text: 'a foto https://a.com/x', attachments: [photo('f1')] }, { state: admin });
+    const user = userEvent.setup();
+    expect(screen.queryByRole('button', { name: 'Remover incorporação' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Remover f1.png' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Remover' }));
+    expect(removeChatAttachment).toHaveBeenCalledWith(7, 'f1');
+  });
+
+  it("an admin still cannot take someone else's only attachment: that is deleting the message", () => {
+    const admin = { ...me, me: { ...me.me, role: 'admin' as const } };
+    renderRow({ id: 'other', name: 'Outro', text: '', attachments: [photo('f1')] }, { state: admin });
+    expect(screen.queryByRole('button', { name: 'Remover f1.png' })).not.toBeInTheDocument();
+  });
+
   it('cancelling the confirmation removes nothing', async () => {
     const { removeChatAttachment } = renderRow({ text: 'a foto', attachments: [photo('f1')] });
     const user = userEvent.setup();

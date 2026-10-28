@@ -130,7 +130,11 @@ const messageWithAuthorSelect = {
   suppressedEmbeds: messages.suppressedEmbeds,
 };
 
-function rowWithParticipant(row: Message, participant: Participant): MessageWithAuthor {
+/** Who wrote a message, as the clients show it: the author's own participant
+ * when they are the one acting, their stored profile when someone else is. */
+interface AuthorIdentity { name: string | null; displayName: string | null; avatar: string | null }
+
+function rowWithParticipant(row: Message, participant: AuthorIdentity): MessageWithAuthor {
   return {
     id: row.id,
     conversationId: row.conversationId,
@@ -572,7 +576,7 @@ async function editMessage(p: Participant, msg: { msgId?: unknown; text?: string
  * the client replaces the message with what arrives in 'chat-edited' (see
  * RoomProvider.tsx), so leaving out its attachments or reactions made them
  * disappear for everyone. */
-async function broadcastChanged(row: Message, author: Participant): Promise<void> {
+async function broadcastChanged(row: Message, author: AuthorIdentity): Promise<void> {
   const [attachment, reactionsByEmoji] = await Promise.all([
     attachments.getByMessageIds([row.id]).then((m) => m.get(row.id)),
     reactions.getByMessageIds([row.id]).then((m) => m.get(row.id)),
@@ -581,26 +585,38 @@ async function broadcastChanged(row: Message, author: Participant): Promise<void
   await broadcastToConversationMembers(row.conversationId, { t: 'chat-edited', message: rowToMessage(rowWithParticipant(row, author), attachment, reactionsByEmoji) });
 }
 
-/** The author's own text message, in a conversation they still belong to:
- * what removing an attachment or a card requires (only the author, like an
- * edit). */
-async function ownTextMessage(p: Participant, rawId: unknown, what: string): Promise<{ row: Message } | ActionFailure> {
+/** A text message in a conversation the actor still belongs to, for what
+ * removing an attachment or a card requires: the author, like an edit — or,
+ * when `adminToo`, a platform admin as well (re-read, not taken from the
+ * connection's frozen role, §7.5). */
+async function removableTextMessage(p: Participant, rawId: unknown, what: string, adminToo: boolean): Promise<{ row: Message; isAuthor: boolean } | ActionFailure> {
   const msgId = Number(rawId);
   if (!Number.isFinite(msgId)) return { code: 'not_found', message: 'Essa mensagem não existe mais.' };
   const [row] = await db.select().from(messages).where(eq(messages.id, msgId)).limit(1);
   if (!row) return { code: 'not_found', message: 'Essa mensagem não existe mais.' };
-  if (row.authorId !== p.userId || row.kind !== 'text') return { code: 'forbidden', message: `Você só pode remover ${what} das suas mensagens.` };
+  const isAuthor = row.authorId === p.userId;
+  const allowed = row.kind === 'text' && (isAuthor || (adminToo && await isActiveAdmin(p.userId)));
+  if (!allowed) return { code: 'forbidden', message: `Você só pode remover ${what} das suas mensagens.` };
   if (!(await conversationExistsForUser(row.conversationId, p.userId))) return { code: 'conversation_not_found', message: 'Conversa não encontrada.' };
-  return { row };
+  return { row, isAuthor };
 }
 
-/** Takes one attachment out of the author's message (Discord's "remove
- * attachment"). The message has to keep something, text or another
+/** The identity to show on a message someone else changed. */
+async function authorIdentityOf(authorId: string | null): Promise<AuthorIdentity> {
+  if (!authorId) return { name: null, displayName: null, avatar: null };
+  const [author] = await db.select({ name: users.username, displayName: users.displayName, avatar: users.avatar }).from(users).where(eq(users.id, authorId)).limit(1);
+  return author ?? { name: null, displayName: null, avatar: null };
+}
+
+/** Takes one attachment out of a message (Discord's "remove attachment"):
+ * the author's own, or anyone's when a platform admin does it, which leaves a
+ * trail and does not mark the message as edited by its author. The message
+ * has to keep something, text or another
  * attachment: taking away all it has is deleting it, which is its own action. */
 async function removeAttachment(p: Participant, msg: { msgId?: unknown; attachmentId?: unknown }): Promise<ActionFailure | null> {
-  const found = await ownTextMessage(p, msg.msgId, 'anexos');
+  const found = await removableTextMessage(p, msg.msgId, 'anexos', true);
   if (!('row' in found)) return found;
-  const { row } = found;
+  const { row, isAuthor } = found;
   const attachmentId = typeof msg.attachmentId === 'string' ? msg.attachmentId : '';
   const current = (await attachments.getByMessageIds([row.id])).get(row.id) ?? [];
   if (!current.some((attachment) => attachment.id === attachmentId)) return { code: 'not_found', message: 'Esse anexo não existe mais.' };
@@ -608,10 +624,20 @@ async function removeAttachment(p: Participant, msg: { msgId?: unknown; attachme
     return { code: 'invalid_message', message: 'Esse anexo é tudo o que a mensagem tem. Para tirá-lo, apague a mensagem.' };
   }
   if (!(await deleteAttachmentOfMessage(row.id, attachmentId))) return { code: 'not_found', message: 'Esse anexo não existe mais.' };
-  const [updated] = await db.update(messages).set({ editedAt: new Date() }).where(eq(messages.id, row.id)).returning();
+  // an admin's removal is not something the author said: no "edited" mark
+  const [updated] = isAuthor
+    ? await db.update(messages).set({ editedAt: new Date() }).where(eq(messages.id, row.id)).returning()
+    : [row];
   // the author's quota just got room back
-  void sendUsageToUser(p.userId).catch(() => {});
-  await broadcastChanged(updated!, p);
+  if (row.authorId) void sendUsageToUser(row.authorId).catch(() => {});
+  if (!isAuthor) {
+    // moderation, so it leaves a trail — ids only, never the message body
+    await recordAudit({
+      actor: { id: p.userId, username: p.name }, action: 'message.attachment.remove', targetType: 'message', targetId: String(row.id),
+      detail: { conversationId: row.conversationId, authorId: row.authorId, attachmentId },
+    }).catch((err) => log.error('message.attachment.remove', err));
+  }
+  await broadcastChanged(updated!, isAuthor ? p : await authorIdentityOf(row.authorId));
   return null;
 }
 
@@ -619,7 +645,7 @@ async function removeAttachment(p: Participant, msg: { msgId?: unknown; attachme
  * embed"): the link stays in the text, as a plain link, and its card is never
  * fetched again. Not an edit of what was said, so it doesn't mark one. */
 async function suppressEmbed(p: Participant, msg: { msgId?: unknown; url?: unknown }): Promise<ActionFailure | null> {
-  const found = await ownTextMessage(p, msg.msgId, 'incorporações');
+  const found = await removableTextMessage(p, msg.msgId, 'incorporações', false);
   if (!('row' in found)) return found;
   const { row } = found;
   const url = typeof msg.url === 'string' ? msg.url : '';

@@ -121,9 +121,11 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
   const isInvite = message.kind === 'group_invite';
   // the author's own sent message: a link card can always go (the link stays);
   // an attachment only while the message keeps something else, text or
-  // another attachment (taking all it has is deleting it)
+  // another attachment (taking all it has is deleting it). An admin may take
+  // anyone's attachment out, but not their link cards.
   const canRemoveParts = isMine && !isInvite && !pending;
-  const canRemoveAttachments = canRemoveParts && (!!message.text.trim() || (message.attachments?.length ?? 0) > 1);
+  const canRemoveAttachments = (isMine || state.me.role === 'admin') && !isInvite && !pending
+    && (!!message.text.trim() || (message.attachments?.length ?? 0) > 1);
   const canReport = can.report;
   const isEditing = !pending && !isInvite && editingMsgId === message.msgId;
   const reactions = withPendingReactions(message.reactions, message.msgId, pendingReactions, state.me.userId);
