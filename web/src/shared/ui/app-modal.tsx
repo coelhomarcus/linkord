@@ -40,7 +40,7 @@ export function AppModal({ label, onClose, size = 'lg', children }: {
         )}
       >
         <AppModalContext.Provider value={onClose}>
-          <div className="flex h-full min-h-0 flex-col">{children}</div>
+          <div className="flex h-full min-h-0 min-w-0 flex-col">{children}</div>
         </AppModalContext.Provider>
       </DialogContent>
     </Dialog>

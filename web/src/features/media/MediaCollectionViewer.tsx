@@ -7,6 +7,8 @@ export interface ViewerItem {
   /** full-size original, the same thing download gets */
   src: string;
   name: string;
+  /** how to show it; a picture when absent */
+  kind?: 'image' | 'video';
 }
 
 interface MediaCollectionViewerProps {
@@ -19,7 +21,7 @@ interface MediaCollectionViewerProps {
 
 const navButton = 'grid size-11 place-items-center rounded-full bg-black/55 text-white transition-colors hover:bg-black/75 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/60 disabled:pointer-events-none disabled:opacity-30';
 
-/** Full-size viewer for the pictures of one message, with previous/next.
+/** Full-size viewer for a set of pictures and videos, with previous/next.
  * Separate from ImageLightbox, whose single-image contract the profile
  * screens depend on. */
 export function MediaCollectionViewer({ items, index, open, onIndexChange, onOpenChange }: MediaCollectionViewerProps) {
@@ -59,15 +61,28 @@ export function MediaCollectionViewer({ items, index, open, onIndexChange, onOpe
                 <DialogPrimitive.Close render={<CloseButton variant="overlay" size="md" />} />
               </div>
               <div className="relative flex min-h-0 flex-1 items-center justify-center px-4 pb-6 sm:px-16">
-                <img
-                  key={item.src}
-                  src={item.src}
-                  alt={item.name}
-                  data-download-url={item.src}
-                  data-download-name={item.name}
-                  className="max-h-full max-w-full rounded-md object-contain shadow-popover"
-                  onClick={(e) => e.stopPropagation()}
-                />
+                {item.kind === 'video' ? (
+                  <video
+                    key={item.src}
+                    src={item.src}
+                    aria-label={item.name}
+                    controls
+                    autoPlay
+                    playsInline
+                    className="max-h-full max-w-full rounded-md shadow-popover"
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                ) : (
+                  <img
+                    key={item.src}
+                    src={item.src}
+                    alt={item.name}
+                    data-download-url={item.src}
+                    data-download-name={item.name}
+                    className="max-h-full max-w-full rounded-md object-contain shadow-popover"
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                )}
                 {items.length > 1 && (
                   <>
                     <button type="button" aria-label="Anterior" disabled={!hasPrev} onClick={(e) => { e.stopPropagation(); onIndexChange(index - 1); }} className={`${navButton} absolute left-2 top-1/2 -translate-y-1/2 sm:left-4`}>

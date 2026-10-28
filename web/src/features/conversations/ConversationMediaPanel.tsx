@@ -1,17 +1,19 @@
-import { PlayIcon } from '@phosphor-icons/react';
+import { MagnifyingGlassIcon } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
 
 import { AppModal } from '@/shared/ui/app-modal';
 import { PageHeader } from '@/shared/PageHeader';
-import { Masonry } from '@/shared/ui/primitives/masonry';
+import { Input } from '@/shared/ui/primitives/input';
 import { Tabs, TabsList, TabsIndicator, TabsTrigger } from '@/shared/ui/primitives/tabs';
-import { DocumentAttachmentCard } from '@/features/media/DocumentAttachmentCard';
-import { ImageLightbox } from '@/features/media/ImageLightbox';
-import { LinkPreview } from '@/features/media/LinkPreview';
-import { fetchMedia, ApiError } from '@/shared/api/api';
+import { MediaCollectionViewer } from '@/features/media/MediaCollectionViewer';
+import type { ViewerItem } from '@/features/media/MediaCollectionViewer';
 import type { MediaItem, MediaKind } from '@/shared/api/api';
-import { useCachedImageSrc } from '@/shared/hooks/useCachedImageSrc';
-import { IMAGE_MIME_TYPES, VIDEO_MIME_TYPES } from '@/features/chat/ChatAttachment';
+import { useRoom } from '@/state/RoomContext';
+import { MediaListItem, MediaTile } from './media/MediaItems';
+import { MediaVirtualList } from './media/MediaVirtualList';
+import { MEDIA_TABS, itemKey, layoutFor } from './media/mediaRows';
+import { useMediaFeed } from './media/useMediaFeed';
+import { viewerItemOf } from './media/viewerItem';
 
 interface ConversationMediaPanelProps {
   conversationId: string | null;
@@ -19,203 +21,132 @@ interface ConversationMediaPanelProps {
   onOpenChange: (open: boolean) => void;
 }
 
-function UploadItemCard({ item, onOpenImage }: { item: MediaItem; onOpenImage: (src: string, alt: string) => void }) {
-  const attachment = item.attachment;
-  const url = attachment ? `/uploads/${attachment.id}` : '';
-  const thumbUrl = attachment ? (attachment.thumbId ? `/uploads/${attachment.thumbId}` : url) : null;
-  // Left unset while the cache warms — see useCachedImageSrc, a fallback src
-  // here would fire a second, concurrent request for the same image. Called
-  // unconditionally (rules-of-hooks) even when there's no attachment to look
-  // up yet — thumbUrl is null in that case, which the hook treats as
-  // "nothing to fetch".
-  const cachedThumbUrl = useCachedImageSrc(thumbUrl);
-  if (!attachment) return null;
+const SEARCH_DEBOUNCE_MS = 300;
 
-  if (IMAGE_MIME_TYPES.has(attachment.mime)) {
-    return (
-      <button
-        type="button"
-        onClick={() => onOpenImage(url, attachment.name)}
-        className="block w-full cursor-zoom-in overflow-hidden rounded-lg border border-border bg-bg-tertiary transition-opacity hover:opacity-90"
-      >
-        {/* Fixed aspect ratio (not h-auto/intrinsic): the masonry places each
-            item from its measured height, and an <img> sized by its content
-            measures 0 until its bytes arrive, so the item below would be
-            placed on top of it. A fixed ratio is known at layout time, same
-            as the video card's aspect-video below. */}
-        <img src={cachedThumbUrl ?? undefined} alt={attachment.name} loading="lazy" className="block aspect-square w-full object-cover" />
-      </button>
-    );
-  }
+const EMPTY_TEXT: Record<MediaKind, string> = {
+  uploads: 'Nenhum arquivo enviado ainda.',
+  images: 'Nenhuma imagem enviada ainda.',
+  gifs: 'Nenhum GIF enviado ainda.',
+  videos: 'Nenhum vídeo enviado ainda.',
+  audios: 'Nenhum áudio enviado ainda.',
+  documents: 'Nenhum documento enviado ainda.',
+  embeds: 'Nenhum link incorporável compartilhado ainda.',
+};
 
-  if (VIDEO_MIME_TYPES.has(attachment.mime)) {
-    return (
-      <a
-        href={url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="group relative block aspect-video w-full overflow-hidden rounded-lg border border-border bg-black"
-      >
-        <video src={`${url}#t=0.1`} muted preload="metadata" playsInline className="pointer-events-none block h-full w-full object-cover" />
-        <span className="absolute inset-0 flex items-center justify-center bg-black/25 transition-colors group-hover:bg-black/40">
-          <span className="grid size-10 place-items-center rounded-full bg-black/60 text-white">
-            <PlayIcon size={18} fill="currentColor" className="ml-0.5" />
-          </span>
-        </span>
-      </a>
-    );
-  }
-
-  return (
-    <a
-      href={url}
-      target="_blank"
-      rel="noopener noreferrer"
-      download={attachment.name}
-      className="flex w-full items-center rounded-lg border border-border bg-bg-tertiary px-3 py-3 transition-colors hover:bg-bg-hover"
-    >
-      <DocumentAttachmentCard name={attachment.name} size={attachment.size} mime={attachment.mime} className="min-w-0 flex-1" />
-    </a>
-  );
-}
-
-/** Close to the card's real height, so little moves once it is measured. */
-function estimateMediaHeight(item: MediaItem, columnWidth: number): number {
-  const mime = item.attachment?.mime;
-  if (!mime) return 220; // an embed: its preview card
-  if (IMAGE_MIME_TYPES.has(mime)) return columnWidth;
-  if (VIDEO_MIME_TYPES.has(mime)) return (columnWidth * 9) / 16;
-  return 64;
-}
-
-const errorMessage = (err: unknown) => (err instanceof ApiError ? err.message : 'Não foi possível carregar.');
+const ARIA_LABEL: Record<MediaKind, string> = {
+  uploads: 'Arquivos enviados',
+  images: 'Imagens enviadas',
+  gifs: 'GIFs enviados',
+  videos: 'Vídeos enviados',
+  audios: 'Áudios enviados',
+  documents: 'Documentos enviados',
+  embeds: 'Links compartilhados',
+};
 
 export function ConversationMediaPanel({ conversationId, open, onOpenChange }: ConversationMediaPanelProps) {
+  const { jumpToMessage } = useRoom();
   const [kind, setKind] = useState<MediaKind>('uploads');
-  const [items, setItems] = useState<MediaItem[]>([]);
-  const [nextBefore, setNextBefore] = useState<number | null>(null);
-  // true from the start: the first load only begins in an effect, after a
-  // render that would otherwise flash the "nothing here yet" state
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [lightbox, setLightbox] = useState<{ src: string; alt: string } | null>(null);
+  const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [viewer, setViewer] = useState<{ items: ViewerItem[]; index: number } | null>(null);
 
-  // The previous request's rows are dropped while rendering, not in an effect,
-  // so a stale list never paints for a frame under the new conversation or tab.
-  // Closing keeps them: the panel is still on screen while it animates out.
-  const requestKey = `${open}|${conversationId}|${kind}`;
-  const [seenRequestKey, setSeenRequestKey] = useState(requestKey);
-  if (seenRequestKey !== requestKey) {
-    setSeenRequestKey(requestKey);
-    if (open && conversationId) {
-      setItems([]);
-      setNextBefore(null);
-      setError(null);
-      setLoading(true);
-    }
-  }
-  // The tab resets when the panel opens, not when it closes: closing changing
-  // it would swap the visible tab under the rows while it animates out.
+  // The tab and the search reset when the panel opens, not when it closes:
+  // closing changing them would swap what is visible under the rows while it
+  // animates out.
   const [wasOpen, setWasOpen] = useState(open);
   if (wasOpen !== open) {
     setWasOpen(open);
-    if (open) setKind('uploads');
+    if (open) { setKind('uploads'); setSearch(''); setDebouncedSearch(''); }
   }
 
-  // `cancelled` drops a response that lands after the tab or conversation
-  // changed, which would otherwise replace the rows of the new request.
   useEffect(() => {
-    if (!open || !conversationId) return;
-    let cancelled = false;
-    fetchMedia(kind, null, conversationId)
-      .then((page) => {
-        if (cancelled) return;
-        setItems(page.items);
-        setNextBefore(page.nextBefore);
-      })
-      .catch((err) => { if (!cancelled) setError(errorMessage(err)); })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
-  }, [open, conversationId, kind]);
+    const timer = window.setTimeout(() => setDebouncedSearch(search.trim()), SEARCH_DEBOUNCE_MS);
+    return () => window.clearTimeout(timer);
+  }, [search]);
 
-  async function loadMore(targetConversationId: string) {
-    setLoading(true);
-    setError(null);
-    try {
-      const page = await fetchMedia(kind, nextBefore, targetConversationId);
-      setItems((prev) => [...prev, ...page.items]);
-      setNextBefore(page.nextBefore);
-    } catch (err) {
-      setError(errorMessage(err));
-    } finally {
-      setLoading(false);
-    }
+  // GIFs have no name to search by
+  const searchable = kind !== 'gifs';
+  const { items, hasMore, loading, error, loadMore } = useMediaFeed({
+    open, conversationId, kind, q: searchable ? debouncedSearch : '',
+  });
+
+  function openViewer(item: MediaItem) {
+    const entries = items.flatMap((candidate) => {
+      const viewerItem = viewerItemOf(candidate);
+      return viewerItem ? [{ key: itemKey(candidate), viewerItem }] : [];
+    });
+    const index = entries.findIndex((entry) => entry.key === itemKey(item));
+    if (index >= 0) setViewer({ items: entries.map((entry) => entry.viewerItem), index });
   }
 
-  const content = conversationId && (
-    <>
-      <PageHeader title="Mídias e links" />
+  function jump(item: MediaItem) {
+    onOpenChange(false);
+    jumpToMessage(item.conversationId, item.msgId);
+  }
 
-      <div className="flex flex-none items-center px-5 pt-4 md:px-6">
-        <Tabs value={kind} onValueChange={(v) => v && setKind(v as MediaKind)} className="w-fit">
-          <TabsList>
-            <TabsIndicator />
-            <TabsTrigger value="uploads">Enviadas</TabsTrigger>
-            <TabsTrigger value="embeds">Embeds</TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
-
-      <div className="min-h-0 flex-1 px-4 pb-4 pt-3 md:px-5">
-        <Masonry
-          // a modal has room for more than the two columns the side panel had
-          maxColumns={4}
-          minColumnWidth={180}
-          items={items}
-          // attachment.id, not msgId — a message can carry more than one
-          // attachment (the 4-image grid) and the uploads query returns one
-          // row per attachment, so msgId alone collides
-          getKey={(item) => `${item.msgId}:${item.attachment?.id ?? 'embed'}`}
-          renderItem={(item) => (
-            kind === 'uploads' ? (
-              <UploadItemCard item={item} onOpenImage={(src, alt) => setLightbox({ src, alt })} />
-            ) : item.embed ? (
-              <LinkPreview embed={item.embed} className="w-full max-w-full" fitContainer />
-            ) : null
-          )}
-          estimateHeight={estimateMediaHeight}
-          onLoadMore={() => { if (conversationId && nextBefore != null) void loadMore(conversationId); }}
-          hasMore={nextBefore != null}
-          loading={loading}
-          error={error}
-          onRetry={() => { if (conversationId) void loadMore(conversationId); }}
-          className="h-full"
-          emptyState={
-            <div className="flex h-full min-h-48 flex-col items-center justify-center px-6 text-center">
-              <p className="select-none text-label text-text-muted">
-                {kind === 'uploads' ? 'Nenhum arquivo enviado ainda.' : 'Nenhum link incorporável compartilhado ainda.'}
-              </p>
-            </div>
-          }
-          ariaLabel={kind === 'uploads' ? 'Arquivos enviados' : 'Links compartilhados'}
-        />
-      </div>
-    </>
-  );
+  const layout = layoutFor(kind);
+  const searching = searchable && debouncedSearch !== '';
 
   return (
     <>
       {open && conversationId && (
         <AppModal label="Mídias e links" onClose={() => onOpenChange(false)}>
-          {content}
+          <PageHeader title="Mídias e links" />
+
+          <div className="flex flex-none flex-wrap items-center gap-3 px-5 pt-4 md:px-6">
+            <div className="min-w-0 max-w-full overflow-x-auto">
+              <Tabs value={kind} onValueChange={(next) => next && setKind(next as MediaKind)} className="w-fit">
+                <TabsList className="w-max">
+                  <TabsIndicator />
+                  {MEDIA_TABS.map((tab) => <TabsTrigger key={tab.kind} value={tab.kind} className="shrink-0">{tab.label}</TabsTrigger>)}
+                </TabsList>
+              </Tabs>
+            </div>
+            {searchable && (
+              <div className="relative ml-auto w-full sm:w-64">
+                <MagnifyingGlassIcon size={16} aria-hidden className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+                <Input
+                  type="search"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder={kind === 'embeds' ? 'Buscar links' : 'Buscar arquivos'}
+                  aria-label={kind === 'embeds' ? 'Buscar links' : 'Buscar arquivos'}
+                  maxLength={100}
+                  className="pl-9"
+                />
+              </div>
+            )}
+          </div>
+
+          <MediaVirtualList
+            key={`${kind}:${debouncedSearch}`}
+            items={items}
+            layout={layout}
+            hasMore={hasMore}
+            loading={loading}
+            error={error}
+            onLoadMore={() => { void loadMore(); }}
+            renderTile={(item) => <MediaTile item={item} onOpen={openViewer} onJump={jump} />}
+            renderItem={(item) => <MediaListItem item={item} onJump={jump} />}
+            ariaLabel={ARIA_LABEL[kind]}
+            className="mt-3 flex-1 px-4 pb-4 md:px-5"
+            emptyState={
+              <div className="flex h-full min-h-48 flex-col items-center justify-center px-6 text-center">
+                <p className="select-none text-label text-text-muted">
+                  {searching ? 'Nada encontrado para essa busca.' : EMPTY_TEXT[kind]}
+                </p>
+              </div>
+            }
+          />
         </AppModal>
       )}
 
-      <ImageLightbox
-        src={lightbox?.src ?? ''}
-        alt={lightbox?.alt ?? ''}
-        open={!!lightbox}
-        onOpenChange={(next) => { if (!next) setLightbox(null); }}
+      <MediaCollectionViewer
+        items={viewer?.items ?? []}
+        index={viewer?.index ?? 0}
+        open={viewer !== null}
+        onIndexChange={(index) => setViewer((prev) => (prev ? { ...prev, index } : prev))}
+        onOpenChange={(next) => { if (!next) setViewer(null); }}
       />
     </>
   );

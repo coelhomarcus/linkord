@@ -100,7 +100,8 @@ export function logout(): Promise<void> {
   return apiFetch('/api/auth/logout', { method: 'POST' });
 }
 
-export type MediaKind = 'uploads' | 'embeds';
+/** uploads is every file ("Todos"); embeds is the shared links */
+export type MediaKind = 'uploads' | 'images' | 'videos' | 'audios' | 'documents' | 'gifs' | 'embeds';
 
 export interface MediaItem {
   msgId: number;
@@ -120,8 +121,9 @@ export interface MediaPage {
   nextBefore: number | null;
 }
 
-export function fetchMedia(kind: MediaKind, before: number | null, conversationId: string, limit = 24): Promise<MediaPage> {
+export function fetchMedia(kind: MediaKind, before: number | null, conversationId: string, q = '', limit = 24): Promise<MediaPage> {
   const params = new URLSearchParams({ kind, limit: String(limit), conversationId });
+  if (q) params.set('q', q);
   if (before != null) params.set('before', String(before));
   return apiFetch(`/api/media?${params.toString()}`);
 }
