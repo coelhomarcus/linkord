@@ -23,7 +23,9 @@ import { registerAdminRoutes } from '../modules/admin/adminRoutes.js';
 import { registerGroupMemberRoutes } from '../modules/conversations/groupMembers.js';
 import { registerGifRoutes } from '../modules/gifs/gifs.js';
 import { registerBotRoutes } from '../modules/bots/bots.js';
+import { registerWebhookIngressRoutes } from '../modules/bots/webhookIngress.js';
 import { logger } from '../lib/logger.js';
+import { loggablePath } from './requestPath.js';
 
 const log = logger.child({ component: 'http' });
 
@@ -38,7 +40,7 @@ const SLOW_REQUEST_MS = 1000;
  * look at (failures, denials, rate limits, slow calls). Static files and the
  * health check are skipped. */
 function logRequest(request: FastifyRequest, status: number, ms: number): void {
-  const route = request.routeOptions?.url ?? request.url.split('?')[0]!;
+  const route = loggablePath(request);
   if (route === '/healthz' || !(route.startsWith('/api/') || route.startsWith('/uploads/'))) return;
   const fields = { reqId: request.id, method: request.method, route, status, ms };
   if (status >= 500) log.error('request failed', undefined, fields);
@@ -65,7 +67,7 @@ export function createApp(): FastifyInstance {
   fastify.setErrorHandler((err: FastifyError, _request: FastifyRequest, reply: FastifyReply) => {
     const status = err.statusCode ?? 500;
     const code = err.code || 'internal_error';
-    if (status >= 500) log.error('error in a route', err, { reqId: _request.id, method: _request.method, url: _request.routeOptions?.url ?? _request.url.split('?')[0] });
+    if (status >= 500) log.error('error in a route', err, { reqId: _request.id, method: _request.method, url: loggablePath(_request) });
     // Fastify's own errors (FST_ERR_*, body parsing) keep their code as-is; only
     // this handler is allowed to put a code outside the registry on the wire
     sendJson(reply, status, { error: { code, message: err.message || 'Erro interno.' } });
@@ -100,6 +102,7 @@ export function createApp(): FastifyInstance {
   registerInvitationRoutes(fastify);
   registerGroupMemberRoutes(fastify);
   registerBotRoutes(fastify);
+  registerWebhookIngressRoutes(fastify);
   registerReportRoutes(fastify);
   registerLimitsRoutes(fastify);
   registerClientLogRoutes(fastify);

@@ -1,0 +1,2 @@
+ALTER TABLE "messages" ADD COLUMN "webhook_delivery_key" varchar(128);--> statement-breakpoint
+CREATE UNIQUE INDEX "messages_webhook_delivery_key_unique" ON "messages" USING btree ("webhook_id","webhook_delivery_key") WHERE "messages"."webhook_delivery_key" IS NOT NULL;

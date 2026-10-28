@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { db } from '../../db/client.js';
-import { webhooks, type Webhook } from '../../db/schema.js';
+import { conversations, webhooks, type Webhook } from '../../db/schema.js';
 import type { Tx } from '../users/userPairLock.js';
 
 // A bot posts through exactly one webhook today; the table allows more (one
@@ -55,4 +55,21 @@ export async function rotateBotWebhookToken(conversationId: string): Promise<Web
   const token = generateWebhookToken();
   await db.update(webhooks).set({ tokenHash: hashWebhookToken(token), tokenRotatedAt: new Date() }).where(eq(webhooks.id, webhook.id));
   return { id: webhook.id, token };
+}
+
+/** The webhook these credentials open, when they're right and its bot can
+ * still be posted to (not suspended). Wrong id and wrong token look the same. */
+export async function findWebhookByCredentials(id: string, token: string): Promise<Webhook | null> {
+  const [row] = await db.select({ webhook: webhooks }).from(webhooks)
+    .innerJoin(conversations, eq(conversations.id, webhooks.conversationId))
+    .where(and(eq(webhooks.id, id), eq(conversations.type, 'bot'), eq(conversations.status, 'active')))
+    .limit(1);
+  if (!row) return null;
+  const expected = Buffer.from(row.webhook.tokenHash, 'hex');
+  const given = Buffer.from(hashWebhookToken(token), 'hex');
+  return expected.length === given.length && crypto.timingSafeEqual(expected, given) ? row.webhook : null;
+}
+
+export async function markWebhookUsed(id: string): Promise<void> {
+  await db.update(webhooks).set({ lastUsedAt: new Date() }).where(eq(webhooks.id, id));
 }
