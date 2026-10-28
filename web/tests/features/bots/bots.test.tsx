@@ -85,8 +85,8 @@ describe('bots page — panel', () => {
   it('a bot reads only: no composer, no call, and its details one click away', () => {
     renderPanel('bots', 'bot-1');
     expect(screen.getByRole('heading', { name: 'Deploys' })).toBeInTheDocument();
-    expect(screen.getByRole('note')).toHaveTextContent('Só o bot envia mensagens aqui.');
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Só o bot envia/)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /chamada/ })).not.toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'Detalhes do bot' }).length).toBeGreaterThan(0);
   });
