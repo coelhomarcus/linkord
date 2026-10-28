@@ -28,6 +28,7 @@ import { buildReplyRef, normalizeReplyRef, type ReplyRef } from './replyRef.js';
 import type { LinkPreviewResult } from '../link-preview/linkPreview.js';
 import { backfillEmbeds, needsEmbeds, storedEmbedsFor, suppressedLinksFor, unfurlMessage } from './messageEmbeds.js';
 import { previewableLinks } from '../link-preview/messageLinks.js';
+import { storedRichEmbeds, type RichEmbed } from '../bots/richEmbeds.js';
 import { insertMessageOnce, isValidClientMessageId, sendPayloadHash } from './sendOperations.js';
 import { publishStaged, StagedUnavailableError } from '../attachments/stagedAttachments.js';
 import { ERROR_CODES, type ErrorCode } from '../../http/errors.js';
@@ -97,6 +98,8 @@ interface ChatMessagePayload {
   // posted by the conversation's bot (its webhook), not by an account: `id` is
   // null and the name/avatar are the bot's own
   bot?: true;
+  // the structured cards the bot sent with it (title, color, fields...)
+  richEmbeds?: RichEmbed[];
 }
 
 interface MessageWithAuthor {
@@ -114,6 +117,7 @@ interface MessageWithAuthor {
   groupInvitationId: string | null;
   embeds: unknown;
   suppressedEmbeds: unknown;
+  richEmbeds: unknown;
   // null unless the bot's webhook posted it; '' is a bot without a title/photo
   botName: string | null;
   botAvatar: string | null;
@@ -138,6 +142,7 @@ const messageWithAuthorSelect = {
   groupInvitationId: messages.groupInvitationId,
   embeds: messages.embeds,
   suppressedEmbeds: messages.suppressedEmbeds,
+  richEmbeds: messages.richEmbeds,
   // read live from the bot conversation, so a rename shows on its whole history
   botName: sql<string | null>`case when ${messages.webhookId} is null then null else (select ${conversations.title} from ${conversations} where ${conversations.id} = ${messages.conversationId}) end`,
   botAvatar: sql<string | null>`case when ${messages.webhookId} is null then null else (select ${conversations.avatar} from ${conversations} where ${conversations.id} = ${messages.conversationId}) end`,
@@ -163,6 +168,7 @@ function rowWithParticipant(row: Message, participant: AuthorIdentity): MessageW
     groupInvitationId: row.groupInvitationId,
     embeds: row.embeds,
     suppressedEmbeds: row.suppressedEmbeds,
+    richEmbeds: row.richEmbeds,
     botName: participant.bot?.name ?? null,
     botAvatar: participant.bot?.avatar ?? null,
   };
@@ -194,6 +200,8 @@ function rowToMessage(row: MessageWithAuthor, attachments?: Attachment[], reacti
     ts: row.createdAt.getTime(),
   };
   if (row.botName !== null) out.bot = true;
+  const richEmbeds = storedRichEmbeds(row.richEmbeds);
+  if (richEmbeds.length) out.richEmbeds = richEmbeds;
   if (row.editedAt) out.editedAt = row.editedAt.getTime();
   const embeds = storedEmbedsFor(row.text, row.embeds, row.suppressedEmbeds);
   if (embeds.length) out.embeds = embeds;
@@ -571,10 +579,10 @@ async function handleChat(socket: AppSocket, msg: ChatSendRequest): Promise<void
 /** What a bot's webhook posts, already authenticated by the caller. A
  * repeated `deliveryKey` answers with the message it first created instead of
  * posting again (`duplicate`); once that message is deleted, the key is free. */
-export async function postBotMessage(input: { conversationId: string; webhookId: string; text: string; deliveryKey: string | null }): Promise<{ message: ChatMessagePayload; duplicate: boolean }> {
-  const { conversationId, webhookId, text, deliveryKey } = input;
+export async function postBotMessage(input: { conversationId: string; webhookId: string; text: string; richEmbeds: RichEmbed[]; deliveryKey: string | null }): Promise<{ message: ChatMessagePayload; duplicate: boolean }> {
+  const { conversationId, webhookId, text, richEmbeds, deliveryKey } = input;
   const [inserted] = await db.insert(messages)
-    .values({ conversationId, authorId: null, webhookId, text, webhookDeliveryKey: deliveryKey })
+    .values({ conversationId, authorId: null, webhookId, text, richEmbeds: richEmbeds.length ? richEmbeds : null, webhookDeliveryKey: deliveryKey })
     .onConflictDoNothing()
     .returning({ id: messages.id });
   const messageId = inserted?.id ?? (deliveryKey ? (await db.select({ id: messages.id }).from(messages)

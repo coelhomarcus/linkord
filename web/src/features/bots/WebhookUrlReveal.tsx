@@ -34,6 +34,17 @@ function curlExample(url: string): string {
   return `curl -X POST '${url}' -H 'Content-Type: application/json' -d '{"content":"Deploy concluído ✅"}'`;
 }
 
+function embedExample(url: string): string {
+  const body = JSON.stringify({
+    embeds: [{
+      title: 'Deploy concluído', color: 'green', url: 'https://exemplo.com/deploys/42',
+      fields: [{ name: 'Versão', value: '1.4.2', inline: true }, { name: 'Ambiente', value: 'produção', inline: true }],
+      footer: 'CI',
+    }],
+  });
+  return `curl -X POST '${url}' -H 'Content-Type: application/json' -d '${body}'`;
+}
+
 /** The webhook URL right after it was made: the server keeps only the
  * token's hash, so this is the one moment it can be copied. */
 export function WebhookUrlReveal({ url }: { url: string }) {
@@ -45,6 +56,7 @@ export function WebhookUrlReveal({ url }: { url: string }) {
       </p>
       <CopyField label="URL do webhook" value={url} />
       <CopyField label="Exemplo" value={curlExample(url)} />
+      <CopyField label="Exemplo com card" value={embedExample(url)} />
     </div>
   );
 }

@@ -100,18 +100,21 @@ interface ChatMessageTextProps {
   suppressedEmbeds?: string[];
   /** the author's own message: each card can be removed, keeping its link */
   onRemoveEmbed?: (url: string) => void;
+  /** text inside something else (a bot's card): its links stay links, with no preview card of their own */
+  noPreviews?: boolean;
 }
 
-export function ChatMessageText({ text, mentionLookup, myUserId, onOpenProfile, embeds: previews, suppressedEmbeds, onRemoveEmbed }: ChatMessageTextProps) {
+export function ChatMessageText({ text, mentionLookup, myUserId, onOpenProfile, embeds: previews, suppressedEmbeds, onRemoveEmbed, noPreviews }: ChatMessageTextProps) {
   const blocks = useMemo(() => parseMessage(text), [text]);
   // keyed by the link as written (what the server keeps for a removed card), not the embed's own url
   const embeds = useMemo(() => {
+    if (noPreviews) return [];
     const removed = new Set(suppressedEmbeds ?? []);
     return previewableLinks(blocks).flatMap((link) => {
       const embed = removed.has(link) ? null : detectEmbed(link);
       return embed ? [{ link, embed }] : [];
     });
-  }, [blocks, suppressedEmbeds]);
+  }, [blocks, suppressedEmbeds, noPreviews]);
   const singleEmoji = isSingleEmoji(text);
   const ctx: RenderContext = { mentionLookup, myUserId, onOpenProfile };
   // a GIF message is only its KLIPY URL: show the GIF, not the link and a preview of it

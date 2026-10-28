@@ -7,6 +7,7 @@ import { Avatar } from '@/shared/Avatar';
 import { MessageMedia } from './MessageMedia';
 import { InviteCard } from '@/features/chat/InviteCard';
 import { ChatMessageText } from '@/features/chat/ChatMessageText';
+import { RichEmbedCard } from './RichEmbedCard';
 import { Button } from '@/shared/ui/primitives/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/primitives/dropdown-menu';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/primitives/popover';
@@ -277,6 +278,7 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
                 />
                 {message.editedAt && <span className="ml-1 text-caption text-text-muted">(editado)</span>}
               </div>
+              {message.richEmbeds?.map((embed, index) => <RichEmbedCard key={index} embed={embed} />)}
               {message.attachments?.length ? (
                 <MessageMedia
                   attachments={message.attachments}

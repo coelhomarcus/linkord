@@ -49,6 +49,9 @@ export function BotWebhookSection({ conversationId }: { conversationId: string }
       <p className="text-label text-text-secondary">
         Seus sistemas enviam um <code className="font-mono">POST</code> com <code className="font-mono">{'{"content": "..."}'}</code> para a URL do webhook, e cada envio aparece aqui como mensagem do bot.
       </p>
+      <p className="text-label text-text-muted">
+        Para um aviso mais legível, envie <code className="font-mono">embeds</code>: até 5 cards com <code className="font-mono">title</code>, <code className="font-mono">description</code>, <code className="font-mono">color</code> (<code className="font-mono">"red"</code>, <code className="font-mono">"#57F287"</code>…), <code className="font-mono">fields</code>, <code className="font-mono">url</code>, <code className="font-mono">footer</code> e <code className="font-mono">timestamp</code> — o mesmo formato do Discord.
+      </p>
       {freshUrl ? (
         <WebhookUrlReveal url={freshUrl} />
       ) : (
