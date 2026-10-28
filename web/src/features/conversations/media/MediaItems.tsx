@@ -11,7 +11,7 @@ import { viewerItemOf } from './viewerItem';
 import { formatMediaDate } from './mediaRows';
 
 // touch screens have no hover, so the controls stay visible there
-const REVEAL = 'opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100';
+const REVEAL = 'opacity-0 transition-opacity group-hover:opacity-100 group-has-[:focus-visible]:opacity-100 [@media(hover:none)]:opacity-100';
 
 function JumpButton({ onJump, label, className }: { onJump: () => void; label?: string; className?: string }) {
   return (

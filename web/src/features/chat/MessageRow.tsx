@@ -308,7 +308,7 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
           moment the mouse leaves the row (e.g. to move onto the open emoji
           picker, which is portaled outside this row), snapping the open
           popover to the viewport's top-left corner. */}
-      {!pending && <div className="absolute right-3 top-0 hidden -translate-y-1/2 items-center gap-0.5 rounded-md border border-border bg-surface-overlay p-0.5 opacity-0 shadow-popover transition-opacity pointer-events-none group-hover/row:opacity-100 group-hover/row:pointer-events-auto group-focus-within/row:opacity-100 group-focus-within/row:pointer-events-auto md:flex">
+      {!pending && <div className="absolute right-3 top-0 hidden -translate-y-1/2 items-center gap-0.5 rounded-md border border-border bg-surface-overlay p-0.5 opacity-0 shadow-popover transition-opacity pointer-events-none group-hover/row:opacity-100 group-hover/row:pointer-events-auto group-has-[:focus-visible]/row:opacity-100 group-has-[:focus-visible]/row:pointer-events-auto md:flex">
         {can.react && <ReactionButton onPick={(emoji) => reactToChatMessage(message.msgId, emoji)} />}
         {can.reply && (
           <Button type="button" variant="ghost" size="icon-sm" aria-label="Responder" onClick={onReply}>

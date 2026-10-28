@@ -2,6 +2,7 @@ import { CaretLeftIcon, CaretRightIcon, DownloadSimpleIcon } from '@phosphor-ico
 import { Dialog as DialogPrimitive } from '@base-ui/react/dialog';
 
 import { CloseButton } from '@/shared/ui/primitives/close-button';
+import { useFinalFocus } from './useFinalFocus';
 
 export interface ViewerItem {
   /** full-size original, the same thing download gets */
@@ -26,6 +27,7 @@ const navButton = 'grid size-11 place-items-center rounded-full bg-black/55 text
  * screens depend on. */
 export function MediaCollectionViewer({ items, index, open, onIndexChange, onOpenChange }: MediaCollectionViewerProps) {
   const item = items[index];
+  const finalFocus = useFinalFocus(open);
   const hasPrev = index > 0;
   const hasNext = index < items.length - 1;
 
@@ -34,6 +36,7 @@ export function MediaCollectionViewer({ items, index, open, onIndexChange, onOpe
       <DialogPrimitive.Portal>
         <DialogPrimitive.Backdrop className="fixed inset-0 z-50 bg-black/90 duration-150 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 motion-reduce:animate-none" />
         <DialogPrimitive.Popup
+          finalFocus={finalFocus}
           aria-label={item ? `${item.name}, ${index + 1} de ${items.length}` : 'Imagem'}
           className="fixed inset-0 z-50 flex flex-col outline-none duration-150 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 motion-reduce:animate-none"
           onClick={() => onOpenChange(false)}

@@ -1,6 +1,7 @@
 import { Dialog as DialogPrimitive } from '@base-ui/react/dialog';
 import { useState } from 'react';
 import { CloseButton } from '@/shared/ui/primitives/close-button';
+import { useFinalFocus } from './useFinalFocus';
 
 interface ImageLightboxProps {
   src: string;
@@ -21,6 +22,8 @@ export function ImageLightbox({ src: srcProp, alt: altProp, open, onOpenChange, 
   }
   const { src, alt, aspectRatio } = srcProp ? { src: srcProp, alt: altProp, aspectRatio: aspectRatioProp } : last;
 
+  const finalFocus = useFinalFocus(open);
+
   const isProfile = variant === 'profile';
   const profileFrameStyle = isProfile ? {
     width: '80vw',
@@ -37,6 +40,7 @@ export function ImageLightbox({ src: srcProp, alt: altProp, open, onOpenChange, 
         />
         <DialogPrimitive.Popup
           data-slot="image-lightbox-popup"
+          finalFocus={finalFocus}
           className="fixed inset-0 z-50 flex cursor-zoom-out items-center justify-center p-8 outline-none duration-150 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0"
           onClick={() => onOpenChange(false)}
         >
