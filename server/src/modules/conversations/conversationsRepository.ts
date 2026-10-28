@@ -265,6 +265,28 @@ export async function shareAnyConversation(a: string, b: string): Promise<boolea
   return !!row;
 }
 
+export interface SharedGroup { id: string; title: string; avatar: string; memberCount: number }
+
+/** The active groups both `a` and `b` are members of, by title: a profile's
+ * groups in common. Listed without paging, so it stops at `limit`; `total` is
+ * the full count. Only groups the viewer is in, by definition. */
+export async function listSharedGroups(a: string, b: string, limit: number): Promise<{ items: SharedGroup[]; total: number }> {
+  const memberOf = (userId: string) => sql`${conversations.id} IN (select ${conversationMembers.conversationId} from ${conversationMembers} where ${conversationMembers.userId} = ${userId})`;
+  const rows = await db
+    .select({
+      id: conversations.id,
+      title: conversations.title,
+      avatar: conversations.avatar,
+      memberCount: sql<number>`(select count(*)::int from ${conversationMembers} where ${conversationMembers.conversationId} = ${conversations.id})`,
+      total: sql<number>`(count(*) over ())::int`,
+    })
+    .from(conversations)
+    .where(and(eq(conversations.type, 'group'), eq(conversations.status, 'active'), memberOf(a), memberOf(b)))
+    .orderBy(sql`lower(${conversations.title})`, conversations.id)
+    .limit(limit);
+  return { items: rows.map(({ total: _total, ...group }) => group), total: rows[0]?.total ?? 0 };
+}
+
 export async function getMemberRole(conversationId: string, userId: string): Promise<ConversationRole | null> {
   const [row] = await db.select({ role: conversationMembers.role })
     .from(conversationMembers)
