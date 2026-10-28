@@ -4,7 +4,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import { after, describe, it } from 'node:test';
 import { eq } from 'drizzle-orm';
-import { attachments, messages } from '../../src/db/schema.js';
+import { adminAuditLogs, attachments, messages } from '../../src/db/schema.js';
 import { handlers } from '../../src/modules/messages/messages.js';
 import { filePathFor } from '../../src/modules/attachments/attachmentStorage.js';
 import { cleanupParticipant, db, joinNew, makeGroupWithMembers, makeUser, pool } from './helpers.js';
@@ -95,6 +95,57 @@ describe('removing an attachment from a message (real Postgres)', () => {
     await handlers['chat-remove-attachment']!(socket, { msgId, attachmentId: id, requestId: 'r1' });
     assert.equal(resultOf(sent, 'r1').error.code, 'not_found');
     assert.equal((await db.select().from(attachments).where(eq(attachments.id, id))).length, 1);
+  }));
+});
+
+describe("an admin removing someone else's attachment (real Postgres)", () => {
+  async function withAdmin<T>(fn: (ctx: { adminSocket: any; adminSent: Sent; conversationId: string; authorId: string; adminId: string; bystanderSocket: any; bystanderSent: Sent }) => Promise<T>): Promise<T> {
+    const author = await makeUser('au'); const admin = await makeUser('ad', 'admin'); const bystander = await makeUser('by');
+    const conversationId = await makeGroupWithMembers(author.id, [admin.id, bystander.id]);
+    const adminJoin = joinNew(admin); const bystanderJoin = joinNew(bystander);
+    try {
+      return await fn({ adminSocket: adminJoin.socket, adminSent: adminJoin.sent, conversationId, authorId: author.id, adminId: admin.id, bystanderSocket: bystanderJoin.socket, bystanderSent: bystanderJoin.sent });
+    } finally {
+      cleanupParticipant(adminJoin.participant); cleanupParticipant(bystanderJoin.participant);
+    }
+  }
+
+  it('takes it out, tells the conversation as the author\'s message, leaves it unmarked as edited, and records an audit entry', () => withAdmin(async ({ adminSocket, adminSent, conversationId, authorId, adminId }) => {
+    const msgId = await message(conversationId, authorId, 'olha a foto');
+    const { id } = await attach(msgId);
+
+    await handlers['chat-remove-attachment']!(adminSocket, { msgId, attachmentId: id, requestId: 'r1' });
+
+    assert.equal(resultOf(adminSent, 'r1').error, undefined);
+    assert.equal((await db.select().from(attachments).where(eq(attachments.messageId, msgId))).length, 0);
+    assert.equal(fs.existsSync(filePathFor(id)), false);
+    const [row] = await db.select().from(messages).where(eq(messages.id, msgId));
+    assert.equal(row!.text, 'olha a foto');
+    assert.equal(row!.editedAt, null);
+    const [changed] = editedBroadcasts(adminSent);
+    assert.equal(changed.msgId, msgId);
+    assert.equal(changed.id, authorId);
+    assert.match(changed.name, /^au_/);
+    assert.equal(changed.attachments, undefined);
+    const trail = await db.select().from(adminAuditLogs).where(eq(adminAuditLogs.targetId, String(msgId)));
+    assert.equal(trail.length, 1);
+    assert.equal(trail[0]!.action, 'message.attachment.remove');
+    assert.equal(trail[0]!.actorId, adminId);
+  }));
+
+  it('an ordinary member still cannot', () => withAdmin(async ({ bystanderSocket, bystanderSent, conversationId, authorId }) => {
+    const msgId = await message(conversationId, authorId, 'minha');
+    const { id } = await attach(msgId);
+    await handlers['chat-remove-attachment']!(bystanderSocket, { msgId, attachmentId: id, requestId: 'r1' });
+    assert.equal(resultOf(bystanderSent, 'r1').error.code, 'forbidden');
+    assert.equal((await db.select().from(attachments).where(eq(attachments.id, id))).length, 1);
+  }));
+
+  it('an admin still cannot take a card off someone else\'s link', () => withAdmin(async ({ adminSocket, adminSent, conversationId, authorId }) => {
+    const url = 'https://exemplo.com/a';
+    const msgId = await message(conversationId, authorId, url);
+    await handlers['chat-suppress-embed']!(adminSocket, { msgId, url, requestId: 'r1' });
+    assert.equal(resultOf(adminSent, 'r1').error.code, 'forbidden');
   }));
 });
 
