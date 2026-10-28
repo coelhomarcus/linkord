@@ -89,7 +89,7 @@ Um bot funciona como um grupo: quem cria é o dono e convida os outros.
 1. Abra o bot → **ⓘ** → **Convidar amigos**.
 2. Escolha os amigos. Cada um recebe um card de convite na conversa com você e entra ao aceitar.
 
-Quem entra **só lê**: o campo de mensagem dá lugar ao aviso "Só o bot envia mensagens aqui". Membros podem reagir e sair quando quiserem. O dono também pode remover membros, transferir o bot para outro membro e apagar mensagens do bot.
+Quem entra **só lê**: o bot não tem campo de mensagem. Membros podem reagir e sair quando quiserem. O dono também pode remover membros, transferir o bot para outro membro e apagar mensagens do bot.
 
 ## 5. Formato da mensagem
 

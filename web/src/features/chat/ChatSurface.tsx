@@ -1,4 +1,4 @@
-import { RobotIcon, UploadSimpleIcon } from '@phosphor-icons/react';
+import { UploadSimpleIcon } from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
 import type { DragEvent } from 'react';
 
@@ -92,12 +92,7 @@ export function ChatSurface({ conversationId, onOpenProfile, surfaceId = 'main' 
         <TypingIndicator conversationId={conversationId} />
       </div>
       <div ref={composerWrapRef} className="absolute inset-x-0 bottom-0">
-        {readOnly ? (
-          <p role="note" className="mx-3 mb-3 flex items-center justify-center gap-2 rounded-lg border border-border bg-fill-subtle px-3 py-2.5 text-label text-text-muted md:mx-4">
-            <RobotIcon size={16} className="flex-none" />
-            Só o bot envia mensagens aqui.
-          </p>
-        ) : (
+        {!readOnly && (
           <DirectComposerGate conversationId={conversationId}>
             <MessageComposer ref={composerRef} conversationId={conversationId} />
           </DirectComposerGate>
