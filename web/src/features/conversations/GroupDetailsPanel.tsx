@@ -1,4 +1,4 @@
-import { CameraIcon, CheckIcon, CrownIcon, FlagIcon, InfoIcon, LinkIcon, PencilSimpleIcon, SignOutIcon, TrashIcon, UploadSimpleIcon, UserPlusIcon, UsersIcon } from '@phosphor-icons/react';
+import { CameraIcon, CheckIcon, CrownIcon, FlagIcon, ImagesIcon, LinkIcon, MagnifyingGlassIcon, PencilSimpleIcon, SignOutIcon, TrashIcon, UploadSimpleIcon, UserPlusIcon } from '@phosphor-icons/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, KeyboardEvent, ReactNode } from 'react';
 import type { Area } from 'react-easy-crop';
@@ -10,7 +10,9 @@ import { Button } from '@/shared/ui/primitives/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/primitives/dropdown-menu';
 import { Input } from '@/shared/ui/primitives/input';
 import { ImageCropDialog } from '@/features/settings/ImageCropDialog';
-import { Avatar } from '@/shared/Avatar';
+import { Avatar, colorFor } from '@/shared/Avatar';
+import { Tabs, TabsIndicator, TabsList, TabsPanel, TabsTrigger } from '@/shared/ui/primitives/tabs';
+import { formatProfileDate } from '@/features/profile/useProfileDetails';
 import { ConfirmDialog } from '@/shared/ConfirmDialog';
 import { ImageUrlDialog } from '@/shared/ImageUrlDialog';
 import { UploadProgressModal } from '@/shared/UploadProgressModal';
@@ -29,11 +31,7 @@ import { ReportDialog } from '@/features/reports/ReportDialog';
 import { fetchGroupInvitations, fetchGroupMembers, inviteToGroup, revokeInvitation } from '@/shared/api/api';
 import type { SocialUser } from '@/shared/api/api';
 
-type GroupSection = 'overview' | 'members';
-const GROUP_SECTIONS = [
-  { id: 'overview', label: 'Visão geral', icon: InfoIcon },
-  { id: 'members', label: 'Membros', icon: UsersIcon },
-] as const satisfies readonly { id: GroupSection; label: string; icon: unknown }[];
+type GroupTab = 'members' | 'invites';
 
 const fetchNothing = () => Promise.resolve({ items: [], nextCursor: null });
 
@@ -42,11 +40,14 @@ interface GroupDetailsPanelProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onOpenProfile: (userId: string) => void;
+  /** shortcuts to what the group does: they close this modal and open theirs */
+  onOpenMedia: () => void;
+  onOpenSearch: () => void;
 }
 
-export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenProfile }: GroupDetailsPanelProps) {
+export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenProfile, onOpenMedia, onOpenSearch }: GroupDetailsPanelProps) {
   const {
-    state, conversations, onlineUserIds,
+    state, conversations, allUsers, onlineUserIds,
     updateGroupTitle, updateGroupAvatar, removeGroupMember, deleteGroup, transferGroupOwnership,
     groupActionError, clearGroupActionError,
   } = useRoom();
@@ -56,7 +57,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
   const isOwner = conversation?.myRole === 'owner';
   const memberIds = useMemo(() => new Set(conversation?.memberIds ?? []), [conversation?.memberIds]);
 
-  const [section, setSection] = useState<GroupSection>('overview');
+  const [tab, setTab] = useState<GroupTab>('members');
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState('');
   const [addOpen, setAddOpen] = useState(false);
@@ -89,7 +90,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
   if (wasOpen !== open) {
     setWasOpen(open);
     if (!open) {
-      setSection('overview');
+      setTab('members');
       setEditingTitle(false);
       setAddOpen(false);
       setAddSelected(new Map());
@@ -258,140 +259,172 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
     }
   }
 
+  const onlineCount = conversation ? conversation.memberIds.filter((id) => id === state.me.userId || onlineUserIds.has(id)).length : 0;
+  const owner = memberList.items.find((entry) => entry.role === 'owner')?.user ?? (conversation?.ownerId ? allUsers.get(conversation.ownerId) ?? null : null);
+
+  const shortcut = 'justify-start gap-2.5 text-text-secondary hover:text-text-primary';
   const actions = conversation && (
     <>
-      <Button type="button" variant="ghost" onClick={() => setConfirmLeave(true)} className="justify-start gap-2 text-text-secondary hover:text-text-primary">
-        <SignOutIcon size={16} />
+      <Button type="button" variant="ghost" onClick={() => setConfirmLeave(true)} className="justify-start gap-2.5 text-text-secondary hover:text-text-primary">
+        <SignOutIcon size={18} />
         Sair do grupo
       </Button>
-      <Button type="button" variant="ghost" onClick={() => setReportOpen(true)} className="justify-start gap-2 text-text-muted hover:text-text-primary">
-        <FlagIcon size={16} />
+      <Button type="button" variant="ghost" onClick={() => setReportOpen(true)} className="justify-start gap-2.5 text-text-muted hover:text-text-primary">
+        <FlagIcon size={18} />
         Denunciar grupo
       </Button>
       {isOwner && (
-        <Button type="button" variant="ghost" onClick={() => setConfirmDelete(true)} className="justify-start gap-2 text-red-text hover:bg-red/10 hover:text-red-text">
-          <TrashIcon size={16} />
+        <Button type="button" variant="ghost" onClick={() => setConfirmDelete(true)} className="justify-start gap-2.5 text-red-text hover:bg-red/10 hover:text-red-text">
+          <TrashIcon size={18} />
           Excluir grupo
         </Button>
       )}
     </>
   );
 
+  // the group's card: who it is, how big, since when, run by whom, and what to do with it
+  const card = conversation && (
+    <div className="contents md:flex md:min-h-0 md:flex-col md:overflow-y-auto md:border-r md:border-border">
+      <div className="h-24 flex-none" style={{ background: `linear-gradient(135deg, ${colorFor(conversation.id)}, transparent 90%)` }} />
+      <div className="flex flex-col gap-1 px-5 pb-4">
+        <div className="relative -mt-10 w-fit">
+          <GroupAvatar title={conversation.title || 'Grupo'} avatar={conversation.avatar} size={80} className="ring-4 ring-surface-panel" />
+          {isOwner && (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                disabled={uploadingAvatar}
+                render={
+                  <button
+                    type="button"
+                    aria-label="Trocar foto do grupo"
+                    className="absolute -bottom-1 -right-1 grid size-6 place-items-center rounded-full border border-border bg-surface-overlay text-text-secondary transition-colors hover:text-text-primary disabled:opacity-50"
+                  />
+                }
+              >
+                <CameraIcon size={12} />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="center">
+                <DropdownMenuItem onClick={() => avatarFileInputRef.current?.click()}>
+                  <UploadSimpleIcon size={14} />
+                  <span>Enviar do computador</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setUrlDialogOpen(true)}>
+                  <LinkIcon size={14} />
+                  <span>Usar URL</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
+      {isOwner && (
+        <input
+          ref={avatarFileInputRef}
+          type="file"
+          accept={AVATAR_MIME_TYPES.join(',')}
+          hidden
+          aria-label="Selecionar foto do grupo"
+          onChange={handleAvatarFilePicked}
+        />
+      )}
+      {avatarError && <p className="text-label text-red">{avatarError}</p>}
+        <div className="mt-1">
+        {editingTitle ? (
+          <div className="flex w-full items-center gap-2">
+            <Input
+              autoFocus
+              value={titleDraft}
+              onChange={(event) => setTitleDraft(event.target.value)}
+              onKeyDown={onTitleKeyDown}
+              maxLength={80}
+              className="border-border bg-fill-subtle text-center"
+            />
+            <Button type="button" size="icon-sm" aria-label="Salvar nome" onClick={saveTitle} disabled={!titleDraft.trim()}>
+              <CheckIcon size={14} />
+            </Button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={isOwner ? startEditTitle : undefined}
+            className={cn(
+              'flex items-center gap-1.5 text-title font-semibold',
+              isOwner && 'transition-colors hover:text-accent-text'
+            )}
+          >
+            {conversation.title || 'Grupo'}
+            {isOwner && <PencilSimpleIcon size={13} className="text-text-muted" />}
+          </button>
+        )}
+        </div>
+        <p className="flex items-center gap-1.5 text-caption text-text-muted">
+          <span>{conversation.memberCount} {conversation.memberCount === 1 ? 'membro' : 'membros'}</span>
+          <span aria-hidden>·</span>
+          <span className="flex items-center gap-1"><span aria-hidden className="size-2 rounded-full bg-green" />{onlineCount} online</span>
+        </p>
+      </div>
+
+      <dl className="flex flex-col gap-3 border-t border-border px-5 py-4">
+        <div>
+          <dt className="text-caption font-medium text-text-muted">Criado em</dt>
+          <dd className="mt-0.5 text-label text-text-primary">{formatProfileDate(new Date(conversation.createdAt).toISOString())}</dd>
+        </div>
+        {owner && (
+          <div>
+            <dt className="text-caption font-medium text-text-muted">Dono</dt>
+            <dd className="mt-0.5">
+              <button type="button" onClick={() => onOpenProfile(owner.id)} className="flex max-w-full items-center gap-2 rounded-md text-left text-label text-text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                <Avatar id={owner.id} name={owner.displayName} avatar={owner.avatar} avatarColor={owner.avatarColor} size={20} />
+                <span className="truncate">{owner.id === state.me.userId ? 'Você' : owner.displayName}</span>
+                <span className="truncate text-caption text-text-muted">@{owner.username}</span>
+              </button>
+            </dd>
+          </div>
+        )}
+      </dl>
+
+      <div className="flex flex-col gap-1 border-t border-border px-3 py-3">
+        {isOwner && (
+          <Button type="button" variant="secondary" onClick={() => { setTab('members'); setAddOpen(true); }} className="justify-start gap-2.5">
+            <UserPlusIcon size={18} />
+            Convidar amigos
+          </Button>
+        )}
+        <Button type="button" variant="ghost" onClick={onOpenMedia} className={shortcut}>
+          <ImagesIcon size={18} />
+          Mídias e links
+        </Button>
+        <Button type="button" variant="ghost" onClick={onOpenSearch} className={shortcut}>
+          <MagnifyingGlassIcon size={18} />
+          Buscar na conversa
+        </Button>
+      </div>
+
+      {/* last on a phone, after the people: nobody scrolls past "Excluir grupo" to see the members */}
+      <div className="order-2 mt-auto flex flex-col gap-1 border-t border-border px-3 py-3 md:order-none">{actions}</div>
+    </div>
+  );
+
+  const TAB = 'h-11 rounded-none px-0 text-body font-semibold text-text-muted hover:text-text-secondary data-active:text-text-primary';
   const content: ReactNode = conversation && (
     <>
       <PageHeader title="Detalhes do grupo" />
-      {/* settings-style: sections on the left with the group's own actions under
-          them; on a phone, a strip of tabs on top and the actions at the end */}
-      <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)_auto] md:grid-cols-[15rem_minmax(0,1fr)] md:grid-rows-[minmax(0,1fr)_auto]">
-        <nav aria-label="Seções do grupo" className="flex gap-1 overflow-x-auto border-b border-border p-2 md:col-start-1 md:row-start-1 md:flex-col md:overflow-visible md:border-r md:border-b-0 md:p-3">
-          {GROUP_SECTIONS.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              aria-current={section === item.id ? 'page' : undefined}
-              onClick={() => setSection(item.id)}
-              className={cn(
-                'flex flex-none items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-label font-medium transition-colors',
-                section === item.id ? 'bg-fill-active text-text-primary' : 'text-text-muted hover:bg-fill-hover hover:text-text-primary',
-              )}
-            >
-              <item.icon size={18} weight={section === item.id ? 'fill' : 'regular'} aria-hidden />
-              {item.label}
-            </button>
-          ))}
-        </nav>
-        <main aria-label={GROUP_SECTIONS.find((item) => item.id === section)!.label} className="flex min-h-0 min-w-0 flex-col gap-6 overflow-y-auto px-5 py-5 md:col-start-2 md:row-span-2 md:row-start-1 md:px-8 md:py-6">
-          {groupActionError && (
-            <div className="flex items-center gap-2 rounded-md bg-red/12 px-2.5 py-1.5 text-label text-red-text">
-              <span className="min-w-0 flex-1">{groupActionError}</span>
-              <CloseButton size="xs" label="Dispensar" onClick={clearGroupActionError} />
-            </div>
-          )}
-          {section === 'overview' && (
-          <div className="flex flex-col items-center gap-3 text-center">
-            <div className="relative">
-              <GroupAvatar title={conversation.title || 'Grupo'} avatar={conversation.avatar} size={64} />
-              {isOwner && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger
-                    disabled={uploadingAvatar}
-                    render={
-                      <button
-                        type="button"
-                        aria-label="Trocar foto do grupo"
-                        className="absolute -bottom-1 -right-1 grid size-6 place-items-center rounded-full border border-border bg-surface-overlay text-text-secondary transition-colors hover:text-text-primary disabled:opacity-50"
-                      />
-                    }
-                  >
-                    <CameraIcon size={12} />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="center">
-                    <DropdownMenuItem onClick={() => avatarFileInputRef.current?.click()}>
-                      <UploadSimpleIcon size={14} />
-                      <span>Enviar do computador</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setUrlDialogOpen(true)}>
-                      <LinkIcon size={14} />
-                      <span>Usar URL</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-            </div>
-            {isOwner && (
-              <input
-                ref={avatarFileInputRef}
-                type="file"
-                accept={AVATAR_MIME_TYPES.join(',')}
-                hidden
-                aria-label="Selecionar foto do grupo"
-                onChange={handleAvatarFilePicked}
-              />
-            )}
-            {avatarError && <p className="text-label text-red">{avatarError}</p>}
-            {editingTitle ? (
-              <div className="flex w-full items-center gap-2">
-                <Input
-                  autoFocus
-                  value={titleDraft}
-                  onChange={(event) => setTitleDraft(event.target.value)}
-                  onKeyDown={onTitleKeyDown}
-                  maxLength={80}
-                  className="border-border bg-fill-subtle text-center"
-                />
-                <Button type="button" size="icon-sm" aria-label="Salvar nome" onClick={saveTitle} disabled={!titleDraft.trim()}>
-                  <CheckIcon size={14} />
-                </Button>
+      {/* the card and the people side by side from md, each column scrolling on its own; stacked below, scrolling as one */}
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto md:grid md:grid-cols-[19rem_minmax(0,1fr)] md:grid-rows-[minmax(0,1fr)] md:overflow-hidden">
+        {card}
+        <Tabs value={tab} onValueChange={(value) => { if (value === 'members' || value === 'invites') setTab(value); }} className="order-1 flex shrink-0 flex-col items-stretch gap-3 border-t border-border p-4 md:order-none md:min-h-0 md:shrink md:border-t-0 md:p-5">
+          <TabsList aria-label="Pessoas" className="flex h-auto w-full flex-none justify-start gap-6 rounded-none border-0 border-b border-border bg-transparent p-0">
+            <TabsIndicator className="top-auto -bottom-px h-0.5 rounded-full bg-text-primary" />
+            <TabsTrigger value="members" className={TAB}>Membros</TabsTrigger>
+            {isOwner && <TabsTrigger value="invites" className={TAB}>Convites enviados{sent.items.length > 0 ? ` (${sent.items.length}${sent.hasMore ? '+' : ''})` : ''}</TabsTrigger>}
+          </TabsList>
+          <div className="flex flex-col gap-3 md:min-h-0 md:flex-1 md:overflow-y-auto md:overscroll-contain">
+            {groupActionError && (
+              <div className="flex items-center gap-2 rounded-md bg-red/12 px-2.5 py-1.5 text-label text-red-text">
+                <span className="min-w-0 flex-1">{groupActionError}</span>
+                <CloseButton size="xs" label="Dispensar" onClick={clearGroupActionError} />
               </div>
-            ) : (
-              <button
-                type="button"
-                onClick={isOwner ? startEditTitle : undefined}
-                className={cn(
-                  'flex items-center gap-1.5 text-title font-semibold',
-                  isOwner && 'transition-colors hover:text-accent-text'
-                )}
-              >
-                {conversation.title || 'Grupo'}
-                {isOwner && <PencilSimpleIcon size={13} className="text-text-muted" />}
-              </button>
             )}
-            <p className="text-caption text-text-muted">{conversation.memberCount} {conversation.memberCount === 1 ? 'membro' : 'membros'}</p>
-          </div>
-          )}
-          {section === 'members' && (
-            <>
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between">
-                <h3 className="text-label font-medium text-text-secondary">Membros</h3>
-                {isOwner && (
-                  <Button type="button" variant="ghost" size="sm" onClick={() => setAddOpen((v) => !v)} className="gap-1.5 text-text-muted hover:text-text-primary">
-                    <UserPlusIcon size={14} />
-                    Convidar amigos
-                  </Button>
-                )}
-              </div>
-
+            <TabsPanel value="members" className="flex flex-col gap-2">
               {addOpen && (
                 <div className="flex flex-col gap-2 rounded-lg border border-border bg-fill-subtle p-2">
                   <p className="px-1 text-caption text-text-muted">Só entram no grupo ao aceitar o convite.</p>
@@ -402,7 +435,6 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
                 </div>
               )}
               {inviteMessage && <p role="status" className="px-1 text-caption text-text-muted">{inviteMessage}</p>}
-
               <div className="flex flex-col gap-1">
                 {memberList.items.map(({ user: member, role }) => {
                   const online = onlineUserIds.has(member.id);
@@ -461,38 +493,40 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
                   </Button>
                 )}
               </div>
-            </div>
-
-            {isOwner && sent.items.length > 0 && (
-              <div className="flex flex-col gap-2">
-                <h3 className="text-label font-medium text-text-secondary">Convites enviados</h3>
-                <div className="flex flex-col gap-1">
-                  {sent.items.map((entry) => (
-                    <div key={entry.id} className="flex items-center gap-2.5 rounded-md px-1.5 py-1.5 hover:bg-fill-subtle">
-                      <Avatar id={entry.invitee.id} name={entry.invitee.displayName} avatar={entry.invitee.avatar} avatarColor={entry.invitee.avatarColor} size={34} />
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-label font-medium">{entry.invitee.displayName}</span>
-                        <span className="block truncate text-caption text-text-muted">
-                          enviado em {new Date(entry.at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+            </TabsPanel>
+            {isOwner && (
+              <TabsPanel value="invites" className="flex flex-col gap-2">
+                {sent.items.length === 0 ? (
+                  <p className="py-10 text-center text-label text-text-muted">Nenhum convite pendente.</p>
+                ) : (
+                  <>
+                  <div className="flex flex-col gap-1">
+                    {sent.items.map((entry) => (
+                      <div key={entry.id} className="flex items-center gap-2.5 rounded-md px-1.5 py-1.5 hover:bg-fill-subtle">
+                        <Avatar id={entry.invitee.id} name={entry.invitee.displayName} avatar={entry.invitee.avatar} avatarColor={entry.invitee.avatarColor} size={34} />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-label font-medium">{entry.invitee.displayName}</span>
+                          <span className="block truncate text-caption text-text-muted">
+                            enviado em {new Date(entry.at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                          </span>
                         </span>
-                      </span>
-                      <Button type="button" variant="ghost" size="xs" disabled={revokingId === entry.id} onClick={() => void handleRevoke(entry.id)}>
-                        Revogar
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-                {sent.hasMore && (
-                  <Button type="button" variant="ghost" size="sm" className="self-center" disabled={sent.loadingMore} onClick={sent.loadMore}>
-                    {sent.loadingMore ? 'Carregando…' : 'Carregar mais'}
-                  </Button>
+                        <Button type="button" variant="ghost" size="xs" disabled={revokingId === entry.id} onClick={() => void handleRevoke(entry.id)}>
+                          Revogar
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                  {sent.hasMore && (
+                    <Button type="button" variant="ghost" size="sm" className="self-center" disabled={sent.loadingMore} onClick={sent.loadMore}>
+                      {sent.loadingMore ? 'Carregando…' : 'Carregar mais'}
+                    </Button>
+                  )}
+                  </>
                 )}
-              </div>
+              </TabsPanel>
             )}
-            </>
-          )}
-        </main>
-        <div className="flex flex-col gap-1 border-t border-border p-2 md:col-start-1 md:row-start-2 md:border-r md:p-3">{actions}</div>
+          </div>
+        </Tabs>
       </div>
     </>
   );
@@ -500,7 +534,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
   return (
     <>
       {open && conversation && (
-        <AppModal label="Detalhes do grupo" onClose={() => onOpenChange(false)}>
+        <AppModal label="Detalhes do grupo" size="md" onClose={() => onOpenChange(false)}>
           {content}
         </AppModal>
       )}
