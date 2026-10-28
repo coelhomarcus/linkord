@@ -18,7 +18,7 @@ export function AppModals({ modal, onClose, onOpenProfile }: {
 }) {
   if (modal === 'settings') {
     return (
-      <AppModal label="Ajustes" onClose={onClose}>
+      <AppModal label="Ajustes" size="form" onClose={onClose}>
         <Routes>
           <Route path="/app/settings/:tab?" element={<SettingsPage onOpenProfile={onOpenProfile} />} />
         </Routes>
