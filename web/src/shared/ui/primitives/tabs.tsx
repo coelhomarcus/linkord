@@ -31,7 +31,7 @@ function TabsIndicator({ className, ...props }: TabsPrimitive.Indicator.Props) {
     <TabsPrimitive.Indicator
       data-slot="tabs-indicator"
       className={cn(
-        "absolute rounded-sm bg-bg-selected transition-all duration-200 ease-out",
+        "absolute rounded-md bg-bg-selected transition-all duration-200 ease-out",
         "left-(--active-tab-left) top-[3px] bottom-[3px] w-(--active-tab-width)",
         "data-[orientation=vertical]:left-[3px] data-[orientation=vertical]:right-[3px] data-[orientation=vertical]:top-(--active-tab-top) data-[orientation=vertical]:h-(--active-tab-height) data-[orientation=vertical]:w-auto data-[orientation=vertical]:bottom-auto",
         className
@@ -46,7 +46,7 @@ function TabsTrigger({ className, ...props }: TabsPrimitive.Tab.Props) {
     <TabsPrimitive.Tab
       data-slot="tabs-trigger"
       className={cn(
-        "relative inline-flex h-8 items-center justify-center gap-1.5 rounded-sm px-3 text-body font-medium text-text-muted outline-none transition-colors select-none data-active:text-text-primary hover:text-text-secondary disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "relative inline-flex h-8 items-center justify-center gap-1.5 rounded-md px-3 text-body font-medium text-text-muted outline-none transition-colors select-none data-active:text-text-primary hover:text-text-secondary disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className
       )}
       {...props}
