@@ -14,7 +14,9 @@ import { NotificationList } from './NotificationList';
 import { formatUnread, notificationTarget } from './notificationText';
 import { useUnreadNotifications } from './useUnreadNotifications';
 
-export function NotificationBell({ collapsed = false, onNavigate }: { collapsed?: boolean; onNavigate?: () => void }) {
+/** topbar: the app's top bar, from 768px; header: the conversation list's
+ * header, on a phone, where there is no top bar. */
+export function NotificationBell({ placement = 'header', onNavigate }: { placement?: 'header' | 'topbar'; onNavigate?: () => void }) {
   const navigate = useNavigate();
   const { bump } = useFriends();
   const { unread, setUnread } = useUnreadNotifications();
@@ -63,18 +65,18 @@ export function NotificationBell({ collapsed = false, onNavigate }: { collapsed?
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         aria-label={label}
-        className={collapsed
-          ? 'relative grid size-11 place-items-center rounded-md text-text-muted transition-colors hover:bg-fill-hover hover:text-text-primary'
+        className={placement === 'topbar'
+          ? 'relative grid size-7 flex-none place-items-center rounded-md text-text-muted transition-colors hover:bg-fill-hover hover:text-text-primary'
           : cn(buttonVariants({ variant: 'ghost', size: 'icon-sm' }), 'relative flex-none text-text-muted hover:text-text-primary')}
       >
-        <BellIcon size={20} />
+        <BellIcon size={placement === 'topbar' ? 18 : 20} />
         {unread > 0 && (
           <CountBadge decorative className="absolute -right-1 -top-1">
             {formatUnread(unread)}
           </CountBadge>
         )}
       </PopoverTrigger>
-      <PopoverContent side={collapsed ? 'right' : 'bottom'} align="start" className="w-[min(22rem,calc(100vw-1.5rem))] bg-bg-modal">
+      <PopoverContent side="bottom" align={placement === 'topbar' ? 'end' : 'start'} className="w-[min(22rem,calc(100vw-1.5rem))] bg-bg-modal">
         <div className="flex items-center justify-between gap-2 px-1">
           <h2 className="text-label font-semibold text-text-primary">Notificações</h2>
           <div className="flex items-center gap-0.5">

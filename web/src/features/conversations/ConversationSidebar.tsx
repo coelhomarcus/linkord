@@ -179,7 +179,8 @@ export function ConversationSidebar({ onReturnToCall, onOpenProfile, showReturnT
               <Button type="button" size="icon-sm" aria-label="Criar grupo" onClick={() => setGroupOpen(true)} className="flex-none">
                 <PlusIcon size={20} />
               </Button>
-              <NotificationBell onNavigate={() => { if (isOverlay) setOpenMobile(false); }} />
+              {/* from 768px the bell is in the top bar; a phone has no top bar */}
+              {isMobile && <NotificationBell onNavigate={() => setOpenMobile(false)} />}
               {!isOverlay && (
                 <Button type="button" variant="ghost" size="icon-sm" aria-label="Ocultar lista de conversas" onClick={toggleSidebar} className="flex-none text-text-muted hover:text-text-primary">
                   <SidebarSimpleIcon size={20} />
