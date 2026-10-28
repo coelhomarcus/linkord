@@ -117,6 +117,7 @@ interface EmbedItem extends MediaBase {
 
 function conversationNameFor(row: MediaBaseRow): string {
   if (row.conversationType === 'group') return row.conversationTitle || 'Grupo';
+  if (row.conversationType === 'bot') return row.conversationTitle || 'Bot';
   return row.otherUsername ? resolveDisplayName(row.otherDisplayName ?? '', row.otherUsername) : 'Conversa direta';
 }
 

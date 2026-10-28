@@ -11,7 +11,7 @@ import * as reactions from '../modules/calls/reactions.js';
 import * as floodControl from './floodControl.js';
 import * as chat from '../modules/messages/messages.js';
 import * as conversations from '../modules/conversations/conversations.js';
-import { listForUser, getConversationForUser, getDirectPeerId, unreadCountsForUser } from '../modules/conversations/conversationsRepository.js';
+import { acceptsHumanMessages, listForUser, getConversationForUser, getDirectPeerId, unreadCountsForUser } from '../modules/conversations/conversationsRepository.js';
 import { canSendDirectMessage } from '../modules/friendships/friendshipsRepository.js';
 import { ERROR_CODES, type ErrorCode } from '../http/errors.js';
 import { getUserUsage } from '../modules/attachments/attachmentQuota.js';
@@ -136,6 +136,10 @@ async function handleCallJoin(socket: AppSocket, msg: { conversationId?: string 
   const conversation = await getConversationForUser(conversationId, p.userId);
   if (!conversation) {
     sendSocketError(socket, 'call-not-allowed', 'Você não tem acesso a essa conversa.');
+    return;
+  }
+  if (!acceptsHumanMessages(conversation)) {
+    sendSocketError(socket, 'call-not-allowed', 'Não há chamadas em bots.');
     return;
   }
   // §4.3: "iniciar chamada privada" is explicitly in the restricted-contact

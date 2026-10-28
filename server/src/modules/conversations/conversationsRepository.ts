@@ -15,7 +15,20 @@ import type { Tx } from '../users/userPairLock.js';
 // `handlers`. See conversations.ts's own module comment for the handler
 // half of this split.
 
-export type ConversationType = 'direct' | 'group';
+export type ConversationType = 'direct' | 'group' | 'bot';
+
+// A bot has a group's whole lifecycle (owner, invitations, leaving,
+// deleting); what sets it apart is only who may post — see acceptsHumanMessages.
+export const GROUP_LIKE_TYPES = ['group', 'bot'] as const;
+
+export function isGroupLike(type: string): boolean {
+  return (GROUP_LIKE_TYPES as readonly string[]).includes(type);
+}
+
+/** Only the bot's webhook posts in a bot conversation; its members read. */
+export function acceptsHumanMessages(conversation: { type: string }): boolean {
+  return conversation.type !== 'bot';
+}
 // 'admin' was never actually assigned anywhere in practice — dropped from
 // the type along with the DB comment (see schema.ts#conversationMembers).
 export type ConversationRole = 'owner' | 'member';
@@ -49,7 +62,7 @@ export function sanitizeConversationTitle(name: unknown): string | null {
 }
 
 function normalizeConversationType(type: string): ConversationType {
-  return type === 'group' ? 'group' : 'direct';
+  return type === 'group' || type === 'bot' ? type : 'direct';
 }
 
 // Exported (not just used by listForUser below) because conversations.ts's
@@ -88,7 +101,7 @@ export async function listForUser(userId: string): Promise<ConversationSummary[]
       // conversations (member.hiddenAt set): hidden until a message newer
       // than the close time arrives, then it reappears on its own.
       or(
-        eq(conversations.type, 'group'),
+        inArray(conversations.type, [...GROUP_LIKE_TYPES]),
         and(
           sql`${conversations.lastMessageAt} is not null`,
           or(
@@ -232,17 +245,19 @@ export async function getOrCreateDirect(a: string, b: string, creatorId: string,
   return executor ? run(executor) : db.transaction(run);
 }
 
-/** A group with its creator as the single `owner` member, in one
+/** A group (or bot) with its creator as the single `owner` member, in one
  * transaction — no path adds anyone else directly anymore (only an accepted
- * invitation does, see invitationsRepository.ts). */
-export async function createGroup(ownerId: string, title: string): Promise<Conversation> {
-  return db.transaction(async (tx) => {
+ * invitation does, see invitationsRepository.ts). Pass a `tx` to join the
+ * caller's (a bot is created together with its webhook). */
+export async function createGroup(ownerId: string, title: string, type: 'group' | 'bot' = 'group', executor?: Tx): Promise<Conversation> {
+  const run = async (tx: Tx) => {
     const [inserted] = await tx.insert(conversations).values({
-      id: crypto.randomUUID(), type: 'group', title, createdBy: ownerId, updatedAt: new Date(),
+      id: crypto.randomUUID(), type, title, createdBy: ownerId, updatedAt: new Date(),
     }).returning();
     await tx.insert(conversationMembers).values({ conversationId: inserted!.id, userId: ownerId, role: 'owner' });
     return inserted!;
-  });
+  };
+  return executor ? run(executor) : db.transaction(run);
 }
 
 /** THE access gate: membership AND an active conversation. A suspended
@@ -387,6 +402,7 @@ export async function conversationDisplayName(conversationId: string, viewerUser
   const conversation = await getConversationForUser(conversationId, viewerUserId);
   if (!conversation) return 'conversa';
   if (conversation.type === 'group') return conversation.title || 'Grupo';
+  if (conversation.type === 'bot') return conversation.title || 'Bot';
 
   const [other] = await db
     .select({ username: users.username, displayName: users.displayName })
@@ -413,7 +429,7 @@ export async function reconcileGroupMembership(conversationId: string, removedUs
     return false;
   }
   const [conversation] = await db.select({ type: conversations.type }).from(conversations).where(eq(conversations.id, conversationId)).limit(1);
-  if (conversation?.type !== 'group') return false;
+  if (!conversation || !isGroupLike(conversation.type)) return false;
   await deleteForConversation(conversationId);
   await db.delete(conversations).where(eq(conversations.id, conversationId));
   return true;

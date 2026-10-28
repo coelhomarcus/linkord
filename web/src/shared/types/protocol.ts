@@ -46,6 +46,8 @@ export interface InvitationCard {
   id: string;
   status: InvitationStatus;
   groupId: string;
+  // absent from servers before bots
+  groupType?: 'group' | 'bot';
   groupTitle: string;
   groupAvatar: string;
   memberCount: number;

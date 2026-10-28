@@ -15,7 +15,7 @@ import { countGroupMemberships, exceedsLimit, limitMax } from '../limits/limits.
 import { SOCIAL_PAGE_SIZE, decodeTimeCursor, encodeTimeCursor, escapeLike } from '../friendships/cursor.js';
 import { notifySocialChanged, onSocialChange, refreshKnownPeers } from '../presence/knownPeers.js';
 import {
-  broadcastToConversationMembers, canManageGroup, getOrCreateDirect, sendConversationUpdateToMembers, touchConversation,
+  broadcastToConversationMembers, canManageGroup, getOrCreateDirect, isGroupLike, sendConversationUpdateToMembers, touchConversation,
 } from './conversationsRepository.js';
 import { loadInvitationCards, type InvitationCard } from './invitationCards.js';
 import { logger } from '../../lib/logger.js';
@@ -116,7 +116,7 @@ async function inviteOne(inviterId: string, conversationId: string, inviteeId: s
     return await withUserPairLock(inviterId, inviteeId, async (tx) => {
       await lockGroup(tx, conversationId);
       const [group] = await tx.select().from(conversations).where(eq(conversations.id, conversationId)).limit(1);
-      if (!group || group.type !== 'group' || group.status !== 'active') return { result: unavailable };
+      if (!group || !isGroupLike(group.type) || group.status !== 'active') return { result: unavailable };
 
       // authority is re-checked INSIDE the lock — the caller may have lost
       // ownership between the up-front check and here
@@ -183,7 +183,7 @@ export async function createInvitations(
   inviterId: string, conversationId: string, rawInviteeIds: unknown,
 ): Promise<{ results: InviteResult[] } | { error: 'not_found' | 'forbidden' | 'too_many' }> {
   const [group] = await db.select({ type: conversations.type, status: conversations.status }).from(conversations).where(eq(conversations.id, conversationId)).limit(1);
-  if (!group || group.type !== 'group' || group.status !== 'active') return { error: 'not_found' };
+  if (!group || !isGroupLike(group.type) || group.status !== 'active') return { error: 'not_found' };
   if (!(await canManageGroup(conversationId, inviterId))) return { error: 'forbidden' };
   const { ids, tooMany } = normalizeInviteeIds(rawInviteeIds, inviterId);
   if (tooMany) return { error: 'too_many' };
@@ -254,7 +254,7 @@ export async function acceptInvitation(inviteeId: string, id: string): Promise<I
 
       const inviterIsOwner = memberRows.some((m) => m.userId === invitation.inviterId && m.role === 'owner');
       const friendship = await getFriendship(invitation.inviterId, inviteeId, tx);
-      const stillAllowed = group.type === 'group' && group.status === 'active' && inviterIsOwner && friendship?.status === 'accepted'
+      const stillAllowed = isGroupLike(group.type) && group.status === 'active' && inviterIsOwner && friendship?.status === 'accepted'
         && !(await isBlockedEitherWay(invitation.inviterId, inviteeId, tx));
       if (!stillAllowed) {
         // never leave a pending invitation that can no longer be honored
@@ -264,7 +264,8 @@ export async function acceptInvitation(inviteeId: string, id: string): Promise<I
       }
       if (!alreadyMember && memberRows.length >= config.MAX_GROUP_MEMBERS) return { code: 'group_full' as const };
       // the invitee's OWN limit on how many groups they can belong to
-      if (!alreadyMember && exceedsLimit(await countGroupMemberships(inviteeId, tx), limitMax('groupMemberships'))) return { code: 'quota_exceeded' as const };
+      // (a bot isn't a group you take part in, so it doesn't count against it)
+      if (!alreadyMember && group.type === 'group' && exceedsLimit(await countGroupMemberships(inviteeId, tx), limitMax('groupMemberships'))) return { code: 'quota_exceeded' as const };
 
       await tx.insert(conversationMembers).values({ conversationId: group.id, userId: inviteeId, role: 'member' }).onConflictDoNothing();
       await markStatus(tx, id, 'accepted');
@@ -388,7 +389,7 @@ const microsecondIso = sql<string>`to_char(${groupInvitations.createdAt} at time
 export interface ReceivedInvitationEntry {
   id: string;
   at: string;
-  group: { id: string; title: string; avatar: string; memberCount: number };
+  group: { id: string; type: 'group' | 'bot'; title: string; avatar: string; memberCount: number };
   inviter: SocialUser;
 }
 
@@ -403,7 +404,7 @@ export async function listReceivedInvitations(userId: string, cursorRaw?: string
   const rows = await db
     .select({
       id: groupInvitations.id, ts: microsecondIso,
-      groupId: conversations.id, groupTitle: conversations.title, groupAvatar: conversations.avatar,
+      groupId: conversations.id, groupType: conversations.type, groupTitle: conversations.title, groupAvatar: conversations.avatar,
       memberCount: sql<number>`(select count(*)::int from conversation_members m where m.conversation_id = ${conversations.id})`,
       inviter: users,
     })
@@ -423,7 +424,7 @@ export async function listReceivedInvitations(userId: string, cursorRaw?: string
   return {
     items: page.map((r) => ({
       id: r.id, at: r.ts,
-      group: { id: r.groupId, title: r.groupTitle, avatar: r.groupAvatar, memberCount: r.memberCount },
+      group: { id: r.groupId, type: r.groupType === 'bot' ? 'bot' as const : 'group' as const, title: r.groupTitle, avatar: r.groupAvatar, memberCount: r.memberCount },
       inviter: toSocialUser(r.inviter),
     })),
     nextCursor: rows.length > SOCIAL_PAGE_SIZE && last ? encodeTimeCursor(last.ts, last.id) : null,

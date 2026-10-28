@@ -8,7 +8,7 @@ import { parseCookies } from '../../http/cookies.js';
 import { resolveSession } from '../auth/session.js';
 import { toSocialUser, type SocialUser } from '../users/users.js';
 import { SOCIAL_PAGE_SIZE, decodeTimeCursor, encodeTimeCursor } from '../friendships/cursor.js';
-import { conversationExistsForUser } from './conversationsRepository.js';
+import { conversationExistsForUser, isGroupLike } from './conversationsRepository.js';
 
 export interface GroupMemberEntry { user: SocialUser; role: 'owner' | 'member'; at: string }
 
@@ -32,7 +32,7 @@ export async function pageGroupMembers(
   const cursor = cursorRaw ? decodeTimeCursor(cursorRaw) : null;
   if (cursorRaw && !cursor) return 'invalid_cursor';
   const [group] = await db.select({ type: conversations.type }).from(conversations).where(eq(conversations.id, conversationId)).limit(1);
-  if (group?.type !== 'group') return 'not_found';
+  if (!group || !isGroupLike(group.type)) return 'not_found';
 
   const rows = await db
     .select({ ts: joinedAtIso, role: conversationMembers.role, user: users })
