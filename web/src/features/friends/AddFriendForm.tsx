@@ -1,13 +1,13 @@
 import { CircleNotchIcon, UserPlusIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { Link } from 'react-router';
 
 import { sendFriendRequest } from '@/shared/api/api';
 import { Button } from '@/shared/ui/primitives/button';
 import { Input } from '@/shared/ui/primitives/input';
 import { friendsSection } from '@/shared/lib/routes';
 import { describeOutcome, describeSendError, normalizeUsernameInput } from './friendsText';
+import { AppLink } from '@/shared/ui/app-link';
 
 type Result = { text: string; tone: 'success' | 'info' | 'error'; linkToRequests?: boolean };
 
@@ -63,7 +63,7 @@ export function AddFriendForm({ onSent, autoFocus }: { onSent: () => void; autoF
       {result && (
         <p role="status" className={`text-label ${toneClass}`}>
           {result.text}
-          {result.linkToRequests && <> <Link to={friendsSection('received')} className="underline underline-offset-2">Ver solicitação recebida</Link></>}
+          {result.linkToRequests && <> <AppLink to={friendsSection('received')} className="underline underline-offset-2">Ver solicitação recebida</AppLink></>}
         </p>
       )}
     </form>

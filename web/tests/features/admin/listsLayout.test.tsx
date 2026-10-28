@@ -44,7 +44,7 @@ describe('UsersPage layout', () => {
     expect(await screen.findByText('Ana')).toBeInTheDocument();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
     expect(screen.getAllByRole('listitem')).toHaveLength(2);
-    expect(screen.getByRole('link', { name: /Ana.*@ana/ })).toHaveAttribute('href', '/admin/users/u1');
+    expect(screen.getByRole('link', { name: /Ana.*@ana/ })).toHaveAttribute('data-to', '/admin/users/u1');
   });
 
   it('copy and history are separate controls from the row link', async () => {
@@ -55,7 +55,7 @@ describe('UsersPage layout', () => {
     await u.click(await screen.findByRole('button', { name: 'Copiar ID de Ana' }));
     expect(writeText).toHaveBeenCalledWith('u1');
     expect(await screen.findByRole('button', { name: 'ID copiado' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Ver histórico de Ana' })).toHaveAttribute('href', '/admin/audit?targetId=u1');
+    expect(screen.getByRole('link', { name: 'Ver histórico de Ana' })).toHaveAttribute('data-to', '/admin/audit?targetId=u1');
     expect(screen.getByRole('link', { name: /Ana.*@ana/ }).querySelector('button')).toBeNull();
   });
 
@@ -93,7 +93,7 @@ describe('GroupsPage layout', () => {
     const table = await screen.findByRole('table', { name: 'Grupos' });
     expect(within(table).getAllByRole('columnheader').map((th) => th.textContent)).toEqual(['Grupo', 'Situação', 'Dono', 'Membros', 'Criado em', 'Ações']);
     const rows = within(table).getAllByRole('row');
-    expect(within(rows[1]!).getByRole('link', { name: '@ana' })).toHaveAttribute('href', '/admin/users/u1');
+    expect(within(rows[1]!).getByRole('link', { name: '@ana' })).toHaveAttribute('data-to', '/admin/users/u1');
     expect(within(rows[2]!).getByText('Sem dono')).toBeInTheDocument();
     expect(within(rows[2]!).getByText('Suspenso')).toBeInTheDocument();
     expect(within(rows[2]!).getByText('Grupo sem nome')).toBeInTheDocument();

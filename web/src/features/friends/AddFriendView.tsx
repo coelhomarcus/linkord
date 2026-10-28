@@ -1,6 +1,5 @@
 import { CheckIcon, CopyIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
-import { Link } from 'react-router';
 
 import { useRoom } from '@/state/RoomContext';
 import { Button } from '@/shared/ui/primitives/button';
@@ -8,6 +7,7 @@ import { friendsSection } from '@/shared/lib/routes';
 import { AddFriendForm } from './AddFriendForm';
 import { useFriends } from './FriendsContext';
 import { ListSectionHeader } from './ListSectionHeader';
+import { AppLink } from '@/shared/ui/app-link';
 
 /** Add by exact @username, plus your own username to share. Discovery is never a
  * catalog: nothing here lists accounts. */
@@ -42,7 +42,7 @@ export function AddFriendView() {
         {pendingFriendRequestCount > 0 && (
           <p className="pt-3 text-label text-text-muted">
             Você tem {pendingFriendRequestCount} solicitaç{pendingFriendRequestCount === 1 ? 'ão' : 'ões'} aguardando resposta.{' '}
-            <Link to={friendsSection('received')} className="underline underline-offset-2">Ver solicitações recebidas</Link>
+            <AppLink to={friendsSection('received')} className="underline underline-offset-2">Ver solicitações recebidas</AppLink>
           </p>
         )}
       </section>

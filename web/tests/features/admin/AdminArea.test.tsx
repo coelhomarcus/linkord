@@ -76,7 +76,7 @@ describe('AdminArea', () => {
     it('a section shows its own title with a way back to the index, and no sidebar', async () => {
       renderAdmin(<AdminArea />, { path: '/admin/users', pattern: '/admin/*' });
       expect(screen.getByRole('heading', { name: 'Usuários' })).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: 'Voltar à administração' })).toHaveAttribute('href', '/admin');
+      expect(screen.getByRole('link', { name: 'Voltar à administração' })).toHaveAttribute('data-to', '/admin');
       expect(screen.queryByRole('link', { name: 'Grupos' })).not.toBeInTheDocument();
       expect(await screen.findByText('Nenhuma conta encontrada.')).toBeInTheDocument();
     });

@@ -141,7 +141,7 @@ describe.skip('SystemPage', () => {
       await u.click(screen.getByRole('button', { name: 'Apagar' }));
       expect(await screen.findByText(/2 apagado\(s\), 1 falha\(s\)/)).toBeInTheDocument();
       await waitFor(() => expect(mocked.fetchSystem).toHaveBeenCalledTimes(2));
-      expect(screen.getByRole('link', { name: 'Ver as falhas na auditoria' })).toHaveAttribute('href', '/admin/audit?action=storage.orphan_delete');
+      expect(screen.getByRole('link', { name: 'Ver as falhas na auditoria' })).toHaveAttribute('data-to', '/admin/audit?action=storage.orphan_delete');
       expect(screen.getByText(/2 apagado\(s\), 1 falha\(s\)/)).toBeInTheDocument();
     });
 

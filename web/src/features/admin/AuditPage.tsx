@@ -1,6 +1,5 @@
 import { CaretDownIcon, CaretRightIcon } from '@phosphor-icons/react';
 import { useCallback, useState } from 'react';
-import { Link } from 'react-router';
 
 import { useUrlSearch } from '@/shared/hooks/useUrlSearch';
 import { fetchAudit } from './adminApi';
@@ -14,6 +13,7 @@ import { useAdminList } from './useAdminList';
 import { useAdminTableFits } from './useAdminMode';
 import { useAdminQuery } from './useAdminQuery';
 import type { QuerySchema } from './useAdminQuery';
+import { AppLink } from '@/shared/ui/app-link';
 
 const TARGET_TYPES = ['all', 'user', 'group', 'message', 'report', 'system'] as const;
 const TARGET_TYPE_LABEL: Record<string, string> = { user: 'Conta', group: 'Grupo', message: 'Mensagem', report: 'Denúncia', system: 'Sistema' };
@@ -49,19 +49,19 @@ function Actor({ row }: { row: AuditRow }) {
   if (!row.actorLabel && !row.actorId) return <span className="text-text-muted">sistema</span>;
   const label = row.actorLabel || row.actorId || '';
   return row.actorId
-    ? <Link to={`/admin/users/${encodeURIComponent(row.actorId)}`} className="hover:underline">{label}</Link>
+    ? <AppLink to={`/admin/users/${encodeURIComponent(row.actorId)}`} className="hover:underline">{label}</AppLink>
     : <span>{label}</span>;
 }
 
 function Target({ row, inline }: { row: AuditRow; inline?: boolean }) {
   const href = entityHref(row.targetType, row.targetId, row.action);
   const label = row.targetLabel || row.targetId || '-';
-  const name = href ? <Link to={href} className="hover:underline">{label}</Link> : <span>{label}</span>;
+  const name = href ? <AppLink to={href} className="hover:underline">{label}</AppLink> : <span>{label}</span>;
   if (inline) return <span className="min-w-0 break-words">{TARGET_TYPE_LABEL[row.targetType] ?? row.targetType}: {name}</span>;
   return (
     <span className="min-w-0">
       <span className="block text-caption text-text-muted">{TARGET_TYPE_LABEL[row.targetType] ?? row.targetType}</span>
-      {href ? <Link to={href} className="block truncate hover:underline">{label}</Link> : <span className="block truncate">{label}</span>}
+      {href ? <AppLink to={href} className="block truncate hover:underline">{label}</AppLink> : <span className="block truncate">{label}</span>}
     </span>
   );
 }

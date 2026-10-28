@@ -45,7 +45,7 @@ describe('UserDetailPage', () => {
 
   it('the groups tab lists the groups with the role of the account in each', async () => {
     open(adminRoom(), 'groups');
-    expect(await screen.findByRole('link', { name: 'Squad' })).toHaveAttribute('href', '/admin/groups/g1');
+    expect(await screen.findByRole('link', { name: 'Squad' })).toHaveAttribute('data-to', '/admin/groups/g1');
     expect(screen.getByText('Dona do grupo')).toBeInTheDocument();
   });
 
@@ -65,8 +65,8 @@ describe('UserDetailPage', () => {
     open();
     await screen.findByText('ana@example.com');
     expect(screen.getByRole('link', { name: 'Resumo' })).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByRole('link', { name: 'Moderação' })).toHaveAttribute('href', '/admin/users/u1?tab=moderation');
-    expect(screen.getByRole('link', { name: 'Grupos (1)' })).toHaveAttribute('href', '/admin/users/u1?tab=groups');
+    expect(screen.getByRole('link', { name: 'Moderação' })).toHaveAttribute('data-to', '/admin/users/u1?tab=moderation');
+    expect(screen.getByRole('link', { name: 'Grupos (1)' })).toHaveAttribute('data-to', '/admin/users/u1?tab=groups');
   });
 
   it('only the open tab mounts: moderation actions are not on the overview', async () => {
@@ -241,7 +241,7 @@ describe('UserDetailPage', () => {
     await screen.findByText('ana@example.com');
     await u.click(screen.getByRole('link', { name: 'Moderação' }));
     await screen.findByRole('button', { name: 'Suspender' });
-    expect(screen.getByRole('link', { name: '← Usuários' })).toHaveAttribute('href', '/admin/users?status=suspended');
+    expect(screen.getByRole('link', { name: '← Usuários' })).toHaveAttribute('data-to', '/admin/users?status=suspended');
   });
 
   it('suspending an account somebody else already suspended explains it and re-reads', async () => {

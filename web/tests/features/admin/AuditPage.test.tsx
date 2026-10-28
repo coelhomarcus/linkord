@@ -36,8 +36,8 @@ describe('AuditPage', () => {
   it('administrator and target link to their admin pages — except the target of its own deletion', async () => {
     open();
     const table = await screen.findByRole('table');
-    expect(within(table).getAllByRole('link', { name: 'lune' })[0]).toHaveAttribute('href', '/admin/users/admin-1');
-    expect(within(table).getByRole('link', { name: 'ana' })).toHaveAttribute('href', '/admin/users/u1');
+    expect(within(table).getAllByRole('link', { name: 'lune' })[0]).toHaveAttribute('data-to', '/admin/users/admin-1');
+    expect(within(table).getByRole('link', { name: 'ana' })).toHaveAttribute('data-to', '/admin/users/u1');
     expect(within(table).queryByRole('link', { name: 'bia' })).not.toBeInTheDocument();
     expect(within(table).getByText('bia')).toBeInTheDocument();
   });

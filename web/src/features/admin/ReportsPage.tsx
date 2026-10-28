@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { Link, useLocation } from 'react-router';
+import { useLocation } from 'react-router';
 import { categoryLabel } from '@/features/reports/reportCategories';
 import { fetchAdminReports } from './adminApi';
 import type { AdminReportRow } from './adminApi';
@@ -12,6 +12,7 @@ import { useAdminList } from './useAdminList';
 import { useAdminTableFits } from './useAdminMode';
 import { useAdminQuery } from './useAdminQuery';
 import type { QuerySchema } from './useAdminQuery';
+import { AppLink } from '@/shared/ui/app-link';
 
 type Queue = 'open' | 'reviewing' | 'closed';
 type TargetFilter = 'all' | 'user' | 'group' | 'message';
@@ -23,10 +24,10 @@ const QUERY: QuerySchema<'status' | 'targetType'> = {
 
 function ReportLink({ report, from }: { report: AdminReportRow; from: { from: string } }) {
   return (
-    <Link to={`/admin/reports/${report.id}`} state={from} className="block min-w-0 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring">
+    <AppLink to={`/admin/reports/${report.id}`} state={from} className="block min-w-0 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring">
       <span className="block truncate text-body font-medium text-text-primary">{report.targetLabel || report.targetId}</span>
       <span className="block truncate text-caption text-text-muted">{REPORT_TARGET_LABEL[report.targetType]}</span>
-    </Link>
+    </AppLink>
   );
 }
 

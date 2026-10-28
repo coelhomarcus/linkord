@@ -1,5 +1,6 @@
-import { Link, useLocation } from 'react-router';
+import { useLocation } from 'react-router';
 import { cn } from '@/shared/lib/utils';
+import { AppLink } from '@/shared/ui/app-link';
 
 export interface DetailTab<T extends string> { id: T; label: string }
 
@@ -21,7 +22,7 @@ export function AdminDetailTabs<T extends string>({ label, tabs, active, default
           const current = tab.id === active;
           return (
             <li key={tab.id}>
-              <Link
+              <AppLink
                 // the list the admin came from travels with every tab, so "back" still knows it
                 to={{ pathname, search: tab.id === defaultTab ? '' : `?tab=${tab.id}` }}
                 state={state}
@@ -32,7 +33,7 @@ export function AdminDetailTabs<T extends string>({ label, tabs, active, default
                 )}
               >
                 {tab.label}
-              </Link>
+              </AppLink>
             </li>
           );
         })}

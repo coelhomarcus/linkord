@@ -20,7 +20,7 @@ describe('UsersPage', () => {
   it('lists accounts with status and role, each linking to its detail page', async () => {
     renderAdmin(<UsersPage />, { path: '/admin/users', pattern: '/admin/users' });
     const link = await screen.findByRole('link', { name: /Ana.*@ana/ });
-    expect(link).toHaveAttribute('href', '/admin/users/u1');
+    expect(link).toHaveAttribute('data-to', '/admin/users/u1');
     expect(screen.getByText('Suspenso')).toBeInTheDocument();
     expect(screen.getByText('Admin')).toBeInTheDocument();
     expect(mocked.fetchAdminUsers).toHaveBeenCalledWith({ q: '', status: undefined, role: undefined }, null);

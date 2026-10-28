@@ -180,7 +180,7 @@ describe('ConversationSidebar — user dock', () => {
   it('does not draw the dock in the column: from 768px it floats over the rail and the list, drawn by the shell', () => {
     renderSidebar();
     expect(screen.queryByRole('button', { name: 'Meu perfil' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'Ajustes' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Ajustes' })).not.toBeInTheDocument();
   });
 
   it('on a phone the drawer carries the dock, with the account, settings and the active call', async () => {
@@ -188,7 +188,7 @@ describe('ConversationSidebar — user dock', () => {
     const onReturnToCall = vi.fn();
     renderSidebar({ openMobile: true, activeCallConversationId: 'conv-group', onReturnToCall });
     expect(screen.getByRole('button', { name: 'Meu perfil' })).toHaveTextContent('Fulana');
-    expect(screen.getByRole('link', { name: 'Ajustes' })).toHaveAttribute('href', '/app/settings');
+    expect(screen.getByRole('button', { name: 'Ajustes' })).toHaveAttribute('aria-haspopup', 'dialog');
     expect(screen.getByText('Em chamada')).toBeInTheDocument();
     await userEvent.setup().click(screen.getByRole('button', { name: 'Voltar à chamada' }));
     expect(onReturnToCall).toHaveBeenCalledTimes(1);

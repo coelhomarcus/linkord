@@ -1,5 +1,5 @@
 import { GearIcon, MicrophoneIcon, MicrophoneSlashIcon, MonitorIcon, PhoneIcon, PhoneSlashIcon, SpeakerHighIcon, SpeakerSlashIcon, VideoCameraIcon, VideoCameraSlashIcon } from '@phosphor-icons/react';
-import { Link, useLocation } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import { iconWeight } from '@/shared/ui/icons';
 import { Avatar } from '@/shared/Avatar';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
@@ -40,6 +40,7 @@ export function CallDock({ onReturnToCall, onOpenProfile, showReturnToCall, layo
     deafened, toggleDeafened, leaveCall, preferMuted, setPreferMuted, reconnecting,
   } = useRoom();
   const { pathname } = useLocation();
+  const navigate = useNavigate();
   const compact = layout === 'compact';
   const onSettings = pathname.startsWith(ROUTES.settings);
   const inCall = !!activeCallConversationId;
@@ -185,7 +186,11 @@ export function CallDock({ onReturnToCall, onOpenProfile, showReturnToCall, layo
         )}
         <Tooltip>
           <TooltipTrigger
-            render={<Link to={ROUTES.settings} onClick={onNavigate} aria-current={onSettings ? 'page' : undefined} aria-label="Ajustes" />}
+            // a button, not a link: it opens the settings modal
+            onClick={() => { navigate(ROUTES.settings); onNavigate?.(); }}
+            aria-label="Ajustes"
+            aria-haspopup="dialog"
+            aria-expanded={onSettings}
             className={cn(DOCK_BUTTON, onSettings ? 'bg-fill-active text-text-primary' : DOCK_NEUTRAL)}
           >
             <GearIcon size={20} weight={iconWeight(onSettings)} aria-hidden />

@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { Link, useParams } from 'react-router';
+import { useParams } from 'react-router';
 import { Avatar } from '@/shared/Avatar';
 import { Button } from '@/shared/ui/primitives/button';
 import { formatFileSize } from '@/shared/lib/formatBytes';
@@ -16,6 +16,7 @@ import { RESTORE_LIST, useAdminBack } from './useAdminBack';
 import { useAdminDetail } from './useAdminDetail';
 import { useAdminQuery } from './useAdminQuery';
 import type { QuerySchema } from './useAdminQuery';
+import { AppLink } from '@/shared/ui/app-link';
 
 type Dialog = 'suspend' | 'reactivate' | 'revoke' | 'delete' | 'grant-admin' | 'revoke-admin' | null;
 
@@ -121,7 +122,7 @@ function UserDetail({ id }: { id: string }) {
             <ul className="flex flex-col divide-y divide-border-subtle">
               {groups.map((g) => (
                 <li key={g.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5">
-                  <Link to={`/admin/groups/${g.id}`} className="min-w-0 flex-1 basis-48 truncate text-body text-text-primary hover:underline">{g.title || 'Grupo sem nome'}</Link>
+                  <AppLink to={`/admin/groups/${g.id}`} className="min-w-0 flex-1 basis-48 truncate text-body text-text-primary hover:underline">{g.title || 'Grupo sem nome'}</AppLink>
                   <span className="text-caption text-text-muted">{g.role === 'owner' ? 'Dona do grupo' : 'Membro'}</span>
                   <Badge value={g.status} />
                 </li>
