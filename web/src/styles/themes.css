@@ -7,6 +7,8 @@
 html[data-theme="black"] {
   /* links read as links in blue; mentions and the rest keep the orchid accent */
   --color-link: #226ec5;
+  /* a solid lift instead of the translucent fill, which barely shows on black */
+  --color-message-hover: #121213;
 
   --color-surface-rail: #000000;
   --color-surface-000: #000000;

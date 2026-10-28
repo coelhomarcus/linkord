@@ -50,8 +50,8 @@ function ReactionButton({ onPick }: { onPick: (emoji: string) => void }) {
         if (!next) setFullPickerOpen(false);
       }}
     >
-      <PopoverTrigger render={<Button type="button" variant="ghost" size="icon-xs" aria-label="Reagir" />}>
-        <SmileyIcon size={13} />
+      <PopoverTrigger render={<Button type="button" variant="ghost" size="icon-sm" aria-label="Reagir" />}>
+        <SmileyIcon size={18} />
       </PopoverTrigger>
       <PopoverContent
         keepMounted={warmed}
@@ -168,7 +168,7 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
       className={cn(
         'group/row relative flex gap-3 rounded-md px-4 py-0.5 transition-colors duration-500',
         showHeader ? 'mt-[17px]' : 'mt-0',
-        'hover:bg-fill-subtle',
+        'hover:bg-message-hover',
         mentionsMe && 'border-l-2 border-yellow/50 bg-yellow/[0.06] pl-[calc(1rem-2px)] hover:bg-yellow/[0.08]',
         highlighted && 'bg-primary/10',
         deleting && 'opacity-50'
@@ -286,26 +286,26 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
           moment the mouse leaves the row (e.g. to move onto the open emoji
           picker, which is portaled outside this row), snapping the open
           popover to the viewport's top-left corner. */}
-      {!pending && <div className="absolute right-3 top-0 hidden -translate-y-1/2 items-center gap-0.5 rounded-full border border-border bg-surface-overlay p-0.5 opacity-0 shadow-popover transition-opacity pointer-events-none group-hover/row:opacity-100 group-hover/row:pointer-events-auto group-focus-within/row:opacity-100 group-focus-within/row:pointer-events-auto md:flex">
+      {!pending && <div className="absolute right-3 top-0 hidden -translate-y-1/2 items-center gap-0.5 rounded-md border border-border bg-surface-overlay p-0.5 opacity-0 shadow-popover transition-opacity pointer-events-none group-hover/row:opacity-100 group-hover/row:pointer-events-auto group-focus-within/row:opacity-100 group-focus-within/row:pointer-events-auto md:flex">
         {can.react && <ReactionButton onPick={(emoji) => reactToChatMessage(message.msgId, emoji)} />}
         {can.reply && (
-          <Button type="button" variant="ghost" size="icon-xs" aria-label="Responder" onClick={onReply}>
-            <ArrowBendUpLeftIcon size={13} />
+          <Button type="button" variant="ghost" size="icon-sm" aria-label="Responder" onClick={onReply}>
+            <ArrowBendUpLeftIcon size={18} />
           </Button>
         )}
         {can.edit && (
-          <Button type="button" variant="ghost" size="icon-xs" aria-label="Editar" onClick={startEdit}>
-            <PencilSimpleIcon size={13} />
+          <Button type="button" variant="ghost" size="icon-sm" aria-label="Editar" onClick={startEdit}>
+            <PencilSimpleIcon size={18} />
           </Button>
         )}
         {canReport && (
-          <Button type="button" variant="ghost" size="icon-xs" aria-label="Denunciar" onClick={() => setReportOpen(true)}>
-            <FlagIcon size={13} />
+          <Button type="button" variant="ghost" size="icon-sm" aria-label="Denunciar" onClick={() => setReportOpen(true)}>
+            <FlagIcon size={18} />
           </Button>
         )}
         {canDelete && (
-          <Button type="button" variant="ghost" size="icon-xs" aria-label="Apagar" disabled={deleting} onClick={(event) => requestDelete(message.msgId, event.shiftKey)} className="hover:bg-red/10 hover:text-red">
-            <TrashIcon size={13} />
+          <Button type="button" variant="ghost" size="icon-sm" aria-label="Apagar" disabled={deleting} onClick={(event) => requestDelete(message.msgId, event.shiftKey)} className="hover:bg-red/10 hover:text-red">
+            <TrashIcon size={18} />
           </Button>
         )}
       </div>}
@@ -315,8 +315,8 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
       {!pending && <div className="absolute right-3 top-1 flex items-center gap-0.5 md:hidden">
         {can.react && <ReactionButton onPick={(emoji) => reactToChatMessage(message.msgId, emoji)} />}
         <DropdownMenu>
-          <DropdownMenuTrigger render={<Button type="button" variant="ghost" size="icon-xs" aria-label="Acoes" />}>
-            <DotsThreeIcon size={13} />
+          <DropdownMenuTrigger render={<Button type="button" variant="ghost" size="icon-sm" aria-label="Acoes" />}>
+            <DotsThreeIcon size={18} />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             {can.reply && <DropdownMenuItem onClick={onReply}><ArrowBendUpLeftIcon size={16} />Responder</DropdownMenuItem>}
