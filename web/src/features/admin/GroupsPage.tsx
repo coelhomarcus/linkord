@@ -41,7 +41,7 @@ function RowActions({ group }: { group: AdminGroupRow }) {
 function GroupIdentity({ group, from }: { group: AdminGroupRow; from: { from: string } }) {
   return (
     <AppLink to={`/admin/groups/${group.id}`} state={from} className="flex min-w-0 items-center gap-3 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring">
-      <GroupAvatar title={group.title} avatar={group.avatar} size={36} />
+      <GroupAvatar id={group.id} title={group.title} avatar={group.avatar} size={36} />
       <span className="block min-w-0 truncate text-body font-medium text-text-primary">{group.title || 'Grupo sem nome'}</span>
     </AppLink>
   );

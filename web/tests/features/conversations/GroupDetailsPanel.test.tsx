@@ -126,7 +126,10 @@ describe('GroupDetailsPanel — invitations', () => {
     // the count is part of the overview, where the modal opens
     expect(await screen.findByText('2 membros')).toBeInTheDocument();
 
-    expect(await screen.findByText('dono')).toBeInTheDocument();
+    // the owner carries a crown (named for a screen reader), not a badge with words
+    expect(await screen.findByRole('img', { name: 'Dono' })).toBeInTheDocument();
+    expect(screen.queryByText('dono')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('img', { name: 'Dono' })).toHaveLength(1);
     await user.click(screen.getByRole('button', { name: 'Carregar mais' }));
     expect(mocked.fetchGroupMembers).toHaveBeenLastCalledWith('g1', 'cursor-2');
     expect(await screen.findByText('Bea')).toBeInTheDocument();

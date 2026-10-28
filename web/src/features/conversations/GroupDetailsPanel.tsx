@@ -10,7 +10,7 @@ import { Button } from '@/shared/ui/primitives/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/primitives/dropdown-menu';
 import { Input } from '@/shared/ui/primitives/input';
 import { ImageCropDialog } from '@/features/settings/ImageCropDialog';
-import { Avatar, colorFor } from '@/shared/Avatar';
+import { Avatar } from '@/shared/Avatar';
 import { Tabs, TabsIndicator, TabsList, TabsPanel, TabsTrigger } from '@/shared/ui/primitives/tabs';
 import { formatProfileDate } from '@/features/profile/useProfileDetails';
 import { ConfirmDialog } from '@/shared/ConfirmDialog';
@@ -285,10 +285,9 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
   // the group's card: who it is, how big, since when, run by whom, and what to do with it
   const card = conversation && (
     <div className="contents md:flex md:min-h-0 md:flex-col md:overflow-y-auto md:border-r md:border-border">
-      <div className="h-24 flex-none" style={{ background: `linear-gradient(135deg, ${colorFor(conversation.id)}, transparent 90%)` }} />
-      <div className="flex flex-col gap-1 px-5 pb-4">
-        <div className="relative -mt-10 w-fit">
-          <GroupAvatar title={conversation.title || 'Grupo'} avatar={conversation.avatar} size={80} className="ring-4 ring-surface-panel" />
+      <div className="flex flex-col gap-1 px-5 pb-4 pt-6">
+        <div className="relative w-fit">
+          <GroupAvatar id={conversation.id} title={conversation.title || 'Grupo'} avatar={conversation.avatar} size={80} />
           {isOwner && (
             <DropdownMenu>
               <DropdownMenuTrigger
@@ -449,7 +448,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
                         <span className="min-w-0">
                           <span className="block truncate text-label font-medium">
                             {member.displayName}{isMe ? ' (você)' : ''}
-                            {role === 'owner' && <span className="ml-1.5 rounded-sm bg-primary/15 px-1 py-px align-middle text-micro font-medium text-accent-text">dono</span>}
+                            {role === 'owner' && <CrownIcon size={15} weight="fill" role="img" aria-label="Dono" className="ml-1.5 inline-block align-text-bottom text-yellow" />}
                           </span>
                           <span className="block truncate text-caption text-text-muted">@{member.username}</span>
                         </span>
