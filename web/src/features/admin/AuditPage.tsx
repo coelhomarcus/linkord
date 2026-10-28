@@ -15,8 +15,8 @@ import { useAdminQuery } from './useAdminQuery';
 import type { QuerySchema } from './useAdminQuery';
 import { AppLink } from '@/shared/ui/app-link';
 
-const TARGET_TYPES = ['all', 'user', 'group', 'message', 'report', 'system'] as const;
-const TARGET_TYPE_LABEL: Record<string, string> = { user: 'Conta', group: 'Grupo', message: 'Mensagem', report: 'Denúncia', system: 'Sistema' };
+const TARGET_TYPES = ['all', 'user', 'group', 'bot', 'message', 'report', 'system'] as const;
+const TARGET_TYPE_LABEL: Record<string, string> = { user: 'Conta', group: 'Grupo', bot: 'Bot', message: 'Mensagem', report: 'Denúncia', system: 'Sistema' };
 
 const QUERY: QuerySchema<'action' | 'actor' | 'targetType' | 'targetId' | 'from' | 'to'> = {
   action: { default: '' },
@@ -35,6 +35,7 @@ function entityHref(type: string, id: string, action: string): string | null {
   if (!id || action.endsWith('.delete')) return null;
   if (type === 'user') return `/admin/users/${encodeURIComponent(id)}`;
   if (type === 'group') return `/admin/groups/${encodeURIComponent(id)}`;
+  if (type === 'bot') return `/admin/bots/${encodeURIComponent(id)}`;
   if (type === 'report') return `/admin/reports/${encodeURIComponent(id)}`;
   return null;
 }

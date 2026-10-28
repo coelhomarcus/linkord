@@ -18,7 +18,7 @@ export interface AuditActor { id: string; username: string }
 export interface AuditEntry {
   actor: AuditActor | null;
   action: string;
-  targetType: 'user' | 'group' | 'message' | 'report' | 'system';
+  targetType: 'user' | 'group' | 'bot' | 'message' | 'report' | 'system';
   targetId?: string;
   targetLabel?: string;
   reason?: string;

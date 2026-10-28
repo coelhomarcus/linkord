@@ -6,6 +6,8 @@ import { AdminLayout } from './AdminLayout';
 import { AdminIndex } from './AdminNavigation';
 import { GroupDetailPage } from './GroupDetailPage';
 import { GroupsPage } from './GroupsPage';
+import { BotsPage } from './BotsPage';
+import { BotDetailPage } from './BotDetailPage';
 import { ReportDetailPage } from './ReportDetailPage';
 import { ReportsPage } from './ReportsPage';
 import { SystemPage } from './SystemPage';
@@ -40,6 +42,8 @@ export default function AdminArea() {
         <Route path="users/:id" element={<UserDetailPage />} />
         <Route path="groups" element={<GroupsPage />} />
         <Route path="groups/:id" element={<GroupDetailPage />} />
+        <Route path="bots" element={<BotsPage />} />
+        <Route path="bots/:id" element={<BotDetailPage />} />
         <Route path="reports" element={<ReportsPage />} />
         <Route path="reports/:id" element={<ReportDetailPage />} />
         <Route path="audit" element={<AuditPage />} />
