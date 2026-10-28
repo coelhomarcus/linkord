@@ -5,6 +5,9 @@
    layout. Hover and selected states stay readable through the translucent
    fills; menus are told apart by a strong border, not by a lighter fill. */
 html[data-theme="black"] {
+  /* links read as links in blue; mentions and the rest keep the orchid accent */
+  --color-link: #226ec5;
+
   --color-surface-rail: #000000;
   --color-surface-000: #000000;
   --color-surface-100: #000000;

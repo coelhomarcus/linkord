@@ -58,6 +58,8 @@
      mentions use this lighter step of the same hue instead */
   --color-accent-text: oklch(76.00% 0.1400 330.00);
   --color-border-accent: var(--color-accent-primary);
+  /* links sent in the chat: the accent text unless a theme gives links their own color */
+  --color-link: var(--color-accent-text);
   /* fields sit on --color-bg-textarea and need no outline until a theme
      makes that surface the same color as everything around it */
   --color-border-field: transparent;

@@ -27,7 +27,7 @@ const MARKDOWN_STYLES = [
   '[&_p]:my-1',
   '[&_ul]:my-1 [&_ul]:list-disc [&_ul]:pl-4',
   '[&_ol]:my-1 [&_ol]:list-decimal [&_ol]:pl-4',
-  '[&_a]:text-accent-text [&_a]:underline [&_a]:underline-offset-2',
+  '[&_a]:text-link [&_a]:underline [&_a]:underline-offset-2',
   '[&_code]:rounded-sm [&_code]:bg-fill-inset [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[0.9em]',
   '[&_pre]:my-1 [&_pre]:overflow-x-auto [&_pre]:rounded-md [&_pre]:bg-fill-inset [&_pre]:p-2 [&_pre_code]:bg-transparent [&_pre_code]:p-0',
   '[&_blockquote]:my-1 [&_blockquote]:border-l-2 [&_blockquote]:border-border-strong [&_blockquote]:pl-2 [&_blockquote]:text-text-muted',
