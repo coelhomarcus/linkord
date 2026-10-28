@@ -73,7 +73,7 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
     <main className="flex h-full min-w-0 flex-1 flex-col text-text-primary">
       {conversation ? (
         <>
-          <header className="flex h-16 flex-none items-center gap-3 border-b border-border bg-surface-panel/90 px-4 backdrop-blur">
+          <header className="flex h-header flex-none items-center gap-3 border-b border-border bg-surface-panel/90 px-4 backdrop-blur">
             <Button type="button" variant="ghost" size="icon-sm" aria-label="Voltar" onClick={() => setOpenMobile(true)} className="-ml-1 md:hidden">
               <ArrowLeftIcon size={20} />
             </Button>

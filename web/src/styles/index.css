@@ -104,6 +104,10 @@
 
   /* the one gap between the shell's surfaces (the content panel's margins, the conversation list's inner edge) so they stay equal */
   --spacing-shell: 0.5rem;
+  /* every header's height — a page's, an open conversation's, the sidebar's,
+     a modal's — so moving between Conversas, Amigos and Bots never makes the
+     top bar jump */
+  --spacing-header: 4rem;
 
   --font-sans: "Figtree Variable", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
 

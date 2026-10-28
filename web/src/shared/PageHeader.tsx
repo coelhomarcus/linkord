@@ -13,7 +13,7 @@ export function PageHeader({ title, subtitle, actions, leading, middle }: { titl
   const { isMobile, setOpenMobile } = useSidebar();
   const closeModal = useAppModalClose();
   return (
-    <header className="flex flex-none items-center gap-3 border-b border-border px-4 py-3 md:px-6">
+    <header className="flex h-header flex-none items-center gap-3 border-b border-border px-4 md:px-6">
       {isMobile && !closeModal && (
         <Button type="button" variant="ghost" size="icon-sm" aria-label="Abrir lista de conversas" onClick={() => setOpenMobile(true)}>
           <SidebarSimpleIcon size={20} />
