@@ -22,6 +22,43 @@ function makeMessage(overrides: Partial<ChatMessage> = {}): ChatMessage {
 
 const noop = () => {};
 
+describe('MessageRow — quick reactions in a bot', () => {
+  const conversation = (type: 'bot' | 'group') => ({
+    id: 'conv-1', type, title: 'x', avatar: '', createdBy: null, memberIds: ['me'], lastMessageAt: null,
+    createdAt: 0, updatedAt: 0, pinnedAt: null, myRole: 'member' as const, ownerId: null, memberCount: 1,
+  });
+  const renderIn = (type: 'bot' | 'group', message = makeMessage({ id: null, name: 'Deploys', bot: true })) => {
+    const reactToChatMessage = vi.fn();
+    renderWithRoom(
+      <MessageRow message={message} showHeader highlighted={false} allUsers={new Map()} mentionLookup={new Map()} onOpenProfile={noop} onReply={noop} onJumpTo={noop} />,
+      { state: { ...initialRoomState, me: { ...initialRoomState.me, userId: 'me' } }, conversations: [conversation(type)], reactToChatMessage },
+    );
+    return reactToChatMessage;
+  };
+
+  it('offers ✅ and ❌ first, one click away, then a divider before the other actions', async () => {
+    const react = renderIn('bot');
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Reagir com ✅' }));
+    expect(react).toHaveBeenCalledWith(1, '✅');
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Reagir com ❌' }));
+    expect(react).toHaveBeenCalledWith(1, '❌');
+    const toolbar = screen.getByRole('button', { name: 'Reagir com ✅' }).parentElement!;
+    const order = [...toolbar.children].map((el) => el.getAttribute('aria-label') ?? (el.getAttribute('aria-hidden') ? '|' : ''));
+    expect(order.slice(0, 4)).toEqual(['Reagir com ✅', 'Reagir com ❌', '|', 'Reagir']);
+  });
+
+  it('marks the one you already used, so a second click reads as taking it back', () => {
+    renderIn('bot', makeMessage({ id: null, name: 'Deploys', bot: true, reactions: { '✅': ['me'] } }));
+    expect(screen.getByRole('button', { name: 'Reagir com ✅' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Reagir com ❌' })).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('only in bots: a group keeps its usual toolbar', () => {
+    renderIn('group', makeMessage());
+    expect(screen.queryByRole('button', { name: 'Reagir com ✅' })).not.toBeInTheDocument();
+  });
+});
+
 describe('MessageRow', () => {
   it("a bot's message carries its name, a BOT tag and no profile to open", () => {
     renderWithRoom(
