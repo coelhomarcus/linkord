@@ -102,8 +102,11 @@ export const ERROR_REGISTRY = {
   'livekit-unavailable': { statuses: [], channel: 'socket' },
   'message-not-found': { statuses: [], channel: 'socket' },
   // chat-send-result refusals (a correlated send, see messages.ts)
-  invalid_message: { statuses: [], channel: 'socket' },
-  message_too_long: { statuses: [], channel: 'socket' },
+  // also what a bot's webhook gets for an empty or oversized post
+  invalid_message: { statuses: [400], channel: 'both' },
+  message_too_long: { statuses: [400], channel: 'both' },
+  // wrong id, wrong token, or a bot that can't be posted to — told apart to no one
+  invalid_webhook: { statuses: [401], channel: 'http' },
   message_deleted: { statuses: [], channel: 'socket' },
   attachments_unavailable: { statuses: [], channel: 'socket' },
 } as const satisfies Record<string, ErrorSpec>;

@@ -246,6 +246,9 @@ export const messages = pgTable('messages', {
   // Set (with authorId null) on a message a bot's webhook posted. SET NULL so
   // a deleted webhook leaves its history behind instead of taking it along.
   webhookId: text('webhook_id').references(() => webhooks.id, { onDelete: 'set null' }),
+  // The sender's Idempotency-Key: a retry of the same delivery finds this row
+  // instead of posting twice. Unique per webhook, null when none was sent.
+  webhookDeliveryKey: varchar('webhook_delivery_key', { length: 128 }),
   // The link previews of the message's cards (one per previewable link, see
   // modules/link-preview/messageLinks.ts), fetched once after it is sent
   // (modules/messages/messageEmbeds.ts) so history ships each card at its
@@ -268,6 +271,7 @@ export const messages = pgTable('messages', {
   index('messages_search_vector_idx').using('gin', t.searchVector),
   index('messages_group_invitation_id_idx').on(t.groupInvitationId),
   index('messages_webhook_id_idx').on(t.webhookId),
+  uniqueIndex('messages_webhook_delivery_key_unique').on(t.webhookId, t.webhookDeliveryKey).where(sql`${t.webhookDeliveryKey} IS NOT NULL`),
   check('messages_kind_reference_check', sql`(${t.kind} = 'text' AND ${t.groupInvitationId} IS NULL) OR (${t.kind} = 'group_invite')`),
 ]);
 

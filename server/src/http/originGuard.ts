@@ -2,6 +2,7 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 import { config } from '../config/env.js';
 import { sendError } from './respond.js';
 import { logger } from '../lib/logger.js';
+import { loggablePath } from './requestPath.js';
 
 const log = logger.child({ component: 'http' });
 
@@ -45,7 +46,7 @@ export async function originGuard(request: FastifyRequest, reply: FastifyReply):
   if (SAFE_METHODS.has(request.method) || !request.url.startsWith('/api/')) return;
   const origin = typeof request.headers.origin === 'string' ? request.headers.origin : undefined;
   if (!isOriginAllowed(currentInput(origin, request.headers.host))) {
-    log.warn('request from a disallowed origin', { origin, method: request.method, url: request.url.split('?')[0] });
+    log.warn('request from a disallowed origin', { origin, method: request.method, url: loggablePath(request) });
     sendError(reply, 403, 'forbidden_origin', 'Origem não permitida.');
   }
 }

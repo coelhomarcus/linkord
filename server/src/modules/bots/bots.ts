@@ -9,7 +9,7 @@ import { sendToUser } from '../presence/participants.js';
 import { botCreationBlocked } from '../limits/limits.js';
 import { canManageGroup, createGroup, getConversationForUser, rowToSummary, sanitizeConversationTitle } from '../conversations/conversationsRepository.js';
 import { createInvitations, normalizeInviteeIds, type InviteResult } from '../conversations/invitationsRepository.js';
-import { createWebhook, getBotWebhook, rotateBotWebhookToken, toWebhookInfo } from './webhooksRepository.js';
+import { createWebhook, getBotWebhook, rotateBotWebhookToken, toWebhookInfo, type WebhookSecret } from './webhooksRepository.js';
 import { logger } from '../../lib/logger.js';
 
 const log = logger.child({ component: 'bots' });
@@ -29,6 +29,11 @@ async function requireSession(request: FastifyRequest, reply: FastifyReply): Pro
     return null;
   }
   return sess;
+}
+
+/** The URL the owner pastes into the sending system — the token in its path. */
+function withUrl(secret: WebhookSecret): WebhookSecret & { url: string } {
+  return { ...secret, url: `${config.APP_URL.replace(/\/+$/, '')}/api/webhooks/${secret.id}/${secret.token}` };
 }
 
 /** Only the bot's owner ever sees anything about its webhook — members just
@@ -66,7 +71,7 @@ async function handleCreateBot(request: FastifyRequest, reply: FastifyReply): Pr
     if ('results' in invited) results = invited.results;
   }
   log.info('bot created', { conversationId: conversation.id, ownerId: sess.userId });
-  sendJson(reply, 201, { conversationId: conversation.id, webhook, results });
+  sendJson(reply, 201, { conversationId: conversation.id, webhook: withUrl(webhook), results });
 }
 
 async function handleGetWebhook(request: FastifyRequest<{ Params: BotParams }>, reply: FastifyReply): Promise<void> {
@@ -90,7 +95,7 @@ async function handleRotateToken(request: FastifyRequest<{ Params: BotParams }>,
   const webhook = await isBotOwner(conversationId, sess.userId) ? await rotateBotWebhookToken(conversationId) : null;
   if (!webhook) return sendError(reply, 404, 'not_found', 'Bot não encontrado.');
   log.info('bot webhook token rotated', { conversationId, webhookId: webhook.id });
-  sendJson(reply, 200, { webhook });
+  sendJson(reply, 200, { webhook: withUrl(webhook) });
 }
 
 export function registerBotRoutes(fastify: FastifyInstance): void {

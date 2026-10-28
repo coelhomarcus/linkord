@@ -4,7 +4,7 @@ import { recordAudit } from '../admin/auditLog.js';
 import { eq, and, desc, asc, lt, gt, gte, sql } from 'drizzle-orm';
 import { config } from '../../config/env.js';
 import { db } from '../../db/client.js';
-import { messages, conversationMembers, users, type Message, type Attachment } from '../../db/schema.js';
+import { messages, conversationMembers, conversations, users, type Message, type Attachment } from '../../db/schema.js';
 import { participants, send, sendSocketError } from '../presence/participants.js';
 import { isSingleEmoji } from './emoji.js';
 import {
@@ -94,6 +94,9 @@ interface ChatMessagePayload {
   embeds?: LinkPreviewResult[];
   // links whose card the author removed: drawn as plain links
   suppressedEmbeds?: string[];
+  // posted by the conversation's bot (its webhook), not by an account: `id` is
+  // null and the name/avatar are the bot's own
+  bot?: true;
 }
 
 interface MessageWithAuthor {
@@ -111,6 +114,9 @@ interface MessageWithAuthor {
   groupInvitationId: string | null;
   embeds: unknown;
   suppressedEmbeds: unknown;
+  // null unless the bot's webhook posted it; '' is a bot without a title/photo
+  botName: string | null;
+  botAvatar: string | null;
 }
 
 function sanitizeChatText(text: unknown): string {
@@ -132,11 +138,14 @@ const messageWithAuthorSelect = {
   groupInvitationId: messages.groupInvitationId,
   embeds: messages.embeds,
   suppressedEmbeds: messages.suppressedEmbeds,
+  // read live from the bot conversation, so a rename shows on its whole history
+  botName: sql<string | null>`case when ${messages.webhookId} is null then null else (select ${conversations.title} from ${conversations} where ${conversations.id} = ${messages.conversationId}) end`,
+  botAvatar: sql<string | null>`case when ${messages.webhookId} is null then null else (select ${conversations.avatar} from ${conversations} where ${conversations.id} = ${messages.conversationId}) end`,
 };
 
 /** Who wrote a message, as the clients show it: the author's own participant
  * when they are the one acting, their stored profile when someone else is. */
-interface AuthorIdentity { name: string | null; displayName: string | null; avatar: string | null }
+interface AuthorIdentity { name: string | null; displayName: string | null; avatar: string | null; bot?: { name: string; avatar: string } }
 
 function rowWithParticipant(row: Message, participant: AuthorIdentity): MessageWithAuthor {
   return {
@@ -154,13 +163,20 @@ function rowWithParticipant(row: Message, participant: AuthorIdentity): MessageW
     groupInvitationId: row.groupInvitationId,
     embeds: row.embeds,
     suppressedEmbeds: row.suppressedEmbeds,
+    botName: participant.bot?.name ?? null,
+    botAvatar: participant.bot?.avatar ?? null,
   };
 }
 
 function authorNameFor(row: MessageWithAuthor): string {
+  if (row.botName !== null) return row.botName || 'Bot';
   return row.authorUsername
     ? resolveDisplayName(row.authorDisplayName ?? '', row.authorUsername)
     : DELETED_AUTHOR_NAME;
+}
+
+function authorAvatarFor(row: MessageWithAuthor): string {
+  return (row.botName !== null ? row.botAvatar : row.authorAvatar) ?? '';
 }
 
 /** `attachments` (optional, up to MAX_ATTACHMENTS_PER_MESSAGE) are the raw
@@ -173,10 +189,11 @@ function rowToMessage(row: MessageWithAuthor, attachments?: Attachment[], reacti
     conversationId: row.conversationId,
     id: row.authorId,
     name: authorNameFor(row),
-    avatar: row.authorAvatar ?? '',
+    avatar: authorAvatarFor(row),
     text: row.text,
     ts: row.createdAt.getTime(),
   };
+  if (row.botName !== null) out.bot = true;
   if (row.editedAt) out.editedAt = row.editedAt.getTime();
   const embeds = storedEmbedsFor(row.text, row.embeds, row.suppressedEmbeds);
   if (embeds.length) out.embeds = embeds;
@@ -428,7 +445,7 @@ async function handleMessageSearch(socket: AppSocket, msg: { query?: string; con
       conversationName,
       id: r.authorId,
       name: authorNameFor(r),
-      avatar: r.authorAvatar ?? '',
+      avatar: authorAvatarFor(r),
       ts: r.createdAt.getTime(),
       snippet: r.snippet,
     };
@@ -484,7 +501,7 @@ export function rejectCorrelated(event: string, socket: AppSocket, msg: unknown,
   return false;
 }
 
-/** The only send path: idempotent per `clientMessageId`, always answered
+/** The only send path for accounts: idempotent per `clientMessageId`, always answered
  * with `chat-send-result`. A request without a valid key is malformed —
  * there's no way to correlate a reply to it, so it's just dropped. */
 async function handleChat(socket: AppSocket, msg: ChatSendRequest): Promise<void> {
@@ -549,6 +566,29 @@ async function handleChat(socket: AppSocket, msg: ChatSendRequest): Promise<void
     log.error('correlated chat send failed', err, { userId: p.userId });
     fail('internal_error', 'Não foi possível enviar agora.');
   }
+}
+
+/** What a bot's webhook posts, already authenticated by the caller. A
+ * repeated `deliveryKey` answers with the message it first created instead of
+ * posting again (`duplicate`); once that message is deleted, the key is free. */
+export async function postBotMessage(input: { conversationId: string; webhookId: string; text: string; deliveryKey: string | null }): Promise<{ message: ChatMessagePayload; duplicate: boolean }> {
+  const { conversationId, webhookId, text, deliveryKey } = input;
+  const [inserted] = await db.insert(messages)
+    .values({ conversationId, authorId: null, webhookId, text, webhookDeliveryKey: deliveryKey })
+    .onConflictDoNothing()
+    .returning({ id: messages.id });
+  const messageId = inserted?.id ?? (deliveryKey ? (await db.select({ id: messages.id }).from(messages)
+    .where(and(eq(messages.webhookId, webhookId), eq(messages.webhookDeliveryKey, deliveryKey))).limit(1))[0]?.id : undefined);
+  if (messageId === undefined) throw new Error('bot message neither inserted nor found');
+  const [row] = await db.select(messageWithAuthorSelect).from(messages)
+    .leftJoin(users, eq(users.id, messages.authorId)).where(eq(messages.id, messageId)).limit(1);
+  const [message] = await serializeRows([row!]);
+  if (!inserted) return { message: message!, duplicate: true };
+  await touchConversation(conversationId, row!.createdAt);
+  await broadcastToConversationMembers(conversationId, { t: 'chat', message: message! });
+  // the preview fetch is throttled per caller; a webhook is its own caller
+  void unfurlMessage(row!, `webhook:${webhookId}`);
+  return { message: message!, duplicate: false };
 }
 
 /** Only the original author edits — not even admin (Discord-like; admin
@@ -625,7 +665,12 @@ async function removableTextMessage(p: Participant, rawId: unknown, what: string
 }
 
 /** The identity to show on a message someone else changed. */
-async function authorIdentityOf(authorId: string | null): Promise<AuthorIdentity> {
+async function authorIdentityOf(row: Message): Promise<AuthorIdentity> {
+  const authorId = row.authorId;
+  if (row.webhookId) {
+    const [bot] = await db.select({ name: conversations.title, avatar: conversations.avatar }).from(conversations).where(eq(conversations.id, row.conversationId)).limit(1);
+    return { name: null, displayName: null, avatar: null, bot: bot ?? { name: '', avatar: '' } };
+  }
   if (!authorId) return { name: null, displayName: null, avatar: null };
   const [author] = await db.select({ name: users.username, displayName: users.displayName, avatar: users.avatar }).from(users).where(eq(users.id, authorId)).limit(1);
   return author ?? { name: null, displayName: null, avatar: null };
@@ -660,7 +705,7 @@ async function removeAttachment(p: Participant, msg: { msgId?: unknown; attachme
       detail: { conversationId: row.conversationId, authorId: row.authorId, attachmentId },
     }).catch((err) => log.error('message.attachment.remove', err));
   }
-  await broadcastChanged(updated!, isAuthor ? p : await authorIdentityOf(row.authorId));
+  await broadcastChanged(updated!, isAuthor ? p : await authorIdentityOf(row));
   return null;
 }
 
