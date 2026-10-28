@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Linkord</title>
-    <meta name="description" content="Linkord: compartilhamento de tela e chat em tempo real, sem cadastro e sem link." />
+    <meta name="description" content="Chat, chamadas de voz e vídeo e compartilhamento de tela em tempo real." />
     <meta name="robots" content="noindex" />
     <meta name="theme-color" content="#000000" />
     <script>
@@ -21,7 +21,11 @@
       })();
     </script>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <!-- iOS takes the home-screen icon and name from these, not from the manifest -->
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="Linkord" />
+    <meta name="application-name" content="Linkord" />
   </head>
   <body>
     <div id="root"></div>
