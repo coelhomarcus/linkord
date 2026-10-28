@@ -68,7 +68,7 @@ function Target({ row, inline }: { row: AuditRow; inline?: boolean }) {
 
 function Toggle({ row, open, onToggle, controls }: { row: AuditRow; open: boolean; onToggle: () => void; controls: string }) {
   return (
-    <button type="button" aria-expanded={open} aria-controls={controls} onClick={onToggle} className="flex items-center gap-1.5 rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-ring">
+    <button type="button" aria-expanded={open} aria-controls={controls} onClick={onToggle} className="flex items-center gap-1.5 rounded-md text-left outline-none focus-visible:ring-2 focus-visible:ring-ring">
       {open ? <CaretDownIcon size={16} aria-hidden className="flex-none text-text-muted" /> : <CaretRightIcon size={16} aria-hidden className="flex-none text-text-muted" />}
       <span>{formatWhenShort(row.at)}</span>
       <span className="sr-only">: detalhes de {ACTION_LABELS[row.action] ?? row.action}</span>
