@@ -175,7 +175,7 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
       data-message-id={pending ? undefined : message.msgId}
       data-pending={pending?.state}
       className={cn(
-        'group/row relative flex gap-3 rounded-md px-4 py-0.5 transition-colors duration-500',
+        'group/row relative flex gap-3 rounded-md px-4 py-0.5 transition-colors duration-100',
         showHeader ? 'mt-[17px]' : 'mt-0',
         'hover:bg-message-hover',
         mentionsMe && 'border-l-2 border-yellow/50 bg-yellow/[0.06] pl-[calc(1rem-2px)] hover:bg-yellow/[0.08]',
