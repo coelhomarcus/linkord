@@ -30,6 +30,8 @@ const MAX_CACHED_CONVERSATIONS = 5;
 // "loading" forever — after this the user can scroll to try again.
 const PAGE_TIMEOUT_MS = 10_000;
 
+const MARK_READ_DELAY_MS = 1_000;
+
 function updateSet(set: Set<string>, id: string, present: boolean): Set<string> {
   if (set.has(id) === present) return set;
   const next = new Set(set);
@@ -146,6 +148,28 @@ export function useChatMessages(deps: ChatMessagesDeps) {
   }, []);
   const outbox = useMessageOutbox({ sendWs, onConfirmed: insertConfirmed });
   const { enqueue: enqueuePending, onEcho: onPendingEcho, onReconnected: onOutboxReconnected } = outbox;
+
+  // one mark per conversation per burst — a bot posting ten lines in a row
+  // only needs the marker moved to the last of them
+  const pendingMarkReadRef = useRef(new Map<string, { msgId: number; timer: ReturnType<typeof setTimeout> }>());
+  useEffect(() => {
+    const pending = pendingMarkReadRef.current;
+    return () => { for (const { timer } of pending.values()) clearTimeout(timer); };
+  }, []);
+  const queueMarkRead = useCallback((conversationId: string, msgId: number) => {
+    const pending = pendingMarkReadRef.current;
+    const existing = pending.get(conversationId);
+    if (existing) {
+      existing.msgId = Math.max(existing.msgId, msgId);
+      return;
+    }
+    const timer = setTimeout(() => {
+      const entry = pending.get(conversationId);
+      pending.delete(conversationId);
+      if (entry) sendWs({ t: 'conversation-mark-read', conversationId, msgId: entry.msgId });
+    }, MARK_READ_DELAY_MS);
+    pending.set(conversationId, { msgId, timer });
+  }, [sendWs]);
 
   const clearUnread = useCallback((conversationId: string) => {
     setUnreadByConversation((prev) => {
@@ -274,8 +298,10 @@ export function useChatMessages(deps: ChatMessagesDeps) {
 
   /** Every welcome, including after a reconnect: resends whatever was still
    * unconfirmed from before the (re)connection. */
-  const onWelcome = useCallback(() => {
+  // a server from before persisted unread sends none: keep the session's own count then
+  const onWelcome = useCallback((unread: Record<string, number> | undefined) => {
     onOutboxReconnected();
+    if (unread) setUnreadByConversation(new Map(Object.entries(unread)));
   }, [onOutboxReconnected]);
   const dismissMessageActionError = useCallback((msgId: number) => {
     setMessageActionErrors((prev) => { if (!prev.has(msgId)) return prev; const next = new Map(prev); next.delete(msgId); return next; });
@@ -395,8 +421,13 @@ export function useChatMessages(deps: ChatMessagesDeps) {
     }
     // your own message is never unread — it can land in a conversation you
     // left (an upload finishing after a switch, or another tab/device)
-    if (conversationId !== activeConversationIdRef.current && m.message.id !== myUserIdRef.current) {
-      setUnreadByConversation((prev) => new Map(prev).set(conversationId, (prev.get(conversationId) || 0) + 1));
+    if (m.message.id !== myUserIdRef.current) {
+      if (conversationId !== activeConversationIdRef.current) {
+        setUnreadByConversation((prev) => new Map(prev).set(conversationId, (prev.get(conversationId) || 0) + 1));
+      } else {
+        // not counted here, so the server mustn't count it on the next load either
+        queueMarkRead(conversationId, m.message.msgId);
+      }
     }
     // The message itself is proof they stopped typing — don't wait for
     // their typing:false (or the local expiry timer) to catch up.
@@ -413,7 +444,7 @@ export function useChatMessages(deps: ChatMessagesDeps) {
         mentioned: mentionsUsername(m.message.text, myUsernameRef.current),
       });
     }
-  }, [activeConversationIdRef, clearTypingEntry, activeViewRef, myUserIdRef, conversationsRef, allUsersRef, myUsernameRef, onPendingEcho, insertConfirmed]);
+  }, [activeConversationIdRef, clearTypingEntry, activeViewRef, myUserIdRef, conversationsRef, allUsersRef, myUsernameRef, onPendingEcho, insertConfirmed, queueMarkRead]);
 
   const onChatDeleted = useCallback((m: Extract<ServerMessage, { t: 'chat-deleted' }>) => {
     setMessagesByConversation((prev) => {

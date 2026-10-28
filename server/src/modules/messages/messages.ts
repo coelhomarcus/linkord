@@ -12,6 +12,7 @@ import {
   conversationDisplayName,
   conversationExistsForUser,
   getDirectPeerId,
+  markReadUpTo,
   touchConversation,
   recordConversationActivity,
 } from '../conversations/conversationsRepository.js';
@@ -252,6 +253,23 @@ async function handleConversationOpen(socket: AppSocket, msg: { conversationId?:
     for (const participant of participants.values()) {
       if (participant.userId === p.userId) send(participant.socket, { t: 'conversation-read', conversationId, lastReadMessageId: newest.id });
     }
+  }
+}
+
+/** A message reached a conversation the client is already showing — it was
+ * seen as it arrived, so the read marker follows it. Without this only
+ * opening a conversation marks it read, and whatever came in while it stayed
+ * open would come back as unread on the next load. */
+async function handleConversationMarkRead(socket: AppSocket, msg: { conversationId?: string; msgId?: unknown }): Promise<void> {
+  const p = participants.get(socket.participantId ?? '');
+  if (!p || p.socket !== socket) return;
+  const conversationId = conversationIdFrom(msg);
+  const msgId = Number(msg.msgId);
+  if (!conversationId || !Number.isSafeInteger(msgId) || msgId <= 0) return;
+  if (!(await conversationExistsForUser(conversationId, p.userId))) return;
+  if (!(await markReadUpTo(conversationId, p.userId, msgId))) return;
+  for (const participant of participants.values()) {
+    if (participant.userId === p.userId && participant.socket !== socket) send(participant.socket, { t: 'conversation-read', conversationId, lastReadMessageId: msgId });
   }
 }
 
@@ -783,6 +801,7 @@ async function handleTyping(socket: AppSocket, msg: { conversationId?: string; v
 
 export const handlers: HandlerTable = {
   'conversation-open': handleConversationOpen,
+  'conversation-mark-read': handleConversationMarkRead,
   'load-more-messages': handleLoadMoreMessages,
   'load-messages-around': handleLoadMessagesAround,
   'load-messages-after': handleLoadMessagesAfter,

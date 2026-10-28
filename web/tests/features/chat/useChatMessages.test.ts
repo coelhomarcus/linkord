@@ -56,6 +56,40 @@ describe('useChatMessages — unread', () => {
     act(() => result.current.onChat({ t: 'chat', message: message(11, { conversationId: 'outra', id: 'a' }) }));
     expect(result.current.unreadByConversation.get('outra')).toBe(1);
   });
+
+  it("the server's counts replace the session's on welcome, and an older server's absence keeps them", () => {
+    const { result } = setup();
+    act(() => result.current.onChat({ t: 'chat', message: message(11, { conversationId: 'outra', id: 'a' }) }));
+    act(() => result.current.onWelcome(undefined));
+    expect(result.current.unreadByConversation.get('outra')).toBe(1);
+
+    act(() => result.current.onWelcome({ g: 4 }));
+    expect([...result.current.unreadByConversation]).toEqual([['g', 4]]);
+  });
+
+  it('a burst in the open conversation is marked read once, up to its last message', () => {
+    vi.useFakeTimers();
+    try {
+      const sendWs = vi.fn(() => true);
+      const ref = <T,>(current: T) => ({ current });
+      const { result } = renderHook(() => useChatMessages({
+        sendWs, activeConversationIdRef: ref<string | null>('dm'), setActiveConversation: vi.fn(),
+        conversationsRef: ref([]), allUsersRef: ref(new Map()), myUserIdRef: ref<string | null>('b'), myUsernameRef: ref<string | null>('b'),
+        activeViewRef: ref<'chat' | 'call'>('chat'), clearTypingEntry: vi.fn(),
+      }));
+      act(() => result.current.onChat({ t: 'chat', message: message(20) }));
+      act(() => result.current.onChat({ t: 'chat', message: message(21) }));
+      act(() => result.current.onChat({ t: 'chat', message: message(22, { id: 'b' }) }));
+      act(() => result.current.onChat({ t: 'chat', message: message(30, { conversationId: 'outra' }) }));
+      act(() => vi.advanceTimersByTime(1_000));
+
+      const marks = sendWs.mock.calls.map((call) => (call as unknown as [{ t: string }])[0]).filter((msg) => msg.t === 'conversation-mark-read');
+      expect(marks).toEqual([{ t: 'conversation-mark-read', conversationId: 'dm', msgId: 21 }]);
+      expect(result.current.unreadByConversation.get('dm')).toBeUndefined();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
 
 describe('useChatMessages — correlated send', () => {
@@ -71,7 +105,7 @@ describe('useChatMessages — correlated send', () => {
 
   it('sends via the outbox and the confirmation enters the history only once', () => {
     const { result, sendWs } = setupWith();
-    act(() => result.current.onWelcome());
+    act(() => result.current.onWelcome(undefined));
     act(() => { result.current.sendChatMessage('dm', 'oi'); });
     const req = (sendWs.mock.calls.at(-1) as unknown as [{ requestId: string; clientMessageId: string }])[0];
     expect(result.current.pendingByConversation.get('dm')).toHaveLength(1);
@@ -152,7 +186,7 @@ describe('useChatMessages — history window', () => {
 
   it('sending from an old window jumps back to the present', () => {
     const { result, sendWs } = setupWindow();
-    act(() => result.current.onWelcome());
+    act(() => result.current.onWelcome(undefined));
     act(() => result.current.jumpToMessage('dm', 5));
     act(() => result.current.onConversationHistoryAround({ t: 'conversation-history-around', conversationId: 'dm', msgId: 5, messages: [message(5)], hasMoreBefore: false, hasMoreAfter: true }));
     act(() => { result.current.sendChatMessage('dm', 'oi'); });
