@@ -266,7 +266,7 @@ function Shell() {
           onOpenProfile={setProfileUserId}
         />
         <TileMenu onOpenProfile={setProfileUserId} />
-        <ProfileModal userId={profileUserId} onClose={() => setProfileUserId(null)} />
+        <ProfileModal userId={profileUserId} onClose={() => setProfileUserId(null)} onOpenProfile={setProfileUserId} />
         <AppModals modal={modal} onClose={closeModal} onOpenProfile={setProfileUserId} />
         <ChatSearchDialog
           open={searchOpen}

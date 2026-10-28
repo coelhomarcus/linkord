@@ -54,6 +54,28 @@ export async function listFriendIds(userId: string): Promise<string[]> {
   return rows.map((r) => (r.userLowId === userId ? r.userHighId : r.userLowId));
 }
 
+/** Since when `a` and `b` are friends, or null when they are not. A row
+ * accepted before `accepted_at` existed falls back to its last update. */
+export async function friendsSince(a: string, b: string): Promise<Date | null> {
+  const row = await getFriendship(a, b);
+  if (row?.status !== 'accepted') return null;
+  return row.acceptedAt ?? row.updatedAt;
+}
+
+/** The accounts both `a` and `b` are friends with, by name. A profile lists
+ * them without paging, so the list stops at `limit`; `total` is the full count. */
+export async function listMutualFriends(a: string, b: string, limit: number): Promise<{ items: SocialUser[]; total: number }> {
+  const [ofA, ofB] = await Promise.all([listFriendIds(a), listFriendIds(b)]);
+  const ofBSet = new Set(ofB);
+  const ids = ofA.filter((id) => ofBSet.has(id) && id !== a && id !== b);
+  if (ids.length === 0) return { items: [], total: 0 };
+  const rows = await db.select().from(users)
+    .where(inArray(users.id, ids))
+    .orderBy(sql`lower(coalesce(nullif(${users.displayName}, ''), ${users.username}))`, sql`lower(${users.username})`)
+    .limit(limit);
+  return { items: rows.map(toSocialUser), total: ids.length };
+}
+
 export interface SocialEntry { user: SocialUser; at: string }
 export interface SocialPage { items: SocialEntry[]; nextCursor: string | null }
 export type Relation = 'self' | 'none' | 'friends' | 'outgoing' | 'incoming' | 'blocked';

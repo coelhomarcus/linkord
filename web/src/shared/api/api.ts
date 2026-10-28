@@ -173,6 +173,23 @@ export interface SocialUser {
   avatarColor: string;
 }
 
+/** A group two accounts are both members of, as a profile lists it. */
+export interface SharedGroup { id: string; title: string; avatar: string; memberCount: number }
+
+/** What a profile shows besides the profile itself. The lists stop at a cap;
+ * `total` is the full count. Empty, with no `friendsSince`, on your own profile. */
+export interface ProfileDetails {
+  memberSince: string;
+  friendsSince: string | null;
+  mutualFriends: { items: SocialUser[]; total: number };
+  mutualGroups: { items: SharedGroup[]; total: number };
+}
+
+/** Same access, and the same 404 for "no" and "doesn't exist", as fetchUserProfile. */
+export function fetchProfileDetails(userId: string, signal?: AbortSignal): Promise<ProfileDetails> {
+  return apiFetch(`/api/users/${userId}/profile-details`, { signal });
+}
+
 export interface SocialEntry { user: SocialUser; at: string }
 export interface SocialPage { items: SocialEntry[]; nextCursor: string | null }
 
