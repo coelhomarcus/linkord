@@ -206,7 +206,9 @@ export function ConversationSidebar({ onReturnToCall, onOpenProfile, showReturnT
           {/* on a phone the rail lives in the drawer; from 768px it stays on screen beside it */}
           {isMobile && mobileRail}
           <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
-            <div className="flex flex-none items-center gap-2 px-4 py-4">
+            {/* from md the content card sits one shell gap (and its border) below the
+                top: starting there too puts this title on the same line as the page's */}
+            <div className="flex h-header flex-none items-center gap-2 px-4 md:mt-[calc(var(--spacing-shell)+1px)]">
               <h1 className="min-w-0 flex-1 truncate text-title font-semibold">{onBots ? 'Bots' : 'Conversas'}</h1>
               <Button type="button" variant="ghost" size="icon-sm" aria-label={onBots ? 'Criar bot' : 'Criar grupo'} onClick={() => (onBots ? setBotOpen(true) : setGroupOpen(true))} className="flex-none text-text-muted hover:text-text-primary">
                 <PlusIcon size={20} />
