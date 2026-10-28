@@ -37,7 +37,7 @@ function ActiveMarker({ layoutId }: { layoutId: string }) {
       layoutId={layoutId}
       aria-hidden
       transition={reduce ? { duration: 0 } : SPRING_LAYOUT}
-      className="absolute -left-2.5 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-text-primary"
+      className="absolute -left-2.5 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-primary"
     />
   );
 }
