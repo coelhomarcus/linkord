@@ -87,7 +87,7 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
                 className="transition-colors hover:border-border-strong"
                 aria-label="Detalhes do grupo"
               >
-                <GroupAvatar title={title} avatar={conversation.avatar} size={40} />
+                <GroupAvatar id={conversation.id} title={title} avatar={conversation.avatar} size={40} />
               </button>
             )}
             <button

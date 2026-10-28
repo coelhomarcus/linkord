@@ -79,7 +79,7 @@ function ConversationRow({ conversation, active, washId, onClick }: {
           </div>
         ) : (
           <div className="relative flex-none">
-            <GroupAvatar title={title} avatar={conversation.avatar} active={active} size={44} />
+            <GroupAvatar id={conversation.id} title={title} avatar={conversation.avatar} active={active} size={44} />
             <span className="absolute -bottom-0.5 -right-0.5 grid size-5 place-items-center rounded-full border-2 border-(--cutout) bg-bg-tertiary text-text-secondary transition-[border-color] duration-300">
               <UsersIcon size={14} weight="fill" />
             </span>

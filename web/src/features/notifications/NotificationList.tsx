@@ -12,7 +12,7 @@ import { cn } from '@/shared/lib/utils';
 import { describeNotification, formatRelativeTime } from './notificationText';
 
 function NotificationIcon({ entry }: { entry: NotificationEntry }) {
-  if (entry.kind === 'group_invitation' && entry.group) return <GroupAvatar title={entry.group.title} avatar={entry.group.avatar} size={36} />;
+  if (entry.kind === 'group_invitation' && entry.group) return <GroupAvatar id={entry.group.id} title={entry.group.title} avatar={entry.group.avatar} size={36} />;
   const actor = entry.actor;
   return <Avatar id={actor?.id ?? entry.id} name={actor?.displayName ?? '?'} avatar={actor?.avatar ?? ''} avatarColor={actor?.avatarColor ?? 'blurple'} size={36} className="flex-none" />;
 }

@@ -93,7 +93,7 @@ function GroupDetail({ id }: { id: string }) {
       {refreshFailed && <RefreshFailedNotice refreshing={refreshing} onRetry={() => void refresh()} />}
 
       <AdminEntityHeader
-        avatar={<GroupAvatar title={group.title} avatar={group.avatar} size={64} />}
+        avatar={<GroupAvatar id={group.id} title={group.title} avatar={group.avatar} size={64} />}
         title={name}
         id={group.id}
         badges={<>{!group.ownerId && <span className="inline-flex rounded-sm bg-yellow/15 px-1.5 py-0.5 text-micro font-medium text-yellow">Sem dono</span>}<Badge value={group.status} /></>}

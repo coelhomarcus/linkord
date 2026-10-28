@@ -98,7 +98,7 @@ function LiveInviteCard({ invitation }: { invitation: InvitationCard }) {
     <div className="mt-1 max-w-[380px] rounded-lg border border-border bg-fill-subtle p-3" data-invite-status={status}>
       <p className="mb-2 text-caption uppercase tracking-wide text-text-muted">Convite para grupo</p>
       <div className="mb-3 flex items-center gap-3">
-        <GroupAvatar title={invitation.groupTitle} avatar={invitation.groupAvatar} size={44} />
+        <GroupAvatar id={invitation.groupId} title={invitation.groupTitle} avatar={invitation.groupAvatar} size={44} />
         <div className="min-w-0">
           <p className="truncate text-body font-medium text-text-primary">{invitation.groupTitle}</p>
           <p className="flex items-center gap-1 text-caption text-text-muted">

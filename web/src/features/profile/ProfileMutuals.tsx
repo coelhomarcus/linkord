@@ -115,7 +115,7 @@ export function ProfileMutuals({ status, details, onRetry, onOpenProfile, onOpen
                   {groups!.items.map((group) => (
                     <li key={group.id}>
                       <button type="button" onClick={() => onOpenGroup(group.id)} className={ROW}>
-                        <GroupAvatar title={group.title} avatar={group.avatar} size={40} />
+                        <GroupAvatar id={group.id} title={group.title} avatar={group.avatar} size={40} />
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-label font-semibold text-text-primary">{group.title}</span>
                           <span className="block truncate text-caption text-text-muted">{count(group.memberCount, 'membro', 'membros')}</span>
