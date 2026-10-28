@@ -31,6 +31,35 @@ import { ConfirmDialog } from '@/shared/ConfirmDialog';
 
 const DELETED_AUTHOR_NAME = 'Usuário apagado';
 
+// A bot's message is usually something to acknowledge or flag — a deploy, an
+// alert — so its toolbar answers in one click, before the rest of the actions.
+const BOT_QUICK_REACTIONS = [
+  { emoji: '✅', label: 'Reagir com ✅' },
+  { emoji: '❌', label: 'Reagir com ❌' },
+] as const;
+
+function BotQuickReactions({ reacted, onPick }: { reacted: (emoji: string) => boolean; onPick: (emoji: string) => void }) {
+  return (
+    <>
+      {BOT_QUICK_REACTIONS.map(({ emoji, label }) => (
+        <Button
+          key={emoji}
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          aria-label={label}
+          aria-pressed={reacted(emoji)}
+          onClick={() => onPick(emoji)}
+          className={cn('text-[18px] leading-none', reacted(emoji) && 'bg-fill-active')}
+        >
+          {emoji}
+        </Button>
+      ))}
+      <span aria-hidden className="mx-0.5 h-5 w-px flex-none bg-border" />
+    </>
+  );
+}
+
 function ReactionButton({ onPick }: { onPick: (emoji: string) => void }) {
   const [open, setOpen] = useState(false);
   const [fullPickerOpen, setFullPickerOpen] = useState(false);
@@ -111,7 +140,9 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
   const [removal, setRemoval] = useState<{ kind: 'attachment'; id: string; name: string } | { kind: 'embed'; url: string } | null>(null);
   const { requestDelete, confirmDialog } = useMessageDeleteConfirm();
   const isMine = message.id === state.me.userId;
-  const can = messagePermissions(message, { userId: state.me.userId, role: state.me.role }, conversations.find((c) => c.id === message.conversationId));
+  const conversation = conversations.find((c) => c.id === message.conversationId);
+  const can = messagePermissions(message, { userId: state.me.userId, role: state.me.role }, conversation);
+  const inBot = conversation?.type === 'bot';
   const canDelete = can.delete;
   const deleting = deletingMsgIds.has(message.msgId);
   const actionError = pending ? undefined : messageActionErrors.get(message.msgId);
@@ -319,6 +350,12 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
           picker, which is portaled outside this row), snapping the open
           popover to the viewport's top-left corner. */}
       {!pending && <div className="absolute right-3 top-0 hidden -translate-y-1/2 items-center gap-0.5 rounded-md border border-border bg-surface-overlay p-0.5 opacity-0 shadow-popover transition-opacity pointer-events-none group-hover/row:opacity-100 group-hover/row:pointer-events-auto group-has-[:focus-visible]/row:opacity-100 group-has-[:focus-visible]/row:pointer-events-auto md:flex">
+        {inBot && can.react && (
+          <BotQuickReactions
+            reacted={(emoji) => !!state.me.userId && !!reactions?.[emoji]?.includes(state.me.userId)}
+            onPick={(emoji) => reactToChatMessage(message.msgId, emoji)}
+          />
+        )}
         {can.react && <ReactionButton onPick={(emoji) => reactToChatMessage(message.msgId, emoji)} />}
         {can.reply && (
           <Button type="button" variant="ghost" size="icon-sm" aria-label="Responder" onClick={onReply}>
