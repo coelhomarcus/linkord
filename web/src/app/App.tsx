@@ -36,6 +36,7 @@ import { ContentLocationProvider } from '@/shared/lib/contentLocation';
 import { createAppRouter } from '@/app/appRouter';
 import { setLogRoute } from '@/shared/lib/logger';
 import { useConversationRouteSync } from '@/app/useConversationRouteSync';
+import { rightPanelsVisible } from '@/app/rightPanels';
 import { SidebarInset, SidebarProvider } from '@/shared/ui/motion/sidebar';
 import { loadSidebarCollapsed, saveSidebarCollapsed } from '@/shared/hooks/useSidebarCollapsedPreference';
 import { TooltipProvider } from '@/shared/ui/primitives/tooltip';
@@ -96,8 +97,6 @@ function Shell() {
     saveSidebarCollapsed(!next);
   }, []);
 
-  useEffect(() => { notifyActiveView(activeView); }, [activeView, notifyActiveView]);
-
   // The first conversation auto-selected right after connecting shouldn't
   // drill in on mobile (the sidebar list is the intended landing screen).
   // Every LATER change to activeConversationId is a
@@ -157,15 +156,19 @@ function Shell() {
   // The call stage only ever shows on the conversations page. Elsewhere the
   // call keeps running (audio, PiP) — navigating never ends it.
   const showStage = onConversations && activeView === 'call' && inCall;
+  // what the user is looking at, not the last view picked: once the call ends
+  // (or on a page with no stage) the chat is what's on screen, and a message
+  // landing in it must not ring as if it were hidden behind a call
+  useEffect(() => { notifyActiveView(showStage ? 'call' : 'chat'); }, [showStage, notifyActiveView]);
 
   const active = conversations.find((conversation) => conversation.id === activeConversationId);
   // each page only ever shows its own kind of conversation (see ConversationPanel)
   const activeConversation = active && (active.type === 'bot') === onBots ? active : undefined;
   const onChatPage = onConversations || onBots;
   const hasDetails = activeConversation?.type === 'group' || activeConversation?.type === 'bot';
-  // the right panels open only where they make sense, whatever their saved flag says
-  const detailsVisible = detailsOpen && onChatPage && hasDetails && activeView !== 'call';
-  const mediaVisible = mediaOpen && onChatPage && !!activeConversation && activeView !== 'call';
+  const { details: detailsVisible, media: mediaVisible } = rightPanelsVisible({
+    detailsOpen, mediaOpen, onChatPage, stageShown: showStage, conversationType: activeConversation?.type ?? null,
+  });
   const activeConversationName = conversationTitle(activeConversation, state.me.userId, allUsers);
 
   useEffect(() => {
