@@ -18,11 +18,12 @@ import {
 import { canSendDirectMessage } from '../friendships/friendshipsRepository.js';
 import { resolveDisplayName } from '../users/users.js';
 import * as attachments from '../attachments/attachments.js';
-import { deleteForMessage } from '../attachments/attachmentCleanup.js';
+import { deleteAttachmentOfMessage, deleteForMessage } from '../attachments/attachmentCleanup.js';
 import * as reactions from './reactions.js';
 import { buildReplyRef, normalizeReplyRef, type ReplyRef } from './replyRef.js';
 import type { LinkPreviewResult } from '../link-preview/linkPreview.js';
-import { backfillEmbeds, needsEmbeds, storedEmbedsFor, unfurlMessage } from './messageEmbeds.js';
+import { backfillEmbeds, needsEmbeds, storedEmbedsFor, suppressedLinksFor, unfurlMessage } from './messageEmbeds.js';
+import { previewableLinks } from '../link-preview/messageLinks.js';
 import { insertMessageOnce, isValidClientMessageId, sendPayloadHash } from './sendOperations.js';
 import { publishStaged, StagedUnavailableError } from '../attachments/stagedAttachments.js';
 import { ERROR_CODES, type ErrorCode } from '../../http/errors.js';
@@ -87,6 +88,8 @@ interface ChatMessagePayload {
   invitation?: InvitationCard | null;
   // the stored previews of the message's link cards (see messageEmbeds.ts)
   embeds?: LinkPreviewResult[];
+  // links whose card the author removed: drawn as plain links
+  suppressedEmbeds?: string[];
 }
 
 interface MessageWithAuthor {
@@ -103,6 +106,7 @@ interface MessageWithAuthor {
   kind: string;
   groupInvitationId: string | null;
   embeds: unknown;
+  suppressedEmbeds: unknown;
 }
 
 function sanitizeChatText(text: unknown): string {
@@ -123,6 +127,7 @@ const messageWithAuthorSelect = {
   kind: messages.kind,
   groupInvitationId: messages.groupInvitationId,
   embeds: messages.embeds,
+  suppressedEmbeds: messages.suppressedEmbeds,
 };
 
 function rowWithParticipant(row: Message, participant: Participant): MessageWithAuthor {
@@ -140,6 +145,7 @@ function rowWithParticipant(row: Message, participant: Participant): MessageWith
     kind: row.kind,
     groupInvitationId: row.groupInvitationId,
     embeds: row.embeds,
+    suppressedEmbeds: row.suppressedEmbeds,
   };
 }
 
@@ -164,8 +170,10 @@ function rowToMessage(row: MessageWithAuthor, attachments?: Attachment[], reacti
     ts: row.createdAt.getTime(),
   };
   if (row.editedAt) out.editedAt = row.editedAt.getTime();
-  const embeds = storedEmbedsFor(row.text, row.embeds);
+  const embeds = storedEmbedsFor(row.text, row.embeds, row.suppressedEmbeds);
   if (embeds.length) out.embeds = embeds;
+  const suppressed = suppressedLinksFor(row.text, row.suppressedEmbeds);
+  if (suppressed.length) out.suppressedEmbeds = suppressed;
   if (row.kind === 'group_invite') {
     out.kind = 'group_invite';
     out.invitation = invitation ?? null;
@@ -444,7 +452,7 @@ export function rejectCorrelated(event: string, socket: AppSocket, msg: unknown,
     sendChatResult(socket, req, { error: { code, message } });
     return true;
   }
-  if ((event === 'chat-edit' || event === 'chat-delete' || event === 'chat-react') && isRequestId(req.requestId)) {
+  if ((event === 'chat-edit' || event === 'chat-delete' || event === 'chat-react' || event === 'chat-remove-attachment' || event === 'chat-suppress-embed') && isRequestId(req.requestId)) {
     answerAction(socket, req, { code, message });
     return true;
   }
@@ -547,20 +555,92 @@ async function editMessage(p: Participant, msg: { msgId?: unknown; text?: string
   // reason edit (not delete) is restricted here.
   const peerId = await getDirectPeerId(existing.conversationId, p.userId);
   if (peerId && !(await canSendDirectMessage(p.userId, peerId))) return { code: ERROR_CODES.relationshipRequired, message: 'Vocês precisam ser amigos pra conversar por aqui.' };
-  // previews of links the edit removed are dropped; new links are fetched below
-  const keptEmbeds = storedEmbedsFor(text, existing.embeds);
-  const [updated] = await db.update(messages).set({ text, editedAt: new Date(), embeds: keptEmbeds.length ? keptEmbeds : null }).where(eq(messages.id, msgId)).returning();
-  // without these, editing a caption on a message WITH an attachment or a
-  // reaction made it disappear for everyone (the client replaces the whole
-  // message with what arrives in 'chat-edited', see RoomProvider.tsx).
-  const [attachment, reactionsByEmoji] = await Promise.all([
-    attachments.getByMessageIds([msgId]).then((m) => m.get(msgId)),
-    reactions.getByMessageIds([msgId]).then((m) => m.get(msgId)),
-  ]);
-  await recordConversationActivity(existing.conversationId);
-  await broadcastToConversationMembers(existing.conversationId, { t: 'chat-edited', message: rowToMessage(rowWithParticipant(updated!, p), attachment, reactionsByEmoji) });
+  // previews (and removed cards) of links the edit dropped go too; new links are fetched below
+  const keptSuppressed = suppressedLinksFor(text, existing.suppressedEmbeds);
+  const keptEmbeds = storedEmbedsFor(text, existing.embeds, keptSuppressed);
+  const [updated] = await db.update(messages).set({
+    text, editedAt: new Date(),
+    embeds: keptEmbeds.length ? keptEmbeds : null,
+    suppressedEmbeds: keptSuppressed.length ? keptSuppressed : null,
+  }).where(eq(messages.id, msgId)).returning();
+  await broadcastChanged(updated!, p);
   if (needsEmbeds(updated!)) void unfurlMessage(updated!, p.userId);
   return null;
+}
+
+/** Sends a changed message, whole, to its conversation. Whole on purpose:
+ * the client replaces the message with what arrives in 'chat-edited' (see
+ * RoomProvider.tsx), so leaving out its attachments or reactions made them
+ * disappear for everyone. */
+async function broadcastChanged(row: Message, author: Participant): Promise<void> {
+  const [attachment, reactionsByEmoji] = await Promise.all([
+    attachments.getByMessageIds([row.id]).then((m) => m.get(row.id)),
+    reactions.getByMessageIds([row.id]).then((m) => m.get(row.id)),
+  ]);
+  await recordConversationActivity(row.conversationId);
+  await broadcastToConversationMembers(row.conversationId, { t: 'chat-edited', message: rowToMessage(rowWithParticipant(row, author), attachment, reactionsByEmoji) });
+}
+
+/** The author's own text message, in a conversation they still belong to:
+ * what removing an attachment or a card requires (only the author, like an
+ * edit). */
+async function ownTextMessage(p: Participant, rawId: unknown, what: string): Promise<{ row: Message } | ActionFailure> {
+  const msgId = Number(rawId);
+  if (!Number.isFinite(msgId)) return { code: 'not_found', message: 'Essa mensagem não existe mais.' };
+  const [row] = await db.select().from(messages).where(eq(messages.id, msgId)).limit(1);
+  if (!row) return { code: 'not_found', message: 'Essa mensagem não existe mais.' };
+  if (row.authorId !== p.userId || row.kind !== 'text') return { code: 'forbidden', message: `Você só pode remover ${what} das suas mensagens.` };
+  if (!(await conversationExistsForUser(row.conversationId, p.userId))) return { code: 'conversation_not_found', message: 'Conversa não encontrada.' };
+  return { row };
+}
+
+/** Takes one attachment out of the author's message (Discord's "remove
+ * attachment"). The message has to keep something, text or another
+ * attachment: taking away all it has is deleting it, which is its own action. */
+async function removeAttachment(p: Participant, msg: { msgId?: unknown; attachmentId?: unknown }): Promise<ActionFailure | null> {
+  const found = await ownTextMessage(p, msg.msgId, 'anexos');
+  if (!('row' in found)) return found;
+  const { row } = found;
+  const attachmentId = typeof msg.attachmentId === 'string' ? msg.attachmentId : '';
+  const current = (await attachments.getByMessageIds([row.id])).get(row.id) ?? [];
+  if (!current.some((attachment) => attachment.id === attachmentId)) return { code: 'not_found', message: 'Esse anexo não existe mais.' };
+  if (!row.text.trim() && current.length === 1) {
+    return { code: 'invalid_message', message: 'Esse anexo é tudo o que a mensagem tem. Para tirá-lo, apague a mensagem.' };
+  }
+  if (!(await deleteAttachmentOfMessage(row.id, attachmentId))) return { code: 'not_found', message: 'Esse anexo não existe mais.' };
+  const [updated] = await db.update(messages).set({ editedAt: new Date() }).where(eq(messages.id, row.id)).returning();
+  // the author's quota just got room back
+  void sendUsageToUser(p.userId).catch(() => {});
+  await broadcastChanged(updated!, p);
+  return null;
+}
+
+/** Removes the card of one link of the author's message (Discord's "remove
+ * embed"): the link stays in the text, as a plain link, and its card is never
+ * fetched again. Not an edit of what was said, so it doesn't mark one. */
+async function suppressEmbed(p: Participant, msg: { msgId?: unknown; url?: unknown }): Promise<ActionFailure | null> {
+  const found = await ownTextMessage(p, msg.msgId, 'incorporações');
+  if (!('row' in found)) return found;
+  const { row } = found;
+  const url = typeof msg.url === 'string' ? msg.url : '';
+  if (!previewableLinks(row.text).includes(url)) return { code: 'not_found', message: 'Esse link não está mais na mensagem.' };
+  const suppressed = [...new Set([...suppressedLinksFor(row.text, row.suppressedEmbeds), url])];
+  const kept = storedEmbedsFor(row.text, row.embeds, suppressed);
+  const [updated] = await db.update(messages).set({ suppressedEmbeds: suppressed, embeds: kept.length ? kept : null }).where(eq(messages.id, row.id)).returning();
+  await broadcastChanged(updated!, p);
+  return null;
+}
+
+async function handleChatRemoveAttachment(socket: AppSocket, msg: { msgId?: unknown; attachmentId?: unknown; requestId?: unknown }): Promise<void> {
+  const p = participants.get(socket.participantId ?? '');
+  if (!p || p.socket !== socket) return;
+  answerAction(socket, msg, await removeAttachment(p, msg));
+}
+
+async function handleChatSuppressEmbed(socket: AppSocket, msg: { msgId?: unknown; url?: unknown; requestId?: unknown }): Promise<void> {
+  const p = participants.get(socket.participantId ?? '');
+  if (!p || p.socket !== socket) return;
+  answerAction(socket, msg, await suppressEmbed(p, msg));
 }
 
 async function handleChatEdit(socket: AppSocket, msg: { msgId?: unknown; text?: string; requestId?: unknown }): Promise<void> {
@@ -684,6 +764,8 @@ export const handlers: HandlerTable = {
   chat: handleChat,
   'chat-delete': handleChatDelete,
   'chat-edit': handleChatEdit,
+  'chat-remove-attachment': handleChatRemoveAttachment,
+  'chat-suppress-embed': handleChatSuppressEmbed,
   'chat-react': handleChatReact,
   typing: handleTyping,
 };

@@ -403,6 +403,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         dismissMessageActionError: chatMessages.dismissMessageActionError,
         pendingReactions: chatMessages.pendingReactions,
         editChatMessage: chatMessages.editChatMessage, reactToChatMessage: chatMessages.reactToChatMessage,
+        removeChatAttachment: chatMessages.removeChatAttachment, suppressChatEmbed: chatMessages.suppressChatEmbed,
         replyingTo: chatMessages.replyingTo, setReplyingTo: chatMessages.setReplyingTo,
         editingMsgId: chatMessages.editingMsgId, setEditingMsgId: chatMessages.setEditingMsgId,
         reactionParticipantsTarget: chatMessages.reactionParticipantsTarget,

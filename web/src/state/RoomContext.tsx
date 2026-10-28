@@ -175,6 +175,10 @@ export interface RoomContextValue {
   deleteChatMessage: (msgId: number) => Promise<void>;
   /** Rejects with the server's reason when the edit didn't go through. */
   editChatMessage: (msgId: number, text: string) => Promise<void>;
+  /** Author only. A refusal lands in messageActionErrors. */
+  removeChatAttachment: (msgId: number, attachmentId: string) => Promise<void>;
+  /** Author only: the link stays, its card goes. A refusal lands in messageActionErrors. */
+  suppressChatEmbed: (msgId: number, url: string) => Promise<void>;
   deletingMsgIds: Set<number>;
   /** The viewer's unconfirmed reaction intents (see reactionState.ts). */
   pendingReactions: Map<string, boolean>;

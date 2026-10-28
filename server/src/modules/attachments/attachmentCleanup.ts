@@ -1,5 +1,5 @@
 import fs from 'node:fs/promises';
-import { and, eq, isNull, or } from 'drizzle-orm';
+import { and, eq, inArray, isNull, or } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { attachments as attachmentsTable, conversations, messages, users } from '../../db/schema.js';
 import { filePathFor } from './attachmentStorage.js';
@@ -25,6 +25,22 @@ const AVATAR_URL_RE = /^\/uploads\/([0-9a-f]{32})$/;
 export async function deleteForMessage(messageId: number): Promise<void> {
   const rows = await db.select().from(attachmentsTable).where(eq(attachmentsTable.messageId, messageId));
   await Promise.all(rows.map((row) => fs.unlink(filePathFor(row.id)).catch((err: NodeJS.ErrnoException) => { if (err.code !== 'ENOENT') throw err; })));
+}
+
+/** Removes one attachment from a message: its row, its thumbnail's row, and
+ * both files. False when it is not (or no longer) one of that message's
+ * attachments. */
+export async function deleteAttachmentOfMessage(messageId: number, attachmentId: string): Promise<boolean> {
+  const [row] = await db.select().from(attachmentsTable).where(and(
+    eq(attachmentsTable.id, attachmentId),
+    eq(attachmentsTable.messageId, messageId),
+    eq(attachmentsTable.isThumbnail, false),
+  )).limit(1);
+  if (!row) return false;
+  const ids = row.thumbId ? [row.id, row.thumbId] : [row.id];
+  await db.delete(attachmentsTable).where(and(inArray(attachmentsTable.id, ids), eq(attachmentsTable.messageId, messageId)));
+  await Promise.all(ids.map((id) => fs.unlink(filePathFor(id)).catch((err: NodeJS.ErrnoException) => { if (err.code !== 'ENOENT') throw err; })));
+  return true;
 }
 
 /** Same idea in bulk — deleting a conversation CASCADEs messages/attachments

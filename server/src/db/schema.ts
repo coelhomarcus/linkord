@@ -248,6 +248,10 @@ export const messages = pgTable('messages', {
   // screen. Null until fetched; an entry only shows while its `url` is still
   // one of the message's links (an edit can change them).
   embeds: jsonb('embeds'),
+  // Links whose card the author removed (Discord's "remove embed"): the link
+  // stays in the text, its card is no longer drawn, and it is never fetched
+  // again. Null when none is. Pruned to the message's links on edit.
+  suppressedEmbeds: jsonb('suppressed_embeds').$type<string[]>(),
   // Postgres computes/maintains this itself (GENERATED ALWAYS AS ... STORED)
   // on every insert/update of `text` — never set from the app. 'portuguese'
   // config for stemming (a search for "mensagem" should also find

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { detectEmbed } from '@/shared/lib/chatEmbeds';
 import { highlightCode } from '@/shared/lib/highlightCode';
@@ -8,6 +8,7 @@ import { Avatar } from '@/shared/Avatar';
 import { cn } from '@/shared/lib/utils';
 import { isSingleEmoji } from '@/shared/lib/isSingleEmoji';
 import { ChatEmbed } from './ChatEmbed';
+import { RemoveCorner } from './RemoveCorner';
 import { GifMessage } from '@/features/gifs/GifMessage';
 import { gifMessageUrl } from '@/features/gifs/klipyMedia';
 import { parseMessage, previewableLinks, type Inline } from './messageMarkup';
@@ -95,11 +96,22 @@ interface ChatMessageTextProps {
   onOpenProfile?: (userId: string) => void;
   /** previews the server stored for the message's links (each card takes its own) */
   embeds?: LinkPreviewData[];
+  /** links whose card was removed: they stay plain links */
+  suppressedEmbeds?: string[];
+  /** the author's own message: each card can be removed, keeping its link */
+  onRemoveEmbed?: (url: string) => void;
 }
 
-export function ChatMessageText({ text, mentionLookup, myUserId, onOpenProfile, embeds: previews }: ChatMessageTextProps) {
+export function ChatMessageText({ text, mentionLookup, myUserId, onOpenProfile, embeds: previews, suppressedEmbeds, onRemoveEmbed }: ChatMessageTextProps) {
   const blocks = useMemo(() => parseMessage(text), [text]);
-  const embeds = useMemo(() => previewableLinks(blocks).flatMap((url) => detectEmbed(url) ?? []), [blocks]);
+  // keyed by the link as written (what the server keeps for a removed card), not the embed's own url
+  const embeds = useMemo(() => {
+    const removed = new Set(suppressedEmbeds ?? []);
+    return previewableLinks(blocks).flatMap((link) => {
+      const embed = removed.has(link) ? null : detectEmbed(link);
+      return embed ? [{ link, embed }] : [];
+    });
+  }, [blocks, suppressedEmbeds]);
   const singleEmoji = isSingleEmoji(text);
   const ctx: RenderContext = { mentionLookup, myUserId, onOpenProfile };
   // a GIF message is only its KLIPY URL: show the GIF, not the link and a preview of it
@@ -126,7 +138,12 @@ export function ChatMessageText({ text, mentionLookup, myUserId, onOpenProfile, 
           }
         }
       })}
-      {embeds.map((embed) => <ChatEmbed key={embed.url} embed={embed} preview={previews?.find((preview) => preview.url === embed.url)} />)}
+      {embeds.map(({ link, embed }) => {
+        const card = <ChatEmbed embed={embed} preview={previews?.find((preview) => preview.url === embed.url)} />;
+        return onRemoveEmbed
+          ? <RemoveCorner key={link} label="Remover incorporação" onRemove={() => onRemoveEmbed(link)}>{card}</RemoveCorner>
+          : <Fragment key={link}>{card}</Fragment>;
+      })}
     </>
   );
 }

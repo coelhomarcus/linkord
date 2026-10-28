@@ -25,6 +25,7 @@ import { MessageReactions } from './MessageReactions';
 import { withPendingReactions } from './reactionState';
 import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { useMessageDeleteConfirm } from './useMessageDeleteConfirm';
+import { ConfirmDialog } from '@/shared/ConfirmDialog';
 
 const DELETED_AUTHOR_NAME = 'Usuário apagado';
 
@@ -97,12 +98,15 @@ function PendingStatus({ entry, offline, onRetry, onDiscard }: { entry: OutboxEn
 export function MessageRow({ message, showHeader, highlighted, allUsers, mentionLookup, onOpenProfile, onReply, onJumpTo, pending }: MessageRowProps) {
   const {
     state, editChatMessage, reactToChatMessage, editingMsgId, setEditingMsgId, retryPendingMessage, discardPendingMessage,
+    removeChatAttachment, suppressChatEmbed,
     deletingMsgIds, messageActionErrors, dismissMessageActionError, pendingReactions, openReactionParticipants,
   } = useRoom();
   const [editText, setEditText] = useState(message.text);
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
+  // what the author asked to take out of the message, waiting for confirmation
+  const [removal, setRemoval] = useState<{ kind: 'attachment'; id: string; name: string } | { kind: 'embed'; url: string } | null>(null);
   const { requestDelete, confirmDialog } = useMessageDeleteConfirm();
   const isMine = message.id === state.me.userId;
   const can = messagePermissions(message, { userId: state.me.userId, role: state.me.role });
@@ -115,6 +119,11 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
   const replyAuthor = message.replyTo?.authorId ? allUsers.get(message.replyTo.authorId) : undefined;
   const mentionsMe = !isMine && mentionsUser(message.text, mentionLookup, state.me.userId);
   const isInvite = message.kind === 'group_invite';
+  // the author's own sent message: a link card can always go (the link stays);
+  // an attachment only while the message keeps something else, text or
+  // another attachment (taking all it has is deleting it)
+  const canRemoveParts = isMine && !isInvite && !pending;
+  const canRemoveAttachments = canRemoveParts && (!!message.text.trim() || (message.attachments?.length ?? 0) > 1);
   const canReport = can.report;
   const isEditing = !pending && !isInvite && editingMsgId === message.msgId;
   const reactions = withPendingReactions(message.reactions, message.msgId, pendingReactions, state.me.userId);
@@ -249,10 +258,23 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
             ) : (
             <>
               <div className={cn('text-body leading-[1.375rem] text-text-secondary', pending && pending.state !== 'failed' && 'opacity-60')}>
-                <ChatMessageText text={message.text} mentionLookup={mentionLookup} myUserId={state.me.userId} onOpenProfile={onOpenProfile} embeds={message.embeds} />
+                <ChatMessageText
+                  text={message.text}
+                  mentionLookup={mentionLookup}
+                  myUserId={state.me.userId}
+                  onOpenProfile={onOpenProfile}
+                  embeds={message.embeds}
+                  suppressedEmbeds={message.suppressedEmbeds}
+                  onRemoveEmbed={canRemoveParts ? (url) => setRemoval({ kind: 'embed', url }) : undefined}
+                />
                 {message.editedAt && <span className="ml-1 text-caption text-text-muted">(editado)</span>}
               </div>
-              {message.attachments?.length ? <MessageMedia attachments={message.attachments} /> : null}
+              {message.attachments?.length ? (
+                <MessageMedia
+                  attachments={message.attachments}
+                  onRemove={canRemoveAttachments ? (attachment) => setRemoval({ kind: 'attachment', id: attachment.id, name: attachment.name }) : undefined}
+                />
+              ) : null}
             </>
             )
           )}
@@ -333,6 +355,21 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
         </DropdownMenu>
       </div>}
       {confirmDialog}
+      <ConfirmDialog
+        open={!!removal}
+        onOpenChange={(open) => { if (!open) setRemoval(null); }}
+        title={removal?.kind === 'embed' ? 'Remover incorporação' : 'Remover anexo'}
+        description={removal?.kind === 'embed'
+          ? 'O link continua na mensagem, só a prévia dele some para todo mundo.'
+          : `"${removal?.kind === 'attachment' ? removal.name : ''}" sai da mensagem para todo mundo e é apagado. O resto da mensagem continua.`}
+        confirmLabel="Remover"
+        destructive
+        onConfirm={() => {
+          if (removal?.kind === 'attachment') void removeChatAttachment(message.msgId, removal.id);
+          else if (removal?.kind === 'embed') void suppressChatEmbed(message.msgId, removal.url);
+          setRemoval(null);
+        }}
+      />
       {reportOpen && (
         <ReportDialog target={{ type: 'message', id: String(message.msgId), label: `mensagem de ${displayedName}` }} open onOpenChange={setReportOpen} />
       )}
