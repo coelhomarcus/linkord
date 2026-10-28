@@ -12,6 +12,7 @@ import { useContentLocation } from '@/shared/lib/contentLocation';
 import { SPRING_LAYOUT } from '@/shared/lib/ease';
 import { ActiveWash } from '@/shared/ui/motion/active-wash';
 import { useFriends } from '@/features/friends/FriendsContext';
+import { NotificationBell } from '@/features/notifications/NotificationBell';
 import { CountBadge } from '@/shared/CountBadge';
 import { iconWeight } from '@/shared/ui/icons';
 import { AppLink } from '@/shared/ui/app-link';
@@ -99,8 +100,8 @@ function RailLink({ to, label, active, badge, onNavigate, indicators, children }
 }
 
 /** The global navigation: where you can go from anywhere. What belongs to one
- * conversation (search, creating a group, the list) stays in the conversations
- * sidebar beside it; the notifications bell is in the top bar. Settings, and the administration inside it, are
+ * conversation (search, creating a group, the list) and the notifications bell
+ * stay in the conversations sidebar beside it. Settings, and the administration inside it, are
  * reached from the user dock laid over its bottom. On a narrow screen the same rail is drawn
  * inside the navigation sheet, so nothing here is reachable only on desktop. */
 export function AppNavigationRail({ className }: {
@@ -114,6 +115,8 @@ export function AppNavigationRail({ className }: {
   // (on a phone the rail already sits inside that drawer, so the button would only close it)
   const showListToggle = isOverlay ? !isMobile : !listOpen;
   const listExpanded = isOverlay ? openMobile : listOpen;
+  // the bell lives in the list's header, so it moves here only while that header is off screen
+  const showBell = !isMobile && !listExpanded;
   const friendsLabel = pendingIncomingCount > 0 ? `Amigos, ${pendingIncomingCount} aguardando resposta` : 'Amigos';
   const indicatorId = useId();
   const indicators: RailIndicatorIds = { wash: `${indicatorId}-wash`, marker: `${indicatorId}-marker` };
@@ -139,6 +142,9 @@ export function AppNavigationRail({ className }: {
       <RailLink to={ROUTES.friends} label={friendsLabel} active={pathname === ROUTES.friends} badge={pendingIncomingCount} onNavigate={afterNavigate} indicators={indicators}>
         <UsersIcon size={24} weight={iconWeight(pathname === ROUTES.friends)} aria-hidden />
       </RailLink>
+      <RailSlot show={showBell}>
+        <NotificationBell collapsed onNavigate={afterNavigate} />
+      </RailSlot>
 
     </nav>
   );

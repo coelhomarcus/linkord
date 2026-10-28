@@ -14,7 +14,6 @@ import { AccessNotice } from '@/app/layout/AccessNotice';
 import { ConversationSidebar } from '@/features/conversations/ConversationSidebar';
 import { AppNavigationRail } from '@/features/navigation/AppNavigationRail';
 import { FloatingUserDock } from '@/features/navigation/FloatingUserDock';
-import { AppTopBar } from '@/features/navigation/AppTopBar';
 import { ConversationPanel } from '@/features/conversations/ConversationPanel';
 import { GroupDetailsPanel } from '@/features/conversations/GroupDetailsPanel';
 import { ConversationMediaPanel } from '@/features/conversations/ConversationMediaPanel';
@@ -194,14 +193,12 @@ function Shell() {
   return (
     <GlobalContextMenu onOpenProfile={setProfileUserId}>
       <ContentLocationProvider value={contentLocation}>
-      <div className="flex h-dvh flex-col bg-bg-primary text-text-primary">
-      <AppTopBar />
       <SidebarProvider
         open={sidebarOpen}
         onOpenChange={setSidebarOpen}
         openMobile={mobileShowSidebar}
         onOpenMobileChange={setMobileShowSidebar}
-        className="relative min-h-0 flex-1 bg-bg-primary text-text-primary [--surface-base:var(--color-surface-app)]"
+        className="relative h-dvh bg-bg-primary text-text-primary [--surface-base:var(--color-surface-app)]"
         style={{ '--sidebar-width': '20rem', '--sidebar-width-mobile': '24rem', '--sidebar-overlay-offset': '4rem' }}
       >
         <ReconnectBanner />
@@ -278,7 +275,6 @@ function Shell() {
           activeConversationName={activeConversationName}
         />
       </SidebarProvider>
-      </div>
       </ContentLocationProvider>
     </GlobalContextMenu>
   );
