@@ -162,6 +162,21 @@ describe('ProfileModal — since when and what you have in common', () => {
     expect(screen.queryByRole('tab', { name: /mútuo/ })).not.toBeInTheDocument();
   });
 
+  it('lists the connections under their label, one per line, opening the site', async () => {
+    mocked.fetchProfileDetails.mockResolvedValue(details);
+    renderProfile({ allUsers: new Map([[user.id, { ...user, profileLinks: ['https://open.spotify.com/user/x', 'https://github.com/marcus'] }]]) });
+    expect(await screen.findByRole('heading', { name: 'Conexões' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Abrir Spotify' })).toHaveAttribute('href', 'https://open.spotify.com/user/x');
+    expect(screen.getByRole('link', { name: 'Abrir GitHub' })).toHaveAttribute('href', 'https://github.com/marcus');
+  });
+
+  it('has no Conexões section for a profile without links', async () => {
+    mocked.fetchProfileDetails.mockResolvedValue(details);
+    renderProfile();
+    expect(await screen.findByText('Membro desde')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Conexões' })).not.toBeInTheDocument();
+  });
+
   it('a failed load offers to try again', async () => {
     mocked.fetchProfileDetails.mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce(details);
     renderProfile();

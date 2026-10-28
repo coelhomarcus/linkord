@@ -1,5 +1,6 @@
 import { ArrowSquareOutIcon, AtIcon, CameraIcon, CheckIcon, CircleNotchIcon, LinkIcon, PaletteIcon, PlusIcon, SealCheckIcon, TrashIcon, UploadSimpleIcon } from '@phosphor-icons/react';
 import { useLayoutEffect, useRef } from 'react';
+import type { ReactNode } from 'react';
 
 import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { Avatar, AVATAR_COLOR_OPTIONS } from '@/shared/Avatar';
@@ -56,6 +57,12 @@ interface ProfileCardProps {
    * apply immediately and aren't part of that draft) while a save is in
    * flight — avoids a race between a new edit and the request already sent. */
   fieldsDisabled?: boolean;
+  /** shown under the name, above the bio (the profile modal's buttons) */
+  actions?: ReactNode;
+  /** shown under the bio, in place of the link icons when `hideLinks` is set */
+  footer?: ReactNode;
+  /** leaves the link icons out, for a footer that lists them its own way */
+  hideLinks?: boolean;
 }
 
 function EditableBio({ value, onChange, disabled }: { value: string; onChange: (value: string) => void; disabled?: boolean }) {
@@ -91,7 +98,7 @@ export function ProfileCard({
   onBannerUpload, onBannerUploadUrl, onBannerRemove, bannerUploading,
   className,
   onDisplayNameChange, onBioChange, onAvatarColorChange,
-  editableLinks, onLinkChange, onAddLink, onRemoveLink, bare, fieldsDisabled,
+  editableLinks, onLinkChange, onAddLink, onRemoveLink, bare, fieldsDisabled, actions, footer, hideLinks,
 }: ProfileCardProps) {
   const links = (user.profileLinks ?? []).map(linkInfo).filter((item): item is LinkInfo => !!item);
   const linksEditable = editableLinks !== undefined && onLinkChange && onAddLink && onRemoveLink;
@@ -197,6 +204,11 @@ export function ProfileCard({
               <Avatar id={user.id} name={user.displayName} avatar={user.avatar} avatarColor={user.avatarColor} size={92} />
             )}
             {online && <span className="absolute right-1 bottom-1 h-5 w-5 rounded-full border-2 border-bg-modal bg-green" />}
+            {online === false && (
+              <span aria-hidden className="absolute right-1 bottom-1 grid h-5 w-5 place-items-center rounded-full border-2 border-bg-modal bg-text-muted">
+                <span className="size-1.5 rounded-full bg-bg-modal" />
+              </span>
+            )}
           </div>
 
           {onAvatarColorChange && (
@@ -278,13 +290,15 @@ export function ProfileCard({
           </div>
         </div>
 
+        {actions && <div className="mt-4">{actions}</div>}
+
         {onBioChange ? (
           <EditableBio value={user.bio} onChange={onBioChange} disabled={fieldsDisabled} />
         ) : (
           user.bio && <p className="mt-4 whitespace-pre-wrap text-body leading-relaxed text-text-secondary">{user.bio}</p>
         )}
 
-        {linksEditable ? (
+        {hideLinks ? null : linksEditable ? (
           <div className="mt-5 flex flex-col gap-2">
             {editableLinks!.map((link, index) => {
               const info = linkInfo(link);
@@ -345,6 +359,8 @@ export function ProfileCard({
             </div>
           )
         )}
+
+        {footer}
       </div>
     </div>
   );
