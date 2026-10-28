@@ -34,7 +34,8 @@ export function ProfileMutuals({ status, details, onRetry, onOpenProfile, onOpen
   onOpenGroup: (conversationId: string) => void;
 }) {
   const { onlineUserIds } = useRoom();
-  const [tab, setTab] = useState<Tab>('friends');
+  // groups first: what you share as a group is the first thing the profile shows
+  const [tab, setTab] = useState<Tab>('groups');
   const friends = details?.mutualFriends;
   const groups = details?.mutualGroups;
 
@@ -69,11 +70,11 @@ export function ProfileMutuals({ status, details, onRetry, onOpenProfile, onOpen
           bar; kept clear of the dialog's close button in the corner */}
       <TabsList aria-label="Em comum" className="flex h-auto w-full flex-none justify-start gap-6 rounded-none border-0 border-b border-border bg-transparent p-0 md:w-[calc(100%-2rem)]">
         <TabsIndicator className="top-auto -bottom-px h-0.5 rounded-full bg-text-primary" />
-        <TabsTrigger value="friends" className={TAB}>
-          {friends ? count(friends.total, 'amigo mútuo', 'amigos mútuos') : 'Amigos mútuos'}
-        </TabsTrigger>
         <TabsTrigger value="groups" className={TAB}>
           {groups ? count(groups.total, 'grupo mútuo', 'grupos mútuos') : 'Grupos mútuos'}
+        </TabsTrigger>
+        <TabsTrigger value="friends" className={TAB}>
+          {friends ? count(friends.total, 'amigo mútuo', 'amigos mútuos') : 'Amigos mútuos'}
         </TabsTrigger>
       </TabsList>
 

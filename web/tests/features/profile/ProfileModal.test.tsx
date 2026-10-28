@@ -114,14 +114,22 @@ describe('ProfileModal — since when and what you have in common', () => {
     expect(screen.queryByText('Amigos desde')).not.toBeInTheDocument();
   });
 
-  it('counts the friends and groups in common on their tabs, and a friend opens their own profile', async () => {
+  it('counts the groups and friends in common on their tabs, groups first and open', async () => {
+    mocked.fetchProfileDetails.mockResolvedValue(details);
+    renderProfile();
+    const tabs = await screen.findAllByRole('tab');
+    expect(tabs.map((t) => t.textContent)).toEqual(['2 grupos mútuos', '1 amigo mútuo']);
+    expect(tabs[0]).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('a friend in common opens their own profile', async () => {
     mocked.fetchProfileDetails.mockResolvedValue(details);
     const { onOpenProfile } = renderProfile();
-    expect(await screen.findByRole('tab', { name: '1 amigo mútuo' })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: '2 grupos mútuos' })).toBeInTheDocument();
+    const interaction = userEvent.setup();
+    await interaction.click(await screen.findByRole('tab', { name: '1 amigo mútuo' }));
     const friend = screen.getByRole('button', { name: /Luis/ });
     expect(friend).toHaveTextContent('@luis · online');
-    await userEvent.setup().click(friend);
+    await interaction.click(friend);
     expect(onOpenProfile).toHaveBeenCalledWith('f1');
   });
 
@@ -130,7 +138,7 @@ describe('ProfileModal — since when and what you have in common', () => {
     const openConversation = vi.fn(); const requestChatView = vi.fn();
     const { onClose } = renderProfile({ openConversation, requestChatView });
     const interaction = userEvent.setup();
-    await interaction.click(await screen.findByRole('tab', { name: '2 grupos mútuos' }));
+    expect(await screen.findByRole('tab', { name: '2 grupos mútuos' })).toHaveAttribute('aria-selected', 'true');
     const panel = screen.getByRole('tabpanel');
     expect(within(panel).getByText('5 membros')).toBeInTheDocument();
     expect(within(panel).getByText('1 membro')).toBeInTheDocument();
@@ -142,7 +150,9 @@ describe('ProfileModal — since when and what you have in common', () => {
 
   it('says so when there is nothing in common', async () => {
     renderProfile();
-    expect(await screen.findByRole('tab', { name: '0 amigos mútuos' })).toBeInTheDocument();
+    expect(await screen.findByRole('tab', { name: '0 grupos mútuos' })).toBeInTheDocument();
+    expect(screen.getByText('Nenhum grupo mútuo.')).toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole('tab', { name: '0 amigos mútuos' }));
     expect(screen.getByText('Nenhum amigo mútuo.')).toBeInTheDocument();
   });
 
