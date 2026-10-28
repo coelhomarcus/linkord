@@ -221,7 +221,7 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
       )}
 
       <div className={cn(
-        'absolute bottom-1.5 left-1.5 flex max-w-[calc(100%-12px)] items-center gap-1.5 rounded-[9px] border border-white/10 bg-black/85 py-1 pr-2.5',
+        'absolute bottom-1.5 left-1.5 flex max-w-[calc(100%-12px)] items-center gap-1.5 rounded-md border border-white/10 bg-black/85 py-1 pr-2.5',
         showsVideo ? 'pl-1' : 'pl-2.5'
       )}>
         {showsVideo && <Avatar id={participantId} name={name} avatar={avatar} poster={avatarPoster} frozen={!isSpeaking} avatarColor={avatarColor} size={20} />}

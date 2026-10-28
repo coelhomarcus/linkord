@@ -96,7 +96,7 @@ export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(fu
           <CloseButton size="xs" label="Dispensar aviso" onClick={() => setDismissedMicProblem(micProblem)} />
         </div>
       )}
-      <div className="flex items-center gap-1 rounded-3xl border border-white/10 bg-black p-1.5 shadow-popover max-[480px]:gap-0.75 max-[480px]:p-1.25 max-[360px]:gap-0.5 max-[360px]:p-1">
+      <div className="flex items-center gap-1 rounded-lg border border-white/10 bg-black p-1.5 shadow-popover max-[480px]:gap-0.75 max-[480px]:p-1.25 max-[360px]:gap-0.5 max-[360px]:p-1">
         <Popover open={reactionsOpen} onOpenChange={setReactionsOpen}>
           <PopoverTrigger
             aria-label="Reagir"
