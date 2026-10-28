@@ -62,14 +62,14 @@ describe('AppNavigationRail', () => {
     expect(screen.queryByRole('link', { name: /Solicitações/ })).not.toBeInTheDocument();
   });
 
-  it('with the list open, the bell stays in the list header instead of the rail', () => {
+  it('never carries the notifications bell: it lives in the top bar', () => {
     renderRail('/app/conversations', true);
     expect(screen.queryByRole('button', { name: /Notificações/ })).not.toBeInTheDocument();
   });
 
-  it('with the list collapsed, the bell moves to the rail and the show-list button comes first', () => {
+  it('with the list collapsed, the show-list button comes first and there is still no bell', () => {
     renderRail('/app/conversations', false);
-    expect(screen.getByRole('button', { name: /Notificações/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Notificações/ })).not.toBeInTheDocument();
     const nav = screen.getByRole('navigation', { name: 'Navegação principal' });
     expect(nav.querySelector('a, button')).toHaveAccessibleName('Mostrar lista de conversas');
   });
