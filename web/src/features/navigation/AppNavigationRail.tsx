@@ -1,5 +1,5 @@
 import { ChatCircleIcon, SidebarSimpleIcon, UsersIcon } from '@phosphor-icons/react';
-import { useId } from 'react';
+import { useId, useMemo } from 'react';
 import type { ReactNode } from 'react';
 
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
@@ -12,6 +12,8 @@ import { useContentLocation } from '@/shared/lib/contentLocation';
 import { SPRING_LAYOUT } from '@/shared/lib/ease';
 import { ActiveWash } from '@/shared/ui/motion/active-wash';
 import { useFriends } from '@/features/friends/FriendsContext';
+import { unreadCountForTab } from '@/features/conversations/conversationUtils';
+import { useRoom } from '@/state/RoomContext';
 import { NotificationBell } from '@/features/notifications/NotificationBell';
 import { CountBadge } from '@/shared/CountBadge';
 import { iconWeight } from '@/shared/ui/icons';
@@ -108,6 +110,11 @@ export function AppNavigationRail({ className }: {
   className?: string;
 }) {
   const { pendingIncomingCount } = useFriends();
+  const { conversations, unreadByConversation } = useRoom();
+  const conversationsUnread = useMemo(
+    () => unreadCountForTab(conversations, unreadByConversation, 'direct') + unreadCountForTab(conversations, unreadByConversation, 'group'),
+    [conversations, unreadByConversation],
+  );
   const { pathname } = useContentLocation();
   const { isMobile, isOverlay, open: listOpen, openMobile, setOpenMobile, toggleSidebar } = useSidebar();
   const afterNavigate = () => { if (isOverlay) setOpenMobile(false); };
@@ -117,6 +124,7 @@ export function AppNavigationRail({ className }: {
   const listExpanded = isOverlay ? openMobile : listOpen;
   // the bell lives in the list's header, so it moves here only while that header is off screen
   const showBell = !isMobile && !listExpanded;
+  const conversationsLabel = conversationsUnread > 0 ? `Conversas, ${conversationsUnread} não lidas` : 'Conversas';
   const friendsLabel = pendingIncomingCount > 0 ? `Amigos, ${pendingIncomingCount} aguardando resposta` : 'Amigos';
   const indicatorId = useId();
   const indicators: RailIndicatorIds = { wash: `${indicatorId}-wash`, marker: `${indicatorId}-marker` };
@@ -136,7 +144,7 @@ export function AppNavigationRail({ className }: {
           <TooltipContent side="right">Mostrar lista de conversas</TooltipContent>
         </Tooltip>
       </RailSlot>
-      <RailLink to={ROUTES.conversations} label="Conversas" active={isConversationsPath(pathname)} onNavigate={afterNavigate} indicators={indicators}>
+      <RailLink to={ROUTES.conversations} label={conversationsLabel} active={isConversationsPath(pathname)} badge={conversationsUnread} onNavigate={afterNavigate} indicators={indicators}>
         <ChatCircleIcon size={24} weight={iconWeight(isConversationsPath(pathname))} aria-hidden />
       </RailLink>
       <RailLink to={ROUTES.friends} label={friendsLabel} active={pathname === ROUTES.friends} badge={pendingIncomingCount} onNavigate={afterNavigate} indicators={indicators}>

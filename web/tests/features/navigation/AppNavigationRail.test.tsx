@@ -94,6 +94,14 @@ describe('AppNavigationRail', () => {
     expect(await screen.findByRole('link', { name: 'Amigos, 3 aguardando resposta' })).toBeInTheDocument();
   });
 
+  it('the Conversas badge sums unread across direct and group conversations', () => {
+    const base = { title: '', avatar: '', createdBy: 'me', memberIds: ['me'], lastMessageAt: null, createdAt: 0, updatedAt: 0, pinnedAt: null, myRole: 'member' as const, ownerId: null, memberCount: 1 };
+    const conversations = [{ ...base, id: 'dm-1', type: 'direct' as const }, { ...base, id: 'g-1', type: 'group' as const }];
+    renderRail('/app/friends', true, false, { conversations, unreadByConversation: new Map([['dm-1', 2], ['g-1', 3], ['gone', 9]]) });
+    const link = screen.getByRole('link', { name: 'Conversas, 5 não lidas' });
+    expect(link).toHaveTextContent('5');
+  });
+
   it('with the list open, the rail does not repeat the hide button (it stays in the list header)', () => {
     renderRail('/app/conversations', true);
     expect(screen.queryByRole('button', { name: /lista de conversas/ })).not.toBeInTheDocument();
