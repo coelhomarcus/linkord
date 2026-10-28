@@ -10,7 +10,10 @@ import { initialRoomState } from '@/state/roomReducer';
 
 // the relationship actions need the router and the friends provider — they
 // have their own tests (tests/features/friends/ProfileActions.test.tsx)
-vi.mock('@/features/friends/ProfileActions', () => ({ ProfileActions: () => null }));
+vi.mock('@/features/friends/ProfileActions', () => ({
+  ProfileActions: () => <div data-testid="actions" />,
+  EditProfileButton: () => <button type="button">Editar perfil</button>,
+}));
 vi.mock('@/shared/api/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/shared/api/api')>()),
   fetchProfileDetails: vi.fn(),
@@ -175,6 +178,19 @@ describe('ProfileModal — since when and what you have in common', () => {
     renderProfile();
     expect(await screen.findByText('Membro desde')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Conexões' })).not.toBeInTheDocument();
+  });
+
+  it('on your own profile the edit button sits on the name line, with no action row', async () => {
+    renderProfile({ state: { ...initialRoomState, me: { ...initialRoomState.me, userId: 'u1' } } });
+    const edit = await screen.findByRole('button', { name: 'Editar perfil' });
+    expect(edit.closest('div')?.parentElement).toContainElement(screen.getByRole('heading', { name: 'Marcus' }));
+    expect(screen.queryByTestId('actions')).not.toBeInTheDocument();
+  });
+
+  it("on someone else's profile the actions are below, with no edit button", async () => {
+    renderProfile();
+    expect(await screen.findByTestId('actions')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Editar perfil' })).not.toBeInTheDocument();
   });
 
   it('a failed load offers to try again', async () => {

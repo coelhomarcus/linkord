@@ -6,7 +6,7 @@ import { ImageLightbox } from '@/features/media/ImageLightbox';
 import { BANNER_ASPECT_RATIO } from '@/features/profile/profileLinks';
 import { fetchUserProfile } from '@/shared/api/api';
 import type { PublicUser } from '@/shared/types/protocol';
-import { ProfileActions } from '@/features/friends/ProfileActions';
+import { EditProfileButton, ProfileActions } from '@/features/friends/ProfileActions';
 import { ProfileCard } from './ProfileCard';
 import { ReportDialog } from '@/features/reports/ReportDialog';
 import { cn } from '@/shared/lib/utils';
@@ -112,16 +112,18 @@ export function ProfileModal({ userId, onClose, onOpenProfile }: ProfileModalPro
                 online={onlineUserIds.has(user.id)}
                 onBannerClick={user.banner ? () => setLightboxImage({ src: user.banner, kind: 'banner' }) : undefined}
                 onAvatarClick={user.avatar ? () => setLightboxImage({ src: user.avatar, kind: 'avatar' }) : undefined}
-                actions={
+                // your own profile has no relationship to act on: the way to edit it sits by the name
+                nameAction={user.id === state.me.userId ? <EditProfileButton onNavigate={onClose} /> : undefined}
+                actions={user.id === state.me.userId ? undefined : (
                   <ProfileActions
                     userId={user.id}
                     username={user.username}
                     displayName={user.displayName}
                     onNavigate={onClose}
-                    onReport={user.id !== state.me.userId ? () => setReportOpen(true) : undefined}
+                    onReport={() => setReportOpen(true)}
                     className="p-0"
                   />
-                }
+                )}
                 hideLinks
                 footer={(details.details || (user.profileLinks ?? []).length > 0) && (
                   <div className="mt-6 flex flex-col gap-5">

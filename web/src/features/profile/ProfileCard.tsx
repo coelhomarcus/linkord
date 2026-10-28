@@ -59,6 +59,8 @@ interface ProfileCardProps {
   fieldsDisabled?: boolean;
   /** shown under the name, above the bio (the profile modal's buttons) */
   actions?: ReactNode;
+  /** shown at the end of the name's line, above the username */
+  nameAction?: ReactNode;
   /** shown under the bio, in place of the link icons when `hideLinks` is set */
   footer?: ReactNode;
   /** leaves the link icons out, for a footer that lists them its own way */
@@ -98,7 +100,7 @@ export function ProfileCard({
   onBannerUpload, onBannerUploadUrl, onBannerRemove, bannerUploading,
   className,
   onDisplayNameChange, onBioChange, onAvatarColorChange,
-  editableLinks, onLinkChange, onAddLink, onRemoveLink, bare, fieldsDisabled, actions, footer, hideLinks,
+  editableLinks, onLinkChange, onAddLink, onRemoveLink, bare, fieldsDisabled, actions, nameAction, footer, hideLinks,
 }: ProfileCardProps) {
   const links = (user.profileLinks ?? []).map(linkInfo).filter((item): item is LinkInfo => !!item);
   const linksEditable = editableLinks !== undefined && onLinkChange && onAddLink && onRemoveLink;
@@ -275,7 +277,10 @@ export function ProfileCard({
               className="w-full min-w-0 bg-transparent text-display font-bold text-text-primary outline-none placeholder:text-text-muted/70 disabled:opacity-60"
             />
           ) : (
-            <h2 className="truncate text-display font-bold text-text-primary">{user.displayName}</h2>
+            <div className="flex min-w-0 items-center gap-3">
+              <h2 className="min-w-0 flex-1 truncate text-display font-bold text-text-primary">{user.displayName}</h2>
+              {nameAction && <div className="flex-none">{nameAction}</div>}
+            </div>
           )}
           <div className="flex min-w-0 items-center gap-2">
             <p className="flex min-w-0 items-center gap-0.5 truncate text-label text-text-muted">

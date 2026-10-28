@@ -17,6 +17,16 @@ import type { SocialConfirm } from './SocialConfirmDialog';
 import { useFriends } from './FriendsContext';
 import { useRelationship } from './useRelationship';
 
+/** Takes you from your own profile to where you edit it. */
+export function EditProfileButton({ onNavigate }: { onNavigate?: () => void }) {
+  const navigate = useNavigate();
+  return (
+    <Button type="button" variant="secondary" size="sm" onClick={() => { navigate(ROUTES.settings); onNavigate?.(); }}>
+      <PencilSimpleIcon size={20} /><span>Editar perfil</span>
+    </Button>
+  );
+}
+
 /** The social actions on someone's profile — what's offered depends only on
  * the viewer's relation to them (docs/plano-rede-social.md §5.4). Composed
  * next to ProfileCard rather than inside it, so a card drawn elsewhere (the
@@ -86,11 +96,7 @@ export function ProfileActions({ userId, username, displayName, onNavigate, onRe
   let actions;
   switch (relation) {
     case 'self':
-      actions = (
-        <Button type="button" variant="secondary" size="sm" onClick={() => { navigate(ROUTES.settings); onNavigate?.(); }}>
-          <PencilSimpleIcon size={20} /><span>Editar perfil</span>
-        </Button>
-      );
+      actions = <EditProfileButton onNavigate={onNavigate} />;
       break;
     case 'friends':
       actions = (
