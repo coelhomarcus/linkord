@@ -14,17 +14,22 @@ vi.mock('@/features/settings/uploadCroppedProfileImage', () => ({
   uploadCroppedProfileImage,
 }));
 
-vi.mock('@/features/settings/ImageCropDialog', () => ({
-  ImageCropDialog: ({ open, processing, onConfirm, onCancel }: { open: boolean; processing?: boolean; onConfirm: (crop: { x: number; y: number; width: number; height: number }) => void; onCancel: () => void }) => (
-    open ? (
-      <div>
-        {processing && <p role="status">Processando imagem…</p>}
-        <button type="button" disabled={processing} onClick={() => onConfirm({ x: 0, y: 0, width: 10, height: 10 })}>Confirmar recorte</button>
-        <button type="button" disabled={processing} onClick={onCancel}>Cancelar recorte</button>
-      </div>
-    ) : null
-  ),
-}));
+// portaled like the real dialog, which opens over the group modal
+vi.mock('@/features/settings/ImageCropDialog', async () => {
+  const { createPortal } = await import('react-dom');
+  return {
+    ImageCropDialog: ({ open, processing, onConfirm, onCancel }: { open: boolean; processing?: boolean; onConfirm: (crop: { x: number; y: number; width: number; height: number }) => void; onCancel: () => void }) => (
+      open ? createPortal(
+        <div>
+          {processing && <p role="status">Processando imagem…</p>}
+          <button type="button" disabled={processing} onClick={() => onConfirm({ x: 0, y: 0, width: 10, height: 10 })}>Confirmar recorte</button>
+          <button type="button" disabled={processing} onClick={onCancel}>Cancelar recorte</button>
+        </div>,
+        document.body,
+      ) : null
+    ),
+  };
+});
 
 vi.mock('@/shared/api/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/shared/api/api')>()),
@@ -63,11 +68,17 @@ function setup(myRole: 'owner' | 'member') {
   );
 }
 
+// the modal opens on the overview; members (and invitations) are their own section
+async function showMembers() {
+  await userEvent.setup().click(await screen.findByRole('button', { name: 'Membros' }));
+}
+
 describe('GroupDetailsPanel — invitations', () => {
   it('owner invites friends (who are not yet members) and does not add them directly', async () => {
     const user = userEvent.setup();
     mocked.inviteToGroup.mockResolvedValue({ results: [{ userId: 'u-bea', outcome: 'sent', invitationId: 'i' }] });
     setup('owner');
+    await showMembers();
 
     await user.click(await screen.findByRole('button', { name: /Convidar amigos/ }));
     // Ana is already a member, so only Bea shows up as a candidate
@@ -84,6 +95,7 @@ describe('GroupDetailsPanel — invitations', () => {
     mocked.fetchGroupInvitations.mockResolvedValue({ items: [{ id: 'inv-9', at: '2026-01-01T00:00:00.000Z', invitee: bea }], nextCursor: null });
     mocked.revokeInvitation.mockResolvedValue({ invitation: {} as never });
     setup('owner');
+    await showMembers();
 
     expect(await screen.findByText('Convites enviados')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /Convidar amigos/ }));
@@ -96,6 +108,7 @@ describe('GroupDetailsPanel — invitations', () => {
     const user = userEvent.setup();
     mocked.inviteToGroup.mockResolvedValue({ results: [{ userId: 'u-bea', outcome: 'not_friends' }] });
     setup('owner');
+    await showMembers();
     await user.click(await screen.findByRole('button', { name: /Convidar amigos/ }));
     await user.click(await screen.findByRole('button', { name: /Bea/ }));
     await user.click(screen.getByRole('button', { name: 'Convidar (1)' }));
@@ -116,9 +129,11 @@ describe('GroupDetailsPanel — invitations', () => {
       items: [{ user: bea, role: 'member', at: '2026-01-03T00:00:00.000Z' }], nextCursor: null,
     });
     setup('owner');
+    // the count is part of the overview, where the modal opens
+    expect(await screen.findByText('2 membros')).toBeInTheDocument();
+    await showMembers();
 
     expect(await screen.findByText('dono')).toBeInTheDocument();
-    expect(screen.getByText('2 membros')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Carregar mais' }));
     expect(mocked.fetchGroupMembers).toHaveBeenLastCalledWith('g1', 'cursor-2');
     expect(await screen.findByText('Bea')).toBeInTheDocument();
@@ -168,12 +183,15 @@ describe('GroupDetailsPanel — invitations', () => {
 
   it('owner sees transfer/remove on others; a regular member sees no management controls', async () => {
     const { unmount } = setup('owner');
+    await showMembers();
     expect(await screen.findByRole('button', { name: 'Remover Ana' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Transferir propriedade para Ana' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Remover Eu/ })).not.toBeInTheDocument();
     unmount();
 
     setup('member');
+
+    await showMembers();
     await screen.findByText('Ana');
     expect(screen.queryByRole('button', { name: /Remover/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Transferir/ })).not.toBeInTheDocument();
@@ -184,6 +202,7 @@ describe('GroupDetailsPanel — invitations', () => {
     const user = userEvent.setup();
     mocked.fetchGroupMembers.mockRejectedValueOnce(new Error('x'));
     setup('member');
+    await showMembers();
     await user.click(await screen.findByRole('button', { name: 'Tentar de novo' }));
     expect(await screen.findByText('Ana')).toBeInTheDocument();
   });
@@ -195,3 +214,33 @@ describe('GroupDetailsPanel — invitations', () => {
     expect(await screen.findByRole('dialog')).toHaveTextContent('Denunciar grupo');
   });
 });
+
+describe('GroupDetailsPanel — a settings-style modal', () => {
+  it('is a dialog that opens on the overview, with the sections on the side and the actions once', async () => {
+    setup('owner');
+    const dialog = await screen.findByRole('dialog', { name: 'Detalhes do grupo' });
+    expect(dialog).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Visão geral' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('main', { name: 'Visão geral' })).toHaveTextContent('Squad');
+    expect(screen.getAllByRole('button', { name: /Sair do grupo/ })).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: /Excluir grupo/ })).toHaveLength(1);
+
+    await showMembers();
+    expect(screen.getByRole('button', { name: 'Membros' })).toHaveAttribute('aria-current', 'page');
+    expect(await screen.findByRole('main', { name: 'Membros' })).toHaveTextContent('Ana');
+  });
+
+  it('closes from the header button', async () => {
+    const onOpenChange = vi.fn();
+    const state = { ...initialRoomState, me: { ...initialRoomState.me, userId: 'me' } };
+    renderSocial(
+      <SidebarProvider>
+        <GroupDetailsPanel conversationId="g1" open onOpenChange={onOpenChange} onOpenProfile={vi.fn()} />
+      </SidebarProvider>,
+      { room: { state, conversations: [group('member')] } },
+    );
+    await userEvent.setup().click(await screen.findByRole('button', { name: 'Fechar' }));
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+});
+
