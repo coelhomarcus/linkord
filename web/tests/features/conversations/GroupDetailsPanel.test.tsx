@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { initialRoomState } from '@/state/roomReducer';
 import { renderSocial, ana, bea } from '@tests/fixtures/socialFixture';
@@ -81,7 +81,20 @@ describe('GroupDetailsPanel — invitations', () => {
     await user.click(screen.getByRole('button', { name: /Bea/ }));
     await user.click(screen.getByRole('button', { name: 'Convidar (1)' }));
     expect(mocked.inviteToGroup).toHaveBeenCalledWith('g1', ['u-bea']);
-    expect(await screen.findByText('Convites enviados.')).toBeInTheDocument();
+    // the picker was a modal over the details: it closes, and the details say what happened
+    expect(await screen.findByText('Convite enviado.')).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Convidar amigos' })).not.toBeInTheDocument());
+  });
+
+  it('the picker opens in its own modal, not over the member list', async () => {
+    const user = userEvent.setup();
+    setup('owner');
+    await user.click(await screen.findByRole('button', { name: /Convidar amigos/ }));
+    const dialog = await screen.findByRole('dialog', { name: 'Convidar amigos' });
+    expect(within(dialog).getByText(/só entram no grupo ao aceitar/)).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Convidar amigos' })).not.toBeInTheDocument());
+    expect(mocked.inviteToGroup).not.toHaveBeenCalled();
   });
 
   it('lists pending invitations, hides those already invited, and revokes', async () => {
@@ -93,6 +106,7 @@ describe('GroupDetailsPanel — invitations', () => {
     // Bea is already invited, so the picker has no one left to offer
     await user.click(await screen.findByRole('button', { name: /Convidar amigos/ }));
     await waitFor(() => expect(screen.getByText('Você não tem amigos para convidar.')).toBeInTheDocument());
+    await user.click(screen.getByRole('button', { name: 'Cancelar' }));
     // the invitations are their own tab, counted
     await user.click(await screen.findByRole('tab', { name: 'Convites enviados (1)' }));
     await user.click(screen.getByRole('button', { name: 'Revogar' }));
@@ -106,7 +120,10 @@ describe('GroupDetailsPanel — invitations', () => {
     await user.click(await screen.findByRole('button', { name: /Convidar amigos/ }));
     await user.click(await screen.findByRole('button', { name: /Bea/ }));
     await user.click(screen.getByRole('button', { name: 'Convidar (1)' }));
-    expect(await screen.findByText(/Bea: não é mais seu amigo/)).toBeInTheDocument();
+    // the modal stays open to say who didn't get one, and why
+    const dialog = await screen.findByRole('dialog', { name: 'Convidar amigos' });
+    expect(await within(dialog).findByText(/não é mais seu amigo/)).toBeInTheDocument();
+    expect(within(dialog).getByText('Bea')).toBeInTheDocument();
   });
 
   it('a regular member does not see invite or sent invitations (and nothing is fetched)', async () => {

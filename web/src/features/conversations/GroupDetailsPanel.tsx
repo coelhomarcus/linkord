@@ -21,12 +21,11 @@ import { cn } from '@/shared/lib/utils';
 import { useRoom } from '@/state/RoomContext';
 import { AVATAR_MIME_TYPES, MAX_AVATAR_BYTES } from '@/shared/types/protocol';
 import { GroupAvatar } from './GroupAvatar';
-import { FriendPicker } from './FriendPicker';
-import { describeInviteOutcome } from './inviteOutcome';
+import { GroupInviteDialog } from './GroupInviteDialog';
 import { useFriends } from '@/features/friends/FriendsContext';
 import { useCursorList } from '@/shared/hooks/useCursorList';
 import { ReportDialog } from '@/features/reports/ReportDialog';
-import { fetchGroupInvitations, fetchGroupMembers, inviteToGroup, revokeInvitation } from '@/shared/api/api';
+import { fetchGroupInvitations, fetchGroupMembers, revokeInvitation } from '@/shared/api/api';
 import type { SocialUser } from '@/shared/api/api';
 import { BotWebhookSection } from '@/features/bots/BotWebhookSection';
 
@@ -63,10 +62,9 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
   const [tab, setTab] = useState<GroupTab>('members');
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState('');
-  const [addOpen, setAddOpen] = useState(false);
-  const [addSelected, setAddSelected] = useState<Map<string, SocialUser>>(new Map());
-  const [inviting, setInviting] = useState(false);
-  const [inviteMessage, setInviteMessage] = useState<string | null>(null);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  // what the last invite or revoke did, above the people tabs
+  const [notice, setNotice] = useState<string | null>(null);
   const [revokingId, setRevokingId] = useState<string | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
   const [confirmLeave, setConfirmLeave] = useState(false);
@@ -94,9 +92,8 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
     if (!open) {
       setTab('members');
       setEditingTitle(false);
-      setAddOpen(false);
-      setAddSelected(new Map());
-      setInviteMessage(null);
+      setInviteOpen(false);
+      setNotice(null);
       setAvatarError(null);
       setAvatarUploadPhase(null);
       setTransferTarget(null);
@@ -146,41 +143,13 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
     if (event.key === 'Escape') setEditingTitle(false);
   }
 
-  function toggleAddCandidate(user: SocialUser) {
-    setAddSelected((prev) => {
-      const next = new Map(prev);
-      if (next.has(user.id)) next.delete(user.id); else next.set(user.id, user);
-      return next;
-    });
-  }
-
-  async function confirmInvite() {
-    if (!conversation || addSelected.size === 0 || inviting) return;
-    setInviting(true);
-    setInviteMessage(null);
-    try {
-      const { results } = await inviteToGroup(conversation.id, [...addSelected.keys()]);
-      const failed = results.filter((r) => r.outcome !== 'sent');
-      setInviteMessage(failed.length === 0
-        ? 'Convites enviados.'
-        : failed.map((r) => `${addSelected.get(r.userId)?.displayName ?? 'Usuário'}: ${describeInviteOutcome(r.outcome)}`).join(' · '));
-      setAddSelected(new Map());
-      if (failed.length === 0) setAddOpen(false);
-      bump();
-    } catch {
-      setInviteMessage('Não foi possível enviar os convites. Tente de novo.');
-    } finally {
-      setInviting(false);
-    }
-  }
-
   async function handleRevoke(invitationId: string) {
     if (revokingId) return;
     setRevokingId(invitationId);
     try {
       await revokeInvitation(invitationId);
     } catch {
-      setInviteMessage('Não foi possível revogar o convite.');
+      setNotice('Não foi possível revogar o convite.');
     } finally {
       bump();
       setRevokingId(null);
@@ -281,7 +250,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
   // the group's card: who it is, how big, since when, run by whom, and what to do with it
   const card = conversation && (
     <div className="contents md:flex md:min-h-0 md:flex-col md:overflow-y-auto md:border-r md:border-border">
-      <div className="flex flex-col gap-1 px-5 pb-4 pt-6">
+      <div className="flex flex-col items-center gap-1 px-5 pb-4 pt-6 text-center">
         <div className="relative w-fit">
           <GroupAvatar id={conversation.id} title={conversation.title || Noun} avatar={conversation.avatar} size={80} />
           {isOwner && (
@@ -307,7 +276,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
         />
       )}
       {avatarError && <p className="text-label text-red">{avatarError}</p>}
-        <div className="mt-1">
+        <div className="mt-1 flex w-full justify-center">
         {editingTitle ? (
           <div className="flex w-full items-center gap-2">
             <Input
@@ -336,7 +305,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
           </button>
         )}
         </div>
-        <p className="flex items-center gap-1.5 text-caption text-text-muted">
+        <p className="flex items-center justify-center gap-1.5 text-caption text-text-muted">
           <span>{conversation.memberCount} {conversation.memberCount === 1 ? 'membro' : 'membros'}</span>
           <span aria-hidden>·</span>
           <span className="flex items-center gap-1"><span aria-hidden className="size-2 rounded-full bg-green" />{onlineCount} online</span>
@@ -364,7 +333,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
 
       <div className="flex flex-col gap-1 border-t border-border px-3 py-3">
         {isOwner && (
-          <Button type="button" variant="secondary" onClick={() => { setTab('members'); setAddOpen(true); }} className="justify-start gap-2.5">
+          <Button type="button" variant="ghost" onClick={() => setInviteOpen(true)} className={shortcut}>
             <UserPlusIcon size={18} />
             Convidar amigos
           </Button>
@@ -405,17 +374,8 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
                 <CloseButton size="xs" label="Dispensar" onClick={clearGroupActionError} />
               </div>
             )}
+            {notice && <p role="status" className="px-1 text-caption text-text-muted">{notice}</p>}
             <TabsPanel value="members" className="flex flex-col gap-2">
-              {addOpen && (
-                <div className="flex flex-col gap-2 rounded-lg border border-border bg-fill-subtle p-2">
-                  <p className="px-1 text-caption text-text-muted">Só entram no {noun} ao aceitar o convite.</p>
-                  <FriendPicker selected={addSelected} onToggle={toggleAddCandidate} excludeIds={excludeIds} maxHeightClass="max-h-48" />
-                  <Button type="button" size="sm" onClick={() => void confirmInvite()} disabled={addSelected.size === 0 || inviting} className="mt-1">
-                    {inviting ? 'Enviando…' : `Convidar ${addSelected.size > 0 ? `(${addSelected.size})` : ''}`}
-                  </Button>
-                </div>
-              )}
-              {inviteMessage && <p role="status" className="px-1 text-caption text-text-muted">{inviteMessage}</p>}
               <div className="flex flex-col gap-1">
                 {memberList.items.map(({ user: member, role }) => {
                   const online = onlineUserIds.has(member.id);
@@ -546,6 +506,9 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
 
       {conversation && (
         <ReportDialog target={{ type: 'group', id: conversation.id, label: conversation.title || 'grupo' }} open={reportOpen} onOpenChange={setReportOpen} />
+      )}
+      {conversation && isOwner && (
+        <GroupInviteDialog open={inviteOpen} onOpenChange={setInviteOpen} conversationId={conversation.id} noun={noun} excludeIds={excludeIds} onInvited={(sent) => { bump(); setNotice(sent === 1 ? 'Convite enviado.' : `${sent} convites enviados.`); }} />
       )}
       <ConfirmDialog
         open={confirmLeave}
