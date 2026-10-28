@@ -82,4 +82,16 @@ describe('FloatingUserDock', () => {
     expect(host.style.getPropertyValue('--dock-clearance')).toMatch(/^\d+px$/);
     expect(host.style.getPropertyValue('--dock-list-clearance')).toBe('0px');
   });
+
+  it('from the shell, also publishes the room it takes on the root, for the call PiP in that corner', () => {
+    const { unmount } = renderDock();
+    expect(document.documentElement.style.getPropertyValue('--user-dock-clearance')).toMatch(/^\d+px$/);
+    unmount();
+    expect(document.documentElement.style.getPropertyValue('--user-dock-clearance')).toBe('');
+  });
+
+  it('inside the phone drawer it does not claim the corner of the screen', () => {
+    renderDock({ width: 390, placement: 'drawer' });
+    expect(document.documentElement.style.getPropertyValue('--user-dock-clearance')).toBe('');
+  });
 });

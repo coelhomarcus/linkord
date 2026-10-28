@@ -133,3 +133,19 @@ describe('FloatingPip — click vs. drag', () => {
     expect(onExpand).not.toHaveBeenCalled();
   });
 });
+
+describe('FloatingPip — position', () => {
+  const box = () => screen.getByTestId('pip-tile').parentElement!.parentElement as HTMLElement;
+
+  it('appears above the user dock floating in the same corner, not over it', () => {
+    vi.mocked(useCallTiles).mockReturnValue([descriptor()]);
+    renderWithRoom(<FloatingPip allIds={['p-2']} />);
+    expect(box().style.bottom).toBe('max(var(--user-dock-clearance, 1rem), 1rem)');
+  });
+
+  it('keeps clear of the reconnect notice too while reconnecting', () => {
+    vi.mocked(useCallTiles).mockReturnValue([descriptor()]);
+    renderWithRoom(<FloatingPip allIds={['p-2']} />, { state: { ...initialRoomState, reconnecting: true } });
+    expect(box().style.bottom).toBe('max(var(--user-dock-clearance, 1rem), 5rem)');
+  });
+});
