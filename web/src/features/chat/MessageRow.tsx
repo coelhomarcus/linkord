@@ -1,4 +1,5 @@
 import { ArrowBendUpLeftIcon, CopyIcon, DotsThreeIcon, FlagIcon, PencilSimpleIcon, SmileyIcon, TrashIcon, UsersIcon } from '@phosphor-icons/react';
+import { GroupAvatar } from '@/features/conversations/GroupAvatar';
 import { useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 
@@ -97,7 +98,7 @@ function PendingStatus({ entry, offline, onRetry, onDiscard }: { entry: OutboxEn
 
 export function MessageRow({ message, showHeader, highlighted, allUsers, mentionLookup, onOpenProfile, onReply, onJumpTo, pending }: MessageRowProps) {
   const {
-    state, editChatMessage, reactToChatMessage, editingMsgId, setEditingMsgId, retryPendingMessage, discardPendingMessage,
+    state, conversations, editChatMessage, reactToChatMessage, editingMsgId, setEditingMsgId, retryPendingMessage, discardPendingMessage,
     removeChatAttachment, suppressChatEmbed,
     deletingMsgIds, messageActionErrors, dismissMessageActionError, pendingReactions, openReactionParticipants,
   } = useRoom();
@@ -109,7 +110,7 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
   const [removal, setRemoval] = useState<{ kind: 'attachment'; id: string; name: string } | { kind: 'embed'; url: string } | null>(null);
   const { requestDelete, confirmDialog } = useMessageDeleteConfirm();
   const isMine = message.id === state.me.userId;
-  const can = messagePermissions(message, { userId: state.me.userId, role: state.me.role });
+  const can = messagePermissions(message, { userId: state.me.userId, role: state.me.role }, conversations.find((c) => c.id === message.conversationId));
   const canDelete = can.delete;
   const deleting = deletingMsgIds.has(message.msgId);
   const actionError = pending ? undefined : messageActionErrors.get(message.msgId);
@@ -192,6 +193,8 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
             <button type="button" onClick={() => onOpenProfile(message.id!)} className="mt-0.5 block rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
               <Avatar id={message.id} name={displayedName} avatar={displayedAvatar} avatarColor={author?.avatarColor} size={40} />
             </button>
+          ) : message.bot ? (
+            <GroupAvatar id={message.conversationId} title={displayedName} avatar={displayedAvatar} size={40} className="mt-0.5" />
           ) : (
             <Avatar id={message.name} name={displayedName} avatar={displayedAvatar} avatarColor={null} size={40} />
           )
@@ -207,6 +210,9 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
               </button>
             ) : (
               <span className="truncate text-body font-medium text-text-primary">{displayedName}</span>
+            )}
+            {message.bot && (
+              <span className="flex-none self-center rounded-sm bg-primary px-1 py-px text-micro font-semibold uppercase leading-none text-white">Bot</span>
             )}
             <span className="flex-none text-caption text-text-muted">{formatTime(message.ts)}</span>
           </div>

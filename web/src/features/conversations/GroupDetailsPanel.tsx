@@ -30,8 +30,9 @@ import { useCursorList } from '@/shared/hooks/useCursorList';
 import { ReportDialog } from '@/features/reports/ReportDialog';
 import { fetchGroupInvitations, fetchGroupMembers, inviteToGroup, revokeInvitation } from '@/shared/api/api';
 import type { SocialUser } from '@/shared/api/api';
+import { BotWebhookSection } from '@/features/bots/BotWebhookSection';
 
-type GroupTab = 'members' | 'invites';
+type GroupTab = 'members' | 'invites' | 'webhook';
 
 const fetchNothing = () => Promise.resolve({ items: [], nextCursor: null });
 
@@ -55,6 +56,10 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
   // real per-group ownership, not the account's global instance role — see
   // conversationsRepository.ts#canManageGroup on the server.
   const isOwner = conversation?.myRole === 'owner';
+  // a bot is managed exactly like a group; only the words and the webhook differ
+  const isBot = conversation?.type === 'bot';
+  const noun = isBot ? 'bot' : 'grupo';
+  const Noun = isBot ? 'Bot' : 'Grupo';
   const memberIds = useMemo(() => new Set(conversation?.memberIds ?? []), [conversation?.memberIds]);
 
   const [tab, setTab] = useState<GroupTab>('members');
@@ -267,16 +272,18 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
     <>
       <Button type="button" variant="ghost" onClick={() => setConfirmLeave(true)} className="justify-start gap-2.5 text-text-secondary hover:text-text-primary">
         <SignOutIcon size={18} />
-        Sair do grupo
+        Sair do {noun}
       </Button>
-      <Button type="button" variant="ghost" onClick={() => setReportOpen(true)} className="justify-start gap-2.5 text-text-muted hover:text-text-primary">
-        <FlagIcon size={18} />
-        Denunciar grupo
-      </Button>
+      {!isBot && (
+        <Button type="button" variant="ghost" onClick={() => setReportOpen(true)} className="justify-start gap-2.5 text-text-muted hover:text-text-primary">
+          <FlagIcon size={18} />
+          Denunciar grupo
+        </Button>
+      )}
       {isOwner && (
         <Button type="button" variant="ghost" onClick={() => setConfirmDelete(true)} className="justify-start gap-2.5 text-red-text hover:bg-red/10 hover:text-red-text">
           <TrashIcon size={18} />
-          Excluir grupo
+          Excluir {noun}
         </Button>
       )}
     </>
@@ -287,7 +294,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
     <div className="contents md:flex md:min-h-0 md:flex-col md:overflow-y-auto md:border-r md:border-border">
       <div className="flex flex-col gap-1 px-5 pb-4 pt-6">
         <div className="relative w-fit">
-          <GroupAvatar id={conversation.id} title={conversation.title || 'Grupo'} avatar={conversation.avatar} size={80} />
+          <GroupAvatar id={conversation.id} title={conversation.title || Noun} avatar={conversation.avatar} size={80} />
           {isOwner && (
             <DropdownMenu>
               <DropdownMenuTrigger
@@ -295,7 +302,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
                 render={
                   <button
                     type="button"
-                    aria-label="Trocar foto do grupo"
+                    aria-label={`Trocar foto do ${noun}`}
                     className="absolute -bottom-1 -right-1 grid size-6 place-items-center rounded-full border border-border bg-surface-overlay text-text-secondary transition-colors hover:text-text-primary disabled:opacity-50"
                   />
                 }
@@ -321,7 +328,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
           type="file"
           accept={AVATAR_MIME_TYPES.join(',')}
           hidden
-          aria-label="Selecionar foto do grupo"
+          aria-label={`Selecionar foto do ${noun}`}
           onChange={handleAvatarFilePicked}
         />
       )}
@@ -350,7 +357,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
               isOwner && 'transition-colors hover:text-accent-text'
             )}
           >
-            {conversation.title || 'Grupo'}
+            {conversation.title || Noun}
             {isOwner && <PencilSimpleIcon size={13} className="text-text-muted" />}
           </button>
         )}
@@ -406,15 +413,16 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
   const TAB = 'h-11 rounded-none px-0 text-body font-semibold text-text-muted hover:text-text-secondary data-active:text-text-primary';
   const content: ReactNode = conversation && (
     <>
-      <PageHeader title="Detalhes do grupo" />
+      <PageHeader title={`Detalhes do ${noun}`} />
       {/* the card and the people side by side from md, each column scrolling on its own; stacked below, scrolling as one */}
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto md:grid md:grid-cols-[19rem_minmax(0,1fr)] md:grid-rows-[minmax(0,1fr)] md:overflow-hidden">
         {card}
-        <Tabs value={tab} onValueChange={(value) => { if (value === 'members' || value === 'invites') setTab(value); }} className="order-1 flex shrink-0 flex-col items-stretch gap-3 border-t border-border p-4 md:order-none md:min-h-0 md:shrink md:border-t-0 md:p-5">
+        <Tabs value={tab} onValueChange={(value) => { if (value === 'members' || value === 'invites' || value === 'webhook') setTab(value); }} className="order-1 flex shrink-0 flex-col items-stretch gap-3 border-t border-border p-4 md:order-none md:min-h-0 md:shrink md:border-t-0 md:p-5">
           <TabsList aria-label="Pessoas" className="flex h-auto w-full flex-none justify-start gap-6 rounded-none border-0 border-b border-border bg-transparent p-0">
             <TabsIndicator className="top-auto -bottom-px h-0.5 rounded-full bg-text-primary" />
             <TabsTrigger value="members" className={TAB}>Membros</TabsTrigger>
             {isOwner && <TabsTrigger value="invites" className={TAB}>Convites enviados{sent.items.length > 0 ? ` (${sent.items.length}${sent.hasMore ? '+' : ''})` : ''}</TabsTrigger>}
+            {isOwner && isBot && <TabsTrigger value="webhook" className={TAB}>Webhook</TabsTrigger>}
           </TabsList>
           <div className="flex flex-col gap-3 md:min-h-0 md:flex-1 md:overflow-y-auto md:overscroll-contain">
             {groupActionError && (
@@ -426,7 +434,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
             <TabsPanel value="members" className="flex flex-col gap-2">
               {addOpen && (
                 <div className="flex flex-col gap-2 rounded-lg border border-border bg-fill-subtle p-2">
-                  <p className="px-1 text-caption text-text-muted">Só entram no grupo ao aceitar o convite.</p>
+                  <p className="px-1 text-caption text-text-muted">Só entram no {noun} ao aceitar o convite.</p>
                   <FriendPicker selected={addSelected} onToggle={toggleAddCandidate} excludeIds={excludeIds} maxHeightClass="max-h-48" />
                   <Button type="button" size="sm" onClick={() => void confirmInvite()} disabled={addSelected.size === 0 || inviting} className="mt-1">
                     {inviting ? 'Enviando…' : `Convidar ${addSelected.size > 0 ? `(${addSelected.size})` : ''}`}
@@ -493,6 +501,11 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
                 )}
               </div>
             </TabsPanel>
+            {isOwner && isBot && conversation && (
+              <TabsPanel value="webhook" className="flex flex-col gap-2">
+                <BotWebhookSection conversationId={conversation.id} />
+              </TabsPanel>
+            )}
             {isOwner && (
               <TabsPanel value="invites" className="flex flex-col gap-2">
                 {sent.items.length === 0 ? (
@@ -533,7 +546,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
   return (
     <>
       {open && conversation && (
-        <AppModal label="Detalhes do grupo" size="md" onClose={() => onOpenChange(false)}>
+        <AppModal label={`Detalhes do ${noun}`} size="md" onClose={() => onOpenChange(false)}>
           {content}
         </AppModal>
       )}
@@ -545,20 +558,20 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
         error={avatarError}
         aspect={1}
         cropShape="rect"
-        title="Recortar foto do grupo"
+        title={`Recortar foto do ${noun}`}
         onCancel={closeCropDialog}
         onConfirm={handleAvatarCropConfirm}
       />
 
       <UploadProgressModal
         open={avatarUploadPhase === 'uploading'}
-        title="Enviando a foto do grupo…"
+        title={`Enviando a foto do ${noun}…`}
         progress={avatarUploadProgress}
       />
 
       <ImageUrlDialog
         open={urlDialogOpen}
-        title="URL da foto do grupo"
+        title={`URL da foto do ${noun}`}
         onOpenChange={setUrlDialogOpen}
         onConfirm={handleAvatarUrlPicked}
       />
@@ -569,8 +582,8 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
       <ConfirmDialog
         open={confirmLeave}
         onOpenChange={setConfirmLeave}
-        title="Sair do grupo"
-        description={`Você vai sair de "${conversation?.title || 'grupo'}" e parar de receber as mensagens dele.`}
+        title={`Sair do ${noun}`}
+        description={`Você vai sair de "${conversation?.title || noun}" e parar de receber as mensagens dele.`}
         confirmLabel="Sair"
         destructive
         onConfirm={handleLeave}
@@ -578,8 +591,8 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
       <ConfirmDialog
         open={confirmDelete}
         onOpenChange={setConfirmDelete}
-        title="Excluir grupo"
-        description={`Isso apaga "${conversation?.title || 'grupo'}" e TODAS as mensagens dele para todo mundo, para sempre. Essa ação não pode ser desfeita.`}
+        title={`Excluir ${noun}`}
+        description={`Isso apaga "${conversation?.title || noun}" e TODAS as mensagens dele para todo mundo, para sempre.${isBot ? ' A URL do webhook para de funcionar.' : ''} Essa ação não pode ser desfeita.`}
         confirmLabel="Excluir"
         destructive
         onConfirm={handleDelete}
@@ -587,8 +600,8 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
       <ConfirmDialog
         open={!!removeTarget}
         onOpenChange={(next) => { if (!next) setRemoveTarget(null); }}
-        title="Remover do grupo"
-        description={`Remover ${removeTarget?.displayName ?? ''} de "${conversation?.title || 'grupo'}"?`}
+        title={`Remover do ${noun}`}
+        description={`Remover ${removeTarget?.displayName ?? ''} de "${conversation?.title || noun}"?`}
         confirmLabel="Remover"
         destructive
         onConfirm={handleRemoveMember}
@@ -597,7 +610,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
         open={!!transferTarget}
         onOpenChange={(next) => { if (!next) setTransferTarget(null); }}
         title="Transferir propriedade"
-        description={`${transferTarget?.displayName ?? ''} passa a ser o dono de "${conversation?.title || 'grupo'}". Você perde os controles de gestão do grupo.`}
+        description={`${transferTarget?.displayName ?? ''} passa a ser o dono de "${conversation?.title || noun}". Você perde os controles de gestão do ${noun}${isBot ? ', incluindo o webhook' : ''}.`}
         confirmLabel="Transferir"
         destructive
         onConfirm={handleTransferOwnership}

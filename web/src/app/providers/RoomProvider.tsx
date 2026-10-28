@@ -174,7 +174,8 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         presence.setInitial(m.knownUsers, m.onlineUserIds, m.friendIds);
         attachmentsUpload.setStorageUsage(m.storageUsage);
         {
-          const firstConversation = (m.conversations ?? [])[0];
+          // never a bot: opening one marks it read, and nobody asked to see it
+          const firstConversation = (m.conversations ?? []).find((c) => c.type !== 'bot');
           if (firstConversation) openConversation(firstConversation.id);
         }
         break;
@@ -269,9 +270,10 @@ export function RoomProvider({ children }: { children: ReactNode }) {
       case 'conversation-deleted': {
         // read the title BEFORE the list drops it; a voluntary leave carries no reason
         const gone = conversationsList.conversationsRef.current.find((c) => c.id === m.conversationId);
-        if (gone?.type === 'group' && m.reason) {
-          const name = gone.title || 'grupo';
-          setAccessNotice(m.reason === 'removed' ? `Você foi removido do grupo "${name}".` : `O grupo "${name}" foi excluído.`);
+        if ((gone?.type === 'group' || gone?.type === 'bot') && m.reason) {
+          const noun = gone.type === 'bot' ? 'bot' : 'grupo';
+          const name = gone.title || noun;
+          setAccessNotice(m.reason === 'removed' ? `Você foi removido do ${noun} "${name}".` : `O ${noun} "${name}" foi excluído.`);
         }
         conversationsList.onConversationDeleted(m);
         chatMessages.onConversationDeleted(m);

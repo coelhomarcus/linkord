@@ -42,6 +42,7 @@ function updateSet(set: Set<string>, id: string, present: boolean): Set<string> 
 function displayNameForConversation(conversation: Conversation | undefined, meUserId: string | null, users: Map<string, PublicUser>): string {
   if (!conversation) return 'Conversa';
   if (conversation.type === 'group') return conversation.title || 'Grupo';
+  if (conversation.type === 'bot') return conversation.title || 'Bot';
   const otherId = conversation.memberIds.find((id) => id !== meUserId) ?? conversation.memberIds[0];
   const other = otherId ? users.get(otherId) : undefined;
   return other?.displayName || other?.username || 'Conversa direta';

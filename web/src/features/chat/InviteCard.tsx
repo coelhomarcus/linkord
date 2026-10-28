@@ -41,6 +41,8 @@ function LiveInviteCard({ invitation }: { invitation: InvitationCard }) {
   const group = conversations.find((c) => c.id === invitation.groupId);
   const isMember = !!group;
   const canRevoke = isInviter && group?.myRole === 'owner';
+  const isBot = invitation.groupType === 'bot';
+  const noun = isBot ? 'bot' : 'grupo';
 
   async function run(kind: 'accept' | 'decline' | 'revoke', action: (id: string) => Promise<unknown>) {
     setBusy(kind);
@@ -59,14 +61,14 @@ function LiveInviteCard({ invitation }: { invitation: InvitationCard }) {
 
   let footer: React.ReactNode;
   if (status === 'pending' && outcome === 'group_full') {
-    footer = <p className="text-label text-text-muted">Limite atingido: o grupo está cheio.</p>;
+    footer = <p className="text-label text-text-muted">Limite atingido: o {noun} está cheio.</p>;
   } else if (status === 'pending' && isInvitee && isMember) {
-    footer = <p className="text-label text-text-muted">Você já participa deste grupo.</p>;
+    footer = <p className="text-label text-text-muted">Você já participa deste {noun}.</p>;
   } else if (status === 'pending' && isInvitee) {
     footer = (
       <div className="flex gap-2">
         <Button type="button" size="sm" disabled={busy !== null} onClick={() => run('accept', acceptInvitation)}>
-          {busy === 'accept' ? 'Aceitando…' : 'Entrar no grupo'}
+          {busy === 'accept' ? 'Aceitando…' : `Entrar no ${noun}`}
         </Button>
         <Button type="button" size="sm" variant="secondary" disabled={busy !== null} onClick={() => run('decline', declineInvitation)}>
           Recusar
@@ -87,7 +89,7 @@ function LiveInviteCard({ invitation }: { invitation: InvitationCard }) {
   } else if (status === 'accepted' && isMember) {
     footer = (
       <Button type="button" size="sm" variant="secondary" onClick={() => openConversation(invitation.groupId)}>
-        Abrir grupo
+        Abrir {noun}
       </Button>
     );
   } else {
@@ -96,7 +98,7 @@ function LiveInviteCard({ invitation }: { invitation: InvitationCard }) {
 
   return (
     <div className="mt-1 max-w-[380px] rounded-lg border border-border bg-fill-subtle p-3" data-invite-status={status}>
-      <p className="mb-2 text-caption uppercase tracking-wide text-text-muted">Convite para grupo</p>
+      <p className="mb-2 text-caption uppercase tracking-wide text-text-muted">Convite para {noun}</p>
       <div className="mb-3 flex items-center gap-3">
         <GroupAvatar id={invitation.groupId} title={invitation.groupTitle} avatar={invitation.groupAvatar} size={44} />
         <div className="min-w-0">
@@ -108,7 +110,7 @@ function LiveInviteCard({ invitation }: { invitation: InvitationCard }) {
         </div>
       </div>
       {status === 'pending' && isInvitee && !isMember && outcome !== 'group_full' && (
-        <p className="mb-2 text-caption text-text-muted">Ao entrar, você verá o histórico do grupo.</p>
+        <p className="mb-2 text-caption text-text-muted">{isBot ? 'Ao entrar, você passa a receber os avisos deste bot.' : 'Ao entrar, você verá o histórico do grupo.'}</p>
       )}
       {footer}
       {error && <p role="alert" className="mt-2 text-caption text-red">{error}</p>}
