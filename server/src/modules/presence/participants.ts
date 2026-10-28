@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import type { ErrorCode } from '../../http/errors.js';
 import { config } from '../../config/env.js';
 import { updateProfile } from '../profile/profileRepository.js';
-import { sanitizeAvatar, sanitizeBanner, sanitizeAvatarColor, sanitizeDisplayName, sanitizeBio, sanitizeProfileLinks } from '../profile/sanitize.js';
+import { isUploadedImage, sanitizeAvatar, sanitizeBanner, sanitizeAvatarColor, sanitizeDisplayName, sanitizeBio, sanitizeProfileLinks } from '../profile/sanitize.js';
 import { deleteAvatarFile, isOwnedProfileImage } from '../attachments/attachmentCleanup.js';
 import { recordUserLastSeen } from '../users/users.js';
 import { runSerialized } from './profileQueue.js';
@@ -236,16 +236,17 @@ interface ProfilePatchBody {
   banner?: string; bannerPoster?: string; bio?: string; profileLinks?: string[];
 }
 
-/** sanitizeAvatar/sanitizeBanner only check the STRING's format — this
- * checks that a local `/uploads/<id>` reference was actually uploaded by
- * `uploaderId` (a no-op for an external https:// URL or empty string, see
- * isOwnedProfileImage). Falls back to empty rather than rejecting the whole
- * patch, same "sanitize to a safe default" posture sanitizeAvatar itself
- * already has for a malformed string — the only way to trip this is a
- * modified client trying to claim someone else's upload, which doesn't
- * deserve a more helpful outcome than "your avatar didn't change". */
-async function ownedOrEmpty(url: string, uploaderId: string): Promise<string> {
-  return url && await isOwnedProfileImage(url, uploaderId) ? url : '';
+/** What an image field becomes after a patch. sanitizeAvatar/sanitizeBanner
+ * only check the STRING's format; a NEW value must also be a `/uploads/<id>`
+ * this account uploaded. Resending the current value keeps it — a profile set
+ * to an external URL before that option was removed isn't wiped by saving the
+ * display name — and '' still removes it. A new external URL leaves the field
+ * as it was, and someone else's upload empties it: the only way to send either
+ * is a modified client, which deserves no more than "your avatar didn't change". */
+async function acceptedImage(url: string, current: string, uploaderId: string): Promise<string> {
+  if (!url || url === current) return url;
+  if (!isUploadedImage(url)) return current;
+  return await isOwnedProfileImage(url, uploaderId) ? url : '';
 }
 
 async function handleProfile(socket: AppSocket, msg: ProfilePatchBody | null | undefined): Promise<void> {
@@ -271,10 +272,10 @@ async function handleProfile(socket: AppSocket, msg: ProfilePatchBody | null | u
     const oldAvatar = current.avatar;
     const oldAvatarPoster = current.avatarPoster;
     const nextAvatar = Object.prototype.hasOwnProperty.call(body, 'avatar')
-      ? await ownedOrEmpty(sanitizeAvatar(body.avatar), current.userId)
+      ? await acceptedImage(sanitizeAvatar(body.avatar), current.avatar, current.userId)
       : current.avatar;
     const nextAvatarPoster = Object.prototype.hasOwnProperty.call(body, 'avatarPoster')
-      ? await ownedOrEmpty(sanitizeAvatar(body.avatarPoster), current.userId)
+      ? await acceptedImage(sanitizeAvatar(body.avatarPoster), current.avatarPoster, current.userId)
       : current.avatarPoster;
     const nextAvatarColor = Object.prototype.hasOwnProperty.call(body, 'avatarColor')
       ? sanitizeAvatarColor(body.avatarColor)
@@ -283,10 +284,10 @@ async function handleProfile(socket: AppSocket, msg: ProfilePatchBody | null | u
       ? (sanitizeDisplayName(body.displayName) || current.name)
       : current.displayName;
     const nextBanner = Object.prototype.hasOwnProperty.call(body, 'banner')
-      ? await ownedOrEmpty(sanitizeBanner(body.banner), current.userId)
+      ? await acceptedImage(sanitizeBanner(body.banner), current.banner, current.userId)
       : current.banner;
     const nextBannerPoster = Object.prototype.hasOwnProperty.call(body, 'bannerPoster')
-      ? await ownedOrEmpty(sanitizeBanner(body.bannerPoster), current.userId)
+      ? await acceptedImage(sanitizeBanner(body.bannerPoster), current.bannerPoster, current.userId)
       : current.bannerPoster;
     const nextBio = Object.prototype.hasOwnProperty.call(body, 'bio')
       ? sanitizeBio(body.bio)

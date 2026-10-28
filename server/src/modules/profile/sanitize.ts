@@ -1,7 +1,16 @@
 import { config } from '../../config/env.js';
 
-// external URL (https://...) or one of our own uploads (/uploads/<id>)
+// external URL (https://...) or one of our own uploads (/uploads/<id>). An
+// external one is only still READ (images set before choosing one by URL was
+// removed); a new value has to be an upload, see isUploadedImage.
 const UPLOADED_AVATAR_RE = /^\/uploads\/[0-9a-f]{32}$/;
+
+/** Whether an image reference points at one of our own uploads — the only
+ * kind a profile, group or bot can newly be given. An external URL would be
+ * fetched by every viewer's browser from wherever its owner chose. */
+export function isUploadedImage(url: string): boolean {
+  return UPLOADED_AVATAR_RE.test(url);
+}
 // exported for modules/conversations.ts — a group avatar is validated the
 // exact same way an account's is, just stored on `conversations` instead.
 export function sanitizeAvatar(url: unknown): string {

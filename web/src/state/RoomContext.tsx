@@ -98,8 +98,6 @@ export interface RoomContextValue {
   /** Crops locally, uploads the result, then persists ONLY that image
    * field — never whatever else happens to be typed in the profile form. */
   uploadProfileImage: (field: 'avatar' | 'banner', file: Blob, crop: CropRect, onProgress?: (fraction: number) => void, onPhaseChange?: (phase: ProfileImageUploadPhase) => void) => Promise<string>;
-  /** Sets avatar/banner to an already-public URL (the "Usar URL" path). */
-  applyImagePatch: (field: 'avatar' | 'banner', url: string, posterUrl: string) => Promise<unknown>;
   /** Same isolation as `uploadProfileImage`, for "remover foto/banner". */
   removeProfileImage: (field: 'avatar' | 'banner') => Promise<unknown>;
   menuTarget: { key: string; participantId: string; kind: TileKind; rect: AnchorRect } | null;

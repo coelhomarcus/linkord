@@ -45,7 +45,6 @@ export function createFakeRoomContextValue(overrides: Partial<RoomContextValue> 
     toggleMicMuted: asyncNoop,
     updateProfile: asyncNoop,
     uploadProfileImage: async () => '',
-    applyImagePatch: asyncNoop,
     removeProfileImage: asyncNoop,
     menuTarget: null,
     openTileMenu: noop,

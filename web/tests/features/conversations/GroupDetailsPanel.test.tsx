@@ -136,14 +136,17 @@ describe('GroupDetailsPanel — invitations', () => {
     expect(screen.queryByRole('button', { name: 'Carregar mais' })).not.toBeInTheDocument();
   });
 
-  it('keeps avatar actions on one line', async () => {
+  it('the camera opens the file picker straight away: a photo only ever comes from the computer', async () => {
     const user = userEvent.setup();
     setup('owner');
+    const input = screen.getByLabelText('Selecionar foto do grupo') as HTMLInputElement;
+    const picked = vi.spyOn(input, 'click');
 
     await user.click(await screen.findByRole('button', { name: 'Trocar foto do grupo' }));
 
-    expect(await screen.findByRole('menu')).toHaveClass('w-max');
-    expect(screen.getByRole('menuitem', { name: 'Enviar do computador' })).toHaveClass('whitespace-nowrap');
+    expect(picked).toHaveBeenCalled();
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    expect(screen.queryByText('Usar URL')).not.toBeInTheDocument();
   });
 
   it('shows processing before switching to the group upload modal', async () => {
@@ -164,8 +167,6 @@ describe('GroupDetailsPanel — invitations', () => {
     }));
     setup('owner');
 
-    await user.click(await screen.findByRole('button', { name: 'Trocar foto do grupo' }));
-    await user.click(await screen.findByRole('menuitem', { name: 'Enviar do computador' }));
     await user.upload(screen.getByLabelText('Selecionar foto do grupo'), new File(['gif'], 'foto.gif', { type: 'image/gif' }));
     await user.click(screen.getByRole('button', { name: 'Confirmar recorte' }));
 

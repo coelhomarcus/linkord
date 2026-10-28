@@ -31,11 +31,9 @@ interface ProfileCardProps {
   onAvatarClick?: () => void;
   onBannerClick?: () => void;
   onAvatarUpload?: () => void;
-  onAvatarUploadUrl?: () => void;
   onAvatarRemove?: () => void;
   avatarUploading?: boolean;
   onBannerUpload?: () => void;
-  onBannerUploadUrl?: () => void;
   onBannerRemove?: () => void;
   bannerUploading?: boolean;
   className?: string;
@@ -96,8 +94,8 @@ function EditableBio({ value, onChange, disabled }: { value: string; onChange: (
 
 export function ProfileCard({
   user, online, onAvatarClick, onBannerClick,
-  onAvatarUpload, onAvatarUploadUrl, onAvatarRemove, avatarUploading,
-  onBannerUpload, onBannerUploadUrl, onBannerRemove, bannerUploading,
+  onAvatarUpload, onAvatarRemove, avatarUploading,
+  onBannerUpload, onBannerRemove, bannerUploading,
   className,
   onDisplayNameChange, onBioChange, onAvatarColorChange,
   editableLinks, onLinkChange, onAddLink, onRemoveLink, bare, fieldsDisabled, actions, nameAction, footer, hideLinks,
@@ -128,12 +126,6 @@ export function ProfileCard({
                 <UploadSimpleIcon size={14} />
                 <span>Enviar do computador</span>
               </DropdownMenuItem>
-              {onBannerUploadUrl && (
-                <DropdownMenuItem onClick={onBannerUploadUrl}>
-                  <LinkIcon size={14} />
-                  <span>Usar URL</span>
-                </DropdownMenuItem>
-              )}
               {user.banner && onBannerRemove && (
                 <DropdownMenuItem variant="destructive" onClick={onBannerRemove}>
                   <TrashIcon size={14} />
@@ -178,12 +170,6 @@ export function ProfileCard({
                       <UploadSimpleIcon size={14} />
                       <span>Enviar do computador</span>
                     </DropdownMenuItem>
-                    {onAvatarUploadUrl && (
-                      <DropdownMenuItem onClick={onAvatarUploadUrl}>
-                        <LinkIcon size={14} />
-                        <span>Usar URL</span>
-                      </DropdownMenuItem>
-                    )}
                     {user.avatar && onAvatarRemove && (
                       <DropdownMenuItem variant="destructive" onClick={onAvatarRemove}>
                         <TrashIcon size={14} />

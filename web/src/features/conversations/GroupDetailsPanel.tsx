@@ -1,4 +1,4 @@
-import { CameraIcon, CheckIcon, CrownIcon, FlagIcon, ImagesIcon, LinkIcon, MagnifyingGlassIcon, PencilSimpleIcon, SignOutIcon, TrashIcon, UploadSimpleIcon, UserPlusIcon } from '@phosphor-icons/react';
+import { CameraIcon, CheckIcon, CrownIcon, FlagIcon, ImagesIcon, MagnifyingGlassIcon, PencilSimpleIcon, SignOutIcon, TrashIcon, UserPlusIcon } from '@phosphor-icons/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, KeyboardEvent, ReactNode } from 'react';
 import type { Area } from 'react-easy-crop';
@@ -7,14 +7,12 @@ import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { AppModal } from '@/shared/ui/app-modal';
 import { PageHeader } from '@/shared/PageHeader';
 import { Button } from '@/shared/ui/primitives/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/primitives/dropdown-menu';
 import { Input } from '@/shared/ui/primitives/input';
 import { ImageCropDialog } from '@/features/settings/ImageCropDialog';
 import { Avatar } from '@/shared/Avatar';
 import { Tabs, TabsIndicator, TabsList, TabsPanel, TabsTrigger } from '@/shared/ui/primitives/tabs';
 import { formatProfileDate } from '@/features/profile/useProfileDetails';
 import { ConfirmDialog } from '@/shared/ConfirmDialog';
-import { ImageUrlDialog } from '@/shared/ImageUrlDialog';
 import { UploadProgressModal } from '@/shared/UploadProgressModal';
 import { formatMB } from '@/shared/lib/formatBytes';
 import { uploadCroppedProfileImage } from '@/features/settings/uploadCroppedProfileImage';
@@ -77,7 +75,6 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
   const [transferTarget, setTransferTarget] = useState<SocialUser | null>(null);
   const avatarFileInputRef = useRef<HTMLInputElement | null>(null);
   const [cropTarget, setCropTarget] = useState<{ kind: 'file'; file: File; src: string } | null>(null);
-  const [urlDialogOpen, setUrlDialogOpen] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [avatarUploadProgress, setAvatarUploadProgress] = useState(0);
   const [avatarUploadPhase, setAvatarUploadPhase] = useState<ProfileImageUploadPhase | null>(null);
@@ -102,7 +99,6 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
       setInviteMessage(null);
       setAvatarError(null);
       setAvatarUploadPhase(null);
-      setUrlDialogOpen(false);
       setTransferTarget(null);
       setCropTarget(null);
     }
@@ -231,13 +227,6 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
     setCropTarget({ kind: 'file', file, src: URL.createObjectURL(file) });
   }
 
-  function handleAvatarUrlPicked(url: string) {
-    if (!conversation) return;
-    setAvatarError(null);
-    updateGroupAvatar(conversation.id, url);
-    setUrlDialogOpen(false);
-  }
-
   function closeCropDialog() {
     setCropTarget(null);
   }
@@ -296,30 +285,15 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
         <div className="relative w-fit">
           <GroupAvatar id={conversation.id} title={conversation.title || Noun} avatar={conversation.avatar} size={80} />
           {isOwner && (
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                disabled={uploadingAvatar}
-                render={
-                  <button
-                    type="button"
-                    aria-label={`Trocar foto do ${noun}`}
-                    className="absolute -bottom-1 -right-1 grid size-6 place-items-center rounded-full border border-border bg-surface-overlay text-text-secondary transition-colors hover:text-text-primary disabled:opacity-50"
-                  />
-                }
-              >
-                <CameraIcon size={12} />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="center">
-                <DropdownMenuItem onClick={() => avatarFileInputRef.current?.click()}>
-                  <UploadSimpleIcon size={14} />
-                  <span>Enviar do computador</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setUrlDialogOpen(true)}>
-                  <LinkIcon size={14} />
-                  <span>Usar URL</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <button
+              type="button"
+              disabled={uploadingAvatar}
+              aria-label={`Trocar foto do ${noun}`}
+              onClick={() => avatarFileInputRef.current?.click()}
+              className="absolute -bottom-1 -right-1 grid size-6 place-items-center rounded-full border border-border bg-surface-overlay text-text-secondary transition-colors hover:text-text-primary disabled:opacity-50"
+            >
+              <CameraIcon size={12} />
+            </button>
           )}
         </div>
       {isOwner && (
@@ -569,12 +543,6 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
         progress={avatarUploadProgress}
       />
 
-      <ImageUrlDialog
-        open={urlDialogOpen}
-        title={`URL da foto do ${noun}`}
-        onOpenChange={setUrlDialogOpen}
-        onConfirm={handleAvatarUrlPicked}
-      />
 
       {conversation && (
         <ReportDialog target={{ type: 'group', id: conversation.id, label: conversation.title || 'grupo' }} open={reportOpen} onOpenChange={setReportOpen} />
