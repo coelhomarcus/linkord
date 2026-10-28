@@ -174,6 +174,7 @@ export type ClientMessage =
   | { t: 'screen-share'; on: boolean }
   | { t: 'speaking'; value: boolean }
   | { t: 'conversation-open'; conversationId: string }
+  | { t: 'conversation-mark-read'; conversationId: string; msgId: number }
   | { t: 'direct-open'; userId: string }
   | { t: 'conversation-close'; conversationId: string }
   | { t: 'conversation-pin'; conversationId: string; pinned: boolean }
@@ -205,6 +206,8 @@ export type ServerMessage =
       banner: string; bannerPoster: string; bio: string; profileLinks: string[]; role: 'user' | 'admin';
       maxParticipants: number; participants: Participant[];
       conversations: Conversation[]; knownUsers: PublicUser[]; onlineUserIds: string[]; friendIds: string[];
+      // conversation id → unread count (capped at 100); absent from servers before persisted unread
+      unreadByConversation?: Record<string, number>;
       storageUsage: StorageUsage;
       livekitUrl: string;
       // absent from servers before protocol 3 (no correlated chat sends)

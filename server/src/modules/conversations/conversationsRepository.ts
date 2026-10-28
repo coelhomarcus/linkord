@@ -125,6 +125,57 @@ export async function listForUser(userId: string): Promise<ConversationSummary[]
   return rows.map((r) => rowToSummary(r.conversation, members.get(r.conversation.id) ?? [], r.pinnedAt, r.role as ConversationRole, owners.get(r.conversation.id) ?? null));
 }
 
+// the badge reads "99+" past this, so counting further is wasted work
+export const UNREAD_COUNT_CAP = 100;
+
+/** Unread messages per conversation, from the member's own read marker —
+ * kept apart from the summary because the summary is also pushed to every
+ * member on a rename/pin, and recounting everyone's unread there would be
+ * pointless. Only conversations with something unread are present.
+ * Messages from before joining never count: a member who just joined a
+ * group, or whose marker predates its being stored, would otherwise start
+ * with the whole history as unread. */
+export async function unreadCountsForUser(userId: string, conversationIds: string[]): Promise<Record<string, number>> {
+  if (!conversationIds.length) return {};
+  const result = await db.execute(sql`
+    select cm.conversation_id, (
+      select count(*) from (
+        select 1 from messages m
+        where m.conversation_id = cm.conversation_id
+          and m.id > coalesce(cm.last_read_message_id, 0)
+          and m.created_at > cm.joined_at
+          and m.author_id is distinct from ${userId}
+        limit ${UNREAD_COUNT_CAP}
+      ) capped
+    )::int as unread
+    from conversation_members cm
+    inner join conversations c on c.id = cm.conversation_id
+    where cm.user_id = ${userId}
+      and c.status = 'active'
+      and cm.conversation_id in (${sql.join(conversationIds.map((id) => sql`${id}`), sql`, `)})
+  `);
+  const out: Record<string, number> = {};
+  for (const row of result.rows as { conversation_id: string; unread: number }[]) {
+    if (row.unread > 0) out[row.conversation_id] = row.unread;
+  }
+  return out;
+}
+
+/** Moves the member's read marker forward to `messageId` — never back, so a
+ * late mark from a slower tab can't resurrect messages another tab already
+ * read past. Returns false when the message isn't in that conversation or
+ * the marker was already at or past it. */
+export async function markReadUpTo(conversationId: string, userId: string, messageId: number): Promise<boolean> {
+  const result = await db.execute(sql`
+    update conversation_members cm set last_read_message_id = ${messageId}
+    where cm.conversation_id = ${conversationId}
+      and cm.user_id = ${userId}
+      and (cm.last_read_message_id is null or cm.last_read_message_id < ${messageId})
+      and exists (select 1 from messages m where m.id = ${messageId} and m.conversation_id = ${conversationId})
+  `);
+  return (result.rowCount ?? 0) > 0;
+}
+
 /** Sends the CURRENT state of one conversation to every member who already
  * has it, each seeing their OWN `pinnedAt` (a per-member column — a shared
  * payload would incorrectly reset another member's pin state on their

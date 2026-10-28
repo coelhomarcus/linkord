@@ -11,7 +11,7 @@ import * as reactions from '../modules/calls/reactions.js';
 import * as floodControl from './floodControl.js';
 import * as chat from '../modules/messages/messages.js';
 import * as conversations from '../modules/conversations/conversations.js';
-import { listForUser, getConversationForUser, getDirectPeerId } from '../modules/conversations/conversationsRepository.js';
+import { listForUser, getConversationForUser, getDirectPeerId, unreadCountsForUser } from '../modules/conversations/conversationsRepository.js';
 import { canSendDirectMessage } from '../modules/friendships/friendshipsRepository.js';
 import { ERROR_CODES, type ErrorCode } from '../http/errors.js';
 import { getUserUsage } from '../modules/attachments/attachmentQuota.js';
@@ -68,6 +68,7 @@ const ACTION_LIMITS: Record<string, { windowMs: number; max: number }> = {
   reaction: { windowMs: 10_000, max: 20 },
   profile: { windowMs: 60_000, max: 10 },
   'message-search': { windowMs: 10_000, max: 20 },
+  'conversation-mark-read': { windowMs: 10_000, max: 30 },
 };
 
 /** 'join' is the one special case in the dispatch: only participants.ts
@@ -89,6 +90,7 @@ async function handleJoin(socket: AppSocket, msg: JoinMessage): Promise<void> {
   // LiveKit token is NOT minted here anymore — just having the tab open/
   // logged in shouldn't open a real call session. That now only happens
   // in handleCallJoin, when someone joins a group call.
+  const conversationList = await listForUser(p.userId);
   send(socket, {
     t: 'welcome',
     id: p.id,
@@ -109,7 +111,8 @@ async function handleJoin(socket: AppSocket, msg: JoinMessage): Promise<void> {
     // (an isolated account receives none of it) — the same snapshot is
     // re-sent as `presence-sync` when that set changes mid-connection.
     ...(await buildPresenceSnapshot(p)),
-    conversations: await listForUser(p.userId),
+    conversations: conversationList,
+    unreadByConversation: await unreadCountsForUser(p.userId, conversationList.map((c) => c.id)),
     storageUsage: await getUserUsage(p.userId),
     livekitUrl: config.LIVEKIT_URL,
     // lets a newer client use what this server supports (3: correlated,
