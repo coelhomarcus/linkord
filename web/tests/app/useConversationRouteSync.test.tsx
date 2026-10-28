@@ -41,37 +41,6 @@ const entryId = () => screen.getByTestId('entry-id').textContent;
 const entryFor = (id: string) => ({ pathname: '/app/conversations', state: { conversationId: id } });
 
 describe('useConversationRouteSync', () => {
-  const bot = (id: string): Conversation => ({ ...conv(id), type: 'bot' });
-
-  it('a bot opens on the bots page, not on the conversations one', async () => {
-    const openConversation = vi.fn();
-    const room = { state: joined, conversations: [conv('c1'), bot('b1')], openConversation };
-    const view = render(tree('/app/conversations', { ...room, activeConversationId: 'c1' }));
-    view.rerender(tree('/app/conversations', { ...room, activeConversationId: 'b1' }));
-    expect(path()).toBe('/app/bots');
-    expect(entryId()).toBe('b1');
-  });
-
-  it('a bot named on the conversations page is not opened there', () => {
-    const openConversation = vi.fn();
-    render(tree(entryFor('b1'), { state: joined, conversations: [conv('c1'), bot('b1')], activeConversationId: 'c1', openConversation }));
-    expect(openConversation).not.toHaveBeenCalledWith('b1');
-    expect(path()).toBe('/app/conversations');
-  });
-
-  it('coming back to the conversations page with a bot open reopens a conversation, never a bot', () => {
-    const openConversation = vi.fn();
-    render(tree('/app/conversations', { state: joined, conversations: [bot('b1'), conv('c1')], activeConversationId: 'b1', openConversation }));
-    expect(openConversation).toHaveBeenCalledWith('c1');
-  });
-
-  it('the bots page with a conversation open opens no bot by itself', () => {
-    const openConversation = vi.fn();
-    render(tree('/app/bots', { state: joined, conversations: [conv('c1'), bot('b1')], activeConversationId: 'c1', openConversation }));
-    expect(openConversation).not.toHaveBeenCalled();
-    expect(path()).toBe('/app/bots');
-  });
-
   it('an entry naming a known conversation (refresh, back/forward) opens it', () => {
     const openConversation = vi.fn();
     render(tree(entryFor('c2'), { state: joined, conversations: [conv('c1'), conv('c2')], activeConversationId: 'c1', openConversation }));

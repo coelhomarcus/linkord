@@ -1,6 +1,6 @@
 import type { Conversation, Participant, PublicUser } from '@/shared/types/protocol';
 
-export type ConversationListTab = 'direct' | 'group';
+export type ConversationListTab = 'direct' | 'group' | 'bot';
 
 export function conversationTitle(conversation: Conversation | null | undefined, meUserId: string | null, users: Map<string, PublicUser>): string {
   if (!conversation) return 'Conversa';

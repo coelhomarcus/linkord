@@ -28,16 +28,12 @@ interface ConversationPanelProps {
   onOpenDetails: () => void;
   onToggleDetails: () => void;
   onToggleMedia: () => void;
-  /** which page this panel is on: each shows only its own kind of conversation */
-  page?: 'conversations' | 'bots';
 }
 
-export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, detailsOpen, mediaOpen, onOpenDetails, onToggleDetails, onToggleMedia, page = 'conversations' }: ConversationPanelProps) {
+export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, detailsOpen, mediaOpen, onOpenDetails, onToggleDetails, onToggleMedia }: ConversationPanelProps) {
   const { state, dispatch, conversations, activeConversationId, allUsers, onlineUserIds, activeCallConversationId } = useRoom();
   const { setOpenMobile } = useSidebar();
-  const active = conversations.find((item) => item.id === activeConversationId) ?? null;
-  const onBots = page === 'bots';
-  const conversation = active && (active.type === 'bot') === onBots ? active : null;
+  const conversation = conversations.find((item) => item.id === activeConversationId) ?? null;
   const isBot = conversation?.type === 'bot';
   const hasDetails = conversation?.type === 'group' || isBot;
   const title = conversationTitle(conversation, state.me.userId, allUsers);
@@ -170,19 +166,12 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
       ) : (
         <>
           {/* the header carries the button that reopens the drawer on a phone, where nothing else can */}
-          <PageHeader title={onBots ? 'Bots' : 'Conversas'} />
+          <PageHeader title="Conversas" />
           <div className="grid flex-1 place-items-center px-6 text-center">
-            {onBots ? (
-              <div>
-                <p className="text-title font-semibold text-text-primary">Avisos dos seus sistemas</p>
-                <p className="mt-1 max-w-sm text-label text-text-muted">Um bot recebe mensagens por webhook — de um deploy, um monitor, uma automação — e mostra aqui para quem você convidar. Crie um no + da sidebar.</p>
-              </div>
-            ) : (
-              <div>
-                <p className="text-title font-semibold text-text-primary">Abra uma conversa</p>
-                <p className="mt-1 text-label text-text-muted">Escolha uma pessoa ou grupo na sidebar.</p>
-              </div>
-            )}
+            <div>
+              <p className="text-title font-semibold text-text-primary">Abra uma conversa</p>
+              <p className="mt-1 text-label text-text-muted">Escolha uma pessoa, grupo ou bot na sidebar.</p>
+            </div>
           </div>
         </>
       )}
