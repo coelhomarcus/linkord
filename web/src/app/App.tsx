@@ -253,6 +253,8 @@ function Shell() {
           open={detailsVisible}
           onOpenChange={setDetailsOpen}
           onOpenProfile={setProfileUserId}
+          onOpenMedia={() => { setDetailsOpen(false); setMediaOpen(true); }}
+          onOpenSearch={() => { setDetailsOpen(false); setSearchOpen(true); }}
         />
         <ConversationMediaPanel
           conversationId={activeConversation?.id ?? null}

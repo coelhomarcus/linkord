@@ -62,15 +62,10 @@ function setup(myRole: 'owner' | 'member') {
   const state = { ...initialRoomState, me: { ...initialRoomState.me, userId: 'me' } };
   return renderSocial(
     <SidebarProvider>
-      <GroupDetailsPanel conversationId="g1" open onOpenChange={vi.fn()} onOpenProfile={vi.fn()} />
+      <GroupDetailsPanel conversationId="g1" open onOpenChange={vi.fn()} onOpenProfile={vi.fn()} onOpenMedia={vi.fn()} onOpenSearch={vi.fn()} />
     </SidebarProvider>,
     { room: { state, conversations: [group(myRole)], allUsers: new Map([['u-ana', pub(ana)], ['me', { ...pub(ana), id: 'me', username: 'eu', displayName: 'Eu' }]]) } },
   );
-}
-
-// the modal opens on the overview; members (and invitations) are their own section
-async function showMembers() {
-  await userEvent.setup().click(await screen.findByRole('button', { name: 'Membros' }));
 }
 
 describe('GroupDetailsPanel — invitations', () => {
@@ -78,7 +73,6 @@ describe('GroupDetailsPanel — invitations', () => {
     const user = userEvent.setup();
     mocked.inviteToGroup.mockResolvedValue({ results: [{ userId: 'u-bea', outcome: 'sent', invitationId: 'i' }] });
     setup('owner');
-    await showMembers();
 
     await user.click(await screen.findByRole('button', { name: /Convidar amigos/ }));
     // Ana is already a member, so only Bea shows up as a candidate
@@ -95,11 +89,12 @@ describe('GroupDetailsPanel — invitations', () => {
     mocked.fetchGroupInvitations.mockResolvedValue({ items: [{ id: 'inv-9', at: '2026-01-01T00:00:00.000Z', invitee: bea }], nextCursor: null });
     mocked.revokeInvitation.mockResolvedValue({ invitation: {} as never });
     setup('owner');
-    await showMembers();
 
-    expect(await screen.findByText('Convites enviados')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /Convidar amigos/ }));
+    // Bea is already invited, so the picker has no one left to offer
+    await user.click(await screen.findByRole('button', { name: /Convidar amigos/ }));
     await waitFor(() => expect(screen.getByText('Você não tem amigos para convidar.')).toBeInTheDocument());
+    // the invitations are their own tab, counted
+    await user.click(await screen.findByRole('tab', { name: 'Convites enviados (1)' }));
     await user.click(screen.getByRole('button', { name: 'Revogar' }));
     expect(mocked.revokeInvitation).toHaveBeenCalledWith('inv-9');
   });
@@ -108,7 +103,6 @@ describe('GroupDetailsPanel — invitations', () => {
     const user = userEvent.setup();
     mocked.inviteToGroup.mockResolvedValue({ results: [{ userId: 'u-bea', outcome: 'not_friends' }] });
     setup('owner');
-    await showMembers();
     await user.click(await screen.findByRole('button', { name: /Convidar amigos/ }));
     await user.click(await screen.findByRole('button', { name: /Bea/ }));
     await user.click(screen.getByRole('button', { name: 'Convidar (1)' }));
@@ -131,7 +125,6 @@ describe('GroupDetailsPanel — invitations', () => {
     setup('owner');
     // the count is part of the overview, where the modal opens
     expect(await screen.findByText('2 membros')).toBeInTheDocument();
-    await showMembers();
 
     expect(await screen.findByText('dono')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Carregar mais' }));
@@ -183,15 +176,12 @@ describe('GroupDetailsPanel — invitations', () => {
 
   it('owner sees transfer/remove on others; a regular member sees no management controls', async () => {
     const { unmount } = setup('owner');
-    await showMembers();
     expect(await screen.findByRole('button', { name: 'Remover Ana' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Transferir propriedade para Ana' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Remover Eu/ })).not.toBeInTheDocument();
     unmount();
 
     setup('member');
-
-    await showMembers();
     await screen.findByText('Ana');
     expect(screen.queryByRole('button', { name: /Remover/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Transferir/ })).not.toBeInTheDocument();
@@ -202,7 +192,6 @@ describe('GroupDetailsPanel — invitations', () => {
     const user = userEvent.setup();
     mocked.fetchGroupMembers.mockRejectedValueOnce(new Error('x'));
     setup('member');
-    await showMembers();
     await user.click(await screen.findByRole('button', { name: 'Tentar de novo' }));
     expect(await screen.findByText('Ana')).toBeInTheDocument();
   });
@@ -215,19 +204,60 @@ describe('GroupDetailsPanel — invitations', () => {
   });
 });
 
-describe('GroupDetailsPanel — a settings-style modal', () => {
-  it('is a dialog that opens on the overview, with the sections on the side and the actions once', async () => {
+describe('GroupDetailsPanel — the group card and its people, in one screen', () => {
+  it('is a dialog with the group on the left and its members on the right, no side navigation', async () => {
     setup('owner');
     const dialog = await screen.findByRole('dialog', { name: 'Detalhes do grupo' });
-    expect(dialog).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Visão geral' })).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByRole('main', { name: 'Visão geral' })).toHaveTextContent('Squad');
+    expect(dialog).toHaveTextContent('Squad');
+    expect(screen.getByRole('tab', { name: 'Membros' })).toHaveAttribute('aria-selected', 'true');
+    expect(await screen.findByText('Ana')).toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'Seções do grupo' })).not.toBeInTheDocument();
+  });
+
+  it('the card says how big the group is, how many are online, since when, and whose it is', async () => {
+    setup('owner');
+    await screen.findByRole('dialog', { name: 'Detalhes do grupo' });
+    expect(screen.getByText('2 membros')).toBeInTheDocument();
+    // me (always) and Ana (not online): one
+    expect(screen.getByText('1 online')).toBeInTheDocument();
+    expect(screen.getByText('Criado em')).toBeInTheDocument();
+    expect(screen.getByText('Dono')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /Você/ })).toBeInTheDocument();
+  });
+
+  it('shortcuts open the media and the search, the group actions are once on the card', async () => {
+    const onOpenMedia = vi.fn(); const onOpenSearch = vi.fn();
+    const state = { ...initialRoomState, me: { ...initialRoomState.me, userId: 'me' } };
+    renderSocial(
+      <SidebarProvider>
+        <GroupDetailsPanel conversationId="g1" open onOpenChange={vi.fn()} onOpenProfile={vi.fn()} onOpenMedia={onOpenMedia} onOpenSearch={onOpenSearch} />
+      </SidebarProvider>,
+      { room: { state, conversations: [group('owner')] } },
+    );
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Mídias e links' }));
+    await user.click(screen.getByRole('button', { name: 'Buscar na conversa' }));
+    expect(onOpenMedia).toHaveBeenCalledTimes(1);
+    expect(onOpenSearch).toHaveBeenCalledTimes(1);
     expect(screen.getAllByRole('button', { name: /Sair do grupo/ })).toHaveLength(1);
     expect(screen.getAllByRole('button', { name: /Excluir grupo/ })).toHaveLength(1);
+  });
 
-    await showMembers();
-    expect(screen.getByRole('button', { name: 'Membros' })).toHaveAttribute('aria-current', 'page');
-    expect(await screen.findByRole('main', { name: 'Membros' })).toHaveTextContent('Ana');
+  it('only the owner has the invitations tab and the invite shortcut', async () => {
+    const { unmount } = setup('owner');
+    expect(await screen.findByRole('tab', { name: /Convites enviados/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Convidar amigos' })).toBeInTheDocument();
+    unmount();
+    setup('member');
+    await screen.findByRole('tab', { name: 'Membros' });
+    expect(screen.queryByRole('tab', { name: /Convites enviados/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Convidar amigos' })).not.toBeInTheDocument();
+  });
+
+  it('an empty invitations tab says so', async () => {
+    setup('owner');
+    await userEvent.setup().click(await screen.findByRole('tab', { name: /Convites enviados/ }));
+    expect(await screen.findByText('Nenhum convite pendente.')).toBeInTheDocument();
   });
 
   it('closes from the header button', async () => {
@@ -235,7 +265,7 @@ describe('GroupDetailsPanel — a settings-style modal', () => {
     const state = { ...initialRoomState, me: { ...initialRoomState.me, userId: 'me' } };
     renderSocial(
       <SidebarProvider>
-        <GroupDetailsPanel conversationId="g1" open onOpenChange={onOpenChange} onOpenProfile={vi.fn()} />
+        <GroupDetailsPanel conversationId="g1" open onOpenChange={onOpenChange} onOpenProfile={vi.fn()} onOpenMedia={vi.fn()} onOpenSearch={vi.fn()} />
       </SidebarProvider>,
       { room: { state, conversations: [group('member')] } },
     );
@@ -243,4 +273,3 @@ describe('GroupDetailsPanel — a settings-style modal', () => {
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 });
-
