@@ -29,6 +29,22 @@ describe('handleGroupUpdate: avatar also goes through the ownership check (real 
     }
   });
 
+  it('an external URL is not taken as a group avatar: the photo stays as it was', async () => {
+    const owner = await makeUser('gu');
+    const groupId = await makeGroupWithMembers(owner.id, []);
+    const { socket, participant } = joinNew(owner);
+    try {
+      const avatarUrl = await makeOwnedAvatarUpload(owner.id);
+      await handlers['group-update'](socket, { conversationId: groupId, avatar: avatarUrl });
+      await handlers['group-update'](socket, { conversationId: groupId, avatar: 'https://exemplo.com/grupo.png' });
+
+      const [row] = await db.select().from(conversations).where(eq(conversations.id, groupId));
+      assert.equal(row!.avatar, avatarUrl);
+    } finally {
+      cleanupParticipant(participant);
+    }
+  });
+
   it('owner tries to use another account\'s upload as the group avatar: refused (stays empty)', async () => {
     // the same bug as handleProfile's, just reached from the group side: the
     // id is a public, observable string — nothing but this check stopped a

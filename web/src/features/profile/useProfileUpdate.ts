@@ -183,5 +183,5 @@ export function useProfileUpdate(deps: ProfileUpdateDeps) {
 
   const removeProfileImage = useCallback((field: 'avatar' | 'banner') => applyImagePatch(field, '', ''), [applyImagePatch]);
 
-  return { updateProfile, uploadProfileImage, applyImagePatch, removeProfileImage, handleProfileResult };
+  return { updateProfile, uploadProfileImage, removeProfileImage, handleProfileResult };
 }

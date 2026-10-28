@@ -368,7 +368,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         startSharing, stopSharing, changeSource, pauseSharePreview, resumeSharePreview,
         shareQuality: roomSettings.shareQuality, setShareQuality: roomSettings.setShareQuality,
         startCamera, stopCamera, activateMic, toggleMicMuted,
-        updateProfile: profileUpdate.updateProfile, uploadProfileImage: profileUpdate.uploadProfileImage, applyImagePatch: profileUpdate.applyImagePatch, removeProfileImage: profileUpdate.removeProfileImage,
+        updateProfile: profileUpdate.updateProfile, uploadProfileImage: profileUpdate.uploadProfileImage, removeProfileImage: profileUpdate.removeProfileImage,
         menuTarget: tileMenu.menuTarget, openTileMenu: tileMenu.openTileMenu, closeTileMenu: tileMenu.closeTileMenu,
         reactions: messageReactions.reactions, sendReaction: messageReactions.sendReaction,
         showStats: roomSettings.showStats, setShowStats: roomSettings.setShowStats,

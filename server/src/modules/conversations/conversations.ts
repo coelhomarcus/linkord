@@ -3,7 +3,7 @@ import { db } from '../../db/client.js';
 import { conversationMembers, conversations, users } from '../../db/schema.js';
 import { participants, send, sendSocketError, sendToUser } from '../presence/participants.js';
 import { refreshKnownPeers } from '../presence/knownPeers.js';
-import { sanitizeAvatar } from '../profile/sanitize.js';
+import { isUploadedImage, sanitizeAvatar } from '../profile/sanitize.js';
 import { deleteAvatarFile, isOwnedProfileImage } from '../attachments/attachmentCleanup.js';
 import { ERROR_CODES } from '../../http/errors.js';
 import {
@@ -167,11 +167,13 @@ async function handleGroupUpdate(socket: AppSocket, msg: { conversationId?: stri
   }
   if (msg.avatar !== undefined) {
     const avatar = sanitizeAvatar(msg.avatar);
-    // same ownership check an account's own avatar/banner gets in
-    // handleProfile — without it, whoever manages the group could claim any
-    // other account's (or group's) /uploads/<id> as this group's avatar,
-    // and its later replacement would delete that real owner's file.
-    updates.avatar = avatar && await isOwnedProfileImage(avatar, p.userId) ? avatar : '';
+    // same rules an account's own avatar gets in handleProfile: a new photo is
+    // only ever an upload (an external URL leaves it as it was), and only one
+    // the caller uploaded — otherwise whoever manages the group could claim
+    // another account's /uploads/<id>, and its later replacement would delete
+    // that real owner's file.
+    if (!avatar) updates.avatar = '';
+    else if (isUploadedImage(avatar)) updates.avatar = await isOwnedProfileImage(avatar, p.userId) ? avatar : '';
   }
   if (updates.title === undefined && updates.avatar === undefined) return;
 

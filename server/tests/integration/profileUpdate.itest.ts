@@ -105,13 +105,33 @@ describe('handleProfile: persists before confirming/broadcasting (real Postgres)
     }
   });
 
-  it('an external URL (https://...) is still accepted normally — the check is only for /uploads/<id>', async () => {
+  it('a new external URL (https://...) is not taken: the photo stays as it was', async () => {
     const user = await makeUser('pu');
-    const { socket, participant } = joinNew(user);
+    const { socket, sent, participant } = joinNew(user);
     try {
-      await handlers.profile(socket, { requestId: 'r8', avatar: 'https://exemplo.com/foto.png' });
+      await handlers.profile(socket, { requestId: 'r8', avatar: 'https://exemplo.com/foto.png', banner: 'https://exemplo.com/banner.png' });
       const [row] = await db.select().from(users).where(eq(users.id, user.id));
-      assert.equal(row!.avatar, 'https://exemplo.com/foto.png');
+      assert.deepEqual({ avatar: row!.avatar, banner: row!.banner }, { avatar: '', banner: '' });
+      assert.equal(sent.find((e) => e.payload?.t === 'profile-result')?.payload.ok, true);
+    } finally {
+      cleanupParticipant(participant);
+    }
+  });
+
+  it('a photo already set by URL survives a save that resends it, and can still be removed', async () => {
+    const user = await makeUser('pu');
+    await db.update(users).set({ avatar: 'https://exemplo.com/antiga.png' }).where(eq(users.id, user.id));
+    const { socket, participant } = joinNew(user);
+    // a real session loads the stored avatar; the test socket starts blank
+    participant.avatar = 'https://exemplo.com/antiga.png';
+    try {
+      await handlers.profile(socket, { requestId: 'r9', displayName: 'Outro Nome', avatar: 'https://exemplo.com/antiga.png' });
+      const [kept] = await db.select().from(users).where(eq(users.id, user.id));
+      assert.deepEqual({ avatar: kept!.avatar, displayName: kept!.displayName }, { avatar: 'https://exemplo.com/antiga.png', displayName: 'Outro Nome' });
+
+      await handlers.profile(socket, { requestId: 'r10', avatar: '' });
+      const [removed] = await db.select().from(users).where(eq(users.id, user.id));
+      assert.equal(removed!.avatar, '');
     } finally {
       cleanupParticipant(participant);
     }

@@ -42,11 +42,6 @@ vi.mock('@/features/settings/ImageCropDialog', () => ({
     ) : null,
 }));
 
-vi.mock('@/shared/ImageUrlDialog', () => ({
-  ImageUrlDialog: ({ open, onConfirm }: { open: boolean; onConfirm: (url: string) => void }) =>
-    open ? <button type="button" onClick={() => void onConfirm('https://example.com/foto.png')}>Confirmar URL</button> : null,
-}));
-
 describe('SettingsPage — profile', () => {
   it('saves the chosen color for the avatar background', async () => {
     const user = userEvent.setup();
@@ -251,23 +246,17 @@ describe('SettingsPage — profile', () => {
     resolveUpload?.('/uploads/novo-avatar');
   });
 
-  it('applies a profile photo URL without opening the crop dialog', async () => {
+  it('the photo menu offers only a file from the computer, never a URL', async () => {
     const user = userEvent.setup();
-    const applyImagePatch = vi.fn().mockResolvedValue({});
-    const uploadProfileImage = vi.fn();
     const state = {
       ...initialRoomState,
       me: { ...initialRoomState.me, id: 'conn-1', userId: 'user-1', name: 'Fulana', displayName: 'Fulana', avatar: '', avatarColor: 'green' },
     };
-    renderSettings({ state, applyImagePatch, uploadProfileImage });
+    renderSettings({ state });
 
     await user.click(screen.getByRole('button', { name: 'Alterar foto de perfil' }));
-    await user.click(await screen.findByRole('menuitem', { name: 'Usar URL' }));
-    await user.click(screen.getByRole('button', { name: 'Confirmar URL' }));
-
-    expect(applyImagePatch).toHaveBeenCalledWith('avatar', 'https://example.com/foto.png', '');
-    expect(uploadProfileImage).not.toHaveBeenCalled();
-    expect(screen.queryByRole('button', { name: 'Confirmar recorte' })).not.toBeInTheDocument();
+    expect(await screen.findByRole('menuitem', { name: 'Enviar do computador' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Usar URL' })).not.toBeInTheDocument();
   });
 
   it('removes the profile photo via an isolated request (not through the form\'s updateProfile)', async () => {

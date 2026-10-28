@@ -4,7 +4,6 @@ import type { Area } from 'react-easy-crop';
 
 import { useBlocker } from 'react-router';
 import { ImageCropDialog } from './ImageCropDialog';
-import { ImageUrlDialog } from '@/shared/ImageUrlDialog';
 import { ProfileCard } from '@/features/profile/ProfileCard';
 import { useRoom } from '@/state/RoomContext';
 import { cn } from '@/shared/lib/utils';
@@ -22,7 +21,7 @@ import { UnsavedProfileChangesDialog } from './UnsavedProfileChangesDialog';
 type ProfileCropTarget = { field: 'avatar' | 'banner'; file: File; src: string };
 
 export function ProfileSettings() {
-  const { state, updateProfile, uploadProfileImage, applyImagePatch, removeProfileImage, activeCallConversationId } = useRoom();
+  const { state, updateProfile, uploadProfileImage, removeProfileImage, activeCallConversationId } = useRoom();
   // FloatingPip (a call kept running while browsing elsewhere) sits fixed at
   // the viewport's bottom-left, on top of whatever's there — on a narrow
   // screen that's exactly where this bar's own Descartar button lands,
@@ -42,7 +41,6 @@ export function ProfileSettings() {
   const avatarFileInputRef = useRef<HTMLInputElement | null>(null);
   const bannerFileInputRef = useRef<HTMLInputElement | null>(null);
   const [cropTarget, setCropTarget] = useState<ProfileCropTarget | null>(null);
-  const [urlDialogField, setUrlDialogField] = useState<'avatar' | 'banner' | null>(null);
   // The crop dialog stays mounted during WASM processing, then gives way to
   // the blocking upload modal when the encoded blob is ready.
   const [activeUpload, setActiveUpload] = useState<{ field: 'avatar' | 'banner'; phase: ProfileImageUploadPhase } | null>(null);
@@ -142,21 +140,6 @@ export function ProfileSettings() {
     setCropTarget({ field, file, src: URL.createObjectURL(file) });
   }
 
-  async function handleUrlPicked(field: 'avatar' | 'banner', url: string) {
-    setUrlDialogField(null);
-    const setUploading = field === 'avatar' ? setUploadingAvatar : setUploadingBanner;
-    const setError = field === 'avatar' ? setAvatarError : setBannerError;
-    setError(null);
-    setUploading(true);
-    try {
-      await applyImagePatch(field, url, '');
-    } catch (err) {
-      setError(describeProfileSaveError(err, `Falha ao aplicar ${field === 'avatar' ? 'a foto' : 'o banner'}.`));
-    } finally {
-      setUploading(false);
-    }
-  }
-
   function closeCropDialog() {
     if (cropTarget) URL.revokeObjectURL(cropTarget.src);
     setCropTarget(null);
@@ -223,11 +206,9 @@ export function ProfileSettings() {
           }}
           online
           onAvatarUpload={() => avatarFileInputRef.current?.click()}
-          onAvatarUploadUrl={() => setUrlDialogField('avatar')}
           onAvatarRemove={() => void handleRemoveImage('avatar')}
           avatarUploading={uploadingAvatar}
           onBannerUpload={() => bannerFileInputRef.current?.click()}
-          onBannerUploadUrl={() => setUrlDialogField('banner')}
           onBannerRemove={() => void handleRemoveImage('banner')}
           bannerUploading={uploadingBanner}
           onDisplayNameChange={(value) => setField('displayName', value)}
@@ -324,12 +305,6 @@ export function ProfileSettings() {
         onConfirm={handleCropConfirm}
       />
 
-      <ImageUrlDialog
-        open={urlDialogField !== null}
-        title={urlDialogField === 'banner' ? 'URL do banner' : 'URL da foto de perfil'}
-        onOpenChange={(next) => { if (!next) setUrlDialogField(null); }}
-        onConfirm={(url) => handleUrlPicked(urlDialogField!, url)}
-      />
 
       <UploadProgressModal
         open={activeUpload?.phase === 'uploading'}
