@@ -13,11 +13,11 @@ import { MediaViewerProvider } from './MediaViewerProvider';
 // Typing lives in a fixed-height rail above the composer, outside the box
 // the ResizeObserver measures: someone starting or stopping typing must not
 // change the list's bottom padding, or a list pinned to the bottom jumps.
-const STATUS_RAIL_HEIGHT = 24;
+const STATUS_RAIL_HEIGHT = 20;
 // the gap between the newest message and the typing rail — and, while someone
-// types, how far above the rail the messages fade out: the same 8px, so that
+// types, how far above the rail the messages fade out: the same 4px, so that
 // fade ends exactly where the newest message does and never covers it
-const RAIL_GAP = 8;
+const RAIL_GAP = 4;
 
 function hasFiles(e: DragEvent<HTMLDivElement>): boolean {
   return Array.from(e.dataTransfer.types).includes('Files');
