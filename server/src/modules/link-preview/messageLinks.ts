@@ -2,14 +2,14 @@
 // web/src/features/chat/messageMarkup.ts (same regexes, same order, same
 // trimming, same cap), the way embeds.ts mirrors chatEmbeds.ts: the server
 // stores a preview for exactly the cards the client draws. Change one side,
-// change the other. Only what decides the links is kept: mentions and
-// emphasis matter here just because they can wrap a link.
+// change the other. Only what decides the links and the @mentions is kept:
+// emphasis matters here just because it can wrap either.
 
 type Inline =
   | { type: 'text' }
   | { type: 'code' }
   | { type: 'link'; url: string; suppressed: boolean }
-  | { type: 'mention' }
+  | { type: 'mention'; name: string }
   | { type: 'emphasis'; children: Inline[] };
 
 type Block = { type: 'paragraph' | 'quote'; children: Inline[] } | { type: 'code' } | { type: 'list'; items: Inline[][] };
@@ -48,8 +48,9 @@ function parseInline(text: string): Inline[] {
       nodes.push({ type: 'link', url: trimmed, suppressed: false });
       re.lastIndex = match.index + trimmed.length;
     } else if (mention !== undefined) {
-      nodes.push({ type: 'mention' });
-      re.lastIndex = match.index + 1 + mention.replace(/\.+$/, '').length;
+      const name = mention.replace(/\.+$/, '');
+      nodes.push({ type: 'mention', name });
+      re.lastIndex = match.index + 1 + name.length;
     } else nodes.push({ type: 'emphasis', children: parseInline((bold ?? strike ?? starItalic ?? underItalic)!) });
   }
   return nodes;
@@ -117,4 +118,23 @@ export function previewableLinks(text: string): string[] {
     else if (block.type === 'list') block.items.forEach((item) => collectInline(item, urls));
   }
   return [...new Set(urls)].slice(0, MAX_PREVIEWS);
+}
+
+function collectMentions(nodes: Inline[], out: string[]) {
+  for (const node of nodes) {
+    if (node.type === 'mention') out.push(node.name.toLowerCase());
+    else if (node.type === 'emphasis') collectMentions(node.children, out);
+  }
+}
+
+/** The usernames a message @mentions, lowercased and each once — the same
+ * ones the client draws as mention chips: never inside code, never the tail
+ * of an e-mail address. */
+export function mentionedUsernames(text: string): string[] {
+  const names: string[] = [];
+  for (const block of parseMessage(text)) {
+    if (block.type === 'paragraph' || block.type === 'quote') collectMentions(block.children, names);
+    else if (block.type === 'list') block.items.forEach((item) => collectMentions(item, names));
+  }
+  return [...new Set(names)];
 }

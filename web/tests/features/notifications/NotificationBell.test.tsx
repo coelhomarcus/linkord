@@ -46,6 +46,24 @@ describe('NotificationBell', () => {
     expect(await screen.findByText('Nenhuma notificação por enquanto.')).toBeInTheDocument();
   });
 
+  it('a mention jumps straight to the message, with its excerpt in the list', async () => {
+    const user = userEvent.setup();
+    const jumpToMessage = vi.fn();
+    const requestChatView = vi.fn();
+    mocked.fetchUnreadNotificationCount.mockResolvedValue({ unread: 1 });
+    mocked.fetchNotifications.mockResolvedValue({
+      items: [entry({ kind: 'mention', friendshipId: null, mention: { messageId: 42, excerpt: '@eu viu o deploy?', conversation: { id: 'g1', type: 'group', title: 'Squad', avatar: '' } } })],
+      nextCursor: null,
+    });
+    renderSocial(<NotificationBell />, { room: { jumpToMessage, requestChatView } });
+    await user.click(screen.getByRole('button', { name: /Notificações/ }));
+    expect(await screen.findByText('@eu viu o deploy?')).toBeInTheDocument();
+    await user.click(screen.getByText(/mencionou você no grupo Squad/));
+    expect(jumpToMessage).toHaveBeenCalledWith('g1', 42);
+    expect(requestChatView).toHaveBeenCalled();
+    expect(mocked.markNotificationsRead).toHaveBeenCalledWith({ ids: ['n1'] });
+  });
+
   it('clicking an item marks it as read and navigates', async () => {
     const user = userEvent.setup();
     mocked.fetchUnreadNotificationCount.mockResolvedValue({ unread: 1 });

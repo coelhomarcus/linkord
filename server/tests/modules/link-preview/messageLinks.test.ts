@@ -1,6 +1,6 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { previewableLinks } from '../../../src/modules/link-preview/messageLinks.js';
+import { mentionedUsernames, previewableLinks } from '../../../src/modules/link-preview/messageLinks.js';
 
 // the same cases as web/tests/features/chat/messageMarkup.test.ts: the server
 // stores previews for exactly the cards the client draws
@@ -21,5 +21,20 @@ describe('previewableLinks (mirror of the client)', () => {
 
   test('links inside emphasis, quotes and lists count', () => {
     assert.deepEqual(previewableLinks('**https://a.com**\n> https://b.com\n- https://c.com'), ['https://a.com', 'https://b.com', 'https://c.com']);
+  });
+});
+
+// the same rule the client uses to draw a mention chip (messageMarkup.ts)
+describe('mentionedUsernames', () => {
+  test('lowercased and each once, from paragraphs, quotes, lists and emphasis', () => {
+    assert.deepEqual(mentionedUsernames('@Ana e @bia\n> @carla\n- @davi\n**@ana** _@eva_'), ['ana', 'bia', 'carla', 'davi', 'eva']);
+  });
+
+  test('never inside code, nor the tail of an e-mail, nor a trailing period', () => {
+    assert.deepEqual(mentionedUsernames('`@code` ana@mail.com fala com @bia.\n```\n@bloco\n```'), ['bia']);
+  });
+
+  test('a message with no mention has none', () => {
+    assert.deepEqual(mentionedUsernames('oi, tudo bem?'), []);
   });
 });
