@@ -1,6 +1,6 @@
 export function LoadingScreen() {
   return (
-    <div className="flex h-dvh items-center justify-center bg-bg-primary">
+    <div className="flex h-full items-center justify-center bg-bg-primary">
       <div className="flex flex-col items-center gap-4">
         <div className="flex items-center gap-2 select-none">
           <img src="/logo.svg" alt="" className="h-8 w-8 flex-none" />

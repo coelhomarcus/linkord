@@ -177,8 +177,23 @@ html, body {
   line-height: var(--text-body--line-height);
 }
 
+/* --app-height / --app-top follow the visual viewport (shared/lib/visualViewport.ts),
+   so the on-screen keyboard shrinks the app instead of covering its bottom */
+:root {
+  --app-height: 100dvh;
+  --app-top: 0px;
+  /* the home indicator's strip; under an open keyboard there is none to keep clear */
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+:root[data-keyboard="open"] {
+  --safe-bottom: 0px;
+}
+
 #root {
-  height: 100dvh;
+  position: fixed;
+  inset-inline: 0;
+  top: var(--app-top);
+  height: var(--app-height);
 }
 
 * {

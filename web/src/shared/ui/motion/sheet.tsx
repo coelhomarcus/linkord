@@ -131,7 +131,7 @@ export function Sheet({ open, onOpenChange, side, ariaLabel, dismissLabel = 'Fec
           }
         }}
         className={cn(
-          'fixed inset-y-0 flex h-dvh flex-col overflow-hidden pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] shadow-popover outline-none will-change-transform',
+          'fixed top-(--app-top) flex h-(--app-height) flex-col overflow-hidden pb-(--safe-bottom) pt-[env(safe-area-inset-top)] shadow-popover outline-none will-change-transform',
           side === 'left'
             ? 'left-0 border-r border-border'
             : 'right-0 w-80 max-w-[85vw] border-l border-border bg-surface-panel [--surface-base:var(--color-surface-panel)]',

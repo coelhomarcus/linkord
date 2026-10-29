@@ -5,7 +5,7 @@ import { Button } from '@/shared/ui/primitives/button';
  * retrying the connection would only get the same answer. */
 export function OutdatedClientScreen() {
   return (
-    <div className="flex h-dvh items-center justify-center bg-bg-primary p-4">
+    <div className="flex h-full items-center justify-center bg-bg-primary p-4">
       <div role="alert" className="flex w-full max-w-100 flex-col gap-3.5 rounded-xl bg-bg-floating p-6">
         <h1 className="text-display font-bold text-text-primary">Há uma versão nova do Linkord</h1>
         <p className="text-body text-text-secondary">

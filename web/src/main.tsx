@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { App } from './app/App';
 import { ErrorBoundary } from './app/layout/ErrorBoundary';
 import { installGlobalErrorHandlers } from './shared/lib/logger';
+import { installVisualViewportTracking } from './shared/lib/visualViewport';
 import './styles/index.css';
 import { applyColorTheme } from '@/features/settings/applyColorTheme';
 import { loadColorTheme } from '@/features/settings/useColorThemePreference';
@@ -14,6 +15,7 @@ if (import.meta.env.DEV) {
 }
 
 installGlobalErrorHandlers();
+installVisualViewportTracking();
 applyColorTheme(loadColorTheme());
 
 // Only in a build: in dev it would sit between Vite and the page. All it does is

@@ -302,8 +302,9 @@ export function AuthScreen() {
   const panelTransition = reduce ? { duration: 0 } : { duration: 0.15, ease: EASE_OUT };
 
   return (
-    <div className="flex h-dvh items-center justify-center bg-bg-primary p-4">
-      <div className="flex w-full max-w-100 flex-col items-center gap-6">
+    // scrolls rather than centers once the keyboard leaves less room than the form needs
+    <div className="flex h-full overflow-y-auto bg-bg-primary p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,var(--safe-bottom))]">
+      <div className="m-auto flex w-full max-w-100 flex-col items-center gap-6">
         <div className="flex flex-col items-center gap-2 text-center">
           <img src="/logo.svg" alt="" className="h-12 w-12" />
           <div>

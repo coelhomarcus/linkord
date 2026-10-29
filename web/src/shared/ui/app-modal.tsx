@@ -35,7 +35,9 @@ export function AppModal({ label, onClose, size = 'lg', children }: {
         showCloseButton={false}
         aria-label={label}
         className={cn(
-          'top-1/2 left-1/2 max-w-none gap-0 overflow-hidden border border-border bg-surface-panel p-0 text-text-primary [--surface-base:var(--color-surface-panel)] sm:max-w-none max-sm:h-dvh max-sm:w-screen max-sm:rounded-none',
+          'top-1/2 left-1/2 max-w-none gap-0 overflow-hidden border border-border bg-surface-panel p-0 text-text-primary [--surface-base:var(--color-surface-panel)] sm:max-w-none max-sm:w-screen max-sm:rounded-none max-sm:border-0',
+          // full screen on a phone, over the part the keyboard leaves visible and clear of the notch and home indicator
+          'max-sm:top-(--app-top) max-sm:h-(--app-height) max-sm:translate-y-0 max-sm:pt-[env(safe-area-inset-top)] max-sm:pb-(--safe-bottom)',
           size === 'md' && 'h-[min(40rem,calc(100dvh-3rem))] w-[min(56rem,calc(100vw-3rem))]',
           size === 'form' && 'h-[min(54rem,calc(100dvh-3rem))] w-[min(64rem,calc(100vw-3rem))]',
           size === 'lg' && 'h-[min(54rem,calc(100dvh-3rem))] w-[min(76rem,calc(100vw-3rem))]',

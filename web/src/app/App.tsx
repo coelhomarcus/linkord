@@ -206,7 +206,7 @@ function Shell() {
         onOpenChange={setSidebarOpen}
         openMobile={mobileShowSidebar}
         onOpenMobileChange={setMobileShowSidebar}
-        className="relative h-dvh bg-bg-primary text-text-primary [--surface-base:var(--color-surface-app)]"
+        className="relative h-full bg-bg-primary text-text-primary [--surface-base:var(--color-surface-app)] max-md:pt-[env(safe-area-inset-top)] max-md:pb-(--safe-bottom)"
         style={{ '--sidebar-width': '20rem', '--sidebar-width-mobile': '24rem', '--sidebar-overlay-offset': '4rem' }}
       >
         <ReconnectBanner />

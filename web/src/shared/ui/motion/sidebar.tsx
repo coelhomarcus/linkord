@@ -95,7 +95,7 @@ export function SidebarProvider({ open, defaultOpen = true, onOpenChange, openMo
 
   return (
     <SidebarContext.Provider value={value}>
-      <div {...props} style={{ '--sidebar-width': '16rem', ...style } as CSSProperties} className={cn('flex min-h-svh w-full min-w-0', className)}>
+      <div {...props} style={{ '--sidebar-width': '16rem', ...style } as CSSProperties} className={cn('flex min-h-0 w-full min-w-0', className)}>
         {children}
       </div>
     </SidebarContext.Provider>
@@ -138,5 +138,5 @@ export function Sidebar({ ariaLabel, className, panelClassName, children }: {
 
 /** The content beside the list. */
 export function SidebarInset({ className, ...props }: HTMLAttributes<HTMLElement>) {
-  return <main {...props} className={cn('relative flex min-h-svh min-w-0 flex-1 flex-col bg-background', className)} />;
+  return <main {...props} className={cn('relative flex min-h-0 min-w-0 flex-1 flex-col bg-background', className)} />;
 }

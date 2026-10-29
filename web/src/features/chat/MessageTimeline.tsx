@@ -332,12 +332,15 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
   // "At the present" drives the new-messages pill: messages appended while
   // reading above are counted instead of yanking the view down.
   const [atEnd, setAtEnd] = useState(true);
+  // read by the resize observer below, which must not re-subscribe on every scroll
+  const atEndRef = useRef(true);
   const [unseen, setUnseen] = useState(0);
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
     const onScroll = () => {
       const end = el.scrollHeight - el.scrollTop - el.clientHeight <= AT_END_THRESHOLD;
+      atEndRef.current = end;
       setAtEnd(end);
       if (end) setUnseen(0);
       if (!readyRef.current) return;
@@ -348,6 +351,22 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
     el.addEventListener('scroll', onScroll, { passive: true });
     return () => el.removeEventListener('scroll', onScroll);
   }, [virtualizer, surfaceId, conversationId]);
+
+  // A phone's keyboard coming up shrinks the list from the bottom, and the
+  // scroll offset alone would leave the newest messages under it: a reader at
+  // the present stays at the present, as the composer moves up.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    let height = el.clientHeight;
+    const observer = new ResizeObserver(() => {
+      const next = el.clientHeight;
+      if (next !== height && atEndRef.current && readyRef.current) el.scrollTop = el.scrollHeight;
+      height = next;
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
   const lastKey = items[items.length - 1]?.key;
   const prevLastKeyRef = useRef(lastKey);
   const prevLengthRef = useRef(items.length);
