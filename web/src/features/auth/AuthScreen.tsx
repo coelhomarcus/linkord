@@ -305,7 +305,7 @@ export function AuthScreen() {
     <div className="flex h-dvh items-center justify-center bg-bg-primary p-4">
       <div className="flex w-full max-w-100 flex-col items-center gap-6">
         <div className="flex flex-col items-center gap-2 text-center">
-          <img src="/logo.svg" alt="" className="h-12 w-12" />
+          <img src="/logo.svg" alt="" className="h-auto w-24" />
           <div>
             <h1 className="text-display font-bold tracking-tight text-text-primary">Linkord</h1>
             <p className="text-label text-text-muted">Converse e faça chamadas com seu grupo</p>
