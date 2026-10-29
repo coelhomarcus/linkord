@@ -21,6 +21,7 @@ import { GifPicker } from '@/features/gifs/GifPicker';
 import { reportGifShared } from '@/features/gifs/klipy';
 import type { Gif } from '@/features/gifs/klipy';
 import { useGifConfig } from '@/features/gifs/useGifConfig';
+import { isPhoneLayout } from './phoneLayout';
 
 // How often notifyTyping actually emits typing:true while the user keeps
 // typing (leading-edge: fires right away after being idle, then throttles),
@@ -256,6 +257,9 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
       if (event.key === 'Escape') { event.preventDefault(); setMentionQuery(null); return; }
     }
     if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing) return;
+    // a phone keyboard has no Shift+Enter: there Enter is the new line, as in
+    // Discord's app, and the send button sends
+    if (isPhoneLayout()) return;
     event.preventDefault();
     void submit();
   }
@@ -418,6 +422,8 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
             size="icon"
             aria-label="Enviar mensagem"
             disabled={!canSubmit}
+            // focus stays in the field: on a phone a tap that took it would close the keyboard after every message
+            onPointerDown={(event) => event.preventDefault()}
             onClick={() => void submit()}
             className="flex-none rounded-full"
           >

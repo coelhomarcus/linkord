@@ -47,6 +47,27 @@ describe('MessageComposer', () => {
     expect(textarea).toHaveValue('linha 1\nlinha 2');
   });
 
+  it('on a phone Enter breaks the line, and the send button sends without taking the focus', async () => {
+    vi.spyOn(window, 'matchMedia').mockImplementation((query: string) => ({
+      matches: query === '(max-width: 767px)', media: query, onchange: null,
+      addListener: () => {}, removeListener: () => {}, addEventListener: () => {}, removeEventListener: () => {}, dispatchEvent: () => false,
+    }) as unknown as MediaQueryList);
+    const user = userEvent.setup();
+    const sendChatMessage = vi.fn(() => true);
+    renderWithRoom(<MessageComposer conversationId="conv-1" />, { state: joinedState, sendChatMessage });
+
+    const textarea = screen.getByPlaceholderText('Mensagem');
+    await user.type(textarea, 'linha 1{Enter}linha 2');
+    expect(sendChatMessage).not.toHaveBeenCalled();
+    expect(textarea).toHaveValue('linha 1\nlinha 2');
+
+    // taking the focus would close the phone's keyboard after every message
+    await user.click(screen.getByRole('button', { name: 'Enviar mensagem' }));
+    expect(sendChatMessage).toHaveBeenCalledWith('conv-1', 'linha 1\nlinha 2', undefined);
+    expect(textarea).toHaveFocus();
+    vi.restoreAllMocks();
+  });
+
   it('the send button starts disabled and enables with text', async () => {
     const user = userEvent.setup();
     const sendChatMessage = vi.fn(() => true);
