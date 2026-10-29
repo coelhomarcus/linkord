@@ -296,7 +296,7 @@ export function fetchReceivedInvitations(cursor: string | null, q?: string): Pro
 
 // ---- notifications (bell) ----------------------------------------------------
 
-export type NotificationKind = 'friend_request' | 'friend_accepted' | 'group_invitation';
+export type NotificationKind = 'friend_request' | 'friend_accepted' | 'group_invitation' | 'mention';
 export interface NotificationEntry {
   id: string;
   kind: NotificationKind;
@@ -306,6 +306,11 @@ export interface NotificationEntry {
   invitationId: string | null;
   actor: SocialUser | null;
   group: { id: string; title: string; avatar: string } | null;
+  // only for mentions: where it was and the start of what was said (absent from older servers)
+  mention?: {
+    messageId: number; excerpt: string;
+    conversation: { id: string; type: 'direct' | 'group' | 'bot'; title: string; avatar: string };
+  } | null;
 }
 
 export function fetchNotifications(cursor: string | null): Promise<{ items: NotificationEntry[]; nextCursor: string | null }> {

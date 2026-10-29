@@ -13,6 +13,9 @@ import { describeNotification, formatRelativeTime } from './notificationText';
 
 function NotificationIcon({ entry }: { entry: NotificationEntry }) {
   if (entry.kind === 'group_invitation' && entry.group) return <GroupAvatar id={entry.group.id} title={entry.group.title} avatar={entry.group.avatar} size={36} />;
+  // a bot's mention has no account: its own picture stands for it
+  const bot = entry.kind === 'mention' && !entry.actor && entry.mention?.conversation.type === 'bot' ? entry.mention.conversation : null;
+  if (bot) return <GroupAvatar id={bot.id} title={bot.title} avatar={bot.avatar} size={36} />;
   const actor = entry.actor;
   return <Avatar id={actor?.id ?? entry.id} name={actor?.displayName ?? '?'} avatar={actor?.avatar ?? ''} avatarColor={actor?.avatarColor ?? 'blurple'} size={36} className="flex-none" />;
 }
@@ -51,6 +54,7 @@ export function NotificationList({ onSelect, onDismiss }: { onSelect: (entry: No
             <NotificationIcon entry={entry} />
             <span className="min-w-0 flex-1">
               <span className={cn('block text-label text-text-primary', !entry.read && 'font-medium')}>{describeNotification(entry)}</span>
+              {entry.mention?.excerpt && <span className="mt-0.5 line-clamp-2 block text-caption text-text-secondary">{entry.mention.excerpt}</span>}
               <span className="block text-caption text-text-muted">{formatRelativeTime(entry.at)}</span>
             </span>
             {!entry.read && <span aria-label="Não lida" className="size-2 flex-none rounded-full bg-primary" />}

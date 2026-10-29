@@ -447,9 +447,11 @@ export type StagedAttachment = typeof stagedAttachments.$inferSelect;
 export const notifications = pgTable('notifications', {
   id: text('id').primaryKey(),
   recipientId: text('recipient_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  kind: varchar('kind', { length: 32 }).notNull(), // 'friend_request' | 'friend_accepted' | 'group_invitation'
+  kind: varchar('kind', { length: 32 }).notNull(), // 'friend_request' | 'friend_accepted' | 'group_invitation' | 'mention'
   friendshipId: text('friendship_id').references(() => friendships.id, { onDelete: 'cascade' }),
   groupInvitationId: text('group_invitation_id').references(() => groupInvitations.id, { onDelete: 'cascade' }),
+  // the message that @mentioned the recipient: deleting it takes the notification along
+  messageId: integer('message_id').references(() => messages.id, { onDelete: 'cascade' }),
   dedupeKey: text('dedupe_key').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   readAt: timestamp('read_at', { withTimezone: true }),
@@ -457,9 +459,11 @@ export const notifications = pgTable('notifications', {
   uniqueIndex('notifications_dedupe_key_unique').on(t.dedupeKey),
   index('notifications_recipient_created_idx').on(t.recipientId, t.createdAt),
   index('notifications_recipient_unread_idx').on(t.recipientId).where(sql`${t.readAt} IS NULL`),
+  index('notifications_message_id_idx').on(t.messageId),
   check('notifications_kind_reference_check', sql`
-    (${t.kind} IN ('friend_request','friend_accepted') AND ${t.friendshipId} IS NOT NULL AND ${t.groupInvitationId} IS NULL)
-    OR (${t.kind} = 'group_invitation' AND ${t.groupInvitationId} IS NOT NULL AND ${t.friendshipId} IS NULL)
+    (${t.kind} IN ('friend_request','friend_accepted') AND ${t.friendshipId} IS NOT NULL AND ${t.groupInvitationId} IS NULL AND ${t.messageId} IS NULL)
+    OR (${t.kind} = 'group_invitation' AND ${t.groupInvitationId} IS NOT NULL AND ${t.friendshipId} IS NULL AND ${t.messageId} IS NULL)
+    OR (${t.kind} = 'mention' AND ${t.messageId} IS NOT NULL AND ${t.friendshipId} IS NULL AND ${t.groupInvitationId} IS NULL)
   `),
 ]);
 
