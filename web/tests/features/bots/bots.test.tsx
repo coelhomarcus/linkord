@@ -43,7 +43,7 @@ describe('bots page — sidebar', () => {
     renderSocial(
       <TooltipProvider>
         <SidebarProvider>
-          <ConversationSidebar onReturnToCall={() => {}} onOpenProfile={() => {}} showReturnToCall={false} mobileRail={null} />
+          <ConversationSidebar onReturnToCall={() => {}} onOpenProfile={() => {}} showReturnToCall={false} />
         </SidebarProvider>
       </TooltipProvider>,
       { room: { state: me, conversations: [group, bot], ...room }, path: '/app/bots' },

@@ -51,6 +51,8 @@ export function FriendsPage({ onOpenProfile }: { onOpenProfile: (userId: string)
     <div ref={areaRef} className="@container flex h-full min-h-0 flex-col">
       <PageHeader
         title="Amigos"
+        // the shell draws the tab bar under this page on a phone
+        withTabBar
         middle={layout === 'inline' ? <FriendsModeNav view={view} className="ml-2" /> : undefined}
         actions={<AddFriendButton active={view === 'add'} iconOnly={layout === 'select'} />}
       />

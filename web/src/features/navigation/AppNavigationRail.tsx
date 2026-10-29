@@ -104,8 +104,8 @@ function RailLink({ to, label, active, badge, onNavigate, indicators, children }
 /** The global navigation: where you can go from anywhere. What belongs to one
  * conversation (search, creating a group, the list) and the notifications bell
  * stay in the conversations sidebar beside it. Settings, and the administration inside it, are
- * reached from the user dock laid over its bottom. On a narrow screen the same rail is drawn
- * inside the navigation sheet, so nothing here is reachable only on desktop. */
+ * reached from the user dock laid over its bottom. A phone has no rail: MobileTabBar
+ * reaches the same places from the bottom of the screen. */
 export function AppNavigationRail({ className }: {
   className?: string;
 }) {
@@ -123,7 +123,6 @@ export function AppNavigationRail({ className }: {
   const botOpen = conversations.some((c) => c.id === activeConversationId && c.type === 'bot');
   const afterNavigateToBots = () => { if (isOverlay) setOpenMobile(!botOpen); };
   // as a drawer the list is opened from here; as a column it can be hidden from its own header, so this is only the way back
-  // (on a phone the rail already sits inside that drawer, so the button would only close it)
   const showListToggle = isOverlay ? !isMobile : !listOpen;
   const listExpanded = isOverlay ? openMobile : listOpen;
   // the bell lives in the list's header, so it moves here only while that header is off screen

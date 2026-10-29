@@ -1,6 +1,5 @@
 import { MagnifyingGlassIcon, PhoneIcon, PlusIcon, PushPinIcon, RobotIcon, SidebarSimpleIcon, UsersIcon } from '@phosphor-icons/react';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router';
 
 import { ActiveWash } from '@/shared/ui/motion/active-wash';
@@ -26,14 +25,13 @@ import { GroupAvatar } from './GroupAvatar';
 import { GroupCreateDialog } from './GroupCreateDialog';
 import { NotificationBell } from '@/features/notifications/NotificationBell';
 import { BotCreateDialog } from '@/features/bots/BotCreateDialog';
-import { FloatingUserDock } from '@/features/navigation/FloatingUserDock';
+import { MobileTabBar } from '@/features/navigation/MobileTabBar';
+import { CallDock } from '@/features/calls/CallDock';
 
 interface ConversationSidebarProps {
   onReturnToCall: () => void;
   onOpenProfile: (userId: string) => void;
   showReturnToCall: boolean;
-  /** the global rail, drawn inside the sheet on a narrow screen (on desktop it sits beside the sidebar) */
-  mobileRail: ReactNode;
 }
 
 function ConversationRow({ conversation, active, washId, onClick }: {
@@ -66,7 +64,7 @@ function ConversationRow({ conversation, active, washId, onClick }: {
           'relative isolate flex w-full items-center gap-2.5 rounded-md border px-2.5 py-2 text-left transition-colors',
           active
             ? 'cutout-active border-transparent text-text-primary'
-            : 'cutout border-transparent text-text-secondary hover:cutout-subtle hover:border-border hover:bg-fill-subtle'
+            : 'cutout border-transparent text-text-secondary hover:cutout-subtle hover:border-border hover:bg-fill-subtle active:bg-fill-active'
         )}
       >
         {/* Discord/Fluxer: the active row is a plain light-gray wash, no border
@@ -87,7 +85,7 @@ function ConversationRow({ conversation, active, washId, onClick }: {
           </div>
         )}
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-label font-semibold">{title}</span>
+          <span className="block truncate text-label font-semibold max-md:text-body">{title}</span>
           {/* Discord-style: just the avatar and name — no last-message time.
               The only thing that goes in this second line is who's on a
               call right now, same spot the time used to sit in. */}
@@ -129,8 +127,8 @@ function tabForConversation(conversations: Conversation[], conversationId: strin
   return conversation?.type === 'group' ? 'group' : 'direct';
 }
 
-export function ConversationSidebar({ onReturnToCall, onOpenProfile, showReturnToCall, mobileRail }: ConversationSidebarProps) {
-  const { state, conversations, activeConversationId, openConversation, allUsers, unreadByConversation, requestChatView } = useRoom();
+export function ConversationSidebar({ onReturnToCall, onOpenProfile, showReturnToCall }: ConversationSidebarProps) {
+  const { state, conversations, activeConversationId, openConversation, allUsers, unreadByConversation, requestChatView, activeCallConversationId } = useRoom();
   const { isMobile, isOverlay, setOpenMobile, toggleSidebar } = useSidebar();
   const navigate = useNavigate();
   const { pathname } = useContentLocation();
@@ -202,10 +200,8 @@ export function ConversationSidebar({ onReturnToCall, onOpenProfile, showReturnT
   return (
     <>
       <Sidebar ariaLabel="Conversas" className="text-text-primary" panelClassName="bg-bg-primary">
-        <div className="relative flex h-full min-h-0">
-          {/* on a phone the rail lives in the drawer; from 768px it stays on screen beside it */}
-          {isMobile && mobileRail}
-          <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
+        <div className="relative flex h-full min-h-0 flex-col">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
             {/* from md the content card sits one shell gap (and its border) below the
                 top: starting there too puts this title on the same line as the page's */}
             <div className="flex h-header flex-none items-center gap-2 px-4 md:mt-[calc(var(--spacing-shell)+1px)]">
@@ -259,16 +255,19 @@ export function ConversationSidebar({ onReturnToCall, onOpenProfile, showReturnT
               )}
             </div>
           </div>
-          {/* from 768px the dock floats over the rail and the list from the shell; on a phone they share this drawer */}
-          {isMobile && (
-            <FloatingUserDock
-              placement="drawer"
-              onReturnToCall={onReturnToCall}
-              onOpenProfile={onOpenProfile}
-              showReturnToCall={showReturnToCall}
-              onNavigate={() => setOpenMobile(false)}
-            />
+          {/* from 768px the rail and the user dock float beside the list; on a phone the
+              tab bar stands in for both, and the call's own card only shows during a call */}
+          {isMobile && activeCallConversationId && (
+            <div className="flex-none px-3 pb-2">
+              <CallDock
+                onReturnToCall={() => { setOpenMobile(false); onReturnToCall(); }}
+                onOpenProfile={onOpenProfile}
+                showReturnToCall={showReturnToCall}
+                onNavigate={() => setOpenMobile(false)}
+              />
+            </div>
           )}
+          {isMobile && <MobileTabBar />}
         </div>
       </Sidebar>
       <GroupCreateDialog

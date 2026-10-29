@@ -53,7 +53,7 @@ function renderSidebar(overrides: {
   const onOpenProfile = overrides.onOpenProfile ?? vi.fn();
   return renderSocial(
     <SidebarProvider open onOpenChange={vi.fn()} openMobile={overrides.openMobile ?? false} onOpenMobileChange={vi.fn()}>
-      <ConversationSidebar onReturnToCall={onReturnToCall} onOpenProfile={onOpenProfile} showReturnToCall={overrides.showReturnToCall ?? true} mobileRail={null} />
+      <ConversationSidebar onReturnToCall={onReturnToCall} onOpenProfile={onOpenProfile} showReturnToCall={overrides.showReturnToCall ?? true} />
     </SidebarProvider>,
     {
       room: {
@@ -183,13 +183,22 @@ describe('ConversationSidebar — user dock', () => {
     expect(screen.queryByRole('button', { name: 'Ajustes' })).not.toBeInTheDocument();
   });
 
-  it('on a phone the drawer carries the dock, with the account, settings and the active call', async () => {
+  it('on a phone the tab bar takes the place of the rail and the dock', () => {
+    setViewport(390);
+    renderSidebar({ openMobile: true });
+    const nav = screen.getByRole('navigation', { name: 'Navegação principal' });
+    expect(nav).toContainElement(screen.getByRole('button', { name: 'Você' }));
+    // outside a call there is no dock: mute and settings live elsewhere on a phone
+    expect(screen.queryByRole('button', { name: 'Meu perfil' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Em chamada')).not.toBeInTheDocument();
+  });
+
+  it('on a phone, during a call, its card sits above the tab bar and goes back to the call', async () => {
     setViewport(390);
     const onReturnToCall = vi.fn();
     renderSidebar({ openMobile: true, activeCallConversationId: 'conv-group', onReturnToCall });
-    expect(screen.getByRole('button', { name: 'Meu perfil' })).toHaveTextContent('Fulana');
-    expect(screen.getByRole('button', { name: 'Ajustes' })).toHaveAttribute('aria-haspopup', 'dialog');
     expect(screen.getByText('Em chamada')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ajustes' })).toHaveAttribute('aria-haspopup', 'dialog');
     await userEvent.setup().click(screen.getByRole('button', { name: 'Voltar à chamada' }));
     expect(onReturnToCall).toHaveBeenCalledTimes(1);
   });

@@ -123,7 +123,8 @@ export function Sidebar({ ariaLabel, className, panelClassName, children }: {
         dismissLabel="Fechar navegação"
         style={sheetVars}
         backdropClassName="md:left-(--sidebar-overlay-offset,0px)"
-        className={cn('w-(--sidebar-width-mobile) max-w-[88vw] bg-background md:left-(--sidebar-overlay-offset,0px)', className)}
+        // on a phone the list is the home screen, not a drawer over the chat: it takes the whole width
+        className={cn('w-(--sidebar-width-mobile) max-w-[88vw] bg-background md:left-(--sidebar-overlay-offset,0px) max-md:w-full max-md:max-w-none max-md:border-r-0 max-md:shadow-none', className)}
       >
         {children}
       </Sheet>

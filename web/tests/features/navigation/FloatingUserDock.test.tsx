@@ -22,13 +22,13 @@ function setViewport(width: number) {
 const originalMatchMedia = window.matchMedia;
 afterEach(() => { window.matchMedia = originalMatchMedia; });
 
-function renderDock({ width = 1400, open = true, placement = 'shell' as 'shell' | 'drawer' } = {}) {
+function renderDock({ width = 1400, open = true } = {}) {
   setViewport(width);
   return renderWithRoom(
     <MemoryRouter>
       <TooltipProvider>
         <SidebarProvider open={open} onOpenChange={vi.fn()} openMobile={false} onOpenMobileChange={vi.fn()}>
-          <FloatingUserDock placement={placement} onReturnToCall={vi.fn()} onOpenProfile={vi.fn()} showReturnToCall />
+          <FloatingUserDock onReturnToCall={vi.fn()} onOpenProfile={vi.fn()} showReturnToCall />
         </SidebarProvider>
       </TooltipProvider>
     </MemoryRouter>,
@@ -58,15 +58,9 @@ describe('FloatingUserDock', () => {
     expect(dock()).toHaveAttribute('data-user-dock', 'compact');
   });
 
-  it('draws nothing from the shell on a phone, where the drawer carries it', () => {
+  it('draws nothing on a phone, where the tab bar takes its place', () => {
     renderDock({ width: 390 });
     expect(dock()).toBeNull();
-  });
-
-  it('inside the phone drawer it is wide and takes the drawer width', () => {
-    renderDock({ width: 390, placement: 'drawer' });
-    expect(dock()).toHaveAttribute('data-user-dock', 'wide');
-    expect(dock()!.style.width).toBe('');
   });
 
   it('publishes the room it takes for the rail and the list to keep clear of it', () => {
@@ -90,8 +84,8 @@ describe('FloatingUserDock', () => {
     expect(document.documentElement.style.getPropertyValue('--user-dock-clearance')).toBe('');
   });
 
-  it('inside the phone drawer it does not claim the corner of the screen', () => {
-    renderDock({ width: 390, placement: 'drawer' });
+  it('on a phone it does not claim the corner of the screen', () => {
+    renderDock({ width: 390 });
     expect(document.documentElement.style.getPropertyValue('--user-dock-clearance')).toBe('');
   });
 });

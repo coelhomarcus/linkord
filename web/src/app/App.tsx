@@ -14,6 +14,7 @@ import { AccessNotice } from '@/app/layout/AccessNotice';
 import { ConversationSidebar } from '@/features/conversations/ConversationSidebar';
 import { AppNavigationRail } from '@/features/navigation/AppNavigationRail';
 import { FloatingUserDock } from '@/features/navigation/FloatingUserDock';
+import { MobileTabBar } from '@/features/navigation/MobileTabBar';
 import { ConversationPanel } from '@/features/conversations/ConversationPanel';
 import { GroupDetailsPanel } from '@/features/conversations/GroupDetailsPanel';
 import { ConversationMediaPanel } from '@/features/conversations/ConversationMediaPanel';
@@ -216,10 +217,8 @@ function Shell() {
           onReturnToCall={handleReturnToCall}
           onOpenProfile={setProfileUserId}
           showReturnToCall={!showStage}
-          mobileRail={<AppNavigationRail />}
         />
         <FloatingUserDock
-          placement="shell"
           onReturnToCall={handleReturnToCall}
           onOpenProfile={setProfileUserId}
           showReturnToCall={!showStage}
@@ -259,7 +258,16 @@ function Shell() {
                 />
               )}
             />
-            <Route path={ROUTES.friends} element={<FriendsPage onOpenProfile={setProfileUserId} />} />
+            <Route
+              path={ROUTES.friends}
+              element={(
+                <>
+                  <FriendsPage onOpenProfile={setProfileUserId} />
+                  {/* a home screen, like the conversation list: on a phone it keeps the tab bar */}
+                  <MobileTabBar className="md:hidden" />
+                </>
+              )}
+            />
             <Route path={ROUTES.requests} element={<RequestsRedirect />} />
             <Route path="*" element={<Navigate to={ROUTES.conversations} replace />} />
           </Routes>

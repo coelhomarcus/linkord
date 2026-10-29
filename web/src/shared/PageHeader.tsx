@@ -1,4 +1,4 @@
-import { SidebarSimpleIcon, XIcon } from '@phosphor-icons/react';
+import { ArrowLeftIcon, XIcon } from '@phosphor-icons/react';
 import type { ReactNode } from 'react';
 
 import { useSidebar } from '@/shared/ui/motion/sidebar-context';
@@ -8,15 +8,16 @@ import { Button } from '@/shared/ui/primitives/button';
 /** Header of a full-page screen (friends, requests) or of an area shown in a
  * modal (settings, administration). On mobile the sidebar is a sheet, so a page
  * has no other way back to the conversation list: the header carries the button
- * that reopens it. In a modal that button gives way to one that closes it. */
-export function PageHeader({ title, subtitle, actions, leading, middle }: { title: string; subtitle?: string; actions?: ReactNode; leading?: ReactNode; middle?: ReactNode }) {
+ * that reopens it, unless the page has the tab bar along its bottom (`withTabBar`),
+ * which already leads there. In a modal that button gives way to one that closes it. */
+export function PageHeader({ title, subtitle, actions, leading, middle, withTabBar }: { title: string; subtitle?: string; actions?: ReactNode; leading?: ReactNode; middle?: ReactNode; withTabBar?: boolean }) {
   const { isMobile, setOpenMobile } = useSidebar();
   const closeModal = useAppModalClose();
   return (
     <header className="flex h-header flex-none items-center gap-3 border-b border-border px-4 md:px-6">
-      {isMobile && !closeModal && (
-        <Button type="button" variant="ghost" size="icon-sm" aria-label="Abrir lista de conversas" onClick={() => setOpenMobile(true)}>
-          <SidebarSimpleIcon size={20} />
+      {isMobile && !closeModal && !withTabBar && (
+        <Button type="button" variant="ghost" size="icon-sm" aria-label="Abrir lista de conversas" onClick={() => setOpenMobile(true)} className="-ml-1">
+          <ArrowLeftIcon size={20} />
         </Button>
       )}
       {leading}

@@ -134,7 +134,7 @@ export function Sheet({ open, onOpenChange, side, ariaLabel, dismissLabel = 'Fec
           'fixed top-(--app-top) flex h-(--app-height) flex-col overflow-hidden pb-(--safe-bottom) pt-[env(safe-area-inset-top)] shadow-popover outline-none will-change-transform',
           side === 'left'
             ? 'left-0 border-r border-border'
-            : 'right-0 w-80 max-w-[85vw] border-l border-border bg-surface-panel [--surface-base:var(--color-surface-panel)]',
+            : 'right-0 w-80 max-w-[85vw] border-l border-border bg-surface-panel [--surface-base:var(--color-surface-panel)] max-md:w-full max-md:max-w-none max-md:border-l-0',
           open ? 'pointer-events-auto' : 'pointer-events-none',
           className,
         )}
