@@ -1,8 +1,6 @@
-// Linkord's service worker does one thing: a page navigation with no network
-// gets a "Sem conexão" page instead of the browser's own error. It caches no
-// app files on purpose — the app is realtime and nothing works offline, and a
-// cached bundle would keep someone on an old version after a deploy. API,
-// socket and upload requests are never touched.
+// The app is realtime, so only the offline page is cached. Push events are
+// handled here because the browser can start this worker after every page
+// has closed. API, socket and upload requests are never intercepted.
 
 const CACHE = 'linkord-offline-v1';
 const OFFLINE_URL = '/offline.html';
@@ -30,6 +28,40 @@ self.addEventListener('fetch', (event) => {
     } catch {
       const cache = await caches.open(CACHE);
       return (await cache.match(OFFLINE_URL)) || Response.error();
+    }
+  })());
+});
+
+self.addEventListener('push', (event) => {
+  let notice;
+  try { notice = event.data?.json()?.notification; } catch { /* still show a visible fallback */ }
+  const title = typeof notice?.title === 'string' && notice.title ? notice.title : 'Linkord';
+  const body = typeof notice?.body === 'string' ? notice.body : 'Você tem uma nova notificação.';
+  let path = '/app/conversations';
+  try {
+    const target = new URL(notice?.navigate, self.location.origin);
+    if (target.origin === self.location.origin && target.pathname.startsWith('/app/')) path = target.pathname + target.search + target.hash;
+  } catch { /* keep the safe default */ }
+  event.waitUntil(self.registration.showNotification(title, {
+    body,
+    icon: '/icons/icon-192.png',
+    badge: '/icons/icon-192.png',
+    tag: typeof notice?.tag === 'string' ? notice.tag : 'linkord',
+    data: { path },
+  }));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const path = event.notification.data?.path || '/app/conversations';
+  event.waitUntil((async () => {
+    const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    const existing = windows.find((client) => new URL(client.url).origin === self.location.origin);
+    if (existing) {
+      await existing.focus();
+      existing.postMessage({ type: 'linkord-push-navigation', path });
+    } else {
+      await self.clients.openWindow(path);
     }
   })());
 });

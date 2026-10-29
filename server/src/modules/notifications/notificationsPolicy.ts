@@ -2,7 +2,7 @@
 
 export const OUTBOX_MAX_ATTEMPTS = 5;
 export const OUTBOX_BATCH = 50;
-export const OUTBOX_POLL_MS = 30_000;
+export const OUTBOX_POLL_MS = 2_000;
 export const OUTBOX_RETENTION_DAYS = 7;
 export const NOTIFICATION_READ_RETENTION_DAYS = 30;
 export const NOTIFICATION_UNREAD_RETENTION_DAYS = 90;

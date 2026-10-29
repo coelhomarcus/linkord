@@ -3,6 +3,8 @@ import type { ReactNode } from 'react';
 import { ApiError, fetchMe, linkEmail as apiLinkEmail, login as apiLogin, logout as apiLogout, register as apiRegister } from '@/shared/api/api';
 import type { ApiUser } from '@/shared/api/api';
 import { clearAllDrafts } from '@/features/chat/conversationDrafts';
+import { disablePush, restorePush } from '@/shared/pushNotifications';
+import { saveNotificationsEnabled, setNotificationsModuleEnabled } from '@/shared/notifications';
 
 
 type AuthStatus = 'loading' | 'anon' | 'authed';
@@ -44,6 +46,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refresh();
   }, [refresh]);
 
+  useEffect(() => {
+    if (status !== 'authed' || !user) return;
+    let current = true;
+    const reconcile = () => {
+      if (document.visibilityState === 'visible') void restorePush().catch(() => {});
+    };
+    reconcile();
+    window.addEventListener('focus', reconcile);
+    document.addEventListener('visibilitychange', reconcile);
+    let permissionStatus: PermissionStatus | null = null;
+    if ('permissions' in navigator) {
+      void navigator.permissions.query({ name: 'notifications' }).then((status) => {
+        if (!current) return;
+        permissionStatus = status;
+        status.addEventListener('change', reconcile);
+      }).catch(() => {});
+    }
+    return () => {
+      current = false;
+      window.removeEventListener('focus', reconcile);
+      document.removeEventListener('visibilitychange', reconcile);
+      permissionStatus?.removeEventListener('change', reconcile);
+    };
+  }, [status, user]);
+
   const login = useCallback(async (username: string, password: string) => {
     const { user: u } = await apiLogin(username, password);
     setUser(u);
@@ -62,6 +89,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
+    try { await disablePush(); } catch { /* a revoked endpoint is removed after the next failed delivery */ }
+    saveNotificationsEnabled(false);
+    setNotificationsModuleEnabled(false);
     try { await apiLogout(); } catch {  }
     clearAllDrafts();
     setUser(null);

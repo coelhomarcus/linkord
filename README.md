@@ -51,6 +51,27 @@ npm run dev             # server (watch) + web (Vite) juntos
 
 O frontend sobe em `http://localhost:5173` (proxy pro backend em `:3000`).
 
+### Notificações Web Push
+
+Gere um par VAPID uma vez com `npx web-push generate-vapid-keys` e configure
+`PUSH_VAPID_PUBLIC_KEY`, `PUSH_VAPID_PRIVATE_KEY` e `PUSH_VAPID_SUBJECT`
+(por exemplo, `mailto:admin@seu-dominio.com`) no servidor. Guarde a chave
+privada e reutilize o mesmo par em todos os deploys; trocá-lo exige que os
+usuários ativem as notificações novamente. Sem essas variáveis, o app funciona,
+mas a opção de Push aparece indisponível.
+
+Em produção, configure `APP_URL` com a origem HTTPS pública e permita conexões
+de saída do servidor aos serviços de push dos navegadores. Cada usuário ativa
+as notificações em **Ajustes → Notificações** em cada aparelho. No iPhone/iPad
+(iOS 16.4+), primeiro adicione o site à Tela de Início, abra pelo ícone e então
+ative a opção; uma aba comum do Safari não recebe Web Push. No Android Chrome,
+a instalação na Tela de Início é opcional.
+
+Mensagens, menções, solicitações de amizade e convites geram Push mesmo com o
+app fechado. A entrega depende da permissão do sistema, da conexão do aparelho
+e do prazo de validade definido pelo serviço de push. O histórico de mensagens
+continua no banco e é carregado ao abrir o Linkord.
+
 Cadastro é fechado por padrão (`REGISTRATION_CODE` vazio = ninguém se cadastra). Depois de criar sua conta, vire admin com:
 
 ```bash

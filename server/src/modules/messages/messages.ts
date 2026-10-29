@@ -32,6 +32,7 @@ import { storedRichEmbeds, type RichEmbed } from '../bots/richEmbeds.js';
 import { markMentionsRead } from '../notifications/notificationsRepository.js';
 import { notifySocialChanged } from '../presence/knownPeers.js';
 import { notifyMentions } from './mentions.js';
+import { queueChatPush } from '../notifications/pushQueue.js';
 import { insertMessageOnce, isValidClientMessageId, sendPayloadHash } from './sendOperations.js';
 import { publishStaged, StagedUnavailableError } from '../attachments/stagedAttachments.js';
 import { ERROR_CODES, type ErrorCode } from '../../http/errors.js';
@@ -593,10 +594,14 @@ async function handleChat(socket: AppSocket, msg: ChatSendRequest): Promise<void
  * posting again (`duplicate`); once that message is deleted, the key is free. */
 export async function postBotMessage(input: { conversationId: string; webhookId: string; text: string; richEmbeds: RichEmbed[]; deliveryKey: string | null }): Promise<{ message: ChatMessagePayload; duplicate: boolean }> {
   const { conversationId, webhookId, text, richEmbeds, deliveryKey } = input;
-  const [inserted] = await db.insert(messages)
-    .values({ conversationId, authorId: null, webhookId, text, richEmbeds: richEmbeds.length ? richEmbeds : null, webhookDeliveryKey: deliveryKey })
-    .onConflictDoNothing()
-    .returning({ id: messages.id });
+  const [inserted] = await db.transaction(async (tx) => {
+    const rows = await tx.insert(messages)
+      .values({ conversationId, authorId: null, webhookId, text, richEmbeds: richEmbeds.length ? richEmbeds : null, webhookDeliveryKey: deliveryKey })
+      .onConflictDoNothing()
+      .returning({ id: messages.id });
+    if (rows[0]) await queueChatPush(tx, { id: rows[0].id, conversationId, authorId: null });
+    return rows;
+  });
   const messageId = inserted?.id ?? (deliveryKey ? (await db.select({ id: messages.id }).from(messages)
     .where(and(eq(messages.webhookId, webhookId), eq(messages.webhookDeliveryKey, deliveryKey))).limit(1))[0]?.id : undefined);
   if (messageId === undefined) throw new Error('bot message neither inserted nor found');

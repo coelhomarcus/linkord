@@ -4,6 +4,7 @@ import { sendJson, sendError, jsonBody } from '../../http/respond.js';
 import { parseCookies } from '../../http/cookies.js';
 import { resolveSession } from '../auth/session.js';
 import { countUnread, deleteAllNotifications, deleteNotification, listNotifications, markRead } from './notificationsRepository.js';
+import { pushAvailable, validPushSubscription, savePushSubscription, removePushSubscription } from './webPush.js';
 
 async function session(request: FastifyRequest, reply: FastifyReply): Promise<{ userId: string } | null> {
   const cookies = parseCookies(request.headers.cookie || '');
@@ -13,6 +14,28 @@ async function session(request: FastifyRequest, reply: FastifyReply): Promise<{ 
 }
 
 export function registerNotificationRoutes(fastify: FastifyInstance): void {
+  fastify.get('/api/notifications/push/config', async (_request, reply) => {
+    sendJson(reply, 200, { available: pushAvailable, publicKey: pushAvailable ? config.PUSH_VAPID_PUBLIC_KEY : null });
+  });
+
+  fastify.post('/api/notifications/push', async (request, reply) => {
+    const sess = await session(request, reply);
+    if (!sess) return;
+    if (!pushAvailable) return sendError(reply, 503, 'push_unavailable', 'Notificações push não configuradas.');
+    if (!validPushSubscription(request.body)) return sendError(reply, 400, 'invalid_request', 'Assinatura push inválida.');
+    await savePushSubscription(sess.userId, request.body);
+    sendJson(reply, 200, { ok: true });
+  });
+
+  fastify.delete('/api/notifications/push', async (request, reply) => {
+    const sess = await session(request, reply);
+    if (!sess) return;
+    const body = jsonBody(request.body);
+    if (typeof body.endpoint !== 'string' || body.endpoint.length > 2048) return sendError(reply, 400, 'invalid_request', 'Assinatura push inválida.');
+    await removePushSubscription(sess.userId, body.endpoint);
+    sendJson(reply, 200, { ok: true });
+  });
+
   fastify.get('/api/notifications', async (request: FastifyRequest<{ Querystring: { cursor?: string } }>, reply) => {
     const sess = await session(request, reply);
     if (!sess) return;

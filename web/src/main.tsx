@@ -16,8 +16,8 @@ if (import.meta.env.DEV) {
 installGlobalErrorHandlers();
 applyColorTheme(loadColorTheme());
 
-// Only in a build: in dev it would sit between Vite and the page. All it does is
-// show an offline page (public/sw.js), so a failed registration costs nothing.
+// Register on load only in a build. In dev, opening notification settings can
+// register it for an explicit Push test without putting it in every Vite tab.
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').catch(() => {}); });
 }

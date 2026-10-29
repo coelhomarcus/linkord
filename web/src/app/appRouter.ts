@@ -17,9 +17,9 @@ export function createAppRouter(routes: RouteObject[]) {
  * still lands on the page it names, once; anything else starts at the
  * conversations. */
 export function initialEntry(): string {
-  const { pathname, search } = window.location;
+  const { pathname, search, hash } = window.location;
   const known = pathname.startsWith('/app/') || pathname === '/app' || pathname === '/admin' || pathname.startsWith('/admin/');
-  return known ? `${pathname}${search}` : ROUTES.conversations;
+  return known ? `${pathname}${search}${hash}` : ROUTES.conversations;
 }
 
 /** Puts the address bar back on the bare address, so the app is only ever

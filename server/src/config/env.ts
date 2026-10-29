@@ -85,6 +85,20 @@ const MAX_PASSWORD_LEN = 200; // hygiene cap — hashing a 1MB password would be
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
 const RESEND_FROM_EMAIL = process.env.RESEND_FROM_EMAIL || '';
 const APP_URL = (process.env.APP_URL || '').trim().replace(/\/+$/, '');
+const PUSH_VAPID_PUBLIC_KEY = (process.env.PUSH_VAPID_PUBLIC_KEY || '').trim();
+const PUSH_VAPID_PRIVATE_KEY = (process.env.PUSH_VAPID_PRIVATE_KEY || '').trim();
+const PUSH_VAPID_SUBJECT = (process.env.PUSH_VAPID_SUBJECT || '').trim();
+if ([PUSH_VAPID_PUBLIC_KEY, PUSH_VAPID_PRIVATE_KEY, PUSH_VAPID_SUBJECT].some(Boolean)
+  && ![PUSH_VAPID_PUBLIC_KEY, PUSH_VAPID_PRIVATE_KEY, PUSH_VAPID_SUBJECT].every(Boolean)) {
+  throw new Error('Configure all three PUSH_VAPID_* variables together.');
+}
+if (PUSH_VAPID_PUBLIC_KEY) {
+  let appOrigin: URL;
+  try { appOrigin = new URL(APP_URL); } catch { throw new Error('APP_URL must be a valid origin when Web Push is enabled.'); }
+  const localDev = process.env.NODE_ENV !== 'production' && appOrigin.protocol === 'http:'
+    && (appOrigin.hostname === 'localhost' || appOrigin.hostname === '127.0.0.1');
+  if (appOrigin.protocol !== 'https:' && !localDev) throw new Error('APP_URL must be HTTPS when Web Push is enabled.');
+}
 const AUTH_CODE_TTL_MS = 30 * 60 * 1000;
 const AUTH_CODE_MAX_ATTEMPTS = 5;
 
@@ -150,6 +164,7 @@ export const config = {
   COOKIE_SECURE, MAX_BODY_BYTES,
   MIN_USERNAME_LEN, MAX_USERNAME_LEN, MAX_DISPLAY_NAME_LEN, MIN_PASSWORD_LEN, MAX_PASSWORD_LEN,
   RESEND_API_KEY, RESEND_FROM_EMAIL, APP_URL, AUTH_CODE_TTL_MS, AUTH_CODE_MAX_ATTEMPTS,
+  PUSH_VAPID_PUBLIC_KEY, PUSH_VAPID_PRIVATE_KEY, PUSH_VAPID_SUBJECT,
   LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET, LIVEKIT_ROOM_NAME, LIVEKIT_TOKEN_TTL_SECONDS,
   UPLOADS_REMOTE_URL, KLIPY_API_KEY,
   REGISTRATIONS_PER_IP_PER_HOUR, MAX_NEW_ACCOUNTS_PER_HOUR, MAX_CONNECTIONS_PER_USER,

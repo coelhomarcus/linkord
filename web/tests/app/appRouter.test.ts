@@ -20,6 +20,8 @@ describe('initialEntry', () => {
     expect(initialEntry()).toBe('/app/settings/av');
     visit('/app/friends?tab=pending');
     expect(initialEntry()).toBe('/app/friends?tab=pending');
+    window.history.replaceState(null, '', '/app/friends?tab=pending#received');
+    expect(initialEntry()).toBe('/app/friends?tab=pending#received');
     visit('/admin/users');
     expect(initialEntry()).toBe('/admin/users');
   });

@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { and, eq, lt } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { messageSendOperations, messages, type Attachment, type Message } from '../../db/schema.js';
+import { queueChatPush } from '../notifications/pushQueue.js';
 
 // A retry can only be told apart from a new message by the key the client
 // chose for its intent; this long is enough for any client still retrying.
@@ -61,6 +62,7 @@ export async function insertMessageOnce(args: {
       eq(messageSendOperations.clientMessageId, args.clientMessageId),
     ));
     const attached = args.attach ? await args.attach(tx, row!) : [];
+    await queueChatPush(tx, row!);
     return { status: 'created', row: row!, attachments: attached };
   });
 }

@@ -312,6 +312,17 @@ function AuthGate() {
 // ever swap — RoomProvider, and with it the LiveKit call, never remounts on
 // navigation.
 function AppProviders() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return;
+    const onPushNavigation = (event: MessageEvent) => {
+      const data = event.data as { type?: unknown; path?: unknown } | null;
+      if (data?.type !== 'linkord-push-navigation' || typeof data.path !== 'string' || !data.path.startsWith('/app/')) return;
+      navigate(data.path);
+    };
+    navigator.serviceWorker.addEventListener('message', onPushNavigation);
+    return () => navigator.serviceWorker.removeEventListener('message', onPushNavigation);
+  }, [navigate]);
   return (
     <AuthProvider>
       <TooltipProvider>

@@ -487,6 +487,18 @@ export const outboxEvents = pgTable('outbox_events', {
   index('outbox_events_audience_user_id_idx').on(t.audienceUserId),
 ]);
 
+/** One browser installation's Web Push address. A browser can reuse the same
+ * endpoint after a different account signs in, so the endpoint is unique and
+ * its owner is replaced on registration. */
+export const pushSubscriptions = pgTable('push_subscriptions', {
+  endpoint: text('endpoint').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  p256dh: text('p256dh').notNull(),
+  auth: text('auth').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index('push_subscriptions_user_id_idx').on(t.userId)]);
+
 export type User = typeof users.$inferSelect;
 export type Session = typeof sessions.$inferSelect;
 export type AuthCode = typeof authCodes.$inferSelect;

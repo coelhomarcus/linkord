@@ -10,11 +10,6 @@ export function saveNotificationsEnabled(value: boolean): void {
   localStorage.setItem(ENABLED_KEY, value ? '1' : '0');
 }
 
-export async function requestNotificationPermission(): Promise<NotificationPermission> {
-  if (typeof Notification === 'undefined') return 'denied';
-  return Notification.requestPermission();
-}
-
 /** The browser's own permission and the Linkord preference are different
  * things — this only ever reads the former. `'unsupported'`: no
  * Notification API at all (never happens for the preference, which is
@@ -27,9 +22,18 @@ export function notificationPermissionState(): NotificationPermissionState {
 }
 
 let enabled = false;
+let pushSubscriptionActive = false;
 export function setNotificationsModuleEnabled(value: boolean): void {
   enabled = value;
 }
+
+export function setPushSubscriptionActive(value: boolean): void {
+  if (pushSubscriptionActive === value) return;
+  pushSubscriptionActive = value;
+  window.dispatchEvent(new Event('linkord-push-changed'));
+}
+
+export function isPushSubscriptionActive(): boolean { return pushSubscriptionActive; }
 
 let onClick: ((conversationId: string) => void) | null = null;
 export function setNotificationClickHandler(fn: ((conversationId: string) => void) | null): void {
@@ -64,6 +68,7 @@ export interface IncomingChatEvent {
 
 export function notifyIncomingChatMessage(evt: IncomingChatEvent): void {
   if (!enabled) return;
+  if (pushSubscriptionActive) return;
   if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
 
   const key = evt.senderId ?? '?';
@@ -112,16 +117,26 @@ function flush(conversationId: string): void {
   }
 
   try {
-    const notif = new Notification(title, {
+    const options = {
       body,
       icon: '/favicon.svg',
       tag: `chat-${conversationId}`,
-    });
-    notif.onclick = () => {
-      window.focus();
-      onClick?.(conversationId);
-      notif.close();
+      data: { path: `/app/conversations/${encodeURIComponent(conversationId)}` },
     };
+    if ('serviceWorker' in navigator) {
+      void navigator.serviceWorker.getRegistration('/').then((registration) => {
+        if (registration) return registration.showNotification(title, options);
+        const notif = new Notification(title, options);
+        notif.onclick = () => { window.focus(); onClick?.(conversationId); notif.close(); };
+      }).catch(() => {});
+    } else {
+      const notif = new Notification(title, options);
+      notif.onclick = () => {
+        window.focus();
+        onClick?.(conversationId);
+        notif.close();
+      };
+    }
   } catch {
   }
 }

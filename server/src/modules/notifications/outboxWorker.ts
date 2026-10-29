@@ -2,39 +2,49 @@ import { and, isNull, lt, sql } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { notifications, outboxEvents } from '../../db/schema.js';
 import { notifySocialChanged } from '../presence/knownPeers.js';
+import { deliverWebPush } from './webPush.js';
 import { OUTBOX_BATCH, OUTBOX_MAX_ATTEMPTS, OUTBOX_RETENTION_DAYS, NOTIFICATION_READ_RETENTION_DAYS, NOTIFICATION_UNREAD_RETENTION_DAYS, daysAgo, nextOutboxState } from './notificationsPolicy.js';
+import { logger } from '../../lib/logger.js';
 
-/** Drains one batch of the transactional outbox. Rows are claimed with
- * FOR UPDATE SKIP LOCKED, so two workers (or two instances later) never take
- * the same event. Delivery is a re-emission of the payload-free `social-changed`
- * hint to the event's audience: the direct emit at the time of the change
- * already reached whoever was online, this is the safety net for an emit that
- * was lost — and it re-validates nothing it doesn't need to, because the hint
- * carries no data; the client refetches what it is allowed to see. */
+const log = logger.child({ component: 'outbox' });
+
+/** Rows are claimed with FOR UPDATE SKIP LOCKED across instances. Social
+ * events re-emit their payload-free socket hint and send Web Push; chat jobs
+ * only send Web Push after their current read/access state has been checked. */
+let draining = false;
 export async function drainOutbox(): Promise<{ processed: number; failed: number }> {
-  return db.transaction(async (tx) => {
-    const batch = await tx.select().from(outboxEvents)
-      .where(and(isNull(outboxEvents.processedAt), lt(outboxEvents.attempts, OUTBOX_MAX_ATTEMPTS)))
-      .orderBy(outboxEvents.createdAt)
-      .limit(OUTBOX_BATCH)
-      .for('update', { skipLocked: true });
-    let processed = 0;
-    let failed = 0;
-    for (const event of batch) {
-      let delivered = true;
-      try {
-        notifySocialChanged([event.audienceUserId]);
-      } catch {
-        delivered = false;
+  if (draining) return { processed: 0, failed: 0 };
+  draining = true;
+  try {
+    return await db.transaction(async (tx) => {
+      const batch = await tx.select().from(outboxEvents)
+        .where(and(isNull(outboxEvents.processedAt), lt(outboxEvents.attempts, OUTBOX_MAX_ATTEMPTS),
+          lt(outboxEvents.createdAt, new Date(Date.now() - 1000))))
+        .orderBy(outboxEvents.createdAt)
+        .limit(OUTBOX_BATCH)
+        .for('update', { skipLocked: true });
+      let processed = 0;
+      let failed = 0;
+      for (const event of batch) {
+        let delivered = true;
+        try {
+          if (event.type !== 'chat_message_push') notifySocialChanged([event.audienceUserId]);
+          delivered = await deliverWebPush(event);
+        } catch (err) {
+          delivered = false;
+          log.error('outbox delivery failed', err, { eventId: event.id, type: event.type });
+        }
+        const state = nextOutboxState(event.attempts, delivered);
+        await tx.update(outboxEvents)
+          .set({ attempts: state.attempts, processedAt: state.processed ? new Date() : null })
+          .where(sql`${outboxEvents.id} = ${event.id}`);
+        if (state.processed) processed++; else failed++;
       }
-      const state = nextOutboxState(event.attempts, delivered);
-      await tx.update(outboxEvents)
-        .set({ attempts: state.attempts, processedAt: state.processed ? new Date() : null })
-        .where(sql`${outboxEvents.id} = ${event.id}`);
-      if (state.processed) processed++; else failed++;
-    }
-    return { processed, failed };
-  });
+      return { processed, failed };
+    });
+  } finally {
+    draining = false;
+  }
 }
 
 /** Retention (docs/plano-rede-social.md §10): read notifications and processed
