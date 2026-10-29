@@ -155,10 +155,11 @@ function Shell() {
   // The call stage only ever shows on the conversations page. Elsewhere the
   // call keeps running (audio, PiP) — navigating never ends it.
   const showStage = onConversations && activeView === 'call' && inCall;
-  // what the user is looking at, not the last view picked: once the call ends
-  // (or on a page with no stage) the chat is what's on screen, and a message
-  // landing in it must not ring as if it were hidden behind a call
-  useEffect(() => { notifyActiveView(showStage ? 'call' : 'chat'); }, [showStage, notifyActiveView]);
+  // what the user is looking at, not the last view picked: the stage, the chat,
+  // or another page with the conversation still active behind it — only the
+  // chat on screen makes a message arriving there read
+  const chatView = showStage ? 'call' : onConversations ? 'chat' : 'away';
+  useEffect(() => { notifyActiveView(chatView); }, [chatView, notifyActiveView]);
 
   const activeConversation = conversations.find((conversation) => conversation.id === activeConversationId);
   const hasDetails = activeConversation?.type === 'group' || activeConversation?.type === 'bot';

@@ -15,6 +15,7 @@ import { useMicrophone } from '@/features/calls/useMicrophone';
 import { useTileMenu } from '@/features/calls/useTileMenu';
 import { useConversationsList } from '@/features/conversations/useConversationsList';
 import { useChatMessages } from '@/features/chat/useChatMessages';
+import type { ChatView } from '@/features/chat/useChatMessages';
 import { useTypingIndicator } from '@/state/hooks/useTypingIndicator';
 import { useMessageReactions } from '@/features/calls/useMessageReactions';
 import { useMessageSearch } from '@/features/chat/useMessageSearch';
@@ -61,8 +62,14 @@ export function RoomProvider({ children }: { children: ReactNode }) {
   }, []);
   const isSocketConnected = useCallback(() => !!socketRef.current?.connected, []);
 
-  const activeViewRef = useRef<'chat' | 'call'>('chat');
-  const notifyActiveView = useCallback((view: 'chat' | 'call') => { activeViewRef.current = view; }, []);
+  const activeViewRef = useRef<ChatView>('chat');
+  // set once the chat hook below exists: coming back to the chat reads what arrived meanwhile
+  const markActiveSeenRef = useRef<(() => void) | null>(null);
+  const notifyActiveView = useCallback((view: ChatView) => {
+    const was = activeViewRef.current;
+    activeViewRef.current = view;
+    if (view === 'chat' && was !== 'chat') markActiveSeenRef.current?.();
+  }, []);
   const requestChatViewRef = useRef<(() => void) | null>(null);
   const registerRequestChatView = useCallback((fn: () => void) => { requestChatViewRef.current = fn; }, []);
   const requestChatView = useCallback(() => { requestChatViewRef.current?.(); }, []);
@@ -99,6 +106,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
     activeViewRef,
     clearTypingEntry: typingIndicator.clearTypingEntry,
   });
+  useEffect(() => { markActiveSeenRef.current = chatMessages.markActiveSeen; }, [chatMessages.markActiveSeen]);
   const messageReactions = useMessageReactions(sendWs, myIdRef);
   const messageSearch = useMessageSearch(sendWs);
   const attachmentsUpload = useStorageUsage();

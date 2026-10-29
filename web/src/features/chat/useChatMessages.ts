@@ -48,6 +48,11 @@ function displayNameForConversation(conversation: Conversation | undefined, meUs
   return other?.displayName || other?.username || 'Conversa direta';
 }
 
+/** What the user has in front of them: the open conversation's chat, the call
+ * stage, or another page (friends, say) with that conversation still active
+ * behind it. Only 'chat' means a message arriving there was seen. */
+export type ChatView = 'chat' | 'call' | 'away';
+
 interface ChatMessagesDeps {
   sendWs: (msg: ClientMessage) => boolean;
   // Read-only cross-domain context — chat message handling genuinely needs
@@ -64,7 +69,7 @@ interface ChatMessagesDeps {
   allUsersRef: MutableRefObject<Map<string, PublicUser>>;
   myUserIdRef: MutableRefObject<string | null>;
   myUsernameRef: MutableRefObject<string | null>;
-  activeViewRef: MutableRefObject<'chat' | 'call'>;
+  activeViewRef: MutableRefObject<ChatView>;
   clearTypingEntry: (conversationId: string, userId: string) => void;
 }
 
@@ -180,6 +185,17 @@ export function useChatMessages(deps: ChatMessagesDeps) {
       return next;
     });
   }, []);
+
+  /** The active conversation's chat came (back) into view — from another page
+   * or from the call stage — without being opened again: what piled up there
+   * meanwhile is read now. */
+  const markActiveSeen = useCallback(() => {
+    const conversationId = activeConversationIdRef.current;
+    if (!conversationId) return;
+    clearUnread(conversationId);
+    const newest = messagesByConversationRef.current.get(conversationId)?.at(-1);
+    if (newest && newest.msgId > 0) queueMarkRead(conversationId, newest.msgId);
+  }, [activeConversationIdRef, clearUnread, queueMarkRead]);
 
   const setLoading = useCallback((direction: 'older' | 'newer', conversationId: string, loading: boolean) => {
     (direction === 'older' ? setLoadingOlderByConversation : setLoadingNewerByConversation)((prev) => updateSet(prev, conversationId, loading));
@@ -423,7 +439,9 @@ export function useChatMessages(deps: ChatMessagesDeps) {
     // your own message is never unread — it can land in a conversation you
     // left (an upload finishing after a switch, or another tab/device)
     if (m.message.id !== myUserIdRef.current) {
-      if (conversationId !== activeConversationIdRef.current) {
+      // the active conversation only counts as read while its chat is on screen:
+      // from the friends page it is still active, but nobody is looking at it
+      if (conversationId !== activeConversationIdRef.current || activeViewRef.current !== 'chat') {
         setUnreadByConversation((prev) => new Map(prev).set(conversationId, (prev.get(conversationId) || 0) + 1));
       } else {
         // not counted here, so the server mustn't count it on the next load either
@@ -538,7 +556,7 @@ export function useChatMessages(deps: ChatMessagesDeps) {
 
   return {
     messagesByConversation, hasMoreByConversation, hasMoreAfterByConversation, loadingOlderByConversation, unreadByConversation,
-    clearUnread, loadOlderMessages, pendingJumpTarget, clearPendingJumpTarget, cancelPendingJump, jumpToMessage,
+    clearUnread, markActiveSeen, loadOlderMessages, pendingJumpTarget, clearPendingJumpTarget, cancelPendingJump, jumpToMessage,
     sendChatMessage, deleteChatMessage, editChatMessage, reactToChatMessage, removeChatAttachment, suppressChatEmbed,
     onWelcome, onChatSendResult: outbox.onChatSendResult, queueMessageWithFiles,
     onChatActionResult: actionRequests.onChatActionResult,
