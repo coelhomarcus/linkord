@@ -196,6 +196,20 @@ html, body {
   height: var(--app-height);
 }
 
+@media (max-width: 767px) {
+  html, body {
+    /* a fling past the top of a list would otherwise pull-to-refresh the whole app */
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  /* iOS zooms the page into any field under 16px when it takes focus, and
+     never zooms back out. Only the small type steps: a larger field (the
+     profile's name) keeps its size */
+  :is(input, textarea, select):is(.text-label, .text-caption, .text-micro) {
+    font-size: 1rem;
+  }
+}
+
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--color-surface-300) transparent;
