@@ -16,6 +16,9 @@ import { MediaViewerProvider } from './MediaViewerProvider';
 const STATUS_RAIL_HEIGHT = 24;
 // how far above the typing rail the messages fade out under it
 const FADE_HEIGHT = 24;
+// room between the last message and that fade, so at rest the newest message
+// sits fully clear of it instead of half covered by its lower part
+const LAST_MESSAGE_GAP = 12;
 
 function hasFiles(e: DragEvent<HTMLDivElement>): boolean {
   return Array.from(e.dataTransfer.types).includes('Files');
@@ -82,7 +85,7 @@ export function ChatSurface({ conversationId, onOpenProfile, surfaceId = 'main' 
     >
       <ChatSurfaceWidthProvider width={surfaceWidth}>
         <MediaViewerProvider>
-          <MessageTimeline key={`${conversationId}:${windowGenerationByConversation.get(conversationId) ?? 0}`} surfaceId={surfaceId} conversationId={conversationId} onReply={setReplyingTo} onOpenProfile={onOpenProfile} bottomPadding={composerHeight + STATUS_RAIL_HEIGHT + 8} />
+          <MessageTimeline key={`${conversationId}:${windowGenerationByConversation.get(conversationId) ?? 0}`} surfaceId={surfaceId} conversationId={conversationId} onReply={setReplyingTo} onOpenProfile={onOpenProfile} bottomPadding={composerHeight + STATUS_RAIL_HEIGHT + FADE_HEIGHT + LAST_MESSAGE_GAP} />
         </MediaViewerProvider>
       </ChatSurfaceWidthProvider>
       <div
