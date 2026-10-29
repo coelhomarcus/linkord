@@ -1,10 +1,10 @@
 import { MagnifyingGlassIcon } from '@phosphor-icons/react';
-import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { GifConfig } from '@/shared/api/api';
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
 import { cn } from '@/shared/lib/utils';
-import { ActiveWash } from '@/shared/ui/motion/active-wash';
+import { ActiveFill } from '@/shared/ui/active-fill';
 import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { Masonry } from '@/shared/ui/primitives/masonry';
 import { fetchRecentGifs, fetchTrendingGifs, searchGifs } from './klipy';
@@ -82,7 +82,6 @@ export function GifPicker({ config, onPick }: { config: EnabledConfig; onPick: (
   const [tab, setTab] = useState<Tab>('trending');
   const query = useDebouncedValue(input.trim(), SEARCH_DEBOUNCE_MS);
   const { feed, loadMore, retry } = useGifFeed(config, tab, query);
-  const washId = useId();
 
   const searching = query.length > 0;
 
@@ -114,11 +113,11 @@ export function GifPicker({ config, onPick }: { config: EnabledConfig; onPick: (
               aria-selected={tab === id}
               onClick={() => setTab(id)}
               className={cn(
-                'relative isolate flex h-7 items-center rounded-md px-2.5 text-label font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring',
-                tab === id ? 'text-text-primary' : 'text-text-muted hover:bg-fill-hover hover:text-text-primary',
+                'relative isolate flex h-7 items-center rounded-md px-2.5 text-label font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                tab === id ? 'text-text-primary' : 'text-text-muted hover:bg-nav-hover hover:text-text-primary',
               )}
             >
-              {tab === id && <ActiveWash layoutId={washId} />}
+              {tab === id && <ActiveFill />}
               {id === 'trending' ? 'Em alta' : 'Recentes'}
             </button>
           ))}

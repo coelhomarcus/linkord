@@ -1,5 +1,5 @@
 import { ChatCircleIcon, SidebarSimpleIcon, UsersIcon } from '@phosphor-icons/react';
-import { useId, useMemo } from 'react';
+import { useMemo } from 'react';
 import type { ReactNode } from 'react';
 
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
@@ -10,7 +10,7 @@ import { ROUTES, isConversationsPath } from '@/shared/lib/routes';
 import { cn } from '@/shared/lib/utils';
 import { useContentLocation } from '@/shared/lib/contentLocation';
 import { SPRING_LAYOUT } from '@/shared/lib/ease';
-import { ActiveWash } from '@/shared/ui/motion/active-wash';
+import { ActiveFill } from '@/shared/ui/active-fill';
 import { useFriends } from '@/features/friends/FriendsContext';
 import { unreadCountForTab } from '@/features/conversations/conversationUtils';
 import { useRoom } from '@/state/RoomContext';
@@ -19,29 +19,17 @@ import { CountBadge } from '@/shared/CountBadge';
 import { iconWeight } from '@/shared/ui/icons';
 import { AppLink } from '@/shared/ui/app-link';
 
-const itemClass = 'relative isolate grid size-11 place-items-center rounded-md outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring';
+const itemClass = 'relative isolate grid size-11 place-items-center rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
-// the active item's look comes from the wash and marker below, which slide
-// between items instead of fading out on one and in on another
+// the active item's look comes from the fill and marker below, which switch
+// instantly from one item to the next
 function stateClass(active: boolean): string {
-  return active ? 'text-text-primary' : 'text-text-muted hover:bg-fill-hover hover:text-text-primary';
+  return active ? 'text-text-primary' : 'text-text-muted hover:bg-nav-hover hover:text-text-primary';
 }
 
-/** The ids shared by every item of one rail, so its wash and marker are one of
- * each, travelling from item to item. */
-interface RailIndicatorIds { wash: string; marker: string }
-
 /** A short bar on the edge: the selected destination isn't told by colour alone. */
-function ActiveMarker({ layoutId }: { layoutId: string }) {
-  const reduce = useReducedMotion();
-  return (
-    <motion.span
-      layoutId={layoutId}
-      aria-hidden
-      transition={reduce ? { duration: 0 } : SPRING_LAYOUT}
-      className="absolute -left-2.5 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-primary"
-    />
-  );
+function ActiveMarker() {
+  return <span aria-hidden className="absolute -left-2.5 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-primary" />;
 }
 
 function RailBadge({ count }: { count: number }) {
@@ -77,13 +65,12 @@ function RailSlot({ show, children }: { show: boolean; children: ReactNode }) {
   );
 }
 
-function RailLink({ to, label, active, badge, onNavigate, indicators, children }: {
+function RailLink({ to, label, active, badge, onNavigate, children }: {
   to: string;
   label: string;
   active: boolean;
   badge?: number;
   onNavigate: () => void;
-  indicators: RailIndicatorIds;
   children: ReactNode;
 }) {
   return (
@@ -91,8 +78,8 @@ function RailLink({ to, label, active, badge, onNavigate, indicators, children }
       <TooltipTrigger
         render={<AppLink to={to} onClick={onNavigate} aria-current={active ? 'page' : undefined} aria-label={label} className={cn(itemClass, stateClass(active))} />}
       >
-        {active && <ActiveWash layoutId={indicators.wash} className="shadow-highlight" />}
-        {active && <ActiveMarker layoutId={indicators.marker} />}
+        {active && <ActiveFill className="shadow-highlight" />}
+        {active && <ActiveMarker />}
         {children}
         {!!badge && <RailBadge count={badge} />}
       </TooltipTrigger>
@@ -126,8 +113,6 @@ export function AppNavigationRail({ className }: {
   const showBell = !isMobile && !listExpanded;
   const conversationsLabel = conversationsUnread > 0 ? `Conversas, ${conversationsUnread} não lidas` : 'Conversas';
   const friendsLabel = pendingIncomingCount > 0 ? `Amigos, ${pendingIncomingCount} aguardando resposta` : 'Amigos';
-  const indicatorId = useId();
-  const indicators: RailIndicatorIds = { wash: `${indicatorId}-wash`, marker: `${indicatorId}-marker` };
 
   return (
     <nav aria-label="Navegação principal" className={cn('flex w-16 flex-none flex-col items-center gap-1.5 border-r border-border-subtle bg-surface-rail pt-3 pb-[max(0.75rem,var(--dock-clearance,0px))]', className)}>
@@ -144,10 +129,10 @@ export function AppNavigationRail({ className }: {
           <TooltipContent side="right">Mostrar lista de conversas</TooltipContent>
         </Tooltip>
       </RailSlot>
-      <RailLink to={ROUTES.conversations} label={conversationsLabel} active={isConversationsPath(pathname)} badge={conversationsUnread} onNavigate={afterNavigate} indicators={indicators}>
+      <RailLink to={ROUTES.conversations} label={conversationsLabel} active={isConversationsPath(pathname)} badge={conversationsUnread} onNavigate={afterNavigate}>
         <ChatCircleIcon size={24} weight={iconWeight(isConversationsPath(pathname))} aria-hidden />
       </RailLink>
-      <RailLink to={ROUTES.friends} label={friendsLabel} active={pathname === ROUTES.friends} badge={pendingIncomingCount} onNavigate={afterNavigate} indicators={indicators}>
+      <RailLink to={ROUTES.friends} label={friendsLabel} active={pathname === ROUTES.friends} badge={pendingIncomingCount} onNavigate={afterNavigate}>
         <UsersIcon size={24} weight={iconWeight(pathname === ROUTES.friends)} aria-hidden />
       </RailLink>
       <RailSlot show={showBell}>

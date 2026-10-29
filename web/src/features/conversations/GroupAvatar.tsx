@@ -17,7 +17,7 @@ export function GroupAvatar({ id, title, avatar, active, size = 44, className }:
   return (
     <div
       className={cn(
-        'grid flex-none select-none place-items-center overflow-hidden rounded-full font-semibold transition-colors duration-300',
+        'grid flex-none select-none place-items-center overflow-hidden rounded-full font-semibold',
         // no picture: a solid color with white initials, like an account. With
         // one, a quiet ring (neutral even when selected) frames it
         solid ? 'text-white' : cn('border border-border', active ? 'bg-primary/20 text-text-primary' : 'bg-fill-hover text-text-secondary'),

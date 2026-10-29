@@ -1,13 +1,10 @@
 import { CaretRightIcon, MagnifyingGlassIcon } from '@phosphor-icons/react';
-import { useId } from 'react';
 import { iconWeight } from '@/shared/ui/icons';
-
-import { motion } from 'motion/react';
 
 import { ROUTES } from '@/shared/lib/routes';
 import type { SettingsTab } from '@/shared/lib/routes';
 import { cn } from '@/shared/lib/utils';
-import { ActiveWash } from '@/shared/ui/motion/active-wash';
+import { ActiveFill } from '@/shared/ui/active-fill';
 import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { FROM_INDEX_STATE, findCategory, visibleGroups } from './settingsCatalog';
 import { useSettingsSearch } from './useSettingsSearch';
@@ -50,7 +47,7 @@ function SettingsSearchResults({ results, query }: { results: SettingsSearchResu
           <AppLink
             key={`${entry.categoryId}-${entry.sectionId ?? ''}`}
             to={to}
-            className="flex min-h-11 items-center gap-3 rounded-md px-2.5 text-body font-medium text-text-primary outline-none transition-colors hover:bg-fill-hover focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex min-h-11 items-center gap-3 rounded-md px-2.5 text-body font-medium text-text-primary outline-none hover:bg-nav-hover focus-visible:ring-2 focus-visible:ring-ring"
           >
             <Icon size={20} aria-hidden className="flex-none text-text-muted" />
             <span className="min-w-0 flex-1">
@@ -67,10 +64,8 @@ function SettingsSearchResults({ results, query }: { results: SettingsSearchResu
 /** The permanent category sidebar of a wide settings area. */
 export function SettingsSidebar({ active, isAdmin }: { active: SettingsTab; isAdmin: boolean }) {
   const { query, setQuery, results } = useSettingsSearch(isAdmin);
-  const washId = useId();
   return (
-    // layoutScroll: the nav scrolls itself, so the sliding wash has to account for its offset
-    <motion.nav layoutScroll aria-label="Categorias de ajustes" className="flex w-64 flex-none flex-col overflow-y-auto border-r border-border p-3">
+    <nav aria-label="Categorias de ajustes" className="flex w-64 flex-none flex-col overflow-y-auto border-r border-border p-3">
       <SettingsSearchField query={query} onChange={setQuery} onClear={() => setQuery('')} />
       {query ? (
         <SettingsSearchResults results={results} query={query} />
@@ -88,12 +83,12 @@ export function SettingsSidebar({ active, isAdmin }: { active: SettingsTab; isAd
                     to={ROUTES.settingsTab(category.id)}
                     aria-current={current ? 'page' : undefined}
                     className={cn(
-                      'relative isolate flex h-9 items-center gap-2 rounded-md px-2.5 text-body font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring',
-                      current ? 'text-text-primary' : 'text-text-muted hover:bg-fill-hover hover:text-text-secondary',
+                      'relative isolate flex h-9 items-center gap-2 rounded-md px-2.5 text-body font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                      current ? 'text-text-primary' : 'text-text-muted hover:bg-nav-hover hover:text-text-secondary',
                     )}
                   >
-                    {/* Discord/Fluxer: a plain light-gray wash for the active item, no accent color */}
-                    {current && <ActiveWash layoutId={washId} />}
+                    {/* Discord/Fluxer: a plain light-gray fill for the active item, no accent color */}
+                    {current && <ActiveFill />}
                     <Icon size={20} weight={iconWeight(current)} aria-hidden className="flex-none" />
                     <span className="truncate">{category.label}</span>
                   </AppLink>
@@ -103,7 +98,7 @@ export function SettingsSidebar({ active, isAdmin }: { active: SettingsTab; isAd
           ))}
         </div>
       )}
-    </motion.nav>
+    </nav>
   );
 }
 
@@ -128,7 +123,7 @@ export function SettingsIndex({ isAdmin }: { isAdmin: boolean }) {
                     key={category.id}
                     to={ROUTES.settingsTab(category.id)}
                     state={FROM_INDEX_STATE}
-                    className="flex min-h-11 items-center gap-3 rounded-md px-2.5 text-body font-medium text-text-primary outline-none transition-colors hover:bg-fill-hover focus-visible:ring-2 focus-visible:ring-ring"
+                    className="flex min-h-11 items-center gap-3 rounded-md px-2.5 text-body font-medium text-text-primary outline-none hover:bg-nav-hover focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <Icon size={20} aria-hidden className="flex-none text-text-muted" />
                     <span className="min-w-0 flex-1 truncate">{category.label}</span>

@@ -41,6 +41,9 @@
   --color-fill-subtle: oklch(100% 0 0 / 0.035);
   --color-fill-hover: oklch(100% 0 0 / 0.06);
   --color-fill-active: oklch(100% 0 0 / 0.10);
+  /* the row under the pointer and the current row of a navigation list */
+  --color-nav-hover: var(--color-fill-hover);
+  --color-nav-active: var(--color-fill-active);
   /* a field or code block sunk into its surface: darker than what it sits on */
   --color-fill-inset: oklch(0% 0 0 / 0.25);
   /* code, block and inline: its own token because the inset fill vanishes on
@@ -159,15 +162,16 @@
    the surface a container names in --surface-base (the shell when none
    does: the mobile sheet renders outside every container that sets it);
    the dot then draws its ring in var(--cutout). Keep the percentages in step
-   with --color-fill-subtle / --color-fill-active. */
+   with --color-fill-subtle / --color-fill-active. A theme whose nav colors
+   are solid names them in --cutout-hover / --cutout-active instead. */
 @utility cutout {
   --cutout: var(--surface-base, var(--color-surface-app));
 }
 @utility cutout-subtle {
-  --cutout: color-mix(in srgb, var(--surface-base, var(--color-surface-app)), white 3.5%);
+  --cutout: var(--cutout-hover, color-mix(in srgb, var(--surface-base, var(--color-surface-app)), white 3.5%));
 }
 @utility cutout-active {
-  --cutout: color-mix(in srgb, var(--surface-base, var(--color-surface-app)), white 10%);
+  --cutout: var(--cutout-active, color-mix(in srgb, var(--surface-base, var(--color-surface-app)), white 10%));
 }
 
 html, body {
