@@ -84,7 +84,7 @@ export function NotificationBell({ collapsed = false, onNavigate }: { collapsed?
       </PopoverTrigger>
       <PopoverContent side={collapsed ? 'right' : 'bottom'} align="start" className="w-[min(22rem,calc(100vw-1.5rem))] bg-bg-modal">
         <div className="flex items-center justify-between gap-2 px-1">
-          <h2 className="text-label font-semibold text-text-primary">Notificações</h2>
+          <h2 className="select-none text-label font-semibold text-text-primary">Notificações</h2>
           <div className="flex items-center gap-0.5">
             <Tooltip>
               <TooltipTrigger

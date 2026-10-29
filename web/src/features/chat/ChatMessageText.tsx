@@ -36,7 +36,8 @@ function Mention({ name, ctx }: { name: string; ctx: RenderContext }) {
         // avatar) came out shorter than that, so the chip always sat a
         // few px off the text baseline no matter how align-middle/a
         // manual translate tried to compensate.
-        'inline-flex h-6 items-center gap-1 rounded-sm px-1 align-middle font-medium',
+        // a button, but part of the sentence: copying the message must keep the name
+        'inline-flex h-6 select-text items-center gap-1 rounded-sm px-1 align-middle font-medium',
         isMe ? 'bg-yellow/25 text-yellow' : 'bg-primary/15 text-accent-text',
         ctx.onOpenProfile && (isMe ? 'hover:bg-yellow/35' : 'hover:bg-primary/25')
       )}

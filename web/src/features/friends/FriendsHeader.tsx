@@ -49,7 +49,7 @@ export function FriendsModeNav({ view, className }: { view: FriendsView; classNa
             to={friendsView(mode.view)}
             aria-current={current ? 'page' : undefined}
             className={cn(
-              'relative isolate flex h-8 items-center gap-1.5 rounded-md px-3 text-label font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring',
+              'relative isolate flex h-8 select-none items-center gap-1.5 rounded-md px-3 text-label font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring',
               current ? 'text-text-primary' : 'text-text-muted hover:bg-fill-hover hover:text-text-primary',
             )}
           >

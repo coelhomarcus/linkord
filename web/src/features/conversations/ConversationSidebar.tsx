@@ -182,7 +182,7 @@ export function ConversationSidebar({ onReturnToCall, onOpenProfile, showReturnT
     <div className="min-h-0 flex-1 overflow-y-auto">
       <div className="flex flex-col gap-1">
         {filteredConversations.length === 0 ? (
-          <p className="px-3 py-8 text-center text-label text-text-muted">{emptyText}</p>
+          <p className="select-none px-3 py-8 text-center text-label text-text-muted">{emptyText}</p>
         ) : filteredConversations.map((conversation) => (
           <ConversationRow
             key={conversation.id}
@@ -206,7 +206,7 @@ export function ConversationSidebar({ onReturnToCall, onOpenProfile, showReturnT
             {/* from md the content card sits one shell gap (and its border) below the
                 top: starting there too puts this title on the same line as the page's */}
             <div className="flex h-header flex-none items-center gap-2 px-4 md:mt-[calc(var(--spacing-shell)+1px)]">
-              <h1 className="min-w-0 flex-1 truncate text-title font-semibold">Conversas</h1>
+              <h1 className="min-w-0 flex-1 select-none truncate text-title font-semibold">Conversas</h1>
               <Button type="button" variant="ghost" size="icon-sm" aria-label={copy.create} onClick={() => (tab === 'bot' ? setBotOpen(true) : setGroupOpen(true))} className="flex-none text-text-muted hover:text-text-primary">
                 <PlusIcon size={20} />
               </Button>

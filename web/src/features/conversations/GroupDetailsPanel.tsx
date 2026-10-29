@@ -305,7 +305,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
           </button>
         )}
         </div>
-        <p className="flex items-center justify-center gap-1.5 text-caption text-text-muted">
+        <p className="flex select-none items-center justify-center gap-1.5 text-caption text-text-muted">
           <span>{conversation.memberCount} {conversation.memberCount === 1 ? 'membro' : 'membros'}</span>
           <span aria-hidden>·</span>
           <span className="flex items-center gap-1"><span aria-hidden className="size-2 rounded-full bg-green" />{onlineCount} online</span>
@@ -314,12 +314,12 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
 
       <dl className="flex flex-col gap-3 border-t border-border px-5 py-4">
         <div>
-          <dt className="text-caption font-medium text-text-muted">Criado em</dt>
+          <dt className="select-none text-caption font-medium text-text-muted">Criado em</dt>
           <dd className="mt-0.5 text-label text-text-primary">{formatProfileDate(new Date(conversation.createdAt).toISOString())}</dd>
         </div>
         {owner && (
           <div>
-            <dt className="text-caption font-medium text-text-muted">Dono</dt>
+            <dt className="select-none text-caption font-medium text-text-muted">Dono</dt>
             <dd className="mt-0.5">
               <button type="button" onClick={() => onOpenProfile(owner.id)} className="flex max-w-full items-center gap-2 rounded-md text-left text-label text-text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                 <Avatar id={owner.id} name={owner.displayName} avatar={owner.avatar} avatarColor={owner.avatarColor} size={20} />

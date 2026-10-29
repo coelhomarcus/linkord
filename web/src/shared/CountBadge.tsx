@@ -26,7 +26,7 @@ export function CountBadge({ label, decorative, className, children }: CountBadg
       aria-label={label}
       aria-hidden={decorative ? true : undefined}
       className={cn(
-        'grid h-4.5 min-w-4.5 place-items-center rounded-full bg-primary px-1 text-micro font-bold leading-none text-primary-foreground',
+        'grid h-4.5 min-w-4.5 select-none place-items-center rounded-full bg-primary px-1 text-micro font-bold leading-none text-primary-foreground',
         className,
       )}
     >

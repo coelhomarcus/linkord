@@ -167,7 +167,7 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
         <>
           {/* the header carries the button that reopens the drawer on a phone, where nothing else can */}
           <PageHeader title="Conversas" />
-          <div className="grid flex-1 place-items-center px-6 text-center">
+          <div className="grid flex-1 select-none place-items-center px-6 text-center">
             <div>
               <p className="text-title font-semibold text-text-primary">Abra uma conversa</p>
               <p className="mt-1 text-label text-text-muted">Escolha uma pessoa, grupo ou bot na sidebar.</p>
