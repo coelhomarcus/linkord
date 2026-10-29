@@ -14,18 +14,19 @@ import { MediaViewerProvider } from './MediaViewerProvider';
 // the ResizeObserver measures: someone starting or stopping typing must not
 // change the list's bottom padding, or a list pinned to the bottom jumps.
 const STATUS_RAIL_HEIGHT = 24;
-// how far above the typing rail the messages fade out under it
-const FADE_HEIGHT = 24;
-// room between the last message and that fade, so at rest the newest message
-// sits fully clear of it instead of half covered by its lower part
-const LAST_MESSAGE_GAP = 12;
+// how far above the composer (or the typing rail, while it shows) the messages
+// fade out; the list's bottom padding clears it, so the newest message never
+// sits under it
+const FADE_HEIGHT = 12;
 
 function hasFiles(e: DragEvent<HTMLDivElement>): boolean {
   return Array.from(e.dataTransfer.types).includes('Files');
 }
 
 export function ChatSurface({ conversationId, onOpenProfile, surfaceId = 'main' }: { conversationId: string; onOpenProfile: (userId: string) => void; surfaceId?: 'main' | 'call' }) {
-  const { state, setReplyingTo, windowGenerationByConversation, conversations } = useRoom();
+  const { state, setReplyingTo, windowGenerationByConversation, conversations, typingByConversation, allUsers } = useRoom();
+  // the same people TypingIndicator names: someone it can't show raises no background
+  const someoneTyping = [...(typingByConversation.get(conversationId) ?? [])].some((id) => allUsers.has(id));
   // only its webhook posts in a bot: no composer, no typing, nothing to drop files into
   const readOnly = conversations.find((c) => c.id === conversationId)?.type === 'bot';
   const composerRef = useRef<MessageComposerHandle>(null);
@@ -85,17 +86,18 @@ export function ChatSurface({ conversationId, onOpenProfile, surfaceId = 'main' 
     >
       <ChatSurfaceWidthProvider width={surfaceWidth}>
         <MediaViewerProvider>
-          <MessageTimeline key={`${conversationId}:${windowGenerationByConversation.get(conversationId) ?? 0}`} surfaceId={surfaceId} conversationId={conversationId} onReply={setReplyingTo} onOpenProfile={onOpenProfile} bottomPadding={composerHeight + STATUS_RAIL_HEIGHT + FADE_HEIGHT + LAST_MESSAGE_GAP} />
+          <MessageTimeline key={`${conversationId}:${windowGenerationByConversation.get(conversationId) ?? 0}`} surfaceId={surfaceId} conversationId={conversationId} onReply={setReplyingTo} onOpenProfile={onOpenProfile} bottomPadding={composerHeight + STATUS_RAIL_HEIGHT + FADE_HEIGHT} />
         </MediaViewerProvider>
       </ChatSurfaceWidthProvider>
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-0"
-        // solid all the way up through the typing rail, fading only above it: a
-        // fade across the whole height left the rail half see-through, and
-        // "fulano está digitando" read over the messages scrolling under it
+        className="pointer-events-none absolute inset-x-0 bottom-0 transition-[height] duration-150 ease-out motion-reduce:transition-none"
+        // solid behind the composer, and behind the typing rail only while
+        // someone types — so "fulano está digitando" never reads over the
+        // messages under it — with a short fade above; the rail's room stays
+        // reserved either way, so nothing in the list moves when it shows
         style={{
-          height: composerHeight + STATUS_RAIL_HEIGHT + FADE_HEIGHT,
+          height: composerHeight + (someoneTyping ? STATUS_RAIL_HEIGHT : 0) + FADE_HEIGHT,
           backgroundImage: `linear-gradient(to top, var(--surface-base) calc(100% - ${FADE_HEIGHT}px), transparent)`,
         }}
       />
