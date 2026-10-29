@@ -1,9 +1,10 @@
-import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, screen, within } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { initialRoomState } from '@/state/roomReducer';
 import { renderWithRoom } from '@tests/fixtures/roomContextFixture';
 import { MessageRow } from '@/features/chat/MessageRow';
+import { LONG_PRESS_MS } from '@/features/chat/useLongPress';
 import type { ChatMessage, PublicUser } from '@/shared/types/protocol';
 import type { OutboxEntry } from '@/features/chat/useMessageOutbox';
 
@@ -291,25 +292,98 @@ describe('MessageRow — quick reactions', () => {
     expect(screen.queryByRole('button', { name: 'Reagir com 👍' })).not.toBeInTheDocument();
   });
 
-  it('the "Ações" menu only offers "Ver todas as reações" when the message has any', async () => {
-    const user = userEvent.setup();
-    renderWithRoom(
+});
+
+describe('MessageRow — phone action sheet', () => {
+  const phone = () => vi.spyOn(window, 'matchMedia').mockImplementation((query: string) => ({
+    matches: query === '(max-width: 767px)', media: query, onchange: null,
+    addListener: () => {}, removeListener: () => {}, addEventListener: () => {}, removeEventListener: () => {}, dispatchEvent: () => false,
+  }) as unknown as MediaQueryList);
+  afterEach(() => vi.restoreAllMocks());
+
+  function row(container: HTMLElement): HTMLElement {
+    return container.querySelector<HTMLElement>('[data-msg-id]')!;
+  }
+
+  async function hold(el: HTMLElement, pointerType = 'touch') {
+    fireEvent.pointerDown(el, { pointerType, clientX: 10, clientY: 10 });
+    await act(() => new Promise((resolve) => setTimeout(resolve, LONG_PRESS_MS + 20)));
+    fireEvent.pointerUp(el, { pointerType });
+  }
+
+  it('holding a finger on the message opens its actions, with no per-row buttons on screen', async () => {
+    phone();
+    const { container } = renderWithRoom(
       <MessageRow message={makeMessage()} showHeader highlighted={false} allUsers={new Map()} mentionLookup={new Map()} onOpenProfile={noop} onReply={noop} onJumpTo={noop} />
     );
-    await user.click(screen.getByRole('button', { name: 'Acoes' }));
-    expect(screen.queryByText('Ver todas as reações')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Acoes' })).not.toBeInTheDocument();
+    await hold(row(container));
+    const sheet = await screen.findByRole('dialog', { name: 'Ações da mensagem' });
+    expect(within(sheet).getByRole('button', { name: 'Responder' })).toBeInTheDocument();
+    expect(within(sheet).getByRole('button', { name: 'Reagir com 👍' })).toBeInTheDocument();
+    // only offered when the message has any
+    expect(within(sheet).queryByText('Ver todas as reações')).not.toBeInTheDocument();
   });
 
   it('"Ver todas as reações" opens the dialog with the right conversation and message', async () => {
+    phone();
     const user = userEvent.setup();
     const openReactionParticipants = vi.fn();
-    renderWithRoom(
+    const { container } = renderWithRoom(
       <MessageRow message={makeMessage({ reactions: { '👍': ['user-2'] } })} showHeader highlighted={false} allUsers={new Map()} mentionLookup={new Map()} onOpenProfile={noop} onReply={noop} onJumpTo={noop} />,
       { openReactionParticipants }
     );
-    await user.click(screen.getByRole('button', { name: 'Acoes' }));
+    await hold(row(container));
     await user.click(await screen.findByText('Ver todas as reações'));
     expect(openReactionParticipants).toHaveBeenCalledWith({ conversationId: 'conv-1', msgId: 1 });
+  });
+
+  it('a quick reaction from the sheet reacts to that message', async () => {
+    phone();
+    const user = userEvent.setup();
+    const reactToChatMessage = vi.fn();
+    const { container } = renderWithRoom(
+      <MessageRow message={makeMessage()} showHeader highlighted={false} allUsers={new Map()} mentionLookup={new Map()} onOpenProfile={noop} onReply={noop} onJumpTo={noop} />,
+      { reactToChatMessage }
+    );
+    await hold(row(container));
+    await user.click(await screen.findByRole('button', { name: 'Reagir com ❤️' }));
+    expect(reactToChatMessage).toHaveBeenCalledWith(1, '❤️');
+  });
+
+  it('the click of the lifted finger does not also follow what was under it', async () => {
+    phone();
+    const onOpenProfile = vi.fn();
+    renderWithRoom(
+      <MessageRow message={makeMessage()} showHeader highlighted={false} allUsers={new Map()} mentionLookup={new Map()} onOpenProfile={onOpenProfile} onReply={noop} onJumpTo={noop} />
+    );
+    const name = screen.getByRole('button', { name: 'Fulana' });
+    await hold(name);
+    fireEvent.click(name);
+    expect(onOpenProfile).not.toHaveBeenCalled();
+    expect(await screen.findByRole('dialog', { name: 'Ações da mensagem' })).toBeInTheDocument();
+  });
+
+  it('a finger that moves is a scroll, not a long press', async () => {
+    phone();
+    const { container } = renderWithRoom(
+      <MessageRow message={makeMessage()} showHeader highlighted={false} allUsers={new Map()} mentionLookup={new Map()} onOpenProfile={noop} onReply={noop} onJumpTo={noop} />
+    );
+    const el = row(container);
+    fireEvent.pointerDown(el, { pointerType: 'touch', clientX: 10, clientY: 10 });
+    fireEvent.pointerMove(el, { pointerType: 'touch', clientX: 10, clientY: 60 });
+    await act(() => new Promise((resolve) => setTimeout(resolve, LONG_PRESS_MS + 20)));
+    expect(screen.queryByRole('dialog', { name: 'Ações da mensagem' })).not.toBeInTheDocument();
+  });
+
+  it('a held mouse button, or a touch on the desktop layout, opens nothing', async () => {
+    const { container } = renderWithRoom(
+      <MessageRow message={makeMessage()} showHeader highlighted={false} allUsers={new Map()} mentionLookup={new Map()} onOpenProfile={noop} onReply={noop} onJumpTo={noop} />
+    );
+    await hold(row(container));
+    phone();
+    await hold(row(container), 'mouse');
+    expect(screen.queryByRole('dialog', { name: 'Ações da mensagem' })).not.toBeInTheDocument();
   });
 });
 

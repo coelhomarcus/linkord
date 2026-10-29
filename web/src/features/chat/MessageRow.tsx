@@ -1,4 +1,4 @@
-import { ArrowBendUpLeftIcon, CopyIcon, DotsThreeIcon, FlagIcon, PencilSimpleIcon, SmileyIcon, TrashIcon, UsersIcon } from '@phosphor-icons/react';
+import { ArrowBendUpLeftIcon, CopyIcon, FlagIcon, PencilSimpleIcon, SmileyIcon, TrashIcon, UsersIcon } from '@phosphor-icons/react';
 import { GroupAvatar } from '@/features/conversations/GroupAvatar';
 import { useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
@@ -9,7 +9,6 @@ import { InviteCard } from '@/features/chat/InviteCard';
 import { ChatMessageText } from '@/features/chat/ChatMessageText';
 import { RichEmbedCard } from './RichEmbedCard';
 import { Button } from '@/shared/ui/primitives/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/primitives/dropdown-menu';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/primitives/popover';
 import { Textarea } from '@/shared/ui/primitives/textarea';
 import { ReportDialog } from '@/features/reports/ReportDialog';
@@ -28,6 +27,9 @@ import { withPendingReactions } from './reactionState';
 import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { useMessageDeleteConfirm } from './useMessageDeleteConfirm';
 import { ConfirmDialog } from '@/shared/ConfirmDialog';
+import { MessageActionSheet } from './MessageActionSheet';
+import type { MessageSheetAction } from './MessageActionSheet';
+import { useLongPress } from './useLongPress';
 
 const DELETED_AUTHOR_NAME = 'Usuário apagado';
 
@@ -136,6 +138,7 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
   // what the author asked to take out of the message, waiting for confirmation
   const [removal, setRemoval] = useState<{ kind: 'attachment'; id: string; name: string } | { kind: 'embed'; url: string } | null>(null);
   const { requestDelete, confirmDialog } = useMessageDeleteConfirm();
@@ -161,6 +164,8 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
     && (!!message.text.trim() || (message.attachments?.length ?? 0) > 1);
   const canReport = can.report;
   const isEditing = !pending && !isInvite && editingMsgId === message.msgId;
+  // a pending row has no server id yet, nothing to act on
+  const longPress = useLongPress(() => { if (!pending && !isEditing) setSheetOpen(true); });
   const reactions = withPendingReactions(message.reactions, message.msgId, pendingReactions, state.me.userId);
   const hasReactions = Object.values(reactions).some((ids) => ids && ids.length > 0);
 
@@ -191,6 +196,19 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
     navigator.clipboard.writeText(message.text).catch(() => {});
   }
 
+  const sheetActions: MessageSheetAction[] = [
+    ...(can.reply ? [{ label: 'Responder', icon: <ArrowBendUpLeftIcon size={20} />, onSelect: onReply }] : []),
+    ...(can.edit ? [{ label: 'Editar mensagem', icon: <PencilSimpleIcon size={20} />, onSelect: startEdit }] : []),
+    ...(can.copy ? [{ label: 'Copiar texto', icon: <CopyIcon size={20} />, onSelect: copyText }] : []),
+    ...(hasReactions ? [{
+      label: 'Ver todas as reações',
+      icon: <UsersIcon size={20} />,
+      onSelect: () => openReactionParticipants({ conversationId: message.conversationId, msgId: message.msgId }),
+    }] : []),
+    ...(canReport ? [{ label: 'Denunciar', icon: <FlagIcon size={20} />, onSelect: () => setReportOpen(true) }] : []),
+    ...(canDelete ? [{ label: 'Apagar mensagem', icon: <TrashIcon size={20} />, destructive: true, disabled: deleting, onSelect: () => requestDelete(message.msgId, false) }] : []),
+  ];
+
   function handleEditKeyDown(event: ReactKeyboardEvent<HTMLTextAreaElement>) {
     if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
       event.preventDefault();
@@ -215,9 +233,14 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
         'hover:bg-message-hover',
         mentionsMe && 'bg-yellow/[0.06] hover:bg-yellow/[0.08]',
         highlighted && 'bg-primary/10',
-        deleting && 'opacity-50'
+        deleting && 'opacity-50',
+        // a held finger opens the action sheet, not the text selection and its callout
+        // (never while editing: iOS won't type into a field inside unselectable text)
+        !isEditing && 'max-md:select-none max-md:[-webkit-touch-callout:none]',
+        sheetOpen && 'max-md:bg-fill-hover'
       )}
       aria-busy={deleting || undefined}
+      {...longPress}
     >
       <div className="w-10 flex-none">
         {showHeader && (
@@ -379,28 +402,17 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
         )}
       </div>}
 
-      {/* Mobile — no hover, so the toolbar above is unreachable; a persistent
-          reaction button plus a tap menu for the rest cover the same actions. */}
-      {!pending && <div className="absolute right-3 top-1 flex items-center gap-0.5 md:hidden">
-        {can.react && <ReactionButton onPick={(emoji) => reactToChatMessage(message.msgId, emoji)} />}
-        <DropdownMenu>
-          <DropdownMenuTrigger render={<Button type="button" variant="ghost" size="icon-sm" aria-label="Acoes" />}>
-            <DotsThreeIcon size={18} />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {can.reply && <DropdownMenuItem onClick={onReply}><ArrowBendUpLeftIcon size={16} />Responder</DropdownMenuItem>}
-            {hasReactions && (
-              <DropdownMenuItem onClick={() => openReactionParticipants({ conversationId: message.conversationId, msgId: message.msgId })}>
-                <UsersIcon size={16} />Ver todas as reações
-              </DropdownMenuItem>
-            )}
-            {can.copy && <DropdownMenuItem onClick={copyText}><CopyIcon size={16} />Copiar texto</DropdownMenuItem>}
-            {can.edit && <DropdownMenuItem onClick={startEdit}><PencilSimpleIcon size={16} />Editar</DropdownMenuItem>}
-            {canReport && <DropdownMenuItem onClick={() => setReportOpen(true)}><FlagIcon size={16} />Denunciar</DropdownMenuItem>}
-            {canDelete && <DropdownMenuItem variant="destructive" disabled={deleting} onClick={(event) => requestDelete(message.msgId, event.shiftKey)}><TrashIcon size={16} />Apagar</DropdownMenuItem>}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>}
+      {/* Phone — no hover and no right click: holding a finger on the message
+          opens the same actions as a sheet from the bottom (see useLongPress) */}
+      {!pending && (
+        <MessageActionSheet
+          open={sheetOpen}
+          onOpenChange={setSheetOpen}
+          onReact={can.react ? (emoji) => reactToChatMessage(message.msgId, emoji) : undefined}
+          reacted={(emoji) => !!state.me.userId && !!reactions[emoji]?.includes(state.me.userId)}
+          actions={sheetActions}
+        />
+      )}
       {confirmDialog}
       <ConfirmDialog
         open={!!removal}
