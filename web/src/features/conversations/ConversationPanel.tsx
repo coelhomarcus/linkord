@@ -12,6 +12,10 @@ import { GroupAvatar } from './GroupAvatar';
 import { ChatSurface } from '@/features/chat/ChatSurface';
 import { useRelationship } from '@/features/friends/useRelationship';
 import { CloseButton } from '@/shared/ui/primitives/close-button';
+import { cn } from '@/shared/lib/utils';
+
+// on a phone the call button is only its icon, round, so the title keeps the room
+const CALL_BUTTON_MOBILE = 'max-md:ml-1 max-md:size-9 max-md:rounded-full max-md:px-0';
 
 function panelToggleClass(open: boolean): string {
   return open ? 'bg-fill-active text-text-primary' : 'text-text-muted hover:text-text-primary';
@@ -73,7 +77,9 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
     <main className="flex h-full min-w-0 flex-1 flex-col text-text-primary">
       {conversation ? (
         <>
-          <header className="flex h-header flex-none items-center gap-3 border-b border-border bg-surface-panel/90 px-4 backdrop-blur">
+          {/* a phone keeps the name readable: the call button drops its label and
+              what the details already offer (media, who is in the call) drops out */}
+          <header className="flex h-header flex-none items-center gap-3 border-b border-border bg-surface-panel/90 px-4 backdrop-blur max-md:gap-1.5 max-md:px-2">
             <Button type="button" variant="ghost" size="icon-sm" aria-label="Voltar" onClick={() => setOpenMobile(true)} className="-ml-1 md:hidden">
               <ArrowLeftIcon size={20} />
             </Button>
@@ -81,7 +87,7 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
               <button
                 type="button"
                 onClick={() => onOpenProfile(other.id)}
-                className="transition-opacity hover:opacity-80"
+                className="flex-none transition-opacity hover:opacity-80"
                 aria-label="Ver perfil"
               >
                 <Avatar id={other.id} name={other.displayName} avatar={other.avatar} avatarColor={other.avatarColor} size={40} />
@@ -90,7 +96,7 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
               <button
                 type="button"
                 onClick={onOpenDetails}
-                className="transition-colors hover:border-border-strong"
+                className="flex-none transition-colors hover:border-border-strong"
                 aria-label={isBot ? 'Detalhes do bot' : 'Detalhes do grupo'}
               >
                 <GroupAvatar id={conversation.id} title={title} avatar={conversation.avatar} size={40} />
@@ -99,14 +105,14 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
             <button
               type="button"
               onClick={hasDetails ? onOpenDetails : (other ? () => onOpenProfile(other.id) : undefined)}
-              className="min-w-0 flex-1 text-left"
+              className="min-w-0 flex-1 text-left max-md:pl-1"
             >
               <h2 className="truncate text-title font-semibold">{title}</h2>
               {subtitle && <p className="truncate text-caption text-text-muted">{subtitle}</p>}
             </button>
             {callParticipants.length > 0 && (
               <Tooltip>
-                <TooltipTrigger render={<div className="flex flex-none items-center -space-x-2" />}>
+                <TooltipTrigger render={<div className="flex flex-none items-center -space-x-2 max-md:hidden" />}>
                   {callParticipants.slice(0, 4).map((p) => (
                     <Avatar key={p.id} id={p.id} name={p.displayName} avatar={p.avatar} avatarColor={p.avatarColor} size={28} className="ring-2 ring-surface-panel" />
                   ))}
@@ -119,7 +125,7 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
                 <TooltipContent side="bottom">Na chamada</TooltipContent>
               </Tooltip>
             )}
-            <Button type="button" variant="ghost" size="icon-sm" aria-label="Mídias e links" aria-pressed={mediaOpen} onClick={onToggleMedia} className={panelToggleClass(mediaOpen)}>
+            <Button type="button" variant="ghost" size="icon-sm" aria-label="Mídias e links" aria-pressed={mediaOpen} onClick={onToggleMedia} className={cn(panelToggleClass(mediaOpen), hasDetails && 'max-md:hidden')}>
               <ImageIcon size={20} />
             </Button>
             <Button type="button" variant="ghost" size="icon-sm" aria-label="Buscar mensagens" onClick={onOpenSearch} className="text-text-muted hover:text-text-primary">
@@ -135,17 +141,17 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
               <Tooltip>
                 {/* a disabled button gets no pointer events, so the tooltip hangs off a wrapper */}
                 <TooltipTrigger render={<span tabIndex={0} className="inline-flex rounded-md focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50" />}>
-                  <Button type="button" size="sm" disabled className="bg-bg-tertiary text-text-muted">
+                  <Button type="button" size="sm" disabled aria-label="Entrar na chamada" className={cn('bg-bg-tertiary text-text-muted', CALL_BUTTON_MOBILE)}>
                     <PhoneIcon size={20} weight="fill" />
-                    Entrar na chamada
+                    <span className="max-md:sr-only">Entrar na chamada</span>
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom">{callBlockedReason}</TooltipContent>
               </Tooltip>
             ) : (
-              <Button type="button" size="sm" disabled={conversation.status === 'suspended'} onClick={() => onOpenCall(conversation.id)} className="bg-green-solid text-white hover:bg-green-hover">
+              <Button type="button" size="sm" disabled={conversation.status === 'suspended'} onClick={() => onOpenCall(conversation.id)} aria-label={callActionLabel} className={cn('bg-green-solid text-white hover:bg-green-hover', CALL_BUTTON_MOBILE)}>
                 <PhoneIcon size={20} weight="fill" />
-                {callActionLabel}
+                <span className="max-md:sr-only">{callActionLabel}</span>
               </Button>
             )}
           </header>
