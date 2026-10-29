@@ -5,6 +5,7 @@ import type { ChatMessage, ClientMessage, Conversation, PublicUser, ReactionEmoj
 import type { RoomAction, RoomState } from './roomReducer';
 import type { TileKind } from '../features/calls/tileTypes';
 import type { OutboxEntry } from '@/features/chat/useMessageOutbox';
+import type { ChatView } from '@/features/chat/useChatMessages';
 import type { ReactionParticipantsTarget } from '@/features/chat/reactionParticipants';
 import type { ShareQualityId } from '@/features/calls/shareQualityPresets';
 import type { ColorThemeId } from '@/features/settings/useColorThemePreference';
@@ -68,7 +69,7 @@ export interface RoomContextValue {
   setPreferMuted: (muted: boolean) => void;
   reconnecting: boolean;
   livekitRoom: Room;
-  notifyActiveView: (view: 'chat' | 'call') => void;
+  notifyActiveView: (view: ChatView) => void;
   registerRequestChatView: (fn: () => void) => void;
   requestChatView: () => void;
   activeCallConversationId: string | null;

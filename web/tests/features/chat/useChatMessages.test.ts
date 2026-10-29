@@ -57,6 +57,32 @@ describe('useChatMessages — unread', () => {
     expect(result.current.unreadByConversation.get('outra')).toBe(1);
   });
 
+  it('the active conversation counts as unread while its chat is off screen, and is read on coming back', () => {
+    vi.useFakeTimers();
+    try {
+      const sendWs = vi.fn(() => true);
+      const ref = <T,>(current: T) => ({ current });
+      const activeViewRef = ref<'chat' | 'call' | 'away'>('away');
+      const { result } = renderHook(() => useChatMessages({
+        sendWs, activeConversationIdRef: ref<string | null>('dm'), setActiveConversation: vi.fn(),
+        conversationsRef: ref([]), allUsersRef: ref(new Map()), myUserIdRef: ref<string | null>('b'), myUsernameRef: ref<string | null>('b'),
+        activeViewRef, clearTypingEntry: vi.fn(),
+      }));
+      act(() => result.current.onChat({ t: 'chat', message: message(40) }));
+      act(() => vi.advanceTimersByTime(1_000));
+      expect(result.current.unreadByConversation.get('dm')).toBe(1);
+      expect(sendWs).not.toHaveBeenCalledWith(expect.objectContaining({ t: 'conversation-mark-read' }));
+
+      activeViewRef.current = 'chat';
+      act(() => result.current.markActiveSeen());
+      act(() => vi.advanceTimersByTime(1_000));
+      expect(result.current.unreadByConversation.get('dm')).toBeUndefined();
+      expect(sendWs).toHaveBeenCalledWith({ t: 'conversation-mark-read', conversationId: 'dm', msgId: 40 });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("the server's counts replace the session's on welcome, and an older server's absence keeps them", () => {
     const { result } = setup();
     act(() => result.current.onChat({ t: 'chat', message: message(11, { conversationId: 'outra', id: 'a' }) }));
