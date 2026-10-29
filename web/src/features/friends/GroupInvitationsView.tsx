@@ -58,7 +58,7 @@ export function GroupInvitationsView({ query, onQueryChange, onOpenProfile }: { 
       </div>
     );
   } else if (list.items.length === 0) {
-    body = <FadeIn skip={list.restored}><p className="py-10 text-center text-label text-text-muted">{search ? 'Nenhum resultado para esta busca.' : 'Nenhum convite de grupo pendente.'}</p></FadeIn>;
+    body = <FadeIn skip={list.restored}><p className="select-none py-10 text-center text-label text-text-muted">{search ? 'Nenhum resultado para esta busca.' : 'Nenhum convite de grupo pendente.'}</p></FadeIn>;
   } else {
     body = (
       <RevealList restored={list.restored}>

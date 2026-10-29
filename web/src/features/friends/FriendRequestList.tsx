@@ -64,7 +64,7 @@ export function FriendRequestList({ direction, search = '', headingId, onOpenPro
   } else if (list.items.length === 0) {
     body = (
       <FadeIn skip={list.restored}>
-        <p className="py-10 text-center text-label text-text-muted">
+        <p className="select-none py-10 text-center text-label text-text-muted">
           {search ? 'Nenhum resultado para esta busca.' : direction === 'incoming' ? 'Nenhuma solicitação recebida.' : 'Você não tem solicitações enviadas.'}
         </p>
       </FadeIn>

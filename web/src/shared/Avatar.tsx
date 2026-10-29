@@ -67,7 +67,7 @@ export function Avatar({ id, name, avatar, avatarColor, size, className, poster,
     <AvatarRoot style={{ width: size, height: size }} className={className}>
       {src && <AvatarImage src={src} alt="" />}
       <AvatarFallback
-        className="font-bold text-white"
+        className="select-none font-bold text-white"
         style={{ background: colorFor(id, avatarColor), fontSize: Math.round(size * 0.4) }}
       >
         {initialsOf(name)}

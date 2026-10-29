@@ -261,4 +261,14 @@ button:not(:disabled) {
   * {
     @apply border-border outline-ring/50;
   }
+  /* The app's chrome isn't text to copy: pressing a row, a tab or a button,
+     or dragging across one, must never start a selection. What people write
+     (messages, code, fields) stays selectable; fields say so explicitly, since
+     WebKit can otherwise inherit "none" into an input inside such a control. */
+  button, [role="button"], [role="tab"], [role="menuitem"], [role="menuitemcheckbox"], [role="menuitemradio"], [role="option"], [role="tooltip"], label, summary {
+    user-select: none;
+  }
+  input, textarea, [contenteditable="true"] {
+    user-select: text;
+  }
 }

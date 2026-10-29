@@ -403,9 +403,9 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
       {/* data-settled: the initial placement is done and scrolls now count as
           reading — what anything waiting on the timeline should wait for */}
       <div ref={scrollRef} data-scroll-root data-settled={ready || undefined} className="h-full overflow-y-auto px-2 [overflow-anchor:none]">
-        {isLoadingOlder && <p className="absolute inset-x-0 top-2 z-10 text-center text-label text-text-muted">Carregando mensagens anteriores...</p>}
+        {isLoadingOlder && <p className="absolute inset-x-0 top-2 z-10 select-none text-center text-label text-text-muted">Carregando mensagens anteriores...</p>}
         {items.length === 0 ? (
-          <div className="flex min-h-[45vh] items-center justify-center px-6 text-center text-label text-text-muted">
+          <div className="flex min-h-[45vh] select-none items-center justify-center px-6 text-center text-label text-text-muted">
             {historyArrived ? 'Nenhuma mensagem ainda.' : (
               // only shown if the history is slow: a quick one would flash it for a frame
               <span role="status" className="animate-in fade-in-0 duration-200 [animation-delay:300ms] [animation-fill-mode:both]">Carregando mensagens…</span>
