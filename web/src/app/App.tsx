@@ -22,7 +22,7 @@ import { Stage } from '@/features/calls/Stage';
 import { CallChatPanel } from '@/features/calls/CallChatPanel';
 import { ParticipantAudioLayer } from '@/features/calls/ParticipantAudioLayer';
 import { FloatingPip } from '@/features/calls/FloatingPip';
-import { callParticipantIds, conversationTitle } from '@/features/conversations/conversationUtils';
+import { APP_TITLE, callParticipantIds, conversationDocumentTitle, conversationTitle } from '@/features/conversations/conversationUtils';
 import { TileMenu } from '@/features/calls/TileMenu';
 import { ReactionsOverlay } from '@/features/reactions/ReactionsOverlay';
 import { GlobalContextMenu } from '@/app/layout/GlobalContextMenu';
@@ -167,6 +167,12 @@ function Shell() {
     detailsOpen, mediaOpen, onChatPage: onConversations, stageShown: showStage, conversationType: activeConversation?.type ?? null,
   });
   const activeConversationName = conversationTitle(activeConversation, state.me.userId, allUsers);
+
+  const tabTitle = onConversations ? conversationDocumentTitle(activeConversation, state.me.userId, allUsers) : APP_TITLE;
+  useEffect(() => {
+    document.title = tabTitle;
+    return () => { document.title = APP_TITLE; };
+  }, [tabTitle]);
 
   useEffect(() => {
     function onBeforeUnload(e: BeforeUnloadEvent) {

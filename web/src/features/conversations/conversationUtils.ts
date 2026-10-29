@@ -11,6 +11,20 @@ export function conversationTitle(conversation: Conversation | null | undefined,
   return other?.displayName || other?.username || 'Conversa direta';
 }
 
+export const APP_TITLE = 'Linkord';
+
+/** The browser tab title for the conversation on screen: a friend by handle,
+ * a group or bot by name. With none open it is just the app name. */
+export function conversationDocumentTitle(conversation: Conversation | null | undefined, meUserId: string | null, users: Map<string, PublicUser>): string {
+  if (!conversation) return APP_TITLE;
+  if (conversation.type === 'direct') {
+    const other = directUser(conversation, meUserId, users);
+    const label = other?.username ? `@${other.username}` : other?.displayName;
+    return label ? `${APP_TITLE} | ${label}` : APP_TITLE;
+  }
+  return `${APP_TITLE} | ${conversationTitle(conversation, meUserId, users)}`;
+}
+
 export function conversationInitials(title: string): string {
   const words = title.trim().split(/\s+/).filter(Boolean);
   if (!words.length) return 'L';
