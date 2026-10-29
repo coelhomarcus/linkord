@@ -94,14 +94,12 @@ describe('AppNavigationRail', () => {
     expect(await screen.findByRole('link', { name: 'Amigos, 3 aguardando resposta' })).toBeInTheDocument();
   });
 
-  it('Bots has its own place in the rail, with its own unread badge', () => {
+  it('has no Bots item: bots live in the Conversas list, and its badge counts them', () => {
     const base = { title: '', avatar: '', createdBy: 'me', memberIds: ['me'], lastMessageAt: null, createdAt: 0, updatedAt: 0, pinnedAt: null, myRole: 'member' as const, ownerId: null, memberCount: 1 };
     const conversations = [{ ...base, id: 'g-1', type: 'group' as const }, { ...base, id: 'b-1', type: 'bot' as const }];
-    renderRail('/app/bots', true, false, { conversations, unreadByConversation: new Map([['g-1', 1], ['b-1', 4]]) });
-    const link = screen.getByRole('link', { name: 'Bots, 4 não lidas' });
-    expect(link).toHaveAttribute('data-to', '/app/bots');
-    expect(link).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByRole('link', { name: 'Conversas, 1 não lidas' })).not.toHaveAttribute('aria-current');
+    renderRail('/app/conversations', true, false, { conversations, unreadByConversation: new Map([['g-1', 1], ['b-1', 4]]) });
+    expect(screen.queryByRole('link', { name: /Bots/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Conversas, 5 não lidas' })).toBeInTheDocument();
   });
 
   it('the Conversas badge sums unread across direct and group conversations', () => {
@@ -143,13 +141,6 @@ describe('AppNavigationRail', () => {
 });
 
 describe('AppNavigationRail — window width', () => {
-  it('tablet: going to Bots with no bot open brings the list into view, since that is all the page has', async () => {
-    setViewport(900);
-    const { onOpenMobileChange } = renderRail('/app/conversations', true, false);
-    await userEvent.setup().click(screen.getByRole('link', { name: 'Bots' }));
-    expect(onOpenMobileChange).toHaveBeenCalledWith(true);
-  });
-
   it('desktop (>= 1024): the list is a column; the rail only offers "show" if it is collapsed', () => {
     setViewport(1440);
     renderRail('/app/conversations', true);

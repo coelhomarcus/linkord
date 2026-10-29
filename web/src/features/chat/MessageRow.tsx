@@ -264,12 +264,12 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
                 {displayedName}
               </button>
             ) : (
-              <span className="truncate text-body font-medium text-text-primary">{displayedName}</span>
+              <span className="select-none truncate text-body font-medium text-text-primary">{displayedName}</span>
             )}
             {message.bot && (
-              <span className="flex-none self-center rounded-sm bg-primary px-1 py-px text-micro font-semibold uppercase leading-none text-white">Bot</span>
+              <span className="flex-none select-none self-center rounded-sm bg-primary px-1 py-px text-micro font-semibold uppercase leading-none text-white">Bot</span>
             )}
-            <span className="flex-none text-caption text-text-muted">{formatTime(message.ts)}</span>
+            <span className="flex-none select-none text-caption text-text-muted">{formatTime(message.ts)}</span>
           </div>
         )}
 
@@ -330,7 +330,7 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
                   suppressedEmbeds={message.suppressedEmbeds}
                   onRemoveEmbed={canRemoveParts ? (url) => setRemoval({ kind: 'embed', url }) : undefined}
                 />
-                {message.editedAt && <span className="ml-1 text-caption text-text-muted">(editado)</span>}
+                {message.editedAt && <span className="ml-1 select-none text-caption text-text-muted">(editado)</span>}
               </div>
               {message.richEmbeds?.map((embed, index) => <RichEmbedCard key={index} embed={embed} />)}
               {message.attachments?.length ? (

@@ -14,6 +14,8 @@ import { MediaViewerProvider } from './MediaViewerProvider';
 // the ResizeObserver measures: someone starting or stopping typing must not
 // change the list's bottom padding, or a list pinned to the bottom jumps.
 const STATUS_RAIL_HEIGHT = 24;
+// how far above the typing rail the messages fade out under it
+const FADE_HEIGHT = 24;
 
 function hasFiles(e: DragEvent<HTMLDivElement>): boolean {
   return Array.from(e.dataTransfer.types).includes('Files');
@@ -85,8 +87,14 @@ export function ChatSurface({ conversationId, onOpenProfile, surfaceId = 'main' 
       </ChatSurfaceWidthProvider>
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-0 bg-linear-to-t from-(--surface-base) to-transparent"
-        style={{ height: composerHeight + STATUS_RAIL_HEIGHT + 24 }}
+        className="pointer-events-none absolute inset-x-0 bottom-0"
+        // solid all the way up through the typing rail, fading only above it: a
+        // fade across the whole height left the rail half see-through, and
+        // "fulano está digitando" read over the messages scrolling under it
+        style={{
+          height: composerHeight + STATUS_RAIL_HEIGHT + FADE_HEIGHT,
+          backgroundImage: `linear-gradient(to top, var(--surface-base) calc(100% - ${FADE_HEIGHT}px), transparent)`,
+        }}
       />
       <div className="pointer-events-none absolute inset-x-0" style={{ bottom: composerHeight, height: STATUS_RAIL_HEIGHT }}>
         <TypingIndicator conversationId={conversationId} />

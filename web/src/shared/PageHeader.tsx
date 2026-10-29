@@ -21,7 +21,7 @@ export function PageHeader({ title, subtitle, actions, leading, middle, withTabB
         </Button>
       )}
       {leading}
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 select-none">
         <h1 className="truncate text-title font-semibold text-text-primary">{title}</h1>
         {subtitle && <p className="truncate text-caption text-text-muted">{subtitle}</p>}
       </div>

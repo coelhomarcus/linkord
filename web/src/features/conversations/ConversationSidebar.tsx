@@ -13,7 +13,7 @@ import { useContentLocation } from '@/shared/lib/contentLocation';
 import { CountBadge } from '@/shared/CountBadge';
 import { useRoom } from '@/state/RoomContext';
 import type { Conversation } from '@/shared/types/protocol';
-import { ROUTES, conversationNav, isBotsPath, isConversationsPath } from '@/shared/lib/routes';
+import { ROUTES, conversationNav, isConversationsPath } from '@/shared/lib/routes';
 import {
   conversationMatchesQuery,
   conversationTitle,
@@ -124,8 +124,15 @@ function ConversationRow({ conversation, active, washId, onClick }: {
 
 function tabForConversation(conversations: Conversation[], conversationId: string | null): ConversationListTab {
   const conversation = conversationId ? conversations.find((item) => item.id === conversationId) : undefined;
-  return conversation?.type === 'group' ? 'group' : 'direct';
+  return conversation?.type === 'group' || conversation?.type === 'bot' ? conversation.type : 'direct';
 }
+
+// what each tab's + creates, searches for, and says when it has nothing
+const TAB_COPY: Record<ConversationListTab, { search: string; empty: string; create: string }> = {
+  direct: { search: 'Buscar amigos', empty: 'Nenhuma conversa.', create: 'Criar grupo' },
+  group: { search: 'Buscar grupos', empty: 'Nenhum grupo.', create: 'Criar grupo' },
+  bot: { search: 'Buscar bots', empty: 'Nenhum bot ainda. Crie um para receber avisos dos seus sistemas.', create: 'Criar bot' },
+};
 
 export function ConversationSidebar({ onReturnToCall, onOpenProfile, showReturnToCall }: ConversationSidebarProps) {
   const { state, conversations, activeConversationId, openConversation, allUsers, unreadByConversation, requestChatView, activeCallConversationId } = useRoom();
@@ -141,31 +148,22 @@ export function ConversationSidebar({ onReturnToCall, onOpenProfile, showReturnT
   const searching = query.trim().length > 0;
 
   useEffect(() => {
-    // a bot opens on its own page: the conversation tabs stay where they were
-    const isBot = conversations.find((item) => item.id === activeConversationId)?.type === 'bot';
-    if (activeConversationId && activeConversationId !== prevActiveId.current && !isBot) {
+    if (activeConversationId && activeConversationId !== prevActiveId.current) {
       setTab(tabForConversation(conversations, activeConversationId));
     }
     prevActiveId.current = activeConversationId;
   }, [activeConversationId, conversations]);
 
-  const onBots = isBotsPath(pathname);
-  // the bots page lists only bots, with no tabs: it's its own place, not a third kind of chat
-  const listType = onBots ? 'bot' : tab;
   const filteredConversations = useMemo(() => (
-    conversations.filter((conversation) => conversation.type === listType && conversationMatchesQuery(conversation, query, state.me.userId, allUsers))
-  ), [allUsers, conversations, query, state.me.userId, listType]);
+    conversations.filter((conversation) => conversation.type === tab && conversationMatchesQuery(conversation, query, state.me.userId, allUsers))
+  ), [allUsers, conversations, query, state.me.userId, tab]);
 
   const friendsUnread = useMemo(() => unreadCountForTab(conversations, unreadByConversation, 'direct'), [conversations, unreadByConversation]);
   const groupsUnread = useMemo(() => unreadCountForTab(conversations, unreadByConversation, 'group'), [conversations, unreadByConversation]);
+  const botsUnread = useMemo(() => unreadCountForTab(conversations, unreadByConversation, 'bot'), [conversations, unreadByConversation]);
 
   function selectConversation(conversationId: string) {
     openConversation(conversationId);
-    if (onBots) {
-      navigate(ROUTES.bots, conversationNav(conversationId));
-      if (isOverlay) setOpenMobile(false);
-      return;
-    }
     // explicit, not left to the URL sync: re-opening the conversation that is
     // ALREADY active (from the friends page, say) changes no state, so nothing
     // else would navigate. Done before requestChatView so that call sees a
@@ -176,19 +174,18 @@ export function ConversationSidebar({ onReturnToCall, onOpenProfile, showReturnT
   }
 
   const onConversations = isConversationsPath(pathname);
-  const emptyText = onBots
-    ? (searching ? 'Nenhum bot.' : 'Nenhum bot ainda. Crie um para receber avisos dos seus sistemas.')
-    : searching || tab === 'direct' ? 'Nenhuma conversa.' : 'Nenhum grupo.';
+  const copy = TAB_COPY[tab];
+  const emptyText = searching ? (tab === 'bot' ? 'Nenhum bot.' : tab === 'group' ? 'Nenhum grupo.' : 'Nenhuma conversa.') : copy.empty;
   const list = (
     <div className="min-h-0 flex-1 overflow-y-auto">
       <div className="flex flex-col gap-1">
         {filteredConversations.length === 0 ? (
-          <p className="px-3 py-8 text-center text-label text-text-muted">{emptyText}</p>
+          <p className="select-none px-3 py-8 text-center text-label text-text-muted">{emptyText}</p>
         ) : filteredConversations.map((conversation) => (
           <ConversationRow
             key={conversation.id}
             conversation={conversation}
-            active={(onBots || onConversations) && conversation.id === activeConversationId}
+            active={onConversations && conversation.id === activeConversationId}
             washId={washId}
             onClick={() => selectConversation(conversation.id)}
           />
@@ -205,8 +202,8 @@ export function ConversationSidebar({ onReturnToCall, onOpenProfile, showReturnT
             {/* from md the content card sits one shell gap (and its border) below the
                 top: starting there too puts this title on the same line as the page's */}
             <div className="flex h-header flex-none items-center gap-2 px-4 md:mt-[calc(var(--spacing-shell)+1px)]">
-              <h1 className="min-w-0 flex-1 truncate text-title font-semibold">{onBots ? 'Bots' : 'Conversas'}</h1>
-              <Button type="button" variant="ghost" size="icon-sm" aria-label={onBots ? 'Criar bot' : 'Criar grupo'} onClick={() => (onBots ? setBotOpen(true) : setGroupOpen(true))} className="flex-none text-text-muted hover:text-text-primary">
+              <h1 className="min-w-0 flex-1 select-none truncate text-title font-semibold">Conversas</h1>
+              <Button type="button" variant="ghost" size="icon-sm" aria-label={copy.create} onClick={() => (tab === 'bot' ? setBotOpen(true) : setGroupOpen(true))} className="flex-none text-text-muted hover:text-text-primary">
                 <PlusIcon size={20} />
               </Button>
               <NotificationBell onNavigate={() => { if (isOverlay) setOpenMobile(false); }} />
@@ -224,15 +221,14 @@ export function ConversationSidebar({ onReturnToCall, onOpenProfile, showReturnT
                 <input
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
-                  placeholder={onBots ? 'Buscar bots' : tab === 'group' ? 'Buscar grupos' : 'Buscar amigos'}
+                  placeholder={copy.search}
                   className="h-10 min-w-0 flex-1 bg-transparent text-label outline-none placeholder:text-text-muted"
                 />
               </div>
 
-              {onBots ? list : (
               <Tabs
                 value={tab}
-                onValueChange={(value) => { if (value === 'direct' || value === 'group') setTab(value); }}
+                onValueChange={(value) => { if (value === 'direct' || value === 'group' || value === 'bot') setTab(value); }}
                 className="flex min-h-0 w-full flex-1 flex-col items-stretch gap-3"
               >
                 <TabsList className="flex h-10 w-full flex-none" aria-label="Tipo de conversa">
@@ -249,10 +245,15 @@ export function ConversationSidebar({ onReturnToCall, onOpenProfile, showReturnT
                       <CountBadge decorative>{groupsUnread > 99 ? '99+' : groupsUnread}</CountBadge>
                     )}
                   </TabsTrigger>
+                  <TabsTrigger value="bot" className="flex-1">
+                    Bots
+                    {botsUnread > 0 && (
+                      <CountBadge decorative>{botsUnread > 99 ? '99+' : botsUnread}</CountBadge>
+                    )}
+                  </TabsTrigger>
                 </TabsList>
                 {list}
               </Tabs>
-              )}
             </div>
           </div>
           {/* from 768px the rail and the user dock float beside the list; on a phone the

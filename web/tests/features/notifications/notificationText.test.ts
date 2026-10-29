@@ -17,6 +17,16 @@ describe('notificationText', () => {
     expect(describeNotification({ ...base, kind: 'group_invitation' })).toBe('Ana convidou você para um grupo');
   });
 
+  it('a mention says who and where; a DM is just "uma conversa", and a bot speaks for itself', () => {
+    const mention = (type: 'direct' | 'group' | 'bot', title: string) => ({
+      ...base, kind: 'mention' as const, friendshipId: null,
+      mention: { messageId: 7, excerpt: '@eu olha', conversation: { id: 'c', type, title, avatar: '' } },
+    });
+    expect(describeNotification(mention('group', 'Squad'))).toBe('Ana mencionou você no grupo Squad');
+    expect(describeNotification(mention('direct', ''))).toBe('Ana mencionou você em uma conversa');
+    expect(describeNotification({ ...mention('bot', 'Alertas'), actor: null })).toBe('Alertas mencionou você');
+  });
+
   it('each type leads to its own page', () => {
     expect(notificationTarget(base)).toBe('/app/friends?tab=pending#received');
     expect(notificationTarget({ ...base, kind: 'friend_accepted' })).toBe('/app/friends');

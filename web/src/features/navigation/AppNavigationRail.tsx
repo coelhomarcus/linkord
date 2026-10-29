@@ -1,4 +1,4 @@
-import { ChatCircleIcon, RobotIcon, SidebarSimpleIcon, UsersIcon } from '@phosphor-icons/react';
+import { ChatCircleIcon, SidebarSimpleIcon, UsersIcon } from '@phosphor-icons/react';
 import { useId, useMemo } from 'react';
 import type { ReactNode } from 'react';
 
@@ -6,7 +6,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 
 import { useSidebar } from '@/shared/ui/motion/sidebar-context';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
-import { ROUTES, isBotsPath, isConversationsPath } from '@/shared/lib/routes';
+import { ROUTES, isConversationsPath } from '@/shared/lib/routes';
 import { cn } from '@/shared/lib/utils';
 import { useContentLocation } from '@/shared/lib/contentLocation';
 import { SPRING_LAYOUT } from '@/shared/lib/ease';
@@ -110,25 +110,20 @@ export function AppNavigationRail({ className }: {
   className?: string;
 }) {
   const { pendingIncomingCount } = useFriends();
-  const { conversations, unreadByConversation, activeConversationId } = useRoom();
+  const { conversations, unreadByConversation } = useRoom();
   const conversationsUnread = useMemo(
-    () => unreadCountForTab(conversations, unreadByConversation, 'direct') + unreadCountForTab(conversations, unreadByConversation, 'group'),
+    () => unreadCountForTab(conversations, unreadByConversation, 'direct') + unreadCountForTab(conversations, unreadByConversation, 'group') + unreadCountForTab(conversations, unreadByConversation, 'bot'),
     [conversations, unreadByConversation],
   );
-  const botsUnread = useMemo(() => unreadCountForTab(conversations, unreadByConversation, 'bot'), [conversations, unreadByConversation]);
   const { pathname } = useContentLocation();
   const { isMobile, isOverlay, open: listOpen, openMobile, setOpenMobile, toggleSidebar } = useSidebar();
   const afterNavigate = () => { if (isOverlay) setOpenMobile(false); };
-  // with no bot open the bots page is just its list, so as a drawer the list stays (or comes) into view
-  const botOpen = conversations.some((c) => c.id === activeConversationId && c.type === 'bot');
-  const afterNavigateToBots = () => { if (isOverlay) setOpenMobile(!botOpen); };
   // as a drawer the list is opened from here; as a column it can be hidden from its own header, so this is only the way back
   const showListToggle = isOverlay ? !isMobile : !listOpen;
   const listExpanded = isOverlay ? openMobile : listOpen;
   // the bell lives in the list's header, so it moves here only while that header is off screen
   const showBell = !isMobile && !listExpanded;
   const conversationsLabel = conversationsUnread > 0 ? `Conversas, ${conversationsUnread} não lidas` : 'Conversas';
-  const botsLabel = botsUnread > 0 ? `Bots, ${botsUnread} não lidas` : 'Bots';
   const friendsLabel = pendingIncomingCount > 0 ? `Amigos, ${pendingIncomingCount} aguardando resposta` : 'Amigos';
   const indicatorId = useId();
   const indicators: RailIndicatorIds = { wash: `${indicatorId}-wash`, marker: `${indicatorId}-marker` };
@@ -153,9 +148,6 @@ export function AppNavigationRail({ className }: {
       </RailLink>
       <RailLink to={ROUTES.friends} label={friendsLabel} active={pathname === ROUTES.friends} badge={pendingIncomingCount} onNavigate={afterNavigate} indicators={indicators}>
         <UsersIcon size={24} weight={iconWeight(pathname === ROUTES.friends)} aria-hidden />
-      </RailLink>
-      <RailLink to={ROUTES.bots} label={botsLabel} active={isBotsPath(pathname)} badge={botsUnread} onNavigate={afterNavigateToBots} indicators={indicators}>
-        <RobotIcon size={24} weight={iconWeight(isBotsPath(pathname))} aria-hidden />
       </RailLink>
       <RailSlot show={showBell}>
         <NotificationBell collapsed onNavigate={afterNavigate} />

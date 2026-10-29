@@ -43,6 +43,9 @@
   --color-fill-active: oklch(100% 0 0 / 0.10);
   /* a field or code block sunk into its surface: darker than what it sits on */
   --color-fill-inset: oklch(0% 0 0 / 0.25);
+  /* code, block and inline: its own token because the inset fill vanishes on
+     a theme whose surfaces are already black */
+  --color-fill-code: var(--color-fill-inset);
 
   --color-text-primary: oklch(95.00% 0.0020 279.30);
   --color-text-secondary: oklch(83.00% 0.0020 279.30);
@@ -286,5 +289,15 @@ button:not(:disabled) {
 @layer base {
   * {
     @apply border-border outline-ring/50;
+  }
+  /* The app's chrome isn't text to copy: pressing a row, a tab or a button,
+     or dragging across one, must never start a selection. What people write
+     (messages, code, fields) stays selectable; fields say so explicitly, since
+     WebKit can otherwise inherit "none" into an input inside such a control. */
+  button, [role="button"], [role="tab"], [role="menuitem"], [role="menuitemcheckbox"], [role="menuitemradio"], [role="option"], [role="tooltip"], label, summary {
+    user-select: none;
+  }
+  input, textarea, [contenteditable="true"] {
+    user-select: text;
   }
 }

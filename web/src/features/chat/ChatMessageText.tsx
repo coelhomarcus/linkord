@@ -1,3 +1,4 @@
+import { CheckIcon, CopyIcon } from '@phosphor-icons/react';
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { detectEmbed } from '@/shared/lib/chatEmbeds';
@@ -35,7 +36,8 @@ function Mention({ name, ctx }: { name: string; ctx: RenderContext }) {
         // avatar) came out shorter than that, so the chip always sat a
         // few px off the text baseline no matter how align-middle/a
         // manual translate tried to compensate.
-        'inline-flex h-6 items-center gap-1 rounded-sm px-1 align-middle font-medium',
+        // a button, but part of the sentence: copying the message must keep the name
+        'inline-flex h-6 select-text items-center gap-1 rounded-sm px-1 align-middle font-medium',
         isMe ? 'bg-yellow/25 text-yellow' : 'bg-primary/15 text-accent-text',
         ctx.onOpenProfile && (isMe ? 'hover:bg-yellow/35' : 'hover:bg-primary/25')
       )}
@@ -50,7 +52,7 @@ function renderInline(nodes: Inline[], ctx: RenderContext): ReactNode[] {
   return nodes.map((node, index) => {
     switch (node.type) {
       case 'text': return node.text;
-      case 'code': return <code key={index} className="rounded-sm bg-fill-active px-1 py-0.5 font-mono text-[0.875em]">{node.text}</code>;
+      case 'code': return <code key={index} className="rounded-sm bg-fill-code px-1 py-0.5 font-mono text-[0.875em]">{node.text}</code>;
       case 'link': return <a key={index} href={node.url} target="_blank" rel="noopener noreferrer" className="break-all text-link hover:underline">{node.url}</a>;
       case 'mention': return <Mention key={index} name={node.name} ctx={ctx} />;
       case 'bold': return <strong key={index} className="font-semibold text-text-primary">{renderInline(node.children, ctx)}</strong>;
@@ -64,6 +66,33 @@ function renderInline(nodes: Inline[], ctx: RenderContext): ReactNode[] {
 // conversations, scrolling back) must not run the highlighter again.
 const highlightCache = new Map<string, string | null>();
 const MAX_HIGHLIGHTS = 100;
+
+const COPIED_FOR_MS = 2000;
+
+/** Copies the block's source as sent — never the highlighted markup. Shown on
+ * hover or focus; a touch screen has no hover, so there it always shows. */
+function CopyCodeButton({ code }: { code: string }) {
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    if (!copied) return;
+    const timer = setTimeout(() => setCopied(false), COPIED_FOR_MS);
+    return () => clearTimeout(timer);
+  }, [copied]);
+  return (
+    <button
+      type="button"
+      onClick={() => { navigator.clipboard.writeText(code).then(() => setCopied(true)).catch(() => {}); }}
+      aria-label={copied ? 'Código copiado' : 'Copiar código'}
+      className={cn(
+        'absolute right-2 top-2 flex items-center gap-1 rounded-md border border-border bg-surface-overlay px-2 py-1 text-caption font-medium text-text-secondary transition-opacity hover:text-text-primary focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [@media(hover:none)]:opacity-100',
+        copied ? 'opacity-100' : 'opacity-0 group-hover/code:opacity-100',
+      )}
+    >
+      {copied ? <CheckIcon size={14} className="text-green" aria-hidden /> : <CopyIcon size={14} aria-hidden />}
+      {copied ? 'Copiado' : 'Copiar'}
+    </button>
+  );
+}
 
 function CodeBlock({ code, lang }: { code: string; lang: string | null }) {
   const cacheKey = `${lang}\u0000${code}`;
@@ -81,10 +110,17 @@ function CodeBlock({ code, lang }: { code: string; lang: string | null }) {
     return () => { cancelled = true; };
   }, [cacheKey, code, lang]);
 
-  const frame = 'my-1 max-w-full overflow-x-auto rounded-md border border-border bg-fill-inset text-label leading-relaxed';
-  // the highlighter escapes the source itself; only its own fixed markup wraps it
-  if (html) return <div className={cn(frame, '[&_pre]:bg-transparent! [&_pre]:p-3')} dangerouslySetInnerHTML={{ __html: html }} />;
-  return <pre className={cn(frame, 'p-3 font-mono')}><code>{code}</code></pre>;
+  const frame = 'max-w-full overflow-x-auto rounded-md border border-border bg-fill-code text-label leading-relaxed';
+  // the button sits outside the scrolling frame, so a wide block scrolls under it instead of taking it along
+  return (
+    <div className="group/code relative my-1 max-w-full">
+      {/* the highlighter escapes the source itself; only its own fixed markup wraps it */}
+      {html
+        ? <div className={cn(frame, '[&_pre]:bg-transparent! [&_pre]:p-3')} dangerouslySetInnerHTML={{ __html: html }} />
+        : <pre className={cn(frame, 'p-3 font-mono')}><code>{code}</code></pre>}
+      <CopyCodeButton code={code} />
+    </div>
+  );
 }
 
 interface ChatMessageTextProps {

@@ -260,6 +260,13 @@
       "when": 1793212985530,
       "tag": "0036_rich_embeds",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1793231246363,
+      "tag": "0037_mention_notifications",
+      "breakpoints": true
     }
   ]
 }

@@ -107,6 +107,22 @@ describe('ChatMessageText — formatting', () => {
     expect(pre).toHaveClass('overflow-x-auto', 'max-w-full');
   });
 
+  it('a code block copies its source as sent, and says so for a moment', async () => {
+    const user = userEvent.setup();
+    const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue();
+    render(<ChatMessageText text={'```js\nconst a = 1;\nconsole.log(a);\n```'} />);
+
+    await user.click(screen.getByRole('button', { name: 'Copiar código' }));
+
+    expect(writeText).toHaveBeenCalledWith('const a = 1;\nconsole.log(a);');
+    expect(await screen.findByRole('button', { name: 'Código copiado' })).toHaveTextContent('Copiado');
+  });
+
+  it('inline code gets no copy button: only blocks do', () => {
+    render(<ChatMessageText text="use `npm test`" />);
+    expect(screen.queryByRole('button', { name: 'Copiar código' })).not.toBeInTheDocument();
+  });
+
   it('blockquote and list', () => {
     const { container } = render(<ChatMessageText text={'> citado\n- um\n- dois'} />);
     expect(container.querySelector('blockquote')).toHaveTextContent('citado');

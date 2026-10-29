@@ -42,32 +42,28 @@ describe('MobileTabBar', () => {
     renderBar();
     expect(screen.getByRole('link', { name: 'Conversas' })).toHaveAttribute('data-to', '/app/conversations');
     expect(screen.getByRole('link', { name: 'Amigos' })).toHaveAttribute('data-to', '/app/friends');
-    expect(screen.getByRole('link', { name: 'Bots' })).toHaveAttribute('data-to', '/app/bots');
     expect(screen.getByRole('button', { name: 'Você' })).toBeInTheDocument();
   });
 
   it.each([
     ['/app/conversations', 'Conversas'],
     ['/app/friends', 'Amigos'],
-    ['/app/bots', 'Bots'],
   ])('at %s only "%s" is marked as the current page', (path, current) => {
     renderBar(path);
-    for (const name of ['Conversas', 'Amigos', 'Bots']) {
+    for (const name of ['Conversas', 'Amigos']) {
       const link = screen.getByRole('link', { name });
       if (name === current) expect(link).toHaveAttribute('aria-current', 'page');
       else expect(link).not.toHaveAttribute('aria-current');
     }
   });
 
-  it('the list pages bring the list up; friends is the page under it', async () => {
+  it('the list comes up for Conversas; friends is the page under it', async () => {
     const user = userEvent.setup();
     const { onOpenMobileChange } = renderBar('/app/friends');
     await user.click(screen.getByRole('link', { name: 'Conversas' }));
     expect(onOpenMobileChange).toHaveBeenLastCalledWith(true);
     await user.click(screen.getByRole('link', { name: 'Amigos' }));
     expect(onOpenMobileChange).toHaveBeenLastCalledWith(false);
-    await user.click(screen.getByRole('link', { name: 'Bots' }));
-    expect(onOpenMobileChange).toHaveBeenLastCalledWith(true);
   });
 
   it('"Você" opens the settings', async () => {
@@ -76,13 +72,12 @@ describe('MobileTabBar', () => {
     expect(screen.getByTestId('where')).toHaveTextContent('/app/settings');
   });
 
-  it('counts what is waiting on each tab', () => {
+  it('counts what is unread in every kind of conversation, bots included', () => {
     const conversation = (id: string, type: Conversation['type']) => ({ id, type, title: id, memberIds: ['me'] }) as unknown as Conversation;
     renderBar('/app/conversations', {
       conversations: [conversation('d', 'direct'), conversation('g', 'group'), conversation('b', 'bot')],
       unreadByConversation: new Map([['d', 2], ['g', 1], ['b', 4]]),
     });
-    expect(screen.getByRole('link', { name: 'Conversas, 3 não lidas' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Bots, 4 não lidas' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Conversas, 7 não lidas' })).toBeInTheDocument();
   });
 });

@@ -25,8 +25,8 @@ Ninguém digita num bot: ele só recebe. Quem participa lê, reage e recebe os a
 
 ## 1. Criar o bot
 
-1. No Linkord, clique no ícone de **robô** na barra lateral (abaixo de Amigos).
-2. Clique no **+** ao lado de "Bots".
+1. No Linkord, na lista de conversas, abra a aba **Bots** (ao lado de Amigos e Grupos).
+2. Clique no **+** no topo da lista.
 3. Dê um nome (ex.: *Deploys*, *Monitoramento*). Se quiser, já escolha amigos para convidar.
 4. Clique em **Criar bot**.
 

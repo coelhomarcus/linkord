@@ -10,6 +10,7 @@ import type { NotificationEntry } from '@/shared/api/api';
 import { cn } from '@/shared/lib/utils';
 import { CountBadge } from '@/shared/CountBadge';
 import { useFriends } from '@/features/friends/FriendsContext';
+import { useRoom } from '@/state/RoomContext';
 import { NotificationList } from './NotificationList';
 import { formatUnread, notificationTarget } from './notificationText';
 import { useUnreadNotifications } from './useUnreadNotifications';
@@ -17,6 +18,7 @@ import { useUnreadNotifications } from './useUnreadNotifications';
 export function NotificationBell({ collapsed = false, onNavigate }: { collapsed?: boolean; onNavigate?: () => void }) {
   const navigate = useNavigate();
   const { bump } = useFriends();
+  const { jumpToMessage, requestChatView } = useRoom();
   const { unread, setUnread } = useUnreadNotifications();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState(false);
@@ -53,7 +55,13 @@ export function NotificationBell({ collapsed = false, onNavigate }: { collapsed?
   function select(entry: NotificationEntry) {
     if (!entry.read) void markAndSync({ ids: [entry.id] }, Math.max(0, unread - 1));
     setOpen(false);
-    navigate(notificationTarget(entry));
+    if (entry.kind === 'mention' && entry.mention) {
+      // straight to the message, highlighted, from wherever the bell was opened
+      jumpToMessage(entry.mention.conversation.id, entry.mention.messageId);
+      requestChatView();
+    } else {
+      navigate(notificationTarget(entry));
+    }
     onNavigate?.();
   }
 
@@ -76,7 +84,7 @@ export function NotificationBell({ collapsed = false, onNavigate }: { collapsed?
       </PopoverTrigger>
       <PopoverContent side={collapsed ? 'right' : 'bottom'} align="start" className="w-[min(22rem,calc(100vw-1.5rem))] bg-bg-modal">
         <div className="flex items-center justify-between gap-2 px-1">
-          <h2 className="text-label font-semibold text-text-primary">Notificações</h2>
+          <h2 className="select-none text-label font-semibold text-text-primary">Notificações</h2>
           <div className="flex items-center gap-0.5">
             <Tooltip>
               <TooltipTrigger

@@ -29,6 +29,9 @@ import type { LinkPreviewResult } from '../link-preview/linkPreview.js';
 import { backfillEmbeds, needsEmbeds, storedEmbedsFor, suppressedLinksFor, unfurlMessage } from './messageEmbeds.js';
 import { previewableLinks } from '../link-preview/messageLinks.js';
 import { storedRichEmbeds, type RichEmbed } from '../bots/richEmbeds.js';
+import { markMentionsRead } from '../notifications/notificationsRepository.js';
+import { notifySocialChanged } from '../presence/knownPeers.js';
+import { notifyMentions } from './mentions.js';
 import { insertMessageOnce, isValidClientMessageId, sendPayloadHash } from './sendOperations.js';
 import { publishStaged, StagedUnavailableError } from '../attachments/stagedAttachments.js';
 import { ERROR_CODES, type ErrorCode } from '../../http/errors.js';
@@ -69,6 +72,12 @@ const AROUND_AFTER_LIMIT = config.CHAT_HISTORY_LIMIT - AROUND_BEFORE_LIMIT;
 
 function conversationIdFrom(msg: { conversationId?: string }): string {
   return String(msg.conversationId || '');
+}
+
+/** Having read a conversation up to a message, the mentions up to it are read
+ * too; the bell (in every tab) refetches only when that changed something. */
+async function settleMentions(userId: string, conversationId: string, upToMessageId: number): Promise<void> {
+  if (await markMentionsRead(userId, conversationId, upToMessageId)) notifySocialChanged([userId]);
 }
 
 interface ChatMessagePayload {
@@ -281,6 +290,7 @@ async function handleConversationOpen(socket: AppSocket, msg: { conversationId?:
     for (const participant of participants.values()) {
       if (participant.userId === p.userId) send(participant.socket, { t: 'conversation-read', conversationId, lastReadMessageId: newest.id });
     }
+    await settleMentions(p.userId, conversationId, newest.id);
   }
 }
 
@@ -299,6 +309,7 @@ async function handleConversationMarkRead(socket: AppSocket, msg: { conversation
   for (const participant of participants.values()) {
     if (participant.userId === p.userId && participant.socket !== socket) send(participant.socket, { t: 'conversation-read', conversationId, lastReadMessageId: msgId });
   }
+  await settleMentions(p.userId, conversationId, msgId);
 }
 
 /** Client scrolled to the top of an already-open conversation — sends up to
@@ -570,6 +581,7 @@ async function handleChat(socket: AppSocket, msg: ChatSendRequest): Promise<void
     await touchConversation(conversationId, outcome.row.createdAt);
     await broadcastToConversationMembers(conversationId, { t: 'chat', message });
     void unfurlMessage(outcome.row, p.userId);
+    void notifyMentions({ id: outcome.row.id, conversationId, text: rawText, authorId: p.userId });
   } catch (err) {
     log.error('correlated chat send failed', err, { userId: p.userId });
     fail('internal_error', 'Não foi possível enviar agora.');
@@ -596,6 +608,7 @@ export async function postBotMessage(input: { conversationId: string; webhookId:
   await broadcastToConversationMembers(conversationId, { t: 'chat', message: message! });
   // the preview fetch is throttled per caller; a webhook is its own caller
   void unfurlMessage(row!, `webhook:${webhookId}`);
+  void notifyMentions({ id: row!.id, conversationId, text, authorId: null });
   return { message: message!, duplicate: false };
 }
 
@@ -640,6 +653,8 @@ async function editMessage(p: Participant, msg: { msgId?: unknown; text?: string
   }).where(eq(messages.id, msgId)).returning();
   await broadcastChanged(updated!, p);
   if (needsEmbeds(updated!)) void unfurlMessage(updated!, p.userId);
+  // a name the edit added is a new mention; one already notified isn't repeated
+  void notifyMentions({ id: updated!.id, conversationId: updated!.conversationId, text, authorId: p.userId });
   return null;
 }
 

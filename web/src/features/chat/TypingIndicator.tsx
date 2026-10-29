@@ -32,7 +32,7 @@ export function TypingIndicator({ conversationId }: { conversationId: string }) 
   // The live region stays mounted even when empty: one created together
   // with its first text is often not announced at all.
   return (
-    <div role="status" aria-live="polite" className="flex h-full w-full items-center gap-2 px-4 text-label text-text-muted @min-[640px]/chat:px-6">
+    <div role="status" aria-live="polite" className="flex h-full w-full select-none items-center gap-2 px-4 text-label text-text-muted @min-[640px]/chat:px-6">
       {label && (
         <>
           <TypingDots />

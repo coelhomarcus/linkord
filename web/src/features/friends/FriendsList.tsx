@@ -107,7 +107,7 @@ export function FriendsList({ view, query, onQueryChange, onOpenProfile }: {
       )}
 
       {isEmptyAccount && (
-        <FadeIn className="flex flex-col items-center gap-3 py-10 text-center">
+        <FadeIn className="flex select-none flex-col items-center gap-3 py-10 text-center">
           <UserIcon size={32} className="text-text-muted" />
           <p className="text-body font-medium text-text-primary">Adicione amigos para começar uma conversa</p>
           <p className="max-w-sm text-label text-text-muted">Peça o @nome de usuário de quem você quer conversar, ou compartilhe o seu.</p>
@@ -126,7 +126,7 @@ export function FriendsList({ view, query, onQueryChange, onOpenProfile }: {
           <FadeIn skip={list.restored}><ListSectionHeader id="friends-list-title" title={view === 'online' ? 'Online' : 'Todos os amigos'} count={countText} /></FadeIn>
           {visible.length === 0 ? (
             <FadeIn skip={list.restored}>
-              <p className="py-8 text-center text-label text-text-muted">
+              <p className="select-none py-8 text-center text-label text-text-muted">
                 {search
                   ? 'Nenhum resultado para esta busca.'
                   : view === 'online' ? 'Nenhum amigo online agora.' : 'Nenhum amigo encontrado.'}

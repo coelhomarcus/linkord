@@ -38,7 +38,7 @@ beforeEach(() => {
 });
 afterEach(() => { vi.clearAllMocks(); });
 
-describe('bots page — sidebar', () => {
+describe('bots — the Bots tab in the sidebar', () => {
   function renderSidebar(room: Partial<RoomContextValue> = {}) {
     renderSocial(
       <TooltipProvider>
@@ -46,59 +46,49 @@ describe('bots page — sidebar', () => {
           <ConversationSidebar onReturnToCall={() => {}} onOpenProfile={() => {}} showReturnToCall={false} />
         </SidebarProvider>
       </TooltipProvider>,
-      { room: { state: me, conversations: [group, bot], ...room }, path: '/app/bots' },
+      { room: { state: me, conversations: [group, bot], ...room }, path: '/app/conversations' },
     );
   }
 
-  it('lists only bots, with no conversation tabs, and offers to create one', () => {
-    renderSidebar();
-    expect(screen.getByRole('heading', { name: 'Bots' })).toBeInTheDocument();
+  it('sits beside Amigos and Grupos, lists only bots, and its + creates a bot', async () => {
+    renderSidebar({ unreadByConversation: new Map([['bot-1', 3]]) });
+    const tabs = screen.getAllByRole('tab').map((t) => t.textContent);
+    expect(tabs).toEqual(['Amigos', 'Grupos', 'Bots3']);
+
+    await userEvent.setup().click(screen.getByRole('tab', { name: /Bots/ }));
     expect(screen.getByText('Deploys')).toBeInTheDocument();
     expect(screen.queryByText('Squad')).not.toBeInTheDocument();
-    expect(screen.queryByRole('tablist', { name: 'Tipo de conversa' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Criar bot' })).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Buscar bots')).toBeInTheDocument();
   });
 
-  it('says what a bot is for when there is none yet', () => {
+  it('says what a bot is for when there is none yet', async () => {
     renderSidebar({ conversations: [group] });
+    await userEvent.setup().click(screen.getByRole('tab', { name: /Bots/ }));
     expect(screen.getByText(/Nenhum bot ainda/)).toBeInTheDocument();
   });
 
-  it('opens the bot it was clicked on', async () => {
+  it('opens on the Bots tab when a bot is the open conversation, and opens the bot clicked', async () => {
     const openConversation = vi.fn();
-    renderSidebar({ openConversation });
+    renderSidebar({ openConversation, activeConversationId: 'bot-1' });
+    expect(screen.getByRole('tab', { name: /Bots/ })).toHaveAttribute('aria-selected', 'true');
     await userEvent.setup().click(screen.getByText('Deploys'));
     expect(openConversation).toHaveBeenCalledWith('bot-1');
   });
 });
 
-describe('bots page — panel', () => {
-  function renderPanel(page: 'bots' | 'conversations', activeConversationId: string) {
+describe('bots — the conversation panel', () => {
+  it('a bot opens like any conversation and reads only: no composer, no call, details one click away', () => {
     renderSocial(
       <SidebarProvider>
-        <ConversationPanel page={page} onOpenProfile={() => {}} onOpenCall={() => {}} onOpenSearch={() => {}} detailsOpen={false} mediaOpen={false} onOpenDetails={() => {}} onToggleDetails={() => {}} onToggleMedia={() => {}} />
+        <ConversationPanel onOpenProfile={() => {}} onOpenCall={() => {}} onOpenSearch={() => {}} detailsOpen={false} mediaOpen={false} onOpenDetails={() => {}} onToggleDetails={() => {}} onToggleMedia={() => {}} />
       </SidebarProvider>,
-      { room: { state: me, conversations: [group, bot], activeConversationId } },
+      { room: { state: me, conversations: [group, bot], activeConversationId: 'bot-1' } },
     );
-  }
-
-  it('a bot reads only: no composer, no call, and its details one click away', () => {
-    renderPanel('bots', 'bot-1');
     expect(screen.getByRole('heading', { name: 'Deploys' })).toBeInTheDocument();
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
-    expect(screen.queryByText(/Só o bot envia/)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /chamada/ })).not.toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'Detalhes do bot' }).length).toBeGreaterThan(0);
-  });
-
-  it('each page shows only its own kind: a group is not drawn on the bots page, nor a bot on the conversations one', () => {
-    renderPanel('bots', 'group-1');
-    expect(screen.getByText('Avisos dos seus sistemas')).toBeInTheDocument();
-  });
-
-  it('the conversations page does not draw an active bot', () => {
-    renderPanel('conversations', 'bot-1');
-    expect(screen.getByText('Abra uma conversa')).toBeInTheDocument();
   });
 });
 

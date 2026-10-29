@@ -1,4 +1,4 @@
-import { ChatCircleIcon, RobotIcon, UsersIcon } from '@phosphor-icons/react';
+import { ChatCircleIcon, UsersIcon } from '@phosphor-icons/react';
 import { useMemo } from 'react';
 import type { ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router';
@@ -9,7 +9,7 @@ import { AppLink } from '@/shared/ui/app-link';
 import { iconWeight } from '@/shared/ui/icons';
 import { useSidebar } from '@/shared/ui/motion/sidebar-context';
 import { useContentLocation } from '@/shared/lib/contentLocation';
-import { ROUTES, isBotsPath, isConversationsPath } from '@/shared/lib/routes';
+import { ROUTES, isConversationsPath } from '@/shared/lib/routes';
 import { cn } from '@/shared/lib/utils';
 import { useFriends } from '@/features/friends/FriendsContext';
 import { unreadCountForTab } from '@/features/conversations/conversationUtils';
@@ -35,7 +35,7 @@ function TabIcon({ badge, children }: { badge?: number; children: ReactNode }) {
 }
 
 /** The phone's way around the app, Discord-style: a bar across the bottom of
- * the home screens (the conversation list, friends, bots) in place of the
+ * the home screens (the conversation list, friends) in place of the
  * desktop rail and user dock. Inside an open chat it is not drawn, the chat
  * header's back button returns here. */
 export function MobileTabBar({ className }: { className?: string }) {
@@ -46,20 +46,18 @@ export function MobileTabBar({ className }: { className?: string }) {
   const { pathname } = useContentLocation();
   const onSettings = useLocation().pathname.startsWith(ROUTES.settings);
   const conversationsUnread = useMemo(
-    () => unreadCountForTab(conversations, unreadByConversation, 'direct') + unreadCountForTab(conversations, unreadByConversation, 'group'),
+    () => unreadCountForTab(conversations, unreadByConversation, 'direct') + unreadCountForTab(conversations, unreadByConversation, 'group') + unreadCountForTab(conversations, unreadByConversation, 'bot'),
     [conversations, unreadByConversation],
   );
-  const botsUnread = useMemo(() => unreadCountForTab(conversations, unreadByConversation, 'bot'), [conversations, unreadByConversation]);
   const onConversations = isConversationsPath(pathname);
   const onFriends = pathname === ROUTES.friends;
-  const onBots = isBotsPath(pathname);
 
   return (
     <nav
       aria-label="Navegação principal"
       className={cn('flex h-14 flex-none items-stretch gap-1 border-t border-border-subtle bg-surface-rail px-2', className)}
     >
-      {/* the list pages are the drawer: going to one shows it, friends is a page under it */}
+      {/* the list is the drawer: going to it shows it, friends is a page under it */}
       <AppLink
         to={ROUTES.conversations}
         onClick={() => setOpenMobile(true)}
@@ -79,16 +77,6 @@ export function MobileTabBar({ className }: { className?: string }) {
       >
         <TabIcon badge={pendingIncomingCount}><UsersIcon size={24} weight={iconWeight(onFriends)} aria-hidden /></TabIcon>
         <span aria-hidden>Amigos</span>
-      </AppLink>
-      <AppLink
-        to={ROUTES.bots}
-        onClick={() => setOpenMobile(true)}
-        aria-current={onBots ? 'page' : undefined}
-        aria-label={botsUnread > 0 ? `Bots, ${botsUnread} não lidas` : 'Bots'}
-        className={cn(itemClass, stateClass(onBots))}
-      >
-        <TabIcon badge={botsUnread}><RobotIcon size={24} weight={iconWeight(onBots)} aria-hidden /></TabIcon>
-        <span aria-hidden>Bots</span>
       </AppLink>
       <button
         type="button"

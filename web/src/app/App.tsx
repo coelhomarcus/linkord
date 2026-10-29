@@ -32,7 +32,7 @@ import { FriendsProvider } from '@/features/friends/FriendsContext';
 import { FriendsPage } from '@/features/friends/FriendsPage';
 import { RequestsRedirect } from '@/features/friends/RequestsRedirect';
 import { AppModals } from '@/app/layout/AppModals';
-import { AWAITING_OPEN, ROUTES, conversationNav, isBotsPath, isConversationsPath, modalForPath } from '@/shared/lib/routes';
+import { AWAITING_OPEN, ROUTES, conversationNav, isConversationsPath, modalForPath } from '@/shared/lib/routes';
 import { ContentLocationProvider } from '@/shared/lib/contentLocation';
 import { createAppRouter } from '@/app/appRouter';
 import { setLogRoute } from '@/shared/lib/logger';
@@ -77,7 +77,6 @@ function Shell() {
     );
   }, [navigate, contentLocation]);
   const onConversations = isConversationsPath(contentLocation.pathname);
-  const onBots = isBotsPath(contentLocation.pathname);
   const [profileUserId, setProfileUserId] = useState<string | null>(null);
   // Landing straight on a page (a deep link, a refresh on /app/friends) should
   // show that page — the sidebar sheet is only the landing screen when the URL
@@ -157,18 +156,16 @@ function Shell() {
   // The call stage only ever shows on the conversations page. Elsewhere the
   // call keeps running (audio, PiP) — navigating never ends it.
   const showStage = onConversations && activeView === 'call' && inCall;
-  // what the user is looking at, not the last view picked: once the call ends
-  // (or on a page with no stage) the chat is what's on screen, and a message
-  // landing in it must not ring as if it were hidden behind a call
-  useEffect(() => { notifyActiveView(showStage ? 'call' : 'chat'); }, [showStage, notifyActiveView]);
+  // what the user is looking at, not the last view picked: the stage, the chat,
+  // or another page with the conversation still active behind it — only the
+  // chat on screen makes a message arriving there read
+  const chatView = showStage ? 'call' : onConversations ? 'chat' : 'away';
+  useEffect(() => { notifyActiveView(chatView); }, [chatView, notifyActiveView]);
 
-  const active = conversations.find((conversation) => conversation.id === activeConversationId);
-  // each page only ever shows its own kind of conversation (see ConversationPanel)
-  const activeConversation = active && (active.type === 'bot') === onBots ? active : undefined;
-  const onChatPage = onConversations || onBots;
+  const activeConversation = conversations.find((conversation) => conversation.id === activeConversationId);
   const hasDetails = activeConversation?.type === 'group' || activeConversation?.type === 'bot';
   const { details: detailsVisible, media: mediaVisible } = rightPanelsVisible({
-    detailsOpen, mediaOpen, onChatPage, stageShown: showStage, conversationType: activeConversation?.type ?? null,
+    detailsOpen, mediaOpen, onChatPage: onConversations, stageShown: showStage, conversationType: activeConversation?.type ?? null,
   });
   const activeConversationName = conversationTitle(activeConversation, state.me.userId, allUsers);
 
@@ -231,22 +228,6 @@ function Shell() {
                 <Stage allIds={callIds} chatOpen={callChatOpen} onToggleChat={() => setCallChatOpen((v) => !v)} />
               ) : (
                 <ConversationPanel
-                  onOpenProfile={setProfileUserId}
-                  onOpenCall={handleOpenCall}
-                  onOpenSearch={() => setSearchOpen(true)}
-                  detailsOpen={detailsVisible}
-                  mediaOpen={mediaVisible}
-                  onOpenDetails={() => { setMediaOpen(false); setDetailsOpen(true); }}
-                  onToggleDetails={() => { setMediaOpen(false); setDetailsOpen(!detailsVisible); }}
-                  onToggleMedia={() => { setDetailsOpen(false); setMediaOpen(!mediaVisible); }}
-                />
-              )}
-            />
-            <Route
-              path={ROUTES.bots}
-              element={(
-                <ConversationPanel
-                  page="bots"
                   onOpenProfile={setProfileUserId}
                   onOpenCall={handleOpenCall}
                   onOpenSearch={() => setSearchOpen(true)}
