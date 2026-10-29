@@ -311,6 +311,9 @@ describe('MessageRow — phone action sheet', () => {
     fireEvent.pointerUp(el, { pointerType });
   }
 
+  // a person taps the sheet once it has slid up, never in the instant the finger lifts
+  const sheetUp = () => act(() => new Promise((resolve) => setTimeout(resolve, 300)));
+
   it('holding a finger on the message opens its actions, with no per-row buttons on screen', async () => {
     phone();
     const { container } = renderWithRoom(
@@ -334,6 +337,7 @@ describe('MessageRow — phone action sheet', () => {
       { openReactionParticipants }
     );
     await hold(row(container));
+    await sheetUp();
     await user.click(await screen.findByText('Ver todas as reações'));
     expect(openReactionParticipants).toHaveBeenCalledWith({ conversationId: 'conv-1', msgId: 1 });
   });
@@ -347,6 +351,7 @@ describe('MessageRow — phone action sheet', () => {
       { reactToChatMessage }
     );
     await hold(row(container));
+    await sheetUp();
     await user.click(await screen.findByRole('button', { name: 'Reagir com ❤️' }));
     expect(reactToChatMessage).toHaveBeenCalledWith(1, '❤️');
   });
@@ -362,6 +367,19 @@ describe('MessageRow — phone action sheet', () => {
     fireEvent.click(name);
     expect(onOpenProfile).not.toHaveBeenCalled();
     expect(await screen.findByRole('dialog', { name: 'Ações da mensagem' })).toBeInTheDocument();
+  });
+
+  it('nor acts on the sheet it opened, when it lands there instead', async () => {
+    phone();
+    const onReply = vi.fn();
+    const { container } = renderWithRoom(
+      <MessageRow message={makeMessage()} showHeader highlighted={false} allUsers={new Map()} mentionLookup={new Map()} onOpenProfile={noop} onReply={onReply} onJumpTo={noop} />
+    );
+    await hold(row(container));
+    const sheet = await screen.findByRole('dialog', { name: 'Ações da mensagem' });
+    fireEvent.click(within(sheet).getByRole('button', { name: 'Responder' }));
+    expect(onReply).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog', { name: 'Ações da mensagem' })).toBeInTheDocument();
   });
 
   it('a finger that moves is a scroll, not a long press', async () => {

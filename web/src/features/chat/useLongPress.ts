@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import type { MouseEvent, PointerEvent, TouchEvent } from 'react';
+import type { MouseEvent, PointerEvent, SyntheticEvent, TouchEvent } from 'react';
 
 import { isPhoneLayout } from './phoneLayout';
 
@@ -8,7 +8,7 @@ export const LONG_PRESS_MS = 450;
 // a finger drifts a little while held still; more than this is a scroll
 const MOVE_TOLERANCE_PX = 10;
 // the click a browser may send for the lifted finger comes right after it
-const RELEASE_CLICK_MS = 400;
+const RELEASE_CLICK_MS = 250;
 
 /** A finger held on a message, on the phone layout: Discord's way into a
  * message's actions, where there is no hover toolbar and no right click.
@@ -18,6 +18,13 @@ const RELEASE_CLICK_MS = 400;
  * row, so the sheet is the only thing that opens. The tap that ends a long
  * press is swallowed too, or it would also follow whatever is under the
  * finger (a link, an image). */
+/** React carries events up from portals: the sheet a long press opens is drawn
+ * outside the row, yet its taps arrive here too, and none of them is a press on
+ * the message. */
+function fromRow(event: SyntheticEvent): boolean {
+  return event.target instanceof Node && event.currentTarget.contains(event.target);
+}
+
 export function useLongPress(onLongPress: () => void) {
   const timerRef = useRef<number | null>(null);
   const startRef = useRef<{ x: number; y: number } | null>(null);
@@ -38,6 +45,7 @@ export function useLongPress(onLongPress: () => void) {
 
   return {
     onPointerDown(event: PointerEvent) {
+      if (!fromRow(event)) return;
       touchedRef.current = event.pointerType === 'touch';
       if (!touchedRef.current || !isPhoneLayout()) return;
       cancel();
@@ -51,11 +59,13 @@ export function useLongPress(onLongPress: () => void) {
       }, LONG_PRESS_MS);
     },
     onPointerMove(event: PointerEvent) {
+      if (!fromRow(event)) return;
       const start = startRef.current;
       if (!start || timerRef.current == null) return;
       if (Math.hypot(event.clientX - start.x, event.clientY - start.y) > MOVE_TOLERANCE_PX) cancel();
     },
-    onPointerUp() {
+    onPointerUp(event: PointerEvent) {
+      if (!fromRow(event)) return;
       if (firedRef.current) releasedAtRef.current = Date.now();
       cancel();
     },
@@ -72,10 +82,11 @@ export function useLongPress(onLongPress: () => void) {
     onClickCapture(event: MouseEvent) {
       if (!firedRef.current) return;
       firedRef.current = false;
-      // React carries clicks up from portals too: a tap inside the sheet this
-      // opened is not the lifted finger and must go through
-      const onRow = event.target instanceof Node && event.currentTarget.contains(event.target);
-      if (!onRow || Date.now() - releasedAtRef.current > RELEASE_CLICK_MS) return;
+      // Only the click that comes right as the finger lifts, wherever it
+      // lands: on the message, or on the backdrop of the sheet already open
+      // under the finger, which it would close. A later tap inside the sheet
+      // is a real one and goes through.
+      if (Date.now() - releasedAtRef.current > RELEASE_CLICK_MS) return;
       event.preventDefault();
       event.stopPropagation();
     },
