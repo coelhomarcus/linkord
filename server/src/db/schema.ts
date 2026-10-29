@@ -482,10 +482,19 @@ export const outboxEvents = pgTable('outbox_events', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   processedAt: timestamp('processed_at', { withTimezone: true }),
   attempts: integer('attempts').notNull().default(0),
+  nextAttemptAt: timestamp('next_attempt_at', { withTimezone: true }).notNull().defaultNow(),
+  leaseToken: text('lease_token'),
+  leaseUntil: timestamp('lease_until', { withTimezone: true }),
 }, (t) => [
-  index('outbox_events_unprocessed_idx').on(t.createdAt).where(sql`${t.processedAt} IS NULL`),
+  index('outbox_events_ready_idx').on(t.nextAttemptAt, t.createdAt).where(sql`${t.processedAt} IS NULL`),
   index('outbox_events_audience_user_id_idx').on(t.audienceUserId),
 ]);
+
+export const pushDeliveryReceipts = pgTable('push_delivery_receipts', {
+  eventId: text('event_id').notNull().references(() => outboxEvents.id, { onDelete: 'cascade' }),
+  endpoint: text('endpoint').notNull(),
+  deliveredAt: timestamp('delivered_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [primaryKey({ columns: [t.eventId, t.endpoint] })]);
 
 /** One browser installation's Web Push address. A browser can reuse the same
  * endpoint after a different account signs in, so the endpoint is unique and

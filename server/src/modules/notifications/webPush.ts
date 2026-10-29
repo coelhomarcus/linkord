@@ -3,7 +3,7 @@ import { and, eq, isNull } from 'drizzle-orm';
 import webPush from 'web-push';
 import { config } from '../../config/env.js';
 import { db } from '../../db/client.js';
-import { conversationMembers, conversations, friendships, groupInvitations, messages, notifications, pushSubscriptions, users, type OutboxEvent } from '../../db/schema.js';
+import { conversationMembers, conversations, friendships, groupInvitations, messages, notifications, pushDeliveryReceipts, pushSubscriptions, users, type OutboxEvent } from '../../db/schema.js';
 import { logger } from '../../lib/logger.js';
 import { canSendDirectMessage } from '../friendships/friendshipsRepository.js';
 
@@ -50,6 +50,22 @@ export async function removePushSubscription(userId: string, endpoint: string): 
 }
 
 interface PushNotice { title: string; body: string; path: string; tag: string }
+
+interface PushDeliveryResult { delivered: boolean; retryAfterMs: number }
+
+export function retryAfterDelayMs(headers: unknown, now = Date.now()): number {
+  if (!headers || typeof headers !== 'object') return 0;
+  const entry = Object.entries(headers).find(([name]) => name.toLowerCase() === 'retry-after');
+  const raw = Array.isArray(entry?.[1]) ? entry[1][0] : entry?.[1];
+  if (typeof raw !== 'string') return 0;
+  const value = raw.trim();
+  if (/^\d+$/.test(value)) {
+    const delay = Number(value) * 1000;
+    return Number.isFinite(delay) ? delay : 0;
+  }
+  const date = Date.parse(value);
+  return Number.isFinite(date) ? Math.max(0, date - now) : 0;
+}
 
 async function noticeFor(event: OutboxEvent): Promise<PushNotice | null> {
   const payload = event.payload as Record<string, unknown>;
@@ -114,14 +130,20 @@ async function noticeFor(event: OutboxEvent): Promise<PushNotice | null> {
     path: kind === 'friend_request' ? '/app/friends?tab=pending#received' : '/app/friends', tag: `social-${row.id}` };
 }
 
-export async function deliverWebPush(event: OutboxEvent): Promise<boolean> {
-  if (!pushAvailable) return true;
+export async function deliverWebPush(event: OutboxEvent): Promise<PushDeliveryResult> {
+  const done = { delivered: true, retryAfterMs: 0 };
+  if (!pushAvailable) return done;
   const [recipient] = await db.select({ status: users.status }).from(users).where(eq(users.id, event.audienceUserId)).limit(1);
-  if (!recipient || recipient.status !== 'active') return true;
+  if (!recipient || recipient.status !== 'active') return done;
   const notice = await noticeFor(event);
-  if (!notice) return true;
+  if (!notice) return done;
   const subscriptions = await db.select().from(pushSubscriptions).where(eq(pushSubscriptions.userId, event.audienceUserId));
-  if (!subscriptions.length) return true;
+  if (!subscriptions.length) return done;
+  const receipts = await db.select({ endpoint: pushDeliveryReceipts.endpoint }).from(pushDeliveryReceipts)
+    .where(eq(pushDeliveryReceipts.eventId, event.id));
+  const deliveredEndpoints = new Set(receipts.map((receipt) => receipt.endpoint));
+  const pending = subscriptions.filter((sub) => !deliveredEndpoints.has(sub.endpoint));
+  if (!pending.length) return done;
   const body = JSON.stringify({ web_push: 8030, notification: {
     title: notice.title, body: notice.body,
     icon: new URL('/icons/icon-192.png', config.APP_URL).href,
@@ -129,23 +151,26 @@ export async function deliverWebPush(event: OutboxEvent): Promise<boolean> {
     navigate: new URL(notice.path, config.APP_URL).href, tag: notice.tag, lang: 'pt-BR',
   } });
   const topic = crypto.createHash('sha256').update(notice.tag).digest('base64url').slice(0, 32);
-  const results = await Promise.all(subscriptions.map(async (sub) => {
+  const results = await Promise.all(pending.map(async (sub): Promise<PushDeliveryResult> => {
     try {
       await webPush.sendNotification({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, body, {
         vapidDetails: { subject: config.PUSH_VAPID_SUBJECT, publicKey: config.PUSH_VAPID_PUBLIC_KEY, privateKey: config.PUSH_VAPID_PRIVATE_KEY },
         contentEncoding: 'aes128gcm', TTL: event.type === 'chat_message_push' ? 3600 : 86400,
         urgency: 'normal', topic, timeout: 5000,
       });
-      return true;
+      await db.insert(pushDeliveryReceipts).values({ eventId: event.id, endpoint: sub.endpoint }).onConflictDoNothing();
+      return done;
     } catch (err) {
-      const status = (err as { statusCode?: number }).statusCode;
+      const response = err as { statusCode?: number; headers?: unknown };
+      const status = response.statusCode;
       if (status === 404 || status === 410) {
-        await db.delete(pushSubscriptions).where(eq(pushSubscriptions.endpoint, sub.endpoint));
-        return true;
+        await db.delete(pushSubscriptions).where(and(eq(pushSubscriptions.endpoint, sub.endpoint), eq(pushSubscriptions.userId, event.audienceUserId),
+          eq(pushSubscriptions.p256dh, sub.p256dh), eq(pushSubscriptions.auth, sub.auth)));
+        return done;
       }
       log.warn('push delivery failed', { status: status ?? 'network', eventId: event.id });
-      return false;
+      return { delivered: false, retryAfterMs: retryAfterDelayMs(response.headers) };
     }
   }));
-  return results.every(Boolean);
+  return { delivered: results.every((result) => result.delivered), retryAfterMs: Math.max(...results.map((result) => result.retryAfterMs)) };
 }

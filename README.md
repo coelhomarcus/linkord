@@ -56,8 +56,9 @@ O frontend sobe em `http://localhost:5173` (proxy pro backend em `:3000`).
 Gere um par VAPID uma vez com `npx web-push generate-vapid-keys` e configure
 `PUSH_VAPID_PUBLIC_KEY`, `PUSH_VAPID_PRIVATE_KEY` e `PUSH_VAPID_SUBJECT`
 (por exemplo, `mailto:admin@seu-dominio.com`) no servidor. Guarde a chave
-privada e reutilize o mesmo par em todos os deploys; trocá-lo exige que os
-usuários ativem as notificações novamente. Sem essas variáveis, o app funciona,
+privada e reutilize o mesmo par em todos os deploys. Se trocar as chaves, o app
+refaz a assinatura quando o usuário abrir o Linkord novamente; até lá, as
+notificações antigas deixam de chegar. Sem essas variáveis, o app funciona,
 mas a opção de Push aparece indisponível.
 
 Em produção, configure `APP_URL` com a origem HTTPS pública e permita conexões

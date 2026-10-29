@@ -21,15 +21,14 @@ export function NotificationsSettings() {
   const [permission, setPermission] = useState<NotificationPermissionState>(() => notificationPermissionState());
   const [setup, setSetup] = useState<PushSetup | null>(null);
   const [preparing, setPreparing] = useState(true);
-  const [active, setActive] = useState(false);
+  const [active, setActive] = useState(isPushSubscriptionActive);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     let current = true;
-    void preparePush().then(async (prepared) => {
+    void preparePush().then((prepared) => {
       if (!current) return;
       setSetup(prepared);
-      const subscription = await prepared?.registration.pushManager.getSubscription();
-      if (current) setActive(!!subscription);
     }).catch(() => { if (current) setSetup(null); }).finally(() => { if (current) setPreparing(false); });
     return () => { current = false; };
   }, []);
@@ -62,11 +61,14 @@ export function NotificationsSettings() {
   }
 
   async function handleToggleNotifications(checked: boolean) {
+    if (busy) return;
     if (!checked) {
+      setBusy(true);
       setNotificationsError(null);
       try { await disablePush(); } catch { /* unsubscribe still invalidates the local endpoint */ }
       setNotificationsEnabled(false);
       setActive(false);
+      setBusy(false);
       return;
     }
     if (permission === 'denied') {
@@ -77,6 +79,7 @@ export function NotificationsSettings() {
       setNotificationsError('Notificações push indisponíveis. Verifique a instalação do app e a configuração do servidor.');
       return;
     }
+    setBusy(true);
     try {
       await enablePush(setup);
       setPermission(notificationPermissionState());
@@ -86,6 +89,8 @@ export function NotificationsSettings() {
     } catch {
       setPermission(notificationPermissionState());
       setNotificationsError('Não foi possível ativar as notificações. Confira a permissão do app e tente novamente.');
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -101,7 +106,7 @@ export function NotificationsSettings() {
     <SettingsSections>
       <SettingsSection id="system" title="Notificações do sistema">
         <SettingsRow label="Notificações do Linkord" description="Mensagens, menções, solicitações de amizade e convites, mesmo com o app fechado.">
-          <Switch checked={effectivelyOn} disabled={preparing} onCheckedChange={(v) => void handleToggleNotifications(v)} aria-label="Notificações do Linkord" />
+          <Switch checked={effectivelyOn} disabled={preparing || busy} onCheckedChange={(v) => void handleToggleNotifications(v)} aria-label="Notificações do Linkord" />
         </SettingsRow>
         {permission !== 'granted' && <p className="text-label text-text-muted">{STATUS_TEXT[permission]}</p>}
         {isIOS && !pushSupported() && <p className="text-label text-text-muted">No iPhone, adicione o Linkord à Tela de Início, abra pelo ícone e volte aqui para ativar as notificações.</p>}

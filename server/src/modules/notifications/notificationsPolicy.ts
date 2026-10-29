@@ -1,8 +1,12 @@
 // Pure rules of the outbox worker and of notification retention.
 
-export const OUTBOX_MAX_ATTEMPTS = 5;
+export const OUTBOX_MAX_ATTEMPTS = 8;
 export const OUTBOX_BATCH = 50;
+export const OUTBOX_CONCURRENCY = 4;
 export const OUTBOX_POLL_MS = 2_000;
+export const OUTBOX_LEASE_MS = 120_000;
+export const OUTBOX_RETRY_BASE_MS = 30_000;
+export const OUTBOX_RETRY_MAX_MS = 15 * 60_000;
 export const OUTBOX_RETENTION_DAYS = 7;
 export const NOTIFICATION_READ_RETENTION_DAYS = 30;
 export const NOTIFICATION_UNREAD_RETENTION_DAYS = 90;
@@ -15,6 +19,11 @@ export interface OutboxState { processed: boolean; attempts: number }
  * unprocessed, no longer retried, visible to an administrator. */
 export function nextOutboxState(attempts: number, delivered: boolean): OutboxState {
   return { processed: delivered, attempts: attempts + 1 };
+}
+
+export function outboxRetryDelayMs(attempts: number, retryAfterMs = 0): number {
+  const backoff = Math.min(OUTBOX_RETRY_MAX_MS, OUTBOX_RETRY_BASE_MS * 2 ** Math.max(0, attempts - 1));
+  return Math.max(backoff, retryAfterMs);
 }
 
 export const isOutboxFailed = (state: { processed: boolean; attempts: number }): boolean => !state.processed && state.attempts >= OUTBOX_MAX_ATTEMPTS;

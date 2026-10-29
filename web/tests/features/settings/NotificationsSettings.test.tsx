@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { RoomContext } from '@/state/RoomContext';
 import { createFakeRoomContextValue } from '@tests/fixtures/roomContextFixture';
 import { NotificationsSettings } from '@/features/settings/NotificationsSettings';
+import { setPushSubscriptionActive } from '@/shared/notifications';
 
 class FakeNotification {
   static permission: NotificationPermission = 'default';
@@ -32,6 +33,7 @@ function renderNotifications(overrides: Parameters<typeof createFakeRoomContextV
 }
 
 beforeEach(() => {
+  setPushSubscriptionActive(false);
   FakeNotification.permission = 'default';
   FakeNotification.requestPermission.mockClear().mockResolvedValue('granted');
   vi.stubGlobal('Notification', FakeNotification);
@@ -79,9 +81,9 @@ describe('NotificationsSettings', () => {
     expect(setNotificationsEnabled).toHaveBeenCalledWith(true);
   });
 
-  it('permission granted with an existing subscription: the switch appears on', async () => {
+  it('permission granted with a reconciled subscription: the switch appears on', async () => {
     FakeNotification.permission = 'granted';
-    setup.registration.pushManager.getSubscription.mockResolvedValue({ endpoint: 'existing' });
+    setPushSubscriptionActive(true);
     renderNotifications({ notificationsEnabled: true });
     await waitFor(() => expect(screen.getByRole('switch', { name: 'Notificações do Linkord' })).toBeChecked());
     expect(screen.queryByText(/Permissão necessária|Bloqueadas|não disponíveis/i)).not.toBeInTheDocument();
@@ -108,7 +110,7 @@ describe('NotificationsSettings', () => {
   });
 
   it('revoking permission and coming back to the page re-evaluates the state (visibilitychange)', async () => {
-    setup.registration.pushManager.getSubscription.mockResolvedValue({ endpoint: 'existing' });
+    setPushSubscriptionActive(true);
     renderNotifications({ notificationsEnabled: true });
     await waitForPreparation();
     FakeNotification.permission = 'granted';
@@ -118,7 +120,7 @@ describe('NotificationsSettings', () => {
 
   it('turning notifications off removes the browser subscription', async () => {
     FakeNotification.permission = 'granted';
-    setup.registration.pushManager.getSubscription.mockResolvedValue({ endpoint: 'existing' });
+    setPushSubscriptionActive(true);
     const setNotificationsEnabled = vi.fn();
     renderNotifications({ notificationsEnabled: true, setNotificationsEnabled });
     await waitFor(() => expect(screen.getByRole('switch', { name: 'Notificações do Linkord' })).toBeChecked());
