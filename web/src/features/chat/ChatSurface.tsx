@@ -14,10 +14,10 @@ import { MediaViewerProvider } from './MediaViewerProvider';
 // the ResizeObserver measures: someone starting or stopping typing must not
 // change the list's bottom padding, or a list pinned to the bottom jumps.
 const STATUS_RAIL_HEIGHT = 24;
-// how far above the composer (or the typing rail, while it shows) the messages
-// fade out; the list's bottom padding clears it, so the newest message never
-// sits under it
-const FADE_HEIGHT = 12;
+// the gap between the newest message and the typing rail — and, while someone
+// types, how far above the rail the messages fade out: the same 8px, so that
+// fade ends exactly where the newest message does and never covers it
+const RAIL_GAP = 8;
 
 function hasFiles(e: DragEvent<HTMLDivElement>): boolean {
   return Array.from(e.dataTransfer.types).includes('Files');
@@ -86,19 +86,22 @@ export function ChatSurface({ conversationId, onOpenProfile, surfaceId = 'main' 
     >
       <ChatSurfaceWidthProvider width={surfaceWidth}>
         <MediaViewerProvider>
-          <MessageTimeline key={`${conversationId}:${windowGenerationByConversation.get(conversationId) ?? 0}`} surfaceId={surfaceId} conversationId={conversationId} onReply={setReplyingTo} onOpenProfile={onOpenProfile} bottomPadding={composerHeight + STATUS_RAIL_HEIGHT + FADE_HEIGHT} />
+          <MessageTimeline key={`${conversationId}:${windowGenerationByConversation.get(conversationId) ?? 0}`} surfaceId={surfaceId} conversationId={conversationId} onReply={setReplyingTo} onOpenProfile={onOpenProfile} bottomPadding={composerHeight + STATUS_RAIL_HEIGHT + RAIL_GAP} />
         </MediaViewerProvider>
       </ChatSurfaceWidthProvider>
       <div
         aria-hidden
         className="pointer-events-none absolute inset-x-0 bottom-0 transition-[height] duration-150 ease-out motion-reduce:transition-none"
-        // solid behind the composer, and behind the typing rail only while
-        // someone types — so "fulano está digitando" never reads over the
-        // messages under it — with a short fade above; the rail's room stays
-        // reserved either way, so nothing in the list moves when it shows
+        // just a solid fill behind the composer (messages must not show through
+        // the margins around it), no fade; only while someone types does it
+        // reach up behind the typing rail — so "fulano está digitando" never
+        // reads over the messages — with a short fade above it. The rail's room
+        // stays reserved either way, so nothing in the list moves when it shows.
         style={{
-          height: composerHeight + (someoneTyping ? STATUS_RAIL_HEIGHT : 0) + FADE_HEIGHT,
-          backgroundImage: `linear-gradient(to top, var(--surface-base) calc(100% - ${FADE_HEIGHT}px), transparent)`,
+          height: composerHeight + (someoneTyping ? STATUS_RAIL_HEIGHT + RAIL_GAP : 0),
+          backgroundImage: someoneTyping
+            ? `linear-gradient(to top, var(--surface-base) calc(100% - ${RAIL_GAP}px), transparent)`
+            : 'linear-gradient(var(--surface-base), var(--surface-base))',
         }}
       />
       <div className="pointer-events-none absolute inset-x-0" style={{ bottom: composerHeight, height: STATUS_RAIL_HEIGHT }}>
