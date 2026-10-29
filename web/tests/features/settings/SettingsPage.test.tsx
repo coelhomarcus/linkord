@@ -426,14 +426,43 @@ describe('SettingsPage — category navigation', () => {
     renderSettings({ state: userState }, '/app/settings/privacy');
     expect(screen.getByText('lista de bloqueados')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Privacidade' })).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByRole('link', { name: 'Perfil' })).not.toHaveAttribute('aria-current');
+    expect(screen.getByRole('link', { name: /Editar perfil/ })).not.toHaveAttribute('aria-current');
   });
 
   it('with no category in the URL, wide mode shows Profile at the same URL (no redirect)', () => {
     renderRouted({ state: userState }, '/app/settings');
     expect(screen.getByLabelText('Nome de exibição')).toBeInTheDocument();
     expect(screen.getByTestId('where')).toHaveTextContent('/app/settings');
-    expect(screen.getByRole('link', { name: 'Perfil' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: /Editar perfil/ })).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('the sidebar opens with the account card, and its list has no separate Perfil entry', () => {
+    renderSettings({ state: userState }, '/app/settings/privacy');
+    const card = screen.getByRole('link', { name: /Editar perfil/ });
+    expect(card).toHaveTextContent('Ana');
+    expect(card).toHaveAttribute('data-to', '/app/settings/profile');
+    expect(screen.queryByRole('link', { name: 'Perfil' })).not.toBeInTheDocument();
+  });
+
+  it('lists the sections of the open category and scrolls to the chosen one', async () => {
+    const user = userEvent.setup();
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    renderSettings({ state: userState }, '/app/settings/av');
+    const sections = screen.getByRole('list', { name: 'Seções de Áudio e vídeo' });
+    expect(within(sections).getAllByRole('button').map((b) => b.textContent)).toEqual(['Entrada de áudio', 'Saída de áudio', 'Vídeo']);
+    expect(within(sections).getByRole('button', { name: 'Entrada de áudio' })).toHaveAttribute('aria-current', 'location');
+
+    await user.click(within(sections).getByRole('button', { name: 'Vídeo' }));
+
+    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' });
+    expect(scrollIntoView.mock.contexts.at(-1)).toBe(document.getElementById('camera'));
+    expect(within(sections).getByRole('button', { name: 'Vídeo' })).toHaveAttribute('aria-current', 'location');
+  });
+
+  it('a category with a single section lists none under it', () => {
+    renderSettings({ state: userState }, '/app/settings/privacy');
+    expect(screen.queryByRole('list', { name: /Seções de/ })).not.toBeInTheDocument();
   });
 
   it('unknown category falls back to profile instead of rendering an empty page', () => {

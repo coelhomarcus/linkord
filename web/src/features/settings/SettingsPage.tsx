@@ -99,7 +99,7 @@ export function SettingsPage({ onOpenProfile }: SettingsPageProps) {
         ) : undefined}
       />
       <div ref={areaRef} className="@container flex min-h-0 min-w-0 flex-1">
-        {mode === 'wide' ? <SettingsSidebar active={current} isAdmin={isAdmin} /> : null}
+        {mode === 'wide' ? <SettingsSidebar active={current} isAdmin={isAdmin} scrollerRef={scrollerRef} /> : null}
         <main ref={scrollerRef} aria-label={showIndex ? 'Ajustes' : category.label} className="min-h-0 min-w-0 flex-1 overflow-y-auto">
           {showIndex ? (
             <SettingsIndex isAdmin={isAdmin} />
