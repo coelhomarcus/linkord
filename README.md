@@ -73,6 +73,17 @@ app fechado. A entrega depende da permissão do sistema, da conexão do aparelho
 e do prazo de validade definido pelo serviço de push. O histórico de mensagens
 continua no banco e é carregado ao abrir o Linkord.
 
+O ícone do app usa a Badging API quando o navegador a oferece. O número é a
+soma de mensagens não lidas e notificações sociais não lidas; menções e cartões
+de convite não são contados duas vezes. O app consulta o servidor ao abrir,
+voltar ao foco e receber Push, e limpa o badge quando não há pendências ou ao
+sair da conta. No iPhone/iPad, o número aparece no app instalado na Tela de
+Início após a permissão de notificações; ao desativar as notificações do Linkord,
+o badge é removido. No Chrome Android, o sistema mostra
+um ponto ao receber notificação, sem contagem numérica pela Badging API.
+Veja a [documentação do WebKit](https://webkit.org/blog/14112/badging-for-home-screen-web-apps/)
+e a [referência da MDN](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/How_to/Display_badge_on_app_icon).
+
 Cadastro é fechado por padrão (`REGISTRATION_CODE` vazio = ninguém se cadastra). Depois de criar sua conta, vire admin com:
 
 ```bash

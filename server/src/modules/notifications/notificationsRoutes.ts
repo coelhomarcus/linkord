@@ -3,7 +3,7 @@ import { config } from '../../config/env.js';
 import { sendJson, sendError, jsonBody } from '../../http/respond.js';
 import { parseCookies } from '../../http/cookies.js';
 import { resolveSession } from '../auth/session.js';
-import { countUnread, deleteAllNotifications, deleteNotification, listNotifications, markRead } from './notificationsRepository.js';
+import { countAppBadge, countUnread, deleteAllNotifications, deleteNotification, listNotifications, markRead } from './notificationsRepository.js';
 import { pushAvailable, validPushSubscription, savePushSubscription, removePushSubscription } from './webPush.js';
 
 async function session(request: FastifyRequest, reply: FastifyReply): Promise<{ userId: string } | null> {
@@ -47,6 +47,11 @@ export function registerNotificationRoutes(fastify: FastifyInstance): void {
   fastify.get('/api/notifications/summary', async (request, reply) => {
     const sess = await session(request, reply);
     if (sess) sendJson(reply, 200, { unread: await countUnread(sess.userId) });
+  });
+
+  fastify.get('/api/notifications/badge', async (request, reply) => {
+    const sess = await session(request, reply);
+    if (sess) sendJson(reply, 200, { count: await countAppBadge(sess.userId) });
   });
 
   fastify.post('/api/notifications/read', async (request, reply) => {

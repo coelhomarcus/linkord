@@ -4,6 +4,7 @@
 
 const CACHE = 'linkord-offline-v1';
 const OFFLINE_URL = '/offline.html';
+let badgeRequestId = 0;
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.add(new Request(OFFLINE_URL, { cache: 'reload' }))));
@@ -42,13 +43,32 @@ self.addEventListener('push', (event) => {
     const target = new URL(notice?.navigate, self.location.origin);
     if (target.origin === self.location.origin && target.pathname.startsWith('/app/')) path = target.pathname + target.search + target.hash;
   } catch { /* keep the safe default */ }
-  event.waitUntil(self.registration.showNotification(title, {
+  const notification = self.registration.showNotification(title, {
     body,
     icon: '/icons/icon-192.png',
     badge: '/icons/notification-badge-96.png',
     tag: typeof notice?.tag === 'string' ? notice.tag : 'linkord',
     data: { path },
-  }));
+  });
+  const badge = (async () => {
+    if (typeof self.navigator?.setAppBadge !== 'function') return;
+    const requestId = ++badgeRequestId;
+    try {
+      const response = await self.fetch('/api/notifications/badge', { credentials: 'same-origin', cache: 'no-store' });
+      if (requestId !== badgeRequestId) return;
+      if (response.status === 401) {
+        if (typeof self.navigator.clearAppBadge === 'function') await self.navigator.clearAppBadge();
+        else await self.navigator.setAppBadge(0);
+        return;
+      }
+      if (!response.ok) return;
+      const count = (await response.json()).count;
+      if (!Number.isSafeInteger(count) || count < 0) return;
+      if (count === 0 && typeof self.navigator.clearAppBadge === 'function') await self.navigator.clearAppBadge();
+      else await self.navigator.setAppBadge(count);
+    } catch { /* a notification still appears if the badge cannot be updated */ }
+  })();
+  event.waitUntil(Promise.all([notification, badge]));
 });
 
 self.addEventListener('notificationclick', (event) => {

@@ -4,6 +4,7 @@ import { ApiError, fetchMe, linkEmail as apiLinkEmail, login as apiLogin, logout
 import type { ApiUser } from '@/shared/api/api';
 import { clearAllDrafts } from '@/features/chat/conversationDrafts';
 import { disablePush, restorePush } from '@/shared/pushNotifications';
+import { clearAppBadge } from '@/features/notifications/appBadge';
 import { saveNotificationsEnabled, setNotificationsModuleEnabled } from '@/shared/notifications';
 
 
@@ -45,6 +46,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    if (status === 'anon') void clearAppBadge();
+  }, [status]);
 
   useEffect(() => {
     if (status !== 'authed' || !user) return;
@@ -89,6 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
+    await clearAppBadge();
     try { await disablePush(); } catch { /* a revoked endpoint is removed after the next failed delivery */ }
     saveNotificationsEnabled(false);
     setNotificationsModuleEnabled(false);

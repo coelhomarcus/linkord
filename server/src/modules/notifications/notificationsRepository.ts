@@ -121,6 +121,37 @@ export async function countUnread(userId: string): Promise<number> {
   return row?.n ?? 0;
 }
 
+/** Mentions contribute through their unread message. A group invitation card
+ * and its unread notification also describe one event, so count it once. */
+export async function countAppBadge(userId: string): Promise<number> {
+  const result = await db.execute(sql`
+    select (
+      select count(*) from conversation_members cm
+      inner join conversations c on c.id = cm.conversation_id
+      inner join messages m on m.conversation_id = cm.conversation_id
+      where cm.user_id = ${userId}
+        and c.status = 'active'
+        and (c.type <> 'direct' or cm.hidden_at is null or c.last_message_at > cm.hidden_at)
+        and m.id > coalesce(cm.last_read_message_id, 0)
+        and m.created_at > cm.joined_at
+        and m.author_id is distinct from ${userId}
+        and not (
+          m.kind = 'group_invite' and exists (
+            select 1 from notifications invitation
+            where invitation.recipient_id = ${userId}
+              and invitation.kind = 'group_invitation'
+              and invitation.group_invitation_id = m.group_invitation_id
+              and invitation.read_at is null
+          )
+        )
+    ) + (
+      select count(*) from notifications n
+      where n.recipient_id = ${userId} and n.read_at is null and n.kind <> 'mention'
+    ) as count
+  `);
+  return Number(result.rows[0]?.count ?? 0);
+}
+
 /** Removes notifications from the recipient's own list. Idempotent, and never
  * reaches someone else's row: the recipient always comes from the session. */
 export async function deleteNotification(userId: string, id: string): Promise<number> {

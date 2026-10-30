@@ -33,6 +33,7 @@ import { FriendsProvider } from '@/features/friends/FriendsContext';
 import { FriendsPage } from '@/features/friends/FriendsPage';
 import { NotificationsPage } from '@/features/notifications/NotificationsPage';
 import { NotificationStateProvider } from '@/features/notifications/NotificationStateProvider';
+import { AppBadgeSync } from '@/features/notifications/AppBadgeSync';
 import { ProfilePage } from '@/features/profile/ProfilePage';
 import { MobileTabBar } from '@/features/navigation/MobileTabBar';
 import { RequestsRedirect } from '@/features/friends/RequestsRedirect';
@@ -305,7 +306,7 @@ function AuthGate() {
   return (
     <RoomProvider key={user.id}>
       <FriendsProvider>
-        <NotificationStateProvider><Shell /></NotificationStateProvider>
+        <NotificationStateProvider><AppBadgeSync /><Shell /></NotificationStateProvider>
       </FriendsProvider>
     </RoomProvider>
   );
