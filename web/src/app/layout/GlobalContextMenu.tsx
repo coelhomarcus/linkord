@@ -55,6 +55,7 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
   const contextMenuActionsRef = useRef<ContextMenuRootActions | null>(null);
   const delegatedContextMenuRef = useRef(false);
   const touchTargetRef = useRef<{ at: number; blocked: boolean }>({ at: 0, blocked: false });
+  const selectionRowRef = useRef<HTMLElement | null>(null);
   const [contextMenuOpen, setContextMenuOpen] = useState(false);
   const targetMessage = messageTarget != null
     ? activeConversationId ? messagesByConversation.get(activeConversationId)?.find((m) => m.msgId === messageTarget) : undefined
@@ -73,6 +74,12 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
   const showUserBlock = !!userTarget;
 
   useEffect(() => {
+    function clearSelectionMode(event: PointerEvent) {
+      if (event.target instanceof Node && !selectionRowRef.current?.contains(event.target)) {
+        selectionRowRef.current?.removeAttribute('data-text-selection-enabled');
+        selectionRowRef.current = null;
+      }
+    }
     function captureTarget(e: MouseEvent | TouchEvent) {
       const element = e.target instanceof Element ? e.target : null;
       const touch = e.type === 'touchstart';
@@ -82,7 +89,8 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
         const conversation = element?.closest('[data-conversation-id]');
         const rowButton = conversation?.querySelector(':scope > button');
         const interactive = element?.closest('a, button, input, textarea, [contenteditable], [data-download-url]');
-        const blocked = (!message && !conversation) || !!window.getSelection()?.toString() || (!!interactive && interactive !== rowButton);
+        const blocked = (!message && !conversation) || !!window.getSelection()?.toString()
+          || !!message?.hasAttribute('data-text-selection-enabled') || (!!interactive && interactive !== rowButton);
         touchTargetRef.current = { at: Date.now(), blocked };
         if (blocked) return;
       } else if (recentTouch && touchTargetRef.current.blocked) {
@@ -96,7 +104,8 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
         return;
       }
       delegatedContextMenuRef.current = false;
-      const wantsNativeMenu = isEditableTarget(e.target) || (!touch && (e as MouseEvent).shiftKey);
+      const wantsNativeMenu = isEditableTarget(e.target) || (!touch && (e as MouseEvent).shiftKey)
+        || !!selectionRowRef.current?.contains(element);
       const downloadEl = element?.closest<HTMLElement>('[data-download-url]') ?? null;
       const messageEl = element?.closest<HTMLElement>('[data-message-id]') ?? null;
       const nextMessageTarget = messageEl ? Number(messageEl.dataset.messageId) : null;
@@ -132,18 +141,21 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
     }
     function blockNative(e: MouseEvent) {
       if (Date.now() - touchTargetRef.current.at < 1500 && touchTargetRef.current.blocked) return;
-      if (isEditableTarget(e.target) || e.shiftKey) return;
+      if (isEditableTarget(e.target) || e.shiftKey || (e.target instanceof Node && selectionRowRef.current?.contains(e.target))) return;
       e.preventDefault();
     }
     function stopForNativeMenu(e: MouseEvent) {
       if (Date.now() - touchTargetRef.current.at < 1500 && touchTargetRef.current.blocked) return;
-      if (isEditableTarget(e.target) || e.shiftKey) e.stopPropagation();
+      if (isEditableTarget(e.target) || e.shiftKey || (e.target instanceof Node && selectionRowRef.current?.contains(e.target))) e.stopPropagation();
     }
+    document.addEventListener('pointerdown', clearSelectionMode, { capture: true });
     document.addEventListener('touchstart', captureTarget, { capture: true, passive: true });
     document.addEventListener('contextmenu', captureTarget, { capture: true });
     document.addEventListener('contextmenu', stopForNativeMenu, { capture: true });
     document.addEventListener('contextmenu', blockNative);
     return () => {
+      document.removeEventListener('pointerdown', clearSelectionMode, { capture: true });
+      selectionRowRef.current?.removeAttribute('data-text-selection-enabled');
       document.removeEventListener('touchstart', captureTarget, { capture: true });
       document.removeEventListener('contextmenu', captureTarget, { capture: true });
       document.removeEventListener('contextmenu', stopForNativeMenu, { capture: true });
@@ -167,6 +179,14 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
 
   function handleCopyMessageText() {
     if (targetMessage?.text) navigator.clipboard.writeText(targetMessage.text).catch(() => {});
+  }
+
+  function handleSelectMessageText() {
+    if (!targetMessage) return;
+    const row = document.querySelector<HTMLElement>(`[data-message-id="${targetMessage.msgId}"]`);
+    selectionRowRef.current?.removeAttribute('data-text-selection-enabled');
+    row?.setAttribute('data-text-selection-enabled', '');
+    selectionRowRef.current = row;
   }
 
   return (
@@ -224,6 +244,12 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
                 <ContextMenuItem onClick={handleCopyMessageText}>
                   <CopyIcon size={16} />
                   <span>Copiar texto</span>
+                </ContextMenuItem>
+              )}
+              {can?.copy && (
+                <ContextMenuItem className="md:hidden" onClick={handleSelectMessageText}>
+                  <CopyIcon size={16} />
+                  <span>Selecionar trecho</span>
                 </ContextMenuItem>
               )}
               {can?.report && (

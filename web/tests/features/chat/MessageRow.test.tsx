@@ -60,6 +60,23 @@ describe('MessageRow — quick reactions in a bot', () => {
 });
 
 describe('MessageRow', () => {
+  it('shows press feedback and cancels it on scroll, release, and interactive content', () => {
+    renderWithRoom(
+      <MessageRow message={makeMessage({ text: 'Leia https://example.com' })} showHeader highlighted={false} allUsers={new Map()} mentionLookup={new Map()} onOpenProfile={noop} onReply={noop} onJumpTo={noop} />
+    );
+    const row = document.querySelector<HTMLElement>('[data-message-id="1"]')!;
+    const text = screen.getByText(/Leia/);
+    fireEvent.touchStart(text, { touches: [{ clientX: 20, clientY: 20 }] });
+    expect(row).toHaveAttribute('data-mobile-pressing', 'true');
+    fireEvent.touchMove(text, { touches: [{ clientX: 20, clientY: 40 }] });
+    expect(row).not.toHaveAttribute('data-mobile-pressing');
+    fireEvent.touchStart(text, { touches: [{ clientX: 20, clientY: 20 }] });
+    fireEvent.touchEnd(text);
+    expect(row).not.toHaveAttribute('data-mobile-pressing');
+    fireEvent.touchStart(screen.getByRole('link'), { touches: [{ clientX: 20, clientY: 20 }] });
+    expect(row).not.toHaveAttribute('data-mobile-pressing');
+  });
+
   it("a bot's message carries its name, a BOT tag and no profile to open", () => {
     renderWithRoom(
       <MessageRow message={makeMessage({ id: null, name: 'Deploys', bot: true })} showHeader highlighted={false} allUsers={new Map()} mentionLookup={new Map()} onOpenProfile={noop} onReply={noop} onJumpTo={noop} />

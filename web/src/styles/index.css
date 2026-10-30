@@ -157,6 +157,56 @@
   30% { transform: translateY(-2px); opacity: 1; }
 }
 
+@keyframes message-press-progress {
+  to { transform: scaleX(1); }
+}
+
+@media (max-width: 767px) and (hover: none) {
+  .mobile-message-press-target {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  .mobile-message-press-target a {
+    -webkit-user-select: text;
+    user-select: text;
+    -webkit-touch-callout: default;
+  }
+
+  [data-text-selection-enabled] .mobile-message-press-target {
+    -webkit-user-select: text;
+    user-select: text;
+    -webkit-touch-callout: default;
+  }
+
+  [data-mobile-pressing='true'] {
+    background: var(--color-message-hover);
+  }
+
+  [data-mobile-pressing='true']::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 1rem;
+    right: 1rem;
+    height: 2px;
+    border-radius: 999px;
+    background: var(--color-accent-primary);
+    pointer-events: none;
+    transform: scaleX(0);
+    transform-origin: left;
+    animation: message-press-progress 500ms linear forwards;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-mobile-pressing='true']::after {
+    animation: none;
+    transform: scaleX(1);
+  }
+}
+
 /* A status dot's cutout ring has to match the row behind it, and a row's
    hover/selected tint is translucent. These give the same tint, opaque, over
    the surface a container names in --surface-base (the shell when none

@@ -143,6 +143,17 @@ describe('GlobalContextMenu', () => {
       expect(setReplyingTo).toHaveBeenCalledWith(expect.objectContaining({ msgId: 8 }));
     });
 
+    it('offers an explicit text selection mode and restores native selection for that row', async () => {
+      renderMessage();
+      const row = screen.getByTestId('msg');
+      fireEvent.contextMenu(row);
+      fireEvent.click(await screen.findByText('Selecionar trecho'));
+      expect(row).toHaveAttribute('data-text-selection-enabled');
+      expect(fireEvent.contextMenu(row)).toBe(true);
+      fireEvent.pointerDown(document.body);
+      expect(row).not.toHaveAttribute('data-text-selection-enabled');
+    });
+
     it('opens with quick reactions and a "+", without the emoji picker', async () => {
       renderMessage();
       fireEvent.contextMenu(screen.getByTestId('msg'));
