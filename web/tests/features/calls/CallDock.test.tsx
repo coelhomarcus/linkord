@@ -167,6 +167,30 @@ describe('CallDock — in a call', () => {
     expect(toggleMicMuted).toHaveBeenCalledTimes(1);
   });
 
+  it('shows the ping next to Em chamada, with its strength, and explains it on hover', async () => {
+    const livekitRoom = new Room();
+    Object.defineProperty(livekitRoom, 'engine', { value: { client: { rtt: 42 } } });
+    renderDock({ activeCallConversationId: 'conv-1', livekitRoom });
+    const indicator = screen.getByLabelText('Conexão boa. Ping: 42 ms');
+    expect(indicator).toHaveAttribute('data-bars', '3');
+    fireEvent.mouseEnter(indicator);
+    fireEvent.focus(indicator);
+    expect(await screen.findByText('Ping: 42 ms')).toBeInTheDocument();
+    expect(screen.getByText('Tempo de ida e volta até o servidor de voz.')).toBeInTheDocument();
+  });
+
+  it('a slow ping turns the indicator down to fewer bars', () => {
+    const livekitRoom = new Room();
+    Object.defineProperty(livekitRoom, 'engine', { value: { client: { rtt: 180 } } });
+    renderDock({ activeCallConversationId: 'conv-1', livekitRoom });
+    expect(screen.getByLabelText('Conexão instável. Ping: 180 ms')).toHaveAttribute('data-bars', '2');
+  });
+
+  it('no ping indicator outside a call', () => {
+    renderDock();
+    expect(screen.queryByLabelText(/Ping:/)).not.toBeInTheDocument();
+  });
+
   it('triggers leaveCall when clicking leave call', () => {
     const leaveCall = vi.fn();
     renderDock({ activeCallConversationId: 'conv-1', leaveCall });

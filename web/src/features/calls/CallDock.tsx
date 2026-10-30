@@ -6,6 +6,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/
 import { useRoom } from '@/state/RoomContext';
 import { conversationTitle } from '@/features/conversations/conversationUtils';
 import { useParticipantMedia } from './useLiveKitTrack';
+import { CallPingIndicator } from './CallPingIndicator';
 import { cn } from '@/shared/lib/utils';
 import { ROUTES } from '@/shared/lib/routes';
 
@@ -116,7 +117,10 @@ export function CallDock({ onReturnToCall, onOpenProfile, showReturnToCall, layo
           {returnButton}
           <div className="flex items-center gap-2">
             <div className="min-w-0 flex-1">
-              <p className="text-caption font-semibold text-green">Em chamada</p>
+              <div className="flex items-center gap-1.5">
+                <p className="text-caption font-semibold text-green">Em chamada</p>
+                <CallPingIndicator />
+              </div>
               <p className="truncate text-label font-semibold text-text-primary">{title}</p>
             </div>
             {leaveButton}
