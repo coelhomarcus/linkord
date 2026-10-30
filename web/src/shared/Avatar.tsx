@@ -45,6 +45,8 @@ export function colorFor(id: string, avatarColor?: string | null): string {
   return AVATAR_COLOR_BY_VALUE.get(normalized) ?? normalized;
 }
 
+const FALLBACK_DELAY_MS = 600;
+
 interface AvatarProps {
   id: string;
   name: string;
@@ -69,7 +71,11 @@ export function Avatar({ id, name, avatar, avatarColor, size, className, poster,
   return (
     <AvatarRoot style={{ width: size, height: size }} className={className}>
       {src && <AvatarImage src={src} alt="" />}
+      {/* with a picture, the initials wait: a remounted row (scrolling the
+          virtualized chat) would otherwise flash them for the frames even a
+          cached image takes to decode, which on a phone is visible */}
       <AvatarFallback
+        delay={src ? FALLBACK_DELAY_MS : undefined}
         className="select-none font-bold text-white"
         style={{ background: colorFor(id, avatarColor), fontSize: Math.round(size * 0.4) }}
       >

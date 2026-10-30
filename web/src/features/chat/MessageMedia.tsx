@@ -26,7 +26,9 @@ function MediaImage({ attachment, className, onNaturalSize }: { attachment: Chat
       // empty until loaded: with no pixels yet, alt text and the broken-image
       // icon would be drawn over the placeholder (the button carries the name)
       alt={loaded ? attachment.name : ''}
-      loading="lazy"
+      // not lazy: the timeline only mounts rows near the screen anyway, and
+      // Safari's lazy margin is small enough that a scrolled-in picture
+      // started loading in view, swapping placeholder for image on screen
       onLoad={(event) => {
         setLoaded(true);
         const { naturalWidth: width, naturalHeight: height } = event.currentTarget;

@@ -208,9 +208,13 @@
 }
 
 /* An animated avatar with animateOnHover plays only while its row (the
-   nearest [data-avatar-hover]) is hovered or holds keyboard focus. */
+   nearest [data-avatar-hover]) is hovered or holds keyboard focus. Only on a
+   real pointer: a tap on a phone leaves a sticky :hover behind, which loaded
+   and played the GIF on every message touched. */
 [data-avatar-live] { display: none; }
-[data-avatar-hover]:hover [data-avatar-live],
+@media (hover: hover) {
+  [data-avatar-hover]:hover [data-avatar-live] { display: block; }
+}
 [data-avatar-hover]:has(:focus-visible) [data-avatar-live] { display: block; }
 
 /* A status dot's cutout ring has to match the row behind it, and a row's

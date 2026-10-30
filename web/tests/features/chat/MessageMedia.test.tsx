@@ -21,6 +21,14 @@ describe('MessageMedia', () => {
     expect(button.style.aspectRatio).toBe('1600 / 900');
   });
 
+  // the virtualized timeline already bounds what is mounted; lazy only made
+  // Safari start the load once the picture was on screen
+  it('pictures load as soon as their row mounts, not lazily', () => {
+    vi.stubGlobal('fetch', vi.fn(() => new Promise(() => {})));
+    const { container } = render(<MessageMedia attachments={[img('a', 1600, 900), img('b', 800, 600)]} />);
+    for (const image of container.querySelectorAll('img')) expect(image).not.toHaveAttribute('loading', 'lazy');
+  });
+
   it('a single image without stored dimensions still reserves a fixed-height box', () => {
     vi.stubGlobal('fetch', vi.fn(() => new Promise(() => {})));
     render(<MessageMedia attachments={[img('old')]} />);

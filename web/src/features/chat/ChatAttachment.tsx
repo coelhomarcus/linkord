@@ -67,7 +67,6 @@ export function ChatAttachment({ attachment, edgeToEdge }: ChatAttachmentProps) 
           <img
             src={cachedThumbUrl ?? undefined}
             alt={attachment.name}
-            loading="lazy"
             style={{ maxWidth }}
             className={cn(
               'block h-auto max-h-80 max-w-full object-contain',

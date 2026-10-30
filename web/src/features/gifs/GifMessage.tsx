@@ -28,7 +28,6 @@ export function GifMessage({ url }: { url: string }) {
       <img
         src={url}
         alt="GIF"
-        loading="lazy"
         decoding="async"
         onError={() => setFailed(true)}
         className="block h-auto max-h-72 w-auto max-w-full rounded-lg"

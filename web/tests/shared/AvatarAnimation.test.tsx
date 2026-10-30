@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { render } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { act, render, screen } from '@testing-library/react';
 import { Avatar } from '@/shared/Avatar';
 
 const live = (container: HTMLElement) => container.querySelector('img[data-avatar-live]');
@@ -19,5 +19,23 @@ describe('Avatar — animate on hover', () => {
   it('without animateOnHover, or while frozen, no hover image is added', () => {
     expect(live(render(<Avatar id="u" name="Ana" avatar="/uploads/a.gif" poster="/uploads/a.webp" size={40} />).container)).toBeNull();
     expect(live(render(<Avatar id="u" name="Ana" avatar="/uploads/a.gif" poster="/uploads/a.webp" frozen animateOnHover size={40} />).container)).toBeNull();
+  });
+});
+
+describe('Avatar — initials', () => {
+  afterEach(() => vi.useRealTimers());
+
+  it('without a picture, the initials show right away', () => {
+    render(<Avatar id="u" name="Ana Costa" avatar="" size={40} />);
+    expect(screen.getByText('AC')).toBeInTheDocument();
+  });
+
+  // a remounted row would flash them for the frames a cached picture takes to decode
+  it('with a picture, the initials only show if it has not loaded after a moment', async () => {
+    vi.useFakeTimers();
+    render(<Avatar id="u" name="Ana Costa" avatar="/uploads/a.png" size={40} />);
+    expect(screen.queryByText('AC')).not.toBeInTheDocument();
+    await act(async () => { vi.advanceTimersByTime(700); });
+    expect(screen.getByText('AC')).toBeInTheDocument();
   });
 });

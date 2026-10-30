@@ -109,7 +109,6 @@ export function LinkPreview({ embed, className = '', edgeToEdge, fitContainer, p
         <img
           src={embed.url}
           alt=""
-          loading="lazy"
           onError={() => setFailed(true)}
           onLoad={fitContainer ? undefined : (event: SyntheticEvent<HTMLImageElement>) => {
             const { naturalWidth: width, naturalHeight: height } = event.currentTarget;

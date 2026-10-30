@@ -165,7 +165,6 @@ export function GenericEmbed({ embed, className = '', edgeToEdge, preview }: Gen
         <img
           src={image}
           alt=""
-          loading="lazy"
           onError={() => setImageFailed(true)}
           className="size-full object-cover"
         />
