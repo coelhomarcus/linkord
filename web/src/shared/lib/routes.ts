@@ -1,6 +1,5 @@
-// Route contract of the app (docs/plano-rede-social.md §5.2). The router is in
-// memory, so these paths never reach the address bar: they are how the app
-// names its pages to itself. Lives in shared/ because both app/ (which owns the
+// Route contract of the app (docs/plano-rede-social.md §5.2). Lives in shared/
+// because both app/ (which owns the
 // router) and features (sidebar links, profile actions) need the same paths,
 // and features must never import app/.
 
@@ -24,12 +23,16 @@ export function parseFriendsView(raw: string | null | undefined): FriendsView {
 
 export const ROUTES = {
   conversations: '/app/conversations',
+  notifications: '/app/notifications',
+  profile: '/app/profile',
   friends: '/app/friends',
   /** legacy: redirects to the pending view of Friends; new links use friendsView/friendsSection */
   requests: '/app/requests',
   settings: '/app/settings',
   admin: '/admin/users',
   settingsTab: (tab: SettingsTab) => `/app/settings/${tab}`,
+  conversation: (id: string) => `/app/conversations/${encodeURIComponent(id)}`,
+  call: (id: string) => `/app/calls/${encodeURIComponent(id)}`,
 } as const;
 
 /** Settings and administration open as modals over the app: their URLs name
@@ -54,11 +57,15 @@ export function friendsSection(section: FriendsSection): string {
   return `${friendsView('pending')}#${section}`;
 }
 
-/** The conversation id in a legacy `/app/conversations/:id` path (an old
- * bookmark or link), or null on any other page (or on the bare list route).
- * The app itself no longer writes ids into the path, see `conversationNav`. */
+/** The conversation id in a conversation URL. */
 export function conversationIdFromPath(pathname: string): string | null {
   const match = /^\/app\/conversations\/([^/]+)\/?$/.exec(pathname);
+  if (!match) return null;
+  try { return decodeURIComponent(match[1]!); } catch { return null; }
+}
+
+export function callConversationIdFromPath(pathname: string): string | null {
+  const match = /^\/app\/calls\/([^/]+)\/?$/.exec(pathname);
   if (!match) return null;
   try { return decodeURIComponent(match[1]!); } catch { return null; }
 }
@@ -67,25 +74,7 @@ export function isConversationsPath(pathname: string): boolean {
   return pathname === ROUTES.conversations || pathname.startsWith(`${ROUTES.conversations}/`);
 }
 
-/** Which conversation is open lives in the router entry's state, not in the
- * path: the page stays `/app/conversations`, while going back to an entry (a
- * modal closing over it, an in-app back) still lands on the right conversation,
- * because each entry keeps its own state. */
-export function conversationNav(conversationId: string) {
-  return { state: { conversationId } };
-}
-
-export function conversationIdFromState(state: unknown): string | null {
-  if (!state || typeof state !== 'object') return null;
-  const id = (state as { conversationId?: unknown }).conversationId;
-  return typeof id === 'string' && id !== '' ? id : null;
-}
-
-/** Navigation options for "take me to the conversations page, the specific
- * conversation is about to be opened" (a friend's Message button, a
- * notification click). Without the flag, the URL sync would immediately
- * canonicalize the bare route to whatever conversation was active a moment
- * ago — a flash of the wrong conversation and an extra history entry. */
+/** A new direct conversation is being created before its id is known. */
 export const AWAITING_OPEN = { state: { awaitingOpen: true } } as const;
 
 export function isAwaitingOpen(state: unknown): boolean {

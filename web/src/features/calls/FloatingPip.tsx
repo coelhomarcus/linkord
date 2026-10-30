@@ -8,6 +8,7 @@ import { useCallTiles } from './useCallTiles';
 import { Tile } from './Tile';
 import { Button } from '@/shared/ui/primitives/button';
 import { cn } from '@/shared/lib/utils';
+import { useSidebar } from '@/shared/ui/motion/sidebar-context';
 
 interface DragPos {
   x: number;
@@ -16,12 +17,14 @@ interface DragPos {
 
 interface FloatingPipProps {
   allIds: string[];
+  hideOnMobile?: boolean;
   /** Called on a plain click/tap (not a drag) — returns to the full call view. */
   onExpand?: () => void;
 }
 
-export function FloatingPip({ allIds, onExpand }: FloatingPipProps) {
+export function FloatingPip({ allIds, onExpand, hideOnMobile = false }: FloatingPipProps) {
   const { state } = useRoom();
+  const { isMobile } = useSidebar();
   const descriptors = useCallTiles(allIds).filter((d) => d.kind !== 'avatar');
   // The user's own explicit prev/next pick — takes priority over following
   // focus, same "manual never gets overridden automatically" rule as the
@@ -94,7 +97,7 @@ export function FloatingPip({ allIds, onExpand }: FloatingPipProps) {
   // Audio-only call (nobody's camera/screen is on) — nothing to preview.
   // The rail's own green phone icon (AppNavigationRail) is the "in a call"
   // indicator and way back for this case; a floating pill duplicated it.
-  if (!current) return null;
+  if (!current || (hideOnMobile && isMobile)) return null;
 
   return createPortal(
     <div
@@ -107,7 +110,9 @@ export function FloatingPip({ allIds, onExpand }: FloatingPipProps) {
       // it (the dock publishes the room it takes; with no dock on screen, a
       // phone, it is the plain 1rem), and above the reconnect notice. Once
       // dragged, it stays wherever it was put.
-      style={dragPos ? { left: dragPos.x, top: dragPos.y } : { bottom: `max(var(--user-dock-clearance, 1rem), ${state.reconnecting ? '5rem' : '1rem'})` }}
+      style={dragPos ? { left: dragPos.x, top: dragPos.y } : isMobile
+        ? { top: 'calc(env(safe-area-inset-top) + 4.5rem)' }
+        : { bottom: `max(var(--user-dock-clearance, 1rem), ${state.reconnecting ? '5rem' : '1rem'})` }}
     >
       <div className="pointer-events-none absolute inset-0">
         {/* cover, not the new contain default: this wrapper doesn't center a

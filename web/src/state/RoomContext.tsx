@@ -70,8 +70,8 @@ export interface RoomContextValue {
   reconnecting: boolean;
   livekitRoom: Room;
   notifyActiveView: (view: ChatView) => void;
-  registerRequestChatView: (fn: () => void) => void;
-  requestChatView: () => void;
+  registerRequestChatView: (fn: (conversationId?: string) => void) => void;
+  requestChatView: (conversationId?: string) => void;
   activeCallConversationId: string | null;
   joinCall: (conversationId: string) => void;
   leaveCall: () => Promise<void>;

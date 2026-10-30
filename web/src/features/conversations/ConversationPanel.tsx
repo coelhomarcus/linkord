@@ -1,7 +1,9 @@
-import { ArrowLeftIcon, ImageIcon, InfoIcon, MagnifyingGlassIcon, PhoneIcon } from '@phosphor-icons/react';
+import { ArrowLeftIcon, DotsThreeIcon, ImageIcon, InfoIcon, MagnifyingGlassIcon, PhoneIcon } from '@phosphor-icons/react';
+import { useLocation, useNavigate } from 'react-router';
 
 import { PageHeader } from '@/shared/PageHeader';
-import { useSidebar } from '@/shared/ui/motion/sidebar-context';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/primitives/dropdown-menu';
+import { ROUTES, conversationIdFromPath } from '@/shared/lib/routes';
 import { Button } from '@/shared/ui/primitives/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
 import { Avatar } from '@/shared/Avatar';
@@ -32,8 +34,10 @@ interface ConversationPanelProps {
 
 export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, detailsOpen, mediaOpen, onOpenDetails, onToggleDetails, onToggleMedia }: ConversationPanelProps) {
   const { state, dispatch, conversations, activeConversationId, allUsers, onlineUserIds, activeCallConversationId } = useRoom();
-  const { setOpenMobile } = useSidebar();
-  const conversation = conversations.find((item) => item.id === activeConversationId) ?? null;
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const requestedId = conversationIdFromPath(pathname);
+  const conversation = conversations.find((item) => item.id === (requestedId ?? activeConversationId)) ?? null;
   const isBot = conversation?.type === 'bot';
   const hasDetails = conversation?.type === 'group' || isBot;
   const title = conversationTitle(conversation, state.me.userId, allUsers);
@@ -69,8 +73,8 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
     <main className="flex h-full min-w-0 flex-1 flex-col text-text-primary">
       {conversation ? (
         <>
-          <header className="flex h-header flex-none items-center gap-3 border-b border-border bg-surface-panel/90 px-4 backdrop-blur">
-            <Button type="button" variant="ghost" size="icon-sm" aria-label="Voltar" onClick={() => setOpenMobile(true)} className="-ml-1 md:hidden">
+          <header className="flex h-header flex-none items-center gap-2 border-b border-border bg-surface-panel/90 px-2 backdrop-blur md:gap-3 md:px-4">
+            <Button type="button" variant="ghost" size="icon" aria-label="Voltar para conversas" onClick={() => navigate(ROUTES.conversations)} className="md:hidden">
               <ArrowLeftIcon size={20} />
             </Button>
             {conversation.type === 'direct' && other ? (
@@ -102,7 +106,7 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
             </button>
             {callParticipants.length > 0 && (
               <Tooltip>
-                <TooltipTrigger render={<div className="flex flex-none items-center -space-x-2" />}>
+                <TooltipTrigger render={<div className="hidden flex-none items-center -space-x-2 md:flex" />}>
                   {callParticipants.slice(0, 4).map((p) => (
                     <Avatar key={p.id} id={p.id} name={p.displayName} avatar={p.avatar} avatarColor={p.avatarColor} size={28} className="ring-2 ring-surface-panel" />
                   ))}
@@ -115,14 +119,14 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
                 <TooltipContent side="bottom">Na chamada</TooltipContent>
               </Tooltip>
             )}
-            <Button type="button" variant="ghost" size="icon-sm" aria-label="Mídias e links" aria-pressed={mediaOpen} onClick={onToggleMedia} className={panelToggleClass(mediaOpen)}>
+            <Button type="button" variant="ghost" size="icon-sm" aria-label="Mídias e links" aria-pressed={mediaOpen} onClick={onToggleMedia} className={`${panelToggleClass(mediaOpen)} max-md:hidden`}>
               <ImageIcon size={20} />
             </Button>
-            <Button type="button" variant="ghost" size="icon-sm" aria-label="Buscar mensagens" onClick={onOpenSearch} className="text-text-muted hover:text-text-primary">
+            <Button type="button" variant="ghost" size="icon-sm" aria-label="Buscar mensagens" onClick={onOpenSearch} className="text-text-muted hover:text-text-primary max-md:hidden">
               <MagnifyingGlassIcon size={20} />
             </Button>
             {hasDetails && (
-              <Button type="button" variant="ghost" size="icon-sm" aria-label={isBot ? 'Detalhes do bot' : 'Detalhes do grupo'} aria-pressed={detailsOpen} onClick={onToggleDetails} className={panelToggleClass(detailsOpen)}>
+              <Button type="button" variant="ghost" size="icon-sm" aria-label={isBot ? 'Detalhes do bot' : 'Detalhes do grupo'} aria-pressed={detailsOpen} onClick={onToggleDetails} className={`${panelToggleClass(detailsOpen)} max-md:hidden`}>
                 <InfoIcon size={20} />
               </Button>
             )}
@@ -131,7 +135,7 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
               <Tooltip>
                 {/* a disabled button gets no pointer events, so the tooltip hangs off a wrapper */}
                 <TooltipTrigger render={<span tabIndex={0} className="inline-flex rounded-md focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50" />}>
-                  <Button type="button" size="sm" disabled className="bg-bg-tertiary text-text-muted">
+                  <Button type="button" size="sm" disabled className="bg-bg-tertiary text-text-muted max-md:hidden">
                     <PhoneIcon size={20} weight="fill" />
                     Entrar na chamada
                   </Button>
@@ -139,11 +143,21 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
                 <TooltipContent side="bottom">{callBlockedReason}</TooltipContent>
               </Tooltip>
             ) : (
-              <Button type="button" size="sm" disabled={conversation.status === 'suspended'} onClick={() => onOpenCall(conversation.id)} className="bg-green-solid text-white hover:bg-green-hover">
+              <Button type="button" size="sm" disabled={conversation.status === 'suspended'} onClick={() => onOpenCall(conversation.id)} className="bg-green-solid text-white hover:bg-green-hover max-md:hidden">
                 <PhoneIcon size={20} weight="fill" />
                 {callActionLabel}
               </Button>
             )}
+            {(activeCallConversationId || !isBot) && <Button type="button" variant="ghost" size="icon" aria-label={activeCallConversationId && activeCallConversationId !== conversation.id ? 'Voltar à chamada ativa' : callBlockedReason ?? callActionLabel} disabled={!activeCallConversationId && (!!callBlockedReason || conversation.status === 'suspended')} onClick={() => onOpenCall(activeCallConversationId ?? conversation.id)} className="flex-none text-green md:hidden"><PhoneIcon size={22} weight="fill" /></Button>}
+            <DropdownMenu>
+              <DropdownMenuTrigger render={<Button type="button" variant="ghost" size="icon" aria-label="Mais opções da conversa" className="flex-none md:hidden" />}><DotsThreeIcon size={22} /></DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={onOpenSearch}><MagnifyingGlassIcon size={18} />Buscar mensagens</DropdownMenuItem>
+                <DropdownMenuItem onClick={onToggleMedia}><ImageIcon size={18} />Mídias e links</DropdownMenuItem>
+                {hasDetails && <DropdownMenuItem onClick={onOpenDetails}><InfoIcon size={18} />{isBot ? 'Detalhes do bot' : 'Detalhes do grupo'}</DropdownMenuItem>}
+                {activeCallConversationId && activeCallConversationId !== conversation.id && !isBot && <DropdownMenuItem disabled={!!callBlockedReason || conversation.status === 'suspended'} onClick={() => onOpenCall(conversation.id)}><PhoneIcon size={18} />Entrar na chamada desta conversa</DropdownMenuItem>}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </header>
           {callJoinError && (
             <div role="alert" className="mx-3 mt-3 flex items-start gap-2 rounded-md border border-red/40 bg-bg-floating px-3 py-2 text-label text-text-secondary shadow-popover md:mx-4">
@@ -165,7 +179,6 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
         </>
       ) : (
         <>
-          {/* the header carries the button that reopens the drawer on a phone, where nothing else can */}
           <PageHeader title="Conversas" />
           <div className="grid flex-1 select-none place-items-center px-6 text-center">
             <div>

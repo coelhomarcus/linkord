@@ -54,6 +54,7 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
   const emojiPickerWarmed = useKeepPopoverWarm(fullEmojiPicker);
   const contextMenuActionsRef = useRef<ContextMenuRootActions | null>(null);
   const delegatedContextMenuRef = useRef(false);
+  const touchTargetRef = useRef<{ at: number; blocked: boolean }>({ at: 0, blocked: false });
   const [contextMenuOpen, setContextMenuOpen] = useState(false);
   const targetMessage = messageTarget != null
     ? activeConversationId ? messagesByConversation.get(activeConversationId)?.find((m) => m.msgId === messageTarget) : undefined
@@ -72,8 +73,22 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
   const showUserBlock = !!userTarget;
 
   useEffect(() => {
-    function captureTarget(e: MouseEvent) {
+    function captureTarget(e: MouseEvent | TouchEvent) {
       const element = e.target instanceof Element ? e.target : null;
+      const touch = e.type === 'touchstart';
+      const recentTouch = Date.now() - touchTargetRef.current.at < 1500;
+      if (touch) {
+        const message = element?.closest('[data-message-id]');
+        const conversation = element?.closest('[data-conversation-id]');
+        const rowButton = conversation?.querySelector(':scope > button');
+        const interactive = element?.closest('a, button, input, textarea, [contenteditable], [data-download-url]');
+        const blocked = (!message && !conversation) || !!window.getSelection()?.toString() || (!!interactive && interactive !== rowButton);
+        touchTargetRef.current = { at: Date.now(), blocked };
+        if (blocked) return;
+      } else if (recentTouch && touchTargetRef.current.blocked) {
+        e.stopPropagation();
+        return;
+      }
       if (isDelegatedContextMenuTarget(element)) {
         delegatedContextMenuRef.current = true;
         setContextMenuOpen(false);
@@ -81,7 +96,7 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
         return;
       }
       delegatedContextMenuRef.current = false;
-      const wantsNativeMenu = isEditableTarget(e.target) || e.shiftKey;
+      const wantsNativeMenu = isEditableTarget(e.target) || (!touch && (e as MouseEvent).shiftKey);
       const downloadEl = element?.closest<HTMLElement>('[data-download-url]') ?? null;
       const messageEl = element?.closest<HTMLElement>('[data-message-id]') ?? null;
       const nextMessageTarget = messageEl ? Number(messageEl.dataset.messageId) : null;
@@ -109,21 +124,27 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
 
       if (!hasVisibleItems) {
         contextMenuActionsRef.current?.close();
-        e.preventDefault();
-        e.stopPropagation();
+        if (!touch) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
       }
     }
     function blockNative(e: MouseEvent) {
+      if (Date.now() - touchTargetRef.current.at < 1500 && touchTargetRef.current.blocked) return;
       if (isEditableTarget(e.target) || e.shiftKey) return;
       e.preventDefault();
     }
     function stopForNativeMenu(e: MouseEvent) {
+      if (Date.now() - touchTargetRef.current.at < 1500 && touchTargetRef.current.blocked) return;
       if (isEditableTarget(e.target) || e.shiftKey) e.stopPropagation();
     }
+    document.addEventListener('touchstart', captureTarget, { capture: true, passive: true });
     document.addEventListener('contextmenu', captureTarget, { capture: true });
     document.addEventListener('contextmenu', stopForNativeMenu, { capture: true });
     document.addEventListener('contextmenu', blockNative);
     return () => {
+      document.removeEventListener('touchstart', captureTarget, { capture: true });
       document.removeEventListener('contextmenu', captureTarget, { capture: true });
       document.removeEventListener('contextmenu', stopForNativeMenu, { capture: true });
       document.removeEventListener('contextmenu', blockNative);
@@ -154,6 +175,10 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
         open={contextMenuOpen}
         actionsRef={contextMenuActionsRef}
         onOpenChange={(open) => {
+          if (open && Date.now() - touchTargetRef.current.at < 1500 && (touchTargetRef.current.blocked || !!window.getSelection()?.toString())) {
+            setContextMenuOpen(false);
+            return;
+          }
           if (open && delegatedContextMenuRef.current) {
             delegatedContextMenuRef.current = false;
             setContextMenuOpen(false);
@@ -183,12 +208,12 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
                     onMore={() => setFullEmojiPicker(true)}
                   />
                   <ContextMenuSeparator />
-                  <ContextMenuItem onClick={() => setReplyingTo(targetMessage)}>
-                    <ArrowBendUpLeftIcon size={16} />
-                    <span>Responder</span>
-                  </ContextMenuItem>
                 </>
               )}
+              {can?.reply && <ContextMenuItem onClick={() => setReplyingTo(targetMessage)}>
+                <ArrowBendUpLeftIcon size={16} />
+                <span>Responder</span>
+              </ContextMenuItem>}
               {hasReactions && (
                 <ContextMenuItem onClick={() => openReactionParticipants({ conversationId: targetMessage.conversationId, msgId: targetMessage.msgId })}>
                   <UsersIcon size={16} />

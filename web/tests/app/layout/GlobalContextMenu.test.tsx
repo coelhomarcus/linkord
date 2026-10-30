@@ -1,5 +1,5 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { initialRoomState } from '@/state/roomReducer';
 import { renderWithRoom } from '@tests/fixtures/roomContextFixture';
 import { GlobalContextMenu } from '@/app/layout/GlobalContextMenu';
@@ -8,6 +8,8 @@ const userState = {
   ...initialRoomState,
   me: { ...initialRoomState.me, userId: 'me', role: 'user' as const },
 };
+
+afterEach(() => vi.useRealTimers());
 
 describe('GlobalContextMenu', () => {
   it('does not block contextmenu on the call stage so local handlers (e.g. TileMenu) can run', async () => {
@@ -123,6 +125,23 @@ describe('GlobalContextMenu', () => {
       </GlobalContextMenu>,
       room(overrides),
     );
+
+    it('uses the touched message as the action target', async () => {
+      const setReplyingTo = vi.fn();
+      const second = { msgId: 8, conversationId: 'c1', id: 'other', name: 'Ana', avatar: '', text: 'second', ts: 1 } as never;
+      renderWithRoom(
+        <GlobalContextMenu onOpenProfile={vi.fn()}>
+          <div><p data-message-id="7">first</p><p data-message-id="8" data-testid="second">second</p></div>
+        </GlobalContextMenu>,
+        room({ setReplyingTo, messagesByConversation: new Map([['c1', [message, second]]]) }),
+      );
+      vi.useFakeTimers();
+      fireEvent.touchStart(screen.getByTestId('second'), { touches: [{ clientX: 20, clientY: 20 }] });
+      await act(async () => { vi.advanceTimersByTime(550); });
+      vi.useRealTimers();
+      fireEvent.click(await screen.findByText('Responder'));
+      expect(setReplyingTo).toHaveBeenCalledWith(expect.objectContaining({ msgId: 8 }));
+    });
 
     it('opens with quick reactions and a "+", without the emoji picker', async () => {
       renderMessage();

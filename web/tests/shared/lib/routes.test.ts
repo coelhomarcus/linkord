@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
-  conversationIdFromPath, conversationIdFromState, conversationNav, friendsSection, friendsView, isAwaitingOpen, isConversationsPath, isSettingsTab, modalForPath, parseFriendsView,
+  ROUTES, callConversationIdFromPath, conversationIdFromPath, friendsSection, friendsView, isAwaitingOpen, isConversationsPath, isSettingsTab, modalForPath, parseFriendsView,
 } from '@/shared/lib/routes';
 
 describe('conversationIdFromPath', () => {
-  it('extracts the id from a legacy /app/conversations/:id link', () => {
+  it('extracts the id from a conversation link', () => {
     expect(conversationIdFromPath('/app/conversations/abc-123')).toBe('abc-123');
     expect(conversationIdFromPath('/app/conversations/abc-123/')).toBe('abc-123');
   });
@@ -43,17 +43,12 @@ describe('isSettingsTab', () => {
   });
 });
 
-describe('conversationNav / conversationIdFromState', () => {
-  it('round-trips the id through the navigation state', () => {
-    expect(conversationIdFromState(conversationNav('c1').state)).toBe('c1');
-  });
-
-  it('reads the id from state without trusting any shape', () => {
-    expect(conversationIdFromState({ conversationId: 42 })).toBeNull();
-    expect(conversationIdFromState({ conversationId: '' })).toBeNull();
-    expect(conversationIdFromState({ awaitingOpen: true })).toBeNull();
-    expect(conversationIdFromState(null)).toBeNull();
-    expect(conversationIdFromState('c1')).toBeNull();
+describe('conversation and call URLs', () => {
+  it('encodes ids in both paths and decodes call ids', () => {
+    expect(ROUTES.conversation('a b/c')).toBe('/app/conversations/a%20b%2Fc');
+    expect(ROUTES.call('a b/c')).toBe('/app/calls/a%20b%2Fc');
+    expect(callConversationIdFromPath(ROUTES.call('a b/c'))).toBe('a b/c');
+    expect(callConversationIdFromPath(ROUTES.friends)).toBeNull();
   });
 });
 

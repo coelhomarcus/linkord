@@ -38,7 +38,7 @@ function renderStage(props: { allIds: string[]; chatOpen: boolean; onToggleChat:
   return render(
     <RoomContext.Provider value={createFakeRoomContextValue(overrides)}>
       <SidebarProvider>
-        <Stage {...props} />
+        <Stage {...props} onBack={() => {}} />
       </SidebarProvider>
     </RoomContext.Provider>
   );

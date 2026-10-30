@@ -63,7 +63,7 @@ export function ProfileModal({ userId, onClose, onOpenProfile }: ProfileModalPro
   // the same way a notification opens a conversation: from any page, the chat comes forward
   function openGroup(conversationId: string) {
     openConversation(conversationId);
-    requestChatView();
+    requestChatView(conversationId);
     onClose();
   }
 

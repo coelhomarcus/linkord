@@ -44,7 +44,6 @@ export function ProfileActions({ userId, username, displayName, onNavigate, onRe
 }) {
   const { openDirect, requestChatView } = useRoom();
   const { bump } = useFriends();
-  const navigate = useNavigate();
   const { state, retry } = useRelationship(userId);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -101,7 +100,7 @@ export function ProfileActions({ userId, username, displayName, onNavigate, onRe
     case 'friends':
       actions = (
         <>
-          <Button type="button" size="sm" onClick={() => { openDirect(userId); requestChatView(); navigate(ROUTES.conversations); onNavigate?.(); }}>
+          <Button type="button" size="sm" onClick={() => { openDirect(userId); requestChatView(); onNavigate?.(); }}>
             <ChatCircleIcon size={20} /><span>Mensagem</span>
           </Button>
           <DropdownMenu>

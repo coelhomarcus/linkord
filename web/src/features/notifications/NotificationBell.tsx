@@ -1,69 +1,26 @@
 import { BellIcon, ChecksIcon, TrashIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
-import { useNavigate } from 'react-router';
 
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/primitives/popover';
 import { buttonVariants } from '@/shared/ui/primitives/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
-import { clearNotifications, deleteNotification, markNotificationsRead } from '@/shared/api/api';
-import type { NotificationEntry } from '@/shared/api/api';
 import { cn } from '@/shared/lib/utils';
 import { CountBadge } from '@/shared/CountBadge';
-import { useFriends } from '@/features/friends/FriendsContext';
-import { useRoom } from '@/state/RoomContext';
 import { NotificationList } from './NotificationList';
-import { formatUnread, notificationTarget } from './notificationText';
-import { useUnreadNotifications } from './useUnreadNotifications';
+import { formatUnread } from './notificationText';
+import { useNotificationActions } from './useNotificationActions';
+import { NotificationStateProvider } from './NotificationStateProvider';
+import { useHasNotificationState } from './useUnreadNotifications';
 
 export function NotificationBell({ collapsed = false, onNavigate }: { collapsed?: boolean; onNavigate?: () => void }) {
-  const navigate = useNavigate();
-  const { bump } = useFriends();
-  const { jumpToMessage, requestChatView } = useRoom();
-  const { unread, setUnread } = useUnreadNotifications();
+  const hasState = useHasNotificationState();
+  if (!hasState) return <NotificationStateProvider><NotificationBellContent collapsed={collapsed} onNavigate={onNavigate} /></NotificationStateProvider>;
+  return <NotificationBellContent collapsed={collapsed} onNavigate={onNavigate} />;
+}
+
+function NotificationBellContent({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
+  const { unread, error, dismiss, select, markAll, clearAll } = useNotificationActions();
   const [open, setOpen] = useState(false);
-  const [error, setError] = useState(false);
-
-  async function markAndSync(input: { ids: string[] } | { all: true }, optimisticUnread: number) {
-    setError(false);
-    setUnread(optimisticUnread);
-    try {
-      await markNotificationsRead(input);
-    } catch {
-      setError(true);
-    } finally {
-      // reconcile the count and the open list with what the server really has
-      bump();
-    }
-  }
-
-  async function removeFromList(request: () => Promise<unknown>, unreadAfter: number) {
-    setError(false);
-    setUnread(unreadAfter);
-    try {
-      await request();
-    } catch {
-      setError(true);
-    } finally {
-      bump();
-    }
-  }
-
-  function dismiss(entry: NotificationEntry) {
-    void removeFromList(() => deleteNotification(entry.id), entry.read ? unread : Math.max(0, unread - 1));
-  }
-
-  function select(entry: NotificationEntry) {
-    if (!entry.read) void markAndSync({ ids: [entry.id] }, Math.max(0, unread - 1));
-    setOpen(false);
-    if (entry.kind === 'mention' && entry.mention) {
-      // straight to the message, highlighted, from wherever the bell was opened
-      jumpToMessage(entry.mention.conversation.id, entry.mention.messageId);
-      requestChatView();
-    } else {
-      navigate(notificationTarget(entry));
-    }
-    onNavigate?.();
-  }
 
   const label = unread > 0 ? `Notificações, ${unread} não lida${unread === 1 ? '' : 's'}` : 'Notificações';
 
@@ -90,7 +47,7 @@ export function NotificationBell({ collapsed = false, onNavigate }: { collapsed?
               <TooltipTrigger
                 aria-label="Marcar todas como lidas"
                 disabled={unread === 0}
-                onClick={() => void markAndSync({ all: true }, 0)}
+                onClick={markAll}
                 className={cn(buttonVariants({ variant: 'ghost', size: 'icon-sm' }), 'text-text-muted hover:text-text-primary')}
               >
                 <ChecksIcon size={16} />
@@ -100,7 +57,7 @@ export function NotificationBell({ collapsed = false, onNavigate }: { collapsed?
             <button
               type="button"
               aria-label="Limpar tudo"
-              onClick={() => void removeFromList(clearNotifications, 0)}
+              onClick={clearAll}
               className={cn(buttonVariants({ variant: 'ghost', size: 'icon-sm' }), 'text-text-muted hover:text-red')}
             >
               <TrashIcon size={16} />
@@ -108,7 +65,7 @@ export function NotificationBell({ collapsed = false, onNavigate }: { collapsed?
           </div>
         </div>
         {error && <p role="alert" className="rounded-md bg-red/12 px-2.5 py-1.5 text-label text-red-text">Não foi possível atualizar. Tente de novo.</p>}
-        <NotificationList onSelect={select} onDismiss={dismiss} />
+        <NotificationList onSelect={(entry) => { setOpen(false); select(entry); onNavigate?.(); }} onDismiss={dismiss} />
       </PopoverContent>
     </Popover>
   );

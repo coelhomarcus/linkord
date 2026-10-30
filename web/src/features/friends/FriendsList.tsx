@@ -7,7 +7,7 @@ import { blockUser, fetchFriends, removeFriend } from '@/shared/api/api';
 import type { SocialEntry, SocialUser } from '@/shared/api/api';
 import { Button } from '@/shared/ui/primitives/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/primitives/dropdown-menu';
-import { ROUTES, friendsView } from '@/shared/lib/routes';
+import { friendsView } from '@/shared/lib/routes';
 import { ActionFeedback } from './ActionFeedback';
 import type { Feedback } from './ActionFeedback';
 import { ListSearch } from './ListSearch';
@@ -74,7 +74,6 @@ export function FriendsList({ view, query, onQueryChange, onOpenProfile }: {
   function handleMessage(user: SocialUser) {
     openDirect(user.id);
     requestChatView();
-    navigate(ROUTES.conversations);
   }
 
   async function handleCopyUsername() {

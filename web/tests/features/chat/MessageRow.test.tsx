@@ -296,7 +296,7 @@ describe('MessageRow — quick reactions', () => {
     renderWithRoom(
       <MessageRow message={makeMessage()} showHeader highlighted={false} allUsers={new Map()} mentionLookup={new Map()} onOpenProfile={noop} onReply={noop} onJumpTo={noop} />
     );
-    await user.click(screen.getByRole('button', { name: 'Acoes' }));
+    await user.click(screen.getByRole('button', { name: 'Ações da mensagem' }));
     expect(screen.queryByText('Ver todas as reações')).not.toBeInTheDocument();
   });
 
@@ -307,7 +307,7 @@ describe('MessageRow — quick reactions', () => {
       <MessageRow message={makeMessage({ reactions: { '👍': ['user-2'] } })} showHeader highlighted={false} allUsers={new Map()} mentionLookup={new Map()} onOpenProfile={noop} onReply={noop} onJumpTo={noop} />,
       { openReactionParticipants }
     );
-    await user.click(screen.getByRole('button', { name: 'Acoes' }));
+    await user.click(screen.getByRole('button', { name: 'Ações da mensagem' }));
     await user.click(await screen.findByText('Ver todas as reações'));
     expect(openReactionParticipants).toHaveBeenCalledWith({ conversationId: 'conv-1', msgId: 1 });
   });

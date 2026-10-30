@@ -1,6 +1,5 @@
 import { MagnifyingGlassIcon, PhoneIcon, PlusIcon, PushPinIcon, RobotIcon, SidebarSimpleIcon, UsersIcon } from '@phosphor-icons/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router';
 
 import { ActiveFill } from '@/shared/ui/active-fill';
@@ -14,7 +13,7 @@ import { useContentLocation } from '@/shared/lib/contentLocation';
 import { CountBadge } from '@/shared/CountBadge';
 import { useRoom } from '@/state/RoomContext';
 import type { Conversation } from '@/shared/types/protocol';
-import { ROUTES, conversationNav, isConversationsPath } from '@/shared/lib/routes';
+import { ROUTES, callConversationIdFromPath, isConversationsPath } from '@/shared/lib/routes';
 import {
   conversationMatchesQuery,
   conversationTitle,
@@ -26,15 +25,6 @@ import { GroupAvatar } from './GroupAvatar';
 import { GroupCreateDialog } from './GroupCreateDialog';
 import { NotificationBell } from '@/features/notifications/NotificationBell';
 import { BotCreateDialog } from '@/features/bots/BotCreateDialog';
-import { FloatingUserDock } from '@/features/navigation/FloatingUserDock';
-
-interface ConversationSidebarProps {
-  onReturnToCall: () => void;
-  onOpenProfile: (userId: string) => void;
-  showReturnToCall: boolean;
-  /** the global rail, drawn inside the sheet on a narrow screen (on desktop it sits beside the sidebar) */
-  mobileRail: ReactNode;
-}
 
 function ConversationRow({ conversation, active, onClick }: {
   conversation: Conversation;
@@ -135,8 +125,8 @@ const TAB_COPY: Record<ConversationListTab, { search: string; empty: string; cre
   bot: { search: 'Buscar bots', empty: 'Nenhum bot ainda. Crie um para receber avisos dos seus sistemas.', create: 'Criar bot' },
 };
 
-export function ConversationSidebar({ onReturnToCall, onOpenProfile, showReturnToCall, mobileRail }: ConversationSidebarProps) {
-  const { state, conversations, activeConversationId, openConversation, allUsers, unreadByConversation, requestChatView } = useRoom();
+export function ConversationSidebar() {
+  const { state, conversations, activeConversationId, openConversation, allUsers, unreadByConversation } = useRoom();
   const { isMobile, isOverlay, setOpenMobile, toggleSidebar } = useSidebar();
   const navigate = useNavigate();
   const { pathname } = useContentLocation();
@@ -164,16 +154,11 @@ export function ConversationSidebar({ onReturnToCall, onOpenProfile, showReturnT
 
   function selectConversation(conversationId: string) {
     openConversation(conversationId);
-    // explicit, not left to the URL sync: re-opening the conversation that is
-    // ALREADY active (from the friends page, say) changes no state, so nothing
-    // else would navigate. Done before requestChatView so that call sees a
-    // conversations path and doesn't push a second history entry.
-    navigate(ROUTES.conversations, conversationNav(conversationId));
-    requestChatView();
+    navigate(ROUTES.conversation(conversationId));
     if (isOverlay) setOpenMobile(false);
   }
 
-  const onConversations = isConversationsPath(pathname);
+  const onConversations = isConversationsPath(pathname) || !!callConversationIdFromPath(pathname);
   const copy = TAB_COPY[tab];
   const emptyText = searching ? (tab === 'bot' ? 'Nenhum bot.' : tab === 'group' ? 'Nenhum grupo.' : 'Nenhuma conversa.') : copy.empty;
   const list = (
@@ -193,82 +178,74 @@ export function ConversationSidebar({ onReturnToCall, onOpenProfile, showReturnT
     </div>
   );
 
+  const content = (
+    <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
+      {/* from md the content card sits one shell gap (and its border) below the
+          top: starting there too puts this title on the same line as the page's */}
+      <div className="flex h-header flex-none items-center gap-2 px-4 md:mt-[calc(var(--spacing-shell)+1px)]">
+        <h1 className="min-w-0 flex-1 select-none truncate text-title font-semibold">Conversas</h1>
+        <Button type="button" variant="ghost" size="icon-sm" aria-label={copy.create} onClick={() => (tab === 'bot' ? setBotOpen(true) : setGroupOpen(true))} className="flex-none text-text-muted hover:text-text-primary">
+          <PlusIcon size={20} />
+        </Button>
+        {!isMobile && <NotificationBell onNavigate={() => { if (isOverlay) setOpenMobile(false); }} />}
+        {!isOverlay && (
+          <Button type="button" variant="ghost" size="icon-sm" aria-label="Ocultar lista de conversas" onClick={toggleSidebar} className="flex-none text-text-muted hover:text-text-primary">
+            <SidebarSimpleIcon size={20} />
+          </Button>
+        )}
+      </div>
+
+      {/* as a column, the gap to the content is the content card's own margin, which stays when the list is hidden */}
+      <div className="flex min-h-0 flex-1 flex-col gap-3 pb-[max(0.75rem,var(--dock-list-clearance,0px))] pl-3 pr-shell lg:pr-0">
+        <div className="flex flex-none items-center gap-2 rounded-md border border-border bg-fill-subtle px-3">
+          <MagnifyingGlassIcon size={20} className="text-text-muted" />
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={copy.search}
+            className="h-10 min-w-0 flex-1 bg-transparent text-label outline-none placeholder:text-text-muted"
+          />
+        </div>
+
+        <Tabs
+          value={tab}
+          onValueChange={(value) => { if (value === 'direct' || value === 'group' || value === 'bot') setTab(value); }}
+          className="flex min-h-0 w-full flex-1 flex-col items-stretch gap-3"
+        >
+          <TabsList className="flex h-10 w-full flex-none" aria-label="Tipo de conversa">
+            <TabsIndicator />
+            <TabsTrigger value="direct" className="flex-1">
+              Amigos
+              {friendsUnread > 0 && (
+                <CountBadge decorative>{friendsUnread > 99 ? '99+' : friendsUnread}</CountBadge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="group" className="flex-1">
+              Grupos
+              {groupsUnread > 0 && (
+                <CountBadge decorative>{groupsUnread > 99 ? '99+' : groupsUnread}</CountBadge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="bot" className="flex-1">
+              Bots
+              {botsUnread > 0 && (
+                <CountBadge decorative>{botsUnread > 99 ? '99+' : botsUnread}</CountBadge>
+              )}
+            </TabsTrigger>
+          </TabsList>
+          {list}
+        </Tabs>
+      </div>
+    </div>
+  );
+
   return (
     <>
-      <Sidebar ariaLabel="Conversas" className="text-text-primary" panelClassName="bg-bg-primary">
-        <div className="relative flex h-full min-h-0">
-          {/* on a phone the rail lives in the drawer; from 768px it stays on screen beside it */}
-          {isMobile && mobileRail}
-          <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
-            {/* from md the content card sits one shell gap (and its border) below the
-                top: starting there too puts this title on the same line as the page's */}
-            <div className="flex h-header flex-none items-center gap-2 px-4 md:mt-[calc(var(--spacing-shell)+1px)]">
-              <h1 className="min-w-0 flex-1 select-none truncate text-title font-semibold">Conversas</h1>
-              <Button type="button" variant="ghost" size="icon-sm" aria-label={copy.create} onClick={() => (tab === 'bot' ? setBotOpen(true) : setGroupOpen(true))} className="flex-none text-text-muted hover:text-text-primary">
-                <PlusIcon size={20} />
-              </Button>
-              <NotificationBell onNavigate={() => { if (isOverlay) setOpenMobile(false); }} />
-              {!isOverlay && (
-                <Button type="button" variant="ghost" size="icon-sm" aria-label="Ocultar lista de conversas" onClick={toggleSidebar} className="flex-none text-text-muted hover:text-text-primary">
-                  <SidebarSimpleIcon size={20} />
-                </Button>
-              )}
-            </div>
-
-            {/* as a column, the gap to the content is the content card's own margin, which stays when the list is hidden */}
-            <div className="flex min-h-0 flex-1 flex-col gap-3 pb-[max(0.75rem,var(--dock-list-clearance,0px))] pl-3 pr-shell lg:pr-0">
-              <div className="flex flex-none items-center gap-2 rounded-md border border-border bg-fill-subtle px-3">
-                <MagnifyingGlassIcon size={20} className="text-text-muted" />
-                <input
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder={copy.search}
-                  className="h-10 min-w-0 flex-1 bg-transparent text-label outline-none placeholder:text-text-muted"
-                />
-              </div>
-
-              <Tabs
-                value={tab}
-                onValueChange={(value) => { if (value === 'direct' || value === 'group' || value === 'bot') setTab(value); }}
-                className="flex min-h-0 w-full flex-1 flex-col items-stretch gap-3"
-              >
-                <TabsList className="flex h-10 w-full flex-none" aria-label="Tipo de conversa">
-                  <TabsIndicator />
-                  <TabsTrigger value="direct" className="flex-1">
-                    Amigos
-                    {friendsUnread > 0 && (
-                      <CountBadge decorative>{friendsUnread > 99 ? '99+' : friendsUnread}</CountBadge>
-                    )}
-                  </TabsTrigger>
-                  <TabsTrigger value="group" className="flex-1">
-                    Grupos
-                    {groupsUnread > 0 && (
-                      <CountBadge decorative>{groupsUnread > 99 ? '99+' : groupsUnread}</CountBadge>
-                    )}
-                  </TabsTrigger>
-                  <TabsTrigger value="bot" className="flex-1">
-                    Bots
-                    {botsUnread > 0 && (
-                      <CountBadge decorative>{botsUnread > 99 ? '99+' : botsUnread}</CountBadge>
-                    )}
-                  </TabsTrigger>
-                </TabsList>
-                {list}
-              </Tabs>
-            </div>
-          </div>
-          {/* from 768px the dock floats over the rail and the list from the shell; on a phone they share this drawer */}
-          {isMobile && (
-            <FloatingUserDock
-              placement="drawer"
-              onReturnToCall={onReturnToCall}
-              onOpenProfile={onOpenProfile}
-              showReturnToCall={showReturnToCall}
-              onNavigate={() => setOpenMobile(false)}
-            />
-          )}
-        </div>
-      </Sidebar>
+      {isMobile ? (
+        pathname === ROUTES.conversations && <main aria-label="Conversas" className="flex min-h-0 min-w-0 flex-1 flex-col bg-bg-primary pb-[var(--mobile-navigation-height)] text-text-primary">{content}</main>
+      ) : (
+        <Sidebar ariaLabel="Conversas" className="text-text-primary" panelClassName="bg-bg-primary">{content}</Sidebar>
+      )}
       <GroupCreateDialog
         open={groupOpen}
         onOpenChange={setGroupOpen}

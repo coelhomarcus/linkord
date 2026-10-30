@@ -1,24 +1,14 @@
-import { SidebarSimpleIcon, XIcon } from '@phosphor-icons/react';
+import { XIcon } from '@phosphor-icons/react';
 import type { ReactNode } from 'react';
 
-import { useSidebar } from '@/shared/ui/motion/sidebar-context';
 import { useAppModalClose } from '@/shared/ui/app-modal';
 import { Button } from '@/shared/ui/primitives/button';
 
-/** Header of a full-page screen (friends, requests) or of an area shown in a
- * modal (settings, administration). On mobile the sidebar is a sheet, so a page
- * has no other way back to the conversation list: the header carries the button
- * that reopens it. In a modal that button gives way to one that closes it. */
+/** Header of a full-page screen or a modal area. */
 export function PageHeader({ title, subtitle, actions, leading, middle }: { title: string; subtitle?: string; actions?: ReactNode; leading?: ReactNode; middle?: ReactNode }) {
-  const { isMobile, setOpenMobile } = useSidebar();
   const closeModal = useAppModalClose();
   return (
     <header className="flex h-header flex-none items-center gap-3 border-b border-border px-4 md:px-6">
-      {isMobile && !closeModal && (
-        <Button type="button" variant="ghost" size="icon-sm" aria-label="Abrir lista de conversas" onClick={() => setOpenMobile(true)}>
-          <SidebarSimpleIcon size={20} />
-        </Button>
-      )}
       {leading}
       <div className="min-w-0 flex-1 select-none">
         <h1 className="truncate text-title font-semibold text-text-primary">{title}</h1>

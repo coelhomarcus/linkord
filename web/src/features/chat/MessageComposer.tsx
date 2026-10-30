@@ -6,6 +6,7 @@ import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { Button } from '@/shared/ui/primitives/button';
 import { EmojiPicker, EmojiPickerContent, EmojiPickerSearch } from '@/shared/ui/primitives/emoji-picker';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/primitives/popover';
+import { Dialog, DialogContent } from '@/shared/ui/primitives/dialog';
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/shared/ui/primitives/dropdown-menu';
 import { Textarea } from '@/shared/ui/primitives/textarea';
 import { Avatar } from '@/shared/Avatar';
@@ -60,6 +61,8 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
   const [compressImages, setCompressImages] = useState(compressImagesDefault);
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
   const [gifPickerOpen, setGifPickerOpen] = useState(false);
+  const [mobileEmojiOpen, setMobileEmojiOpen] = useState(false);
+  const [mobileGifOpen, setMobileGifOpen] = useState(false);
   const gifConfig = useGifConfig();
   // once opened, keeps the picker mounted (hidden) instead of paying its
   // dataset fetch/measure cost again on every open — see useKeepPopoverWarm.
@@ -239,6 +242,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
   function sendGif(gif: Gif, query: string) {
     if (!state.joined || gifConfig?.enabled !== true) return;
     setGifPickerOpen(false);
+    setMobileGifOpen(false);
     sendChatMessage(conversationId, gif.full.url, replyingTo?.msgId);
     setReplyingTo(null);
     reportGifShared(gifConfig, gif.slug, query);
@@ -272,6 +276,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
     const end = el?.selectionEnd ?? text.length;
     setText(text.slice(0, start) + emoji + text.slice(end));
     setEmojiPickerOpen(false);
+    setMobileEmojiOpen(false);
     setMentionQuery(null);
     // caret restore has to wait for the controlled value to actually reach
     // the DOM (this same tick's setText hasn't rendered yet).
@@ -300,7 +305,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
   const iconButton = 'flex-none rounded-full text-text-muted hover:text-text-primary';
 
   return (
-    <div className="w-full flex-none px-2 pb-3 @min-[640px]/chat:px-4 @min-[640px]/chat:pb-4">
+    <div className="w-full flex-none px-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] @min-[640px]/chat:px-4 @min-[640px]/chat:pb-4">
       <input ref={fileInputRef} type="file" multiple hidden onChange={handleFileChange} />
       <input ref={imageInputRef} type="file" accept="image/*" multiple hidden onChange={handleFileChange} />
 
@@ -357,6 +362,8 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
             <DropdownMenuContent side="top" align="start" className="w-64">
               <DropdownMenuItem onClick={() => fileInputRef.current?.click()}><PaperclipIcon size={16} />Anexar arquivos</DropdownMenuItem>
               <DropdownMenuItem onClick={() => imageInputRef.current?.click()}><ImageSquareIcon size={16} />Enviar imagens</DropdownMenuItem>
+              {gifConfig?.enabled && <DropdownMenuItem className="md:hidden" onClick={() => setMobileGifOpen(true)}>GIF</DropdownMenuItem>}
+              <DropdownMenuItem className="md:hidden" onClick={() => setMobileEmojiOpen(true)}><SmileyIcon size={16} />Inserir emoji</DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuCheckboxItem checked={compressImages} onCheckedChange={toggleCompress}>
                 Compactar imagens (WebP)
@@ -391,7 +398,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
           {gifConfig?.enabled && (
             <Popover open={gifPickerOpen} onOpenChange={setGifPickerOpen}>
               <PopoverTrigger
-                render={<Button type="button" variant="ghost" size="icon" aria-label="Enviar GIF" disabled={disabled} className={iconButton} />}
+                render={<Button type="button" variant="ghost" size="icon" aria-label="Enviar GIF" disabled={disabled} className={`${iconButton} max-md:hidden`} />}
               >
                 <span aria-hidden className="rounded-[4px] border-[1.5px] border-current px-[3px] py-px text-[9px] font-bold leading-none tracking-wide">GIF</span>
               </PopoverTrigger>
@@ -402,7 +409,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
           )}
           <Popover open={emojiPickerOpen} onOpenChange={setEmojiPickerOpen}>
             <PopoverTrigger
-              render={<Button type="button" variant="ghost" size="icon" aria-label="Inserir emoji" disabled={disabled} className={iconButton} />}
+              render={<Button type="button" variant="ghost" size="icon" aria-label="Inserir emoji" disabled={disabled} className={`${iconButton} max-md:hidden`} />}
             >
               <SmileyIcon size={20} />
             </PopoverTrigger>
@@ -425,6 +432,19 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
           </Button>
         </div>
       </div>
+      {gifConfig?.enabled && <Dialog open={mobileGifOpen} onOpenChange={setMobileGifOpen}>
+        <DialogContent aria-label="Enviar GIF" className="w-[calc(100vw-1rem)] max-w-md bg-bg-modal p-2 md:hidden">
+          <GifPicker config={gifConfig} onPick={sendGif} />
+        </DialogContent>
+      </Dialog>}
+      <Dialog open={mobileEmojiOpen} onOpenChange={setMobileEmojiOpen}>
+        <DialogContent aria-label="Inserir emoji" className="w-[calc(100vw-1rem)] max-w-md bg-bg-modal p-2 md:hidden">
+          <EmojiPicker className="h-[min(22rem,60dvh)] w-full" onEmojiSelect={({ emoji }) => insertEmoji(emoji)}>
+            <EmojiPickerSearch />
+            <EmojiPickerContent />
+          </EmojiPicker>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 });

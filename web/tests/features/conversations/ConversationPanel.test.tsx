@@ -45,7 +45,7 @@ describe('ConversationPanel — call button', () => {
     mockedApi.fetchRelationship.mockResolvedValue({ relation: 'friends', retryAfter: null });
     const { onOpenCall } = renderPanel({});
     await vi.waitFor(() => expect(mockedApi.fetchRelationship).toHaveBeenCalled());
-    fireEvent.click(screen.getByRole('button', { name: 'Entrar na chamada' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Entrar na chamada' })[0]!);
     expect(onOpenCall).toHaveBeenCalledWith('c1');
   });
 
@@ -53,8 +53,8 @@ describe('ConversationPanel — call button', () => {
     mockedApi.fetchRequestSummary.mockResolvedValue({ incoming: 0, invitations: 0 });
     mockedApi.fetchRelationship.mockResolvedValue({ relation: 'friends', retryAfter: null });
     const { onOpenCall } = renderPanel({ activeCallConversationId: 'c1' });
-    await vi.waitFor(() => expect(screen.getByRole('button', { name: 'Voltar à chamada' })).toBeInTheDocument());
-    fireEvent.click(screen.getByRole('button', { name: 'Voltar à chamada' }));
+    await vi.waitFor(() => expect(screen.getAllByRole('button', { name: 'Voltar à chamada' })[0]).toBeInTheDocument());
+    fireEvent.click(screen.getAllByRole('button', { name: 'Voltar à chamada' })[0]!);
     expect(onOpenCall).toHaveBeenCalledWith('c1');
   });
 

@@ -67,7 +67,7 @@ export interface Logger {
 
 let routeProvider: (() => string) | null = null;
 
-/** Names the route reports carry, for an app whose address bar never changes. */
+/** Overrides the browser path used in reports when needed. */
 export function setLogRoute(provider: (() => string) | null): void {
   routeProvider = provider;
 }

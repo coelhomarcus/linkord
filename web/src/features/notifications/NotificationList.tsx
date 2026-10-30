@@ -22,7 +22,7 @@ function NotificationIcon({ entry }: { entry: NotificationEntry }) {
 
 const notificationKey = (entry: NotificationEntry) => entry.id;
 
-export function NotificationList({ onSelect, onDismiss }: { onSelect: (entry: NotificationEntry) => void; onDismiss: (entry: NotificationEntry) => void }) {
+export function NotificationList({ onSelect, onDismiss, fullPage = false }: { onSelect: (entry: NotificationEntry) => void; onDismiss: (entry: NotificationEntry) => void; fullPage?: boolean }) {
   const { revision } = useFriends();
   const fetchPage = useCallback((cursor: string | null) => fetchNotifications(cursor), []);
   const list = useCursorList(fetchPage, 'notifications', { revision, getKey: notificationKey });
@@ -39,7 +39,7 @@ export function NotificationList({ onSelect, onDismiss }: { onSelect: (entry: No
   if (list.items.length === 0) return <p className="py-6 text-center text-label text-text-muted">Nenhuma notificação por enquanto.</p>;
 
   return (
-    <div className="flex max-h-[min(24rem,60vh)] flex-col overflow-y-auto">
+    <div className={cn('flex min-h-0 flex-col overflow-y-auto', fullPage ? 'flex-1' : 'max-h-[min(24rem,60vh)]')}>
     <ul className="flex flex-col">
       {list.items.map((entry) => (
         <li key={entry.id} className="group relative">

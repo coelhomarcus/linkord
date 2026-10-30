@@ -1,6 +1,6 @@
 import { ArrowBendUpLeftIcon, CopyIcon, DotsThreeIcon, FlagIcon, PencilSimpleIcon, SmileyIcon, TrashIcon, UsersIcon } from '@phosphor-icons/react';
 import { GroupAvatar } from '@/features/conversations/GroupAvatar';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 
 import { Avatar } from '@/shared/Avatar';
@@ -136,6 +136,16 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
+  const [mobileSelected, setMobileSelected] = useState(false);
+  const rowRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!mobileSelected) return;
+    const clearOutside = (event: PointerEvent) => {
+      if (event.target instanceof Node && !rowRef.current?.contains(event.target)) setMobileSelected(false);
+    };
+    document.addEventListener('pointerdown', clearOutside);
+    return () => document.removeEventListener('pointerdown', clearOutside);
+  }, [mobileSelected]);
   // what the author asked to take out of the message, waiting for confirmation
   const [removal, setRemoval] = useState<{ kind: 'attachment'; id: string; name: string } | { kind: 'embed'; url: string } | null>(null);
   const { requestDelete, confirmDialog } = useMessageDeleteConfirm();
@@ -205,6 +215,8 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
 
   return (
     <div
+      ref={rowRef}
+      onPointerUp={() => { if (window.getSelection()?.toString()) setMobileSelected(true); }}
       // pending rows have no server id yet: nothing may jump to or act on them
       data-msg-id={pending ? undefined : message.msgId}
       data-message-id={pending ? undefined : message.msgId}
@@ -379,12 +391,11 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
         )}
       </div>}
 
-      {/* Mobile — no hover, so the toolbar above is unreachable; a persistent
-          reaction button plus a tap menu for the rest cover the same actions. */}
-      {!pending && <div className="absolute right-3 top-1 flex items-center gap-0.5 md:hidden">
+      {/* Keyboard focus and selected text expose a tap target; touch hold uses the global context menu. */}
+      {!pending && <div className={cn('absolute right-3 top-1 flex items-center md:hidden', !mobileSelected && 'pointer-events-none opacity-0 group-focus-within/row:pointer-events-auto group-focus-within/row:opacity-100')}>
         {can.react && <ReactionButton onPick={(emoji) => reactToChatMessage(message.msgId, emoji)} />}
         <DropdownMenu>
-          <DropdownMenuTrigger render={<Button type="button" variant="ghost" size="icon-sm" aria-label="Acoes" />}>
+          <DropdownMenuTrigger render={<Button type="button" variant="ghost" size="icon" aria-label="Ações da mensagem" />}>
             <DotsThreeIcon size={18} />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">

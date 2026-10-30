@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, Route, Routes, RouterProvider, useLocation, useNavigate } from 'react-router';
+import type { CSSProperties } from 'react';
 import type { Location } from 'react-router';
 import { RoomProvider } from '@/app/providers/RoomProvider';
 import { useRoom } from '@/state/RoomContext';
@@ -19,6 +20,7 @@ import { GroupDetailsPanel } from '@/features/conversations/GroupDetailsPanel';
 import { ConversationMediaPanel } from '@/features/conversations/ConversationMediaPanel';
 import { ChatSearchDialog } from '@/features/chat/ChatSearchDialog';
 import { Stage } from '@/features/calls/Stage';
+import { CallConnectingScreen } from '@/features/calls/CallConnectingScreen';
 import { CallChatPanel } from '@/features/calls/CallChatPanel';
 import { ParticipantAudioLayer } from '@/features/calls/ParticipantAudioLayer';
 import { FloatingPip } from '@/features/calls/FloatingPip';
@@ -29,12 +31,15 @@ import { GlobalContextMenu } from '@/app/layout/GlobalContextMenu';
 import { ProfileModal } from '@/features/profile/ProfileModal';
 import { FriendsProvider } from '@/features/friends/FriendsContext';
 import { FriendsPage } from '@/features/friends/FriendsPage';
+import { NotificationsPage } from '@/features/notifications/NotificationsPage';
+import { NotificationStateProvider } from '@/features/notifications/NotificationStateProvider';
+import { ProfilePage } from '@/features/profile/ProfilePage';
+import { MobileTabBar } from '@/features/navigation/MobileTabBar';
 import { RequestsRedirect } from '@/features/friends/RequestsRedirect';
 import { AppModals } from '@/app/layout/AppModals';
-import { AWAITING_OPEN, ROUTES, conversationNav, isConversationsPath, modalForPath } from '@/shared/lib/routes';
+import { AWAITING_OPEN, ROUTES, callConversationIdFromPath, conversationIdFromPath, isConversationsPath, modalForPath } from '@/shared/lib/routes';
 import { ContentLocationProvider } from '@/shared/lib/contentLocation';
 import { createAppRouter } from '@/app/appRouter';
-import { setLogRoute } from '@/shared/lib/logger';
 import { useConversationRouteSync } from '@/app/useConversationRouteSync';
 import { rightPanelsVisible } from '@/app/rightPanels';
 import { SidebarInset, SidebarProvider } from '@/shared/ui/motion/sidebar';
@@ -45,9 +50,7 @@ import { TooltipProvider } from '@/shared/ui/primitives/tooltip';
 // (a refresh on /app/settings/av): behind it, the conversations
 const DEFAULT_CONTENT_LOCATION: Location = { pathname: ROUTES.conversations, search: '', hash: '', state: null, key: 'default' };
 
-/** The route the app is on right now. Read from the router, not from the
- * address bar (which never changes), and up to date as soon as a navigate()
- * has run, which is what the handlers that navigate and then ask need. */
+/** Read the route from the router so same-handler navigation sees the new path. */
 function currentPath(): string {
   return router.state.location.pathname;
 }
@@ -55,9 +58,8 @@ function currentPath(): string {
 function Shell() {
   const {
     state, dispatch, livekitRoom, closeTileMenu, sendWs, notifyActiveView, registerRequestChatView,
-    activeCallConversationId, activeConversationId, joinCall, conversations, allUsers,
+    activeCallConversationId, activeConversationId, joinCall, leaveCall, conversations, allUsers,
   } = useRoom();
-  const [activeView, setActiveView] = useState<'chat' | 'call'>('chat');
   const roomError = state.roomError;
   const navigate = useNavigate();
   const location = useLocation();
@@ -75,44 +77,20 @@ function Shell() {
       { replace: true, state: contentLocation.state },
     );
   }, [navigate, contentLocation]);
-  const onConversations = isConversationsPath(contentLocation.pathname);
+  const onConversations = isConversationsPath(contentLocation.pathname) || !!callConversationIdFromPath(contentLocation.pathname);
   const [profileUserId, setProfileUserId] = useState<string | null>(null);
-  // Landing straight on a page (a deep link, a refresh on /app/friends) should
-  // show that page — the sidebar sheet is only the landing screen when the URL
-  // names no page at all.
-  // only on a phone: from 768px the rail is on screen and the drawer opens on demand
-  const [mobileShowSidebar, setMobileShowSidebar] = useState(() => {
-    const path = currentPath().replace(/\/$/, '');
-    return window.matchMedia('(max-width: 767px)').matches && (path === '' || path === '/app' || path === ROUTES.conversations);
-  });
+  const [mobileShowSidebar, setMobileShowSidebar] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [mediaOpen, setMediaOpen] = useState(false);
   const [callChatOpen, setCallChatOpen] = useState(false);
+  const pendingStageRef = useRef<string | null>(null);
 
   const [sidebarOpen, setSidebarOpenState] = useState(() => !loadSidebarCollapsed());
   const setSidebarOpen = useCallback((next: boolean) => {
     setSidebarOpenState(next);
     saveSidebarCollapsed(!next);
   }, []);
-
-  // The first conversation auto-selected right after connecting shouldn't
-  // drill in on mobile (the sidebar list is the intended landing screen).
-  // Every LATER change to activeConversationId is a
-  // real navigation the user should actually see: a group they just
-  // created, a notification click, or anything else that opens a
-  // conversation without going through the sidebar row's own onClick (which
-  // already closes the mobile sheet directly). Without this, those left the
-  // active conversation switched behind an unchanged, still-open sidebar.
-  const hasAutoSelectedInitialConversationRef = useRef(false);
-  useEffect(() => {
-    if (!activeConversationId) return;
-    if (!hasAutoSelectedInitialConversationRef.current) {
-      hasAutoSelectedInitialConversationRef.current = true;
-      return;
-    }
-    setMobileShowSidebar(false);
-  }, [activeConversationId]);
 
   useConversationRouteSync();
 
@@ -121,9 +99,9 @@ function Shell() {
   // pathname) on purpose: callers navigate() explicitly in the same handler
   // just before this, and only the router's own state is already up to date then.
   useEffect(() => {
-    registerRequestChatView(() => {
-      setActiveView('chat');
-      if (!isConversationsPath(currentPath())) navigate(ROUTES.conversations, AWAITING_OPEN);
+    registerRequestChatView((conversationId?: string) => {
+      if (conversationId) navigate(ROUTES.conversation(conversationId));
+      else if (!isConversationsPath(currentPath())) navigate(ROUTES.conversations, AWAITING_OPEN);
     });
   }, [registerRequestChatView, navigate]);
 
@@ -139,36 +117,59 @@ function Shell() {
   );
 
   function handleOpenCall(conversationId: string) {
+    pendingStageRef.current = conversationId;
     joinCall(conversationId);
-    setActiveView('call');
-    setMobileShowSidebar(false);
-    if (!isConversationsPath(currentPath())) navigate(ROUTES.conversations, conversationNav(conversationId));
+    navigate(ROUTES.call(conversationId), { state: { from: currentPath() } });
   }
 
   // Jump back to the Stage from wherever you wandered off to — used by both
   // FloatingPip (clicking it) and the sidebar CallDock title.
   function handleReturnToCall() {
-    setActiveView('call');
-    if (!onConversations) navigate(ROUTES.conversations, activeCallConversationId ? conversationNav(activeCallConversationId) : undefined);
+    if (activeCallConversationId) navigate(ROUTES.call(activeCallConversationId), { state: { from: currentPath() } });
   }
 
-  // The call stage only ever shows on the conversations page. Elsewhere the
-  // call keeps running (audio, PiP) — navigating never ends it.
-  const showStage = onConversations && activeView === 'call' && inCall;
+  // Navigation never ends a call; only its own route shows the stage.
+  const stageConversationId = callConversationIdFromPath(contentLocation.pathname);
+  const showStage = !!stageConversationId && stageConversationId === activeCallConversationId;
+  useEffect(() => {
+    if (showStage && pendingStageRef.current === stageConversationId) pendingStageRef.current = null;
+    if (!stageConversationId || !state.joined || showStage) return;
+    if (pendingStageRef.current === stageConversationId && state.callJoinError?.conversationId !== stageConversationId) return;
+    pendingStageRef.current = null;
+    navigate(ROUTES.conversation(stageConversationId), { replace: true });
+  }, [stageConversationId, showStage, state.joined, state.callJoinError, navigate]);
+  useEffect(() => {
+    if (!stageConversationId || showStage || pendingStageRef.current !== stageConversationId) return;
+    const timeout = window.setTimeout(() => {
+      pendingStageRef.current = null;
+      dispatch({ type: 'SET_CALL_JOIN_ERROR', error: { conversationId: stageConversationId, message: 'A chamada demorou para conectar. Tente novamente.' } });
+      void leaveCall();
+      navigate(ROUTES.conversation(stageConversationId), { replace: true });
+    }, 20_000);
+    return () => window.clearTimeout(timeout);
+  }, [stageConversationId, showStage, dispatch, leaveCall, navigate]);
+  function cancelPendingCall() {
+    const joiningThisCall = !!stageConversationId && pendingStageRef.current === stageConversationId;
+    pendingStageRef.current = null;
+    if (joiningThisCall) void leaveCall();
+    navigate(stageConversationId ? ROUTES.conversation(stageConversationId) : ROUTES.conversations, { replace: true });
+  }
   // what the user is looking at, not the last view picked: the stage, the chat,
   // or another page with the conversation still active behind it — only the
   // chat on screen makes a message arriving there read
-  const chatView = showStage ? 'call' : onConversations ? 'chat' : 'away';
+  const visibleConversationId = conversationIdFromPath(contentLocation.pathname);
+  const chatView = showStage ? 'call' : visibleConversationId && visibleConversationId === activeConversationId ? 'chat' : 'away';
   useEffect(() => { notifyActiveView(chatView); }, [chatView, notifyActiveView]);
 
-  const activeConversation = conversations.find((conversation) => conversation.id === activeConversationId);
+  const activeConversation = conversations.find((conversation) => conversation.id === (visibleConversationId ?? stageConversationId ?? activeConversationId));
   const hasDetails = activeConversation?.type === 'group' || activeConversation?.type === 'bot';
   const { details: detailsVisible, media: mediaVisible } = rightPanelsVisible({
     detailsOpen, mediaOpen, onChatPage: onConversations, stageShown: showStage, conversationType: activeConversation?.type ?? null,
   });
   const activeConversationName = conversationTitle(activeConversation, state.me.userId, allUsers);
 
-  const tabTitle = onConversations ? conversationDocumentTitle(activeConversation, state.me.userId, allUsers) : APP_TITLE;
+  const tabTitle = onConversations || showStage ? conversationDocumentTitle(activeConversation, state.me.userId, allUsers) : APP_TITLE;
+  const mobileMainPage = contentLocation.pathname === ROUTES.conversations || contentLocation.pathname === ROUTES.friends || contentLocation.pathname === ROUTES.notifications || contentLocation.pathname === ROUTES.profile;
   useEffect(() => {
     document.title = tabTitle;
     return () => { document.title = APP_TITLE; };
@@ -209,31 +210,24 @@ function Shell() {
         onOpenChange={setSidebarOpen}
         openMobile={mobileShowSidebar}
         onOpenMobileChange={setMobileShowSidebar}
-        className="relative h-dvh bg-bg-primary text-text-primary [--surface-base:var(--color-surface-app)]"
-        style={{ '--sidebar-width': '20rem', '--sidebar-width-mobile': '24rem', '--sidebar-overlay-offset': '4rem' }}
+        className="relative h-[var(--app-viewport-height,100dvh)] bg-bg-primary text-text-primary [--surface-base:var(--color-surface-app)] max-md:pt-[env(safe-area-inset-top)]"
+        style={{ minHeight: 0, '--sidebar-width': '20rem', '--sidebar-width-mobile': '24rem', '--sidebar-overlay-offset': '4rem', '--mobile-navigation-height': `calc(4rem + env(safe-area-inset-bottom) + ${inCall ? '3rem' : '0rem'})` } as CSSProperties}
       >
         <ReconnectBanner />
         <AccessNotice />
         <AppNavigationRail className="hidden md:flex" />
-        <ConversationSidebar
-          onReturnToCall={handleReturnToCall}
-          onOpenProfile={setProfileUserId}
-          showReturnToCall={!showStage}
-          mobileRail={<AppNavigationRail />}
-        />
+        <ConversationSidebar />
         <FloatingUserDock
           placement="shell"
           onReturnToCall={handleReturnToCall}
           onOpenProfile={setProfileUserId}
           showReturnToCall={!showStage}
         />
-        <SidebarInset className="relative min-h-0 overflow-hidden bg-surface-panel [--surface-base:var(--color-surface-panel)] md:m-shell md:rounded-xl md:border md:border-border">
+        <SidebarInset className={`relative min-h-0 overflow-hidden bg-surface-panel [--surface-base:var(--color-surface-panel)] md:m-shell md:rounded-xl md:border md:border-border ${contentLocation.pathname === ROUTES.conversations ? 'max-md:hidden' : ''} ${mobileMainPage ? 'max-md:pb-[var(--mobile-navigation-height)]' : ''}`}>
           <Routes location={contentLocation}>
             <Route
               path="/app/conversations/:conversationId?"
-              element={showStage ? (
-                <Stage allIds={callIds} chatOpen={callChatOpen} onToggleChat={() => setCallChatOpen((v) => !v)} />
-              ) : (
+              element={
                 <ConversationPanel
                   onOpenProfile={setProfileUserId}
                   onOpenCall={handleOpenCall}
@@ -244,9 +238,16 @@ function Shell() {
                   onToggleDetails={() => { setMediaOpen(false); setDetailsOpen(!detailsVisible); }}
                   onToggleMedia={() => { setDetailsOpen(false); setMediaOpen(!mediaVisible); }}
                 />
-              )}
+              }
             />
+            <Route path="/app/calls/:conversationId" element={stageConversationId ? (
+              showStage
+                ? <Stage allIds={callIds} chatOpen={callChatOpen} onToggleChat={() => setCallChatOpen((v) => !v)} onBack={() => { if ((contentLocation.state as { from?: unknown } | null)?.from) navigate(-1); else navigate(ROUTES.conversations, { replace: true }); }} />
+                : <CallConnectingScreen onCancel={cancelPendingCall} />
+            ) : <Navigate to={ROUTES.conversations} replace />} />
             <Route path={ROUTES.friends} element={<FriendsPage onOpenProfile={setProfileUserId} />} />
+            <Route path={ROUTES.notifications} element={<NotificationsPage />} />
+            <Route path={ROUTES.profile} element={<ProfilePage onOpenProfile={setProfileUserId} />} />
             <Route path={ROUTES.requests} element={<RequestsRedirect />} />
             <Route path="*" element={<Navigate to={ROUTES.conversations} replace />} />
           </Routes>
@@ -255,10 +256,12 @@ function Shell() {
             <FloatingPip
               allIds={callIds}
               onExpand={handleReturnToCall}
+              hideOnMobile={mobileMainPage}
             />
           )}
           <ReactionsOverlay />
         </SidebarInset>
+        {mobileMainPage && <MobileTabBar activeCallConversationId={activeCallConversationId} onReturnToCall={handleReturnToCall} />}
         <GroupDetailsPanel
           conversationId={hasDetails && activeConversation ? activeConversation.id : null}
           open={detailsVisible}
@@ -302,7 +305,7 @@ function AuthGate() {
   return (
     <RoomProvider key={user.id}>
       <FriendsProvider>
-        <Shell />
+        <NotificationStateProvider><Shell /></NotificationStateProvider>
       </FriendsProvider>
     </RoomProvider>
   );
@@ -313,6 +316,31 @@ function AuthGate() {
 // navigation.
 function AppProviders() {
   const navigate = useNavigate();
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    const mobile = window.matchMedia('(max-width: 767px)');
+    if (!viewport) return;
+    const syncHeight = () => {
+      if (mobile.matches) {
+        document.documentElement.style.setProperty('--app-viewport-height', `${viewport.height}px`);
+        document.documentElement.style.setProperty('--app-viewport-bottom', `${Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop)}px`);
+      } else {
+        document.documentElement.style.removeProperty('--app-viewport-height');
+        document.documentElement.style.removeProperty('--app-viewport-bottom');
+      }
+    };
+    syncHeight();
+    viewport.addEventListener('resize', syncHeight);
+    viewport.addEventListener('scroll', syncHeight);
+    mobile.addEventListener('change', syncHeight);
+    return () => {
+      viewport.removeEventListener('resize', syncHeight);
+      viewport.removeEventListener('scroll', syncHeight);
+      mobile.removeEventListener('change', syncHeight);
+      document.documentElement.style.removeProperty('--app-viewport-height');
+      document.documentElement.style.removeProperty('--app-viewport-bottom');
+    };
+  }, []);
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return;
     const onPushNavigation = (event: MessageEvent) => {
@@ -332,15 +360,8 @@ function AppProviders() {
   );
 }
 
-// A single splat route whose element owns its own nested <Routes> (in Shell).
-// This "descendant routes" setup is the smallest step from a plain router to a
-// data router: every route, guard and provider lifecycle stays identical —
-// the only reason to make the change at all is that useBlocker (settings'
-// unsaved-changes guard) requires a data router to exist somewhere above it.
-// It is an in-memory one (see createAppRouter): the URL never changes.
+// The data router provides browser history and the settings draft blocker.
 const router = createAppRouter([{ path: '*', element: <AppProviders /> }]);
-// client error reports name the route the app is on; the address bar never does
-setLogRoute(currentPath);
 
 export function App() {
   return <RouterProvider router={router} />;

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useLocation } from 'react-router';
 import { renderSocial } from '@tests/fixtures/socialFixture';
 import { SidebarProvider } from '@/shared/ui/motion/sidebar';
 import { ConversationSidebar } from '@/features/conversations/ConversationSidebar';
@@ -37,23 +38,21 @@ function callParticipant(): Participant {
   };
 }
 
+function CurrentPath() { return <span data-testid="current-path">{useLocation().pathname}</span>; }
+
 function renderSidebar(overrides: {
   activeCallConversationId?: string | null;
   participants?: Map<string, Participant>;
   activeConversationId?: string | null;
   unreadByConversation?: Map<string, number>;
-  onReturnToCall?: () => void;
-  onOpenProfile?: (userId: string) => void;
-  showReturnToCall?: boolean;
   openMobile?: boolean;
 } = {}) {
   const dm = directConversation();
   const group = groupConversation();
-  const onReturnToCall = overrides.onReturnToCall ?? vi.fn();
-  const onOpenProfile = overrides.onOpenProfile ?? vi.fn();
   return renderSocial(
     <SidebarProvider open onOpenChange={vi.fn()} openMobile={overrides.openMobile ?? false} onOpenMobileChange={vi.fn()}>
-      <ConversationSidebar onReturnToCall={onReturnToCall} onOpenProfile={onOpenProfile} showReturnToCall={overrides.showReturnToCall ?? true} mobileRail={null} />
+      <ConversationSidebar />
+      <CurrentPath />
     </SidebarProvider>,
     {
       room: {
@@ -120,6 +119,11 @@ describe('ConversationSidebar — the conversation row only shows the name (no @
 });
 
 describe('ConversationSidebar — Amigos / Grupos tabs', () => {
+  it('opens the detail URL even when the conversation is already active', async () => {
+    renderSidebar({ activeConversationId: 'conv-dm' });
+    await userEvent.setup().click(screen.getByRole('button', { name: /Bea/ }));
+    expect(screen.getByTestId('current-path')).toHaveTextContent('/app/conversations/conv-dm');
+  });
   it('defaults to Amigos: shows the DM and hides the group', () => {
     renderSidebar();
     expect(screen.getByText('Bea')).toBeInTheDocument();
@@ -183,14 +187,11 @@ describe('ConversationSidebar — user dock', () => {
     expect(screen.queryByRole('button', { name: 'Ajustes' })).not.toBeInTheDocument();
   });
 
-  it('on a phone the drawer carries the dock, with the account, settings and the active call', async () => {
+  it('on a phone the list fills the page without a drawer or dock', () => {
     setViewport(390);
-    const onReturnToCall = vi.fn();
-    renderSidebar({ openMobile: true, activeCallConversationId: 'conv-group', onReturnToCall });
-    expect(screen.getByRole('button', { name: 'Meu perfil' })).toHaveTextContent('Fulana');
-    expect(screen.getByRole('button', { name: 'Ajustes' })).toHaveAttribute('aria-haspopup', 'dialog');
-    expect(screen.getByText('Em chamada')).toBeInTheDocument();
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Voltar à chamada' }));
-    expect(onReturnToCall).toHaveBeenCalledTimes(1);
+    renderSidebar();
+    expect(screen.getByRole('main', { name: 'Conversas' })).toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'Conversas' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Meu perfil' })).not.toBeInTheDocument();
   });
 });

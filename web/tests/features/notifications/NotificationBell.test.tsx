@@ -4,6 +4,8 @@ import userEvent from '@testing-library/user-event';
 import { Route, Routes, useLocation } from 'react-router';
 import { renderSocial, ana } from '@tests/fixtures/socialFixture';
 import { NotificationBell } from '@/features/notifications/NotificationBell';
+import { NotificationsPage } from '@/features/notifications/NotificationsPage';
+import { NotificationStateProvider } from '@/features/notifications/NotificationStateProvider';
 import * as api from '@/shared/api/api';
 import type { NotificationEntry } from '@/shared/api/api';
 
@@ -18,7 +20,7 @@ const entry = (over: Partial<NotificationEntry> = {}): NotificationEntry => ({
 });
 
 function Where() { const l = useLocation(); return <p data-testid="where">{l.pathname}{l.search}</p>; }
-const renderBell = () => renderSocial(<><NotificationBell /><Routes><Route path="*" element={<Where />} /></Routes></>);
+const renderBell = () => renderSocial(<NotificationStateProvider><NotificationBell /><Routes><Route path="*" element={<Where />} /></Routes></NotificationStateProvider>);
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -49,18 +51,17 @@ describe('NotificationBell', () => {
   it('a mention jumps straight to the message, with its excerpt in the list', async () => {
     const user = userEvent.setup();
     const jumpToMessage = vi.fn();
-    const requestChatView = vi.fn();
     mocked.fetchUnreadNotificationCount.mockResolvedValue({ unread: 1 });
     mocked.fetchNotifications.mockResolvedValue({
       items: [entry({ kind: 'mention', friendshipId: null, mention: { messageId: 42, excerpt: '@eu viu o deploy?', conversation: { id: 'g1', type: 'group', title: 'Squad', avatar: '' } } })],
       nextCursor: null,
     });
-    renderSocial(<NotificationBell />, { room: { jumpToMessage, requestChatView } });
+    renderSocial(<NotificationStateProvider><NotificationBell /><Routes><Route path="*" element={<Where />} /></Routes></NotificationStateProvider>, { room: { jumpToMessage } });
     await user.click(screen.getByRole('button', { name: /Notificações/ }));
     expect(await screen.findByText('@eu viu o deploy?')).toBeInTheDocument();
     await user.click(screen.getByText(/mencionou você no grupo Squad/));
     expect(jumpToMessage).toHaveBeenCalledWith('g1', 42);
-    expect(requestChatView).toHaveBeenCalled();
+    expect(screen.getByTestId('where')).toHaveTextContent('/app/conversations/g1');
     expect(mocked.markNotificationsRead).toHaveBeenCalledWith({ ids: ['n1'] });
   });
 
@@ -150,5 +151,16 @@ describe('NotificationBell', () => {
     await user.click(await screen.findByRole('button', { name: 'Descartar notificação' }));
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     await waitFor(() => expect(mocked.fetchUnreadNotificationCount.mock.calls.length).toBeGreaterThan(1));
+  });
+});
+
+describe('NotificationsPage', () => {
+  it('shows the same notification actions in a full page', async () => {
+    mocked.fetchUnreadNotificationCount.mockResolvedValue({ unread: 1 });
+    mocked.fetchNotifications.mockResolvedValue({ items: [entry()], nextCursor: null });
+    renderSocial(<NotificationStateProvider><NotificationsPage /><Where /></NotificationStateProvider>, { path: '/app/notifications' });
+    expect(await screen.findByText('Ana enviou uma solicitação de amizade')).toBeInTheDocument();
+    await userEvent.setup().click(screen.getByText('Ana enviou uma solicitação de amizade'));
+    expect(screen.getByTestId('where')).toHaveTextContent('/app/friends?tab=pending');
   });
 });

@@ -1,19 +1,26 @@
+import type { ComponentProps } from 'react';
 import { fireEvent, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { initialRoomState } from '@/state/roomReducer';
 import { RoomContext } from '@/state/RoomContext';
 import { createFakeRoomContextValue, renderWithRoom } from '@tests/fixtures/roomContextFixture';
 import { FloatingPip } from '@/features/calls/FloatingPip';
+import { SidebarProvider } from '@/shared/ui/motion/sidebar';
 import { useCallTiles } from '@/features/calls/useCallTiles';
 import type { TileDescriptor } from '@/features/calls/tileTypes';
 
 vi.mock('@/features/calls/useCallTiles', () => ({ useCallTiles: vi.fn() }));
+afterEach(() => vi.unstubAllGlobals());
 
 vi.mock('@/features/calls/Tile', () => ({
   Tile: ({ participantId, kind, paused }: { participantId: string; kind: string; paused?: boolean }) => (
     <div data-testid="pip-tile" data-participant={participantId} data-kind={kind} data-paused={paused ? '1' : '0'} />
   ),
 }));
+
+function TestPip(props: ComponentProps<typeof FloatingPip>) {
+  return <SidebarProvider><FloatingPip {...props} /></SidebarProvider>;
+}
 
 function descriptor(overrides: Partial<TileDescriptor> = {}): TileDescriptor {
   return { key: 'p-2:screen', participantId: 'p-2', kind: 'screen', loading: false, paused: false, ...overrides };
@@ -26,7 +33,7 @@ function currentTile() {
 describe('FloatingPip — selection by stable identity', () => {
   it('audio-only (no non-avatar descriptors): renders nothing', () => {
     vi.mocked(useCallTiles).mockReturnValue([]);
-    const { container } = renderWithRoom(<FloatingPip allIds={['p-1', 'p-2']} />);
+    const { container } = renderWithRoom(<TestPip allIds={['p-1', 'p-2']} />);
     expect(container.querySelector('[data-testid="pip-tile"]')).not.toBeInTheDocument();
   });
 
@@ -35,7 +42,7 @@ describe('FloatingPip — selection by stable identity', () => {
       descriptor({ key: 'p-2:screen', participantId: 'p-2', kind: 'screen' }),
       descriptor({ key: 'p-3:participant', participantId: 'p-3', kind: 'camera' }),
     ]);
-    renderWithRoom(<FloatingPip allIds={['p-2', 'p-3']} />);
+    renderWithRoom(<TestPip allIds={['p-2', 'p-3']} />);
     expect(currentTile()).toHaveAttribute('data-participant', 'p-2');
   });
 
@@ -44,7 +51,7 @@ describe('FloatingPip — selection by stable identity', () => {
       descriptor({ key: 'p-2:screen', participantId: 'p-2', kind: 'screen' }),
       descriptor({ key: 'p-3:participant', participantId: 'p-3', kind: 'camera' }),
     ]);
-    renderWithRoom(<FloatingPip allIds={['p-2', 'p-3']} />, {
+    renderWithRoom(<TestPip allIds={['p-2', 'p-3']} />, {
       state: { ...initialRoomState, focusedId: 'p-3:participant' },
     });
     expect(currentTile()).toHaveAttribute('data-participant', 'p-3');
@@ -55,7 +62,7 @@ describe('FloatingPip — selection by stable identity', () => {
       descriptor({ key: 'p-2:screen', participantId: 'p-2', kind: 'screen' }),
       descriptor({ key: 'p-3:participant', participantId: 'p-3', kind: 'camera' }),
     ]);
-    renderWithRoom(<FloatingPip allIds={['p-2', 'p-3']} />, {
+    renderWithRoom(<TestPip allIds={['p-2', 'p-3']} />, {
       state: { ...initialRoomState, focusedId: 'p-2:screen' },
     });
     expect(currentTile()).toHaveAttribute('data-participant', 'p-2');
@@ -70,7 +77,7 @@ describe('FloatingPip — selection by stable identity', () => {
       descriptor({ key: 'p-2:screen', participantId: 'p-2', kind: 'screen' }),
       descriptor({ key: 'p-3:participant', participantId: 'p-3', kind: 'camera' }),
     ]);
-    const { rerender } = renderWithRoom(<FloatingPip allIds={['p-2', 'p-3']} />, value);
+    const { rerender } = renderWithRoom(<TestPip allIds={['p-2', 'p-3']} />, value);
 
     // manually pick the OTHER descriptor (p-2), away from the focused one
     fireEvent.click(screen.getByLabelText('Transmissão anterior'));
@@ -84,7 +91,7 @@ describe('FloatingPip — selection by stable identity', () => {
     ]);
     rerender(
       <RoomContext.Provider value={value}>
-        <FloatingPip allIds={['p-2', 'p-3']} />
+        <TestPip allIds={['p-2', 'p-3']} />
       </RoomContext.Provider>
     );
     expect(currentTile()).toHaveAttribute('data-participant', 'p-3');
@@ -92,7 +99,7 @@ describe('FloatingPip — selection by stable identity', () => {
 
   it('passes "paused" through to the Tile', () => {
     vi.mocked(useCallTiles).mockReturnValue([descriptor({ paused: true })]);
-    renderWithRoom(<FloatingPip allIds={['p-2']} />);
+    renderWithRoom(<TestPip allIds={['p-2']} />);
     expect(currentTile()).toHaveAttribute('data-paused', '1');
   });
 });
@@ -101,7 +108,7 @@ describe('FloatingPip — click vs. drag', () => {
   it('a simple click (no movement) calls onExpand', () => {
     vi.mocked(useCallTiles).mockReturnValue([descriptor()]);
     const onExpand = vi.fn();
-    renderWithRoom(<FloatingPip allIds={['p-2']} onExpand={onExpand} />);
+    renderWithRoom(<TestPip allIds={['p-2']} onExpand={onExpand} />);
     const dragHandle = currentTile().parentElement!.nextElementSibling!;
 
     fireEvent.pointerDown(dragHandle, { button: 0, clientX: 100, clientY: 100 });
@@ -112,7 +119,7 @@ describe('FloatingPip — click vs. drag', () => {
   it('dragging past the threshold does NOT call onExpand', () => {
     vi.mocked(useCallTiles).mockReturnValue([descriptor()]);
     const onExpand = vi.fn();
-    renderWithRoom(<FloatingPip allIds={['p-2']} onExpand={onExpand} />);
+    renderWithRoom(<TestPip allIds={['p-2']} onExpand={onExpand} />);
     const dragHandle = currentTile().parentElement!.nextElementSibling!;
 
     fireEvent.pointerDown(dragHandle, { button: 0, clientX: 100, clientY: 100 });
@@ -124,7 +131,7 @@ describe('FloatingPip — click vs. drag', () => {
   it('pointercancel after a drag also does not call onExpand', () => {
     vi.mocked(useCallTiles).mockReturnValue([descriptor()]);
     const onExpand = vi.fn();
-    renderWithRoom(<FloatingPip allIds={['p-2']} onExpand={onExpand} />);
+    renderWithRoom(<TestPip allIds={['p-2']} onExpand={onExpand} />);
     const dragHandle = currentTile().parentElement!.nextElementSibling!;
 
     fireEvent.pointerDown(dragHandle, { button: 0, clientX: 100, clientY: 100 });
@@ -135,17 +142,26 @@ describe('FloatingPip — click vs. drag', () => {
 });
 
 describe('FloatingPip — position', () => {
+  it('starts above the mobile composer and hides behind the active-call bar on main pages', () => {
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: query.includes('767px') || query.includes('1023px'), media: query,
+      addEventListener: () => {}, removeEventListener: () => {},
+    }));
+    vi.mocked(useCallTiles).mockReturnValue([descriptor()]);
+    renderWithRoom(<TestPip allIds={['p-2']} />);
+    expect(screen.getByTestId('pip-tile').closest('.fixed')).toHaveStyle({ top: 'calc(env(safe-area-inset-top) + 4.5rem)' });
+  });
   const box = () => screen.getByTestId('pip-tile').parentElement!.parentElement as HTMLElement;
 
   it('appears above the user dock floating in the same corner, not over it', () => {
     vi.mocked(useCallTiles).mockReturnValue([descriptor()]);
-    renderWithRoom(<FloatingPip allIds={['p-2']} />);
+    renderWithRoom(<TestPip allIds={['p-2']} />);
     expect(box().style.bottom).toBe('max(var(--user-dock-clearance, 1rem), 1rem)');
   });
 
   it('keeps clear of the reconnect notice too while reconnecting', () => {
     vi.mocked(useCallTiles).mockReturnValue([descriptor()]);
-    renderWithRoom(<FloatingPip allIds={['p-2']} />, { state: { ...initialRoomState, reconnecting: true } });
+    renderWithRoom(<TestPip allIds={['p-2']} />, { state: { ...initialRoomState, reconnecting: true } });
     expect(box().style.bottom).toBe('max(var(--user-dock-clearance, 1rem), 5rem)');
   });
 });

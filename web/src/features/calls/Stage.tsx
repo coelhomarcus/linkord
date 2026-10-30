@@ -1,7 +1,6 @@
 import { ArrowLeftIcon, VideoCameraSlashIcon } from '@phosphor-icons/react';
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 
-import { useSidebar } from '@/shared/ui/motion/sidebar-context';
 import { useRoom } from '../../state/RoomContext';
 import { useCallTiles } from './useCallTiles';
 import { useAutoFocusScreenShare } from './useAutoFocusScreenShare';
@@ -15,6 +14,7 @@ interface StageProps {
   allIds: string[];
   chatOpen: boolean;
   onToggleChat: () => void;
+  onBack: () => void;
 }
 
 // Matches the old fixed `pb-32` (8rem) until the control bar's real height
@@ -25,9 +25,8 @@ const FALLBACK_RESERVED_BOTTOM = 116;
 // already uses for its own distance from the true bottom edge.
 const BAR_GRID_GAP = 12;
 
-export function Stage({ allIds, chatOpen, onToggleChat }: StageProps) {
+export function Stage({ allIds, chatOpen, onToggleChat, onBack }: StageProps) {
   const { state, dispatch, hideAudioOnlyTiles, setHideAudioOnlyTiles, callStageRef, reconnecting, menuTarget } = useRoom();
-  const { setOpenMobile } = useSidebar();
   const allDescriptors = useCallTiles(allIds);
   const descriptors = hideAudioOnlyTiles ? allDescriptors.filter((d) => d.kind !== 'avatar') : allDescriptors;
   const focusScreenShare = useCallback((key: string) => dispatch({ type: 'SET_FOCUSED', id: key, origin: 'automatic' }), [dispatch]);
@@ -84,7 +83,7 @@ export function Stage({ allIds, chatOpen, onToggleChat }: StageProps) {
         variant="ghost"
         size="icon-sm"
         aria-label="Voltar para conversas"
-        onClick={() => setOpenMobile(true)}
+        onClick={onBack}
         className="absolute left-2 top-2 z-20 bg-bg-tertiary/80 text-text-secondary hover:bg-bg-hover md:hidden"
       >
         <ArrowLeftIcon size={18} />

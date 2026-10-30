@@ -70,9 +70,9 @@ export function RoomProvider({ children }: { children: ReactNode }) {
     activeViewRef.current = view;
     if (view === 'chat' && was !== 'chat') markActiveSeenRef.current?.();
   }, []);
-  const requestChatViewRef = useRef<(() => void) | null>(null);
-  const registerRequestChatView = useCallback((fn: () => void) => { requestChatViewRef.current = fn; }, []);
-  const requestChatView = useCallback(() => { requestChatViewRef.current?.(); }, []);
+  const requestChatViewRef = useRef<((conversationId?: string) => void) | null>(null);
+  const registerRequestChatView = useCallback((fn: (conversationId?: string) => void) => { requestChatViewRef.current = fn; }, []);
+  const requestChatView = useCallback((conversationId?: string) => { requestChatViewRef.current?.(conversationId); }, []);
 
   // 'forbidden'/'conflict'/'not_found' over the socket are, today, only
   // ever group-action denials (conversations.ts) — rename/delete/members/
@@ -207,6 +207,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         break;
       case 'conversation-opened':
         conversationsList.onConversationOpened(m, openConversation);
+        requestChatViewRef.current?.(m.conversationId);
         break;
       case 'conversation-created':
         conversationsList.onConversationCreated(m);
@@ -353,7 +354,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     setNotificationClickHandler((conversationId) => {
       openConversation(conversationId);
-      requestChatViewRef.current?.();
+      requestChatViewRef.current?.(conversationId);
     });
     return () => setNotificationClickHandler(null);
   }, [openConversation]);

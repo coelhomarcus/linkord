@@ -6,7 +6,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 
 import { useSidebar } from '@/shared/ui/motion/sidebar-context';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
-import { ROUTES, isConversationsPath } from '@/shared/lib/routes';
+import { ROUTES, callConversationIdFromPath, isConversationsPath } from '@/shared/lib/routes';
 import { cn } from '@/shared/lib/utils';
 import { useContentLocation } from '@/shared/lib/contentLocation';
 import { SPRING_LAYOUT } from '@/shared/lib/ease';
@@ -103,6 +103,7 @@ export function AppNavigationRail({ className }: {
     [conversations, unreadByConversation],
   );
   const { pathname } = useContentLocation();
+  const onConversations = isConversationsPath(pathname) || !!callConversationIdFromPath(pathname);
   const { isMobile, isOverlay, open: listOpen, openMobile, setOpenMobile, toggleSidebar } = useSidebar();
   const afterNavigate = () => { if (isOverlay) setOpenMobile(false); };
   // as a drawer the list is opened from here; as a column it can be hidden from its own header, so this is only the way back
@@ -129,8 +130,8 @@ export function AppNavigationRail({ className }: {
           <TooltipContent side="right">Mostrar lista de conversas</TooltipContent>
         </Tooltip>
       </RailSlot>
-      <RailLink to={ROUTES.conversations} label={conversationsLabel} active={isConversationsPath(pathname)} badge={conversationsUnread} onNavigate={afterNavigate}>
-        <ChatCircleIcon size={24} weight={iconWeight(isConversationsPath(pathname))} aria-hidden />
+      <RailLink to={ROUTES.conversations} label={conversationsLabel} active={onConversations} badge={conversationsUnread} onNavigate={afterNavigate}>
+        <ChatCircleIcon size={24} weight={iconWeight(onConversations)} aria-hidden />
       </RailLink>
       <RailLink to={ROUTES.friends} label={friendsLabel} active={pathname === ROUTES.friends} badge={pendingIncomingCount} onNavigate={afterNavigate}>
         <UsersIcon size={24} weight={iconWeight(pathname === ROUTES.friends)} aria-hidden />
