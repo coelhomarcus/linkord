@@ -52,6 +52,13 @@ import { TooltipProvider } from '@/shared/ui/primitives/tooltip';
 // (a refresh on /app/settings/av): behind it, the conversations
 const DEFAULT_CONTENT_LOCATION: Location = { pathname: ROUTES.conversations, search: '', hash: '', state: null, key: 'default' };
 
+/** Where the current entry sits in this tab's history: the browser router
+ * keeps it in history.state. Null when the entry did not come from it. */
+function currentHistoryIndex(): number | null {
+  const idx = (window.history.state as { idx?: unknown } | null)?.idx;
+  return typeof idx === 'number' ? idx : null;
+}
+
 /** Read the route from the router so same-handler navigation sees the new path. */
 function currentPath(): string {
   return router.state.location.pathname;
@@ -69,16 +76,25 @@ function Shell() {
   // URL names it, and the page underneath stays the last real page, so the
   // conversation, a running call's stage and the rail do not change behind it.
   const modal = modalForPath(location.pathname);
-  const [lastContent, setLastContent] = useState<Location | null>(null);
-  if (!modal && lastContent !== location) setLastContent(location);
-  const contentLocation = modal ? (lastContent ?? DEFAULT_CONTENT_LOCATION) : location;
-  // closing puts the page behind the modal back in the modal's place
+  const [lastContent, setLastContent] = useState<{ location: Location; historyIndex: number | null } | null>(null);
+  if (!modal && lastContent?.location !== location) setLastContent({ location, historyIndex: currentHistoryIndex() });
+  const contentLocation = modal ? (lastContent?.location ?? DEFAULT_CONTENT_LOCATION) : location;
+  // Closing steps back to the page the modal opened over, past every entry
+  // its own sections pushed, so the browser's back (an iPhone edge swipe)
+  // never lands on the modal again. Opened straight from a URL, there is
+  // nothing to step back to: the page behind takes the modal's place.
   const closeModal = useCallback(() => {
+    const here = currentHistoryIndex();
+    const behind = lastContent?.historyIndex ?? null;
+    if (here !== null && behind !== null && behind < here) {
+      navigate(behind - here);
+      return;
+    }
     navigate(
       { pathname: contentLocation.pathname, search: contentLocation.search, hash: contentLocation.hash },
       { replace: true, state: contentLocation.state },
     );
-  }, [navigate, contentLocation]);
+  }, [navigate, contentLocation, lastContent]);
   const onConversations = isConversationsPath(contentLocation.pathname) || !!callConversationIdFromPath(contentLocation.pathname);
   const [profileUserId, setProfileUserId] = useState<string | null>(null);
   const [mobileShowSidebar, setMobileShowSidebar] = useState(false);

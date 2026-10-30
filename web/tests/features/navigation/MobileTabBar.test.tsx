@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useLocation, useNavigationType } from 'react-router';
 import { renderSocial } from '@tests/fixtures/socialFixture';
 import { MobileTabBar } from '@/features/navigation/MobileTabBar';
 import { NotificationStateProvider } from '@/features/notifications/NotificationStateProvider';
@@ -23,9 +24,13 @@ beforeEach(() => {
   mocked.fetchUnreadNotificationCount.mockResolvedValue({ unread: 3 });
 });
 
+function WhereAmI() {
+  return <output data-testid="where">{`${useNavigationType()} ${useLocation().pathname}`}</output>;
+}
+
 function renderBar(callId: string | null = null, onReturnToCall = vi.fn()) {
   return renderSocial(
-    <NotificationStateProvider><MobileTabBar activeCallConversationId={callId} onReturnToCall={onReturnToCall} /></NotificationStateProvider>,
+    <NotificationStateProvider><MobileTabBar activeCallConversationId={callId} onReturnToCall={onReturnToCall} /><WhereAmI /></NotificationStateProvider>,
     {
       path: '/app/friends',
       room: {
@@ -51,5 +56,13 @@ describe('MobileTabBar', () => {
     renderBar('c1', onReturnToCall);
     await userEvent.setup().click(screen.getByRole('button', { name: /Em chamada: Equipe/ }));
     expect(onReturnToCall).toHaveBeenCalledOnce();
+  });
+
+  // siblings: a back swipe leaves the section instead of replaying every tab
+  it('switching tabs replaces the history entry', async () => {
+    const user = userEvent.setup();
+    renderBar();
+    await user.click(screen.getByRole('link', { name: /^Conversas/ }));
+    expect(screen.getByTestId('where')).toHaveTextContent('REPLACE /app/conversations');
   });
 });

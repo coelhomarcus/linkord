@@ -5,6 +5,9 @@ import type { RoomContextValue } from '@/state/RoomContext';
 import { ConversationPanel } from '@/features/conversations/ConversationPanel';
 import type { Conversation, PublicUser } from '@/shared/types/protocol';
 import { SidebarProvider } from '@/shared/ui/motion/sidebar';
+import { MemoryRouter, useLocation, useNavigationType } from 'react-router';
+import { renderWithRoom } from '@tests/fixtures/roomContextFixture';
+import { FriendsProvider } from '@/features/friends/FriendsContext';
 import { renderSocial } from '@tests/fixtures/socialFixture';
 import * as api from '@/shared/api/api';
 
@@ -205,5 +208,41 @@ describe('ConversationPanel — phone list route', () => {
     }) as MediaQueryList);
     renderAt('/app/conversations/g1');
     expect(screen.getByRole('button', { name: 'Voltar para conversas' })).toBeInTheDocument();
+  });
+});
+
+describe('ConversationPanel — phone Voltar', () => {
+  const group: Conversation = {
+    id: 'g1', type: 'group', title: 'Squad', avatar: '', createdBy: null, memberIds: ['me'],
+    lastMessageAt: null, createdAt: 0, updatedAt: 0, pinnedAt: null, myRole: 'member', ownerId: null, memberCount: 1,
+  };
+  function WhereAmI() {
+    return <output data-testid="where">{`${useNavigationType()} ${useLocation().pathname}`}</output>;
+  }
+  function renderFrom(entries: Parameters<typeof MemoryRouter>[0]['initialEntries']) {
+    renderWithRoom(
+      <MemoryRouter initialEntries={entries} initialIndex={(entries?.length ?? 1) - 1}>
+        <FriendsProvider>
+          <SidebarProvider>
+            <ConversationPanel onOpenProfile={() => {}} onOpenCall={() => {}} onOpenSearch={() => {}} detailsOpen={false} mediaOpen={false} onOpenDetails={() => {}} onToggleDetails={() => {}} onToggleMedia={() => {}} />
+          </SidebarProvider>
+          <WhereAmI />
+        </FriendsProvider>
+      </MemoryRouter>,
+      { state: joinedState, conversations: [group], activeConversationId: 'g1' },
+    );
+  }
+
+  // the same place an iPhone back swipe lands
+  it('opened from the list, it steps back to that entry', () => {
+    renderFrom(['/app/conversations', { pathname: '/app/conversations/g1', state: { from: '/app/conversations' } }]);
+    fireEvent.click(screen.getByRole('button', { name: 'Voltar para conversas' }));
+    expect(screen.getByTestId('where')).toHaveTextContent('POP /app/conversations');
+  });
+
+  it('opened from elsewhere, the list takes its place', () => {
+    renderFrom(['/app/notifications', '/app/conversations/g1']);
+    fireEvent.click(screen.getByRole('button', { name: 'Voltar para conversas' }));
+    expect(screen.getByTestId('where')).toHaveTextContent('REPLACE /app/conversations');
   });
 });

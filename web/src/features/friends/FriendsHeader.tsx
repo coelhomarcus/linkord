@@ -68,7 +68,7 @@ export function FriendsModeSelect({ view }: { view: FriendsView }) {
   const current = MODES.find((mode) => mode.view === view) ?? MODES[0];
   const text = (mode: (typeof MODES)[number]) => (counts[mode.view] ? `${mode.label} (${counts[mode.view]})` : mode.label);
   return (
-    <Select value={current.view} onValueChange={(next) => next && navigate(friendsView(next as FriendsView))}>
+    <Select value={current.view} onValueChange={(next) => next && navigate(friendsView(next as FriendsView), { replace: true })}>
       <SelectTrigger aria-label="Visualização de Amigos" className="w-full">
         <SelectValue>{() => text(current)}</SelectValue>
       </SelectTrigger>

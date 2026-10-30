@@ -155,7 +155,8 @@ export function ConversationSidebar() {
 
   function selectConversation(conversationId: string) {
     openConversation(conversationId);
-    navigate(ROUTES.conversation(conversationId));
+    // the phone's Voltar returns to this exact entry (see ConversationPanel)
+    navigate(ROUTES.conversation(conversationId), { state: { from: pathname } });
     if (isOverlay) setOpenMobile(false);
   }
 

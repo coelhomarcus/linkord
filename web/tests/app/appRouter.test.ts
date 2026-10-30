@@ -28,4 +28,17 @@ describe('createAppRouter', () => {
     expect(window.location.pathname).toBe('/app/friends');
     router.dispose();
   });
+
+  // closing a modal steps back by this index (App.tsx's currentHistoryIndex)
+  it('numbers each history entry, so a modal can step back to the page it opened over', async () => {
+    visit('/app/profile');
+    const router = createAppRouter([{ path: '*', element: null }]);
+    const start = (window.history.state as { idx: number }).idx;
+    await router.navigate('/app/settings');
+    await router.navigate('/app/settings/av');
+    expect((window.history.state as { idx: number }).idx).toBe(start + 2);
+    await router.navigate(start - (window.history.state as { idx: number }).idx);
+    expect(router.state.location.pathname).toBe('/app/profile');
+    router.dispose();
+  });
 });

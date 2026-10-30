@@ -10,6 +10,9 @@ import { ROUTES } from '@/shared/lib/routes';
 import { AppLink } from '@/shared/ui/app-link';
 import { useRoom } from '@/state/RoomContext';
 
+/** The phone's top-level sections. Switching one replaces the history entry:
+ * they are siblings, so a back swipe leaves the section instead of walking
+ * through every tab visited, the way a native tab bar behaves. */
 export function MobileTabBar({ activeCallConversationId, onReturnToCall }: { activeCallConversationId: string | null; onReturnToCall: () => void }) {
   const { pathname } = useContentLocation();
   const { state, conversations, unreadByConversation, allUsers } = useRoom();
@@ -44,7 +47,7 @@ export function MobileTabBar({ activeCallConversationId, onReturnToCall }: { act
             ? `${label}, ${count} ${to === ROUTES.friends ? (count === 1 ? 'solicitação pendente' : 'solicitações pendentes') : (count === 1 ? 'não lida' : 'não lidas')}`
             : label;
           return (
-            <AppLink key={to} to={to} aria-label={accessibleLabel} aria-current={active ? 'page' : undefined} className={`relative flex min-w-0 flex-col items-center justify-center gap-0.5 text-caption ${active ? 'font-semibold text-primary' : 'text-text-muted'}`}>
+            <AppLink key={to} to={to} replace aria-label={accessibleLabel} aria-current={active ? 'page' : undefined} className={`relative flex min-w-0 flex-col items-center justify-center gap-0.5 text-caption ${active ? 'font-semibold text-primary' : 'text-text-muted'}`}>
               {active && <span aria-hidden className="absolute inset-x-4 top-0 h-0.5 rounded-full bg-primary" />}
               <span className="relative">
                 {to === ROUTES.profile ? <Avatar id={state.me.userId ?? state.me.id ?? 'me'} name={state.me.displayName} avatar={state.me.avatar} avatarColor={state.me.avatarColor} size={24} /> : <Icon size={24} weight={active ? 'fill' : 'regular'} aria-hidden />}

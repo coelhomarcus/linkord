@@ -36,7 +36,7 @@ interface ConversationPanelProps {
 export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, detailsOpen, mediaOpen, onOpenDetails, onToggleDetails, onToggleMedia }: ConversationPanelProps) {
   const { state, dispatch, conversations, activeConversationId, allUsers, onlineUserIds, activeCallConversationId } = useRoom();
   const navigate = useNavigate();
-  const { pathname } = useLocation();
+  const { pathname, state: locationState } = useLocation();
   const { isMobile } = useSidebar();
   const requestedId = conversationIdFromPath(pathname);
   // On a phone the bare list route hides this panel (display: none). Mounting
@@ -45,6 +45,13 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
   const shownId = requestedId ?? (isMobile ? null : activeConversationId);
   const conversation = conversations.find((item) => item.id === shownId) ?? null;
   const isBot = conversation?.type === 'bot';
+  // Opened from the list: step back to that entry, so the browser's own back
+  // (an iPhone edge swipe) and this button land in the same place. Opened
+  // from anywhere else, the list takes this entry's place instead.
+  function goBackToList() {
+    if ((locationState as { from?: unknown } | null)?.from === ROUTES.conversations) navigate(-1);
+    else navigate(ROUTES.conversations, { replace: true });
+  }
   const hasDetails = conversation?.type === 'group' || isBot;
   const title = conversationTitle(conversation, state.me.userId, allUsers);
   const other = directUser(conversation, state.me.userId, allUsers);
@@ -80,7 +87,7 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
       {conversation ? (
         <>
           <header data-avatar-hover className="flex h-header flex-none items-center gap-2 bg-surface-panel/90 px-2 backdrop-blur md:gap-3 md:border-b md:border-border md:px-4">
-            <Button type="button" variant="ghost" size="icon" aria-label="Voltar para conversas" onClick={() => navigate(ROUTES.conversations)} className="md:hidden">
+            <Button type="button" variant="ghost" size="icon" aria-label="Voltar para conversas" onClick={goBackToList} className="md:hidden">
               <ArrowLeftIcon size={20} />
             </Button>
             {conversation.type === 'direct' && other ? (
