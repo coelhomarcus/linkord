@@ -124,6 +124,10 @@ export function useChatMessages(deps: ChatMessagesDeps) {
   const pageRequestsRef = useRef(new Map<string, { requestId: string; timer: ReturnType<typeof setTimeout> }>());
   const [unreadByConversation, setUnreadByConversation] = useState<Map<string, number>>(new Map());
   const [unreadStartByConversation, setUnreadStartByConversation] = useState<Map<string, number>>(new Map());
+  // The counts, readable synchronously: a divider only stays put while the
+  // messages after it are still unread. Once they were seen, the next arrival
+  // starts a new one. State would lag behind two arrivals in the same tick.
+  const unreadCountsRef = useRef(new Map<string, number>());
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
   const [editingMsgId, setEditingMsgId] = useState<number | null>(null);
   // which message's full reaction list is open — shared by the row menu and
@@ -179,6 +183,7 @@ export function useChatMessages(deps: ChatMessagesDeps) {
   }, [sendWs]);
 
   const clearUnread = useCallback((conversationId: string) => {
+    unreadCountsRef.current.delete(conversationId);
     setUnreadByConversation((prev) => {
       if (!prev.has(conversationId)) return prev;
       const next = new Map(prev);
@@ -319,7 +324,10 @@ export function useChatMessages(deps: ChatMessagesDeps) {
   // a server from before persisted unread sends none: keep the session's own count then
   const onWelcome = useCallback((unread: Record<string, number> | undefined) => {
     onOutboxReconnected();
-    if (unread) setUnreadByConversation(new Map(Object.entries(unread)));
+    if (unread) {
+      unreadCountsRef.current = new Map(Object.entries(unread));
+      setUnreadByConversation(new Map(unreadCountsRef.current));
+    }
   }, [onOutboxReconnected]);
   const dismissMessageActionError = useCallback((msgId: number) => {
     setMessageActionErrors((prev) => { if (!prev.has(msgId)) return prev; const next = new Map(prev); next.delete(msgId); return next; });
@@ -449,8 +457,10 @@ export function useChatMessages(deps: ChatMessagesDeps) {
       // the active conversation only counts as read while its chat is on screen:
       // from the friends page it is still active, but nobody is looking at it
       if (conversationId !== activeConversationIdRef.current || activeViewRef.current !== 'chat') {
+        const unreadBefore = unreadCountsRef.current.get(conversationId) ?? 0;
+        unreadCountsRef.current.set(conversationId, unreadBefore + 1);
         setUnreadByConversation((prev) => new Map(prev).set(conversationId, (prev.get(conversationId) || 0) + 1));
-        setUnreadStartByConversation((prev) => prev.has(conversationId) ? prev : new Map(prev).set(conversationId, m.message.msgId));
+        setUnreadStartByConversation((prev) => unreadBefore > 0 && prev.has(conversationId) ? prev : new Map(prev).set(conversationId, m.message.msgId));
       } else {
         // not counted here, so the server mustn't count it on the next load either
         queueMarkRead(conversationId, m.message.msgId);

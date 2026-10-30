@@ -64,6 +64,25 @@ describe('useChatMessages — unread', () => {
     expect(result.current.unreadStartByConversation.has('dm')).toBe(false);
   });
 
+  it('a message arriving after the divider was read moves it there; one arriving while still unread keeps it', () => {
+    const ref = <T,>(current: T) => ({ current });
+    const { result } = renderHook(() => useChatMessages({
+      sendWs: vi.fn(), activeConversationIdRef: ref<string | null>('dm'), setActiveConversation: vi.fn(),
+      conversationsRef: ref([]), allUsersRef: ref(new Map()), myUserIdRef: ref<string | null>('b'), myUsernameRef: ref<string | null>('b'),
+      activeViewRef: ref<'chat' | 'call' | 'away'>('away'), clearTypingEntry: vi.fn(),
+    }));
+    act(() => result.current.onConversationHistory({
+      t: 'conversation-history', conversationId: 'dm', hasMore: false,
+      firstUnreadMessageId: 2, messages: [message(1), message(2)],
+    }));
+    act(() => result.current.clearUnread('dm'));
+    act(() => {
+      result.current.onChat({ t: 'chat', message: message(3) });
+      result.current.onChat({ t: 'chat', message: message(4) });
+    });
+    expect(result.current.unreadStartByConversation.get('dm')).toBe(3);
+  });
+
   it("own message in another conversation doesn't count as unread; someone else's does", () => {
     const { result } = setup();
     act(() => result.current.onChat({ t: 'chat', message: message(10, { conversationId: 'outra', id: 'b' }) }));
