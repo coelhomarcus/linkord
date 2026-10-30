@@ -123,6 +123,7 @@ export function useChatMessages(deps: ChatMessagesDeps) {
   // other requestId answers something since replaced (a jump, a reload)
   const pageRequestsRef = useRef(new Map<string, { requestId: string; timer: ReturnType<typeof setTimeout> }>());
   const [unreadByConversation, setUnreadByConversation] = useState<Map<string, number>>(new Map());
+  const [unreadStartByConversation, setUnreadStartByConversation] = useState<Map<string, number>>(new Map());
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
   const [editingMsgId, setEditingMsgId] = useState<number | null>(null);
   // which message's full reaction list is open — shared by the row menu and
@@ -375,6 +376,12 @@ export function useChatMessages(deps: ChatMessagesDeps) {
   // the list visibly jumped away and back.
   const onConversationHistory = useCallback((m: Extract<ServerMessage, { t: 'conversation-history' }>) => {
     const conversationId = m.conversationId;
+    setUnreadStartByConversation((prev) => {
+      const next = new Map(prev);
+      if (m.firstUnreadMessageId != null) next.set(conversationId, m.firstUnreadMessageId);
+      else next.delete(conversationId);
+      return next;
+    });
     const loaded = messagesByConversationRef.current.get(conversationId);
     const atPresent = hasMoreAfterRef.current.get(conversationId) !== true;
     const update = loaded && atPresent ? withPresentPage(loaded, m.messages) : null;
@@ -443,6 +450,7 @@ export function useChatMessages(deps: ChatMessagesDeps) {
       // from the friends page it is still active, but nobody is looking at it
       if (conversationId !== activeConversationIdRef.current || activeViewRef.current !== 'chat') {
         setUnreadByConversation((prev) => new Map(prev).set(conversationId, (prev.get(conversationId) || 0) + 1));
+        setUnreadStartByConversation((prev) => prev.has(conversationId) ? prev : new Map(prev).set(conversationId, m.message.msgId));
       } else {
         // not counted here, so the server mustn't count it on the next load either
         queueMarkRead(conversationId, m.message.msgId);
@@ -544,6 +552,12 @@ export function useChatMessages(deps: ChatMessagesDeps) {
       return next;
     });
     clearUnread(m.conversationId);
+    setUnreadStartByConversation((prev) => {
+      if (!prev.has(m.conversationId)) return prev;
+      const next = new Map(prev);
+      next.delete(m.conversationId);
+      return next;
+    });
   }, [clearUnread]);
 
   /** Another of this user's own sessions/tabs opened this conversation (or
@@ -555,7 +569,7 @@ export function useChatMessages(deps: ChatMessagesDeps) {
   }, [clearUnread]);
 
   return {
-    messagesByConversation, hasMoreByConversation, hasMoreAfterByConversation, loadingOlderByConversation, unreadByConversation,
+    messagesByConversation, hasMoreByConversation, hasMoreAfterByConversation, loadingOlderByConversation, unreadByConversation, unreadStartByConversation,
     clearUnread, markActiveSeen, loadOlderMessages, pendingJumpTarget, clearPendingJumpTarget, cancelPendingJump, jumpToMessage,
     sendChatMessage, deleteChatMessage, editChatMessage, reactToChatMessage, removeChatAttachment, suppressChatEmbed,
     onWelcome, onChatSendResult: outbox.onChatSendResult, queueMessageWithFiles,

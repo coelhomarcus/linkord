@@ -184,9 +184,12 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         attachmentsUpload.setStorageUsage(m.storageUsage);
         if (!hasWelcomedRef.current) {
           hasWelcomedRef.current = true;
-          // Never a bot: opening one marks it read, and nobody asked to see it.
-          const firstConversation = (m.conversations ?? []).find((c) => c.type !== 'bot');
-          if (firstConversation) openConversation(firstConversation.id);
+          // The mobile list is a page of its own; selecting a chat here
+          // would mark unread messages as read before it is visible.
+          if (window.matchMedia('(min-width: 768px)').matches) {
+            const firstConversation = (m.conversations ?? []).find((c) => c.type !== 'bot');
+            if (firstConversation) openConversation(firstConversation.id);
+          }
         } else {
           const activeId = conversationsList.activeConversationIdRef.current;
           if (activeId && activeViewRef.current === 'chat' && (m.conversations ?? []).some((c) => c.id === activeId)) {
@@ -407,6 +410,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         newerCountByConversation: chatMessages.newerCountByConversation,
         windowGenerationByConversation: chatMessages.windowGenerationByConversation,
         unreadByConversation: chatMessages.unreadByConversation,
+        unreadStartByConversation: chatMessages.unreadStartByConversation,
         typingByConversation: typingIndicator.typingByConversation, sendTyping: typingIndicator.sendTyping,
         allUsers: presence.allUsers, onlineUserIds: presence.onlineUserIds, friendUserIds: presence.friendUserIds,
         kickFromCall: callLifecycle.kickFromCall,

@@ -139,6 +139,7 @@ export interface RoomContextValue {
   hasMoreByConversation: Map<string, boolean>;
   loadingOlderByConversation: Set<string>;
   unreadByConversation: Map<string, number>;
+  unreadStartByConversation: Map<string, number>;
   typingByConversation: Map<string, Set<string>>;
   sendTyping: (conversationId: string, value: boolean) => void;
   loadOlderMessages: (conversationId: string) => void;

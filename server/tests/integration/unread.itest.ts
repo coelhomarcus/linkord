@@ -32,6 +32,29 @@ async function lastReadOf(conversationId: string, userId: string): Promise<numbe
 }
 
 describe('persisted unread (real Postgres)', () => {
+  it('sends the first unread message before opening advances the read marker', async () => {
+    const { owner, reader, conversationId } = await groupWithReader();
+    await post(conversationId, owner.id, new Date(Date.now() - 2 * HOUR));
+    const read = await post(conversationId, owner.id);
+    await post(conversationId, reader.id);
+    const unread = await post(conversationId, owner.id);
+    await markReadUpTo(conversationId, reader.id, read);
+    const tab = joinNew(reader);
+    try {
+      await handlers['conversation-open']!(tab.socket, { conversationId });
+      const firstHistory = tab.sent.find((entry) => entry.event === 'conversation-history')?.payload;
+      assert.equal(firstHistory?.firstUnreadMessageId, unread);
+      assert.equal(await lastReadOf(conversationId, reader.id), unread);
+
+      tab.sent.length = 0;
+      await handlers['conversation-open']!(tab.socket, { conversationId });
+      const secondHistory = tab.sent.find((entry) => entry.event === 'conversation-history')?.payload;
+      assert.equal(secondHistory?.firstUnreadMessageId, null);
+    } finally {
+      cleanupParticipant(tab.participant);
+    }
+  });
+
   it("counts others' messages past the read marker, never your own or those from before joining", async () => {
     const { owner, reader, conversationId } = await groupWithReader();
     await post(conversationId, owner.id, new Date(Date.now() - 2 * HOUR));

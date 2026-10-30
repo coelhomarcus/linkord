@@ -48,6 +48,22 @@ describe('useChatMessages — invitation-updated', () => {
 });
 
 describe('useChatMessages — unread', () => {
+  it('keeps the unread boundary after opening clears the badge, then removes it on the next open', () => {
+    const { result } = setup();
+    act(() => result.current.onConversationHistory({
+      t: 'conversation-history', conversationId: 'dm', hasMore: false,
+      firstUnreadMessageId: 2, messages: [message(1), message(2)],
+    }));
+    expect(result.current.unreadStartByConversation.get('dm')).toBe(2);
+    act(() => result.current.clearUnread('dm'));
+    expect(result.current.unreadStartByConversation.get('dm')).toBe(2);
+    act(() => result.current.onConversationHistory({
+      t: 'conversation-history', conversationId: 'dm', hasMore: false,
+      firstUnreadMessageId: null, messages: [message(1), message(2)],
+    }));
+    expect(result.current.unreadStartByConversation.has('dm')).toBe(false);
+  });
+
   it("own message in another conversation doesn't count as unread; someone else's does", () => {
     const { result } = setup();
     act(() => result.current.onChat({ t: 'chat', message: message(10, { conversationId: 'outra', id: 'b' }) }));
@@ -55,6 +71,7 @@ describe('useChatMessages — unread', () => {
 
     act(() => result.current.onChat({ t: 'chat', message: message(11, { conversationId: 'outra', id: 'a' }) }));
     expect(result.current.unreadByConversation.get('outra')).toBe(1);
+    expect(result.current.unreadStartByConversation.get('outra')).toBe(11);
   });
 
   it('the active conversation counts as unread while its chat is off screen, and is read on coming back', () => {

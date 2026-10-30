@@ -29,7 +29,7 @@ const PLACEMENT_MAX_FRAMES = 30;
  * far off the scrollbar is until then. */
 function estimateSize(item: TimelineItem | undefined): number {
   if (!item) return 40;
-  if (item.type === 'date') return 44;
+  if (item.type === 'date' || item.type === 'unread') return 44;
   const message = item.message;
   let size = item.showHeader ? 62 : 26;
   size += Math.floor(message.text.length / 90) * 22;
@@ -63,6 +63,7 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
     jumpToMessage,
     openConversation,
     pendingByConversation,
+    unreadStartByConversation,
     editingMsgId,
     state,
   } = useRoom();
@@ -81,8 +82,8 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
   const pending = pendingByConversation.get(conversationId) ?? EMPTY_PENDING;
   const { userId: myUserId, displayName: myName, avatar: myAvatar } = state.me;
   const items = useMemo(
-    () => buildTimelineItems(messages, pending, { userId: myUserId, name: myName, avatar: myAvatar }),
-    [messages, pending, myUserId, myName, myAvatar],
+    () => buildTimelineItems(messages, pending, { userId: myUserId, name: myName, avatar: myAvatar }, unreadStartByConversation.get(conversationId)),
+    [messages, pending, myUserId, myName, myAvatar, unreadStartByConversation, conversationId],
   );
 
   // Rows playing audio/video are tracked from the media events themselves
@@ -426,8 +427,16 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
                   style={{ transform: `translateY(${virtualItem.start}px)` }}
                 >
                   {item.type === 'date' ? (
-                    <div className="my-4 flex select-none items-center justify-center px-4">
+                    <div className="my-4 flex select-none items-center gap-3 px-4">
+                      <span aria-hidden className="h-px flex-1 bg-border-default" />
                       <span className="flex-none text-caption font-medium text-text-muted opacity-60">{item.label}</span>
+                      <span aria-hidden className="h-px flex-1 bg-border-default" />
+                    </div>
+                  ) : item.type === 'unread' ? (
+                    <div className="my-4 flex select-none items-center gap-3 px-4" role="separator" aria-label="Novas Mensagens">
+                      <span aria-hidden className="h-px flex-1 bg-accent-text/45" />
+                      <span className="flex-none text-caption font-semibold text-accent-text">Novas Mensagens</span>
+                      <span aria-hidden className="h-px flex-1 bg-accent-text/45" />
                     </div>
                   ) : (
                     <ArrivalMotion surfaceId={surfaceId} itemKey={item.key}>

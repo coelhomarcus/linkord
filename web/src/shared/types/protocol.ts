@@ -243,7 +243,7 @@ export type ServerMessage =
   | { t: 'conversation-member-removed'; conversationId: string; userId: string }
   | { t: 'conversation-pinned'; conversationId: string; pinnedAt: number | null }
   | { t: 'conversation-read'; conversationId: string; lastReadMessageId: number }
-  | { t: 'conversation-history'; conversationId: string; messages: ChatMessage[]; hasMore: boolean }
+  | { t: 'conversation-history'; conversationId: string; messages: ChatMessage[]; hasMore: boolean; firstUnreadMessageId?: number | null }
   | { t: 'conversation-history-more'; conversationId: string; messages: ChatMessage[]; hasMore: boolean; requestId?: string }
   | { t: 'conversation-history-newer'; conversationId: string; messages: ChatMessage[]; hasMoreAfter: boolean; requestId?: string }
   | { t: 'conversation-history-around'; conversationId: string; msgId: number; messages: ChatMessage[]; hasMoreBefore: boolean; hasMoreAfter: boolean }

@@ -270,11 +270,24 @@ async function handleConversationOpen(socket: AppSocket, msg: { conversationId?:
   // one query for all history messages' attachments/reactions, not one per
   // message (N+1) — most have neither anyway.
   const payloads = await serializeRows(rows);
+  const unreadRows = await db.execute(sql`
+    select m.id from messages m
+    inner join conversation_members cm on cm.conversation_id = m.conversation_id
+    where cm.conversation_id = ${conversationId}
+      and cm.user_id = ${p.userId}
+      and m.id > coalesce(cm.last_read_message_id, 0)
+      and m.created_at > cm.joined_at
+      and m.author_id is distinct from ${p.userId}
+    order by m.id asc
+    limit 1
+  `);
+  const firstUnreadMessageId = (unreadRows.rows[0] as { id: number } | undefined)?.id ?? null;
   send(socket, {
     t: 'conversation-history',
     conversationId,
     messages: payloads,
     hasMore: rows.length === config.CHAT_HISTORY_LIMIT,
+    firstUnreadMessageId,
   });
   void backfillEmbeds(rows, p.userId);
 

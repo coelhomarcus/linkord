@@ -5,6 +5,7 @@ import type { OutboxEntry } from './useMessageOutbox';
 const GROUP_GAP_MS = 5 * 60 * 1000;
 export type TimelineItem =
   | { type: 'date'; key: string; label: string }
+  | { type: 'unread'; key: string }
   | { type: 'message'; key: string; message: ChatMessage; showHeader: boolean; pending?: OutboxEntry };
 
 /** Who the pending copies are drawn as — they have no server row yet. */
@@ -16,7 +17,7 @@ function messageKey(message: ChatMessage): string {
   return message.clientMessageId ? `c:${message.clientMessageId}` : String(message.msgId);
 }
 
-export function buildTimelineItems(messages: ChatMessage[], pending: OutboxEntry[] = [], author?: PendingAuthor): TimelineItem[] {
+export function buildTimelineItems(messages: ChatMessage[], pending: OutboxEntry[] = [], author?: PendingAuthor, firstUnreadMessageId?: number): TimelineItem[] {
   const stored = new Set(messages.flatMap((message) => (message.clientMessageId ? [message.clientMessageId] : [])));
   const rows: { message: ChatMessage; pending?: OutboxEntry }[] = messages.map((message) => ({ message }));
   pending.forEach((entry, index) => {
@@ -41,12 +42,18 @@ export function buildTimelineItems(messages: ChatMessage[], pending: OutboxEntry
   const items: TimelineItem[] = [];
   let lastMsg: ChatMessage | null = null;
   let lastDateKey = '';
+  let unreadInserted = false;
   for (const { message, pending: entry } of rows) {
     const dateKey = new Date(message.ts).toDateString();
     if (dateKey !== lastDateKey) {
       items.push({ type: 'date', key: `date-${dateKey}`, label: formatDateHeading(message.ts) });
       lastDateKey = dateKey;
       lastMsg = null;
+    }
+    if (!unreadInserted && firstUnreadMessageId !== undefined && !entry && message.msgId >= firstUnreadMessageId) {
+      items.push({ type: 'unread', key: `unread-${firstUnreadMessageId}` });
+      lastMsg = null;
+      unreadInserted = true;
     }
     const showHeader = !lastMsg || lastMsg.id !== message.id || message.ts - lastMsg.ts > GROUP_GAP_MS;
     items.push({ type: 'message', key: messageKey(message), message, showHeader, ...(entry ? { pending: entry } : {}) });
