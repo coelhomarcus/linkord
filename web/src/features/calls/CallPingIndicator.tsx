@@ -18,7 +18,8 @@ const TONE_TEXT: Record<ConnectionTone, string> = {
  * drops the missing bars instead. */
 function SignalBars({ bars }: { bars: number }) {
   return (
-    <svg viewBox="0 0 16 16" width={16} height={16} aria-hidden className="flex-none">
+    // sized to the caption it sits beside: the tallest bar about the text's height
+    <svg viewBox="0 0 16 16" width={12} height={12} aria-hidden className="flex-none">
       {[{ x: 1, h: 6 }, { x: 6, h: 10 }, { x: 11, h: 14 }].map(({ x, h }, index) => (
         <rect key={x} x={x} y={15 - h} width={4} height={h} rx={1} fill="currentColor" opacity={index < bars ? 1 : 0.25} />
       ))}

@@ -117,7 +117,7 @@ export function CallDock({ onReturnToCall, onOpenProfile, showReturnToCall, layo
           {returnButton}
           <div className="flex items-center gap-2">
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1">
                 <p className="text-caption font-semibold text-green">Em chamada</p>
                 <CallPingIndicator />
               </div>
