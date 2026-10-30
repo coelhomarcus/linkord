@@ -256,6 +256,21 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
   const itemsRef = useRef(items);
   const virtualizerRef = useRef(virtualizer);
   useLayoutEffect(() => { itemsRef.current = items; virtualizerRef.current = virtualizer; });
+  const hasItems = items.length > 0;
+  useEffect(() => {
+    if (!hasItems) return;
+    // Some mobile browsers do not run the initial measurement frame until
+    // the user scrolls. A bounded fallback keeps the timeline from staying
+    // invisible while the virtualizer waits for that frame.
+    const timer = window.setTimeout(() => {
+      if (readyRef.current) return;
+      virtualizerRef.current.measure();
+      scrollRef.current?.dispatchEvent(new Event('scroll'));
+      readyRef.current = true;
+      setReady(true);
+    }, 750);
+    return () => window.clearTimeout(timer);
+  }, [hasItems, conversationId]);
   const captureMessageAnchor = useCallback(() => {
     const scrollTop = scrollRef.current?.scrollTop ?? 0;
     const row = virtualizer.getVirtualItems().find((v) => items[v.index]?.type === 'message' && v.end > scrollTop);

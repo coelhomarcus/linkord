@@ -11,6 +11,7 @@ import { getCachedLinkPreview, loadLinkPreview } from '@/shared/lib/linkPreviewC
 import type { LinkPreviewData } from '@/shared/api/api';
 import { embedImageBox, previewImageSize, type ImageSize } from './embedImageBox';
 import { useNearViewport } from './useNearViewport';
+import { canLoadMediaUrl } from './mediaUrl';
 
 /** The server's measurement of a picture behind an arbitrary URL, asked for
  * shortly before it scrolls into view. Until it answers (or if it can't
@@ -83,6 +84,7 @@ export function LinkPreview({ embed, className = '', edgeToEdge, fitContainer, p
     return <GenericEmbed key={embed.url} embed={embed} className={className} edgeToEdge={edgeToEdge} preview={preview} />;
   }
 
+  if (!canLoadMediaUrl(embed.url)) return <EmbedFailedFallback url={embed.url} className={className} />;
   if (failed) return <EmbedFailedFallback url={embed.url} className={className} />;
 
   if (embed.kind === 'video') {

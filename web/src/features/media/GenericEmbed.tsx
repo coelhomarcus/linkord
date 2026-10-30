@@ -10,6 +10,7 @@ import type { LinkPreviewData } from '@/shared/api/api';
 import { availableAttachmentWidth, useChatSurfaceWidth } from '@/shared/lib/chatSurfaceWidth';
 import { VideoPlayer } from './MediaPlayers';
 import { embedImageAspect, previewImageSize } from './embedImageBox';
+import { canLoadMediaUrl } from './mediaUrl';
 
 interface GenericEmbedProps {
   embed: DetectedEmbed;
@@ -106,7 +107,9 @@ export function GenericEmbed({ embed, className = '', edgeToEdge, preview }: Gen
     );
   }
 
-  if (!data.title && !data.description && !data.image && !hasKnownPlayer) {
+  const image = data.image && canLoadMediaUrl(data.image) ? data.image : null;
+  const video = data.video && canLoadMediaUrl(data.video) ? data.video : null;
+  if (!data.title && !data.description && !image && !hasKnownPlayer) {
     return (
       <a
         href={url}
@@ -122,17 +125,18 @@ export function GenericEmbed({ embed, className = '', edgeToEdge, preview }: Gen
   }
 
   const siteName = data.siteName || known?.name || url;
-  const favicon = !faviconFailed ? (data.favicon || known?.favicon) : null;
-  const playableVideo = !!data.video && !videoFailed;
+  const candidateFavicon = data.favicon || known?.favicon;
+  const favicon = !faviconFailed && candidateFavicon && canLoadMediaUrl(candidateFavicon) ? candidateFavicon : null;
+  const playableVideo = !!video && !videoFailed;
 
-  const aspect = embedImageAspect(previewImageSize(data));
+  const aspect = image ? embedImageAspect(previewImageSize(data)) : null;
   let media: ReactNode = null;
   if (embed.kind === 'youtube') {
     media = (
       <div className="aspect-video w-full bg-black">
         <ReactPlayer
           src={embed.url}
-          light={data.image || `https://i.ytimg.com/vi/${embed.youtubeId}/hqdefault.jpg`}
+          light={image || `https://i.ytimg.com/vi/${embed.youtubeId}/hqdefault.jpg`}
           controls
           width="100%"
           height="100%"
@@ -148,9 +152,9 @@ export function GenericEmbed({ embed, className = '', edgeToEdge, preview }: Gen
     media = <div className="w-full bg-black"><TwitchPlayer embed={embed} /></div>;
   } else if (playableVideo) {
     media = (
-      <VideoPlayer src={data.video!} poster={data.image} className="max-w-none rounded-none border-0" onError={() => setVideoFailed(true)} />
+      <VideoPlayer src={video!} poster={image} className="max-w-none rounded-none border-0" onError={() => setVideoFailed(true)} />
     );
-  } else if (data.image && !imageFailed) {
+  } else if (image && !imageFailed) {
     media = (
       // the frame is sized before the picture arrives (its measured
       // proportions, or a fixed height when unknown): the card must not grow
@@ -159,7 +163,7 @@ export function GenericEmbed({ embed, className = '', edgeToEdge, preview }: Gen
         style={aspect ? { aspectRatio: aspect, maxHeight: 280 } : undefined}
       >
         <img
-          src={data.image}
+          src={image}
           alt=""
           loading="lazy"
           onError={() => setImageFailed(true)}

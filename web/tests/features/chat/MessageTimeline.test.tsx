@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { RoomContext } from '@/state/RoomContext';
 import type { RoomContextValue } from '@/state/RoomContext';
 import { createFakeRoomContextValue } from '@tests/fixtures/roomContextFixture';
@@ -72,6 +72,21 @@ function renderTimeline(overrides: Partial<RoomContextValue>, surfaces = 1) {
 }
 
 describe('MessageTimeline — virtualization', { timeout: HEAVY_RENDER_TIMEOUT }, () => {
+  it('renders the unread divider between dated messages with a stronger accent line', async () => {
+    const { container } = renderTimeline({
+      messagesByConversation: new Map([['conv-1', [message(1), message(2)]]]),
+      unreadStartByConversation: new Map([['conv-1', 2]]),
+      hasMoreByConversation: new Map([['conv-1', false]]),
+    });
+    const divider = await screen.findByRole('separator', { name: 'Novas Mensagens' });
+    expect(divider).toHaveTextContent('Novas Mensagens');
+    expect(divider.querySelector('[class*="bg-accent-text"]')).not.toBeNull();
+    const date = container.querySelector('[class*="bg-border-default"]');
+    expect(date).not.toBeNull();
+    const rows = [...container.querySelectorAll('[data-msg-id], [role="separator"]')];
+    expect(rows.map((row) => row.getAttribute('data-msg-id') ?? 'unread')).toEqual(['1', 'unread', '2']);
+  });
+
   it('with 1000 messages, only the visible ones (plus a buffer) stay in the DOM', async () => {
     const messages = Array.from({ length: 1000 }, (_, i) => message(i + 1));
     const { container } = renderTimeline({ messagesByConversation: new Map([['conv-1', messages]]) });
@@ -161,6 +176,21 @@ describe('MessageTimeline — jump to message', { timeout: HEAVY_RENDER_TIMEOUT 
 });
 
 describe('MessageTimeline — initial placement', () => {
+  it('reveals history even when initial animation frames never arrive', () => {
+    vi.useFakeTimers();
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 1);
+    try {
+      const { container } = renderTimeline({ messagesByConversation: new Map([['conv-1', [message(1), message(2)]]]) });
+      const log = container.querySelector('[role="log"]') as HTMLElement;
+      expect(log.style.visibility).toBe('hidden');
+      act(() => vi.advanceTimersByTime(750));
+      expect(log.style.visibility).toBe('');
+      expect(container.querySelector('[data-scroll-root]')).toHaveAttribute('data-settled');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('stays invisible until its placement has settled, so no frame shows it in the wrong place', async () => {
     const messages = Array.from({ length: 50 }, (_, i) => message(i + 1));
     const { container } = renderTimeline({ messagesByConversation: new Map([['conv-1', messages]]) });
