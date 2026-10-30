@@ -169,3 +169,41 @@ describe('ConversationPanel — right panel buttons', () => {
     expect(toggle).toHaveAttribute('aria-pressed', 'false');
   });
 });
+
+describe('ConversationPanel — phone list route', () => {
+  const group: Conversation = {
+    id: 'g1', type: 'group', title: 'Squad', avatar: '', createdBy: null, memberIds: ['me'],
+    lastMessageAt: null, createdAt: 0, updatedAt: 0, pinnedAt: null, myRole: 'member', ownerId: null, memberCount: 1,
+  };
+
+  function renderAt(path: string) {
+    renderSocial(
+      <SidebarProvider>
+        <ConversationPanel onOpenProfile={() => {}} onOpenCall={() => {}} onOpenSearch={() => {}} detailsOpen={false} mediaOpen={false} onOpenDetails={() => {}} onToggleDetails={() => {}} onToggleMedia={() => {}} />
+      </SidebarProvider>,
+      { path, room: { state: joinedState, conversations: [group], activeConversationId: 'g1' } },
+    );
+  }
+
+  afterEach(() => { vi.restoreAllMocks(); });
+
+  // the list route hides the panel; a chat mounted there settled at zero
+  // height and opened mid-history once shown
+  it('does not mount the active conversation behind the list', () => {
+    vi.spyOn(window, 'matchMedia').mockImplementation((query) => ({
+      matches: query === '(max-width: 767px)', media: query, onchange: null,
+      addListener: () => {}, removeListener: () => {}, addEventListener: () => {}, removeEventListener: () => {}, dispatchEvent: () => false,
+    }) as MediaQueryList);
+    renderAt('/app/conversations');
+    expect(screen.queryByRole('button', { name: 'Voltar para conversas' })).not.toBeInTheDocument();
+  });
+
+  it('mounts the conversation the route names', () => {
+    vi.spyOn(window, 'matchMedia').mockImplementation((query) => ({
+      matches: query === '(max-width: 767px)', media: query, onchange: null,
+      addListener: () => {}, removeListener: () => {}, addEventListener: () => {}, removeEventListener: () => {}, dispatchEvent: () => false,
+    }) as MediaQueryList);
+    renderAt('/app/conversations/g1');
+    expect(screen.getByRole('button', { name: 'Voltar para conversas' })).toBeInTheDocument();
+  });
+});

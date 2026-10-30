@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from 'react-router';
 import { PageHeader } from '@/shared/PageHeader';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/primitives/dropdown-menu';
 import { ROUTES, conversationIdFromPath } from '@/shared/lib/routes';
+import { useSidebar } from '@/shared/ui/motion/sidebar-context';
 import { Button } from '@/shared/ui/primitives/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
 import { Avatar } from '@/shared/Avatar';
@@ -36,8 +37,13 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
   const { state, dispatch, conversations, activeConversationId, allUsers, onlineUserIds, activeCallConversationId } = useRoom();
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const { isMobile } = useSidebar();
   const requestedId = conversationIdFromPath(pathname);
-  const conversation = conversations.find((item) => item.id === (requestedId ?? activeConversationId)) ?? null;
+  // On a phone the bare list route hides this panel (display: none). Mounting
+  // the active chat there let its timeline settle at zero height, and the
+  // browser reset its scroll when it was shown, so it opened mid-history.
+  const shownId = requestedId ?? (isMobile ? null : activeConversationId);
+  const conversation = conversations.find((item) => item.id === shownId) ?? null;
   const isBot = conversation?.type === 'bot';
   const hasDetails = conversation?.type === 'group' || isBot;
   const title = conversationTitle(conversation, state.me.userId, allUsers);

@@ -1,6 +1,6 @@
 export function LoadingScreen({ reconnecting = false, onRetry }: { reconnecting?: boolean; onRetry?: () => void }) {
   return (
-    <div className="flex h-dvh items-center justify-center bg-bg-primary">
+    <div className="flex min-h-full items-center justify-center bg-bg-primary">
       <div className="flex flex-col items-center gap-5">
         <div className="flex flex-col items-center gap-3 select-none">
           <img src="/logo.svg" alt="" className="h-auto w-28 flex-none" />

@@ -183,6 +183,8 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
   // the scroll listener must not record the jumps of the initial placement
   const readyRef = useRef(false);
   useEffect(() => { readyRef.current = ready; }, [ready]);
+  // the latest placement, for the fallback below to apply before revealing
+  const placeRef = useRef<(() => void) | null>(null);
   useLayoutEffect(() => {
     if (ready || !items.length) return;
     const saved = jumpIndex < 0 ? readingPositionFor(surfaceId, conversationId) : undefined;
@@ -200,11 +202,16 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
         virtualizer.scrollToIndex(items.length - 1, { align: 'end' });
       }
     };
+    const atEndPlacement = jumpIndex < 0 && savedIndex < 0;
+    placeRef.current = () => {
+      place(true);
+      const el = scrollRef.current;
+      if (atEndPlacement && el) el.scrollTop = el.scrollHeight - el.clientHeight;
+    };
     place(false);
     let frames = 0;
     let stableFrames = 0;
     let last = '';
-    const atEndPlacement = jumpIndex < 0 && savedIndex < 0;
     let handle = requestAnimationFrame(function settle() {
       place(true);
       const el = scrollRef.current;
@@ -218,6 +225,12 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
       const now = `${el?.scrollTop}:${el?.scrollHeight}`;
       stableFrames = reached && now === last ? stableFrames + 1 : 0;
       last = now;
+      // not laid out yet (a hidden pane): nothing measured is real, so wait
+      // without spending the frame budget
+      if (el && el.clientHeight === 0) {
+        handle = requestAnimationFrame(settle);
+        return;
+      }
       if (stableFrames < PLACEMENT_STABLE_FRAMES && ++frames < PLACEMENT_MAX_FRAMES) {
         handle = requestAnimationFrame(settle);
         return;
@@ -263,8 +276,10 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
     // the user scrolls. A bounded fallback keeps the timeline from staying
     // invisible while the virtualizer waits for that frame.
     const timer = window.setTimeout(() => {
-      if (readyRef.current) return;
+      if (readyRef.current || !scrollRef.current?.clientHeight) return;
       virtualizerRef.current.measure();
+      // revealed where the placement would have ended, not wherever it was
+      placeRef.current?.();
       scrollRef.current?.dispatchEvent(new Event('scroll'));
       readyRef.current = true;
       setReady(true);

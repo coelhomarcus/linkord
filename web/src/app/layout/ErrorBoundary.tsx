@@ -21,7 +21,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { failed: 
   render() {
     if (!this.state.failed) return this.props.children;
     return (
-      <div className="flex h-dvh items-center justify-center bg-bg-primary p-4">
+      <div className="flex min-h-full items-center justify-center bg-bg-primary p-4">
         <div role="alert" className="flex w-full max-w-100 flex-col gap-3.5 rounded-xl bg-bg-floating p-6">
           <h1 className="text-display font-bold text-text-primary">Algo deu errado</h1>
           <p className="text-body text-text-secondary">Aconteceu um erro inesperado e ele já foi registrado. Recarregue a página para continuar.</p>

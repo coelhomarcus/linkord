@@ -211,7 +211,7 @@ function Shell() {
         onOpenChange={setSidebarOpen}
         openMobile={mobileShowSidebar}
         onOpenMobileChange={setMobileShowSidebar}
-        className="relative h-[var(--app-viewport-height,100dvh)] bg-bg-primary text-text-primary [--surface-base:var(--color-surface-app)] max-md:pt-[env(safe-area-inset-top)]"
+        className="relative h-full bg-bg-primary text-text-primary [--surface-base:var(--color-surface-app)] max-md:pt-[env(safe-area-inset-top)]"
         style={{ minHeight: 0, '--sidebar-width': '20rem', '--sidebar-width-mobile': '24rem', '--sidebar-overlay-offset': '4rem', '--mobile-navigation-height': `calc(4rem + env(safe-area-inset-bottom) + ${inCall ? '3rem' : '0rem'})` } as CSSProperties}
       >
         <ReconnectBanner />
@@ -321,13 +321,16 @@ function AppProviders() {
     const viewport = window.visualViewport;
     const mobile = window.matchMedia('(max-width: 767px)');
     if (!viewport) return;
+    const root = document.documentElement.style;
     const syncHeight = () => {
       if (mobile.matches) {
-        document.documentElement.style.setProperty('--app-viewport-height', `${viewport.height}px`);
-        document.documentElement.style.setProperty('--app-viewport-bottom', `${Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop)}px`);
+        // offsetTop too: iOS pans the visual viewport to reveal a focused
+        // input, and #root (fixed) has to follow that pan, not just shrink
+        root.setProperty('--app-viewport-top', `${viewport.offsetTop}px`);
+        root.setProperty('--app-viewport-height', `${viewport.height}px`);
       } else {
-        document.documentElement.style.removeProperty('--app-viewport-height');
-        document.documentElement.style.removeProperty('--app-viewport-bottom');
+        root.removeProperty('--app-viewport-top');
+        root.removeProperty('--app-viewport-height');
       }
     };
     syncHeight();
@@ -338,8 +341,8 @@ function AppProviders() {
       viewport.removeEventListener('resize', syncHeight);
       viewport.removeEventListener('scroll', syncHeight);
       mobile.removeEventListener('change', syncHeight);
-      document.documentElement.style.removeProperty('--app-viewport-height');
-      document.documentElement.style.removeProperty('--app-viewport-bottom');
+      root.removeProperty('--app-viewport-top');
+      root.removeProperty('--app-viewport-height');
     };
   }, []);
   useEffect(() => {

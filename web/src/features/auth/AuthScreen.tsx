@@ -302,7 +302,7 @@ export function AuthScreen() {
   const panelTransition = reduce ? { duration: 0 } : { duration: 0.15, ease: EASE_OUT };
 
   return (
-    <div className="flex h-dvh items-center justify-center bg-bg-primary p-4">
+    <div className="flex min-h-full items-center justify-center bg-bg-primary p-4">
       <div className="flex w-full max-w-100 flex-col items-center gap-6">
         <div className="flex flex-col items-center gap-2 text-center">
           <img src="/logo.svg" alt="" className="h-auto w-24" />

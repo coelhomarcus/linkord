@@ -29,7 +29,7 @@ export function MobileTabBar({ activeCallConversationId, onReturnToCall }: { act
   ] as const;
 
   return (
-    <div className="fixed inset-x-0 bottom-[var(--app-viewport-bottom,0px)] z-30 bg-bg-primary md:hidden">
+    <div className="absolute inset-x-0 bottom-0 z-30 bg-bg-primary md:hidden">
       {activeCallConversationId && (
         <button type="button" onClick={onReturnToCall} className="flex h-12 w-full items-center gap-2 border-b border-border bg-bg-secondary px-4 text-left text-label">
           <PhoneIcon size={18} weight="fill" className="flex-none text-green" aria-hidden />
