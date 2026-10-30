@@ -1,6 +1,6 @@
 import { ImageBrokenIcon } from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
-import type { RefObject, SyntheticEvent } from 'react';
+import type { RefObject } from 'react';
 
 import type { DetectedEmbed } from '@/shared/lib/chatEmbeds';
 import { ImageLightbox } from './ImageLightbox';
@@ -18,17 +18,14 @@ import { canLoadMediaUrl } from './mediaUrl';
  * tell), the box keeps its fixed fallback size. */
 function useRemoteImageSize(url: string, ref: RefObject<HTMLElement | null>, enabled: boolean, stored: LinkPreviewData | undefined): ImageSize | null {
   const near = useNearViewport(ref);
-  const [size, setSize] = useState<ImageSize | null>(() => (enabled ? previewImageSize(getCachedLinkPreview(url)) : null));
   useEffect(() => {
-    // the size came with the message: nothing to ask
+    // Warm the cache only: resizing the row when the answer arrives moved the
+    // history on phones (WebKit applies scroll compensation a frame late).
     if (!enabled || !near || stored) return;
-    let cancelled = false;
-    loadLinkPreview(url)
-      .then((data) => { if (!cancelled) setSize(previewImageSize(data)); })
-      .catch(() => { /* no size: the fallback box stays */ });
-    return () => { cancelled = true; };
+    void loadLinkPreview(url).catch(() => {});
   }, [url, near, enabled, stored]);
-  return (enabled && previewImageSize(stored)) || size;
+  if (!enabled) return null;
+  return previewImageSize(stored) ?? previewImageSize(getCachedLinkPreview(url));
 }
 
 function EmbedFailedFallback({ url, className }: { url: string; className: string }) {
@@ -74,11 +71,7 @@ export function LinkPreview({ embed, className = '', edgeToEdge, fitContainer, p
   const surfaceWidth = useChatSurfaceWidth(384 + 120);
   const maxWidth = availableAttachmentWidth(surfaceWidth, 384);
   const boxRef = useRef<HTMLButtonElement | null>(null);
-  const remoteSize = useRemoteImageSize(embed.url, boxRef, embed.kind === 'image' && !fitContainer, preview);
-  // When the server could not measure it, the picture itself reports its size
-  // as it loads, and the box is fitted to that: no bars around an odd shape.
-  const [loadedSize, setLoadedSize] = useState<ImageSize | null>(null);
-  const knownSize = remoteSize ?? loadedSize;
+  const knownSize = useRemoteImageSize(embed.url, boxRef, embed.kind === 'image' && !fitContainer, preview);
 
   if (embed.kind === 'youtube' || embed.kind === 'twitch-channel' || embed.kind === 'twitch-vod' || embed.kind === 'twitch-clip' || embed.kind === 'link') {
     return <GenericEmbed key={embed.url} embed={embed} className={className} edgeToEdge={edgeToEdge} preview={preview} />;
@@ -110,10 +103,6 @@ export function LinkPreview({ embed, className = '', edgeToEdge, fitContainer, p
           src={embed.url}
           alt=""
           onError={() => setFailed(true)}
-          onLoad={fitContainer ? undefined : (event: SyntheticEvent<HTMLImageElement>) => {
-            const { naturalWidth: width, naturalHeight: height } = event.currentTarget;
-            if (width > 0 && height > 0) setLoadedSize({ width, height });
-          }}
           // a known size means the box has the picture's own proportions, so it
           // is filled (a pixel of rounding cropped at most); an unknown one is
           // only fitted inside the fallback box, whatever shape it turns out to be

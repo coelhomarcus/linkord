@@ -44,17 +44,15 @@ function MediaImage({ attachment, className, onNaturalSize }: { attachment: Chat
  * fixed height holds it while it loads, then takes the picture's own
  * proportions once the browser reports them (no bars around an odd shape). */
 function LegacyImageButton({ attachment, onOpen, className }: { attachment: ChatAttachmentData; onOpen: () => void; className: string }) {
-  const [natural, setNatural] = useState<{ width: number; height: number } | null>(null);
-  const box = natural ? singleImageBox(natural) : null;
   return (
     <button
       type="button"
       aria-label={`Abrir ${attachment.name}`}
       onClick={onOpen}
       className={className}
-      style={box ? { width: box.width, aspectRatio: box.aspectRatio } : { width: `min(100%, ${MEDIA_MAX_WIDTH}px)`, height: LEGACY_IMAGE_BOX_HEIGHT }}
+      style={{ width: `min(100%, ${MEDIA_MAX_WIDTH}px)`, height: LEGACY_IMAGE_BOX_HEIGHT }}
     >
-      <MediaImage attachment={attachment} onNaturalSize={setNatural} className={cn('block size-full', box ? 'object-cover' : 'object-contain')} />
+      <MediaImage attachment={attachment} className="block size-full object-contain" />
     </button>
   );
 }
