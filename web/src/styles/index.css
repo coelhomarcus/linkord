@@ -207,6 +207,12 @@
   }
 }
 
+/* An animated avatar with animateOnHover plays only while its row (the
+   nearest [data-avatar-hover]) is hovered or holds keyboard focus. */
+[data-avatar-live] { display: none; }
+[data-avatar-hover]:hover [data-avatar-live],
+[data-avatar-hover]:has(:focus-visible) [data-avatar-live] { display: block; }
+
 /* A status dot's cutout ring has to match the row behind it, and a row's
    hover/selected tint is translucent. These give the same tint, opaque, over
    the surface a container names in --surface-base (the shell when none

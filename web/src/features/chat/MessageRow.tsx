@@ -158,6 +158,8 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
   const author = message.id ? allUsers.get(message.id) : undefined;
   const displayedName = author?.displayName ?? message.name;
   const displayedAvatar = author?.avatar ?? message.avatar;
+  // your own messages: you may not be in allUsers, but your still frame is known
+  const displayedPoster = author ? author.avatarPoster : isMine ? state.me.avatarPoster : undefined;
   const replyAuthor = message.replyTo?.authorId ? allUsers.get(message.replyTo.authorId) : undefined;
   const mentionsMe = !isMine && mentionsUser(message.text, mentionLookup, state.me.userId);
   const isInvite = message.kind === 'group_invite';
@@ -245,6 +247,7 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
       data-message-id={pending ? undefined : message.msgId}
       data-pending={pending?.state}
       data-mobile-pressing={mobilePressing || undefined}
+      data-avatar-hover
       className={cn(
         'group/row relative flex gap-3 rounded-md px-4 py-0.5 transition-colors duration-100',
         showHeader ? 'mt-[17px]' : 'mt-0',
@@ -259,7 +262,7 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
         {showHeader && (
           message.id ? (
             <button type="button" onClick={() => onOpenProfile(message.id!)} className="mt-0.5 block rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-              <Avatar id={message.id} name={displayedName} avatar={displayedAvatar} avatarColor={author?.avatarColor} size={40} />
+              <Avatar id={message.id} name={displayedName} avatar={displayedAvatar} poster={displayedPoster} animateOnHover avatarColor={author?.avatarColor} size={40} />
             </button>
           ) : message.bot ? (
             <GroupAvatar id={message.conversationId} title={displayedName} avatar={displayedAvatar} size={40} className="mt-0.5" />
@@ -299,6 +302,8 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
                   id={message.replyTo.authorId}
                   name={replyAuthor?.displayName ?? DELETED_AUTHOR_NAME}
                   avatar={replyAuthor?.avatar ?? ''}
+                  poster={replyAuthor?.avatarPoster}
+                  animateOnHover
                   avatarColor={replyAuthor?.avatarColor}
                   size={14}
                   className="flex-none"

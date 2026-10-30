@@ -12,6 +12,8 @@ export interface PublicUser {
   username: string;
   displayName: string;
   avatar: string;
+  /** the first frame of an animated avatar ('' for a still one) */
+  avatarPoster: string;
   avatarColor: string;
   banner: string;
   bio: string;
@@ -34,7 +36,7 @@ export function resolveDisplayName(displayName: string, username: string): strin
 export function publicUser(u: User): PublicUser {
   return {
     id: u.id, username: u.username, displayName: resolveDisplayName(u.displayName, u.username),
-    avatar: u.avatar, avatarColor: u.avatarColor, banner: u.banner, bio: u.bio,
+    avatar: u.avatar, avatarPoster: u.avatarPoster, avatarColor: u.avatarColor, banner: u.banner, bio: u.bio,
     profileLinks: Array.isArray(u.profileLinks) ? u.profileLinks : [],
     role: u.role as Role,
     lastSeenAt: u.lastSeenAt ? u.lastSeenAt.toISOString() : null,

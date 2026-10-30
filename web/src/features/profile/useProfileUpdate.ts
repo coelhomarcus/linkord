@@ -117,7 +117,8 @@ export function useProfileUpdate(deps: ProfileUpdateDeps) {
       const next = new Map(prev);
       next.set(userId, {
         ...existing,
-        avatar: profile.avatar ?? existing.avatar, avatarColor: profile.avatarColor ?? existing.avatarColor,
+        avatar: profile.avatar ?? existing.avatar, avatarPoster: profile.avatarPoster ?? existing.avatarPoster,
+        avatarColor: profile.avatarColor ?? existing.avatarColor,
         displayName: profile.displayName ?? existing.displayName, banner: profile.banner ?? existing.banner,
         bio: profile.bio ?? existing.bio, profileLinks: profile.profileLinks ?? existing.profileLinks,
       });

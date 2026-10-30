@@ -5,6 +5,7 @@ function mergeUserFromParticipant(prev: Map<string, PublicUser>, participant: Pa
   const existing = prev.get(participant.userId);
   if (!existing || (
     existing.avatar === participant.avatar
+    && existing.avatarPoster === participant.avatarPoster
     && existing.avatarColor === participant.avatarColor
     && existing.displayName === participant.displayName
     && existing.banner === participant.banner
@@ -14,7 +15,7 @@ function mergeUserFromParticipant(prev: Map<string, PublicUser>, participant: Pa
   )) return prev;
   const next = new Map(prev);
   next.set(participant.userId, {
-    ...existing, avatar: participant.avatar, avatarColor: participant.avatarColor,
+    ...existing, avatar: participant.avatar, avatarPoster: participant.avatarPoster, avatarColor: participant.avatarColor,
     displayName: participant.displayName, banner: participant.banner, bio: participant.bio,
     profileLinks: participant.profileLinks, role: participant.role,
   });

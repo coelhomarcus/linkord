@@ -169,6 +169,8 @@ export interface PublicUser {
   username: string;
   displayName: string;
   avatar: string;
+  /** the first frame of an animated avatar ('' for a still one) */
+  avatarPoster?: string;
   avatarColor: string;
   banner: string;
   bio: string;

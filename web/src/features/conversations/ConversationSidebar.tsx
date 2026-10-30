@@ -40,7 +40,7 @@ function ConversationRow({ conversation, active, onClick }: {
   // ConversationPanel.tsx's header avatar stack.
   const otherCallParticipants = [...state.participants.values()].filter((p) => p.callConversationId === conversation.id);
   const callParticipants = activeCallConversationId === conversation.id
-    ? [{ id: state.me.userId ?? 'me', displayName: state.me.displayName, avatar: state.me.avatar, avatarColor: state.me.avatarColor }, ...otherCallParticipants]
+    ? [{ id: state.me.userId ?? 'me', displayName: state.me.displayName, avatar: state.me.avatar, avatarPoster: state.me.avatarPoster, avatarColor: state.me.avatarColor }, ...otherCallParticipants]
     : otherCallParticipants;
   const hasActiveCall = callParticipants.length > 0;
   const online = other ? onlineUserIds.has(other.id) : false;
@@ -50,6 +50,7 @@ function ConversationRow({ conversation, active, onClick }: {
       <button
         type="button"
         onClick={onClick}
+        data-avatar-hover
         className={cn(
           'relative isolate flex w-full items-center gap-2.5 rounded-md px-[11px] py-[9px] text-left',
           active
@@ -64,7 +65,7 @@ function ConversationRow({ conversation, active, onClick }: {
         {active && <ActiveFill className="shadow-highlight" />}
         {conversation.type === 'direct' && other ? (
           <div className="relative flex-none">
-            <Avatar id={other.id} name={other.displayName} avatar={other.avatar} avatarColor={other.avatarColor} size={44} />
+            <Avatar id={other.id} name={other.displayName} avatar={other.avatar} poster={other.avatarPoster} animateOnHover avatarColor={other.avatarColor} size={44} />
             <span className={cn('absolute -bottom-0.5 -right-0.5 size-4 rounded-full border-2 border-(--cutout)', online ? 'bg-green' : 'bg-text-muted')} />
           </div>
         ) : (
@@ -85,7 +86,7 @@ function ConversationRow({ conversation, active, onClick }: {
               <PhoneIcon size={14} weight="fill" className="flex-none text-green" />
               <span className="flex items-center -space-x-1.5">
                 {callParticipants.slice(0, 4).map((p) => (
-                  <Avatar key={p.id} id={p.id} name={p.displayName} avatar={p.avatar} avatarColor={p.avatarColor} size={16} className="ring-2 ring-(--cutout)" />
+                  <Avatar key={p.id} id={p.id} name={p.displayName} avatar={p.avatar} poster={p.avatarPoster} animateOnHover avatarColor={p.avatarColor} size={16} className="ring-2 ring-(--cutout)" />
                 ))}
                 {callParticipants.length > 4 && (
                   <span className="grid size-4 place-items-center rounded-full bg-bg-tertiary text-[9px] font-semibold text-text-secondary ring-2 ring-(--cutout)">

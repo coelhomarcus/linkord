@@ -452,3 +452,19 @@ describe('MessageRow — edit and delete with confirmation', () => {
     expect(dismissMessageActionError).toHaveBeenCalledWith(mine.msgId);
   });
 });
+
+describe('MessageRow — animated avatar', () => {
+  it("the author's GIF waits for the row to be hovered, starting from its still frame", () => {
+    const author: PublicUser = {
+      id: 'user-2', username: 'fulana', displayName: 'Fulana', avatar: '/uploads/a.gif', avatarPoster: '/uploads/a.webp',
+      avatarColor: 'blurple', banner: '', bio: '', profileLinks: [], role: 'user',
+    };
+    const { container } = renderWithRoom(
+      <MessageRow message={makeMessage()} showHeader highlighted={false} allUsers={new Map([['user-2', author]])} mentionLookup={new Map()} onOpenProfile={noop} onReply={noop} onJumpTo={noop} />,
+      { state: { ...initialRoomState, me: { ...initialRoomState.me, userId: 'me' } } },
+    );
+    const live = container.querySelector('img[data-avatar-live]');
+    expect(live).toHaveAttribute('src', '/uploads/a.gif');
+    expect(live?.closest('[data-avatar-hover]')).toHaveAttribute('data-message-id', '1');
+  });
+});

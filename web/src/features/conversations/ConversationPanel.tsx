@@ -58,7 +58,7 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
   // instead, gated on whether I'm actually the one in this call.
   const otherCallParticipants = [...state.participants.values()].filter((p) => p.callConversationId === conversation?.id);
   const callParticipants = conversation && activeCallConversationId === conversation.id
-    ? [{ id: state.me.userId ?? 'me', displayName: state.me.displayName, avatar: state.me.avatar, avatarColor: state.me.avatarColor }, ...otherCallParticipants]
+    ? [{ id: state.me.userId ?? 'me', displayName: state.me.displayName, avatar: state.me.avatar, avatarPoster: state.me.avatarPoster, avatarColor: state.me.avatarColor }, ...otherCallParticipants]
     : otherCallParticipants;
   const directPeerId = conversation?.type === 'direct' ? (conversation.memberIds.find((id) => id !== state.me.userId) ?? null) : null;
   const { state: relationship } = useRelationship(directPeerId);
@@ -79,7 +79,7 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
     <main className="flex h-full min-w-0 flex-1 flex-col text-text-primary">
       {conversation ? (
         <>
-          <header className="flex h-header flex-none items-center gap-2 bg-surface-panel/90 px-2 backdrop-blur md:gap-3 md:border-b md:border-border md:px-4">
+          <header data-avatar-hover className="flex h-header flex-none items-center gap-2 bg-surface-panel/90 px-2 backdrop-blur md:gap-3 md:border-b md:border-border md:px-4">
             <Button type="button" variant="ghost" size="icon" aria-label="Voltar para conversas" onClick={() => navigate(ROUTES.conversations)} className="md:hidden">
               <ArrowLeftIcon size={20} />
             </Button>
@@ -90,7 +90,7 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
                 className="transition-opacity hover:opacity-80"
                 aria-label="Ver perfil"
               >
-                <Avatar id={other.id} name={other.displayName} avatar={other.avatar} avatarColor={other.avatarColor} size={40} />
+                <Avatar id={other.id} name={other.displayName} avatar={other.avatar} poster={other.avatarPoster} animateOnHover avatarColor={other.avatarColor} size={40} />
               </button>
             ) : (
               <button
@@ -114,7 +114,7 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
               <Tooltip>
                 <TooltipTrigger render={<div className="hidden flex-none items-center -space-x-2 md:flex" />}>
                   {callParticipants.slice(0, 4).map((p) => (
-                    <Avatar key={p.id} id={p.id} name={p.displayName} avatar={p.avatar} avatarColor={p.avatarColor} size={28} className="ring-2 ring-surface-panel" />
+                    <Avatar key={p.id} id={p.id} name={p.displayName} avatar={p.avatar} poster={p.avatarPoster} animateOnHover avatarColor={p.avatarColor} size={28} className="ring-2 ring-surface-panel" />
                   ))}
                   {callParticipants.length > 4 && (
                     <span className="grid size-7 place-items-center rounded-full bg-bg-tertiary text-micro font-semibold text-text-secondary ring-2 ring-surface-panel">

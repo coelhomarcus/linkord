@@ -52,17 +52,20 @@ interface AvatarProps {
   avatarColor?: string | null;
   size: number;
   className?: string;
-  // When both are given, shows `poster` (a static first-frame image) instead
-  // of the live `avatar` while `frozen` is true — lets an animated avatar
-  // freeze until the person actually speaks, like Discord (see Tile.tsx,
-  // the only caller that passes these — everywhere else an avatar just
-  // always shows its live `avatar`, same as before this existed).
+  // `poster` is the static first frame of an animated avatar. `frozen` shows
+  // it instead of the live one (a call tile, until the person speaks);
+  // `animateOnHover` shows it until the nearest [data-avatar-hover] ancestor
+  // (a message row, a sidebar row, the chat header) is hovered, so a list
+  // full of GIFs doesn't all play at once.
   poster?: string;
   frozen?: boolean;
+  animateOnHover?: boolean;
 }
 
-export function Avatar({ id, name, avatar, avatarColor, size, className, poster, frozen }: AvatarProps) {
-  const src = frozen && poster ? poster : avatar;
+export function Avatar({ id, name, avatar, avatarColor, size, className, poster, frozen, animateOnHover }: AvatarProps) {
+  const hasStill = !!poster && poster !== avatar;
+  const stillUntilHover = !!animateOnHover && hasStill && !frozen;
+  const src = (frozen || stillUntilHover) && hasStill ? poster : avatar;
   return (
     <AvatarRoot style={{ width: size, height: size }} className={className}>
       {src && <AvatarImage src={src} alt="" />}
@@ -72,6 +75,9 @@ export function Avatar({ id, name, avatar, avatarColor, size, className, poster,
       >
         {initialsOf(name)}
       </AvatarFallback>
+      {/* laid over the still frame and hidden by CSS until hovered (see
+          index.css); lazy, so a GIF nobody hovers is never downloaded */}
+      {stillUntilHover && <img src={avatar} alt="" loading="lazy" decoding="async" data-avatar-live className="absolute inset-0 aspect-square size-full rounded-full object-cover" />}
     </AvatarRoot>
   );
 }
