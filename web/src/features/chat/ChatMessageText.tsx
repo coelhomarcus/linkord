@@ -1,5 +1,5 @@
 import { CheckIcon, CopyIcon } from '@phosphor-icons/react';
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { detectEmbed } from '@/shared/lib/chatEmbeds';
 import { highlightCode } from '@/shared/lib/highlightCode';
@@ -9,7 +9,6 @@ import { Avatar } from '@/shared/Avatar';
 import { cn } from '@/shared/lib/utils';
 import { isSingleEmoji } from '@/shared/lib/isSingleEmoji';
 import { ChatEmbed } from './ChatEmbed';
-import { RemoveCorner } from './RemoveCorner';
 import { GifMessage } from '@/features/gifs/GifMessage';
 import { gifMessageUrl } from '@/features/gifs/klipyMedia';
 import { parseMessage, previewableLinks, type Inline } from './messageMarkup';
@@ -134,13 +133,11 @@ interface ChatMessageTextProps {
   embeds?: LinkPreviewData[];
   /** links whose card was removed: they stay plain links */
   suppressedEmbeds?: string[];
-  /** the author's own message: each card can be removed, keeping its link */
-  onRemoveEmbed?: (url: string) => void;
   /** text inside something else (a bot's card): its links stay links, with no preview card of their own */
   noPreviews?: boolean;
 }
 
-export function ChatMessageText({ text, mentionLookup, myUserId, onOpenProfile, embeds: previews, suppressedEmbeds, onRemoveEmbed, noPreviews }: ChatMessageTextProps) {
+export function ChatMessageText({ text, mentionLookup, myUserId, onOpenProfile, embeds: previews, suppressedEmbeds, noPreviews }: ChatMessageTextProps) {
   const blocks = useMemo(() => parseMessage(text), [text]);
   // keyed by the link as written (what the server keeps for a removed card), not the embed's own url
   const embeds = useMemo(() => {
@@ -177,12 +174,13 @@ export function ChatMessageText({ text, mentionLookup, myUserId, onOpenProfile, 
           }
         }
       })}
-      {embeds.map(({ link, embed }) => {
-        const card = <ChatEmbed embed={embed} preview={previews?.find((preview) => preview.url === embed.url)} />;
-        return onRemoveEmbed
-          ? <RemoveCorner key={link} label="Remover incorporação" onRemove={() => onRemoveEmbed(link)}>{card}</RemoveCorner>
-          : <Fragment key={link}>{card}</Fragment>;
-      })}
+      {/* data-embed-link names the card a right-click is on (GlobalContextMenu
+          offers removing it); `contents` keeps the card's own box and widths */}
+      {embeds.map(({ link, embed }) => (
+        <div key={link} data-embed-link={link} className="contents">
+          <ChatEmbed embed={embed} preview={previews?.find((preview) => preview.url === embed.url)} />
+        </div>
+      ))}
     </>
   );
 }

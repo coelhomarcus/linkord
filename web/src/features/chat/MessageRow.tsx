@@ -28,7 +28,6 @@ import { MessageReactions } from './MessageReactions';
 import { withPendingReactions } from './reactionState';
 import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { useMessageDeleteConfirm } from './useMessageDeleteConfirm';
-import { ConfirmDialog } from '@/shared/ConfirmDialog';
 
 const DELETED_AUTHOR_NAME = 'Usuário apagado';
 
@@ -130,7 +129,6 @@ function PendingStatus({ entry, offline, onRetry, onDiscard }: { entry: OutboxEn
 export function MessageRow({ message, showHeader, highlighted, allUsers, mentionLookup, onOpenProfile, onReply, onJumpTo, pending }: MessageRowProps) {
   const {
     state, conversations, editChatMessage, reactToChatMessage, editingMsgId, setEditingMsgId, retryPendingMessage, discardPendingMessage,
-    suppressChatEmbed,
     deletingMsgIds, messageActionErrors, dismissMessageActionError, pendingReactions, openReactionParticipants,
   } = useRoom();
   const [editText, setEditText] = useState(message.text);
@@ -149,8 +147,6 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
     document.addEventListener('pointerdown', clearOutside);
     return () => document.removeEventListener('pointerdown', clearOutside);
   }, [mobileSelected]);
-  // the link card the author asked to take out, waiting for confirmation
-  const [embedRemoval, setEmbedRemoval] = useState<string | null>(null);
   const { requestDelete, confirmDialog } = useMessageDeleteConfirm();
   const isMine = message.id === state.me.userId;
   const conversation = conversations.find((c) => c.id === message.conversationId);
@@ -165,9 +161,6 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
   const replyAuthor = message.replyTo?.authorId ? allUsers.get(message.replyTo.authorId) : undefined;
   const mentionsMe = !isMine && mentionsUser(message.text, mentionLookup, state.me.userId);
   const isInvite = message.kind === 'group_invite';
-  // the author's own sent message: a link card can always go (the link stays).
-  // Attachments are taken out from the right-click menu (see messagePermissions).
-  const canRemoveParts = isMine && !isInvite && !pending;
   const canReport = can.report;
   const isEditing = !pending && !isInvite && editingMsgId === message.msgId;
   const reactions = withPendingReactions(message.reactions, message.msgId, pendingReactions, state.me.userId);
@@ -348,7 +341,6 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
                   onOpenProfile={onOpenProfile}
                   embeds={message.embeds}
                   suppressedEmbeds={message.suppressedEmbeds}
-                  onRemoveEmbed={canRemoveParts ? setEmbedRemoval : undefined}
                 />
                 {message.editedAt && <span className="ml-1 select-none text-caption text-text-muted">(editado)</span>}
               </div>
@@ -441,18 +433,6 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
         </DropdownMenu>
       </div>}
       {confirmDialog}
-      <ConfirmDialog
-        open={embedRemoval !== null}
-        onOpenChange={(open) => { if (!open) setEmbedRemoval(null); }}
-        title="Remover incorporação"
-        description="O link continua na mensagem, só a prévia dele some para todo mundo."
-        confirmLabel="Remover"
-        destructive
-        onConfirm={() => {
-          if (embedRemoval !== null) void suppressChatEmbed(message.msgId, embedRemoval);
-          setEmbedRemoval(null);
-        }}
-      />
       {reportOpen && (
         <ReportDialog target={{ type: 'message', id: String(message.msgId), label: `mensagem de ${displayedName}` }} open onOpenChange={setReportOpen} />
       )}

@@ -9,6 +9,8 @@ export interface MessagePermissions {
   report: boolean;
   /** taking one attachment out, while the message keeps something else */
   removeAttachment: boolean;
+  /** hiding one link's preview card (the link stays) */
+  removeEmbed: boolean;
 }
 
 /** What the viewer may do with a message — one answer for the hover
@@ -34,5 +36,7 @@ export function messagePermissions(
     // anyone's attachment out
     removeAttachment: (isMine || me.role === 'admin') && !isInvite
       && (!!message.text.trim() || (message.attachments?.length ?? 0) > 1),
+    // only the author: an admin may take attachments out, not reshape the text
+    removeEmbed: isMine && !isInvite,
   };
 }

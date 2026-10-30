@@ -1,4 +1,4 @@
-import { ArrowBendUpLeftIcon, CopyIcon, DownloadSimpleIcon, FileXIcon, FlagIcon, PencilSimpleIcon, PushPinIcon, PushPinSlashIcon, TrashIcon, UsersIcon, XIcon } from '@phosphor-icons/react';
+import { ArrowBendUpLeftIcon, CopyIcon, DownloadSimpleIcon, FileXIcon, FlagIcon, LinkBreakIcon, PencilSimpleIcon, PushPinIcon, PushPinSlashIcon, TrashIcon, UsersIcon, XIcon } from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { ContextMenuRootActions } from '@base-ui/react/context-menu';
@@ -37,15 +37,19 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
   const {
     state,
     activeConversationId, messagesByConversation, reactToChatMessage, setReplyingTo, setEditingMsgId,
-    conversations, closeConversation, pinConversation, openReactionParticipants, removeChatAttachment,
+    conversations, closeConversation, pinConversation, openReactionParticipants, removeChatAttachment, suppressChatEmbed,
   } = useRoom();
   const [hasSelection, setHasSelection] = useState(false);
   const [downloadTarget, setDownloadTarget] = useState<{ url: string; name: string } | null>(null);
   const { requestDelete, confirmDialog } = useMessageDeleteConfirm();
   const [messageTarget, setMessageTarget] = useState<number | null>(null);
-  // which of the message's attachments was right-clicked: a message can carry several
+  // which of the message's attachments / link cards was right-clicked: a message can carry several
   const [attachmentTarget, setAttachmentTarget] = useState<string | null>(null);
-  const [attachmentRemoval, setAttachmentRemoval] = useState<{ msgId: number; id: string; name: string } | null>(null);
+  const [embedTarget, setEmbedTarget] = useState<string | null>(null);
+  // what was asked to come out of a message, waiting for confirmation
+  const [partRemoval, setPartRemoval] = useState<
+    { kind: 'attachment'; msgId: number; id: string; name: string } | { kind: 'embed'; msgId: number; link: string } | null
+  >(null);
   const [conversationTarget, setConversationTarget] = useState<string | null>(null);
   const [userTarget, setUserTarget] = useState<string | null>(null);
   const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null);
@@ -70,6 +74,7 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
     : null;
   const hasReactions = !!targetMessage && Object.values(targetMessage.reactions ?? {}).some((ids) => ids && ids.length > 0);
   const targetAttachment = can?.removeAttachment ? targetMessage?.attachments?.find((a) => a.id === attachmentTarget) : undefined;
+  const targetEmbedLink = can?.removeEmbed ? embedTarget : null;
   const targetConversation = conversationTarget ? conversations.find((c) => c.id === conversationTarget) : undefined;
 
   const showMessageBlock = !!targetMessage;
@@ -94,11 +99,12 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
         const conversation = element?.closest('[data-conversation-id]');
         const rowButton = conversation?.querySelector(':scope > button');
         // holding a picture (a button that opens the viewer) is how a phone
-        // reaches "Remover anexo"; other controls keep their own long press
+        // reaches "Remover anexo" / "Remover incorporação"; links and other
+        // controls keep their own long press
         const interactive = element?.closest('a, button, input, textarea, [contenteditable], [data-download-url]');
-        const onAttachmentButton = !!interactive?.matches('button') && !!interactive.closest('[data-attachment-id]');
+        const onPartButton = !!interactive?.matches('button') && !!interactive.closest('[data-attachment-id], [data-embed-link]');
         const blocked = (!message && !conversation) || !!window.getSelection()?.toString()
-          || !!message?.hasAttribute('data-text-selection-enabled') || (!!interactive && interactive !== rowButton && !onAttachmentButton);
+          || !!message?.hasAttribute('data-text-selection-enabled') || (!!interactive && interactive !== rowButton && !onPartButton);
         touchTargetRef.current = { at: Date.now(), blocked };
         if (blocked) return;
       } else if (recentTouch && touchTargetRef.current.blocked) {
@@ -118,6 +124,7 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
       const messageEl = element?.closest<HTMLElement>('[data-message-id]') ?? null;
       const nextMessageTarget = messageEl ? Number(messageEl.dataset.messageId) : null;
       const attachmentEl = messageEl ? element?.closest<HTMLElement>('[data-attachment-id]') ?? null : null;
+      const embedEl = messageEl ? element?.closest<HTMLElement>('[data-embed-link]') ?? null : null;
       const conversationEl = element?.closest<HTMLElement>('[data-conversation-id]') ?? null;
       const nextConversationTarget = conversationEl?.dataset.conversationId ?? null;
       const userEl = element?.closest<HTMLElement>('[data-user-id]') ?? null;
@@ -127,6 +134,7 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
       setDownloadTarget(downloadEl ? { url: downloadEl.dataset.downloadUrl!, name: downloadEl.dataset.downloadName || '' } : null);
       setMessageTarget(nextMessageTarget);
       setAttachmentTarget(attachmentEl?.dataset.attachmentId ?? null);
+      setEmbedTarget(embedEl?.dataset.embedLink ?? null);
       setConversationTarget(nextConversationTarget);
       setUserTarget(nextUserTarget);
       setHasSelection(nextHasSelection);
@@ -275,9 +283,15 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
                 </ContextMenuItem>
               )}
               {targetAttachment && (
-                <ContextMenuItem variant="destructive" onClick={() => setAttachmentRemoval({ msgId: targetMessage.msgId, id: targetAttachment.id, name: targetAttachment.name })}>
+                <ContextMenuItem variant="destructive" onClick={() => setPartRemoval({ kind: 'attachment', msgId: targetMessage.msgId, id: targetAttachment.id, name: targetAttachment.name })}>
                   <FileXIcon size={16} />
                   <span>Remover anexo</span>
+                </ContextMenuItem>
+              )}
+              {targetEmbedLink && (
+                <ContextMenuItem variant="destructive" onClick={() => setPartRemoval({ kind: 'embed', msgId: targetMessage.msgId, link: targetEmbedLink })}>
+                  <LinkBreakIcon size={16} />
+                  <span>Remover incorporação</span>
                 </ContextMenuItem>
               )}
               {can?.delete && (
@@ -335,15 +349,18 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
       <ReactionParticipantsDialog />
       {confirmDialog}
       <ConfirmDialog
-        open={!!attachmentRemoval}
-        onOpenChange={(open) => { if (!open) setAttachmentRemoval(null); }}
-        title="Remover anexo"
-        description={`"${attachmentRemoval?.name ?? ''}" sai da mensagem para todo mundo e é apagado. O resto da mensagem continua.`}
+        open={!!partRemoval}
+        onOpenChange={(open) => { if (!open) setPartRemoval(null); }}
+        title={partRemoval?.kind === 'embed' ? 'Remover incorporação' : 'Remover anexo'}
+        description={partRemoval?.kind === 'embed'
+          ? 'O link continua na mensagem, só a prévia dele some para todo mundo.'
+          : `"${partRemoval?.name ?? ''}" sai da mensagem para todo mundo e é apagado. O resto da mensagem continua.`}
         confirmLabel="Remover"
         destructive
         onConfirm={() => {
-          if (attachmentRemoval) void removeChatAttachment(attachmentRemoval.msgId, attachmentRemoval.id);
-          setAttachmentRemoval(null);
+          if (partRemoval?.kind === 'attachment') void removeChatAttachment(partRemoval.msgId, partRemoval.id);
+          else if (partRemoval?.kind === 'embed') void suppressChatEmbed(partRemoval.msgId, partRemoval.link);
+          setPartRemoval(null);
         }}
       />
     </>
