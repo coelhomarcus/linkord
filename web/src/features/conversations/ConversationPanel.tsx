@@ -73,7 +73,7 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
     <main className="flex h-full min-w-0 flex-1 flex-col text-text-primary">
       {conversation ? (
         <>
-          <header className="flex h-header flex-none items-center gap-2 border-b border-border bg-surface-panel/90 px-2 backdrop-blur md:gap-3 md:px-4">
+          <header className="flex h-header flex-none items-center gap-2 bg-surface-panel/90 px-2 backdrop-blur md:gap-3 md:border-b md:border-border md:px-4">
             <Button type="button" variant="ghost" size="icon" aria-label="Voltar para conversas" onClick={() => navigate(ROUTES.conversations)} className="md:hidden">
               <ArrowLeftIcon size={20} />
             </Button>

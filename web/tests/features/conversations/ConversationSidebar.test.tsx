@@ -194,4 +194,18 @@ describe('ConversationSidebar — user dock', () => {
     expect(screen.queryByRole('dialog', { name: 'Conversas' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Meu perfil' })).not.toBeInTheDocument();
   });
+
+  it('does not highlight the active conversation in the phone list', () => {
+    setViewport(390);
+    renderSidebar({ activeConversationId: 'conv-dm' });
+    const row = screen.getByRole('button', { name: /Bea/ });
+    expect(row.querySelector('.bg-nav-active')).toBeNull();
+  });
+
+  it('keeps the active conversation highlight on desktop', () => {
+    setViewport(1280);
+    renderSidebar({ activeConversationId: 'conv-dm' });
+    const row = screen.getByRole('button', { name: /Bea/ });
+    expect(row.querySelector('.bg-nav-active')).not.toBeNull();
+  });
 });

@@ -8,7 +8,7 @@ import { Button } from '@/shared/ui/primitives/button';
 export function PageHeader({ title, subtitle, actions, leading, middle }: { title: string; subtitle?: string; actions?: ReactNode; leading?: ReactNode; middle?: ReactNode }) {
   const closeModal = useAppModalClose();
   return (
-    <header className="flex h-header flex-none items-center gap-3 border-b border-border px-4 md:px-6">
+    <header className="flex h-header flex-none items-center gap-3 px-4 md:border-b md:border-border md:px-6">
       {leading}
       <div className="min-w-0 flex-1 select-none">
         <h1 className="truncate text-title font-semibold text-text-primary">{title}</h1>

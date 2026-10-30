@@ -54,7 +54,7 @@ function ConversationRow({ conversation, active, onClick }: {
           'relative isolate flex w-full items-center gap-2.5 rounded-md px-[11px] py-[9px] text-left',
           active
             ? 'cutout-active text-text-primary'
-            : 'cutout text-text-secondary hover:cutout-subtle hover:bg-nav-hover'
+            : 'cutout text-text-secondary md:hover:cutout-subtle md:hover:bg-nav-hover'
         )}
       >
         {/* Discord/Fluxer: the active row is a plain light-gray wash, no border
@@ -170,7 +170,7 @@ export function ConversationSidebar() {
           <ConversationRow
             key={conversation.id}
             conversation={conversation}
-            active={onConversations && conversation.id === activeConversationId}
+            active={!isMobile && onConversations && conversation.id === activeConversationId}
             onClick={() => selectConversation(conversation.id)}
           />
         ))}

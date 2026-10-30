@@ -2,9 +2,7 @@ import { useId } from 'react';
 import type { ComponentProps, ReactNode, Ref } from 'react';
 import { cn } from '@/shared/lib/utils';
 
-/** The reading column of a category: capped width, sections stacked vertically
- * with a divider between them. Padding follows the width of the settings area
- * (container queries), not the window. */
+/** Padding follows the width of the settings area (container queries), not the window. */
 export function SettingsContent({ className, ...props }: ComponentProps<'div'>) {
   return <div className={cn('w-full max-w-[760px] px-4 py-6 @[520px]:px-6 @[960px]:px-8 @[960px]:py-8', className)} {...props} />;
 }
@@ -24,7 +22,6 @@ export function SettingsPageHeader({ title, description, headingRef, hideTitle }
   );
 }
 
-/** The sections of one category, separated by a discreet divider. */
 export function SettingsSections({ className, ...props }: ComponentProps<'div'>) {
   return <div className={cn('flex flex-col gap-6', className)} {...props} />;
 }
@@ -45,7 +42,7 @@ export function SettingsSection({ id, title, description, children, className }:
       // Not natively focusable — a search result landing here (SettingsPage's
       // hash effect) needs somewhere real to move focus to, not just scroll.
       tabIndex={id ? -1 : undefined}
-      className={cn('flex scroll-mt-20 flex-col gap-3 border-t border-border pt-6 first:border-t-0 first:pt-0 outline-none', className)}
+      className={cn('flex scroll-mt-20 flex-col gap-3 pt-6 first:pt-0 md:border-t md:border-border md:first:border-t-0 outline-none', className)}
     >
       <div className="flex flex-col gap-0.5">
         <h3 id={headingId} className="text-title font-semibold text-text-primary">{title}</h3>
