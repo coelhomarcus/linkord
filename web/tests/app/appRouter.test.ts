@@ -26,6 +26,9 @@ describe('createAppRouter', () => {
     await router.navigate(-1);
     expect(router.state.location.pathname).toBe('/app/friends');
     expect(window.location.pathname).toBe('/app/friends');
+    await router.navigate(1);
+    expect(router.state.location.pathname).toBe('/app/conversations/c1');
+    expect(window.location.pathname).toBe('/app/conversations/c1');
     router.dispose();
   });
 

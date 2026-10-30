@@ -5,7 +5,7 @@ import type { RoomContextValue } from '@/state/RoomContext';
 import { ConversationPanel } from '@/features/conversations/ConversationPanel';
 import type { Conversation, PublicUser } from '@/shared/types/protocol';
 import { SidebarProvider } from '@/shared/ui/motion/sidebar';
-import { MemoryRouter, useLocation, useNavigationType } from 'react-router';
+import { MemoryRouter, useLocation, useNavigate, useNavigationType } from 'react-router';
 import { renderWithRoom } from '@tests/fixtures/roomContextFixture';
 import { FriendsProvider } from '@/features/friends/FriendsContext';
 import { renderSocial } from '@tests/fixtures/socialFixture';
@@ -217,9 +217,15 @@ describe('ConversationPanel — phone Voltar', () => {
     lastMessageAt: null, createdAt: 0, updatedAt: 0, pinnedAt: null, myRole: 'member', ownerId: null, memberCount: 1,
   };
   function WhereAmI() {
-    return <output data-testid="where">{`${useNavigationType()} ${useLocation().pathname}`}</output>;
+    const navigate = useNavigate();
+    return (
+      <>
+        <output data-testid="where">{`${useNavigationType()} ${useLocation().pathname}`}</output>
+        <button type="button" onClick={() => navigate(1)}>forward</button>
+      </>
+    );
   }
-  function renderFrom(entries: Parameters<typeof MemoryRouter>[0]['initialEntries']) {
+  function renderFrom(entries: Parameters<typeof MemoryRouter>[0]['initialEntries'], conversations: Conversation[] = [group]) {
     renderWithRoom(
       <MemoryRouter initialEntries={entries} initialIndex={(entries?.length ?? 1) - 1}>
         <FriendsProvider>
@@ -229,7 +235,7 @@ describe('ConversationPanel — phone Voltar', () => {
           <WhereAmI />
         </FriendsProvider>
       </MemoryRouter>,
-      { state: joinedState, conversations: [group], activeConversationId: 'g1' },
+      { state: joinedState, conversations, activeConversationId: conversations.at(-1)?.id ?? 'g1' },
     );
   }
 
@@ -244,5 +250,27 @@ describe('ConversationPanel — phone Voltar', () => {
     renderFrom(['/app/notifications', '/app/conversations/g1']);
     fireEvent.click(screen.getByRole('button', { name: 'Voltar para conversas' }));
     expect(screen.getByTestId('where')).toHaveTextContent('REPLACE /app/conversations');
+  });
+
+  // the same place an iPhone forward swipe lands after a back swipe
+  it('opened from the list, forward returns to the chat after Voltar', () => {
+    renderFrom(['/app/conversations', { pathname: '/app/conversations/g1', state: { from: '/app/conversations' } }]);
+    fireEvent.click(screen.getByRole('button', { name: 'Voltar para conversas' }));
+    expect(screen.getByTestId('where')).toHaveTextContent('POP /app/conversations');
+    fireEvent.click(screen.getByRole('button', { name: 'forward' }));
+    expect(screen.getByTestId('where')).toHaveTextContent('POP /app/conversations/g1');
+  });
+
+  it('opened from another chat, it steps back instead of replacing history', () => {
+    const other: Conversation = { ...group, id: 'g2', title: 'Other' };
+    renderFrom([
+      '/app/conversations',
+      { pathname: '/app/conversations/g1', state: { from: '/app/conversations' } },
+      { pathname: '/app/conversations/g2', state: { from: '/app/conversations/g1' } },
+    ], [group, other]);
+    fireEvent.click(screen.getByRole('button', { name: 'Voltar para conversas' }));
+    expect(screen.getByTestId('where')).toHaveTextContent('POP /app/conversations/g1');
+    fireEvent.click(screen.getByRole('button', { name: 'forward' }));
+    expect(screen.getByTestId('where')).toHaveTextContent('POP /app/conversations/g2');
   });
 });

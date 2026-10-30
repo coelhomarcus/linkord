@@ -46,7 +46,7 @@ describe('MessageMedia', () => {
     expect(picture.style.backgroundImage).toBe('');
   });
 
-  it('an image stored without dimensions takes its own proportions once it has loaded', () => {
+  it('an image stored without dimensions keeps a fixed box through load so the row does not resize', () => {
     vi.stubGlobal('fetch', vi.fn(() => new Promise(() => {})));
     render(<MessageMedia attachments={[img('old')]} />);
     const button = screen.getByRole('button', { name: 'Abrir old.png' });
@@ -57,8 +57,8 @@ describe('MessageMedia', () => {
     Object.defineProperty(picture, 'naturalHeight', { value: 400, configurable: true });
     fireEvent.load(picture);
 
-    expect(button.style.aspectRatio).toBe('800 / 400');
-    expect(button.style.height).toBe('');
+    expect(button.style.height).toBe('320px');
+    expect(picture.className.split(/\s+/)).toContain('object-contain');
   });
 
   it('shows no alt text over the placeholder: the image is named by its button, and by its alt once loaded', () => {

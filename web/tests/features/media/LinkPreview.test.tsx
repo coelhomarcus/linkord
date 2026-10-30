@@ -94,42 +94,42 @@ describe('LinkPreview — size measured by the server', () => {
   const previewJson = (over: Record<string, unknown>) => JSON.stringify({ url: 'https://ex.com', title: 'Exemplo', description: null, image: null, video: null, favicon: null, siteName: 'ex.com', themeColor: null, ...over });
   const respond = (body: string) => vi.fn(async () => new Response(body, { status: 200, headers: { 'Content-Type': 'application/json' } }));
 
-  it('a direct image url takes the proportions the server measured, replacing the fallback box', async () => {
-    vi.stubGlobal('fetch', respond(previewJson({ image: 'https://cdn.example.com/wide.png', imageWidth: 1000, imageHeight: 500 })));
-    const { container } = render(<LinkPreview embed={{ kind: 'image', url: 'https://cdn.example.com/wide.png' }} />);
+  it('a direct image url uses the proportions stored on the message from the first frame', () => {
+    const { container } = render(
+      <LinkPreview
+        embed={{ kind: 'image', url: 'https://cdn.example.com/wide.png' }}
+        preview={{ url: 'https://cdn.example.com/wide.png', title: null, description: null, image: 'https://cdn.example.com/wide.png', video: null, favicon: null, siteName: 'cdn', themeColor: null, imageWidth: 1000, imageHeight: 500 }}
+      />,
+    );
     const box = container.querySelector('img')!.closest('button')!;
-    expect(box.style.height).toBe('280px'); // until the size arrives
-
-    await vi.waitFor(() => expect(box.style.height).not.toBe('280px'));
     expect(parseFloat(box.style.width) / parseFloat(box.style.height)).toBeCloseTo(2, 1);
   });
 
-  it('fills the box once its size is known (the box already has the picture\'s proportions) and only fits it inside while unknown', async () => {
-    vi.stubGlobal('fetch', respond(previewJson({ image: 'https://cdn.example.com/wide.png', imageWidth: 1000, imageHeight: 500 })));
-    const { container } = render(<LinkPreview embed={{ kind: 'image', url: 'https://cdn.example.com/wide.png' }} />);
+  it('fills the box when the size is known upfront and only fits inside the fallback while unknown', () => {
+    const { container } = render(
+      <LinkPreview
+        embed={{ kind: 'image', url: 'https://cdn.example.com/wide.png' }}
+        preview={{ url: 'https://cdn.example.com/wide.png', title: null, description: null, image: 'https://cdn.example.com/wide.png', video: null, favicon: null, siteName: 'cdn', themeColor: null, imageWidth: 1000, imageHeight: 500 }}
+      />,
+    );
     const img = container.querySelector('img')!;
-    // unknown: whatever the shape, the whole picture must be visible in the fallback box
-    expect(img.className.split(/\s+/)).toContain('object-contain');
-
-    await vi.waitFor(() => expect(img.className.split(/\s+/)).toContain('object-cover'));
+    expect(img.className.split(/\s+/)).toContain('object-cover');
     expect(img.className.split(/\s+/)).not.toContain('object-contain');
   });
 
-  it('when the server could not measure it, the box takes the picture\'s own proportions once it has loaded', async () => {
+  it('when the size is unknown, the fallback box stays through load so the row does not resize', async () => {
     vi.stubGlobal('fetch', respond(previewJson({ image: 'https://cdn.example.com/x.png', imageWidth: null, imageHeight: null })));
     const { container } = render(<LinkPreview embed={{ kind: 'image', url: 'https://cdn.example.com/x.png' }} />);
     const img = container.querySelector('img')!;
     const box = img.closest('button')!;
     expect(box.style.height).toBe('280px');
 
-    // jsdom decodes nothing: the browser's answer is stood in for
     Object.defineProperty(img, 'naturalWidth', { value: 300, configurable: true });
     Object.defineProperty(img, 'naturalHeight', { value: 900, configurable: true });
     fireEvent.load(img);
 
-    await vi.waitFor(() => expect(box.style.height).toBe('280px')); // 300x900 fits at 93x280
-    expect(box.style.width).toBe('93px');
-    expect(img.className.split(/\s+/)).toContain('object-cover');
+    await vi.waitFor(() => expect(box.style.height).toBe('280px'));
+    expect(img.className.split(/\s+/)).toContain('object-contain');
   });
 
   it('ignores a load that reports no size (an SVG with no intrinsic dimensions)', () => {

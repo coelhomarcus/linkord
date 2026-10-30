@@ -45,11 +45,12 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
   const shownId = requestedId ?? (isMobile ? null : activeConversationId);
   const conversation = conversations.find((item) => item.id === shownId) ?? null;
   const isBot = conversation?.type === 'bot';
-  // Opened from the list: step back to that entry, so the browser's own back
-  // (an iPhone edge swipe) and this button land in the same place. Opened
-  // from anywhere else, the list takes this entry's place instead.
+  // ConversationSidebar pushes every open with the route we came from in
+  // state. Step back to that entry so the browser's back and forward (edge
+  // swipes on a phone) and Voltar stay on the same history. With no prior
+  // entry (a direct link), the list takes this one's place.
   function goBackToList() {
-    if ((locationState as { from?: unknown } | null)?.from === ROUTES.conversations) navigate(-1);
+    if ((locationState as { from?: unknown } | null)?.from != null) navigate(-1);
     else navigate(ROUTES.conversations, { replace: true });
   }
   const hasDetails = conversation?.type === 'group' || isBot;

@@ -100,9 +100,13 @@ export function GenericEmbed({ embed, className = '', edgeToEdge, preview }: Gen
 
   if (!data) {
     return (
-      <div ref={skeletonRef} style={{ maxWidth }} className={`flex w-full animate-pulse flex-col gap-1.5 ${cardBorderClass} bg-bg-tertiary px-3 py-2.5 ${className}`}>
-        <div className="h-2.5 w-1/3 rounded-sm bg-bg-hover" />
-        <div className="h-3.5 w-3/4 rounded-sm bg-bg-hover" />
+      <div ref={skeletonRef} style={{ maxWidth }} className={`flex w-full animate-pulse flex-col overflow-hidden ${cardBorderClass} bg-bg-tertiary ${className}`}>
+        <div className="flex flex-col gap-1.5 px-3 pt-2.5 pb-2">
+          <div className="h-2.5 w-1/3 rounded-sm bg-bg-hover" />
+          <div className="h-3.5 w-3/4 rounded-sm bg-bg-hover" />
+        </div>
+        {/* same footprint as a card with an og:image at the fallback height */}
+        <div className="h-70 w-full bg-bg-hover" />
       </div>
     );
   }

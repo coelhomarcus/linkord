@@ -212,6 +212,7 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
     let frames = 0;
     let stableFrames = 0;
     let last = '';
+    let lastTotalSize = -1;
     let handle = requestAnimationFrame(function settle() {
       place(true);
       const el = scrollRef.current;
@@ -222,8 +223,11 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
       const maxTop = el ? el.scrollHeight - el.clientHeight : 0;
       const reached = !atEndPlacement || !el || Math.abs(el.scrollTop - maxTop) <= 1;
       if (!reached && el) el.scrollTop = maxTop;
-      const now = `${el?.scrollTop}:${el?.scrollHeight}`;
-      stableFrames = reached && now === last ? stableFrames + 1 : 0;
+      const totalSize = virtualizer.getTotalSize();
+      const sizeStill = !atEndPlacement || totalSize === lastTotalSize;
+      lastTotalSize = totalSize;
+      const now = `${el?.scrollTop}:${el?.scrollHeight}:${totalSize}`;
+      stableFrames = reached && sizeStill && now === last ? stableFrames + 1 : 0;
       last = now;
       // not laid out yet (a hidden pane): nothing measured is real, so wait
       // without spending the frame budget
@@ -306,17 +310,25 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
   // same threshold: compensating there too would count it twice.
   const indexByKey = useMemo(() => new Map(items.map((item, index) => [item.key, index])), [items]);
   const followedRowRef = useRef<{ key: string; start: number; firstKey: string | undefined } | null>(null);
+  const totalSizeRef = useRef(virtualizer.getTotalSize());
   useLayoutEffect(() => {
     const el = scrollRef.current;
     if (!el || !ready) { followedRowRef.current = null; return; }
     const prev = followedRowRef.current;
-    if (prev && prev.firstKey === firstKey && virtualizer.getDistanceFromEnd() > AT_END_THRESHOLD) {
+    const totalSize = virtualizer.getTotalSize();
+    const distanceFromEnd = virtualizer.getDistanceFromEnd();
+    // Near the present, rows still grow as media loads; pin once per growth
+    // so WebKit does not show the list jumping (custom compensation is off here).
+    if (distanceFromEnd <= AT_END_THRESHOLD && totalSize !== totalSizeRef.current) {
+      el.scrollTop = el.scrollHeight - el.clientHeight;
+    } else if (distanceFromEnd > AT_END_THRESHOLD && prev && prev.firstKey === firstKey) {
       const index = indexByKey.get(prev.key);
       const start = index === undefined ? undefined : virtualizer.measurementsCache[index]?.start;
       if (start !== undefined && Math.abs(start - prev.start) >= 1) el.scrollTop += start - prev.start;
     }
     const top = virtualizer.getVirtualItemForOffset(el.scrollTop);
     followedRowRef.current = top ? { key: String(top.key), start: top.start, firstKey } : null;
+    totalSizeRef.current = totalSize;
   });
 
   const [settlingPrepend, setSettlingPrepend] = useState(false);
