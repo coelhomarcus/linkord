@@ -238,6 +238,12 @@
    the whole app under the tab bar, and focusing the composer pans it on top of
    our own keyboard compensation. #root is pinned to the visual viewport instead
    (App syncs --app-viewport-top/height), and only inner panes scroll. */
+/* The bottom safe area (home indicator); App sets it to 0 while a phone
+   keyboard covers that strip. */
+:root {
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
 html, body {
   margin: 0;
   padding: 0;

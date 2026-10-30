@@ -55,7 +55,7 @@ export function MobileTabBar({ activeCallConversationId, onReturnToCall }: { act
           );
         })}
       </nav>
-      <div aria-hidden className="h-[env(safe-area-inset-bottom)]" />
+      <div aria-hidden className="h-(--safe-bottom)" />
     </div>
   );
 }

@@ -42,6 +42,7 @@ import { AWAITING_OPEN, ROUTES, callConversationIdFromPath, conversationIdFromPa
 import { ContentLocationProvider } from '@/shared/lib/contentLocation';
 import { createAppRouter } from '@/app/appRouter';
 import { useConversationRouteSync } from '@/app/useConversationRouteSync';
+import { clearViewportVars, syncViewportVars } from '@/app/viewportVars';
 import { rightPanelsVisible } from '@/app/rightPanels';
 import { SidebarInset, SidebarProvider } from '@/shared/ui/motion/sidebar';
 import { loadSidebarCollapsed, saveSidebarCollapsed } from '@/shared/hooks/useSidebarCollapsedPreference';
@@ -212,7 +213,7 @@ function Shell() {
         openMobile={mobileShowSidebar}
         onOpenMobileChange={setMobileShowSidebar}
         className="relative h-full bg-bg-primary text-text-primary [--surface-base:var(--color-surface-app)] max-md:pt-[env(safe-area-inset-top)]"
-        style={{ minHeight: 0, '--sidebar-width': '20rem', '--sidebar-width-mobile': '24rem', '--sidebar-overlay-offset': '4rem', '--mobile-navigation-height': `calc(4rem + env(safe-area-inset-bottom) + ${inCall ? '3rem' : '0rem'})` } as CSSProperties}
+        style={{ minHeight: 0, '--sidebar-width': '20rem', '--sidebar-width-mobile': '24rem', '--sidebar-overlay-offset': '4rem', '--mobile-navigation-height': `calc(4rem + var(--safe-bottom) + ${inCall ? '3rem' : '0rem'})` } as CSSProperties}
       >
         <ReconnectBanner />
         <AccessNotice />
@@ -322,17 +323,7 @@ function AppProviders() {
     const mobile = window.matchMedia('(max-width: 767px)');
     if (!viewport) return;
     const root = document.documentElement.style;
-    const syncHeight = () => {
-      if (mobile.matches) {
-        // offsetTop too: iOS pans the visual viewport to reveal a focused
-        // input, and #root (fixed) has to follow that pan, not just shrink
-        root.setProperty('--app-viewport-top', `${viewport.offsetTop}px`);
-        root.setProperty('--app-viewport-height', `${viewport.height}px`);
-      } else {
-        root.removeProperty('--app-viewport-top');
-        root.removeProperty('--app-viewport-height');
-      }
-    };
+    const syncHeight = () => syncViewportVars(root, viewport, window.innerHeight, mobile.matches);
     syncHeight();
     viewport.addEventListener('resize', syncHeight);
     viewport.addEventListener('scroll', syncHeight);
@@ -341,8 +332,7 @@ function AppProviders() {
       viewport.removeEventListener('resize', syncHeight);
       viewport.removeEventListener('scroll', syncHeight);
       mobile.removeEventListener('change', syncHeight);
-      root.removeProperty('--app-viewport-top');
-      root.removeProperty('--app-viewport-height');
+      clearViewportVars(root);
     };
   }, []);
   useEffect(() => {

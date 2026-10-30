@@ -305,7 +305,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
   const iconButton = 'flex-none rounded-full text-text-muted hover:text-text-primary';
 
   return (
-    <div className="w-full flex-none px-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] @min-[640px]/chat:px-4 @min-[640px]/chat:pb-4">
+    <div className="w-full flex-none px-2 pb-[max(0.75rem,var(--safe-bottom))] @min-[640px]/chat:px-4 @min-[640px]/chat:pb-4">
       <input ref={fileInputRef} type="file" multiple hidden onChange={handleFileChange} />
       <input ref={imageInputRef} type="file" accept="image/*" multiple hidden onChange={handleFileChange} />
 
