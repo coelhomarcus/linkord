@@ -49,6 +49,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
   // hook below needs sendWs too.
   const socketRef = useRef<Socket | null>(null);
   const intentionalCloseRef = useRef(false);
+  const hasWelcomedRef = useRef(false);
 
   const [livekitRoom] = useState(() => new Room({
     adaptiveStream: true,
@@ -181,10 +182,16 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         chatMessages.onWelcome(m.unreadByConversation);
         presence.setInitial(m.knownUsers, m.onlineUserIds, m.friendIds);
         attachmentsUpload.setStorageUsage(m.storageUsage);
-        {
-          // never a bot: opening one marks it read, and nobody asked to see it
+        if (!hasWelcomedRef.current) {
+          hasWelcomedRef.current = true;
+          // Never a bot: opening one marks it read, and nobody asked to see it.
           const firstConversation = (m.conversations ?? []).find((c) => c.type !== 'bot');
           if (firstConversation) openConversation(firstConversation.id);
+        } else {
+          const activeId = conversationsList.activeConversationIdRef.current;
+          if (activeId && activeViewRef.current === 'chat' && (m.conversations ?? []).some((c) => c.id === activeId)) {
+            sendWs({ t: 'conversation-open', conversationId: activeId });
+          }
         }
         break;
       }
@@ -341,11 +348,11 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         break;
     }
   }, [
-    dispatch, conversationsList, presence, attachmentsUpload, openConversation, callLifecycle,
+    dispatch, conversationsList, presence, attachmentsUpload, openConversation, sendWs, callLifecycle,
     messageReactions, messageSearch, chatMessages, typingIndicator, disconnectIntentionally, profileUpdate,
   ]);
 
-  useSocketConnection({ socketRef, intentionalCloseRef, sendWs, dispatch, refreshAuth, onMessage: handleServerMessage });
+  const { retryConnection } = useSocketConnection({ socketRef, intentionalCloseRef, sendWs, dispatch, refreshAuth, onMessage: handleServerMessage });
 
   useEffect(() => {
     preloadSounds();
@@ -366,7 +373,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
   return (
     <RoomContext.Provider
       value={{
-        state, dispatch, sendWs, tileDomRegistry, audioRegistry,
+        state, dispatch, sendWs, retryConnection, tileDomRegistry, audioRegistry,
         callStageRef, isCallFullscreen, toggleCallFullscreen, fullscreenElement,
         audioUnlocked: callLifecycle.audioUnlocked, deafened: callLifecycle.deafened, toggleDeafened: callLifecycle.toggleDeafened,
         preferMuted: callLifecycle.preferMuted, setPreferMuted: callLifecycle.setPreferMuted,

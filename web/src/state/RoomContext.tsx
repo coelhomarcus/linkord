@@ -48,6 +48,7 @@ export interface RoomContextValue {
   dispatch: Dispatch<RoomAction>;
   /** False when the socket is down and the message was dropped. */
   sendWs: (msg: ClientMessage) => boolean;
+  retryConnection: () => void;
   tileDomRegistry: MutableRefObject<Map<string, TileDomHandle>>;
   audioRegistry: MutableRefObject<Map<string, AudioHandle>>;
   /** Attached by Stage.tsx to its own root — the fullscreen target for

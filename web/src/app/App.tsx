@@ -58,7 +58,7 @@ function currentPath(): string {
 
 function Shell() {
   const {
-    state, dispatch, livekitRoom, closeTileMenu, sendWs, notifyActiveView, registerRequestChatView,
+    state, dispatch, livekitRoom, closeTileMenu, sendWs, retryConnection, notifyActiveView, registerRequestChatView,
     activeCallConversationId, activeConversationId, joinCall, leaveCall, conversations, allUsers,
   } = useRoom();
   const roomError = state.roomError;
@@ -201,7 +201,7 @@ function Shell() {
 
   if (state.clientOutdated) return <OutdatedClientScreen />;
   if (roomError) return <RoomErrorScreen message={roomError} />;
-  if (!state.joined) return <LoadingScreen />;
+  if (!state.joined) return <LoadingScreen reconnecting={state.reconnecting} onRetry={retryConnection} />;
 
   return (
     <GlobalContextMenu onOpenProfile={setProfileUserId}>

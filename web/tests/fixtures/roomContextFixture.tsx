@@ -13,6 +13,7 @@ export function createFakeRoomContextValue(overrides: Partial<RoomContextValue> 
     state: initialRoomState,
     dispatch: noop,
     sendWs: () => true,
+    retryConnection: noop,
     tileDomRegistry: { current: new Map() },
     audioRegistry: { current: new Map() },
     callStageRef: { current: null },

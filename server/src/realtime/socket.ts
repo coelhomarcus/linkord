@@ -187,19 +187,16 @@ function safeHandle(eventName: string, socket: AppSocket, payload: unknown, hand
 }
 
 export function createWsServer(httpServer: HttpServer): Server {
-  // transports:['websocket'] kept for simplicity (one less fallback to
-  // test) — now that camera/screen go over WebRTC, there's no strong
-  // technical reason for it (the socket only carries small signaling).
   const io = new Server(httpServer, {
     path: '/ws',
-    transports: ['websocket'],
+    transports: ['polling', 'websocket'],
     maxHttpBufferSize: config.MAX_MSG_BYTES,
   });
 
   // no anonymous socket ever exists: the handshake carries the cookie, so
   // the session is resolved BEFORE 'connection' fires. A rejection here
-  // kills the socket without reconnecting (socket.active becomes false
-  // client-side) — RoomProvider uses that to fall back to the login screen.
+  // stops automatic reconnection; the client refreshes auth only for an
+  // expired session and retries transient auth failures separately.
   io.use(async (socket: Socket, next) => {
     if (!isSocketOriginAllowed(socket.handshake.headers)) {
       log.warn('socket handshake from a disallowed origin', { origin: socket.handshake.headers.origin ?? null });
