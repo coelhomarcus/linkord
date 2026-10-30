@@ -7,6 +7,8 @@ export interface MessagePermissions {
   edit: boolean;
   delete: boolean;
   report: boolean;
+  /** taking one attachment out, while the message keeps something else */
+  removeAttachment: boolean;
 }
 
 /** What the viewer may do with a message — one answer for the hover
@@ -28,5 +30,9 @@ export function messagePermissions(
     edit: isMine && !isInvite,
     delete: isMine || me.role === 'admin' || (inBot && conversation?.myRole === 'owner'),
     report: !isMine && !isInvite && !!message.id,
+    // taking the only thing a message has is deleting it; an admin may take
+    // anyone's attachment out
+    removeAttachment: (isMine || me.role === 'admin') && !isInvite
+      && (!!message.text.trim() || (message.attachments?.length ?? 0) > 1),
   };
 }

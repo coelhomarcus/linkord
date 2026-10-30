@@ -1,9 +1,10 @@
-import { ArrowBendUpLeftIcon, CopyIcon, DownloadSimpleIcon, FlagIcon, PencilSimpleIcon, PushPinIcon, PushPinSlashIcon, TrashIcon, UsersIcon, XIcon } from '@phosphor-icons/react';
+import { ArrowBendUpLeftIcon, CopyIcon, DownloadSimpleIcon, FileXIcon, FlagIcon, PencilSimpleIcon, PushPinIcon, PushPinSlashIcon, TrashIcon, UsersIcon, XIcon } from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { ContextMenuRootActions } from '@base-ui/react/context-menu';
 
 import { ReportDialog } from '@/features/reports/ReportDialog';
+import { ConfirmDialog } from '@/shared/ConfirmDialog';
 import type { ReportTarget } from '@/features/reports/reportCategories';
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from '@/shared/ui/primitives/context-menu';
 import { ReactionEmojiPicker } from '@/features/chat/ReactionEmojiPicker';
@@ -36,12 +37,15 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
   const {
     state,
     activeConversationId, messagesByConversation, reactToChatMessage, setReplyingTo, setEditingMsgId,
-    conversations, closeConversation, pinConversation, openReactionParticipants,
+    conversations, closeConversation, pinConversation, openReactionParticipants, removeChatAttachment,
   } = useRoom();
   const [hasSelection, setHasSelection] = useState(false);
   const [downloadTarget, setDownloadTarget] = useState<{ url: string; name: string } | null>(null);
   const { requestDelete, confirmDialog } = useMessageDeleteConfirm();
   const [messageTarget, setMessageTarget] = useState<number | null>(null);
+  // which of the message's attachments was right-clicked: a message can carry several
+  const [attachmentTarget, setAttachmentTarget] = useState<string | null>(null);
+  const [attachmentRemoval, setAttachmentRemoval] = useState<{ msgId: number; id: string; name: string } | null>(null);
   const [conversationTarget, setConversationTarget] = useState<string | null>(null);
   const [userTarget, setUserTarget] = useState<string | null>(null);
   const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null);
@@ -65,6 +69,7 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
     ? messagePermissions(targetMessage, { userId: state.me.userId, role: state.me.role }, conversations.find((c) => c.id === targetMessage.conversationId))
     : null;
   const hasReactions = !!targetMessage && Object.values(targetMessage.reactions ?? {}).some((ids) => ids && ids.length > 0);
+  const targetAttachment = can?.removeAttachment ? targetMessage?.attachments?.find((a) => a.id === attachmentTarget) : undefined;
   const targetConversation = conversationTarget ? conversations.find((c) => c.id === conversationTarget) : undefined;
 
   const showMessageBlock = !!targetMessage;
@@ -88,9 +93,12 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
         const message = element?.closest('[data-message-id]');
         const conversation = element?.closest('[data-conversation-id]');
         const rowButton = conversation?.querySelector(':scope > button');
+        // holding a picture (a button that opens the viewer) is how a phone
+        // reaches "Remover anexo"; other controls keep their own long press
         const interactive = element?.closest('a, button, input, textarea, [contenteditable], [data-download-url]');
+        const onAttachmentButton = !!interactive?.matches('button') && !!interactive.closest('[data-attachment-id]');
         const blocked = (!message && !conversation) || !!window.getSelection()?.toString()
-          || !!message?.hasAttribute('data-text-selection-enabled') || (!!interactive && interactive !== rowButton);
+          || !!message?.hasAttribute('data-text-selection-enabled') || (!!interactive && interactive !== rowButton && !onAttachmentButton);
         touchTargetRef.current = { at: Date.now(), blocked };
         if (blocked) return;
       } else if (recentTouch && touchTargetRef.current.blocked) {
@@ -109,6 +117,7 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
       const downloadEl = element?.closest<HTMLElement>('[data-download-url]') ?? null;
       const messageEl = element?.closest<HTMLElement>('[data-message-id]') ?? null;
       const nextMessageTarget = messageEl ? Number(messageEl.dataset.messageId) : null;
+      const attachmentEl = messageEl ? element?.closest<HTMLElement>('[data-attachment-id]') ?? null : null;
       const conversationEl = element?.closest<HTMLElement>('[data-conversation-id]') ?? null;
       const nextConversationTarget = conversationEl?.dataset.conversationId ?? null;
       const userEl = element?.closest<HTMLElement>('[data-user-id]') ?? null;
@@ -117,6 +126,7 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
 
       setDownloadTarget(downloadEl ? { url: downloadEl.dataset.downloadUrl!, name: downloadEl.dataset.downloadName || '' } : null);
       setMessageTarget(nextMessageTarget);
+      setAttachmentTarget(attachmentEl?.dataset.attachmentId ?? null);
       setConversationTarget(nextConversationTarget);
       setUserTarget(nextUserTarget);
       setHasSelection(nextHasSelection);
@@ -264,6 +274,12 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
                   <span>Editar</span>
                 </ContextMenuItem>
               )}
+              {targetAttachment && (
+                <ContextMenuItem variant="destructive" onClick={() => setAttachmentRemoval({ msgId: targetMessage.msgId, id: targetAttachment.id, name: targetAttachment.name })}>
+                  <FileXIcon size={16} />
+                  <span>Remover anexo</span>
+                </ContextMenuItem>
+              )}
               {can?.delete && (
                 <ContextMenuItem variant="destructive" onClick={(event) => requestDelete(targetMessage.msgId, event.shiftKey)}>
                   <TrashIcon size={16} />
@@ -318,6 +334,18 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
       <ReportDialog target={reportTarget} open={!!reportTarget} onOpenChange={(open) => { if (!open) setReportTarget(null); }} />
       <ReactionParticipantsDialog />
       {confirmDialog}
+      <ConfirmDialog
+        open={!!attachmentRemoval}
+        onOpenChange={(open) => { if (!open) setAttachmentRemoval(null); }}
+        title="Remover anexo"
+        description={`"${attachmentRemoval?.name ?? ''}" sai da mensagem para todo mundo e é apagado. O resto da mensagem continua.`}
+        confirmLabel="Remover"
+        destructive
+        onConfirm={() => {
+          if (attachmentRemoval) void removeChatAttachment(attachmentRemoval.msgId, attachmentRemoval.id);
+          setAttachmentRemoval(null);
+        }}
+      />
     </>
   );
 }

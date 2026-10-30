@@ -7,8 +7,6 @@ import { ChatAttachment } from './ChatAttachment';
 import { placeholderDataUrl } from './placeholderImage';
 import { MEDIA_MAX_WIDTH, mosaicLayout, singleImageBox, splitAttachments } from './mediaLayout';
 import { MediaViewerProvider } from './MediaViewerProvider';
-import { RemoveCorner } from './RemoveCorner';
-import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { useMediaViewer } from './useMediaViewer';
 
 // the old natural-size rule capped height at max-h-80
@@ -62,16 +60,13 @@ function LegacyImageButton({ attachment, onOpen, className }: { attachment: Chat
 /** The pictures of a message as one unit (a lone image at its own shape, or
  * a 2–4 mosaic), followed by its other files. Every box is sized before the
  * pixels arrive, so loading doesn't move the history. */
-export function MessageMedia({ attachments, onRemove }: {
-  attachments: ChatAttachmentData[];
-  /** the author's own message, when it would still have something left: each
-   * attachment can be taken out of it */
-  onRemove?: (attachment: ChatAttachmentData) => void;
-}) {
+export function MessageMedia({ attachments }: { attachments: ChatAttachmentData[] }) {
   const viewer = useMediaViewer();
-  if (!viewer) return <MediaViewerProvider><MessageMedia attachments={attachments} onRemove={onRemove} /></MediaViewerProvider>;
-  const removable = (attachment: ChatAttachmentData, node: ReactNode, key?: string) => (
-    onRemove ? <RemoveCorner key={key} label={`Remover ${attachment.name}`} onRemove={() => onRemove(attachment)}>{node}</RemoveCorner> : node
+  if (!viewer) return <MediaViewerProvider><MessageMedia attachments={attachments} /></MediaViewerProvider>;
+  // data-attachment-id names which one a right-click is on (GlobalContextMenu
+  // offers taking it out); `contents` keeps the child's own box and widths
+  const tagged = (attachment: ChatAttachmentData, node: ReactNode) => (
+    <div key={attachment.id} data-attachment-id={attachment.id} className="contents">{node}</div>
   );
 
   const { visual, files } = splitAttachments(attachments);
@@ -82,7 +77,7 @@ export function MessageMedia({ attachments, onRemove }: {
   if (visual.length === 1) {
     const attachment = visual[0]!;
     const box = singleImageBox(attachment);
-    pictures = removable(attachment, box ? (
+    pictures = tagged(attachment, box ? (
       <button type="button" aria-label={`Abrir ${attachment.name}`} onClick={() => openAt(0)} style={{ width: box.width, aspectRatio: box.aspectRatio }} className={cn(cellButton, 'rounded-lg')}>
         <MediaImage attachment={attachment} className="block size-full object-cover" />
       </button>
@@ -98,7 +93,7 @@ export function MessageMedia({ attachments, onRemove }: {
       >
         {visual.map((attachment, index) => (
           // the cell is the grid item: its corner is the picture's corner
-          <div key={attachment.id} style={{ gridArea: layout.areas[index] }} className="group/cell relative min-h-0 min-w-0">
+          <div key={attachment.id} data-attachment-id={attachment.id} style={{ gridArea: layout.areas[index] }} className="relative min-h-0 min-w-0">
             <button
               type="button"
               aria-label={`Abrir ${attachment.name} (${index + 1} de ${visual.length})`}
@@ -107,15 +102,6 @@ export function MessageMedia({ attachments, onRemove }: {
             >
               <MediaImage attachment={attachment} className="block size-full object-cover" />
             </button>
-            {onRemove && (
-              <CloseButton
-                variant="overlay"
-                size="xs"
-                label={`Remover ${attachment.name}`}
-                onClick={() => onRemove(attachment)}
-                className="absolute top-1.5 right-1.5 z-10 opacity-0 transition-opacity group-hover/cell:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100"
-              />
-            )}
           </div>
         ))}
       </div>
@@ -125,9 +111,7 @@ export function MessageMedia({ attachments, onRemove }: {
   return (
     <div className="mt-1.5 flex flex-col gap-1.5">
       {pictures}
-      {files.map((attachment) => (onRemove
-        ? removable(attachment, <ChatAttachment attachment={attachment} />, attachment.id)
-        : <ChatAttachment key={attachment.id} attachment={attachment} />))}
+      {files.map((attachment) => tagged(attachment, <ChatAttachment attachment={attachment} />))}
     </div>
   );
 }

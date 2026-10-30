@@ -130,7 +130,7 @@ function PendingStatus({ entry, offline, onRetry, onDiscard }: { entry: OutboxEn
 export function MessageRow({ message, showHeader, highlighted, allUsers, mentionLookup, onOpenProfile, onReply, onJumpTo, pending }: MessageRowProps) {
   const {
     state, conversations, editChatMessage, reactToChatMessage, editingMsgId, setEditingMsgId, retryPendingMessage, discardPendingMessage,
-    removeChatAttachment, suppressChatEmbed,
+    suppressChatEmbed,
     deletingMsgIds, messageActionErrors, dismissMessageActionError, pendingReactions, openReactionParticipants,
   } = useRoom();
   const [editText, setEditText] = useState(message.text);
@@ -149,8 +149,8 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
     document.addEventListener('pointerdown', clearOutside);
     return () => document.removeEventListener('pointerdown', clearOutside);
   }, [mobileSelected]);
-  // what the author asked to take out of the message, waiting for confirmation
-  const [removal, setRemoval] = useState<{ kind: 'attachment'; id: string; name: string } | { kind: 'embed'; url: string } | null>(null);
+  // the link card the author asked to take out, waiting for confirmation
+  const [embedRemoval, setEmbedRemoval] = useState<string | null>(null);
   const { requestDelete, confirmDialog } = useMessageDeleteConfirm();
   const isMine = message.id === state.me.userId;
   const conversation = conversations.find((c) => c.id === message.conversationId);
@@ -165,13 +165,9 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
   const replyAuthor = message.replyTo?.authorId ? allUsers.get(message.replyTo.authorId) : undefined;
   const mentionsMe = !isMine && mentionsUser(message.text, mentionLookup, state.me.userId);
   const isInvite = message.kind === 'group_invite';
-  // the author's own sent message: a link card can always go (the link stays);
-  // an attachment only while the message keeps something else, text or
-  // another attachment (taking all it has is deleting it). An admin may take
-  // anyone's attachment out, but not their link cards.
+  // the author's own sent message: a link card can always go (the link stays).
+  // Attachments are taken out from the right-click menu (see messagePermissions).
   const canRemoveParts = isMine && !isInvite && !pending;
-  const canRemoveAttachments = (isMine || state.me.role === 'admin') && !isInvite && !pending
-    && (!!message.text.trim() || (message.attachments?.length ?? 0) > 1);
   const canReport = can.report;
   const isEditing = !pending && !isInvite && editingMsgId === message.msgId;
   const reactions = withPendingReactions(message.reactions, message.msgId, pendingReactions, state.me.userId);
@@ -352,16 +348,13 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
                   onOpenProfile={onOpenProfile}
                   embeds={message.embeds}
                   suppressedEmbeds={message.suppressedEmbeds}
-                  onRemoveEmbed={canRemoveParts ? (url) => setRemoval({ kind: 'embed', url }) : undefined}
+                  onRemoveEmbed={canRemoveParts ? setEmbedRemoval : undefined}
                 />
                 {message.editedAt && <span className="ml-1 select-none text-caption text-text-muted">(editado)</span>}
               </div>
               {message.richEmbeds?.map((embed, index) => <RichEmbedCard key={index} embed={embed} />)}
               {message.attachments?.length ? (
-                <MessageMedia
-                  attachments={message.attachments}
-                  onRemove={canRemoveAttachments ? (attachment) => setRemoval({ kind: 'attachment', id: attachment.id, name: attachment.name }) : undefined}
-                />
+                <MessageMedia attachments={message.attachments} />
               ) : null}
             </>
             )
@@ -449,18 +442,15 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
       </div>}
       {confirmDialog}
       <ConfirmDialog
-        open={!!removal}
-        onOpenChange={(open) => { if (!open) setRemoval(null); }}
-        title={removal?.kind === 'embed' ? 'Remover incorporação' : 'Remover anexo'}
-        description={removal?.kind === 'embed'
-          ? 'O link continua na mensagem, só a prévia dele some para todo mundo.'
-          : `"${removal?.kind === 'attachment' ? removal.name : ''}" sai da mensagem para todo mundo e é apagado. O resto da mensagem continua.`}
+        open={embedRemoval !== null}
+        onOpenChange={(open) => { if (!open) setEmbedRemoval(null); }}
+        title="Remover incorporação"
+        description="O link continua na mensagem, só a prévia dele some para todo mundo."
         confirmLabel="Remover"
         destructive
         onConfirm={() => {
-          if (removal?.kind === 'attachment') void removeChatAttachment(message.msgId, removal.id);
-          else if (removal?.kind === 'embed') void suppressChatEmbed(message.msgId, removal.url);
-          setRemoval(null);
+          if (embedRemoval !== null) void suppressChatEmbed(message.msgId, embedRemoval);
+          setEmbedRemoval(null);
         }}
       />
       {reportOpen && (

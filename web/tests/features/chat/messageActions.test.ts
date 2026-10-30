@@ -13,7 +13,7 @@ describe('messagePermissions', () => {
   });
 
   it('own message: can edit and delete, cannot report', () => {
-    expect(messagePermissions(msg(), { userId: 'autor', role: 'user' })).toEqual({ react: true, reply: true, copy: true, edit: true, delete: true, report: false });
+    expect(messagePermissions(msg(), { userId: 'autor', role: 'user' })).toEqual({ react: true, reply: true, copy: true, edit: true, delete: true, report: false, removeAttachment: true });
   });
 
   it("someone else's message: can report, cannot edit or delete", () => {
@@ -25,7 +25,15 @@ describe('messagePermissions', () => {
   });
 
   it('invitation card: no react, reply, edit or report', () => {
-    expect(messagePermissions(msg({ kind: 'group_invite', text: '' }), { userId: 'autor', role: 'user' })).toEqual({ react: false, reply: false, copy: false, edit: false, delete: true, report: false });
+    expect(messagePermissions(msg({ kind: 'group_invite', text: '' }), { userId: 'autor', role: 'user' })).toEqual({ react: false, reply: false, copy: false, edit: false, delete: true, report: false, removeAttachment: false });
+  });
+
+  it('removing an attachment: only while the message keeps something else, by its author or an admin', () => {
+    const photo = { id: 'f1', name: 'f1.png', mime: 'image/png', size: 1 };
+    expect(messagePermissions(msg({ text: '', attachments: [photo] }), { userId: 'autor', role: 'user' }).removeAttachment).toBe(false);
+    expect(messagePermissions(msg({ text: '', attachments: [photo, { ...photo, id: 'f2' }] }), { userId: 'autor', role: 'user' }).removeAttachment).toBe(true);
+    expect(messagePermissions(msg({ attachments: [photo] }), { userId: 'eu', role: 'user' }).removeAttachment).toBe(false);
+    expect(messagePermissions(msg({ attachments: [photo] }), { userId: 'adm', role: 'admin' }).removeAttachment).toBe(true);
   });
 
   it('deleted author: no one to report', () => {

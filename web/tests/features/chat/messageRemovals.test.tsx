@@ -1,9 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
-import { screen, within } from '@testing-library/react';
+import { act, fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { initialRoomState } from '@/state/roomReducer';
 import { renderWithRoom } from '@tests/fixtures/roomContextFixture';
 import { MessageRow } from '@/features/chat/MessageRow';
+import { GlobalContextMenu } from '@/app/layout/GlobalContextMenu';
 import type { ChatAttachment, ChatMessage } from '@/shared/types/protocol';
 import type { RoomContextValue } from '@/state/RoomContext';
 
@@ -16,13 +17,12 @@ const photo = (id: string): ChatAttachment => ({ id, name: `${id}.png`, mime: 'i
 
 function renderRow(overrides: Partial<ChatMessage>, room: Partial<RoomContextValue> = {}) {
   const message: ChatMessage = { msgId: 7, conversationId: 'c', id: 'me', name: 'Eu', avatar: '', text: '', ts: Date.now(), ...overrides };
-  const removeChatAttachment = vi.fn(async () => {});
   const suppressChatEmbed = vi.fn(async () => {});
   renderWithRoom(
     <MessageRow message={message} showHeader highlighted={false} allUsers={new Map()} mentionLookup={new Map()} onOpenProfile={vi.fn()} onReply={vi.fn()} onJumpTo={vi.fn()} />,
-    { state: me, removeChatAttachment, suppressChatEmbed, ...room },
+    { state: me, suppressChatEmbed, ...room },
   );
-  return { removeChatAttachment, suppressChatEmbed };
+  return { suppressChatEmbed };
 }
 
 describe('removing a link card', () => {
@@ -49,51 +49,105 @@ describe('removing a link card', () => {
 });
 
 describe('removing an attachment', () => {
-  it('with text, the author takes the attachment out after confirming', async () => {
-    const { removeChatAttachment } = renderRow({ text: 'a foto', attachments: [photo('f1')] });
+  // the author's (or an admin's) way out for one attachment is the right-click
+  // menu on that attachment; the row itself draws no remove button
+  function renderInMenu(overrides: Partial<ChatMessage>, state = me) {
+    const message: ChatMessage = { msgId: 7, conversationId: 'c', id: 'me', name: 'Eu', avatar: '', text: '', ts: Date.now(), ...overrides };
+    const removeChatAttachment = vi.fn(async () => {});
+    renderWithRoom(
+      <GlobalContextMenu onOpenProfile={vi.fn()}>
+        <MessageRow message={message} showHeader highlighted={false} allUsers={new Map()} mentionLookup={new Map()} onOpenProfile={vi.fn()} onReply={vi.fn()} onJumpTo={vi.fn()} />
+      </GlobalContextMenu>,
+      { state, removeChatAttachment, activeConversationId: 'c', messagesByConversation: new Map([['c', [message]]]) },
+    );
+    return { removeChatAttachment };
+  }
+  const openMenuOn = async (name: RegExp) => {
+    fireEvent.contextMenu(screen.getByRole('button', { name }));
+    await screen.findByRole('menu');
+  };
+
+  it('no remove button sits on the attachment itself', () => {
+    renderInMenu({ text: 'a foto', attachments: [photo('f1')] });
+    expect(screen.queryByRole('button', { name: 'Remover f1.png' })).not.toBeInTheDocument();
+  });
+
+  it('with text, the author takes the attachment out from its menu after confirming', async () => {
+    const { removeChatAttachment } = renderInMenu({ text: 'a foto', attachments: [photo('f1')] });
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Remover f1.png' }));
+    await openMenuOn(/^Abrir f1\.png/);
+    await user.click(screen.getByRole('menuitem', { name: 'Remover anexo' }));
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveTextContent('"f1.png" sai da mensagem');
+    await user.click(within(dialog).getByRole('button', { name: 'Remover' }));
+    expect(removeChatAttachment).toHaveBeenCalledWith(7, 'f1');
+  });
+
+  it('several attachments: the one right-clicked is the one removed', async () => {
+    const { removeChatAttachment } = renderInMenu({ text: '', attachments: [photo('f1'), photo('f2')] });
+    const user = userEvent.setup();
+    await openMenuOn(/^Abrir f2\.png/);
+    await user.click(screen.getByRole('menuitem', { name: 'Remover anexo' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Remover' }));
+    expect(removeChatAttachment).toHaveBeenCalledWith(7, 'f2');
+  });
+
+  it('a right-click on the text, not an attachment, does not offer it', async () => {
+    renderInMenu({ text: 'a foto', attachments: [photo('f1')] });
+    fireEvent.contextMenu(screen.getByText('a foto'));
+    await screen.findByRole('menu');
+    expect(screen.queryByRole('menuitem', { name: 'Remover anexo' })).not.toBeInTheDocument();
+  });
+
+  it('a lone attachment with no text cannot be removed: that is deleting the message', async () => {
+    renderInMenu({ text: '', attachments: [photo('f1')] });
+    await openMenuOn(/^Abrir f1\.png/);
+    expect(screen.queryByRole('menuitem', { name: 'Remover anexo' })).not.toBeInTheDocument();
+  });
+
+  it("no one removes an attachment from someone else's message", async () => {
+    renderInMenu({ id: 'other', name: 'Outro', text: 'a foto', attachments: [photo('f1')] });
+    await openMenuOn(/^Abrir f1\.png/);
+    expect(screen.queryByRole('menuitem', { name: 'Remover anexo' })).not.toBeInTheDocument();
+  });
+
+  it("an admin removes an attachment from someone else's message", async () => {
+    const admin = { ...me, me: { ...me.me, role: 'admin' as const } };
+    const { removeChatAttachment } = renderInMenu({ id: 'other', name: 'Outro', text: 'a foto', attachments: [photo('f1')] }, admin);
+    const user = userEvent.setup();
+    await openMenuOn(/^Abrir f1\.png/);
+    await user.click(screen.getByRole('menuitem', { name: 'Remover anexo' }));
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Remover' }));
     expect(removeChatAttachment).toHaveBeenCalledWith(7, 'f1');
   });
 
-  it('several attachments without text: each can go, the others stay', () => {
-    renderRow({ text: '', attachments: [photo('f1'), photo('f2')] });
-    expect(screen.getByRole('button', { name: 'Remover f1.png' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Remover f2.png' })).toBeInTheDocument();
-  });
-
-  it('a lone attachment with no text cannot be removed: that is deleting the message', () => {
-    renderRow({ text: '', attachments: [photo('f1')] });
-    expect(screen.queryByRole('button', { name: 'Remover f1.png' })).not.toBeInTheDocument();
-  });
-
-  it("no one removes an attachment from someone else's message", () => {
-    renderRow({ id: 'other', name: 'Outro', text: 'a foto', attachments: [photo('f1')] });
-    expect(screen.queryByRole('button', { name: 'Remover f1.png' })).not.toBeInTheDocument();
-  });
-
-  it("an admin removes an attachment from someone else's message, but not its link cards", async () => {
-    const admin = { ...me, me: { ...me.me, role: 'admin' as const } };
-    const { removeChatAttachment } = renderRow({ id: 'other', name: 'Outro', text: 'a foto https://a.com/x', attachments: [photo('f1')] }, { state: admin });
+  it('on a phone, holding the attachment opens the menu that removes it', async () => {
+    const { removeChatAttachment } = renderInMenu({ text: 'a foto', attachments: [photo('f1')] });
+    const picture = screen.getByRole('button', { name: /^Abrir f1\.png/ });
+    vi.useFakeTimers();
+    fireEvent.touchStart(picture, { touches: [{ clientX: 20, clientY: 20 }] });
+    await act(async () => { vi.advanceTimersByTime(550); });
+    vi.useRealTimers();
     const user = userEvent.setup();
-    expect(screen.queryByRole('button', { name: 'Remover incorporação' })).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Remover f1.png' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Remover anexo' }));
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Remover' }));
     expect(removeChatAttachment).toHaveBeenCalledWith(7, 'f1');
-  });
-
-  it("an admin still cannot take someone else's only attachment: that is deleting the message", () => {
-    const admin = { ...me, me: { ...me.me, role: 'admin' as const } };
-    renderRow({ id: 'other', name: 'Outro', text: '', attachments: [photo('f1')] }, { state: admin });
-    expect(screen.queryByRole('button', { name: 'Remover f1.png' })).not.toBeInTheDocument();
   });
 
   it('cancelling the confirmation removes nothing', async () => {
-    const { removeChatAttachment } = renderRow({ text: 'a foto', attachments: [photo('f1')] });
+    const { removeChatAttachment } = renderInMenu({ text: 'a foto', attachments: [photo('f1')] });
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Remover f1.png' }));
+    await openMenuOn(/^Abrir f1\.png/);
+    await user.click(screen.getByRole('menuitem', { name: 'Remover anexo' }));
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancelar' }));
     expect(removeChatAttachment).not.toHaveBeenCalled();
+  });
+});
+
+describe('removing a link card as an admin', () => {
+  it("an admin cannot remove someone else's link card", () => {
+    const admin = { ...me, me: { ...me.me, role: 'admin' as const } };
+    renderRow({ id: 'other', name: 'Outro', text: 'a foto https://a.com/x', attachments: [photo('f1')] }, { state: admin });
+    expect(screen.queryByRole('button', { name: 'Remover incorporação' })).not.toBeInTheDocument();
   });
 });
