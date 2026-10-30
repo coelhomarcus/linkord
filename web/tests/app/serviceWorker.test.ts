@@ -26,7 +26,11 @@ describe('push service worker', () => {
       waitUntil: (promise) => { pending = promise; },
     });
     await pending;
-    expect(showNotification).toHaveBeenCalledWith('Conversa', expect.objectContaining({ data: { path: '/app/conversations/abc' } }));
+    expect(showNotification).toHaveBeenCalledWith('Conversa', expect.objectContaining({
+      icon: '/icons/icon-192.png',
+      badge: '/icons/notification-badge-96.png',
+      data: { path: '/app/conversations/abc' },
+    }));
   });
 
   it('opens the target after all pages have closed', async () => {

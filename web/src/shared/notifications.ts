@@ -120,6 +120,7 @@ function flush(conversationId: string): void {
     const options = {
       body,
       icon: '/favicon.svg',
+      badge: '/icons/notification-badge-96.png',
       tag: `chat-${conversationId}`,
       data: { path: `/app/conversations/${encodeURIComponent(conversationId)}` },
     };

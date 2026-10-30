@@ -147,7 +147,7 @@ export async function deliverWebPush(event: OutboxEvent): Promise<PushDeliveryRe
   const body = JSON.stringify({ web_push: 8030, notification: {
     title: notice.title, body: notice.body,
     icon: new URL('/icons/icon-192.png', config.APP_URL).href,
-    badge: new URL('/icons/icon-192.png', config.APP_URL).href,
+    badge: new URL('/icons/notification-badge-96.png', config.APP_URL).href,
     navigate: new URL(notice.path, config.APP_URL).href, tag: notice.tag, lang: 'pt-BR',
   } });
   const topic = crypto.createHash('sha256').update(notice.tag).digest('base64url').slice(0, 32);
