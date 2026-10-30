@@ -151,7 +151,8 @@ describe('Amigos — search in Pendentes and Convites (on the server, before pag
 
   it('a search with no results says so (not "nenhuma solicitacao")', async () => {
     at('/app/friends?tab=pending&q=zzz');
-    expect((await screen.findAllByText('Nenhum resultado para esta busca.')).length).toBe(2);
+    // The two sections load independently, so wait for both rather than the first to appear.
+    await waitFor(() => expect(screen.getAllByText('Nenhum resultado para esta busca.')).toHaveLength(2));
   });
 
   it('Convites sends ?q= and shows an empty search state', async () => {
