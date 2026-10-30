@@ -14,6 +14,7 @@ import { Slider } from '@/shared/ui/primitives/slider';
 import { canKickFromTile } from './canKickFromTile';
 import { SHARE_QUALITY_PRESETS } from './shareQualityPresets';
 import type { ShareQualityId } from './shareQualityPresets';
+import { ShareQualityIcon } from './ShareQualityIcon';
 
 type StatsCapableTrack = { getRTCStatsReport?: () => Promise<RTCStatsReport | undefined> };
 
@@ -266,7 +267,7 @@ export function TileMenu({ onOpenProfile }: TileMenuProps) {
               <DropdownMenuSubContent container={fullscreenElement ?? undefined}>
                 <DropdownMenuRadioGroup value={shareQuality} onValueChange={(v) => setShareQuality(v as ShareQualityId)}>
                   {(Object.entries(SHARE_QUALITY_PRESETS) as [ShareQualityId, typeof SHARE_QUALITY_PRESETS[ShareQualityId]][]).map(([id, preset]) => (
-                    <DropdownMenuRadioItem key={id} value={id}>{preset.label}</DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem key={id} value={id}><ShareQualityIcon id={id} /><span>{preset.label}</span></DropdownMenuRadioItem>
                   ))}
                 </DropdownMenuRadioGroup>
               </DropdownMenuSubContent>

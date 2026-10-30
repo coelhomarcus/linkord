@@ -1,4 +1,4 @@
-import { ArrowBendUpLeftIcon, ArrowUpIcon, ImageSquareIcon, PaperclipIcon, PlusIcon, SmileyIcon } from '@phosphor-icons/react';
+import { ArrowBendUpLeftIcon, ArrowsInSimpleIcon, ArrowUpIcon, GifIcon, ImageSquareIcon, PaperclipIcon, PlusIcon, SmileyIcon } from '@phosphor-icons/react';
 import { forwardRef, useEffect, useId, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, ClipboardEvent, KeyboardEvent as ReactKeyboardEvent, SyntheticEvent } from 'react';
 
@@ -359,14 +359,14 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
             >
               <PlusIcon size={20} />
             </DropdownMenuTrigger>
-            <DropdownMenuContent side="top" align="start" className="w-64">
+            <DropdownMenuContent side="top" align="start" className="w-72">
               <DropdownMenuItem onClick={() => fileInputRef.current?.click()}><PaperclipIcon size={16} />Anexar arquivos</DropdownMenuItem>
               <DropdownMenuItem onClick={() => imageInputRef.current?.click()}><ImageSquareIcon size={16} />Enviar imagens</DropdownMenuItem>
-              {gifConfig?.enabled && <DropdownMenuItem className="md:hidden" onClick={() => setMobileGifOpen(true)}>GIF</DropdownMenuItem>}
+              {gifConfig?.enabled && <DropdownMenuItem className="md:hidden" onClick={() => setMobileGifOpen(true)}><GifIcon size={16} />GIF</DropdownMenuItem>}
               <DropdownMenuItem className="md:hidden" onClick={() => setMobileEmojiOpen(true)}><SmileyIcon size={16} />Inserir emoji</DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuCheckboxItem checked={compressImages} onCheckedChange={toggleCompress}>
-                Compactar imagens (WebP)
+                <ArrowsInSimpleIcon size={16} />Compactar imagens (WebP)
               </DropdownMenuCheckboxItem>
             </DropdownMenuContent>
           </DropdownMenu>

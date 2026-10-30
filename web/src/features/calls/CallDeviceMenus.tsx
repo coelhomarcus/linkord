@@ -1,4 +1,4 @@
-import { ArrowsClockwiseIcon, CaretDownIcon, FlipHorizontalIcon, GearIcon, PauseIcon, PlayIcon } from '@phosphor-icons/react';
+import { ArrowsClockwiseIcon, CaretDownIcon, FlipHorizontalIcon, GearIcon, LockKeyOpenIcon, PauseIcon, PlayIcon } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router';
 
 import type { Room } from 'livekit-client';
@@ -11,6 +11,7 @@ import { useRoom } from '@/state/RoomContext';
 import { useParticipantMedia } from './useLiveKitTrack';
 import { SHARE_QUALITY_PRESETS } from './shareQualityPresets';
 import type { ShareQualityId } from './shareQualityPresets';
+import { ShareQualityIcon } from './ShareQualityIcon';
 import { ROUTES } from '@/shared/lib/routes';
 import { cn } from '@/shared/lib/utils';
 
@@ -35,7 +36,7 @@ function DeviceRadioList({ room, kind, heading, label }: { room: Room; kind: Med
     <DropdownMenuGroup>
       <DropdownMenuLabel className={MENU_LABEL}>{heading}</DropdownMenuLabel>
       {status === 'permission-needed' ? (
-        <DropdownMenuItem className="px-2 py-2" onClick={() => void requestPermission()}>Permitir acesso aos dispositivos</DropdownMenuItem>
+        <DropdownMenuItem className="px-2 py-2" onClick={() => void requestPermission()}><LockKeyOpenIcon size={16} />Permitir acesso aos dispositivos</DropdownMenuItem>
       ) : status === 'unsupported' || status === 'permission-denied' ? (
         <p className={MENU_NOTE}>Não foi possível listar dispositivos.</p>
       ) : status === 'no-devices' ? (
@@ -114,7 +115,7 @@ export function ScreenShareQuickMenu({ className }: { className?: string }) {
           <DropdownMenuLabel className={MENU_LABEL}>Qualidade</DropdownMenuLabel>
           <DropdownMenuRadioGroup value={shareQuality} onValueChange={(v) => { if (v) setShareQuality(v as ShareQualityId); }}>
             {(Object.entries(SHARE_QUALITY_PRESETS) as [ShareQualityId, typeof SHARE_QUALITY_PRESETS[ShareQualityId]][]).map(([id, preset]) => (
-              <DropdownMenuOptionItem key={id} value={id}>{preset.label}</DropdownMenuOptionItem>
+              <DropdownMenuOptionItem key={id} value={id}><span className="flex items-center gap-1.5"><ShareQualityIcon id={id} />{preset.label}</span></DropdownMenuOptionItem>
             ))}
           </DropdownMenuRadioGroup>
         </DropdownMenuGroup>

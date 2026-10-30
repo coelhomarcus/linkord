@@ -116,6 +116,18 @@ describe('FriendsPage', () => {
     expect(await screen.findByText('Adicione amigos para começar uma conversa')).toBeInTheDocument();
   });
 
+  it("each action in a friend's menu has an icon beside its name", async () => {
+    const user = userEvent.setup();
+    mocked.fetchFriends.mockResolvedValue(page(ana));
+    renderSocial(<FriendsPage onOpenProfile={vi.fn()} />, { room: { state: me } });
+
+    await screen.findByText('Ana');
+    await user.click(screen.getByRole('button', { name: 'Mais ações para Ana' }));
+    const items = await screen.findAllByRole('menuitem');
+    expect(items.map((item) => item.textContent)).toEqual(['Ver perfil', 'Remover amizade', 'Bloquear']);
+    for (const item of items) expect(item.querySelector('svg')).not.toBeNull();
+  });
+
   it('blocking explains its effect before confirming', async () => {
     const user = userEvent.setup();
     mocked.fetchFriends.mockResolvedValue(page(ana));

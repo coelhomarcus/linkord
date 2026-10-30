@@ -1,4 +1,4 @@
-import { ChatCircleIcon, CircleNotchIcon, DotsThreeIcon, PencilSimpleIcon, ProhibitIcon, UserCheckIcon, UserPlusIcon } from '@phosphor-icons/react';
+import { ChatCircleIcon, CircleNotchIcon, DotsThreeIcon, FlagIcon, PencilSimpleIcon, ProhibitIcon, UserCheckIcon, UserMinusIcon, UserPlusIcon } from '@phosphor-icons/react';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
@@ -90,7 +90,7 @@ export function ProfileActions({ userId, username, displayName, onNavigate, onRe
       </DropdownMenu>
     );
   }
-  const reportItem = onReport && <DropdownMenuItem variant="destructive" onClick={onReport}>Denunciar</DropdownMenuItem>;
+  const reportItem = onReport && <DropdownMenuItem variant="destructive" onClick={onReport}><FlagIcon size={16} />Denunciar</DropdownMenuItem>;
 
   let actions;
   switch (relation) {
@@ -108,12 +108,12 @@ export function ProfileActions({ userId, username, displayName, onNavigate, onRe
               <UserCheckIcon size={16} />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-max min-w-0">
-              <DropdownMenuItem variant="destructive" onClick={() => setConfirm({ kind: 'remove', userId, displayName })}>Remover amizade</DropdownMenuItem>
+              <DropdownMenuItem variant="destructive" onClick={() => setConfirm({ kind: 'remove', userId, displayName })}><UserMinusIcon size={16} />Remover amizade</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           {moreMenu(
             <>
-              <DropdownMenuItem variant="destructive" onClick={() => setConfirm({ kind: 'block', userId, displayName })}>Bloquear</DropdownMenuItem>
+              <DropdownMenuItem variant="destructive" onClick={() => setConfirm({ kind: 'block', userId, displayName })}><ProhibitIcon size={16} />Bloquear</DropdownMenuItem>
               {reportItem}
             </>,
           )}

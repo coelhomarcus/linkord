@@ -1,4 +1,4 @@
-import { ChatCircleIcon, CheckIcon, CopyIcon, DotsThreeIcon, UserIcon, UserPlusIcon } from '@phosphor-icons/react';
+import { ChatCircleIcon, CheckIcon, CopyIcon, DotsThreeIcon, ProhibitIcon, UserIcon, UserMinusIcon, UserPlusIcon } from '@phosphor-icons/react';
 import { useCallback, useState } from 'react';
 import { useNavigate } from 'react-router';
 
@@ -147,12 +147,12 @@ export function FriendsList({ view, query, onQueryChange, onOpenProfile }: {
                         <DotsThreeIcon size={16} />
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-max min-w-0">
-                        <DropdownMenuItem onClick={() => onOpenProfile(user.id)}>Ver perfil</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onOpenProfile(user.id)}><UserIcon size={16} />Ver perfil</DropdownMenuItem>
                         <DropdownMenuItem variant="destructive" onClick={() => setConfirm({ kind: 'remove', userId: user.id, displayName: user.displayName })}>
-                          Remover amizade
+                          <UserMinusIcon size={16} />Remover amizade
                         </DropdownMenuItem>
                         <DropdownMenuItem variant="destructive" onClick={() => setConfirm({ kind: 'block', userId: user.id, displayName: user.displayName })}>
-                          Bloquear
+                          <ProhibitIcon size={16} />Bloquear
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>

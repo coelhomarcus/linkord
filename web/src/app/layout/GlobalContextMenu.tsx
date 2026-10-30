@@ -1,4 +1,4 @@
-import { ArrowBendUpLeftIcon, CopyIcon, DownloadSimpleIcon, FileXIcon, FlagIcon, LinkBreakIcon, PencilSimpleIcon, PushPinIcon, PushPinSlashIcon, TrashIcon, UsersIcon, XIcon } from '@phosphor-icons/react';
+import { ArrowBendUpLeftIcon, CopyIcon, DownloadSimpleIcon, FileXIcon, FlagIcon, LinkBreakIcon, PencilSimpleIcon, PushPinIcon, PushPinSlashIcon, TrashIcon, UserIcon, UsersIcon, XIcon } from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { ContextMenuRootActions } from '@base-ui/react/context-menu';
@@ -323,7 +323,7 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
           {showUserBlock && userTarget && (
             <>
               <ContextMenuItem onClick={() => onOpenProfile(userTarget)}>
-                <UsersIcon size={16} />
+                <UserIcon size={16} />
                 <span>Ver perfil</span>
               </ContextMenuItem>
               {showConversationBlock && <ContextMenuSeparator />}
