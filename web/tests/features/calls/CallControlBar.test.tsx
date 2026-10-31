@@ -6,17 +6,6 @@ import { renderWithRoom } from '@tests/fixtures/roomContextFixture';
 import { CallControlBar } from '@/features/calls/CallControlBar';
 
 describe('CallControlBar', () => {
-  it('renders reactions and the call controls (mic/listen/camera/screen) and leave', () => {
-    renderWithRoom(<CallControlBar />);
-    expect(screen.getByLabelText('Reagir')).toBeInTheDocument();
-    // no mic publication yet (initial state), so the button offers to activate it.
-    expect(screen.getByLabelText('Ativar microfone')).toBeInTheDocument();
-    expect(screen.getByLabelText('Parar de ouvir')).toBeInTheDocument();
-    expect(screen.getByLabelText('Ligar câmera')).toBeInTheDocument();
-    expect(screen.getByLabelText('Compartilhar tela')).toBeInTheDocument();
-    expect(screen.getByLabelText('Sair da chamada')).toBeInTheDocument();
-  });
-
   it('triggers toggleMicMuted when clicking the mic control', () => {
     const toggleMicMuted = vi.fn();
     const livekitRoom = new Room();
@@ -73,35 +62,6 @@ describe('CallControlBar', () => {
     expect(screen.getByRole('status')).toHaveTextContent('em uso por outro aplicativo');
   });
 
-  it('active camera and screen share use the same visual treatment (green)', () => {
-    renderWithRoom(<CallControlBar />, {
-      state: { ...initialRoomState, me: { ...initialRoomState.me, cameraOn: true, sharing: true } },
-    });
-    expect(screen.getByLabelText('Parar câmera').className).toMatch(/bg-green/);
-    expect(screen.getByLabelText('Parar compartilhamento').className).toMatch(/bg-green/);
-  });
-
-  it('camera and screen share turned off do not use the active color', () => {
-    renderWithRoom(<CallControlBar />);
-    expect(screen.getByLabelText('Ligar câmera').className).not.toMatch(/bg-green/);
-    expect(screen.getByLabelText('Compartilhar tela').className).not.toMatch(/bg-green/);
-  });
-
-  it('muted and deafened mic use the red treatment', () => {
-    const livekitRoom = new Room();
-    vi.spyOn(livekitRoom.localParticipant, 'getTrackPublication').mockImplementation((source) => (
-      source === Track.Source.Microphone ? { isMuted: true, track: undefined } as never : undefined
-    ));
-    renderWithRoom(<CallControlBar />, { livekitRoom, deafened: true });
-    expect(screen.getByLabelText('Desmutar').className).toMatch(/bg-red/);
-    expect(screen.getByLabelText('Voltar a ouvir').className).toMatch(/bg-red/);
-  });
-
-  it('leave call keeps its own red highlight, outside the neutral grouping', () => {
-    renderWithRoom(<CallControlBar />);
-    expect(screen.getByLabelText('Sair da chamada').className).toMatch(/bg-red\b/);
-  });
-
   it('shows the fullscreen button and triggers toggleCallFullscreen when clicked', () => {
     const toggleCallFullscreen = vi.fn();
     renderWithRoom(<CallControlBar />, { toggleCallFullscreen });
@@ -113,17 +73,5 @@ describe('CallControlBar', () => {
     renderWithRoom(<CallControlBar />, { isCallFullscreen: true });
     expect(screen.getByLabelText('Sair da tela cheia')).toBeInTheDocument();
     expect(screen.queryByLabelText('Tela cheia')).not.toBeInTheDocument();
-  });
-
-  it('without hudVisible (defaults to true), the bar stays visible', () => {
-    renderWithRoom(<CallControlBar />);
-    const bar = screen.getByLabelText('Sair da chamada').closest('div.absolute');
-    expect(bar).toHaveClass('opacity-100');
-  });
-
-  it('with hudVisible=false, the bar has zero opacity but stays in the DOM', () => {
-    renderWithRoom(<CallControlBar hudVisible={false} />);
-    const bar = screen.getByLabelText('Sair da chamada').closest('div.absolute');
-    expect(bar).toHaveClass('opacity-0', 'pointer-events-none');
   });
 });

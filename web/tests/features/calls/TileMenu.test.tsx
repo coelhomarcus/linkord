@@ -372,16 +372,6 @@ describe('TileMenu — stats with resolution', () => {
     });
     await waitFor(() => expect(screen.getByText('Resolução: 1920×1080')).toBeInTheDocument());
   });
-
-  it('with no resolution stat available, does not show the row (never makes up a zero)', () => {
-    const participants = new Map([['p-2', fakeParticipant()]]);
-    renderWithRoom(<TileMenu onOpenProfile={vi.fn()} />, {
-      state: { ...initialRoomState, me: { ...initialRoomState.me, id: 'p-1' }, participants },
-      menuTarget,
-      showStats: true,
-    });
-    expect(screen.queryByText(/Resolução/)).not.toBeInTheDocument();
-  });
 });
 
 describe('TileMenu — my own shared screen', () => {

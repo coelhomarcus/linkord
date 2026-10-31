@@ -43,6 +43,7 @@ import { ContentLocationProvider } from '@/shared/lib/contentLocation';
 import { createAppRouter } from '@/app/appRouter';
 import { useConversationRouteSync } from '@/app/useConversationRouteSync';
 import { clearViewportVars, syncViewportVars } from '@/app/viewportVars';
+import { chatViewFor } from '@/app/chatView';
 import { rightPanelsVisible } from '@/app/rightPanels';
 import { SidebarInset, SidebarProvider } from '@/shared/ui/motion/sidebar';
 import { loadSidebarCollapsed, saveSidebarCollapsed } from '@/shared/hooks/useSidebarCollapsedPreference';
@@ -172,11 +173,11 @@ function Shell() {
     if (joiningThisCall) void leaveCall();
     navigate(stageConversationId ? ROUTES.conversation(stageConversationId) : ROUTES.conversations, { replace: true });
   }
-  // what the user is looking at, not the last view picked: the stage, the chat,
-  // or another page with the conversation still active behind it — only the
-  // chat on screen makes a message arriving there read
+  // what the user is looking at, not the last view picked. The call's side
+  // chat is the conversation on screen: a message arriving then was seen.
   const visibleConversationId = conversationIdFromPath(contentLocation.pathname);
-  const chatView = showStage ? 'call' : visibleConversationId && visibleConversationId === activeConversationId ? 'chat' : 'away';
+  const callChatShown = callChatOpen && !!activeCallConversationId && conversations.some((conversation) => conversation.id === activeCallConversationId);
+  const chatView = chatViewFor({ stageShown: showStage, callChatShown, visibleConversationId, activeConversationId });
   useEffect(() => { notifyActiveView(chatView); }, [chatView, notifyActiveView]);
 
   const activeConversation = conversations.find((conversation) => conversation.id === (visibleConversationId ?? stageConversationId ?? activeConversationId));

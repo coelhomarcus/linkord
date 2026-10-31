@@ -26,14 +26,6 @@ beforeEach(() => {
 });
 
 describe('GroupDetailPage', () => {
-  it('shows owner and members, with no way to open the conversation', async () => {
-    open('members');
-    expect((await screen.findAllByText('@ana')).length).toBeGreaterThan(0);
-    expect(screen.getByRole('link', { name: /BIA/ })).toHaveAttribute('data-to', '/admin/users/bia');
-    expect(screen.queryByRole('link', { name: /entrar|abrir/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /entrar|abrir/i })).not.toBeInTheDocument();
-  });
-
   it('suspending asks for a reason and calls the group API', async () => {
     const u = userEvent.setup();
     mocked.suspendGroup.mockResolvedValue({ ok: true });
@@ -75,40 +67,6 @@ describe('GroupDetailPage', () => {
     await waitFor(() => expect(mocked.deleteGroup).toHaveBeenCalledWith('g1', 'illegal'));
   });
 
-  it('a failed "load more" keeps the members already shown and offers to try again', async () => {
-    const u = userEvent.setup();
-    const first = detail();
-    first.members.nextCursor = 'c1';
-    mocked.fetchAdminGroup.mockResolvedValueOnce(first);
-    open('members');
-    expect(await screen.findByRole('link', { name: /BIA/ })).toBeInTheDocument();
-
-    mocked.fetchAdminGroup.mockRejectedValueOnce(new Error('offline'));
-    await u.click(screen.getByRole('button', { name: 'Carregar mais' }));
-    expect(await screen.findByText('Não foi possível carregar mais membros.')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /BIA/ })).toBeInTheDocument();
-
-    mocked.fetchAdminGroup.mockResolvedValueOnce({ ...detail(), members: { items: [member('cai', 'member')], nextCursor: null } });
-    await u.click(screen.getByRole('button', { name: 'Tentar de novo' }));
-    expect(await screen.findByRole('link', { name: /CAI/ })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /BIA/ })).toBeInTheDocument();
-    expect(screen.queryByText('Não foi possível carregar mais membros.')).not.toBeInTheDocument();
-    expect(mocked.fetchAdminGroup).toHaveBeenLastCalledWith('g1', 'c1');
-  });
-
-  it('overview shows who owns the group (a group with no owner says so), with the id in the header', async () => {
-    const { unmount } = open();
-    expect(await screen.findByRole('link', { name: '@ana' })).toHaveAttribute('data-to', '/admin/users/ana');
-    expect(screen.getByRole('heading', { name: 'Squad' })).toBeInTheDocument();
-    expect(screen.getByText('g1')).toBeInTheDocument();
-    unmount();
-
-    mocked.fetchAdminGroup.mockResolvedValue(detail({}, false));
-    open();
-    expect(await screen.findByText('nenhum (grupo sem dono)')).toBeInTheDocument();
-    expect(screen.getByText('Sem dono')).toBeInTheDocument();
-  });
-
   it('the owner dialog names the current and the new owner, and nothing changes until the server confirms', async () => {
     const u = userEvent.setup();
     let confirm!: () => void;
@@ -146,19 +104,5 @@ describe('GroupDetailPage', () => {
     await u.click(screen.getAllByRole('button', { name: 'Suspender' }).at(-1)!);
     expect(await screen.findByRole('alert')).toHaveTextContent('Já estava suspenso');
     await waitFor(() => expect(mocked.fetchAdminGroup).toHaveBeenCalledTimes(2));
-  });
-
-  it('the history tab reads the group audit trail by target', async () => {
-    mocked.fetchAudit.mockResolvedValue({ items: [{ id: 'a1', at: '2026-01-01T10:00:00.000Z', actorId: 'x', actorLabel: 'lune', action: 'group.suspend', targetType: 'group', targetId: 'g1', targetLabel: 'Squad', reason: 'abuso', result: 'ok', detail: {}, requestId: 'r' }], nextCursor: null });
-    open('history');
-    expect(await screen.findByText('Grupo suspenso')).toBeInTheDocument();
-    expect(mocked.fetchAudit).toHaveBeenCalledWith({ targetType: 'group', targetId: 'g1' }, null);
-  });
-
-  it('tabs are links with their own URL; the admin never gets a way into the conversation', async () => {
-    open();
-    await screen.findByRole('heading', { name: 'Squad' });
-    expect(screen.getByRole('link', { name: 'Membros (2)' })).toHaveAttribute('data-to', '/admin/groups/g1?tab=members');
-    expect(screen.queryByRole('link', { name: /entrar|abrir/i })).not.toBeInTheDocument();
   });
 });

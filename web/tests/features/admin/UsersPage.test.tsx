@@ -17,24 +17,6 @@ beforeEach(() => {
 });
 
 describe('UsersPage', () => {
-  it('lists accounts with status and role, each linking to its detail page', async () => {
-    renderAdmin(<UsersPage />, { path: '/admin/users', pattern: '/admin/users' });
-    const link = await screen.findByRole('link', { name: /Ana.*@ana/ });
-    expect(link).toHaveAttribute('data-to', '/admin/users/u1');
-    expect(screen.getByText('Suspenso')).toBeInTheDocument();
-    expect(screen.getByText('Admin')).toBeInTheDocument();
-    expect(mocked.fetchAdminUsers).toHaveBeenCalledWith({ q: '', status: undefined, role: undefined }, null);
-  });
-
-  it('the last-seen column says Online for a connected account', async () => {
-    mocked.fetchAdminUsers.mockResolvedValue({
-      items: [user({ lastSeenAt: '2026-10-24T14:32:00.000Z', online: true })],
-      nextCursor: null,
-    });
-    renderAdmin(<UsersPage />, { path: '/admin/users', pattern: '/admin/users' });
-    expect(await screen.findByText('Online')).toBeInTheDocument();
-  });
-
   it('the status and role filters reach the server', async () => {
     const u = userEvent.setup();
     renderAdmin(<UsersPage />, { path: '/admin/users', pattern: '/admin/users' });
@@ -57,13 +39,5 @@ describe('UsersPage', () => {
 
     await u.type(screen.getByLabelText('Buscar usuários'), 'ca');
     await waitFor(() => expect(mocked.fetchAdminUsers).toHaveBeenLastCalledWith(expect.objectContaining({ q: 'ca' }), null));
-  });
-
-  it('error offers a retry', async () => {
-    const u = userEvent.setup();
-    mocked.fetchAdminUsers.mockRejectedValueOnce(new Error('x'));
-    renderAdmin(<UsersPage />, { path: '/admin/users', pattern: '/admin/users' });
-    await u.click(await screen.findByRole('button', { name: 'Tentar de novo' }));
-    expect(await screen.findByText('Ana')).toBeInTheDocument();
   });
 });

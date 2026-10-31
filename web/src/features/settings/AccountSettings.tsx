@@ -2,21 +2,21 @@ import { ShieldCheckIcon, SignOutIcon } from '@phosphor-icons/react';
 
 import { useAuth } from '@/state/AuthContext';
 import { useRoom } from '@/state/RoomContext';
-import { Button, buttonVariants } from '@/shared/ui/primitives/button';
+import { Button } from '@/shared/ui/primitives/button';
 import { ROUTES } from '@/shared/lib/routes';
-import { cn } from '@/shared/lib/utils';
 import { EmailSettings } from './EmailSettings';
+import { formatStorage } from './formatStorage';
 import { SettingsRow, SettingsSection, SettingsSections } from './SettingsLayout';
 import { AppLink } from '@/shared/ui/app-link';
 
-function formatGB(bytes: number): string {
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
-}
+// any usage at all stays visible as a sliver instead of an empty track
+const MIN_VISIBLE_PERCENT = 2;
 
 export function AccountSettings() {
   const { state, storageUsage, activeCallConversationId } = useRoom();
   const { logout, user } = useAuth();
   const usedPercent = storageUsage.maxBytes ? Math.min(100, (storageUsage.totalBytes / storageUsage.maxBytes) * 100) : 0;
+  const barPercent = storageUsage.totalBytes > 0 ? Math.max(MIN_VISIBLE_PERCENT, usedPercent) : 0;
   const inCall = activeCallConversationId !== null;
 
   return (
@@ -30,9 +30,11 @@ export function AccountSettings() {
             </span>
           )}
         </SettingsRow>
-        <SettingsRow label="Nome de exibição" description="É o que aparece para todo mundo.">
+        <SettingsRow
+          label="Nome de exibição"
+          description={<>É o que aparece para todo mundo. Altere em <AppLink to={ROUTES.settingsTab('profile')} className="text-text-secondary underline underline-offset-2 hover:text-text-primary">Perfil</AppLink>.</>}
+        >
           <span className="break-words text-body text-text-primary">{state.me.displayName}</span>
-          <AppLink to={ROUTES.settingsTab('profile')} className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }))}>Editar perfil</AppLink>
         </SettingsRow>
       </SettingsSection>
 
@@ -49,10 +51,10 @@ export function AccountSettings() {
           aria-valuenow={Math.round(usedPercent)}
           className="h-2 w-full overflow-hidden rounded-full bg-bg-hover"
         >
-          <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${usedPercent}%` }} />
+          <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${barPercent}%` }} />
         </div>
         <p className="text-label text-text-muted">
-          {formatGB(storageUsage.totalBytes)} de {formatGB(storageUsage.maxBytes)} da sua cota usados, {storageUsage.totalFiles} arquivo{storageUsage.totalFiles === 1 ? '' : 's'} enviado{storageUsage.totalFiles === 1 ? '' : 's'}.
+          {formatStorage(storageUsage.totalBytes)} de {formatStorage(storageUsage.maxBytes)} usados · {storageUsage.totalFiles} arquivo{storageUsage.totalFiles === 1 ? '' : 's'}
         </p>
       </SettingsSection>
 
