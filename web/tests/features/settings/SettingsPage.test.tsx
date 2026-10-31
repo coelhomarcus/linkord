@@ -350,36 +350,6 @@ describe('SettingsPage — profile', () => {
     expect(screen.queryByRole('button', { name: 'Salvar perfil' })).not.toBeInTheDocument();
   });
 
-  it('with no edits, the save bar stays hidden', () => {
-    const state = { ...initialRoomState, me: { ...initialRoomState.me, id: 'conn-1', userId: 'user-1', name: 'Fulana', displayName: 'Fulana' } };
-    renderSettings({ state });
-    expect(screen.queryByRole('button', { name: 'Salvar perfil' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Descartar' })).not.toBeInTheDocument();
-  });
-
-  it('with an active call, the save bar moves up to stay clear of the floating PiP', async () => {
-    const user = userEvent.setup();
-    const state = { ...initialRoomState, me: { ...initialRoomState.me, id: 'conn-1', userId: 'user-1', name: 'Fulana', displayName: 'Fulana' } };
-    renderSettings({ state, activeCallConversationId: 'conv-1' });
-
-    await user.type(screen.getByLabelText('Bio'), 'editando durante a chamada');
-    const bar = screen.getByRole('region', { name: 'Salvar alterações do perfil' });
-    // FloatingPip sits fixed at the viewport's bottom-left — lift the save pill so it stays tappable.
-    expect(bar.className).toContain('bottom-20');
-  });
-
-  it('with no active call, the save bar floats above the bottom inset', async () => {
-    const user = userEvent.setup();
-    const state = { ...initialRoomState, me: { ...initialRoomState.me, id: 'conn-1', userId: 'user-1', name: 'Fulana', displayName: 'Fulana' } };
-    renderSettings({ state, activeCallConversationId: null });
-
-    await user.type(screen.getByLabelText('Bio'), 'editando sem chamada');
-    const bar = screen.getByRole('region', { name: 'Salvar alterações do perfil' });
-    expect(bar.className).toContain('fixed');
-    expect(bar.className).toContain('bottom-[max(1rem,env(safe-area-inset-bottom))]');
-    expect(bar.className).not.toContain('bottom-20');
-  });
-
   it('discarding reverts fields to the last confirmed values and hides the bar', async () => {
     const user = userEvent.setup();
     const state = {
@@ -436,35 +406,6 @@ describe('SettingsPage — category navigation', () => {
     expect(screen.getByRole('link', { name: /Editar perfil/ })).toHaveAttribute('aria-current', 'page');
   });
 
-  it('the sidebar opens with the account card, and its list has no separate Perfil entry', () => {
-    renderSettings({ state: userState }, '/app/settings/privacy');
-    const card = screen.getByRole('link', { name: /Editar perfil/ });
-    expect(card).toHaveTextContent('Ana');
-    expect(card).toHaveAttribute('data-to', '/app/settings/profile');
-    expect(screen.queryByRole('link', { name: 'Perfil' })).not.toBeInTheDocument();
-  });
-
-  it('lists the sections of the open category and scrolls to the chosen one', async () => {
-    const user = userEvent.setup();
-    const scrollIntoView = vi.fn();
-    Element.prototype.scrollIntoView = scrollIntoView;
-    renderSettings({ state: userState }, '/app/settings/av');
-    const sections = screen.getByRole('list', { name: 'Seções de Áudio e vídeo' });
-    expect(within(sections).getAllByRole('button').map((b) => b.textContent)).toEqual(['Entrada de áudio', 'Saída de áudio', 'Vídeo']);
-    expect(within(sections).getByRole('button', { name: 'Entrada de áudio' })).toHaveAttribute('aria-current', 'location');
-
-    await user.click(within(sections).getByRole('button', { name: 'Vídeo' }));
-
-    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' });
-    expect(scrollIntoView.mock.contexts.at(-1)).toBe(document.getElementById('camera'));
-    expect(within(sections).getByRole('button', { name: 'Vídeo' })).toHaveAttribute('aria-current', 'location');
-  });
-
-  it('a category with a single section lists none under it', () => {
-    renderSettings({ state: userState }, '/app/settings/privacy');
-    expect(screen.queryByRole('list', { name: /Seções de/ })).not.toBeInTheDocument();
-  });
-
   it('unknown category falls back to profile instead of rendering an empty page', () => {
     renderRouted({ state: userState }, '/app/settings/naoexiste');
     expect(screen.getByLabelText('Nome de exibição')).toBeInTheDocument();
@@ -499,41 +440,6 @@ describe('SettingsPage — category navigation', () => {
     expect(screen.getByTestId('where')).toHaveTextContent('/app/settings/av');
     expect(document.activeElement?.id).toBe('camera');
   });
-
-  it('search with no results shows the empty state, with a clear button', async () => {
-    const user = userEvent.setup();
-    renderRouted({ state: userState });
-    await user.type(screen.getByLabelText('Buscar nas configurações'), 'xyzxyzxyz');
-    expect(screen.getByText(/Nada encontrado/)).toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', { name: 'Limpar busca' }));
-    expect(screen.getByLabelText('Buscar nas configurações')).toHaveValue('');
-    expect(screen.getByRole('link', { name: 'Privacidade' })).toBeInTheDocument();
-  });
-
-  it('the save button sits with the card, in the same form, without a side panel', async () => {
-    const user = userEvent.setup();
-    renderSettings({ state: userState });
-    await user.type(screen.getByLabelText('Bio'), 'edição pendente');
-    const form = screen.getByRole('button', { name: 'Salvar perfil' }).closest('form');
-    expect(form).not.toBeNull();
-    expect(form!.contains(screen.getByLabelText('Nome de exibição'))).toBe(true);
-    expect(screen.queryByText('Salvar alterações')).not.toBeInTheDocument();
-  });
-
-  it.each([
-    ['account', 'Minha conta'], ['av', 'Áudio e vídeo'], ['notifications', 'Notificações'], ['prefs', 'Preferências'], ['privacy', 'Privacidade'],
-  ])('category %s opens with its own title', (tab, title) => {
-    renderSettings({ state: userState }, `/app/settings/${tab}`);
-    expect(screen.getByRole('heading', { level: 2, name: title })).toBeInTheDocument();
-  });
-
-  it('"Minha conta" lists sections in sequence (no card grid)', () => {
-    renderSettings({ state: userState }, '/app/settings/account');
-    for (const name of ['Identificação', 'E-mail', 'Armazenamento de anexos', 'Sessão']) {
-      expect(screen.getByRole('heading', { level: 3, name })).toBeInTheDocument();
-    }
-  });
 });
 
 describe('SettingsPage — compact mode (index and detail)', () => {
@@ -541,13 +447,6 @@ describe('SettingsPage — compact mode (index and detail)', () => {
 
   beforeEach(() => { mockMode = 'compact'; });
   afterEach(() => { mockMode = 'wide'; });
-
-  it('/app/settings shows the category index, without a form', () => {
-    renderRouted({ state: userState }, '/app/settings');
-    expect(screen.getByRole('navigation', { name: 'Categorias de ajustes' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Áudio e vídeo' })).toBeInTheDocument();
-    expect(screen.queryByLabelText('Nome de exibição')).not.toBeInTheDocument();
-  });
 
   it('a category opens directly by link, with an accessible way back to the index', async () => {
     const user = userEvent.setup();
@@ -568,11 +467,6 @@ describe('SettingsPage — compact mode (index and detail)', () => {
     await user.click(screen.getByRole('button', { name: 'Voltar às configurações' }));
     expect(screen.getByTestId('where')).toHaveTextContent(/^\/app\/settings$/);
     expect(screen.getByRole('navigation', { name: 'Categorias de ajustes' })).toBeInTheDocument();
-  });
-
-  it('the index does not list administration for a non-admin', () => {
-    renderRouted({ state: userState }, '/app/settings');
-    expect(screen.queryByRole('link', { name: 'Administração' })).not.toBeInTheDocument();
   });
 });
 

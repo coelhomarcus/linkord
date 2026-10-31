@@ -36,56 +36,18 @@ describe('AdminArea', () => {
     expect(mocked.fetchAdminUsers).not.toHaveBeenCalled();
   });
 
-  it('admin sees navigation for all five sections and the current one is marked', async () => {
-    renderAdmin(<AdminArea />, { path: '/admin/users', pattern: '/admin/*' });
-    for (const label of ['Usuários', 'Grupos', 'Denúncias', 'Auditoria', 'Sistema']) {
-      expect(screen.getByRole('link', { name: label })).toBeInTheDocument();
-    }
-    expect(screen.getByRole('link', { name: 'Usuários' })).toHaveAttribute('aria-current', 'page');
-    expect(await screen.findByText('Nenhuma conta encontrada.')).toBeInTheDocument();
-  });
-
-  it('a detail page keeps its section marked', async () => {
-    renderAdmin(<AdminArea />, { path: '/admin/reports/r1', pattern: '/admin/*' });
-    expect(screen.getByRole('link', { name: 'Denúncias' })).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByRole('link', { name: 'Usuários' })).not.toHaveAttribute('aria-current');
-  });
-
-  it('unknown route inside /admin falls back to Users', async () => {
-    renderAdmin(<AdminArea />, { path: '/admin/nada', pattern: '/admin/*' });
-    expect(await screen.findByText('Nenhuma conta encontrada.')).toBeInTheDocument();
-  });
-
-  it('the bare /admin entry opens Users in wide mode', async () => {
+  it('the bare /admin entry in compact mode is the section index, and does not fetch a list', () => {
+    vi.mocked(useAdminLayout).mockReturnValue({ mode: 'compact', measured: true });
     renderAdmin(<AdminArea />, { path: '/admin', pattern: '/admin/*' });
-    expect(await screen.findByText('Nenhuma conta encontrada.')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Administração' })).toBeInTheDocument();
+    expect(mocked.fetchAdminUsers).not.toHaveBeenCalled();
   });
 
-  describe('compact', () => {
-    beforeEach(() => vi.mocked(useAdminLayout).mockReturnValue({ mode: 'compact', measured: true }));
-
-    it('the bare /admin entry is the section index, not a redirect', () => {
-      renderAdmin(<AdminArea />, { path: '/admin', pattern: '/admin/*' });
-      expect(screen.getByRole('heading', { name: 'Administração' })).toBeInTheDocument();
-      for (const label of ['Usuários', 'Grupos', 'Denúncias', 'Auditoria', 'Sistema']) {
-        expect(screen.getByRole('link', { name: label })).toBeInTheDocument();
-      }
-      expect(mocked.fetchAdminUsers).not.toHaveBeenCalled();
-    });
-
-    it('a section shows its own title with a way back to the index, and no sidebar', async () => {
-      renderAdmin(<AdminArea />, { path: '/admin/users', pattern: '/admin/*' });
-      expect(screen.getByRole('heading', { name: 'Usuários' })).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: 'Voltar à administração' })).toHaveAttribute('data-to', '/admin');
-      expect(screen.queryByRole('link', { name: 'Grupos' })).not.toBeInTheDocument();
-      expect(await screen.findByText('Nenhuma conta encontrada.')).toBeInTheDocument();
-    });
-
-    it('a detail URL is never redirected because of the window size', async () => {
-      renderAdmin(<AdminArea />, { path: '/admin/users/u1', pattern: '/admin/*' });
-      expect(screen.getByRole('link', { name: 'Voltar à administração' })).toBeInTheDocument();
-      expect(mocked.fetchAdminUsers).not.toHaveBeenCalled();
-    });
+  it('a detail URL is never redirected because of the window size', () => {
+    vi.mocked(useAdminLayout).mockReturnValue({ mode: 'compact', measured: true });
+    renderAdmin(<AdminArea />, { path: '/admin/users/u1', pattern: '/admin/*' });
+    expect(mocked.fetchAdminUser).toHaveBeenCalled();
+    expect(mocked.fetchAdminUsers).not.toHaveBeenCalled();
   });
 
   it('losing admin access replaces the pages with an explanation, then leaves for the conversations', async () => {

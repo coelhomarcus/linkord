@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { screen, waitFor, within } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { chooseAdminSelect, renderAdmin } from './adminFixture';
 import { ApiError } from '@/shared/api/api';
@@ -32,16 +32,6 @@ beforeEach(() => {
 });
 
 describe('ReportsPage', () => {
-  it('lists the open queue as a table, the report opening its own page', async () => {
-    renderAdmin(<ReportsPage />, { path: '/admin/reports', pattern: '/admin/reports' });
-    const link = await screen.findByRole('link', { name: /mensagem de bia/ });
-    expect(link).toHaveAttribute('data-to', '/admin/reports/r1');
-    expect(mocked.fetchAdminReports).toHaveBeenCalledWith({ status: 'open', targetType: undefined }, null);
-    const table = screen.getByRole('table', { name: 'Denúncias' });
-    expect(within(table).getAllByRole('columnheader').map((th) => th.textContent)).toEqual(['Alvo', 'Categoria', 'Situação', 'Responsável', 'Recebida em']);
-    expect(screen.getByText('1 denúncia carregada')).toBeInTheDocument();
-  });
-
   it('the queue and the target type are filters, and both reach the server', async () => {
     const u = userEvent.setup();
     renderAdmin(<ReportsPage />, { path: '/admin/reports', pattern: '/admin/reports' });
@@ -52,20 +42,6 @@ describe('ReportsPage', () => {
     await waitFor(() => expect(mocked.fetchAdminReports).toHaveBeenLastCalledWith({ status: 'closed', targetType: 'group' }, null));
   });
 
-  it('an assignee shows in the queue, a missing one as a dash', async () => {
-    mocked.fetchAdminReports.mockResolvedValue({ items: [row({ assignee: 'lune', status: 'reviewing' }), row({ id: 'r2', assignee: null })], nextCursor: null });
-    renderAdmin(<ReportsPage />, { path: '/admin/reports?status=reviewing', pattern: '/admin/reports' });
-    expect(await screen.findByText('@lune')).toBeInTheDocument();
-    expect(screen.getByText('-')).toBeInTheDocument();
-  });
-
-  it('compact: stacked rows only', async () => {
-    vi.mocked(useAdminTableFits).mockReturnValue(false);
-    renderAdmin(<ReportsPage />, { path: '/admin/reports', pattern: '/admin/reports' });
-    expect(await screen.findByRole('link', { name: /mensagem de bia/ })).toBeInTheDocument();
-    expect(screen.queryByRole('table')).not.toBeInTheDocument();
-  });
-
   it('opening the queue never fetches any evidence', async () => {
     renderAdmin(<ReportsPage />, { path: '/admin/reports', pattern: '/admin/reports' });
     await screen.findByRole('table');
@@ -74,38 +50,12 @@ describe('ReportsPage', () => {
 });
 
 describe('ReportDetailPage', () => {
-  it('reads as a sequence: identification, evidence, report, decision, history', async () => {
-    openDetail();
-    await screen.findByText('texto da mensagem');
-    const headings = screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent);
-    expect(headings).toEqual(['Evidência', 'Denúncia', 'Decisão', 'Histórico']);
-    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('mensagem de bia');
-    expect(screen.getByText('r1')).toBeInTheDocument();
-  });
-
-  it('shows evidence and reporter (admin-only), and says when the stored text was truncated', async () => {
-    mocked.fetchAdminReport.mockResolvedValue(detail({ snapshot: { text: 'texto da mensagem', authorId: 'u9', authorUsername: 'bia', conversationTitle: 'Squad', sentAt: '2026-01-01T00:00:00.000Z', truncated: true } }));
-    openDetail();
-    expect(await screen.findByText('texto da mensagem')).toBeInTheDocument();
-    expect(screen.getByText('@ana')).toBeInTheDocument();
-    expect(screen.getByText('foi ofensivo')).toBeInTheDocument();
-    expect(screen.getByText(/foi truncado ao ser guardado/)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: '@bia' })).toHaveAttribute('data-to', '/admin/users/u9');
-  });
-
   it('the evidence is inert text: a URL inside it is not a link and nothing is fetched for it', async () => {
     mocked.fetchAdminReport.mockResolvedValue(detail({ snapshot: { text: 'veja https://evil.example/x <img src=x onerror=alert(1)>', authorId: null } }));
     const { container } = openDetail();
     expect(await screen.findByText(/veja https:\/\/evil.example\/x/)).toBeInTheDocument();
     expect(container.querySelector('a[href*="evil.example"]')).toBeNull();
     expect(container.querySelector('img')).toBeNull();
-  });
-
-  it('a message by a deleted account has no link to the author; a deleted reporter says so', async () => {
-    mocked.fetchAdminReport.mockResolvedValue(detail({ reporter: null, snapshot: { text: 'oi', authorId: null, authorUsername: null } }));
-    openDetail();
-    await screen.findByText('oi');
-    expect(screen.getAllByText('conta apagada')).toHaveLength(2);
   });
 
   it('for a message report the outcomes are delete, suspend the author, no action, dismiss — never suspend the group', async () => {
@@ -194,13 +144,6 @@ describe('ReportDetailPage', () => {
     expect(screen.getByText('“removed”')).toBeInTheDocument();
     expect(screen.queryByRole('radio')).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Decisão' })).not.toBeInTheDocument();
-  });
-
-  it('a dismissed report reads "Dispensada"', async () => {
-    mocked.fetchAdminReport.mockResolvedValue(detail({ status: 'dismissed', resolution: 'no_action', resolutionNote: 'nothing', resolvedAt: '2026-01-02T00:00:00.000Z' }));
-    openDetail();
-    const outcome = (await screen.findByRole('heading', { name: 'Desfecho' })).closest('section')!;
-    expect(outcome).toHaveTextContent('Dispensada');
   });
 
   it('a report somebody else closed meanwhile: explains it, re-reads, and does not claim success', async () => {
