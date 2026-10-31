@@ -396,14 +396,20 @@ describe('SettingsPage — category navigation', () => {
     renderSettings({ state: userState }, '/app/settings/privacy');
     expect(screen.getByText('lista de bloqueados')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Privacidade' })).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByRole('link', { name: /Editar perfil/ })).not.toHaveAttribute('aria-current');
+    expect(screen.getByRole('link', { name: 'Perfil' })).not.toHaveAttribute('aria-current');
+  });
+
+  it('keeps the sidebar one level deep: an open category lists no sections under it', () => {
+    renderSettings({ state: userState }, '/app/settings/account');
+    expect(screen.getByRole('link', { name: 'Minha conta' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.queryByRole('list', { name: /Seções de/ })).not.toBeInTheDocument();
   });
 
   it('with no category in the URL, wide mode shows Profile at the same URL (no redirect)', () => {
     renderRouted({ state: userState }, '/app/settings');
     expect(screen.getByLabelText('Nome de exibição')).toBeInTheDocument();
     expect(screen.getByTestId('where')).toHaveTextContent('/app/settings');
-    expect(screen.getByRole('link', { name: /Editar perfil/ })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: 'Perfil' })).toHaveAttribute('aria-current', 'page');
   });
 
   it('unknown category falls back to profile instead of rendering an empty page', () => {

@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { SETTINGS_GROUPS } from '@/features/settings/settingsCatalog';
-import { SETTINGS_SEARCH_INDEX } from '@/features/settings/settingsSearchIndex';
+import { SETTINGS_GROUPS, visibleGroups } from '@/features/settings/settingsCatalog';
 
-describe('settings catalog sections', () => {
-  it('every section the sidebar lists is one a search result can land on', () => {
-    const searchable = new Set(SETTINGS_SEARCH_INDEX.flatMap((entry) => (entry.sectionId ? [`${entry.categoryId}#${entry.sectionId}`] : [])));
-    const listed = SETTINGS_GROUPS.flatMap((group) => group.categories.flatMap((category) => (category.sections ?? []).map((section) => `${category.id}#${section.id}`)));
-    expect(listed.length).toBeGreaterThan(0);
-    for (const key of listed) expect(searchable, key).toContain(key);
+describe('settings catalog', () => {
+  it('gives every category its own icon, so the sidebar items can be told apart', () => {
+    const icons = SETTINGS_GROUPS.flatMap((group) => group.categories.map((category) => category.icon));
+    expect(new Set(icons).size).toBe(icons.length);
+  });
+
+  it('lists the profile as the first item of the first group', () => {
+    expect(visibleGroups(false)[0]?.categories[0]?.id).toBe('profile');
   });
 });
