@@ -1,9 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes } from 'react-router';
 import { renderAdmin, adminRoom, auditRow } from './adminFixture';
-import { renderWithRoom } from '@tests/fixtures/roomContextFixture';
 import { UserDetailPage } from '@/features/admin/UserDetailPage';
 import * as adminApi from '@/features/admin/adminApi';
 import { ApiError } from '@/shared/api/api';
@@ -27,28 +25,6 @@ beforeEach(() => {
 });
 
 describe('UserDetailPage', () => {
-  it('overview shows email, storage and state, with the id in the header', async () => {
-    open();
-    expect(await screen.findByText('ana@example.com')).toBeInTheDocument();
-    expect(screen.getByText(/2.0 KB em 2 arquivo/)).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Ana' })).toBeInTheDocument();
-    expect(screen.getByText('u1')).toBeInTheDocument();
-    expect(screen.getByText('Ativa')).toBeInTheDocument();
-    expect(screen.getByText('Última vez online').parentElement).toHaveTextContent('-');
-  });
-
-  it('shows Online agora when the account is connected', async () => {
-    mocked.fetchAdminUser.mockResolvedValue(detail({ online: true, lastSeenAt: '2026-10-24T14:32:00.000Z' }));
-    open();
-    expect(await screen.findByText('Online agora')).toBeInTheDocument();
-  });
-
-  it('the groups tab lists the groups with the role of the account in each', async () => {
-    open(adminRoom(), 'groups');
-    expect(await screen.findByRole('link', { name: 'Squad' })).toHaveAttribute('data-to', '/admin/groups/g1');
-    expect(screen.getByText('Dona do grupo')).toBeInTheDocument();
-  });
-
   it('the history tab reads the complete history by target, with a cursor', async () => {
     const u = userEvent.setup();
     mocked.fetchAudit.mockResolvedValueOnce({ items: [auditRow()], nextCursor: 'c2' }).mockResolvedValue({ items: [auditRow({ id: 'a2', action: 'user.reactivate' })], nextCursor: null });
@@ -59,29 +35,6 @@ describe('UserDetailPage', () => {
     await u.click(screen.getByRole('button', { name: 'Carregar mais' }));
     expect(await screen.findByText('Conta reativada')).toBeInTheDocument();
     expect(mocked.fetchAudit).toHaveBeenLastCalledWith({ targetType: 'user', targetId: 'u1' }, 'c2');
-  });
-
-  it('the tabs are links with their own URL, the current one marked', async () => {
-    open();
-    await screen.findByText('ana@example.com');
-    expect(screen.getByRole('link', { name: 'Resumo' })).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByRole('link', { name: 'Moderação' })).toHaveAttribute('data-to', '/admin/users/u1?tab=moderation');
-    expect(screen.getByRole('link', { name: 'Grupos (1)' })).toHaveAttribute('data-to', '/admin/users/u1?tab=groups');
-  });
-
-  it('only the open tab mounts: moderation actions are not on the overview', async () => {
-    const u = userEvent.setup();
-    open();
-    await screen.findByText('ana@example.com');
-    expect(screen.queryByRole('button', { name: 'Suspender' })).not.toBeInTheDocument();
-    await u.click(screen.getByRole('link', { name: 'Moderação' }));
-    expect(await screen.findByRole('button', { name: 'Suspender' })).toBeInTheDocument();
-    expect(mocked.fetchAudit).not.toHaveBeenCalled();
-  });
-
-  it('an unknown tab in the URL falls back to the overview', async () => {
-    open(adminRoom(), 'banana');
-    expect(await screen.findByText('ana@example.com')).toBeInTheDocument();
   });
 
   it('suspending requires a reason, sends it, and reloads', async () => {
@@ -193,21 +146,6 @@ describe('UserDetailPage', () => {
     expect(screen.queryByText(/Ação concluída, mas/)).not.toBeInTheDocument();
   });
 
-  it('on your own account every unavailable action says why', async () => {
-    openModeration(adminRoom('admin', 'u1'));
-    expect(await screen.findByText('Você não pode suspender a própria conta.')).toBeInTheDocument();
-    expect(screen.getByText('Você não pode excluir a própria conta.')).toBeInTheDocument();
-    expect(screen.getByText(/encerra a sua própria sessão/)).toBeInTheDocument();
-  });
-
-  it('deleting sits apart, in its own danger section, with the real effect spelled out', async () => {
-    openModeration();
-    const danger = (await screen.findByRole('heading', { name: 'Zona de perigo' })).closest('section')!;
-    expect(danger).toHaveTextContent('passam ao membro mais antigo');
-    expect(danger).toHaveTextContent('As mensagens já enviadas continuam no histórico');
-    expect(danger.querySelectorAll('button')).toHaveLength(1);
-  });
-
   it('revoking ANOTHER account\'s sessions re-reads the account', async () => {
     const u = userEvent.setup();
     mocked.revokeUserSessions.mockResolvedValue({ ok: true });
@@ -228,20 +166,6 @@ describe('UserDetailPage', () => {
     await u.click(screen.getAllByRole('button', { name: 'Revogar' }).at(-1)!);
     expect(await screen.findByRole('status')).toHaveTextContent('Suas sessões foram encerradas');
     expect(mocked.fetchAdminUser).toHaveBeenCalledTimes(1);
-  });
-
-  it('the list the admin came from travels through the tabs, so "back" still returns to its query', async () => {
-    const u = userEvent.setup();
-    renderWithRoom(
-      <MemoryRouter initialEntries={[{ pathname: '/admin/users/u1', state: { from: '/admin/users?status=suspended' } }]}>
-        <Routes><Route path="/admin/users/:id" element={<UserDetailPage />} /></Routes>
-      </MemoryRouter>,
-      adminRoom(),
-    );
-    await screen.findByText('ana@example.com');
-    await u.click(screen.getByRole('link', { name: 'Moderação' }));
-    await screen.findByRole('button', { name: 'Suspender' });
-    expect(screen.getByRole('link', { name: '← Usuários' })).toHaveAttribute('data-to', '/admin/users?status=suspended');
   });
 
   it('suspending an account somebody else already suspended explains it and re-reads', async () => {

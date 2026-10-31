@@ -30,7 +30,7 @@ async function seed(): Promise<void> {
 
   await db.transaction(async (tx) => {
     await tx.insert(users).values([
-      { id: accountIds.ana, username: 'ana', email: 'ana@linkord.test', displayName: 'Ana Costa', avatarColor: 'pink', bio: 'Testando o Linkord no celular.', passwordHash },
+      { id: accountIds.ana, username: 'ana', email: 'ana@linkord.test', displayName: 'Ana Costa', avatarColor: 'fuchsia', bio: 'Testando o Linkord no celular.', passwordHash },
       { id: accountIds.bruno, username: 'bruno', email: 'bruno@linkord.test', displayName: 'Bruno Lima', avatarColor: 'blue', bio: 'Design e conversas.', passwordHash },
       { id: accountIds.carla, username: 'carla', email: 'carla@linkord.test', displayName: 'Carla Souza', avatarColor: 'green', bio: 'Projetos em grupo.', passwordHash },
       { id: accountIds.davi, username: 'davi', email: 'davi@linkord.test', displayName: 'Davi Rocha', avatarColor: 'orange', bio: 'Sempre por aqui.', passwordHash },

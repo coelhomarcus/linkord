@@ -8,9 +8,8 @@ export interface ProfileDraftFields {
   profileLinks: string[];
 }
 
-/** What actually gets compared and sent — trims and drops the empty
- * trailing link row the editor keeps around for "add another link", so an
- * untouched blank row never counts as an edit. */
+/** What actually gets compared and sent — trims and drops empty link rows,
+ * so a field added with "Adicionar link" and left blank never counts as an edit. */
 export function normalizeProfileDraftFields(fields: ProfileDraftFields): ProfileDraftFields {
   return { ...fields, profileLinks: fields.profileLinks.map((link) => link.trim()).filter(Boolean) };
 }
@@ -26,7 +25,7 @@ function fieldsEqual(a: ProfileDraftFields, b: ProfileDraftFields): boolean {
 }
 
 /** Map a confirmed profile-result (or the current draft on a void mock) into
- * draft fields, keeping the editor's trailing empty link row when needed. */
+ * draft fields. */
 function draftFromSaveResult(result: unknown, sent: ProfileDraftFields): ProfileDraftFields {
   if (!result || typeof result !== 'object') return sent;
   const patch = result as Record<string, unknown>;
@@ -37,7 +36,7 @@ function draftFromSaveResult(result: unknown, sent: ProfileDraftFields): Profile
     displayName: typeof patch.displayName === 'string' ? patch.displayName : sent.displayName,
     avatarColor: typeof patch.avatarColor === 'string' ? patch.avatarColor : sent.avatarColor,
     bio: typeof patch.bio === 'string' ? patch.bio : sent.bio,
-    profileLinks: links.length ? links : [''],
+    profileLinks: links,
   };
 }
 
@@ -72,10 +71,10 @@ export function useProfileDraft({ baseline, save: doSave }: UseProfileDraftOptio
     baselineRef.current = baseline;
     if (fieldsEqual(prevBaseline, baseline)) return;
     if (fieldsEqual(draftRef.current, baseline)) {
-      setDraft({ ...baseline, profileLinks: baseline.profileLinks.length ? baseline.profileLinks : [''] });
+      setDraft(baseline);
       setConflict(false);
     } else if (fieldsEqual(draftRef.current, prevBaseline)) {
-      setDraft({ ...baseline, profileLinks: baseline.profileLinks.length ? baseline.profileLinks : [''] });
+      setDraft(baseline);
       setConflict(false);
     } else {
       setConflict(true);

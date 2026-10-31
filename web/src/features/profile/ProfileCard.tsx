@@ -1,5 +1,5 @@
-import { ArrowSquareOutIcon, AtIcon, CameraIcon, CheckIcon, CircleNotchIcon, LinkIcon, PaletteIcon, PlusIcon, SealCheckIcon, TrashIcon, UploadSimpleIcon } from '@phosphor-icons/react';
-import { useLayoutEffect, useRef } from 'react';
+import { ArrowSquareOutIcon, AtIcon, CameraIcon, CheckIcon, CircleNotchIcon, LinkIcon, PaletteIcon, PencilSimpleIcon, PlusIcon, SealCheckIcon, TrashIcon, UploadSimpleIcon } from '@phosphor-icons/react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 
 import { CloseButton } from '@/shared/ui/primitives/close-button';
@@ -103,6 +103,18 @@ export function ProfileCard({
   const links = (user.profileLinks ?? []).map(linkInfo).filter((item): item is LinkInfo => !!item);
   const linksEditable = editableLinks !== undefined && onLinkChange && onAddLink && onRemoveLink;
   const isCustomAvatarColor = !AVATAR_COLOR_OPTIONS.some((option) => option.value === user.avatarColor);
+  const linksRef = useRef<HTMLDivElement | null>(null);
+  const linkCount = editableLinks?.length ?? 0;
+  const prevLinkCount = useRef(linkCount);
+  // there's no empty field waiting anymore: the one "Adicionar link" just
+  // created is where the next keystroke should go
+  useEffect(() => {
+    if (linkCount > prevLinkCount.current) {
+      const inputs = linksRef.current?.querySelectorAll('input');
+      inputs?.[inputs.length - 1]?.focus();
+    }
+    prevLinkCount.current = linkCount;
+  }, [linkCount]);
 
   return (
     <div className={cn('overflow-hidden bg-bg-modal', !bare && 'rounded-lg border border-border-strong', className)}>
@@ -253,15 +265,19 @@ export function ProfileCard({
 
         <div className="mt-3 flex min-w-0 flex-col gap-1">
           {onDisplayNameChange ? (
-            <input
-              aria-label="Nome de exibição"
-              maxLength={MAX_DISPLAY_NAME_LEN}
-              placeholder={user.username}
-              disabled={fieldsDisabled}
-              value={user.displayName === user.username ? '' : user.displayName}
-              onChange={(e) => onDisplayNameChange(e.target.value)}
-              className="w-full min-w-0 bg-transparent text-display font-bold text-text-primary outline-none placeholder:text-text-muted/70 disabled:opacity-60"
-            />
+            // the pencil and underline are the only hint that the name is a field
+            <label className="group/name flex min-w-0 items-center gap-2 border-b border-transparent focus-within:border-primary/50 hover:border-border-strong">
+              <input
+                aria-label="Nome de exibição"
+                maxLength={MAX_DISPLAY_NAME_LEN}
+                placeholder={user.username}
+                disabled={fieldsDisabled}
+                value={user.displayName === user.username ? '' : user.displayName}
+                onChange={(e) => onDisplayNameChange(e.target.value)}
+                className="w-full min-w-0 bg-transparent text-display font-bold text-text-primary outline-none placeholder:text-text-muted/70 disabled:opacity-60"
+              />
+              <PencilSimpleIcon size={18} aria-hidden className="flex-none text-text-muted opacity-60 transition-opacity group-hover/name:opacity-100 group-focus-within/name:opacity-100" />
+            </label>
           ) : (
             <div className="flex min-w-0 items-center gap-3">
               <h2 className="min-w-0 flex-1 truncate text-display font-bold text-text-primary">{user.displayName}</h2>
@@ -290,7 +306,7 @@ export function ProfileCard({
         )}
 
         {hideLinks ? null : linksEditable ? (
-          <div className="mt-5 flex flex-col gap-2">
+          <div ref={linksRef} className="mt-5 flex flex-col gap-2">
             {editableLinks!.map((link, index) => {
               const info = linkInfo(link);
               return (
