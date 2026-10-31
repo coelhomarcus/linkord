@@ -43,6 +43,23 @@ vi.mock('@/features/settings/ImageCropDialog', () => ({
 }));
 
 describe('SettingsPage — profile', () => {
+  it('brings the edited field back above the save bar when the bar appears', async () => {
+    const user = userEvent.setup();
+    const scrollIntoView = vi.fn();
+    const original = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = scrollIntoView;
+    try {
+      renderSettings({ state: { ...initialRoomState, me: { ...initialRoomState.me, id: 'c', userId: 'u', name: 'Fulana', displayName: 'Fulana', avatarColor: 'green' } } });
+      const swatch = screen.getByRole('button', { name: 'Usar Fuchsia' });
+      await user.click(swatch);
+
+      expect(screen.getByRole('region', { name: 'Salvar alterações do perfil' })).toBeInTheDocument();
+      expect(scrollIntoView.mock.contexts).toContain(swatch);
+    } finally {
+      Element.prototype.scrollIntoView = original;
+    }
+  });
+
   it('saves the chosen color for the avatar background', async () => {
     const user = userEvent.setup();
     const updateProfile = vi.fn();
@@ -164,7 +181,10 @@ describe('SettingsPage — profile', () => {
     renderSettings({ state, updateProfile });
 
     await user.type(screen.getByLabelText('Bio'), 'Oi, eu sou a Fulana.');
-    await user.type(screen.getByLabelText('Link 1'), 'https://youtube.com/@fulana');
+    expect(screen.queryByLabelText('Link 1')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Adicionar link' }));
+    expect(screen.getByLabelText('Link 1')).toHaveFocus();
+    await user.keyboard('https://youtube.com/@fulana');
     await user.click(screen.getByRole('button', { name: 'Adicionar link' }));
     await user.click(screen.getByRole('button', { name: 'Salvar perfil' }));
 
@@ -396,14 +416,20 @@ describe('SettingsPage — category navigation', () => {
     renderSettings({ state: userState }, '/app/settings/privacy');
     expect(screen.getByText('lista de bloqueados')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Privacidade' })).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByRole('link', { name: /Editar perfil/ })).not.toHaveAttribute('aria-current');
+    expect(screen.getByRole('link', { name: 'Perfil' })).not.toHaveAttribute('aria-current');
+  });
+
+  it('keeps the sidebar one level deep: an open category lists no sections under it', () => {
+    renderSettings({ state: userState }, '/app/settings/account');
+    expect(screen.getByRole('link', { name: 'Minha conta' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.queryByRole('list', { name: /Seções de/ })).not.toBeInTheDocument();
   });
 
   it('with no category in the URL, wide mode shows Profile at the same URL (no redirect)', () => {
     renderRouted({ state: userState }, '/app/settings');
     expect(screen.getByLabelText('Nome de exibição')).toBeInTheDocument();
     expect(screen.getByTestId('where')).toHaveTextContent('/app/settings');
-    expect(screen.getByRole('link', { name: /Editar perfil/ })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: 'Perfil' })).toHaveAttribute('aria-current', 'page');
   });
 
   it('unknown category falls back to profile instead of rendering an empty page', () => {

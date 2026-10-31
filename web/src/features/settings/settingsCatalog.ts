@@ -1,13 +1,7 @@
-import { BellIcon, IdentificationCardIcon, LockIcon, ShieldCheckIcon, SlidersIcon, UserIcon } from '@phosphor-icons/react';
+import { BellIcon, GearSixIcon, HeadphonesIcon, IdentificationCardIcon, LockIcon, ShieldCheckIcon, UserIcon } from '@phosphor-icons/react';
 
 import type { IconComponent } from '@/shared/ui/icons';
 import type { SettingsTab } from '@/shared/lib/routes';
-
-/** A titled block of a category: `id` is the `<SettingsSection id>` it points at. */
-export interface SettingsSectionRef {
-  id: string;
-  label: string;
-}
 
 export interface SettingsCategory {
   id: SettingsTab;
@@ -15,8 +9,6 @@ export interface SettingsCategory {
   /** one line under the page title */
   description: string;
   icon: IconComponent;
-  /** the titled blocks of its page, in page order; the sidebar lists them under the open category */
-  sections?: SettingsSectionRef[];
   adminOnly?: boolean;
 }
 
@@ -33,20 +25,16 @@ export const SETTINGS_GROUPS: SettingsGroup[] = [
     label: 'Você',
     categories: [
       { id: 'profile', label: 'Perfil', description: 'Edite direto no seu perfil. O que você vê aqui é exatamente o que os outros vão ver.', icon: UserIcon },
-      { id: 'account', label: 'Minha conta', description: 'Identificação, e-mail, armazenamento e sessão.', icon: IdentificationCardIcon,
-        sections: [{ id: 'identity', label: 'Identificação' }, { id: 'email', label: 'E-mail' }, { id: 'storage', label: 'Armazenamento de anexos' }, { id: 'session', label: 'Sessão' }] },
+      { id: 'account', label: 'Minha conta', description: 'Identificação, e-mail, armazenamento e sessão.', icon: IdentificationCardIcon },
       { id: 'privacy', label: 'Privacidade', description: 'Quem você bloqueou e o que isso muda.', icon: LockIcon },
     ],
   },
   {
     label: 'Aplicativo',
     categories: [
-      { id: 'av', label: 'Áudio e vídeo', description: 'Dispositivos e o processamento do seu microfone.', icon: SlidersIcon,
-        sections: [{ id: 'microphone', label: 'Entrada de áudio' }, { id: 'speaker', label: 'Saída de áudio' }, { id: 'camera', label: 'Vídeo' }] },
-      { id: 'notifications', label: 'Notificações', description: 'Avisos do sistema e sons do app.', icon: BellIcon,
-        sections: [{ id: 'system', label: 'Notificações do sistema' }, { id: 'sounds', label: 'Sons' }] },
-      { id: 'prefs', label: 'Preferências', description: 'Como a chamada aparece e como imagens são enviadas. Vale só neste navegador e não acompanha a conta entre dispositivos.', icon: SlidersIcon,
-        sections: [{ id: 'app-appearance', label: 'Aparência do app' }, { id: 'call-appearance', label: 'Aparência da chamada' }, { id: 'image-uploads', label: 'Envio de imagens' }] },
+      { id: 'av', label: 'Áudio e vídeo', description: 'Dispositivos e o processamento do seu microfone.', icon: HeadphonesIcon },
+      { id: 'notifications', label: 'Notificações', description: 'Avisos do sistema e sons do app.', icon: BellIcon },
+      { id: 'prefs', label: 'Preferências', description: 'Como a chamada aparece e como imagens são enviadas. Vale só neste navegador e não acompanha a conta entre dispositivos.', icon: GearSixIcon },
     ],
   },
   {

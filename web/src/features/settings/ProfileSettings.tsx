@@ -55,7 +55,7 @@ export function ProfileSettings() {
     displayName: state.me.displayName,
     avatarColor: normalizeAvatarColor(state.me.avatarColor) || DEFAULT_AVATAR_COLOR,
     bio: state.me.bio,
-    profileLinks: state.me.profileLinks.length ? state.me.profileLinks : [''],
+    profileLinks: state.me.profileLinks,
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [state.me.displayName, state.me.avatarColor, state.me.bio, profileLinksKey]);
 
@@ -123,8 +123,7 @@ export function ProfileSettings() {
   }
 
   function removeProfileLink(index: number) {
-    const next = draft.profileLinks.filter((_, i) => i !== index);
-    setField('profileLinks', next.length ? next : ['']);
+    setField('profileLinks', draft.profileLinks.filter((_, i) => i !== index));
   }
 
   function handleFilePicked(field: 'avatar' | 'banner', e: ChangeEvent<HTMLInputElement>) {
@@ -184,6 +183,18 @@ export function ProfileSettings() {
   }
 
   const showBar = dirty || saveState === 'saving' || saveState === 'error';
+
+  // The save bar floats over the bottom of the page, so the field whose edit
+  // made it appear (a link field near the bottom, say) can end up underneath
+  // it. Scroll that field back above the bar; the form's scroll-margin leaves
+  // room for it.
+  const lastTouchedRef = useRef<HTMLElement | null>(null);
+  function rememberTouched(e: { target: EventTarget }) {
+    if (e.target instanceof HTMLElement) lastTouchedRef.current = e.target;
+  }
+  useEffect(() => {
+    if (showBar) lastTouchedRef.current?.scrollIntoView?.({ block: 'nearest' });
+  }, [showBar]);
   const barStatusText = saveState === 'error' ? saveError
     : saving ? 'Salvando…'
     : dirty ? 'Você tem alterações não salvas.'
@@ -193,7 +204,9 @@ export function ProfileSettings() {
     <div className="flex flex-col gap-4">
       <form
         onSubmit={handleFormSubmit}
-        className={cn('flex max-w-120 flex-col gap-3', showBar && 'pb-24')}
+        onPointerDownCapture={rememberTouched}
+        onFocusCapture={rememberTouched}
+        className={cn('flex max-w-120 flex-col gap-3 [&_*]:scroll-mb-28', showBar && 'pb-24')}
       >
         <ProfileCard
           user={{
@@ -240,7 +253,7 @@ export function ProfileSettings() {
         {bannerError && <p role="alert" className="text-label text-red">{bannerError}</p>}
 
         <p className="text-caption text-text-muted">
-          PNG, JPEG, GIF ou WEBP, até {formatMB(MAX_AVATAR_BYTES)}. Foto e banner valem assim que você confirma o recorte; nome, cor, bio e links só depois de salvar.
+          Foto e banner: PNG, JPEG, GIF ou WEBP até {formatMB(MAX_AVATAR_BYTES)}, salvos na hora.
         </p>
 
         {justSaved && (
