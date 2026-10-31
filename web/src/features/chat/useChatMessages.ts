@@ -48,9 +48,10 @@ function displayNameForConversation(conversation: Conversation | undefined, meUs
   return other?.displayName || other?.username || 'Conversa direta';
 }
 
-/** What the user has in front of them: the open conversation's chat, the call
- * stage, or another page (friends, say) with that conversation still active
- * behind it. Only 'chat' means a message arriving there was seen. */
+/** What the user has in front of them. Only 'chat' means a message arriving
+ * there was seen — the conversation chat, or the call stage while its side
+ * chat is open. 'call' is the stage with that chat closed; 'away' is
+ * another page with the conversation still active behind it. */
 export type ChatView = 'chat' | 'call' | 'away';
 
 interface ChatMessagesDeps {
