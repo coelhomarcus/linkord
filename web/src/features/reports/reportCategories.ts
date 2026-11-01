@@ -1,10 +1,12 @@
+import { i18n } from '@/shared/i18n/init';
+
 export const REPORT_CATEGORIES = [
-  { value: 'spam', label: 'Spam ou propaganda' },
-  { value: 'harassment', label: 'Assédio ou ameaça' },
-  { value: 'inappropriate', label: 'Conteúdo impróprio' },
-  { value: 'impersonation', label: 'Falsa identidade' },
-  { value: 'illegal', label: 'Atividade ilegal' },
-  { value: 'other', label: 'Outro motivo' },
+  { value: 'spam' },
+  { value: 'harassment' },
+  { value: 'inappropriate' },
+  { value: 'impersonation' },
+  { value: 'illegal' },
+  { value: 'other' },
 ] as const;
 
 export type ReportCategory = (typeof REPORT_CATEGORIES)[number]['value'];
@@ -12,4 +14,7 @@ export type ReportTarget = { type: 'user' | 'group' | 'message'; id: string; lab
 
 export const MAX_REPORT_DETAILS = 1000;
 
-export const categoryLabel = (value: string): string => REPORT_CATEGORIES.find((c) => c.value === value)?.label ?? value;
+export const categoryLabel = (value: string): string => {
+  const category = REPORT_CATEGORIES.find((c) => c.value === value)?.value;
+  return category ? i18n.t(`reports:categories.${category}`) : value;
+};

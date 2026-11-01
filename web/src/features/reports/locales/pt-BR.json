@@ -1,0 +1,30 @@
+{
+  "categories": {
+    "spam": "Spam ou propaganda",
+    "harassment": "Assédio ou ameaça",
+    "inappropriate": "Conteúdo impróprio",
+    "impersonation": "Falsa identidade",
+    "illegal": "Atividade ilegal",
+    "other": "Outro motivo"
+  },
+  "targets": { "user": "conta", "group": "grupo", "message": "mensagem" },
+  "errors": {
+    "rateLimited": "Você enviou muitas denúncias. Espere um pouco.",
+    "notFound": "Não foi possível encontrar o que você quer denunciar.",
+    "submitFailed": "Não foi possível enviar a denúncia. Tente de novo."
+  },
+  "dialog": {
+    "title": "Denunciar {{target}}",
+    "sentTitle": "Denúncia enviada.",
+    "sentDescription": "Obrigado por avisar. A administração vai analisar.",
+    "about": "Sobre",
+    "confidential": "Sua denúncia é sigilosa: a pessoa denunciada não vê quem enviou.",
+    "reason": "Motivo",
+    "detailsPlaceholder": "Detalhes (opcional)",
+    "detailsLabel": "Detalhes",
+    "close": "Fechar",
+    "cancel": "Cancelar",
+    "sending": "Enviando…",
+    "submit": "Enviar denúncia"
+  }
+}

@@ -1,20 +1,22 @@
 import { FlagIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/shared/ui/primitives/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/primitives/dialog';
 import { Textarea } from '@/shared/ui/primitives/textarea';
 import { ApiError, submitReport } from '@/shared/api/api';
 import { cn } from '@/shared/lib/utils';
+import { i18n } from '@/shared/i18n/init';
 import { MAX_REPORT_DETAILS, REPORT_CATEGORIES } from './reportCategories';
 import type { ReportCategory, ReportTarget } from './reportCategories';
 
 function describeError(err: unknown): string {
   if (err instanceof ApiError) {
-    if (err.status === 429) return 'Você enviou muitas denúncias. Espere um pouco.';
-    if (err.status === 404) return 'Não foi possível encontrar o que você quer denunciar.';
+    if (err.status === 429) return i18n.t('reports:errors.rateLimited');
+    if (err.status === 404) return i18n.t('reports:errors.notFound');
   }
-  return 'Não foi possível enviar a denúncia. Tente de novo.';
+  return i18n.t('reports:errors.submitFailed');
 }
 
 /** Files a report about an account, a group or a message. The confirmation is
@@ -25,6 +27,7 @@ export function ReportDialog({ target, open, onOpenChange }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const { t } = useTranslation('reports');
   const [category, setCategory] = useState<ReportCategory | null>(null);
   const [details, setDetails] = useState('');
   const [status, setStatus] = useState<'idle' | 'sending' | 'sent'>('idle');
@@ -51,7 +54,7 @@ export function ReportDialog({ target, open, onOpenChange }: {
     }
   }
 
-  const noun = target?.type === 'user' ? 'conta' : target?.type === 'group' ? 'grupo' : 'mensagem';
+  const noun = target?.type === 'user' ? t('targets.user') : target?.type === 'group' ? t('targets.group') : t('targets.message');
 
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!next) close(); }}>
@@ -59,21 +62,21 @@ export function ReportDialog({ target, open, onOpenChange }: {
         <DialogHeader className="border-b border-border px-5 py-4">
           <DialogTitle className="flex items-center gap-2 text-title">
             <FlagIcon size={17} />
-            Denunciar {noun}
+            {t('dialog.title', { target: noun })}
           </DialogTitle>
         </DialogHeader>
         {status === 'sent' ? (
           <div className="px-5 py-6 text-body text-text-secondary">
-            <p className="font-medium text-text-primary">Denúncia enviada.</p>
-            <p className="mt-1 text-label text-text-muted">Obrigado por avisar. A administração vai analisar.</p>
+            <p className="font-medium text-text-primary">{t('dialog.sentTitle')}</p>
+            <p className="mt-1 text-label text-text-muted">{t('dialog.sentDescription')}</p>
           </div>
         ) : (
           <div className="flex flex-col gap-4 px-5 py-4">
             <p className="text-label text-text-muted">
-              {target ? <>Sobre <span className="font-medium text-text-secondary">{target.label}</span>. </> : null}
-              Sua denúncia é sigilosa: a pessoa denunciada não vê quem enviou.
+              {target ? <>{t('dialog.about')} <span className="font-medium text-text-secondary">{target.label}</span>. </> : null}
+              {t('dialog.confidential')}
             </p>
-            <div role="radiogroup" aria-label="Motivo" className="flex flex-col gap-1">
+            <div role="radiogroup" aria-label={t('dialog.reason')} className="flex flex-col gap-1">
               {REPORT_CATEGORIES.map((option) => (
                 <button
                   key={option.value}
@@ -89,7 +92,7 @@ export function ReportDialog({ target, open, onOpenChange }: {
                   <span className={cn('grid size-4 place-items-center rounded-full border', category === option.value ? 'border-primary' : 'border-border-strong')}>
                     {category === option.value && <span className="size-2 rounded-full bg-primary" />}
                   </span>
-                  {option.label}
+                  {t(`categories.${option.value}`)}
                 </button>
               ))}
             </div>
@@ -98,8 +101,8 @@ export function ReportDialog({ target, open, onOpenChange }: {
               onChange={(event) => setDetails(event.target.value)}
               maxLength={MAX_REPORT_DETAILS}
               rows={3}
-              placeholder="Detalhes (opcional)"
-              aria-label="Detalhes"
+              placeholder={t('dialog.detailsPlaceholder')}
+              aria-label={t('dialog.detailsLabel')}
               className="resize-none border-border bg-fill-subtle"
             />
             {error && <p role="alert" className="text-label text-red-text">{error}</p>}
@@ -107,12 +110,12 @@ export function ReportDialog({ target, open, onOpenChange }: {
         )}
         <DialogFooter className="border-t border-border px-5 py-4">
           {status === 'sent' ? (
-            <Button type="button" onClick={close}>Fechar</Button>
+            <Button type="button" onClick={close}>{t('dialog.close')}</Button>
           ) : (
             <>
-              <Button type="button" variant="ghost" onClick={close}>Cancelar</Button>
+              <Button type="button" variant="ghost" onClick={close}>{t('dialog.cancel')}</Button>
               <Button type="button" onClick={() => void submit()} disabled={!category || status === 'sending'}>
-                {status === 'sending' ? 'Enviando…' : 'Enviar denúncia'}
+                {status === 'sending' ? t('dialog.sending') : t('dialog.submit')}
               </Button>
             </>
           )}

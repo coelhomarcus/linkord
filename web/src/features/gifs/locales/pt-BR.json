@@ -1,0 +1,15 @@
+{
+  "message": { "unavailable": "GIF indisponível", "open": "Abrir GIF" },
+  "picker": {
+    "searchPlaceholder": "Search KLIPY",
+    "searchLabel": "Buscar GIFs",
+    "clearSearch": "Limpar busca",
+    "tabs": "GIFs",
+    "trending": "Em alta",
+    "recent": "Recentes",
+    "loadFailed": "Não foi possível carregar os GIFs.",
+    "searchEmpty": "Nenhum GIF encontrado.",
+    "recentEmpty": "Os GIFs que você enviar aparecem aqui.",
+    "empty": "Nenhum GIF por enquanto."
+  }
+}

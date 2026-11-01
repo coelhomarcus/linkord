@@ -14,6 +14,7 @@ import { BotCreateDialog } from '@/features/bots/BotCreateDialog';
 import { BotWebhookSection } from '@/features/bots/BotWebhookSection';
 import * as api from '@/shared/api/api';
 import * as botsApi from '@/features/bots/botsApi';
+import { useLanguageForTests } from '@tests/fixtures/i18nFixture';
 
 vi.mock('@/shared/api/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/shared/api/api')>()),
@@ -125,5 +126,16 @@ describe('BotWebhookSection', () => {
     await user.click(screen.getByRole('button', { name: 'Gerar' }));
     await waitFor(() => expect(mockedBots.rotateBotWebhook).toHaveBeenCalledWith('bot-1'));
     expect(await screen.findByText('https://linkord.test/api/webhooks/w1/new')).toBeInTheDocument();
+  });
+});
+
+describe('BotWebhookSection in English', () => {
+  useLanguageForTests('en-US');
+
+  it('renders the translated empty webhook state', async () => {
+    mockedBots.fetchBotWebhook.mockResolvedValue({ webhook: { id: 'w1', createdAt: '2026-10-01T10:00:00.000Z', tokenRotatedAt: '2026-10-01T10:00:00.000Z', lastUsedAt: null } });
+    renderWithRoom(<BotWebhookSection conversationId="bot-1" />, { state: me });
+    expect(await screen.findByText('None yet')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Generate new URL' })).toBeInTheDocument();
   });
 });
