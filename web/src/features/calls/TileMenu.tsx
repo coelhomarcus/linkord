@@ -1,4 +1,4 @@
-import { ArrowsClockwiseIcon, ArrowsOutIcon, CrosshairIcon, EyeIcon, EyeSlashIcon, FlipHorizontalIcon, GaugeIcon, PauseIcon, PictureInPictureIcon, PlayIcon, ScreencastIcon, SpeakerHighIcon, SpeakerSlashIcon, UserIcon, UserMinusIcon, VideoCameraSlashIcon } from '@phosphor-icons/react';
+import { ArrowsClockwiseIcon, ArrowsInIcon, ArrowsOutIcon, CrosshairIcon, EyeIcon, EyeSlashIcon, FlipHorizontalIcon, GaugeIcon, PauseIcon, PictureInPictureIcon, PlayIcon, ScreencastIcon, SpeakerHighIcon, SpeakerSlashIcon, UserIcon, UserMinusIcon, VideoCameraSlashIcon } from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
 
 import type { Track as LKTrack } from 'livekit-client';
@@ -166,8 +166,13 @@ export function TileMenu({ onOpenProfile }: TileMenuProps) {
   function toggleFocus() {
     dispatch({ type: 'SET_FOCUSED', id: isFocused ? null : key!, origin: 'manual' });
   }
-  function goFullscreen() {
-    handle?.root.requestFullscreen?.().catch(() => {});
+  const isTileFullscreen = !!handle && fullscreenElement === handle.root;
+  function toggleTileFullscreen() {
+    if (isTileFullscreen) {
+      document.exitFullscreen().catch(() => {});
+    } else {
+      handle?.root.requestFullscreen?.().catch(() => {});
+    }
   }
   function togglePip() {
     if (!handle?.video) return;
@@ -219,9 +224,9 @@ export function TileMenu({ onOpenProfile }: TileMenuProps) {
             <span>Ver perfil</span>
           </DropdownMenuItem>
         )}
-        <DropdownMenuItem onClick={goFullscreen}>
-          <ArrowsOutIcon size={16} />
-          <span>Tela cheia</span>
+        <DropdownMenuItem onClick={toggleTileFullscreen}>
+          {isTileFullscreen ? <ArrowsInIcon size={16} /> : <ArrowsOutIcon size={16} />}
+          <span>{isTileFullscreen ? 'Sair da tela cheia' : 'Tela cheia'}</span>
         </DropdownMenuItem>
         {pipSupported && (
           <DropdownMenuItem onClick={togglePip}>

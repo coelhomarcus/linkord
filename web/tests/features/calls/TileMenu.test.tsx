@@ -479,3 +479,33 @@ describe('TileMenu — watch/stop watching another person\'s screen', () => {
     expect(screen.queryByText('Parar de assistir')).not.toBeInTheDocument();
   });
 });
+
+describe('TileMenu — tile fullscreen', () => {
+  function renderWithTileRoot(fullscreenElement: HTMLElement | null, root: HTMLDivElement) {
+    const participants = new Map([['p-2', fakeParticipant()]]);
+    renderWithRoom(<TileMenu onOpenProfile={vi.fn()} />, {
+      state: { ...initialRoomState, me: { ...initialRoomState.me, id: 'p-1' }, participants },
+      menuTarget,
+      fullscreenElement,
+      tileDomRegistry: { current: new Map([['p-2:avatar', { root, video: null }]]) },
+    });
+  }
+
+  it('offers "Tela cheia" and requests fullscreen on the tile when it is not fullscreen', () => {
+    const root = document.createElement('div');
+    root.requestFullscreen = vi.fn().mockResolvedValue(undefined);
+    renderWithTileRoot(null, root);
+    fireEvent.click(screen.getByText('Tela cheia'));
+    expect(root.requestFullscreen).toHaveBeenCalled();
+  });
+
+  it('offers "Sair da tela cheia" and exits fullscreen when this tile is the fullscreen element', () => {
+    // The menu portals into the fullscreen element, so it has to be attached for screen queries to find it.
+    const root = document.body.appendChild(document.createElement('div'));
+    document.exitFullscreen = vi.fn().mockResolvedValue(undefined);
+    renderWithTileRoot(root, root);
+    expect(screen.queryByText('Tela cheia')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText('Sair da tela cheia'));
+    expect(document.exitFullscreen).toHaveBeenCalled();
+  });
+});
