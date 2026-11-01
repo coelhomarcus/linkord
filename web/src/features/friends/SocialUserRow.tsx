@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Avatar } from '@/shared/Avatar';
 import type { SocialUser } from '@/shared/api/api';
 
@@ -10,12 +11,13 @@ export function SocialUserRow({ user, online, subtitle, onOpenProfile, children 
   onOpenProfile: () => void;
   children?: ReactNode;
 }) {
+  const { t } = useTranslation('friends');
   return (
     <div className="cutout flex items-center gap-3 rounded-md px-3 py-3 transition-colors hover:cutout-subtle hover:bg-fill-subtle">
       <button
         type="button"
         onClick={onOpenProfile}
-        aria-label={`Ver perfil de ${user.displayName}`}
+        aria-label={t('row.viewProfile', { name: user.displayName })}
         className="flex min-w-0 flex-1 items-center gap-3 rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <div className="relative flex-none">
@@ -31,7 +33,7 @@ export function SocialUserRow({ user, online, subtitle, onOpenProfile, children 
           <p className="truncate text-body font-medium text-text-primary">{user.displayName}</p>
           <p className="truncate text-caption text-text-muted">
             @{user.username}
-            {online !== undefined && <span className="sr-only">{online ? ', online' : ', offline'}</span>}
+            {online !== undefined && <span className="sr-only">{online ? t('row.online') : t('row.offline')}</span>}
             {subtitle ? ` · ${subtitle}` : ''}
           </p>
         </div>

@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/shared/ui/primitives/button';
 import { acceptFriendRequest, cancelFriendRequest, declineFriendRequest, fetchFriendRequests } from '@/shared/api/api';
 import type { SocialEntry } from '@/shared/api/api';
@@ -11,12 +12,13 @@ import { usePendingIds } from './usePendingIds';
 import { FadeIn, RevealList, RevealRow, SocialRowsSkeleton } from './listReveal';
 import { useLoadingPhase } from './useLoadingPhase';
 import { useRememberedList } from './useRememberedList';
+import { i18n } from '@/shared/i18n/init';
 
 export type RequestDirection = 'incoming' | 'outgoing';
 
 function formatWhen(iso: string): string {
   const date = new Date(iso);
-  return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+  return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString(i18n.language, { day: '2-digit', month: 'short' });
 }
 
 const entryKey = (entry: SocialEntry) => entry.user.id;
@@ -28,6 +30,7 @@ export function FriendRequestList({ direction, search = '', headingId, onOpenPro
   headingId?: string;
   onOpenProfile: (userId: string) => void;
 }) {
+  const { t } = useTranslation('friends');
   const { revision, bump } = useFriends();
   const pending = usePendingIds();
   const [feedback, setFeedback] = useState<Feedback>(null);
@@ -41,7 +44,7 @@ export function FriendRequestList({ direction, search = '', headingId, onOpenPro
     const outcome = await pending.run(userId, () => action(userId));
     if (!outcome) return;
     if (!outcome.ok) {
-      setFeedback({ tone: 'error', text: 'Não foi possível concluir a ação. Tente de novo.' });
+      setFeedback({ tone: 'error', text: t('feedback.actionFailed') });
       bump(); // the row may already be settled elsewhere: re-read, the message stays
       return;
     }
@@ -53,19 +56,19 @@ export function FriendRequestList({ direction, search = '', headingId, onOpenPro
 
   let body;
   if (phase === 'skeleton') {
-    body = <SocialRowsSkeleton label="Carregando solicitações…" rows={2} />;
+    body = <SocialRowsSkeleton label={t('requests.loading')} rows={2} />;
   } else if (list.status === 'error') {
     body = (
       <div className="flex flex-col items-center gap-3 py-8 text-center">
-        <p className="text-body text-text-muted">Não foi possível carregar as solicitações.</p>
-        <Button type="button" variant="secondary" size="sm" onClick={list.retry}>Tentar de novo</Button>
+        <p className="text-body text-text-muted">{t('requests.loadFailed')}</p>
+        <Button type="button" variant="secondary" size="sm" onClick={list.retry}>{t('loadMore.retry')}</Button>
       </div>
     );
   } else if (list.items.length === 0) {
     body = (
       <FadeIn skip={list.restored}>
         <p className="select-none py-10 text-center text-label text-text-muted">
-          {search ? 'Nenhum resultado para esta busca.' : direction === 'incoming' ? 'Nenhuma solicitação recebida.' : 'Você não tem solicitações enviadas.'}
+          {search ? t('list.noResults') : direction === 'incoming' ? t('requests.noneIncoming') : t('requests.noneOutgoing')}
         </p>
       </FadeIn>
     );
@@ -79,11 +82,11 @@ export function FriendRequestList({ direction, search = '', headingId, onOpenPro
               <SocialUserRow user={user} subtitle={formatWhen(at)} onOpenProfile={() => onOpenProfile(user.id)}>
                 {direction === 'incoming' ? (
                   <>
-                    <Button type="button" size="sm" disabled={busy} onClick={() => void act(user.id, acceptFriendRequest, 'Solicitação aceita.')}>Aceitar</Button>
-                    <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={() => void act(user.id, declineFriendRequest, 'Solicitação recusada.')}>Recusar</Button>
+                    <Button type="button" size="sm" disabled={busy} onClick={() => void act(user.id, acceptFriendRequest, t('requests.accepted'))}>{t('requests.accept')}</Button>
+                    <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={() => void act(user.id, declineFriendRequest, t('requests.declined'))}>{t('requests.decline')}</Button>
                   </>
                 ) : (
-                  <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={() => void act(user.id, cancelFriendRequest, 'Solicitação cancelada.')}>Cancelar</Button>
+                  <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={() => void act(user.id, cancelFriendRequest, t('requests.cancelled'))}>{t('requests.cancel')}</Button>
                 )}
               </SocialUserRow>
             </RevealRow>

@@ -2,6 +2,7 @@ import { ChatCircleIcon, CircleNotchIcon, DotsThreeIcon, FlagIcon, PencilSimpleI
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
+import { useTranslation } from 'react-i18next';
 
 import { useRoom } from '@/state/RoomContext';
 import {
@@ -19,10 +20,11 @@ import { useRelationship } from './useRelationship';
 
 /** Takes you from your own profile to where you edit it. */
 export function EditProfileButton({ onNavigate }: { onNavigate?: () => void }) {
+  const { t } = useTranslation('friends');
   const navigate = useNavigate();
   return (
     <Button type="button" variant="secondary" size="sm" onClick={() => { navigate(ROUTES.settings); onNavigate?.(); }}>
-      <PencilSimpleIcon size={20} /><span>Editar perfil</span>
+      <PencilSimpleIcon size={20} /><span>{t('profile.edit')}</span>
     </Button>
   );
 }
@@ -42,6 +44,7 @@ export function ProfileActions({ userId, username, displayName, onNavigate, onRe
   /** overrides the default padding (`px-4 pb-4`) when the parent lays it out */
   className?: string;
 }) {
+  const { t } = useTranslation('friends');
   const { openDirect, requestChatView } = useRoom();
   const { bump } = useFriends();
   const { state, retry } = useRelationship(userId);
@@ -49,7 +52,7 @@ export function ProfileActions({ userId, username, displayName, onNavigate, onRe
   const [error, setError] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<SocialConfirm | null>(null);
 
-  async function run(action: () => Promise<unknown>, failure = 'Não foi possível concluir a ação. Tente de novo.') {
+  async function run(action: () => Promise<unknown>, failure: 'send' | 'action' = 'action') {
     if (pending) return;
     setPending(true);
     setError(null);
@@ -57,20 +60,20 @@ export function ProfileActions({ userId, username, displayName, onNavigate, onRe
       await action();
       bump();
     } catch (err) {
-      setError(failure === 'send' ? describeSendError(err) : failure);
+      setError(failure === 'send' ? describeSendError(err) : t('feedback.actionFailed'));
     } finally {
       setPending(false);
     }
   }
 
   if (state.status === 'loading') {
-    return <p className={cn('px-4 pb-4 text-label text-text-muted', className)} aria-live="polite">Carregando…</p>;
+    return <p className={cn('px-4 pb-4 text-label text-text-muted', className)} aria-live="polite">{t('profile.loading')}</p>;
   }
   if (state.status === 'error') {
     return (
       <div className={cn('flex items-center gap-2 px-4 pb-4 text-label text-text-muted', className)}>
-        <span>Não foi possível carregar as ações.</span>
-        <Button type="button" variant="ghost" size="sm" onClick={retry}>Tentar de novo</Button>
+        <span>{t('profile.loadFailed')}</span>
+        <Button type="button" variant="ghost" size="sm" onClick={retry}>{t('profile.retry')}</Button>
       </div>
     );
   }
@@ -83,14 +86,14 @@ export function ProfileActions({ userId, username, displayName, onNavigate, onRe
   function moreMenu(items: ReactNode): ReactNode {
     return (
       <DropdownMenu>
-        <DropdownMenuTrigger render={<Button type="button" variant="outline" size="icon-sm" aria-label="Mais ações" />}>
+        <DropdownMenuTrigger render={<Button type="button" variant="outline" size="icon-sm" aria-label={t('profile.more')} />}>
           <DotsThreeIcon size={16} />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-max min-w-0">{items}</DropdownMenuContent>
       </DropdownMenu>
     );
   }
-  const reportItem = onReport && <DropdownMenuItem variant="destructive" onClick={onReport}><FlagIcon size={16} />Denunciar</DropdownMenuItem>;
+  const reportItem = onReport && <DropdownMenuItem variant="destructive" onClick={onReport}><FlagIcon size={16} />{t('profile.report')}</DropdownMenuItem>;
 
   let actions;
   switch (relation) {
@@ -101,19 +104,19 @@ export function ProfileActions({ userId, username, displayName, onNavigate, onRe
       actions = (
         <>
           <Button type="button" size="sm" onClick={() => { openDirect(userId); requestChatView(); onNavigate?.(); }}>
-            <ChatCircleIcon size={20} /><span>Mensagem</span>
+            <ChatCircleIcon size={20} /><span>{t('profile.message')}</span>
           </Button>
           <DropdownMenu>
-            <DropdownMenuTrigger render={<Button type="button" variant="outline" size="icon-sm" aria-label="Amizade" />}>
+            <DropdownMenuTrigger render={<Button type="button" variant="outline" size="icon-sm" aria-label={t('profile.friendship')} />}>
               <UserCheckIcon size={16} />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-max min-w-0">
-              <DropdownMenuItem variant="destructive" onClick={() => setConfirm({ kind: 'remove', userId, displayName })}><UserMinusIcon size={16} />Remover amizade</DropdownMenuItem>
+              <DropdownMenuItem variant="destructive" onClick={() => setConfirm({ kind: 'remove', userId, displayName })}><UserMinusIcon size={16} />{t('profile.removeFriend')}</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           {moreMenu(
             <>
-              <DropdownMenuItem variant="destructive" onClick={() => setConfirm({ kind: 'block', userId, displayName })}><ProhibitIcon size={16} />Bloquear</DropdownMenuItem>
+              <DropdownMenuItem variant="destructive" onClick={() => setConfirm({ kind: 'block', userId, displayName })}><ProhibitIcon size={16} />{t('profile.block')}</DropdownMenuItem>
               {reportItem}
             </>,
           )}
@@ -123,33 +126,33 @@ export function ProfileActions({ userId, username, displayName, onNavigate, onRe
     case 'outgoing':
       actions = (
         <>
-          <span className="flex items-center gap-1.5 text-label text-text-muted"><UserCheckIcon size={16} />Solicitação enviada</span>
-          <Button type="button" variant="ghost" size="sm" disabled={pending} onClick={() => void run(() => cancelFriendRequest(userId))}>{spinner}<span>Cancelar</span></Button>
+          <span className="flex items-center gap-1.5 text-label text-text-muted"><UserCheckIcon size={16} />{t('profile.requestSent')}</span>
+          <Button type="button" variant="ghost" size="sm" disabled={pending} onClick={() => void run(() => cancelFriendRequest(userId))}>{spinner}<span>{t('profile.cancel')}</span></Button>
         </>
       );
       break;
     case 'incoming':
       actions = (
         <>
-          <Button type="button" size="sm" disabled={pending} onClick={() => void run(() => acceptFriendRequest(userId))}>{spinner}<span>Aceitar</span></Button>
-          <Button type="button" variant="ghost" size="sm" disabled={pending} onClick={() => void run(() => declineFriendRequest(userId))}><span>Recusar</span></Button>
+          <Button type="button" size="sm" disabled={pending} onClick={() => void run(() => acceptFriendRequest(userId))}>{spinner}<span>{t('profile.accept')}</span></Button>
+          <Button type="button" variant="ghost" size="sm" disabled={pending} onClick={() => void run(() => declineFriendRequest(userId))}><span>{t('profile.decline')}</span></Button>
         </>
       );
       break;
     case 'blocked':
       actions = (
         <>
-          <span className="flex items-center gap-1.5 text-label text-text-muted"><ProhibitIcon size={16} />Você bloqueou essa pessoa</span>
-          <Button type="button" variant="secondary" size="sm" disabled={pending} onClick={() => void run(() => unblockUser(userId))}>{spinner}<span>Desbloquear</span></Button>
+          <span className="flex items-center gap-1.5 text-label text-text-muted"><ProhibitIcon size={16} />{t('profile.blockedByYou')}</span>
+          <Button type="button" variant="secondary" size="sm" disabled={pending} onClick={() => void run(() => unblockUser(userId))}>{spinner}<span>{t('profile.unblock')}</span></Button>
         </>
       );
       break;
     default:
       actions = retryAfter ? (
-        <span className="text-label text-text-muted">Você poderá enviar uma nova solicitação a partir de {formatRetryAfter(retryAfter)}.</span>
+        <span className="text-label text-text-muted">{t('profile.retryAfter', { when: formatRetryAfter(retryAfter) })}</span>
       ) : (
         <Button type="button" size="sm" disabled={pending} onClick={() => void run(() => sendFriendRequest(username), 'send')}>
-          {spinner ?? <UserPlusIcon size={20} />}<span>Adicionar amigo</span>
+          {spinner ?? <UserPlusIcon size={20} />}<span>{t('profile.add')}</span>
         </Button>
       );
   }
