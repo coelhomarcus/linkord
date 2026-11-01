@@ -37,6 +37,10 @@ export const users = pgTable('users', {
   status: varchar('status', { length: 16 }).notNull().default('active'),
   statusReason: text('status_reason').notNull().default(''),
   statusChangedAt: timestamp('status_changed_at', { withTimezone: true }),
+  // UI language (see modules/users/locale.ts for the supported list). Also
+  // what e-mails and push notifications are written in, which is why it
+  // lives on the account instead of only in the browser.
+  locale: varchar('locale', { length: 16 }).notNull().default('pt-BR'),
   // Last time the account actually went offline (last live socket gone,
   // after the reconnect grace). Null until the first disconnect after this
   // column existed — the migration backfills from sessions.last_seen_at.

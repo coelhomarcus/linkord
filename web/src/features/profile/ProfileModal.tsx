@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useRoom } from '@/state/RoomContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/primitives/dialog';
 import { Button } from '@/shared/ui/primitives/button';
@@ -31,6 +32,7 @@ type ProfileImageSelection = {
  * message who has since left the conversation. `fetchStatus` only tracks
  * that fallback path — a cache hit never touches it. */
 export function ProfileModal({ userId, onClose, onOpenProfile }: ProfileModalProps) {
+  const { t } = useTranslation('profile');
   const { state, allUsers, onlineUserIds, openConversation, requestChatView } = useRoom();
   const [reportOpen, setReportOpen] = useState(false);
   const cachedUser = userId ? allUsers.get(userId) : null;
@@ -72,20 +74,20 @@ export function ProfileModal({ userId, onClose, onOpenProfile }: ProfileModalPro
       {!user && fetchStatus === 'loading' && (
         <DialogContent className="max-w-[calc(100%-2rem)] bg-bg-modal sm:max-w-130">
           <DialogHeader className="sr-only">
-            <DialogTitle>Carregando perfil</DialogTitle>
+            <DialogTitle>{t('modal.loadingTitle')}</DialogTitle>
           </DialogHeader>
-          <p className="py-8 text-center text-body text-text-muted">Carregando perfil…</p>
+          <p className="py-8 text-center text-body text-text-muted">{t('modal.loading')}</p>
         </DialogContent>
       )}
       {!user && fetchStatus === 'error' && (
         <DialogContent className="max-w-[calc(100%-2rem)] bg-bg-modal sm:max-w-130">
           <DialogHeader className="sr-only">
-            <DialogTitle>Não foi possível carregar o perfil</DialogTitle>
+            <DialogTitle>{t('modal.loadFailedTitle')}</DialogTitle>
           </DialogHeader>
           <div className="flex flex-col items-center gap-3 py-8 text-center">
-            <p className="text-body text-text-muted">Não foi possível carregar esse perfil.</p>
+            <p className="text-body text-text-muted">{t('modal.loadFailed')}</p>
             <Button type="button" variant="secondary" size="sm" onClick={() => userId && loadProfile(userId)}>
-              Tentar de novo
+              {t('modal.retry')}
             </Button>
           </div>
         </DialogContent>
@@ -101,7 +103,7 @@ export function ProfileModal({ userId, onClose, onOpenProfile }: ProfileModalPro
           )}
         >
           <DialogHeader className="sr-only">
-            <DialogTitle>Perfil de {user.displayName}</DialogTitle>
+            <DialogTitle>{t('modal.profileOf', { name: user.displayName })}</DialogTitle>
           </DialogHeader>
           {/* side by side from md, each column scrolling on its own; stacked below, scrolling as one */}
           <div className={cn('min-h-0 overflow-y-auto', showMutuals && 'md:grid md:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] md:grid-rows-[minmax(0,1fr)] md:overflow-hidden')}>
@@ -130,12 +132,12 @@ export function ProfileModal({ userId, onClose, onOpenProfile }: ProfileModalPro
                     {details.details && (
                       <dl className="flex flex-col gap-5">
                         <div>
-                          <dt className="text-label font-medium text-text-muted">Membro desde</dt>
+                          <dt className="text-label font-medium text-text-muted">{t('modal.memberSince')}</dt>
                           <dd className="mt-1 text-body text-text-primary">{formatProfileDate(details.details.memberSince)}</dd>
                         </div>
                         {details.details.friendsSince && (
                           <div>
-                            <dt className="text-label font-medium text-text-muted">Amigos desde</dt>
+                            <dt className="text-label font-medium text-text-muted">{t('modal.friendsSince')}</dt>
                             <dd className="mt-1 text-body text-text-primary">{formatProfileDate(details.details.friendsSince)}</dd>
                           </div>
                         )}
@@ -166,7 +168,7 @@ export function ProfileModal({ userId, onClose, onOpenProfile }: ProfileModalPro
       {user && (
         <ImageLightbox
           src={lightboxImage?.src ?? ''}
-          alt={lightboxImage?.kind === 'banner' ? 'Banner' : 'Foto de perfil'}
+          alt={lightboxImage?.kind === 'banner' ? t('modal.banner') : t('modal.avatar')}
           variant="profile"
           aspectRatio={lightboxImage?.kind === 'banner' ? BANNER_ASPECT_RATIO : 1}
           open={!!lightboxImage}

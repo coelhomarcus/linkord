@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useEffect, useRef } from 'react';
 import type { RefObject } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
@@ -17,6 +18,7 @@ interface ComposerAttachmentTrayProps {
  * scrolling row of document tiles, each wide enough to read its name and
  * type before sending (see DocumentAttachmentCard). */
 export function ComposerAttachmentTray({ files, onRemove, fallbackFocusRef }: ComposerAttachmentTrayProps) {
+  const { t } = useTranslation('chat');
   // keyed by file id, not array index — an index shifts under every removal
   // (the tile after the removed one slides left), a stable id doesn't
   const removeButtonRefs = useRef(new Map<string, HTMLButtonElement | null>());
@@ -73,7 +75,7 @@ export function ComposerAttachmentTray({ files, onRemove, fallbackFocusRef }: Co
                   ref={(el) => { removeButtonRefs.current.set(item.id, el); }}
                   variant={item.previewUrl ? 'overlay' : 'ghost'}
                   size="xs"
-                  label={`Remover ${item.file.name}`}
+                  label={t('composer.removeFile', { name: item.file.name })}
                   onClick={() => handleRemove(item.id, index)}
                   className={item.previewUrl ? 'absolute right-1 top-1' : 'flex-none'}
                 />

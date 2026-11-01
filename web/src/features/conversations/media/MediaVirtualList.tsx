@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
+import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/shared/ui/primitives/button';
 import { cn } from '@/shared/lib/utils';
@@ -36,6 +37,7 @@ interface MediaVirtualListProps {
 export function MediaVirtualList({
   items, layout, hasMore, loading, error, onLoadMore, emptyState, ariaLabel, renderTile, renderItem, className,
 }: MediaVirtualListProps) {
+  const { t } = useTranslation('conversations');
   const scrollRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(FALLBACK_WIDTH);
@@ -114,10 +116,10 @@ export function MediaVirtualList({
                   error ? (
                     <div className="flex flex-col items-center gap-3 py-6 text-center">
                       <p className="text-label text-text-secondary">{error}</p>
-                      <Button type="button" variant="secondary" size="sm" onClick={onLoadMore}>Tentar de novo</Button>
+                      <Button type="button" variant="secondary" size="sm" onClick={onLoadMore}>{t('media.retry')}</Button>
                     </div>
                   ) : (
-                    <p className="select-none py-6 text-center text-label text-text-muted">Carregando…</p>
+                    <p className="select-none py-6 text-center text-label text-text-muted">{t('media.loading')}</p>
                   )
                 ) : row.type === 'header' ? (
                   <h3 className="flex items-end px-0.5 pb-2 pt-3 text-label font-semibold text-text-secondary" style={{ height: HEADER_HEIGHT }}>{row.label}</h3>

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { ArrowDownIcon } from '@phosphor-icons/react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { defaultRangeExtractor, useVirtualizer, type Range } from '@tanstack/react-virtual';
@@ -48,6 +49,7 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
   onOpenProfile: (userId: string) => void;
   bottomPadding: number;
 }) {
+  const { t } = useTranslation('chat');
   const {
     messagesByConversation,
     allUsers,
@@ -446,16 +448,16 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
       {/* data-settled: the initial placement is done and scrolls now count as
           reading — what anything waiting on the timeline should wait for */}
       <div ref={scrollRef} data-scroll-root data-settled={ready || undefined} className="h-full overflow-y-auto px-2 [overflow-anchor:none]">
-        {isLoadingOlder && <p className="absolute inset-x-0 top-2 z-10 select-none text-center text-label text-text-muted">Carregando mensagens anteriores...</p>}
+        {isLoadingOlder && <p className="absolute inset-x-0 top-2 z-10 select-none text-center text-label text-text-muted">{t('timeline.loadingOlder')}</p>}
         {items.length === 0 ? (
           <div className="flex min-h-[45vh] select-none items-center justify-center px-6 text-center text-label text-text-muted">
             {historyArrived ? 'Nenhuma mensagem ainda.' : (
               // only shown if the history is slow: a quick one would flash it for a frame
-              <span role="status" className="animate-in fade-in-0 duration-200 [animation-delay:300ms] [animation-fill-mode:both]">Carregando mensagens…</span>
+              <span role="status" className="animate-in fade-in-0 duration-200 [animation-delay:300ms] [animation-fill-mode:both]">{t('timeline.loading')}</span>
             )}
           </div>
         ) : (
-          <div role="log" aria-label="Mensagens" className="relative w-full" style={{ height: virtualizer.getTotalSize(), visibility: ready ? undefined : 'hidden' }}>
+          <div role="log" aria-label={t('timeline.log')} className="relative w-full" style={{ height: virtualizer.getTotalSize(), visibility: ready ? undefined : 'hidden' }}>
             {virtualItems.map((virtualItem) => {
               const item = items[virtualItem.index]!;
               return (
@@ -475,9 +477,9 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
                       <span aria-hidden className="h-px flex-1 bg-border-default" />
                     </div>
                   ) : item.type === 'unread' ? (
-                    <div className="my-4 flex select-none items-center gap-3 px-4" role="separator" aria-label="Novas Mensagens">
+                    <div className="my-4 flex select-none items-center gap-3 px-4" role="separator" aria-label={t('timeline.newMessages')}>
                       <span aria-hidden className="h-px flex-1 bg-accent-text/45" />
-                      <span className="flex-none text-caption font-semibold text-accent-text">Novas Mensagens</span>
+                      <span className="flex-none text-caption font-semibold text-accent-text">{t('timeline.newMessages')}</span>
                       <span aria-hidden className="h-px flex-1 bg-accent-text/45" />
                     </div>
                   ) : (

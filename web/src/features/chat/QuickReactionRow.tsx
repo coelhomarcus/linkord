@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { PlusIcon } from '@phosphor-icons/react';
 
 import { cn } from '@/shared/lib/utils';
@@ -9,6 +10,7 @@ import { cn } from '@/shared/lib/utils';
 const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'] as const;
 
 export function QuickReactionRow({ onPick, onMore, className }: { onPick: (emoji: string) => void; onMore: () => void; className?: string }) {
+  const { t } = useTranslation('chat');
   return (
     <div className={cn('flex items-center gap-1', className)}>
       {QUICK_REACTIONS.map((emoji) => (
@@ -16,7 +18,7 @@ export function QuickReactionRow({ onPick, onMore, className }: { onPick: (emoji
           key={emoji}
           type="button"
           onClick={() => onPick(emoji)}
-          aria-label={`Reagir com ${emoji}`}
+          aria-label={t('reactWith', { emoji })}
           className="rounded-md p-1.5 text-[20px] leading-none transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
         >
           {emoji}
@@ -25,7 +27,7 @@ export function QuickReactionRow({ onPick, onMore, className }: { onPick: (emoji
       <button
         type="button"
         onClick={onMore}
-        aria-label="Mais emojis"
+        aria-label={t('moreEmojis')}
         className="rounded-md p-1.5 text-text-muted transition-colors hover:bg-muted hover:text-text-primary focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
       >
         <PlusIcon size={18} />

@@ -1,5 +1,6 @@
 import { ArrowLeftIcon } from '@phosphor-icons/react';
 import { useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { Navigate, useLocation, useNavigate, useParams } from 'react-router';
 import { useRoom } from '@/state/RoomContext';
@@ -36,6 +37,7 @@ function CategoryPage({ tab, onOpenProfile }: { tab: SettingsTab; onOpenProfile:
 }
 
 export function SettingsPage({ onOpenProfile }: SettingsPageProps) {
+  const { t } = useTranslation('settings');
   const { state } = useRoom();
   const { tab } = useParams<{ tab?: string }>();
   const navigate = useNavigate();
@@ -85,13 +87,13 @@ export function SettingsPage({ onOpenProfile }: SettingsPageProps) {
   return (
     <div className="flex h-full min-h-0 flex-col">
       <PageHeader
-        title={compactDetail ? category.label : 'Ajustes'}
+        title={compactDetail ? t(category.labelKey) : t('title')}
         leading={compactDetail ? (
           <Button
             type="button"
             variant="ghost"
             size="icon-sm"
-            aria-label="Voltar às configurações"
+            aria-label={t('back')}
             onClick={() => (fromIndex ? navigate(-1) : navigate(ROUTES.settings))}
           >
             <ArrowLeftIcon size={20} aria-hidden />
@@ -100,12 +102,12 @@ export function SettingsPage({ onOpenProfile }: SettingsPageProps) {
       />
       <div ref={areaRef} className="@container flex min-h-0 min-w-0 flex-1">
         {mode === 'wide' ? <SettingsSidebar active={current} isAdmin={isAdmin} /> : null}
-        <main ref={scrollerRef} aria-label={showIndex ? 'Ajustes' : category.label} className="min-h-0 min-w-0 flex-1 overflow-y-auto">
+        <main ref={scrollerRef} aria-label={showIndex ? t('title') : t(category.labelKey)} className="min-h-0 min-w-0 flex-1 overflow-y-auto">
           {showIndex ? (
             <SettingsIndex isAdmin={isAdmin} />
           ) : (
             <SettingsContent>
-              <SettingsPageHeader title={category.label} description={category.description} headingRef={headingRef} hideTitle={compactDetail} />
+              <SettingsPageHeader title={t(category.labelKey)} description={t(category.descriptionKey)} headingRef={headingRef} hideTitle={compactDetail} />
               <CategoryPage tab={current} onOpenProfile={onOpenProfile} />
             </SettingsContent>
           )}

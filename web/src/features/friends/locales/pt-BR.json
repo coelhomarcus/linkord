@@ -1,0 +1,142 @@
+{
+  "title": "Amigos",
+  "views": {
+    "ariaLabel": "Visualização de Amigos",
+    "all": "Todos",
+    "online": "Online",
+    "pending": "Pendentes",
+    "invitations": "Convites"
+  },
+  "badge": {
+    "pending": "{{count}} solicitações aguardando resposta",
+    "invitations": "{{count}} convites aguardando resposta"
+  },
+  "addFriend": "Adicionar amigo",
+  "feedback": {
+    "actionFailed": "Não foi possível concluir a ação. Tente de novo."
+  },
+  "send": {
+    "unavailable": "Não foi possível enviar a solicitação. Confira o nome de usuário.",
+    "cooldownAt": "Aguarde para tentar de novo. Disponível a partir de {{when}}.",
+    "cooldown": "Aguarde um pouco antes de tentar de novo.",
+    "failed": "Não foi possível enviar a solicitação.",
+    "created": "Solicitação enviada para @{{username}}.",
+    "already_pending": "Você já enviou uma solicitação para @{{username}}.",
+    "pending_received": "@{{username}} já te enviou uma solicitação. Aceite em Solicitações.",
+    "already_friends": "Você e @{{username}} já são amigos."
+  },
+  "form": {
+    "hint": "Digite o @nome de usuário exato da pessoa.",
+    "placeholder": "@nomedeusuario",
+    "submit": "Enviar",
+    "viewReceived": "Ver solicitação recebida"
+  },
+  "add": {
+    "shareTitle": "Seu nome de usuário",
+    "copied": "Copiado",
+    "copy": "Copiar @{{username}}",
+    "waiting_one": "Você tem {{count}} solicitação aguardando resposta.",
+    "waiting_other": "Você tem {{count}} solicitações aguardando resposta.",
+    "viewReceivedPlural": "Ver solicitações recebidas"
+  },
+  "list": {
+    "searchFriends": "Buscar nos seus amigos",
+    "loadingFriends": "Carregando amigos…",
+    "loadFriendsFailed": "Não foi possível carregar seus amigos.",
+    "retry": "Tentar de novo",
+    "emptyTitle": "Adicione amigos para começar uma conversa",
+    "emptyText": "Peça o @nome de usuário de quem você quer conversar, ou compartilhe o seu.",
+    "sectionOnline": "Online",
+    "sectionAll": "Todos os amigos",
+    "results_one": "{{count}} resultado",
+    "results_other": "{{count}} resultados",
+    "friends_one": "{{count}} amigo",
+    "friends_other": "{{count}} amigos",
+    "noResults": "Nenhum resultado para esta busca.",
+    "noneOnline": "Nenhum amigo online agora.",
+    "noneFound": "Nenhum amigo encontrado.",
+    "message": "Mensagem",
+    "messageTo": "Enviar mensagem para {{name}}",
+    "moreFor": "Mais ações para {{name}}",
+    "viewProfile": "Ver perfil",
+    "removeFriend": "Remover amizade",
+    "block": "Bloquear"
+  },
+  "requests": {
+    "searchLabel": "Buscar nas solicitações",
+    "received": "Recebidas",
+    "sent": "Enviadas",
+    "waiting": "{{count}} aguardando resposta",
+    "loading": "Carregando solicitações…",
+    "loadFailed": "Não foi possível carregar as solicitações.",
+    "noneIncoming": "Nenhuma solicitação recebida.",
+    "noneOutgoing": "Você não tem solicitações enviadas.",
+    "accept": "Aceitar",
+    "decline": "Recusar",
+    "cancel": "Cancelar",
+    "accepted": "Solicitação aceita.",
+    "declined": "Solicitação recusada.",
+    "cancelled": "Solicitação cancelada."
+  },
+  "invitations": {
+    "searchLabel": "Buscar nos convites",
+    "title": "Convites de grupo",
+    "loading": "Carregando convites…",
+    "loadFailed": "Não foi possível carregar os convites.",
+    "none": "Nenhum convite de grupo pendente.",
+    "from": "de",
+    "join": "Entrar",
+    "decline": "Recusar",
+    "joined": "Você entrou no grupo.",
+    "declined": "Convite recusado.",
+    "groupFull": "O grupo está cheio.",
+    "quotaExceeded": "Você já participa do máximo de grupos permitido.",
+    "members_zero": "{{count}} membros",
+    "members_one": "{{count}} membro",
+    "members_other": "{{count}} membros"
+  },
+  "loadMore": {
+    "refreshFailed": "Não foi possível atualizar a lista.",
+    "retry": "Tentar de novo",
+    "moreFailed": "Não foi possível carregar mais.",
+    "loading": "Carregando…",
+    "button": "Carregar mais"
+  },
+  "row": {
+    "viewProfile": "Ver perfil de {{name}}",
+    "online": ", online",
+    "offline": ", offline"
+  },
+  "gate": {
+    "blocked": "Você não pode enviar mensagens nem ligar enquanto essa pessoa estiver bloqueada. O histórico continua disponível.",
+    "notFriends": "Vocês precisam ser amigos para trocar mensagens e fazer chamadas aqui. O histórico continua disponível."
+  },
+  "profile": {
+    "edit": "Editar perfil",
+    "loading": "Carregando…",
+    "loadFailed": "Não foi possível carregar as ações.",
+    "retry": "Tentar de novo",
+    "more": "Mais ações",
+    "report": "Denunciar",
+    "message": "Mensagem",
+    "friendship": "Amizade",
+    "removeFriend": "Remover amizade",
+    "block": "Bloquear",
+    "requestSent": "Solicitação enviada",
+    "cancel": "Cancelar",
+    "accept": "Aceitar",
+    "decline": "Recusar",
+    "blockedByYou": "Você bloqueou essa pessoa",
+    "unblock": "Desbloquear",
+    "retryAfter": "Você poderá enviar uma nova solicitação a partir de {{when}}.",
+    "add": "Adicionar amigo"
+  },
+  "confirm": {
+    "blockTitle": "Bloquear pessoa",
+    "removeTitle": "Remover amizade",
+    "blockText": "Bloquear {{name}} remove a amizade e impede mensagens e chamadas privadas entre vocês. Grupos em comum continuam. Desbloquear depois não restaura a amizade.",
+    "removeText": "Remover {{name}} dos seus amigos? Vocês ainda podem ver o histórico da conversa, mas não conseguem mais trocar mensagens até serem amigos de novo.",
+    "block": "Bloquear",
+    "remove": "Remover"
+  }
+}

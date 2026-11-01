@@ -1,4 +1,5 @@
 import { DownloadSimpleIcon } from '@phosphor-icons/react';
+import { useTranslation } from 'react-i18next';
 
 import { cn } from '@/shared/lib/utils';
 import { DocumentAttachmentCard } from './DocumentAttachmentCard';
@@ -25,6 +26,7 @@ interface FileAttachmentCardProps {
  * so selecting the name never triggers a download and nothing nests a
  * button inside a link. */
 export function FileAttachmentCard({ name, size, mime, url, maxWidth, bordered = true, className }: FileAttachmentCardProps) {
+  const { t } = useTranslation('media');
   return (
     <div
       style={maxWidth ? { maxWidth } : undefined}
@@ -38,7 +40,7 @@ export function FileAttachmentCard({ name, size, mime, url, maxWidth, bordered =
       <a
         href={url}
         download={name}
-        aria-label={`Baixar ${name}`}
+        aria-label={t('download', { name })}
         className="grid size-11 flex-none place-items-center rounded-md text-text-muted transition-colors hover:bg-fill-hover hover:text-text-primary focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
       >
         <DownloadSimpleIcon size={18} />

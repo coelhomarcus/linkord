@@ -4,6 +4,7 @@ import { db } from '../../db/client.js';
 import { sessions, users } from '../../db/schema.js';
 import { config } from '../../config/env.js';
 import type { SessionUser } from '../../types.js';
+import { resolveLocale } from '../users/locale.js';
 
 // Login sessions. The cookie carries a raw 32-byte token; only its sha256
 // (`tokenHash`) is stored — a DB leak alone can't be replayed as a session.
@@ -77,6 +78,7 @@ export async function resolveSession(rawToken: string | undefined | null): Promi
       bio: users.bio,
       profileLinks: users.profileLinks,
       role: users.role,
+      locale: users.locale,
       status: users.status,
     })
     .from(sessions)
@@ -112,6 +114,7 @@ export async function resolveSession(rawToken: string | undefined | null): Promi
     bio: row.bio,
     profileLinks: Array.isArray(row.profileLinks) ? row.profileLinks : [],
     role: row.role as SessionUser['role'],
+    locale: resolveLocale(row.locale),
   };
   cacheSet(tokenHash, value);
   return value;

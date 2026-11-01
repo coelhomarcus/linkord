@@ -5,6 +5,7 @@ import type { LocalAudioTrack, Room } from 'livekit-client';
 import type { MicProblem, RoomAction } from '../../state/roomReducer';
 import { playSound } from '../../shared/sounds';
 import { loadDevicePreference } from '../settings/useDevicePreference';
+import { i18n } from '@/shared/i18n/init';
 
 interface MicrophoneApi {
   activateMic: () => Promise<void>;
@@ -40,7 +41,7 @@ export function useMicrophone(room: Room, dispatch: Dispatch<RoomAction>): Micro
     if (activatingRef.current) return;
     if (room.localParticipant.getTrackPublication(Track.Source.Microphone)) return;
     if (!navigator.mediaDevices?.getUserMedia) {
-      dispatch({ type: 'SET_SHARE_ERROR', message: 'Seu navegador não suporta acesso ao microfone.' });
+      dispatch({ type: 'SET_SHARE_ERROR', message: i18n.t('calls:errors.microphoneUnsupported') });
       return;
     }
 
@@ -59,7 +60,7 @@ export function useMicrophone(room: Room, dispatch: Dispatch<RoomAction>): Micro
       setMicProblem(null);
     } catch (err) {
       if (err instanceof Error && err.message === 'timeout') {
-        dispatch({ type: 'SET_SHARE_ERROR', message: 'Não foi possível conectar ao servidor de vídeo. Verifique sua conexão e tente de novo.' });
+        dispatch({ type: 'SET_SHARE_ERROR', message: i18n.t('calls:errors.videoConnectionFailed') });
         return;
       }
       const name = (err as DOMException)?.name;
@@ -71,7 +72,7 @@ export function useMicrophone(room: Room, dispatch: Dispatch<RoomAction>): Micro
       if (name === 'NotFoundError') { setMicProblem('not-found'); return; }
       if (name === 'NotAllowedError') { setMicProblem('denied'); return; }
       if (name === 'NotReadableError' || name === 'AbortError') { setMicProblem('unavailable'); return; }
-      dispatch({ type: 'SET_SHARE_ERROR', message: `Não foi possível acessar o microfone: ${(err as Error)?.message}` });
+      dispatch({ type: 'SET_SHARE_ERROR', message: i18n.t('calls:errors.microphoneAccess', { error: (err as Error)?.message }) });
     } finally {
       activatingRef.current = false;
     }

@@ -6,8 +6,8 @@ export type FileFamily = 'pdf' | 'document' | 'spreadsheet' | 'presentation' | '
 
 export interface FilePresentation {
   family: FileFamily;
-  /** The word shown next to the size, e.g. "Documento PDF" — never the raw MIME. */
-  typeLabel: string;
+  /** Translation key for the word shown next to the size — never the raw MIME. */
+  typeLabelKey: FileFamily;
   icon: Icon;
   /** Small corner marker on the icon — only PDF gets one; every other family
    * relies on its own icon shape, not color, to read as distinct (see the
@@ -65,19 +65,6 @@ const EXT_FAMILY: Partial<Record<string, FileFamily>> = {
   ppt: 'presentation', pptx: 'presentation', odp: 'presentation',
   zip: 'archive', rar: 'archive', '7z': 'archive', tar: 'archive', gz: 'archive', bz2: 'archive', xz: 'archive',
   'tar.gz': 'archive', 'tar.bz2': 'archive', 'tar.xz': 'archive',
-};
-
-const FAMILY_LABEL: Record<FileFamily, string> = {
-  pdf: 'Documento PDF',
-  document: 'Documento',
-  spreadsheet: 'Planilha',
-  presentation: 'Apresentação',
-  archive: 'Arquivo compactado',
-  'text-code': 'Texto/código',
-  image: 'Imagem',
-  audio: 'Áudio',
-  video: 'Vídeo',
-  unknown: 'Arquivo',
 };
 
 const FAMILY_ICON: Record<FileFamily, Icon> = {
@@ -155,7 +142,7 @@ export function presentFile(name: string, mime: string): FilePresentation {
   const color = FAMILY_COLOR[family];
   return {
     family,
-    typeLabel: FAMILY_LABEL[family],
+    typeLabelKey: family,
     icon: FAMILY_ICON[family],
     badge: family === 'pdf' ? 'PDF' : undefined,
     iconBgClassName: color.bg,

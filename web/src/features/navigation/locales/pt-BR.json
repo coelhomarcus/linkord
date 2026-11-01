@@ -1,0 +1,18 @@
+{
+  "main": "Navegação principal",
+  "showList": "Mostrar lista de conversas",
+  "conversations": "Conversas",
+  "conversationsUnread_one": "Conversas, {{count}} não lida",
+  "conversationsUnread_other": "Conversas, {{count}} não lidas",
+  "friends": "Amigos",
+  "friendsPending_one": "Amigos, {{count}} aguardando resposta",
+  "friendsPending_other": "Amigos, {{count}} aguardando resposta",
+  "notifications": "Notificações",
+  "profile": "Perfil",
+  "inCall": "Em chamada: {{title}}",
+  "returnToCall": "Voltar",
+  "tabFriendsPending_one": "{{label}}, {{count}} solicitação pendente",
+  "tabFriendsPending_other": "{{label}}, {{count}} solicitações pendentes",
+  "tabUnread_one": "{{label}}, {{count}} não lida",
+  "tabUnread_other": "{{label}}, {{count}} não lidas"
+}

@@ -1,14 +1,15 @@
 import type { Conversation, Participant, PublicUser } from '@/shared/types/protocol';
+import { i18n } from '@/shared/i18n/init';
 
 export type ConversationListTab = 'direct' | 'group' | 'bot';
 
 export function conversationTitle(conversation: Conversation | null | undefined, meUserId: string | null, users: Map<string, PublicUser>): string {
-  if (!conversation) return 'Conversa';
-  if (conversation.type === 'group') return conversation.title || 'Grupo';
-  if (conversation.type === 'bot') return conversation.title || 'Bot';
+  if (!conversation) return i18n.t('conversations:fallback.conversation');
+  if (conversation.type === 'group') return conversation.title || i18n.t('conversations:fallback.group');
+  if (conversation.type === 'bot') return conversation.title || i18n.t('conversations:fallback.bot');
   const otherId = conversation.memberIds.find((id) => id !== meUserId) ?? conversation.memberIds[0];
   const other = otherId ? users.get(otherId) : undefined;
-  return other?.displayName || other?.username || 'Conversa direta';
+  return other?.displayName || other?.username || i18n.t('conversations:fallback.direct');
 }
 
 export const APP_TITLE = 'Linkord';

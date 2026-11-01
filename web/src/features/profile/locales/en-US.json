@@ -1,0 +1,63 @@
+{
+  "title": "Profile",
+  "page": {
+    "options": "Profile options",
+    "myProfile": "My profile",
+    "settings": "Settings"
+  },
+  "connections": "Connections",
+  "card": {
+    "bio": "Bio",
+    "bioPlaceholder": "Tell us a little about yourself...",
+    "changeBanner": "Change banner",
+    "uploadFromComputer": "Upload from computer",
+    "removeBanner": "Remove banner",
+    "viewBanner": "View banner full screen",
+    "changeAvatar": "Change profile picture",
+    "removeAvatar": "Remove picture",
+    "viewAvatar": "View profile picture full screen",
+    "useColor": "Use {{name}}",
+    "customColorTitle": "Custom color",
+    "customColorLabel": "Choose custom color",
+    "displayName": "Display name",
+    "openLink": "Open {{name}}",
+    "link": "Link {{count}}",
+    "removeLink": "Remove link",
+    "addLink": "Add link",
+    "admin": "Admin"
+  },
+  "modal": {
+    "loadingTitle": "Loading profile",
+    "loading": "Loading profile…",
+    "loadFailedTitle": "Couldn't load the profile",
+    "loadFailed": "Couldn't load this profile.",
+    "retry": "Try again",
+    "profileOf": "{{name}}'s profile",
+    "memberSince": "Member since",
+    "friendsSince": "Friends since",
+    "banner": "Banner",
+    "avatar": "Profile picture"
+  },
+  "mutuals": {
+    "title": "Shared",
+    "friendsTitle": "Mutual friends",
+    "groupsTitle": "Mutual groups",
+    "friends_one": "{{count}} mutual friend",
+    "friends_other": "{{count}} mutual friends",
+    "groups_one": "{{count}} mutual group",
+    "groups_other": "{{count}} mutual groups",
+    "members_one": "{{count}} member",
+    "members_other": "{{count}} members",
+    "showing": "Showing {{shown}} of {{total}}.",
+    "loadFailed": "Couldn't load what you have in common.",
+    "retry": "Try again",
+    "noneFriends": "No mutual friends.",
+    "noneGroups": "No mutual groups.",
+    "online": " · online"
+  },
+  "save": {
+    "timeout": "The profile wasn't confirmed in time. Check your connection and try again.",
+    "offline": "No connection to the server. Try again in a moment.",
+    "failed": "Couldn't save the profile. Try again."
+  }
+}

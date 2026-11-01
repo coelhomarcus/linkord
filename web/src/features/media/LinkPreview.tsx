@@ -1,4 +1,5 @@
 import { ImageBrokenIcon } from '@phosphor-icons/react';
+import { useTranslation } from 'react-i18next';
 import { useEffect, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 
@@ -29,6 +30,7 @@ function useRemoteImageSize(url: string, ref: RefObject<HTMLElement | null>, ena
 }
 
 function EmbedFailedFallback({ url, className }: { url: string; className: string }) {
+  const { t } = useTranslation('media');
   return (
     <a
       href={url}
@@ -37,7 +39,7 @@ function EmbedFailedFallback({ url, className }: { url: string; className: strin
       className={`flex w-full max-w-sm items-center gap-2 rounded-md border border-border bg-bg-tertiary px-3 py-2.5 text-label text-text-muted transition-colors hover:bg-bg-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 ${className}`}
     >
       <ImageBrokenIcon size={14} className="flex-none" />
-      <span className="truncate">Não foi possível carregar a prévia. Abrir link</span>
+      <span className="truncate">{t('embed.previewFailed')} {t('embed.openLink')}</span>
     </a>
   );
 }

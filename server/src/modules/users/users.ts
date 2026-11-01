@@ -2,6 +2,7 @@ import { eq, inArray, sql } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { users, type User } from '../../db/schema.js';
 import type { Role } from '../../types.js';
+import { resolveLocale, type Locale } from './locale.js';
 
 // Account CRUD. Username uniqueness is case-insensitive (index on
 // lower(username) in the schema) — every username lookup must use the
@@ -24,6 +25,7 @@ export interface PublicUser {
 
 export interface PrivateUser extends PublicUser {
   email: string | null;
+  locale: Locale;
 }
 
 /** '' (never set, or explicitly cleared) falls back to the immutable
@@ -51,7 +53,7 @@ export async function recordUserLastSeen(userId: string, at: Date): Promise<void
 }
 
 export function privateUser(u: User): PrivateUser {
-  return { ...publicUser(u), email: u.email };
+  return { ...publicUser(u), email: u.email, locale: resolveLocale(u.locale) };
 }
 
 /** The minimum needed to render a row in a friends/requests/blocks list —

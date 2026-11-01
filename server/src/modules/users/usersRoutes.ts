@@ -1,8 +1,10 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { config } from '../../config/env.js';
-import { sendJson, sendError } from '../../http/respond.js';
+import { sendJson, sendError, jsonBody } from '../../http/respond.js';
 import { parseCookies } from '../../http/cookies.js';
 import { resolveSession } from '../auth/session.js';
+import { updateLocale } from '../auth/accounts.js';
+import { isLocale } from './locale.js';
 import { findById, publicUser } from './users.js';
 import { areFriends, friendsSince, listMutualFriends } from '../friendships/friendshipsRepository.js';
 import { listSharedGroups, shareAnyConversation } from '../conversations/conversationsRepository.js';
@@ -76,7 +78,22 @@ async function handleGetProfileDetails(request: FastifyRequest<{ Params: Params 
   });
 }
 
+/** `PATCH /api/me/locale` — the account's UI language, which every device
+ * picks up on its next /api/auth/me and which e-mails and push follow. */
+async function handleSetLocale(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  const cookies = parseCookies(request.headers.cookie || '');
+  const sess = await resolveSession(cookies[config.SESSION_COOKIE]);
+  if (!sess) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
+
+  const { locale } = jsonBody(request.body);
+  if (!isLocale(locale)) return sendError(reply, 400, 'invalid_request', 'Idioma não suportado.');
+
+  await updateLocale(sess.userId, locale);
+  sendJson(reply, 200, { locale });
+}
+
 export function registerUserRoutes(fastify: FastifyInstance): void {
+  fastify.patch('/api/me/locale', handleSetLocale);
   fastify.get('/api/users/:userId/profile', handleGetProfile);
   fastify.get('/api/users/:userId/profile-details', handleGetProfileDetails);
 }

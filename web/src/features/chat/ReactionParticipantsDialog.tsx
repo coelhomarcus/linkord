@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import { Avatar } from '@/shared/Avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/primitives/dialog';
@@ -13,6 +14,7 @@ import type { ReactionEmoji } from '@/shared/types/protocol';
  * comes from RoomContext's reactionParticipantsTarget, so it works the same
  * from a row in the main chat or in the call panel. */
 export function ReactionParticipantsDialog() {
+  const { t } = useTranslation('chat');
   const { reactionParticipantsTarget: target, closeReactionParticipants, messagesByConversation, allUsers, pendingReactions, state } = useRoom();
   const [activeEmoji, setActiveEmoji] = useState<ReactionEmoji | null>(null);
 
@@ -37,13 +39,13 @@ export function ReactionParticipantsDialog() {
     <Dialog open={!!target} onOpenChange={(next) => { if (!next) closeReactionParticipants(); }}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>Reações</DialogTitle>
+          <DialogTitle>{t('reactions.title')}</DialogTitle>
         </DialogHeader>
         {entries.length === 0 ? (
-          <p className="py-4 text-center text-body text-text-muted">Ainda não há reações.</p>
+          <p className="py-4 text-center text-body text-text-muted">{t('reactions.empty')}</p>
         ) : (
           <>
-            <div role="tablist" aria-label="Emoji" className="flex flex-wrap gap-1">
+            <div role="tablist" aria-label={t('reactions.tabsLabel')} className="flex flex-wrap gap-1">
               {entries.map(([emoji, userIds]) => (
                 <button
                   key={emoji}

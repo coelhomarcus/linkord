@@ -1,6 +1,10 @@
 import '@testing-library/jest-dom/vitest';
 import { afterEach } from 'vitest';
 import { cleanup } from '@testing-library/react';
+import { initI18n } from '@/shared/i18n/init';
+
+// jsdom reports en-US; the suite asserts the Portuguese UI text.
+initI18n('pt-BR');
 
 afterEach(() => {
   if (typeof document !== 'undefined') cleanup();

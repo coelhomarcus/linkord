@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { UsersIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
 
@@ -10,18 +11,13 @@ import { ERROR_CODES } from '@/shared/api/errorCodes';
 
 type LocalOutcome = 'group_full' | null;
 
-const STATUS_LABEL: Record<Exclude<InvitationStatus, 'pending'>, string> = {
-  accepted: 'Aceito',
-  declined: 'Recusado',
-  revoked: 'Cancelado',
-  expired: 'Expirado',
-};
 
 export function InviteCard({ invitation }: { invitation: InvitationCard | null | undefined }) {
+  const { t } = useTranslation('chat');
   if (!invitation) {
     return (
       <div className="mt-1 max-w-[380px] rounded-lg border border-border bg-fill-subtle px-4 py-3 text-label text-text-muted">
-        Convite indisponível: o grupo não existe mais.
+        {t('invite.unavailable')}
       </div>
     );
   }
@@ -29,6 +25,7 @@ export function InviteCard({ invitation }: { invitation: InvitationCard | null |
 }
 
 function LiveInviteCard({ invitation }: { invitation: InvitationCard }) {
+  const { t } = useTranslation('chat');
   const { state, conversations, openConversation } = useRoom();
   const [busy, setBusy] = useState<'accept' | 'decline' | 'revoke' | null>(null);
   const [outcome, setOutcome] = useState<LocalOutcome>(null);
@@ -42,7 +39,7 @@ function LiveInviteCard({ invitation }: { invitation: InvitationCard }) {
   const isMember = !!group;
   const canRevoke = isInviter && group?.myRole === 'owner';
   const isBot = invitation.groupType === 'bot';
-  const noun = isBot ? 'bot' : 'grupo';
+  const kind = isBot ? 'bot' : 'group';
 
   async function run(kind: 'accept' | 'decline' | 'revoke', action: (id: string) => Promise<unknown>) {
     setBusy(kind);
@@ -52,8 +49,8 @@ function LiveInviteCard({ invitation }: { invitation: InvitationCard }) {
       // the card itself updates from the server's `invitation-updated`
     } catch (err) {
       if (err instanceof ApiError && err.code === ERROR_CODES.group_full) setOutcome('group_full');
-      else if (err instanceof ApiError && err.code === ERROR_CODES.quota_exceeded) setError('Você já participa do máximo de grupos permitido.');
-      else setError('Não foi possível concluir a ação. Tente de novo.');
+      else if (err instanceof ApiError && err.code === ERROR_CODES.quota_exceeded) setError(t('invite.quotaExceeded'));
+      else setError(t('invite.failed'));
     } finally {
       setBusy(null);
     }
@@ -61,27 +58,27 @@ function LiveInviteCard({ invitation }: { invitation: InvitationCard }) {
 
   let footer: React.ReactNode;
   if (status === 'pending' && outcome === 'group_full') {
-    footer = <p className="text-label text-text-muted">Limite atingido: o {noun} está cheio.</p>;
+    footer = <p className="text-label text-text-muted">{t(`invite.full_${kind}`)}</p>;
   } else if (status === 'pending' && isInvitee && isMember) {
-    footer = <p className="text-label text-text-muted">Você já participa deste {noun}.</p>;
+    footer = <p className="text-label text-text-muted">{t(`invite.alreadyMember_${kind}`)}</p>;
   } else if (status === 'pending' && isInvitee) {
     footer = (
       <div className="flex gap-2">
         <Button type="button" size="sm" disabled={busy !== null} onClick={() => run('accept', acceptInvitation)}>
-          {busy === 'accept' ? 'Aceitando…' : `Entrar no ${noun}`}
+          {busy === 'accept' ? t('invite.accepting') : t(`invite.join_${kind}`)}
         </Button>
         <Button type="button" size="sm" variant="secondary" disabled={busy !== null} onClick={() => run('decline', declineInvitation)}>
-          Recusar
+          {t('invite.decline')}
         </Button>
       </div>
     );
   } else if (status === 'pending') {
     footer = (
       <div className="flex items-center gap-2">
-        <span className="text-label text-text-muted">Aguardando resposta</span>
+        <span className="text-label text-text-muted">{t('invite.waiting')}</span>
         {canRevoke && (
           <Button type="button" size="xs" variant="ghost" disabled={busy !== null} onClick={() => run('revoke', revokeInvitation)}>
-            Revogar
+            {t('invite.revoke')}
           </Button>
         )}
       </div>
@@ -89,28 +86,28 @@ function LiveInviteCard({ invitation }: { invitation: InvitationCard }) {
   } else if (status === 'accepted' && isMember) {
     footer = (
       <Button type="button" size="sm" variant="secondary" onClick={() => openConversation(invitation.groupId)}>
-        Abrir {noun}
+        {t(`invite.open_${kind}`)}
       </Button>
     );
   } else {
-    footer = <p className="text-label font-medium text-text-muted">{STATUS_LABEL[status]}</p>;
+    footer = <p className="text-label font-medium text-text-muted">{t(`invite.status.${status}`)}</p>;
   }
 
   return (
     <div className="mt-1 max-w-[380px] rounded-lg border border-border bg-fill-subtle p-3" data-invite-status={status}>
-      <p className="mb-2 text-caption uppercase tracking-wide text-text-muted">Convite para {noun}</p>
+      <p className="mb-2 text-caption uppercase tracking-wide text-text-muted">{t(`invite.header_${kind}`)}</p>
       <div className="mb-3 flex items-center gap-3">
         <GroupAvatar id={invitation.groupId} title={invitation.groupTitle} avatar={invitation.groupAvatar} size={44} />
         <div className="min-w-0">
           <p className="truncate text-body font-medium text-text-primary">{invitation.groupTitle}</p>
           <p className="flex items-center gap-1 text-caption text-text-muted">
             <UsersIcon size={12} />
-            {invitation.memberCount} {invitation.memberCount === 1 ? 'membro' : 'membros'}
+            {t('invite.members', { count: invitation.memberCount })}
           </p>
         </div>
       </div>
       {status === 'pending' && isInvitee && !isMember && outcome !== 'group_full' && (
-        <p className="mb-2 text-caption text-text-muted">{isBot ? 'Ao entrar, você passa a receber os avisos deste bot.' : 'Ao entrar, você verá o histórico do grupo.'}</p>
+        <p className="mb-2 text-caption text-text-muted">{t(`invite.hint_${kind}`)}</p>
       )}
       {footer}
       {error && <p role="alert" className="mt-2 text-caption text-red">{error}</p>}

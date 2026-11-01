@@ -6,6 +6,7 @@ import { renderAdmin, adminRoom } from './adminFixture';
 import AdminArea from '@/features/admin/AdminArea';
 import * as adminApi from '@/features/admin/adminApi';
 import { useAdminLayout } from '@/features/admin/useAdminLayout';
+import { useLanguageForTests } from '../../fixtures/i18nFixture';
 
 vi.mock('@/shared/PageHeader', () => ({
   PageHeader: ({ title, subtitle, leading }: { title: string; subtitle?: string; leading?: React.ReactNode }) => (
@@ -75,5 +76,15 @@ describe('AdminArea', () => {
     expect(screen.queryByText('Nenhuma conta encontrada.')).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Grupos' })).not.toBeInTheDocument();
     expect(refreshAuth).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('AdminArea in English', () => {
+  useLanguageForTests('en-US');
+
+  it('renders the administration index in English', () => {
+    vi.mocked(useAdminLayout).mockReturnValue({ mode: 'compact', measured: true });
+    renderAdmin(<AdminArea />, { path: '/admin', pattern: '/admin/*' });
+    expect(screen.getByRole('heading', { name: 'Administration' })).toBeInTheDocument();
   });
 });

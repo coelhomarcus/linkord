@@ -1,18 +1,11 @@
 import type { MediaItem, MediaKind } from '@/shared/api/api';
+import { i18n } from '@/shared/i18n/init';
 
 /** tiles: a grid of squares (pictures, GIFs, videos, and every file in
  * "Todos"); list: one file per line; cards: one link preview per line */
 export type MediaLayout = 'tiles' | 'list' | 'cards';
 
-export const MEDIA_TABS: { kind: MediaKind; label: string }[] = [
-  { kind: 'uploads', label: 'Todos' },
-  { kind: 'images', label: 'Imagens' },
-  { kind: 'gifs', label: 'GIFs' },
-  { kind: 'videos', label: 'Vídeos' },
-  { kind: 'audios', label: 'Áudios' },
-  { kind: 'documents', label: 'Documentos' },
-  { kind: 'embeds', label: 'Links' },
-];
+export const MEDIA_TABS: MediaKind[] = ['uploads', 'images', 'gifs', 'videos', 'audios', 'documents', 'embeds'];
 
 export function layoutFor(kind: MediaKind): MediaLayout {
   if (kind === 'audios' || kind === 'documents') return 'list';
@@ -36,15 +29,15 @@ export function dateGroupLabel(ts: number, now: number = Date.now()): string {
   const startOfToday = new Date(now).setHours(0, 0, 0, 0);
   const startOfDay = new Date(ts).setHours(0, 0, 0, 0);
   const daysAgo = Math.round((startOfToday - startOfDay) / DAY_MS);
-  if (daysAgo <= 0) return 'Hoje';
-  if (daysAgo === 1) return 'Ontem';
-  if (daysAgo < 7) return 'Esta semana';
-  const month = new Date(ts).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+  if (daysAgo <= 0) return i18n.t('conversations:media.today');
+  if (daysAgo === 1) return i18n.t('conversations:media.yesterday');
+  if (daysAgo < 7) return i18n.t('conversations:media.thisWeek');
+  const month = new Date(ts).toLocaleDateString(i18n.language, { month: 'long', year: 'numeric' });
   return month.charAt(0).toUpperCase() + month.slice(1);
 }
 
 export function formatMediaDate(ts: number): string {
-  return new Date(ts).toLocaleString('pt-BR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  return new Date(ts).toLocaleString(i18n.language, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
 /** Items arrive newest first, so each heading's items are contiguous: a

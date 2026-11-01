@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import { FriendRequestList } from './FriendRequestList';
 import { useFriends } from './FriendsContext';
 import { ListSearch } from './ListSearch';
@@ -9,6 +10,7 @@ import { useUrlSearch } from '@/shared/hooks/useUrlSearch';
 /** Received and sent requests in one scroll, each with its own pagination. The
  * hash (#received / #sent) is a direct link to a section. */
 export function PendingRequestsView({ query, onQueryChange, onOpenProfile }: { query: string; onQueryChange: (next: string) => void; onOpenProfile: (userId: string) => void }) {
+  const { t } = useTranslation('friends');
   const { pendingFriendRequestCount } = useFriends();
   const { value, setValue, search } = useUrlSearch(query, onQueryChange);
   const { hash } = useLocation();
@@ -19,13 +21,13 @@ export function PendingRequestsView({ query, onQueryChange, onOpenProfile }: { q
 
   return (
     <div className="flex flex-col gap-6">
-      <ListSearch value={value} onChange={setValue} label="Buscar nas solicitações" />
+      <ListSearch value={value} onChange={setValue} label={t('requests.searchLabel')} />
       <section id="received" aria-labelledby="received-title" className="scroll-mt-4">
-        <ListSectionHeader id="received-title" title="Recebidas" count={!search && pendingFriendRequestCount > 0 ? `${pendingFriendRequestCount} aguardando resposta` : undefined} />
+        <ListSectionHeader id="received-title" title={t('requests.received')} count={!search && pendingFriendRequestCount > 0 ? t('requests.waiting', { count: pendingFriendRequestCount }) : undefined} />
         <FriendRequestList direction="incoming" search={search} headingId="received-title" onOpenProfile={onOpenProfile} />
       </section>
       <section id="sent" aria-labelledby="sent-title" className="scroll-mt-4">
-        <ListSectionHeader id="sent-title" title="Enviadas" />
+        <ListSectionHeader id="sent-title" title={t('requests.sent')} />
         <FriendRequestList direction="outgoing" search={search} headingId="sent-title" onOpenProfile={onOpenProfile} />
       </section>
     </div>

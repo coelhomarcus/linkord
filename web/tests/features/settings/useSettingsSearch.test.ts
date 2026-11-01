@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { normalizeSearchText, useSettingsSearch } from '@/features/settings/useSettingsSearch';
+import { useLanguageForTests } from '@tests/fixtures/i18nFixture';
 
 function titles(results: ReturnType<typeof useSettingsSearch>['results']): string[] {
-  return results.map((r) => r.entry.title);
+  return results.map((r) => r.title);
 }
 
 describe('normalizeSearchText', () => {
@@ -29,7 +30,7 @@ describe('useSettingsSearch', () => {
     const { result } = renderHook(() => useSettingsSearch(false));
     act(() => result.current.setQuery('foto'));
     expect(titles(result.current.results)).toContain('Perfil');
-    expect(result.current.results.find((r) => r.entry.title === 'Perfil')?.entry.sectionId).toBeUndefined();
+    expect(result.current.results.find((r) => r.title === 'Perfil')?.entry.sectionId).toBeUndefined();
   });
 
   it('"som" finds Sons and/or Alto-falante', () => {
@@ -53,5 +54,17 @@ describe('useSettingsSearch', () => {
     const admin = renderHook(() => useSettingsSearch(true));
     act(() => admin.result.current.setQuery('admin'));
     expect(titles(admin.result.current.results)).toContain('Área administrativa');
+  });
+});
+
+describe('useSettingsSearch in English', () => {
+  useLanguageForTests('en-US');
+
+  it('searches the English titles and synonyms', () => {
+    const { result } = renderHook(() => useSettingsSearch(false));
+    act(() => result.current.setQuery('webcam'));
+    expect(titles(result.current.results)).toContain('Camera');
+    act(() => result.current.setQuery('alto-falante'));
+    expect(result.current.results).toEqual([]);
   });
 });

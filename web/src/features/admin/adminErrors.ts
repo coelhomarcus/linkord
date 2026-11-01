@@ -1,5 +1,6 @@
 import { ApiError } from '@/shared/api/api';
 import { ERROR_CODES } from '@/shared/api/errorCodes';
+import { i18n } from '@/shared/i18n/init';
 
 export const REASON_MIN = 3;
 export const REASON_MAX = 500;
@@ -20,24 +21,24 @@ export function isStaleStateError(err: unknown): boolean {
 export function describeAdminError(err: unknown): string {
   if (err instanceof ApiError) {
     switch (err.code) {
-      case ERROR_CODES.reason_required: return 'Informe o motivo (3 a 500 caracteres).';
-      case ERROR_CODES.self_action: return 'Você não pode fazer isso na própria conta.';
-      case ERROR_CODES.last_admin: return 'Essa conta é o último administrador ativo.';
-      case ERROR_CODES.confirmation_mismatch: return 'A confirmação não confere.';
-      case ERROR_CODES.already_admin: return 'Essa conta já é administradora.';
-      case ERROR_CODES.not_admin: return 'Essa conta não é administradora.';
-      case ERROR_CODES.target_inactive: return 'Só uma conta ativa pode virar administradora.';
-      case ERROR_CODES.already_suspended: return 'Já estava suspenso: o estado mudou antes da sua ação. Os dados foram atualizados.';
-      case ERROR_CODES.not_suspended: return 'Já estava ativo: o estado mudou antes da sua ação. Os dados foram atualizados.';
-      case ERROR_CODES.already_closed: return 'Essa denúncia já foi encerrada por outra pessoa. Os dados foram atualizados.';
-      case ERROR_CODES.not_open: return 'Essa denúncia já está em análise. Os dados foram atualizados.';
-      case ERROR_CODES.invalid_action: return 'Essa ação não se aplica a esse tipo de denúncia.';
-      case ERROR_CODES.action_failed: return 'Não foi possível aplicar a ação, então a denúncia continua aberta. Confira o estado do alvo e tente de novo.';
-      case ERROR_CODES.not_member: return 'Essa conta não é mais membro do grupo. A lista de membros foi atualizada.';
-      case ERROR_CODES.forbidden: return 'Você não tem mais permissão de administrador.';
-      case ERROR_CODES.rate_limited: return 'Muitas ações seguidas. Espere um pouco.';
+      case ERROR_CODES.reason_required: return i18n.t('admin:errors.reasonRequired');
+      case ERROR_CODES.self_action: return i18n.t('admin:errors.selfAction');
+      case ERROR_CODES.last_admin: return i18n.t('admin:errors.lastAdmin');
+      case ERROR_CODES.confirmation_mismatch: return i18n.t('admin:errors.confirmationMismatch');
+      case ERROR_CODES.already_admin: return i18n.t('admin:errors.alreadyAdmin');
+      case ERROR_CODES.not_admin: return i18n.t('admin:errors.notAdmin');
+      case ERROR_CODES.target_inactive: return i18n.t('admin:errors.targetInactive');
+      case ERROR_CODES.already_suspended: return i18n.t('admin:errors.alreadySuspended');
+      case ERROR_CODES.not_suspended: return i18n.t('admin:errors.notSuspended');
+      case ERROR_CODES.already_closed: return i18n.t('admin:errors.alreadyClosed');
+      case ERROR_CODES.not_open: return i18n.t('admin:errors.notOpen');
+      case ERROR_CODES.invalid_action: return i18n.t('admin:errors.invalidAction');
+      case ERROR_CODES.action_failed: return i18n.t('admin:errors.actionFailed');
+      case ERROR_CODES.not_member: return i18n.t('admin:errors.notMember');
+      case ERROR_CODES.forbidden: return i18n.t('admin:errors.forbidden');
+      case ERROR_CODES.rate_limited: return i18n.t('admin:errors.rateLimited');
       default: if (err.message) return err.message;
     }
   }
-  return 'Não foi possível concluir a ação. Tente de novo.';
+  return i18n.t('admin:errors.generic');
 }

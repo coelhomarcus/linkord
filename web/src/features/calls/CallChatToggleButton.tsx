@@ -1,4 +1,5 @@
 import { ChatCircleIcon } from '@phosphor-icons/react';
+import { useTranslation } from 'react-i18next';
 
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
 import { buttonVariants } from '@/shared/ui/primitives/button';
@@ -16,6 +17,8 @@ interface CallChatToggleButtonProps {
 // position doubles as a hint that it opens a side panel, same corner a
 // sidebar toggle would live in.
 export function CallChatToggleButton({ chatOpen, onToggleChat, hudVisible = true }: CallChatToggleButtonProps) {
+  const { t } = useTranslation('calls');
+  const label = chatOpen ? t('controls.closeChat') : t('controls.openChat');
   return (
     <div className={cn(
       'absolute right-[calc(1rem+env(safe-area-inset-right))] top-[calc(1rem+env(safe-area-inset-top))] z-20 transition-opacity duration-200 motion-reduce:transition-none',
@@ -24,7 +27,7 @@ export function CallChatToggleButton({ chatOpen, onToggleChat, hudVisible = true
       <Tooltip>
         <TooltipTrigger
           onClick={onToggleChat}
-          aria-label={chatOpen ? 'Fechar chat' : 'Abrir chat'}
+          aria-label={label}
           className={cn(
             buttonVariants({ variant: 'ghost', size: 'icon-lg' }),
             'h-11 w-11 rounded-full border border-border-strong bg-bg-floating/90 shadow-popover backdrop-blur-xl',
@@ -33,7 +36,7 @@ export function CallChatToggleButton({ chatOpen, onToggleChat, hudVisible = true
         >
           <ChatCircleIcon size={18} />
         </TooltipTrigger>
-        <TooltipContent side="left">{chatOpen ? 'Fechar chat' : 'Abrir chat'}</TooltipContent>
+        <TooltipContent side="left">{label}</TooltipContent>
       </Tooltip>
     </div>
   );

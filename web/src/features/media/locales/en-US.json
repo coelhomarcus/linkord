@@ -1,0 +1,47 @@
+{
+  "fileTypes": {
+    "pdf": "PDF document",
+    "document": "Document",
+    "spreadsheet": "Spreadsheet",
+    "presentation": "Presentation",
+    "archive": "Compressed archive",
+    "text-code": "Text/code",
+    "image": "Image",
+    "audio": "Audio",
+    "video": "Video",
+    "unknown": "File"
+  },
+  "download": "Download {{name}}",
+  "collection": {
+    "itemPosition": "{{name}}, {{index}} of {{total}}",
+    "image": "Image",
+    "downloadOriginal": "Download original",
+    "previous": "Previous",
+    "next": "Next"
+  },
+  "embed": {
+    "previewFailed": "Could not load the preview.",
+    "openLink": "Open link",
+    "twitchChannel": "twitch.tv/{{channel}}",
+    "twitchVod": "Twitch VOD",
+    "twitchClip": "Twitch clip",
+    "loadPlayer": "Click to load player"
+  },
+  "player": {
+    "volume": "Volume",
+    "playVideo": "Play video",
+    "play": "Play",
+    "pause": "Pause",
+    "unmute": "Unmute",
+    "mute": "Mute",
+    "download": "Download",
+    "fullscreen": "Fullscreen",
+    "video": "video",
+    "audio": "audio"
+  },
+  "preview": {
+    "showLess": "Show less",
+    "showMore": "Show more",
+    "downloadFull": "Download to see all"
+  }
+}

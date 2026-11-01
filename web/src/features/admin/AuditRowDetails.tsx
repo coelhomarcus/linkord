@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { formatFileSize } from '@/shared/lib/formatBytes';
 import type { AuditRow } from './adminApi';
 import { ACTION_LABELS, REPORT_RESOLUTION_LABEL } from './adminFormat';
@@ -45,11 +46,12 @@ function splitDetail(detail: Record<string, unknown>): { pairs: { key: string; l
 }
 
 function RawJson({ value }: { value: Record<string, unknown> }) {
+  const { t } = useTranslation('admin');
   const text = JSON.stringify(value, null, 2);
   const cut = text.length > JSON_LIMIT;
   return (
     <details className="text-caption text-text-muted">
-      <summary className="cursor-pointer select-none py-1">Ver dados brutos</summary>
+      <summary className="cursor-pointer select-none py-1">{t('audit.rawData')}</summary>
       <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-all rounded-md bg-fill-inset p-3 font-mono text-text-secondary">{cut ? `${text.slice(0, JSON_LIMIT)}\n…` : text}</pre>
       {cut && <p className="mt-1">Mostrando os primeiros {JSON_LIMIT} caracteres.</p>}
     </details>
@@ -58,14 +60,15 @@ function RawJson({ value }: { value: Record<string, unknown> }) {
 
 /** Everything a record carries that the row itself doesn't show. */
 export function AuditRowDetails({ row }: { row: AuditRow }) {
+  const { t } = useTranslation('admin');
   const { pairs, rest } = splitDetail(row.detail);
   return (
     <div className="flex flex-col gap-2">
       <AdminFields>
-        <AdminFieldRow label="Motivo">{row.reason || '-'}</AdminFieldRow>
-        <AdminFieldRow label="Código da ação"><span className="font-mono text-caption">{row.action}</span>{ACTION_LABELS[row.action] ? '' : ' (sem rótulo conhecido)'}</AdminFieldRow>
-        <AdminFieldRow label="ID do alvo"><span className="break-all font-mono text-caption">{row.targetId || '-'}</span></AdminFieldRow>
-        <AdminFieldRow label="ID da requisição"><span className="break-all font-mono text-caption">{row.requestId || '-'}</span></AdminFieldRow>
+        <AdminFieldRow label={t('audit.reason')}>{row.reason || '-'}</AdminFieldRow>
+        <AdminFieldRow label={t('audit.actionCode')}><span className="font-mono text-caption">{row.action}</span>{ACTION_LABELS[row.action] ? '' : t('audit.unknownCode')}</AdminFieldRow>
+        <AdminFieldRow label={t('audit.targetId')}><span className="break-all font-mono text-caption">{row.targetId || '-'}</span></AdminFieldRow>
+        <AdminFieldRow label={t('audit.requestId')}><span className="break-all font-mono text-caption">{row.requestId || '-'}</span></AdminFieldRow>
         {pairs.map((pair) => <AdminFieldRow key={pair.key} label={pair.label}>{pair.value}</AdminFieldRow>)}
       </AdminFields>
       {rest && <RawJson value={rest} />}

@@ -1,4 +1,7 @@
+import { useTranslation } from 'react-i18next';
+
 export function LoadingScreen({ reconnecting = false, onRetry }: { reconnecting?: boolean; onRetry?: () => void }) {
+  const { t } = useTranslation('common');
   return (
     <div className="flex min-h-full items-center justify-center bg-bg-primary">
       <div className="flex flex-col items-center gap-5">
@@ -11,9 +14,9 @@ export function LoadingScreen({ reconnecting = false, onRetry }: { reconnecting?
         </div>
         {reconnecting && (
           <div className="flex flex-col items-center gap-3 text-center">
-            <p className="text-label text-text-muted">Aguardando conexão com o servidor...</p>
+            <p className="text-label text-text-muted">{t('layout.waitingForServer')}</p>
             <button type="button" onClick={onRetry} className="min-h-11 rounded-lg border border-border-strong px-4 text-label font-medium text-text-primary hover:bg-bg-secondary">
-              Tentar reconectar
+              {t('layout.retryNow')}
             </button>
           </div>
         )}

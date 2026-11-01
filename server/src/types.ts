@@ -1,5 +1,7 @@
 import type { Socket } from 'socket.io';
 
+import type { Locale } from './modules/users/locale.js';
+
 export type Role = 'user' | 'admin';
 
 /** Resolved session (see modules/auth/session.ts#resolveSession) —
@@ -21,6 +23,7 @@ export interface SessionUser {
   bio: string;
   profileLinks: string[];
   role: Role;
+  locale: Locale;
 }
 
 /** The single room's participant (see realtime/participants.ts). `id` is

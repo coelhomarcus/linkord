@@ -1,4 +1,5 @@
 import { cn } from '@/shared/lib/utils';
+import { i18n } from '@/shared/i18n/init';
 import type { RichEmbed } from '@/shared/types/protocol';
 import { ChatMessageText } from './ChatMessageText';
 
@@ -8,7 +9,7 @@ function hexColor(color: number): string {
 
 function formatEmbedTime(iso: string): string {
   const date = new Date(iso);
-  return Number.isNaN(date.getTime()) ? '' : date.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  return Number.isNaN(date.getTime()) ? '' : date.toLocaleString(i18n.language, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
 /** A bot's structured card: an accent bar in its color, a title (a link when it

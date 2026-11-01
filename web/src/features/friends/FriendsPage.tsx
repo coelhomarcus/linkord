@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import { PageHeader } from '@/shared/PageHeader';
 import { useElementWidth } from '@/shared/hooks/useElementWidth';
 import { parseFriendsView } from '@/shared/lib/routes';
@@ -23,6 +24,7 @@ function headerLayoutFor(width: number): FriendsHeaderLayout {
 /** Friends, pending requests, group invitations and adding people — one page. The
  * view (`?tab=`) and the search (`?q=`) live in the URL. */
 export function FriendsPage({ onOpenProfile }: { onOpenProfile: (userId: string) => void }) {
+  const { t } = useTranslation('friends');
   const [params, setParams] = useSearchParams();
   const rawTab = params.get('tab');
   const view = parseFriendsView(rawTab);
@@ -50,13 +52,13 @@ export function FriendsPage({ onOpenProfile }: { onOpenProfile: (userId: string)
   return (
     <div ref={areaRef} className="@container flex h-full min-h-0 flex-col">
       <PageHeader
-        title="Amigos"
+        title={t('title')}
         middle={layout === 'inline' ? <FriendsModeNav view={view} className="ml-2" /> : undefined}
         actions={<AddFriendButton active={view === 'add'} iconOnly={layout === 'select'} />}
       />
       {layout === 'row' && <FriendsModeNav view={view} className="flex-none px-4 py-2 md:border-b md:border-border md:px-6" />}
       {layout === 'select' && <div className="flex-none px-4 py-2 md:border-b md:border-border"><FriendsModeSelect view={view} /></div>}
-      <main aria-label="Amigos" className="min-h-0 flex-1 overflow-y-auto px-4 py-4 md:px-6">
+      <main aria-label={t('views.ariaLabel')} className="min-h-0 flex-1 overflow-y-auto px-4 py-4 md:px-6">
         {(view === 'all' || view === 'online') && (
           <FriendsList key={view} view={view} query={query} onQueryChange={setQuery} onOpenProfile={onOpenProfile} />
         )}

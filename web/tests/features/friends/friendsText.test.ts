@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ApiError } from '@/shared/api/api';
 import { describeOutcome, describeSendError, normalizeUsernameInput } from '@/features/friends/friendsText';
+import { useLanguageForTests } from '@tests/fixtures/i18nFixture';
 
 describe('normalizeUsernameInput', () => {
   it('strips spaces and the @ that people naturally type', () => {
@@ -39,5 +40,17 @@ describe('describeOutcome', () => {
     expect(describeOutcome('pending_received', 'ana').text).toMatch(/Solicitações/);
     expect(describeOutcome('already_pending', 'ana').tone).toBe('info');
     expect(describeOutcome('already_friends', 'ana').text).toMatch(/já são amigos/);
+  });
+});
+
+describe('English translations', () => {
+  useLanguageForTests('en-US');
+
+  it('uses the English generic send error', () => {
+    expect(describeSendError(new Error('boom'))).toBe("Couldn't send the request.");
+  });
+
+  it('uses the English request outcome text', () => {
+    expect(describeOutcome('created', 'ana')).toEqual({ text: 'Request sent to @ana.', tone: 'success' });
   });
 });

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { CheckIcon, CopyIcon } from '@phosphor-icons/react';
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
@@ -71,6 +72,7 @@ const COPIED_FOR_MS = 2000;
 /** Copies the block's source as sent — never the highlighted markup. Shown on
  * hover or focus; a touch screen has no hover, so there it always shows. */
 function CopyCodeButton({ code }: { code: string }) {
+  const { t } = useTranslation('chat');
   const [copied, setCopied] = useState(false);
   useEffect(() => {
     if (!copied) return;
@@ -81,14 +83,14 @@ function CopyCodeButton({ code }: { code: string }) {
     <button
       type="button"
       onClick={() => { navigator.clipboard.writeText(code).then(() => setCopied(true)).catch(() => {}); }}
-      aria-label={copied ? 'Código copiado' : 'Copiar código'}
+      aria-label={copied ? t('code.copied') : t('code.copy')}
       className={cn(
         'absolute right-2 top-2 flex items-center gap-1 rounded-md border border-border bg-surface-overlay px-2 py-1 text-caption font-medium text-text-secondary transition-opacity hover:text-text-primary focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [@media(hover:none)]:opacity-100',
         copied ? 'opacity-100' : 'opacity-0 group-hover/code:opacity-100',
       )}
     >
       {copied ? <CheckIcon size={14} className="text-green" aria-hidden /> : <CopyIcon size={14} aria-hidden />}
-      {copied ? 'Copiado' : 'Copiar'}
+      {copied ? t('code.copiedLabel') : t('code.copyLabel')}
     </button>
   );
 }

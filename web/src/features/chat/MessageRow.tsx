@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { ArrowBendUpLeftIcon, CopyIcon, DotsThreeIcon, FlagIcon, PencilSimpleIcon, SmileyIcon, TrashIcon, UsersIcon } from '@phosphor-icons/react';
 import { GroupAvatar } from '@/features/conversations/GroupAvatar';
 import { useEffect, useRef, useState } from 'react';
@@ -29,25 +30,21 @@ import { withPendingReactions } from './reactionState';
 import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { useMessageDeleteConfirm } from './useMessageDeleteConfirm';
 
-const DELETED_AUTHOR_NAME = 'Usuário apagado';
-
 // A bot's message is usually something to acknowledge or flag — a deploy, an
 // alert — so its toolbar answers in one click, before the rest of the actions.
-const BOT_QUICK_REACTIONS = [
-  { emoji: '✅', label: 'Reagir com ✅' },
-  { emoji: '❌', label: 'Reagir com ❌' },
-] as const;
+const BOT_QUICK_REACTIONS = ['✅', '❌'] as const;
 
 function BotQuickReactions({ reacted, onPick }: { reacted: (emoji: string) => boolean; onPick: (emoji: string) => void }) {
+  const { t } = useTranslation('chat');
   return (
     <>
-      {BOT_QUICK_REACTIONS.map(({ emoji, label }) => (
+      {BOT_QUICK_REACTIONS.map((emoji) => (
         <Button
           key={emoji}
           type="button"
           variant="ghost"
           size="icon-sm"
-          aria-label={label}
+          aria-label={t('reactWith', { emoji })}
           aria-pressed={reacted(emoji)}
           onClick={() => onPick(emoji)}
           className={cn('text-[18px] leading-none', reacted(emoji) && 'bg-fill-active')}
@@ -61,6 +58,7 @@ function BotQuickReactions({ reacted, onPick }: { reacted: (emoji: string) => bo
 }
 
 function ReactionButton({ onPick }: { onPick: (emoji: string) => void }) {
+  const { t } = useTranslation('chat');
   const [open, setOpen] = useState(false);
   const [fullPickerOpen, setFullPickerOpen] = useState(false);
   const warmed = useKeepPopoverWarm(fullPickerOpen);
@@ -82,7 +80,7 @@ function ReactionButton({ onPick }: { onPick: (emoji: string) => void }) {
         if (!next) setFullPickerOpen(false);
       }}
     >
-      <PopoverTrigger render={<Button type="button" variant="ghost" size="icon-sm" aria-label="Reagir" />}>
+      <PopoverTrigger render={<Button type="button" variant="ghost" size="icon-sm" aria-label={t('react')} />}>
         <SmileyIcon size={18} />
       </PopoverTrigger>
       <PopoverContent
@@ -112,21 +110,24 @@ interface MessageRowProps {
 }
 
 function PendingStatus({ entry, offline, onRetry, onDiscard }: { entry: OutboxEntry; offline: boolean; onRetry: (id: string) => void; onDiscard: (id: string) => void }) {
+  const { t } = useTranslation('chat');
   // queued sends go out on their own after reconnecting; say why they wait
-  if (entry.state === 'uploading') return <span className="sr-only">Enviando anexos</span>;
-  if (entry.state === 'sending' && offline) return <p className="mt-0.5 text-caption text-text-muted">Aguardando conexão…</p>;
-  if (entry.state === 'sending') return <span className="sr-only">Enviando</span>;
-  if (entry.state === 'unknown') return <p className="mt-0.5 text-caption text-text-muted">Confirmando envio…</p>;
+  if (entry.state === 'uploading') return <span className="sr-only">{t('pending.uploading')}</span>;
+  if (entry.state === 'sending' && offline) return <p className="mt-0.5 text-caption text-text-muted">{t('pending.waiting')}</p>;
+  if (entry.state === 'sending') return <span className="sr-only">{t('pending.sending')}</span>;
+  if (entry.state === 'unknown') return <p className="mt-0.5 text-caption text-text-muted">{t('pending.confirming')}</p>;
   return (
     <p role="alert" className="mt-0.5 flex flex-wrap items-center gap-x-2 text-caption text-red">
-      <span>Não enviada{entry.error ? `: ${entry.error}` : '.'}</span>
-      <button type="button" onClick={() => onRetry(entry.clientMessageId)} className="font-medium underline hover:text-text-primary">Tentar novamente</button>
-      <button type="button" onClick={() => onDiscard(entry.clientMessageId)} className="text-text-muted underline hover:text-text-secondary">Descartar</button>
+      <span>{entry.error ? t('pending.notSentWithError', { error: entry.error }) : t('pending.notSent')}</span>
+      <button type="button" onClick={() => onRetry(entry.clientMessageId)} className="font-medium underline hover:text-text-primary">{t('pending.retry')}</button>
+      <button type="button" onClick={() => onDiscard(entry.clientMessageId)} className="text-text-muted underline hover:text-text-secondary">{t('pending.discard')}</button>
     </p>
   );
 }
 
 export function MessageRow({ message, showHeader, highlighted, allUsers, mentionLookup, onOpenProfile, onReply, onJumpTo, pending }: MessageRowProps) {
+  const { t } = useTranslation('chat');
+  const deletedAuthorName = t('deletedAuthor');
   const {
     state, conversations, editChatMessage, reactToChatMessage, editingMsgId, setEditingMsgId, retryPendingMessage, discardPendingMessage,
     deletingMsgIds, messageActionErrors, dismissMessageActionError, pendingReactions, openReactionParticipants,
@@ -179,7 +180,7 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
       setEditingMsgId(null);
     } catch (err) {
       // the editor stays open with the text as typed, so nothing is lost
-      setEditError(err instanceof Error ? err.message : 'Não foi possível salvar.');
+      setEditError(err instanceof Error ? err.message : t('edit.saveFailed'));
     } finally {
       setEditSaving(false);
     }
@@ -283,7 +284,7 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
               <span className="select-none truncate text-body font-medium text-text-primary">{displayedName}</span>
             )}
             {message.bot && (
-              <span className="flex-none select-none self-center rounded-sm bg-primary px-1 py-px text-micro font-semibold uppercase leading-none text-white">Bot</span>
+              <span className="flex-none select-none self-center rounded-sm bg-primary px-1 py-px text-micro font-semibold uppercase leading-none text-white">{t('bot')}</span>
             )}
             <span className="flex-none select-none text-caption text-text-muted">{formatTime(message.ts)}</span>
           </div>
@@ -300,7 +301,7 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
               {message.replyTo.authorId && (
                 <Avatar
                   id={message.replyTo.authorId}
-                  name={replyAuthor?.displayName ?? DELETED_AUTHOR_NAME}
+                  name={replyAuthor?.displayName ?? deletedAuthorName}
                   avatar={replyAuthor?.avatar ?? ''}
                   poster={replyAuthor?.avatarPoster}
                   animateOnHover
@@ -310,7 +311,7 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
                 />
               )}
               <span className="flex-none font-medium text-text-secondary">
-                {replyAuthor ? `@${replyAuthor.displayName}` : DELETED_AUTHOR_NAME}
+                {replyAuthor ? `@${replyAuthor.displayName}` : deletedAuthorName}
               </span>
               {message.replyTo.text && <span className="truncate">{message.replyTo.text}</span>}
             </button>
@@ -328,8 +329,8 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
               />
               {editError && <p role="alert" className="text-caption text-red">{editError}</p>}
               <p className="text-caption text-text-muted">
-                {editSaving ? 'Salvando…' : (
-                  <>escape para <button type="button" onClick={() => setEditingMsgId(null)} className="underline hover:text-text-secondary">cancelar</button> · enter para <button type="button" onClick={() => void saveEdit()} className="underline hover:text-text-secondary">salvar</button></>
+                {editSaving ? t('edit.saving') : (
+                  <>{t('edit.escapeTo')} <button type="button" onClick={() => setEditingMsgId(null)} className="underline hover:text-text-secondary">{t('edit.cancel')}</button> · {t('edit.enterTo')} <button type="button" onClick={() => void saveEdit()} className="underline hover:text-text-secondary">{t('edit.save')}</button></>
                 )}
               </p>
             </div>
@@ -347,7 +348,7 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
                   embeds={message.embeds}
                   suppressedEmbeds={message.suppressedEmbeds}
                 />
-                {message.editedAt && <span className="ml-1 select-none text-caption text-text-muted">(editado)</span>}
+                {message.editedAt && <span className="ml-1 select-none text-caption text-text-muted">{t('edited')}</span>}
               </div>
               {message.richEmbeds?.map((embed, index) => <RichEmbedCard key={index} embed={embed} />)}
               {message.attachments?.length ? (
@@ -358,11 +359,11 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
           )}
         </div>
 
-        {deleting && <p className="mt-0.5 text-caption text-text-muted">Apagando…</p>}
+        {deleting && <p className="mt-0.5 text-caption text-text-muted">{t('deleting')}</p>}
         {actionError && (
           <p role="alert" className="mt-0.5 flex items-center gap-2 text-caption text-red">
             <span>{actionError}</span>
-            <CloseButton size="xs" label="Dispensar aviso" onClick={() => dismissMessageActionError(message.msgId)} />
+            <CloseButton size="xs" label={t('dismissNotice')} onClick={() => dismissMessageActionError(message.msgId)} />
           </p>
         )}
         {pending?.attachments && <PendingAttachments attachments={pending.attachments} />}
@@ -395,22 +396,22 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
         )}
         {can.react && <ReactionButton onPick={(emoji) => reactToChatMessage(message.msgId, emoji)} />}
         {can.reply && (
-          <Button type="button" variant="ghost" size="icon-sm" aria-label="Responder" onClick={onReply}>
+          <Button type="button" variant="ghost" size="icon-sm" aria-label={t('actions.reply')} onClick={onReply}>
             <ArrowBendUpLeftIcon size={18} />
           </Button>
         )}
         {can.edit && (
-          <Button type="button" variant="ghost" size="icon-sm" aria-label="Editar" onClick={startEdit}>
+          <Button type="button" variant="ghost" size="icon-sm" aria-label={t('actions.edit')} onClick={startEdit}>
             <PencilSimpleIcon size={18} />
           </Button>
         )}
         {canReport && (
-          <Button type="button" variant="ghost" size="icon-sm" aria-label="Denunciar" onClick={() => setReportOpen(true)}>
+          <Button type="button" variant="ghost" size="icon-sm" aria-label={t('actions.report')} onClick={() => setReportOpen(true)}>
             <FlagIcon size={18} />
           </Button>
         )}
         {canDelete && (
-          <Button type="button" variant="ghost" size="icon-sm" aria-label="Apagar" disabled={deleting} onClick={(event) => requestDelete(message.msgId, event.shiftKey)} className="hover:bg-red/10 hover:text-red">
+          <Button type="button" variant="ghost" size="icon-sm" aria-label={t('actions.delete')} disabled={deleting} onClick={(event) => requestDelete(message.msgId, event.shiftKey)} className="hover:bg-red/10 hover:text-red">
             <TrashIcon size={18} />
           </Button>
         )}
@@ -420,26 +421,26 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
       {!pending && <div className={cn('absolute right-3 top-1 flex items-center md:hidden', !mobileSelected && 'pointer-events-none opacity-0 group-focus-within/row:pointer-events-auto group-focus-within/row:opacity-100')}>
         {can.react && <ReactionButton onPick={(emoji) => reactToChatMessage(message.msgId, emoji)} />}
         <DropdownMenu>
-          <DropdownMenuTrigger render={<Button type="button" variant="ghost" size="icon" aria-label="Ações da mensagem" />}>
+          <DropdownMenuTrigger render={<Button type="button" variant="ghost" size="icon" aria-label={t('actions.more')} />}>
             <DotsThreeIcon size={18} />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            {can.reply && <DropdownMenuItem onClick={onReply}><ArrowBendUpLeftIcon size={16} />Responder</DropdownMenuItem>}
+            {can.reply && <DropdownMenuItem onClick={onReply}><ArrowBendUpLeftIcon size={16} />{t('actions.reply')}</DropdownMenuItem>}
             {hasReactions && (
               <DropdownMenuItem onClick={() => openReactionParticipants({ conversationId: message.conversationId, msgId: message.msgId })}>
-                <UsersIcon size={16} />Ver todas as reações
+                <UsersIcon size={16} />{t('actions.viewReactions')}
               </DropdownMenuItem>
             )}
-            {can.copy && <DropdownMenuItem onClick={copyText}><CopyIcon size={16} />Copiar texto</DropdownMenuItem>}
-            {can.edit && <DropdownMenuItem onClick={startEdit}><PencilSimpleIcon size={16} />Editar</DropdownMenuItem>}
-            {canReport && <DropdownMenuItem onClick={() => setReportOpen(true)}><FlagIcon size={16} />Denunciar</DropdownMenuItem>}
-            {canDelete && <DropdownMenuItem variant="destructive" disabled={deleting} onClick={(event) => requestDelete(message.msgId, event.shiftKey)}><TrashIcon size={16} />Apagar</DropdownMenuItem>}
+            {can.copy && <DropdownMenuItem onClick={copyText}><CopyIcon size={16} />{t('actions.copyText')}</DropdownMenuItem>}
+            {can.edit && <DropdownMenuItem onClick={startEdit}><PencilSimpleIcon size={16} />{t('actions.edit')}</DropdownMenuItem>}
+            {canReport && <DropdownMenuItem onClick={() => setReportOpen(true)}><FlagIcon size={16} />{t('actions.report')}</DropdownMenuItem>}
+            {canDelete && <DropdownMenuItem variant="destructive" disabled={deleting} onClick={(event) => requestDelete(message.msgId, event.shiftKey)}><TrashIcon size={16} />{t('actions.delete')}</DropdownMenuItem>}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>}
       {confirmDialog}
       {reportOpen && (
-        <ReportDialog target={{ type: 'message', id: String(message.msgId), label: `mensagem de ${displayedName}` }} open onOpenChange={setReportOpen} />
+        <ReportDialog target={{ type: 'message', id: String(message.msgId), label: t('actions.reportLabel', { name: displayedName }) }} open onOpenChange={setReportOpen} />
       )}
     </div>
   );

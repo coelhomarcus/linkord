@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import type { CSSProperties, HTMLAttributes, ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/shared/lib/utils';
 import { SidePanel } from './side-panel';
 import { Sheet } from './sheet';
@@ -112,6 +113,7 @@ export function Sidebar({ ariaLabel, className, panelClassName, children }: {
   panelClassName?: string;
   children: ReactNode;
 }) {
+  const { t } = useTranslation('common');
   const { isOverlay, open, openMobile, setOpenMobile, sheetVars } = useSidebar();
   if (isOverlay) {
     return (
@@ -120,7 +122,7 @@ export function Sidebar({ ariaLabel, className, panelClassName, children }: {
         open={openMobile}
         onOpenChange={setOpenMobile}
         ariaLabel={ariaLabel}
-        dismissLabel="Fechar navegação"
+        dismissLabel={t('accessibility.navigationClose')}
         style={sheetVars}
         backdropClassName="md:left-(--sidebar-overlay-offset,0px)"
         className={cn('w-(--sidebar-width-mobile) max-w-[88vw] bg-background md:left-(--sidebar-overlay-offset,0px)', className)}

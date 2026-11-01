@@ -1,9 +1,10 @@
 import { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router';
 import { categoryLabel } from '@/features/reports/reportCategories';
 import { fetchAdminReports } from './adminApi';
 import type { AdminReportRow } from './adminApi';
-import { REPORT_TARGET_LABEL, formatWhen, formatWhenShort } from './adminFormat';
+import { reportTargetLabel, formatWhen, formatWhenShort } from './adminFormat';
 import { AdminListToolbar, AdminSelectField } from './AdminListToolbar';
 import { AdminTable, AdminTd, AdminTh, AdminTr } from './AdminTable';
 import { Badge, ListChrome } from './adminUi';
@@ -26,7 +27,7 @@ function ReportLink({ report, from }: { report: AdminReportRow; from: { from: st
   return (
     <AppLink to={`/admin/reports/${report.id}`} state={from} className="block min-w-0 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring">
       <span className="block truncate text-body font-medium text-text-primary">{report.targetLabel || report.targetId}</span>
-      <span className="block truncate text-caption text-text-muted">{REPORT_TARGET_LABEL[report.targetType]}</span>
+      <span className="block truncate text-caption text-text-muted">{reportTargetLabel(report.targetType)}</span>
     </AppLink>
   );
 }
@@ -34,6 +35,7 @@ function ReportLink({ report, from }: { report: AdminReportRow; from: { from: st
 const assignee = (report: AdminReportRow) => (report.assignee ? `@${report.assignee}` : '-');
 
 export function ReportsPage() {
+  const { t } = useTranslation('admin');
   const { filters, update, clear, active, identity } = useAdminQuery(QUERY);
   const { pathname, search } = useLocation();
   const tableFits = useAdminTableFits();
@@ -50,21 +52,21 @@ export function ReportsPage() {
       <AdminListToolbar
         filters={(
           <>
-            <AdminSelectField<Queue> label="Fila" value={queue} onChange={(next) => update({ status: next })}
-              options={[{ value: 'open', label: 'Abertas' }, { value: 'reviewing', label: 'Em análise' }, { value: 'closed', label: 'Encerradas' }]} />
-            <AdminSelectField<TargetFilter> label="Tipo de alvo" value={target} onChange={(next) => update({ targetType: next })}
-              options={[{ value: 'all', label: 'Todos' }, { value: 'user', label: 'Contas' }, { value: 'group', label: 'Grupos' }, { value: 'message', label: 'Mensagens' }]} />
+            <AdminSelectField<Queue> label={t('ui.queue')} value={queue} onChange={(next) => update({ status: next })}
+              options={[{ value: 'open', label: t('ui.open') }, { value: 'reviewing', label: t('ui.inReview') }, { value: 'closed', label: t('ui.closed') }]} />
+            <AdminSelectField<TargetFilter> label={t('ui.targetType')} value={target} onChange={(next) => update({ targetType: next })}
+              options={[{ value: 'all', label: t('ui.all') }, { value: 'user', label: t('ui.accountsPlural') }, { value: 'group', label: t('ui.groups') }, { value: 'message', label: t('ui.messagesPlural') }]} />
           </>
         )}
-        summary={list.status === 'ready' && list.items.length > 0 ? `${list.items.length} ${list.items.length === 1 ? 'denúncia carregada' : 'denúncias carregadas'}${list.hasMore ? ' (há mais resultados)' : ''}` : undefined}
+        summary={list.status === 'ready' && list.items.length > 0 ? `${list.items.length} ${t('ui.report', { count: list.items.length })}${list.hasMore ? t('ui.moreResults') : ''}` : undefined}
         onClear={active ? clear : undefined}
       />
-      <ListChrome list={list} empty="Nenhuma denúncia nesta fila.">
+      <ListChrome list={list} empty={t('ui.noReports')}>
         {tableFits ? (
-          <AdminTable caption="Denúncias">
+          <AdminTable caption={t('ui.reports')}>
             <thead>
               <tr>
-                <AdminTh className="min-w-52">Alvo</AdminTh><AdminTh>Categoria</AdminTh><AdminTh>Situação</AdminTh><AdminTh>Responsável</AdminTh><AdminTh>Recebida em</AdminTh>
+                <AdminTh className="min-w-52">{t('audit.target')}</AdminTh><AdminTh>{t('common.category')}</AdminTh><AdminTh>{t('ui.status')}</AdminTh><AdminTh>{t('ui.responsible')}</AdminTh><AdminTh>{t('ui.receivedAt')}</AdminTh>
               </tr>
             </thead>
             <tbody>
@@ -87,7 +89,7 @@ export function ReportsPage() {
                 <div className="flex flex-wrap items-center gap-2 text-caption text-text-muted">
                   <Badge value={r.status} />
                   <span>{categoryLabel(r.category)}</span>
-                  <span>responsável: {assignee(r)}</span>
+                  <span>{t('ui.responsiblePrefix', { value: assignee(r) })}</span>
                   <span>{formatWhen(r.createdAt)}</span>
                 </div>
               </li>

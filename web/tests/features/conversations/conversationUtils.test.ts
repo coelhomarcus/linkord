@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { Conversation, PublicUser } from '@/shared/types/protocol';
-import { conversationDocumentTitle, conversationMatchesQuery, unreadCountForTab } from '@/features/conversations/conversationUtils';
+import { conversationDocumentTitle, conversationMatchesQuery, conversationTitle, unreadCountForTab } from '@/features/conversations/conversationUtils';
+import { describeInviteOutcome } from '@/features/conversations/inviteOutcome';
+import { dateGroupLabel } from '@/features/conversations/media/mediaRows';
+import { useLanguageForTests } from '@tests/fixtures/i18nFixture';
 
 const bea: PublicUser = {
   id: 'u-bea', username: 'bea', displayName: 'Bea', avatar: '', avatarColor: 'green',
@@ -72,5 +75,23 @@ describe('conversationDocumentTitle', () => {
     const bot = conv('b', { type: 'bot', title: 'Alertas' });
     expect(conversationDocumentTitle(group, 'me', users)).toBe('Linkord | Os Xerecas');
     expect(conversationDocumentTitle(bot, 'me', users)).toBe('Linkord | Alertas');
+  });
+});
+
+describe('conversation text in English', () => {
+  useLanguageForTests('en-US');
+
+  it('falls back to English names for untitled conversations', () => {
+    expect(conversationTitle(null, 'me', users)).toBe('Conversation');
+    expect(conversationTitle(conv('g', { type: 'group' }), 'me', users)).toBe('Group');
+    expect(conversationTitle(conv('b', { type: 'bot' }), 'me', users)).toBe('Bot');
+    expect(conversationTitle(conv('dm', { memberIds: ['me'] }), 'me', users)).toBe('Direct conversation');
+  });
+
+  it('describes invitation outcomes and media date groups in English', () => {
+    expect(describeInviteOutcome('already_member')).toBe('is already in the group');
+    const now = new Date(2026, 10, 10, 15).getTime();
+    expect(dateGroupLabel(now, now)).toBe('Today');
+    expect(dateGroupLabel(new Date(2026, 9, 1).getTime(), now)).toBe('October 2026');
   });
 });

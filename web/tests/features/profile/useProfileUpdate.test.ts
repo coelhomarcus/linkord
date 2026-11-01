@@ -4,6 +4,7 @@ import type { ClientMessage, PublicUser, ServerMessage } from '@/shared/types/pr
 import {
   ProfileSaveOffline, ProfileSaveRefused, ProfileSaveTimeout, describeProfileSaveError, useProfileUpdate,
 } from '@/features/profile/useProfileUpdate';
+import { useLanguageForTests } from '@tests/fixtures/i18nFixture';
 
 vi.mock('@/features/settings/uploadCroppedProfileImage', () => ({
   uploadCroppedProfileImage: vi.fn(async () => ({ avatar: '/uploads/novo', avatarPoster: '/uploads/poster' })),
@@ -111,5 +112,14 @@ describe('describeProfileSaveError', () => {
     expect(describeProfileSaveError(new ProfileSaveRefused('x', 'Motivo do servidor.'))).toBe('Motivo do servidor.');
     expect(describeProfileSaveError(new Error('outra coisa'))).toBe('Não foi possível salvar o perfil. Tente de novo.');
     expect(describeProfileSaveError(new Error('x'), 'Mensagem própria.')).toBe('Mensagem própria.');
+  });
+});
+
+describe('English translations', () => {
+  useLanguageForTests('en-US');
+
+  it('uses English profile save errors', () => {
+    expect(new ProfileSaveOffline().message).toBe('No connection to the server. Try again in a moment.');
+    expect(describeProfileSaveError(new Error('other'))).toBe("Couldn't save the profile. Try again.");
   });
 });

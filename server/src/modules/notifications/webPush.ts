@@ -6,6 +6,8 @@ import { db } from '../../db/client.js';
 import { conversationMembers, conversations, friendships, groupInvitations, messages, notifications, pushDeliveryReceipts, pushSubscriptions, users, type OutboxEvent } from '../../db/schema.js';
 import { logger } from '../../lib/logger.js';
 import { canSendDirectMessage } from '../friendships/friendshipsRepository.js';
+import { resolveLocale, type Locale } from '../users/locale.js';
+import { localeText } from '../users/localeText.js';
 
 const log = logger.child({ component: 'web-push' });
 
@@ -67,7 +69,7 @@ export function retryAfterDelayMs(headers: unknown, now = Date.now()): number {
   return Number.isFinite(date) ? Math.max(0, date - now) : 0;
 }
 
-async function noticeFor(event: OutboxEvent): Promise<PushNotice | null> {
+async function noticeFor(event: OutboxEvent, locale: Locale): Promise<PushNotice | null> {
   const payload = event.payload as Record<string, unknown>;
   if (event.type === 'chat_message_push') {
     if (!Number.isSafeInteger(payload.messageId)) return null;
@@ -88,7 +90,7 @@ async function noticeFor(event: OutboxEvent): Promise<PushNotice | null> {
     const name = row.author ? row.author.displayName || row.author.username : row.conversation.type === 'bot' ? row.conversation.title || 'Bot' : 'Alguém';
     const text = row.message.text.replace(/\s+/g, ' ').trim().slice(0, 120);
     const title = row.conversation.type === 'direct' ? name : row.conversation.title || 'Conversa';
-    return { title, body: text ? `${name}: ${text}` : `${name} enviou uma mensagem`,
+    return { title, body: text ? `${name}: ${text}` : localeText(locale, 'push.chatEmptyBody', { name }),
       path: `/app/conversations/${encodeURIComponent(row.conversation.id)}`, tag: `chat-${row.conversation.id}` };
   }
 
@@ -115,27 +117,28 @@ async function noticeFor(event: OutboxEvent): Promise<PushNotice | null> {
     if (!message) return null;
     if (message.conversationType === 'direct' && message.authorId
       && !(await canSendDirectMessage(message.authorId, event.audienceUserId))) return null;
-    return { title: 'Você foi mencionado', body: 'Abra a conversa para ver a mensagem.',
+    return { title: localeText(locale, 'push.mentionedTitle'), body: localeText(locale, 'push.mentionedBody'),
       path: `/app/conversations/${encodeURIComponent(message.conversationId)}`, tag: `mention-${row.id}` };
   }
   if (kind === 'group_invitation') {
     const [invitation] = await db.select({ status: groupInvitations.status }).from(groupInvitations).where(eq(groupInvitations.id, String(reference))).limit(1);
     if (!invitation || invitation.status !== 'pending') return null;
-    return { title: 'Convite para grupo', body: 'Você recebeu um convite no Linkord.', path: '/app/friends?tab=invitations', tag: `social-${row.id}` };
+    return { title: localeText(locale, 'push.groupInvitationTitle'), body: localeText(locale, 'push.groupInvitationBody'), path: '/app/friends?tab=invitations', tag: `social-${row.id}` };
   }
   const [friendship] = await db.select({ status: friendships.status }).from(friendships).where(eq(friendships.id, String(reference))).limit(1);
   if (!friendship || friendship.status !== (kind === 'friend_request' ? 'pending' : 'accepted')) return null;
-  return { title: kind === 'friend_request' ? 'Solicitação de amizade' : 'Solicitação aceita',
-    body: kind === 'friend_request' ? 'Você recebeu uma solicitação no Linkord.' : 'Uma pessoa aceitou sua solicitação.',
+  return { title: localeText(locale, kind === 'friend_request' ? 'push.friendRequestTitle' : 'push.friendAcceptedTitle'),
+    body: localeText(locale, kind === 'friend_request' ? 'push.friendRequestBody' : 'push.friendAcceptedBody'),
     path: kind === 'friend_request' ? '/app/friends?tab=pending#received' : '/app/friends', tag: `social-${row.id}` };
 }
 
 export async function deliverWebPush(event: OutboxEvent): Promise<PushDeliveryResult> {
   const done = { delivered: true, retryAfterMs: 0 };
   if (!pushAvailable) return done;
-  const [recipient] = await db.select({ status: users.status }).from(users).where(eq(users.id, event.audienceUserId)).limit(1);
+  const [recipient] = await db.select({ status: users.status, locale: users.locale }).from(users).where(eq(users.id, event.audienceUserId)).limit(1);
   if (!recipient || recipient.status !== 'active') return done;
-  const notice = await noticeFor(event);
+  const locale = resolveLocale(recipient.locale);
+  const notice = await noticeFor(event, locale);
   if (!notice) return done;
   const subscriptions = await db.select().from(pushSubscriptions).where(eq(pushSubscriptions.userId, event.audienceUserId));
   if (!subscriptions.length) return done;
@@ -148,7 +151,7 @@ export async function deliverWebPush(event: OutboxEvent): Promise<PushDeliveryRe
     title: notice.title, body: notice.body,
     icon: new URL('/icons/icon-192.png', config.APP_URL).href,
     badge: new URL('/icons/notification-badge-96.png', config.APP_URL).href,
-    navigate: new URL(notice.path, config.APP_URL).href, tag: notice.tag, lang: 'pt-BR',
+    navigate: new URL(notice.path, config.APP_URL).href, tag: notice.tag, lang: locale,
   } });
   const topic = crypto.createHash('sha256').update(notice.tag).digest('base64url').slice(0, 32);
   const results = await Promise.all(pending.map(async (sub): Promise<PushDeliveryResult> => {

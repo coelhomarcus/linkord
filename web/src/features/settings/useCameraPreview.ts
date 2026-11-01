@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { logger } from '@/shared/lib/logger';
+import { i18n } from '@/shared/i18n/init';
 
 const log = logger.child({ component: 'camera-preview' });
 
@@ -31,7 +32,7 @@ export function useCameraPreview(): CameraPreviewApi {
     stop();
     setError(null);
     if (!navigator.mediaDevices?.getUserMedia) {
-      setError('Seu navegador não suporta pré-visualizar a câmera.');
+      setError(i18n.t('settings:deviceErrors.cameraUnsupported'));
       return;
     }
     try {
@@ -46,7 +47,7 @@ export function useCameraPreview(): CameraPreviewApi {
       log.warn('Failed to start camera preview', { err: String(err) });
       const name = (err as DOMException)?.name;
       const denied = name === 'NotAllowedError' || name === 'NotFoundError';
-      setError(denied ? 'Não foi possível acessar a câmera.' : 'Não foi possível pré-visualizar a câmera agora.');
+      setError(denied ? i18n.t('settings:deviceErrors.cameraDenied') : i18n.t('settings:deviceErrors.cameraFailed'));
     }
   }, [stop]);
 

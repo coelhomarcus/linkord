@@ -1,0 +1,142 @@
+{
+  "title": "Friends",
+  "views": {
+    "ariaLabel": "Friends view",
+    "all": "All",
+    "online": "Online",
+    "pending": "Pending",
+    "invitations": "Invitations"
+  },
+  "badge": {
+    "pending": "{{count}} requests awaiting reply",
+    "invitations": "{{count}} invitations awaiting reply"
+  },
+  "addFriend": "Add friend",
+  "feedback": {
+    "actionFailed": "Couldn't complete the action. Try again."
+  },
+  "send": {
+    "unavailable": "Couldn't send the request. Check the username.",
+    "cooldownAt": "Please wait before trying again. Available from {{when}}.",
+    "cooldown": "Please wait a bit before trying again.",
+    "failed": "Couldn't send the request.",
+    "created": "Request sent to @{{username}}.",
+    "already_pending": "You already sent a request to @{{username}}.",
+    "pending_received": "@{{username}} already sent you a request. Accept it under Requests.",
+    "already_friends": "You and @{{username}} are already friends."
+  },
+  "form": {
+    "hint": "Enter the person's exact @username.",
+    "placeholder": "@username",
+    "submit": "Send",
+    "viewReceived": "View received request"
+  },
+  "add": {
+    "shareTitle": "Your username",
+    "copied": "Copied",
+    "copy": "Copy @{{username}}",
+    "waiting_one": "You have {{count}} request awaiting reply.",
+    "waiting_other": "You have {{count}} requests awaiting reply.",
+    "viewReceivedPlural": "View received requests"
+  },
+  "list": {
+    "searchFriends": "Search your friends",
+    "loadingFriends": "Loading friends…",
+    "loadFriendsFailed": "Couldn't load your friends.",
+    "retry": "Try again",
+    "emptyTitle": "Add friends to start a conversation",
+    "emptyText": "Ask for the @username of who you want to talk to, or share yours.",
+    "sectionOnline": "Online",
+    "sectionAll": "All friends",
+    "results_one": "{{count}} result",
+    "results_other": "{{count}} results",
+    "friends_one": "{{count}} friend",
+    "friends_other": "{{count}} friends",
+    "noResults": "No results for this search.",
+    "noneOnline": "No friends online right now.",
+    "noneFound": "No friends found.",
+    "message": "Message",
+    "messageTo": "Send message to {{name}}",
+    "moreFor": "More actions for {{name}}",
+    "viewProfile": "View profile",
+    "removeFriend": "Remove friend",
+    "block": "Block"
+  },
+  "requests": {
+    "searchLabel": "Search requests",
+    "received": "Received",
+    "sent": "Sent",
+    "waiting": "{{count}} awaiting reply",
+    "loading": "Loading requests…",
+    "loadFailed": "Couldn't load the requests.",
+    "noneIncoming": "No requests received.",
+    "noneOutgoing": "You have no sent requests.",
+    "accept": "Accept",
+    "decline": "Decline",
+    "cancel": "Cancel",
+    "accepted": "Request accepted.",
+    "declined": "Request declined.",
+    "cancelled": "Request cancelled."
+  },
+  "invitations": {
+    "searchLabel": "Search invitations",
+    "title": "Group invitations",
+    "loading": "Loading invitations…",
+    "loadFailed": "Couldn't load the invitations.",
+    "none": "No pending group invitations.",
+    "from": "from",
+    "join": "Join",
+    "decline": "Decline",
+    "joined": "You joined the group.",
+    "declined": "Invitation declined.",
+    "groupFull": "The group is full.",
+    "quotaExceeded": "You're already in the maximum number of groups allowed.",
+    "members_zero": "{{count}} members",
+    "members_one": "{{count}} member",
+    "members_other": "{{count}} members"
+  },
+  "loadMore": {
+    "refreshFailed": "Couldn't refresh the list.",
+    "retry": "Try again",
+    "moreFailed": "Couldn't load more.",
+    "loading": "Loading…",
+    "button": "Load more"
+  },
+  "row": {
+    "viewProfile": "View {{name}}'s profile",
+    "online": ", online",
+    "offline": ", offline"
+  },
+  "gate": {
+    "blocked": "You can't send messages or call while this person is blocked. The history remains available.",
+    "notFriends": "You need to be friends to exchange messages and make calls here. The history remains available."
+  },
+  "profile": {
+    "edit": "Edit profile",
+    "loading": "Loading…",
+    "loadFailed": "Couldn't load the actions.",
+    "retry": "Try again",
+    "more": "More actions",
+    "report": "Report",
+    "message": "Message",
+    "friendship": "Friendship",
+    "removeFriend": "Remove friend",
+    "block": "Block",
+    "requestSent": "Request sent",
+    "cancel": "Cancel",
+    "accept": "Accept",
+    "decline": "Decline",
+    "blockedByYou": "You blocked this person",
+    "unblock": "Unblock",
+    "retryAfter": "You can send a new request from {{when}}.",
+    "add": "Add friend"
+  },
+  "confirm": {
+    "blockTitle": "Block person",
+    "removeTitle": "Remove friend",
+    "blockText": "Blocking {{name}} removes the friendship and prevents private messages and calls between you. Shared groups remain. Unblocking later doesn't restore the friendship.",
+    "removeText": "Remove {{name}} from your friends? You can still see the conversation history, but you can't exchange messages until you're friends again.",
+    "block": "Block",
+    "remove": "Remove"
+  }
+}

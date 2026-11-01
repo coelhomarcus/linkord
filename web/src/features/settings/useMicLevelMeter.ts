@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { logger } from '@/shared/lib/logger';
+import { i18n } from '@/shared/i18n/init';
 
 const log = logger.child({ component: 'mic-level-meter' });
 
@@ -45,7 +46,7 @@ export function useMicLevelMeter(): MicLevelMeterApi {
     stop();
     setError(null);
     if (!navigator.mediaDevices?.getUserMedia) {
-      setError('Seu navegador não suporta testar o microfone.');
+      setError(i18n.t('settings:deviceErrors.micUnsupported'));
       return;
     }
     try {
@@ -59,7 +60,7 @@ export function useMicLevelMeter(): MicLevelMeterApi {
       if (!AudioContextCtor) {
         for (const track of stream.getTracks()) track.stop();
         streamRef.current = null;
-        setError('Seu navegador não suporta testar o microfone.');
+        setError(i18n.t('settings:deviceErrors.micUnsupported'));
         return;
       }
       const ctx = new AudioContextCtor();
@@ -86,7 +87,7 @@ export function useMicLevelMeter(): MicLevelMeterApi {
       log.warn('Failed to start mic level meter', { err: String(err) });
       const name = (err as DOMException)?.name;
       const denied = name === 'NotAllowedError' || name === 'NotFoundError';
-      setError(denied ? 'Não foi possível acessar o microfone.' : 'Não foi possível testar o microfone agora.');
+      setError(denied ? i18n.t('settings:deviceErrors.micDenied') : i18n.t('settings:deviceErrors.micFailed'));
     }
   }, [stop]);
 

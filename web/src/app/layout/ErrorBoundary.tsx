@@ -2,6 +2,7 @@ import { Component } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
 import { Button } from '@/shared/ui/primitives/button';
 import { logger } from '@/shared/lib/logger';
+import { i18n } from '@/shared/i18n/init';
 
 const log = logger.child({ component: 'render' });
 
@@ -23,9 +24,9 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { failed: 
     return (
       <div className="flex min-h-full items-center justify-center bg-bg-primary p-4">
         <div role="alert" className="flex w-full max-w-100 flex-col gap-3.5 rounded-xl bg-bg-floating p-6">
-          <h1 className="text-display font-bold text-text-primary">Algo deu errado</h1>
-          <p className="text-body text-text-secondary">Aconteceu um erro inesperado e ele já foi registrado. Recarregue a página para continuar.</p>
-          <Button type="button" size="lg" onClick={() => location.reload()}>Recarregar</Button>
+          <h1 className="text-display font-bold text-text-primary">{i18n.t('layout.unexpectedTitle')}</h1>
+          <p className="text-body text-text-secondary">{i18n.t('layout.unexpectedDescription')}</p>
+          <Button type="button" size="lg" onClick={() => location.reload()}>{i18n.t('layout.reload')}</Button>
         </div>
       </div>
     );

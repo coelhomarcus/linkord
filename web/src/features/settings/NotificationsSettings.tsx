@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useRoom } from '@/state/RoomContext';
 import { isPushSubscriptionActive, notificationPermissionState } from '@/shared/notifications';
 import type { NotificationPermissionState } from '@/shared/notifications';
@@ -9,13 +10,8 @@ import { Switch } from '@/shared/ui/primitives/switch';
 import { Button } from '@/shared/ui/primitives/button';
 import { SettingsRow, SettingsSection, SettingsSections } from './SettingsLayout';
 
-const STATUS_TEXT: Record<Exclude<NotificationPermissionState, 'granted'>, string> = {
-  default: 'Permissão necessária. O navegador vai perguntar quando você ativar.',
-  denied: 'Bloqueadas no navegador. Permita o acesso nas configurações do navegador pra este site.',
-  unsupported: 'Não disponíveis neste navegador.',
-};
-
 export function NotificationsSettings() {
+  const { t } = useTranslation('settings');
   const { notifyVolume, setNotifyVolume, notificationsEnabled, setNotificationsEnabled } = useRoom();
   const [notificationsError, setNotificationsError] = useState<string | null>(null);
   const [permission, setPermission] = useState<NotificationPermissionState>(() => notificationPermissionState());
@@ -72,11 +68,11 @@ export function NotificationsSettings() {
       return;
     }
     if (permission === 'denied') {
-      setNotificationsError('Notificações bloqueadas. Permita o acesso nas configurações do navegador para habilitar.');
+      setNotificationsError(t('notifications.errors.blocked'));
       return;
     }
     if (!setup) {
-      setNotificationsError('Notificações push indisponíveis. Verifique a instalação do app e a configuração do servidor.');
+      setNotificationsError(t('notifications.errors.unavailable'));
       return;
     }
     setBusy(true);
@@ -88,7 +84,7 @@ export function NotificationsSettings() {
       setActive(true);
     } catch {
       setPermission(notificationPermissionState());
-      setNotificationsError('Não foi possível ativar as notificações. Confira a permissão do app e tente novamente.');
+      setNotificationsError(t('notifications.errors.enableFailed'));
     } finally {
       setBusy(false);
     }
@@ -104,24 +100,24 @@ export function NotificationsSettings() {
 
   return (
     <SettingsSections>
-      <SettingsSection id="system" title="Notificações do sistema">
-        <SettingsRow label="Notificações do Linkord" description="Mensagens, menções, solicitações de amizade e convites, mesmo com o app fechado.">
-          <Switch checked={effectivelyOn} disabled={preparing || busy} onCheckedChange={(v) => void handleToggleNotifications(v)} aria-label="Notificações do Linkord" />
+      <SettingsSection id="system" title={t('catalog.sections.system')}>
+        <SettingsRow label={t('notifications.label')} description={t('notifications.description')}>
+          <Switch checked={effectivelyOn} disabled={preparing || busy} onCheckedChange={(v) => void handleToggleNotifications(v)} aria-label={t('notifications.label')} />
         </SettingsRow>
-        {permission !== 'granted' && <p className="text-label text-text-muted">{STATUS_TEXT[permission]}</p>}
-        {isIOS && !pushSupported() && <p className="text-label text-text-muted">No iPhone, adicione o Linkord à Tela de Início, abra pelo ícone e volte aqui para ativar as notificações.</p>}
-        {!preparing && !setup && pushSupported() && <p className="text-label text-text-muted">Push indisponível: confira a configuração do servidor.</p>}
-        {preparing && <p className="text-label text-text-muted">Preparando notificações...</p>}
+        {permission !== 'granted' && <p className="text-label text-text-muted">{t(`notifications.status.${permission}`)}</p>}
+        {isIOS && !pushSupported() && <p className="text-label text-text-muted">{t('notifications.ios')}</p>}
+        {!preparing && !setup && pushSupported() && <p className="text-label text-text-muted">{t('notifications.pushUnavailable')}</p>}
+        {preparing && <p className="text-label text-text-muted">{t('notifications.preparing')}</p>}
         {notificationsError && <p role="alert" className="text-label text-red">{notificationsError}</p>}
       </SettingsSection>
 
-      <SettingsSection id="sounds" title="Sons">
-        <SettingsRow label="Volume das notificações" description="Mutar/desmutar, ensurdecer, entrar/sair da chamada, câmera, tela e mensagem nova.">
-          <span className="text-label tabular-nums text-text-muted">{percent === 0 ? 'Mudo' : `${percent}%`}</span>
+      <SettingsSection id="sounds" title={t('catalog.sections.sounds')}>
+        <SettingsRow label={t('notifications.volume.label')} description={t('notifications.volume.description')}>
+          <span className="text-label tabular-nums text-text-muted">{percent === 0 ? t('notifications.volume.muted') : `${percent}%`}</span>
         </SettingsRow>
-        <Slider aria-label="Volume das notificações" value={[percent]} onValueChange={handleVolumeChange} min={0} max={100} />
+        <Slider aria-label={t('notifications.volume.label')} value={[percent]} onValueChange={handleVolumeChange} min={0} max={100} />
         <Button type="button" variant="outline" size="sm" className="w-fit" onClick={() => playSound('newMessage')}>
-          <span>Testar som</span>
+          <span>{t('notifications.volume.test')}</span>
         </Button>
       </SettingsSection>
     </SettingsSections>

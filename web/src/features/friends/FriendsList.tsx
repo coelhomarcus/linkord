@@ -1,5 +1,6 @@
 import { ChatCircleIcon, CheckIcon, CopyIcon, DotsThreeIcon, ProhibitIcon, UserIcon, UserMinusIcon, UserPlusIcon } from '@phosphor-icons/react';
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 
 import { useRoom } from '@/state/RoomContext';
@@ -34,6 +35,7 @@ export function FriendsList({ view, query, onQueryChange, onOpenProfile }: {
   onQueryChange: (next: string) => void;
   onOpenProfile: (userId: string) => void;
 }) {
+  const { t } = useTranslation('friends');
   const { state, onlineUserIds, openDirect, requestChatView } = useRoom();
   const { revision, bump } = useFriends();
   const navigate = useNavigate();
@@ -63,7 +65,7 @@ export function FriendsList({ view, query, onQueryChange, onOpenProfile }: {
     const outcome = await pending.run(userId, action);
     if (!outcome) return;
     if (!outcome.ok) {
-      setFeedback({ tone: 'error', text: 'Não foi possível concluir a ação. Tente de novo.' });
+      setFeedback({ tone: 'error', text: t('feedback.actionFailed') });
       bump();
       return;
     }
@@ -86,35 +88,36 @@ export function FriendsList({ view, query, onQueryChange, onOpenProfile }: {
 
   const countText = list.status !== 'ready'
     ? undefined
-    : search
-      ? `${list.items.length}${list.hasMore ? '+' : ''} resultado${list.items.length === 1 ? '' : 's'}`
-      : `${list.items.length}${list.hasMore ? '+' : ''} amigo${list.items.length === 1 ? '' : 's'}`;
+    : t(search
+      ? list.items.length === 1 ? 'list.results_one' : 'list.results_other'
+      : list.items.length === 1 ? 'list.friends_one' : 'list.friends_other',
+    { count: `${list.items.length}${list.hasMore ? '+' : ''}` });
 
   return (
     <div className="flex flex-col gap-4">
-      {!isEmptyAccount && <ListSearch value={value} onChange={setValue} label="Buscar nos seus amigos" />}
+      {!isEmptyAccount && <ListSearch value={value} onChange={setValue} label={t('list.searchFriends')} />}
 
       <ActionFeedback feedback={feedback} onClear={clearFeedback} />
 
-      {phase === 'skeleton' && <SocialRowsSkeleton label="Carregando amigos…" />}
+      {phase === 'skeleton' && <SocialRowsSkeleton label={t('list.loadingFriends')} />}
 
       {phase === 'content' && list.status === 'error' && (
         <div className="flex flex-col items-center gap-3 py-8 text-center">
-          <p className="text-body text-text-muted">Não foi possível carregar seus amigos.</p>
-          <Button type="button" variant="secondary" size="sm" onClick={list.retry}>Tentar de novo</Button>
+          <p className="text-body text-text-muted">{t('list.loadFriendsFailed')}</p>
+          <Button type="button" variant="secondary" size="sm" onClick={list.retry}>{t('list.retry')}</Button>
         </div>
       )}
 
       {isEmptyAccount && (
         <FadeIn className="flex select-none flex-col items-center gap-3 py-10 text-center">
           <UserIcon size={32} className="text-text-muted" />
-          <p className="text-body font-medium text-text-primary">Adicione amigos para começar uma conversa</p>
-          <p className="max-w-sm text-label text-text-muted">Peça o @nome de usuário de quem você quer conversar, ou compartilhe o seu.</p>
+          <p className="text-body font-medium text-text-primary">{t('list.emptyTitle')}</p>
+          <p className="max-w-sm text-label text-text-muted">{t('list.emptyText')}</p>
           <div className="flex flex-wrap justify-center gap-2">
-            <Button type="button" size="sm" onClick={() => navigate(friendsView('add'))}><UserPlusIcon size={20} /><span>Adicionar amigo</span></Button>
+            <Button type="button" size="sm" onClick={() => navigate(friendsView('add'))}><UserPlusIcon size={20} /><span>{t('addFriend')}</span></Button>
             <Button type="button" variant="secondary" size="sm" onClick={() => void handleCopyUsername()}>
               {copied ? <CheckIcon size={20} /> : <CopyIcon size={20} />}
-              <span>{copied ? 'Copiado' : `Copiar @${state.me.name}`}</span>
+              <span>{copied ? t('add.copied') : t('add.copy', { username: state.me.name })}</span>
             </Button>
           </div>
         </FadeIn>
@@ -122,13 +125,13 @@ export function FriendsList({ view, query, onQueryChange, onOpenProfile }: {
 
       {phase === 'content' && list.status === 'ready' && !isEmptyAccount && (
         <section aria-labelledby="friends-list-title">
-          <FadeIn skip={list.restored}><ListSectionHeader id="friends-list-title" title={view === 'online' ? 'Online' : 'Todos os amigos'} count={countText} /></FadeIn>
+          <FadeIn skip={list.restored}><ListSectionHeader id="friends-list-title" title={view === 'online' ? t('views.online') : t('list.sectionAll')} count={countText} /></FadeIn>
           {visible.length === 0 ? (
             <FadeIn skip={list.restored}>
               <p className="select-none py-8 text-center text-label text-text-muted">
                 {search
-                  ? 'Nenhum resultado para esta busca.'
-                  : view === 'online' ? 'Nenhum amigo online agora.' : 'Nenhum amigo encontrado.'}
+                  ? t('list.noResults')
+                  : view === 'online' ? t('list.noneOnline') : t('list.noneFound')}
               </p>
             </FadeIn>
           ) : (
@@ -136,23 +139,23 @@ export function FriendsList({ view, query, onQueryChange, onOpenProfile }: {
               {visible.map(({ user }) => (
                 <RevealRow key={user.id}>
                   <SocialUserRow user={user} online={onlineUserIds.has(user.id)} onOpenProfile={() => onOpenProfile(user.id)}>
-                    <Button type="button" variant="secondary" size="sm" onClick={() => handleMessage(user)} aria-label={`Enviar mensagem para ${user.displayName}`}>
+                    <Button type="button" variant="secondary" size="sm" onClick={() => handleMessage(user)} aria-label={t('list.messageTo', { name: user.displayName })}>
                       <ChatCircleIcon size={20} />
-                      <span className="hidden sm:inline">Mensagem</span>
+                      <span className="hidden sm:inline">{t('list.message')}</span>
                     </Button>
                     <DropdownMenu>
                       <DropdownMenuTrigger
-                        render={<Button type="button" variant="ghost" size="icon-sm" disabled={pending.isPending(user.id)} aria-label={`Mais ações para ${user.displayName}`} />}
+                        render={<Button type="button" variant="ghost" size="icon-sm" disabled={pending.isPending(user.id)} aria-label={t('list.moreFor', { name: user.displayName })} />}
                       >
                         <DotsThreeIcon size={16} />
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-max min-w-0">
-                        <DropdownMenuItem onClick={() => onOpenProfile(user.id)}><UserIcon size={16} />Ver perfil</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onOpenProfile(user.id)}><UserIcon size={16} />{t('list.viewProfile')}</DropdownMenuItem>
                         <DropdownMenuItem variant="destructive" onClick={() => setConfirm({ kind: 'remove', userId: user.id, displayName: user.displayName })}>
-                          <UserMinusIcon size={16} />Remover amizade
+                          <UserMinusIcon size={16} />{t('list.removeFriend')}
                         </DropdownMenuItem>
                         <DropdownMenuItem variant="destructive" onClick={() => setConfirm({ kind: 'block', userId: user.id, displayName: user.displayName })}>
-                          <ProhibitIcon size={16} />Bloquear
+                          <ProhibitIcon size={16} />{t('list.block')}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>

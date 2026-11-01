@@ -5,6 +5,7 @@ import type { ApiUser } from '@/shared/api/api';
 import { clearAllDrafts } from '@/features/chat/conversationDrafts';
 import { disablePush, restorePush } from '@/shared/pushNotifications';
 import { clearAppBadge } from '@/features/notifications/appBadge';
+import { applyLanguage } from '@/shared/i18n/applyLanguage';
 import { saveNotificationsEnabled, setNotificationsModuleEnabled } from '@/shared/notifications';
 
 
@@ -50,6 +51,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (status === 'anon') void clearAppBadge();
   }, [status]);
+
+  // The account's language wins over whatever this browser last used, so a
+  // choice made on another device shows up here on the next load.
+  const accountLanguage = user?.locale;
+  useEffect(() => {
+    if (accountLanguage) void applyLanguage(accountLanguage);
+  }, [accountLanguage]);
 
   useEffect(() => {
     if (status !== 'authed' || !user) return;

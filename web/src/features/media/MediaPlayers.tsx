@@ -3,6 +3,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode, RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import { Dialog as DialogPrimitive } from '@base-ui/react/dialog';
+import { useTranslation } from 'react-i18next';
 
 import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { Button } from '@/shared/ui/primitives/button';
@@ -167,10 +168,11 @@ function VolumeSlider({ muted, volume, onChange, className }: {
   onChange: (value: number | readonly number[]) => void;
   className?: string;
 }) {
+  const { t } = useTranslation('media');
   return (
     <div className={cn('w-14 flex-none', className)}>
       <Slider
-        aria-label="Volume"
+        aria-label={t('player.volume')}
         value={[muted ? 0 : Math.round(volume * 100)]}
         min={0}
         max={100}
@@ -217,6 +219,7 @@ function VideoChrome({
   variant, portalHostRef, mediaState: { currentTime, duration, playing, muted, volume },
   waiting, togglePlay, seek, setVolume, toggleMute, onExpand, src, title, className, style,
 }: VideoChromeProps) {
+  const { t } = useTranslation('media');
   return (
     <div
       className={cn('group/player @container/player relative overflow-hidden rounded-md border border-white/10 bg-black', className)}
@@ -242,7 +245,7 @@ function VideoChrome({
       {!playing && (
         <button
           type="button"
-              aria-label="Reproduzir vídeo"
+              aria-label={t('player.playVideo')}
           onClick={togglePlay}
           className="absolute left-1/2 top-1/2 flex size-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-black/65 text-white shadow-popover transition-colors hover:bg-primary focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
         >
@@ -261,14 +264,14 @@ function VideoChrome({
           className="[&_[data-slot=slider-range]]:bg-primary [&_[data-slot=slider-thumb]]:size-2.5 [&_[data-slot=slider-track]]:bg-white/25"
         />
         <div className="flex min-w-0 items-center gap-0.5 text-text-secondary [&_button:hover]:bg-white/10 [&_button:hover]:text-white">
-          <MediaButton label={playing ? 'Pausar' : 'Reproduzir'} onClick={togglePlay}>
+          <MediaButton label={playing ? t('player.pause') : t('player.play')} onClick={togglePlay}>
             {playing ? <PauseIcon size={15} fill="currentColor" /> : <PlayIcon size={15} fill="currentColor" />}
           </MediaButton>
           <span className="ml-1 hidden flex-none select-none text-caption tabular-nums text-text-muted @[15rem]/player:block">
             {formatTime(currentTime)} / {formatTime(duration)}
           </span>
           <div className="ml-auto flex flex-none items-center gap-0.5">
-            <MediaButton label={muted || volume === 0 ? 'Desmutar' : 'Mutar'} onClick={toggleMute}>
+            <MediaButton label={muted || volume === 0 ? t('player.unmute') : t('player.mute')} onClick={toggleMute}>
               {muted || volume === 0 ? <SpeakerSlashIcon size={15} /> : <SpeakerHighIcon size={15} />}
             </MediaButton>
             <VolumeSlider
@@ -277,11 +280,11 @@ function VideoChrome({
               onChange={setVolume}
               className="mr-1 hidden @[19rem]/player:block [&_[data-slot=slider-range]]:bg-white/80 [&_[data-slot=slider-track]]:bg-white/25"
             />
-            <MediaButton label="Baixar" onClick={() => downloadFile(src, title || 'video')}>
+            <MediaButton label={t('player.download')} onClick={() => downloadFile(src, title || t('player.video'))}>
               <DownloadSimpleIcon size={15} />
             </MediaButton>
             {onExpand && (
-              <MediaButton label="Tela cheia" onClick={onExpand}>
+              <MediaButton label={t('player.fullscreen')} onClick={onExpand}>
                 <ArrowsOutIcon size={15} />
               </MediaButton>
             )}
@@ -300,6 +303,7 @@ function VideoChrome({
 // which reset playback to 0:00 — so the target has to stay the same object
 // forever and the actual move has to happen outside React's reconciliation.
 function VideoPlayerImpl({ src, poster, title, className, onError }: VideoPlayerProps) {
+  const { t } = useTranslation('media');
   const {
     ref: videoRef,
     state,
@@ -409,11 +413,11 @@ function VideoPlayerImpl({ src, poster, title, className, onError }: VideoPlayer
             className="fixed inset-0 z-50 flex cursor-zoom-out items-center justify-center p-4 outline-none duration-150 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 sm:p-8"
             onClick={() => setLightboxOpen(false)}
           >
-            <DialogPrimitive.Title className="sr-only">{title || 'Video'}</DialogPrimitive.Title>
+            <DialogPrimitive.Title className="sr-only">{title || t('fileTypes.video')}</DialogPrimitive.Title>
             <div
               className="max-w-6xl cursor-default"
               data-download-url={src}
-              data-download-name={title || 'video'}
+              data-download-name={title || t('player.video')}
               onClick={(event) => event.stopPropagation()}
             >
               <VideoChrome
@@ -444,6 +448,7 @@ export function AudioPlayer({ src, title, className, onError }: AudioPlayerProps
 }
 
 function AudioPlayerInner({ src, title, className, onError }: AudioPlayerProps) {
+  const { t } = useTranslation('media');
   const {
     ref,
     state: { currentTime, duration, playing, muted, volume },
@@ -488,7 +493,7 @@ function AudioPlayerInner({ src, title, className, onError }: AudioPlayerProps) 
       <div className="flex min-w-0 items-center gap-2">
         <button
           type="button"
-          aria-label={playing ? 'Pausar' : 'Reproduzir'}
+          aria-label={playing ? t('player.pause') : t('player.play')}
           onClick={togglePlay}
           className="flex size-8 flex-none items-center justify-center rounded-full bg-primary text-white transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
         >
@@ -507,7 +512,7 @@ function AudioPlayerInner({ src, title, className, onError }: AudioPlayerProps) 
 
         <div className="flex flex-none items-center gap-0.5">
           <MediaButton
-            label={muted || volume === 0 ? 'Desmutar' : 'Mutar'}
+            label={muted || volume === 0 ? t('player.unmute') : t('player.mute')}
             onClick={toggleMute}
             className="text-text-muted hover:text-text-primary"
           >
@@ -520,8 +525,8 @@ function AudioPlayerInner({ src, title, className, onError }: AudioPlayerProps) 
             className="hidden @[19rem]/audio:block [&_[data-slot=slider-range]]:bg-text-muted [&_[data-slot=slider-track]]:bg-bg-hover"
           />
           <MediaButton
-            label="Baixar"
-            onClick={() => downloadFile(src, title || 'audio')}
+            label={t('player.download')}
+            onClick={() => downloadFile(src, title || t('player.audio'))}
             className="text-text-muted hover:text-text-primary"
           >
             <DownloadSimpleIcon size={15} />

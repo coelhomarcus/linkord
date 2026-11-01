@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { fetchProfileDetails } from '@/shared/api/api';
+import { i18n } from '@/shared/i18n/init';
 import type { ProfileDetails } from '@/shared/api/api';
 
 type Loaded = { userId: string } & ({ status: 'ready'; details: ProfileDetails } | { status: 'error' });
@@ -35,5 +36,5 @@ export function useProfileDetails(userId: string | null) {
 
 /** "4 de mai. de 2023" */
 export function formatProfileDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', year: 'numeric' });
+  return new Date(iso).toLocaleDateString(i18n.language, { day: 'numeric', month: 'short', year: 'numeric' });
 }

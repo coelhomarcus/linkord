@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { type LinkProps } from 'react-router';
 import { Button } from '@/shared/ui/primitives/button';
 import { cn } from '@/shared/lib/utils';
 import type { AuditRow } from './adminApi';
-import { ACTION_LABELS, formatWhen } from './adminFormat';
+import { actionLabel, formatWhen } from './adminFormat';
 import type { AdminDetailStatus } from './useAdminDetail';
 import { AppLink } from '@/shared/ui/app-link';
 
@@ -13,11 +14,6 @@ const TONES: Record<string, string> = {
   resolved: 'bg-green/15 text-green', dismissed: 'bg-fill-active text-text-muted',
   admin: 'bg-primary/15 text-accent-text', user: 'bg-fill-active text-text-muted',
 };
-const LABELS: Record<string, string> = {
-  active: 'Ativo', suspended: 'Suspenso', open: 'Aberta', reviewing: 'Em análise', resolved: 'Resolvida', dismissed: 'Dispensada',
-  admin: 'Admin', user: 'Usuário',
-};
-
 /** In-flow navigation that used to be a raw underlined `<AppLink>`. */
 export function AdminTextLink({ to, state, children, className }: {
   to: LinkProps['to'];
@@ -33,22 +29,24 @@ export function AdminTextLink({ to, state, children, className }: {
 }
 
 export function Badge({ value }: { value: string }) {
-  return <span className={cn('inline-flex flex-none rounded-sm px-1.5 py-0.5 text-micro font-medium', TONES[value] ?? 'bg-fill-active text-text-muted')}>{LABELS[value] ?? value}</span>;
+  const { t } = useTranslation('admin');
+  return <span className={cn('inline-flex flex-none rounded-sm px-1.5 py-0.5 text-micro font-medium', TONES[value] ?? 'bg-fill-active text-text-muted')}>{t(`status.${value}`, { defaultValue: value })}</span>;
 }
 
-export function AuditList({ items, empty = 'Nenhuma ação registrada.' }: { items: AuditRow[]; empty?: string }) {
-  if (items.length === 0) return <p className="py-4 text-label text-text-muted">{empty}</p>;
+export function AuditList({ items, empty }: { items: AuditRow[]; empty?: string }) {
+  const { t } = useTranslation('admin');
+  if (items.length === 0) return <p className="py-4 text-label text-text-muted">{empty ?? t('audit.empty')}</p>;
   return (
     <ul className="flex flex-col divide-y divide-border-subtle">
       {items.map((row) => (
         <li key={row.id} className="flex flex-col gap-0.5 py-2.5 text-label">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="font-medium text-text-primary">{ACTION_LABELS[row.action] ?? row.action}</span>
-            {row.result === 'failed' && <span className="rounded-sm bg-red/15 px-1.5 py-0.5 text-micro font-medium text-red-text">falhou</span>}
+            <span className="font-medium text-text-primary">{actionLabel(row.action)}</span>
+            {row.result === 'failed' && <span className="rounded-sm bg-red/15 px-1.5 py-0.5 text-micro font-medium text-red-text">{t('status.failed')}</span>}
             <span className="text-caption text-text-muted">{formatWhen(row.at)}</span>
           </div>
           <p className="text-caption text-text-muted">
-            por {row.actorLabel || 'sistema'}{row.targetLabel ? ` · alvo: ${row.targetLabel}` : ''}
+            {t('common.by')} {row.actorLabel || t('common.system')}{row.targetLabel ? ` · ${t('common.target')}: ${row.targetLabel}` : ''}
           </p>
           {row.reason && <p className="text-caption text-text-secondary">“{row.reason}”</p>}
         </li>
@@ -79,12 +77,13 @@ export function ListChrome({ list, empty, emptyAction, children }: {
   emptyAction?: ReactNode;
   children: ReactNode;
 }) {
-  if (list.status === 'loading') return <p className="py-8 text-center text-label text-text-muted">Carregando…</p>;
+  const { t } = useTranslation('admin');
+  if (list.status === 'loading') return <p className="py-8 text-center text-label text-text-muted">{t('chrome.loading')}</p>;
   if (list.status === 'error') {
     return (
       <div className="flex flex-col items-center gap-3 py-8 text-center">
-        <p className="text-body text-text-muted">Não foi possível carregar.</p>
-        <Button type="button" variant="secondary" size="sm" onClick={list.retry}>Tentar de novo</Button>
+        <p className="text-body text-text-muted">{t('chrome.loadFailed')}</p>
+        <Button type="button" variant="secondary" size="sm" onClick={list.retry}>{t('chrome.retry')}</Button>
       </div>
     );
   }
@@ -100,15 +99,15 @@ export function ListChrome({ list, empty, emptyAction, children }: {
     <>
       {list.stale && (
         <div role="alert" className="flex flex-wrap items-center gap-3 rounded-lg border border-yellow/30 bg-yellow/10 px-3 py-2 text-label text-text-primary">
-          <p className="min-w-0 flex-1">Não foi possível atualizar a lista. Estes dados podem estar desatualizados.</p>
-          <Button type="button" variant="secondary" size="sm" disabled={list.refreshing} onClick={list.retry}>{list.refreshing ? 'Atualizando…' : 'Atualizar'}</Button>
+          <p className="min-w-0 flex-1">{t('chrome.stale')}</p>
+          <Button type="button" variant="secondary" size="sm" disabled={list.refreshing} onClick={list.retry}>{list.refreshing ? t('chrome.refreshing') : t('chrome.refresh')}</Button>
         </div>
       )}
       <div className="flex flex-col">{children}</div>
-      {list.loadMoreError && <p role="alert" className="text-center text-caption text-red-text">Não foi possível carregar mais.</p>}
+      {list.loadMoreError && <p role="alert" className="text-center text-caption text-red-text">{t('chrome.loadMoreFailed')}</p>}
       {list.hasMore && (
         <Button type="button" variant="ghost" size="sm" className="mt-2 self-center" disabled={list.loadingMore} onClick={list.loadMore}>
-          {list.loadingMore ? 'Carregando…' : list.loadMoreError ? 'Tentar de novo' : 'Carregar mais'}
+          {list.loadingMore ? t('chrome.loading') : list.loadMoreError ? t('chrome.retry') : t('chrome.loadMore')}
         </Button>
       )}
     </>
@@ -127,7 +126,8 @@ export function DetailStatusView({ status, missing, failed, backTo, backLabel, o
   backLabel: string;
   onRetry: () => void;
 }) {
-  if (status === 'loading') return <p className="py-8 text-center text-label text-text-muted">Carregando…</p>;
+  const { t } = useTranslation('admin');
+  if (status === 'loading') return <p className="py-8 text-center text-label text-text-muted">{t('chrome.loading')}</p>;
   if (status === 'missing') {
     return <p className="py-8 text-center text-label text-text-muted">{missing} <AdminTextLink to={backTo}>{backLabel}</AdminTextLink></p>;
   }
@@ -135,7 +135,7 @@ export function DetailStatusView({ status, missing, failed, backTo, backLabel, o
     return (
       <div className="flex flex-col items-center gap-3 py-8">
         <p className="text-body text-text-muted">{failed}</p>
-        <Button type="button" variant="secondary" size="sm" onClick={onRetry}>Tentar de novo</Button>
+        <Button type="button" variant="secondary" size="sm" onClick={onRetry}>{t('chrome.retry')}</Button>
       </div>
     );
   }
@@ -145,10 +145,11 @@ export function DetailStatusView({ status, missing, failed, backTo, backLabel, o
 /** After a mutation succeeded but the follow-up read failed: the action is DONE,
  * only the view is old — the retry is a read, never the mutation. */
 export function RefreshFailedNotice({ refreshing, onRetry }: { refreshing: boolean; onRetry: () => void }) {
+  const { t } = useTranslation('admin');
   return (
     <div role="alert" className="flex flex-wrap items-center gap-3 rounded-lg border border-yellow/30 bg-yellow/10 px-3 py-2 text-label text-text-primary">
-      <p className="min-w-0 flex-1">Ação concluída, mas não foi possível atualizar os dados. O que você vê pode estar desatualizado.</p>
-      <Button type="button" variant="secondary" size="sm" disabled={refreshing} onClick={onRetry}>{refreshing ? 'Atualizando…' : 'Atualizar'}</Button>
+      <p className="min-w-0 flex-1">{t('chrome.actionDoneStale')}</p>
+      <Button type="button" variant="secondary" size="sm" disabled={refreshing} onClick={onRetry}>{refreshing ? t('chrome.refreshing') : t('chrome.refresh')}</Button>
     </div>
   );
 }

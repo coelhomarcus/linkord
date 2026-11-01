@@ -1,4 +1,5 @@
 import { ArrowBendUpLeftIcon, PlayIcon } from '@phosphor-icons/react';
+import { useTranslation } from 'react-i18next';
 
 import { cn } from '@/shared/lib/utils';
 import { useCachedImageSrc } from '@/shared/hooks/useCachedImageSrc';
@@ -14,11 +15,12 @@ import { formatMediaDate } from './mediaRows';
 const REVEAL = 'opacity-0 transition-opacity group-hover:opacity-100 group-has-[:focus-visible]:opacity-100 [@media(hover:none)]:opacity-100';
 
 function JumpButton({ onJump, label, className }: { onJump: () => void; label?: string; className?: string }) {
+  const { t } = useTranslation('conversations');
   return (
     <button
       type="button"
-      aria-label="Ir para a mensagem"
-      title="Ir para a mensagem"
+      aria-label={t('media.jumpToMessage')}
+      title={t('media.jumpToMessage')}
       onClick={onJump}
       className={cn(
         'z-10 inline-flex items-center gap-1.5 rounded-md bg-black/65 px-2 py-1.5 text-caption font-medium text-white backdrop-blur-sm transition-colors hover:bg-black/80 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/60',
@@ -75,17 +77,18 @@ function TileFace({ item }: { item: MediaItem }) {
 /** A square in the grid: opens the viewer (or the file, for what the viewer
  * cannot show), and on hover says who sent it and when. */
 export function MediaTile({ item, onOpen, onJump }: { item: MediaItem; onOpen: (item: MediaItem) => void; onJump: (item: MediaItem) => void }) {
+  const { t } = useTranslation('conversations');
   const label = item.attachment?.name ?? 'GIF';
   const viewable = viewerItemOf(item) !== null;
   const faceClass = 'absolute inset-0 block overflow-hidden';
   return (
     <div className="group relative aspect-square overflow-hidden rounded-lg border border-border bg-bg-tertiary">
       {viewable ? (
-        <button type="button" aria-label={`Abrir ${label}`} onClick={() => onOpen(item)} className={cn(faceClass, 'cursor-zoom-in transition-opacity focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-inset focus-visible:ring-ring/60')}>
+        <button type="button" aria-label={t('media.open', { name: label })} onClick={() => onOpen(item)} className={cn(faceClass, 'cursor-zoom-in transition-opacity focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-inset focus-visible:ring-ring/60')}>
           <TileFace item={item} />
         </button>
       ) : (
-        <a href={`/uploads/${item.attachment?.id}`} download={item.attachment?.name} aria-label={`Baixar ${label}`} className={cn(faceClass, 'transition-colors hover:bg-bg-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-inset focus-visible:ring-ring/60')}>
+        <a href={`/uploads/${item.attachment?.id}`} download={item.attachment?.name} aria-label={t('media.download', { name: label })} className={cn(faceClass, 'transition-colors hover:bg-bg-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-inset focus-visible:ring-ring/60')}>
           <TileFace item={item} />
         </a>
       )}
@@ -99,12 +102,13 @@ export function MediaTile({ item, onOpen, onJump }: { item: MediaItem; onOpen: (
 }
 
 function ItemMeta({ item, onJump }: { item: MediaItem; onJump: (item: MediaItem) => void }) {
+  const { t } = useTranslation('conversations');
   return (
     <div className="flex items-center gap-2">
       <p className="min-w-0 flex-1 truncate text-caption text-text-muted">
         {item.authorName} · {formatMediaDate(item.ts)}
       </p>
-      <JumpButton onJump={() => onJump(item)} label="Ir para a mensagem" className={cn('flex-none bg-fill-active text-text-secondary hover:bg-fill-hover', REVEAL)} />
+      <JumpButton onJump={() => onJump(item)} label={t('media.jumpToMessage')} className={cn('flex-none bg-fill-active text-text-secondary hover:bg-fill-hover', REVEAL)} />
     </div>
   );
 }

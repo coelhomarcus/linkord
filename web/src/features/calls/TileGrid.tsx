@@ -1,5 +1,6 @@
 import { CaretDownIcon, CaretUpIcon } from '@phosphor-icons/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useRoom } from '../../state/RoomContext';
 import { Tile } from './Tile';
@@ -32,6 +33,7 @@ const DEFAULT_MIN_TILE_WIDTH = 220;
 const MAX_VISIBLE_THUMB_ROWS = 2;
 
 export function TileGrid({ descriptors, focusedId, minTileWidth = DEFAULT_MIN_TILE_WIDTH, onCapacityChange }: TileGridProps) {
+  const { t } = useTranslation('calls');
   const { state } = useRoom();
   const keys = useMemo(() => descriptors.map((d) => d.key), [descriptors]);
   const focus = focusedId && keys.includes(focusedId) ? focusedId : null;
@@ -124,11 +126,11 @@ export function TileGrid({ descriptors, focusedId, minTileWidth = DEFAULT_MIN_TI
             type="button"
             onClick={() => setThumbsCollapsed((v) => !v)}
             aria-expanded={!thumbsCollapsed}
-            aria-label={thumbsCollapsed ? 'Mostrar participantes' : 'Ocultar participantes'}
+            aria-label={thumbsCollapsed ? t('stage.showParticipants') : t('stage.hideParticipants')}
             className="flex items-center gap-1 rounded-full px-2 py-0.5 text-caption text-text-muted transition-colors hover:bg-fill-subtle hover:text-text-secondary"
           >
             {thumbsCollapsed ? <CaretUpIcon size={12} /> : <CaretDownIcon size={12} />}
-            {thumbs.length} participante{thumbs.length === 1 ? '' : 's'}
+            {t('tileGrid.participants', { count: thumbs.length })}
           </button>
           {!thumbsCollapsed && (
             <div data-thumb-strip className="w-full overflow-y-auto" style={{ maxHeight: thumbStripMaxHeight }}>

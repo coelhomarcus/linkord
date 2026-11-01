@@ -1,0 +1,155 @@
+{
+  "deletedAuthor": "Deleted user",
+  "bot": "Bot",
+  "reactWith": "React with {{emoji}}",
+  "react": "React",
+  "moreEmojis": "More emojis",
+  "edited": "(edited)",
+  "deleting": "Deleting…",
+  "dismissNotice": "Dismiss notice",
+  "pending": {
+    "uploading": "Uploading attachments",
+    "waiting": "Waiting for connection…",
+    "sending": "Sending",
+    "confirming": "Confirming delivery…",
+    "notSent": "Not sent.",
+    "notSentWithError": "Not sent: {{error}}",
+    "retry": "Try again",
+    "discard": "Discard",
+    "attachmentFailed": "Failed",
+    "attachmentDone": "File uploaded",
+    "attachmentPreparing": "Preparing upload…",
+    "attachmentUploading": "Uploading file… {{percent}}%"
+  },
+  "edit": {
+    "saving": "Saving…",
+    "escapeTo": "escape to",
+    "cancel": "cancel",
+    "enterTo": "enter to",
+    "save": "save",
+    "saveFailed": "Couldn't save."
+  },
+  "actions": {
+    "reply": "Reply",
+    "edit": "Edit",
+    "report": "Report",
+    "delete": "Delete",
+    "more": "Message actions",
+    "viewReactions": "See all reactions",
+    "copyText": "Copy text",
+    "reportLabel": "message from {{name}}"
+  },
+  "composer": {
+    "replyingTo": "Replying to",
+    "cancelReply": "Cancel reply",
+    "add": "Add",
+    "attachFiles": "Attach files",
+    "sendImages": "Send images",
+    "gif": "GIF",
+    "insertEmoji": "Insert emoji",
+    "compress": "Compress images (WebP)",
+    "message": "Message",
+    "addCaption": "Add a caption",
+    "sendGif": "Send GIF",
+    "send": "Send message",
+    "dropToAttach": "Drop to attach",
+    "removeFile": "Remove {{name}}",
+    "maxAttachments_one": "Maximum of {{count}} attachment per message.",
+    "maxAttachments_other": "Maximum of {{count}} attachments per message.",
+    "tooLarge": "\"{{name}}\" is too large (maximum {{max}})."
+  },
+  "reactions": {
+    "title": "Reactions",
+    "empty": "No reactions yet.",
+    "tabsLabel": "Emoji",
+    "fallbackName": "Unavailable participant",
+    "you": "You",
+    "more": "{{names}} and {{count}} more",
+    "reacted_one": "{{names}} reacted",
+    "reacted_other": "{{names}} reacted",
+    "reactedMore_one": "{{names}} and {{count}} other person reacted",
+    "reactedMore_other": "{{names}} and {{count}} other people reacted",
+    "chipAdd": "Add reaction {{emoji}} ({{count}}): {{names}}",
+    "chipRemove": "Remove reaction {{emoji}} ({{count}}): {{names}}"
+  },
+  "deleteConfirm": {
+    "title": "Delete message",
+    "description": "The message will be deleted for everyone and can't be undone.",
+    "descriptionShift": "The message will be deleted for everyone and can't be undone. Hold Shift when clicking Delete to skip this confirmation.",
+    "confirm": "Delete"
+  },
+  "invite": {
+    "unavailable": "Invitation unavailable: the group no longer exists.",
+    "status": {
+      "accepted": "Accepted",
+      "declined": "Declined",
+      "revoked": "Cancelled",
+      "expired": "Expired"
+    },
+    "quotaExceeded": "You're already in the maximum number of groups allowed.",
+    "failed": "Couldn't complete the action. Try again.",
+    "full_group": "Limit reached: the group is full.",
+    "full_bot": "Limit reached: the bot is full.",
+    "alreadyMember_group": "You're already in this group.",
+    "alreadyMember_bot": "You're already in this bot.",
+    "accepting": "Accepting…",
+    "join_group": "Join the group",
+    "join_bot": "Join the bot",
+    "decline": "Decline",
+    "waiting": "Awaiting reply",
+    "revoke": "Revoke",
+    "open_group": "Open group",
+    "open_bot": "Open bot",
+    "header_group": "Group invitation",
+    "header_bot": "Bot invitation",
+    "members_one": "{{count}} member",
+    "members_other": "{{count}} members",
+    "hint_group": "When you join, you'll see the group's history.",
+    "hint_bot": "When you join, you'll start receiving this bot's alerts."
+  },
+  "search": {
+    "title": "Search messages",
+    "placeholder": "Search messages...",
+    "scopeAll": "Searching all conversations",
+    "scopeOne": "Searching in {{name}}",
+    "conversationFallback": "conversation",
+    "all": "All",
+    "scopeAria": "Search all conversations",
+    "searching": "Searching…",
+    "none": "No messages found."
+  },
+  "code": {
+    "copied": "Code copied",
+    "copy": "Copy code",
+    "copiedLabel": "Copied",
+    "copyLabel": "Copy"
+  },
+  "timeline": {
+    "loadingOlder": "Loading earlier messages...",
+    "loading": "Loading messages…",
+    "log": "Messages",
+    "newMessages": "New Messages"
+  },
+  "media": {
+    "open": "Open {{name}}",
+    "openIndexed": "Open {{name}} ({{index}} of {{total}})"
+  },
+  "preview": {
+    "invite": "Invitation to the group {{title}}",
+    "inviteUnavailable": "Invitation unavailable",
+    "notice": "Notice",
+    "attachment": "Attachment"
+  },
+  "errors": {
+    "unknown": "unknown error",
+    "reactFailed": "Couldn't react: {{message}}",
+    "deleteFailed": "Couldn't delete: {{message}}",
+    "removeAttachmentFailed": "Couldn't remove the attachment: {{message}}",
+    "removeEmbedFailed": "Couldn't remove the embed: {{message}}",
+    "offline": "No connection to the server. Try again once you're reconnected.",
+    "noResponse": "The server didn't respond. Try again.",
+    "unconfirmed": "Couldn't confirm the send.",
+    "attachmentFailed_one": "One attachment wasn't sent.",
+    "attachmentFailed_other": "{{count}} attachments weren't sent."
+  }
+}

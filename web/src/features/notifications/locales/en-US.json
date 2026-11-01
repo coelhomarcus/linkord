@@ -1,0 +1,42 @@
+{
+  "title": "Notifications",
+  "bell": {
+    "unread_one": "Notifications, {{count}} unread",
+    "unread_other": "Notifications, {{count}} unread"
+  },
+  "actions": {
+    "markAllRead": "Mark all as read",
+    "clearAll": "Clear all",
+    "dismiss": "Dismiss notification",
+    "retry": "Try again",
+    "updateFailed": "Couldn't update. Try again.",
+    "unread": "Unread"
+  },
+  "list": {
+    "loading": "Loading…",
+    "loadFailed": "Couldn't load notifications.",
+    "empty": "No notifications yet."
+  },
+  "text": {
+    "unknownActor": "Someone",
+    "unknownBot": "A bot",
+    "unknownGroup": "Group",
+    "friendRequest": "{{name}} sent you a friend request",
+    "friendAccepted": "{{name}} accepted your friend request",
+    "groupInvitationNamed": "{{name}} invited you to the group {{group}}",
+    "groupInvitationUnnamed": "{{name}} invited you to a group",
+    "mentionBot": "{{name}} mentioned you",
+    "mentionDirect": "{{name}} mentioned you in a conversation",
+    "mentionGroup": "{{name}} mentioned you in the group {{group}}",
+    "mentionBotConversation": "{{name}} mentioned you in the bot {{bot}}"
+  },
+  "relative": {
+    "now": "now",
+    "minutes_one": "{{count}} min ago",
+    "minutes_other": "{{count}} min ago",
+    "hours_one": "{{count}} hr ago",
+    "hours_other": "{{count}} hrs ago",
+    "days_one": "{{count}} day ago",
+    "days_other": "{{count}} days ago"
+  }
+}

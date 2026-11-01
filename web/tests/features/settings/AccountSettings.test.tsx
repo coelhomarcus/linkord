@@ -29,7 +29,7 @@ describe('formatStorage', () => {
 describe('AccountSettings', () => {
   it('describes the quota in pt-BR, with the file count in the singular when it is one', () => {
     renderAccount({ totalBytes: 8.3 * MB, totalFiles: 1, maxBytes: 5 * GB });
-    expect(screen.getByText('8,3 MB de 5 GB usados · 1 arquivo')).toBeInTheDocument();
+    expect(screen.getByText('8,3 MB de 5 GB da sua cota usados, 1 arquivo enviado.')).toBeInTheDocument();
   });
 
   it('keeps any usage visible on the bar while reporting the real value', () => {
@@ -39,9 +39,8 @@ describe('AccountSettings', () => {
     expect(bar.firstElementChild).toHaveStyle({ width: '2%' });
   });
 
-  it('points to the profile page for the display name instead of repeating its button', () => {
+  it('links the display name to profile settings', () => {
     renderAccount({ totalBytes: 0, totalFiles: 0, maxBytes: 5 * GB });
-    expect(screen.getByRole('link', { name: 'Perfil' })).toHaveAttribute('href', '/app/settings/profile');
-    expect(screen.queryByRole('link', { name: 'Editar perfil' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Editar perfil' })).toHaveAttribute('href', '/app/settings/profile');
   });
 });

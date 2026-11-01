@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useRoom } from '@/state/RoomContext';
 import { ProfileActions } from './ProfileActions';
 import { useRelationship } from './useRelationship';
@@ -12,6 +13,7 @@ import { useRelationship } from './useRelationship';
  * if it failed to load, the composer stays — hiding it on a hiccup would be
  * worse than letting the server say no. */
 export function DirectComposerGate({ conversationId, children }: { conversationId: string; children: ReactNode }) {
+  const { t } = useTranslation('friends');
   const { conversations, allUsers, state } = useRoom();
   const conversation = conversations.find((item) => item.id === conversationId);
   const peerId = conversation?.type === 'direct' ? (conversation.memberIds.find((id) => id !== state.me.userId) ?? null) : null;
@@ -25,8 +27,8 @@ export function DirectComposerGate({ conversationId, children }: { conversationI
     <div className="mx-3 mb-3 rounded-lg border border-border bg-bg-secondary p-3 md:mx-4 md:mb-4">
       <p className="px-4 pt-1 pb-2 text-label text-text-muted">
         {blocked
-          ? 'Você não pode enviar mensagens nem ligar enquanto essa pessoa estiver bloqueada. O histórico continua disponível.'
-          : 'Vocês precisam ser amigos para trocar mensagens e fazer chamadas aqui. O histórico continua disponível.'}
+          ? t('gate.blocked')
+          : t('gate.notFriends')}
       </p>
       {peer && <ProfileActions userId={peer.id} username={peer.username} displayName={peer.displayName} />}
     </div>

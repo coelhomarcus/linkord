@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { MagnifyingGlassIcon } from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
 
@@ -49,6 +50,7 @@ function SearchResultRow({ result, showConversation, onSelect }: { result: Searc
 }
 
 export function ChatSearchDialog({ open, onOpenChange, activeConversationId, activeConversationName }: ChatSearchDialogProps) {
+  const { t } = useTranslation('chat');
   const { searchResults, searchLoading, searchError, clearSearchError, searchMessages, jumpToMessage } = useRoom();
   const [query, setQuery] = useState('');
   const [scopeAll, setScopeAll] = useState(false);
@@ -81,7 +83,7 @@ export function ChatSearchDialog({ open, onOpenChange, activeConversationId, act
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] max-w-[calc(100%-2rem)] grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden bg-bg-modal p-0 sm:max-w-2xl">
         <DialogHeader className="px-4 pt-4 pr-12">
-          <DialogTitle className="text-title font-semibold text-text-primary">Buscar mensagens</DialogTitle>
+          <DialogTitle className="text-title font-semibold text-text-primary">{t('search.title')}</DialogTitle>
         </DialogHeader>
 
         <div className="flex min-h-0 flex-col gap-3 overflow-y-auto px-4 pb-4 pt-3">
@@ -91,7 +93,7 @@ export function ChatSearchDialog({ open, onOpenChange, activeConversationId, act
                 dialog IS the user asking to type a search query */}
             <Input
               autoFocus
-              placeholder="Buscar mensagens..."
+              placeholder={t('search.placeholder')}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               className="pl-10"
@@ -100,11 +102,11 @@ export function ChatSearchDialog({ open, onOpenChange, activeConversationId, act
 
           <div className="flex flex-none items-center justify-between gap-3">
             <span className="min-w-0 truncate text-label text-text-muted">
-              {scopeAll ? 'Buscando em todas as conversas' : `Buscando em ${activeConversationName ?? 'conversa'}`}
+              {scopeAll ? t('search.scopeAll') : t('search.scopeOne', { name: activeConversationName ?? t('search.conversationFallback') })}
             </span>
             <div className="flex flex-none items-center gap-2">
-              <Label htmlFor="searchScopeAll" className="text-label text-text-secondary">Todas</Label>
-              <Switch id="searchScopeAll" checked={scopeAll} onCheckedChange={setScopeAll} aria-label="Buscar em todas as conversas" />
+              <Label htmlFor="searchScopeAll" className="text-label text-text-secondary">{t('search.all')}</Label>
+              <Switch id="searchScopeAll" checked={scopeAll} onCheckedChange={setScopeAll} aria-label={t('search.scopeAria')} />
             </div>
           </div>
 
@@ -112,10 +114,10 @@ export function ChatSearchDialog({ open, onOpenChange, activeConversationId, act
 
           <div className="flex min-h-0 flex-1 flex-col gap-1">
             {searchLoading && (
-              <p className="select-none px-1 py-4 text-center text-label text-text-muted">Buscando…</p>
+              <p className="select-none px-1 py-4 text-center text-label text-text-muted">{t('search.searching')}</p>
             )}
             {!searchLoading && trimmed && searchResults.length === 0 && (
-              <p className="select-none px-1 py-4 text-center text-label text-text-muted">Nenhuma mensagem encontrada.</p>
+              <p className="select-none px-1 py-4 text-center text-label text-text-muted">{t('search.none')}</p>
             )}
             {!searchLoading && searchResults.map((result) => (
               <SearchResultRow key={result.msgId} result={result} showConversation={scopeAll} onSelect={() => handleSelect(result)} />

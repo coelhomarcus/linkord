@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { UploadSimpleIcon } from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
 import type { DragEvent } from 'react';
@@ -24,6 +25,7 @@ function hasFiles(e: DragEvent<HTMLDivElement>): boolean {
 }
 
 export function ChatSurface({ conversationId, onOpenProfile, surfaceId = 'main' }: { conversationId: string; onOpenProfile: (userId: string) => void; surfaceId?: 'main' | 'call' }) {
+  const { t } = useTranslation('chat');
   const { state, setReplyingTo, windowGenerationByConversation, conversations, typingByConversation, allUsers } = useRoom();
   // the same people TypingIndicator names: someone it can't show raises no background
   const someoneTyping = [...(typingByConversation.get(conversationId) ?? [])].some((id) => allUsers.has(id));
@@ -117,7 +119,7 @@ export function ChatSurface({ conversationId, onOpenProfile, surfaceId = 'main' 
       {dragActive && (
         <div className="pointer-events-none absolute inset-0 z-10 m-2 flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-primary bg-(--surface-base)/90 text-text-primary">
           <UploadSimpleIcon size={28} className="text-primary" />
-          <p className="text-body font-medium">Solte para anexar</p>
+          <p className="text-body font-medium">{t('composer.dropToAttach')}</p>
         </div>
       )}
     </div>

@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { renderWithRoom } from '@tests/fixtures/roomContextFixture';
 import { ReportDialog } from '@/features/reports/ReportDialog';
 import * as api from '@/shared/api/api';
+import { useLanguageForTests } from '@tests/fixtures/i18nFixture';
 
 vi.mock('@/shared/api/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/shared/api/api')>()),
@@ -57,5 +58,15 @@ describe('ReportDialog', () => {
   it('the title matches the target type', () => {
     renderWithRoom(<ReportDialog target={{ type: 'group', id: 'g', label: 'Squad' }} open onOpenChange={vi.fn()} />);
     expect(screen.getByText('Denunciar grupo')).toBeInTheDocument();
+  });
+});
+
+describe('ReportDialog in English', () => {
+  useLanguageForTests('en-US');
+
+  it('renders the translated target and reason labels', () => {
+    renderWithRoom(<ReportDialog target={target} open onOpenChange={vi.fn()} />);
+    expect(screen.getByText('Report message')).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'Spam or advertising' })).toBeInTheDocument();
   });
 });

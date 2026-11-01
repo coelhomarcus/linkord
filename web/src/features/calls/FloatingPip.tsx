@@ -2,6 +2,7 @@ import { CaretLeftIcon, CaretRightIcon } from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 
 import { useRoom } from '../../state/RoomContext';
 import { useCallTiles } from './useCallTiles';
@@ -23,6 +24,7 @@ interface FloatingPipProps {
 }
 
 export function FloatingPip({ allIds, onExpand, hideOnMobile = false }: FloatingPipProps) {
+  const { t } = useTranslation('calls');
   const { state } = useRoom();
   const { isMobile } = useSidebar();
   const descriptors = useCallTiles(allIds).filter((d) => d.kind !== 'avatar');
@@ -128,7 +130,7 @@ export function FloatingPip({ allIds, onExpand, hideOnMobile = false }: Floating
             type="button"
             variant="ghost"
             size="icon-xs"
-            aria-label="Transmissão anterior"
+            aria-label={t('controls.previousStream')}
             onPointerDown={(e) => e.stopPropagation()}
             onClick={() => {
               const i = descriptors.findIndex((d) => d.key === current.key);
@@ -142,7 +144,7 @@ export function FloatingPip({ allIds, onExpand, hideOnMobile = false }: Floating
             type="button"
             variant="ghost"
             size="icon-xs"
-            aria-label="Próxima transmissão"
+            aria-label={t('controls.nextStream')}
             onPointerDown={(e) => e.stopPropagation()}
             onClick={() => {
               const i = descriptors.findIndex((d) => d.key === current.key);

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { logger } from '@/shared/lib/logger';
+import { i18n } from '@/shared/i18n/init';
 
 const log = logger.child({ component: 'speaker-test' });
 
@@ -41,7 +42,7 @@ export function useSpeakerTest(): SpeakerTestApi {
     audio.onended = () => { setTesting(false); if (audioRef.current === audio) audioRef.current = null; };
     audio.onerror = () => {
       setTesting(false);
-      setError('Não foi possível tocar o som de teste.');
+      setError(i18n.t('settings:deviceErrors.speakerFailed'));
       if (audioRef.current === audio) audioRef.current = null;
     };
     try {
@@ -50,7 +51,7 @@ export function useSpeakerTest(): SpeakerTestApi {
     } catch (err) {
       log.warn('Failed to play the test sound', { err: String(err) });
       setTesting(false);
-      setError('Não foi possível tocar o som de teste.');
+      setError(i18n.t('settings:deviceErrors.speakerFailed'));
     }
   }, [stop]);
 

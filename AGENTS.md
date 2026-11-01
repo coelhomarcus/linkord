@@ -51,6 +51,18 @@ server/tests/            # mirrors server/src/ — NO tests inside src/
 - **Never use a dynamic `import()` just to dodge an import cycle.** If two modules form a cycle, extract the part both need into a new leaf module (zero dependency back into the cycle) — that's what resolved the `conversations.ts`/`attachments.ts` cycle (see `modules/attachments/attachmentCleanup.ts`, which only depends on `db`/schema/`attachmentStorage.ts`). A dynamic import is a sign the module boundary is wrong, not a solution.
 - Tests ALWAYS in `server/tests/`, never inside `server/src/`.
 
+## Internationalization (`web/`)
+
+i18next + react-i18next, strings bundled (no backend). Supported languages live in `web/src/shared/i18n/languages.ts` (mirrored by `server/src/modules/users/locale.ts`, pinned by a server test).
+
+- **Where strings live**: `features/<name>/locales/{pt-BR,en-US}.json`, one namespace per feature (the folder name); `shared/i18n/locales/` is the `common` namespace for things with no owner. Don't create a root-level translations folder.
+- **Using them**: `const { t } = useTranslation('<feature>')`. Outside React (hooks' error text, plain modules) use `i18n.t('<ns>:key')` from `@/shared/i18n/init`, at the moment the text is produced — never at module load, which would freeze the language. For catalogs of labels (like `settingsCatalog.ts`), store the *key* and call `t()` where it renders.
+- **Keys**: nested and descriptive (`email.errors.sendFailed`), pt-BR is the source of truth for names and types (register the namespace in `shared/i18n/i18next.d.ts`). Plurals use `_one`/`_other` (pt-BR also `_zero` when 0 reads differently). Variables are `{{name}}`.
+- **Adding a language**: one entry in `languages.ts` (and the server's `LOCALES`), one JSON per namespace. `tests/shared/i18n/localeParity.test.ts` fails until every file has the same keys and `{{variables}}`.
+- **Language preference**: the account's `users.locale` wins; `ss-locale` in localStorage covers logged-out screens; then the browser's language; then pt-BR.
+- **Dates/numbers**: don't hardcode `'pt-BR'` in `toLocale*String` — use the active language.
+- Proper names (theme names, "Linkord") stay untranslated.
+
 ## Verification before calling something done
 
 ```bash
@@ -76,8 +88,8 @@ A change that touches a real flow (upload, call, conversations, auth) deserves l
 No Portuguese comments in any source. Comments and identifiers in English; follow the existing language of surrounding prose.
 
 - Comments always explain the *why* (a non-obvious decision, an invariant, a workaround) — never the *what* (the code already says that). Prefer no comment at all when the name is already clear.
-- UI strings are in Portuguese (the product itself is Portuguese-language). Code identifiers (variables, functions, types), comments and commit messages are in English.
-- **This English-only rule covers tests too**: `describe`/`it` titles, comments, and internal fixture/variable names are in English. The one exception is a literal that's asserting against real UI-rendered text (`getByText`, `aria-label`, toast copy, etc.) — that stays in Portuguese, because it has to match what the app actually renders.
+- UI strings are translated (see **Internationalization** below); pt-BR is the source language. Code identifiers (variables, functions, types), comments and commit messages are in English.
+- **This English-only rule covers tests too**: `describe`/`it` titles, comments, and internal fixture/variable names are in English. The one exception is a literal that's asserting against real UI-rendered text (`getByText`, `aria-label`, toast copy, etc.) — that stays in Portuguese, because the suite renders the app in pt-BR (`tests/setup.ts`). To assert another language wrap the `describe` in `useLanguageForTests('en-US')` (`tests/fixtures/i18nFixture.ts`).
 
 ## Commits
 

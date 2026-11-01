@@ -1,3 +1,4 @@
+import { i18n } from '@/shared/i18n/init';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { discardStagedFile, stageFileInChunks, type StagedFile } from '@/shared/lib/chunkedUpload';
 import { compressImageFile } from '@/shared/lib/compressImageFile';
@@ -129,7 +130,7 @@ export function useMessageOutbox({ sendWs, onConfirmed, stageFile = stageFileInC
       tracked.timer = null;
       tracked.requestId = null;
       if (tracked.attempts >= MAX_AUTO_ATTEMPTS) {
-        update(entry.clientMessageId, { state: 'failed', error: 'Não foi possível confirmar o envio.' });
+        update(entry.clientMessageId, { state: 'failed', error: i18n.t('chat:errors.unconfirmed') });
       } else {
         update(entry.clientMessageId, { state: 'unknown' });
       }
@@ -173,7 +174,7 @@ export function useMessageOutbox({ sendWs, onConfirmed, stageFile = stageFileInC
       remaining -= 1;
       if (remaining > 0 || !trackingRef.current.has(clientMessageId)) return;
       if (failures) {
-        update(clientMessageId, { state: 'failed', error: failures === 1 ? 'Um anexo não foi enviado.' : `${failures} anexos não foram enviados.` });
+        update(clientMessageId, { state: 'failed', error: i18n.t('chat:errors.attachmentFailed', { count: failures }) });
       } else {
         update(clientMessageId, { state: 'sending' });
       }

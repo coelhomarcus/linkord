@@ -1,4 +1,5 @@
 import { ArrowSquareOutIcon, PlayIcon } from '@phosphor-icons/react';
+import { useTranslation } from 'react-i18next';
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import ReactPlayer from 'react-player';
@@ -31,14 +32,15 @@ const KNOWN_SITE: Partial<Record<DetectedEmbed['kind'], { name: string; favicon:
 };
 
 function TwitchPlayer({ embed }: { embed: DetectedEmbed }) {
+  const { t } = useTranslation('media');
   const [loaded, setLoaded] = useState(false);
 
   if (!loaded) {
     const label = embed.kind === 'twitch-channel'
-      ? `twitch.tv/${embed.twitchChannel}`
+      ? t('embed.twitchChannel', { channel: embed.twitchChannel })
       : embed.kind === 'twitch-vod'
-        ? 'VOD da Twitch'
-        : 'Clip da Twitch';
+        ? t('embed.twitchVod')
+        : t('embed.twitchClip');
     return (
       <button
         type="button"
@@ -48,7 +50,7 @@ function TwitchPlayer({ embed }: { embed: DetectedEmbed }) {
         <span className="flex h-12 w-12 flex-none items-center justify-center rounded-full bg-[#9146FF] text-white">
           <PlayIcon size={18} fill="currentColor" />
         </span>
-        <span className="text-label text-text-secondary">{label}: clique pra carregar o player</span>
+        <span className="text-label text-text-secondary">{label}: {t('embed.loadPlayer')}</span>
       </button>
     );
   }

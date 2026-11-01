@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/primitives/dialog';
 import { Button } from '@/shared/ui/primitives/button';
 
@@ -16,15 +17,16 @@ interface UnsavedProfileChangesDialogProps {
 export function UnsavedProfileChangesDialog({
   open, saving, error, onContinueEditing, onDiscardAndLeave, onSaveAndLeave,
 }: UnsavedProfileChangesDialogProps) {
+  const { t } = useTranslation('settings');
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!next) onContinueEditing(); }}>
       <DialogContent className="max-h-[90vh] max-w-[calc(100%-2rem)] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden bg-bg-modal p-0 sm:max-w-100">
         <DialogHeader className="px-6 pt-6 pr-12">
-          <DialogTitle className="text-title font-semibold text-text-primary">Alterações não salvas</DialogTitle>
+          <DialogTitle className="text-title font-semibold text-text-primary">{t('unsaved.title')}</DialogTitle>
         </DialogHeader>
         <div className="min-h-0 overflow-y-auto px-6 py-4">
           <DialogDescription className="select-none text-body text-text-secondary">
-            Você editou seu perfil e ainda não salvou. O que você quer fazer?
+            {t('unsaved.description')}
           </DialogDescription>
           {error && <p role="alert" className="mt-3 text-label text-red">{error}</p>}
         </div>
@@ -36,13 +38,13 @@ export function UnsavedProfileChangesDialog({
             of the three buttons — caught only by looking at a screenshot). */}
         <DialogFooter className="flex-col gap-2 border-border-subtle bg-bg-tertiary/60 px-6 py-4 sm:flex-col sm:justify-start">
           <Button type="button" className="w-full" onClick={onSaveAndLeave} disabled={saving}>
-            <span>{saving ? 'Salvando…' : 'Salvar e sair'}</span>
+            <span>{saving ? t('unsaved.saving') : t('unsaved.saveAndLeave')}</span>
           </Button>
           <Button type="button" variant="outline" className="w-full text-red hover:bg-red/12" onClick={onDiscardAndLeave} disabled={saving}>
-            <span>Descartar e sair</span>
+            <span>{t('unsaved.discardAndLeave')}</span>
           </Button>
           <Button type="button" variant="ghost" className="w-full" onClick={onContinueEditing} disabled={saving}>
-            <span>Continuar editando</span>
+            <span>{t('unsaved.continueEditing')}</span>
           </Button>
         </DialogFooter>
       </DialogContent>

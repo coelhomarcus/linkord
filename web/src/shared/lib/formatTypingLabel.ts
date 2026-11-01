@@ -1,16 +1,18 @@
+import { i18n } from '@/shared/i18n/init';
+
 // Caps at naming 3 people (matches the avatar stack in TypingIndicator.tsx,
 // same rolling-name threshold Discord/Fluxer use) — beyond that a growing
 // list of names reads worse than a plain count, so it falls back to a
-// generic line instead of "Fulano e mais 7 estão digitando...".
+// generic line instead of "Ana and 7 more are typing...".
 const MAX_NAMED = 3;
 
-/** "Fulano está digitando...", "Fulano e Beltrana estão digitando...",
- * "Fulano, Beltrana e Ciclano estão digitando...", or, beyond 3 people,
- * "Várias pessoas estão digitando...". */
+/** "Ana is typing...", "Ana and Bia are typing...", "Ana, Bia and Caio are
+ * typing...", or, beyond 3 people, "Several people are typing...". */
 export function formatTypingLabel(names: string[]): string | null {
   if (names.length === 0) return null;
-  if (names.length === 1) return `${names[0]} está digitando...`;
-  if (names.length === 2) return `${names[0]} e ${names[1]} estão digitando...`;
-  if (names.length <= MAX_NAMED) return `${names.slice(0, -1).join(', ')} e ${names[names.length - 1]} estão digitando...`;
-  return 'Várias pessoas estão digitando...';
+  if (names.length === 1) return i18n.t('common:typing.one', { name: names[0] });
+  if (names.length <= MAX_NAMED) {
+    return i18n.t('common:typing.some', { names: new Intl.ListFormat(i18n.language, { style: 'long', type: 'conjunction' }).format(names) });
+  }
+  return i18n.t('common:typing.many');
 }

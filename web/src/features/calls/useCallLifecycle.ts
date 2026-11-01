@@ -8,6 +8,7 @@ import { useTrackSpeaking } from '@/features/calls/useLiveKitTrack';
 import type { RoomAction } from '@/state/roomReducer';
 import type { ClientMessage } from '@/shared/types/protocol';
 import { logger } from '@/shared/lib/logger';
+import { i18n } from '@/shared/i18n/init';
 
 const log = logger.child({ component: 'call' });
 
@@ -134,7 +135,7 @@ export function useCallLifecycle(deps: CallLifecycleDeps) {
         sendWs({ t: 'call-leave' });
         pendingCallConversationIdRef.current = null;
         setActiveCallConversationId(null);
-        dispatch({ type: 'SET_CALL_JOIN_ERROR', error: { conversationId: m.conversationId, message: 'Não foi possível conectar à chamada. Verifique sua conexão e tente de novo.' } });
+        dispatch({ type: 'SET_CALL_JOIN_ERROR', error: { conversationId: m.conversationId, message: i18n.t('calls:errors.joinCall') } });
       });
     setActiveCallConversationId(m.conversationId);
   }, [livekitRoom, activateMic, setMicMuted, setActiveCallConversationId, sendWs, dispatch]);

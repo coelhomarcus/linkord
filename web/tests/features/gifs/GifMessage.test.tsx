@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { GifMessage } from '@/features/gifs/GifMessage';
+import { useLanguageForTests } from '@tests/fixtures/i18nFixture';
 
 const URL = 'https://static.klipy.com/ii/abc/def/cat.gif';
 
@@ -21,5 +22,14 @@ describe('GifMessage', () => {
 
     expect(screen.queryByRole('button', { name: 'Abrir GIF' })).toBeNull();
     expect(screen.getByRole('link', { name: /GIF indisponível/ }).getAttribute('href')).toBe(URL);
+  });
+});
+
+describe('GifMessage in English', () => {
+  useLanguageForTests('en-US');
+
+  it('uses the translated action label', () => {
+    render(<GifMessage url={URL} />);
+    expect(screen.getByRole('button', { name: 'Open GIF' })).toBeInTheDocument();
   });
 });

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
 import { cn } from '@/shared/lib/utils';
@@ -12,6 +13,7 @@ interface MessageReactionsProps {
 }
 
 export function MessageReactions({ reactions, myUserId, allUsers, onToggle }: MessageReactionsProps) {
+  const { t } = useTranslation('chat');
   const reduced = useReducedMotion();
   const entries = (Object.entries(reactions) as [ReactionEmoji, string[]][]).filter(([, userIds]) => userIds?.length);
   if (!entries.length) return null;
@@ -32,7 +34,7 @@ export function MessageReactions({ reactions, myUserId, allUsers, onToggle }: Me
                 <button
                   type="button"
                   aria-pressed={mine}
-                  aria-label={`${mine ? 'Remover' : 'Adicionar'} reação ${emoji} (${userIds.length}): ${summarizeReactionParticipants(names)}`}
+                  aria-label={t(mine ? 'reactions.chipRemove' : 'reactions.chipAdd', { emoji, count: userIds.length, names: summarizeReactionParticipants(names) })}
                   onClick={() => onToggle(emoji)}
                   className={cn(
                     'flex h-6 items-center gap-1 rounded-full border px-1.5 text-label transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50',

@@ -1,0 +1,21 @@
+{
+  "create": {
+    "created": "Bot criado", "new": "Novo bot",
+    "instructions": "Configure seu sistema para enviar um POST com {{payload}} para esta URL. Cada envio chega aqui como uma mensagem do bot.",
+    "inviteFailures": "Alguns convites não foram enviados:", "name": "Nome",
+    "namePlaceholder": "Ex: Deploys, Monitoramento, Vendas", "inviteFriends": "Convidar amigos",
+    "readOnly": "Quem entrar só lê os avisos do bot; ninguém escreve nele.", "ready": "Pronto", "cancel": "Cancelar", "creating": "Criando…",
+    "withInvites_one": "Criar e convidar ({{count}})", "withInvites_other": "Criar e convidar ({{count}})",
+    "create": "Criar bot", "failed": "Não foi possível criar o bot. Tente de novo."
+  },
+  "webhook": {
+    "instructions": "Seus sistemas enviam um POST com {{payload}} para a URL do webhook, e cada envio aparece aqui como mensagem do bot.",
+    "embedInstructions": "Para um aviso mais legível, envie embeds: até 5 cards com title, description, color ({{colors}}…), fields, url, footer e timestamp — o mesmo formato do Discord.",
+    "hiddenUrl": "A URL só aparece quando é criada. Se você não tem mais a atual, gere uma nova.", "loadFailed": "Não foi possível carregar os dados do webhook.",
+    "lastUsed": "Último envio", "generatedAt": "URL gerada em", "noneYet": "Nenhum ainda", "generating": "Gerando…", "generate": "Gerar nova URL",
+    "rotateFailed": "Não foi possível gerar uma nova URL. Tente de novo.", "confirmTitle": "Gerar nova URL", "confirmDescription": "A URL atual para de funcionar na hora. Os sistemas que enviam para este bot precisam receber a nova.", "confirm": "Gerar"
+  },
+  "reveal": {
+    "warning": "Copie a URL agora: ela não aparece de novo. Se perder, gere outra nas configurações do bot.", "webhookUrl": "URL do webhook", "example": "Exemplo", "embedExample": "Exemplo com card", "copied": "Copiado", "copy": "Copiar {{label}}", "contentExample": "Deploy concluído ✅", "deployTitle": "Deploy concluído", "version": "Versão", "environment": "Ambiente", "production": "produção"
+  }
+}

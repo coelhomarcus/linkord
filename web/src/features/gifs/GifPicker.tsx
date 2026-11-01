@@ -1,5 +1,6 @@
 import { MagnifyingGlassIcon } from '@phosphor-icons/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import type { GifConfig } from '@/shared/api/api';
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
@@ -63,11 +64,12 @@ function useGifFeed(config: EnabledConfig, tab: Tab, query: string) {
 }
 
 function GifTile({ gif, onPick }: { gif: Gif; onPick: (gif: Gif) => void }) {
+  const { t } = useTranslation('gifs');
   return (
     <button
       type="button"
       onClick={() => onPick(gif)}
-      aria-label={gif.title || 'GIF'}
+      aria-label={gif.title || t('picker.tabs')}
       title={gif.title || undefined}
       style={{ aspectRatio: `${gif.preview.width} / ${gif.preview.height}`, backgroundImage: gif.placeholder ? `url("${gif.placeholder}")` : undefined }}
       className="block w-full overflow-hidden rounded-md bg-fill-subtle bg-cover bg-center outline-none transition-[filter,box-shadow] hover:brightness-110 focus-visible:ring-2 focus-visible:ring-ring"
@@ -78,6 +80,7 @@ function GifTile({ gif, onPick }: { gif: Gif; onPick: (gif: Gif) => void }) {
 }
 
 export function GifPicker({ config, onPick }: { config: EnabledConfig; onPick: (gif: Gif, query: string) => void }) {
+  const { t } = useTranslation('gifs');
   const [input, setInput] = useState('');
   const [tab, setTab] = useState<Tab>('trending');
   const query = useDebouncedValue(input.trim(), SEARCH_DEBOUNCE_MS);
@@ -95,16 +98,16 @@ export function GifPicker({ config, onPick }: { config: EnabledConfig; onPick: (
             value={input}
             onChange={(event) => setInput(event.target.value)}
             // KLIPY's attribution rules require this exact placeholder
-            placeholder="Search KLIPY"
-            aria-label="Buscar GIFs"
+            placeholder={t('picker.searchPlaceholder')}
+            aria-label={t('picker.searchLabel')}
             className="h-9 min-w-0 flex-1 bg-transparent text-label outline-none placeholder:text-text-muted"
           />
-          {input && <CloseButton size="xs" label="Limpar busca" onClick={() => setInput('')} />}
+          {input && <CloseButton size="xs" label={t('picker.clearSearch')} onClick={() => setInput('')} />}
         </div>
       </div>
 
       {!searching && (
-        <div role="tablist" aria-label="GIFs" className="flex flex-none gap-1 px-2 pb-2">
+        <div role="tablist" aria-label={t('picker.tabs')} className="flex flex-none gap-1 px-2 pb-2">
           {(['trending', 'recent'] as const).map((id) => (
             <button
               key={id}
@@ -118,7 +121,7 @@ export function GifPicker({ config, onPick }: { config: EnabledConfig; onPick: (
               )}
             >
               {tab === id && <ActiveFill />}
-              {id === 'trending' ? 'Em alta' : 'Recentes'}
+              {id === 'trending' ? t('picker.trending') : t('picker.recent')}
             </button>
           ))}
         </div>
@@ -134,16 +137,16 @@ export function GifPicker({ config, onPick }: { config: EnabledConfig; onPick: (
         hasMore={feed.hasNext}
         onLoadMore={loadMore}
         loading={feed.status === 'loading' || feed.loadingMore}
-        error={feed.status === 'error' ? 'Não foi possível carregar os GIFs.' : null}
+        error={feed.status === 'error' ? t('picker.loadFailed') : null}
         onRetry={retry}
         emptyState={
           <p className="py-10 text-center text-label text-text-muted">
-            {searching ? 'Nenhum GIF encontrado.' : tab === 'recent' ? 'Os GIFs que você enviar aparecem aqui.' : 'Nenhum GIF por enquanto.'}
+            {searching ? t('picker.searchEmpty') : tab === 'recent' ? t('picker.recentEmpty') : t('picker.empty')}
           </p>
         }
         minColumnWidth={140}
         gap={6}
-        ariaLabel="GIFs"
+        ariaLabel={t('picker.tabs')}
         className="flex-1 px-2 pb-2"
       />
 

@@ -1,0 +1,65 @@
+{
+  "tagline": "Chat and make calls with your group",
+  "tabs": {
+    "ariaLabel": "Sign in or create account",
+    "login": "Sign in",
+    "register": "Create account"
+  },
+  "fields": {
+    "username": "Username",
+    "email": "Email",
+    "password": "Password",
+    "newPassword": "New password",
+    "inviteCode": "Invite code"
+  },
+  "placeholders": {
+    "username": "3 to 20 characters",
+    "email": "you@example.com",
+    "password": "At least 8 characters"
+  },
+  "password": {
+    "show": "Show password",
+    "hide": "Hide password"
+  },
+  "login": {
+    "submit": "Sign in",
+    "pending": "Signing in…",
+    "forgot": "Forgot my password",
+    "failed": "Couldn't sign in."
+  },
+  "register": {
+    "submit": "Create account",
+    "pending": "Creating account…",
+    "failed": "Couldn't create the account."
+  },
+  "recovery": {
+    "title": "Recover account",
+    "intro": "Enter your username or email to receive a recovery code.",
+    "by": "Recover by",
+    "sendCode": "Send code",
+    "sending": "Sending…",
+    "sendFailed": "Couldn't send the code.",
+    "backToLogin": "Back to sign in",
+    "enterCode": "Enter the code",
+    "sentToEmail": "We sent a code to {{email}}. It expires in 30 minutes.",
+    "sentToAccount": "We sent a code to the email registered on that account. It expires in 30 minutes.",
+    "codeLabel": "Recovery code",
+    "codeHint": "Enter the 6 digits sent to your email.",
+    "codeError": "Check the code and try again.",
+    "success": "Password reset successfully.",
+    "reset": "Reset password",
+    "saving": "Saving…",
+    "resetDone": "Password reset",
+    "resetFailed": "Couldn't reset the password.",
+    "useOtherEmail": "Use a different email",
+    "useOtherUsername": "Use a different username"
+  },
+  "emailRequired": {
+    "title": "Link your email",
+    "description": "To protect your account and allow password recovery, enter an email.",
+    "submit": "Link email",
+    "saving": "Saving…",
+    "logout": "Sign out",
+    "failed": "Couldn't link the email."
+  }
+}

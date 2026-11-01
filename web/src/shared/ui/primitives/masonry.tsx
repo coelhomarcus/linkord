@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Button } from '@/shared/ui/primitives/button';
 import { cn } from '@/shared/lib/utils';
+import { useTranslation } from 'react-i18next';
 
 // load the next page while this many rows per column are still below the fold
 const PREFETCH_ROWS = 3;
@@ -37,6 +38,7 @@ export function Masonry<T>({
   items, getKey, renderItem, estimateHeight, hasMore, onLoadMore, loading = false, error = null, onRetry,
   emptyState, minColumnWidth = 140, maxColumns = 2, gap = 10, ariaLabel, className,
 }: MasonryProps<T>) {
+  const { t } = useTranslation('common');
   const scrollRef = useRef<HTMLDivElement>(null);
   // always mounted, empty state included: it is what gets measured
   const contentRef = useRef<HTMLDivElement>(null);
@@ -106,7 +108,7 @@ export function Masonry<T>({
               {!isTail ? renderItem(items[virtualItem.index]!) : error ? (
                 <div role="alert" className="flex flex-col items-start gap-2 rounded-lg border border-red/20 bg-red/5 p-3">
                   <p className="text-label text-text-secondary">{error}</p>
-                  {onRetry && <Button type="button" variant="secondary" size="sm" onClick={onRetry}>Tentar de novo</Button>}
+                  {onRetry && <Button type="button" variant="secondary" size="sm" onClick={onRetry}>{t('page.retry')}</Button>}
                 </div>
               ) : (
                 <div aria-hidden className="animate-pulse rounded-lg bg-fill-subtle" style={{ height: 140 + ((virtualItem.index - items.length) % 3) * 32 }} />
@@ -115,7 +117,7 @@ export function Masonry<T>({
           );
         })}
       </div>
-      <span className="sr-only top-0 left-0" aria-live="polite">{loading ? 'Carregando mais itens' : null}</span>
+      <span className="sr-only top-0 left-0" aria-live="polite">{loading ? t('page.loadingMore') : null}</span>
     </div>
   );
 }

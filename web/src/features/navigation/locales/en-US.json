@@ -1,0 +1,18 @@
+{
+  "main": "Main navigation",
+  "showList": "Show conversation list",
+  "conversations": "Conversations",
+  "conversationsUnread_one": "Conversations, {{count}} unread",
+  "conversationsUnread_other": "Conversations, {{count}} unread",
+  "friends": "Friends",
+  "friendsPending_one": "Friends, {{count}} awaiting reply",
+  "friendsPending_other": "Friends, {{count}} awaiting reply",
+  "notifications": "Notifications",
+  "profile": "Profile",
+  "inCall": "In call: {{title}}",
+  "returnToCall": "Back",
+  "tabFriendsPending_one": "{{label}}, {{count}} pending request",
+  "tabFriendsPending_other": "{{label}}, {{count}} pending requests",
+  "tabUnread_one": "{{label}}, {{count}} unread",
+  "tabUnread_other": "{{label}}, {{count}} unread"
+}

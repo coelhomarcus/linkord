@@ -1,5 +1,6 @@
 import { ArrowsInIcon, ArrowsOutIcon, MicrophoneIcon, MicrophoneSlashIcon, MonitorIcon, PhoneSlashIcon, SmileyIcon, SpeakerHighIcon, SpeakerSlashIcon, VideoCameraIcon, VideoCameraSlashIcon } from '@phosphor-icons/react';
 import { forwardRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { iconWeight } from '@/shared/ui/icons';
 
 import { CloseButton } from '@/shared/ui/primitives/close-button';
@@ -17,16 +18,16 @@ import { cn } from '@/shared/lib/utils';
 // Unrelated to per-message chat reactions, which now accept any emoji.
 const CALL_REACTIONS = ['👍', '❤️', '😂', '😮', '👏', '🎉'] as const;
 
-const MIC_PROBLEM_LABEL = {
-  'not-found': 'Nenhum microfone encontrado',
-  denied: 'Microfone bloqueado pelo navegador',
-  unavailable: 'Microfone indisponível',
+const MIC_PROBLEM_LABEL_KEY = {
+  'not-found': 'micProblem.notFoundLabel',
+  denied: 'micProblem.deniedLabel',
+  unavailable: 'micProblem.unavailableLabel',
 } as const;
 
-const MIC_PROBLEM_NOTICE = {
-  'not-found': 'Nenhum microfone encontrado. Você está na chamada, mas ninguém te ouve. Conecte um microfone e ele será ativado sozinho.',
-  denied: 'O navegador bloqueou o microfone. Você está na chamada, mas ninguém te ouve. Libere o microfone nas permissões do site e clique no botão do microfone.',
-  unavailable: 'Não foi possível iniciar o microfone. Ele pode estar em uso por outro aplicativo. Você está na chamada, mas ninguém te ouve; clique no botão do microfone para tentar de novo.',
+const MIC_PROBLEM_NOTICE_KEY = {
+  'not-found': 'micProblem.notFoundNotice',
+  denied: 'micProblem.deniedNotice',
+  unavailable: 'micProblem.unavailableNotice',
 } as const;
 
 // The bar is intentionally theme-independent (black material, white-based
@@ -50,6 +51,7 @@ interface CallControlBarProps {
 // (banners + bar + gaps) and reserve exactly that much space for it instead
 // of a fixed `pb-32` guess (see the calls redesign plan §5.1).
 export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(function CallControlBar({ hudVisible = true }, ref) {
+  const { t } = useTranslation('calls');
   const {
     state, dispatch, startCamera, stopCamera, startSharing, stopSharing, activateMic, toggleMicMuted, deafened, toggleDeafened,
     leaveCall, sendReaction, reconnecting, isCallFullscreen, toggleCallFullscreen, fullscreenElement,
@@ -63,7 +65,7 @@ export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(fu
   // one (a later call, the mic unplugged again) has to show again.
   const [dismissedMicProblem, setDismissedMicProblem] = useState<MicProblem>(null);
   if (!micProblem && dismissedMicProblem) setDismissedMicProblem(null);
-  const micLabel = micProblem ? MIC_PROBLEM_LABEL[micProblem] : !myMedia.micActivated ? 'Ativar microfone' : myMedia.micMuted ? 'Desmutar' : 'Mutar';
+  const micLabel = micProblem ? t(MIC_PROBLEM_LABEL_KEY[micProblem]) : !myMedia.micActivated ? t('controls.micActivate') : myMedia.micMuted ? t('controls.micUnmute') : t('controls.micMute');
 
   function pickReaction(emoji: ReactionEmoji) {
     sendReaction(emoji);
@@ -80,26 +82,26 @@ export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(fu
     >
       {reconnecting && (
         <div className="rounded-md border border-border-strong bg-bg-floating px-3 py-2 text-label text-text-secondary shadow-popover">
-          Reconectando à chamada…
+          {t('controls.reconnecting')}
         </div>
       )}
       {state.shareError && (
         <div className="flex max-w-[calc(100vw-2rem)] items-start gap-2 rounded-md border border-border-strong bg-bg-floating px-3 py-2 text-label text-text-secondary shadow-popover md:max-w-100">
           <span className="min-w-0 flex-1">{state.shareError}</span>
-          <CloseButton size="xs" label="Dispensar aviso" onClick={() => dispatch({ type: 'SET_SHARE_ERROR', message: null })} />
+          <CloseButton size="xs" label={t('controls.dismissNotice')} onClick={() => dispatch({ type: 'SET_SHARE_ERROR', message: null })} />
         </div>
       )}
       {micProblem && micProblem !== dismissedMicProblem && (
         <div role="status" className="flex max-w-[calc(100vw-2rem)] items-start gap-2 rounded-md border border-red/40 bg-bg-floating px-3 py-2 text-label text-text-secondary shadow-popover md:max-w-100">
           <MicrophoneSlashIcon size={16} className="mt-0.5 flex-none text-red" />
-          <span className="min-w-0 flex-1">{MIC_PROBLEM_NOTICE[micProblem]}</span>
-          <CloseButton size="xs" label="Dispensar aviso" onClick={() => setDismissedMicProblem(micProblem)} />
+          <span className="min-w-0 flex-1">{t(MIC_PROBLEM_NOTICE_KEY[micProblem])}</span>
+          <CloseButton size="xs" label={t('controls.dismissNotice')} onClick={() => setDismissedMicProblem(micProblem)} />
         </div>
       )}
       <div className="flex items-center gap-1 rounded-lg border border-white/10 bg-black p-1.5 shadow-popover max-[480px]:gap-0.75 max-[480px]:p-1.25 max-[360px]:gap-0.5 max-[360px]:p-1">
         <Popover open={reactionsOpen} onOpenChange={setReactionsOpen}>
           <PopoverTrigger
-            aria-label="Reagir"
+            aria-label={t('controls.react')}
             className={cn(BAR_BUTTON, reactionsOpen ? 'bg-white/12 text-white' : BAR_BUTTON_NEUTRAL)}
           >
             <SmileyIcon size="100%" className={BAR_ICON} />
@@ -139,12 +141,12 @@ export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(fu
           <Tooltip>
             <TooltipTrigger
               onClick={toggleDeafened}
-              aria-label={deafened ? 'Voltar a ouvir' : 'Parar de ouvir'}
+              aria-label={deafened ? t('controls.listenAgain') : t('controls.stopListening')}
               className={cn(BAR_BUTTON, deafened ? BAR_BUTTON_RED : BAR_BUTTON_NEUTRAL)}
             >
               {deafened ? <SpeakerSlashIcon size={22} weight={iconWeight(true)} className={BAR_ICON} /> : <SpeakerHighIcon size={22} className={BAR_ICON} />}
             </TooltipTrigger>
-            <TooltipContent>{deafened ? 'Voltar a ouvir' : 'Parar de ouvir'}</TooltipContent>
+            <TooltipContent>{deafened ? t('controls.listenAgain') : t('controls.stopListening')}</TooltipContent>
           </Tooltip>
           <SpeakerQuickMenu />
         </div>
@@ -153,12 +155,12 @@ export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(fu
           <Tooltip>
             <TooltipTrigger
               onClick={() => { void (cameraOn ? stopCamera() : startCamera()); }}
-              aria-label={cameraOn ? 'Parar câmera' : 'Ligar câmera'}
+              aria-label={cameraOn ? t('controls.cameraOff') : t('controls.cameraOn')}
               className={cn(BAR_BUTTON, cameraOn ? BAR_BUTTON_GREEN : BAR_BUTTON_NEUTRAL)}
             >
               {cameraOn ? <VideoCameraIcon size={22} weight={iconWeight(true)} className={BAR_ICON} /> : <VideoCameraSlashIcon size={22} className={BAR_ICON} />}
             </TooltipTrigger>
-            <TooltipContent>{cameraOn ? 'Parar câmera' : 'Ligar câmera'}</TooltipContent>
+            <TooltipContent>{cameraOn ? t('controls.cameraOff') : t('controls.cameraOn')}</TooltipContent>
           </Tooltip>
           <CameraQuickMenu />
         </div>
@@ -167,12 +169,12 @@ export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(fu
           <Tooltip>
             <TooltipTrigger
               onClick={() => { void (sharing ? stopSharing() : startSharing()); }}
-              aria-label={sharing ? 'Parar compartilhamento' : 'Compartilhar tela'}
+              aria-label={sharing ? t('controls.shareStop') : t('controls.shareStart')}
               className={cn(BAR_BUTTON, sharing ? BAR_BUTTON_GREEN : BAR_BUTTON_NEUTRAL)}
             >
               <MonitorIcon size={22} weight={iconWeight(sharing)} className={BAR_ICON} />
             </TooltipTrigger>
-            <TooltipContent>{sharing ? 'Parar compartilhamento' : 'Compartilhar tela'}</TooltipContent>
+            <TooltipContent>{sharing ? t('controls.shareStop') : t('controls.shareStart')}</TooltipContent>
           </Tooltip>
           <ScreenShareQuickMenu />
         </div>
@@ -180,12 +182,12 @@ export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(fu
         <Tooltip>
           <TooltipTrigger
             onClick={() => void toggleCallFullscreen()}
-            aria-label={isCallFullscreen ? 'Sair da tela cheia' : 'Tela cheia'}
+            aria-label={isCallFullscreen ? t('controls.fullscreenExit') : t('controls.fullscreenEnter')}
             className={cn(BAR_BUTTON, BAR_BUTTON_NEUTRAL)}
           >
             {isCallFullscreen ? <ArrowsInIcon size={22} className={BAR_ICON} /> : <ArrowsOutIcon size={22} className={BAR_ICON} />}
           </TooltipTrigger>
-          <TooltipContent>{isCallFullscreen ? 'Sair da tela cheia' : 'Tela cheia'}</TooltipContent>
+          <TooltipContent>{isCallFullscreen ? t('controls.fullscreenExit') : t('controls.fullscreenEnter')}</TooltipContent>
         </Tooltip>
 
         <div aria-hidden className="mx-0.5 h-6 w-px flex-none bg-white/10" />
@@ -193,12 +195,12 @@ export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(fu
         <Tooltip>
           <TooltipTrigger
             onClick={leaveCall}
-            aria-label="Sair da chamada"
+            aria-label={t('controls.leaveCall')}
             className={cn(BAR_BUTTON, 'bg-red text-white hover:bg-red-hover')}
           >
             <PhoneSlashIcon size="100%" weight="fill" className={BAR_ICON} />
           </TooltipTrigger>
-          <TooltipContent>Sair da chamada</TooltipContent>
+          <TooltipContent>{t('controls.leaveCall')}</TooltipContent>
         </Tooltip>
       </div>
     </div>

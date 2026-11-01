@@ -1,14 +1,16 @@
 import { CircleNotchIcon, EnvelopeIcon, SignOutIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { FormEvent } from 'react';
 
 import { useAuth } from '../../state/AuthContext';
-import { ApiError } from '@/shared/api/api';
+import { describeApiError } from '@/shared/api/errorText';
 import { Button } from '@/shared/ui/primitives/button';
 import { Input } from '@/shared/ui/primitives/input';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/ui/primitives/dialog';
 
 export function EmailRequiredModal() {
+  const { t } = useTranslation('auth');
   const { user, linkEmail, logout } = useAuth();
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -21,7 +23,7 @@ export function EmailRequiredModal() {
     try {
       await linkEmail(email);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Não foi possível vincular o e-mail.');
+      setError(describeApiError(err, 'auth:emailRequired.failed'));
     } finally {
       setPending(false);
     }
@@ -31,29 +33,29 @@ export function EmailRequiredModal() {
     <Dialog open={Boolean(user && !user.email)} onOpenChange={() => {}}>
       <DialogContent showCloseButton={false} className="max-w-md bg-bg-modal">
         <DialogHeader>
-          <DialogTitle>Vincule seu e-mail</DialogTitle>
+          <DialogTitle>{t('emailRequired.title')}</DialogTitle>
           <DialogDescription>
-            Para proteger sua conta e permitir a recuperação de senha, informe um e-mail.
+            {t('emailRequired.description')}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <Input
-            aria-label="E-mail"
+            aria-label={t('fields.email')}
             type="email"
             autoFocus
             autoComplete="email"
-            placeholder="voce@exemplo.com"
+            placeholder={t('placeholders.email')}
             value={email}
             onChange={(event) => setEmail(event.target.value)}
           />
           {error && <p className="text-label text-red">{error}</p>}
           <Button type="submit" disabled={pending || !email}>
             {pending ? <CircleNotchIcon size={20} className="animate-spin" /> : <EnvelopeIcon size={20} />}
-            {pending ? 'Salvando…' : 'Vincular e-mail'}
+            {pending ? t('emailRequired.saving') : t('emailRequired.submit')}
           </Button>
           <Button type="button" variant="ghost" onClick={() => void logout()}>
             <SignOutIcon size={20} />
-            Sair da conta
+            {t('emailRequired.logout')}
           </Button>
         </form>
       </DialogContent>

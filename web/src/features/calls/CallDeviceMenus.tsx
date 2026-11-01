@@ -1,5 +1,6 @@
 import { ArrowsClockwiseIcon, CaretDownIcon, FlipHorizontalIcon, GearIcon, LockKeyOpenIcon, PauseIcon, PlayIcon } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router';
+import { useTranslation } from 'react-i18next';
 
 import type { Room } from 'livekit-client';
 import {
@@ -27,6 +28,7 @@ const MENU_LABEL = 'px-2 pb-1 pt-2 text-caption font-semibold uppercase tracking
 const MENU_NOTE = 'px-2 py-2 text-label text-text-muted';
 
 function DeviceRadioList({ room, kind, heading, label }: { room: Room; kind: MediaDeviceKind; heading: string; label: string }) {
+  const { t } = useTranslation('calls');
   // Only enumerates (silent, no getUserMedia) — opening this menu never
   // starts a capture on its own; requestPermission below is the one
   // explicit gesture that does.
@@ -36,17 +38,17 @@ function DeviceRadioList({ room, kind, heading, label }: { room: Room; kind: Med
     <DropdownMenuGroup>
       <DropdownMenuLabel className={MENU_LABEL}>{heading}</DropdownMenuLabel>
       {status === 'permission-needed' ? (
-        <DropdownMenuItem className="px-2 py-2" onClick={() => void requestPermission()}><LockKeyOpenIcon size={16} />Permitir acesso aos dispositivos</DropdownMenuItem>
+        <DropdownMenuItem className="px-2 py-2" onClick={() => void requestPermission()}><LockKeyOpenIcon size={16} />{t('devices.permission')}</DropdownMenuItem>
       ) : status === 'unsupported' || status === 'permission-denied' ? (
-        <p className={MENU_NOTE}>Não foi possível listar dispositivos.</p>
+        <p className={MENU_NOTE}>{t('devices.listFailed')}</p>
       ) : status === 'no-devices' ? (
-        <p className={MENU_NOTE}>Nenhum dispositivo encontrado.</p>
+        <p className={MENU_NOTE}>{t('devices.none')}</p>
       ) : (
         <>
           <DropdownMenuRadioGroup aria-label={label} value={activeDeviceId} onValueChange={(v) => { if (v) void selectDevice(v as string); }}>
             {devices.map((d) => (
               <DropdownMenuOptionItem key={d.deviceId} value={d.deviceId} disabled={switching}>
-                {d.label || 'Dispositivo sem nome'}
+                {d.label || t('devices.unnamed')}
               </DropdownMenuOptionItem>
             ))}
           </DropdownMenuRadioGroup>
@@ -58,26 +60,28 @@ function DeviceRadioList({ room, kind, heading, label }: { room: Room; kind: Med
 }
 
 function SettingsShortcutItem() {
+  const { t } = useTranslation('calls');
   const navigate = useNavigate();
   // Leaving the stage's route doesn't end the call — FloatingPip takes over
   // (see App.tsx's showStage/inCall split), same as opening any other page.
   return (
     <DropdownMenuItem className="px-2 py-2 text-text-secondary" onClick={() => navigate(ROUTES.settingsTab('av'))}>
       <GearIcon size={16} />
-      Configurações completas
+      {t('devices.fullSettings')}
     </DropdownMenuItem>
   );
 }
 
 export function MicQuickMenu({ className }: { className?: string }) {
+  const { t } = useTranslation('calls');
   const { livekitRoom, fullscreenElement } = useRoom();
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger aria-label="Configurações do microfone" className={cn(CORNER_TRIGGER, className)}>
+      <DropdownMenuTrigger aria-label={t('devices.micSettings')} className={cn(CORNER_TRIGGER, className)}>
         <CaretDownIcon size={10} />
       </DropdownMenuTrigger>
       <DropdownMenuContent side="top" align="start" container={fullscreenElement ?? undefined} className={MENU_CONTENT}>
-        <DeviceRadioList room={livekitRoom} kind="audioinput" heading="Entrada de áudio" label="Microfone" />
+        <DeviceRadioList room={livekitRoom} kind="audioinput" heading={t('devices.audioInput')} label={t('devices.microphone')} />
         <DropdownMenuSeparator />
         <SettingsShortcutItem />
       </DropdownMenuContent>
@@ -86,14 +90,15 @@ export function MicQuickMenu({ className }: { className?: string }) {
 }
 
 export function SpeakerQuickMenu({ className }: { className?: string }) {
+  const { t } = useTranslation('calls');
   const { livekitRoom, fullscreenElement } = useRoom();
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger aria-label="Configurações de saída de áudio" className={cn(CORNER_TRIGGER, className)}>
+      <DropdownMenuTrigger aria-label={t('devices.audioOutputSettings')} className={cn(CORNER_TRIGGER, className)}>
         <CaretDownIcon size={10} />
       </DropdownMenuTrigger>
       <DropdownMenuContent side="top" align="start" container={fullscreenElement ?? undefined} className={MENU_CONTENT}>
-        <DeviceRadioList room={livekitRoom} kind="audiooutput" heading="Saída de áudio" label="Alto-falante" />
+        <DeviceRadioList room={livekitRoom} kind="audiooutput" heading={t('devices.audioOutput')} label={t('devices.speaker')} />
         <DropdownMenuSeparator />
         <SettingsShortcutItem />
       </DropdownMenuContent>
@@ -102,20 +107,21 @@ export function SpeakerQuickMenu({ className }: { className?: string }) {
 }
 
 export function ScreenShareQuickMenu({ className }: { className?: string }) {
+  const { t } = useTranslation('calls');
   const { state, shareQuality, setShareQuality, changeSource, pauseSharePreview, resumeSharePreview, fullscreenElement } = useRoom();
   const sharing = state.me.sharing;
   const myMedia = useParticipantMedia(state.me.id ?? '');
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger aria-label="Configurações de compartilhamento de tela" className={cn(CORNER_TRIGGER, className)}>
+      <DropdownMenuTrigger aria-label={t('devices.screenSettings')} className={cn(CORNER_TRIGGER, className)}>
         <CaretDownIcon size={10} />
       </DropdownMenuTrigger>
       <DropdownMenuContent side="top" align="start" container={fullscreenElement ?? undefined} className={MENU_CONTENT}>
         <DropdownMenuGroup>
-          <DropdownMenuLabel className={MENU_LABEL}>Qualidade</DropdownMenuLabel>
+          <DropdownMenuLabel className={MENU_LABEL}>{t('menu.quality')}</DropdownMenuLabel>
           <DropdownMenuRadioGroup value={shareQuality} onValueChange={(v) => { if (v) setShareQuality(v as ShareQualityId); }}>
             {(Object.entries(SHARE_QUALITY_PRESETS) as [ShareQualityId, typeof SHARE_QUALITY_PRESETS[ShareQualityId]][]).map(([id, preset]) => (
-              <DropdownMenuOptionItem key={id} value={id}><span className="flex items-center gap-1.5"><ShareQualityIcon id={id} />{preset.label}</span></DropdownMenuOptionItem>
+              <DropdownMenuOptionItem key={id} value={id}><span className="flex items-center gap-1.5"><ShareQualityIcon id={id} />{t(`quality.${preset.labelKey}`)}</span></DropdownMenuOptionItem>
             ))}
           </DropdownMenuRadioGroup>
         </DropdownMenuGroup>
@@ -124,11 +130,11 @@ export function ScreenShareQuickMenu({ className }: { className?: string }) {
             <DropdownMenuSeparator />
             <DropdownMenuItem className="px-2 py-2" onClick={() => void changeSource()}>
               <ArrowsClockwiseIcon size={16} />
-              Trocar fonte
+              {t('menu.changeSource')}
             </DropdownMenuItem>
             <DropdownMenuItem className="px-2 py-2" onClick={() => void (myMedia.screenPaused ? resumeSharePreview() : pauseSharePreview())}>
               {myMedia.screenPaused ? <PlayIcon size={16} /> : <PauseIcon size={16} />}
-              {myMedia.screenPaused ? 'Retomar prévia' : 'Pausar prévia'}
+              {myMedia.screenPaused ? t('menu.resumePreview') : t('menu.pausePreview')}
             </DropdownMenuItem>
           </>
         )}
@@ -140,18 +146,19 @@ export function ScreenShareQuickMenu({ className }: { className?: string }) {
 }
 
 export function CameraQuickMenu({ className }: { className?: string }) {
+  const { t } = useTranslation('calls');
   const { livekitRoom, mirrorCameraPreview, setMirrorCameraPreview, fullscreenElement } = useRoom();
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger aria-label="Configurações da câmera" className={cn(CORNER_TRIGGER, className)}>
+      <DropdownMenuTrigger aria-label={t('devices.cameraSettings')} className={cn(CORNER_TRIGGER, className)}>
         <CaretDownIcon size={10} />
       </DropdownMenuTrigger>
       <DropdownMenuContent side="top" align="start" container={fullscreenElement ?? undefined} className={MENU_CONTENT}>
-        <DeviceRadioList room={livekitRoom} kind="videoinput" heading="Câmera" label="Câmera" />
+        <DeviceRadioList room={livekitRoom} kind="videoinput" heading={t('devices.camera')} label={t('devices.camera')} />
         <DropdownMenuSeparator />
         <DropdownMenuSwitchItem checked={mirrorCameraPreview} onCheckedChange={setMirrorCameraPreview}>
           <FlipHorizontalIcon size={16} />
-          Espelhar minha prévia
+          {t('menu.mirror')}
         </DropdownMenuSwitchItem>
         <DropdownMenuSeparator />
         <SettingsShortcutItem />

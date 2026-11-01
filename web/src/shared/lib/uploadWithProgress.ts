@@ -1,4 +1,5 @@
 import { ApiError } from '@/shared/api/api';
+import { i18n } from '@/shared/i18n/init';
 
 export interface UploadWithProgressOptions {
   url: string;
@@ -24,9 +25,9 @@ export function uploadWithProgress<T = unknown>({ url, file, headers, onProgress
         return;
       }
       const err = (body && typeof body === 'object' ? (body as { error?: { code?: string; message?: string } }).error : null) || {};
-      reject(new ApiError(xhr.status, err.code || 'unknown_error', err.message || 'Erro inesperado.'));
+      reject(new ApiError(xhr.status, err.code || 'unknown_error', err.message || i18n.t('errors.unexpected')));
     };
-    xhr.onerror = () => reject(new ApiError(0, 'network_error', 'Falha de rede ao enviar o arquivo.'));
+    xhr.onerror = () => reject(new ApiError(0, 'network_error', i18n.t('errors.networkUpload')));
     xhr.send(file);
   });
 }

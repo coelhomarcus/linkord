@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import { motion, useReducedMotion } from 'motion/react';
 import { EASE_DRAWER, EASE_OUT } from '@/shared/lib/ease';
 import { cn } from '@/shared/lib/utils';
+import { useTranslation } from 'react-i18next';
 
 const SLIDE = { duration: 0.36, ease: EASE_DRAWER } as const;
 const FADE = { duration: 0.16, ease: EASE_OUT } as const;
@@ -78,7 +79,7 @@ function trapTab(event: KeyboardEvent<HTMLDivElement>, panel: HTMLDivElement | n
  * search typed, a scroll position) is still there when it opens again — and
  * hides itself once the slide out ends: `visibility` rides the same animation,
  * so nothing has to keep a duration in sync. While closed it is inert. */
-export function Sheet({ open, onOpenChange, side, ariaLabel, dismissLabel = 'Fechar', className, backdropClassName, style, children }: {
+export function Sheet({ open, onOpenChange, side, ariaLabel, dismissLabel, className, backdropClassName, style, children }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   side: 'left' | 'right';
@@ -91,6 +92,7 @@ export function Sheet({ open, onOpenChange, side, ariaLabel, dismissLabel = 'Fec
   style?: CSSProperties;
   children: ReactNode;
 }) {
+  const { t } = useTranslation('common');
   const reduce = useReducedMotion();
   const panelRef = useRef<HTMLDivElement>(null);
   useModalFocus(open, panelRef);
@@ -104,7 +106,7 @@ export function Sheet({ open, onOpenChange, side, ariaLabel, dismissLabel = 'Fec
     <div style={style} className="pointer-events-none fixed left-0 top-0 z-50 size-0">
       <motion.button
         type="button"
-        aria-label={dismissLabel}
+        aria-label={dismissLabel ?? t('page.close')}
         tabIndex={open ? 0 : -1}
         initial={false}
         animate={{ opacity: open ? 1 : 0, visibility }}

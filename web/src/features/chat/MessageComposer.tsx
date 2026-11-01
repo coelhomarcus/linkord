@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { ArrowBendUpLeftIcon, ArrowsInSimpleIcon, ArrowUpIcon, GifIcon, ImageSquareIcon, PaperclipIcon, PlusIcon, SmileyIcon } from '@phosphor-icons/react';
 import { forwardRef, useEffect, useId, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, ClipboardEvent, KeyboardEvent as ReactKeyboardEvent, SyntheticEvent } from 'react';
@@ -53,6 +54,7 @@ export interface MessageComposerHandle {
 }
 
 export const MessageComposer = forwardRef<MessageComposerHandle, { conversationId: string }>(function MessageComposer({ conversationId }, ref) {
+  const { t } = useTranslation('chat');
   const { state, allUsers, conversations, sendChatMessage, queueMessageWithFiles, sendTyping, replyingTo, setReplyingTo, compressImagesDefault, setCompressImagesDefault } = useRoom();
   const accountId = state.me.userId ?? '';
   const [draft, updateDraft] = useConversationDraft(accountId, conversationId);
@@ -181,11 +183,11 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
     let error: string | null = null;
     for (const file of files) {
       if (accepted.length >= remainingSlots) {
-        error = `Máximo de ${MAX_ATTACHMENTS_PER_MESSAGE} anexos por mensagem.`;
+        error = t('composer.maxAttachments', { count: MAX_ATTACHMENTS_PER_MESSAGE });
         break;
       }
       if (file.size > MAX_ATTACHMENT_BYTES) {
-        error = `"${file.name}" é grande demais (máximo ${formatSizeLimit(MAX_ATTACHMENT_BYTES)}).`;
+        error = t('composer.tooLarge', { name: file.name, max: formatSizeLimit(MAX_ATTACHMENT_BYTES) });
         continue;
       }
       accepted.push({
@@ -341,10 +343,10 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
           <div className="flex items-center gap-2 border-b border-border-subtle py-1.5 pl-3 pr-1.5 text-label">
             <ArrowBendUpLeftIcon size={16} className="flex-none text-text-muted" />
             <span className="min-w-0 flex-1 truncate text-text-muted">
-              Respondendo a <span className="font-medium text-text-secondary">{replyName}</span>
+              {t('composer.replyingTo')} <span className="font-medium text-text-secondary">{replyName}</span>
               {replyingTo.text ? <span> - {replyingTo.text}</span> : null}
             </span>
-            <CloseButton size="xs" label="Cancelar resposta" onClick={() => setReplyingTo(null)} />
+            <CloseButton size="xs" label={t('composer.cancelReply')} onClick={() => setReplyingTo(null)} />
           </div>
         )}
 
@@ -355,18 +357,18 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
         <div className="flex items-end gap-1 p-1.5">
           <DropdownMenu>
             <DropdownMenuTrigger
-              render={<Button type="button" variant="ghost" size="icon" aria-label="Adicionar" disabled={disabled} className={iconButton} />}
+              render={<Button type="button" variant="ghost" size="icon" aria-label={t('composer.add')} disabled={disabled} className={iconButton} />}
             >
               <PlusIcon size={20} />
             </DropdownMenuTrigger>
             <DropdownMenuContent side="top" align="start" className="w-72">
-              <DropdownMenuItem onClick={() => fileInputRef.current?.click()}><PaperclipIcon size={16} />Anexar arquivos</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => imageInputRef.current?.click()}><ImageSquareIcon size={16} />Enviar imagens</DropdownMenuItem>
-              {gifConfig?.enabled && <DropdownMenuItem className="md:hidden" onClick={() => setMobileGifOpen(true)}><GifIcon size={16} />GIF</DropdownMenuItem>}
-              <DropdownMenuItem className="md:hidden" onClick={() => setMobileEmojiOpen(true)}><SmileyIcon size={16} />Inserir emoji</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => fileInputRef.current?.click()}><PaperclipIcon size={16} />{t('composer.attachFiles')}</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => imageInputRef.current?.click()}><ImageSquareIcon size={16} />{t('composer.sendImages')}</DropdownMenuItem>
+              {gifConfig?.enabled && <DropdownMenuItem className="md:hidden" onClick={() => setMobileGifOpen(true)}><GifIcon size={16} />{t('composer.gif')}</DropdownMenuItem>}
+              <DropdownMenuItem className="md:hidden" onClick={() => setMobileEmojiOpen(true)}><SmileyIcon size={16} />{t('composer.insertEmoji')}</DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuCheckboxItem checked={compressImages} onCheckedChange={toggleCompress}>
-                <ArrowsInSimpleIcon size={16} />Compactar imagens (WebP)
+                <ArrowsInSimpleIcon size={16} />{t('composer.compress')}
               </DropdownMenuCheckboxItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -384,10 +386,10 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
             onPaste={handlePaste}
             disabled={disabled}
             rows={1}
-            aria-label="Mensagem"
+            aria-label={t('composer.message')}
             aria-invalid={tooLong || undefined}
             aria-describedby={showCounter ? counterId : undefined}
-            placeholder={pendingFiles.length ? 'Adicionar legenda' : 'Mensagem'}
+            placeholder={pendingFiles.length ? t('composer.addCaption') : t('composer.message')}
             className="min-h-9 max-h-40 flex-1 resize-none border-none bg-transparent px-1 py-1.5 text-body shadow-none focus-visible:ring-0"
           />
           {showCounter && (
@@ -398,7 +400,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
           {gifConfig?.enabled && (
             <Popover open={gifPickerOpen} onOpenChange={setGifPickerOpen}>
               <PopoverTrigger
-                render={<Button type="button" variant="ghost" size="icon" aria-label="Enviar GIF" disabled={disabled} className={`${iconButton} max-md:hidden`} />}
+                render={<Button type="button" variant="ghost" size="icon" aria-label={t('composer.sendGif')} disabled={disabled} className={`${iconButton} max-md:hidden`} />}
               >
                 <span aria-hidden className="rounded-[4px] border-[1.5px] border-current px-[3px] py-px text-[9px] font-bold leading-none tracking-wide">GIF</span>
               </PopoverTrigger>
@@ -409,7 +411,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
           )}
           <Popover open={emojiPickerOpen} onOpenChange={setEmojiPickerOpen}>
             <PopoverTrigger
-              render={<Button type="button" variant="ghost" size="icon" aria-label="Inserir emoji" disabled={disabled} className={`${iconButton} max-md:hidden`} />}
+              render={<Button type="button" variant="ghost" size="icon" aria-label={t('composer.insertEmoji')} disabled={disabled} className={`${iconButton} max-md:hidden`} />}
             >
               <SmileyIcon size={20} />
             </PopoverTrigger>
@@ -423,7 +425,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
           <Button
             type="button"
             size="icon"
-            aria-label="Enviar mensagem"
+            aria-label={t('composer.send')}
             disabled={!canSubmit}
             onClick={() => void submit()}
             className="flex-none rounded-full"
@@ -433,12 +435,12 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
         </div>
       </div>
       {gifConfig?.enabled && <Dialog open={mobileGifOpen} onOpenChange={setMobileGifOpen}>
-        <DialogContent aria-label="Enviar GIF" className="w-[calc(100vw-1rem)] max-w-md bg-bg-modal p-2 md:hidden">
+        <DialogContent aria-label={t('composer.sendGif')} className="w-[calc(100vw-1rem)] max-w-md bg-bg-modal p-2 md:hidden">
           <GifPicker config={gifConfig} onPick={sendGif} />
         </DialogContent>
       </Dialog>}
       <Dialog open={mobileEmojiOpen} onOpenChange={setMobileEmojiOpen}>
-        <DialogContent aria-label="Inserir emoji" className="w-[calc(100vw-1rem)] max-w-md bg-bg-modal p-2 md:hidden">
+        <DialogContent aria-label={t('composer.insertEmoji')} className="w-[calc(100vw-1rem)] max-w-md bg-bg-modal p-2 md:hidden">
           <EmojiPicker className="h-[min(22rem,60dvh)] w-full" onEmojiSelect={({ emoji }) => insertEmoji(emoji)}>
             <EmojiPickerSearch />
             <EmojiPickerContent />

@@ -5,12 +5,12 @@ import type { IconComponent } from '@/shared/ui/icons';
 export interface AdminSection {
   /** first path segment under /admin */
   id: 'users' | 'groups' | 'bots' | 'reports' | 'audit' | 'system';
-  label: string;
+  labelKey: string;
   icon: IconComponent;
 }
 
 export interface AdminGroup {
-  label: string;
+  labelKey: string;
   sections: AdminSection[];
 }
 
@@ -18,22 +18,22 @@ export interface AdminGroup {
 // drift apart. Ids are public URLs (/admin/:id): labels can change, ids can't.
 export const ADMIN_GROUPS: AdminGroup[] = [
   {
-    label: 'Gestão',
+    labelKey: 'nav.management',
     sections: [
-      { id: 'users', label: 'Usuários', icon: UsersIcon },
-      { id: 'groups', label: 'Grupos', icon: UsersIcon },
-      { id: 'bots', label: 'Bots', icon: RobotIcon },
+      { id: 'users', labelKey: 'nav.users', icon: UsersIcon },
+      { id: 'groups', labelKey: 'nav.groups', icon: UsersIcon },
+      { id: 'bots', labelKey: 'nav.bots', icon: RobotIcon },
     ],
   },
   {
-    label: 'Moderação',
-    sections: [{ id: 'reports', label: 'Denúncias', icon: FlagIcon }],
+    labelKey: 'nav.moderation',
+    sections: [{ id: 'reports', labelKey: 'nav.reports', icon: FlagIcon }],
   },
   {
-    label: 'Operação',
+    labelKey: 'nav.operations',
     sections: [
-      { id: 'audit', label: 'Auditoria', icon: ScrollIcon },
-      { id: 'system', label: 'Sistema', icon: HardDrivesIcon },
+      { id: 'audit', labelKey: 'nav.audit', icon: ScrollIcon },
+      { id: 'system', labelKey: 'nav.system', icon: HardDrivesIcon },
     ],
   },
 ];

@@ -3,7 +3,7 @@ import type { ScreenShareCaptureOptions, TrackPublishOptions, VideoEncoding } fr
 export type ShareQualityId = 'game' | 'screen';
 
 interface ShareQualityPreset {
-  label: string;
+  labelKey: 'game' | 'screen';
   resolution: { width: number; height: number; frameRate: number };
   contentHint: NonNullable<ScreenShareCaptureOptions['contentHint']>;
   degradationPreference: NonNullable<TrackPublishOptions['degradationPreference']>;
@@ -20,14 +20,14 @@ interface ShareQualityPreset {
 // sharpness and drops the frames a game needs.
 export const SHARE_QUALITY_PRESETS: Record<ShareQualityId, ShareQualityPreset> = {
   game: {
-    label: 'Jogo (1440p, 60 fps)',
+    labelKey: 'game',
     resolution: { width: 2560, height: 1440, frameRate: 60 },
     contentHint: 'motion',
     degradationPreference: 'maintain-framerate',
     encoding: { maxBitrate: 6_000_000, maxFramerate: 60, priority: 'high' },
   },
   screen: {
-    label: 'Tela (1080p, 30 fps)',
+    labelKey: 'screen',
     resolution: { width: 1920, height: 1080, frameRate: 30 },
     contentHint: 'text',
     degradationPreference: 'maintain-resolution',

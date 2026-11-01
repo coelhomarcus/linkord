@@ -1,0 +1,63 @@
+{
+  "title": "Perfil",
+  "page": {
+    "options": "Opções do perfil",
+    "myProfile": "Meu perfil",
+    "settings": "Ajustes"
+  },
+  "connections": "Conexões",
+  "card": {
+    "bio": "Bio",
+    "bioPlaceholder": "Fale um pouco sobre você...",
+    "changeBanner": "Alterar banner",
+    "uploadFromComputer": "Enviar do computador",
+    "removeBanner": "Remover banner",
+    "viewBanner": "Ver banner em tela cheia",
+    "changeAvatar": "Alterar foto de perfil",
+    "removeAvatar": "Remover foto",
+    "viewAvatar": "Ver foto de perfil em tela cheia",
+    "useColor": "Usar {{name}}",
+    "customColorTitle": "Cor personalizada",
+    "customColorLabel": "Escolher cor personalizada",
+    "displayName": "Nome de exibição",
+    "openLink": "Abrir {{name}}",
+    "link": "Link {{count}}",
+    "removeLink": "Remover link",
+    "addLink": "Adicionar link",
+    "admin": "Admin"
+  },
+  "modal": {
+    "loadingTitle": "Carregando perfil",
+    "loading": "Carregando perfil…",
+    "loadFailedTitle": "Não foi possível carregar o perfil",
+    "loadFailed": "Não foi possível carregar esse perfil.",
+    "retry": "Tentar de novo",
+    "profileOf": "Perfil de {{name}}",
+    "memberSince": "Membro desde",
+    "friendsSince": "Amigos desde",
+    "banner": "Banner",
+    "avatar": "Foto de perfil"
+  },
+  "mutuals": {
+    "title": "Em comum",
+    "friendsTitle": "Amigos mútuos",
+    "groupsTitle": "Grupos mútuos",
+    "friends_one": "{{count}} amigo mútuo",
+    "friends_other": "{{count}} amigos mútuos",
+    "groups_one": "{{count}} grupo mútuo",
+    "groups_other": "{{count}} grupos mútuos",
+    "members_one": "{{count}} membro",
+    "members_other": "{{count}} membros",
+    "showing": "Mostrando {{shown}} de {{total}}.",
+    "loadFailed": "Não foi possível carregar o que vocês têm em comum.",
+    "retry": "Tentar de novo",
+    "noneFriends": "Nenhum amigo mútuo.",
+    "noneGroups": "Nenhum grupo mútuo.",
+    "online": " · online"
+  },
+  "save": {
+    "timeout": "O perfil não foi confirmado a tempo. Verifique sua conexão e tente de novo.",
+    "offline": "Sem conexão com o servidor. Tente de novo em instantes.",
+    "failed": "Não foi possível salvar o perfil. Tente de novo."
+  }
+}

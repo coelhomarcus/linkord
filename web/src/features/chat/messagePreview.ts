@@ -1,3 +1,4 @@
+import { i18n } from '@/shared/i18n/init';
 import type { ChatMessage } from '@/shared/types/protocol';
 import { gifMessageUrl } from '@/features/gifs/klipyMedia';
 
@@ -6,10 +7,10 @@ import { gifMessageUrl } from '@/features/gifs/klipyMedia';
  * `text`, so without this they would read as an attachment. */
 export function messagePreviewText(message: Pick<ChatMessage, 'text' | 'kind' | 'invitation' | 'richEmbeds'>): string {
   if (message.kind === 'group_invite') {
-    return message.invitation ? `Convite para o grupo ${message.invitation.groupTitle}` : 'Convite indisponível';
+    return message.invitation ? i18n.t('chat:preview.invite', { title: message.invitation.groupTitle }) : i18n.t('chat:preview.inviteUnavailable');
   }
   if (gifMessageUrl(message.text)) return 'GIF';
   // a bot may send only a card: its title says what it's about
   const card = message.richEmbeds?.[0];
-  return message.text || card?.title || card?.description || (card ? 'Aviso' : 'Anexo');
+  return message.text || card?.title || card?.description || (card ? i18n.t('chat:preview.notice') : i18n.t('chat:preview.attachment'));
 }

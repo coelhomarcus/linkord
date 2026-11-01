@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/shared/ui/primitives/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/primitives/dialog';
 import { Input } from '@/shared/ui/primitives/input';
@@ -19,6 +20,7 @@ export function ReasonDialog({ open, onOpenChange, title, description, confirmLa
   confirmText?: string;
   onSubmit: (reason: string, confirm: string) => Promise<void>;
 }) {
+  const { t } = useTranslation('admin');
   const [reason, setReason] = useState('');
   const [confirm, setConfirm] = useState('');
   const [busy, setBusy] = useState(false);
@@ -62,21 +64,21 @@ export function ReasonDialog({ open, onOpenChange, title, description, confirmLa
         </DialogHeader>
         <div className="flex flex-col gap-3 px-6 py-4">
           <label className="flex flex-col gap-1.5 text-label text-text-muted">
-            Motivo (fica registrado na auditoria)
+            {t('dialog.reasonLabel')}
             <Textarea value={reason} onChange={(e) => setReason(e.target.value)} maxLength={REASON_MAX} rows={3} className="resize-none border-border bg-fill-subtle" />
           </label>
           {confirmText && (
             <label className="flex flex-col gap-1.5 text-label text-text-muted">
-              <span>Para confirmar, digite <span className="font-medium text-text-primary">{confirmText}</span></span>
+              <span>{t('dialog.confirmPrompt')} <span className="font-medium text-text-primary">{confirmText}</span></span>
               <Input value={confirm} onChange={(e) => setConfirm(e.target.value)} className="border-border bg-fill-subtle" />
             </label>
           )}
           {error && <p role="alert" className="text-label text-red-text">{error}</p>}
         </div>
         <DialogFooter className="border-border-subtle bg-bg-tertiary/60 px-6 py-4">
-          <Button type="button" variant="ghost" disabled={busy} onClick={close}>Cancelar</Button>
+          <Button type="button" variant="ghost" disabled={busy} onClick={close}>{t('dialog.cancel')}</Button>
           <Button type="button" variant={destructive ? 'destructive' : 'default'} disabled={!reasonOk || !confirmOk || busy} onClick={() => void submit()}>
-            {busy ? 'Aguarde…' : confirmLabel}
+            {busy ? t('dialog.wait') : confirmLabel}
           </Button>
         </DialogFooter>
       </DialogContent>
