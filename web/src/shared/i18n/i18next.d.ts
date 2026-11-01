@@ -1,5 +1,6 @@
 import 'i18next';
 import type common from './locales/pt-BR.json';
+import type auth from '@/features/auth/locales/pt-BR.json';
 import type settings from '@/features/settings/locales/pt-BR.json';
 
 // pt-BR is the source of truth for key names: other languages are checked
@@ -10,6 +11,7 @@ declare module 'i18next' {
     defaultNS: 'common';
     resources: {
       common: typeof common;
+      auth: typeof auth;
       settings: typeof settings;
     };
   }

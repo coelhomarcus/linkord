@@ -1,5 +1,6 @@
 import { ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon, CircleNotchIcon, EnvelopeIcon, EyeIcon, EyeSlashIcon, KeyIcon, LockIcon, SignInIcon, UserIcon, UserPlusIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { FormEvent } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 
@@ -15,14 +16,16 @@ import { OTPInput, type OTPStatus } from '@/shared/ui/motion/otp-input';
 import { ERROR_CODES } from '@/shared/api/errorCodes';
 
 function PasswordToggle({ visible, onToggle }: { visible: boolean; onToggle: () => void }) {
+  const { t } = useTranslation('auth');
   return (
-    <button type="button" onClick={onToggle} aria-label={visible ? 'Ocultar senha' : 'Mostrar senha'}>
+    <button type="button" onClick={onToggle} aria-label={visible ? t('password.hide') : t('password.show')}>
       {visible ? <EyeSlashIcon size={20} /> : <EyeIcon size={20} />}
     </button>
   );
 }
 
 function LoginForm({ onForgotPassword }: { onForgotPassword: () => void }) {
+  const { t } = useTranslation('auth');
   const { login } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -37,7 +40,7 @@ function LoginForm({ onForgotPassword }: { onForgotPassword: () => void }) {
     try {
       await login(username, password);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Não foi possível entrar.');
+      setError(err instanceof ApiError ? err.message : t('login.failed'));
     } finally {
       setPending(false);
     }
@@ -47,7 +50,7 @@ function LoginForm({ onForgotPassword }: { onForgotPassword: () => void }) {
     <form onSubmit={handleSubmit} className="flex flex-col gap-3.5">
       <AuthField
         id="loginUsername"
-        label="Usuário"
+        label={t('fields.username')}
         autoFocus
         autoComplete="username"
         leftIcon={<UserIcon size={20} />}
@@ -56,7 +59,7 @@ function LoginForm({ onForgotPassword }: { onForgotPassword: () => void }) {
       />
       <AuthField
         id="loginPassword"
-        label="Senha"
+        label={t('fields.password')}
         type={showPassword ? 'text' : 'password'}
         autoComplete="current-password"
         leftIcon={<LockIcon size={20} />}
@@ -66,11 +69,11 @@ function LoginForm({ onForgotPassword }: { onForgotPassword: () => void }) {
       />
       <Button type="submit" size="lg" className="mt-1 h-11 w-full" disabled={pending || !username || !password}>
         {pending ? <CircleNotchIcon size={20} className="animate-spin" /> : <SignInIcon size={20} />}
-        <span>{pending ? 'Entrando…' : 'Entrar'}</span>
+        <span>{pending ? t('login.pending') : t('login.submit')}</span>
         {!pending && <ArrowRightIcon size={20} className="ml-auto" />}
       </Button>
       <button type="button" onClick={onForgotPassword} className="self-center text-label text-text-muted transition-colors hover:text-text-primary">
-        Esqueci minha senha
+        {t('login.forgot')}
       </button>
       {error && <ErrorBanner>{error}</ErrorBanner>}
     </form>
@@ -85,6 +88,7 @@ interface RegisterFieldErrors {
 }
 
 function RegisterForm() {
+  const { t } = useTranslation('auth');
   const { register } = useAuth();
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -119,7 +123,7 @@ function RegisterForm() {
           setFormError(err.message);
         }
       } else {
-        setFormError('Não foi possível criar a conta.');
+        setFormError(t('register.failed'));
       }
     } finally {
       setPending(false);
@@ -130,11 +134,11 @@ function RegisterForm() {
     <form onSubmit={handleSubmit} className="flex flex-col gap-3.5">
       <AuthField
         id="registerUsername"
-        label="Usuário"
+        label={t('fields.username')}
         autoFocus
         autoComplete="username"
         maxLength={20}
-        placeholder="3 a 20 caracteres"
+        placeholder={t('placeholders.username')}
         leftIcon={<UserIcon size={20} />}
         value={username}
         onChange={setUsername}
@@ -143,10 +147,10 @@ function RegisterForm() {
       />
       <AuthField
         id="registerEmail"
-        label="E-mail"
+        label={t('fields.email')}
         type="email"
         autoComplete="email"
-        placeholder="voce@exemplo.com"
+        placeholder={t('placeholders.email')}
         leftIcon={<EnvelopeIcon size={20} />}
         value={email}
         onChange={setEmail}
@@ -155,7 +159,7 @@ function RegisterForm() {
       />
       <AuthField
         id="registerPassword"
-        label="Senha"
+        label={t('fields.password')}
         type={showPassword ? 'text' : 'password'}
         autoComplete="new-password"
         placeholder="Pelo menos 8 caracteres"
@@ -168,7 +172,7 @@ function RegisterForm() {
       />
       <AuthField
         id="registerCode"
-        label="Código de convite"
+        label={t('fields.inviteCode')}
         leftIcon={<KeyIcon size={20} />}
         value={code}
         onChange={setCode}
@@ -177,7 +181,7 @@ function RegisterForm() {
       />
       <Button type="submit" size="lg" className="mt-1 h-11 w-full" disabled={pending || !username || !email || !password || !code}>
         {pending ? <CircleNotchIcon size={20} className="animate-spin" /> : <UserPlusIcon size={20} />}
-        <span>{pending ? 'Criando conta…' : 'Criar conta'}</span>
+        <span>{pending ? t('register.pending') : t('register.submit')}</span>
         {!pending && <ArrowRightIcon size={20} className="ml-auto" />}
       </Button>
       {formError && <ErrorBanner>{formError}</ErrorBanner>}
@@ -186,6 +190,7 @@ function RegisterForm() {
 }
 
 function RecoveryForm({ onBack }: { onBack: () => void }) {
+  const { t } = useTranslation('auth');
   const [identifierType, setIdentifierType] = useState<'email' | 'username'>('email');
   const [identifierValue, setIdentifierValue] = useState('');
   const [code, setCode] = useState('');
@@ -206,7 +211,7 @@ function RecoveryForm({ onBack }: { onBack: () => void }) {
       setRequested(true);
       setStatus('idle');
     } catch (err) {
-      setMessage(err instanceof ApiError ? err.message : 'Não foi possível enviar o código.');
+      setMessage(err instanceof ApiError ? err.message : t('recovery.sendFailed'));
     } finally {
       setPending(false);
     }
@@ -222,7 +227,7 @@ function RecoveryForm({ onBack }: { onBack: () => void }) {
       setStatus('success');
     } catch (err) {
       setStatus('error');
-      setMessage(err instanceof ApiError ? err.message : 'Não foi possível redefinir a senha.');
+      setMessage(err instanceof ApiError ? err.message : t('recovery.resetFailed'));
     } finally {
       setPending(false);
     }
@@ -232,27 +237,27 @@ function RecoveryForm({ onBack }: { onBack: () => void }) {
     return (
       <form onSubmit={requestCode} className="flex flex-col gap-3.5">
         <div className="flex flex-col gap-1">
-          <h2 className="text-title font-semibold text-text-primary">Recuperar conta</h2>
-          <p className="text-label text-text-muted">Informe seu usuário ou e-mail para receber um código de recuperação.</p>
+          <h2 className="text-title font-semibold text-text-primary">{t('recovery.title')}</h2>
+          <p className="text-label text-text-muted">{t('recovery.intro')}</p>
         </div>
         <SegmentedTabs
-          ariaLabel="Recuperar pelo"
+          ariaLabel={t('recovery.by')}
           value={identifierType}
           onChange={(next) => { setIdentifierType(next); setIdentifierValue(''); }}
-          options={[{ value: 'email', label: 'E-mail' }, { value: 'username', label: 'Usuário' }]}
+          options={[{ value: 'email', label: t('fields.email') }, { value: 'username', label: t('fields.username') }]}
         />
         {identifierType === 'email' ? (
-          <AuthField id="recoveryEmail" label="E-mail" type="email" autoFocus autoComplete="email" leftIcon={<EnvelopeIcon size={20} />} value={identifierValue} onChange={setIdentifierValue} />
+          <AuthField id="recoveryEmail" label={t('fields.email')} type="email" autoFocus autoComplete="email" leftIcon={<EnvelopeIcon size={20} />} value={identifierValue} onChange={setIdentifierValue} />
         ) : (
-          <AuthField id="recoveryUsername" label="Usuário" autoFocus autoComplete="username" leftIcon={<UserIcon size={20} />} value={identifierValue} onChange={setIdentifierValue} />
+          <AuthField id="recoveryUsername" label={t('fields.username')} autoFocus autoComplete="username" leftIcon={<UserIcon size={20} />} value={identifierValue} onChange={setIdentifierValue} />
         )}
         <Button type="submit" size="lg" className="h-11 w-full" disabled={pending || !identifierValue}>
           {pending ? <CircleNotchIcon size={20} className="animate-spin" /> : <EnvelopeIcon size={20} />}
-          <span>{pending ? 'Enviando…' : 'Enviar código'}</span>
+          <span>{pending ? t('recovery.sending') : t('recovery.sendCode')}</span>
           {!pending && <ArrowRightIcon size={20} className="ml-auto" />}
         </Button>
         {message && <ErrorBanner>{message}</ErrorBanner>}
-        <button type="button" onClick={onBack} className="flex items-center justify-center gap-1.5 text-label text-text-muted hover:text-text-primary"><ArrowLeftIcon size={16} /> Voltar para entrar</button>
+        <button type="button" onClick={onBack} className="flex items-center justify-center gap-1.5 text-label text-text-muted hover:text-text-primary"><ArrowLeftIcon size={16} /> {t('recovery.backToLogin')}</button>
       </form>
     );
   }
@@ -260,35 +265,33 @@ function RecoveryForm({ onBack }: { onBack: () => void }) {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-1">
-        <h2 className="text-title font-semibold text-text-primary">Digite o código</h2>
+        <h2 className="text-title font-semibold text-text-primary">{t('recovery.enterCode')}</h2>
         <p className="text-label text-text-muted">
-          {identifierType === 'email'
-            ? `Enviamos um código para ${identifierValue}. Ele expira em 30 minutos.`
-            : 'Enviamos um código para o e-mail cadastrado nessa conta. Ele expira em 30 minutos.'}
+          {identifierType === 'email' ? t('recovery.sentToEmail', { email: identifierValue }) : t('recovery.sentToAccount')}
         </p>
       </div>
       <OTPInput
-        label="Código de recuperação"
-        hint="Digite os 6 dígitos enviados para seu e-mail."
-        errorMessage={message ?? 'Confira o código e tente novamente.'}
-        successMessage="Senha redefinida com sucesso."
+        label={t('recovery.codeLabel')}
+        hint={t('recovery.codeHint')}
+        errorMessage={message ?? t('recovery.codeError')}
+        successMessage={t('recovery.success')}
         value={code}
         status={status}
         onChange={(value) => { setCode(value); setStatus('idle'); setMessage(null); }}
         onComplete={(value) => { void submitReset(value); }}
         autoFocus
-        aria-label="Código de recuperação"
+        aria-label={t('recovery.codeLabel')}
       />
-      <AuthField id="recoveryPassword" label="Nova senha" type="password" autoComplete="new-password" leftIcon={<LockIcon size={20} />} value={password} onChange={setPassword} placeholder="Pelo menos 8 caracteres" />
+      <AuthField id="recoveryPassword" label={t('fields.newPassword')} type="password" autoComplete="new-password" leftIcon={<LockIcon size={20} />} value={password} onChange={setPassword} placeholder={t('placeholders.password')} />
       <Button type="button" size="lg" className="h-11 w-full" disabled={pending || code.length !== 6 || password.length < 8} onClick={() => void submitReset()}>
         {pending ? <CircleNotchIcon size={20} className="animate-spin" /> : status === 'success' ? <CheckCircleIcon size={20} /> : <LockIcon size={20} />}
-        <span>{pending ? 'Salvando…' : status === 'success' ? 'Senha redefinida' : 'Redefinir senha'}</span>
+        <span>{pending ? t('recovery.saving') : status === 'success' ? t('recovery.resetDone') : t('recovery.reset')}</span>
       </Button>
       {status === 'success' ? (
-        <button type="button" onClick={onBack} className="text-label text-text-muted hover:text-text-primary">Voltar para entrar</button>
+        <button type="button" onClick={onBack} className="text-label text-text-muted hover:text-text-primary">{t('recovery.backToLogin')}</button>
       ) : (
         <button type="button" onClick={() => { setRequested(false); setStatus('idle'); setMessage(null); }} className="text-label text-text-muted hover:text-text-primary">
-          {identifierType === 'email' ? 'Usar outro e-mail' : 'Usar outro usuário'}
+          {identifierType === 'email' ? t('recovery.useOtherEmail') : t('recovery.useOtherUsername')}
         </button>
       )}
     </div>
@@ -296,6 +299,7 @@ function RecoveryForm({ onBack }: { onBack: () => void }) {
 }
 
 export function AuthScreen() {
+  const { t } = useTranslation('auth');
   const [tab, setTab] = useState<'login' | 'register'>('login');
   const [recovery, setRecovery] = useState(false);
   const reduce = useReducedMotion();
@@ -308,7 +312,7 @@ export function AuthScreen() {
           <img src="/logo.svg" alt="" className="h-auto w-24" />
           <div>
             <h1 className="text-display font-bold tracking-tight text-text-primary">Linkord</h1>
-            <p className="text-label text-text-muted">Converse e faça chamadas com seu grupo</p>
+            <p className="text-label text-text-muted">{t('tagline')}</p>
           </div>
         </div>
 
@@ -316,10 +320,10 @@ export function AuthScreen() {
           <div className="flex w-full flex-col gap-5">
             {!recovery && (
               <SegmentedTabs
-                ariaLabel="Entrar ou criar conta"
+                ariaLabel={t('tabs.ariaLabel')}
                 value={tab}
                 onChange={(next) => { setRecovery(false); setTab(next); }}
-                options={[{ value: 'login', label: 'Entrar' }, { value: 'register', label: 'Criar conta' }]}
+                options={[{ value: 'login', label: t('tabs.login') }, { value: 'register', label: t('tabs.register') }]}
               />
             )}
             {/* The card itself carries `layout` (above), so its height
