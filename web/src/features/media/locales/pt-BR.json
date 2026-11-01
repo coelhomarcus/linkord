@@ -1,0 +1,47 @@
+{
+  "fileTypes": {
+    "pdf": "Documento PDF",
+    "document": "Documento",
+    "spreadsheet": "Planilha",
+    "presentation": "Apresentação",
+    "archive": "Arquivo compactado",
+    "text-code": "Texto/código",
+    "image": "Imagem",
+    "audio": "Áudio",
+    "video": "Vídeo",
+    "unknown": "Arquivo"
+  },
+  "download": "Baixar {{name}}",
+  "collection": {
+    "itemPosition": "{{name}}, {{index}} de {{total}}",
+    "image": "Imagem",
+    "downloadOriginal": "Baixar original",
+    "previous": "Anterior",
+    "next": "Próxima"
+  },
+  "embed": {
+    "previewFailed": "Não foi possível carregar a prévia.",
+    "openLink": "Abrir link",
+    "twitchChannel": "twitch.tv/{{channel}}",
+    "twitchVod": "VOD da Twitch",
+    "twitchClip": "Clip da Twitch",
+    "loadPlayer": "Clique para carregar o player"
+  },
+  "player": {
+    "volume": "Volume",
+    "playVideo": "Reproduzir vídeo",
+    "play": "Reproduzir",
+    "pause": "Pausar",
+    "unmute": "Desmutar",
+    "mute": "Mutar",
+    "download": "Baixar",
+    "fullscreen": "Tela cheia",
+    "video": "vídeo",
+    "audio": "áudio"
+  },
+  "preview": {
+    "showLess": "Mostrar menos",
+    "showMore": "Mostrar mais",
+    "downloadFull": "Baixar pra ver tudo"
+  }
+}

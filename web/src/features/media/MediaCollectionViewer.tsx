@@ -1,5 +1,6 @@
 import { CaretLeftIcon, CaretRightIcon, DownloadSimpleIcon } from '@phosphor-icons/react';
 import { Dialog as DialogPrimitive } from '@base-ui/react/dialog';
+import { useTranslation } from 'react-i18next';
 
 import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { useFinalFocus } from './useFinalFocus';
@@ -26,6 +27,7 @@ const navButton = 'grid size-11 place-items-center rounded-full bg-black/55 text
  * Separate from ImageLightbox, whose single-image contract the profile
  * screens depend on. */
 export function MediaCollectionViewer({ items, index, open, onIndexChange, onOpenChange }: MediaCollectionViewerProps) {
+  const { t } = useTranslation('media');
   const item = items[index];
   const finalFocus = useFinalFocus(open);
   const hasPrev = index > 0;
@@ -37,7 +39,7 @@ export function MediaCollectionViewer({ items, index, open, onIndexChange, onOpe
         <DialogPrimitive.Backdrop className="fixed inset-0 z-50 bg-black/90 duration-150 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 motion-reduce:animate-none" />
         <DialogPrimitive.Popup
           finalFocus={finalFocus}
-          aria-label={item ? `${item.name}, ${index + 1} de ${items.length}` : 'Imagem'}
+          aria-label={item ? t('collection.itemPosition', { name: item.name, index: index + 1, total: items.length }) : t('collection.image')}
           className="fixed inset-0 z-50 flex flex-col outline-none duration-150 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 motion-reduce:animate-none"
           onClick={() => onOpenChange(false)}
           // on the popup, which holds focus while open — a window listener
@@ -56,7 +58,7 @@ export function MediaCollectionViewer({ items, index, open, onIndexChange, onOpe
                 <a
                   href={item.src}
                   download={item.name}
-                  aria-label="Baixar original"
+                  aria-label={t('collection.downloadOriginal')}
                   className="grid size-9 flex-none place-items-center rounded-full text-white/80 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/60"
                 >
                   <DownloadSimpleIcon size={18} />
@@ -88,10 +90,10 @@ export function MediaCollectionViewer({ items, index, open, onIndexChange, onOpe
                 )}
                 {items.length > 1 && (
                   <>
-                    <button type="button" aria-label="Anterior" disabled={!hasPrev} onClick={(e) => { e.stopPropagation(); onIndexChange(index - 1); }} className={`${navButton} absolute left-2 top-1/2 -translate-y-1/2 sm:left-4`}>
+                    <button type="button" aria-label={t('collection.previous')} disabled={!hasPrev} onClick={(e) => { e.stopPropagation(); onIndexChange(index - 1); }} className={`${navButton} absolute left-2 top-1/2 -translate-y-1/2 sm:left-4`}>
                       <CaretLeftIcon size={22} />
                     </button>
-                    <button type="button" aria-label="Próxima" disabled={!hasNext} onClick={(e) => { e.stopPropagation(); onIndexChange(index + 1); }} className={`${navButton} absolute right-2 top-1/2 -translate-y-1/2 sm:right-4`}>
+                    <button type="button" aria-label={t('collection.next')} disabled={!hasNext} onClick={(e) => { e.stopPropagation(); onIndexChange(index + 1); }} className={`${navButton} absolute right-2 top-1/2 -translate-y-1/2 sm:right-4`}>
                       <CaretRightIcon size={22} />
                     </button>
                   </>
