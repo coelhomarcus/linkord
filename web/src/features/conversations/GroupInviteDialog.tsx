@@ -1,5 +1,6 @@
 import { UserPlusIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/shared/ui/primitives/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/primitives/dialog';
@@ -13,7 +14,7 @@ interface GroupInviteDialogProps {
   onOpenChange: (open: boolean) => void;
   conversationId: string;
   /** 'grupo' or 'bot': both are joined the same way */
-  noun: string;
+  kind: 'group' | 'bot';
   /** members and people already invited: not offered again */
   excludeIds: Set<string>;
   /** how many invitations went out, when any did — the sent list needs a refetch */
@@ -23,7 +24,8 @@ interface GroupInviteDialogProps {
 /** Picks friends to invite, over the details instead of pushing the member
  * list down. Closes on its own when every invitation went out; otherwise stays
  * to say which ones didn't, the same way creating a group does. */
-export function GroupInviteDialog({ open, onOpenChange, conversationId, noun, excludeIds, onInvited }: GroupInviteDialogProps) {
+export function GroupInviteDialog({ open, onOpenChange, conversationId, kind, excludeIds, onInvited }: GroupInviteDialogProps) {
+  const { t } = useTranslation('conversations');
   const [selected, setSelected] = useState<Map<string, SocialUser>>(new Map());
   const [inviting, setInviting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,7 +62,7 @@ export function GroupInviteDialog({ open, onOpenChange, conversationId, noun, ex
       if (failed.length === 0) close();
       else setFailures(failed);
     } catch {
-      setError('Não foi possível enviar os convites. Tente de novo.');
+      setError(t('groupInvite.failed'));
     } finally {
       setInviting(false);
     }
@@ -72,12 +74,12 @@ export function GroupInviteDialog({ open, onOpenChange, conversationId, noun, ex
         <DialogHeader className="border-b border-border px-5 py-4">
           <DialogTitle className="flex items-center gap-2 text-title">
             <UserPlusIcon size={20} />
-            Convidar amigos
+            {t('groupInvite.title')}
           </DialogTitle>
         </DialogHeader>
         {failures ? (
           <div className="flex flex-col gap-2 px-5 py-4">
-            <p className="text-label text-text-secondary">Alguns convites não foram enviados:</p>
+            <p className="text-label text-text-secondary">{t('groupInvite.partial')}</p>
             <ul className="flex flex-col gap-1 text-label text-text-muted">
               {failures.map(({ user, text }) => (
                 <li key={user.id}><span className="font-medium text-text-secondary">{user.displayName}</span>: {text}</li>
@@ -86,19 +88,19 @@ export function GroupInviteDialog({ open, onOpenChange, conversationId, noun, ex
           </div>
         ) : (
           <div className="flex flex-col gap-3 px-5 py-4">
-            <p className="text-caption text-text-muted">Seus amigos recebem um convite e só entram no {noun} ao aceitar.</p>
+            <p className="text-caption text-text-muted">{t(`groupInvite.hint_${kind}`)}</p>
             <FriendPicker selected={selected} onToggle={toggle} excludeIds={excludeIds} maxHeightClass="max-h-64" />
             {error && <p role="alert" className="text-label text-red-text">{error}</p>}
           </div>
         )}
         <DialogFooter className="border-t border-border px-5 py-4">
           {failures ? (
-            <Button type="button" onClick={close}>Fechar</Button>
+            <Button type="button" onClick={close}>{t('groupInvite.close')}</Button>
           ) : (
             <>
-              <Button type="button" variant="ghost" onClick={close}>Cancelar</Button>
+              <Button type="button" variant="ghost" onClick={close}>{t('groupInvite.cancel')}</Button>
               <Button type="button" onClick={() => void invite()} disabled={selected.size === 0 || inviting}>
-                {inviting ? 'Enviando…' : selected.size > 0 ? `Convidar (${selected.size})` : 'Convidar'}
+                {inviting ? t('groupInvite.sending') : selected.size > 0 ? t('groupInvite.inviteCount', { count: selected.size }) : t('groupInvite.invite')}
               </Button>
             </>
           )}

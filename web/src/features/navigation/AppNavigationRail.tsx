@@ -1,6 +1,7 @@
 import { ChatCircleIcon, SidebarSimpleIcon, UsersIcon } from '@phosphor-icons/react';
 import { useMemo } from 'react';
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 
@@ -96,6 +97,7 @@ function RailLink({ to, label, active, badge, onNavigate, children }: {
 export function AppNavigationRail({ className }: {
   className?: string;
 }) {
+  const { t } = useTranslation('navigation');
   const { pendingIncomingCount } = useFriends();
   const { conversations, unreadByConversation } = useRoom();
   const conversationsUnread = useMemo(
@@ -112,22 +114,22 @@ export function AppNavigationRail({ className }: {
   const listExpanded = isOverlay ? openMobile : listOpen;
   // the bell lives in the list's header, so it moves here only while that header is off screen
   const showBell = !isMobile && !listExpanded;
-  const conversationsLabel = conversationsUnread > 0 ? `Conversas, ${conversationsUnread} não lidas` : 'Conversas';
-  const friendsLabel = pendingIncomingCount > 0 ? `Amigos, ${pendingIncomingCount} aguardando resposta` : 'Amigos';
+  const conversationsLabel = conversationsUnread > 0 ? t('conversationsUnread', { count: conversationsUnread }) : t('conversations');
+  const friendsLabel = pendingIncomingCount > 0 ? t('friendsPending', { count: pendingIncomingCount }) : t('friends');
 
   return (
-    <nav aria-label="Navegação principal" className={cn('flex w-16 flex-none flex-col items-center gap-1.5 border-r border-border-subtle bg-surface-rail pt-3 pb-[max(0.75rem,var(--dock-clearance,0px))]', className)}>
+    <nav aria-label={t('main')} className={cn('flex w-16 flex-none flex-col items-center gap-1.5 border-r border-border-subtle bg-surface-rail pt-3 pb-[max(0.75rem,var(--dock-clearance,0px))]', className)}>
       <RailSlot show={showListToggle}>
         <Tooltip>
           <TooltipTrigger
             onClick={toggleSidebar}
-            aria-label="Mostrar lista de conversas"
+            aria-label={t('showList')}
             aria-expanded={listExpanded}
             className={cn(itemClass, stateClass(false))}
           >
             <SidebarSimpleIcon size={24} aria-hidden />
           </TooltipTrigger>
-          <TooltipContent side="right">Mostrar lista de conversas</TooltipContent>
+          <TooltipContent side="right">{t('showList')}</TooltipContent>
         </Tooltip>
       </RailSlot>
       <RailLink to={ROUTES.conversations} label={conversationsLabel} active={onConversations} badge={conversationsUnread} onNavigate={afterNavigate}>

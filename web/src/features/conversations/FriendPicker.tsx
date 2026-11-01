@@ -1,5 +1,6 @@
 import { CheckIcon, MagnifyingGlassIcon } from '@phosphor-icons/react';
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { Avatar } from '@/shared/Avatar';
 import { Button } from '@/shared/ui/primitives/button';
@@ -21,6 +22,7 @@ interface FriendPickerProps {
 /** Paginated friend list with search. Selection lives in the parent as a Map
  * (not derived from the visible page) so it survives searching and paging. */
 export function FriendPicker({ selected, onToggle, excludeIds, inputId, maxHeightClass = 'max-h-72' }: FriendPickerProps) {
+  const { t } = useTranslation('conversations');
   const [query, setQuery] = useState('');
   const debounced = useDebouncedValue(query.trim(), 250);
   const fetchPage = useCallback((cursor: string | null) => fetchFriends(cursor, debounced), [debounced]);
@@ -35,21 +37,21 @@ export function FriendPicker({ selected, onToggle, excludeIds, inputId, maxHeigh
           id={inputId}
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Buscar amigos"
+          placeholder={t('friendPicker.search')}
           className="h-9 min-w-0 flex-1 bg-transparent text-label outline-none placeholder:text-text-muted"
         />
       </div>
       <div className={cn('overflow-y-auto rounded-lg border border-border bg-fill-inset p-1', maxHeightClass)}>
         {list.status === 'loading' ? (
-          <p className="px-3 py-8 text-center text-label text-text-muted">Carregando amigos…</p>
+          <p className="px-3 py-8 text-center text-label text-text-muted">{t('friendPicker.loading')}</p>
         ) : list.status === 'error' ? (
           <div className="flex flex-col items-center gap-2 px-3 py-6">
-            <p className="text-label text-text-muted">Não foi possível carregar seus amigos.</p>
-            <Button type="button" variant="secondary" size="sm" onClick={list.retry}>Tentar de novo</Button>
+            <p className="text-label text-text-muted">{t('friendPicker.loadFailed')}</p>
+            <Button type="button" variant="secondary" size="sm" onClick={list.retry}>{t('friendPicker.retry')}</Button>
           </div>
         ) : visible.length === 0 ? (
           <p className="px-3 py-8 text-center text-label text-text-muted">
-            {debounced ? 'Nenhum amigo encontrado.' : 'Você não tem amigos para convidar.'}
+            {debounced ? t('friendPicker.noMatch') : t('friendPicker.noneToInvite')}
           </p>
         ) : (
           visible.map(({ user }) => {
@@ -82,7 +84,7 @@ export function FriendPicker({ selected, onToggle, excludeIds, inputId, maxHeigh
         )}
         {list.hasMore && (
           <Button type="button" variant="ghost" size="sm" className="mx-auto my-1 flex" disabled={list.loadingMore} onClick={list.loadMore}>
-            {list.loadingMore ? 'Carregando…' : 'Carregar mais'}
+            {list.loadingMore ? t('friendPicker.loadingMore') : t('friendPicker.loadMore')}
           </Button>
         )}
       </div>

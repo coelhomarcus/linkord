@@ -1,0 +1,220 @@
+{
+  "fallback": {
+    "conversation": "Conversa",
+    "group": "Grupo",
+    "bot": "Bot",
+    "direct": "Conversa direta"
+  },
+  "noun_group": "grupo",
+  "noun_bot": "bot",
+  "outcome": {
+    "sent": "convite enviado",
+    "already_pending": "já tem um convite pendente",
+    "already_member": "já está no grupo",
+    "not_friends": "não é mais seu amigo",
+    "group_full": "o grupo está cheio",
+    "unavailable": "indisponível"
+  },
+  "sidebar": {
+    "title": "Conversas",
+    "hide": "Ocultar lista de conversas",
+    "tabsLabel": "Tipo de conversa",
+    "tabs": {
+      "direct": "Amigos",
+      "group": "Grupos",
+      "bot": "Bots"
+    },
+    "search": {
+      "direct": "Buscar amigos",
+      "group": "Buscar grupos",
+      "bot": "Buscar bots"
+    },
+    "empty": {
+      "direct": "Nenhuma conversa.",
+      "group": "Nenhum grupo.",
+      "bot": "Nenhum bot.",
+      "botFirst": "Nenhum bot ainda. Crie um para receber avisos dos seus sistemas."
+    },
+    "create": {
+      "direct": "Criar grupo",
+      "group": "Criar grupo",
+      "bot": "Criar bot"
+    }
+  },
+  "panel": {
+    "back": "Voltar para conversas",
+    "viewProfile": "Ver perfil",
+    "details_group": "Detalhes do grupo",
+    "details_bot": "Detalhes do bot",
+    "members_zero": "{{count}} membros",
+    "members_one": "{{count}} membro",
+    "members_other": "{{count}} membros",
+    "online": "Online",
+    "inCall": "Na chamada",
+    "media": "Mídias e links",
+    "search": "Buscar mensagens",
+    "blocked": "Você não pode ligar enquanto essa pessoa estiver bloqueada.",
+    "needFriends": "Vocês precisam ser amigos para fazer chamadas.",
+    "returnToCall": "Voltar à chamada",
+    "joinCall": "Entrar na chamada",
+    "returnToActiveCall": "Voltar à chamada ativa",
+    "moreOptions": "Mais opções da conversa",
+    "joinThisCall": "Entrar na chamada desta conversa",
+    "dismissNotice": "Dispensar aviso",
+    "suspendedTitle_group": "Grupo suspenso",
+    "suspendedTitle_bot": "Bot suspenso",
+    "suspendedText_group": "A administração suspendeu este grupo. Enquanto durar, ninguém lê, escreve ou entra em chamada.",
+    "suspendedText_bot": "A administração suspendeu este bot. Enquanto durar, ninguém lê os avisos e ele não recebe novos.",
+    "emptyTitle": "Abra uma conversa",
+    "emptyText": "Escolha uma pessoa, grupo ou bot na sidebar."
+  },
+  "friendPicker": {
+    "search": "Buscar amigos",
+    "loading": "Carregando amigos…",
+    "loadFailed": "Não foi possível carregar seus amigos.",
+    "retry": "Tentar de novo",
+    "noMatch": "Nenhum amigo encontrado.",
+    "noneToInvite": "Você não tem amigos para convidar.",
+    "loadingMore": "Carregando…",
+    "loadMore": "Carregar mais"
+  },
+  "groupCreate": {
+    "title": "Novo grupo",
+    "titleCreated": "Grupo criado",
+    "partial": "O grupo foi criado, mas alguns convites não foram enviados:",
+    "name": "Nome",
+    "namePlaceholder": "Ex: Produto, familia, squad",
+    "inviteFriends": "Convidar amigos",
+    "inviteHint": "Seus amigos receberão um convite e só entram no grupo ao aceitar.",
+    "close": "Fechar",
+    "cancel": "Cancelar",
+    "creating": "Criando…",
+    "createAndInvite": "Criar e convidar ({{count}})",
+    "create": "Criar grupo",
+    "failed": "Não foi possível criar o grupo. Tente de novo."
+  },
+  "groupInvite": {
+    "title": "Convidar amigos",
+    "partial": "Alguns convites não foram enviados:",
+    "hint_group": "Seus amigos recebem um convite e só entram no grupo ao aceitar.",
+    "hint_bot": "Seus amigos recebem um convite e só entram no bot ao aceitar.",
+    "close": "Fechar",
+    "cancel": "Cancelar",
+    "sending": "Enviando…",
+    "inviteCount": "Convidar ({{count}})",
+    "invite": "Convidar",
+    "failed": "Não foi possível enviar os convites. Tente de novo."
+  },
+  "details": {
+    "title_group": "Detalhes do grupo",
+    "title_bot": "Detalhes do bot",
+    "leave_group": "Sair do grupo",
+    "leave_bot": "Sair do bot",
+    "report": "Denunciar grupo",
+    "delete_group": "Excluir grupo",
+    "delete_bot": "Excluir bot",
+    "changePhoto_group": "Trocar foto do grupo",
+    "changePhoto_bot": "Trocar foto do bot",
+    "selectPhoto_group": "Selecionar foto do grupo",
+    "selectPhoto_bot": "Selecionar foto do bot",
+    "saveName": "Salvar nome",
+    "members_zero": "{{count}} membros",
+    "members_one": "{{count}} membro",
+    "members_other": "{{count}} membros",
+    "online": "{{count}} online",
+    "createdAt": "Criado em",
+    "owner": "Dono",
+    "you": "Você",
+    "meSuffix": " (você)",
+    "inviteFriends": "Convidar amigos",
+    "media": "Mídias e links",
+    "searchConversation": "Buscar na conversa",
+    "tabsLabel": "Pessoas",
+    "tabMembers": "Membros",
+    "tabInvites": "Convites enviados",
+    "tabWebhook": "Webhook",
+    "dismiss": "Dispensar",
+    "transfer": "Transferir propriedade para {{name}}",
+    "remove": "Remover {{name}}",
+    "loadingMembers": "Carregando membros…",
+    "loadMembersFailed": "Não foi possível carregar os membros.",
+    "retry": "Tentar de novo",
+    "loadMore": "Carregar mais",
+    "loading": "Carregando…",
+    "noInvites": "Nenhum convite pendente.",
+    "sentOn": "enviado em {{date}}",
+    "revoke": "Revogar",
+    "revokeFailed": "Não foi possível revogar o convite.",
+    "fileTooLarge": "Arquivo muito grande (máximo {{max}}).",
+    "uploadFailed": "Falha ao enviar a foto.",
+    "invited_one": "Convite enviado.",
+    "invited_other": "{{count}} convites enviados.",
+    "cropTitle_group": "Recortar foto do grupo",
+    "cropTitle_bot": "Recortar foto do bot",
+    "uploading_group": "Enviando a foto do grupo…",
+    "uploading_bot": "Enviando a foto do bot…",
+    "leaveConfirm": {
+      "description": "Você vai sair de \"{{title}}\" e parar de receber as mensagens dele.",
+      "confirm": "Sair"
+    },
+    "deleteConfirm": {
+      "description_group": "Isso apaga \"{{title}}\" e TODAS as mensagens dele para todo mundo, para sempre. Essa ação não pode ser desfeita.",
+      "description_bot": "Isso apaga \"{{title}}\" e TODAS as mensagens dele para todo mundo, para sempre. A URL do webhook para de funcionar. Essa ação não pode ser desfeita.",
+      "confirm": "Excluir"
+    },
+    "removeConfirm": {
+      "title_group": "Remover do grupo",
+      "title_bot": "Remover do bot",
+      "description": "Remover {{name}} de \"{{title}}\"?",
+      "confirm": "Remover"
+    },
+    "transferConfirm": {
+      "title": "Transferir propriedade",
+      "description_group": "{{name}} passa a ser o dono de \"{{title}}\". Você perde os controles de gestão do grupo.",
+      "description_bot": "{{name}} passa a ser o dono de \"{{title}}\". Você perde os controles de gestão do bot, incluindo o webhook.",
+      "confirm": "Transferir"
+    }
+  },
+  "media": {
+    "title": "Mídias e links",
+    "tabs": {
+      "uploads": "Todos",
+      "images": "Imagens",
+      "gifs": "GIFs",
+      "videos": "Vídeos",
+      "audios": "Áudios",
+      "documents": "Documentos",
+      "embeds": "Links"
+    },
+    "empty": {
+      "uploads": "Nenhum arquivo enviado ainda.",
+      "images": "Nenhuma imagem enviada ainda.",
+      "gifs": "Nenhum GIF enviado ainda.",
+      "videos": "Nenhum vídeo enviado ainda.",
+      "audios": "Nenhum áudio enviado ainda.",
+      "documents": "Nenhum documento enviado ainda.",
+      "embeds": "Nenhum link incorporável compartilhado ainda."
+    },
+    "list": {
+      "uploads": "Arquivos enviados",
+      "images": "Imagens enviadas",
+      "gifs": "GIFs enviados",
+      "videos": "Vídeos enviados",
+      "audios": "Áudios enviados",
+      "documents": "Documentos enviados",
+      "embeds": "Links compartilhados"
+    },
+    "noResults": "Nada encontrado para essa busca.",
+    "searchLinks": "Buscar links",
+    "searchFiles": "Buscar arquivos",
+    "today": "Hoje",
+    "yesterday": "Ontem",
+    "thisWeek": "Esta semana",
+    "loadFailed": "Não foi possível carregar.",
+    "jumpToMessage": "Ir para a mensagem",
+    "open": "Abrir {{name}}",
+    "download": "Baixar {{name}}",
+    "retry": "Tentar de novo",
+    "loading": "Carregando…"
+  }
+}

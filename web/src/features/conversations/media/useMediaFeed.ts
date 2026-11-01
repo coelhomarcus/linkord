@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 
+import { i18n } from '@/shared/i18n/init';
+
 import { fetchMedia, ApiError } from '@/shared/api/api';
 import type { MediaItem, MediaKind } from '@/shared/api/api';
 
-const errorMessage = (err: unknown) => (err instanceof ApiError ? err.message : 'Não foi possível carregar.');
+const errorMessage = (err: unknown) => (err instanceof ApiError ? err.message : i18n.t('conversations:media.loadFailed'));
 
 /** One list of the media modal: the first page for the tab and search, then
  * further pages on demand. Changing the tab, the search or the conversation
