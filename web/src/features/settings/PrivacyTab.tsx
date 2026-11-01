@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/shared/ui/primitives/button';
 import { fetchBlocks, unblockUser } from '@/shared/api/api';
 import { SocialUserRow } from '@/features/friends/SocialUserRow';
@@ -16,6 +17,7 @@ const blockedKey = (entry: SocialEntry) => entry.user.id;
 /** Blocked accounts. Only YOUR blocks are listed — who blocked you is never
  * exposed anywhere. */
 export function PrivacyTab({ onOpenProfile }: { onOpenProfile: (userId: string) => void }) {
+  const { t } = useTranslation('settings');
   const { revision, bump } = useFriends();
   const pending = usePendingIds();
   const [feedback, setFeedback] = useState<Feedback>(null);
@@ -29,7 +31,7 @@ export function PrivacyTab({ onOpenProfile }: { onOpenProfile: (userId: string) 
     if (!outcome) return;
     if (!outcome.ok) {
       // the person stays listed and the action can be tried again
-      setFeedback({ tone: 'error', text: 'Não foi possível desbloquear. Tente de novo.' });
+      setFeedback({ tone: 'error', text: t('privacy.unblockFailed') });
       return;
     }
     list.removeItem(userId);
@@ -40,26 +42,26 @@ export function PrivacyTab({ onOpenProfile }: { onOpenProfile: (userId: string) 
     <SettingsSections>
     <SettingsSection
       id="blocked"
-      title="Pessoas bloqueadas"
-      description="Quem você bloqueia não consegue te enviar mensagens nem te ligar em conversa privada. Desbloquear não devolve a amizade: vocês precisam se adicionar de novo."
+      title={t('catalog.sections.blocked')}
+      description={t('privacy.description')}
     >
       <ActionFeedback feedback={feedback} onClear={clearFeedback} />
-      {list.status === 'loading' && <p className="py-4 text-center text-label text-text-muted">Carregando…</p>}
+      {list.status === 'loading' && <p className="py-4 text-center text-label text-text-muted">{t('privacy.loading')}</p>}
       {list.status === 'error' && (
         <div className="flex items-center gap-2 rounded-md bg-red/12 px-2.5 py-1.5 text-label text-red-text">
-          <span className="min-w-0 flex-1">Não foi possível carregar a lista.</span>
-          <button type="button" onClick={list.retry} className="flex-none font-medium underline-offset-2 hover:underline">Tentar de novo</button>
+          <span className="min-w-0 flex-1">{t('privacy.loadFailed')}</span>
+          <button type="button" onClick={list.retry} className="flex-none font-medium underline-offset-2 hover:underline">{t('privacy.retry')}</button>
         </div>
       )}
       {list.status === 'ready' && list.items.length === 0 && (
-        <p className="py-4 text-center text-label text-text-muted">Você não bloqueou ninguém.</p>
+        <p className="py-4 text-center text-label text-text-muted">{t('privacy.empty')}</p>
       )}
 
       <div className="flex flex-col divide-y divide-border">
         {list.items.map(({ user }) => (
           <SocialUserRow key={user.id} user={user} onOpenProfile={() => onOpenProfile(user.id)}>
             <Button type="button" variant="secondary" size="sm" disabled={pending.isPending(user.id)} onClick={() => void handleUnblock(user.id)}>
-              Desbloquear
+              {t('privacy.unblock')}
             </Button>
           </SocialUserRow>
         ))}

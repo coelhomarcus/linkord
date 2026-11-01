@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { RoomContext } from '@/state/RoomContext';
 import { createFakeRoomContextValue } from '@tests/fixtures/roomContextFixture';
 import { PreferencesSettings } from '@/features/settings/PreferencesSettings';
+import { useLanguageForTests } from '@tests/fixtures/i18nFixture';
 
 function renderPreferences(overrides: Parameters<typeof createFakeRoomContextValue>[0] = {}) {
   return render(
@@ -60,5 +61,18 @@ describe('PreferencesSettings', () => {
 
     await user.click(screen.getByRole('switch', { name: 'Compactar imagens por padrão' }));
     expect(setCompressImagesDefault.mock.calls[0]?.[0]).toBe(false);
+  });
+});
+
+describe('PreferencesSettings in English', () => {
+  useLanguageForTests('en-US');
+
+  it('labels the controls in English and keeps the theme names as they are', () => {
+    renderPreferences({ colorTheme: 'linkord' });
+
+    expect(screen.getByRole('combobox', { name: 'Color theme' })).toHaveTextContent('Old');
+    expect(screen.getByRole('switch', { name: 'Show statistics' })).toBeInTheDocument();
+    expect(screen.getByRole('switch', { name: 'Compress images by default' })).toBeInTheDocument();
+    expect(screen.queryByText('Tema de cores')).not.toBeInTheDocument();
   });
 });

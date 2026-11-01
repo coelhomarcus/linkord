@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useRoom } from '@/state/RoomContext';
 import { Switch } from '@/shared/ui/primitives/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/primitives/select';
@@ -5,6 +6,7 @@ import { SettingsRow, SettingsSection, SettingsSections } from './SettingsLayout
 import { COLOR_THEME_IDS, COLOR_THEME_LABELS, type ColorThemeId } from './useColorThemePreference';
 
 export function PreferencesSettings() {
+  const { t } = useTranslation('settings');
   const {
     colorTheme, setColorTheme,
     showTileBanners, setShowTileBanners, showStats, setShowStats,
@@ -13,13 +15,13 @@ export function PreferencesSettings() {
 
   return (
     <SettingsSections>
-      <SettingsSection id="app-appearance" title="Aparência do app">
+      <SettingsSection id="app-appearance" title={t('catalog.sections.appAppearance')}>
         <SettingsRow
-          label="Tema de cores"
-          description="Muda fundos, textos e botões da interface neste dispositivo."
+          label={t('prefs.theme.label')}
+          description={t('prefs.theme.description')}
         >
           <Select value={colorTheme} onValueChange={(value) => value && setColorTheme(value as ColorThemeId)}>
-            <SelectTrigger aria-label="Tema de cores" className="w-full max-w-xs">
+            <SelectTrigger aria-label={t('prefs.theme.label')} className="w-full max-w-xs">
               <SelectValue>{() => COLOR_THEME_LABELS[colorTheme]}</SelectValue>
             </SelectTrigger>
             <SelectContent>
@@ -33,21 +35,21 @@ export function PreferencesSettings() {
         </SettingsRow>
       </SettingsSection>
 
-      <SettingsSection id="call-appearance" title="Aparência da chamada">
-        <SettingsRow label="Mostrar banners dos participantes" description="Exibe o banner do perfil como fundo dos cartões da chamada.">
-          <Switch checked={showTileBanners} onCheckedChange={setShowTileBanners} aria-label="Mostrar banners nos tiles" />
+      <SettingsSection id="call-appearance" title={t('catalog.sections.callAppearance')}>
+        <SettingsRow label={t('prefs.banners.label')} description={t('prefs.banners.description')}>
+          <Switch checked={showTileBanners} onCheckedChange={setShowTileBanners} aria-label={t('prefs.banners.aria')} />
         </SettingsRow>
-        <SettingsRow label="Ocultar participantes sem vídeo" description="Some com os cartões de quem só está no áudio, deixando o palco só para quem está com câmera ou tela ligada.">
-          <Switch checked={hideAudioOnlyTiles} onCheckedChange={setHideAudioOnlyTiles} aria-label="Ocultar participantes sem vídeo" />
+        <SettingsRow label={t('prefs.hideAudioOnly.label')} description={t('prefs.hideAudioOnly.description')}>
+          <Switch checked={hideAudioOnlyTiles} onCheckedChange={setHideAudioOnlyTiles} aria-label={t('prefs.hideAudioOnly.label')} />
         </SettingsRow>
-        <SettingsRow label="Mostrar estatísticas" description="Bitrate e tempo no ar no menu de cada transmissão.">
-          <Switch checked={showStats} onCheckedChange={setShowStats} aria-label="Mostrar estatísticas" />
+        <SettingsRow label={t('prefs.stats.label')} description={t('prefs.stats.description')}>
+          <Switch checked={showStats} onCheckedChange={setShowStats} aria-label={t('prefs.stats.label')} />
         </SettingsRow>
       </SettingsSection>
 
-      <SettingsSection id="image-uploads" title="Envio de imagens">
-        <SettingsRow label="Compactar imagens por padrão" description="Reduz o tamanho antes de enviar. Vale para novos anexos a partir de agora. Um que você já preparou não é reprocessado.">
-          <Switch checked={compressImagesDefault} onCheckedChange={setCompressImagesDefault} aria-label="Compactar imagens por padrão" />
+      <SettingsSection id="image-uploads" title={t('catalog.sections.imageUploads')}>
+        <SettingsRow label={t('prefs.compress.label')} description={t('prefs.compress.description')}>
+          <Switch checked={compressImagesDefault} onCheckedChange={setCompressImagesDefault} aria-label={t('prefs.compress.label')} />
         </SettingsRow>
       </SettingsSection>
     </SettingsSections>

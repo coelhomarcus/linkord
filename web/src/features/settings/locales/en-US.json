@@ -1,7 +1,329 @@
 {
+  "title": "Settings",
+  "back": "Back to settings",
   "language": {
     "label": "Language",
     "description": "Interface language. Applies on all your devices.",
     "saveFailed": "Couldn't save the language. Try again."
+  },
+  "nav": {
+    "ariaLabel": "Settings categories",
+    "search": "Search settings",
+    "clearSearch": "Clear search",
+    "noResults": "Nothing found for \"{{query}}\".",
+    "editProfile": "Edit profile",
+    "sectionsOf": "Sections of {{category}}"
+  },
+  "catalog": {
+    "groups": {
+      "you": "You",
+      "app": "App",
+      "admin": "Administration"
+    },
+    "categories": {
+      "profile": {
+        "label": "Profile",
+        "description": "Edit right on your profile. What you see here is exactly what others will see."
+      },
+      "account": {
+        "label": "My account",
+        "description": "Identity, language, email, storage and session."
+      },
+      "privacy": {
+        "label": "Privacy",
+        "description": "Who you've blocked and what that changes."
+      },
+      "av": {
+        "label": "Audio and video",
+        "description": "Devices and your microphone processing."
+      },
+      "notifications": {
+        "label": "Notifications",
+        "description": "System alerts and app sounds."
+      },
+      "prefs": {
+        "label": "Preferences",
+        "description": "How the call looks and how images are sent. Applies only to this browser and doesn't follow your account across devices."
+      },
+      "moderation": {
+        "label": "Administration",
+        "description": "Access to the instance's admin area."
+      }
+    },
+    "sections": {
+      "identity": "Identity",
+      "language": "Language",
+      "email": "Email",
+      "storage": "Attachment storage",
+      "session": "Session",
+      "blocked": "Blocked people",
+      "microphone": "Audio input",
+      "speaker": "Audio output",
+      "camera": "Video",
+      "system": "System notifications",
+      "sounds": "Sounds",
+      "appAppearance": "App appearance",
+      "callAppearance": "Call appearance",
+      "imageUploads": "Image uploads",
+      "adminArea": "Admin area"
+    }
+  },
+  "search": {
+    "profile": {
+      "title": "Profile",
+      "keywords": "photo, avatar, banner, display name, bio, links, color"
+    },
+    "identity": {
+      "title": "Identity",
+      "keywords": "username, handle, admin"
+    },
+    "language": {
+      "title": "Language",
+      "keywords": "idioma, português, portuguese, english, translate"
+    },
+    "email": {
+      "title": "Email",
+      "keywords": "e-mail, change email, confirm email, code"
+    },
+    "storage": {
+      "title": "Attachment storage",
+      "keywords": "space, quota, files, storage"
+    },
+    "session": {
+      "title": "Session",
+      "keywords": "sign out, logout, end session"
+    },
+    "blocked": {
+      "title": "Blocked people",
+      "keywords": "blocked, unblock, block"
+    },
+    "microphone": {
+      "title": "Microphone",
+      "keywords": "mic, audio input, device"
+    },
+    "speaker": {
+      "title": "Speaker",
+      "keywords": "audio output, sound, headphones"
+    },
+    "camera": {
+      "title": "Camera",
+      "keywords": "video, webcam"
+    },
+    "system": {
+      "title": "System notifications",
+      "keywords": "permission, alerts, messages"
+    },
+    "sounds": {
+      "title": "Sounds",
+      "keywords": "volume, sound, test sound, mute"
+    },
+    "appAppearance": {
+      "title": "App appearance",
+      "keywords": "theme, colors, black, old, graphite, appearance"
+    },
+    "callAppearance": {
+      "title": "Call appearance",
+      "keywords": "banner, statistics, hide participants, tiles"
+    },
+    "imageUploads": {
+      "title": "Image uploads",
+      "keywords": "compress, image, attachment"
+    },
+    "adminArea": {
+      "title": "Admin area",
+      "keywords": "admin, report, audit, users, groups"
+    }
+  },
+  "account": {
+    "username": {
+      "label": "Username",
+      "description": "Fixed, can't be changed."
+    },
+    "admin": "Admin",
+    "displayName": {
+      "label": "Display name",
+      "description": "It's what shows up for everyone."
+    },
+    "editProfile": "Edit profile",
+    "storageBar": "Storage used",
+    "storageUsage_one": "{{used}} of {{max}} of your quota used, {{count}} file uploaded.",
+    "storageUsage_other": "{{used}} of {{max}} of your quota used, {{count}} files uploaded.",
+    "logout": {
+      "label": "Sign out",
+      "description": "Ends the session in this browser.",
+      "descriptionInCall": "Ends the session in this browser and also leaves the call in progress.",
+      "button": "Sign out"
+    }
+  },
+  "email": {
+    "none": "No email on file.",
+    "change": "Change email",
+    "changeHint": "Used to recover your account. The change will be confirmed with a code.",
+    "newLabel": "New email",
+    "sendCode": "Send code",
+    "sending": "Sending…",
+    "cancel": "Cancel",
+    "codeSent": "Enter the code sent to {{email}}. It expires in 30 minutes.",
+    "codeLabel": "Confirmation code",
+    "codeHint": "Enter the 6 digits sent to your email.",
+    "codeError": "Check the code and try again.",
+    "codeSuccess": "Email changed successfully.",
+    "codeAria": "Email confirmation code",
+    "confirm": "Confirm email",
+    "confirming": "Confirming…",
+    "resend": "Resend code",
+    "resent": "Code resent",
+    "useOther": "Use a different email",
+    "changed": "Email changed to {{email}}.",
+    "validation": {
+      "required": "Enter an email.",
+      "invalid": "Enter a valid email.",
+      "same": "Enter an email different from the current one."
+    },
+    "errors": {
+      "sendFailed": "Couldn't send the code.",
+      "resendFailed": "Couldn't resend the code.",
+      "confirmFailed": "Couldn't confirm the email."
+    }
+  },
+  "privacy": {
+    "description": "People you block can't message you or call you in a private conversation. Unblocking doesn't restore the friendship: you have to add each other again.",
+    "unblockFailed": "Couldn't unblock. Try again.",
+    "loading": "Loading…",
+    "loadFailed": "Couldn't load the list.",
+    "retry": "Try again",
+    "empty": "You haven't blocked anyone.",
+    "unblock": "Unblock"
+  },
+  "adminLink": {
+    "label": "Users, groups, reports and audit",
+    "description": "Every action asks for a reason and is logged.",
+    "open": "Open the admin area"
+  },
+  "av": {
+    "microphone": "Microphone",
+    "speaker": "Speaker",
+    "camera": "Camera",
+    "status": {
+      "unsupported": "Your browser doesn't let you pick a device here.",
+      "permission-denied": "Permission denied. Enable access in your browser settings for this site.",
+      "no-devices": "No devices found."
+    },
+    "allowAccess": "Allow access to see device names",
+    "systemDefault": "System default",
+    "switchHelp": "The change applies right away, even during a call.",
+    "micTest": "Test microphone",
+    "stopTest": "Stop test",
+    "micLevel": "Microphone level",
+    "speakerTest": "Test",
+    "playing": "Playing…",
+    "previewStart": "Start preview",
+    "previewStop": "Stop preview"
+  },
+  "deviceErrors": {
+    "switchFailed": "Couldn't switch the device. Try again.",
+    "micUnsupported": "Your browser doesn't support testing the microphone.",
+    "micDenied": "Couldn't access the microphone.",
+    "micFailed": "Couldn't test the microphone right now.",
+    "cameraUnsupported": "Your browser doesn't support previewing the camera.",
+    "cameraDenied": "Couldn't access the camera.",
+    "cameraFailed": "Couldn't preview the camera right now.",
+    "speakerFailed": "Couldn't play the test sound."
+  },
+  "notifications": {
+    "label": "Linkord notifications",
+    "description": "Messages, mentions, friend requests and invitations, even with the app closed.",
+    "status": {
+      "default": "Permission required. The browser will ask when you turn this on.",
+      "denied": "Blocked in the browser. Allow access in your browser settings for this site.",
+      "unsupported": "Not available in this browser."
+    },
+    "ios": "On iPhone, add Linkord to your Home Screen, open it from the icon and come back here to turn on notifications.",
+    "pushUnavailable": "Push unavailable: check the server configuration.",
+    "preparing": "Preparing notifications...",
+    "errors": {
+      "blocked": "Notifications blocked. Allow access in your browser settings to enable them.",
+      "unavailable": "Push notifications unavailable. Check the app installation and the server configuration.",
+      "enableFailed": "Couldn't turn on notifications. Check the app's permission and try again."
+    },
+    "volume": {
+      "label": "Notification volume",
+      "description": "Mute/unmute, deafen, join/leave call, camera, screen and new message.",
+      "muted": "Muted",
+      "test": "Test sound"
+    }
+  },
+  "prefs": {
+    "theme": {
+      "label": "Color theme",
+      "description": "Changes the interface's backgrounds, text and buttons on this device."
+    },
+    "banners": {
+      "label": "Show participant banners",
+      "description": "Shows the profile banner as the background of call cards.",
+      "aria": "Show banners on tiles"
+    },
+    "hideAudioOnly": {
+      "label": "Hide participants without video",
+      "description": "Hides the cards of people who are audio-only, leaving the stage to those with camera or screen on."
+    },
+    "stats": {
+      "label": "Show statistics",
+      "description": "Bitrate and time live in each stream's menu."
+    },
+    "compress": {
+      "label": "Compress images by default",
+      "description": "Reduces the size before sending. Applies to new attachments from now on. One you've already prepared isn't reprocessed."
+    }
+  },
+  "profile": {
+    "fileTooLarge": "File too large (maximum {{max}}).",
+    "uploadFailed": {
+      "avatar": "Failed to upload the photo.",
+      "banner": "Failed to upload the banner."
+    },
+    "removeFailed": {
+      "avatar": "Couldn't remove the photo.",
+      "banner": "Couldn't remove the banner."
+    },
+    "avatarInput": "Select profile photo",
+    "bannerInput": "Select banner",
+    "formats": "PNG, JPEG, GIF or WEBP, up to {{max}}. Photo and banner apply as soon as you confirm the crop; name, color, bio and links only after saving.",
+    "saved": "Profile saved.",
+    "conflict": "This profile was updated elsewhere while you were editing.",
+    "useSaved": "Use saved values",
+    "barLabel": "Save profile changes",
+    "unsavedNotice": "You have unsaved changes.",
+    "discard": "Discard",
+    "save": "Save profile",
+    "saving": "Saving…",
+    "cropTitle": {
+      "avatar": "Crop profile photo",
+      "banner": "Crop banner"
+    },
+    "uploadingTitle": {
+      "avatar": "Uploading the profile photo…",
+      "banner": "Uploading the banner…"
+    }
+  },
+  "unsaved": {
+    "title": "Unsaved changes",
+    "description": "You edited your profile and haven't saved yet. What do you want to do?",
+    "saveAndLeave": "Save and leave",
+    "saving": "Saving…",
+    "discardAndLeave": "Discard and leave",
+    "continueEditing": "Keep editing"
+  },
+  "crop": {
+    "processing": "Processing image…",
+    "processingDescription": "Preparing the image for upload. Animated GIFs can take a few seconds.",
+    "cancel": "Cancel",
+    "save": "Save",
+    "errors": {
+      "loadProcessor": "Couldn't load the image processor.",
+      "outOfBounds": "Crop is outside the image bounds.",
+      "invalidCrop": "Invalid crop.",
+      "processFailed": "Couldn't process the image."
+    }
   }
 }

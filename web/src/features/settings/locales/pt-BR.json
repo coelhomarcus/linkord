@@ -1,7 +1,330 @@
 {
+  "title": "Ajustes",
+  "back": "Voltar às configurações",
   "language": {
     "label": "Idioma",
     "description": "Idioma da interface. Vale em todos os seus dispositivos.",
     "saveFailed": "Não foi possível salvar o idioma. Tente de novo."
+  },
+  "nav": {
+    "ariaLabel": "Categorias de ajustes",
+    "search": "Buscar nas configurações",
+    "clearSearch": "Limpar busca",
+    "noResults": "Nada encontrado para \"{{query}}\".",
+    "editProfile": "Editar perfil",
+    "sectionsOf": "Seções de {{category}}"
+  },
+  "catalog": {
+    "groups": {
+      "you": "Você",
+      "app": "Aplicativo",
+      "admin": "Administração"
+    },
+    "categories": {
+      "profile": {
+        "label": "Perfil",
+        "description": "Edite direto no seu perfil. O que você vê aqui é exatamente o que os outros vão ver."
+      },
+      "account": {
+        "label": "Minha conta",
+        "description": "Identificação, idioma, e-mail, armazenamento e sessão."
+      },
+      "privacy": {
+        "label": "Privacidade",
+        "description": "Quem você bloqueou e o que isso muda."
+      },
+      "av": {
+        "label": "Áudio e vídeo",
+        "description": "Dispositivos e o processamento do seu microfone."
+      },
+      "notifications": {
+        "label": "Notificações",
+        "description": "Avisos do sistema e sons do app."
+      },
+      "prefs": {
+        "label": "Preferências",
+        "description": "Como a chamada aparece e como imagens são enviadas. Vale só neste navegador e não acompanha a conta entre dispositivos."
+      },
+      "moderation": {
+        "label": "Administração",
+        "description": "Acesso à área administrativa da instância."
+      }
+    },
+    "sections": {
+      "identity": "Identificação",
+      "language": "Idioma",
+      "email": "E-mail",
+      "storage": "Armazenamento de anexos",
+      "session": "Sessão",
+      "blocked": "Pessoas bloqueadas",
+      "microphone": "Entrada de áudio",
+      "speaker": "Saída de áudio",
+      "camera": "Vídeo",
+      "system": "Notificações do sistema",
+      "sounds": "Sons",
+      "appAppearance": "Aparência do app",
+      "callAppearance": "Aparência da chamada",
+      "imageUploads": "Envio de imagens",
+      "adminArea": "Área administrativa"
+    }
+  },
+  "search": {
+    "profile": {
+      "title": "Perfil",
+      "keywords": "foto, avatar, banner, nome de exibição, bio, links, cor"
+    },
+    "identity": {
+      "title": "Identificação",
+      "keywords": "nome de usuário, username, admin"
+    },
+    "language": {
+      "title": "Idioma",
+      "keywords": "language, português, inglês, english, traduzir"
+    },
+    "email": {
+      "title": "E-mail",
+      "keywords": "email, trocar e-mail, confirmar e-mail, código"
+    },
+    "storage": {
+      "title": "Armazenamento de anexos",
+      "keywords": "espaço, cota, arquivos, storage"
+    },
+    "session": {
+      "title": "Sessão",
+      "keywords": "sair, logout, encerrar sessão"
+    },
+    "blocked": {
+      "title": "Pessoas bloqueadas",
+      "keywords": "bloqueado, desbloquear, bloquear"
+    },
+    "microphone": {
+      "title": "Microfone",
+      "keywords": "mic, entrada de áudio, dispositivo"
+    },
+    "speaker": {
+      "title": "Alto-falante",
+      "keywords": "saída de áudio, som, fone"
+    },
+    "camera": {
+      "title": "Câmera",
+      "keywords": "vídeo, webcam"
+    },
+    "system": {
+      "title": "Notificações do sistema",
+      "keywords": "permissão, avisos, mensagens"
+    },
+    "sounds": {
+      "title": "Sons",
+      "keywords": "volume, som, testar som, mudo"
+    },
+    "appAppearance": {
+      "title": "Aparência do app",
+      "keywords": "tema, cores, black, preto, old, antigo, graphite, grafite, aparência"
+    },
+    "callAppearance": {
+      "title": "Aparência da chamada",
+      "keywords": "banner, estatísticas, ocultar participantes, tiles"
+    },
+    "imageUploads": {
+      "title": "Envio de imagens",
+      "keywords": "compactar, imagem, anexo"
+    },
+    "adminArea": {
+      "title": "Área administrativa",
+      "keywords": "admin, denúncia, auditoria, usuários, grupos"
+    }
+  },
+  "account": {
+    "username": {
+      "label": "Nome de usuário",
+      "description": "Fixo, não pode ser trocado."
+    },
+    "admin": "Admin",
+    "displayName": {
+      "label": "Nome de exibição",
+      "description": "É o que aparece para todo mundo."
+    },
+    "editProfile": "Editar perfil",
+    "storageBar": "Armazenamento usado",
+    "storageUsage_zero": "{{used}} de {{max}} da sua cota usados, nenhum arquivo enviado.",
+    "storageUsage_one": "{{used}} de {{max}} da sua cota usados, {{count}} arquivo enviado.",
+    "storageUsage_other": "{{used}} de {{max}} da sua cota usados, {{count}} arquivos enviados.",
+    "logout": {
+      "label": "Sair da conta",
+      "description": "Encerra a sessão neste navegador.",
+      "descriptionInCall": "Encerra a sessão neste navegador e também sai da chamada em andamento.",
+      "button": "Sair da conta"
+    }
+  },
+  "email": {
+    "none": "Nenhum e-mail cadastrado.",
+    "change": "Alterar e-mail",
+    "changeHint": "Usado para recuperar sua conta. A alteração será confirmada por código.",
+    "newLabel": "Novo e-mail",
+    "sendCode": "Enviar código",
+    "sending": "Enviando…",
+    "cancel": "Cancelar",
+    "codeSent": "Digite o código enviado para {{email}}. Ele expira em 30 minutos.",
+    "codeLabel": "Código de confirmação",
+    "codeHint": "Digite os 6 dígitos enviados para seu e-mail.",
+    "codeError": "Confira o código e tente novamente.",
+    "codeSuccess": "E-mail alterado com sucesso.",
+    "codeAria": "Código de confirmação de e-mail",
+    "confirm": "Confirmar e-mail",
+    "confirming": "Confirmando…",
+    "resend": "Reenviar código",
+    "resent": "Código reenviado",
+    "useOther": "Usar outro e-mail",
+    "changed": "E-mail alterado para {{email}}.",
+    "validation": {
+      "required": "Informe um e-mail.",
+      "invalid": "Informe um e-mail válido.",
+      "same": "Informe um e-mail diferente do atual."
+    },
+    "errors": {
+      "sendFailed": "Não foi possível enviar o código.",
+      "resendFailed": "Não foi possível reenviar o código.",
+      "confirmFailed": "Não foi possível confirmar o e-mail."
+    }
+  },
+  "privacy": {
+    "description": "Quem você bloqueia não consegue te enviar mensagens nem te ligar em conversa privada. Desbloquear não devolve a amizade: vocês precisam se adicionar de novo.",
+    "unblockFailed": "Não foi possível desbloquear. Tente de novo.",
+    "loading": "Carregando…",
+    "loadFailed": "Não foi possível carregar a lista.",
+    "retry": "Tentar de novo",
+    "empty": "Você não bloqueou ninguém.",
+    "unblock": "Desbloquear"
+  },
+  "adminLink": {
+    "label": "Usuários, grupos, denúncias e auditoria",
+    "description": "Toda ação pede um motivo e fica registrada.",
+    "open": "Abrir a área administrativa"
+  },
+  "av": {
+    "microphone": "Microfone",
+    "speaker": "Alto-falante",
+    "camera": "Câmera",
+    "status": {
+      "unsupported": "Seu navegador não permite escolher dispositivo aqui.",
+      "permission-denied": "Permissão negada. Habilite o acesso nas configurações do navegador pra este site.",
+      "no-devices": "Nenhum dispositivo encontrado."
+    },
+    "allowAccess": "Permitir acesso pra ver os nomes dos dispositivos",
+    "systemDefault": "Padrão do sistema",
+    "switchHelp": "A troca vale na hora, mesmo durante uma chamada.",
+    "micTest": "Testar microfone",
+    "stopTest": "Parar teste",
+    "micLevel": "Nível do microfone",
+    "speakerTest": "Testar",
+    "playing": "Tocando…",
+    "previewStart": "Ativar prévia",
+    "previewStop": "Parar prévia"
+  },
+  "deviceErrors": {
+    "switchFailed": "Não foi possível trocar o dispositivo. Tente de novo.",
+    "micUnsupported": "Seu navegador não suporta testar o microfone.",
+    "micDenied": "Não foi possível acessar o microfone.",
+    "micFailed": "Não foi possível testar o microfone agora.",
+    "cameraUnsupported": "Seu navegador não suporta pré-visualizar a câmera.",
+    "cameraDenied": "Não foi possível acessar a câmera.",
+    "cameraFailed": "Não foi possível pré-visualizar a câmera agora.",
+    "speakerFailed": "Não foi possível tocar o som de teste."
+  },
+  "notifications": {
+    "label": "Notificações do Linkord",
+    "description": "Mensagens, menções, solicitações de amizade e convites, mesmo com o app fechado.",
+    "status": {
+      "default": "Permissão necessária. O navegador vai perguntar quando você ativar.",
+      "denied": "Bloqueadas no navegador. Permita o acesso nas configurações do navegador pra este site.",
+      "unsupported": "Não disponíveis neste navegador."
+    },
+    "ios": "No iPhone, adicione o Linkord à Tela de Início, abra pelo ícone e volte aqui para ativar as notificações.",
+    "pushUnavailable": "Push indisponível: confira a configuração do servidor.",
+    "preparing": "Preparando notificações...",
+    "errors": {
+      "blocked": "Notificações bloqueadas. Permita o acesso nas configurações do navegador para habilitar.",
+      "unavailable": "Notificações push indisponíveis. Verifique a instalação do app e a configuração do servidor.",
+      "enableFailed": "Não foi possível ativar as notificações. Confira a permissão do app e tente novamente."
+    },
+    "volume": {
+      "label": "Volume das notificações",
+      "description": "Mutar/desmutar, ensurdecer, entrar/sair da chamada, câmera, tela e mensagem nova.",
+      "muted": "Mudo",
+      "test": "Testar som"
+    }
+  },
+  "prefs": {
+    "theme": {
+      "label": "Tema de cores",
+      "description": "Muda fundos, textos e botões da interface neste dispositivo."
+    },
+    "banners": {
+      "label": "Mostrar banners dos participantes",
+      "description": "Exibe o banner do perfil como fundo dos cartões da chamada.",
+      "aria": "Mostrar banners nos tiles"
+    },
+    "hideAudioOnly": {
+      "label": "Ocultar participantes sem vídeo",
+      "description": "Some com os cartões de quem só está no áudio, deixando o palco só para quem está com câmera ou tela ligada."
+    },
+    "stats": {
+      "label": "Mostrar estatísticas",
+      "description": "Bitrate e tempo no ar no menu de cada transmissão."
+    },
+    "compress": {
+      "label": "Compactar imagens por padrão",
+      "description": "Reduz o tamanho antes de enviar. Vale para novos anexos a partir de agora. Um que você já preparou não é reprocessado."
+    }
+  },
+  "profile": {
+    "fileTooLarge": "Arquivo muito grande (máximo {{max}}).",
+    "uploadFailed": {
+      "avatar": "Falha ao enviar a foto.",
+      "banner": "Falha ao enviar o banner."
+    },
+    "removeFailed": {
+      "avatar": "Não foi possível remover a foto.",
+      "banner": "Não foi possível remover o banner."
+    },
+    "avatarInput": "Selecionar foto de perfil",
+    "bannerInput": "Selecionar banner",
+    "formats": "PNG, JPEG, GIF ou WEBP, até {{max}}. Foto e banner valem assim que você confirma o recorte; nome, cor, bio e links só depois de salvar.",
+    "saved": "Perfil salvo.",
+    "conflict": "Este perfil foi atualizado em outro lugar enquanto você editava.",
+    "useSaved": "Usar valores salvos",
+    "barLabel": "Salvar alterações do perfil",
+    "unsavedNotice": "Você tem alterações não salvas.",
+    "discard": "Descartar",
+    "save": "Salvar perfil",
+    "saving": "Salvando…",
+    "cropTitle": {
+      "avatar": "Recortar foto de perfil",
+      "banner": "Recortar banner"
+    },
+    "uploadingTitle": {
+      "avatar": "Enviando a foto de perfil…",
+      "banner": "Enviando o banner…"
+    }
+  },
+  "unsaved": {
+    "title": "Alterações não salvas",
+    "description": "Você editou seu perfil e ainda não salvou. O que você quer fazer?",
+    "saveAndLeave": "Salvar e sair",
+    "saving": "Salvando…",
+    "discardAndLeave": "Descartar e sair",
+    "continueEditing": "Continuar editando"
+  },
+  "crop": {
+    "processing": "Processando imagem…",
+    "processingDescription": "Preparando a imagem para o upload. GIFs animados podem levar alguns segundos.",
+    "cancel": "Cancelar",
+    "save": "Salvar",
+    "errors": {
+      "loadProcessor": "Não foi possível carregar o processador de imagem.",
+      "outOfBounds": "Recorte fora dos limites da imagem.",
+      "invalidCrop": "Recorte inválido.",
+      "processFailed": "Não foi possível processar a imagem."
+    }
   }
 }

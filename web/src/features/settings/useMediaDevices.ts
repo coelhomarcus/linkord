@@ -3,6 +3,7 @@ import { Room } from 'livekit-client';
 import type { Room as LKRoom } from 'livekit-client';
 import { loadDevicePreference, saveDevicePreference } from './useDevicePreference';
 import { logger } from '@/shared/lib/logger';
+import { i18n } from '@/shared/i18n/init';
 
 const log = logger.child({ component: 'devices' });
 
@@ -100,7 +101,7 @@ export function useMediaDevices(room: LKRoom, kind: MediaDeviceKind): MediaDevic
       saveDevicePreference(kind, deviceId);
     } catch (err) {
       log.warn('Failed to switch active device', { kind, err: String(err) });
-      setError('Não foi possível trocar o dispositivo. Tente de novo.');
+      setError(i18n.t('settings:deviceErrors.switchFailed'));
     } finally {
       setSwitching(false);
     }

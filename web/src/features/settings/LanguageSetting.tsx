@@ -11,7 +11,7 @@ export function LanguageSetting() {
   const nativeName = (code: string) => LANGUAGES.find((entry) => entry.code === code)?.nativeName ?? code;
 
   return (
-    <SettingsSection id="language" title={t('language.label')}>
+    <SettingsSection id="language" title={t('catalog.sections.language')}>
       <SettingsRow label={t('language.label')} description={t('language.description')}>
         <Select value={language} onValueChange={(value) => { if (isLanguage(value)) void setLanguage(value); }}>
           <SelectTrigger aria-label={t('language.label')} className="w-full max-w-xs">

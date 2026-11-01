@@ -1,4 +1,5 @@
 import { CaretRightIcon, MagnifyingGlassIcon } from '@phosphor-icons/react';
+import { useTranslation } from 'react-i18next';
 import { iconWeight } from '@/shared/ui/icons';
 
 import { ROUTES } from '@/shared/lib/routes';
@@ -16,17 +17,18 @@ function GroupLabel({ children }: { children: string }) {
 }
 
 function SettingsSearchField({ query, onChange, onClear }: { query: string; onChange: (value: string) => void; onClear: () => void }) {
+  const { t } = useTranslation('settings');
   return (
     <div className="mb-3 flex flex-none items-center gap-2 rounded-md border border-border bg-fill-subtle px-3">
       <MagnifyingGlassIcon size={20} className="flex-none text-text-muted" aria-hidden />
       <input
         value={query}
         onChange={(event) => onChange(event.target.value)}
-        placeholder="Buscar nas configurações"
-        aria-label="Buscar nas configurações"
+        placeholder={t('nav.search')}
+        aria-label={t('nav.search')}
         className="h-9 min-w-0 flex-1 bg-transparent text-label outline-none placeholder:text-text-muted"
       />
-      {query && <CloseButton size="xs" label="Limpar busca" onClick={onClear} />}
+      {query && <CloseButton size="xs" label={t('nav.clearSearch')} onClick={onClear} />}
     </div>
   );
 }
@@ -34,12 +36,13 @@ function SettingsSearchField({ query, onChange, onClear }: { query: string; onCh
 /** The single-column results list, shared by both nav surfaces — a search
  * result is already a flat list regardless of which one triggered it. */
 function SettingsSearchResults({ results, query }: { results: SettingsSearchResult[]; query: string }) {
+  const { t } = useTranslation('settings');
   if (results.length === 0) {
-    return <p className="px-2.5 py-4 text-label text-text-muted">Nada encontrado para "{query}".</p>;
+    return <p className="px-2.5 py-4 text-label text-text-muted">{t('nav.noResults', { query })}</p>;
   }
   return (
     <div className="flex flex-col gap-0.5">
-      {results.map(({ entry, categoryLabel }) => {
+      {results.map(({ entry, title, categoryLabel }) => {
         const category = findCategory(entry.categoryId);
         const Icon = category.icon;
         const to = entry.sectionId ? `${ROUTES.settingsTab(entry.categoryId)}#${entry.sectionId}` : ROUTES.settingsTab(entry.categoryId);
@@ -51,7 +54,7 @@ function SettingsSearchResults({ results, query }: { results: SettingsSearchResu
           >
             <Icon size={20} aria-hidden className="flex-none text-text-muted" />
             <span className="min-w-0 flex-1">
-              <span className="block truncate">{entry.title}</span>
+              <span className="block truncate">{title}</span>
               <span className="block truncate text-caption text-text-muted">{categoryLabel}</span>
             </span>
           </AppLink>
@@ -65,17 +68,18 @@ function SettingsSearchResults({ results, query }: { results: SettingsSearchResu
  * per-section list under the open category did nothing visible on pages that
  * fit on screen, so the page's own titles are the way around it. */
 export function SettingsSidebar({ active, isAdmin }: { active: SettingsTab; isAdmin: boolean }) {
+  const { t } = useTranslation('settings');
   const { query, setQuery, results } = useSettingsSearch(isAdmin);
   return (
-    <nav aria-label="Categorias de ajustes" className="flex w-64 flex-none flex-col overflow-y-auto border-r border-border p-3">
+    <nav aria-label={t('nav.ariaLabel')} className="flex w-64 flex-none flex-col overflow-y-auto border-r border-border p-3">
       <SettingsSearchField query={query} onChange={setQuery} onClear={() => setQuery('')} />
       {query ? (
         <SettingsSearchResults results={results} query={query} />
       ) : (
         <div className="flex flex-col gap-0.5">
           {visibleGroups(isAdmin).map((group) => (
-            <div key={group.label} className="flex flex-col gap-0.5 pt-4 first:pt-0">
-              <GroupLabel>{group.label}</GroupLabel>
+            <div key={group.labelKey} className="flex flex-col gap-0.5 pt-4 first:pt-0">
+              <GroupLabel>{t(group.labelKey)}</GroupLabel>
               {group.categories.map((category) => {
                 const Icon = category.icon;
                 const current = category.id === active;
@@ -92,7 +96,7 @@ export function SettingsSidebar({ active, isAdmin }: { active: SettingsTab; isAd
                     {/* Discord/Fluxer: a plain light-gray fill for the active item, no accent color */}
                     {current && <ActiveFill />}
                     <Icon size={20} weight={iconWeight(current)} aria-hidden className="flex-none" />
-                    <span className="truncate">{category.label}</span>
+                    <span className="truncate">{t(category.labelKey)}</span>
                   </AppLink>
                 );
               })}
@@ -107,17 +111,18 @@ export function SettingsSidebar({ active, isAdmin }: { active: SettingsTab; isAd
 /** The compact landing screen: the same groups, icons and labels as the sidebar,
  * one full-width row each. */
 export function SettingsIndex({ isAdmin }: { isAdmin: boolean }) {
+  const { t } = useTranslation('settings');
   const { query, setQuery, results } = useSettingsSearch(isAdmin);
   return (
-    <nav aria-label="Categorias de ajustes" className="flex flex-col px-4 py-4 @[520px]:px-6">
+    <nav aria-label={t('nav.ariaLabel')} className="flex flex-col px-4 py-4 @[520px]:px-6">
       <SettingsSearchField query={query} onChange={setQuery} onClear={() => setQuery('')} />
       {query ? (
         <SettingsSearchResults results={results} query={query} />
       ) : (
         <div className="flex flex-col gap-1">
           {visibleGroups(isAdmin).map((group) => (
-            <div key={group.label} className="flex flex-col gap-0.5 pt-4 first:pt-0">
-              <GroupLabel>{group.label}</GroupLabel>
+            <div key={group.labelKey} className="flex flex-col gap-0.5 pt-4 first:pt-0">
+              <GroupLabel>{t(group.labelKey)}</GroupLabel>
               {group.categories.map((category) => {
                 const Icon = category.icon;
                 return (
@@ -128,7 +133,7 @@ export function SettingsIndex({ isAdmin }: { isAdmin: boolean }) {
                     className="flex min-h-11 items-center gap-3 rounded-md px-2.5 text-body font-medium text-text-primary outline-none hover:bg-nav-hover focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <Icon size={20} aria-hidden className="flex-none text-text-muted" />
-                    <span className="min-w-0 flex-1 truncate">{category.label}</span>
+                    <span className="min-w-0 flex-1 truncate">{t(category.labelKey)}</span>
                     <CaretRightIcon size={16} aria-hidden className="flex-none text-text-muted" />
                   </AppLink>
                 );

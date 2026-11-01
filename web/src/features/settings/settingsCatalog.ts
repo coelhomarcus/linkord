@@ -1,47 +1,76 @@
+import type { ParseKeys } from 'i18next';
 import { BellIcon, GearSixIcon, HeadphonesIcon, IdentificationCardIcon, LockIcon, ShieldCheckIcon, UserIcon } from '@phosphor-icons/react';
 
 import type { IconComponent } from '@/shared/ui/icons';
 import type { SettingsTab } from '@/shared/lib/routes';
 
+/** An i18n key of the `settings` namespace. */
+export type SettingsKey = ParseKeys<'settings'>;
+
+/** A titled block of a category: `id` is the `<SettingsSection id>` it points at. */
+export interface SettingsSectionRef {
+  id: string;
+  labelKey: SettingsKey;
+}
+
 export interface SettingsCategory {
   id: SettingsTab;
-  label: string;
+  labelKey: SettingsKey;
   /** one line under the page title */
-  description: string;
+  descriptionKey: SettingsKey;
   icon: IconComponent;
   adminOnly?: boolean;
+  sections?: SettingsSectionRef[];
 }
 
 export interface SettingsGroup {
-  label: string;
+  labelKey: SettingsKey;
   categories: SettingsCategory[];
 }
 
 // One catalog feeds the desktop sidebar and the compact index, so the two can't
 // drift apart. Ids are the public URLs (/app/settings/:id): labels can change,
-// ids can't.
+// ids can't. Labels are i18n keys, resolved where they are rendered so a
+// language switch needs no reload.
 export const SETTINGS_GROUPS: SettingsGroup[] = [
   {
-    label: 'Você',
+    labelKey: 'catalog.groups.you',
     categories: [
-      { id: 'profile', label: 'Perfil', description: 'Edite direto no seu perfil. O que você vê aqui é exatamente o que os outros vão ver.', icon: UserIcon },
-      { id: 'account', label: 'Minha conta', description: 'Identificação, e-mail, armazenamento e sessão.', icon: IdentificationCardIcon,
-        sections: [{ id: 'identity', label: 'Identificação' }, { id: 'language', label: 'Idioma' }, { id: 'email', label: 'E-mail' }, { id: 'storage', label: 'Armazenamento de anexos' }, { id: 'session', label: 'Sessão' }] },
-      { id: 'privacy', label: 'Privacidade', description: 'Quem você bloqueou e o que isso muda.', icon: LockIcon },
+      { id: 'profile', labelKey: 'catalog.categories.profile.label', descriptionKey: 'catalog.categories.profile.description', icon: UserIcon },
+      { id: 'account', labelKey: 'catalog.categories.account.label', descriptionKey: 'catalog.categories.account.description', icon: IdentificationCardIcon,
+        sections: [
+          { id: 'identity', labelKey: 'catalog.sections.identity' },
+          { id: 'language', labelKey: 'catalog.sections.language' },
+          { id: 'email', labelKey: 'catalog.sections.email' },
+          { id: 'storage', labelKey: 'catalog.sections.storage' },
+          { id: 'session', labelKey: 'catalog.sections.session' },
+        ] },
+      { id: 'privacy', labelKey: 'catalog.categories.privacy.label', descriptionKey: 'catalog.categories.privacy.description', icon: LockIcon },
     ],
   },
   {
-    label: 'Aplicativo',
+    labelKey: 'catalog.groups.app',
     categories: [
-      { id: 'av', label: 'Áudio e vídeo', description: 'Dispositivos e o processamento do seu microfone.', icon: HeadphonesIcon },
-      { id: 'notifications', label: 'Notificações', description: 'Avisos do sistema e sons do app.', icon: BellIcon },
-      { id: 'prefs', label: 'Preferências', description: 'Como a chamada aparece e como imagens são enviadas. Vale só neste navegador e não acompanha a conta entre dispositivos.', icon: GearSixIcon },
+      { id: 'av', labelKey: 'catalog.categories.av.label', descriptionKey: 'catalog.categories.av.description', icon: HeadphonesIcon,
+        sections: [
+          { id: 'microphone', labelKey: 'catalog.sections.microphone' },
+          { id: 'speaker', labelKey: 'catalog.sections.speaker' },
+          { id: 'camera', labelKey: 'catalog.sections.camera' },
+        ] },
+      { id: 'notifications', labelKey: 'catalog.categories.notifications.label', descriptionKey: 'catalog.categories.notifications.description', icon: BellIcon,
+        sections: [{ id: 'system', labelKey: 'catalog.sections.system' }, { id: 'sounds', labelKey: 'catalog.sections.sounds' }] },
+      { id: 'prefs', labelKey: 'catalog.categories.prefs.label', descriptionKey: 'catalog.categories.prefs.description', icon: GearSixIcon,
+        sections: [
+          { id: 'app-appearance', labelKey: 'catalog.sections.appAppearance' },
+          { id: 'call-appearance', labelKey: 'catalog.sections.callAppearance' },
+          { id: 'image-uploads', labelKey: 'catalog.sections.imageUploads' },
+        ] },
     ],
   },
   {
-    label: 'Administração',
+    labelKey: 'catalog.groups.admin',
     categories: [
-      { id: 'moderation', label: 'Administração', description: 'Acesso à área administrativa da instância.', icon: ShieldCheckIcon, adminOnly: true },
+      { id: 'moderation', labelKey: 'catalog.categories.moderation.label', descriptionKey: 'catalog.categories.moderation.description', icon: ShieldCheckIcon, adminOnly: true },
     ],
   },
 ];
