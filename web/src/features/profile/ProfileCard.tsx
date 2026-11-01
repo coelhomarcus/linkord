@@ -1,6 +1,7 @@
 import { ArrowSquareOutIcon, AtIcon, CameraIcon, CheckIcon, CircleNotchIcon, LinkIcon, PaletteIcon, PencilSimpleIcon, PlusIcon, SealCheckIcon, TrashIcon, UploadSimpleIcon } from '@phosphor-icons/react';
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { Avatar, AVATAR_COLOR_OPTIONS } from '@/shared/Avatar';
@@ -66,6 +67,7 @@ interface ProfileCardProps {
 }
 
 function EditableBio({ value, onChange, disabled }: { value: string; onChange: (value: string) => void; disabled?: boolean }) {
+  const { t } = useTranslation('profile');
   const ref = useRef<HTMLTextAreaElement | null>(null);
 
   useLayoutEffect(() => {
@@ -79,10 +81,10 @@ function EditableBio({ value, onChange, disabled }: { value: string; onChange: (
     <div className="mt-4 flex flex-col items-end gap-1">
       <textarea
         ref={ref}
-        aria-label="Bio"
+        aria-label={t('card.bio')}
         value={value}
         onChange={(e) => onChange(e.target.value.slice(0, MAX_PROFILE_BIO_LEN))}
-        placeholder="Fale um pouco sobre você..."
+        placeholder={t('card.bioPlaceholder')}
         rows={1}
         disabled={disabled}
         className="w-full resize-none overflow-hidden whitespace-pre-wrap bg-transparent text-body leading-relaxed text-text-secondary outline-none placeholder:text-text-muted/70 disabled:opacity-60"
@@ -100,6 +102,7 @@ export function ProfileCard({
   onDisplayNameChange, onBioChange, onAvatarColorChange,
   editableLinks, onLinkChange, onAddLink, onRemoveLink, bare, fieldsDisabled, actions, nameAction, footer, hideLinks,
 }: ProfileCardProps) {
+  const { t } = useTranslation('profile');
   const links = (user.profileLinks ?? []).map(linkInfo).filter((item): item is LinkInfo => !!item);
   const linksEditable = editableLinks !== undefined && onLinkChange && onAddLink && onRemoveLink;
   const isCustomAvatarColor = !AVATAR_COLOR_OPTIONS.some((option) => option.value === user.avatarColor);
@@ -126,7 +129,7 @@ export function ProfileCard({
               render={
                 <button
                   type="button"
-                  aria-label="Alterar banner"
+                  aria-label={t('card.changeBanner')}
                   className="absolute inset-0 flex items-center justify-center bg-black/0 text-transparent transition-colors group-hover:bg-black/40 group-hover:text-white focus-visible:bg-black/40 focus-visible:text-white focus-visible:outline-none disabled:cursor-default"
                 />
               }
@@ -136,12 +139,12 @@ export function ProfileCard({
             <DropdownMenuContent align="center" className="w-max min-w-0">
               <DropdownMenuItem onClick={onBannerUpload}>
                 <UploadSimpleIcon size={14} />
-                <span>Enviar do computador</span>
+                <span>{t('card.uploadFromComputer')}</span>
               </DropdownMenuItem>
               {user.banner && onBannerRemove && (
                 <DropdownMenuItem variant="destructive" onClick={onBannerRemove}>
                   <TrashIcon size={14} />
-                  <span>Remover banner</span>
+                  <span>{t('card.removeBanner')}</span>
                 </DropdownMenuItem>
               )}
             </DropdownMenuContent>
@@ -150,7 +153,7 @@ export function ProfileCard({
       ) : onBannerClick ? (
         <button
           type="button"
-          aria-label="Ver banner em tela cheia"
+          aria-label={t('card.viewBanner')}
           onClick={onBannerClick}
           className="block w-full cursor-zoom-in"
           style={{ ...bannerStyle(user), aspectRatio: BANNER_ASPECT_RATIO }}
@@ -170,7 +173,7 @@ export function ProfileCard({
                     render={
                       <button
                         type="button"
-                        aria-label="Alterar foto de perfil"
+                        aria-label={t('card.changeAvatar')}
                         className="absolute inset-0 flex items-center justify-center rounded-full bg-black/0 text-transparent transition-colors group-hover:bg-black/50 group-hover:text-white focus-visible:bg-black/50 focus-visible:text-white focus-visible:outline-none disabled:cursor-default"
                       />
                     }
@@ -180,12 +183,12 @@ export function ProfileCard({
                   <DropdownMenuContent align="start" className="w-max min-w-0">
                     <DropdownMenuItem onClick={onAvatarUpload}>
                       <UploadSimpleIcon size={14} />
-                      <span>Enviar do computador</span>
+                      <span>{t('card.uploadFromComputer')}</span>
                     </DropdownMenuItem>
                     {user.avatar && onAvatarRemove && (
                       <DropdownMenuItem variant="destructive" onClick={onAvatarRemove}>
                         <TrashIcon size={14} />
-                        <span>Remover foto</span>
+                        <span>{t('card.removeAvatar')}</span>
                       </DropdownMenuItem>
                     )}
                   </DropdownMenuContent>
@@ -194,7 +197,7 @@ export function ProfileCard({
             ) : user.avatar && onAvatarClick ? (
               <button
                 type="button"
-                aria-label="Ver foto de perfil em tela cheia"
+                aria-label={t('card.viewAvatar')}
                 onClick={onAvatarClick}
                 className="block cursor-zoom-in rounded-full focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
               >
@@ -221,7 +224,7 @@ export function ProfileCard({
                       render={
                         <button
                           type="button"
-                          aria-label={`Usar ${option.label}`}
+                          aria-label={t('card.useColor', { name: option.label })}
                           aria-pressed={selected}
                           disabled={fieldsDisabled}
                           onClick={() => onAvatarColorChange(option.value)}
@@ -240,7 +243,7 @@ export function ProfileCard({
                 );
               })}
               <label
-                title="Cor personalizada"
+                title={t('card.customColorTitle')}
                 className={cn(
                   'relative flex h-5 w-5 items-center justify-center rounded-full border transition focus-within:outline-none focus-within:ring-3 focus-within:ring-ring/40',
                   isCustomAvatarColor ? 'border-text-primary ring-2 ring-ring/40 ring-offset-1 ring-offset-bg-modal' : 'border-border-strong hover:border-text-muted'
@@ -248,7 +251,7 @@ export function ProfileCard({
               >
                 <input
                   type="color"
-                  aria-label="Escolher cor personalizada"
+                  aria-label={t('card.customColorLabel')}
                   aria-pressed={isCustomAvatarColor}
                   disabled={fieldsDisabled}
                   value={isCustomAvatarColor ? user.avatarColor : '#6b7280'}
@@ -268,7 +271,7 @@ export function ProfileCard({
             // the pencil and underline are the only hint that the name is a field
             <label className="group/name flex min-w-0 items-center gap-2 border-b border-transparent focus-within:border-primary/50 hover:border-border-strong">
               <input
-                aria-label="Nome de exibição"
+                aria-label={t('card.displayName')}
                 maxLength={MAX_DISPLAY_NAME_LEN}
                 placeholder={user.username}
                 disabled={fieldsDisabled}
@@ -291,7 +294,7 @@ export function ProfileCard({
             </p>
             {user.role === 'admin' && (
               <span className="flex flex-none items-center gap-1 rounded-sm bg-primary/15 px-1.5 py-0.5 text-caption font-medium text-accent-text">
-                <SealCheckIcon size={13} /> Admin
+                <SealCheckIcon size={13} /> {t('card.admin')}
               </span>
             )}
           </div>
@@ -315,7 +318,7 @@ export function ProfileCard({
                     {info ? <BrandIcon kind={info.kind} /> : <LinkIcon size={15} />}
                   </span>
                   <input
-                    aria-label={`Link ${index + 1}`}
+                    aria-label={t('card.link', { count: index + 1 })}
                     maxLength={MAX_PROFILE_LINK_LEN}
                     placeholder="https://..."
                     disabled={fieldsDisabled}
@@ -323,7 +326,7 @@ export function ProfileCard({
                     onChange={(e) => onLinkChange!(index, e.target.value)}
                     className="min-w-0 flex-1 border-b border-transparent bg-transparent py-1 text-body text-text-primary outline-none placeholder:text-text-muted/70 focus:border-primary/50 disabled:opacity-60"
                   />
-                  <CloseButton variant="danger" label="Remover link" disabled={fieldsDisabled} onClick={() => onRemoveLink!(index)} />
+                  <CloseButton variant="danger" label={t('card.removeLink')} disabled={fieldsDisabled} onClick={() => onRemoveLink!(index)} />
                 </div>
               );
             })}
@@ -336,7 +339,7 @@ export function ProfileCard({
               onClick={onAddLink}
             >
               <PlusIcon size={14} />
-              <span>Adicionar link</span>
+              <span>{t('card.addLink')}</span>
             </Button>
           </div>
         ) : (
@@ -350,7 +353,7 @@ export function ProfileCard({
                         href={link.url}
                         target="_blank"
                         rel="noreferrer"
-                        aria-label={`Abrir ${link.label}`}
+                        aria-label={t('card.openLink', { name: link.label })}
                         className="flex h-9 w-9 items-center justify-center rounded-md border border-border-strong bg-bg-tertiary text-text-primary transition-colors hover:bg-bg-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
                       />
                     }

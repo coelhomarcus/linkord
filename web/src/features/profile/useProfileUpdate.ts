@@ -8,6 +8,7 @@ import type { RoomAction } from '@/state/roomReducer';
 import type { CropRect } from '@/state/RoomContext';
 import { uploadCroppedProfileImage } from '@/features/settings/uploadCroppedProfileImage';
 import type { ProfileImageUploadPhase } from '@/features/settings/uploadCroppedProfileImage';
+import { i18n } from '@/shared/i18n/init';
 
 const PROFILE_SAVE_TIMEOUT_MS = 15_000;
 
@@ -16,7 +17,7 @@ const PROFILE_SAVE_TIMEOUT_MS = 15_000;
  * now. Distinct from a `code`d refusal (`ProfileSaveRefused` below): the
  * account might still be saved, might not; the caller can't tell which. */
 export class ProfileSaveTimeout extends Error {
-  constructor() { super('O perfil não foi confirmado a tempo. Verifique sua conexão e tente de novo.'); }
+  constructor() { super(i18n.t('profile:save.timeout')); }
 }
 
 /** The server explicitly refused the patch (see participants.ts#handleProfile). */
@@ -29,16 +30,17 @@ export class ProfileSaveRefused extends Error {
  * from a timeout so the UI can say "sem conexão" instead of "não respondeu",
  * and so it fails at once instead of only after the timeout. */
 export class ProfileSaveOffline extends Error {
-  constructor() { super('Sem conexão com o servidor. Tente de novo em instantes.'); }
+  constructor() { super(i18n.t('profile:save.offline')); }
 }
 
 /** Turns a rejection of `updateProfile`/`uploadProfileImage`/`removeProfileImage`
  * into UI text. `fallback` covers a plain Error a caller wants worded for its
  * own context (e.g. "Falha ao enviar a foto." instead of the generic one). */
-export function describeProfileSaveError(err: unknown, fallback = 'Não foi possível salvar o perfil. Tente de novo.'): string {
+export function describeProfileSaveError(err: unknown, fallback?: string): string {
+  const fallbackText = fallback ?? i18n.t('profile:save.failed');
   if (err instanceof ProfileSaveOffline || err instanceof ProfileSaveTimeout) return err.message;
-  if (err instanceof ProfileSaveRefused) return err.message || fallback;
-  return fallback;
+  if (err instanceof ProfileSaveRefused) return err.message || fallbackText;
+  return fallbackText;
 }
 
 function sanitizeImageUrl(value: unknown): string {
