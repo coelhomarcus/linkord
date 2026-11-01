@@ -1,5 +1,6 @@
 import { BellIcon, ChecksIcon, TrashIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/primitives/popover';
 import { buttonVariants } from '@/shared/ui/primitives/button';
@@ -19,10 +20,11 @@ export function NotificationBell({ collapsed = false, onNavigate }: { collapsed?
 }
 
 function NotificationBellContent({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
+  const { t } = useTranslation('notifications');
   const { unread, error, dismiss, select, markAll, clearAll } = useNotificationActions();
   const [open, setOpen] = useState(false);
 
-  const label = unread > 0 ? `Notificações, ${unread} não lida${unread === 1 ? '' : 's'}` : 'Notificações';
+  const label = unread > 0 ? t('bell.unread', { count: unread }) : t('title');
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -41,22 +43,22 @@ function NotificationBellContent({ collapsed, onNavigate }: { collapsed: boolean
       </PopoverTrigger>
       <PopoverContent side={collapsed ? 'right' : 'bottom'} align="start" className="w-[min(22rem,calc(100vw-1.5rem))] bg-bg-modal">
         <div className="flex items-center justify-between gap-2 px-1">
-          <h2 className="select-none text-label font-semibold text-text-primary">Notificações</h2>
+          <h2 className="select-none text-label font-semibold text-text-primary">{t('title')}</h2>
           <div className="flex items-center gap-0.5">
             <Tooltip>
               <TooltipTrigger
-                aria-label="Marcar todas como lidas"
+                aria-label={t('actions.markAllRead')}
                 disabled={unread === 0}
                 onClick={markAll}
                 className={cn(buttonVariants({ variant: 'ghost', size: 'icon-sm' }), 'text-text-muted hover:text-text-primary')}
               >
                 <ChecksIcon size={16} />
               </TooltipTrigger>
-              <TooltipContent side="bottom">Marcar todas como lidas</TooltipContent>
+              <TooltipContent side="bottom">{t('actions.markAllRead')}</TooltipContent>
             </Tooltip>
             <button
               type="button"
-              aria-label="Limpar tudo"
+              aria-label={t('actions.clearAll')}
               onClick={clearAll}
               className={cn(buttonVariants({ variant: 'ghost', size: 'icon-sm' }), 'text-text-muted hover:text-red')}
             >
@@ -64,7 +66,7 @@ function NotificationBellContent({ collapsed, onNavigate }: { collapsed: boolean
             </button>
           </div>
         </div>
-        {error && <p role="alert" className="rounded-md bg-red/12 px-2.5 py-1.5 text-label text-red-text">Não foi possível atualizar. Tente de novo.</p>}
+        {error && <p role="alert" className="rounded-md bg-red/12 px-2.5 py-1.5 text-label text-red-text">{t('actions.updateFailed')}</p>}
         <NotificationList onSelect={(entry) => { setOpen(false); select(entry); onNavigate?.(); }} onDismiss={dismiss} />
       </PopoverContent>
     </Popover>

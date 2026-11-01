@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { NotificationEntry } from '@/shared/api/api';
 import { describeNotification, formatRelativeTime, formatUnread, notificationTarget } from '@/features/notifications/notificationText';
+import { useLanguageForTests } from '@tests/fixtures/i18nFixture';
 
 const actor = { id: 'u-ana', username: 'ana', displayName: 'Ana', avatar: '', avatarColor: 'blurple' };
 const base: NotificationEntry = { id: 'n1', kind: 'friend_request', at: '2026-01-01T00:00:00.000Z', read: false, friendshipId: 'f1', invitationId: null, actor, group: null };
@@ -45,5 +46,19 @@ describe('notificationText', () => {
     expect(formatRelativeTime('2026-01-01T09:00:00Z', now)).toBe('há 3 h');
     expect(formatRelativeTime('2025-12-30T12:00:00Z', now)).toBe('há 2 d');
     expect(formatRelativeTime('lixo', now)).toBe('');
+  });
+});
+
+describe('English translations', () => {
+  useLanguageForTests('en-US');
+
+  it('describes friend notifications in English', () => {
+    expect(describeNotification(base)).toBe('Ana sent you a friend request');
+    expect(describeNotification({ ...base, kind: 'friend_accepted' })).toBe('Ana accepted your friend request');
+  });
+
+  it('formats relative notification time in English', () => {
+    const now = new Date('2026-01-01T12:00:00Z').getTime();
+    expect(formatRelativeTime('2026-01-01T11:00:00Z', now)).toBe('1 hr ago');
   });
 });

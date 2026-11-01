@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { Button } from '@/shared/ui/primitives/button';
 import { Avatar } from '@/shared/Avatar';
@@ -23,20 +24,21 @@ function NotificationIcon({ entry }: { entry: NotificationEntry }) {
 const notificationKey = (entry: NotificationEntry) => entry.id;
 
 export function NotificationList({ onSelect, onDismiss, fullPage = false }: { onSelect: (entry: NotificationEntry) => void; onDismiss: (entry: NotificationEntry) => void; fullPage?: boolean }) {
+  const { t } = useTranslation('notifications');
   const { revision } = useFriends();
   const fetchPage = useCallback((cursor: string | null) => fetchNotifications(cursor), []);
   const list = useCursorList(fetchPage, 'notifications', { revision, getKey: notificationKey });
 
-  if (list.status === 'loading') return <p className="py-6 text-center text-label text-text-muted">Carregando…</p>;
+  if (list.status === 'loading') return <p className="py-6 text-center text-label text-text-muted">{t('list.loading')}</p>;
   if (list.status === 'error') {
     return (
       <div className="flex flex-col items-center gap-2 py-6 text-center">
-        <p className="text-label text-text-muted">Não foi possível carregar as notificações.</p>
-        <Button type="button" variant="secondary" size="sm" onClick={list.retry}>Tentar de novo</Button>
+        <p className="text-label text-text-muted">{t('list.loadFailed')}</p>
+        <Button type="button" variant="secondary" size="sm" onClick={list.retry}>{t('actions.retry')}</Button>
       </div>
     );
   }
-  if (list.items.length === 0) return <p className="py-6 text-center text-label text-text-muted">Nenhuma notificação por enquanto.</p>;
+  if (list.items.length === 0) return <p className="py-6 text-center text-label text-text-muted">{t('list.empty')}</p>;
 
   return (
     <div className={cn('flex min-h-0 flex-col overflow-y-auto', fullPage ? 'flex-1' : 'max-h-[min(24rem,60vh)]')}>
@@ -57,9 +59,9 @@ export function NotificationList({ onSelect, onDismiss, fullPage = false }: { on
               {entry.mention?.excerpt && <span className="mt-0.5 line-clamp-2 block text-caption text-text-secondary">{entry.mention.excerpt}</span>}
               <span className="block text-caption text-text-muted">{formatRelativeTime(entry.at)}</span>
             </span>
-            {!entry.read && <span aria-label="Não lida" className="size-2 flex-none rounded-full bg-primary" />}
+            {!entry.read && <span aria-label={t('actions.unread')} className="size-2 flex-none rounded-full bg-primary" />}
           </button>
-          <CloseButton size="xs" label="Descartar notificação" onClick={() => onDismiss(entry)} className="absolute right-1.5 top-1/2 -translate-y-1/2" />
+          <CloseButton size="xs" label={t('actions.dismiss')} onClick={() => onDismiss(entry)} className="absolute right-1.5 top-1/2 -translate-y-1/2" />
         </li>
       ))}
     </ul>
