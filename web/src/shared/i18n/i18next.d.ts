@@ -1,5 +1,6 @@
 import 'i18next';
 import type common from './locales/pt-BR.json';
+import type settings from '@/features/settings/locales/pt-BR.json';
 
 // pt-BR is the source of truth for key names: other languages are checked
 // against it by tests/shared/i18n/localeParity.test.ts. A feature that moves
@@ -9,6 +10,7 @@ declare module 'i18next' {
     defaultNS: 'common';
     resources: {
       common: typeof common;
+      settings: typeof settings;
     };
   }
 }

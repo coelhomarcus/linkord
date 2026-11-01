@@ -6,6 +6,7 @@ import { Button } from '@/shared/ui/primitives/button';
 import { ROUTES } from '@/shared/lib/routes';
 import { EmailSettings } from './EmailSettings';
 import { formatStorage } from './formatStorage';
+import { LanguageSetting } from './LanguageSetting';
 import { SettingsRow, SettingsSection, SettingsSections } from './SettingsLayout';
 import { AppLink } from '@/shared/ui/app-link';
 
@@ -37,6 +38,8 @@ export function AccountSettings() {
           <span className="break-words text-body text-text-primary">{state.me.displayName}</span>
         </SettingsRow>
       </SettingsSection>
+
+      <LanguageSetting />
 
       <SettingsSection id="email" title="E-mail">
         <EmailSettings currentEmail={user?.email ?? null} />

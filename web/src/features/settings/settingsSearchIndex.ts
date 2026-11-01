@@ -17,6 +17,7 @@ export interface SearchEntry {
 export const SETTINGS_SEARCH_INDEX: SearchEntry[] = [
   { categoryId: 'profile', title: 'Perfil', keywords: ['foto', 'avatar', 'banner', 'nome de exibição', 'bio', 'links', 'cor'] },
   { categoryId: 'account', sectionId: 'identity', title: 'Identificação', keywords: ['nome de usuário', 'username', 'admin'] },
+  { categoryId: 'account', sectionId: 'language', title: 'Idioma', keywords: ['language', 'português', 'inglês', 'english', 'traduzir'] },
   { categoryId: 'account', sectionId: 'email', title: 'E-mail', keywords: ['email', 'trocar e-mail', 'confirmar e-mail', 'código'] },
   { categoryId: 'account', sectionId: 'storage', title: 'Armazenamento de anexos', keywords: ['espaço', 'cota', 'arquivos', 'storage'] },
   { categoryId: 'account', sectionId: 'session', title: 'Sessão', keywords: ['sair', 'logout', 'encerrar sessão'] },

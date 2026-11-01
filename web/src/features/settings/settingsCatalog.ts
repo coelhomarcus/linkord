@@ -25,7 +25,8 @@ export const SETTINGS_GROUPS: SettingsGroup[] = [
     label: 'Você',
     categories: [
       { id: 'profile', label: 'Perfil', description: 'Edite direto no seu perfil. O que você vê aqui é exatamente o que os outros vão ver.', icon: UserIcon },
-      { id: 'account', label: 'Minha conta', description: 'Identificação, e-mail, armazenamento e sessão.', icon: IdentificationCardIcon },
+      { id: 'account', label: 'Minha conta', description: 'Identificação, e-mail, armazenamento e sessão.', icon: IdentificationCardIcon,
+        sections: [{ id: 'identity', label: 'Identificação' }, { id: 'language', label: 'Idioma' }, { id: 'email', label: 'E-mail' }, { id: 'storage', label: 'Armazenamento de anexos' }, { id: 'session', label: 'Sessão' }] },
       { id: 'privacy', label: 'Privacidade', description: 'Quem você bloqueou e o que isso muda.', icon: LockIcon },
     ],
   },

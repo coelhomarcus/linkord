@@ -1,0 +1,7 @@
+{
+  "language": {
+    "label": "Language",
+    "description": "Interface language. Applies on all your devices.",
+    "saveFailed": "Couldn't save the language. Try again."
+  }
+}
