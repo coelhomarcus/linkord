@@ -1,5 +1,6 @@
 import { ArrowLeftIcon } from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { Outlet, useLocation, useNavigate } from 'react-router';
 import { PageHeader } from '@/shared/PageHeader';
@@ -23,14 +24,15 @@ export const ADMIN_TABLE_MIN = 820;
  * The pages are gone by then (their data, dialogs and pending reads with them);
  * leaving also fixes the stale role so the guard and the rail agree. */
 function AccessLost() {
+  const { t } = useTranslation('admin');
   const { dispatch } = useRoom();
   const navigate = useNavigate();
   return (
     <div role="alert" className="flex flex-col items-center gap-3 py-12 text-center">
-      <h2 className="text-title font-semibold text-text-primary">Você não tem mais acesso à administração</h2>
-      <p className="max-w-md text-label text-text-muted">Sua conta deixou de ser administradora ou foi suspensa. Nada foi alterado pela última ação.</p>
+      <h2 className="text-title font-semibold text-text-primary">{t('layout.accessLostTitle')}</h2>
+      <p className="max-w-md text-label text-text-muted">{t('layout.accessLostDescription')}</p>
       <Button type="button" onClick={() => { dispatch({ type: 'SET_ROLE', role: 'user' }); navigate(ROUTES.conversations, { replace: true }); }}>
-        Voltar às conversas
+        {t('layout.backToConversations')}
       </Button>
     </div>
   );
@@ -39,12 +41,13 @@ function AccessLost() {
 /** Shown when the server says there is no session: the area is gone, and the
  * auth state is re-read so the app can take the person to the login. */
 function SessionEnded() {
+  const { t } = useTranslation('admin');
   const { refresh } = useAuth();
   useEffect(() => { void refresh(); }, [refresh]);
   return (
     <div role="alert" className="flex flex-col items-center gap-2 py-12 text-center">
-      <h2 className="text-title font-semibold text-text-primary">Sua sessão terminou</h2>
-      <p className="max-w-md text-label text-text-muted">Entre de novo para continuar. A última ação não foi concluída.</p>
+      <h2 className="text-title font-semibold text-text-primary">{t('layout.sessionEndedTitle')}</h2>
+      <p className="max-w-md text-label text-text-muted">{t('layout.sessionEndedDescription')}</p>
     </div>
   );
 }
@@ -53,6 +56,7 @@ function SessionEnded() {
  * (compact), and one scrolling content column that uses the whole width left
  * over by the rail and the conversation sidebar. */
 export function AdminLayout() {
+  const { t } = useTranslation('admin');
   const areaRef = useRef<HTMLDivElement | null>(null);
   const scrollerRef = useRef<HTMLElement | null>(null);
   const contentRef = useRef<HTMLDivElement | null>(null);
@@ -83,17 +87,17 @@ export function AdminLayout() {
   return (
     <div className="flex h-full min-h-0 flex-col">
       <PageHeader
-        title={compactSection ? section.label : 'Administração'}
-        subtitle={mode === 'wide' ? section?.label : undefined}
+        title={compactSection ? t(section.labelKey as never) : t('layout.title')}
+        subtitle={mode === 'wide' && section ? t(section.labelKey as never) : undefined}
         leading={compactSection ? (
-          <AppLink to={ADMIN_PATH} aria-label="Voltar à administração" className={buttonVariants({ variant: 'ghost', size: 'icon-sm' })}>
+          <AppLink to={ADMIN_PATH} aria-label={t('layout.backToAdmin')} className={buttonVariants({ variant: 'ghost', size: 'icon-sm' })}>
             <ArrowLeftIcon size={20} aria-hidden />
           </AppLink>
         ) : undefined}
       />
       <div ref={areaRef} className="@container flex min-h-0 min-w-0 flex-1">
         {mode === 'wide' && lost === null ? <AdminSidebar /> : null}
-        <main ref={scrollerRef} aria-label={section?.label ?? 'Administração'} className="min-h-0 min-w-0 flex-1 overflow-y-auto">
+        <main ref={scrollerRef} aria-label={section ? t(section.labelKey as never) : t('layout.title')} className="min-h-0 min-w-0 flex-1 overflow-y-auto">
           <div ref={contentRef} className="flex w-full flex-col gap-4 px-4 py-4 @[520px]:px-6 @[960px]:px-8 @[960px]:py-6">
             {lost === 'access' ? <AccessLost /> : lost === 'session' ? <SessionEnded /> : <Outlet context={{ mode, measured, tableFits: contentWidth === 0 || contentWidth >= ADMIN_TABLE_MIN, scroller: scrollerRef } satisfies AdminOutletContext} />}
           </div>

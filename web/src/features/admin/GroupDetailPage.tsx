@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 import { Avatar } from '@/shared/Avatar';
 import { Button } from '@/shared/ui/primitives/button';
@@ -37,11 +38,12 @@ export function GroupDetailPage() {
 
 /** The whole audit trail of the group, by cursor. `revision` re-reads it after something changed. */
 function GroupHistory({ id, revision }: { id: string; revision: string }) {
+  const { t } = useTranslation('admin');
   const fetchPage = useCallback((cursor: string | null) => fetchAudit({ targetType: 'group', targetId: id }, cursor), [id]);
   const list = useCursorList(fetchPage, id, { getKey: (row) => row.id, revision });
   return (
-    <AdminSection title="Histórico completo" description="Tudo o que a administração registrou sobre este grupo, da ação mais recente à mais antiga.">
-      <ListChrome list={list} empty="Nenhuma ação registrada sobre este grupo."><AuditList items={list.items} /></ListChrome>
+    <AdminSection title={t('entity.fullHistoryGroup')} description={t('entity.historyGroupDescription')}>
+      <ListChrome list={list} empty={t('entity.noGroupHistory')}><AuditList items={list.items} /></ListChrome>
     </AdminSection>
   );
 }
@@ -49,6 +51,7 @@ function GroupHistory({ id, revision }: { id: string; revision: string }) {
 /** Administrative detail of a group. Deliberately offers no way to open the
  * conversation: an admin sees who is in it and acts on it, without joining. */
 function GroupDetail({ id }: { id: string }) {
+  const { t } = useTranslation('admin');
   const back = useAdminBack('/admin/groups');
   const { filters } = useAdminQuery(QUERY);
   const tab = filters.tab as Tab;
@@ -76,57 +79,57 @@ function GroupDetail({ id }: { id: string }) {
     }
   }
 
-  if (deleted) return <p className="py-8 text-center text-label text-text-muted">Grupo excluído. <AdminTextLink to={back}>Voltar à lista</AdminTextLink></p>;
-  if (!detail) return <DetailStatusView status={status} missing="Grupo não encontrado." failed="Não foi possível carregar o grupo." backTo={back} backLabel="Voltar" onRetry={reload} />;
+  if (deleted) return <p className="py-8 text-center text-label text-text-muted">{t('entity.groupDeleted')} <AdminTextLink to={back}>{t('detail.backToList')}</AdminTextLink></p>;
+  if (!detail) return <DetailStatusView status={status} missing={t('entity.groupNotFound')} failed={t('entity.groupLoadFailed')} backTo={back} backLabel={t('common.back')} onRetry={reload} />;
 
   const { group } = detail;
   const extra = more?.base === detail ? more : null;
   const members = [...detail.members.items, ...(extra?.items ?? [])];
   const nextCursor = extra ? extra.cursor : detail.members.nextCursor;
   const suspended = group.status === 'suspended';
-  const name = group.title || 'Grupo sem nome';
+  const name = group.title || t('detail.groupUnnamed');
   const ownerDialog = typeof dialog === 'object' && dialog !== null ? dialog.owner : null;
 
   return (
     <div className="flex flex-col gap-5">
-      <AdminTextLink to={back} state={RESTORE_LIST} className="w-fit text-caption text-text-muted">← Grupos</AdminTextLink>
+      <AdminTextLink to={back} state={RESTORE_LIST} className="w-fit text-caption text-text-muted">{t('entity.backGroups')}</AdminTextLink>
       {refreshFailed && <RefreshFailedNotice refreshing={refreshing} onRetry={() => void refresh()} />}
 
       <AdminEntityHeader
         avatar={<GroupAvatar id={group.id} title={group.title} avatar={group.avatar} size={64} />}
         title={name}
         id={group.id}
-        badges={<>{!group.ownerId && <span className="inline-flex rounded-sm bg-yellow/15 px-1.5 py-0.5 text-micro font-medium text-yellow">Sem dono</span>}<Badge value={group.status} /></>}
+        badges={<>{!group.ownerId && <span className="inline-flex rounded-sm bg-yellow/15 px-1.5 py-0.5 text-micro font-medium text-yellow">{t('ui.noOwner')}</span>}<Badge value={group.status} /></>}
       />
 
       <AdminDetailTabs<Tab>
-        label="Seções do grupo"
+        label={t('entity.groupSections')}
         active={tab}
         defaultTab="overview"
         tabs={[
-          { id: 'overview', label: 'Resumo' },
-          { id: 'members', label: `Membros (${group.memberCount})` },
-          { id: 'moderation', label: 'Moderação' },
-          { id: 'history', label: 'Histórico' },
+          { id: 'overview', label: t('detail.overview') },
+          { id: 'members', label: `${t('detail.groups')} (${group.memberCount})` },
+          { id: 'moderation', label: t('detail.moderation') },
+          { id: 'history', label: t('detail.history') },
         ]}
       />
 
       {tab === 'overview' && (
-        <AdminSection title="Grupo">
+        <AdminSection title={t('entity.group')}>
           <AdminFields>
-            <AdminFieldRow label="Dono atual">
-              {group.ownerId ? <AppLink to={`/admin/users/${group.ownerId}`} className="hover:underline">@{group.ownerUsername}</AppLink> : 'nenhum (grupo sem dono)'}
+            <AdminFieldRow label={t('entity.currentOwner')}>
+              {group.ownerId ? <AppLink to={`/admin/users/${group.ownerId}`} className="hover:underline">@{group.ownerUsername}</AppLink> : t('entity.noGroupOwner')}
             </AdminFieldRow>
-            <AdminFieldRow label="Situação">{suspended ? `Suspenso: “${group.statusReason}”` : 'Ativo'}</AdminFieldRow>
-            <AdminFieldRow label="Criado em">{formatWhen(group.createdAt)}</AdminFieldRow>
-            <AdminFieldRow label="Membros">{group.memberCount}</AdminFieldRow>
-            <AdminFieldRow label="Última mensagem">{group.lastMessageAt ? formatWhen(new Date(group.lastMessageAt).toISOString()) : '-'}</AdminFieldRow>
+            <AdminFieldRow label={t('detail.status')}>{suspended ? `${t('status.suspended')}: “${group.statusReason}”` : t('detail.active')}</AdminFieldRow>
+            <AdminFieldRow label={t('entity.createdAt')}>{formatWhen(group.createdAt)}</AdminFieldRow>
+            <AdminFieldRow label={t('detail.groups')}>{group.memberCount}</AdminFieldRow>
+            <AdminFieldRow label={t('entity.lastMessage')}>{group.lastMessageAt ? formatWhen(new Date(group.lastMessageAt).toISOString()) : '-'}</AdminFieldRow>
           </AdminFields>
         </AdminSection>
       )}
 
       {tab === 'members' && (
-        <AdminSection title="Membros" description="Quem participa do grupo. Você consulta e administra sem entrar na conversa.">
+        <AdminSection title={t('detail.groups')} description={t('entity.membersDescription')}>
           <ul className="flex flex-col divide-y divide-border-subtle">
             {members.map((m) => (
               <li key={m.user.id} className="flex items-center gap-3 py-2.5">
@@ -135,15 +138,15 @@ function GroupDetail({ id }: { id: string }) {
                   {m.user.displayName} <span className="text-text-muted">@{m.user.username}</span>
                 </AppLink>
                 {m.role === 'owner'
-                  ? <span className="text-caption text-accent-text">dono</span>
-                  : <Button type="button" variant="ghost" size="xs" onClick={() => setDialog({ owner: m })}>Atribuir dono</Button>}
+                  ? <span className="text-caption text-accent-text">{t('entity.owner')}</span>
+                  : <Button type="button" variant="ghost" size="xs" onClick={() => setDialog({ owner: m })}>{t('entity.assignOwner')}</Button>}
               </li>
             ))}
           </ul>
-          {loadMoreError && <p role="alert" className="text-center text-caption text-red-text">Não foi possível carregar mais membros.</p>}
+          {loadMoreError && <p role="alert" className="text-center text-caption text-red-text">{t('entity.loadMoreMembers')}</p>}
           {nextCursor && (
             <Button type="button" variant="ghost" size="sm" className="self-center" disabled={loadingMore} onClick={() => void loadMoreMembers()}>
-              {loadingMore ? 'Carregando…' : loadMoreError ? 'Tentar de novo' : 'Carregar mais'}
+              {loadingMore ? t('chrome.loading') : loadMoreError ? t('chrome.retry') : t('chrome.loadMore')}
             </Button>
           )}
         </AdminSection>
@@ -151,23 +154,23 @@ function GroupDetail({ id }: { id: string }) {
 
       {tab === 'moderation' && (
         <>
-          <AdminSection title="Acesso ao grupo" description="Toda ação pede um motivo e fica registrada.">
+          <AdminSection title={t('entity.accessGroup')} description={t('detail.accessDescription')}>
             {suspended ? (
-              <AdminActionRow title="Grupo suspenso" description={`Motivo: “${group.statusReason}”. Ninguém lê, escreve, baixa mídia ou entra em chamada.`}>
-                <Button type="button" size="sm" onClick={() => setDialog('reactivate')}>Reativar grupo</Button>
+              <AdminActionRow title={t('entity.suspendedGroup')} description={t('entity.suspendedGroupDescription', { reason: group.statusReason })}>
+                <Button type="button" size="sm" onClick={() => setDialog('reactivate')}>{t('entity.reactivateGroup')}</Button>
               </AdminActionRow>
             ) : (
               <AdminActionRow
-                title="Suspender o grupo"
-                description="Os membros continuam vendo o grupo na lista, mas ninguém lê, escreve, baixa mídia ou entra em chamada. Chamadas em andamento são encerradas."
+                title={t('entity.suspendGroup')}
+                description={t('entity.suspendGroupDescription')}
               >
-                <Button type="button" size="sm" variant="secondary" onClick={() => setDialog('suspend')}>Suspender grupo</Button>
+                <Button type="button" size="sm" variant="secondary" onClick={() => setDialog('suspend')}>{t('entity.suspendGroupButton')}</Button>
               </AdminActionRow>
             )}
           </AdminSection>
-          <AdminSection danger title="Zona de perigo" description="Ações que não têm volta.">
-            <AdminActionRow title="Excluir o grupo" description="Definitivo: apaga o grupo, as mensagens e os arquivos. Não há como desfazer.">
-              <Button type="button" size="sm" variant="destructive" onClick={() => setDialog('delete')}>Excluir grupo</Button>
+          <AdminSection danger title={t('detail.danger')} description={t('detail.dangerDescription')}>
+            <AdminActionRow title={t('entity.deleteGroup')} description={t('entity.deleteGroupDescription')}>
+              <Button type="button" size="sm" variant="destructive" onClick={() => setDialog('delete')}>{t('common.deleteGroup')}</Button>
             </AdminActionRow>
           </AdminSection>
         </>
@@ -175,19 +178,19 @@ function GroupDetail({ id }: { id: string }) {
 
       {tab === 'history' && <GroupHistory id={group.id} revision={detail.history[0]?.id ?? ''} />}
 
-      <ReasonDialog open={dialog === 'suspend'} onOpenChange={(o) => !o && setDialog(null)} title="Suspender grupo"
-        description="Os membros continuam vendo o grupo na lista, mas ninguém lê, escreve, baixa mídia ou entra em chamada. Chamadas em andamento são encerradas."
-        confirmLabel="Suspender" destructive onSubmit={(reason) => mutate(() => suspendGroup(group.id, reason))} />
-      <ReasonDialog open={dialog === 'reactivate'} onOpenChange={(o) => !o && setDialog(null)} title="Reativar grupo"
-        description="O acesso dos membros é restaurado." confirmLabel="Reativar" onSubmit={(reason) => mutate(() => reactivateGroup(group.id, reason))} />
-      <ReasonDialog open={dialog === 'delete'} onOpenChange={(o) => !o && setDialog(null)} title="Excluir grupo"
-        description="Definitivo: apaga o grupo, as mensagens e os arquivos. Não há como desfazer." confirmLabel="Excluir para sempre" destructive
+      <ReasonDialog open={dialog === 'suspend'} onOpenChange={(o) => !o && setDialog(null)} title={t('entity.suspendGroupTitle')}
+        description={t('entity.suspendGroupDescription')}
+        confirmLabel={t('detail.suspend')} destructive onSubmit={(reason) => mutate(() => suspendGroup(group.id, reason))} />
+      <ReasonDialog open={dialog === 'reactivate'} onOpenChange={(o) => !o && setDialog(null)} title={t('entity.reactivateGroupTitle')}
+        description={t('entity.restoreMembers')} confirmLabel={t('entity.reactivateGroup')} onSubmit={(reason) => mutate(() => reactivateGroup(group.id, reason))} />
+      <ReasonDialog open={dialog === 'delete'} onOpenChange={(o) => !o && setDialog(null)} title={t('entity.deleteGroupTitle')}
+        description={t('entity.deleteGroupDescription')} confirmLabel={t('detail.deleteForever')} destructive
         confirmText={group.title || group.id} onSubmit={async (reason) => { await deleteGroup(group.id, reason); setDeleted(true); }} />
-      <ReasonDialog open={ownerDialog !== null} onOpenChange={(o) => !o && setDialog(null)} title="Atribuir dono"
+      <ReasonDialog open={ownerDialog !== null} onOpenChange={(o) => !o && setDialog(null)} title={t('entity.assignGroupOwnerTitle')}
         description={ownerDialog
-          ? `${group.ownerUsername ? `Dono atual: @${group.ownerUsername}.` : 'O grupo está sem dono.'} Novo dono: @${ownerDialog.user.username}. Quem era dono passa a membro. Você não entra no grupo.`
+          ? t('entity.ownerAssignment', { current: group.ownerUsername ? `Dono atual: @${group.ownerUsername}.` : 'O grupo está sem dono.', username: ownerDialog.user.username })
           : ''}
-        confirmLabel="Atribuir" onSubmit={(reason) => (ownerDialog ? mutate(() => assignGroupOwner(group.id, ownerDialog.user.id, reason)) : Promise.resolve())} />
+        confirmLabel={t('common.assign')} onSubmit={(reason) => (ownerDialog ? mutate(() => assignGroupOwner(group.id, ownerDialog.user.id, reason)) : Promise.resolve())} />
     </div>
   );
 }

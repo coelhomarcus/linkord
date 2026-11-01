@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import type { FormEvent } from 'react';
 
 import { useAuth } from '../../state/AuthContext';
-import { ApiError } from '@/shared/api/api';
+import { describeApiError } from '@/shared/api/errorText';
 import { Button } from '@/shared/ui/primitives/button';
 import { Input } from '@/shared/ui/primitives/input';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/ui/primitives/dialog';
@@ -23,7 +23,7 @@ export function EmailRequiredModal() {
     try {
       await linkEmail(email);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t('emailRequired.failed'));
+      setError(describeApiError(err, 'auth:emailRequired.failed'));
     } finally {
       setPending(false);
     }

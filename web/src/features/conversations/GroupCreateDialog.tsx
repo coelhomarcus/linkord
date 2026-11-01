@@ -6,11 +6,11 @@ import { Button } from '@/shared/ui/primitives/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/primitives/dialog';
 import { Input } from '@/shared/ui/primitives/input';
 import { Label } from '@/shared/ui/primitives/label';
-import { ApiError, createGroup } from '@/shared/api/api';
+import { createGroup } from '@/shared/api/api';
 import type { InviteResult, SocialUser } from '@/shared/api/api';
 import { FriendPicker } from './FriendPicker';
 import { describeInviteOutcome } from './inviteOutcome';
-import { ERROR_CODES } from '@/shared/api/errorCodes';
+import { describeApiError } from '@/shared/api/errorText';
 
 interface GroupCreateDialogProps {
   open: boolean;
@@ -66,7 +66,7 @@ export function GroupCreateDialog({ open, onOpenChange, onCreated }: GroupCreate
       if (failed.length === 0) close();
       else setFailures(failed);
     } catch (err) {
-      setError(err instanceof ApiError && err.code === ERROR_CODES.quota_exceeded ? err.message : t('groupCreate.failed'));
+      setError(describeApiError(err, 'conversations:groupCreate.failed'));
     } finally {
       setSubmitting(false);
     }

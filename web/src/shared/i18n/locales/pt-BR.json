@@ -100,6 +100,9 @@
   },
   "errors": {
     "unexpected": "Erro inesperado.",
-    "networkUpload": "Falha de rede ao enviar o arquivo."
+    "networkUpload": "Falha de rede ao enviar o arquivo.",
+    "codes": {
+      "invalid_credentials": "Usuário ou senha inválidos.", "account_unavailable": "Esta conta está indisponível. Fale com a administração.", "registration_closed": "Registro fechado.", "invalid_code": "Código inválido.", "code_expired": "Código expirado. Solicite um novo código.", "too_many_attempts": "Limite de tentativas atingido. Solicite um novo código.", "invalid_email": "Informe um e-mail válido.", "weak_password": "A senha não atende aos requisitos mínimos.", "password_mismatch": "As senhas não coincidem.", "username_taken": "Esse nome de usuário ou e-mail já está em uso.", "email_taken": "Esse e-mail já está em uso.", "forbidden": "Você não tem permissão para fazer isso.", "not_found": "Não foi possível encontrar o item.", "rate_limited": "Muitas solicitações. Tente novamente mais tarde.", "group_full": "Este grupo está cheio.", "relationship_required": "Você não pode enviar mensagens para esta pessoa.", "reason_required": "Informe um motivo.", "internal_error": "Não foi possível concluir a operação. Tente de novo."
+    }
   }
 }

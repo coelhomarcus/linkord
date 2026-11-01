@@ -1,21 +1,23 @@
+import { i18n } from '@/shared/i18n/init';
+
 export function formatWhen(iso: string | null | undefined): string {
   if (!iso) return '-';
   const date = new Date(iso);
-  return Number.isNaN(date.getTime()) ? '-' : date.toLocaleString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  return Number.isNaN(date.getTime()) ? '-' : date.toLocaleString(i18n.language, { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
 /** Compact date for table cells (`07/10/2026 04:34`): the long form is for detail pages. */
 export function formatWhenShort(iso: string | null | undefined): string {
   if (!iso) return '-';
   const date = new Date(iso);
-  return Number.isNaN(date.getTime()) ? '-' : date.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  return Number.isNaN(date.getTime()) ? '-' : date.toLocaleString(i18n.language, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
 /** A date with no time (`07/10/2026`): for columns where the hour adds nothing, like when an account was created. */
 export function formatDateShort(iso: string | null | undefined): string {
   if (!iso) return '-';
   const date = new Date(iso);
-  return Number.isNaN(date.getTime()) ? '-' : date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  return Number.isNaN(date.getTime()) ? '-' : date.toLocaleDateString(i18n.language, { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
 export const ACTION_LABELS: Record<string, string> = {
@@ -27,6 +29,11 @@ export const ACTION_LABELS: Record<string, string> = {
   'message.delete': 'Mensagem apagada', 'message.attachment.remove': 'Anexo removido', 'call.kick': 'Removido da chamada', 'report.view': 'Evidência aberta',
   'report.claim': 'Denúncia assumida', 'report.resolve': 'Denúncia resolvida', 'report.dismiss': 'Denúncia dispensada',
 };
+
+export function actionLabel(action: string): string {
+  const fallback = ACTION_LABELS[action] ?? action;
+  return i18n.t(`admin:actions.${action}` as never, { defaultValue: fallback });
+}
 
 /** A local calendar day (`yyyy-mm-dd`, as a date input gives it), or null when it is not a real date. */
 function parseDay(day: string): { y: number; m: number; d: number } | null {
@@ -53,6 +60,17 @@ export function nextDayStartIso(day: string): string | undefined {
 
 export const REPORT_TARGET_LABEL = { user: 'Conta', group: 'Grupo', message: 'Mensagem' } as const;
 
+export function reportTargetLabel(target: string): string {
+  const fallback = REPORT_TARGET_LABEL[target as keyof typeof REPORT_TARGET_LABEL] ?? target;
+  return i18n.t(`admin:audit.${target}` as never, { defaultValue: fallback });
+}
+
 export const REPORT_RESOLUTION_LABEL: Record<string, string> = {
   no_action: 'Resolvida sem ação', user_suspended: 'Conta suspensa', group_suspended: 'Grupo suspenso', message_deleted: 'Mensagem apagada',
 };
+
+export function reportResolutionLabel(value: string | null | undefined): string {
+  if (!value) return i18n.t('admin:common.unknown' as never);
+  const key = value === 'no_action' ? 'noAction' : value === 'user_suspended' ? 'userSuspended' : value === 'group_suspended' ? 'groupSuspended' : value === 'message_deleted' ? 'messageDeleted' : null;
+  return i18n.t(key ? `admin:resolution.${key}` as never : 'admin:common.unknown' as never, { defaultValue: REPORT_RESOLUTION_LABEL[value] ?? value });
+}

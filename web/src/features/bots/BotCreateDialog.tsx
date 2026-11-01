@@ -6,9 +6,8 @@ import { Button } from '@/shared/ui/primitives/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/primitives/dialog';
 import { Input } from '@/shared/ui/primitives/input';
 import { Label } from '@/shared/ui/primitives/label';
-import { ApiError } from '@/shared/api/api';
 import type { InviteResult, SocialUser } from '@/shared/api/api';
-import { ERROR_CODES } from '@/shared/api/errorCodes';
+import { describeApiError } from '@/shared/api/errorText';
 import { FriendPicker } from '@/features/conversations/FriendPicker';
 import { describeInviteOutcome } from '@/features/conversations/inviteOutcome';
 import { createBot } from './botsApi';
@@ -65,7 +64,7 @@ export function BotCreateDialog({ open, onOpenChange }: BotCreateDialogProps) {
         });
       setCreated({ url: webhook.url, failures });
     } catch (err) {
-      setError(err instanceof ApiError && err.code === ERROR_CODES.quota_exceeded ? err.message : t('create.failed'));
+      setError(describeApiError(err, 'bots:create.failed'));
     } finally {
       setSubmitting(false);
     }

@@ -6,7 +6,8 @@ import { useAuth } from '@/state/AuthContext';
 import { Label } from '@/shared/ui/primitives/label';
 import { Button } from '@/shared/ui/primitives/button';
 import { Input } from '@/shared/ui/primitives/input';
-import { ApiError, confirmEmailChange, requestEmailChange } from '@/shared/api/api';
+import { confirmEmailChange, requestEmailChange } from '@/shared/api/api';
+import { describeApiError } from '@/shared/api/errorText';
 import { OTPInput, type OTPStatus } from '@/shared/ui/motion/otp-input';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -84,7 +85,7 @@ export function EmailSettings({ currentEmail }: { currentEmail: string | null })
       setOtpStatus('idle');
       setPhase('requested');
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t('email.errors.sendFailed'));
+      setError(describeApiError(err, 'settings:email.errors.sendFailed'));
     } finally {
       setPending(false);
     }
@@ -97,7 +98,7 @@ export function EmailSettings({ currentEmail }: { currentEmail: string | null })
       await requestEmailChange(targetEmail);
       setResent(true);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t('email.errors.resendFailed'));
+      setError(describeApiError(err, 'settings:email.errors.resendFailed'));
     } finally {
       setPending(false);
     }
@@ -116,7 +117,7 @@ export function EmailSettings({ currentEmail }: { currentEmail: string | null })
       await refresh();
     } catch (err) {
       setOtpStatus('error');
-      setError(err instanceof ApiError ? err.message : t('email.errors.confirmFailed'));
+      setError(describeApiError(err, 'settings:email.errors.confirmFailed'));
     } finally {
       setPending(false);
       confirmingRef.current = false;

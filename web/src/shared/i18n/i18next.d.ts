@@ -12,6 +12,7 @@ import type profile from '@/features/profile/locales/pt-BR.json';
 import type media from '@/features/media/locales/pt-BR.json';
 import type reports from '@/features/reports/locales/pt-BR.json';
 import type bots from '@/features/bots/locales/pt-BR.json';
+import type admin from '@/features/admin/locales/pt-BR.json';
 import type settings from '@/features/settings/locales/pt-BR.json';
 
 // pt-BR is the source of truth for key names: other languages are checked
@@ -34,6 +35,7 @@ declare module 'i18next' {
       media: typeof media;
       reports: typeof reports;
       bots: typeof bots;
+      admin: typeof admin;
       settings: typeof settings;
     };
   }

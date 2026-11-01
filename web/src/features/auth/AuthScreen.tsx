@@ -8,6 +8,7 @@ import { useAuth } from '@/state/AuthContext';
 import { ApiError, requestPasswordRecovery, resetPassword } from '@/shared/api/api';
 import type { RecoveryIdentifier } from '@/shared/api/api';
 import { ErrorBanner } from '@/shared/ErrorBanner';
+import { describeApiError } from '@/shared/api/errorText';
 import { AuthField } from './AuthField';
 import { Button } from '@/shared/ui/primitives/button';
 import { SegmentedTabs } from './SegmentedTabs';
@@ -40,7 +41,7 @@ function LoginForm({ onForgotPassword }: { onForgotPassword: () => void }) {
     try {
       await login(username, password);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t('login.failed'));
+      setError(describeApiError(err, 'auth:login.failed'));
     } finally {
       setPending(false);
     }
@@ -211,7 +212,7 @@ function RecoveryForm({ onBack }: { onBack: () => void }) {
       setRequested(true);
       setStatus('idle');
     } catch (err) {
-      setMessage(err instanceof ApiError ? err.message : t('recovery.sendFailed'));
+      setMessage(describeApiError(err, 'auth:recovery.sendFailed'));
     } finally {
       setPending(false);
     }
@@ -227,7 +228,7 @@ function RecoveryForm({ onBack }: { onBack: () => void }) {
       setStatus('success');
     } catch (err) {
       setStatus('error');
-      setMessage(err instanceof ApiError ? err.message : t('recovery.resetFailed'));
+      setMessage(describeApiError(err, 'auth:recovery.resetFailed'));
     } finally {
       setPending(false);
     }
