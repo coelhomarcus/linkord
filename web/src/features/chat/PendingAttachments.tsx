@@ -1,3 +1,4 @@
+import { i18n } from '@/shared/i18n/init';
 import { WarningCircleIcon } from '@phosphor-icons/react';
 
 import { DocumentAttachmentCard } from '@/features/media/DocumentAttachmentCard';
@@ -10,10 +11,10 @@ import type { OutboxAttachment } from './useMessageOutbox';
 // progress === 0 covers both honestly, without inventing precision it can't
 // back up. See the redesign plan's note on this exact point.
 function statusLabel(attachment: OutboxAttachment): string {
-  if (attachment.failed) return 'Falhou';
-  if (attachment.progress >= 1) return 'Arquivo carregado';
-  if (attachment.progress <= 0) return 'Preparando envio…';
-  return `Enviando arquivo… ${Math.round(attachment.progress * 100)}%`;
+  if (attachment.failed) return i18n.t('chat:pending.attachmentFailed');
+  if (attachment.progress >= 1) return i18n.t('chat:pending.attachmentDone');
+  if (attachment.progress <= 0) return i18n.t('chat:pending.attachmentPreparing');
+  return i18n.t('chat:pending.attachmentUploading', { percent: Math.round(attachment.progress * 100) });
 }
 
 /** The files of a send still in the outbox: local previews while the server

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import type { ChatAttachment as ChatAttachmentData } from '@/shared/types/protocol';
@@ -44,10 +45,11 @@ function MediaImage({ attachment, className, onNaturalSize }: { attachment: Chat
  * fixed height holds it while it loads, then takes the picture's own
  * proportions once the browser reports them (no bars around an odd shape). */
 function LegacyImageButton({ attachment, onOpen, className }: { attachment: ChatAttachmentData; onOpen: () => void; className: string }) {
+  const { t } = useTranslation('chat');
   return (
     <button
       type="button"
-      aria-label={`Abrir ${attachment.name}`}
+      aria-label={t('media.open', { name: attachment.name })}
       onClick={onOpen}
       className={className}
       style={{ width: `min(100%, ${MEDIA_MAX_WIDTH}px)`, height: LEGACY_IMAGE_BOX_HEIGHT }}
@@ -61,6 +63,7 @@ function LegacyImageButton({ attachment, onOpen, className }: { attachment: Chat
  * a 2–4 mosaic), followed by its other files. Every box is sized before the
  * pixels arrive, so loading doesn't move the history. */
 export function MessageMedia({ attachments }: { attachments: ChatAttachmentData[] }) {
+  const { t } = useTranslation('chat');
   const viewer = useMediaViewer();
   if (!viewer) return <MediaViewerProvider><MessageMedia attachments={attachments} /></MediaViewerProvider>;
   // data-attachment-id names which one a right-click is on (GlobalContextMenu
@@ -78,7 +81,7 @@ export function MessageMedia({ attachments }: { attachments: ChatAttachmentData[
     const attachment = visual[0]!;
     const box = singleImageBox(attachment);
     pictures = tagged(attachment, box ? (
-      <button type="button" aria-label={`Abrir ${attachment.name}`} onClick={() => openAt(0)} style={{ width: box.width, aspectRatio: box.aspectRatio }} className={cn(cellButton, 'rounded-lg')}>
+      <button type="button" aria-label={t('media.open', { name: attachment.name })} onClick={() => openAt(0)} style={{ width: box.width, aspectRatio: box.aspectRatio }} className={cn(cellButton, 'rounded-lg')}>
         <MediaImage attachment={attachment} className="block size-full object-cover" />
       </button>
     ) : (
@@ -96,7 +99,7 @@ export function MessageMedia({ attachments }: { attachments: ChatAttachmentData[
           <div key={attachment.id} data-attachment-id={attachment.id} style={{ gridArea: layout.areas[index] }} className="relative min-h-0 min-w-0">
             <button
               type="button"
-              aria-label={`Abrir ${attachment.name} (${index + 1} de ${visual.length})`}
+              aria-label={t('media.openIndexed', { name: attachment.name, index: index + 1, total: visual.length })}
               onClick={() => openAt(index)}
               className={cn(cellButton, 'size-full')}
             >

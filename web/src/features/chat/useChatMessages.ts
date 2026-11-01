@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { MutableRefObject } from 'react';
 import { playSound } from '@/shared/sounds';
+import { conversationTitle } from '@/features/conversations/conversationUtils';
+import { i18n } from '@/shared/i18n/init';
 import { notifyIncomingChatMessage } from '@/shared/notifications';
 import { messagePreviewText } from '@/features/chat/messagePreview';
 import { mentionsUsername } from '@/shared/lib/mentions';
@@ -37,15 +39,6 @@ function updateSet(set: Set<string>, id: string, present: boolean): Set<string> 
   const next = new Set(set);
   if (present) next.add(id); else next.delete(id);
   return next;
-}
-
-function displayNameForConversation(conversation: Conversation | undefined, meUserId: string | null, users: Map<string, PublicUser>): string {
-  if (!conversation) return 'Conversa';
-  if (conversation.type === 'group') return conversation.title || 'Grupo';
-  if (conversation.type === 'bot') return conversation.title || 'Bot';
-  const otherId = conversation.memberIds.find((id) => id !== meUserId) ?? conversation.memberIds[0];
-  const other = otherId ? users.get(otherId) : undefined;
-  return other?.displayName || other?.username || 'Conversa direta';
 }
 
 /** What the user has in front of them. Only 'chat' means a message arriving
@@ -142,7 +135,7 @@ export function useChatMessages(deps: ChatMessagesDeps) {
   const [deletingMsgIds, setDeletingMsgIds] = useState<Set<number>>(new Set());
   const [messageActionErrors, setMessageActionErrors] = useState<Map<number, string>>(new Map());
   const onReactionError = useCallback((msgId: number, message: string) => {
-    setMessageActionErrors((prev) => new Map(prev).set(msgId, `Não foi possível reagir: ${message}`));
+    setMessageActionErrors((prev) => new Map(prev).set(msgId, i18n.t('chat:errors.reactFailed', { message })));
   }, []);
   const reactionIntents = useReactionIntents({ request: requestAction, onError: onReactionError });
   const { react: reactWithIntent } = reactionIntents;
@@ -342,7 +335,7 @@ export function useChatMessages(deps: ChatMessagesDeps) {
     try {
       await requestAction({ t: 'chat-delete', msgId });
     } catch (err) {
-      setMessageActionErrors((prev) => new Map(prev).set(msgId, `Não foi possível apagar: ${err instanceof Error ? err.message : 'erro desconhecido'}`));
+      setMessageActionErrors((prev) => new Map(prev).set(msgId, i18n.t('chat:errors.deleteFailed', { message: err instanceof Error ? err.message : i18n.t('chat:errors.unknown') })));
     } finally {
       setDeletingMsgIds((prev) => { const next = new Set(prev); next.delete(msgId); return next; });
     }
@@ -356,8 +349,8 @@ export function useChatMessages(deps: ChatMessagesDeps) {
     try {
       await requestAction({ ...action, msgId });
     } catch (err) {
-      const what = action.t === 'chat-remove-attachment' ? 'o anexo' : 'a incorporação';
-      setMessageActionErrors((prev) => new Map(prev).set(msgId, `Não foi possível remover ${what}: ${err instanceof Error ? err.message : 'erro desconhecido'}`));
+      const key = action.t === 'chat-remove-attachment' ? 'chat:errors.removeAttachmentFailed' : 'chat:errors.removeEmbedFailed';
+      setMessageActionErrors((prev) => new Map(prev).set(msgId, i18n.t(key, { message: err instanceof Error ? err.message : i18n.t('chat:errors.unknown') })));
     }
   }, [requestAction, dismissMessageActionError]);
   const removeChatAttachment = useCallback((msgId: number, attachmentId: string) => removeFromMessage(msgId, { t: 'chat-remove-attachment', attachmentId }), [removeFromMessage]);
@@ -475,7 +468,7 @@ export function useChatMessages(deps: ChatMessagesDeps) {
       playSound('newMessage');
       notifyIncomingChatMessage({
         conversationId,
-        conversationName: displayNameForConversation(conversationsRef.current.find((c) => c.id === conversationId), myUserIdRef.current, allUsersRef.current),
+        conversationName: conversationTitle(conversationsRef.current.find((c) => c.id === conversationId), myUserIdRef.current, allUsersRef.current),
         senderId: m.message.id,
         senderName: (m.message.id ? allUsersRef.current.get(m.message.id)?.displayName : undefined) ?? m.message.name,
         text: messagePreviewText(m.message),

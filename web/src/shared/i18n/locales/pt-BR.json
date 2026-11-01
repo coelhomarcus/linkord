@@ -1,1 +1,16 @@
-{}
+{
+  "typing": {
+    "one": "{{name}} está digitando...",
+    "some": "{{names}} estão digitando...",
+    "many": "Várias pessoas estão digitando..."
+  },
+  "time": {
+    "yesterdayAt": "Ontem às {{time}}"
+  },
+  "lastSeen": {
+    "offline": "Offline",
+    "today": "Última vez online hoje às {{time}}",
+    "yesterday": "Última vez online ontem às {{time}}",
+    "date": "Última vez online em {{date}} às {{time}}"
+  }
+}

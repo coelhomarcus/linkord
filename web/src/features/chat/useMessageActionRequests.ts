@@ -1,3 +1,4 @@
+import { i18n } from '@/shared/i18n/init';
 import { useCallback, useEffect, useRef } from 'react';
 import type { ClientMessage, ServerMessage } from '@/shared/types/protocol';
 
@@ -18,12 +19,12 @@ export function useMessageActionRequests(sendWs: (msg: ClientMessage) => boolean
   const request = useCallback((msg: ActionMessage): Promise<void> => new Promise((resolve, reject) => {
     const requestId = crypto.randomUUID();
     if (!sendWs({ ...msg, requestId })) {
-      reject(new MessageActionError('Sem conexão com o servidor. Tente de novo quando reconectar.'));
+      reject(new MessageActionError(i18n.t('chat:errors.offline')));
       return;
     }
     const timer = setTimeout(() => {
       pendingRef.current.delete(requestId);
-      reject(new MessageActionError('O servidor não respondeu. Tente de novo.'));
+      reject(new MessageActionError(i18n.t('chat:errors.noResponse')));
     }, RESULT_TIMEOUT_MS);
     pendingRef.current.set(requestId, { resolve, reject, timer });
   }), [sendWs]);

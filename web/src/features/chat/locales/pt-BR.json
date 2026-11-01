@@ -1,0 +1,156 @@
+{
+  "deletedAuthor": "Usuário apagado",
+  "bot": "Bot",
+  "reactWith": "Reagir com {{emoji}}",
+  "react": "Reagir",
+  "moreEmojis": "Mais emojis",
+  "edited": "(editado)",
+  "deleting": "Apagando…",
+  "dismissNotice": "Dispensar aviso",
+  "pending": {
+    "uploading": "Enviando anexos",
+    "waiting": "Aguardando conexão…",
+    "sending": "Enviando",
+    "confirming": "Confirmando envio…",
+    "notSent": "Não enviada.",
+    "notSentWithError": "Não enviada: {{error}}",
+    "retry": "Tentar novamente",
+    "discard": "Descartar",
+    "attachmentFailed": "Falhou",
+    "attachmentDone": "Arquivo carregado",
+    "attachmentPreparing": "Preparando envio…",
+    "attachmentUploading": "Enviando arquivo… {{percent}}%"
+  },
+  "edit": {
+    "saving": "Salvando…",
+    "escapeTo": "escape para",
+    "cancel": "cancelar",
+    "enterTo": "enter para",
+    "save": "salvar",
+    "saveFailed": "Não foi possível salvar."
+  },
+  "actions": {
+    "reply": "Responder",
+    "edit": "Editar",
+    "report": "Denunciar",
+    "delete": "Apagar",
+    "more": "Ações da mensagem",
+    "viewReactions": "Ver todas as reações",
+    "copyText": "Copiar texto",
+    "reportLabel": "mensagem de {{name}}"
+  },
+  "composer": {
+    "replyingTo": "Respondendo a",
+    "cancelReply": "Cancelar resposta",
+    "add": "Adicionar",
+    "attachFiles": "Anexar arquivos",
+    "sendImages": "Enviar imagens",
+    "gif": "GIF",
+    "insertEmoji": "Inserir emoji",
+    "compress": "Compactar imagens (WebP)",
+    "message": "Mensagem",
+    "addCaption": "Adicionar legenda",
+    "sendGif": "Enviar GIF",
+    "send": "Enviar mensagem",
+    "dropToAttach": "Solte para anexar",
+    "removeFile": "Remover {{name}}",
+    "maxAttachments_one": "Máximo de {{count}} anexo por mensagem.",
+    "maxAttachments_other": "Máximo de {{count}} anexos por mensagem.",
+    "tooLarge": "\"{{name}}\" é grande demais (máximo {{max}})."
+  },
+  "reactions": {
+    "title": "Reações",
+    "empty": "Ainda não há reações.",
+    "tabsLabel": "Emoji",
+    "fallbackName": "Participante indisponível",
+    "you": "Você",
+    "more": "{{names}} e mais {{count}}",
+    "reacted_one": "{{names}} reagiu",
+    "reacted_other": "{{names}} reagiram",
+    "reactedMore_one": "{{names}} e mais {{count}} pessoa reagiram",
+    "reactedMore_other": "{{names}} e mais {{count}} pessoas reagiram",
+    "chipAdd": "Adicionar reação {{emoji}} ({{count}}): {{names}}",
+    "chipRemove": "Remover reação {{emoji}} ({{count}}): {{names}}"
+  },
+  "deleteConfirm": {
+    "title": "Apagar mensagem",
+    "description": "A mensagem será apagada para todos e não dá para desfazer.",
+    "descriptionShift": "A mensagem será apagada para todos e não dá para desfazer. Segure Shift ao clicar em Apagar para pular esta confirmação.",
+    "confirm": "Apagar"
+  },
+  "invite": {
+    "unavailable": "Convite indisponível: o grupo não existe mais.",
+    "status": {
+      "accepted": "Aceito",
+      "declined": "Recusado",
+      "revoked": "Cancelado",
+      "expired": "Expirado"
+    },
+    "quotaExceeded": "Você já participa do máximo de grupos permitido.",
+    "failed": "Não foi possível concluir a ação. Tente de novo.",
+    "full_group": "Limite atingido: o grupo está cheio.",
+    "full_bot": "Limite atingido: o bot está cheio.",
+    "alreadyMember_group": "Você já participa deste grupo.",
+    "alreadyMember_bot": "Você já participa deste bot.",
+    "accepting": "Aceitando…",
+    "join_group": "Entrar no grupo",
+    "join_bot": "Entrar no bot",
+    "decline": "Recusar",
+    "waiting": "Aguardando resposta",
+    "revoke": "Revogar",
+    "open_group": "Abrir grupo",
+    "open_bot": "Abrir bot",
+    "header_group": "Convite para grupo",
+    "header_bot": "Convite para bot",
+    "members_zero": "{{count}} membros",
+    "members_one": "{{count}} membro",
+    "members_other": "{{count}} membros",
+    "hint_group": "Ao entrar, você verá o histórico do grupo.",
+    "hint_bot": "Ao entrar, você passa a receber os avisos deste bot."
+  },
+  "search": {
+    "title": "Buscar mensagens",
+    "placeholder": "Buscar mensagens...",
+    "scopeAll": "Buscando em todas as conversas",
+    "scopeOne": "Buscando em {{name}}",
+    "conversationFallback": "conversa",
+    "all": "Todas",
+    "scopeAria": "Buscar em todas as conversas",
+    "searching": "Buscando…",
+    "none": "Nenhuma mensagem encontrada."
+  },
+  "code": {
+    "copied": "Código copiado",
+    "copy": "Copiar código",
+    "copiedLabel": "Copiado",
+    "copyLabel": "Copiar"
+  },
+  "timeline": {
+    "loadingOlder": "Carregando mensagens anteriores...",
+    "loading": "Carregando mensagens…",
+    "log": "Mensagens",
+    "newMessages": "Novas Mensagens"
+  },
+  "media": {
+    "open": "Abrir {{name}}",
+    "openIndexed": "Abrir {{name}} ({{index}} de {{total}})"
+  },
+  "preview": {
+    "invite": "Convite para o grupo {{title}}",
+    "inviteUnavailable": "Convite indisponível",
+    "notice": "Aviso",
+    "attachment": "Anexo"
+  },
+  "errors": {
+    "unknown": "erro desconhecido",
+    "reactFailed": "Não foi possível reagir: {{message}}",
+    "deleteFailed": "Não foi possível apagar: {{message}}",
+    "removeAttachmentFailed": "Não foi possível remover o anexo: {{message}}",
+    "removeEmbedFailed": "Não foi possível remover a incorporação: {{message}}",
+    "offline": "Sem conexão com o servidor. Tente de novo quando reconectar.",
+    "noResponse": "O servidor não respondeu. Tente de novo.",
+    "unconfirmed": "Não foi possível confirmar o envio.",
+    "attachmentFailed_one": "Um anexo não foi enviado.",
+    "attachmentFailed_other": "{{count}} anexos não foram enviados."
+  }
+}

@@ -1,1 +1,16 @@
-{}
+{
+  "typing": {
+    "one": "{{name}} is typing...",
+    "some": "{{names}} are typing...",
+    "many": "Several people are typing..."
+  },
+  "time": {
+    "yesterdayAt": "Yesterday at {{time}}"
+  },
+  "lastSeen": {
+    "offline": "Offline",
+    "today": "Last seen online today at {{time}}",
+    "yesterday": "Last seen online yesterday at {{time}}",
+    "date": "Last seen online on {{date}} at {{time}}"
+  }
+}
