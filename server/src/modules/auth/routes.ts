@@ -227,10 +227,10 @@ function sessionForRequest(request: FastifyRequest) {
   return resolveSession(cookies[config.SESSION_COOKIE]);
 }
 
-async function issueAndSendCode(userId: string, email: string, username: string, purpose: AuthCodePurpose): Promise<void> {
+async function issueAndSendCode(userId: string, email: string, username: string, purpose: AuthCodePurpose, locale: ReturnType<typeof resolveLocale>): Promise<void> {
   const code = await issueAuthCode(userId, purpose, email);
   try {
-    await sendAuthCodeEmail({ to: email, code, purpose, username });
+    await sendAuthCodeEmail({ to: email, code, purpose, username, locale });
   } catch (err) {
     log.error('failed to send code', err);
     throw err;
@@ -279,7 +279,7 @@ async function handleRecoveryRequest(request: FastifyRequest, reply: FastifyRepl
   const user = await findUserByIdentifier(identifier);
   if (user?.email) {
     try {
-      await issueAndSendCode(user.id, user.email, user.username, 'password_reset');
+      await issueAndSendCode(user.id, user.email, user.username, 'password_reset', resolveLocale(user.locale));
     } catch { /* Keep the response identical so recovery never enumerates accounts. */ }
   }
   sendJson(reply, 200, { ok: true });
@@ -339,7 +339,7 @@ async function handleEmailChangeRequest(request: FastifyRequest, reply: FastifyR
   }
   ratelimit.recordFailure(changeKey);
   try {
-    await issueAndSendCode(sess.userId, email, sess.username, 'email_change');
+    await issueAndSendCode(sess.userId, email, sess.username, 'email_change', resolveLocale(sess.locale));
   } catch {
     return sendError(reply, 503, 'email_unavailable', 'Não foi possível enviar o código agora. Tente novamente mais tarde.');
   }
