@@ -6,6 +6,7 @@ import type conversations from '@/features/conversations/locales/pt-BR.json';
 import type friends from '@/features/friends/locales/pt-BR.json';
 import type navigation from '@/features/navigation/locales/pt-BR.json';
 import type notifications from '@/features/notifications/locales/pt-BR.json';
+import type calls from '@/features/calls/locales/pt-BR.json';
 import type settings from '@/features/settings/locales/pt-BR.json';
 
 // pt-BR is the source of truth for key names: other languages are checked
@@ -22,6 +23,7 @@ declare module 'i18next' {
       friends: typeof friends;
       navigation: typeof navigation;
       notifications: typeof notifications;
+      calls: typeof calls;
       settings: typeof settings;
     };
   }

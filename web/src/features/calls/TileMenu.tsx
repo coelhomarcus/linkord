@@ -1,5 +1,6 @@
 import { ArrowsClockwiseIcon, ArrowsInIcon, ArrowsOutIcon, CrosshairIcon, EyeIcon, EyeSlashIcon, FlipHorizontalIcon, GaugeIcon, PauseIcon, PictureInPictureIcon, PlayIcon, ScreencastIcon, SpeakerHighIcon, SpeakerSlashIcon, UserIcon, UserMinusIcon, VideoCameraSlashIcon } from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import type { Track as LKTrack } from 'livekit-client';
 import { useRoom } from '../../state/RoomContext';
@@ -69,6 +70,7 @@ interface TileMenuProps {
 }
 
 export function TileMenu({ onOpenProfile }: TileMenuProps) {
+  const { t } = useTranslation('calls');
   const {
     state, dispatch, menuTarget, closeTileMenu, tileDomRegistry, showStats, kickFromCall,
     activeCallConversationId, conversations, mirrorCameraPreview, setMirrorCameraPreview, stopCamera,
@@ -216,22 +218,22 @@ export function TileMenu({ onOpenProfile }: TileMenuProps) {
       >
         <DropdownMenuItem onClick={toggleFocus}>
           <CrosshairIcon size={16} />
-              <span>{isFocused ? 'Sair do foco' : 'Focar'}</span>
+              <span>{isFocused ? t('menu.unfocus') : t('menu.focus')}</span>
         </DropdownMenuItem>
         {targetUserId && (
           <DropdownMenuItem onClick={handleOpenProfile}>
             <UserIcon size={16} />
-            <span>Ver perfil</span>
+            <span>{t('menu.profile')}</span>
           </DropdownMenuItem>
         )}
         <DropdownMenuItem onClick={toggleTileFullscreen}>
           {isTileFullscreen ? <ArrowsInIcon size={16} /> : <ArrowsOutIcon size={16} />}
-          <span>{isTileFullscreen ? 'Sair da tela cheia' : 'Tela cheia'}</span>
+          <span>{isTileFullscreen ? t('controls.fullscreenExit') : t('controls.fullscreenEnter')}</span>
         </DropdownMenuItem>
         {pipSupported && (
           <DropdownMenuItem onClick={togglePip}>
             <PictureInPictureIcon size={16} />
-              <span>{inPip ? 'Sair do picture-in-picture' : 'Picture-in-picture'}</span>
+              <span>{inPip ? t('menu.exitPictureInPicture') : t('menu.pictureInPicture')}</span>
           </DropdownMenuItem>
         )}
 
@@ -240,11 +242,11 @@ export function TileMenu({ onOpenProfile }: TileMenuProps) {
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => setMirrorCameraPreview(!mirrorCameraPreview)}>
               <FlipHorizontalIcon size={16} />
-              <span>{mirrorCameraPreview ? 'Parar de espelhar minha prévia' : 'Espelhar minha prévia'}</span>
+              <span>{mirrorCameraPreview ? t('menu.stopMirror') : t('menu.mirror')}</span>
             </DropdownMenuItem>
             <DropdownMenuItem onClick={stopCamera}>
               <VideoCameraSlashIcon size={16} />
-              <span>Desligar câmera</span>
+              <span>{t('menu.turnCameraOff')}</span>
             </DropdownMenuItem>
           </>
         )}
@@ -253,7 +255,7 @@ export function TileMenu({ onOpenProfile }: TileMenuProps) {
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleToggleHiddenForMe}>
               <EyeSlashIcon size={16} />
-              <span>{isHiddenForMe ? 'Restaurar vídeo' : 'Ocultar vídeo para mim'}</span>
+              <span>{isHiddenForMe ? t('menu.restoreVideo') : t('menu.hideVideo')}</span>
             </DropdownMenuItem>
           </>
         )}
@@ -262,28 +264,28 @@ export function TileMenu({ onOpenProfile }: TileMenuProps) {
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => void changeSource()}>
               <ArrowsClockwiseIcon size={16} />
-              <span>Trocar fonte</span>
+              <span>{t('menu.changeSource')}</span>
             </DropdownMenuItem>
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>
                 <GaugeIcon size={16} />
-                <span>Qualidade</span>
+                <span>{t('menu.quality')}</span>
               </DropdownMenuSubTrigger>
               <DropdownMenuSubContent container={fullscreenElement ?? undefined}>
                 <DropdownMenuRadioGroup value={shareQuality} onValueChange={(v) => setShareQuality(v as ShareQualityId)}>
                   {(Object.entries(SHARE_QUALITY_PRESETS) as [ShareQualityId, typeof SHARE_QUALITY_PRESETS[ShareQualityId]][]).map(([id, preset]) => (
-                    <DropdownMenuRadioItem key={id} value={id}><ShareQualityIcon id={id} /><span>{preset.label}</span></DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem key={id} value={id}><ShareQualityIcon id={id} /><span>{t(`quality.${preset.labelKey}`)}</span></DropdownMenuRadioItem>
                   ))}
                 </DropdownMenuRadioGroup>
               </DropdownMenuSubContent>
             </DropdownMenuSub>
             <DropdownMenuItem onClick={() => void (isSharePaused ? resumeSharePreview() : pauseSharePreview())}>
               {isSharePaused ? <PlayIcon size={16} /> : <PauseIcon size={16} />}
-              <span>{isSharePaused ? 'Retomar prévia' : 'Pausar prévia'}</span>
+              <span>{isSharePaused ? t('menu.resumePreview') : t('menu.pausePreview')}</span>
             </DropdownMenuItem>
             <DropdownMenuItem variant="destructive" onClick={handleStopSharing}>
               <ScreencastIcon size={16} />
-              <span>Encerrar compartilhamento</span>
+              <span>{t('menu.stopSharing')}</span>
             </DropdownMenuItem>
           </>
         )}
@@ -292,7 +294,7 @@ export function TileMenu({ onOpenProfile }: TileMenuProps) {
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleToggleWatch}>
               {isNotWatching ? <EyeIcon size={16} /> : <EyeSlashIcon size={16} />}
-              <span>{isNotWatching ? 'Assistir' : 'Parar de assistir'}</span>
+              <span>{isNotWatching ? t('menu.watch') : t('menu.stopWatching')}</span>
             </DropdownMenuItem>
           </>
         )}
@@ -304,7 +306,7 @@ export function TileMenu({ onOpenProfile }: TileMenuProps) {
               <button
                 type="button"
                 onClick={toggleMute}
-                aria-label={muted ? 'Reativar áudio' : 'Silenciar áudio'}
+                aria-label={muted ? t('menu.unmuteAudio') : t('menu.muteAudio')}
                 className="flex-none text-text-secondary transition-colors hover:text-text-primary"
               >
                 {muted ? <SpeakerSlashIcon size={16} /> : <SpeakerHighIcon size={16} />}
@@ -317,9 +319,9 @@ export function TileMenu({ onOpenProfile }: TileMenuProps) {
           <>
             <DropdownMenuSeparator />
             <div className="select-none space-y-0.5 px-2.5 py-2 text-caption text-text-muted">
-              <div>Bitrate: {bitrateKbps} kbps</div>
-              {resolution && <div>Resolução: {resolution}</div>}
-              {isMe && <div>No ar: {formatElapsed(elapsedSec)}</div>}
+              <div>{t('menu.bitrate', { value: bitrateKbps })}</div>
+              {resolution && <div>{t('menu.resolution', { value: resolution })}</div>}
+              {isMe && <div>{t('menu.onAir', { value: formatElapsed(elapsedSec) })}</div>}
             </div>
           </>
         )}
@@ -328,7 +330,7 @@ export function TileMenu({ onOpenProfile }: TileMenuProps) {
             <DropdownMenuSeparator />
             <DropdownMenuItem variant="destructive" onClick={handleKick}>
               <UserMinusIcon size={16} />
-              <span>Remover da chamada</span>
+              <span>{t('menu.removeFromCall')}</span>
             </DropdownMenuItem>
           </>
         )}

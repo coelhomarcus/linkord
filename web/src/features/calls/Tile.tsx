@@ -1,6 +1,7 @@
 import { CellSignalLowIcon, CellSignalNoneIcon, CircleNotchIcon, EyeSlashIcon, GearIcon, MicrophoneSlashIcon, MonitorIcon, MonitorPlayIcon, SpeakerSlashIcon } from '@phosphor-icons/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ConnectionQuality } from 'livekit-client';
 
 import { useRoom } from '../../state/RoomContext';
@@ -28,6 +29,7 @@ interface TileProps {
 }
 
 export function Tile({ participantId, kind, isMine, loading = false, paused = false, fit = 'contain', avatarSize = 96, nameSize = 'body' }: TileProps) {
+  const { t } = useTranslation('calls');
   const { state, dispatch, openTileMenu, tileDomRegistry, deafened, showTileBanners, mirrorCameraPreview, livekitRoom } = useRoom();
   const key = tileKey(participantId, kind);
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -161,7 +163,7 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
       role="button"
       tabIndex={0}
       aria-pressed={isFocused}
-      aria-label={`${isFocused ? 'Desfazer destaque de' : 'Destacar'} ${name || 'participante'}`}
+      aria-label={isFocused ? t('tile.unfocusLabel', { name: name || t('tile.participant') }) : t('tile.focusLabel', { name: name || t('tile.participant') })}
       className={`tile-fullscreen-target relative h-full w-full cursor-pointer overflow-hidden rounded-lg border-[3.5px] bg-bg-tertiary transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 ${
         showSpeakingBorder ? '' : 'border-transparent'
       }`}
@@ -190,12 +192,12 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
           {notWatching ? (
             <span className="flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 text-caption text-text-muted">
               <MonitorIcon size={16} />
-              Você parou de assistir
+              {t('tile.stoppedWatching')}
             </span>
           ) : (
             <span className="flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 text-caption text-text-muted">
               <MonitorPlayIcon size={16} />
-              Prévia pausada
+              {t('tile.previewPaused')}
             </span>
           )}
         </div>
@@ -214,7 +216,7 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
           {hiddenForMe && (
             <span className="flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 text-caption text-text-muted">
               <EyeSlashIcon size={12} />
-              Vídeo oculto
+              {t('tile.hiddenVideo')}
             </span>
           )}
         </div>
@@ -249,7 +251,7 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
             type="button"
             variant="ghost"
             size="icon-sm"
-            aria-label="Reativar áudio"
+            aria-label={t('menu.unmuteAudio')}
             onClick={handleUnmuteClick}
             className="h-full w-7 rounded-none text-red hover:bg-white/10 hover:text-red"
           >
@@ -260,7 +262,7 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
           type="button"
           variant="ghost"
           size="icon-sm"
-          aria-label="Configurações da transmissão"
+          aria-label={t('menu.streamSettings')}
           onClick={handleGearClick}
           className="h-full w-7 rounded-none text-white/90 hover:bg-white/10 hover:text-white"
         >

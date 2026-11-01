@@ -1,4 +1,5 @@
 import { ChatCircleIcon } from '@phosphor-icons/react';
+import { useTranslation } from 'react-i18next';
 
 import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { useSidebar } from '@/shared/ui/motion/sidebar-context';
@@ -21,6 +22,7 @@ interface CallChatPanelProps {
  * full-screen — same panel used in the normal chat view, just following
  * the app's right-sidebar convention instead of replacing the call. */
 export function CallChatPanel({ conversationId, open, onOpenChange, onOpenProfile }: CallChatPanelProps) {
+  const { t } = useTranslation('calls');
   const { state, conversations, allUsers } = useRoom();
   const { isMobile } = useSidebar();
   const conversation = conversationId ? conversations.find((c) => c.id === conversationId) ?? null : null;
@@ -31,7 +33,7 @@ export function CallChatPanel({ conversationId, open, onOpenChange, onOpenProfil
       <div className="flex flex-none items-center gap-2 border-b border-border px-4 py-4">
         <ChatCircleIcon size={18} className="flex-none text-text-muted" />
         <h2 className="min-w-0 flex-1 truncate text-title font-semibold">{title}</h2>
-        <CloseButton label="Fechar chat" onClick={() => onOpenChange(false)} />
+        <CloseButton label={t('controls.closeChat')} onClick={() => onOpenChange(false)} />
       </div>
       <ChatSurface surfaceId="call" conversationId={conversation.id} onOpenProfile={onOpenProfile} />
     </>
@@ -42,13 +44,13 @@ export function CallChatPanel({ conversationId, open, onOpenChange, onOpenProfil
       side="right"
       open={open && !!conversation}
       onOpenChange={onOpenChange}
-      ariaLabel="Chat da chamada"
+      ariaLabel={t('chat.title')}
       className="flex w-96 flex-col text-text-primary"
     >
       {content}
     </Sheet>
   ) : (
-    <SidePanel open={open && !!conversation} width={PANEL_WIDTH} ariaLabel="Chat da chamada" className="bg-bg-primary text-text-primary">
+    <SidePanel open={open && !!conversation} width={PANEL_WIDTH} ariaLabel={t('chat.title')} className="bg-bg-primary text-text-primary">
       {content}
     </SidePanel>
   );

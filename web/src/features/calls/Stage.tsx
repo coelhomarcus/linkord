@@ -1,5 +1,6 @@
 import { ArrowLeftIcon, VideoCameraSlashIcon } from '@phosphor-icons/react';
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useRoom } from '../../state/RoomContext';
 import { useCallTiles } from './useCallTiles';
@@ -26,6 +27,7 @@ const FALLBACK_RESERVED_BOTTOM = 116;
 const BAR_GRID_GAP = 12;
 
 export function Stage({ allIds, chatOpen, onToggleChat, onBack }: StageProps) {
+  const { t } = useTranslation('calls');
   const { state, dispatch, hideAudioOnlyTiles, setHideAudioOnlyTiles, callStageRef, reconnecting, menuTarget } = useRoom();
   const allDescriptors = useCallTiles(allIds);
   const descriptors = hideAudioOnlyTiles ? allDescriptors.filter((d) => d.kind !== 'avatar') : allDescriptors;
@@ -82,7 +84,7 @@ export function Stage({ allIds, chatOpen, onToggleChat, onBack }: StageProps) {
         type="button"
         variant="ghost"
         size="icon-sm"
-        aria-label="Voltar para conversas"
+        aria-label={t('controls.backToConversations')}
         onClick={onBack}
         className="absolute left-2 top-2 z-20 bg-bg-tertiary/80 text-text-secondary hover:bg-bg-hover md:hidden"
       >
@@ -92,11 +94,11 @@ export function Stage({ allIds, chatOpen, onToggleChat, onBack }: StageProps) {
         <div className="flex flex-col items-center gap-3 px-6 text-center text-text-muted">
           <VideoCameraSlashIcon size={28} />
           <p className="text-body">
-            Ninguém está com a câmera ligada agora.<br />
-            A opção <span className="font-medium text-text-secondary">"Ocultar sem vídeo"</span> está ativada.
+            {t('stage.noVideo')}<br />
+            {t('stage.hiddenFilter')}
           </p>
           <Button type="button" variant="secondary" size="sm" onClick={() => setHideAudioOnlyTiles(false)}>
-            Mostrar todos
+            {t('stage.showAll')}
           </Button>
         </div>
       ) : (
