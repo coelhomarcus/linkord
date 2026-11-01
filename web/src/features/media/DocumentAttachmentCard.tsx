@@ -1,5 +1,6 @@
 import { formatFileSize } from '@/shared/lib/formatBytes';
 import { cn } from '@/shared/lib/utils';
+import { useTranslation } from 'react-i18next';
 import { presentFile } from './filePresentation';
 
 interface DocumentAttachmentCardProps {
@@ -15,7 +16,8 @@ interface DocumentAttachmentCardProps {
  * same everywhere in the app. No download control, no card chrome: those
  * belong to whichever surface wraps this (see FileAttachmentCard). */
 export function DocumentAttachmentCard({ name, size, mime, className }: DocumentAttachmentCardProps) {
-  const { icon: Icon, iconBgClassName, iconTextClassName, badge, typeLabel, baseName, extension } = presentFile(name, mime);
+  const { t } = useTranslation('media');
+  const { icon: Icon, iconBgClassName, iconTextClassName, badge, typeLabelKey, baseName, extension } = presentFile(name, mime);
   return (
     <div className={cn('flex min-w-0 items-center gap-3', className)}>
       <div className={cn('relative grid size-10 flex-none place-items-center rounded-md', iconBgClassName)}>
@@ -32,7 +34,7 @@ export function DocumentAttachmentCard({ name, size, mime, className }: Document
           {extension && <span className="flex-none overflow-hidden text-ellipsis">.{extension}</span>}
         </p>
         <p className="truncate text-caption text-text-muted">
-          {typeLabel} · {formatFileSize(size)}
+          {t(`fileTypes.${typeLabelKey}`)} · {formatFileSize(size)}
         </p>
       </div>
     </div>

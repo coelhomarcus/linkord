@@ -1,4 +1,5 @@
 import { ConfirmDialog } from '@/shared/ConfirmDialog';
+import { useTranslation } from 'react-i18next';
 
 export type SocialConfirm = { kind: 'remove' | 'block'; userId: string; displayName: string };
 
@@ -11,18 +12,19 @@ export function SocialConfirmDialog({ target, onCancel, onConfirm }: {
   onCancel: () => void;
   onConfirm: (target: SocialConfirm) => void;
 }) {
+  const { t } = useTranslation('friends');
   const isBlock = target?.kind === 'block';
   return (
     <ConfirmDialog
       open={!!target}
       onOpenChange={(open) => { if (!open) onCancel(); }}
-      title={isBlock ? 'Bloquear pessoa' : 'Remover amizade'}
+      title={isBlock ? t('confirm.blockTitle') : t('confirm.removeTitle')}
       description={
         isBlock
-          ? `Bloquear ${target?.displayName ?? ''} remove a amizade e impede mensagens e chamadas privadas entre vocês. Grupos em comum continuam. Desbloquear depois não restaura a amizade.`
-          : `Remover ${target?.displayName ?? ''} dos seus amigos? Vocês ainda podem ver o histórico da conversa, mas não conseguem mais trocar mensagens até serem amigos de novo.`
+          ? t('confirm.blockText', { name: target?.displayName ?? '' })
+          : t('confirm.removeText', { name: target?.displayName ?? '' })
       }
-      confirmLabel={isBlock ? 'Bloquear' : 'Remover'}
+      confirmLabel={isBlock ? t('confirm.block') : t('confirm.remove')}
       destructive
       onConfirm={() => { if (target) onConfirm(target); }}
     />

@@ -6,28 +6,35 @@ export interface SearchEntry {
    * `/app/settings/:categoryId#:sectionId`. Profile has none: it's a single
    * card, not a sequence of SettingsSection blocks. */
   sectionId?: string;
-  title: string;
-  keywords: string[];
+  /** `search.<searchKey>.title` / `.keywords` (comma separated) in the
+   * settings locale files. */
+  searchKey: SearchKey;
   adminOnly?: boolean;
 }
+
+export type SearchKey =
+  | 'profile' | 'identity' | 'language' | 'email' | 'storage' | 'session' | 'blocked'
+  | 'microphone' | 'speaker' | 'camera' | 'system' | 'sounds'
+  | 'appAppearance' | 'callAppearance' | 'imageUploads' | 'adminArea';
 
 // One entry per SettingsSection that exists today (grep '<SettingsSection id='
 // across features/settings/*.tsx to keep this honest) — curated, not
 // generated, since the sections live scattered across several files.
 export const SETTINGS_SEARCH_INDEX: SearchEntry[] = [
-  { categoryId: 'profile', title: 'Perfil', keywords: ['foto', 'avatar', 'banner', 'nome de exibição', 'bio', 'links', 'cor'] },
-  { categoryId: 'account', sectionId: 'identity', title: 'Identificação', keywords: ['nome de usuário', 'username', 'admin'] },
-  { categoryId: 'account', sectionId: 'email', title: 'E-mail', keywords: ['email', 'trocar e-mail', 'confirmar e-mail', 'código'] },
-  { categoryId: 'account', sectionId: 'storage', title: 'Armazenamento de anexos', keywords: ['espaço', 'cota', 'arquivos', 'storage'] },
-  { categoryId: 'account', sectionId: 'session', title: 'Sessão', keywords: ['sair', 'logout', 'encerrar sessão'] },
-  { categoryId: 'privacy', sectionId: 'blocked', title: 'Pessoas bloqueadas', keywords: ['bloqueado', 'desbloquear', 'bloquear'] },
-  { categoryId: 'av', sectionId: 'microphone', title: 'Microfone', keywords: ['mic', 'entrada de áudio', 'dispositivo'] },
-  { categoryId: 'av', sectionId: 'speaker', title: 'Alto-falante', keywords: ['saída de áudio', 'som', 'fone'] },
-  { categoryId: 'av', sectionId: 'camera', title: 'Câmera', keywords: ['vídeo', 'webcam'] },
-  { categoryId: 'notifications', sectionId: 'system', title: 'Notificações do sistema', keywords: ['permissão', 'avisos', 'mensagens'] },
-  { categoryId: 'notifications', sectionId: 'sounds', title: 'Sons', keywords: ['volume', 'som', 'testar som', 'mudo'] },
-  { categoryId: 'prefs', sectionId: 'app-appearance', title: 'Aparência do app', keywords: ['tema', 'cores', 'black', 'preto', 'old', 'antigo', 'graphite', 'grafite', 'aparência'] },
-  { categoryId: 'prefs', sectionId: 'call-appearance', title: 'Aparência da chamada', keywords: ['banner', 'estatísticas', 'ocultar participantes', 'tiles'] },
-  { categoryId: 'prefs', sectionId: 'image-uploads', title: 'Envio de imagens', keywords: ['compactar', 'imagem', 'anexo'] },
-  { categoryId: 'moderation', sectionId: 'admin-area', title: 'Área administrativa', keywords: ['admin', 'denúncia', 'auditoria', 'usuários', 'grupos'], adminOnly: true },
+  { categoryId: 'profile', searchKey: 'profile' },
+  { categoryId: 'account', sectionId: 'identity', searchKey: 'identity' },
+  { categoryId: 'account', sectionId: 'language', searchKey: 'language' },
+  { categoryId: 'account', sectionId: 'email', searchKey: 'email' },
+  { categoryId: 'account', sectionId: 'storage', searchKey: 'storage' },
+  { categoryId: 'account', sectionId: 'session', searchKey: 'session' },
+  { categoryId: 'privacy', sectionId: 'blocked', searchKey: 'blocked' },
+  { categoryId: 'av', sectionId: 'microphone', searchKey: 'microphone' },
+  { categoryId: 'av', sectionId: 'speaker', searchKey: 'speaker' },
+  { categoryId: 'av', sectionId: 'camera', searchKey: 'camera' },
+  { categoryId: 'notifications', sectionId: 'system', searchKey: 'system' },
+  { categoryId: 'notifications', sectionId: 'sounds', searchKey: 'sounds' },
+  { categoryId: 'prefs', sectionId: 'app-appearance', searchKey: 'appAppearance' },
+  { categoryId: 'prefs', sectionId: 'call-appearance', searchKey: 'callAppearance' },
+  { categoryId: 'prefs', sectionId: 'image-uploads', searchKey: 'imageUploads' },
+  { categoryId: 'moderation', sectionId: 'admin-area', searchKey: 'adminArea', adminOnly: true },
 ];

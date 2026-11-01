@@ -1,11 +1,13 @@
 import { CheckCircleIcon, CheckIcon, CircleNotchIcon, EnvelopeIcon } from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '@/state/AuthContext';
 import { Label } from '@/shared/ui/primitives/label';
 import { Button } from '@/shared/ui/primitives/button';
 import { Input } from '@/shared/ui/primitives/input';
-import { ApiError, confirmEmailChange, requestEmailChange } from '@/shared/api/api';
+import { confirmEmailChange, requestEmailChange } from '@/shared/api/api';
+import { describeApiError } from '@/shared/api/errorText';
 import { OTPInput, type OTPStatus } from '@/shared/ui/motion/otp-input';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -15,14 +17,17 @@ const MAX_EMAIL_LEN = 254;
 
 type Phase = 'view' | 'edit' | 'requested' | 'success';
 
-function validateNewEmail(value: string, currentEmail: string | null): string | null {
-  if (!value) return 'Informe um e-mail.';
-  if (!EMAIL_RE.test(value)) return 'Informe um e-mail válido.';
-  if (currentEmail && value.toLowerCase() === currentEmail.toLowerCase()) return 'Informe um e-mail diferente do atual.';
+type EmailValidationError = 'required' | 'invalid' | 'same';
+
+function validateNewEmail(value: string, currentEmail: string | null): EmailValidationError | null {
+  if (!value) return 'required';
+  if (!EMAIL_RE.test(value)) return 'invalid';
+  if (currentEmail && value.toLowerCase() === currentEmail.toLowerCase()) return 'same';
   return null;
 }
 
 export function EmailSettings({ currentEmail }: { currentEmail: string | null }) {
+  const { t } = useTranslation('settings');
   const { refresh } = useAuth();
   // `view` reads `currentEmail` straight from the prop, so a phase reset
   // effect keyed on it isn't needed — and isn't safe to have anyway:
@@ -32,7 +37,7 @@ export function EmailSettings({ currentEmail }: { currentEmail: string | null })
   // browser, not by a test — nothing here exercises AuthContext for real).
   const [phase, setPhase] = useState<Phase>('view');
   const [email, setEmail] = useState('');
-  const [validationError, setValidationError] = useState<string | null>(null);
+  const [validationError, setValidationError] = useState<EmailValidationError | null>(null);
   // Frozen the moment a code is requested — editing again means starting a
   // fresh request, never silently confirming a different address than the
   // one the code was actually sent to.
@@ -80,7 +85,7 @@ export function EmailSettings({ currentEmail }: { currentEmail: string | null })
       setOtpStatus('idle');
       setPhase('requested');
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Não foi possível enviar o código.');
+      setError(describeApiError(err, 'settings:email.errors.sendFailed'));
     } finally {
       setPending(false);
     }
@@ -93,7 +98,7 @@ export function EmailSettings({ currentEmail }: { currentEmail: string | null })
       await requestEmailChange(targetEmail);
       setResent(true);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Não foi possível reenviar o código.');
+      setError(describeApiError(err, 'settings:email.errors.resendFailed'));
     } finally {
       setPending(false);
     }
@@ -112,7 +117,7 @@ export function EmailSettings({ currentEmail }: { currentEmail: string | null })
       await refresh();
     } catch (err) {
       setOtpStatus('error');
-      setError(err instanceof ApiError ? err.message : 'Não foi possível confirmar o e-mail.');
+      setError(describeApiError(err, 'settings:email.errors.confirmFailed'));
     } finally {
       setPending(false);
       confirmingRef.current = false;
@@ -122,7 +127,7 @@ export function EmailSettings({ currentEmail }: { currentEmail: string | null })
   if (phase === 'success') {
     return (
       <p className="flex items-center gap-1.5 text-label text-green">
-        <CheckCircleIcon size={16} aria-hidden /> E-mail alterado para {targetEmail}.
+        <CheckCircleIcon size={16} aria-hidden /> {t('email.changed', { email: targetEmail })}
       </p>
     );
   }
@@ -130,9 +135,9 @@ export function EmailSettings({ currentEmail }: { currentEmail: string | null })
   if (phase === 'view') {
     return (
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="break-all text-body text-text-primary">{currentEmail ?? 'Nenhum e-mail cadastrado.'}</span>
+        <span className="break-all text-body text-text-primary">{currentEmail ?? t('email.none')}</span>
         <Button type="button" variant="secondary" size="sm" onClick={startEdit}>
-          <span>Alterar e-mail</span>
+          <span>{t('email.change')}</span>
         </Button>
       </div>
     );
@@ -141,10 +146,10 @@ export function EmailSettings({ currentEmail }: { currentEmail: string | null })
   if (phase === 'edit') {
     return (
       <div className="flex flex-col gap-3">
-        <p className="text-label text-text-muted">Usado para recuperar sua conta. A alteração será confirmada por código.</p>
+        <p className="text-label text-text-muted">{t('email.changeHint')}</p>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
           <div className="min-w-0 flex-1">
-            <Label htmlFor="accountEmail" className="text-label text-text-muted">Novo e-mail</Label>
+            <Label htmlFor="accountEmail" className="text-label text-text-muted">{t('email.newLabel')}</Label>
             <Input
               id="accountEmail"
               type="email"
@@ -157,39 +162,39 @@ export function EmailSettings({ currentEmail }: { currentEmail: string | null })
           </div>
           <Button type="button" size="sm" disabled={pending} onClick={() => void handleRequest()}>
             {pending ? <CircleNotchIcon size={20} className="animate-spin" /> : <EnvelopeIcon size={20} />}
-            <span>{pending ? 'Enviando…' : 'Enviar código'}</span>
+            <span>{pending ? t('email.sending') : t('email.sendCode')}</span>
           </Button>
         </div>
         <Button type="button" variant="ghost" size="sm" className="w-fit" disabled={pending} onClick={() => setPhase('view')}>
-          <span>Cancelar</span>
+          <span>{t('email.cancel')}</span>
         </Button>
-        {(validationError ?? error) && <p role="alert" className="text-label text-red">{validationError ?? error}</p>}
+        {(validationError ?? error) && <p role="alert" className="text-label text-red">{validationError ? t(`email.validation.${validationError}`) : error}</p>}
       </div>
     );
   }
 
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-label text-text-muted">Digite o código enviado para {targetEmail}. Ele expira em 30 minutos.</p>
+      <p className="text-label text-text-muted">{t('email.codeSent', { email: targetEmail })}</p>
       <OTPInput
-        label="Código de confirmação"
-        hint="Digite os 6 dígitos enviados para seu e-mail."
-        errorMessage={error ?? 'Confira o código e tente novamente.'}
-        successMessage="E-mail alterado com sucesso."
+        label={t('email.codeLabel')}
+        hint={t('email.codeHint')}
+        errorMessage={error ?? t('email.codeError')}
+        successMessage={t('email.codeSuccess')}
         value={code}
         status={otpStatus}
         disabled={pending}
         onChange={(value) => { setCode(value); setOtpStatus('idle'); setError(null); }}
         onComplete={(value) => { void handleConfirm(value); }}
-        aria-label="Código de confirmação de e-mail"
+        aria-label={t('email.codeAria')}
       />
       <div className="flex flex-wrap items-center gap-2">
         <Button type="button" size="sm" disabled={pending || code.length !== 6} onClick={() => void handleConfirm()}>
           {pending ? <CircleNotchIcon size={20} className="animate-spin" /> : <CheckIcon size={20} />}
-          <span>{pending ? 'Confirmando…' : 'Confirmar e-mail'}</span>
+          <span>{pending ? t('email.confirming') : t('email.confirm')}</span>
         </Button>
         <Button type="button" variant="ghost" size="sm" disabled={pending} onClick={() => void handleResend()}>
-          <span>{resent ? 'Código reenviado' : 'Reenviar código'}</span>
+          <span>{resent ? t('email.resent') : t('email.resend')}</span>
         </Button>
         <Button
           type="button"
@@ -198,7 +203,7 @@ export function EmailSettings({ currentEmail }: { currentEmail: string | null })
           disabled={pending}
           onClick={() => { setPhase('edit'); setCode(''); setError(null); setOtpStatus('idle'); }}
         >
-          <span>Usar outro e-mail</span>
+          <span>{t('email.useOther')}</span>
         </Button>
       </div>
     </div>

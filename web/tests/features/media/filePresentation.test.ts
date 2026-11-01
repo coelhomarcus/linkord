@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { presentFile, splitFileName } from '@/features/media/filePresentation';
+import { useLanguageForTests } from '@tests/fixtures/i18nFixture';
+
+describe('file presentation translations', () => {
+  useLanguageForTests('en-US');
+
+  it('returns a stable family key for the active-language label', () => {
+    expect(presentFile('report.pdf', 'application/pdf').typeLabelKey).toBe('pdf');
+  });
+});
 
 describe('splitFileName', () => {
   it('splits on the last dot, keeping a compound extension and a dotfile whole', () => {
@@ -27,7 +36,7 @@ describe('presentFile', () => {
 
     const unknown = presentFile('README', 'application/x-something-weird');
     expect(unknown.family).toBe('unknown');
-    expect(unknown.typeLabel).toBe('Arquivo');
+    expect(unknown.typeLabelKey).toBe('unknown');
   });
 
   it('a name that disagrees with the MIME only changes the identity, never a preview', () => {

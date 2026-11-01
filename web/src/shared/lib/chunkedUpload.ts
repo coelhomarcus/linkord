@@ -1,4 +1,5 @@
 import { ApiError } from '@/shared/api/api';
+import { i18n } from '@/shared/i18n/init';
 import { logger } from '@/shared/lib/logger';
 
 const log = logger.child({ component: 'upload' });
@@ -14,7 +15,7 @@ async function toApiError(res: Response): Promise<ApiError> {
   let body: unknown = null;
   try { body = await res.json(); } catch {  }
   const err = (body && typeof body === 'object' ? (body as { error?: { code?: string; message?: string } }).error : null) || {};
-  return new ApiError(res.status, err.code || 'unknown_error', err.message || 'Erro inesperado.', res.headers.get('Retry-After') ?? undefined);
+  return new ApiError(res.status, err.code || 'unknown_error', err.message || i18n.t('errors.unexpected'), res.headers.get('Retry-After') ?? undefined);
 }
 
 async function runWithConcurrency(count: number, limit: number, task: (i: number) => Promise<void>): Promise<void> {
@@ -68,7 +69,7 @@ interface UploadRun {
  * message that carries it (with the whole batch) is created later by one
  * correlated `chat` send — see stageFileInChunks below, its only caller. */
 async function runUpload({ conversationId, file, onProgress, signal }: UploadRun): Promise<unknown> {
-  if (!conversationId) throw new ApiError(400, 'missing_conversation', 'Conversa não informada.');
+  if (!conversationId) throw new ApiError(400, 'missing_conversation', i18n.t('upload.missingConversation'));
   let initRes: Response;
   // several batches in a row can hit the server's per-minute cap on new
   // uploads; wait out its Retry-After rather than failing the file

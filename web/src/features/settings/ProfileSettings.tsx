@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import type { Area } from 'react-easy-crop';
+import { useTranslation } from 'react-i18next';
 
 import { useBlocker } from 'react-router';
 import { ImageCropDialog } from './ImageCropDialog';
@@ -21,6 +22,7 @@ import { UnsavedProfileChangesDialog } from './UnsavedProfileChangesDialog';
 type ProfileCropTarget = { field: 'avatar' | 'banner'; file: File; src: string };
 
 export function ProfileSettings() {
+  const { t } = useTranslation('settings');
   const { state, updateProfile, uploadProfileImage, removeProfileImage, activeCallConversationId } = useRoom();
   // FloatingPip (a call kept running while browsing elsewhere) sits fixed at
   // the viewport's bottom-left, on top of whatever's there — on a narrow
@@ -132,7 +134,7 @@ export function ProfileSettings() {
     if (!file) return;
     const setError = field === 'avatar' ? setAvatarError : setBannerError;
     if (file.size > MAX_AVATAR_BYTES) {
-      setError(`Arquivo muito grande (máximo ${formatMB(MAX_AVATAR_BYTES)}).`);
+      setError(t('profile.fileTooLarge', { max: formatMB(MAX_AVATAR_BYTES) }));
       return;
     }
     setError(null);
@@ -165,7 +167,7 @@ export function ProfileSettings() {
         if (phase === 'uploading') closeCropDialog();
       });
     } catch (err) {
-      setError(describeProfileSaveError(err, `Falha ao enviar ${field === 'avatar' ? 'a foto' : 'o banner'}.`));
+      setError(describeProfileSaveError(err, t(`profile.uploadFailed.${field}`)));
     } finally {
       setUploading(false);
       setActiveUpload(null);
@@ -178,7 +180,7 @@ export function ProfileSettings() {
     try {
       await removeProfileImage(field);
     } catch (err) {
-      setError(describeProfileSaveError(err, `Não foi possível remover ${field === 'avatar' ? 'a foto' : 'o banner'}.`));
+      setError(describeProfileSaveError(err, t(`profile.removeFailed.${field}`)));
     }
   }
 
@@ -196,8 +198,8 @@ export function ProfileSettings() {
     if (showBar) lastTouchedRef.current?.scrollIntoView?.({ block: 'nearest' });
   }, [showBar]);
   const barStatusText = saveState === 'error' ? saveError
-    : saving ? 'Salvando…'
-    : dirty ? 'Você tem alterações não salvas.'
+    : saving ? t('profile.saving')
+    : dirty ? t('profile.unsavedNotice')
     : '';
 
   return (
@@ -235,7 +237,7 @@ export function ProfileSettings() {
         />
         <input
           ref={avatarFileInputRef}
-          aria-label="Selecionar foto de perfil"
+          aria-label={t('profile.avatarInput')}
           type="file"
           accept={AVATAR_MIME_TYPES.join(',')}
           hidden
@@ -243,7 +245,7 @@ export function ProfileSettings() {
         />
         <input
           ref={bannerFileInputRef}
-          aria-label="Selecionar banner"
+          aria-label={t('profile.bannerInput')}
           type="file"
           accept={AVATAR_MIME_TYPES.join(',')}
           hidden
@@ -253,20 +255,20 @@ export function ProfileSettings() {
         {bannerError && <p role="alert" className="text-label text-red">{bannerError}</p>}
 
         <p className="text-caption text-text-muted">
-          Foto e banner: PNG, JPEG, GIF ou WEBP até {formatMB(MAX_AVATAR_BYTES)}, salvos na hora.
+          {t('profile.formats', { max: formatMB(MAX_AVATAR_BYTES) })}
         </p>
 
         {justSaved && (
           <p role="status" className="text-label font-medium text-green">
-            Perfil salvo.
+            {t('profile.saved')}
           </p>
         )}
 
         {conflict && dirty && (
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border-strong bg-bg-tertiary px-4 py-3 text-label text-text-secondary">
-            <span>Este perfil foi atualizado em outro lugar enquanto você editava.</span>
+            <span>{t('profile.conflict')}</span>
             <Button type="button" variant="ghost" size="sm" onClick={applyIncoming}>
-              <span>Usar valores salvos</span>
+              <span>{t('profile.useSaved')}</span>
             </Button>
           </div>
         )}
@@ -274,7 +276,7 @@ export function ProfileSettings() {
         {showBar && (
           <div
             role="region"
-            aria-label="Salvar alterações do perfil"
+            aria-label={t('profile.barLabel')}
             className={cn(
               'fixed left-1/2 z-50 flex w-[min(100%,28rem)] max-w-[calc(100vw-2rem)] -translate-x-1/2 flex-wrap items-center justify-between gap-3 rounded-xl border border-border-strong bg-bg-floating/95 px-4 py-3 shadow-popover backdrop-blur-xl',
               inCall ? 'bottom-20' : 'bottom-[max(1rem,env(safe-area-inset-bottom))]',
@@ -286,11 +288,11 @@ export function ProfileSettings() {
             <div className="flex gap-2">
               {dirty && (
                 <Button type="button" variant="ghost" size="sm" disabled={saving} onClick={discard}>
-                  <span>Descartar</span>
+                  <span>{t('profile.discard')}</span>
                 </Button>
               )}
               <Button type="submit" size="sm" disabled={saving}>
-                <span>{saving ? 'Salvando…' : 'Salvar perfil'}</span>
+                <span>{saving ? t('profile.saving') : t('profile.save')}</span>
               </Button>
             </div>
           </div>
@@ -313,7 +315,7 @@ export function ProfileSettings() {
         error={cropTarget?.field === 'banner' ? bannerError : avatarError}
         aspect={cropTarget?.field === 'banner' ? BANNER_ASPECT_RATIO : 1}
         cropShape={cropTarget?.field === 'banner' ? 'rect' : 'round'}
-        title={cropTarget?.field === 'banner' ? 'Recortar banner' : 'Recortar foto de perfil'}
+        title={cropTarget?.field === 'banner' ? t('profile.cropTitle.banner') : t('profile.cropTitle.avatar')}
         onCancel={closeCropDialog}
         onConfirm={handleCropConfirm}
       />
@@ -321,7 +323,7 @@ export function ProfileSettings() {
 
       <UploadProgressModal
         open={activeUpload?.phase === 'uploading'}
-        title={`Enviando ${activeUpload?.field === 'banner' ? 'o banner' : 'a foto de perfil'}…`}
+        title={activeUpload?.field === 'banner' ? t('profile.uploadingTitle.banner') : t('profile.uploadingTitle.avatar')}
         progress={activeUpload?.field === 'banner' ? bannerUploadProgress : avatarUploadProgress}
       />
     </div>

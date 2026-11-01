@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 import { Avatar } from '@/shared/Avatar';
 import { Button } from '@/shared/ui/primitives/button';
@@ -34,16 +35,18 @@ export function UserDetailPage() {
 /** The whole history of the account, by cursor — not just the few rows the
  * detail payload carries. `revision` re-reads it after something changed. */
 function UserHistory({ id, revision }: { id: string; revision: string }) {
+  const { t } = useTranslation('admin');
   const fetchPage = useCallback((cursor: string | null) => fetchAudit({ targetType: 'user', targetId: id }, cursor), [id]);
   const list = useCursorList(fetchPage, id, { getKey: (row) => row.id, revision });
   return (
-    <AdminSection title="Histórico completo" description="Tudo o que a administração registrou sobre esta conta, da ação mais recente à mais antiga.">
-      <ListChrome list={list} empty="Nenhuma ação registrada sobre esta conta."><AuditList items={list.items} /></ListChrome>
+    <AdminSection title={t('detail.fullHistory')} description={t('detail.historyDescription')}>
+      <ListChrome list={list} empty={t('detail.noHistory')}><AuditList items={list.items} /></ListChrome>
     </AdminSection>
   );
 }
 
 function UserDetail({ id }: { id: string }) {
+  const { t } = useTranslation('admin');
   const { state } = useRoom();
   const back = useAdminBack('/admin/users');
   const { filters } = useAdminQuery(QUERY);
@@ -53,8 +56,8 @@ function UserDetail({ id }: { id: string }) {
   const [deleted, setDeleted] = useState(false);
   const [ownSessionsEnded, setOwnSessionsEnded] = useState(false);
 
-  if (deleted) return <p className="py-8 text-center text-label text-text-muted">Conta excluída. <AdminTextLink to={back}>Voltar à lista</AdminTextLink></p>;
-  if (!detail) return <DetailStatusView status={status} missing="Conta não encontrada." failed="Não foi possível carregar a conta." backTo={back} backLabel="Voltar" onRetry={reload} />;
+  if (deleted) return <p className="py-8 text-center text-label text-text-muted">{t('detail.deleted')} <AdminTextLink to={back}>{t('detail.backToList')}</AdminTextLink></p>;
+  if (!detail) return <DetailStatusView status={status} missing={t('detail.notFound')} failed={t('detail.loadFailed')} backTo={back} backLabel={t('common.back')} onRetry={reload} />;
 
   const { user, groups, storage } = detail;
   const isSelf = user.id === state.me.userId;
@@ -69,11 +72,11 @@ function UserDetail({ id }: { id: string }) {
 
   return (
     <div className="flex flex-col gap-5">
-      <AdminTextLink to={back} state={RESTORE_LIST} className="w-fit text-caption text-text-muted">← Usuários</AdminTextLink>
+      <AdminTextLink to={back} state={RESTORE_LIST} className="w-fit text-caption text-text-muted">{t('detail.backUsers')}</AdminTextLink>
       {refreshFailed && <RefreshFailedNotice refreshing={refreshing} onRetry={() => void refresh()} />}
       {ownSessionsEnded && (
         <p role="status" className="rounded-lg border border-yellow/30 bg-yellow/10 px-3 py-2 text-label text-text-primary">
-          Suas sessões foram encerradas. Entre de novo para continuar.
+          {t('detail.sessionsEnded')}
         </p>
       )}
 
@@ -86,44 +89,44 @@ function UserDetail({ id }: { id: string }) {
       />
 
       <AdminDetailTabs<Tab>
-        label="Seções da conta"
+        label={t('detail.accountSections')}
         active={tab}
         defaultTab="overview"
         tabs={[
-          { id: 'overview', label: 'Resumo' },
-          { id: 'groups', label: `Grupos (${groups.length})` },
-          { id: 'moderation', label: 'Moderação' },
-          { id: 'history', label: 'Histórico' },
+          { id: 'overview', label: t('detail.overview') },
+          { id: 'groups', label: `${t('detail.groups')} (${groups.length})` },
+          { id: 'moderation', label: t('detail.moderation') },
+          { id: 'history', label: t('detail.history') },
         ]}
       />
 
       {tab === 'overview' && (
-        <AdminSection title="Conta">
+        <AdminSection title={t('detail.account')}>
           <AdminFields>
-            <AdminFieldRow label="E-mail">{user.email ?? '-'}</AdminFieldRow>
-            <AdminFieldRow label="Criada em">{formatWhen(user.createdAt)}</AdminFieldRow>
-            <AdminFieldRow label="Última vez online">{user.online ? 'Online agora' : formatWhen(user.lastSeenAt)}</AdminFieldRow>
-            <AdminFieldRow label="Situação">
-              {suspended ? `Suspensa em ${formatWhen(user.statusChangedAt)}: “${user.statusReason}”` : 'Ativa'}
+            <AdminFieldRow label={t('detail.email')}>{user.email ?? '-'}</AdminFieldRow>
+            <AdminFieldRow label={t('detail.createdAt')}>{formatWhen(user.createdAt)}</AdminFieldRow>
+            <AdminFieldRow label={t('detail.lastOnline')}>{user.online ? t('detail.onlineNow') : formatWhen(user.lastSeenAt)}</AdminFieldRow>
+            <AdminFieldRow label={t('detail.status')}>
+              {suspended ? t('detail.suspendedAt', { when: formatWhen(user.statusChangedAt), reason: user.statusReason }) : t('detail.active')}
             </AdminFieldRow>
-            <AdminFieldRow label="Papel">{isAdmin ? 'Administradora' : 'Conta comum'}</AdminFieldRow>
-            <AdminFieldRow label="Armazenamento atribuível">{formatFileSize(storage.bytes)} em {storage.files} arquivo(s)</AdminFieldRow>
-            <AdminFieldRow label="Grupos">
-              {groups.length === 0 ? 'Não participa de nenhum grupo.' : <AdminTextLink to={{ search: '?tab=groups' }}>Ver os {groups.length} grupo(s)</AdminTextLink>}
+            <AdminFieldRow label={t('ui.role')}>{isAdmin ? t('detail.administrator') : t('detail.regularAccount')}</AdminFieldRow>
+            <AdminFieldRow label={t('detail.storage')}>{formatFileSize(storage.bytes)} em {storage.files} {t('detail.files')}</AdminFieldRow>
+            <AdminFieldRow label={t('detail.groups')}>
+              {groups.length === 0 ? t('detail.noGroups') : <AdminTextLink to={{ search: '?tab=groups' }}>{t('detail.viewGroups', { count: groups.length })}</AdminTextLink>}
             </AdminFieldRow>
-            <AdminFieldRow label="Histórico"><AdminTextLink to={{ search: '?tab=history' }}>Ver ações registradas sobre esta conta</AdminTextLink></AdminFieldRow>
+            <AdminFieldRow label={t('detail.history')}><AdminTextLink to={{ search: '?tab=history' }}>{t('detail.viewHistory')}</AdminTextLink></AdminFieldRow>
           </AdminFields>
         </AdminSection>
       )}
 
       {tab === 'groups' && (
-        <AdminSection title="Grupos" description="Os grupos de que a conta participa e o papel dela em cada um.">
-          {groups.length === 0 ? <p className="text-label text-text-muted">Não participa de nenhum grupo.</p> : (
+        <AdminSection title={t('detail.groups')} description={t('detail.groupsDescription')}>
+          {groups.length === 0 ? <p className="text-label text-text-muted">{t('detail.noGroups')}</p> : (
             <ul className="flex flex-col divide-y divide-border-subtle">
               {groups.map((g) => (
                 <li key={g.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5">
-                  <AppLink to={`/admin/groups/${g.id}`} className="min-w-0 flex-1 basis-48 truncate text-body text-text-primary hover:underline">{g.title || 'Grupo sem nome'}</AppLink>
-                  <span className="text-caption text-text-muted">{g.role === 'owner' ? 'Dona do grupo' : 'Membro'}</span>
+                  <AppLink to={`/admin/groups/${g.id}`} className="min-w-0 flex-1 basis-48 truncate text-body text-text-primary hover:underline">{g.title || t('detail.groupUnnamed')}</AppLink>
+                  <span className="text-caption text-text-muted">{g.role === 'owner' ? t('detail.groupOwner') : t('detail.member')}</span>
                   <Badge value={g.status} />
                 </li>
               ))}
@@ -134,58 +137,58 @@ function UserDetail({ id }: { id: string }) {
 
       {tab === 'moderation' && (
         <>
-          <AdminSection title="Acesso" description="O que a conta consegue fazer na instância. Toda ação pede um motivo e fica registrada.">
+          <AdminSection title={t('detail.access')} description={t('detail.accessDescription')}>
             <div className="flex flex-col divide-y divide-border-subtle">
               {suspended ? (
-                <AdminActionRow title="Conta suspensa" description={`Suspensa em ${formatWhen(user.statusChangedAt)}: “${user.statusReason}”. Não consegue entrar.`}>
-                  <Button type="button" size="sm" onClick={() => setDialog('reactivate')}>Reativar conta</Button>
+                <AdminActionRow title={t('detail.suspended')} description={t('detail.suspendedDescription', { when: formatWhen(user.statusChangedAt), reason: user.statusReason })}>
+                  <Button type="button" size="sm" onClick={() => setDialog('reactivate')}>{t('detail.reactivateAccount')}</Button>
                 </AdminActionRow>
               ) : (
                 <AdminActionRow
-                  title="Suspender a conta"
-                  description="A conta perde a sessão agora e não consegue entrar até ser reativada."
-                  note={isSelf ? 'Você não pode suspender a própria conta.' : undefined}
+                  title={t('detail.suspendAccount')}
+                  description={t('detail.suspendDescription')}
+                  note={isSelf ? t('detail.selfSuspend') : undefined}
                 >
-                  <Button type="button" size="sm" variant="secondary" disabled={isSelf} onClick={() => setDialog('suspend')}>Suspender</Button>
+                  <Button type="button" size="sm" variant="secondary" disabled={isSelf} onClick={() => setDialog('suspend')}>{t('detail.suspend')}</Button>
                 </AdminActionRow>
               )}
               <AdminActionRow
-                title="Encerrar sessões"
-                description="Desconecta a conta de todos os dispositivos. Ela continua ativa e pode entrar de novo."
-                note={isSelf ? 'Isso encerra a sua própria sessão: você precisará entrar de novo.' : undefined}
+                title={t('detail.sessions')}
+                description={t('detail.sessionsDescription')}
+                note={isSelf ? t('detail.selfSessions') : undefined}
               >
-                <Button type="button" size="sm" variant="secondary" onClick={() => setDialog('revoke')}>Revogar sessões</Button>
+                <Button type="button" size="sm" variant="secondary" onClick={() => setDialog('revoke')}>{t('detail.revokeSessions')}</Button>
               </AdminActionRow>
             </div>
           </AdminSection>
 
-          <AdminSection title="Administração" description="Quem pode ver e operar toda a instância: usuários, grupos, denúncias e auditoria.">
+          <AdminSection title={t('detail.administration')} description={t('detail.administrationDescription')}>
             {isAdmin ? (
               <AdminActionRow
-                title="Esta conta é administradora"
-                description="Remover o papel a torna uma conta comum. O último administrador ativo não pode ser removido."
-                note={isSelf ? 'Você não pode remover a própria administração.' : undefined}
+                title={t('detail.isAdministrator')}
+                description={t('detail.removeAdminDescription')}
+                note={isSelf ? t('detail.selfAdmin') : undefined}
               >
-                <Button type="button" size="sm" variant="secondary" disabled={isSelf} onClick={() => setDialog('revoke-admin')}>Remover admin</Button>
+                <Button type="button" size="sm" variant="secondary" disabled={isSelf} onClick={() => setDialog('revoke-admin')}>{t('detail.removeAdmin')}</Button>
               </AdminActionRow>
             ) : (
               <AdminActionRow
-                title="Conceder administração"
-                description="Faça isso só para quem você confia: a conta passa a operar toda a instância."
-                note={suspended ? 'Só uma conta ativa pode virar administradora.' : undefined}
+                title={t('detail.grantAdmin')}
+                description={t('detail.grantAdminDescription')}
+                note={suspended ? t('detail.activeOnlyAdmin') : undefined}
               >
-                <Button type="button" size="sm" variant="secondary" disabled={suspended} onClick={() => setDialog('grant-admin')}>Conceder admin</Button>
+                <Button type="button" size="sm" variant="secondary" disabled={suspended} onClick={() => setDialog('grant-admin')}>{t('detail.grant')}</Button>
               </AdminActionRow>
             )}
           </AdminSection>
 
-          <AdminSection danger title="Zona de perigo" description="Ações que não têm volta.">
+          <AdminSection danger title={t('detail.danger')} description={t('detail.dangerDescription')}>
             <AdminActionRow
-              title="Excluir a conta"
-              description="Definitivo. Grupos que ela possui passam ao membro mais antigo; grupos sem outros membros são apagados. As mensagens já enviadas continuam no histórico."
-              note={isSelf ? 'Você não pode excluir a própria conta.' : undefined}
+              title={t('detail.deleteAccount')}
+              description={t('detail.deleteDescription')}
+              note={isSelf ? t('detail.selfDelete') : undefined}
             >
-              <Button type="button" size="sm" variant="destructive" disabled={isSelf} onClick={() => setDialog('delete')}>Excluir conta</Button>
+              <Button type="button" size="sm" variant="destructive" disabled={isSelf} onClick={() => setDialog('delete')}>{t('detail.delete')}</Button>
             </AdminActionRow>
           </AdminSection>
         </>
@@ -193,24 +196,24 @@ function UserDetail({ id }: { id: string }) {
 
       {tab === 'history' && <UserHistory id={user.id} revision={detail.history[0]?.id ?? ''} />}
 
-      <ReasonDialog open={dialog === 'suspend'} onOpenChange={(o) => !o && setDialog(null)} title="Suspender conta"
-        description={`@${user.username} perde a sessão agora e não consegue entrar até ser reativada.`} confirmLabel="Suspender" destructive
+      <ReasonDialog open={dialog === 'suspend'} onOpenChange={(o) => !o && setDialog(null)} title={t('detail.suspendTitle')}
+        description={t('detail.suspendDialog', { username: user.username })} confirmLabel={t('detail.suspend')} destructive
         onSubmit={(reason) => mutate(() => suspendUser(user.id, reason))} />
-      <ReasonDialog open={dialog === 'reactivate'} onOpenChange={(o) => !o && setDialog(null)} title="Reativar conta"
-        description={`@${user.username} volta a poder entrar.`} confirmLabel="Reativar"
+      <ReasonDialog open={dialog === 'reactivate'} onOpenChange={(o) => !o && setDialog(null)} title={t('detail.reactivateTitle')}
+        description={t('detail.reactivateDialog', { username: user.username })} confirmLabel={t('detail.reactivateAccount')}
         onSubmit={(reason) => mutate(() => reactivateUser(user.id, reason))} />
-      <ReasonDialog open={dialog === 'revoke'} onOpenChange={(o) => !o && setDialog(null)} title="Revogar sessões"
-        description={`Encerra todas as sessões e conexões de @${user.username}. A conta continua ativa.`} confirmLabel="Revogar"
+      <ReasonDialog open={dialog === 'revoke'} onOpenChange={(o) => !o && setDialog(null)} title={t('detail.revokeTitle')}
+        description={t('detail.revokeDialog', { username: user.username })} confirmLabel={t('common.revoke')}
         onSubmit={revokeSessions} />
-      <ReasonDialog open={dialog === 'grant-admin'} onOpenChange={(o) => !o && setDialog(null)} title="Conceder administração"
-        description={`@${user.username} passa a ver e operar toda a instância: usuários, grupos, denúncias e auditoria. Faça isso só para quem você confia.`}
-        confirmLabel="Conceder admin" confirmText={user.username} onSubmit={(reason) => mutate(() => grantAdmin(user.id, reason))} />
-      <ReasonDialog open={dialog === 'revoke-admin'} onOpenChange={(o) => !o && setDialog(null)} title="Remover administração"
-        description={`@${user.username} volta a ser uma conta comum. Não é possível remover o último administrador ativo.`}
-        confirmLabel="Remover admin" destructive confirmText={user.username} onSubmit={(reason) => mutate(() => revokeAdmin(user.id, reason))} />
-      <ReasonDialog open={dialog === 'delete'} onOpenChange={(o) => !o && setDialog(null)} title="Excluir conta"
-        description="Definitivo. Grupos que ela possui passam ao membro mais antigo; grupos sem outros membros são apagados. As mensagens já enviadas continuam no histórico."
-        confirmLabel="Excluir para sempre" destructive confirmText={user.username}
+      <ReasonDialog open={dialog === 'grant-admin'} onOpenChange={(o) => !o && setDialog(null)} title={t('detail.grantTitle')}
+        description={t('detail.grantDialog', { username: user.username })}
+        confirmLabel={t('detail.grant')} confirmText={user.username} onSubmit={(reason) => mutate(() => grantAdmin(user.id, reason))} />
+      <ReasonDialog open={dialog === 'revoke-admin'} onOpenChange={(o) => !o && setDialog(null)} title={t('detail.revokeAdminTitle')}
+        description={t('detail.revokeAdminDialog', { username: user.username })}
+        confirmLabel={t('detail.removeAdmin')} destructive confirmText={user.username} onSubmit={(reason) => mutate(() => revokeAdmin(user.id, reason))} />
+      <ReasonDialog open={dialog === 'delete'} onOpenChange={(o) => !o && setDialog(null)} title={t('detail.deleteTitle')}
+        description={t('detail.deleteDialog')}
+        confirmLabel={t('detail.deleteForever')} destructive confirmText={user.username}
         onSubmit={async (reason, confirm) => { await deleteUser(user.id, reason, confirm); setDeleted(true); }} />
     </div>
   );

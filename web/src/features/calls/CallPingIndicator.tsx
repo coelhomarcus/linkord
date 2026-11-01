@@ -1,4 +1,5 @@
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
+import { i18n } from '@/shared/i18n/init';
 import { useRoom } from '@/state/RoomContext';
 import { cn } from '@/shared/lib/utils';
 import { connectionStrength } from './connectionStrength';
@@ -33,11 +34,12 @@ export function CallPingIndicator() {
   const quality = useConnectionQuality(state.me.id ?? '');
   const strength = connectionStrength(ping, quality, reconnecting);
   const pingText = ping === null ? '—' : `${ping} ms`;
+  const pingLabel = i18n.t('calls:connection.ping', { value: pingText });
   return (
     <Tooltip>
       <TooltipTrigger
         render={<span tabIndex={0} />}
-        aria-label={`${strength.label}. Ping: ${pingText}`}
+        aria-label={`${strength.label}. ${pingLabel}`}
         data-tone={strength.tone}
         data-bars={strength.bars}
         className={cn('inline-flex rounded-sm focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50', TONE_TEXT[strength.tone])}
@@ -46,8 +48,8 @@ export function CallPingIndicator() {
       </TooltipTrigger>
       <TooltipContent side="top" className="flex-col items-start gap-0.5">
         <span className={cn('font-semibold', TONE_TEXT[strength.tone])}>{strength.label}</span>
-        <span>Ping: {pingText}</span>
-        <span className="text-caption font-normal text-text-muted">Tempo de ida e volta até o servidor de voz.</span>
+        <span>{pingLabel}</span>
+        <span className="text-caption font-normal text-text-muted">{i18n.t('calls:connection.roundTrip')}</span>
         {strength.note && <span className="text-caption font-normal text-text-muted">{strength.note}</span>}
       </TooltipContent>
     </Tooltip>

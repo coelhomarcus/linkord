@@ -1,5 +1,6 @@
 import { ClockCounterClockwiseIcon } from '@phosphor-icons/react';
 import { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router';
 
 import { Avatar } from '@/shared/Avatar';
@@ -30,15 +31,16 @@ const QUERY: QuerySchema<'q' | 'status' | 'role' | 'from' | 'to'> = {
   to: { default: '' },
 };
 
-function lastSeenLabel(user: AdminUserRow): string {
-  return user.online ? 'Online' : formatWhenShort(user.lastSeenAt);
+function lastSeenLabel(user: AdminUserRow, onlineLabel: string): string {
+  return user.online ? onlineLabel : formatWhenShort(user.lastSeenAt);
 }
 
 function RowActions({ user }: { user: AdminUserRow }) {
+  const { t } = useTranslation('admin');
   return (
     <div className="flex items-center justify-end gap-0.5">
-      <CopyIdButton id={user.id} label={`Copiar ID de ${user.displayName}`} />
-      <AppLink to={`/admin/audit?targetId=${encodeURIComponent(user.id)}`} aria-label={`Ver histórico de ${user.displayName}`} title="Ver histórico" className={buttonVariants({ variant: 'ghost', size: 'icon-sm' })}>
+      <CopyIdButton id={user.id} label={t('ui.copyId', { name: user.displayName })} />
+      <AppLink to={`/admin/audit?targetId=${encodeURIComponent(user.id)}`} aria-label={t('ui.viewHistory', { name: user.displayName })} title={t('ui.history')} className={buttonVariants({ variant: 'ghost', size: 'icon-sm' })}>
         <ClockCounterClockwiseIcon size={16} aria-hidden />
       </AppLink>
     </div>
@@ -58,6 +60,7 @@ function UserIdentity({ user, from }: { user: AdminUserRow; from: { from: string
 }
 
 export function UsersPage() {
+  const { t } = useTranslation('admin');
   const { filters, update, clear, active, identity } = useAdminQuery(QUERY);
   const { pathname, search } = useLocation();
   const tableFits = useAdminTableFits();
@@ -77,31 +80,31 @@ export function UsersPage() {
   return (
     <div className="flex flex-col gap-4">
       <AdminListToolbar
-        search={{ value: query, onChange: setQuery, placeholder: 'Buscar por nome, usuário ou ID', label: 'Buscar usuários' }}
+        search={{ value: query, onChange: setQuery, placeholder: t('ui.searchUsers'), label: t('ui.searchUsers') }}
         filters={(
           <>
-            <AdminSelectField<StatusFilter> label="Situação" value={status} onChange={(next) => update({ status: next })}
-              options={[{ value: 'all', label: 'Todas' }, { value: 'active', label: 'Ativas' }, { value: 'suspended', label: 'Suspensas' }]} />
-            <AdminSelectField<RoleFilter> label="Papel" value={role} onChange={(next) => update({ role: next })}
-              options={[{ value: 'all', label: 'Qualquer papel' }, { value: 'admin', label: 'Administradores' }, { value: 'user', label: 'Usuários comuns' }]} />
+            <AdminSelectField<StatusFilter> label={t('ui.status')} value={status} onChange={(next) => update({ status: next })}
+              options={[{ value: 'all', label: t('ui.allStatus') }, { value: 'active', label: t('ui.active') }, { value: 'suspended', label: t('ui.suspended') }]} />
+            <AdminSelectField<RoleFilter> label={t('ui.role')} value={role} onChange={(next) => update({ role: next })}
+              options={[{ value: 'all', label: t('ui.anyRole') }, { value: 'admin', label: t('ui.administrators') }, { value: 'user', label: t('ui.regularUsers') }]} />
           </>
         )}
         advanced={(
           <>
-            <AdminDateField label="Criada a partir de" value={filters.from} onChange={(from) => update({ from })} />
-            <AdminDateField label="Criada até" value={filters.to} onChange={(to) => update({ to })} />
+            <AdminDateField label={t('ui.createdFrom')} value={filters.from} onChange={(from) => update({ from })} />
+            <AdminDateField label={t('ui.createdUntil')} value={filters.to} onChange={(to) => update({ to })} />
           </>
         )}
         advancedActive={filters.from !== '' || filters.to !== ''}
-        summary={list.status === 'ready' && list.items.length > 0 ? `${list.items.length} ${list.items.length === 1 ? 'conta carregada' : 'contas carregadas'}${list.hasMore ? ' (há mais resultados)' : ''}` : undefined}
+        summary={list.status === 'ready' && list.items.length > 0 ? `${list.items.length} ${t('ui.account', { count: list.items.length })}${list.hasMore ? t('ui.moreResults') : ''}` : undefined}
         onClear={active ? clear : undefined}
       />
-      <ListChrome list={list} empty="Nenhuma conta encontrada.">
+      <ListChrome list={list} empty={t('ui.noAccounts')}>
         {tableFits ? (
-          <AdminTable caption="Contas">
+          <AdminTable caption={t('ui.accounts')}>
             <thead>
               <tr>
-                <AdminTh className="min-w-52">Usuário</AdminTh><AdminTh>Situação</AdminTh><AdminTh>Papel</AdminTh><AdminTh>Criada em</AdminTh><AdminTh>Última vez</AdminTh><AdminTh className="text-right">Ações</AdminTh>
+                <AdminTh className="min-w-52">{t('nav.users')}</AdminTh><AdminTh>{t('ui.status')}</AdminTh><AdminTh>{t('ui.role')}</AdminTh><AdminTh>{t('ui.createdAt')}</AdminTh><AdminTh>{t('ui.lastSeen')}</AdminTh><AdminTh className="text-right">{t('ui.actions')}</AdminTh>
               </tr>
             </thead>
             <tbody>
@@ -111,7 +114,7 @@ export function UsersPage() {
                   <AdminTd><Badge value={u.status} /></AdminTd>
                   <AdminTd><Badge value={u.role} /></AdminTd>
                   <AdminTd className="whitespace-nowrap">{formatDateShort(u.createdAt)}</AdminTd>
-                  <AdminTd className="whitespace-nowrap">{lastSeenLabel(u)}</AdminTd>
+                  <AdminTd className="whitespace-nowrap">{lastSeenLabel(u, t('ui.online'))}</AdminTd>
                   <AdminTd><RowActions user={u} /></AdminTd>
                 </AdminTr>
               ))}
@@ -128,8 +131,8 @@ export function UsersPage() {
                 <div className="flex flex-wrap items-center gap-2 text-caption text-text-muted">
                   <Badge value={u.status} />
                   <Badge value={u.role} />
-                  <span>criada em {formatWhen(u.createdAt)}</span>
-                  <span>{u.online ? 'Online' : `última vez ${formatWhenShort(u.lastSeenAt)}`}</span>
+                  <span>{t('ui.created')} {formatWhen(u.createdAt)}</span>
+                  <span>{u.online ? t('ui.online') : t('ui.lastSeenLower', { value: formatWhenShort(u.lastSeenAt) })}</span>
                 </div>
               </li>
             ))}

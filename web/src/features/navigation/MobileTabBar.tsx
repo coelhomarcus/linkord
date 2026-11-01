@@ -1,5 +1,6 @@
 import { BellIcon, ChatCircleIcon, PhoneIcon, UserCircleIcon, UsersIcon } from '@phosphor-icons/react';
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Avatar } from '@/shared/Avatar';
 import { CountBadge } from '@/shared/CountBadge';
 import { useFriends } from '@/features/friends/FriendsContext';
@@ -14,6 +15,7 @@ import { useRoom } from '@/state/RoomContext';
  * they are siblings, so a back swipe leaves the section instead of walking
  * through every tab visited, the way a native tab bar behaves. */
 export function MobileTabBar({ activeCallConversationId, onReturnToCall }: { activeCallConversationId: string | null; onReturnToCall: () => void }) {
+  const { t } = useTranslation('navigation');
   const { pathname } = useContentLocation();
   const { state, conversations, unreadByConversation, allUsers } = useRoom();
   const { pendingIncomingCount } = useFriends();
@@ -25,10 +27,10 @@ export function MobileTabBar({ activeCallConversationId, onReturnToCall }: { act
   ), [conversations, unreadByConversation]);
   const call = conversations.find((item) => item.id === activeCallConversationId);
   const tabs = [
-    { to: ROUTES.conversations, label: 'Conversas', icon: ChatCircleIcon, count: conversationsUnread },
-    { to: ROUTES.friends, label: 'Amigos', icon: UsersIcon, count: pendingIncomingCount },
-    { to: ROUTES.notifications, label: 'Notificações', icon: BellIcon, count: notificationsUnread },
-    { to: ROUTES.profile, label: 'Perfil', icon: UserCircleIcon, count: 0 },
+    { to: ROUTES.conversations, label: t('conversations'), icon: ChatCircleIcon, count: conversationsUnread },
+    { to: ROUTES.friends, label: t('friends'), icon: UsersIcon, count: pendingIncomingCount },
+    { to: ROUTES.notifications, label: t('notifications'), icon: BellIcon, count: notificationsUnread },
+    { to: ROUTES.profile, label: t('profile'), icon: UserCircleIcon, count: 0 },
   ] as const;
 
   return (
@@ -36,15 +38,15 @@ export function MobileTabBar({ activeCallConversationId, onReturnToCall }: { act
       {activeCallConversationId && (
         <button type="button" onClick={onReturnToCall} className="flex h-12 w-full items-center gap-2 border-b border-border bg-bg-secondary px-4 text-left text-label">
           <PhoneIcon size={18} weight="fill" className="flex-none text-green" aria-hidden />
-          <span className="min-w-0 flex-1 truncate">Em chamada: {conversationTitle(call, state.me.userId, allUsers)}</span>
-          <span className="font-semibold text-green">Voltar</span>
+          <span className="min-w-0 flex-1 truncate">{t('inCall', { title: conversationTitle(call, state.me.userId, allUsers) })}</span>
+          <span className="font-semibold text-green">{t('returnToCall')}</span>
         </button>
       )}
-      <nav aria-label="Navegação principal" className="grid h-16 grid-cols-4 items-stretch pb-0">
+      <nav aria-label={t('main')} className="grid h-16 grid-cols-4 items-stretch pb-0">
         {tabs.map(({ to, label, icon: Icon, count }) => {
           const active = pathname === to;
           const accessibleLabel = count > 0
-            ? `${label}, ${count} ${to === ROUTES.friends ? (count === 1 ? 'solicitação pendente' : 'solicitações pendentes') : (count === 1 ? 'não lida' : 'não lidas')}`
+            ? t(to === ROUTES.friends ? 'tabFriendsPending' : 'tabUnread', { label, count })
             : label;
           return (
             <AppLink key={to} to={to} replace aria-label={accessibleLabel} aria-current={active ? 'page' : undefined} className={`relative flex min-w-0 flex-col items-center justify-center gap-0.5 text-caption ${active ? 'font-semibold text-primary' : 'text-text-muted'}`}>

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { Avatar } from '@/shared/Avatar';
 import { Button } from '@/shared/ui/primitives/button';
@@ -13,14 +14,11 @@ type Tab = 'friends' | 'groups';
 const TAB = 'h-11 rounded-none px-0 text-body font-semibold text-text-muted hover:text-text-secondary data-active:text-text-primary';
 const ROW = 'flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-fill-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
-function count(total: number, one: string, many: string): string {
-  return `${total} ${total === 1 ? one : many}`;
-}
-
 /** Says how much of a capped list is shown, when it is not all of it. */
 function Truncated({ shown, total }: { shown: number; total: number }) {
+  const { t } = useTranslation('profile');
   if (total <= shown) return null;
-  return <p className="px-2.5 pt-2 text-caption text-text-muted">Mostrando {shown} de {total}.</p>;
+  return <p className="px-2.5 pt-2 text-caption text-text-muted">{t('mutuals.showing', { shown, total })}</p>;
 }
 
 /** The friends and groups the viewer has in common with the profile's owner,
@@ -33,6 +31,7 @@ export function ProfileMutuals({ status, details, onRetry, onOpenProfile, onOpen
   onOpenProfile: (userId: string) => void;
   onOpenGroup: (conversationId: string) => void;
 }) {
+  const { t } = useTranslation('profile');
   const { onlineUserIds } = useRoom();
   // groups first: what you share as a group is the first thing the profile shows
   const [tab, setTab] = useState<Tab>('groups');
@@ -43,8 +42,8 @@ export function ProfileMutuals({ status, details, onRetry, onOpenProfile, onOpen
   if (status === 'error') {
     body = (
       <div className="flex flex-col items-center gap-3 py-10 text-center">
-        <p className="text-label text-text-muted">Não foi possível carregar o que vocês têm em comum.</p>
-        <Button type="button" variant="secondary" size="sm" onClick={onRetry}>Tentar de novo</Button>
+        <p className="text-label text-text-muted">{t('mutuals.loadFailed')}</p>
+        <Button type="button" variant="secondary" size="sm" onClick={onRetry}>{t('mutuals.retry')}</Button>
       </div>
     );
   } else if (!details) {
@@ -68,13 +67,13 @@ export function ProfileMutuals({ status, details, onRetry, onOpenProfile, onOpen
     >
       {/* underlined text tabs over a full-width rule, the active one bold with a
           bar; kept clear of the dialog's close button in the corner */}
-      <TabsList aria-label="Em comum" className="flex h-auto w-full flex-none justify-start gap-6 rounded-none border-0 border-b border-border bg-transparent p-0 md:w-[calc(100%-2rem)]">
+      <TabsList aria-label={t('mutuals.title')} className="flex h-auto w-full flex-none justify-start gap-6 rounded-none border-0 border-b border-border bg-transparent p-0 md:w-[calc(100%-2rem)]">
         <TabsIndicator className="top-auto -bottom-px h-0.5 rounded-full bg-text-primary" />
         <TabsTrigger value="groups" className={TAB}>
-          {groups ? count(groups.total, 'grupo mútuo', 'grupos mútuos') : 'Grupos mútuos'}
+          {groups ? t(groups.total === 1 ? 'mutuals.groups_one' : 'mutuals.groups_other', { count: groups.total }) : t('mutuals.groupsTitle')}
         </TabsTrigger>
         <TabsTrigger value="friends" className={TAB}>
-          {friends ? count(friends.total, 'amigo mútuo', 'amigos mútuos') : 'Amigos mútuos'}
+          {friends ? t(friends.total === 1 ? 'mutuals.friends_one' : 'mutuals.friends_other', { count: friends.total }) : t('mutuals.friendsTitle')}
         </TabsTrigger>
       </TabsList>
 
@@ -83,7 +82,7 @@ export function ProfileMutuals({ status, details, onRetry, onOpenProfile, onOpen
           <>
             <TabsPanel value="friends">
               {friends!.items.length === 0 ? (
-                <p className="py-10 text-center text-label text-text-muted">Nenhum amigo mútuo.</p>
+                <p className="py-10 text-center text-label text-text-muted">{t('mutuals.noneFriends')}</p>
               ) : (
                 <ul className="flex flex-col gap-0.5">
                   {friends!.items.map((friend) => {
@@ -97,7 +96,7 @@ export function ProfileMutuals({ status, details, onRetry, onOpenProfile, onOpen
                           </span>
                           <span className="min-w-0 flex-1">
                             <span className="block truncate text-label font-semibold text-text-primary">{friend.displayName}</span>
-                            <span className="block truncate text-caption text-text-muted">@{friend.username}{online ? ' · online' : ''}</span>
+                            <span className="block truncate text-caption text-text-muted">@{friend.username}{online ? t('mutuals.online') : ''}</span>
                           </span>
                         </button>
                       </li>
@@ -109,7 +108,7 @@ export function ProfileMutuals({ status, details, onRetry, onOpenProfile, onOpen
             </TabsPanel>
             <TabsPanel value="groups">
               {groups!.items.length === 0 ? (
-                <p className="py-10 text-center text-label text-text-muted">Nenhum grupo mútuo.</p>
+                <p className="py-10 text-center text-label text-text-muted">{t('mutuals.noneGroups')}</p>
               ) : (
                 <ul className="flex flex-col gap-0.5">
                   {groups!.items.map((group) => (
@@ -118,7 +117,7 @@ export function ProfileMutuals({ status, details, onRetry, onOpenProfile, onOpen
                         <GroupAvatar id={group.id} title={group.title} avatar={group.avatar} size={40} />
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-label font-semibold text-text-primary">{group.title}</span>
-                          <span className="block truncate text-caption text-text-muted">{count(group.memberCount, 'membro', 'membros')}</span>
+                          <span className="block truncate text-caption text-text-muted">{t(group.memberCount === 1 ? 'mutuals.members_one' : 'mutuals.members_other', { count: group.memberCount })}</span>
                         </span>
                       </button>
                     </li>

@@ -1,5 +1,6 @@
 import { ArrowLeftIcon, DotsThreeIcon, ImageIcon, InfoIcon, MagnifyingGlassIcon, PhoneIcon } from '@phosphor-icons/react';
 import { useLocation, useNavigate } from 'react-router';
+import { useTranslation } from 'react-i18next';
 
 import { PageHeader } from '@/shared/PageHeader';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/primitives/dropdown-menu';
@@ -34,6 +35,7 @@ interface ConversationPanelProps {
 }
 
 export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, detailsOpen, mediaOpen, onOpenDetails, onToggleDetails, onToggleMedia }: ConversationPanelProps) {
+  const { t } = useTranslation('conversations');
   const { state, dispatch, conversations, activeConversationId, allUsers, onlineUserIds, activeCallConversationId } = useRoom();
   const navigate = useNavigate();
   const { pathname, state: locationState } = useLocation();
@@ -59,8 +61,8 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
   const members = groupMembers(conversation, allUsers);
   const online = other ? onlineUserIds.has(other.id) : false;
   const subtitle = hasDetails
-    ? `${members.length} ${members.length === 1 ? 'membro' : 'membros'}`
-    : other ? (online ? 'Online' : formatLastSeen(other.lastSeenAt)) : '';
+    ? t('panel.members', { count: members.length })
+    : other ? (online ? t('panel.online') : formatLastSeen(other.lastSeenAt)) : '';
   // `state.participants` only ever holds OTHER people (the server excludes
   // yourself from it) — my own row in this list has to come from `state.me`
   // instead, gated on whether I'm actually the one in this call.
@@ -75,20 +77,21 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
   const callBlockedReason = conversation?.status === 'suspended'
     ? null
     : relationship.status === 'ready' && relationship.value.relation === 'blocked'
-      ? 'Você não pode ligar enquanto essa pessoa estiver bloqueada.'
+      ? t('panel.blocked')
       : relationship.status === 'ready' && relationship.value.relation !== 'friends'
-        ? 'Vocês precisam ser amigos para fazer chamadas.'
+        ? t('panel.needFriends')
         : null;
   const callJoinError = state.callJoinError && state.callJoinError.conversationId === conversation?.id ? state.callJoinError.message : null;
   const inThisCall = !!conversation && activeCallConversationId === conversation.id;
-  const callActionLabel = inThisCall ? 'Voltar à chamada' : 'Entrar na chamada';
+  const callActionLabel = inThisCall ? t('panel.returnToCall') : t('panel.joinCall');
+  const detailsLabel = isBot ? t('panel.details_bot') : t('panel.details_group');
 
   return (
     <main className="flex h-full min-w-0 flex-1 flex-col text-text-primary">
       {conversation ? (
         <>
           <header data-avatar-hover className="flex h-header flex-none items-center gap-2 bg-surface-panel/90 px-2 backdrop-blur md:gap-3 md:border-b md:border-border md:px-4">
-            <Button type="button" variant="ghost" size="icon" aria-label="Voltar para conversas" onClick={goBackToList} className="md:hidden">
+            <Button type="button" variant="ghost" size="icon" aria-label={t('panel.back')} onClick={goBackToList} className="md:hidden">
               <ArrowLeftIcon size={20} />
             </Button>
             {conversation.type === 'direct' && other ? (
@@ -96,7 +99,7 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
                 type="button"
                 onClick={() => onOpenProfile(other.id)}
                 className="transition-opacity hover:opacity-80"
-                aria-label="Ver perfil"
+                aria-label={t('panel.viewProfile')}
               >
                 <Avatar id={other.id} name={other.displayName} avatar={other.avatar} poster={other.avatarPoster} animateOnHover avatarColor={other.avatarColor} size={40} />
               </button>
@@ -105,7 +108,7 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
                 type="button"
                 onClick={onOpenDetails}
                 className="transition-colors hover:border-border-strong"
-                aria-label={isBot ? 'Detalhes do bot' : 'Detalhes do grupo'}
+                aria-label={detailsLabel}
               >
                 <GroupAvatar id={conversation.id} title={title} avatar={conversation.avatar} size={40} />
               </button>
@@ -130,17 +133,17 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
                     </span>
                   )}
                 </TooltipTrigger>
-                <TooltipContent side="bottom">Na chamada</TooltipContent>
+                <TooltipContent side="bottom">{t('panel.inCall')}</TooltipContent>
               </Tooltip>
             )}
-            <Button type="button" variant="ghost" size="icon-sm" aria-label="Mídias e links" aria-pressed={mediaOpen} onClick={onToggleMedia} className={`${panelToggleClass(mediaOpen)} max-md:hidden`}>
+            <Button type="button" variant="ghost" size="icon-sm" aria-label={t('panel.media')} aria-pressed={mediaOpen} onClick={onToggleMedia} className={`${panelToggleClass(mediaOpen)} max-md:hidden`}>
               <ImageIcon size={20} />
             </Button>
-            <Button type="button" variant="ghost" size="icon-sm" aria-label="Buscar mensagens" onClick={onOpenSearch} className="text-text-muted hover:text-text-primary max-md:hidden">
+            <Button type="button" variant="ghost" size="icon-sm" aria-label={t('panel.search')} onClick={onOpenSearch} className="text-text-muted hover:text-text-primary max-md:hidden">
               <MagnifyingGlassIcon size={20} />
             </Button>
             {hasDetails && (
-              <Button type="button" variant="ghost" size="icon-sm" aria-label={isBot ? 'Detalhes do bot' : 'Detalhes do grupo'} aria-pressed={detailsOpen} onClick={onToggleDetails} className={`${panelToggleClass(detailsOpen)} max-md:hidden`}>
+              <Button type="button" variant="ghost" size="icon-sm" aria-label={detailsLabel} aria-pressed={detailsOpen} onClick={onToggleDetails} className={`${panelToggleClass(detailsOpen)} max-md:hidden`}>
                 <InfoIcon size={20} />
               </Button>
             )}
@@ -151,7 +154,7 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
                 <TooltipTrigger render={<span tabIndex={0} className="inline-flex rounded-md focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50" />}>
                   <Button type="button" size="sm" disabled className="bg-bg-tertiary text-text-muted max-md:hidden">
                     <PhoneIcon size={20} weight="fill" />
-                    Entrar na chamada
+                    {t('panel.joinCall')}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom">{callBlockedReason}</TooltipContent>
@@ -162,14 +165,14 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
                 {callActionLabel}
               </Button>
             )}
-            {(activeCallConversationId || !isBot) && <Button type="button" variant="ghost" size="icon" aria-label={activeCallConversationId && activeCallConversationId !== conversation.id ? 'Voltar à chamada ativa' : callBlockedReason ?? callActionLabel} disabled={!activeCallConversationId && (!!callBlockedReason || conversation.status === 'suspended')} onClick={() => onOpenCall(activeCallConversationId ?? conversation.id)} className="flex-none text-green md:hidden"><PhoneIcon size={22} weight="fill" /></Button>}
+            {(activeCallConversationId || !isBot) && <Button type="button" variant="ghost" size="icon" aria-label={activeCallConversationId && activeCallConversationId !== conversation.id ? t('panel.returnToActiveCall') : callBlockedReason ?? callActionLabel} disabled={!activeCallConversationId && (!!callBlockedReason || conversation.status === 'suspended')} onClick={() => onOpenCall(activeCallConversationId ?? conversation.id)} className="flex-none text-green md:hidden"><PhoneIcon size={22} weight="fill" /></Button>}
             <DropdownMenu>
-              <DropdownMenuTrigger render={<Button type="button" variant="ghost" size="icon" aria-label="Mais opções da conversa" className="flex-none md:hidden" />}><DotsThreeIcon size={22} /></DropdownMenuTrigger>
+              <DropdownMenuTrigger render={<Button type="button" variant="ghost" size="icon" aria-label={t('panel.moreOptions')} className="flex-none md:hidden" />}><DotsThreeIcon size={22} /></DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={onOpenSearch}><MagnifyingGlassIcon size={18} />Buscar mensagens</DropdownMenuItem>
-                <DropdownMenuItem onClick={onToggleMedia}><ImageIcon size={18} />Mídias e links</DropdownMenuItem>
-                {hasDetails && <DropdownMenuItem onClick={onOpenDetails}><InfoIcon size={18} />{isBot ? 'Detalhes do bot' : 'Detalhes do grupo'}</DropdownMenuItem>}
-                {activeCallConversationId && activeCallConversationId !== conversation.id && !isBot && <DropdownMenuItem disabled={!!callBlockedReason || conversation.status === 'suspended'} onClick={() => onOpenCall(conversation.id)}><PhoneIcon size={18} />Entrar na chamada desta conversa</DropdownMenuItem>}
+                <DropdownMenuItem onClick={onOpenSearch}><MagnifyingGlassIcon size={18} />{t('panel.search')}</DropdownMenuItem>
+                <DropdownMenuItem onClick={onToggleMedia}><ImageIcon size={18} />{t('panel.media')}</DropdownMenuItem>
+                {hasDetails && <DropdownMenuItem onClick={onOpenDetails}><InfoIcon size={18} />{detailsLabel}</DropdownMenuItem>}
+                {activeCallConversationId && activeCallConversationId !== conversation.id && !isBot && <DropdownMenuItem disabled={!!callBlockedReason || conversation.status === 'suspended'} onClick={() => onOpenCall(conversation.id)}><PhoneIcon size={18} />{t('panel.joinThisCall')}</DropdownMenuItem>}
               </DropdownMenuContent>
             </DropdownMenu>
           </header>
@@ -177,14 +180,14 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
             <div role="alert" className="mx-3 mt-3 flex items-start gap-2 rounded-md border border-red/40 bg-bg-floating px-3 py-2 text-label text-text-secondary shadow-popover md:mx-4">
               <PhoneIcon size={20} className="mt-0.5 flex-none text-red" />
               <span className="min-w-0 flex-1">{callJoinError}</span>
-              <CloseButton size="xs" label="Dispensar aviso" onClick={() => dispatch({ type: 'SET_CALL_JOIN_ERROR', error: null })} />
+              <CloseButton size="xs" label={t('panel.dismissNotice')} onClick={() => dispatch({ type: 'SET_CALL_JOIN_ERROR', error: null })} />
             </div>
           )}
           {conversation.status === 'suspended' ? (
               <div role="status" className="grid flex-1 place-items-center px-6 text-center">
                 <div>
-                  <p className="text-title font-semibold text-text-primary">{isBot ? 'Bot suspenso' : 'Grupo suspenso'}</p>
-                  <p className="mt-1 max-w-sm text-label text-text-muted">{isBot ? 'A administração suspendeu este bot. Enquanto durar, ninguém lê os avisos e ele não recebe novos.' : 'A administração suspendeu este grupo. Enquanto durar, ninguém lê, escreve ou entra em chamada.'}</p>
+                  <p className="text-title font-semibold text-text-primary">{isBot ? t('panel.suspendedTitle_bot') : t('panel.suspendedTitle_group')}</p>
+                  <p className="mt-1 max-w-sm text-label text-text-muted">{isBot ? t('panel.suspendedText_bot') : t('panel.suspendedText_group')}</p>
                 </div>
               </div>
             ) : (
@@ -193,11 +196,11 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
         </>
       ) : (
         <>
-          <PageHeader title="Conversas" />
+          <PageHeader title={t('sidebar.title')} />
           <div className="grid flex-1 select-none place-items-center px-6 text-center">
             <div>
-              <p className="text-title font-semibold text-text-primary">Abra uma conversa</p>
-              <p className="mt-1 text-label text-text-muted">Escolha uma pessoa, grupo ou bot na sidebar.</p>
+              <p className="text-title font-semibold text-text-primary">{t('panel.emptyTitle')}</p>
+              <p className="mt-1 text-label text-text-muted">{t('panel.emptyText')}</p>
             </div>
           </div>
         </>

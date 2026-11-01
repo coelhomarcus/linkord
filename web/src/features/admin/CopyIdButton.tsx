@@ -1,11 +1,13 @@
 import { CheckIcon, CopyIcon } from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/shared/ui/primitives/button';
 
 /** Copies an entity id. Its own button (never inside a link): the row link opens
  * the detail, this only touches the clipboard. */
 export function CopyIdButton({ id, label }: { id: string; label: string }) {
+  const { t } = useTranslation('admin');
   const [copied, setCopied] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(timer.current), []);
@@ -22,7 +24,7 @@ export function CopyIdButton({ id, label }: { id: string; label: string }) {
   }
 
   return (
-    <Button type="button" variant="ghost" size="icon-sm" aria-label={copied ? 'ID copiado' : label} title={copied ? 'ID copiado' : label} onClick={() => void copy()}>
+    <Button type="button" variant="ghost" size="icon-sm" aria-label={copied ? t('ui.idCopied') : label} title={copied ? t('ui.idCopied') : label} onClick={() => void copy()}>
       {copied ? <CheckIcon size={16} aria-hidden /> : <CopyIcon size={16} aria-hidden />}
     </Button>
   );

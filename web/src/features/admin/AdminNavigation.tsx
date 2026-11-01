@@ -1,4 +1,5 @@
 import { CaretRightIcon } from '@phosphor-icons/react';
+import { useTranslation } from 'react-i18next';
 import { iconWeight } from '@/shared/ui/icons';
 import { NavLink } from 'react-router';
 import { cn } from '@/shared/lib/utils';
@@ -11,11 +12,12 @@ function GroupLabel({ children }: { children: string }) {
 /** The permanent section sidebar of a wide admin area. A detail page keeps its
  * section marked: NavLink matches by path prefix. */
 export function AdminSidebar() {
+  const { t } = useTranslation('admin');
   return (
-    <nav aria-label="Administração" className="flex w-60 flex-none flex-col overflow-y-auto border-r border-border p-3">
+    <nav aria-label={t('layout.title')} className="flex w-60 flex-none flex-col overflow-y-auto border-r border-border p-3">
       {ADMIN_GROUPS.map((group) => (
-        <div key={group.label} className="flex flex-col gap-0.5 pt-4 first:pt-0">
-          <GroupLabel>{group.label}</GroupLabel>
+        <div key={group.labelKey} className="flex flex-col gap-0.5 pt-4 first:pt-0">
+          <GroupLabel>{t(group.labelKey as never)}</GroupLabel>
           {group.sections.map((section) => {
             const Icon = section.icon;
             return (
@@ -30,7 +32,7 @@ export function AdminSidebar() {
                 {({ isActive }) => (
                   <>
                     <Icon size={20} weight={iconWeight(isActive)} aria-hidden className="flex-none" />
-                    <span className="truncate">{section.label}</span>
+                    <span className="truncate">{t(section.labelKey as never)}</span>
                   </>
                 )}
               </NavLink>
@@ -45,11 +47,12 @@ export function AdminSidebar() {
 /** The compact landing screen: the same groups, icons and labels as the
  * sidebar, one full-width row each. */
 export function AdminIndex() {
+  const { t } = useTranslation('admin');
   return (
-    <nav aria-label="Administração" className="flex flex-col gap-1">
+    <nav aria-label={t('layout.title')} className="flex flex-col gap-1">
       {ADMIN_GROUPS.map((group) => (
-        <div key={group.label} className="flex flex-col gap-0.5 pt-4 first:pt-0">
-          <GroupLabel>{group.label}</GroupLabel>
+        <div key={group.labelKey} className="flex flex-col gap-0.5 pt-4 first:pt-0">
+          <GroupLabel>{t(group.labelKey as never)}</GroupLabel>
           {group.sections.map((section) => {
             const Icon = section.icon;
             return (
@@ -59,7 +62,7 @@ export function AdminIndex() {
                 className="flex min-h-11 items-center gap-3 rounded-md px-2.5 text-body font-medium text-text-primary outline-none hover:bg-nav-hover focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <Icon size={20} aria-hidden className="flex-none text-text-muted" />
-                <span className="min-w-0 flex-1 truncate">{section.label}</span>
+                <span className="min-w-0 flex-1 truncate">{t(section.labelKey as never)}</span>
                 <CaretRightIcon size={16} aria-hidden className="flex-none text-text-muted" />
               </NavLink>
             );

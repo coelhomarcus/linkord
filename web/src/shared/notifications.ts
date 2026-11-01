@@ -1,4 +1,6 @@
 
+import { i18n } from '@/shared/i18n/init';
+
 const ENABLED_KEY = 'ss-notifications-enabled';
 
 export function loadNotificationsEnabled(): boolean {
@@ -106,14 +108,14 @@ function flush(conversationId: string): void {
   if (!buf) return;
   buffers.delete(conversationId);
 
-  const title = buf.mentioned ? `Você foi mencionado em ${buf.conversationName}` : buf.conversationName;
+  const title = buf.mentioned ? i18n.t('browserNotifications.mentioned', { conversation: buf.conversationName }) : buf.conversationName;
   let body: string;
   if (buf.count === 1) {
     body = `${buf.lastSenderName}: ${buf.lastText.slice(0, BODY_TEXT_LIMIT)}`;
   } else if (buf.senders.size === 1) {
-    body = `${buf.lastSenderName} enviou ${buf.count} mensagens`;
+    body = i18n.t(buf.count === 1 ? 'browserNotifications.sentMessages_one' : 'browserNotifications.sentMessages_other', { name: buf.lastSenderName, count: buf.count });
   } else {
-    body = `${buf.senders.size} pessoas enviaram mensagens`;
+    body = i18n.t(buf.senders.size === 1 ? 'browserNotifications.peopleSent_one' : 'browserNotifications.peopleSent_other', { count: buf.senders.size });
   }
 
   try {

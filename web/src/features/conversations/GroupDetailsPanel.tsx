@@ -2,6 +2,7 @@ import { CameraIcon, CheckIcon, CrownIcon, FlagIcon, ImagesIcon, MagnifyingGlass
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, KeyboardEvent, ReactNode } from 'react';
 import type { Area } from 'react-easy-crop';
+import { useTranslation } from 'react-i18next';
 
 import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { AppModal } from '@/shared/ui/app-modal';
@@ -27,6 +28,7 @@ import { useCursorList } from '@/shared/hooks/useCursorList';
 import { ReportDialog } from '@/features/reports/ReportDialog';
 import { fetchGroupInvitations, fetchGroupMembers, revokeInvitation } from '@/shared/api/api';
 import type { SocialUser } from '@/shared/api/api';
+import { i18n } from '@/shared/i18n/init';
 import { BotWebhookSection } from '@/features/bots/BotWebhookSection';
 
 type GroupTab = 'members' | 'invites' | 'webhook';
@@ -44,6 +46,7 @@ interface GroupDetailsPanelProps {
 }
 
 export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenProfile, onOpenMedia, onOpenSearch }: GroupDetailsPanelProps) {
+  const { t } = useTranslation('conversations');
   const {
     state, conversations, allUsers, onlineUserIds,
     updateGroupTitle, updateGroupAvatar, removeGroupMember, deleteGroup, transferGroupOwnership,
@@ -55,8 +58,10 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
   const isOwner = conversation?.myRole === 'owner';
   // a bot is managed exactly like a group; only the words and the webhook differ
   const isBot = conversation?.type === 'bot';
-  const noun = isBot ? 'bot' : 'grupo';
-  const Noun = isBot ? 'Bot' : 'Grupo';
+  const kind = isBot ? 'bot' : 'group';
+  const noun = t(`noun_${kind}`);
+  const Noun = t(`fallback.${kind}`);
+  const groupName = conversation?.title || noun;
   const memberIds = useMemo(() => new Set(conversation?.memberIds ?? []), [conversation?.memberIds]);
 
   const [tab, setTab] = useState<GroupTab>('members');
@@ -149,7 +154,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
     try {
       await revokeInvitation(invitationId);
     } catch {
-      setNotice('Não foi possível revogar o convite.');
+      setNotice(t('details.revokeFailed'));
     } finally {
       bump();
       setRevokingId(null);
@@ -189,7 +194,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
     event.target.value = '';
     if (!file) return;
     if (file.size > MAX_AVATAR_BYTES) {
-      setAvatarError(`Arquivo muito grande (máximo ${formatMB(MAX_AVATAR_BYTES)}).`);
+      setAvatarError(t('details.fileTooLarge', { max: formatMB(MAX_AVATAR_BYTES) }));
       return;
     }
     setAvatarError(null);
@@ -215,7 +220,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
       });
       updateGroupAvatar(conversationId, body.avatar);
     } catch (err) {
-      setAvatarError(err instanceof Error ? err.message : 'Falha ao enviar a foto.');
+      setAvatarError(err instanceof Error ? err.message : t('details.uploadFailed'));
     } finally {
       setUploadingAvatar(false);
       setAvatarUploadPhase(null);
@@ -230,18 +235,18 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
     <>
       <Button type="button" variant="ghost" onClick={() => setConfirmLeave(true)} className="justify-start gap-2.5 text-text-secondary hover:text-text-primary">
         <SignOutIcon size={18} />
-        Sair do {noun}
+        {t(`details.leave_${kind}`)}
       </Button>
       {!isBot && (
         <Button type="button" variant="ghost" onClick={() => setReportOpen(true)} className="justify-start gap-2.5 text-text-muted hover:text-text-primary">
           <FlagIcon size={18} />
-          Denunciar grupo
+          {t('details.report')}
         </Button>
       )}
       {isOwner && (
         <Button type="button" variant="ghost" onClick={() => setConfirmDelete(true)} className="justify-start gap-2.5 text-red-text hover:bg-red/10 hover:text-red-text">
           <TrashIcon size={18} />
-          Excluir {noun}
+          {t(`details.delete_${kind}`)}
         </Button>
       )}
     </>
@@ -257,7 +262,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
             <button
               type="button"
               disabled={uploadingAvatar}
-              aria-label={`Trocar foto do ${noun}`}
+              aria-label={t(`details.changePhoto_${kind}`)}
               onClick={() => avatarFileInputRef.current?.click()}
               className="absolute -bottom-1 -right-1 grid size-6 place-items-center rounded-full border border-border bg-surface-overlay text-text-secondary transition-colors hover:text-text-primary disabled:opacity-50"
             >
@@ -271,7 +276,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
           type="file"
           accept={AVATAR_MIME_TYPES.join(',')}
           hidden
-          aria-label={`Selecionar foto do ${noun}`}
+          aria-label={t(`details.selectPhoto_${kind}`)}
           onChange={handleAvatarFilePicked}
         />
       )}
@@ -287,7 +292,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
               maxLength={80}
               className="border-border bg-fill-subtle text-center"
             />
-            <Button type="button" size="icon-sm" aria-label="Salvar nome" onClick={saveTitle} disabled={!titleDraft.trim()}>
+            <Button type="button" size="icon-sm" aria-label={t('details.saveName')} onClick={saveTitle} disabled={!titleDraft.trim()}>
               <CheckIcon size={14} />
             </Button>
           </div>
@@ -306,24 +311,24 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
         )}
         </div>
         <p className="flex select-none items-center justify-center gap-1.5 text-caption text-text-muted">
-          <span>{conversation.memberCount} {conversation.memberCount === 1 ? 'membro' : 'membros'}</span>
+          <span>{t('details.members', { count: conversation.memberCount })}</span>
           <span aria-hidden>·</span>
-          <span className="flex items-center gap-1"><span aria-hidden className="size-2 rounded-full bg-green" />{onlineCount} online</span>
+          <span className="flex items-center gap-1"><span aria-hidden className="size-2 rounded-full bg-green" />{t('details.online', { count: onlineCount })}</span>
         </p>
       </div>
 
       <dl className="flex flex-col gap-3 border-t border-border px-5 py-4">
         <div>
-          <dt className="select-none text-caption font-medium text-text-muted">Criado em</dt>
+          <dt className="select-none text-caption font-medium text-text-muted">{t('details.createdAt')}</dt>
           <dd className="mt-0.5 text-label text-text-primary">{formatProfileDate(new Date(conversation.createdAt).toISOString())}</dd>
         </div>
         {owner && (
           <div>
-            <dt className="select-none text-caption font-medium text-text-muted">Dono</dt>
+            <dt className="select-none text-caption font-medium text-text-muted">{t('details.owner')}</dt>
             <dd className="mt-0.5">
               <button type="button" onClick={() => onOpenProfile(owner.id)} className="flex max-w-full items-center gap-2 rounded-md text-left text-label text-text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                 <Avatar id={owner.id} name={owner.displayName} avatar={owner.avatar} avatarColor={owner.avatarColor} size={20} />
-                <span className="truncate">{owner.id === state.me.userId ? 'Você' : owner.displayName}</span>
+                <span className="truncate">{owner.id === state.me.userId ? t('details.you') : owner.displayName}</span>
                 <span className="truncate text-caption text-text-muted">@{owner.username}</span>
               </button>
             </dd>
@@ -335,16 +340,16 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
         {isOwner && (
           <Button type="button" variant="ghost" onClick={() => setInviteOpen(true)} className={shortcut}>
             <UserPlusIcon size={18} />
-            Convidar amigos
+            {t('details.inviteFriends')}
           </Button>
         )}
         <Button type="button" variant="ghost" onClick={onOpenMedia} className={shortcut}>
           <ImagesIcon size={18} />
-          Mídias e links
+          {t('details.media')}
         </Button>
         <Button type="button" variant="ghost" onClick={onOpenSearch} className={shortcut}>
           <MagnifyingGlassIcon size={18} />
-          Buscar na conversa
+          {t('details.searchConversation')}
         </Button>
       </div>
 
@@ -356,22 +361,22 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
   const TAB = 'h-11 rounded-none px-0 text-body font-semibold text-text-muted hover:text-text-secondary data-active:text-text-primary';
   const content: ReactNode = conversation && (
     <>
-      <PageHeader title={`Detalhes do ${noun}`} />
+      <PageHeader title={t(`details.title_${kind}`)} />
       {/* the card and the people side by side from md, each column scrolling on its own; stacked below, scrolling as one */}
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto md:grid md:grid-cols-[19rem_minmax(0,1fr)] md:grid-rows-[minmax(0,1fr)] md:overflow-hidden">
         {card}
         <Tabs value={tab} onValueChange={(value) => { if (value === 'members' || value === 'invites' || value === 'webhook') setTab(value); }} className="order-1 flex shrink-0 flex-col items-stretch gap-3 border-t border-border p-4 md:order-none md:min-h-0 md:shrink md:border-t-0 md:p-5">
-          <TabsList aria-label="Pessoas" className="flex h-auto w-full flex-none justify-start gap-6 rounded-none border-0 border-b border-border bg-transparent p-0">
+          <TabsList aria-label={t('details.tabsLabel')} className="flex h-auto w-full flex-none justify-start gap-6 rounded-none border-0 border-b border-border bg-transparent p-0">
             <TabsIndicator className="top-auto -bottom-px h-0.5 rounded-full bg-text-primary" />
-            <TabsTrigger value="members" className={TAB}>Membros</TabsTrigger>
-            {isOwner && <TabsTrigger value="invites" className={TAB}>Convites enviados{sent.items.length > 0 ? ` (${sent.items.length}${sent.hasMore ? '+' : ''})` : ''}</TabsTrigger>}
-            {isOwner && isBot && <TabsTrigger value="webhook" className={TAB}>Webhook</TabsTrigger>}
+            <TabsTrigger value="members" className={TAB}>{t('details.tabMembers')}</TabsTrigger>
+            {isOwner && <TabsTrigger value="invites" className={TAB}>{t('details.tabInvites')}{sent.items.length > 0 ? ` (${sent.items.length}${sent.hasMore ? '+' : ''})` : ''}</TabsTrigger>}
+            {isOwner && isBot && <TabsTrigger value="webhook" className={TAB}>{t('details.tabWebhook')}</TabsTrigger>}
           </TabsList>
           <div className="flex flex-col gap-3 md:min-h-0 md:flex-1 md:overflow-y-auto md:overscroll-contain">
             {groupActionError && (
               <div className="flex items-center gap-2 rounded-md bg-red/12 px-2.5 py-1.5 text-label text-red-text">
                 <span className="min-w-0 flex-1">{groupActionError}</span>
-                <CloseButton size="xs" label="Dispensar" onClick={clearGroupActionError} />
+                <CloseButton size="xs" label={t('details.dismiss')} onClick={clearGroupActionError} />
               </div>
             )}
             {notice && <p role="status" className="px-1 text-caption text-text-muted">{notice}</p>}
@@ -389,8 +394,8 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
                         </div>
                         <span className="min-w-0">
                           <span className="block truncate text-label font-medium">
-                            {member.displayName}{isMe ? ' (você)' : ''}
-                            {role === 'owner' && <CrownIcon size={15} weight="fill" role="img" aria-label="Dono" className="ml-1.5 inline-block align-text-bottom text-yellow" />}
+                            {member.displayName}{isMe ? t('details.meSuffix') : ''}
+                            {role === 'owner' && <CrownIcon size={15} weight="fill" role="img" aria-label={t('details.owner')} className="ml-1.5 inline-block align-text-bottom text-yellow" />}
                           </span>
                           <span className="block truncate text-caption text-text-muted">@{member.username}</span>
                         </span>
@@ -401,7 +406,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
                             type="button"
                             variant="ghost"
                             size="icon-xs"
-                            aria-label={`Transferir propriedade para ${member.displayName}`}
+                            aria-label={t('details.transfer', { name: member.displayName })}
                             onClick={() => setTransferTarget(member)}
                             className="flex-none text-text-muted opacity-0 transition-opacity hover:text-accent-text group-hover:opacity-100"
                           >
@@ -410,7 +415,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
                           <CloseButton
                             variant="danger"
                             size="xs"
-                            label={`Remover ${member.displayName}`}
+                            label={t('details.remove', { name: member.displayName })}
                             onClick={() => setRemoveTarget(member)}
                             className="opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
                           />
@@ -420,17 +425,17 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
                   );
                 })}
                 {memberList.status === 'loading' && memberList.items.length === 0 && (
-                  <p className="px-2 py-3 text-center text-caption text-text-muted">Carregando membros…</p>
+                  <p className="px-2 py-3 text-center text-caption text-text-muted">{t('details.loadingMembers')}</p>
                 )}
                 {memberList.status === 'error' && (
                   <div className="flex flex-col items-center gap-2 px-2 py-3">
-                    <p className="text-caption text-text-muted">Não foi possível carregar os membros.</p>
-                    <Button type="button" variant="secondary" size="sm" onClick={memberList.retry}>Tentar de novo</Button>
+                    <p className="text-caption text-text-muted">{t('details.loadMembersFailed')}</p>
+                    <Button type="button" variant="secondary" size="sm" onClick={memberList.retry}>{t('details.retry')}</Button>
                   </div>
                 )}
                 {memberList.hasMore && (
                   <Button type="button" variant="ghost" size="sm" className="self-center" disabled={memberList.loadingMore} onClick={memberList.loadMore}>
-                    {memberList.loadingMore ? 'Carregando…' : 'Carregar mais'}
+                    {memberList.loadingMore ? t('details.loading') : t('details.loadMore')}
                   </Button>
                 )}
               </div>
@@ -443,7 +448,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
             {isOwner && (
               <TabsPanel value="invites" className="flex flex-col gap-2">
                 {sent.items.length === 0 ? (
-                  <p className="py-10 text-center text-label text-text-muted">Nenhum convite pendente.</p>
+                  <p className="py-10 text-center text-label text-text-muted">{t('details.noInvites')}</p>
                 ) : (
                   <>
                   <div className="flex flex-col gap-1">
@@ -453,18 +458,18 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-label font-medium">{entry.invitee.displayName}</span>
                           <span className="block truncate text-caption text-text-muted">
-                            enviado em {new Date(entry.at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                            {t('details.sentOn', { date: new Date(entry.at).toLocaleDateString(i18n.language, { day: '2-digit', month: 'short' }) })}
                           </span>
                         </span>
                         <Button type="button" variant="ghost" size="xs" disabled={revokingId === entry.id} onClick={() => void handleRevoke(entry.id)}>
-                          Revogar
+                          {t('details.revoke')}
                         </Button>
                       </div>
                     ))}
                   </div>
                   {sent.hasMore && (
                     <Button type="button" variant="ghost" size="sm" className="self-center" disabled={sent.loadingMore} onClick={sent.loadMore}>
-                      {sent.loadingMore ? 'Carregando…' : 'Carregar mais'}
+                      {sent.loadingMore ? t('details.loading') : t('details.loadMore')}
                     </Button>
                   )}
                   </>
@@ -480,7 +485,7 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
   return (
     <>
       {open && conversation && (
-        <AppModal label={`Detalhes do ${noun}`} size="md" onClose={() => onOpenChange(false)}>
+        <AppModal label={t(`details.title_${kind}`)} size="md" onClose={() => onOpenChange(false)}>
           {content}
         </AppModal>
       )}
@@ -492,57 +497,57 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
         error={avatarError}
         aspect={1}
         cropShape="rect"
-        title={`Recortar foto do ${noun}`}
+        title={t(`details.cropTitle_${kind}`)}
         onCancel={closeCropDialog}
         onConfirm={handleAvatarCropConfirm}
       />
 
       <UploadProgressModal
         open={avatarUploadPhase === 'uploading'}
-        title={`Enviando a foto do ${noun}…`}
+        title={t(`details.uploading_${kind}`)}
         progress={avatarUploadProgress}
       />
 
 
       {conversation && (
-        <ReportDialog target={{ type: 'group', id: conversation.id, label: conversation.title || 'grupo' }} open={reportOpen} onOpenChange={setReportOpen} />
+        <ReportDialog target={{ type: 'group', id: conversation.id, label: conversation.title || noun }} open={reportOpen} onOpenChange={setReportOpen} />
       )}
       {conversation && isOwner && (
-        <GroupInviteDialog open={inviteOpen} onOpenChange={setInviteOpen} conversationId={conversation.id} noun={noun} excludeIds={excludeIds} onInvited={(sent) => { bump(); setNotice(sent === 1 ? 'Convite enviado.' : `${sent} convites enviados.`); }} />
+        <GroupInviteDialog open={inviteOpen} onOpenChange={setInviteOpen} conversationId={conversation.id} kind={kind} excludeIds={excludeIds} onInvited={(sent) => { bump(); setNotice(t('details.invited', { count: sent })); }} />
       )}
       <ConfirmDialog
         open={confirmLeave}
         onOpenChange={setConfirmLeave}
-        title={`Sair do ${noun}`}
-        description={`Você vai sair de "${conversation?.title || noun}" e parar de receber as mensagens dele.`}
-        confirmLabel="Sair"
+        title={t(`details.leave_${kind}`)}
+        description={t('details.leaveConfirm.description', { title: groupName })}
+        confirmLabel={t('details.leaveConfirm.confirm')}
         destructive
         onConfirm={handleLeave}
       />
       <ConfirmDialog
         open={confirmDelete}
         onOpenChange={setConfirmDelete}
-        title={`Excluir ${noun}`}
-        description={`Isso apaga "${conversation?.title || noun}" e TODAS as mensagens dele para todo mundo, para sempre.${isBot ? ' A URL do webhook para de funcionar.' : ''} Essa ação não pode ser desfeita.`}
-        confirmLabel="Excluir"
+        title={t(`details.delete_${kind}`)}
+        description={t(`details.deleteConfirm.description_${kind}`, { title: groupName })}
+        confirmLabel={t('details.deleteConfirm.confirm')}
         destructive
         onConfirm={handleDelete}
       />
       <ConfirmDialog
         open={!!removeTarget}
         onOpenChange={(next) => { if (!next) setRemoveTarget(null); }}
-        title={`Remover do ${noun}`}
-        description={`Remover ${removeTarget?.displayName ?? ''} de "${conversation?.title || noun}"?`}
-        confirmLabel="Remover"
+        title={t(`details.removeConfirm.title_${kind}`)}
+        description={t('details.removeConfirm.description', { name: removeTarget?.displayName ?? '', title: groupName })}
+        confirmLabel={t('details.removeConfirm.confirm')}
         destructive
         onConfirm={handleRemoveMember}
       />
       <ConfirmDialog
         open={!!transferTarget}
         onOpenChange={(next) => { if (!next) setTransferTarget(null); }}
-        title="Transferir propriedade"
-        description={`${transferTarget?.displayName ?? ''} passa a ser o dono de "${conversation?.title || noun}". Você perde os controles de gestão do ${noun}${isBot ? ', incluindo o webhook' : ''}.`}
-        confirmLabel="Transferir"
+        title={t('details.transferConfirm.title')}
+        description={t(`details.transferConfirm.description_${kind}`, { name: transferTarget?.displayName ?? '', title: groupName })}
+        confirmLabel={t('details.transferConfirm.confirm')}
         destructive
         onConfirm={handleTransferOwnership}
       />

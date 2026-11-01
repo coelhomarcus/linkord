@@ -4,6 +4,7 @@ import { ConnectionState, VideoPresets } from 'livekit-client';
 import type { Room } from 'livekit-client';
 import type { RoomAction } from '../../state/roomReducer';
 import { loadDevicePreference } from '../settings/useDevicePreference';
+import { i18n } from '@/shared/i18n/init';
 
 interface CameraApi {
   startCamera: () => Promise<void>;
@@ -13,11 +14,11 @@ interface CameraApi {
 export function useCamera(room: Room, dispatch: Dispatch<RoomAction>): CameraApi {
   const startCamera = useCallback(async () => {
     if (room.state !== ConnectionState.Connected) {
-      dispatch({ type: 'SET_SHARE_ERROR', message: 'Ainda conectando ao servidor de vídeo, tente de novo em instantes.' });
+      dispatch({ type: 'SET_SHARE_ERROR', message: i18n.t('calls:errors.videoConnecting') });
       return;
     }
     if (!navigator.mediaDevices?.getUserMedia) {
-      dispatch({ type: 'SET_SHARE_ERROR', message: 'Seu navegador não suporta acesso à câmera.' });
+      dispatch({ type: 'SET_SHARE_ERROR', message: i18n.t('calls:errors.cameraUnsupported') });
       return;
     }
 
@@ -34,7 +35,7 @@ export function useCamera(room: Room, dispatch: Dispatch<RoomAction>): CameraApi
     } catch (err) {
       const name = (err as DOMException)?.name;
       const denied = name === 'NotAllowedError' || name === 'NotFoundError' || name === 'AbortError';
-      if (!denied) dispatch({ type: 'SET_SHARE_ERROR', message: `Não foi possível acessar a câmera: ${(err as Error)?.message}` });
+      if (!denied) dispatch({ type: 'SET_SHARE_ERROR', message: i18n.t('calls:errors.cameraAccess', { error: (err as Error)?.message }) });
       return;
     }
 

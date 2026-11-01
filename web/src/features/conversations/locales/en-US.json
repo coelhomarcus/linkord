@@ -1,0 +1,218 @@
+{
+  "fallback": {
+    "conversation": "Conversation",
+    "group": "Group",
+    "bot": "Bot",
+    "direct": "Direct conversation"
+  },
+  "noun_group": "group",
+  "noun_bot": "bot",
+  "outcome": {
+    "sent": "invitation sent",
+    "already_pending": "already has a pending invitation",
+    "already_member": "is already in the group",
+    "not_friends": "is no longer your friend",
+    "group_full": "the group is full",
+    "unavailable": "unavailable"
+  },
+  "sidebar": {
+    "title": "Conversations",
+    "hide": "Hide conversation list",
+    "tabsLabel": "Conversation type",
+    "tabs": {
+      "direct": "Friends",
+      "group": "Groups",
+      "bot": "Bots"
+    },
+    "search": {
+      "direct": "Search friends",
+      "group": "Search groups",
+      "bot": "Search bots"
+    },
+    "empty": {
+      "direct": "No conversations.",
+      "group": "No groups.",
+      "bot": "No bots.",
+      "botFirst": "No bots yet. Create one to receive alerts from your systems."
+    },
+    "create": {
+      "direct": "Create group",
+      "group": "Create group",
+      "bot": "Create bot"
+    }
+  },
+  "panel": {
+    "back": "Back to conversations",
+    "viewProfile": "View profile",
+    "details_group": "Group details",
+    "details_bot": "Bot details",
+    "members_one": "{{count}} member",
+    "members_other": "{{count}} members",
+    "online": "Online",
+    "inCall": "In the call",
+    "media": "Media and links",
+    "search": "Search messages",
+    "blocked": "You can't call while this person is blocked.",
+    "needFriends": "You need to be friends to make calls.",
+    "returnToCall": "Back to the call",
+    "joinCall": "Join the call",
+    "returnToActiveCall": "Back to the active call",
+    "moreOptions": "More conversation options",
+    "joinThisCall": "Join this conversation's call",
+    "dismissNotice": "Dismiss notice",
+    "suspendedTitle_group": "Group suspended",
+    "suspendedTitle_bot": "Bot suspended",
+    "suspendedText_group": "The administration suspended this group. While it lasts, nobody can read, write or join a call.",
+    "suspendedText_bot": "The administration suspended this bot. While it lasts, nobody reads its alerts and it receives no new ones.",
+    "emptyTitle": "Open a conversation",
+    "emptyText": "Pick a person, group or bot in the sidebar."
+  },
+  "friendPicker": {
+    "search": "Search friends",
+    "loading": "Loading friends…",
+    "loadFailed": "Couldn't load your friends.",
+    "retry": "Try again",
+    "noMatch": "No friends found.",
+    "noneToInvite": "You have no friends to invite.",
+    "loadingMore": "Loading…",
+    "loadMore": "Load more"
+  },
+  "groupCreate": {
+    "title": "New group",
+    "titleCreated": "Group created",
+    "partial": "The group was created, but some invitations weren't sent:",
+    "name": "Name",
+    "namePlaceholder": "E.g. Product, family, squad",
+    "inviteFriends": "Invite friends",
+    "inviteHint": "Your friends will get an invitation and only join the group once they accept.",
+    "close": "Close",
+    "cancel": "Cancel",
+    "creating": "Creating…",
+    "createAndInvite": "Create and invite ({{count}})",
+    "create": "Create group",
+    "failed": "Couldn't create the group. Try again."
+  },
+  "groupInvite": {
+    "title": "Invite friends",
+    "partial": "Some invitations weren't sent:",
+    "hint_group": "Your friends get an invitation and only join the group once they accept.",
+    "hint_bot": "Your friends get an invitation and only join the bot once they accept.",
+    "close": "Close",
+    "cancel": "Cancel",
+    "sending": "Sending…",
+    "inviteCount": "Invite ({{count}})",
+    "invite": "Invite",
+    "failed": "Couldn't send the invitations. Try again."
+  },
+  "details": {
+    "title_group": "Group details",
+    "title_bot": "Bot details",
+    "leave_group": "Leave group",
+    "leave_bot": "Leave bot",
+    "report": "Report group",
+    "delete_group": "Delete group",
+    "delete_bot": "Delete bot",
+    "changePhoto_group": "Change group photo",
+    "changePhoto_bot": "Change bot photo",
+    "selectPhoto_group": "Select group photo",
+    "selectPhoto_bot": "Select bot photo",
+    "saveName": "Save name",
+    "members_one": "{{count}} member",
+    "members_other": "{{count}} members",
+    "online": "{{count}} online",
+    "createdAt": "Created on",
+    "owner": "Owner",
+    "you": "You",
+    "meSuffix": " (you)",
+    "inviteFriends": "Invite friends",
+    "media": "Media and links",
+    "searchConversation": "Search in conversation",
+    "tabsLabel": "People",
+    "tabMembers": "Members",
+    "tabInvites": "Sent invitations",
+    "tabWebhook": "Webhook",
+    "dismiss": "Dismiss",
+    "transfer": "Transfer ownership to {{name}}",
+    "remove": "Remove {{name}}",
+    "loadingMembers": "Loading members…",
+    "loadMembersFailed": "Couldn't load the members.",
+    "retry": "Try again",
+    "loadMore": "Load more",
+    "loading": "Loading…",
+    "noInvites": "No pending invitations.",
+    "sentOn": "sent on {{date}}",
+    "revoke": "Revoke",
+    "revokeFailed": "Couldn't revoke the invitation.",
+    "fileTooLarge": "File too large (maximum {{max}}).",
+    "uploadFailed": "Failed to upload the photo.",
+    "invited_one": "Invitation sent.",
+    "invited_other": "{{count}} invitations sent.",
+    "cropTitle_group": "Crop group photo",
+    "cropTitle_bot": "Crop bot photo",
+    "uploading_group": "Uploading the group photo…",
+    "uploading_bot": "Uploading the bot photo…",
+    "leaveConfirm": {
+      "description": "You'll leave \"{{title}}\" and stop receiving its messages.",
+      "confirm": "Leave"
+    },
+    "deleteConfirm": {
+      "description_group": "This deletes \"{{title}}\" and ALL of its messages for everyone, forever. This can't be undone.",
+      "description_bot": "This deletes \"{{title}}\" and ALL of its messages for everyone, forever. The webhook URL stops working. This can't be undone.",
+      "confirm": "Delete"
+    },
+    "removeConfirm": {
+      "title_group": "Remove from group",
+      "title_bot": "Remove from bot",
+      "description": "Remove {{name}} from \"{{title}}\"?",
+      "confirm": "Remove"
+    },
+    "transferConfirm": {
+      "title": "Transfer ownership",
+      "description_group": "{{name}} becomes the owner of \"{{title}}\". You lose the management controls of the group.",
+      "description_bot": "{{name}} becomes the owner of \"{{title}}\". You lose the management controls of the bot, including the webhook.",
+      "confirm": "Transfer"
+    }
+  },
+  "media": {
+    "title": "Media and links",
+    "tabs": {
+      "uploads": "All",
+      "images": "Images",
+      "gifs": "GIFs",
+      "videos": "Videos",
+      "audios": "Audio",
+      "documents": "Documents",
+      "embeds": "Links"
+    },
+    "empty": {
+      "uploads": "No files sent yet.",
+      "images": "No images sent yet.",
+      "gifs": "No GIFs sent yet.",
+      "videos": "No videos sent yet.",
+      "audios": "No audio sent yet.",
+      "documents": "No documents sent yet.",
+      "embeds": "No embeddable links shared yet."
+    },
+    "list": {
+      "uploads": "Files sent",
+      "images": "Images sent",
+      "gifs": "GIFs sent",
+      "videos": "Videos sent",
+      "audios": "Audio sent",
+      "documents": "Documents sent",
+      "embeds": "Links shared"
+    },
+    "noResults": "Nothing found for that search.",
+    "searchLinks": "Search links",
+    "searchFiles": "Search files",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "thisWeek": "This week",
+    "loadFailed": "Couldn't load.",
+    "jumpToMessage": "Go to message",
+    "open": "Open {{name}}",
+    "download": "Download {{name}}",
+    "retry": "Try again",
+    "loading": "Loading…"
+  }
+}

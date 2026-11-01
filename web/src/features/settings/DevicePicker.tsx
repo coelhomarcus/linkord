@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef } from 'react';
 import type { Room } from 'livekit-client';
+import { useTranslation } from 'react-i18next';
 import { Label } from '@/shared/ui/primitives/label';
 import { Button } from '@/shared/ui/primitives/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/primitives/select';
@@ -8,17 +9,12 @@ import { useMicLevelMeter } from './useMicLevelMeter';
 import { useSpeakerTest } from './useSpeakerTest';
 import { useCameraPreview } from './useCameraPreview';
 
-const STATUS_TEXT: Record<'unsupported' | 'permission-denied' | 'no-devices', string> = {
-  unsupported: 'Seu navegador não permite escolher dispositivo aqui.',
-  'permission-denied': 'Permissão negada. Habilite o acesso nas configurações do navegador pra este site.',
-  'no-devices': 'Nenhum dispositivo encontrado.',
-};
-
 /** The three "am I actually picking the right device" checks (plano §8.3,
  * melhorias P2) — each opens its own getUserMedia stream, never touches
  * room.localParticipant (a call's own track), starts only on this button and
  * stops on it, on unmount, or the moment the picked device changes. */
 function MicTest({ deviceId }: { deviceId: string | undefined }) {
+  const { t } = useTranslation('settings');
   const meter = useMicLevelMeter();
   useEffect(() => {
     if (meter.active) void meter.start(deviceId);
@@ -30,12 +26,12 @@ function MicTest({ deviceId }: { deviceId: string | undefined }) {
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center gap-2">
         <Button type="button" variant="outline" size="xs" className="flex-none" onClick={() => (meter.active ? meter.stop() : void meter.start(deviceId))}>
-          <span>{meter.active ? 'Parar teste' : 'Testar microfone'}</span>
+          <span>{meter.active ? t('av.stopTest') : t('av.micTest')}</span>
         </Button>
         {meter.active && (
           <div
             role="meter"
-            aria-label="Nível do microfone"
+            aria-label={t('av.micLevel')}
             aria-valuenow={Math.round(meter.level * 100)}
             aria-valuemin={0}
             aria-valuemax={100}
@@ -51,11 +47,12 @@ function MicTest({ deviceId }: { deviceId: string | undefined }) {
 }
 
 function SpeakerTestButton({ deviceId }: { deviceId: string | undefined }) {
+  const { t } = useTranslation('settings');
   const { testing, error, test } = useSpeakerTest();
   return (
     <div className="flex flex-col gap-1.5">
       <Button type="button" variant="outline" size="xs" className="self-start" disabled={testing} onClick={() => void test(deviceId)}>
-        <span>{testing ? 'Tocando…' : 'Testar'}</span>
+        <span>{testing ? t('av.playing') : t('av.speakerTest')}</span>
       </Button>
       {error && <p role="alert" className="text-label text-red">{error}</p>}
     </div>
@@ -63,6 +60,7 @@ function SpeakerTestButton({ deviceId }: { deviceId: string | undefined }) {
 }
 
 function CameraPreview({ deviceId }: { deviceId: string | undefined }) {
+  const { t } = useTranslation('settings');
   const preview = useCameraPreview();
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
@@ -78,7 +76,7 @@ function CameraPreview({ deviceId }: { deviceId: string | undefined }) {
   return (
     <div className="flex flex-col gap-1.5">
       <Button type="button" variant="outline" size="xs" className="self-start" onClick={() => (preview.active ? preview.stop() : void preview.start(deviceId))}>
-        <span>{preview.active ? 'Parar prévia' : 'Ativar prévia'}</span>
+        <span>{preview.active ? t('av.previewStop') : t('av.previewStart')}</span>
       </Button>
       {preview.active && (
         // eslint-disable-next-line jsx-a11y/media-has-caption -- a live self-preview, not media content
@@ -90,6 +88,7 @@ function CameraPreview({ deviceId }: { deviceId: string | undefined }) {
 }
 
 export function DevicePicker({ label, room, kind }: { label: string; room: Room; kind: MediaDeviceKind }) {
+  const { t } = useTranslation('settings');
   const { devices, activeDeviceId, status, switching, error, selectDevice, requestPermission } = useMediaDevices(room, kind);
   const controlId = useId();
   const helpId = useId();
@@ -99,17 +98,17 @@ export function DevicePicker({ label, room, kind }: { label: string; room: Room;
       <Label htmlFor={controlId} className="text-body font-medium text-text-primary">{label}</Label>
       {status === 'permission-needed' ? (
         <Button id={controlId} type="button" variant="outline" size="sm" className="self-start" aria-describedby={helpId} onClick={() => requestPermission()}>
-          <span>Permitir acesso pra ver os nomes dos dispositivos</span>
+          <span>{t('av.allowAccess')}</span>
         </Button>
       ) : status === 'unsupported' || status === 'permission-denied' ? (
         // Asking again wouldn't help in either case — browsers don't
         // re-prompt once denied, and there's nothing to prompt for at all
         // when the API itself isn't available.
-        <p id={controlId} className="text-body text-text-muted">{STATUS_TEXT[status]}</p>
+        <p id={controlId} className="text-body text-text-muted">{t(`av.status.${status}`)}</p>
       ) : (
         <Select value={activeDeviceId} onValueChange={(v) => v && selectDevice(v)} disabled={devices.length === 0 || switching}>
           <SelectTrigger id={controlId} aria-describedby={helpId} className="w-full text-text-muted">
-            <SelectValue>{() => devices.find((d) => d.deviceId === activeDeviceId)?.label || 'Padrão do sistema'}</SelectValue>
+            <SelectValue>{() => devices.find((d) => d.deviceId === activeDeviceId)?.label || t('av.systemDefault')}</SelectValue>
           </SelectTrigger>
           <SelectContent>
             {devices.map((d) => (
@@ -118,8 +117,8 @@ export function DevicePicker({ label, room, kind }: { label: string; room: Room;
           </SelectContent>
         </Select>
       )}
-      {status === 'no-devices' && <p className="text-label text-text-muted">{STATUS_TEXT['no-devices']}</p>}
-      <p id={helpId} className="text-label text-text-muted">A troca vale na hora, mesmo durante uma chamada.</p>
+      {status === 'no-devices' && <p className="text-label text-text-muted">{t('av.status.no-devices')}</p>}
+      <p id={helpId} className="text-label text-text-muted">{t('av.switchHelp')}</p>
       {error && <p role="alert" className="text-label text-red">{error}</p>}
 
       {status === 'ready' && kind === 'audioinput' && <MicTest deviceId={activeDeviceId} />}

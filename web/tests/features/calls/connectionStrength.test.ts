@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ConnectionQuality } from 'livekit-client';
 import { connectionStrength } from '@/features/calls/connectionStrength';
+import { useLanguageForTests } from '@tests/fixtures/i18nFixture';
 
 describe('connectionStrength', () => {
   it('the ping alone sets the bars: 3 green, 2 yellow, 1 red', () => {
@@ -23,5 +24,14 @@ describe('connectionStrength', () => {
   it('a lost or reconnecting connection shows no bars, in red', () => {
     expect(connectionStrength(40, ConnectionQuality.Lost, false)).toMatchObject({ bars: 0, tone: 'poor', label: 'Sem conexão' });
     expect(connectionStrength(40, ConnectionQuality.Excellent, true)).toMatchObject({ bars: 0, tone: 'poor', label: 'Reconectando…' });
+  });
+});
+
+describe('English translations', () => {
+  useLanguageForTests('en-US');
+
+  it('uses the English connection labels and packet-loss note', () => {
+    expect(connectionStrength(40, ConnectionQuality.Excellent, false)).toMatchObject({ label: 'Good connection' });
+    expect(connectionStrength(40, ConnectionQuality.Poor, false)).toMatchObject({ note: 'The network is losing audio or video packets.' });
   });
 });

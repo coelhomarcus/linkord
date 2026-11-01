@@ -1,0 +1,30 @@
+{
+  "categories": {
+    "spam": "Spam or advertising",
+    "harassment": "Harassment or threat",
+    "inappropriate": "Inappropriate content",
+    "impersonation": "Impersonation",
+    "illegal": "Illegal activity",
+    "other": "Other reason"
+  },
+  "targets": { "user": "account", "group": "group", "message": "message" },
+  "errors": {
+    "rateLimited": "You have sent too many reports. Please wait a little.",
+    "notFound": "We could not find what you want to report.",
+    "submitFailed": "Could not send the report. Try again."
+  },
+  "dialog": {
+    "title": "Report {{target}}",
+    "sentTitle": "Report sent.",
+    "sentDescription": "Thanks for letting us know. The administration will review it.",
+    "about": "About",
+    "confidential": "Your report is confidential: the reported person cannot see who sent it.",
+    "reason": "Reason",
+    "detailsPlaceholder": "Details (optional)",
+    "detailsLabel": "Details",
+    "close": "Close",
+    "cancel": "Cancel",
+    "sending": "Sending…",
+    "submit": "Send report"
+  }
+}

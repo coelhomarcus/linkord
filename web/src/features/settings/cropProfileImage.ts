@@ -2,6 +2,7 @@ import { ImageMagick, initializeImageMagick, MagickFormat, MagickGeometry } from
 import magickWasmUrl from '@imagemagick/magick-wasm/magick.wasm?url';
 
 import type { CropRect } from '@/state/RoomContext';
+import { i18n } from '@/shared/i18n/init';
 
 export const MAX_PROFILE_IMAGE_DIMENSION = 4096;
 
@@ -16,7 +17,7 @@ let init: Promise<void> | null = null;
 
 async function loadDefaultWasm(): Promise<Uint8Array> {
   const res = await fetch(magickWasmUrl);
-  if (!res.ok) throw new ProfileImageCropError('Não foi possível carregar o processador de imagem.');
+  if (!res.ok) throw new ProfileImageCropError(i18n.t('settings:crop.errors.loadProcessor'));
   return new Uint8Array(await res.arrayBuffer());
 }
 
@@ -52,19 +53,19 @@ export async function cropProfileImage(bytes: Uint8Array, crop: CropRect, mime: 
   await initializeProfileImageMagick();
   const rect = roundedCrop(crop);
   if (rect.width <= 0 || rect.height <= 0 || rect.left < 0 || rect.top < 0) {
-    throw new ProfileImageCropError('Recorte inválido.');
+    throw new ProfileImageCropError(i18n.t('settings:crop.errors.invalidCrop'));
   }
 
   try {
     return await ImageMagick.readCollection(bytes, (images) => {
-      if (images.length === 0) throw new ProfileImageCropError('Não foi possível processar a imagem.');
+      if (images.length === 0) throw new ProfileImageCropError(i18n.t('settings:crop.errors.processFailed'));
       // GIF/WebP frames are often deltas against the previous one — coalesce
       // so the crop rect applies to a full picture on every page.
       if (images.length > 1) images.coalesce();
 
       const source = images[0]!;
       if (rect.left + rect.width > source.width || rect.top + rect.height > source.height) {
-        throw new ProfileImageCropError('Recorte fora dos limites da imagem.');
+        throw new ProfileImageCropError(i18n.t('settings:crop.errors.outOfBounds'));
       }
 
       const cropGeometry = new MagickGeometry(rect.left, rect.top, rect.width, rect.height);
@@ -89,6 +90,6 @@ export async function cropProfileImage(bytes: Uint8Array, crop: CropRect, mime: 
     });
   } catch (err) {
     if (err instanceof ProfileImageCropError) throw err;
-    throw new ProfileImageCropError('Não foi possível processar a imagem.');
+    throw new ProfileImageCropError(i18n.t('settings:crop.errors.processFailed'));
   }
 }

@@ -7,6 +7,7 @@ import { parseCookies, serializeCookie, clearCookie, isSecureRequest } from '../
 import { hashPassword, verifyPassword, needsRehash, DUMMY_HASH } from './password.js';
 import { createSession, resolveSession, destroyAllSessionsForUser, destroySession } from './session.js';
 import { findByEmailLower, findByUsernameLower, isValidEmail, normalizeEmail, privateUser } from '../users/users.js';
+import { resolveLocale } from '../users/locale.js';
 import { createUser, updateEmail, updatePassword } from './accounts.js';
 import { checkRegistrationAllowed } from './registrationLimits.js';
 import type { User } from '../../db/schema.js';
@@ -115,7 +116,7 @@ async function handleRegister(request: FastifyRequest, reply: FastifyReply): Pro
 
   let user;
   try {
-    user = await createUser({ username, email, passwordHash, role });
+    user = await createUser({ username, email, passwordHash, role, locale: resolveLocale(body.locale) });
   } catch (err: unknown) {
     if (err && (err as { code?: string }).code === 'account_identity_taken') return sendError(reply, 409, 'username_taken', 'Esse nome de usuário ou e-mail já está em uso.');
     throw err;
@@ -207,6 +208,7 @@ async function handleMe(request: FastifyRequest, reply: FastifyReply): Promise<v
       bio: sess.bio,
       profileLinks: sess.profileLinks,
       role: sess.role,
+      locale: sess.locale,
     },
   });
 }
@@ -225,10 +227,10 @@ function sessionForRequest(request: FastifyRequest) {
   return resolveSession(cookies[config.SESSION_COOKIE]);
 }
 
-async function issueAndSendCode(userId: string, email: string, username: string, purpose: AuthCodePurpose): Promise<void> {
+async function issueAndSendCode(userId: string, email: string, username: string, purpose: AuthCodePurpose, locale: ReturnType<typeof resolveLocale>): Promise<void> {
   const code = await issueAuthCode(userId, purpose, email);
   try {
-    await sendAuthCodeEmail({ to: email, code, purpose, username });
+    await sendAuthCodeEmail({ to: email, code, purpose, username, locale });
   } catch (err) {
     log.error('failed to send code', err);
     throw err;
@@ -277,7 +279,7 @@ async function handleRecoveryRequest(request: FastifyRequest, reply: FastifyRepl
   const user = await findUserByIdentifier(identifier);
   if (user?.email) {
     try {
-      await issueAndSendCode(user.id, user.email, user.username, 'password_reset');
+      await issueAndSendCode(user.id, user.email, user.username, 'password_reset', resolveLocale(user.locale));
     } catch { /* Keep the response identical so recovery never enumerates accounts. */ }
   }
   sendJson(reply, 200, { ok: true });
@@ -337,7 +339,7 @@ async function handleEmailChangeRequest(request: FastifyRequest, reply: FastifyR
   }
   ratelimit.recordFailure(changeKey);
   try {
-    await issueAndSendCode(sess.userId, email, sess.username, 'email_change');
+    await issueAndSendCode(sess.userId, email, sess.username, 'email_change', resolveLocale(sess.locale));
   } catch {
     return sendError(reply, 503, 'email_unavailable', 'Não foi possível enviar o código agora. Tente novamente mais tarde.');
   }

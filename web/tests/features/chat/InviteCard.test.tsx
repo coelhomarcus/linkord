@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { initialRoomState } from '@/state/roomReducer';
 import { renderWithRoom } from '@tests/fixtures/roomContextFixture';
 import { InviteCard } from '@/features/chat/InviteCard';
+import { useLanguageForTests } from '@tests/fixtures/i18nFixture';
 import * as api from '@/shared/api/api';
 import type { Conversation, InvitationCard } from '@/shared/types/protocol';
 
@@ -126,5 +127,17 @@ describe('InviteCard', () => {
     await user.click(screen.getByRole('button', { name: 'Entrar no grupo' }));
     await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
     expect(screen.getByRole('button', { name: 'Entrar no grupo' })).toBeEnabled();
+  });
+});
+
+describe('InviteCard in English', () => {
+  useLanguageForTests('en-US');
+
+  it('words the invitation and its actions in English', () => {
+    render(card());
+    expect(screen.getByText('Group invitation')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Join the group' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Decline' })).toBeInTheDocument();
+    expect(screen.getByText('3 members')).toBeInTheDocument();
   });
 });

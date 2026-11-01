@@ -1,13 +1,15 @@
 import { ErrorBanner } from '@/shared/ErrorBanner';
 import { Button } from '@/shared/ui/primitives/button';
+import { useTranslation } from 'react-i18next';
 
 export function RoomErrorScreen({ message }: { message: string }) {
+  const { t } = useTranslation('common');
   return (
     <div className="flex min-h-full items-center justify-center bg-bg-primary p-4">
       <div className="flex w-full max-w-100 flex-col gap-3.5 rounded-xl bg-bg-floating p-6">
-        <h1 className="text-display font-bold text-text-primary">Não foi possível entrar</h1>
+        <h1 className="text-display font-bold text-text-primary">{t('layout.roomErrorTitle')}</h1>
         <ErrorBanner>{message}</ErrorBanner>
-        <Button type="button" size="lg" onClick={() => location.reload()}>Tentar de novo</Button>
+        <Button type="button" size="lg" onClick={() => location.reload()}>{t('layout.tryAgain')}</Button>
       </div>
     </div>
   );

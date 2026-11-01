@@ -1,5 +1,6 @@
 import { GearIcon, MicrophoneIcon, MicrophoneSlashIcon, MonitorIcon, PhoneIcon, PhoneSlashIcon, SpeakerHighIcon, SpeakerSlashIcon, VideoCameraIcon, VideoCameraSlashIcon } from '@phosphor-icons/react';
 import { useLocation, useNavigate } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import { iconWeight } from '@/shared/ui/icons';
 import { Avatar } from '@/shared/Avatar';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
@@ -10,10 +11,10 @@ import { CallPingIndicator } from './CallPingIndicator';
 import { cn } from '@/shared/lib/utils';
 import { ROUTES } from '@/shared/lib/routes';
 
-const MIC_PROBLEM_LABEL = {
-  'not-found': 'Nenhum microfone encontrado',
-  denied: 'Microfone bloqueado pelo navegador',
-  unavailable: 'Microfone indisponível',
+const MIC_PROBLEM_LABEL_KEY = {
+  'not-found': 'micProblem.notFoundLabel',
+  denied: 'micProblem.deniedLabel',
+  unavailable: 'micProblem.unavailableLabel',
 } as const;
 
 const DOCK_BUTTON = 'grid size-9 flex-none place-items-center rounded-md transition-colors';
@@ -35,6 +36,7 @@ interface CallDockProps {
 }
 
 export function CallDock({ onReturnToCall, onOpenProfile, showReturnToCall, layout = 'wide', onNavigate }: CallDockProps) {
+  const { t } = useTranslation('calls');
   const {
     state, conversations, allUsers, activeCallConversationId,
     startCamera, stopCamera, startSharing, stopSharing, activateMic, toggleMicMuted,
@@ -50,8 +52,8 @@ export function CallDock({ onReturnToCall, onOpenProfile, showReturnToCall, layo
   const sharing = state.me.sharing;
   const micProblem = myMedia.micActivated ? null : state.micProblem;
   const micLabel = inCall
-    ? (micProblem ? MIC_PROBLEM_LABEL[micProblem] : !myMedia.micActivated ? 'Ativar microfone' : myMedia.micMuted ? 'Desmutar' : 'Mutar')
-    : preferMuted ? 'Desmutar' : 'Mutar';
+    ? (micProblem ? t(MIC_PROBLEM_LABEL_KEY[micProblem]) : !myMedia.micActivated ? t('controls.micActivate') : myMedia.micMuted ? t('controls.micUnmute') : t('controls.micMute'))
+    : preferMuted ? t('controls.micUnmute') : t('controls.micMute');
   const micMuted = inCall ? (myMedia.micMuted || !!micProblem) : preferMuted;
   const title = conversationTitle(
     conversations.find((conversation) => conversation.id === activeCallConversationId) ?? null,
@@ -75,15 +77,15 @@ export function CallDock({ onReturnToCall, onOpenProfile, showReturnToCall, layo
   const returnButton = inCall && showReturnToCall && (
     compact ? (
       <Tooltip>
-        <TooltipTrigger onClick={onReturnToCall} aria-label="Voltar à chamada" className={cn(DOCK_BUTTON, DOCK_GREEN)}>
+        <TooltipTrigger onClick={onReturnToCall} aria-label={t('controls.returnToCall')} className={cn(DOCK_BUTTON, DOCK_GREEN)}>
           <PhoneIcon size={20} weight="fill" />
         </TooltipTrigger>
-        <TooltipContent side="right">Voltar à chamada</TooltipContent>
+        <TooltipContent side="right">{t('controls.returnToCall')}</TooltipContent>
       </Tooltip>
     ) : (
       <button type="button" onClick={onReturnToCall} className={CALL_JOIN}>
         <PhoneIcon size={20} weight="fill" />
-        Voltar à chamada
+        {t('controls.returnToCall')}
       </button>
     )
   );
@@ -91,12 +93,12 @@ export function CallDock({ onReturnToCall, onOpenProfile, showReturnToCall, layo
     <Tooltip>
       <TooltipTrigger
         onClick={() => void leaveCall()}
-        aria-label="Sair da chamada"
+        aria-label={t('controls.leaveCall')}
         className={cn(DOCK_BUTTON, 'bg-red text-white hover:bg-red-hover')}
       >
         <PhoneSlashIcon size={20} weight="fill" />
       </TooltipTrigger>
-      <TooltipContent side={compact ? 'right' : 'top'}>Sair da chamada</TooltipContent>
+      <TooltipContent side={compact ? 'right' : 'top'}>{t('controls.leaveCall')}</TooltipContent>
     </Tooltip>
   );
   const tipSide = compact ? 'right' : 'top';
@@ -118,7 +120,7 @@ export function CallDock({ onReturnToCall, onOpenProfile, showReturnToCall, layo
           <div className="flex items-center gap-2">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1">
-                <p className="text-caption font-semibold text-green">Em chamada</p>
+                <p className="text-caption font-semibold text-green">{t('controls.inCall')}</p>
                 <CallPingIndicator />
               </div>
               <p className="truncate text-label font-semibold text-text-primary">{title}</p>
@@ -131,7 +133,7 @@ export function CallDock({ onReturnToCall, onOpenProfile, showReturnToCall, layo
         <button
           type="button"
           onClick={() => { if (state.me.userId) onOpenProfile(state.me.userId); }}
-          aria-label="Meu perfil"
+          aria-label={t('controls.myProfile')}
           className={cn(
             'flex items-center gap-2 rounded-md text-left transition-colors hover:bg-fill-hover',
             compact ? 'p-0.5' : 'min-w-0 flex-1 px-1 py-0.5',
@@ -157,34 +159,34 @@ export function CallDock({ onReturnToCall, onOpenProfile, showReturnToCall, layo
         <Tooltip>
           <TooltipTrigger
             onClick={toggleDeafened}
-            aria-label={deafened ? 'Voltar a ouvir' : 'Parar de ouvir'}
+            aria-label={deafened ? t('controls.listenAgain') : t('controls.stopListening')}
             className={cn(DOCK_BUTTON, deafened ? DOCK_RED : DOCK_NEUTRAL)}
           >
             {deafened ? <SpeakerSlashIcon size={20} weight={iconWeight(true)} /> : <SpeakerHighIcon size={20} />}
           </TooltipTrigger>
-          <TooltipContent side={tipSide}>{deafened ? 'Voltar a ouvir' : 'Parar de ouvir'}</TooltipContent>
+          <TooltipContent side={tipSide}>{deafened ? t('controls.listenAgain') : t('controls.stopListening')}</TooltipContent>
         </Tooltip>
         {inCall && (
           <>
             <Tooltip>
               <TooltipTrigger
                 onClick={() => { void (cameraOn ? stopCamera() : startCamera()); }}
-                aria-label={cameraOn ? 'Parar câmera' : 'Ligar câmera'}
+                aria-label={cameraOn ? t('controls.cameraOff') : t('controls.cameraOn')}
                 className={cn(DOCK_BUTTON, cameraOn ? DOCK_GREEN : DOCK_NEUTRAL)}
               >
                 {cameraOn ? <VideoCameraIcon size={20} weight={iconWeight(true)} /> : <VideoCameraSlashIcon size={20} />}
               </TooltipTrigger>
-              <TooltipContent side={tipSide}>{cameraOn ? 'Parar câmera' : 'Ligar câmera'}</TooltipContent>
+              <TooltipContent side={tipSide}>{cameraOn ? t('controls.cameraOff') : t('controls.cameraOn')}</TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger
                 onClick={() => { void (sharing ? stopSharing() : startSharing()); }}
-                aria-label={sharing ? 'Parar compartilhamento' : 'Compartilhar tela'}
+                aria-label={sharing ? t('controls.shareStop') : t('controls.shareStart')}
                 className={cn(DOCK_BUTTON, sharing ? DOCK_GREEN : DOCK_NEUTRAL)}
               >
                 <MonitorIcon size={20} weight={iconWeight(sharing)} />
               </TooltipTrigger>
-              <TooltipContent side={tipSide}>{sharing ? 'Parar compartilhamento' : 'Compartilhar tela'}</TooltipContent>
+              <TooltipContent side={tipSide}>{sharing ? t('controls.shareStop') : t('controls.shareStart')}</TooltipContent>
             </Tooltip>
           </>
         )}
@@ -192,14 +194,14 @@ export function CallDock({ onReturnToCall, onOpenProfile, showReturnToCall, layo
           <TooltipTrigger
             // a button, not a link: it opens the settings modal
             onClick={() => { navigate(ROUTES.settings); onNavigate?.(); }}
-            aria-label="Ajustes"
+            aria-label={t('controls.settings')}
             aria-haspopup="dialog"
             aria-expanded={onSettings}
             className={cn(DOCK_BUTTON, onSettings ? 'bg-fill-active text-text-primary' : DOCK_NEUTRAL)}
           >
             <GearIcon size={20} weight={iconWeight(onSettings)} aria-hidden />
           </TooltipTrigger>
-          <TooltipContent side={tipSide}>Ajustes</TooltipContent>
+          <TooltipContent side={tipSide}>{t('controls.settings')}</TooltipContent>
         </Tooltip>
       </div>
     </div>

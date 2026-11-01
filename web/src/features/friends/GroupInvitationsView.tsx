@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/shared/ui/primitives/button';
 import { ApiError, acceptInvitation, declineInvitation, fetchReceivedInvitations } from '@/shared/api/api';
 import type { ReceivedInvitationEntry } from '@/shared/api/api';
@@ -16,11 +17,13 @@ import { useUrlSearch } from '@/shared/hooks/useUrlSearch';
 import { FadeIn, RevealList, RevealRow, SocialRowsSkeleton } from './listReveal';
 import { useLoadingPhase } from './useLoadingPhase';
 import { useRememberedList } from './useRememberedList';
+import { i18n } from '@/shared/i18n/init';
 
 const HEADING_ID = 'invitations-title';
 const invitationKey = (entry: ReceivedInvitationEntry) => entry.id;
 
 export function GroupInvitationsView({ query, onQueryChange, onOpenProfile }: { query: string; onQueryChange: (next: string) => void; onOpenProfile: (userId: string) => void }) {
+  const { t } = useTranslation('friends');
   const { revision, bump } = useFriends();
   const pending = usePendingIds();
   const [feedback, setFeedback] = useState<Feedback>(null);
@@ -49,16 +52,16 @@ export function GroupInvitationsView({ query, onQueryChange, onOpenProfile }: { 
 
   let body: ReactNode;
   if (phase === 'skeleton') {
-    body = <SocialRowsSkeleton label="Carregando convites…" rows={2} />;
+    body = <SocialRowsSkeleton label={t('invitations.loading')} rows={2} />;
   } else if (list.status === 'error') {
     body = (
       <div className="flex flex-col items-center gap-3 py-8 text-center">
-        <p className="text-body text-text-muted">Não foi possível carregar os convites.</p>
-        <Button type="button" variant="secondary" size="sm" onClick={list.retry}>Tentar de novo</Button>
+        <p className="text-body text-text-muted">{t('invitations.loadFailed')}</p>
+        <Button type="button" variant="secondary" size="sm" onClick={list.retry}>{t('loadMore.retry')}</Button>
       </div>
     );
   } else if (list.items.length === 0) {
-    body = <FadeIn skip={list.restored}><p className="select-none py-10 text-center text-label text-text-muted">{search ? 'Nenhum resultado para esta busca.' : 'Nenhum convite de grupo pendente.'}</p></FadeIn>;
+    body = <FadeIn skip={list.restored}><p className="select-none py-10 text-center text-label text-text-muted">{search ? t('list.noResults') : t('invitations.none')}</p></FadeIn>;
   } else {
     body = (
       <RevealList restored={list.restored}>
@@ -71,14 +74,14 @@ export function GroupInvitationsView({ query, onQueryChange, onOpenProfile }: { 
                 <div className="min-w-0 flex-1 basis-48">
                   <p className="truncate text-body font-medium text-text-primary">{entry.group.title}</p>
                   <p className="truncate text-caption text-text-muted">
-                    de{' '}
+                    {t('invitations.from')}{' '}
                     <button type="button" onClick={() => onOpenProfile(entry.inviter.id)} className="hover:underline">{entry.inviter.displayName}</button>
-                    {` · ${entry.group.memberCount} ${entry.group.memberCount === 1 ? 'membro' : 'membros'}`}
+                    {` · ${t('invitations.members', { count: entry.group.memberCount })}`}
                   </p>
                 </div>
                 <div className="flex flex-none items-center gap-1.5">
-                  <Button type="button" size="sm" disabled={busy} onClick={() => void act(entry.id, acceptInvitation, 'Você entrou no grupo.')}>Entrar</Button>
-                  <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={() => void act(entry.id, declineInvitation, 'Convite recusado.')}>Recusar</Button>
+                  <Button type="button" size="sm" disabled={busy} onClick={() => void act(entry.id, acceptInvitation, t('invitations.joined'))}>{t('invitations.join')}</Button>
+                  <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={() => void act(entry.id, declineInvitation, t('invitations.declined'))}>{t('invitations.decline')}</Button>
                 </div>
               </div>
             </RevealRow>
@@ -90,9 +93,9 @@ export function GroupInvitationsView({ query, onQueryChange, onOpenProfile }: { 
 
   return (
     <div className="flex flex-col gap-4">
-      <ListSearch value={value} onChange={setValue} label="Buscar nos convites" />
+      <ListSearch value={value} onChange={setValue} label={t('invitations.searchLabel')} />
       <section aria-labelledby={HEADING_ID} className="flex flex-col gap-2">
-        <ListSectionHeader id={HEADING_ID} title="Convites de grupo" />
+        <ListSectionHeader id={HEADING_ID} title={t('invitations.title')} />
         <ActionFeedback feedback={feedback} onClear={clearFeedback} />
         {body}
         {phase === 'content' && list.status === 'ready' && <LoadMoreFooter list={list} className="pt-2" />}
@@ -103,8 +106,8 @@ export function GroupInvitationsView({ query, onQueryChange, onOpenProfile }: { 
 
 function describeInvitationError(err: unknown): string {
   if (err instanceof ApiError) {
-    if (err.code === ERROR_CODES.group_full) return 'O grupo está cheio.';
-    if (err.code === ERROR_CODES.quota_exceeded) return 'Você já participa do máximo de grupos permitido.';
+    if (err.code === ERROR_CODES.group_full) return i18n.t('friends:invitations.groupFull');
+    if (err.code === ERROR_CODES.quota_exceeded) return i18n.t('friends:invitations.quotaExceeded');
   }
-  return 'Não foi possível concluir a ação. Tente de novo.';
+  return i18n.t('friends:feedback.actionFailed');
 }

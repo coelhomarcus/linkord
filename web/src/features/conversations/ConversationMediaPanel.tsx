@@ -1,5 +1,6 @@
 import { MagnifyingGlassIcon } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { AppModal } from '@/shared/ui/app-modal';
 import { PageHeader } from '@/shared/PageHeader';
@@ -23,27 +24,8 @@ interface ConversationMediaPanelProps {
 
 const SEARCH_DEBOUNCE_MS = 300;
 
-const EMPTY_TEXT: Record<MediaKind, string> = {
-  uploads: 'Nenhum arquivo enviado ainda.',
-  images: 'Nenhuma imagem enviada ainda.',
-  gifs: 'Nenhum GIF enviado ainda.',
-  videos: 'Nenhum vídeo enviado ainda.',
-  audios: 'Nenhum áudio enviado ainda.',
-  documents: 'Nenhum documento enviado ainda.',
-  embeds: 'Nenhum link incorporável compartilhado ainda.',
-};
-
-const ARIA_LABEL: Record<MediaKind, string> = {
-  uploads: 'Arquivos enviados',
-  images: 'Imagens enviadas',
-  gifs: 'GIFs enviados',
-  videos: 'Vídeos enviados',
-  audios: 'Áudios enviados',
-  documents: 'Documentos enviados',
-  embeds: 'Links compartilhados',
-};
-
 export function ConversationMediaPanel({ conversationId, open, onOpenChange }: ConversationMediaPanelProps) {
+  const { t } = useTranslation('conversations');
   const { jumpToMessage } = useRoom();
   const [kind, setKind] = useState<MediaKind>('uploads');
   const [search, setSearch] = useState('');
@@ -90,15 +72,15 @@ export function ConversationMediaPanel({ conversationId, open, onOpenChange }: C
   return (
     <>
       {open && conversationId && (
-        <AppModal label="Mídias e links" onClose={() => onOpenChange(false)}>
-          <PageHeader title="Mídias e links" />
+        <AppModal label={t('media.title')} onClose={() => onOpenChange(false)}>
+          <PageHeader title={t('media.title')} />
 
           <div className="flex flex-none flex-wrap items-center gap-3 px-5 pt-4 md:px-6">
             <div className="min-w-0 max-w-full overflow-x-auto">
               <Tabs value={kind} onValueChange={(next) => next && setKind(next as MediaKind)} className="w-fit">
                 <TabsList className="w-max">
                   <TabsIndicator />
-                  {MEDIA_TABS.map((tab) => <TabsTrigger key={tab.kind} value={tab.kind} className="shrink-0">{tab.label}</TabsTrigger>)}
+                  {MEDIA_TABS.map((tabKind) => <TabsTrigger key={tabKind} value={tabKind} className="shrink-0">{t(`media.tabs.${tabKind}`)}</TabsTrigger>)}
                 </TabsList>
               </Tabs>
             </div>
@@ -109,8 +91,8 @@ export function ConversationMediaPanel({ conversationId, open, onOpenChange }: C
                   type="search"
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
-                  placeholder={kind === 'embeds' ? 'Buscar links' : 'Buscar arquivos'}
-                  aria-label={kind === 'embeds' ? 'Buscar links' : 'Buscar arquivos'}
+                  placeholder={kind === 'embeds' ? t('media.searchLinks') : t('media.searchFiles')}
+                  aria-label={kind === 'embeds' ? t('media.searchLinks') : t('media.searchFiles')}
                   maxLength={100}
                   className="pl-9"
                 />
@@ -128,12 +110,12 @@ export function ConversationMediaPanel({ conversationId, open, onOpenChange }: C
             onLoadMore={() => { void loadMore(); }}
             renderTile={(item) => <MediaTile item={item} onOpen={openViewer} onJump={jump} />}
             renderItem={(item) => <MediaListItem item={item} onJump={jump} />}
-            ariaLabel={ARIA_LABEL[kind]}
+            ariaLabel={t(`media.list.${kind}`)}
             className="mt-3 flex-1 px-4 pb-4 md:px-5"
             emptyState={
               <div className="flex h-full min-h-48 flex-col items-center justify-center px-6 text-center">
                 <p className="select-none text-label text-text-muted">
-                  {searching ? 'Nada encontrado para essa busca.' : EMPTY_TEXT[kind]}
+                  {searching ? t('media.noResults') : t(`media.empty.${kind}`)}
                 </p>
               </div>
             }

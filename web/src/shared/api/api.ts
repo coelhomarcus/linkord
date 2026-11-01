@@ -2,6 +2,8 @@
 import type { ChatAttachment, InvitationCard, PublicUser } from '@/shared/types/protocol';
 import type { DetectedEmbed } from '@/shared/lib/chatEmbeds';
 import { logger } from '@/shared/lib/logger';
+import { i18n } from '@/shared/i18n/init';
+import type { Language } from '@/shared/i18n/languages';
 
 const log = logger.child({ component: 'api' });
 
@@ -16,6 +18,7 @@ export interface ApiUser {
   bio: string;
   profileLinks: string[];
   role: 'user' | 'admin';
+  locale: Language;
 }
 
 export class ApiError extends Error {
@@ -53,7 +56,7 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
     // expected 4xx answers (validation, cooldowns, denials) are normal control flow;
     // a server failure is worth a record, and a report
     if (res.status >= 500) log.error('API request failed', undefined, { path: path.split('?')[0], method: init?.method ?? 'GET', status: res.status, code: err.code });
-    throw new ApiError(res.status, err.code || 'unknown_error', err.message || 'Erro inesperado.', err.retryAfter);
+    throw new ApiError(res.status, err.code || 'unknown_error', err.message || i18n.t('errors.unexpected'), err.retryAfter);
   }
   return body as T;
 }
@@ -67,7 +70,11 @@ export function login(username: string, password: string): Promise<{ user: ApiUs
 }
 
 export function register(username: string, email: string, password: string, confirmPassword: string, code: string): Promise<{ user: ApiUser }> {
-  return apiFetch('/api/auth/register', { method: 'POST', body: JSON.stringify({ username, email, password, confirmPassword, code }) });
+  return apiFetch('/api/auth/register', { method: 'POST', body: JSON.stringify({ username, email, password, confirmPassword, code, locale: i18n.language }) });
+}
+
+export function updateLocale(locale: Language): Promise<{ locale: Language }> {
+  return apiFetch('/api/me/locale', { method: 'PATCH', body: JSON.stringify({ locale }) });
 }
 
 export type RecoveryIdentifier = { type: 'email'; value: string } | { type: 'username'; value: string };

@@ -1,5 +1,6 @@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/primitives/dialog';
 import { Button } from '@/shared/ui/primitives/button';
+import { useTranslation } from 'react-i18next';
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -14,8 +15,11 @@ interface ConfirmDialogProps {
 
 export function ConfirmDialog({
   open, onOpenChange, title, description,
-  confirmLabel = 'Confirmar', cancelLabel = 'Cancelar', destructive = false, onConfirm,
+  confirmLabel, cancelLabel, destructive = false, onConfirm,
 }: ConfirmDialogProps) {
+  const { t } = useTranslation('common');
+  const resolvedConfirmLabel = confirmLabel ?? t('confirm.confirm');
+  const resolvedCancelLabel = cancelLabel ?? t('confirm.cancel');
   function handleConfirm() {
     onConfirm();
     onOpenChange(false);
@@ -32,10 +36,10 @@ export function ConfirmDialog({
         </div>
         <DialogFooter className="border-border-subtle bg-bg-tertiary/60 px-6 py-4">
           <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-            <span>{cancelLabel}</span>
+            <span>{resolvedCancelLabel}</span>
           </Button>
           <Button type="button" variant={destructive ? 'destructive' : 'default'} onClick={handleConfirm}>
-            <span>{confirmLabel}</span>
+            <span>{resolvedConfirmLabel}</span>
           </Button>
         </DialogFooter>
       </DialogContent>

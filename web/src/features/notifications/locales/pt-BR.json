@@ -1,0 +1,42 @@
+{
+  "title": "Notificações",
+  "bell": {
+    "unread_one": "Notificações, {{count}} não lida",
+    "unread_other": "Notificações, {{count}} não lidas"
+  },
+  "actions": {
+    "markAllRead": "Marcar todas como lidas",
+    "clearAll": "Limpar tudo",
+    "dismiss": "Descartar notificação",
+    "retry": "Tentar de novo",
+    "updateFailed": "Não foi possível atualizar. Tente de novo.",
+    "unread": "Não lida"
+  },
+  "list": {
+    "loading": "Carregando…",
+    "loadFailed": "Não foi possível carregar as notificações.",
+    "empty": "Nenhuma notificação por enquanto."
+  },
+  "text": {
+    "unknownActor": "Alguém",
+    "unknownBot": "Um bot",
+    "unknownGroup": "Grupo",
+    "friendRequest": "{{name}} enviou uma solicitação de amizade",
+    "friendAccepted": "{{name}} aceitou sua solicitação de amizade",
+    "groupInvitationNamed": "{{name}} convidou você para o grupo {{group}}",
+    "groupInvitationUnnamed": "{{name}} convidou você para um grupo",
+    "mentionBot": "{{name}} mencionou você",
+    "mentionDirect": "{{name}} mencionou você em uma conversa",
+    "mentionGroup": "{{name}} mencionou você no grupo {{group}}",
+    "mentionBotConversation": "{{name}} mencionou você no bot {{bot}}"
+  },
+  "relative": {
+    "now": "agora",
+    "minutes_one": "há {{count}} min",
+    "minutes_other": "há {{count}} min",
+    "hours_one": "há {{count}} h",
+    "hours_other": "há {{count}} h",
+    "days_one": "há {{count}} d",
+    "days_other": "há {{count}} d"
+  }
+}

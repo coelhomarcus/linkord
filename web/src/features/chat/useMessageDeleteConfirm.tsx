@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { ConfirmDialog } from '@/shared/ConfirmDialog';
 import { useRoom } from '@/state/RoomContext';
@@ -6,6 +7,7 @@ import { useRoom } from '@/state/RoomContext';
  * point asks first. Shift held while clicking skips the question — the way
  * out for someone clearing several messages in a row. */
 export function useMessageDeleteConfirm() {
+  const { t } = useTranslation('chat');
   const { deleteChatMessage } = useRoom();
   // kept after closing so the text doesn't change while the dialog fades out
   const [target, setTarget] = useState<{ msgId: number; shiftHint: boolean } | null>(null);
@@ -23,11 +25,11 @@ export function useMessageDeleteConfirm() {
     <ConfirmDialog
       open={open}
       onOpenChange={setOpen}
-      title="Apagar mensagem"
+      title={t('deleteConfirm.title')}
       description={target?.shiftHint
-        ? 'A mensagem será apagada para todos e não dá para desfazer. Segure Shift ao clicar em Apagar para pular esta confirmação.'
-        : 'A mensagem será apagada para todos e não dá para desfazer.'}
-      confirmLabel="Apagar"
+        ? t('deleteConfirm.descriptionShift')
+        : t('deleteConfirm.description')}
+      confirmLabel={t('deleteConfirm.confirm')}
       destructive
       onConfirm={() => { if (target) void deleteChatMessage(target.msgId); }}
     />

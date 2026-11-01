@@ -5,6 +5,7 @@ import type { Room } from 'livekit-client';
 import type { RoomAction } from '../../state/roomReducer';
 import { loadShareQuality } from '../settings/useShareQualityPreference';
 import { SHARE_QUALITY_PRESETS } from './shareQualityPresets';
+import { i18n } from '@/shared/i18n/init';
 
 interface ScreenShareApi {
   startSharing: () => Promise<void>;
@@ -40,15 +41,15 @@ async function dropAudioThatLoopsBack(room: Room): Promise<boolean> {
 export function useScreenShare(room: Room, dispatch: Dispatch<RoomAction>): ScreenShareApi {
   const startSharing = useCallback(async () => {
     if (room.state !== ConnectionState.Connected) {
-      dispatch({ type: 'SET_SHARE_ERROR', message: 'Ainda conectando ao servidor de vídeo, tente de novo em instantes.' });
+      dispatch({ type: 'SET_SHARE_ERROR', message: i18n.t('calls:errors.videoConnecting') });
       return;
     }
     if (!navigator.mediaDevices?.getDisplayMedia) {
-      dispatch({ type: 'SET_SHARE_ERROR', message: 'Seu navegador não suporta captura de tela. Use Chrome, Edge ou Firefox no computador.' });
+      dispatch({ type: 'SET_SHARE_ERROR', message: i18n.t('calls:errors.screenUnsupported') });
       return;
     }
     if (!window.isSecureContext) {
-      dispatch({ type: 'SET_SHARE_ERROR', message: 'Compartilhar tela exige HTTPS (ou http://localhost para testar).' });
+      dispatch({ type: 'SET_SHARE_ERROR', message: i18n.t('calls:errors.httpsRequired') });
       return;
     }
 
@@ -82,12 +83,12 @@ export function useScreenShare(room: Room, dispatch: Dispatch<RoomAction>): Scre
     } catch (err) {
       const name = (err as DOMException)?.name;
       const aborted = name === 'NotAllowedError' || name === 'AbortError';
-      if (!aborted) dispatch({ type: 'SET_SHARE_ERROR', message: `Não foi possível capturar a tela: ${(err as Error)?.message}` });
+      if (!aborted) dispatch({ type: 'SET_SHARE_ERROR', message: i18n.t('calls:errors.screenCapture', { error: (err as Error)?.message }) });
       return;
     }
 
     if (await dropAudioThatLoopsBack(room)) {
-      dispatch({ type: 'SET_SHARE_ERROR', message: 'Seu navegador não separa o áudio do Linkord da tela inteira, então ela foi compartilhada sem áudio para evitar retorno. Compartilhe uma aba ou janela para incluir áudio.' });
+      dispatch({ type: 'SET_SHARE_ERROR', message: i18n.t('calls:errors.screenLoopback') });
     } else {
       dispatch({ type: 'SET_SHARE_ERROR', message: null });
     }
@@ -110,7 +111,7 @@ export function useScreenShare(room: Room, dispatch: Dispatch<RoomAction>): Scre
     try {
       await pub.mute();
     } catch (err) {
-      dispatch({ type: 'SET_SHARE_ERROR', message: `Não foi possível pausar a prévia: ${(err as Error)?.message}` });
+      dispatch({ type: 'SET_SHARE_ERROR', message: i18n.t('calls:errors.pausePreview', { error: (err as Error)?.message }) });
     }
   }, [room, dispatch]);
 
@@ -120,7 +121,7 @@ export function useScreenShare(room: Room, dispatch: Dispatch<RoomAction>): Scre
     try {
       await pub.unmute();
     } catch (err) {
-      dispatch({ type: 'SET_SHARE_ERROR', message: `Não foi possível retomar a prévia: ${(err as Error)?.message}` });
+      dispatch({ type: 'SET_SHARE_ERROR', message: i18n.t('calls:errors.resumePreview', { error: (err as Error)?.message }) });
     }
   }, [room, dispatch]);
 

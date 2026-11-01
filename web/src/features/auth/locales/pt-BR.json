@@ -1,0 +1,65 @@
+{
+  "tagline": "Converse e faça chamadas com seu grupo",
+  "tabs": {
+    "ariaLabel": "Entrar ou criar conta",
+    "login": "Entrar",
+    "register": "Criar conta"
+  },
+  "fields": {
+    "username": "Usuário",
+    "email": "E-mail",
+    "password": "Senha",
+    "newPassword": "Nova senha",
+    "inviteCode": "Código de convite"
+  },
+  "placeholders": {
+    "username": "3 a 20 caracteres",
+    "email": "voce@exemplo.com",
+    "password": "Pelo menos 8 caracteres"
+  },
+  "password": {
+    "show": "Mostrar senha",
+    "hide": "Ocultar senha"
+  },
+  "login": {
+    "submit": "Entrar",
+    "pending": "Entrando…",
+    "forgot": "Esqueci minha senha",
+    "failed": "Não foi possível entrar."
+  },
+  "register": {
+    "submit": "Criar conta",
+    "pending": "Criando conta…",
+    "failed": "Não foi possível criar a conta."
+  },
+  "recovery": {
+    "title": "Recuperar conta",
+    "intro": "Informe seu usuário ou e-mail para receber um código de recuperação.",
+    "by": "Recuperar pelo",
+    "sendCode": "Enviar código",
+    "sending": "Enviando…",
+    "sendFailed": "Não foi possível enviar o código.",
+    "backToLogin": "Voltar para entrar",
+    "enterCode": "Digite o código",
+    "sentToEmail": "Enviamos um código para {{email}}. Ele expira em 30 minutos.",
+    "sentToAccount": "Enviamos um código para o e-mail cadastrado nessa conta. Ele expira em 30 minutos.",
+    "codeLabel": "Código de recuperação",
+    "codeHint": "Digite os 6 dígitos enviados para seu e-mail.",
+    "codeError": "Confira o código e tente novamente.",
+    "success": "Senha redefinida com sucesso.",
+    "reset": "Redefinir senha",
+    "saving": "Salvando…",
+    "resetDone": "Senha redefinida",
+    "resetFailed": "Não foi possível redefinir a senha.",
+    "useOtherEmail": "Usar outro e-mail",
+    "useOtherUsername": "Usar outro usuário"
+  },
+  "emailRequired": {
+    "title": "Vincule seu e-mail",
+    "description": "Para proteger sua conta e permitir a recuperação de senha, informe um e-mail.",
+    "submit": "Vincular e-mail",
+    "saving": "Salvando…",
+    "logout": "Sair da conta",
+    "failed": "Não foi possível vincular o e-mail."
+  }
+}

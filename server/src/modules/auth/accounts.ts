@@ -5,6 +5,7 @@ import { users, type User } from '../../db/schema.js';
 import type { Role } from '../../types.js';
 import { invalidateSessionsForUser } from './session.js';
 import { normalizeEmail } from '../users/users.js';
+import type { Locale } from '../users/locale.js';
 
 // Account lifecycle: create/register, and change the two credential fields
 // (email, password). `modules/users/users.ts` owns looking a user up and
@@ -12,10 +13,10 @@ import { normalizeEmail } from '../users/users.js';
 
 /** Throws with `.code = 'account_identity_taken'` if a race loses to either
  * identity unique index despite the earlier checks. */
-export async function createUser({ username, email, passwordHash, role }: { username: string; email: string; passwordHash: string; role: Role }): Promise<User> {
+export async function createUser({ username, email, passwordHash, role, locale }: { username: string; email: string; passwordHash: string; role: Role; locale?: Locale }): Promise<User> {
   const id = crypto.randomUUID();
   try {
-    const [row] = await db.insert(users).values({ id, username, email: normalizeEmail(email), passwordHash, role }).returning();
+    const [row] = await db.insert(users).values({ id, username, email: normalizeEmail(email), passwordHash, role, ...(locale ? { locale } : {}) }).returning();
     return row!;
   } catch (err: unknown) {
     // drizzle wraps the driver error in DrizzleQueryError — Postgres's code
@@ -27,6 +28,11 @@ export async function createUser({ username, email, passwordHash, role }: { user
     }
     throw err;
   }
+}
+
+export async function updateLocale(id: string, locale: Locale): Promise<void> {
+  await db.update(users).set({ locale, updatedAt: new Date() }).where(eq(users.id, id));
+  invalidateSessionsForUser(id);
 }
 
 export async function updateEmail(id: string, email: string): Promise<User | null> {

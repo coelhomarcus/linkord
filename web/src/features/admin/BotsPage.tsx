@@ -1,5 +1,6 @@
 import { ClockCounterClockwiseIcon } from '@phosphor-icons/react';
 import { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router';
 
 import { GroupAvatar } from '@/features/conversations/GroupAvatar';
@@ -27,11 +28,12 @@ const QUERY: QuerySchema<'q' | 'filter'> = {
 };
 
 function RowActions({ bot }: { bot: AdminBotRow }) {
-  const name = bot.title || 'bot sem nome';
+  const { t } = useTranslation('admin');
+  const name = bot.title || t('ui.noName', { kind: t('nav.bots').toLowerCase() });
   return (
     <div className="flex items-center justify-end gap-0.5">
-      <CopyIdButton id={bot.id} label={`Copiar ID de ${name}`} />
-      <AppLink to={`/admin/audit?targetId=${encodeURIComponent(bot.id)}`} aria-label={`Ver histórico de ${name}`} title="Ver histórico" className={buttonVariants({ variant: 'ghost', size: 'icon-sm' })}>
+      <CopyIdButton id={bot.id} label={t('ui.copyId', { name })} />
+      <AppLink to={`/admin/audit?targetId=${encodeURIComponent(bot.id)}`} aria-label={t('ui.viewHistory', { name })} title={t('ui.history')} className={buttonVariants({ variant: 'ghost', size: 'icon-sm' })}>
         <ClockCounterClockwiseIcon size={16} aria-hidden />
       </AppLink>
     </div>
@@ -39,22 +41,25 @@ function RowActions({ bot }: { bot: AdminBotRow }) {
 }
 
 function BotIdentity({ bot, from }: { bot: AdminBotRow; from: { from: string } }) {
+  const { t } = useTranslation('admin');
   return (
     <AppLink to={`/admin/bots/${bot.id}`} state={from} className="flex min-w-0 items-center gap-3 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring">
       <GroupAvatar id={bot.id} title={bot.title} avatar={bot.avatar} size={36} />
-      <span className="block min-w-0 truncate text-body font-medium text-text-primary">{bot.title || 'Bot sem nome'}</span>
+      <span className="block min-w-0 truncate text-body font-medium text-text-primary">{bot.title || t('ui.noName', { kind: t('nav.bots').toLowerCase() })}</span>
     </AppLink>
   );
 }
 
 /** A bot with no owner is a condition, not a status: it gets its own mark so it can't be mistaken for a suspension. */
 function Owner({ bot }: { bot: AdminBotRow }) {
-  if (!bot.ownerId) return <span className="inline-flex rounded-sm bg-yellow/15 px-1.5 py-0.5 text-micro font-medium text-yellow">Sem dono</span>;
+  const { t } = useTranslation('admin');
+  if (!bot.ownerId) return <span className="inline-flex rounded-sm bg-yellow/15 px-1.5 py-0.5 text-micro font-medium text-yellow">{t('ui.noOwner')}</span>;
   return <AppLink to={`/admin/users/${bot.ownerId}`} className="block max-w-full truncate text-text-secondary hover:underline">@{bot.ownerUsername}</AppLink>;
 }
 
 /** Every bot on the instance: who runs it, how many read it and how much it posts. */
 export function BotsPage() {
+  const { t } = useTranslation('admin');
   const { filters, update, clear, active, identity } = useAdminQuery(QUERY);
   const { pathname, search } = useLocation();
   const tableFits = useAdminTableFits();
@@ -69,20 +74,20 @@ export function BotsPage() {
   return (
     <div className="flex flex-col gap-4">
       <AdminListToolbar
-        search={{ value: query, onChange: setQuery, placeholder: 'Buscar por nome ou ID', label: 'Buscar bots' }}
+        search={{ value: query, onChange: setQuery, placeholder: t('ui.searchNameOrId'), label: t('ui.searchBots') }}
         filters={(
-          <AdminSelectField<StatusFilter> label="Estado" value={filter} onChange={(next) => update({ filter: next })}
-            options={[{ value: 'all', label: 'Todos' }, { value: 'active', label: 'Ativos' }, { value: 'suspended', label: 'Suspensos' }, { value: 'orphan', label: 'Sem dono' }]} />
+          <AdminSelectField<StatusFilter> label={t('ui.state')} value={filter} onChange={(next) => update({ filter: next })}
+            options={[{ value: 'all', label: t('ui.all') }, { value: 'active', label: t('ui.active') }, { value: 'suspended', label: t('ui.suspended') }, { value: 'orphan', label: t('ui.noOwner') }]} />
         )}
-        summary={list.status === 'ready' && list.items.length > 0 ? `${list.items.length} ${list.items.length === 1 ? 'bot carregado' : 'bots carregados'}${list.hasMore ? ' (há mais resultados)' : ''}` : undefined}
+        summary={list.status === 'ready' && list.items.length > 0 ? `${list.items.length} ${t('ui.bot', { count: list.items.length })}${list.hasMore ? t('ui.moreResults') : ''}` : undefined}
         onClear={active ? clear : undefined}
       />
-      <ListChrome list={list} empty="Nenhum bot encontrado.">
+      <ListChrome list={list} empty={t('ui.noBots')}>
         {tableFits ? (
-          <AdminTable caption="Bots">
+          <AdminTable caption={t('ui.bots')}>
             <thead>
               <tr>
-                <AdminTh className="min-w-52">Bot</AdminTh><AdminTh>Situação</AdminTh><AdminTh>Dono</AdminTh><AdminTh>Membros</AdminTh><AdminTh>Mensagens</AdminTh><AdminTh>Último envio</AdminTh><AdminTh>Criado em</AdminTh><AdminTh className="text-right">Ações</AdminTh>
+                <AdminTh className="min-w-52">{t('nav.bots')}</AdminTh><AdminTh>{t('ui.status')}</AdminTh><AdminTh>{t('ui.owner')}</AdminTh><AdminTh>{t('ui.members')}</AdminTh><AdminTh>{t('ui.messages')}</AdminTh><AdminTh>{t('ui.lastDelivery')}</AdminTh><AdminTh>{t('ui.createdAt')}</AdminTh><AdminTh className="text-right">{t('ui.actions')}</AdminTh>
               </tr>
             </thead>
             <tbody>
@@ -111,10 +116,10 @@ export function BotsPage() {
                 <div className="flex flex-wrap items-center gap-2 text-caption text-text-muted">
                   <Badge value={g.status} />
                   <Owner bot={g} />
-                  <span>{g.memberCount} {g.memberCount === 1 ? 'membro' : 'membros'}</span>
-                  <span>{g.messageCount} {g.messageCount === 1 ? 'mensagem' : 'mensagens'}</span>
-                  <span>último envio {g.webhookLastUsedAt ? formatWhen(g.webhookLastUsedAt) : 'nunca'}</span>
-                  <span>criado em {formatWhen(g.createdAt)}</span>
+                  <span>{g.memberCount} {t('ui.member', { count: g.memberCount })}</span>
+                  <span>{g.messageCount} {t('ui.message', { count: g.messageCount })}</span>
+                  <span>{t('ui.lastDelivery').toLowerCase()} {g.webhookLastUsedAt ? formatWhen(g.webhookLastUsedAt) : t('ui.never')}</span>
+                  <span>{t('ui.created')} {formatWhen(g.createdAt)}</span>
                 </div>
               </li>
             ))}

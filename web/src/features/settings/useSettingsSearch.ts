@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { findCategory } from './settingsCatalog';
 import { SETTINGS_SEARCH_INDEX } from './settingsSearchIndex';
 import type { SearchEntry } from './settingsSearchIndex';
@@ -15,10 +16,12 @@ export function normalizeSearchText(value: string): string {
 
 export interface SettingsSearchResult {
   entry: SearchEntry;
+  title: string;
   categoryLabel: string;
 }
 
 export function useSettingsSearch(isAdmin: boolean) {
+  const { t } = useTranslation('settings');
   const [query, setQuery] = useState('');
 
   const visibleEntries = useMemo(
@@ -30,12 +33,15 @@ export function useSettingsSearch(isAdmin: boolean) {
     const q = normalizeSearchText(query);
     if (!q) return [];
     return visibleEntries
-      .map((entry) => ({ entry, categoryLabel: findCategory(entry.categoryId).label }))
-      .filter(({ entry, categoryLabel }) => {
-        const haystack = normalizeSearchText([entry.title, categoryLabel, ...entry.keywords].join(' '));
-        return haystack.includes(q);
-      });
-  }, [query, visibleEntries]);
+      .map((entry) => ({
+        entry,
+        title: t(`search.${entry.searchKey}.title`),
+        categoryLabel: t(findCategory(entry.categoryId).labelKey),
+        keywords: t(`search.${entry.searchKey}.keywords`),
+      }))
+      .filter(({ title, categoryLabel, keywords }) => normalizeSearchText([title, categoryLabel, keywords].join(' ')).includes(q))
+      .map(({ entry, title, categoryLabel }) => ({ entry, title, categoryLabel }));
+  }, [query, visibleEntries, t]);
 
   return { query, setQuery, results };
 }

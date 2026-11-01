@@ -1,5 +1,6 @@
 import { CaretDownIcon, CaretUpIcon } from '@phosphor-icons/react';
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import type { ChatAttachment as ChatAttachmentData } from '@/shared/types/protocol';
 import { FileAttachmentCard } from './FileAttachmentCard';
@@ -57,6 +58,7 @@ export function __resetPreviewCacheForTests(): void {
 }
 
 export function TextPreviewCard({ attachment, maxWidth }: { attachment: ChatAttachmentData; maxWidth?: number }) {
+  const { t } = useTranslation('media');
   const [preview, setPreview] = useState<PreviewResponse | null>(() => previewCache.get(attachment.id) ?? null);
   const [expanded, setExpanded] = useState(false);
   const [highlightedHtml, setHighlightedHtml] = useState<string | null>(null);
@@ -118,11 +120,11 @@ export function TextPreviewCard({ attachment, maxWidth }: { attachment: ChatAtta
           <div className="flex items-center justify-between gap-3 border-t border-border px-3 py-1.5 text-caption text-text-muted">
             <button type="button" onClick={() => setExpanded((v) => !v)} className="flex items-center gap-1 hover:text-text-primary">
               {expanded ? <CaretUpIcon size={12} /> : <CaretDownIcon size={12} />}
-              {expanded ? 'Mostrar menos' : 'Mostrar mais'}
+              {expanded ? t('preview.showLess') : t('preview.showMore')}
             </button>
             {preview.truncated && (
               <button type="button" onClick={() => downloadFile(url, attachment.name)} className="hover:text-text-primary">
-                Baixar pra ver tudo
+                {t('preview.downloadFull')}
               </button>
             )}
           </div>

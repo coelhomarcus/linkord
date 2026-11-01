@@ -1,6 +1,7 @@
 import { CaretDownIcon, MagnifyingGlassIcon } from '@phosphor-icons/react';
 import { useId, useState } from 'react';
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/shared/ui/primitives/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/primitives/select';
@@ -55,6 +56,7 @@ export function AdminListToolbar({ search, filters, advanced, advancedActive, su
   /** present when any filter differs from its default */
   onClear?: () => void;
 }) {
+  const { t } = useTranslation('admin');
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const panelId = useId();
   const open = advancedOpen || advancedActive === true;
@@ -77,7 +79,7 @@ export function AdminListToolbar({ search, filters, advanced, advancedActive, su
         {filters}
         {advanced && (
           <Button type="button" variant="secondary" size="sm" className="h-9" aria-expanded={open} aria-controls={panelId} onClick={() => setAdvancedOpen((v) => !v)}>
-            Mais filtros
+            {t('ui.moreFilters')}
             <CaretDownIcon size={16} aria-hidden className={cn('transition-transform', open && 'rotate-180')} />
           </Button>
         )}
@@ -86,7 +88,7 @@ export function AdminListToolbar({ search, filters, advanced, advancedActive, su
       {(summary || onClear) && (
         <div className="flex flex-wrap items-center gap-3 text-caption text-text-muted">
           {summary && <p aria-live="polite">{summary}</p>}
-          {onClear && <Button type="button" variant="ghost" size="xs" onClick={onClear}>Limpar filtros</Button>}
+          {onClear && <Button type="button" variant="ghost" size="xs" onClick={onClear}>{t('ui.clearFilters')}</Button>}
         </div>
       )}
     </div>

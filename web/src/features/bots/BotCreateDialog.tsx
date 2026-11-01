@@ -1,13 +1,13 @@
 import { RobotIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/shared/ui/primitives/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/primitives/dialog';
 import { Input } from '@/shared/ui/primitives/input';
 import { Label } from '@/shared/ui/primitives/label';
-import { ApiError } from '@/shared/api/api';
 import type { InviteResult, SocialUser } from '@/shared/api/api';
-import { ERROR_CODES } from '@/shared/api/errorCodes';
+import { describeApiError } from '@/shared/api/errorText';
 import { FriendPicker } from '@/features/conversations/FriendPicker';
 import { describeInviteOutcome } from '@/features/conversations/inviteOutcome';
 import { createBot } from './botsApi';
@@ -21,6 +21,7 @@ interface BotCreateDialogProps {
 /** Name the bot, optionally invite friends, then hand over its webhook URL —
  * the dialog stays open on that last step, since closing it loses the URL. */
 export function BotCreateDialog({ open, onOpenChange }: BotCreateDialogProps) {
+  const { t } = useTranslation('bots');
   const [title, setTitle] = useState('');
   const [selected, setSelected] = useState<Map<string, SocialUser>>(new Map());
   const [submitting, setSubmitting] = useState(false);
@@ -63,7 +64,7 @@ export function BotCreateDialog({ open, onOpenChange }: BotCreateDialogProps) {
         });
       setCreated({ url: webhook.url, failures });
     } catch (err) {
-      setError(err instanceof ApiError && err.code === ERROR_CODES.quota_exceeded ? err.message : 'Não foi possível criar o bot. Tente de novo.');
+      setError(describeApiError(err, 'bots:create.failed'));
     } finally {
       setSubmitting(false);
     }
@@ -75,18 +76,18 @@ export function BotCreateDialog({ open, onOpenChange }: BotCreateDialogProps) {
         <DialogHeader className="border-b border-border px-5 py-4">
           <DialogTitle className="flex items-center gap-2 text-title">
             <RobotIcon size={20} />
-            {created ? 'Bot criado' : 'Novo bot'}
+            {created ? t('create.created') : t('create.new')}
           </DialogTitle>
         </DialogHeader>
         {created ? (
           <div className="flex flex-col gap-4 px-5 py-4">
             <p className="text-label text-text-secondary">
-              Configure seu sistema para enviar um <code className="font-mono">POST</code> com <code className="font-mono">{'{"content": "..."}'}</code> para esta URL. Cada envio chega aqui como uma mensagem do bot.
+              {t('create.instructions', { payload: '{"content": "..."}' })}
             </p>
             <WebhookUrlReveal url={created.url} />
             {created.failures.length > 0 && (
               <div className="flex flex-col gap-1">
-                <p className="text-label text-text-secondary">Alguns convites não foram enviados:</p>
+                <p className="text-label text-text-secondary">{t('create.inviteFailures')}</p>
                 <ul className="flex flex-col gap-1 text-label text-text-muted">
                   {created.failures.map(({ user, text }) => (
                     <li key={user.id}><span className="font-medium text-text-secondary">{user.displayName}</span>: {text}</li>
@@ -98,19 +99,19 @@ export function BotCreateDialog({ open, onOpenChange }: BotCreateDialogProps) {
         ) : (
           <div className="flex flex-col gap-4 px-5 py-4">
             <div className="flex flex-col gap-2">
-              <Label htmlFor="bot-title" className="text-label text-text-muted">Nome</Label>
+              <Label htmlFor="bot-title" className="text-label text-text-muted">{t('create.name')}</Label>
               <Input
                 id="bot-title"
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
                 maxLength={80}
-                placeholder="Ex: Deploys, Monitoramento, Vendas"
+                placeholder={t('create.namePlaceholder')}
                 className="border-border bg-fill-subtle"
               />
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="bot-users" className="text-label text-text-muted">Convidar amigos</Label>
-              <p className="text-caption text-text-muted">Quem entrar só lê os avisos do bot; ninguém escreve nele.</p>
+              <Label htmlFor="bot-users" className="text-label text-text-muted">{t('create.inviteFriends')}</Label>
+              <p className="text-caption text-text-muted">{t('create.readOnly')}</p>
               <FriendPicker selected={selected} onToggle={toggle} inputId="bot-users" />
             </div>
             {error && <p role="alert" className="text-label text-red-text">{error}</p>}
@@ -118,12 +119,12 @@ export function BotCreateDialog({ open, onOpenChange }: BotCreateDialogProps) {
         )}
         <DialogFooter className="border-t border-border px-5 py-4">
           {created ? (
-            <Button type="button" onClick={close}>Pronto</Button>
+            <Button type="button" onClick={close}>{t('create.ready')}</Button>
           ) : (
             <>
-              <Button type="button" variant="ghost" onClick={close}>Cancelar</Button>
+              <Button type="button" variant="ghost" onClick={close}>{t('create.cancel')}</Button>
               <Button type="button" onClick={() => void handleSubmit()} disabled={!title.trim() || submitting}>
-                {submitting ? 'Criando…' : selected.size > 0 ? `Criar e convidar (${selected.size})` : 'Criar bot'}
+                {submitting ? t('create.creating') : selected.size > 0 ? t(selected.size === 1 ? 'create.withInvites_one' : 'create.withInvites_other', { count: selected.size }) : t('create.create')}
               </Button>
             </>
           )}
