@@ -12,5 +12,94 @@
     "today": "Última vez online hoje às {{time}}",
     "yesterday": "Última vez online ontem às {{time}}",
     "date": "Última vez online em {{date}} às {{time}}"
+  },
+  "confirm": {
+    "confirm": "Confirmar",
+    "cancel": "Cancelar"
+  },
+  "page": {
+    "close": "Fechar",
+    "retry": "Tentar de novo",
+    "loadingMore": "Carregando mais itens"
+  },
+  "layout": {
+    "reconnect": "Sem conexão com o servidor.",
+    "retryNow": "Tentar reconectar agora",
+    "retryShort": "Tentar",
+    "retry": "Tentar agora",
+    "waitingForServer": "Aguardando conexão com o servidor...",
+    "reload": "Recarregar",
+    "unexpectedTitle": "Algo deu errado",
+    "unexpectedDescription": "Aconteceu um erro inesperado e ele já foi registrado. Recarregue a página para continuar.",
+    "outdatedTitle": "Há uma versão nova do Linkord",
+    "outdatedDescription": "O Linkord foi atualizado e esta aba ainda está na versão anterior. Atualize a página para continuar. Suas conversas e amizades continuam como estavam.",
+    "update": "Atualizar a página",
+    "roomErrorTitle": "Não foi possível entrar",
+    "tryAgain": "Tentar de novo",
+    "settings": "Ajustes",
+    "administration": "Administração",
+    "loading": "Carregando…"
+  },
+  "upload": {
+    "missingConversation": "Conversa não informada.",
+    "networkFailed": "Falha de rede ao enviar o arquivo."
+  },
+  "accessibility": {
+    "navigationClose": "Fechar navegação",
+    "oneTimeCode": "Código de uso único"
+  },
+  "avatar": {
+    "colors": {
+      "blurple": "Índigo",
+      "green": "Verde",
+      "red": "Vermelho",
+      "fuchsia": "Fuchsia",
+      "orange": "Laranja",
+      "purple": "Roxo",
+      "teal": "Verde-azulado",
+      "blue": "Azul"
+    }
+  },
+  "browserNotifications": {
+    "mentioned": "Você foi mencionado em {{conversation}}",
+    "sentMessages_one": "{{name}} enviou {{count}} mensagem",
+    "sentMessages_other": "{{name}} enviou {{count}} mensagens",
+    "peopleSent_one": "{{count}} pessoa enviou mensagens",
+    "peopleSent_other": "{{count}} pessoas enviaram mensagens"
+  },
+  "contextMenu": {
+    "reply": "Responder",
+    "allReactions": "Ver todas as reações",
+    "copyText": "Copiar texto",
+    "selectText": "Selecionar trecho",
+    "report": "Denunciar",
+    "edit": "Editar",
+    "removeAttachment": "Remover anexo",
+    "removeEmbed": "Remover incorporação",
+    "delete": "Apagar",
+    "download": "Baixar",
+    "copy": "Copiar",
+    "viewProfile": "Ver perfil",
+    "unpinConversation": "Desafixar conversa",
+    "pinConversation": "Fixar conversa",
+    "closeConversation": "Fechar conversa",
+    "removeEmbedTitle": "Remover incorporação",
+    "removeAttachmentTitle": "Remover anexo",
+    "removeEmbedDescription": "O link continua na mensagem, só a prévia dele some para todo mundo.",
+    "removeAttachmentDescription": "\"{{name}}\" sai da mensagem para todo mundo e é apagado. O resto da mensagem continua.",
+    "remove": "Remover",
+    "messageFrom": "mensagem de {{name}}"
+  },
+  "room": {
+    "removed": "Você foi removido do {{noun}} \"{{name}}\".",
+    "deleted": "O {{noun}} \"{{name}}\" foi excluído.",
+    "full": "Sala cheia, tente mais tarde.",
+    "tooManyConnections": "Você já tem conexões demais abertas. Feche alguma aba.",
+    "nounGroup": "grupo",
+    "nounBot": "bot"
+  },
+  "errors": {
+    "unexpected": "Erro inesperado.",
+    "networkUpload": "Falha de rede ao enviar o arquivo."
   }
 }

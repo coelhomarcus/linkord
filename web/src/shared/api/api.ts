@@ -56,7 +56,7 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
     // expected 4xx answers (validation, cooldowns, denials) are normal control flow;
     // a server failure is worth a record, and a report
     if (res.status >= 500) log.error('API request failed', undefined, { path: path.split('?')[0], method: init?.method ?? 'GET', status: res.status, code: err.code });
-    throw new ApiError(res.status, err.code || 'unknown_error', err.message || 'Erro inesperado.', err.retryAfter);
+    throw new ApiError(res.status, err.code || 'unknown_error', err.message || i18n.t('errors.unexpected'), err.retryAfter);
   }
   return body as T;
 }

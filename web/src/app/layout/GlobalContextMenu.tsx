@@ -1,5 +1,6 @@
 import { ArrowBendUpLeftIcon, CopyIcon, DownloadSimpleIcon, FileXIcon, FlagIcon, LinkBreakIcon, PencilSimpleIcon, PushPinIcon, PushPinSlashIcon, TrashIcon, UserIcon, UsersIcon, XIcon } from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { ReactNode } from 'react';
 import type { ContextMenuRootActions } from '@base-ui/react/context-menu';
 
@@ -34,6 +35,7 @@ function isDelegatedContextMenuTarget(element: Element | null): boolean {
 }
 
 export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenuProps) {
+  const { t } = useTranslation('common');
   const {
     state,
     activeConversationId, messagesByConversation, reactToChatMessage, setReplyingTo, setEditingMsgId,
@@ -250,54 +252,54 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
               )}
               {can?.reply && <ContextMenuItem onClick={() => setReplyingTo(targetMessage)}>
                 <ArrowBendUpLeftIcon size={16} />
-                <span>Responder</span>
+                <span>{t('contextMenu.reply')}</span>
               </ContextMenuItem>}
               {hasReactions && (
                 <ContextMenuItem onClick={() => openReactionParticipants({ conversationId: targetMessage.conversationId, msgId: targetMessage.msgId })}>
                   <UsersIcon size={16} />
-                  <span>Ver todas as reações</span>
+                  <span>{t('contextMenu.allReactions')}</span>
                 </ContextMenuItem>
               )}
               {can?.copy && (
                 <ContextMenuItem onClick={handleCopyMessageText}>
                   <CopyIcon size={16} />
-                  <span>Copiar texto</span>
+                  <span>{t('contextMenu.copyText')}</span>
                 </ContextMenuItem>
               )}
               {can?.copy && (
                 <ContextMenuItem className="md:hidden" onClick={handleSelectMessageText}>
                   <CopyIcon size={16} />
-                  <span>Selecionar trecho</span>
+                  <span>{t('contextMenu.selectText')}</span>
                 </ContextMenuItem>
               )}
               {can?.report && (
-                <ContextMenuItem onClick={() => setReportTarget({ type: 'message', id: String(targetMessage.msgId), label: `mensagem de ${targetMessage.name}` })}>
+                <ContextMenuItem onClick={() => setReportTarget({ type: 'message', id: String(targetMessage.msgId), label: t('contextMenu.messageFrom', { name: targetMessage.name }) })}>
                   <FlagIcon size={16} />
-                  <span>Denunciar</span>
+                  <span>{t('contextMenu.report')}</span>
                 </ContextMenuItem>
               )}
               {can?.edit && (
                 <ContextMenuItem onClick={() => setEditingMsgId(targetMessage.msgId)}>
                   <PencilSimpleIcon size={16} />
-                  <span>Editar</span>
+                  <span>{t('contextMenu.edit')}</span>
                 </ContextMenuItem>
               )}
               {targetAttachment && (
                 <ContextMenuItem variant="destructive" onClick={() => setPartRemoval({ kind: 'attachment', msgId: targetMessage.msgId, id: targetAttachment.id, name: targetAttachment.name })}>
                   <FileXIcon size={16} />
-                  <span>Remover anexo</span>
+                  <span>{t('contextMenu.removeAttachment')}</span>
                 </ContextMenuItem>
               )}
               {targetEmbedLink && (
                 <ContextMenuItem variant="destructive" onClick={() => setPartRemoval({ kind: 'embed', msgId: targetMessage.msgId, link: targetEmbedLink })}>
                   <LinkBreakIcon size={16} />
-                  <span>Remover incorporação</span>
+                  <span>{t('contextMenu.removeEmbed')}</span>
                 </ContextMenuItem>
               )}
               {can?.delete && (
                 <ContextMenuItem variant="destructive" onClick={(event) => requestDelete(targetMessage.msgId, event.shiftKey)}>
                   <TrashIcon size={16} />
-                  <span>Apagar</span>
+                  <span>{t('contextMenu.delete')}</span>
                 </ContextMenuItem>
               )}
               {(showDownloadBlock || showSelectionBlock) && <ContextMenuSeparator />}
@@ -307,7 +309,7 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
             <>
               <ContextMenuItem onClick={handleDownload}>
                 <DownloadSimpleIcon size={16} />
-                <span>Baixar</span>
+                <span>{t('contextMenu.download')}</span>
               </ContextMenuItem>
               {showSelectionBlock && <ContextMenuSeparator />}
             </>
@@ -316,7 +318,7 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
             <>
               <ContextMenuItem onClick={handleCopy}>
                 <CopyIcon size={16} />
-                <span>Copiar</span>
+                <span>{t('contextMenu.copy')}</span>
               </ContextMenuItem>
             </>
           )}
@@ -324,7 +326,7 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
             <>
               <ContextMenuItem onClick={() => onOpenProfile(userTarget)}>
                 <UserIcon size={16} />
-                <span>Ver perfil</span>
+                <span>{t('contextMenu.viewProfile')}</span>
               </ContextMenuItem>
               {showConversationBlock && <ContextMenuSeparator />}
             </>
@@ -333,12 +335,12 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
             <>
               <ContextMenuItem onClick={() => pinConversation(targetConversation.id, !targetConversation.pinnedAt)}>
                 {targetConversation.pinnedAt ? <PushPinSlashIcon size={16} /> : <PushPinIcon size={16} />}
-                <span>{targetConversation.pinnedAt ? 'Desafixar conversa' : 'Fixar conversa'}</span>
+                <span>{targetConversation.pinnedAt ? t('contextMenu.unpinConversation') : t('contextMenu.pinConversation')}</span>
               </ContextMenuItem>
               {targetConversation.type === 'direct' && (
                 <ContextMenuItem onClick={() => closeConversation(targetConversation.id)}>
                   <XIcon size={16} />
-                  <span>Fechar conversa</span>
+                  <span>{t('contextMenu.closeConversation')}</span>
                 </ContextMenuItem>
               )}
             </>
@@ -351,11 +353,11 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
       <ConfirmDialog
         open={!!partRemoval}
         onOpenChange={(open) => { if (!open) setPartRemoval(null); }}
-        title={partRemoval?.kind === 'embed' ? 'Remover incorporação' : 'Remover anexo'}
+        title={partRemoval?.kind === 'embed' ? t('contextMenu.removeEmbedTitle') : t('contextMenu.removeAttachmentTitle')}
         description={partRemoval?.kind === 'embed'
-          ? 'O link continua na mensagem, só a prévia dele some para todo mundo.'
-          : `"${partRemoval?.name ?? ''}" sai da mensagem para todo mundo e é apagado. O resto da mensagem continua.`}
-        confirmLabel="Remover"
+          ? t('contextMenu.removeEmbedDescription')
+          : t('contextMenu.removeAttachmentDescription', { name: partRemoval?.name ?? '' })}
+        confirmLabel={t('contextMenu.remove')}
         destructive
         onConfirm={() => {
           if (partRemoval?.kind === 'attachment') void removeChatAttachment(partRemoval.msgId, partRemoval.id);

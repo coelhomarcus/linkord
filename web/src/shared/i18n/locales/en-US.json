@@ -12,5 +12,52 @@
     "today": "Last seen online today at {{time}}",
     "yesterday": "Last seen online yesterday at {{time}}",
     "date": "Last seen online on {{date}} at {{time}}"
+  },
+  "confirm": { "confirm": "Confirm", "cancel": "Cancel" },
+  "page": { "close": "Close", "retry": "Try again", "loadingMore": "Loading more items" },
+  "layout": {
+    "reconnect": "Disconnected from the server.",
+    "retryNow": "Reconnect now",
+    "retryShort": "Retry",
+    "retry": "Try now",
+    "waitingForServer": "Waiting for the server connection...",
+    "reload": "Reload",
+    "unexpectedTitle": "Something went wrong",
+    "unexpectedDescription": "Something unexpected happened and was recorded. Reload the page to continue.",
+    "outdatedTitle": "A new version of Linkord is available",
+    "outdatedDescription": "Linkord was updated, but this tab is still on the previous version. Update the page to continue. Your conversations and friendships are unchanged.",
+    "update": "Update the page",
+    "roomErrorTitle": "Could not join",
+    "tryAgain": "Try again",
+    "settings": "Settings",
+    "administration": "Administration",
+    "loading": "Loading…"
+  },
+  "upload": { "missingConversation": "Conversation not provided.", "networkFailed": "Network error while uploading the file." },
+  "accessibility": { "navigationClose": "Close navigation", "oneTimeCode": "One-time code" },
+  "avatar": {
+    "colors": { "blurple": "Indigo", "green": "Green", "red": "Red", "fuchsia": "Fuchsia", "orange": "Orange", "purple": "Purple", "teal": "Teal", "blue": "Blue" }
+  },
+  "browserNotifications": {
+    "mentioned": "You were mentioned in {{conversation}}",
+    "sentMessages_one": "{{name}} sent {{count}} message",
+    "sentMessages_other": "{{name}} sent {{count}} messages",
+    "peopleSent_one": "{{count}} person sent messages",
+    "peopleSent_other": "{{count}} people sent messages"
+  },
+  "contextMenu": {
+    "reply": "Reply", "allReactions": "View all reactions", "copyText": "Copy text", "selectText": "Select text", "report": "Report", "edit": "Edit", "removeAttachment": "Remove attachment", "removeEmbed": "Remove embed", "delete": "Delete", "download": "Download", "copy": "Copy", "viewProfile": "View profile", "unpinConversation": "Unpin conversation", "pinConversation": "Pin conversation", "closeConversation": "Close conversation", "removeEmbedTitle": "Remove embed", "removeAttachmentTitle": "Remove attachment", "removeEmbedDescription": "The link stays in the message; only its preview is removed for everyone.", "removeAttachmentDescription": "\"{{name}}\" is removed from the message for everyone and deleted. The rest of the message remains.", "remove": "Remove", "messageFrom": "message from {{name}}"
+  },
+  "room": {
+    "removed": "You were removed from the {{noun}} \"{{name}}\".",
+    "deleted": "The {{noun}} \"{{name}}\" was deleted.",
+    "full": "The room is full. Try again later.",
+    "tooManyConnections": "You already have too many open connections. Close another tab.",
+    "nounGroup": "group",
+    "nounBot": "bot"
+  },
+  "errors": {
+    "unexpected": "Unexpected error.",
+    "networkUpload": "Network error while uploading the file."
   }
 }

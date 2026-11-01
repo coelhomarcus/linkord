@@ -29,6 +29,7 @@ import { setNotificationClickHandler } from '@/shared/notifications';
 import type { ClientMessage, ServerMessage } from '@/shared/types/protocol';
 import { logger } from '@/shared/lib/logger';
 import { ERROR_CODES } from '@/shared/api/errorCodes';
+import { i18n } from '@/shared/i18n/init';
 
 const log = logger.child({ component: 'room' });
 
@@ -290,9 +291,9 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         // read the title BEFORE the list drops it; a voluntary leave carries no reason
         const gone = conversationsList.conversationsRef.current.find((c) => c.id === m.conversationId);
         if ((gone?.type === 'group' || gone?.type === 'bot') && m.reason) {
-          const noun = gone.type === 'bot' ? 'bot' : 'grupo';
+          const noun = gone.type === 'bot' ? i18n.t('room.nounBot') : i18n.t('room.nounGroup');
           const name = gone.title || noun;
-          setAccessNotice(m.reason === 'removed' ? `Você foi removido do ${noun} "${name}".` : `O ${noun} "${name}" foi excluído.`);
+          setAccessNotice(m.reason === 'removed' ? i18n.t('room.removed', { noun, name }) : i18n.t('room.deleted', { noun, name }));
         }
         conversationsList.onConversationDeleted(m);
         chatMessages.onConversationDeleted(m);
@@ -324,7 +325,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
       case 'error':
         if (m.code === ERROR_CODES.full) {
           disconnectIntentionally();
-          dispatch({ type: 'SET_ROOM_ERROR', message: m.message || 'Sala cheia, tente mais tarde.' });
+          dispatch({ type: 'SET_ROOM_ERROR', message: m.message || i18n.t('room.full') });
         } else if (m.code === ERROR_CODES.client_outdated) {
           log.warn('server refused this build (client_outdated)');
           // stop retrying: every reconnect would get the same answer
@@ -332,7 +333,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
           dispatch({ type: 'SET_CLIENT_OUTDATED' });
         } else if (m.code === ERROR_CODES.too_many_connections) {
           disconnectIntentionally();
-          dispatch({ type: 'SET_ROOM_ERROR', message: m.message || 'Você já tem conexões demais abertas. Feche alguma aba.' });
+          dispatch({ type: 'SET_ROOM_ERROR', message: m.message || i18n.t('room.tooManyConnections') });
         } else if (m.code === ERROR_CODES.quota_exceeded) {
           setGroupActionError(m.message);
         } else if (m.code === ERROR_CODES.forbidden || m.code === ERROR_CODES.conflict || m.code === ERROR_CODES.not_found) {

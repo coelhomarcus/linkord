@@ -1,17 +1,19 @@
 import { Button } from '@/shared/ui/primitives/button';
+import { useTranslation } from 'react-i18next';
 
 /** Shown when the server refuses this build's protocol (`client_outdated`).
  * Nothing else can work until the page is reloaded onto the new build, and
  * retrying the connection would only get the same answer. */
 export function OutdatedClientScreen() {
+  const { t } = useTranslation('common');
   return (
     <div className="flex min-h-full items-center justify-center bg-bg-primary p-4">
       <div role="alert" className="flex w-full max-w-100 flex-col gap-3.5 rounded-xl bg-bg-floating p-6">
-        <h1 className="text-display font-bold text-text-primary">Há uma versão nova do Linkord</h1>
+        <h1 className="text-display font-bold text-text-primary">{t('layout.outdatedTitle')}</h1>
         <p className="text-body text-text-secondary">
-          O Linkord foi atualizado e esta aba ainda está na versão anterior. Atualize a página para continuar. Suas conversas e amizades continuam como estavam.
+          {t('layout.outdatedDescription')}
         </p>
-        <Button type="button" size="lg" onClick={() => location.reload()}>Atualizar a página</Button>
+        <Button type="button" size="lg" onClick={() => location.reload()}>{t('layout.update')}</Button>
       </div>
     </div>
   );

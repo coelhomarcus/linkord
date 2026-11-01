@@ -9,6 +9,7 @@ import {
 import { useEffect, useId, useRef, useState } from "react";
 import { EASE_OUT } from "@/shared/lib/ease";
 import { cn } from "@/shared/lib/utils";
+import { useTranslation } from 'react-i18next';
 
 export type OTPStatus = "idle" | "error" | "success";
 
@@ -44,9 +45,11 @@ export function OTPInput({
   mask = false,
   disabled = false,
   autoFocus = false,
-  "aria-label": ariaLabel = "Código de uso único",
+  "aria-label": ariaLabel,
   className,
 }: OTPInputProps) {
+  const { t } = useTranslation('common');
+  const resolvedAriaLabel = ariaLabel ?? t('accessibility.oneTimeCode');
   const uid = useId();
   const reduce = useReducedMotion();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -177,7 +180,7 @@ export function OTPInput({
           autoComplete="one-time-code"
           autoFocus={autoFocus}
           disabled={disabled}
-          aria-label={ariaLabel}
+          aria-label={resolvedAriaLabel}
           aria-invalid={status === "error"}
           value=""
           maxLength={length}

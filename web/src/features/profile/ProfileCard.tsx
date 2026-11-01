@@ -224,7 +224,7 @@ export function ProfileCard({
                       render={
                         <button
                           type="button"
-                          aria-label={t('card.useColor', { name: option.label })}
+                          aria-label={t('card.useColor', { name: t(`common:${option.labelKey}`, { defaultValue: option.labelKey }) })}
                           aria-pressed={selected}
                           disabled={fieldsDisabled}
                           onClick={() => onAvatarColorChange(option.value)}
@@ -238,7 +238,7 @@ export function ProfileCard({
                     >
                       {selected && <CheckIcon size={11} weight="bold" className="pointer-events-none text-white drop-shadow" />}
                     </TooltipTrigger>
-                    <TooltipContent side="top">{option.label}</TooltipContent>
+                        <TooltipContent side="top">{t(`common:${option.labelKey}`, { defaultValue: option.labelKey })}</TooltipContent>
                   </Tooltip>
                 );
               })}

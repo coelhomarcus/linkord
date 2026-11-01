@@ -5,6 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Linkord</title>
     <meta name="description" content="Chat, chamadas de voz e vídeo e compartilhamento de tela em tempo real." />
+    <script>
+      (function () {
+        var language = (localStorage.getItem('ss-locale') || navigator.language || '').toLowerCase().startsWith('en') ? 'en-US' : 'pt-BR';
+        document.documentElement.lang = language;
+        document.title = language === 'en-US' ? 'Linkord' : 'Linkord';
+      }());
+    </script>
     <meta name="robots" content="noindex" />
     <meta name="theme-color" content="#000000" />
     <script>
