@@ -7,6 +7,7 @@ import { parseCookies, serializeCookie, clearCookie, isSecureRequest } from '../
 import { hashPassword, verifyPassword, needsRehash, DUMMY_HASH } from './password.js';
 import { createSession, resolveSession, destroyAllSessionsForUser, destroySession } from './session.js';
 import { findByEmailLower, findByUsernameLower, isValidEmail, normalizeEmail, privateUser } from '../users/users.js';
+import { resolveLocale } from '../users/locale.js';
 import { createUser, updateEmail, updatePassword } from './accounts.js';
 import { checkRegistrationAllowed } from './registrationLimits.js';
 import type { User } from '../../db/schema.js';
@@ -115,7 +116,7 @@ async function handleRegister(request: FastifyRequest, reply: FastifyReply): Pro
 
   let user;
   try {
-    user = await createUser({ username, email, passwordHash, role });
+    user = await createUser({ username, email, passwordHash, role, locale: resolveLocale(body.locale) });
   } catch (err: unknown) {
     if (err && (err as { code?: string }).code === 'account_identity_taken') return sendError(reply, 409, 'username_taken', 'Esse nome de usuário ou e-mail já está em uso.');
     throw err;
@@ -207,6 +208,7 @@ async function handleMe(request: FastifyRequest, reply: FastifyReply): Promise<v
       bio: sess.bio,
       profileLinks: sess.profileLinks,
       role: sess.role,
+      locale: sess.locale,
     },
   });
 }
