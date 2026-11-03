@@ -19,6 +19,7 @@
     "shareStop": "Parar compartilhamento",
     "fullscreenEnter": "Tela cheia",
     "fullscreenExit": "Sair da tela cheia",
+    "callSettings": "Ajustes da chamada",
     "leaveCall": "Sair da chamada",
     "openChat": "Abrir chat",
     "closeChat": "Fechar chat",
@@ -28,6 +29,12 @@
     "settings": "Ajustes",
     "previousStream": "Transmissão anterior",
     "nextStream": "Próxima transmissão"
+  },
+  "callSettings": {
+    "title": "Exibição da chamada",
+    "hideAudioOnly": "Ocultar participantes sem vídeo",
+    "banners": "Mostrar banners dos participantes",
+    "stats": "Mostrar estatísticas"
   },
   "chat": {
     "title": "Chat da chamada"
@@ -74,8 +81,7 @@
     "bitrate": "Bitrate: {{value}} kbps",
     "resolution": "Resolução: {{value}}",
     "onAir": "No ar: {{value}}",
-    "removeFromCall": "Remover da chamada",
-    "streamSettings": "Configurações da transmissão"
+    "removeFromCall": "Remover da chamada"
   },
   "devices": {
     "permission": "Permitir acesso aos dispositivos",

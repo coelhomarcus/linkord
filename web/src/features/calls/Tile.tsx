@@ -1,4 +1,4 @@
-import { CellSignalLowIcon, CellSignalNoneIcon, CircleNotchIcon, EyeSlashIcon, GearIcon, MicrophoneSlashIcon, MonitorIcon, MonitorPlayIcon, SpeakerSlashIcon } from '@phosphor-icons/react';
+import { CellSignalLowIcon, CellSignalNoneIcon, CircleNotchIcon, EyeSlashIcon, MicrophoneSlashIcon, MonitorIcon, MonitorPlayIcon, SpeakerSlashIcon } from '@phosphor-icons/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -108,7 +108,7 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
   }, [dispatch, key, state.focusedId]);
 
   // Enter/Space on the tile itself toggle focus, same as a click — but not
-  // when they land on a nested real <button> (gear, unmute), which already
+  // when they land on a nested real <button> (unmute), which already
   // handles its own activation and would otherwise double-fire.
   const handleKeyDown = useCallback((e: ReactKeyboardEvent<HTMLDivElement>) => {
     if (e.target !== e.currentTarget) return;
@@ -121,11 +121,6 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
     e.preventDefault();
     e.stopPropagation();
     openTileMenu(key, participantId, kind, { left: e.clientX, top: e.clientY, right: e.clientX, bottom: e.clientY });
-  }, [key, participantId, kind, openTileMenu]);
-
-  const handleGearClick = useCallback((e: MouseEvent<HTMLButtonElement>) => {
-    e.stopPropagation();
-    openTileMenu(key, participantId, kind, e.currentTarget.getBoundingClientRect());
   }, [key, participantId, kind, openTileMenu]);
 
   const handleUnmuteClick = useCallback((e: MouseEvent<HTMLButtonElement>) => {
@@ -243,32 +238,18 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
         )}
       </div>
 
-      {/* one grouped pill for tile-level actions, not separate floating
-          buttons — a thin divider only appears when there's more than one */}
-      <div className="absolute left-1.5 top-1.5 flex h-6 items-stretch divide-x divide-white/10 overflow-hidden rounded-md border border-white/10 bg-black/85">
-        {hasMutableAudio && mutedForMe && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            aria-label={t('menu.unmuteAudio')}
-            onClick={handleUnmuteClick}
-            className="h-full w-7 rounded-none text-red hover:bg-white/10 hover:text-red"
-          >
-            <SpeakerSlashIcon size={16} weight="fill" />
-          </Button>
-        )}
+      {hasMutableAudio && mutedForMe && (
         <Button
           type="button"
           variant="ghost"
           size="icon-sm"
-          aria-label={t('menu.streamSettings')}
-          onClick={handleGearClick}
-          className="h-full w-7 rounded-none text-white/90 hover:bg-white/10 hover:text-white"
+          aria-label={t('menu.unmuteAudio')}
+          onClick={handleUnmuteClick}
+          className="absolute left-1.5 top-1.5 h-6 w-7 rounded-md border border-white/10 bg-black/85 text-red hover:bg-white/10 hover:text-red"
         >
-          <GearIcon size={16} />
+          <SpeakerSlashIcon size={16} weight="fill" />
         </Button>
-      </div>
+      )}
     </div>
   );
 }

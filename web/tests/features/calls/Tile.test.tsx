@@ -121,7 +121,7 @@ describe('Tile — paused share and stopped watching', () => {
 });
 
 describe('Tile — keyboard', () => {
-  it('Enter focuses the tile, and Enter on the gear does not', () => {
+  it('Enter focuses the tile and there is no gear button', () => {
     const dispatch = vi.fn();
     renderWithRoom(<Tile participantId="p-2" kind="avatar" isMine={false} />, {
       state: { ...initialRoomState, participants: new Map([['p-2', fakeParticipant()]]), focusedId: null },
@@ -131,7 +131,6 @@ describe('Tile — keyboard', () => {
     fireEvent.keyDown(screen.getByRole('button', { name: /Destacar Fulana/ }), { key: 'Enter' });
     expect(dispatch).toHaveBeenCalledWith({ type: 'SET_FOCUSED', id: 'p-2:participant', origin: 'manual' });
 
-    fireEvent.keyDown(screen.getByLabelText('Configurações da transmissão'), { key: 'Enter' });
-    expect(dispatch).toHaveBeenCalledTimes(1);
+    expect(screen.queryByLabelText('Configurações da transmissão')).not.toBeInTheDocument();
   });
 });

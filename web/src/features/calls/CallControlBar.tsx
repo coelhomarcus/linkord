@@ -10,6 +10,7 @@ import { useParticipantMedia } from './useLiveKitTrack';
 import type { ReactionEmoji } from '@/shared/types/protocol';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/primitives/popover';
+import { CallSettingsMenu } from './CallSettingsMenu';
 import { CameraQuickMenu, MicQuickMenu, ScreenShareQuickMenu, SpeakerQuickMenu } from './CallDeviceMenus';
 import { cn } from '@/shared/lib/utils';
 
@@ -189,6 +190,8 @@ export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(fu
           </TooltipTrigger>
           <TooltipContent>{isCallFullscreen ? t('controls.fullscreenExit') : t('controls.fullscreenEnter')}</TooltipContent>
         </Tooltip>
+
+        <CallSettingsMenu triggerClassName={cn(BAR_BUTTON, BAR_BUTTON_NEUTRAL)} />
 
         <div aria-hidden className="mx-0.5 h-6 w-px flex-none bg-white/10" />
 

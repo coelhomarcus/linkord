@@ -19,6 +19,7 @@
     "shareStop": "Stop sharing",
     "fullscreenEnter": "Enter full screen",
     "fullscreenExit": "Exit full screen",
+    "callSettings": "Call settings",
     "leaveCall": "Leave call",
     "openChat": "Open chat",
     "closeChat": "Close chat",
@@ -28,6 +29,12 @@
     "settings": "Settings",
     "previousStream": "Previous stream",
     "nextStream": "Next stream"
+  },
+  "callSettings": {
+    "title": "Call display",
+    "hideAudioOnly": "Hide participants without video",
+    "banners": "Show participant banners",
+    "stats": "Show statistics"
   },
   "chat": {
     "title": "Call chat"
@@ -74,8 +81,7 @@
     "bitrate": "Bitrate: {{value}} kbps",
     "resolution": "Resolution: {{value}}",
     "onAir": "On air: {{value}}",
-    "removeFromCall": "Remove from call",
-    "streamSettings": "Stream settings"
+    "removeFromCall": "Remove from call"
   },
   "devices": {
     "permission": "Allow access to devices",
