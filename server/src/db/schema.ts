@@ -87,9 +87,10 @@ export const authCodes = pgTable('auth_codes', {
   index('auth_codes_email_purpose_idx').on(t.email, t.purpose),
 ]);
 
-/** A messaging conversation. `direct` rows represent a one-to-one DM and
- * use `dmKey` (sorted user ids) to guarantee there is only one conversation
- * per pair. `group` rows are admin-created spaces that can also host calls.
+/** A messaging conversation: a one-to-one DM (`direct`, with `dmKey` —
+ * sorted user ids — guaranteeing one conversation per pair) or a server
+ * channel (`text` / `voice`, with `serverId`). Messages, attachments,
+ * webhooks, read state and calls all hang off this id, whichever kind it is.
  *
  * Three separate timestamps, deliberately not conflated (see
  * modules/conversations.ts#touchConversation / #recordConversationActivity):
@@ -106,22 +107,14 @@ export const authCodes = pgTable('auth_codes', {
  * as the sort key the way `lastMessageAt` used to. */
 export const conversations = pgTable('conversations', {
   id: text('id').primaryKey(),
-  // 'bot' is a group whose only voice is its webhook: members read, react
-  // and manage it like a group, but no human ever posts in it
-  type: varchar('type', { length: 12 }).notNull(), // 'direct' | 'group' | 'bot'
+  type: varchar('type', { length: 12 }).notNull(), // 'direct' | 'text' | 'voice'
+  // a channel's name; always '' on a DM
   title: varchar('title', { length: 80 }).notNull().default(''),
-  avatar: text('avatar').notNull().default(''),
   createdBy: text('created_by').references(() => users.id, { onDelete: 'set null' }),
   dmKey: text('dm_key'),
   lastMessageAt: timestamp('last_message_at', { withTimezone: true }),
   lastActivityAt: timestamp('last_activity_at', { withTimezone: true }),
-  // 'active' | 'suspended' — a suspended conversation is still listed to its
-  // members but every membership-gated read/write treats it as no access
-  // (conversationsRepository.ts#conversationExistsForUser).
-  status: varchar('status', { length: 16 }).notNull().default('active'),
-  statusReason: text('status_reason').notNull().default(''),
-  // Set on a server channel (text or voice), null on a DM. A channel's
-  // `title` is its name; suspension lives on the server, not here.
+  // Set on a server channel, null on a DM. Suspension lives on the server.
   serverId: text('server_id').references((): AnyPgColumn => servers.id, { onDelete: 'cascade' }),
   categoryId: text('category_id').references((): AnyPgColumn => serverCategories.id, { onDelete: 'set null' }),
   position: integer('position').notNull().default(0),
@@ -135,13 +128,14 @@ export const conversations = pgTable('conversations', {
   uniqueIndex('conversations_dm_key_unique').on(t.dmKey),
   index('conversations_server_id_idx').on(t.serverId, t.position),
   index('conversations_type_idx').on(t.type),
-  index('conversations_type_status_created_idx').on(t.type, t.status, t.createdAt, t.id),
+  check('conversations_type_check', sql`${t.type} IN ('direct','text','voice')`),
+  check('conversations_server_channel_check', sql`(${t.type} = 'direct') = (${t.serverId} IS NULL)`),
 ]);
 
-/** Membership for both DMs and groups. DMs always have two rows, both
- * `member` (a DM has no owner). Groups have the creator as `owner` and
- * everyone else as `member` — `'admin'` was never actually assigned
- * anywhere and has been dropped from the type. */
+/** The two members of a DM. Server channels have no rows here: who belongs
+ * to a server is `server_members`, and who sees a channel is resolved from
+ * its roles (modules/servers/permissions.ts). `role` is a leftover of groups
+ * and always 'member'. */
 export const conversationMembers = pgTable('conversation_members', {
   conversationId: text('conversation_id').notNull().references(() => conversations.id, { onDelete: 'cascade' }),
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
@@ -149,24 +143,16 @@ export const conversationMembers = pgTable('conversation_members', {
   lastReadMessageId: integer('last_read_message_id'),
   // set when this member "closes" a direct conversation (Discord-style —
   // leaves their own history list without deleting anything). listForUser
-  // hides it again until a message newer than this arrives. Never used for
-  // groups (those use conversation_members row deletion = actually leaving).
+  // hides it again until a message newer than this arrives.
   hiddenAt: timestamp('hidden_at', { withTimezone: true }),
-  // per-member pin (works for both direct and group) — purely a personal
-  // sidebar preference, doesn't touch the conversation itself or anyone
-  // else's row. Pinned conversations sort first in listForUser.
+  // per-member pin — purely a personal sidebar preference, doesn't touch the
+  // conversation itself or anyone else's row. Pinned DMs sort first.
   pinnedAt: timestamp('pinned_at', { withTimezone: true }),
   joinedAt: timestamp('joined_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
   uniqueIndex('conversation_members_conversation_user_key').on(t.conversationId, t.userId),
   index('conversation_members_user_id_idx').on(t.userId),
   index('conversation_members_conversation_id_idx').on(t.conversationId),
-  // at most one owner per conversation — DMs never set role='owner' at all,
-  // so this only ever constrains groups. Application logic (conversations.ts)
-  // already only ever assigns exactly one owner at creation, but the real
-  // guarantee needs to live in the database, not just in code that could
-  // have a bug later.
-  uniqueIndex('conversation_members_one_owner_idx').on(t.conversationId).where(sql`${t.role} = 'owner'`),
 ]);
 
 /** A Discord-style server: the owner of its channels (`conversations` rows
@@ -347,16 +333,14 @@ export const userBlocks = pgTable('user_blocks', {
   check('user_blocks_different_users_check', sql`${t.blockerId} <> ${t.blockedId}`),
 ]);
 
-/** A pending/resolved invitation to a group — a pending invite is NOT
- * membership (no history, call access, search, or mentions until accepted).
- * `conversationId` always points at a `group` conversation, never a DM.
- * Cascades when the group itself is deleted — an invite to a group that no
- * longer exists is meaningless, and `messages.groupInvitationId` (below)
- * is what keeps the DM card alive as a tombstone instead of disappearing. */
-export const groupInvitations = pgTable('group_invitations', {
+/** A friend's invitation to a server, delivered as a card in their DM — a
+ * pending invite is NOT membership. Cascades when the server is deleted —
+ * an invite to a server that no longer exists is meaningless, and
+ * `messages.serverInvitationId` (below) is what keeps the DM card alive as a
+ * tombstone instead of disappearing. Invite LINKS are server_invites. */
+export const serverInvitations = pgTable('server_invitations', {
   id: text('id').primaryKey(),
-  conversationId: text('conversation_id').notNull().references(() => conversations.id, { onDelete: 'cascade' }),
-  serverId: text('server_id').references(() => servers.id, { onDelete: 'cascade' }),
+  serverId: text('server_id').notNull().references(() => servers.id, { onDelete: 'cascade' }),
   inviterId: text('inviter_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   inviteeId: text('invitee_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   status: varchar('status', { length: 16 }).notNull().default('pending'), // 'pending' | 'accepted' | 'declined' | 'revoked' | 'expired'
@@ -366,12 +350,12 @@ export const groupInvitations = pgTable('group_invitations', {
   expiresAt: timestamp('expires_at', { withTimezone: true }),
   respondedAt: timestamp('responded_at', { withTimezone: true }),
 }, (t) => [
-  // at most one PENDING invite per (group, invitee) — a re-invite after
+  // at most one PENDING invite per (server, invitee) — a re-invite after
   // decline/expiry resolves the old row first, doesn't get blocked here.
-  uniqueIndex('group_invitations_pending_unique').on(t.conversationId, t.inviteeId).where(sql`${t.status} = 'pending'`),
-  index('group_invitations_invitee_status_idx').on(t.inviteeId, t.status),
-  index('group_invitations_conversation_id_idx').on(t.conversationId),
-  check('group_invitations_status_check', sql`${t.status} IN ('pending','accepted','declined','revoked','expired')`),
+  uniqueIndex('server_invitations_pending_unique').on(t.serverId, t.inviteeId).where(sql`${t.status} = 'pending'`),
+  index('server_invitations_invitee_status_idx').on(t.inviteeId, t.status),
+  index('server_invitations_server_id_idx').on(t.serverId),
+  check('server_invitations_status_check', sql`${t.status} IN ('pending','accepted','declined','revoked','expired')`),
 ]);
 
 /** Chat message, now persisted (used to live only in memory, lost on
@@ -387,14 +371,14 @@ export const messages = pgTable('messages', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   editedAt: timestamp('edited_at', { withTimezone: true }),
   replyTo: jsonb('reply_to'),
-  kind: varchar('kind', { length: 16 }).notNull().default('text'), // 'text' | 'group_invite' | 'call_invite'
+  kind: varchar('kind', { length: 16 }).notNull().default('text'), // 'text' | 'server_invite' | 'call_invite'
   // Points at the invitation this card represents. SET NULL (not cascade):
   // if the invitation row is gone (e.g. the group got deleted, cascading
-  // down to group_invitations), the card stays in the DM as a tombstone —
+  // down to server_invitations), the card stays in the DM as a tombstone —
   // "Convite indisponível" — instead of vanishing.
-  groupInvitationId: text('group_invitation_id').references(() => groupInvitations.id, { onDelete: 'set null' }),
-  // The group whose call a `call_invite` card asks the recipient to join. SET
-  // NULL for the same reason as above: a deleted group leaves a tombstone.
+  serverInvitationId: text('server_invitation_id').references(() => serverInvitations.id, { onDelete: 'set null' }),
+  // The voice channel (or DM) whose call a `call_invite` card asks the
+  // recipient to join. SET NULL for the same reason as above.
   callConversationId: text('call_conversation_id').references(() => conversations.id, { onDelete: 'set null' }),
   // Set (with authorId null) on a message a bot's webhook posted. SET NULL so
   // a deleted webhook leaves its history behind instead of taking it along.
@@ -425,11 +409,11 @@ export const messages = pgTable('messages', {
 }, (t) => [
   index('messages_conversation_id_idx').on(t.conversationId),
   index('messages_search_vector_idx').using('gin', t.searchVector),
-  index('messages_group_invitation_id_idx').on(t.groupInvitationId),
+  index('messages_server_invitation_id_idx').on(t.serverInvitationId),
   index('messages_webhook_id_idx').on(t.webhookId),
   uniqueIndex('messages_webhook_delivery_key_unique').on(t.webhookId, t.webhookDeliveryKey).where(sql`${t.webhookDeliveryKey} IS NOT NULL`),
   index('messages_call_conversation_id_idx').on(t.callConversationId),
-  check('messages_kind_reference_check', sql`(${t.kind} = 'text' AND ${t.groupInvitationId} IS NULL AND ${t.callConversationId} IS NULL) OR (${t.kind} = 'group_invite' AND ${t.callConversationId} IS NULL) OR (${t.kind} = 'call_invite' AND ${t.groupInvitationId} IS NULL)`),
+  check('messages_kind_reference_check', sql`(${t.kind} = 'text' AND ${t.serverInvitationId} IS NULL AND ${t.callConversationId} IS NULL) OR (${t.kind} = 'server_invite' AND ${t.callConversationId} IS NULL) OR (${t.kind} = 'call_invite' AND ${t.serverInvitationId} IS NULL)`),
 ]);
 
 /** The credential an outside system posts into a bot conversation with. Only
@@ -594,15 +578,14 @@ export const stagedAttachments = pgTable('staged_attachments', {
 
 export type StagedAttachment = typeof stagedAttachments.$inferSelect;
 
-// A group's soundboard. Its own table rather than an `attachments` row for the
+// A server's soundboard. Its own table rather than an `attachments` row for the
 // same reason as staged files: a message-less attachment is a public profile
-// image, while a sound is only for the group's members. The file lives on disk
+// image, while a sound is only for the server's members. The file lives on disk
 // under the row's id; `size` is counted in the instance-wide storage total.
-export const groupSounds = pgTable('group_sounds', {
+export const serverSounds = pgTable('server_sounds', {
   id: text('id').primaryKey(),
-  conversationId: text('conversation_id').notNull().references(() => conversations.id, { onDelete: 'cascade' }),
-  serverId: text('server_id').references(() => servers.id, { onDelete: 'cascade' }),
-  // set null, not cascade: the sound belongs to the group, not to whoever sent it
+  serverId: text('server_id').notNull().references(() => servers.id, { onDelete: 'cascade' }),
+  // set null, not cascade: the sound belongs to the server, not to whoever sent it
   uploaderId: text('uploader_id').references(() => users.id, { onDelete: 'set null' }),
   name: varchar('name', { length: 32 }).notNull(),
   emoji: varchar('emoji', { length: 16 }).notNull().default(''),
@@ -612,11 +595,11 @@ export const groupSounds = pgTable('group_sounds', {
   durationMs: integer('duration_ms').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
-  index('group_sounds_conversation_id_idx').on(t.conversationId, t.createdAt),
-  check('group_sounds_volume_range', sql`${t.volume} BETWEEN 0 AND 100`),
+  index('server_sounds_server_id_idx').on(t.serverId, t.createdAt),
+  check('server_sounds_volume_range', sql`${t.volume} BETWEEN 0 AND 100`),
 ]);
 
-export type GroupSound = typeof groupSounds.$inferSelect;
+export type ServerSound = typeof serverSounds.$inferSelect;
 
 /** The recipient's inbox/read-state for a social event — scoped for now to
  * the resources that exist this etapa (friend requests, group invitations).
@@ -629,9 +612,9 @@ export type GroupSound = typeof groupSounds.$inferSelect;
 export const notifications = pgTable('notifications', {
   id: text('id').primaryKey(),
   recipientId: text('recipient_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  kind: varchar('kind', { length: 32 }).notNull(), // 'friend_request' | 'friend_accepted' | 'group_invitation' | 'mention'
+  kind: varchar('kind', { length: 32 }).notNull(), // 'friend_request' | 'friend_accepted' | 'server_invitation' | 'mention'
   friendshipId: text('friendship_id').references(() => friendships.id, { onDelete: 'cascade' }),
-  groupInvitationId: text('group_invitation_id').references(() => groupInvitations.id, { onDelete: 'cascade' }),
+  serverInvitationId: text('server_invitation_id').references(() => serverInvitations.id, { onDelete: 'cascade' }),
   // the message that @mentioned the recipient: deleting it takes the notification along
   messageId: integer('message_id').references(() => messages.id, { onDelete: 'cascade' }),
   dedupeKey: text('dedupe_key').notNull(),
@@ -643,9 +626,9 @@ export const notifications = pgTable('notifications', {
   index('notifications_recipient_unread_idx').on(t.recipientId).where(sql`${t.readAt} IS NULL`),
   index('notifications_message_id_idx').on(t.messageId),
   check('notifications_kind_reference_check', sql`
-    (${t.kind} IN ('friend_request','friend_accepted') AND ${t.friendshipId} IS NOT NULL AND ${t.groupInvitationId} IS NULL AND ${t.messageId} IS NULL)
-    OR (${t.kind} = 'group_invitation' AND ${t.groupInvitationId} IS NOT NULL AND ${t.friendshipId} IS NULL AND ${t.messageId} IS NULL)
-    OR (${t.kind} = 'mention' AND ${t.messageId} IS NOT NULL AND ${t.friendshipId} IS NULL AND ${t.groupInvitationId} IS NULL)
+    (${t.kind} IN ('friend_request','friend_accepted') AND ${t.friendshipId} IS NOT NULL AND ${t.serverInvitationId} IS NULL AND ${t.messageId} IS NULL)
+    OR (${t.kind} = 'server_invitation' AND ${t.serverInvitationId} IS NOT NULL AND ${t.friendshipId} IS NULL AND ${t.messageId} IS NULL)
+    OR (${t.kind} = 'mention' AND ${t.messageId} IS NOT NULL AND ${t.friendshipId} IS NULL AND ${t.serverInvitationId} IS NULL)
   `),
 ]);
 
@@ -700,7 +683,7 @@ export type Attachment = typeof attachments.$inferSelect;
 export type MessageReaction = typeof messageReactions.$inferSelect;
 export type Friendship = typeof friendships.$inferSelect;
 export type UserBlock = typeof userBlocks.$inferSelect;
-export type GroupInvitation = typeof groupInvitations.$inferSelect;
+export type ServerInvitation = typeof serverInvitations.$inferSelect;
 export type Webhook = typeof webhooks.$inferSelect;
 export type Notification = typeof notifications.$inferSelect;
 export type OutboxEvent = typeof outboxEvents.$inferSelect;
@@ -721,7 +704,7 @@ export const adminAuditLogs = pgTable('admin_audit_logs', {
   actorId: text('actor_id'),
   actorLabel: text('actor_label').notNull().default(''),
   action: varchar('action', { length: 48 }).notNull(),
-  targetType: varchar('target_type', { length: 16 }).notNull(), // 'user' | 'group' | 'message' | 'report' | 'system'
+  targetType: varchar('target_type', { length: 16 }).notNull(), // 'user' | 'server' | 'group' (before servers) | 'message' | 'report' | 'system'
   targetId: text('target_id').notNull().default(''),
   targetLabel: text('target_label').notNull().default(''),
   reason: text('reason').notNull().default(''),
@@ -745,7 +728,7 @@ export const adminAuditLogs = pgTable('admin_audit_logs', {
 export const reports = pgTable('reports', {
   id: text('id').primaryKey(),
   reporterId: text('reporter_id').references(() => users.id, { onDelete: 'set null' }),
-  targetType: varchar('target_type', { length: 16 }).notNull(), // 'user' | 'group' | 'message'
+  targetType: varchar('target_type', { length: 16 }).notNull(), // 'user' | 'server' | 'message'
   targetId: text('target_id').notNull(),
   targetLabel: text('target_label').notNull().default(''),
   category: varchar('category', { length: 24 }).notNull(),
@@ -762,7 +745,7 @@ export const reports = pgTable('reports', {
   index('reports_target_idx').on(t.targetType, t.targetId),
   // one live report per reporter and target — a second click is not a second case
   uniqueIndex('reports_open_unique').on(t.reporterId, t.targetType, t.targetId).where(sql`${t.status} IN ('open','reviewing')`),
-  check('reports_target_type_check', sql`${t.targetType} IN ('user','group','message')`),
+  check('reports_target_type_check', sql`${t.targetType} IN ('user','server','message')`),
   check('reports_status_check', sql`${t.status} IN ('open','reviewing','resolved','dismissed')`),
 ]);
 

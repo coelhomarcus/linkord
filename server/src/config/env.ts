@@ -27,8 +27,14 @@ const MAX_ATTACHMENTS_PER_MESSAGE = 4;
 // teste"), not a validated product decision. Doesn't gate the other side
 // requesting back right away, only a repeat from whoever just got turned down.
 const FRIEND_REQUEST_COOLDOWN_MS = 24 * 60 * 60 * 1000;
-// gates NEW acceptances only: an existing group already above this keeps every member
-const MAX_GROUP_MEMBERS = Number(process.env.MAX_GROUP_MEMBERS || 100);
+// gates NEW joins only: a server already above this keeps every member.
+// The MAX_GROUP_* names are read too, so a deploy configured before servers
+// keeps its numbers.
+const MAX_SERVER_MEMBERS = Number(process.env.MAX_SERVER_MEMBERS || process.env.MAX_GROUP_MEMBERS || 100);
+const MAX_CHANNELS_PER_SERVER = Number(process.env.MAX_CHANNELS_PER_SERVER || 50);
+const MAX_ROLES_PER_SERVER = Number(process.env.MAX_ROLES_PER_SERVER || 25);
+const MAX_INVITES_PER_SERVER = Number(process.env.MAX_INVITES_PER_SERVER || 50);
+const MAX_WEBHOOKS_PER_CHANNEL = Number(process.env.MAX_WEBHOOKS_PER_CHANNEL || 10);
 const MAX_INVITEES_PER_REQUEST = 20;
 
 // anchored to the repo root (not cwd) — inside Docker this is /app/uploads
@@ -106,8 +112,8 @@ const AUTH_CODE_MAX_ATTEMPTS = 5;
 const LIVEKIT_URL = process.env.LIVEKIT_URL || '';
 const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY || '';
 const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET || '';
-// prefix for each group call's LiveKit room name (see
-// realtime/livekit.ts) — one room per group, not a single shared one.
+// prefix for each call's LiveKit room name (see
+// integrations/livekit/livekit.ts) — one room per voice channel or DM, not a single shared one.
 const LIVEKIT_ROOM_NAME = process.env.LIVEKIT_ROOM_NAME || 'linkord-room';
 // A token only gates ENTERING a room; LiveKit can't recall one already issued,
 // so a short life bounds how long a removed member could still reconnect with
@@ -135,9 +141,8 @@ const MAX_NEW_ACCOUNTS_PER_HOUR = Number(process.env.MAX_NEW_ACCOUNTS_PER_HOUR |
 const MAX_CONNECTIONS_PER_USER = Number(process.env.MAX_CONNECTIONS_PER_USER || 5);
 // per-account quotas
 const MAX_USER_STORAGE_BYTES = Number(process.env.MAX_USER_STORAGE_BYTES || 5 * 1024 * 1024 * 1024);
-const MAX_OWNED_GROUPS_PER_USER = Number(process.env.MAX_OWNED_GROUPS_PER_USER || 20);
-const MAX_GROUP_MEMBERSHIPS_PER_USER = Number(process.env.MAX_GROUP_MEMBERSHIPS_PER_USER || 100);
-const MAX_OWNED_BOTS_PER_USER = Number(process.env.MAX_OWNED_BOTS_PER_USER || 10);
+const MAX_OWNED_SERVERS_PER_USER = Number(process.env.MAX_OWNED_SERVERS_PER_USER || process.env.MAX_OWNED_GROUPS_PER_USER || 20);
+const MAX_SERVER_MEMBERSHIPS_PER_USER = Number(process.env.MAX_SERVER_MEMBERSHIPS_PER_USER || process.env.MAX_GROUP_MEMBERSHIPS_PER_USER || 100);
 const MAX_FRIENDS = Number(process.env.MAX_FRIENDS || 500);
 const MAX_PENDING_OUTGOING_REQUESTS = Number(process.env.MAX_PENDING_OUTGOING_REQUESTS || 50);
 // extra browser origins allowed to call the API/socket (comma-separated), on
@@ -156,7 +161,7 @@ export const config = {
   PORT, HOST_BIND, MAX_PARTICIPANTS, TRUST_PROXY, MAX_MSG_BYTES, RECONNECT_GRACE_MS,
   MAX_AVATAR_LEN, MAX_BANNER_LEN, MAX_PROFILE_BIO_LEN, MAX_PROFILE_LINKS, MAX_PROFILE_LINK_LEN,
   MAX_CHAT_LEN, CHAT_HISTORY_LIMIT, SEARCH_RESULT_LIMIT, MAX_SEARCH_QUERY_LEN, MAX_ATTACHMENTS_PER_MESSAGE,
-  FRIEND_REQUEST_COOLDOWN_MS, MAX_GROUP_MEMBERS, MAX_INVITEES_PER_REQUEST,
+  FRIEND_REQUEST_COOLDOWN_MS, MAX_SERVER_MEMBERS, MAX_CHANNELS_PER_SERVER, MAX_ROLES_PER_SERVER, MAX_INVITES_PER_SERVER, MAX_WEBHOOKS_PER_CHANNEL, MAX_INVITEES_PER_REQUEST,
   UPLOAD_DIR, MAX_ATTACHMENT_BYTES, MAX_STORAGE_BYTES, MAX_AVATAR_BYTES,
   UPLOAD_CHUNK_BYTES, UPLOAD_SESSION_TTL_MS,
   DATABASE_URL, DATABASE_SSL, DATABASE_SSL_CA, MIGRATE_ON_BOOT,
@@ -168,6 +173,6 @@ export const config = {
   LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET, LIVEKIT_ROOM_NAME, LIVEKIT_TOKEN_TTL_SECONDS,
   UPLOADS_REMOTE_URL, KLIPY_API_KEY,
   REGISTRATIONS_PER_IP_PER_HOUR, MAX_NEW_ACCOUNTS_PER_HOUR, MAX_CONNECTIONS_PER_USER,
-  MAX_USER_STORAGE_BYTES, MAX_OWNED_GROUPS_PER_USER, MAX_GROUP_MEMBERSHIPS_PER_USER, MAX_OWNED_BOTS_PER_USER, MAX_FRIENDS, MAX_PENDING_OUTGOING_REQUESTS,
+  MAX_USER_STORAGE_BYTES, MAX_OWNED_SERVERS_PER_USER, MAX_SERVER_MEMBERSHIPS_PER_USER, MAX_FRIENDS, MAX_PENDING_OUTGOING_REQUESTS,
   ALLOWED_ORIGINS, IS_DEV, ORPHAN_GRACE_MS, ORPHAN_SWEEP_DRY_RUN,
 };

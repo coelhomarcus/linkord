@@ -18,7 +18,12 @@ export const ERROR_CODES = {
   rate_limited: 'rate_limited',
   relationship_required: 'relationship_required',
   // HTTP
-  group_full: 'group_full',
+  server_full: 'server_full',
+  banned: 'banned',
+  invalid_invite: 'invalid_invite',
+  owner_must_transfer: 'owner_must_transfer',
+  hierarchy: 'hierarchy',
+  invalid_name: 'invalid_name',
   user_unavailable: 'user_unavailable',
   cooldown: 'cooldown',
   username_taken: 'username_taken',

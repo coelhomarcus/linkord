@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { config } from '../../../src/config/env.js';
-import { normalizeInviteeIds } from '../../../src/modules/conversations/invitationsRepository.js';
+import { normalizeInviteeIds } from '../../../src/modules/servers/serverInvitationsRepository.js';
 
 describe('normalizeInviteeIds', () => {
   it('dedupes, ignores garbage and never invites yourself', () => {

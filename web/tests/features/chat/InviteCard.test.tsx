@@ -64,7 +64,7 @@ describe('InviteCard', () => {
 
   it('group_full error shows "Limite atingido" without offering Join', async () => {
     const user = userEvent.setup();
-    mocked.acceptInvitation.mockRejectedValue(new api.ApiError(409, 'group_full', 'cheio'));
+    mocked.acceptInvitation.mockRejectedValue(new api.ApiError(409, 'server_full', 'cheio'));
     render(card());
     await user.click(screen.getByRole('button', { name: 'Entrar no grupo' }));
     expect(await screen.findByText(/Limite atingido/)).toBeInTheDocument();

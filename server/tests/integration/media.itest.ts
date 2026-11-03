@@ -4,7 +4,7 @@ import crypto from 'node:crypto';
 import { after, describe, it } from 'node:test';
 import { attachments, messages } from '../../src/db/schema.js';
 import { fetchMediaPage, type MediaKind } from '../../src/modules/attachments/media.js';
-import { cleanupParticipant, db, joinNew, makeGroupWithMembers, makeUser, pool } from './helpers.js';
+import { cleanupParticipant, db, joinNew, makeServerWithMembers, makeUser, pool } from './helpers.js';
 
 after(() => pool.end());
 
@@ -21,7 +21,7 @@ async function attach(messageId: number, fileName: string, mimeType: string): Pr
 
 async function withConversation<T>(fn: (ctx: { conversationId: string; userId: string; outsiderId: string }) => Promise<T>): Promise<T> {
   const author = await makeUser('md'); const other = await makeUser('mo'); const outsider = await makeUser('mx');
-  const conversationId = await makeGroupWithMembers(author.id, [other.id]);
+  const conversationId = (await makeServerWithMembers(author.id, [other.id])).textChannelId;
   const { participant } = joinNew(author);
   try {
     return await fn({ conversationId, userId: author.id, outsiderId: outsider.id });

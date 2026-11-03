@@ -309,6 +309,13 @@
       "when": 1793730560180,
       "tag": "0043_servers_expand",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1793730922460,
+      "tag": "0044_servers_contract",
+      "breakpoints": true
     }
   ]
 }

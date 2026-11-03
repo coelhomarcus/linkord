@@ -106,7 +106,7 @@ export function GroupInvitationsView({ query, onQueryChange, onOpenProfile }: { 
 
 function describeInvitationError(err: unknown): string {
   if (err instanceof ApiError) {
-    if (err.code === ERROR_CODES.group_full) return i18n.t('friends:invitations.groupFull');
+    if (err.code === ERROR_CODES.server_full) return i18n.t('friends:invitations.groupFull');
     if (err.code === ERROR_CODES.quota_exceeded) return i18n.t('friends:invitations.quotaExceeded');
   }
   return i18n.t('friends:feedback.actionFailed');

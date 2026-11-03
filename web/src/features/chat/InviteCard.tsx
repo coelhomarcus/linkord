@@ -48,7 +48,7 @@ function LiveInviteCard({ invitation }: { invitation: InvitationCard }) {
       await action(invitation.id);
       // the card itself updates from the server's `invitation-updated`
     } catch (err) {
-      if (err instanceof ApiError && err.code === ERROR_CODES.group_full) setOutcome('group_full');
+      if (err instanceof ApiError && err.code === ERROR_CODES.server_full) setOutcome('group_full');
       else if (err instanceof ApiError && err.code === ERROR_CODES.quota_exceeded) setError(t('invite.quotaExceeded'));
       else setError(t('invite.failed'));
     } finally {

@@ -2,15 +2,15 @@ import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import { after, describe, it } from 'node:test';
 import { eq } from 'drizzle-orm';
-import { conversations, friendships, groupInvitations, notifications } from '../../src/db/schema.js';
+import { friendships, notifications, serverInvitations, servers } from '../../src/db/schema.js';
 import { listNotifications } from '../../src/modules/notifications/notificationsRepository.js';
-import { befriend, db, makeGroupWithMembers, makeUser, pool } from './helpers.js';
+import { befriend, db, makeServerWithMembers, makeUser, pool } from './helpers.js';
 
 after(() => pool.end());
 
 async function notify(recipientId: string, kind: string, ref: { friendshipId?: string; invitationId?: string }): Promise<void> {
   await db.insert(notifications).values({
-    id: crypto.randomUUID(), recipientId, kind, friendshipId: ref.friendshipId ?? null, groupInvitationId: ref.invitationId ?? null,
+    id: crypto.randomUUID(), recipientId, kind, friendshipId: ref.friendshipId ?? null, serverInvitationId: ref.invitationId ?? null,
     dedupeKey: crypto.randomUUID(),
   });
 }
@@ -22,13 +22,13 @@ async function pendingFriendship(requester: string, other: string): Promise<stri
   return id;
 }
 
-async function invite(groupId: string, inviter: string, invitee: string): Promise<string> {
+async function invite(serverId: string, inviter: string, invitee: string): Promise<string> {
   const id = crypto.randomUUID();
-  await db.insert(groupInvitations).values({ id, conversationId: groupId, inviterId: inviter, inviteeId: invitee });
+  await db.insert(serverInvitations).values({ id, serverId, inviterId: inviter, inviteeId: invitee });
   return id;
 }
 
-describe('notification list with actor and group (real Postgres)', () => {
+describe('notification list with actor and server (real Postgres)', () => {
   it('request: the actor is whoever asked; acceptance: the actor is whoever accepted', async () => {
     const a = await makeUser('na'); const b = await makeUser('nb');
     const friendshipId = await pendingFriendship(a.id, b.id);
@@ -39,7 +39,7 @@ describe('notification list with actor and group (real Postgres)', () => {
     assert.ok(typeof forB !== 'string');
     assert.equal(forB.items.length, 1);
     assert.equal(forB.items[0]!.actor?.id, a.id);
-    assert.equal(forB.items[0]!.group, null);
+    assert.equal(forB.items[0]!.server, null);
     assert.equal(forB.items[0]!.read, false);
 
     const forA = await listNotifications(a.id);
@@ -49,22 +49,22 @@ describe('notification list with actor and group (real Postgres)', () => {
     assert.equal('email' in (forA.items[0]!.actor ?? {}), false);
   });
 
-  it('invitation: carries the group; a deleted group leaves the notification without a group', async () => {
+  it('invitation: carries the server; deleting the server takes the notification along', async () => {
     const owner = await makeUser('go'); const guest = await makeUser('gg');
     await befriend(owner.id, guest.id);
-    const groupId = await makeGroupWithMembers(owner.id, [], 'Squad');
-    const invitationId = await invite(groupId, owner.id, guest.id);
-    await notify(guest.id, 'group_invitation', { invitationId });
+    const { serverId } = await makeServerWithMembers(owner.id, [], 'Squad');
+    const invitationId = await invite(serverId, owner.id, guest.id);
+    await notify(guest.id, 'server_invitation', { invitationId });
 
     const before = await listNotifications(guest.id);
     assert.ok(typeof before !== 'string');
     assert.equal(before.items[0]!.actor?.id, owner.id);
-    assert.deepEqual(before.items[0]!.group && { id: before.items[0]!.group.id, title: before.items[0]!.group.title }, { id: groupId, title: 'Squad' });
+    assert.deepEqual(before.items[0]!.server && { id: before.items[0]!.server.id, name: before.items[0]!.server.name }, { id: serverId, name: 'Squad' });
 
-    await db.delete(conversations).where(eq(conversations.id, groupId));
+    await db.delete(servers).where(eq(servers.id, serverId));
     const after = await listNotifications(guest.id);
     assert.ok(typeof after !== 'string');
-    // the invitation cascades with the group, so the notification row goes too
+    // the invitation cascades with the server, so the notification row goes too
     assert.equal(after.items.length, 0);
   });
 

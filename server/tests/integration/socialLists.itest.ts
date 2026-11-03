@@ -4,13 +4,13 @@ import { after, before, describe, it } from 'node:test';
 import { eq } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { config } from '../../src/config/env.js';
-import { friendships, groupInvitations, users } from '../../src/db/schema.js';
+import { friendships, serverInvitations, users } from '../../src/db/schema.js';
 import { createApp } from '../../src/http/app.js';
 import { createSession } from '../../src/modules/auth/session.js';
-import { listReceivedInvitations } from '../../src/modules/conversations/invitationsRepository.js';
+import { listReceivedInvitations } from '../../src/modules/servers/serverInvitationsRepository.js';
 import { listFriendRequests, listFriends } from '../../src/modules/friendships/friendshipsRepository.js';
 import { SOCIAL_PAGE_SIZE } from '../../src/modules/friendships/cursor.js';
-import { befriend, db, makeGroupWithMembers, makeUser, pool } from './helpers.js';
+import { befriend, db, makeServerWithMembers, makeUser, pool } from './helpers.js';
 
 let app: FastifyInstance;
 before(async () => { app = createApp(); await app.ready(); });
@@ -46,13 +46,13 @@ describe('online friends: filtered before pagination (real Postgres)', () => {
     assert.equal((online as { nextCursor: string | null }).nextCursor, null);
   });
 
-  it('empty online ids: empty list; a group acquaintance who is not a friend never shows up', async () => {
-    const me = await makeUser('on'); const friend = await makeUser('fr'); const groupmate = await makeUser('gm');
+  it('empty online ids: empty list; a server acquaintance who is not a friend never shows up', async () => {
+    const me = await makeUser('on'); const friend = await makeUser('fr'); const servermate = await makeUser('gm');
     await befriend(me.id, friend.id);
-    await makeGroupWithMembers(me.id, [groupmate.id]);
+    await makeServerWithMembers(me.id, [servermate.id]);
     assert.deepEqual(names(await listFriends(me.id, { onlineIds: [] })), []);
-    assert.deepEqual(names(await listFriends(me.id, { onlineIds: [groupmate.id] })), []);
-    assert.deepEqual(names(await listFriends(me.id, { onlineIds: [friend.id, groupmate.id] })), [friend.username]);
+    assert.deepEqual(names(await listFriends(me.id, { onlineIds: [servermate.id] })), []);
+    assert.deepEqual(names(await listFriends(me.id, { onlineIds: [friend.id, servermate.id] })), [friend.username]);
   });
 
   it('search and online combine before pagination', async () => {
@@ -90,11 +90,11 @@ describe('search over requests and invitations (real Postgres)', () => {
     assert.equal(none.items.length, 0);
   });
 
-  it('invitations: matched by group name or by the sender, only among one\'s own', async () => {
+  it('invitations: matched by server name or by the sender, only among one\'s own', async () => {
     const owner = await makeUser('ow'); const guest = await makeUser('gu'); const other = await makeUser('ot');
     await befriend(owner.id, guest.id);
-    const groupId = await makeGroupWithMembers(owner.id, [], 'Football Team');
-    await db.insert(groupInvitations).values({ id: crypto.randomUUID(), conversationId: groupId, inviterId: owner.id, inviteeId: guest.id });
+    const { serverId } = await makeServerWithMembers(owner.id, [], 'Football Team');
+    await db.insert(serverInvitations).values({ id: crypto.randomUUID(), serverId, inviterId: owner.id, inviteeId: guest.id });
     const byTitle = await listReceivedInvitations(guest.id, undefined, 'football');
     assert.ok(typeof byTitle !== 'string');
     assert.equal(byTitle.items.length, 1);

@@ -1,13 +1,13 @@
 import fs from 'node:fs/promises';
 import { and, eq, inArray, isNull, or } from 'drizzle-orm';
 import { db } from '../../db/client.js';
-import { attachments as attachmentsTable, conversations, groupSounds, messages, users } from '../../db/schema.js';
+import { attachments as attachmentsTable, conversations, messages, serverSounds, servers, users, webhooks } from '../../db/schema.js';
 import { filePathFor } from './attachmentStorage.js';
 
 // Deleting the on-disk file(s) when whatever owned them (a message, a whole
-// conversation, an account/group avatar) goes away. Kept in its own leaf
-// file, same reasoning as attachmentStorage.ts: messages.ts, conversations.ts/
-// conversationsRepository.ts, presence/participants.ts and moderation.ts all
+// conversation, a server, an account avatar) goes away. Kept in its own leaf
+// file, same reasoning as attachmentStorage.ts: messages.ts, servers/,
+// presence/participants.ts and moderation.ts all
 // need this, and none of it depends on anything conversations/participants-
 // related — putting it here (rather than in attachments.ts, which pulls in
 // attachmentUploads.ts/attachmentServing.ts, which in turn depend on
@@ -43,23 +43,35 @@ export async function deleteAttachmentOfMessage(messageId: number, attachmentId:
   return true;
 }
 
+const unlinkAll = (ids: { id: string }[]) =>
+  Promise.all(ids.map((row) => fs.unlink(filePathFor(row.id)).catch((err: NodeJS.ErrnoException) => { if (err.code !== 'ENOENT') throw err; })));
+
 /** Same idea in bulk — deleting a conversation CASCADEs messages/attachments
  * in Postgres without going through deleteForMessage, so this exists purely
- * to avoid orphaned files. Called by modules/conversations/ before the
- * delete. */
+ * to avoid orphaned files. Called before the delete. */
 export async function deleteForConversation(conversationId: string): Promise<void> {
-  const rows = await db
+  await unlinkAll(await db
     .select({ id: attachmentsTable.id })
     .from(attachmentsTable)
     .innerJoin(messages, eq(attachmentsTable.messageId, messages.id))
-    .where(eq(messages.conversationId, conversationId));
-  // the group's soundboard files go with it too (their rows cascade the same way)
-  const sounds = await db.select({ id: groupSounds.id }).from(groupSounds).where(eq(groupSounds.conversationId, conversationId));
-  await Promise.all([...rows, ...sounds].map((row) => fs.unlink(filePathFor(row.id)).catch((err: NodeJS.ErrnoException) => { if (err.code !== 'ENOENT') throw err; })));
+    .where(eq(messages.conversationId, conversationId)));
+}
+
+/** Every file a server owns — each channel's attachments and the
+ * soundboard — before the server row (and everything cascading from it)
+ * is deleted. */
+export async function deleteForServer(serverId: string): Promise<void> {
+  await unlinkAll(await db
+    .select({ id: attachmentsTable.id })
+    .from(attachmentsTable)
+    .innerJoin(messages, eq(attachmentsTable.messageId, messages.id))
+    .innerJoin(conversations, eq(conversations.id, messages.conversationId))
+    .where(eq(conversations.serverId, serverId)));
+  await unlinkAll(await db.select({ id: serverSounds.id }).from(serverSounds).where(eq(serverSounds.serverId, serverId)));
 }
 
 /** Whether `url` (already passed through sanitizeAvatar/sanitizeBanner) is
- * safe for `uploaderId` to claim as their own avatar/banner/group avatar.
+ * safe for `uploaderId` to claim as their own avatar/banner/server icon.
  * True for anything that isn't a LOCAL upload reference — an external
  * https:// URL or an empty string has no file of ours to protect. For a
  * local `/uploads/<id>` reference, only true when it's a genuine, still a
@@ -83,28 +95,28 @@ export async function isOwnedProfileImage(url: string, uploaderId: string): Prom
   return !!row;
 }
 
-/** Whether some OTHER account's avatar/banner or group's avatar is still
- * literally set to this exact URL right now — deleteAvatarFile's caller
- * always updates ITS OWN row to the new value before calling this for the
- * old one (see presence/participants.ts#handleProfile,
- * conversations.ts#handleGroupUpdate), so if the string still turns up
- * anywhere in `users`/`conversations` at this point, it's necessarily a
- * DIFFERENT account/group still actively using it. */
+/** Whether some OTHER account's avatar/banner, server's icon or webhook's
+ * avatar is still literally set to this exact URL right now —
+ * deleteAvatarFile's caller always updates ITS OWN row to the new value
+ * before calling this for the old one, so if the string still turns up
+ * anywhere at this point, something else is still actively using it. */
 async function isProfileImageStillReferenced(url: string): Promise<boolean> {
   const [byUser] = await db.select({ id: users.id }).from(users)
     .where(or(eq(users.avatar, url), eq(users.avatarPoster, url), eq(users.banner, url), eq(users.bannerPoster, url)))
     .limit(1);
   if (byUser) return true;
-  const [byGroup] = await db.select({ id: conversations.id }).from(conversations).where(eq(conversations.avatar, url)).limit(1);
-  return !!byGroup;
+  const [byServer] = await db.select({ id: servers.id }).from(servers).where(eq(servers.icon, url)).limit(1);
+  if (byServer) return true;
+  const [byWebhook] = await db.select({ id: webhooks.id }).from(webhooks).where(eq(webhooks.avatar, url)).limit(1);
+  return !!byWebhook;
 }
 
-/** Deletes the OLD avatar file+row when an account or group switches to a
+/** Deletes the OLD avatar file+row when an account or server switches to a
  * new one — otherwise old avatars pile up orphaned forever. No-ops for an
  * external URL or empty value. `isNull(messageId)` is a guard so a
  * manipulated value could never delete a real chat attachment; the
  * still-referenced check right before is what stops it from deleting a
- * DIFFERENT account's (or group's) current avatar/banner — see
+ * DIFFERENT account's (or server's) current avatar/banner — see
  * isOwnedProfileImage's own comment for how such a reference could exist
  * at all. */
 export async function deleteAvatarFile(avatarValue: unknown): Promise<void> {

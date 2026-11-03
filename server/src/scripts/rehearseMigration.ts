@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { Pool } from 'pg';
 import { MIGRATIONS_FOLDER } from '../db/migrate.js';
-import { DEFAULT_EVERYONE_PERMISSIONS } from '../modules/servers/permissions.js';
+import { DEFAULT_EVERYONE_PERMISSIONS, PERMISSIONS } from '../modules/servers/permissions.js';
 import { defaultServerTemplate } from '../modules/servers/serverTemplate.js';
 import { classifyInventory, loadInventory, planRepairs } from '../modules/migration/legacyInventory.js';
 import { applyRepairs, InjectedRepairFailure } from '../modules/migration/legacyRepair.js';
@@ -110,6 +110,33 @@ async function verifyServers(pool: Pool, seed: GroupSeedManifest): Promise<void>
   check('idempotente: rodar o backfill de novo não muda nada', (await serverSnapshot(pool)) === before);
 }
 
+/** After 0044: the group's own row is the first text channel, and nothing
+ * points at "a group" anymore. */
+async function verifyConversion(pool: Pool, seed: GroupSeedManifest): Promise<void> {
+  const c = seed.counts;
+  let channelsOk = true;
+  for (const [groupId, owner] of Object.entries(GROUP_OWNERS)) {
+    const template = defaultServerTemplate(owner ? GROUP_USERS[owner] : 'pt-BR');
+    const text = template.categories.flatMap((cat) => cat.channels).find((ch) => ch.type === 'text')!;
+    channelsOk &&= (await count(pool, `select count(*) as n from conversations where id = '${groupId}' and type = 'text' and title = '${text.name}' and server_id = ${serverIdOf(groupId)}`)) === 1;
+  }
+  check('o grupo virou o primeiro canal de texto do servidor, com o nome do template', channelsOk);
+  check('nenhum tipo antigo sobrou e canais não têm linhas de membro',
+    (await count(pool, "select count(*) as n from conversations where type in ('group','bot')")) === 0
+    && (await count(pool, 'select count(*) as n from conversation_members m join conversations c on c.id = m.conversation_id where c.server_id is not null')) === 0
+    && (await count(pool, "select count(*) as n from conversation_members where role <> 'member'")) === 0);
+  check('histórico, anexos e reações continuam lá', (await count(pool, 'select count(*) as n from messages')) === c.messages
+    && (await count(pool, 'select count(*) as n from attachments')) === c.attachments && (await count(pool, 'select count(*) as n from message_reactions')) === c.reactions);
+  check('o cartão de chamada aponta para o canal de voz', (await count(pool,
+    `select count(*) as n from messages where id = ${seed.callInviteMessageId} and call_conversation_id = md5('voice-channel:grp-team')::uuid::text`)) === 1);
+  check('o cartão de convite virou convite de servidor', (await count(pool, "select count(*) as n from messages where kind = 'server_invite' and server_invitation_id = 'inv-cy'")) === 1
+    && (await count(pool, 'select count(*) as n from server_invitations')) === c.invitations && (await count(pool, 'select count(*) as n from server_sounds')) === c.sounds);
+  check('o canal do bot continua só leitura para as pessoas', (await count(pool,
+    `select count(*) as n from channel_permission_overwrites o join conversations ch on ch.id = o.channel_id
+     where ch.id = 'bot-news' and not ch.permissions_synced and o.role_id = md5('everyone:bot-news')::uuid::text and o.deny = ${PERMISSIONS.SEND_MESSAGES}`)) === 1);
+  check('a denúncia do grupo aponta para o servidor', (await count(pool, `select count(*) as n from reports where id = 'rep-1' and target_type = 'server' and target_id = ${serverIdOf('grp-team')}`)) === 1);
+}
+
 async function main(): Promise<number> {
   const baseUrl = process.env.DATABASE_URL;
   if (!baseUrl) { console.error('DATABASE_URL não configurada'); return 2; }
@@ -157,11 +184,16 @@ async function main(): Promise<number> {
       (await count(A.pool, 'select count(*) as n from messages')) === c.messages && (await count(A.pool, 'select count(*) as n from attachments')) === c.attachments
       && (await count(A.pool, 'select count(*) as n from message_reactions')) === c.reactions && (await count(A.pool, 'select count(*) as n from sessions')) === c.sessions
       && (await count(A.pool, "select count(*) as n from conversations where type <> 'voice'")) === c.conversations);
-    check('fixações e marcadores de leitura preservados', (await count(A.pool, 'select count(*) as n from conversation_members where pinned_at is not null')) === c.pinned && (await count(A.pool, 'select count(*) as n from conversation_members where last_read_message_id is not null')) === c.readMarkers);
-    check('nenhuma amizade, convite ou notificação foi criada pela migração', (await count(A.pool, 'select count(*) as n from friendships')) === 0 && (await count(A.pool, 'select count(*) as n from group_invitations')) === 0 && (await count(A.pool, 'select count(*) as n from notifications')) === 0);
+    // the legacy groups became servers: a group pin is the server's place in
+    // the rail, a group read marker is the channel's read state
+    check('fixações e marcadores de leitura preservados',
+      (await count(A.pool, `select count(*) as n from server_members where server_id = md5('server:g-ok')::uuid::text and user_id = '${manifest.users.bia}' and position = 0`)) === c.pinned
+      && (await count(A.pool, 'select count(*) as n from conversation_members where last_read_message_id is not null')) + (await count(A.pool, 'select count(*) as n from channel_read_states')) === c.readMarkers);
+    check('nenhuma amizade, convite ou notificação foi criada pela migração', (await count(A.pool, 'select count(*) as n from friendships')) === 0 && (await count(A.pool, 'select count(*) as n from server_invitations')) === 0 && (await count(A.pool, 'select count(*) as n from notifications')) === 0);
     check('DMs legadas continuam (inclusive a de conta apagada) e sem dono', (await count(A.pool, "select count(*) as n from conversations where type = 'direct'")) === 3 && (await count(A.pool, "select count(*) as n from conversation_members m join conversations c on c.id = m.conversation_id where c.type = 'direct' and m.role = 'owner'")) === 0);
-    const owners = Object.fromEntries((await A.pool.query<{ conversation_id: string; user_id: string }>("select conversation_id, user_id from conversation_members where role = 'owner'")).rows.map((r) => [r.conversation_id, r.user_id]));
-    check('cada grupo não vazio tem EXATAMENTE um dono, e é o previsto pelas regras do §12.2',
+    const owners = Object.fromEntries((await A.pool.query<{ conversation_id: string; user_id: string }>(
+      "select c.id as conversation_id, s.owner_id as user_id from servers s join conversations c on c.server_id = s.id and c.type = 'text' where s.owner_id is not null")).rows.map((r) => [r.conversation_id, r.user_id]));
+    check('cada grupo não vazio virou um servidor com o dono previsto pelas regras do §12.2',
       Object.entries(EXPECTED_OWNER).every(([group, user]) => owners[group] === manifest.users[user]) && Object.keys(owners).filter((id) => id.startsWith('g-')).length === Object.keys(EXPECTED_OWNER).length, JSON.stringify(Object.fromEntries(Object.entries(owners).filter(([id]) => id.startsWith('g-')))));
     check('papel inesperado virou membro', (await count(A.pool, "select count(*) as n from conversation_members where role not in ('owner','member')")) === 0);
     check('grupo vazio foi só relatado (continua existindo)', (await count(A.pool, "select count(*) as n from conversations where id = 'g-empty'")) === 1);
@@ -194,16 +226,20 @@ async function main(): Promise<number> {
     const upTo42 = makeMigrationsFolder({ toIdx: 42 });
     try { await migrateOn(D.pool, upTo42.folder); } finally { upTo42.cleanup(); }
     const groups = await seedGroupDataset(D.pool);
-    const toTop = makeMigrationsFolder();
+    const upTo43 = makeMigrationsFolder({ toIdx: 43 });
     let blocked: unknown = null;
-    try { await migrateOn(D.pool, toTop.folder); } catch (err) { blocked = err; }
+    try { await migrateOn(D.pool, upTo43.folder); } catch (err) { blocked = err; }
     check('o portão recusa converter um grupo sem dono, sem aplicar nada', blocked instanceof LegacyDataBlockedError && !(await tableExists(D.pool, 'servers')));
     const groupPlan = planRepairs(await loadInventory(D.pool));
     check('o reparo nomeia o dono do grupo órfão e mantém o dono do bot', groupPlan.length === 1 && groupPlan[0]!.conversationId === 'grp-orphan' && groupPlan[0]!.userId === groups.users.cy);
     await applyRepairs(D.pool, groupPlan);
+    await migrateOn(D.pool, upTo43.folder);
+    upTo43.cleanup();
+    await verifyServers(D.pool, groups);
+    const toTop = makeMigrationsFolder();
     await migrateOn(D.pool, toTop.folder);
     toTop.cleanup();
-    await verifyServers(D.pool, groups);
+    await verifyConversion(D.pool, groups);
 
     // ---- C: a brand new database
     note('Banco vazio');
