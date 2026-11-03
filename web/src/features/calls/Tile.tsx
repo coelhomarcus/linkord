@@ -196,9 +196,10 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
 
       <div className={cn(
         'absolute bottom-1.5 left-1.5 flex max-w-[calc(100%-12px)] items-center gap-1.5 rounded-md border border-white/10 bg-black/85 py-1 pr-2.5',
-        showsVideo ? 'pl-1' : 'pl-2.5'
+        kind === 'screen' ? 'pl-2' : showsVideo ? 'pl-1' : 'pl-2.5'
       )}>
-        {showsVideo && <Avatar id={participantId} name={name} avatar={avatar} poster={avatarPoster} frozen={!isSpeaking} avatarColor={avatarColor} size={20} />}
+        {kind === 'screen' && <MonitorIcon size={16} weight="fill" className="flex-none text-green" />}
+        {kind !== 'screen' && showsVideo && <Avatar id={participantId} name={name} avatar={avatar} poster={avatarPoster} frozen={!isSpeaking} avatarColor={avatarColor} size={20} />}
         <span className={cn('select-none truncate font-medium text-text-primary', nameSize === 'label' ? 'text-label' : 'text-caption')}>{name}</span>
         {isDeafened ? (
           <SpeakerSlashIcon size={16} weight="fill" className="flex-none text-red" />

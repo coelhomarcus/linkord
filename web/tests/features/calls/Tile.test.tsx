@@ -87,6 +87,23 @@ describe('Tile — media aspect ratio', () => {
   });
 });
 
+describe('Tile — name pill icon', () => {
+  it('marks a screen share with a green monitor instead of the avatar', () => {
+    const screenShare = renderWithRoom(<Tile participantId="p-1" kind="screen" isMine />, {
+      state: { ...initialRoomState, me: { ...initialRoomState.me, id: 'p-1', displayName: 'Eu' } },
+    });
+    const pill = screenShare.getByText('Eu').parentElement!;
+    expect(pill.querySelector('svg.text-green')).toBeInTheDocument();
+    expect(pill.querySelector('[data-avatar], img')).not.toBeInTheDocument();
+    screenShare.unmount();
+
+    const camera = renderWithRoom(<Tile participantId="p-1" kind="camera" isMine />, {
+      state: { ...initialRoomState, me: { ...initialRoomState.me, id: 'p-1', displayName: 'Eu' } },
+    });
+    expect(camera.getByText('Eu').parentElement!.querySelector('svg.text-green')).not.toBeInTheDocument();
+  });
+});
+
 describe('Tile — video hidden for me', () => {
   it('hides another person\'s camera, and never my own camera or a shared screen', () => {
     const hidden = renderWithRoom(<Tile participantId="p-2" kind="camera" isMine={false} />, {
