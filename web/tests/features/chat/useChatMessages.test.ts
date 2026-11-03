@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { useChatMessages } from '@/features/chat/useChatMessages';
+import { playSound } from '@/shared/sounds';
+import { notifyIncomingChatMessage } from '@/shared/notifications';
 import type { ChatMessage, InvitationCard } from '@/shared/types/protocol';
 
 vi.mock('@/shared/sounds', () => ({ playSound: vi.fn() }));
@@ -148,6 +150,38 @@ describe('useChatMessages — unread', () => {
       const marks = sendWs.mock.calls.map((call) => (call as unknown as [{ t: string }])[0]).filter((msg) => msg.t === 'conversation-mark-read');
       expect(marks).toEqual([{ t: 'conversation-mark-read', conversationId: 'dm', msgId: 21 }]);
       expect(result.current.unreadByConversation.get('dm')).toBeUndefined();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe('useChatMessages — new message sound', () => {
+  it('a burst plays the sound once, while every message still notifies and counts as unread', () => {
+    vi.useFakeTimers();
+    vi.mocked(playSound).mockClear();
+    vi.mocked(notifyIncomingChatMessage).mockClear();
+    try {
+      const { result } = setup();
+      for (let msgId = 40; msgId < 45; msgId++) {
+        act(() => result.current.onChat({ t: 'chat', message: message(msgId, { conversationId: 'outra' }) }));
+        act(() => vi.advanceTimersByTime(500));
+      }
+      expect(playSound).toHaveBeenCalledTimes(1);
+      expect(notifyIncomingChatMessage).toHaveBeenCalledTimes(5);
+      expect(result.current.unreadByConversation.get('outra')).toBe(5);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('plays the mention sound, not the regular one, when the message addresses me', () => {
+    vi.useFakeTimers();
+    vi.mocked(playSound).mockClear();
+    try {
+      const { result } = setup();
+      act(() => result.current.onChat({ t: 'chat', message: message(60, { conversationId: 'outra', text: 'oi @b' }) }));
+      expect(playSound).toHaveBeenCalledExactlyOnceWith('mention');
     } finally {
       vi.useRealTimers();
     }

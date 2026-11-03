@@ -15,12 +15,14 @@ import { registerFriendshipRoutes } from '../modules/friendships/friendships.js'
 import { registerBlockRoutes } from '../modules/blocks/blocks.js';
 import { registerUserRoutes } from '../modules/users/usersRoutes.js';
 import { registerInvitationRoutes } from '../modules/conversations/invitations.js';
+import { registerCallInviteRoutes } from '../modules/calls/callInvites.js';
 import { registerNotificationRoutes } from '../modules/notifications/notificationsRoutes.js';
 import { registerClientLogRoutes } from '../modules/logs/clientLogs.js';
 import { registerLimitsRoutes } from '../modules/limits/limitsRoutes.js';
 import { registerReportRoutes } from '../modules/reports/reports.js';
 import { registerAdminRoutes } from '../modules/admin/adminRoutes.js';
 import { registerGroupMemberRoutes } from '../modules/conversations/groupMembers.js';
+import { registerSoundboardRoutes } from '../modules/soundboard/soundboard.js';
 import { registerGifRoutes } from '../modules/gifs/gifs.js';
 import { registerBotRoutes } from '../modules/bots/bots.js';
 import { registerWebhookIngressRoutes } from '../modules/bots/webhookIngress.js';
@@ -100,7 +102,9 @@ export function createApp(): FastifyInstance {
   registerBlockRoutes(fastify);
   registerUserRoutes(fastify);
   registerInvitationRoutes(fastify);
+  registerCallInviteRoutes(fastify);
   registerGroupMemberRoutes(fastify);
+  registerSoundboardRoutes(fastify);
   registerBotRoutes(fastify);
   registerWebhookIngressRoutes(fastify);
   registerReportRoutes(fastify);

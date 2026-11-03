@@ -131,6 +131,7 @@
     "tabMembers": "Members",
     "tabInvites": "Sent invitations",
     "tabWebhook": "Webhook",
+    "tabSounds": "Sounds",
     "dismiss": "Dismiss",
     "transfer": "Transfer ownership to {{name}}",
     "remove": "Remove {{name}}",

@@ -16,10 +16,8 @@
   "confirm": { "confirm": "Confirm", "cancel": "Cancel" },
   "page": { "close": "Close", "retry": "Try again", "loadingMore": "Loading more items" },
   "layout": {
-    "reconnect": "Disconnected from the server.",
+    "reconnect": "Disconnected from the server. Press F5 to reload the page.",
     "retryNow": "Reconnect now",
-    "retryShort": "Retry",
-    "retry": "Try now",
     "waitingForServer": "Waiting for the server connection...",
     "reload": "Reload",
     "unexpectedTitle": "Something went wrong",

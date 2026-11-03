@@ -1,5 +1,5 @@
-import { CellSignalLowIcon, CellSignalNoneIcon, CircleNotchIcon, EyeSlashIcon, GearIcon, MicrophoneSlashIcon, MonitorIcon, MonitorPlayIcon, SpeakerSlashIcon } from '@phosphor-icons/react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { CellSignalLowIcon, CellSignalNoneIcon, CircleNotchIcon, EyeSlashIcon, MicrophoneSlashIcon, MonitorIcon, MonitorPlayIcon, SpeakerSlashIcon } from '@phosphor-icons/react';
+import { useCallback, useEffect, useRef } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ConnectionQuality } from 'livekit-client';
@@ -34,7 +34,6 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
   const key = tileKey(participantId, kind);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const [containSize, setContainSize] = useState<{ w: number; h: number } | null>(null);
 
   const participant = isMine ? null : state.participants.get(participantId);
   const name = isMine ? state.me.displayName : (participant?.displayName ?? '');
@@ -73,34 +72,6 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
     return () => { tileDomRegistry.current.delete(key); };
   }, [key, showsVideo, videoTrack, tileDomRegistry]);
 
-  useEffect(() => {
-    if (fit !== 'contain' || !showsVideo) { setContainSize(null); return; }
-    const root = rootRef.current;
-    const video = videoRef.current;
-    const parent = root?.parentElement;
-    if (!root || !video || !parent) return;
-
-    function recompute() {
-      const ratio = video!.videoWidth && video!.videoHeight ? video!.videoWidth / video!.videoHeight : 16 / 9;
-      const { width: pw, height: ph } = parent!.getBoundingClientRect();
-      let w = pw;
-      let h = w / ratio;
-      if (h > ph) { h = ph; w = h * ratio; }
-      setContainSize({ w, h });
-    }
-
-    recompute();
-    video.addEventListener('loadedmetadata', recompute);
-    video.addEventListener('resize', recompute);
-    const ro = new ResizeObserver(recompute);
-    ro.observe(parent);
-    return () => {
-      video.removeEventListener('loadedmetadata', recompute);
-      video.removeEventListener('resize', recompute);
-      ro.disconnect();
-    };
-  }, [fit, showsVideo, videoTrack]);
-
   const isFocused = state.focusedId === key;
 
   const handleClick = useCallback(() => {
@@ -108,7 +79,7 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
   }, [dispatch, key, state.focusedId]);
 
   // Enter/Space on the tile itself toggle focus, same as a click — but not
-  // when they land on a nested real <button> (gear, unmute), which already
+  // when they land on a nested real <button> (unmute), which already
   // handles its own activation and would otherwise double-fire.
   const handleKeyDown = useCallback((e: ReactKeyboardEvent<HTMLDivElement>) => {
     if (e.target !== e.currentTarget) return;
@@ -121,11 +92,6 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
     e.preventDefault();
     e.stopPropagation();
     openTileMenu(key, participantId, kind, { left: e.clientX, top: e.clientY, right: e.clientX, bottom: e.clientY });
-  }, [key, participantId, kind, openTileMenu]);
-
-  const handleGearClick = useCallback((e: MouseEvent<HTMLButtonElement>) => {
-    e.stopPropagation();
-    openTileMenu(key, participantId, kind, e.currentTarget.getBoundingClientRect());
   }, [key, participantId, kind, openTileMenu]);
 
   const handleUnmuteClick = useCallback((e: MouseEvent<HTMLButtonElement>) => {
@@ -169,7 +135,6 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
       }`}
       style={{
         ...rootStyle,
-        ...(fit === 'contain' && containSize ? { width: containSize.w, height: containSize.h } : {}),
         ...(showSpeakingBorder ? { borderColor: tint } : {}),
       }}
       onClick={handleClick}
@@ -183,7 +148,14 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
           autoPlay
           playsInline
           muted={isMine}
-          className={`relative h-full w-full object-cover ${kind === 'screen' ? 'bg-bg-call' : ''}`}
+          className={cn(
+            'relative h-full w-full',
+            // A tile always keeps its cell's size; media of another aspect
+            // ratio is letterboxed inside it. A cover-fit preview still
+            // letterboxes once its tile goes fullscreen, so nothing is cut off.
+            fit === 'contain' ? 'object-contain' : 'object-cover [:fullscreen_&]:object-contain',
+            kind === 'screen' && 'bg-bg-call'
+          )}
           // presentation only — the track actually published/sent is never touched
           style={isMine && kind === 'camera' && mirrorCameraPreview ? { transform: 'scaleX(-1)' } : undefined}
         />
@@ -224,9 +196,10 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
 
       <div className={cn(
         'absolute bottom-1.5 left-1.5 flex max-w-[calc(100%-12px)] items-center gap-1.5 rounded-md border border-white/10 bg-black/85 py-1 pr-2.5',
-        showsVideo ? 'pl-1' : 'pl-2.5'
+        kind === 'screen' ? 'pl-2' : showsVideo ? 'pl-1' : 'pl-2.5'
       )}>
-        {showsVideo && <Avatar id={participantId} name={name} avatar={avatar} poster={avatarPoster} frozen={!isSpeaking} avatarColor={avatarColor} size={20} />}
+        {kind === 'screen' && <MonitorIcon size={16} weight="fill" className="flex-none text-green" />}
+        {kind !== 'screen' && showsVideo && <Avatar id={participantId} name={name} avatar={avatar} poster={avatarPoster} frozen={!isSpeaking} avatarColor={avatarColor} size={20} />}
         <span className={cn('select-none truncate font-medium text-text-primary', nameSize === 'label' ? 'text-label' : 'text-caption')}>{name}</span>
         {isDeafened ? (
           <SpeakerSlashIcon size={16} weight="fill" className="flex-none text-red" />
@@ -243,32 +216,18 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
         )}
       </div>
 
-      {/* one grouped pill for tile-level actions, not separate floating
-          buttons — a thin divider only appears when there's more than one */}
-      <div className="absolute left-1.5 top-1.5 flex h-6 items-stretch divide-x divide-white/10 overflow-hidden rounded-md border border-white/10 bg-black/85">
-        {hasMutableAudio && mutedForMe && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            aria-label={t('menu.unmuteAudio')}
-            onClick={handleUnmuteClick}
-            className="h-full w-7 rounded-none text-red hover:bg-white/10 hover:text-red"
-          >
-            <SpeakerSlashIcon size={16} weight="fill" />
-          </Button>
-        )}
+      {hasMutableAudio && mutedForMe && (
         <Button
           type="button"
           variant="ghost"
           size="icon-sm"
-          aria-label={t('menu.streamSettings')}
-          onClick={handleGearClick}
-          className="h-full w-7 rounded-none text-white/90 hover:bg-white/10 hover:text-white"
+          aria-label={t('menu.unmuteAudio')}
+          onClick={handleUnmuteClick}
+          className="absolute left-1.5 top-1.5 h-6 w-7 rounded-md border border-white/10 bg-black/85 text-red hover:bg-white/10 hover:text-red"
         >
-          <GearIcon size={16} />
+          <SpeakerSlashIcon size={16} weight="fill" />
         </Button>
-      </div>
+      )}
     </div>
   );
 }

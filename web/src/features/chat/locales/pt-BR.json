@@ -138,6 +138,8 @@
   "preview": {
     "invite": "Convite para o grupo {{title}}",
     "inviteUnavailable": "Convite indisponível",
+    "callInvite": "Convite para a chamada em {{title}}",
+    "callInviteUnavailable": "Convite para chamada indisponível",
     "notice": "Aviso",
     "attachment": "Anexo"
   },
@@ -152,5 +154,15 @@
     "unconfirmed": "Não foi possível confirmar o envio.",
     "attachmentFailed_one": "Um anexo não foi enviado.",
     "attachmentFailed_other": "{{count}} anexos não foram enviados."
+  },
+  "callInvite": {
+    "header": "Convite para chamada de voz",
+    "join": "Entrar na chamada de voz",
+    "return": "Voltar para a chamada",
+    "inCall_one": "{{count}} pessoa na chamada",
+    "inCall_other": "{{count}} pessoas na chamada",
+    "ended": "A chamada terminou",
+    "notMember": "Você não faz mais parte desse grupo.",
+    "unavailable": "Convite para chamada indisponível"
   }
 }

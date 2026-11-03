@@ -3,11 +3,14 @@ import { useRoom } from '../../state/RoomContext';
 import { useParticipantMedia, useAttachTrack } from './useLiveKitTrack';
 import { loadCallVolume } from '../settings/useCallVolumePreference';
 import { loadDevicePreference } from '../settings/useDevicePreference';
+import { useAudioPreferences } from './audioPreferences';
+import { getParticipantVolume, setParticipantVolume } from './participantVolume';
 
 function ParticipantAudio({ participantId }: { participantId: string }) {
   const { state, audioRegistry, audioUnlocked, deafened } = useRoom();
   const userId = state.participants.get(participantId)?.userId ?? null;
   const media = useParticipantMedia(participantId);
+  const { outputVolume } = useAudioPreferences();
   const micRef = useRef<HTMLAudioElement | null>(null);
   const screenRef = useRef<HTMLAudioElement | null>(null);
   useAttachTrack(media.micTrack, micRef);
@@ -36,7 +39,7 @@ function ParticipantAudio({ participantId }: { participantId: string }) {
       }
     }
     if (micEl) {
-      micEl.volume = userId ? loadCallVolume(userId) : 1;
+      setParticipantVolume(micEl, userId ? loadCallVolume(userId) : 1);
       audioRegistry.current.set(participantId, { element: micEl });
     }
     // Only register once there's an actual track, not just because the
@@ -45,7 +48,7 @@ function ParticipantAudio({ participantId }: { participantId: string }) {
     // (see the calls redesign plan §8.3: "não mostrar 'áudio compartilhado'
     // apenas porque foi solicitado").
     if (screenEl && media.screenAudioTrack) {
-      screenEl.volume = userId ? loadCallVolume(`${userId}:screen`) : 1;
+      setParticipantVolume(screenEl, userId ? loadCallVolume(`${userId}:screen`) : 1);
       audioRegistry.current.set(screenKey, { element: screenEl });
     } else {
       audioRegistry.current.delete(screenKey);
@@ -55,6 +58,12 @@ function ParticipantAudio({ participantId }: { participantId: string }) {
       audioRegistry.current.delete(screenKey);
     };
   }, [participantId, userId, audioRegistry, media.screenAudioTrack]);
+
+  useEffect(() => {
+    for (const el of [micRef.current, screenRef.current]) {
+      if (el) setParticipantVolume(el, getParticipantVolume(el), outputVolume);
+    }
+  }, [outputVolume]);
 
   return (
     <>

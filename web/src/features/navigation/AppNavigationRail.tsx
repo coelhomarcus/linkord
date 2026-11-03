@@ -79,7 +79,7 @@ function RailLink({ to, label, active, badge, onNavigate, children }: {
       <TooltipTrigger
         render={<AppLink to={to} onClick={onNavigate} aria-current={active ? 'page' : undefined} aria-label={label} className={cn(itemClass, stateClass(active))} />}
       >
-        {active && <ActiveFill className="shadow-highlight" />}
+        {active && <ActiveFill />}
         {active && <ActiveMarker />}
         {children}
         {!!badge && <RailBadge count={badge} />}

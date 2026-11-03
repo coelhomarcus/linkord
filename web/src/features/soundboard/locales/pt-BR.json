@@ -1,0 +1,76 @@
+{
+  "panel": {
+    "description": "Sons que qualquer pessoa do grupo pode tocar durante as chamadas.",
+    "upload": "Enviar som",
+    "slots_zero": "Nenhum espaço livre de {{max}}",
+    "slots_one": "{{count}} espaço livre de {{max}}",
+    "slots_other": "{{count}} espaços livres de {{max}}",
+    "columns": {
+      "emoji": "Emoji",
+      "name": "Nome",
+      "uploadedBy": "Enviado por"
+    },
+    "empty": "Nenhum som ainda. Envie o primeiro!",
+    "loading": "Carregando sons…",
+    "loadFailed": "Não foi possível carregar os sons.",
+    "retry": "Tentar de novo",
+    "preview": "Ouvir {{name}}",
+    "edit": "Editar {{name}}",
+    "delete": "Remover {{name}}",
+    "deletedUser": "Conta apagada",
+    "deleteFailed": "Não foi possível remover o som.",
+    "deleteConfirm": {
+      "title": "Remover som",
+      "description": "\"{{name}}\" vai sair dos sons do grupo para todo mundo.",
+      "confirm": "Remover"
+    }
+  },
+  "editor": {
+    "titleCreate": "Enviar um som",
+    "titleEdit": "Editar som",
+    "preview": "Prévia",
+    "file": "Arquivo",
+    "browse": "Navegar",
+    "noFile": "Escolha um arquivo de áudio",
+    "name": "Nome do som",
+    "emoji": "Emoji relacionado",
+    "emojiPlaceholder": "Clique para selecionar",
+    "clearEmoji": "Remover emoji",
+    "searchEmoji": "Buscar emoji…",
+    "volume": "Volume do som",
+    "required": "obrigatório",
+    "play": "Ouvir prévia",
+    "stop": "Parar prévia",
+    "trimHint": "Arraste as bordas para escolher até {{seconds}} segundos.",
+    "trimStart": "Início do trecho",
+    "trimEnd": "Fim do trecho",
+    "loadingAudio": "Lendo o áudio…",
+    "cancel": "Cancelar",
+    "submit": "Enviar",
+    "save": "Salvar",
+    "uploading": "Enviando {{percent}}%",
+    "saving": "Salvando…",
+    "errors": {
+      "decodeFailed": "Não foi possível ler esse arquivo de áudio.",
+      "fileTooLarge": "Arquivo grande demais (máximo {{max}}).",
+      "uploadFailed": "Não foi possível enviar o som.",
+      "saveFailed": "Não foi possível salvar o som."
+    }
+  },
+  "picker": {
+    "open": "Efeitos sonoros",
+    "search": "Encontre o som perfeito",
+    "empty": "Este grupo ainda não tem sons.",
+    "emptyHint": "Envie sons na aba Sons dos detalhes do grupo.",
+    "noResults": "Nenhum som encontrado.",
+    "loading": "Carregando sons…",
+    "loadFailed": "Não foi possível carregar os sons.",
+    "volume": "Volume dos efeitos sonoros",
+    "play": "Tocar {{name}}"
+  },
+  "errors": {
+    "invalid_sound": "Não foi possível ler esse áudio.",
+    "sound_too_long": "O som pode ter no máximo 5 segundos.",
+    "soundboard_full": "O grupo já usou todos os espaços de som."
+  }
+}

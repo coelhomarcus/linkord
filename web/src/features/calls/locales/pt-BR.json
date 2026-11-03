@@ -19,6 +19,7 @@
     "shareStop": "Parar compartilhamento",
     "fullscreenEnter": "Tela cheia",
     "fullscreenExit": "Sair da tela cheia",
+    "callSettings": "Ajustes da chamada",
     "leaveCall": "Sair da chamada",
     "openChat": "Abrir chat",
     "closeChat": "Fechar chat",
@@ -28,6 +29,12 @@
     "settings": "Ajustes",
     "previousStream": "Transmissão anterior",
     "nextStream": "Próxima transmissão"
+  },
+  "callSettings": {
+    "title": "Exibição da chamada",
+    "hideAudioOnly": "Ocultar participantes sem vídeo",
+    "banners": "Mostrar banners dos participantes",
+    "stats": "Mostrar estatísticas"
   },
   "chat": {
     "title": "Chat da chamada"
@@ -74,24 +81,38 @@
     "bitrate": "Bitrate: {{value}} kbps",
     "resolution": "Resolução: {{value}}",
     "onAir": "No ar: {{value}}",
-    "removeFromCall": "Remover da chamada",
-    "streamSettings": "Configurações da transmissão"
+    "removeFromCall": "Remover da chamada"
   },
   "devices": {
     "permission": "Permitir acesso aos dispositivos",
     "listFailed": "Não foi possível listar dispositivos.",
     "none": "Nenhum dispositivo encontrado.",
     "unnamed": "Dispositivo sem nome",
-    "fullSettings": "Configurações completas",
     "micSettings": "Configurações do microfone",
     "audioOutputSettings": "Configurações de saída de áudio",
     "screenSettings": "Configurações de compartilhamento de tela",
     "cameraSettings": "Configurações da câmera",
-    "audioInput": "Entrada de áudio",
     "microphone": "Microfone",
-    "audioOutput": "Saída de áudio",
     "speaker": "Alto-falante",
-    "camera": "Câmera"
+    "camera": "Câmera",
+    "voiceSettings": "Configurações de voz",
+    "videoSettings": "Configurações de vídeo",
+    "inputDevice": "Dispositivo de entrada",
+    "outputDevice": "Dispositivo de saída",
+    "inputProfile": "Perfil de entrada",
+    "inputVolume": "Volume de entrada",
+    "outputVolume": "Volume de saída",
+    "inputLevel": "Nível de entrada",
+    "profiles": {
+      "voice-isolation": {
+        "label": "Isolamento de voz",
+        "description": "Reduz ruído de fundo e eco"
+      },
+      "studio": {
+        "label": "Estúdio",
+        "description": "Áudio puro, sem processamento. Use fones para evitar eco"
+      }
+    }
   },
   "quality": {
     "game": "Jogo (1440p, 60 fps)",
@@ -130,5 +151,27 @@
     "pausePreview": "Não foi possível pausar a prévia: {{error}}",
     "resumePreview": "Não foi possível retomar a prévia: {{error}}",
     "joinCall": "Não foi possível conectar à chamada. Verifique sua conexão e tente de novo."
+  },
+  "invite": {
+    "button": "Convidar para voz",
+    "tileTitle": "Ainda não chegou ninguém",
+    "tileHint": "Chame alguém do grupo para a chamada.",
+    "title": "Convidar para a chamada em {{group}}",
+    "description": "O convite chega na conversa privada de vocês, com um botão para entrar.",
+    "search": "Buscar membros",
+    "members": "Membros do grupo",
+    "noMatch": "Ninguém com esse nome.",
+    "everyoneHere": "Todo mundo do grupo já está na chamada.",
+    "notFriends": "Só amigos recebem convite",
+    "invite": "Convidar",
+    "sending": "Enviando…",
+    "sent": "Enviado",
+    "errors": {
+      "failed": "Não foi possível enviar o convite.",
+      "notFriends": "Vocês precisam ser amigos.",
+      "alreadyInCall": "Já está na chamada.",
+      "rateLimited": "Convite enviado há pouco. Espere um pouco.",
+      "notInCall": "Entre na chamada para convidar."
+    }
   }
 }

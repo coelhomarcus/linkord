@@ -30,5 +30,6 @@ export function useMessageReactions(sendWs: (msg: ClientMessage) => void, myIdRe
     pushReaction(m.id, m.emoji);
   }, [pushReaction]);
 
-  return { reactions, sendReaction, onReaction };
+  // the soundboard floats a played sound's emoji the same way
+  return { reactions, sendReaction, onReaction, showReaction: pushReaction };
 }

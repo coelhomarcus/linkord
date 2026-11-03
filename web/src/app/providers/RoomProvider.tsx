@@ -18,6 +18,7 @@ import { useChatMessages } from '@/features/chat/useChatMessages';
 import type { ChatView } from '@/features/chat/useChatMessages';
 import { useTypingIndicator } from '@/state/hooks/useTypingIndicator';
 import { useMessageReactions } from '@/features/calls/useMessageReactions';
+import { useSoundboardEvents } from '@/features/soundboard/useSoundboardEvents';
 import { useMessageSearch } from '@/features/chat/useMessageSearch';
 import { useStorageUsage } from '@/features/chat/useStorageUsage';
 import { usePresence } from '@/state/hooks/usePresence';
@@ -75,6 +76,9 @@ export function RoomProvider({ children }: { children: ReactNode }) {
   const requestChatViewRef = useRef<((conversationId?: string) => void) | null>(null);
   const registerRequestChatView = useCallback((fn: (conversationId?: string) => void) => { requestChatViewRef.current = fn; }, []);
   const requestChatView = useCallback((conversationId?: string) => { requestChatViewRef.current?.(conversationId); }, []);
+  const openCallRef = useRef<((conversationId: string) => void) | null>(null);
+  const registerOpenCall = useCallback((fn: (conversationId: string) => void) => { openCallRef.current = fn; }, []);
+  const openCall = useCallback((conversationId: string) => { openCallRef.current?.(conversationId); }, []);
 
   // 'forbidden'/'conflict'/'not_found' over the socket are, today, only
   // ever group-action denials (conversations.ts) — rename/delete/members/
@@ -122,6 +126,11 @@ export function RoomProvider({ children }: { children: ReactNode }) {
   const callLifecycle = useCallLifecycle({
     livekitRoom, dispatch, sendWs, stopCamera, stopSharing, activateMic, setMicMuted, leaveMic,
     cameraOn: state.me.cameraOn, sharing: state.me.sharing,
+  });
+  const soundboardEvents = useSoundboardEvents({
+    activeCallConversationId: callLifecycle.activeCallConversationId,
+    deafened: callLifecycle.deafened,
+    showReaction: messageReactions.showReaction,
   });
 
   const profileUpdate = useProfileUpdate({
@@ -215,6 +224,12 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         break;
       case 'reaction':
         messageReactions.onReaction(m);
+        break;
+      case 'soundboard-play':
+        soundboardEvents.onSoundboardPlay(m);
+        break;
+      case 'group-sounds-changed':
+        soundboardEvents.onGroupSoundsChanged(m);
         break;
       case 'conversation-opened':
         conversationsList.onConversationOpened(m, openConversation);
@@ -353,7 +368,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
     }
   }, [
     dispatch, conversationsList, presence, attachmentsUpload, openConversation, sendWs, callLifecycle,
-    messageReactions, messageSearch, chatMessages, typingIndicator, disconnectIntentionally, profileUpdate,
+    messageReactions, messageSearch, chatMessages, typingIndicator, disconnectIntentionally, profileUpdate, soundboardEvents,
   ]);
 
   const { retryConnection } = useSocketConnection({ socketRef, intentionalCloseRef, sendWs, dispatch, refreshAuth, onMessage: handleServerMessage });
@@ -383,7 +398,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         preferMuted: callLifecycle.preferMuted, setPreferMuted: callLifecycle.setPreferMuted,
         reconnecting: callLifecycle.reconnecting,
         livekitRoom, notifyActiveView,
-        registerRequestChatView, requestChatView,
+        registerRequestChatView, requestChatView, registerOpenCall, openCall,
         activeCallConversationId: callLifecycle.activeCallConversationId, joinCall: callLifecycle.joinCall, leaveCall: callLifecycle.leaveCall,
         startSharing, stopSharing, changeSource, pauseSharePreview, resumeSharePreview,
         shareQuality: roomSettings.shareQuality, setShareQuality: roomSettings.setShareQuality,

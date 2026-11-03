@@ -28,6 +28,10 @@ describe('messagePermissions', () => {
     expect(messagePermissions(msg({ kind: 'group_invite', text: '' }), { userId: 'autor', role: 'user' })).toEqual({ react: false, reply: false, copy: false, edit: false, delete: true, report: false, removeAttachment: false, removeEmbed: false });
   });
 
+  it('call invite card: no react, reply, edit or report, but its author may delete it', () => {
+    expect(messagePermissions(msg({ kind: 'call_invite', text: '' }), { userId: 'autor', role: 'user' })).toEqual({ react: false, reply: false, copy: false, edit: false, delete: true, report: false, removeAttachment: false, removeEmbed: false });
+  });
+
   it('removing an attachment: only while the message keeps something else, by its author or an admin', () => {
     const photo = { id: 'f1', name: 'f1.png', mime: 'image/png', size: 1 };
     expect(messagePermissions(msg({ text: '', attachments: [photo] }), { userId: 'autor', role: 'user' }).removeAttachment).toBe(false);

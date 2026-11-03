@@ -21,6 +21,14 @@ vi.mock('@/features/calls/CallChatToggleButton', () => ({
   ),
 }));
 
+// one avatar tile per id, so a test can say who is in the call through allIds alone
+vi.mock('@/features/calls/useCallTiles', () => ({
+  useCallTiles: (ids: string[]) => ids.map((id) => ({ key: `${id}:participant`, participantId: id, kind: 'avatar', loading: false, paused: false })),
+}));
+vi.mock('@/features/calls/CallInviteTile', () => ({
+  CallInviteTile: ({ conversationId }: { conversationId: string }) => <div data-testid="invite-tile" data-conversation-id={conversationId} />,
+}));
+
 const tileGridSpy = vi.fn();
 vi.mock('@/features/calls/TileGrid', () => ({
   TileGrid: (props: { onCapacityChange?: (meetsMinimum: boolean, key: string | null) => void }) => {
@@ -169,5 +177,28 @@ describe("Stage — capacity fallback (TileGrid can't fit everyone -> automatic 
     });
     lastOnCapacityChange()(false, 'p-3:avatar');
     expect(dispatch).not.toHaveBeenCalled();
+  });
+
+  describe('invite tile', () => {
+    const conversation = (type: 'group' | 'direct') => ({
+      id: 'c1', type, title: 'Squad', avatar: '', createdBy: 'me', memberIds: ['me', 'ana'],
+      lastMessageAt: null, createdAt: 1, updatedAt: 1, pinnedAt: null, myRole: 'owner' as const, ownerId: 'me', memberCount: 2,
+    });
+    const lastExtraTile = () => tileGridSpy.mock.calls.at(-1)![0].extraTile as React.ReactElement<{ conversationId: string }> | undefined;
+
+    it('fills the empty seat while you are alone in a group call', () => {
+      renderStage({ allIds: ['me'], chatOpen: false, onToggleChat: vi.fn() }, { activeCallConversationId: 'c1', conversations: [conversation('group')] });
+      expect(lastExtraTile()?.props.conversationId).toBe('c1');
+    });
+
+    it('goes away once someone else is in the call', () => {
+      renderStage({ allIds: ['me', 'ana'], chatOpen: false, onToggleChat: vi.fn() }, { activeCallConversationId: 'c1', conversations: [conversation('group')] });
+      expect(lastExtraTile()).toBeUndefined();
+    });
+
+    it('a private call has nobody else to invite', () => {
+      renderStage({ allIds: ['me'], chatOpen: false, onToggleChat: vi.fn() }, { activeCallConversationId: 'c1', conversations: [conversation('direct')] });
+      expect(lastExtraTile()).toBeUndefined();
+    });
   });
 });

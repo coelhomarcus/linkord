@@ -56,6 +56,14 @@ export interface InvitationCard {
   version: number;
 }
 
+/** The group a `call_invite` message points at. Who is in that call is not
+ * part of it: the card reads that live from presence. */
+export interface CallInviteCard {
+  groupId: string;
+  groupTitle: string;
+  groupAvatar: string;
+}
+
 export interface ChatMessage {
   msgId: number;
   conversationId: string;
@@ -68,9 +76,11 @@ export interface ChatMessage {
   editedAt?: number;
   reactions?: Partial<Record<ReactionEmoji, string[]>>;
   attachments?: ChatAttachment[];
-  kind?: 'text' | 'group_invite';
+  kind?: 'text' | 'group_invite' | 'call_invite';
   // `null` on a group_invite message = the group is gone (tombstone)
   invitation?: InvitationCard | null;
+  // the group whose call a call_invite asks to join; `null` once it's gone
+  callInvite?: CallInviteCard | null;
   // the author's send key, present when the send was correlated — lets the
   // author's client swap its pending copy for this one without remounting
   clientMessageId?: string;
@@ -220,6 +230,7 @@ export type ClientMessage =
   | { t: 'call-join'; conversationId: string }
   | { t: 'call-leave' }
   | { t: 'call-kick'; participantId: string }
+  | { t: 'soundboard-play'; conversationId: string; soundId: string }
   | { t: 'leave' }
   | { t: 'ping' };
 
@@ -254,6 +265,9 @@ export type ServerMessage =
   | { t: 'participant-updated'; participant: Participant }
   | { t: 'participant-left'; id: string }
   | { t: 'reaction'; id: string; emoji: ReactionEmoji }
+  | { t: 'soundboard-play'; conversationId: string; soundId: string; participantId: string; emoji: string; volume: number }
+  // payload-free like social-changed: the list itself comes from GET /api/groups/:id/sounds
+  | { t: 'group-sounds-changed'; conversationId: string }
   | { t: 'message-search-results'; query: string; conversationId?: string; results: SearchResult[] }
   | { t: 'chat'; message: ChatMessage }
   | { t: 'chat-send-result'; requestId: string; clientMessageId: string; message?: ChatMessage; error?: { code: string; message: string } }

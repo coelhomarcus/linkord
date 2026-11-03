@@ -5,7 +5,7 @@
 <h1 align="center">Linkord</h1>
 
 <p align="center">
-  Comunicação em tempo real, self-hosted — amigos, grupos e chamadas.
+  Self-hosted real-time communication: friends, groups and calls.
 </p>
 
 <p align="center">
@@ -14,126 +14,122 @@
   </a>
 </p>
 
-## O que é
+## What it is
 
-Linkord é uma plataforma de chat e chamadas self-hosted, no estilo Discord — mas organizada por **amigos e grupos**, não por servidores/canais públicos. Cada conta adiciona amigos por `@username` exato, conversa por DM ou cria grupos próprios (com convite e aceite), e chama por voz/vídeo/tela dentro dessas conversas.
+Linkord is a self-hosted chat and calling platform, Discord-style, but organized around **friends and groups** rather than public servers and channels. Each account adds friends by exact `@username`, talks over DMs or creates its own groups (with invites and acceptance), and calls by voice, video or screen share inside those conversations.
 
-- **Amigos**: pedido de amizade, aceitar/recusar, bloqueio
-- **Conversas**: DMs e grupos — qualquer conta pode criar um grupo e é dona dele (renomear, convidar, remover membro, transferir posse)
-- **Chat**: anexos (upload em chunks, até 2GB), embeds automáticos (YouTube/Twitch/mídia direta/Open Graph), reações, respostas, editar/apagar mensagem, busca
-- **Chamadas**: voz, câmera e compartilhamento de tela por conversa (LiveKit)
-- **Administração** (`/admin`): usuários, grupos, denúncias, log de auditoria e limpeza de arquivos órfãos
-- **Ajustes**: perfil, conta/segurança, dispositivos de áudio/vídeo, notificações, preferências, privacidade (bloqueados)
+- **Friends**: friend requests, accept/decline, blocking
+- **Conversations**: DMs and groups. Any account can create a group and owns it (rename, invite, remove members, transfer ownership)
+- **Chat**: attachments (chunked uploads, up to 2GB), automatic embeds (YouTube/Twitch/direct media/Open Graph), reactions, replies, edit/delete messages, search
+- **Calls**: voice, camera and screen sharing per conversation (LiveKit)
+- **Administration** (`/admin`): users, groups, reports, audit log and orphaned file cleanup
+- **Settings**: profile, account/security, audio/video devices, notifications, preferences, privacy (blocked users)
 
 ## Stack
 
 - **Frontend**: React + TypeScript + Vite, Tailwind
-- **Backend**: Node.js + TypeScript (ESM) com Fastify + Socket.IO
-- **Banco**: PostgreSQL via Drizzle ORM
-- **Vídeo/áudio**: LiveKit Cloud (WebRTC)
+- **Backend**: Node.js + TypeScript (ESM) with Fastify + Socket.IO
+- **Database**: PostgreSQL via Drizzle ORM
+- **Video/audio**: LiveKit Cloud (WebRTC)
 
-## Rodando localmente
+## Running locally
 
-Requer Node.js 22+ e um Postgres acessível (`DATABASE_URL`). Pra um Postgres local via Docker, sem depender de nada externo:
+Requires Node.js 22+ and a reachable Postgres (`DATABASE_URL`). For a local Postgres via Docker, with no external dependencies:
 
 ```bash
-docker compose -f docker-compose.dev.yml up -d   # só o Postgres, isolado de produção
+docker compose -f docker-compose.dev.yml up -d   # Postgres only, isolated from production
 ```
 
-Isso sobe em `localhost:5432` com usuário/senha/banco `linkord`/`linkord`/`linkord` — bate com o `DATABASE_URL` de exemplo do `.env.example`.
+This starts on `localhost:5432` with user/password/database `linkord`/`linkord`/`linkord`, which matches the example `DATABASE_URL` in `.env.example`.
 
 ```bash
 npm install
-cp .env.example .env   # preencha DATABASE_URL, LIVEKIT_*, REGISTRATION_CODE, etc.
+cp .env.example .env   # fill in DATABASE_URL, LIVEKIT_*, REGISTRATION_CODE, etc.
 npm run db:migrate
-npm run dev             # server (watch) + web (Vite) juntos
+npm run dev             # server (watch) + web (Vite) together
 ```
 
-O frontend sobe em `http://localhost:5173` (proxy pro backend em `:3000`).
+The frontend runs at `http://localhost:5173` (proxying to the backend on `:3000`).
 
-### Notificações Web Push
+### Web Push notifications
 
-Gere um par VAPID uma vez com `npx web-push generate-vapid-keys` e configure
-`PUSH_VAPID_PUBLIC_KEY`, `PUSH_VAPID_PRIVATE_KEY` e `PUSH_VAPID_SUBJECT`
-(por exemplo, `mailto:admin@seu-dominio.com`) no servidor. Guarde a chave
-privada e reutilize o mesmo par em todos os deploys. Se trocar as chaves, o app
-refaz a assinatura quando o usuário abrir o Linkord novamente; até lá, as
-notificações antigas deixam de chegar. Sem essas variáveis, o app funciona,
-mas a opção de Push aparece indisponível.
+Generate a VAPID key pair once with `npx web-push generate-vapid-keys` and set
+`PUSH_VAPID_PUBLIC_KEY`, `PUSH_VAPID_PRIVATE_KEY` and `PUSH_VAPID_SUBJECT`
+(for example, `mailto:admin@your-domain.com`) on the server. Keep the private
+key safe and reuse the same pair across all deploys. If you change the keys, the
+app resubscribes the next time the user opens Linkord; until then, notifications
+for the old subscription stop arriving. Without these variables the app still
+works, but the Push option shows up as unavailable.
 
-Em produção, configure `APP_URL` com a origem HTTPS pública e permita conexões
-de saída do servidor aos serviços de push dos navegadores. Cada usuário ativa
-as notificações em **Ajustes → Notificações** em cada aparelho. No iPhone/iPad
-(iOS 16.4+), primeiro adicione o site à Tela de Início, abra pelo ícone e então
-ative a opção; uma aba comum do Safari não recebe Web Push. No Android Chrome,
-a instalação na Tela de Início é opcional.
+In production, set `APP_URL` to the public HTTPS origin and allow outbound
+connections from the server to the browsers' push services. Each user enables
+notifications under **Settings → Notifications** on each device. On iPhone/iPad
+(iOS 16.4+), first add the site to the Home Screen, open it from the icon and
+then enable the option; a regular Safari tab does not receive Web Push. On
+Android Chrome, installing to the Home Screen is optional.
 
-Mensagens, menções, solicitações de amizade e convites geram Push mesmo com o
-app fechado. A entrega depende da permissão do sistema, da conexão do aparelho
-e do prazo de validade definido pelo serviço de push. O histórico de mensagens
-continua no banco e é carregado ao abrir o Linkord.
+Messages, mentions, friend requests and invites trigger Push even with the app
+closed. Delivery depends on the system permission, the device's connection and
+the expiry time set by the push service. Message history stays in the database
+and is loaded when Linkord is opened.
 
-O ícone do app usa a Badging API quando o navegador a oferece. O número é a
-soma de mensagens não lidas e notificações sociais não lidas; menções e cartões
-de convite não são contados duas vezes. O app consulta o servidor ao abrir,
-voltar ao foco e receber Push, e limpa o badge quando não há pendências ou ao
-sair da conta. No iPhone/iPad, o número aparece no app instalado na Tela de
-Início após a permissão de notificações; ao desativar as notificações do Linkord,
-o badge é removido. No Chrome Android, o sistema mostra
-um ponto ao receber notificação, sem contagem numérica pela Badging API.
-Veja a [documentação do WebKit](https://webkit.org/blog/14112/badging-for-home-screen-web-apps/)
-e a [referência da MDN](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/How_to/Display_badge_on_app_icon).
+The app icon uses the Badging API when the browser offers it. The number is the
+sum of unread messages and unread social notifications; mentions and invite
+cards are not counted twice. The app queries the server on open, on regaining
+focus and on receiving Push, and clears the badge when there is nothing pending
+or on sign-out. On iPhone/iPad, the number appears on the app installed to the
+Home Screen after notification permission is granted; turning off Linkord
+notifications removes the badge. On Android Chrome, the system shows a dot when
+a notification arrives, with no numeric count through the Badging API.
+See the [WebKit documentation](https://webkit.org/blog/14112/badging-for-home-screen-web-apps/)
+and the [MDN reference](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/How_to/Display_badge_on_app_icon).
 
-Cadastro é fechado por padrão (`REGISTRATION_CODE` vazio = ninguém se cadastra). Depois de criar sua conta, vire admin com:
+Registration is closed by default (an empty `REGISTRATION_CODE` means nobody can sign up). After creating your account, become an admin with:
 
 ```bash
-npm run admin:grant -- <seu-username>
+npm run admin:grant -- <your-username>
 ```
 
-### Scripts principais
+### Main scripts
 
-| Script | O que faz |
+| Script | What it does |
 |---|---|
-| `npm run dev` | Backend (`tsx --watch`) + frontend (Vite) em paralelo |
-| `npm run build` | Compila o backend (`tsc`) e builda o frontend (`vite build`) |
-| `npm start` | Roda o backend já compilado (`server/dist/index.js`) |
-| `npm test` | Testes do backend (`node --test`) e do frontend (`vitest`) |
-| `npm run db:generate` | Gera uma migration nova a partir de `server/src/db/schema.ts` |
-| `npm run db:migrate` | Aplica as migrations pendentes |
-| `npm run admin:grant -- <username>` | Concede papel de admin a uma conta existente |
+| `npm run dev` | Backend (`tsx --watch`) + frontend (Vite) in parallel |
+| `npm run build` | Compiles the backend (`tsc`) and builds the frontend (`vite build`) |
+| `npm start` | Runs the already compiled backend (`server/dist/index.js`) |
+| `npm test` | Backend tests (`node --test`) and frontend tests (`vitest`) |
+| `npm run db:generate` | Generates a new migration from `server/src/db/schema.ts` |
+| `npm run db:migrate` | Applies pending migrations |
+| `npm run admin:grant -- <username>` | Grants the admin role to an existing account |
 
-## Testes
+## Tests
 
-- **Backend**: `node --test` (`server/tests/**/*.test.ts`) — não precisa de Postgres nem LiveKit de verdade rodando.
+- **Backend**: `node --test` (`server/tests/**/*.test.ts`). Needs neither a real Postgres nor LiveKit running.
 - **Frontend**: Vitest + React Testing Library (`web/tests/**/*.test.tsx`).
 
 ```bash
 npm test              # backend + frontend
-npm run test:server   # só o backend
-npm run test:web      # só o frontend
+npm run test:server   # backend only
+npm run test:web      # frontend only
 ```
 
-Roda automaticamente em todo push/PR pra `main`/`develop` ([`.github/workflows/test.yml`](.github/workflows/test.yml)).
+Runs automatically on every push/PR to `main`/`develop` ([`.github/workflows/test.yml`](.github/workflows/test.yml)).
 
-## Variáveis de ambiente
+## Environment variables
 
-Veja [`.env.example`](.env.example) — cobre servidor, banco, contas/sessão, LiveKit, upload e limites de abuso.
+See [`.env.example`](.env.example). It covers server, database, accounts/session, LiveKit, uploads and abuse limits.
 
 ## Deploy
 
-A imagem é construída pelo [`Dockerfile`](Dockerfile) (multi-stage: builda o frontend, compila o backend TypeScript, e monta um runtime enxuto sem devDependencies nem código-fonte). Produção roda via [Dokploy](https://dokploy.com) a partir desse `Dockerfile` — sem proxy reverso nem systemd no repositório, o Dokploy já cuida de domínio, HTTPS e do proxy na frente.
+The image is built by the [`Dockerfile`](Dockerfile) (multi-stage: builds the frontend, compiles the TypeScript backend, and assembles a lean runtime with no devDependencies or source code). Production runs on [Dokploy](https://dokploy.com) from that `Dockerfile`, with no reverse proxy or systemd in the repository, since Dokploy already handles the domain, HTTPS and the proxy in front.
 
-Pra rodar localmente com Docker (app + Postgres, tudo em container):
+To run locally with Docker (app + Postgres, all in containers):
 
 ```bash
 cp .env.example .env
 docker compose -f docker-compose.dev.yml -f docker-compose.yml up -d
 ```
 
-## Nota sobre áudios
-
-Os áudios de notificação usados atualmente no projeto são de autoria do Discord e estão presentes apenas para fins de teste durante o desenvolvimento — serão substituídos em breve.
-
-## Licença
+## License
 
 [MIT](LICENSE)

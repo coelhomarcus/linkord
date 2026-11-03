@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import { and, eq, inArray, isNull, or } from 'drizzle-orm';
 import { db } from '../../db/client.js';
-import { attachments as attachmentsTable, conversations, messages, users } from '../../db/schema.js';
+import { attachments as attachmentsTable, conversations, groupSounds, messages, users } from '../../db/schema.js';
 import { filePathFor } from './attachmentStorage.js';
 
 // Deleting the on-disk file(s) when whatever owned them (a message, a whole
@@ -53,7 +53,9 @@ export async function deleteForConversation(conversationId: string): Promise<voi
     .from(attachmentsTable)
     .innerJoin(messages, eq(attachmentsTable.messageId, messages.id))
     .where(eq(messages.conversationId, conversationId));
-  await Promise.all(rows.map((row) => fs.unlink(filePathFor(row.id)).catch((err: NodeJS.ErrnoException) => { if (err.code !== 'ENOENT') throw err; })));
+  // the group's soundboard files go with it too (their rows cascade the same way)
+  const sounds = await db.select({ id: groupSounds.id }).from(groupSounds).where(eq(groupSounds.conversationId, conversationId));
+  await Promise.all([...rows, ...sounds].map((row) => fs.unlink(filePathFor(row.id)).catch((err: NodeJS.ErrnoException) => { if (err.code !== 'ENOENT') throw err; })));
 }
 
 /** Whether `url` (already passed through sanitizeAvatar/sanitizeBanner) is

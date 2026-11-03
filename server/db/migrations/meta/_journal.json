@@ -288,6 +288,20 @@
       "when": 1793507837279,
       "tag": "0040_user_locale",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1793714258978,
+      "tag": "0041_group_sounds",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1793714346476,
+      "tag": "0042_call_invites",
+      "breakpoints": true
     }
   ]
 }

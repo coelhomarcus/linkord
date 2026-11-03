@@ -1,4 +1,5 @@
 import { fireEvent, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { Room, Track } from 'livekit-client';
 import { initialRoomState } from '@/state/roomReducer';
@@ -42,6 +43,18 @@ describe('CallControlBar', () => {
     expect(screen.getByRole('status')).toHaveTextContent('permissões do site');
   });
 
+  it('offers the soundboard in a group call only', () => {
+    const conversation = (type: 'group' | 'direct') => ({
+      id: 'c1', type, title: '', avatar: '', createdBy: null, memberIds: [], lastMessageAt: null,
+      createdAt: 0, updatedAt: 0, pinnedAt: null, myRole: 'member' as const, ownerId: null, memberCount: 2,
+    });
+    const { unmount } = renderWithRoom(<CallControlBar />, { activeCallConversationId: 'c1', conversations: [conversation('group')] });
+    expect(screen.getByLabelText('Efeitos sonoros')).toBeInTheDocument();
+    unmount();
+    renderWithRoom(<CallControlBar />, { activeCallConversationId: 'c1', conversations: [conversation('direct')] });
+    expect(screen.queryByLabelText('Efeitos sonoros')).not.toBeInTheDocument();
+  });
+
   it('triggers leaveCall when clicking leave call', () => {
     const leaveCall = vi.fn();
     renderWithRoom(<CallControlBar />, { leaveCall });
@@ -73,5 +86,18 @@ describe('CallControlBar', () => {
     renderWithRoom(<CallControlBar />, { isCallFullscreen: true });
     expect(screen.getByLabelText('Sair da tela cheia')).toBeInTheDocument();
     expect(screen.queryByLabelText('Tela cheia')).not.toBeInTheDocument();
+  });
+
+  it('call settings dropdown flips the display preferences', async () => {
+    const user = userEvent.setup();
+    const setShowStats = vi.fn();
+    const setHideAudioOnlyTiles = vi.fn();
+    renderWithRoom(<CallControlBar />, { showStats: false, setShowStats, hideAudioOnlyTiles: false, setHideAudioOnlyTiles });
+    await user.click(screen.getByLabelText('Ajustes da chamada'));
+    await user.click(await screen.findByRole('menuitemcheckbox', { name: 'Mostrar estatísticas' }));
+    expect(setShowStats).toHaveBeenCalledWith(true, expect.anything());
+    expect(setHideAudioOnlyTiles).not.toHaveBeenCalled();
+    expect(screen.getByRole('menuitemcheckbox', { name: 'Ocultar participantes sem vídeo' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitemcheckbox', { name: 'Mostrar banners dos participantes' })).toBeInTheDocument();
   });
 });

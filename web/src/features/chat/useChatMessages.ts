@@ -11,6 +11,7 @@ import { useMessageActionRequests } from './useMessageActionRequests';
 import { useReactionIntents } from './useReactionIntents';
 import { MAX_WINDOW, withNewerMessages, withOlderPage, withPresentPage } from './historyWindow';
 import { markArrival } from './arrivals';
+import { createMessageSoundThrottle } from './messageSoundThrottle';
 import type { ReactionParticipantsTarget } from './reactionParticipants';
 import type { ChatMessage, ClientMessage, Conversation, PublicUser, ReactionEmoji, ServerMessage } from '@/shared/types/protocol';
 
@@ -122,6 +123,7 @@ export function useChatMessages(deps: ChatMessagesDeps) {
   // messages after it are still unread. Once they were seen, the next arrival
   // starts a new one. State would lag behind two arrivals in the same tick.
   const unreadCountsRef = useRef(new Map<string, number>());
+  const [shouldChime] = useState(createMessageSoundThrottle);
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
   const [editingMsgId, setEditingMsgId] = useState<number | null>(null);
   // which message's full reaction list is open — shared by the row menu and
@@ -465,17 +467,18 @@ export function useChatMessages(deps: ChatMessagesDeps) {
     if (m.message.id) clearTypingEntry(conversationId, m.message.id);
     const amLookingAtIt = document.hasFocus() && activeViewRef.current === 'chat' && conversationId === activeConversationIdRef.current;
     if (m.message.id !== myUserIdRef.current && !amLookingAtIt) {
-      playSound('newMessage');
+      const mentioned = mentionsUsername(m.message.text, myUsernameRef.current);
+      if (shouldChime(conversationId, mentioned)) playSound(mentioned ? 'mention' : 'newMessage');
       notifyIncomingChatMessage({
         conversationId,
         conversationName: conversationTitle(conversationsRef.current.find((c) => c.id === conversationId), myUserIdRef.current, allUsersRef.current),
         senderId: m.message.id,
         senderName: (m.message.id ? allUsersRef.current.get(m.message.id)?.displayName : undefined) ?? m.message.name,
         text: messagePreviewText(m.message),
-        mentioned: mentionsUsername(m.message.text, myUsernameRef.current),
+        mentioned,
       });
     }
-  }, [activeConversationIdRef, clearTypingEntry, activeViewRef, myUserIdRef, conversationsRef, allUsersRef, myUsernameRef, onPendingEcho, insertConfirmed, queueMarkRead]);
+  }, [activeConversationIdRef, clearTypingEntry, activeViewRef, myUserIdRef, conversationsRef, allUsersRef, myUsernameRef, onPendingEcho, insertConfirmed, queueMarkRead, shouldChime]);
 
   const onChatDeleted = useCallback((m: Extract<ServerMessage, { t: 'chat-deleted' }>) => {
     setMessagesByConversation((prev) => {

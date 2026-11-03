@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import { config } from '../../config/env.js';
 import { db } from '../../db/client.js';
-import { attachments } from '../../db/schema.js';
+import { attachments, groupSounds } from '../../db/schema.js';
 import { recordAudit, recordAuditFailure, type AuditActor } from '../admin/auditLog.js';
 import { filePathFor } from './attachmentStorage.js';
 import { stagedFileIds } from './stagedAttachments.js';
@@ -111,7 +111,11 @@ async function runSweep(opts: { dryRun: boolean; actor: AuditActor | null; reque
   // in at least one. Attachments first would miss a file published between the
   // two reads — in neither list, and old enough to be collected.
   const staged = await stagedFileIds();
-  const dbIds = new Set([...staged, ...(await db.select({ id: attachments.id }).from(attachments)).map((r) => r.id)]);
+  const dbIds = new Set([
+    ...staged,
+    ...(await db.select({ id: attachments.id }).from(attachments)).map((r) => r.id),
+    ...(await db.select({ id: groupSounds.id }).from(groupSounds)).map((r) => r.id),
+  ]);
   const { orphans, recent, missingFiles } = classifyOrphans({ files, dbIds, now: Date.now(), graceMs: config.ORPHAN_GRACE_MS });
 
   let deleted = 0;
