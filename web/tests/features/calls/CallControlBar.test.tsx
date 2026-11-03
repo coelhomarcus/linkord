@@ -43,6 +43,18 @@ describe('CallControlBar', () => {
     expect(screen.getByRole('status')).toHaveTextContent('permissões do site');
   });
 
+  it('offers the soundboard in a group call only', () => {
+    const conversation = (type: 'group' | 'direct') => ({
+      id: 'c1', type, title: '', avatar: '', createdBy: null, memberIds: [], lastMessageAt: null,
+      createdAt: 0, updatedAt: 0, pinnedAt: null, myRole: 'member' as const, ownerId: null, memberCount: 2,
+    });
+    const { unmount } = renderWithRoom(<CallControlBar />, { activeCallConversationId: 'c1', conversations: [conversation('group')] });
+    expect(screen.getByLabelText('Efeitos sonoros')).toBeInTheDocument();
+    unmount();
+    renderWithRoom(<CallControlBar />, { activeCallConversationId: 'c1', conversations: [conversation('direct')] });
+    expect(screen.queryByLabelText('Efeitos sonoros')).not.toBeInTheDocument();
+  });
+
   it('triggers leaveCall when clicking leave call', () => {
     const leaveCall = vi.fn();
     renderWithRoom(<CallControlBar />, { leaveCall });

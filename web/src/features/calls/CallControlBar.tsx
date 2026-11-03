@@ -12,6 +12,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/primitives/popover';
 import { CallSettingsMenu } from './CallSettingsMenu';
 import { CameraQuickMenu, MicQuickMenu, ScreenShareQuickMenu, SpeakerQuickMenu } from './CallDeviceMenus';
+import { SoundboardButton } from '@/features/soundboard/SoundboardButton';
 import { cn } from '@/shared/lib/utils';
 
 // Floating call reactions (burst animation on everyone's screen) stay a
@@ -56,7 +57,10 @@ export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(fu
   const {
     state, dispatch, startCamera, stopCamera, startSharing, stopSharing, activateMic, toggleMicMuted, deafened, toggleDeafened,
     leaveCall, sendReaction, reconnecting, isCallFullscreen, toggleCallFullscreen, fullscreenElement,
+    activeCallConversationId, conversations,
   } = useRoom();
+  // sounds belong to a group, so a 1:1 call has no soundboard
+  const soundboardGroupId = conversations.find((c) => c.id === activeCallConversationId && c.type === 'group')?.id ?? null;
   const myMedia = useParticipantMedia(state.me.id ?? '');
   const cameraOn = state.me.cameraOn;
   const sharing = state.me.sharing;
@@ -122,6 +126,15 @@ export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(fu
             </div>
           </PopoverContent>
         </Popover>
+
+        {soundboardGroupId && (
+          <SoundboardButton
+            conversationId={soundboardGroupId}
+            className={cn(BAR_BUTTON, BAR_BUTTON_NEUTRAL)}
+            activeClassName="bg-white/12 text-white"
+            iconClassName={BAR_ICON}
+          />
+        )}
 
         <div className="relative">
           <Tooltip>

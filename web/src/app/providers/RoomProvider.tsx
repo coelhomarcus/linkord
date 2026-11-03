@@ -18,6 +18,7 @@ import { useChatMessages } from '@/features/chat/useChatMessages';
 import type { ChatView } from '@/features/chat/useChatMessages';
 import { useTypingIndicator } from '@/state/hooks/useTypingIndicator';
 import { useMessageReactions } from '@/features/calls/useMessageReactions';
+import { useSoundboardEvents } from '@/features/soundboard/useSoundboardEvents';
 import { useMessageSearch } from '@/features/chat/useMessageSearch';
 import { useStorageUsage } from '@/features/chat/useStorageUsage';
 import { usePresence } from '@/state/hooks/usePresence';
@@ -126,6 +127,11 @@ export function RoomProvider({ children }: { children: ReactNode }) {
     livekitRoom, dispatch, sendWs, stopCamera, stopSharing, activateMic, setMicMuted, leaveMic,
     cameraOn: state.me.cameraOn, sharing: state.me.sharing,
   });
+  const soundboardEvents = useSoundboardEvents({
+    activeCallConversationId: callLifecycle.activeCallConversationId,
+    deafened: callLifecycle.deafened,
+    showReaction: messageReactions.showReaction,
+  });
 
   const profileUpdate = useProfileUpdate({
     dispatch, sendWs, myUserIdRef, setAllUsers: presence.setAllUsers, name: state.me.name, isConnected: isSocketConnected,
@@ -218,6 +224,12 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         break;
       case 'reaction':
         messageReactions.onReaction(m);
+        break;
+      case 'soundboard-play':
+        soundboardEvents.onSoundboardPlay(m);
+        break;
+      case 'group-sounds-changed':
+        soundboardEvents.onGroupSoundsChanged(m);
         break;
       case 'conversation-opened':
         conversationsList.onConversationOpened(m, openConversation);
@@ -356,7 +368,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
     }
   }, [
     dispatch, conversationsList, presence, attachmentsUpload, openConversation, sendWs, callLifecycle,
-    messageReactions, messageSearch, chatMessages, typingIndicator, disconnectIntentionally, profileUpdate,
+    messageReactions, messageSearch, chatMessages, typingIndicator, disconnectIntentionally, profileUpdate, soundboardEvents,
   ]);
 
   const { retryConnection } = useSocketConnection({ socketRef, intentionalCloseRef, sendWs, dispatch, refreshAuth, onMessage: handleServerMessage });

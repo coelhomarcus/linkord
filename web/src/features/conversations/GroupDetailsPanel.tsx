@@ -30,8 +30,9 @@ import { fetchGroupInvitations, fetchGroupMembers, revokeInvitation } from '@/sh
 import type { SocialUser } from '@/shared/api/api';
 import { i18n } from '@/shared/i18n/init';
 import { BotWebhookSection } from '@/features/bots/BotWebhookSection';
+import { GroupSoundsPanel } from '@/features/soundboard/GroupSoundsPanel';
 
-type GroupTab = 'members' | 'invites' | 'webhook';
+type GroupTab = 'members' | 'invites' | 'webhook' | 'sounds';
 
 const fetchNothing = () => Promise.resolve({ items: [], nextCursor: null });
 
@@ -365,12 +366,14 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
       {/* the card and the people side by side from md, each column scrolling on its own; stacked below, scrolling as one */}
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto md:grid md:grid-cols-[19rem_minmax(0,1fr)] md:grid-rows-[minmax(0,1fr)] md:overflow-hidden">
         {card}
-        <Tabs value={tab} onValueChange={(value) => { if (value === 'members' || value === 'invites' || value === 'webhook') setTab(value); }} className="order-1 flex shrink-0 flex-col items-stretch gap-3 border-t border-border p-4 md:order-none md:min-h-0 md:shrink md:border-t-0 md:p-5">
+        <Tabs value={tab} onValueChange={(value) => { if (value === 'members' || value === 'invites' || value === 'webhook' || value === 'sounds') setTab(value); }} className="order-1 flex shrink-0 flex-col items-stretch gap-3 border-t border-border p-4 md:order-none md:min-h-0 md:shrink md:border-t-0 md:p-5">
           <TabsList aria-label={t('details.tabsLabel')} className="flex h-auto w-full flex-none justify-start gap-6 rounded-none border-0 border-b border-border bg-transparent p-0">
             <TabsIndicator className="top-auto -bottom-px h-0.5 rounded-full bg-text-primary" />
             <TabsTrigger value="members" className={TAB}>{t('details.tabMembers')}</TabsTrigger>
             {isOwner && <TabsTrigger value="invites" className={TAB}>{t('details.tabInvites')}{sent.items.length > 0 ? ` (${sent.items.length}${sent.hasMore ? '+' : ''})` : ''}</TabsTrigger>}
             {isOwner && isBot && <TabsTrigger value="webhook" className={TAB}>{t('details.tabWebhook')}</TabsTrigger>}
+            {/* a bot has no calls to play sounds in */}
+            {!isBot && <TabsTrigger value="sounds" className={TAB}>{t('details.tabSounds')}</TabsTrigger>}
           </TabsList>
           <div className="flex flex-col gap-3 md:min-h-0 md:flex-1 md:overflow-y-auto md:overscroll-contain">
             {groupActionError && (
@@ -440,6 +443,11 @@ export function GroupDetailsPanel({ conversationId, open, onOpenChange, onOpenPr
                 )}
               </div>
             </TabsPanel>
+            {!isBot && conversation && (
+              <TabsPanel value="sounds" className="flex flex-col gap-2">
+                <GroupSoundsPanel conversationId={conversation.id} myUserId={state.me.userId} isOwner={isOwner} />
+              </TabsPanel>
+            )}
             {isOwner && isBot && conversation && (
               <TabsPanel value="webhook" className="flex flex-col gap-2">
                 <BotWebhookSection conversationId={conversation.id} />

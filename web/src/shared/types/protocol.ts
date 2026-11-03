@@ -230,6 +230,7 @@ export type ClientMessage =
   | { t: 'call-join'; conversationId: string }
   | { t: 'call-leave' }
   | { t: 'call-kick'; participantId: string }
+  | { t: 'soundboard-play'; conversationId: string; soundId: string }
   | { t: 'leave' }
   | { t: 'ping' };
 
@@ -264,6 +265,9 @@ export type ServerMessage =
   | { t: 'participant-updated'; participant: Participant }
   | { t: 'participant-left'; id: string }
   | { t: 'reaction'; id: string; emoji: ReactionEmoji }
+  | { t: 'soundboard-play'; conversationId: string; soundId: string; participantId: string; emoji: string; volume: number }
+  // payload-free like social-changed: the list itself comes from GET /api/groups/:id/sounds
+  | { t: 'group-sounds-changed'; conversationId: string }
   | { t: 'message-search-results'; query: string; conversationId?: string; results: SearchResult[] }
   | { t: 'chat'; message: ChatMessage }
   | { t: 'chat-send-result'; requestId: string; clientMessageId: string; message?: ChatMessage; error?: { code: string; message: string } }
