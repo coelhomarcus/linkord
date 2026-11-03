@@ -26,6 +26,12 @@ interface TileGridProps {
 const THUMB_W = 160;
 const THUMB_H = 90;
 const DEFAULT_MIN_TILE_WIDTH = 220;
+// How long the container must hold still before the "does everyone fit"
+// verdict is trusted. A docked panel (the call chat) springs its width open
+// over a few hundred ms, and every in-between width would otherwise flip
+// the call in and out of focus mode — which swaps the whole tile tree and
+// remounts every video.
+const CAPACITY_SETTLE_MS = 200;
 // How many thumbnail rows show before the strip scrolls instead of growing
 // — otherwise a big call's secondary strip keeps eating rows until the
 // main tile is crushed to nothing (see the plan's "faixa recolhível...
@@ -40,15 +46,31 @@ export function TileGrid({ descriptors, focusedId, minTileWidth = DEFAULT_MIN_TI
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [containerSize, setContainerSize] = useState({ w: 0, h: 0 });
+  const [settledSize, setSettledSize] = useState({ w: 0, h: 0 });
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
+    let settleTimer: ReturnType<typeof setTimeout> | undefined;
+    let measured = false;
     const ro = new ResizeObserver((entries) => {
       const { width, height } = entries[0].contentRect;
-      setContainerSize({ w: width, h: height });
+      const size = { w: width, h: height };
+      setContainerSize(size);
+      clearTimeout(settleTimer);
+      // The first real measurement is trusted at once so a call that opens
+      // too cramped still lands in focus mode without a delay.
+      if (!measured) {
+        measured = true;
+        setSettledSize(size);
+        return;
+      }
+      settleTimer = setTimeout(() => setSettledSize(size), CAPACITY_SETTLE_MS);
     });
     ro.observe(el);
-    return () => ro.disconnect();
+    return () => {
+      clearTimeout(settleTimer);
+      ro.disconnect();
+    };
   }, []);
 
   const isMine = (participantId: string) => participantId === state.me.id;
@@ -59,12 +81,14 @@ export function TileGrid({ descriptors, focusedId, minTileWidth = DEFAULT_MIN_TI
   const thumbs = focus ? descriptors.filter((d) => d.key !== focus) : [];
 
   // Reports geometry upward, never decides on its own — before the first
-  // real measurement `gridFit` is null (container still 0x0), which must
+  // real measurement the fit is null (container still 0x0), which must
   // read as "assume it fits" rather than flashing into focus mode at mount.
+  // Judged on the settled size, not the live one used for layout above.
+  const meetsMinimum = fitGrid(n, settledSize.w, settledSize.h, minTileWidth)?.meetsMinimum ?? true;
   useEffect(() => {
     if (n === 0) return;
-    onCapacityChange?.(gridFit?.meetsMinimum ?? true, descriptors[0]?.key ?? null);
-  }, [gridFit?.meetsMinimum, n, descriptors, onCapacityChange]);
+    onCapacityChange?.(meetsMinimum, descriptors[0]?.key ?? null);
+  }, [meetsMinimum, n, descriptors, onCapacityChange]);
 
   // Contain-fit tiles shrink their own root to the media's aspect ratio (see
   // Tile.tsx), so their wrapper has to actively center them — a cover-fit
