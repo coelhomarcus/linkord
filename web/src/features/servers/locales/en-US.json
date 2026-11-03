@@ -176,6 +176,7 @@
     "received": "You've been invited to join a server",
     "invitedBy": "{{name}} invited you to join",
     "sentInvalid": "You sent an invite, but",
+    "receivedInvalid": "You received an invite, but",
     "invalid": "Invalid Invite",
     "invalidHint": "Try sending a new invite",
     "members_one": "{{count}} member",

@@ -176,6 +176,7 @@
     "received": "Você recebeu um convite para entrar em um servidor",
     "invitedBy": "{{name}} convidou você para entrar",
     "sentInvalid": "Você enviou um convite, mas",
+    "receivedInvalid": "Você recebeu um convite, mas",
     "invalid": "Convite inválido",
     "invalidHint": "Tente enviar um novo convite",
     "members_one": "{{count}} membro",

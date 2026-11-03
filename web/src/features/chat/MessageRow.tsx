@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { ArrowBendUpLeftIcon, CopyIcon, DotsThreeIcon, FlagIcon, PencilSimpleIcon, SmileyIcon, TrashIcon, UsersIcon } from '@phosphor-icons/react';
 import { GroupAvatar } from '@/features/conversations/GroupAvatar';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import type { TouchEvent as ReactTouchEvent } from 'react';
 
@@ -11,6 +11,8 @@ import { InviteCard } from '@/features/chat/InviteCard';
 import { CallInviteCard } from '@/features/chat/CallInviteCard';
 import { ChatMessageText } from '@/features/chat/ChatMessageText';
 import { RichEmbedCard } from './RichEmbedCard';
+import { InviteLinkCard } from '@/features/servers/InviteLinkCard';
+import { inviteCodesInText } from '@/features/servers/inviteCode';
 import { Button } from '@/shared/ui/primitives/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/primitives/dropdown-menu';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/primitives/popover';
@@ -164,6 +166,7 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
   const replyAuthor = message.replyTo?.authorId ? allUsers.get(message.replyTo.authorId) : undefined;
   const mentionsMe = !isMine && mentionsUser(message.text, mentionLookup, state.me.userId);
   const isInvite = message.kind === 'server_invite' || message.kind === 'call_invite';
+  const inviteCodes = useMemo(() => (isInvite ? [] : inviteCodesInText(message.text)), [isInvite, message.text]);
   const canReport = can.report;
   const isEditing = !pending && !isInvite && editingMsgId === message.msgId;
   const reactions = withPendingReactions(message.reactions, message.msgId, pendingReactions, state.me.userId);
@@ -352,6 +355,7 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
                 />
                 {message.editedAt && <span className="ml-1 select-none text-caption text-text-muted">{t('edited')}</span>}
               </div>
+              {!pending && inviteCodes.map((code) => <InviteLinkCard key={code} code={code} own={isMine} />)}
               {message.richEmbeds?.map((embed, index) => <RichEmbedCard key={index} embed={embed} />)}
               {message.attachments?.length ? (
                 <MessageMedia attachments={message.attachments} />

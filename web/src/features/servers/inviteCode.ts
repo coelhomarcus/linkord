@@ -24,3 +24,16 @@ export function inviteCodeFromLink(href: string, origin = window.location.origin
     return null;
   }
 }
+
+const MAX_INVITE_CARDS = 3;
+
+/** The distinct invite codes linked in a message's text, in order. */
+export function inviteCodesInText(text: string, origin = window.location.origin): string[] {
+  const codes: string[] = [];
+  for (const [href] of text.matchAll(/https?:\/\/[^\s<>]+/g)) {
+    const code = inviteCodeFromLink(href.replace(/[.,!?)]+$/, ''), origin);
+    if (code && !codes.includes(code)) codes.push(code);
+    if (codes.length === MAX_INVITE_CARDS) break;
+  }
+  return codes;
+}
