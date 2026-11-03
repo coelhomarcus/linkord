@@ -71,4 +71,20 @@ describe('useCallHud', () => {
     act(() => { vi.advanceTimersByTime(2000); });
     expect(result.current.hudVisible).toBe(true);
   });
+
+  it('stays while a menu opened from the HUD is expanded, and hides once it closes', () => {
+    const hud = document.createElement('div');
+    const trigger = document.createElement('button');
+    trigger.setAttribute('aria-expanded', 'true');
+    hud.appendChild(trigger);
+    const hudRef = { current: hud };
+    const { result } = renderHook(() => useCallHud(false, hudRef));
+
+    act(() => { vi.advanceTimersByTime(10000); });
+    expect(result.current.hudVisible).toBe(true);
+
+    trigger.setAttribute('aria-expanded', 'false');
+    act(() => { vi.advanceTimersByTime(3000); });
+    expect(result.current.hudVisible).toBe(false);
+  });
 });

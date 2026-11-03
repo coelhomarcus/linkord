@@ -29,7 +29,7 @@ export function DocumentAttachmentCard({ name, size, mime, className }: Document
         )}
       </div>
       <div className="min-w-0 flex-1">
-        <p title={name} className="flex min-w-0 items-baseline text-label font-medium text-text-secondary">
+        <p className="flex min-w-0 items-baseline text-label font-medium text-text-secondary">
           <span className="truncate">{baseName}</span>
           {extension && <span className="flex-none overflow-hidden text-ellipsis">.{extension}</span>}
         </p>

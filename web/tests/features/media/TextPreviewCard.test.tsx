@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { TextPreviewCard, __resetPreviewCacheForTests } from '@/features/media/TextPreviewCard';
+import { fileName } from '@tests/fixtures/fileNameMatcher';
 
 vi.mock('@/shared/lib/highlightCode', () => ({ highlightCode: vi.fn(async () => null) }));
 
@@ -60,6 +61,6 @@ describe('TextPreviewCard', () => {
     render(<TextPreviewCard attachment={{ id: 'bin-id', name: 'data.log', mime: 'text/plain', size: 50 }} />);
 
     await waitFor(() => expect(screen.queryByRole('button', { name: /Mostrar mais/ })).not.toBeInTheDocument());
-    expect(screen.getByTitle('data.log')).toBeInTheDocument();
+    expect(screen.getByText(fileName('data.log'))).toBeInTheDocument();
   });
 });

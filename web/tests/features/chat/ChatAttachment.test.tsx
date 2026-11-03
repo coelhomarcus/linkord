@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { ChatAttachment } from '@/features/chat/ChatAttachment';
 import { __resetCachedImageSrcForTests } from '@/shared/hooks/useCachedImageSrc';
 import { __resetPreviewCacheForTests } from '@/features/media/TextPreviewCard';
+import { fileName } from '@tests/fixtures/fileNameMatcher';
 
 // Keeps this test off the real grammar loading — highlightCode's own
 // correctness isn't this file's concern, just that ChatAttachment routes to
@@ -45,7 +46,7 @@ describe('ChatAttachment', () => {
 
   it('generic file (not previewable) shows its identity and its own download link', () => {
     render(<ChatAttachment attachment={{ id: 'zip-id', name: 'projeto.zip', mime: 'application/zip', size: 999 }} />);
-    expect(screen.getByTitle('projeto.zip')).toBeInTheDocument();
+    expect(screen.getByText(fileName('projeto.zip'))).toBeInTheDocument();
     const link = screen.getByRole('link', { name: 'Baixar projeto.zip' });
     expect(link).toHaveAttribute('href', '/uploads/zip-id');
     expect(link).toHaveAttribute('download', 'projeto.zip');

@@ -46,13 +46,12 @@ export function Stage({ allIds, chatOpen, onToggleChat, onBack }: StageProps) {
   // A tile menu open, reconnecting, or an actionable error keeps the HUD
   // forced visible regardless of the idle timer (plan §11.3).
   const suspendHud = !!menuTarget || reconnecting || !!state.shareError || !!state.micProblem || !!state.callJoinError;
-  const { hudVisible } = useCallHud(suspendHud);
-
   // Reserves exactly as much bottom space as the bar (+ any banners above
   // it) actually needs, instead of a fixed `pb-32` guess that's either too
   // little for a taller bar (a mic-problem banner appearing) or wastes grid
   // space when there's nothing to reserve room for (plan §5.1).
   const controlBarRef = useRef<HTMLDivElement | null>(null);
+  const { hudVisible } = useCallHud(suspendHud, controlBarRef);
   const [reservedBottom, setReservedBottom] = useState(FALLBACK_RESERVED_BOTTOM);
   useLayoutEffect(() => {
     const el = controlBarRef.current;

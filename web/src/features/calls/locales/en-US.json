@@ -7,7 +7,6 @@
     "connectionPending": "Wait for the connection to be confirmed.",
     "reconnecting": "Reconnecting to the call…",
     "dismissNotice": "Dismiss notice",
-    "react": "React",
     "micActivate": "Turn on microphone",
     "micUnmute": "Unmute",
     "micMute": "Mute",

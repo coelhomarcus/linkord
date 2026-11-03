@@ -33,7 +33,6 @@ export function PendingAttachments({ attachments }: { attachments: OutboxAttachm
           return (
             <div
               key={attachment.localId}
-              title={attachment.name}
               className={cn('relative size-32 overflow-hidden rounded-lg border', attachment.failed ? 'border-red/50' : 'border-border')}
             >
               <img src={attachment.previewUrl} alt={attachment.name} className={cn('size-full object-cover', !done && 'opacity-60')} />

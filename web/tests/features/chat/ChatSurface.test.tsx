@@ -6,6 +6,7 @@ import { RoomContext } from '@/state/RoomContext';
 import type { PublicUser } from '@/shared/types/protocol';
 import { ChatSurface } from '@/features/chat/ChatSurface';
 import { clearAllDrafts } from '@/features/chat/conversationDrafts';
+import { fileName } from '@tests/fixtures/fileNameMatcher';
 
 // the direct-conversation gate needs the friends provider — covered by its
 // own tests (tests/features/friends/DirectComposerGate.test.tsx)
@@ -50,7 +51,7 @@ describe('ChatSurface — drag and drop', () => {
 
     dropFiles(dropzone, [fakeFile('relatorio.pdf', 'application/pdf')]);
 
-    expect(screen.getByTitle('relatorio.pdf')).toBeInTheDocument();
+    expect(screen.getByText(fileName('relatorio.pdf'))).toBeInTheDocument();
   });
 
   it('attaches nothing when the user has not joined the conversation yet', () => {
