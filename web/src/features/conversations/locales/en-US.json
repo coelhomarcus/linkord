@@ -40,7 +40,8 @@
     "dismissNotice": "Dismiss notice",
     "emptyTitle": "Open a conversation",
     "emptyText": "Pick a conversation in the sidebar.",
-    "members": "Show Member List"
+    "members": "Show Member List",
+    "profile": "Show user profile"
   },
   "friendPicker": {
     "search": "Search friends",

@@ -6,11 +6,11 @@ type NotificationTextKey =
   | 'unknownActor'
   | 'friendRequest'
   | 'friendAccepted'
-  | 'groupInvitationNamed'
-  | 'groupInvitationUnnamed'
+  | 'serverInvitationNamed'
+  | 'serverInvitationUnnamed'
   | 'mentionBot'
   | 'mentionDirect'
-  | 'mentionGroup';
+  | 'mentionChannel';
 
 function text(key: NotificationTextKey, options?: Record<string, string>): string {
   return i18n.t(`notifications:text.${key}`, options);
@@ -22,15 +22,15 @@ export function describeNotification(entry: NotificationEntry): string {
     case 'friend_request': return text('friendRequest', { name: who });
     case 'friend_accepted': return text('friendAccepted', { name: who });
     case 'server_invitation': return entry.server
-      ? text('groupInvitationNamed', { name: who, group: entry.server.name })
-      : text('groupInvitationUnnamed', { name: who });
+      ? text('serverInvitationNamed', { name: who, server: entry.server.name })
+      : text('serverInvitationUnnamed', { name: who });
     case 'mention': {
       const conversation = entry.mention?.conversation;
       if (!conversation || conversation.type === 'direct') return text('mentionDirect', { name: who });
       const where = `#${conversation.name} · ${conversation.serverName}`;
       // a webhook has no account behind it: the channel is who mentioned you
       if (!entry.actor) return text('mentionBot', { name: where });
-      return text('mentionGroup', { name: who, group: where });
+      return text('mentionChannel', { name: who, channel: where });
     }
   }
 }

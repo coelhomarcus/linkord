@@ -21,11 +21,11 @@
     "unknownActor": "Alguém",
     "friendRequest": "{{name}} enviou uma solicitação de amizade",
     "friendAccepted": "{{name}} aceitou sua solicitação de amizade",
-    "groupInvitationNamed": "{{name}} convidou você para o servidor {{group}}",
-    "groupInvitationUnnamed": "{{name}} convidou você para um servidor",
+    "serverInvitationNamed": "{{name}} convidou você para o servidor {{server}}",
+    "serverInvitationUnnamed": "{{name}} convidou você para um servidor",
     "mentionBot": "Você foi mencionado em {{name}}",
     "mentionDirect": "{{name}} mencionou você em uma conversa",
-    "mentionGroup": "{{name}} mencionou você em {{group}}"
+    "mentionChannel": "{{name}} mencionou você em {{channel}}"
   },
   "relative": {
     "now": "agora",

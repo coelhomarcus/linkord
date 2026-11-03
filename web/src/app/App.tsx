@@ -15,6 +15,7 @@ import { AccessNotice } from '@/app/layout/AccessNotice';
 import { ConversationSidebar } from '@/features/conversations/ConversationSidebar';
 import { ServerRail } from '@/features/servers/ServerRail';
 import { MemberListPanel } from '@/features/servers/MemberListPanel';
+import { DirectProfilePanel } from '@/features/profile/DirectProfilePanel';
 import { ServerSettingsProvider } from '@/features/servers/ServerSettingsContext';
 import { InvitePage } from '@/features/servers/InvitePage';
 import { ServerLanding } from '@/features/servers/ServerLanding';
@@ -29,7 +30,7 @@ import { CallConnectingScreen } from '@/features/calls/CallConnectingScreen';
 import { CallChatPanel } from '@/features/calls/CallChatPanel';
 import { ParticipantAudioLayer } from '@/features/calls/ParticipantAudioLayer';
 import { FloatingPip } from '@/features/calls/FloatingPip';
-import { APP_TITLE, callParticipantIds, conversationDocumentTitle, conversationTitle } from '@/features/conversations/conversationUtils';
+import { APP_TITLE, callParticipantIds, conversationDocumentTitle, conversationTitle, directUser } from '@/features/conversations/conversationUtils';
 import { TileMenu } from '@/features/calls/TileMenu';
 import { SoundEmojiOverlay } from '@/features/soundboard/SoundEmojiOverlay';
 import { GlobalContextMenu } from '@/app/layout/GlobalContextMenu';
@@ -122,6 +123,9 @@ function Shell() {
   const [mobileShowSidebar, setMobileShowSidebar] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  // a DM's profile sits beside it unless closed, as in Discord; the member
+  // list starts closed
+  const [profilePanelOpen, setProfilePanelOpen] = useState(true);
   const [mediaOpen, setMediaOpen] = useState(false);
   const [callChatOpen, setCallChatOpen] = useState(false);
   const pendingStageRef = useRef<string | null>(null);
@@ -221,9 +225,16 @@ function Shell() {
 
   const activeConversation = conversations.find((conversation) => conversation.id === (visibleConversationId ?? stageConversationId ?? activeConversationId));
   const currentServer = servers.find((s) => s.id === serverIdFromPath(contentLocation.pathname)) ?? null;
-  const { details: membersVisible, media: mediaVisible } = rightPanelsVisible({
-    detailsOpen, mediaOpen, onChatPage: !!visibleConversationId, stageShown: showStage, conversationType: visibleConversationId ? activeConversation?.type ?? null : null,
+  const shownType = visibleConversationId ? activeConversation?.type ?? null : null;
+  const directShown = shownType === 'direct';
+  const { details: detailsVisible, media: mediaVisible } = rightPanelsVisible({
+    detailsOpen: directShown ? profilePanelOpen && wide : detailsOpen, mediaOpen, onChatPage: !!visibleConversationId, stageShown: showStage, conversationType: shownType,
   });
+  // the media panel takes the profile's place without forgetting it was open
+  const membersVisible = detailsVisible && !directShown;
+  const profileVisible = detailsVisible && directShown && !mediaVisible;
+  const profilePanelUser = profileVisible ? directUser(activeConversation, state.me.userId, allUsers) : null;
+  const setDetails = (open: boolean) => (directShown ? setProfilePanelOpen(open) : setDetailsOpen(open));
   const activeConversationName = conversationTitle(activeConversation, state.me.userId, allUsers);
 
   const tabTitle = onConversations || showStage ? conversationDocumentTitle(activeConversation, state.me.userId, allUsers, currentServer?.name) : APP_TITLE;
@@ -305,11 +316,11 @@ function Shell() {
                   onOpenProfile={setProfileUserId}
                   onOpenCall={handleOpenCall}
                   onOpenSearch={() => setSearchOpen(true)}
-                  detailsOpen={membersVisible}
+                  detailsOpen={membersVisible || profileVisible}
                   mediaOpen={mediaVisible}
-                  onOpenDetails={() => { setMediaOpen(false); setDetailsOpen(true); }}
-                  onToggleDetails={() => { setMediaOpen(false); setDetailsOpen(!membersVisible); }}
-                  onToggleMedia={() => { setDetailsOpen(false); setMediaOpen(!mediaVisible); }}
+                  onOpenDetails={() => { setMediaOpen(false); setDetails(true); }}
+                  onToggleDetails={() => { setMediaOpen(false); setDetails(!(membersVisible || profileVisible)); }}
+                  onToggleMedia={() => { if (!directShown) setDetailsOpen(false); setMediaOpen(!mediaVisible); }}
                 />
               )}
             />
@@ -327,6 +338,7 @@ function Shell() {
           </Routes>
           </div>
           {membersVisible && currentServer && wide && <MemberListPanel server={currentServer} onOpenProfile={setProfileUserId} />}
+          {profilePanelUser && <DirectProfilePanel user={profilePanelUser} onOpenProfile={setProfileUserId} />}
           </div>
           {inCall && <ParticipantAudioLayer participantIds={callIds} />}
           {inCall && !showStage && (

@@ -155,7 +155,7 @@
     "button": "Convidar para voz",
     "tileTitle": "Ainda não chegou ninguém",
     "tileHint": "Chame alguém do servidor para o canal de voz.",
-    "title": "Convidar para {{group}}",
+    "title": "Convidar para {{channel}}",
     "description": "O convite chega na conversa privada de vocês, com um botão para entrar.",
     "search": "Buscar membros",
     "members": "Membros do servidor",

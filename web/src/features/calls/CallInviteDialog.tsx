@@ -85,7 +85,7 @@ export function CallInviteDialog({ open, onOpenChange, conversationId }: CallInv
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent container={fullscreenElement ?? undefined} className="max-w-md gap-0 p-0 text-text-primary sm:max-w-md">
         <DialogHeader className="px-5 pb-3 pt-5">
-          <DialogTitle className="pr-8 text-title">{t('invite.title', { group: conversation?.title ?? '' })}</DialogTitle>
+          <DialogTitle className="pr-8 text-title">{t('invite.title', { channel: conversation?.title ?? '' })}</DialogTitle>
           <DialogDescription className="text-label text-text-muted">{t('invite.description')}</DialogDescription>
         </DialogHeader>
         <div className="px-5 pb-3">

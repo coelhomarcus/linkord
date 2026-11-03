@@ -1,4 +1,4 @@
-import { ArrowLeftIcon, DotsThreeIcon, HashIcon, ImageIcon, MagnifyingGlassIcon, PhoneIcon, UsersThreeIcon } from '@phosphor-icons/react';
+import { ArrowLeftIcon, DotsThreeIcon, HashIcon, ImageIcon, MagnifyingGlassIcon, PhoneIcon, UserCircleIcon, UsersThreeIcon } from '@phosphor-icons/react';
 import { useLocation, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 
@@ -134,9 +134,14 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
             <Button type="button" variant="ghost" size="icon-sm" aria-label={t('panel.search')} onClick={onOpenSearch} className="text-text-muted hover:text-text-primary max-md:hidden">
               <MagnifyingGlassIcon size={20} />
             </Button>
-            {isChannel && (
+            {isChannel ? (
               <Button type="button" variant="ghost" size="icon-sm" aria-label={detailsLabel} aria-pressed={detailsOpen} onClick={onToggleDetails} className={panelToggleClass(detailsOpen)}>
                 <UsersThreeIcon size={22} weight={detailsOpen ? 'fill' : 'regular'} />
+              </Button>
+            ) : other && (
+              // the DM profile panel only fits beside the chat on wide screens
+              <Button type="button" variant="ghost" size="icon-sm" aria-label={t('panel.profile')} aria-pressed={detailsOpen} onClick={onToggleDetails} className={`${panelToggleClass(detailsOpen)} max-xl:hidden`}>
+                <UserCircleIcon size={22} weight={detailsOpen ? 'fill' : 'regular'} />
               </Button>
             )}
             {/* calls in a server happen in its voice channels */}

@@ -1,6 +1,6 @@
 {
   "panel": {
-    "description": "Sounds anyone in the group can play during calls.",
+    "description": "Sounds anyone in the server can play during calls.",
     "upload": "Upload sound",
     "slots_zero": "No free slots out of {{max}}",
     "slots_one": "{{count}} free slot out of {{max}}",
@@ -21,7 +21,7 @@
     "deleteFailed": "Couldn't remove the sound.",
     "deleteConfirm": {
       "title": "Remove sound",
-      "description": "\"{{name}}\" will be removed from the group's sounds for everyone.",
+      "description": "\"{{name}}\" will be removed from the server's sounds for everyone.",
       "confirm": "Remove"
     }
   },
@@ -60,8 +60,8 @@
   "picker": {
     "open": "Soundboard",
     "search": "Find the perfect sound",
-    "empty": "This group has no sounds yet.",
-    "emptyHint": "Upload sounds in the Sounds tab of the group details.",
+    "empty": "This server has no sounds yet.",
+    "emptyHint": "Upload sounds in the Soundboard tab of the server settings.",
     "noResults": "No sounds found.",
     "loading": "Loading sounds…",
     "loadFailed": "Couldn't load the sounds.",
@@ -71,6 +71,6 @@
   "errors": {
     "invalid_sound": "Couldn't read that audio.",
     "sound_too_long": "Sounds can be at most 5 seconds long.",
-    "soundboard_full": "The group has used all of its sound slots."
+    "soundboard_full": "The server has used all of its sound slots."
   }
 }

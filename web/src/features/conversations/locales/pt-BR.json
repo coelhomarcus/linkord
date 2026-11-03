@@ -40,7 +40,8 @@
     "dismissNotice": "Dispensar aviso",
     "emptyTitle": "Abra uma conversa",
     "emptyText": "Escolha uma conversa na barra lateral.",
-    "members": "Mostrar lista de membros"
+    "members": "Mostrar lista de membros",
+    "profile": "Mostrar perfil do usuário"
   },
   "friendPicker": {
     "search": "Buscar amigos",

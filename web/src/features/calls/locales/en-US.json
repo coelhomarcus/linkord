@@ -155,7 +155,7 @@
     "button": "Invite to voice",
     "tileTitle": "Nobody's here yet",
     "tileHint": "Call someone from the server into the voice channel.",
-    "title": "Invite to {{group}}",
+    "title": "Invite to {{channel}}",
     "description": "The invite arrives in your direct conversation, with a button to join.",
     "search": "Search members",
     "members": "Server members",

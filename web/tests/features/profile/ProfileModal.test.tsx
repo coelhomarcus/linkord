@@ -203,6 +203,6 @@ describe('ProfileModal — since when and what you have in common', () => {
     mocked.fetchProfileDetails.mockResolvedValue(details);
     renderProfile();
     expect(await screen.findByRole('tab', { name: '1 amigo mútuo' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /amigos e grupos em comum/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /amigos e servidores em comum/ })).not.toBeInTheDocument();
   });
 });

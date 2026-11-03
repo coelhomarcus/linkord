@@ -22,7 +22,7 @@ import { i18n } from '@/shared/i18n/init';
 const HEADING_ID = 'invitations-title';
 const invitationKey = (entry: ReceivedInvitationEntry) => entry.id;
 
-export function GroupInvitationsView({ query, onQueryChange, onOpenProfile }: { query: string; onQueryChange: (next: string) => void; onOpenProfile: (userId: string) => void }) {
+export function ServerInvitationsView({ query, onQueryChange, onOpenProfile }: { query: string; onQueryChange: (next: string) => void; onOpenProfile: (userId: string) => void }) {
   const { t } = useTranslation('friends');
   const { revision, bump } = useFriends();
   const pending = usePendingIds();
@@ -106,7 +106,7 @@ export function GroupInvitationsView({ query, onQueryChange, onOpenProfile }: { 
 
 function describeInvitationError(err: unknown): string {
   if (err instanceof ApiError) {
-    if (err.code === ERROR_CODES.server_full) return i18n.t('friends:invitations.groupFull');
+    if (err.code === ERROR_CODES.server_full) return i18n.t('friends:invitations.serverFull');
     if (err.code === ERROR_CODES.quota_exceeded) return i18n.t('friends:invitations.quotaExceeded');
   }
   return i18n.t('friends:feedback.actionFailed');

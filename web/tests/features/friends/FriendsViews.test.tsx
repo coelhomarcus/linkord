@@ -48,7 +48,7 @@ describe('Amigos — the view comes from the URL', () => {
 
   it('?tab=invitations opens directly on Convites', async () => {
     at('/app/friends?tab=invitations');
-    expect(await screen.findByText('Nenhum convite de grupo pendente.')).toBeInTheDocument();
+    expect(await screen.findByText('Nenhum convite de servidor pendente.')).toBeInTheDocument();
     expect(mocked.fetchFriendRequests).not.toHaveBeenCalled();
   });
 
@@ -195,7 +195,7 @@ describe('Friends — group invitations', () => {
     at('/app/friends?tab=invitations');
 
     await user.click(await screen.findByRole('button', { name: 'Entrar' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('O grupo está cheio.');
+    expect(await screen.findByRole('alert')).toHaveTextContent('O servidor está cheio.');
   });
 });
 
@@ -266,9 +266,9 @@ describe('Amigos — robust actions and lists (E5)', () => {
     mocked.acceptInvitation.mockRejectedValue(new api.ApiError(409, 'server_full', 'x'));
     at('/app/friends?tab=invitations');
     await user.click(await screen.findByRole('button', { name: 'Entrar' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('O grupo está cheio.');
+    expect(await screen.findByRole('alert')).toHaveTextContent('O servidor está cheio.');
     await waitFor(() => expect(mocked.fetchReceivedInvitations.mock.calls.length).toBeGreaterThan(1));
-    expect(screen.getByRole('alert')).toHaveTextContent('O grupo está cheio.');
+    expect(screen.getByRole('alert')).toHaveTextContent('O servidor está cheio.');
     expect(screen.getByText('Squad')).toBeInTheDocument();
   });
 

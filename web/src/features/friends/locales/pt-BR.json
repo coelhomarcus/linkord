@@ -80,17 +80,17 @@
   },
   "invitations": {
     "searchLabel": "Buscar nos convites",
-    "title": "Convites de grupo",
+    "title": "Convites de servidor",
     "loading": "Carregando convites…",
     "loadFailed": "Não foi possível carregar os convites.",
-    "none": "Nenhum convite de grupo pendente.",
+    "none": "Nenhum convite de servidor pendente.",
     "from": "de",
     "join": "Entrar",
     "decline": "Recusar",
-    "joined": "Você entrou no grupo.",
+    "joined": "Você entrou no servidor.",
     "declined": "Convite recusado.",
-    "groupFull": "O grupo está cheio.",
-    "quotaExceeded": "Você já participa do máximo de grupos permitido.",
+    "serverFull": "O servidor está cheio.",
+    "quotaExceeded": "Você já participa do máximo de servidores permitido.",
     "members_zero": "{{count}} membros",
     "members_one": "{{count}} membro",
     "members_other": "{{count}} membros"
@@ -134,9 +134,18 @@
   "confirm": {
     "blockTitle": "Bloquear pessoa",
     "removeTitle": "Remover amizade",
-    "blockText": "Bloquear {{name}} remove a amizade e impede mensagens e chamadas privadas entre vocês. Grupos em comum continuam. Desbloquear depois não restaura a amizade.",
+    "blockText": "Bloquear {{name}} remove a amizade e impede mensagens e chamadas privadas entre vocês. Servidores em comum continuam. Desbloquear depois não restaura a amizade.",
     "removeText": "Remover {{name}} dos seus amigos? Vocês ainda podem ver o histórico da conversa, mas não conseguem mais trocar mensagens até serem amigos de novo.",
     "block": "Bloquear",
     "remove": "Remover"
+  },
+  "activeNow": {
+    "title": "Ativo agora",
+    "emptyTitle": "Está tranquilo por enquanto…",
+    "emptyText": "Quando um amigo entrar em uma chamada de voz, ela aparece aqui.",
+    "names_one": "{{name}} e mais {{count}}",
+    "names_other": "{{name}} e mais {{count}}",
+    "inChannel": "{{channel}} · {{server}}",
+    "inDirectCall": "Em uma chamada com você"
   }
 }

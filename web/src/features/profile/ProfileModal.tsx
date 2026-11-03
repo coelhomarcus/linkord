@@ -156,7 +156,7 @@ export function ProfileModal({ userId, onClose, onOpenProfile }: ProfileModalPro
                   details={details.details}
                   onRetry={details.retry}
                   onOpenProfile={onOpenProfile}
-                  onOpenGroup={openServer}
+                  onOpenServer={openServer}
                 />
               </div>
             )}

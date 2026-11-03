@@ -15,8 +15,9 @@ describe('rightPanelsVisible', () => {
     expect(rightPanelsVisible({ ...base, stageShown: true })).toEqual({ details: false, media: false });
   });
 
-  it('a DM has media but no member list', () => {
-    expect(rightPanelsVisible({ ...base, conversationType: 'direct' })).toEqual({ details: false, media: true });
+  it("a DM's details are its profile panel; a voice channel has none", () => {
+    expect(rightPanelsVisible({ ...base, conversationType: 'direct' })).toEqual({ details: true, media: true });
+    expect(rightPanelsVisible({ ...base, conversationType: 'voice' })).toEqual({ details: false, media: true });
   });
 
   it('nothing opens off the chat pages or with no conversation shown', () => {
