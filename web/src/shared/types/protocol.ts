@@ -201,7 +201,6 @@ export type ProfilePatch = Partial<{
 export type ClientMessage =
   | { t: 'join'; id?: string; token?: string; v: number }
   | ({ t: 'profile'; requestId: string } & ProfilePatch)
-  | { t: 'reaction'; emoji: ReactionEmoji }
   | { t: 'deafened'; value: boolean }
   | { t: 'mic-state'; activated: boolean; muted: boolean }
   | { t: 'camera'; on: boolean }
@@ -264,7 +263,6 @@ export type ServerMessage =
   | { t: 'participant-joined'; participant: Participant }
   | { t: 'participant-updated'; participant: Participant }
   | { t: 'participant-left'; id: string }
-  | { t: 'reaction'; id: string; emoji: ReactionEmoji }
   | { t: 'soundboard-play'; conversationId: string; soundId: string; participantId: string; emoji: string; volume: number }
   // payload-free like social-changed: the list itself comes from GET /api/groups/:id/sounds
   | { t: 'group-sounds-changed'; conversationId: string }

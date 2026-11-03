@@ -17,7 +17,6 @@ import { useConversationsList } from '@/features/conversations/useConversationsL
 import { useChatMessages } from '@/features/chat/useChatMessages';
 import type { ChatView } from '@/features/chat/useChatMessages';
 import { useTypingIndicator } from '@/state/hooks/useTypingIndicator';
-import { useMessageReactions } from '@/features/calls/useMessageReactions';
 import { useSoundboardEvents } from '@/features/soundboard/useSoundboardEvents';
 import { useMessageSearch } from '@/features/chat/useMessageSearch';
 import { useStorageUsage } from '@/features/chat/useStorageUsage';
@@ -113,7 +112,6 @@ export function RoomProvider({ children }: { children: ReactNode }) {
     clearTypingEntry: typingIndicator.clearTypingEntry,
   });
   useEffect(() => { markActiveSeenRef.current = chatMessages.markActiveSeen; }, [chatMessages.markActiveSeen]);
-  const messageReactions = useMessageReactions(sendWs, myIdRef);
   const messageSearch = useMessageSearch(sendWs);
   const attachmentsUpload = useStorageUsage();
 
@@ -130,7 +128,6 @@ export function RoomProvider({ children }: { children: ReactNode }) {
   const soundboardEvents = useSoundboardEvents({
     activeCallConversationId: callLifecycle.activeCallConversationId,
     deafened: callLifecycle.deafened,
-    showReaction: messageReactions.showReaction,
   });
 
   const profileUpdate = useProfileUpdate({
@@ -221,9 +218,6 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         break;
       case 'participant-left':
         dispatch({ type: 'PARTICIPANT_LEFT', id: m.id });
-        break;
-      case 'reaction':
-        messageReactions.onReaction(m);
         break;
       case 'soundboard-play':
         soundboardEvents.onSoundboardPlay(m);
@@ -368,7 +362,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
     }
   }, [
     dispatch, conversationsList, presence, attachmentsUpload, openConversation, sendWs, callLifecycle,
-    messageReactions, messageSearch, chatMessages, typingIndicator, disconnectIntentionally, profileUpdate, soundboardEvents,
+    messageSearch, chatMessages, typingIndicator, disconnectIntentionally, profileUpdate, soundboardEvents,
   ]);
 
   const { retryConnection } = useSocketConnection({ socketRef, intentionalCloseRef, sendWs, dispatch, refreshAuth, onMessage: handleServerMessage });
@@ -405,7 +399,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         startCamera, stopCamera, activateMic, toggleMicMuted,
         updateProfile: profileUpdate.updateProfile, uploadProfileImage: profileUpdate.uploadProfileImage, removeProfileImage: profileUpdate.removeProfileImage,
         menuTarget: tileMenu.menuTarget, openTileMenu: tileMenu.openTileMenu, closeTileMenu: tileMenu.closeTileMenu,
-        reactions: messageReactions.reactions, sendReaction: messageReactions.sendReaction,
+        soundEmojis: soundboardEvents.floatingEmojis,
         showStats: roomSettings.showStats, setShowStats: roomSettings.setShowStats,
         notifyVolume: roomSettings.notifyVolume, setNotifyVolume: roomSettings.setNotifyVolume,
         notificationsEnabled: roomSettings.notificationsEnabled, setNotificationsEnabled: roomSettings.setNotificationsEnabled,
