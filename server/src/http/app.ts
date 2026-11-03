@@ -22,6 +22,7 @@ import { registerLimitsRoutes } from '../modules/limits/limitsRoutes.js';
 import { registerReportRoutes } from '../modules/reports/reports.js';
 import { registerAdminRoutes } from '../modules/admin/adminRoutes.js';
 import { registerGroupMemberRoutes } from '../modules/conversations/groupMembers.js';
+import { registerSoundboardRoutes } from '../modules/soundboard/soundboard.js';
 import { registerGifRoutes } from '../modules/gifs/gifs.js';
 import { registerBotRoutes } from '../modules/bots/bots.js';
 import { registerWebhookIngressRoutes } from '../modules/bots/webhookIngress.js';
@@ -103,6 +104,7 @@ export function createApp(): FastifyInstance {
   registerInvitationRoutes(fastify);
   registerCallInviteRoutes(fastify);
   registerGroupMemberRoutes(fastify);
+  registerSoundboardRoutes(fastify);
   registerBotRoutes(fastify);
   registerWebhookIngressRoutes(fastify);
   registerReportRoutes(fastify);

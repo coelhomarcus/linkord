@@ -444,6 +444,29 @@ export const stagedAttachments = pgTable('staged_attachments', {
 
 export type StagedAttachment = typeof stagedAttachments.$inferSelect;
 
+// A group's soundboard. Its own table rather than an `attachments` row for the
+// same reason as staged files: a message-less attachment is a public profile
+// image, while a sound is only for the group's members. The file lives on disk
+// under the row's id; `size` is counted in the instance-wide storage total.
+export const groupSounds = pgTable('group_sounds', {
+  id: text('id').primaryKey(),
+  conversationId: text('conversation_id').notNull().references(() => conversations.id, { onDelete: 'cascade' }),
+  // set null, not cascade: the sound belongs to the group, not to whoever sent it
+  uploaderId: text('uploader_id').references(() => users.id, { onDelete: 'set null' }),
+  name: varchar('name', { length: 32 }).notNull(),
+  emoji: varchar('emoji', { length: 16 }).notNull().default(''),
+  // 0..100, applied on top of each listener's own soundboard volume
+  volume: integer('volume').notNull().default(100),
+  size: integer('size').notNull(),
+  durationMs: integer('duration_ms').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  index('group_sounds_conversation_id_idx').on(t.conversationId, t.createdAt),
+  check('group_sounds_volume_range', sql`${t.volume} BETWEEN 0 AND 100`),
+]);
+
+export type GroupSound = typeof groupSounds.$inferSelect;
+
 /** The recipient's inbox/read-state for a social event — scoped for now to
  * the resources that exist this etapa (friend requests, group invitations).
  * Typed FKs, not a generic JSON blob, so referential integrity is real.
