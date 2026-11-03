@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { RefObject } from 'react';
 
 const IDLE_TIMEOUT_MS = 2500;
 // Not per-event (mousemove fires dozens of times/sec) — a slow poll against a
@@ -20,8 +21,9 @@ interface CallHudApi {
  * keyboard, or touch activity — so they don't permanently cover the video
  * underneath (plan §11.3). `suspend` (a tile menu open, reconnecting, an
  * actionable error) forces it visible and pauses the idle countdown
- * regardless of the timer. */
-export function useCallHud(suspend: boolean): CallHudApi {
+ * regardless of the timer. A menu or popover opened from inside `hudRef`
+ * holds it too. */
+export function useCallHud(suspend: boolean, hudRef?: RefObject<HTMLElement | null>): CallHudApi {
   const [hudVisible, setHudVisible] = useState(true);
   const lastActivityRef = useRef(Date.now());
 
@@ -38,13 +40,19 @@ export function useCallHud(suspend: boolean): CallHudApi {
     revealHud();
     for (const ev of ACTIVITY_EVENTS) window.addEventListener(ev, revealHud, { passive: true });
     const interval = setInterval(() => {
+      // The menu renders in a portal, so the bar fading out would leave it
+      // floating on its own; while its trigger is expanded, the bar stays.
+      if (hudRef?.current?.querySelector('[aria-expanded="true"]')) {
+        lastActivityRef.current = Date.now();
+        return;
+      }
       if (Date.now() - lastActivityRef.current >= IDLE_TIMEOUT_MS) setHudVisible(false);
     }, CHECK_INTERVAL_MS);
     return () => {
       for (const ev of ACTIVITY_EVENTS) window.removeEventListener(ev, revealHud);
       clearInterval(interval);
     };
-  }, [suspend, revealHud]);
+  }, [suspend, revealHud, hudRef]);
 
   return { hudVisible, revealHud };
 }
