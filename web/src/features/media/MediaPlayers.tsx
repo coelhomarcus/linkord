@@ -392,7 +392,6 @@ function VideoPlayerImpl({ src, poster, title, className, onError }: VideoPlayer
           poster={poster || undefined}
           preload="metadata"
           playsInline
-          title={title}
           onLoadedMetadata={handleLoadedMetadata}
           onTimeUpdate={sync}
           onPlay={sync}

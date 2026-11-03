@@ -243,7 +243,6 @@ export function ProfileCard({
                 );
               })}
               <label
-                title={t('card.customColorTitle')}
                 className={cn(
                   'relative flex h-5 w-5 items-center justify-center rounded-full border transition focus-within:outline-none focus-within:ring-3 focus-within:ring-ring/40',
                   isCustomAvatarColor ? 'border-text-primary ring-2 ring-ring/40 ring-offset-1 ring-offset-bg-modal' : 'border-border-strong hover:border-text-muted'

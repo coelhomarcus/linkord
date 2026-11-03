@@ -20,7 +20,6 @@ function JumpButton({ onJump, label, className }: { onJump: () => void; label?: 
     <button
       type="button"
       aria-label={t('media.jumpToMessage')}
-      title={t('media.jumpToMessage')}
       onClick={onJump}
       className={cn(
         'z-10 inline-flex items-center gap-1.5 rounded-md bg-black/65 px-2 py-1.5 text-caption font-medium text-white backdrop-blur-sm transition-colors hover:bg-black/80 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/60',
@@ -66,7 +65,7 @@ function TileFace({ item }: { item: MediaItem }) {
       <span className={cn('grid size-12 place-items-center rounded-md', iconBgClassName)}>
         <Icon size={24} className={iconTextClassName} />
       </span>
-      <span title={attachment.name} className="flex w-full min-w-0 items-baseline justify-center text-caption text-text-secondary">
+      <span className="flex w-full min-w-0 items-baseline justify-center text-caption text-text-secondary">
         <span className="truncate">{baseName}</span>
         {extension && <span className="flex-none">.{extension}</span>}
       </span>

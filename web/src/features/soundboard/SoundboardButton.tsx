@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/primitives/popover';
 import { Slider } from '@/shared/ui/primitives/slider';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
 import { useRoom } from '@/state/RoomContext';
 import { cn } from '@/shared/lib/utils';
 import { useGroupSounds } from './useGroupSounds';
@@ -53,9 +54,12 @@ export function SoundboardButton({ conversationId, className, activeClassName, i
 
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
-      <PopoverTrigger aria-label={t('picker.open')} title={t('picker.open')} className={cn(className, open && activeClassName)}>
-        <MusicNotesIcon size="100%" className={iconClassName} />
-      </PopoverTrigger>
+      <Tooltip>
+        <TooltipTrigger render={<PopoverTrigger aria-label={t('picker.open')} className={cn(className, open && activeClassName)} />}>
+          <MusicNotesIcon size="100%" className={iconClassName} />
+        </TooltipTrigger>
+        <TooltipContent>{t('picker.open')}</TooltipContent>
+      </Tooltip>
       <PopoverContent side="top" className="flex w-[min(26rem,calc(100vw-1.5rem))] flex-col gap-3 p-3" container={fullscreenElement ?? undefined}>
         <label className="flex h-10 items-center gap-2 rounded-md border border-border-strong bg-fill-subtle px-3 focus-within:ring-3 focus-within:ring-ring/50">
           <MagnifyingGlassIcon size={16} className="flex-none text-text-muted" />

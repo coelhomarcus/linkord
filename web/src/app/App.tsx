@@ -26,7 +26,7 @@ import { ParticipantAudioLayer } from '@/features/calls/ParticipantAudioLayer';
 import { FloatingPip } from '@/features/calls/FloatingPip';
 import { APP_TITLE, callParticipantIds, conversationDocumentTitle, conversationTitle } from '@/features/conversations/conversationUtils';
 import { TileMenu } from '@/features/calls/TileMenu';
-import { ReactionsOverlay } from '@/features/reactions/ReactionsOverlay';
+import { SoundEmojiOverlay } from '@/features/soundboard/SoundEmojiOverlay';
 import { GlobalContextMenu } from '@/app/layout/GlobalContextMenu';
 import { ProfileModal } from '@/features/profile/ProfileModal';
 import { FriendsProvider } from '@/features/friends/FriendsContext';
@@ -281,7 +281,7 @@ function Shell() {
               hideOnMobile={mobileMainPage}
             />
           )}
-          <ReactionsOverlay />
+          <SoundEmojiOverlay />
         </SidebarInset>
         {mobileMainPage && <MobileTabBar activeCallConversationId={activeCallConversationId} onReturnToCall={handleReturnToCall} />}
         <GroupDetailsPanel

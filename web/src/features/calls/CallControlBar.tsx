@@ -1,4 +1,4 @@
-import { ArrowsInIcon, ArrowsOutIcon, MicrophoneIcon, MicrophoneSlashIcon, MonitorIcon, PhoneSlashIcon, SmileyIcon, SpeakerHighIcon, SpeakerSlashIcon, VideoCameraIcon, VideoCameraSlashIcon } from '@phosphor-icons/react';
+import { ArrowsInIcon, ArrowsOutIcon, MicrophoneIcon, MicrophoneSlashIcon, MonitorIcon, PhoneSlashIcon, SpeakerHighIcon, SpeakerSlashIcon, VideoCameraIcon, VideoCameraSlashIcon } from '@phosphor-icons/react';
 import { forwardRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { iconWeight } from '@/shared/ui/icons';
@@ -7,18 +7,11 @@ import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { useRoom } from '../../state/RoomContext';
 import type { MicProblem } from '@/state/roomReducer';
 import { useParticipantMedia } from './useLiveKitTrack';
-import type { ReactionEmoji } from '@/shared/types/protocol';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
-import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/primitives/popover';
 import { CallSettingsMenu } from './CallSettingsMenu';
 import { CameraQuickMenu, MicQuickMenu, ScreenShareQuickMenu, SpeakerQuickMenu } from './CallDeviceMenus';
 import { SoundboardButton } from '@/features/soundboard/SoundboardButton';
 import { cn } from '@/shared/lib/utils';
-
-// Floating call reactions (burst animation on everyone's screen) stay a
-// short fixed set — server (realtime/reactions.ts) enforces the same list.
-// Unrelated to per-message chat reactions, which now accept any emoji.
-const CALL_REACTIONS = ['👍', '❤️', '😂', '😮', '👏', '🎉'] as const;
 
 const MIC_PROBLEM_LABEL_KEY = {
   'not-found': 'micProblem.notFoundLabel',
@@ -56,7 +49,7 @@ export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(fu
   const { t } = useTranslation('calls');
   const {
     state, dispatch, startCamera, stopCamera, startSharing, stopSharing, activateMic, toggleMicMuted, deafened, toggleDeafened,
-    leaveCall, sendReaction, reconnecting, isCallFullscreen, toggleCallFullscreen, fullscreenElement,
+    leaveCall, reconnecting, isCallFullscreen, toggleCallFullscreen,
     activeCallConversationId, conversations,
   } = useRoom();
   // sounds belong to a group, so a 1:1 call has no soundboard
@@ -64,18 +57,12 @@ export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(fu
   const myMedia = useParticipantMedia(state.me.id ?? '');
   const cameraOn = state.me.cameraOn;
   const sharing = state.me.sharing;
-  const [reactionsOpen, setReactionsOpen] = useState(false);
   const micProblem = myMedia.micActivated ? null : state.micProblem;
   // Dismissing hides this occurrence only: once the problem clears, the next
   // one (a later call, the mic unplugged again) has to show again.
   const [dismissedMicProblem, setDismissedMicProblem] = useState<MicProblem>(null);
   if (!micProblem && dismissedMicProblem) setDismissedMicProblem(null);
   const micLabel = micProblem ? t(MIC_PROBLEM_LABEL_KEY[micProblem]) : !myMedia.micActivated ? t('controls.micActivate') : myMedia.micMuted ? t('controls.micUnmute') : t('controls.micMute');
-
-  function pickReaction(emoji: ReactionEmoji) {
-    sendReaction(emoji);
-    setReactionsOpen(false);
-  }
 
   return (
     <div
@@ -104,38 +91,6 @@ export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(fu
         </div>
       )}
       <div className="flex items-center gap-1 rounded-lg border border-white/10 bg-black p-1.5 shadow-popover max-[480px]:gap-0.75 max-[480px]:p-1.25 max-[360px]:gap-0.5 max-[360px]:p-1">
-        <Popover open={reactionsOpen} onOpenChange={setReactionsOpen}>
-          <PopoverTrigger
-            aria-label={t('controls.react')}
-            className={cn(BAR_BUTTON, reactionsOpen ? 'bg-white/12 text-white' : BAR_BUTTON_NEUTRAL)}
-          >
-            <SmileyIcon size="100%" className={BAR_ICON} />
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-1.5" side="top" container={fullscreenElement ?? undefined}>
-            <div className="flex gap-1">
-              {CALL_REACTIONS.map((emoji) => (
-                <button
-                  key={emoji}
-                  type="button"
-                  onClick={() => pickReaction(emoji)}
-                  className="rounded-md p-1.5 text-[20px] leading-none transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-                >
-                  {emoji}
-                </button>
-              ))}
-            </div>
-          </PopoverContent>
-        </Popover>
-
-        {soundboardGroupId && (
-          <SoundboardButton
-            conversationId={soundboardGroupId}
-            className={cn(BAR_BUTTON, BAR_BUTTON_NEUTRAL)}
-            activeClassName="bg-white/12 text-white"
-            iconClassName={BAR_ICON}
-          />
-        )}
-
         <div className="relative">
           <Tooltip>
             <TooltipTrigger
@@ -192,6 +147,15 @@ export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(fu
           </Tooltip>
           <ScreenShareQuickMenu />
         </div>
+
+        {soundboardGroupId && (
+          <SoundboardButton
+            conversationId={soundboardGroupId}
+            className={cn(BAR_BUTTON, BAR_BUTTON_NEUTRAL)}
+            activeClassName="bg-white/12 text-white"
+            iconClassName={BAR_ICON}
+          />
+        )}
 
         <Tooltip>
           <TooltipTrigger

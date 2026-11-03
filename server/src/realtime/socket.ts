@@ -7,7 +7,6 @@ import {
 } from '../modules/presence/participants.js';
 import { applyPeerVisibility, buildPresenceSnapshot } from '../modules/presence/knownPeers.js';
 import * as livekit from '../integrations/livekit/livekit.js';
-import * as reactions from '../modules/calls/reactions.js';
 import * as soundboard from '../modules/soundboard/soundboard.js';
 import * as floodControl from './floodControl.js';
 import * as chat from '../modules/messages/messages.js';
@@ -33,7 +32,6 @@ const log = logger.child({ component: 'socket' });
 const handlers: HandlerTable = Object.assign(
   {},
   participantHandlers,
-  reactions.handlers,
   soundboard.handlers,
   chat.handlers,
   conversations.handlers,
@@ -67,7 +65,6 @@ const ACTION_LIMITS: Record<string, { windowMs: number; max: number }> = {
   'chat-remove-attachment': { windowMs: 10_000, max: 10 },
   'chat-suppress-embed': { windowMs: 10_000, max: 10 },
   'chat-react': { windowMs: 10_000, max: 20 },
-  reaction: { windowMs: 10_000, max: 20 },
   'soundboard-play': { windowMs: 10_000, max: 6 },
   profile: { windowMs: 60_000, max: 10 },
   'message-search': { windowMs: 10_000, max: 20 },

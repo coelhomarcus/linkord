@@ -4,6 +4,7 @@ import { MessageMedia } from '@/features/chat/MessageMedia';
 import { __resetCachedImageSrcForTests } from '@/shared/hooks/useCachedImageSrc';
 import { rgbaToThumbHash } from 'thumbhash';
 import type { ChatAttachment } from '@/shared/types/protocol';
+import { fileName } from '@tests/fixtures/fileNameMatcher';
 
 vi.mock('@/shared/lib/highlightCode', () => ({ highlightCode: vi.fn(async () => null) }));
 
@@ -90,7 +91,7 @@ describe('MessageMedia', () => {
     expect(within(grid as HTMLElement).getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual([
       'Abrir a.png (1 de 3)', 'Abrir b.png (2 de 3)', 'Abrir c.png (3 de 3)',
     ]);
-    expect(screen.getByTitle('rel.pdf').compareDocumentPosition(grid) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
+    expect(screen.getByText(fileName('rel.pdf')).compareDocumentPosition(grid) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
   });
 
   it('opens the viewer on the clicked image and navigates through the collection', () => {

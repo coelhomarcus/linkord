@@ -131,7 +131,7 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
       aria-pressed={isFocused}
       aria-label={isFocused ? t('tile.unfocusLabel', { name: name || t('tile.participant') }) : t('tile.focusLabel', { name: name || t('tile.participant') })}
       className={`tile-fullscreen-target relative h-full w-full cursor-pointer overflow-hidden rounded-lg border-[3.5px] bg-bg-tertiary transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 ${
-        showSpeakingBorder ? '' : 'border-transparent'
+        showSpeakingBorder ? '' : 'border-white/10'
       }`}
       style={{
         ...rootStyle,
@@ -195,8 +195,8 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
       )}
 
       <div className={cn(
-        'absolute bottom-1.5 left-1.5 flex max-w-[calc(100%-12px)] items-center gap-1.5 rounded-md border border-white/10 bg-black/85 py-1 pr-2.5',
-        kind === 'screen' ? 'pl-2' : showsVideo ? 'pl-1' : 'pl-2.5'
+        'absolute bottom-1.5 left-1.5 flex max-w-[calc(100%-12px)] items-center gap-1 rounded-md border border-white/10 bg-black/85 py-0.5 pr-1.5',
+        kind === 'screen' || !showsVideo ? 'pl-1.5' : 'pl-0.5'
       )}>
         {kind === 'screen' && <MonitorIcon size={16} weight="fill" className="flex-none text-green" />}
         {kind !== 'screen' && showsVideo && <Avatar id={participantId} name={name} avatar={avatar} poster={avatarPoster} frozen={!isSpeaking} avatarColor={avatarColor} size={20} />}

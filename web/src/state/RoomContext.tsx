@@ -10,13 +10,7 @@ import type { ReactionParticipantsTarget } from '@/features/chat/reactionPartici
 import type { ShareQualityId } from '@/features/calls/shareQualityPresets';
 import type { ColorThemeId } from '@/features/settings/useColorThemePreference';
 import type { ProfileImageUploadPhase } from '@/features/settings/uploadCroppedProfileImage';
-
-export interface ReactionEvent {
-  key: number;
-  id: string;
-  emoji: ReactionEmoji;
-  left: number;
-}
+import type { FloatingSoundEmoji } from '@/features/soundboard/useSoundboardEvents';
 
 export interface TileDomHandle {
   root: HTMLDivElement;
@@ -109,8 +103,7 @@ export interface RoomContextValue {
   menuTarget: { key: string; participantId: string; kind: TileKind; rect: AnchorRect } | null;
   openTileMenu: (key: string, participantId: string, kind: TileKind, rect: AnchorRect) => void;
   closeTileMenu: () => boolean;
-  reactions: ReactionEvent[];
-  sendReaction: (emoji: ReactionEmoji) => void;
+  soundEmojis: FloatingSoundEmoji[];
   showStats: boolean;
   setShowStats: (value: boolean) => void;
   notifyVolume: number;

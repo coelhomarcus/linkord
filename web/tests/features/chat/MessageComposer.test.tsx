@@ -7,6 +7,7 @@ import { RoomContext } from '@/state/RoomContext';
 import { MessageComposer } from '@/features/chat/MessageComposer';
 import { clearAllDrafts } from '@/features/chat/conversationDrafts';
 import type { Conversation, PublicUser } from '@/shared/types/protocol';
+import { fileName } from '@tests/fixtures/fileNameMatcher';
 
 const joinedState = { ...initialRoomState, joined: true };
 
@@ -176,7 +177,7 @@ describe('MessageComposer', () => {
     expect(screen.getByRole('textbox')).toHaveValue('');
     expect(screen.getByRole('textbox')).toBeEnabled();
     // the tray unmounts via a framer-motion exit animation, not synchronously
-    await waitFor(() => expect(screen.queryByTitle('doc.pdf')).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByText(fileName('doc.pdf'))).not.toBeInTheDocument());
   });
 
   it('when replying to a message, sending attachments carries the reply reference', async () => {
@@ -366,9 +367,9 @@ describe('MessageComposer — per-conversation draft', () => {
 
     switchTo('conv-2');
     // the tray has an exit animation, so the node leaves a moment later
-    await waitFor(() => expect(screen.queryByTitle('um.pdf')).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByText(fileName('um.pdf'))).not.toBeInTheDocument());
     switchTo('conv-1');
-    expect(screen.getByTitle('um.pdf')).toBeInTheDocument();
+    expect(screen.getByText(fileName('um.pdf'))).toBeInTheDocument();
   });
 
   it('sending a batch frees up the conversation right away: switching afterward neither erases nor resends anything', async () => {
@@ -384,7 +385,7 @@ describe('MessageComposer — per-conversation draft', () => {
     expect(queueMessageWithFiles).toHaveBeenCalledTimes(1);
     expect(screen.getByRole('textbox')).toHaveValue('');
     // the tray unmounts via a framer-motion exit animation, not synchronously
-    await waitFor(() => expect(screen.queryByTitle('um.pdf')).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByText(fileName('um.pdf'))).not.toBeInTheDocument());
 
     switchTo('conv-2');
     await user.type(screen.getByRole('textbox'), 'texto novo');

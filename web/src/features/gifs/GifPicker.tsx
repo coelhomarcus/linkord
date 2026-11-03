@@ -70,7 +70,6 @@ function GifTile({ gif, onPick }: { gif: Gif; onPick: (gif: Gif) => void }) {
       type="button"
       onClick={() => onPick(gif)}
       aria-label={gif.title || t('picker.tabs')}
-      title={gif.title || undefined}
       style={{ aspectRatio: `${gif.preview.width} / ${gif.preview.height}`, backgroundImage: gif.placeholder ? `url("${gif.placeholder}")` : undefined }}
       className="block w-full overflow-hidden rounded-md bg-fill-subtle bg-cover bg-center outline-none transition-[filter,box-shadow] hover:brightness-110 focus-visible:ring-2 focus-visible:ring-ring"
     >

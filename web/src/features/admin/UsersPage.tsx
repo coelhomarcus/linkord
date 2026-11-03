@@ -40,7 +40,7 @@ function RowActions({ user }: { user: AdminUserRow }) {
   return (
     <div className="flex items-center justify-end gap-0.5">
       <CopyIdButton id={user.id} label={t('ui.copyId', { name: user.displayName })} />
-      <AppLink to={`/admin/audit?targetId=${encodeURIComponent(user.id)}`} aria-label={t('ui.viewHistory', { name: user.displayName })} title={t('ui.history')} className={buttonVariants({ variant: 'ghost', size: 'icon-sm' })}>
+      <AppLink to={`/admin/audit?targetId=${encodeURIComponent(user.id)}`} aria-label={t('ui.viewHistory', { name: user.displayName })} className={buttonVariants({ variant: 'ghost', size: 'icon-sm' })}>
         <ClockCounterClockwiseIcon size={16} aria-hidden />
       </AppLink>
     </div>
