@@ -63,7 +63,7 @@ function ConversationRow({ conversation, active, onClick }: {
             and no accent color — the color is reserved for actual brand
             moments, not "you are here" state. It switches instantly: no slide
             between rows and no color fade. */}
-        {active && <ActiveFill className="shadow-highlight" />}
+        {active && <ActiveFill />}
         {conversation.type === 'direct' && other ? (
           <div className="relative flex-none">
             <Avatar id={other.id} name={other.displayName} avatar={other.avatar} poster={other.avatarPoster} animateOnHover avatarColor={other.avatarColor} size={44} />
