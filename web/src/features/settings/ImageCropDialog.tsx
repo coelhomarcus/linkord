@@ -44,7 +44,7 @@ export function ImageCropDialog({ open, imageSrc, aspect, cropShape, title, proc
 
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!next && !processing) onCancel(); }}>
-      <DialogContent aria-busy={processing} className="relative max-h-[90vh] max-w-[calc(100%-2rem)] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden bg-bg-modal p-0 sm:max-w-125">
+      <DialogContent aria-busy={processing} className="max-h-[90vh] max-w-[calc(100%-2rem)] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden bg-bg-modal p-0 sm:max-w-125">
         <DialogHeader className="px-6 pt-6 pr-12">
           <DialogTitle className="text-title font-semibold text-text-primary">{processing ? t('crop.processing') : title}</DialogTitle>
         </DialogHeader>
@@ -88,6 +88,8 @@ export function ImageCropDialog({ open, imageSrc, aspect, cropShape, title, proc
           </Button>
         </DialogFooter>
 
+        {/* placed against the dialog itself: its `fixed` centering already makes it
+            the containing block, and adding `relative` there replaced the centering */}
         {processing && (
           <div role="status" aria-live="polite" className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-bg-modal/95 px-8 text-center">
             <CircleNotchIcon size={28} className="animate-spin text-primary" />
