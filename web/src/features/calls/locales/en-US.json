@@ -88,16 +88,31 @@
     "listFailed": "Couldn't list devices.",
     "none": "No devices found.",
     "unnamed": "Unnamed device",
-    "fullSettings": "Full settings",
     "micSettings": "Microphone settings",
     "audioOutputSettings": "Audio output settings",
     "screenSettings": "Screen sharing settings",
     "cameraSettings": "Camera settings",
-    "audioInput": "Audio input",
     "microphone": "Microphone",
-    "audioOutput": "Audio output",
     "speaker": "Speaker",
-    "camera": "Camera"
+    "camera": "Camera",
+    "voiceSettings": "Voice settings",
+    "videoSettings": "Video settings",
+    "inputDevice": "Input device",
+    "outputDevice": "Output device",
+    "inputProfile": "Input profile",
+    "inputVolume": "Input volume",
+    "outputVolume": "Output volume",
+    "inputLevel": "Input level",
+    "profiles": {
+      "voice-isolation": {
+        "label": "Voice isolation",
+        "description": "Reduces background noise and echo"
+      },
+      "studio": {
+        "label": "Studio",
+        "description": "Pure audio, no processing. Use headphones to avoid echo"
+      }
+    }
   },
   "quality": {
     "game": "Game (1440p, 60 fps)",

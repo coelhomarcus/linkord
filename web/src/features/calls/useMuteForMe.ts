@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import { useRoom } from '../../state/RoomContext';
 import type { TileKind } from './tileTypes';
 import { saveCallVolume } from '../settings/useCallVolumePreference';
+import { getParticipantVolume, setParticipantVolume } from './participantVolume';
 
 // Local (per-viewer) mute/volume for a participant's stream — mirrors the
-// slider in TileMenu. `audio.volume` is the source of truth; this hook just
+// slider in TileMenu. The element is the source of truth; this hook just
 // mirrors it into React state via the native `volumechange` event so any
 // component (the tile's own indicator button, the settings menu) can read
 // and drive the same value without duplicating the mute/restore semantics.
@@ -25,7 +26,7 @@ export function useMuteForMe(participantId: string | null, kind: TileKind, isMin
     const audio = audioRegistry.current.get(audioKey)?.element;
     if (!audio) return;
     const sync = () => {
-      const v = Math.round(audio.volume * 100);
+      const v = Math.round(getParticipantVolume(audio) * 100);
       setVolumeState(v);
       if (v > 0) unmuteToRef.current = v;
     };
@@ -39,7 +40,7 @@ export function useMuteForMe(participantId: string | null, kind: TileKind, isMin
     const v = Math.max(0, Math.min(100, value));
     if (v > 0) unmuteToRef.current = v;
     const audio = audioRegistry.current.get(audioKey)?.element;
-    if (audio) audio.volume = v / 100;
+    if (audio) setParticipantVolume(audio, v / 100);
     setVolumeState(v);
     if (volumeStorageKey) saveCallVolume(volumeStorageKey, v / 100);
   }
