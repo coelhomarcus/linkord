@@ -29,7 +29,7 @@ export function CallSettingsMenu({ triggerClassName }: CallSettingsMenuProps) {
         </TooltipTrigger>
         <TooltipContent>{label}</TooltipContent>
       </Tooltip>
-      <DropdownMenuContent side="top" align="end" container={fullscreenElement ?? undefined} className="w-80 max-w-[calc(100vw-1.5rem)] p-1.5">
+      <DropdownMenuContent side="top" align="end" container={fullscreenElement ?? undefined} className="min-w-80 max-w-[calc(100vw-1.5rem)] p-1.5">
         <DropdownMenuGroup>
           <DropdownMenuLabel className="px-2 pb-1 pt-2 text-caption font-semibold uppercase tracking-wide">{t('callSettings.title')}</DropdownMenuLabel>
           <DropdownMenuSwitchItem checked={hideAudioOnlyTiles} onCheckedChange={setHideAudioOnlyTiles}>
