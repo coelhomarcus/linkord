@@ -1,5 +1,5 @@
 import { CellSignalLowIcon, CellSignalNoneIcon, CircleNotchIcon, EyeSlashIcon, MicrophoneSlashIcon, MonitorIcon, MonitorPlayIcon, SpeakerSlashIcon } from '@phosphor-icons/react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ConnectionQuality } from 'livekit-client';
@@ -34,7 +34,6 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
   const key = tileKey(participantId, kind);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const [containSize, setContainSize] = useState<{ w: number; h: number } | null>(null);
 
   const participant = isMine ? null : state.participants.get(participantId);
   const name = isMine ? state.me.displayName : (participant?.displayName ?? '');
@@ -72,34 +71,6 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
     tileDomRegistry.current.set(key, { root, video: showsVideo ? videoRef.current : null });
     return () => { tileDomRegistry.current.delete(key); };
   }, [key, showsVideo, videoTrack, tileDomRegistry]);
-
-  useEffect(() => {
-    if (fit !== 'contain' || !showsVideo) { setContainSize(null); return; }
-    const root = rootRef.current;
-    const video = videoRef.current;
-    const parent = root?.parentElement;
-    if (!root || !video || !parent) return;
-
-    function recompute() {
-      const ratio = video!.videoWidth && video!.videoHeight ? video!.videoWidth / video!.videoHeight : 16 / 9;
-      const { width: pw, height: ph } = parent!.getBoundingClientRect();
-      let w = pw;
-      let h = w / ratio;
-      if (h > ph) { h = ph; w = h * ratio; }
-      setContainSize({ w, h });
-    }
-
-    recompute();
-    video.addEventListener('loadedmetadata', recompute);
-    video.addEventListener('resize', recompute);
-    const ro = new ResizeObserver(recompute);
-    ro.observe(parent);
-    return () => {
-      video.removeEventListener('loadedmetadata', recompute);
-      video.removeEventListener('resize', recompute);
-      ro.disconnect();
-    };
-  }, [fit, showsVideo, videoTrack]);
 
   const isFocused = state.focusedId === key;
 
@@ -164,7 +135,6 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
       }`}
       style={{
         ...rootStyle,
-        ...(fit === 'contain' && containSize ? { width: containSize.w, height: containSize.h } : {}),
         ...(showSpeakingBorder ? { borderColor: tint } : {}),
       }}
       onClick={handleClick}
@@ -178,7 +148,14 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
           autoPlay
           playsInline
           muted={isMine}
-          className={`relative h-full w-full object-cover ${kind === 'screen' ? 'bg-bg-call' : ''}`}
+          className={cn(
+            'relative h-full w-full',
+            // A tile always keeps its cell's size; media of another aspect
+            // ratio is letterboxed inside it. A cover-fit preview still
+            // letterboxes once its tile goes fullscreen, so nothing is cut off.
+            fit === 'contain' ? 'object-contain' : 'object-cover [:fullscreen_&]:object-contain',
+            kind === 'screen' && 'bg-bg-call'
+          )}
           // presentation only — the track actually published/sent is never touched
           style={isMine && kind === 'camera' && mirrorCameraPreview ? { transform: 'scaleX(-1)' } : undefined}
         />

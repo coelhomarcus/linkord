@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next';
 import { useRoom } from '../../state/RoomContext';
 import { Tile } from './Tile';
 import { fitGrid, gridGap } from './callLayoutMetrics';
-import { cn } from '@/shared/lib/utils';
 import type { TileDescriptor } from './tileTypes';
 
 interface TileGridProps {
@@ -90,15 +89,13 @@ export function TileGrid({ descriptors, focusedId, minTileWidth = DEFAULT_MIN_TI
     onCapacityChange?.(meetsMinimum, descriptors[0]?.key ?? null);
   }, [meetsMinimum, n, descriptors, onCapacityChange]);
 
-  // Contain-fit tiles shrink their own root to the media's aspect ratio (see
-  // Tile.tsx), so their wrapper has to actively center them — a cover-fit
-  // tile (only the thumbnail strip, small previews read fine cropped) fills
-  // its wrapper exactly and needs no centering.
+  // Every tile fills its wrapper exactly; media that isn't 16:9 is letterboxed
+  // inside the tile (see Tile.tsx), so all tiles stay the same size.
   const renderTile = (d: TileDescriptor, isFocused: boolean, width: number | string, height: number | string, fit: 'cover' | 'contain' = 'contain') => (
     <div
       key={d.key}
       style={{ width, height }}
-      className={cn('flex-none', fit === 'contain' ? 'flex min-h-0 min-w-0 items-center justify-center' : 'min-h-0 min-w-0')}
+      className="min-h-0 min-w-0 flex-none"
     >
       <Tile
         participantId={d.participantId}

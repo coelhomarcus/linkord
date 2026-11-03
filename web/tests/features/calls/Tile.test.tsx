@@ -70,6 +70,23 @@ describe('Tile — mirroring', () => {
   });
 });
 
+describe('Tile — media aspect ratio', () => {
+  it('letterboxes inside a fixed-size tile instead of resizing it or cropping', () => {
+    const contain = renderWithRoom(<Tile participantId="p-1" kind="screen" isMine />, {
+      state: { ...initialRoomState, me: { ...initialRoomState.me, id: 'p-1' } },
+    });
+    expect(contain.container.querySelector('video')).toHaveClass('object-contain');
+    expect(contain.container.querySelector('[data-tile-kind]')).not.toHaveAttribute('style', expect.stringContaining('width'));
+    contain.unmount();
+
+    const cover = renderWithRoom(<Tile participantId="p-1" kind="camera" isMine fit="cover" />, {
+      state: { ...initialRoomState, me: { ...initialRoomState.me, id: 'p-1' } },
+    });
+    expect(cover.container.querySelector('video')).toHaveClass('object-cover');
+    expect(cover.container.querySelector('video')?.className).toContain('[:fullscreen_&]:object-contain');
+  });
+});
+
 describe('Tile — video hidden for me', () => {
   it('hides another person\'s camera, and never my own camera or a shared screen', () => {
     const hidden = renderWithRoom(<Tile participantId="p-2" kind="camera" isMine={false} />, {
