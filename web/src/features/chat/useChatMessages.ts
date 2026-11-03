@@ -468,7 +468,7 @@ export function useChatMessages(deps: ChatMessagesDeps) {
     const amLookingAtIt = document.hasFocus() && activeViewRef.current === 'chat' && conversationId === activeConversationIdRef.current;
     if (m.message.id !== myUserIdRef.current && !amLookingAtIt) {
       const mentioned = mentionsUsername(m.message.text, myUsernameRef.current);
-      if (shouldChime(conversationId, mentioned)) playSound('newMessage');
+      if (shouldChime(conversationId, mentioned)) playSound(mentioned ? 'mention' : 'newMessage');
       notifyIncomingChatMessage({
         conversationId,
         conversationName: conversationTitle(conversationsRef.current.find((c) => c.id === conversationId), myUserIdRef.current, allUsersRef.current),

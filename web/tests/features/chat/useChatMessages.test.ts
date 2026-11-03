@@ -174,6 +174,18 @@ describe('useChatMessages — new message sound', () => {
       vi.useRealTimers();
     }
   });
+
+  it('plays the mention sound, not the regular one, when the message addresses me', () => {
+    vi.useFakeTimers();
+    vi.mocked(playSound).mockClear();
+    try {
+      const { result } = setup();
+      act(() => result.current.onChat({ t: 'chat', message: message(60, { conversationId: 'outra', text: 'oi @b' }) }));
+      expect(playSound).toHaveBeenCalledExactlyOnceWith('mention');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
 
 describe('useChatMessages — correlated send', () => {
