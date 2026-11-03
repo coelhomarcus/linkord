@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { PendingAttachments } from '@/features/chat/PendingAttachments';
 import type { OutboxAttachment } from '@/features/chat/useMessageOutbox';
+import { fileName } from '@tests/fixtures/fileNameMatcher';
 
 function attachment(over: Partial<OutboxAttachment> = {}): OutboxAttachment {
   return { localId: 'l1', name: 'contrato.pdf', mime: 'application/pdf', size: 1024, previewUrl: null, progress: 0, failed: false, ...over };
@@ -10,7 +11,7 @@ function attachment(over: Partial<OutboxAttachment> = {}): OutboxAttachment {
 describe('PendingAttachments', () => {
   it('document with no progress yet shows "Preparando envio…", without making up a percentage', () => {
     render(<PendingAttachments attachments={[attachment({ progress: 0 })]} />);
-    expect(screen.getByTitle('contrato.pdf')).toBeInTheDocument();
+    expect(screen.getByText(fileName('contrato.pdf'))).toBeInTheDocument();
     expect(screen.getByText('Preparando envio…')).toBeInTheDocument();
     expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '0');
   });
