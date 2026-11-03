@@ -5,168 +5,60 @@ import { useLocation } from 'react-router';
 import { renderSocial } from '@tests/fixtures/socialFixture';
 import { SidebarProvider } from '@/shared/ui/motion/sidebar';
 import { ConversationSidebar } from '@/features/conversations/ConversationSidebar';
+import { channelConversation } from '@/features/servers/useServersList';
+import { PERMISSIONS } from '@/features/servers/permissionBits';
 import { initialRoomState } from '@/state/roomReducer';
-import type { Conversation, ChatMessage, Participant, PublicUser } from '@/shared/types/protocol';
+import type { Conversation, Participant, PublicUser, ServerSummary } from '@/shared/types/protocol';
 
 const meState = { ...initialRoomState, me: { ...initialRoomState.me, id: 'c', userId: 'me', name: 'fulana', displayName: 'Fulana' } };
 const bea: PublicUser = { id: 'u-bea', username: 'bea', displayName: 'Bea', avatar: '', avatarColor: 'green', banner: '', bio: '', profileLinks: [], role: 'user' as const };
+const caio: PublicUser = { ...bea, id: 'u-caio', username: 'caio', displayName: 'Caio' };
 
-function directConversation(): Conversation {
+const direct = (id: string, peer: string): Conversation => ({
+  id, type: 'direct', title: '', serverId: null, memberIds: ['me', peer], lastMessageAt: Date.now(), createdAt: 0, updatedAt: 0, pinnedAt: null,
+});
+
+const everyone = PERMISSIONS.VIEW_CHANNEL | PERMISSIONS.SEND_MESSAGES | PERMISSIONS.CONNECT | PERMISSIONS.CREATE_INVITE;
+const server: ServerSummary = {
+  id: 's1', name: 'Os Xerecas', icon: '', ownerId: 'u-bea', status: 'active', createdAt: 0, memberCount: 3, position: 0,
+  permissions: everyone, myRoleIds: [], roles: [],
+  categories: [{ id: 'cat-text', name: 'Canais de texto', position: 0 }, { id: 'cat-voice', name: 'Canais de voz', position: 1 }],
+  channels: [
+    { id: 'ch-geral', serverId: 's1', type: 'text', name: 'geral', topic: '', categoryId: 'cat-text', position: 0, permissionsSynced: true, permissions: everyone },
+    { id: 'ch-voz', serverId: 's1', type: 'voice', name: 'Geral', topic: '', categoryId: 'cat-voice', position: 0, permissionsSynced: true, permissions: everyone },
+  ],
+};
+
+function inVoice(): Participant {
   return {
-    id: 'conv-dm', type: 'direct', title: '', avatar: '', createdBy: null, memberIds: ['me', 'u-bea'],
-    lastMessageAt: Date.now(), createdAt: 0, updatedAt: 0, pinnedAt: null, myRole: 'member', ownerId: null, memberCount: 2,
-  };
-}
-
-function groupConversation(): Conversation {
-  return {
-    id: 'conv-group', type: 'group', title: 'os xerecas', avatar: '', createdBy: 'me', memberIds: ['me', 'u-bea'],
-    lastMessageAt: null, createdAt: 0, updatedAt: 0, pinnedAt: null, myRole: 'owner', ownerId: 'me', memberCount: 2,
-  };
-}
-
-function lastMessage(conversationId: string): ChatMessage {
-  return { msgId: 1, conversationId, id: 'u-bea', name: 'Bea', avatar: '', text: 'oi, tudo bem?', ts: Date.now() };
-}
-
-function callParticipant(): Participant {
-  return {
-    id: 'p-bea', userId: 'u-bea',
-    name: 'bea', displayName: 'Bea', avatar: '', avatarPoster: '', avatarColor: 'green', banner: '', bannerPoster: '', bio: '', profileLinks: [],
-    role: 'user', deafened: false, callConversationId: 'conv-group', micActivated: true, micMuted: false, cameraOn: false,
-    sharing: false, speaking: false,
+    id: 'p-bea', userId: 'u-bea', name: 'bea', displayName: 'Bea', avatar: '', avatarPoster: '', avatarColor: 'green', banner: '', bannerPoster: '', bio: '', profileLinks: [],
+    role: 'user', deafened: false, callConversationId: 'ch-voz', micActivated: true, micMuted: false, cameraOn: false, sharing: false, speaking: false,
   };
 }
 
 function CurrentPath() { return <span data-testid="current-path">{useLocation().pathname}</span>; }
 
-function renderSidebar(overrides: {
-  activeCallConversationId?: string | null;
-  participants?: Map<string, Participant>;
-  activeConversationId?: string | null;
-  unreadByConversation?: Map<string, number>;
-  openMobile?: boolean;
-} = {}) {
-  const dm = directConversation();
-  const group = groupConversation();
+function renderSidebar(path = '/app/channels/@me', overrides: { unreadByConversation?: Map<string, number>; participants?: Map<string, Participant>; openCall?: () => void } = {}) {
+  const conversations = [direct('dm-bea', 'u-bea'), direct('dm-caio', 'u-caio'), ...server.channels.map((c) => channelConversation(server, c))];
   return renderSocial(
-    <SidebarProvider open onOpenChange={vi.fn()} openMobile={overrides.openMobile ?? false} onOpenMobileChange={vi.fn()}>
+    <SidebarProvider open onOpenChange={vi.fn()} openMobile={false} onOpenMobileChange={vi.fn()}>
       <ConversationSidebar />
       <CurrentPath />
     </SidebarProvider>,
     {
       room: {
         state: { ...meState, participants: overrides.participants ?? new Map() },
-        conversations: [dm, group],
-        allUsers: new Map([['u-bea', bea]]),
-        messagesByConversation: new Map([['conv-dm', [lastMessage('conv-dm')]]]),
-        activeCallConversationId: overrides.activeCallConversationId ?? null,
-        activeConversationId: overrides.activeConversationId ?? null,
+        conversations,
+        servers: [server],
+        allUsers: new Map([['u-bea', bea], ['u-caio', caio]]),
         unreadByConversation: overrides.unreadByConversation ?? new Map(),
+        ...(overrides.openCall ? { openCall: overrides.openCall } : {}),
       },
-      path: '/app/conversations',
+      path,
     },
   );
 }
 
-async function openGroupsTab() {
-  const user = userEvent.setup();
-  await user.click(screen.getByRole('tab', { name: 'Grupos' }));
-  return user;
-}
-
-describe('ConversationSidebar — the conversation row only shows the name (no @, no preview, no "members")', () => {
-  it('DM with a message: shows only the display name, not the last message preview', () => {
-    renderSidebar();
-    expect(screen.getByText('Bea')).toBeInTheDocument();
-    expect(screen.queryByText(/tudo bem/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/@bea/)).not.toBeInTheDocument();
-  });
-
-  it('group with no message: shows only the title, not the member count', async () => {
-    renderSidebar();
-    await openGroupsTab();
-    expect(screen.getByText('os xerecas')).toBeInTheDocument();
-    expect(screen.queryByText(/membros/)).not.toBeInTheDocument();
-  });
-
-  it("no longer shows the last message's time — just avatar and name, like Discord", () => {
-    renderSidebar();
-    // 17:32-shaped or similar — any DM/group row's time text is gone entirely.
-    expect(screen.queryByText(/^\d{1,2}:\d{2}$/)).not.toBeInTheDocument();
-  });
-
-  it('no active call: the conversation row has only one line (the name), nothing below', async () => {
-    renderSidebar();
-    await openGroupsTab();
-    const title = screen.getByText('os xerecas');
-    // title's own wrapping <span> has no sibling below it (no second line) —
-    // the row only grows a second line when there's a call to show.
-    expect(title.parentElement?.children).toHaveLength(1);
-  });
-
-  it('group with an active call: a second line appears with who is on the call, in the slot where the date used to be', async () => {
-    const participants = new Map([['p-bea', callParticipant()]]);
-    renderSidebar({ participants });
-    await openGroupsTab();
-    const title = screen.getByText('os xerecas');
-    // title's row now has a sibling block below it — the call indicator, in
-    // the exact slot the removed timestamp used to occupy.
-    expect(title.parentElement?.children).toHaveLength(2);
-    expect(title.nextElementSibling).not.toBeNull();
-    expect(title.nextElementSibling?.textContent).not.toContain('os xerecas');
-  });
-});
-
-describe('ConversationSidebar — Amigos / Grupos tabs', () => {
-  it('opens the detail URL even when the conversation is already active', async () => {
-    renderSidebar({ activeConversationId: 'conv-dm' });
-    await userEvent.setup().click(screen.getByRole('button', { name: /Bea/ }));
-    expect(screen.getByTestId('current-path')).toHaveTextContent('/app/conversations/conv-dm');
-  });
-  it('defaults to Amigos: shows the DM and hides the group', () => {
-    renderSidebar();
-    expect(screen.getByText('Bea')).toBeInTheDocument();
-    expect(screen.queryByText('os xerecas')).not.toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'Amigos' })).toHaveAttribute('data-active');
-  });
-
-  it('clicking Grupos shows the group and hides the DM', async () => {
-    renderSidebar();
-    await openGroupsTab();
-    expect(screen.getByText('os xerecas')).toBeInTheDocument();
-    expect(screen.queryByText('Bea')).not.toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'Grupos' })).toHaveAttribute('data-active');
-  });
-
-  it('search only filters the active tab', async () => {
-    const user = userEvent.setup();
-    renderSidebar();
-    await user.type(screen.getByPlaceholderText('Buscar amigos'), 'xerecas');
-    expect(screen.getByText('Nenhuma conversa.')).toBeInTheDocument();
-    expect(screen.queryByText('os xerecas')).not.toBeInTheDocument();
-
-    await user.click(screen.getByRole('tab', { name: 'Grupos' }));
-    expect(screen.getByPlaceholderText('Buscar grupos')).toBeInTheDocument();
-    expect(screen.getByText('os xerecas')).toBeInTheDocument();
-    expect(screen.queryByText('Nenhuma conversa.')).not.toBeInTheDocument();
-  });
-
-  it('shows an unread count on the Grupos tab when a group has unread', () => {
-    renderSidebar({ unreadByConversation: new Map([['conv-group', 3]]) });
-    expect(screen.getByRole('tab', { name: 'Grupos' })).toHaveTextContent('3');
-    expect(screen.getByRole('tab', { name: 'Amigos' })).not.toHaveTextContent('3');
-  });
-
-  it('opens on Grupos when the active conversation is a group', () => {
-    renderSidebar({ activeConversationId: 'conv-group' });
-    expect(screen.getByText('os xerecas')).toBeInTheDocument();
-    expect(screen.queryByText('Bea')).not.toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'Grupos' })).toHaveAttribute('data-active');
-  });
-});
-
-/** Pretends the window is `width` wide for the `(max-width: Npx)` queries the sidebar reads. */
 function setViewport(width: number) {
   window.matchMedia = ((query: string) => {
     const max = /max-width:\s*(\d+)px/.exec(query);
@@ -177,35 +69,77 @@ function setViewport(width: number) {
   }) as typeof window.matchMedia;
 }
 
-describe('ConversationSidebar — user dock', () => {
+describe('ConversationSidebar — home', () => {
+  it('lists Friends and the DMs by the other person, never a channel', () => {
+    renderSidebar();
+    expect(screen.getByRole('button', { name: /Amigos/ })).toBeInTheDocument();
+    expect(screen.getByText('Mensagens diretas')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Bea' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Caio' })).toBeInTheDocument();
+    expect(screen.queryByText('geral')).not.toBeInTheDocument();
+  });
+
+  it('opens a DM at its home URL', async () => {
+    renderSidebar();
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Bea' }));
+    expect(screen.getByTestId('current-path')).toHaveTextContent('/app/channels/@me/dm-bea');
+  });
+
+  it('filters the DMs by name', async () => {
+    renderSidebar();
+    await userEvent.setup().type(screen.getByRole('textbox', { name: 'Encontre ou comece uma conversa' }), 'cai');
+    expect(screen.queryByRole('button', { name: 'Bea' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Caio' })).toBeInTheDocument();
+  });
+
+  it('shows a DM\'s unread count on its row', () => {
+    renderSidebar('/app/channels/@me', { unreadByConversation: new Map([['dm-bea', 3]]) });
+    expect(screen.getByRole('button', { name: 'Bea, 3 não lidas' })).toHaveTextContent('3');
+  });
+});
+
+describe('ConversationSidebar — a server', () => {
+  it('shows the server, its categories and channels, and who is in each voice channel', () => {
+    renderSidebar('/app/channels/s1/ch-geral', { participants: new Map([['p-bea', inVoice()]]) });
+    expect(screen.getByText('Os Xerecas')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Canais de texto/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'geral' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: 'Geral' })).toBeInTheDocument();
+    expect(screen.getByText('Bea')).toBeInTheDocument();
+    expect(screen.queryByText('Mensagens diretas')).not.toBeInTheDocument();
+  });
+
+  it('a text channel opens at its URL; a voice channel joins its call', async () => {
+    const openCall = vi.fn();
+    renderSidebar('/app/channels/s1/ch-geral', { openCall });
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Geral' }));
+    expect(openCall).toHaveBeenCalledWith('ch-voz');
+    await user.click(screen.getByRole('button', { name: 'geral' }));
+    expect(screen.getByTestId('current-path')).toHaveTextContent('/app/channels/s1/ch-geral');
+  });
+
+  it('collapsing a category hides its channels', async () => {
+    renderSidebar('/app/channels/s1/ch-geral');
+    await userEvent.setup().click(screen.getByRole('button', { name: /Canais de voz/ }));
+    expect(screen.queryByRole('button', { name: 'Geral' })).not.toBeInTheDocument();
+  });
+});
+
+describe('ConversationSidebar — on a phone', () => {
   const originalMatchMedia = window.matchMedia;
   afterEach(() => { window.matchMedia = originalMatchMedia; });
 
-  it('does not draw the dock in the column: from 768px it floats over the rail and the list, drawn by the shell', () => {
-    renderSidebar();
-    expect(screen.queryByRole('button', { name: 'Meu perfil' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Ajustes' })).not.toBeInTheDocument();
-  });
-
-  it('on a phone the list fills the page without a drawer or dock', () => {
+  it('home is a page with the server rail beside the DMs', () => {
     setViewport(390);
     renderSidebar();
-    expect(screen.getByRole('main', { name: 'Conversas' })).toBeInTheDocument();
-    expect(screen.queryByRole('dialog', { name: 'Conversas' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Meu perfil' })).not.toBeInTheDocument();
+    expect(screen.getByRole('main', { name: 'Mensagens diretas' })).toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: 'Servidores' })).toBeInTheDocument();
   });
 
-  it('does not highlight the active conversation in the phone list', () => {
+  it('is not drawn while a conversation is open', () => {
     setViewport(390);
-    renderSidebar({ activeConversationId: 'conv-dm' });
-    const row = screen.getByRole('button', { name: /Bea/ });
-    expect(row.querySelector('.bg-nav-active')).toBeNull();
-  });
-
-  it('keeps the active conversation highlight on desktop', () => {
-    setViewport(1280);
-    renderSidebar({ activeConversationId: 'conv-dm' });
-    const row = screen.getByRole('button', { name: /Bea/ });
-    expect(row.querySelector('.bg-nav-active')).not.toBeNull();
+    renderSidebar('/app/channels/@me/dm-bea');
+    expect(screen.queryByRole('main', { name: 'Mensagens diretas' })).not.toBeInTheDocument();
   });
 });

@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { initialRoomState } from '@/state/roomReducer';
+import { PERMISSIONS } from '@/features/servers/permissionBits';
+import { MemoryRouter } from 'react-router';
 import { renderWithRoom } from '@tests/fixtures/roomContextFixture';
 import { MessageRow } from '@/features/chat/MessageRow';
 import type { ChatMessage, PublicUser } from '@/shared/types/protocol';
@@ -22,10 +24,12 @@ function makeMessage(overrides: Partial<ChatMessage> = {}): ChatMessage {
 
 const noop = () => {};
 
-describe('MessageRow — quick reactions in a bot', () => {
+describe('MessageRow — quick reactions in a read-only channel', () => {
+  // read-only: reacting is all a member can do there (a webhook's announcements)
   const conversation = (type: 'bot' | 'group') => ({
-    id: 'conv-1', type, title: 'x', avatar: '', createdBy: null, memberIds: ['me'], lastMessageAt: null,
-    createdAt: 0, updatedAt: 0, pinnedAt: null, myRole: 'member' as const, ownerId: null, memberCount: 1,
+    id: 'conv-1', type: 'text' as const, title: 'x', serverId: 's1', memberIds: [], lastMessageAt: null,
+    createdAt: 0, updatedAt: 0, pinnedAt: null,
+    permissions: PERMISSIONS.VIEW_CHANNEL | PERMISSIONS.ADD_REACTIONS | (type === 'group' ? PERMISSIONS.SEND_MESSAGES : 0),
   });
   const renderIn = (type: 'bot' | 'group', message = makeMessage({ id: null, name: 'Deploys', bot: true })) => {
     const reactToChatMessage = vi.fn();
@@ -332,9 +336,9 @@ describe('MessageRow — quick reactions', () => {
 
 describe('MessageRow — invitation card', () => {
   const inviteMessage = () => makeMessage({
-    kind: 'group_invite', text: '',
+    kind: 'server_invite', text: '',
     invitation: {
-      id: 'inv', status: 'pending', groupId: 'g', groupTitle: 'Squad', groupAvatar: '', memberCount: 2,
+      id: 'inv', status: 'pending', serverId: 'g', serverName: 'Squad', serverIcon: '', memberCount: 2,
       inviterId: 'user-1', inviteeId: 'user-2', version: 1,
     },
   });
@@ -342,7 +346,7 @@ describe('MessageRow — invitation card', () => {
   it('renders the card and offers no reply, edit or react (only delete)', () => {
     const state = { ...initialRoomState, me: { ...initialRoomState.me, userId: 'user-2' } };
     renderWithRoom(
-      <MessageRow message={inviteMessage()} showHeader highlighted={false} allUsers={new Map()} mentionLookup={new Map()} onOpenProfile={noop} onReply={noop} onJumpTo={noop} />,
+      <MemoryRouter><MessageRow message={inviteMessage()} showHeader highlighted={false} allUsers={new Map()} mentionLookup={new Map()} onOpenProfile={noop} onReply={noop} onJumpTo={noop} /></MemoryRouter>,
       { state, editingMsgId: 1 },
     );
     expect(screen.getByText('Squad')).toBeInTheDocument();
@@ -372,7 +376,7 @@ describe('MessageRow — reporting', () => {
     const { unmount } = row(makeMessage({ id: 'user-1' }));
     expect(screen.queryByRole('button', { name: 'Denunciar' })).not.toBeInTheDocument();
     unmount();
-    row(makeMessage({ id: 'user-2', kind: 'group_invite', text: '', invitation: null }));
+    row(makeMessage({ id: 'user-2', kind: 'server_invite', text: '', invitation: null }));
     expect(screen.queryByRole('button', { name: 'Denunciar' })).not.toBeInTheDocument();
   });
 });

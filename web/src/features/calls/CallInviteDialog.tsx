@@ -1,5 +1,5 @@
 import { CheckIcon, MagnifyingGlassIcon } from '@phosphor-icons/react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useRoom } from '@/state/RoomContext';
@@ -8,7 +8,7 @@ import { Button } from '@/shared/ui/primitives/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/ui/primitives/dialog';
 import { ApiError, inviteToCall } from '@/shared/api/api';
 import { ERROR_CODES } from '@/shared/api/errorCodes';
-import { groupMembers } from '@/features/conversations/conversationUtils';
+import { fetchAllServerMembers } from '@/features/servers/serversApi';
 import type { PublicUser } from '@/shared/types/protocol';
 
 interface CallInviteDialogProps {
@@ -43,8 +43,19 @@ export function CallInviteDialog({ open, onOpenChange, conversationId }: CallInv
     for (const p of state.participants.values()) if (p.callConversationId === conversationId) ids.add(p.userId);
     return ids;
   }, [state.participants, conversationId]);
+  // the server's members: who could be in this voice channel (the server
+  // still checks each one can connect there)
+  const [members, setMembers] = useState<PublicUser[]>([]);
+  useEffect(() => {
+    if (!open || !conversation?.serverId) return;
+    let cancelled = false;
+    fetchAllServerMembers(conversation.serverId)
+      .then((items) => { if (!cancelled) setMembers(items.map((m) => allUsers.get(m.user.id) ?? (m.user as PublicUser))); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [open, conversation?.serverId, allUsers]);
   const needle = query.trim().toLowerCase();
-  const candidates = groupMembers(conversation, allUsers)
+  const candidates = [...members].sort((a, b) => a.displayName.localeCompare(b.displayName))
     .filter((u) => u.id !== state.me.userId && !inCall.has(u.id))
     .filter((u) => !needle || u.displayName.toLowerCase().includes(needle) || u.username.toLowerCase().includes(needle));
 

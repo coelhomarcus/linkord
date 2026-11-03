@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router';
+import { ROUTES } from '@/shared/lib/routes';
 import { useRoom } from '@/state/RoomContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/primitives/dialog';
 import { Button } from '@/shared/ui/primitives/button';
@@ -33,7 +35,8 @@ type ProfileImageSelection = {
  * that fallback path — a cache hit never touches it. */
 export function ProfileModal({ userId, onClose, onOpenProfile }: ProfileModalProps) {
   const { t } = useTranslation('profile');
-  const { state, allUsers, onlineUserIds, openConversation, requestChatView } = useRoom();
+  const { state, allUsers, onlineUserIds } = useRoom();
+  const navigate = useNavigate();
   const [reportOpen, setReportOpen] = useState(false);
   const cachedUser = userId ? allUsers.get(userId) : null;
   const [fetchedUser, setFetchedUser] = useState<PublicUser | null>(null);
@@ -62,10 +65,8 @@ export function ProfileModal({ userId, onClose, onOpenProfile }: ProfileModalPro
   // your own profile has nothing in common to list: it stays one column
   const showMutuals = !!user && user.id !== state.me.userId;
 
-  // the same way a notification opens a conversation: from any page, the chat comes forward
-  function openGroup(conversationId: string) {
-    openConversation(conversationId);
-    requestChatView(conversationId);
+  function openServer(serverId: string) {
+    navigate(ROUTES.server(serverId));
     onClose();
   }
 
@@ -155,7 +156,7 @@ export function ProfileModal({ userId, onClose, onOpenProfile }: ProfileModalPro
                   details={details.details}
                   onRetry={details.retry}
                   onOpenProfile={onOpenProfile}
-                  onOpenGroup={openGroup}
+                  onOpenGroup={openServer}
                 />
               </div>
             )}

@@ -52,8 +52,9 @@ export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(fu
     leaveCall, reconnecting, isCallFullscreen, toggleCallFullscreen,
     activeCallConversationId, conversations,
   } = useRoom();
-  // sounds belong to a group, so a 1:1 call has no soundboard
-  const soundboardGroupId = conversations.find((c) => c.id === activeCallConversationId && c.type === 'group')?.id ?? null;
+  // sounds belong to a server, so a 1:1 call has no soundboard
+  const callChannel = conversations.find((c) => c.id === activeCallConversationId && c.type === 'voice');
+  const soundboardServerId = callChannel?.serverId ?? null;
   const myMedia = useParticipantMedia(state.me.id ?? '');
   const cameraOn = state.me.cameraOn;
   const sharing = state.me.sharing;
@@ -148,9 +149,10 @@ export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(fu
           <ScreenShareQuickMenu />
         </div>
 
-        {soundboardGroupId && (
+        {soundboardServerId && callChannel && (
           <SoundboardButton
-            conversationId={soundboardGroupId}
+            serverId={soundboardServerId}
+            conversationId={callChannel.id}
             className={cn(BAR_BUTTON, BAR_BUTTON_NEUTRAL)}
             activeClassName="bg-white/12 text-white"
             iconClassName={BAR_ICON}

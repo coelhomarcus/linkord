@@ -149,13 +149,13 @@ async function noticeFor(event: OutboxEvent, locale: Locale): Promise<PushNotice
   if (kind === 'server_invitation') {
     const [invitation] = await db.select({ status: serverInvitations.status }).from(serverInvitations).where(eq(serverInvitations.id, String(reference))).limit(1);
     if (!invitation || invitation.status !== 'pending') return null;
-    return { title: localeText(locale, 'push.serverInvitationTitle'), body: localeText(locale, 'push.serverInvitationBody'), path: '/app/channels/@me?tab=invitations', tag: `social-${row.id}` };
+    return { title: localeText(locale, 'push.serverInvitationTitle'), body: localeText(locale, 'push.serverInvitationBody'), path: '/app/friends?tab=invitations', tag: `social-${row.id}` };
   }
   const [friendship] = await db.select({ status: friendships.status }).from(friendships).where(eq(friendships.id, String(reference))).limit(1);
   if (!friendship || friendship.status !== (kind === 'friend_request' ? 'pending' : 'accepted')) return null;
   return { title: localeText(locale, kind === 'friend_request' ? 'push.friendRequestTitle' : 'push.friendAcceptedTitle'),
     body: localeText(locale, kind === 'friend_request' ? 'push.friendRequestBody' : 'push.friendAcceptedBody'),
-    path: kind === 'friend_request' ? '/app/channels/@me?tab=pending#received' : '/app/channels/@me', tag: `social-${row.id}` };
+    path: kind === 'friend_request' ? '/app/friends?tab=pending#received' : '/app/friends', tag: `social-${row.id}` };
 }
 
 export async function deliverWebPush(event: OutboxEvent): Promise<PushDeliveryResult> {

@@ -19,16 +19,13 @@
   },
   "text": {
     "unknownActor": "Alguém",
-    "unknownBot": "Um bot",
-    "unknownGroup": "Grupo",
     "friendRequest": "{{name}} enviou uma solicitação de amizade",
     "friendAccepted": "{{name}} aceitou sua solicitação de amizade",
-    "groupInvitationNamed": "{{name}} convidou você para o grupo {{group}}",
-    "groupInvitationUnnamed": "{{name}} convidou você para um grupo",
-    "mentionBot": "{{name}} mencionou você",
+    "groupInvitationNamed": "{{name}} convidou você para o servidor {{group}}",
+    "groupInvitationUnnamed": "{{name}} convidou você para um servidor",
+    "mentionBot": "Você foi mencionado em {{name}}",
     "mentionDirect": "{{name}} mencionou você em uma conversa",
-    "mentionGroup": "{{name}} mencionou você no grupo {{group}}",
-    "mentionBotConversation": "{{name}} mencionou você no bot {{bot}}"
+    "mentionGroup": "{{name}} mencionou você em {{group}}"
   },
   "relative": {
     "now": "agora",

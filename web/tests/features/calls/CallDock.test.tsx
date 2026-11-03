@@ -7,8 +7,8 @@ import { CallDock } from '@/features/calls/CallDock';
 import type { Conversation } from '@/shared/types/protocol';
 
 const group: Conversation = {
-  id: 'conv-1', type: 'group', title: 'os xerecas', avatar: '', createdBy: 'me', memberIds: ['me'],
-  lastMessageAt: null, createdAt: 0, updatedAt: 0, pinnedAt: null, myRole: 'owner', ownerId: 'me', memberCount: 1,
+  id: 'conv-1', type: 'voice', title: 'os xerecas', serverId: 's1', memberIds: ['me'],
+  lastMessageAt: null, createdAt: 0, updatedAt: 0, pinnedAt: null,
 };
 
 const me = { ...initialRoomState, me: { ...initialRoomState.me, userId: 'me', displayName: 'Fulana' } };

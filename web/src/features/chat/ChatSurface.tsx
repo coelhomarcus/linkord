@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { hasPermission, PERMISSIONS } from '@/features/servers/permissionBits';
 import { UploadSimpleIcon } from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
 import type { DragEvent } from 'react';
@@ -29,8 +30,10 @@ export function ChatSurface({ conversationId, onOpenProfile, surfaceId = 'main' 
   const { state, setReplyingTo, windowGenerationByConversation, conversations, typingByConversation, allUsers } = useRoom();
   // the same people TypingIndicator names: someone it can't show raises no background
   const someoneTyping = [...(typingByConversation.get(conversationId) ?? [])].some((id) => allUsers.has(id));
-  // only its webhook posts in a bot: no composer, no typing, nothing to drop files into
-  const readOnly = conversations.find((c) => c.id === conversationId)?.type === 'bot';
+  // a channel the viewer can't write in (a webhook's announcements, say):
+  // no composer, no typing, nothing to drop files into
+  const shown = conversations.find((c) => c.id === conversationId);
+  const readOnly = shown?.permissions !== undefined && !hasPermission(shown.permissions, PERMISSIONS.SEND_MESSAGES);
   const composerRef = useRef<MessageComposerHandle>(null);
   const composerWrapRef = useRef<HTMLDivElement | null>(null);
   const [composerHeight, setComposerHeight] = useState(0);

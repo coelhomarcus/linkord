@@ -79,34 +79,28 @@
     "confirm": "Apagar"
   },
   "invite": {
-    "unavailable": "Convite indisponível: o grupo não existe mais.",
+    "unavailable": "Convite indisponível: o servidor não existe mais.",
     "status": {
       "accepted": "Aceito",
       "declined": "Recusado",
       "revoked": "Cancelado",
       "expired": "Expirado"
     },
-    "quotaExceeded": "Você já participa do máximo de grupos permitido.",
+    "quotaExceeded": "Você já participa do máximo de servidores permitido.",
     "failed": "Não foi possível concluir a ação. Tente de novo.",
-    "full_group": "Limite atingido: o grupo está cheio.",
-    "full_bot": "Limite atingido: o bot está cheio.",
-    "alreadyMember_group": "Você já participa deste grupo.",
-    "alreadyMember_bot": "Você já participa deste bot.",
     "accepting": "Aceitando…",
-    "join_group": "Entrar no grupo",
-    "join_bot": "Entrar no bot",
     "decline": "Recusar",
     "waiting": "Aguardando resposta",
     "revoke": "Revogar",
-    "open_group": "Abrir grupo",
-    "open_bot": "Abrir bot",
-    "header_group": "Convite para grupo",
-    "header_bot": "Convite para bot",
     "members_zero": "{{count}} membros",
     "members_one": "{{count}} membro",
     "members_other": "{{count}} membros",
-    "hint_group": "Ao entrar, você verá o histórico do grupo.",
-    "hint_bot": "Ao entrar, você passa a receber os avisos deste bot."
+    "full": "Limite atingido: o servidor está cheio.",
+    "alreadyMember": "Você já participa deste servidor.",
+    "join": "Entrar no servidor",
+    "open": "Abrir servidor",
+    "header": "Convite para servidor",
+    "hint": "Ao entrar, você verá o histórico do servidor."
   },
   "search": {
     "title": "Buscar mensagens",
@@ -136,9 +130,9 @@
     "openIndexed": "Abrir {{name}} ({{index}} de {{total}})"
   },
   "preview": {
-    "invite": "Convite para o grupo {{title}}",
+    "invite": "Convite para o servidor {{title}}",
     "inviteUnavailable": "Convite indisponível",
-    "callInvite": "Convite para a chamada em {{title}}",
+    "callInvite": "Convite para o canal de voz {{title}}",
     "callInviteUnavailable": "Convite para chamada indisponível",
     "notice": "Aviso",
     "attachment": "Anexo"
@@ -162,7 +156,7 @@
     "inCall_one": "{{count}} pessoa na chamada",
     "inCall_other": "{{count}} pessoas na chamada",
     "ended": "A chamada terminou",
-    "notMember": "Você não faz mais parte desse grupo.",
+    "notMember": "Você não faz mais parte desse canal.",
     "unavailable": "Convite para chamada indisponível"
   }
 }

@@ -6,7 +6,7 @@ import { Button } from '@/shared/ui/primitives/button';
 import { Tabs, TabsIndicator, TabsList, TabsPanel, TabsTrigger } from '@/shared/ui/primitives/tabs';
 import { cn } from '@/shared/lib/utils';
 import { useRoom } from '@/state/RoomContext';
-import { GroupAvatar } from '@/features/conversations/GroupAvatar';
+import { ServerIcon } from '@/features/servers/ServerIcon';
 import type { ProfileDetails } from '@/shared/api/api';
 
 type Tab = 'friends' | 'groups';
@@ -36,7 +36,7 @@ export function ProfileMutuals({ status, details, onRetry, onOpenProfile, onOpen
   // groups first: what you share as a group is the first thing the profile shows
   const [tab, setTab] = useState<Tab>('groups');
   const friends = details?.mutualFriends;
-  const groups = details?.mutualGroups;
+  const groups = details?.mutualServers;
 
   let body;
   if (status === 'error') {
@@ -114,9 +114,9 @@ export function ProfileMutuals({ status, details, onRetry, onOpenProfile, onOpen
                   {groups!.items.map((group) => (
                     <li key={group.id}>
                       <button type="button" onClick={() => onOpenGroup(group.id)} className={ROW}>
-                        <GroupAvatar id={group.id} title={group.title} avatar={group.avatar} size={40} />
+                        <ServerIcon id={group.id} name={group.name} icon={group.icon} size={40} active />
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate text-label font-semibold text-text-primary">{group.title}</span>
+                          <span className="block truncate text-label font-semibold text-text-primary">{group.name}</span>
                           <span className="block truncate text-caption text-text-muted">{t(group.memberCount === 1 ? 'mutuals.members_one' : 'mutuals.members_other', { count: group.memberCount })}</span>
                         </span>
                       </button>

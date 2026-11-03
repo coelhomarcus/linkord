@@ -7,44 +7,44 @@ import { ConfirmDialog } from '@/shared/ConfirmDialog';
 import { Button } from '@/shared/ui/primitives/button';
 import { logger } from '@/shared/lib/logger';
 import { SoundEditorDialog } from './SoundEditorDialog';
-import { deleteGroupSound, describeSoundboardError } from './soundboardApi';
-import type { GroupSound } from './soundboardApi';
-import { playGroupSound } from './soundPlayback';
-import { useGroupSounds } from './useGroupSounds';
+import { deleteServerSound, describeSoundboardError } from './soundboardApi';
+import type { ServerSound } from './soundboardApi';
+import { playServerSound } from './soundPlayback';
+import { useServerSounds } from './useServerSounds';
 
 const log = logger.child({ component: 'soundboard' });
 
-interface GroupSoundsPanelProps {
-  conversationId: string;
+interface ServerSoundsPanelProps {
+  serverId: string;
   myUserId: string | null;
-  isOwner: boolean;
+  canManage: boolean;
 }
 
 /** The group's soundboard, as a tab of the group details: what's there, who
  * sent it, and — for whoever sent it or owns the group — edit and remove. */
-export function GroupSoundsPanel({ conversationId, myUserId, isOwner }: GroupSoundsPanelProps) {
+export function ServerSoundsPanel({ serverId, myUserId, canManage }: ServerSoundsPanelProps) {
   const { t } = useTranslation('soundboard');
-  const { status, sounds, maxSounds, reload } = useGroupSounds(conversationId);
+  const { status, sounds, maxSounds, reload } = useServerSounds(serverId);
   const [editorOpen, setEditorOpen] = useState(false);
-  const [editing, setEditing] = useState<GroupSound | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<GroupSound | null>(null);
+  const [editing, setEditing] = useState<ServerSound | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ServerSound | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const free = Math.max(0, maxSounds - sounds.length);
-  const canEdit = (sound: GroupSound) => isOwner || (!!myUserId && sound.uploader?.id === myUserId);
+  const canEdit = (sound: ServerSound) => canManage || (!!myUserId && sound.uploader?.id === myUserId);
 
   function openCreate() {
     setEditing(null);
     setEditorOpen(true);
   }
 
-  function openEdit(sound: GroupSound) {
+  function openEdit(sound: ServerSound) {
     setEditing(sound);
     setEditorOpen(true);
   }
 
-  function preview(sound: GroupSound) {
-    playGroupSound(conversationId, sound.id, sound.volume).catch((err: unknown) => {
+  function preview(sound: ServerSound) {
+    playServerSound(serverId, sound.id, sound.volume).catch((err: unknown) => {
       log.warn('could not preview sound', { soundId: sound.id, err: err instanceof Error ? err.message : String(err) });
     });
   }
@@ -55,7 +55,7 @@ export function GroupSoundsPanel({ conversationId, myUserId, isOwner }: GroupSou
     if (!target) return;
     setError(null);
     try {
-      await deleteGroupSound(conversationId, target.id);
+      await deleteServerSound(serverId, target.id);
       await reload();
     } catch (err) {
       setError(describeSoundboardError(err, 'soundboard:panel.deleteFailed'));
@@ -137,7 +137,7 @@ export function GroupSoundsPanel({ conversationId, myUserId, isOwner }: GroupSou
       )}
 
       <SoundEditorDialog
-        conversationId={conversationId}
+        serverId={serverId}
         open={editorOpen}
         onOpenChange={setEditorOpen}
         sound={editing}

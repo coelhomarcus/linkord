@@ -171,7 +171,7 @@ describe('Amigos — search in Pendentes and Convites (on the server, before pag
 });
 
 describe('Friends — group invitations', () => {
-  const entry = { id: 'inv-1', at: '2026-01-01T00:00:00.000Z', group: { id: 'g', title: 'Squad', avatar: '', memberCount: 3 }, inviter: ana };
+  const entry = { id: 'inv-1', at: '2026-01-01T00:00:00.000Z', server: { id: 'g', name: 'Squad', icon: '', memberCount: 3 }, inviter: ana };
 
   it('lists invitations and accepts/declines by invitation id', async () => {
     const user = userEvent.setup();
@@ -261,7 +261,7 @@ describe('Amigos — robust actions and lists (E5)', () => {
 
   it('invitation: joining shows the confirmation; a full-group failure keeps the reason after re-reading', async () => {
     const user = userEvent.setup();
-    const entry = { id: 'inv-1', at: '2026-01-01T00:00:00.000Z', group: { id: 'g', title: 'Squad', avatar: '', memberCount: 3 }, inviter: ana };
+    const entry = { id: 'inv-1', at: '2026-01-01T00:00:00.000Z', server: { id: 'g', name: 'Squad', icon: '', memberCount: 3 }, inviter: ana };
     mocked.fetchReceivedInvitations.mockResolvedValue({ items: [entry], nextCursor: null });
     mocked.acceptInvitation.mockRejectedValue(new api.ApiError(409, 'server_full', 'x'));
     at('/app/friends?tab=invitations');

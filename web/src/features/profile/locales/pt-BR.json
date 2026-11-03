@@ -40,18 +40,18 @@
   "mutuals": {
     "title": "Em comum",
     "friendsTitle": "Amigos mútuos",
-    "groupsTitle": "Grupos mútuos",
+    "groupsTitle": "Servidores em comum",
     "friends_one": "{{count}} amigo mútuo",
     "friends_other": "{{count}} amigos mútuos",
-    "groups_one": "{{count}} grupo mútuo",
-    "groups_other": "{{count}} grupos mútuos",
+    "groups_one": "{{count}} servidor em comum",
+    "groups_other": "{{count}} servidores em comum",
     "members_one": "{{count}} membro",
     "members_other": "{{count}} membros",
     "showing": "Mostrando {{shown}} de {{total}}.",
     "loadFailed": "Não foi possível carregar o que vocês têm em comum.",
     "retry": "Tentar de novo",
     "noneFriends": "Nenhum amigo mútuo.",
-    "noneGroups": "Nenhum grupo mútuo.",
+    "noneGroups": "Nenhum servidor em comum.",
     "online": " · online"
   },
   "save": {

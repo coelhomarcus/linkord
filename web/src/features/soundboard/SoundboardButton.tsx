@@ -7,11 +7,14 @@ import { Slider } from '@/shared/ui/primitives/slider';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
 import { useRoom } from '@/state/RoomContext';
 import { cn } from '@/shared/lib/utils';
-import { useGroupSounds } from './useGroupSounds';
+import { useServerSounds } from './useServerSounds';
 import { loadSoundBuffer, loadSoundboardVolume, saveSoundboardVolume } from './soundPlayback';
-import type { GroupSound } from './soundboardApi';
+import type { ServerSound } from './soundboardApi';
 
 interface SoundboardButtonProps {
+  /** whose soundboard: the server the voice channel belongs to */
+  serverId: string;
+  /** the call it plays in */
   conversationId: string;
   className: string;
   activeClassName: string;
@@ -20,10 +23,10 @@ interface SoundboardButtonProps {
 
 /** The call bar's soundboard: pick one of the group's sounds and everyone in
  * the call hears it (the server fans it out, see soundboard.ts#handlePlay). */
-export function SoundboardButton({ conversationId, className, activeClassName, iconClassName }: SoundboardButtonProps) {
+export function SoundboardButton({ serverId, conversationId, className, activeClassName, iconClassName }: SoundboardButtonProps) {
   const { t } = useTranslation('soundboard');
   const { sendWs, fullscreenElement } = useRoom();
-  const { status, sounds } = useGroupSounds(conversationId);
+  const { status, sounds } = useServerSounds(serverId);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [volume, setVolume] = useState(() => Math.round(loadSoundboardVolume() * 100));
@@ -37,10 +40,10 @@ export function SoundboardButton({ conversationId, className, activeClassName, i
     setOpen(next);
     if (!next) setQuery('');
     // decode ahead so the first click isn't the one waiting on the download
-    if (next) for (const sound of sounds) void loadSoundBuffer(conversationId, sound.id).catch(() => {});
+    if (next) for (const sound of sounds) void loadSoundBuffer(serverId, sound.id).catch(() => {});
   }
 
-  function play(sound: GroupSound) {
+  function play(sound: ServerSound) {
     sendWs({ t: 'soundboard-play', conversationId, soundId: sound.id });
   }
 

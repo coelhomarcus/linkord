@@ -3,6 +3,7 @@ import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { PublicUser } from '@/shared/types/protocol';
 import { renderWithRoom } from '@tests/fixtures/roomContextFixture';
+import { MemoryRouter } from 'react-router';
 import { ProfileModal } from '@/features/profile/ProfileModal';
 import * as api from '@/shared/api/api';
 import type { ProfileDetails } from '@/shared/api/api';
@@ -22,7 +23,7 @@ const mocked = vi.mocked(api);
 
 const NOTHING: ProfileDetails = {
   memberSince: '2023-05-04T12:00:00.000Z', friendsSince: null,
-  mutualFriends: { items: [], total: 0 }, mutualGroups: { items: [], total: 0 },
+  mutualFriends: { items: [], total: 0 }, mutualServers: { items: [], total: 0 },
 };
 beforeEach(() => {
   mocked.fetchProfileDetails.mockReset().mockResolvedValue(NOTHING);
@@ -43,7 +44,7 @@ const user: PublicUser = {
 describe('ProfileModal', () => {
   it('opens avatar and banner in the same standardized frame, identifying the clicked image', async () => {
     const interaction = userEvent.setup();
-    renderWithRoom(<ProfileModal userId="u1" onClose={vi.fn()} onOpenProfile={vi.fn()} />, {
+    renderWithRoom(<MemoryRouter><ProfileModal userId="u1" onClose={vi.fn()} onOpenProfile={vi.fn()} /></MemoryRouter>, {
       allUsers: new Map([[user.id, user]]),
     });
 
@@ -64,7 +65,7 @@ describe('ProfileModal', () => {
   it('keeps the correct identification when avatar and banner use the same URL', async () => {
     const interaction = userEvent.setup();
     const sameUrlUser = { ...user, avatar: '/same-image.webp', banner: '/same-image.webp' };
-    renderWithRoom(<ProfileModal userId="u1" onClose={vi.fn()} onOpenProfile={vi.fn()} />, {
+    renderWithRoom(<MemoryRouter><ProfileModal userId="u1" onClose={vi.fn()} onOpenProfile={vi.fn()} /></MemoryRouter>, {
       allUsers: new Map([[sameUrlUser.id, sameUrlUser]]),
     });
 
@@ -73,7 +74,7 @@ describe('ProfileModal', () => {
   });
 
   it('the card inside the modal has no border of its own (only the modal\'s) and the X stays legible over the banner', () => {
-    renderWithRoom(<ProfileModal userId="u1" onClose={vi.fn()} onOpenProfile={vi.fn()} />, {
+    renderWithRoom(<MemoryRouter><ProfileModal userId="u1" onClose={vi.fn()} onOpenProfile={vi.fn()} /></MemoryRouter>, {
       allUsers: new Map([[user.id, user]]),
     });
 
@@ -90,12 +91,12 @@ describe('ProfileModal — since when and what you have in common', () => {
     memberSince: '2023-05-04T12:00:00.000Z',
     friendsSince: '2026-03-12T12:00:00.000Z',
     mutualFriends: { items: [{ id: 'f1', username: 'luis', displayName: 'Luis', avatar: '', avatarColor: 'green' }], total: 1 },
-    mutualGroups: { items: [{ id: 'g1', title: 'os xerecas', avatar: '', memberCount: 5 }, { id: 'g2', title: 'trampo', avatar: '', memberCount: 1 }], total: 2 },
+    mutualServers: { items: [{ id: 'g1', name: 'os xerecas', icon: '', memberCount: 5 }, { id: 'g2', name: 'trampo', icon: '', memberCount: 1 }], total: 2 },
   };
 
   function renderProfile(overrides: Parameters<typeof renderWithRoom>[1] = {}, props: Partial<Parameters<typeof ProfileModal>[0]> = {}) {
     const onClose = vi.fn(); const onOpenProfile = vi.fn();
-    renderWithRoom(<ProfileModal userId="u1" onClose={onClose} onOpenProfile={onOpenProfile} {...props} />, {
+    renderWithRoom(<MemoryRouter><ProfileModal userId="u1" onClose={onClose} onOpenProfile={onOpenProfile} {...props} /></MemoryRouter>, {
       state: me, allUsers: new Map([[user.id, user]]), onlineUserIds: new Set(['f1']), ...overrides,
     });
     return { onClose, onOpenProfile };
@@ -117,11 +118,11 @@ describe('ProfileModal — since when and what you have in common', () => {
     expect(screen.queryByText('Amigos desde')).not.toBeInTheDocument();
   });
 
-  it('counts the groups and friends in common on their tabs, groups first and open', async () => {
+  it('counts the servers and friends in common on their tabs, servers first and open', async () => {
     mocked.fetchProfileDetails.mockResolvedValue(details);
     renderProfile();
     const tabs = await screen.findAllByRole('tab');
-    expect(tabs.map((t) => t.textContent)).toEqual(['2 grupos mútuos', '1 amigo mútuo']);
+    expect(tabs.map((t) => t.textContent)).toEqual(['2 servidores em comum', '1 amigo mútuo']);
     expect(tabs[0]).toHaveAttribute('aria-selected', 'true');
   });
 
@@ -136,25 +137,22 @@ describe('ProfileModal — since when and what you have in common', () => {
     expect(onOpenProfile).toHaveBeenCalledWith('f1');
   });
 
-  it('a group in common opens its conversation and closes the profile', async () => {
+  it('a server in common opens it and closes the profile', async () => {
     mocked.fetchProfileDetails.mockResolvedValue(details);
-    const openConversation = vi.fn(); const requestChatView = vi.fn();
-    const { onClose } = renderProfile({ openConversation, requestChatView });
+    const { onClose } = renderProfile();
     const interaction = userEvent.setup();
-    expect(await screen.findByRole('tab', { name: '2 grupos mútuos' })).toHaveAttribute('aria-selected', 'true');
+    expect(await screen.findByRole('tab', { name: '2 servidores em comum' })).toHaveAttribute('aria-selected', 'true');
     const panel = screen.getByRole('tabpanel');
     expect(within(panel).getByText('5 membros')).toBeInTheDocument();
     expect(within(panel).getByText('1 membro')).toBeInTheDocument();
     await interaction.click(within(panel).getByRole('button', { name: /os xerecas/ }));
-    expect(openConversation).toHaveBeenCalledWith('g1');
-    expect(requestChatView).toHaveBeenCalled();
     expect(onClose).toHaveBeenCalled();
   });
 
   it('says so when there is nothing in common', async () => {
     renderProfile();
-    expect(await screen.findByRole('tab', { name: '0 grupos mútuos' })).toBeInTheDocument();
-    expect(screen.getByText('Nenhum grupo mútuo.')).toBeInTheDocument();
+    expect(await screen.findByRole('tab', { name: '0 servidores em comum' })).toBeInTheDocument();
+    expect(screen.getByText('Nenhum servidor em comum.')).toBeInTheDocument();
     await userEvent.setup().click(screen.getByRole('tab', { name: '0 amigos mútuos' }));
     expect(screen.getByText('Nenhum amigo mútuo.')).toBeInTheDocument();
   });

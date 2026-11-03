@@ -32,7 +32,7 @@ function AdminEntry() {
  * server. */
 export default function AdminArea() {
   const { state } = useRoom();
-  if (state.me.role !== 'admin') return <Navigate to={ROUTES.conversations} replace />;
+  if (state.me.role !== 'admin') return <Navigate to={ROUTES.home} replace />;
 
   return (
     <Routes>

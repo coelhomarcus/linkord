@@ -16,7 +16,7 @@ vi.mock('@/shared/api/api', async (importOriginal) => ({
 const mocked = vi.mocked(api);
 
 const entry = (over: Partial<NotificationEntry> = {}): NotificationEntry => ({
-  id: 'n1', kind: 'friend_request', at: new Date().toISOString(), read: false, friendshipId: 'f1', invitationId: null, actor: ana, group: null, ...over,
+  id: 'n1', kind: 'friend_request', at: new Date().toISOString(), read: false, friendshipId: 'f1', invitationId: null, actor: ana, server: null, ...over,
 });
 
 function Where() { const l = useLocation(); return <p data-testid="where">{l.pathname}{l.search}</p>; }
@@ -53,25 +53,25 @@ describe('NotificationBell', () => {
     const jumpToMessage = vi.fn();
     mocked.fetchUnreadNotificationCount.mockResolvedValue({ unread: 1 });
     mocked.fetchNotifications.mockResolvedValue({
-      items: [entry({ kind: 'mention', friendshipId: null, mention: { messageId: 42, excerpt: '@eu viu o deploy?', conversation: { id: 'g1', type: 'group', title: 'Squad', avatar: '' } } })],
+      items: [entry({ kind: 'mention', friendshipId: null, mention: { messageId: 42, excerpt: '@eu viu o deploy?', conversation: { id: 'g1', type: 'text', name: 'geral', serverId: 's1', serverName: 'Squad', serverIcon: '' } } })],
       nextCursor: null,
     });
     renderSocial(<NotificationStateProvider><NotificationBell /><Routes><Route path="*" element={<Where />} /></Routes></NotificationStateProvider>, { room: { jumpToMessage } });
     await user.click(screen.getByRole('button', { name: /Notificações/ }));
     expect(await screen.findByText('@eu viu o deploy?')).toBeInTheDocument();
-    await user.click(screen.getByText(/mencionou você no grupo Squad/));
+    await user.click(screen.getByText(/mencionou você em #geral · Squad/));
     expect(jumpToMessage).toHaveBeenCalledWith('g1', 42);
-    expect(screen.getByTestId('where')).toHaveTextContent('/app/conversations/g1');
+    expect(screen.getByTestId('where')).toHaveTextContent('/app/channels/s1/g1');
     expect(mocked.markNotificationsRead).toHaveBeenCalledWith({ ids: ['n1'] });
   });
 
   it('clicking an item marks it as read and navigates', async () => {
     const user = userEvent.setup();
     mocked.fetchUnreadNotificationCount.mockResolvedValue({ unread: 1 });
-    mocked.fetchNotifications.mockResolvedValue({ items: [entry({ kind: 'group_invitation', invitationId: 'i1', friendshipId: null, group: { id: 'g', title: 'Squad', avatar: '' } })], nextCursor: null });
+    mocked.fetchNotifications.mockResolvedValue({ items: [entry({ kind: 'server_invitation', invitationId: 'i1', friendshipId: null, server: { id: 'g', name: 'Squad', icon: '' } })], nextCursor: null });
     renderBell();
     await user.click(await screen.findByRole('button', { name: 'Notificações, 1 não lida' }));
-    await user.click(await screen.findByText('Ana convidou você para o grupo Squad'));
+    await user.click(await screen.findByText('Ana convidou você para o servidor Squad'));
     expect(mocked.markNotificationsRead).toHaveBeenCalledWith({ ids: ['n1'] });
     expect(screen.getByTestId('where')).toHaveTextContent('/app/friends?tab=invitations');
   });

@@ -10,7 +10,7 @@ export const REPORT_CATEGORIES = [
 ] as const;
 
 export type ReportCategory = (typeof REPORT_CATEGORIES)[number]['value'];
-export type ReportTarget = { type: 'user' | 'group' | 'message'; id: string; label: string };
+export type ReportTarget = { type: 'user' | 'server' | 'message'; id: string; label: string };
 
 export const MAX_REPORT_DETAILS = 1000;
 

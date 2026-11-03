@@ -5,7 +5,7 @@ import { Button } from '@/shared/ui/primitives/button';
 import { ApiError, acceptInvitation, declineInvitation, fetchReceivedInvitations } from '@/shared/api/api';
 import type { ReceivedInvitationEntry } from '@/shared/api/api';
 import { ERROR_CODES } from '@/shared/api/errorCodes';
-import { GroupAvatar } from '@/features/conversations/GroupAvatar';
+import { ServerIcon } from '@/features/servers/ServerIcon';
 import { ActionFeedback } from './ActionFeedback';
 import type { Feedback } from './ActionFeedback';
 import { useFriends } from './FriendsContext';
@@ -70,13 +70,13 @@ export function GroupInvitationsView({ query, onQueryChange, onOpenProfile }: { 
           return (
             <RevealRow key={entry.id}>
               <div className="flex flex-wrap items-center gap-3 rounded-md px-3 py-3 transition-colors hover:bg-fill-subtle">
-                <GroupAvatar id={entry.group.id} title={entry.group.title} avatar={entry.group.avatar} size={40} />
+                <ServerIcon id={entry.server.id} name={entry.server.name} icon={entry.server.icon} size={40} active />
                 <div className="min-w-0 flex-1 basis-48">
-                  <p className="truncate text-body font-medium text-text-primary">{entry.group.title}</p>
+                  <p className="truncate text-body font-medium text-text-primary">{entry.server.name}</p>
                   <p className="truncate text-caption text-text-muted">
                     {t('invitations.from')}{' '}
                     <button type="button" onClick={() => onOpenProfile(entry.inviter.id)} className="hover:underline">{entry.inviter.displayName}</button>
-                    {` · ${t('invitations.members', { count: entry.group.memberCount })}`}
+                    {` · ${t('invitations.members', { count: entry.server.memberCount })}`}
                   </p>
                 </div>
                 <div className="flex flex-none items-center gap-1.5">

@@ -8,6 +8,13 @@ import { MessageComposer } from '@/features/chat/MessageComposer';
 import { clearAllDrafts } from '@/features/chat/conversationDrafts';
 import type { Conversation, PublicUser } from '@/shared/types/protocol';
 import { fileName } from '@tests/fixtures/fileNameMatcher';
+import * as serversApi from '@/features/servers/serversApi';
+
+vi.mock('@/features/servers/serversApi', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/features/servers/serversApi')>()),
+  fetchAllServerMembers: vi.fn(),
+}));
+const mockedServers = vi.mocked(serversApi);
 
 const joinedState = { ...initialRoomState, joined: true };
 
@@ -266,8 +273,8 @@ describe('MessageComposer — mentions (@)', () => {
   const outsider = fakeUser('u-fora', 'foradaconversa', 'Fora Da Conversa');
 
   const conversation: Conversation = {
-    id: 'conv-1', type: 'group', title: 'Squad', avatar: '', createdBy: null,
-    memberIds: ['u-ana', 'u-andre'], lastMessageAt: null, createdAt: 1, updatedAt: 1, pinnedAt: null, myRole: 'member', ownerId: null, memberCount: 0,
+    id: 'conv-1', type: 'direct', serverId: null, title: '',
+    memberIds: ['u-ana', 'u-andre'], lastMessageAt: null, createdAt: 1, updatedAt: 1, pinnedAt: null,
   };
 
   function renderComposer(overrides: Partial<Parameters<typeof renderWithRoom>[1]> = {}) {
@@ -334,6 +341,20 @@ describe('MessageComposer — mentions (@)', () => {
     await user.type(screen.getByPlaceholderText('Mensagem'), 'fulano@an');
 
     expect(screen.queryByText('Ana Silva')).not.toBeInTheDocument();
+  });
+
+  it("in a channel the candidates are the server's members", async () => {
+    const channel: Conversation = { ...conversation, type: 'text', serverId: 's1', title: 'geral', memberIds: [] };
+    mockedServers.fetchAllServerMembers.mockResolvedValue([ana, outsider].map((u) => ({ user: u, roleIds: [], isOwner: false, at: '' })));
+    const user = userEvent.setup();
+    renderComposer({ conversations: [channel] });
+
+    await user.type(screen.getByPlaceholderText('Mensagem'), 'oi @');
+
+    expect(await screen.findByText('Ana Silva')).toBeInTheDocument();
+    expect(screen.getByText('Fora Da Conversa')).toBeInTheDocument();
+    expect(screen.queryByText('André Costa')).not.toBeInTheDocument();
+    expect(mockedServers.fetchAllServerMembers).toHaveBeenCalledWith('s1');
   });
 });
 

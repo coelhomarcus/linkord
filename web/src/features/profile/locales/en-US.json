@@ -40,18 +40,18 @@
   "mutuals": {
     "title": "Shared",
     "friendsTitle": "Mutual friends",
-    "groupsTitle": "Mutual groups",
+    "groupsTitle": "Mutual servers",
     "friends_one": "{{count}} mutual friend",
     "friends_other": "{{count}} mutual friends",
-    "groups_one": "{{count}} mutual group",
-    "groups_other": "{{count}} mutual groups",
+    "groups_one": "{{count}} mutual server",
+    "groups_other": "{{count}} mutual servers",
     "members_one": "{{count}} member",
     "members_other": "{{count}} members",
     "showing": "Showing {{shown}} of {{total}}.",
     "loadFailed": "Couldn't load what you have in common.",
     "retry": "Try again",
     "noneFriends": "No mutual friends.",
-    "noneGroups": "No mutual groups.",
+    "noneGroups": "No mutual servers.",
     "online": " · online"
   },
   "save": {
