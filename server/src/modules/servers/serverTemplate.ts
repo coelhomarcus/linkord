@@ -21,9 +21,9 @@ export interface ServerTemplate {
 
 /** The layout every new server starts with — and the one each legacy group
  * was migrated into (migration 0043 writes the same names and positions in
- * SQL; server/tests/integration/serverMigration.itest.ts pins the two
- * together). The first text channel is where a migrated group's history
- * lands, the first voice channel is where its call moved. */
+ * SQL; `npm run db:rehearse` fails if the two drift apart). The first text
+ * channel is where a migrated group's history lands, the first voice channel
+ * is where its call moved. */
 export function defaultServerTemplate(locale: Locale): ServerTemplate {
   return {
     everyonePermissions: DEFAULT_EVERYONE_PERMISSIONS,

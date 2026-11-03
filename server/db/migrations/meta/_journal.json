@@ -302,6 +302,13 @@
       "when": 1793714346476,
       "tag": "0042_call_invites",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1793730560180,
+      "tag": "0043_servers_expand",
+      "breakpoints": true
     }
   ]
 }

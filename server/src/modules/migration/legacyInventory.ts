@@ -54,6 +54,10 @@ export interface Findings {
 }
 
 const VALID_ROLES = new Set(['owner', 'member']);
+// A bot conversation has an owner like a group. Server channels (from 0043 on)
+// have no member rows at all, so they are neither groups nor DMs here.
+const isGroupLike = (type: string) => type === 'group' || type === 'bot';
+const isServerChannel = (type: string) => type === 'text' || type === 'voice';
 
 export function classifyInventory(inv: Inventory): Findings {
   const byConversation = new Map<string, MemberRow[]>();
@@ -71,7 +75,8 @@ export function classifyInventory(inv: Inventory): Findings {
     const members = byConversation.get(c.id) ?? [];
     for (const m of members) if (!VALID_ROLES.has(m.role)) f.unexpectedRoles.push({ conversationId: c.id, userId: m.userId, role: m.role });
     const owners = members.filter((m) => m.role === 'owner');
-    if (c.type === 'group') {
+    if (isServerChannel(c.type)) continue;
+    if (isGroupLike(c.type)) {
       if (members.length === 0) f.emptyGroups.push(c.id);
       else if (owners.length === 0) f.groupsWithoutOwner.push(c.id);
       else if (owners.length > 1) f.groupsWithMultipleOwners.push(c.id);
@@ -83,6 +88,7 @@ export function classifyInventory(inv: Inventory): Findings {
   }
   for (const [key, n] of keyCount) if (n > 1) f.duplicateDmKeys.push(key);
   if (f.groupsWithMultipleOwners.length) f.blockers.push(`${f.groupsWithMultipleOwners.length} grupo(s) com mais de um dono (bloqueia o índice único da migration 0020)`);
+  if (f.groupsWithoutOwner.length) f.blockers.push(`${f.groupsWithoutOwner.length} grupo(s) sem dono (bloqueia a conversão em servidores da migration 0043)`);
   if (f.duplicateDmKeys.length) f.blockers.push(`${f.duplicateDmKeys.length} dm_key duplicada(s) (bloqueia o índice único de conversations)`);
   return f;
 }
@@ -126,7 +132,8 @@ export function planRepairs(inv: Inventory): RepairAction[] {
       return { ...m, role: 'member' };
     });
 
-    if (c.type !== 'group') {
+    if (isServerChannel(c.type)) continue;
+    if (!isGroupLike(c.type)) {
       for (const m of normalized) {
         if (m.role === 'owner') actions.push({ kind: 'demote_direct_owner', conversationId: c.id, userId: m.userId, before: { role: 'owner' }, after: { role: 'member' }, note: 'conversa direta não tem dono', needsReview: false });
       }

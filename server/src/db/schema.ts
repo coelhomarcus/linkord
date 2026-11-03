@@ -1,4 +1,4 @@
-import { pgTable, text, varchar, timestamp, integer, bigint, jsonb, serial, boolean, uniqueIndex, index, primaryKey, check, customType } from 'drizzle-orm/pg-core';
+import { pgTable, text, varchar, timestamp, integer, bigint, jsonb, serial, boolean, uniqueIndex, index, primaryKey, check, customType, foreignKey, type AnyPgColumn } from 'drizzle-orm/pg-core';
 import { sql, type SQL } from 'drizzle-orm';
 
 // Postgres tsvector has no first-class drizzle column type — customType
@@ -120,10 +120,20 @@ export const conversations = pgTable('conversations', {
   // (conversationsRepository.ts#conversationExistsForUser).
   status: varchar('status', { length: 16 }).notNull().default('active'),
   statusReason: text('status_reason').notNull().default(''),
+  // Set on a server channel (text or voice), null on a DM. A channel's
+  // `title` is its name; suspension lives on the server, not here.
+  serverId: text('server_id').references((): AnyPgColumn => servers.id, { onDelete: 'cascade' }),
+  categoryId: text('category_id').references((): AnyPgColumn => serverCategories.id, { onDelete: 'set null' }),
+  position: integer('position').notNull().default(0),
+  topic: text('topic').notNull().default(''),
+  // true: the channel follows its category's permission overwrites instead
+  // of its own (Discord's "synced with category")
+  permissionsSynced: boolean('permissions_synced').notNull().default(true),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
   uniqueIndex('conversations_dm_key_unique').on(t.dmKey),
+  index('conversations_server_id_idx').on(t.serverId, t.position),
   index('conversations_type_idx').on(t.type),
   index('conversations_type_status_created_idx').on(t.type, t.status, t.createdAt, t.id),
 ]);
@@ -157,6 +167,141 @@ export const conversationMembers = pgTable('conversation_members', {
   // guarantee needs to live in the database, not just in code that could
   // have a bug later.
   uniqueIndex('conversation_members_one_owner_idx').on(t.conversationId).where(sql`${t.role} = 'owner'`),
+]);
+
+/** A Discord-style server: the owner of its channels (`conversations` rows
+ * with `serverId`), roles and members. `ownerId` is null only for a legacy
+ * group that had no members left when it was migrated — an admin can assign
+ * one (modules/admin). Suspension blocks every channel at once. */
+export const servers = pgTable('servers', {
+  id: text('id').primaryKey(),
+  name: varchar('name', { length: 100 }).notNull(),
+  icon: text('icon').notNull().default(''),
+  ownerId: text('owner_id').references(() => users.id, { onDelete: 'set null' }),
+  status: varchar('status', { length: 16 }).notNull().default('active'), // 'active' | 'suspended'
+  statusReason: text('status_reason').notNull().default(''),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  index('servers_status_created_idx').on(t.status, t.createdAt, t.id),
+  index('servers_owner_id_idx').on(t.ownerId),
+  check('servers_status_check', sql`${t.status} IN ('active','suspended')`),
+]);
+
+/** Server membership — the single source of truth for who belongs. Access
+ * to a channel is this row plus the channel's resolved VIEW_CHANNEL
+ * (modules/servers/permissions.ts), never a per-channel row. `position` is
+ * the member's own order of the server in their rail. */
+export const serverMembers = pgTable('server_members', {
+  serverId: text('server_id').notNull().references(() => servers.id, { onDelete: 'cascade' }),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  position: integer('position').notNull().default(0),
+  joinedAt: timestamp('joined_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  primaryKey({ columns: [t.serverId, t.userId] }),
+  index('server_members_user_id_idx').on(t.userId),
+]);
+
+/** A server role. Exactly one per server is @everyone (`isDefault`, position
+ * 0), held implicitly by every member and never assigned. Higher `position`
+ * outranks lower. `permissions` is the bitfield of modules/servers/permissions.ts. */
+export const serverRoles = pgTable('server_roles', {
+  id: text('id').primaryKey(),
+  serverId: text('server_id').notNull().references(() => servers.id, { onDelete: 'cascade' }),
+  name: varchar('name', { length: 100 }).notNull(),
+  color: varchar('color', { length: 16 }).notNull().default(''),
+  position: integer('position').notNull().default(0),
+  permissions: integer('permissions').notNull().default(0),
+  // shown as its own section of the member list
+  hoist: boolean('hoist').notNull().default(false),
+  mentionable: boolean('mentionable').notNull().default(false),
+  isDefault: boolean('is_default').notNull().default(false),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  index('server_roles_server_id_idx').on(t.serverId, t.position),
+  uniqueIndex('server_roles_one_default_idx').on(t.serverId).where(sql`${t.isDefault}`),
+]);
+
+/** Which roles a member holds. Keyed to the membership, so leaving or being
+ * removed from a server takes the member's roles along. */
+export const serverMemberRoles = pgTable('server_member_roles', {
+  serverId: text('server_id').notNull(),
+  userId: text('user_id').notNull(),
+  roleId: text('role_id').notNull().references(() => serverRoles.id, { onDelete: 'cascade' }),
+}, (t) => [
+  primaryKey({ columns: [t.userId, t.roleId] }),
+  index('server_member_roles_server_id_idx').on(t.serverId),
+  foreignKey({ columns: [t.serverId, t.userId], foreignColumns: [serverMembers.serverId, serverMembers.userId] }).onDelete('cascade'),
+]);
+
+export const serverCategories = pgTable('server_categories', {
+  id: text('id').primaryKey(),
+  serverId: text('server_id').notNull().references(() => servers.id, { onDelete: 'cascade' }),
+  name: varchar('name', { length: 100 }).notNull(),
+  position: integer('position').notNull().default(0),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  index('server_categories_server_id_idx').on(t.serverId, t.position),
+]);
+
+/** A permission overwrite on one channel or one category, for one role or
+ * one member. `allow` and `deny` are bitfields; a bit in neither inherits. */
+export const channelPermissionOverwrites = pgTable('channel_permission_overwrites', {
+  id: text('id').primaryKey(),
+  serverId: text('server_id').notNull().references(() => servers.id, { onDelete: 'cascade' }),
+  channelId: text('channel_id').references(() => conversations.id, { onDelete: 'cascade' }),
+  categoryId: text('category_id').references(() => serverCategories.id, { onDelete: 'cascade' }),
+  roleId: text('role_id').references(() => serverRoles.id, { onDelete: 'cascade' }),
+  userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }),
+  allow: integer('allow').notNull().default(0),
+  deny: integer('deny').notNull().default(0),
+}, (t) => [
+  index('channel_permission_overwrites_server_id_idx').on(t.serverId),
+  // ids are uuids, so a channel id never collides with a category id (nor a
+  // role id with a user id) and one expression index covers all four shapes
+  uniqueIndex('channel_permission_overwrites_target_subject_key').on(sql`coalesce(${t.channelId}, ${t.categoryId})`, sql`coalesce(${t.roleId}, ${t.userId})`),
+  check('channel_permission_overwrites_one_target_check', sql`num_nonnulls(${t.channelId}, ${t.categoryId}) = 1`),
+  check('channel_permission_overwrites_one_subject_check', sql`num_nonnulls(${t.roleId}, ${t.userId}) = 1`),
+]);
+
+/** A member's read position in a server channel — what
+ * `conversation_members.lastReadMessageId` is for a DM. No row means
+ * nothing read yet; unread counts start at the member's server `joinedAt`. */
+export const channelReadStates = pgTable('channel_read_states', {
+  channelId: text('channel_id').notNull().references(() => conversations.id, { onDelete: 'cascade' }),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  lastReadMessageId: integer('last_read_message_id'),
+}, (t) => [
+  primaryKey({ columns: [t.channelId, t.userId] }),
+  index('channel_read_states_user_id_idx').on(t.userId),
+]);
+
+/** An invite link (`/invite/<code>`). Anyone signed in with the code joins,
+ * unlike a friend invitation (server_invitations) which names its invitee. */
+export const serverInvites = pgTable('server_invites', {
+  code: varchar('code', { length: 16 }).primaryKey(),
+  serverId: text('server_id').notNull().references(() => servers.id, { onDelete: 'cascade' }),
+  // the channel the invite lands on; falls back to the first visible one
+  channelId: text('channel_id').references(() => conversations.id, { onDelete: 'set null' }),
+  createdBy: text('created_by').references(() => users.id, { onDelete: 'set null' }),
+  maxUses: integer('max_uses'), // null = unlimited
+  uses: integer('uses').notNull().default(0),
+  expiresAt: timestamp('expires_at', { withTimezone: true }), // null = never
+  revokedAt: timestamp('revoked_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  index('server_invites_server_id_idx').on(t.serverId),
+]);
+
+/** A ban: the account can't rejoin by link or invitation until it's lifted. */
+export const serverBans = pgTable('server_bans', {
+  serverId: text('server_id').notNull().references(() => servers.id, { onDelete: 'cascade' }),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  bannedBy: text('banned_by').references(() => users.id, { onDelete: 'set null' }),
+  reason: text('reason').notNull().default(''),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  primaryKey({ columns: [t.serverId, t.userId] }),
 ]);
 
 /** A friend relationship between two accounts — one row per canonical pair
@@ -211,6 +356,7 @@ export const userBlocks = pgTable('user_blocks', {
 export const groupInvitations = pgTable('group_invitations', {
   id: text('id').primaryKey(),
   conversationId: text('conversation_id').notNull().references(() => conversations.id, { onDelete: 'cascade' }),
+  serverId: text('server_id').references(() => servers.id, { onDelete: 'cascade' }),
   inviterId: text('inviter_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   inviteeId: text('invitee_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   status: varchar('status', { length: 16 }).notNull().default('pending'), // 'pending' | 'accepted' | 'declined' | 'revoked' | 'expired'
@@ -293,6 +439,10 @@ export const webhooks = pgTable('webhooks', {
   id: text('id').primaryKey(),
   conversationId: text('conversation_id').notNull().references(() => conversations.id, { onDelete: 'cascade' }),
   tokenHash: text('token_hash').notNull(),
+  // The name and picture its messages are shown under — a bot used to borrow
+  // its conversation's, but a channel can host several webhooks.
+  name: varchar('name', { length: 80 }).notNull().default(''),
+  avatar: text('avatar').notNull().default(''),
   createdBy: text('created_by').references(() => users.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   tokenRotatedAt: timestamp('token_rotated_at', { withTimezone: true }).notNull().defaultNow(),
@@ -451,6 +601,7 @@ export type StagedAttachment = typeof stagedAttachments.$inferSelect;
 export const groupSounds = pgTable('group_sounds', {
   id: text('id').primaryKey(),
   conversationId: text('conversation_id').notNull().references(() => conversations.id, { onDelete: 'cascade' }),
+  serverId: text('server_id').references(() => servers.id, { onDelete: 'cascade' }),
   // set null, not cascade: the sound belongs to the group, not to whoever sent it
   uploaderId: text('uploader_id').references(() => users.id, { onDelete: 'set null' }),
   name: varchar('name', { length: 32 }).notNull(),
@@ -553,6 +704,12 @@ export type GroupInvitation = typeof groupInvitations.$inferSelect;
 export type Webhook = typeof webhooks.$inferSelect;
 export type Notification = typeof notifications.$inferSelect;
 export type OutboxEvent = typeof outboxEvents.$inferSelect;
+export type Server = typeof servers.$inferSelect;
+export type ServerMember = typeof serverMembers.$inferSelect;
+export type ServerRole = typeof serverRoles.$inferSelect;
+export type ServerCategory = typeof serverCategories.$inferSelect;
+export type ChannelPermissionOverwrite = typeof channelPermissionOverwrites.$inferSelect;
+export type ServerInvite = typeof serverInvites.$inferSelect;
 
 /** Append-only record of administrative actions. No foreign keys on purpose:
  * the trail must outlive the account or group it is about (and the admin who

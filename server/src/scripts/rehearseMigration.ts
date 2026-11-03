@@ -1,8 +1,14 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import type { Pool } from 'pg';
+import { MIGRATIONS_FOLDER } from '../db/migrate.js';
+import { DEFAULT_EVERYONE_PERMISSIONS } from '../modules/servers/permissions.js';
+import { defaultServerTemplate } from '../modules/servers/serverTemplate.js';
 import { classifyInventory, loadInventory, planRepairs } from '../modules/migration/legacyInventory.js';
 import { applyRepairs, InjectedRepairFailure } from '../modules/migration/legacyRepair.js';
 import { LegacyDataBlockedError } from '../modules/migration/migrationGate.js';
 import { createIsolatedDatabase, type IsolatedDatabase } from './rehearsal/isolatedDb.js';
+import { GROUP_OWNERS, GROUP_USERS, seedGroupDataset, type GroupSeedManifest } from './rehearsal/groupDataset.js';
 import { EXPECTED_OWNER, EXPECTED_REVIEW, seedLegacyDataset, type SeedManifest } from './rehearsal/legacyDataset.js';
 import { journalTags, makeMigrationsFolder } from './rehearsal/migrationFolders.js';
 import { migrateOn } from './rehearsal/migrateOn.js';
@@ -41,6 +47,67 @@ async function legacyDatabase(baseUrl: string, label: string): Promise<{ db: Iso
     legacyFolder.cleanup();
   }
   return { db, manifest: await seedLegacyDataset(db.pool) };
+}
+
+const serverIdOf = (groupId: string) => `md5('server:' || '${groupId.replaceAll("'", "''")}')::uuid::text`;
+
+/** The data statements of 0043 (its backfill), to prove a second run changes nothing. */
+function backfillStatements(): string[] {
+  const sql = fs.readFileSync(path.join(MIGRATIONS_FOLDER, '0043_servers_expand.sql'), 'utf8');
+  return sql.split('--> statement-breakpoint')
+    .map((part) => part.split('\n').filter((line) => !line.trimStart().startsWith('--')).join('\n').trim())
+    .filter((part) => /^(INSERT|UPDATE)\b/.test(part));
+}
+
+const SERVER_TABLES = ['servers', 'server_members', 'server_roles', 'server_categories', 'channel_read_states', 'conversations'];
+const serverSnapshot = async (pool: Pool): Promise<string> => {
+  const parts: unknown[] = [];
+  for (const table of SERVER_TABLES) parts.push((await pool.query(`select * from ${table} order by 1, 2`)).rows);
+  parts.push((await pool.query('select id, server_id from group_invitations union all select id, server_id from group_sounds union all select id, name from webhooks order by 1')).rows);
+  return JSON.stringify(parts);
+};
+
+async function verifyServers(pool: Pool, seed: GroupSeedManifest): Promise<void> {
+  const c = seed.counts;
+  check('cada grupo e bot virou exatamente um servidor', (await count(pool, 'select count(*) as n from servers')) === c.groups);
+  const owners = await Promise.all(Object.entries(GROUP_OWNERS).map(async ([groupId, owner]) => {
+    const row = (await pool.query<{ owner_id: string | null }>(`select owner_id from servers where id = ${serverIdOf(groupId)}`)).rows[0];
+    return row !== undefined && row.owner_id === (owner ? seed.users[owner] : null);
+  }));
+  check('o dono do servidor é o dono do grupo (o grupo vazio fica sem dono)', owners.every(Boolean));
+  check('todo membro de grupo virou membro do servidor', (await count(pool, 'select count(*) as n from server_members')) === c.groupMembers);
+  check('quem fixou o grupo o vê primeiro no rail', (await count(pool, `select count(*) as n from server_members where server_id = ${serverIdOf('grp-team')} and user_id = '${seed.users.ben}' and position = 0`)) === 1);
+
+  let layoutOk = true;
+  for (const [groupId, owner] of Object.entries(GROUP_OWNERS)) {
+    const template = defaultServerTemplate(owner ? GROUP_USERS[owner] : 'pt-BR');
+    const sid = serverIdOf(groupId);
+    const categories = (await pool.query<{ id: string; name: string }>(`select id, name from server_categories where server_id = ${sid} order by position`)).rows;
+    const roles = (await pool.query<{ permissions: number }>(`select permissions from server_roles where server_id = ${sid} and is_default`)).rows;
+    const channels = (await pool.query<{ id: string; type: string; title: string; category_id: string }>(`select id, type, title, category_id from conversations where server_id = ${sid} order by type desc`)).rows;
+    const voice = template.categories.flatMap((cat) => cat.channels).find((ch) => ch.type === 'voice')!;
+    layoutOk &&= JSON.stringify(categories.map((cat) => cat.name)) === JSON.stringify(template.categories.map((cat) => cat.name))
+      && roles.length === 1 && roles[0]!.permissions === DEFAULT_EVERYONE_PERMISSIONS && template.everyonePermissions === DEFAULT_EVERYONE_PERMISSIONS
+      && channels.length === 2
+      && channels.some((ch) => ch.id === groupId && ch.category_id === categories[0]!.id)
+      && channels.some((ch) => ch.type === 'voice' && ch.title === voice.name && ch.category_id === categories[1]!.id);
+  }
+  check('o layout de cada servidor é o do template (no idioma do dono), com o grupo como primeiro canal de texto', layoutOk);
+
+  check('mensagens, anexos e reações preservados, e o histórico continua no mesmo id',
+    (await count(pool, 'select count(*) as n from messages')) === c.messages && (await count(pool, 'select count(*) as n from attachments')) === c.attachments
+    && (await count(pool, 'select count(*) as n from message_reactions')) === c.reactions
+    && (await count(pool, "select count(*) as n from messages where conversation_id = 'grp-team' and kind = 'text'")) === 2);
+  check('marcadores de leitura dos grupos viraram estado de leitura do canal', (await count(pool, 'select count(*) as n from channel_read_states')) === c.groupReadMarkers);
+  check('convites e sons apontam para o servidor', (await count(pool, 'select count(*) as n from group_invitations where server_id is not null')) === c.invitations
+    && (await count(pool, 'select count(*) as n from group_sounds where server_id is not null')) === c.sounds);
+  check('o webhook herdou o nome e o avatar do bot', (await count(pool, "select count(*) as n from webhooks where id = 'wh-news' and name = 'News' and avatar = '/uploads/avatar-bot-news'")) === 1);
+  check('a suspensão passou para o servidor', (await count(pool, `select count(*) as n from servers where id = ${serverIdOf('grp-suspended')} and status = 'suspended'`)) === 1);
+  check('grupo sem título ganhou nome a partir do dono', (await count(pool, `select count(*) as n from servers where id = ${serverIdOf('grp-untitled')} and name = 'BEN''s server'`)) === 1);
+
+  const before = await serverSnapshot(pool);
+  for (const statement of backfillStatements()) await pool.query(statement);
+  check('idempotente: rodar o backfill de novo não muda nada', (await serverSnapshot(pool)) === before);
 }
 
 async function main(): Promise<number> {
@@ -89,7 +156,7 @@ async function main(): Promise<number> {
     check('mensagens, anexos, reações, sessões e conversas preservados',
       (await count(A.pool, 'select count(*) as n from messages')) === c.messages && (await count(A.pool, 'select count(*) as n from attachments')) === c.attachments
       && (await count(A.pool, 'select count(*) as n from message_reactions')) === c.reactions && (await count(A.pool, 'select count(*) as n from sessions')) === c.sessions
-      && (await count(A.pool, 'select count(*) as n from conversations')) === c.conversations);
+      && (await count(A.pool, "select count(*) as n from conversations where type <> 'voice'")) === c.conversations);
     check('fixações e marcadores de leitura preservados', (await count(A.pool, 'select count(*) as n from conversation_members where pinned_at is not null')) === c.pinned && (await count(A.pool, 'select count(*) as n from conversation_members where last_read_message_id is not null')) === c.readMarkers);
     check('nenhuma amizade, convite ou notificação foi criada pela migração', (await count(A.pool, 'select count(*) as n from friendships')) === 0 && (await count(A.pool, 'select count(*) as n from group_invitations')) === 0 && (await count(A.pool, 'select count(*) as n from notifications')) === 0);
     check('DMs legadas continuam (inclusive a de conta apagada) e sem dono', (await count(A.pool, "select count(*) as n from conversations where type = 'direct'")) === 3 && (await count(A.pool, "select count(*) as n from conversation_members m join conversations c on c.id = m.conversation_id where c.type = 'direct' and m.role = 'owner'")) === 0);
@@ -119,6 +186,24 @@ async function main(): Promise<number> {
     await migrateOn(B.pool, good.folder);
     check('retomada: sem a quebrada, tudo aplica de uma vez e chega ao topo', (await tableExists(B.pool, 'admin_audit_logs')) && (await tableExists(B.pool, 'reports')) && (await tableExists(B.pool, 'data_repairs')));
     good.cleanup();
+
+    // ---- D: groups become servers (0043)
+    note('Grupos viram servidores (schema até a 0042)');
+    const D = await createIsolatedDatabase(baseUrl, 'rehearsal', `d_${Date.now().toString(36)}`);
+    dbs.push(D);
+    const upTo42 = makeMigrationsFolder({ toIdx: 42 });
+    try { await migrateOn(D.pool, upTo42.folder); } finally { upTo42.cleanup(); }
+    const groups = await seedGroupDataset(D.pool);
+    const toTop = makeMigrationsFolder();
+    let blocked: unknown = null;
+    try { await migrateOn(D.pool, toTop.folder); } catch (err) { blocked = err; }
+    check('o portão recusa converter um grupo sem dono, sem aplicar nada', blocked instanceof LegacyDataBlockedError && !(await tableExists(D.pool, 'servers')));
+    const groupPlan = planRepairs(await loadInventory(D.pool));
+    check('o reparo nomeia o dono do grupo órfão e mantém o dono do bot', groupPlan.length === 1 && groupPlan[0]!.conversationId === 'grp-orphan' && groupPlan[0]!.userId === groups.users.cy);
+    await applyRepairs(D.pool, groupPlan);
+    await migrateOn(D.pool, toTop.folder);
+    toTop.cleanup();
+    await verifyServers(D.pool, groups);
 
     // ---- C: a brand new database
     note('Banco vazio');
