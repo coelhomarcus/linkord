@@ -91,15 +91,6 @@ export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(fu
         </div>
       )}
       <div className="flex items-center gap-1 rounded-lg border border-white/10 bg-black p-1.5 shadow-popover max-[480px]:gap-0.75 max-[480px]:p-1.25 max-[360px]:gap-0.5 max-[360px]:p-1">
-        {soundboardGroupId && (
-          <SoundboardButton
-            conversationId={soundboardGroupId}
-            className={cn(BAR_BUTTON, BAR_BUTTON_NEUTRAL)}
-            activeClassName="bg-white/12 text-white"
-            iconClassName={BAR_ICON}
-          />
-        )}
-
         <div className="relative">
           <Tooltip>
             <TooltipTrigger
@@ -156,6 +147,15 @@ export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(fu
           </Tooltip>
           <ScreenShareQuickMenu />
         </div>
+
+        {soundboardGroupId && (
+          <SoundboardButton
+            conversationId={soundboardGroupId}
+            className={cn(BAR_BUTTON, BAR_BUTTON_NEUTRAL)}
+            activeClassName="bg-white/12 text-white"
+            iconClassName={BAR_ICON}
+          />
+        )}
 
         <Tooltip>
           <TooltipTrigger
