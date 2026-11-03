@@ -45,4 +45,15 @@ describe('ImageCropDialog', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Falha ao processar a imagem.');
     expect(screen.getByRole('button', { name: 'Salvar' })).toBeInTheDocument();
   });
+
+  // a `relative` here once replaced the dialog's `fixed` centering, leaving
+  // it pinned near the top of the screen
+  it('stays centered on the screen like every other dialog', () => {
+    render(
+      <ImageCropDialog open imageSrc="blob:photo" aspect={1} cropShape="rect" title="Recortar imagem do grupo" onCancel={vi.fn()} onConfirm={vi.fn()} />,
+    );
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveClass('fixed', 'top-1/2', 'left-1/2', '-translate-y-1/2');
+    expect(dialog).not.toHaveClass('relative');
+  });
 });
