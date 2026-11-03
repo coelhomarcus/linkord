@@ -24,6 +24,7 @@ import { reportGifShared } from '@/features/gifs/klipy';
 import type { Gif } from '@/features/gifs/klipy';
 import { useGifConfig } from '@/features/gifs/useGifConfig';
 import { fetchAllServerMembers } from '@/features/servers/serversApi';
+import { directUser } from '@/features/conversations/conversationUtils';
 
 // How often notifyTyping actually emits typing:true while the user keeps
 // typing (leading-edge: fires right away after being idle, then throttles),
@@ -145,6 +146,9 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
     return () => { cancelled = true; };
   }, [needsServerMembers, serverId, serverMembersKey]);
   const directMemberIds = conversation?.memberIds;
+  const peer = directUser(conversation, state.me.userId, allUsers);
+  const messagePlaceholder = conversation?.serverId ? t('composer.messageChannel', { channel: conversation.title })
+    : peer ? t('composer.messageDirect', { name: peer.displayName }) : t('composer.message');
   const mentionCandidates = useMemo(() => {
     if (!mentionQuery) return [];
     const q = mentionQuery.query.toLowerCase();
@@ -408,7 +412,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
             aria-label={t('composer.message')}
             aria-invalid={tooLong || undefined}
             aria-describedby={showCounter ? counterId : undefined}
-            placeholder={pendingFiles.length ? t('composer.addCaption') : t('composer.message')}
+            placeholder={pendingFiles.length ? t('composer.addCaption') : messagePlaceholder}
             className="min-h-9 max-h-40 flex-1 resize-none border-none bg-transparent px-1 py-1.5 text-body shadow-none focus-visible:ring-0"
           />
           {showCounter && (

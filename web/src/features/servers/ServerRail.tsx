@@ -71,8 +71,10 @@ export function ServerRail({ className }: { className?: string }) {
   return (
     <nav aria-label={t('rail.label')} className={cn('flex w-[72px] flex-none flex-col items-center gap-2 overflow-y-auto bg-surface-rail pt-3 pb-[max(0.75rem,var(--dock-clearance,0px))] [scrollbar-width:none]', className)}>
       <RailItem label={t('rail.home')} active={home} unread={false} badge={directUnread + pendingIncomingCount} onClick={() => navigate(ROUTES.home)}>
-        <span className={cn('grid size-12 place-items-center bg-primary transition-[border-radius] duration-150', home ? 'rounded-[30%]' : 'rounded-[50%] group-hover/server:rounded-[30%]')}>
-          <img src="/logo.svg" alt="" className="size-7 brightness-0 invert" />
+        {/* the logo is a single blue shape: whitened on a blue tile it lost its
+            features, so it keeps its own color on a neutral one */}
+        <span className={cn('grid size-12 place-items-center transition-[border-radius,background-color] duration-150', home ? 'rounded-[30%] bg-bg-selected' : 'rounded-[50%] bg-bg-secondary group-hover/server:rounded-[30%] group-hover/server:bg-bg-hover')}>
+          <img src="/logo.svg" alt="" className="h-auto w-8" />
         </span>
       </RailItem>
       <span aria-hidden className="h-0.5 w-8 flex-none rounded-full bg-border" />

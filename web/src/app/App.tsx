@@ -341,7 +341,7 @@ function Shell() {
         {mobileMainPage && <MobileTabBar activeCallConversationId={activeCallConversationId} onReturnToCall={handleReturnToCall} />}
         {currentServer && !wide && (
           <Sheet open={membersVisible} onOpenChange={setDetailsOpen} side="right" ariaLabel={currentServer.name} className="w-60">
-            <MemberListPanel server={currentServer} onOpenProfile={setProfileUserId} />
+            <MemberListPanel server={currentServer} onOpenProfile={setProfileUserId} active={membersVisible} />
           </Sheet>
         )}
         <ConversationMediaPanel

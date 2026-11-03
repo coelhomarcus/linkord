@@ -28,17 +28,20 @@ export function groupMembers(server: ServerSummary, members: ServerMemberEntry[]
     .map((s) => ({ ...s, members: [...s.members].sort(byName) }));
 }
 
-export function MemberListPanel({ server, onOpenProfile }: { server: ServerSummary; onOpenProfile: (userId: string) => void }) {
+/** `active` is false while a closed sheet keeps this mounted for its
+ * animation: nothing is fetched until it is shown. */
+export function MemberListPanel({ server, onOpenProfile, active = true }: { server: ServerSummary; onOpenProfile: (userId: string) => void; active?: boolean }) {
   const { t } = useTranslation('servers');
   const { onlineUserIds, serverMemberRevision, allUsers } = useRoom();
   const revision = serverMemberRevision.get(server.id) ?? 0;
   const [members, setMembers] = useState<ServerMemberEntry[] | null>(null);
 
   useEffect(() => {
+    if (!active) return;
     let cancelled = false;
     fetchAllServerMembers(server.id).then((items) => { if (!cancelled) setMembers(items); }).catch(() => { if (!cancelled) setMembers((prev) => prev ?? []); });
     return () => { cancelled = true; };
-  }, [server.id, revision, server.roles]);
+  }, [active, server.id, revision, server.roles]);
 
   const sections = useMemo(
     () => (members ? groupMembers(server, members, onlineUserIds, { online: t('members.online'), offline: t('members.offline') }) : []),

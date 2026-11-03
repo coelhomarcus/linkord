@@ -49,6 +49,8 @@
     "insertEmoji": "Inserir emoji",
     "compress": "Compactar imagens (WebP)",
     "message": "Mensagem",
+    "messageChannel": "Conversar em #{{channel}}",
+    "messageDirect": "Conversar com @{{name}}",
     "addCaption": "Adicionar legenda",
     "sendGif": "Enviar GIF",
     "send": "Enviar mensagem",
