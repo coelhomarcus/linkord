@@ -79,6 +79,11 @@ export const ERROR_REGISTRY = {
   crop_failed: { statuses: [400], channel: 'http' },
   invalid_report: { statuses: [400], channel: 'http' },
 
+  // group soundboard
+  invalid_sound: { statuses: [400], channel: 'http' },
+  sound_too_long: { statuses: [400], channel: 'http' },
+  soundboard_full: { statuses: [409], channel: 'http' },
+
   // admin actions (docs/plano-rede-social.md §9)
   self_action: { statuses: [409], channel: 'http' },
   last_admin: { statuses: [409], channel: 'http' },

@@ -293,6 +293,11 @@ export function inviteToGroup(conversationId: string, userIds: string[]): Promis
   return apiFetch(`/api/groups/${encodeURIComponent(conversationId)}/invitations`, { method: 'POST', body: JSON.stringify({ userIds }) });
 }
 
+/** Asks a member of the group to join its call, as a card in your DM with them. */
+export function inviteToCall(conversationId: string, userId: string): Promise<{ ok: true }> {
+  return apiFetch(`/api/calls/${encodeURIComponent(conversationId)}/invites`, { method: 'POST', body: JSON.stringify({ userId }) });
+}
+
 export function fetchGroupInvitations(conversationId: string, cursor: string | null): Promise<{ items: SentInvitationEntry[]; nextCursor: string | null }> {
   return apiFetch(`/api/groups/${encodeURIComponent(conversationId)}/invitations${pageQuery({ cursor })}`);
 }

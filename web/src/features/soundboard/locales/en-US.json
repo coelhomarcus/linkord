@@ -1,0 +1,76 @@
+{
+  "panel": {
+    "description": "Sounds anyone in the group can play during calls.",
+    "upload": "Upload sound",
+    "slots_zero": "No free slots out of {{max}}",
+    "slots_one": "{{count}} free slot out of {{max}}",
+    "slots_other": "{{count}} free slots out of {{max}}",
+    "columns": {
+      "emoji": "Emoji",
+      "name": "Name",
+      "uploadedBy": "Uploaded by"
+    },
+    "empty": "No sounds yet. Upload the first one!",
+    "loading": "Loading sounds…",
+    "loadFailed": "Couldn't load the sounds.",
+    "retry": "Try again",
+    "preview": "Listen to {{name}}",
+    "edit": "Edit {{name}}",
+    "delete": "Remove {{name}}",
+    "deletedUser": "Deleted account",
+    "deleteFailed": "Couldn't remove the sound.",
+    "deleteConfirm": {
+      "title": "Remove sound",
+      "description": "\"{{name}}\" will be removed from the group's sounds for everyone.",
+      "confirm": "Remove"
+    }
+  },
+  "editor": {
+    "titleCreate": "Upload a sound",
+    "titleEdit": "Edit sound",
+    "preview": "Preview",
+    "file": "File",
+    "browse": "Browse",
+    "noFile": "Choose an audio file",
+    "name": "Sound name",
+    "emoji": "Related emoji",
+    "emojiPlaceholder": "Click to select",
+    "clearEmoji": "Remove emoji",
+    "searchEmoji": "Search emoji…",
+    "volume": "Sound volume",
+    "required": "required",
+    "play": "Play preview",
+    "stop": "Stop preview",
+    "trimHint": "Drag the edges to pick up to {{seconds}} seconds.",
+    "trimStart": "Clip start",
+    "trimEnd": "Clip end",
+    "loadingAudio": "Reading the audio…",
+    "cancel": "Cancel",
+    "submit": "Upload",
+    "save": "Save",
+    "uploading": "Uploading {{percent}}%",
+    "saving": "Saving…",
+    "errors": {
+      "decodeFailed": "Couldn't read that audio file.",
+      "fileTooLarge": "File too large (max {{max}}).",
+      "uploadFailed": "Couldn't upload the sound.",
+      "saveFailed": "Couldn't save the sound."
+    }
+  },
+  "picker": {
+    "open": "Soundboard",
+    "search": "Find the perfect sound",
+    "empty": "This group has no sounds yet.",
+    "emptyHint": "Upload sounds in the Sounds tab of the group details.",
+    "noResults": "No sounds found.",
+    "loading": "Loading sounds…",
+    "loadFailed": "Couldn't load the sounds.",
+    "volume": "Soundboard volume",
+    "play": "Play {{name}}"
+  },
+  "errors": {
+    "invalid_sound": "Couldn't read that audio.",
+    "sound_too_long": "Sounds can be at most 5 seconds long.",
+    "soundboard_full": "The group has used all of its sound slots."
+  }
+}

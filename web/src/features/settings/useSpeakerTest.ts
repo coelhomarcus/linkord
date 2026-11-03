@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { logger } from '@/shared/lib/logger';
 import { i18n } from '@/shared/i18n/init';
+import { SPEAKER_TEST_SOUND_URL } from '@/shared/sounds';
 
 const log = logger.child({ component: 'speaker-test' });
 
@@ -30,7 +31,7 @@ export function useSpeakerTest(): SpeakerTestApi {
   const test = useCallback(async (deviceId?: string) => {
     stop();
     setError(null);
-    const audio = new Audio('/sounds/new-message.mp3');
+    const audio = new Audio(SPEAKER_TEST_SOUND_URL);
     audioRef.current = audio;
     if (deviceId && 'setSinkId' in audio) {
       try {

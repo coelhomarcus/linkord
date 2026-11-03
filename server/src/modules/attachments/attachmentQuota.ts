@@ -1,7 +1,7 @@
 import { eq, sql } from 'drizzle-orm';
 import { config } from '../../config/env.js';
 import { db } from '../../db/client.js';
-import { attachments as attachmentsTable, messages } from '../../db/schema.js';
+import { attachments as attachmentsTable, groupSounds, messages } from '../../db/schema.js';
 import { sendToUser } from '../presence/participants.js';
 import { stagedBytes } from './stagedAttachments.js';
 
@@ -22,13 +22,21 @@ export interface UsageInfo {
  * doing that simultaneously does add up against the shared instance-wide
  * cap. Chat attachments still get their own PER-USER quota separately
  * (getUserUsage below, via the message's author) — this total is the
- * shared ceiling everyone draws from regardless of what kind of file it is. */
+ * shared ceiling everyone draws from regardless of what kind of file it is —
+ * group soundboard files included. */
 export async function getUsage(): Promise<UsageInfo> {
   const [row] = await db
     .select({ totalBytes: sql<number>`coalesce(sum(${attachmentsTable.size}), 0)`, totalFiles: sql<number>`count(*)` })
     .from(attachmentsTable);
+  const [sounds] = await db
+    .select({ totalBytes: sql<number>`coalesce(sum(${groupSounds.size}), 0)`, totalFiles: sql<number>`count(*)` })
+    .from(groupSounds);
   const staged = await stagedBytes();
-  return { totalBytes: Number(row!.totalBytes) + staged.bytes, totalFiles: Number(row!.totalFiles) + staged.files, maxBytes: config.MAX_STORAGE_BYTES };
+  return {
+    totalBytes: Number(row!.totalBytes) + Number(sounds!.totalBytes) + staged.bytes,
+    totalFiles: Number(row!.totalFiles) + Number(sounds!.totalFiles) + staged.files,
+    maxBytes: config.MAX_STORAGE_BYTES,
+  };
 }
 
 /** The figure an ordinary account sees: ITS OWN storage against ITS OWN

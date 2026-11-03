@@ -5,9 +5,12 @@ import { gifMessageUrl } from '@/features/gifs/klipyMedia';
 /** One-line text for a message wherever the body itself can't be shown
  * (sidebar subtitle, desktop notification). Invite cards have an empty
  * `text`, so without this they would read as an attachment. */
-export function messagePreviewText(message: Pick<ChatMessage, 'text' | 'kind' | 'invitation' | 'richEmbeds'>): string {
+export function messagePreviewText(message: Pick<ChatMessage, 'text' | 'kind' | 'invitation' | 'callInvite' | 'richEmbeds'>): string {
   if (message.kind === 'group_invite') {
     return message.invitation ? i18n.t('chat:preview.invite', { title: message.invitation.groupTitle }) : i18n.t('chat:preview.inviteUnavailable');
+  }
+  if (message.kind === 'call_invite') {
+    return message.callInvite ? i18n.t('chat:preview.callInvite', { title: message.callInvite.groupTitle }) : i18n.t('chat:preview.callInviteUnavailable');
   }
   if (gifMessageUrl(message.text)) return 'GIF';
   // a bot may send only a card: its title says what it's about

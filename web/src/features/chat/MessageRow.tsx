@@ -8,6 +8,7 @@ import type { TouchEvent as ReactTouchEvent } from 'react';
 import { Avatar } from '@/shared/Avatar';
 import { MessageMedia } from './MessageMedia';
 import { InviteCard } from '@/features/chat/InviteCard';
+import { CallInviteCard } from '@/features/chat/CallInviteCard';
 import { ChatMessageText } from '@/features/chat/ChatMessageText';
 import { RichEmbedCard } from './RichEmbedCard';
 import { Button } from '@/shared/ui/primitives/button';
@@ -163,7 +164,7 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
   const displayedPoster = author ? author.avatarPoster : isMine ? state.me.avatarPoster : undefined;
   const replyAuthor = message.replyTo?.authorId ? allUsers.get(message.replyTo.authorId) : undefined;
   const mentionsMe = !isMine && mentionsUser(message.text, mentionLookup, state.me.userId);
-  const isInvite = message.kind === 'group_invite';
+  const isInvite = message.kind === 'group_invite' || message.kind === 'call_invite';
   const canReport = can.report;
   const isEditing = !pending && !isInvite && editingMsgId === message.msgId;
   const reactions = withPendingReactions(message.reactions, message.msgId, pendingReactions, state.me.userId);
@@ -335,7 +336,9 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
               </p>
             </div>
           ) : (
-            isInvite ? (
+            message.kind === 'call_invite' ? (
+              <CallInviteCard callInvite={message.callInvite} />
+            ) : isInvite ? (
               <InviteCard invitation={message.invitation} />
             ) : (
             <>

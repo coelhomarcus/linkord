@@ -137,6 +137,8 @@
   "preview": {
     "invite": "Invitation to the group {{title}}",
     "inviteUnavailable": "Invitation unavailable",
+    "callInvite": "Invite to the call in {{title}}",
+    "callInviteUnavailable": "Call invite unavailable",
     "notice": "Notice",
     "attachment": "Attachment"
   },
@@ -151,5 +153,15 @@
     "unconfirmed": "Couldn't confirm the send.",
     "attachmentFailed_one": "One attachment wasn't sent.",
     "attachmentFailed_other": "{{count}} attachments weren't sent."
+  },
+  "callInvite": {
+    "header": "Voice call invite",
+    "join": "Join voice call",
+    "return": "Return to the call",
+    "inCall_one": "{{count}} person in the call",
+    "inCall_other": "{{count}} people in the call",
+    "ended": "The call has ended",
+    "notMember": "You are no longer in this group.",
+    "unavailable": "Call invite unavailable"
   }
 }

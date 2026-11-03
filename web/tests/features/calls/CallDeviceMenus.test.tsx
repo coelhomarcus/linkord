@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Room } from 'livekit-client';
 import type { Room as LKRoom } from 'livekit-client';
@@ -7,6 +7,7 @@ import { Track } from 'livekit-client';
 import { renderWithRoom } from '@tests/fixtures/roomContextFixture';
 import { initialRoomState } from '@/state/roomReducer';
 import { CameraQuickMenu, MicQuickMenu, ScreenShareQuickMenu, SpeakerQuickMenu } from '@/features/calls/CallDeviceMenus';
+import { getAudioPreferences } from '@/features/calls/audioPreferences';
 
 const navigate = vi.fn();
 vi.mock('react-router', () => ({ useNavigate: () => navigate }));
@@ -16,19 +17,39 @@ Object.defineProperty(navigator, 'mediaDevices', { value: new EventTarget(), con
 beforeEach(() => {
   vi.restoreAllMocks();
   navigate.mockClear();
+  localStorage.clear();
 });
 
-function fakeLivekitRoom(activeDeviceId: string | undefined = undefined) {
+function fakeLivekitRoom(activeDeviceId: string | undefined = undefined, micTrack?: object) {
   const room = {
     getActiveDevice: vi.fn(() => activeDeviceId),
     switchActiveDevice: vi.fn(async () => undefined),
+    localParticipant: {
+      identity: 'p-1',
+      getTrackPublication: (source: Track.Source) => (source === Track.Source.Microphone && micTrack ? { track: micTrack } : undefined),
+    },
+    getParticipantByIdentity: vi.fn(() => undefined),
+    on: vi.fn(),
+    off: vi.fn(),
   };
-  return room as typeof room & LKRoom;
+  return room as unknown as typeof room & LKRoom;
+}
+
+// base-ui keeps pointer-events off a submenu while its open transition
+// runs, which jsdom never finishes — so its items are clicked directly.
+const submenuUser = () => userEvent.setup({ pointerEventsCheck: 0 });
+
+async function openSubmenu(user: ReturnType<typeof userEvent.setup>, title: string) {
+  await user.click(await screen.findByText(title));
+}
+
+async function pickInSubmenu(text: string) {
+  fireEvent.click(await screen.findByText(text));
 }
 
 describe('MicQuickMenu', () => {
-  it('lists the microphones and switches the active one when picking another', async () => {
-    const user = userEvent.setup();
+  it('shows the active microphone and switches it from the input device submenu', async () => {
+    const user = submenuUser();
     vi.spyOn(Room, 'getLocalDevices').mockResolvedValue([
       { deviceId: 'd1', label: 'Microfone interno', kind: 'audioinput' } as MediaDeviceInfo,
       { deviceId: 'd2', label: 'Fone USB', kind: 'audioinput' } as MediaDeviceInfo,
@@ -37,8 +58,9 @@ describe('MicQuickMenu', () => {
     renderWithRoom(<MicQuickMenu />, { livekitRoom });
 
     await user.click(screen.getByRole('button', { name: 'Configurações do microfone' }));
-    await screen.findByText('Fone USB');
-    await user.click(screen.getByText('Fone USB'));
+    expect(await screen.findByText('Microfone interno')).toBeInTheDocument();
+    await openSubmenu(user, 'Dispositivo de entrada');
+    await pickInSubmenu('Fone USB');
 
     await waitFor(() => expect(livekitRoom.switchActiveDevice).toHaveBeenCalledWith('audioinput', 'd2'));
   });
@@ -55,23 +77,40 @@ describe('MicQuickMenu', () => {
     expect(Room.getLocalDevices).toHaveBeenCalledWith('audioinput', false);
   });
 
-  it('offers no noise suppression switch: the browser and LiveKit defaults apply', async () => {
-    const user = userEvent.setup();
+  it('picking the studio profile saves it and restarts the mic with processing off', async () => {
+    const user = submenuUser();
     vi.spyOn(Room, 'getLocalDevices').mockResolvedValue([{ deviceId: 'd1', label: 'Mic', kind: 'audioinput' } as MediaDeviceInfo]);
-    renderWithRoom(<MicQuickMenu />, { livekitRoom: fakeLivekitRoom('d1') });
+    const micTrack = { restartTrack: vi.fn(async () => undefined) };
+    renderWithRoom(<MicQuickMenu />, { livekitRoom: fakeLivekitRoom('d1', micTrack) });
 
     await user.click(screen.getByRole('button', { name: 'Configurações do microfone' }));
-    await screen.findByText('Mic');
-    expect(screen.queryByText('Supressão de ruído')).not.toBeInTheDocument();
+    expect(await screen.findByText('Isolamento de voz')).toBeInTheDocument();
+    await openSubmenu(user, 'Perfil de entrada');
+    await pickInSubmenu('Estúdio');
+
+    expect(getAudioPreferences().inputProfile).toBe('studio');
+    await waitFor(() => expect(micTrack.restartTrack).toHaveBeenCalledWith(expect.objectContaining({
+      deviceId: 'd1', noiseSuppression: false, echoCancellation: false, autoGainControl: false,
+    })));
   });
 
-  it('full settings shortcut navigates to the audio and video tab', async () => {
+  it('shows the input volume and level', async () => {
     const user = userEvent.setup();
     vi.spyOn(Room, 'getLocalDevices').mockResolvedValue([{ deviceId: 'd1', label: 'Mic', kind: 'audioinput' } as MediaDeviceInfo]);
     renderWithRoom(<MicQuickMenu />, { livekitRoom: fakeLivekitRoom('d1') });
 
     await user.click(screen.getByRole('button', { name: 'Configurações do microfone' }));
-    await user.click(await screen.findByText('Configurações completas'));
+    expect(await screen.findByLabelText('Volume de entrada')).toHaveValue('100');
+    expect(screen.getByRole('meter', { name: 'Nível de entrada' })).toBeInTheDocument();
+  });
+
+  it('voice settings shortcut navigates to the audio and video tab', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(Room, 'getLocalDevices').mockResolvedValue([{ deviceId: 'd1', label: 'Mic', kind: 'audioinput' } as MediaDeviceInfo]);
+    renderWithRoom(<MicQuickMenu />, { livekitRoom: fakeLivekitRoom('d1') });
+
+    await user.click(screen.getByRole('button', { name: 'Configurações do microfone' }));
+    await user.click(await screen.findByText('Configurações de voz'));
 
     expect(navigate).toHaveBeenCalledWith('/app/settings/av');
   });
@@ -92,25 +131,38 @@ describe('CameraQuickMenu', () => {
   });
 
   it('with permission not yet granted, offers to request access instead of an empty list', async () => {
-    const user = userEvent.setup();
+    const user = submenuUser();
     vi.spyOn(Room, 'getLocalDevices').mockResolvedValue([{ deviceId: 'c1', label: '', kind: 'videoinput' } as MediaDeviceInfo]);
     renderWithRoom(<CameraQuickMenu />, { livekitRoom: fakeLivekitRoom(undefined) });
 
     await user.click(screen.getByRole('button', { name: 'Configurações da câmera' }));
-    expect(await screen.findByText('Permitir acesso aos dispositivos')).toBeInTheDocument();
+    await openSubmenu(user, 'Câmera');
+    expect(await screen.findAllByText('Permitir acesso aos dispositivos')).not.toHaveLength(0);
   });
 });
 
 describe('SpeakerQuickMenu', () => {
-  it('lists the available audio outputs', async () => {
-    const user = userEvent.setup();
+  it('lists the available audio outputs in the output device submenu', async () => {
+    const user = submenuUser();
     vi.spyOn(Room, 'getLocalDevices').mockResolvedValue([
       { deviceId: 's1', label: 'Alto-falantes', kind: 'audiooutput' } as MediaDeviceInfo,
+      { deviceId: 's2', label: 'Fone Bluetooth', kind: 'audiooutput' } as MediaDeviceInfo,
     ]);
     renderWithRoom(<SpeakerQuickMenu />, { livekitRoom: fakeLivekitRoom('s1') });
 
     await user.click(screen.getByRole('button', { name: 'Configurações de saída de áudio' }));
-    expect(await screen.findByText('Alto-falantes')).toBeInTheDocument();
+    await openSubmenu(user, 'Dispositivo de saída');
+    expect(await screen.findByText('Fone Bluetooth')).toBeInTheDocument();
+  });
+
+  it('shows the saved output volume', async () => {
+    const user = userEvent.setup();
+    localStorage.setItem('ss-output-volume', '0.4');
+    vi.spyOn(Room, 'getLocalDevices').mockResolvedValue([{ deviceId: 's1', label: 'Alto-falantes', kind: 'audiooutput' } as MediaDeviceInfo]);
+    renderWithRoom(<SpeakerQuickMenu />, { livekitRoom: fakeLivekitRoom('s1') });
+
+    await user.click(screen.getByRole('button', { name: 'Configurações de saída de áudio' }));
+    expect(await screen.findByLabelText('Volume de saída')).toHaveValue('40');
   });
 });
 

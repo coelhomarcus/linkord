@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ArrowClockwiseIcon, WifiSlashIcon } from '@phosphor-icons/react';
+import { WifiSlashIcon } from '@phosphor-icons/react';
 
 import { useRoom } from '@/state/RoomContext';
 
@@ -12,7 +12,6 @@ export function ReconnectBanner() {
 
 function ReconnectNotice() {
   const { t } = useTranslation('common');
-  const { retryConnection } = useRoom();
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -29,11 +28,6 @@ function ReconnectNotice() {
       </span>
       <WifiSlashIcon size={15} className="flex-none" />
       <span className="min-w-0 flex-1">{t('layout.reconnect')}</span>
-      <button type="button" onClick={retryConnection} className="flex min-h-9 flex-none items-center gap-1 rounded-lg px-2 text-primary hover:bg-bg-secondary focus-visible:outline-2 focus-visible:outline-primary" aria-label={t('layout.retryNow')}>
-        <ArrowClockwiseIcon size={16} />
-        <span className="sm:hidden">{t('layout.retryShort')}</span>
-        <span className="hidden sm:inline">{t('layout.retry')}</span>
-      </button>
     </div>
   );
 }

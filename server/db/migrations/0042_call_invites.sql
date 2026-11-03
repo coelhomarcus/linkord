@@ -1,0 +1,5 @@
+ALTER TABLE "messages" DROP CONSTRAINT "messages_kind_reference_check";--> statement-breakpoint
+ALTER TABLE "messages" ADD COLUMN "call_conversation_id" text;--> statement-breakpoint
+ALTER TABLE "messages" ADD CONSTRAINT "messages_call_conversation_id_conversations_id_fk" FOREIGN KEY ("call_conversation_id") REFERENCES "public"."conversations"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "messages_call_conversation_id_idx" ON "messages" USING btree ("call_conversation_id");--> statement-breakpoint
+ALTER TABLE "messages" ADD CONSTRAINT "messages_kind_reference_check" CHECK (("messages"."kind" = 'text' AND "messages"."group_invitation_id" IS NULL AND "messages"."call_conversation_id" IS NULL) OR ("messages"."kind" = 'group_invite' AND "messages"."call_conversation_id" IS NULL) OR ("messages"."kind" = 'call_invite' AND "messages"."group_invitation_id" IS NULL));

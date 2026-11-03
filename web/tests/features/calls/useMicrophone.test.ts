@@ -47,6 +47,20 @@ describe('useMicrophone — activateMic applies the saved microphone', () => {
     expect(setMicrophoneEnabled).toHaveBeenCalledWith(true, { deviceId: 'preferred-mic' });
   });
 
+  it('with the studio profile, captures with the browser processing turned off', async () => {
+    saveDevicePreference('audioinput', 'preferred-mic');
+    localStorage.setItem('ss-input-profile', 'studio');
+    const setMicrophoneEnabled = vi.fn(async () => undefined);
+    const room = fakeRoom(setMicrophoneEnabled);
+    const { result } = renderHook(() => useMicrophone(room, vi.fn()));
+
+    await result.current.activateMic();
+
+    expect(setMicrophoneEnabled).toHaveBeenCalledWith(true, {
+      deviceId: 'preferred-mic', echoCancellation: false, noiseSuppression: false, autoGainControl: false, voiceIsolation: false,
+    });
+  });
+
   it('without a saved preference, does not force any deviceId (lets the browser choose)', async () => {
     const setMicrophoneEnabled = vi.fn(async () => undefined);
     const room = fakeRoom(setMicrophoneEnabled);

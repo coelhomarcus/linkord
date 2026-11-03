@@ -73,6 +73,10 @@ export interface RoomContextValue {
   notifyActiveView: (view: ChatView) => void;
   registerRequestChatView: (fn: (conversationId?: string) => void) => void;
   requestChatView: (conversationId?: string) => void;
+  /** Joins (or returns to) a conversation's call and shows its stage — the
+   * same path as the conversation header's call button. */
+  registerOpenCall: (fn: (conversationId: string) => void) => void;
+  openCall: (conversationId: string) => void;
   activeCallConversationId: string | null;
   joinCall: (conversationId: string) => void;
   leaveCall: () => Promise<void>;

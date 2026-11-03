@@ -19,6 +19,7 @@
     "shareStop": "Stop sharing",
     "fullscreenEnter": "Enter full screen",
     "fullscreenExit": "Exit full screen",
+    "callSettings": "Call settings",
     "leaveCall": "Leave call",
     "openChat": "Open chat",
     "closeChat": "Close chat",
@@ -28,6 +29,12 @@
     "settings": "Settings",
     "previousStream": "Previous stream",
     "nextStream": "Next stream"
+  },
+  "callSettings": {
+    "title": "Call display",
+    "hideAudioOnly": "Hide participants without video",
+    "banners": "Show participant banners",
+    "stats": "Show statistics"
   },
   "chat": {
     "title": "Call chat"
@@ -74,24 +81,38 @@
     "bitrate": "Bitrate: {{value}} kbps",
     "resolution": "Resolution: {{value}}",
     "onAir": "On air: {{value}}",
-    "removeFromCall": "Remove from call",
-    "streamSettings": "Stream settings"
+    "removeFromCall": "Remove from call"
   },
   "devices": {
     "permission": "Allow access to devices",
     "listFailed": "Couldn't list devices.",
     "none": "No devices found.",
     "unnamed": "Unnamed device",
-    "fullSettings": "Full settings",
     "micSettings": "Microphone settings",
     "audioOutputSettings": "Audio output settings",
     "screenSettings": "Screen sharing settings",
     "cameraSettings": "Camera settings",
-    "audioInput": "Audio input",
     "microphone": "Microphone",
-    "audioOutput": "Audio output",
     "speaker": "Speaker",
-    "camera": "Camera"
+    "camera": "Camera",
+    "voiceSettings": "Voice settings",
+    "videoSettings": "Video settings",
+    "inputDevice": "Input device",
+    "outputDevice": "Output device",
+    "inputProfile": "Input profile",
+    "inputVolume": "Input volume",
+    "outputVolume": "Output volume",
+    "inputLevel": "Input level",
+    "profiles": {
+      "voice-isolation": {
+        "label": "Voice isolation",
+        "description": "Reduces background noise and echo"
+      },
+      "studio": {
+        "label": "Studio",
+        "description": "Pure audio, no processing. Use headphones to avoid echo"
+      }
+    }
   },
   "quality": {
     "game": "Game (1440p, 60 fps)",
@@ -130,5 +151,27 @@
     "pausePreview": "Couldn't pause the preview: {{error}}",
     "resumePreview": "Couldn't resume the preview: {{error}}",
     "joinCall": "Couldn't connect to the call. Check your connection and try again."
+  },
+  "invite": {
+    "button": "Invite to voice",
+    "tileTitle": "Nobody's here yet",
+    "tileHint": "Call someone from the group into the call.",
+    "title": "Invite to the call in {{group}}",
+    "description": "The invite arrives in your direct conversation, with a button to join.",
+    "search": "Search members",
+    "members": "Group members",
+    "noMatch": "Nobody by that name.",
+    "everyoneHere": "Everyone in the group is already in the call.",
+    "notFriends": "Only friends can be invited",
+    "invite": "Invite",
+    "sending": "Sending…",
+    "sent": "Sent",
+    "errors": {
+      "failed": "Couldn't send the invite.",
+      "notFriends": "You need to be friends.",
+      "alreadyInCall": "Already in the call.",
+      "rateLimited": "Invite sent a moment ago. Wait a bit.",
+      "notInCall": "Join the call to invite someone."
+    }
   }
 }

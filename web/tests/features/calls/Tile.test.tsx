@@ -70,6 +70,40 @@ describe('Tile — mirroring', () => {
   });
 });
 
+describe('Tile — media aspect ratio', () => {
+  it('letterboxes inside a fixed-size tile instead of resizing it or cropping', () => {
+    const contain = renderWithRoom(<Tile participantId="p-1" kind="screen" isMine />, {
+      state: { ...initialRoomState, me: { ...initialRoomState.me, id: 'p-1' } },
+    });
+    expect(contain.container.querySelector('video')).toHaveClass('object-contain');
+    expect(contain.container.querySelector('[data-tile-kind]')).not.toHaveAttribute('style', expect.stringContaining('width'));
+    contain.unmount();
+
+    const cover = renderWithRoom(<Tile participantId="p-1" kind="camera" isMine fit="cover" />, {
+      state: { ...initialRoomState, me: { ...initialRoomState.me, id: 'p-1' } },
+    });
+    expect(cover.container.querySelector('video')).toHaveClass('object-cover');
+    expect(cover.container.querySelector('video')?.className).toContain('[:fullscreen_&]:object-contain');
+  });
+});
+
+describe('Tile — name pill icon', () => {
+  it('marks a screen share with a green monitor instead of the avatar', () => {
+    const screenShare = renderWithRoom(<Tile participantId="p-1" kind="screen" isMine />, {
+      state: { ...initialRoomState, me: { ...initialRoomState.me, id: 'p-1', displayName: 'Eu' } },
+    });
+    const pill = screenShare.getByText('Eu').parentElement!;
+    expect(pill.querySelector('svg.text-green')).toBeInTheDocument();
+    expect(pill.querySelector('[data-avatar], img')).not.toBeInTheDocument();
+    screenShare.unmount();
+
+    const camera = renderWithRoom(<Tile participantId="p-1" kind="camera" isMine />, {
+      state: { ...initialRoomState, me: { ...initialRoomState.me, id: 'p-1', displayName: 'Eu' } },
+    });
+    expect(camera.getByText('Eu').parentElement!.querySelector('svg.text-green')).not.toBeInTheDocument();
+  });
+});
+
 describe('Tile — video hidden for me', () => {
   it('hides another person\'s camera, and never my own camera or a shared screen', () => {
     const hidden = renderWithRoom(<Tile participantId="p-2" kind="camera" isMine={false} />, {
@@ -121,7 +155,7 @@ describe('Tile — paused share and stopped watching', () => {
 });
 
 describe('Tile — keyboard', () => {
-  it('Enter focuses the tile, and Enter on the gear does not', () => {
+  it('Enter focuses the tile and there is no gear button', () => {
     const dispatch = vi.fn();
     renderWithRoom(<Tile participantId="p-2" kind="avatar" isMine={false} />, {
       state: { ...initialRoomState, participants: new Map([['p-2', fakeParticipant()]]), focusedId: null },
@@ -131,7 +165,6 @@ describe('Tile — keyboard', () => {
     fireEvent.keyDown(screen.getByRole('button', { name: /Destacar Fulana/ }), { key: 'Enter' });
     expect(dispatch).toHaveBeenCalledWith({ type: 'SET_FOCUSED', id: 'p-2:participant', origin: 'manual' });
 
-    fireEvent.keyDown(screen.getByLabelText('Configurações da transmissão'), { key: 'Enter' });
-    expect(dispatch).toHaveBeenCalledTimes(1);
+    expect(screen.queryByLabelText('Configurações da transmissão')).not.toBeInTheDocument();
   });
 });

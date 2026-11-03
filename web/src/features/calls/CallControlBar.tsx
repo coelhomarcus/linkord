@@ -10,7 +10,9 @@ import { useParticipantMedia } from './useLiveKitTrack';
 import type { ReactionEmoji } from '@/shared/types/protocol';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/primitives/popover';
+import { CallSettingsMenu } from './CallSettingsMenu';
 import { CameraQuickMenu, MicQuickMenu, ScreenShareQuickMenu, SpeakerQuickMenu } from './CallDeviceMenus';
+import { SoundboardButton } from '@/features/soundboard/SoundboardButton';
 import { cn } from '@/shared/lib/utils';
 
 // Floating call reactions (burst animation on everyone's screen) stay a
@@ -55,7 +57,10 @@ export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(fu
   const {
     state, dispatch, startCamera, stopCamera, startSharing, stopSharing, activateMic, toggleMicMuted, deafened, toggleDeafened,
     leaveCall, sendReaction, reconnecting, isCallFullscreen, toggleCallFullscreen, fullscreenElement,
+    activeCallConversationId, conversations,
   } = useRoom();
+  // sounds belong to a group, so a 1:1 call has no soundboard
+  const soundboardGroupId = conversations.find((c) => c.id === activeCallConversationId && c.type === 'group')?.id ?? null;
   const myMedia = useParticipantMedia(state.me.id ?? '');
   const cameraOn = state.me.cameraOn;
   const sharing = state.me.sharing;
@@ -76,7 +81,7 @@ export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(fu
     <div
       ref={ref}
       className={cn(
-        'absolute bottom-[calc(0.75rem+env(safe-area-inset-bottom))] left-1/2 z-20 flex -translate-x-1/2 flex-col items-center gap-2 transition-opacity duration-200 motion-reduce:transition-none',
+        'absolute bottom-[calc(0.25rem+env(safe-area-inset-bottom))] left-1/2 z-20 flex -translate-x-1/2 flex-col items-center gap-2 transition-opacity duration-200 motion-reduce:transition-none',
         hudVisible ? 'opacity-100' : 'pointer-events-none opacity-0'
       )}
     >
@@ -121,6 +126,15 @@ export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(fu
             </div>
           </PopoverContent>
         </Popover>
+
+        {soundboardGroupId && (
+          <SoundboardButton
+            conversationId={soundboardGroupId}
+            className={cn(BAR_BUTTON, BAR_BUTTON_NEUTRAL)}
+            activeClassName="bg-white/12 text-white"
+            iconClassName={BAR_ICON}
+          />
+        )}
 
         <div className="relative">
           <Tooltip>
@@ -189,6 +203,8 @@ export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(fu
           </TooltipTrigger>
           <TooltipContent>{isCallFullscreen ? t('controls.fullscreenExit') : t('controls.fullscreenEnter')}</TooltipContent>
         </Tooltip>
+
+        <CallSettingsMenu triggerClassName={cn(BAR_BUTTON, BAR_BUTTON_NEUTRAL)} />
 
         <div aria-hidden className="mx-0.5 h-6 w-px flex-none bg-white/10" />
 

@@ -90,6 +90,13 @@ async function noticeFor(event: OutboxEvent, locale: Locale): Promise<PushNotice
     const name = row.author ? row.author.displayName || row.author.username : row.conversation.type === 'bot' ? row.conversation.title || 'Bot' : 'Alguém';
     const text = row.message.text.replace(/\s+/g, ' ').trim().slice(0, 120);
     const title = row.conversation.type === 'direct' ? name : row.conversation.title || 'Conversa';
+    if (row.message.kind === 'call_invite' && row.message.callConversationId) {
+      const [group] = await db.select({ title: conversations.title }).from(conversations).where(eq(conversations.id, row.message.callConversationId)).limit(1);
+      if (group) {
+        return { title, body: localeText(locale, 'push.callInviteBody', { name, group: group.title }),
+          path: `/app/conversations/${encodeURIComponent(row.conversation.id)}`, tag: `chat-${row.conversation.id}` };
+      }
+    }
     return { title, body: text ? `${name}: ${text}` : localeText(locale, 'push.chatEmptyBody', { name }),
       path: `/app/conversations/${encodeURIComponent(row.conversation.id)}`, tag: `chat-${row.conversation.id}` };
   }

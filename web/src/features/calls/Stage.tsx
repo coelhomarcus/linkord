@@ -9,6 +9,7 @@ import { useCallHud } from './useCallHud';
 import { TileGrid } from './TileGrid';
 import { CallControlBar } from './CallControlBar';
 import { CallChatToggleButton } from './CallChatToggleButton';
+import { CallInviteTile } from './CallInviteTile';
 import { Button } from '@/shared/ui/primitives/button';
 
 interface StageProps {
@@ -28,7 +29,7 @@ const BAR_GRID_GAP = 12;
 
 export function Stage({ allIds, chatOpen, onToggleChat, onBack }: StageProps) {
   const { t } = useTranslation('calls');
-  const { state, dispatch, hideAudioOnlyTiles, setHideAudioOnlyTiles, callStageRef, reconnecting, menuTarget } = useRoom();
+  const { state, dispatch, hideAudioOnlyTiles, setHideAudioOnlyTiles, callStageRef, reconnecting, menuTarget, activeCallConversationId, conversations } = useRoom();
   const allDescriptors = useCallTiles(allIds);
   const descriptors = hideAudioOnlyTiles ? allDescriptors.filter((d) => d.kind !== 'avatar') : allDescriptors;
   const focusScreenShare = useCallback((key: string) => dispatch({ type: 'SET_FOCUSED', id: key, origin: 'automatic' }), [dispatch]);
@@ -37,6 +38,10 @@ export function Stage({ allIds, chatOpen, onToggleChat, onBack }: StageProps) {
   // otherwise — the option lives in Preferences, so the empty stage has to
   // say why it's empty and offer a way back.
   const allHiddenByFilter = allDescriptors.length > 0 && descriptors.length === 0;
+  // allIds always holds you, so one id means nobody else is here yet
+  const inviteConversationId = allIds.length <= 1 && conversations.find((c) => c.id === activeCallConversationId)?.type === 'group'
+    ? activeCallConversationId
+    : null;
 
   // A tile menu open, reconnecting, or an actionable error keeps the HUD
   // forced visible regardless of the idle timer (plan §11.3).
@@ -102,7 +107,12 @@ export function Stage({ allIds, chatOpen, onToggleChat, onBack }: StageProps) {
           </Button>
         </div>
       ) : (
-        <TileGrid descriptors={descriptors} focusedId={state.focusedId} onCapacityChange={handleCapacityChange} />
+        <TileGrid
+          descriptors={descriptors}
+          focusedId={state.focusedId}
+          onCapacityChange={handleCapacityChange}
+          extraTile={inviteConversationId && descriptors.length > 0 ? <CallInviteTile conversationId={inviteConversationId} /> : undefined}
+        />
       )}
       <CallControlBar ref={controlBarRef} hudVisible={hudVisible} />
       <CallChatToggleButton chatOpen={chatOpen} onToggleChat={onToggleChat} hudVisible={hudVisible} />

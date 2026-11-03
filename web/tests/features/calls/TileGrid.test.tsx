@@ -1,8 +1,11 @@
-import { describe, expect, it, vi } from 'vitest';
+import { act } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import userEvent from '@testing-library/user-event';
 import type { TileDescriptor } from '@/features/calls/tileTypes';
 import { TileGrid } from '@/features/calls/TileGrid';
 import { renderWithRoom } from '@tests/fixtures/roomContextFixture';
+
+let resizeContainer: (width: number, height: number) => void = () => {};
 
 vi.stubGlobal(
   'ResizeObserver',
@@ -14,10 +17,11 @@ vi.stubGlobal(
     }
 
     observe() {
-      this.callback(
-        [{ contentRect: { width: 600, height: 600 } } as ResizeObserverEntry],
+      resizeContainer = (width, height) => this.callback(
+        [{ contentRect: { width, height } } as ResizeObserverEntry],
         this as unknown as ResizeObserver,
       );
+      resizeContainer(600, 600);
     }
 
     unobserve() {}
@@ -53,6 +57,20 @@ describe('TileGrid', () => {
     expect(container.querySelector('[data-thumb-strip]')).toBeInTheDocument();
   });
 
+  it('the extra tile takes a grid cell, but has no place in focus mode', () => {
+    const all = descriptors(1);
+    const extra = <div data-testid="extra" />;
+    const grid = renderWithRoom(<TileGrid descriptors={all} focusedId={null} extraTile={extra} />);
+    const cells = grid.container.querySelectorAll('[data-tile-grid] > div');
+    expect(cells).toHaveLength(2);
+    expect(cells[1]!.querySelector('[data-testid="extra"]')).toBeInTheDocument();
+    expect((cells[1] as HTMLElement).style.width).toBe((cells[0] as HTMLElement).style.width);
+    grid.unmount();
+
+    const focused = renderWithRoom(<TileGrid descriptors={all} focusedId={all[0]!.key} extraTile={extra} />);
+    expect(focused.queryByTestId('extra')).not.toBeInTheDocument();
+  });
+
   it('focuses the camera and screen of the SAME person independently (distinct keys per source)', () => {
     const camera: TileDescriptor = { key: 'u1:participant', participantId: 'u1', kind: 'camera', loading: false, paused: false };
     const screen: TileDescriptor = { key: 'u1:screen', participantId: 'u1', kind: 'screen', loading: false, paused: false };
@@ -82,6 +100,37 @@ describe('TileGrid — onCapacityChange', () => {
   it('reports meetsMinimum=false when the required minTileWidth does not fit (fake container is 600x600)', () => {
     const onCapacityChange = vi.fn();
     renderWithRoom(<TileGrid descriptors={descriptors(9)} focusedId={null} minTileWidth={1000} onCapacityChange={onCapacityChange} />);
+    expect(onCapacityChange).toHaveBeenCalledWith(false, 'p-0:avatar');
+  });
+});
+
+describe('TileGrid — capacity while the container resizes', () => {
+  afterEach(() => vi.useRealTimers());
+
+  it('ignores a width that is only crossed mid-animation', () => {
+    vi.useFakeTimers();
+    const onCapacityChange = vi.fn();
+    renderWithRoom(<TileGrid descriptors={descriptors(3)} focusedId={null} onCapacityChange={onCapacityChange} />);
+    onCapacityChange.mockClear();
+
+    act(() => resizeContainer(200, 600));
+    act(() => vi.advanceTimersByTime(100));
+    act(() => resizeContainer(600, 600));
+    act(() => vi.advanceTimersByTime(1_000));
+
+    expect(onCapacityChange).not.toHaveBeenCalledWith(false, expect.anything());
+  });
+
+  it('reports a lack of room once the container holds still', () => {
+    vi.useFakeTimers();
+    const onCapacityChange = vi.fn();
+    renderWithRoom(<TileGrid descriptors={descriptors(3)} focusedId={null} onCapacityChange={onCapacityChange} />);
+    onCapacityChange.mockClear();
+
+    act(() => resizeContainer(200, 600));
+    expect(onCapacityChange).not.toHaveBeenCalled();
+    act(() => vi.advanceTimersByTime(250));
+
     expect(onCapacityChange).toHaveBeenCalledWith(false, 'p-0:avatar');
   });
 });

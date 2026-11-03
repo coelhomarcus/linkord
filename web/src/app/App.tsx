@@ -67,7 +67,7 @@ function currentPath(): string {
 
 function Shell() {
   const {
-    state, dispatch, livekitRoom, closeTileMenu, sendWs, retryConnection, notifyActiveView, registerRequestChatView,
+    state, dispatch, livekitRoom, closeTileMenu, sendWs, retryConnection, notifyActiveView, registerRequestChatView, registerOpenCall,
     activeCallConversationId, activeConversationId, joinCall, leaveCall, conversations, allUsers,
   } = useRoom();
   const roomError = state.roomError;
@@ -140,6 +140,9 @@ function Shell() {
     joinCall(conversationId);
     navigate(ROUTES.call(conversationId), { state: { from: currentPath() } });
   }
+
+  // re-registered every render: the handler closes over the current location
+  useEffect(() => { registerOpenCall(handleOpenCall); });
 
   // Jump back to the Stage from wherever you wandered off to — used by both
   // FloatingPip (clicking it) and the sidebar CallDock title.

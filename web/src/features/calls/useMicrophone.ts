@@ -6,6 +6,12 @@ import type { MicProblem, RoomAction } from '../../state/roomReducer';
 import { playSound } from '../../shared/sounds';
 import { loadDevicePreference } from '../settings/useDevicePreference';
 import { i18n } from '@/shared/i18n/init';
+import { logger } from '@/shared/lib/logger';
+import { getAudioPreferences } from './audioPreferences';
+import { applyInputGain } from './inputGain';
+import { captureOptionsForProfile } from './inputProfile';
+
+const log = logger.child({ component: 'microphone' });
 
 interface MicrophoneApi {
   activateMic: () => Promise<void>;
@@ -56,8 +62,14 @@ export function useMicrophone(room: Room, dispatch: Dispatch<RoomAction>): Micro
       // first (the common case — a call's mic button) never consulted it,
       // so the choice looked like it "didn't stick".
       const savedDeviceId = loadDevicePreference('audioinput');
-      await room.localParticipant.setMicrophoneEnabled(true, savedDeviceId ? { deviceId: savedDeviceId } : undefined);
+      const { inputProfile, inputVolume } = getAudioPreferences();
+      const options = { ...(savedDeviceId ? { deviceId: savedDeviceId } : {}), ...captureOptionsForProfile(inputProfile) };
+      await room.localParticipant.setMicrophoneEnabled(true, Object.keys(options).length > 0 ? options : undefined);
       setMicProblem(null);
+      const track = room.localParticipant.getTrackPublication(Track.Source.Microphone)?.track as LocalAudioTrack | undefined;
+      if (track) {
+        applyInputGain(track, inputVolume).catch((err) => log.warn('Failed to apply the input volume', { err: String(err) }));
+      }
     } catch (err) {
       if (err instanceof Error && err.message === 'timeout') {
         dispatch({ type: 'SET_SHARE_ERROR', message: i18n.t('calls:errors.videoConnectionFailed') });

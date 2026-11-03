@@ -130,8 +130,6 @@
   --shadow-panel: 0 1px 2px rgb(0 0 0 / 0.35);
   /* everything that floats: menus, popovers, dialogs, drawers, toolbars */
   --shadow-popover: 0 18px 60px rgb(0 0 0 / 0.5);
-  /* the top-edge sheen on a selected item in a list or the rail */
-  --shadow-highlight: inset 0 1px 0 oklch(100% 0 0 / 0.06);
 
   --default-transition-duration: 150ms;
 

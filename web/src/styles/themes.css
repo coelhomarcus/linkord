@@ -48,7 +48,6 @@ html[data-theme="black"] {
   /* a shadow disappears on black; the border carries the elevation */
   --shadow-panel: none;
   --shadow-popover: 0 0 0 1px oklch(100% 0 0 / 0.25);
-  --shadow-highlight: none;
 }
 
 /* Graphite: neutral slate; fields sink below the panel, menus rise above it */
@@ -87,5 +86,4 @@ html[data-theme="discord"] {
   --color-fill-active: rgb(255 255 255 / 0.14);
 
   --shadow-panel: 0 1px 3px rgb(0 0 0 / 0.45);
-  --shadow-highlight: inset 0 1px 0 rgb(255 255 255 / 0.07);
 }
