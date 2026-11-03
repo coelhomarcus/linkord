@@ -5,7 +5,8 @@ type TextKey =
   | 'push.friendRequestTitle' | 'push.friendRequestBody' | 'push.friendAcceptedTitle' | 'push.friendAcceptedBody'
   | 'push.chatEmptyBody' | 'push.chatSentBody_one' | 'push.chatSentBody_other' | 'push.callInviteBody'
   | 'email.recoverySubject' | 'email.changeSubject' | 'email.recoveryTitle' | 'email.changeTitle'
-  | 'email.recoveryIntro' | 'email.changeIntro' | 'email.recoveryAccountLine' | 'email.expires';
+  | 'email.recoveryIntro' | 'email.changeIntro' | 'email.recoveryAccountLine' | 'email.expires'
+  | 'server.textCategory' | 'server.textChannel' | 'server.voiceCategory' | 'server.voiceChannel';
 
 const TEXT: Record<Locale, Record<TextKey, string>> = {
   'pt-BR': {
@@ -20,6 +21,8 @@ const TEXT: Record<Locale, Record<TextKey, string>> = {
     'email.recoveryIntro': 'Use este código para redefinir a senha da sua conta Linkord:', 'email.changeIntro': 'Use este código para confirmar o novo e-mail da sua conta Linkord:',
     'email.recoveryAccountLine': 'Esse código é para a conta de usuário "{{username}}", associada a este e-mail ({{email}}).',
     'email.expires': 'O código expira em 30 minutos. Se você não solicitou isso, ignore este e-mail.',
+    'server.textCategory': 'Canais de texto', 'server.textChannel': 'geral',
+    'server.voiceCategory': 'Canais de voz', 'server.voiceChannel': 'Geral',
   },
   'en-US': {
     'push.mentionedTitle': 'You were mentioned', 'push.mentionedBody': 'Open the conversation to see the message.',
@@ -33,6 +36,8 @@ const TEXT: Record<Locale, Record<TextKey, string>> = {
     'email.recoveryIntro': 'Use this code to reset your Linkord account password:', 'email.changeIntro': 'Use this code to confirm your new Linkord account email:',
     'email.recoveryAccountLine': 'This code is for the user account "{{username}}", associated with this email ({{email}}).',
     'email.expires': 'The code expires in 30 minutes. If you did not request this, ignore this email.',
+    'server.textCategory': 'Text Channels', 'server.textChannel': 'general',
+    'server.voiceCategory': 'Voice Channels', 'server.voiceChannel': 'General',
   },
 };
 
