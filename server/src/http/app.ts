@@ -15,6 +15,7 @@ import { registerFriendshipRoutes } from '../modules/friendships/friendships.js'
 import { registerBlockRoutes } from '../modules/blocks/blocks.js';
 import { registerUserRoutes } from '../modules/users/usersRoutes.js';
 import { registerInvitationRoutes } from '../modules/conversations/invitations.js';
+import { registerCallInviteRoutes } from '../modules/calls/callInvites.js';
 import { registerNotificationRoutes } from '../modules/notifications/notificationsRoutes.js';
 import { registerClientLogRoutes } from '../modules/logs/clientLogs.js';
 import { registerLimitsRoutes } from '../modules/limits/limitsRoutes.js';
@@ -100,6 +101,7 @@ export function createApp(): FastifyInstance {
   registerBlockRoutes(fastify);
   registerUserRoutes(fastify);
   registerInvitationRoutes(fastify);
+  registerCallInviteRoutes(fastify);
   registerGroupMemberRoutes(fastify);
   registerBotRoutes(fastify);
   registerWebhookIngressRoutes(fastify);

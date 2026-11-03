@@ -12,6 +12,10 @@ describe('messagePreviewText', () => {
     expect(messagePreviewText({ text: '', richEmbeds: [{ title: 'CPU alta' }] })).toBe('CPU alta');
     expect(messagePreviewText({ text: '', richEmbeds: [{ fields: [{ name: 'a', value: 'b', inline: false }] }] })).toBe('Aviso');
   });
+  it('names the group whose call a call invite points at', () => {
+    expect(messagePreviewText({ text: '', kind: 'call_invite', callInvite: { groupId: 'g1', groupTitle: 'Squad', groupAvatar: '' } })).toBe('Convite para a chamada em Squad');
+    expect(messagePreviewText({ text: '', kind: 'call_invite', callInvite: null })).toBe('Convite para chamada indisponível');
+  });
   it('an invitation with no group is "indisponível", never "Anexo"', () => {
     expect(messagePreviewText({ text: '', kind: 'group_invite', invitation: null })).toBe('Convite indisponível');
   });

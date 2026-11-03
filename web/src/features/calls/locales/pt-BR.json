@@ -136,5 +136,27 @@
     "pausePreview": "Não foi possível pausar a prévia: {{error}}",
     "resumePreview": "Não foi possível retomar a prévia: {{error}}",
     "joinCall": "Não foi possível conectar à chamada. Verifique sua conexão e tente de novo."
+  },
+  "invite": {
+    "button": "Convidar para voz",
+    "tileTitle": "Ainda não chegou ninguém",
+    "tileHint": "Chame alguém do grupo para a chamada.",
+    "title": "Convidar para a chamada em {{group}}",
+    "description": "O convite chega na conversa privada de vocês, com um botão para entrar.",
+    "search": "Buscar membros",
+    "members": "Membros do grupo",
+    "noMatch": "Ninguém com esse nome.",
+    "everyoneHere": "Todo mundo do grupo já está na chamada.",
+    "notFriends": "Só amigos recebem convite",
+    "invite": "Convidar",
+    "sending": "Enviando…",
+    "sent": "Enviado",
+    "errors": {
+      "failed": "Não foi possível enviar o convite.",
+      "notFriends": "Vocês precisam ser amigos.",
+      "alreadyInCall": "Já está na chamada.",
+      "rateLimited": "Convite enviado há pouco. Espere um pouco.",
+      "notInCall": "Entre na chamada para convidar."
+    }
   }
 }

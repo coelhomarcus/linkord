@@ -1,5 +1,6 @@
 import { CaretDownIcon, CaretUpIcon } from '@phosphor-icons/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useRoom } from '../../state/RoomContext';
@@ -20,6 +21,9 @@ interface TileGridProps {
    * the geometry it already measures for its own layout. `suggestedKey` is
    * just the first available descriptor, a reasonable default main tile. */
   onCapacityChange?: (meetsMinimum: boolean, suggestedKey: string | null) => void;
+  /** One more cell after the participants, sized like them (the invite tile
+   * while you're alone). Only in the grid: focus mode has no free seat for it. */
+  extraTile?: ReactNode;
 }
 
 const THUMB_W = 160;
@@ -37,7 +41,7 @@ const CAPACITY_SETTLE_MS = 200;
 // não acumular linhas que eliminem o principal").
 const MAX_VISIBLE_THUMB_ROWS = 2;
 
-export function TileGrid({ descriptors, focusedId, minTileWidth = DEFAULT_MIN_TILE_WIDTH, onCapacityChange }: TileGridProps) {
+export function TileGrid({ descriptors, focusedId, minTileWidth = DEFAULT_MIN_TILE_WIDTH, onCapacityChange, extraTile }: TileGridProps) {
   const { t } = useTranslation('calls');
   const { state } = useRoom();
   const keys = useMemo(() => descriptors.map((d) => d.key), [descriptors]);
@@ -75,7 +79,7 @@ export function TileGrid({ descriptors, focusedId, minTileWidth = DEFAULT_MIN_TI
   const isMine = (participantId: string) => participantId === state.me.id;
   const [thumbsCollapsed, setThumbsCollapsed] = useState(false);
 
-  const n = descriptors.length;
+  const n = descriptors.length + (extraTile && !focus ? 1 : 0);
   const gridFit = fitGrid(n, containerSize.w, containerSize.h, minTileWidth);
   const thumbs = focus ? descriptors.filter((d) => d.key !== focus) : [];
 
@@ -124,6 +128,11 @@ export function TileGrid({ descriptors, focusedId, minTileWidth = DEFAULT_MIN_TI
         style={{ gap: gridFit ? gridGap(n) : 0 }}
       >
         {descriptors.map((d) => renderTile(d, false, gridFit?.tileW ?? 0, gridFit?.tileH ?? 0))}
+        {extraTile && (
+          <div key="extra-tile" style={{ width: gridFit?.tileW ?? 0, height: gridFit?.tileH ?? 0 }} className="min-h-0 min-w-0 flex-none">
+            {extraTile}
+          </div>
+        )}
       </div>
     );
   }

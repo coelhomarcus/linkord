@@ -57,6 +57,20 @@ describe('TileGrid', () => {
     expect(container.querySelector('[data-thumb-strip]')).toBeInTheDocument();
   });
 
+  it('the extra tile takes a grid cell, but has no place in focus mode', () => {
+    const all = descriptors(1);
+    const extra = <div data-testid="extra" />;
+    const grid = renderWithRoom(<TileGrid descriptors={all} focusedId={null} extraTile={extra} />);
+    const cells = grid.container.querySelectorAll('[data-tile-grid] > div');
+    expect(cells).toHaveLength(2);
+    expect(cells[1]!.querySelector('[data-testid="extra"]')).toBeInTheDocument();
+    expect((cells[1] as HTMLElement).style.width).toBe((cells[0] as HTMLElement).style.width);
+    grid.unmount();
+
+    const focused = renderWithRoom(<TileGrid descriptors={all} focusedId={all[0]!.key} extraTile={extra} />);
+    expect(focused.queryByTestId('extra')).not.toBeInTheDocument();
+  });
+
   it('focuses the camera and screen of the SAME person independently (distinct keys per source)', () => {
     const camera: TileDescriptor = { key: 'u1:participant', participantId: 'u1', kind: 'camera', loading: false, paused: false };
     const screen: TileDescriptor = { key: 'u1:screen', participantId: 'u1', kind: 'screen', loading: false, paused: false };

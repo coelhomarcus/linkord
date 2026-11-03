@@ -241,12 +241,15 @@ export const messages = pgTable('messages', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   editedAt: timestamp('edited_at', { withTimezone: true }),
   replyTo: jsonb('reply_to'),
-  kind: varchar('kind', { length: 16 }).notNull().default('text'), // 'text' | 'group_invite'
+  kind: varchar('kind', { length: 16 }).notNull().default('text'), // 'text' | 'group_invite' | 'call_invite'
   // Points at the invitation this card represents. SET NULL (not cascade):
   // if the invitation row is gone (e.g. the group got deleted, cascading
   // down to group_invitations), the card stays in the DM as a tombstone —
   // "Convite indisponível" — instead of vanishing.
   groupInvitationId: text('group_invitation_id').references(() => groupInvitations.id, { onDelete: 'set null' }),
+  // The group whose call a `call_invite` card asks the recipient to join. SET
+  // NULL for the same reason as above: a deleted group leaves a tombstone.
+  callConversationId: text('call_conversation_id').references(() => conversations.id, { onDelete: 'set null' }),
   // Set (with authorId null) on a message a bot's webhook posted. SET NULL so
   // a deleted webhook leaves its history behind instead of taking it along.
   webhookId: text('webhook_id').references(() => webhooks.id, { onDelete: 'set null' }),
@@ -279,7 +282,8 @@ export const messages = pgTable('messages', {
   index('messages_group_invitation_id_idx').on(t.groupInvitationId),
   index('messages_webhook_id_idx').on(t.webhookId),
   uniqueIndex('messages_webhook_delivery_key_unique').on(t.webhookId, t.webhookDeliveryKey).where(sql`${t.webhookDeliveryKey} IS NOT NULL`),
-  check('messages_kind_reference_check', sql`(${t.kind} = 'text' AND ${t.groupInvitationId} IS NULL) OR (${t.kind} = 'group_invite')`),
+  index('messages_call_conversation_id_idx').on(t.callConversationId),
+  check('messages_kind_reference_check', sql`(${t.kind} = 'text' AND ${t.groupInvitationId} IS NULL AND ${t.callConversationId} IS NULL) OR (${t.kind} = 'group_invite' AND ${t.callConversationId} IS NULL) OR (${t.kind} = 'call_invite' AND ${t.groupInvitationId} IS NULL)`),
 ]);
 
 /** The credential an outside system posts into a bot conversation with. Only

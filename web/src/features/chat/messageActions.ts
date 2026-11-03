@@ -21,7 +21,7 @@ export function messagePermissions(
   me: { userId: string | null; role: string },
   conversation?: Pick<Conversation, 'type' | 'myRole'> | null,
 ): MessagePermissions {
-  const isInvite = message.kind === 'group_invite';
+  const isInvite = message.kind === 'group_invite' || message.kind === 'call_invite';
   const isMine = !!me.userId && message.id === me.userId;
   // a bot takes no replies (nobody writes in it), and whoever owns it tidies it up
   const inBot = conversation?.type === 'bot';

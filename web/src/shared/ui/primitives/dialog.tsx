@@ -44,14 +44,17 @@ function DialogContent({
   children,
   showCloseButton = true,
   closeButtonVariant = "ghost",
+  container,
   ...props
 }: DialogPrimitive.Popup.Props & {
   showCloseButton?: boolean
   /** `overlay` when the dialog opens on an image or banner the X would blend into */
   closeButtonVariant?: "ghost" | "overlay"
+  /** where to render instead of the body — a fullscreen call hides anything outside itself */
+  container?: DialogPrimitive.Portal.Props["container"]
 }) {
   return (
-    <DialogPortal>
+    <DialogPortal container={container}>
       <DialogOverlay />
       <DialogPrimitive.Popup
         data-slot="dialog-content"

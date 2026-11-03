@@ -56,6 +56,14 @@ export interface InvitationCard {
   version: number;
 }
 
+/** The group a `call_invite` message points at. Who is in that call is not
+ * part of it: the card reads that live from presence. */
+export interface CallInviteCard {
+  groupId: string;
+  groupTitle: string;
+  groupAvatar: string;
+}
+
 export interface ChatMessage {
   msgId: number;
   conversationId: string;
@@ -68,9 +76,11 @@ export interface ChatMessage {
   editedAt?: number;
   reactions?: Partial<Record<ReactionEmoji, string[]>>;
   attachments?: ChatAttachment[];
-  kind?: 'text' | 'group_invite';
+  kind?: 'text' | 'group_invite' | 'call_invite';
   // `null` on a group_invite message = the group is gone (tombstone)
   invitation?: InvitationCard | null;
+  // the group whose call a call_invite asks to join; `null` once it's gone
+  callInvite?: CallInviteCard | null;
   // the author's send key, present when the send was correlated — lets the
   // author's client swap its pending copy for this one without remounting
   clientMessageId?: string;

@@ -75,6 +75,9 @@ export function RoomProvider({ children }: { children: ReactNode }) {
   const requestChatViewRef = useRef<((conversationId?: string) => void) | null>(null);
   const registerRequestChatView = useCallback((fn: (conversationId?: string) => void) => { requestChatViewRef.current = fn; }, []);
   const requestChatView = useCallback((conversationId?: string) => { requestChatViewRef.current?.(conversationId); }, []);
+  const openCallRef = useRef<((conversationId: string) => void) | null>(null);
+  const registerOpenCall = useCallback((fn: (conversationId: string) => void) => { openCallRef.current = fn; }, []);
+  const openCall = useCallback((conversationId: string) => { openCallRef.current?.(conversationId); }, []);
 
   // 'forbidden'/'conflict'/'not_found' over the socket are, today, only
   // ever group-action denials (conversations.ts) — rename/delete/members/
@@ -383,7 +386,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         preferMuted: callLifecycle.preferMuted, setPreferMuted: callLifecycle.setPreferMuted,
         reconnecting: callLifecycle.reconnecting,
         livekitRoom, notifyActiveView,
-        registerRequestChatView, requestChatView,
+        registerRequestChatView, requestChatView, registerOpenCall, openCall,
         activeCallConversationId: callLifecycle.activeCallConversationId, joinCall: callLifecycle.joinCall, leaveCall: callLifecycle.leaveCall,
         startSharing, stopSharing, changeSource, pauseSharePreview, resumeSharePreview,
         shareQuality: roomSettings.shareQuality, setShareQuality: roomSettings.setShareQuality,

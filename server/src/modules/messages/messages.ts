@@ -37,6 +37,7 @@ import { insertMessageOnce, isValidClientMessageId, sendPayloadHash } from './se
 import { publishStaged, StagedUnavailableError } from '../attachments/stagedAttachments.js';
 import { ERROR_CODES, type ErrorCode } from '../../http/errors.js';
 import { loadInvitationCards, type InvitationCard } from '../conversations/invitationCards.js';
+import { loadCallInviteCards, type CallInviteCard } from '../calls/callInviteCards.js';
 import { revokeInvitationForDeletedCard } from '../conversations/invitationsRepository.js';
 import type { AppSocket, HandlerTable, Participant } from '../../types.js';
 import { logger } from '../../lib/logger.js';
@@ -97,10 +98,12 @@ interface ChatMessagePayload {
   // pending copy with the stored message
   clientMessageId?: string;
   // only set for structured messages — absent means a plain text message
-  kind?: 'group_invite';
+  kind?: 'group_invite' | 'call_invite';
   // the invitation's CURRENT state, resolved at read time so a card is right
   // after a refresh; null is the tombstone (its group was deleted)
   invitation?: InvitationCard | null;
+  // the group whose call a `call_invite` points at; null once it's gone
+  callInvite?: CallInviteCard | null;
   // the stored previews of the message's link cards (see messageEmbeds.ts)
   embeds?: LinkPreviewResult[];
   // links whose card the author removed: drawn as plain links
@@ -125,6 +128,7 @@ interface MessageWithAuthor {
   replyTo: unknown;
   kind: string;
   groupInvitationId: string | null;
+  callConversationId: string | null;
   embeds: unknown;
   suppressedEmbeds: unknown;
   richEmbeds: unknown;
@@ -150,6 +154,7 @@ const messageWithAuthorSelect = {
   replyTo: messages.replyTo,
   kind: messages.kind,
   groupInvitationId: messages.groupInvitationId,
+  callConversationId: messages.callConversationId,
   embeds: messages.embeds,
   suppressedEmbeds: messages.suppressedEmbeds,
   richEmbeds: messages.richEmbeds,
@@ -176,6 +181,7 @@ function rowWithParticipant(row: Message, participant: AuthorIdentity): MessageW
     replyTo: row.replyTo,
     kind: row.kind,
     groupInvitationId: row.groupInvitationId,
+    callConversationId: row.callConversationId,
     embeds: row.embeds,
     suppressedEmbeds: row.suppressedEmbeds,
     richEmbeds: row.richEmbeds,
@@ -199,7 +205,7 @@ function authorAvatarFor(row: MessageWithAuthor): string {
  * attachments-table rows, and `reactionsByEmoji` the grouped
  * message_reactions rows for this message — neither lives in the messages
  * table itself, see modules/attachments.ts and modules/reactions.ts. */
-function rowToMessage(row: MessageWithAuthor, attachments?: Attachment[], reactionsByEmoji?: Record<string, string[]>, invitation?: InvitationCard): ChatMessagePayload {
+function rowToMessage(row: MessageWithAuthor, attachments?: Attachment[], reactionsByEmoji?: Record<string, string[]>, invitation?: InvitationCard, callInvite?: CallInviteCard): ChatMessagePayload {
   const out: ChatMessagePayload = {
     msgId: row.id,
     conversationId: row.conversationId,
@@ -221,6 +227,10 @@ function rowToMessage(row: MessageWithAuthor, attachments?: Attachment[], reacti
     out.kind = 'group_invite';
     out.invitation = invitation ?? null;
   }
+  if (row.kind === 'call_invite') {
+    out.kind = 'call_invite';
+    out.callInvite = callInvite ?? null;
+  }
   const replyTo = normalizeReplyRef(row.replyTo);
   if (replyTo) out.replyTo = replyTo;
   if (reactionsByEmoji && Object.keys(reactionsByEmoji).length) out.reactions = reactionsByEmoji;
@@ -240,14 +250,17 @@ function rowToMessage(row: MessageWithAuthor, attachments?: Attachment[], reacti
 async function serializeRows(rows: MessageWithAuthor[]): Promise<ChatMessagePayload[]> {
   const messageIds = rows.map((r) => r.id);
   const cardIds = rows.flatMap((r) => (r.kind === 'group_invite' && r.groupInvitationId ? [r.groupInvitationId] : []));
-  const [attachmentByMessageId, reactionsByMessageId, cards] = await Promise.all([
+  const callGroupIds = rows.flatMap((r) => (r.kind === 'call_invite' && r.callConversationId ? [r.callConversationId] : []));
+  const [attachmentByMessageId, reactionsByMessageId, cards, callCards] = await Promise.all([
     attachments.getByMessageIds(messageIds),
     reactions.getByMessageIds(messageIds),
     loadInvitationCards(cardIds),
+    loadCallInviteCards(callGroupIds),
   ]);
   return rows.map((r) => rowToMessage(
     r, attachmentByMessageId.get(r.id), reactionsByMessageId.get(r.id),
     r.groupInvitationId ? cards.get(r.groupInvitationId) : undefined,
+    r.callConversationId ? callCards.get(r.callConversationId) : undefined,
   ));
 }
 
