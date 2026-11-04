@@ -1,4 +1,5 @@
 import { ChartLineIcon, ImageIcon, SlidersHorizontalIcon, VideoCameraSlashIcon } from '@phosphor-icons/react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useRoom } from '@/state/RoomContext';
@@ -20,10 +21,19 @@ export function CallSettingsMenu({ triggerClassName }: CallSettingsMenuProps) {
     showTileBanners, setShowTileBanners, hideAudioOnlyTiles, setHideAudioOnlyTiles, showStats, setShowStats, fullscreenElement,
   } = useRoom();
   const label = t('controls.callSettings');
+  const [open, setOpen] = useState(false);
 
   return (
-    <DropdownMenu>
-      <Tooltip>
+    // Not modal: a modal menu laid a full-screen backdrop over the call with a
+    // hole cut where the trigger stood when it rendered. Clicking the trigger
+    // to close could land on that backdrop instead (closing the menu) and then
+    // reach the trigger too (opening it again), so it flickered shut, open and
+    // shut. Without the backdrop the trigger alone toggles it; a press outside
+    // and Esc still close it.
+    <DropdownMenu modal={false} open={open} onOpenChange={setOpen}>
+      {/* the tooltip sits where the menu opens: while the menu is up it would
+          pop over it every time the pointer came back to the button */}
+      <Tooltip disabled={open}>
         <TooltipTrigger render={<DropdownMenuTrigger aria-label={label} className={triggerClassName} />}>
           <SlidersHorizontalIcon className="size-[22px] max-[480px]:size-5 max-[360px]:size-[19px]" />
         </TooltipTrigger>
