@@ -117,7 +117,7 @@ export function CallDock({ onReturnToCall, onOpenProfile, layout = 'wide', onNav
           aria-label={t('controls.myProfile')}
           className={cn(
             'flex items-center gap-2 rounded-lg text-left transition-colors hover:bg-fill-hover',
-            compact ? 'p-0.5' : inCall ? 'mr-auto p-1' : 'min-w-0 flex-1 py-1 pl-1 pr-2',
+            compact ? 'p-0.5' : 'min-w-0 flex-1 py-1 pl-1 pr-2',
           )}
         >
           <span className="relative flex-none">
@@ -125,9 +125,7 @@ export function CallDock({ onReturnToCall, onOpenProfile, layout = 'wide', onNav
             {/* you are online while this is on screen; gray while the connection is being re-established */}
             <span aria-hidden data-status={reconnecting ? 'reconnecting' : 'online'} className={cn('absolute -bottom-0.5 -right-0.5 size-3.5 rounded-full border-[3px] border-surface-app', reconnecting ? 'bg-text-muted' : 'bg-green')} />
           </span>
-          {/* in a call the row also holds the camera and screen buttons: the
-              name would only be squeezed to an ellipsis, so it steps aside */}
-          {!compact && !inCall && (
+          {!compact && (
             <span className="min-w-0 leading-tight">
               <span className="block truncate text-label font-semibold text-text-primary">{state.me.displayName}</span>
               <span className="block truncate text-caption text-text-secondary">{reconnecting ? t('controls.statusReconnecting') : t('controls.statusOnline')}</span>

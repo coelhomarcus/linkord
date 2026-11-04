@@ -88,9 +88,10 @@ describe('CallDock — in a call', () => {
     expect(onReturnToCall).toHaveBeenCalledTimes(1);
   });
 
-  it('drops the account name from the row while in a call, keeping the avatar', () => {
+  it('keeps the account name and status in the row while in a call', () => {
     renderDock({ activeCallConversationId: 'conv-1' });
-    expect(screen.queryByText('Fulana')).not.toBeInTheDocument();
+    expect(screen.getByText('Fulana')).toBeInTheDocument();
+    expect(screen.getByText('Disponível')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Meu perfil' })).toBeInTheDocument();
   });
 
