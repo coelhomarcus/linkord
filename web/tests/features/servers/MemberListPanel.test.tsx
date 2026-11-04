@@ -5,6 +5,7 @@ import { groupMembers, MemberListPanel } from '@/features/servers/MemberListPane
 import * as serversApi from '@/features/servers/serversApi';
 import type { ServerMemberEntry } from '@/features/servers/serversApi';
 import type { RoleSummary, ServerSummary } from '@/shared/types/protocol';
+import { initialRoomState } from '@/state/roomReducer';
 
 vi.mock('@/features/servers/serversApi', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/features/servers/serversApi')>()),
@@ -45,6 +46,15 @@ describe('MemberListPanel', () => {
     expect(screen.getByText('Disponível — 1')).toBeInTheDocument();
     expect(screen.getByText('Offline — 1')).toBeInTheDocument();
     expect(screen.getByLabelText('Dono do servidor')).toBeInTheDocument();
+  });
+
+  it('counts the viewer as online even though the presence snapshot never lists them', async () => {
+    renderWithRoom(<MemberListPanel server={server} onOpenProfile={vi.fn()} />, {
+      onlineUserIds: new Set(['u-bia']),
+      state: { ...initialRoomState, me: { ...initialRoomState.me, userId: 'u-ana' } },
+    });
+    expect(await screen.findByText('Mods — 1')).toBeInTheDocument();
+    expect(screen.getByText('Offline — 1')).toBeInTheDocument();
   });
 
   it('fetches nothing while kept mounted behind a closed sheet', () => {

@@ -32,7 +32,7 @@ export function groupMembers(server: ServerSummary, members: ServerMemberEntry[]
  * animation: nothing is fetched until it is shown. */
 export function MemberListPanel({ server, onOpenProfile, active = true }: { server: ServerSummary; onOpenProfile: (userId: string) => void; active?: boolean }) {
   const { t } = useTranslation('servers');
-  const { onlineUserIds, serverMemberRevision, allUsers } = useRoom();
+  const { state, onlineUserIds, serverMemberRevision, allUsers } = useRoom();
   const revision = serverMemberRevision.get(server.id) ?? 0;
   const [members, setMembers] = useState<ServerMemberEntry[] | null>(null);
 
@@ -43,9 +43,12 @@ export function MemberListPanel({ server, onOpenProfile, active = true }: { serv
     return () => { cancelled = true; };
   }, [active, server.id, revision, server.roles]);
 
+  // the server's presence snapshot only covers other people, never the viewer
+  const meId = state.me.userId;
+  const online = useMemo(() => (meId ? new Set(onlineUserIds).add(meId) : onlineUserIds), [onlineUserIds, meId]);
   const sections = useMemo(
-    () => (members ? groupMembers(server, members, onlineUserIds, { online: t('members.online'), offline: t('members.offline') }) : []),
-    [members, server, onlineUserIds, t],
+    () => (members ? groupMembers(server, members, online, { online: t('members.online'), offline: t('members.offline') }) : []),
+    [members, server, online, t],
   );
 
   return (
