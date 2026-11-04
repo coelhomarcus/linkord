@@ -56,6 +56,11 @@ export function SoundboardButton({ serverId, conversationId, className, activeCl
   const VolumeIcon = volume === 0 ? SpeakerSlashIcon : volume < 50 ? SpeakerLowIcon : SpeakerHighIcon;
 
   return (
+    // While open, the popover puts focus guards beside its trigger. Loose in
+    // the call bar they became flex items of its own, and WebKit spaced them
+    // with the bar's gap, shoving the buttons aside until it closed; a box of
+    // their own keeps them out of the bar's row.
+    <div className="relative flex flex-none">
     <Popover open={open} onOpenChange={handleOpenChange}>
       <Tooltip>
         <TooltipTrigger render={<PopoverTrigger aria-label={t('picker.open')} className={cn(className, open && activeClassName)} />}>
@@ -112,5 +117,6 @@ export function SoundboardButton({ serverId, conversationId, className, activeCl
         </div>
       </PopoverContent>
     </Popover>
+    </div>
   );
 }

@@ -1,8 +1,8 @@
 # Integrando um sistema ao Linkord por webhook
 
-Um **webhook** deixa um sistema de fora (um deploy, um monitor, uma automação, um script no cron) postar num canal de texto de um servidor. O sistema faz um `POST` HTTP para a URL do webhook, e a mensagem aparece na hora para todo mundo que vê o canal, com o nome do webhook, selo **BOT**, contagem de não lidas e notificação.
+Um **webhook** deixa um sistema de fora (um deploy, um monitor, uma automação, um script no cron) postar num canal de texto de um servidor. O sistema faz um `POST` HTTP para a URL do webhook, e a mensagem aparece na hora para todo mundo que vê o canal, com o nome e a imagem do webhook, selo **WEBHOOK**, contagem de não lidas e notificação.
 
-Um canal pode ter vários webhooks, cada um com sua URL e seu nome. Para um canal só de avisos, tire de `@everyone` a permissão **Enviar mensagens** nesse canal: as pessoas continuam lendo e reagindo, e só os webhooks postam.
+Um canal pode ter vários webhooks, cada um com sua URL, seu nome e sua imagem (trocados em **Editar canal → Integrações**, valendo também para as mensagens que ele já postou). Para um canal só de avisos, tire de `@everyone` a permissão **Enviar mensagens** nesse canal: as pessoas continuam lendo e reagindo, e só os webhooks postam.
 
 ---
 

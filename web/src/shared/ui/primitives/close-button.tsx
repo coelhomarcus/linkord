@@ -14,7 +14,7 @@ const closeButtonVariants = cva(
   {
     variants: {
       variant: {
-        ghost: "text-text-muted hover:bg-fill-hover hover:text-text-primary",
+        ghost: "text-text-secondary hover:text-text-primary",
         danger: "text-text-muted hover:bg-red/12 hover:text-red-text",
         overlay: "bg-black/60 text-white ring-1 ring-white/25 backdrop-blur-sm hover:bg-black/80",
       },
@@ -28,7 +28,7 @@ const closeButtonVariants = cva(
   }
 )
 
-const ICON_SIZE = { xs: 13, sm: 16, md: 18 } as const
+const ICON_SIZE = { xs: 13, sm: 18, md: 24 } as const
 
 const CloseButton = forwardRef<
   HTMLButtonElement,

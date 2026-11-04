@@ -1,4 +1,5 @@
 import { ArrowLeftIcon, DotsThreeIcon, HashIcon, ImageIcon, MagnifyingGlassIcon, PhoneIcon, UserCircleIcon, UsersThreeIcon } from '@phosphor-icons/react';
+import type { ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 
@@ -15,9 +16,21 @@ import { conversationTitle, directUser } from './conversationUtils';
 import { ChatSurface } from '@/features/chat/ChatSurface';
 import { useRelationship } from '@/features/friends/useRelationship';
 import { CloseButton } from '@/shared/ui/primitives/close-button';
+import { cn } from '@/shared/lib/utils';
 
-function panelToggleClass(open: boolean): string {
-  return open ? 'bg-fill-active text-text-primary' : 'text-text-muted hover:text-text-primary';
+// Discord's header icons: bare 24px glyphs, gray at rest, white while hovered
+// or while the panel they toggle is open
+const HEADER_ICON = 'grid size-8 flex-none place-items-center rounded-lg text-text-secondary transition-colors hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-pressed:text-text-strong';
+
+function HeaderIcon({ label, pressed, onClick, className, children }: { label: string; pressed?: boolean; onClick: () => void; className?: string; children: ReactNode }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger onClick={onClick} aria-label={label} aria-pressed={pressed} className={cn(HEADER_ICON, className)}>
+        {children}
+      </TooltipTrigger>
+      <TooltipContent side="bottom">{label}</TooltipContent>
+    </Tooltip>
+  );
 }
 
 interface ConversationPanelProps {
@@ -35,7 +48,7 @@ interface ConversationPanelProps {
 
 export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, detailsOpen, mediaOpen, onToggleDetails, onToggleMedia }: ConversationPanelProps) {
   const { t } = useTranslation('conversations');
-  const { state, dispatch, conversations, activeConversationId, allUsers, onlineUserIds, activeCallConversationId } = useRoom();
+  const { state, dispatch, conversations, activeConversationId, allUsers, onlineUserIds, activeCallConversationId, servers } = useRoom();
   const navigate = useNavigate();
   const { pathname, state: locationState } = useLocation();
   const { isMobile } = useSidebar();
@@ -85,7 +98,7 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
     <main className="flex h-full min-w-0 flex-1 flex-col text-text-primary">
       {conversation ? (
         <>
-          <header data-avatar-hover className="flex h-header flex-none items-center gap-2 bg-surface-panel/90 px-2 backdrop-blur md:gap-3 md:border-b md:border-border md:px-4">
+          <header data-avatar-hover className="flex h-header flex-none items-center gap-2 bg-surface-panel px-2 md:border-b md:border-border-subtle md:px-4">
             <Button type="button" variant="ghost" size="icon" aria-label={t('panel.back')} onClick={goBackToList} className="md:hidden">
               <ArrowLeftIcon size={20} />
             </Button>
@@ -93,34 +106,34 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
               <button
                 type="button"
                 onClick={() => onOpenProfile(other.id)}
-                className="transition-opacity hover:opacity-80"
+                className="relative flex-none transition-opacity hover:opacity-80"
                 aria-label={t('panel.viewProfile')}
               >
-                <Avatar id={other.id} name={other.displayName} avatar={other.avatar} poster={other.avatarPoster} animateOnHover avatarColor={other.avatarColor} size={40} />
+                <Avatar id={other.id} name={other.displayName} avatar={other.avatar} poster={other.avatarPoster} animateOnHover avatarColor={other.avatarColor} size={24} />
+                <span aria-hidden className={cn('absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border-2 border-surface-panel', online ? 'bg-green' : 'bg-text-muted')} />
               </button>
             ) : (
               <HashIcon size={24} className="flex-none text-text-muted" aria-hidden />
             )}
-            {isChannel ? (
-              <div className="flex min-w-0 flex-1 items-center gap-3">
-                <h2 className="flex-none truncate text-title font-semibold">{title}</h2>
-                {subtitle && <span aria-hidden className="h-5 w-px flex-none bg-border max-md:hidden" />}
-                {subtitle && <p className="min-w-0 truncate text-label text-text-muted max-md:hidden">{subtitle}</p>}
-              </div>
-            ) : (
-              <button type="button" onClick={other ? () => onOpenProfile(other.id) : undefined} className="min-w-0 flex-1 text-left">
-                <h2 className="truncate text-title font-semibold">{title}</h2>
-                {subtitle && <p className="truncate text-caption text-text-muted">{subtitle}</p>}
-              </button>
-            )}
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              {isChannel ? (
+                <h2 className="flex-none truncate text-body font-semibold text-text-strong">{title}</h2>
+              ) : (
+                <button type="button" onClick={other ? () => onOpenProfile(other.id) : undefined} className="min-w-0 flex-none truncate text-left text-body font-semibold text-text-strong">
+                  <h2 className="truncate">{title}</h2>
+                </button>
+              )}
+              {subtitle && <span aria-hidden className="mx-1 h-6 w-px flex-none bg-border-default max-md:hidden" />}
+              {subtitle && <p className="min-w-0 truncate text-label text-text-secondary max-md:hidden">{subtitle}</p>}
+            </div>
             {callParticipants.length > 0 && (
               <Tooltip>
                 <TooltipTrigger render={<div className="hidden flex-none items-center -space-x-2 md:flex" />}>
                   {callParticipants.slice(0, 4).map((p) => (
-                    <Avatar key={p.id} id={p.id} name={p.displayName} avatar={p.avatar} poster={p.avatarPoster} animateOnHover avatarColor={p.avatarColor} size={28} className="ring-2 ring-surface-panel" />
+                    <Avatar key={p.id} id={p.id} name={p.displayName} avatar={p.avatar} poster={p.avatarPoster} animateOnHover avatarColor={p.avatarColor} size={24} className="ring-2 ring-surface-panel" />
                   ))}
                   {callParticipants.length > 4 && (
-                    <span className="grid size-7 place-items-center rounded-full bg-bg-tertiary text-micro font-semibold text-text-secondary ring-2 ring-surface-panel">
+                    <span className="grid size-6 place-items-center rounded-full bg-bg-tertiary text-micro font-semibold text-text-secondary ring-2 ring-surface-panel">
                       +{callParticipants.length - 4}
                     </span>
                   )}
@@ -128,40 +141,47 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
                 <TooltipContent side="bottom">{t('panel.inCall')}</TooltipContent>
               </Tooltip>
             )}
-            <Button type="button" variant="ghost" size="icon-sm" aria-label={t('panel.media')} aria-pressed={mediaOpen} onClick={onToggleMedia} className={`${panelToggleClass(mediaOpen)} max-md:hidden`}>
-              <ImageIcon size={20} />
-            </Button>
-            <Button type="button" variant="ghost" size="icon-sm" aria-label={t('panel.search')} onClick={onOpenSearch} className="text-text-muted hover:text-text-primary max-md:hidden">
-              <MagnifyingGlassIcon size={20} />
-            </Button>
-            {isChannel ? (
-              <Button type="button" variant="ghost" size="icon-sm" aria-label={detailsLabel} aria-pressed={detailsOpen} onClick={onToggleDetails} className={panelToggleClass(detailsOpen)}>
-                <UsersThreeIcon size={22} weight={detailsOpen ? 'fill' : 'regular'} />
-              </Button>
-            ) : other && (
-              // the DM profile panel only fits beside the chat on wide screens
-              <Button type="button" variant="ghost" size="icon-sm" aria-label={t('panel.profile')} aria-pressed={detailsOpen} onClick={onToggleDetails} className={`${panelToggleClass(detailsOpen)} max-xl:hidden`}>
-                <UserCircleIcon size={22} weight={detailsOpen ? 'fill' : 'regular'} />
-              </Button>
-            )}
-            {/* calls in a server happen in its voice channels */}
-            {isChannel ? null : callBlockedReason ? (
-              <Tooltip>
-                {/* a disabled button gets no pointer events, so the tooltip hangs off a wrapper */}
-                <TooltipTrigger render={<span tabIndex={0} className="inline-flex rounded-md focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50" />}>
-                  <Button type="button" size="sm" disabled className="bg-bg-tertiary text-text-muted max-md:hidden">
-                    <PhoneIcon size={20} weight="fill" />
-                    {t('panel.joinCall')}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">{callBlockedReason}</TooltipContent>
-              </Tooltip>
-            ) : (
-              <Button type="button" size="sm" onClick={() => onOpenCall(conversation.id)} className="bg-green-solid text-white hover:bg-green-hover max-md:hidden">
-                <PhoneIcon size={20} weight="fill" />
-                {callActionLabel}
-              </Button>
-            )}
+            <div className="flex flex-none items-center gap-2">
+              {/* calls in a server happen in its voice channels */}
+              {isChannel ? null : callBlockedReason ? (
+                <Tooltip>
+                  {/* a disabled button gets no pointer events, so the tooltip hangs off a wrapper */}
+                  <TooltipTrigger render={<span tabIndex={0} className="inline-flex rounded-lg focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 max-md:hidden" />}>
+                    <button type="button" disabled aria-label={t('panel.joinCall')} className={cn(HEADER_ICON, 'opacity-40')}>
+                      <PhoneIcon size={24} weight="fill" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">{callBlockedReason}</TooltipContent>
+                </Tooltip>
+              ) : (
+                <HeaderIcon label={callActionLabel} onClick={() => onOpenCall(conversation.id)} className={cn('max-md:hidden', inThisCall && 'text-green hover:text-green')}>
+                  <PhoneIcon size={24} weight="fill" />
+                </HeaderIcon>
+              )}
+              <HeaderIcon label={t('panel.media')} pressed={mediaOpen} onClick={onToggleMedia} className="max-md:hidden">
+                <ImageIcon size={24} weight={mediaOpen ? 'fill' : 'regular'} />
+              </HeaderIcon>
+              {isChannel ? (
+                <HeaderIcon label={detailsLabel} pressed={detailsOpen} onClick={onToggleDetails}>
+                  <UsersThreeIcon size={24} weight="fill" />
+                </HeaderIcon>
+              ) : other && (
+                // the DM profile panel only fits beside the chat on wide screens
+                <HeaderIcon label={t('panel.profile')} pressed={detailsOpen} onClick={onToggleDetails} className="max-xl:hidden">
+                  <UserCircleIcon size={24} weight="fill" />
+                </HeaderIcon>
+              )}
+              {/* Discord's search box: a field-looking button that opens the search */}
+              <button
+                type="button"
+                onClick={onOpenSearch}
+                aria-label={t('panel.search')}
+                className="ml-2 flex h-8 w-36 items-center gap-2 rounded-lg border border-border-field bg-bg-textarea pl-2 pr-1.5 text-left text-label text-text-faint transition-colors hover:border-border-strong max-md:hidden lg:w-60"
+              >
+                <span className="min-w-0 flex-1 truncate">{t('panel.searchIn', { name: isChannel ? (servers.find((s) => s.id === conversation.serverId)?.name ?? title) : title })}</span>
+                <MagnifyingGlassIcon size={18} className="flex-none text-text-secondary" aria-hidden />
+              </button>
+            </div>
             {(activeCallConversationId || !isChannel) && <Button type="button" variant="ghost" size="icon" aria-label={activeCallConversationId && activeCallConversationId !== conversation.id ? t('panel.returnToActiveCall') : callBlockedReason ?? callActionLabel} disabled={!activeCallConversationId && !!callBlockedReason} onClick={() => onOpenCall(activeCallConversationId ?? conversation.id)} className="flex-none text-green md:hidden"><PhoneIcon size={22} weight="fill" /></Button>}
             <DropdownMenu>
               <DropdownMenuTrigger render={<Button type="button" variant="ghost" size="icon" aria-label={t('panel.moreOptions')} className="flex-none md:hidden" />}><DotsThreeIcon size={22} /></DropdownMenuTrigger>

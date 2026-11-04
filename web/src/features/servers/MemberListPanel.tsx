@@ -52,11 +52,11 @@ export function MemberListPanel({ server, onOpenProfile, active = true }: { serv
   );
 
   return (
-    <aside aria-label={t('members.label')} className="flex h-full w-60 flex-none flex-col overflow-y-auto border-l border-border-subtle bg-bg-secondary px-2 py-4">
+    <aside aria-label={t('members.label')} className="flex h-full w-[264px] flex-none flex-col overflow-y-auto border-l border-border-subtle bg-surface-app px-2 py-4">
       {members === null && <p className="px-2 text-label text-text-muted">{t('members.loading')}</p>}
       {sections.map((section) => (
-        <section key={section.key} className="mb-5">
-          <h3 className="select-none px-2 pb-1 text-caption font-semibold text-text-muted">{t('members.section', { name: section.label, count: section.members.length })}</h3>
+        <section key={section.key} className="mb-4">
+          <h3 className="select-none px-2 pb-1 text-label font-medium text-text-secondary">{t('members.section', { name: section.label, count: section.members.length })}</h3>
           <ul>
             {section.members.map((member) => {
               const user = allUsers.get(member.user.id) ?? member.user;
@@ -65,12 +65,12 @@ export function MemberListPanel({ server, onOpenProfile, active = true }: { serv
               return (
                 <li key={member.user.id} data-user-id={member.user.id}>
                   <button type="button" onClick={() => onOpenProfile(member.user.id)} data-avatar-hover
-                    className={cn('flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-left hover:bg-nav-hover', offline && 'opacity-40 hover:opacity-100')}>
+                    className={cn('cutout flex h-[42px] w-full items-center gap-3 rounded-lg px-2 text-left hover:cutout-subtle hover:bg-nav-hover', offline && 'opacity-30 hover:opacity-100')}>
                     <span className="relative flex-none">
                       <Avatar id={user.id} name={user.displayName} avatar={user.avatar} poster={'avatarPoster' in user ? (user.avatarPoster as string | undefined) : undefined} animateOnHover avatarColor={user.avatarColor} size={32} />
-                      {!offline && <span className="absolute -bottom-0.5 -right-0.5 size-3.5 rounded-full border-[3px] border-bg-secondary bg-green" />}
+                      {!offline && <span className="absolute -bottom-0.5 -right-0.5 size-3.5 rounded-full border-[3px] border-(--cutout) bg-green" />}
                     </span>
-                    <span className="min-w-0 flex-1 truncate text-label font-medium" style={color ? { color } : undefined}>{user.displayName}</span>
+                    <span className="min-w-0 flex-1 truncate text-body font-medium text-text-primary" style={color ? { color } : undefined}>{user.displayName}</span>
                     {member.isOwner && <CrownIcon size={14} weight="fill" className="flex-none text-yellow" aria-label={t('members.owner')} />}
                   </button>
                 </li>

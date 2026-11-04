@@ -30,6 +30,7 @@
     "inCall": "Na chamada",
     "media": "Mídias e links",
     "search": "Buscar mensagens",
+    "searchIn": "Buscar {{name}}",
     "blocked": "Você não pode ligar enquanto essa pessoa estiver bloqueada.",
     "needFriends": "Vocês precisam ser amigos para fazer chamadas.",
     "returnToCall": "Voltar à chamada",

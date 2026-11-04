@@ -1,53 +1,78 @@
 /* Palettes — semantic tokens only. The Old theme is the base palette in
    index.css @theme, so it needs no block here. */
 
-/* Black: every surface is the same black, so the borders alone draw the
-   layout. Hover and selected states stay readable through the translucent
-   fills; menus are told apart by a strong border, not by a lighter fill. */
+/* Black: Discord's Onyx. Every surface of the shell is the same black, so the
+   hairline borders alone draw the layout; what floats (menus, modals, the
+   inbox) is a near-black of its own with a slightly stronger edge. The values
+   are Onyx's own, read off its screens. */
 html[data-theme="black"] {
-  /* links keep their own, deeper blue so they stay apart from the sky-blue accent */
-  --color-link: #226ec5;
-  /* a solid lift instead of the translucent fill, which barely shows on black */
-  --color-message-hover: #121213;
+  /* links keep their own, deeper blue so they stay apart from the blurple accent */
+  --color-link: #4c9cff;
   /* solid, so the status-dot ring on a row can match them exactly */
-  --color-nav-hover: #121213;
+  --color-message-hover: #121214;
+  --color-nav-hover: #18181a;
   --color-nav-active: #242426;
-  --cutout-hover: #121213;
+  --cutout-hover: #18181a;
   --cutout-active: #242426;
 
   --color-surface-rail: #000000;
   --color-surface-000: #000000;
   --color-surface-100: #000000;
   --color-surface-200: #000000;
-  --color-surface-300: #000000;
-  --color-surface-400: oklch(20.00% 0 0);
-  --color-surface-500: oklch(28.00% 0 0);
+  --color-surface-300: #121214;
+  --color-surface-400: #242426;
+  --color-surface-500: #2d2d30;
 
   --color-surface-app: var(--color-surface-000);
   --color-surface-panel: var(--color-surface-100);
   --color-surface-raised: var(--color-surface-200);
-  --color-surface-overlay: var(--color-surface-300);
+  /* menus and popovers */
+  --color-surface-overlay: #121214;
+  /* dialogs, the inbox and the pickers sit a step below the menus */
+  --color-bg-modal: #0a0a0c;
+  /* the user panel, the composer, cards beside a conversation */
+  --color-bg-card: #101012;
+  /* a field is a hole in whatever it sits on */
+  --color-bg-textarea: oklch(0% 0 0 / 0.5);
+  /* buttons that are not the action: Cancelar, Ver perfil completo */
+  --color-bg-control: #1c1c1f;
+  --color-bg-control-hover: #252528;
+  --color-border-control: #2f2f33;
 
-  --color-text-primary: oklch(97.00% 0 0);
-  --color-text-secondary: oklch(84.00% 0 0);
-  --color-text-muted: oklch(70.00% 0 0);
+  --color-text-primary: #dcdcdf;
+  --color-text-strong: #f2f2f3;
+  --color-text-secondary: #9c9da1;
+  --color-text-muted: #818289;
+  --color-text-faint: #6d6f78;
 
   --color-fill-subtle: oklch(100% 0 0 / 0.04);
   --color-fill-hover: oklch(100% 0 0 / 0.08);
-  --color-fill-active: oklch(100% 0 0 / 0.14);
+  --color-fill-active: oklch(100% 0 0 / 0.12);
   --color-fill-inset: oklch(100% 0 0 / 0.03);
-  /* solid and a step above the message hover (#121213), so code still stands
-     out on a hovered message */
-  --color-fill-code: oklch(22% 0 0);
+  /* solid and a step above the message hover, so code still stands out on a
+     hovered message */
+  --color-fill-code: #1c1c1f;
 
-  --color-border-subtle: oklch(100% 0 0 / 0.09);
-  --color-border-default: oklch(100% 0 0 / 0.15);
-  --color-border-strong: oklch(100% 0 0 / 0.25);
-  --color-border-field: var(--color-border-default);
+  /* the shell's hairlines: rail, list and content share them */
+  --color-border-subtle: #1e1e20;
+  /* cards, the composer, the inbox */
+  --color-border-default: #262629;
+  /* menus and popovers */
+  --color-border-strong: #2d2d30;
+  --color-border-field: #29292c;
+  /* the user panel's edge, a shade darker than the shell's hairlines */
+  --color-border-panel: #181819;
 
-  /* a shadow disappears on black; the border carries the elevation */
+  --color-accent-primary: #5865f2;
+  --color-accent-hover: #4752c4;
+  --color-accent-text: #7983f5;
+  --color-border-accent: #5865f2;
+
+  --color-red-text: #da6863;
+
+  /* a shadow barely shows on black; the border carries the elevation */
   --shadow-panel: none;
-  --shadow-popover: 0 0 0 1px oklch(100% 0 0 / 0.25);
+  --shadow-popover: 0 8px 24px rgb(0 0 0 / 0.6);
 }
 
 /* Graphite: neutral slate; fields sink below the panel, menus rise above it */
@@ -74,6 +99,7 @@ html[data-theme="discord"] {
   --color-border-strong: oklch(100% 0 0 / 0.20);
 
   --color-accent-primary: #5865f2;
+  --color-accent-hover: #4752c4;
   --color-accent-text: #00b0f4;
   --color-border-accent: #5865f2;
 

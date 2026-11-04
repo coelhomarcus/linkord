@@ -14,12 +14,12 @@ export function TopBar({ className, title, server }: { className?: string; title
   const onFriends = pathname === ROUTES.home || pathname === ROUTES.friends;
   const label = server ? server.name : onFriends ? t('topBar.friends') : isHomePath(pathname) ? t('topBar.directMessages') : title ?? 'Linkord';
   return (
-    <header className={cn('relative h-9 flex-none items-center justify-center bg-surface-rail px-3', className)}>
-      <span className="flex min-w-0 items-center gap-2 text-label font-semibold text-text-primary">
-        {server ? <ServerIcon id={server.id} name={server.name} icon={server.icon} size={18} active /> : onFriends ? <UsersIcon size={18} weight="fill" /> : <img src="/logo.svg" alt="" className="size-4" />}
+    <header className={cn('relative h-titlebar flex-none items-center justify-center bg-surface-rail px-3', className)}>
+      <span className="flex min-w-0 items-center gap-2 text-label font-medium text-text-primary">
+        {server ? <ServerIcon id={server.id} name={server.name} icon={server.icon} size={18} /> : onFriends ? <UsersIcon size={18} weight="fill" /> : <img src="/logo.svg" alt="" className="size-4" />}
         <span className="truncate">{label}</span>
       </span>
-      <span className="absolute right-2 top-1/2 -translate-y-1/2"><NotificationBell collapsed /></span>
+      <span className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center"><NotificationBell collapsed /></span>
     </header>
   );
 }

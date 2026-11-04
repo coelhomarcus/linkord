@@ -287,7 +287,8 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
               <span className="select-none truncate text-body font-medium text-text-primary">{displayedName}</span>
             )}
             {message.bot && (
-              <span className="flex-none select-none self-center rounded-sm bg-primary px-1 py-px text-micro font-semibold uppercase leading-none text-white">{t('bot')}</span>
+              // a webhook is no account: tagged the way Discord tags its apps
+              <span className="inline-flex h-[15px] flex-none select-none items-center self-center rounded-[4px] bg-accent-primary px-[5px] text-[10px] font-semibold uppercase leading-none tracking-[0.02em] text-white">{t('bot')}</span>
             )}
             <span className="flex-none select-none text-caption text-text-muted">{formatTime(message.ts)}</span>
           </div>

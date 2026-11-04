@@ -30,7 +30,7 @@ const THUMB_W = 160;
 const THUMB_H = 90;
 const DEFAULT_MIN_TILE_WIDTH = 220;
 // How long the container must hold still before the "does everyone fit"
-// verdict is trusted. A docked panel (the call chat) springs its width open
+// verdict is trusted. A docked panel (the conversation list) springs its width open
 // over a few hundred ms, and every in-between width would otherwise flip
 // the call in and out of focus mode — which swaps the whole tile tree and
 // remounts every video.

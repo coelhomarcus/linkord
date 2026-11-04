@@ -31,7 +31,7 @@ function EmojiPicker({
   return (
     <EmojiPickerPrimitive.Root
       className={cn(
-        "bg-popover text-popover-foreground isolate flex h-full w-fit flex-col overflow-hidden rounded-md",
+        "bg-bg-modal text-popover-foreground isolate flex h-full w-fit flex-col overflow-hidden rounded-[12px]",
         className
       )}
       data-slot="emoji-picker"
@@ -49,12 +49,12 @@ function EmojiPickerSearch({
 }: React.ComponentProps<typeof EmojiPickerPrimitive.Search>) {
   return (
     <div
-      className={cn("flex h-9 items-center gap-2 border-b px-3", className)}
+      className={cn("m-3 mb-2 flex h-10 flex-none items-center gap-2 rounded-lg border border-border-field bg-bg-textarea px-3 focus-within:border-border-accent", className)}
       data-slot="emoji-picker-search-wrapper"
     >
-      <MagnifyingGlassIcon size={16} className="size-4 shrink-0 opacity-50" />
+      <MagnifyingGlassIcon size={20} className="size-5 shrink-0 text-text-secondary" />
       <EmojiPickerPrimitive.Search
-        className="outline-hidden placeholder:text-muted-foreground flex h-10 w-full rounded-md bg-transparent py-3 text-label disabled:cursor-not-allowed disabled:opacity-50"
+        className="outline-hidden placeholder:text-text-faint flex h-full w-full bg-transparent text-body disabled:cursor-not-allowed disabled:opacity-50"
         data-slot="emoji-picker-search"
         placeholder={placeholder}
         {...props}
@@ -106,7 +106,7 @@ function EmojiPickerCategoryHeader({
   return (
     <div
       {...props}
-      className="bg-popover text-muted-foreground px-3 pb-2 pt-3.5 text-caption leading-none"
+      className="bg-bg-modal text-text-primary px-3 pb-2 pt-3.5 text-label font-semibold leading-none"
       data-slot="emoji-picker-category-header"
     >
       {category.label}

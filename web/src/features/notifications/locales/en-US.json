@@ -1,8 +1,8 @@
 {
-  "title": "Notifications",
+  "title": "Inbox",
   "bell": {
-    "unread_one": "Notifications, {{count}} unread",
-    "unread_other": "Notifications, {{count}} unread"
+    "unread_one": "Inbox, {{count}} unread",
+    "unread_other": "Inbox, {{count}} unread"
   },
   "actions": {
     "markAllRead": "Mark all as read",
@@ -15,7 +15,8 @@
   "list": {
     "loading": "Loading…",
     "loadFailed": "Couldn't load notifications.",
-    "empty": "No notifications yet."
+    "empty": "No notifications yet.",
+    "emptyTitle": "You're all caught up!"
   },
   "text": {
     "unknownActor": "Someone",

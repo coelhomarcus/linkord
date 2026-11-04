@@ -62,7 +62,10 @@
     "copied": "Copied",
     "expires": "Your invite link expires in 7 days.",
     "linkFailed": "Could not create the invite link.",
-    "failed": "Could not send the invites."
+    "failed": "Could not send the invites.",
+    "inviteOne": "Invite",
+    "sentOne": "Sent",
+    "arrivesIn": "Recipients will land in #{{channel}}"
   },
   "channel": {
     "create": "Create Channel",
@@ -113,7 +116,14 @@
     "soundboard": "Soundboard",
     "delete": "Delete Server",
     "changeIcon": "Change Icon",
-    "removeIcon": "Remove Icon"
+    "removeIcon": "Remove Icon",
+    "groups": {
+      "expressions": "Expressions",
+      "people": "People",
+      "moderation": "Moderation"
+    },
+    "icon": "Icon",
+    "iconHint": "We recommend an image of at least 512x512."
   },
   "roles": {
     "hint": "Use roles to group your members and set what each one can do. Higher roles outrank lower ones.",
@@ -131,9 +141,15 @@
   },
   "invites": {
     "none": "No active invites.",
-    "meta": "by {{name}} · uses {{uses}} · expires {{expires}}",
     "never": "never",
-    "revoke": "Revoke"
+    "revoke": "Revoke",
+    "columns": {
+      "creator": "Created by",
+      "code": "Invite code",
+      "uses": "Uses",
+      "expires": "Expires"
+    },
+    "active": "Active invite links"
   },
   "bans": {
     "none": "Nobody is banned.",
@@ -171,7 +187,11 @@
     "create": "New Webhook",
     "rotate": "New URL",
     "delete": "Delete",
-    "rename": "Name of webhook {{name}}"
+    "rename": "Name of webhook {{name}}",
+    "name": "Name",
+    "changeAvatar": "Change image",
+    "removeAvatar": "Remove image",
+    "avatarFor": "Image of the webhook {{name}}"
   },
   "inviteCard": {
     "sent": "You sent an invite to join a server",

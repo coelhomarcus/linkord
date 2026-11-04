@@ -51,6 +51,9 @@ export function buildTimelineItems(messages: ChatMessage[], pending: OutboxEntry
       lastMsg = null;
     }
     if (!unreadInserted && firstUnreadMessageId !== undefined && !entry && message.msgId >= firstUnreadMessageId) {
+      // two hairlines stacked read as a glitch: when the day starts with the
+      // first unread message, the new-messages line takes the date's place
+      if (items.at(-1)?.type === 'date') items.pop();
       items.push({ type: 'unread', key: `unread-${firstUnreadMessageId}` });
       lastMsg = null;
       unreadInserted = true;

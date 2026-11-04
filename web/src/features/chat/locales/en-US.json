@@ -1,6 +1,6 @@
 {
   "deletedAuthor": "Deleted user",
-  "bot": "Bot",
+  "bot": "Webhook",
   "reactWith": "React with {{emoji}}",
   "react": "React",
   "moreEmojis": "More emojis",

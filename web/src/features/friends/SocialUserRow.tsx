@@ -13,7 +13,9 @@ export function SocialUserRow({ user, online, subtitle, onOpenProfile, children 
 }) {
   const { t } = useTranslation('friends');
   return (
-    <div className="cutout flex items-center gap-3 rounded-md px-3 py-3 transition-colors hover:cutout-subtle hover:bg-fill-subtle">
+    // Discord's friend row: a hairline above each, swapped for a rounded fill
+    // while hovered
+    <div className="group/row cutout -mx-2.5 flex h-[62px] items-center gap-3 rounded-lg border-t border-border-subtle px-2.5 transition-colors hover:cutout-subtle hover:border-transparent hover:bg-nav-hover">
       <button
         type="button"
         onClick={onOpenProfile}
@@ -21,24 +23,24 @@ export function SocialUserRow({ user, online, subtitle, onOpenProfile, children 
         className="flex min-w-0 flex-1 items-center gap-3 rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <div className="relative flex-none">
-          <Avatar id={user.id} name={user.displayName} avatar={user.avatar} avatarColor={user.avatarColor} size={40} />
+          <Avatar id={user.id} name={user.displayName} avatar={user.avatar} avatarColor={user.avatarColor} size={32} />
           {online !== undefined && (
             <span
               aria-hidden
-              className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-(--cutout) ${online ? 'bg-green' : 'bg-text-muted'}`}
+              className={`absolute -bottom-0.5 -right-0.5 size-3.5 rounded-full border-[3px] border-(--cutout) ${online ? 'bg-green' : 'bg-text-muted'}`}
             />
           )}
         </div>
         <div className="min-w-0">
-          <p className="truncate text-body font-medium text-text-primary">{user.displayName}</p>
-          <p className="truncate text-caption text-text-muted">
+          <p className="truncate text-body font-semibold text-text-primary">{user.displayName}</p>
+          <p className="truncate text-label text-text-secondary">
             @{user.username}
             {online !== undefined && <span className="sr-only">{online ? t('row.online') : t('row.offline')}</span>}
             {subtitle ? ` · ${subtitle}` : ''}
           </p>
         </div>
       </button>
-      {children && <div className="flex flex-none items-center gap-1.5">{children}</div>}
+      {children && <div className="flex flex-none items-center gap-2.5">{children}</div>}
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { TrayIcon } from '@phosphor-icons/react';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CloseButton } from '@/shared/ui/primitives/close-button';
@@ -38,7 +39,17 @@ export function NotificationList({ onSelect, onDismiss, fullPage = false }: { on
       </div>
     );
   }
-  if (list.items.length === 0) return <p className="py-6 text-center text-label text-text-muted">{t('list.empty')}</p>;
+  if (list.items.length === 0) {
+    return (
+      <div className="flex flex-col items-center px-6 py-10 text-center">
+        <span aria-hidden className="mb-5 grid size-20 place-items-center rounded-full bg-surface-app text-text-secondary">
+          <TrayIcon size={36} weight="fill" />
+        </span>
+        <p className="text-[1.25rem] font-bold text-text-strong">{t('list.emptyTitle')}</p>
+        <p className="mt-1 text-label text-text-secondary">{t('list.empty')}</p>
+      </div>
+    );
+  }
 
   return (
     <div className={cn('flex min-h-0 flex-col overflow-y-auto', fullPage ? 'flex-1' : 'max-h-[min(24rem,60vh)]')}>
@@ -49,8 +60,8 @@ export function NotificationList({ onSelect, onDismiss, fullPage = false }: { on
             type="button"
             onClick={() => onSelect(entry)}
             className={cn(
-              'flex w-full items-center gap-3 rounded-md py-2 pl-2 pr-9 text-left transition-colors hover:bg-fill-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-              !entry.read && 'bg-primary/[0.08]',
+              'flex w-full items-center gap-3 rounded-lg py-2 pl-2 pr-9 text-left transition-colors hover:bg-nav-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              !entry.read && 'bg-accent-primary/[0.08]',
             )}
           >
             <NotificationIcon entry={entry} />

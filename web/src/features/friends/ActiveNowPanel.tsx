@@ -29,8 +29,8 @@ export function ActiveNowPanel() {
   }, [state.participants, conversations, friendUserIds]);
 
   return (
-    <aside aria-label={t('activeNow.title')} className="flex w-[360px] flex-none flex-col overflow-y-auto border-l border-border-subtle px-4 py-5">
-      <h2 className="mb-4 text-title font-bold text-text-primary">{t('activeNow.title')}</h2>
+    <aside aria-label={t('activeNow.title')} className="flex w-[360px] flex-none flex-col overflow-y-auto border-l border-border-subtle px-4 py-4">
+      <h2 className="mb-4 text-[1.25rem] font-bold leading-[1.2] text-text-primary">{t('activeNow.title')}</h2>
       {calls.length === 0 ? (
         <div className="px-4 py-6 text-center">
           <p className="text-body font-semibold text-text-primary">{t('activeNow.emptyTitle')}</p>
@@ -46,7 +46,7 @@ export function ActiveNowPanel() {
                 <button
                   type="button"
                   onClick={() => openCall(conversation.id)}
-                  className="w-full rounded-lg border border-border-subtle bg-bg-secondary p-3 text-left transition-colors hover:bg-bg-hover"
+                  className="w-full rounded-[12px] border border-border-subtle bg-surface-app p-4 text-left transition-colors hover:bg-message-hover"
                 >
                   <span className="flex items-center gap-3">
                     <Avatar id={lead.userId} name={lead.displayName} avatar={lead.avatar} poster={lead.avatarPoster} avatarColor={lead.avatarColor} size={32} />
@@ -63,7 +63,7 @@ export function ActiveNowPanel() {
                     <SpeakerHighIcon size={16} weight="fill" className="flex-none text-green" />
                     <span className="flex -space-x-1.5">
                       {friends.slice(0, 5).map((friend) => (
-                        <Avatar key={friend.userId} id={friend.userId} name={friend.displayName} avatar={friend.avatar} poster={friend.avatarPoster} avatarColor={friend.avatarColor} size={20} className="ring-2 ring-bg-secondary" />
+                        <Avatar key={friend.userId} id={friend.userId} name={friend.displayName} avatar={friend.avatar} poster={friend.avatarPoster} avatarColor={friend.avatarColor} size={20} className="ring-2 ring-surface-app" />
                       ))}
                     </span>
                   </span>

@@ -20,11 +20,11 @@
     "fullscreenExit": "Sair da tela cheia",
     "callSettings": "Ajustes da chamada",
     "leaveCall": "Sair da chamada",
-    "openChat": "Abrir chat",
-    "closeChat": "Fechar chat",
     "returnToCall": "Voltar à chamada",
     "inCall": "Em chamada",
     "myProfile": "Meu perfil",
+    "statusOnline": "Disponível",
+    "statusReconnecting": "Reconectando…",
     "settings": "Ajustes",
     "previousStream": "Transmissão anterior",
     "nextStream": "Próxima transmissão"
@@ -34,9 +34,6 @@
     "hideAudioOnly": "Ocultar participantes sem vídeo",
     "banners": "Mostrar banners dos participantes",
     "stats": "Mostrar estatísticas"
-  },
-  "chat": {
-    "title": "Chat da chamada"
   },
   "stage": {
     "noVideo": "Ninguém está com a câmera ligada agora.",
