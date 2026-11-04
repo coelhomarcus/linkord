@@ -1,4 +1,4 @@
-import { ArrowLeftIcon, DotsThreeIcon, ImageIcon, InfoIcon, MagnifyingGlassIcon, PhoneIcon } from '@phosphor-icons/react';
+import { ArrowLeftIcon, DotsThreeIcon, HashIcon, ImageIcon, MagnifyingGlassIcon, PhoneIcon, UserCircleIcon, UsersThreeIcon } from '@phosphor-icons/react';
 import { useLocation, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 
@@ -11,8 +11,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/
 import { Avatar } from '@/shared/Avatar';
 import { useRoom } from '@/state/RoomContext';
 import { formatLastSeen } from '@/shared/lib/formatLastSeen';
-import { conversationTitle, directUser, groupMembers } from './conversationUtils';
-import { GroupAvatar } from './GroupAvatar';
+import { conversationTitle, directUser } from './conversationUtils';
 import { ChatSurface } from '@/features/chat/ChatSurface';
 import { useRelationship } from '@/features/friends/useRelationship';
 import { CloseButton } from '@/shared/ui/primitives/close-button';
@@ -34,7 +33,7 @@ interface ConversationPanelProps {
   onToggleMedia: () => void;
 }
 
-export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, detailsOpen, mediaOpen, onOpenDetails, onToggleDetails, onToggleMedia }: ConversationPanelProps) {
+export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, detailsOpen, mediaOpen, onToggleDetails, onToggleMedia }: ConversationPanelProps) {
   const { t } = useTranslation('conversations');
   const { state, dispatch, conversations, activeConversationId, allUsers, onlineUserIds, activeCallConversationId } = useRoom();
   const navigate = useNavigate();
@@ -46,22 +45,20 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
   // browser reset its scroll when it was shown, so it opened mid-history.
   const shownId = requestedId ?? (isMobile ? null : activeConversationId);
   const conversation = conversations.find((item) => item.id === shownId) ?? null;
-  const isBot = conversation?.type === 'bot';
+  const isChannel = !!conversation?.serverId;
   // ConversationSidebar pushes every open with the route we came from in
   // state. Step back to that entry so the browser's back and forward (edge
   // swipes on a phone) and Voltar stay on the same history. With no prior
   // entry (a direct link), the list takes this one's place.
   function goBackToList() {
     if ((locationState as { from?: unknown } | null)?.from != null) navigate(-1);
-    else navigate(ROUTES.conversations, { replace: true });
+    else navigate(conversation?.serverId ? ROUTES.server(conversation.serverId) : ROUTES.home, { replace: true });
   }
-  const hasDetails = conversation?.type === 'group' || isBot;
   const title = conversationTitle(conversation, state.me.userId, allUsers);
   const other = directUser(conversation, state.me.userId, allUsers);
-  const members = groupMembers(conversation, allUsers);
   const online = other ? onlineUserIds.has(other.id) : false;
-  const subtitle = hasDetails
-    ? t('panel.members', { count: members.length })
+  const subtitle = isChannel
+    ? conversation?.topic ?? ''
     : other ? (online ? t('panel.online') : formatLastSeen(other.lastSeenAt)) : '';
   // `state.participants` only ever holds OTHER people (the server excludes
   // yourself from it) — my own row in this list has to come from `state.me`
@@ -74,9 +71,7 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
   const { state: relationship } = useRelationship(directPeerId);
   // Same stance as DirectComposerGate: only a confirmed answer disables the
   // button — while loading (or on a failed read) the server's own check decides.
-  const callBlockedReason = conversation?.status === 'suspended'
-    ? null
-    : relationship.status === 'ready' && relationship.value.relation === 'blocked'
+  const callBlockedReason = relationship.status === 'ready' && relationship.value.relation === 'blocked'
       ? t('panel.blocked')
       : relationship.status === 'ready' && relationship.value.relation !== 'friends'
         ? t('panel.needFriends')
@@ -84,7 +79,7 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
   const callJoinError = state.callJoinError && state.callJoinError.conversationId === conversation?.id ? state.callJoinError.message : null;
   const inThisCall = !!conversation && activeCallConversationId === conversation.id;
   const callActionLabel = inThisCall ? t('panel.returnToCall') : t('panel.joinCall');
-  const detailsLabel = isBot ? t('panel.details_bot') : t('panel.details_group');
+  const detailsLabel = t('panel.members');
 
   return (
     <main className="flex h-full min-w-0 flex-1 flex-col text-text-primary">
@@ -104,23 +99,20 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
                 <Avatar id={other.id} name={other.displayName} avatar={other.avatar} poster={other.avatarPoster} animateOnHover avatarColor={other.avatarColor} size={40} />
               </button>
             ) : (
-              <button
-                type="button"
-                onClick={onOpenDetails}
-                className="transition-colors hover:border-border-strong"
-                aria-label={detailsLabel}
-              >
-                <GroupAvatar id={conversation.id} title={title} avatar={conversation.avatar} size={40} />
+              <HashIcon size={24} className="flex-none text-text-muted" aria-hidden />
+            )}
+            {isChannel ? (
+              <div className="flex min-w-0 flex-1 items-center gap-3">
+                <h2 className="flex-none truncate text-title font-semibold">{title}</h2>
+                {subtitle && <span aria-hidden className="h-5 w-px flex-none bg-border max-md:hidden" />}
+                {subtitle && <p className="min-w-0 truncate text-label text-text-muted max-md:hidden">{subtitle}</p>}
+              </div>
+            ) : (
+              <button type="button" onClick={other ? () => onOpenProfile(other.id) : undefined} className="min-w-0 flex-1 text-left">
+                <h2 className="truncate text-title font-semibold">{title}</h2>
+                {subtitle && <p className="truncate text-caption text-text-muted">{subtitle}</p>}
               </button>
             )}
-            <button
-              type="button"
-              onClick={hasDetails ? onOpenDetails : (other ? () => onOpenProfile(other.id) : undefined)}
-              className="min-w-0 flex-1 text-left"
-            >
-              <h2 className="truncate text-title font-semibold">{title}</h2>
-              {subtitle && <p className="truncate text-caption text-text-muted">{subtitle}</p>}
-            </button>
             {callParticipants.length > 0 && (
               <Tooltip>
                 <TooltipTrigger render={<div className="hidden flex-none items-center -space-x-2 md:flex" />}>
@@ -142,13 +134,18 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
             <Button type="button" variant="ghost" size="icon-sm" aria-label={t('panel.search')} onClick={onOpenSearch} className="text-text-muted hover:text-text-primary max-md:hidden">
               <MagnifyingGlassIcon size={20} />
             </Button>
-            {hasDetails && (
-              <Button type="button" variant="ghost" size="icon-sm" aria-label={detailsLabel} aria-pressed={detailsOpen} onClick={onToggleDetails} className={`${panelToggleClass(detailsOpen)} max-md:hidden`}>
-                <InfoIcon size={20} />
+            {isChannel ? (
+              <Button type="button" variant="ghost" size="icon-sm" aria-label={detailsLabel} aria-pressed={detailsOpen} onClick={onToggleDetails} className={panelToggleClass(detailsOpen)}>
+                <UsersThreeIcon size={22} weight={detailsOpen ? 'fill' : 'regular'} />
+              </Button>
+            ) : other && (
+              // the DM profile panel only fits beside the chat on wide screens
+              <Button type="button" variant="ghost" size="icon-sm" aria-label={t('panel.profile')} aria-pressed={detailsOpen} onClick={onToggleDetails} className={`${panelToggleClass(detailsOpen)} max-xl:hidden`}>
+                <UserCircleIcon size={22} weight={detailsOpen ? 'fill' : 'regular'} />
               </Button>
             )}
-            {/* a bot has nobody to call */}
-            {isBot ? null : callBlockedReason ? (
+            {/* calls in a server happen in its voice channels */}
+            {isChannel ? null : callBlockedReason ? (
               <Tooltip>
                 {/* a disabled button gets no pointer events, so the tooltip hangs off a wrapper */}
                 <TooltipTrigger render={<span tabIndex={0} className="inline-flex rounded-md focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50" />}>
@@ -160,19 +157,18 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
                 <TooltipContent side="bottom">{callBlockedReason}</TooltipContent>
               </Tooltip>
             ) : (
-              <Button type="button" size="sm" disabled={conversation.status === 'suspended'} onClick={() => onOpenCall(conversation.id)} className="bg-green-solid text-white hover:bg-green-hover max-md:hidden">
+              <Button type="button" size="sm" onClick={() => onOpenCall(conversation.id)} className="bg-green-solid text-white hover:bg-green-hover max-md:hidden">
                 <PhoneIcon size={20} weight="fill" />
                 {callActionLabel}
               </Button>
             )}
-            {(activeCallConversationId || !isBot) && <Button type="button" variant="ghost" size="icon" aria-label={activeCallConversationId && activeCallConversationId !== conversation.id ? t('panel.returnToActiveCall') : callBlockedReason ?? callActionLabel} disabled={!activeCallConversationId && (!!callBlockedReason || conversation.status === 'suspended')} onClick={() => onOpenCall(activeCallConversationId ?? conversation.id)} className="flex-none text-green md:hidden"><PhoneIcon size={22} weight="fill" /></Button>}
+            {(activeCallConversationId || !isChannel) && <Button type="button" variant="ghost" size="icon" aria-label={activeCallConversationId && activeCallConversationId !== conversation.id ? t('panel.returnToActiveCall') : callBlockedReason ?? callActionLabel} disabled={!activeCallConversationId && !!callBlockedReason} onClick={() => onOpenCall(activeCallConversationId ?? conversation.id)} className="flex-none text-green md:hidden"><PhoneIcon size={22} weight="fill" /></Button>}
             <DropdownMenu>
               <DropdownMenuTrigger render={<Button type="button" variant="ghost" size="icon" aria-label={t('panel.moreOptions')} className="flex-none md:hidden" />}><DotsThreeIcon size={22} /></DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={onOpenSearch}><MagnifyingGlassIcon size={18} />{t('panel.search')}</DropdownMenuItem>
                 <DropdownMenuItem onClick={onToggleMedia}><ImageIcon size={18} />{t('panel.media')}</DropdownMenuItem>
-                {hasDetails && <DropdownMenuItem onClick={onOpenDetails}><InfoIcon size={18} />{detailsLabel}</DropdownMenuItem>}
-                {activeCallConversationId && activeCallConversationId !== conversation.id && !isBot && <DropdownMenuItem disabled={!!callBlockedReason || conversation.status === 'suspended'} onClick={() => onOpenCall(conversation.id)}><PhoneIcon size={18} />{t('panel.joinThisCall')}</DropdownMenuItem>}
+                {activeCallConversationId && activeCallConversationId !== conversation.id && !isChannel && <DropdownMenuItem disabled={!!callBlockedReason} onClick={() => onOpenCall(conversation.id)}><PhoneIcon size={18} />{t('panel.joinThisCall')}</DropdownMenuItem>}
               </DropdownMenuContent>
             </DropdownMenu>
           </header>
@@ -183,20 +179,11 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
               <CloseButton size="xs" label={t('panel.dismissNotice')} onClick={() => dispatch({ type: 'SET_CALL_JOIN_ERROR', error: null })} />
             </div>
           )}
-          {conversation.status === 'suspended' ? (
-              <div role="status" className="grid flex-1 place-items-center px-6 text-center">
-                <div>
-                  <p className="text-title font-semibold text-text-primary">{isBot ? t('panel.suspendedTitle_bot') : t('panel.suspendedTitle_group')}</p>
-                  <p className="mt-1 max-w-sm text-label text-text-muted">{isBot ? t('panel.suspendedText_bot') : t('panel.suspendedText_group')}</p>
-                </div>
-              </div>
-            ) : (
-              <ChatSurface conversationId={conversation.id} onOpenProfile={onOpenProfile} />
-            )}
+          <ChatSurface conversationId={conversation.id} onOpenProfile={onOpenProfile} />
         </>
       ) : (
         <>
-          <PageHeader title={t('sidebar.title')} />
+          <PageHeader title={t('sidebar.directMessages')} />
           <div className="grid flex-1 select-none place-items-center px-6 text-center">
             <div>
               <p className="text-title font-semibold text-text-primary">{t('panel.emptyTitle')}</p>

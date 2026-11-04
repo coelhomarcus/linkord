@@ -5,6 +5,7 @@ import type { Room as LKRoom } from 'livekit-client';
 import { initialRoomState } from '@/state/roomReducer';
 import { RoomContext } from '@/state/RoomContext';
 import { createFakeRoomContextValue, renderWithRoom } from '@tests/fixtures/roomContextFixture';
+import { PERMISSIONS } from '@/features/servers/permissionBits';
 import { TileMenu } from '@/features/calls/TileMenu';
 import type { Conversation, Participant } from '@/shared/types/protocol';
 
@@ -58,8 +59,8 @@ function fakeParticipant(overrides: Partial<Participant> = {}): Participant {
 
 function fakeConversation(overrides: Partial<Conversation> = {}): Conversation {
   return {
-    id: 'conv-1', type: 'group', title: 'Group', avatar: '', createdBy: 'u-1', memberIds: ['u-1', 'u-2'],
-    lastMessageAt: null, createdAt: Date.now(), updatedAt: Date.now(), pinnedAt: null, myRole: 'member', ownerId: null, memberCount: 0,
+    id: 'conv-1', type: 'voice', title: 'Group', serverId: 's1', memberIds: ['u-1', 'u-2'],
+    lastMessageAt: null, createdAt: Date.now(), updatedAt: Date.now(), pinnedAt: null,
     ...overrides,
   };
 }
@@ -87,20 +88,9 @@ describe('TileMenu — remove from call', () => {
       state: { ...initialRoomState, me: { ...initialRoomState.me, id: 'p-1', role: 'user' }, participants },
       menuTarget,
       activeCallConversationId: 'conv-1',
-      conversations: [fakeConversation({ myRole: 'owner', ownerId: 'u-1' })],
+      conversations: [fakeConversation({ permissions: PERMISSIONS.MOVE_MEMBERS })],
     });
     expect(screen.getByText('Remover da chamada')).toBeInTheDocument();
-  });
-
-  it('owner cannot remove someone who is not a group member', () => {
-    const participants = new Map([['p-2', fakeParticipant({ userId: 'u-9' })]]);
-    renderWithRoom(<TileMenu onOpenProfile={vi.fn()} />, {
-      state: { ...initialRoomState, me: { ...initialRoomState.me, id: 'p-1', role: 'user' }, participants },
-      menuTarget,
-      activeCallConversationId: 'conv-1',
-      conversations: [fakeConversation({ myRole: 'owner', ownerId: 'u-1' })],
-    });
-    expect(screen.queryByText('Remover da chamada')).not.toBeInTheDocument();
   });
 
   it('does not appear for someone who is not an admin', () => {

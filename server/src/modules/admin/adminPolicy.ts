@@ -44,7 +44,7 @@ export function decideAdminRoleChange(input: {
   return 'allow';
 }
 
-/** Successor when a group's owner disappears (§7.4): oldest membership first,
+/** Successor when a server's owner disappears (§7.4): oldest membership first,
  * ties broken by user id, never the departing owner. null = nobody left. */
 export function pickSuccessor(members: { userId: string; joinedAt: Date }[], departingId: string): string | null {
   const candidates = members

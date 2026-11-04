@@ -1,7 +1,7 @@
 import { eq, sql } from 'drizzle-orm';
 import { config } from '../../config/env.js';
 import { db } from '../../db/client.js';
-import { attachments as attachmentsTable, groupSounds, messages } from '../../db/schema.js';
+import { attachments as attachmentsTable, serverSounds, messages } from '../../db/schema.js';
 import { sendToUser } from '../presence/participants.js';
 import { stagedBytes } from './stagedAttachments.js';
 
@@ -12,7 +12,7 @@ export interface UsageInfo {
 }
 
 /** Always computed live (sum/count the table) — never drifts from disk.
- * Counts EVERYTHING, including avatars/banners/group avatars (messageId
+ * Counts EVERYTHING, including avatars/banners/server icons (messageId
  * null) — those used to be excluded on the theory that an account only ever
  * has one avatar + one banner at a time, so they don't accumulate the way
  * chat history does (see schema.ts#attachments). That's true for STEADY
@@ -23,14 +23,14 @@ export interface UsageInfo {
  * cap. Chat attachments still get their own PER-USER quota separately
  * (getUserUsage below, via the message's author) — this total is the
  * shared ceiling everyone draws from regardless of what kind of file it is —
- * group soundboard files included. */
+ * server soundboard files included. */
 export async function getUsage(): Promise<UsageInfo> {
   const [row] = await db
     .select({ totalBytes: sql<number>`coalesce(sum(${attachmentsTable.size}), 0)`, totalFiles: sql<number>`count(*)` })
     .from(attachmentsTable);
   const [sounds] = await db
-    .select({ totalBytes: sql<number>`coalesce(sum(${groupSounds.size}), 0)`, totalFiles: sql<number>`count(*)` })
-    .from(groupSounds);
+    .select({ totalBytes: sql<number>`coalesce(sum(${serverSounds.size}), 0)`, totalFiles: sql<number>`count(*)` })
+    .from(serverSounds);
   const staged = await stagedBytes();
   return {
     totalBytes: Number(row!.totalBytes) + Number(sounds!.totalBytes) + staged.bytes,

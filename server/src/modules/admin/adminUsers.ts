@@ -1,12 +1,15 @@
-import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, sql } from 'drizzle-orm';
 import { db } from '../../db/client.js';
-import { attachments, conversationMembers, conversations, messages, users } from '../../db/schema.js';
+import { attachments, messages, serverMembers, servers, users } from '../../db/schema.js';
 import { destroyAllSessionsForUser, invalidateSessionsForUser } from '../auth/session.js';
 import { broadcastToKnownPeers, listOnlineUserIds, participants, sendToUser } from '../presence/participants.js';
 import { deleteAvatarFile } from '../attachments/attachmentCleanup.js';
-import { GROUP_LIKE_TYPES, reconcileGroupMembership, sendConversationUpdateToMembers } from '../conversations/conversationsRepository.js';
-import { announceRevocations } from '../conversations/invitationsRepository.js';
-import { revokePendingForUser } from '../conversations/invitationRevocation.js';
+import { announceRevocations } from '../servers/serverInvitationsRepository.js';
+import { revokePendingForUser } from '../servers/invitationRevocation.js';
+import { invalidateServer } from '../servers/serverAccess.js';
+import { broadcastToServerMembers, sendServerUpdateToMembers } from '../servers/serverSummaries.js';
+import { deleteServerCompletely } from '../servers/serverDeletion.js';
+import { countServerMembers } from '../servers/serversRepository.js';
 import { SOCIAL_PAGE_SIZE, decodeTimeCursor, encodeTimeCursor } from '../friendships/cursor.js';
 import { dropUserConnections } from './accountEnforcement.js';
 import { decideAdminRoleChange, decideUserAction, pickSuccessor, type AdminRoleAction, type AdminRoleDecision, type UserActionDecision } from './adminPolicy.js';
@@ -112,18 +115,18 @@ export async function revokeUserSessions(ctx: Ctx, targetId: string): Promise<Us
   return { code: 'ok' };
 }
 
-/** Deletes an account (§7.4/§7.5). Every group it OWNS first passes to the
- * member who has been there longest — under the group row lock, in the same
- * transaction as the delete — so no group is ever left without an owner. A
- * group with nobody else left is emptied by the delete and removed right
- * after by reconcileGroupMembership (files included). */
+/** Deletes an account (§7.4/§7.5). Every server it OWNS first passes to the
+ * member who has been there longest — under the server row lock, in the same
+ * transaction as the delete — so no server is ever left without an owner. A
+ * server with nobody else left is emptied by the delete and removed right
+ * after (files included). */
 export async function deleteUserAccount(ctx: Ctx, targetId: string, confirm: string): Promise<UserActionResult> {
   const [known] = await db.select({ username: users.username }).from(users).where(eq(users.id, targetId)).limit(1);
   if (!known) return { code: 'not_found' };
   if (confirm.trim().toLowerCase() !== known.username.toLowerCase()) return { code: 'confirmation_mismatch' };
 
   const outcome = await db.transaction(async (tx): Promise<UserActionResult<{
-    username: string; avatar: string; groupIds: string[]; successions: { groupId: string; newOwnerId: string }[];
+    username: string; avatar: string; serverIds: string[]; successions: { serverId: string; newOwnerId: string }[];
   }>> => {
     const { activeAdminCount, target, actorStillAdmin } = await lockAdminsAndTarget(tx, targetId, ctx.actor.id);
     if (!actorStillAdmin) return { code: 'forbidden' };
@@ -131,33 +134,24 @@ export async function deleteUserAccount(ctx: Ctx, targetId: string, confirm: str
     const decision = decideUserAction({ action: 'delete', actorId: ctx.actor.id, targetId, targetRole: target.role, targetStatus: target.status, activeAdminCount });
     if (decision !== 'allow') return { code: decision };
 
-    const memberships = await tx.select({ conversationId: conversationMembers.conversationId, role: conversationMembers.role })
-      .from(conversationMembers)
-      .innerJoin(conversations, eq(conversations.id, conversationMembers.conversationId))
-      // a bot needs a successor just as much as a group does
-      .where(and(eq(conversationMembers.userId, targetId), inArray(conversations.type, [...GROUP_LIKE_TYPES])))
-      .orderBy(asc(conversationMembers.conversationId));
+    const memberships = await tx.select({ serverId: serverMembers.serverId }).from(serverMembers)
+      .where(eq(serverMembers.userId, targetId)).orderBy(asc(serverMembers.serverId));
 
-    const successions: { groupId: string; newOwnerId: string }[] = [];
+    const successions: { serverId: string; newOwnerId: string }[] = [];
     for (const m of memberships) {
-      if (m.role !== 'owner') continue;
-      await tx.execute(sql`select id from conversations where id = ${m.conversationId} for update`);
-      const members = await tx.select({ userId: conversationMembers.userId, joinedAt: conversationMembers.joinedAt, role: conversationMembers.role })
-        .from(conversationMembers).where(eq(conversationMembers.conversationId, m.conversationId));
-      // the role read before the lock can be stale (a concurrent transfer may
-      // already have handed the group over) — only act on what the lock shows
-      if (members.find((x) => x.userId === targetId)?.role !== 'owner') continue;
+      await tx.execute(sql`select id from servers where id = ${m.serverId} for update`);
+      // the owner read under the lock — a concurrent transfer may already
+      // have handed the server over
+      const [server] = await tx.select({ ownerId: servers.ownerId }).from(servers).where(eq(servers.id, m.serverId)).limit(1);
+      if (server?.ownerId !== targetId) continue;
+      const members = await tx.select({ userId: serverMembers.userId, joinedAt: serverMembers.joinedAt })
+        .from(serverMembers).where(eq(serverMembers.serverId, m.serverId));
       const successor = pickSuccessor(members, targetId);
       if (!successor) continue;
-      // the partial unique index allows ONE owner per group, so the departing
-      // owner steps down before the successor steps up
-      await tx.update(conversationMembers).set({ role: 'member' })
-        .where(and(eq(conversationMembers.conversationId, m.conversationId), eq(conversationMembers.userId, targetId)));
-      await tx.update(conversationMembers).set({ role: 'owner' })
-        .where(and(eq(conversationMembers.conversationId, m.conversationId), eq(conversationMembers.userId, successor)));
-      successions.push({ groupId: m.conversationId, newOwnerId: successor });
+      await tx.update(servers).set({ ownerId: successor, updatedAt: new Date() }).where(eq(servers.id, m.serverId));
+      successions.push({ serverId: m.serverId, newOwnerId: successor });
       await recordAudit({
-        actor: ctx.actor, action: 'group.owner_succession', targetType: 'group', targetId: m.conversationId,
+        actor: ctx.actor, action: 'server.owner_succession', targetType: 'server', targetId: m.serverId,
         reason: `dono ${target.username} excluído`, detail: { newOwnerId: successor, previousOwnerId: targetId }, requestId: ctx.requestId,
       }, tx);
     }
@@ -165,9 +159,9 @@ export async function deleteUserAccount(ctx: Ctx, targetId: string, confirm: str
     await tx.delete(users).where(eq(users.id, targetId));
     await recordAudit({
       actor: ctx.actor, action: 'user.delete', targetType: 'user', targetId, targetLabel: target.username, reason: ctx.reason,
-      detail: { groups: memberships.length, successions: successions.length }, requestId: ctx.requestId,
+      detail: { servers: memberships.length, successions: successions.length }, requestId: ctx.requestId,
     }, tx);
-    return { code: 'ok', username: target.username, avatar: target.avatar, groupIds: memberships.map((m) => m.conversationId), successions };
+    return { code: 'ok', username: target.username, avatar: target.avatar, serverIds: memberships.map((m) => m.serverId), successions };
   });
   if (outcome.code !== 'ok') return outcome;
 
@@ -176,12 +170,18 @@ export async function deleteUserAccount(ctx: Ctx, targetId: string, confirm: str
   dropUserConnections(targetId);
   broadcastToKnownPeers(targetId, { t: 'user-deleted', userId: targetId });
 
-  for (const { groupId } of outcome.successions) {
-    const [row] = await db.select().from(conversations).where(eq(conversations.id, groupId)).limit(1);
-    if (row) await sendConversationUpdateToMembers('conversation-updated', row);
+  // the membership cascaded with the account: a server left with nobody is
+  // gone for good, the others just lose a member
+  for (const serverId of outcome.serverIds) {
+    invalidateServer(serverId);
+    if ((await countServerMembers(serverId)) === 0) {
+      await deleteServerCompletely(serverId);
+      continue;
+    }
+    await sendServerUpdateToMembers(serverId);
+    await broadcastToServerMembers(serverId, { t: 'server-member-removed', serverId, userId: targetId });
   }
-  for (const groupId of outcome.groupIds) await reconcileGroupMembership(groupId, targetId);
-  log.warn('account deleted', { actorId: ctx.actor.id, targetId, groups: outcome.groupIds.length, successions: outcome.successions.length });
+  log.warn('account deleted', { actorId: ctx.actor.id, targetId, servers: outcome.serverIds.length, successions: outcome.successions.length });
 
   if (outcome.avatar) {
     await deleteAvatarFile(outcome.avatar).catch((err) => recordAuditFailure(
@@ -251,12 +251,13 @@ export async function getAdminUser(userId: string) {
   const [row] = await db.select({ user: users, ts: createdAtIso }).from(users).where(eq(users.id, userId)).limit(1);
   if (!row) return null;
   const u = row.user;
-  const groups = await db
-    .select({ id: conversations.id, title: conversations.title, status: conversations.status, role: conversationMembers.role })
-    .from(conversationMembers)
-    .innerJoin(conversations, eq(conversations.id, conversationMembers.conversationId))
-    .where(and(eq(conversationMembers.userId, userId), eq(conversations.type, 'group')))
-    .orderBy(asc(conversations.title));
+  const serverRows = await db
+    .select({ id: servers.id, name: servers.name, status: servers.status, ownerId: servers.ownerId })
+    .from(serverMembers)
+    .innerJoin(servers, eq(servers.id, serverMembers.serverId))
+    .where(eq(serverMembers.userId, userId))
+    .orderBy(asc(servers.name));
+  const memberServers = serverRows.map((r) => ({ id: r.id, name: r.name, status: r.status, isOwner: r.ownerId === userId }));
   // bytes attributable to the account: attachments on messages it authored
   const [usage] = await db
     .select({ bytes: sql<number>`coalesce(sum(${attachments.size}), 0)::float8`, files: sql<number>`count(${attachments.id})::int` })
@@ -272,7 +273,7 @@ export async function getAdminUser(userId: string) {
       lastSeenAt: u.lastSeenAt ? u.lastSeenAt.toISOString() : null,
       online: listOnlineUserIds().includes(u.id),
     },
-    groups,
+    servers: memberServers,
     storage: { bytes: usage?.bytes ?? 0, files: usage?.files ?? 0 },
     history: history === 'invalid_cursor' ? [] : history.items,
   };

@@ -182,8 +182,8 @@ export interface SocialUser {
   avatarColor: string;
 }
 
-/** A group two accounts are both members of, as a profile lists it. */
-export interface SharedGroup { id: string; title: string; avatar: string; memberCount: number }
+/** A server two accounts are both members of, as a profile lists it. */
+export interface SharedServer { id: string; name: string; icon: string; memberCount: number }
 
 /** What a profile shows besides the profile itself. The lists stop at a cap;
  * `total` is the full count. Empty, with no `friendsSince`, on your own profile. */
@@ -191,7 +191,7 @@ export interface ProfileDetails {
   memberSince: string;
   friendsSince: string | null;
   mutualFriends: { items: SocialUser[]; total: number };
-  mutualGroups: { items: SharedGroup[]; total: number };
+  mutualServers: { items: SharedServer[]; total: number };
 }
 
 /** Same access, and the same 404 for "no" and "doesn't exist", as fetchUserProfile. */
@@ -271,44 +271,39 @@ export function unblockUser(userId: string): Promise<unknown> {
   return apiFetch(`/api/blocks/${encodeURIComponent(userId)}`, { method: 'DELETE' });
 }
 
-// ---- group invitations (Etapa 9) --------------------------------------------
+// ---- server invitations (a friend's card in a DM) ---------------------------
 
-export type InviteOutcome = 'sent' | 'already_pending' | 'already_member' | 'not_friends' | 'group_full' | 'unavailable';
+export type InviteOutcome = 'sent' | 'already_pending' | 'already_member' | 'not_friends' | 'server_full' | 'banned' | 'unavailable';
 export interface InviteResult { userId: string; outcome: InviteOutcome; invitationId?: string }
 
 export interface ReceivedInvitationEntry {
   id: string;
   at: string;
-  // `type` is absent from servers before bots
-  group: { id: string; type?: 'group' | 'bot'; title: string; avatar: string; memberCount: number };
+  server: { id: string; name: string; icon: string; memberCount: number };
   inviter: SocialUser;
 }
-export interface SentInvitationEntry { id: string; at: string; invitee: SocialUser }
+export interface SentInvitationEntry { id: string; at: string; invitee: SocialUser; inviter: SocialUser }
 
-export function createGroup(title: string, inviteeIds: string[]): Promise<{ conversationId: string; results: InviteResult[] }> {
-  return apiFetch('/api/groups', { method: 'POST', body: JSON.stringify({ title, inviteeIds }) });
+export function inviteToServer(serverId: string, userIds: string[]): Promise<{ results: InviteResult[] }> {
+  return apiFetch(`/api/servers/${encodeURIComponent(serverId)}/invitations`, { method: 'POST', body: JSON.stringify({ userIds }) });
 }
 
-export function inviteToGroup(conversationId: string, userIds: string[]): Promise<{ results: InviteResult[] }> {
-  return apiFetch(`/api/groups/${encodeURIComponent(conversationId)}/invitations`, { method: 'POST', body: JSON.stringify({ userIds }) });
-}
-
-/** Asks a member of the group to join its call, as a card in your DM with them. */
+/** Asks a member who can join a voice channel to come in, as a card in your DM with them. */
 export function inviteToCall(conversationId: string, userId: string): Promise<{ ok: true }> {
   return apiFetch(`/api/calls/${encodeURIComponent(conversationId)}/invites`, { method: 'POST', body: JSON.stringify({ userId }) });
 }
 
-export function fetchGroupInvitations(conversationId: string, cursor: string | null): Promise<{ items: SentInvitationEntry[]; nextCursor: string | null }> {
-  return apiFetch(`/api/groups/${encodeURIComponent(conversationId)}/invitations${pageQuery({ cursor })}`);
+export function fetchServerInvitations(serverId: string, cursor: string | null): Promise<{ items: SentInvitationEntry[]; nextCursor: string | null }> {
+  return apiFetch(`/api/servers/${encodeURIComponent(serverId)}/invitations${pageQuery({ cursor })}`);
 }
 
 export function fetchReceivedInvitations(cursor: string | null, q?: string): Promise<{ items: ReceivedInvitationEntry[]; nextCursor: string | null }> {
-  return apiFetch(`/api/group-invitations${pageQuery({ cursor, q })}`);
+  return apiFetch(`/api/server-invitations${pageQuery({ cursor, q })}`);
 }
 
 // ---- notifications (bell) ----------------------------------------------------
 
-export type NotificationKind = 'friend_request' | 'friend_accepted' | 'group_invitation' | 'mention';
+export type NotificationKind = 'friend_request' | 'friend_accepted' | 'server_invitation' | 'mention';
 export interface NotificationEntry {
   id: string;
   kind: NotificationKind;
@@ -317,11 +312,11 @@ export interface NotificationEntry {
   friendshipId: string | null;
   invitationId: string | null;
   actor: SocialUser | null;
-  group: { id: string; title: string; avatar: string } | null;
-  // only for mentions: where it was and the start of what was said (absent from older servers)
+  server: { id: string; name: string; icon: string } | null;
+  // only for mentions: where it was and the start of what was said
   mention?: {
     messageId: number; excerpt: string;
-    conversation: { id: string; type: 'direct' | 'group' | 'bot'; title: string; avatar: string };
+    conversation: { id: string; type: 'direct' | 'text' | 'voice'; name: string; serverId: string | null; serverName: string; serverIcon: string };
   } | null;
 }
 
@@ -346,27 +341,20 @@ export function markNotificationsRead(input: { ids: string[] } | { all: true }):
 }
 
 export function acceptInvitation(id: string): Promise<{ invitation: InvitationCard }> {
-  return apiFetch(`/api/group-invitations/${encodeURIComponent(id)}/accept`, { method: 'POST' });
+  return apiFetch(`/api/server-invitations/${encodeURIComponent(id)}/accept`, { method: 'POST' });
 }
 
 export function declineInvitation(id: string): Promise<{ invitation: InvitationCard }> {
-  return apiFetch(`/api/group-invitations/${encodeURIComponent(id)}/decline`, { method: 'POST' });
+  return apiFetch(`/api/server-invitations/${encodeURIComponent(id)}/decline`, { method: 'POST' });
 }
 
 export function revokeInvitation(id: string): Promise<{ invitation: InvitationCard }> {
-  return apiFetch(`/api/group-invitations/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  return apiFetch(`/api/server-invitations/${encodeURIComponent(id)}`, { method: 'DELETE' });
 }
 
 // ---- reports (Etapa 11) -----------------------------------------------------
 
-export function submitReport(input: { targetType: 'user' | 'group' | 'message'; targetId: string; category: string; details: string }): Promise<{ ok: true }> {
+export function submitReport(input: { targetType: 'user' | 'server' | 'message'; targetId: string; category: string; details: string }): Promise<{ ok: true }> {
   return apiFetch('/api/reports', { method: 'POST', body: JSON.stringify(input) });
 }
 
-// ---- group members (Etapa 10) -----------------------------------------------
-
-export interface GroupMemberEntry { user: SocialUser; role: 'owner' | 'member'; at: string }
-
-export function fetchGroupMembers(conversationId: string, cursor: string | null): Promise<{ items: GroupMemberEntry[]; nextCursor: string | null }> {
-  return apiFetch(`/api/groups/${encodeURIComponent(conversationId)}/members${pageQuery({ cursor })}`);
-}

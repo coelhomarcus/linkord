@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import { after, describe, it } from 'node:test';
 import { and, eq } from 'drizzle-orm';
-import { conversationMembers, messages } from '../../src/db/schema.js';
+import { channelReadStates, conversations, serverMembers, messages } from '../../src/db/schema.js';
 import { handlers } from '../../src/modules/messages/messages.js';
 import { markReadUpTo, unreadCountsForUser, UNREAD_COUNT_CAP } from '../../src/modules/conversations/conversationsRepository.js';
-import { cleanupParticipant, db, joinNew, makeGroupWithMembers, makeUser, pool } from './helpers.js';
+import { cleanupParticipant, db, joinNew, makeServerWithMembers, makeUser, pool } from './helpers.js';
 
 after(() => pool.end());
 
@@ -15,30 +15,35 @@ async function post(conversationId: string, authorId: string, createdAt = new Da
   return row!.id;
 }
 
-/** A group whose reader joined an hour ago, so messages posted now count. */
-async function groupWithReader() {
+/** A channel whose reader joined an hour ago, so messages posted now count. */
+async function channelWithReader() {
   const owner = await makeUser('ur');
   const reader = await makeUser('ur');
-  const conversationId = await makeGroupWithMembers(owner.id, [reader.id]);
-  await db.update(conversationMembers).set({ joinedAt: new Date(Date.now() - HOUR) })
-    .where(and(eq(conversationMembers.conversationId, conversationId), eq(conversationMembers.userId, reader.id)));
+  const { serverId, textChannelId: conversationId } = await makeServerWithMembers(owner.id, [reader.id]);
+  await db.update(serverMembers).set({ joinedAt: new Date(Date.now() - HOUR) })
+    .where(and(eq(serverMembers.serverId, serverId), eq(serverMembers.userId, reader.id)));
   return { owner, reader, conversationId };
 }
 
+async function channel(id: string) {
+  const [row] = await db.select().from(conversations).where(eq(conversations.id, id));
+  return row!;
+}
+
 async function lastReadOf(conversationId: string, userId: string): Promise<number | null> {
-  const [row] = await db.select({ id: conversationMembers.lastReadMessageId }).from(conversationMembers)
-    .where(and(eq(conversationMembers.conversationId, conversationId), eq(conversationMembers.userId, userId)));
+  const [row] = await db.select({ id: channelReadStates.lastReadMessageId }).from(channelReadStates)
+    .where(and(eq(channelReadStates.channelId, conversationId), eq(channelReadStates.userId, userId)));
   return row?.id ?? null;
 }
 
 describe('persisted unread (real Postgres)', () => {
   it('sends the first unread message before opening advances the read marker', async () => {
-    const { owner, reader, conversationId } = await groupWithReader();
+    const { owner, reader, conversationId } = await channelWithReader();
     await post(conversationId, owner.id, new Date(Date.now() - 2 * HOUR));
     const read = await post(conversationId, owner.id);
     await post(conversationId, reader.id);
     const unread = await post(conversationId, owner.id);
-    await markReadUpTo(conversationId, reader.id, read);
+    await markReadUpTo(await channel(conversationId), reader.id, read);
     const tab = joinNew(reader);
     try {
       await handlers['conversation-open']!(tab.socket, { conversationId });
@@ -56,7 +61,7 @@ describe('persisted unread (real Postgres)', () => {
   });
 
   it("counts others' messages past the read marker, never your own or those from before joining", async () => {
-    const { owner, reader, conversationId } = await groupWithReader();
+    const { owner, reader, conversationId } = await channelWithReader();
     await post(conversationId, owner.id, new Date(Date.now() - 2 * HOUR));
     const read = await post(conversationId, owner.id);
     await post(conversationId, owner.id);
@@ -64,34 +69,33 @@ describe('persisted unread (real Postgres)', () => {
     await post(conversationId, owner.id);
 
     assert.deepEqual(await unreadCountsForUser(reader.id, [conversationId]), { [conversationId]: 3 });
-    await markReadUpTo(conversationId, reader.id, read);
+    await markReadUpTo(await channel(conversationId), reader.id, read);
     assert.deepEqual(await unreadCountsForUser(reader.id, [conversationId]), { [conversationId]: 2 });
   });
 
   it('leaves out conversations with nothing unread and stops counting at the cap', async () => {
-    const { owner, reader, conversationId } = await groupWithReader();
-    const quiet = await groupWithReader();
+    const { owner, reader, conversationId } = await channelWithReader();
+    const quiet = await channelWithReader();
     await db.insert(messages).values(Array.from({ length: UNREAD_COUNT_CAP + 5 }, () => ({ conversationId, authorId: owner.id, text: 'x' })));
-    await db.insert(conversationMembers).values({ conversationId: quiet.conversationId, userId: reader.id, joinedAt: new Date(Date.now() - HOUR) });
 
     assert.deepEqual(await unreadCountsForUser(reader.id, [conversationId, quiet.conversationId]), { [conversationId]: UNREAD_COUNT_CAP });
   });
 
   it('the read marker only moves forward, and only to a message of that conversation', async () => {
-    const { owner, reader, conversationId } = await groupWithReader();
-    const other = await groupWithReader();
+    const { owner, reader, conversationId } = await channelWithReader();
+    const other = await channelWithReader();
     const first = await post(conversationId, owner.id);
     const second = await post(conversationId, owner.id);
     const elsewhere = await post(other.conversationId, other.owner.id);
 
-    assert.equal(await markReadUpTo(conversationId, reader.id, second), true);
-    assert.equal(await markReadUpTo(conversationId, reader.id, first), false);
-    assert.equal(await markReadUpTo(conversationId, reader.id, elsewhere), false);
+    assert.equal(await markReadUpTo(await channel(conversationId), reader.id, second), true);
+    assert.equal(await markReadUpTo(await channel(conversationId), reader.id, first), false);
+    assert.equal(await markReadUpTo(await channel(conversationId), reader.id, elsewhere), false);
     assert.equal(await lastReadOf(conversationId, reader.id), second);
   });
 
   it("mark-read tells the reader's other tabs, and does nothing for a non-member", async () => {
-    const { owner, reader, conversationId } = await groupWithReader();
+    const { owner, reader, conversationId } = await channelWithReader();
     const stranger = await makeUser('ur');
     const msgId = await post(conversationId, owner.id);
     const tab = joinNew(reader);

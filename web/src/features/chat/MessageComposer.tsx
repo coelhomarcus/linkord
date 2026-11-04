@@ -23,6 +23,8 @@ import { GifPicker } from '@/features/gifs/GifPicker';
 import { reportGifShared } from '@/features/gifs/klipy';
 import type { Gif } from '@/features/gifs/klipy';
 import { useGifConfig } from '@/features/gifs/useGifConfig';
+import { fetchAllServerMembers } from '@/features/servers/serversApi';
+import { directUser } from '@/features/conversations/conversationUtils';
 
 // How often notifyTyping actually emits typing:true while the user keeps
 // typing (leading-edge: fires right away after being idle, then throttles),
@@ -55,7 +57,7 @@ export interface MessageComposerHandle {
 
 export const MessageComposer = forwardRef<MessageComposerHandle, { conversationId: string }>(function MessageComposer({ conversationId }, ref) {
   const { t } = useTranslation('chat');
-  const { state, allUsers, conversations, sendChatMessage, queueMessageWithFiles, sendTyping, replyingTo, setReplyingTo, compressImagesDefault, setCompressImagesDefault } = useRoom();
+  const { state, allUsers, conversations, serverMemberRevision, sendChatMessage, queueMessageWithFiles, sendTyping, replyingTo, setReplyingTo, compressImagesDefault, setCompressImagesDefault } = useRoom();
   const accountId = state.me.userId ?? '';
   const [draft, updateDraft] = useConversationDraft(accountId, conversationId);
   const { text, pendingFiles, attachError } = draft;
@@ -128,21 +130,42 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
 
   // Scoped to this conversation's actual members (not every registered
   // user in the room) — a big roster elsewhere shouldn't show up as
-  // mentionable in a DM/group they're not part of.
-  const memberIds = conversations.find((c) => c.id === conversationId)?.memberIds ?? [];
+  // mentionable in a DM they're not part of. A channel carries no member
+  // list, so its server's is fetched the first time a mention starts there.
+  const conversation = conversations.find((c) => c.id === conversationId);
+  const serverId = conversation?.serverId ?? null;
+  const serverMembersKey = serverId ? `${serverId}:${serverMemberRevision.get(serverId) ?? 0}` : null;
+  const [serverMembers, setServerMembers] = useState<{ key: string; users: PublicUser[] } | null>(null);
+  const needsServerMembers = mentionQuery !== null && serverMembersKey !== null && serverMembers?.key !== serverMembersKey;
+  useEffect(() => {
+    if (!needsServerMembers || !serverId || !serverMembersKey) return;
+    let cancelled = false;
+    fetchAllServerMembers(serverId)
+      .then((items) => { if (!cancelled) setServerMembers({ key: serverMembersKey, users: items.map((m) => m.user as PublicUser) }); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [needsServerMembers, serverId, serverMembersKey]);
+  const directMemberIds = conversation?.memberIds;
+  const peer = directUser(conversation, state.me.userId, allUsers);
+  const messagePlaceholder = conversation?.serverId ? t('composer.messageChannel', { channel: conversation.title })
+    : peer ? t('composer.messageDirect', { name: peer.displayName }) : t('composer.message');
   const mentionCandidates = useMemo(() => {
     if (!mentionQuery) return [];
     const q = mentionQuery.query.toLowerCase();
     const members: PublicUser[] = [];
-    for (const id of memberIds) {
-      const user = allUsers.get(id);
-      if (user) members.push(user);
+    if (serverMembersKey) {
+      if (serverMembers?.key === serverMembersKey) for (const member of serverMembers.users) members.push(allUsers.get(member.id) ?? member);
+    } else {
+      for (const id of directMemberIds ?? []) {
+        const user = allUsers.get(id);
+        if (user) members.push(user);
+      }
     }
     return members
       .filter((u) => u.username.toLowerCase().startsWith(q))
       .sort((a, b) => a.username.localeCompare(b.username))
       .slice(0, MAX_MENTION_RESULTS);
-  }, [allUsers, mentionQuery, memberIds]);
+  }, [allUsers, mentionQuery, directMemberIds, serverMembersKey, serverMembers]);
 
   // re-derives the active "@query" from wherever the cursor is now — called
   // after every edit (the Textarea's onChange) and every cursor move that
@@ -389,7 +412,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
             aria-label={t('composer.message')}
             aria-invalid={tooLong || undefined}
             aria-describedby={showCounter ? counterId : undefined}
-            placeholder={pendingFiles.length ? t('composer.addCaption') : t('composer.message')}
+            placeholder={pendingFiles.length ? t('composer.addCaption') : messagePlaceholder}
             className="min-h-9 max-h-40 flex-1 resize-none border-none bg-transparent px-1 py-1.5 text-body shadow-none focus-visible:ring-0"
           />
           {showCounter && (

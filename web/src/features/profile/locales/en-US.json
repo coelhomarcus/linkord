@@ -40,23 +40,33 @@
   "mutuals": {
     "title": "Shared",
     "friendsTitle": "Mutual friends",
-    "groupsTitle": "Mutual groups",
+    "serversTitle": "Mutual servers",
     "friends_one": "{{count}} mutual friend",
     "friends_other": "{{count}} mutual friends",
-    "groups_one": "{{count}} mutual group",
-    "groups_other": "{{count}} mutual groups",
+    "servers_one": "{{count}} mutual server",
+    "servers_other": "{{count}} mutual servers",
     "members_one": "{{count}} member",
     "members_other": "{{count}} members",
     "showing": "Showing {{shown}} of {{total}}.",
     "loadFailed": "Couldn't load what you have in common.",
     "retry": "Try again",
     "noneFriends": "No mutual friends.",
-    "noneGroups": "No mutual groups.",
+    "noneServers": "No mutual servers.",
     "online": " · online"
   },
   "save": {
     "timeout": "The profile wasn't confirmed in time. Check your connection and try again.",
     "offline": "No connection to the server. Try again in a moment.",
     "failed": "Couldn't save the profile. Try again."
+  },
+  "panel": {
+    "label": "User profile",
+    "online": "Online",
+    "offline": "Offline",
+    "mutualServers_one": "{{count}} mutual server",
+    "mutualServers_other": "{{count}} mutual servers",
+    "mutualFriends_one": "{{count}} mutual friend",
+    "mutualFriends_other": "{{count}} mutual friends",
+    "viewFull": "View full profile"
   }
 }

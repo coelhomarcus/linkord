@@ -8,6 +8,13 @@ import { MessageComposer } from '@/features/chat/MessageComposer';
 import { clearAllDrafts } from '@/features/chat/conversationDrafts';
 import type { Conversation, PublicUser } from '@/shared/types/protocol';
 import { fileName } from '@tests/fixtures/fileNameMatcher';
+import * as serversApi from '@/features/servers/serversApi';
+
+vi.mock('@/features/servers/serversApi', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/features/servers/serversApi')>()),
+  fetchAllServerMembers: vi.fn(),
+}));
+const mockedServers = vi.mocked(serversApi);
 
 const joinedState = { ...initialRoomState, joined: true };
 
@@ -266,8 +273,8 @@ describe('MessageComposer — mentions (@)', () => {
   const outsider = fakeUser('u-fora', 'foradaconversa', 'Fora Da Conversa');
 
   const conversation: Conversation = {
-    id: 'conv-1', type: 'group', title: 'Squad', avatar: '', createdBy: null,
-    memberIds: ['u-ana', 'u-andre'], lastMessageAt: null, createdAt: 1, updatedAt: 1, pinnedAt: null, myRole: 'member', ownerId: null, memberCount: 0,
+    id: 'conv-1', type: 'direct', serverId: null, title: '',
+    memberIds: ['u-ana', 'u-andre'], lastMessageAt: null, createdAt: 1, updatedAt: 1, pinnedAt: null,
   };
 
   function renderComposer(overrides: Partial<Parameters<typeof renderWithRoom>[1]> = {}) {
@@ -281,7 +288,7 @@ describe('MessageComposer — mentions (@)', () => {
     const user = userEvent.setup();
     renderComposer();
 
-    await user.type(screen.getByPlaceholderText('Mensagem'), 'oi @an');
+    await user.type(screen.getByPlaceholderText(/^Conversar/), 'oi @an');
 
     expect(await screen.findByText('Ana Silva')).toBeInTheDocument();
     expect(screen.getByText('André Costa')).toBeInTheDocument();
@@ -293,7 +300,7 @@ describe('MessageComposer — mentions (@)', () => {
     const sendChatMessage = vi.fn(() => true);
     renderComposer({ sendChatMessage });
 
-    const textarea = screen.getByPlaceholderText('Mensagem');
+    const textarea = screen.getByPlaceholderText(/^Conversar/);
     await user.type(textarea, 'oi @an');
     await screen.findByText('Ana Silva');
     await user.keyboard('{Enter}');
@@ -307,7 +314,7 @@ describe('MessageComposer — mentions (@)', () => {
     const user = userEvent.setup();
     renderComposer();
 
-    const textarea = screen.getByPlaceholderText('Mensagem');
+    const textarea = screen.getByPlaceholderText(/^Conversar/);
     await user.type(textarea, '@an');
     await user.click(await screen.findByText('André Costa'));
 
@@ -318,7 +325,7 @@ describe('MessageComposer — mentions (@)', () => {
     const user = userEvent.setup();
     renderComposer();
 
-    const textarea = screen.getByPlaceholderText('Mensagem');
+    const textarea = screen.getByPlaceholderText(/^Conversar/);
     await user.type(textarea, '@an');
     await screen.findByText('Ana Silva');
     await user.keyboard('{Escape}');
@@ -331,9 +338,31 @@ describe('MessageComposer — mentions (@)', () => {
     const user = userEvent.setup();
     renderComposer();
 
-    await user.type(screen.getByPlaceholderText('Mensagem'), 'fulano@an');
+    await user.type(screen.getByPlaceholderText(/^Conversar/), 'fulano@an');
 
     expect(screen.queryByText('Ana Silva')).not.toBeInTheDocument();
+  });
+
+  it('the placeholder names the channel, or the person in a DM', () => {
+    const { unmount } = renderComposer({ state: { ...joinedState, me: { ...joinedState.me, userId: 'u-andre' } } });
+    expect(screen.getByPlaceholderText('Conversar com @Ana Silva')).toBeInTheDocument();
+    unmount();
+    renderComposer({ conversations: [{ ...conversation, type: 'text', serverId: 's1', title: 'geral', memberIds: [] }] });
+    expect(screen.getByPlaceholderText('Conversar em #geral')).toBeInTheDocument();
+  });
+
+  it("in a channel the candidates are the server's members", async () => {
+    const channel: Conversation = { ...conversation, type: 'text', serverId: 's1', title: 'geral', memberIds: [] };
+    mockedServers.fetchAllServerMembers.mockResolvedValue([ana, outsider].map((u) => ({ user: u, roleIds: [], isOwner: false, at: '' })));
+    const user = userEvent.setup();
+    renderComposer({ conversations: [channel] });
+
+    await user.type(screen.getByPlaceholderText(/^Conversar/), 'oi @');
+
+    expect(await screen.findByText('Ana Silva')).toBeInTheDocument();
+    expect(screen.getByText('Fora Da Conversa')).toBeInTheDocument();
+    expect(screen.queryByText('André Costa')).not.toBeInTheDocument();
+    expect(mockedServers.fetchAllServerMembers).toHaveBeenCalledWith('s1');
   });
 });
 

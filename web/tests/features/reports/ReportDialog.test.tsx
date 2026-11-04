@@ -56,8 +56,8 @@ describe('ReportDialog', () => {
   });
 
   it('the title matches the target type', () => {
-    renderWithRoom(<ReportDialog target={{ type: 'group', id: 'g', label: 'Squad' }} open onOpenChange={vi.fn()} />);
-    expect(screen.getByText('Denunciar grupo')).toBeInTheDocument();
+    renderWithRoom(<ReportDialog target={{ type: 'server', id: 'g', label: 'Squad' }} open onOpenChange={vi.fn()} />);
+    expect(screen.getByText('Denunciar servidor')).toBeInTheDocument();
   });
 });
 

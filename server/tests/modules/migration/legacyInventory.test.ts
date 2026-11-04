@@ -31,8 +31,17 @@ describe('classifyInventory', () => {
     assert.equal(f.unexpectedRoles.length, 1);
     assert.deepEqual(f.directWithOwner, ['dm1']);
     assert.deepEqual(f.directIncomplete, ['dm2']);
-    assert.equal(f.blockers.length, 1);
+    assert.equal(f.blockers.length, 2);
     assert.match(f.blockers[0]!, /mais de um dono/);
+    assert.match(f.blockers[1]!, /sem dono/);
+  });
+
+  it('treats a bot like a group and skips server channels', () => {
+    const f = classifyInventory(inv({
+      conversations: [{ id: 'bot', type: 'bot', createdBy: 'a', dmKey: null }, { id: 'ch', type: 'text', createdBy: 'a', dmKey: null }, { id: 'vc', type: 'voice', createdBy: 'a', dmKey: null }],
+      members: [member('bot', 'a', 'owner', '2025-01-01')],
+    }));
+    assert.deepEqual([f.directWithOwner, f.directIncomplete, f.directWithoutKey, f.groupsWithoutOwner, f.blockers], [[], [], [], [], []]);
   });
 
   it('duplicate dm_key also blocks', () => {
@@ -43,6 +52,10 @@ describe('classifyInventory', () => {
 });
 
 describe('planRepairs', () => {
+  it('keeps a bot owner instead of treating the bot as a DM', () => {
+    assert.deepEqual(planRepairs(inv({ conversations: [{ id: 'bot', type: 'bot', createdBy: 'a', dmKey: null }], members: [member('bot', 'a', 'owner', '2025-01-01')] })), []);
+  });
+
   it('does not touch a group with exactly one owner', () => {
     assert.deepEqual(planRepairs(inv({ conversations: [group('g', 'a')], members: [member('g', 'a', 'owner', '2025-01-01'), member('g', 'b', 'member', '2025-01-02')] })), []);
   });

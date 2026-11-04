@@ -1,7 +1,7 @@
 import { and, eq, or, sql } from 'drizzle-orm';
 import { config } from '../../config/env.js';
 import { db } from '../../db/client.js';
-import { attachments, conversationMembers, conversations, friendships, messages } from '../../db/schema.js';
+import { attachments, friendships, messages, serverMembers, servers } from '../../db/schema.js';
 import type { Tx } from '../users/userPairLock.js';
 import { stagedBytes } from '../attachments/stagedAttachments.js';
 
@@ -9,14 +9,13 @@ import { stagedBytes } from '../attachments/stagedAttachments.js';
 // live in config (initial guesses, tunable); this module is the one place
 // that says what is counted and when something is over.
 
-export type LimitKind = 'storage' | 'ownedGroups' | 'ownedBots' | 'groupMemberships' | 'friends' | 'pendingRequests';
+export type LimitKind = 'storage' | 'ownedServers' | 'serverMemberships' | 'friends' | 'pendingRequests';
 
 export const limitMax = (kind: LimitKind, cfg = config): number => {
   switch (kind) {
     case 'storage': return cfg.MAX_USER_STORAGE_BYTES;
-    case 'ownedGroups': return cfg.MAX_OWNED_GROUPS_PER_USER;
-    case 'ownedBots': return cfg.MAX_OWNED_BOTS_PER_USER;
-    case 'groupMemberships': return cfg.MAX_GROUP_MEMBERSHIPS_PER_USER;
+    case 'ownedServers': return cfg.MAX_OWNED_SERVERS_PER_USER;
+    case 'serverMemberships': return cfg.MAX_SERVER_MEMBERSHIPS_PER_USER;
     case 'friends': return cfg.MAX_FRIENDS;
     case 'pendingRequests': return cfg.MAX_PENDING_OUTGOING_REQUESTS;
   }
@@ -30,25 +29,13 @@ export function exceedsLimit(used: number, max: number, adding = 1): boolean {
 
 type Executor = Tx | typeof db;
 
-async function countOwned(userId: string, type: 'group' | 'bot', executor: Executor): Promise<number> {
-  const [row] = await executor.select({ n: sql<number>`count(*)::int` }).from(conversationMembers)
-    .innerJoin(conversations, eq(conversations.id, conversationMembers.conversationId))
-    .where(and(eq(conversationMembers.userId, userId), eq(conversationMembers.role, 'owner'), eq(conversations.type, type)));
+export async function countOwnedServers(userId: string, executor: Executor = db): Promise<number> {
+  const [row] = await executor.select({ n: sql<number>`count(*)::int` }).from(servers).where(eq(servers.ownerId, userId));
   return row?.n ?? 0;
 }
 
-export async function countOwnedGroups(userId: string, executor: Executor = db): Promise<number> {
-  return countOwned(userId, 'group', executor);
-}
-
-export async function countOwnedBots(userId: string, executor: Executor = db): Promise<number> {
-  return countOwned(userId, 'bot', executor);
-}
-
-export async function countGroupMemberships(userId: string, executor: Executor = db): Promise<number> {
-  const [row] = await executor.select({ n: sql<number>`count(*)::int` }).from(conversationMembers)
-    .innerJoin(conversations, eq(conversations.id, conversationMembers.conversationId))
-    .where(and(eq(conversationMembers.userId, userId), eq(conversations.type, 'group')));
+export async function countServerMemberships(userId: string, executor: Executor = db): Promise<number> {
+  const [row] = await executor.select({ n: sql<number>`count(*)::int` }).from(serverMembers).where(eq(serverMembers.userId, userId));
   return row?.n ?? 0;
 }
 
@@ -76,8 +63,8 @@ export async function getUserStorageBytes(userId: string): Promise<number> {
 
 export interface UserLimits {
   storage: { used: number; max: number };
-  ownedGroups: { used: number; max: number };
-  groupMemberships: { used: number; max: number };
+  ownedServers: { used: number; max: number };
+  serverMemberships: { used: number; max: number };
   friends: { used: number; max: number };
   pendingRequests: { used: number; max: number };
 }
@@ -85,25 +72,21 @@ export interface UserLimits {
 /** What the account itself may see about its own quotas — the instance-wide
  * total is an administrative figure (§8.3). */
 export async function getUserLimits(userId: string): Promise<UserLimits> {
-  const [storage, ownedGroups, groupMemberships, friends, pendingRequests] = await Promise.all([
-    getUserStorageBytes(userId), countOwnedGroups(userId), countGroupMemberships(userId), countFriends(userId), countPendingOutgoing(userId),
+  const [storage, ownedServers, serverMemberships, friends, pendingRequests] = await Promise.all([
+    getUserStorageBytes(userId), countOwnedServers(userId), countServerMemberships(userId), countFriends(userId), countPendingOutgoing(userId),
   ]);
   return {
     storage: { used: storage, max: limitMax('storage') },
-    ownedGroups: { used: ownedGroups, max: limitMax('ownedGroups') },
-    groupMemberships: { used: groupMemberships, max: limitMax('groupMemberships') },
+    ownedServers: { used: ownedServers, max: limitMax('ownedServers') },
+    serverMemberships: { used: serverMemberships, max: limitMax('serverMemberships') },
     friends: { used: friends, max: limitMax('friends') },
     pendingRequests: { used: pendingRequests, max: limitMax('pendingRequests') },
   };
 }
 
-/** Which group quota (if any) creating one more group would break. */
-export async function groupCreationBlockedBy(userId: string): Promise<'ownedGroups' | 'groupMemberships' | null> {
-  if (exceedsLimit(await countOwnedGroups(userId), limitMax('ownedGroups'))) return 'ownedGroups';
-  if (exceedsLimit(await countGroupMemberships(userId), limitMax('groupMemberships'))) return 'groupMemberships';
+/** Which server quota (if any) creating one more server would break. */
+export async function serverCreationBlockedBy(userId: string): Promise<'ownedServers' | 'serverMemberships' | null> {
+  if (exceedsLimit(await countOwnedServers(userId), limitMax('ownedServers'))) return 'ownedServers';
+  if (exceedsLimit(await countServerMemberships(userId), limitMax('serverMemberships'))) return 'serverMemberships';
   return null;
-}
-
-export async function botCreationBlocked(userId: string): Promise<boolean> {
-  return exceedsLimit(await countOwnedBots(userId), limitMax('ownedBots'));
 }

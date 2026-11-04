@@ -1,0 +1,244 @@
+{
+  "rail": {
+    "label": "Servers",
+    "home": "Direct Messages",
+    "add": "Add a Server",
+    "showList": "Show channels and conversations"
+  },
+  "topBar": {
+    "friends": "Friends",
+    "directMessages": "Direct Messages"
+  },
+  "back": "Back",
+  "cancel": "Cancel",
+  "save": "Save Changes",
+  "reset": "Reset",
+  "close": "Close",
+  "channels": "Channels",
+  "noChannels": "No channels here yet.",
+  "suspended": "This server was suspended by the administrators.",
+  "create": {
+    "title": "Create Your Server",
+    "description": "Your server is where you and your friends hang out. Make yours and start talking.",
+    "own": "Create My Own",
+    "customize": "Customize Your Server",
+    "customizeHint": "Give your new server a personality with a name. You can always change it later.",
+    "name": "Server Name",
+    "defaultName": "{{name}}'s server",
+    "template": "Starts with #general and a General voice channel.",
+    "submit": "Create",
+    "creating": "Creating…",
+    "failed": "Could not create the server. Try again."
+  },
+  "join": {
+    "question": "Have an invite already?",
+    "title": "Join a Server",
+    "description": "Enter an invite below to join an existing server.",
+    "link": "Invite Link",
+    "submit": "Join Server",
+    "joining": "Joining…",
+    "invalid": "That invite link doesn't look valid.",
+    "failed": "Could not join the server."
+  },
+  "menu": {
+    "invite": "Invite People",
+    "settings": "Server Settings",
+    "createChannel": "Create Channel",
+    "createCategory": "Create Category",
+    "leave": "Leave Server"
+  },
+  "leave": {
+    "title": "Leave \"{{name}}\"",
+    "description": "You won't be able to come back without a new invite.",
+    "confirm": "Leave Server"
+  },
+  "invite": {
+    "title": "Invite friends to {{name}}",
+    "send_one": "Send invite",
+    "send_other": "Send invites ({{count}})",
+    "orLink": "Or, send a server invite link to a friend",
+    "generating": "Generating…",
+    "copy": "Copy",
+    "copied": "Copied",
+    "expires": "Your invite link expires in 7 days.",
+    "linkFailed": "Could not create the invite link.",
+    "failed": "Could not send the invites."
+  },
+  "channel": {
+    "create": "Create Channel",
+    "createCategory": "Create Category",
+    "inCategory": "in {{name}}",
+    "type": "Channel Type",
+    "types": {
+      "text": "Text",
+      "voice": "Voice"
+    },
+    "typeHint": {
+      "text": "Send messages, images, GIFs, emoji, opinions, and puns",
+      "voice": "Hang out together with voice, video, and screen share"
+    },
+    "name": "Channel Name",
+    "namePlaceholder": "new-channel",
+    "categoryName": "Category Name",
+    "categoryPlaceholder": "New Category",
+    "willBe": "The channel will be called {{name}}",
+    "createFailed": "Could not create it.",
+    "invite": "Create Invite",
+    "edit": "Edit Channel"
+  },
+  "members": {
+    "label": "Members",
+    "online": "Online",
+    "offline": "Offline",
+    "section": "{{name}} — {{count}}",
+    "loading": "Loading members…",
+    "owner": "Server Owner",
+    "kick": "Kick",
+    "ban": "Ban",
+    "transfer": "Transfer Ownership",
+    "kickTitle": "Kick {{name}}",
+    "kickDescription": "They leave the server and can only come back with a new invite.",
+    "banTitle": "Ban {{name}}",
+    "banDescription": "They leave the server and can't come back, not even by link, until the ban is lifted.",
+    "transferTitle": "Transfer to {{name}}",
+    "transferDescription": "They become the server's owner and you no longer are."
+  },
+  "settings": {
+    "label": "{{name}} settings",
+    "overview": "Overview",
+    "roles": "Roles",
+    "members": "Members",
+    "invites": "Invites",
+    "bans": "Bans",
+    "soundboard": "Soundboard",
+    "delete": "Delete Server",
+    "changeIcon": "Change Icon",
+    "removeIcon": "Remove Icon"
+  },
+  "roles": {
+    "hint": "Use roles to group your members and set what each one can do. Higher roles outrank lower ones.",
+    "create": "Create Role",
+    "newName": "new role",
+    "name": "Role Name",
+    "color": "Color",
+    "hoist": "Display members with this role separately",
+    "mentionable": "Allow anyone to @mention this role",
+    "delete": "Delete Role",
+    "deleteTitle": "Delete {{name}}",
+    "deleteDescription": "Whoever has this role loses the permissions it gave.",
+    "up": "Move up",
+    "down": "Move down"
+  },
+  "invites": {
+    "none": "No active invites.",
+    "meta": "by {{name}} · uses {{uses}} · expires {{expires}}",
+    "never": "never",
+    "revoke": "Revoke"
+  },
+  "bans": {
+    "none": "Nobody is banned.",
+    "revoke": "Revoke Ban"
+  },
+  "deleteServer": {
+    "title": "Delete \"{{name}}\"",
+    "description": "Deleting {{name}} erases all of its channels, messages, files and sounds. This can't be undone.",
+    "confirm": "Are you sure? This can't be undone."
+  },
+  "channelSettings": {
+    "label": "{{name}} settings",
+    "overview": "Overview",
+    "permissions": "Permissions",
+    "webhooks": "Integrations",
+    "delete": "Delete Channel",
+    "topic": "Channel Topic",
+    "topicPlaceholder": "Let everyone know how to use this channel",
+    "synced": "This channel follows its category's permissions. Changing anything here stops that.",
+    "sync": "Sync with Category"
+  },
+  "deleteChannel": {
+    "title": "Delete #{{name}}",
+    "description": "Deleting {{name}} erases all of its messages and files.",
+    "confirm": "Are you sure? This can't be undone."
+  },
+  "overwrite": {
+    "allow": "Allow",
+    "inherit": "Inherit",
+    "deny": "Deny"
+  },
+  "webhooks": {
+    "hint": "Webhooks let outside systems post into this channel.",
+    "defaultName": "Captain Hook",
+    "create": "New Webhook",
+    "rotate": "New URL",
+    "delete": "Delete",
+    "rename": "Name of webhook {{name}}"
+  },
+  "inviteCard": {
+    "sent": "You sent an invite to join a server",
+    "received": "You've been invited to join a server",
+    "invitedBy": "{{name}} invited you to join",
+    "sentInvalid": "You sent an invite, but",
+    "receivedInvalid": "You received an invite, but",
+    "invalid": "Invalid Invite",
+    "invalidHint": "Try sending a new invite",
+    "members_one": "{{count}} member",
+    "members_other": "{{count}} members",
+    "join": "Join",
+    "go": "Go to Server"
+  },
+  "voice": {
+    "inside_one": "{{count}} person in the channel",
+    "inside_other": "{{count}} people in the channel",
+    "empty": "No one is here right now.",
+    "join": "Join Voice",
+    "noAccess": "You can't join this channel"
+  },
+  "permissionSections": {
+    "general": "General Server Permissions",
+    "members": "Membership Permissions",
+    "text": "Text Channel Permissions",
+    "voice": "Voice Channel Permissions"
+  },
+  "permissions": {
+    "ADMINISTRATOR": "Administrator",
+    "MANAGE_SERVER": "Manage Server",
+    "MANAGE_ROLES": "Manage Roles",
+    "MANAGE_CHANNELS": "Manage Channels",
+    "CREATE_INVITE": "Create Invite",
+    "KICK_MEMBERS": "Kick Members",
+    "BAN_MEMBERS": "Ban Members",
+    "VIEW_CHANNEL": "View Channels",
+    "SEND_MESSAGES": "Send Messages",
+    "ATTACH_FILES": "Attach Files",
+    "ADD_REACTIONS": "Add Reactions",
+    "MANAGE_MESSAGES": "Manage Messages",
+    "MANAGE_WEBHOOKS": "Manage Webhooks",
+    "CONNECT": "Connect",
+    "SPEAK": "Speak",
+    "STREAM": "Video and Screen",
+    "MOVE_MEMBERS": "Disconnect Members",
+    "USE_SOUNDBOARD": "Use Soundboard",
+    "MANAGE_EXPRESSIONS": "Manage Expressions"
+  },
+  "permissionHints": {
+    "ADMINISTRATOR": "Grants every permission and bypasses channel rules. Be careful granting this.",
+    "MANAGE_SERVER": "Change the server's name and icon and see its invites.",
+    "MANAGE_ROLES": "Create and edit roles below yours, and change channel permissions.",
+    "MANAGE_CHANNELS": "Create, edit, reorder and delete channels and categories.",
+    "CREATE_INVITE": "Invite friends and create invite links.",
+    "KICK_MEMBERS": "Remove members below your role.",
+    "BAN_MEMBERS": "Ban members below your role.",
+    "VIEW_CHANNEL": "See the channel and read its history. Without it the channel is hidden.",
+    "SEND_MESSAGES": "Write in the channel.",
+    "ATTACH_FILES": "Send images and files.",
+    "ADD_REACTIONS": "React to messages.",
+    "MANAGE_MESSAGES": "Delete other people's messages.",
+    "MANAGE_WEBHOOKS": "Create, edit and delete webhooks.",
+    "CONNECT": "Join voice channels.",
+    "SPEAK": "Talk in voice channels.",
+    "STREAM": "Turn on the camera and share the screen.",
+    "MOVE_MEMBERS": "Disconnect members below your role from a voice channel.",
+    "USE_SOUNDBOARD": "Play and add soundboard sounds.",
+    "MANAGE_EXPRESSIONS": "Edit and remove anyone's sounds."
+  }
+}

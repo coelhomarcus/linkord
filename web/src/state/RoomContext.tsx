@@ -1,7 +1,7 @@
 import { createContext, useContext } from 'react';
 import type { Dispatch, MutableRefObject } from 'react';
 import type { Room } from 'livekit-client';
-import type { ChatMessage, ClientMessage, Conversation, PublicUser, ReactionEmoji, SearchResult, StorageUsage } from '@/shared/types/protocol';
+import type { ChatMessage, ClientMessage, Conversation, PublicUser, ReactionEmoji, SearchResult, ServerSummary, StorageUsage } from '@/shared/types/protocol';
 import type { RoomAction, RoomState } from './roomReducer';
 import type { TileKind } from '../features/calls/tileTypes';
 import type { OutboxEntry } from '@/features/chat/useMessageOutbox';
@@ -121,17 +121,18 @@ export interface RoomContextValue {
   /** Local self-view only — never flips the track actually sent. */
   mirrorCameraPreview: boolean;
   setMirrorCameraPreview: (value: boolean) => void;
+  /** DMs and every channel the account can see, as conversations. */
   conversations: Conversation[];
+  servers: ServerSummary[];
+  /** Bumped per server when its members change — open member lists refetch on it. */
+  serverMemberRevision: Map<string, number>;
+  /** Optimistic rail reorder; the caller also saves it over HTTP. */
+  reorderServers: (serverIds: string[]) => void;
   activeConversationId: string | null;
   openConversation: (conversationId: string) => void;
   openDirect: (userId: string) => void;
   closeConversation: (conversationId: string) => void;
   pinConversation: (conversationId: string, pinned: boolean) => void;
-  deleteGroup: (conversationId: string) => void;
-  updateGroupTitle: (conversationId: string, title: string) => void;
-  updateGroupAvatar: (conversationId: string, avatar: string) => void;
-  removeGroupMember: (conversationId: string, userId: string) => void;
-  transferGroupOwnership: (conversationId: string, userId: string) => void;
   messagesByConversation: Map<string, ChatMessage[]>;
   hasMoreByConversation: Map<string, boolean>;
   loadingOlderByConversation: Set<string>;
@@ -152,11 +153,11 @@ export interface RoomContextValue {
   /** The friend subset of allUsers — see usePresence.ts's own comment. */
   friendUserIds: Set<string>;
   kickFromCall: (participantId: string) => void;
-  groupActionError: string | null;
+  actionError: string | null;
   socialRevision: number;
-  clearGroupActionError: () => void;
-  // "you were removed from / the group was deleted" — shown app-wide, since
-  // the conversation (and any panel about it) is already gone by then
+  clearActionError: () => void;
+  // "you were removed from / the server was deleted" — shown app-wide, since
+  // the server (and any panel about it) is already gone by then
   accessNotice: string | null;
   clearAccessNotice: () => void;
   /** False when nothing was sent (empty text, or the socket is down). */

@@ -4,7 +4,7 @@ import { reports, users } from '../../db/schema.js';
 import { SOCIAL_PAGE_SIZE, decodeTimeCursor, encodeTimeCursor } from '../friendships/cursor.js';
 import { isActionAllowedFor, isClosed, resolutionFor, type ReportAction, type ReportTargetType } from '../reports/reportsPolicy.js';
 import { suspendUser } from './adminUsers.js';
-import { suspendGroup } from './adminGroups.js';
+import { suspendServer } from './adminServers.js';
 import { deleteMessageAsAdmin } from './adminMessages.js';
 import { listAudit, recordAudit, type AuditActor } from './auditLog.js';
 
@@ -39,7 +39,7 @@ export async function listAdminReports(filters: { status?: string; targetType?: 
       // 'closed' = resolved + dismissed, the queue's "done" view
       filters.status === 'closed' ? inArray(reports.status, ['resolved', 'dismissed'])
         : filters.status && ['open', 'reviewing', 'resolved', 'dismissed'].includes(filters.status) ? eq(reports.status, filters.status) : undefined,
-      filters.targetType && ['user', 'group', 'message'].includes(filters.targetType) ? eq(reports.targetType, filters.targetType) : undefined,
+      filters.targetType && ['user', 'server', 'message'].includes(filters.targetType) ? eq(reports.targetType, filters.targetType) : undefined,
       cursor ? sql`(${reports.createdAt}, ${reports.id}) < (${cursor.ts}::timestamptz, ${cursor.id})` : undefined,
     ))
     .orderBy(desc(reports.createdAt), desc(reports.id))
@@ -156,8 +156,8 @@ async function resolveLocked(ctx: Ctx, reportId: string, input: { dismiss: boole
 async function applyAction(ctx: Ctx, report: typeof reports.$inferSelect, action: ReportAction): Promise<string> {
   const actionCtx = { actor: ctx.actor, reason: `Denúncia ${report.id}: ${ctx.reason}`.slice(0, 500), requestId: ctx.requestId };
   switch (action) {
-    case 'suspend_group':
-      return (await suspendGroup(actionCtx, report.targetId)).code;
+    case 'suspend_server':
+      return (await suspendServer(actionCtx, report.targetId)).code;
     case 'delete_message':
       return (await deleteMessageAsAdmin(actionCtx, Number(report.targetId))).code;
     case 'suspend_user': {

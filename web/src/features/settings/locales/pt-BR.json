@@ -131,7 +131,7 @@
     },
     "adminArea": {
       "title": "Área administrativa",
-      "keywords": "admin, denúncia, auditoria, usuários, grupos"
+      "keywords": "admin, denúncia, auditoria, usuários, servidores"
     }
   },
   "account": {
@@ -197,7 +197,7 @@
     "unblock": "Desbloquear"
   },
   "adminLink": {
-    "label": "Usuários, grupos, denúncias e auditoria",
+    "label": "Usuários, servidores, denúncias e auditoria",
     "description": "Toda ação pede um motivo e fica registrada.",
     "open": "Abrir a área administrativa"
   },

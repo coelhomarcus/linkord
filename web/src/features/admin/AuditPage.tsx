@@ -16,7 +16,8 @@ import { useAdminQuery } from './useAdminQuery';
 import type { QuerySchema } from './useAdminQuery';
 import { AppLink } from '@/shared/ui/app-link';
 
-const TARGET_TYPES = ['all', 'user', 'group', 'bot', 'message', 'report', 'system'] as const;
+// group and bot stay filterable: records from before servers still carry them
+const TARGET_TYPES = ['all', 'user', 'server', 'webhook', 'group', 'bot', 'message', 'report', 'system'] as const;
 
 const QUERY: QuerySchema<'action' | 'actor' | 'targetType' | 'targetId' | 'from' | 'to'> = {
   action: { default: '' },
@@ -33,8 +34,8 @@ const TIME_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
 function entityHref(type: string, id: string, action: string): string | null {
   if (!id || action.endsWith('.delete')) return null;
   if (type === 'user') return `/admin/users/${encodeURIComponent(id)}`;
-  if (type === 'group') return `/admin/groups/${encodeURIComponent(id)}`;
-  if (type === 'bot') return `/admin/bots/${encodeURIComponent(id)}`;
+  if (type === 'server') return `/admin/servers/${encodeURIComponent(id)}`;
+  if (type === 'webhook') return `/admin/webhooks/${encodeURIComponent(id)}`;
   if (type === 'report') return `/admin/reports/${encodeURIComponent(id)}`;
   return null;
 }

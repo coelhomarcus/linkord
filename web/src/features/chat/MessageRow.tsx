@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { ArrowBendUpLeftIcon, CopyIcon, DotsThreeIcon, FlagIcon, PencilSimpleIcon, SmileyIcon, TrashIcon, UsersIcon } from '@phosphor-icons/react';
 import { GroupAvatar } from '@/features/conversations/GroupAvatar';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import type { TouchEvent as ReactTouchEvent } from 'react';
 
@@ -11,6 +11,8 @@ import { InviteCard } from '@/features/chat/InviteCard';
 import { CallInviteCard } from '@/features/chat/CallInviteCard';
 import { ChatMessageText } from '@/features/chat/ChatMessageText';
 import { RichEmbedCard } from './RichEmbedCard';
+import { InviteLinkCard } from '@/features/servers/InviteLinkCard';
+import { inviteCodesInText } from '@/features/servers/inviteCode';
 import { Button } from '@/shared/ui/primitives/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/primitives/dropdown-menu';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/primitives/popover';
@@ -153,7 +155,6 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
   const isMine = message.id === state.me.userId;
   const conversation = conversations.find((c) => c.id === message.conversationId);
   const can = messagePermissions(message, { userId: state.me.userId, role: state.me.role }, conversation);
-  const inBot = conversation?.type === 'bot';
   const canDelete = can.delete;
   const deleting = deletingMsgIds.has(message.msgId);
   const actionError = pending ? undefined : messageActionErrors.get(message.msgId);
@@ -164,7 +165,8 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
   const displayedPoster = author ? author.avatarPoster : isMine ? state.me.avatarPoster : undefined;
   const replyAuthor = message.replyTo?.authorId ? allUsers.get(message.replyTo.authorId) : undefined;
   const mentionsMe = !isMine && mentionsUser(message.text, mentionLookup, state.me.userId);
-  const isInvite = message.kind === 'group_invite' || message.kind === 'call_invite';
+  const isInvite = message.kind === 'server_invite' || message.kind === 'call_invite';
+  const inviteCodes = useMemo(() => (isInvite ? [] : inviteCodesInText(message.text)), [isInvite, message.text]);
   const canReport = can.report;
   const isEditing = !pending && !isInvite && editingMsgId === message.msgId;
   const reactions = withPendingReactions(message.reactions, message.msgId, pendingReactions, state.me.userId);
@@ -353,6 +355,7 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
                 />
                 {message.editedAt && <span className="ml-1 select-none text-caption text-text-muted">{t('edited')}</span>}
               </div>
+              {!pending && inviteCodes.map((code) => <InviteLinkCard key={code} code={code} own={isMine} />)}
               {message.richEmbeds?.map((embed, index) => <RichEmbedCard key={index} embed={embed} />)}
               {message.attachments?.length ? (
                 <MessageMedia attachments={message.attachments} />
@@ -391,7 +394,7 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
           picker, which is portaled outside this row), snapping the open
           popover to the viewport's top-left corner. */}
       {!pending && <div className="absolute right-3 top-0 hidden -translate-y-1/2 items-center gap-0.5 rounded-md border border-border bg-surface-overlay p-0.5 opacity-0 shadow-popover transition-opacity pointer-events-none group-hover/row:opacity-100 group-hover/row:pointer-events-auto group-has-[:focus-visible]/row:opacity-100 group-has-[:focus-visible]/row:pointer-events-auto md:flex">
-        {inBot && can.react && (
+        {!can.reply && can.react && (
           <BotQuickReactions
             reacted={(emoji) => !!state.me.userId && !!reactions?.[emoji]?.includes(state.me.userId)}
             onPick={(emoji) => reactToChatMessage(message.msgId, emoji)}

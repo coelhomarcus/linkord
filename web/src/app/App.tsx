@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Navigate, Route, Routes, RouterProvider, useLocation, useNavigate } from 'react-router';
+import { Navigate, Route, Routes, RouterProvider, useLocation, useNavigate, useParams } from 'react-router';
 import type { CSSProperties } from 'react';
 import type { Location } from 'react-router';
 import { RoomProvider } from '@/app/providers/RoomProvider';
@@ -13,10 +13,16 @@ import { LoadingScreen } from '@/app/layout/LoadingScreen';
 import { ReconnectBanner } from '@/app/layout/ReconnectBanner';
 import { AccessNotice } from '@/app/layout/AccessNotice';
 import { ConversationSidebar } from '@/features/conversations/ConversationSidebar';
-import { AppNavigationRail } from '@/features/navigation/AppNavigationRail';
+import { ServerRail } from '@/features/servers/ServerRail';
+import { MemberListPanel } from '@/features/servers/MemberListPanel';
+import { DirectProfilePanel } from '@/features/profile/DirectProfilePanel';
+import { ServerSettingsProvider } from '@/features/servers/ServerSettingsContext';
+import { InvitePage } from '@/features/servers/InvitePage';
+import { ServerLanding } from '@/features/servers/ServerLanding';
+import { VoiceChannelLobby } from '@/features/servers/VoiceChannelLobby';
+import { TopBar } from '@/app/layout/TopBar';
 import { FloatingUserDock } from '@/features/navigation/FloatingUserDock';
 import { ConversationPanel } from '@/features/conversations/ConversationPanel';
-import { GroupDetailsPanel } from '@/features/conversations/GroupDetailsPanel';
 import { ConversationMediaPanel } from '@/features/conversations/ConversationMediaPanel';
 import { ChatSearchDialog } from '@/features/chat/ChatSearchDialog';
 import { Stage } from '@/features/calls/Stage';
@@ -24,7 +30,7 @@ import { CallConnectingScreen } from '@/features/calls/CallConnectingScreen';
 import { CallChatPanel } from '@/features/calls/CallChatPanel';
 import { ParticipantAudioLayer } from '@/features/calls/ParticipantAudioLayer';
 import { FloatingPip } from '@/features/calls/FloatingPip';
-import { APP_TITLE, callParticipantIds, conversationDocumentTitle, conversationTitle } from '@/features/conversations/conversationUtils';
+import { APP_TITLE, callParticipantIds, conversationDocumentTitle, conversationTitle, directUser } from '@/features/conversations/conversationUtils';
 import { TileMenu } from '@/features/calls/TileMenu';
 import { SoundEmojiOverlay } from '@/features/soundboard/SoundEmojiOverlay';
 import { GlobalContextMenu } from '@/app/layout/GlobalContextMenu';
@@ -38,20 +44,35 @@ import { ProfilePage } from '@/features/profile/ProfilePage';
 import { MobileTabBar } from '@/features/navigation/MobileTabBar';
 import { RequestsRedirect } from '@/features/friends/RequestsRedirect';
 import { AppModals } from '@/app/layout/AppModals';
-import { AWAITING_OPEN, ROUTES, callConversationIdFromPath, conversationIdFromPath, isConversationsPath, modalForPath } from '@/shared/lib/routes';
+import {
+  AWAITING_OPEN, ROUTES, callConversationIdFromPath, conversationIdFromPath, conversationPath, isChannelsPath, isHomePath, modalForPath, serverIdFromPath,
+} from '@/shared/lib/routes';
+import { Sheet } from '@/shared/ui/motion/sheet';
+import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
 import { ContentLocationProvider } from '@/shared/lib/contentLocation';
 import { createAppRouter } from '@/app/appRouter';
 import { useConversationRouteSync } from '@/app/useConversationRouteSync';
 import { clearViewportVars, syncViewportVars } from '@/app/viewportVars';
 import { chatViewFor } from '@/app/chatView';
 import { rightPanelsVisible } from '@/app/rightPanels';
+import { isJoiningStage } from '@/app/stageJoin';
+import { i18n } from '@/shared/i18n/init';
 import { SidebarInset, SidebarProvider } from '@/shared/ui/motion/sidebar';
 import { loadSidebarCollapsed, saveSidebarCollapsed } from '@/shared/hooks/useSidebarCollapsedPreference';
 import { TooltipProvider } from '@/shared/ui/primitives/tooltip';
 
 // where the content area sits when the very first URL already names a modal
-// (a refresh on /app/settings/av): behind it, the conversations
-const DEFAULT_CONTENT_LOCATION: Location = { pathname: ROUTES.conversations, search: '', hash: '', state: null, key: 'default' };
+// (a refresh on /app/settings/av): behind it, home
+const DEFAULT_CONTENT_LOCATION: Location = { pathname: ROUTES.home, search: '', hash: '', state: null, key: 'default' };
+
+/** A link from before servers: a group's id is now its first text channel's,
+ * so an old conversation URL still finds what it named. */
+function LegacyConversationRedirect() {
+  const { conversationId = '' } = useParams();
+  const { conversations } = useRoom();
+  const conversation = conversations.find((c) => c.id === conversationId);
+  return <Navigate to={conversation ? conversationPath(conversation) : ROUTES.home} replace />;
+}
 
 /** Where the current entry sits in this tab's history: the browser router
  * keeps it in history.state. Null when the entry did not come from it. */
@@ -68,7 +89,7 @@ function currentPath(): string {
 function Shell() {
   const {
     state, dispatch, livekitRoom, closeTileMenu, sendWs, retryConnection, notifyActiveView, registerRequestChatView, registerOpenCall,
-    activeCallConversationId, activeConversationId, joinCall, leaveCall, conversations, allUsers,
+    activeCallConversationId, activeConversationId, joinCall, leaveCall, conversations, allUsers, servers,
   } = useRoom();
   const roomError = state.roomError;
   const navigate = useNavigate();
@@ -96,11 +117,17 @@ function Shell() {
       { replace: true, state: contentLocation.state },
     );
   }, [navigate, contentLocation, lastContent]);
-  const onConversations = isConversationsPath(contentLocation.pathname) || !!callConversationIdFromPath(contentLocation.pathname);
+  const onConversations = isChannelsPath(contentLocation.pathname) || !!callConversationIdFromPath(contentLocation.pathname);
+  const conversationsRef = useRef(conversations);
+  conversationsRef.current = conversations;
+  const wide = useMediaQuery('(min-width: 1280px)');
   const [profileUserId, setProfileUserId] = useState<string | null>(null);
   const [mobileShowSidebar, setMobileShowSidebar] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  // a DM's profile sits beside it unless closed, as in Discord; the member
+  // list starts closed
+  const [profilePanelOpen, setProfilePanelOpen] = useState(true);
   const [mediaOpen, setMediaOpen] = useState(false);
   const [callChatOpen, setCallChatOpen] = useState(false);
   const pendingStageRef = useRef<string | null>(null);
@@ -119,8 +146,9 @@ function Shell() {
   // just before this, and only the router's own state is already up to date then.
   useEffect(() => {
     registerRequestChatView((conversationId?: string) => {
-      if (conversationId) navigate(ROUTES.conversation(conversationId));
-      else if (!isConversationsPath(currentPath())) navigate(ROUTES.conversations, AWAITING_OPEN);
+      const conversation = conversationId ? conversationsRef.current.find((c) => c.id === conversationId) : undefined;
+      if (conversationId) navigate(conversation ? conversationPath(conversation) : ROUTES.direct(conversationId));
+      else if (!isHomePath(currentPath())) navigate(ROUTES.home, AWAITING_OPEN);
     });
   }, [registerRequestChatView, navigate]);
 
@@ -135,10 +163,16 @@ function Shell() {
     [activeCallConversationId, state.me.id, state.participants]
   );
 
+  /** Where a call's stage shows: a voice channel's own URL, or a DM's call page. */
+  function stagePath(conversationId: string): string {
+    const conversation = conversationsRef.current.find((c) => c.id === conversationId);
+    return conversation?.type === 'voice' && conversation.serverId ? ROUTES.channel(conversation.serverId, conversation.id) : ROUTES.call(conversationId);
+  }
+
   function handleOpenCall(conversationId: string) {
     pendingStageRef.current = conversationId;
     joinCall(conversationId);
-    navigate(ROUTES.call(conversationId), { state: { from: currentPath() } });
+    navigate(stagePath(conversationId), { state: { from: currentPath() } });
   }
 
   // re-registered every render: the handler closes over the current location
@@ -147,51 +181,69 @@ function Shell() {
   // Jump back to the Stage from wherever you wandered off to — used by both
   // FloatingPip (clicking it) and the sidebar CallDock title.
   function handleReturnToCall() {
-    if (activeCallConversationId) navigate(ROUTES.call(activeCallConversationId), { state: { from: currentPath() } });
+    if (activeCallConversationId) navigate(stagePath(activeCallConversationId), { state: { from: currentPath() } });
   }
 
-  // Navigation never ends a call; only its own route shows the stage.
-  const stageConversationId = callConversationIdFromPath(contentLocation.pathname);
+  // Navigation never ends a call; only its own route shows the stage — a DM
+  // call's page, or the voice channel's URL (which shows a lobby when you
+  // aren't in it).
+  const dmStageId = callConversationIdFromPath(contentLocation.pathname);
+  const pathConversation = conversations.find((c) => c.id === conversationIdFromPath(contentLocation.pathname));
+  const voiceChannelOnPath = pathConversation?.type === 'voice' ? pathConversation : null;
+  const stageConversationId = dmStageId ?? voiceChannelOnPath?.id ?? null;
   const showStage = !!stageConversationId && stageConversationId === activeCallConversationId;
+  const leaveStagePath = (id: string) => (voiceChannelOnPath ? ROUTES.server(voiceChannelOnPath.serverId!) : ROUTES.direct(id));
   useEffect(() => {
     if (showStage && pendingStageRef.current === stageConversationId) pendingStageRef.current = null;
-    if (!stageConversationId || !state.joined || showStage) return;
-    if (pendingStageRef.current === stageConversationId && state.callJoinError?.conversationId !== stageConversationId) return;
+    // a voice channel without its call is the lobby, not somewhere to leave
+    if (!dmStageId || !state.joined || showStage) return;
+    if (pendingStageRef.current === dmStageId && state.callJoinError?.conversationId !== dmStageId) return;
     pendingStageRef.current = null;
-    navigate(ROUTES.conversation(stageConversationId), { replace: true });
-  }, [stageConversationId, showStage, state.joined, state.callJoinError, navigate]);
+    navigate(ROUTES.direct(dmStageId), { replace: true });
+  }, [dmStageId, stageConversationId, showStage, state.joined, state.callJoinError, navigate]);
+  const joinFailedId = state.callJoinError?.conversationId ?? null;
   useEffect(() => {
-    if (!stageConversationId || showStage || pendingStageRef.current !== stageConversationId) return;
+    if (!stageConversationId || showStage || pendingStageRef.current !== stageConversationId || joinFailedId === stageConversationId) return;
     const timeout = window.setTimeout(() => {
       pendingStageRef.current = null;
-      dispatch({ type: 'SET_CALL_JOIN_ERROR', error: { conversationId: stageConversationId, message: 'A chamada demorou para conectar. Tente novamente.' } });
+      dispatch({ type: 'SET_CALL_JOIN_ERROR', error: { conversationId: stageConversationId, message: i18n.t('calls:errors.joinTimeout') } });
       void leaveCall();
-      navigate(ROUTES.conversation(stageConversationId), { replace: true });
+      if (dmStageId) navigate(ROUTES.direct(dmStageId), { replace: true });
     }, 20_000);
     return () => window.clearTimeout(timeout);
-  }, [stageConversationId, showStage, dispatch, leaveCall, navigate]);
+  }, [stageConversationId, dmStageId, showStage, joinFailedId, dispatch, leaveCall, navigate]);
   function cancelPendingCall() {
     const joiningThisCall = !!stageConversationId && pendingStageRef.current === stageConversationId;
     pendingStageRef.current = null;
     if (joiningThisCall) void leaveCall();
-    navigate(stageConversationId ? ROUTES.conversation(stageConversationId) : ROUTES.conversations, { replace: true });
+    navigate(stageConversationId ? leaveStagePath(stageConversationId) : ROUTES.home, { replace: true });
   }
+  const joiningStage = isJoiningStage({ stageConversationId, pendingConversationId: pendingStageRef.current, failedConversationId: joinFailedId });
   // what the user is looking at, not the last view picked. The call's side
   // chat is the conversation on screen: a message arriving then was seen.
-  const visibleConversationId = conversationIdFromPath(contentLocation.pathname);
+  const visibleConversationId = voiceChannelOnPath ? null : conversationIdFromPath(contentLocation.pathname);
   const callChatShown = callChatOpen && !!activeCallConversationId && conversations.some((conversation) => conversation.id === activeCallConversationId);
   const chatView = chatViewFor({ stageShown: showStage, callChatShown, visibleConversationId, activeConversationId });
   useEffect(() => { notifyActiveView(chatView); }, [chatView, notifyActiveView]);
 
   const activeConversation = conversations.find((conversation) => conversation.id === (visibleConversationId ?? stageConversationId ?? activeConversationId));
-  const hasDetails = activeConversation?.type === 'group' || activeConversation?.type === 'bot';
+  const currentServer = servers.find((s) => s.id === serverIdFromPath(contentLocation.pathname)) ?? null;
+  const shownType = visibleConversationId ? activeConversation?.type ?? null : null;
+  const directShown = shownType === 'direct';
   const { details: detailsVisible, media: mediaVisible } = rightPanelsVisible({
-    detailsOpen, mediaOpen, onChatPage: onConversations, stageShown: showStage, conversationType: activeConversation?.type ?? null,
+    detailsOpen: directShown ? profilePanelOpen && wide : detailsOpen, mediaOpen, onChatPage: !!visibleConversationId, stageShown: showStage, conversationType: shownType,
   });
+  // the media panel takes the profile's place without forgetting it was open
+  const membersVisible = detailsVisible && !directShown;
+  const profileVisible = detailsVisible && directShown && !mediaVisible;
+  const profilePanelUser = profileVisible ? directUser(activeConversation, state.me.userId, allUsers) : null;
+  const setDetails = (open: boolean) => (directShown ? setProfilePanelOpen(open) : setDetailsOpen(open));
   const activeConversationName = conversationTitle(activeConversation, state.me.userId, allUsers);
 
-  const tabTitle = onConversations || showStage ? conversationDocumentTitle(activeConversation, state.me.userId, allUsers) : APP_TITLE;
-  const mobileMainPage = contentLocation.pathname === ROUTES.conversations || contentLocation.pathname === ROUTES.friends || contentLocation.pathname === ROUTES.notifications || contentLocation.pathname === ROUTES.profile;
+  const tabTitle = onConversations || showStage ? conversationDocumentTitle(activeConversation, state.me.userId, allUsers, currentServer?.name) : APP_TITLE;
+  // the pages a phone reaches from its tab bar (the column pages count: home and a server's channel list)
+  const mobileListPage = contentLocation.pathname === ROUTES.home || (!!currentServer && !conversationIdFromPath(contentLocation.pathname));
+  const mobileMainPage = mobileListPage || contentLocation.pathname === ROUTES.friends || contentLocation.pathname === ROUTES.notifications || contentLocation.pathname === ROUTES.profile;
   useEffect(() => {
     document.title = tabTitle;
     return () => { document.title = APP_TITLE; };
@@ -227,17 +279,20 @@ function Shell() {
   return (
     <GlobalContextMenu onOpenProfile={setProfileUserId}>
       <ContentLocationProvider value={contentLocation}>
+      <ServerSettingsProvider onOpenProfile={setProfileUserId}>
+      <div className="flex h-full min-h-0 flex-col bg-surface-rail">
+      <TopBar className="hidden md:flex" title={tabTitle === APP_TITLE ? undefined : activeConversationName} server={currentServer} />
       <SidebarProvider
         open={sidebarOpen}
         onOpenChange={setSidebarOpen}
         openMobile={mobileShowSidebar}
         onOpenMobileChange={setMobileShowSidebar}
-        className="relative h-full bg-bg-primary text-text-primary [--surface-base:var(--color-surface-app)] max-md:pt-[env(safe-area-inset-top)]"
-        style={{ minHeight: 0, '--sidebar-width': '20rem', '--sidebar-width-mobile': '24rem', '--sidebar-overlay-offset': '4rem', '--mobile-navigation-height': `calc(4rem + var(--safe-bottom) + ${inCall ? '3rem' : '0rem'})` } as CSSProperties}
+        className="relative min-h-0 flex-1 bg-surface-rail text-text-primary [--surface-base:var(--color-surface-app)] max-md:pt-[env(safe-area-inset-top)]"
+        style={{ minHeight: 0, '--sidebar-width': '15rem', '--sidebar-width-mobile': '24rem', '--sidebar-overlay-offset': '4.5rem', '--mobile-navigation-height': `calc(4rem + var(--safe-bottom) + ${inCall ? '3rem' : '0rem'})` } as CSSProperties}
       >
         <ReconnectBanner />
         <AccessNotice />
-        <AppNavigationRail className="hidden md:flex" />
+        <ServerRail className="hidden md:flex" />
         <ConversationSidebar />
         <FloatingUserDock
           placement="shell"
@@ -245,34 +300,49 @@ function Shell() {
           onOpenProfile={setProfileUserId}
           showReturnToCall={!showStage}
         />
-        <SidebarInset className={`relative min-h-0 overflow-hidden bg-surface-panel [--surface-base:var(--color-surface-panel)] md:m-shell md:rounded-xl md:border md:border-border ${contentLocation.pathname === ROUTES.conversations ? 'max-md:hidden' : ''} ${mobileMainPage ? 'max-md:pb-[var(--mobile-navigation-height)]' : ''}`}>
+        <SidebarInset className={`relative min-h-0 overflow-hidden bg-surface-panel [--surface-base:var(--color-surface-panel)] md:rounded-tl-xl md:border-l md:border-t md:border-border-subtle ${mobileListPage ? 'max-md:hidden' : ''} ${mobileMainPage ? 'max-md:pb-[var(--mobile-navigation-height)]' : ''}`}>
+          <div className="flex h-full min-h-0">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <Routes location={contentLocation}>
+            <Route path={ROUTES.home} element={<FriendsPage onOpenProfile={setProfileUserId} />} />
+            <Route path={ROUTES.friends} element={<FriendsPage onOpenProfile={setProfileUserId} />} />
+            <Route path="/app/channels" element={<Navigate to={ROUTES.home} replace />} />
+            <Route path="/app/channels/:serverId" element={<ServerLanding />} />
             <Route
-              path="/app/conversations/:conversationId?"
-              element={
+              path="/app/channels/:serverId/:conversationId"
+              element={voiceChannelOnPath ? (
+                showStage
+                  ? <Stage allIds={callIds} chatOpen={callChatOpen} onToggleChat={() => setCallChatOpen((v) => !v)} onBack={() => navigate(ROUTES.server(voiceChannelOnPath.serverId!))} />
+                  : joiningStage ? <CallConnectingScreen onCancel={cancelPendingCall} /> : <VoiceChannelLobby channel={voiceChannelOnPath} onJoin={() => handleOpenCall(voiceChannelOnPath.id)} />
+              ) : (
                 <ConversationPanel
                   onOpenProfile={setProfileUserId}
                   onOpenCall={handleOpenCall}
                   onOpenSearch={() => setSearchOpen(true)}
-                  detailsOpen={detailsVisible}
+                  detailsOpen={membersVisible || profileVisible}
                   mediaOpen={mediaVisible}
-                  onOpenDetails={() => { setMediaOpen(false); setDetailsOpen(true); }}
-                  onToggleDetails={() => { setMediaOpen(false); setDetailsOpen(!detailsVisible); }}
-                  onToggleMedia={() => { setDetailsOpen(false); setMediaOpen(!mediaVisible); }}
+                  onOpenDetails={() => { setMediaOpen(false); setDetails(true); }}
+                  onToggleDetails={() => { setMediaOpen(false); setDetails(!(membersVisible || profileVisible)); }}
+                  onToggleMedia={() => { if (!directShown) setDetailsOpen(false); setMediaOpen(!mediaVisible); }}
                 />
-              }
+              )}
             />
             <Route path="/app/calls/:conversationId" element={stageConversationId ? (
               showStage
-                ? <Stage allIds={callIds} chatOpen={callChatOpen} onToggleChat={() => setCallChatOpen((v) => !v)} onBack={() => { if ((contentLocation.state as { from?: unknown } | null)?.from) navigate(-1); else navigate(ROUTES.conversations, { replace: true }); }} />
+                ? <Stage allIds={callIds} chatOpen={callChatOpen} onToggleChat={() => setCallChatOpen((v) => !v)} onBack={() => { if ((contentLocation.state as { from?: unknown } | null)?.from) navigate(-1); else navigate(ROUTES.direct(stageConversationId), { replace: true }); }} />
                 : <CallConnectingScreen onCancel={cancelPendingCall} />
-            ) : <Navigate to={ROUTES.conversations} replace />} />
-            <Route path={ROUTES.friends} element={<FriendsPage onOpenProfile={setProfileUserId} />} />
+            ) : <Navigate to={ROUTES.home} replace />} />
+            <Route path="/invite/:code" element={<InvitePage />} />
             <Route path={ROUTES.notifications} element={<NotificationsPage />} />
             <Route path={ROUTES.profile} element={<ProfilePage onOpenProfile={setProfileUserId} />} />
             <Route path={ROUTES.requests} element={<RequestsRedirect />} />
-            <Route path="*" element={<Navigate to={ROUTES.conversations} replace />} />
+            <Route path="/app/conversations/:conversationId" element={<LegacyConversationRedirect />} />
+            <Route path="*" element={<Navigate to={ROUTES.home} replace />} />
           </Routes>
+          </div>
+          {membersVisible && currentServer && wide && <MemberListPanel server={currentServer} onOpenProfile={setProfileUserId} />}
+          {profilePanelUser && <DirectProfilePanel user={profilePanelUser} onOpenProfile={setProfileUserId} />}
+          </div>
           {inCall && <ParticipantAudioLayer participantIds={callIds} />}
           {inCall && !showStage && (
             <FloatingPip
@@ -284,15 +354,11 @@ function Shell() {
           <SoundEmojiOverlay />
         </SidebarInset>
         {mobileMainPage && <MobileTabBar activeCallConversationId={activeCallConversationId} onReturnToCall={handleReturnToCall} />}
-        <GroupDetailsPanel
-          conversationId={hasDetails && activeConversation ? activeConversation.id : null}
-          open={detailsVisible}
-          onOpenChange={setDetailsOpen}
-          onOpenProfile={setProfileUserId}
-          // over the details, not instead of them: closing the media goes back to them
-          onOpenMedia={() => setMediaOpen(true)}
-          onOpenSearch={() => { setDetailsOpen(false); setSearchOpen(true); }}
-        />
+        {currentServer && !wide && (
+          <Sheet open={membersVisible} onOpenChange={setDetailsOpen} side="right" ariaLabel={currentServer.name} className="w-60">
+            <MemberListPanel server={currentServer} onOpenProfile={setProfileUserId} active={membersVisible} />
+          </Sheet>
+        )}
         <ConversationMediaPanel
           conversationId={activeConversation?.id ?? null}
           open={mediaVisible}
@@ -314,6 +380,8 @@ function Shell() {
           activeConversationName={activeConversationName}
         />
       </SidebarProvider>
+      </div>
+      </ServerSettingsProvider>
       </ContentLocationProvider>
     </GlobalContextMenu>
   );

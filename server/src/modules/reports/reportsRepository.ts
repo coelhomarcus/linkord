@@ -1,16 +1,17 @@
 import crypto from 'node:crypto';
-import { and, eq } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { db } from '../../db/client.js';
-import { conversationMembers, conversations, messages, reports, users } from '../../db/schema.js';
+import { conversations, messages, reports, servers, users } from '../../db/schema.js';
 import { areFriends } from '../friendships/friendshipsRepository.js';
-import { shareAnyConversation } from '../conversations/conversationsRepository.js';
+import { getConversationForUser, shareAnyConversation } from '../conversations/conversationsRepository.js';
+import { isServerMember } from '../servers/serversRepository.js';
 import { buildMessageSnapshot, type ReportInput } from './reportsPolicy.js';
 
 export type CreateReportResult = { code: 'ok'; id: string } | { code: 'not_found' | 'invalid_target' };
 
 /** Files a report. A reporter can only report what they can already SEE: an
- * account they have a relationship with (friend, shared conversation), a group
- * they are in, a message in a conversation they are in. Anything else answers
+ * account they have a relationship with (friend, shared DM or server), a
+ * server they are in, a message in a conversation they can read. Anything else answers
  * `not_found` — reporting is not a way to probe whether an id exists. A repeat
  * report of the same open case is accepted quietly and not duplicated. */
 export async function createReport(reporterId: string, input: ReportInput): Promise<CreateReportResult> {
@@ -34,13 +35,9 @@ async function resolveTarget(reporterId: string, input: ReportInput): Promise<{ 
     return { label: target.username, snapshot: {} };
   }
 
-  if (input.targetType === 'group') {
-    const [row] = await db.select({ title: conversations.title })
-      .from(conversationMembers)
-      .innerJoin(conversations, eq(conversations.id, conversationMembers.conversationId))
-      .where(and(eq(conversationMembers.conversationId, input.targetId), eq(conversationMembers.userId, reporterId), eq(conversations.type, 'group')))
-      .limit(1);
-    return row ? { label: row.title, snapshot: {} } : { code: 'not_found' };
+  if (input.targetType === 'server') {
+    const [row] = await db.select({ name: servers.name }).from(servers).where(eq(servers.id, input.targetId)).limit(1);
+    return row && (await isServerMember(input.targetId, reporterId)) ? { label: row.name, snapshot: {} } : { code: 'not_found' };
   }
 
   const msgId = Number(input.targetId);
@@ -51,11 +48,10 @@ async function resolveTarget(reporterId: string, input: ReportInput): Promise<{ 
   })
     .from(messages)
     .innerJoin(conversations, eq(conversations.id, messages.conversationId))
-    .innerJoin(conversationMembers, and(eq(conversationMembers.conversationId, messages.conversationId), eq(conversationMembers.userId, reporterId)))
     .leftJoin(users, eq(users.id, messages.authorId))
     .where(eq(messages.id, msgId))
     .limit(1);
-  if (!msg) return { code: 'not_found' };
+  if (!msg || !(await getConversationForUser(msg.conversationId, reporterId))) return { code: 'not_found' };
   if (msg.authorId === reporterId || msg.kind !== 'text') return { code: 'invalid_target' };
   return {
     label: `mensagem de ${msg.authorUsername ?? 'conta apagada'}`,

@@ -17,8 +17,8 @@ import type { TrimRange } from './Waveform';
 import { CLIP_SAMPLE_RATE, MAX_SOURCE_BYTES, computePeaks, decodeAudioFile, encodeWav, renderClip } from './soundClip';
 import { loadSoundBuffer, playBuffer } from './soundPlayback';
 import type { PlayingSound } from './soundPlayback';
-import { MAX_SOUND_DURATION_MS, MAX_SOUND_NAME_LEN, describeSoundboardError, updateGroupSound, uploadGroupSound } from './soundboardApi';
-import type { GroupSound } from './soundboardApi';
+import { MAX_SOUND_DURATION_MS, MAX_SOUND_NAME_LEN, describeSoundboardError, updateServerSound, uploadServerSound } from './soundboardApi';
+import type { ServerSound } from './soundboardApi';
 
 const PEAK_BARS = 96;
 const MAX_TRIM_SEC = MAX_SOUND_DURATION_MS / 1000;
@@ -61,15 +61,15 @@ function usePreview() {
 }
 
 interface SoundEditorDialogProps {
-  conversationId: string;
+  serverId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** edit this sound's details; without it, the dialog uploads a new one */
-  sound?: GroupSound | null;
+  sound?: ServerSound | null;
   onSaved?: () => void;
 }
 
-export function SoundEditorDialog({ conversationId, open, onOpenChange, sound = null, onSaved }: SoundEditorDialogProps) {
+export function SoundEditorDialog({ serverId, open, onOpenChange, sound = null, onSaved }: SoundEditorDialogProps) {
   const { t } = useTranslation('soundboard');
   const editing = !!sound;
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -116,12 +116,12 @@ export function SoundEditorDialog({ conversationId, open, onOpenChange, sound = 
   useEffect(() => {
     if (!open || !sound) return;
     let cancelled = false;
-    loadSoundBuffer(conversationId, sound.id)
+    loadSoundBuffer(serverId, sound.id)
       .then((buffer) => { if (!cancelled) setClip({ buffer, peaks: computePeaks(buffer, PEAK_BARS) }); })
       .catch(() => { if (!cancelled) setError(t('editor.errors.decodeFailed')); })
       .finally(() => { if (!cancelled) setDecoding(false); });
     return () => { cancelled = true; };
-  }, [open, sound, conversationId, t]);
+  }, [open, sound, serverId, t]);
 
   async function handleFilePicked(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -179,10 +179,10 @@ export function SoundEditorDialog({ conversationId, open, onOpenChange, sound = 
     try {
       const details = { name: trimmedName, emoji, volume };
       if (sound) {
-        await updateGroupSound(conversationId, sound.id, details);
+        await updateServerSound(serverId, sound.id, details);
       } else {
         const samples = await renderClip(clip!.buffer, trim!.start, trim!.end);
-        await uploadGroupSound(conversationId, encodeWav(samples, CLIP_SAMPLE_RATE), details, setProgress);
+        await uploadServerSound(serverId, encodeWav(samples, CLIP_SAMPLE_RATE), details, setProgress);
       }
       onSaved?.();
       onOpenChange(false);
