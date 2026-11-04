@@ -421,7 +421,10 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
               {remaining}
             </span>
           )}
+          {/* each popover trigger in a box of its own: the focus guards it adds
+              while open must not become flex items of this row */}
           {gifConfig?.enabled && (
+            <div className="flex flex-none max-md:hidden">
             <Popover open={gifPickerOpen} onOpenChange={setGifPickerOpen}>
               <PopoverTrigger
                 render={<Button type="button" variant="ghost" size="icon" aria-label={t('composer.sendGif')} disabled={disabled} className={`${iconButton} max-md:hidden`} />}
@@ -432,7 +435,9 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
                 <GifPicker config={gifConfig} onPick={sendGif} />
               </PopoverContent>
             </Popover>
+            </div>
           )}
+          <div className="flex flex-none max-md:hidden">
           <Popover open={emojiPickerOpen} onOpenChange={setEmojiPickerOpen}>
             <PopoverTrigger
               render={<Button type="button" variant="ghost" size="icon" aria-label={t('composer.insertEmoji')} disabled={disabled} className={`${iconButton} max-md:hidden`} />}
@@ -446,6 +451,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
               </EmojiPicker>
             </PopoverContent>
           </Popover>
+          </div>
           <Button
             type="button"
             size="icon"
