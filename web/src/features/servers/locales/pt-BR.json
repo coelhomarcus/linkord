@@ -4,6 +4,8 @@
     "home": "Mensagens diretas",
     "add": "Adicionar um servidor",
     "showList": "Mostrar canais e conversas",
+    "unread_one": "{{count}} mensagem não lida",
+    "unread_other": "{{count}} mensagens não lidas",
     "liveCall": "Chamada de voz em andamento"
   },
   "topBar": {

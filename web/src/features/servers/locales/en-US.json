@@ -4,6 +4,8 @@
     "home": "Direct Messages",
     "add": "Add a Server",
     "showList": "Show channels and conversations",
+    "unread_one": "{{count}} unread message",
+    "unread_other": "{{count}} unread messages",
     "liveCall": "Voice call in progress"
   },
   "topBar": {

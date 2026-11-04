@@ -123,14 +123,41 @@ describe('ServerRail — live call seal', () => {
     renderRail(vi.fn(), [withChannels], withParticipants(inCall('dm-1'), { ...inCall('elsewhere-voice'), id: 'p-luis' }));
     expect(screen.queryByTestId('live-call-seal')).not.toBeInTheDocument();
   });
+});
+
+describe('ServerRail — unread messages', () => {
+  const original = window.matchMedia;
+  afterEach(() => { window.matchMedia = original; });
+
+  it('a red count shows how many messages arrived, in its own corner beside the call seal', () => {
+    setViewport(1440);
+    renderRail(vi.fn(), [withChannels], { ...withParticipants(inCall('c-voice')), unreadByConversation: new Map([['c-text', 3]]) });
+    const button = screen.getByRole('button', { name: 'Squad, 3 mensagens não lidas, Chamada de voz em andamento' });
+    const count = within(button).getByText('3');
+    expect(count).toHaveClass('bg-red', '-bottom-1', '-right-1');
+    expect(within(button).getByTestId('live-call-seal')).toHaveClass('-top-1');
+  });
+
+  it('caps the count at 99+', () => {
+    setViewport(1440);
+    renderRail(vi.fn(), [withChannels], { unreadByConversation: new Map([['c-text', 120]]) });
+    expect(within(screen.getByRole('button', { name: 'Squad, 120 mensagens não lidas' })).getByText('99+')).toBeInTheDocument();
+  });
+
+  it('nothing unread, no count', () => {
+    setViewport(1440);
+    renderRail(vi.fn(), [withChannels], { unreadByConversation: new Map([['c-text', 0]]) });
+    expect(screen.getByRole('button', { name: 'Squad' })).toBeInTheDocument();
+    expect(screen.queryByText('0')).not.toBeInTheDocument();
+  });
 
   describe('in English', () => {
     useLanguageForTests('en-US');
 
-    it('names the call in English', () => {
+    it('names the count and the call in English', () => {
       setViewport(1440);
-      renderRail(vi.fn(), [withChannels], { activeCallConversationId: 'c-voice' });
-      expect(screen.getByRole('button', { name: 'Squad, Voice call in progress' })).toBeInTheDocument();
+      renderRail(vi.fn(), [withChannels], { activeCallConversationId: 'c-voice', unreadByConversation: new Map([['c-text', 1]]) });
+      expect(screen.getByRole('button', { name: 'Squad, 1 unread message, Voice call in progress' })).toBeInTheDocument();
     });
   });
 });

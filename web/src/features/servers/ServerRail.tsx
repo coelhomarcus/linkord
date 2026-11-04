@@ -46,8 +46,11 @@ function Pill({ active, unread }: { active: boolean; unread: boolean }) {
 // unread count bottom-right, so the two never sit on each other.
 const CORNER = 'pointer-events-none absolute ring-4 ring-surface-rail';
 
-function RailItem({ label, active, unread, badge, liveCall, onClick, children, dragging = false, sortable }: {
+function RailItem({ label, active, unread, badge, badgeLabel, badgeClassName, liveCall, onClick, children, dragging = false, sortable }: {
   label: string; active: boolean; unread: boolean; badge?: number; onClick: () => void; children: ReactNode;
+  /** what the count means, for the item's accessible name; without it the count is left out of the name */
+  badgeLabel?: string;
+  badgeClassName?: string;
   /** set while a voice channel has someone in it: the seal's wording */
   liveCall?: string;
   /** while this item is the one being dragged: no tooltip trailing it */
@@ -55,7 +58,7 @@ function RailItem({ label, active, unread, badge, liveCall, onClick, children, d
   /** what makes the item a handle of the rail's sortable list */
   sortable?: { ref: (node: HTMLElement | null) => void; style: CSSProperties; props: HTMLAttributes<HTMLElement> };
 }) {
-  const accessibleName = [label, liveCall].filter(Boolean).join(', ');
+  const accessibleName = [label, badge ? badgeLabel : undefined, liveCall].filter(Boolean).join(', ');
   return (
     <Tooltip disabled={dragging}>
       <TooltipTrigger
@@ -79,7 +82,7 @@ function RailItem({ label, active, unread, badge, liveCall, onClick, children, d
           </span>
         )}
         {!!badge && (
-          <CountBadge decorative className={cn(CORNER, '-bottom-1 -right-1')}>
+          <CountBadge decorative className={cn(CORNER, '-bottom-1 -right-1', badgeClassName)}>
             {badge > 99 ? '99+' : badge}
           </CountBadge>
         )}
@@ -179,6 +182,9 @@ export function ServerRail({ className }: { className?: string }) {
                 label={server.name}
                 active={server.id === currentServerId}
                 unread={unread > 0}
+                badge={unread}
+                badgeLabel={t('rail.unread', { count: unread })}
+                badgeClassName="bg-red text-white"
                 liveCall={serverHasLiveCall(server, callIds) ? t('rail.liveCall') : undefined}
                 onClick={() => go(ROUTES.server(server.id))}
               >
