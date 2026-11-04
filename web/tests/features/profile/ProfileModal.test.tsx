@@ -21,6 +21,13 @@ vi.mock('@/shared/api/api', async (importOriginal) => ({
 }));
 const mocked = vi.mocked(api);
 
+function yesterdayAt1011(): string {
+  const at = new Date();
+  at.setDate(at.getDate() - 1);
+  at.setHours(10, 11, 0, 0);
+  return at.toISOString();
+}
+
 const NOTHING: ProfileDetails = {
   memberSince: '2023-05-04T12:00:00.000Z', friendsSince: null,
   mutualFriends: { items: [], total: 0 }, mutualServers: { items: [], total: 0 },
@@ -161,6 +168,27 @@ describe('ProfileModal — since when and what you have in common', () => {
     renderProfile({ state: { ...initialRoomState, me: { ...initialRoomState.me, userId: 'u1' } } });
     expect(await screen.findByText('Membro desde')).toBeInTheDocument();
     expect(screen.queryByRole('tab', { name: /mútuo/ })).not.toBeInTheDocument();
+  });
+
+  it('an offline user shows when they were last online, above the fetched dates', async () => {
+    renderProfile({ allUsers: new Map([[user.id, { ...user, lastSeenAt: yesterdayAt1011() }]]) });
+    const lastSeen = screen.getByText('Última vez online');
+    expect(lastSeen.nextElementSibling).toHaveTextContent('ontem às 10:11');
+    const memberSince = await screen.findByText('Membro desde');
+    expect(lastSeen.compareDocumentPosition(memberSince) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('an online user shows the current status instead of the last visit', async () => {
+    renderProfile({ allUsers: new Map([[user.id, { ...user, lastSeenAt: yesterdayAt1011() }]]), onlineUserIds: new Set(['u1']) });
+    expect(screen.getByText('Status').nextElementSibling).toHaveTextContent('Online');
+    expect(screen.queryByText('Última vez online')).not.toBeInTheDocument();
+    expect(await screen.findByText('Membro desde')).toBeInTheDocument();
+  });
+
+  it('an offline user with no recorded visit reads as Offline', async () => {
+    renderProfile({ allUsers: new Map([[user.id, { ...user, lastSeenAt: null }]]) });
+    expect(screen.getByText('Status').nextElementSibling).toHaveTextContent('Offline');
+    expect(await screen.findByText('Membro desde')).toBeInTheDocument();
   });
 
   it('lists the connections under their label, one per line, opening the site', async () => {

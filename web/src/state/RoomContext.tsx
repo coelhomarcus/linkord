@@ -153,6 +153,8 @@ export interface RoomContextValue {
   /** The friend subset of allUsers — see usePresence.ts's own comment. */
   friendUserIds: Set<string>;
   kickFromCall: (participantId: string) => void;
+  /** asks the server to move someone to another voice channel of the same server */
+  moveToCall: (participantId: string, conversationId: string) => void;
   actionError: string | null;
   socialRevision: number;
   clearActionError: () => void;

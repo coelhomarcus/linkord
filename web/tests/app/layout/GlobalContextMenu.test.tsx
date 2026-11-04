@@ -31,6 +31,38 @@ describe('GlobalContextMenu', () => {
     });
   });
 
+  it('leaves someone in a voice channel list to the voice member menu, even though it carries a user', async () => {
+    const onMemberMenu = vi.fn();
+    renderWithRoom(
+      <GlobalContextMenu onOpenProfile={vi.fn()}>
+        <li data-voice-member="p-bea" data-user-id="u-bea" data-testid="member" onContextMenu={onMemberMenu} />
+      </GlobalContextMenu>,
+      { state: userState },
+    );
+
+    fireEvent.contextMenu(screen.getByTestId('member'));
+
+    expect(onMemberMenu).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(document.querySelector('[data-slot="context-menu-content"][data-open]')).not.toBeInTheDocument();
+    });
+  });
+
+  it('a long press on someone in a voice channel list still reaches the voice member menu', () => {
+    const onMemberMenu = vi.fn();
+    renderWithRoom(
+      <GlobalContextMenu onOpenProfile={vi.fn()}>
+        <li data-voice-member="p-bea" data-testid="member" onContextMenu={onMemberMenu} />
+      </GlobalContextMenu>,
+      { state: userState },
+    );
+
+    fireEvent.touchStart(screen.getByTestId('member'));
+    fireEvent.contextMenu(screen.getByTestId('member'));
+
+    expect(onMemberMenu).toHaveBeenCalled();
+  });
+
   it('does not offer hide-audio-only on the call stage', async () => {
     renderWithRoom(
       <GlobalContextMenu onOpenProfile={vi.fn()}>

@@ -8,19 +8,22 @@ import { useRoom } from '@/state/RoomContext';
 import { ServerIcon } from '@/features/servers/ServerIcon';
 import type { PublicUser } from '@/shared/types/protocol';
 import { bannerStyle } from './profileLinks';
+import { lastSeenField } from './formatLastSeen';
 import { formatProfileDate, useProfileDetails } from './useProfileDetails';
 
 const SHOWN_MUTUALS = 5;
 const SECTION = 'flex flex-col gap-1';
 
-/** The profile beside a DM, as Discord draws it: banner, avatar, bio, since
- * when, and what you have in common, with the full profile one click away. */
+/** The profile beside a DM, as Discord draws it: banner, avatar, bio, when
+ * last online, since when, and what you have in common, with the full
+ * profile one click away. */
 export function DirectProfilePanel({ user, onOpenProfile }: { user: PublicUser; onOpenProfile: (userId: string) => void }) {
   const { t } = useTranslation('profile');
   const navigate = useNavigate();
   const { onlineUserIds } = useRoom();
   const { details } = useProfileDetails(user.id);
   const online = onlineUserIds.has(user.id);
+  const presence = lastSeenField(online, user.lastSeenAt);
   const servers = details?.mutualServers;
   const friends = details?.mutualFriends;
 
@@ -44,17 +47,19 @@ export function DirectProfilePanel({ user, onOpenProfile }: { user: PublicUser; 
           <p className="truncate text-label text-text-primary">{user.username}</p>
         </div>
         <div className="mt-4 flex flex-col gap-4">
-          {(user.bio || details) && (
-            <section className={SECTION}>
-              {user.bio && <p className="mb-2 whitespace-pre-wrap wrap-break-word text-label text-text-primary">{user.bio}</p>}
-              {details && (
-                <>
-                  <h3 className="text-caption font-semibold text-text-primary">{t('modal.memberSince')}</h3>
-                  <p className="text-label text-text-secondary">{formatProfileDate(details.memberSince)}</p>
-                </>
-              )}
-            </section>
-          )}
+          <section className="flex flex-col gap-3">
+            {user.bio && <p className="whitespace-pre-wrap wrap-break-word text-label text-text-primary">{user.bio}</p>}
+            <div className={SECTION}>
+              <h3 className="text-caption font-semibold text-text-primary">{presence.label}</h3>
+              <p className="text-label text-text-secondary">{presence.value}</p>
+            </div>
+            {details && (
+              <div className={SECTION}>
+                <h3 className="text-caption font-semibold text-text-primary">{t('modal.memberSince')}</h3>
+                <p className="text-label text-text-secondary">{formatProfileDate(details.memberSince)}</p>
+              </div>
+            )}
+          </section>
           {servers && servers.total > 0 && (
             <section className={SECTION}>
               <h3 className="mb-1 text-caption font-semibold text-text-primary">{t('panel.mutualServers', { count: servers.total })}</h3>

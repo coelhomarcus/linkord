@@ -88,7 +88,7 @@ describe('ConversationPanel — call button', () => {
   });
 });
 
-describe('ConversationPanel — DM subtitle', () => {
+describe('ConversationPanel — DM header', () => {
   const direct: Conversation = {
     id: 'c1', type: 'direct', title: '', serverId: null, memberIds: ['me', 'peer'],
     lastMessageAt: null, createdAt: 0, updatedAt: 0, pinnedAt: null,
@@ -118,19 +118,22 @@ describe('ConversationPanel — DM subtitle', () => {
 
   afterEach(() => { vi.clearAllMocks(); });
 
-  it('shows Online when the peer is connected', () => {
+  // presence moved to the profile (DirectProfilePanel, ProfileModal)
+  it('shows no status when the peer is connected', () => {
     renderDm(true, peer.lastSeenAt ?? null);
-    expect(screen.getByText('Online')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Peer' })).toBeInTheDocument();
+    expect(screen.queryByText('Online')).not.toBeInTheDocument();
   });
 
-  it('shows last seen when the peer is offline', () => {
+  it('shows no last seen when the peer is offline', () => {
     renderDm(false, new Date(2026, 9, 24, 14, 32).toISOString());
-    expect(screen.getByText(/^Última vez online /)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Peer' })).toBeInTheDocument();
+    expect(screen.queryByText(/Última vez online|às 14:32/)).not.toBeInTheDocument();
   });
 
-  it('falls back to Offline without a timestamp', () => {
+  it('shows no Offline without a timestamp', () => {
     renderDm(false, null);
-    expect(screen.getByText('Offline')).toBeInTheDocument();
+    expect(screen.queryByText('Offline')).not.toBeInTheDocument();
   });
 });
 

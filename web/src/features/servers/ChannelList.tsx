@@ -3,9 +3,9 @@ import {
   SpeakerHighIcon, UserPlusIcon,
 } from '@phosphor-icons/react';
 import { useRef, useState } from 'react';
+import type { DragEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { Avatar } from '@/shared/Avatar';
 import { ConfirmDialog } from '@/shared/ConfirmDialog';
 import { ActiveFill } from '@/shared/ui/active-fill';
 import {
@@ -21,8 +21,9 @@ import { PERMISSIONS } from './permissionBits';
 import { CreateChannelDialog, type CreateTarget } from './CreateChannelDialog';
 import { ServerInviteDialog } from './ServerInviteDialog';
 import { leaveServer } from './serversApi';
-import { can, canInChannel, canOpenSettings, groupChannels } from './serverUtils';
+import { can, canInChannel, canMoveInto, canOpenSettings, groupChannels } from './serverUtils';
 import { useServerSettings } from './ServerSettingsContext';
+import { VoiceMembers, type VoiceDrag } from './VoiceMembers';
 
 const COLLAPSED_KEY = (serverId: string) => `ss-collapsed-categories:${serverId}`;
 
@@ -30,37 +31,35 @@ function loadCollapsed(serverId: string): Set<string> {
   try { return new Set(JSON.parse(localStorage.getItem(COLLAPSED_KEY(serverId)) ?? '[]') as string[]); } catch { return new Set(); }
 }
 
-function VoiceMembers({ channelId }: { channelId: string }) {
-  const { state, activeCallConversationId } = useRoom();
-  const others = [...state.participants.values()].filter((p) => p.callConversationId === channelId);
-  const people = activeCallConversationId === channelId
-    ? [{ id: state.me.id ?? 'me', userId: state.me.userId ?? 'me', displayName: state.me.displayName, avatar: state.me.avatar, avatarPoster: state.me.avatarPoster, avatarColor: state.me.avatarColor, speaking: false }, ...others]
-    : others;
-  if (!people.length) return null;
-  return (
-    <ul className="mb-1 ml-8 flex flex-col">
-      {people.map((p) => (
-        <li key={p.id} className="flex items-center gap-2 rounded-sm px-2 py-1 text-label text-text-secondary">
-          <Avatar id={p.userId} name={p.displayName} avatar={p.avatar} poster={p.avatarPoster} avatarColor={p.avatarColor} size={24}
-            className={cn('ring-2', p.speaking ? 'ring-green' : 'ring-transparent')} />
-          <span className="truncate">{p.displayName}</span>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function ChannelRow({ server, channel, active, onOpen, onInvite }: {
+function ChannelRow({ server, channel, active, onOpen, onInvite, onOpenProfile, drag, onDragChange }: {
   server: ServerSummary; channel: ChannelSummary; active: boolean; onOpen: () => void; onInvite: () => void;
+  onOpenProfile: (userId: string) => void; drag: VoiceDrag | null; onDragChange: (drag: VoiceDrag | null) => void;
 }) {
   const { t } = useTranslation('servers');
-  const { unreadByConversation } = useRoom();
+  const { state, unreadByConversation, moveToCall } = useRoom();
   const { openChannelSettings } = useServerSettings();
+  const [dropping, setDropping] = useState(false);
   const unread = channel.type === 'text' ? unreadByConversation.get(channel.id) ?? 0 : 0;
   const Icon = channel.type === 'voice' ? SpeakerHighIcon : HashIcon;
+  // someone dragged out of another voice channel can land in this one
+  const accepts = channel.type === 'voice' && !!drag && drag.fromChannelId !== channel.id && canMoveInto(channel, state.me.role === 'admin');
+  const dropHandlers = accepts ? {
+    onDragOver: (event: DragEvent) => { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; setDropping(true); },
+    onDragLeave: (event: DragEvent) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDropping(false); },
+    onDrop: (event: DragEvent) => {
+      event.preventDefault();
+      setDropping(false);
+      moveToCall(drag.participantId, channel.id);
+      onDragChange(null);
+    },
+  } : {};
   return (
-    <li data-channel-id={channel.id}>
-      <div className={cn('group/channel relative isolate mx-2 flex h-8 items-center rounded-lg', active ? 'text-text-primary' : unread ? 'text-text-primary' : 'text-text-muted hover:bg-nav-hover hover:text-text-primary')}>
+    <li data-channel-id={channel.id} data-drop-target={accepts && dropping ? '' : undefined} {...dropHandlers}>
+      <div className={cn(
+        'group/channel relative isolate mx-2 flex h-8 items-center rounded-lg',
+        active ? 'text-text-primary' : unread ? 'text-text-primary' : 'text-text-muted hover:bg-nav-hover hover:text-text-primary',
+        accepts && dropping && 'bg-nav-hover text-text-primary ring-2 ring-ring',
+      )}>
         {active && <ActiveFill />}
         {unread > 0 && !active && <span aria-hidden className="absolute -left-2 top-1/2 h-2 w-1 -translate-y-1/2 rounded-r-full bg-text-primary" />}
         <button type="button" onClick={onOpen} aria-current={active ? 'page' : undefined} className="flex h-full min-w-0 flex-1 items-center gap-1.5 px-2 text-left">
@@ -82,14 +81,16 @@ function ChannelRow({ server, channel, active, onOpen, onInvite }: {
           )}
         </span>
       </div>
-      {channel.type === 'voice' && <VoiceMembers channelId={channel.id} />}
+      {channel.type === 'voice' && <VoiceMembers server={server} channel={channel} onOpenProfile={onOpenProfile} drag={drag} onDragChange={onDragChange} />}
     </li>
   );
 }
 
 /** A server's column: its name and menu on top, then its channels by
  * category, with who is in each voice channel listed under it. */
-export function ChannelList({ server, activeChannelId, onNavigate }: { server: ServerSummary; activeChannelId: string | null; onNavigate?: () => void }) {
+export function ChannelList({ server, activeChannelId, onNavigate, onOpenProfile }: {
+  server: ServerSummary; activeChannelId: string | null; onNavigate?: () => void; onOpenProfile: (userId: string) => void;
+}) {
   const { t } = useTranslation('servers');
   const navigate = useNavigate();
   const { openCall, activeCallConversationId } = useRoom();
@@ -98,6 +99,7 @@ export function ChannelList({ server, activeChannelId, onNavigate }: { server: S
   const [inviteOpen, setInviteOpen] = useState<{ channelId?: string } | null>(null);
   const [createTarget, setCreateTarget] = useState<CreateTarget | null>(null);
   const [confirmLeave, setConfirmLeave] = useState(false);
+  const [drag, setDrag] = useState<VoiceDrag | null>(null);
   const [leaveError, setLeaveError] = useState<string | null>(null);
   const canManageChannels = can(server, PERMISSIONS.MANAGE_CHANNELS);
   // the menu opens centred under the whole header, as Discord's does, not under the name
@@ -188,7 +190,8 @@ export function ChannelList({ server, activeChannelId, onNavigate }: { server: S
                 <ul className="flex flex-col gap-0.5">
                   {shown.map((channel) => (
                     <ChannelRow key={channel.id} server={server} channel={channel} active={channel.id === activeChannelId}
-                      onOpen={() => open(channel)} onInvite={() => setInviteOpen({ channelId: channel.id })} />
+                      onOpen={() => open(channel)} onInvite={() => setInviteOpen({ channelId: channel.id })}
+                      onOpenProfile={onOpenProfile} drag={drag} onDragChange={setDrag} />
                   ))}
                 </ul>
               </section>

@@ -11,7 +11,6 @@ import { Button } from '@/shared/ui/primitives/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
 import { Avatar } from '@/shared/Avatar';
 import { useRoom } from '@/state/RoomContext';
-import { formatLastSeen } from '@/shared/lib/formatLastSeen';
 import { conversationTitle, directUser } from './conversationUtils';
 import { ChatSurface } from '@/features/chat/ChatSurface';
 import { useRelationship } from '@/features/friends/useRelationship';
@@ -70,9 +69,8 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
   const title = conversationTitle(conversation, state.me.userId, allUsers);
   const other = directUser(conversation, state.me.userId, allUsers);
   const online = other ? onlineUserIds.has(other.id) : false;
-  const subtitle = isChannel
-    ? conversation?.topic ?? ''
-    : other ? (online ? t('panel.online') : formatLastSeen(other.lastSeenAt)) : '';
+  // a DM's presence lives on the profile (side panel and modal), not here
+  const subtitle = isChannel ? conversation?.topic ?? '' : '';
   // `state.participants` only ever holds OTHER people (the server excludes
   // yourself from it) — my own row in this list has to come from `state.me`
   // instead, gated on whether I'm actually the one in this call.

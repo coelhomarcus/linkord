@@ -199,6 +199,19 @@ function Shell() {
     pendingStageRef.current = null;
     navigate(ROUTES.direct(dmStageId), { replace: true });
   }, [dmStageId, stageConversationId, showStage, state.joined, state.callJoinError, navigate]);
+  // A moderator's move lands this connection in another channel's call
+  // without it navigating anywhere: whoever was watching the old channel's
+  // stage follows the call to the new one instead of being left at a lobby.
+  const lastCallIdRef = useRef<string | null>(null);
+  const voiceChannelOnPathId = voiceChannelOnPath?.id ?? null;
+  useEffect(() => {
+    if (!activeCallConversationId) return;
+    const last = lastCallIdRef.current;
+    lastCallIdRef.current = activeCallConversationId;
+    if (!last || last === activeCallConversationId || voiceChannelOnPathId !== last) return;
+    const moved = conversationsRef.current.find((c) => c.id === activeCallConversationId);
+    if (moved?.type === 'voice' && moved.serverId) navigate(ROUTES.channel(moved.serverId, moved.id), { replace: true });
+  }, [activeCallConversationId, voiceChannelOnPathId, navigate]);
   const joinFailedId = state.callJoinError?.conversationId ?? null;
   useEffect(() => {
     if (!stageConversationId || showStage || pendingStageRef.current !== stageConversationId || joinFailedId === stageConversationId) return;
@@ -293,7 +306,7 @@ function Shell() {
         {/* Discord's one framed panel: the list and the content side by side
             under a shared hairline, rounded once at its top-left corner */}
         <div className="flex min-h-0 min-w-0 flex-1 md:overflow-hidden md:rounded-tl-[12px] md:border-l md:border-t md:border-border-subtle">
-        <ConversationSidebar />
+        <ConversationSidebar onOpenProfile={setProfileUserId} />
         <SidebarInset className={`relative min-h-0 overflow-hidden bg-surface-panel [--surface-base:var(--color-surface-panel)] ${mobileListPage ? 'max-md:hidden' : ''} ${mobileMainPage ? 'max-md:pb-[var(--mobile-navigation-height)]' : ''}`}>
           <div className="flex h-full min-h-0">
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">

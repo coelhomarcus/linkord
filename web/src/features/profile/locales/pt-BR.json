@@ -37,6 +37,15 @@
     "banner": "Banner",
     "avatar": "Foto de perfil"
   },
+  "lastSeen": {
+    "label": "Última vez online",
+    "status": "Status",
+    "online": "Online",
+    "offline": "Offline",
+    "today": "hoje às {{time}}",
+    "yesterday": "ontem às {{time}}",
+    "date": "{{date}} às {{time}}"
+  },
   "mutuals": {
     "title": "Em comum",
     "friendsTitle": "Amigos mútuos",

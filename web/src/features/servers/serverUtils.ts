@@ -31,6 +31,16 @@ export function firstTextChannel(server: ServerSummary): ChannelSummary | null {
 export const can = (server: ServerSummary | null | undefined, bit: number) => !!server && hasPermission(server.permissions, bit);
 export const canInChannel = (channel: { permissions?: number } | null | undefined, bit: number) => !!channel && hasPermission(channel.permissions ?? 0, bit);
 
+/** Whether to offer moving (or disconnecting) someone out of this voice
+ * channel. Mirrors the server's canMoveInCall without the hierarchy part,
+ * which only the server can judge: a refusal comes back as an error. */
+export const canMoveOutOf = (channel: { permissions?: number }, meIsAdmin: boolean) =>
+  meIsAdmin || canInChannel(channel, PERMISSIONS.MOVE_MEMBERS);
+
+/** Whether this voice channel can take someone moved into it. */
+export const canMoveInto = (channel: { permissions?: number }, meIsAdmin: boolean) =>
+  meIsAdmin || canInChannel(channel, PERMISSIONS.CONNECT);
+
 /** Whether anything in server settings is the member's to change. */
 export function canOpenSettings(server: ServerSummary): boolean {
   return can(server, PERMISSIONS.MANAGE_SERVER) || can(server, PERMISSIONS.MANAGE_ROLES) || can(server, PERMISSIONS.MANAGE_CHANNELS)
@@ -39,6 +49,22 @@ export function canOpenSettings(server: ServerSummary): boolean {
 
 export function serverUnread(server: ServerSummary, unreadByConversation: Map<string, number>): number {
   return server.channels.reduce((sum, c) => sum + (c.type === 'text' ? unreadByConversation.get(c.id) ?? 0 : 0), 0);
+}
+
+/** Every call someone is in right now. `participants` only ever holds OTHER
+ * people (the server leaves the account itself out), so the viewer's own call
+ * comes in separately. */
+export function liveCallIds(participants: Iterable<{ callConversationId: string | null }>, ownCallId: string | null): Set<string> {
+  const ids = new Set<string>();
+  for (const p of participants) if (p.callConversationId) ids.add(p.callConversationId);
+  if (ownCallId) ids.add(ownCallId);
+  return ids;
+}
+
+/** Whether anyone is in one of the server's voice channels. Only channels the
+ * member can see are in `server.channels`, so a private call stays unseen. */
+export function serverHasLiveCall(server: ServerSummary, callIds: Set<string>): boolean {
+  return server.channels.some((c) => c.type === 'voice' && callIds.has(c.id));
 }
 
 /** The colour a member's name shows in: their highest role that has one. */

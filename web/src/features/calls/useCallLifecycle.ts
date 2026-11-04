@@ -114,6 +114,12 @@ export function useCallLifecycle(deps: CallLifecycleDeps) {
   useEffect(() => { leaveCallRef.current = leaveCall; }, [leaveCall]);
 
   const kickFromCall = useCallback((participantId: string) => sendWs({ t: 'call-kick', participantId }), [sendWs]);
+  const moveToCall = useCallback((participantId: string, conversationId: string) => sendWs({ t: 'call-move', participantId, conversationId }), [sendWs]);
+
+  /** A moderator moved this connection: the server already took it out of
+   * the old room, so this is an ordinary join of the new one (with the
+   * account's own permissions, and the same mute/deafen it had). */
+  const onCallMoved = useCallback((conversationId: string) => { void joinCall(conversationId); }, [joinCall]);
 
   const onCallToken = useCallback((m: { conversationId: string; livekitUrl: string; livekitToken: string }) => {
     if (m.conversationId !== pendingCallConversationIdRef.current) return;
@@ -239,7 +245,7 @@ export function useCallLifecycle(deps: CallLifecycleDeps) {
 
   return {
     audioUnlocked, deafened, toggleDeafened, preferMuted, setPreferMuted, reconnecting,
-    activeCallConversationId, joinCall, leaveCall, kickFromCall,
-    onCallToken, onConversationDeleted, onCallJoinRejected,
+    activeCallConversationId, joinCall, leaveCall, kickFromCall, moveToCall,
+    onCallToken, onCallMoved, onConversationDeleted, onCallJoinRejected,
   };
 }

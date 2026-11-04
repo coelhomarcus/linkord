@@ -1,4 +1,4 @@
-import { PlusIcon, SidebarSimpleIcon } from '@phosphor-icons/react';
+import { PlusIcon, SidebarSimpleIcon, SpeakerHighIcon } from '@phosphor-icons/react';
 import { useMemo, useRef, useState } from 'react';
 import type { CSSProperties, DragEvent, HTMLAttributes, ReactNode } from 'react';
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core';
@@ -17,7 +17,7 @@ import { useFriends } from '@/features/friends/FriendsContext';
 import { useRoom } from '@/state/RoomContext';
 import { ServerIcon } from './ServerIcon';
 import { CreateServerDialog } from './CreateServerDialog';
-import { serverUnread } from './serverUtils';
+import { liveCallIds, serverHasLiveCall, serverUnread } from './serverUtils';
 import { saveServerOrder } from './serversApi';
 
 // the rail is one column: a dragged server only travels up and down it
@@ -42,13 +42,23 @@ function Pill({ active, unread }: { active: boolean; unread: boolean }) {
   );
 }
 
-function RailItem({ label, active, unread, badge, onClick, children, dragging = false, sortable }: {
+// The tile's corners, each with one job: the live-call seal top-right, the
+// unread count bottom-right, so the two never sit on each other.
+const CORNER = 'pointer-events-none absolute ring-4 ring-surface-rail';
+
+function RailItem({ label, active, unread, badge, badgeLabel, badgeClassName, liveCall, onClick, children, dragging = false, sortable }: {
   label: string; active: boolean; unread: boolean; badge?: number; onClick: () => void; children: ReactNode;
+  /** what the count means, for the item's accessible name; without it the count is left out of the name */
+  badgeLabel?: string;
+  badgeClassName?: string;
+  /** set while a voice channel has someone in it: the seal's wording */
+  liveCall?: string;
   /** while this item is the one being dragged: no tooltip trailing it */
   dragging?: boolean;
   /** what makes the item a handle of the rail's sortable list */
   sortable?: { ref: (node: HTMLElement | null) => void; style: CSSProperties; props: HTMLAttributes<HTMLElement> };
 }) {
+  const accessibleName = [label, badge ? badgeLabel : undefined, liveCall].filter(Boolean).join(', ');
   return (
     <Tooltip disabled={dragging}>
       <TooltipTrigger
@@ -57,7 +67,7 @@ function RailItem({ label, active, unread, badge, onClick, children, dragging = 
         style={sortable?.style}
         onClick={onClick}
         onDragStart={blockNativeDrag}
-        aria-label={label}
+        aria-label={accessibleName}
         aria-current={active ? 'page' : undefined}
         className={cn(
           'group/server relative grid size-10 flex-none touch-none select-none place-items-center rounded-[12px] outline-none [-webkit-user-drag:none] focus-visible:ring-2 focus-visible:ring-ring',
@@ -66,13 +76,26 @@ function RailItem({ label, active, unread, badge, onClick, children, dragging = 
       >
         <Pill active={active} unread={unread} />
         {children}
+        {liveCall && (
+          <span aria-hidden data-testid="live-call-seal" className={cn(CORNER, '-right-1 -top-1 grid size-4.5 place-items-center rounded-full bg-green-solid text-white')}>
+            <SpeakerHighIcon size={10} weight="fill" />
+          </span>
+        )}
         {!!badge && (
-          <CountBadge decorative className="absolute -bottom-1 -right-1 ring-4 ring-surface-rail">
+          <CountBadge decorative className={cn(CORNER, '-bottom-1 -right-1', badgeClassName)}>
             {badge > 99 ? '99+' : badge}
           </CountBadge>
         )}
       </TooltipTrigger>
-      <TooltipContent side="right" className="text-label font-semibold">{label}</TooltipContent>
+      <TooltipContent side="right" className="flex flex-col gap-0.5 text-label font-semibold">
+        <span>{label}</span>
+        {liveCall && (
+          <span className="flex items-center gap-1 text-caption font-medium">
+            <SpeakerHighIcon size={12} weight="fill" className="text-green" aria-hidden />
+            {liveCall}
+          </span>
+        )}
+      </TooltipContent>
     </Tooltip>
   );
 }
@@ -98,7 +121,8 @@ export function ServerRail({ className }: { className?: string }) {
   const { t } = useTranslation('servers');
   const navigate = useNavigate();
   const { pathname } = useContentLocation();
-  const { servers, conversations, unreadByConversation, reorderServers } = useRoom();
+  const { state, servers, conversations, unreadByConversation, reorderServers, activeCallConversationId } = useRoom();
+  const callIds = useMemo(() => liveCallIds(state.participants.values(), activeCallConversationId), [state.participants, activeCallConversationId]);
   // a press only becomes a drag past a few pixels, so a click still opens the server
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   const draggedAtRef = useRef(0);
@@ -158,6 +182,10 @@ export function ServerRail({ className }: { className?: string }) {
                 label={server.name}
                 active={server.id === currentServerId}
                 unread={unread > 0}
+                badge={unread}
+                badgeLabel={t('rail.unread', { count: unread })}
+                badgeClassName="bg-red text-white"
+                liveCall={serverHasLiveCall(server, callIds) ? t('rail.liveCall') : undefined}
                 onClick={() => go(ROUTES.server(server.id))}
               >
                 <ServerIcon id={server.id} name={server.name} icon={server.icon} size={40} className={server.status === 'suspended' ? 'opacity-40 grayscale' : undefined} />

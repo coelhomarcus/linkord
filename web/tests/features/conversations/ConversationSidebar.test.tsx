@@ -42,7 +42,7 @@ function renderSidebar(path = '/app/channels/@me', overrides: { unreadByConversa
   const conversations = [direct('dm-bea', 'u-bea'), direct('dm-caio', 'u-caio'), ...server.channels.map((c) => channelConversation(server, c))];
   return renderSocial(
     <SidebarProvider open onOpenChange={vi.fn()} openMobile={false} onOpenMobileChange={vi.fn()}>
-      <ConversationSidebar />
+      <ConversationSidebar onOpenProfile={vi.fn()} />
       <CurrentPath />
     </SidebarProvider>,
     {

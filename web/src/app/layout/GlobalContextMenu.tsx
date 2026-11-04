@@ -29,9 +29,10 @@ function isEditableTarget(target: EventTarget | null): boolean {
   );
 }
 
-/** Call stage / tiles open TileMenu locally — the global menu must not swallow their contextmenu. */
+/** Call stage / tiles open TileMenu locally, and someone in a voice channel's
+ * list opens the voice member menu — the global menu must not swallow their contextmenu. */
 function isDelegatedContextMenuTarget(element: Element | null): boolean {
-  return !!element?.closest('[data-stage]') || !!element?.closest('[data-tile-kind]');
+  return !!element?.closest('[data-stage]') || !!element?.closest('[data-tile-kind]') || !!element?.closest('[data-voice-member]');
 }
 
 export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenuProps) {
@@ -96,6 +97,11 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
       const element = e.target instanceof Element ? e.target : null;
       const touch = e.type === 'touchstart';
       const recentTouch = Date.now() - touchTargetRef.current.at < 1500;
+      if (touch && element?.closest('[data-voice-member]')) {
+        // a long press there opens the voice member menu, which handles it itself
+        touchTargetRef.current = { at: Date.now(), blocked: false };
+        return;
+      }
       if (touch) {
         const message = element?.closest('[data-message-id]');
         const conversation = element?.closest('[data-conversation-id]');
