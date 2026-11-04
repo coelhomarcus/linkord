@@ -16,6 +16,7 @@ import { cn } from '@/shared/lib/utils';
 import { ProfileConnections } from './ProfileConnections';
 import { ProfileMutuals } from './ProfileMutuals';
 import { formatProfileDate, useProfileDetails } from './useProfileDetails';
+import { lastSeenField } from './formatLastSeen';
 
 interface ProfileModalProps {
   userId: string | null;
@@ -64,6 +65,8 @@ export function ProfileModal({ userId, onClose, onOpenProfile }: ProfileModalPro
   const details = useProfileDetails(open ? userId : null);
   // your own profile has nothing in common to list: it stays one column
   const showMutuals = !!user && user.id !== state.me.userId;
+  const online = !!user && onlineUserIds.has(user.id);
+  const presence = user ? lastSeenField(online, user.lastSeenAt) : null;
 
   function openServer(serverId: string) {
     navigate(ROUTES.server(serverId));
@@ -112,7 +115,7 @@ export function ProfileModal({ userId, onClose, onOpenProfile }: ProfileModalPro
               <ProfileCard
                 bare
                 user={user}
-                online={onlineUserIds.has(user.id)}
+                online={online}
                 onBannerClick={user.banner ? () => setLightboxImage({ src: user.banner, kind: 'banner' }) : undefined}
                 onAvatarClick={user.avatar ? () => setLightboxImage({ src: user.avatar, kind: 'avatar' }) : undefined}
                 // your own profile has no relationship to act on: the way to edit it sits by the name
@@ -128,22 +131,29 @@ export function ProfileModal({ userId, onClose, onOpenProfile }: ProfileModalPro
                   />
                 )}
                 hideLinks
-                footer={(details.details || (user.profileLinks ?? []).length > 0) && (
+                footer={(
                   <div className="mt-6 flex flex-col gap-5">
-                    {details.details && (
-                      <dl className="flex flex-col gap-5">
+                    {/* presence first: it is known at once, so the rows fetched after it don't push it down */}
+                    <dl className="flex flex-col gap-5">
+                      {presence && (
+                        <div>
+                          <dt className="text-label font-medium text-text-muted">{presence.label}</dt>
+                          <dd className="mt-1 text-body text-text-primary">{presence.value}</dd>
+                        </div>
+                      )}
+                      {details.details && (
                         <div>
                           <dt className="text-label font-medium text-text-muted">{t('modal.memberSince')}</dt>
                           <dd className="mt-1 text-body text-text-primary">{formatProfileDate(details.details.memberSince)}</dd>
                         </div>
-                        {details.details.friendsSince && (
-                          <div>
-                            <dt className="text-label font-medium text-text-muted">{t('modal.friendsSince')}</dt>
-                            <dd className="mt-1 text-body text-text-primary">{formatProfileDate(details.details.friendsSince)}</dd>
-                          </div>
-                        )}
-                      </dl>
-                    )}
+                      )}
+                      {details.details?.friendsSince && (
+                        <div>
+                          <dt className="text-label font-medium text-text-muted">{t('modal.friendsSince')}</dt>
+                          <dd className="mt-1 text-body text-text-primary">{formatProfileDate(details.details.friendsSince)}</dd>
+                        </div>
+                      )}
+                    </dl>
                     <ProfileConnections links={user.profileLinks ?? []} />
                   </div>
                 )}

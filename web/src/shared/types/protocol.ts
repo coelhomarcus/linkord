@@ -274,6 +274,10 @@ export type ClientMessage =
   | { t: 'call-join'; conversationId: string }
   | { t: 'call-leave' }
   | { t: 'call-kick'; participantId: string }
+  | { t: 'call-move'; participantId: string; conversationId: string }
+  | { t: 'stream-preview-request'; participantId: string }
+  // answers a `stream-preview-capture`: a JPEG data URL of the shared screen
+  | { t: 'stream-preview-frame'; image: string }
   | { t: 'soundboard-play'; conversationId: string; soundId: string }
   | { t: 'leave' }
   | { t: 'ping' };
@@ -293,6 +297,12 @@ export type ServerMessage =
       protocolVersion?: number;
     }
   | { t: 'call-token'; conversationId: string; livekitUrl: string; livekitToken: string }
+  // a moderator moved this connection: it already left its call, join this one
+  | { t: 'call-moved'; conversationId: string }
+  // someone hovered this connection's "ao vivo" badge: send a frame of the share
+  | { t: 'stream-preview-capture' }
+  // null when there is no still to show (not sharing anymore, no answer, no access)
+  | { t: 'stream-preview'; participantId: string; image: string | null }
   | { t: 'conversation-opened'; conversationId: string; conversation: DirectSummary }
   | { t: 'conversation-created'; conversation: DirectSummary }
   | { t: 'conversation-updated'; conversation: DirectSummary }

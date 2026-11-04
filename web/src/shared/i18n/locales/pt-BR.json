@@ -7,12 +7,6 @@
   "time": {
     "yesterdayAt": "Ontem às {{time}}"
   },
-  "lastSeen": {
-    "offline": "Offline",
-    "today": "Última vez online hoje às {{time}}",
-    "yesterday": "Última vez online ontem às {{time}}",
-    "date": "Última vez online em {{date}} às {{time}}"
-  },
   "confirm": {
     "confirm": "Confirmar",
     "cancel": "Cancelar"

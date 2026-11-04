@@ -3,7 +3,10 @@
     "label": "Servidores",
     "home": "Mensagens diretas",
     "add": "Adicionar um servidor",
-    "showList": "Mostrar canais e conversas"
+    "showList": "Mostrar canais e conversas",
+    "unread_one": "{{count}} mensagem não lida",
+    "unread_other": "{{count}} mensagens não lidas",
+    "liveCall": "Chamada de voz em andamento"
   },
   "topBar": {
     "friends": "Amigos",
@@ -257,8 +260,29 @@
     "CONNECT": "Entrar nos canais de voz.",
     "SPEAK": "Falar nos canais de voz.",
     "STREAM": "Ligar a câmera e compartilhar a tela.",
-    "MOVE_MEMBERS": "Desconectar membros abaixo do seu cargo de um canal de voz.",
+    "MOVE_MEMBERS": "Mover membros abaixo do seu cargo entre canais de voz, ou desconectá-los.",
     "USE_SOUNDBOARD": "Tocar e adicionar sons do soundboard.",
     "MANAGE_EXPRESSIONS": "Editar e remover os sons de qualquer pessoa."
+  },
+  "voiceMembers": {
+    "inChannel": "Na chamada de {{channel}}",
+    "status": {
+      "muted": "Microfone desativado",
+      "deafened": "Áudio desativado",
+      "camera": "Câmera ligada",
+      "live": "Ao vivo"
+    },
+    "previewOf": "Tela de {{name}}",
+    "previewLoading": "Carregando prévia",
+    "previewUnavailable": "Prévia indisponível",
+    "menu": {
+      "profile": "Ver perfil",
+      "message": "Enviar mensagem",
+      "muteForMe": "Silenciar para mim",
+      "unmuteForMe": "Reativar o som",
+      "volume": "Volume de {{name}}",
+      "moveTo": "Mover para",
+      "disconnect": "Desconectar"
+    }
   }
 }
