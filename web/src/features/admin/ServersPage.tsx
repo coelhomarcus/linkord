@@ -3,12 +3,12 @@ import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router';
 
-import { GroupAvatar } from '@/features/conversations/GroupAvatar';
+import { ServerIcon } from '@/features/servers/ServerIcon';
 import { buttonVariants } from '@/shared/ui/primitives/button';
 import { useUrlSearch } from '@/shared/hooks/useUrlSearch';
-import { fetchAdminBots } from './adminApi';
-import type { AdminBotRow } from './adminApi';
-import { formatDateShort, formatWhen, formatWhenShort } from './adminFormat';
+import { fetchAdminServers } from './adminApi';
+import type { AdminServerRow } from './adminApi';
+import { formatDateShort, formatWhen } from './adminFormat';
 import { AdminListToolbar, AdminSelectField } from './AdminListToolbar';
 import { AdminTable, AdminTd, AdminTh, AdminTr } from './AdminTable';
 import { Badge, ListChrome } from './adminUi';
@@ -27,45 +27,44 @@ const QUERY: QuerySchema<'q' | 'filter'> = {
   filter: { default: 'all', allowed: ['all', 'active', 'suspended', 'orphan'] },
 };
 
-function RowActions({ bot }: { bot: AdminBotRow }) {
+function RowActions({ server }: { server: AdminServerRow }) {
   const { t } = useTranslation('admin');
-  const name = bot.title || t('ui.noName', { kind: t('nav.bots').toLowerCase() });
+  const name = server.name || t('ui.noName', { kind: t('ui.server').toLowerCase() });
   return (
     <div className="flex items-center justify-end gap-0.5">
-      <CopyIdButton id={bot.id} label={t('ui.copyId', { name })} />
-      <AppLink to={`/admin/audit?targetId=${encodeURIComponent(bot.id)}`} aria-label={t('ui.viewHistory', { name })} className={buttonVariants({ variant: 'ghost', size: 'icon-sm' })}>
+      <CopyIdButton id={server.id} label={t('ui.copyId', { name })} />
+      <AppLink to={`/admin/audit?targetId=${encodeURIComponent(server.id)}`} aria-label={t('ui.viewHistory', { name })} className={buttonVariants({ variant: 'ghost', size: 'icon-sm' })}>
         <ClockCounterClockwiseIcon size={16} aria-hidden />
       </AppLink>
     </div>
   );
 }
 
-function BotIdentity({ bot, from }: { bot: AdminBotRow; from: { from: string } }) {
+function ServerIdentity({ server, from }: { server: AdminServerRow; from: { from: string } }) {
   const { t } = useTranslation('admin');
   return (
-    <AppLink to={`/admin/bots/${bot.id}`} state={from} className="flex min-w-0 items-center gap-3 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring">
-      <GroupAvatar id={bot.id} title={bot.title} avatar={bot.avatar} size={36} />
-      <span className="block min-w-0 truncate text-body font-medium text-text-primary">{bot.title || t('ui.noName', { kind: t('nav.bots').toLowerCase() })}</span>
+    <AppLink to={`/admin/servers/${server.id}`} state={from} className="flex min-w-0 items-center gap-3 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring">
+      <ServerIcon id={server.id} name={server.name} icon={server.icon} size={36} active />
+      <span className="block min-w-0 truncate text-body font-medium text-text-primary">{server.name || t('ui.noName', { kind: t('ui.server').toLowerCase() })}</span>
     </AppLink>
   );
 }
 
-/** A bot with no owner is a condition, not a status: it gets its own mark so it can't be mistaken for a suspension. */
-function Owner({ bot }: { bot: AdminBotRow }) {
+/** A server with no owner is a condition, not a status: it gets its own mark so it can't be mistaken for a suspension. */
+function Owner({ server }: { server: AdminServerRow }) {
   const { t } = useTranslation('admin');
-  if (!bot.ownerId) return <span className="inline-flex rounded-sm bg-yellow/15 px-1.5 py-0.5 text-micro font-medium text-yellow">{t('ui.noOwner')}</span>;
-  return <AppLink to={`/admin/users/${bot.ownerId}`} className="block max-w-full truncate text-text-secondary hover:underline">@{bot.ownerUsername}</AppLink>;
+  if (!server.ownerId) return <span className="inline-flex rounded-sm bg-yellow/15 px-1.5 py-0.5 text-micro font-medium text-yellow">{t('ui.noOwner')}</span>;
+  return <AppLink to={`/admin/users/${server.ownerId}`} className="block max-w-full truncate text-text-secondary hover:underline">@{server.ownerUsername}</AppLink>;
 }
 
-/** Every bot on the instance: who runs it, how many read it and how much it posts. */
-export function BotsPage() {
+export function ServersPage() {
   const { t } = useTranslation('admin');
   const { filters, update, clear, active, identity } = useAdminQuery(QUERY);
   const { pathname, search } = useLocation();
   const tableFits = useAdminTableFits();
   const { value: query, setValue: setQuery } = useUrlSearch(filters.q, (q) => update({ q }));
   const filter = filters.filter as StatusFilter;
-  const fetchPage = useCallback((cursor: string | null) => fetchAdminBots({
+  const fetchPage = useCallback((cursor: string | null) => fetchAdminServers({
     q: filters.q, status: filter === 'active' || filter === 'suspended' ? filter : undefined, orphan: filter === 'orphan',
   }, cursor), [filters.q, filter]);
   const list = useAdminList(fetchPage, identity, (g) => g.id);
@@ -74,33 +73,32 @@ export function BotsPage() {
   return (
     <div className="flex flex-col gap-4">
       <AdminListToolbar
-        search={{ value: query, onChange: setQuery, placeholder: t('ui.searchNameOrId'), label: t('ui.searchBots') }}
+        search={{ value: query, onChange: setQuery, placeholder: t('ui.searchNameOrId'), label: t('ui.searchServers') }}
         filters={(
           <AdminSelectField<StatusFilter> label={t('ui.state')} value={filter} onChange={(next) => update({ filter: next })}
             options={[{ value: 'all', label: t('ui.all') }, { value: 'active', label: t('ui.active') }, { value: 'suspended', label: t('ui.suspended') }, { value: 'orphan', label: t('ui.noOwner') }]} />
         )}
-        summary={list.status === 'ready' && list.items.length > 0 ? `${list.items.length} ${t('ui.bot', { count: list.items.length })}${list.hasMore ? t('ui.moreResults') : ''}` : undefined}
+        summary={list.status === 'ready' && list.items.length > 0 ? `${list.items.length} ${t('ui.server', { count: list.items.length })}${list.hasMore ? t('ui.moreResults') : ''}` : undefined}
         onClear={active ? clear : undefined}
       />
-      <ListChrome list={list} empty={t('ui.noBots')}>
+      <ListChrome list={list} empty={t('ui.noServers')}>
         {tableFits ? (
-          <AdminTable caption={t('ui.bots')}>
+          <AdminTable caption={t('ui.servers')}>
             <thead>
               <tr>
-                <AdminTh className="min-w-52">{t('nav.bots')}</AdminTh><AdminTh>{t('ui.status')}</AdminTh><AdminTh>{t('ui.owner')}</AdminTh><AdminTh>{t('ui.members')}</AdminTh><AdminTh>{t('ui.messages')}</AdminTh><AdminTh>{t('ui.lastDelivery')}</AdminTh><AdminTh>{t('ui.createdAt')}</AdminTh><AdminTh className="text-right">{t('ui.actions')}</AdminTh>
+                <AdminTh className="min-w-52">{t('nav.servers')}</AdminTh><AdminTh>{t('ui.status')}</AdminTh><AdminTh>{t('ui.owner')}</AdminTh><AdminTh>{t('ui.members')}</AdminTh><AdminTh>{t('ui.channels')}</AdminTh><AdminTh>{t('ui.createdAt')}</AdminTh><AdminTh className="text-right">{t('ui.actions')}</AdminTh>
               </tr>
             </thead>
             <tbody>
               {list.items.map((g) => (
                 <AdminTr key={g.id}>
-                  <AdminTd className="max-w-0 w-[28%]"><BotIdentity bot={g} from={origin} /></AdminTd>
+                  <AdminTd className="max-w-0 w-[34%]"><ServerIdentity server={g} from={origin} /></AdminTd>
                   <AdminTd><Badge value={g.status} /></AdminTd>
-                  <AdminTd className="max-w-40"><Owner bot={g} /></AdminTd>
+                  <AdminTd className="max-w-40"><Owner server={g} /></AdminTd>
                   <AdminTd>{g.memberCount}</AdminTd>
-                  <AdminTd>{g.messageCount}</AdminTd>
-                  <AdminTd className="whitespace-nowrap">{g.webhookLastUsedAt ? formatWhenShort(g.webhookLastUsedAt) : 'nunca'}</AdminTd>
+                  <AdminTd>{g.channelCount}</AdminTd>
                   <AdminTd className="whitespace-nowrap">{formatDateShort(g.createdAt)}</AdminTd>
-                  <AdminTd><RowActions bot={g} /></AdminTd>
+                  <AdminTd><RowActions server={g} /></AdminTd>
                 </AdminTr>
               ))}
             </tbody>
@@ -110,15 +108,13 @@ export function BotsPage() {
             {list.items.map((g) => (
               <li key={g.id} className="flex flex-col gap-2 p-3">
                 <div className="flex items-center gap-2">
-                  <div className="min-w-0 flex-1"><BotIdentity bot={g} from={origin} /></div>
-                  <RowActions bot={g} />
+                  <div className="min-w-0 flex-1"><ServerIdentity server={g} from={origin} /></div>
+                  <RowActions server={g} />
                 </div>
                 <div className="flex flex-wrap items-center gap-2 text-caption text-text-muted">
                   <Badge value={g.status} />
-                  <Owner bot={g} />
+                  <Owner server={g} />
                   <span>{g.memberCount} {t('ui.member', { count: g.memberCount })}</span>
-                  <span>{g.messageCount} {t('ui.message', { count: g.messageCount })}</span>
-                  <span>{t('ui.lastDelivery').toLowerCase()} {g.webhookLastUsedAt ? formatWhen(g.webhookLastUsedAt) : t('ui.never')}</span>
                   <span>{t('ui.created')} {formatWhen(g.createdAt)}</span>
                 </div>
               </li>

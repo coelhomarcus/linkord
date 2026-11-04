@@ -17,7 +17,7 @@ const user = (id: string): adminApi.AdminUserRow => ({
 });
 const detail = (id: string): adminApi.AdminUserDetail => ({
   user: { ...user(id), email: `${id}@example.com`, statusReason: '', statusChangedAt: null },
-  groups: [], storage: { bytes: 0, files: 0 }, history: [],
+  servers: [], storage: { bytes: 0, files: 0 }, history: [],
 });
 
 const scrollTo = vi.fn();
