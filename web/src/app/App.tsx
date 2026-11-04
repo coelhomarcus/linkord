@@ -27,7 +27,6 @@ import { ConversationMediaPanel } from '@/features/conversations/ConversationMed
 import { ChatSearchDialog } from '@/features/chat/ChatSearchDialog';
 import { Stage } from '@/features/calls/Stage';
 import { CallConnectingScreen } from '@/features/calls/CallConnectingScreen';
-import { CallChatPanel } from '@/features/calls/CallChatPanel';
 import { ParticipantAudioLayer } from '@/features/calls/ParticipantAudioLayer';
 import { FloatingPip } from '@/features/calls/FloatingPip';
 import { APP_TITLE, callParticipantIds, conversationDocumentTitle, conversationTitle, directUser } from '@/features/conversations/conversationUtils';
@@ -129,7 +128,6 @@ function Shell() {
   // list starts closed
   const [profilePanelOpen, setProfilePanelOpen] = useState(true);
   const [mediaOpen, setMediaOpen] = useState(false);
-  const [callChatOpen, setCallChatOpen] = useState(false);
   const pendingStageRef = useRef<string | null>(null);
 
   const [sidebarOpen, setSidebarOpenState] = useState(() => !loadSidebarCollapsed());
@@ -222,8 +220,7 @@ function Shell() {
   // what the user is looking at, not the last view picked. The call's side
   // chat is the conversation on screen: a message arriving then was seen.
   const visibleConversationId = voiceChannelOnPath ? null : conversationIdFromPath(contentLocation.pathname);
-  const callChatShown = callChatOpen && !!activeCallConversationId && conversations.some((conversation) => conversation.id === activeCallConversationId);
-  const chatView = chatViewFor({ stageShown: showStage, callChatShown, visibleConversationId, activeConversationId });
+  const chatView = chatViewFor({ stageShown: showStage, visibleConversationId, activeConversationId });
   useEffect(() => { notifyActiveView(chatView); }, [chatView, notifyActiveView]);
 
   const activeConversation = conversations.find((conversation) => conversation.id === (visibleConversationId ?? stageConversationId ?? activeConversationId));
@@ -309,7 +306,7 @@ function Shell() {
               path="/app/channels/:serverId/:conversationId"
               element={voiceChannelOnPath ? (
                 showStage
-                  ? <Stage allIds={callIds} chatOpen={callChatOpen} onToggleChat={() => setCallChatOpen((v) => !v)} onBack={() => navigate(ROUTES.server(voiceChannelOnPath.serverId!))} />
+                  ? <Stage allIds={callIds} onBack={() => navigate(ROUTES.server(voiceChannelOnPath.serverId!))} />
                   : joiningStage ? <CallConnectingScreen onCancel={cancelPendingCall} /> : <VoiceChannelLobby channel={voiceChannelOnPath} onJoin={() => handleOpenCall(voiceChannelOnPath.id)} />
               ) : (
                 <ConversationPanel
@@ -326,7 +323,7 @@ function Shell() {
             />
             <Route path="/app/calls/:conversationId" element={stageConversationId ? (
               showStage
-                ? <Stage allIds={callIds} chatOpen={callChatOpen} onToggleChat={() => setCallChatOpen((v) => !v)} onBack={() => { if ((contentLocation.state as { from?: unknown } | null)?.from) navigate(-1); else navigate(ROUTES.direct(stageConversationId), { replace: true }); }} />
+                ? <Stage allIds={callIds} onBack={() => { if ((contentLocation.state as { from?: unknown } | null)?.from) navigate(-1); else navigate(ROUTES.direct(stageConversationId), { replace: true }); }} />
                 : <CallConnectingScreen onCancel={cancelPendingCall} />
             ) : <Navigate to={ROUTES.home} replace />} />
             <Route path="/invite/:code" element={<InvitePage />} />
@@ -366,12 +363,6 @@ function Shell() {
           conversationId={activeConversation?.id ?? null}
           open={mediaVisible}
           onOpenChange={setMediaOpen}
-        />
-        <CallChatPanel
-          conversationId={activeCallConversationId}
-          open={callChatOpen && showStage}
-          onOpenChange={setCallChatOpen}
-          onOpenProfile={setProfileUserId}
         />
         <TileMenu onOpenProfile={setProfileUserId} />
         <ProfileModal userId={profileUserId} onClose={() => setProfileUserId(null)} onOpenProfile={setProfileUserId} />

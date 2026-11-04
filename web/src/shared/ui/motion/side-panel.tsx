@@ -4,7 +4,7 @@ import { SPRING_SIDEBAR } from '@/shared/lib/ease';
 import { cn } from '@/shared/lib/utils';
 
 /** A column docked beside the content — the conversation list on the left;
- * group details, media and the call chat on the right. Its width springs open
+ * group details and media on the right. Its width springs open
  * or shut and the panel, pinned to the edge facing the content, rides out with
  * it as one sheet: one spring drives both the slide and the content's reflow,
  * so the two can never drift apart. Closed, it is zero wide and inert. */

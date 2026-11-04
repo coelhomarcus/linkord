@@ -20,8 +20,6 @@
     "fullscreenExit": "Exit full screen",
     "callSettings": "Call settings",
     "leaveCall": "Leave call",
-    "openChat": "Open chat",
-    "closeChat": "Close chat",
     "returnToCall": "Return to call",
     "inCall": "In a call",
     "myProfile": "My profile",
@@ -36,9 +34,6 @@
     "hideAudioOnly": "Hide participants without video",
     "banners": "Show participant banners",
     "stats": "Show statistics"
-  },
-  "chat": {
-    "title": "Call chat"
   },
   "stage": {
     "noVideo": "Nobody has their camera on right now.",

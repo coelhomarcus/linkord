@@ -73,7 +73,7 @@ function trapTab(event: KeyboardEvent<HTMLDivElement>, panel: HTMLDivElement | n
 }
 
 /** A modal panel sliding in from one edge, for narrow screens: the conversation
- * list from the left, group details / media / the call chat from the right.
+ * list from the left, group details / media from the right.
  *
  * It stays mounted while closed — like the desktop column, its content (a
  * search typed, a scroll position) is still there when it opens again — and
