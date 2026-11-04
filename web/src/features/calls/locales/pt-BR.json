@@ -25,6 +25,8 @@
     "returnToCall": "Voltar à chamada",
     "inCall": "Em chamada",
     "myProfile": "Meu perfil",
+    "statusOnline": "Disponível",
+    "statusReconnecting": "Reconectando…",
     "settings": "Ajustes",
     "previousStream": "Transmissão anterior",
     "nextStream": "Próxima transmissão"

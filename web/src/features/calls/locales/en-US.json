@@ -25,6 +25,8 @@
     "returnToCall": "Return to call",
     "inCall": "In a call",
     "myProfile": "My profile",
+    "statusOnline": "Online",
+    "statusReconnecting": "Reconnecting…",
     "settings": "Settings",
     "previousStream": "Previous stream",
     "nextStream": "Next stream"

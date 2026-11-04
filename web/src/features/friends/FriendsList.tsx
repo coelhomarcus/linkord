@@ -1,4 +1,4 @@
-import { ChatCircleIcon, CheckIcon, CopyIcon, DotsThreeIcon, ProhibitIcon, UserIcon, UserMinusIcon, UserPlusIcon } from '@phosphor-icons/react';
+import { ChatCircleIcon, CheckIcon, CopyIcon, DotsThreeVerticalIcon, ProhibitIcon, UserIcon, UserMinusIcon, UserPlusIcon } from '@phosphor-icons/react';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
@@ -19,6 +19,9 @@ import type { SocialConfirm } from './SocialConfirmDialog';
 import { SocialUserRow } from './SocialUserRow';
 import { useFriends } from './FriendsContext';
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
+
+// Discord's round row actions, which darken to the row's own fill on hover
+const ROW_ACTION = 'grid size-9 place-items-center rounded-full bg-surface-300 text-text-secondary transition-colors hover:text-text-primary group-hover/row:bg-surface-app disabled:opacity-50';
 import { usePendingIds } from './usePendingIds';
 import { useUrlSearch } from '@/shared/hooks/useUrlSearch';
 import { FadeIn, RevealList, RevealRow, SocialRowsSkeleton } from './listReveal';
@@ -139,15 +142,14 @@ export function FriendsList({ view, query, onQueryChange, onOpenProfile }: {
               {visible.map(({ user }) => (
                 <RevealRow key={user.id}>
                   <SocialUserRow user={user} online={onlineUserIds.has(user.id)} onOpenProfile={() => onOpenProfile(user.id)}>
-                    <Button type="button" variant="secondary" size="sm" onClick={() => handleMessage(user)} aria-label={t('list.messageTo', { name: user.displayName })}>
-                      <ChatCircleIcon size={20} />
-                      <span className="hidden sm:inline">{t('list.message')}</span>
-                    </Button>
+                    <button type="button" onClick={() => handleMessage(user)} aria-label={t('list.messageTo', { name: user.displayName })} className={ROW_ACTION}>
+                      <ChatCircleIcon size={20} weight="fill" />
+                    </button>
                     <DropdownMenu>
                       <DropdownMenuTrigger
-                        render={<Button type="button" variant="ghost" size="icon-sm" disabled={pending.isPending(user.id)} aria-label={t('list.moreFor', { name: user.displayName })} />}
+                        render={<button type="button" disabled={pending.isPending(user.id)} aria-label={t('list.moreFor', { name: user.displayName })} className={ROW_ACTION} />}
                       >
-                        <DotsThreeIcon size={16} />
+                        <DotsThreeVerticalIcon size={20} weight="bold" />
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-max min-w-0">
                         <DropdownMenuItem onClick={() => onOpenProfile(user.id)}><UserIcon size={16} />{t('list.viewProfile')}</DropdownMenuItem>

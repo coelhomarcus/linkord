@@ -288,19 +288,16 @@ function Shell() {
         openMobile={mobileShowSidebar}
         onOpenMobileChange={setMobileShowSidebar}
         className="relative min-h-0 flex-1 bg-surface-rail text-text-primary [--surface-base:var(--color-surface-app)] max-md:pt-[env(safe-area-inset-top)]"
-        style={{ minHeight: 0, '--sidebar-width': '15rem', '--sidebar-width-mobile': '24rem', '--sidebar-overlay-offset': '4.5rem', '--mobile-navigation-height': `calc(4rem + var(--safe-bottom) + ${inCall ? '3rem' : '0rem'})` } as CSSProperties}
+        style={{ minHeight: 0, '--sidebar-width': 'var(--spacing-sidebar)', '--sidebar-width-mobile': '24rem', '--sidebar-overlay-offset': '4.5rem', '--mobile-navigation-height': `calc(4rem + var(--safe-bottom) + ${inCall ? '3rem' : '0rem'})` } as CSSProperties}
       >
         <ReconnectBanner />
         <AccessNotice />
         <ServerRail className="hidden md:flex" />
+        {/* Discord's one framed panel: the list and the content side by side
+            under a shared hairline, rounded once at its top-left corner */}
+        <div className="flex min-h-0 min-w-0 flex-1 md:overflow-hidden md:rounded-tl-[12px] md:border-l md:border-t md:border-border-subtle">
         <ConversationSidebar />
-        <FloatingUserDock
-          placement="shell"
-          onReturnToCall={handleReturnToCall}
-          onOpenProfile={setProfileUserId}
-          showReturnToCall={!showStage}
-        />
-        <SidebarInset className={`relative min-h-0 overflow-hidden bg-surface-panel [--surface-base:var(--color-surface-panel)] md:rounded-tl-xl md:border-l md:border-t md:border-border-subtle ${mobileListPage ? 'max-md:hidden' : ''} ${mobileMainPage ? 'max-md:pb-[var(--mobile-navigation-height)]' : ''}`}>
+        <SidebarInset className={`relative min-h-0 overflow-hidden bg-surface-panel [--surface-base:var(--color-surface-panel)] ${mobileListPage ? 'max-md:hidden' : ''} ${mobileMainPage ? 'max-md:pb-[var(--mobile-navigation-height)]' : ''}`}>
           <div className="flex h-full min-h-0">
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <Routes location={contentLocation}>
@@ -353,6 +350,12 @@ function Shell() {
           )}
           <SoundEmojiOverlay />
         </SidebarInset>
+        </div>
+        <FloatingUserDock
+          placement="shell"
+          onReturnToCall={handleReturnToCall}
+          onOpenProfile={setProfileUserId}
+        />
         {mobileMainPage && <MobileTabBar activeCallConversationId={activeCallConversationId} onReturnToCall={handleReturnToCall} />}
         {currentServer && !wide && (
           <Sheet open={membersVisible} onOpenChange={setDetailsOpen} side="right" ariaLabel={currentServer.name} className="w-60">

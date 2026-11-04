@@ -15,14 +15,14 @@ import { ServerIcon } from './ServerIcon';
 import { CreateServerDialog } from './CreateServerDialog';
 import { serverUnread } from './serverUtils';
 
-/** Discord's pill on the left edge: tall for the open item, short for an
- * unread one, growing a little on hover. */
+/** Discord's pill on the rail's left edge: tall for the open item, short for
+ * an unread one, growing a little on hover. */
 function Pill({ active, unread }: { active: boolean; unread: boolean }) {
   return (
     <span
       aria-hidden
       className={cn(
-        'absolute -left-3 top-1/2 w-1 -translate-y-1/2 rounded-r-full bg-text-primary transition-[height] duration-150',
+        'absolute -left-4 top-1/2 w-1 -translate-y-1/2 rounded-r-full bg-text-primary transition-[height] duration-150',
         active ? 'h-10' : unread ? 'h-2 group-hover/server:h-5' : 'h-0 group-hover/server:h-5',
       )}
     />
@@ -38,12 +38,12 @@ function RailItem({ label, active, unread, badge, onClick, children }: {
         onClick={onClick}
         aria-label={label}
         aria-current={active ? 'page' : undefined}
-        className="group/server relative grid size-12 flex-none place-items-center outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-2xl"
+        className="group/server relative grid size-10 flex-none place-items-center rounded-[12px] outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <Pill active={active} unread={unread} />
         {children}
         {!!badge && (
-          <CountBadge decorative className="absolute -bottom-0.5 -right-0.5 ring-4 ring-surface-rail">
+          <CountBadge decorative className="absolute -bottom-1 -right-1 ring-4 ring-surface-rail">
             {badge > 99 ? '99+' : badge}
           </CountBadge>
         )}
@@ -75,24 +75,24 @@ export function ServerRail({ className }: { className?: string }) {
   );
 
   return (
-    <nav aria-label={t('rail.label')} className={cn('flex w-[72px] flex-none flex-col items-center gap-2 overflow-y-auto bg-surface-rail pt-3 pb-[max(0.75rem,var(--dock-clearance,0px))] [scrollbar-width:none]', className)}>
+    <nav aria-label={t('rail.label')} className={cn('flex w-[72px] flex-none flex-col items-center gap-2 overflow-y-auto bg-surface-rail pb-[max(0.75rem,var(--dock-clearance,0px))] [scrollbar-width:none] max-md:pt-3', className)}>
       {drawer && (
         <Tooltip>
           <TooltipTrigger onClick={toggleSidebar} aria-label={t('rail.showList')} aria-expanded={openMobile}
-            className="grid size-12 flex-none place-items-center rounded-2xl text-text-muted outline-none hover:bg-bg-hover hover:text-text-primary focus-visible:ring-2 focus-visible:ring-ring">
+            className="grid size-10 flex-none place-items-center rounded-[12px] bg-surface-300 text-text-secondary outline-none hover:bg-surface-400 hover:text-text-primary focus-visible:ring-2 focus-visible:ring-ring">
             <SidebarSimpleIcon size={24} aria-hidden />
           </TooltipTrigger>
           <TooltipContent side="right">{t('rail.showList')}</TooltipContent>
         </Tooltip>
       )}
       <RailItem label={t('rail.home')} active={home} unread={false} badge={directUnread + pendingIncomingCount} onClick={() => go(ROUTES.home)}>
-        {/* the logo is a single blue shape: whitened on a blue tile it lost its
-            features, so it keeps its own color on a neutral one */}
-        <span className={cn('grid size-12 place-items-center transition-[border-radius,background-color] duration-150', home ? 'rounded-[30%] bg-bg-selected' : 'rounded-[50%] bg-bg-secondary group-hover/server:rounded-[30%] group-hover/server:bg-bg-hover')}>
-          <img src="/logo.svg" alt="" className="h-auto w-8" />
+        {/* Discord's home tile: blurple with a white logo while home is open;
+            the logo's eyes are cut out, so the tile shows through them */}
+        <span className={cn('grid size-10 place-items-center rounded-[12px] transition-colors duration-150', home ? 'bg-accent-primary' : 'bg-surface-300 group-hover/server:bg-accent-primary')}>
+          <img src="/logo.svg" alt="" className={cn('h-auto w-6', home ? 'brightness-0 invert' : 'group-hover/server:brightness-0 group-hover/server:invert')} />
         </span>
       </RailItem>
-      <span aria-hidden className="h-0.5 w-8 flex-none rounded-full bg-border" />
+      <span aria-hidden className="h-px w-8 flex-none bg-border-subtle" />
       {servers.map((server) => {
         const unread = serverUnread(server, unreadByConversation);
         return (
@@ -103,13 +103,13 @@ export function ServerRail({ className }: { className?: string }) {
             unread={unread > 0}
             onClick={() => go(ROUTES.server(server.id))}
           >
-            <ServerIcon id={server.id} name={server.name} icon={server.icon} active={server.id === currentServerId} className={server.status === 'suspended' ? 'opacity-40 grayscale' : undefined} />
+            <ServerIcon id={server.id} name={server.name} icon={server.icon} size={40} className={server.status === 'suspended' ? 'opacity-40 grayscale' : undefined} />
           </RailItem>
         );
       })}
       <RailItem label={t('rail.add')} active={false} unread={false} onClick={() => setCreateOpen(true)}>
-        <span className="grid size-12 place-items-center rounded-[50%] bg-bg-secondary text-green transition-[border-radius,background-color,color] duration-150 group-hover/server:rounded-[30%] group-hover/server:bg-green-solid group-hover/server:text-white">
-          <PlusIcon size={24} weight="bold" />
+        <span className="grid size-10 place-items-center rounded-[12px] bg-surface-300 text-text-primary transition-colors duration-150 group-hover/server:bg-accent-primary group-hover/server:text-white">
+          <PlusIcon size={20} weight="bold" />
         </span>
       </RailItem>
       <CreateServerDialog open={createOpen} onOpenChange={setCreateOpen} />

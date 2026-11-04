@@ -13,7 +13,6 @@ interface FloatingUserDockProps {
   placement: 'shell' | 'drawer';
   onReturnToCall: () => void;
   onOpenProfile: (userId: string) => void;
-  showReturnToCall: boolean;
   onNavigate?: () => void;
 }
 
@@ -24,7 +23,7 @@ interface FloatingUserDockProps {
  * takes is published as CSS variables for the rail and the list to keep clear
  * of it and, from the shell, on the root for whatever else floats in that corner
  * (the call's picture-in-picture). */
-export function FloatingUserDock({ placement, onReturnToCall, onOpenProfile, showReturnToCall, onNavigate }: FloatingUserDockProps) {
+export function FloatingUserDock({ placement, onReturnToCall, onOpenProfile, onNavigate }: FloatingUserDockProps) {
   const { isMobile, isOverlay, open } = useSidebar();
   const ref = useRef<HTMLDivElement | null>(null);
   const wide = placement === 'drawer' || (!isOverlay && open);
@@ -63,14 +62,13 @@ export function FloatingUserDock({ placement, onReturnToCall, onOpenProfile, sho
         'absolute bottom-shell left-shell z-30 transition-[width] duration-300 ease-out motion-reduce:transition-none',
         placement === 'drawer' && 'right-shell',
       )}
-      // the rail (4rem) plus the list, less the gap kept on both outer sides
-      style={placement === 'shell' ? { width: wide ? 'calc(4rem + var(--sidebar-width) - 1rem)' : '3rem' } : undefined}
+      // the rail (72px) plus the list, less the gap kept on both outer sides
+      style={placement === 'shell' ? { width: wide ? 'calc(72px + var(--sidebar-width) - 1rem)' : '3rem' } : undefined}
     >
       <CallDock
         layout={wide ? 'wide' : 'compact'}
         onReturnToCall={onReturnToCall}
         onOpenProfile={onOpenProfile}
-        showReturnToCall={showReturnToCall}
         onNavigate={onNavigate}
       />
     </div>
