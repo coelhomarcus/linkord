@@ -131,3 +131,23 @@ describe('useCallLifecycle — preferMuted', () => {
     expect(setMicMuted).toHaveBeenCalledWith(true);
   });
 });
+
+describe('useCallLifecycle — moving between voice channels', () => {
+  it('moving someone asks the server, naming who and where', () => {
+    const { result, sendWs } = setup();
+    act(() => { result.current.moveToCall('p-bea', 'voice-2'); });
+    expect(sendWs).toHaveBeenCalledWith({ t: 'call-move', participantId: 'p-bea', conversationId: 'voice-2' });
+  });
+
+  it('being moved leaves the old call and joins the new one', async () => {
+    const { result, sendWs } = setup();
+    await act(async () => { await result.current.joinCall('voice-1'); });
+    await act(async () => { result.current.onCallToken({ ...token, conversationId: 'voice-1' }); });
+    sendWs.mockClear();
+
+    await act(async () => { result.current.onCallMoved('voice-2'); });
+
+    await vi.waitFor(() => expect(sendWs).toHaveBeenCalledWith({ t: 'call-join', conversationId: 'voice-2' }));
+    expect(sendWs).toHaveBeenCalledWith({ t: 'call-leave' });
+  });
+});

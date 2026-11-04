@@ -18,6 +18,7 @@ import { canSendDirectMessage } from '../modules/friendships/friendshipsReposito
 import { ERROR_CODES, type ErrorCode } from '../http/errors.js';
 import { getUserUsage } from '../modules/attachments/attachmentQuota.js';
 import * as moderation from '../modules/moderation/moderation.js';
+import * as streamPreview from '../modules/calls/streamPreview.js';
 import { parseCookies } from '../http/cookies.js';
 import { resolveSession } from '../modules/auth/session.js';
 import { isSocketOriginAllowed } from '../http/originGuard.js';
@@ -38,6 +39,7 @@ const handlers: HandlerTable = Object.assign(
   chat.handlers,
   conversations.handlers,
   moderation.handlers,
+  streamPreview.handlers,
 );
 
 interface JoinMessage {
@@ -57,7 +59,8 @@ interface JoinMessage {
 // against the DB on every call, so it gets a conservative cap as defense in
 // depth against a scripted client bypassing the search box's own debounce;
 // 'load-messages-around' stays unthrottled like the other reads since it's
-// click-driven, not keystroke-driven. 'typing' is intentionally absent too —
+// click-driven, not keystroke-driven. The stream-preview pair is capped
+// because a request can wake another account's client to capture its screen. 'typing' is intentionally absent too —
 // it never touches the DB, and the composer itself throttles to about one
 // emit per 3s while held down (see MessageComposer.tsx).
 const ACTION_LIMITS: Record<string, { windowMs: number; max: number }> = {
@@ -71,6 +74,10 @@ const ACTION_LIMITS: Record<string, { windowMs: number; max: number }> = {
   profile: { windowMs: 60_000, max: 10 },
   'message-search': { windowMs: 10_000, max: 20 },
   'conversation-mark-read': { windowMs: 10_000, max: 30 },
+  // hover-driven, and each one may wake a streamer's client to draw a frame
+  'stream-preview-request': { windowMs: 10_000, max: 20 },
+  'stream-preview-frame': { windowMs: 10_000, max: 10 },
+  'call-move': { windowMs: 10_000, max: 10 },
 };
 
 /** 'join' is the one special case in the dispatch: only participants.ts

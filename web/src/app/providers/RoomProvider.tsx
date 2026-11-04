@@ -23,6 +23,8 @@ import { useMessageSearch } from '@/features/chat/useMessageSearch';
 import { useStorageUsage } from '@/features/chat/useStorageUsage';
 import { usePresence } from '@/state/hooks/usePresence';
 import { useCallLifecycle } from '@/features/calls/useCallLifecycle';
+import { captureScreenPreview } from '@/features/calls/captureScreenPreview';
+import { streamPreviewStore } from '@/features/calls/streamPreviewStore';
 import { useRoomSettings } from '@/features/settings/useRoomSettings';
 import { useProfileUpdate } from '@/features/profile/useProfileUpdate';
 import { preloadSounds } from '@/shared/sounds';
@@ -210,6 +212,15 @@ export function RoomProvider({ children }: { children: ReactNode }) {
       case 'call-token':
         callLifecycle.onCallToken(m);
         break;
+      case 'call-moved':
+        callLifecycle.onCallMoved(m.conversationId);
+        break;
+      case 'stream-preview-capture':
+        void captureScreenPreview(livekitRoom).then((image) => { if (image) sendWs({ t: 'stream-preview-frame', image }); });
+        break;
+      case 'stream-preview':
+        streamPreviewStore.set(m.participantId, m.image);
+        break;
       case 'participant-joined':
         dispatch({ type: 'PARTICIPANT_JOINED', participant: m.participant });
         presence.onParticipantJoined(m);
@@ -371,7 +382,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
     }
   }, [
     dispatch, conversationsList, serversList, presence, attachmentsUpload, openConversation, sendWs, callLifecycle,
-    messageSearch, chatMessages, typingIndicator, disconnectIntentionally, profileUpdate, soundboardEvents,
+    messageSearch, chatMessages, typingIndicator, disconnectIntentionally, profileUpdate, soundboardEvents, livekitRoom,
   ]);
 
   const { retryConnection } = useSocketConnection({ socketRef, intentionalCloseRef, sendWs, dispatch, refreshAuth, onMessage: handleServerMessage });
@@ -429,7 +440,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         unreadStartByConversation: chatMessages.unreadStartByConversation,
         typingByConversation: typingIndicator.typingByConversation, sendTyping: typingIndicator.sendTyping,
         allUsers: presence.allUsers, onlineUserIds: presence.onlineUserIds, friendUserIds: presence.friendUserIds,
-        kickFromCall: callLifecycle.kickFromCall,
+        kickFromCall: callLifecycle.kickFromCall, moveToCall: callLifecycle.moveToCall,
         actionError, clearActionError: () => setActionError(null),
         accessNotice, clearAccessNotice: () => setAccessNotice(null),
         socialRevision,

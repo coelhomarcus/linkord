@@ -31,6 +31,16 @@ export function firstTextChannel(server: ServerSummary): ChannelSummary | null {
 export const can = (server: ServerSummary | null | undefined, bit: number) => !!server && hasPermission(server.permissions, bit);
 export const canInChannel = (channel: { permissions?: number } | null | undefined, bit: number) => !!channel && hasPermission(channel.permissions ?? 0, bit);
 
+/** Whether to offer moving (or disconnecting) someone out of this voice
+ * channel. Mirrors the server's canMoveInCall without the hierarchy part,
+ * which only the server can judge: a refusal comes back as an error. */
+export const canMoveOutOf = (channel: { permissions?: number }, meIsAdmin: boolean) =>
+  meIsAdmin || canInChannel(channel, PERMISSIONS.MOVE_MEMBERS);
+
+/** Whether this voice channel can take someone moved into it. */
+export const canMoveInto = (channel: { permissions?: number }, meIsAdmin: boolean) =>
+  meIsAdmin || canInChannel(channel, PERMISSIONS.CONNECT);
+
 /** Whether anything in server settings is the member's to change. */
 export function canOpenSettings(server: ServerSummary): boolean {
   return can(server, PERMISSIONS.MANAGE_SERVER) || can(server, PERMISSIONS.MANAGE_ROLES) || can(server, PERMISSIONS.MANAGE_CHANNELS)
