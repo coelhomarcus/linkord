@@ -1,4 +1,4 @@
-import { GearIcon, MicrophoneIcon, MicrophoneSlashIcon, MonitorIcon, PhoneIcon, PhoneSlashIcon, SpeakerHighIcon, SpeakerSlashIcon, VideoCameraIcon, VideoCameraSlashIcon } from '@phosphor-icons/react';
+import { GearIcon, MicrophoneIcon, MicrophoneSlashIcon, MonitorIcon, PhoneSlashIcon, SpeakerHighIcon, SpeakerSlashIcon, VideoCameraIcon, VideoCameraSlashIcon } from '@phosphor-icons/react';
 import { useLocation, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { iconWeight } from '@/shared/ui/icons';
@@ -17,17 +17,15 @@ const MIC_PROBLEM_LABEL_KEY = {
   unavailable: 'micProblem.unavailableLabel',
 } as const;
 
-const DOCK_BUTTON = 'grid size-9 flex-none place-items-center rounded-md transition-colors';
+const DOCK_BUTTON = 'grid size-8 flex-none place-items-center rounded-lg transition-colors';
 const DOCK_NEUTRAL = 'text-text-secondary hover:bg-fill-hover hover:text-text-primary';
-const DOCK_RED = 'bg-red/16 text-red hover:bg-red/24';
+const DOCK_RED = 'bg-red/12 text-red-text hover:bg-red/20';
 const DOCK_GREEN = 'bg-green-solid text-white hover:bg-green-hover';
-const CALL_JOIN = 'flex h-9 w-full items-center justify-center gap-1.5 rounded-md bg-green-solid text-label font-semibold text-white transition-colors hover:bg-green-hover';
 
 interface CallDockProps {
+  /** the call's name, like Discord's channel line under "Voz conectada", leads back to it */
   onReturnToCall: () => void;
   onOpenProfile: (userId: string) => void;
-  /** False while the stage is already on screen, no point offering a way back. */
-  showReturnToCall: boolean;
   /** wide: one row with the name, across the rail and the list; compact: a
    * column of icons, for when only the rail is on screen */
   layout?: 'wide' | 'compact';
@@ -35,7 +33,7 @@ interface CallDockProps {
   onNavigate?: () => void;
 }
 
-export function CallDock({ onReturnToCall, onOpenProfile, showReturnToCall, layout = 'wide', onNavigate }: CallDockProps) {
+export function CallDock({ onReturnToCall, onOpenProfile, layout = 'wide', onNavigate }: CallDockProps) {
   const { t } = useTranslation('calls');
   const {
     state, conversations, allUsers, activeCallConversationId,
@@ -74,27 +72,12 @@ export function CallDock({ onReturnToCall, onOpenProfile, showReturnToCall, layo
     void activateMic();
   }
 
-  const returnButton = inCall && showReturnToCall && (
-    compact ? (
-      <Tooltip>
-        <TooltipTrigger onClick={onReturnToCall} aria-label={t('controls.returnToCall')} className={cn(DOCK_BUTTON, DOCK_GREEN)}>
-          <PhoneIcon size={20} weight="fill" />
-        </TooltipTrigger>
-        <TooltipContent side="right">{t('controls.returnToCall')}</TooltipContent>
-      </Tooltip>
-    ) : (
-      <button type="button" onClick={onReturnToCall} className={CALL_JOIN}>
-        <PhoneIcon size={20} weight="fill" />
-        {t('controls.returnToCall')}
-      </button>
-    )
-  );
   const leaveButton = (
     <Tooltip>
       <TooltipTrigger
         onClick={() => void leaveCall()}
         aria-label={t('controls.leaveCall')}
-        className={cn(DOCK_BUTTON, 'bg-red text-white hover:bg-red-hover')}
+        className={cn(DOCK_BUTTON, compact ? 'bg-red text-white hover:bg-red-hover' : 'text-text-secondary hover:bg-fill-hover hover:text-red-text')}
       >
         <PhoneSlashIcon size={20} weight="fill" />
       </TooltipTrigger>
@@ -104,47 +87,52 @@ export function CallDock({ onReturnToCall, onOpenProfile, showReturnToCall, layo
   const tipSide = compact ? 'right' : 'top';
 
   return (
+    // Discord's user panel: the shell's black with a hairline a shade darker
+    // than the panel's own, so it reads as laid over the rail and the list
     <div className={cn(
-      'flex flex-col gap-2 rounded-xl border border-border bg-bg-secondary shadow-panel',
+      'flex flex-col rounded-[10px] border border-border-panel bg-surface-app',
       // the compact card is 48px wide: its buttons only fit with a thinner edge
-      compact ? 'items-center p-1' : 'p-2',
+      compact ? 'items-center gap-1 p-1' : 'p-2',
     )}>
       {inCall && (compact ? (
         <div className="flex flex-col items-center gap-1">
-          {returnButton}
           {leaveButton}
         </div>
       ) : (
-        <div className="flex flex-col gap-2 px-0.5 pt-0.5">
-          {returnButton}
-          <div className="flex items-center gap-2">
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1">
-                <p className="text-caption font-semibold text-green">{t('controls.inCall')}</p>
-                <CallPingIndicator />
-              </div>
-              <p className="truncate text-label font-semibold text-text-primary">{title}</p>
+        <div className="-mx-2 mb-2 flex items-center gap-2 border-b border-border-panel px-3 pb-2">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1">
+              <CallPingIndicator />
+              <p className="text-label font-semibold text-green">{t('controls.inCall')}</p>
             </div>
-            {leaveButton}
+            <button type="button" onClick={onReturnToCall} className="block max-w-full truncate text-left text-caption text-text-secondary hover:text-text-primary hover:underline">{title}</button>
           </div>
+          {leaveButton}
         </div>
       ))}
-      <div className={cn('flex items-center gap-1', compact ? 'flex-col' : 'px-0.5')}>
+      <div className={cn('flex items-center gap-0.5', compact && 'flex-col')}>
         <button
           type="button"
           onClick={() => { if (state.me.userId) onOpenProfile(state.me.userId); }}
           aria-label={t('controls.myProfile')}
           className={cn(
-            'flex items-center gap-2 rounded-md text-left transition-colors hover:bg-fill-hover',
-            compact ? 'p-0.5' : 'min-w-0 flex-1 px-1 py-0.5',
+            'flex items-center gap-2 rounded-lg text-left transition-colors hover:bg-fill-hover',
+            compact ? 'p-0.5' : inCall ? 'mr-auto p-1' : 'min-w-0 flex-1 py-1 pl-1 pr-2',
           )}
         >
           <span className="relative flex-none">
-            <Avatar id={state.me.userId ?? state.me.id ?? 'me'} name={state.me.displayName} avatar={state.me.avatar} avatarColor={state.me.avatarColor} size={36} />
+            <Avatar id={state.me.userId ?? state.me.id ?? 'me'} name={state.me.displayName} avatar={state.me.avatar} avatarColor={state.me.avatarColor} size={32} />
             {/* you are online while this is on screen; gray while the connection is being re-established */}
-            <span aria-hidden data-status={reconnecting ? 'reconnecting' : 'online'} className={cn('absolute -bottom-0.5 -right-0.5 size-3.5 rounded-full border-2 border-bg-secondary', reconnecting ? 'bg-text-muted' : 'bg-green')} />
+            <span aria-hidden data-status={reconnecting ? 'reconnecting' : 'online'} className={cn('absolute -bottom-0.5 -right-0.5 size-3.5 rounded-full border-[3px] border-surface-app', reconnecting ? 'bg-text-muted' : 'bg-green')} />
           </span>
-          {!compact && <span className="min-w-0 truncate text-label font-semibold text-text-primary">{state.me.displayName}</span>}
+          {/* in a call the row also holds the camera and screen buttons: the
+              name would only be squeezed to an ellipsis, so it steps aside */}
+          {!compact && !inCall && (
+            <span className="min-w-0 leading-tight">
+              <span className="block truncate text-label font-semibold text-text-primary">{state.me.displayName}</span>
+              <span className="block truncate text-caption text-text-secondary">{reconnecting ? t('controls.statusReconnecting') : t('controls.statusOnline')}</span>
+            </span>
+          )}
         </button>
         <Tooltip>
           <TooltipTrigger

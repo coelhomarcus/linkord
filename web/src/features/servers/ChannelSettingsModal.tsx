@@ -1,5 +1,7 @@
-import { CheckIcon, MinusIcon, XIcon } from '@phosphor-icons/react';
-import { useCallback, useEffect, useState } from 'react';
+import { CameraIcon, CheckIcon, MinusIcon, XIcon } from '@phosphor-icons/react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { ChangeEvent } from 'react';
+import type { Area } from 'react-easy-crop';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { ConfirmDialog } from '@/shared/ConfirmDialog';
@@ -11,6 +13,9 @@ import { ROUTES } from '@/shared/lib/routes';
 import { cn } from '@/shared/lib/utils';
 import type { ChannelSummary, ServerSummary } from '@/shared/types/protocol';
 import { WebhookUrlReveal } from '@/features/bots/WebhookUrlReveal';
+import { GroupAvatar } from '@/features/conversations/GroupAvatar';
+import { ImageCropDialog } from '@/features/settings/ImageCropDialog';
+import { uploadCroppedProfileImage } from '@/features/settings/uploadCroppedProfileImage';
 import { PERMISSIONS } from './permissionBits';
 import { bitOf, channelPermissionNames } from './permissionCatalog';
 import { SectionTitle, SettingsShell, type SettingsTab } from './SettingsShell';
@@ -103,6 +108,79 @@ function Permissions({ server, channel }: { server: ServerSummary; channel: Chan
   );
 }
 
+/** One webhook: its picture and name (what its messages are signed with),
+ * and the actions on its URL. */
+function WebhookCard({ channel, webhook, onChanged, onReveal, onError }: {
+  channel: ChannelSummary; webhook: WebhookInfo; onChanged: () => Promise<unknown>; onReveal: (url: string) => void; onError: (message: string | null) => void;
+}) {
+  const { t } = useTranslation('servers');
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [crop, setCrop] = useState<{ file: File; src: string } | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const run = async (fn: () => Promise<unknown>) => {
+    onError(null);
+    try { await fn(); await onChanged(); } catch (err) { onError(describeApiError(err)); }
+  };
+
+  function pick(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (file) setCrop({ file, src: URL.createObjectURL(file) });
+  }
+
+  async function confirmCrop(area: Area) {
+    if (!crop) return;
+    setUploading(true);
+    await run(async () => {
+      // the same upload as an account's picture: the server only takes an
+      // image this account uploaded itself
+      const body = await uploadCroppedProfileImage(crop.file, area, undefined, (phase) => { if (phase === 'uploading') setCrop(null); });
+      await updateWebhook(channel.id, webhook.id, { avatar: body.avatar });
+    });
+    setUploading(false);
+    setCrop(null);
+  }
+
+  return (
+    <li className="flex items-start gap-4 rounded-lg border border-border-subtle bg-bg-card p-4 max-sm:flex-col">
+      <button type="button" disabled={uploading} onClick={() => fileRef.current?.click()} aria-label={t('webhooks.avatarFor', { name: webhook.name })}
+        className="group/avatar relative flex-none rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+        <GroupAvatar id={channel.id} title={webhook.name} avatar={webhook.avatar} size={80} />
+        <span aria-hidden className="absolute inset-0 grid place-items-center rounded-full bg-black/60 text-white opacity-0 transition-opacity group-hover/avatar:opacity-100 group-focus-visible/avatar:opacity-100">
+          <CameraIcon size={24} weight="fill" />
+        </span>
+      </button>
+      <input ref={fileRef} type="file" accept="image/*" hidden onChange={pick} />
+      <div className="flex min-w-0 flex-1 flex-col gap-3">
+        <label className="flex flex-col gap-2">
+          <span className="text-body font-medium text-text-primary">{t('webhooks.name')}</span>
+          {/* the name is what its messages are signed with: renamed in place, saved on leaving the field */}
+          <Input
+            key={webhook.name}
+            defaultValue={webhook.name}
+            maxLength={80}
+            aria-label={t('webhooks.rename', { name: webhook.name })}
+            onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+            onBlur={(e) => {
+              const next = e.currentTarget.value.trim();
+              if (next && next !== webhook.name) void run(() => updateWebhook(channel.id, webhook.id, { name: next }));
+              else e.currentTarget.value = webhook.name;
+            }}
+          />
+        </label>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="secondary" disabled={uploading} onClick={() => fileRef.current?.click()}>{t('webhooks.changeAvatar')}</Button>
+          {webhook.avatar && <Button type="button" variant="secondary" onClick={() => void run(() => updateWebhook(channel.id, webhook.id, { avatar: '' }))}>{t('webhooks.removeAvatar')}</Button>}
+          <Button type="button" variant="secondary" onClick={() => void run(async () => { const { webhook: secret } = await rotateWebhook(channel.id, webhook.id); onReveal(secret.url); })}>{t('webhooks.rotate')}</Button>
+          <Button type="button" variant="danger-outline" className="ml-auto" onClick={() => void run(() => deleteWebhook(channel.id, webhook.id))}>{t('webhooks.delete')}</Button>
+        </div>
+      </div>
+      <ImageCropDialog open={!!crop} imageSrc={crop?.src ?? null} aspect={1} cropShape="round" title={t('webhooks.changeAvatar')}
+        processing={uploading} onCancel={() => setCrop(null)} onConfirm={(area) => void confirmCrop(area)} />
+    </li>
+  );
+}
+
 function Webhooks({ channel }: { channel: ChannelSummary }) {
   const { t } = useTranslation('servers');
   const [items, setItems] = useState<WebhookInfo[]>([]);
@@ -117,34 +195,16 @@ function Webhooks({ channel }: { channel: ChannelSummary }) {
   };
   return (
     <>
-      <SectionTitle>{t('channelSettings.webhooks')}</SectionTitle>
-      <p className="text-label text-text-muted">{t('webhooks.hint')}</p>
+      <SectionTitle description={t('webhooks.hint')}>{t('channelSettings.webhooks')}</SectionTitle>
       <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); void run(async () => { const { webhook } = await createWebhook(channel.id, name || t('webhooks.defaultName')); setRevealed(webhook.url); setName(''); }); }}>
         <Input value={name} maxLength={80} placeholder={t('webhooks.defaultName')} onChange={(e) => setName(e.target.value)} />
-        <Button type="submit">{t('webhooks.create')}</Button>
+        <Button type="submit" size="lg">{t('webhooks.create')}</Button>
       </form>
       {revealed && <WebhookUrlReveal url={revealed} />}
-      {error && <p role="alert" className="text-label text-red">{error}</p>}
-      <ul className="flex flex-col divide-y divide-border-subtle">
+      {error && <p role="alert" className="text-label text-red-text">{error}</p>}
+      <ul className="flex flex-col gap-3">
         {items.map((webhook) => (
-          <li key={webhook.id} className="flex items-center gap-3 py-3">
-            {/* the name is what its messages are signed with: renamed in place, saved on leaving the field */}
-            <Input
-              key={webhook.name}
-              defaultValue={webhook.name}
-              maxLength={80}
-              aria-label={t('webhooks.rename', { name: webhook.name })}
-              className="min-w-0 flex-1"
-              onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
-              onBlur={(e) => {
-                const next = e.currentTarget.value.trim();
-                if (next && next !== webhook.name) void run(() => updateWebhook(channel.id, webhook.id, { name: next }));
-                else e.currentTarget.value = webhook.name;
-              }}
-            />
-            <Button type="button" size="sm" variant="ghost" onClick={() => void run(async () => { const { webhook: secret } = await rotateWebhook(channel.id, webhook.id); setRevealed(secret.url); })}>{t('webhooks.rotate')}</Button>
-            <Button type="button" size="sm" variant="ghost" className="text-red" onClick={() => void run(() => deleteWebhook(channel.id, webhook.id))}>{t('webhooks.delete')}</Button>
-          </li>
+          <WebhookCard key={webhook.id} channel={channel} webhook={webhook} onChanged={load} onReveal={setRevealed} onError={setError} />
         ))}
       </ul>
     </>
@@ -178,12 +238,12 @@ export function ChannelSettingsModal({ server, channel, onClose }: { server: Ser
         }}>
           <SectionTitle>{t('channelSettings.overview')}</SectionTitle>
           <label className="flex flex-col gap-1.5">
-            <span className="text-caption font-bold uppercase text-text-secondary">{t('channel.name')}</span>
+            <span className="text-body font-medium text-text-primary">{t('channel.name')}</span>
             <Input value={name} maxLength={80} onChange={(e) => setName(e.target.value)} />
           </label>
           {channel.type === 'text' && (
             <label className="flex flex-col gap-1.5">
-              <span className="text-caption font-bold uppercase text-text-secondary">{t('channelSettings.topic')}</span>
+              <span className="text-body font-medium text-text-primary">{t('channelSettings.topic')}</span>
               <Textarea value={topic} maxLength={1024} rows={3} placeholder={t('channelSettings.topicPlaceholder')} onChange={(e) => setTopic(e.target.value)} />
             </label>
           )}

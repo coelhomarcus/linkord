@@ -16,19 +16,17 @@ const me = { ...initialRoomState, me: { ...initialRoomState.me, userId: 'me', di
 function renderDock(room: Parameters<typeof renderWithRoom>[1] = {}, {
   onReturnToCall = vi.fn(),
   onOpenProfile = vi.fn(),
-  showReturnToCall = true,
   layout = 'wide',
   path = '/app/conversations',
 }: {
   onReturnToCall?: () => void;
   onOpenProfile?: (userId: string) => void;
-  showReturnToCall?: boolean;
   layout?: 'wide' | 'compact';
   path?: string;
 } = {}) {
   const result = renderWithRoom(
     <MemoryRouter initialEntries={[path]}>
-      <CallDock onReturnToCall={onReturnToCall} onOpenProfile={onOpenProfile} showReturnToCall={showReturnToCall} layout={layout} />
+      <CallDock onReturnToCall={onReturnToCall} onOpenProfile={onOpenProfile} layout={layout} />
     </MemoryRouter>,
     {
       state: me,
@@ -76,17 +74,29 @@ describe('CallDock — settings', () => {
 });
 
 describe('CallDock — in a call', () => {
-  it('hides Voltar à chamada while the stage is already in focus', () => {
-    renderDock({ activeCallConversationId: 'conv-1' }, { showReturnToCall: false });
+  it('has no Voltar à chamada button, only the leave button', () => {
+    renderDock({ activeCallConversationId: 'conv-1' });
     expect(screen.getByText('Em chamada')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Voltar à chamada' })).not.toBeInTheDocument();
     expect(screen.getByLabelText('Sair da chamada')).toBeInTheDocument();
   });
 
-  it('clicking Voltar à chamada returns to the stage', () => {
+  it('the call name under Em chamada returns to the stage', () => {
     const onReturnToCall = vi.fn();
     renderDock({ activeCallConversationId: 'conv-1' }, { onReturnToCall });
-    fireEvent.click(screen.getByRole('button', { name: 'Voltar à chamada' }));
+    fireEvent.click(screen.getByRole('button', { name: 'os xerecas' }));
     expect(onReturnToCall).toHaveBeenCalledTimes(1);
+  });
+
+  it('drops the account name from the row while in a call, keeping the avatar', () => {
+    renderDock({ activeCallConversationId: 'conv-1' });
+    expect(screen.queryByText('Fulana')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Meu perfil' })).toBeInTheDocument();
+  });
+
+  it('shows the account name and status while idle', () => {
+    renderDock();
+    expect(screen.getByText('Fulana')).toBeInTheDocument();
+    expect(screen.getByText('Disponível')).toBeInTheDocument();
   });
 });

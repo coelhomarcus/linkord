@@ -25,7 +25,7 @@ function hasFiles(e: DragEvent<HTMLDivElement>): boolean {
   return Array.from(e.dataTransfer.types).includes('Files');
 }
 
-export function ChatSurface({ conversationId, onOpenProfile, surfaceId = 'main' }: { conversationId: string; onOpenProfile: (userId: string) => void; surfaceId?: 'main' | 'call' }) {
+export function ChatSurface({ conversationId, onOpenProfile }: { conversationId: string; onOpenProfile: (userId: string) => void }) {
   const { t } = useTranslation('chat');
   const { state, setReplyingTo, windowGenerationByConversation, conversations, typingByConversation, allUsers } = useRoom();
   // the same people TypingIndicator names: someone it can't show raises no background
@@ -91,7 +91,7 @@ export function ChatSurface({ conversationId, onOpenProfile, surfaceId = 'main' 
     >
       <ChatSurfaceWidthProvider width={surfaceWidth}>
         <MediaViewerProvider>
-          <MessageTimeline key={`${conversationId}:${windowGenerationByConversation.get(conversationId) ?? 0}`} surfaceId={surfaceId} conversationId={conversationId} onReply={setReplyingTo} onOpenProfile={onOpenProfile} bottomPadding={composerHeight + STATUS_RAIL_HEIGHT + RAIL_GAP} />
+          <MessageTimeline key={`${conversationId}:${windowGenerationByConversation.get(conversationId) ?? 0}`} conversationId={conversationId} onReply={setReplyingTo} onOpenProfile={onOpenProfile} bottomPadding={composerHeight + STATUS_RAIL_HEIGHT + RAIL_GAP} />
         </MediaViewerProvider>
       </ChatSurfaceWidthProvider>
       <div

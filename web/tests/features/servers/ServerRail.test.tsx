@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { screen } from '@testing-library/react';
+import { createEvent, fireEvent, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useLocation } from 'react-router';
 import { renderSocial } from '@tests/fixtures/socialFixture';
@@ -20,12 +20,12 @@ function setViewport(width: number) {
 
 function Where() { return <p data-testid="where">{useLocation().pathname}</p>; }
 
-function renderRail(onOpenMobileChange = vi.fn()) {
+function renderRail(onOpenMobileChange = vi.fn(), servers: ServerSummary[] = [server]) {
   renderSocial(
     <SidebarProvider open onOpenChange={vi.fn()} openMobile={false} onOpenMobileChange={onOpenMobileChange}>
       <ServerRail /><Where />
     </SidebarProvider>,
-    { room: { servers: [server] }, path: '/app/channels/@me' },
+    { room: { servers }, path: '/app/channels/@me' },
   );
   return onOpenMobileChange;
 }
@@ -51,5 +51,22 @@ describe('ServerRail', () => {
     onOpenMobileChange.mockClear();
     await user.click(screen.getByRole('button', { name: 'Squad' }));
     expect(onOpenMobileChange).toHaveBeenLastCalledWith(true);
+  });
+
+  it('servers are handles of a sortable list', () => {
+    setViewport(1440);
+    renderRail();
+    expect(screen.getByRole('button', { name: 'Squad' })).toHaveAttribute('aria-roledescription', 'sortable');
+  });
+
+  // the browser's own image drag would take the pointer away from the reorder
+  it('never starts a native drag from a server or its picture', () => {
+    setViewport(1440);
+    renderRail(vi.fn(), [{ ...server, icon: '/uploads/squad.png' }]);
+    const button = screen.getByRole('button', { name: 'Squad' });
+    expect(button.querySelector('img')).toHaveAttribute('draggable', 'false');
+    const dragStart = createEvent.dragStart(button);
+    fireEvent(button, dragStart);
+    expect(dragStart.defaultPrevented).toBe(true);
   });
 });

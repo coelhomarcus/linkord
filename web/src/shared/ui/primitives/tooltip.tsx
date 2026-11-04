@@ -38,12 +38,18 @@ function TooltipContent({
   >) {
   return (
     <TooltipPrimitive.Portal>
+      {/* A trigger that only shows on hover (a channel row's icons) vanishes
+          the moment the pointer leaves its row, often while its tooltip is
+          still up. With no box left to follow, the positioner places the
+          tooltip at the page's top-left corner and only marks the anchor as
+          hidden, so the tooltip flashed there before fading. Without its
+          anchor a tooltip has nothing to label: it hides at once. */}
       <TooltipPrimitive.Positioner
         align={align}
         alignOffset={alignOffset}
         side={side}
         sideOffset={sideOffset}
-        className="isolate z-50"
+        className="isolate z-50 data-anchor-hidden:invisible"
       >
         <TooltipPrimitive.Popup
           data-slot="tooltip-content"

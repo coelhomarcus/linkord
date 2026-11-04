@@ -1,4 +1,3 @@
-import { UserPlusIcon } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 
@@ -33,7 +32,7 @@ export function FriendsModeNav({ view, className }: { view: FriendsView; classNa
   const { t } = useTranslation('friends');
   const counts = useModeCounts();
   return (
-    <nav aria-label={t('views.ariaLabel')} className={cn('flex items-center gap-1', className)}>
+    <nav aria-label={t('views.ariaLabel')} className={cn('flex items-center gap-2', className)}>
       {MODES.map((mode) => {
         const count = counts[mode] ?? 0;
         const current = mode === view;
@@ -43,8 +42,8 @@ export function FriendsModeNav({ view, className }: { view: FriendsView; classNa
             to={friendsView(mode)}
             aria-current={current ? 'page' : undefined}
             className={cn(
-              'relative isolate flex h-8 select-none items-center gap-1.5 rounded-md px-3 text-label font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring',
-              current ? 'text-text-primary' : 'text-text-muted hover:bg-nav-hover hover:text-text-primary',
+              'relative isolate flex h-8 select-none items-center gap-1.5 rounded-lg px-3 text-body font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              current ? 'text-text-primary' : 'text-text-secondary hover:bg-nav-hover hover:text-text-primary',
             )}
           >
             {current && <ActiveFill />}
@@ -76,17 +75,18 @@ export function FriendsModeSelect({ view }: { view: FriendsView }) {
   );
 }
 
-export function AddFriendButton({ active, iconOnly }: { active: boolean; iconOnly?: boolean }) {
+/** Discord's "Adicionar amigo": a blurple pill beside the views, which turns
+ * into blurple text on its own page. */
+export function AddFriendButton({ active }: { active: boolean }) {
   const { t } = useTranslation('friends');
   return (
     <AppLink
       to={friendsView('add')}
       aria-current={active ? 'page' : undefined}
       aria-label={t('addFriend')}
-      className={cn(buttonVariants({ size: iconOnly ? 'icon-sm' : 'default' }), active && 'ring-2 ring-primary/40')}
+      className={cn(buttonVariants({ size: 'default' }), 'text-body', active && 'bg-transparent text-accent-text hover:bg-transparent')}
     >
-      <UserPlusIcon size={20} aria-hidden />
-      {!iconOnly && <span>{t('addFriend')}</span>}
+      <span>{t('addFriend')}</span>
     </AppLink>
   );
 }

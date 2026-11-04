@@ -7,7 +7,7 @@
   "friends": "Amigos",
   "friendsPending_one": "Amigos, {{count}} aguardando resposta",
   "friendsPending_other": "Amigos, {{count}} aguardando resposta",
-  "notifications": "Notificações",
+  "notifications": "Caixa de entrada",
   "profile": "Perfil",
   "inCall": "Em chamada: {{title}}",
   "returnToCall": "Voltar",

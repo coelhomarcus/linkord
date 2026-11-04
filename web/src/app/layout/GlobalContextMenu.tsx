@@ -243,7 +243,7 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
                   <ReactionEmojiPicker
                     fullPickerOpen={fullEmojiPicker}
                     warmed={emojiPickerWarmed}
-                    quickRowClassName="justify-between px-1 py-0.5"
+                    quickRowClassName="justify-between pb-1"
                     onPick={(emoji) => handleReact(targetMessage.msgId, emoji)}
                     onMore={() => setFullEmojiPicker(true)}
                   />

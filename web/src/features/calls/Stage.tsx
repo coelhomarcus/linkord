@@ -8,14 +8,11 @@ import { useAutoFocusScreenShare } from './useAutoFocusScreenShare';
 import { useCallHud } from './useCallHud';
 import { TileGrid } from './TileGrid';
 import { CallControlBar } from './CallControlBar';
-import { CallChatToggleButton } from './CallChatToggleButton';
 import { CallInviteTile } from './CallInviteTile';
 import { Button } from '@/shared/ui/primitives/button';
 
 interface StageProps {
   allIds: string[];
-  chatOpen: boolean;
-  onToggleChat: () => void;
   onBack: () => void;
 }
 
@@ -27,7 +24,7 @@ const FALLBACK_RESERVED_BOTTOM = 116;
 // already uses for its own distance from the true bottom edge.
 const BAR_GRID_GAP = 12;
 
-export function Stage({ allIds, chatOpen, onToggleChat, onBack }: StageProps) {
+export function Stage({ allIds, onBack }: StageProps) {
   const { t } = useTranslation('calls');
   const { state, dispatch, hideAudioOnlyTiles, setHideAudioOnlyTiles, callStageRef, reconnecting, menuTarget, activeCallConversationId, conversations } = useRoom();
   const allDescriptors = useCallTiles(allIds);
@@ -114,7 +111,6 @@ export function Stage({ allIds, chatOpen, onToggleChat, onBack }: StageProps) {
         />
       )}
       <CallControlBar ref={controlBarRef} hudVisible={hudVisible} />
-      <CallChatToggleButton chatOpen={chatOpen} onToggleChat={onToggleChat} hudVisible={hudVisible} />
     </main>
   );
 }

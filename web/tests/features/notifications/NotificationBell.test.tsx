@@ -36,7 +36,7 @@ describe('NotificationBell', () => {
     mocked.fetchNotifications.mockResolvedValue({ items: [], nextCursor: null });
     renderBell();
     expect(await screen.findByText('9+')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Notificações, 12 não lidas' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Caixa de Entrada, 12 não lidas' })).toBeInTheDocument();
   });
 
   it('empty list', async () => {
@@ -44,7 +44,7 @@ describe('NotificationBell', () => {
     mocked.fetchUnreadNotificationCount.mockResolvedValue({ unread: 0 });
     mocked.fetchNotifications.mockResolvedValue({ items: [], nextCursor: null });
     renderBell();
-    await user.click(screen.getByRole('button', { name: 'Notificações' }));
+    await user.click(screen.getByRole('button', { name: 'Caixa de Entrada' }));
     expect(await screen.findByText('Nenhuma notificação por enquanto.')).toBeInTheDocument();
   });
 
@@ -57,7 +57,7 @@ describe('NotificationBell', () => {
       nextCursor: null,
     });
     renderSocial(<NotificationStateProvider><NotificationBell /><Routes><Route path="*" element={<Where />} /></Routes></NotificationStateProvider>, { room: { jumpToMessage } });
-    await user.click(screen.getByRole('button', { name: /Notificações/ }));
+    await user.click(screen.getByRole('button', { name: /Caixa de Entrada/ }));
     expect(await screen.findByText('@eu viu o deploy?')).toBeInTheDocument();
     await user.click(screen.getByText(/mencionou você em #geral · Squad/));
     expect(jumpToMessage).toHaveBeenCalledWith('g1', 42);
@@ -70,7 +70,7 @@ describe('NotificationBell', () => {
     mocked.fetchUnreadNotificationCount.mockResolvedValue({ unread: 1 });
     mocked.fetchNotifications.mockResolvedValue({ items: [entry({ kind: 'server_invitation', invitationId: 'i1', friendshipId: null, server: { id: 'g', name: 'Squad', icon: '' } })], nextCursor: null });
     renderBell();
-    await user.click(await screen.findByRole('button', { name: 'Notificações, 1 não lida' }));
+    await user.click(await screen.findByRole('button', { name: 'Caixa de Entrada, 1 não lida' }));
     await user.click(await screen.findByText('Ana convidou você para o servidor Squad'));
     expect(mocked.markNotificationsRead).toHaveBeenCalledWith({ ids: ['n1'] });
     expect(screen.getByTestId('where')).toHaveTextContent('/app/friends?tab=invitations');
@@ -81,7 +81,7 @@ describe('NotificationBell', () => {
     mocked.fetchUnreadNotificationCount.mockResolvedValue({ unread: 0 });
     mocked.fetchNotifications.mockResolvedValue({ items: [entry({ read: true, kind: 'friend_accepted' })], nextCursor: null });
     renderBell();
-    await user.click(screen.getByRole('button', { name: 'Notificações' }));
+    await user.click(screen.getByRole('button', { name: 'Caixa de Entrada' }));
     await user.click(await screen.findByText('Ana aceitou sua solicitação de amizade'));
     expect(mocked.markNotificationsRead).not.toHaveBeenCalled();
     expect(screen.getByTestId('where')).toHaveTextContent('/app/friends');
@@ -92,7 +92,7 @@ describe('NotificationBell', () => {
     mocked.fetchUnreadNotificationCount.mockResolvedValue({ unread: 2 });
     mocked.fetchNotifications.mockResolvedValue({ items: [entry()], nextCursor: null });
     renderBell();
-    await user.click(await screen.findByRole('button', { name: 'Notificações, 2 não lidas' }));
+    await user.click(await screen.findByRole('button', { name: 'Caixa de Entrada, 2 não lidas' }));
     await user.click(await screen.findByRole('button', { name: 'Marcar todas como lidas' }));
     expect(mocked.markNotificationsRead).toHaveBeenCalledWith({ all: true });
   });
@@ -103,7 +103,7 @@ describe('NotificationBell', () => {
     mocked.fetchNotifications.mockResolvedValue({ items: [entry()], nextCursor: null });
     mocked.markNotificationsRead.mockRejectedValue(new Error('rede'));
     renderBell();
-    await user.click(await screen.findByRole('button', { name: 'Notificações, 2 não lidas' }));
+    await user.click(await screen.findByRole('button', { name: 'Caixa de Entrada, 2 não lidas' }));
     await user.click(await screen.findByRole('button', { name: 'Marcar todas como lidas' }));
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     await waitFor(() => expect(mocked.fetchUnreadNotificationCount.mock.calls.length).toBeGreaterThan(1));
@@ -114,7 +114,7 @@ describe('NotificationBell', () => {
     mocked.fetchUnreadNotificationCount.mockResolvedValue({ unread: 0 });
     mocked.fetchNotifications.mockRejectedValueOnce(new Error('x')).mockResolvedValue({ items: [entry()], nextCursor: null });
     renderBell();
-    await user.click(screen.getByRole('button', { name: 'Notificações' }));
+    await user.click(screen.getByRole('button', { name: 'Caixa de Entrada' }));
     await user.click(await screen.findByRole('button', { name: 'Tentar de novo' }));
     expect(await screen.findByText('Ana enviou uma solicitação de amizade')).toBeInTheDocument();
   });
@@ -124,7 +124,7 @@ describe('NotificationBell', () => {
     mocked.fetchUnreadNotificationCount.mockResolvedValue({ unread: 1 });
     mocked.fetchNotifications.mockResolvedValue({ items: [entry()], nextCursor: null });
     renderBell();
-    await user.click(await screen.findByRole('button', { name: 'Notificações, 1 não lida' }));
+    await user.click(await screen.findByRole('button', { name: 'Caixa de Entrada, 1 não lida' }));
     await user.click(await screen.findByRole('button', { name: 'Descartar notificação' }));
     expect(mocked.deleteNotification).toHaveBeenCalledWith('n1');
     expect(mocked.markNotificationsRead).not.toHaveBeenCalled();
@@ -136,7 +136,7 @@ describe('NotificationBell', () => {
     mocked.fetchUnreadNotificationCount.mockResolvedValue({ unread: 0 });
     mocked.fetchNotifications.mockResolvedValue({ items: [entry({ read: true })], nextCursor: null });
     renderBell();
-    await user.click(screen.getByRole('button', { name: 'Notificações' }));
+    await user.click(screen.getByRole('button', { name: 'Caixa de Entrada' }));
     await user.click(await screen.findByRole('button', { name: 'Limpar tudo' }));
     expect(mocked.clearNotifications).toHaveBeenCalled();
   });
@@ -147,7 +147,7 @@ describe('NotificationBell', () => {
     mocked.fetchNotifications.mockResolvedValue({ items: [entry({ read: true })], nextCursor: null });
     mocked.deleteNotification.mockRejectedValue(new Error('rede'));
     renderBell();
-    await user.click(screen.getByRole('button', { name: 'Notificações' }));
+    await user.click(screen.getByRole('button', { name: 'Caixa de Entrada' }));
     await user.click(await screen.findByRole('button', { name: 'Descartar notificação' }));
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     await waitFor(() => expect(mocked.fetchUnreadNotificationCount.mock.calls.length).toBeGreaterThan(1));

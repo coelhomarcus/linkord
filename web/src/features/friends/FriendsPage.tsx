@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { PageHeader } from '@/shared/PageHeader';
+import { UsersIcon } from '@phosphor-icons/react';
 import { useElementWidth } from '@/shared/hooks/useElementWidth';
 import { parseFriendsView } from '@/shared/lib/routes';
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
@@ -54,15 +54,20 @@ export function FriendsPage({ onOpenProfile }: { onOpenProfile: (userId: string)
 
   return (
     <div ref={areaRef} className="@container flex h-full min-h-0 flex-col">
-      <PageHeader
-        title={t('title')}
-        middle={layout === 'inline' ? <FriendsModeNav view={view} className="ml-2" /> : undefined}
-        actions={<AddFriendButton active={view === 'add'} iconOnly={layout === 'select'} />}
-      />
-      {layout === 'row' && <FriendsModeNav view={view} className="flex-none px-4 py-2 md:border-b md:border-border md:px-6" />}
-      {layout === 'select' && <div className="flex-none px-4 py-2 md:border-b md:border-border"><FriendsModeSelect view={view} /></div>}
+      {/* Discord's friends bar: the icon and title, a dot, then the views
+          and the add button all on one line */}
+      <header className="flex h-header flex-none select-none items-center gap-2 px-4 md:border-b md:border-border-subtle">
+        <UsersIcon size={24} weight="fill" className="flex-none text-text-secondary" aria-hidden />
+        <h1 className="flex-none text-body font-semibold text-text-strong">{t('title')}</h1>
+        <span aria-hidden className="mx-2 size-1 flex-none rounded-full bg-text-faint" />
+        {layout === 'inline' && <FriendsModeNav view={view} />}
+        {layout !== 'inline' && <span className="flex-1" />}
+        <AddFriendButton active={view === 'add'} />
+      </header>
+      {layout === 'row' && <FriendsModeNav view={view} className="flex-none px-4 py-2 md:border-b md:border-border-subtle" />}
+      {layout === 'select' && <div className="flex-none px-4 py-2 md:border-b md:border-border-subtle"><FriendsModeSelect view={view} /></div>}
       <div className="flex min-h-0 flex-1">
-      <main aria-label={t('views.ariaLabel')} className="min-h-0 flex-1 overflow-y-auto px-4 py-4 md:px-6">
+      <main aria-label={t('views.ariaLabel')} className="min-h-0 flex-1 overflow-y-auto px-6 pt-4 pb-4">
         {(view === 'all' || view === 'online') && (
           <FriendsList key={view} view={view} query={query} onQueryChange={setQuery} onOpenProfile={onOpenProfile} />
         )}

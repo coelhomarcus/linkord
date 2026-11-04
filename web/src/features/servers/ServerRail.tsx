@@ -1,6 +1,10 @@
 import { PlusIcon, SidebarSimpleIcon } from '@phosphor-icons/react';
-import { useMemo, useState } from 'react';
-import type { ReactNode } from 'react';
+import { useMemo, useRef, useState } from 'react';
+import type { CSSProperties, DragEvent, HTMLAttributes, ReactNode } from 'react';
+import { DndContext, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core';
+import type { DragEndEvent, Modifier } from '@dnd-kit/core';
+import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
@@ -14,36 +18,56 @@ import { useRoom } from '@/state/RoomContext';
 import { ServerIcon } from './ServerIcon';
 import { CreateServerDialog } from './CreateServerDialog';
 import { serverUnread } from './serverUtils';
+import { saveServerOrder } from './serversApi';
 
-/** Discord's pill on the left edge: tall for the open item, short for an
- * unread one, growing a little on hover. */
+// the rail is one column: a dragged server only travels up and down it
+const alongRail: Modifier = ({ transform }) => ({ ...transform, x: 0 });
+
+// A browser drags an <img> (or a link) on its own, as a file to drop
+// elsewhere: started on a server's picture that ghost image took the pointer
+// and the reorder never saw the move. Nothing in the rail is a native drag.
+const blockNativeDrag = (event: DragEvent) => event.preventDefault();
+
+/** Discord's pill on the rail's left edge: tall for the open item, short for
+ * an unread one, growing a little on hover. */
 function Pill({ active, unread }: { active: boolean; unread: boolean }) {
   return (
     <span
       aria-hidden
       className={cn(
-        'absolute -left-3 top-1/2 w-1 -translate-y-1/2 rounded-r-full bg-text-primary transition-[height] duration-150',
+        'absolute -left-4 top-1/2 w-1 -translate-y-1/2 rounded-r-full bg-text-primary transition-[height] duration-150',
         active ? 'h-10' : unread ? 'h-2 group-hover/server:h-5' : 'h-0 group-hover/server:h-5',
       )}
     />
   );
 }
 
-function RailItem({ label, active, unread, badge, onClick, children }: {
+function RailItem({ label, active, unread, badge, onClick, children, dragging = false, sortable }: {
   label: string; active: boolean; unread: boolean; badge?: number; onClick: () => void; children: ReactNode;
+  /** while this item is the one being dragged: no tooltip trailing it */
+  dragging?: boolean;
+  /** what makes the item a handle of the rail's sortable list */
+  sortable?: { ref: (node: HTMLElement | null) => void; style: CSSProperties; props: HTMLAttributes<HTMLElement> };
 }) {
   return (
-    <Tooltip>
+    <Tooltip disabled={dragging}>
       <TooltipTrigger
+        {...sortable?.props}
+        ref={sortable?.ref}
+        style={sortable?.style}
         onClick={onClick}
+        onDragStart={blockNativeDrag}
         aria-label={label}
         aria-current={active ? 'page' : undefined}
-        className="group/server relative grid size-12 flex-none place-items-center outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-2xl"
+        className={cn(
+          'group/server relative grid size-10 flex-none touch-none select-none place-items-center rounded-[12px] outline-none [-webkit-user-drag:none] focus-visible:ring-2 focus-visible:ring-ring',
+          dragging && 'z-10 cursor-grabbing',
+        )}
       >
         <Pill active={active} unread={unread} />
         {children}
         {!!badge && (
-          <CountBadge decorative className="absolute -bottom-0.5 -right-0.5 ring-4 ring-surface-rail">
+          <CountBadge decorative className="absolute -bottom-1 -right-1 ring-4 ring-surface-rail">
             {badge > 99 ? '99+' : badge}
           </CountBadge>
         )}
@@ -53,13 +77,42 @@ function RailItem({ label, active, unread, badge, onClick, children }: {
   );
 }
 
+/** A server in the rail that can be dragged to a new place in it. */
+function SortableServerItem({ id, suppressClick, ...item }: Omit<Parameters<typeof RailItem>[0], 'sortable' | 'dragging'> & { id: string; suppressClick: () => boolean }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  return (
+    <RailItem
+      {...item}
+      // the press that ends a drag is not a click on the server it dropped
+      onClick={() => { if (!suppressClick()) item.onClick(); }}
+      dragging={isDragging}
+      sortable={{ ref: setNodeRef, style: { transform: CSS.Translate.toString(transform), transition }, props: { ...attributes, ...listeners } }}
+    />
+  );
+}
+
 /** The far-left column: home (friends and DMs) on top, then every server the
- * account is in, then creating or joining one. */
+ * account is in, then creating or joining one. Servers are dragged to reorder
+ * them, as in Discord's rail; the order is the account's own. */
 export function ServerRail({ className }: { className?: string }) {
   const { t } = useTranslation('servers');
   const navigate = useNavigate();
   const { pathname } = useContentLocation();
-  const { servers, conversations, unreadByConversation } = useRoom();
+  const { servers, conversations, unreadByConversation, reorderServers } = useRoom();
+  // a press only becomes a drag past a few pixels, so a click still opens the server
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+  const draggedAtRef = useRef(0);
+  const suppressClick = () => Date.now() - draggedAtRef.current < 250;
+
+  function handleDragEnd({ active, over }: DragEndEvent) {
+    draggedAtRef.current = Date.now();
+    if (!over || active.id === over.id) return;
+    const before = servers.map((s) => s.id);
+    const after = arrayMove(before, before.indexOf(String(active.id)), before.indexOf(String(over.id)));
+    reorderServers(after);
+    // the rail already moved; a refused save puts it back
+    saveServerOrder(after).catch(() => reorderServers(before));
+  }
   const { pendingIncomingCount } = useFriends();
   const [createOpen, setCreateOpen] = useState(false);
   const { isMobile, isOverlay, openMobile, setOpenMobile, toggleSidebar } = useSidebar();
@@ -75,41 +128,47 @@ export function ServerRail({ className }: { className?: string }) {
   );
 
   return (
-    <nav aria-label={t('rail.label')} className={cn('flex w-[72px] flex-none flex-col items-center gap-2 overflow-y-auto bg-surface-rail pt-3 pb-[max(0.75rem,var(--dock-clearance,0px))] [scrollbar-width:none]', className)}>
+    <nav aria-label={t('rail.label')} className={cn('flex w-[72px] flex-none flex-col items-center gap-2 overflow-y-auto bg-surface-rail pb-[max(0.75rem,var(--dock-clearance,0px))] [scrollbar-width:none] max-md:pt-3', className)}>
       {drawer && (
         <Tooltip>
           <TooltipTrigger onClick={toggleSidebar} aria-label={t('rail.showList')} aria-expanded={openMobile}
-            className="grid size-12 flex-none place-items-center rounded-2xl text-text-muted outline-none hover:bg-bg-hover hover:text-text-primary focus-visible:ring-2 focus-visible:ring-ring">
+            className="grid size-10 flex-none place-items-center rounded-[12px] bg-surface-300 text-text-secondary outline-none hover:bg-surface-400 hover:text-text-primary focus-visible:ring-2 focus-visible:ring-ring">
             <SidebarSimpleIcon size={24} aria-hidden />
           </TooltipTrigger>
           <TooltipContent side="right">{t('rail.showList')}</TooltipContent>
         </Tooltip>
       )}
       <RailItem label={t('rail.home')} active={home} unread={false} badge={directUnread + pendingIncomingCount} onClick={() => go(ROUTES.home)}>
-        {/* the logo is a single blue shape: whitened on a blue tile it lost its
-            features, so it keeps its own color on a neutral one */}
-        <span className={cn('grid size-12 place-items-center transition-[border-radius,background-color] duration-150', home ? 'rounded-[30%] bg-bg-selected' : 'rounded-[50%] bg-bg-secondary group-hover/server:rounded-[30%] group-hover/server:bg-bg-hover')}>
-          <img src="/logo.svg" alt="" className="h-auto w-8" />
+        {/* Discord's home tile: blurple with a white logo while home is open;
+            the logo's eyes are cut out, so the tile shows through them */}
+        <span className={cn('grid size-10 place-items-center rounded-[12px] transition-colors duration-150', home ? 'bg-accent-primary' : 'bg-surface-300 group-hover/server:bg-accent-primary')}>
+          <img src="/logo.svg" alt="" draggable={false} className={cn('h-auto w-6', home ? 'brightness-0 invert' : 'group-hover/server:brightness-0 group-hover/server:invert')} />
         </span>
       </RailItem>
-      <span aria-hidden className="h-0.5 w-8 flex-none rounded-full bg-border" />
-      {servers.map((server) => {
-        const unread = serverUnread(server, unreadByConversation);
-        return (
-          <RailItem
-            key={server.id}
-            label={server.name}
-            active={server.id === currentServerId}
-            unread={unread > 0}
-            onClick={() => go(ROUTES.server(server.id))}
-          >
-            <ServerIcon id={server.id} name={server.name} icon={server.icon} active={server.id === currentServerId} className={server.status === 'suspended' ? 'opacity-40 grayscale' : undefined} />
-          </RailItem>
-        );
-      })}
+      <span aria-hidden className="h-px w-8 flex-none bg-border-subtle" />
+      <DndContext sensors={sensors} collisionDetection={closestCenter} modifiers={[alongRail]} onDragStart={() => { draggedAtRef.current = Date.now(); }} onDragEnd={handleDragEnd} onDragCancel={() => { draggedAtRef.current = Date.now(); }}>
+        <SortableContext items={servers.map((s) => s.id)} strategy={verticalListSortingStrategy}>
+          {servers.map((server) => {
+            const unread = serverUnread(server, unreadByConversation);
+            return (
+              <SortableServerItem
+                key={server.id}
+                id={server.id}
+                suppressClick={suppressClick}
+                label={server.name}
+                active={server.id === currentServerId}
+                unread={unread > 0}
+                onClick={() => go(ROUTES.server(server.id))}
+              >
+                <ServerIcon id={server.id} name={server.name} icon={server.icon} size={40} className={server.status === 'suspended' ? 'opacity-40 grayscale' : undefined} />
+              </SortableServerItem>
+            );
+          })}
+        </SortableContext>
+      </DndContext>
       <RailItem label={t('rail.add')} active={false} unread={false} onClick={() => setCreateOpen(true)}>
-        <span className="grid size-12 place-items-center rounded-[50%] bg-bg-secondary text-green transition-[border-radius,background-color,color] duration-150 group-hover/server:rounded-[30%] group-hover/server:bg-green-solid group-hover/server:text-white">
-          <PlusIcon size={24} weight="bold" />
+        <span className="grid size-10 place-items-center rounded-[12px] bg-surface-300 text-text-primary transition-colors duration-150 group-hover/server:bg-accent-primary group-hover/server:text-white">
+          <PlusIcon size={20} weight="bold" />
         </span>
       </RailItem>
       <CreateServerDialog open={createOpen} onOpenChange={setCreateOpen} />

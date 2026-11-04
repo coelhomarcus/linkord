@@ -41,7 +41,17 @@ describe('buildTimelineItems', () => {
 
   it('keeps the divider at the first visible unread row when earlier history is not loaded', () => {
     const items = buildTimelineItems([msg(5, 'ana', 0), msg(6, 'bia', 1)], [], undefined, 2);
-    expect(items.map((item) => item.type)).toEqual(['date', 'unread', 'message', 'message']);
+    expect(items.map((item) => item.type)).toEqual(['unread', 'message', 'message']);
+  });
+
+  it('puts the unread divider in place of the date when a new day starts with the first unread message', () => {
+    const items = buildTimelineItems([msg(1, 'ana', 0), msg(2, 'ana', 24 * 60), msg(3, 'bia', 24 * 60 + 1)], [], undefined, 2);
+    expect(items.map((item) => item.type)).toEqual(['date', 'message', 'unread', 'message', 'message']);
+  });
+
+  it('keeps the date when the first unread message falls mid-day', () => {
+    const items = buildTimelineItems([msg(1, 'ana', 0), msg(2, 'bia', 1)], [], undefined, 2);
+    expect(items.map((item) => item.type)).toEqual(['date', 'message', 'unread', 'message']);
   });
 
   it('does not show the divider before the unread row arrives', () => {

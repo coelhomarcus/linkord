@@ -1,8 +1,8 @@
 {
-  "title": "Notificações",
+  "title": "Caixa de Entrada",
   "bell": {
-    "unread_one": "Notificações, {{count}} não lida",
-    "unread_other": "Notificações, {{count}} não lidas"
+    "unread_one": "Caixa de Entrada, {{count}} não lida",
+    "unread_other": "Caixa de Entrada, {{count}} não lidas"
   },
   "actions": {
     "markAllRead": "Marcar todas como lidas",
@@ -15,7 +15,8 @@
   "list": {
     "loading": "Carregando…",
     "loadFailed": "Não foi possível carregar as notificações.",
-    "empty": "Nenhuma notificação por enquanto."
+    "empty": "Nenhuma notificação por enquanto.",
+    "emptyTitle": "Você está por dentro!"
   },
   "text": {
     "unknownActor": "Alguém",

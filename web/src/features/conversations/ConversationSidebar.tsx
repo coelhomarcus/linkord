@@ -38,8 +38,8 @@ function DirectRow({ conversation, active, onClick, onClose }: {
         aria-label={unread > 0 ? t('sidebar.rowUnread', { name: title, count: unread }) : title}
         aria-current={active ? 'page' : undefined}
         className={cn(
-          'relative isolate flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-left',
-          active ? 'cutout-active text-text-primary' : cn('cutout md:hover:cutout-subtle md:hover:bg-nav-hover', unread ? 'text-text-primary' : 'text-text-muted md:hover:text-text-secondary'),
+          'relative isolate flex h-11 w-full items-center gap-3 rounded-lg px-2 text-left',
+          active ? 'cutout-active text-text-primary' : cn('cutout md:hover:cutout-subtle md:hover:bg-nav-hover', unread ? 'text-text-primary' : 'text-text-muted md:hover:text-text-primary'),
         )}
       >
         {active && <ActiveFill />}
@@ -49,11 +49,11 @@ function DirectRow({ conversation, active, onClick, onClose }: {
             : <span className="block size-8 rounded-full bg-fill-hover" />}
           <span className={cn('absolute -bottom-0.5 -right-0.5 size-3.5 rounded-full border-[3px] border-(--cutout)', online ? 'bg-green' : 'bg-text-muted')} />
         </span>
-        <span className={cn('min-w-0 flex-1 truncate text-label', unread ? 'font-semibold' : 'font-medium')}>{title}</span>
+        <span className={cn('min-w-0 flex-1 truncate text-body', unread ? 'font-semibold' : 'font-medium')}>{title}</span>
         {unread > 0 && <CountBadge className="h-5 min-w-5 px-1.5 text-micro">{unread > 99 ? '99+' : unread}</CountBadge>}
       </button>
       <button type="button" onClick={onClose} aria-label={t('sidebar.close', { name: title })}
-        className="absolute right-1.5 top-1/2 hidden -translate-y-1/2 rounded-sm p-0.5 text-text-muted hover:text-text-primary group-hover/dm:block">
+        className="absolute right-2 top-1/2 hidden -translate-y-1/2 rounded-sm p-0.5 text-text-muted hover:text-text-primary group-hover/dm:block">
         <XIcon size={16} />
       </button>
     </li>
@@ -85,29 +85,30 @@ function DirectList({ onNavigate }: { onNavigate: () => void }) {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex h-header flex-none items-center border-b border-border-subtle px-2.5 md:mt-[calc(var(--spacing-shell)+1px)]">
+      <div className="flex h-header flex-none items-center border-b border-border-subtle px-2">
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           aria-label={t('sidebar.find')}
           placeholder={t('sidebar.find')}
-          className="h-8 w-full rounded-md bg-fill-inset px-2 text-center text-label outline-none placeholder:text-text-muted focus:text-left"
+          className="h-8 w-full rounded-lg border border-border-default bg-surface-300 px-2 text-center text-label font-medium text-text-primary outline-none placeholder:text-text-primary focus:border-border-accent focus:text-left focus:placeholder:text-text-faint"
         />
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto pb-[max(0.75rem,var(--dock-list-clearance,0px))] pt-2">
-        <div className="mx-2 mb-4">
+        <div className="mx-2">
           <button type="button" onClick={() => { navigate(isMobile ? ROUTES.friends : ROUTES.home); onNavigate(); }} aria-current={onFriends ? 'page' : undefined}
-            className={cn('relative isolate flex w-full items-center gap-3 rounded-md px-2 py-2.5 text-left text-label font-medium', onFriends ? 'text-text-primary' : 'text-text-muted hover:bg-nav-hover hover:text-text-secondary')}>
+            className={cn('relative isolate flex h-[38px] w-full items-center gap-3 rounded-lg px-2 text-left text-body font-medium', onFriends ? 'text-text-primary' : 'text-text-muted hover:bg-nav-hover hover:text-text-primary')}>
             {onFriends && <ActiveFill />}
-            <UsersIcon size={24} weight="fill" />
+            <UsersIcon size={20} weight="fill" />
             <span className="flex-1">{t('sidebar.friends')}</span>
-            {pendingIncomingCount > 0 && <CountBadge className="h-5 min-w-5 px-1.5 text-micro">{pendingIncomingCount}</CountBadge>}
+            {pendingIncomingCount > 0 && <CountBadge className="h-4 min-w-4 px-1 text-micro">{pendingIncomingCount}</CountBadge>}
           </button>
         </div>
-        <div className="flex items-center px-4 pb-1">
-          <span className="flex-1 select-none text-caption font-semibold text-text-muted hover:text-text-secondary">{t('sidebar.directMessages')}</span>
+        <div aria-hidden className="mx-2 my-2 h-px bg-border-subtle" />
+        <div className="group/dm-header flex h-10 items-center px-4 pt-2">
+          <span className="flex-1 select-none text-label font-medium text-text-muted group-hover/dm-header:text-text-primary">{t('sidebar.directMessages')}</span>
           <Tooltip>
-            <TooltipTrigger onClick={() => setNewOpen(true)} aria-label={t('sidebar.newDirect')} className="text-text-muted hover:text-text-primary"><PlusIcon size={16} /></TooltipTrigger>
+            <TooltipTrigger onClick={() => setNewOpen(true)} aria-label={t('sidebar.newDirect')} className="text-text-secondary hover:text-text-primary"><PlusIcon size={18} /></TooltipTrigger>
             <TooltipContent>{t('sidebar.newDirect')}</TooltipContent>
           </Tooltip>
         </div>
@@ -155,7 +156,7 @@ export function ConversationSidebar() {
     );
   }
   return (
-    <Sidebar ariaLabel={isHomePath(pathname) ? t('sidebar.title') : server?.name ?? t('sidebar.title')} className="text-text-primary" panelClassName="bg-bg-secondary">
+    <Sidebar ariaLabel={isHomePath(pathname) ? t('sidebar.title') : server?.name ?? t('sidebar.title')} className="text-text-primary" panelClassName="border-r border-border-subtle bg-surface-app">
       {content}
     </Sidebar>
   );

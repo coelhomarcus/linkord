@@ -28,7 +28,7 @@ function renderDock({ width = 1400, open = true, placement = 'shell' as 'shell' 
     <MemoryRouter>
       <TooltipProvider>
         <SidebarProvider open={open} onOpenChange={vi.fn()} openMobile={false} onOpenMobileChange={vi.fn()}>
-          <FloatingUserDock placement={placement} onReturnToCall={vi.fn()} onOpenProfile={vi.fn()} showReturnToCall />
+          <FloatingUserDock placement={placement} onReturnToCall={vi.fn()} onOpenProfile={vi.fn()} />
         </SidebarProvider>
       </TooltipProvider>
     </MemoryRouter>,
@@ -42,7 +42,7 @@ describe('FloatingUserDock', () => {
   it('spans the rail and the list when the list is a column on screen', () => {
     renderDock();
     expect(dock()).toHaveAttribute('data-user-dock', 'wide');
-    expect(dock()!.style.width).toBe('calc(4rem + var(--sidebar-width) - 1rem)');
+    expect(dock()!.style.width).toBe('calc(72px + var(--sidebar-width) - 1rem)');
     expect(screen.getByRole('button', { name: 'Meu perfil' })).toHaveTextContent('Fulana');
   });
 

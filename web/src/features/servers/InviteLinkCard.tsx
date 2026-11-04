@@ -52,7 +52,7 @@ export function InviteLinkCard({ code, own = false, page = false }: { code: stri
   const heading = own ? t('inviteCard.sent') : page && preview?.inviter ? t('inviteCard.invitedBy', { name: preview.inviter.displayName }) : t('inviteCard.received');
   return (
     <div className={page ? 'flex w-full max-w-md flex-col items-center gap-4 rounded-xl bg-bg-secondary p-8 text-center' : 'mt-1 w-full max-w-[26rem] rounded-lg border border-border bg-bg-secondary p-4'}>
-      <p className={page ? 'text-label text-text-secondary' : 'mb-3 text-caption font-bold uppercase text-text-secondary'}>{preview === null ? t(own ? 'inviteCard.sentInvalid' : 'inviteCard.receivedInvalid') : heading}</p>
+      <p className={page ? 'text-label text-text-secondary' : 'mb-3 text-body font-medium text-text-primary'}>{preview === null ? t(own ? 'inviteCard.sentInvalid' : 'inviteCard.receivedInvalid') : heading}</p>
       {preview === null ? (
         <div className="flex items-center gap-3">
           <span className="grid size-12 place-items-center rounded-2xl bg-red/15 text-red"><EnvelopeSimpleIcon size={26} weight="fill" /></span>

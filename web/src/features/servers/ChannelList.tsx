@@ -2,7 +2,7 @@ import {
   CaretDownIcon, CaretRightIcon, FolderPlusIcon, GearSixIcon, HashIcon, PlusCircleIcon, PlusIcon, SignOutIcon,
   SpeakerHighIcon, UserPlusIcon,
 } from '@phosphor-icons/react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Avatar } from '@/shared/Avatar';
@@ -60,23 +60,23 @@ function ChannelRow({ server, channel, active, onOpen, onInvite }: {
   const Icon = channel.type === 'voice' ? SpeakerHighIcon : HashIcon;
   return (
     <li data-channel-id={channel.id}>
-      <div className={cn('group/channel relative isolate mx-2 flex items-center rounded-md', active ? 'text-text-primary' : unread ? 'text-text-primary' : 'text-text-muted hover:bg-nav-hover hover:text-text-secondary')}>
+      <div className={cn('group/channel relative isolate mx-2 flex h-8 items-center rounded-lg', active ? 'text-text-primary' : unread ? 'text-text-primary' : 'text-text-muted hover:bg-nav-hover hover:text-text-primary')}>
         {active && <ActiveFill />}
         {unread > 0 && !active && <span aria-hidden className="absolute -left-2 top-1/2 h-2 w-1 -translate-y-1/2 rounded-r-full bg-text-primary" />}
-        <button type="button" onClick={onOpen} aria-current={active ? 'page' : undefined} className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1.5 text-left">
-          <Icon size={20} className="flex-none opacity-70" />
-          <span className={cn('truncate text-label', unread > 0 || active ? 'font-semibold' : 'font-medium')}>{channel.name}</span>
+        <button type="button" onClick={onOpen} aria-current={active ? 'page' : undefined} className="flex h-full min-w-0 flex-1 items-center gap-1.5 px-2 text-left">
+          <Icon size={20} className={cn('flex-none', active || unread > 0 ? 'text-text-secondary' : 'text-text-muted')} />
+          <span className={cn('truncate text-body', unread > 0 ? 'font-semibold' : 'font-medium')}>{channel.name}</span>
         </button>
-        <span className={cn('flex flex-none items-center gap-0.5 pr-1.5', active ? 'flex' : 'hidden group-hover/channel:flex group-focus-within/channel:flex [@media(hover:none)]:flex')}>
+        <span className={cn('flex flex-none items-center gap-1 pr-2', active ? 'flex' : 'hidden group-hover/channel:flex group-focus-within/channel:flex [@media(hover:none)]:flex')}>
           {can(server, PERMISSIONS.CREATE_INVITE) && (
             <Tooltip>
-              <TooltipTrigger onClick={onInvite} aria-label={t('channel.invite')} className="rounded-sm p-0.5 text-text-muted hover:text-text-primary pointer-coarse:p-2"><UserPlusIcon size={16} /></TooltipTrigger>
+              <TooltipTrigger onClick={onInvite} aria-label={t('channel.invite')} className="rounded-sm text-text-secondary hover:text-text-primary pointer-coarse:p-2"><UserPlusIcon size={16} weight="fill" /></TooltipTrigger>
               <TooltipContent>{t('channel.invite')}</TooltipContent>
             </Tooltip>
           )}
           {canInChannel(channel, PERMISSIONS.MANAGE_CHANNELS) && (
             <Tooltip>
-              <TooltipTrigger onClick={() => openChannelSettings(server.id, channel.id)} aria-label={t('channel.edit')} className="rounded-sm p-0.5 text-text-muted hover:text-text-primary pointer-coarse:p-2"><GearSixIcon size={16} /></TooltipTrigger>
+              <TooltipTrigger onClick={() => openChannelSettings(server.id, channel.id)} aria-label={t('channel.edit')} className="rounded-sm text-text-secondary hover:text-text-primary pointer-coarse:p-2"><GearSixIcon size={16} weight="fill" /></TooltipTrigger>
               <TooltipContent>{t('channel.edit')}</TooltipContent>
             </Tooltip>
           )}
@@ -100,6 +100,8 @@ export function ChannelList({ server, activeChannelId, onNavigate }: { server: S
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [leaveError, setLeaveError] = useState<string | null>(null);
   const canManageChannels = can(server, PERMISSIONS.MANAGE_CHANNELS);
+  // the menu opens centred under the whole header, as Discord's does, not under the name
+  const headerRef = useRef<HTMLDivElement | null>(null);
 
   function toggleCategory(id: string) {
     setCollapsed((prev) => {
@@ -133,40 +135,51 @@ export function ChannelList({ server, activeChannelId, onNavigate }: { server: S
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <DropdownMenu>
-        <DropdownMenuTrigger className="flex h-header flex-none items-center gap-2 border-b border-border-subtle px-4 text-left hover:bg-nav-hover aria-expanded:bg-nav-hover md:mt-[calc(var(--spacing-shell)+1px)]">
-          <span className="min-w-0 flex-1 truncate text-title font-semibold">{server.name}</span>
-          <CaretDownIcon size={16} weight="bold" className="flex-none" />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-56">
-          {can(server, PERMISSIONS.CREATE_INVITE) && <DropdownMenuItem onClick={() => setInviteOpen({})} className="text-accent-text"><UserPlusIcon size={18} />{t('menu.invite')}</DropdownMenuItem>}
-          {canOpenSettings(server) && <DropdownMenuItem onClick={() => openServerSettings(server.id)}><GearSixIcon size={18} />{t('menu.settings')}</DropdownMenuItem>}
-          {canManageChannels && <DropdownMenuItem onClick={() => setCreateTarget({ kind: 'channel', categoryId: null })}><PlusCircleIcon size={18} />{t('menu.createChannel')}</DropdownMenuItem>}
-          {canManageChannels && <DropdownMenuItem onClick={() => setCreateTarget({ kind: 'category' })}><FolderPlusIcon size={18} />{t('menu.createCategory')}</DropdownMenuItem>}
-          <DropdownMenuSeparator />
-          <DropdownMenuItem variant="destructive" onClick={() => { setLeaveError(null); setConfirmLeave(true); }}><SignOutIcon size={18} />{t('menu.leave')}</DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <div ref={headerRef} className="flex h-header flex-none items-center gap-2 border-b border-border-subtle px-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger className="group/server-menu flex h-8 min-w-0 items-center gap-1 rounded-lg px-2 text-left text-text-primary hover:bg-nav-hover aria-expanded:bg-nav-hover">
+            <span className="min-w-0 truncate text-body font-semibold">{server.name}</span>
+            <CaretDownIcon size={14} weight="bold" className="flex-none transition-transform group-aria-expanded/server-menu:rotate-180" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent anchor={headerRef} align="center" sideOffset={-6} className="w-[220px]">
+            {can(server, PERMISSIONS.CREATE_INVITE) && <DropdownMenuItem onClick={() => setInviteOpen({})}><UserPlusIcon size={18} weight="fill" />{t('menu.invite')}</DropdownMenuItem>}
+            {canOpenSettings(server) && <DropdownMenuItem onClick={() => openServerSettings(server.id)}><GearSixIcon size={18} weight="fill" />{t('menu.settings')}</DropdownMenuItem>}
+            {canManageChannels && <DropdownMenuItem onClick={() => setCreateTarget({ kind: 'channel', categoryId: null })}><PlusCircleIcon size={18} weight="fill" />{t('menu.createChannel')}</DropdownMenuItem>}
+            {canManageChannels && <DropdownMenuItem onClick={() => setCreateTarget({ kind: 'category' })}><FolderPlusIcon size={18} weight="fill" />{t('menu.createCategory')}</DropdownMenuItem>}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant="destructive" onClick={() => { setLeaveError(null); setConfirmLeave(true); }}><SignOutIcon size={18} weight="bold" />{t('menu.leave')}</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <span className="flex-1" />
+        {can(server, PERMISSIONS.CREATE_INVITE) && (
+          <Tooltip>
+            <TooltipTrigger onClick={() => setInviteOpen({})} aria-label={t('menu.invite')} className="grid size-8 flex-none place-items-center rounded-lg text-text-secondary hover:bg-nav-hover hover:text-text-primary">
+              <UserPlusIcon size={20} weight="fill" />
+            </TooltipTrigger>
+            <TooltipContent side="bottom">{t('menu.invite')}</TooltipContent>
+          </Tooltip>
+        )}
+      </div>
 
       {server.status === 'suspended' ? (
         <p className="px-4 py-8 text-center text-label text-text-muted">{t('suspended')}</p>
       ) : (
-        <nav aria-label={t('channels')} className="min-h-0 flex-1 overflow-y-auto pb-[max(0.75rem,var(--dock-list-clearance,0px))] pt-3">
+        <nav aria-label={t('channels')} className="min-h-0 flex-1 overflow-y-auto pb-[max(0.75rem,var(--dock-list-clearance,0px))] pt-4">
           {groupChannels(server).map(({ category, channels }) => {
             const isCollapsed = !!category && collapsed.has(category.id);
             const shown = isCollapsed ? channels.filter((c) => c.id === activeChannelId || c.id === activeCallConversationId) : channels;
             return (
-              <section key={category?.id ?? 'loose'} className="mb-3">
+              <section key={category?.id ?? 'loose'} className="mb-4">
                 {category && (
-                  <div className="group/category flex items-center pr-2">
+                  <div className="group/category flex h-6 items-center pl-4 pr-4 mb-1">
                     <button type="button" onClick={() => toggleCategory(category.id)} aria-expanded={!isCollapsed}
-                      className="flex min-w-0 flex-1 items-center gap-0.5 px-2 py-1 text-left text-caption font-semibold uppercase tracking-wide text-text-muted hover:text-text-secondary">
-                      {isCollapsed ? <CaretRightIcon size={12} weight="bold" /> : <CaretDownIcon size={12} weight="bold" />}
+                      className="flex min-w-0 flex-1 items-center gap-1 text-left text-label font-medium text-text-muted hover:text-text-primary">
                       <span className="truncate">{category.name}</span>
+                      {isCollapsed ? <CaretRightIcon size={12} weight="bold" className="flex-none" /> : <CaretDownIcon size={12} weight="bold" className="flex-none" />}
                     </button>
                     {canManageChannels && (
                       <Tooltip>
-                        <TooltipTrigger onClick={() => setCreateTarget({ kind: 'channel', categoryId: category.id })} aria-label={t('channel.create')} className="text-text-muted hover:text-text-primary"><PlusIcon size={16} /></TooltipTrigger>
+                        <TooltipTrigger onClick={() => setCreateTarget({ kind: 'channel', categoryId: category.id })} aria-label={t('channel.create')} className="text-text-secondary hover:text-text-primary"><PlusIcon size={18} /></TooltipTrigger>
                         <TooltipContent>{t('channel.create')}</TooltipContent>
                       </Tooltip>
                     )}

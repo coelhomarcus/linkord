@@ -15,11 +15,6 @@ vi.mock('@/features/calls/CallControlBar', () => ({
     return <div ref={ref} data-testid="control-bar" data-hud-visible={hudVisible ? '1' : '0'} />;
   }),
 }));
-vi.mock('@/features/calls/CallChatToggleButton', () => ({
-  CallChatToggleButton: ({ chatOpen, hudVisible }: { chatOpen: boolean; hudVisible?: boolean }) => (
-    <div data-testid="chat-toggle" data-chat-open={chatOpen ? '1' : '0'} data-hud-visible={hudVisible ? '1' : '0'} />
-  ),
-}));
 
 // one avatar tile per id, so a test can say who is in the call through allIds alone
 vi.mock('@/features/calls/useCallTiles', () => ({
@@ -42,7 +37,7 @@ function lastOnCapacityChange(): (meetsMinimum: boolean, key: string | null) => 
   return call![0].onCapacityChange!;
 }
 
-function renderStage(props: { allIds: string[]; chatOpen: boolean; onToggleChat: () => void }, overrides: Partial<RoomContextValue> = {}) {
+function renderStage(props: { allIds: string[] }, overrides: Partial<RoomContextValue> = {}) {
   return render(
     <RoomContext.Provider value={createFakeRoomContextValue(overrides)}>
       <SidebarProvider>
@@ -55,27 +50,24 @@ function renderStage(props: { allIds: string[]; chatOpen: boolean; onToggleChat:
 describe('Stage — composition and integration with fullscreen/HUD', () => {
   it('attaches callStageRef to its own root element (fullscreen target)', () => {
     const callStageRef = { current: null as HTMLElement | null };
-    const { container } = renderStage({ allIds: [], chatOpen: false, onToggleChat: vi.fn() }, { callStageRef });
+    const { container } = renderStage({ allIds: [] }, { callStageRef });
     expect(callStageRef.current).toBe(container.querySelector('[data-stage]'));
   });
 
-  it('renders CallControlBar and CallChatToggleButton inside itself, forwarding chatOpen', () => {
-    renderStage({ allIds: [], chatOpen: true, onToggleChat: vi.fn() });
-    const chatToggle = document.querySelector('[data-testid="chat-toggle"]');
+  it('renders CallControlBar inside itself', () => {
+    renderStage({ allIds: [] });
     expect(document.querySelector('[data-testid="control-bar"]')).toBeInTheDocument();
-    expect(chatToggle).toHaveAttribute('data-chat-open', '1');
   });
 
-  it('HUD starts visible (forwarded to both children)', () => {
-    renderStage({ allIds: [], chatOpen: false, onToggleChat: vi.fn() });
+  it('HUD starts visible (forwarded to the control bar)', () => {
+    renderStage({ allIds: [] });
     expect(document.querySelector('[data-testid="control-bar"]')).toHaveAttribute('data-hud-visible', '1');
-    expect(document.querySelector('[data-testid="chat-toggle"]')).toHaveAttribute('data-hud-visible', '1');
   });
 
   it('with a tile menu open (menuTarget), the HUD always stays visible regardless of idle time', () => {
     vi.useFakeTimers();
     try {
-      renderStage({ allIds: [], chatOpen: false, onToggleChat: vi.fn() }, {
+      renderStage({ allIds: [] }, {
         menuTarget: { key: 'p-2:participant', participantId: 'p-2', kind: 'camera', rect: { left: 0, top: 0, right: 0, bottom: 0 } },
       });
       act(() => { vi.advanceTimersByTime(10000); });
@@ -88,7 +80,7 @@ describe('Stage — composition and integration with fullscreen/HUD', () => {
   it('reconnecting also suspends the HUD auto-hide', () => {
     vi.useFakeTimers();
     try {
-      renderStage({ allIds: [], chatOpen: false, onToggleChat: vi.fn() }, { reconnecting: true });
+      renderStage({ allIds: [] }, { reconnecting: true });
       act(() => { vi.advanceTimersByTime(10000); });
       expect(document.querySelector('[data-testid="control-bar"]')).toHaveAttribute('data-hud-visible', '1');
     } finally {
@@ -99,7 +91,7 @@ describe('Stage — composition and integration with fullscreen/HUD', () => {
   it('a sharing error (shareError) suspends the HUD auto-hide', () => {
     vi.useFakeTimers();
     try {
-      renderStage({ allIds: [], chatOpen: false, onToggleChat: vi.fn() }, {
+      renderStage({ allIds: [] }, {
         state: { ...initialRoomState, shareError: 'failed' },
       });
       act(() => { vi.advanceTimersByTime(10000); });
@@ -112,7 +104,7 @@ describe('Stage — composition and integration with fullscreen/HUD', () => {
   it('with nothing suspending it, the HUD hides itself after the idle time', () => {
     vi.useFakeTimers();
     try {
-      renderStage({ allIds: [], chatOpen: false, onToggleChat: vi.fn() });
+      renderStage({ allIds: [] });
       act(() => { vi.advanceTimersByTime(3000); });
       expect(document.querySelector('[data-testid="control-bar"]')).toHaveAttribute('data-hud-visible', '0');
     } finally {
@@ -125,7 +117,7 @@ describe('Stage — dynamic space reservation for the bar (no fixed pb-32)', () 
   it('measures the real height of the bar (+ banners) and reserves exactly height + spacing', () => {
     const getRect = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ height: 60 } as DOMRect);
     try {
-      renderStage({ allIds: [], chatOpen: false, onToggleChat: vi.fn() });
+      renderStage({ allIds: [] });
       const stage = document.querySelector('[data-stage]') as HTMLElement;
       expect(stage.style.paddingBottom).toBe('72px');
     } finally {
@@ -137,14 +129,14 @@ describe('Stage — dynamic space reservation for the bar (no fixed pb-32)', () 
 describe("Stage — capacity fallback (TileGrid can't fit everyone -> automatic focus)", () => {
   it('with no one focused, insufficient capacity triggers SET_FOCUSED with origin "capacity"', () => {
     const dispatch = vi.fn();
-    renderStage({ allIds: [], chatOpen: false, onToggleChat: vi.fn() }, { dispatch, state: { ...initialRoomState, focusedId: null, focusOrigin: null } });
+    renderStage({ allIds: [] }, { dispatch, state: { ...initialRoomState, focusedId: null, focusOrigin: null } });
     lastOnCapacityChange()(false, 'p-2:avatar');
     expect(dispatch).toHaveBeenCalledWith({ type: 'SET_FOCUSED', id: 'p-2:avatar', origin: 'capacity' });
   });
 
   it('when capacity fits again, undoes ONLY a focus that it itself caused', () => {
     const dispatch = vi.fn();
-    renderStage({ allIds: [], chatOpen: false, onToggleChat: vi.fn() }, {
+    renderStage({ allIds: [] }, {
       dispatch, state: { ...initialRoomState, focusedId: 'p-2:avatar', focusOrigin: 'capacity' },
     });
     lastOnCapacityChange()(true, null);
@@ -153,7 +145,7 @@ describe("Stage — capacity fallback (TileGrid can't fit everyone -> automatic 
 
   it('never overwrites a MANUAL focus, neither to focus nor to unfocus', () => {
     const dispatch = vi.fn();
-    renderStage({ allIds: [], chatOpen: false, onToggleChat: vi.fn() }, {
+    renderStage({ allIds: [] }, {
       dispatch, state: { ...initialRoomState, focusedId: 'p-2:avatar', focusOrigin: 'manual' },
     });
     lastOnCapacityChange()(false, 'p-3:avatar');
@@ -163,7 +155,7 @@ describe("Stage — capacity fallback (TileGrid can't fit everyone -> automatic 
 
   it('does not touch an automatic focus caused by screen share (origin "automatic"), only what it itself caused', () => {
     const dispatch = vi.fn();
-    renderStage({ allIds: [], chatOpen: false, onToggleChat: vi.fn() }, {
+    renderStage({ allIds: [] }, {
       dispatch, state: { ...initialRoomState, focusedId: 'p-2:screen', focusOrigin: 'automatic' },
     });
     lastOnCapacityChange()(true, null);
@@ -172,7 +164,7 @@ describe("Stage — capacity fallback (TileGrid can't fit everyone -> automatic 
 
   it('already with something focused (any origin), does not focus again just due to lack of capacity', () => {
     const dispatch = vi.fn();
-    renderStage({ allIds: [], chatOpen: false, onToggleChat: vi.fn() }, {
+    renderStage({ allIds: [] }, {
       dispatch, state: { ...initialRoomState, focusedId: 'p-2:screen', focusOrigin: 'automatic' },
     });
     lastOnCapacityChange()(false, 'p-3:avatar');
@@ -187,17 +179,17 @@ describe("Stage — capacity fallback (TileGrid can't fit everyone -> automatic 
     const lastExtraTile = () => tileGridSpy.mock.calls.at(-1)![0].extraTile as React.ReactElement<{ conversationId: string }> | undefined;
 
     it('fills the empty seat while you are alone in a group call', () => {
-      renderStage({ allIds: ['me'], chatOpen: false, onToggleChat: vi.fn() }, { activeCallConversationId: 'c1', conversations: [conversation('voice')] });
+      renderStage({ allIds: ['me'] }, { activeCallConversationId: 'c1', conversations: [conversation('voice')] });
       expect(lastExtraTile()?.props.conversationId).toBe('c1');
     });
 
     it('goes away once someone else is in the call', () => {
-      renderStage({ allIds: ['me', 'ana'], chatOpen: false, onToggleChat: vi.fn() }, { activeCallConversationId: 'c1', conversations: [conversation('voice')] });
+      renderStage({ allIds: ['me', 'ana'] }, { activeCallConversationId: 'c1', conversations: [conversation('voice')] });
       expect(lastExtraTile()).toBeUndefined();
     });
 
     it('a private call has nobody else to invite', () => {
-      renderStage({ allIds: ['me'], chatOpen: false, onToggleChat: vi.fn() }, { activeCallConversationId: 'c1', conversations: [conversation('direct')] });
+      renderStage({ allIds: ['me'] }, { activeCallConversationId: 'c1', conversations: [conversation('direct')] });
       expect(lastExtraTile()).toBeUndefined();
     });
   });

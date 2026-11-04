@@ -92,7 +92,7 @@ describe('MessageRow', () => {
       <MessageRow message={makeMessage({ id: null, name: 'Deploys', bot: true })} showHeader highlighted={false} allUsers={new Map()} mentionLookup={new Map()} onOpenProfile={noop} onReply={noop} onJumpTo={noop} />
     );
     expect(screen.getByText('Deploys')).toBeInTheDocument();
-    expect(screen.getByText('Bot')).toBeInTheDocument();
+    expect(screen.getByText('Webhook')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Deploys' })).not.toBeInTheDocument();
   });
 
