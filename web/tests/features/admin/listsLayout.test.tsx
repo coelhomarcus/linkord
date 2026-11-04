@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import { renderAdmin } from './adminFixture';
 import { UsersPage } from '@/features/admin/UsersPage';
-import { GroupsPage } from '@/features/admin/GroupsPage';
+import { ServersPage } from '@/features/admin/ServersPage';
 import { dayStartIso, nextDayStartIso } from '@/features/admin/adminFormat';
 import * as adminApi from '@/features/admin/adminApi';
 
@@ -12,14 +12,14 @@ const mocked = vi.mocked(adminApi);
 const user = (over: Partial<adminApi.AdminUserRow> = {}): adminApi.AdminUserRow => ({
   id: 'u1', username: 'ana', displayName: 'Ana', avatar: '', avatarColor: 'blurple', role: 'user', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', lastSeenAt: null, online: false, ...over,
 });
-const group = (over: Partial<adminApi.AdminGroupRow> = {}): adminApi.AdminGroupRow => ({
-  id: 'g1', title: 'Squad', avatar: '', status: 'active', memberCount: 3, ownerId: 'u1', ownerUsername: 'ana', createdBy: 'u1', createdAt: '2026-01-01T00:00:00.000Z', lastMessageAt: null, ...over,
+const server = (over: Partial<adminApi.AdminServerRow> = {}): adminApi.AdminServerRow => ({
+  id: 'g1', name: 'Squad', icon: '', status: 'active', memberCount: 3, channelCount: 2, ownerId: 'u1', ownerUsername: 'ana', createdAt: '2026-01-01T00:00:00.000Z', lastMessageAt: null, ...over,
 });
 
 beforeEach(() => {
   vi.clearAllMocks();
   mocked.fetchAdminUsers.mockResolvedValue({ items: [user()], nextCursor: null });
-  mocked.fetchAdminGroups.mockResolvedValue({ items: [group()], nextCursor: null });
+  mocked.fetchAdminServers.mockResolvedValue({ items: [server()], nextCursor: null });
 });
 
 describe('list filters reach the server', () => {
@@ -33,9 +33,9 @@ describe('list filters reach the server', () => {
   });
 
   it('the "no owner" filter reaches the server as the orphan flag', async () => {
-    renderAdmin(<GroupsPage />, { path: '/admin/groups?filter=orphan', pattern: '/admin/groups' });
+    renderAdmin(<ServersPage />, { path: '/admin/servers?filter=orphan', pattern: '/admin/servers' });
     await screen.findByText('Squad');
-    expect(mocked.fetchAdminGroups).toHaveBeenCalledWith({ q: '', status: undefined, orphan: true }, null);
+    expect(mocked.fetchAdminServers).toHaveBeenCalledWith({ q: '', status: undefined, orphan: true }, null);
   });
 });
 

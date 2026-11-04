@@ -7,7 +7,7 @@
     "illegal": "Illegal activity",
     "other": "Other reason"
   },
-  "targets": { "user": "account", "group": "group", "message": "message" },
+  "targets": { "user": "account", "server": "server", "message": "message" },
   "errors": {
     "rateLimited": "You have sent too many reports. Please wait a little.",
     "notFound": "We could not find what you want to report.",

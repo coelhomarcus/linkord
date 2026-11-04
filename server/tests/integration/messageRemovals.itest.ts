@@ -7,7 +7,7 @@ import { eq } from 'drizzle-orm';
 import { adminAuditLogs, attachments, messages } from '../../src/db/schema.js';
 import { handlers } from '../../src/modules/messages/messages.js';
 import { filePathFor } from '../../src/modules/attachments/attachmentStorage.js';
-import { cleanupParticipant, db, joinNew, makeGroupWithMembers, makeUser, pool } from './helpers.js';
+import { cleanupParticipant, db, joinNew, makeServerWithMembers, makeUser, pool } from './helpers.js';
 
 after(() => pool.end());
 
@@ -35,7 +35,7 @@ async function attach(messageId: number, withThumb = false): Promise<{ id: strin
 
 async function withAuthor<T>(fn: (ctx: { socket: any; sent: Sent; conversationId: string; userId: string; otherId: string }) => Promise<T>): Promise<T> {
   const author = await makeUser('rm'); const other = await makeUser('ot');
-  const conversationId = await makeGroupWithMembers(author.id, [other.id]);
+  const conversationId = (await makeServerWithMembers(author.id, [other.id])).textChannelId;
   const { socket, sent, participant } = joinNew(author);
   try {
     return await fn({ socket, sent, conversationId, userId: author.id, otherId: other.id });
@@ -101,7 +101,7 @@ describe('removing an attachment from a message (real Postgres)', () => {
 describe("an admin removing someone else's attachment (real Postgres)", () => {
   async function withAdmin<T>(fn: (ctx: { adminSocket: any; adminSent: Sent; conversationId: string; authorId: string; adminId: string; bystanderSocket: any; bystanderSent: Sent }) => Promise<T>): Promise<T> {
     const author = await makeUser('au'); const admin = await makeUser('ad', 'admin'); const bystander = await makeUser('by');
-    const conversationId = await makeGroupWithMembers(author.id, [admin.id, bystander.id]);
+    const conversationId = (await makeServerWithMembers(author.id, [admin.id, bystander.id])).textChannelId;
     const adminJoin = joinNew(admin); const bystanderJoin = joinNew(bystander);
     try {
       return await fn({ adminSocket: adminJoin.socket, adminSent: adminJoin.sent, conversationId, authorId: author.id, adminId: admin.id, bystanderSocket: bystanderJoin.socket, bystanderSent: bystanderJoin.sent });

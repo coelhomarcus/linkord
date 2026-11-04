@@ -11,8 +11,12 @@
 // `present` state instead of toggling; attachment uploads are always staged,
 // published only through a correlated `chat` carrying `attachmentIds`. None
 // of that has a fallback anymore — MIN_PROTOCOL_VERSION enforces it at join.
-export const PROTOCOL_VERSION = 5;
-export const MIN_PROTOCOL_VERSION = 5;
+//
+// 6 is servers: groups are gone, `welcome` carries `servers` next to the DMs
+// in `conversations`, and every group event became a server one. A client
+// that still thinks in groups can't render any of it.
+export const PROTOCOL_VERSION = 6;
+export const MIN_PROTOCOL_VERSION = 6;
 
 export function isClientCompatible(version: unknown): boolean {
   return typeof version === 'number' && Number.isInteger(version) && version >= MIN_PROTOCOL_VERSION;

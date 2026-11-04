@@ -16,11 +16,11 @@ import type { QuerySchema } from './useAdminQuery';
 import { AppLink } from '@/shared/ui/app-link';
 
 type Queue = 'open' | 'reviewing' | 'closed';
-type TargetFilter = 'all' | 'user' | 'group' | 'message';
+type TargetFilter = 'all' | 'user' | 'server' | 'message';
 
 const QUERY: QuerySchema<'status' | 'targetType'> = {
   status: { default: 'open', allowed: ['open', 'reviewing', 'closed'] },
-  targetType: { default: 'all', allowed: ['all', 'user', 'group', 'message'] },
+  targetType: { default: 'all', allowed: ['all', 'user', 'server', 'message'] },
 };
 
 function ReportLink({ report, from }: { report: AdminReportRow; from: { from: string } }) {
@@ -55,7 +55,7 @@ export function ReportsPage() {
             <AdminSelectField<Queue> label={t('ui.queue')} value={queue} onChange={(next) => update({ status: next })}
               options={[{ value: 'open', label: t('ui.open') }, { value: 'reviewing', label: t('ui.inReview') }, { value: 'closed', label: t('ui.closed') }]} />
             <AdminSelectField<TargetFilter> label={t('ui.targetType')} value={target} onChange={(next) => update({ targetType: next })}
-              options={[{ value: 'all', label: t('ui.all') }, { value: 'user', label: t('ui.accountsPlural') }, { value: 'group', label: t('ui.groups') }, { value: 'message', label: t('ui.messagesPlural') }]} />
+              options={[{ value: 'all', label: t('ui.all') }, { value: 'user', label: t('ui.accountsPlural') }, { value: 'server', label: t('ui.servers') }, { value: 'message', label: t('ui.messagesPlural') }]} />
           </>
         )}
         summary={list.status === 'ready' && list.items.length > 0 ? `${list.items.length} ${t('ui.report', { count: list.items.length })}${list.hasMore ? t('ui.moreResults') : ''}` : undefined}

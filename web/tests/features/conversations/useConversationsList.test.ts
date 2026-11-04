@@ -4,16 +4,16 @@ import type { Conversation } from '@/shared/types/protocol';
 import { useConversationsList } from '@/features/conversations/useConversationsList';
 
 const conv = (id: string, over: Partial<Conversation> = {}): Conversation => ({
-  id, type: 'direct', title: '', avatar: '', createdBy: null, memberIds: ['me', 'peer'],
-  lastMessageAt: null, createdAt: 1, updatedAt: 1, pinnedAt: null, myRole: 'member', ownerId: null, memberCount: 0, ...over,
+  id, type: 'direct', title: '', serverId: null, memberIds: ['me', 'peer'],
+  lastMessageAt: null, createdAt: 1, updatedAt: 1, pinnedAt: null, ...over,
 });
 
 describe('useConversationsList — conversation-updated', () => {
   it('updates a conversation the client already has', () => {
     const { result } = renderHook(() => useConversationsList(vi.fn()));
-    act(() => result.current.setInitial([conv('a', { title: 'old' })]));
-    act(() => result.current.onConversationUpdated({ t: 'conversation-updated', conversation: conv('a', { title: 'new' }) }));
-    expect(result.current.conversations.map((c) => c.title)).toEqual(['new']);
+    act(() => result.current.setInitial([conv('a', { lastMessageAt: 1000 })]));
+    act(() => result.current.onConversationUpdated({ t: 'conversation-updated', conversation: conv('a', { lastMessageAt: 2000 }) }));
+    expect(result.current.conversations.map((c) => c.lastMessageAt)).toEqual([2000]);
   });
 
   it('an update for an UNKNOWN conversation becomes an insert — this is exactly how the recipient of a first DM gets it', () => {
@@ -25,7 +25,7 @@ describe('useConversationsList — conversation-updated', () => {
 });
 
 describe('useConversationsList — conversation-opened/conversation-created respect the pinned item', () => {
-  it('opening a new conversation (DM or freshly-created group) does not push the pinned one down', () => {
+  it('opening a new conversation (DM or a channel) does not push the pinned one down', () => {
     // handleDirectOpen/handleGroupCreate on the server both send
     // 'conversation-opened' for a brand-new conversation the client never
     // had — reproduces exactly that: a pinned conversation already in the

@@ -1,59 +1,40 @@
 import crypto from 'node:crypto';
 import { and, desc, eq, inArray, or, sql } from 'drizzle-orm';
 import { db } from '../../db/client.js';
-import { conversationMembers, conversations, users, type Conversation } from '../../db/schema.js';
+import { channelReadStates, conversationMembers, conversations, users, type Conversation } from '../../db/schema.js';
 import { participants, send } from '../presence/participants.js';
 import { resolveDisplayName } from '../users/users.js';
-import { deleteForConversation } from '../attachments/attachmentCleanup.js';
+import { hasPermission, PERMISSIONS } from '../servers/permissions.js';
+import { channelPermissions, channelPermissionsIn, channelViewerIds, loadServerSnapshot, serverIdsForUser, serverPeerIds } from '../servers/serverAccess.js';
 import type { Tx } from '../users/userPairLock.js';
 
 // The conversations API other modules actually depend on (messages.ts,
 // moderation.ts, attachmentServing.ts, attachmentUploads.ts) — as opposed
-// to the socket handlers for conversation/group actions themselves
-// (direct-open, group-create, etc.), which live in conversations.ts and
-// are never imported individually, only dispatched as a block via
-// `handlers`. See conversations.ts's own module comment for the handler
-// half of this split.
+// to the socket handlers for DM actions themselves (direct-open, close,
+// pin), which live in conversations.ts and are only dispatched as a block
+// via `handlers`.
+//
+// A conversation is either a DM (two `conversation_members` rows) or a
+// server channel (`serverId` set, access resolved from the server's roles
+// — modules/servers/serverAccess.ts). Everything here answers for both, so
+// messages, uploads, calls and search never need to know which one it is.
 
-export type ConversationType = 'direct' | 'group' | 'bot';
+export type ConversationType = 'direct' | 'text' | 'voice';
 
-// A bot has a group's whole lifecycle (owner, invitations, leaving,
-// deleting); what sets it apart is only who may post — see acceptsHumanMessages.
-export const GROUP_LIKE_TYPES = ['group', 'bot'] as const;
-
-export function isGroupLike(type: string): boolean {
-  return (GROUP_LIKE_TYPES as readonly string[]).includes(type);
+export function isServerChannel(conversation: { serverId: string | null }): conversation is { serverId: string } {
+  return conversation.serverId !== null;
 }
 
-/** Only the bot's webhook posts in a bot conversation; its members read. */
-export function acceptsHumanMessages(conversation: { type: string }): boolean {
-  return conversation.type !== 'bot';
-}
-// 'admin' was never actually assigned anywhere in practice — dropped from
-// the type along with the DB comment (see schema.ts#conversationMembers).
-export type ConversationRole = 'owner' | 'member';
-
+/** A DM as the sidebar shows it. Server channels travel inside their
+ * server's summary instead (modules/servers/serverSummaries.ts). */
 export interface ConversationSummary {
   id: string;
-  type: ConversationType;
-  title: string;
-  avatar: string;
-  createdBy: string | null;
+  type: 'direct';
   memberIds: string[];
   lastMessageAt: number | null;
   createdAt: number;
   updatedAt: number;
   pinnedAt: number | null;
-  // the VIEWER's own role in this conversation — always 'member' for a DM
-  // (DMs have no owner). Lets the frontend gate group-management UI on real
-  // per-group ownership instead of the account's global instance role.
-  myRole: ConversationRole;
-  // derived from the owner's membership row, never stored twice (§6.3);
-  // null for a DM. `memberIds` stays for presence/mentions until etapa 14.
-  ownerId: string | null;
-  memberCount: number;
-  // 'suspended' = moderated away by an admin: still listed, no access
-  status: 'active' | 'suspended';
 }
 
 export function sanitizeConversationTitle(name: unknown): string | null {
@@ -61,111 +42,89 @@ export function sanitizeConversationTitle(name: unknown): string | null {
   return s || null;
 }
 
-function normalizeConversationType(type: string): ConversationType {
-  return type === 'group' || type === 'bot' ? type : 'direct';
-}
-
-// Exported (not just used by listForUser below) because conversations.ts's
-// own handlers (handleDirectOpen, handleGroupCreate, handleGroupMembersAdd)
-// build the same summary shape for the conversation they just acted on.
-export function rowToSummary(row: Conversation, memberIds: string[], pinnedAt: Date | null, myRole: ConversationRole, ownerId: string | null): ConversationSummary {
+export function rowToSummary(row: Conversation, memberIds: string[], pinnedAt: Date | null): ConversationSummary {
   return {
     id: row.id,
-    type: normalizeConversationType(row.type),
-    title: row.title,
-    avatar: row.avatar,
-    createdBy: row.createdBy,
+    type: 'direct',
     memberIds,
     lastMessageAt: row.lastMessageAt ? row.lastMessageAt.getTime() : null,
     createdAt: row.createdAt.getTime(),
     updatedAt: row.updatedAt.getTime(),
     pinnedAt: pinnedAt ? pinnedAt.getTime() : null,
-    myRole,
-    ownerId,
-    memberCount: memberIds.length,
-    status: row.status === 'suspended' ? 'suspended' : 'active',
   };
 }
 
+/** The account's DMs. A DM only counts as "history" once it has a message —
+ * opening one (handleDirectOpen) creates the row right away so both sides
+ * can chat, but that alone shouldn't plant it in anyone's sidebar. The same
+ * clause covers "closed" DMs (member.hiddenAt set): hidden until a message
+ * newer than the close time arrives, then it reappears on its own. */
 export async function listForUser(userId: string): Promise<ConversationSummary[]> {
   const rows = await db
-    .select({ conversation: conversations, pinnedAt: conversationMembers.pinnedAt, role: conversationMembers.role })
+    .select({ conversation: conversations, pinnedAt: conversationMembers.pinnedAt })
     .from(conversationMembers)
     .innerJoin(conversations, eq(conversations.id, conversationMembers.conversationId))
     .where(and(
       eq(conversationMembers.userId, userId),
-      // groups always show. A direct conversation only counts as "history"
-      // once it has a message — opening a DM (handleDirectOpen) creates the
-      // row right away so both sides can chat, but that alone shouldn't
-      // plant it in anyone's sidebar. The same clause covers "closed"
-      // conversations (member.hiddenAt set): hidden until a message newer
-      // than the close time arrives, then it reappears on its own.
+      eq(conversations.type, 'direct'),
+      sql`${conversations.lastMessageAt} is not null`,
       or(
-        inArray(conversations.type, [...GROUP_LIKE_TYPES]),
-        and(
-          sql`${conversations.lastMessageAt} is not null`,
-          or(
-            sql`${conversationMembers.hiddenAt} is null`,
-            sql`${conversations.lastMessageAt} > ${conversationMembers.hiddenAt}`
-          )
-        )
-      )
+        sql`${conversationMembers.hiddenAt} is null`,
+        sql`${conversations.lastMessageAt} > ${conversationMembers.hiddenAt}`,
+      ),
     ))
-    // pinned conversations first (most recently pinned first among those),
-    // then everyone else by the usual recency rule. Deliberately
-    // lastMessageAt (not updatedAt/lastActivityAt) — a rename or a message
-    // edit/delete must not resort the sidebar, only a genuinely NEW message
-    // does (see schema.ts#conversations and touchConversation below).
+    // pinned first (most recently pinned first among those), then by the
+    // newest message — deliberately lastMessageAt, so an edit or delete of an
+    // old message never resorts the sidebar (see schema.ts#conversations)
     .orderBy(
       desc(sql`${conversationMembers.pinnedAt} is not null`),
       desc(conversationMembers.pinnedAt),
-      desc(sql`coalesce(${conversations.lastMessageAt}, ${conversations.createdAt})`)
+      desc(sql`coalesce(${conversations.lastMessageAt}, ${conversations.createdAt})`),
     );
 
   const ids = rows.map((r) => r.conversation.id);
   const members = new Map<string, string[]>();
-  const owners = new Map<string, string>();
   if (ids.length) {
-    const memberRows = await db.select().from(conversationMembers).where(inArray(conversationMembers.conversationId, ids));
-    for (const row of memberRows) {
-      const list = members.get(row.conversationId) ?? [];
-      list.push(row.userId);
-      members.set(row.conversationId, list);
-      if (row.role === 'owner') owners.set(row.conversationId, row.userId);
-    }
+    const memberRows = await db.select({ conversationId: conversationMembers.conversationId, userId: conversationMembers.userId })
+      .from(conversationMembers).where(inArray(conversationMembers.conversationId, ids));
+    for (const row of memberRows) members.set(row.conversationId, [...(members.get(row.conversationId) ?? []), row.userId]);
   }
-
-  return rows.map((r) => rowToSummary(r.conversation, members.get(r.conversation.id) ?? [], r.pinnedAt, r.role as ConversationRole, owners.get(r.conversation.id) ?? null));
+  return rows.map((r) => rowToSummary(r.conversation, members.get(r.conversation.id) ?? [], r.pinnedAt));
 }
 
 // the badge reads "99+" past this, so counting further is wasted work
 export const UNREAD_COUNT_CAP = 100;
 
-/** Unread messages per conversation, from the member's own read marker —
- * kept apart from the summary because the summary is also pushed to every
- * member on a rename/pin, and recounting everyone's unread there would be
- * pointless. Only conversations with something unread are present.
- * Messages from before joining never count: a member who just joined a
- * group, or whose marker predates its being stored, would otherwise start
- * with the whole history as unread. */
+/** Unread messages per conversation — DMs from the member's read marker,
+ * text channels from the channel read state, both counted only from when
+ * the account joined (a new member would otherwise start with the whole
+ * history as unread). Callers pass only conversations the account can see.
+ * Only conversations with something unread are present. */
 export async function unreadCountsForUser(userId: string, conversationIds: string[]): Promise<Record<string, number>> {
   if (!conversationIds.length) return {};
+  const ids = sql.join(conversationIds.map((id) => sql`${id}`), sql`, `);
+  const unread = (lastRead: ReturnType<typeof sql>, joinedAt: ReturnType<typeof sql>) => sql`(
+    select count(*) from (
+      select 1 from messages m
+      where m.conversation_id = c.id
+        and m.id > coalesce(${lastRead}, 0)
+        and m.created_at > ${joinedAt}
+        and m.author_id is distinct from ${userId}
+      limit ${UNREAD_COUNT_CAP}
+    ) capped
+  )::int`;
   const result = await db.execute(sql`
-    select cm.conversation_id, (
-      select count(*) from (
-        select 1 from messages m
-        where m.conversation_id = cm.conversation_id
-          and m.id > coalesce(cm.last_read_message_id, 0)
-          and m.created_at > cm.joined_at
-          and m.author_id is distinct from ${userId}
-        limit ${UNREAD_COUNT_CAP}
-      ) capped
-    )::int as unread
-    from conversation_members cm
-    inner join conversations c on c.id = cm.conversation_id
-    where cm.user_id = ${userId}
-      and c.status = 'active'
-      and cm.conversation_id in (${sql.join(conversationIds.map((id) => sql`${id}`), sql`, `)})
+    select c.id as conversation_id, ${unread(sql`cm.last_read_message_id`, sql`cm.joined_at`)} as unread
+    from conversations c
+    inner join conversation_members cm on cm.conversation_id = c.id and cm.user_id = ${userId}
+    where c.type = 'direct' and c.id in (${ids})
+    union all
+    select c.id, ${unread(sql`rs.last_read_message_id`, sql`sm.joined_at`)}
+    from conversations c
+    inner join servers s on s.id = c.server_id and s.status = 'active'
+    inner join server_members sm on sm.server_id = c.server_id and sm.user_id = ${userId}
+    left join channel_read_states rs on rs.channel_id = c.id and rs.user_id = ${userId}
+    where c.type = 'text' and c.id in (${ids})
   `);
   const out: Record<string, number> = {};
   for (const row of result.rows as { conversation_id: string; unread: number }[]) {
@@ -174,46 +133,86 @@ export async function unreadCountsForUser(userId: string, conversationIds: strin
   return out;
 }
 
-/** Moves the member's read marker forward to `messageId` — never back, so a
- * late mark from a slower tab can't resurrect messages another tab already
- * read past. Returns false when the message isn't in that conversation or
- * the marker was already at or past it. */
-export async function markReadUpTo(conversationId: string, userId: string, messageId: number): Promise<boolean> {
+/** The first message after the account's read marker — where the client
+ * draws the "new messages" line when it opens the conversation. */
+export async function firstUnreadMessageId(conversation: Conversation, userId: string): Promise<number | null> {
+  const result = isServerChannel(conversation)
+    ? await db.execute(sql`
+        select min(m.id)::int as id from messages m
+        inner join server_members sm on sm.server_id = ${conversation.serverId} and sm.user_id = ${userId}
+        left join channel_read_states rs on rs.channel_id = m.conversation_id and rs.user_id = ${userId}
+        where m.conversation_id = ${conversation.id}
+          and m.id > coalesce(rs.last_read_message_id, 0)
+          and m.created_at > sm.joined_at
+          and m.author_id is distinct from ${userId}`)
+    : await db.execute(sql`
+        select min(m.id)::int as id from messages m
+        inner join conversation_members cm on cm.conversation_id = m.conversation_id and cm.user_id = ${userId}
+        where m.conversation_id = ${conversation.id}
+          and m.id > coalesce(cm.last_read_message_id, 0)
+          and m.created_at > cm.joined_at
+          and m.author_id is distinct from ${userId}`);
+  return (result.rows[0] as { id: number | null } | undefined)?.id ?? null;
+}
+
+/** Moves the read marker forward to `messageId` — never back, so a late mark
+ * from a slower tab can't resurrect messages another tab already read past.
+ * Returns false when the message isn't in that conversation or the marker
+ * was already at or past it. */
+export async function markReadUpTo(conversation: Conversation, userId: string, messageId: number): Promise<boolean> {
+  if (isServerChannel(conversation)) {
+    const result = await db.execute(sql`
+      insert into channel_read_states (channel_id, user_id, last_read_message_id)
+      select ${conversation.id}, ${userId}, ${messageId}
+      where exists (select 1 from messages m where m.id = ${messageId} and m.conversation_id = ${conversation.id})
+      on conflict (channel_id, user_id) do update set last_read_message_id = excluded.last_read_message_id
+      where ${channelReadStates.lastReadMessageId} is null or ${channelReadStates.lastReadMessageId} < excluded.last_read_message_id
+    `);
+    return (result.rowCount ?? 0) > 0;
+  }
   const result = await db.execute(sql`
     update conversation_members cm set last_read_message_id = ${messageId}
-    where cm.conversation_id = ${conversationId}
+    where cm.conversation_id = ${conversation.id}
       and cm.user_id = ${userId}
       and (cm.last_read_message_id is null or cm.last_read_message_id < ${messageId})
-      and exists (select 1 from messages m where m.id = ${messageId} and m.conversation_id = ${conversationId})
+      and exists (select 1 from messages m where m.id = ${messageId} and m.conversation_id = ${conversation.id})
   `);
   return (result.rowCount ?? 0) > 0;
 }
 
-/** Sends the CURRENT state of one conversation to every member who already
- * has it, each seeing their OWN `pinnedAt` (a per-member column — a shared
- * payload would incorrectly reset another member's pin state on their
- * client, which does a wholesale replace-by-id, not a field merge). One
- * query for the member list, reused both for `memberIds` and each
- * recipient's pin — this is what replaced resending every OTHER
- * conversation in the sidebar (the old `broadcastConversationListToUser(s)`
- * + `listForUser`) just to reflect a change to ONE row. Exported because
- * conversations.ts's handleGroupUpdate calls this too, after renaming or
- * re-avataring a group. */
+async function directMemberRows(conversationId: string) {
+  return db.select({ userId: conversationMembers.userId, pinnedAt: conversationMembers.pinnedAt })
+    .from(conversationMembers).where(eq(conversationMembers.conversationId, conversationId));
+}
+
+/** Sends the CURRENT state of one DM to both members, each with their OWN
+ * `pinnedAt` (a per-member column — a shared payload would reset the other
+ * side's pin on a client that replaces by id). */
 export async function sendConversationUpdateToMembers(t: 'conversation-created' | 'conversation-updated', row: Conversation): Promise<void> {
-  const memberRows = await db.select({ userId: conversationMembers.userId, pinnedAt: conversationMembers.pinnedAt, role: conversationMembers.role })
-    .from(conversationMembers).where(eq(conversationMembers.conversationId, row.id));
+  if (isServerChannel(row)) return;
+  const memberRows = await directMemberRows(row.id);
   const memberIds = memberRows.map((r) => r.userId);
-  const ownerId = memberRows.find((r) => r.role === 'owner')?.userId ?? null;
-  for (const { userId, pinnedAt, role } of memberRows) {
+  for (const { userId, pinnedAt } of memberRows) {
     for (const p of participants.values()) {
-      if (p.userId === userId) send(p.socket, { t, conversation: rowToSummary(row, memberIds, pinnedAt, role as ConversationRole, ownerId) });
+      if (p.userId === userId) send(p.socket, { t, conversation: rowToSummary(row, memberIds, pinnedAt) });
     }
   }
 }
 
+/** Who can read a conversation right now: both sides of a DM, or every
+ * server member the channel is visible to. */
+export async function conversationAudienceIds(conversation: Pick<Conversation, 'id' | 'serverId'>): Promise<string[]> {
+  if (conversation.serverId) {
+    const snapshot = await loadServerSnapshot(conversation.serverId);
+    return snapshot && snapshot.server.status === 'active' ? channelViewerIds(snapshot, conversation.id) : [];
+  }
+  return (await directMemberRows(conversation.id)).map((r) => r.userId);
+}
+
 export async function broadcastToConversationMembers(conversationId: string, obj: { t: string; [key: string]: unknown }): Promise<void> {
-  const memberRows = await db.select({ userId: conversationMembers.userId }).from(conversationMembers).where(eq(conversationMembers.conversationId, conversationId));
-  const allowed = new Set(memberRows.map((row) => row.userId));
+  const [conversation] = await db.select({ id: conversations.id, serverId: conversations.serverId }).from(conversations).where(eq(conversations.id, conversationId)).limit(1);
+  if (!conversation) return;
+  const allowed = new Set(await conversationAudienceIds(conversation));
   for (const p of participants.values()) {
     if (allowed.has(p.userId)) send(p.socket, obj);
   }
@@ -245,48 +244,31 @@ export async function getOrCreateDirect(a: string, b: string, creatorId: string,
   return executor ? run(executor) : db.transaction(run);
 }
 
-/** A group (or bot) with its creator as the single `owner` member, in one
- * transaction — no path adds anyone else directly anymore (only an accepted
- * invitation does, see invitationsRepository.ts). Pass a `tx` to join the
- * caller's (a bot is created together with its webhook). */
-export async function createGroup(ownerId: string, title: string, type: 'group' | 'bot' = 'group', executor?: Tx): Promise<Conversation> {
-  const run = async (tx: Tx) => {
-    const [inserted] = await tx.insert(conversations).values({
-      id: crypto.randomUUID(), type, title, createdBy: ownerId, updatedAt: new Date(),
-    }).returning();
-    await tx.insert(conversationMembers).values({ conversationId: inserted!.id, userId: ownerId, role: 'owner' });
-    return inserted!;
-  };
-  return executor ? run(executor) : db.transaction(run);
+/** THE access gate. A DM: being one of its two members. A channel: being a
+ * member of an active server and holding `permission` there — VIEW_CHANNEL
+ * by default (every read), SEND_MESSAGES / ATTACH_FILES / ADD_REACTIONS /
+ * CONNECT for the writes that need them. A DM ignores `permission`: who may
+ * write there is the friendship gate's call (canSendDirectMessage). */
+export async function getConversationForUser(conversationId: string, userId: string, permission: number = PERMISSIONS.VIEW_CHANNEL): Promise<Conversation | null> {
+  const [conversation] = await db.select().from(conversations).where(eq(conversations.id, conversationId)).limit(1);
+  if (!conversation) return null;
+  if (isServerChannel(conversation)) {
+    const granted = await channelPermissions(conversation.serverId, conversation.id, userId);
+    return hasPermission(granted, PERMISSIONS.VIEW_CHANNEL) && hasPermission(granted, permission) ? conversation : null;
+  }
+  const [member] = await db.select({ userId: conversationMembers.userId }).from(conversationMembers)
+    .where(and(eq(conversationMembers.conversationId, conversationId), eq(conversationMembers.userId, userId))).limit(1);
+  return member ? conversation : null;
 }
 
-/** THE access gate: membership AND an active conversation. A suspended
- * conversation (admin moderation) is invisible to every read, write, media
- * fetch, search, upload and call token that goes through here — members still
- * see it listed (listForUser) but as unavailable. */
-export async function getConversationForUser(conversationId: string, userId: string): Promise<Conversation | null> {
-  const [row] = await db
-    .select({ conversation: conversations })
-    .from(conversationMembers)
-    .innerJoin(conversations, eq(conversations.id, conversationMembers.conversationId))
-    .where(and(
-      eq(conversationMembers.conversationId, conversationId),
-      eq(conversationMembers.userId, userId),
-      eq(conversations.status, 'active'),
-    ))
-    .limit(1);
-  return row?.conversation ?? null;
-}
-
-export async function conversationExistsForUser(conversationId: string, userId: string): Promise<boolean> {
-  return !!(await getConversationForUser(conversationId, userId));
+export async function conversationExistsForUser(conversationId: string, userId: string, permission?: number): Promise<boolean> {
+  return !!(await getConversationForUser(conversationId, userId, permission));
 }
 
 /** The other member of a DIRECT conversation — null if `userId` isn't a
- * member, or the conversation is a group (a group has no single "peer",
- * and contact restrictions never apply to it — membership already governs
- * that). Used by the direct-message write-path gates (canSendDirectMessage)
- * in messages.ts/socket.ts/attachmentUploads.ts. */
+ * member, or the conversation is a channel (contact restrictions never apply
+ * there — the server's roles already govern it). Used by the direct-message
+ * write-path gates (canSendDirectMessage). */
 export async function getDirectPeerId(conversationId: string, userId: string): Promise<string | null> {
   const conversation = await getConversationForUser(conversationId, userId);
   if (!conversation || conversation.type !== 'direct') return null;
@@ -298,9 +280,8 @@ export async function getDirectPeerId(conversationId: string, userId: string): P
   return other?.userId ?? null;
 }
 
-/** Every OTHER account this user shares at least one conversation with
- * (DM or group), deduplicated — used to compute the "known peers"
- * presence-scoping set (realtime/socket.ts). */
+/** Every OTHER account this user shares a DM or a server with, deduplicated
+ * — the "known peers" presence-scoping set (presence/knownPeers.ts). */
 export async function listConversationMemberIds(userId: string): Promise<string[]> {
   const rows = await db
     .select({ userId: conversationMembers.userId })
@@ -311,79 +292,29 @@ export async function listConversationMemberIds(userId: string): Promise<string[
       )`,
       sql`${conversationMembers.userId} <> ${userId}`,
     ));
-  return [...new Set(rows.map((r) => r.userId))];
+  return [...new Set([...rows.map((r) => r.userId), ...(await serverPeerIds(userId))])];
 }
 
-/** Whether `a` and `b` are both members of at least one conversation —
- * used only by usersRoutes.ts's profile-visibility check (a pairwise
- * question, unlike listConversationMemberIds' bulk one above). */
+/** Whether `a` and `b` share a DM or a server — the profile-visibility
+ * check (usersRoutes.ts), a pairwise question unlike the bulk one above. */
 export async function shareAnyConversation(a: string, b: string): Promise<boolean> {
-  const [row] = await db
-    .select({ conversationId: conversationMembers.conversationId })
-    .from(conversationMembers)
-    .where(and(
-      eq(conversationMembers.userId, a),
-      sql`${conversationMembers.conversationId} IN (
-        select ${conversationMembers.conversationId} from ${conversationMembers} where ${conversationMembers.userId} = ${b}
-      )`,
-    ))
-    .limit(1);
-  return !!row;
-}
-
-export interface SharedGroup { id: string; title: string; avatar: string; memberCount: number }
-
-/** The active groups both `a` and `b` are members of, by title: a profile's
- * groups in common. Listed without paging, so it stops at `limit`; `total` is
- * the full count. Only groups the viewer is in, by definition. */
-export async function listSharedGroups(a: string, b: string, limit: number): Promise<{ items: SharedGroup[]; total: number }> {
-  const memberOf = (userId: string) => sql`${conversations.id} IN (select ${conversationMembers.conversationId} from ${conversationMembers} where ${conversationMembers.userId} = ${userId})`;
-  const rows = await db
-    .select({
-      id: conversations.id,
-      title: conversations.title,
-      avatar: conversations.avatar,
-      memberCount: sql<number>`(select count(*)::int from ${conversationMembers} where ${conversationMembers.conversationId} = ${conversations.id})`,
-      total: sql<number>`(count(*) over ())::int`,
-    })
-    .from(conversations)
-    .where(and(eq(conversations.type, 'group'), eq(conversations.status, 'active'), memberOf(a), memberOf(b)))
-    .orderBy(sql`lower(${conversations.title})`, conversations.id)
-    .limit(limit);
-  return { items: rows.map(({ total: _total, ...group }) => group), total: rows[0]?.total ?? 0 };
-}
-
-export async function getMemberRole(conversationId: string, userId: string): Promise<ConversationRole | null> {
-  const [row] = await db.select({ role: conversationMembers.role })
-    .from(conversationMembers)
-    .where(and(eq(conversationMembers.conversationId, conversationId), eq(conversationMembers.userId, userId)))
-    .limit(1);
-  return row ? (row.role as ConversationRole) : null;
-}
-
-/** Real per-group authority to manage a group (rename, re-avatar, add/remove
- * members, delete) — the group's actual `owner`, not the account's global
- * instance role. Replaces the old `isAdmin(p)` gate in conversations.ts,
- * which let ANY instance admin manage ANY group regardless of membership. */
-export async function canManageGroup(conversationId: string, userId: string): Promise<boolean> {
-  const [row] = await db.select({ role: conversationMembers.role })
-    .from(conversationMembers)
-    .innerJoin(conversations, eq(conversations.id, conversationMembers.conversationId))
-    .where(and(
-      eq(conversationMembers.conversationId, conversationId),
-      eq(conversationMembers.userId, userId),
-      eq(conversations.status, 'active'),
-    ))
-    .limit(1);
-  return row?.role === 'owner';
+  const result = await db.execute(sql`
+    select 1 from conversation_members x
+    inner join conversation_members y on y.conversation_id = x.conversation_id and y.user_id = ${b}
+    where x.user_id = ${a}
+    union all
+    select 1 from server_members x
+    inner join server_members y on y.server_id = x.server_id and y.user_id = ${b}
+    where x.user_id = ${a}
+    limit 1
+  `);
+  return result.rows.length > 0;
 }
 
 /** A genuinely NEW message was created (send, or a fresh attachment-only
- * message) — the only thing that should move a conversation to the top of
- * anyone's sidebar or make an otherwise-empty/closed direct conversation
- * start showing (see listForUser's `lastMessageAt`-gated visibility rule
- * above). Broadcasts, since `lastMessageAt` is part of what the client
- * displays/sorts by. */
+ * message) — the only thing that moves a DM to the top of the sidebar or
+ * makes an otherwise-empty/closed DM start showing (see listForUser).
+ * Channels keep their own order, so only a DM's summary is re-sent. */
 export async function touchConversation(conversationId: string, when = new Date()): Promise<void> {
   const [row] = await db.update(conversations).set({ lastMessageAt: when, lastActivityAt: when }).where(eq(conversations.id, conversationId)).returning();
   if (row) await sendConversationUpdateToMembers('conversation-updated', row);
@@ -392,17 +323,17 @@ export async function touchConversation(conversationId: string, when = new Date(
 /** A message was edited or deleted, or a file was attached to a message
  * that already exists — real chat activity, but NOT a new message, so
  * `lastMessageAt` must stay untouched (see touchConversation above for
- * why). Only bumps the bookkeeping-only `lastActivityAt` — nothing the
- * client displays changes, so there's nothing worth broadcasting either. */
+ * why). Only bumps the bookkeeping-only `lastActivityAt`. */
 export async function recordConversationActivity(conversationId: string, when = new Date()): Promise<void> {
   await db.update(conversations).set({ lastActivityAt: when }).where(eq(conversations.id, conversationId));
 }
 
+/** How a conversation is named to `viewerUserId`: the other person of a DM,
+ * or `#channel` of a server channel. */
 export async function conversationDisplayName(conversationId: string, viewerUserId: string): Promise<string> {
   const conversation = await getConversationForUser(conversationId, viewerUserId);
   if (!conversation) return 'conversa';
-  if (conversation.type === 'group') return conversation.title || 'Grupo';
-  if (conversation.type === 'bot') return conversation.title || 'Bot';
+  if (isServerChannel(conversation)) return `#${conversation.title}`;
 
   const [other] = await db
     .select({ username: users.username, displayName: users.displayName })
@@ -413,24 +344,17 @@ export async function conversationDisplayName(conversationId: string, viewerUser
   return other ? resolveDisplayName(other.displayName, other.username) : 'Conversa direta';
 }
 
-/** Purges a group once it has zero members left (an admin-account deletion
- * can do this too, not just handleGroupMembersRemove in conversations.ts —
- * with no group-discovery UI, a memberless group would otherwise become an
- * invisible, unmanageable row nobody's `listForUser` query ever surfaces
- * again). Otherwise just notifies whoever remains that `removedUserId` left.
- * Returns whether the group was purged. */
-export async function reconcileGroupMembership(conversationId: string, removedUserId: string): Promise<boolean> {
-  const remainingRows = await db.select({ userId: conversationMembers.userId }).from(conversationMembers).where(eq(conversationMembers.conversationId, conversationId));
-  if (remainingRows.length > 0) {
-    const remainingIds = new Set(remainingRows.map((row) => row.userId));
-    for (const p of participants.values()) {
-      if (remainingIds.has(p.userId)) send(p.socket, { t: 'conversation-member-removed', conversationId, userId: removedUserId });
+/** Every conversation the account can read: its DMs and each channel it can
+ * see in its servers — what a search across everything covers. */
+export async function visibleConversationIds(userId: string): Promise<string[]> {
+  const dms = await db.select({ id: conversationMembers.conversationId }).from(conversationMembers).where(eq(conversationMembers.userId, userId));
+  const channels: string[] = [];
+  for (const serverId of await serverIdsForUser(userId)) {
+    const snapshot = await loadServerSnapshot(serverId);
+    if (!snapshot) continue;
+    for (const channel of snapshot.channels) {
+      if (hasPermission(channelPermissionsIn(snapshot, channel.id, userId), PERMISSIONS.VIEW_CHANNEL)) channels.push(channel.id);
     }
-    return false;
   }
-  const [conversation] = await db.select({ type: conversations.type }).from(conversations).where(eq(conversations.id, conversationId)).limit(1);
-  if (!conversation || !isGroupLike(conversation.type)) return false;
-  await deleteForConversation(conversationId);
-  await db.delete(conversations).where(eq(conversations.id, conversationId));
-  return true;
+  return [...dms.map((r) => r.id), ...channels];
 }

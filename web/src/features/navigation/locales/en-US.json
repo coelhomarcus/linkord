@@ -14,5 +14,7 @@
   "tabFriendsPending_one": "{{label}}, {{count}} pending request",
   "tabFriendsPending_other": "{{label}}, {{count}} pending requests",
   "tabUnread_one": "{{label}}, {{count}} unread",
-  "tabUnread_other": "{{label}}, {{count}} unread"
+  "tabUnread_other": "{{label}}, {{count}} unread",
+  "servers": "Servers",
+  "messages": "Messages"
 }

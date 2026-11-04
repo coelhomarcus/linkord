@@ -3,25 +3,28 @@ import { after, before, describe, it } from 'node:test';
 import { eq } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { config } from '../../src/config/env.js';
-import { conversationMembers, conversations, messages, webhooks } from '../../src/db/schema.js';
+import { messages, serverMembers, servers, webhooks } from '../../src/db/schema.js';
 import { createApp } from '../../src/http/app.js';
 import { createSession } from '../../src/modules/auth/session.js';
 import { handlers as chatHandlers } from '../../src/modules/messages/messages.js';
 import { unreadCountsForUser } from '../../src/modules/conversations/conversationsRepository.js';
-import { cleanupParticipant, db, joinNew, makeUser, pool } from './helpers.js';
+import { invalidateAllServers } from '../../src/modules/servers/serverAccess.js';
+import { cleanupParticipant, db, joinNew, makeServerWithMembers, makeUser, pool } from './helpers.js';
 
 let app: FastifyInstance;
 before(async () => { app = createApp(); await app.ready(); });
 after(async () => { await app.close(); await pool.end(); });
 
-interface Bot { conversationId: string; owner: { id: string; username: string }; webhook: { id: string; token: string; url: string } }
+interface Bot { conversationId: string; serverId: string; owner: { id: string; username: string }; webhook: { id: string; token: string; url: string } }
 
-async function makeBot(title = 'Deploys'): Promise<Bot> {
+/** A webhook on a server's first text channel, made the way its manager would. */
+async function makeBot(name = 'Deploys'): Promise<Bot> {
   const owner = await makeUser('wo');
+  const { serverId, textChannelId } = await makeServerWithMembers(owner.id, []);
   const token = (await createSession(owner.id)).rawToken;
-  const res = await app.inject({ method: 'POST', url: '/api/bots', payload: { title }, headers: { cookie: `${config.SESSION_COOKIE}=${token}` } });
+  const res = await app.inject({ method: 'POST', url: `/api/channels/${textChannelId}/webhooks`, payload: { name }, headers: { cookie: `${config.SESSION_COOKIE}=${token}` } });
   assert.equal(res.statusCode, 201);
-  return { owner, ...JSON.parse(res.body) };
+  return { owner, serverId, conversationId: textChannelId, webhook: JSON.parse(res.body).webhook };
 }
 
 async function post(url: string, payload: unknown, headers: Record<string, string> = {}) {
@@ -33,9 +36,9 @@ const pathOf = (bot: Bot) => `/api/webhooks/${bot.webhook.id}/${bot.webhook.toke
 const rowsOf = (conversationId: string) => db.select().from(messages).where(eq(messages.conversationId, conversationId));
 
 describe('webhook ingress (real Postgres)', () => {
-  it('a post becomes a message from the bot, live for its members and with its name and photo', async () => {
+  it('a post becomes a message from the webhook, live for the channel and with its name and photo', async () => {
     const bot = await makeBot('Deploys');
-    await db.update(conversations).set({ avatar: '/uploads/bot.png' }).where(eq(conversations.id, bot.conversationId));
+    await db.update(webhooks).set({ avatar: '/uploads/bot.png' }).where(eq(webhooks.id, bot.webhook.id));
     assert.match(bot.webhook.url, new RegExp(`/api/webhooks/${bot.webhook.id}/${bot.webhook.token}$`));
     const { socket, sent, participant } = joinNew(bot.owner);
     try {
@@ -51,8 +54,8 @@ describe('webhook ingress (real Postgres)', () => {
       const [stored] = await db.select().from(webhooks).where(eq(webhooks.id, bot.webhook.id));
       assert.ok(stored?.lastUsedAt);
 
-      // history reads the bot's current name, so a rename shows on old messages too
-      await db.update(conversations).set({ title: 'CI' }).where(eq(conversations.id, bot.conversationId));
+      // history reads the webhook's current name, so a rename shows on old messages too
+      await db.update(webhooks).set({ name: 'CI' }).where(eq(webhooks.id, bot.webhook.id));
       await chatHandlers['conversation-open']!(socket, { conversationId: bot.conversationId });
       const history = sent.find((s) => s.event === 'conversation-history')?.payload.messages;
       assert.deepEqual(history.map((m: { name: string; bot?: boolean }) => [m.name, m.bot]), [['CI', true]]);
@@ -68,7 +71,7 @@ describe('webhook ingress (real Postgres)', () => {
     assert.equal((await rowsOf(bot.conversationId)).length, 1);
   });
 
-  it('a wrong token, an unknown id, a rotated-out token and a suspended bot all get the same answer', async () => {
+  it('a wrong token, an unknown id, a rotated-out token and a suspended server all get the same answer', async () => {
     const bot = await makeBot();
     const other = await makeBot();
     const attempts = [
@@ -82,10 +85,11 @@ describe('webhook ingress (real Postgres)', () => {
     assert.equal((await post(`/api/webhooks/${bot.webhook.id}`, { content: 'x' })).status, 401);
 
     const ownerToken = (await createSession(bot.owner.id)).rawToken;
-    await app.inject({ method: 'POST', url: `/api/bots/${bot.conversationId}/webhook/rotate`, headers: { cookie: `${config.SESSION_COOKIE}=${ownerToken}` } });
+    await app.inject({ method: 'POST', url: `/api/channels/${bot.conversationId}/webhooks/${bot.webhook.id}/rotate`, headers: { cookie: `${config.SESSION_COOKIE}=${ownerToken}` } });
     assert.equal((await post(pathOf(bot), { content: 'x' })).status, 401);
 
-    await db.update(conversations).set({ status: 'suspended' }).where(eq(conversations.id, other.conversationId));
+    await db.update(servers).set({ status: 'suspended' }).where(eq(servers.id, other.serverId));
+    invalidateAllServers();
     assert.equal((await post(pathOf(other), { content: 'x' })).status, 401);
     assert.equal((await rowsOf(bot.conversationId)).length + (await rowsOf(other.conversationId)).length, 0);
   });
@@ -141,10 +145,11 @@ describe('webhook ingress (real Postgres)', () => {
     assert.ok(Number(limited.headers['retry-after']) >= 1);
   });
 
-  it("a member who isn't the owner sees the bot's messages and reads them as unread", async () => {
+  it("a member who isn't the owner sees the webhook's messages and reads them as unread", async () => {
     const bot = await makeBot();
     const member = await makeUser('wm');
-    await db.insert(conversationMembers).values({ conversationId: bot.conversationId, userId: member.id, role: 'member', joinedAt: new Date(Date.now() - 60_000) });
+    await db.insert(serverMembers).values({ serverId: bot.serverId, userId: member.id, joinedAt: new Date(Date.now() - 60_000) });
+    invalidateAllServers();
     const { sent, participant } = joinNew(member);
     try {
       await post(pathOf(bot), { content: 'alert' });

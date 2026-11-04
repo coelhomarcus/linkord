@@ -16,7 +16,7 @@ web/src/
     App.tsx
     layout/             # GlobalContextMenu, LoadingScreen, RoomErrorScreen, ReconnectBanner
     providers/          # RoomProvider.tsx (the room's state root)
-  features/<domain>/    # calls, chat, conversations, media, profile, settings, auth, reactions...
+  features/<domain>/    # servers, calls, chat, conversations (DMs), media, profile, settings, auth, reactions...
   shared/                # see criteria below
     api/ hooks/ lib/ types/ ui/{primitives,motion}/
     Avatar.tsx, ConfirmDialog.tsx, notifications.ts, sounds.ts, ...
@@ -41,7 +41,7 @@ server/src/
   http/                 # app.ts (Fastify), cookies.ts, respond.ts
   realtime/             # socket.ts — combines every module's `handlers` into one dispatch table
   integrations/<name>/  # external service adapters: livekit/
-  modules/<domain>/     # auth, users, presence, conversations, messages, calls,
+  modules/<domain>/     # auth, users, presence, servers, conversations, messages, calls,
                         # attachments, moderation, profile, link-preview
 server/tests/            # mirrors server/src/ — NO tests inside src/
 ```
@@ -49,6 +49,7 @@ server/tests/            # mirrors server/src/ — NO tests inside src/
 - **No alias** — every import is a relative path, with an explicit `.js` extension even though the file is `.ts` (this is real ESM; `.js` is what exists after the build). E.g. `import { db } from '../../db/client.js';`.
 - **When to split a large module into repository vs. handlers** (the pattern used in `conversations.ts`/`conversationsRepository.ts` and `attachmentUploads.ts`/`uploadSession.ts`): only split with **real fan-in evidence** — if specific functions in the file are already imported by several different external modules (a repository API buried alongside handlers nobody imports individually), splitting is worth it. File size alone is **not** a reason — `messages.ts` stays at ~470 lines on purpose because it's cohesive and none of its functions are used outside its own socket dispatch. Don't split "because it got big"; split when two different groups of external consumers each only need one half of the file.
 - **Never use a dynamic `import()` just to dodge an import cycle.** If two modules form a cycle, extract the part both need into a new leaf module (zero dependency back into the cycle) — that's what resolved the `conversations.ts`/`attachments.ts` cycle (see `modules/attachments/attachmentCleanup.ts`, which only depends on `db`/schema/`attachmentStorage.ts`). A dynamic import is a sign the module boundary is wrong, not a solution.
+- **Servers and channels**: a channel is a `conversations` row (`type` `text` or `voice`, with `serverId`); a DM is `type` `direct` with `conversation_members`. Access to a channel goes through `getConversationForUser(id, userId, permission)` in `conversationsRepository.ts`, which resolves the member's permissions (`modules/servers/permissions.ts`, mirrored in `web/src/features/servers/permissionBits.ts` and pinned by a test). Ask for the bit the action needs — never check membership by hand.
 - Tests ALWAYS in `server/tests/`, never inside `server/src/`.
 
 ## Internationalization (`web/`)

@@ -11,7 +11,7 @@ const mocked = vi.mocked(adminApi);
 
 const detail = (over: Partial<adminApi.AdminUserDetail['user']> = {}): adminApi.AdminUserDetail => ({
   user: { id: 'u1', username: 'ana', displayName: 'Ana', avatar: '', avatarColor: 'blurple', role: 'user', status: 'active', createdAt: '2026-01-01T00:00:00.000Z', lastSeenAt: null, online: false, email: 'ana@example.com', statusReason: '', statusChangedAt: null, ...over },
-  groups: [{ id: 'g1', title: 'Squad', status: 'active', role: 'owner' }],
+  servers: [{ id: 'g1', name: 'Squad', status: 'active', isOwner: true }],
   storage: { bytes: 2048, files: 2 },
   history: [auditRow()],
 });

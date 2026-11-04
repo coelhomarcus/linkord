@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, useReducer } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useReducer } from 'react';
 import type { ReactNode } from 'react';
 import { Room } from 'livekit-client';
 import type { Socket } from 'socket.io-client';
@@ -14,6 +14,7 @@ import { useCamera } from '@/features/calls/useCamera';
 import { useMicrophone } from '@/features/calls/useMicrophone';
 import { useTileMenu } from '@/features/calls/useTileMenu';
 import { useConversationsList } from '@/features/conversations/useConversationsList';
+import { useServersList } from '@/features/servers/useServersList';
 import { useChatMessages } from '@/features/chat/useChatMessages';
 import type { ChatView } from '@/features/chat/useChatMessages';
 import { useTypingIndicator } from '@/state/hooks/useTypingIndicator';
@@ -26,7 +27,7 @@ import { useRoomSettings } from '@/features/settings/useRoomSettings';
 import { useProfileUpdate } from '@/features/profile/useProfileUpdate';
 import { preloadSounds } from '@/shared/sounds';
 import { setNotificationClickHandler } from '@/shared/notifications';
-import type { ClientMessage, ServerMessage } from '@/shared/types/protocol';
+import type { ClientMessage, Conversation, ServerMessage } from '@/shared/types/protocol';
 import { logger } from '@/shared/lib/logger';
 import { ERROR_CODES } from '@/shared/api/errorCodes';
 import { i18n } from '@/shared/i18n/init';
@@ -79,12 +80,9 @@ export function RoomProvider({ children }: { children: ReactNode }) {
   const registerOpenCall = useCallback((fn: (conversationId: string) => void) => { openCallRef.current = fn; }, []);
   const openCall = useCallback((conversationId: string) => { openCallRef.current?.(conversationId); }, []);
 
-  // 'forbidden'/'conflict'/'not_found' over the socket are, today, only
-  // ever group-action denials (conversations.ts) — rename/delete/members/
-  // transfer/leave. If another domain starts using these same codes over
-  // the socket later, this needs to get more specific (e.g. carry which
-  // action it was about) instead of assuming "group action" like it does now.
-  const [groupActionError, setGroupActionError] = useState<string | null>(null);
+  // a refusal the socket sent without a request to answer (a call kick the
+  // actor may not do, a quota) — shown as a banner, since nothing else waits on it
+  const [actionError, setActionError] = useState<string | null>(null);
   const [accessNotice, setAccessNotice] = useState<string | null>(null);
   // bumped whenever the server says friends/requests/blocks changed — the
   // friends feature refetches its own lists off this, so social state never
@@ -98,13 +96,21 @@ export function RoomProvider({ children }: { children: ReactNode }) {
   // and the camera/screen-share/mic hooks before useCallLifecycle (it
   // composes their leave/mute functions).
   const conversationsList = useConversationsList(sendWs);
+  const serversList = useServersList();
+  // DMs and channels as one list: chat, unread and calls look up whichever it is by id
+  const allConversations = useMemo<Conversation[]>(
+    () => [...conversationsList.conversations, ...serversList.channelConversations],
+    [conversationsList.conversations, serversList.channelConversations],
+  );
+  const allConversationsRef = useRef<Conversation[]>(allConversations);
+  allConversationsRef.current = allConversations;
   const presence = usePresence();
   const typingIndicator = useTypingIndicator(sendWs, myUserIdRef);
   const chatMessages = useChatMessages({
     sendWs,
     activeConversationIdRef: conversationsList.activeConversationIdRef,
     setActiveConversation: conversationsList.setActiveConversation,
-    conversationsRef: conversationsList.conversationsRef,
+    conversationsRef: allConversationsRef,
     allUsersRef: presence.allUsersRef,
     myUserIdRef,
     myUsernameRef,
@@ -186,23 +192,19 @@ export function RoomProvider({ children }: { children: ReactNode }) {
           participants: m.participants,
         });
         conversationsList.setInitial(m.conversations ?? []);
+        serversList.setInitial(m.servers ?? []);
         chatMessages.onWelcome(m.unreadByConversation);
         presence.setInitial(m.knownUsers, m.onlineUserIds, m.friendIds);
         attachmentsUpload.setStorageUsage(m.storageUsage);
-        if (!hasWelcomedRef.current) {
-          hasWelcomedRef.current = true;
-          // The mobile list is a page of its own; selecting a chat here
-          // would mark unread messages as read before it is visible.
-          if (window.matchMedia('(min-width: 768px)').matches) {
-            const firstConversation = (m.conversations ?? []).find((c) => c.type !== 'bot');
-            if (firstConversation) openConversation(firstConversation.id);
-          }
-        } else {
+        // the first welcome opens nothing: the URL says what to show (the
+        // route sync opens it). A reconnect reloads what was open.
+        if (hasWelcomedRef.current) {
           const activeId = conversationsList.activeConversationIdRef.current;
-          if (activeId && activeViewRef.current === 'chat' && (m.conversations ?? []).some((c) => c.id === activeId)) {
-            sendWs({ t: 'conversation-open', conversationId: activeId });
-          }
+          const stillThere = (m.conversations ?? []).some((c) => c.id === activeId)
+            || (m.servers ?? []).some((server) => server.channels.some((c) => c.id === activeId));
+          if (activeId && activeViewRef.current === 'chat' && stillThere) sendWs({ t: 'conversation-open', conversationId: activeId });
         }
+        hasWelcomedRef.current = true;
         break;
       }
       case 'call-token':
@@ -222,8 +224,30 @@ export function RoomProvider({ children }: { children: ReactNode }) {
       case 'soundboard-play':
         soundboardEvents.onSoundboardPlay(m);
         break;
-      case 'group-sounds-changed':
-        soundboardEvents.onGroupSoundsChanged(m);
+      case 'server-sounds-changed':
+        soundboardEvents.onServerSoundsChanged(m);
+        break;
+      case 'server-created':
+      case 'server-updated':
+        serversList.onServerChanged(m);
+        break;
+      case 'server-deleted': {
+        const gone = serversList.onServerDeleted(m);
+        if (gone && m.reason) setAccessNotice(i18n.t(`room.server.${m.reason}`, { name: gone.name }));
+        if (gone) {
+          const channelIds = new Set(gone.channels.map((c) => c.id));
+          if (conversationsList.activeConversationIdRef.current && channelIds.has(conversationsList.activeConversationIdRef.current)) conversationsList.clearActiveConversation();
+          for (const id of channelIds) {
+            chatMessages.onConversationDeleted({ t: 'conversation-deleted', conversationId: id });
+            callLifecycle.onConversationDeleted(id);
+          }
+        }
+        break;
+      }
+      case 'server-member-added':
+      case 'server-member-removed':
+      case 'server-member-updated':
+        serversList.onMembersChanged(m);
         break;
       case 'conversation-opened':
         conversationsList.onConversationOpened(m, openConversation);
@@ -234,12 +258,6 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         break;
       case 'conversation-updated':
         conversationsList.onConversationUpdated(m);
-        break;
-      case 'conversation-member-added':
-        conversationsList.onConversationMemberAdded(m);
-        break;
-      case 'conversation-member-removed':
-        conversationsList.onConversationMemberRemoved(m);
         break;
       case 'conversation-pinned':
         conversationsList.onConversationPinned(m);
@@ -297,13 +315,6 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         chatMessages.onChatReactionUpdated(m);
         break;
       case 'conversation-deleted': {
-        // read the title BEFORE the list drops it; a voluntary leave carries no reason
-        const gone = conversationsList.conversationsRef.current.find((c) => c.id === m.conversationId);
-        if ((gone?.type === 'group' || gone?.type === 'bot') && m.reason) {
-          const noun = gone.type === 'bot' ? i18n.t('room.nounBot') : i18n.t('room.nounGroup');
-          const name = gone.title || noun;
-          setAccessNotice(m.reason === 'removed' ? i18n.t('room.removed', { noun, name }) : i18n.t('room.deleted', { noun, name }));
-        }
         conversationsList.onConversationDeleted(m);
         chatMessages.onConversationDeleted(m);
         callLifecycle.onConversationDeleted(m.conversationId);
@@ -343,10 +354,8 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         } else if (m.code === ERROR_CODES.too_many_connections) {
           disconnectIntentionally();
           dispatch({ type: 'SET_ROOM_ERROR', message: m.message || i18n.t('room.tooManyConnections') });
-        } else if (m.code === ERROR_CODES.quota_exceeded) {
-          setGroupActionError(m.message);
-        } else if (m.code === ERROR_CODES.forbidden || m.code === ERROR_CODES.conflict || m.code === ERROR_CODES.not_found) {
-          setGroupActionError(m.message);
+        } else if (m.code === ERROR_CODES.quota_exceeded || m.code === ERROR_CODES.forbidden || m.code === ERROR_CODES.conflict || m.code === ERROR_CODES.not_found) {
+          setActionError(m.message);
         } else if (m.code === ERROR_CODES['livekit-unavailable']) {
           // also answers a moderator's kick from inside a call, where the call UI is open
           if (!callLifecycle.onCallJoinRejected(m.message)) dispatch({ type: 'SET_SHARE_ERROR', message: m.message });
@@ -361,7 +370,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         break;
     }
   }, [
-    dispatch, conversationsList, presence, attachmentsUpload, openConversation, sendWs, callLifecycle,
+    dispatch, conversationsList, serversList, presence, attachmentsUpload, openConversation, sendWs, callLifecycle,
     messageSearch, chatMessages, typingIndicator, disconnectIntentionally, profileUpdate, soundboardEvents,
   ]);
 
@@ -408,12 +417,9 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         compressImagesDefault: roomSettings.compressImagesDefault, setCompressImagesDefault: roomSettings.setCompressImagesDefault,
         colorTheme: roomSettings.colorTheme, setColorTheme: roomSettings.setColorTheme,
         mirrorCameraPreview: roomSettings.mirrorCameraPreview, setMirrorCameraPreview: roomSettings.setMirrorCameraPreview,
-        conversations: conversationsList.conversations, activeConversationId: conversationsList.activeConversationId,
+        conversations: allConversations, activeConversationId: conversationsList.activeConversationId,
+        servers: serversList.servers, serverMemberRevision: serversList.memberRevision, reorderServers: serversList.reorderLocally,
         openConversation, openDirect: conversationsList.openDirect, closeConversation, pinConversation: conversationsList.pinConversation,
-        deleteGroup: conversationsList.deleteGroup,
-        updateGroupTitle: conversationsList.updateGroupTitle, updateGroupAvatar: conversationsList.updateGroupAvatar,
-        removeGroupMember: conversationsList.removeGroupMember,
-        transferGroupOwnership: conversationsList.transferGroupOwnership,
         messagesByConversation: chatMessages.messagesByConversation, hasMoreByConversation: chatMessages.hasMoreByConversation,
         loadingOlderByConversation: chatMessages.loadingOlderByConversation, loadOlderMessages: chatMessages.loadOlderMessages,
         loadNewerMessages: chatMessages.loadNewerMessages, loadingNewerByConversation: chatMessages.loadingNewerByConversation,
@@ -424,7 +430,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         typingByConversation: typingIndicator.typingByConversation, sendTyping: typingIndicator.sendTyping,
         allUsers: presence.allUsers, onlineUserIds: presence.onlineUserIds, friendUserIds: presence.friendUserIds,
         kickFromCall: callLifecycle.kickFromCall,
-        groupActionError, clearGroupActionError: () => setGroupActionError(null),
+        actionError, clearActionError: () => setActionError(null),
         accessNotice, clearAccessNotice: () => setAccessNotice(null),
         socialRevision,
         sendChatMessage: chatMessages.sendChatMessage, deleteChatMessage: chatMessages.deleteChatMessage,

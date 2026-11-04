@@ -23,7 +23,7 @@ beforeEach(() => {
   mocked.fetchAdminUsers.mockResolvedValue({ items: [user()], nextCursor: null });
   mocked.fetchAdminUser.mockResolvedValue({
     user: { ...user(), email: 'ana@example.com', statusReason: '', statusChangedAt: null },
-    groups: [], storage: { bytes: 0, files: 0 }, history: [],
+    servers: [], storage: { bytes: 0, files: 0 }, history: [],
   });
 });
 

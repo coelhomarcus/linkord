@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Conversation, PublicUser } from '@/shared/types/protocol';
-import { conversationDocumentTitle, conversationMatchesQuery, conversationTitle, unreadCountForTab } from '@/features/conversations/conversationUtils';
+import { conversationDocumentTitle, conversationMatchesQuery, conversationTitle } from '@/features/conversations/conversationUtils';
 import { describeInviteOutcome } from '@/features/conversations/inviteOutcome';
 import { dateGroupLabel } from '@/features/conversations/media/mediaRows';
 import { useLanguageForTests } from '@tests/fixtures/i18nFixture';
@@ -11,8 +11,8 @@ const bea: PublicUser = {
 };
 
 const conv = (id: string, over: Partial<Conversation> = {}): Conversation => ({
-  id, type: 'direct', title: '', avatar: '', createdBy: null, memberIds: ['me', 'u-bea'],
-  lastMessageAt: null, createdAt: 1, updatedAt: 1, pinnedAt: null, myRole: 'member', ownerId: null, memberCount: 2, ...over,
+  id, type: 'direct', title: '', memberIds: ['me', 'u-bea'], serverId: null,
+  lastMessageAt: null, createdAt: 1, updatedAt: 1, pinnedAt: null, ...over,
 });
 
 const users = new Map([['u-bea', bea]]);
@@ -31,29 +31,10 @@ describe('conversationMatchesQuery', () => {
     expect(conversationMatchesQuery(dm, 'xerecas', 'me', users)).toBe(false);
   });
 
-  it('matches a group by title, case-insensitive', () => {
-    const group = conv('g', { type: 'group', title: 'os xerecas', createdBy: 'me', myRole: 'owner', ownerId: 'me' });
+  it('matches a channel by name, case-insensitive', () => {
+    const group = conv('g', { type: 'text', title: 'os xerecas', serverId: 's', memberIds: [] });
     expect(conversationMatchesQuery(group, 'Xerecas', 'me', users)).toBe(true);
     expect(conversationMatchesQuery(group, 'bea', 'me', users)).toBe(false);
-  });
-});
-
-describe('unreadCountForTab', () => {
-  it('sums unread only for the given tab type', () => {
-    const dm = conv('dm');
-    const otherDm = conv('dm-2', { memberIds: ['me', 'u-other'] });
-    const group = conv('g', { type: 'group', title: 'os xerecas', createdBy: 'me', myRole: 'owner', ownerId: 'me' });
-    const unread = new Map([['dm', 3], ['g', 7], ['dm-2', 2]]);
-
-    expect(unreadCountForTab([dm, otherDm, group], unread, 'direct')).toBe(5);
-    expect(unreadCountForTab([dm, otherDm, group], unread, 'group')).toBe(7);
-  });
-
-  it('treats a missing unread entry as zero', () => {
-    const dm = conv('dm');
-    const group = conv('g', { type: 'group', title: 'os xerecas', createdBy: 'me', myRole: 'owner', ownerId: 'me' });
-    expect(unreadCountForTab([dm, group], new Map(), 'direct')).toBe(0);
-    expect(unreadCountForTab([dm, group], new Map([['g', 4]]), 'direct')).toBe(0);
   });
 });
 
@@ -70,11 +51,11 @@ describe('conversationDocumentTitle', () => {
     expect(conversationDocumentTitle(conv('dm', { memberIds: ['me', 'u-ghost'] }), 'me', users)).toBe('Linkord');
   });
 
-  it('names a group and a bot by title', () => {
-    const group = conv('g', { type: 'group', title: 'Os Xerecas' });
-    const bot = conv('b', { type: 'bot', title: 'Alertas' });
-    expect(conversationDocumentTitle(group, 'me', users)).toBe('Linkord | Os Xerecas');
-    expect(conversationDocumentTitle(bot, 'me', users)).toBe('Linkord | Alertas');
+  it('names a channel with its server', () => {
+    const text = conv('g', { type: 'text', title: 'geral', serverId: 's' });
+    const voice = conv('v', { type: 'voice', title: 'Geral', serverId: 's' });
+    expect(conversationDocumentTitle(text, 'me', users, 'Os Xerecas')).toBe('Linkord | #geral | Os Xerecas');
+    expect(conversationDocumentTitle(voice, 'me', users)).toBe('Linkord | Geral');
   });
 });
 
@@ -83,13 +64,12 @@ describe('conversation text in English', () => {
 
   it('falls back to English names for untitled conversations', () => {
     expect(conversationTitle(null, 'me', users)).toBe('Conversation');
-    expect(conversationTitle(conv('g', { type: 'group' }), 'me', users)).toBe('Group');
-    expect(conversationTitle(conv('b', { type: 'bot' }), 'me', users)).toBe('Bot');
+    expect(conversationTitle(conv('g', { type: 'text', title: 'general', serverId: 's' }), 'me', users)).toBe('general');
     expect(conversationTitle(conv('dm', { memberIds: ['me'] }), 'me', users)).toBe('Direct conversation');
   });
 
   it('describes invitation outcomes and media date groups in English', () => {
-    expect(describeInviteOutcome('already_member')).toBe('is already in the group');
+    expect(describeInviteOutcome('already_member')).toBe('is already in the server');
     const now = new Date(2026, 10, 10, 15).getTime();
     expect(dateGroupLabel(now, now)).toBe('Today');
     expect(dateGroupLabel(new Date(2026, 9, 1).getTime(), now)).toBe('October 2026');

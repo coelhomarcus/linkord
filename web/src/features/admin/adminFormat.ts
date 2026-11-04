@@ -25,7 +25,8 @@ export const ACTION_LABELS: Record<string, string> = {
   'user.delete.avatar_cleanup': 'Limpeza da foto', 'group.suspend': 'Grupo suspenso', 'group.reactivate': 'Grupo reativado',
   'group.assign_owner': 'Dono atribuído', 'group.delete': 'Grupo excluído', 'group.owner_succession': 'Sucessão de dono',
   'bot.suspend': 'Bot suspenso', 'bot.reactivate': 'Bot reativado', 'bot.assign_owner': 'Dono do bot atribuído', 'bot.delete': 'Bot excluído',
-  'bot.revoke_webhook': 'Webhook revogado',
+  'bot.revoke_webhook': 'Webhook revogado', 'server.suspend': 'Servidor suspenso', 'server.reactivate': 'Servidor reativado',
+  'server.assign_owner': 'Dono atribuído', 'server.delete': 'Servidor excluído', 'server.owner_succession': 'Sucessão de dono', 'webhook.revoke': 'Webhook revogado',
   'message.delete': 'Mensagem apagada', 'message.attachment.remove': 'Anexo removido', 'call.kick': 'Removido da chamada', 'report.view': 'Evidência aberta',
   'report.claim': 'Denúncia assumida', 'report.resolve': 'Denúncia resolvida', 'report.dismiss': 'Denúncia dispensada',
 };
@@ -58,7 +59,7 @@ export function nextDayStartIso(day: string): string | undefined {
   return parsed ? new Date(parsed.y, parsed.m - 1, parsed.d + 1).toISOString() : undefined;
 }
 
-export const REPORT_TARGET_LABEL = { user: 'Conta', group: 'Grupo', message: 'Mensagem' } as const;
+export const REPORT_TARGET_LABEL = { user: 'Conta', server: 'Servidor', group: 'Grupo', message: 'Mensagem' } as const;
 
 export function reportTargetLabel(target: string): string {
   const fallback = REPORT_TARGET_LABEL[target as keyof typeof REPORT_TARGET_LABEL] ?? target;
@@ -66,11 +67,11 @@ export function reportTargetLabel(target: string): string {
 }
 
 export const REPORT_RESOLUTION_LABEL: Record<string, string> = {
-  no_action: 'Resolvida sem ação', user_suspended: 'Conta suspensa', group_suspended: 'Grupo suspenso', message_deleted: 'Mensagem apagada',
+  no_action: 'Resolvida sem ação', user_suspended: 'Conta suspensa', server_suspended: 'Servidor suspenso', group_suspended: 'Grupo suspenso', message_deleted: 'Mensagem apagada',
 };
 
 export function reportResolutionLabel(value: string | null | undefined): string {
   if (!value) return i18n.t('admin:common.unknown' as never);
-  const key = value === 'no_action' ? 'noAction' : value === 'user_suspended' ? 'userSuspended' : value === 'group_suspended' ? 'groupSuspended' : value === 'message_deleted' ? 'messageDeleted' : null;
+  const key = value === 'no_action' ? 'noAction' : value === 'user_suspended' ? 'userSuspended' : value === 'server_suspended' ? 'serverSuspended' : value === 'group_suspended' ? 'groupSuspended' : value === 'message_deleted' ? 'messageDeleted' : null;
   return i18n.t(key ? `admin:resolution.${key}` as never : 'admin:common.unknown' as never, { defaultValue: REPORT_RESOLUTION_LABEL[value] ?? value });
 }

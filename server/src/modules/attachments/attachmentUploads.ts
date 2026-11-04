@@ -4,7 +4,8 @@ import { config } from '../../config/env.js';
 import { sendJson, sendError, jsonBody } from '../../http/respond.js';
 import { parseCookies } from '../../http/cookies.js';
 import { resolveSession } from '../auth/session.js';
-import { acceptsHumanMessages, getConversationForUser, getDirectPeerId } from '../conversations/conversationsRepository.js';
+import { getConversationForUser, getDirectPeerId } from '../conversations/conversationsRepository.js';
+import { PERMISSIONS } from '../servers/permissions.js';
 import { canSendDirectMessage } from '../friendships/friendshipsRepository.js';
 import { newId, filePathFor } from './attachmentStorage.js';
 import { generateThumbnail, readImageDimensions, readImagePlaceholder, THUMBNAIL_SOURCE_MIME_TYPES } from './attachmentThumbnails.js';
@@ -53,11 +54,13 @@ export async function handleAttachmentInit(request: FastifyRequest, reply: Fasti
 
   const body = jsonBody(request.body);
   const conversationId = String(body.conversationId || '');
-  const conversation = conversationId ? await getConversationForUser(conversationId, sess.userId) : null;
-  if (!conversation) return sendError(reply, 404, 'conversation_not_found', 'Conversa não encontrada.');
-  if (!acceptsHumanMessages(conversation)) return sendError(reply, 403, 'forbidden', 'Só o bot envia mensagens aqui.');
+  if (!conversationId || !(await getConversationForUser(conversationId, sess.userId))) return sendError(reply, 404, 'conversation_not_found', 'Conversa não encontrada.');
+  // a channel takes both: sending there, and sending files there
+  if (!(await getConversationForUser(conversationId, sess.userId, PERMISSIONS.SEND_MESSAGES | PERMISSIONS.ATTACH_FILES))) {
+    return sendError(reply, 403, 'forbidden', 'Você não pode enviar arquivos nesse canal.');
+  }
   // §4.3: "anexar" is on the restricted-contact list — same gate as
-  // messages.ts's chat/react/typing. No-ops for a group (getDirectPeerId
+  // messages.ts's chat/react/typing. No-ops for a channel (getDirectPeerId
   // returns null there).
   const peerId = await getDirectPeerId(conversationId, sess.userId);
   if (peerId && !(await canSendDirectMessage(sess.userId, peerId))) {

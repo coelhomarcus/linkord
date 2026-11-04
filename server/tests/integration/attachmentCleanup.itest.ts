@@ -2,9 +2,9 @@ import assert from 'node:assert/strict';
 import { after, describe, it } from 'node:test';
 import crypto from 'node:crypto';
 import { eq } from 'drizzle-orm';
-import { attachments as attachmentsTable, conversations, users } from '../../src/db/schema.js';
+import { attachments as attachmentsTable, servers, users } from '../../src/db/schema.js';
 import { deleteAvatarFile } from '../../src/modules/attachments/attachmentCleanup.js';
-import { db, makeGroupWithMembers, makeUser, pool } from './helpers.js';
+import { db, makeServerWithMembers, makeUser, pool } from './helpers.js';
 
 after(() => pool.end());
 
@@ -28,7 +28,7 @@ async function attachmentExists(id: string): Promise<boolean> {
 // rows directly to reproduce "the old value is still someone else's current
 // one" without needing a real handler round-trip.
 
-describe('deleteAvatarFile — never deletes a file another account/group still uses (real Postgres)', () => {
+describe('deleteAvatarFile — never deletes a file another account/server still uses (real Postgres)', () => {
   it('another account still has this URL as its own avatar: does not delete', async () => {
     const id = await makeAvatarRow((await makeUser('ac')).id);
     const url = `/uploads/${id}`;
@@ -51,12 +51,12 @@ describe('deleteAvatarFile — never deletes a file another account/group still 
     assert.equal(await attachmentExists(id), true);
   });
 
-  it('a group still has this URL as its own avatar: does not delete', async () => {
+  it('a server still has this URL as its icon: does not delete', async () => {
     const owner = await makeUser('ac');
     const id = await makeAvatarRow(owner.id);
     const url = `/uploads/${id}`;
-    const groupId = await makeGroupWithMembers(owner.id, []);
-    await db.update(conversations).set({ avatar: url }).where(eq(conversations.id, groupId));
+    const { serverId } = await makeServerWithMembers(owner.id, []);
+    await db.update(servers).set({ icon: url }).where(eq(servers.id, serverId));
 
     await deleteAvatarFile(url);
 

@@ -1,0 +1,244 @@
+{
+  "rail": {
+    "label": "Servidores",
+    "home": "Mensagens diretas",
+    "add": "Adicionar um servidor",
+    "showList": "Mostrar canais e conversas"
+  },
+  "topBar": {
+    "friends": "Amigos",
+    "directMessages": "Mensagens diretas"
+  },
+  "back": "Voltar",
+  "cancel": "Cancelar",
+  "save": "Salvar alterações",
+  "reset": "Redefinir",
+  "close": "Fechar",
+  "channels": "Canais",
+  "noChannels": "Nenhum canal por aqui ainda.",
+  "suspended": "Este servidor foi suspenso pela administração.",
+  "create": {
+    "title": "Crie o seu servidor",
+    "description": "Seu servidor é onde você e seus amigos se encontram. Crie o seu e comece a conversar.",
+    "own": "Criar o meu",
+    "customize": "Personalize o seu servidor",
+    "customizeHint": "Dê uma personalidade ao seu novo servidor com um nome. Você pode mudar isso depois.",
+    "name": "Nome do servidor",
+    "defaultName": "Servidor de {{name}}",
+    "template": "Começa com #geral e um canal de voz Geral.",
+    "submit": "Criar",
+    "creating": "Criando…",
+    "failed": "Não foi possível criar o servidor. Tente de novo."
+  },
+  "join": {
+    "question": "Já tem um convite?",
+    "title": "Entrar em um servidor",
+    "description": "Insira um convite abaixo para entrar em um servidor existente.",
+    "link": "Link de convite",
+    "submit": "Entrar no servidor",
+    "joining": "Entrando…",
+    "invalid": "Esse link de convite não parece válido.",
+    "failed": "Não foi possível entrar no servidor."
+  },
+  "menu": {
+    "invite": "Convidar pessoas",
+    "settings": "Configurações do servidor",
+    "createChannel": "Criar canal",
+    "createCategory": "Criar categoria",
+    "leave": "Sair do servidor"
+  },
+  "leave": {
+    "title": "Sair de \"{{name}}\"",
+    "description": "Você não poderá voltar sem um novo convite.",
+    "confirm": "Sair do servidor"
+  },
+  "invite": {
+    "title": "Convide amigos para {{name}}",
+    "send_one": "Enviar convite",
+    "send_other": "Enviar convites ({{count}})",
+    "orLink": "Ou envie um link de convite para um amigo",
+    "generating": "Gerando…",
+    "copy": "Copiar",
+    "copied": "Copiado",
+    "expires": "Seu link de convite expira em 7 dias.",
+    "linkFailed": "Não foi possível gerar o link de convite.",
+    "failed": "Não foi possível enviar os convites."
+  },
+  "channel": {
+    "create": "Criar canal",
+    "createCategory": "Criar categoria",
+    "inCategory": "em {{name}}",
+    "type": "Tipo de canal",
+    "types": {
+      "text": "Texto",
+      "voice": "Voz"
+    },
+    "typeHint": {
+      "text": "Envie mensagens, imagens, GIFs, emoji, opiniões e piadas",
+      "voice": "Converse com voz, vídeo e compartilhamento de tela"
+    },
+    "name": "Nome do canal",
+    "namePlaceholder": "novo-canal",
+    "categoryName": "Nome da categoria",
+    "categoryPlaceholder": "Nova categoria",
+    "willBe": "O canal vai se chamar {{name}}",
+    "createFailed": "Não foi possível criar.",
+    "invite": "Criar convite",
+    "edit": "Editar canal"
+  },
+  "members": {
+    "label": "Membros",
+    "online": "Disponível",
+    "offline": "Offline",
+    "section": "{{name}} — {{count}}",
+    "loading": "Carregando membros…",
+    "owner": "Dono do servidor",
+    "kick": "Expulsar",
+    "ban": "Banir",
+    "transfer": "Transferir posse",
+    "kickTitle": "Expulsar {{name}}",
+    "kickDescription": "A pessoa sai do servidor e só volta com um novo convite.",
+    "banTitle": "Banir {{name}}",
+    "banDescription": "A pessoa sai do servidor e não pode voltar, nem por link, até o banimento ser revogado.",
+    "transferTitle": "Transferir {{name}}",
+    "transferDescription": "Essa pessoa vira dona do servidor e você deixa de ser."
+  },
+  "settings": {
+    "label": "Configurações de {{name}}",
+    "overview": "Visão geral",
+    "roles": "Cargos",
+    "members": "Membros",
+    "invites": "Convites",
+    "bans": "Banimentos",
+    "soundboard": "Soundboard",
+    "delete": "Excluir servidor",
+    "changeIcon": "Alterar ícone",
+    "removeIcon": "Remover ícone"
+  },
+  "roles": {
+    "hint": "Use cargos para organizar os membros e definir o que cada um pode fazer. Cargos mais acima mandam nos de baixo.",
+    "create": "Criar cargo",
+    "newName": "novo cargo",
+    "name": "Nome do cargo",
+    "color": "Cor",
+    "hoist": "Exibir membros com este cargo separadamente",
+    "mentionable": "Permitir que qualquer um @mencione este cargo",
+    "delete": "Excluir cargo",
+    "deleteTitle": "Excluir {{name}}",
+    "deleteDescription": "Quem tem este cargo perde as permissões que ele dava.",
+    "up": "Subir",
+    "down": "Descer"
+  },
+  "invites": {
+    "none": "Nenhum convite ativo.",
+    "meta": "por {{name}} · usos {{uses}} · expira {{expires}}",
+    "never": "nunca",
+    "revoke": "Revogar"
+  },
+  "bans": {
+    "none": "Ninguém banido.",
+    "revoke": "Revogar banimento"
+  },
+  "deleteServer": {
+    "title": "Excluir \"{{name}}\"",
+    "description": "Excluir {{name}} apaga todos os canais, mensagens, arquivos e sons dele. Não dá para desfazer.",
+    "confirm": "Tem certeza? Isso não pode ser desfeito."
+  },
+  "channelSettings": {
+    "label": "Configurações de {{name}}",
+    "overview": "Visão geral",
+    "permissions": "Permissões",
+    "webhooks": "Integrações",
+    "delete": "Excluir canal",
+    "topic": "Tópico do canal",
+    "topicPlaceholder": "Diga a todos como usar este canal",
+    "synced": "Este canal segue as permissões da categoria. Mudar algo aqui deixa de segui-las.",
+    "sync": "Sincronizar com a categoria"
+  },
+  "deleteChannel": {
+    "title": "Excluir #{{name}}",
+    "description": "Excluir {{name}} apaga todas as mensagens e arquivos dele.",
+    "confirm": "Tem certeza? Isso não pode ser desfeito."
+  },
+  "overwrite": {
+    "allow": "Permitir",
+    "inherit": "Herdar",
+    "deny": "Negar"
+  },
+  "webhooks": {
+    "hint": "Webhooks deixam sistemas externos postarem neste canal.",
+    "defaultName": "Capitão Gancho",
+    "create": "Novo webhook",
+    "rotate": "Gerar nova URL",
+    "delete": "Excluir",
+    "rename": "Nome do webhook {{name}}"
+  },
+  "inviteCard": {
+    "sent": "Você enviou um convite para entrar em um servidor",
+    "received": "Você recebeu um convite para entrar em um servidor",
+    "invitedBy": "{{name}} convidou você para entrar",
+    "sentInvalid": "Você enviou um convite, mas",
+    "receivedInvalid": "Você recebeu um convite, mas",
+    "invalid": "Convite inválido",
+    "invalidHint": "Tente enviar um novo convite",
+    "members_one": "{{count}} membro",
+    "members_other": "{{count}} membros",
+    "join": "Entrar",
+    "go": "Ir para o servidor"
+  },
+  "voice": {
+    "inside_one": "{{count}} pessoa no canal",
+    "inside_other": "{{count}} pessoas no canal",
+    "empty": "Ninguém está aqui agora.",
+    "join": "Entrar no canal de voz",
+    "noAccess": "Você não pode entrar neste canal"
+  },
+  "permissionSections": {
+    "general": "Permissões gerais do servidor",
+    "members": "Permissões de membros",
+    "text": "Permissões de canal de texto",
+    "voice": "Permissões de canal de voz"
+  },
+  "permissions": {
+    "ADMINISTRATOR": "Administrador",
+    "MANAGE_SERVER": "Gerenciar servidor",
+    "MANAGE_ROLES": "Gerenciar cargos",
+    "MANAGE_CHANNELS": "Gerenciar canais",
+    "CREATE_INVITE": "Criar convite",
+    "KICK_MEMBERS": "Expulsar membros",
+    "BAN_MEMBERS": "Banir membros",
+    "VIEW_CHANNEL": "Ver canais",
+    "SEND_MESSAGES": "Enviar mensagens",
+    "ATTACH_FILES": "Anexar arquivos",
+    "ADD_REACTIONS": "Adicionar reações",
+    "MANAGE_MESSAGES": "Gerenciar mensagens",
+    "MANAGE_WEBHOOKS": "Gerenciar webhooks",
+    "CONNECT": "Conectar",
+    "SPEAK": "Falar",
+    "STREAM": "Vídeo e tela",
+    "MOVE_MEMBERS": "Desconectar membros",
+    "USE_SOUNDBOARD": "Usar soundboard",
+    "MANAGE_EXPRESSIONS": "Gerenciar expressões"
+  },
+  "permissionHints": {
+    "ADMINISTRATOR": "Concede todas as permissões e ignora as regras de cada canal. Cuidado ao dar esta.",
+    "MANAGE_SERVER": "Mudar o nome e o ícone do servidor e ver os convites.",
+    "MANAGE_ROLES": "Criar e editar cargos abaixo do seu, e mudar permissões de canais.",
+    "MANAGE_CHANNELS": "Criar, editar, reordenar e excluir canais e categorias.",
+    "CREATE_INVITE": "Convidar amigos e gerar links de convite.",
+    "KICK_MEMBERS": "Remover membros abaixo do seu cargo.",
+    "BAN_MEMBERS": "Banir membros abaixo do seu cargo.",
+    "VIEW_CHANNEL": "Ver o canal e ler o histórico. Sem isso o canal fica escondido.",
+    "SEND_MESSAGES": "Escrever no canal.",
+    "ATTACH_FILES": "Enviar imagens e arquivos.",
+    "ADD_REACTIONS": "Reagir às mensagens.",
+    "MANAGE_MESSAGES": "Apagar mensagens de outras pessoas.",
+    "MANAGE_WEBHOOKS": "Criar, editar e excluir webhooks.",
+    "CONNECT": "Entrar nos canais de voz.",
+    "SPEAK": "Falar nos canais de voz.",
+    "STREAM": "Ligar a câmera e compartilhar a tela.",
+    "MOVE_MEMBERS": "Desconectar membros abaixo do seu cargo de um canal de voz.",
+    "USE_SOUNDBOARD": "Tocar e adicionar sons do soundboard.",
+    "MANAGE_EXPRESSIONS": "Editar e remover os sons de qualquer pessoa."
+  }
+}

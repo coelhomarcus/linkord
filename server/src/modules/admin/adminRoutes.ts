@@ -10,10 +10,10 @@ import {
   type AdminRoleResult, type UserActionResult,
 } from './adminUsers.js';
 import {
-  assignGroupOwner, deleteGroupAsAdmin, getAdminGroup, listAdminGroups, reactivateGroup, suspendGroup,
-  type GroupActionResult,
-} from './adminGroups.js';
-import { getAdminBot, listAdminBots, revokeBotWebhook, type BotWebhookActionResult } from './adminBots.js';
+  assignServerOwner, deleteServerAsAdmin, getAdminServer, listAdminServers, reactivateServer, suspendServer,
+  type ServerActionResult,
+} from './adminServers.js';
+import { getAdminWebhook, listAdminWebhooks, revokeWebhook, type WebhookActionResult } from './adminWebhooks.js';
 import { claimReport, getAdminReport, listAdminReports, resolveReport, type ReportActionResult } from './adminReports.js';
 import type { AuditActor } from './auditLog.js';
 import { getSystemInfo } from './adminSystem.js';
@@ -30,7 +30,7 @@ const ERRORS: Record<string, [number, ErrorCode, string]> = {
   last_admin: [409, 'last_admin', 'Essa conta é o último administrador ativo.'],
   already_suspended: [409, 'already_suspended', 'Já está suspenso.'],
   not_suspended: [409, 'not_suspended', 'Não está suspenso.'],
-  not_member: [409, 'not_member', 'Essa conta não é membro do grupo.'],
+  not_member: [409, 'not_member', 'Essa conta não é membro do servidor.'],
   confirmation_mismatch: [400, 'confirmation_mismatch', 'A confirmação não confere.'],
   already_admin: [409, 'already_admin', 'Essa conta já é administradora.'],
   not_admin: [409, 'not_admin', 'Essa conta não é administradora.'],
@@ -51,7 +51,7 @@ async function runSweep(reply: FastifyReply, opts: Parameters<typeof sweepOrphan
   }
 }
 
-function respond(reply: FastifyReply, result: UserActionResult | GroupActionResult | BotWebhookActionResult | ReportActionResult | AdminRoleResult): void {
+function respond(reply: FastifyReply, result: UserActionResult | ServerActionResult | WebhookActionResult | ReportActionResult | AdminRoleResult): void {
   if (result.code === 'ok') return sendJson(reply, 200, { ok: true });
   const [status, code, message] = ERRORS[result.code] ?? [500, 'internal_error', 'Erro interno.'];
   sendError(reply, status, code, message);
@@ -115,59 +115,39 @@ export function registerAdminRoutes(fastify: FastifyInstance): void {
     if (m) respond(reply, await deleteUserAccount({ actor: m.actor, reason: m.reason, requestId: request.id }, request.params.id, String(m.body.confirm ?? '')));
   });
 
-  fastify.get('/api/admin/groups', (request: FastifyRequest<{ Querystring: Query }>, reply) => reading(request, reply, () => {
+  fastify.get('/api/admin/servers', (request: FastifyRequest<{ Querystring: Query }>, reply) => reading(request, reply, () => {
     const { q, status, orphan, cursor } = request.query;
-    return listAdminGroups({ q, status, orphan: orphan === '1' }, cursor);
+    return listAdminServers({ q, status, orphan: orphan === '1' }, cursor);
   }));
-  fastify.get('/api/admin/groups/:id', (request: FastifyRequest<{ Params: IdParams; Querystring: Query }>, reply) => reading(request, reply, () => getAdminGroup(request.params.id, request.query.cursor)));
-  fastify.post('/api/admin/groups/:id/suspend', async (request: FastifyRequest<{ Params: IdParams }>, reply) => {
+  fastify.get('/api/admin/servers/:id', (request: FastifyRequest<{ Params: IdParams; Querystring: Query }>, reply) => reading(request, reply, () => getAdminServer(request.params.id, request.query.cursor)));
+  fastify.post('/api/admin/servers/:id/suspend', async (request: FastifyRequest<{ Params: IdParams }>, reply) => {
     const m = await mutating(request, reply);
-    if (m) respond(reply, await suspendGroup({ actor: m.actor, reason: m.reason, requestId: request.id }, request.params.id));
+    if (m) respond(reply, await suspendServer({ actor: m.actor, reason: m.reason, requestId: request.id }, request.params.id));
   });
-  fastify.post('/api/admin/groups/:id/reactivate', async (request: FastifyRequest<{ Params: IdParams }>, reply) => {
+  fastify.post('/api/admin/servers/:id/reactivate', async (request: FastifyRequest<{ Params: IdParams }>, reply) => {
     const m = await mutating(request, reply);
-    if (m) respond(reply, await reactivateGroup({ actor: m.actor, reason: m.reason, requestId: request.id }, request.params.id));
+    if (m) respond(reply, await reactivateServer({ actor: m.actor, reason: m.reason, requestId: request.id }, request.params.id));
   });
-  fastify.post('/api/admin/groups/:id/owner', async (request: FastifyRequest<{ Params: IdParams }>, reply) => {
+  fastify.post('/api/admin/servers/:id/owner', async (request: FastifyRequest<{ Params: IdParams }>, reply) => {
     const m = await mutating(request, reply);
     if (!m) return;
     const userId = String(m.body.userId ?? '');
     if (!userId) return sendError(reply, 400, 'invalid_request', 'Informe o novo dono.');
-    respond(reply, await assignGroupOwner({ actor: m.actor, reason: m.reason, requestId: request.id }, request.params.id, userId));
+    respond(reply, await assignServerOwner({ actor: m.actor, reason: m.reason, requestId: request.id }, request.params.id, userId));
   });
-  fastify.delete('/api/admin/groups/:id', async (request: FastifyRequest<{ Params: IdParams }>, reply) => {
+  fastify.delete('/api/admin/servers/:id', async (request: FastifyRequest<{ Params: IdParams }>, reply) => {
     const m = await mutating(request, reply);
-    if (m) respond(reply, await deleteGroupAsAdmin({ actor: m.actor, reason: m.reason, requestId: request.id }, request.params.id));
+    if (m) respond(reply, await deleteServerAsAdmin({ actor: m.actor, reason: m.reason, requestId: request.id }, request.params.id));
   });
 
-  // a bot is moderated with the group actions (kind 'bot'), plus cutting off its webhook
-  fastify.get('/api/admin/bots', (request: FastifyRequest<{ Querystring: Query }>, reply) => reading(request, reply, () => {
-    const { q, status, orphan, cursor } = request.query;
-    return listAdminBots({ q, status, orphan: orphan === '1' }, cursor);
+  fastify.get('/api/admin/webhooks', (request: FastifyRequest<{ Querystring: Query }>, reply) => reading(request, reply, () => {
+    const { q, cursor } = request.query;
+    return listAdminWebhooks({ q }, cursor);
   }));
-  fastify.get('/api/admin/bots/:id', (request: FastifyRequest<{ Params: IdParams; Querystring: Query }>, reply) => reading(request, reply, () => getAdminBot(request.params.id, request.query.cursor)));
-  fastify.post('/api/admin/bots/:id/suspend', async (request: FastifyRequest<{ Params: IdParams }>, reply) => {
+  fastify.get('/api/admin/webhooks/:id', (request: FastifyRequest<{ Params: IdParams }>, reply) => reading(request, reply, () => getAdminWebhook(request.params.id)));
+  fastify.post('/api/admin/webhooks/:id/revoke', async (request: FastifyRequest<{ Params: IdParams }>, reply) => {
     const m = await mutating(request, reply);
-    if (m) respond(reply, await suspendGroup({ actor: m.actor, reason: m.reason, requestId: request.id }, request.params.id, 'bot'));
-  });
-  fastify.post('/api/admin/bots/:id/reactivate', async (request: FastifyRequest<{ Params: IdParams }>, reply) => {
-    const m = await mutating(request, reply);
-    if (m) respond(reply, await reactivateGroup({ actor: m.actor, reason: m.reason, requestId: request.id }, request.params.id, 'bot'));
-  });
-  fastify.post('/api/admin/bots/:id/owner', async (request: FastifyRequest<{ Params: IdParams }>, reply) => {
-    const m = await mutating(request, reply);
-    if (!m) return;
-    const userId = String(m.body.userId ?? '');
-    if (!userId) return sendError(reply, 400, 'invalid_request', 'Informe o novo dono.');
-    respond(reply, await assignGroupOwner({ actor: m.actor, reason: m.reason, requestId: request.id }, request.params.id, userId, 'bot'));
-  });
-  fastify.post('/api/admin/bots/:id/revoke-webhook', async (request: FastifyRequest<{ Params: IdParams }>, reply) => {
-    const m = await mutating(request, reply);
-    if (m) respond(reply, await revokeBotWebhook({ actor: m.actor, reason: m.reason, requestId: request.id }, request.params.id));
-  });
-  fastify.delete('/api/admin/bots/:id', async (request: FastifyRequest<{ Params: IdParams }>, reply) => {
-    const m = await mutating(request, reply);
-    if (m) respond(reply, await deleteGroupAsAdmin({ actor: m.actor, reason: m.reason, requestId: request.id }, request.params.id, 'bot'));
+    if (m) respond(reply, await revokeWebhook({ actor: m.actor, reason: m.reason, requestId: request.id }, request.params.id));
   });
 
   fastify.get('/api/admin/reports', (request: FastifyRequest<{ Querystring: Query }>, reply) => reading(request, reply, () => {
@@ -189,7 +169,7 @@ export function registerAdminRoutes(fastify: FastifyInstance): void {
     const m = await mutating(request, reply);
     if (!m) return;
     const action = m.body.action == null || m.body.action === '' ? null : String(m.body.action) as ReportAction;
-    if (action !== null && !['suspend_user', 'suspend_group', 'delete_message'].includes(action)) {
+    if (action !== null && !['suspend_user', 'suspend_server', 'delete_message'].includes(action)) {
       return sendError(reply, 400, 'invalid_action', 'Ação inválida.');
     }
     respond(reply, await resolveReport({ actor: m.actor, reason: m.reason, requestId: request.id }, request.params.id, { dismiss: m.body.dismiss === true, action }));

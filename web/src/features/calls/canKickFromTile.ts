@@ -1,14 +1,14 @@
 import type { Conversation } from '@/shared/types/protocol';
+import { hasPermission, PERMISSIONS } from '@/features/servers/permissionBits';
 
 /** Mirrors the server's canKickFromCall (modules/moderation/moderation.ts):
- * instance admins as before, plus the OWNER of the group the call belongs
- * to — for a member of that group. Never in a 1:1 call, and never on
- * yourself. The server re-checks; this only decides whether to show it. */
+ * instance admins, or MOVE_MEMBERS in the voice channel. Never in a 1:1
+ * call, and never on yourself. The hierarchy part (only someone below you)
+ * is the server's call: this only decides whether to offer it. */
 export function canKickFromTile(input: {
   isMe: boolean; conversation: Conversation | undefined; meIsAdmin: boolean; targetUserId: string | undefined;
 }): boolean {
   const { isMe, conversation, meIsAdmin, targetUserId } = input;
-  if (isMe || conversation?.type !== 'group') return false;
-  if (meIsAdmin) return true;
-  return conversation.myRole === 'owner' && !!targetUserId && conversation.memberIds.includes(targetUserId);
+  if (isMe || conversation?.type !== 'voice' || !targetUserId) return false;
+  return meIsAdmin || hasPermission(conversation.permissions ?? 0, PERMISSIONS.MOVE_MEMBERS);
 }

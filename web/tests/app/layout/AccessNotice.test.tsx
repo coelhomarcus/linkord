@@ -15,8 +15,8 @@ describe('AccessNotice', () => {
   it('shows the notice and allows dismissing it', async () => {
     const user = userEvent.setup();
     const clear = vi.fn();
-    renderWithRoom(<AccessNotice />, { accessNotice: 'Você foi removido do grupo "Squad".', clearAccessNotice: clear });
-    expect(screen.getByRole('status')).toHaveTextContent('Você foi removido do grupo "Squad".');
+    renderWithRoom(<AccessNotice />, { accessNotice: 'Você foi removido do servidor "Squad".', clearAccessNotice: clear });
+    expect(screen.getByRole('status')).toHaveTextContent('Você foi removido do servidor "Squad".');
     await user.click(screen.getByRole('button', { name: 'Dispensar aviso' }));
     expect(clear).toHaveBeenCalled();
   });

@@ -49,6 +49,8 @@
     "insertEmoji": "Insert emoji",
     "compress": "Compress images (WebP)",
     "message": "Message",
+    "messageChannel": "Message #{{channel}}",
+    "messageDirect": "Message @{{name}}",
     "addCaption": "Add a caption",
     "sendGif": "Send GIF",
     "send": "Send message",
@@ -79,33 +81,27 @@
     "confirm": "Delete"
   },
   "invite": {
-    "unavailable": "Invitation unavailable: the group no longer exists.",
+    "unavailable": "Invite unavailable: the server no longer exists.",
     "status": {
       "accepted": "Accepted",
       "declined": "Declined",
       "revoked": "Cancelled",
       "expired": "Expired"
     },
-    "quotaExceeded": "You're already in the maximum number of groups allowed.",
+    "quotaExceeded": "You already belong to the most servers allowed.",
     "failed": "Couldn't complete the action. Try again.",
-    "full_group": "Limit reached: the group is full.",
-    "full_bot": "Limit reached: the bot is full.",
-    "alreadyMember_group": "You're already in this group.",
-    "alreadyMember_bot": "You're already in this bot.",
     "accepting": "Accepting…",
-    "join_group": "Join the group",
-    "join_bot": "Join the bot",
     "decline": "Decline",
     "waiting": "Awaiting reply",
     "revoke": "Revoke",
-    "open_group": "Open group",
-    "open_bot": "Open bot",
-    "header_group": "Group invitation",
-    "header_bot": "Bot invitation",
     "members_one": "{{count}} member",
     "members_other": "{{count}} members",
-    "hint_group": "When you join, you'll see the group's history.",
-    "hint_bot": "When you join, you'll start receiving this bot's alerts."
+    "full": "Limit reached: the server is full.",
+    "alreadyMember": "You're already in this server.",
+    "join": "Join the server",
+    "open": "Open server",
+    "header": "Server invitation",
+    "hint": "When you join, you'll see the server's history."
   },
   "search": {
     "title": "Search messages",
@@ -135,9 +131,9 @@
     "openIndexed": "Open {{name}} ({{index}} of {{total}})"
   },
   "preview": {
-    "invite": "Invitation to the group {{title}}",
+    "invite": "Invitation to the server {{title}}",
     "inviteUnavailable": "Invitation unavailable",
-    "callInvite": "Invite to the call in {{title}}",
+    "callInvite": "Invite to the voice channel {{title}}",
     "callInviteUnavailable": "Call invite unavailable",
     "notice": "Notice",
     "attachment": "Attachment"
@@ -161,7 +157,7 @@
     "inCall_one": "{{count}} person in the call",
     "inCall_other": "{{count}} people in the call",
     "ended": "The call has ended",
-    "notMember": "You are no longer in this group.",
+    "notMember": "You can no longer see this channel.",
     "unavailable": "Call invite unavailable"
   }
 }

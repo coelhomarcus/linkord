@@ -6,12 +6,12 @@ import { config } from '../../config/env.js';
 const UPLOADED_AVATAR_RE = /^\/uploads\/[0-9a-f]{32}$/;
 
 /** Whether an image reference points at one of our own uploads — the only
- * kind a profile, group or bot can newly be given. An external URL would be
+ * kind a profile, server or webhook can newly be given. An external URL would be
  * fetched by every viewer's browser from wherever its owner chose. */
 export function isUploadedImage(url: string): boolean {
   return UPLOADED_AVATAR_RE.test(url);
 }
-// exported for modules/conversations.ts — a group avatar is validated the
+// exported for modules/servers — a server icon is validated the
 // exact same way an account's is, just stored on `conversations` instead.
 export function sanitizeAvatar(url: unknown): string {
   const s = String(url == null ? '' : url).trim().slice(0, config.MAX_AVATAR_LEN);
