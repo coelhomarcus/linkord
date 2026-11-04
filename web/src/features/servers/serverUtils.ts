@@ -41,6 +41,22 @@ export function serverUnread(server: ServerSummary, unreadByConversation: Map<st
   return server.channels.reduce((sum, c) => sum + (c.type === 'text' ? unreadByConversation.get(c.id) ?? 0 : 0), 0);
 }
 
+/** Every call someone is in right now. `participants` only ever holds OTHER
+ * people (the server leaves the account itself out), so the viewer's own call
+ * comes in separately. */
+export function liveCallIds(participants: Iterable<{ callConversationId: string | null }>, ownCallId: string | null): Set<string> {
+  const ids = new Set<string>();
+  for (const p of participants) if (p.callConversationId) ids.add(p.callConversationId);
+  if (ownCallId) ids.add(ownCallId);
+  return ids;
+}
+
+/** Whether anyone is in one of the server's voice channels. Only channels the
+ * member can see are in `server.channels`, so a private call stays unseen. */
+export function serverHasLiveCall(server: ServerSummary, callIds: Set<string>): boolean {
+  return server.channels.some((c) => c.type === 'voice' && callIds.has(c.id));
+}
+
 /** The colour a member's name shows in: their highest role that has one. */
 export function memberColor(server: ServerSummary, roleIds: string[]): string {
   const held = new Set(roleIds);

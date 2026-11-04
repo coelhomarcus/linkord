@@ -3,7 +3,8 @@
     "label": "Servidores",
     "home": "Mensagens diretas",
     "add": "Adicionar um servidor",
-    "showList": "Mostrar canais e conversas"
+    "showList": "Mostrar canais e conversas",
+    "liveCall": "Chamada de voz em andamento"
   },
   "topBar": {
     "friends": "Amigos",

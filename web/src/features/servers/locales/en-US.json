@@ -3,7 +3,8 @@
     "label": "Servers",
     "home": "Direct Messages",
     "add": "Add a Server",
-    "showList": "Show channels and conversations"
+    "showList": "Show channels and conversations",
+    "liveCall": "Voice call in progress"
   },
   "topBar": {
     "friends": "Friends",

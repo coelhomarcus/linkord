@@ -1,11 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createEvent, fireEvent, screen } from '@testing-library/react';
+import { createEvent, fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useLocation } from 'react-router';
 import { renderSocial } from '@tests/fixtures/socialFixture';
 import { SidebarProvider } from '@/shared/ui/motion/sidebar';
 import { ServerRail } from '@/features/servers/ServerRail';
-import type { ServerSummary } from '@/shared/types/protocol';
+import type { Participant, ServerSummary } from '@/shared/types/protocol';
+import type { RoomContextValue } from '@/state/RoomContext';
+import { initialRoomState } from '@/state/roomReducer';
+import { useLanguageForTests } from '@tests/fixtures/i18nFixture';
 
 const server = { id: 's1', name: 'Squad', icon: '', status: 'active', roles: [], categories: [], channels: [] } as unknown as ServerSummary;
 
@@ -20,14 +23,34 @@ function setViewport(width: number) {
 
 function Where() { return <p data-testid="where">{useLocation().pathname}</p>; }
 
-function renderRail(onOpenMobileChange = vi.fn(), servers: ServerSummary[] = [server]) {
+function renderRail(onOpenMobileChange = vi.fn(), servers: ServerSummary[] = [server], room: Partial<RoomContextValue> = {}) {
   renderSocial(
     <SidebarProvider open onOpenChange={vi.fn()} openMobile={false} onOpenMobileChange={onOpenMobileChange}>
       <ServerRail /><Where />
     </SidebarProvider>,
-    { room: { servers }, path: '/app/channels/@me' },
+    { room: { servers, ...room }, path: '/app/channels/@me' },
   );
   return onOpenMobileChange;
+}
+
+const withChannels = {
+  ...server,
+  channels: [
+    { id: 'c-text', type: 'text', name: 'geral', categoryId: null, position: 0 },
+    { id: 'c-voice', type: 'voice', name: 'Voz', categoryId: null, position: 1 },
+  ],
+} as unknown as ServerSummary;
+
+function inCall(callConversationId: string | null): Participant {
+  return {
+    id: 'p-bea', userId: 'u-bea', name: 'bea', displayName: 'Bea', avatar: '', avatarPoster: '', avatarColor: 'green',
+    banner: '', bannerPoster: '', bio: '', profileLinks: [], role: 'user', deafened: false, callConversationId,
+    micActivated: false, micMuted: true, cameraOn: false, sharing: false, speaking: false,
+  };
+}
+
+function withParticipants(...participants: Participant[]): Partial<RoomContextValue> {
+  return { state: { ...initialRoomState, participants: new Map(participants.map((p) => [p.id, p])) } };
 }
 
 describe('ServerRail', () => {
@@ -68,5 +91,46 @@ describe('ServerRail', () => {
     const dragStart = createEvent.dragStart(button);
     fireEvent(button, dragStart);
     expect(dragStart.defaultPrevented).toBe(true);
+  });
+});
+
+describe('ServerRail — live call seal', () => {
+  const original = window.matchMedia;
+  afterEach(() => { window.matchMedia = original; });
+
+  it('shows while someone else is in one of its voice channels, with you in no call', () => {
+    setViewport(1440);
+    renderRail(vi.fn(), [withChannels], withParticipants(inCall('c-voice')));
+    const button = screen.getByRole('button', { name: 'Squad, Chamada de voz em andamento' });
+    expect(within(button).getByTestId('live-call-seal')).toHaveClass('-top-1', '-right-1');
+  });
+
+  it('shows while you are the one in its call', () => {
+    setViewport(1440);
+    renderRail(vi.fn(), [withChannels], { activeCallConversationId: 'c-voice' });
+    expect(screen.getByRole('button', { name: 'Squad, Chamada de voz em andamento' })).toBeInTheDocument();
+  });
+
+  it('is gone once nobody is in the channel', () => {
+    setViewport(1440);
+    renderRail(vi.fn(), [withChannels], withParticipants(inCall(null)));
+    expect(screen.getByRole('button', { name: 'Squad' })).toBeInTheDocument();
+    expect(screen.queryByTestId('live-call-seal')).not.toBeInTheDocument();
+  });
+
+  it("a call in a DM or another server's channel doesn't light this one", () => {
+    setViewport(1440);
+    renderRail(vi.fn(), [withChannels], withParticipants(inCall('dm-1'), { ...inCall('elsewhere-voice'), id: 'p-luis' }));
+    expect(screen.queryByTestId('live-call-seal')).not.toBeInTheDocument();
+  });
+
+  describe('in English', () => {
+    useLanguageForTests('en-US');
+
+    it('names the call in English', () => {
+      setViewport(1440);
+      renderRail(vi.fn(), [withChannels], { activeCallConversationId: 'c-voice' });
+      expect(screen.getByRole('button', { name: 'Squad, Voice call in progress' })).toBeInTheDocument();
+    });
   });
 });
