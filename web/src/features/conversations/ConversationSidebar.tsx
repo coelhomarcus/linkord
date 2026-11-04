@@ -148,7 +148,7 @@ export function ConversationSidebar() {
     const listPage = pathname === ROUTES.home || pathname === '/app/channels' || (!!serverId && !conversationIdFromPath(pathname));
     if (!listPage) return null;
     return (
-      <main aria-label={t('sidebar.title')} className="flex min-h-0 min-w-0 flex-1 bg-bg-primary pb-[var(--mobile-navigation-height)] text-text-primary">
+      <main aria-label={server?.name ?? t('sidebar.title')} className="flex min-h-0 min-w-0 flex-1 bg-bg-primary pb-[var(--mobile-navigation-height)] text-text-primary">
         <ServerRail />
         <div className="flex min-w-0 flex-1 flex-col rounded-tl-xl bg-bg-secondary">{content}</div>
       </main>

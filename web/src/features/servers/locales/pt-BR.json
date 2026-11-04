@@ -2,7 +2,8 @@
   "rail": {
     "label": "Servidores",
     "home": "Mensagens diretas",
-    "add": "Adicionar um servidor"
+    "add": "Adicionar um servidor",
+    "showList": "Mostrar canais e conversas"
   },
   "topBar": {
     "friends": "Amigos",

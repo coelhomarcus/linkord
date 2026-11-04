@@ -1,4 +1,4 @@
-import { PlusIcon } from '@phosphor-icons/react';
+import { PlusIcon, SidebarSimpleIcon } from '@phosphor-icons/react';
 import { useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router';
@@ -7,6 +7,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/
 import { ROUTES, isHomePath, serverIdFromPath } from '@/shared/lib/routes';
 import { cn } from '@/shared/lib/utils';
 import { useContentLocation } from '@/shared/lib/contentLocation';
+import { useSidebar } from '@/shared/ui/motion/sidebar-context';
 import { CountBadge } from '@/shared/CountBadge';
 import { useFriends } from '@/features/friends/FriendsContext';
 import { useRoom } from '@/state/RoomContext';
@@ -61,6 +62,11 @@ export function ServerRail({ className }: { className?: string }) {
   const { servers, conversations, unreadByConversation } = useRoom();
   const { pendingIncomingCount } = useFriends();
   const [createOpen, setCreateOpen] = useState(false);
+  const { isMobile, isOverlay, openMobile, setOpenMobile, toggleSidebar } = useSidebar();
+  // between phone and desktop the column is a drawer: the rail opens it, and
+  // picking a place shows that place's column
+  const drawer = isOverlay && !isMobile;
+  const go = (to: string) => { navigate(to); if (drawer) setOpenMobile(true); };
   const currentServerId = serverIdFromPath(pathname);
   const home = isHomePath(pathname) || pathname.startsWith('/app/calls/');
   const directUnread = useMemo(
@@ -70,7 +76,16 @@ export function ServerRail({ className }: { className?: string }) {
 
   return (
     <nav aria-label={t('rail.label')} className={cn('flex w-[72px] flex-none flex-col items-center gap-2 overflow-y-auto bg-surface-rail pt-3 pb-[max(0.75rem,var(--dock-clearance,0px))] [scrollbar-width:none]', className)}>
-      <RailItem label={t('rail.home')} active={home} unread={false} badge={directUnread + pendingIncomingCount} onClick={() => navigate(ROUTES.home)}>
+      {drawer && (
+        <Tooltip>
+          <TooltipTrigger onClick={toggleSidebar} aria-label={t('rail.showList')} aria-expanded={openMobile}
+            className="grid size-12 flex-none place-items-center rounded-2xl text-text-muted outline-none hover:bg-bg-hover hover:text-text-primary focus-visible:ring-2 focus-visible:ring-ring">
+            <SidebarSimpleIcon size={24} aria-hidden />
+          </TooltipTrigger>
+          <TooltipContent side="right">{t('rail.showList')}</TooltipContent>
+        </Tooltip>
+      )}
+      <RailItem label={t('rail.home')} active={home} unread={false} badge={directUnread + pendingIncomingCount} onClick={() => go(ROUTES.home)}>
         {/* the logo is a single blue shape: whitened on a blue tile it lost its
             features, so it keeps its own color on a neutral one */}
         <span className={cn('grid size-12 place-items-center transition-[border-radius,background-color] duration-150', home ? 'rounded-[30%] bg-bg-selected' : 'rounded-[50%] bg-bg-secondary group-hover/server:rounded-[30%] group-hover/server:bg-bg-hover')}>
@@ -86,7 +101,7 @@ export function ServerRail({ className }: { className?: string }) {
             label={server.name}
             active={server.id === currentServerId}
             unread={unread > 0}
-            onClick={() => navigate(ROUTES.server(server.id))}
+            onClick={() => go(ROUTES.server(server.id))}
           >
             <ServerIcon id={server.id} name={server.name} icon={server.icon} active={server.id === currentServerId} className={server.status === 'suspended' ? 'opacity-40 grayscale' : undefined} />
           </RailItem>

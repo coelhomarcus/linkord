@@ -2,7 +2,8 @@
   "rail": {
     "label": "Servers",
     "home": "Direct Messages",
-    "add": "Add a Server"
+    "add": "Add a Server",
+    "showList": "Show channels and conversations"
   },
   "topBar": {
     "friends": "Friends",

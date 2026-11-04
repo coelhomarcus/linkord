@@ -137,6 +137,12 @@ describe('ConversationSidebar — on a phone', () => {
     expect(screen.getByRole('navigation', { name: 'Servidores' })).toBeInTheDocument();
   });
 
+  it("a server's page is its channel list, named after it", () => {
+    setViewport(390);
+    renderSidebar('/app/channels/s1');
+    expect(screen.getByRole('main', { name: 'Os Xerecas' })).toHaveTextContent('geral');
+  });
+
   it('is not drawn while a conversation is open', () => {
     setViewport(390);
     renderSidebar('/app/channels/@me/dm-bea');
