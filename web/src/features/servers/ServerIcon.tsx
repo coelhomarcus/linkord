@@ -21,7 +21,7 @@ export function ServerIcon({ id, name, icon, size = 48, className }: {
       )}
       style={{ width: size, height: size, fontSize: Math.round(size * 0.34), ...(icon ? {} : { background: colorFor(id) }) }}
     >
-      {icon ? <img src={icon} alt="" className="size-full object-cover" /> : conversationInitials(name)}
+      {icon ? <img src={icon} alt="" draggable={false} className="size-full object-cover" /> : conversationInitials(name)}
     </span>
   );
 }
