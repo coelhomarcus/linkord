@@ -1,8 +1,14 @@
 import crypto from 'node:crypto';
 import { and, eq } from 'drizzle-orm';
 import { db, pool } from '../db/client.js';
-import { conversationMembers, conversations, friendships, messages, notifications, users } from '../db/schema.js';
+import {
+  channelPermissionOverwrites, conversationMembers, conversations, friendships, messages, notifications, serverCategories,
+  serverMemberRoles, serverMembers, serverRoles, servers, users, webhooks,
+} from '../db/schema.js';
 import { hashPassword } from '../modules/auth/password.js';
+import { PERMISSIONS } from '../modules/servers/permissions.js';
+import { defaultServerTemplate } from '../modules/servers/serverTemplate.js';
+import { generateWebhookToken, hashWebhookToken } from '../modules/bots/webhooksRepository.js';
 
 const accountIds = {
   ana: '10000000-0000-4000-8000-000000000001',
@@ -12,9 +18,19 @@ const accountIds = {
 } as const;
 const conversationIds = {
   direct: '20000000-0000-4000-8000-000000000001',
-  group: '20000000-0000-4000-8000-000000000002',
-  bot: '20000000-0000-4000-8000-000000000003',
+  general: '20000000-0000-4000-8000-000000000002',
+  announcements: '20000000-0000-4000-8000-000000000003',
   secondDirect: '20000000-0000-4000-8000-000000000004',
+  voice: '20000000-0000-4000-8000-000000000005',
+} as const;
+const serverIds = {
+  server: '40000000-0000-4000-8000-000000000001',
+  everyone: '40000000-0000-4000-8000-000000000002',
+  moderators: '40000000-0000-4000-8000-000000000003',
+  textCategory: '40000000-0000-4000-8000-000000000004',
+  voiceCategory: '40000000-0000-4000-8000-000000000005',
+  readOnly: '40000000-0000-4000-8000-000000000006',
+  webhook: '40000000-0000-4000-8000-000000000007',
 } as const;
 const requestId = '30000000-0000-4000-8000-000000000001';
 const password = 'LinkordDev123!';
@@ -50,25 +66,53 @@ async function seed(): Promise<void> {
     await tx.insert(conversations).values([
       { id: conversationIds.direct, type: 'direct', dmKey: directKey(accountIds.ana, accountIds.bruno), createdBy: accountIds.ana, createdAt: joinedAt },
       { id: conversationIds.secondDirect, type: 'direct', dmKey: directKey(accountIds.ana, accountIds.davi), createdBy: accountIds.ana, createdAt: joinedAt },
-      { id: conversationIds.group, type: 'group', title: 'Equipe do projeto', createdBy: accountIds.ana, createdAt: joinedAt },
-      { id: conversationIds.bot, type: 'bot', title: 'Avisos do projeto', createdBy: accountIds.ana, createdAt: joinedAt },
     ]).onConflictDoNothing();
     await tx.insert(conversationMembers).values([
       { conversationId: conversationIds.direct, userId: accountIds.ana, joinedAt },
       { conversationId: conversationIds.direct, userId: accountIds.bruno, joinedAt },
       { conversationId: conversationIds.secondDirect, userId: accountIds.ana, joinedAt },
       { conversationId: conversationIds.secondDirect, userId: accountIds.davi, joinedAt },
-      { conversationId: conversationIds.group, userId: accountIds.ana, role: 'owner', joinedAt, pinnedAt: joinedAt },
-      { conversationId: conversationIds.group, userId: accountIds.bruno, joinedAt },
-      { conversationId: conversationIds.group, userId: accountIds.carla, joinedAt },
-      { conversationId: conversationIds.bot, userId: accountIds.ana, role: 'owner', joinedAt },
     ]).onConflictDoNothing();
 
-    const addMessages = async (conversationId: string, entries: { authorId: string | null; text: string; minutesAgo: number }[]) => {
+    // one server from the template, plus a read-only announcements channel fed
+    // by a webhook and a hoisted moderators role — enough to see channels,
+    // roles and permissions working
+    const template = defaultServerTemplate('pt-BR');
+    const [textCategory, voiceCategory] = template.categories;
+    await tx.insert(servers).values({ id: serverIds.server, name: 'Equipe do projeto', ownerId: accountIds.ana, createdAt: joinedAt }).onConflictDoNothing();
+    await tx.insert(serverRoles).values([
+      { id: serverIds.everyone, serverId: serverIds.server, name: '@everyone', position: 0, permissions: template.everyonePermissions, isDefault: true },
+      { id: serverIds.moderators, serverId: serverIds.server, name: 'Moderação', color: '#3ba55c', position: 1, hoist: true,
+        permissions: PERMISSIONS.MANAGE_MESSAGES | PERMISSIONS.KICK_MEMBERS | PERMISSIONS.MOVE_MEMBERS },
+    ]).onConflictDoNothing();
+    await tx.insert(serverCategories).values([
+      { id: serverIds.textCategory, serverId: serverIds.server, name: textCategory!.name, position: 0 },
+      { id: serverIds.voiceCategory, serverId: serverIds.server, name: voiceCategory!.name, position: 1 },
+    ]).onConflictDoNothing();
+    await tx.insert(conversations).values([
+      { id: conversationIds.general, type: 'text', title: textCategory!.channels[0]!.name, serverId: serverIds.server, categoryId: serverIds.textCategory, position: 0, createdBy: accountIds.ana, createdAt: joinedAt },
+      { id: conversationIds.announcements, type: 'text', title: 'avisos', topic: 'Só o bot do projeto escreve aqui.', serverId: serverIds.server, categoryId: serverIds.textCategory, position: 1, permissionsSynced: false, createdBy: accountIds.ana, createdAt: joinedAt },
+      { id: conversationIds.voice, type: 'voice', title: voiceCategory!.channels[0]!.name, serverId: serverIds.server, categoryId: serverIds.voiceCategory, position: 0, createdBy: accountIds.ana, createdAt: joinedAt },
+    ]).onConflictDoNothing();
+    await tx.insert(channelPermissionOverwrites).values({
+      id: serverIds.readOnly, serverId: serverIds.server, channelId: conversationIds.announcements, roleId: serverIds.everyone, deny: PERMISSIONS.SEND_MESSAGES,
+    }).onConflictDoNothing();
+    await tx.insert(serverMembers).values([
+      { serverId: serverIds.server, userId: accountIds.ana, joinedAt },
+      { serverId: serverIds.server, userId: accountIds.bruno, joinedAt },
+      { serverId: serverIds.server, userId: accountIds.carla, joinedAt },
+    ]).onConflictDoNothing();
+    await tx.insert(serverMemberRoles).values({ serverId: serverIds.server, userId: accountIds.bruno, roleId: serverIds.moderators }).onConflictDoNothing();
+    await tx.insert(webhooks).values({
+      id: serverIds.webhook, conversationId: conversationIds.announcements, name: 'Avisos do projeto', createdBy: accountIds.ana,
+      tokenHash: hashWebhookToken(generateWebhookToken()),
+    }).onConflictDoNothing();
+
+    const addMessages = async (conversationId: string, entries: { authorId: string | null; text: string; minutesAgo: number }[], webhookId: string | null = null) => {
       const existing = await tx.select({ id: messages.id }).from(messages).where(eq(messages.conversationId, conversationId)).limit(1);
       if (existing.length) return;
       const inserted = await tx.insert(messages).values(entries.map(({ authorId, text, minutesAgo }) => ({
-        conversationId, authorId, text, createdAt: time(minutesAgo),
+        conversationId, authorId, text, webhookId, createdAt: time(minutesAgo),
       }))).returning({ id: messages.id });
       const lastAt = time(entries.at(-1)!.minutesAgo);
       await tx.update(conversations).set({ lastMessageAt: lastAt, lastActivityAt: lastAt }).where(eq(conversations.id, conversationId));
@@ -83,21 +127,21 @@ async function seed(): Promise<void> {
       { authorId: accountIds.davi, text: 'Bom dia! A nova navegação ficou pronta para testar.', minutesAgo: 65 },
       { authorId: accountIds.ana, text: 'Vou conferir agora.', minutesAgo: 50 },
     ]);
-    const groupMessages = await addMessages(conversationIds.group, [
-      { authorId: accountIds.ana, text: 'Bem-vindos ao grupo de teste!', minutesAgo: 70 },
+    const serverMessages = await addMessages(conversationIds.general, [
+      { authorId: accountIds.ana, text: 'Bem-vindos ao servidor de teste!', minutesAgo: 70 },
       { authorId: accountIds.carla, text: 'Separei alguns cenários para a versão mobile.', minutesAgo: 35 },
       { authorId: accountIds.bruno, text: '@ana consegue revisar a tela de notificações?', minutesAgo: 7 },
     ]);
-    await addMessages(conversationIds.bot, [
+    await addMessages(conversationIds.announcements, [
       { authorId: null, text: 'Aviso de exemplo: a versão mobile está disponível para testes.', minutesAgo: 25 },
-    ]);
+    ], serverIds.webhook);
 
     await tx.insert(notifications).values({
       id: crypto.randomUUID(), recipientId: accountIds.ana, kind: 'friend_request',
       friendshipId: requestId, dedupeKey: 'dev:friend-request:carla', createdAt: time(20),
     }).onConflictDoNothing();
-    const mentionId = groupMessages?.at(-1)?.id ?? (await tx.select({ id: messages.id }).from(messages)
-      .where(and(eq(messages.conversationId, conversationIds.group), eq(messages.authorId, accountIds.bruno)))
+    const mentionId = serverMessages?.at(-1)?.id ?? (await tx.select({ id: messages.id }).from(messages)
+      .where(and(eq(messages.conversationId, conversationIds.general), eq(messages.authorId, accountIds.bruno)))
       .orderBy(messages.id)).at(-1)?.id;
     if (mentionId) await tx.insert(notifications).values({
       id: crypto.randomUUID(), recipientId: accountIds.ana, kind: 'mention',

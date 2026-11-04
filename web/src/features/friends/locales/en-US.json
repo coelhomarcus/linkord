@@ -80,17 +80,17 @@
   },
   "invitations": {
     "searchLabel": "Search invitations",
-    "title": "Group invitations",
+    "title": "Server invitations",
     "loading": "Loading invitations…",
     "loadFailed": "Couldn't load the invitations.",
-    "none": "No pending group invitations.",
+    "none": "No pending server invitations.",
     "from": "from",
     "join": "Join",
     "decline": "Decline",
-    "joined": "You joined the group.",
+    "joined": "You joined the server.",
     "declined": "Invitation declined.",
-    "groupFull": "The group is full.",
-    "quotaExceeded": "You're already in the maximum number of groups allowed.",
+    "serverFull": "The server is full.",
+    "quotaExceeded": "You're already in the maximum number of servers allowed.",
     "members_zero": "{{count}} members",
     "members_one": "{{count}} member",
     "members_other": "{{count}} members"
@@ -134,9 +134,18 @@
   "confirm": {
     "blockTitle": "Block person",
     "removeTitle": "Remove friend",
-    "blockText": "Blocking {{name}} removes the friendship and prevents private messages and calls between you. Shared groups remain. Unblocking later doesn't restore the friendship.",
+    "blockText": "Blocking {{name}} removes the friendship and prevents private messages and calls between you. Shared servers remain. Unblocking later doesn't restore the friendship.",
     "removeText": "Remove {{name}} from your friends? You can still see the conversation history, but you can't exchange messages until you're friends again.",
     "block": "Block",
     "remove": "Remove"
+  },
+  "activeNow": {
+    "title": "Active Now",
+    "emptyTitle": "It's quiet for now…",
+    "emptyText": "When a friend joins a voice call, it shows up here.",
+    "names_one": "{{name}} and {{count}} other",
+    "names_other": "{{name}} and {{count}} others",
+    "inChannel": "{{channel}} · {{server}}",
+    "inDirectCall": "In a call with you"
   }
 }

@@ -10,6 +10,7 @@ import { Avatar } from '@/shared/Avatar';
 import { cn } from '@/shared/lib/utils';
 import { isSingleEmoji } from '@/shared/lib/isSingleEmoji';
 import { ChatEmbed } from './ChatEmbed';
+import { inviteCodeFromLink } from '@/features/servers/inviteCode';
 import { GifMessage } from '@/features/gifs/GifMessage';
 import { gifMessageUrl } from '@/features/gifs/klipyMedia';
 import { parseMessage, previewableLinks, type Inline } from './messageMarkup';
@@ -146,6 +147,8 @@ export function ChatMessageText({ text, mentionLookup, myUserId, onOpenProfile, 
     if (noPreviews) return [];
     const removed = new Set(suppressedEmbeds ?? []);
     return previewableLinks(blocks).flatMap((link) => {
+      // an invite to this instance gets MessageRow's server card instead
+      if (inviteCodeFromLink(link)) return [];
       const embed = removed.has(link) ? null : detectEmbed(link);
       return embed ? [{ link, embed }] : [];
     });

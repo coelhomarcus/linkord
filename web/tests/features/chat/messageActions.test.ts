@@ -1,15 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { messagePermissions } from '@/features/chat/messageActions';
 import type { ChatMessage } from '@/shared/types/protocol';
+import { PERMISSIONS } from '@/features/servers/permissionBits';
 
 const msg = (over: Partial<ChatMessage> = {}): ChatMessage => ({ msgId: 1, conversationId: 'c', id: 'autor', name: 'A', avatar: '', text: 'oi', ts: 1, ...over });
 
 describe('messagePermissions', () => {
-  it("in a bot: nobody replies, and its owner deletes what it posted", () => {
-    const botMessage = msg({ id: null, bot: true });
-    expect(messagePermissions(botMessage, { userId: 'dono', role: 'user' }, { type: 'bot', myRole: 'owner' })).toMatchObject({ reply: false, react: true, delete: true, report: false });
-    expect(messagePermissions(botMessage, { userId: 'eu', role: 'user' }, { type: 'bot', myRole: 'member' })).toMatchObject({ reply: false, delete: false });
-    expect(messagePermissions(msg(), { userId: 'dono', role: 'user' }, { type: 'group', myRole: 'owner' }).delete).toBe(false);
+  it('in a channel: the permissions decide replying, reacting and deleting others', () => {
+    const webhookMessage = msg({ id: null, bot: true });
+    const readOnly = PERMISSIONS.VIEW_CHANNEL | PERMISSIONS.ADD_REACTIONS;
+    const moderator = readOnly | PERMISSIONS.SEND_MESSAGES | PERMISSIONS.MANAGE_MESSAGES;
+    expect(messagePermissions(webhookMessage, { userId: 'eu', role: 'user' }, { type: 'text', permissions: readOnly })).toMatchObject({ reply: false, react: true, delete: false, report: false });
+    expect(messagePermissions(webhookMessage, { userId: 'mod', role: 'user' }, { type: 'text', permissions: moderator })).toMatchObject({ reply: true, delete: true });
+    expect(messagePermissions(msg(), { userId: 'eu', role: 'user' }, { type: 'text', permissions: PERMISSIONS.VIEW_CHANNEL }).react).toBe(false);
   });
 
   it('own message: can edit and delete, cannot report', () => {
@@ -25,7 +28,7 @@ describe('messagePermissions', () => {
   });
 
   it('invitation card: no react, reply, edit or report', () => {
-    expect(messagePermissions(msg({ kind: 'group_invite', text: '' }), { userId: 'autor', role: 'user' })).toEqual({ react: false, reply: false, copy: false, edit: false, delete: true, report: false, removeAttachment: false, removeEmbed: false });
+    expect(messagePermissions(msg({ kind: 'server_invite', text: '' }), { userId: 'autor', role: 'user' })).toEqual({ react: false, reply: false, copy: false, edit: false, delete: true, report: false, removeAttachment: false, removeEmbed: false });
   });
 
   it('call invite card: no react, reply, edit or report, but its author may delete it', () => {

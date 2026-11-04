@@ -28,7 +28,8 @@ export type ReactionEmoji = string;
  * (client_outdated). Keep in sync with server/src/realtime/protocolVersion.ts
  * — the server's MIN_PROTOCOL_VERSION now requires 5 (correlated sends,
  * actions and reactions; staged-only attachments), with no legacy fallback. */
-export const PROTOCOL_VERSION = 5;
+// 6: servers replaced groups (welcome carries `servers`, group events are gone)
+export const PROTOCOL_VERSION = 6;
 
 export interface ChatReplyRef {
   msgId: number;
@@ -39,29 +40,29 @@ export interface ChatReplyRef {
 
 export type InvitationStatus = 'pending' | 'accepted' | 'declined' | 'revoked' | 'expired';
 
-/** The live state of a group invitation, as embedded in a `group_invite`
+/** The live state of a server invitation, as embedded in a `server_invite`
  * message. `expired` only appears on invitations that lapsed before they
  * stopped expiring. */
 export interface InvitationCard {
   id: string;
   status: InvitationStatus;
-  groupId: string;
-  // absent from servers before bots
-  groupType?: 'group' | 'bot';
-  groupTitle: string;
-  groupAvatar: string;
+  serverId: string;
+  serverName: string;
+  serverIcon: string;
   memberCount: number;
   inviterId: string;
   inviteeId: string;
   version: number;
 }
 
-/** The group a `call_invite` message points at. Who is in that call is not
- * part of it: the card reads that live from presence. */
+/** The voice channel a `call_invite` message points at. Who is in that call
+ * is not part of it: the card reads that live from presence. */
 export interface CallInviteCard {
-  groupId: string;
-  groupTitle: string;
-  groupAvatar: string;
+  channelId: string;
+  channelName: string;
+  serverId: string;
+  serverName: string;
+  serverIcon: string;
 }
 
 export interface ChatMessage {
@@ -76,7 +77,7 @@ export interface ChatMessage {
   editedAt?: number;
   reactions?: Partial<Record<ReactionEmoji, string[]>>;
   attachments?: ChatAttachment[];
-  kind?: 'text' | 'group_invite' | 'call_invite';
+  kind?: 'text' | 'server_invite' | 'call_invite';
   // `null` on a group_invite message = the group is gone (tombstone)
   invitation?: InvitationCard | null;
   // the group whose call a call_invite asks to join; `null` once it's gone
@@ -152,26 +153,74 @@ export interface StorageUsage {
   maxBytes: number;
 }
 
+/** A DM, or a server channel seen as a place to chat. The server sends a DM
+ * summary as is; a channel is built on the client from its server's summary
+ * (features/servers/useServersList.ts), so chat, calls and unread never need
+ * to know which kind they are looking at. */
 export interface Conversation {
   id: string;
-  // 'bot': a group only its webhook posts in — members read, react and manage it
-  type: 'direct' | 'group' | 'bot';
+  type: 'direct' | 'text' | 'voice';
+  /** a channel's name; '' on a DM */
   title: string;
-  avatar: string;
-  createdBy: string | null;
+  /** a DM's two members; empty on a channel (its server knows who is in it) */
   memberIds: string[];
+  serverId: string | null;
   lastMessageAt: number | null;
   createdAt: number;
   updatedAt: number;
   pinnedAt: number | null;
-  // the viewer's own role in this conversation — 'member' for every DM (DMs
-  // have no owner). Real per-group authority, not the account's global role.
-  myRole: 'owner' | 'member';
-  // derived on the server from the owner's membership row; null for a DM
+  topic?: string;
+  categoryId?: string | null;
+  position?: number;
+  /** effective permission bits in a channel (features/servers/permissionBits.ts); absent on a DM */
+  permissions?: number;
+}
+
+/** A DM as the server sends it — no title or server. */
+export type DirectSummary = Omit<Conversation, 'title' | 'serverId'> & Partial<Pick<Conversation, 'title' | 'serverId'>>;
+
+export interface RoleSummary {
+  id: string;
+  name: string;
+  color: string;
+  position: number;
+  permissions: number;
+  hoist: boolean;
+  mentionable: boolean;
+  isDefault: boolean;
+}
+
+export interface CategorySummary { id: string; name: string; position: number }
+
+export interface ChannelSummary {
+  id: string;
+  serverId: string;
+  type: 'text' | 'voice';
+  name: string;
+  topic: string;
+  categoryId: string | null;
+  position: number;
+  permissionsSynced: boolean;
+  permissions: number;
+}
+
+/** A server as THIS member sees it: hidden channels are absent and
+ * `permissions` are already resolved for them. */
+export interface ServerSummary {
+  id: string;
+  name: string;
+  icon: string;
   ownerId: string | null;
+  status: 'active' | 'suspended';
+  createdAt: number;
   memberCount: number;
-  // 'suspended' = moderated away by an administrator: still listed, but no access
-  status?: 'active' | 'suspended';
+  /** the member's own order of this server in their rail */
+  position: number;
+  permissions: number;
+  myRoleIds: string[];
+  roles: RoleSummary[];
+  categories: CategorySummary[];
+  channels: ChannelSummary[];
 }
 
 export interface PublicUser {
@@ -211,10 +260,6 @@ export type ClientMessage =
   | { t: 'direct-open'; userId: string }
   | { t: 'conversation-close'; conversationId: string }
   | { t: 'conversation-pin'; conversationId: string; pinned: boolean }
-  | { t: 'group-delete'; conversationId: string }
-  | { t: 'group-update'; conversationId: string; title?: string; avatar?: string }
-  | { t: 'group-members-remove'; conversationId: string; userId: string }
-  | { t: 'group-transfer-owner'; conversationId: string; userId: string }
   | { t: 'load-more-messages'; conversationId: string; beforeMsgId: number; requestId?: string }
   | { t: 'load-messages-after'; conversationId: string; afterMsgId: number; requestId?: string }
   | { t: 'load-messages-around'; conversationId: string; msgId: number; requestId?: string }
@@ -239,7 +284,7 @@ export type ServerMessage =
       userId: string; name: string; displayName: string; avatar: string; avatarPoster: string; avatarColor: string;
       banner: string; bannerPoster: string; bio: string; profileLinks: string[]; role: 'user' | 'admin';
       maxParticipants: number; participants: Participant[];
-      conversations: Conversation[]; knownUsers: PublicUser[]; onlineUserIds: string[]; friendIds: string[];
+      conversations: DirectSummary[]; servers: ServerSummary[]; knownUsers: PublicUser[]; onlineUserIds: string[]; friendIds: string[];
       // conversation id → unread count (capped at 100); absent from servers before persisted unread
       unreadByConversation?: Record<string, number>;
       storageUsage: StorageUsage;
@@ -248,24 +293,28 @@ export type ServerMessage =
       protocolVersion?: number;
     }
   | { t: 'call-token'; conversationId: string; livekitUrl: string; livekitToken: string }
-  | { t: 'conversation-opened'; conversationId: string; conversation: Conversation }
-  | { t: 'conversation-created'; conversation: Conversation }
-  | { t: 'conversation-updated'; conversation: Conversation }
-  | { t: 'conversation-member-added'; conversationId: string; userId: string }
-  | { t: 'conversation-member-removed'; conversationId: string; userId: string }
+  | { t: 'conversation-opened'; conversationId: string; conversation: DirectSummary }
+  | { t: 'conversation-created'; conversation: DirectSummary }
+  | { t: 'conversation-updated'; conversation: DirectSummary }
+  | { t: 'server-created'; server: ServerSummary }
+  | { t: 'server-updated'; server: ServerSummary }
+  | { t: 'server-deleted'; serverId: string; reason?: 'removed' | 'banned' | 'deleted' }
+  | { t: 'server-member-added'; serverId: string; userId: string }
+  | { t: 'server-member-removed'; serverId: string; userId: string }
+  | { t: 'server-member-updated'; serverId: string; userId: string; roleIds: string[] }
   | { t: 'conversation-pinned'; conversationId: string; pinnedAt: number | null }
   | { t: 'conversation-read'; conversationId: string; lastReadMessageId: number }
   | { t: 'conversation-history'; conversationId: string; messages: ChatMessage[]; hasMore: boolean; firstUnreadMessageId?: number | null }
   | { t: 'conversation-history-more'; conversationId: string; messages: ChatMessage[]; hasMore: boolean; requestId?: string }
   | { t: 'conversation-history-newer'; conversationId: string; messages: ChatMessage[]; hasMoreAfter: boolean; requestId?: string }
   | { t: 'conversation-history-around'; conversationId: string; msgId: number; messages: ChatMessage[]; hasMoreBefore: boolean; hasMoreAfter: boolean }
-  | { t: 'conversation-deleted'; conversationId: string; reason?: 'removed' | 'deleted' }
+  | { t: 'conversation-deleted'; conversationId: string }
   | { t: 'participant-joined'; participant: Participant }
   | { t: 'participant-updated'; participant: Participant }
   | { t: 'participant-left'; id: string }
-  | { t: 'soundboard-play'; conversationId: string; soundId: string; participantId: string; emoji: string; volume: number }
-  // payload-free like social-changed: the list itself comes from GET /api/groups/:id/sounds
-  | { t: 'group-sounds-changed'; conversationId: string }
+  | { t: 'soundboard-play'; conversationId: string; serverId: string; soundId: string; participantId: string; emoji: string; volume: number }
+  // payload-free like social-changed: the list itself comes from GET /api/servers/:id/sounds
+  | { t: 'server-sounds-changed'; serverId: string }
   | { t: 'message-search-results'; query: string; conversationId?: string; results: SearchResult[] }
   | { t: 'chat'; message: ChatMessage }
   | { t: 'chat-send-result'; requestId: string; clientMessageId: string; message?: ChatMessage; error?: { code: string; message: string } }

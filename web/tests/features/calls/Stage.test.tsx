@@ -180,19 +180,19 @@ describe("Stage — capacity fallback (TileGrid can't fit everyone -> automatic 
   });
 
   describe('invite tile', () => {
-    const conversation = (type: 'group' | 'direct') => ({
-      id: 'c1', type, title: 'Squad', avatar: '', createdBy: 'me', memberIds: ['me', 'ana'],
-      lastMessageAt: null, createdAt: 1, updatedAt: 1, pinnedAt: null, myRole: 'owner' as const, ownerId: 'me', memberCount: 2,
+    const conversation = (type: 'voice' | 'direct') => ({
+      id: 'c1', type, title: 'Squad', serverId: type === 'voice' ? 's1' : null, memberIds: ['me', 'ana'],
+      lastMessageAt: null, createdAt: 1, updatedAt: 1, pinnedAt: null,
     });
     const lastExtraTile = () => tileGridSpy.mock.calls.at(-1)![0].extraTile as React.ReactElement<{ conversationId: string }> | undefined;
 
     it('fills the empty seat while you are alone in a group call', () => {
-      renderStage({ allIds: ['me'], chatOpen: false, onToggleChat: vi.fn() }, { activeCallConversationId: 'c1', conversations: [conversation('group')] });
+      renderStage({ allIds: ['me'], chatOpen: false, onToggleChat: vi.fn() }, { activeCallConversationId: 'c1', conversations: [conversation('voice')] });
       expect(lastExtraTile()?.props.conversationId).toBe('c1');
     });
 
     it('goes away once someone else is in the call', () => {
-      renderStage({ allIds: ['me', 'ana'], chatOpen: false, onToggleChat: vi.fn() }, { activeCallConversationId: 'c1', conversations: [conversation('group')] });
+      renderStage({ allIds: ['me', 'ana'], chatOpen: false, onToggleChat: vi.fn() }, { activeCallConversationId: 'c1', conversations: [conversation('voice')] });
       expect(lastExtraTile()).toBeUndefined();
     });
 

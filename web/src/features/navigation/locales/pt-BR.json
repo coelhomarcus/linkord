@@ -14,5 +14,7 @@
   "tabFriendsPending_one": "{{label}}, {{count}} solicitação pendente",
   "tabFriendsPending_other": "{{label}}, {{count}} solicitações pendentes",
   "tabUnread_one": "{{label}}, {{count}} não lida",
-  "tabUnread_other": "{{label}}, {{count}} não lidas"
+  "tabUnread_other": "{{label}}, {{count}} não lidas",
+  "servers": "Servidores",
+  "messages": "Mensagens"
 }

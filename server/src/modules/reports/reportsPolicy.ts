@@ -3,7 +3,7 @@
 
 export const REPORT_CATEGORIES = ['spam', 'harassment', 'inappropriate', 'impersonation', 'illegal', 'other'] as const;
 export type ReportCategory = (typeof REPORT_CATEGORIES)[number];
-export type ReportTargetType = 'user' | 'group' | 'message';
+export type ReportTargetType = 'user' | 'server' | 'message';
 
 export const MAX_REPORT_DETAILS = 1000;
 export const MAX_SNAPSHOT_TEXT = 2000;
@@ -12,7 +12,7 @@ export interface ReportInput { targetType: ReportTargetType; targetId: string; c
 
 export function parseReportInput(body: Record<string, unknown>): ReportInput | null {
   const targetType = body.targetType;
-  if (targetType !== 'user' && targetType !== 'group' && targetType !== 'message') return null;
+  if (targetType !== 'user' && targetType !== 'server' && targetType !== 'message') return null;
   const targetId = String(body.targetId ?? '').trim();
   if (!targetId || targetId.length > 64) return null;
   const category = body.category;
@@ -37,12 +37,12 @@ export function buildMessageSnapshot(input: { text: string; authorId: string | n
 }
 
 export type ReportStatus = 'open' | 'reviewing' | 'resolved' | 'dismissed';
-export type ReportAction = 'suspend_user' | 'suspend_group' | 'delete_message';
-export type ReportResolution = 'no_action' | 'user_suspended' | 'group_suspended' | 'message_deleted';
+export type ReportAction = 'suspend_user' | 'suspend_server' | 'delete_message';
+export type ReportResolution = 'no_action' | 'user_suspended' | 'server_suspended' | 'message_deleted';
 
 const ACTIONS_BY_TARGET: Record<ReportTargetType, ReportAction[]> = {
   user: ['suspend_user'],
-  group: ['suspend_group'],
+  server: ['suspend_server'],
   // a reported message can lead to removing it or to suspending whoever wrote it
   message: ['delete_message', 'suspend_user'],
 };
@@ -54,7 +54,7 @@ export function isActionAllowedFor(targetType: ReportTargetType, action: ReportA
 export function resolutionFor(action: ReportAction | null): ReportResolution {
   switch (action) {
     case 'suspend_user': return 'user_suspended';
-    case 'suspend_group': return 'group_suspended';
+    case 'suspend_server': return 'server_suspended';
     case 'delete_message': return 'message_deleted';
     default: return 'no_action';
   }

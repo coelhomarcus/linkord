@@ -1,24 +1,27 @@
 import { sendUsageToUser } from '../attachments/attachmentQuota.js';
 import { isActiveAdmin } from '../admin/adminAuth.js';
 import { recordAudit } from '../admin/auditLog.js';
-import { eq, and, desc, asc, lt, gt, gte, sql } from 'drizzle-orm';
+import { eq, and, desc, asc, lt, gt, gte, inArray, sql } from 'drizzle-orm';
 import { config } from '../../config/env.js';
 import { db } from '../../db/client.js';
-import { messages, conversationMembers, conversations, users, type Message, type Attachment } from '../../db/schema.js';
+import { messages, users, webhooks, type Message, type Attachment } from '../../db/schema.js';
 import { participants, send, sendSocketError } from '../presence/participants.js';
 import { isSingleEmoji } from './emoji.js';
 import {
-  acceptsHumanMessages,
   broadcastToConversationMembers,
-  canManageGroup,
   conversationDisplayName,
   conversationExistsForUser,
+  firstUnreadMessageId as firstUnreadFor,
   getConversationForUser,
   getDirectPeerId,
+  isServerChannel,
   markReadUpTo,
   touchConversation,
   recordConversationActivity,
+  visibleConversationIds,
 } from '../conversations/conversationsRepository.js';
+import { hasPermission, PERMISSIONS } from '../servers/permissions.js';
+import { channelPermissions } from '../servers/serverAccess.js';
 import { canSendDirectMessage } from '../friendships/friendshipsRepository.js';
 import { resolveDisplayName } from '../users/users.js';
 import * as attachments from '../attachments/attachments.js';
@@ -36,9 +39,9 @@ import { queueChatPush } from '../notifications/pushQueue.js';
 import { insertMessageOnce, isValidClientMessageId, sendPayloadHash } from './sendOperations.js';
 import { publishStaged, StagedUnavailableError } from '../attachments/stagedAttachments.js';
 import { ERROR_CODES, type ErrorCode } from '../../http/errors.js';
-import { loadInvitationCards, type InvitationCard } from '../conversations/invitationCards.js';
+import { loadInvitationCards, type InvitationCard } from '../servers/invitationCards.js';
 import { loadCallInviteCards, type CallInviteCard } from '../calls/callInviteCards.js';
-import { revokeInvitationForDeletedCard } from '../conversations/invitationsRepository.js';
+import { revokeInvitationForDeletedCard } from '../servers/serverInvitationsRepository.js';
 import type { AppSocket, HandlerTable, Participant } from '../../types.js';
 import { logger } from '../../lib/logger.js';
 
@@ -47,9 +50,9 @@ const log = logger.child({ component: 'audit' });
 // Etapa 6 (docs/plano-rede-social.md §4.3): "não enviar, reagir, anexar,
 // digitar" while contact is restricted (not friends, or blocked) — this is
 // the shared gate every one of those write paths calls. `getDirectPeerId`
-// returns null for a group conversation, so the check no-ops there on its
-// own; reading history (open/load-more/around/search) is NEVER gated —
-// only these write actions are.
+// returns null for a server channel, so the check no-ops there on its own
+// (the channel's permissions govern it); reading history
+// (open/load-more/around/search) is NEVER gated — only these write actions are.
 async function assertCanWriteToConversation(socket: AppSocket, conversationId: string, userId: string): Promise<boolean> {
   const peerId = await getDirectPeerId(conversationId, userId);
   if (peerId && !(await canSendDirectMessage(userId, peerId))) {
@@ -98,18 +101,18 @@ interface ChatMessagePayload {
   // pending copy with the stored message
   clientMessageId?: string;
   // only set for structured messages — absent means a plain text message
-  kind?: 'group_invite' | 'call_invite';
+  kind?: 'server_invite' | 'call_invite';
   // the invitation's CURRENT state, resolved at read time so a card is right
-  // after a refresh; null is the tombstone (its group was deleted)
+  // after a refresh; null is the tombstone (its server was deleted)
   invitation?: InvitationCard | null;
-  // the group whose call a `call_invite` points at; null once it's gone
+  // the voice channel whose call a `call_invite` points at; null once it's gone
   callInvite?: CallInviteCard | null;
   // the stored previews of the message's link cards (see messageEmbeds.ts)
   embeds?: LinkPreviewResult[];
   // links whose card the author removed: drawn as plain links
   suppressedEmbeds?: string[];
-  // posted by the conversation's bot (its webhook), not by an account: `id` is
-  // null and the name/avatar are the bot's own
+  // posted by a webhook, not by an account: `id` is null and the name/avatar
+  // are the webhook's own
   bot?: true;
   // the structured cards the bot sent with it (title, color, fields...)
   richEmbeds?: RichEmbed[];
@@ -127,7 +130,7 @@ interface MessageWithAuthor {
   editedAt: Date | null;
   replyTo: unknown;
   kind: string;
-  groupInvitationId: string | null;
+  serverInvitationId: string | null;
   callConversationId: string | null;
   embeds: unknown;
   suppressedEmbeds: unknown;
@@ -153,14 +156,14 @@ const messageWithAuthorSelect = {
   editedAt: messages.editedAt,
   replyTo: messages.replyTo,
   kind: messages.kind,
-  groupInvitationId: messages.groupInvitationId,
+  serverInvitationId: messages.serverInvitationId,
   callConversationId: messages.callConversationId,
   embeds: messages.embeds,
   suppressedEmbeds: messages.suppressedEmbeds,
   richEmbeds: messages.richEmbeds,
-  // read live from the bot conversation, so a rename shows on its whole history
-  botName: sql<string | null>`case when ${messages.webhookId} is null then null else (select ${conversations.title} from ${conversations} where ${conversations.id} = ${messages.conversationId}) end`,
-  botAvatar: sql<string | null>`case when ${messages.webhookId} is null then null else (select ${conversations.avatar} from ${conversations} where ${conversations.id} = ${messages.conversationId}) end`,
+  // read live from the webhook, so a rename shows on its whole history
+  botName: sql<string | null>`case when ${messages.webhookId} is null then null else coalesce((select ${webhooks.name} from ${webhooks} where ${webhooks.id} = ${messages.webhookId}), '') end`,
+  botAvatar: sql<string | null>`case when ${messages.webhookId} is null then null else (select ${webhooks.avatar} from ${webhooks} where ${webhooks.id} = ${messages.webhookId}) end`,
 };
 
 /** Who wrote a message, as the clients show it: the author's own participant
@@ -180,7 +183,7 @@ function rowWithParticipant(row: Message, participant: AuthorIdentity): MessageW
     editedAt: row.editedAt,
     replyTo: row.replyTo,
     kind: row.kind,
-    groupInvitationId: row.groupInvitationId,
+    serverInvitationId: row.serverInvitationId,
     callConversationId: row.callConversationId,
     embeds: row.embeds,
     suppressedEmbeds: row.suppressedEmbeds,
@@ -223,8 +226,8 @@ function rowToMessage(row: MessageWithAuthor, attachments?: Attachment[], reacti
   if (embeds.length) out.embeds = embeds;
   const suppressed = suppressedLinksFor(row.text, row.suppressedEmbeds);
   if (suppressed.length) out.suppressedEmbeds = suppressed;
-  if (row.kind === 'group_invite') {
-    out.kind = 'group_invite';
+  if (row.kind === 'server_invite') {
+    out.kind = 'server_invite';
     out.invitation = invitation ?? null;
   }
   if (row.kind === 'call_invite') {
@@ -249,17 +252,17 @@ function rowToMessage(row: MessageWithAuthor, attachments?: Attachment[], reacti
  * invitation cards) — never a query per message. */
 async function serializeRows(rows: MessageWithAuthor[]): Promise<ChatMessagePayload[]> {
   const messageIds = rows.map((r) => r.id);
-  const cardIds = rows.flatMap((r) => (r.kind === 'group_invite' && r.groupInvitationId ? [r.groupInvitationId] : []));
-  const callGroupIds = rows.flatMap((r) => (r.kind === 'call_invite' && r.callConversationId ? [r.callConversationId] : []));
+  const cardIds = rows.flatMap((r) => (r.kind === 'server_invite' && r.serverInvitationId ? [r.serverInvitationId] : []));
+  const callChannelIds = rows.flatMap((r) => (r.kind === 'call_invite' && r.callConversationId ? [r.callConversationId] : []));
   const [attachmentByMessageId, reactionsByMessageId, cards, callCards] = await Promise.all([
     attachments.getByMessageIds(messageIds),
     reactions.getByMessageIds(messageIds),
     loadInvitationCards(cardIds),
-    loadCallInviteCards(callGroupIds),
+    loadCallInviteCards(callChannelIds),
   ]);
   return rows.map((r) => rowToMessage(
     r, attachmentByMessageId.get(r.id), reactionsByMessageId.get(r.id),
-    r.groupInvitationId ? cards.get(r.groupInvitationId) : undefined,
+    r.serverInvitationId ? cards.get(r.serverInvitationId) : undefined,
     r.callConversationId ? callCards.get(r.callConversationId) : undefined,
   ));
 }
@@ -271,7 +274,8 @@ async function handleConversationOpen(socket: AppSocket, msg: { conversationId?:
   const p = participants.get(socket.participantId ?? '');
   if (!p || p.socket !== socket) return;
   const conversationId = conversationIdFrom(msg);
-  if (!conversationId || !(await conversationExistsForUser(conversationId, p.userId))) return;
+  const conversation = conversationId ? await getConversationForUser(conversationId, p.userId) : null;
+  if (!conversation) return;
   const rows = await db
     .select(messageWithAuthorSelect)
     .from(messages)
@@ -283,18 +287,7 @@ async function handleConversationOpen(socket: AppSocket, msg: { conversationId?:
   // one query for all history messages' attachments/reactions, not one per
   // message (N+1) — most have neither anyway.
   const payloads = await serializeRows(rows);
-  const unreadRows = await db.execute(sql`
-    select m.id from messages m
-    inner join conversation_members cm on cm.conversation_id = m.conversation_id
-    where cm.conversation_id = ${conversationId}
-      and cm.user_id = ${p.userId}
-      and m.id > coalesce(cm.last_read_message_id, 0)
-      and m.created_at > cm.joined_at
-      and m.author_id is distinct from ${p.userId}
-    order by m.id asc
-    limit 1
-  `);
-  const firstUnreadMessageId = (unreadRows.rows[0] as { id: number } | undefined)?.id ?? null;
+  const firstUnreadMessageId = await firstUnreadFor(conversation, p.userId);
   send(socket, {
     t: 'conversation-history',
     conversationId,
@@ -311,9 +304,7 @@ async function handleConversationOpen(socket: AppSocket, msg: { conversationId?:
   // on an old search result isn't "read up to the latest".
   const newest = rows[rows.length - 1];
   if (newest) {
-    await db.update(conversationMembers)
-      .set({ lastReadMessageId: newest.id })
-      .where(and(eq(conversationMembers.conversationId, conversationId), eq(conversationMembers.userId, p.userId)));
+    await markReadUpTo(conversation, p.userId, newest.id);
     for (const participant of participants.values()) {
       if (participant.userId === p.userId) send(participant.socket, { t: 'conversation-read', conversationId, lastReadMessageId: newest.id });
     }
@@ -331,8 +322,8 @@ async function handleConversationMarkRead(socket: AppSocket, msg: { conversation
   const conversationId = conversationIdFrom(msg);
   const msgId = Number(msg.msgId);
   if (!conversationId || !Number.isSafeInteger(msgId) || msgId <= 0) return;
-  if (!(await conversationExistsForUser(conversationId, p.userId))) return;
-  if (!(await markReadUpTo(conversationId, p.userId, msgId))) return;
+  const conversation = await getConversationForUser(conversationId, p.userId);
+  if (!conversation || !(await markReadUpTo(conversation, p.userId, msgId))) return;
   for (const participant of participants.values()) {
     if (participant.userId === p.userId && participant.socket !== socket) send(participant.socket, { t: 'conversation-read', conversationId, lastReadMessageId: msgId });
   }
@@ -459,6 +450,7 @@ async function handleMessageSearch(socket: AppSocket, msg: { query?: string; con
     return;
   }
   if (conversationId && !(await conversationExistsForUser(conversationId, p.userId))) return;
+  const searchable = conversationId ? [conversationId] : await visibleConversationIds(p.userId);
 
   const tsQuery = sql`websearch_to_tsquery('portuguese', ${query})`;
   const rank = sql`ts_rank(${messages.searchVector}, ${tsQuery})`;
@@ -471,14 +463,10 @@ async function handleMessageSearch(socket: AppSocket, msg: { query?: string; con
   const rows = await db
     .select({ ...messageWithAuthorSelect, snippet })
     .from(messages)
-    .innerJoin(conversationMembers, and(
-      eq(conversationMembers.conversationId, messages.conversationId),
-      eq(conversationMembers.userId, p.userId),
-    ))
     .leftJoin(users, eq(users.id, messages.authorId))
     .where(and(
       sql`${messages.searchVector} @@ ${tsQuery}`,
-      conversationId ? eq(messages.conversationId, conversationId) : undefined,
+      searchable.length ? inArray(messages.conversationId, searchable) : sql`false`,
     ))
     .orderBy(desc(rank), desc(messages.id))
     .limit(config.SEARCH_RESULT_LIMIT);
@@ -567,7 +555,11 @@ async function handleChat(socket: AppSocket, msg: ChatSendRequest): Promise<void
     if (rawText.length > config.MAX_CHAT_LEN) return fail('message_too_long', `A mensagem passa de ${config.MAX_CHAT_LEN} caracteres.`);
     const conversation = await getConversationForUser(conversationId, p.userId);
     if (!conversation) return fail('conversation_not_found', 'Conversa não encontrada.');
-    if (!acceptsHumanMessages(conversation)) return fail(ERROR_CODES.forbidden, 'Só o bot envia mensagens aqui.');
+    if (isServerChannel(conversation)) {
+      const granted = await channelPermissions(conversation.serverId, conversation.id, p.userId);
+      if (!hasPermission(granted, PERMISSIONS.SEND_MESSAGES)) return fail(ERROR_CODES.forbidden, 'Você não pode enviar mensagens nesse canal.');
+      if (attachmentIds.length && !hasPermission(granted, PERMISSIONS.ATTACH_FILES)) return fail(ERROR_CODES.forbidden, 'Você não pode enviar arquivos nesse canal.');
+    }
     const peerId = await getDirectPeerId(conversationId, p.userId);
     if (peerId && !(await canSendDirectMessage(p.userId, peerId))) {
       return fail(ERROR_CODES.relationshipRequired, 'Vocês precisam ser amigos pra conversar por aqui.');
@@ -722,7 +714,7 @@ async function removableTextMessage(p: Participant, rawId: unknown, what: string
 async function authorIdentityOf(row: Message): Promise<AuthorIdentity> {
   const authorId = row.authorId;
   if (row.webhookId) {
-    const [bot] = await db.select({ name: conversations.title, avatar: conversations.avatar }).from(conversations).where(eq(conversations.id, row.conversationId)).limit(1);
+    const [bot] = await db.select({ name: webhooks.name, avatar: webhooks.avatar }).from(webhooks).where(eq(webhooks.id, row.webhookId)).limit(1);
     return { name: null, displayName: null, avatar: null, bot: bot ?? { name: '', avatar: '' } };
   }
   if (!authorId) return { name: null, displayName: null, avatar: null };
@@ -814,7 +806,7 @@ async function handleChatReact(socket: AppSocket, msg: { msgId?: unknown; emoji?
   const [existing] = await db.select({ conversationId: messages.conversationId, kind: messages.kind }).from(messages).where(eq(messages.id, msgId)).limit(1);
   if (!existing) return fail({ code: 'not_found', message: 'Essa mensagem não existe mais.' });
   if (existing.kind !== 'text') return fail({ code: 'forbidden', message: 'Convites não recebem reações.' });
-  if (!(await conversationExistsForUser(existing.conversationId, p.userId))) return fail({ code: 'conversation_not_found', message: 'Conversa não encontrada.' });
+  if (!(await conversationExistsForUser(existing.conversationId, p.userId, PERMISSIONS.ADD_REACTIONS))) return fail({ code: 'conversation_not_found', message: 'Conversa não encontrada.' });
   const peerId = await getDirectPeerId(existing.conversationId, p.userId);
   if (peerId && !(await canSendDirectMessage(p.userId, peerId))) return fail({ code: ERROR_CODES.relationshipRequired, message: 'Vocês precisam ser amigos pra conversar por aqui.' });
 
@@ -841,7 +833,7 @@ async function deleteMessage(p: Participant, msg: { msgId?: unknown }): Promise<
   const msgId = Number(msg.msgId);
   if (!Number.isFinite(msgId)) return { code: 'not_found', message: 'Essa mensagem não existe mais.' };
   const [existing] = await db
-    .select({ conversationId: messages.conversationId, authorId: messages.authorId, kind: messages.kind, groupInvitationId: messages.groupInvitationId })
+    .select({ conversationId: messages.conversationId, authorId: messages.authorId, kind: messages.kind, serverInvitationId: messages.serverInvitationId })
     .from(messages)
     .where(eq(messages.id, msgId))
     .limit(1);
@@ -850,15 +842,16 @@ async function deleteMessage(p: Participant, msg: { msgId?: unknown }): Promise<
   const conversation = await getConversationForUser(existing.conversationId, p.userId);
   if (!conversation) return { code: 'conversation_not_found', message: 'Conversa não encontrada.' };
   const isAuthor = existing.authorId === p.userId;
-  // nobody authors a bot's messages, so whoever owns the bot keeps it tidy —
-  // that's running their own bot, not moderation, so it isn't audited
-  const isBotOwner = !acceptsHumanMessages(conversation) && await canManageGroup(conversation.id, p.userId);
+  // a server's own moderators keep its channels tidy — that's running the
+  // server, not instance moderation, so it isn't audited
+  const isChannelModerator = isServerChannel(conversation)
+    && hasPermission(await channelPermissions(conversation.serverId, conversation.id, p.userId), PERMISSIONS.MANAGE_MESSAGES);
   // admin authority is re-read, not taken from the connection's frozen role (§7.5)
-  if (!isAuthor && !isBotOwner && !(await isActiveAdmin(p.userId))) return { code: 'forbidden', message: 'Você só pode apagar as suas mensagens.' };
+  if (!isAuthor && !isChannelModerator && !(await isActiveAdmin(p.userId))) return { code: 'forbidden', message: 'Você só pode apagar as suas mensagens.' };
   // before the row goes: a card that vanished while its invitation stayed
   // acceptable is exactly the desync this prevents
-  if (existing.kind === 'group_invite' && existing.groupInvitationId) {
-    await revokeInvitationForDeletedCard(existing.groupInvitationId);
+  if (existing.kind === 'server_invite' && existing.serverInvitationId) {
+    await revokeInvitationForDeletedCard(existing.serverInvitationId);
   }
   // delete the file on disk before the row — after the delete below, the
   // attachments row disappears via CASCADE, but nothing would know which
@@ -868,7 +861,7 @@ async function deleteMessage(p: Participant, msg: { msgId?: unknown }): Promise<
   // the author's quota just got room back
   if (existing.authorId) void sendUsageToUser(existing.authorId).catch(() => {});
   await recordConversationActivity(existing.conversationId);
-  if (!isAuthor && !isBotOwner) {
+  if (!isAuthor && !isChannelModerator) {
     // moderation, so it leaves a trail — ids only, never the message body
     await recordAudit({
       actor: { id: p.userId, username: p.name }, action: 'message.delete', targetType: 'message', targetId: String(msgId),
@@ -898,8 +891,8 @@ async function handleTyping(socket: AppSocket, msg: { conversationId?: string; v
   if (!p || p.socket !== socket) return;
   const conversationId = conversationIdFrom(msg);
   if (!conversationId) return;
-  const conversation = await getConversationForUser(conversationId, p.userId);
-  if (!conversation || !acceptsHumanMessages(conversation)) return;
+  const conversation = await getConversationForUser(conversationId, p.userId, PERMISSIONS.SEND_MESSAGES);
+  if (!conversation) return;
   if (!(await assertCanWriteToConversation(socket, conversationId, p.userId))) return;
   await broadcastToConversationMembers(conversationId, {
     t: 'typing',

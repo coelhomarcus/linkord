@@ -21,7 +21,7 @@ import { AppLink } from '@/shared/ui/app-link';
 
 type Dialog = 'suspend' | 'reactivate' | 'revoke' | 'delete' | 'grant-admin' | 'revoke-admin' | null;
 
-const TABS = ['overview', 'groups', 'moderation', 'history'] as const;
+const TABS = ['overview', 'servers', 'moderation', 'history'] as const;
 type Tab = (typeof TABS)[number];
 const QUERY: QuerySchema<'tab'> = { tab: { default: 'overview', allowed: TABS } };
 
@@ -59,7 +59,7 @@ function UserDetail({ id }: { id: string }) {
   if (deleted) return <p className="py-8 text-center text-label text-text-muted">{t('detail.deleted')} <AdminTextLink to={back}>{t('detail.backToList')}</AdminTextLink></p>;
   if (!detail) return <DetailStatusView status={status} missing={t('detail.notFound')} failed={t('detail.loadFailed')} backTo={back} backLabel={t('common.back')} onRetry={reload} />;
 
-  const { user, groups, storage } = detail;
+  const { user, servers, storage } = detail;
   const isSelf = user.id === state.me.userId;
   const suspended = user.status === 'suspended';
   const isAdmin = user.role === 'admin';
@@ -94,7 +94,7 @@ function UserDetail({ id }: { id: string }) {
         defaultTab="overview"
         tabs={[
           { id: 'overview', label: t('detail.overview') },
-          { id: 'groups', label: `${t('detail.groups')} (${groups.length})` },
+          { id: 'servers', label: `${t('detail.servers')} (${servers.length})` },
           { id: 'moderation', label: t('detail.moderation') },
           { id: 'history', label: t('detail.history') },
         ]}
@@ -111,22 +111,22 @@ function UserDetail({ id }: { id: string }) {
             </AdminFieldRow>
             <AdminFieldRow label={t('ui.role')}>{isAdmin ? t('detail.administrator') : t('detail.regularAccount')}</AdminFieldRow>
             <AdminFieldRow label={t('detail.storage')}>{formatFileSize(storage.bytes)} em {storage.files} {t('detail.files')}</AdminFieldRow>
-            <AdminFieldRow label={t('detail.groups')}>
-              {groups.length === 0 ? t('detail.noGroups') : <AdminTextLink to={{ search: '?tab=groups' }}>{t('detail.viewGroups', { count: groups.length })}</AdminTextLink>}
+            <AdminFieldRow label={t('detail.servers')}>
+              {servers.length === 0 ? t('detail.noServers') : <AdminTextLink to={{ search: '?tab=servers' }}>{t('detail.viewServers', { count: servers.length })}</AdminTextLink>}
             </AdminFieldRow>
             <AdminFieldRow label={t('detail.history')}><AdminTextLink to={{ search: '?tab=history' }}>{t('detail.viewHistory')}</AdminTextLink></AdminFieldRow>
           </AdminFields>
         </AdminSection>
       )}
 
-      {tab === 'groups' && (
-        <AdminSection title={t('detail.groups')} description={t('detail.groupsDescription')}>
-          {groups.length === 0 ? <p className="text-label text-text-muted">{t('detail.noGroups')}</p> : (
+      {tab === 'servers' && (
+        <AdminSection title={t('detail.servers')} description={t('detail.serversDescription')}>
+          {servers.length === 0 ? <p className="text-label text-text-muted">{t('detail.noServers')}</p> : (
             <ul className="flex flex-col divide-y divide-border-subtle">
-              {groups.map((g) => (
+              {servers.map((g) => (
                 <li key={g.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5">
-                  <AppLink to={`/admin/groups/${g.id}`} className="min-w-0 flex-1 basis-48 truncate text-body text-text-primary hover:underline">{g.title || t('detail.groupUnnamed')}</AppLink>
-                  <span className="text-caption text-text-muted">{g.role === 'owner' ? t('detail.groupOwner') : t('detail.member')}</span>
+                  <AppLink to={`/admin/servers/${g.id}`} className="min-w-0 flex-1 basis-48 truncate text-body text-text-primary hover:underline">{g.name || t('detail.serverUnnamed')}</AppLink>
+                  <span className="text-caption text-text-muted">{g.isOwner ? t('detail.serverOwner') : t('detail.member')}</span>
                   <Badge value={g.status} />
                 </li>
               ))}

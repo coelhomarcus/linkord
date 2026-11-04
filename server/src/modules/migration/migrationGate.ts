@@ -18,6 +18,11 @@ const tableExists = async (db: Queryable, name: string): Promise<boolean> => (aw
 
 export const MIGRATION_PRECONDITIONS: Precondition[] = [
   {
+    migration: '0043 — grupos viram servidores',
+    isPending: async (db) => (await tableExists(db, 'conversation_members')) && !(await tableExists(db, 'servers')),
+    blockedBy: (f) => (f.groupsWithoutOwner.length ? [`grupos sem dono: ${f.groupsWithoutOwner.join(', ')}`] : []),
+  },
+  {
     migration: '0020 — um dono por grupo',
     isPending: async (db) => (await tableExists(db, 'conversation_members')) && !(await indexExists(db, 'conversation_members_one_owner_idx')),
     blockedBy: (f) => (f.groupsWithMultipleOwners.length ? [`grupos com mais de um dono: ${f.groupsWithMultipleOwners.join(', ')}`] : []),

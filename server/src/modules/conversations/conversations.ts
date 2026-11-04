@@ -1,38 +1,16 @@
 import { and, eq } from 'drizzle-orm';
 import { db } from '../../db/client.js';
-import { conversationMembers, conversations, users } from '../../db/schema.js';
-import { participants, send, sendSocketError, sendToUser } from '../presence/participants.js';
+import { conversationMembers, users } from '../../db/schema.js';
+import { participants, send, sendToUser } from '../presence/participants.js';
 import { refreshKnownPeers } from '../presence/knownPeers.js';
-import { isUploadedImage, sanitizeAvatar } from '../profile/sanitize.js';
-import { deleteAvatarFile, isOwnedProfileImage } from '../attachments/attachmentCleanup.js';
-import { ERROR_CODES } from '../../http/errors.js';
-import {
-  canManageGroup,
-  conversationExistsForUser,
-  createGroup,
-  getOrCreateDirect,
-  getConversationForUser,
-  isGroupLike,
-  reconcileGroupMembership,
-  rowToSummary,
-  sanitizeConversationTitle,
-  sendConversationUpdateToMembers,
-} from './conversationsRepository.js';
-import { createInvitations, announceRevocations } from './invitationsRepository.js';
-import { removeMember, transferOwnership } from './groupMembership.js';
-import { groupCreationBlockedBy } from '../limits/limits.js';
-import { revokeCallAccess } from '../calls/callAccess.js';
-import { deleteGroupCompletely } from './groupDeletion.js';
+import { getOrCreateDirect, getConversationForUser, rowToSummary } from './conversationsRepository.js';
 import type { AppSocket, HandlerTable } from '../../types.js';
-import { logger } from '../../lib/logger.js';
 
-const log = logger.child({ component: 'conversations' });
-
-// The socket handlers for conversation/group actions (open a DM, create a
-// group, rename it, add/remove members...) — never imported individually,
-// only dispatched as a block via `handlers`. The repository API other
-// modules actually depend on (listForUser, touchConversation, etc.) lives
-// in conversationsRepository.ts; see that file's own module comment.
+// The socket handlers for DM actions (open, close, pin) — never imported
+// individually, only dispatched as a block via `handlers`. The repository
+// API other modules actually depend on (listForUser, touchConversation,
+// etc.) lives in conversationsRepository.ts. Servers and their channels are
+// managed over HTTP (modules/servers).
 
 async function findUser(userId: string): Promise<boolean> {
   const [row] = await db.select({ id: users.id }).from(users).where(eq(users.id, userId)).limit(1);
@@ -57,7 +35,7 @@ async function handleDirectOpen(socket: AppSocket, msg: { userId?: string }): Pr
   send(socket, {
     t: 'conversation-opened',
     conversationId: conversation.id,
-    conversation: rowToSummary(conversation, [p.userId, otherUserId], null, 'member', null),
+    conversation: rowToSummary(conversation, [p.userId, otherUserId], null),
   });
   // a peer this connection has never had in its known set (a brand-new DM,
   // or one that predates the connection) — without this the client gets a
@@ -88,15 +66,15 @@ async function handleConversationClose(socket: AppSocket, msg: { conversationId?
   sendToUser(p.userId, { t: 'conversation-deleted', conversationId });
 }
 
-/** Per-member pin (direct or group) — a personal sort-to-top on the
- * caller's own sidebar, doesn't touch the conversation or anyone else's
- * row. Symmetric with handleConversationClose but not DM-only. */
+/** Per-member DM pin — a personal sort-to-top on the caller's own
+ * sidebar, doesn't touch the conversation or anyone else's row. */
 async function handleConversationPin(socket: AppSocket, msg: { conversationId?: string; pinned?: boolean }): Promise<void> {
   const p = participants.get(socket.participantId ?? '');
   if (!p || p.socket !== socket) return;
   const conversationId = String(msg.conversationId || '');
   if (!conversationId) return;
-  if (!(await conversationExistsForUser(conversationId, p.userId))) return;
+  const conversation = await getConversationForUser(conversationId, p.userId);
+  if (!conversation || conversation.type !== 'direct') return;
 
   const [updated] = await db.update(conversationMembers)
     .set({ pinnedAt: msg.pinned ? new Date() : null })
@@ -105,172 +83,8 @@ async function handleConversationPin(socket: AppSocket, msg: { conversationId?: 
   sendToUser(p.userId, { t: 'conversation-pinned', conversationId, pinnedAt: updated?.pinnedAt ? updated.pinnedAt.getTime() : null });
 }
 
-// Any active account can create a group — creating one makes you its
-// owner (canManageGroup, conversationsRepository.ts), same as everyone
-// else's groups. No instance-role gate here at all.
-//
-// Nobody but the creator becomes a member here anymore (docs/plano-rede-social.md
-// §4.2.10): `memberIds` from a client that still sends them (an old build, or a
-// raw socket) are turned into INVITATIONS, and only accepting one creates a
-// member. The current client creates groups over HTTP (POST /api/groups) and
-// sees each invitation's result; this path stays for the ones that don't.
-async function handleGroupCreate(socket: AppSocket, msg: { title?: string; memberIds?: unknown }): Promise<void> {
-  const p = participants.get(socket.participantId ?? '');
-  if (!p || p.socket !== socket) return;
-  const title = sanitizeConversationTitle(msg.title);
-  if (!title) return;
-
-  if (await groupCreationBlockedBy(p.userId)) {
-    sendSocketError(socket, 'quota_exceeded', 'Você atingiu o limite de grupos.');
-    return;
-  }
-  const conversation = await createGroup(p.userId, title);
-  send(socket, { t: 'conversation-opened', conversationId: conversation.id, conversation: rowToSummary(conversation, [p.userId], null, 'owner', p.userId) });
-  if (Array.isArray(msg.memberIds) && msg.memberIds.length) {
-    await createInvitations(p.userId, conversation.id, msg.memberIds);
-  }
-}
-
-async function handleGroupDelete(socket: AppSocket, msg: { conversationId?: string }): Promise<void> {
-  const p = participants.get(socket.participantId ?? '');
-  if (!p || p.socket !== socket) return;
-  const conversationId = String(msg.conversationId || '');
-  if (!(await canManageGroup(conversationId, p.userId))) {
-    sendSocketError(socket, ERROR_CODES.forbidden, 'Você não tem permissão para gerenciar esse grupo.');
-    return;
-  }
-  const deleted = await deleteGroupCompletely(conversationId);
-  if (deleted) log.info('group deleted by its owner', { conversationId, ownerId: p.userId, members: deleted.memberIds.length });
-}
-
-/** Owner-only rename/re-avatar. `title` and `avatar` are each applied only
- * when present in the message, so one can change without touching the
- * other. Title validation mirrors handleGroupCreate; avatar validation
- * mirrors an account's own (see modules/profile/sanitize.ts#sanitizeAvatar) —
- * `avatar: ''` is a valid, deliberate "remove the photo". */
-async function handleGroupUpdate(socket: AppSocket, msg: { conversationId?: string; title?: string; avatar?: string }): Promise<void> {
-  const p = participants.get(socket.participantId ?? '');
-  if (!p || p.socket !== socket) return;
-  const conversationId = String(msg.conversationId || '');
-  if (!conversationId) return;
-  if (!(await canManageGroup(conversationId, p.userId))) {
-    sendSocketError(socket, ERROR_CODES.forbidden, 'Você não tem permissão para gerenciar esse grupo.');
-    return;
-  }
-  const [conversation] = await db.select().from(conversations).where(eq(conversations.id, conversationId)).limit(1);
-  if (!conversation || !isGroupLike(conversation.type)) return;
-
-  const updates: { title?: string; avatar?: string; updatedAt: Date } = { updatedAt: new Date() };
-  if (msg.title !== undefined) {
-    const title = sanitizeConversationTitle(msg.title);
-    if (title) updates.title = title;
-  }
-  if (msg.avatar !== undefined) {
-    const avatar = sanitizeAvatar(msg.avatar);
-    // same rules an account's own avatar gets in handleProfile: a new photo is
-    // only ever an upload (an external URL leaves it as it was), and only one
-    // the caller uploaded — otherwise whoever manages the group could claim
-    // another account's /uploads/<id>, and its later replacement would delete
-    // that real owner's file.
-    if (!avatar) updates.avatar = '';
-    else if (isUploadedImage(avatar)) updates.avatar = await isOwnedProfileImage(avatar, p.userId) ? avatar : '';
-  }
-  if (updates.title === undefined && updates.avatar === undefined) return;
-
-  const [updatedRow] = await db.update(conversations).set(updates).where(eq(conversations.id, conversationId)).returning();
-
-  // the old file (if it was one of our uploads) is now orphaned — same
-  // cleanup an account's own avatar change gets in handleProfile.
-  if (updates.avatar !== undefined && conversation.avatar && conversation.avatar !== updates.avatar) {
-    deleteAvatarFile(conversation.avatar).catch((err) => {
-      log.error('failed to delete old group avatar', err, { conversationId });
-    });
-  }
-
-  await sendConversationUpdateToMembers('conversation-updated', updatedRow!);
-}
-
-/** Adding a member directly is gone: joining a group takes the invitee's
- * acceptance (docs/plano-rede-social.md §4.2.10). Kept as a handler only so a
- * client that still sends this gets a clear refusal instead of silence —
- * nothing here writes to conversation_members. */
-async function handleGroupMembersAdd(socket: AppSocket): Promise<void> {
-  sendSocketError(socket, ERROR_CODES.forbidden, 'Convide amigos para o grupo. Eles entram ao aceitar o convite.');
-}
-
-/** Owner-only. Hands the group to an existing member and demotes the
- * caller, validated and applied under the group row lock (see
- * groupMembership.ts#transferOwnership). Reuses
- * sendConversationUpdateToMembers so every recipient gets their own
- * correct `myRole` (the new owner's flips to 'owner', everyone else's
- * summary is unaffected but resent for consistency). */
-async function handleGroupTransferOwner(socket: AppSocket, msg: { conversationId?: string; userId?: string }): Promise<void> {
-  const p = participants.get(socket.participantId ?? '');
-  if (!p || p.socket !== socket) return;
-  const conversationId = String(msg.conversationId || '');
-  const newOwnerId = String(msg.userId || '');
-  if (!conversationId || !newOwnerId || newOwnerId === p.userId) return;
-
-  const result = await transferOwnership(conversationId, p.userId, newOwnerId);
-  if (result.code === 'forbidden') {
-    sendSocketError(socket, ERROR_CODES.forbidden, 'Você não tem permissão para gerenciar esse grupo.');
-    return;
-  }
-  if (result.code === 'not_member') {
-    sendSocketError(socket, ERROR_CODES.notFound, 'Essa pessoa não é membro do grupo.');
-    return;
-  }
-  if (result.code !== 'ok') return;
-
-  const [conversation] = await db.select().from(conversations).where(eq(conversations.id, conversationId)).limit(1);
-  if (conversation) await sendConversationUpdateToMembers('conversation-updated', conversation);
-  await announceRevocations(result.revokedInvitationIds);
-  log.info('group ownership transferred', { conversationId, from: p.userId, to: newOwnerId });
-}
-
-/** The group's owner removes anyone; a member can only remove THEMSELVES
- * (leave). The owner leaving is only allowed once they're the LAST member —
- * otherwise they'd orphan the group. Transferring ownership first (see
- * handleGroupTransferOwner) clears the way. */
-async function handleGroupMembersRemove(socket: AppSocket, msg: { conversationId?: string; userId?: string }): Promise<void> {
-  const p = participants.get(socket.participantId ?? '');
-  if (!p || p.socket !== socket) return;
-  const conversationId = String(msg.conversationId || '');
-  const targetUserId = String(msg.userId || '');
-  if (!conversationId || !targetUserId) return;
-
-  const result = await removeMember(conversationId, p.userId, targetUserId);
-  if (result.code === 'forbidden') {
-    sendSocketError(socket, ERROR_CODES.forbidden, 'Você não tem permissão para remover esse membro.');
-    return;
-  }
-  if (result.code === 'owner_must_transfer') {
-    sendSocketError(socket, ERROR_CODES.conflict, 'Transfira a propriedade do grupo antes de sair.');
-    return;
-  }
-  if (result.code !== 'ok') return;
-
-  // the removed account loses access immediately — from their client's POV
-  // this is the same as the conversation disappearing (RoomProvider already
-  // clears messages/unread and leaves an active call on 'conversation-deleted').
-  // leaving on your own needs no notice; being removed does
-  sendToUser(targetUserId, { t: 'conversation-deleted', conversationId, ...(targetUserId !== p.userId ? { reason: 'removed' } : {}) });
-  // a client that ignores the event still gets cut off from the media itself
-  void revokeCallAccess(targetUserId, conversationId);
-
-  await reconcileGroupMembership(conversationId, targetUserId);
-  await refreshKnownPeers([targetUserId, ...result.remainingIds]);
-  log.info(targetUserId === p.userId ? 'member left the group' : 'member removed from the group', { conversationId, actorId: p.userId, targetUserId });
-}
-
 export const handlers: HandlerTable = {
   'direct-open': handleDirectOpen,
   'conversation-close': handleConversationClose,
   'conversation-pin': handleConversationPin,
-  'group-create': handleGroupCreate,
-  'group-delete': handleGroupDelete,
-  'group-update': handleGroupUpdate,
-  'group-members-add': handleGroupMembersAdd,
-  'group-members-remove': handleGroupMembersRemove,
-  'group-transfer-owner': handleGroupTransferOwner,
 };

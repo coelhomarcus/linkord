@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { clearNotifications, deleteNotification, markNotificationsRead } from '@/shared/api/api';
 import type { NotificationEntry } from '@/shared/api/api';
-import { ROUTES } from '@/shared/lib/routes';
+import { conversationPath } from '@/shared/lib/routes';
 import { useFriends } from '@/features/friends/FriendsContext';
 import { useRoom } from '@/state/RoomContext';
 import { notificationTarget } from './notificationText';
@@ -36,7 +36,7 @@ export function useNotificationActions() {
     if (!entry.read) void change(() => markNotificationsRead({ ids: [entry.id] }), Math.max(0, unread - 1));
     if (entry.kind === 'mention' && entry.mention) {
       jumpToMessage(entry.mention.conversation.id, entry.mention.messageId);
-      navigate(ROUTES.conversation(entry.mention.conversation.id), { state: { from: `${pathname}${search}${hash}` } });
+      navigate(conversationPath(entry.mention.conversation), { state: { from: `${pathname}${search}${hash}` } });
     } else {
       navigate(notificationTarget(entry));
     }

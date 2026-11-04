@@ -12,7 +12,7 @@ import {
 } from './friendshipsRepository.js';
 import { normalizeSearchQuery } from './cursor.js';
 import { onSocialChange } from '../presence/knownPeers.js';
-import { announceRevocations, countReceivedInvitations } from '../conversations/invitationsRepository.js';
+import { announceRevocations, countReceivedInvitations } from '../servers/serverInvitationsRepository.js';
 import { revokeDirectCallAccess } from '../calls/callAccess.js';
 import type { Friendship } from '../../db/schema.js';
 import { logger } from '../../lib/logger.js';
@@ -155,7 +155,7 @@ async function handleListRequests(request: FastifyRequest<{ Querystring: { direc
 async function handleRequestSummary(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   const sess = await requireSession(request, reply);
   if (!sess) return;
-  // `incoming` = friend requests, `invitations` = group invitations — both
+  // `incoming` = friend requests, `invitations` = server invitations — both
   // wait on the caller's answer and both feed the sidebar badge
   const [incoming, invitations] = await Promise.all([countIncomingRequests(sess.userId), countReceivedInvitations(sess.userId)]);
   sendJson(reply, 200, { incoming, invitations });

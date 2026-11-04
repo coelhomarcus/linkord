@@ -40,23 +40,33 @@
   "mutuals": {
     "title": "Em comum",
     "friendsTitle": "Amigos mútuos",
-    "groupsTitle": "Grupos mútuos",
+    "serversTitle": "Servidores em comum",
     "friends_one": "{{count}} amigo mútuo",
     "friends_other": "{{count}} amigos mútuos",
-    "groups_one": "{{count}} grupo mútuo",
-    "groups_other": "{{count}} grupos mútuos",
+    "servers_one": "{{count}} servidor em comum",
+    "servers_other": "{{count}} servidores em comum",
     "members_one": "{{count}} membro",
     "members_other": "{{count}} membros",
     "showing": "Mostrando {{shown}} de {{total}}.",
     "loadFailed": "Não foi possível carregar o que vocês têm em comum.",
     "retry": "Tentar de novo",
     "noneFriends": "Nenhum amigo mútuo.",
-    "noneGroups": "Nenhum grupo mútuo.",
+    "noneServers": "Nenhum servidor em comum.",
     "online": " · online"
   },
   "save": {
     "timeout": "O perfil não foi confirmado a tempo. Verifique sua conexão e tente de novo.",
     "offline": "Sem conexão com o servidor. Tente de novo em instantes.",
     "failed": "Não foi possível salvar o perfil. Tente de novo."
+  },
+  "panel": {
+    "label": "Perfil do usuário",
+    "online": "Online",
+    "offline": "Offline",
+    "mutualServers_one": "{{count}} servidor em comum",
+    "mutualServers_other": "{{count}} servidores em comum",
+    "mutualFriends_one": "{{count}} amigo em comum",
+    "mutualFriends_other": "{{count}} amigos em comum",
+    "viewFull": "Ver perfil completo"
   }
 }

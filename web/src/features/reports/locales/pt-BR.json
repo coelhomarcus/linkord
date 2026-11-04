@@ -7,7 +7,7 @@
     "illegal": "Atividade ilegal",
     "other": "Outro motivo"
   },
-  "targets": { "user": "conta", "group": "grupo", "message": "mensagem" },
+  "targets": { "user": "conta", "server": "servidor", "message": "mensagem" },
   "errors": {
     "rateLimited": "Você enviou muitas denúncias. Espere um pouco.",
     "notFound": "Não foi possível encontrar o que você quer denunciar.",

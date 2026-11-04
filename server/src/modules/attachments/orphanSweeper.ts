@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import { config } from '../../config/env.js';
 import { db } from '../../db/client.js';
-import { attachments, groupSounds } from '../../db/schema.js';
+import { attachments, serverSounds } from '../../db/schema.js';
 import { recordAudit, recordAuditFailure, type AuditActor } from '../admin/auditLog.js';
 import { filePathFor } from './attachmentStorage.js';
 import { stagedFileIds } from './stagedAttachments.js';
@@ -9,7 +9,7 @@ import { logger } from '../../lib/logger.js';
 
 const log = logger.child({ component: 'audit' });
 
-// Files on disk that no `attachments` row points to. Deleting a group/account/
+// Files on disk that no `attachments` row points to. Deleting a server/account/
 // message removes rows and files in separate steps, and a failed unlink leaves
 // the file behind forever — this is the periodic net under all of them
 // (docs/plano-rede-social.md §11: "coleta de órfãos"). It only ever considers
@@ -114,7 +114,7 @@ async function runSweep(opts: { dryRun: boolean; actor: AuditActor | null; reque
   const dbIds = new Set([
     ...staged,
     ...(await db.select({ id: attachments.id }).from(attachments)).map((r) => r.id),
-    ...(await db.select({ id: groupSounds.id }).from(groupSounds)).map((r) => r.id),
+    ...(await db.select({ id: serverSounds.id }).from(serverSounds)).map((r) => r.id),
   ]);
   const { orphans, recent, missingFiles } = classifyOrphans({ files, dbIds, now: Date.now(), graceMs: config.ORPHAN_GRACE_MS });
 

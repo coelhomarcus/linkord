@@ -8,14 +8,15 @@ import Fastify from 'fastify';
 import sharp from 'sharp';
 import { eq } from 'drizzle-orm';
 import { config } from '../../src/config/env.js';
-import { attachments as attachmentsTable, conversationMembers, messageSendOperations, messages, stagedAttachments } from '../../src/db/schema.js';
+import { attachments as attachmentsTable, messageSendOperations, messages, serverMembers, stagedAttachments } from '../../src/db/schema.js';
+import { invalidateAllServers } from '../../src/modules/servers/serverAccess.js';
 import { getByMessageIds } from '../../src/modules/attachments/attachments.js';
 import { getUserUsage } from '../../src/modules/attachments/attachmentQuota.js';
 import { STAGED_TTL_MS, stagedFileIds, sweepExpiredStaged } from '../../src/modules/attachments/stagedAttachments.js';
 import { handlers as chatHandlers } from '../../src/modules/messages/messages.js';
 import { registerAttachmentRoutes } from '../../src/modules/attachments/attachments.js';
 import { createSession } from '../../src/modules/auth/session.js';
-import { cleanupParticipant, db, joinNew, makeGroupWithMembers, makeUser, pool } from './helpers.js';
+import { cleanupParticipant, db, joinNew, makeServerWithMembers, makeUser, pool } from './helpers.js';
 
 const app = Fastify();
 registerAttachmentRoutes(app);
@@ -52,8 +53,8 @@ describe('staged upload and batch publishing (real Postgres)', () => {
 
   async function member() {
     const owner = await makeUser('st');
-    const conversationId = await makeGroupWithMembers(owner.id, []);
-    return { owner, conversationId, cookie: await sessionFor(owner.id) };
+    const { serverId, textChannelId: conversationId } = await makeServerWithMembers(owner.id, []);
+    return { owner, serverId, conversationId, cookie: await sessionFor(owner.id) };
   }
 
   const correlatedSend = async (owner: { id: string; username: string }, conversationId: string, attachmentIds: string[], text = '', clientMessageId = crypto.randomUUID()) => {
@@ -112,7 +113,8 @@ describe('staged upload and batch publishing (real Postgres)', () => {
     const victim = await member();
     const victimFile = await stage(victim.cookie, victim.conversationId);
     const attacker = await makeUser('st');
-    await db.insert(conversationMembers).values({ conversationId: victim.conversationId, userId: attacker.id, role: 'member' });
+    await db.insert(serverMembers).values({ serverId: victim.serverId, userId: attacker.id });
+    invalidateAllServers();
     const clientMessageId = crypto.randomUUID();
 
     const result = await correlatedSend(attacker, victim.conversationId, [victimFile], '', clientMessageId);
@@ -124,7 +126,7 @@ describe('staged upload and batch publishing (real Postgres)', () => {
 
   it('a file staged for another conversation does not enter this one', async () => {
     const { owner, conversationId, cookie } = await member();
-    const otherConversation = await makeGroupWithMembers(owner.id, []);
+    const otherConversation = (await makeServerWithMembers(owner.id, [])).textChannelId;
     const id = await stage(cookie, otherConversation);
     const result = await correlatedSend(owner, conversationId, [id]);
     assert.equal(result.error.code, 'attachments_unavailable');
@@ -183,7 +185,7 @@ describe('staged upload and batch publishing (real Postgres)', () => {
 
   it('a reply to a message from another conversation is dropped, without failing the send with an attachment', async () => {
     const { owner, conversationId, cookie } = await member();
-    const otherConversationId = await makeGroupWithMembers(owner.id, []);
+    const otherConversationId = (await makeServerWithMembers(owner.id, [])).textChannelId;
     const [elsewhere] = await db.insert(messages).values({ conversationId: otherConversationId, authorId: owner.id, text: 'another conversation' }).returning();
     const id = await stage(cookie, conversationId);
 
@@ -213,7 +215,7 @@ describe('media dimensions (real Postgres)', () => {
 
   it('a staged image reports width/height and so does the published message', async () => {
     const owner = await makeUser('dm');
-    const conversationId = await makeGroupWithMembers(owner.id, []);
+    const conversationId = (await makeServerWithMembers(owner.id, [])).textChannelId;
     const cookie = await sessionFor(owner.id);
     const staged = await stageBuffer(cookie, conversationId, bigPng, 'landscape.png', 'image/png');
     assert.deepEqual([staged.width, staged.height], [1200, 900]);
@@ -235,7 +237,7 @@ describe('media dimensions (real Postgres)', () => {
 
   it('photo rotated by EXIF: display and thumbnail dimensions come out portrait', async () => {
     const owner = await makeUser('dm');
-    const conversationId = await makeGroupWithMembers(owner.id, []);
+    const conversationId = (await makeServerWithMembers(owner.id, [])).textChannelId;
     const cookie = await sessionFor(owner.id);
     // stored landscape, displayed portrait (orientation 6 = rotate 90°)
     const rotated = await sharp({ create: { width: 1200, height: 900, channels: 3, background: '#aa3300' } }).jpeg().withMetadata({ orientation: 6 }).toBuffer();
@@ -247,7 +249,7 @@ describe('media dimensions (real Postgres)', () => {
 
   it('a file that is not an image does not invent dimensions', async () => {
     const owner = await makeUser('dm');
-    const conversationId = await makeGroupWithMembers(owner.id, []);
+    const conversationId = (await makeServerWithMembers(owner.id, [])).textChannelId;
     const staged = await stageBuffer(await sessionFor(owner.id), conversationId, Buffer.from('%PDF-1.4 x'), 'doc.pdf', 'application/pdf');
     assert.equal(staged.width, undefined);
     assert.equal(staged.placeholder, undefined);

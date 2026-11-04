@@ -3,7 +3,7 @@ import { db } from '../../db/client.js';
 import { userBlocks, friendships, users } from '../../db/schema.js';
 import { withUserPairLock, type Tx } from '../users/userPairLock.js';
 import { toSocialUser, type SocialUser } from '../users/users.js';
-import { revokePendingBetween } from '../conversations/invitationRevocation.js';
+import { revokePendingBetween } from '../servers/invitationRevocation.js';
 import { SOCIAL_PAGE_SIZE, decodeTimeCursor, encodeTimeCursor } from '../friendships/cursor.js';
 
 export async function isBlocked(blockerId: string, blockedId: string): Promise<boolean> {
@@ -51,7 +51,7 @@ export async function blockUser(blockerId: string, blockedId: string): Promise<s
         ),
         sql`${friendships.status} IN ('pending', 'accepted')`,
       ));
-    // a pending group invitation between the two is invalidated in the same
+    // a pending server invitation between the two is invalidated in the same
     // transaction (§7.3); the ids go back so the caller can update the cards
     return revokePendingBetween(tx, blockerId, blockedId);
   });

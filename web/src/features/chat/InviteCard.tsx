@@ -2,14 +2,16 @@ import { useTranslation } from 'react-i18next';
 import { UsersIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
 
-import { GroupAvatar } from '@/features/conversations/GroupAvatar';
+import { ServerIcon } from '@/features/servers/ServerIcon';
+import { useNavigate } from 'react-router';
+import { ROUTES } from '@/shared/lib/routes';
 import { Button } from '@/shared/ui/primitives/button';
 import { acceptInvitation, ApiError, declineInvitation, revokeInvitation } from '@/shared/api/api';
 import { useRoom } from '@/state/RoomContext';
 import type { InvitationCard, InvitationStatus } from '@/shared/types/protocol';
 import { ERROR_CODES } from '@/shared/api/errorCodes';
 
-type LocalOutcome = 'group_full' | null;
+type LocalOutcome = 'server_full' | null;
 
 
 export function InviteCard({ invitation }: { invitation: InvitationCard | null | undefined }) {
@@ -26,7 +28,8 @@ export function InviteCard({ invitation }: { invitation: InvitationCard | null |
 
 function LiveInviteCard({ invitation }: { invitation: InvitationCard }) {
   const { t } = useTranslation('chat');
-  const { state, conversations, openConversation } = useRoom();
+  const { state, servers } = useRoom();
+  const navigate = useNavigate();
   const [busy, setBusy] = useState<'accept' | 'decline' | 'revoke' | null>(null);
   const [outcome, setOutcome] = useState<LocalOutcome>(null);
   const [error, setError] = useState<string | null>(null);
@@ -35,11 +38,8 @@ function LiveInviteCard({ invitation }: { invitation: InvitationCard }) {
   const isInvitee = invitation.inviteeId === myId;
   const isInviter = invitation.inviterId === myId;
   const status: InvitationStatus = invitation.status;
-  const group = conversations.find((c) => c.id === invitation.groupId);
-  const isMember = !!group;
-  const canRevoke = isInviter && group?.myRole === 'owner';
-  const isBot = invitation.groupType === 'bot';
-  const kind = isBot ? 'bot' : 'group';
+  const isMember = servers.some((s) => s.id === invitation.serverId);
+  const canRevoke = isInviter;
 
   async function run(kind: 'accept' | 'decline' | 'revoke', action: (id: string) => Promise<unknown>) {
     setBusy(kind);
@@ -48,7 +48,7 @@ function LiveInviteCard({ invitation }: { invitation: InvitationCard }) {
       await action(invitation.id);
       // the card itself updates from the server's `invitation-updated`
     } catch (err) {
-      if (err instanceof ApiError && err.code === ERROR_CODES.group_full) setOutcome('group_full');
+      if (err instanceof ApiError && err.code === ERROR_CODES.server_full) setOutcome('server_full');
       else if (err instanceof ApiError && err.code === ERROR_CODES.quota_exceeded) setError(t('invite.quotaExceeded'));
       else setError(t('invite.failed'));
     } finally {
@@ -57,15 +57,15 @@ function LiveInviteCard({ invitation }: { invitation: InvitationCard }) {
   }
 
   let footer: React.ReactNode;
-  if (status === 'pending' && outcome === 'group_full') {
-    footer = <p className="text-label text-text-muted">{t(`invite.full_${kind}`)}</p>;
+  if (status === 'pending' && outcome === 'server_full') {
+    footer = <p className="text-label text-text-muted">{t('invite.full')}</p>;
   } else if (status === 'pending' && isInvitee && isMember) {
-    footer = <p className="text-label text-text-muted">{t(`invite.alreadyMember_${kind}`)}</p>;
+    footer = <p className="text-label text-text-muted">{t('invite.alreadyMember')}</p>;
   } else if (status === 'pending' && isInvitee) {
     footer = (
       <div className="flex gap-2">
         <Button type="button" size="sm" disabled={busy !== null} onClick={() => run('accept', acceptInvitation)}>
-          {busy === 'accept' ? t('invite.accepting') : t(`invite.join_${kind}`)}
+          {busy === 'accept' ? t('invite.accepting') : t('invite.join')}
         </Button>
         <Button type="button" size="sm" variant="secondary" disabled={busy !== null} onClick={() => run('decline', declineInvitation)}>
           {t('invite.decline')}
@@ -85,8 +85,8 @@ function LiveInviteCard({ invitation }: { invitation: InvitationCard }) {
     );
   } else if (status === 'accepted' && isMember) {
     footer = (
-      <Button type="button" size="sm" variant="secondary" onClick={() => openConversation(invitation.groupId)}>
-        {t(`invite.open_${kind}`)}
+      <Button type="button" size="sm" variant="secondary" onClick={() => navigate(ROUTES.server(invitation.serverId))}>
+        {t('invite.open')}
       </Button>
     );
   } else {
@@ -95,19 +95,19 @@ function LiveInviteCard({ invitation }: { invitation: InvitationCard }) {
 
   return (
     <div className="mt-1 max-w-[380px] rounded-lg border border-border bg-fill-subtle p-3" data-invite-status={status}>
-      <p className="mb-2 text-caption uppercase tracking-wide text-text-muted">{t(`invite.header_${kind}`)}</p>
+      <p className="mb-2 text-caption uppercase tracking-wide text-text-muted">{t('invite.header')}</p>
       <div className="mb-3 flex items-center gap-3">
-        <GroupAvatar id={invitation.groupId} title={invitation.groupTitle} avatar={invitation.groupAvatar} size={44} />
+        <ServerIcon id={invitation.serverId} name={invitation.serverName} icon={invitation.serverIcon} size={44} active />
         <div className="min-w-0">
-          <p className="truncate text-body font-medium text-text-primary">{invitation.groupTitle}</p>
+          <p className="truncate text-body font-medium text-text-primary">{invitation.serverName}</p>
           <p className="flex items-center gap-1 text-caption text-text-muted">
             <UsersIcon size={12} />
             {t('invite.members', { count: invitation.memberCount })}
           </p>
         </div>
       </div>
-      {status === 'pending' && isInvitee && !isMember && outcome !== 'group_full' && (
-        <p className="mb-2 text-caption text-text-muted">{t(`invite.hint_${kind}`)}</p>
+      {status === 'pending' && isInvitee && !isMember && outcome !== 'server_full' && (
+        <p className="mb-2 text-caption text-text-muted">{t('invite.hint')}</p>
       )}
       {footer}
       {error && <p role="alert" className="mt-2 text-caption text-red">{error}</p>}

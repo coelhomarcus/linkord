@@ -47,7 +47,7 @@ export interface Participant {
   profileLinks: string[];
   role: Role;
   deafened: boolean;
-  // Which group conversation call they're in now, or null — set explicitly by
+  // Which call (voice channel or DM) they're in now, or null — set explicitly by
   // call join/leave (see realtime/socket.ts), never just from having the
   // socket connected.
   callConversationId: string | null;

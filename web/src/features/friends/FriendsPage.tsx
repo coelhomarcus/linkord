@@ -4,11 +4,13 @@ import { useTranslation } from 'react-i18next';
 import { PageHeader } from '@/shared/PageHeader';
 import { useElementWidth } from '@/shared/hooks/useElementWidth';
 import { parseFriendsView } from '@/shared/lib/routes';
+import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
+import { ActiveNowPanel } from './ActiveNowPanel';
 import { AddFriendView } from './AddFriendView';
 import { AddFriendButton, FriendsModeNav, FriendsModeSelect } from './FriendsHeader';
 import type { FriendsHeaderLayout } from './FriendsHeader';
 import { FriendsList } from './FriendsList';
-import { GroupInvitationsView } from './GroupInvitationsView';
+import { ServerInvitationsView } from './ServerInvitationsView';
 import { PendingRequestsView } from './PendingRequestsView';
 
 // Where the header switches arrangement, measured on the page AREA (the space
@@ -21,7 +23,7 @@ function headerLayoutFor(width: number): FriendsHeaderLayout {
   return width >= ROW_MIN ? 'row' : 'select';
 }
 
-/** Friends, pending requests, group invitations and adding people — one page. The
+/** Friends, pending requests, server invitations and adding people — one page. The
  * view (`?tab=`) and the search (`?q=`) live in the URL. */
 export function FriendsPage({ onOpenProfile }: { onOpenProfile: (userId: string) => void }) {
   const { t } = useTranslation('friends');
@@ -31,6 +33,7 @@ export function FriendsPage({ onOpenProfile }: { onOpenProfile: (userId: string)
   const query = params.get('q') ?? '';
   const areaRef = useRef<HTMLDivElement | null>(null);
   const layout = headerLayoutFor(useElementWidth(areaRef));
+  const wide = useMediaQuery('(min-width: 1280px)');
 
   // an unknown (or redundant `all`) tab is normalised in place, never an empty page
   useEffect(() => {
@@ -58,14 +61,17 @@ export function FriendsPage({ onOpenProfile }: { onOpenProfile: (userId: string)
       />
       {layout === 'row' && <FriendsModeNav view={view} className="flex-none px-4 py-2 md:border-b md:border-border md:px-6" />}
       {layout === 'select' && <div className="flex-none px-4 py-2 md:border-b md:border-border"><FriendsModeSelect view={view} /></div>}
+      <div className="flex min-h-0 flex-1">
       <main aria-label={t('views.ariaLabel')} className="min-h-0 flex-1 overflow-y-auto px-4 py-4 md:px-6">
         {(view === 'all' || view === 'online') && (
           <FriendsList key={view} view={view} query={query} onQueryChange={setQuery} onOpenProfile={onOpenProfile} />
         )}
         {view === 'pending' && <PendingRequestsView query={query} onQueryChange={setQuery} onOpenProfile={onOpenProfile} />}
-        {view === 'invitations' && <GroupInvitationsView query={query} onQueryChange={setQuery} onOpenProfile={onOpenProfile} />}
+        {view === 'invitations' && <ServerInvitationsView query={query} onQueryChange={setQuery} onOpenProfile={onOpenProfile} />}
         {view === 'add' && <AddFriendView />}
       </main>
+      {wide && <ActiveNowPanel />}
+      </div>
     </div>
   );
 }

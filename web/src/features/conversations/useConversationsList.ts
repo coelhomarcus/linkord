@@ -1,5 +1,11 @@
 import { useCallback, useRef, useState } from 'react';
-import type { ClientMessage, Conversation, ServerMessage } from '@/shared/types/protocol';
+import type { ClientMessage, Conversation, DirectSummary, ServerMessage } from '@/shared/types/protocol';
+
+/** The server sends a DM without a title or server: fill them in, so a DM
+ * and a channel read the same everywhere. */
+export function toDirectConversation(summary: DirectSummary): Conversation {
+  return { ...summary, title: '', serverId: null };
+}
 
 /** Mirrors listForUser's own ORDER BY (server/src/modules/conversations.ts)
  * — pinned first (most recently pinned first among those), then everyone
@@ -16,7 +22,7 @@ function sortConversations(list: Conversation[]): Conversation[] {
   ));
 }
 
-/** The conversation list/sidebar + which one is currently open. Message
+/** The DM list + which conversation (DM or channel) is currently open. Message
  * content itself (messagesByConversation, unread counts, reply/edit draft
  * state) lives in useChatMessages — this hook only owns the list of
  * conversations and the "which one is active" cursor.
@@ -33,9 +39,10 @@ export function useConversationsList(sendWs: (msg: ClientMessage) => void) {
   const [activeConversationId, setActiveConversationIdState] = useState<string | null>(null);
   const activeConversationIdRef = useRef<string | null>(null);
 
-  const setInitial = useCallback((initial: Conversation[]) => {
-    setConversations(initial);
-    conversationsRef.current = initial;
+  const setInitial = useCallback((initial: DirectSummary[]) => {
+    const list = initial.map(toDirectConversation);
+    setConversations(list);
+    conversationsRef.current = list;
   }, []);
 
   const setActiveConversation = useCallback((conversationId: string) => {
@@ -71,19 +78,13 @@ export function useConversationsList(sendWs: (msg: ClientMessage) => void) {
     sendWs({ t: 'conversation-pin', conversationId, pinned });
   }, [sendWs]);
 
-  const deleteGroup = useCallback((conversationId: string) => sendWs({ t: 'group-delete', conversationId }), [sendWs]);
-  const updateGroupTitle = useCallback((conversationId: string, title: string) => sendWs({ t: 'group-update', conversationId, title }), [sendWs]);
-  const updateGroupAvatar = useCallback((conversationId: string, avatar: string) => sendWs({ t: 'group-update', conversationId, avatar }), [sendWs]);
-  const removeGroupMember = useCallback((conversationId: string, userId: string) => sendWs({ t: 'group-members-remove', conversationId, userId }), [sendWs]);
-  const transferGroupOwnership = useCallback((conversationId: string, userId: string) => sendWs({ t: 'group-transfer-owner', conversationId, userId }), [sendWs]);
-
-  /** A conversation now belongs on this client's sidebar for the first
-   * time (new group, or just added to an existing one) — upsert by id
-   * (same merge onConversationOpened does), but never switches the active
+  /** A DM now belongs on this client's list for the first time — upsert by
+   * id (same merge onConversationOpened does), but never switches the active
    * conversation; that's what 'conversation-opened' is for. */
   const onConversationCreated = useCallback((m: Extract<ServerMessage, { t: 'conversation-created' }>) => {
-    const idx = conversationsRef.current.findIndex((c) => c.id === m.conversation.id);
-    const base = idx === -1 ? [m.conversation, ...conversationsRef.current] : conversationsRef.current.map((c) => (c.id === m.conversation.id ? m.conversation : c));
+    const conversation = toDirectConversation(m.conversation);
+    const idx = conversationsRef.current.findIndex((c) => c.id === conversation.id);
+    const base = idx === -1 ? [conversation, ...conversationsRef.current] : conversationsRef.current.map((c) => (c.id === conversation.id ? conversation : c));
     const next = sortConversations(base);
     conversationsRef.current = next;
     setConversations(next);
@@ -97,29 +98,14 @@ export function useConversationsList(sendWs: (msg: ClientMessage) => void) {
    * the first message is what surfaces it — see touchConversation), and how a
    * DM the user closed comes back when a newer message arrives. */
   const onConversationUpdated = useCallback((m: Extract<ServerMessage, { t: 'conversation-updated' }>) => {
-    const known = conversationsRef.current.some((c) => c.id === m.conversation.id);
+    const conversation = toDirectConversation(m.conversation);
+    const known = conversationsRef.current.some((c) => c.id === conversation.id);
     const base = known
-      ? conversationsRef.current.map((c) => (c.id === m.conversation.id ? m.conversation : c))
-      : [m.conversation, ...conversationsRef.current];
+      ? conversationsRef.current.map((c) => (c.id === conversation.id ? conversation : c))
+      : [conversation, ...conversationsRef.current];
     const next = sortConversations(base);
     conversationsRef.current = next;
     setConversations(next);
-  }, []);
-
-  const onConversationMemberAdded = useCallback((m: Extract<ServerMessage, { t: 'conversation-member-added' }>) => {
-    setConversations((prev) => {
-      const next = prev.map((c) => (c.id === m.conversationId && !c.memberIds.includes(m.userId) ? { ...c, memberIds: [...c.memberIds, m.userId] } : c));
-      conversationsRef.current = next;
-      return next;
-    });
-  }, []);
-
-  const onConversationMemberRemoved = useCallback((m: Extract<ServerMessage, { t: 'conversation-member-removed' }>) => {
-    setConversations((prev) => {
-      const next = prev.map((c) => (c.id === m.conversationId ? { ...c, memberIds: c.memberIds.filter((id) => id !== m.userId) } : c));
-      conversationsRef.current = next;
-      return next;
-    });
   }, []);
 
   /** Syncs pin state pushed from ANOTHER of this user's own sessions/tabs —
@@ -143,13 +129,13 @@ export function useConversationsList(sendWs: (msg: ClientMessage) => void) {
     // session; it becomes "real" history for everyone once a message
     // is actually sent (touchConversation broadcasts the list then).
     // Re-sorted like every other list-changing handler here — this is also
-    // what fires for a brand-new DM/group (handleDirectOpen/handleGroupCreate
-    // on the server both send it), so skipping the sort used to let it land
-    // above a pinned conversation instead of respecting pinnedAt.
-    const idx = conversationsRef.current.findIndex((c) => c.id === m.conversation.id);
+    // what fires for a brand-new DM, so skipping the sort used to let it
+    // land above a pinned conversation instead of respecting pinnedAt.
+    const conversation = toDirectConversation(m.conversation);
+    const idx = conversationsRef.current.findIndex((c) => c.id === conversation.id);
     const base = idx === -1
-      ? [m.conversation, ...conversationsRef.current]
-      : conversationsRef.current.map((c) => (c.id === m.conversation.id ? m.conversation : c));
+      ? [conversation, ...conversationsRef.current]
+      : conversationsRef.current.map((c) => (c.id === conversation.id ? conversation : c));
     const nextConversations = sortConversations(base);
     conversationsRef.current = nextConversations;
     setConversations(nextConversations);
@@ -170,8 +156,7 @@ export function useConversationsList(sendWs: (msg: ClientMessage) => void) {
     conversations, conversationsRef, activeConversationId, activeConversationIdRef,
     setInitial, setActiveConversation, clearActiveConversation, removeConversation,
     openDirect, pinConversation,
-    deleteGroup, updateGroupTitle, updateGroupAvatar, removeGroupMember, transferGroupOwnership,
-    onConversationCreated, onConversationUpdated, onConversationMemberAdded, onConversationMemberRemoved,
+    onConversationCreated, onConversationUpdated,
     onConversationPinned, onConversationOpened, onConversationDeleted,
   };
 }

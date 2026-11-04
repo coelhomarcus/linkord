@@ -1,6 +1,6 @@
 {
   "panel": {
-    "description": "Sons que qualquer pessoa do grupo pode tocar durante as chamadas.",
+    "description": "Sons que qualquer pessoa do servidor pode tocar durante as chamadas.",
     "upload": "Enviar som",
     "slots_zero": "Nenhum espaço livre de {{max}}",
     "slots_one": "{{count}} espaço livre de {{max}}",
@@ -21,7 +21,7 @@
     "deleteFailed": "Não foi possível remover o som.",
     "deleteConfirm": {
       "title": "Remover som",
-      "description": "\"{{name}}\" vai sair dos sons do grupo para todo mundo.",
+      "description": "\"{{name}}\" vai sair dos sons do servidor para todo mundo.",
       "confirm": "Remover"
     }
   },
@@ -60,8 +60,8 @@
   "picker": {
     "open": "Efeitos sonoros",
     "search": "Encontre o som perfeito",
-    "empty": "Este grupo ainda não tem sons.",
-    "emptyHint": "Envie sons na aba Sons dos detalhes do grupo.",
+    "empty": "Este servidor ainda não tem sons.",
+    "emptyHint": "Envie sons na aba Soundboard das configurações do servidor.",
     "noResults": "Nenhum som encontrado.",
     "loading": "Carregando sons…",
     "loadFailed": "Não foi possível carregar os sons.",
@@ -71,6 +71,6 @@
   "errors": {
     "invalid_sound": "Não foi possível ler esse áudio.",
     "sound_too_long": "O som pode ter no máximo 5 segundos.",
-    "soundboard_full": "O grupo já usou todos os espaços de som."
+    "soundboard_full": "O servidor já usou todos os espaços de som."
   }
 }

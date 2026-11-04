@@ -27,7 +27,6 @@ export const ERROR_REGISTRY = {
   invalid_target: { statuses: [400], channel: 'http' },
   invalid_index: { statuses: [400], channel: 'http' },
   invalid_log: { statuses: [400], channel: 'http' },
-  invalid_title: { statuses: [400], channel: 'http' },
   invalid_size: { statuses: [400], channel: 'http' },
   invalid_type: { statuses: [400], channel: 'http' },
   invalid_url: { statuses: [400], channel: 'http' },
@@ -39,7 +38,7 @@ export const ERROR_REGISTRY = {
   relationship_required: { statuses: [403], channel: 'both' },
   cooldown: { statuses: [409], channel: 'http' },
   // 400: the account's storage quota (upload init); 409: a count quota that needs
-  // another action first (friends, pending requests, groups)
+  // another action first (friends, pending requests, servers)
   quota_exceeded: { statuses: [400, 409], channel: 'both' },
   storage_full: { statuses: [400], channel: 'http' },
 
@@ -64,9 +63,16 @@ export const ERROR_REGISTRY = {
   password_mismatch: { statuses: [400], channel: 'http' },
   forbidden_origin: { statuses: [403], channel: 'both' },
 
-  // groups and invitations
-  group_full: { statuses: [409], channel: 'http' },
+  // servers, channels, roles and invitations
+  server_full: { statuses: [409], channel: 'http' },
+  banned: { statuses: [403], channel: 'http' },
   too_many_invitees: { statuses: [400], channel: 'http' },
+  invalid_name: { statuses: [400], channel: 'http' },
+  invalid_invite: { statuses: [404], channel: 'http' },
+  // the owner can't leave a server that still has other members
+  owner_must_transfer: { statuses: [409], channel: 'http' },
+  // above the actor in the role hierarchy, or a permission they don't hold themselves
+  hierarchy: { statuses: [403], channel: 'http' },
 
   // conversations, messages, attachments
   conversation_not_found: { statuses: [404], channel: 'both' },
@@ -79,7 +85,7 @@ export const ERROR_REGISTRY = {
   crop_failed: { statuses: [400], channel: 'http' },
   invalid_report: { statuses: [400], channel: 'http' },
 
-  // group soundboard
+  // server soundboard
   invalid_sound: { statuses: [400], channel: 'http' },
   sound_too_long: { statuses: [400], channel: 'http' },
   soundboard_full: { statuses: [409], channel: 'http' },

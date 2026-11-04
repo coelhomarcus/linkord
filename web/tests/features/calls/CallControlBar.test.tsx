@@ -44,11 +44,11 @@ describe('CallControlBar', () => {
   });
 
   it('offers the soundboard in a group call only', () => {
-    const conversation = (type: 'group' | 'direct') => ({
-      id: 'c1', type, title: '', avatar: '', createdBy: null, memberIds: [], lastMessageAt: null,
-      createdAt: 0, updatedAt: 0, pinnedAt: null, myRole: 'member' as const, ownerId: null, memberCount: 2,
+    const conversation = (type: 'voice' | 'direct') => ({
+      id: 'c1', type, title: '', serverId: type === 'voice' ? 's1' : null, memberIds: [], lastMessageAt: null,
+      createdAt: 0, updatedAt: 0, pinnedAt: null,
     });
-    const { unmount } = renderWithRoom(<CallControlBar />, { activeCallConversationId: 'c1', conversations: [conversation('group')] });
+    const { unmount } = renderWithRoom(<CallControlBar />, { activeCallConversationId: 'c1', conversations: [conversation('voice')] });
     expect(screen.getByLabelText('Efeitos sonoros')).toBeInTheDocument();
     unmount();
     renderWithRoom(<CallControlBar />, { activeCallConversationId: 'c1', conversations: [conversation('direct')] });

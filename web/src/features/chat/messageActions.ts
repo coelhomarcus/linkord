@@ -1,4 +1,5 @@
 import type { ChatMessage, Conversation } from '@/shared/types/protocol';
+import { hasPermission, PERMISSIONS } from '@/features/servers/permissionBits';
 
 export interface MessagePermissions {
   react: boolean;
@@ -19,18 +20,19 @@ export interface MessagePermissions {
 export function messagePermissions(
   message: ChatMessage,
   me: { userId: string | null; role: string },
-  conversation?: Pick<Conversation, 'type' | 'myRole'> | null,
+  conversation?: Pick<Conversation, 'type' | 'permissions'> | null,
 ): MessagePermissions {
-  const isInvite = message.kind === 'group_invite' || message.kind === 'call_invite';
+  const isInvite = message.kind === 'server_invite' || message.kind === 'call_invite';
   const isMine = !!me.userId && message.id === me.userId;
-  // a bot takes no replies (nobody writes in it), and whoever owns it tidies it up
-  const inBot = conversation?.type === 'bot';
+  // in a channel the server's roles decide; a DM leaves the friendship gate to the server
+  const channel = conversation?.permissions;
+  const may = (bit: number) => channel === undefined || hasPermission(channel, bit);
   return {
-    react: !isInvite,
-    reply: !isInvite && !inBot,
+    react: !isInvite && may(PERMISSIONS.ADD_REACTIONS),
+    reply: !isInvite && may(PERMISSIONS.SEND_MESSAGES),
     copy: !!message.text,
     edit: isMine && !isInvite,
-    delete: isMine || me.role === 'admin' || (inBot && conversation?.myRole === 'owner'),
+    delete: isMine || me.role === 'admin' || (channel !== undefined && hasPermission(channel, PERMISSIONS.MANAGE_MESSAGES)),
     report: !isMine && !isInvite && !!message.id,
     // taking the only thing a message has is deleting it; an admin may take
     // anyone's attachment out

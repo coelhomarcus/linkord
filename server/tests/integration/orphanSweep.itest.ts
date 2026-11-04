@@ -6,7 +6,7 @@ import { after, afterEach, describe, it } from 'node:test';
 import { attachments, messages, stagedAttachments } from '../../src/db/schema.js';
 import { newId } from '../../src/modules/attachments/attachmentStorage.js';
 import { sweepOrphans } from '../../src/modules/attachments/orphanSweeper.js';
-import { db, makeGroupWithMembers, makeUser, pool } from './helpers.js';
+import { db, makeServerWithMembers, makeUser, pool } from './helpers.js';
 
 after(async () => {
   await pool.end();
@@ -32,7 +32,7 @@ afterEach(() => {
 describe('orphan sweep, end to end (real Postgres and disk)', () => {
   async function seedEverything() {
     const owner = await makeUser('sweep');
-    const conversationId = await makeGroupWithMembers(owner.id, []);
+    const conversationId = (await makeServerWithMembers(owner.id, [])).textChannelId;
     const ids = { published: newId(), publishedThumb: newId(), staged: newId(), stagedThumb: newId(), avatar: newId(), avatarPoster: newId(), orphan: newId(), recentOrphan: newId() };
 
     const [message] = await db.insert(messages).values({ conversationId, authorId: owner.id, text: '' }).returning();

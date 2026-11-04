@@ -9,7 +9,7 @@ import { logger } from '../../lib/logger.js';
 const log = logger.child({ component: 'calls' });
 
 /** Cuts an account's live call access for one conversation after the
- * database already revoked it (removal, group deletion, block, unfriend,
+ * database already revoked it (removal, server deletion, block, unfriend,
  * account deletion): resets the socket-side call state of every connection
  * the account has in that call, then removes them from the SFU — the socket
  * state alone leaves the media connection open. Callers run it AFTER the

@@ -5,7 +5,7 @@
 <h1 align="center">Linkord</h1>
 
 <p align="center">
-  Self-hosted real-time communication: friends, groups and calls.
+  Self-hosted real-time communication: friends, servers and calls.
 </p>
 
 <p align="center">
@@ -16,13 +16,15 @@
 
 ## What it is
 
-Linkord is a self-hosted chat and calling platform, Discord-style, but organized around **friends and groups** rather than public servers and channels. Each account adds friends by exact `@username`, talks over DMs or creates its own groups (with invites and acceptance), and calls by voice, video or screen share inside those conversations.
+Linkord is a self-hosted chat and calling platform in the style of Discord. Each account adds friends by exact `@username`, talks to them in DMs, and joins or creates **servers**: private spaces with text and voice channels, roles and invites. There is no public server directory: you get into a server by an invitation from a friend or an invite link.
 
 - **Friends**: friend requests, accept/decline, blocking
-- **Conversations**: DMs and groups. Any account can create a group and owns it (rename, invite, remove members, transfer ownership)
+- **Servers**: created from a template (a `#geral` text channel and a "Geral" voice channel), with categories, text and voice channels, roles with permissions (per channel too, so channels can be private), invitations to friends and invite links, kicks and bans
+- **DMs**: one-to-one conversations and calls with friends
 - **Chat**: attachments (chunked uploads, up to 2GB), automatic embeds (YouTube/Twitch/direct media/Open Graph), reactions, replies, edit/delete messages, search
-- **Calls**: voice, camera and screen sharing per conversation (LiveKit)
-- **Administration** (`/admin`): users, groups, reports, audit log and orphaned file cleanup
+- **Calls**: voice, camera and screen sharing in voice channels and DMs (LiveKit), with a soundboard per server
+- **Webhooks**: outside systems post into a channel ([docs/WEBHOOK.md](docs/WEBHOOK.md))
+- **Administration** (`/admin`): users, servers, webhooks, reports, audit log and orphaned file cleanup
 - **Settings**: profile, account/security, audio/video devices, notifications, preferences, privacy (blocked users)
 
 ## Stack
@@ -101,6 +103,8 @@ npm run admin:grant -- <your-username>
 | `npm run db:generate` | Generates a new migration from `server/src/db/schema.ts` |
 | `npm run db:migrate` | Applies pending migrations |
 | `npm run admin:grant -- <username>` | Grants the admin role to an existing account |
+| `npm run db:preflight` / `db:repair` | Checks (and fixes) legacy data that would block a migration |
+| `npm run db:rehearse` | Rehearses every migration on throwaway databases |
 
 ## Tests
 
@@ -129,6 +133,85 @@ To run locally with Docker (app + Postgres, all in containers):
 cp .env.example .env
 docker compose -f docker-compose.dev.yml -f docker-compose.yml up -d
 ```
+
+### Migrating groups to servers
+
+Migrations `0043_servers_expand` and `0044_servers_contract` turn every group (and every bot) into a server. The server applies them by itself on boot (unless `MIGRATE_ON_BOOT=0`), behind the migration gate, so a deploy is the migration. This runbook is what to do **before** that deploy, so nothing is lost and nothing surprises you in production.
+
+#### What the migration does
+
+For each group or bot conversation:
+
+- A server is created with the group's name, avatar, owner, status and creation date. Every member becomes a server member, keeping when they joined; pinned groups come first in the server rail.
+- The group's own conversation row becomes the `#geral` text channel **with the same id**, under the category "Canais de texto". Messages, attachments, reactions, read markers, links and push URLs keep working.
+- A voice channel "Geral" is created under "Canais de voz". Call invitation cards now point to it.
+- Group invitations become server invitations, group sounds become server sounds, reports on a group now target its server.
+- A bot becomes a server whose `#geral` is read-only for `@everyone`. Its webhook keeps its URL and takes the bot's name and avatar.
+
+Ids of the new rows are derived from the group id (`md5('<kind>:' || group_id)`), so running the backfill twice produces the same result.
+
+#### 1. Back up production
+
+```bash
+pg_dump --format=custom --no-owner --file=linkord-before-servers.dump "$DATABASE_URL_PROD"
+```
+
+Keep the file until the new version has been running for a while. Restoring it is the way back: the migration has no down step.
+
+#### 2. Rehearse on a copy of that backup
+
+Restore the dump into a throwaway local database and point the scripts at it. Nothing here touches production.
+
+```bash
+createdb linkord_prodcopy
+pg_restore --no-owner --dbname=linkord_prodcopy linkord-before-servers.dump
+export COPY_URL=postgres://linkord:linkord@localhost:5432/linkord_prodcopy
+```
+
+Check whether anything would block the migration:
+
+```bash
+npm run db:preflight -- --database-url=$COPY_URL
+```
+
+The gate refuses 0043 while a group with members has no owner. If the preflight reports one, see what the repair would do, then apply it (one transaction, every change logged in `data_repairs`):
+
+```bash
+npm run db:repair -- --database-url=$COPY_URL
+npm run db:repair -- --database-url=$COPY_URL --apply
+```
+
+Record the counts before migrating:
+
+```sql
+select
+  (select count(*) from messages) as messages,
+  (select count(*) from attachments) as attachments,
+  (select count(*) from message_reactions) as reactions,
+  (select count(*) from conversations where type in ('group', 'bot')) as groups;
+```
+
+Migrate the copy:
+
+```bash
+DATABASE_URL=$COPY_URL npm run db:migrate
+```
+
+Then compare: `messages`, `attachments` and `reactions` must be unchanged, and `select count(*) from servers` must equal the old `groups` count. Run the app against the copy (`DATABASE_URL=$COPY_URL npm run dev`), open a few migrated servers and check history, attachments, unread counts and the soundboard.
+
+#### 3. Run the synthetic rehearsal
+
+```bash
+npm run db:rehearse
+```
+
+It builds its own `linkord_rehearsal_*` databases with messy legacy data (including a group with no owner and a bot) and checks that every group becomes exactly one server, that `#geral` keeps the old id, that counts survive, that the structure matches what creating a server from the template produces, that a second run of the backfill changes nothing, that a refused migration leaves nothing half-applied, and that a repair failing midway is undone. It never touches `DATABASE_URL` or production.
+
+#### 4. Deploy
+
+Once the copy migrated cleanly, run the production repair if the preflight asked for one (`npm run db:repair -- --database-url=$DATABASE_URL_PROD --apply`), then deploy. On boot the server applies 0043 and 0044; if the gate refuses, it logs why and exits without starting, and the database stays as it was.
+
+Clients on the previous version see the "update the app" screen (the protocol version went up) and reload into the new one.
 
 ## License
 

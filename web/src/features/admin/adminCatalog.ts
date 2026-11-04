@@ -1,10 +1,10 @@
-import { FlagIcon, HardDrivesIcon, RobotIcon, ScrollIcon, UsersIcon } from '@phosphor-icons/react';
+import { FlagIcon, HardDrivesIcon, ScrollIcon, SquaresFourIcon, UsersIcon, WebhooksLogoIcon } from '@phosphor-icons/react';
 
 import type { IconComponent } from '@/shared/ui/icons';
 
 export interface AdminSection {
   /** first path segment under /admin */
-  id: 'users' | 'groups' | 'bots' | 'reports' | 'audit' | 'system';
+  id: 'users' | 'servers' | 'webhooks' | 'reports' | 'audit' | 'system';
   labelKey: string;
   icon: IconComponent;
 }
@@ -21,8 +21,8 @@ export const ADMIN_GROUPS: AdminGroup[] = [
     labelKey: 'nav.management',
     sections: [
       { id: 'users', labelKey: 'nav.users', icon: UsersIcon },
-      { id: 'groups', labelKey: 'nav.groups', icon: UsersIcon },
-      { id: 'bots', labelKey: 'nav.bots', icon: RobotIcon },
+      { id: 'servers', labelKey: 'nav.servers', icon: SquaresFourIcon },
+      { id: 'webhooks', labelKey: 'nav.webhooks', icon: WebhooksLogoIcon },
     ],
   },
   {

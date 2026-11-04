@@ -9,7 +9,7 @@ export function roomNameFor(conversationId: string): string {
   return `${config.LIVEKIT_ROOM_NAME}-${conversationId}`;
 }
 
-/** Access token for ONE LiveKit room (one per call — group or 1:1, see
+/** Access token for ONE LiveKit room (one per call — voice channel or 1:1, see
  * realtime/socket.ts#handleCallJoin — `roomName` comes from
  * `${LIVEKIT_ROOM_NAME}-${conversationId}`), with the same identity (p.id/p.name)
  * the participant already has in Socket.IO — no separate id<->identity

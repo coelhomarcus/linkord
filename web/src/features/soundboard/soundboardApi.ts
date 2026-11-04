@@ -8,7 +8,7 @@ import { i18n } from '@/shared/i18n/init';
 export const MAX_SOUND_DURATION_MS = 5000;
 export const MAX_SOUND_NAME_LEN = 32;
 
-export interface GroupSound {
+export interface ServerSound {
   id: string;
   name: string;
   emoji: string;
@@ -24,20 +24,20 @@ export interface SoundDetails {
   volume: number;
 }
 
-const base = (conversationId: string) => `/api/groups/${encodeURIComponent(conversationId)}/sounds`;
+const base = (serverId: string) => `/api/servers/${encodeURIComponent(serverId)}/sounds`;
 
-export function soundFileUrl(conversationId: string, soundId: string): string {
-  return `${base(conversationId)}/${encodeURIComponent(soundId)}/file`;
+export function soundFileUrl(serverId: string, soundId: string): string {
+  return `${base(serverId)}/${encodeURIComponent(soundId)}/file`;
 }
 
-export function fetchGroupSounds(conversationId: string): Promise<{ sounds: GroupSound[]; maxSounds: number }> {
-  return apiFetch(base(conversationId));
+export function fetchServerSounds(serverId: string): Promise<{ sounds: ServerSound[]; maxSounds: number }> {
+  return apiFetch(base(serverId));
 }
 
-export async function uploadGroupSound(conversationId: string, wav: Blob, details: SoundDetails, onProgress?: (fraction: number) => void): Promise<GroupSound> {
+export async function uploadServerSound(serverId: string, wav: Blob, details: SoundDetails, onProgress?: (fraction: number) => void): Promise<ServerSound> {
   const query = new URLSearchParams({ name: details.name, emoji: details.emoji, volume: String(details.volume) });
-  const { sound } = await uploadWithProgress<{ sound: GroupSound }>({
-    url: `${base(conversationId)}?${query}`,
+  const { sound } = await uploadWithProgress<{ sound: ServerSound }>({
+    url: `${base(serverId)}?${query}`,
     file: wav,
     headers: { 'Content-Type': 'audio/wav' },
     onProgress,
@@ -45,16 +45,16 @@ export async function uploadGroupSound(conversationId: string, wav: Blob, detail
   return sound;
 }
 
-export async function updateGroupSound(conversationId: string, soundId: string, details: SoundDetails): Promise<GroupSound> {
-  const { sound } = await apiFetch<{ sound: GroupSound }>(`${base(conversationId)}/${encodeURIComponent(soundId)}`, {
+export async function updateServerSound(serverId: string, soundId: string, details: SoundDetails): Promise<ServerSound> {
+  const { sound } = await apiFetch<{ sound: ServerSound }>(`${base(serverId)}/${encodeURIComponent(soundId)}`, {
     method: 'PATCH',
     body: JSON.stringify(details),
   });
   return sound;
 }
 
-export function deleteGroupSound(conversationId: string, soundId: string): Promise<void> {
-  return apiFetch(`${base(conversationId)}/${encodeURIComponent(soundId)}`, { method: 'DELETE' });
+export function deleteServerSound(serverId: string, soundId: string): Promise<void> {
+  return apiFetch(`${base(serverId)}/${encodeURIComponent(soundId)}`, { method: 'DELETE' });
 }
 
 const SOUNDBOARD_ERROR_CODES = new Set(['invalid_sound', 'sound_too_long', 'soundboard_full']);

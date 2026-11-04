@@ -4,6 +4,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { config } from '../../config/env.js';
 import { db } from '../../db/client.js';
 import { messages, conversations, conversationMembers, users, attachments as attachmentsTable } from '../../db/schema.js';
+import { getConversationForUser, visibleConversationIds } from '../conversations/conversationsRepository.js';
 import { sendJson, sendError } from '../../http/respond.js';
 import { parseCookies } from '../../http/cookies.js';
 import { resolveSession } from '../auth/session.js';
@@ -16,8 +17,8 @@ import { escapeLike } from '../friendships/cursor.js';
 // per ?kind (see MEDIA_KINDS), each cursor-paginated (?before=<msgId>,
 // exclusive) instead of offset — a cursor can't skip or repeat an item if a
 // new message arrives between two "load more" clicks. An optional
-// ?conversationId narrows to a single DM/group; omitted, it aggregates
-// across every conversation the user is in (same shape, just unfiltered).
+// ?conversationId narrows to a single DM/channel; omitted, it aggregates
+// across every conversation the user can read (same shape, just unfiltered).
 //
 // The upload kinds (uploads, images, videos, audios, documents) are one exact
 // query each (the attachments innerJoin already filters to
@@ -30,9 +31,9 @@ import { escapeLike } from '../friendships/cursor.js';
 // the SQL filter (~* 'https?://') only narrows candidates; fetchEmbedsPage
 // scans in batches until it collects `limit` real embeds or the table runs out.
 //
-// Both queries innerJoin conversationMembers on the REQUESTING user — this
-// is the privacy boundary: without it, someone's Media tab would surface
-// every other user's DMs/groups too, not just their own.
+// Both queries are scoped to the conversations the REQUESTING user can read
+// (fetchMediaPage works them out) — this is the privacy boundary: without
+// it, someone's Media tab would surface everyone else's DMs and channels too.
 
 const DEFAULT_LIMIT = 24;
 const MAX_LIMIT = 60;
@@ -116,8 +117,7 @@ interface EmbedItem extends MediaBase {
 }
 
 function conversationNameFor(row: MediaBaseRow): string {
-  if (row.conversationType === 'group') return row.conversationTitle || 'Grupo';
-  if (row.conversationType === 'bot') return row.conversationTitle || 'Bot';
+  if (row.conversationType !== 'direct') return `#${row.conversationTitle}`;
   return row.otherUsername ? resolveDisplayName(row.otherDisplayName ?? '', row.otherUsername) : 'Conversa direta';
 }
 
@@ -136,7 +136,7 @@ function toMediaBase(row: MediaBaseRow): MediaBase {
   };
 }
 
-async function fetchUploadsPage(kind: UploadKind, viewerId: string, before: number | null, limit: number, conversationId: string | null, q: string | null): Promise<MediaPage<UploadItem>> {
+async function fetchUploadsPage(kind: UploadKind, viewerId: string, before: number | null, limit: number, scope: string[], q: string | null): Promise<MediaPage<UploadItem>> {
   const pattern = likePattern(q);
   const rows = await db
     .select({
@@ -166,11 +166,6 @@ async function fetchUploadsPage(kind: UploadKind, viewerId: string, before: numb
     // filters to message-with-attachment — avatars (message_id NULL) never
     // match, no extra filter needed.
     .innerJoin(attachmentsTable, eq(attachmentsTable.messageId, messages.id))
-    // innerJoin on the REQUESTING user is the privacy boundary — it stays
-    // even when conversationId narrows the scope, so passing someone else's
-    // conversationId (one the viewer isn't a member of) yields zero rows
-    // instead of leaking that conversation's media.
-    .innerJoin(conversationMembers, and(eq(conversationMembers.conversationId, messages.conversationId), eq(conversationMembers.userId, viewerId)))
     .innerJoin(conversations, eq(conversations.id, messages.conversationId))
     .leftJoin(otherMembers, and(
       eq(otherMembers.conversationId, messages.conversationId),
@@ -181,7 +176,7 @@ async function fetchUploadsPage(kind: UploadKind, viewerId: string, before: numb
     .leftJoin(users, eq(users.id, messages.authorId))
     .where(and(
       lt(messages.id, before ?? PG_INT4_MAX),
-      conversationId ? eq(messages.conversationId, conversationId) : undefined,
+      inArray(messages.conversationId, scope),
       // thumbnail rows share their parent's messageId on purpose (see
       // schema.ts) — without this they'd show up as a second, duplicate item.
       eq(attachmentsTable.isThumbnail, false),
@@ -205,7 +200,7 @@ async function fetchUploadsPage(kind: UploadKind, viewerId: string, before: numb
 
 /** links: messages with an embeddable link, GIF messages left out (they have
  * their own list). gifs: the messages that are only a GIF URL. */
-async function fetchEmbedsPage(mode: 'links' | 'gifs', viewerId: string, before: number | null, limit: number, conversationId: string | null, q: string | null): Promise<MediaPage<EmbedItem>> {
+async function fetchEmbedsPage(mode: 'links' | 'gifs', viewerId: string, before: number | null, limit: number, scope: string[], q: string | null): Promise<MediaPage<EmbedItem>> {
   const pattern = likePattern(q);
   const items: EmbedItem[] = [];
   let cursor = before ?? null;
@@ -230,7 +225,6 @@ async function fetchEmbedsPage(mode: 'links' | 'gifs', viewerId: string, before:
         text: messages.text,
       })
       .from(messages)
-      .innerJoin(conversationMembers, and(eq(conversationMembers.conversationId, messages.conversationId), eq(conversationMembers.userId, viewerId)))
       .innerJoin(conversations, eq(conversations.id, messages.conversationId))
       .leftJoin(otherMembers, and(
         eq(otherMembers.conversationId, messages.conversationId),
@@ -245,7 +239,7 @@ async function fetchEmbedsPage(mode: 'links' | 'gifs', viewerId: string, before:
           ? sql`${messages.text} ~* ${GIF_TEXT_RE}`
           : and(sql`${messages.text} ~* ${'https?://'}`, sql`${messages.text} !~* ${GIF_TEXT_RE}`),
         pattern ? ilike(messages.text, pattern) : undefined,
-        conversationId ? eq(messages.conversationId, conversationId) : undefined,
+        inArray(messages.conversationId, scope),
       ))
       .orderBy(desc(messages.id))
       .limit(EMBED_BATCH_SIZE);
@@ -277,10 +271,16 @@ async function fetchEmbedsPage(mode: 'links' | 'gifs', viewerId: string, before:
   return { items, nextBefore: exhausted ? null : cursor };
 }
 
-export function fetchMediaPage(kind: MediaKind, viewerId: string, before: number | null, limit: number, conversationId: string | null, q: string | null): Promise<MediaPage<UploadItem> | MediaPage<EmbedItem>> {
-  if (kind === 'embeds') return fetchEmbedsPage('links', viewerId, before, limit, conversationId, q);
-  if (kind === 'gifs') return fetchEmbedsPage('gifs', viewerId, before, limit, conversationId, q);
-  return fetchUploadsPage(kind, viewerId, before, limit, conversationId, q);
+export async function fetchMediaPage(kind: MediaKind, viewerId: string, before: number | null, limit: number, conversationId: string | null, q: string | null): Promise<MediaPage<UploadItem> | MediaPage<EmbedItem>> {
+  // someone else's conversationId (one the viewer can't read) yields an
+  // empty page instead of that conversation's media
+  const scope = conversationId
+    ? (await getConversationForUser(conversationId, viewerId)) ? [conversationId] : []
+    : await visibleConversationIds(viewerId);
+  if (!scope.length) return { items: [], nextBefore: null };
+  if (kind === 'embeds') return fetchEmbedsPage('links', viewerId, before, limit, scope, q);
+  if (kind === 'gifs') return fetchEmbedsPage('gifs', viewerId, before, limit, scope, q);
+  return fetchUploadsPage(kind, viewerId, before, limit, scope, q);
 }
 
 async function handleMedia(request: FastifyRequest, reply: FastifyReply): Promise<void> {

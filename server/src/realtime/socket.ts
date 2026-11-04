@@ -11,7 +11,9 @@ import * as soundboard from '../modules/soundboard/soundboard.js';
 import * as floodControl from './floodControl.js';
 import * as chat from '../modules/messages/messages.js';
 import * as conversations from '../modules/conversations/conversations.js';
-import { acceptsHumanMessages, listForUser, getConversationForUser, getDirectPeerId, unreadCountsForUser } from '../modules/conversations/conversationsRepository.js';
+import { listForUser, getConversationForUser, getDirectPeerId, unreadCountsForUser } from '../modules/conversations/conversationsRepository.js';
+import { listServersForUser } from '../modules/servers/serverSummaries.js';
+import { PERMISSIONS } from '../modules/servers/permissions.js';
 import { canSendDirectMessage } from '../modules/friendships/friendshipsRepository.js';
 import { ERROR_CODES, type ErrorCode } from '../http/errors.js';
 import { getUserUsage } from '../modules/attachments/attachmentQuota.js';
@@ -89,8 +91,9 @@ async function handleJoin(socket: AppSocket, msg: JoinMessage): Promise<void> {
   await applyPeerVisibility(p);
   // LiveKit token is NOT minted here anymore — just having the tab open/
   // logged in shouldn't open a real call session. That now only happens
-  // in handleCallJoin, when someone joins a group call.
-  const conversationList = await listForUser(p.userId);
+  // in handleCallJoin, when someone joins a voice channel or a DM call.
+  const [conversationList, serverList] = await Promise.all([listForUser(p.userId), listServersForUser(p.userId)]);
+  const textChannelIds = serverList.flatMap((server) => server.channels.filter((c) => c.type === 'text').map((c) => c.id));
   send(socket, {
     t: 'welcome',
     id: p.id,
@@ -112,7 +115,8 @@ async function handleJoin(socket: AppSocket, msg: JoinMessage): Promise<void> {
     // re-sent as `presence-sync` when that set changes mid-connection.
     ...(await buildPresenceSnapshot(p)),
     conversations: conversationList,
-    unreadByConversation: await unreadCountsForUser(p.userId, conversationList.map((c) => c.id)),
+    servers: serverList,
+    unreadByConversation: await unreadCountsForUser(p.userId, [...conversationList.map((c) => c.id), ...textChannelIds]),
     storageUsage: await getUserUsage(p.userId),
     livekitUrl: config.LIVEKIT_URL,
     // lets a newer client use what this server supports (3: correlated,
@@ -124,27 +128,26 @@ async function handleJoin(socket: AppSocket, msg: JoinMessage): Promise<void> {
   log.info('joined', { participantId: p.id, username: p.name, ip: socket.ip });
 }
 
-/** Actually joins a call (group or 1:1 direct): mints a LiveKit token for
- * that conversation's room (`${LIVEKIT_ROOM_NAME}-${conversationId}`) and
- * sets `p.callConversationId`. Rejected if the caller isn't a member of
- * that conversation at all. */
-async function handleCallJoin(socket: AppSocket, msg: { conversationId?: string }): Promise<void> {
+/** Actually joins a call — a server's voice channel or a DM: mints a
+ * LiveKit token for that conversation's room (roomNameFor) and sets
+ * `p.callConversationId`. A voice channel takes CONNECT there. */
+export async function handleCallJoin(socket: AppSocket, msg: { conversationId?: string }): Promise<void> {
   const p = participantsMap.get(socket.participantId ?? '');
   if (!p || p.socket !== socket) return;
   const conversationId = String(msg.conversationId || '');
   if (!conversationId) return;
-  const conversation = await getConversationForUser(conversationId, p.userId);
+  const conversation = await getConversationForUser(conversationId, p.userId, PERMISSIONS.CONNECT);
   if (!conversation) {
     sendSocketError(socket, 'call-not-allowed', 'Você não tem acesso a essa conversa.');
     return;
   }
-  if (!acceptsHumanMessages(conversation)) {
-    sendSocketError(socket, 'call-not-allowed', 'Não há chamadas em bots.');
+  if (conversation.type === 'text') {
+    sendSocketError(socket, 'call-not-allowed', 'Chamadas acontecem nos canais de voz.');
     return;
   }
   // §4.3: "iniciar chamada privada" is explicitly in the restricted-contact
   // list — a private call token is just another way to reach someone who
-  // isn't (or is no longer) a friend. No-ops for groups (getDirectPeerId
+  // isn't (or is no longer) a friend. No-ops for channels (getDirectPeerId
   // returns null there).
   const peerId = await getDirectPeerId(conversationId, p.userId);
   if (peerId && !(await canSendDirectMessage(p.userId, peerId))) {
@@ -153,7 +156,7 @@ async function handleCallJoin(socket: AppSocket, msg: { conversationId?: string 
   }
   let livekitToken: string;
   try {
-    livekitToken = await livekit.createToken(p, `${config.LIVEKIT_ROOM_NAME}-${conversationId}`);
+    livekitToken = await livekit.createToken(p, livekit.roomNameFor(conversationId));
   } catch (err) {
     log.warn('failed to generate LiveKit token', { participantId: p.id, err: err instanceof Error ? err.message : String(err) });
     sendSocketError(socket, 'livekit-unavailable', 'Vídeo/voz indisponível no momento.');

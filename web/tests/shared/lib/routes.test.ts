@@ -1,36 +1,50 @@
 import { describe, expect, it } from 'vitest';
 import {
-  ROUTES, callConversationIdFromPath, conversationIdFromPath, friendsSection, friendsView, isAwaitingOpen, isConversationsPath, isSettingsTab, modalForPath, parseFriendsView,
+  ROUTES, callConversationIdFromPath, conversationIdFromPath, conversationPath, friendsSection, friendsView, inviteCodeFromPath, isAwaitingOpen, isHomePath, isSettingsTab, modalForPath, parseFriendsView, serverIdFromPath,
 } from '@/shared/lib/routes';
 
 describe('conversationIdFromPath', () => {
-  it('extracts the id from a conversation link', () => {
-    expect(conversationIdFromPath('/app/conversations/abc-123')).toBe('abc-123');
-    expect(conversationIdFromPath('/app/conversations/abc-123/')).toBe('abc-123');
+  it('extracts the conversation from a DM or a channel link', () => {
+    expect(conversationIdFromPath('/app/channels/@me/abc-123')).toBe('abc-123');
+    expect(conversationIdFromPath('/app/channels/srv/chan/')).toBe('chan');
   });
 
   it('decodes a percent-encoded id', () => {
-    expect(conversationIdFromPath(`/app/conversations/${encodeURIComponent('a b/c')}`)).toBe('a b/c');
+    expect(conversationIdFromPath(`/app/channels/@me/${encodeURIComponent('a b/c')}`)).toBe('a b/c');
   });
 
-  it('is null for the route without an id and for any other page', () => {
-    expect(conversationIdFromPath('/app/conversations')).toBeNull();
+  it('is null for home, a bare server and any other page', () => {
+    expect(conversationIdFromPath('/app/channels/@me')).toBeNull();
+    expect(conversationIdFromPath('/app/channels/srv')).toBeNull();
     expect(conversationIdFromPath('/app/friends')).toBeNull();
-    expect(conversationIdFromPath('/app/conversations/a/extra')).toBeNull();
+    expect(conversationIdFromPath('/app/channels/a/b/extra')).toBeNull();
   });
 
   it('broken percent-encoding does not throw', () => {
-    expect(conversationIdFromPath('/app/conversations/%E0%A4%A')).toBeNull();
+    expect(conversationIdFromPath('/app/channels/@me/%E0%A4%A')).toBeNull();
   });
 });
 
-describe('isConversationsPath', () => {
-  it('covers the list and the conversation, and nothing beyond that', () => {
-    expect(isConversationsPath('/app/conversations')).toBe(true);
-    expect(isConversationsPath('/app/conversations/x')).toBe(true);
-    expect(isConversationsPath('/app/conversationsX')).toBe(false);
-    expect(isConversationsPath('/app/friends')).toBe(false);
-    expect(isConversationsPath('/app/settings/profile')).toBe(false);
+describe('serverIdFromPath and isHomePath', () => {
+  it('names the server, never home', () => {
+    expect(serverIdFromPath('/app/channels/srv')).toBe('srv');
+    expect(serverIdFromPath('/app/channels/srv/chan')).toBe('srv');
+    expect(serverIdFromPath('/app/channels/@me/dm')).toBeNull();
+    expect(serverIdFromPath('/app/friends')).toBeNull();
+  });
+
+  it('home is the DMs and the friends page', () => {
+    expect(isHomePath('/app/channels/@me')).toBe(true);
+    expect(isHomePath('/app/channels/@me/dm')).toBe(true);
+    expect(isHomePath('/app/friends')).toBe(true);
+    expect(isHomePath('/app/channels/srv/chan')).toBe(false);
+  });
+});
+
+describe('inviteCodeFromPath', () => {
+  it('reads the code of an invite link', () => {
+    expect(inviteCodeFromPath('/invite/hTKzmak')).toBe('hTKzmak');
+    expect(inviteCodeFromPath('/invite')).toBeNull();
   });
 });
 
@@ -45,7 +59,8 @@ describe('isSettingsTab', () => {
 
 describe('conversation and call URLs', () => {
   it('encodes ids in both paths and decodes call ids', () => {
-    expect(ROUTES.conversation('a b/c')).toBe('/app/conversations/a%20b%2Fc');
+    expect(conversationPath({ id: 'a b/c', serverId: null })).toBe('/app/channels/@me/a%20b%2Fc');
+    expect(conversationPath({ id: 'c', serverId: 's' })).toBe('/app/channels/s/c');
     expect(ROUTES.call('a b/c')).toBe('/app/calls/a%20b%2Fc');
     expect(callConversationIdFromPath(ROUTES.call('a b/c'))).toBe('a b/c');
     expect(callConversationIdFromPath(ROUTES.friends)).toBeNull();

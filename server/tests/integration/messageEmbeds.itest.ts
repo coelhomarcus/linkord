@@ -7,7 +7,7 @@ import sharp from 'sharp';
 import { messages } from '../../src/db/schema.js';
 import { backfillEmbeds, unfurlMessage } from '../../src/modules/messages/messageEmbeds.js';
 import { handlers as chatHandlers } from '../../src/modules/messages/messages.js';
-import { cleanupParticipant, db, joinNew, makeGroupWithMembers, makeUser, pool } from './helpers.js';
+import { cleanupParticipant, db, joinNew, makeServerWithMembers, makeUser, pool } from './helpers.js';
 
 // the real lookup refuses loopback (SSRF guard); only these tests reach the local page server
 const allowLoopback: LookupFunction = (_host, options, callback) => {
@@ -34,7 +34,7 @@ after(async () => { server.close(); server.closeAllConnections(); await pool.end
 
 async function seed(text: string) {
   const owner = await makeUser('emb');
-  const conversationId = await makeGroupWithMembers(owner.id, []);
+  const conversationId = (await makeServerWithMembers(owner.id, [])).textChannelId;
   const [row] = await db.insert(messages).values({ conversationId, authorId: owner.id, text }).returning();
   return { owner, conversationId, row: row! };
 }

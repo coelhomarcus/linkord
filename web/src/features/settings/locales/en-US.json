@@ -131,7 +131,7 @@
     },
     "adminArea": {
       "title": "Admin area",
-      "keywords": "admin, report, audit, users, groups"
+      "keywords": "admin, report, audit, users, servers"
     }
   },
   "account": {
@@ -196,7 +196,7 @@
     "unblock": "Unblock"
   },
   "adminLink": {
-    "label": "Users, groups, reports and audit",
+    "label": "Users, servers, reports and audit",
     "description": "Every action asks for a reason and is logged.",
     "open": "Open the admin area"
   },

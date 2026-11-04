@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { Button } from '@/shared/ui/primitives/button';
 import { Avatar } from '@/shared/Avatar';
-import { GroupAvatar } from '@/features/conversations/GroupAvatar';
+import { ServerIcon } from '@/features/servers/ServerIcon';
 import { LoadMoreFooter } from '@/features/friends/LoadMoreFooter';
 import { useCursorList } from '@/shared/hooks/useCursorList';
 import { useFriends } from '@/features/friends/FriendsContext';
@@ -13,10 +13,10 @@ import { cn } from '@/shared/lib/utils';
 import { describeNotification, formatRelativeTime } from './notificationText';
 
 function NotificationIcon({ entry }: { entry: NotificationEntry }) {
-  if (entry.kind === 'group_invitation' && entry.group) return <GroupAvatar id={entry.group.id} title={entry.group.title} avatar={entry.group.avatar} size={36} />;
-  // a bot's mention has no account: its own picture stands for it
-  const bot = entry.kind === 'mention' && !entry.actor && entry.mention?.conversation.type === 'bot' ? entry.mention.conversation : null;
-  if (bot) return <GroupAvatar id={bot.id} title={bot.title} avatar={bot.avatar} size={36} />;
+  if (entry.kind === 'server_invitation' && entry.server) return <ServerIcon id={entry.server.id} name={entry.server.name} icon={entry.server.icon} size={36} active />;
+  // a webhook's mention has no account: its server's picture stands for it
+  const channel = entry.kind === 'mention' && !entry.actor && entry.mention?.conversation.serverId ? entry.mention.conversation : null;
+  if (channel) return <ServerIcon id={channel.serverId!} name={channel.serverName} icon={channel.serverIcon} size={36} active />;
   const actor = entry.actor;
   return <Avatar id={actor?.id ?? entry.id} name={actor?.displayName ?? '?'} avatar={actor?.avatar ?? ''} avatarColor={actor?.avatarColor ?? 'blurple'} size={36} className="flex-none" />;
 }

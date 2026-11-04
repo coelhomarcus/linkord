@@ -2,12 +2,14 @@ import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import { and, eq, sql } from 'drizzle-orm';
 import { db, pool } from '../../src/db/client.js';
-import { conversationMembers, friendships, users } from '../../src/db/schema.js';
+import { conversations, friendships, serverMembers, servers, users } from '../../src/db/schema.js';
 import { join, participants } from '../../src/modules/presence/participants.js';
+import { createServer } from '../../src/modules/servers/serversRepository.js';
+import { invalidateAllServers } from '../../src/modules/servers/serverAccess.js';
 import type { AppSocket, Participant } from '../../src/types.js';
 
 // Shared setup for the real-Postgres suite. Every test makes its own users and
-// groups (unique names), so files never depend on each other or on order.
+// servers (unique names), so files never depend on each other or on order.
 
 export { db, pool };
 
@@ -23,24 +25,29 @@ export async function befriend(a: string, b: string): Promise<void> {
   await db.insert(friendships).values({ id: crypto.randomUUID(), userLowId: low, userHighId: high, requestedBy: a, status: 'accepted', acceptedAt: new Date() });
 }
 
-/** A group owned by `ownerId` with `memberIds` added straight into the table
- * (oldest first), the way it would look after invitations were accepted. */
-export async function makeGroupWithMembers(ownerId: string, memberIds: string[], title = 'itest'): Promise<string> {
-  const { createGroup } = await import('../../src/modules/conversations/conversationsRepository.js');
-  const group = await createGroup(ownerId, title);
+export interface TestServer { serverId: string; textChannelId: string; voiceChannelId: string }
+
+/** A server from the template owned by `ownerId`, with `memberIds` added
+ * straight into the table (oldest first), the way it would look after
+ * invitations were accepted. */
+export async function makeServerWithMembers(ownerId: string, memberIds: string[], name = 'itest'): Promise<TestServer> {
+  const { serverId, firstTextChannelId } = await createServer(ownerId, name, 'pt-BR');
   for (let i = 0; i < memberIds.length; i++) {
-    await db.insert(conversationMembers).values({ conversationId: group.id, userId: memberIds[i]!, role: 'member', joinedAt: new Date(Date.now() + i * 1000) });
+    await db.insert(serverMembers).values({ serverId, userId: memberIds[i]!, joinedAt: new Date(Date.now() + i * 1000) });
   }
-  return group.id;
+  const [voice] = await db.select({ id: conversations.id }).from(conversations).where(and(eq(conversations.serverId, serverId), eq(conversations.type, 'voice'))).limit(1);
+  // a test that writes rows directly must not read a snapshot from before them
+  invalidateAllServers();
+  return { serverId, textChannelId: firstTextChannelId, voiceChannelId: voice!.id };
 }
 
-export async function ownersOf(conversationId: string): Promise<string[]> {
-  return (await db.select({ userId: conversationMembers.userId }).from(conversationMembers)
-    .where(and(eq(conversationMembers.conversationId, conversationId), eq(conversationMembers.role, 'owner')))).map((r) => r.userId);
+export async function ownerOf(serverId: string): Promise<string | null> {
+  const [row] = await db.select({ ownerId: servers.ownerId }).from(servers).where(eq(servers.id, serverId)).limit(1);
+  return row?.ownerId ?? null;
 }
 
-export async function memberCount(conversationId: string): Promise<number> {
-  const [row] = await db.select({ n: sql<number>`count(*)::int` }).from(conversationMembers).where(eq(conversationMembers.conversationId, conversationId));
+export async function memberCount(serverId: string): Promise<number> {
+  const [row] = await db.select({ n: sql<number>`count(*)::int` }).from(serverMembers).where(eq(serverMembers.serverId, serverId));
   return row?.n ?? 0;
 }
 
@@ -83,7 +90,7 @@ export function cleanupParticipant(participant: Participant): void {
 }
 
 /** A real attachments row, the way avatarUpload.ts's encodeAndStoreProfileImage
- * writes one — needed so a profile/group-avatar patch's ownership check
+ * writes one — needed so a profile/server-icon patch's ownership check
  * (isOwnedProfileImage) accepts the reference instead of silently clearing
  * it. */
 export async function makeOwnedAvatarUpload(uploaderId: string): Promise<string> {

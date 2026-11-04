@@ -25,16 +25,16 @@ interface Outcome { id: OutcomeId; label: string; effect: string; destructive: b
 
 const OUTCOME_TEXT: Record<OutcomeId, { label: string; effect: string }> = {
   suspend_user: { label: 'report.suspendUserLabel', effect: 'report.suspendUserEffect' },
-  suspend_group: { label: 'report.suspendGroupLabel', effect: 'report.suspendGroupEffect' },
+  suspend_server: { label: 'report.suspendServerLabel', effect: 'report.suspendServerEffect' },
   delete_message: { label: 'report.deleteMessageLabel', effect: 'report.deleteMessageEffect' },
   no_action: { label: 'report.noActionLabel', effect: 'report.noActionEffect' },
   dismiss: { label: 'report.dismissLabel', effect: 'report.dismissEffect' },
 };
 
 /** Only what the product allows for this kind of target. A message report can
- * also suspend its AUTHOR — never its group, which is another target. */
+ * also suspend its AUTHOR — never its server, which is another target. */
 function outcomesFor(targetType: string, t: (key: string) => string): Outcome[] {
-  const actions: ReportAction[] = targetType === 'user' ? ['suspend_user'] : targetType === 'group' ? ['suspend_group'] : ['delete_message', 'suspend_user'];
+  const actions: ReportAction[] = targetType === 'user' ? ['suspend_user'] : targetType === 'server' ? ['suspend_server'] : ['delete_message', 'suspend_user'];
   const ids: OutcomeId[] = [...actions, 'no_action', 'dismiss'];
   return ids.map((id) => ({ id, label: t(OUTCOME_TEXT[id].label), effect: t(OUTCOME_TEXT[id].effect), destructive: id !== 'no_action' && id !== 'dismiss' }));
 }
@@ -65,7 +65,7 @@ function ReportDetail({ id }: { id: string }) {
   const snapshot = report.snapshot;
   const snapshotText = typeof snapshot.text === 'string' ? snapshot.text : null;
   const authorId = typeof snapshot.authorId === 'string' && snapshot.authorId ? snapshot.authorId : null;
-  const targetHref = report.targetType === 'user' ? `/admin/users/${report.targetId}` : report.targetType === 'group' ? `/admin/groups/${report.targetId}` : null;
+  const targetHref = report.targetType === 'user' ? `/admin/users/${report.targetId}` : report.targetType === 'server' ? `/admin/servers/${report.targetId}` : null;
   const translate = (key: string) => t(key as never);
   const outcomes = outcomesFor(report.targetType, translate);
   const chosen = outcomes.find((o) => o.id === selected) ?? null;

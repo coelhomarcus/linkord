@@ -6,10 +6,10 @@ import { renderWithRoom } from '@tests/fixtures/roomContextFixture';
 import { CallInviteCard } from '@/features/chat/CallInviteCard';
 import type { CallInviteCard as CallInvite, Conversation, Participant } from '@/shared/types/protocol';
 
-const invite: CallInvite = { groupId: 'g1', groupTitle: 'Squad', groupAvatar: '' };
-const group: Conversation = {
-  id: 'g1', type: 'group', title: 'Squad', avatar: '', createdBy: 'owner', memberIds: ['me', 'ana'],
-  lastMessageAt: null, createdAt: 1, updatedAt: 1, pinnedAt: null, myRole: 'member', ownerId: null, memberCount: 2,
+const invite: CallInvite = { channelId: 'g1', channelName: 'Squad', serverId: 's1', serverName: 'Servidor', serverIcon: '' };
+const channel: Conversation = {
+  id: 'g1', type: 'voice', title: 'Squad', serverId: 's1', memberIds: ['me', 'ana'],
+  lastMessageAt: null, createdAt: 1, updatedAt: 1, pinnedAt: null,
 };
 const ana = { id: 'conn-ana', userId: 'ana', displayName: 'Ana', avatar: '', avatarPoster: '', avatarColor: '', callConversationId: 'g1' } as Participant;
 
@@ -21,7 +21,7 @@ function render(callInvite: CallInvite | null, opts: { inCall?: Participant[]; c
       me: { ...initialRoomState.me, userId: 'me', displayName: 'Eu' },
       participants: new Map((opts.inCall ?? []).map((p) => [p.id, p])),
     },
-    conversations: opts.conversations ?? [group],
+    conversations: opts.conversations ?? [channel],
     activeCallConversationId: opts.active ?? null,
     openCall,
   });
@@ -29,7 +29,7 @@ function render(callInvite: CallInvite | null, opts: { inCall?: Participant[]; c
 }
 
 describe('CallInviteCard', () => {
-  it('names the group and who is in its call, and joins it', async () => {
+  it('names the channel and who is in its call, and joins it', async () => {
     const user = userEvent.setup();
     const openCall = render(invite, { inCall: [ana] });
     expect(screen.getByText('Squad')).toBeInTheDocument();
@@ -55,13 +55,13 @@ describe('CallInviteCard', () => {
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
 
-  it('someone who left the group gets no way in', () => {
+  it('someone who can no longer see the channel gets no way in', () => {
     render(invite, { inCall: [ana], conversations: [] });
-    expect(screen.getByText('Você não faz mais parte desse grupo.')).toBeInTheDocument();
+    expect(screen.getByText('Você não faz mais parte desse canal.')).toBeInTheDocument();
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
 
-  it('a deleted group leaves a tombstone', () => {
+  it('a deleted channel leaves a tombstone', () => {
     render(null);
     expect(screen.getByText('Convite para chamada indisponível')).toBeInTheDocument();
   });

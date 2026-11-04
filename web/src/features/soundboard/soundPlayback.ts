@@ -40,11 +40,11 @@ export function saveSoundboardVolume(value: number): void {
 
 /** Fetched and decoded once per sound; a sound's file never changes (an edit
  * only touches name/emoji/volume), so the decoded buffer stays valid. */
-export function loadSoundBuffer(conversationId: string, soundId: string): Promise<AudioBuffer> {
-  const key = `${conversationId}:${soundId}`;
+export function loadSoundBuffer(serverId: string, soundId: string): Promise<AudioBuffer> {
+  const key = `${serverId}:${soundId}`;
   let pending = buffers.get(key);
   if (!pending) {
-    pending = fetch(soundFileUrl(conversationId, soundId), { credentials: 'same-origin' })
+    pending = fetch(soundFileUrl(serverId, soundId), { credentials: 'same-origin' })
       .then((res) => {
         if (!res.ok) throw new Error(`sound ${res.status}`);
         return res.arrayBuffer();
@@ -83,7 +83,7 @@ export function playBuffer(buffer: AudioBuffer, gain: number, startSec = 0, endS
 }
 
 /** A group sound at its own volume times this listener's soundboard volume. */
-export async function playGroupSound(conversationId: string, soundId: string, volume: number): Promise<PlayingSound> {
-  const buffer = await loadSoundBuffer(conversationId, soundId);
+export async function playServerSound(serverId: string, soundId: string, volume: number): Promise<PlayingSound> {
+  const buffer = await loadSoundBuffer(serverId, soundId);
   return playBuffer(buffer, (volume / 100) * loadSoundboardVolume());
 }

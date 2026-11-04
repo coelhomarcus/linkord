@@ -6,7 +6,7 @@ import { resolveSession } from '../auth/session.js';
 import { findById } from '../users/users.js';
 import { blockUser, unblockUser, listBlocks } from './blocksRepository.js';
 import { onSocialChange } from '../presence/knownPeers.js';
-import { announceRevocations } from '../conversations/invitationsRepository.js';
+import { announceRevocations } from '../servers/serverInvitationsRepository.js';
 import { revokeDirectCallAccess } from '../calls/callAccess.js';
 
 type Params = { userId: string };

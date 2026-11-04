@@ -1,8 +1,9 @@
 import crypto from 'node:crypto';
-import { and, eq, ne } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { config } from '../../config/env.js';
 import { db } from '../../db/client.js';
-import { conversationMembers, outboxEvents } from '../../db/schema.js';
+import { conversations, outboxEvents } from '../../db/schema.js';
+import { conversationAudienceIds } from '../conversations/conversationsRepository.js';
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -10,11 +11,12 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
  * does not queue again because only the newly inserted message calls this. */
 export async function queueChatPush(tx: Tx, message: { id: number; conversationId: string; authorId: string | null }): Promise<void> {
   if (!config.PUSH_VAPID_PUBLIC_KEY) return;
-  const recipients = await tx.select({ userId: conversationMembers.userId }).from(conversationMembers)
-    .where(and(eq(conversationMembers.conversationId, message.conversationId),
-      message.authorId ? ne(conversationMembers.userId, message.authorId) : undefined));
+  const [conversation] = await tx.select({ id: conversations.id, serverId: conversations.serverId }).from(conversations)
+    .where(eq(conversations.id, message.conversationId)).limit(1);
+  if (!conversation) return;
+  const recipients = (await conversationAudienceIds(conversation)).filter((userId) => userId !== message.authorId);
   if (!recipients.length) return;
-  await tx.insert(outboxEvents).values(recipients.map(({ userId }) => ({
+  await tx.insert(outboxEvents).values(recipients.map((userId) => ({
     id: crypto.randomUUID(), type: 'chat_message_push', audienceUserId: userId,
     payload: { messageId: message.id },
   })));

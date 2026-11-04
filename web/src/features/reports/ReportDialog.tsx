@@ -19,7 +19,7 @@ function describeError(err: unknown): string {
   return i18n.t('reports:errors.submitFailed');
 }
 
-/** Files a report about an account, a group or a message. The confirmation is
+/** Files a report about an account, a server or a message. The confirmation is
  * deliberately neutral: it says nothing about what happens next or who else
  * was told — the reported account never learns who reported. */
 export function ReportDialog({ target, open, onOpenChange }: {
@@ -54,7 +54,7 @@ export function ReportDialog({ target, open, onOpenChange }: {
     }
   }
 
-  const noun = target?.type === 'user' ? t('targets.user') : target?.type === 'group' ? t('targets.group') : t('targets.message');
+  const noun = target?.type === 'user' ? t('targets.user') : target?.type === 'server' ? t('targets.server') : t('targets.message');
 
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!next) close(); }}>

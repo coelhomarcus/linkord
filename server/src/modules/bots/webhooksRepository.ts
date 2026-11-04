@@ -1,14 +1,15 @@
 import crypto from 'node:crypto';
 import { and, eq } from 'drizzle-orm';
 import { db } from '../../db/client.js';
-import { conversations, webhooks, type Webhook } from '../../db/schema.js';
+import { conversations, servers, webhooks, type Webhook } from '../../db/schema.js';
 import type { Tx } from '../users/userPairLock.js';
 
-// A bot posts through exactly one webhook today; the table allows more (one
-// per source system, say) without a migration once there's UI for it.
+// A channel's webhooks — the credential an outside system posts through.
 
 export interface WebhookInfo {
   id: string;
+  name: string;
+  avatar: string;
   createdAt: string;
   tokenRotatedAt: string;
   lastUsedAt: string | null;
@@ -28,41 +29,38 @@ export function hashWebhookToken(token: string): string {
 export function toWebhookInfo(row: Webhook): WebhookInfo {
   return {
     id: row.id,
+    name: row.name,
+    avatar: row.avatar,
     createdAt: row.createdAt.toISOString(),
     tokenRotatedAt: row.tokenRotatedAt.toISOString(),
     lastUsedAt: row.lastUsedAt ? row.lastUsedAt.toISOString() : null,
   };
 }
 
-export async function createWebhook(tx: Tx, conversationId: string, createdBy: string): Promise<WebhookSecret> {
+export async function createWebhook(tx: Tx, conversationId: string, createdBy: string, name: string): Promise<WebhookSecret> {
   const token = generateWebhookToken();
   const [row] = await tx.insert(webhooks).values({
-    id: crypto.randomUUID(), conversationId, tokenHash: hashWebhookToken(token), createdBy,
+    id: crypto.randomUUID(), conversationId, name, tokenHash: hashWebhookToken(token), createdBy,
   }).returning({ id: webhooks.id });
   return { id: row!.id, token };
 }
 
-export async function getBotWebhook(conversationId: string): Promise<Webhook | null> {
-  const [row] = await db.select().from(webhooks).where(eq(webhooks.conversationId, conversationId)).orderBy(webhooks.createdAt).limit(1);
-  return row ?? null;
-}
-
 /** Replaces the token in place: the webhook keeps its id, so the old URL
- * stops working the moment the new one exists. Null when the bot has none. */
-export async function rotateBotWebhookToken(conversationId: string): Promise<WebhookSecret | null> {
-  const webhook = await getBotWebhook(conversationId);
-  if (!webhook) return null;
+ * stops working the moment the new one exists. */
+export async function rotateWebhookToken(webhookId: string): Promise<WebhookSecret> {
   const token = generateWebhookToken();
-  await db.update(webhooks).set({ tokenHash: hashWebhookToken(token), tokenRotatedAt: new Date() }).where(eq(webhooks.id, webhook.id));
-  return { id: webhook.id, token };
+  await db.update(webhooks).set({ tokenHash: hashWebhookToken(token), tokenRotatedAt: new Date() }).where(eq(webhooks.id, webhookId));
+  return { id: webhookId, token };
 }
 
-/** The webhook these credentials open, when they're right and its bot can
- * still be posted to (not suspended). Wrong id and wrong token look the same. */
+/** The webhook these credentials open, when they're right and its channel
+ * can still be posted to (its server not suspended). Wrong id and wrong
+ * token look the same. */
 export async function findWebhookByCredentials(id: string, token: string): Promise<Webhook | null> {
   const [row] = await db.select({ webhook: webhooks }).from(webhooks)
     .innerJoin(conversations, eq(conversations.id, webhooks.conversationId))
-    .where(and(eq(webhooks.id, id), eq(conversations.type, 'bot'), eq(conversations.status, 'active')))
+    .innerJoin(servers, eq(servers.id, conversations.serverId))
+    .where(and(eq(webhooks.id, id), eq(conversations.type, 'text'), eq(servers.status, 'active')))
     .limit(1);
   if (!row) return null;
   const expected = Buffer.from(row.webhook.tokenHash, 'hex');

@@ -13,8 +13,15 @@
     "yesterday": "Last seen online yesterday at {{time}}",
     "date": "Last seen online on {{date}} at {{time}}"
   },
-  "confirm": { "confirm": "Confirm", "cancel": "Cancel" },
-  "page": { "close": "Close", "retry": "Try again", "loadingMore": "Loading more items" },
+  "confirm": {
+    "confirm": "Confirm",
+    "cancel": "Cancel"
+  },
+  "page": {
+    "close": "Close",
+    "retry": "Try again",
+    "loadingMore": "Loading more items"
+  },
   "layout": {
     "reconnect": "Disconnected from the server. Press F5 to reload the page.",
     "retryNow": "Reconnect now",
@@ -31,10 +38,25 @@
     "administration": "Administration",
     "loading": "Loading…"
   },
-  "upload": { "missingConversation": "Conversation not provided.", "networkFailed": "Network error while uploading the file." },
-  "accessibility": { "navigationClose": "Close navigation", "oneTimeCode": "One-time code" },
+  "upload": {
+    "missingConversation": "Conversation not provided.",
+    "networkFailed": "Network error while uploading the file."
+  },
+  "accessibility": {
+    "navigationClose": "Close navigation",
+    "oneTimeCode": "One-time code"
+  },
   "avatar": {
-    "colors": { "blurple": "Indigo", "green": "Green", "red": "Red", "fuchsia": "Fuchsia", "orange": "Orange", "purple": "Purple", "teal": "Teal", "blue": "Blue" }
+    "colors": {
+      "blurple": "Indigo",
+      "green": "Green",
+      "red": "Red",
+      "fuchsia": "Fuchsia",
+      "orange": "Orange",
+      "purple": "Purple",
+      "teal": "Teal",
+      "blue": "Blue"
+    }
   },
   "browserNotifications": {
     "mentioned": "You were mentioned in {{conversation}}",
@@ -44,21 +66,62 @@
     "peopleSent_other": "{{count}} people sent messages"
   },
   "contextMenu": {
-    "reply": "Reply", "allReactions": "View all reactions", "copyText": "Copy text", "selectText": "Select text", "report": "Report", "edit": "Edit", "removeAttachment": "Remove attachment", "removeEmbed": "Remove embed", "delete": "Delete", "download": "Download", "copy": "Copy", "viewProfile": "View profile", "unpinConversation": "Unpin conversation", "pinConversation": "Pin conversation", "closeConversation": "Close conversation", "removeEmbedTitle": "Remove embed", "removeAttachmentTitle": "Remove attachment", "removeEmbedDescription": "The link stays in the message; only its preview is removed for everyone.", "removeAttachmentDescription": "\"{{name}}\" is removed from the message for everyone and deleted. The rest of the message remains.", "remove": "Remove", "messageFrom": "message from {{name}}"
+    "reply": "Reply",
+    "allReactions": "View all reactions",
+    "copyText": "Copy text",
+    "selectText": "Select text",
+    "report": "Report",
+    "edit": "Edit",
+    "removeAttachment": "Remove attachment",
+    "removeEmbed": "Remove embed",
+    "delete": "Delete",
+    "download": "Download",
+    "copy": "Copy",
+    "viewProfile": "View profile",
+    "unpinConversation": "Unpin conversation",
+    "pinConversation": "Pin conversation",
+    "closeConversation": "Close conversation",
+    "removeEmbedTitle": "Remove embed",
+    "removeAttachmentTitle": "Remove attachment",
+    "removeEmbedDescription": "The link stays in the message; only its preview is removed for everyone.",
+    "removeAttachmentDescription": "\"{{name}}\" is removed from the message for everyone and deleted. The rest of the message remains.",
+    "remove": "Remove",
+    "messageFrom": "message from {{name}}"
   },
   "room": {
-    "removed": "You were removed from the {{noun}} \"{{name}}\".",
-    "deleted": "The {{noun}} \"{{name}}\" was deleted.",
     "full": "The room is full. Try again later.",
     "tooManyConnections": "You already have too many open connections. Close another tab.",
-    "nounGroup": "group",
-    "nounBot": "bot"
+    "server": {
+      "removed": "You were removed from the server \"{{name}}\".",
+      "banned": "You were banned from the server \"{{name}}\".",
+      "deleted": "The server \"{{name}}\" was deleted."
+    }
   },
   "errors": {
     "unexpected": "Unexpected error.",
     "networkUpload": "Network error while uploading the file.",
     "codes": {
-      "invalid_credentials": "Invalid username or password.", "account_unavailable": "This account is unavailable. Contact an administrator.", "registration_closed": "Registration is closed.", "invalid_code": "Invalid code.", "code_expired": "Code expired. Request a new one.", "too_many_attempts": "Too many attempts. Request a new code.", "invalid_email": "Enter a valid email address.", "weak_password": "The password does not meet the minimum requirements.", "password_mismatch": "The passwords do not match.", "username_taken": "That username or email is already in use.", "email_taken": "That email is already in use.", "forbidden": "You do not have permission to do this.", "not_found": "The item could not be found.", "rate_limited": "Too many requests. Try again later.", "group_full": "This group is full.", "relationship_required": "You cannot message this person.", "reason_required": "Enter a reason.", "internal_error": "Could not complete the operation. Try again."
+      "invalid_credentials": "Invalid username or password.",
+      "account_unavailable": "This account is unavailable. Contact an administrator.",
+      "registration_closed": "Registration is closed.",
+      "invalid_code": "Invalid code.",
+      "code_expired": "Code expired. Request a new one.",
+      "too_many_attempts": "Too many attempts. Request a new code.",
+      "invalid_email": "Enter a valid email address.",
+      "weak_password": "The password does not meet the minimum requirements.",
+      "password_mismatch": "The passwords do not match.",
+      "username_taken": "That username or email is already in use.",
+      "email_taken": "That email is already in use.",
+      "forbidden": "You do not have permission to do this.",
+      "not_found": "The item could not be found.",
+      "rate_limited": "Too many requests. Try again later.",
+      "relationship_required": "You cannot message this person.",
+      "reason_required": "Enter a reason.",
+      "internal_error": "Could not complete the operation. Try again.",
+      "server_full": "This server is full.",
+      "banned": "You were banned from this server.",
+      "invalid_invite": "This invite is invalid or has expired.",
+      "hierarchy": "That is above your role."
     }
   }
 }

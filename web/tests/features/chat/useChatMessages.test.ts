@@ -9,7 +9,7 @@ vi.mock('@/shared/sounds', () => ({ playSound: vi.fn() }));
 vi.mock('@/shared/notifications', () => ({ notifyIncomingChatMessage: vi.fn() }));
 
 const card = (over: Partial<InvitationCard> = {}): InvitationCard => ({
-  id: 'inv-1', status: 'pending', groupId: 'g', groupTitle: 'Grupo', groupAvatar: '', memberCount: 2,
+  id: 'inv-1', status: 'pending', serverId: 'g', serverName: 'Grupo', serverIcon: '', memberCount: 2,
   inviterId: 'a', inviteeId: 'b', version: 1, ...over,
 });
 const message = (msgId: number, over: Partial<ChatMessage> = {}): ChatMessage => ({
@@ -30,7 +30,7 @@ describe('useChatMessages — invitation-updated', () => {
     const { result } = setup();
     act(() => result.current.onConversationHistory({
       t: 'conversation-history', conversationId: 'dm', hasMore: false,
-      messages: [message(1, { text: 'oi' }), message(2, { kind: 'group_invite', invitation: card() }), message(3, { kind: 'group_invite', invitation: card({ id: 'inv-2' }) })],
+      messages: [message(1, { text: 'oi' }), message(2, { kind: 'server_invite', invitation: card() }), message(3, { kind: 'server_invite', invitation: card({ id: 'inv-2' }) })],
     }));
     act(() => result.current.onInvitationUpdated({ t: 'invitation-updated', invitation: card({ status: 'accepted', version: 2 }) }));
 

@@ -25,8 +25,8 @@ const joinedState = { ...initialRoomState, joined: true };
 
 describe('ConversationPanel — call button', () => {
   const direct: Conversation = {
-    id: 'c1', type: 'direct', title: '', avatar: '', createdBy: null, memberIds: ['me', 'peer'],
-    lastMessageAt: null, createdAt: 0, updatedAt: 0, pinnedAt: null, myRole: 'member', ownerId: null, memberCount: 0,
+    id: 'c1', type: 'direct', title: '', serverId: null, memberIds: ['me', 'peer'],
+    lastMessageAt: null, createdAt: 0, updatedAt: 0, pinnedAt: null,
   };
   const me = { ...joinedState, me: { ...initialRoomState.me, userId: 'me' } };
 
@@ -90,8 +90,8 @@ describe('ConversationPanel — call button', () => {
 
 describe('ConversationPanel — DM subtitle', () => {
   const direct: Conversation = {
-    id: 'c1', type: 'direct', title: '', avatar: '', createdBy: null, memberIds: ['me', 'peer'],
-    lastMessageAt: null, createdAt: 0, updatedAt: 0, pinnedAt: null, myRole: 'member', ownerId: null, memberCount: 0,
+    id: 'c1', type: 'direct', title: '', serverId: null, memberIds: ['me', 'peer'],
+    lastMessageAt: null, createdAt: 0, updatedAt: 0, pinnedAt: null,
   };
   const peer: PublicUser = {
     id: 'peer', username: 'peer', displayName: 'Peer', avatar: '', avatarColor: 'blurple',
@@ -136,8 +136,8 @@ describe('ConversationPanel — DM subtitle', () => {
 
 describe('ConversationPanel — right panel buttons', () => {
   const group: Conversation = {
-    id: 'g1', type: 'group', title: 'Time', avatar: '', createdBy: 'me', memberIds: ['me', 'peer'],
-    lastMessageAt: null, createdAt: 0, updatedAt: 0, pinnedAt: null, myRole: 'owner', ownerId: 'me', memberCount: 2,
+    id: 'g1', type: 'text', title: 'Time', serverId: 's1', memberIds: ['me', 'peer'],
+    lastMessageAt: null, createdAt: 0, updatedAt: 0, pinnedAt: null,
   };
   const me = { ...joinedState, me: { ...initialRoomState.me, userId: 'me' } };
 
@@ -150,14 +150,13 @@ describe('ConversationPanel — right panel buttons', () => {
       </SidebarProvider>,
       { room: { state: me, conversations: [group], activeConversationId: 'g1' } },
     );
-    // the avatar opens the details too; the header's toggle is the pressable one
-    const toggle = screen.getAllByRole('button', { name: 'Detalhes do grupo' }).find((button) => button.hasAttribute('aria-pressed'))!;
+    const toggle = screen.getAllByRole('button', { name: 'Mostrar lista de membros' }).find((button) => button.hasAttribute('aria-pressed'))!;
     return { toggle, onToggleDetails, onOpenDetails };
   }
 
   afterEach(() => { vi.clearAllMocks(); });
 
-  it('the details button toggles instead of only opening, and reads as pressed while the panel shows', () => {
+  it('the members button toggles instead of only opening, and reads as pressed while the panel shows', () => {
     mockedApi.fetchRequestSummary.mockResolvedValue({ incoming: 0, invitations: 0 });
     const { toggle, onToggleDetails, onOpenDetails } = renderGroup(true);
     expect(toggle).toHaveAttribute('aria-pressed', 'true');
@@ -166,7 +165,7 @@ describe('ConversationPanel — right panel buttons', () => {
     expect(onOpenDetails).not.toHaveBeenCalled();
   });
 
-  it('closed, the details button is not pressed', () => {
+  it('closed, the members button is not pressed', () => {
     mockedApi.fetchRequestSummary.mockResolvedValue({ incoming: 0, invitations: 0 });
     const { toggle } = renderGroup(false);
     expect(toggle).toHaveAttribute('aria-pressed', 'false');
@@ -175,8 +174,8 @@ describe('ConversationPanel — right panel buttons', () => {
 
 describe('ConversationPanel — phone list route', () => {
   const group: Conversation = {
-    id: 'g1', type: 'group', title: 'Squad', avatar: '', createdBy: null, memberIds: ['me'],
-    lastMessageAt: null, createdAt: 0, updatedAt: 0, pinnedAt: null, myRole: 'member', ownerId: null, memberCount: 1,
+    id: 'g1', type: 'text', title: 'Squad', serverId: 's1', memberIds: ['me'],
+    lastMessageAt: null, createdAt: 0, updatedAt: 0, pinnedAt: null,
   };
 
   function renderAt(path: string) {
@@ -197,7 +196,7 @@ describe('ConversationPanel — phone list route', () => {
       matches: query === '(max-width: 767px)', media: query, onchange: null,
       addListener: () => {}, removeListener: () => {}, addEventListener: () => {}, removeEventListener: () => {}, dispatchEvent: () => false,
     }) as MediaQueryList);
-    renderAt('/app/conversations');
+    renderAt('/app/channels/s1');
     expect(screen.queryByRole('button', { name: 'Voltar para conversas' })).not.toBeInTheDocument();
   });
 
@@ -206,15 +205,15 @@ describe('ConversationPanel — phone list route', () => {
       matches: query === '(max-width: 767px)', media: query, onchange: null,
       addListener: () => {}, removeListener: () => {}, addEventListener: () => {}, removeEventListener: () => {}, dispatchEvent: () => false,
     }) as MediaQueryList);
-    renderAt('/app/conversations/g1');
+    renderAt('/app/channels/s1/g1');
     expect(screen.getByRole('button', { name: 'Voltar para conversas' })).toBeInTheDocument();
   });
 });
 
 describe('ConversationPanel — phone Voltar', () => {
   const group: Conversation = {
-    id: 'g1', type: 'group', title: 'Squad', avatar: '', createdBy: null, memberIds: ['me'],
-    lastMessageAt: null, createdAt: 0, updatedAt: 0, pinnedAt: null, myRole: 'member', ownerId: null, memberCount: 1,
+    id: 'g1', type: 'text', title: 'Squad', serverId: 's1', memberIds: ['me'],
+    lastMessageAt: null, createdAt: 0, updatedAt: 0, pinnedAt: null,
   };
   function WhereAmI() {
     const navigate = useNavigate();
@@ -241,36 +240,36 @@ describe('ConversationPanel — phone Voltar', () => {
 
   // the same place an iPhone back swipe lands
   it('opened from the list, it steps back to that entry', () => {
-    renderFrom(['/app/conversations', { pathname: '/app/conversations/g1', state: { from: '/app/conversations' } }]);
+    renderFrom(['/app/channels/s1', { pathname: '/app/channels/s1/g1', state: { from: '/app/channels/s1' } }]);
     fireEvent.click(screen.getByRole('button', { name: 'Voltar para conversas' }));
-    expect(screen.getByTestId('where')).toHaveTextContent('POP /app/conversations');
+    expect(screen.getByTestId('where')).toHaveTextContent('POP /app/channels/s1');
   });
 
   it('opened from elsewhere, the list takes its place', () => {
-    renderFrom(['/app/notifications', '/app/conversations/g1']);
+    renderFrom(['/app/notifications', '/app/channels/s1/g1']);
     fireEvent.click(screen.getByRole('button', { name: 'Voltar para conversas' }));
-    expect(screen.getByTestId('where')).toHaveTextContent('REPLACE /app/conversations');
+    expect(screen.getByTestId('where')).toHaveTextContent('REPLACE /app/channels/s1');
   });
 
   // the same place an iPhone forward swipe lands after a back swipe
   it('opened from the list, forward returns to the chat after Voltar', () => {
-    renderFrom(['/app/conversations', { pathname: '/app/conversations/g1', state: { from: '/app/conversations' } }]);
+    renderFrom(['/app/channels/s1', { pathname: '/app/channels/s1/g1', state: { from: '/app/channels/s1' } }]);
     fireEvent.click(screen.getByRole('button', { name: 'Voltar para conversas' }));
-    expect(screen.getByTestId('where')).toHaveTextContent('POP /app/conversations');
+    expect(screen.getByTestId('where')).toHaveTextContent('POP /app/channels/s1');
     fireEvent.click(screen.getByRole('button', { name: 'forward' }));
-    expect(screen.getByTestId('where')).toHaveTextContent('POP /app/conversations/g1');
+    expect(screen.getByTestId('where')).toHaveTextContent('POP /app/channels/s1/g1');
   });
 
   it('opened from another chat, it steps back instead of replacing history', () => {
     const other: Conversation = { ...group, id: 'g2', title: 'Other' };
     renderFrom([
-      '/app/conversations',
-      { pathname: '/app/conversations/g1', state: { from: '/app/conversations' } },
-      { pathname: '/app/conversations/g2', state: { from: '/app/conversations/g1' } },
+      '/app/channels/s1',
+      { pathname: '/app/channels/s1/g1', state: { from: '/app/channels/s1' } },
+      { pathname: '/app/channels/s1/g2', state: { from: '/app/channels/s1/g1' } },
     ], [group, other]);
     fireEvent.click(screen.getByRole('button', { name: 'Voltar para conversas' }));
-    expect(screen.getByTestId('where')).toHaveTextContent('POP /app/conversations/g1');
+    expect(screen.getByTestId('where')).toHaveTextContent('POP /app/channels/s1/g1');
     fireEvent.click(screen.getByRole('button', { name: 'forward' }));
-    expect(screen.getByTestId('where')).toHaveTextContent('POP /app/conversations/g2');
+    expect(screen.getByTestId('where')).toHaveTextContent('POP /app/channels/s1/g2');
   });
 });

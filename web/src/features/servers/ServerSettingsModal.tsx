@@ -1,0 +1,369 @@
+import { ArrowDownIcon, ArrowUpIcon, CrownIcon, PlusIcon, TrashIcon } from '@phosphor-icons/react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { ChangeEvent } from 'react';
+import { useNavigate } from 'react-router';
+import { useTranslation } from 'react-i18next';
+import type { Area } from 'react-easy-crop';
+import { Avatar } from '@/shared/Avatar';
+import { ConfirmDialog } from '@/shared/ConfirmDialog';
+import { Button } from '@/shared/ui/primitives/button';
+import { Input } from '@/shared/ui/primitives/input';
+import { Switch } from '@/shared/ui/primitives/switch';
+import { describeApiError } from '@/shared/api/errorText';
+import { ROUTES } from '@/shared/lib/routes';
+import { cn } from '@/shared/lib/utils';
+import { useRoom } from '@/state/RoomContext';
+import type { RoleSummary, ServerSummary } from '@/shared/types/protocol';
+import { ImageCropDialog } from '@/features/settings/ImageCropDialog';
+import { uploadCroppedProfileImage } from '@/features/settings/uploadCroppedProfileImage';
+import { ServerSoundsPanel } from '@/features/soundboard/ServerSoundsPanel';
+import { hasPermission, PERMISSIONS } from './permissionBits';
+import { PERMISSION_SECTIONS, bitOf } from './permissionCatalog';
+import { ServerIcon } from './ServerIcon';
+import { SectionTitle, SettingsShell, type SettingsTab } from './SettingsShell';
+import {
+  banMember, createRole, deleteRole, deleteServer, fetchAllServerMembers, fetchBans, fetchInviteLinks, kickMember,
+  revokeInviteLink, saveRoleOrder, setMemberRoles, transferServer, unbanMember, updateRole, updateServer,
+  type ServerInvite, type ServerMemberEntry,
+} from './serversApi';
+import { can, memberColor } from './serverUtils';
+import { inviteUrl } from './inviteCode';
+
+type TabKey = 'overview' | 'roles' | 'members' | 'invites' | 'bans' | 'soundboard' | 'delete';
+
+function useAction() {
+  const [error, setError] = useState<string | null>(null);
+  const run = useCallback(async (fn: () => Promise<unknown>) => {
+    setError(null);
+    try { await fn(); return true; } catch (err) { setError(describeApiError(err)); return false; }
+  }, []);
+  return { error, run };
+}
+
+function ErrorLine({ error }: { error: string | null }) {
+  return error ? <p role="alert" className="text-label text-red">{error}</p> : null;
+}
+
+function Overview({ server }: { server: ServerSummary }) {
+  const { t } = useTranslation('servers');
+  const [name, setName] = useState(server.name);
+  const [crop, setCrop] = useState<{ file: File; src: string } | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const { error, run } = useAction();
+  useEffect(() => setName(server.name), [server.name]);
+
+  function pick(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (file) setCrop({ file, src: URL.createObjectURL(file) });
+  }
+
+  async function confirmCrop(area: Area) {
+    if (!crop) return;
+    setUploading(true);
+    await run(async () => {
+      const body = await uploadCroppedProfileImage(crop.file, area, undefined, (phase) => { if (phase === 'uploading') setCrop(null); });
+      await updateServer(server.id, { icon: body.avatar });
+    });
+    setUploading(false);
+    setCrop(null);
+  }
+
+  return (
+    <>
+      <SectionTitle>{t('settings.overview')}</SectionTitle>
+      <div className="flex items-start gap-6 max-sm:flex-col">
+        <div className="flex flex-col items-center gap-2">
+          <ServerIcon id={server.id} name={name || server.name} icon={server.icon} size={96} active />
+          <Button type="button" size="sm" variant="outline" disabled={uploading} onClick={() => fileRef.current?.click()}>{t('settings.changeIcon')}</Button>
+          {server.icon && <Button type="button" size="sm" variant="ghost" onClick={() => void run(() => updateServer(server.id, { icon: '' }))}>{t('settings.removeIcon')}</Button>}
+          <input ref={fileRef} type="file" accept="image/*" hidden onChange={pick} />
+        </div>
+        <form className="flex flex-1 flex-col gap-2" onSubmit={(e) => { e.preventDefault(); void run(() => updateServer(server.id, { name })); }}>
+          <label htmlFor="server-settings-name" className="text-caption font-bold uppercase text-text-secondary">{t('create.name')}</label>
+          <Input id="server-settings-name" value={name} maxLength={100} onChange={(e) => setName(e.target.value)} />
+          <Button type="submit" className="self-start" disabled={!name.trim() || name === server.name}>{t('save')}</Button>
+        </form>
+      </div>
+      <ErrorLine error={error} />
+      <ImageCropDialog open={!!crop} imageSrc={crop?.src ?? null} aspect={1} cropShape="round" title={t('settings.changeIcon')}
+        processing={uploading} onCancel={() => setCrop(null)} onConfirm={(area) => void confirmCrop(area)} />
+    </>
+  );
+}
+
+function PermissionSwitches({ value, onChange, disabled }: { value: number; onChange: (next: number) => void; disabled?: boolean }) {
+  const { t } = useTranslation('servers');
+  return (
+    <div className="flex flex-col gap-5">
+      {PERMISSION_SECTIONS.map((section) => (
+        <section key={section.key} className="flex flex-col">
+          <h4 className="pb-2 text-caption font-bold uppercase text-text-secondary">{t(`permissionSections.${section.key}`)}</h4>
+          {section.names.map((name) => {
+            const bit = bitOf(name);
+            return (
+              <label key={name} className="flex items-start gap-4 border-b border-border-subtle py-3">
+                <span className="flex-1">
+                  <span className="block text-label font-medium">{t(`permissions.${name}`)}</span>
+                  <span className="block text-caption text-text-muted">{t(`permissionHints.${name}`)}</span>
+                </span>
+                <Switch checked={hasPermission(value, bit)} disabled={disabled} onCheckedChange={(on) => onChange(on ? value | bit : value & ~bit)} />
+              </label>
+            );
+          })}
+        </section>
+      ))}
+    </div>
+  );
+}
+
+function Roles({ server }: { server: ServerSummary }) {
+  const { t } = useTranslation('servers');
+  const sorted = [...server.roles].sort((a, b) => b.position - a.position);
+  const [selectedId, setSelectedId] = useState<string>(sorted.find((r) => !r.isDefault)?.id ?? sorted[0]!.id);
+  const role = server.roles.find((r) => r.id === selectedId) ?? sorted[0]!;
+  const [draft, setDraft] = useState<RoleSummary>(role);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const { error, run } = useAction();
+  useEffect(() => setDraft(role), [role]);
+  const dirty = JSON.stringify(draft) !== JSON.stringify(role);
+  const movable = sorted.filter((r) => !r.isDefault);
+
+  async function move(roleId: string, delta: 1 | -1) {
+    const lowestFirst = [...movable].reverse().map((r) => r.id);
+    const index = lowestFirst.indexOf(roleId);
+    const target = index + delta;
+    if (target < 0 || target >= lowestFirst.length) return;
+    [lowestFirst[index], lowestFirst[target]] = [lowestFirst[target]!, lowestFirst[index]!];
+    await run(() => saveRoleOrder(server.id, lowestFirst));
+  }
+
+  return (
+    <>
+      <SectionTitle>{t('settings.roles')}</SectionTitle>
+      <p className="text-label text-text-muted">{t('roles.hint')}</p>
+      <div className="flex gap-6 max-md:flex-col">
+        <div className="flex w-52 flex-none flex-col gap-1">
+          <Button type="button" size="sm" onClick={() => void run(async () => { const { roleId } = await createRole(server.id, { name: t('roles.newName') }); setSelectedId(roleId); })}>
+            <PlusIcon size={16} /> {t('roles.create')}
+          </Button>
+          {sorted.map((r) => (
+            <div key={r.id} className={cn('group/role flex items-center gap-1 rounded-md pr-1', r.id === selectedId ? 'bg-fill-active' : 'hover:bg-fill-hover')}>
+              <button type="button" onClick={() => setSelectedId(r.id)} className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-left text-label">
+                <span className="size-3 flex-none rounded-full" style={{ background: r.color || 'var(--color-text-muted)' }} />
+                <span className="truncate">{r.name}</span>
+              </button>
+              {!r.isDefault && (
+                <span className="hidden gap-0.5 group-hover/role:flex">
+                  <button type="button" aria-label={t('roles.up')} onClick={() => void move(r.id, 1)} className="text-text-muted hover:text-text-primary"><ArrowUpIcon size={14} /></button>
+                  <button type="button" aria-label={t('roles.down')} onClick={() => void move(r.id, -1)} className="text-text-muted hover:text-text-primary"><ArrowDownIcon size={14} /></button>
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+        <form className="flex min-w-0 flex-1 flex-col gap-4" onSubmit={(e) => {
+          e.preventDefault();
+          void run(() => updateRole(role.id, { name: draft.isDefault ? undefined : draft.name, color: draft.color, permissions: draft.permissions, hoist: draft.hoist, mentionable: draft.mentionable }));
+        }}>
+          <div className="flex items-end gap-3">
+            <label className="flex flex-1 flex-col gap-1.5">
+              <span className="text-caption font-bold uppercase text-text-secondary">{t('roles.name')}</span>
+              <Input value={draft.name} disabled={draft.isDefault} maxLength={100} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
+            </label>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-caption font-bold uppercase text-text-secondary">{t('roles.color')}</span>
+              <input type="color" value={draft.color || '#99aab5'} onChange={(e) => setDraft({ ...draft, color: e.target.value })} className="h-10 w-14 cursor-pointer rounded-md border border-border bg-transparent" />
+            </label>
+          </div>
+          {!draft.isDefault && (
+            <>
+              <label className="flex items-center justify-between gap-4 text-label">{t('roles.hoist')}<Switch checked={draft.hoist} onCheckedChange={(on) => setDraft({ ...draft, hoist: on })} /></label>
+              <label className="flex items-center justify-between gap-4 text-label">{t('roles.mentionable')}<Switch checked={draft.mentionable} onCheckedChange={(on) => setDraft({ ...draft, mentionable: on })} /></label>
+            </>
+          )}
+          <PermissionSwitches value={draft.permissions} onChange={(permissions) => setDraft({ ...draft, permissions })} />
+          <ErrorLine error={error} />
+          <div className="sticky bottom-0 flex items-center gap-2 bg-surface-panel py-3">
+            <Button type="submit" disabled={!dirty}>{t('save')}</Button>
+            {dirty && <Button type="button" variant="ghost" onClick={() => setDraft(role)}>{t('reset')}</Button>}
+            {!role.isDefault && <Button type="button" variant="destructive" className="ml-auto" onClick={() => setConfirmDelete(true)}><TrashIcon size={16} /> {t('roles.delete')}</Button>}
+          </div>
+        </form>
+      </div>
+      <ConfirmDialog open={confirmDelete} onOpenChange={setConfirmDelete} title={t('roles.deleteTitle', { name: role.name })} description={t('roles.deleteDescription')}
+        destructive confirmLabel={t('roles.delete')} onConfirm={() => void run(async () => { await deleteRole(role.id); setSelectedId(sorted[0]!.id); })} />
+    </>
+  );
+}
+
+function Members({ server, onOpenProfile }: { server: ServerSummary; onOpenProfile: (userId: string) => void }) {
+  const { t } = useTranslation('servers');
+  const { state, serverMemberRevision } = useRoom();
+  const [members, setMembers] = useState<ServerMemberEntry[]>([]);
+  const [confirm, setConfirm] = useState<{ kind: 'kick' | 'ban' | 'transfer'; member: ServerMemberEntry } | null>(null);
+  const { error, run } = useAction();
+  const revision = serverMemberRevision.get(server.id) ?? 0;
+  useEffect(() => { void fetchAllServerMembers(server.id).then(setMembers).catch(() => {}); }, [server.id, revision]);
+  const assignable = server.roles.filter((r) => !r.isDefault).sort((a, b) => b.position - a.position);
+  const isOwner = server.ownerId === state.me.userId;
+
+  return (
+    <>
+      <SectionTitle>{t('settings.members')}</SectionTitle>
+      <ErrorLine error={error} />
+      <ul className="flex flex-col divide-y divide-border-subtle">
+        {members.map((member) => (
+          <li key={member.user.id} className="flex flex-wrap items-center gap-3 py-3">
+            <button type="button" onClick={() => onOpenProfile(member.user.id)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+              <Avatar id={member.user.id} name={member.user.displayName} avatar={member.user.avatar} avatarColor={member.user.avatarColor} size={36} />
+              <span className="min-w-0">
+                <span className="flex items-center gap-1 truncate text-label font-semibold" style={{ color: memberColor(server, member.roleIds) || undefined }}>
+                  {member.user.displayName}{member.isOwner && <CrownIcon size={14} weight="fill" className="text-yellow" />}
+                </span>
+                <span className="block truncate text-caption text-text-muted">@{member.user.username}</span>
+              </span>
+            </button>
+            {can(server, PERMISSIONS.MANAGE_ROLES) && (
+              <span className="flex flex-wrap gap-1">
+                {assignable.map((role) => {
+                  const held = member.roleIds.includes(role.id);
+                  return (
+                    <button key={role.id} type="button" aria-pressed={held}
+                      onClick={() => void run(() => setMemberRoles(server.id, member.user.id, held ? member.roleIds.filter((id) => id !== role.id) : [...member.roleIds, role.id]))}
+                      className={cn('flex items-center gap-1 rounded-full border px-2 py-0.5 text-caption', held ? 'border-border-strong bg-fill-active text-text-primary' : 'border-dashed border-border text-text-muted hover:text-text-primary')}>
+                      <span className="size-2 rounded-full" style={{ background: role.color || 'var(--color-text-muted)' }} />{role.name}
+                    </button>
+                  );
+                })}
+              </span>
+            )}
+            {!member.isOwner && member.user.id !== state.me.userId && (
+              <span className="flex gap-1">
+                {can(server, PERMISSIONS.KICK_MEMBERS) && <Button type="button" size="sm" variant="ghost" onClick={() => setConfirm({ kind: 'kick', member })}>{t('members.kick')}</Button>}
+                {can(server, PERMISSIONS.BAN_MEMBERS) && <Button type="button" size="sm" variant="ghost" className="text-red" onClick={() => setConfirm({ kind: 'ban', member })}>{t('members.ban')}</Button>}
+                {isOwner && <Button type="button" size="sm" variant="ghost" onClick={() => setConfirm({ kind: 'transfer', member })}>{t('members.transfer')}</Button>}
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
+      <ConfirmDialog
+        open={!!confirm}
+        onOpenChange={(open) => { if (!open) setConfirm(null); }}
+        title={confirm ? t(`members.${confirm.kind}Title`, { name: confirm.member.user.displayName }) : ''}
+        description={confirm ? t(`members.${confirm.kind}Description`) : ''}
+        destructive={confirm?.kind !== 'transfer'}
+        confirmLabel={confirm ? t(`members.${confirm.kind}`) : ''}
+        onConfirm={() => {
+          if (!confirm) return;
+          const { kind, member } = confirm;
+          void run(() => (kind === 'kick' ? kickMember(server.id, member.user.id) : kind === 'ban' ? banMember(server.id, member.user.id) : transferServer(server.id, member.user.id)));
+        }}
+      />
+    </>
+  );
+}
+
+function Invites({ server }: { server: ServerSummary }) {
+  const { t, i18n } = useTranslation('servers');
+  const [items, setItems] = useState<ServerInvite[]>([]);
+  const { error, run } = useAction();
+  const load = useCallback(() => fetchInviteLinks(server.id).then(({ items: next }) => setItems(next)).catch(() => {}), [server.id]);
+  useEffect(() => { void load(); }, [load]);
+  return (
+    <>
+      <SectionTitle>{t('settings.invites')}</SectionTitle>
+      <ErrorLine error={error} />
+      {items.length === 0 && <p className="text-label text-text-muted">{t('invites.none')}</p>}
+      <ul className="flex flex-col divide-y divide-border-subtle">
+        {items.map((invite) => (
+          <li key={invite.code} className="flex items-center gap-3 py-3 text-label">
+            <span className="min-w-0 flex-1">
+              <code className="block truncate">{inviteUrl(invite.code)}</code>
+              <span className="text-caption text-text-muted">
+                {t('invites.meta', {
+                  name: invite.creator?.displayName ?? '—',
+                  uses: invite.maxUses ? `${invite.uses}/${invite.maxUses}` : String(invite.uses),
+                  expires: invite.expiresAt ? new Date(invite.expiresAt).toLocaleString(i18n.language) : t('invites.never'),
+                })}
+              </span>
+            </span>
+            <Button type="button" size="sm" variant="ghost" className="text-red" onClick={() => void run(async () => { await revokeInviteLink(invite.code); await load(); })}>{t('invites.revoke')}</Button>
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+}
+
+function Bans({ server }: { server: ServerSummary }) {
+  const { t } = useTranslation('servers');
+  const [items, setItems] = useState<{ user: ServerMemberEntry['user']; reason: string }[]>([]);
+  const { error, run } = useAction();
+  const load = useCallback(() => fetchBans(server.id).then(({ items: next }) => setItems(next)).catch(() => {}), [server.id]);
+  useEffect(() => { void load(); }, [load]);
+  return (
+    <>
+      <SectionTitle>{t('settings.bans')}</SectionTitle>
+      <ErrorLine error={error} />
+      {items.length === 0 && <p className="text-label text-text-muted">{t('bans.none')}</p>}
+      <ul className="flex flex-col divide-y divide-border-subtle">
+        {items.map((ban) => (
+          <li key={ban.user.id} className="flex items-center gap-3 py-3">
+            <Avatar id={ban.user.id} name={ban.user.displayName} avatar={ban.user.avatar} avatarColor={ban.user.avatarColor} size={32} />
+            <span className="min-w-0 flex-1 truncate text-label">{ban.user.displayName}{ban.reason && <span className="text-text-muted"> — {ban.reason}</span>}</span>
+            <Button type="button" size="sm" variant="ghost" onClick={() => void run(async () => { await unbanMember(server.id, ban.user.id); await load(); })}>{t('bans.revoke')}</Button>
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+}
+
+export function ServerSettingsModal({ server, onClose, onOpenProfile }: { server: ServerSummary; onClose: () => void; onOpenProfile: (userId: string) => void }) {
+  const { t } = useTranslation('servers');
+  const { state } = useRoom();
+  const navigate = useNavigate();
+  const isOwner = server.ownerId === state.me.userId;
+  const tabs: (SettingsTab & { key: TabKey })[] = [
+    ...(can(server, PERMISSIONS.MANAGE_SERVER) ? [{ key: 'overview' as const, label: t('settings.overview') }] : []),
+    ...(can(server, PERMISSIONS.MANAGE_ROLES) ? [{ key: 'roles' as const, label: t('settings.roles') }] : []),
+    ...(can(server, PERMISSIONS.KICK_MEMBERS) || can(server, PERMISSIONS.BAN_MEMBERS) || can(server, PERMISSIONS.MANAGE_ROLES) ? [{ key: 'members' as const, label: t('settings.members') }] : []),
+    ...(can(server, PERMISSIONS.MANAGE_SERVER) ? [{ key: 'invites' as const, label: t('settings.invites') }] : []),
+    ...(can(server, PERMISSIONS.BAN_MEMBERS) ? [{ key: 'bans' as const, label: t('settings.bans') }] : []),
+    { key: 'soundboard' as const, label: t('settings.soundboard') },
+    ...(isOwner ? [{ key: 'delete' as const, label: t('settings.delete'), danger: true }] : []),
+  ];
+  const [tab, setTab] = useState<TabKey>(tabs[0]!.key);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const { error, run } = useAction();
+
+  return (
+    <SettingsShell label={t('settings.label', { name: server.name })} heading={server.name} tabs={tabs} current={tab} onSelect={(key) => setTab(key as TabKey)} onClose={onClose}>
+      {tab === 'overview' && <Overview server={server} />}
+      {tab === 'roles' && <Roles server={server} />}
+      {tab === 'members' && <Members server={server} onOpenProfile={onOpenProfile} />}
+      {tab === 'invites' && <Invites server={server} />}
+      {tab === 'bans' && <Bans server={server} />}
+      {tab === 'soundboard' && (
+        <>
+          <SectionTitle>{t('settings.soundboard')}</SectionTitle>
+          <ServerSoundsPanel serverId={server.id} myUserId={state.me.userId} canManage={can(server, PERMISSIONS.MANAGE_EXPRESSIONS)} />
+        </>
+      )}
+      {tab === 'delete' && (
+        <>
+          <SectionTitle>{t('settings.delete')}</SectionTitle>
+          <p className="text-label text-text-secondary">{t('deleteServer.description', { name: server.name })}</p>
+          <ErrorLine error={error} />
+          <Button type="button" variant="destructive" className="self-start" onClick={() => setConfirmDelete(true)}>{t('settings.delete')}</Button>
+          <ConfirmDialog open={confirmDelete} onOpenChange={setConfirmDelete} title={t('deleteServer.title', { name: server.name })} description={t('deleteServer.confirm')}
+            destructive confirmLabel={t('settings.delete')}
+            onConfirm={() => void run(async () => { await deleteServer(server.id); onClose(); navigate(ROUTES.home); })} />
+        </>
+      )}
+    </SettingsShell>
+  );
+}

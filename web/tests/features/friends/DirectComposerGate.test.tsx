@@ -14,8 +14,8 @@ const mocked = vi.mocked(api);
 
 const peer: PublicUser = { id: 'peer', username: 'peer', displayName: 'Peer', avatar: '', avatarColor: 'blurple', banner: '', bio: '', profileLinks: [], role: 'user' };
 const conversation = (over: Partial<Conversation>): Conversation => ({
-  id: 'c1', type: 'direct', title: '', avatar: '', createdBy: null, memberIds: ['me', 'peer'],
-  lastMessageAt: null, createdAt: 0, updatedAt: 0, pinnedAt: null, myRole: 'member', ownerId: null, memberCount: 0, ...over,
+  id: 'c1', type: 'direct', title: '', serverId: null, memberIds: ['me', 'peer'],
+  lastMessageAt: null, createdAt: 0, updatedAt: 0, pinnedAt: null, ...over,
 });
 const me = { ...initialRoomState, joined: true, me: { ...initialRoomState.me, userId: 'me' } };
 
@@ -67,7 +67,7 @@ describe('DirectComposerGate', () => {
   });
 
   it('group: never queries the relationship nor shows a warning', () => {
-    renderGate(conversation({ type: 'group', memberIds: ['me', 'peer', 'other'] }));
+    renderGate(conversation({ type: 'text', serverId: 's1', memberIds: ['me', 'peer', 'other'] }));
     expect(screen.getByText('compositor')).toBeInTheDocument();
     expect(mocked.fetchRelationship).not.toHaveBeenCalled();
   });

@@ -39,7 +39,7 @@ export function Stage({ allIds, chatOpen, onToggleChat, onBack }: StageProps) {
   // say why it's empty and offer a way back.
   const allHiddenByFilter = allDescriptors.length > 0 && descriptors.length === 0;
   // allIds always holds you, so one id means nobody else is here yet
-  const inviteConversationId = allIds.length <= 1 && conversations.find((c) => c.id === activeCallConversationId)?.type === 'group'
+  const inviteConversationId = allIds.length <= 1 && conversations.find((c) => c.id === activeCallConversationId)?.type === 'voice'
     ? activeCallConversationId
     : null;
 

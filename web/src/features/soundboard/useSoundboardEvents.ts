@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ServerMessage } from '@/shared/types/protocol';
 import { logger } from '@/shared/lib/logger';
-import { invalidateGroupSounds } from './useGroupSounds';
-import { playGroupSound } from './soundPlayback';
+import { invalidateServerSounds } from './useServerSounds';
+import { playServerSound } from './soundPlayback';
 
 const log = logger.child({ component: 'soundboard' });
 
@@ -45,14 +45,14 @@ export function useSoundboardEvents({ activeCallConversationId, deafened }: Soun
     if (m.conversationId !== call.activeCallConversationId) return;
     floatEmoji(m.participantId, m.emoji || FALLBACK_EMOJI);
     if (call.deafened) return;
-    playGroupSound(m.conversationId, m.soundId, m.volume).catch((err: unknown) => {
+    playServerSound(m.serverId, m.soundId, m.volume).catch((err: unknown) => {
       log.warn('could not play soundboard sound', { soundId: m.soundId, err: err instanceof Error ? err.message : String(err) });
     });
   }, [floatEmoji]);
 
-  const onGroupSoundsChanged = useCallback((m: Extract<ServerMessage, { t: 'group-sounds-changed' }>) => {
-    invalidateGroupSounds(m.conversationId);
+  const onServerSoundsChanged = useCallback((m: Extract<ServerMessage, { t: 'server-sounds-changed' }>) => {
+    invalidateServerSounds(m.serverId);
   }, []);
 
-  return { floatingEmojis, onSoundboardPlay, onGroupSoundsChanged };
+  return { floatingEmojis, onSoundboardPlay, onServerSoundsChanged };
 }

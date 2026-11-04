@@ -1,12 +1,12 @@
 import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { db } from '../../db/client.js';
-import { conversations, friendships, groupInvitations, messages, notifications, users, type User } from '../../db/schema.js';
+import { conversations, friendships, messages, notifications, serverInvitations, servers, users, type User } from '../../db/schema.js';
 import { SOCIAL_PAGE_SIZE, decodeTimeCursor, encodeTimeCursor } from '../friendships/cursor.js';
 import { toSocialUser, type SocialUser } from '../users/users.js';
 import type { Tx } from '../users/userPairLock.js';
 
-// Leaf module (db/schema + cursor helpers only): friendships/ and conversations/
+// Leaf module (db/schema + cursor helpers only): friendships/ and servers/
 // call markNotificationsRead INSIDE their own transactions, so it must not
 // depend on either of them.
 
@@ -20,7 +20,7 @@ export async function markNotificationsRead(tx: Tx | typeof db, ref: { friendshi
   }
   if (ref.invitationIds.length === 0) return;
   await tx.update(notifications).set({ readAt: new Date() })
-    .where(and(inArray(notifications.groupInvitationId, ref.invitationIds), isNull(notifications.readAt)));
+    .where(and(inArray(notifications.serverInvitationId, ref.invitationIds), isNull(notifications.readAt)));
 }
 
 /** Reading a conversation up to a message settles the mentions up to it —
@@ -47,12 +47,12 @@ export interface NotificationEntry {
   id: string; kind: string; at: string; read: boolean; friendshipId: string | null; invitationId: string | null;
   /** Who caused it; null once that account no longer exists, and for a bot's mention. */
   actor: SocialUser | null;
-  /** Only for group invitations; null once the group is gone. */
-  group: { id: string; title: string; avatar: string } | null;
+  /** Only for server invitations; null once the server is gone. */
+  server: { id: string; name: string; icon: string } | null;
   /** Only for mentions: where it was, and the start of what was said. */
   mention: {
     messageId: number; excerpt: string;
-    conversation: { id: string; type: 'direct' | 'group' | 'bot'; title: string; avatar: string };
+    conversation: { id: string; type: 'direct' | 'text' | 'voice'; name: string; serverId: string | null; serverName: string; serverIcon: string };
   } | null;
 }
 
@@ -60,19 +60,24 @@ interface NotificationRow {
   id: string; kind: string; readAt: Date | null; friendshipId: string | null; invitationId: string | null;
 }
 
-type ConversationRef = { id: string; type: string; title: string; avatar: string };
+type ServerRef = { id: string; name: string; icon: string };
+type ConversationRef = { id: string; type: string; title: string; serverId: string | null };
 
 export function toNotificationEntry(
-  row: NotificationRow, at: string, actor: User | null, conversation: ConversationRef | null, message: { id: number; text: string } | null = null,
+  row: NotificationRow, at: string, actor: User | null, server: ServerRef | null,
+  conversation: ConversationRef | null = null, message: { id: number; text: string } | null = null,
 ): NotificationEntry {
   return {
     id: row.id, kind: row.kind, at, read: row.readAt !== null, friendshipId: row.friendshipId, invitationId: row.invitationId,
     actor: actor ? toSocialUser(actor) : null,
-    group: row.kind === 'group_invitation' && conversation ? { id: conversation.id, title: conversation.title, avatar: conversation.avatar } : null,
+    server: row.kind === 'server_invitation' && server ? { id: server.id, name: server.name, icon: server.icon } : null,
     mention: row.kind === 'mention' && conversation && message ? {
       messageId: message.id,
       excerpt: message.text.replace(/\s+/g, ' ').trim().slice(0, MENTION_EXCERPT_LEN),
-      conversation: { id: conversation.id, type: conversation.type === 'group' || conversation.type === 'bot' ? conversation.type : 'direct', title: conversation.title, avatar: conversation.avatar },
+      conversation: {
+        id: conversation.id, type: conversation.type === 'text' || conversation.type === 'voice' ? conversation.type : 'direct', name: conversation.title,
+        serverId: conversation.serverId, serverName: server?.name ?? '', serverIcon: server?.icon ?? '',
+      },
     } : null,
   };
 }
@@ -90,12 +95,17 @@ export async function listNotifications(userId: string, cursorRaw?: string): Pro
     when 'friend_request' then ${friendships.requestedBy}
     when 'friend_accepted' then case when ${friendships.userLowId} = ${userId} then ${friendships.userHighId} else ${friendships.userLowId} end
     when 'mention' then ${messages.authorId}
-    else ${groupInvitations.inviterId} end`;
-  const rows = await db.select({ row: notifications, ts: createdAtIso, actor: actors, conversation: conversations, message: { id: messages.id, text: messages.text } }).from(notifications)
+    else ${serverInvitations.inviterId} end`;
+  const rows = await db.select({
+    row: notifications, ts: createdAtIso, actor: actors, server: { id: servers.id, name: servers.name, icon: servers.icon },
+    conversation: { id: conversations.id, type: conversations.type, title: conversations.title, serverId: conversations.serverId },
+    message: { id: messages.id, text: messages.text },
+  }).from(notifications)
     .leftJoin(friendships, eq(friendships.id, notifications.friendshipId))
-    .leftJoin(groupInvitations, eq(groupInvitations.id, notifications.groupInvitationId))
+    .leftJoin(serverInvitations, eq(serverInvitations.id, notifications.serverInvitationId))
     .leftJoin(messages, eq(messages.id, notifications.messageId))
-    .leftJoin(conversations, sql`${conversations.id} = coalesce(${groupInvitations.conversationId}, ${messages.conversationId})`)
+    .leftJoin(conversations, eq(conversations.id, messages.conversationId))
+    .leftJoin(servers, sql`${servers.id} = coalesce(${serverInvitations.serverId}, ${conversations.serverId})`)
     .leftJoin(actors, sql`${actors.id} = ${actorId}`)
     .where(and(
       eq(notifications.recipientId, userId),
@@ -106,10 +116,9 @@ export async function listNotifications(userId: string, cursorRaw?: string): Pro
   const page = rows.slice(0, SOCIAL_PAGE_SIZE);
   const last = page[page.length - 1];
   return {
-    items: page.map(({ row, ts, actor, conversation, message }) => toNotificationEntry(
-      { id: row.id, kind: row.kind, readAt: row.readAt, friendshipId: row.friendshipId, invitationId: row.groupInvitationId },
-      ts, actor, conversation ? { id: conversation.id, type: conversation.type, title: conversation.title, avatar: conversation.avatar } : null,
-      message?.id ? message : null,
+    items: page.map(({ row, ts, actor, server, conversation, message }) => toNotificationEntry(
+      { id: row.id, kind: row.kind, readAt: row.readAt, friendshipId: row.friendshipId, invitationId: row.serverInvitationId },
+      ts, actor, server?.id ? server : null, conversation?.id ? conversation : null, message?.id ? message : null,
     )),
     nextCursor: rows.length > SOCIAL_PAGE_SIZE && last ? encodeTimeCursor(last.ts, last.row.id) : null,
   };
@@ -121,8 +130,10 @@ export async function countUnread(userId: string): Promise<number> {
   return row?.n ?? 0;
 }
 
-/** Mentions contribute through their unread message. A group invitation card
- * and its unread notification also describe one event, so count it once. */
+/** Unread DMs plus unread notifications — like Discord, a server channel's
+ * traffic only reaches the icon through a mention. A DM mention already
+ * counts through its unread message, and a server invitation card and its
+ * unread notification describe one event, so each is counted once. */
 export async function countAppBadge(userId: string): Promise<number> {
   const result = await db.execute(sql`
     select (
@@ -130,23 +141,25 @@ export async function countAppBadge(userId: string): Promise<number> {
       inner join conversations c on c.id = cm.conversation_id
       inner join messages m on m.conversation_id = cm.conversation_id
       where cm.user_id = ${userId}
-        and c.status = 'active'
-        and (c.type <> 'direct' or cm.hidden_at is null or c.last_message_at > cm.hidden_at)
+        and c.type = 'direct'
+        and (cm.hidden_at is null or c.last_message_at > cm.hidden_at)
         and m.id > coalesce(cm.last_read_message_id, 0)
         and m.created_at > cm.joined_at
         and m.author_id is distinct from ${userId}
         and not (
-          m.kind = 'group_invite' and exists (
+          m.kind = 'server_invite' and exists (
             select 1 from notifications invitation
             where invitation.recipient_id = ${userId}
-              and invitation.kind = 'group_invitation'
-              and invitation.group_invitation_id = m.group_invitation_id
+              and invitation.kind = 'server_invitation'
+              and invitation.server_invitation_id = m.server_invitation_id
               and invitation.read_at is null
           )
         )
     ) + (
       select count(*) from notifications n
-      where n.recipient_id = ${userId} and n.read_at is null and n.kind <> 'mention'
+      left join messages mm on mm.id = n.message_id
+      left join conversations mc on mc.id = mm.conversation_id
+      where n.recipient_id = ${userId} and n.read_at is null and (n.kind <> 'mention' or mc.type <> 'direct')
     ) as count
   `);
   return Number(result.rows[0]?.count ?? 0);

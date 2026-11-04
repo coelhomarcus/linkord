@@ -4,17 +4,19 @@ import { after, before, describe, it } from 'node:test';
 import { eq } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { config } from '../../src/config/env.js';
-import { conversationMembers, friendships, userBlocks, users } from '../../src/db/schema.js';
+import { friendships, serverMembers, serverRoles, userBlocks, users } from '../../src/db/schema.js';
 import { createApp } from '../../src/http/app.js';
 import { createSession } from '../../src/modules/auth/session.js';
 import { canSendDirectMessage } from '../../src/modules/friendships/friendshipsRepository.js';
-import { createInvitations } from '../../src/modules/conversations/invitationsRepository.js';
-import { befriend, db, makeGroupWithMembers, makeUser, pool } from './helpers.js';
+import { createInvitations } from '../../src/modules/servers/serverInvitationsRepository.js';
+import { invalidateAllServers } from '../../src/modules/servers/serverAccess.js';
+import { PERMISSIONS } from '../../src/modules/servers/permissions.js';
+import { befriend, db, makeServerWithMembers, makeUser, pool } from './helpers.js';
 
 // The permission matrix of docs/contratos.md, executed over HTTP against a real
 // database: for each action, who may do it and, for everyone else, WHICH error
-// they get. Actions that only exist as socket handlers (group-update,
-// group-delete, chat-*, call-kick) are not reachable from here.
+// they get. Actions that only exist as socket handlers (chat-*, call-kick)
+// are not reachable from here; servers.itest.ts covers roles and channels.
 
 let app: FastifyInstance;
 before(async () => { app = createApp(); await app.ready(); });
@@ -27,7 +29,7 @@ async function actor(prefix: string, role: 'user' | 'admin' = 'user'): Promise<A
 }
 
 interface Reply { status: number; code?: string; body: any }
-async function call(as: Actor | null, method: 'GET' | 'POST' | 'DELETE', url: string, payload?: unknown): Promise<Reply> {
+async function call(as: Actor | null, method: 'GET' | 'POST' | 'DELETE' | 'PATCH' | 'PUT', url: string, payload?: unknown): Promise<Reply> {
   const res = await app.inject({ method, url, payload: payload as object | undefined, headers: as ? { cookie: `${config.SESSION_COOKIE}=${as.token}` } : {} });
   const body = res.body ? JSON.parse(res.body) : null;
   return { status: res.statusCode, code: body?.error?.code, body };
@@ -37,20 +39,21 @@ function expectDenied(reply: Reply, status: number, code: string, who: string): 
   assert.deepEqual({ status: reply.status, code: reply.code }, { status, code }, `${who}: expected ${status} ${code}`);
 }
 
-/** owner + member + ex-member in one group; a friend, an invited friend, a
+/** owner + member + ex-member in one server; a friend, an invited friend, a
  * stranger and someone the owner blocked around it. */
 async function world() {
   const [owner, member, exMember, friend, invitee, stranger, blocked] = await Promise.all(
     ['own', 'mem', 'exm', 'fri', 'inv', 'str', 'blk'].map((p) => actor(p)),
   ) as [Actor, Actor, Actor, Actor, Actor, Actor, Actor];
   for (const other of [member, exMember, friend, invitee, blocked]) await befriend(owner.id, other.id);
-  const groupId = await makeGroupWithMembers(owner.id, [member.id, exMember.id], 'matrix');
-  await db.delete(conversationMembers).where(eq(conversationMembers.userId, exMember.id));
-  const invited = await createInvitations(owner.id, groupId, [invitee.id]);
+  const { serverId } = await makeServerWithMembers(owner.id, [member.id, exMember.id], 'matrix');
+  await db.delete(serverMembers).where(eq(serverMembers.userId, exMember.id));
+  invalidateAllServers();
+  const invited = await createInvitations(owner.id, serverId, [invitee.id]);
   assert.ok('results' in invited);
   const invitationId = invited.results[0]!.invitationId!;
   await db.insert(userBlocks).values({ blockerId: owner.id, blockedId: blocked.id });
-  return { owner, member, exMember, friend, invitee, stranger, blocked, groupId, invitationId };
+  return { owner, member, exMember, friend, invitee, stranger, blocked, serverId, invitationId };
 }
 
 describe('matrix: admin routes', () => {
@@ -63,12 +66,14 @@ describe('matrix: admin routes', () => {
     ['grant admin', 'POST', '/api/admin/users/x/grant-admin'],
     ['remove admin', 'POST', '/api/admin/users/x/revoke-admin'],
     ['delete user', 'DELETE', '/api/admin/users/x'],
-    ['list groups', 'GET', '/api/admin/groups'],
-    ['group detail', 'GET', '/api/admin/groups/x'],
-    ['suspend group', 'POST', '/api/admin/groups/x/suspend'],
-    ['reactivate group', 'POST', '/api/admin/groups/x/reactivate'],
-    ['assign owner', 'POST', '/api/admin/groups/x/owner'],
-    ['delete group', 'DELETE', '/api/admin/groups/x'],
+    ['list servers', 'GET', '/api/admin/servers'],
+    ['server detail', 'GET', '/api/admin/servers/x'],
+    ['suspend server', 'POST', '/api/admin/servers/x/suspend'],
+    ['reactivate server', 'POST', '/api/admin/servers/x/reactivate'],
+    ['assign owner', 'POST', '/api/admin/servers/x/owner'],
+    ['delete server', 'DELETE', '/api/admin/servers/x'],
+    ['list webhooks', 'GET', '/api/admin/webhooks'],
+    ['revoke webhook', 'POST', '/api/admin/webhooks/x/revoke'],
     ['list reports', 'GET', '/api/admin/reports'],
     ['report detail', 'GET', '/api/admin/reports/x'],
     ['claim report', 'POST', '/api/admin/reports/x/claim'],
@@ -96,7 +101,7 @@ describe('matrix: admin routes', () => {
 
   it('an active admin reads; without a reason it does not act; it does not act on itself', async () => {
     const admin = await actor('ad', 'admin');
-    for (const url of ['/api/admin/users', '/api/admin/groups', '/api/admin/reports', '/api/admin/system', '/api/admin/audit']) {
+    for (const url of ['/api/admin/users', '/api/admin/servers', '/api/admin/webhooks', '/api/admin/reports', '/api/admin/system', '/api/admin/audit']) {
       assert.equal((await call(admin, 'GET', url)).status, 200, url);
     }
     expectDenied(await call(admin, 'POST', `/api/admin/users/${admin.id}/suspend`, {}), 400, 'reason_required', 'no reason');
@@ -105,22 +110,31 @@ describe('matrix: admin routes', () => {
   });
 });
 
-describe('matrix: groups and invitations', () => {
-  it('inviting: only the current owner, only a friend, never someone blocked or already a member', async () => {
+describe('matrix: servers and invitations', () => {
+  it('inviting: any member with CREATE_INVITE, only a friend, never someone blocked or already a member', async () => {
     const w = await world();
-    const url = `/api/groups/${w.groupId}/invitations`;
+    const url = `/api/servers/${w.serverId}/invitations`;
     expectDenied(await call(null, 'POST', url, { userIds: [w.friend.id] }), 401, 'unauthenticated', 'no session');
-    for (const [who, a] of [['member', w.member], ['ex-member', w.exMember], ['invitee', w.invitee], ['friend', w.friend], ['stranger', w.stranger]] as const) {
-      expectDenied(await call(a, 'POST', url, { userIds: [w.friend.id] }), 403, 'forbidden', who);
+    for (const [who, a] of [['ex-member', w.exMember], ['invitee', w.invitee], ['friend', w.friend], ['stranger', w.stranger]] as const) {
+      expectDenied(await call(a, 'POST', url, { userIds: [w.friend.id] }), 404, 'not_found', who);
     }
     const res = await call(w.owner, 'POST', url, { userIds: [w.friend.id, w.stranger.id, w.blocked.id, w.member.id] });
     assert.equal(res.status, 200);
     assert.deepEqual(res.body.results.map((r: { outcome: string }) => r.outcome), ['sent', 'not_friends', 'not_friends', 'already_member']);
   });
 
-  it('sent invitations: only the owner lists them', async () => {
+  it('inviting without CREATE_INVITE: 403 for the member, still allowed for the owner', async () => {
     const w = await world();
-    const url = `/api/groups/${w.groupId}/invitations`;
+    await db.update(serverRoles).set({ permissions: PERMISSIONS.VIEW_CHANNEL | PERMISSIONS.SEND_MESSAGES }).where(eq(serverRoles.serverId, w.serverId));
+    invalidateAllServers();
+    const url = `/api/servers/${w.serverId}/invitations`;
+    expectDenied(await call(w.member, 'POST', url, { userIds: [w.friend.id] }), 403, 'forbidden', 'member without the permission');
+    assert.equal((await call(w.owner, 'POST', url, { userIds: [w.friend.id] })).status, 200);
+  });
+
+  it('sent invitations: only who manages the server lists them', async () => {
+    const w = await world();
+    const url = `/api/servers/${w.serverId}/invitations`;
     assert.equal((await call(w.owner, 'GET', url)).status, 200);
     for (const [who, a] of [['member', w.member], ['ex-member', w.exMember], ['invitee', w.invitee], ['friend', w.friend], ['stranger', w.stranger]] as const) {
       expectDenied(await call(a, 'GET', url), 403, 'forbidden', who);
@@ -129,27 +143,27 @@ describe('matrix: groups and invitations', () => {
 
   it('received invitations: each account sees only its own', async () => {
     const w = await world();
-    assert.equal((await call(w.invitee, 'GET', '/api/group-invitations')).body.items.length, 1);
-    assert.equal((await call(w.stranger, 'GET', '/api/group-invitations')).body.items.length, 0);
-    assert.equal((await call(w.owner, 'GET', '/api/group-invitations')).body.items.length, 0);
+    assert.equal((await call(w.invitee, 'GET', '/api/server-invitations')).body.items.length, 1);
+    assert.equal((await call(w.stranger, 'GET', '/api/server-invitations')).body.items.length, 0);
+    assert.equal((await call(w.owner, 'GET', '/api/server-invitations')).body.items.length, 0);
   });
 
   it('accepting and declining: only the invitee (no one else even knows it exists)', async () => {
     const w = await world();
     for (const action of ['accept', 'decline']) {
       for (const [who, a] of [['owner', w.owner], ['stranger', w.stranger], ['member', w.member], ['ex-member', w.exMember], ['friend', w.friend]] as const) {
-        expectDenied(await call(a, 'POST', `/api/group-invitations/${w.invitationId}/${action}`), 404, 'not_found', `${action} ${who}`);
+        expectDenied(await call(a, 'POST', `/api/server-invitations/${w.invitationId}/${action}`), 404, 'not_found', `${action} ${who}`);
       }
     }
-    expectDenied(await call(null, 'POST', `/api/group-invitations/${w.invitationId}/accept`), 401, 'unauthenticated', 'no session');
-    const ok = await call(w.invitee, 'POST', `/api/group-invitations/${w.invitationId}/accept`);
+    expectDenied(await call(null, 'POST', `/api/server-invitations/${w.invitationId}/accept`), 401, 'unauthenticated', 'no session');
+    const ok = await call(w.invitee, 'POST', `/api/server-invitations/${w.invitationId}/accept`);
     assert.equal(ok.status, 200);
     assert.equal(ok.body.invitation.status, 'accepted');
   });
 
-  it('revoking: only the group owner; invitee, member and stranger get 403', async () => {
+  it('revoking: the inviter or who manages the server; invitee, member and stranger get 403', async () => {
     const w = await world();
-    const url = `/api/group-invitations/${w.invitationId}`;
+    const url = `/api/server-invitations/${w.invitationId}`;
     for (const [who, a] of [['invitee', w.invitee], ['member', w.member], ['ex-member', w.exMember], ['friend', w.friend], ['stranger', w.stranger]] as const) {
       expectDenied(await call(a, 'DELETE', url), 403, 'forbidden', who);
     }
@@ -157,12 +171,12 @@ describe('matrix: groups and invitations', () => {
     assert.equal(ok.status, 200);
     assert.equal(ok.body.invitation.status, 'revoked');
     // and a revoked invitation can no longer be accepted
-    expectDenied(await call(w.invitee, 'POST', `/api/group-invitations/${w.invitationId}/accept`), 409, 'conflict', 'accepting a revoked one');
+    expectDenied(await call(w.invitee, 'POST', `/api/server-invitations/${w.invitationId}/accept`), 409, 'conflict', 'accepting a revoked one');
   });
 
   it('member list: only members; ex-member, pending invitee and stranger get 404', async () => {
     const w = await world();
-    const url = `/api/groups/${w.groupId}/members`;
+    const url = `/api/servers/${w.serverId}/members`;
     expectDenied(await call(null, 'GET', url), 401, 'unauthenticated', 'no session');
     for (const [who, a] of [['owner', w.owner], ['member', w.member]] as const) assert.equal((await call(a, 'GET', url)).status, 200, who);
     for (const [who, a] of [['ex-member', w.exMember], ['invitee', w.invitee], ['friend', w.friend], ['stranger', w.stranger]] as const) {
@@ -170,9 +184,9 @@ describe('matrix: groups and invitations', () => {
     }
   });
 
-  it('creating a group with an invite only reaches friends', async () => {
+  it('creating a server with an invite only reaches friends', async () => {
     const w = await world();
-    const res = await call(w.owner, 'POST', '/api/groups', { title: 'new', inviteeIds: [w.friend.id, w.stranger.id] });
+    const res = await call(w.owner, 'POST', '/api/servers', { name: 'new', inviteeIds: [w.friend.id, w.stranger.id] });
     assert.equal(res.status, 201);
     assert.deepEqual(res.body.results.map((r: { outcome: string }) => r.outcome), ['sent', 'not_friends']);
   });
@@ -235,14 +249,14 @@ describe('matrix: notifications and reports', () => {
   it('reporting: only what the account can see; an invisible target and a nonexistent one answer the same', async () => {
     const w = await world();
     const report = (a: Actor | null, targetType: string, targetId: string) => call(a, 'POST', '/api/reports', { targetType, targetId, category: 'spam', details: '' });
-    assert.equal((await report(w.member, 'group', w.groupId)).status, 201);
+    assert.equal((await report(w.member, 'server', w.serverId)).status, 201);
     for (const [who, a] of [['ex-member', w.exMember], ['invitee', w.invitee], ['friend', w.friend], ['stranger', w.stranger]] as const) {
-      expectDenied(await report(a, 'group', w.groupId), 404, 'not_found', `group it can't see: ${who}`);
+      expectDenied(await report(a, 'server', w.serverId), 404, 'not_found', `server it can't see: ${who}`);
     }
-    expectDenied(await report(w.stranger, 'group', 'nonexistent'), 404, 'not_found', 'nonexistent group');
+    expectDenied(await report(w.stranger, 'server', 'nonexistent'), 404, 'not_found', 'nonexistent server');
     expectDenied(await report(w.stranger, 'user', w.owner.id), 404, 'not_found', 'unrelated user');
     assert.equal((await report(w.friend, 'user', w.owner.id)).status, 201);
     expectDenied(await report(w.friend, 'user', w.friend.id), 400, 'invalid_report', 'against oneself');
-    expectDenied(await report(null, 'group', w.groupId), 401, 'unauthenticated', 'no session');
+    expectDenied(await report(null, 'server', w.serverId), 401, 'unauthenticated', 'no session');
   });
 });

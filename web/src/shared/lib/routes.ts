@@ -21,19 +21,35 @@ export function parseFriendsView(raw: string | null | undefined): FriendsView {
   return (FRIENDS_VIEWS as readonly string[]).includes(raw ?? '') ? (raw as FriendsView) : 'all';
 }
 
+// Discord's URL shapes: `@me` is home (friends and DMs), anything else in
+// that slot is a server id.
+export const HOME = '@me';
+
 export const ROUTES = {
-  conversations: '/app/conversations',
+  /** home: the DM list (and, beside it on a wide screen, the friends page) */
+  home: '/app/channels/@me',
+  /** the friends page on its own — what a phone opens from the DM list */
+  friends: '/app/friends',
   notifications: '/app/notifications',
   profile: '/app/profile',
-  friends: '/app/friends',
   /** legacy: redirects to the pending view of Friends; new links use friendsView/friendsSection */
   requests: '/app/requests',
   settings: '/app/settings',
   admin: '/admin/users',
   settingsTab: (tab: SettingsTab) => `/app/settings/${tab}`,
-  conversation: (id: string) => `/app/conversations/${encodeURIComponent(id)}`,
+  direct: (id: string) => `/app/channels/@me/${encodeURIComponent(id)}`,
+  /** a server without a channel: lands on its first visible text channel */
+  server: (serverId: string) => `/app/channels/${encodeURIComponent(serverId)}`,
+  channel: (serverId: string, channelId: string) => `/app/channels/${encodeURIComponent(serverId)}/${encodeURIComponent(channelId)}`,
+  /** a DM call's stage; a voice channel's call shows on its own channel URL */
   call: (id: string) => `/app/calls/${encodeURIComponent(id)}`,
+  invite: (code: string) => `/invite/${encodeURIComponent(code)}`,
 } as const;
+
+/** Where a conversation lives: a DM under home, a channel under its server. */
+export function conversationPath(conversation: { id: string; serverId: string | null }): string {
+  return conversation.serverId ? ROUTES.channel(conversation.serverId, conversation.id) : ROUTES.direct(conversation.id);
+}
 
 /** Settings and administration open as modals over the app: their URLs name
  * the modal, and the page underneath stays the last real page. */
@@ -57,21 +73,41 @@ export function friendsSection(section: FriendsSection): string {
   return `${friendsView('pending')}#${section}`;
 }
 
-/** The conversation id in a conversation URL. */
+const decode = (value: string | undefined): string | null => {
+  if (!value) return null;
+  try { return decodeURIComponent(value); } catch { return null; }
+};
+
+/** The conversation (DM or channel) a URL shows. */
 export function conversationIdFromPath(pathname: string): string | null {
-  const match = /^\/app\/conversations\/([^/]+)\/?$/.exec(pathname);
-  if (!match) return null;
-  try { return decodeURIComponent(match[1]!); } catch { return null; }
+  const match = /^\/app\/channels\/([^/]+)\/([^/]+)\/?$/.exec(pathname);
+  return match ? decode(match[2]) : null;
+}
+
+/** The server a URL is in; null at home and outside the channels area. */
+export function serverIdFromPath(pathname: string): string | null {
+  const match = /^\/app\/channels\/([^/]+)(?:\/[^/]*)?\/?$/.exec(pathname);
+  const id = match ? decode(match[1]) : null;
+  return id && id !== HOME ? id : null;
 }
 
 export function callConversationIdFromPath(pathname: string): string | null {
   const match = /^\/app\/calls\/([^/]+)\/?$/.exec(pathname);
-  if (!match) return null;
-  try { return decodeURIComponent(match[1]!); } catch { return null; }
+  return match ? decode(match[1]) : null;
 }
 
-export function isConversationsPath(pathname: string): boolean {
-  return pathname === ROUTES.conversations || pathname.startsWith(`${ROUTES.conversations}/`);
+/** Home: the friends page and the DMs. */
+export function isHomePath(pathname: string): boolean {
+  return pathname === ROUTES.home || pathname.startsWith(`${ROUTES.home}/`) || pathname === ROUTES.friends;
+}
+
+export function isChannelsPath(pathname: string): boolean {
+  return pathname === '/app/channels' || pathname.startsWith('/app/channels/');
+}
+
+export function inviteCodeFromPath(pathname: string): string | null {
+  const match = /^\/invite\/([^/]+)\/?$/.exec(pathname);
+  return match ? decode(match[1]) : null;
 }
 
 /** A new direct conversation is being created before its id is known. */

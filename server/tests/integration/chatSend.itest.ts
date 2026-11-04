@@ -6,7 +6,7 @@ import { conversationMembers, messageSendOperations, messages } from '../../src/
 import { handlers } from '../../src/modules/messages/messages.js';
 import { getOrCreateDirect } from '../../src/modules/conversations/conversationsRepository.js';
 import { sweepSendOperations } from '../../src/modules/messages/sendOperations.js';
-import { cleanupParticipant, db, joinNew, makeGroupWithMembers, makeUser, pool } from './helpers.js';
+import { cleanupParticipant, db, joinNew, makeServerWithMembers, makeUser, pool } from './helpers.js';
 
 after(() => pool.end());
 
@@ -20,7 +20,7 @@ async function rowsIn(conversationId: string) {
 
 async function withMember<T>(fn: (ctx: { socket: any; sent: Sent; conversationId: string; userId: string }) => Promise<T>): Promise<T> {
   const owner = await makeUser('cs');
-  const conversationId = await makeGroupWithMembers(owner.id, []);
+  const conversationId = (await makeServerWithMembers(owner.id, [])).textChannelId;
   const { socket, sent, participant } = joinNew(owner);
   try {
     return await fn({ socket, sent, conversationId, userId: owner.id });
@@ -93,7 +93,7 @@ describe('correlated chat (real Postgres)', () => {
 
   it('refusals are also answered: someone else\'s conversation', () => withMember(async ({ socket, sent }) => {
     const stranger = await makeUser('cs');
-    const otherGroup = await makeGroupWithMembers(stranger.id, []);
+    const otherGroup = (await makeServerWithMembers(stranger.id, [])).textChannelId;
     await handlers.chat!(socket, { conversationId: otherGroup, text: 'trespassing', requestId: 'a', clientMessageId: key() });
     assert.equal(results(sent)[0].error.code, 'conversation_not_found');
   }));
@@ -243,7 +243,7 @@ describe('forward history (real Postgres)', () => {
 
   it('someone else\'s conversation does not respond', async () => {
     const stranger = await makeUser('cs');
-    const otherGroup = await makeGroupWithMembers(stranger.id, []);
+    const otherGroup = (await makeServerWithMembers(stranger.id, [])).textChannelId;
     await withMember(async (ctx) => {
       await handlers['load-messages-after']!(ctx.socket, { conversationId: otherGroup, afterMsgId: 0 });
       assert.equal(ctx.sent.filter((s) => s.event === 'conversation-history-newer').length, 0);

@@ -10,7 +10,7 @@ import { createSession } from '../../src/modules/auth/session.js';
 import { handlers } from '../../src/modules/messages/messages.js';
 import { listNotifications } from '../../src/modules/notifications/notificationsRepository.js';
 import { getOrCreateDirect } from '../../src/modules/conversations/conversationsRepository.js';
-import { befriend, cleanupParticipant, db, joinNew, makeGroupWithMembers, makeUser, pool } from './helpers.js';
+import { befriend, cleanupParticipant, db, joinNew, makeServerWithMembers, makeUser, pool } from './helpers.js';
 
 let app: FastifyInstance;
 before(async () => { app = createApp(); await app.ready(); });
@@ -29,15 +29,15 @@ async function send(socket: Parameters<NonNullable<typeof handlers.chat>>[0], co
 }
 
 describe('mention notifications (real Postgres)', () => {
-  it('a member named in a group is notified; the author, a non-member and an unnamed member are not', async () => {
+  it('a member named in a channel is notified; the author, a non-member and an unnamed member are not', async () => {
     const author = await makeUser('mn');
     const named = await makeUser('mn');
     const quiet = await makeUser('mn');
     const outsider = await makeUser('mn');
-    const groupId = await makeGroupWithMembers(author.id, [named.id, quiet.id]);
+    const channelId = (await makeServerWithMembers(author.id, [named.id, quiet.id])).textChannelId;
     const { socket, participant } = joinNew(author);
     try {
-      await send(socket, groupId, `olha isso @${named.username.toUpperCase()} e @${author.username} e @${outsider.username}`);
+      await send(socket, channelId, `olha isso @${named.username.toUpperCase()} e @${author.username} e @${outsider.username}`);
     } finally {
       cleanupParticipant(participant);
     }
@@ -71,10 +71,10 @@ describe('mention notifications (real Postgres)', () => {
     const author = await makeUser('mn');
     const first = await makeUser('mn');
     const later = await makeUser('mn');
-    const groupId = await makeGroupWithMembers(author.id, [first.id, later.id]);
+    const channelId = (await makeServerWithMembers(author.id, [first.id, later.id])).textChannelId;
     const { socket, sent, participant } = joinNew(author);
     try {
-      await send(socket, groupId, `oi @${first.username}`);
+      await send(socket, channelId, `oi @${first.username}`);
       const msgId = sent.find((s) => s.event === 'chat-send-result')!.payload.message.msgId;
       await handlers['chat-edit']!(socket, { msgId, text: `oi @${first.username} e @${later.username}`, requestId: 'e' });
       await settle();
@@ -88,11 +88,11 @@ describe('mention notifications (real Postgres)', () => {
   it('a block either way stops the notification', async () => {
     const author = await makeUser('mn');
     const blocker = await makeUser('mn');
-    const groupId = await makeGroupWithMembers(author.id, [blocker.id]);
+    const channelId = (await makeServerWithMembers(author.id, [blocker.id])).textChannelId;
     await db.insert(userBlocks).values({ blockerId: blocker.id, blockedId: author.id });
     const { socket, participant } = joinNew(author);
     try {
-      await send(socket, groupId, `@${blocker.username} oi`);
+      await send(socket, channelId, `@${blocker.username} oi`);
     } finally {
       cleanupParticipant(participant);
     }
@@ -102,20 +102,20 @@ describe('mention notifications (real Postgres)', () => {
   it('opening the conversation reads its mentions, and deleting the message removes the notification', async () => {
     const author = await makeUser('mn');
     const named = await makeUser('mn');
-    const groupId = await makeGroupWithMembers(author.id, [named.id]);
+    const channelId = (await makeServerWithMembers(author.id, [named.id])).textChannelId;
     const authorSocket = joinNew(author);
     const namedSocket = joinNew(named);
     try {
-      await send(authorSocket.socket, groupId, `@${named.username} primeira`);
-      await send(authorSocket.socket, groupId, `@${named.username} segunda`);
+      await send(authorSocket.socket, channelId, `@${named.username} primeira`);
+      await send(authorSocket.socket, channelId, `@${named.username} segunda`);
       assert.deepEqual((await mentionsOf(named.id)).map((n) => n.readAt), [null, null]);
       // the open bell in every tab refetches on this hint
       assert.ok(namedSocket.sent.some((s) => s.event === 'social-changed'));
 
-      await handlers['conversation-open']!(namedSocket.socket, { conversationId: groupId });
+      await handlers['conversation-open']!(namedSocket.socket, { conversationId: channelId });
       assert.ok((await mentionsOf(named.id)).every((n) => n.readAt !== null));
 
-      const [last] = await db.select({ id: messages.id }).from(messages).where(eq(messages.conversationId, groupId)).orderBy(messages.id);
+      const [last] = await db.select({ id: messages.id }).from(messages).where(eq(messages.conversationId, channelId)).orderBy(messages.id);
       await handlers['chat-delete']!(authorSocket.socket, { msgId: last!.id, requestId: 'd' });
       assert.equal((await mentionsOf(named.id)).length, 1);
     } finally {
@@ -124,11 +124,12 @@ describe('mention notifications (real Postgres)', () => {
     }
   });
 
-  it("a bot's message notifies whoever it names, with no account as the author", async () => {
+  it("a webhook's message notifies whoever it names, with no account as the author", async () => {
     const owner = await makeUser('mn');
+    const { serverId, textChannelId: conversationId } = await makeServerWithMembers(owner.id, [], 'Alertas');
     const cookie = `${config.SESSION_COOKIE}=${(await createSession(owner.id)).rawToken}`;
-    const created = await app.inject({ method: 'POST', url: '/api/bots', payload: { title: 'Alertas' }, headers: { cookie } });
-    const { webhook, conversationId } = JSON.parse(created.body);
+    const created = await app.inject({ method: 'POST', url: `/api/channels/${conversationId}/webhooks`, payload: { name: 'Alertas' }, headers: { cookie } });
+    const { webhook } = JSON.parse(created.body);
     await app.inject({ method: 'POST', url: `/api/webhooks/${webhook.id}/${webhook.token}`, payload: { content: `@${owner.username} CPU alta` } });
     await settle();
     const page = await listNotifications(owner.id);
@@ -136,6 +137,9 @@ describe('mention notifications (real Postgres)', () => {
     const [entry] = page.items;
     assert.equal(entry?.kind, 'mention');
     assert.equal(entry?.actor, null);
-    assert.deepEqual({ type: entry?.mention?.conversation.type, title: entry?.mention?.conversation.title, id: entry?.mention?.conversation.id }, { type: 'bot', title: 'Alertas', id: conversationId });
+    assert.deepEqual(
+      { type: entry?.mention?.conversation.type, serverId: entry?.mention?.conversation.serverId, serverName: entry?.mention?.conversation.serverName, id: entry?.mention?.conversation.id },
+      { type: 'text', serverId, serverName: 'Alertas', id: conversationId },
+    );
   });
 });

@@ -46,7 +46,7 @@ function mimeForFormat(format: string | undefined): string | null {
 /** Stores a client-cropped profile image. Sharp only reads metadata (the
  * decompression-bomb guard) and, when the file is animated, freezes the
  * first frame as a JPEG poster for the call UI. `uploaderId` is who gets
- * to later claim this as their own avatar/banner/group avatar. */
+ * to later claim this as their own avatar/banner/server icon. */
 export async function encodeAndStoreProfileImage(
   buffer: Buffer,
   uploaderId: string,

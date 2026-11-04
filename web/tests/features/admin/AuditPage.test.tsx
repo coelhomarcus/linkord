@@ -42,10 +42,10 @@ describe('AuditPage', () => {
     open();
     await screen.findByRole('table');
     expect(screen.queryByRole('button', { name: 'Limpar filtros' })).not.toBeInTheDocument();
-    await chooseAdminSelect(u, 'Tipo de alvo', 'Grupo');
+    await chooseAdminSelect(u, 'Tipo de alvo', 'Servidor');
     await u.type(screen.getByLabelText('Administrador'), 'lune');
     await u.type(screen.getByLabelText('ID do alvo'), 'g1');
-    await waitFor(() => expect(mocked.fetchAudit).toHaveBeenLastCalledWith(expect.objectContaining({ targetType: 'group', actor: 'lune', targetId: 'g1' }), null));
+    await waitFor(() => expect(mocked.fetchAudit).toHaveBeenLastCalledWith(expect.objectContaining({ targetType: 'server', actor: 'lune', targetId: 'g1' }), null));
     expect(screen.getByRole('button', { name: 'Limpar filtros' })).toBeInTheDocument();
   });
 

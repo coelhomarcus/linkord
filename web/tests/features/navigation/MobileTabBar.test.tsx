@@ -6,7 +6,7 @@ import { renderSocial } from '@tests/fixtures/socialFixture';
 import { MobileTabBar } from '@/features/navigation/MobileTabBar';
 import { NotificationStateProvider } from '@/features/notifications/NotificationStateProvider';
 import { initialRoomState } from '@/state/roomReducer';
-import type { Conversation } from '@/shared/types/protocol';
+import type { Conversation, ServerSummary } from '@/shared/types/protocol';
 import * as api from '@/shared/api/api';
 
 vi.mock('@/shared/api/api', async (importOriginal) => ({
@@ -15,8 +15,14 @@ vi.mock('@/shared/api/api', async (importOriginal) => ({
 }));
 const mocked = vi.mocked(api);
 const conversation: Conversation = {
-  id: 'c1', type: 'group', title: 'Equipe', avatar: '', createdBy: null, memberIds: [], lastMessageAt: null,
-  createdAt: 0, updatedAt: 0, pinnedAt: null, myRole: 'member', ownerId: null, memberCount: 0,
+  id: 'c1', type: 'text', title: 'Equipe', serverId: 's1', memberIds: [], lastMessageAt: null,
+  createdAt: 0, updatedAt: 0, pinnedAt: null,
+};
+const direct: Conversation = { ...conversation, id: 'd1', type: 'direct', title: '', serverId: null, memberIds: ['me', 'ana'] };
+const server: ServerSummary = {
+  id: 's1', name: 'Equipe', icon: '', ownerId: 'me', status: 'active', createdAt: 0, memberCount: 2, position: 0,
+  permissions: 0, myRoleIds: [], roles: [], categories: [],
+  channels: [{ id: 'c1', serverId: 's1', type: 'text', name: 'geral', topic: '', categoryId: null, position: 0, permissionsSynced: true, permissions: 0 }],
 };
 
 beforeEach(() => {
@@ -35,7 +41,7 @@ function renderBar(callId: string | null = null, onReturnToCall = vi.fn()) {
       path: '/app/friends',
       room: {
         state: { ...initialRoomState, me: { ...initialRoomState.me, userId: 'me', displayName: 'Mar' } },
-        conversations: [conversation], unreadByConversation: new Map([['c1', 2]]),
+        conversations: [conversation, direct], servers: [server], unreadByConversation: new Map([['c1', 2], ['d1', 1]]),
       },
     },
   );
@@ -45,9 +51,10 @@ describe('MobileTabBar', () => {
   it('links to four top-level pages with active state and unread badges', async () => {
     renderBar();
     const links = screen.getAllByRole('link');
-    expect(links.map((link) => link.getAttribute('href'))).toEqual(['/app/conversations', '/app/friends', '/app/notifications', '/app/profile']);
-    expect(screen.getByRole('link', { name: /Amigos/ })).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByRole('link', { name: /Conversas/ })).toHaveTextContent('2');
+    expect(links.map((link) => link.getAttribute('href'))).toEqual(['/app/channels/s1', '/app/channels/@me', '/app/notifications', '/app/profile']);
+    expect(screen.getByRole('link', { name: /^Mensagens/ })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: 'Servidores, 2 não lidas' })).toHaveTextContent('2');
+    expect(screen.getByRole('link', { name: 'Mensagens, 1 não lida' })).toHaveTextContent('1');
     expect(await screen.findByText('3')).toBeInTheDocument();
   });
 
@@ -62,7 +69,7 @@ describe('MobileTabBar', () => {
   it('switching tabs replaces the history entry', async () => {
     const user = userEvent.setup();
     renderBar();
-    await user.click(screen.getByRole('link', { name: /^Conversas/ }));
-    expect(screen.getByTestId('where')).toHaveTextContent('REPLACE /app/conversations');
+    await user.click(screen.getByRole('link', { name: /^Servidores/ }));
+    expect(screen.getByTestId('where')).toHaveTextContent('REPLACE /app/channels/s1');
   });
 });

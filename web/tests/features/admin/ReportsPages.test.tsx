@@ -38,8 +38,8 @@ describe('ReportsPage', () => {
     await screen.findByRole('table');
     await chooseAdminSelect(u, 'Fila', 'Encerradas');
     await waitFor(() => expect(mocked.fetchAdminReports).toHaveBeenLastCalledWith({ status: 'closed', targetType: undefined }, null));
-    await chooseAdminSelect(u, 'Tipo de alvo', 'Grupos');
-    await waitFor(() => expect(mocked.fetchAdminReports).toHaveBeenLastCalledWith({ status: 'closed', targetType: 'group' }, null));
+    await chooseAdminSelect(u, 'Tipo de alvo', 'Servidores');
+    await waitFor(() => expect(mocked.fetchAdminReports).toHaveBeenLastCalledWith({ status: 'closed', targetType: 'server' }, null));
   });
 
   it('opening the queue never fetches any evidence', async () => {
@@ -58,7 +58,7 @@ describe('ReportDetailPage', () => {
     expect(container.querySelector('img')).toBeNull();
   });
 
-  it('for a message report the outcomes are delete, suspend the author, no action, dismiss — never suspend the group', async () => {
+  it('for a message report the outcomes are delete, suspend the author, no action, dismiss — never suspend the server', async () => {
     openDetail();
     await screen.findByText('texto da mensagem');
     const labels = screen.getAllByRole('radio').map((r) => r.closest('label')!.textContent);
@@ -66,22 +66,22 @@ describe('ReportDetailPage', () => {
       expect.stringContaining('Apagar a mensagem'), expect.stringContaining('Suspender a conta'),
       expect.stringContaining('Resolver sem ação'), expect.stringContaining('Dispensar'),
     ]);
-    expect(screen.queryByRole('radio', { name: /Suspender o grupo/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: /Suspender o servidor/ })).not.toBeInTheDocument();
   });
 
-  it('a group report only offers the group; a user report only the account', async () => {
-    mocked.fetchAdminReport.mockResolvedValue(detail({ targetType: 'group', targetId: 'g1', targetLabel: 'Squad', snapshot: {} }));
+  it('a server report only offers the server; a user report only the account', async () => {
+    mocked.fetchAdminReport.mockResolvedValue(detail({ targetType: 'server', targetId: 'g1', targetLabel: 'Squad', snapshot: {} }));
     const { unmount } = openDetail();
-    await screen.findByRole('radio', { name: /Suspender o grupo/ });
+    await screen.findByRole('radio', { name: /Suspender o servidor/ });
     expect(screen.queryByRole('radio', { name: /Apagar a mensagem/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('radio', { name: /Suspender a conta/ })).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Abrir no admin' })).toHaveAttribute('data-to', '/admin/groups/g1');
+    expect(screen.getByRole('link', { name: 'Abrir no admin' })).toHaveAttribute('data-to', '/admin/servers/g1');
     unmount();
 
     mocked.fetchAdminReport.mockResolvedValue(detail({ targetType: 'user', targetId: 'u1', targetLabel: 'ana', snapshot: {} }));
     openDetail();
     await screen.findByRole('radio', { name: /Suspender a conta/ });
-    expect(screen.queryByRole('radio', { name: /Suspender o grupo/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: /Suspender o servidor/ })).not.toBeInTheDocument();
   });
 
   it('nothing is decided before an outcome is chosen and confirmed with a reason', async () => {
@@ -98,7 +98,7 @@ describe('ReportDetailPage', () => {
     await waitFor(() => expect(mocked.resolveReport).toHaveBeenCalledWith('r1', { reason: 'confirmed offense', action: 'delete_message', dismiss: false }));
   });
 
-  it('the dialog states the concrete effect on the concrete target: suspending the author is not suspending the group', async () => {
+  it('the dialog states the concrete effect on the concrete target: suspending the author is not suspending the server', async () => {
     const u = userEvent.setup();
     openDetail();
     await u.click(await screen.findByRole('radio', { name: /Suspender a conta/ }));

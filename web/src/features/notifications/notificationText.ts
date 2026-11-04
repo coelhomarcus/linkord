@@ -4,16 +4,13 @@ import { ROUTES, friendsSection, friendsView } from '@/shared/lib/routes';
 
 type NotificationTextKey =
   | 'unknownActor'
-  | 'unknownBot'
-  | 'unknownGroup'
   | 'friendRequest'
   | 'friendAccepted'
-  | 'groupInvitationNamed'
-  | 'groupInvitationUnnamed'
+  | 'serverInvitationNamed'
+  | 'serverInvitationUnnamed'
   | 'mentionBot'
   | 'mentionDirect'
-  | 'mentionGroup'
-  | 'mentionBotConversation';
+  | 'mentionChannel';
 
 function text(key: NotificationTextKey, options?: Record<string, string>): string {
   return i18n.t(`notifications:text.${key}`, options);
@@ -24,18 +21,16 @@ export function describeNotification(entry: NotificationEntry): string {
   switch (entry.kind) {
     case 'friend_request': return text('friendRequest', { name: who });
     case 'friend_accepted': return text('friendAccepted', { name: who });
-    case 'group_invitation': return entry.group
-      ? text('groupInvitationNamed', { name: who, group: entry.group.title })
-      : text('groupInvitationUnnamed', { name: who });
+    case 'server_invitation': return entry.server
+      ? text('serverInvitationNamed', { name: who, server: entry.server.name })
+      : text('serverInvitationUnnamed', { name: who });
     case 'mention': {
       const conversation = entry.mention?.conversation;
-      // A bot has no account behind it: the bot itself is who mentioned you.
-      if (!entry.actor && conversation?.type === 'bot') {
-        return text('mentionBot', { name: conversation.title || text('unknownBot') });
-      }
       if (!conversation || conversation.type === 'direct') return text('mentionDirect', { name: who });
-      if (conversation.type === 'bot') return text('mentionBotConversation', { name: who, bot: conversation.title || text('unknownBot') });
-      return text('mentionGroup', { name: who, group: conversation.title || text('unknownGroup') });
+      const where = `#${conversation.name} · ${conversation.serverName}`;
+      // a webhook has no account behind it: the channel is who mentioned you
+      if (!entry.actor) return text('mentionBot', { name: where });
+      return text('mentionChannel', { name: who, channel: where });
     }
   }
 }
@@ -44,9 +39,9 @@ export function notificationTarget(entry: NotificationEntry): string {
   switch (entry.kind) {
     case 'friend_request': return friendsSection('received');
     case 'friend_accepted': return ROUTES.friends;
-    case 'group_invitation': return friendsView('invitations');
+    case 'server_invitation': return friendsView('invitations');
     // opened by jumping to the message itself (see NotificationBell), not by a route
-    case 'mention': return ROUTES.conversations;
+    case 'mention': return ROUTES.home;
   }
 }
 

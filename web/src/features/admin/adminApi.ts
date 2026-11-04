@@ -50,7 +50,7 @@ export interface AuditRow {
 }
 export interface AdminUserDetail {
   user: AdminUserRow & { email: string | null; statusReason: string; statusChangedAt: string | null };
-  groups: { id: string; title: string; status: string; role: 'owner' | 'member' }[];
+  servers: { id: string; name: string; status: string; isOwner: boolean }[];
   storage: { bytes: number; files: number };
   history: AuditRow[];
 }
@@ -66,60 +66,56 @@ export const revokeUserSessions = (id: string, reason: string) => post(`/api/adm
 export const deleteUser = (id: string, reason: string, confirm: string) =>
   adminFetch<{ ok: true }>(`/api/admin/users/${encodeURIComponent(id)}`, { method: 'DELETE', body: JSON.stringify({ reason, confirm }) });
 
-// ---- groups ------------------------------------------------------------------
+// ---- servers -----------------------------------------------------------------
 
-export interface AdminGroupRow {
-  id: string; title: string; avatar: string; status: 'active' | 'suspended'; memberCount: number;
-  ownerId: string | null; ownerUsername: string | null; createdBy: string | null; createdAt: string; lastMessageAt: number | null;
+export interface AdminServerRow {
+  id: string; name: string; icon: string; status: 'active' | 'suspended'; memberCount: number; channelCount: number;
+  ownerId: string | null; ownerUsername: string | null; createdAt: string; lastMessageAt: number | null;
 }
-export interface AdminGroupMember { user: { id: string; username: string; displayName: string; avatar: string; avatarColor: string }; role: 'owner' | 'member'; at: string }
-export interface AdminGroupDetail {
-  group: AdminGroupRow & { statusReason: string };
-  members: Page<AdminGroupMember>;
+export interface AdminServerMember { user: { id: string; username: string; displayName: string; avatar: string; avatarColor: string }; roleIds: string[]; isOwner: boolean; at: string }
+export interface AdminServerDetail {
+  server: AdminServerRow & { statusReason: string };
+  channels: { id: string; type: 'text' | 'voice'; name: string }[];
+  members: Page<AdminServerMember>;
   history: AuditRow[];
 }
 
-export const fetchAdminGroups = (filters: { q?: string; status?: string; orphan?: boolean }, cursor: string | null) =>
-  adminFetch<Page<AdminGroupRow>>(`/api/admin/groups${qs({ ...filters, cursor })}`);
-export const fetchAdminGroup = (id: string, cursor?: string | null) => adminFetch<AdminGroupDetail>(`/api/admin/groups/${encodeURIComponent(id)}${qs({ cursor })}`);
-export const suspendGroup = (id: string, reason: string) => post(`/api/admin/groups/${encodeURIComponent(id)}/suspend`, { reason });
-export const reactivateGroup = (id: string, reason: string) => post(`/api/admin/groups/${encodeURIComponent(id)}/reactivate`, { reason });
-export const assignGroupOwner = (id: string, userId: string, reason: string) => post(`/api/admin/groups/${encodeURIComponent(id)}/owner`, { userId, reason });
-export const deleteGroup = (id: string, reason: string) =>
-  adminFetch<{ ok: true }>(`/api/admin/groups/${encodeURIComponent(id)}`, { method: 'DELETE', body: JSON.stringify({ reason }) });
+export const fetchAdminServers = (filters: { q?: string; status?: string; orphan?: boolean }, cursor: string | null) =>
+  adminFetch<Page<AdminServerRow>>(`/api/admin/servers${qs({ ...filters, cursor })}`);
+export const fetchAdminServer = (id: string, cursor?: string | null) => adminFetch<AdminServerDetail>(`/api/admin/servers/${encodeURIComponent(id)}${qs({ cursor })}`);
+export const suspendServer = (id: string, reason: string) => post(`/api/admin/servers/${encodeURIComponent(id)}/suspend`, { reason });
+export const reactivateServer = (id: string, reason: string) => post(`/api/admin/servers/${encodeURIComponent(id)}/reactivate`, { reason });
+export const assignServerOwner = (id: string, userId: string, reason: string) => post(`/api/admin/servers/${encodeURIComponent(id)}/owner`, { userId, reason });
+export const deleteServer = (id: string, reason: string) =>
+  adminFetch<{ ok: true }>(`/api/admin/servers/${encodeURIComponent(id)}`, { method: 'DELETE', body: JSON.stringify({ reason }) });
 
-// ---- bots --------------------------------------------------------------------
+// ---- webhooks ----------------------------------------------------------------
 
-export interface AdminBotRow extends AdminGroupRow { messageCount: number; webhookLastUsedAt: string | null }
-export interface AdminBotWebhook { id: string; createdAt: string; tokenRotatedAt: string; lastUsedAt: string | null }
-export interface AdminBotDetail {
-  bot: AdminBotRow & { statusReason: string; messagesLast24h: number };
-  webhook: AdminBotWebhook | null;
-  members: Page<AdminGroupMember>;
+export interface AdminWebhookRow {
+  id: string; name: string; avatar: string; channelId: string; channelName: string; serverId: string; serverName: string; serverStatus: string;
+  createdAt: string; lastUsedAt: string | null; messageCount: number;
+}
+export interface AdminWebhookDetail {
+  webhook: AdminWebhookRow & { tokenRotatedAt: string; messagesLast24h: number };
   history: AuditRow[];
 }
 
-export const fetchAdminBots = (filters: { q?: string; status?: string; orphan?: boolean }, cursor: string | null) =>
-  adminFetch<Page<AdminBotRow>>(`/api/admin/bots${qs({ ...filters, cursor })}`);
-export const fetchAdminBot = (id: string, cursor?: string | null) => adminFetch<AdminBotDetail>(`/api/admin/bots/${encodeURIComponent(id)}${qs({ cursor })}`);
-export const suspendBot = (id: string, reason: string) => post(`/api/admin/bots/${encodeURIComponent(id)}/suspend`, { reason });
-export const reactivateBot = (id: string, reason: string) => post(`/api/admin/bots/${encodeURIComponent(id)}/reactivate`, { reason });
-export const assignBotOwner = (id: string, userId: string, reason: string) => post(`/api/admin/bots/${encodeURIComponent(id)}/owner`, { userId, reason });
-export const revokeBotWebhook = (id: string, reason: string) => post(`/api/admin/bots/${encodeURIComponent(id)}/revoke-webhook`, { reason });
-export const deleteBot = (id: string, reason: string) =>
-  adminFetch<{ ok: true }>(`/api/admin/bots/${encodeURIComponent(id)}`, { method: 'DELETE', body: JSON.stringify({ reason }) });
+export const fetchAdminWebhooks = (filters: { q?: string }, cursor: string | null) =>
+  adminFetch<Page<AdminWebhookRow>>(`/api/admin/webhooks${qs({ ...filters, cursor })}`);
+export const fetchAdminWebhook = (id: string) => adminFetch<AdminWebhookDetail>(`/api/admin/webhooks/${encodeURIComponent(id)}`);
+export const revokeWebhook = (id: string, reason: string) => post(`/api/admin/webhooks/${encodeURIComponent(id)}/revoke`, { reason });
 
 // ---- reports -----------------------------------------------------------------
 
 export interface AdminReportRow {
-  id: string; targetType: 'user' | 'group' | 'message'; targetId: string; targetLabel: string; category: string;
+  id: string; targetType: 'user' | 'server' | 'message'; targetId: string; targetLabel: string; category: string;
   status: 'open' | 'reviewing' | 'resolved' | 'dismissed'; reporter: string | null; assignee: string | null; createdAt: string;
 }
 export interface AdminReportDetail {
   report: AdminReportRow & { details: string; snapshot: Record<string, unknown>; resolution: string; resolutionNote: string; resolvedAt: string | null };
   history: AuditRow[];
 }
-export type ReportAction = 'suspend_user' | 'suspend_group' | 'delete_message';
+export type ReportAction = 'suspend_user' | 'suspend_server' | 'delete_message';
 
 export const fetchAdminReports = (filters: { status?: string; targetType?: string }, cursor: string | null) =>
   adminFetch<Page<AdminReportRow>>(`/api/admin/reports${qs({ ...filters, cursor })}`);

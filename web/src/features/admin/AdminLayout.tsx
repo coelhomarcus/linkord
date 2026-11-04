@@ -31,7 +31,7 @@ function AccessLost() {
     <div role="alert" className="flex flex-col items-center gap-3 py-12 text-center">
       <h2 className="text-title font-semibold text-text-primary">{t('layout.accessLostTitle')}</h2>
       <p className="max-w-md text-label text-text-muted">{t('layout.accessLostDescription')}</p>
-      <Button type="button" onClick={() => { dispatch({ type: 'SET_ROLE', role: 'user' }); navigate(ROUTES.conversations, { replace: true }); }}>
+      <Button type="button" onClick={() => { dispatch({ type: 'SET_ROLE', role: 'user' }); navigate(ROUTES.home, { replace: true }); }}>
         {t('layout.backToConversations')}
       </Button>
     </div>

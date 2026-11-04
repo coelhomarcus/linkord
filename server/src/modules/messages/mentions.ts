@@ -1,7 +1,8 @@
 import crypto from 'node:crypto';
 import { and, eq, inArray, ne, sql } from 'drizzle-orm';
 import { db } from '../../db/client.js';
-import { conversationMembers, notifications, outboxEvents, users } from '../../db/schema.js';
+import { conversations, notifications, outboxEvents, users } from '../../db/schema.js';
+import { conversationAudienceIds } from '../conversations/conversationsRepository.js';
 import { mentionedUsernames } from '../link-preview/messageLinks.js';
 import { isBlockedEitherWay } from '../blocks/blocksRepository.js';
 import { notifySocialChanged } from '../presence/knownPeers.js';
@@ -10,7 +11,7 @@ import { logger } from '../../lib/logger.js';
 const log = logger.child({ component: 'mentions' });
 
 /** Turns the @mentions of a message into notifications for whoever they name
- * — only members of that conversation, never the author, never across a block
+ * — only whoever can read that conversation, never the author, never across a block
  * either way. Safe to call again for the same message (an edit): a member
  * already notified for it isn't notified twice, while one the edit adds is.
  * `authorId` is null for a bot's message, which notifies everyone it names. */
@@ -18,10 +19,13 @@ export async function notifyMentions(message: { id: number; conversationId: stri
   const names = mentionedUsernames(message.text);
   if (!names.length) return;
   try {
-    const named = await db.select({ userId: users.id }).from(conversationMembers)
-      .innerJoin(users, eq(users.id, conversationMembers.userId))
+    const [conversation] = await db.select({ id: conversations.id, serverId: conversations.serverId }).from(conversations)
+      .where(eq(conversations.id, message.conversationId)).limit(1);
+    const audience = conversation ? await conversationAudienceIds(conversation) : [];
+    if (!audience.length) return;
+    const named = await db.select({ userId: users.id }).from(users)
       .where(and(
-        eq(conversationMembers.conversationId, message.conversationId),
+        inArray(users.id, audience),
         inArray(sql`lower(${users.username})`, names),
         message.authorId ? ne(users.id, message.authorId) : undefined,
       ));

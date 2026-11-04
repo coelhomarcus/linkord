@@ -3,7 +3,8 @@ import { and, eq, isNull } from 'drizzle-orm';
 import webPush from 'web-push';
 import { config } from '../../config/env.js';
 import { db } from '../../db/client.js';
-import { conversationMembers, conversations, friendships, groupInvitations, messages, notifications, pushDeliveryReceipts, pushSubscriptions, users, type OutboxEvent } from '../../db/schema.js';
+import { channelReadStates, conversationMembers, conversations, friendships, messages, notifications, pushDeliveryReceipts, pushSubscriptions, serverInvitations, servers, users, webhooks, type Conversation, type OutboxEvent } from '../../db/schema.js';
+import { getConversationForUser } from '../conversations/conversationsRepository.js';
 import { logger } from '../../lib/logger.js';
 import { canSendDirectMessage } from '../friendships/friendshipsRepository.js';
 import { resolveLocale, type Locale } from '../users/locale.js';
@@ -69,68 +70,86 @@ export function retryAfterDelayMs(headers: unknown, now = Date.now()): number {
   return Number.isFinite(date) ? Math.max(0, date - now) : 0;
 }
 
+/** Where a tap on the notification takes the reader. */
+export function conversationPath(conversation: Pick<Conversation, 'id' | 'serverId'>): string {
+  return conversation.serverId
+    ? `/app/channels/${encodeURIComponent(conversation.serverId)}/${encodeURIComponent(conversation.id)}`
+    : `/app/channels/@me/${encodeURIComponent(conversation.id)}`;
+}
+
+async function lastReadMessageId(conversation: Conversation, userId: string): Promise<number> {
+  const [row] = conversation.serverId
+    ? await db.select({ id: channelReadStates.lastReadMessageId }).from(channelReadStates)
+      .where(and(eq(channelReadStates.channelId, conversation.id), eq(channelReadStates.userId, userId))).limit(1)
+    : await db.select({ id: conversationMembers.lastReadMessageId }).from(conversationMembers)
+      .where(and(eq(conversationMembers.conversationId, conversation.id), eq(conversationMembers.userId, userId))).limit(1);
+  return row?.id ?? 0;
+}
+
 async function noticeFor(event: OutboxEvent, locale: Locale): Promise<PushNotice | null> {
   const payload = event.payload as Record<string, unknown>;
   if (event.type === 'chat_message_push') {
     if (!Number.isSafeInteger(payload.messageId)) return null;
-    const [row] = await db.select({ message: messages, member: conversationMembers, conversation: conversations, author: users })
+    const [row] = await db.select({ message: messages, author: users, webhookName: webhooks.name, serverName: servers.name })
       .from(messages)
-      .innerJoin(conversationMembers, and(eq(conversationMembers.conversationId, messages.conversationId), eq(conversationMembers.userId, event.audienceUserId)))
       .innerJoin(conversations, eq(conversations.id, messages.conversationId))
+      .leftJoin(servers, eq(servers.id, conversations.serverId))
       .leftJoin(users, eq(users.id, messages.authorId))
+      .leftJoin(webhooks, eq(webhooks.id, messages.webhookId))
       .where(eq(messages.id, payload.messageId as number)).limit(1);
-    if (!row || row.conversation.status !== 'active' || (row.member.lastReadMessageId ?? 0) >= row.message.id) return null;
-    if (row.conversation.type === 'direct' && row.message.authorId
+    // re-checked at delivery: the reader may have lost the channel since
+    const conversation = row ? await getConversationForUser(row.message.conversationId, event.audienceUserId) : null;
+    if (!row || !conversation || (await lastReadMessageId(conversation, event.audienceUserId)) >= row.message.id) return null;
+    if (conversation.type === 'direct' && row.message.authorId
       && !(await canSendDirectMessage(row.message.authorId, event.audienceUserId))) return null;
     const [mention] = await db.select({ id: notifications.id }).from(notifications).where(and(
       eq(notifications.recipientId, event.audienceUserId), eq(notifications.kind, 'mention'),
       eq(notifications.messageId, row.message.id), isNull(notifications.readAt),
     )).limit(1);
     if (mention) return null;
-    const name = row.author ? row.author.displayName || row.author.username : row.conversation.type === 'bot' ? row.conversation.title || 'Bot' : 'Alguém';
+    const name = row.author ? row.author.displayName || row.author.username : row.message.webhookId ? row.webhookName || 'Bot' : 'Alguém';
     const text = row.message.text.replace(/\s+/g, ' ').trim().slice(0, 120);
-    const title = row.conversation.type === 'direct' ? name : row.conversation.title || 'Conversa';
+    const title = conversation.type === 'direct' ? name : `#${conversation.title} · ${row.serverName ?? ''}`;
+    const path = conversationPath(conversation);
     if (row.message.kind === 'call_invite' && row.message.callConversationId) {
-      const [group] = await db.select({ title: conversations.title }).from(conversations).where(eq(conversations.id, row.message.callConversationId)).limit(1);
-      if (group) {
-        return { title, body: localeText(locale, 'push.callInviteBody', { name, group: group.title }),
-          path: `/app/conversations/${encodeURIComponent(row.conversation.id)}`, tag: `chat-${row.conversation.id}` };
+      const [channel] = await db.select({ name: conversations.title, serverName: servers.name }).from(conversations)
+        .innerJoin(servers, eq(servers.id, conversations.serverId))
+        .where(eq(conversations.id, row.message.callConversationId)).limit(1);
+      if (channel) {
+        return { title, body: localeText(locale, 'push.callInviteBody', { name, channel: channel.name, server: channel.serverName }), path, tag: `chat-${conversation.id}` };
       }
     }
-    return { title, body: text ? `${name}: ${text}` : localeText(locale, 'push.chatEmptyBody', { name }),
-      path: `/app/conversations/${encodeURIComponent(row.conversation.id)}`, tag: `chat-${row.conversation.id}` };
+    return { title, body: text ? `${name}: ${text}` : localeText(locale, 'push.chatEmptyBody', { name }), path, tag: `chat-${conversation.id}` };
   }
 
   const kind = event.type === 'friend_request_created' ? 'friend_request'
     : event.type === 'friend_request_accepted' ? 'friend_accepted'
-      : event.type === 'group_invitation_created' ? 'group_invitation'
+      : event.type === 'server_invitation_created' ? 'server_invitation'
         : event.type === 'mention_created' ? 'mention' : null;
   if (!kind) return null;
-  const reference = kind === 'mention' ? payload.messageId : kind === 'group_invitation' ? payload.invitationId : payload.friendshipId;
+  const reference = kind === 'mention' ? payload.messageId : kind === 'server_invitation' ? payload.invitationId : payload.friendshipId;
   if (typeof reference !== 'string' && typeof reference !== 'number') return null;
   const [row] = await db.select({ id: notifications.id }).from(notifications).where(and(
     eq(notifications.recipientId, event.audienceUserId), eq(notifications.kind, kind), isNull(notifications.readAt),
     kind === 'mention' ? eq(notifications.messageId, Number(reference))
-      : kind === 'group_invitation' ? eq(notifications.groupInvitationId, String(reference))
+      : kind === 'server_invitation' ? eq(notifications.serverInvitationId, String(reference))
         : eq(notifications.friendshipId, String(reference)),
   )).limit(1);
   if (!row) return null;
   if (kind === 'mention') {
-    const [message] = await db.select({ conversationId: messages.conversationId, conversationType: conversations.type, authorId: messages.authorId })
-      .from(messages)
-      .innerJoin(conversationMembers, and(eq(conversationMembers.conversationId, messages.conversationId), eq(conversationMembers.userId, event.audienceUserId)))
-      .innerJoin(conversations, and(eq(conversations.id, messages.conversationId), eq(conversations.status, 'active')))
-      .where(eq(messages.id, Number(reference))).limit(1);
-    if (!message) return null;
-    if (message.conversationType === 'direct' && message.authorId
+    const [message] = await db.select({ conversationId: messages.conversationId, authorId: messages.authorId })
+      .from(messages).where(eq(messages.id, Number(reference))).limit(1);
+    const conversation = message ? await getConversationForUser(message.conversationId, event.audienceUserId) : null;
+    if (!message || !conversation) return null;
+    if (conversation.type === 'direct' && message.authorId
       && !(await canSendDirectMessage(message.authorId, event.audienceUserId))) return null;
     return { title: localeText(locale, 'push.mentionedTitle'), body: localeText(locale, 'push.mentionedBody'),
-      path: `/app/conversations/${encodeURIComponent(message.conversationId)}`, tag: `mention-${row.id}` };
+      path: conversationPath(conversation), tag: `mention-${row.id}` };
   }
-  if (kind === 'group_invitation') {
-    const [invitation] = await db.select({ status: groupInvitations.status }).from(groupInvitations).where(eq(groupInvitations.id, String(reference))).limit(1);
+  if (kind === 'server_invitation') {
+    const [invitation] = await db.select({ status: serverInvitations.status }).from(serverInvitations).where(eq(serverInvitations.id, String(reference))).limit(1);
     if (!invitation || invitation.status !== 'pending') return null;
-    return { title: localeText(locale, 'push.groupInvitationTitle'), body: localeText(locale, 'push.groupInvitationBody'), path: '/app/friends?tab=invitations', tag: `social-${row.id}` };
+    return { title: localeText(locale, 'push.serverInvitationTitle'), body: localeText(locale, 'push.serverInvitationBody'), path: '/app/friends?tab=invitations', tag: `social-${row.id}` };
   }
   const [friendship] = await db.select({ status: friendships.status }).from(friendships).where(eq(friendships.id, String(reference))).limit(1);
   if (!friendship || friendship.status !== (kind === 'friend_request' ? 'pending' : 'accepted')) return null;
