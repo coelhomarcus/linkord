@@ -3,7 +3,10 @@
     "label": "Servers",
     "home": "Direct Messages",
     "add": "Add a Server",
-    "showList": "Show channels and conversations"
+    "showList": "Show channels and conversations",
+    "unread_one": "{{count}} unread message",
+    "unread_other": "{{count}} unread messages",
+    "liveCall": "Voice call in progress"
   },
   "topBar": {
     "friends": "Friends",
@@ -257,8 +260,29 @@
     "CONNECT": "Join voice channels.",
     "SPEAK": "Talk in voice channels.",
     "STREAM": "Turn on the camera and share the screen.",
-    "MOVE_MEMBERS": "Disconnect members below your role from a voice channel.",
+    "MOVE_MEMBERS": "Move members below your role between voice channels, or disconnect them.",
     "USE_SOUNDBOARD": "Play and add soundboard sounds.",
     "MANAGE_EXPRESSIONS": "Edit and remove anyone's sounds."
+  },
+  "voiceMembers": {
+    "inChannel": "In the {{channel}} call",
+    "status": {
+      "muted": "Muted",
+      "deafened": "Deafened",
+      "camera": "Camera on",
+      "live": "Live"
+    },
+    "previewOf": "{{name}}'s screen",
+    "previewLoading": "Loading preview",
+    "previewUnavailable": "Preview unavailable",
+    "menu": {
+      "profile": "View profile",
+      "message": "Message",
+      "muteForMe": "Mute for me",
+      "unmuteForMe": "Unmute",
+      "volume": "{{name}}'s volume",
+      "moveTo": "Move to",
+      "disconnect": "Disconnect"
+    }
   }
 }

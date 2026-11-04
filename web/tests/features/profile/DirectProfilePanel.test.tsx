@@ -15,6 +15,13 @@ const mocked = vi.mocked(api);
 
 const bea: PublicUser = { id: 'u-bea', username: 'bea', displayName: 'Bea', avatar: '', avatarColor: 'green', banner: '', bio: 'oi, eu sou a Bea', profileLinks: [], role: 'user' };
 
+function yesterdayAt1011(): string {
+  const at = new Date();
+  at.setDate(at.getDate() - 1);
+  at.setHours(10, 11, 0, 0);
+  return at.toISOString();
+}
+
 beforeEach(() => {
   mocked.fetchProfileDetails.mockReset().mockResolvedValue({
     memberSince: '2023-05-04T12:00:00.000Z', friendsSince: null,
@@ -32,6 +39,25 @@ describe('DirectProfilePanel', () => {
     expect(await screen.findByText('4 de mai. de 2023')).toBeInTheDocument();
     expect(screen.getByText('1 servidor em comum')).toBeInTheDocument();
     expect(screen.getByText('1 amigo em comum')).toBeInTheDocument();
+  });
+
+  it('an online user shows the current status instead of the last visit', async () => {
+    renderWithRoom(<MemoryRouter><DirectProfilePanel user={{ ...bea, lastSeenAt: yesterdayAt1011() }} onOpenProfile={vi.fn()} /></MemoryRouter>, { onlineUserIds: new Set(['u-bea']) });
+    expect(screen.getByRole('heading', { name: 'Status' }).nextElementSibling).toHaveTextContent('Online');
+    expect(screen.queryByText('Última vez online')).not.toBeInTheDocument();
+    expect(await screen.findByText('4 de mai. de 2023')).toBeInTheDocument();
+  });
+
+  it('an offline user shows when they were last online', async () => {
+    renderWithRoom(<MemoryRouter><DirectProfilePanel user={{ ...bea, lastSeenAt: yesterdayAt1011() }} onOpenProfile={vi.fn()} /></MemoryRouter>);
+    expect(screen.getByRole('heading', { name: 'Última vez online' }).nextElementSibling).toHaveTextContent('ontem às 10:11');
+    expect(await screen.findByText('4 de mai. de 2023')).toBeInTheDocument();
+  });
+
+  it('an offline user with no recorded visit reads as Offline', async () => {
+    renderWithRoom(<MemoryRouter><DirectProfilePanel user={{ ...bea, lastSeenAt: null }} onOpenProfile={vi.fn()} /></MemoryRouter>);
+    expect(screen.getByRole('heading', { name: 'Status' }).nextElementSibling).toHaveTextContent('Offline');
+    expect(await screen.findByText('4 de mai. de 2023')).toBeInTheDocument();
   });
 
   it('a mutual friend and the footer open profiles', async () => {

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import { renderSocial } from '@tests/fixtures/socialFixture';
 import { ChannelList } from '@/features/servers/ChannelList';
@@ -16,7 +16,7 @@ const server = {
 
 describe('ChannelList', () => {
   it('reveals a channel\'s invite and settings actions on touch screens, where nothing can be hovered', () => {
-    renderSocial(<ChannelList server={server} activeChannelId={null} />, { room: { servers: [server] }, path: '/app/channels/s1' });
+    renderSocial(<ChannelList server={server} activeChannelId={null} onOpenProfile={vi.fn()} />, { room: { servers: [server] }, path: '/app/channels/s1' });
     const settings = screen.getAllByRole('button', { name: 'Editar canal', hidden: true });
     expect(settings).toHaveLength(2);
     expect(settings[0]!.parentElement!.className).toContain('[@media(hover:none)]:flex');

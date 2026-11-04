@@ -132,7 +132,7 @@ function DirectList({ onNavigate }: { onNavigate: () => void }) {
 
 /** The second column: home's DMs, or the open server's channels. On a phone
  * it is the main page of the Servers/Messages tabs, drawn next to the rail. */
-export function ConversationSidebar() {
+export function ConversationSidebar({ onOpenProfile }: { onOpenProfile: (userId: string) => void }) {
   const { t } = useTranslation('conversations');
   const { servers } = useRoom();
   const { isMobile, isOverlay, setOpenMobile } = useSidebar();
@@ -141,7 +141,7 @@ export function ConversationSidebar() {
   const server = serverId ? servers.find((s) => s.id === serverId) ?? null : null;
   const afterNavigate = () => { if (isOverlay) setOpenMobile(false); };
   const content = server
-    ? <ChannelList server={server} activeChannelId={isMobile ? null : conversationIdFromPath(pathname)} onNavigate={afterNavigate} />
+    ? <ChannelList server={server} activeChannelId={isMobile ? null : conversationIdFromPath(pathname)} onNavigate={afterNavigate} onOpenProfile={onOpenProfile} />
     : <DirectList onNavigate={afterNavigate} />;
 
   if (isMobile) {
