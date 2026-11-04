@@ -67,16 +67,16 @@ function ChannelRow({ server, channel, active, onOpen, onInvite }: {
           <Icon size={20} className="flex-none opacity-70" />
           <span className={cn('truncate text-label', unread > 0 || active ? 'font-semibold' : 'font-medium')}>{channel.name}</span>
         </button>
-        <span className={cn('flex flex-none items-center gap-0.5 pr-1.5', active ? 'flex' : 'hidden group-hover/channel:flex group-focus-within/channel:flex')}>
+        <span className={cn('flex flex-none items-center gap-0.5 pr-1.5', active ? 'flex' : 'hidden group-hover/channel:flex group-focus-within/channel:flex [@media(hover:none)]:flex')}>
           {can(server, PERMISSIONS.CREATE_INVITE) && (
             <Tooltip>
-              <TooltipTrigger onClick={onInvite} aria-label={t('channel.invite')} className="rounded-sm p-0.5 text-text-muted hover:text-text-primary"><UserPlusIcon size={16} /></TooltipTrigger>
+              <TooltipTrigger onClick={onInvite} aria-label={t('channel.invite')} className="rounded-sm p-0.5 text-text-muted hover:text-text-primary pointer-coarse:p-2"><UserPlusIcon size={16} /></TooltipTrigger>
               <TooltipContent>{t('channel.invite')}</TooltipContent>
             </Tooltip>
           )}
           {canInChannel(channel, PERMISSIONS.MANAGE_CHANNELS) && (
             <Tooltip>
-              <TooltipTrigger onClick={() => openChannelSettings(server.id, channel.id)} aria-label={t('channel.edit')} className="rounded-sm p-0.5 text-text-muted hover:text-text-primary"><GearSixIcon size={16} /></TooltipTrigger>
+              <TooltipTrigger onClick={() => openChannelSettings(server.id, channel.id)} aria-label={t('channel.edit')} className="rounded-sm p-0.5 text-text-muted hover:text-text-primary pointer-coarse:p-2"><GearSixIcon size={16} /></TooltipTrigger>
               <TooltipContent>{t('channel.edit')}</TooltipContent>
             </Tooltip>
           )}
