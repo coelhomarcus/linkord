@@ -1,17 +1,17 @@
 # Integrando um sistema ao Linkord por webhook
 
-Um **bot** no Linkord é um canal que recebe mensagens de fora. Seu sistema (um deploy, um monitor, uma automação, um script no cron) faz um `POST` HTTP para a URL do bot, e a mensagem aparece na hora para todo mundo que participa dele, com selo **BOT**, contagem de não lidas e notificação.
+Um **webhook** deixa um sistema de fora (um deploy, um monitor, uma automação, um script no cron) postar num canal de texto de um servidor. O sistema faz um `POST` HTTP para a URL do webhook, e a mensagem aparece na hora para todo mundo que vê o canal, com o nome do webhook, selo **BOT**, contagem de não lidas e notificação.
 
-Ninguém digita num bot: ele só recebe. Quem participa lê, reage e recebe os avisos.
+Um canal pode ter vários webhooks, cada um com sua URL e seu nome. Para um canal só de avisos, tire de `@everyone` a permissão **Enviar mensagens** nesse canal: as pessoas continuam lendo e reagindo, e só os webhooks postam.
 
 ---
 
 ## Sumário
 
-1. [Criar o bot](#1-criar-o-bot)
+1. [Criar o webhook](#1-criar-o-webhook)
 2. [Guardar a URL do webhook](#2-guardar-a-url-do-webhook)
 3. [Enviar a primeira mensagem](#3-enviar-a-primeira-mensagem)
-4. [Convidar quem vai receber os avisos](#4-convidar-quem-vai-receber-os-avisos)
+4. [Quem recebe os avisos](#4-quem-recebe-os-avisos)
 5. [Formato da mensagem](#5-formato-da-mensagem)
 6. [Cards (embeds)](#6-cards-embeds)
 7. [Evitar mensagens duplicadas](#7-evitar-mensagens-duplicadas)
@@ -23,16 +23,17 @@ Ninguém digita num bot: ele só recebe. Quem participa lê, reage e recebe os a
 
 ---
 
-## 1. Criar o bot
+## 1. Criar o webhook
 
-1. No Linkord, na lista de conversas, abra a aba **Bots** (ao lado de Amigos e Grupos).
-2. Clique no **+** no topo da lista.
-3. Dê um nome (ex.: *Deploys*, *Monitoramento*). Se quiser, já escolha amigos para convidar.
-4. Clique em **Criar bot**.
+Precisa da permissão **Gerenciar webhooks** no canal (o dono do servidor e quem tem **Administrador** já têm).
 
-Depois de criado, você pode trocar o nome e a foto do bot nos detalhes dele (ícone **ⓘ** no topo da conversa). As mensagens antigas passam a mostrar o nome e a foto novos.
+1. No servidor, passe o mouse sobre o canal de texto e clique na engrenagem (**Editar canal**).
+2. Abra a aba **Integrações** e clique em **Novo webhook**.
+3. Dê um nome (ex.: *Deploys*, *Monitoramento*).
 
-> Cada conta pode ter até 10 bots (o limite é configurável na instância por `MAX_OWNED_BOTS_PER_USER`).
+O nome pode ser trocado depois, na mesma aba (edite o campo e saia dele). As mensagens antigas passam a mostrar o nome novo.
+
+> Cada canal pode ter até 10 webhooks (o limite é configurável na instância por `MAX_WEBHOOKS_PER_CHANNEL`).
 
 ## 2. Guardar a URL do webhook
 
@@ -44,9 +45,9 @@ https://seu-linkord/api/webhooks/<id>/<token>
 
 **Copie agora e guarde num lugar seguro** (o cofre de segredos do seu CI, uma variável de ambiente etc.). O Linkord guarda só um hash do token: a URL **não aparece de novo**.
 
-Perdeu a URL? Abra o bot → **ⓘ** → aba **Webhook** → **Gerar nova URL**. A URL antiga para de funcionar na mesma hora, então atualize todos os sistemas que a usavam.
+Perdeu a URL? Abra o canal → **Editar canal** → **Integrações** → **Gerar nova URL** no webhook. A URL antiga para de funcionar na mesma hora, então atualize todos os sistemas que a usavam.
 
-> A URL é a credencial inteira: quem tiver ela consegue postar como o bot. Trate-a como uma senha.
+> A URL é a credencial inteira: quem tiver ela consegue postar como o webhook. Trate-a como uma senha.
 
 ## 3. Enviar a primeira mensagem
 
@@ -64,7 +65,7 @@ Resposta de sucesso (`201 Created`):
 { "id": 123, "duplicate": false }
 ```
 
-A mensagem aparece no bot em tempo real para quem estiver online, e como não lida para quem não estiver.
+A mensagem aparece no canal em tempo real para quem estiver online, e como não lida para quem não estiver.
 
 ### Duas formas de mandar o token
 
@@ -82,14 +83,11 @@ curl -X POST "https://seu-linkord/api/webhooks/$WEBHOOK_ID" \
   -d '{"content": "Backup terminou"}'
 ```
 
-## 4. Convidar quem vai receber os avisos
+## 4. Quem recebe os avisos
 
-Um bot funciona como um grupo: quem cria é o dono e convida os outros.
+Quem **vê o canal** recebe: todo membro do servidor, a não ser que as permissões do canal escondam ele de algum cargo. Para chamar mais gente, convide para o servidor (amigos ou link de convite, no menu do servidor).
 
-1. Abra o bot → **ⓘ** → **Convidar amigos**.
-2. Escolha os amigos. Cada um recebe um card de convite na conversa com você e entra ao aceitar.
-
-Quem entra **só lê**: o bot não tem campo de mensagem. Membros podem reagir e sair quando quiserem. O dono também pode remover membros, transferir o bot para outro membro e apagar mensagens do bot.
+Quem tem **Gerenciar mensagens** no canal pode apagar mensagens de um webhook, como apaga as de qualquer pessoa.
 
 ## 5. Formato da mensagem
 
@@ -217,12 +215,12 @@ A `message` diz exatamente o que corrigir.
 | `400` | `message_too_long` | `content` com mais de 2000 caracteres. |
 | `400` | `invalid_request` | `Idempotency-Key` inválida. |
 | `400` | `invalid_json` | O corpo não é um objeto JSON. |
-| `401` | `invalid_webhook` | URL ou token errado, URL substituída por uma nova, webhook revogado pela administração, ou bot suspenso. |
+| `401` | `invalid_webhook` | URL ou token errado, URL substituída por uma nova, webhook revogado pela administração, ou servidor suspenso. |
 | `413` | `FST_ERR_CTP_BODY_TOO_LARGE` | Corpo maior que 64 KB. |
 | `415` | `FST_ERR_CTP_INVALID_MEDIA_TYPE` | `Content-Type` diferente de `application/json`. |
 | `429` | `rate_limited` | Envios demais em pouco tempo. Respeite o header `Retry-After`, em segundos. |
 
-Um `401` nunca diz qual parte está errada, de propósito. Se ele começar a aparecer de repente, a URL provavelmente foi trocada ou revogada: peça uma nova ao dono do bot.
+Um `401` nunca diz qual parte está errada, de propósito. Se ele começar a aparecer de repente, a URL provavelmente foi trocada ou revogada: peça uma nova a quem gerencia os webhooks do canal.
 
 **Vale repetir o envio?** Sim em `429` (após o `Retry-After`) e em erros `5xx` ou de rede. Use `Idempotency-Key` para que o retry nunca duplique. Não adianta repetir em `400`, `401`, `413` ou `415` sem mudar o pedido.
 
@@ -236,8 +234,7 @@ Um `401` nunca diz qual parte está errada, de propósito. Se ele começar a apa
 | Texto (`content`) | 2000 caracteres |
 | Cards por mensagem | 5 |
 | Campos por card | 10 |
-| Bots por conta | 10 |
-| Membros por bot | 100 |
+| Webhooks por canal | 10 |
 
 Precisa mandar muita coisa de uma vez? Agrupe num único envio (vários `fields` ou vários cards) em vez de uma mensagem por item.
 
@@ -331,15 +328,15 @@ Guarde a URL em **Settings → Secrets and variables → Actions** como `LINKORD
 
 - **A URL é um segredo.** Guarde-a em variáveis de ambiente ou no cofre de segredos, nunca no código nem num repositório.
 - **Prefira o header `Authorization: Bearer`** quando puder: o token fica fora de URLs, que costumam aparecer em logs de proxies e de acesso. O Linkord nunca registra o token nos próprios logs.
-- **Vazou? Gere uma nova URL** (bot → **ⓘ** → **Webhook** → **Gerar nova URL**). A anterior morre na hora.
+- **Vazou? Gere uma nova URL** (canal → **Editar canal** → **Integrações** → **Gerar nova URL**). A anterior morre na hora.
 - **O Linkord guarda só o hash do token.** Nem a administração da instância consegue ver a sua URL.
-- **A administração pode revogar o webhook ou suspender o bot** (por abuso ou vazamento). Nos dois casos os envios passam a receber `401`. Depois de uma revogação, o dono volta a receber avisos gerando uma nova URL. Depois de uma suspensão, a mesma URL volta a funcionar quando a administração reativar o bot.
+- **A administração pode revogar o webhook ou suspender o servidor** (por abuso ou vazamento). Nos dois casos os envios passam a receber `401`. Depois de uma revogação, quem gerencia o canal volta a receber avisos gerando uma nova URL. Depois de uma suspensão, a mesma URL volta a funcionar quando a administração reativar o servidor.
 - **Links nos cards** só podem ser `http(s)`. Não existe forma de executar script ou carregar imagem externa por um card.
 
 ## 12. Problemas comuns
 
 **Recebo `401 invalid_webhook` numa URL que funcionava.**
-A URL foi trocada (alguém clicou em "Gerar nova URL"), a administração revogou o webhook, ou o bot está suspenso. Peça ao dono do bot uma URL nova.
+A URL foi trocada (alguém clicou em "Gerar nova URL"), a administração revogou o webhook, ou o servidor está suspenso. Peça uma URL nova a quem gerencia os webhooks do canal.
 
 **Recebo `415`.**
 Falta o header `Content-Type: application/json`.
@@ -354,4 +351,4 @@ Seu sistema repetiu o envio. Mande um `Idempotency-Key` único por evento ([seç
 Só campos com `"inline": true` dividem a linha, até 3 por vez.
 
 **Ninguém recebeu a mensagem.**
-Confira se as pessoas aceitaram o convite: só membros veem o bot. Quem não estava online vê a mensagem como não lida na próxima vez que abrir o Linkord.
+Confira se as pessoas estão no servidor e se as permissões do canal deixam elas verem o canal. Quem não estava online vê a mensagem como não lida na próxima vez que abrir o Linkord.
