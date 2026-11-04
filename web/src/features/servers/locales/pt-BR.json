@@ -187,7 +187,11 @@
     "create": "Novo webhook",
     "rotate": "Gerar nova URL",
     "delete": "Excluir",
-    "rename": "Nome do webhook {{name}}"
+    "rename": "Nome do webhook {{name}}",
+    "name": "Nome",
+    "changeAvatar": "Alterar imagem",
+    "removeAvatar": "Remover imagem",
+    "avatarFor": "Imagem do webhook {{name}}"
   },
   "inviteCard": {
     "sent": "Você enviou um convite para entrar em um servidor",

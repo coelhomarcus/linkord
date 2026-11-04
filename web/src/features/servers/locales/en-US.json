@@ -187,7 +187,11 @@
     "create": "New Webhook",
     "rotate": "New URL",
     "delete": "Delete",
-    "rename": "Name of webhook {{name}}"
+    "rename": "Name of webhook {{name}}",
+    "name": "Name",
+    "changeAvatar": "Change image",
+    "removeAvatar": "Remove image",
+    "avatarFor": "Image of the webhook {{name}}"
   },
   "inviteCard": {
     "sent": "You sent an invite to join a server",
