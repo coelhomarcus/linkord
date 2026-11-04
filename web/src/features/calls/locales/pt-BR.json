@@ -149,7 +149,8 @@
     "screenLoopback": "Seu navegador não separa o áudio do Linkord da tela inteira, então ela foi compartilhada sem áudio para evitar retorno. Compartilhe uma aba ou janela para incluir áudio.",
     "pausePreview": "Não foi possível pausar a prévia: {{error}}",
     "resumePreview": "Não foi possível retomar a prévia: {{error}}",
-    "joinCall": "Não foi possível conectar à chamada. Verifique sua conexão e tente de novo."
+    "joinCall": "Não foi possível conectar à chamada. Verifique sua conexão e tente de novo.",
+    "joinTimeout": "A chamada demorou para conectar. Tente novamente."
   },
   "invite": {
     "button": "Convidar para voz",

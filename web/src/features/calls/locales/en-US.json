@@ -149,7 +149,8 @@
     "screenLoopback": "Your browser can't separate Linkord's audio from the entire screen, so it was shared without audio to prevent echo. Share a tab or window to include audio.",
     "pausePreview": "Couldn't pause the preview: {{error}}",
     "resumePreview": "Couldn't resume the preview: {{error}}",
-    "joinCall": "Couldn't connect to the call. Check your connection and try again."
+    "joinCall": "Couldn't connect to the call. Check your connection and try again.",
+    "joinTimeout": "The call took too long to connect. Try again."
   },
   "invite": {
     "button": "Invite to voice",

@@ -55,6 +55,8 @@ import { useConversationRouteSync } from '@/app/useConversationRouteSync';
 import { clearViewportVars, syncViewportVars } from '@/app/viewportVars';
 import { chatViewFor } from '@/app/chatView';
 import { rightPanelsVisible } from '@/app/rightPanels';
+import { isJoiningStage } from '@/app/stageJoin';
+import { i18n } from '@/shared/i18n/init';
 import { SidebarInset, SidebarProvider } from '@/shared/ui/motion/sidebar';
 import { loadSidebarCollapsed, saveSidebarCollapsed } from '@/shared/hooks/useSidebarCollapsedPreference';
 import { TooltipProvider } from '@/shared/ui/primitives/tooltip';
@@ -199,23 +201,24 @@ function Shell() {
     pendingStageRef.current = null;
     navigate(ROUTES.direct(dmStageId), { replace: true });
   }, [dmStageId, stageConversationId, showStage, state.joined, state.callJoinError, navigate]);
+  const joinFailedId = state.callJoinError?.conversationId ?? null;
   useEffect(() => {
-    if (!stageConversationId || showStage || pendingStageRef.current !== stageConversationId) return;
+    if (!stageConversationId || showStage || pendingStageRef.current !== stageConversationId || joinFailedId === stageConversationId) return;
     const timeout = window.setTimeout(() => {
       pendingStageRef.current = null;
-      dispatch({ type: 'SET_CALL_JOIN_ERROR', error: { conversationId: stageConversationId, message: 'A chamada demorou para conectar. Tente novamente.' } });
+      dispatch({ type: 'SET_CALL_JOIN_ERROR', error: { conversationId: stageConversationId, message: i18n.t('calls:errors.joinTimeout') } });
       void leaveCall();
       if (dmStageId) navigate(ROUTES.direct(dmStageId), { replace: true });
     }, 20_000);
     return () => window.clearTimeout(timeout);
-  }, [stageConversationId, dmStageId, showStage, dispatch, leaveCall, navigate]);
+  }, [stageConversationId, dmStageId, showStage, joinFailedId, dispatch, leaveCall, navigate]);
   function cancelPendingCall() {
     const joiningThisCall = !!stageConversationId && pendingStageRef.current === stageConversationId;
     pendingStageRef.current = null;
     if (joiningThisCall) void leaveCall();
     navigate(stageConversationId ? leaveStagePath(stageConversationId) : ROUTES.home, { replace: true });
   }
-  const joiningStage = !!stageConversationId && pendingStageRef.current === stageConversationId;
+  const joiningStage = isJoiningStage({ stageConversationId, pendingConversationId: pendingStageRef.current, failedConversationId: joinFailedId });
   // what the user is looking at, not the last view picked. The call's side
   // chat is the conversation on screen: a message arriving then was seen.
   const visibleConversationId = voiceChannelOnPath ? null : conversationIdFromPath(contentLocation.pathname);
