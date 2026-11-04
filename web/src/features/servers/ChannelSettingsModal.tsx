@@ -15,7 +15,7 @@ import { PERMISSIONS } from './permissionBits';
 import { bitOf, channelPermissionNames } from './permissionCatalog';
 import { SectionTitle, SettingsShell, type SettingsTab } from './SettingsShell';
 import {
-  createWebhook, deleteChannel, deleteWebhook, fetchOverwrites, fetchWebhooks, rotateWebhook, setOverwrite, updateChannel,
+  createWebhook, deleteChannel, deleteWebhook, fetchOverwrites, fetchWebhooks, rotateWebhook, setOverwrite, updateChannel, updateWebhook,
   type Overwrite, type WebhookInfo,
 } from './serversApi';
 import { can, canInChannel } from './serverUtils';
@@ -128,7 +128,20 @@ function Webhooks({ channel }: { channel: ChannelSummary }) {
       <ul className="flex flex-col divide-y divide-border-subtle">
         {items.map((webhook) => (
           <li key={webhook.id} className="flex items-center gap-3 py-3">
-            <span className="min-w-0 flex-1 truncate text-label font-medium">{webhook.name}</span>
+            {/* the name is what its messages are signed with: renamed in place, saved on leaving the field */}
+            <Input
+              key={webhook.name}
+              defaultValue={webhook.name}
+              maxLength={80}
+              aria-label={t('webhooks.rename', { name: webhook.name })}
+              className="min-w-0 flex-1"
+              onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+              onBlur={(e) => {
+                const next = e.currentTarget.value.trim();
+                if (next && next !== webhook.name) void run(() => updateWebhook(channel.id, webhook.id, { name: next }));
+                else e.currentTarget.value = webhook.name;
+              }}
+            />
             <Button type="button" size="sm" variant="ghost" onClick={() => void run(async () => { const { webhook: secret } = await rotateWebhook(channel.id, webhook.id); setRevealed(secret.url); })}>{t('webhooks.rotate')}</Button>
             <Button type="button" size="sm" variant="ghost" className="text-red" onClick={() => void run(() => deleteWebhook(channel.id, webhook.id))}>{t('webhooks.delete')}</Button>
           </li>

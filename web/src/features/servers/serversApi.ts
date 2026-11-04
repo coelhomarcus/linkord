@@ -74,5 +74,6 @@ export const acceptInviteLink = (code: string) => apiFetch<{ serverId: string; c
 export interface WebhookInfo { id: string; name: string; avatar: string; createdAt: string; tokenRotatedAt: string; lastUsedAt: string | null }
 export const fetchWebhooks = (channelId: string) => apiFetch<{ webhooks: WebhookInfo[] }>(`/api/channels/${id(channelId)}/webhooks`);
 export const createWebhook = (channelId: string, name: string) => apiFetch<{ webhook: WebhookInfo & { token: string; url: string } }>(`/api/channels/${id(channelId)}/webhooks`, json('POST', { name }));
+export const updateWebhook = (channelId: string, webhookId: string, changes: { name?: string; avatar?: string }) => apiFetch<{ webhook: WebhookInfo }>(`/api/channels/${id(channelId)}/webhooks/${id(webhookId)}`, json('PATCH', changes));
 export const rotateWebhook = (channelId: string, webhookId: string) => apiFetch<{ webhook: { id: string; token: string; url: string } }>(`/api/channels/${id(channelId)}/webhooks/${id(webhookId)}/rotate`, json('POST'));
 export const deleteWebhook = (channelId: string, webhookId: string) => apiFetch(`/api/channels/${id(channelId)}/webhooks/${id(webhookId)}`, json('DELETE'));

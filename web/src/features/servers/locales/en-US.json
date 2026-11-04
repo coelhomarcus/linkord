@@ -170,7 +170,8 @@
     "defaultName": "Captain Hook",
     "create": "New Webhook",
     "rotate": "New URL",
-    "delete": "Delete"
+    "delete": "Delete",
+    "rename": "Name of webhook {{name}}"
   },
   "inviteCard": {
     "sent": "You sent an invite to join a server",
