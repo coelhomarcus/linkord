@@ -431,7 +431,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
               >
                 <span aria-hidden className="rounded-[4px] border-2 border-current px-[3px] py-[2px] text-[9px] font-extrabold leading-none tracking-wide">GIF</span>
               </PopoverTrigger>
-              <PopoverContent className="w-[22rem] max-w-[calc(100vw-1.5rem)] p-0" side="top" align="end">
+              <PopoverContent className="w-[26rem] max-w-[calc(100vw-1.5rem)] rounded-[12px] border-border-default bg-bg-modal p-0" side="top" align="end" sideOffset={12}>
                 <GifPicker config={gifConfig} onPick={sendGif} />
               </PopoverContent>
             </Popover>
@@ -444,8 +444,8 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
             >
               <SmileyIcon size={24} weight="fill" />
             </PopoverTrigger>
-            <PopoverContent keepMounted={emojiPickerWarmed} className="w-75 p-0" side="top" align="end">
-              <EmojiPicker className="h-80 w-full" onEmojiSelect={({ emoji }) => insertEmoji(emoji)}>
+            <PopoverContent keepMounted={emojiPickerWarmed} className="w-[22rem] rounded-[12px] border-border-default bg-bg-modal p-0" side="top" align="end" sideOffset={12}>
+              <EmojiPicker className="h-[26rem] w-full" onEmojiSelect={({ emoji }) => insertEmoji(emoji)}>
                 <EmojiPickerSearch />
                 <EmojiPickerContent />
               </EmojiPicker>

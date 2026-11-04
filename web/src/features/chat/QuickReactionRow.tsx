@@ -19,7 +19,8 @@ export function QuickReactionRow({ onPick, onMore, className }: { onPick: (emoji
           type="button"
           onClick={() => onPick(emoji)}
           aria-label={t('reactWith', { emoji })}
-          className="rounded-md p-1.5 text-[20px] leading-none transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+          // Discord's quick reactions: square tiles at the top of the menu
+          className="grid size-9 place-items-center rounded-lg bg-bg-control text-[20px] leading-none transition-colors hover:bg-bg-control-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           {emoji}
         </button>
@@ -28,7 +29,7 @@ export function QuickReactionRow({ onPick, onMore, className }: { onPick: (emoji
         type="button"
         onClick={onMore}
         aria-label={t('moreEmojis')}
-        className="rounded-md p-1.5 text-text-muted transition-colors hover:bg-muted hover:text-text-primary focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+        className="grid size-9 place-items-center rounded-lg bg-bg-control text-text-secondary transition-colors hover:bg-bg-control-hover hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <PlusIcon size={18} />
       </button>

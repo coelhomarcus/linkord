@@ -89,9 +89,9 @@ export function GifPicker({ config, onPick }: { config: EnabledConfig; onPick: (
 
   return (
     <div className="flex h-[26rem] w-full flex-col">
-      <div className="flex-none p-2 pb-1.5">
-        <div className="flex items-center gap-2 rounded-md border border-border bg-fill-subtle px-2.5">
-          <MagnifyingGlassIcon size={20} aria-hidden className="flex-none text-text-muted" />
+      <div className="flex-none p-3 pb-2">
+        <div className="flex h-10 items-center gap-2 rounded-lg border border-border-field bg-bg-textarea px-3 focus-within:border-border-accent">
+          <MagnifyingGlassIcon size={20} aria-hidden className="flex-none text-text-secondary" />
           <input
             autoFocus
             value={input}
@@ -99,14 +99,14 @@ export function GifPicker({ config, onPick }: { config: EnabledConfig; onPick: (
             // KLIPY's attribution rules require this exact placeholder
             placeholder={t('picker.searchPlaceholder')}
             aria-label={t('picker.searchLabel')}
-            className="h-9 min-w-0 flex-1 bg-transparent text-label outline-none placeholder:text-text-muted"
+            className="h-full min-w-0 flex-1 bg-transparent text-body outline-none placeholder:text-text-faint"
           />
           {input && <CloseButton size="xs" label={t('picker.clearSearch')} onClick={() => setInput('')} />}
         </div>
       </div>
 
       {!searching && (
-        <div role="tablist" aria-label={t('picker.tabs')} className="flex flex-none gap-1 px-2 pb-2">
+        <div role="tablist" aria-label={t('picker.tabs')} className="flex flex-none gap-1 px-3 pb-2">
           {(['trending', 'recent'] as const).map((id) => (
             <button
               key={id}
@@ -115,8 +115,8 @@ export function GifPicker({ config, onPick }: { config: EnabledConfig; onPick: (
               aria-selected={tab === id}
               onClick={() => setTab(id)}
               className={cn(
-                'relative isolate flex h-7 items-center rounded-md px-2.5 text-label font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                tab === id ? 'text-text-primary' : 'text-text-muted hover:bg-nav-hover hover:text-text-primary',
+                'relative isolate flex h-8 items-center rounded-lg px-3 text-label font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                tab === id ? 'text-text-strong' : 'text-text-secondary hover:bg-nav-hover hover:text-text-primary',
               )}
             >
               {tab === id && <ActiveFill />}

@@ -64,21 +64,21 @@ export function CreateServerDialog({ open, onOpenChange }: { open: boolean; onOp
 
   return (
     <Dialog open={open} onOpenChange={(next) => (next ? onOpenChange(true) : close())}>
-      <DialogContent className="max-w-md text-text-primary">
+      <DialogContent className="max-w-[calc(100%-2rem)] text-text-primary sm:max-w-[440px]">
         {step === 'choose' && (
           <>
-            <DialogHeader className="items-center text-center">
-              <DialogTitle className="text-display">{t('create.title')}</DialogTitle>
+            <DialogHeader className="items-center text-center [&_[data-slot=dialog-description]]:text-body">
+              <DialogTitle className="text-display font-bold">{t('create.title')}</DialogTitle>
               <DialogDescription>{t('create.description')}</DialogDescription>
             </DialogHeader>
             <div className="flex flex-col gap-2">
-              <button type="button" onClick={() => { setStep('create'); setName(t('create.defaultName', { name: state.me.displayName || state.me.name })); }} className="flex items-center gap-3 rounded-lg border border-border p-3 text-left hover:bg-fill-hover">
-                <PlusCircleIcon size={36} weight="fill" className="text-green" />
-                <span className="flex-1 text-label font-semibold">{t('create.own')}</span>
-                <CaretRightIcon size={18} className="text-text-muted" />
+              <button type="button" onClick={() => { setStep('create'); setName(t('create.defaultName', { name: state.me.displayName || state.me.name })); }} className="flex h-14 items-center gap-3 rounded-lg border border-border-strong bg-surface-300 px-4 text-left transition-colors hover:bg-bg-control-hover">
+                <PlusCircleIcon size={32} weight="fill" className="flex-none text-green" />
+                <span className="flex-1 text-body font-semibold text-text-primary">{t('create.own')}</span>
+                <CaretRightIcon size={20} weight="bold" className="flex-none text-text-secondary" />
               </button>
-              <p className="mt-3 text-center text-title font-semibold">{t('join.question')}</p>
-              <Button type="button" variant="secondary" onClick={() => setStep('join')}>
+              <p className="mt-4 text-center text-[1.25rem] font-semibold text-text-strong">{t('join.question')}</p>
+              <Button type="button" variant="secondary" size="lg" onClick={() => setStep('join')}>
                 <LinkIcon size={18} /> {t('join.title')}
               </Button>
             </div>
@@ -86,8 +86,8 @@ export function CreateServerDialog({ open, onOpenChange }: { open: boolean; onOp
         )}
         {step === 'create' && (
           <form onSubmit={(e) => { e.preventDefault(); void submitCreate(); }} className="flex flex-col gap-4">
-            <DialogHeader className="items-center text-center">
-              <DialogTitle className="text-display">{t('create.customize')}</DialogTitle>
+            <DialogHeader className="items-center text-center [&_[data-slot=dialog-description]]:text-body">
+              <DialogTitle className="text-display font-bold">{t('create.customize')}</DialogTitle>
               <DialogDescription>{t('create.customizeHint')}</DialogDescription>
             </DialogHeader>
             <div className="flex flex-col gap-1.5">
@@ -104,8 +104,8 @@ export function CreateServerDialog({ open, onOpenChange }: { open: boolean; onOp
         )}
         {step === 'join' && (
           <form onSubmit={(e) => { e.preventDefault(); void submitJoin(); }} className="flex flex-col gap-4">
-            <DialogHeader className="items-center text-center">
-              <DialogTitle className="text-display">{t('join.title')}</DialogTitle>
+            <DialogHeader className="items-center text-center [&_[data-slot=dialog-description]]:text-body">
+              <DialogTitle className="text-display font-bold">{t('join.title')}</DialogTitle>
               <DialogDescription>{t('join.description')}</DialogDescription>
             </DialogHeader>
             <div className="flex flex-col gap-1.5">

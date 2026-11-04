@@ -18,8 +18,8 @@
   "noChannels": "Nenhum canal por aqui ainda.",
   "suspended": "Este servidor foi suspenso pela administração.",
   "create": {
-    "title": "Crie o seu servidor",
-    "description": "Seu servidor é onde você e seus amigos se encontram. Crie o seu e comece a conversar.",
+    "title": "Criar seu servidor",
+    "description": "Seu servidor é onde você e seus amigos se reúnem. Crie o seu e comece a interagir.",
     "own": "Criar o meu",
     "customize": "Personalize o seu servidor",
     "customizeHint": "Dê uma personalidade ao seu novo servidor com um nome. Você pode mudar isso depois.",
