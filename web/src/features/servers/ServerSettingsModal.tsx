@@ -1,4 +1,4 @@
-import { ArrowDownIcon, ArrowUpIcon, CrownIcon, PlusIcon, TrashIcon } from '@phosphor-icons/react';
+import { ArrowDownIcon, ArrowUpIcon, CrownIcon, PlusIcon, ShieldIcon, TrashIcon, XIcon } from '@phosphor-icons/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { useNavigate } from 'react-router';
@@ -73,19 +73,24 @@ function Overview({ server }: { server: ServerSummary }) {
   return (
     <>
       <SectionTitle>{t('settings.overview')}</SectionTitle>
-      <div className="flex items-start gap-6 max-sm:flex-col">
-        <div className="flex flex-col items-center gap-2">
-          <ServerIcon id={server.id} name={name || server.name} icon={server.icon} size={96} active />
-          <Button type="button" size="sm" variant="outline" disabled={uploading} onClick={() => fileRef.current?.click()}>{t('settings.changeIcon')}</Button>
-          {server.icon && <Button type="button" size="sm" variant="ghost" onClick={() => void run(() => updateServer(server.id, { icon: '' }))}>{t('settings.removeIcon')}</Button>}
+      <form className="flex flex-col gap-2" onSubmit={(e) => { e.preventDefault(); void run(() => updateServer(server.id, { name })); }}>
+        <label htmlFor="server-settings-name" className="text-body font-medium text-text-primary">{t('create.name')}</label>
+        <Input id="server-settings-name" value={name} maxLength={100} onChange={(e) => setName(e.target.value)} />
+        <Button type="submit" className="mt-2 self-start" disabled={!name.trim() || name === server.name}>{t('save')}</Button>
+      </form>
+      <hr className="border-border-subtle" />
+      <section className="flex items-start justify-between gap-6 max-sm:flex-col">
+        <div className="flex flex-col gap-1">
+          <h3 className="text-body font-medium text-text-primary">{t('settings.icon')}</h3>
+          <p className="text-label text-text-secondary">{t('settings.iconHint')}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button type="button" disabled={uploading} onClick={() => fileRef.current?.click()}>{t('settings.changeIcon')}</Button>
+            {server.icon && <Button type="button" variant="danger-outline" onClick={() => void run(() => updateServer(server.id, { icon: '' }))}>{t('settings.removeIcon')}</Button>}
+          </div>
           <input ref={fileRef} type="file" accept="image/*" hidden onChange={pick} />
         </div>
-        <form className="flex flex-1 flex-col gap-2" onSubmit={(e) => { e.preventDefault(); void run(() => updateServer(server.id, { name })); }}>
-          <label htmlFor="server-settings-name" className="text-caption font-bold uppercase text-text-secondary">{t('create.name')}</label>
-          <Input id="server-settings-name" value={name} maxLength={100} onChange={(e) => setName(e.target.value)} />
-          <Button type="submit" className="self-start" disabled={!name.trim() || name === server.name}>{t('save')}</Button>
-        </form>
-      </div>
+        <ServerIcon id={server.id} name={name || server.name} icon={server.icon} size={80} />
+      </section>
       <ErrorLine error={error} />
       <ImageCropDialog open={!!crop} imageSrc={crop?.src ?? null} aspect={1} cropShape="round" title={t('settings.changeIcon')}
         processing={uploading} onCancel={() => setCrop(null)} onConfirm={(area) => void confirmCrop(area)} />
@@ -99,14 +104,14 @@ function PermissionSwitches({ value, onChange, disabled }: { value: number; onCh
     <div className="flex flex-col gap-5">
       {PERMISSION_SECTIONS.map((section) => (
         <section key={section.key} className="flex flex-col">
-          <h4 className="pb-2 text-caption font-bold uppercase text-text-secondary">{t(`permissionSections.${section.key}`)}</h4>
+          <h4 className="pb-2 text-label font-semibold text-text-secondary">{t(`permissionSections.${section.key}`)}</h4>
           {section.names.map((name) => {
             const bit = bitOf(name);
             return (
               <label key={name} className="flex items-start gap-4 border-b border-border-subtle py-3">
                 <span className="flex-1">
-                  <span className="block text-label font-medium">{t(`permissions.${name}`)}</span>
-                  <span className="block text-caption text-text-muted">{t(`permissionHints.${name}`)}</span>
+                  <span className="block text-body font-medium text-text-primary">{t(`permissions.${name}`)}</span>
+                  <span className="block text-label text-text-secondary">{t(`permissionHints.${name}`)}</span>
                 </span>
                 <Switch checked={hasPermission(value, bit)} disabled={disabled} onCheckedChange={(on) => onChange(on ? value | bit : value & ~bit)} />
               </label>
@@ -141,17 +146,16 @@ function Roles({ server }: { server: ServerSummary }) {
 
   return (
     <>
-      <SectionTitle>{t('settings.roles')}</SectionTitle>
-      <p className="text-label text-text-muted">{t('roles.hint')}</p>
+      <SectionTitle description={t('roles.hint')}>{t('settings.roles')}</SectionTitle>
       <div className="flex gap-6 max-md:flex-col">
-        <div className="flex w-52 flex-none flex-col gap-1">
-          <Button type="button" size="sm" onClick={() => void run(async () => { const { roleId } = await createRole(server.id, { name: t('roles.newName') }); setSelectedId(roleId); })}>
+        <div className="flex w-52 flex-none flex-col gap-0.5">
+          <Button type="button" className="mb-2" onClick={() => void run(async () => { const { roleId } = await createRole(server.id, { name: t('roles.newName') }); setSelectedId(roleId); })}>
             <PlusIcon size={16} /> {t('roles.create')}
           </Button>
           {sorted.map((r) => (
-            <div key={r.id} className={cn('group/role flex items-center gap-1 rounded-md pr-1', r.id === selectedId ? 'bg-fill-active' : 'hover:bg-fill-hover')}>
-              <button type="button" onClick={() => setSelectedId(r.id)} className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-left text-label">
-                <span className="size-3 flex-none rounded-full" style={{ background: r.color || 'var(--color-text-muted)' }} />
+            <div key={r.id} className={cn('group/role flex h-9 items-center gap-1 rounded-lg pr-1', r.id === selectedId ? 'bg-nav-active text-text-strong' : 'text-text-secondary hover:bg-nav-hover hover:text-text-primary')}>
+              <button type="button" onClick={() => setSelectedId(r.id)} className="flex h-full min-w-0 flex-1 items-center gap-2 px-2 text-left text-body font-medium">
+                <ShieldIcon size={18} weight="fill" className="flex-none" style={{ color: r.color || 'var(--color-text-muted)' }} />
                 <span className="truncate">{r.name}</span>
               </button>
               {!r.isDefault && (
@@ -169,12 +173,12 @@ function Roles({ server }: { server: ServerSummary }) {
         }}>
           <div className="flex items-end gap-3">
             <label className="flex flex-1 flex-col gap-1.5">
-              <span className="text-caption font-bold uppercase text-text-secondary">{t('roles.name')}</span>
+              <span className="text-body font-medium text-text-primary">{t('roles.name')}</span>
               <Input value={draft.name} disabled={draft.isDefault} maxLength={100} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
             </label>
             <label className="flex flex-col gap-1.5">
-              <span className="text-caption font-bold uppercase text-text-secondary">{t('roles.color')}</span>
-              <input type="color" value={draft.color || '#99aab5'} onChange={(e) => setDraft({ ...draft, color: e.target.value })} className="h-10 w-14 cursor-pointer rounded-md border border-border bg-transparent" />
+              <span className="text-body font-medium text-text-primary">{t('roles.color')}</span>
+              <input type="color" value={draft.color || '#99aab5'} onChange={(e) => setDraft({ ...draft, color: e.target.value })} className="h-10 w-14 cursor-pointer rounded-lg border border-border-field bg-transparent" />
             </label>
           </div>
           {!draft.isDefault && (
@@ -185,7 +189,7 @@ function Roles({ server }: { server: ServerSummary }) {
           )}
           <PermissionSwitches value={draft.permissions} onChange={(permissions) => setDraft({ ...draft, permissions })} />
           <ErrorLine error={error} />
-          <div className="sticky bottom-0 flex items-center gap-2 bg-surface-panel py-3">
+          <div className="sticky bottom-0 flex items-center gap-2 border-t border-border-subtle bg-surface-app py-3">
             <Button type="submit" disabled={!dirty}>{t('save')}</Button>
             {dirty && <Button type="button" variant="ghost" onClick={() => setDraft(role)}>{t('reset')}</Button>}
             {!role.isDefault && <Button type="button" variant="destructive" className="ml-auto" onClick={() => setConfirmDelete(true)}><TrashIcon size={16} /> {t('roles.delete')}</Button>}
@@ -276,24 +280,35 @@ function Invites({ server }: { server: ServerSummary }) {
     <>
       <SectionTitle>{t('settings.invites')}</SectionTitle>
       <ErrorLine error={error} />
-      {items.length === 0 && <p className="text-label text-text-muted">{t('invites.none')}</p>}
-      <ul className="flex flex-col divide-y divide-border-subtle">
-        {items.map((invite) => (
-          <li key={invite.code} className="flex items-center gap-3 py-3 text-label">
-            <span className="min-w-0 flex-1">
-              <code className="block truncate">{inviteUrl(invite.code)}</code>
-              <span className="text-caption text-text-muted">
-                {t('invites.meta', {
-                  name: invite.creator?.displayName ?? '—',
-                  uses: invite.maxUses ? `${invite.uses}/${invite.maxUses}` : String(invite.uses),
-                  expires: invite.expiresAt ? new Date(invite.expiresAt).toLocaleString(i18n.language) : t('invites.never'),
-                })}
+      {items.length === 0 ? <p className="text-label text-text-secondary">{t('invites.none')}</p> : (
+        // Discord's invite table: a header row, then one hairline-ruled row per link
+        <div role="table" aria-label={t('invites.active')} className="flex flex-col text-label">
+          <div role="row" className="grid grid-cols-[minmax(0,1.6fr)_minmax(0,1.4fr)_4rem_minmax(0,1.2fr)_2rem] items-center gap-3 pb-2 font-medium text-text-primary">
+            <span role="columnheader">{t('invites.columns.creator')}</span>
+            <span role="columnheader">{t('invites.columns.code')}</span>
+            <span role="columnheader">{t('invites.columns.uses')}</span>
+            <span role="columnheader">{t('invites.columns.expires')}</span>
+            <span />
+          </div>
+          {items.map((invite) => (
+            <div role="row" key={invite.code} className="group/invite grid grid-cols-[minmax(0,1.6fr)_minmax(0,1.4fr)_4rem_minmax(0,1.2fr)_2rem] items-center gap-3 border-b border-border-subtle py-3">
+              <span role="cell" className="flex min-w-0 items-center gap-2">
+                {invite.creator && <Avatar id={invite.creator.id} name={invite.creator.displayName} avatar={invite.creator.avatar} avatarColor={invite.creator.avatarColor} size={24} />}
+                <span className="truncate text-text-primary">{invite.creator?.displayName ?? '—'}</span>
               </span>
-            </span>
-            <Button type="button" size="sm" variant="ghost" className="text-red" onClick={() => void run(async () => { await revokeInviteLink(invite.code); await load(); })}>{t('invites.revoke')}</Button>
-          </li>
-        ))}
-      </ul>
+              <code role="cell" className="truncate font-mono text-text-primary" title={inviteUrl(invite.code)}>{invite.code}</code>
+              <span role="cell" className="font-mono text-text-primary">{invite.maxUses ? `${invite.uses}/${invite.maxUses}` : invite.uses}</span>
+              <span role="cell" className="truncate font-mono text-text-primary">{invite.expiresAt ? new Date(invite.expiresAt).toLocaleString(i18n.language, { dateStyle: 'short', timeStyle: 'short' }) : t('invites.never')}</span>
+              <span role="cell" className="flex justify-end">
+                <button type="button" aria-label={t('invites.revoke')} onClick={() => void run(async () => { await revokeInviteLink(invite.code); await load(); })}
+                  className="grid size-6 place-items-center rounded-full bg-red text-white opacity-0 transition-opacity group-hover/invite:opacity-100 focus-visible:opacity-100">
+                  <XIcon size={14} weight="bold" />
+                </button>
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </>
   );
 }
@@ -327,13 +342,18 @@ export function ServerSettingsModal({ server, onClose, onOpenProfile }: { server
   const { state } = useRoom();
   const navigate = useNavigate();
   const isOwner = server.ownerId === state.me.userId;
-  const tabs: (SettingsTab & { key: TabKey })[] = [
+  type Tab = SettingsTab & { key: TabKey };
+  // Discord's column: the server's own pages, then each group under its heading
+  const grouped = (group: string, items: Tab[]): Tab[] => items.map((item, index) => (index === 0 ? { ...item, group } : item));
+  const tabs: Tab[] = [
     ...(can(server, PERMISSIONS.MANAGE_SERVER) ? [{ key: 'overview' as const, label: t('settings.overview') }] : []),
-    ...(can(server, PERMISSIONS.MANAGE_ROLES) ? [{ key: 'roles' as const, label: t('settings.roles') }] : []),
-    ...(can(server, PERMISSIONS.KICK_MEMBERS) || can(server, PERMISSIONS.BAN_MEMBERS) || can(server, PERMISSIONS.MANAGE_ROLES) ? [{ key: 'members' as const, label: t('settings.members') }] : []),
-    ...(can(server, PERMISSIONS.MANAGE_SERVER) ? [{ key: 'invites' as const, label: t('settings.invites') }] : []),
-    ...(can(server, PERMISSIONS.BAN_MEMBERS) ? [{ key: 'bans' as const, label: t('settings.bans') }] : []),
-    { key: 'soundboard' as const, label: t('settings.soundboard') },
+    ...grouped(t('settings.groups.expressions'), [{ key: 'soundboard' as const, label: t('settings.soundboard') }]),
+    ...grouped(t('settings.groups.people'), [
+      ...(can(server, PERMISSIONS.KICK_MEMBERS) || can(server, PERMISSIONS.BAN_MEMBERS) || can(server, PERMISSIONS.MANAGE_ROLES) ? [{ key: 'members' as const, label: t('settings.members') }] : []),
+      ...(can(server, PERMISSIONS.MANAGE_ROLES) ? [{ key: 'roles' as const, label: t('settings.roles') }] : []),
+      ...(can(server, PERMISSIONS.MANAGE_SERVER) ? [{ key: 'invites' as const, label: t('settings.invites') }] : []),
+    ]),
+    ...grouped(t('settings.groups.moderation'), can(server, PERMISSIONS.BAN_MEMBERS) ? [{ key: 'bans' as const, label: t('settings.bans') }] : []),
     ...(isOwner ? [{ key: 'delete' as const, label: t('settings.delete'), danger: true }] : []),
   ];
   const [tab, setTab] = useState<TabKey>(tabs[0]!.key);

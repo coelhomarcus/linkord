@@ -1,8 +1,8 @@
-import { CheckIcon, CopyIcon } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/shared/ui/primitives/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/primitives/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/ui/primitives/dialog';
+import { cn } from '@/shared/lib/utils';
 import { inviteToServer, type SocialUser } from '@/shared/api/api';
 import { describeApiError } from '@/shared/api/errorText';
 import { FriendPicker } from '@/features/conversations/FriendPicker';
@@ -11,22 +11,26 @@ import type { ServerSummary } from '@/shared/types/protocol';
 import { createInviteLink } from './serversApi';
 import { inviteUrl } from './inviteCode';
 
+// the picker's own selection is unused here: each row invites by itself
+const EMPTY_SELECTION = new Map<string, SocialUser>();
+
 /** "Invite people": friends get a card in their DM; anyone gets the link. */
 export function ServerInviteDialog({ server, channelId, open, onOpenChange }: {
   server: ServerSummary; channelId?: string; open: boolean; onOpenChange: (open: boolean) => void;
 }) {
   const { t } = useTranslation('servers');
-  const [selected, setSelected] = useState<Map<string, SocialUser>>(new Map());
+  const [sending, setSending] = useState<Set<string>>(new Set());
+  const [sent, setSent] = useState<Set<string>>(new Set());
   const [link, setLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const channel = channelId ? server.channels.find((c) => c.id === channelId) ?? null : null;
   const [notes, setNotes] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
-    setLink(null); setCopied(false); setNotes([]); setError(null); setSelected(new Map());
+    setLink(null); setCopied(false); setNotes([]); setError(null); setSent(new Set());
     createInviteLink(server.id, channelId ? { channelId } : {})
       .then(({ invite }) => { if (!cancelled) setLink(inviteUrl(invite.code)); })
       .catch((err: unknown) => { if (!cancelled) setError(describeApiError(err, 'servers:invite.linkFailed')); });
@@ -39,50 +43,58 @@ export function ServerInviteDialog({ server, channelId, open, onOpenChange }: {
     return () => clearTimeout(timer);
   }, [copied]);
 
-  function toggle(user: SocialUser) {
-    setSelected((prev) => {
-      const next = new Map(prev);
-      if (next.has(user.id)) next.delete(user.id); else next.set(user.id, user);
-      return next;
-    });
-  }
-
-  async function send() {
-    if (!selected.size || busy) return;
-    setBusy(true); setError(null);
+  // Discord invites one friend per click: the row's button sends at once and
+  // then reads Enviado
+  async function inviteOne(user: SocialUser) {
+    if (sending.has(user.id) || sent.has(user.id)) return;
+    setSending((prev) => new Set(prev).add(user.id));
+    setError(null);
     try {
-      const { results } = await inviteToServer(server.id, [...selected.keys()]);
-      setNotes(results.map((r) => `${selected.get(r.userId)?.displayName ?? r.userId}: ${describeInviteOutcome(r.outcome)}`));
-      setSelected(new Map());
+      const { results } = await inviteToServer(server.id, [user.id]);
+      const outcome = results[0]?.outcome;
+      if (outcome === 'sent' || outcome === 'already_pending') setSent((prev) => new Set(prev).add(user.id));
+      else if (outcome) setNotes((prev) => [...prev, `${user.displayName}: ${describeInviteOutcome(outcome)}`]);
     } catch (err) {
       setError(describeApiError(err, 'servers:invite.failed'));
     } finally {
-      setBusy(false);
+      setSending((prev) => { const next = new Set(prev); next.delete(user.id); return next; });
     }
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md text-text-primary">
-        <DialogHeader>
+      <DialogContent className="max-w-[calc(100%-2rem)] gap-0 overflow-hidden p-0 text-text-primary sm:max-w-[440px]">
+        <DialogHeader className="gap-1 px-6 pt-6 pr-14">
           <DialogTitle>{t('invite.title', { name: server.name })}</DialogTitle>
+          {channel && <DialogDescription>{t('invite.arrivesIn', { channel: channel.name })}</DialogDescription>}
         </DialogHeader>
-        <FriendPicker selected={selected} onToggle={toggle} maxHeightClass="max-h-64" />
-        {notes.length > 0 && <ul className="flex flex-col gap-0.5 text-caption text-text-secondary">{notes.map((n) => <li key={n}>{n}</li>)}</ul>}
-        <Button type="button" disabled={!selected.size || busy} onClick={() => void send()}>
-          {t('invite.send', { count: selected.size })}
-        </Button>
-        <div className="flex flex-col gap-1.5 border-t border-border pt-4">
-          <span className="text-caption font-bold uppercase text-text-secondary">{t('invite.orLink')}</span>
-          <div className="flex items-center gap-2 rounded-md bg-fill-inset p-1 pl-3">
-            <code className="min-w-0 flex-1 truncate text-label">{link ?? t('invite.generating')}</code>
-            <Button type="button" size="sm" disabled={!link} onClick={() => { if (link) navigator.clipboard.writeText(link).then(() => setCopied(true)).catch(() => {}); }}>
-              {copied ? <CheckIcon size={16} /> : <CopyIcon size={16} />} {copied ? t('invite.copied') : t('invite.copy')}
+        <div className="flex flex-col gap-2 px-6 pb-4 pt-4">
+          <FriendPicker
+            selected={EMPTY_SELECTION}
+            onToggle={() => {}}
+            maxHeightClass="max-h-72"
+            rowAction={(user) => {
+              const done = sent.has(user.id);
+              return (
+                <Button type="button" variant={done ? 'ghost' : 'secondary'} disabled={done || sending.has(user.id)} onClick={() => void inviteOne(user)} className="w-24 flex-none">
+                  {done ? t('invite.sentOne') : t('invite.inviteOne')}
+                </Button>
+              );
+            }}
+          />
+          {notes.length > 0 && <ul className="flex flex-col gap-0.5 text-caption text-text-secondary">{notes.map((n) => <li key={n}>{n}</li>)}</ul>}
+          {error && <p role="alert" className="text-label text-red-text">{error}</p>}
+        </div>
+        <div className="flex flex-col gap-2 border-t border-border-subtle px-6 pb-6 pt-4">
+          <span className="text-body font-semibold text-text-primary">{t('invite.orLink')}</span>
+          <div className="flex h-11 items-center gap-2 rounded-lg border border-border-field bg-bg-textarea py-1 pl-3 pr-1">
+            <code className="min-w-0 flex-1 truncate font-sans text-body text-text-primary">{link ?? t('invite.generating')}</code>
+            <Button type="button" disabled={!link} onClick={() => { if (link) navigator.clipboard.writeText(link).then(() => setCopied(true)).catch(() => {}); }} className={cn('w-20', copied && 'bg-green-solid hover:bg-green-hover')}>
+              {copied ? t('invite.copied') : t('invite.copy')}
             </Button>
           </div>
-          <span className="text-caption text-text-muted">{t('invite.expires')}</span>
+          <span className="text-caption text-text-secondary">{t('invite.expires')}</span>
         </div>
-        {error && <p role="alert" className="text-label text-red">{error}</p>}
       </DialogContent>
     </Dialog>
   );

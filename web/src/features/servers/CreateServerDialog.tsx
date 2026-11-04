@@ -91,7 +91,7 @@ export function CreateServerDialog({ open, onOpenChange }: { open: boolean; onOp
               <DialogDescription>{t('create.customizeHint')}</DialogDescription>
             </DialogHeader>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="server-name" className="text-caption font-bold uppercase text-text-secondary">{t('create.name')}</Label>
+              <Label htmlFor="server-name" className="text-body font-medium text-text-primary">{t('create.name')}</Label>
               <Input id="server-name" value={name} maxLength={100} autoFocus onChange={(e) => setName(e.target.value)} />
               <p className="text-caption text-text-muted">{t('create.template')}</p>
             </div>
@@ -109,7 +109,7 @@ export function CreateServerDialog({ open, onOpenChange }: { open: boolean; onOp
               <DialogDescription>{t('join.description')}</DialogDescription>
             </DialogHeader>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="server-invite" className="text-caption font-bold uppercase text-text-secondary">{t('join.link')}</Label>
+              <Label htmlFor="server-invite" className="text-body font-medium text-text-primary">{t('join.link')}</Label>
               <Input id="server-invite" value={link} autoFocus placeholder={`${window.location.origin}/invite/hTKzmak`} onChange={(e) => setLink(e.target.value)} />
             </div>
             {error && <p role="alert" className="text-label text-red">{error}</p>}

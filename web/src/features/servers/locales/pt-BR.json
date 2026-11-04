@@ -53,16 +53,19 @@
     "confirm": "Sair do servidor"
   },
   "invite": {
-    "title": "Convide amigos para {{name}}",
+    "title": "Convidar amigos para {{name}}",
     "send_one": "Enviar convite",
     "send_other": "Enviar convites ({{count}})",
-    "orLink": "Ou envie um link de convite para um amigo",
+    "orLink": "Ou, envie um convite do servidor a um amigo",
     "generating": "Gerando…",
     "copy": "Copiar",
     "copied": "Copiado",
     "expires": "Seu link de convite expira em 7 dias.",
     "linkFailed": "Não foi possível gerar o link de convite.",
-    "failed": "Não foi possível enviar os convites."
+    "failed": "Não foi possível enviar os convites.",
+    "inviteOne": "Convidar",
+    "sentOne": "Enviado",
+    "arrivesIn": "Os destinatários chegarão em #{{channel}}"
   },
   "channel": {
     "create": "Criar canal",
@@ -113,7 +116,14 @@
     "soundboard": "Soundboard",
     "delete": "Excluir servidor",
     "changeIcon": "Alterar ícone",
-    "removeIcon": "Remover ícone"
+    "removeIcon": "Remover ícone",
+    "groups": {
+      "expressions": "Expressões",
+      "people": "Pessoas",
+      "moderation": "Moderação"
+    },
+    "icon": "Ícone",
+    "iconHint": "Recomendamos uma imagem de, pelo menos, 512x512."
   },
   "roles": {
     "hint": "Use cargos para organizar os membros e definir o que cada um pode fazer. Cargos mais acima mandam nos de baixo.",
@@ -131,9 +141,15 @@
   },
   "invites": {
     "none": "Nenhum convite ativo.",
-    "meta": "por {{name}} · usos {{uses}} · expira {{expires}}",
     "never": "nunca",
-    "revoke": "Revogar"
+    "revoke": "Revogar",
+    "columns": {
+      "creator": "Criado por",
+      "code": "Código do convite",
+      "uses": "Usos",
+      "expires": "Expira em"
+    },
+    "active": "Links de convite ativos"
   },
   "bans": {
     "none": "Ninguém banido.",

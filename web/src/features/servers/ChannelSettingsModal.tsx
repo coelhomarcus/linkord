@@ -178,12 +178,12 @@ export function ChannelSettingsModal({ server, channel, onClose }: { server: Ser
         }}>
           <SectionTitle>{t('channelSettings.overview')}</SectionTitle>
           <label className="flex flex-col gap-1.5">
-            <span className="text-caption font-bold uppercase text-text-secondary">{t('channel.name')}</span>
+            <span className="text-body font-medium text-text-primary">{t('channel.name')}</span>
             <Input value={name} maxLength={80} onChange={(e) => setName(e.target.value)} />
           </label>
           {channel.type === 'text' && (
             <label className="flex flex-col gap-1.5">
-              <span className="text-caption font-bold uppercase text-text-secondary">{t('channelSettings.topic')}</span>
+              <span className="text-body font-medium text-text-primary">{t('channelSettings.topic')}</span>
               <Textarea value={topic} maxLength={1024} rows={3} placeholder={t('channelSettings.topicPlaceholder')} onChange={(e) => setTopic(e.target.value)} />
             </label>
           )}

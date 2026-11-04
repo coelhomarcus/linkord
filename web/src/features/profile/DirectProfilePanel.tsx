@@ -11,7 +11,7 @@ import { bannerStyle } from './profileLinks';
 import { formatProfileDate, useProfileDetails } from './useProfileDetails';
 
 const SHOWN_MUTUALS = 5;
-const CARD = 'rounded-lg bg-bg-tertiary/60 p-3';
+const SECTION = 'flex flex-col gap-1';
 
 /** The profile beside a DM, as Discord draws it: banner, avatar, bio, since
  * when, and what you have in common, with the full profile one click away. */
@@ -25,35 +25,39 @@ export function DirectProfilePanel({ user, onOpenProfile }: { user: PublicUser; 
   const friends = details?.mutualFriends;
 
   return (
-    <aside aria-label={t('panel.label')} className="flex h-full w-[340px] flex-none flex-col overflow-y-auto border-l border-border-subtle bg-bg-secondary">
-      <div className="h-[120px] flex-none" style={bannerStyle(user)} />
+    // Discord's profile beside a DM: a card of its own, inset from the edges,
+    // rather than a column ruled off from the chat
+    <aside aria-label={t('panel.label')} className="flex h-full w-[340px] flex-none flex-col p-2 pl-0">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[12px] border border-border-subtle bg-bg-card">
+      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div className="h-[104px] flex-none" style={bannerStyle(user)} />
       <div className="relative px-4 pb-4">
-        <span className="absolute -top-12 left-4 rounded-full border-[6px] border-bg-secondary">
+        <span className="absolute -top-12 left-3 rounded-full border-[6px] border-bg-card">
           <Avatar id={user.id} name={user.displayName} avatar={user.avatar} poster={user.avatarPoster} animateOnHover avatarColor={user.avatarColor} size={80} />
           <span
             aria-label={online ? t('panel.online') : t('panel.offline')}
-            className={`absolute bottom-0.5 right-0.5 size-5 rounded-full border-4 border-bg-secondary ${online ? 'bg-green' : 'bg-text-muted'}`}
+            className={`absolute bottom-0.5 right-0.5 size-5 rounded-full border-4 border-bg-card ${online ? 'bg-green' : 'bg-text-muted'}`}
           />
         </span>
         <div className="pt-12">
-          <h2 className="truncate text-title font-bold text-text-primary">{user.displayName}</h2>
-          <p className="truncate text-label text-text-secondary">{user.username}</p>
+          <h2 className="truncate text-[1.25rem] font-bold leading-[1.3] text-text-strong">{user.displayName}</h2>
+          <p className="truncate text-label text-text-primary">{user.username}</p>
         </div>
-        <div className="mt-4 flex flex-col gap-2">
+        <div className="mt-4 flex flex-col gap-4">
           {(user.bio || details) && (
-            <section className={CARD}>
-              {user.bio && <p className="mb-3 whitespace-pre-wrap wrap-break-word text-label text-text-secondary">{user.bio}</p>}
+            <section className={SECTION}>
+              {user.bio && <p className="mb-2 whitespace-pre-wrap wrap-break-word text-label text-text-primary">{user.bio}</p>}
               {details && (
                 <>
-                  <h3 className="text-caption font-semibold text-text-muted">{t('modal.memberSince')}</h3>
+                  <h3 className="text-caption font-semibold text-text-primary">{t('modal.memberSince')}</h3>
                   <p className="text-label text-text-secondary">{formatProfileDate(details.memberSince)}</p>
                 </>
               )}
             </section>
           )}
           {servers && servers.total > 0 && (
-            <section className={CARD}>
-              <h3 className="mb-2 text-caption font-semibold text-text-muted">{t('panel.mutualServers', { count: servers.total })}</h3>
+            <section className={SECTION}>
+              <h3 className="mb-1 text-caption font-semibold text-text-primary">{t('panel.mutualServers', { count: servers.total })}</h3>
               <ul className="flex flex-col gap-1">
                 {servers.items.slice(0, SHOWN_MUTUALS).map((server) => (
                   <li key={server.id}>
@@ -67,8 +71,8 @@ export function DirectProfilePanel({ user, onOpenProfile }: { user: PublicUser; 
             </section>
           )}
           {friends && friends.total > 0 && (
-            <section className={CARD}>
-              <h3 className="mb-2 text-caption font-semibold text-text-muted">{t('panel.mutualFriends', { count: friends.total })}</h3>
+            <section className={SECTION}>
+              <h3 className="mb-1 text-caption font-semibold text-text-primary">{t('panel.mutualFriends', { count: friends.total })}</h3>
               <ul className="flex flex-col gap-1">
                 {friends.items.slice(0, SHOWN_MUTUALS).map((friend) => (
                   <li key={friend.id}>
@@ -83,8 +87,10 @@ export function DirectProfilePanel({ user, onOpenProfile }: { user: PublicUser; 
           )}
         </div>
       </div>
-      <div className="mt-auto border-t border-border-subtle p-3">
-        <Button type="button" variant="ghost" className="w-full text-text-secondary" onClick={() => onOpenProfile(user.id)}>{t('panel.viewFull')}</Button>
+      </div>
+      <div className="flex-none p-4 pt-2">
+        <Button type="button" variant="secondary" size="lg" className="w-full" onClick={() => onOpenProfile(user.id)}>{t('panel.viewFull')}</Button>
+      </div>
       </div>
     </aside>
   );

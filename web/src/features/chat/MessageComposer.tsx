@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { ArrowBendUpLeftIcon, ArrowsInSimpleIcon, ArrowUpIcon, GifIcon, ImageSquareIcon, PaperclipIcon, PlusIcon, SmileyIcon } from '@phosphor-icons/react';
+import { ArrowBendUpLeftIcon, ArrowsInSimpleIcon, ArrowUpIcon, GifIcon, ImageSquareIcon, PaperclipIcon, PlusCircleIcon, SmileyIcon } from '@phosphor-icons/react';
 import { forwardRef, useEffect, useId, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, ClipboardEvent, KeyboardEvent as ReactKeyboardEvent, SyntheticEvent } from 'react';
 
@@ -327,14 +327,15 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
 
   const remaining = MAX_MESSAGE_LEN - text.length;
   const showCounter = text.length >= COUNTER_THRESHOLD;
-  const iconButton = 'flex-none rounded-full text-text-muted hover:text-text-primary';
+  // Discord's composer glyphs: 24px, gray at rest, white under the pointer
+  const iconButton = 'flex-none rounded-lg text-text-secondary hover:bg-transparent hover:text-text-primary aria-expanded:bg-fill-hover aria-expanded:text-text-primary';
 
   return (
-    <div className="w-full flex-none px-2 pb-[max(0.75rem,var(--safe-bottom))] @min-[640px]/chat:px-4 @min-[640px]/chat:pb-4">
+    <div className="w-full flex-none px-2 pb-[max(0.5rem,var(--safe-bottom))]">
       <input ref={fileInputRef} type="file" multiple hidden onChange={handleFileChange} />
       <input ref={imageInputRef} type="file" accept="image/*" multiple hidden onChange={handleFileChange} />
 
-      <div className="relative flex flex-col rounded-xl border border-border bg-surface-raised focus-within:border-border-strong">
+      <div className="relative flex flex-col rounded-lg border border-border-default bg-bg-card">
         {mentionQuery && mentionCandidates.length > 0 && (
           <div className="absolute inset-x-0 bottom-full z-20 mb-1 max-h-56 overflow-y-auto rounded-lg border border-border bg-surface-overlay py-1 shadow-popover">
             <p className="select-none px-3 pb-1 pt-0.5 text-caption font-semibold uppercase text-text-muted">Mencionar alguém</p>
@@ -377,12 +378,12 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
 
         {attachError && <p role="alert" className="mx-2 mt-2 rounded-md border border-red/20 bg-red/10 px-3 py-2 text-label text-red">{attachError}</p>}
 
-        <div className="flex items-end gap-1 p-1.5">
+        <div className="flex items-end gap-1 px-2 py-[9px]">
           <DropdownMenu>
             <DropdownMenuTrigger
               render={<Button type="button" variant="ghost" size="icon" aria-label={t('composer.add')} disabled={disabled} className={iconButton} />}
             >
-              <PlusIcon size={20} />
+              <PlusCircleIcon size={24} weight="fill" />
             </DropdownMenuTrigger>
             <DropdownMenuContent side="top" align="start" className="w-72">
               <DropdownMenuItem onClick={() => fileInputRef.current?.click()}><PaperclipIcon size={16} />{t('composer.attachFiles')}</DropdownMenuItem>
@@ -413,7 +414,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
             aria-invalid={tooLong || undefined}
             aria-describedby={showCounter ? counterId : undefined}
             placeholder={pendingFiles.length ? t('composer.addCaption') : messagePlaceholder}
-            className="min-h-9 max-h-40 flex-1 resize-none border-none bg-transparent px-1 py-1.5 text-body shadow-none focus-visible:ring-0"
+            className="min-h-9 max-h-40 flex-1 resize-none rounded-none border-none bg-transparent px-1 py-1.5 text-body shadow-none placeholder:text-text-faint focus-visible:ring-0"
           />
           {showCounter && (
             <span id={counterId} className={cn('flex-none self-end px-1 pb-2.5 text-caption tabular-nums', tooLong ? 'font-semibold text-red' : 'text-text-muted')}>
@@ -425,7 +426,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
               <PopoverTrigger
                 render={<Button type="button" variant="ghost" size="icon" aria-label={t('composer.sendGif')} disabled={disabled} className={`${iconButton} max-md:hidden`} />}
               >
-                <span aria-hidden className="rounded-[4px] border-[1.5px] border-current px-[3px] py-px text-[9px] font-bold leading-none tracking-wide">GIF</span>
+                <span aria-hidden className="rounded-[4px] border-2 border-current px-[3px] py-[2px] text-[9px] font-extrabold leading-none tracking-wide">GIF</span>
               </PopoverTrigger>
               <PopoverContent className="w-[22rem] max-w-[calc(100vw-1.5rem)] p-0" side="top" align="end">
                 <GifPicker config={gifConfig} onPick={sendGif} />
@@ -436,7 +437,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
             <PopoverTrigger
               render={<Button type="button" variant="ghost" size="icon" aria-label={t('composer.insertEmoji')} disabled={disabled} className={`${iconButton} max-md:hidden`} />}
             >
-              <SmileyIcon size={20} />
+              <SmileyIcon size={24} weight="fill" />
             </PopoverTrigger>
             <PopoverContent keepMounted={emojiPickerWarmed} className="w-75 p-0" side="top" align="end">
               <EmojiPicker className="h-80 w-full" onEmojiSelect={({ emoji }) => insertEmoji(emoji)}>
@@ -451,7 +452,8 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
             aria-label={t('composer.send')}
             disabled={!canSubmit}
             onClick={() => void submit()}
-            className="flex-none rounded-full"
+            // Discord's desktop composer sends on Enter alone; the button stays for touch
+            className="flex-none rounded-full md:hidden"
           >
             <ArrowUpIcon size={20} />
           </Button>

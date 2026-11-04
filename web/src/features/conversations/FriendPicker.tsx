@@ -1,5 +1,6 @@
 import { CheckIcon, MagnifyingGlassIcon } from '@phosphor-icons/react';
 import { useCallback, useState } from 'react';
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Avatar } from '@/shared/Avatar';
@@ -17,11 +18,14 @@ interface FriendPickerProps {
   excludeIds?: Set<string>;
   inputId?: string;
   maxHeightClass?: string;
+  /** Discord's invite list: each row carries its own button instead of being
+   * picked, and the row itself does nothing */
+  rowAction?: (user: SocialUser) => ReactNode;
 }
 
 /** Paginated friend list with search. Selection lives in the parent as a Map
  * (not derived from the visible page) so it survives searching and paging. */
-export function FriendPicker({ selected, onToggle, excludeIds, inputId, maxHeightClass = 'max-h-72' }: FriendPickerProps) {
+export function FriendPicker({ selected, onToggle, excludeIds, inputId, maxHeightClass = 'max-h-72', rowAction }: FriendPickerProps) {
   const { t } = useTranslation('conversations');
   const [query, setQuery] = useState('');
   const debounced = useDebouncedValue(query.trim(), 250);
@@ -31,17 +35,17 @@ export function FriendPicker({ selected, onToggle, excludeIds, inputId, maxHeigh
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-2 rounded-md border border-border bg-fill-subtle px-3">
-        <MagnifyingGlassIcon size={20} className="text-text-muted" />
+      <div className="flex h-10 items-center gap-2 rounded-lg border border-border-field bg-bg-textarea px-3 focus-within:border-border-accent">
+        <MagnifyingGlassIcon size={20} className="flex-none text-text-secondary" />
         <input
           id={inputId}
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder={t('friendPicker.search')}
-          className="h-9 min-w-0 flex-1 bg-transparent text-label outline-none placeholder:text-text-muted"
+          className="h-full min-w-0 flex-1 bg-transparent text-body outline-none placeholder:text-text-faint"
         />
       </div>
-      <div className={cn('overflow-y-auto rounded-lg border border-border bg-fill-inset p-1', maxHeightClass)}>
+      <div className={cn('-mx-2 overflow-y-auto', maxHeightClass)}>
         {list.status === 'loading' ? (
           <p className="px-3 py-8 text-center text-label text-text-muted">{t('friendPicker.loading')}</p>
         ) : list.status === 'error' ? (
@@ -55,6 +59,18 @@ export function FriendPicker({ selected, onToggle, excludeIds, inputId, maxHeigh
           </p>
         ) : (
           visible.map(({ user }) => {
+            if (rowAction) {
+              return (
+                <div key={user.id} className="flex items-center gap-3 rounded-lg px-2 py-2 hover:bg-nav-hover">
+                  <Avatar id={user.id} name={user.displayName} avatar={user.avatar} avatarColor={user.avatarColor} size={32} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-body font-semibold text-text-primary">{user.displayName}</span>
+                    <span className="block truncate text-label text-text-secondary">{user.username}</span>
+                  </span>
+                  {rowAction(user)}
+                </div>
+              );
+            }
             const checked = selected.has(user.id);
             return (
               <button
@@ -63,14 +79,14 @@ export function FriendPicker({ selected, onToggle, excludeIds, inputId, maxHeigh
                 aria-pressed={checked}
                 onClick={() => onToggle(user)}
                 className={cn(
-                  'flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-left transition-colors',
-                  checked ? 'bg-primary/12 text-text-primary' : 'text-text-secondary hover:bg-fill-hover',
+                  'flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors',
+                  checked ? 'bg-nav-active text-text-primary' : 'text-text-primary hover:bg-nav-hover',
                 )}
               >
-                <Avatar id={user.id} name={user.displayName} avatar={user.avatar} avatarColor={user.avatarColor} size={34} />
+                <Avatar id={user.id} name={user.displayName} avatar={user.avatar} avatarColor={user.avatarColor} size={32} />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-label font-medium">{user.displayName}</span>
-                  <span className="block truncate text-caption text-text-muted">@{user.username}</span>
+                  <span className="block truncate text-body font-semibold">{user.displayName}</span>
+                  <span className="block truncate text-label text-text-secondary">@{user.username}</span>
                 </span>
                 <span className={cn(
                   'grid size-5 place-items-center rounded-full border text-micro',
