@@ -1,4 +1,4 @@
-import { BellIcon, ChatCircleIcon, PhoneIcon, SquaresFourIcon, UserCircleIcon } from '@phosphor-icons/react';
+import { TrayIcon, ChatCircleIcon, PhoneIcon, SquaresFourIcon, UserCircleIcon } from '@phosphor-icons/react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Avatar } from '@/shared/Avatar';
@@ -33,7 +33,7 @@ export function MobileTabBar({ activeCallConversationId, onReturnToCall }: { act
   const tabs = [
     { key: 'servers', to: serverTab, label: t('servers'), icon: SquaresFourIcon, count: serversUnread, active: !!currentServerId },
     { key: 'messages', to: ROUTES.home, label: t('messages'), icon: ChatCircleIcon, count: directUnread + pendingIncomingCount, active: isHomePath(pathname) },
-    { key: 'notifications', to: ROUTES.notifications, label: t('notifications'), icon: BellIcon, count: notificationsUnread, active: pathname === ROUTES.notifications },
+    { key: 'notifications', to: ROUTES.notifications, label: t('notifications'), icon: TrayIcon, count: notificationsUnread, active: pathname === ROUTES.notifications },
     { key: 'profile', to: ROUTES.profile, label: t('profile'), icon: UserCircleIcon, count: 0, active: pathname === ROUTES.profile },
   ] as const;
 
