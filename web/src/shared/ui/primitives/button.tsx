@@ -13,7 +13,7 @@ const buttonVariants = cva(
           "border-border-control bg-bg-control text-text-strong hover:bg-bg-control-hover aria-expanded:bg-bg-control-hover",
         secondary:
           "border-border-control bg-bg-control text-text-strong hover:bg-bg-control-hover aria-expanded:bg-bg-control-hover",
-        // a neutral button whose action is destructive: Discord's "Remover o ícone"
+        // A neutral button style for destructive actions, such as removing an icon.
         "danger-outline":
           "border-border-control bg-bg-control text-red-text hover:bg-bg-control-hover",
         ghost:

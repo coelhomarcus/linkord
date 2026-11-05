@@ -12,11 +12,7 @@ interface CameraPreviewApi {
   stop: () => void;
 }
 
-/** "Prévia" da câmera em Settings — own getUserMedia stream, separate from
- * useCamera.ts (which is what a call actually publishes). Starting never
- * touches room.localParticipant, and stop() — on click, on unmount, or right
- * before a new start() — always stops every track, or the camera's own
- * hardware light stays on after leaving the page. */
+/** Use a temporary camera stream separate from the track published in a call. */
 export function useCameraPreview(): CameraPreviewApi {
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [error, setError] = useState<string | null>(null);

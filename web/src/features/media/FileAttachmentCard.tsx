@@ -4,8 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { cn } from '@/shared/lib/utils';
 import { DocumentAttachmentCard } from './DocumentAttachmentCard';
 
-// One width for every state (draft, pending, published) — see the redesign
-// plan's "usar uma única regra para documentos publicados e pendentes".
+// Keep the attachment width consistent between drafts, pending uploads, and published files.
 export const FILE_CARD_MAX_WIDTH = 360;
 
 interface FileAttachmentCardProps {

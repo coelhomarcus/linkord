@@ -1,9 +1,5 @@
-// Inventory and repair PLANNING for data that predates the social model
-// (docs/plano-rede-social.md §12). Everything that decides anything is a pure
-// function over plain rows, so it is unit-tested without a database; the only
-// SQL is `loadInventory`, written against the few tables that exist at every
-// schema level from migration 0011 on — the repair has to run BEFORE the
-// migrations that would choke on the data (0020's unique-owner index).
+// Inspect legacy data before migrations that assume newer constraints. Repair decisions are pure
+// functions over plain rows; only loadInventory executes SQL, against tables present since 0011.
 
 export interface Queryable {
   query<R = Record<string, unknown>>(text: string, params?: unknown[]): Promise<{ rows: R[] }>;

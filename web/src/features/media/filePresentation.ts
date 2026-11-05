@@ -9,9 +9,7 @@ export interface FilePresentation {
   /** Translation key for the word shown next to the size — never the raw MIME. */
   typeLabelKey: FileFamily;
   icon: Icon;
-  /** Small corner marker on the icon — only PDF gets one; every other family
-   * relies on its own icon shape, not color, to read as distinct (see the
-   * plan's "diferenciáveis sem depender de cor" requirement). */
+  /** Small corner marker; only PDF needs one because the other file icons are distinct by shape. */
   badge?: string;
   iconBgClassName: string;
   iconTextClassName: string;
@@ -80,8 +78,7 @@ const FAMILY_ICON: Record<FileFamily, Icon> = {
   unknown: FileIcon,
 };
 
-// Reinforcement only (rule: "usar cor apenas como reforço") — every family
-// already has a distinct icon shape; these just add a second signal.
+// Color adds a secondary cue; each family already has a distinct icon shape.
 const FAMILY_COLOR: Record<FileFamily, { bg: string; text: string }> = {
   pdf: { bg: 'bg-red/10', text: 'text-red' },
   document: { bg: 'bg-blue/10', text: 'text-blue' },

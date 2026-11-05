@@ -6,18 +6,9 @@ import { attachments as attachmentsTable, type Attachment } from '../../db/schem
 import { handleAttachmentInit, handleAttachmentChunk, handleAttachmentComplete, handleAttachmentCancel } from './attachmentUploads.js';
 import { serveUpload, handleAttachmentPreview } from './attachmentServing.js';
 
-// This module is now just the DB-persistence core for attachments (CRUD +
-// route wiring) — the upload lifecycle, file-serving/preview, and thumbnail
-// generation each moved to their own sibling module (attachmentUploads.ts,
-// attachmentServing.ts, attachmentThumbnails.ts) since none of those are
-// really about "the attachments table." Deleting files when their owner
-// disappears (a message, a conversation, an avatar) lives in
-// attachmentCleanup.ts instead — messages.ts/conversations.ts/participants.ts/
-// moderation.ts all need it, and it has to stay a leaf module (no dependency
-// on this file or its attachmentUploads.js/attachmentServing.js imports) so
-// those 4 callers can import it statically without a cycle. Avatar upload
-// lives in modules/profile/ instead — a different domain that happens to
-// share this table's storage.
+// Keep cleanup in a leaf module: message, conversation, presence, and moderation handlers all
+// depend on it, so importing attachment routes here would create a cycle. Avatar uploads remain
+// in the profile module even though they share this table.
 
 /** One query for all messages' attachments (avoids N+1). Up to
  * MAX_ATTACHMENTS_PER_MESSAGE rows per message now (see

@@ -30,10 +30,7 @@ type ProfileImageSelection = {
   kind: 'avatar' | 'banner';
 };
 
-/** A profile not already in the known-users cache (Etapa 7 — see
- * usePresence.ts) needs an on-demand fetch: e.g. the author of an old
- * message who has since left the conversation. `fetchStatus` only tracks
- * that fallback path — a cache hit never touches it. */
+/** Fetch uncached profiles on demand, such as authors of older messages who have left the conversation. */
 export function ProfileModal({ userId, onClose, onOpenProfile }: ProfileModalProps) {
   const { t } = useTranslation('profile');
   const { state, allUsers, onlineUserIds } = useRoom();

@@ -25,17 +25,7 @@ import { logger } from '../../lib/logger.js';
 
 const log = logger.child({ component: 'invitations' });
 
-// Inviting friends to a server (docs/plano-rede-social.md §5.5, §5.6, §6.2,
-// §7.2) — a card in their DM. An invitation is NOT membership: the only
-// thing here that creates a member is acceptInvitation. Invite LINKS are
-// serverInvites.ts.
-//
-// LOCK ORDER — one order for every operation here, so none can deadlock:
-//   1. the user-pair advisory lock (the same one friendships/blocks take)
-//   2. the server row  (`for update`)
-//   3. the invitation row  (`for update`)
-// Accept reads the invitation UNLOCKED first, only to learn the pair and the
-// server.
+// Create, accept, and revoke share this row; transaction and lock ordering serialize concurrent transitions.
 
 type InviteOutcome = 'sent' | 'already_pending' | 'already_member' | 'not_friends' | 'server_full' | 'banned' | 'unavailable';
 export interface InviteResult { userId: string; outcome: InviteOutcome; invitationId?: string }

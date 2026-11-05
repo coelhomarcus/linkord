@@ -29,10 +29,7 @@ export function EditProfileButton({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
-/** The social actions on someone's profile — what's offered depends only on
- * the viewer's relation to them (docs/plano-rede-social.md §5.4). Composed
- * next to ProfileCard rather than inside it, so a card drawn elsewhere (the
- * settings preview) never grows relationship rules. */
+/** Keep relationship actions beside the profile card so other card contexts stay independent. */
 export function ProfileActions({ userId, username, displayName, onNavigate, onReport, className }: {
   userId: string;
   username: string;

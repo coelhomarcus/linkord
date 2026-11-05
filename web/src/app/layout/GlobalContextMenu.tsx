@@ -106,9 +106,7 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
         const message = element?.closest('[data-message-id]');
         const conversation = element?.closest('[data-conversation-id]');
         const rowButton = conversation?.querySelector(':scope > button');
-        // holding a picture (a button that opens the viewer) is how a phone
-        // reaches "Remover anexo" / "Remover incorporação"; links and other
-        // controls keep their own long press
+        // Long-pressing an attachment opens its action; links and other controls keep their own long press.
         const interactive = element?.closest('a, button, input, textarea, [contenteditable], [data-download-url]');
         const onPartButton = !!interactive?.matches('button') && !!interactive.closest('[data-attachment-id], [data-embed-link]');
         const blocked = (!message && !conversation) || !!window.getSelection()?.toString()

@@ -19,7 +19,7 @@ import { logger } from '../../lib/logger.js';
 
 const log = logger.child({ component: 'calls' });
 
-// "Convidar para voz": someone in a voice channel asks another member of the
+// "Invite to voice": someone in a voice channel asks another member of the
 // server, who can connect there, to join. The invite is a card in their DM,
 // so it reaches them the same way a message does (unread count, push) and
 // only between friends — the DM's own rule. A pending server invitation is

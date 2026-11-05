@@ -90,7 +90,7 @@ export const ERROR_REGISTRY = {
   sound_too_long: { statuses: [400], channel: 'http' },
   soundboard_full: { statuses: [409], channel: 'http' },
 
-  // admin actions (docs/plano-rede-social.md §9)
+  // Admin actions.
   self_action: { statuses: [409], channel: 'http' },
   last_admin: { statuses: [409], channel: 'http' },
   already_suspended: { statuses: [409], channel: 'http' },

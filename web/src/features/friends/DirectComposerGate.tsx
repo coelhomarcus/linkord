@@ -4,14 +4,7 @@ import { useRoom } from '@/state/RoomContext';
 import { ProfileActions } from './ProfileActions';
 import { useRelationship } from './useRelationship';
 
-/** In a direct conversation with someone who isn't a friend (never was, was
- * removed, or is blocked), the composer is replaced by an explanation plus the
- * one action that fixes it — the history above stays fully readable
- * (docs/plano-rede-social.md §5.7). This is presentation only: the server
- * refuses the writes on its own (canSendDirectMessage), so a stale answer here
- * can never let a message through. While the relationship is still loading, or
- * if it failed to load, the composer stays — hiding it on a hiccup would be
- * worse than letting the server say no. */
+/** Keep history readable while explaining why sending is unavailable and how to restore access. */
 export function DirectComposerGate({ conversationId, children }: { conversationId: string; children: ReactNode }) {
   const { t } = useTranslation('friends');
   const { conversations, allUsers, state } = useRoom();

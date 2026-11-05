@@ -12,8 +12,7 @@ import { AppLink } from '@/shared/ui/app-link';
 
 type Result = { text: string; tone: 'success' | 'info' | 'error'; linkToRequests?: boolean };
 
-/** Discovery is by EXACT @username only — no catalog, no partial search
- * (docs/plano-rede-social.md §3): nothing here ever lists accounts. */
+/** Account discovery accepts exact usernames only and never lists accounts. */
 export function AddFriendForm({ onSent, autoFocus }: { onSent: () => void; autoFocus?: boolean }) {
   const { t } = useTranslation('friends');
   const [value, setValue] = useState('');

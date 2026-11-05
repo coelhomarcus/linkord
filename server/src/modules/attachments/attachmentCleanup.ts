@@ -70,21 +70,9 @@ export async function deleteForServer(serverId: string): Promise<void> {
   await unlinkAll(await db.select({ id: serverSounds.id }).from(serverSounds).where(eq(serverSounds.serverId, serverId)));
 }
 
-/** Whether `url` (already passed through sanitizeAvatar/sanitizeBanner) is
- * safe for `uploaderId` to claim as their own avatar/banner/server icon.
- * True for anything that isn't a LOCAL upload reference — an external
- * https:// URL or an empty string has no file of ours to protect. For a
- * local `/uploads/<id>` reference, only true when it's a genuine, still a
- * profile-image row (messageId null) that THIS account itself uploaded.
- *
- * Without this, sanitizeAvatar's format check alone let ANY account claim
- * ANY other account's `/uploads/<id>` profile image as its own — the id is
- * a public, observable string, free to copy out of someone else's profile.
- * The eventual replacement of that fraudulent reference would then delete
- * the real owner's still-in-use file via deleteAvatarFile below — this is
- * the write-time half of that fix; deleteAvatarFile's own reference check
- * is the read-time half (defense in depth for anything that predates this
- * or reaches it some other way). */
+/** Local upload URLs are safe to claim only when the uploader owns a profile-image row for them.
+ * This prevents a forged avatar reference from causing cleanup to delete another user's file.
+ * External URLs and empty values have no local file to protect. */
 export async function isOwnedProfileImage(url: string, uploaderId: string): Promise<boolean> {
   const match = AVATAR_URL_RE.exec(url);
   if (!match) return true;

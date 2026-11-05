@@ -3,10 +3,7 @@ import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { describe, it } from 'node:test';
 
-// The migration rehearsal is itself a real-Postgres scenario (legacy data →
-// gate → repair → head, interrupted migration, empty database). Running it here
-// makes `test:integration` the single place that proves "migrations from empty
-// and over legacy" (docs/plano-rede-social.md §14.1). It builds its own
+// Exercises migration and repair against a disposable database, including repeated runs and legacy rows. It builds its own
 // throwaway databases next to the one this suite runs in.
 
 describe('ensaio de migracao', () => {

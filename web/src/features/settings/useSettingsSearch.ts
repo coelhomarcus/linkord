@@ -4,8 +4,7 @@ import { findCategory } from './settingsCatalog';
 import { SETTINGS_SEARCH_INDEX } from './settingsSearchIndex';
 import type { SearchEntry } from './settingsSearchIndex';
 
-/** Accent/case-insensitive: "camera" has to find "Câmera" (plano §5.3). No
- * existing helper for this in the repo — small enough not to need one. */
+/** Normalize accents and case so queries match localized labels. */
 export function normalizeSearchText(value: string): string {
   return value
     .normalize('NFD')

@@ -15,13 +15,8 @@ import { migrateOn } from './rehearsal/migrateOn.js';
 
 // `npm run db:rehearse [-- --keep] [-- --json]`
 //
-// Rehearses the production migration end to end on throwaway local databases
-// (docs/plano-rede-social.md §12, §14.1 "Migração"): the database as it was
-// before the social model, loaded with messy legacy data, taken to the current
-// schema through the same safety gate the server uses — and proves that the
-// data and the social policy survive. It never touches DATABASE_URL_PROD or the
-// development database: everything happens in `linkord_rehearsal_*` databases it
-// creates and drops.
+// Rehearses migration, repair, and validation against disposable databases.
+// It never touches production or development databases.
 
 const args = process.argv.slice(2);
 const keep = args.includes('--keep');

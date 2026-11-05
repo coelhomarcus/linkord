@@ -125,10 +125,8 @@ async function handleRegister(request: FastifyRequest, reply: FastifyReply): Pro
   const { rawToken } = await createSession(user.id);
   setSessionCookie(request, reply, rawToken);
   log.info('account registered', { userId: user.id, username: user.username });
-  // Etapa 7: no more global 'user-registered' broadcast — a brand-new
-  // account has zero friends and zero shared conversations by definition,
-  // so its knownPeerIds is empty on every side; the event would reach
-  // nobody anyway (see participants.ts#broadcastToKnownPeers).
+  // A new account has no friends or shared conversations, so scoped presence would deliver this
+  // event to nobody.
   sendJson(reply, 201, { user: privateUser(user) });
 }
 

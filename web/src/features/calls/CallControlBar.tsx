@@ -25,11 +25,8 @@ const MIC_PROBLEM_NOTICE_KEY = {
   unavailable: 'micProblem.unavailableNotice',
 } as const;
 
-// The bar is intentionally theme-independent (black material, white-based
-// states) — it stays the same over the dark call stage regardless of the
-// app's own light/dark theme, matching the Fluxer reference. Sizes shrink
-// at 480/360px (viewport width, not the stage's own measured width — the
-// stage doesn't expose that yet; see the calls redesign plan's E5/E10).
+// Keep the controls legible over the call stage regardless of the app theme.
+// Compact them at narrow viewport widths.
 const BAR_BUTTON = 'grid size-11 flex-none place-items-center rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-white/50 active:translate-y-px max-[480px]:size-10 max-[480px]:rounded-[14px] max-[360px]:size-9 max-[360px]:rounded-[13px]';
 const BAR_BUTTON_NEUTRAL = 'bg-white/5 text-white/90 hover:bg-white/12';
 const BAR_BUTTON_RED = 'bg-red/16 text-red hover:bg-red/24';
@@ -42,9 +39,7 @@ interface CallControlBarProps {
   hudVisible?: boolean;
 }
 
-// forwardRef so Stage.tsx can measure this wrapper's real rendered height
-// (banners + bar + gaps) and reserve exactly that much space for it instead
-// of a fixed `pb-32` guess (see the calls redesign plan §5.1).
+// Stage measures the rendered height to reserve space for the bar and any banners.
 export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(function CallControlBar({ hudVisible = true }, ref) {
   const { t } = useTranslation('calls');
   const {

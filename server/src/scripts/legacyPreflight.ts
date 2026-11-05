@@ -2,8 +2,7 @@ import { Pool } from 'pg';
 import { classifyInventory, formatFindings, loadInventory } from '../modules/migration/legacyInventory.js';
 
 // `npm run db:preflight [-- --json] [-- --database-url=<url>]`
-// Read-only inventory of legacy data (docs/plano-rede-social.md §12.1). Exit
-// code 1 only when something would BLOCK a pending migration; warnings exit 0.
+// Read-only inventory; exit code 1 means a pending migration is blocked.
 
 const args = process.argv.slice(2);
 const json = args.includes('--json');

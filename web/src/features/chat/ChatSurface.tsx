@@ -97,11 +97,7 @@ export function ChatSurface({ conversationId, onOpenProfile }: { conversationId:
       <div
         aria-hidden
         className="pointer-events-none absolute inset-x-0 bottom-0 transition-[height] duration-150 ease-out motion-reduce:transition-none"
-        // just a solid fill behind the composer (messages must not show through
-        // the margins around it), no fade; only while someone types does it
-        // reach up behind the typing rail — so "fulano está digitando" never
-        // reads over the messages — with a short fade above it. The rail's room
-        // stays reserved either way, so nothing in the list moves when it shows.
+        // Keep the typing indicator above the message list so it does not overlap the rail.
         style={{
           height: composerHeight + (someoneTyping ? STATUS_RAIL_HEIGHT + RAIL_GAP : 0),
           backgroundImage: someoneTyping

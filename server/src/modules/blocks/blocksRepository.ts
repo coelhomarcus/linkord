@@ -31,14 +31,9 @@ export async function isBlockedEitherWay(a: string, b: string, executor: Tx | ty
   return !!row;
 }
 
-/** Directional block. Idempotent (a repeat block is a no-op, not an error).
- * Ends any active/pending friendship for the pair in the SAME transaction
- * (docs/plano-rede-social.md §7.3) — reaches into the `friendships` table
- * directly rather than importing friendshipsRepository.ts, which would
- * create a cycle (that module imports this one for canSendDirectMessage).
- * Only the status transition is duplicated here, not the cooldown/version
- * bookkeeping a real friend-request rejection goes through — a block isn't
- * a request that could be retried, there's nothing to cool down. */
+/** A block is directional and idempotent. It ends any friendship in the same transaction.
+ * Update the row here instead of importing friendshipsRepository.ts, which imports this module
+ * for canSendDirectMessage and would create a cycle. A block does not use request cooldowns. */
 export async function blockUser(blockerId: string, blockedId: string): Promise<string[]> {
   return withUserPairLock(blockerId, blockedId, async (tx) => {
     await tx.insert(userBlocks).values({ blockerId, blockedId }).onConflictDoNothing();
@@ -84,8 +79,7 @@ export async function listBlocks(blockerId: string, cursorRaw?: string): Promise
   };
 }
 
-/** Unblocking never restores the friendship, invitations, or calls on its
- * own (docs/plano-rede-social.md §5.7/§7.3) — it only removes this row. */
+/** Unblocking removes the block only; it does not restore friendships, invitations, or calls. */
 export async function unblockUser(blockerId: string, blockedId: string): Promise<void> {
   await db.delete(userBlocks).where(and(eq(userBlocks.blockerId, blockerId), eq(userBlocks.blockedId, blockedId)));
 }

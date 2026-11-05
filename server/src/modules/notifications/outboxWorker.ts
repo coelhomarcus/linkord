@@ -80,8 +80,7 @@ export async function drainOutbox(): Promise<{ processed: number; failed: number
   }
 }
 
-/** Retention (docs/plano-rede-social.md §10): read notifications and processed
- * outbox rows don't need to live forever. Unread ones are kept much longer. */
+/** Remove old read notifications and processed outbox rows; retain unread notifications longer. */
 export async function pruneNotifications(now = new Date()): Promise<{ notifications: number; outbox: number }> {
   const readCut = daysAgo(NOTIFICATION_READ_RETENTION_DAYS, now);
   const unreadCut = daysAgo(NOTIFICATION_UNREAD_RETENTION_DAYS, now);
