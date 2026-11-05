@@ -7,7 +7,7 @@ import { serverInvitations, servers } from '../../db/schema.js';
 // consumers — keeping the shared pieces here stops the two from importing
 // each other.
 
-export type InvitationStatus = 'pending' | 'accepted' | 'declined' | 'revoked' | 'expired';
+type InvitationStatus = 'pending' | 'accepted' | 'declined' | 'revoked' | 'expired';
 
 // `expired` is legacy: invitations no longer lapse, but rows from before that
 // keep the state they had.

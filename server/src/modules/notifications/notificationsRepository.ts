@@ -63,7 +63,7 @@ interface NotificationRow {
 type ServerRef = { id: string; name: string; icon: string };
 type ConversationRef = { id: string; type: string; title: string; serverId: string | null };
 
-export function toNotificationEntry(
+function toNotificationEntry(
   row: NotificationRow, at: string, actor: User | null, server: ServerRef | null,
   conversation: ConversationRef | null = null, message: { id: number; text: string } | null = null,
 ): NotificationEntry {

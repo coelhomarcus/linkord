@@ -58,7 +58,7 @@ export async function memberCount(serverId: string): Promise<number> {
  * join() falls back displayName to when empty, and a raw id (a 36-char
  * uuid) overflows display_name's varchar(32) the moment a test doesn't set
  * displayName itself first. */
-export function fakeSocket(user: { id: string; username: string }): { socket: AppSocket; sent: { event: string; payload: any }[] } {
+function fakeSocket(user: { id: string; username: string }): { socket: AppSocket; sent: { event: string; payload: any }[] } {
   const sent: { event: string; payload: any }[] = [];
   const socket = {
     participantId: null,

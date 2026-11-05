@@ -2,7 +2,7 @@
 // collect it). One JSON line per record in production, a readable line in dev.
 // A leaf module: it must not import anything from the rest of the server.
 
-export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 export type LogFields = Record<string, unknown>;
 
 const ORDER: Record<LogLevel, number> = { debug: 10, info: 20, warn: 30, error: 40 };

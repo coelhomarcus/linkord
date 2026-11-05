@@ -49,7 +49,7 @@ const EMBED_SCAN_CEILING = 400;
 const PG_INT4_MAX = 2147483647;
 const DELETED_AUTHOR_NAME = 'Usuário apagado';
 
-export const MEDIA_KINDS = ['uploads', 'images', 'videos', 'audios', 'documents', 'gifs', 'embeds'] as const;
+const MEDIA_KINDS = ['uploads', 'images', 'videos', 'audios', 'documents', 'gifs', 'embeds'] as const;
 export type MediaKind = (typeof MEDIA_KINDS)[number];
 type UploadKind = 'uploads' | 'images' | 'videos' | 'audios' | 'documents';
 

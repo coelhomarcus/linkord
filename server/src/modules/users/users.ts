@@ -100,14 +100,6 @@ export async function findById(id: string): Promise<User | null> {
   return row || null;
 }
 
-/** Every account on the instance — no longer sent to ordinary clients (see
- * realtime/socket.ts's `welcome.knownUsers`, Etapa 7); only
- * `GET /api/admin/users` (usersRoutes.ts) still calls this. */
-export async function listAllUsers(): Promise<PublicUser[]> {
-  const rows = await db.select().from(users).orderBy(sql`lower(${users.username})`);
-  return rows.map(publicUser);
-}
-
 /** The "known users" projection sent in `welcome` — bounded to a specific
  * set of ids (friends ∪ conversation members), not everyone. Empty input
  * short-circuits: `inArray` with an empty array is a Drizzle footgun (some

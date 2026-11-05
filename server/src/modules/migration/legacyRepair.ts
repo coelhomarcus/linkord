@@ -1,12 +1,12 @@
 import crypto from 'node:crypto';
 import type { Pool } from 'pg';
-import type { Queryable, RepairAction } from './legacyInventory.js';
+import type { RepairAction } from './legacyInventory.js';
 
 // Applies a repair plan (legacyInventory.ts#planRepairs). Runs BEFORE the
 // migrations that would fail on the data, so it talks to the database with plain
 // SQL and creates its own log table if the schema does not have it yet.
 
-export const ENSURE_REPAIRS_TABLE = `
+const ENSURE_REPAIRS_TABLE = `
 create table if not exists data_repairs (
   id text primary key,
   run_id text not null,
@@ -69,5 +69,3 @@ export async function applyRepairs(pool: Pool, actions: RepairAction[], opts: { 
     client.release();
   }
 }
-
-export type { Queryable };

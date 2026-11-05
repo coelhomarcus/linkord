@@ -30,13 +30,13 @@ const CODE_ALPHABET = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789';
 const MAX_AGE_SECONDS = [0, 30 * 60, 60 * 60, 6 * 60 * 60, 12 * 60 * 60, 24 * 60 * 60, 7 * 24 * 60 * 60];
 const MAX_USES = [0, 1, 5, 10, 25, 50, 100];
 
-export function newInviteCode(): string {
+function newInviteCode(): string {
   const bytes = crypto.randomBytes(8);
   return [...bytes].map((b) => CODE_ALPHABET[b % CODE_ALPHABET.length]).join('');
 }
 
 /** Whether a link still lets someone in at `now`. */
-export function isInviteLive(invite: Pick<ServerInvite, 'revokedAt' | 'expiresAt' | 'maxUses' | 'uses'>, now = new Date()): boolean {
+function isInviteLive(invite: Pick<ServerInvite, 'revokedAt' | 'expiresAt' | 'maxUses' | 'uses'>, now = new Date()): boolean {
   if (invite.revokedAt) return false;
   if (invite.expiresAt && invite.expiresAt <= now) return false;
   return invite.maxUses === null || invite.uses < invite.maxUses;

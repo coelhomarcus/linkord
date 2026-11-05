@@ -5,7 +5,7 @@
 // browser from wherever the sender points, which the link previews already
 // avoid by fetching server-side.
 
-export interface RichEmbedField { name: string; value: string; inline: boolean }
+interface RichEmbedField { name: string; value: string; inline: boolean }
 
 export interface RichEmbed {
   title?: string;

@@ -16,7 +16,7 @@ interface Precondition {
 const indexExists = async (db: Queryable, name: string): Promise<boolean> => (await db.query('select to_regclass($1) as r', [`public.${name}`])).rows[0]?.r != null;
 const tableExists = async (db: Queryable, name: string): Promise<boolean> => (await db.query('select to_regclass($1) as r', [`public.${name}`])).rows[0]?.r != null;
 
-export const MIGRATION_PRECONDITIONS: Precondition[] = [
+const MIGRATION_PRECONDITIONS: Precondition[] = [
   {
     migration: '0043 — grupos viram servidores',
     isPending: async (db) => (await tableExists(db, 'conversation_members')) && !(await tableExists(db, 'servers')),

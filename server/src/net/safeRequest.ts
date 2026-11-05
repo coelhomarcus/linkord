@@ -13,14 +13,14 @@ import { isBlockedIp } from './ssrfGuard.js';
 // bypass, and redirects are followed by hand so each hop is revalidated.
 // What to do with the body is up to the caller's handler.
 
-export const REQUEST_TIMEOUT_MS = 5000;
+const REQUEST_TIMEOUT_MS = 5000;
 
 type Lookup = NonNullable<http.RequestOptions['lookup']>;
 
 /** Custom `lookup` passed to http/https.request — called by Node on EVERY
  * connection attempt (including after a redirect), so it validates the
  * actual IP being used, not just an upfront DNS lookup. */
-export function safeLookup(
+function safeLookup(
   hostname: string,
   options: LookupOptions,
   callback: (err: NodeJS.ErrnoException | null, address: string | LookupAddress[], family?: number) => void,
