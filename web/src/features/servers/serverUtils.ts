@@ -1,4 +1,5 @@
 import type { CategorySummary, ChannelSummary, ServerSummary } from '@/shared/types/protocol';
+import { LOCAL_STORAGE_KEYS, localStorageStore } from '@/shared/lib/localStorage';
 import { hasPermission, PERMISSIONS } from './permissionBits';
 
 export interface ChannelGroup {
@@ -74,16 +75,13 @@ export function memberColor(server: ServerSummary, roleIds: string[]): string {
   return top?.color ?? '';
 }
 
-const LAST_CHANNEL_KEY = (serverId: string) => `ss-last-channel:${serverId}`;
-
 export function rememberChannel(serverId: string, channelId: string): void {
-  try { localStorage.setItem(LAST_CHANNEL_KEY(serverId), channelId); } catch { /* storage unavailable */ }
+  localStorageStore.set(LOCAL_STORAGE_KEYS.lastChannel(serverId), channelId);
 }
 
 /** Where opening a server lands: the last text channel visited there, while
  * it is still visible, else the first one. */
 export function landingChannel(server: ServerSummary): ChannelSummary | null {
-  let last: string | null = null;
-  try { last = localStorage.getItem(LAST_CHANNEL_KEY(server.id)); } catch { /* storage unavailable */ }
+  const last = localStorageStore.get(LOCAL_STORAGE_KEYS.lastChannel(server.id));
   return server.channels.find((c) => c.id === last && c.type === 'text') ?? firstTextChannel(server);
 }

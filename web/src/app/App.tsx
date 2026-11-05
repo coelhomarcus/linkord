@@ -58,6 +58,7 @@ import { isJoiningStage } from '@/app/stageJoin';
 import { i18n } from '@/shared/i18n/init';
 import { SidebarInset, SidebarProvider } from '@/shared/ui/motion/sidebar';
 import { loadSidebarCollapsed, saveSidebarCollapsed } from '@/shared/hooks/useSidebarCollapsedPreference';
+import { loadMemberListOpen, saveMemberListOpen } from '@/features/servers/memberListPreference';
 import { TooltipProvider } from '@/shared/ui/primitives/tooltip';
 
 // where the content area sits when the very first URL already names a modal
@@ -123,9 +124,8 @@ function Shell() {
   const [profileUserId, setProfileUserId] = useState<string | null>(null);
   const [mobileShowSidebar, setMobileShowSidebar] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [detailsOpen, setDetailsOpen] = useState(false);
-  // a DM's profile sits beside it unless closed, as in Discord; the member
-  // list starts closed
+  const [memberListOpen, setMemberListOpen] = useState(loadMemberListOpen);
+  // A DM's profile sits beside it unless closed, as in Discord.
   const [profilePanelOpen, setProfilePanelOpen] = useState(true);
   const [mediaOpen, setMediaOpen] = useState(false);
   const pendingStageRef = useRef<string | null>(null);
@@ -135,6 +135,10 @@ function Shell() {
     setSidebarOpenState(next);
     saveSidebarCollapsed(!next);
   }, []);
+  const setMemberListPreference = (open: boolean) => {
+    setMemberListOpen(open);
+    saveMemberListOpen(open);
+  };
 
   useConversationRouteSync();
 
@@ -241,13 +245,13 @@ function Shell() {
   const shownType = visibleConversationId ? activeConversation?.type ?? null : null;
   const directShown = shownType === 'direct';
   const { details: detailsVisible, media: mediaVisible } = rightPanelsVisible({
-    detailsOpen: directShown ? profilePanelOpen && wide : detailsOpen, mediaOpen, onChatPage: !!visibleConversationId, stageShown: showStage, conversationType: shownType,
+    detailsOpen: directShown ? profilePanelOpen && wide : memberListOpen, mediaOpen, onChatPage: !!visibleConversationId, stageShown: showStage, conversationType: shownType,
   });
   // the media panel takes the profile's place without forgetting it was open
   const membersVisible = detailsVisible && !directShown;
   const profileVisible = detailsVisible && directShown && !mediaVisible;
   const profilePanelUser = profileVisible ? directUser(activeConversation, state.me.userId, allUsers) : null;
-  const setDetails = (open: boolean) => (directShown ? setProfilePanelOpen(open) : setDetailsOpen(open));
+  const setDetails = (open: boolean) => (directShown ? setProfilePanelOpen(open) : setMemberListPreference(open));
   const activeConversationName = conversationTitle(activeConversation, state.me.userId, allUsers);
 
   const tabTitle = onConversations || showStage ? conversationDocumentTitle(activeConversation, state.me.userId, allUsers, currentServer?.name) : APP_TITLE;
@@ -326,11 +330,11 @@ function Shell() {
                   onOpenProfile={setProfileUserId}
                   onOpenCall={handleOpenCall}
                   onOpenSearch={() => setSearchOpen(true)}
-                  detailsOpen={membersVisible || profileVisible}
+                  detailsOpen={directShown ? profileVisible : memberListOpen}
                   mediaOpen={mediaVisible}
                   onOpenDetails={() => { setMediaOpen(false); setDetails(true); }}
-                  onToggleDetails={() => { setMediaOpen(false); setDetails(!(membersVisible || profileVisible)); }}
-                  onToggleMedia={() => { if (!directShown) setDetailsOpen(false); setMediaOpen(!mediaVisible); }}
+                  onToggleDetails={() => { setMediaOpen(false); setDetails(directShown ? !(membersVisible || profileVisible) : !memberListOpen); }}
+                  onToggleMedia={() => { setMediaOpen(!mediaVisible); }}
                 />
               )}
             />
@@ -368,7 +372,7 @@ function Shell() {
         />
         {mobileMainPage && <MobileTabBar activeCallConversationId={activeCallConversationId} onReturnToCall={handleReturnToCall} />}
         {currentServer && !wide && (
-          <Sheet open={membersVisible} onOpenChange={setDetailsOpen} side="right" ariaLabel={currentServer.name} className="w-60">
+          <Sheet open={membersVisible} onOpenChange={setMemberListPreference} side="right" ariaLabel={currentServer.name} className="w-60">
             <MemberListPanel server={currentServer} onOpenProfile={setProfileUserId} active={membersVisible} />
           </Sheet>
         )}

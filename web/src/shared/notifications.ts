@@ -1,15 +1,14 @@
 
 import { i18n } from '@/shared/i18n/init';
-
-const ENABLED_KEY = 'ss-notifications-enabled';
+import { LOCAL_STORAGE_KEYS, localStorageStore } from '@/shared/lib/localStorage';
 
 export function loadNotificationsEnabled(): boolean {
-  const stored = localStorage.getItem(ENABLED_KEY);
+  const stored = localStorageStore.get(LOCAL_STORAGE_KEYS.notificationsEnabled);
   return stored === null ? true : stored === '1';
 }
 
 export function saveNotificationsEnabled(value: boolean): void {
-  localStorage.setItem(ENABLED_KEY, value ? '1' : '0');
+  localStorageStore.set(LOCAL_STORAGE_KEYS.notificationsEnabled, value ? '1' : '0');
 }
 
 /** The browser's own permission and the Linkord preference are different

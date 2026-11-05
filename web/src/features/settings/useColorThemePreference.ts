@@ -1,4 +1,4 @@
-const KEY = 'linkord.colorTheme';
+import { LOCAL_STORAGE_KEYS, localStorageStore } from '@/shared/lib/localStorage';
 
 // The ids are what is stored in the browser, so they outlive the labels:
 // 'linkord' is the Old theme (once the default) and 'discord' is Graphite. A
@@ -20,10 +20,10 @@ function isColorThemeId(value: string | null): value is ColorThemeId {
 }
 
 export function loadColorTheme(): ColorThemeId {
-  const raw = localStorage.getItem(KEY);
+  const raw = localStorageStore.get(LOCAL_STORAGE_KEYS.colorTheme);
   return isColorThemeId(raw) ? raw : DEFAULT_COLOR_THEME;
 }
 
 export function saveColorTheme(value: ColorThemeId): void {
-  localStorage.setItem(KEY, value);
+  localStorageStore.set(LOCAL_STORAGE_KEYS.colorTheme, value);
 }

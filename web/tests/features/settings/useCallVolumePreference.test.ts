@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { loadCallVolume, saveCallVolume } from '@/features/settings/useCallVolumePreference';
+import { LOCAL_STORAGE_KEYS, localStorageStore } from '@/shared/lib/localStorage';
 
 beforeEach(() => {
   localStorage.clear();
@@ -23,7 +24,7 @@ describe('loadCallVolume / saveCallVolume', () => {
   });
 
   it('corrupted JSON in localStorage does not throw — falls back to the default', () => {
-    localStorage.setItem('ss-call-volumes', '{ this is not valid json');
+    localStorageStore.set(LOCAL_STORAGE_KEYS.callVolumes, '{ this is not valid json');
     expect(loadCallVolume('user-1')).toBe(1);
   });
 

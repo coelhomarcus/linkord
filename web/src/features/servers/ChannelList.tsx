@@ -16,6 +16,7 @@ import { describeApiError } from '@/shared/api/errorText';
 import { ROUTES } from '@/shared/lib/routes';
 import { cn } from '@/shared/lib/utils';
 import { useRoom } from '@/state/RoomContext';
+import { LOCAL_STORAGE_KEYS, localStorageStore } from '@/shared/lib/localStorage';
 import type { ChannelSummary, ServerSummary } from '@/shared/types/protocol';
 import { PERMISSIONS } from './permissionBits';
 import { CreateChannelDialog, type CreateTarget } from './CreateChannelDialog';
@@ -25,10 +26,8 @@ import { can, canInChannel, canMoveInto, canOpenSettings, groupChannels } from '
 import { useServerSettings } from './ServerSettingsContext';
 import { VoiceMembers, type VoiceDrag } from './VoiceMembers';
 
-const COLLAPSED_KEY = (serverId: string) => `ss-collapsed-categories:${serverId}`;
-
 function loadCollapsed(serverId: string): Set<string> {
-  try { return new Set(JSON.parse(localStorage.getItem(COLLAPSED_KEY(serverId)) ?? '[]') as string[]); } catch { return new Set(); }
+  try { return new Set(JSON.parse(localStorageStore.get(LOCAL_STORAGE_KEYS.collapsedCategories(serverId)) ?? '[]') as string[]); } catch { return new Set(); }
 }
 
 function ChannelRow({ server, channel, active, onOpen, onInvite, onOpenProfile, drag, onDragChange }: {
@@ -109,7 +108,7 @@ export function ChannelList({ server, activeChannelId, onNavigate, onOpenProfile
     setCollapsed((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id); else next.add(id);
-      try { localStorage.setItem(COLLAPSED_KEY(server.id), JSON.stringify([...next])); } catch { /* storage unavailable */ }
+      localStorageStore.set(LOCAL_STORAGE_KEYS.collapsedCategories(server.id), JSON.stringify([...next]));
       return next;
     });
   }

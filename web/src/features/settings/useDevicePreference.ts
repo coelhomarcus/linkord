@@ -1,10 +1,10 @@
 
-const KEY_PREFIX = 'ss-device-';
+import { LOCAL_STORAGE_KEYS, localStorageStore } from '@/shared/lib/localStorage';
 
 export function loadDevicePreference(kind: MediaDeviceKind): string | null {
-  return localStorage.getItem(KEY_PREFIX + kind);
+  return localStorageStore.get(LOCAL_STORAGE_KEYS.device(kind));
 }
 
 export function saveDevicePreference(kind: MediaDeviceKind, deviceId: string): void {
-  localStorage.setItem(KEY_PREFIX + kind, deviceId);
+  localStorageStore.set(LOCAL_STORAGE_KEYS.device(kind), deviceId);
 }

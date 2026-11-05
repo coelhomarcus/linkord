@@ -1,9 +1,9 @@
-const KEY = 'ss-show-tile-banners';
+import { LOCAL_STORAGE_KEYS, localStorageStore } from '@/shared/lib/localStorage';
 
 export function loadShowTileBanners(): boolean {
-  return localStorage.getItem(KEY) !== '0';
+  return localStorageStore.get(LOCAL_STORAGE_KEYS.showTileBanners) !== '0';
 }
 
 export function saveShowTileBanners(value: boolean): void {
-  localStorage.setItem(KEY, value ? '1' : '0');
+  localStorageStore.set(LOCAL_STORAGE_KEYS.showTileBanners, value ? '1' : '0');
 }
