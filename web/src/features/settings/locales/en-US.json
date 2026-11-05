@@ -288,7 +288,7 @@
     },
     "avatarInput": "Select profile photo",
     "bannerInput": "Select banner",
-    "formats": "PNG, JPEG, GIF or WEBP, up to {{max}}. Photo and banner apply as soon as you confirm the crop; name, color, bio and links only after saving.",
+    "formats": "PNG, JPEG, GIF or WEBP, up to {{max}}. Photo and banner apply as soon as you confirm the crop; name, color and bio only after saving. Connections are saved separately.",
     "saved": "Profile saved.",
     "conflict": "This profile was updated elsewhere while you were editing.",
     "useSaved": "Use saved values",

@@ -94,7 +94,7 @@ export interface RoomContextValue {
    * fields); rejects with `ProfileSaveRefused`/`ProfileSaveTimeout`/
    * `ProfileSaveOffline` (see features/profile/useProfileUpdate.ts) otherwise
    * — a caller must never show "salvo" just because this was called. */
-  updateProfile: (profile: { avatar: string; avatarPoster: string; avatarColor: string; displayName: string; banner: string; bannerPoster: string; bio: string; profileLinks: string[] }) => Promise<unknown>;
+  updateProfile: (profile: { avatar: string; avatarPoster: string; avatarColor: string; displayName: string; banner: string; bannerPoster: string; bio: string }) => Promise<unknown>;
   /** Crops locally, uploads the result, then persists ONLY that image
    * field — never whatever else happens to be typed in the profile form. */
   uploadProfileImage: (field: 'avatar' | 'banner', file: Blob, crop: CropRect, onProgress?: (fraction: number) => void, onPhaseChange?: (phase: ProfileImageUploadPhase) => void) => Promise<string>;

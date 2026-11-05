@@ -83,3 +83,15 @@ npm run admin:grant -- <your-username>
 - If the database is not ready, check `docker compose -f docker-compose.dev.yml ps` and `docker compose -f docker-compose.dev.yml logs postgres`.
 - If port `5432` is already in use, stop the other PostgreSQL service or change the host-side port mapping in `docker-compose.dev.yml` and update `DATABASE_URL` to match.
 - If the app cannot connect to PostgreSQL, confirm the container is healthy and that `DATABASE_URL` uses `localhost:5432`, the `linkord` database, and the local credentials above.
+
+## Profile connections and Wall
+
+The profile settings support URL, MyAnimeList and GitHub connections. Existing profile links migrate as URL connections; adding a service connection requires its username. Connections are self-declared and do not verify ownership. Only widgets explicitly added and saved by the account owner appear on their Wall.
+
+MyAnimeList uses the public, read-only Jikan v4 API and requires no credentials. The worker synchronizes on connection and every twenty-four hours, but Jikan's own cache can delay updates by up to twenty-four hours. Private or unavailable data is not imported. Failures preserve the last complete snapshot and retry automatically.
+
+GitHub requires no token or OAuth setup. The server reads the public profile through `GET https://api.github.com/users/{username}` and extracts daily contribution counts from the public `https://github.com/users/{username}/contributions` calendar. The calendar is HTML, not a versioned API, so markup changes may require an adapter update; unrecognized or incomplete calendars preserve the previous snapshot. Anonymous REST access is limited to 60 requests per hour per IP. PostgreSQL coordinates one GitHub sync every 65 seconds across server instances, and rate-limit responses postpone the provider until its cooldown expires. Connections share this queue and refresh every twenty-four hours once synced; other traffic sharing the server's outbound IP can reduce the available quota. No credentials, user cookies, or private data are requested.
+
+The worker starts with the API process, checks due connections every minute, and coordinates leases and provider request limits through PostgreSQL. Viewing a profile reads saved snapshots and never contacts the provider APIs. No separate scheduler or Redis service is required. Check `connection-sync` logs for failures; disconnecting deletes the connection snapshot and its widgets.
+
+Connection CRUD uses `/api/me/connections`; Wall configuration uses `/api/me/wall`, and authorized profile viewers read `/api/users/:userId/wall`. `profileLinks` remains a read-only URL projection in profile payloads. Protocol version 7 requires old clients to reload before changing profiles.

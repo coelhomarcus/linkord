@@ -289,7 +289,7 @@
     },
     "avatarInput": "Selecionar foto de perfil",
     "bannerInput": "Selecionar banner",
-    "formats": "PNG, JPEG, GIF ou WEBP, até {{max}}. Foto e banner valem assim que você confirma o recorte; nome, cor, bio e links só depois de salvar.",
+    "formats": "PNG, JPEG, GIF ou WEBP, até {{max}}. Foto e banner valem assim que você confirma o recorte; nome, cor e bio só depois de salvar. Conexões são salvas separadamente.",
     "saved": "Perfil salvo.",
     "conflict": "Este perfil foi atualizado em outro lugar enquanto você editava.",
     "useSaved": "Usar valores salvos",

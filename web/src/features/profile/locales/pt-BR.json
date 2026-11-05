@@ -20,9 +20,6 @@
     "customColorLabel": "Escolher cor personalizada",
     "displayName": "Nome de exibição",
     "openLink": "Abrir {{name}}",
-    "link": "Link {{count}}",
-    "removeLink": "Remover link",
-    "addLink": "Adicionar link",
     "admin": "Admin"
   },
   "modal": {
@@ -75,5 +72,88 @@
     "mutualFriends_one": "{{count}} amigo em comum",
     "mutualFriends_other": "{{count}} amigos em comum",
     "viewFull": "Ver perfil completo"
+  },
+  "integration": {
+    "url": "URL",
+    "description": "Conecte seus perfis e escolha o que mostrar no Mural. Atualização automática a cada 24 horas.",
+    "loading": "Carregando conexões…",
+    "empty": "Você ainda não adicionou conexões.",
+    "pending": "Aguardando a primeira sincronização…",
+    "ready": "Sincronizado",
+    "editConnection": "Editar conexão {{name}}",
+    "removeConnection": "Remover conexão {{name}}",
+    "editTitle": "Editar {{name}}",
+    "connectTitle": "Conectar {{name}}",
+    "urlHint": "Informe o endereço completo do site.",
+    "usernameHint": "Informe seu nome de usuário público. Esta conexão não verifica a titularidade da conta.",
+    "username": "Nome de usuário",
+    "removeTitle": "Remover conexão?",
+    "removeDescription": "Os widgets desta conexão e os dados sincronizados também serão removidos do seu Mural.",
+    "errors": {
+      "invalid": "Informe uma URL http/https válida ou um nome de usuário válido para o serviço.",
+      "duplicate": "Esta conexão já foi adicionada.",
+      "limit": "Você pode adicionar até oito conexões.",
+      "missing": "Esta conexão já foi removida.",
+      "rateLimited": "Aguarde um pouco antes de tentar novamente.",
+      "failed": "Não foi possível salvar a conexão. Tente novamente.",
+      "load": "Não foi possível carregar as conexões."
+    },
+    "syncErrors": {
+      "not_found": "Usuário não encontrado no serviço.",
+      "private": "Os dados deste perfil não estão públicos.",
+      "rate_limited": "Limite do serviço atingido. Uma nova tentativa será feita automaticamente.",
+      "invalid_response": "O serviço retornou dados indisponíveis ou incompletos.",
+      "unavailable": "Não foi possível sincronizar. Tentaremos novamente automaticamente."
+    }
+  },
+  "wall": {
+    "title": "Mural",
+    "about": "Sobre",
+    "profileTabs": "Abas do perfil",
+    "edit": "Editar Mural",
+    "cancel": "Cancelar",
+    "save": "Salvar",
+    "saving": "Salvando…",
+    "loading": "Carregando Mural…",
+    "saveFailed": "Não foi possível salvar o Mural. Confira as conexões e tente novamente.",
+    "loadFailed": "Não foi possível carregar o Mural.",
+    "addWidget": "Adicionar widget",
+    "allAdded": "Todos os widgets disponíveis já foram adicionados.",
+    "noConnections": "Conecte MyAnimeList ou GitHub para liberar widgets.",
+    "manageConnections": "Gerenciar conexões",
+    "emptyOwner": "Seu Mural está vazio. Clique em Editar Mural para escolher seus widgets.",
+    "emptyVisitor": "Este usuário ainda não publicou widgets no Mural.",
+    "moveUp": "Mover {{name}} para cima",
+    "moveDown": "Mover {{name}} para baixo",
+    "remove": "Remover {{name}}",
+    "unavailable": "Não foi possível carregar os dados deste widget.",
+    "pending": "Os dados aparecerão após a primeira sincronização.",
+    "noItems": "Nenhum item público disponível.",
+    "progress": "Episódios: {{current}} / {{total}}",
+    "stale": "A última sincronização falhou. Exibindo os últimos dados disponíveis.",
+    "updated": "Atualizado em {{date}}",
+    "widgets": {
+      "mal-recent-anime": "Atividade recente de animes",
+      "mal-favorite-anime": "Animes favoritos",
+      "mal-favorite-manga": "Mangás favoritos",
+      "mal-favorite-characters": "Personagens favoritos",
+      "github-profile": "Perfil do GitHub",
+      "github-calendar": "Contribuições no GitHub"
+    },
+    "statuses": {
+      "watching": "Assistindo",
+      "completed": "Concluído",
+      "onHold": "Em pausa",
+      "dropped": "Abandonado",
+      "planned": "Planejo assistir"
+    },
+    "github": {
+      "repositories": "Repositórios",
+      "followers": "Seguidores",
+      "following": "Seguindo",
+      "contributions": "{{total}} contribuições nos últimos 12 meses",
+      "calendar": "Calendário de contribuições do GitHub",
+      "day": "{{date}}: {{total}} contribuições"
+    }
   }
 }

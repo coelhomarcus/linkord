@@ -3,8 +3,8 @@ import { act, renderHook } from '@testing-library/react';
 import { useProfileDraft } from '@/features/settings/useProfileDraft';
 import type { ProfileDraftFields } from '@/features/settings/useProfileDraft';
 
-const baselineA: ProfileDraftFields = { displayName: 'Fulana', avatarColor: 'green', bio: 'original bio', profileLinks: [] };
-const baselineB: ProfileDraftFields = { displayName: 'Other name', avatarColor: 'blue', bio: 'different bio', profileLinks: ['https://x.com/other'] };
+const baselineA: ProfileDraftFields = { displayName: 'Fulana', avatarColor: 'green', bio: 'original bio' };
+const baselineB: ProfileDraftFields = { displayName: 'Other name', avatarColor: 'blue', bio: 'different bio' };
 
 function setup(baseline: ProfileDraftFields, save = vi.fn().mockResolvedValue(undefined)) {
   const { result, rerender } = renderHook(({ baseline: b }) => useProfileDraft({ baseline: b, save }), {
@@ -20,27 +20,13 @@ describe('useProfileDraft', () => {
     expect(result.current.draft).toEqual(baselineA);
   });
 
-  it('editing a field marks it dirty; an empty, untouched link row does not count', () => {
+  it('editing a field marks it dirty', () => {
     const { result } = setup(baselineA);
     act(() => result.current.setField('displayName', 'Fulana'));
     expect(result.current.dirty).toBe(false); // same value, still clean
 
     act(() => result.current.setField('bio', 'new bio'));
     expect(result.current.dirty).toBe(true);
-  });
-
-  it('adding then removing a link (back to the same normalized content) becomes clean again', () => {
-    const { result } = setup(baselineA);
-    act(() => result.current.setField('profileLinks', ['https://x.com/new']));
-    expect(result.current.dirty).toBe(true);
-    act(() => result.current.setField('profileLinks', []));
-    expect(result.current.dirty).toBe(false);
-  });
-
-  it('a link field added and left blank is not an edit', () => {
-    const { result } = setup(baselineA);
-    act(() => result.current.setField('profileLinks', ['']));
-    expect(result.current.dirty).toBe(false);
   });
 
   it('an external baseline change while clean simply follows the new baseline', () => {
@@ -95,12 +81,11 @@ describe('useProfileDraft', () => {
   });
 
   it('after save, a baseline echo matching the draft does not raise conflict', async () => {
-    const saved: ProfileDraftFields = { ...baselineA, bio: 'new bio', profileLinks: [] };
+    const saved: ProfileDraftFields = { ...baselineA, bio: 'new bio' };
     const save = vi.fn().mockResolvedValue({
       displayName: saved.displayName,
       avatarColor: saved.avatarColor,
       bio: saved.bio,
-      profileLinks: [],
     });
     const { result, rerender } = setup(baselineA, save);
     act(() => result.current.setField('bio', 'new bio'));

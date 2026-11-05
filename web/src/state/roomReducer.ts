@@ -71,6 +71,7 @@ export const initialRoomState: RoomState = {
 };
 
 export type RoomAction =
+  | { type: 'PROFILE_CONNECTIONS_CHANGED'; userId: string; profileLinks: string[] }
   | {
       type: 'WELCOME'; id: string; userId: string; name: string; displayName: string;
       avatar: string; avatarPoster: string; avatarColor: string; banner: string; bannerPoster: string; bio: string; profileLinks: string[];
@@ -181,6 +182,17 @@ export function roomReducer(state: RoomState, action: RoomAction): RoomState {
     }
     case 'SET_RECONNECTING':
       return { ...state, reconnecting: action.value };
+    case 'PROFILE_CONNECTIONS_CHANGED': {
+      const participants = new Map(state.participants);
+      for (const [id, participant] of participants) {
+        if (participant.userId === action.userId) participants.set(id, { ...participant, profileLinks: action.profileLinks });
+      }
+      return {
+        ...state,
+        participants,
+        me: action.userId === state.me.userId ? { ...state.me, profileLinks: action.profileLinks } : state.me,
+      };
+    }
     case 'SET_LOCAL_AVATAR':
       return { ...state, me: { ...state.me, avatar: action.avatar } };
     case 'SET_LOCAL_PROFILE':

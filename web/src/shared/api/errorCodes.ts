@@ -17,6 +17,10 @@ export const ERROR_CODES = {
   quota_exceeded: 'quota_exceeded',
   rate_limited: 'rate_limited',
   relationship_required: 'relationship_required',
+  invalid_connection: 'invalid_connection',
+  connection_not_found: 'connection_not_found',
+  connection_exists: 'connection_exists',
+  invalid_wall: 'invalid_wall',
   // HTTP
   server_full: 'server_full',
   banned: 'banned',

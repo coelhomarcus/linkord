@@ -287,9 +287,7 @@ async function handleProfile(socket: AppSocket, msg: ProfilePatchBody | null | u
     const nextBio = Object.prototype.hasOwnProperty.call(body, 'bio')
       ? sanitizeBio(body.bio)
       : current.bio;
-    const nextProfileLinks = Object.prototype.hasOwnProperty.call(body, 'profileLinks')
-      ? sanitizeProfileLinks(body.profileLinks)
-      : current.profileLinks;
+    let nextProfileLinks = current.profileLinks;
 
     const nextProfile = {
       avatar: nextAvatar, avatarPoster: nextAvatarPoster, avatarColor: nextAvatarColor, displayName: nextDisplayName,
@@ -312,6 +310,8 @@ async function handleProfile(socket: AppSocket, msg: ProfilePatchBody | null | u
       return;
     }
 
+    nextProfileLinks = saved.profileLinks;
+    nextProfile.profileLinks = nextProfileLinks;
     for (const other of participants.values()) {
       if (other.userId !== current.userId) continue;
       other.avatar = nextAvatar;
@@ -410,3 +410,10 @@ export const handlers: HandlerTable = {
   speaking: handleSpeaking,
   leave: handleLeave,
 };
+
+export function publishProfileConnections(userId: string, profileLinks: string[]): void {
+  for (const participant of participants.values()) {
+    if (participant.userId === userId) participant.profileLinks = profileLinks;
+  }
+  broadcastToKnownPeers(userId, { t: 'profile-connections-changed', userId, profileLinks });
+}

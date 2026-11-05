@@ -14,7 +14,6 @@ export async function updateProfile(id: string, profile: { avatar: string; avata
       banner: profile.banner,
       bannerPoster: profile.bannerPoster,
       bio: profile.bio,
-      profileLinks: profile.profileLinks,
       updatedAt: new Date(),
     })
     .where(eq(users.id, id))

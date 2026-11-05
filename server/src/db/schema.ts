@@ -1,3 +1,4 @@
+import type { ConnectionProvider, ConnectionSnapshot, WidgetType } from '../modules/connections/types.js';
 import { pgTable, text, varchar, timestamp, integer, bigint, jsonb, serial, boolean, uniqueIndex, index, primaryKey, check, customType, foreignKey, type AnyPgColumn } from 'drizzle-orm/pg-core';
 import { sql, type SQL } from 'drizzle-orm';
 
@@ -697,3 +698,41 @@ export const dataRepairs = pgTable('data_repairs', {
   index('data_repairs_run_idx').on(t.runId),
   index('data_repairs_target_idx').on(t.targetType, t.targetId),
 ]);
+
+export const profileConnections = pgTable('profile_connections', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  provider: varchar('provider', { length: 16 }).$type<ConnectionProvider>().notNull(),
+  value: text('value').notNull(),
+  url: text('url').notNull(),
+  position: integer('position').notNull(),
+  snapshot: jsonb('snapshot').$type<ConnectionSnapshot>(),
+  syncedAt: timestamp('synced_at', { withTimezone: true }),
+  nextSyncAt: timestamp('next_sync_at', { withTimezone: true }).notNull().defaultNow(),
+  syncError: varchar('sync_error', { length: 32 }),
+  attempts: integer('attempts').notNull().default(0),
+  leaseToken: text('lease_token'),
+  leaseUntil: timestamp('lease_until', { withTimezone: true }),
+}, (t) => [
+  index('profile_connections_user_idx').on(t.userId, t.position),
+  index('profile_connections_due_idx').on(t.nextSyncAt),
+  uniqueIndex('profile_connections_service_unique').on(t.userId, t.provider).where(sql`${t.provider} <> 'url'`),
+  uniqueIndex('profile_connections_url_unique').on(t.userId, sql`lower(${t.url})`),
+  check('profile_connections_provider_check', sql`${t.provider} IN ('url','myanimelist','github')`),
+]);
+export type ProfileConnection = typeof profileConnections.$inferSelect;
+
+export const profileWallWidgets = pgTable('profile_wall_widgets', {
+  id: text('id').primaryKey(),
+  connectionId: text('connection_id').notNull().references(() => profileConnections.id, { onDelete: 'cascade' }),
+  type: varchar('type', { length: 32 }).$type<WidgetType>().notNull(),
+  position: integer('position').notNull(),
+}, (t) => [
+  uniqueIndex('profile_wall_widgets_connection_type_unique').on(t.connectionId, t.type),
+  check('profile_wall_widgets_type_check', sql`${t.type} IN ('mal-recent-anime','mal-favorite-anime','mal-favorite-manga','mal-favorite-characters','github-profile','github-calendar')`),
+]);
+
+export const connectionSyncLimits = pgTable('connection_sync_limits', {
+  provider: varchar('provider', { length: 16 }).primaryKey(),
+  nextRequestAt: timestamp('next_request_at', { withTimezone: true }).notNull().defaultNow(),
+});

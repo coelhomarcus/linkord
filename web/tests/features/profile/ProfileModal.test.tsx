@@ -108,7 +108,7 @@ describe('ProfileModal — since when and what you have in common', () => {
   it('counts the servers and friends in common on their tabs, servers first and open', async () => {
     mocked.fetchProfileDetails.mockResolvedValue(details);
     renderProfile();
-    const tabs = await screen.findAllByRole('tab');
+    const tabs = within(await screen.findByRole('tablist', { name: 'Em comum' })).getAllByRole('tab');
     expect(tabs.map((t) => t.textContent)).toEqual(['2 servidores em comum', '1 amigo mútuo']);
     expect(tabs[0]).toHaveAttribute('aria-selected', 'true');
   });
@@ -129,7 +129,7 @@ describe('ProfileModal — since when and what you have in common', () => {
     const { onClose } = renderProfile();
     const interaction = userEvent.setup();
     expect(await screen.findByRole('tab', { name: '2 servidores em comum' })).toHaveAttribute('aria-selected', 'true');
-    const panel = screen.getByRole('tabpanel');
+    const panel = screen.getByRole('tabpanel', { name: '2 servidores em comum' });
     expect(within(panel).getByText('5 membros')).toBeInTheDocument();
     expect(within(panel).getByText('1 membro')).toBeInTheDocument();
     await interaction.click(within(panel).getByRole('button', { name: /os xerecas/ }));

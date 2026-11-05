@@ -1,17 +1,15 @@
-import { ArrowSquareOutIcon, AtIcon, CameraIcon, CheckIcon, CircleNotchIcon, LinkIcon, PaletteIcon, PencilSimpleIcon, PlusIcon, SealCheckIcon, TrashIcon, UploadSimpleIcon } from '@phosphor-icons/react';
-import { useEffect, useLayoutEffect, useRef } from 'react';
+import { ArrowSquareOutIcon, AtIcon, CameraIcon, CheckIcon, CircleNotchIcon, PaletteIcon, PencilSimpleIcon, SealCheckIcon, TrashIcon, UploadSimpleIcon } from '@phosphor-icons/react';
+import { useLayoutEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { Avatar, AVATAR_COLOR_OPTIONS } from '@/shared/Avatar';
 import { BANNER_ASPECT_RATIO, BrandIcon, bannerStyle, linkInfo } from '@/features/profile/profileLinks';
 import type { LinkInfo } from '@/features/profile/profileLinks';
 import { MAX_DISPLAY_NAME_LEN } from '@/shared/lib/displayName';
-import { MAX_PROFILE_BIO_LEN, MAX_PROFILE_LINK_LEN, MAX_PROFILE_LINKS } from '@/shared/types/protocol';
+import { MAX_PROFILE_BIO_LEN } from '@/shared/types/protocol';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/primitives/dropdown-menu';
-import { Button } from '@/shared/ui/primitives/button';
 import { cn } from '@/shared/lib/utils';
 
 interface ProfileCardData {
@@ -46,15 +44,7 @@ interface ProfileCardProps {
   /** Makes the bio an inline, auto-growing textarea instead of a paragraph. */
   onBioChange?: (value: string) => void;
   onAvatarColorChange?: (value: string) => void;
-  /** Makes the links list an editable set of URL fields instead of icon
-   * pills — pass the raw (possibly invalid/in-progress) strings here. */
-  editableLinks?: string[];
-  onLinkChange?: (index: number, value: string) => void;
-  onAddLink?: () => void;
-  onRemoveLink?: (index: number) => void;
-  /** Freezes name/color/bio/links (not the avatar/banner controls, which
-   * apply immediately and aren't part of that draft) while a save is in
-   * flight — avoids a race between a new edit and the request already sent. */
+  /** Freezes draft fields while a save is in flight. */
   fieldsDisabled?: boolean;
   /** shown under the name, above the bio (the profile modal's buttons) */
   actions?: ReactNode;
@@ -100,24 +90,11 @@ export function ProfileCard({
   onBannerUpload, onBannerRemove, bannerUploading,
   className,
   onDisplayNameChange, onBioChange, onAvatarColorChange,
-  editableLinks, onLinkChange, onAddLink, onRemoveLink, bare, fieldsDisabled, actions, nameAction, footer, hideLinks,
+  bare, fieldsDisabled, actions, nameAction, footer, hideLinks,
 }: ProfileCardProps) {
   const { t } = useTranslation('profile');
   const links = (user.profileLinks ?? []).map(linkInfo).filter((item): item is LinkInfo => !!item);
-  const linksEditable = editableLinks !== undefined && onLinkChange && onAddLink && onRemoveLink;
   const isCustomAvatarColor = !AVATAR_COLOR_OPTIONS.some((option) => option.value === user.avatarColor);
-  const linksRef = useRef<HTMLDivElement | null>(null);
-  const linkCount = editableLinks?.length ?? 0;
-  const prevLinkCount = useRef(linkCount);
-  // there's no empty field waiting anymore: the one "Adicionar link" just
-  // created is where the next keystroke should go
-  useEffect(() => {
-    if (linkCount > prevLinkCount.current) {
-      const inputs = linksRef.current?.querySelectorAll('input');
-      inputs?.[inputs.length - 1]?.focus();
-    }
-    prevLinkCount.current = linkCount;
-  }, [linkCount]);
 
   return (
     <div className={cn('overflow-hidden bg-bg-modal', !bare && 'rounded-lg border border-border-strong', className)}>
@@ -307,41 +284,7 @@ export function ProfileCard({
           user.bio && <p className="mt-4 whitespace-pre-wrap text-body leading-relaxed text-text-secondary">{user.bio}</p>
         )}
 
-        {hideLinks ? null : linksEditable ? (
-          <div ref={linksRef} className="mt-5 flex flex-col gap-2">
-            {editableLinks!.map((link, index) => {
-              const info = linkInfo(link);
-              return (
-                <div key={index} className="flex items-center gap-2">
-                  <span className="flex size-8 flex-none items-center justify-center rounded-full border border-border-strong bg-bg-tertiary text-text-muted">
-                    {info ? <BrandIcon kind={info.kind} /> : <LinkIcon size={15} />}
-                  </span>
-                  <input
-                    aria-label={t('card.link', { count: index + 1 })}
-                    maxLength={MAX_PROFILE_LINK_LEN}
-                    placeholder="https://..."
-                    disabled={fieldsDisabled}
-                    value={link}
-                    onChange={(e) => onLinkChange!(index, e.target.value)}
-                    className="min-w-0 flex-1 border-b border-transparent bg-transparent py-1 text-body text-text-primary outline-none placeholder:text-text-muted/70 focus:border-primary/50 disabled:opacity-60"
-                  />
-                  <CloseButton variant="danger" label={t('card.removeLink')} disabled={fieldsDisabled} onClick={() => onRemoveLink!(index)} />
-                </div>
-              );
-            })}
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="w-fit text-text-muted hover:text-text-primary"
-              disabled={fieldsDisabled || editableLinks!.length >= MAX_PROFILE_LINKS}
-              onClick={onAddLink}
-            >
-              <PlusIcon size={14} />
-              <span>{t('card.addLink')}</span>
-            </Button>
-          </div>
-        ) : (
+        {hideLinks ? null : (
           links.length > 0 && (
             <div className="mt-5 flex flex-wrap gap-2">
               {links.map((link) => (

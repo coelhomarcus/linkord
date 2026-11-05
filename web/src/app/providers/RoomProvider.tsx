@@ -225,6 +225,15 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         dispatch({ type: 'PARTICIPANT_JOINED', participant: m.participant });
         presence.onParticipantJoined(m);
         break;
+      case 'profile-connections-changed':
+        dispatch({ type: 'PROFILE_CONNECTIONS_CHANGED', userId: m.userId, profileLinks: m.profileLinks });
+        presence.setAllUsers((previous) => {
+          const user = previous.get(m.userId);
+          if (!user) return previous;
+          return new Map(previous).set(m.userId, { ...user, profileLinks: m.profileLinks });
+        });
+        window.dispatchEvent(new CustomEvent('profile-connections-changed', { detail: m.userId }));
+        break;
       case 'participant-updated':
         dispatch({ type: 'PARTICIPANT_UPDATED', participant: m.participant });
         presence.onParticipantUpdated(m);
