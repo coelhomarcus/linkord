@@ -2,7 +2,7 @@ import { FileArchiveIcon, FileAudioIcon, FileCodeIcon, FileIcon, FileImageIcon, 
 
 import type { Icon } from '@phosphor-icons/react';
 
-export type FileFamily = 'pdf' | 'document' | 'spreadsheet' | 'presentation' | 'archive' | 'text-code' | 'image' | 'audio' | 'video' | 'unknown';
+type FileFamily = 'pdf' | 'document' | 'spreadsheet' | 'presentation' | 'archive' | 'text-code' | 'image' | 'audio' | 'video' | 'unknown';
 
 export interface FilePresentation {
   family: FileFamily;

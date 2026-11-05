@@ -7,7 +7,7 @@ import { LOCAL_STORAGE_KEYS, localStorageStore } from '@/shared/lib/localStorage
 export const COLOR_THEME_IDS = ['black', 'linkord', 'discord'] as const;
 export type ColorThemeId = (typeof COLOR_THEME_IDS)[number];
 
-export const DEFAULT_COLOR_THEME: ColorThemeId = 'black';
+const DEFAULT_COLOR_THEME: ColorThemeId = 'black';
 
 export const COLOR_THEME_LABELS: Record<ColorThemeId, string> = {
   black: 'Black',

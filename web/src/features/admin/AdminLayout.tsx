@@ -18,7 +18,7 @@ import type { AdminOutletContext } from './useAdminMode';
 import { AppLink } from '@/shared/ui/app-link';
 
 /** Width of the content column below which a 5–6 column table would cut its last columns. */
-export const ADMIN_TABLE_MIN = 820;
+const ADMIN_TABLE_MIN = 820;
 
 /** Shown when the server stopped treating this account as an administrator.
  * The pages are gone by then (their data, dialogs and pending reads with them);

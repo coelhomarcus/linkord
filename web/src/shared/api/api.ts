@@ -183,7 +183,7 @@ export interface SocialUser {
 }
 
 /** A server two accounts are both members of, as a profile lists it. */
-export interface SharedServer { id: string; name: string; icon: string; memberCount: number }
+interface SharedServer { id: string; name: string; icon: string; memberCount: number }
 
 /** What a profile shows besides the profile itself. The lists stop at a cap;
  * `total` is the full count. Empty, with no `friendsSince`, on your own profile. */
@@ -282,7 +282,6 @@ export interface ReceivedInvitationEntry {
   server: { id: string; name: string; icon: string; memberCount: number };
   inviter: SocialUser;
 }
-export interface SentInvitationEntry { id: string; at: string; invitee: SocialUser; inviter: SocialUser }
 
 export function inviteToServer(serverId: string, userIds: string[]): Promise<{ results: InviteResult[] }> {
   return apiFetch(`/api/servers/${encodeURIComponent(serverId)}/invitations`, { method: 'POST', body: JSON.stringify({ userIds }) });
@@ -293,17 +292,13 @@ export function inviteToCall(conversationId: string, userId: string): Promise<{ 
   return apiFetch(`/api/calls/${encodeURIComponent(conversationId)}/invites`, { method: 'POST', body: JSON.stringify({ userId }) });
 }
 
-export function fetchServerInvitations(serverId: string, cursor: string | null): Promise<{ items: SentInvitationEntry[]; nextCursor: string | null }> {
-  return apiFetch(`/api/servers/${encodeURIComponent(serverId)}/invitations${pageQuery({ cursor })}`);
-}
-
 export function fetchReceivedInvitations(cursor: string | null, q?: string): Promise<{ items: ReceivedInvitationEntry[]; nextCursor: string | null }> {
   return apiFetch(`/api/server-invitations${pageQuery({ cursor, q })}`);
 }
 
 // ---- notifications (bell) ----------------------------------------------------
 
-export type NotificationKind = 'friend_request' | 'friend_accepted' | 'server_invitation' | 'mention';
+type NotificationKind = 'friend_request' | 'friend_accepted' | 'server_invitation' | 'mention';
 export interface NotificationEntry {
   id: string;
   kind: NotificationKind;

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useSyncExternalStore } from 'react';
 import { fetchServerSounds } from './soundboardApi';
 import type { ServerSound } from './soundboardApi';
 
-export interface ServerSoundsState {
+interface ServerSoundsState {
   status: 'idle' | 'loading' | 'ready' | 'error';
   sounds: ServerSound[];
   maxSounds: number;

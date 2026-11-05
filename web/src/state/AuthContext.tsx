@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import { ApiError, fetchMe, linkEmail as apiLinkEmail, login as apiLogin, logout as apiLogout, register as apiRegister } from '@/shared/api/api';
+import { fetchMe, linkEmail as apiLinkEmail, login as apiLogin, logout as apiLogout, register as apiRegister } from '@/shared/api/api';
 import type { ApiUser } from '@/shared/api/api';
 import { clearAllDrafts } from '@/features/chat/conversationDrafts';
 import { disablePush, restorePush } from '@/shared/pushNotifications';
@@ -118,5 +118,3 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     </AuthContext.Provider>
   );
 }
-
-export { ApiError };

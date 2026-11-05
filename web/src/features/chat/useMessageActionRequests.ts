@@ -8,7 +8,7 @@ type ActionMessage = Extract<ClientMessage, { t: 'chat-edit' } | { t: 'chat-dele
 // counts as done), so a lost answer only costs the user a retry click.
 const RESULT_TIMEOUT_MS = 10_000;
 
-export class MessageActionError extends Error {}
+class MessageActionError extends Error {}
 
 /** chat-edit/chat-delete as promises settled by the server's
  * chat-action-result — so the UI can keep an editor open on failure

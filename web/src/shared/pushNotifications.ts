@@ -27,7 +27,7 @@ export async function preparePush(): Promise<PushSetup | null> {
   return { registration, publicKey: decodePublicKey(config.publicKey) };
 }
 
-export function subscriptionUsesKey(subscription: PushSubscription, publicKey: Uint8Array<ArrayBuffer>): boolean {
+function subscriptionUsesKey(subscription: PushSubscription, publicKey: Uint8Array<ArrayBuffer>): boolean {
   const current = subscription.options.applicationServerKey;
   if (!current) return false;
   const bytes = new Uint8Array(current);

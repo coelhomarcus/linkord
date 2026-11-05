@@ -10,7 +10,7 @@ import { cn } from '../../shared/lib/utils';
 
 export const IMAGE_MIME_TYPES = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp']);
 export const VIDEO_MIME_TYPES = new Set(['video/mp4', 'video/webm', 'video/ogg']);
-export const AUDIO_MIME_TYPES = new Set(['audio/mpeg', 'audio/ogg', 'audio/wav', 'audio/mp4']);
+const AUDIO_MIME_TYPES = new Set(['audio/mpeg', 'audio/ogg', 'audio/wav', 'audio/mp4']);
 // Mirrors server/src/modules/attachments.ts#TEXT_PREVIEW_EXTENSIONS and
 // features/media/filePresentation.ts#TEXT_CODE_EXTENSIONS — no shared
 // package between those, so this is duplicated on purpose, same as the mime
@@ -25,14 +25,6 @@ function isTextPreviewable(attachment: ChatAttachmentData): boolean {
   const match = /\.([^./\\]+)$/.exec(attachment.name);
   const ext = match ? match[1]!.toLowerCase() : '';
   return TEXT_PREVIEW_EXTENSIONS.has(ext) || attachment.mime.startsWith('text/');
-}
-
-/** Whether this attachment can render flush with the bubble's own edges
- * (see `edgeToEdge` on ChatAttachment) instead of sitting in its own
- * bordered card — image/video/audio all have chrome substantial enough to
- * read as the bubble itself rather than a floating box nested inside it. */
-export function isEdgeToEdgeMime(mime: string): boolean {
-  return IMAGE_MIME_TYPES.has(mime) || VIDEO_MIME_TYPES.has(mime) || AUDIO_MIME_TYPES.has(mime);
 }
 
 interface ChatAttachmentProps {

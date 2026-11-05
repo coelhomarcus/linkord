@@ -96,7 +96,7 @@ export interface ChatMessage {
   richEmbeds?: RichEmbed[];
 }
 
-export interface RichEmbedField { name: string; value: string; inline: boolean }
+interface RichEmbedField { name: string; value: string; inline: boolean }
 
 /** A bot's card, as the server normalized it (see server/src/modules/bots/richEmbeds.ts). */
 export interface RichEmbed {

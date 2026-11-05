@@ -1,4 +1,3 @@
-import { useSyncExternalStore } from 'react';
 import { LOCAL_STORAGE_KEYS, localStorageStore } from './localStorage';
 
 // One volume lives outside any single player: every video/audio element in
@@ -43,9 +42,4 @@ export function setMediaVolumeState(volume: number, muted: boolean): void {
 export function subscribeMediaVolume(listener: () => void): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);
-}
-
-/** Re-renders whenever the shared volume changes, from any player. */
-export function useMediaVolumeState(): MediaVolumeState {
-  return useSyncExternalStore(subscribeMediaVolume, getMediaVolumeState, getMediaVolumeState);
 }

@@ -3,7 +3,7 @@ import type { ClientMessage, Conversation, DirectSummary, ServerMessage } from '
 
 /** The server sends a DM without a title or server: fill them in, so a DM
  * and a channel read the same everywhere. */
-export function toDirectConversation(summary: DirectSummary): Conversation {
+function toDirectConversation(summary: DirectSummary): Conversation {
   return { ...summary, title: '', serverId: null };
 }
 
