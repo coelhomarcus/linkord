@@ -26,10 +26,8 @@ export type ReactionEmoji = string;
 
 /** Wire protocol version this build speaks; the server refuses older ones
  * (client_outdated). Keep in sync with server/src/realtime/protocolVersion.ts
- * — the server's MIN_PROTOCOL_VERSION now requires 5 (correlated sends,
- * actions and reactions; staged-only attachments), with no legacy fallback. */
-// 6: servers replaced groups (welcome carries `servers`, group events are gone)
-export const PROTOCOL_VERSION = 6;
+ * — version 7 moves connection edits out of profile patches. */
+export const PROTOCOL_VERSION = 7;
 
 export interface ChatReplyRef {
   msgId: number;
@@ -244,7 +242,7 @@ export interface PublicUser {
  * that hasn't been saved. `requestId` correlates the `profile-result`. */
 export type ProfilePatch = Partial<{
   avatar: string; avatarPoster: string; avatarColor: string; displayName: string;
-  banner: string; bannerPoster: string; bio: string; profileLinks: string[];
+  banner: string; bannerPoster: string; bio: string;
 }>;
 
 export type ClientMessage =
@@ -283,6 +281,7 @@ export type ClientMessage =
   | { t: 'ping' };
 
 export type ServerMessage =
+  | { t: 'profile-connections-changed'; userId: string; profileLinks: string[] }
   | {
       t: 'welcome'; id: string; token: string;
       userId: string; name: string; displayName: string; avatar: string; avatarPoster: string; avatarColor: string;
@@ -350,7 +349,7 @@ export type ServerMessage =
   // answers the `profile` patch of the same requestId, once the server has
   // actually persisted it (or refused to) — never inferred from
   // `participant-updated`, which a different account's edit also triggers
-  | ({ t: 'profile-result'; requestId: string; ok: true } & ProfilePatch)
+  | ({ t: 'profile-result'; requestId: string; ok: true; profileLinks: string[] } & ProfilePatch)
   | { t: 'profile-result'; requestId: string; ok: false; code: string; message: string }
   | { t: 'error'; code: string; message: string }
   | { t: 'pong' }

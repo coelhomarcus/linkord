@@ -5,23 +5,12 @@ export interface ProfileDraftFields {
   displayName: string;
   avatarColor: string;
   bio: string;
-  profileLinks: string[];
-}
-
-/** What actually gets compared and sent — trims and drops empty link rows,
- * so a field added with "Adicionar link" and left blank never counts as an edit. */
-export function normalizeProfileDraftFields(fields: ProfileDraftFields): ProfileDraftFields {
-  return { ...fields, profileLinks: fields.profileLinks.map((link) => link.trim()).filter(Boolean) };
 }
 
 function fieldsEqual(a: ProfileDraftFields, b: ProfileDraftFields): boolean {
-  const na = normalizeProfileDraftFields(a);
-  const nb = normalizeProfileDraftFields(b);
-  return na.displayName === nb.displayName
-    && na.avatarColor === nb.avatarColor
-    && na.bio === nb.bio
-    && na.profileLinks.length === nb.profileLinks.length
-    && na.profileLinks.every((link, i) => link === nb.profileLinks[i]);
+  return a.displayName === b.displayName
+    && a.avatarColor === b.avatarColor
+    && a.bio === b.bio;
 }
 
 /** Map a confirmed profile-result (or the current draft on a void mock) into
@@ -29,14 +18,10 @@ function fieldsEqual(a: ProfileDraftFields, b: ProfileDraftFields): boolean {
 function draftFromSaveResult(result: unknown, sent: ProfileDraftFields): ProfileDraftFields {
   if (!result || typeof result !== 'object') return sent;
   const patch = result as Record<string, unknown>;
-  const links = Array.isArray(patch.profileLinks)
-    ? patch.profileLinks.map((link) => String(link))
-    : sent.profileLinks;
   return {
     displayName: typeof patch.displayName === 'string' ? patch.displayName : sent.displayName,
     avatarColor: typeof patch.avatarColor === 'string' ? patch.avatarColor : sent.avatarColor,
     bio: typeof patch.bio === 'string' ? patch.bio : sent.bio,
-    profileLinks: links,
   };
 }
 

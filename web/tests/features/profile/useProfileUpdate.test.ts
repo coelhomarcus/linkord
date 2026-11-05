@@ -34,6 +34,7 @@ describe('useProfileUpdate', () => {
     const promise = result.current.updateProfile(fullProfile);
     expect(sent).toHaveLength(1);
     expect(sent[0]).toMatchObject({ t: 'profile', displayName: 'Fulana' });
+    expect(sent[0]).not.toHaveProperty('profileLinks');
     expect(typeof (sent[0] as any).requestId).toBe('string');
 
     act(() => result.current.handleProfileResult({ t: 'profile-result', requestId: (sent[0] as any).requestId, ok: true, ...fullProfile, displayName: 'Confirmado' } as never));
