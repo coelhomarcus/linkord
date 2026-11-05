@@ -63,16 +63,16 @@ export function ServerInviteDialog({ server, channelId, open, onOpenChange }: {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[calc(100%-2rem)] gap-0 overflow-hidden p-0 text-text-primary sm:max-w-[440px]">
+      <DialogContent className="max-h-[calc(100dvh-2rem)] max-w-[calc(100%-2rem)] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 text-text-primary sm:max-w-[440px]">
         <DialogHeader className="gap-1 px-6 pt-6 pr-14">
           <DialogTitle>{t('invite.title', { name: server.name })}</DialogTitle>
           {channel && <DialogDescription>{t('invite.arrivesIn', { channel: channel.name })}</DialogDescription>}
         </DialogHeader>
-        <div className="flex flex-col gap-2 px-6 pb-4 pt-4">
+        <div className="flex min-h-0 flex-col gap-2 px-6 pb-4 pt-4">
           <FriendPicker
             selected={EMPTY_SELECTION}
             onToggle={() => {}}
-            maxHeightClass="max-h-72"
+            maxHeightClass="max-h-72 flex-1"
             rowAction={(user) => {
               const done = sent.has(user.id);
               return (

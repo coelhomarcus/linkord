@@ -52,7 +52,7 @@ export function MediaCollectionViewer({ items, index, open, onIndexChange, onOpe
           {item && (
             <>
               <DialogPrimitive.Title className="sr-only">{item.name}</DialogPrimitive.Title>
-              <div className="flex flex-none items-center gap-3 px-4 py-3 text-white" onClick={(e) => e.stopPropagation()}>
+              <div className="flex flex-none items-center gap-3 pb-3 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-[max(0.75rem,env(safe-area-inset-top))] text-white" onClick={(e) => e.stopPropagation()}>
                 <span className="min-w-0 flex-1 truncate text-label">{item.name}</span>
                 {items.length > 1 && <span className="flex-none text-label tabular-nums text-white/70">{index + 1} / {items.length}</span>}
                 <a
@@ -65,7 +65,7 @@ export function MediaCollectionViewer({ items, index, open, onIndexChange, onOpe
                 </a>
                 <DialogPrimitive.Close render={<CloseButton variant="surface" size="md" />} />
               </div>
-              <div className="relative flex min-h-0 flex-1 items-center justify-center px-4 pb-6 sm:px-16">
+              <div className="relative flex min-h-0 flex-1 items-center justify-center pb-[max(1.5rem,env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] sm:px-16">
                 {item.kind === 'video' ? (
                   <video
                     key={item.src}

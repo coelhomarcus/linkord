@@ -46,6 +46,7 @@ export async function uploadCroppedProfileImage(
     url: '/api/avatar',
     file: cropped,
     headers: { 'Content-Type': cropped.type || 'application/octet-stream' },
+    timeoutMs: 120_000,
     onProgress,
   });
   // A thrown POST leaves the draft so a retry can skip ImageMagick.

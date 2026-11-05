@@ -102,7 +102,12 @@ export function FriendsList({ view, query, onQueryChange, onOpenProfile }: {
 
       <ActionFeedback feedback={feedback} onClear={clearFeedback} />
 
-      {phase === 'skeleton' && <SocialRowsSkeleton label={t('list.loadingFriends')} />}
+      {phase === 'skeleton' && (
+        <section aria-labelledby="friends-list-title">
+          <FadeIn><ListSectionHeader id="friends-list-title" title={view === 'online' ? t('views.online') : t('list.sectionAll')} /></FadeIn>
+          <SocialRowsSkeleton label={t('list.loadingFriends')} kind="friend" />
+        </section>
+      )}
 
       {phase === 'content' && list.status === 'error' && (
         <div className="flex flex-col items-center gap-3 py-8 text-center">

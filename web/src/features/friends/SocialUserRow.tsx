@@ -13,9 +13,7 @@ export function SocialUserRow({ user, online, subtitle, onOpenProfile, children 
 }) {
   const { t } = useTranslation('friends');
   return (
-    // Discord's friend row: a hairline above each, swapped for a rounded fill
-    // while hovered
-    <div className="group/row cutout -mx-2.5 flex h-[62px] items-center gap-3 rounded-lg border-t border-border-subtle px-2.5 transition-colors hover:cutout-subtle hover:border-transparent hover:bg-nav-hover">
+    <div className="group/row cutout -mx-2.5 flex h-[62px] items-center gap-3 rounded-lg px-2.5 transition-colors hover:cutout-subtle hover:bg-nav-hover">
       <button
         type="button"
         onClick={onOpenProfile}

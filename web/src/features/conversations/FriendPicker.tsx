@@ -34,7 +34,7 @@ export function FriendPicker({ selected, onToggle, excludeIds, inputId, maxHeigh
   const visible = list.items.filter(({ user }) => !excludeIds?.has(user.id));
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex min-h-0 flex-col gap-2">
       <div className="flex h-10 items-center gap-2 rounded-lg border border-border-field bg-bg-textarea px-3 focus-within:border-border-accent">
         <MagnifyingGlassIcon size={20} className="flex-none text-text-secondary" />
         <input
@@ -45,7 +45,7 @@ export function FriendPicker({ selected, onToggle, excludeIds, inputId, maxHeigh
           className="h-full min-w-0 flex-1 bg-transparent text-body outline-none placeholder:text-text-faint"
         />
       </div>
-      <div className={cn('-mx-2 overflow-y-auto', maxHeightClass)}>
+      <div className={cn('-mx-2 min-h-0 overflow-y-auto', maxHeightClass)}>
         {list.status === 'loading' ? (
           <p className="px-3 py-8 text-center text-label text-text-muted">{t('friendPicker.loading')}</p>
         ) : list.status === 'error' ? (
