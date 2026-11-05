@@ -6,7 +6,7 @@ import { PERMISSIONS } from '@/features/servers/permissionBits';
 import { MemoryRouter } from 'react-router';
 import { renderWithRoom } from '@tests/fixtures/roomContextFixture';
 import { MessageRow } from '@/features/chat/MessageRow';
-import type { ChatMessage, PublicUser } from '@/shared/types/protocol';
+import type { ChatMessage, PublicUser, RoleSummary, ServerSummary } from '@/shared/types/protocol';
 import type { OutboxEntry } from '@/features/chat/useMessageOutbox';
 import * as serversApi from '@/features/servers/serversApi';
 
@@ -116,6 +116,23 @@ describe('MessageRow', () => {
     const row = document.querySelector('[data-message-id="1"]');
     expect(row).not.toBeNull();
     expect(row?.className).not.toMatch(/justify-end/);
+  });
+
+  it('colors a server message author with their highest colored role', () => {
+    const role: RoleSummary = { id: 'role-blue', name: 'Blue', color: '#3399ff', position: 2, permissions: 0, hoist: false, mentionable: false, isDefault: false };
+    const server: ServerSummary = {
+      id: 's1', name: 'Squad', icon: '', ownerId: null, status: 'active', createdAt: 0, memberCount: 1,
+      position: 0, permissions: 0, myRoleIds: [], roles: [role], categories: [], channels: [],
+    };
+    renderWithRoom(
+      <MessageRow message={makeMessage()} showHeader highlighted={false} allUsers={new Map()} mentionLookup={new Map()} onOpenProfile={noop} onReply={noop} onJumpTo={noop} />,
+      {
+        conversations: [{ id: 'conv-1', type: 'text', title: 'general', serverId: 's1', memberIds: [], lastMessageAt: null, createdAt: 0, updatedAt: 0, pinnedAt: null, topic: '', categoryId: null, position: 0, permissions: 0 }],
+        servers: [server],
+        serverMemberRoleIds: new Map([['s1', new Map([['user-2', ['role-blue']]])]]),
+      },
+    );
+    expect(screen.getByRole('button', { name: 'Fulana' })).toHaveStyle({ color: 'rgb(51, 153, 255)' });
   });
 
   it('groups consecutive messages from the same author without repeating name/avatar', () => {

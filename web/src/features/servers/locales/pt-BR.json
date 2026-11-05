@@ -99,6 +99,13 @@
     "section": "{{name}} — {{count}}",
     "loading": "Carregando membros…",
     "owner": "Dono do servidor",
+    "openProfile": "Abrir perfil de {{name}}",
+    "viewProfile": "Ver perfil completo",
+    "roles": "Cargos",
+    "noRoles": "Sem cargos",
+    "addRole": "Adicionar cargo",
+    "noAssignableRoles": "Não há outros cargos disponíveis.",
+    "roleUpdateFailed": "Não foi possível atualizar os cargos.",
     "kick": "Expulsar",
     "ban": "Banir",
     "transfer": "Transferir posse",
@@ -140,7 +147,10 @@
     "deleteTitle": "Excluir {{name}}",
     "deleteDescription": "Quem tem este cargo perde as permissões que ele dava.",
     "up": "Subir",
-    "down": "Descer"
+    "down": "Descer",
+    "search": "Buscar cargos",
+    "memberCount": "{{count}} membros",
+    "noResults": "Nenhum cargo encontrado."
   },
   "invites": {
     "none": "Nenhum convite ativo.",

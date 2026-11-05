@@ -77,6 +77,8 @@ export function createFakeRoomContextValue(overrides: Partial<RoomContextValue> 
     pinConversation: noop,
     servers: [],
     serverMemberRevision: new Map(),
+    serverMemberRoleIds: new Map(),
+    setServerMemberSnapshot: noop,
     reorderServers: noop,
     messagesByConversation: new Map(),
     hasMoreByConversation: new Map(),
