@@ -1,12 +1,15 @@
-import { CrownIcon, PlusIcon, UserIcon } from '@phosphor-icons/react';
-import { useState } from 'react';
+import { ArrowUpIcon, CrownIcon, PlusIcon } from '@phosphor-icons/react';
+import { useEffect, useRef, useState } from 'react';
+import type { FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Avatar } from '@/shared/Avatar';
 import { Button } from '@/shared/ui/primitives/button';
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuLabel, DropdownMenuTrigger } from '@/shared/ui/primitives/dropdown-menu';
+import { Input } from '@/shared/ui/primitives/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/primitives/popover';
 import type { ServerSummary } from '@/shared/types/protocol';
 import { ProfileActions } from '@/features/friends/ProfileActions';
+import { BANNER_ASPECT_RATIO } from '@/features/profile/profileLinks';
 import { useRoom } from '@/state/RoomContext';
 import type { PublicUser } from '@/shared/types/protocol';
 import { cn } from '@/shared/lib/utils';
@@ -27,14 +30,36 @@ interface MemberQuickProfileProps {
 
 export function MemberQuickProfile({ server, member, currentUser, offline, open, onOpenChange, onOpenProfile, onRoleIdsChange }: MemberQuickProfileProps) {
   const { t } = useTranslation('servers');
-  const { state } = useRoom();
+  const { t: tChat } = useTranslation('chat');
+  const { state, conversations, openDirect, sendChatMessage } = useRoom();
   const [savingRoleId, setSavingRoleId] = useState<string | null>(null);
   const [roleError, setRoleError] = useState(false);
+  const [messageDraft, setMessageDraft] = useState('');
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const [queuedMessage, setQueuedMessage] = useState<string | null>(null);
+  const sentQueuedMessageRef = useRef(false);
   const user = currentUser ?? member.user;
   const avatarPoster = 'avatarPoster' in user && typeof user.avatarPoster === 'string' ? user.avatarPoster : undefined;
   const assignable = [...server.roles].filter((role) => !role.isDefault).sort((a, b) => b.position - a.position);
   const color = memberColor(server, member.roleIds);
   const canManageRoles = !member.isOwner && user.id !== state.me.userId && hasPermission(server.permissions, PERMISSIONS.MANAGE_ROLES);
+
+  useEffect(() => {
+    const direct = conversations.find((conversation) => (
+      conversation.type === 'direct'
+      && conversation.memberIds.length === 2
+      && conversation.memberIds.includes(user.id)
+      && !!state.me.userId
+      && conversation.memberIds.includes(state.me.userId)
+    ));
+    if (!queuedMessage || sentQueuedMessageRef.current || !direct) return;
+    sentQueuedMessageRef.current = true;
+    sendChatMessage(direct.id, queuedMessage);
+    setQueuedMessage(null);
+    setMessageDraft('');
+    setSendingMessage(false);
+    onOpenChange(false);
+  }, [conversations, onOpenChange, queuedMessage, sendChatMessage, state.me.userId, user.id]);
 
   async function toggleRole(roleId: string, checked: boolean) {
     const roleIds = checked ? [...new Set([...member.roleIds, roleId])] : member.roleIds.filter((id) => id !== roleId);
@@ -48,6 +73,21 @@ export function MemberQuickProfile({ server, member, currentUser, offline, open,
     } finally {
       setSavingRoleId(null);
     }
+  }
+
+  function submitQuickMessage(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const text = messageDraft.trim();
+    if (!text || sendingMessage || !state.joined) return;
+    sentQueuedMessageRef.current = false;
+    setQueuedMessage(text);
+    setSendingMessage(true);
+    openDirect(user.id);
+  }
+
+  function openFullProfile() {
+    onOpenChange(false);
+    onOpenProfile(user.id);
   }
 
   return (
@@ -70,15 +110,42 @@ export function MemberQuickProfile({ server, member, currentUser, offline, open,
         {member.isOwner && <CrownIcon size={14} weight="fill" className="flex-none text-yellow" aria-label={t('members.owner')} />}
       </PopoverTrigger>
       <PopoverContent side="left" align="start" sideOffset={8} className="w-[min(24rem,calc(100vw-1rem))] gap-0 overflow-hidden rounded-xl border-border-default bg-bg-modal p-0">
-        <div className="h-20" style={{ background: color || 'var(--color-accent-primary)' }} />
+        <div className="relative w-full" style={{ background: color || 'var(--color-accent-primary)', aspectRatio: BANNER_ASPECT_RATIO }}>
+          <button
+            type="button"
+            aria-label={t('members.openProfile', { name: user.displayName })}
+            onClick={openFullProfile}
+            className="absolute inset-0 block h-full w-full cursor-pointer border-0 bg-transparent p-0"
+          />
+          <div className="absolute right-3 top-3 z-10 flex max-w-[calc(100%-1.5rem)] flex-wrap items-center justify-end gap-1.5">
+            <ProfileActions userId={user.id} username={user.username} displayName={user.displayName} onNavigate={() => onOpenChange(false)} showMessage={false} showFriendRequestActions={false} className="flex-row gap-1 p-0" />
+          </div>
+        </div>
         <div className="px-4 pb-4">
-          <Avatar id={user.id} name={user.displayName} avatar={user.avatar} poster={avatarPoster} animateOnHover avatarColor={user.avatarColor} size={72} className="-mt-9 ring-4 ring-bg-modal" />
+          <div className="relative -mt-9 w-fit rounded-full bg-bg-modal p-1">
+            <button
+              type="button"
+              aria-label={t('members.openProfile', { name: user.displayName })}
+              onClick={openFullProfile}
+              className="block cursor-pointer rounded-full border-0 bg-transparent p-0 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+            >
+              <Avatar id={user.id} name={user.displayName} avatar={user.avatar} poster={avatarPoster} animateOnHover avatarColor={user.avatarColor} size={72} />
+            </button>
+            <span
+              aria-label={offline ? t('members.offline') : t('members.online')}
+              className={`absolute bottom-1 right-1 grid size-5 place-items-center rounded-full border-4 border-bg-modal ${offline ? 'bg-text-muted' : 'bg-green'}`}
+            >
+              {offline && <span className="size-1.5 rounded-full bg-bg-modal" />}
+            </span>
+          </div>
           <div className="mt-2 flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <h2 className="truncate text-heading font-semibold text-text-primary">{user.displayName}</h2>
+              <h2 className="flex min-w-0 items-center gap-1.5 text-heading font-semibold text-text-primary">
+                <span className="truncate">{user.displayName}</span>
+                {member.isOwner && <CrownIcon size={14} weight="fill" className="flex-none text-yellow" aria-label={t('members.owner')} />}
+              </h2>
               <p className="truncate text-label text-text-secondary">@{user.username}</p>
             </div>
-            {member.isOwner && <span className="rounded-full bg-fill-active px-2 py-1 text-caption text-text-secondary">{t('members.owner')}</span>}
           </div>
 
           <div className="mt-4 flex flex-wrap items-center gap-1.5">
@@ -95,8 +162,8 @@ export function MemberQuickProfile({ server, member, currentUser, offline, open,
             {member.roleIds.length === 0 && <span className="text-caption text-text-muted">{t('members.noRoles')}</span>}
             {canManageRoles && (
               <DropdownMenu>
-                <DropdownMenuTrigger render={<Button type="button" variant="outline" size="icon-sm" aria-label={t('members.addRole')} disabled={savingRoleId !== null} className="size-7 rounded-full" />}>
-                  <PlusIcon size={15} />
+                <DropdownMenuTrigger render={<Button type="button" variant="ghost" size="icon-xs" aria-label={t('members.addRole')} disabled={savingRoleId !== null} className="size-5 border-0 bg-transparent p-0 text-text-muted hover:bg-transparent hover:text-text-primary aria-expanded:bg-transparent" />}>
+                  <PlusIcon className="size-3" />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="max-h-64 min-w-56">
                   <DropdownMenuGroup>
@@ -116,13 +183,23 @@ export function MemberQuickProfile({ server, member, currentUser, offline, open,
               </DropdownMenu>
             )}
           </div>
+          {user.id !== state.me.userId && (
+            <form onSubmit={submitQuickMessage} className="mt-4 flex h-12 items-center gap-2 rounded-xl border border-border-control px-3 focus-within:border-border-accent">
+              <Input
+                value={messageDraft}
+                onChange={(event) => setMessageDraft(event.target.value)}
+                maxLength={2000}
+                disabled={sendingMessage || !state.joined}
+                placeholder={tChat('composer.messageDirect', { name: user.displayName })}
+                aria-label={tChat('composer.messageDirect', { name: user.displayName })}
+                className="h-10 flex-1 border-0 bg-transparent px-1 focus-visible:border-0 focus-visible:ring-0"
+              />
+              <Button type="submit" variant="ghost" size="icon-sm" aria-label={tChat('composer.send')} disabled={!messageDraft.trim() || sendingMessage || !state.joined} className="size-8 text-text-muted hover:text-text-primary">
+                <ArrowUpIcon size={18} />
+              </Button>
+            </form>
+          )}
           {roleError && <p role="alert" className="mt-2 text-caption text-red-text">{t('members.roleUpdateFailed')}</p>}
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <ProfileActions userId={user.id} username={user.username} displayName={user.displayName} onNavigate={() => onOpenChange(false)} className="p-0" />
-            <Button type="button" variant="ghost" size="sm" onClick={() => { onOpenChange(false); onOpenProfile(user.id); }}>
-              <UserIcon size={16} />{t('members.viewProfile')}
-            </Button>
-          </div>
         </div>
       </PopoverContent>
     </Popover>

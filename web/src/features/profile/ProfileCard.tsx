@@ -206,9 +206,9 @@ export function ProfileCard({
             ) : (
               <Avatar id={user.id} name={user.displayName} avatar={user.avatar} avatarColor={user.avatarColor} size={92} />
             )}
-            {online && <span className="absolute right-1 bottom-1 h-5 w-5 rounded-full border-2 border-bg-modal bg-green" />}
+            {online && <span className="absolute right-1 bottom-1 h-5 w-5 rounded-full border-4 border-bg-modal bg-green" />}
             {online === false && (
-              <span aria-hidden className="absolute right-1 bottom-1 grid h-5 w-5 place-items-center rounded-full border-2 border-bg-modal bg-text-muted">
+              <span aria-hidden className="absolute right-1 bottom-1 grid h-5 w-5 place-items-center rounded-full border-4 border-bg-modal bg-text-muted">
                 <span className="size-1.5 rounded-full bg-bg-modal" />
               </span>
             )}

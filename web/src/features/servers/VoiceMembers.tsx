@@ -5,7 +5,7 @@ import {
 import { useEffect, useState } from 'react';
 import type { DragEvent, MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Avatar } from '@/shared/Avatar';
+import { Avatar, colorFor } from '@/shared/Avatar';
 import { iconWeight } from '@/shared/ui/icons';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator,
@@ -237,13 +237,13 @@ export function VoiceMembers({ server, channel, onOpenProfile, drag, onDragChang
                 className="flex min-w-0 flex-1 items-center gap-2 text-left text-label text-text-secondary group-hover/member:text-text-primary">
                 {/* the name beside it already says who: the avatar's initials would only repeat it */}
                 <span aria-hidden data-speaking={person.speaking || undefined}
-                  className={cn('inline-flex flex-none rounded-full ring-2 transition-shadow', person.speaking ? 'ring-green' : 'ring-transparent')}>
+                  className={cn('inline-flex flex-none rounded-full ring-2 transition-shadow', person.speaking ? 'ring-current' : 'ring-transparent')}
+                  style={person.speaking ? { color: colorFor(person.userId, person.avatarColor) } : undefined}>
                   <Avatar id={person.userId} name={person.displayName} avatar={person.avatar} poster={person.avatarPoster} avatarColor={person.avatarColor} size={24} />
                 </span>
                 <span className="truncate">{person.displayName}</span>
               </button>
-              {/* a share's still is for whoever cannot already watch it in the call */}
-              <VoiceStatus person={person} previewable={!person.isMe && !inThisCall} />
+              <VoiceStatus person={person} previewable={!person.isMe} />
             </li>
           );
         })}

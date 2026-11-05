@@ -63,7 +63,7 @@ export function MediaCollectionViewer({ items, index, open, onIndexChange, onOpe
                 >
                   <DownloadSimpleIcon size={18} />
                 </a>
-                <DialogPrimitive.Close render={<CloseButton variant="overlay" size="md" />} />
+                <DialogPrimitive.Close render={<CloseButton variant="surface" size="md" />} />
               </div>
               <div className="relative flex min-h-0 flex-1 items-center justify-center px-4 pb-6 sm:px-16">
                 {item.kind === 'video' ? (

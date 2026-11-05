@@ -427,7 +427,7 @@ function VideoPlayerImpl({ src, poster, title, className, onError }: VideoPlayer
                 style={boxStyleFor('fullscreen')}
               />
             </div>
-            <DialogPrimitive.Close render={<CloseButton variant="overlay" size="md" className="fixed right-4 top-4 z-50" />} />
+            <DialogPrimitive.Close render={<CloseButton variant="surface" size="md" className="fixed right-4 top-4 z-50" />} />
           </DialogPrimitive.Popup>
         </DialogPrimitive.Portal>
       </DialogPrimitive.Root>

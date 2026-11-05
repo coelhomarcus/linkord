@@ -16,7 +16,7 @@ const closeButtonVariants = cva(
       variant: {
         ghost: "text-text-secondary hover:text-text-primary",
         danger: "text-text-muted hover:bg-red/12 hover:text-red-text",
-        overlay: "bg-black/60 text-white ring-1 ring-white/25 backdrop-blur-sm hover:bg-black/80",
+        surface: "rounded-lg border border-border-control bg-bg-control text-text-secondary shadow-popover hover:bg-bg-control-hover hover:text-text-primary",
       },
       size: {
         xs: "size-6",

@@ -30,7 +30,7 @@ export function EditProfileButton({ onNavigate }: { onNavigate?: () => void }) {
 }
 
 /** Keep relationship actions beside the profile card so other card contexts stay independent. */
-export function ProfileActions({ userId, username, displayName, onNavigate, onReport, className }: {
+export function ProfileActions({ userId, username, displayName, onNavigate, onReport, className, showMessage = true, showFriendRequestActions = true }: {
   userId: string;
   username: string;
   displayName: string;
@@ -40,6 +40,8 @@ export function ProfileActions({ userId, username, displayName, onNavigate, onRe
   onReport?: () => void;
   /** overrides the default padding (`px-4 pb-4`) when the parent lays it out */
   className?: string;
+  showMessage?: boolean;
+  showFriendRequestActions?: boolean;
 }) {
   const { t } = useTranslation('friends');
   const { openDirect, requestChatView } = useRoom();
@@ -100,9 +102,11 @@ export function ProfileActions({ userId, username, displayName, onNavigate, onRe
     case 'friends':
       actions = (
         <>
-          <Button type="button" size="sm" onClick={() => { openDirect(userId); requestChatView(); onNavigate?.(); }}>
-            <ChatCircleIcon size={20} /><span>{t('profile.message')}</span>
-          </Button>
+          {showMessage && (
+            <Button type="button" size="sm" onClick={() => { openDirect(userId); requestChatView(); onNavigate?.(); }}>
+              <ChatCircleIcon size={20} /><span>{t('profile.message')}</span>
+            </Button>
+          )}
           <DropdownMenu>
             <DropdownMenuTrigger render={<Button type="button" variant="outline" size="icon-sm" aria-label={t('profile.friendship')} />}>
               <UserCheckIcon size={16} />
@@ -129,12 +133,12 @@ export function ProfileActions({ userId, username, displayName, onNavigate, onRe
       );
       break;
     case 'incoming':
-      actions = (
+      actions = showFriendRequestActions ? (
         <>
           <Button type="button" size="sm" disabled={pending} onClick={() => void run(() => acceptFriendRequest(userId))}>{spinner}<span>{t('profile.accept')}</span></Button>
           <Button type="button" variant="ghost" size="sm" disabled={pending} onClick={() => void run(() => declineFriendRequest(userId))}><span>{t('profile.decline')}</span></Button>
         </>
-      );
+      ) : null;
       break;
     case 'blocked':
       actions = (
