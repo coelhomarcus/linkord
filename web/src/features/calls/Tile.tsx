@@ -4,12 +4,13 @@ import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ConnectionQuality } from 'livekit-client';
 
-import { useRoom } from '../../state/RoomContext';
+import { useRoom } from '@/state/RoomContext';
 import { useParticipantMedia, useAttachTrack, useIsSpeaking, useConnectionQuality, useWatchScreenShare } from './useLiveKitTrack';
 import { useMuteForMe } from './useMuteForMe';
+import { useTileSizing } from './useTileSizing';
 import { tileKey } from './tileTypes';
 import type { TileKind } from './tileTypes';
-import { Avatar, colorFor } from '../../shared/Avatar';
+import { Avatar, colorFor } from '@/shared/Avatar';
 import { Button } from '@/shared/ui/primitives/button';
 import { cn } from '@/shared/lib/utils';
 
@@ -24,11 +25,12 @@ interface TileProps {
    * own preview (see useScreenShare's pauseSharePreview). */
   paused?: boolean;
   fit?: 'cover' | 'contain';
+  sizing?: 'fill' | 'source';
   avatarSize?: number;
   nameSize?: 'body' | 'label';
 }
 
-export function Tile({ participantId, kind, isMine, loading = false, paused = false, fit = 'contain', avatarSize = 96, nameSize = 'body' }: TileProps) {
+export function Tile({ participantId, kind, isMine, loading = false, paused = false, fit = 'contain', sizing = 'fill', avatarSize = 96, nameSize = 'body' }: TileProps) {
   const { t } = useTranslation('calls');
   const { state, dispatch, openTileMenu, tileDomRegistry, deafened, showTileBanners, mirrorCameraPreview, livekitRoom } = useRoom();
   const key = tileKey(participantId, kind);
@@ -58,7 +60,8 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
   useWatchScreenShare(livekitRoom, participantId, notWatching);
   const showsVideo = kind !== 'avatar' && !hiddenForMe && !notWatching && !paused;
   const videoTrack = kind === 'screen' ? media.screenTrack : kind === 'camera' ? media.cameraTrack : null;
-  useAttachTrack(videoTrack, videoRef);
+  const { containerRef, frameStyle } = useTileSizing(sizing, `${participantId}:${kind}`, showsVideo, videoTrack, videoRef, rootRef);
+  useAttachTrack(showsVideo ? videoTrack : null, videoRef);
 
   const showSpeakingBorder = kind !== 'screen' && isSpeaking;
   const tint = colorFor(participantId, avatarColor);
@@ -66,8 +69,9 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
   useEffect(() => {
     const root = rootRef.current;
     if (!root) return;
-    tileDomRegistry.current.set(key, { root, video: showsVideo ? videoRef.current : null });
-    return () => { tileDomRegistry.current.delete(key); };
+    const registry = tileDomRegistry.current;
+    registry.set(key, { root, video: showsVideo ? videoRef.current : null });
+    return () => { registry.delete(key); };
   }, [key, showsVideo, videoTrack, tileDomRegistry]);
 
   const isFocused = state.focusedId === key;
@@ -97,14 +101,8 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
     toggleMuteForMe();
   }, [toggleMuteForMe]);
 
-  // A banner replaces the flat tint (still shown as letterbox filler behind
-  // a `contain`-fit camera track, same as the tint was). Rendered as its
-  // own absolutely-positioned layer (not the root's own background) so the
-  // root's `border` + `border-radius` + `overflow-hidden` never have to
-  // reconcile with a background-image's own box/clip math on the SAME
-  // element — that combination was leaving a hairline gap at the rounded
-  // corners where the overlay wasn't fully covering the image underneath.
-  const rootStyle = kind === 'screen' || banner
+  // Keep banners on a separate layer to avoid hairline gaps at rounded corners.
+  const rootStyle = showsVideo || kind === 'screen' || banner
     ? undefined
     : { background: `color-mix(in srgb, ${tint} 22%, var(--color-bg-tertiary))` };
   // Freezes on the static poster frame until the person actually speaks —
@@ -120,7 +118,7 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
       }
     : undefined;
 
-  return (
+  const frame = (
     <div
       ref={rootRef}
       data-tile-kind={kind}
@@ -128,18 +126,21 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
       tabIndex={0}
       aria-pressed={isFocused}
       aria-label={isFocused ? t('tile.unfocusLabel', { name: name || t('tile.participant') }) : t('tile.focusLabel', { name: name || t('tile.participant') })}
-      className={`tile-fullscreen-target relative h-full w-full cursor-pointer overflow-hidden rounded-lg border-[3.5px] bg-bg-tertiary transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 ${
-        showSpeakingBorder ? '' : 'border-white/10'
-      }`}
+      className={cn(
+        'tile-fullscreen-target relative h-full w-full shrink-0 cursor-pointer overflow-hidden rounded-lg border-[3.5px] transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50',
+        showsVideo || kind === 'screen' ? 'bg-bg-call' : 'bg-bg-tertiary',
+        !showSpeakingBorder && 'border-white/10',
+      )}
       style={{
         ...rootStyle,
+        ...frameStyle,
         ...(showSpeakingBorder ? { borderColor: tint } : {}),
       }}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       onContextMenu={handleContextMenu}
     >
-      {kind !== 'screen' && banner && <div className="absolute inset-0" style={bannerLayerStyle} />}
+      {!showsVideo && kind !== 'screen' && banner && <div className="absolute inset-0" style={bannerLayerStyle} />}
       {showsVideo ? (
         <video
           ref={videoRef}
@@ -147,12 +148,9 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
           playsInline
           muted={isMine}
           className={cn(
-            'relative h-full w-full',
-            // A tile always keeps its cell's size; media of another aspect
-            // ratio is letterboxed inside it. A cover-fit preview still
-            // letterboxes once its tile goes fullscreen, so nothing is cut off.
+            'relative h-full w-full bg-bg-call',
+            // Fullscreen must show the entire source even for a cropped PiP preview.
             fit === 'contain' ? 'object-contain' : 'object-cover [:fullscreen_&]:object-contain',
-            kind === 'screen' && 'bg-bg-call'
           )}
           // presentation only — the track actually published/sent is never touched
           style={isMine && kind === 'camera' && mirrorCameraPreview ? { transform: 'scaleX(-1)' } : undefined}
@@ -225,6 +223,12 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
           <SpeakerSlashIcon size={16} weight="fill" />
         </Button>
       )}
+    </div>
+  );
+
+  return (
+    <div ref={containerRef} className="flex h-full min-h-0 w-full min-w-0 items-center justify-center">
+      {frame}
     </div>
   );
 }

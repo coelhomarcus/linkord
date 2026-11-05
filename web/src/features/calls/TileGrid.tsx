@@ -84,9 +84,8 @@ export function TileGrid({ descriptors, focusedId, minTileWidth = DEFAULT_MIN_TI
     onCapacityChange?.(meetsMinimum, descriptors[0]?.key ?? null);
   }, [meetsMinimum, n, descriptors, onCapacityChange]);
 
-  // Every tile fills its wrapper exactly; media that isn't 16:9 is letterboxed
-  // inside the tile (see Tile.tsx), so all tiles stay the same size.
-  const renderTile = (d: TileDescriptor, isFocused: boolean, width: number | string, height: number | string, fit: 'cover' | 'contain' = 'contain') => (
+  // Grid cells and thumbnails stay uniform; only the focused frame follows its source.
+  const renderTile = (d: TileDescriptor, isFocused: boolean, width: number | string, height: number | string) => (
     <div
       key={d.key}
       style={{ width, height }}
@@ -98,7 +97,7 @@ export function TileGrid({ descriptors, focusedId, minTileWidth = DEFAULT_MIN_TI
         loading={d.loading}
         paused={d.paused}
         isMine={isMine(d.participantId)}
-        fit={fit}
+        sizing={isFocused ? 'source' : 'fill'}
         avatarSize={isFocused ? 104 : focus ? 32 : 96}
         nameSize={isFocused ? 'label' : 'body'}
       />
@@ -156,7 +155,7 @@ export function TileGrid({ descriptors, focusedId, minTileWidth = DEFAULT_MIN_TI
           {!thumbsCollapsed && (
             <div data-thumb-strip className="w-full overflow-y-auto" style={{ maxHeight: thumbStripMaxHeight }}>
               <div className="flex flex-wrap justify-center gap-3">
-                {thumbs.map((d) => renderTile(d, false, THUMB_W, THUMB_H, 'cover'))}
+                {thumbs.map((d) => renderTile(d, false, THUMB_W, THUMB_H))}
               </div>
             </div>
           )}

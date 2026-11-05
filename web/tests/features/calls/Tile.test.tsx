@@ -1,7 +1,10 @@
-import { fireEvent, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { Track } from 'livekit-client';
+import type { Room } from 'livekit-client';
 import { initialRoomState } from '@/state/roomReducer';
-import { renderWithRoom } from '@tests/fixtures/roomContextFixture';
+import { RoomContext } from '@/state/RoomContext';
+import { createFakeRoomContextValue, renderWithRoom } from '@tests/fixtures/roomContextFixture';
 import { Tile } from '@/features/calls/Tile';
 import type { Participant } from '@/shared/types/protocol';
 
@@ -12,6 +15,14 @@ function fakeParticipant(overrides: Partial<Participant> = {}): Participant {
     micActivated: true, micMuted: false, cameraOn: false, sharing: false, speaking: false,
     ...overrides,
   };
+}
+
+function setVideoSize(video: HTMLVideoElement, width: number, height: number, event = 'loadedmetadata') {
+  Object.defineProperties(video, {
+    videoWidth: { configurable: true, value: width },
+    videoHeight: { configurable: true, value: height },
+  });
+  fireEvent(video, new Event(event));
 }
 
 describe('Tile — muted for me', () => {
@@ -84,6 +95,177 @@ describe('Tile — media aspect ratio', () => {
     });
     expect(cover.container.querySelector('video')).toHaveClass('object-cover');
     expect(cover.container.querySelector('video')?.className).toContain('[:fullscreen_&]:object-contain');
+  });
+});
+
+describe('Tile — video background', () => {
+  it.each(['camera', 'screen'] as const)('uses black behind a %s even with a profile banner', (kind) => {
+    const { container } = renderWithRoom(<Tile participantId="p-2" kind={kind} isMine={false} />, {
+      state: { ...initialRoomState, participants: new Map([['p-2', fakeParticipant({ banner: '/banner.webp', bannerPoster: '/poster.webp' })]]) },
+    });
+    expect(container.querySelector('[data-tile-kind]')).toHaveClass('bg-bg-call');
+    expect(container.querySelector('video')).toHaveClass('bg-bg-call', 'object-contain');
+    expect(container.querySelector<HTMLElement>('[data-tile-kind]')!.style.background).toBe('');
+    expect(container.querySelector('[style*="background-image"]')).not.toBeInTheDocument();
+  });
+
+  it('uses black instead of the profile tint when no banner is configured', () => {
+    const { container } = renderWithRoom(<Tile participantId="p-2" kind="camera" isMine={false} />, {
+      state: { ...initialRoomState, participants: new Map([['p-2', fakeParticipant()]]) },
+    });
+    expect(container.querySelector('[data-tile-kind]')).toHaveClass('bg-bg-call');
+    expect(container.querySelector('[style*="color-mix"]')).not.toBeInTheDocument();
+  });
+
+  it.each(['avatar', 'camera'] as const)('preserves the banner for an %s presentation without video', (kind) => {
+    const { container } = renderWithRoom(<Tile participantId="p-2" kind={kind} isMine={false} sizing="source" />, {
+      state: {
+        ...initialRoomState,
+        participants: new Map([['p-2', fakeParticipant({ banner: '/banner.webp', bannerPoster: '/poster.webp' })]]),
+        hiddenVideoKeys: new Set(['p-2:participant']),
+      },
+    });
+    expect(container.querySelector('video')).not.toBeInTheDocument();
+    expect(container.querySelector('[style*="poster.webp"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-tile-kind]')).not.toHaveAttribute('style', expect.stringContaining('width'));
+  });
+});
+
+describe('Tile — focused source sizing', () => {
+  let resizeSlot: (width: number, height: number) => void;
+  let disconnect: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    disconnect = vi.fn();
+    vi.stubGlobal('ResizeObserver', class {
+      private readonly callback: ResizeObserverCallback;
+      constructor(callback: ResizeObserverCallback) { this.callback = callback; }
+      observe() {
+        resizeSlot = (width, height) => this.callback(
+          [{ contentRect: { width, height } } as ResizeObserverEntry],
+          this as unknown as ResizeObserver,
+        );
+        resizeSlot(800, 600);
+      }
+      disconnect = disconnect;
+    });
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it.each([
+    [1920, 1080, 800, 450],
+    [640, 480, 800, 600],
+    [720, 1280, 337.5, 600],
+    [2560, 1080, 800, 337.5],
+  ])('fits a %ix%i source within its slot', (width, height, expectedW, expectedH) => {
+    const { container } = renderWithRoom(<Tile participantId="p-2" kind="camera" isMine={false} sizing="source" />);
+    const video = container.querySelector('video')!;
+    const frame = container.querySelector<HTMLElement>('[data-tile-kind]')!;
+    setVideoSize(video, width, height);
+    expect(parseFloat(frame.style.width)).toBeCloseTo(expectedW);
+    expect(parseFloat(frame.style.height)).toBeCloseTo(expectedH);
+  });
+
+  it('falls back to 16:9 until metadata is available and handles zero dimensions', () => {
+    const { container } = renderWithRoom(<Tile participantId="p-2" kind="screen" isMine={false} sizing="source" />);
+    const frame = container.querySelector('[data-tile-kind]')!;
+    expect(frame).toHaveStyle({ width: '800px', height: '450px' });
+    setVideoSize(container.querySelector('video')!, 0, 0);
+    expect(frame).toHaveStyle({ width: '800px', height: '450px' });
+  });
+
+  it('updates orientation and available space without replacing the video or registered frame', () => {
+    const value = createFakeRoomContextValue();
+    const { container, unmount } = renderWithRoom(<Tile participantId="p-2" kind="screen" isMine={false} sizing="source" />, value);
+    const video = container.querySelector('video')!;
+    const frame = container.querySelector('[data-tile-kind]')!;
+    setVideoSize(video, 1920, 1080);
+    setVideoSize(video, 720, 1280, 'resize');
+    expect(frame).toHaveStyle({ width: '337.5px', height: '600px' });
+    act(() => resizeSlot(400, 800));
+    expect(frame).toHaveStyle({ width: '400px' });
+    expect(parseFloat((frame as HTMLElement).style.height)).toBeCloseTo(711.111);
+    expect(container.querySelector('video')).toBe(video);
+    expect(value.tileDomRegistry.current.get('p-2:screen')).toEqual({ root: frame, video });
+    unmount();
+    expect(disconnect).toHaveBeenCalledOnce();
+    expect(value.tileDomRegistry.current.has('p-2:screen')).toBe(false);
+  });
+
+  it('accounts for the border without letterboxing the focused video', () => {
+    const { container } = renderWithRoom(<Tile participantId="p-2" kind="camera" isMine={false} sizing="source" />);
+    const frame = container.querySelector<HTMLElement>('[data-tile-kind]')!;
+    frame.style.borderWidth = '3.5px';
+    act(() => resizeSlot(800, 600));
+    setVideoSize(container.querySelector('video')!, 720, 1280);
+    expect(parseFloat(frame.style.height)).toBe(600);
+    expect((parseFloat(frame.style.width) - 7) / (parseFloat(frame.style.height) - 7)).toBeCloseTo(720 / 1280);
+  });
+
+  it('resets the old ratio when the source changes and restores paused screen video', () => {
+    const value = createFakeRoomContextValue();
+    const renderTile = (kind: 'camera' | 'screen', paused = false) => (
+      <RoomContext.Provider value={value}>
+        <Tile participantId="p-2" kind={kind} isMine={false} sizing="source" paused={paused} />
+      </RoomContext.Provider>
+    );
+    const { container, rerender } = renderWithRoom(renderTile('camera'), value);
+    setVideoSize(container.querySelector('video')!, 720, 1280);
+    rerender(renderTile('screen'));
+    const frame = container.querySelector('[data-tile-kind]')!;
+    expect(frame).toHaveStyle({ width: '800px', height: '450px' });
+    setVideoSize(container.querySelector('video')!, 640, 480);
+    expect(frame).toHaveStyle({ width: '800px', height: '600px' });
+    rerender(renderTile('screen', true));
+    expect(container.querySelector('video')).not.toBeInTheDocument();
+    expect(frame).not.toHaveAttribute('style', expect.stringContaining('width'));
+    rerender(renderTile('screen'));
+    setVideoSize(container.querySelector('video')!, 720, 1280);
+    expect(frame).toHaveStyle({ width: '337.5px', height: '600px' });
+  });
+
+  it('resets dimensions when a track is replaced and reattaches after hiding a camera', () => {
+    const first = { attach: vi.fn(), detach: vi.fn() };
+    const second = { attach: vi.fn(), detach: vi.fn() };
+    let camera = first;
+    const on = vi.fn();
+    const room = {
+      on, off: vi.fn(),
+      localParticipant: { identity: 'p-1', getTrackPublication: () => undefined },
+      getParticipantByIdentity: () => ({
+        getTrackPublication: (source: Track.Source) => source === Track.Source.Camera ? { isMuted: false, track: camera } : undefined,
+      }),
+    } as unknown as Room;
+    const value = createFakeRoomContextValue({ livekitRoom: room });
+    const renderTile = () => (
+      <RoomContext.Provider value={value}>
+        <Tile participantId="p-2" kind="camera" isMine={false} sizing="source" />
+      </RoomContext.Provider>
+    );
+    const { container, rerender } = renderWithRoom(renderTile(), value);
+    const firstVideo = container.querySelector('video')!;
+    setVideoSize(firstVideo, 720, 1280);
+    camera = second;
+    act(() => on.mock.calls.find(([event]) => event === 'trackSubscribed')![1]());
+    expect(first.detach).toHaveBeenCalledWith(firstVideo);
+    expect(second.attach).toHaveBeenCalledWith(firstVideo);
+    expect(container.querySelector('[data-tile-kind]')).toHaveStyle({ width: '800px', height: '450px' });
+    value.state = { ...value.state, hiddenVideoKeys: new Set(['p-2:participant']) };
+    rerender(renderTile());
+    expect(second.detach).toHaveBeenCalledWith(firstVideo);
+    value.state = { ...value.state, hiddenVideoKeys: new Set() };
+    rerender(renderTile());
+    const restoredVideo = container.querySelector('video')!;
+    expect(restoredVideo).not.toBe(firstVideo);
+    expect(second.attach).toHaveBeenLastCalledWith(restoredVideo);
+    setVideoSize(restoredVideo, 1920, 1080);
+    expect(container.querySelector('[data-tile-kind]')).toHaveStyle({ width: '800px', height: '450px' });
+  });
+
+  it('keeps grid tiles fixed when source dimensions change', () => {
+    const { container } = renderWithRoom(<Tile participantId="p-2" kind="camera" isMine={false} />);
+    setVideoSize(container.querySelector('video')!, 720, 1280);
+    expect(container.querySelector('[data-tile-kind]')).not.toHaveAttribute('style', expect.stringContaining('width'));
   });
 });
 

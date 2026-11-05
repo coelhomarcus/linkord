@@ -289,6 +289,9 @@ html, body {
 *::-webkit-scrollbar-thumb:hover { background: var(--color-surface-500); }
 
 .tile-fullscreen-target:fullscreen {
+  /* Focused frames have inline dimensions fitted to their stage slot. */
+  width: 100% !important;
+  height: 100% !important;
   border-radius: 0;
 }
 

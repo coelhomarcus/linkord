@@ -3,7 +3,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import userEvent from '@testing-library/user-event';
 import type { TileDescriptor } from '@/features/calls/tileTypes';
 import { TileGrid } from '@/features/calls/TileGrid';
-import { renderWithRoom } from '@tests/fixtures/roomContextFixture';
+import { RoomContext } from '@/state/RoomContext';
+import { createFakeRoomContextValue, renderWithRoom } from '@tests/fixtures/roomContextFixture';
 
 let resizeContainer: (width: number, height: number) => void = () => {};
 
@@ -31,7 +32,9 @@ vi.stubGlobal(
 );
 
 vi.mock('@/features/calls/Tile', () => ({
-  Tile: ({ participantId, fit }: { participantId: string; fit?: string }) => <div data-testid={`tile-${participantId}`} data-fit={fit} />,
+  Tile: ({ participantId, fit = 'contain', sizing }: { participantId: string; fit?: string; sizing?: string }) => (
+    <div data-testid={`tile-${participantId}`} data-fit={fit} data-sizing={sizing} />
+  ),
 }));
 
 function descriptors(count: number): TileDescriptor[] {
@@ -45,6 +48,34 @@ function descriptors(count: number): TileDescriptor[] {
 }
 
 describe('TileGrid', () => {
+  it('keeps grid cells uniform and uses source sizing only for the focused tile', () => {
+    const all = descriptors(3);
+    const { container, rerender } = renderWithRoom(<TileGrid descriptors={all} focusedId={null} />);
+    const cells = Array.from(container.querySelectorAll<HTMLElement>('[data-tile-grid] > div'));
+    for (const cell of cells) {
+      expect(cell.style.width).toBe(cells[0]!.style.width);
+      expect(cell.style.height).toBe(cells[0]!.style.height);
+      expect(parseFloat(cell.style.width) / parseFloat(cell.style.height)).toBeCloseTo(16 / 9);
+      expect(cell.firstElementChild).toHaveAttribute('data-sizing', 'fill');
+    }
+    const value = createFakeRoomContextValue();
+    const renderGrid = (focusedId: string) => (
+      <RoomContext.Provider value={value}><TileGrid descriptors={all} focusedId={focusedId} /></RoomContext.Provider>
+    );
+    rerender(renderGrid(all[0]!.key));
+    expect(container.querySelector('[data-testid="tile-p-0"]')).toHaveAttribute('data-sizing', 'source');
+    const thumbs = container.querySelectorAll('[data-thumb-strip] [data-testid]');
+    expect(thumbs).toHaveLength(2);
+    for (const thumb of thumbs) {
+      expect(thumb).toHaveAttribute('data-fit', 'contain');
+      expect(thumb).toHaveAttribute('data-sizing', 'fill');
+      expect(thumb.parentElement).toHaveStyle({ width: '160px', height: '90px' });
+    }
+    rerender(renderGrid(all[1]!.key));
+    expect(container.querySelector('[data-testid="tile-p-1"]')).toHaveAttribute('data-sizing', 'source');
+    expect(container.querySelector('[data-testid="tile-p-0"]')).toHaveAttribute('data-sizing', 'fill');
+  });
+
   it('the thumbnail strip is collapsible', async () => {
     const user = userEvent.setup();
     const all = descriptors(3);
