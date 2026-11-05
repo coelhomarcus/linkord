@@ -24,15 +24,15 @@ const log = logger.child({ component: 'soundboard' });
 
 export const MAX_SOUNDS_PER_SERVER = 24;
 // a little over 5s so a clip trimmed to exactly 5s never trips on rounding
-export const MAX_SOUND_DURATION_MS = 5200;
+const MAX_SOUND_DURATION_MS = 5200;
 // 5.2s of 48kHz mono 16-bit PCM is ~500KB — the most the client ever produces
-export const MAX_SOUND_BYTES = 512 * 1024;
-export const MAX_SOUND_NAME_LEN = 32;
+const MAX_SOUND_BYTES = 512 * 1024;
+const MAX_SOUND_NAME_LEN = 32;
 
 // generous for someone building a soundboard, not for a script filling disks
 const SOUND_UPLOAD_LIMIT = { windowMs: 60_000, max: 10 };
 
-export interface SoundEntry {
+interface SoundEntry {
   id: string;
   name: string;
   emoji: string;

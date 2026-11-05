@@ -4,6 +4,7 @@ import { ConnectionState, Track } from 'livekit-client';
 import type { Room } from 'livekit-client';
 import { useMicrophone } from '@/features/calls/useMicrophone';
 import { saveDevicePreference } from '@/features/settings/useDevicePreference';
+import { LOCAL_STORAGE_KEYS, localStorageStore } from '@/shared/lib/localStorage';
 
 function fakeTrack() {
   return {
@@ -49,7 +50,7 @@ describe('useMicrophone — activateMic applies the saved microphone', () => {
 
   it('with the studio profile, captures with the browser processing turned off', async () => {
     saveDevicePreference('audioinput', 'preferred-mic');
-    localStorage.setItem('ss-input-profile', 'studio');
+    localStorageStore.set(LOCAL_STORAGE_KEYS.inputProfile, 'studio');
     const setMicrophoneEnabled = vi.fn(async () => undefined);
     const room = fakeRoom(setMicrophoneEnabled);
     const { result } = renderHook(() => useMicrophone(room, vi.fn()));
@@ -162,7 +163,7 @@ describe('useMicrophone — capture is left to LiveKit\'s defaults', () => {
   afterEach(() => { localStorage.clear(); });
 
   it('never attaches a processor or rewrites constraints, even for someone who had the old preference on', async () => {
-    localStorage.setItem('ss-noise-suppression', '1');
+    localStorageStore.set(LOCAL_STORAGE_KEYS.legacyNoiseSuppression, '1');
     const track = fakeTrack();
     const unpublishTrack = vi.fn(async () => undefined);
     const room = fakeRoom(vi.fn(async () => undefined), track);

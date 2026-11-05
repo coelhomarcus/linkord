@@ -4,12 +4,12 @@ import { DEFAULT_EVERYONE_PERMISSIONS } from './permissions.js';
 
 export type ChannelType = 'text' | 'voice';
 
-export interface TemplateChannel {
+interface TemplateChannel {
   name: string;
   type: ChannelType;
 }
 
-export interface TemplateCategory {
+interface TemplateCategory {
   name: string;
   channels: TemplateChannel[];
 }

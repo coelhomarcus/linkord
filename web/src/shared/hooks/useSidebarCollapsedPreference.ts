@@ -1,10 +1,10 @@
 
-const KEY = 'ss-sidebar-collapsed';
+import { LOCAL_STORAGE_KEYS, localStorageStore } from '@/shared/lib/localStorage';
 
 export function loadSidebarCollapsed(): boolean {
-  return localStorage.getItem(KEY) === '1';
+  return localStorageStore.get(LOCAL_STORAGE_KEYS.sidebarCollapsed) === '1';
 }
 
 export function saveSidebarCollapsed(value: boolean): void {
-  localStorage.setItem(KEY, value ? '1' : '0');
+  localStorageStore.set(LOCAL_STORAGE_KEYS.sidebarCollapsed, value ? '1' : '0');
 }

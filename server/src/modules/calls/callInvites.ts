@@ -64,7 +64,7 @@ function cardMessagePayload(message: Message, inviter: User, card: CallInviteCar
   };
 }
 
-export async function sendCallInvite(inviterId: string, channelId: string, inviteeId: string): Promise<{ code: 'sent' } | { code: CallInviteRefusal }> {
+async function sendCallInvite(inviterId: string, channelId: string, inviteeId: string): Promise<{ code: 'sent' } | { code: CallInviteRefusal }> {
   const [channel] = await db.select({ type: conversations.type, serverId: conversations.serverId }).from(conversations).where(eq(conversations.id, channelId)).limit(1);
   const canConnect = async (userId: string) => !!channel?.serverId && hasPermission(await channelPermissions(channel.serverId, channelId, userId), PERMISSIONS.CONNECT);
   const inviterCanConnect = await canConnect(inviterId);

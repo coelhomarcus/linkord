@@ -1,6 +1,6 @@
 import type { PublicUser } from '@/shared/types/protocol';
 
-export const MENTION_RE = /@([A-Za-z0-9_.-]{1,20})/g;
+const MENTION_RE = /@([A-Za-z0-9_.-]{1,20})/g;
 
 export function buildMentionLookup(allUsers: Map<string, PublicUser>): Map<string, PublicUser> {
   const lookup = new Map<string, PublicUser>();

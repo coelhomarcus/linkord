@@ -1,10 +1,10 @@
 
-const KEY = 'ss-hide-audio-only-tiles';
+import { LOCAL_STORAGE_KEYS, localStorageStore } from '@/shared/lib/localStorage';
 
 export function loadHideAudioOnlyTiles(): boolean {
-  return localStorage.getItem(KEY) === '1';
+  return localStorageStore.get(LOCAL_STORAGE_KEYS.hideAudioOnlyTiles) === '1';
 }
 
 export function saveHideAudioOnlyTiles(value: boolean): void {
-  localStorage.setItem(KEY, value ? '1' : '0');
+  localStorageStore.set(LOCAL_STORAGE_KEYS.hideAudioOnlyTiles, value ? '1' : '0');
 }

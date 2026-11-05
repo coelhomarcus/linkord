@@ -4,14 +4,15 @@ import { rightPanelsVisible } from '@/app/rightPanels';
 const base = { detailsOpen: true, mediaOpen: true, onChatPage: true, stageShown: false, conversationType: 'text' as const };
 
 describe('rightPanelsVisible', () => {
-  it('opens the member list and media over a text channel', () => {
-    expect(rightPanelsVisible(base)).toEqual({ details: true, media: true });
+  it('temporarily hides the member list behind media in a text channel', () => {
+    expect(rightPanelsVisible(base)).toEqual({ details: false, media: true });
+    expect(rightPanelsVisible({ ...base, mediaOpen: false })).toEqual({ details: true, media: false });
   });
 
   it('a call that already ended does not keep them shut: only the stage on screen does', () => {
     // the regression: after leaving a call the last picked view stayed 'call',
     // and the toggle did nothing until another conversation was opened
-    expect(rightPanelsVisible({ ...base, stageShown: false })).toEqual({ details: true, media: true });
+    expect(rightPanelsVisible({ ...base, stageShown: false })).toEqual({ details: false, media: true });
     expect(rightPanelsVisible({ ...base, stageShown: true })).toEqual({ details: false, media: false });
   });
 

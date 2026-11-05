@@ -1,4 +1,3 @@
-import { CheckIcon } from '@phosphor-icons/react';
 import { ContextMenu as ContextMenuPrimitive } from "@base-ui/react/context-menu"
 import { cn } from "@/shared/lib/utils"
 
@@ -56,35 +55,6 @@ function ContextMenuItem({
   )
 }
 
-function ContextMenuCheckboxItem({
-  className,
-  children,
-  checked,
-  ...props
-}: ContextMenuPrimitive.CheckboxItem.Props) {
-  return (
-    <ContextMenuPrimitive.CheckboxItem
-      data-slot="context-menu-checkbox-item"
-      className={cn(
-        "relative flex cursor-default items-center gap-1.5 min-h-8 rounded-[6px] py-1.5 pr-8 pl-2 text-label font-medium outline-hidden select-none focus:bg-accent focus:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-[18px]",
-        className
-      )}
-      checked={checked}
-      {...props}
-    >
-      <span
-        className="pointer-events-none absolute right-2 flex items-center justify-center"
-        data-slot="context-menu-checkbox-item-indicator"
-      >
-        <ContextMenuPrimitive.CheckboxItemIndicator>
-          <CheckIcon size={16} />
-        </ContextMenuPrimitive.CheckboxItemIndicator>
-      </span>
-      {children}
-    </ContextMenuPrimitive.CheckboxItem>
-  )
-}
-
 function ContextMenuSeparator({
   className,
   ...props
@@ -103,6 +73,5 @@ export {
   ContextMenuTrigger,
   ContextMenuContent,
   ContextMenuItem,
-  ContextMenuCheckboxItem,
   ContextMenuSeparator,
 }

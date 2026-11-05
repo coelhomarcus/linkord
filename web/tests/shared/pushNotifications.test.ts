@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { disablePush, enablePush, restorePush, type PushSetup } from '@/shared/pushNotifications';
+import { LOCAL_STORAGE_KEYS, localStorageStore } from '@/shared/lib/localStorage';
 
 const apiFetch = vi.hoisted(() => vi.fn());
 vi.mock('@/shared/api/api', () => ({ apiFetch }));
@@ -99,7 +100,7 @@ describe('Web Push activation', () => {
     await Promise.all([restoring, disabling]);
     expect(apiFetch).toHaveBeenCalledWith('/api/notifications/push', expect.objectContaining({ method: 'DELETE' }));
     expect(subscription.unsubscribe).toHaveBeenCalledOnce();
-    expect(localStorage.getItem('ss-notifications-enabled')).toBe('0');
+    expect(localStorageStore.get(LOCAL_STORAGE_KEYS.notificationsEnabled)).toBe('0');
   });
 
   it('renews a stale VAPID subscription when the app reopens', async () => {

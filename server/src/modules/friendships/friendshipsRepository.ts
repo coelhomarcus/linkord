@@ -76,7 +76,7 @@ export async function listMutualFriends(a: string, b: string, limit: number): Pr
   return { items: rows.map(toSocialUser), total: ids.length };
 }
 
-export interface SocialEntry { user: SocialUser; at: string }
+interface SocialEntry { user: SocialUser; at: string }
 export interface SocialPage { items: SocialEntry[]; nextCursor: string | null }
 export type Relation = 'self' | 'none' | 'friends' | 'outgoing' | 'incoming' | 'blocked';
 

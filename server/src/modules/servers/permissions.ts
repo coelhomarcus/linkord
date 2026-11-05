@@ -28,8 +28,6 @@ export const PERMISSIONS = {
   MANAGE_EXPRESSIONS: 1 << 18,
 } as const;
 
-export type PermissionName = keyof typeof PERMISSIONS;
-
 export const ALL_PERMISSIONS = Object.values(PERMISSIONS).reduce((all, bit) => all | bit, 0);
 
 /** What a brand-new server's @everyone can do — also what the migration

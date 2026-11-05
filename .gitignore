@@ -37,3 +37,4 @@ PLAN.md
 docs/*
 # the webhook integration guide is the one doc meant for whoever integrates
 !docs/WEBHOOK.md
+!docs/MIGRATING_GROUPS_TO_SERVERS.md

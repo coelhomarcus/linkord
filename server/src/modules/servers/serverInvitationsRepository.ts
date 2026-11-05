@@ -37,7 +37,7 @@ const log = logger.child({ component: 'invitations' });
 // Accept reads the invitation UNLOCKED first, only to learn the pair and the
 // server.
 
-export type InviteOutcome = 'sent' | 'already_pending' | 'already_member' | 'not_friends' | 'server_full' | 'banned' | 'unavailable';
+type InviteOutcome = 'sent' | 'already_pending' | 'already_member' | 'not_friends' | 'server_full' | 'banned' | 'unavailable';
 export interface InviteResult { userId: string; outcome: InviteOutcome; invitationId?: string }
 
 // distributes over the union so `code` stays a real discriminant
@@ -77,7 +77,7 @@ function cardMessagePayload(message: Message, inviter: User, card: InvitationCar
 /** Pushes the current state of these invitations to whoever is looking at
  * their card — the two members of the DM the card lives in. Never throws: it
  * runs after the change committed. */
-export async function broadcastInvitationUpdates(invitationIds: string[]): Promise<void> {
+async function broadcastInvitationUpdates(invitationIds: string[]): Promise<void> {
   if (!invitationIds.length) return;
   try {
     const [cards, cardMessages] = await Promise.all([

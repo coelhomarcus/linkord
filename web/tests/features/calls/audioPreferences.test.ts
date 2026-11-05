@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { getAudioPreferences, setAudioPreference, useAudioPreferences } from '@/features/calls/audioPreferences';
+import { LOCAL_STORAGE_KEYS, localStorageStore } from '@/shared/lib/localStorage';
 
 afterEach(() => localStorage.clear());
 
@@ -10,8 +11,8 @@ describe('audioPreferences', () => {
   });
 
   it('clamps a stored volume out of range and ignores garbage', () => {
-    localStorage.setItem('ss-input-volume', '3');
-    localStorage.setItem('ss-output-volume', 'loud');
+    localStorageStore.set(LOCAL_STORAGE_KEYS.inputVolume, '3');
+    localStorageStore.set(LOCAL_STORAGE_KEYS.outputVolume, 'loud');
     expect(getAudioPreferences()).toMatchObject({ inputVolume: 1, outputVolume: 1 });
   });
 

@@ -18,7 +18,7 @@ export const transferServer = (serverId: string, userId: string) => apiFetch(`/a
 export const saveServerOrder = (serverIds: string[]) => apiFetch('/api/servers/order', json('PUT', { serverIds }));
 
 export interface ServerMemberEntry { user: SocialUser; roleIds: string[]; isOwner: boolean; at: string }
-export function fetchServerMembers(serverId: string, cursor: string | null = null): Promise<{ items: ServerMemberEntry[]; nextCursor: string | null }> {
+function fetchServerMembers(serverId: string, cursor: string | null = null): Promise<{ items: ServerMemberEntry[]; nextCursor: string | null }> {
   return apiFetch(`/api/servers/${id(serverId)}/members${cursor ? `?cursor=${id(cursor)}` : ''}`);
 }
 /** Every page, for the member list (servers are capped at a few hundred). */
@@ -45,10 +45,6 @@ export const createChannel = (serverId: string, input: { name: string; type: 'te
 export const updateChannel = (channelId: string, patch: { name?: string; topic?: string; permissionsSynced?: true }) => apiFetch(`/api/channels/${id(channelId)}`, json('PATCH', patch));
 export const deleteChannel = (channelId: string) => apiFetch(`/api/channels/${id(channelId)}`, json('DELETE'));
 export const createCategory = (serverId: string, name: string) => apiFetch<{ categoryId: string }>(`/api/servers/${id(serverId)}/categories`, json('POST', { name }));
-export const updateCategory = (categoryId: string, name: string) => apiFetch(`/api/categories/${id(categoryId)}`, json('PATCH', { name }));
-export const deleteCategory = (categoryId: string) => apiFetch(`/api/categories/${id(categoryId)}`, json('DELETE'));
-export const saveLayout = (serverId: string, layout: { categories: string[]; channels: { id: string; categoryId: string | null }[] }) =>
-  apiFetch(`/api/servers/${id(serverId)}/layout`, json('PUT', layout));
 
 export interface Overwrite { roleId: string | null; userId: string | null; allow: number; deny: number }
 export function fetchOverwrites(serverId: string, targetId: string): Promise<{ items: Overwrite[] }> {

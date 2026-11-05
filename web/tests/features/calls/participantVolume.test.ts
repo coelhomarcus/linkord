@@ -1,11 +1,12 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { getParticipantVolume, setParticipantVolume } from '@/features/calls/participantVolume';
+import { LOCAL_STORAGE_KEYS, localStorageStore } from '@/shared/lib/localStorage';
 
 afterEach(() => localStorage.clear());
 
 describe('participantVolume', () => {
   it('plays at the participant volume times the output volume', () => {
-    localStorage.setItem('ss-output-volume', '0.5');
+    localStorageStore.set(LOCAL_STORAGE_KEYS.outputVolume, '0.5');
     const el = document.createElement('audio');
     setParticipantVolume(el, 0.8);
     expect(el.volume).toBeCloseTo(0.4);
