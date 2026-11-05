@@ -21,9 +21,9 @@ export function NewDirectDialog({ open, onOpenChange, onOpened }: { open: boolea
 
   return (
     <Dialog open={open} onOpenChange={(next) => (next ? onOpenChange(true) : close())}>
-      <DialogContent className="max-w-md text-text-primary">
+      <DialogContent className="max-h-[calc(100dvh-2rem)] grid-rows-[auto_minmax(0,1fr)_auto] gap-4 overflow-hidden text-text-primary">
         <DialogHeader><DialogTitle>{t('newDirect.title')}</DialogTitle></DialogHeader>
-        <FriendPicker selected={selected} onToggle={(user) => setSelected(new Map([[user.id, user]]))} maxHeightClass="max-h-72" />
+        <FriendPicker selected={selected} onToggle={(user) => setSelected(new Map([[user.id, user]]))} maxHeightClass="max-h-72 flex-1" />
         <Button type="button" disabled={!first} onClick={() => {
           if (!first) return;
           openDirect(first);

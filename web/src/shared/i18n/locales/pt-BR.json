@@ -94,6 +94,7 @@
   "errors": {
     "unexpected": "Erro inesperado.",
     "networkUpload": "Falha de rede ao enviar o arquivo.",
+    "uploadTimeout": "O servidor demorou para responder ao upload. Tente novamente.",
     "codes": {
       "invalid_credentials": "Usuário ou senha inválidos.",
       "account_unavailable": "Esta conta está indisponível. Fale com a administração.",

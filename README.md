@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="#-features"><b>Features</b></a> •
-  <a href="#-getting-started"><b>Getting started</b></a> •
+  <a href="docs/DEVELOPMENT.md"><b>Development</b></a> •
   <a href="https://github.com/coelhomarcus/Linkord/issues"><b>Issues</b></a>
 </p>
 
@@ -46,34 +46,11 @@ Linkord is a self-hosted place to chat and call with friends. Talk in direct mes
 - **Your preferences**
   Set up your profile, account security, audio and video devices, notifications, privacy, and interface preferences.
 
-## 🚀 Getting started
+## 🚀 Development
 
-### Local development
+For local development, the frontend and backend run on the host and only PostgreSQL runs in Docker. Follow the [local development guide](docs/DEVELOPMENT.md) for setup and run instructions.
 
-You need [Node.js 22+](https://nodejs.org/) and Docker for the local PostgreSQL database.
-
-```bash
-docker compose -f docker-compose.dev.yml up -d
-npm install
-cp .env.example .env
-```
-
-The example environment file connects to the local database created above. Fill in `LIVEKIT_URL`, `LIVEKIT_API_KEY`, and `LIVEKIT_API_SECRET` to use voice and video. Then run:
-
-```bash
-npm run db:migrate
-npm run dev
-```
-
-The web app is available at `http://localhost:5173`; the API runs at `http://localhost:3000`.
-
-Registration is closed by default. Set `REGISTRATION_CODE` in `.env` to allow sign-ups. After creating your account, grant it admin access:
-
-```bash
-npm run admin:grant -- <your-username>
-```
-
-### Docker deployment
+## 🐳 Docker deployment
 
 The `Dockerfile` builds the web app and API into one image. Configure `.env` with your production database and secrets, then start the app:
 
@@ -87,7 +64,7 @@ The container applies pending migrations on startup by default. Set `MIGRATE_ON_
 
 See [`.env.example`](.env.example) for all server, database, session, LiveKit, push, upload, and rate limit settings. In production, set `APP_URL` to the public HTTPS origin and configure a stable Web Push VAPID key pair. For iPhone and iPad, users must add Linkord to the Home Screen before enabling Push notifications.
 
-## 🧰 Development
+## 🧰 Command reference
 
 | Command | What it does |
 | --- | --- |

@@ -6,12 +6,14 @@ export interface UploadWithProgressOptions {
   file: Blob;
   headers?: Record<string, string>;
   onProgress?: (fraction: number) => void;
+  timeoutMs?: number;
 }
 
-export function uploadWithProgress<T = unknown>({ url, file, headers, onProgress }: UploadWithProgressOptions): Promise<T> {
+export function uploadWithProgress<T = unknown>({ url, file, headers, onProgress, timeoutMs = 120_000 }: UploadWithProgressOptions): Promise<T> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open('POST', url);
+    xhr.timeout = timeoutMs;
     xhr.withCredentials = true;
     for (const [key, value] of Object.entries(headers ?? {})) xhr.setRequestHeader(key, value);
     xhr.upload.onprogress = (e) => {
@@ -28,6 +30,7 @@ export function uploadWithProgress<T = unknown>({ url, file, headers, onProgress
       reject(new ApiError(xhr.status, err.code || 'unknown_error', err.message || i18n.t('errors.unexpected')));
     };
     xhr.onerror = () => reject(new ApiError(0, 'network_error', i18n.t('errors.networkUpload')));
+    xhr.ontimeout = () => reject(new ApiError(0, 'upload_timeout', i18n.t('errors.uploadTimeout')));
     xhr.send(file);
   });
 }

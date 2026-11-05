@@ -56,7 +56,7 @@ export function FriendRequestList({ direction, search = '', headingId, onOpenPro
 
   let body;
   if (phase === 'skeleton') {
-    body = <SocialRowsSkeleton label={t('requests.loading')} rows={2} />;
+    body = <SocialRowsSkeleton label={t('requests.loading')} rows={2} kind={direction === 'incoming' ? 'incoming-request' : 'outgoing-request'} />;
   } else if (list.status === 'error') {
     body = (
       <div className="flex flex-col items-center gap-3 py-8 text-center">

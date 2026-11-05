@@ -94,6 +94,7 @@
   "errors": {
     "unexpected": "Unexpected error.",
     "networkUpload": "Network error while uploading the file.",
+    "uploadTimeout": "The server took too long to respond to the upload. Try again.",
     "codes": {
       "invalid_credentials": "Invalid username or password.",
       "account_unavailable": "This account is unavailable. Contact an administrator.",

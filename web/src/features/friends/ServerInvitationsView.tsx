@@ -52,7 +52,7 @@ export function ServerInvitationsView({ query, onQueryChange, onOpenProfile }: {
 
   let body: ReactNode;
   if (phase === 'skeleton') {
-    body = <SocialRowsSkeleton label={t('invitations.loading')} rows={2} />;
+    body = <SocialRowsSkeleton label={t('invitations.loading')} rows={2} kind="invitation" />;
   } else if (list.status === 'error') {
     body = (
       <div className="flex flex-col items-center gap-3 py-8 text-center">

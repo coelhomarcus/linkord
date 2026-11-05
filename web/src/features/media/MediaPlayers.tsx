@@ -409,7 +409,7 @@ function VideoPlayerImpl({ src, poster, title, className, onError }: VideoPlayer
         <DialogPrimitive.Portal keepMounted>
           <DialogPrimitive.Backdrop className="fixed inset-0 z-50 bg-black/85 duration-150 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0" />
           <DialogPrimitive.Popup
-            className="fixed inset-0 z-50 flex cursor-zoom-out items-center justify-center p-4 outline-none duration-150 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 sm:p-8"
+            className="fixed inset-0 z-50 flex cursor-zoom-out items-center justify-center pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] sm:pl-[max(2rem,env(safe-area-inset-left))] sm:pr-[max(2rem,env(safe-area-inset-right))] sm:pt-[max(2rem,env(safe-area-inset-top))] sm:pb-[max(2rem,env(safe-area-inset-bottom))] outline-none duration-150 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0"
             onClick={() => setLightboxOpen(false)}
           >
             <DialogPrimitive.Title className="sr-only">{title || t('fileTypes.video')}</DialogPrimitive.Title>
@@ -427,7 +427,7 @@ function VideoPlayerImpl({ src, poster, title, className, onError }: VideoPlayer
                 style={boxStyleFor('fullscreen')}
               />
             </div>
-            <DialogPrimitive.Close render={<CloseButton variant="surface" size="md" className="fixed right-4 top-4 z-50" />} />
+            <DialogPrimitive.Close render={<CloseButton variant="surface" size="md" className="fixed right-[max(1rem,env(safe-area-inset-right))] top-[max(1rem,env(safe-area-inset-top))] z-50" />} />
           </DialogPrimitive.Popup>
         </DialogPrimitive.Portal>
       </DialogPrimitive.Root>
