@@ -83,7 +83,7 @@ export function CallInviteDialog({ open, onOpenChange, conversationId }: CallInv
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent container={fullscreenElement ?? undefined} className="max-w-md gap-0 p-0 text-text-primary sm:max-w-md">
+      <DialogContent container={fullscreenElement ?? undefined} className="max-h-[calc(100dvh-2rem)] max-w-md grid-rows-[auto_auto_auto_minmax(0,1fr)] gap-0 overflow-hidden p-0 text-text-primary sm:max-w-md">
         <DialogHeader className="px-5 pb-3 pt-5">
           <DialogTitle className="pr-8 text-title">{t('invite.title', { channel: conversation?.title ?? '' })}</DialogTitle>
           <DialogDescription className="text-label text-text-muted">{t('invite.description')}</DialogDescription>
@@ -101,7 +101,7 @@ export function CallInviteDialog({ open, onOpenChange, conversationId }: CallInv
           </div>
         </div>
         <p className="px-5 pb-1 text-caption font-semibold uppercase tracking-wide text-text-muted">{t('invite.members')}</p>
-        <ul className="max-h-80 overflow-y-auto px-3 pb-4">
+        <ul className="max-h-80 min-h-0 overflow-y-auto px-3 pb-4">
           {candidates.length === 0 ? (
             <li className="px-2 py-8 text-center text-label text-text-muted">
               {needle ? t('invite.noMatch') : t('invite.everyoneHere')}
