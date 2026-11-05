@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react';
+import { LOCAL_STORAGE_KEYS, localStorageStore, type LocalStorageKey } from '@/shared/lib/localStorage';
 
 export type InputProfile = 'voice-isolation' | 'studio';
 
@@ -10,14 +11,14 @@ export interface AudioPreferences {
   outputVolume: number;
 }
 
-const STORAGE_KEYS: Record<keyof AudioPreferences, string> = {
-  inputVolume: 'ss-input-volume',
-  inputProfile: 'ss-input-profile',
-  outputVolume: 'ss-output-volume',
+const STORAGE_KEYS: Record<keyof AudioPreferences, LocalStorageKey> = {
+  inputVolume: LOCAL_STORAGE_KEYS.inputVolume,
+  inputProfile: LOCAL_STORAGE_KEYS.inputProfile,
+  outputVolume: LOCAL_STORAGE_KEYS.outputVolume,
 };
 
-function loadUnit(key: string): number {
-  const raw = localStorage.getItem(key);
+function loadUnit(key: LocalStorageKey): number {
+  const raw = localStorageStore.get(key);
   if (raw == null) return 1;
   const n = Number(raw);
   return Number.isFinite(n) ? Math.max(0, Math.min(1, n)) : 1;
@@ -26,7 +27,7 @@ function loadUnit(key: string): number {
 function read(): AudioPreferences {
   return {
     inputVolume: loadUnit(STORAGE_KEYS.inputVolume),
-    inputProfile: localStorage.getItem(STORAGE_KEYS.inputProfile) === 'studio' ? 'studio' : 'voice-isolation',
+    inputProfile: localStorageStore.get(STORAGE_KEYS.inputProfile) === 'studio' ? 'studio' : 'voice-isolation',
     outputVolume: loadUnit(STORAGE_KEYS.outputVolume),
   };
 }
@@ -45,7 +46,7 @@ export function getAudioPreferences(): AudioPreferences {
 }
 
 export function setAudioPreference<K extends keyof AudioPreferences>(key: K, value: AudioPreferences[K]): void {
-  localStorage.setItem(STORAGE_KEYS[key], String(value));
+  localStorageStore.set(STORAGE_KEYS[key], String(value));
   for (const listener of listeners) listener();
 }
 

@@ -19,8 +19,6 @@ import type { Tx } from '../users/userPairLock.js';
 // — modules/servers/serverAccess.ts). Everything here answers for both, so
 // messages, uploads, calls and search never need to know which one it is.
 
-export type ConversationType = 'direct' | 'text' | 'voice';
-
 export function isServerChannel(conversation: { serverId: string | null }): conversation is { serverId: string } {
   return conversation.serverId !== null;
 }
@@ -35,11 +33,6 @@ export interface ConversationSummary {
   createdAt: number;
   updatedAt: number;
   pinnedAt: number | null;
-}
-
-export function sanitizeConversationTitle(name: unknown): string | null {
-  const s = String(name == null ? '' : name).replace(/[\r\n\t]+/g, ' ').trim().slice(0, 80);
-  return s || null;
 }
 
 export function rowToSummary(row: Conversation, memberIds: string[], pinnedAt: Date | null): ConversationSummary {
@@ -188,7 +181,7 @@ async function directMemberRows(conversationId: string) {
 /** Sends the CURRENT state of one DM to both members, each with their OWN
  * `pinnedAt` (a per-member column — a shared payload would reset the other
  * side's pin on a client that replaces by id). */
-export async function sendConversationUpdateToMembers(t: 'conversation-created' | 'conversation-updated', row: Conversation): Promise<void> {
+async function sendConversationUpdateToMembers(t: 'conversation-created' | 'conversation-updated', row: Conversation): Promise<void> {
   if (isServerChannel(row)) return;
   const memberRows = await directMemberRows(row.id);
   const memberIds = memberRows.map((r) => r.userId);

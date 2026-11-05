@@ -123,5 +123,5 @@ export type AppSocket = Socket & {
  * purpose: each concrete handler uses its real payload type, and `any` on
  * the target parameter lets TypeScript accept that without bypassing the
  * type check INSIDE each handler. */
-export type SocketHandler<T = unknown> = (socket: AppSocket, msg: T) => unknown | Promise<unknown>;
+type SocketHandler<T = unknown> = (socket: AppSocket, msg: T) => unknown | Promise<unknown>;
 export type HandlerTable = Record<string, SocketHandler<any>>;

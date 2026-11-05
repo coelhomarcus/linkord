@@ -4,7 +4,7 @@ import magickWasmUrl from '@imagemagick/magick-wasm/magick.wasm?url';
 import type { CropRect } from '@/state/RoomContext';
 import { i18n } from '@/shared/i18n/init';
 
-export const MAX_PROFILE_IMAGE_DIMENSION = 4096;
+const MAX_PROFILE_IMAGE_DIMENSION = 4096;
 
 export class ProfileImageCropError extends Error {
   constructor(message: string) {

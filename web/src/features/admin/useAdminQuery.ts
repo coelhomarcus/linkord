@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router';
 
-export interface QueryField {
+interface QueryField {
   default: string;
   /** a closed set of values; anything else in the URL falls back to the default */
   allowed?: readonly string[];

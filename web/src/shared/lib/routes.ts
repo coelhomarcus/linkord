@@ -3,7 +3,7 @@
 // router) and features (sidebar links, profile actions) need the same paths,
 // and features must never import app/.
 
-export const SETTINGS_TABS = ['profile', 'account', 'av', 'notifications', 'prefs', 'privacy', 'moderation'] as const;
+const SETTINGS_TABS = ['profile', 'account', 'av', 'notifications', 'prefs', 'privacy', 'moderation'] as const;
 export type SettingsTab = (typeof SETTINGS_TABS)[number];
 
 export function isSettingsTab(value: string | undefined): value is SettingsTab {
@@ -12,7 +12,7 @@ export function isSettingsTab(value: string | undefined): value is SettingsTab {
 
 /** The views of the unified Friends page. The view lives in the URL
  * (`?tab=`), so history, links and notifications all mean the same thing. */
-export const FRIENDS_VIEWS = ['all', 'online', 'pending', 'invitations', 'add'] as const;
+const FRIENDS_VIEWS = ['all', 'online', 'pending', 'invitations', 'add'] as const;
 export type FriendsView = (typeof FRIENDS_VIEWS)[number];
 export type FriendsSection = 'received' | 'sent';
 
@@ -23,7 +23,7 @@ export function parseFriendsView(raw: string | null | undefined): FriendsView {
 
 // Discord's URL shapes: `@me` is home (friends and DMs), anything else in
 // that slot is a server id.
-export const HOME = '@me';
+const HOME = '@me';
 
 export const ROUTES = {
   /** home: the DM list (and, beside it on a wide screen, the friends page) */

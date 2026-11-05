@@ -29,7 +29,7 @@ const FORMAT_MIME: Record<string, string> = {
 // actual person picking a photo (including a few crop retries).
 const AVATAR_UPLOAD_LIMIT = { windowMs: 60_000, max: 5 };
 
-export class ProfileImageProcessingError extends Error {
+class ProfileImageProcessingError extends Error {
   readonly code: 'crop_failed';
 
   constructor(code: 'crop_failed', message: string) {

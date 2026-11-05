@@ -8,6 +8,7 @@ import { renderWithRoom } from '@tests/fixtures/roomContextFixture';
 import { initialRoomState } from '@/state/roomReducer';
 import { CameraQuickMenu, MicQuickMenu, ScreenShareQuickMenu, SpeakerQuickMenu } from '@/features/calls/CallDeviceMenus';
 import { getAudioPreferences } from '@/features/calls/audioPreferences';
+import { LOCAL_STORAGE_KEYS, localStorageStore } from '@/shared/lib/localStorage';
 
 const navigate = vi.fn();
 vi.mock('react-router', () => ({ useNavigate: () => navigate }));
@@ -157,7 +158,7 @@ describe('SpeakerQuickMenu', () => {
 
   it('shows the saved output volume', async () => {
     const user = userEvent.setup();
-    localStorage.setItem('ss-output-volume', '0.4');
+    localStorageStore.set(LOCAL_STORAGE_KEYS.outputVolume, '0.4');
     vi.spyOn(Room, 'getLocalDevices').mockResolvedValue([{ deviceId: 's1', label: 'Alto-falantes', kind: 'audiooutput' } as MediaDeviceInfo]);
     renderWithRoom(<SpeakerQuickMenu />, { livekitRoom: fakeLivekitRoom('s1') });
 

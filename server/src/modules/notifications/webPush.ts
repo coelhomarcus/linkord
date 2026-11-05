@@ -71,7 +71,7 @@ export function retryAfterDelayMs(headers: unknown, now = Date.now()): number {
 }
 
 /** Where a tap on the notification takes the reader. */
-export function conversationPath(conversation: Pick<Conversation, 'id' | 'serverId'>): string {
+function conversationPath(conversation: Pick<Conversation, 'id' | 'serverId'>): string {
   return conversation.serverId
     ? `/app/channels/${encodeURIComponent(conversation.serverId)}/${encodeURIComponent(conversation.id)}`
     : `/app/channels/@me/${encodeURIComponent(conversation.id)}`;

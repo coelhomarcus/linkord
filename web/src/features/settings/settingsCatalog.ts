@@ -5,10 +5,10 @@ import type { IconComponent } from '@/shared/ui/icons';
 import type { SettingsTab } from '@/shared/lib/routes';
 
 /** An i18n key of the `settings` namespace. */
-export type SettingsKey = ParseKeys<'settings'>;
+type SettingsKey = ParseKeys<'settings'>;
 
 /** A titled block of a category: `id` is the `<SettingsSection id>` it points at. */
-export interface SettingsSectionRef {
+interface SettingsSectionRef {
   id: string;
   labelKey: SettingsKey;
 }

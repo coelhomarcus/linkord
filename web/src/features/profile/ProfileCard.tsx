@@ -14,7 +14,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Button } from '@/shared/ui/primitives/button';
 import { cn } from '@/shared/lib/utils';
 
-export interface ProfileCardData {
+interface ProfileCardData {
   id: string;
   displayName: string;
   username: string;

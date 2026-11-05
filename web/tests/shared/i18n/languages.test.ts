@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { matchLanguage } from '@/shared/i18n/languages';
 import { loadStoredLanguage, resolveInitialLanguage, saveStoredLanguage } from '@/shared/i18n/languagePreference';
+import { LOCAL_STORAGE_KEYS, localStorageStore } from '@/shared/lib/localStorage';
 
 describe('matchLanguage', () => {
   it('matches a supported language exactly, ignoring case', () => {
@@ -36,7 +37,7 @@ describe('resolveInitialLanguage', () => {
   });
 
   it('ignores a stored value that is no longer a supported language', () => {
-    localStorage.setItem('ss-locale', 'xx-XX');
+    localStorageStore.set(LOCAL_STORAGE_KEYS.language, 'xx-XX');
     expect(loadStoredLanguage()).toBeNull();
   });
 });

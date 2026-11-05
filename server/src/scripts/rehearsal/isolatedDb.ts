@@ -4,7 +4,7 @@ import { Pool } from 'pg';
 // The guards are deliberately strict: these tools CREATE and DROP databases, so
 // they must never be pointed at anything that could be a real one.
 
-export const ISOLATED_NAME_RE = /^linkord_(test|rehearsal)_[a-z0-9_]{1,40}$/;
+const ISOLATED_NAME_RE = /^linkord_(test|rehearsal)_[a-z0-9_]{1,40}$/;
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '::1', '[::1]']);
 
 export const isSafeIsolatedName = (name: string): boolean => ISOLATED_NAME_RE.test(name) && !/prod/i.test(name);

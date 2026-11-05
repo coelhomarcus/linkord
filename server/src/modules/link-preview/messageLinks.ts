@@ -107,7 +107,7 @@ function collectInline(nodes: Inline[], out: string[]) {
   }
 }
 
-export const MAX_PREVIEWS = 3;
+const MAX_PREVIEWS = 3;
 
 /** Links worth a preview: outside code, not wrapped in <…>, each address
  * once, at most three. */

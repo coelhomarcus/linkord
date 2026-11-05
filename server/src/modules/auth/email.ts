@@ -2,7 +2,7 @@ import { config } from '../../config/env.js';
 import type { Locale } from '../users/locale.js';
 import { localeText } from '../users/localeText.js';
 
-export class EmailDeliveryError extends Error {
+class EmailDeliveryError extends Error {
   code = 'email_delivery_failed';
   statusCode = 503;
 }

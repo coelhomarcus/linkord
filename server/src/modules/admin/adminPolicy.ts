@@ -54,8 +54,8 @@ export function pickSuccessor(members: { userId: string; joinedAt: Date }[], dep
 }
 
 /** Actions that need a written justification (§7.5). */
-export const REASON_MIN_LENGTH = 3;
-export const REASON_MAX_LENGTH = 500;
+const REASON_MIN_LENGTH = 3;
+const REASON_MAX_LENGTH = 500;
 
 export function normalizeReason(raw: unknown): string | null {
   const reason = String(raw == null ? '' : raw).replace(/\s+/g, ' ').trim();

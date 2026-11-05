@@ -29,7 +29,7 @@ export function exceedsLimit(used: number, max: number, adding = 1): boolean {
 
 type Executor = Tx | typeof db;
 
-export async function countOwnedServers(userId: string, executor: Executor = db): Promise<number> {
+async function countOwnedServers(userId: string, executor: Executor = db): Promise<number> {
   const [row] = await executor.select({ n: sql<number>`count(*)::int` }).from(servers).where(eq(servers.ownerId, userId));
   return row?.n ?? 0;
 }

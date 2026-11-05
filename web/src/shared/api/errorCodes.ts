@@ -48,5 +48,3 @@ export const ERROR_CODES = {
   invalid_action: 'invalid_action',
   action_failed: 'action_failed',
 } as const;
-
-export type KnownErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];

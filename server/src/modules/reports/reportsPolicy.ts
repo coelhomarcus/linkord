@@ -1,8 +1,8 @@
 // Pure rules for reports: what a report may contain and how one moves through
 // its states. No DB here.
 
-export const REPORT_CATEGORIES = ['spam', 'harassment', 'inappropriate', 'impersonation', 'illegal', 'other'] as const;
-export type ReportCategory = (typeof REPORT_CATEGORIES)[number];
+const REPORT_CATEGORIES = ['spam', 'harassment', 'inappropriate', 'impersonation', 'illegal', 'other'] as const;
+type ReportCategory = (typeof REPORT_CATEGORIES)[number];
 export type ReportTargetType = 'user' | 'server' | 'message';
 
 export const MAX_REPORT_DETAILS = 1000;
@@ -36,7 +36,6 @@ export function buildMessageSnapshot(input: { text: string; authorId: string | n
   };
 }
 
-export type ReportStatus = 'open' | 'reviewing' | 'resolved' | 'dismissed';
 export type ReportAction = 'suspend_user' | 'suspend_server' | 'delete_message';
 export type ReportResolution = 'no_action' | 'user_suspended' | 'server_suspended' | 'message_deleted';
 

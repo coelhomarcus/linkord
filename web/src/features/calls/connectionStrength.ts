@@ -14,8 +14,8 @@ export interface ConnectionStrength {
 
 // Round trip to the voice server; voice stays comfortable under the first,
 // talking over each other starts past the second.
-export const PING_GOOD_MS = 100;
-export const PING_FAIR_MS = 250;
+const PING_GOOD_MS = 100;
+const PING_FAIR_MS = 250;
 
 const LABEL_KEYS: Record<ConnectionTone, 'calls:connection.good' | 'calls:connection.fair' | 'calls:connection.poor' | 'calls:connection.unknown'> = {
   good: 'calls:connection.good',

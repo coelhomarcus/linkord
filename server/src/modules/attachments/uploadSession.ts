@@ -100,7 +100,7 @@ export async function assembleChunks(uploadId: string, manifest: UploadManifest,
 // are deliberately kept there for the client to retry. Rebuilt from disk at
 // boot by sweepStaleUploads, since a restart clears this map but not the
 // chunks already written.
-export const pendingUploadBytes = new Map<string, number>();
+const pendingUploadBytes = new Map<string, number>();
 
 // uploadId -> the account that reserved it, so a per-account storage quota can
 // count what that account already has in flight (etapa 12). Always changed

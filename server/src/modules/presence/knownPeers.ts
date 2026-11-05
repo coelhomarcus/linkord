@@ -16,7 +16,7 @@ const log = logger.child({ component: 'presence' });
 // not in realtime/socket.ts, because HTTP handlers (friendships/blocks) need
 // it too and must not import the socket composition root.
 
-export async function computePeerVisibility(userId: string): Promise<{ known: Set<string>; friends: Set<string>; blocked: Set<string> }> {
+async function computePeerVisibility(userId: string): Promise<{ known: Set<string>; friends: Set<string>; blocked: Set<string> }> {
   const [friendIds, memberIds, blockedIds] = await Promise.all([
     listFriendIds(userId),
     listConversationMemberIds(userId),

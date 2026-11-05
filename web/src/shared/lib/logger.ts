@@ -4,7 +4,7 @@
 // error on somebody's screen shows up in the same log as the server's. It never
 // throws and never logs about its own failures.
 
-export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 export type LogFields = Record<string, unknown>;
 
 const ORDER: Record<LogLevel, number> = { debug: 10, info: 20, warn: 30, error: 40 };

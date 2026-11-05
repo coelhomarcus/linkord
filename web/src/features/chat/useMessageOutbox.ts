@@ -6,7 +6,7 @@ import type { ChatMessage, ChatReplyRef, ClientMessage, ServerMessage } from '@/
 import { markArrival } from './arrivals';
 
 /** `uploading`: files still being staged; the message itself waits. */
-export type OutboxState = 'uploading' | 'sending' | 'unknown' | 'failed';
+type OutboxState = 'uploading' | 'sending' | 'unknown' | 'failed';
 
 export interface OutboxAttachment {
   localId: string;

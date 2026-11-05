@@ -9,11 +9,11 @@ import type { Pool } from 'pg';
 
 const at = (iso: string) => new Date(iso);
 
-export const USERS = ['ana', 'bia', 'caio', 'duda', 'eli'] as const;
+const USERS = ['ana', 'bia', 'caio', 'duda', 'eli'] as const;
 
 interface GroupSeed { id: string; createdBy: string | null; members: [user: string, role: string, joinedAt: string][] }
 
-export const GROUPS: GroupSeed[] = [
+const GROUPS: GroupSeed[] = [
   { id: 'g-ok', createdBy: 'ana', members: [['ana', 'owner', '2025-01-01'], ['bia', 'member', '2025-01-02'], ['caio', 'member', '2025-01-03']] },
   { id: 'g-noowner-creator-in', createdBy: 'bia', members: [['bia', 'member', '2025-02-02'], ['caio', 'member', '2025-02-01']] },
   { id: 'g-noowner-creator-gone', createdBy: null, members: [['duda', 'member', '2025-03-05'], ['caio', 'member', '2025-03-01']] },
@@ -24,7 +24,7 @@ export const GROUPS: GroupSeed[] = [
 ];
 
 interface DmSeed { id: string; a: string; b: string | null; ownerOf?: string }
-export const DMS: DmSeed[] = [
+const DMS: DmSeed[] = [
   { id: 'dm-ana-bia', a: 'ana', b: 'bia' },
   { id: 'dm-caio-duda', a: 'caio', b: 'duda', ownerOf: 'caio' },
   { id: 'dm-eli-gone', a: 'eli', b: null },

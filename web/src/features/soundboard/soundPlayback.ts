@@ -1,7 +1,6 @@
 import { loadDevicePreference } from '@/features/settings/useDevicePreference';
+import { LOCAL_STORAGE_KEYS, localStorageStore } from '@/shared/lib/localStorage';
 import { soundFileUrl } from './soundboardApi';
-
-const LOCAL_VOLUME_KEY = 'ss-soundboard-volume';
 
 let context: AudioContext | null = null;
 let appliedSinkId: string | null = null;
@@ -26,16 +25,13 @@ function audioContext(): AudioContext {
 
 /** This listener's own soundboard volume (0..1), on top of each sound's. */
 export function loadSoundboardVolume(): number {
-  try {
-    const v = Number(localStorage.getItem(LOCAL_VOLUME_KEY));
-    return localStorage.getItem(LOCAL_VOLUME_KEY) !== null && Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : 1;
-  } catch {
-    return 1;
-  }
+  const stored = localStorageStore.get(LOCAL_STORAGE_KEYS.soundboardVolume);
+  const v = Number(stored);
+  return stored !== null && Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : 1;
 }
 
 export function saveSoundboardVolume(value: number): void {
-  try { localStorage.setItem(LOCAL_VOLUME_KEY, String(Math.max(0, Math.min(1, value)))); } catch { /* private mode */ }
+  localStorageStore.set(LOCAL_STORAGE_KEYS.soundboardVolume, String(Math.max(0, Math.min(1, value))));
 }
 
 /** Fetched and decoded once per sound; a sound's file never changes (an edit

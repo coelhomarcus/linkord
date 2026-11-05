@@ -1,21 +1,10 @@
 "use client"
 
-import { CaretDownIcon, CaretUpIcon, CheckIcon } from '@phosphor-icons/react';
-import * as React from "react"
+import { CaretDownIcon, CheckIcon } from '@phosphor-icons/react';
 import { Select as SelectPrimitive } from "@base-ui/react/select"
 
 import { cn } from "@/shared/lib/utils"
 const Select = SelectPrimitive.Root
-
-function SelectGroup({ className, ...props }: SelectPrimitive.Group.Props) {
-  return (
-    <SelectPrimitive.Group
-      data-slot="select-group"
-      className={cn("scroll-my-1 p-1", className)}
-      {...props}
-    />
-  )
-}
 
 function SelectValue({ className, ...props }: SelectPrimitive.Value.Props) {
   return (
@@ -88,25 +77,12 @@ function SelectContent({
           )}
           {...props}
         >
-          <SelectScrollUpButton />
+          <SelectPrimitive.ScrollUpArrow />
           <SelectPrimitive.List>{children}</SelectPrimitive.List>
-          <SelectScrollDownButton />
+          <SelectPrimitive.ScrollDownArrow />
         </SelectPrimitive.Popup>
       </SelectPrimitive.Positioner>
     </SelectPrimitive.Portal>
-  )
-}
-
-function SelectLabel({
-  className,
-  ...props
-}: SelectPrimitive.GroupLabel.Props) {
-  return (
-    <SelectPrimitive.GroupLabel
-      data-slot="select-label"
-      className={cn("px-2 py-1 text-caption text-text-muted", className)}
-      {...props}
-    />
   )
 }
 
@@ -138,64 +114,10 @@ function SelectItem({
   )
 }
 
-function SelectSeparator({
-  className,
-  ...props
-}: SelectPrimitive.Separator.Props) {
-  return (
-    <SelectPrimitive.Separator
-      data-slot="select-separator"
-      className={cn("pointer-events-none -mx-1 my-1 h-px bg-border", className)}
-      {...props}
-    />
-  )
-}
-
-function SelectScrollUpButton({
-  className,
-  ...props
-}: React.ComponentProps<typeof SelectPrimitive.ScrollUpArrow>) {
-  return (
-    <SelectPrimitive.ScrollUpArrow
-      data-slot="select-scroll-up-button"
-      className={cn(
-        "top-0 z-10 flex w-full cursor-default items-center justify-center bg-bg-floating py-1 text-text-muted [&_svg:not([class*='size-'])]:size-[18px]",
-        className
-      )}
-      {...props}
-    >
-      <CaretUpIcon size={16} />
-    </SelectPrimitive.ScrollUpArrow>
-  )
-}
-
-function SelectScrollDownButton({
-  className,
-  ...props
-}: React.ComponentProps<typeof SelectPrimitive.ScrollDownArrow>) {
-  return (
-    <SelectPrimitive.ScrollDownArrow
-      data-slot="select-scroll-down-button"
-      className={cn(
-        "bottom-0 z-10 flex w-full cursor-default items-center justify-center bg-bg-floating py-1 text-text-muted [&_svg:not([class*='size-'])]:size-[18px]",
-        className
-      )}
-      {...props}
-    >
-      <CaretDownIcon size={16} />
-    </SelectPrimitive.ScrollDownArrow>
-  )
-}
-
 export {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
-  SelectScrollDownButton,
-  SelectScrollUpButton,
-  SelectSeparator,
   SelectTrigger,
   SelectValue,
 }

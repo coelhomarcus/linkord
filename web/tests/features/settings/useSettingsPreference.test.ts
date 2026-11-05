@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { loadShowStats, saveShowStats, loadNotifyVolume, saveNotifyVolume } from '@/features/settings/useSettingsPreference';
 import { loadShowTileBanners, saveShowTileBanners } from '@/features/settings/useTileBannerPreference';
+import { LOCAL_STORAGE_KEYS, localStorageStore } from '@/shared/lib/localStorage';
 
 beforeEach(() => {
   localStorage.clear();
@@ -34,14 +35,14 @@ describe('loadNotifyVolume / saveNotifyVolume', () => {
   });
 
   it('valor corrompido no localStorage cai no default', () => {
-    localStorage.setItem('ss-notify-volume', 'nao-e-numero');
+    localStorageStore.set(LOCAL_STORAGE_KEYS.notifyVolume, 'nao-e-numero');
     expect(loadNotifyVolume()).toBe(0.65);
   });
 
   it('clampa entre 0 e 1 mesmo se algo escrever um valor fora do range', () => {
-    localStorage.setItem('ss-notify-volume', '5');
+    localStorageStore.set(LOCAL_STORAGE_KEYS.notifyVolume, '5');
     expect(loadNotifyVolume()).toBe(1);
-    localStorage.setItem('ss-notify-volume', '-2');
+    localStorageStore.set(LOCAL_STORAGE_KEYS.notifyVolume, '-2');
     expect(loadNotifyVolume()).toBe(0);
   });
 });

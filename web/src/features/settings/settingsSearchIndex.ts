@@ -12,7 +12,7 @@ export interface SearchEntry {
   adminOnly?: boolean;
 }
 
-export type SearchKey =
+type SearchKey =
   | 'profile' | 'identity' | 'language' | 'email' | 'storage' | 'session' | 'blocked'
   | 'microphone' | 'speaker' | 'camera' | 'system' | 'sounds'
   | 'appAppearance' | 'callAppearance' | 'imageUploads' | 'adminArea';

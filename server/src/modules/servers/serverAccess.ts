@@ -16,7 +16,7 @@ import {
 // purpose: everything that gates a channel imports it, and it imports
 // nothing back but the database.
 
-export interface ChannelShape {
+interface ChannelShape {
   id: string;
   serverId: string;
   type: 'text' | 'voice';
@@ -104,7 +104,7 @@ export function basePermissionsIn(snapshot: ServerSnapshot, userId: string): num
   return computeBasePermissions(member, snapshot.roles);
 }
 
-export function channelOverwrites(snapshot: ServerSnapshot, channel: ChannelShape): OverwriteInput[] {
+function channelOverwrites(snapshot: ServerSnapshot, channel: ChannelShape): OverwriteInput[] {
   const target = channel.permissionsSynced && channel.categoryId ? channel.categoryId : channel.id;
   return snapshot.overwrites.get(target) ?? [];
 }
@@ -114,14 +114,6 @@ export function channelPermissionsIn(snapshot: ServerSnapshot, channelId: string
   const channel = snapshot.channels.find((c) => c.id === channelId);
   if (!member || !channel || snapshot.server.status !== 'active') return 0;
   return computeChannelPermissions(member, snapshot.roles, channelOverwrites(snapshot, channel));
-}
-
-/** The permissions a member has over a category itself — what decides
- * whether they see it (and edit it) in the channel list. */
-export function categoryPermissionsIn(snapshot: ServerSnapshot, categoryId: string, userId: string): number {
-  const member = memberInput(snapshot, userId);
-  if (!member || snapshot.server.status !== 'active') return 0;
-  return computeChannelPermissions(member, snapshot.roles, snapshot.overwrites.get(categoryId) ?? []);
 }
 
 /** The accounts that can currently see a channel — who a message there is

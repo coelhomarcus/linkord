@@ -1,9 +1,9 @@
 
-const CALL_VOLUME_KEY = 'ss-call-volumes';
+import { LOCAL_STORAGE_KEYS, localStorageStore } from '@/shared/lib/localStorage';
 
 function loadAll(): Record<string, number> {
   try {
-    const raw = localStorage.getItem(CALL_VOLUME_KEY);
+    const raw = localStorageStore.get(LOCAL_STORAGE_KEYS.callVolumes);
     return raw ? JSON.parse(raw) : {};
   } catch {
     return {};
@@ -18,5 +18,5 @@ export function loadCallVolume(key: string): number {
 export function saveCallVolume(key: string, value: number): void {
   const all = loadAll();
   all[key] = value;
-  localStorage.setItem(CALL_VOLUME_KEY, JSON.stringify(all));
+  localStorageStore.set(LOCAL_STORAGE_KEYS.callVolumes, JSON.stringify(all));
 }

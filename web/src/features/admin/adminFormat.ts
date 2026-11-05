@@ -59,7 +59,7 @@ export function nextDayStartIso(day: string): string | undefined {
   return parsed ? new Date(parsed.y, parsed.m - 1, parsed.d + 1).toISOString() : undefined;
 }
 
-export const REPORT_TARGET_LABEL = { user: 'Conta', server: 'Servidor', group: 'Grupo', message: 'Mensagem' } as const;
+const REPORT_TARGET_LABEL = { user: 'Conta', server: 'Servidor', group: 'Grupo', message: 'Mensagem' } as const;
 
 export function reportTargetLabel(target: string): string {
   const fallback = REPORT_TARGET_LABEL[target as keyof typeof REPORT_TARGET_LABEL] ?? target;

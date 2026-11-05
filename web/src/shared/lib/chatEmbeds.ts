@@ -1,5 +1,5 @@
 
-export type EmbedKind = 'youtube' | 'twitch-channel' | 'twitch-vod' | 'twitch-clip' | 'video' | 'audio' | 'image' | 'link';
+type EmbedKind = 'youtube' | 'twitch-channel' | 'twitch-vod' | 'twitch-clip' | 'video' | 'audio' | 'image' | 'link';
 
 export interface DetectedEmbed {
   kind: EmbedKind;

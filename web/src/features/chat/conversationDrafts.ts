@@ -74,7 +74,7 @@ export function readDraft(accountId: string, conversationId: string): Conversati
   return getDraft(draftKey(accountId, conversationId));
 }
 
-export function updateDraft(accountId: string, conversationId: string, update: (draft: ConversationDraft) => Partial<ConversationDraft>): void {
+function updateDraft(accountId: string, conversationId: string, update: (draft: ConversationDraft) => Partial<ConversationDraft>): void {
   const key = draftKey(accountId, conversationId);
   const prev = getDraft(key);
   const next = { ...prev, ...update(prev) };

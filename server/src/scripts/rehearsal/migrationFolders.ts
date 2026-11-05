@@ -9,7 +9,6 @@ interface Journal { version: string; dialect: string; entries: JournalEntry[] }
 const readJournal = (): Journal => JSON.parse(fs.readFileSync(path.join(MIGRATIONS_FOLDER, 'meta', '_journal.json'), 'utf8'));
 
 export const journalTags = (): string[] => readJournal().entries.map((e) => e.tag);
-export const lastIdx = (): number => readJournal().entries.length - 1;
 
 /** A copy of the migrations folder holding only entries `fromIdx`..`toIdx` of the
  * real journal (the drizzle runner reads nothing else), optionally with an extra

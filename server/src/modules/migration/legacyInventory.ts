@@ -9,7 +9,7 @@ export interface Queryable {
   query<R = Record<string, unknown>>(text: string, params?: unknown[]): Promise<{ rows: R[] }>;
 }
 
-export interface ConversationRow { id: string; type: string; createdBy: string | null; dmKey: string | null }
+interface ConversationRow { id: string; type: string; createdBy: string | null; dmKey: string | null }
 export interface MemberRow { conversationId: string; userId: string; role: string; joinedAt: Date }
 
 export interface Inventory {
@@ -93,7 +93,7 @@ export function classifyInventory(inv: Inventory): Findings {
   return f;
 }
 
-export type RepairKind = 'normalize_role' | 'demote_extra_owner' | 'demote_direct_owner' | 'assign_owner';
+type RepairKind = 'normalize_role' | 'demote_extra_owner' | 'demote_direct_owner' | 'assign_owner';
 
 export interface RepairAction {
   kind: RepairKind;

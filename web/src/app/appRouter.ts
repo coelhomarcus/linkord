@@ -2,7 +2,7 @@ import { createBrowserRouter, createPath } from 'react-router';
 import type { RouteObject, To } from 'react-router';
 
 /** What the address bar shows while you are anywhere in the app. */
-export const APP_ADDRESS = '/app';
+const APP_ADDRESS = '/app';
 
 /** The address bar's text for a page: its own path for the pages meant to be
  * opened from a link or shared (settings and administration, an invite),

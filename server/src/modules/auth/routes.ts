@@ -374,5 +374,3 @@ export function registerAuthRoutes(fastify: FastifyInstance): void {
   fastify.post('/api/auth/email/change/request', handleEmailChangeRequest);
   fastify.post('/api/auth/email/change/confirm', handleEmailChangeConfirm);
 }
-
-export { ipOfRequest };

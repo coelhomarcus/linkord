@@ -9,7 +9,7 @@ import {
 // and the member's own effective permissions — the client reads bits, it
 // never resolves them (see permissions.ts).
 
-export interface RoleSummary {
+interface RoleSummary {
   id: string;
   name: string;
   color: string;
@@ -20,9 +20,9 @@ export interface RoleSummary {
   isDefault: boolean;
 }
 
-export interface CategorySummary { id: string; name: string; position: number }
+interface CategorySummary { id: string; name: string; position: number }
 
-export interface ChannelSummary {
+interface ChannelSummary {
   id: string;
   serverId: string;
   type: 'text' | 'voice';

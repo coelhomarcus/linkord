@@ -1,0 +1,35 @@
+{
+  "workspaces": {
+    ".": {
+      "entry": [
+        "server/src/index.ts",
+        "server/src/db/migrate.ts",
+        "server/src/scripts/*.ts",
+        "server/tests/**/*.test.ts",
+        "server/tests/**/*.itest.ts"
+      ],
+      "project": [
+        "server/src/**/*.ts",
+        "server/tests/**/*.ts"
+      ]
+    },
+    "web": {
+      "ignoreDependencies": [
+        "@fontsource-variable/figtree",
+        "@twinkleplop/theme-github",
+        "shadcn",
+        "tailwindcss",
+        "tw-animate-css"
+      ],
+      "entry": [
+        "src/main.tsx",
+        "tests/**/*.test.ts",
+        "tests/**/*.test.tsx"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx}",
+        "tests/**/*.{ts,tsx}"
+      ]
+    }
+  }
+}
