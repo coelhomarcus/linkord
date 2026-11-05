@@ -12,6 +12,7 @@
     "build": "npm run build:server && npm run build:web",
     "build:server": "tsc -p server/tsconfig.json",
     "build:web": "npm run build --prefix web",
+    "check:dead-code": "knip",
     "test": "npm run test:server && npm run test:web",
     "test:server": "node --env-file-if-exists=.env.test --import tsx --test \"server/tests/**/*.test.ts\"",
     "test:server:coverage": "node --env-file-if-exists=.env.test --import tsx --experimental-test-coverage --test \"server/tests/**/*.test.ts\"",
@@ -49,6 +50,7 @@
     "@types/web-push": "^3.6.4",
     "concurrently": "^9.2.1",
     "drizzle-kit": "^0.31.10",
+    "knip": "^6.44.1",
     "tsx": "^4.23.13",
     "typescript": "~6.0.2"
   },
