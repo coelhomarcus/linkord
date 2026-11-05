@@ -126,6 +126,9 @@ export interface RoomContextValue {
   servers: ServerSummary[];
   /** Bumped per server when its members change — open member lists refetch on it. */
   serverMemberRevision: Map<string, number>;
+  /** Per-server member role assignments used to color authors in channel messages. */
+  serverMemberRoleIds: Map<string, Map<string, string[]>>;
+  setServerMemberSnapshot: (serverId: string, members: { userId: string; roleIds: string[] }[]) => void;
   /** Optimistic rail reorder; the caller also saves it over HTTP. */
   reorderServers: (serverIds: string[]) => void;
   activeConversationId: string | null;

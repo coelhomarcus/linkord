@@ -74,11 +74,8 @@ export async function findIdentitiesToEvict(
   return [...identities];
 }
 
-/** Removes every connection an account has in one conversation's call. Runs
- * AFTER the database change that revoked their membership and never undoes
- * it: a failure here is logged and retried a few times, not surfaced as a
- * failed removal (docs/plano-rede-social.md §7.4). Fire-and-forget by design;
- * resolves once attempts are exhausted or everything was removed. */
+/** Removes an account's connections after membership is revoked. Failures are logged and retried;
+ * they do not roll back the database change or turn the completed action into an error. */
 export async function evictFromCall(
   userId: string, conversationId: string, knownIdentities: string[],
   api: RoomApi = roomService(), sleep: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms)),

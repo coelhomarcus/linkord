@@ -16,9 +16,10 @@ describe('CloseButton', () => {
     expect(screen.getByRole('button', { name: 'Dispensar aviso' })).toBeInTheDocument();
   });
 
-  it('the overlay variant gets a dark background so it does not vanish over an image', () => {
-    render(<CloseButton variant="overlay" />);
-    expect(screen.getByRole('button', { name: 'Fechar' }).className).toContain('bg-black/60');
-    expect(screen.getByRole('button', { name: 'Fechar' }).className).toContain('text-white');
+  it('the surface variant matches the app control style', () => {
+    render(<CloseButton variant="surface" />);
+    expect(screen.getByRole('button', { name: 'Fechar' }).className).toContain('bg-bg-control');
+    expect(screen.getByRole('button', { name: 'Fechar' }).className).toContain('border-border-control');
+    expect(screen.getByRole('button', { name: 'Fechar' }).className).toContain('rounded-lg');
   });
 });

@@ -56,10 +56,7 @@ export function privateUser(u: User): PrivateUser {
   return { ...publicUser(u), email: u.email, locale: resolveLocale(u.locale) };
 }
 
-/** The minimum needed to render a row in a friends/requests/blocks list —
- * deliberately no banner/bio/links (docs/plano-rede-social.md §5.3: show a
- * minimal result, never a full profile, to someone who isn't authorized to
- * see one yet). */
+/** Keep list results minimal; callers may not be authorized to view the full profile. */
 export interface SocialUser {
   id: string;
   username: string;

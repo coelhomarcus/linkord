@@ -74,12 +74,8 @@ async function canViewAttachment(row: Attachment, userId: string): Promise<boole
   return conversationExistsForUser(msg.conversationId, userId);
 }
 
-/** Avatars/banners are public by design and safe to cache for good. A chat
- * attachment is only readable by current members, so the browser must
- * revalidate on every use: the ETag is the (immutable) file id, and the 304
- * is only ever answered AFTER the membership check — a removed member's
- * cached copy of the URL stops resolving instead of replaying for a year. A
- * copy already downloaded can't be recalled (docs/plano-rede-social.md §11). */
+/** Profile images are public and immutable. Chat attachments must revalidate membership before
+ * returning a cached response, so a removed member cannot reuse an old URL. */
 export function cachePolicyFor(row: Pick<Attachment, 'id' | 'messageId'>, ifNoneMatch: string | undefined): {
   cacheControl: string; etag: string | null; notModified: boolean;
 } {

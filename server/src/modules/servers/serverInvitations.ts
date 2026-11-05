@@ -12,9 +12,7 @@ import { logger } from '../../lib/logger.js';
 
 const log = logger.child({ component: 'invitations' });
 
-// HTTP surface of friend invitations to a server (docs/plano-rede-social.md
-// §8.2): commands answer with an explicit, per-recipient result, lists are
-// cursor-paginated with a server-fixed page size.
+// Invitation commands return per-recipient results; lists use a server-fixed cursor page size.
 
 type IdParams = { id: string };
 type ServerParams = { serverId: string };

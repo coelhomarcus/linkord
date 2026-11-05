@@ -87,24 +87,9 @@ export const authCodes = pgTable('auth_codes', {
   index('auth_codes_email_purpose_idx').on(t.email, t.purpose),
 ]);
 
-/** A messaging conversation: a one-to-one DM (`direct`, with `dmKey` —
- * sorted user ids — guaranteeing one conversation per pair) or a server
- * channel (`text` / `voice`, with `serverId`). Messages, attachments,
- * webhooks, read state and calls all hang off this id, whichever kind it is.
- *
- * Three separate timestamps, deliberately not conflated (see
- * modules/conversations.ts#touchConversation / #recordConversationActivity):
- * `lastMessageAt` moves ONLY when a genuinely NEW message is sent — it's
- * what sorts the sidebar (listForUser) and what makes an otherwise-empty
- * direct conversation start showing / a closed one resurface, so an edit or
- * delete of an OLD message must never touch it (that used to bump a
- * conversation to the top of everyone's sidebar for no new activity).
- * `updatedAt` is the conversation ROW itself changing (rename/avatar via
- * handleGroupUpdate) — unrelated to message activity. `lastActivityAt` is
- * the broad bookkeeping timestamp: any chat activity at all (send, edit,
- * delete) — not read by any sort/visibility rule today, kept for future
- * "last touched" needs (moderation, cleanup) without it silently doubling
- * as the sort key the way `lastMessageAt` used to. */
+/** DMs are unique per sorted member pair; server channels share this table via `serverId`.
+ * Keep the timestamps distinct: `lastMessageAt` controls DM visibility/order, `updatedAt`
+ * tracks row edits, and `lastActivityAt` records broader activity without affecting either. */
 export const conversations = pgTable('conversations', {
   id: text('id').primaryKey(),
   type: varchar('type', { length: 12 }).notNull(), // 'direct' | 'text' | 'voice'
@@ -290,14 +275,8 @@ export const serverBans = pgTable('server_bans', {
   primaryKey({ columns: [t.serverId, t.userId] }),
 ]);
 
-/** A friend relationship between two accounts — one row per canonical pair
- * (`userLowId < userHighId`, a deterministic ordering of the ids so the
- * same pair can never get two rows regardless of who requested). Consent is
- * two-sided: `requestedBy` is whichever side is still waiting on the other
- * while `status = 'pending'`. `version` guards against a stale accept
- * racing a newer request (see modules/friendships in a later etapa) — the
- * column exists now so the DB invariant is there before any handler writes
- * to it. */
+/** One row per canonical account pair. `requestedBy` identifies who is waiting while the
+ * request is pending; `version` prevents stale accepts from racing newer requests. */
 export const friendships = pgTable('friendships', {
   id: text('id').primaryKey(),
   userLowId: text('user_low_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
@@ -372,10 +351,7 @@ export const messages = pgTable('messages', {
   editedAt: timestamp('edited_at', { withTimezone: true }),
   replyTo: jsonb('reply_to'),
   kind: varchar('kind', { length: 16 }).notNull().default('text'), // 'text' | 'server_invite' | 'call_invite'
-  // Points at the invitation this card represents. SET NULL (not cascade):
-  // if the invitation row is gone (e.g. the group got deleted, cascading
-  // down to server_invitations), the card stays in the DM as a tombstone —
-  // "Convite indisponível" — instead of vanishing.
+  // Keep the card as a tombstone if its invitation is deleted.
   serverInvitationId: text('server_invitation_id').references(() => serverInvitations.id, { onDelete: 'set null' }),
   // The voice channel (or DM) whose call a `call_invite` card asks the
   // recipient to join. SET NULL for the same reason as above.
@@ -457,17 +433,8 @@ export const messageSendOperations = pgTable('message_send_operations', {
 
 export type MessageSendOperation = typeof messageSendOperations.$inferSelect;
 
-/** One row per (message, user, emoji) — a user can react to the same
- * message with several DIFFERENT emoji at once, but only once per emoji
- * (that's the toggle in modules/chat.ts#handleChatReact: reacting again
- * with the same emoji removes this exact row). No surrogate id: nothing
- * ever references a single reaction row on its own — it's only ever
- * inserted, deleted, or listed grouped by message/emoji — so the natural
- * key IS the primary key (contrast with attachments.id, which exists
- * because a file has its own on-disk identity). Both FKs cascade: a
- * reaction with no message or no reactor left means nothing, unlike
- * messages.authorId (set null) which preserves history on account
- * deletion — there's no "ghost reaction" worth keeping around. */
+/** The natural key prevents duplicate reactions per user and emoji.
+ * Both foreign keys cascade because reactions have no meaning without their message or reactor. */
 export const messageReactions = pgTable('message_reactions', {
   messageId: integer('message_id').notNull().references(() => messages.id, { onDelete: 'cascade' }),
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
@@ -478,40 +445,14 @@ export const messageReactions = pgTable('message_reactions', {
   index('message_reactions_message_id_idx').on(t.messageId),
 ]);
 
-/** A file on disk (config.UPLOAD_DIR) — either a message attachment or an
- * avatar; both reuse the same table/folder/serving route
- * (attachments.ts). `messageId` NULL is what distinguishes an avatar from
- * a chat attachment (never backfilled later) — chat attachments alone get
- * a PER-USER quota (getUserUsage, joined through the message's author,
- * since an avatar has no such join target), but the instance-wide total
- * (getUsage) counts every row regardless of kind — see that function's own
- * comment for why avatars/banners are included there. `id` is an
- * app-generated uuid reused as the on-disk
- * filename — Postgres doesn't know that, so deleting this row (directly or
- * via CASCADE from messages/conversations) NEVER deletes the file by itself;
- * that's on the code that deletes the row (see
- * deleteForMessage/deleteForConversation/deleteAvatarFile). A generated
- * thumbnail is a THIRD kind of row: `messageId` set to the same message as
- * the attachment it previews (`isThumbnail: true`), not null — see
- * `thumbId`/`isThumbnail` below for why. */
+/** Attachment rows may represent message files, profile images, or generated thumbnails.
+ * Database cascades do not remove disk files; cleanup must go through the attachment helpers.
+ * Thumbnail rows share their parent's message so they follow its cascade and quota accounting. */
 export const attachments = pgTable('attachments', {
   id: text('id').primaryKey(),
   messageId: integer('message_id').references(() => messages.id, { onDelete: 'cascade' }),
-  // Who uploaded this file — only populated for a PROFILE image (messageId
-  // null: avatar/banner/group avatar). A chat attachment already has an
-  // owner via messageId -> messages.authorId, so this stays null there on
-  // purpose rather than duplicating it. What this field is actually FOR:
-  // handleProfile/handleGroupUpdate use it to verify a claimed
-  // `/uploads/<id>` avatar/banner reference was really uploaded by the
-  // account claiming it, instead of trusting the id alone — any account's
-  // own /uploads/<id> is a public, observable string, and without this
-  // nothing stopped a different account from claiming it as their own
-  // avatar; the eventual cleanup of THAT fraudulent reference would then
-  // delete the real owner's still-in-use file (see
-  // attachmentCleanup.ts#deleteAvatarFile's own reference check, the other
-  // half of this same fix). `set null` (not cascade) on user deletion:
-  // losing the attribution isn't a reason to also destroy the file, which
-  // may still be another account's actual current avatar.
+  // Set only for profile images. It prevents another account from claiming a public
+  // `/uploads/<id>` URL and deleting the real owner's file; retain the file if its uploader is deleted.
   uploaderId: text('uploader_id').references(() => users.id, { onDelete: 'set null' }),
   fileName: text('file_name').notNull(),
   mimeType: text('mime_type').notNull(),
@@ -601,14 +542,9 @@ export const serverSounds = pgTable('server_sounds', {
 
 export type ServerSound = typeof serverSounds.$inferSelect;
 
-/** The recipient's inbox/read-state for a social event — scoped for now to
- * the resources that exist this etapa (friend requests, group invitations).
- * Typed FKs, not a generic JSON blob, so referential integrity is real.
- * `dedupeKey` is deterministic per event (e.g.
- * `friend_request:<friendshipId>:<version>`) so a retried outbox write
- * can't create a duplicate notification. "Read" only means seen — it does
- * NOT mean accepted; the friendship/invitation row is the actual source of
- * truth for that. */
+/** Inbox and read state for a social event. Typed foreign keys preserve referential integrity;
+ * deterministic `dedupeKey` values make retried outbox writes idempotent. Reading a notification
+ * does not change the friendship or invitation state. */
 export const notifications = pgTable('notifications', {
   id: text('id').primaryKey(),
   recipientId: text('recipient_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
@@ -632,13 +568,8 @@ export const notifications = pgTable('notifications', {
   `),
 ]);
 
-/** Transactional outbox: the same commit that changes durable state (e.g.
- * accepts a friend request) writes the event to deliver here, instead of
- * emitting directly and risking a commit that succeeds while the socket
- * emit is lost. A worker (introduced in a later etapa) delivers with
- * dedup/retry. `payload` is a minimal reference (ids only) — it must never
- * freeze a permission snapshot; the worker re-validates audience/authorization
- * at delivery time, not at write time. */
+/** Write events in the same transaction as their state change to avoid losing socket notifications
+ * after commit. Payloads contain ids only; the worker revalidates authorization when delivering. */
 export const outboxEvents = pgTable('outbox_events', {
   id: text('id').primaryKey(),
   type: varchar('type', { length: 64 }).notNull(), // e.g. 'friend_request_created', 'group_invitation_created'
@@ -749,10 +680,8 @@ export const reports = pgTable('reports', {
   check('reports_status_check', sql`${t.status} IN ('open','reviewing','resolved','dismissed')`),
 ]);
 
-/** Record of every correction the legacy-data repair made (docs/plano-rede-social.md
- * §12.2 "registrar todas as correções"). The repair script creates this table
- * itself when it runs BEFORE the migrations; this definition keeps drizzle and the
- * migration history in step. */
+/** Audit record for legacy-data repairs. The repair script creates this table before migrations;
+ * this definition keeps Drizzle and the migration history in sync. */
 export const dataRepairs = pgTable('data_repairs', {
   id: text('id').primaryKey(),
   runId: text('run_id').notNull(),

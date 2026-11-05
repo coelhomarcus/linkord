@@ -28,10 +28,7 @@ function ParticipantAudio({ participantId }: { participantId: string }) {
     const screenKey = `${participantId}:screen`;
     const micEl = micRef.current;
     const screenEl = screenRef.current;
-    // Same reasoning as the saved mic/camera device (useMicrophone.ts,
-    // useCamera.ts): a freshly created <audio> element otherwise plays out
-    // whatever the browser's default output is, ignoring the speaker saved
-    // in Settings. setSinkId isn't in every browser (no Firefox support).
+    // Apply the saved output to newly created audio elements when supported.
     const savedOutputId = loadDevicePreference('audiooutput');
     if (savedOutputId) {
       for (const el of [micEl, screenEl]) {
@@ -42,11 +39,8 @@ function ParticipantAudio({ participantId }: { participantId: string }) {
       setParticipantVolume(micEl, userId ? loadCallVolume(userId) : 1);
       audioRegistry.current.set(participantId, { element: micEl });
     }
-    // Only register once there's an actual track, not just because the
-    // (always-mounted) <audio> element exists — a screen share with no
-    // audio must never look "mutable" in the tile menu's volume slider
-    // (see the calls redesign plan §8.3: "não mostrar 'áudio compartilhado'
-    // apenas porque foi solicitado").
+    // Register screen audio only when a track exists so a missing share is not
+    // exposed as a mutable audio control in the tile menu.
     if (screenEl && media.screenAudioTrack) {
       setParticipantVolume(screenEl, userId ? loadCallVolume(`${userId}:screen`) : 1);
       audioRegistry.current.set(screenKey, { element: screenEl });

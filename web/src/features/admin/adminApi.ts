@@ -3,8 +3,7 @@ import { ERROR_CODES } from '@/shared/api/errorCodes';
 import { reportAdminAccessLost, reportAdminSessionEnded } from './adminAccess';
 import { invalidateAdminLists } from './adminListCache';
 
-// Client for /api/admin/* (docs/plano-rede-social.md §9). The server is the
-// authority on every one of these — a non-admin gets 403 whatever the UI shows.
+// The server enforces access; hiding admin routes in the UI is not authorization.
 
 export interface Page<T> { items: T[]; nextCursor: string | null }
 

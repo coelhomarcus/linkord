@@ -22,14 +22,9 @@ function mergeUserFromParticipant(prev: Map<string, PublicUser>, participant: Pa
   return next;
 }
 
-/** The "known users" cache (`allUsers`, keyed by userId — distinct from the
- * reducer's own `participants` map, which is only who's actually connected
- * right now) plus who's online. Etapa 7: this is no longer every account on
- * the instance — `welcome.knownUsers` only seeds friends and conversation
- * members, so a profile not already in here needs an on-demand fetch (see
- * ProfileModal.tsx). `setAllUsers` is returned raw (not just wrapped
- * actions) because `useProfileUpdate` still needs to patch the local
- * user's entry directly when a profile edit is applied optimistically. */
+/** `allUsers` contains friends and conversation members; `participants` contains only connected
+ * users. Profiles outside the initial cache are fetched on demand. `setAllUsers` also supports
+ * optimistic updates to the current user's profile. */
 export function usePresence() {
   const [allUsers, setAllUsers] = useState<Map<string, PublicUser>>(new Map());
   const allUsersRef = useRef<Map<string, PublicUser>>(new Map());

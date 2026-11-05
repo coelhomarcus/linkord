@@ -11,15 +11,9 @@ import type { TileDescriptor } from './tileTypes';
 interface TileGridProps {
   descriptors: TileDescriptor[];
   focusedId: string | null;
-  /** 220 in the normal grid, 148 in a compact stage (a call sidebar) — see
-   * the calls redesign plan §5.2. Below this, fitGrid still returns its
-   * best candidate (never hides anyone), just flagged `meetsMinimum: false`. */
+  /** Minimum tile width before the layout switches to focus mode. */
   minTileWidth?: number;
-  /** Fires whenever "does everyone fit at a legible size" changes — the
-   * caller (Stage.tsx) decides whether that means switching into focus mode
-   * (plan §5.2 point 8), never this component itself: TileGrid only reports
-   * the geometry it already measures for its own layout. `suggestedKey` is
-   * just the first available descriptor, a reasonable default main tile. */
+  /** Reports whether the current layout can fit all tiles legibly. */
   onCapacityChange?: (meetsMinimum: boolean, suggestedKey: string | null) => void;
   /** One more cell after the participants, sized like them (the invite tile
    * while you're alone). Only in the grid: focus mode has no free seat for it. */
@@ -35,10 +29,7 @@ const DEFAULT_MIN_TILE_WIDTH = 220;
 // the call in and out of focus mode — which swaps the whole tile tree and
 // remounts every video.
 const CAPACITY_SETTLE_MS = 200;
-// How many thumbnail rows show before the strip scrolls instead of growing
-// — otherwise a big call's secondary strip keeps eating rows until the
-// main tile is crushed to nothing (see the plan's "faixa recolhível...
-// não acumular linhas que eliminem o principal").
+// Limit the thumbnail strip so it cannot squeeze the main tile out of view.
 const MAX_VISIBLE_THUMB_ROWS = 2;
 
 export function TileGrid({ descriptors, focusedId, minTileWidth = DEFAULT_MIN_TILE_WIDTH, onCapacityChange, extraTile }: TileGridProps) {

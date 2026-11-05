@@ -12,28 +12,9 @@ import { resolveDisplayName } from '../users/users.js';
 import { firstEmbed, type DetectedEmbed } from '../link-preview/embeds.js';
 import { escapeLike } from '../friendships/cursor.js';
 
-// GET /api/media — the per-conversation "Mídias e links" panel: aggregates
-// every uploaded attachment and every embeddable link, newest first. One list
-// per ?kind (see MEDIA_KINDS), each cursor-paginated (?before=<msgId>,
-// exclusive) instead of offset — a cursor can't skip or repeat an item if a
-// new message arrives between two "load more" clicks. An optional
-// ?conversationId narrows to a single DM/channel; omitted, it aggregates
-// across every conversation the user can read (same shape, just unfiltered).
-//
-// The upload kinds (uploads, images, videos, audios, documents) are one exact
-// query each (the attachments innerJoin already filters to
-// message-with-attachment; the type is a filter on the mime). A type is
-// filtered here, not in the client, so a sparse tab does not sit empty while
-// its few items hide behind many pages of the others. ?q narrows them by file
-// name (and links by their text). gifs are the messages that are nothing but a
-// KLIPY URL, one exact query on the text. embeds must scan message TEXT in JS (mirrors
-// web/src/shared/lib/chatEmbeds.ts) since not every link becomes an embed —
-// the SQL filter (~* 'https?://') only narrows candidates; fetchEmbedsPage
-// scans in batches until it collects `limit` real embeds or the table runs out.
-//
-// Both queries are scoped to the conversations the REQUESTING user can read
-// (fetchMediaPage works them out) — this is the privacy boundary: without
-// it, someone's Media tab would surface everyone else's DMs and channels too.
+// Cursor-based media search keeps pagination stable as new messages arrive. Filter by kind in
+// the query so sparse tabs do not hide items behind other kinds. Every result is scoped to
+// conversations the requesting user can read; this is the privacy boundary for DMs and channels.
 
 const DEFAULT_LIMIT = 24;
 const MAX_LIMIT = 60;

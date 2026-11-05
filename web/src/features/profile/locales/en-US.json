@@ -33,9 +33,7 @@
     "retry": "Try again",
     "profileOf": "{{name}}'s profile",
     "memberSince": "Member since",
-    "friendsSince": "Friends since",
-    "banner": "Banner",
-    "avatar": "Profile picture"
+    "friendsSince": "Friends since"
   },
   "lastSeen": {
     "label": "Last seen online",

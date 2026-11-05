@@ -1,20 +1,8 @@
 import { useEffect, useState } from 'react';
 
-// Chat attachments are served with `Cache-Control: private, no-cache`
-// (server/src/modules/attachments/attachmentServing.ts) — deliberately, so a
-// member removed from a conversation loses access to its images instead of
-// the browser replaying a stale cached copy for up to a year. The cost is
-// that every <img> MOUNT (not just a cold load) pays a real revalidation
-// round trip, even for a conversation switched away from seconds ago —
-// message rows unmount/remount on every conversation switch, so this is what
-// reads as "loading again" instead of Discord's instant repaint.
-//
-// This cache doesn't touch that server guarantee: it only reuses a blob
-// AFTER it has already passed the membership check once in this tab. A
-// removed member still can't fetch a NEW image, and still loses access on
-// their next reload — this only skips redundant re-fetches of something the
-// tab already has in memory, the same thing the browser's own HTTP cache
-// already keeps on disk regardless.
+// The server rechecks membership on every attachment request. This tab reuses a blob only after
+// that check succeeds, avoiding repeat fetches on conversation switches without extending access
+// after reload or allowing a removed member to fetch new files.
 interface Entry { objectUrl: string; refCount: number; bytes: number }
 const cache = new Map<string, Entry>(); // insertion order doubles as LRU order for refCount === 0 entries
 const MAX_IDLE_ENTRIES = 200;

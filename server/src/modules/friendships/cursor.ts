@@ -2,7 +2,7 @@
 // nothing here touches the DB, so the malformed-input handling (a cursor is
 // attacker-controlled text) is testable without one.
 
-/** Server-fixed page size — the client never chooses it (docs/plano-rede-social.md §8.2). */
+/** Fixed by the server; clients cannot choose the page size. */
 export const SOCIAL_PAGE_SIZE = 30;
 
 // Timestamps travel as text with MICROsecond precision straight from

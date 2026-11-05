@@ -57,7 +57,8 @@ export function RevealRow({ children }: { children: ReactNode }) {
       animate={{ opacity: 1, transition: { duration: 0.2, ease: EASE_OUT } }}
       exit={reduce ? { opacity: 0, transition: { duration: 0 } } : { opacity: 0, height: 0, transition: { duration: 0.2, ease: EASE_OUT } }}
       // clips the row as its height collapses on the way out
-      className="overflow-hidden"
+      className="overflow-visible"
+      style={{ clipPath: 'inset(0 -0.625rem round 0.5rem)' }}
     >
       {children}
     </motion.div>

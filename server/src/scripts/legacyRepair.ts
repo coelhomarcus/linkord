@@ -2,10 +2,7 @@ import { Pool } from 'pg';
 import { classifyInventory, loadInventory, planRepairs, type RepairAction } from '../modules/migration/legacyInventory.js';
 import { applyRepairs } from '../modules/migration/legacyRepair.js';
 
-// `npm run db:repair`            → shows the plan, changes nothing
-// `npm run db:repair -- --apply` → applies it in one transaction and logs each change in data_repairs
-// Idempotent: a second run finds nothing to do. Never deletes anything, never
-// creates a friendship or an invitation (docs/plano-rede-social.md §12).
+// Repairs legacy relationship rows without creating friendships or invitations.
 
 const args = process.argv.slice(2);
 const apply = args.includes('--apply');

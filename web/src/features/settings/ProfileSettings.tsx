@@ -47,11 +47,8 @@ export function ProfileSettings() {
   // the blocking upload modal when the encoded blob is ready.
   const [activeUpload, setActiveUpload] = useState<{ field: 'avatar' | 'banner'; phase: ProfileImageUploadPhase } | null>(null);
 
-  // Avatar/banner apply immediately (E2) and never join this draft — only
-  // name/color/bio/links go through baseline/draft/saveState (plano
-  // §9.2). profileLinksKey guards against the array's fresh reference on
-  // every socket message (JSON deserializes a new one even with identical
-  // content) turning into a spurious "external change".
+  // Avatar and banner save immediately; text fields use the draft flow.
+  // Normalize links because each socket message deserializes a new array.
   const profileLinksKey = state.me.profileLinks.join('␟');
   const baseline = useMemo(() => ({
     displayName: state.me.displayName,

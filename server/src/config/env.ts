@@ -21,11 +21,8 @@ const CHAT_HISTORY_LIMIT = 50; // messages kept to give context to whoever joins
 const SEARCH_RESULT_LIMIT = 30; // server-fixed, not client-controlled — same posture as CHAT_HISTORY_LIMIT
 const MAX_SEARCH_QUERY_LEN = 200;
 const MAX_ATTACHMENTS_PER_MESSAGE = 4;
-// after a friend request is declined/cancelled/removed, how long the SAME
-// requester has to wait before requesting that account again — an initial
-// guess (docs/plano-rede-social.md §10.2.8: "valores iniciais precisam de
-// teste"), not a validated product decision. Doesn't gate the other side
-// requesting back right away, only a repeat from whoever just got turned down.
+// Cooldown after a declined, cancelled, or removed request; the other party may still request
+// immediately. This initial limit needs adjustment based on real usage.
 const FRIEND_REQUEST_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 // gates NEW joins only: a server already above this keeps every member.
 // The MAX_GROUP_* names are read too, so a deploy configured before servers
@@ -134,8 +131,7 @@ const KLIPY_API_KEY = (process.env.KLIPY_API_KEY || '').trim();
 // stripped so `${UPLOADS_REMOTE_URL}/uploads/<id>` doesn't double up.
 const UPLOADS_REMOTE_URL = (process.env.UPLOADS_REMOTE_URL || '').trim().replace(/\/+$/, '');
 
-// ---- abuse limits (etapa 12). Initial values are starting guesses, not
-// measured capacity — tune them against real use (docs/plano-rede-social.md §10.2.8).
+// ---- abuse limits (initial estimates; tune based on actual usage) ----
 const REGISTRATIONS_PER_IP_PER_HOUR = Number(process.env.REGISTRATIONS_PER_IP_PER_HOUR || 5);
 const MAX_NEW_ACCOUNTS_PER_HOUR = Number(process.env.MAX_NEW_ACCOUNTS_PER_HOUR || 30);
 const MAX_CONNECTIONS_PER_USER = Number(process.env.MAX_CONNECTIONS_PER_USER || 5);

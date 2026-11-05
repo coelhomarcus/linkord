@@ -9,12 +9,8 @@ import { logger } from '../../lib/logger.js';
 
 const log = logger.child({ component: 'audit' });
 
-// Files on disk that no `attachments` row points to. Deleting a server/account/
-// message removes rows and files in separate steps, and a failed unlink leaves
-// the file behind forever — this is the periodic net under all of them
-// (docs/plano-rede-social.md §11: "coleta de órfãos"). It only ever considers
-// files older than a grace period, so an upload being committed right now is
-// never mistaken for one.
+// A failed unlink can leave a file after its database row is gone. Sweep old unreferenced files
+// after a grace period so an upload being committed is not mistaken for an orphan.
 
 const FILE_ID_RE = /^[0-9a-f]{32}$/;
 

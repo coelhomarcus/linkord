@@ -86,25 +86,12 @@ export async function assembleChunks(uploadId: string, manifest: UploadManifest,
   }
 }
 
-// uploadId -> declared totalSize, for every upload session that has chunks
-// on disk but isn't committed to the DB yet. getUsage() only sums committed
-// rows, so without this an attacker could open many parallel init()s — each
-// one sees the same (unchanged) committed total and passes the quota check
-// on its own — then upload chunks for all of them at once, filling the disk
-// far past MAX_STORAGE_BYTES before any single one reaches complete(). This
-// map is the running total of storage already "promised" to in-flight
-// sessions; init() checks committed + reserved + this-upload's size against
-// the quota, atomically (see withInitLock). Entries are released only when
-// the session's chunks are actually gone from disk (cancel, a *successful*
-// complete, or the stale sweep) — never on a failed complete, since chunks
-// are deliberately kept there for the client to retry. Rebuilt from disk at
-// boot by sweepStaleUploads, since a restart clears this map but not the
-// chunks already written.
+// Reserve declared sizes before chunks reach the database so concurrent uploads cannot bypass
+// the quota. Release a reservation only after its files are deleted; failed completes keep their
+// chunks retryable. The stale-upload sweep rebuilds these in-memory totals after restart.
 const pendingUploadBytes = new Map<string, number>();
 
-// uploadId -> the account that reserved it, so a per-account storage quota can
-// count what that account already has in flight (etapa 12). Always changed
-// together with pendingUploadBytes, through reserveUpload/releaseUpload.
+// Kept in sync with pendingUploadBytes so per-account quotas include in-flight uploads.
 const pendingUploadOwners = new Map<string, string>();
 
 export function reserveUpload(uploadId: string, bytes: number, userId: string): void {

@@ -19,29 +19,10 @@ interface Options<T> {
   getKey?: (item: T) => string;
 }
 
-/** A keyset-paginated list.
- *
- * - `identity` is WHAT is being listed (a search text, a filter, a direction).
- *   When it changes the old rows and cursor are dropped at once — buttons of
- *   the previous context must never sit under the new one.
- * - `options.revision` is the same query, invalidated. The list re-reads the
- *   pages it had loaded (not just the first) and swaps them in together; if
- *   any link fails the previous window stays, marked `stale`.
- * - A failed "load more" keeps every row and is reported apart
- *   (`loadMoreError`); only the FIRST load can turn the list into `error`.
- * - Every response is tied to a generation: an answer to a request superseded
- *   by a newer one (from the same still-mounted hook instance) is dropped.
- *   A response landing after a REAL unmount is harmless on its own (React 18
- *   treats a state update on an unmounted component as a no-op) — there used
- *   to be an extra `useEffect(() => () => generation.current++, [])` for
- *   that case specifically, but StrictMode's dev-only double-invoke (mount,
- *   cleanup, mount again, to catch impure effects) ran that same cleanup on
- *   its simulated unmount too, bumping `generation` without the following
- *   remount ever re-firing a request (identity/revision hadn't changed) —
- *   the in-flight response from the first mount would then land on a
- *   generation that no longer matched, and the list stayed on "loading"
- *   forever. Found live (StrictMode isn't active under vitest/RTL, so
- *   nothing here caught it) — removed instead of patched around. */
+/** Changing identity resets the list; changing revision refreshes its loaded pages in place.
+ * Failed refreshes keep the old rows and mark them stale. Generations discard superseded
+ * responses. Do not invalidate requests in effect cleanup: StrictMode's simulated unmount can
+ * otherwise discard the only in-flight response without triggering a replacement. */
 export function useCursorList<T>(fetchPage: (cursor: string | null) => Promise<Page<T>>, identity: string, options: Options<T> = {}) {
   const { revision = 0 } = options;
   const restored = useRef(options.restore ?? null);

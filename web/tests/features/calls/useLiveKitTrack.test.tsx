@@ -157,7 +157,7 @@ describe('useWatchScreenShare', () => {
   });
 });
 
-describe('useParticipantMedia — subscription shared by identity (plan §11.2)', () => {
+describe('useParticipantMedia — subscription shared by identity', () => {
   it('two instances watching the SAME identity register the LiveKit listeners only once', () => {
     const { room, on, off } = fakeEventRoom();
     const wrapper = roomWrapper(room);

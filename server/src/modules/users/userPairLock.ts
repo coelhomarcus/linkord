@@ -3,13 +3,7 @@ import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { db } from '../../db/client.js';
 import * as schema from '../../db/schema.js';
 
-// Serializes every mutation touching a given pair of accounts — friendship
-// AND block state both need the SAME lock (docs/plano-rede-social.md §7.3:
-// "serializar bloqueio com comandos de contato"), so this lives in neither
-// module: friendships/friendshipsRepository.ts imports blocks' repository
-// (for canSendDirectMessage), and blocks needs this same lock — putting it
-// in either of those two would create a cycle. `users` is a dependency both
-// already have.
+// Friendship and block transitions share a lock to prevent conflicting pair state.
 
 export type Tx = NodePgDatabase<typeof schema>;
 

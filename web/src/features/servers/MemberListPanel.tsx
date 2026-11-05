@@ -1,12 +1,9 @@
-import { CrownIcon } from '@phosphor-icons/react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Avatar } from '@/shared/Avatar';
-import { cn } from '@/shared/lib/utils';
 import { useRoom } from '@/state/RoomContext';
 import type { ServerSummary } from '@/shared/types/protocol';
 import { fetchAllServerMembers, type ServerMemberEntry } from './serversApi';
-import { memberColor } from './serverUtils';
+import { MemberQuickProfile } from './MemberQuickProfile';
 
 interface Section { key: string; label: string; members: ServerMemberEntry[] }
 
@@ -32,16 +29,21 @@ export function groupMembers(server: ServerSummary, members: ServerMemberEntry[]
  * animation: nothing is fetched until it is shown. */
 export function MemberListPanel({ server, onOpenProfile, active = true }: { server: ServerSummary; onOpenProfile: (userId: string) => void; active?: boolean }) {
   const { t } = useTranslation('servers');
-  const { state, onlineUserIds, serverMemberRevision, allUsers } = useRoom();
+  const { state, onlineUserIds, serverMemberRevision, allUsers, setServerMemberSnapshot } = useRoom();
   const revision = serverMemberRevision.get(server.id) ?? 0;
   const [members, setMembers] = useState<ServerMemberEntry[] | null>(null);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!active) return;
     let cancelled = false;
-    fetchAllServerMembers(server.id).then((items) => { if (!cancelled) setMembers(items); }).catch(() => { if (!cancelled) setMembers((prev) => prev ?? []); });
+    fetchAllServerMembers(server.id).then((items) => {
+      if (cancelled) return;
+      setMembers(items);
+      setServerMemberSnapshot(server.id, items.map((member) => ({ userId: member.user.id, roleIds: member.roleIds })));
+    }).catch(() => { if (!cancelled) setMembers((prev) => prev ?? []); });
     return () => { cancelled = true; };
-  }, [active, server.id, revision, server.roles]);
+  }, [active, server.id, revision, server.roles, setServerMemberSnapshot]);
 
   // the server's presence snapshot only covers other people, never the viewer
   const meId = state.me.userId;
@@ -58,21 +60,24 @@ export function MemberListPanel({ server, onOpenProfile, active = true }: { serv
         <section key={section.key} className="mb-4">
           <h3 className="select-none px-2 pb-1 text-label font-medium text-text-secondary">{t('members.section', { name: section.label, count: section.members.length })}</h3>
           <ul>
-            {section.members.map((member) => {
-              const user = allUsers.get(member.user.id) ?? member.user;
+            {section.members.map((entry) => {
+              const member = entry;
               const offline = section.key === 'offline';
-              const color = memberColor(server, member.roleIds);
               return (
                 <li key={member.user.id} data-user-id={member.user.id}>
-                  <button type="button" onClick={() => onOpenProfile(member.user.id)} data-avatar-hover
-                    className={cn('cutout flex h-[42px] w-full items-center gap-3 rounded-lg px-2 text-left hover:cutout-subtle hover:bg-nav-hover', offline && 'opacity-30 hover:opacity-100')}>
-                    <span className="relative flex-none">
-                      <Avatar id={user.id} name={user.displayName} avatar={user.avatar} poster={'avatarPoster' in user ? (user.avatarPoster as string | undefined) : undefined} animateOnHover avatarColor={user.avatarColor} size={32} />
-                      {!offline && <span className="absolute -bottom-0.5 -right-0.5 size-3.5 rounded-full border-[3px] border-(--cutout) bg-green" />}
-                    </span>
-                    <span className="min-w-0 flex-1 truncate text-body font-medium text-text-primary" style={color ? { color } : undefined}>{user.displayName}</span>
-                    {member.isOwner && <CrownIcon size={14} weight="fill" className="flex-none text-yellow" aria-label={t('members.owner')} />}
-                  </button>
+                  <MemberQuickProfile
+                    server={server}
+                    member={member}
+                    currentUser={allUsers.get(member.user.id)}
+                    offline={offline}
+                    open={selectedUserId === member.user.id}
+                    onOpenChange={(open) => setSelectedUserId(open ? member.user.id : null)}
+                    onOpenProfile={onOpenProfile}
+                    onRoleIdsChange={(roleIds) => {
+                      setMembers((current) => current?.map((item) => item.user.id === member.user.id ? { ...item, roleIds } : item) ?? null);
+                      setServerMemberSnapshot(server.id, (members ?? []).map((item) => ({ userId: item.user.id, roleIds: item.user.id === member.user.id ? roleIds : item.roleIds })));
+                    }}
+                  />
                 </li>
               );
             })}
