@@ -1,4 +1,4 @@
-import { ArrowDownIcon, ArrowUpIcon, CrownIcon, PlusIcon, ShieldIcon, TrashIcon, XIcon } from '@phosphor-icons/react';
+import { ArrowDownIcon, ArrowUpIcon, CrownIcon, MagnifyingGlassIcon, PlusIcon, ShieldIcon, TrashIcon, UserIcon, XIcon } from '@phosphor-icons/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { useNavigate } from 'react-router';
@@ -125,15 +125,28 @@ function PermissionSwitches({ value, onChange, disabled }: { value: number; onCh
 
 function Roles({ server }: { server: ServerSummary }) {
   const { t } = useTranslation('servers');
+  const { serverMemberRevision } = useRoom();
   const sorted = [...server.roles].sort((a, b) => b.position - a.position);
   const [selectedId, setSelectedId] = useState<string>(sorted.find((r) => !r.isDefault)?.id ?? sorted[0]!.id);
   const role = server.roles.find((r) => r.id === selectedId) ?? sorted[0]!;
   const [draft, setDraft] = useState<RoleSummary>(role);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [query, setQuery] = useState('');
+  const [members, setMembers] = useState<ServerMemberEntry[]>([]);
+  const [creating, setCreating] = useState(false);
+  const [newRoleName, setNewRoleName] = useState('');
   const { error, run } = useAction();
   useEffect(() => setDraft(role), [role]);
+  const revision = serverMemberRevision.get(server.id) ?? 0;
+  useEffect(() => {
+    let cancelled = false;
+    fetchAllServerMembers(server.id).then((items) => { if (!cancelled) setMembers(items); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [server.id, revision]);
   const dirty = JSON.stringify(draft) !== JSON.stringify(role);
   const movable = sorted.filter((r) => !r.isDefault);
+  const visibleRoles = sorted.filter((item) => item.name.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
+  const memberCounts = new Map(sorted.map((item) => [item.id, members.filter((member) => member.roleIds.includes(item.id)).length]));
 
   async function move(roleId: string, delta: 1 | -1) {
     const lowestFirst = [...movable].reverse().map((r) => r.id);
@@ -149,23 +162,52 @@ function Roles({ server }: { server: ServerSummary }) {
       <SectionTitle description={t('roles.hint')}>{t('settings.roles')}</SectionTitle>
       <div className="flex gap-6 max-md:flex-col">
         <div className="flex w-52 flex-none flex-col gap-0.5">
-          <Button type="button" className="mb-2" onClick={() => void run(async () => { const { roleId } = await createRole(server.id, { name: t('roles.newName') }); setSelectedId(roleId); })}>
-            <PlusIcon size={16} /> {t('roles.create')}
+          <div className="relative mb-1">
+            <MagnifyingGlassIcon size={16} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" />
+            <Input value={query} onChange={(event) => setQuery(event.target.value)} aria-label={t('roles.search')} placeholder={t('roles.search')} className="pl-8" />
+          </div>
+          <Button type="button" variant={creating ? 'secondary' : 'default'} className="mb-2" onClick={() => { setCreating((value) => !value); setNewRoleName(''); }}>
+            {creating ? <XIcon size={16} /> : <PlusIcon size={16} />} {creating ? t('cancel') : t('roles.create')}
           </Button>
-          {sorted.map((r) => (
-            <div key={r.id} className={cn('group/role flex h-9 items-center gap-1 rounded-lg pr-1', r.id === selectedId ? 'bg-nav-active text-text-strong' : 'text-text-secondary hover:bg-nav-hover hover:text-text-primary')}>
-              <button type="button" onClick={() => setSelectedId(r.id)} className="flex h-full min-w-0 flex-1 items-center gap-2 px-2 text-left text-body font-medium">
-                <ShieldIcon size={18} weight="fill" className="flex-none" style={{ color: r.color || 'var(--color-text-muted)' }} />
-                <span className="truncate">{r.name}</span>
-              </button>
-              {!r.isDefault && (
-                <span className="hidden gap-0.5 group-hover/role:flex">
-                  <button type="button" aria-label={t('roles.up')} onClick={() => void move(r.id, 1)} className="text-text-muted hover:text-text-primary"><ArrowUpIcon size={14} /></button>
-                  <button type="button" aria-label={t('roles.down')} onClick={() => void move(r.id, -1)} className="text-text-muted hover:text-text-primary"><ArrowDownIcon size={14} /></button>
-                </span>
-              )}
-            </div>
-          ))}
+          {creating && (
+            <form className="mb-2 flex flex-col gap-2 rounded-lg border border-border-subtle p-2" onSubmit={(event) => {
+              event.preventDefault();
+              const name = newRoleName.trim();
+              if (!name) return;
+              void run(async () => {
+                const { roleId } = await createRole(server.id, { name });
+                setSelectedId(roleId);
+                setCreating(false);
+                setNewRoleName('');
+              });
+            }}>
+              <Input autoFocus value={newRoleName} maxLength={100} onChange={(event) => setNewRoleName(event.target.value)} placeholder={t('roles.newName')} aria-label={t('roles.name')} />
+              <Button type="submit" size="sm" disabled={!newRoleName.trim()}>{t('roles.create')}</Button>
+            </form>
+          )}
+          <div className="max-h-72 overflow-y-auto">
+            {visibleRoles.map((r) => {
+              const movableIndex = movable.findIndex((item) => item.id === r.id);
+              return (
+              <div key={r.id} className={cn('group/role flex min-h-10 items-center gap-1 rounded-lg pr-1', r.id === selectedId ? 'bg-nav-active text-text-strong' : 'text-text-secondary hover:bg-nav-hover hover:text-text-primary')}>
+                <button type="button" onClick={() => setSelectedId(r.id)} className="flex min-h-10 min-w-0 flex-1 items-center gap-2 px-2 text-left text-body font-medium">
+                  <ShieldIcon size={18} weight="fill" className="flex-none" style={{ color: r.color || 'var(--color-text-muted)' }} />
+                  <span className="min-w-0 flex-1 truncate">{r.name}</span>
+                  <span className="flex flex-none items-center gap-1 text-caption text-text-muted" aria-label={t('roles.memberCount', { count: memberCounts.get(r.id) ?? 0 })}>
+                    <UserIcon size={13} />{memberCounts.get(r.id) ?? 0}
+                  </span>
+                </button>
+                {!r.isDefault && (
+                  <span className="flex gap-0.5">
+                    <button type="button" aria-label={t('roles.up')} disabled={movableIndex === 0} onClick={() => void move(r.id, 1)} className="rounded p-1 text-text-muted hover:text-text-primary disabled:opacity-30"><ArrowUpIcon size={14} /></button>
+                    <button type="button" aria-label={t('roles.down')} disabled={movableIndex === movable.length - 1} onClick={() => void move(r.id, -1)} className="rounded p-1 text-text-muted hover:text-text-primary disabled:opacity-30"><ArrowDownIcon size={14} /></button>
+                  </span>
+                )}
+              </div>
+              );
+            })}
+            {visibleRoles.length === 0 && <p className="px-2 py-3 text-caption text-text-muted">{t('roles.noResults')}</p>}
+          </div>
         </div>
         <form className="flex min-w-0 flex-1 flex-col gap-4" onSubmit={(e) => {
           e.preventDefault();

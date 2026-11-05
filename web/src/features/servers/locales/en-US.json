@@ -99,6 +99,13 @@
     "section": "{{name}} — {{count}}",
     "loading": "Loading members…",
     "owner": "Server Owner",
+    "openProfile": "Open {{name}}'s profile",
+    "viewProfile": "View full profile",
+    "roles": "Roles",
+    "noRoles": "No roles",
+    "addRole": "Add role",
+    "noAssignableRoles": "No other roles are available.",
+    "roleUpdateFailed": "Couldn't update roles.",
     "kick": "Kick",
     "ban": "Ban",
     "transfer": "Transfer Ownership",
@@ -140,7 +147,10 @@
     "deleteTitle": "Delete {{name}}",
     "deleteDescription": "Whoever has this role loses the permissions it gave.",
     "up": "Move up",
-    "down": "Move down"
+    "down": "Move down",
+    "search": "Search roles",
+    "memberCount": "{{count}} members",
+    "noResults": "No roles found."
   },
   "invites": {
     "none": "No active invites.",

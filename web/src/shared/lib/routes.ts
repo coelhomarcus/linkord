@@ -1,7 +1,4 @@
-// Route contract of the app (docs/plano-rede-social.md §5.2). Lives in shared/
-// because both app/ (which owns the
-// router) and features (sidebar links, profile actions) need the same paths,
-// and features must never import app/.
+// Shared because the router and feature links need the same paths; features must not import app/.
 
 const SETTINGS_TABS = ['profile', 'account', 'av', 'notifications', 'prefs', 'privacy', 'moderation'] as const;
 export type SettingsTab = (typeof SETTINGS_TABS)[number];

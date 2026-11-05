@@ -33,9 +33,7 @@
     "retry": "Tentar de novo",
     "profileOf": "Perfil de {{name}}",
     "memberSince": "Membro desde",
-    "friendsSince": "Amigos desde",
-    "banner": "Banner",
-    "avatar": "Foto de perfil"
+    "friendsSince": "Amigos desde"
   },
   "lastSeen": {
     "label": "Última vez online",

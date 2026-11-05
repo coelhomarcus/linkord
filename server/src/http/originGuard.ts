@@ -6,12 +6,9 @@ import { loggablePath } from './requestPath.js';
 
 const log = logger.child({ component: 'http' });
 
-// Origin validation (docs/plano-rede-social.md §8.2). The session cookie is
-// SameSite=Lax and bodies must be JSON, which already blocks the classic
-// cross-site form post; this closes the rest for state-changing calls and the
-// realtime handshake: a browser request that names an Origin must name one of
-// ours. A request with NO Origin header (curl, scripts, server-to-server) is
-// not a cross-site browser request and is let through.
+// SameSite cookies and JSON bodies block classic cross-site form posts. Validate any supplied
+// Origin on state-changing HTTP requests and the realtime handshake; requests without Origin
+// (scripts and server-to-server calls) are not browser cross-site requests.
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 const DEV_ORIGINS = ['http://localhost:5173', 'http://127.0.0.1:5173'];

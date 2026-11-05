@@ -39,6 +39,7 @@ function DirectRow({ conversation, active, onClick, onClose }: {
         aria-current={active ? 'page' : undefined}
         className={cn(
           'relative isolate flex h-11 w-full items-center gap-3 rounded-lg px-2 text-left',
+          unread > 0 ? 'pr-10' : 'group-hover/dm:pr-10 group-focus-within/dm:pr-10',
           active ? 'cutout-active text-text-primary' : cn('cutout md:hover:cutout-subtle md:hover:bg-nav-hover', unread ? 'text-text-primary' : 'text-text-muted md:hover:text-text-primary'),
         )}
       >
@@ -50,10 +51,14 @@ function DirectRow({ conversation, active, onClick, onClose }: {
           <span className={cn('absolute -bottom-0.5 -right-0.5 size-3.5 rounded-full border-[3px] border-(--cutout)', online ? 'bg-green' : 'bg-text-muted')} />
         </span>
         <span className={cn('min-w-0 flex-1 truncate text-body', unread ? 'font-semibold' : 'font-medium')}>{title}</span>
-        {unread > 0 && <CountBadge className="h-5 min-w-5 px-1.5 text-micro">{unread > 99 ? '99+' : unread}</CountBadge>}
       </button>
+      {unread > 0 && (
+        <CountBadge decorative className="pointer-events-none absolute right-2 top-1/2 h-5 min-w-5 -translate-y-1/2 px-1.5 text-micro transition-transform duration-200 ease-out group-hover/dm:-translate-x-7 group-focus-within/dm:-translate-x-7">
+          {unread > 99 ? '99+' : unread}
+        </CountBadge>
+      )}
       <button type="button" onClick={onClose} aria-label={t('sidebar.close', { name: title })}
-        className="absolute right-2 top-1/2 hidden -translate-y-1/2 rounded-sm p-0.5 text-text-muted hover:text-text-primary group-hover/dm:block">
+        className="pointer-events-none absolute right-2 top-1/2 grid size-6 -translate-y-1/2 scale-90 place-items-center rounded-md text-text-muted opacity-0 transition-all duration-150 group-hover/dm:pointer-events-auto group-hover/dm:scale-100 group-hover/dm:opacity-100 group-focus-within/dm:pointer-events-auto group-focus-within/dm:scale-100 group-focus-within/dm:opacity-100 hover:bg-fill-hover hover:text-text-primary focus-visible:pointer-events-auto focus-visible:scale-100 focus-visible:opacity-100">
         <XIcon size={16} />
       </button>
     </li>

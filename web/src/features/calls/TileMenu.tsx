@@ -33,9 +33,7 @@ async function getTrackBytes(track: LKTrack | null): Promise<number> {
   return 0;
 }
 
-/** Width/height straight off the media track — never inferred, never a
- * made-up placeholder when it isn't available yet (see the redesign plan
- * §9.4: "ausência de estatística não vira zero inventado"). */
+/** Read dimensions from the media track; unavailable statistics remain unavailable. */
 function getVideoResolution(track: LKTrack | null): string | null {
   const settings = track?.mediaStreamTrack?.getSettings();
   return settings?.width && settings.height ? `${settings.width}×${settings.height}` : null;
@@ -90,10 +88,7 @@ export function TileMenu({ onOpenProfile }: TileMenuProps) {
   const mainTrack = kind === 'screen' ? media.screenTrack : kind === 'camera' ? media.cameraTrack : media.micTrack;
   const { hasAudio, volume, muted, setVolume, toggleMute } = useMuteForMe(participantId, kind ?? 'camera', isMe);
 
-  // Closes the menu when its target stops making sense — the participant
-  // left, this specific source ended (camera/share stopped), or the call
-  // itself changed — instead of leaving stale actions operable on a target
-  // that's gone (plan §9.3: "alvo que saiu não continua operável"). Skips
+  // Recheck the target before acting because it may have left since the menu opened. Skips
   // the render right after opening on a new target: useParticipantMedia
   // starts empty and syncs a tick later, which would otherwise read as
   // "the source just ended" the instant the menu opens.
@@ -107,9 +102,8 @@ export function TileMenu({ onOpenProfile }: TileMenuProps) {
       return;
     }
     const participantGone = !isMe && !state.participants.has(participantId);
-    // A paused screen (media.screenTrack null because muted, not gone — see
-    // useScreenShare's pauseSharePreview) must NOT read as "ended": that's
-    // the exact state this menu's own "Pausar prévia" action puts it in.
+    // A muted screen share has no track but is not ended; keep the menu open
+    // while its pause action is active.
     const sourceEnded = (kind === 'camera' && !media.cameraTrack) || (kind === 'screen' && !media.screenTrack && !media.screenPaused);
     const conversationChanged = activeCallConversationId !== openedConversationIdRef.current;
     if (participantGone || sourceEnded || conversationChanged) closeTileMenu();

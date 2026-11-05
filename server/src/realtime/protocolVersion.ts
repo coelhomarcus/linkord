@@ -1,20 +1,6 @@
-// Realtime protocol version (docs/plano-rede-social.md §12.7). Bumped when the
-// wire contract changes in a way an old client cannot cope with. A client
-// that does not announce a compatible version is told to update, instead of
-// half-working against a `welcome` (or a `chat`/`chat-edit`/`chat-react`
-// dispatch) it does not understand.
-//
-// 5 is the messages redesign's wire contract: `chat` requires a
-// `clientMessageId` and is always answered with `chat-send-result`;
-// `chat-edit`/`chat-delete`/`chat-react` require a `requestId` and are
-// always answered with `chat-action-result`; `chat-react` sets a desired
-// `present` state instead of toggling; attachment uploads are always staged,
-// published only through a correlated `chat` carrying `attachmentIds`. None
-// of that has a fallback anymore — MIN_PROTOCOL_VERSION enforces it at join.
-//
-// 6 is servers: groups are gone, `welcome` carries `servers` next to the DMs
-// in `conversations`, and every group event became a server one. A client
-// that still thinks in groups can't render any of it.
+// Bump when a wire-contract change cannot be handled by an older client; the minimum version
+// is enforced at join. Version 5 introduced correlated message actions and staged uploads.
+// Version 6 replaced groups with servers and channels in the welcome payload.
 export const PROTOCOL_VERSION = 6;
 export const MIN_PROTOCOL_VERSION = 6;
 

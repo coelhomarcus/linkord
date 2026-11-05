@@ -8,11 +8,7 @@ import { withPendingReactions } from './reactionState';
 import { reactionParticipantName } from './reactionParticipants';
 import type { ReactionEmoji } from '@/shared/types/protocol';
 
-/** The full reaction list — reached from the message menu (desktop
- * right-click, mobile "Ações"), never from the hover tooltip, which stays
- * non-interactive. One instance for the whole app; which message it shows
- * comes from RoomContext's reactionParticipantsTarget, so it works the same
- * from a row in the main chat or in the call panel. */
+/** Open the full reaction list from the message actions menu, not the hover tooltip. */
 export function ReactionParticipantsDialog() {
   const { t } = useTranslation('chat');
   const { reactionParticipantsTarget: target, closeReactionParticipants, messagesByConversation, allUsers, pendingReactions, state } = useRoom();

@@ -25,11 +25,7 @@ function AdminEntry() {
   return mode === 'compact' ? <AdminIndex /> : <Navigate to={ROUTES.admin} replace />;
 }
 
-/** The administrative area (docs/plano-rede-social.md §9). Loaded on demand —
- * ordinary users never download it — and mounted under the same shell as the
- * rest of the app, so opening it during a call doesn't touch the call. The
- * guard only hides the UI: every endpoint re-checks the admin role on the
- * server. */
+/** Loaded on demand under the app shell; server endpoints enforce admin access independently. */
 export default function AdminArea() {
   const { state } = useRoom();
   if (state.me.role !== 'admin') return <Navigate to={ROUTES.home} replace />;

@@ -7,11 +7,7 @@ import {
   broadcastToKnownPeers, handlers,
 } from '../../../src/modules/presence/participants.js';
 
-// join() returns { participant, justCameOnline } (Etapa 7 — the caller now
-// computes knownPeerIds before broadcasting 'user-online', see
-// realtime/socket.ts#handleJoin). Every test here only cares about the
-// participant itself, so this thin wrapper keeps every existing assertion
-// unchanged instead of destructuring at each call site.
+// These tests only need the participant, so keep the caller's assertions concise.
 function joinP(socket: AppSocket, msg: Parameters<typeof join>[1]): Participant | null {
   const result = join(socket, msg);
   return result ? result.participant : null;
@@ -308,7 +304,7 @@ describe('self-reported media state (mic-state / camera / screen-share / speakin
   });
 });
 
-describe('broadcastToKnownPeers (Etapa 7 — presence scoping)', () => {
+describe('broadcastToKnownPeers (presence scoping)', () => {
   function fakeSocketWithSpy(userId: string): { socket: AppSocket; emitted: string[]; payloads: Array<{ t: string; [key: string]: unknown }> } {
     const emitted: string[] = [];
     const payloads: Array<{ t: string; [key: string]: unknown }> = [];

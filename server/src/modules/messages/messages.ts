@@ -47,12 +47,8 @@ import { logger } from '../../lib/logger.js';
 
 const log = logger.child({ component: 'audit' });
 
-// Etapa 6 (docs/plano-rede-social.md §4.3): "não enviar, reagir, anexar,
-// digitar" while contact is restricted (not friends, or blocked) — this is
-// the shared gate every one of those write paths calls. `getDirectPeerId`
-// returns null for a server channel, so the check no-ops there on its own
-// (the channel's permissions govern it); reading history
-// (open/load-more/around/search) is NEVER gated — only these write actions are.
+// Apply the shared write gate to direct messages when the other account is not a friend or is
+// blocked. Server channels use their own permissions; reads are never gated here.
 async function assertCanWriteToConversation(socket: AppSocket, conversationId: string, userId: string): Promise<boolean> {
   const peerId = await getDirectPeerId(conversationId, userId);
   if (peerId && !(await canSendDirectMessage(userId, peerId))) {

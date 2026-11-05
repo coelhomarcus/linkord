@@ -4,7 +4,7 @@ function clock(at: Date): string {
   return at.toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' });
 }
 
-/** "ontem às 10:11", counted in the viewer's local calendar; null without a usable timestamp. */
+/** Format relative to the viewer's local calendar; return null without a usable timestamp. */
 export function formatLastSeen(iso: string | null | undefined, now: Date = new Date()): string | null {
   if (!iso) return null;
   const at = new Date(iso);

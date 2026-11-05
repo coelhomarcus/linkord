@@ -43,7 +43,7 @@ function person(over: Partial<Participant> & Pick<Participant, 'id' | 'userId' |
 }
 
 const bea = person({ id: 'p-bea', userId: 'u-bea', displayName: 'Bea' });
-const me = { ...initialRoomState.me, id: 'p-me', userId: 'u-me', displayName: 'Eu' };
+const me = { ...initialRoomState.me, id: 'p-me', userId: 'u-me', displayName: 'Eu', avatarColor: 'green' };
 
 function renderList({ permissions = MEMBER, participants = [bea], room = {} }: { permissions?: number; participants?: Participant[]; room?: Partial<RoomContextValue> } = {}) {
   const onOpenProfile = vi.fn();
@@ -86,7 +86,8 @@ describe('VoiceMembers — what everyone in the server sees', () => {
     renderList({ participants: [person({ id: 'p-bea', userId: 'u-bea', displayName: 'Bea', speaking: true })] });
     const bea = row('Bea');
     expect(within(bea).queryByRole('img', { name: /desativado|ligada/ })).not.toBeInTheDocument();
-    expect(bea.querySelector('[data-speaking]')).toHaveClass('ring-green');
+    expect(bea.querySelector('[data-speaking]')).toHaveClass('ring-current');
+    expect(bea.querySelector('[data-speaking]')).toHaveStyle({ color: 'var(--color-avatar-green)' });
   });
 
   it('a member with no mic published reads as muted', () => {
@@ -99,7 +100,8 @@ describe('VoiceMembers — your own row', () => {
   it('lights up while you talk, read from your own microphone', () => {
     mockedTrack.useIsSpeaking.mockImplementation((identity: string) => identity === 'p-me');
     renderList({ room: { activeCallConversationId: 'v1' } });
-    expect(row('Eu').querySelector('[data-speaking]')).toHaveClass('ring-green');
+    expect(row('Eu').querySelector('[data-speaking]')).toHaveClass('ring-current');
+    expect(row('Eu').querySelector('[data-speaking]')).toHaveStyle({ color: 'var(--color-avatar-green)' });
     expect(row('Bea').querySelector('[data-speaking]')).toBeNull();
   });
 
@@ -225,11 +227,11 @@ describe('VoiceMembers — the live badge preview', () => {
     expect(screen.getByText('Prévia indisponível')).toBeInTheDocument();
   });
 
-  it('inside the same call there is no preview: the share is already on the stage', async () => {
+  it('inside the same call, hovering the live badge still shows the preview', async () => {
     const { sendWs } = renderList({ participants: [streaming], room: { activeCallConversationId: 'v1' } });
     await userEvent.setup().hover(within(row('Bea')).getByText('Ao vivo'));
-    expect(screen.queryByRole('status', { name: 'Carregando prévia' })).not.toBeInTheDocument();
-    expect(sendWs).not.toHaveBeenCalledWith(expect.objectContaining({ t: 'stream-preview-request' }));
+    await vi.waitFor(() => expect(sendWs).toHaveBeenCalledWith({ t: 'stream-preview-request', participantId: 'p-bea' }));
+    expect(await screen.findByRole('status', { name: 'Carregando prévia' })).toBeInTheDocument();
   });
 });
 

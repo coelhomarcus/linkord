@@ -32,6 +32,7 @@ import { MessageReactions } from './MessageReactions';
 import { withPendingReactions } from './reactionState';
 import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { useMessageDeleteConfirm } from './useMessageDeleteConfirm';
+import { memberColor } from '@/features/servers/serverUtils';
 
 // A bot's message is usually something to acknowledge or flag — a deploy, an
 // alert — so its toolbar answers in one click, before the rest of the actions.
@@ -132,7 +133,7 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
   const { t } = useTranslation('chat');
   const deletedAuthorName = t('deletedAuthor');
   const {
-    state, conversations, editChatMessage, reactToChatMessage, editingMsgId, setEditingMsgId, retryPendingMessage, discardPendingMessage,
+    state, conversations, servers, serverMemberRoleIds, editChatMessage, reactToChatMessage, editingMsgId, setEditingMsgId, retryPendingMessage, discardPendingMessage,
     deletingMsgIds, messageActionErrors, dismissMessageActionError, pendingReactions, openReactionParticipants,
   } = useRoom();
   const [editText, setEditText] = useState(message.text);
@@ -154,6 +155,9 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
   const { requestDelete, confirmDialog } = useMessageDeleteConfirm();
   const isMine = message.id === state.me.userId;
   const conversation = conversations.find((c) => c.id === message.conversationId);
+  const messageServer = conversation?.serverId ? servers.find((server) => server.id === conversation.serverId) : undefined;
+  const authorRoleIds = message.id && conversation?.serverId ? serverMemberRoleIds?.get(conversation.serverId)?.get(message.id) ?? [] : [];
+  const authorRoleColor = messageServer ? memberColor(messageServer, authorRoleIds) : '';
   const can = messagePermissions(message, { userId: state.me.userId, role: state.me.role }, conversation);
   const canDelete = can.delete;
   const deleting = deletingMsgIds.has(message.msgId);
@@ -280,7 +284,7 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
         {showHeader && (
           <div className="flex items-baseline gap-2">
             {message.id ? (
-              <button type="button" onClick={() => onOpenProfile(message.id!)} className="truncate text-body font-medium text-text-primary hover:underline">
+              <button type="button" onClick={() => onOpenProfile(message.id!)} className="truncate text-body font-medium text-text-primary hover:underline" style={authorRoleColor ? { color: authorRoleColor } : undefined}>
                 {displayedName}
               </button>
             ) : (

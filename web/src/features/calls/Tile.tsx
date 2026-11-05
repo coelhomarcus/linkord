@@ -49,9 +49,7 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
   const connectionQuality = useConnectionQuality(participantId);
   const { hasAudio: hasMutableAudio, muted: mutedForMe, toggleMute: toggleMuteForMe } = useMuteForMe(participantId, kind, isMine);
 
-  // "Ocultar vídeo para mim" — presentation only: never unsubscribes or
-  // touches anyone else's view (see TileMenu.tsx). Not offered for your own
-  // camera (that's what turning it off is for) or for screens.
+  // Hiding a tile is presentation-only; it never changes the media subscription.
   const hiddenForMe = kind === 'camera' && !isMine && state.hiddenVideoKeys.has(key);
   // "Parar de assistir" a remote screen share — unlike hiddenForMe, this
   // really unsubscribes (see useWatchScreenShare), a deliberate bandwidth
@@ -183,8 +181,7 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
               <CircleNotchIcon size={Math.max(20, avatarSize / 3)} className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 animate-spin text-text-muted" />
             </span>
           )}
-          {/* distinct from "camera off": their camera is on, this viewer just
-              chose not to see it — TileMenu's "Ocultar vídeo para mim" */}
+          {/* Hiding a tile is presentation-only; the media subscription remains active. */}
           {hiddenForMe && (
             <span className="flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 text-caption text-text-muted">
               <EyeSlashIcon size={12} />

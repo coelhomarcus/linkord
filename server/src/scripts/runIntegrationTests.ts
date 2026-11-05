@@ -7,12 +7,8 @@ import { migrateOn } from './rehearsal/migrateOn.js';
 
 // `npm run test:integration`
 //
-// Runs server/tests/integration/**/*.itest.ts against a REAL Postgres: a fresh
-// `linkord_test_*` database on the local server, migrated to the current schema,
-// dropped when the run ends (docs/plano-rede-social.md §14.1). The unit suite
-// (`npm run test:server`) never touches a database; this one exists for the
-// invariants only a real one can prove — unique owner, idempotent DM, races.
-// The child process only ever sees the throwaway database's URL.
+// Runs integration tests against a disposable local Postgres database.
+// The child process only receives the throwaway database URL.
 
 function findTests(dir: string): string[] {
   const out: string[] = [];

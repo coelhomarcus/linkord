@@ -5,9 +5,7 @@ import { attachments, friendships, messages, serverMembers, servers } from '../.
 import type { Tx } from '../users/userPairLock.js';
 import { stagedBytes } from '../attachments/stagedAttachments.js';
 
-// Per-account quotas (docs/plano-rede-social.md §6.6, §10.2.8). The numbers
-// live in config (initial guesses, tunable); this module is the one place
-// that says what is counted and when something is over.
+// Per-account quota values live in config; this module defines what each quota counts.
 
 export type LimitKind = 'storage' | 'ownedServers' | 'serverMemberships' | 'friends' | 'pendingRequests';
 

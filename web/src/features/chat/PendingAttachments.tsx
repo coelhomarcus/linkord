@@ -7,9 +7,7 @@ import { UploadProgressBar } from '@/shared/UploadProgressBar';
 import { cn } from '@/shared/lib/utils';
 import type { OutboxAttachment } from './useMessageOutbox';
 
-// The structure doesn't currently distinguish "queued" from "compressing" —
-// progress === 0 covers both honestly, without inventing precision it can't
-// back up. See the redesign plan's note on this exact point.
+// Keep drafts available when an upload fails so the user can retry.
 function statusLabel(attachment: OutboxAttachment): string {
   if (attachment.failed) return i18n.t('chat:pending.attachmentFailed');
   if (attachment.progress >= 1) return i18n.t('chat:pending.attachmentDone');

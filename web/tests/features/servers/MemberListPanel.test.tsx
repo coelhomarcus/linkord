@@ -1,15 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { renderWithRoom } from '@tests/fixtures/roomContextFixture';
 import { groupMembers, MemberListPanel } from '@/features/servers/MemberListPanel';
 import * as serversApi from '@/features/servers/serversApi';
 import type { ServerMemberEntry } from '@/features/servers/serversApi';
 import type { RoleSummary, ServerSummary } from '@/shared/types/protocol';
 import { initialRoomState } from '@/state/roomReducer';
+import { PERMISSIONS } from '@/features/servers/permissionBits';
+
+vi.mock('@/features/friends/ProfileActions', () => ({ ProfileActions: () => null }));
 
 vi.mock('@/features/servers/serversApi', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/features/servers/serversApi')>()),
   fetchAllServerMembers: vi.fn(),
+  setMemberRoles: vi.fn(),
 }));
 const mocked = vi.mocked(serversApi);
 
@@ -55,6 +60,17 @@ describe('MemberListPanel', () => {
     });
     expect(await screen.findByText('Mods — 1')).toBeInTheDocument();
     expect(screen.getByText('Offline — 1')).toBeInTheDocument();
+  });
+
+  it('opens a compact member profile and lets role managers assign roles there', async () => {
+    const user = userEvent.setup();
+    mocked.setMemberRoles.mockResolvedValue(undefined);
+    renderWithRoom(<MemberListPanel server={{ ...server, permissions: PERMISSIONS.MANAGE_ROLES }} onOpenProfile={vi.fn()} />);
+    await user.click(await screen.findByRole('button', { name: 'Abrir perfil de Bia' }));
+    expect(screen.getByText('@u-bia')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Adicionar cargo' }));
+    await user.click(await screen.findByText('Mods', { exact: true }));
+    expect(mocked.setMemberRoles).toHaveBeenCalledWith('s1', 'u-bia', ['Quiet', 'Mods']);
   });
 
   it('fetches nothing while kept mounted behind a closed sheet', () => {

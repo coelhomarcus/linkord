@@ -71,16 +71,9 @@ export interface Participant {
   // new friend's live presence only starts showing up after either side
   // reconnects, not immediately.
   knownPeerIds: Set<string>;
-  // The friend subset of knownPeerIds above — a conversation co-member who
-  // isn't a friend is IN knownPeerIds (their profile/presence is needed to
-  // render the shared conversation) but must not be offered as a DM target
-  // (docs/plano-rede-social.md §3: DMs are friends-only) or listed as a
-  // friend anywhere else. Computed alongside knownPeerIds, same staleness.
+  // A known id alone does not grant access to a direct conversation.
   friendPeerIds: Set<string>;
-  // Accounts with a block against this one in EITHER direction. Still in
-  // knownPeerIds when they share a conversation (their profile is needed to
-  // render the shared history), but presence — online, call/mic/camera state,
-  // reactions — never flows between the two (docs/plano-rede-social.md §7.3).
+  // Reactions are not shared between blocked accounts.
   blockedPeerIds: Set<string>;
 }
 

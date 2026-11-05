@@ -31,22 +31,16 @@ export function Stage({ allIds, onBack }: StageProps) {
   const descriptors = hideAudioOnlyTiles ? allDescriptors.filter((d) => d.kind !== 'avatar') : allDescriptors;
   const focusScreenShare = useCallback((key: string) => dispatch({ type: 'SET_FOCUSED', id: key, origin: 'automatic' }), [dispatch]);
   useAutoFocusScreenShare(allDescriptors, state.focusOrigin, focusScreenShare);
-  // "Ocultar sem vídeo" filtering everyone out reads as a black-screen bug
-  // otherwise — the option lives in Preferences, so the empty stage has to
-  // say why it's empty and offer a way back.
+  // Explain an empty stage caused by the audio-only filter and offer a way back.
   const allHiddenByFilter = allDescriptors.length > 0 && descriptors.length === 0;
   // allIds always holds you, so one id means nobody else is here yet
   const inviteConversationId = allIds.length <= 1 && conversations.find((c) => c.id === activeCallConversationId)?.type === 'voice'
     ? activeCallConversationId
     : null;
 
-  // A tile menu open, reconnecting, or an actionable error keeps the HUD
-  // forced visible regardless of the idle timer (plan §11.3).
+  // Keep the HUD visible while a menu, reconnect, or actionable error needs attention.
   const suspendHud = !!menuTarget || reconnecting || !!state.shareError || !!state.micProblem || !!state.callJoinError;
-  // Reserves exactly as much bottom space as the bar (+ any banners above
-  // it) actually needs, instead of a fixed `pb-32` guess that's either too
-  // little for a taller bar (a mic-problem banner appearing) or wastes grid
-  // space when there's nothing to reserve room for (plan §5.1).
+  // Measure the bar and banners so the grid reserves only the space they need.
   const controlBarRef = useRef<HTMLDivElement | null>(null);
   const { hudVisible } = useCallHud(suspendHud, controlBarRef);
   const [reservedBottom, setReservedBottom] = useState(FALLBACK_RESERVED_BOTTOM);
@@ -60,11 +54,7 @@ export function Stage({ allIds, onBack }: StageProps) {
     return () => ro.disconnect();
   }, []);
 
-  // "Se nem todos couberem, transicionar para foco" (plan §5.2 point 8) —
-  // TileGrid only reports the geometry; this is the one place that decides
-  // what it means. Never overrides a manual (or screen-share-driven
-  // automatic) focus, and only retracts a focus IT caused once space
-  // recovers — never one it didn't.
+  // Switch focus only when needed; preserve manual focus and clear only capacity-driven focus.
   const handleCapacityChange = useCallback((meetsMinimum: boolean, suggestedKey: string | null) => {
     if (state.focusOrigin === 'manual') return;
     if (!meetsMinimum && !state.focusedId && suggestedKey) {

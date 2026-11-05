@@ -84,14 +84,7 @@ interface StoreEntry<T> {
   teardown: () => void;
 }
 
-/** One shared LiveKit subscription per (room, identity), reused by every
- * caller watching that identity — instead of each `useParticipantMedia`/
- * `useConnectionQuality` instance registering its own room listeners. A
- * participant commonly has 2+ simultaneous watchers today (a camera tile
- * AND a screen tile for the same person, `useIsSpeaking` calling
- * `useParticipantMedia` again internally, TileMenu re-reading it while
- * open) — this is the "reduzir duplicação por participante" from the
- * calls redesign plan §11.2, not a hypothetical future need. */
+/** Share one LiveKit subscription per room and identity to avoid duplicate room listeners. */
 function shallowEqual<T>(a: T, b: T): boolean {
   if (Object.is(a, b)) return true;
   if (typeof a !== 'object' || typeof b !== 'object' || a === null || b === null) return false;
@@ -253,13 +246,8 @@ export function useAttachTrack(track: LKTrack | null, elRef: RefObject<HTMLMedia
   }, [track, elRef]);
 }
 
-/** "Parar de assistir" a remote screen share: tells the server to stop
- * sending this viewer video/audio data for it (`RemoteTrackPublication.
- * setEnabled`), a real bandwidth saving — but it never touches the
- * publication itself, so the presenter keeps publishing and every other
- * viewer is unaffected (see the calls redesign plan §9.2: "'Parar de
- * assistir' não encerra a publicação remota"). Re-applies whenever the
- * publication (re)appears, so restarting a paused-for-me share stays off. */
+/** Disable only this viewer's remote share subscription; the presenter and other viewers are unaffected.
+ * Reapply when the publication returns so a locally paused share stays disabled. */
 export function useWatchScreenShare(room: Room, participantId: string, notWatching: boolean): void {
   useEffect(() => {
     function apply() {

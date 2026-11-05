@@ -20,18 +20,9 @@ interface SocketConnectionDeps {
   onMessage: (m: ServerMessage) => void;
 }
 
-/** The websocket transport itself — connect on mount, join with whatever
- * identity is saved locally, route every incoming message to `onMessage`,
- * flag reconnecting on an unintentional drop. Doesn't know about any
- * domain hook; `onMessage` is kept in a ref so passing a new function
- * identity every render (RoomProvider's message router depends on nearly
- * every other hook, so it's never stable) doesn't tear down and reconnect
- * the socket. `socketRef`/`intentionalCloseRef` are owned by the caller,
- * not this hook: `sendWs` (RoomProvider) reads `socketRef` directly and is
- * constructed before this hook runs, since nearly every domain hook needs
- * `sendWs` too; `intentionalCloseRef` is flipped by RoomProvider's own
- * `disconnectIntentionally` for the server's `full` error, so the
- * `disconnect` handler below doesn't flag that as a drop. */
+/** Keep the message callback in a ref so changing its identity does not reconnect the socket.
+ * The caller owns both refs because it constructs `sendWs` before this hook and marks deliberate
+ * disconnects that must not trigger reconnect UI. */
 export function useSocketConnection(deps: SocketConnectionDeps) {
   const { socketRef, intentionalCloseRef, sendWs, dispatch, refreshAuth, onMessage } = deps;
 

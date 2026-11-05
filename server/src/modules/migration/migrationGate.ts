@@ -1,10 +1,7 @@
 import { classifyInventory, formatFindings, loadInventory, type Findings, type Queryable } from './legacyInventory.js';
 
-// Some migrations cannot apply to legacy data as-is (a unique index over rows
-// that already violate it). Running them anyway would half-migrate the database
-// and then kill the boot, so the server checks first and refuses — telling the
-// operator exactly what to do — instead of "repairing" data on its own
-// (docs/plano-rede-social.md §12: corrections are reviewed, never silent).
+// Check legacy data before migrations that require clean constraints. Refuse startup with repair
+// instructions instead of changing existing data without operator review.
 
 interface Precondition {
   migration: string;

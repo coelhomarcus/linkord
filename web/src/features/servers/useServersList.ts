@@ -23,6 +23,7 @@ export function useServersList() {
   const [servers, setServers] = useState<ServerSummary[]>([]);
   const serversRef = useRef<ServerSummary[]>([]);
   const [memberRevision, setMemberRevision] = useState<Map<string, number>>(new Map());
+  const [memberRoleIds, setMemberRoleIds] = useState<Map<string, Map<string, string[]>>>(new Map());
 
   const commit = useCallback((next: ServerSummary[]) => {
     const sorted = sortServers(next);
@@ -43,11 +44,31 @@ export function useServersList() {
   const onServerDeleted = useCallback((m: Extract<ServerMessage, { t: 'server-deleted' }>): ServerSummary | null => {
     const gone = serversRef.current.find((s) => s.id === m.serverId) ?? null;
     commit(serversRef.current.filter((s) => s.id !== m.serverId));
+    setMemberRoleIds((prev) => {
+      if (!prev.has(m.serverId)) return prev;
+      const next = new Map(prev);
+      next.delete(m.serverId);
+      return next;
+    });
     return gone;
   }, [commit]);
 
   const onMembersChanged = useCallback((m: Extract<ServerMessage, { t: 'server-member-added' | 'server-member-removed' | 'server-member-updated' }>) => {
     setMemberRevision((prev) => new Map(prev).set(m.serverId, (prev.get(m.serverId) ?? 0) + 1));
+    if (m.t === 'server-member-updated' || m.t === 'server-member-removed') {
+      setMemberRoleIds((prev) => {
+        const current = prev.get(m.serverId);
+        if (!current) return prev;
+        const next = new Map(current);
+        if (m.t === 'server-member-removed') next.delete(m.userId);
+        else next.set(m.userId, m.roleIds);
+        return new Map(prev).set(m.serverId, next);
+      });
+    }
+  }, []);
+
+  const setMemberSnapshot = useCallback((serverId: string, members: { userId: string; roleIds: string[] }[]) => {
+    setMemberRoleIds((prev) => new Map(prev).set(serverId, new Map(members.map((member) => [member.userId, member.roleIds]))));
   }, []);
 
   /** Optimistic: the rail moves at once, the server keeps the order. */
@@ -64,5 +85,5 @@ export function useServersList() {
     [servers],
   );
 
-  return { servers, serversRef, memberRevision, channelConversations, setInitial, onServerChanged, onServerDeleted, onMembersChanged, reorderLocally };
+  return { servers, serversRef, memberRevision, memberRoleIds, setMemberSnapshot, channelConversations, setInitial, onServerChanged, onServerDeleted, onMembersChanged, reorderLocally };
 }

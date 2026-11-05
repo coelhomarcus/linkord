@@ -11,19 +11,9 @@ export interface UsageInfo {
   maxBytes: number;
 }
 
-/** Always computed live (sum/count the table) — never drifts from disk.
- * Counts EVERYTHING, including avatars/banners/server icons (messageId
- * null) — those used to be excluded on the theory that an account only ever
- * has one avatar + one banner at a time, so they don't accumulate the way
- * chat history does (see schema.ts#attachments). That's true for STEADY
- * storage, but it left this total (and therefore handleAvatarUpload, which
- * checks it) blind to write VOLUME — nothing stopped an account from
- * replacing its avatar as fast as the network allowed, and many accounts
- * doing that simultaneously does add up against the shared instance-wide
- * cap. Chat attachments still get their own PER-USER quota separately
- * (getUserUsage below, via the message's author) — this total is the
- * shared ceiling everyone draws from regardless of what kind of file it is —
- * server soundboard files included. */
+/** Counts committed files and sounds on every request. Include profile images too: frequent
+ * replacements contribute to write volume even when each account keeps only one current image.
+ * Chat attachments also have a separate per-user quota. */
 export async function getUsage(): Promise<UsageInfo> {
   const [row] = await db
     .select({ totalBytes: sql<number>`coalesce(sum(${attachmentsTable.size}), 0)`, totalFiles: sql<number>`count(*)` })

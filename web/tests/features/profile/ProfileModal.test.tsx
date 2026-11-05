@@ -49,35 +49,14 @@ const user: PublicUser = {
 };
 
 describe('ProfileModal', () => {
-  it('opens avatar and banner in the same standardized frame, identifying the clicked image', async () => {
-    const interaction = userEvent.setup();
+  it('does not offer image previews from the avatar or banner', () => {
     renderWithRoom(<MemoryRouter><ProfileModal userId="u1" onClose={vi.fn()} onOpenProfile={vi.fn()} /></MemoryRouter>, {
       allUsers: new Map([[user.id, user]]),
     });
 
-    await interaction.click(screen.getByRole('button', { name: 'Ver foto de perfil em tela cheia' }));
-    expect(screen.getByRole('img', { name: 'Foto de perfil' })).toHaveAttribute('src', user.avatar);
-    const avatarFrame = document.querySelector<HTMLElement>('[data-slot="image-lightbox-frame"]');
-    expect(avatarFrame).toHaveStyle({ width: '80vw', maxWidth: '80vh' });
-    expect(avatarFrame?.style.aspectRatio).toBe('1 / 1');
-
-    await interaction.click(screen.getByRole('button', { name: 'Fechar' }));
-    await interaction.click(screen.getByRole('button', { name: 'Ver banner em tela cheia' }));
-    expect(screen.getByRole('img', { name: 'Banner' })).toHaveAttribute('src', user.banner);
-    const bannerFrame = document.querySelector<HTMLElement>('[data-slot="image-lightbox-frame"]');
-    expect(bannerFrame).toHaveStyle({ width: '80vw', maxWidth: `${(80 * 16) / 9}vh` });
-    expect(bannerFrame?.style.aspectRatio).toBe(`${16 / 9} / 1`);
-  });
-
-  it('keeps the correct identification when avatar and banner use the same URL', async () => {
-    const interaction = userEvent.setup();
-    const sameUrlUser = { ...user, avatar: '/same-image.webp', banner: '/same-image.webp' };
-    renderWithRoom(<MemoryRouter><ProfileModal userId="u1" onClose={vi.fn()} onOpenProfile={vi.fn()} /></MemoryRouter>, {
-      allUsers: new Map([[sameUrlUser.id, sameUrlUser]]),
-    });
-
-    await interaction.click(screen.getByRole('button', { name: 'Ver banner em tela cheia' }));
-    expect(screen.getByRole('img', { name: 'Banner' })).toHaveAttribute('src', sameUrlUser.banner);
+    expect(screen.queryByRole('button', { name: 'Ver foto de perfil em tela cheia' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Ver banner em tela cheia' })).not.toBeInTheDocument();
+    expect(document.querySelector('[data-slot="image-lightbox-frame"]')).toBeNull();
   });
 
   it('the card inside the modal has no border of its own (only the modal\'s) and the X stays legible over the banner', () => {
@@ -88,7 +67,8 @@ describe('ProfileModal', () => {
     const content = document.querySelector('[data-slot="dialog-content"]')!;
     expect(content.querySelector('.border-strong')).toBeNull();
     expect(content.querySelector('.rounded-xl.border')).toBeNull();
-    expect(content.querySelector('[data-slot="dialog-close"]')!.className).toContain('bg-black/60');
+    expect(content.querySelector('[data-slot="dialog-close"]')!.className).toContain('bg-bg-control');
+    expect(content.querySelector('[data-slot="dialog-close"]')!.className).toContain('border-border-control');
   });
 });
 

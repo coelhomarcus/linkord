@@ -94,7 +94,8 @@ describe('ConversationSidebar — home', () => {
 
   it('shows a DM\'s unread count on its row', () => {
     renderSidebar('/app/channels/@me', { unreadByConversation: new Map([['dm-bea', 3]]) });
-    expect(screen.getByRole('button', { name: 'Bea, 3 não lidas' })).toHaveTextContent('3');
+    const row = screen.getByRole('button', { name: 'Bea, 3 não lidas' }).closest('li');
+    expect(row).toHaveTextContent('3');
   });
 });
 

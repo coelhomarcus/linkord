@@ -27,14 +27,10 @@ export interface RoomState {
    * capacity fallback (TileGrid can't fit everyone legibly) can retract
    * ONLY its own focus when space recovers, never one it didn't cause. */
   focusOrigin: 'manual' | 'automatic' | 'capacity' | null;
-  /** Tile keys whose video a viewer chose to stop seeing ("Ocultar vídeo
-   * para mim") — local-only, session-only, never synced to the server or
-   * to other participants. Cleared per-participant on PARTICIPANT_LEFT. */
+  /** Tile keys hidden locally for this session. Cleared when that participant leaves. */
   hiddenVideoKeys: Set<string>;
-  /** Screen-share tile keys a viewer chose to stop watching ("Parar de
-   * assistir") — unlike hiddenVideoKeys this actually drives an unsubscribe
-   * (see useWatchScreenShare), but is still local-only/session-only and
-   * never touches the presenter's publication. Cleared on PARTICIPANT_LEFT. */
+  /** Screen shares unsubscribed locally for this session; never changes the presenter's
+   * publication. Cleared when that participant leaves. */
   unwatchedScreenKeys: Set<string>;
   reconnecting: boolean;
   joined: boolean;

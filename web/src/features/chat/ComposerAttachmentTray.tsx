@@ -73,7 +73,7 @@ export function ComposerAttachmentTray({ files, onRemove, fallbackFocusRef }: Co
                 )}
                 <CloseButton
                   ref={(el) => { removeButtonRefs.current.set(item.id, el); }}
-                  variant={item.previewUrl ? 'overlay' : 'ghost'}
+                  variant={item.previewUrl ? 'surface' : 'ghost'}
                   size="xs"
                   label={t('composer.removeFile', { name: item.file.name })}
                   onClick={() => handleRemove(item.id, index)}

@@ -48,21 +48,9 @@ interface JoinMessage {
   v?: unknown;
 }
 
-// Per-account sliding-window caps for the events an authenticated account
-// (or a script driving it) could otherwise flood at unlimited speed — chat
-// writes/broadcasts, reactions, and profile updates all hit the DB and fan
-// out to every connected participant with no other throttle in front of
-// them. Not applied to every event on purpose: most read-only/idempotent
-// ones (conversation-open, call-join, mic-state, ...) aren't the same kind of
-// risk and a limiter here would just make normal UI usage flaky.
-// 'message-search' is the one read-only exception — it's a full-text query
-// against the DB on every call, so it gets a conservative cap as defense in
-// depth against a scripted client bypassing the search box's own debounce;
-// 'load-messages-around' stays unthrottled like the other reads since it's
-// click-driven, not keystroke-driven. The stream-preview pair is capped
-// because a request can wake another account's client to capture its screen. 'typing' is intentionally absent too —
-// it never touches the DB, and the composer itself throttles to about one
-// emit per 3s while held down (see MessageComposer.tsx).
+// Rate-limit events that write to the database or trigger work on another client. Search is
+// capped because scripted clients can bypass the UI debounce; click-driven reads stay uncapped.
+// Typing is already throttled by the composer and does not touch the database.
 const ACTION_LIMITS: Record<string, { windowMs: number; max: number }> = {
   chat: { windowMs: 10_000, max: 10 },
   'chat-edit': { windowMs: 10_000, max: 10 },

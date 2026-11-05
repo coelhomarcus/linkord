@@ -1,13 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type { TileDescriptor } from './tileTypes';
 
-/** Suggests focus onto a screen share the moment it starts — but never
- * overrides a focus the viewer picked themselves (calls redesign plan §6.2:
- * "nunca substituir um foco manual ativo"). Only reacts to a screen key
- * that's genuinely new since the last render — a share that was already
- * active when this mounted (joining mid-share) isn't "someone just started
- * sharing", so the first render only records what's there without focusing
- * it. */
+/** Focus a newly started screen share unless the viewer has chosen a focus manually. */
 export function useAutoFocusScreenShare(
   descriptors: TileDescriptor[],
   focusOrigin: 'manual' | 'automatic' | 'capacity' | null,

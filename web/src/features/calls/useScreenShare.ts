@@ -10,14 +10,9 @@ import { i18n } from '@/shared/i18n/init';
 interface ScreenShareApi {
   startSharing: () => Promise<void>;
   stopSharing: () => void;
-  /** Stops the current capture and immediately opens a fresh native picker
-   * — the only way to pick a different window/tab/screen, or to have a
-   * quality preference chosen mid-share actually take effect (see the calls
-   * redesign plan §8.3: "troca de fonte usa o seletor do navegador"). */
+  /** Restart capture through the native picker so source and quality changes take effect. */
   changeSource: () => Promise<void>;
-  /** Mutes the local screen-share publication without unpublishing it — the
-   * tile (mine and everyone else's) shows a "prévia pausada" state instead
-   * of vanishing, distinct from stopping the share entirely. */
+  /** Muting keeps the share tile visible with a paused-preview state; stopping removes it. */
   pauseSharePreview: () => Promise<void>;
   resumeSharePreview: () => Promise<void>;
 }

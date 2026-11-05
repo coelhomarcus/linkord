@@ -15,6 +15,7 @@ import { AccessNotice } from '@/app/layout/AccessNotice';
 import { ConversationSidebar } from '@/features/conversations/ConversationSidebar';
 import { ServerRail } from '@/features/servers/ServerRail';
 import { MemberListPanel } from '@/features/servers/MemberListPanel';
+import { fetchAllServerMembers } from '@/features/servers/serversApi';
 import { DirectProfilePanel } from '@/features/profile/DirectProfilePanel';
 import { ServerSettingsProvider } from '@/features/servers/ServerSettingsContext';
 import { InvitePage } from '@/features/servers/InvitePage';
@@ -90,6 +91,7 @@ function Shell() {
   const {
     state, dispatch, livekitRoom, closeTileMenu, sendWs, retryConnection, notifyActiveView, registerRequestChatView, registerOpenCall,
     activeCallConversationId, activeConversationId, joinCall, leaveCall, conversations, allUsers, servers,
+    serverMemberRevision, setServerMemberSnapshot,
   } = useRoom();
   const roomError = state.roomError;
   const navigate = useNavigate();
@@ -242,6 +244,18 @@ function Shell() {
 
   const activeConversation = conversations.find((conversation) => conversation.id === (visibleConversationId ?? stageConversationId ?? activeConversationId));
   const currentServer = servers.find((s) => s.id === serverIdFromPath(contentLocation.pathname)) ?? null;
+  const roleDataServerId = activeConversation?.serverId ?? currentServer?.id ?? null;
+  const roleDataRevision = roleDataServerId ? serverMemberRevision.get(roleDataServerId) ?? 0 : 0;
+  useEffect(() => {
+    if (!roleDataServerId) return;
+    let cancelled = false;
+    fetchAllServerMembers(roleDataServerId)
+      .then((members) => {
+        if (!cancelled) setServerMemberSnapshot(roleDataServerId, members.map((member) => ({ userId: member.user.id, roleIds: member.roleIds })));
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [roleDataServerId, roleDataRevision, setServerMemberSnapshot]);
   const shownType = visibleConversationId ? activeConversation?.type ?? null : null;
   const directShown = shownType === 'direct';
   const { details: detailsVisible, media: mediaVisible } = rightPanelsVisible({

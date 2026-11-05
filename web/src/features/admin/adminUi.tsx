@@ -118,9 +118,9 @@ export function ListChrome({ list, empty, emptyAction, children }: {
  * with a retry. Renders nothing once the data is there. */
 export function DetailStatusView({ status, missing, failed, backTo, backLabel, onRetry }: {
   status: AdminDetailStatus;
-  /** "Conta não encontrada." */
+  /** Account not found. */
   missing: string;
-  /** "Não foi possível carregar a conta." */
+  /** Could not load the account. */
   failed: string;
   backTo: string;
   backLabel: string;

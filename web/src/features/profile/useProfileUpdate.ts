@@ -26,16 +26,12 @@ export class ProfileSaveRefused extends Error {
   constructor(code: string, message: string) { super(message); this.code = code; }
 }
 
-/** Never queued at all — no live connection to send it over. Distinguished
- * from a timeout so the UI can say "sem conexão" instead of "não respondeu",
- * and so it fails at once instead of only after the timeout. */
+/** Fail immediately when offline so the UI can distinguish it from a server timeout. */
 export class ProfileSaveOffline extends Error {
   constructor() { super(i18n.t('profile:save.offline')); }
 }
 
-/** Turns a rejection of `updateProfile`/`uploadProfileImage`/`removeProfileImage`
- * into UI text. `fallback` covers a plain Error a caller wants worded for its
- * own context (e.g. "Falha ao enviar a foto." instead of the generic one). */
+/** Converts profile update failures to UI text. `fallback` lets callers provide context-specific wording. */
 export function describeProfileSaveError(err: unknown, fallback?: string): string {
   const fallbackText = fallback ?? i18n.t('profile:save.failed');
   if (err instanceof ProfileSaveOffline || err instanceof ProfileSaveTimeout) return err.message;

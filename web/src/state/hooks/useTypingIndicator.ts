@@ -2,10 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { MutableRefObject } from 'react';
 import type { ClientMessage, ServerMessage } from '@/shared/types/protocol';
 
-/** "Fulano está digitando..." indicator — entirely ephemeral, no persisted/
- * server-held state to reconcile on reconnect (unlike speaking/deafened).
- * `myUserIdRef` is read (not owned) here, just to filter out the server
- * ever echoing our own typing back to us. */
+/** Typing state is ephemeral and needs no reconnect reconciliation. The caller-owned user id
+ * ref filters out any typing event echoed back for the current account. */
 export function useTypingIndicator(sendWs: (msg: ClientMessage) => void, myUserIdRef: MutableRefObject<string | null>) {
   const [typingByConversation, setTypingByConversation] = useState<Map<string, Set<string>>>(new Map());
   // Per (conversationId, userId) auto-expiry timers — kept out of React

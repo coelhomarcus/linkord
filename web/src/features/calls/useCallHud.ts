@@ -2,9 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 
 const IDLE_TIMEOUT_MS = 2500;
-// Not per-event (mousemove fires dozens of times/sec) — a slow poll against a
-// timestamp is effectively free, where a setTimeout/clearTimeout churn on
-// every pixel of movement would not be (plan §11.2: "medir... antes de
+// Ignore small pointer movements so incidental jitter does not keep the controls visible.
 // otimizar", applied conservatively here without a literal profiling pass).
 const CHECK_INTERVAL_MS = 400;
 const ACTIVITY_EVENTS = ['mousemove', 'keydown', 'pointerdown', 'touchstart'] as const;
@@ -17,12 +15,7 @@ interface CallHudApi {
   revealHud: () => void;
 }
 
-/** Auto-hides the call's floating controls after a period with no mouse,
- * keyboard, or touch activity — so they don't permanently cover the video
- * underneath (plan §11.3). `suspend` (a tile menu open, reconnecting, an
- * actionable error) forces it visible and pauses the idle countdown
- * regardless of the timer. A menu or popover opened from inside `hudRef`
- * holds it too. */
+/** Hide controls after inactivity; keep them visible while an action needs attention. */
 export function useCallHud(suspend: boolean, hudRef?: RefObject<HTMLElement | null>): CallHudApi {
   const [hudVisible, setHudVisible] = useState(true);
   const lastActivityRef = useRef(Date.now());

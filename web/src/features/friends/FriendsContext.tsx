@@ -24,8 +24,7 @@ interface FriendsContextValue {
 
 const FriendsContext = createContext<FriendsContextValue | null>(null);
 
-// Social state belongs to this feature, not to the room reducer
-// (docs/plano-rede-social.md §8.1): the room only forwards the server's
+// Forward only server-provided friend data; do not reconstruct relationship state in the client.
 // payload-free signal as `socialRevision`, everything else lives here.
 export function FriendsProvider({ children }: { children: ReactNode }) {
   const { socialRevision } = useRoom();

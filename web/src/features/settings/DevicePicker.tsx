@@ -9,10 +9,7 @@ import { useMicLevelMeter } from './useMicLevelMeter';
 import { useSpeakerTest } from './useSpeakerTest';
 import { useCameraPreview } from './useCameraPreview';
 
-/** The three "am I actually picking the right device" checks (plano §8.3,
- * melhorias P2) — each opens its own getUserMedia stream, never touches
- * room.localParticipant (a call's own track), starts only on this button and
- * stops on it, on unmount, or the moment the picked device changes. */
+/** Each device test owns a temporary media stream and never changes the active call. */
 function MicTest({ deviceId }: { deviceId: string | undefined }) {
   const { t } = useTranslation('settings');
   const meter = useMicLevelMeter();

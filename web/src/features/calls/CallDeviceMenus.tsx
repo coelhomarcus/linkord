@@ -28,8 +28,7 @@ import { cn } from '@/shared/lib/utils';
 
 const log = logger.child({ component: 'call-device-menus' });
 
-// 17x17, offset -2px top/right of the 44px main button it sits on — see the
-// calls redesign plan §4. Same black/white-based material as the bar itself,
+// Keep device menus visually consistent with the call control bar. Same black/white-based material as the bar itself,
 // not the app's theme.
 const CORNER_TRIGGER = 'absolute -right-0.5 -top-0.5 z-10 grid size-[17px] place-items-center rounded-[7px] bg-black text-white/70 ring-1 ring-white/15 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60';
 

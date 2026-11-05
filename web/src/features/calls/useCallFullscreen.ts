@@ -14,10 +14,7 @@ interface CallFullscreenApi {
   fullscreenElement: HTMLElement | null;
 }
 
-/** Browser fullscreen for the whole call view (Stage + control bar), with a
- * graceful fallback per the calls redesign plan §10: if the Fullscreen API
- * doesn't exist or the request fails, the call simply stays in its already-
- * expanded (non-fullscreen) view — never a broken or half-applied state. */
+/** Request fullscreen for the call view; if unavailable or rejected, keep the expanded view usable. */
 export function useCallFullscreen(containerRef: RefObject<HTMLElement | null>): CallFullscreenApi {
   const fullscreenElement = useFullscreenElement();
   // Compared in an effect, not inline during render — reading `.current`

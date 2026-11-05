@@ -39,8 +39,7 @@ export function FloatingPip({ allIds, onExpand, hideOnMobile = false }: Floating
   const dragStartRef = useRef({ x: 0, y: 0, left: 0, top: 0 });
   const didDragRef = useRef(false);
 
-  // Selects by stable key, never by array index (plan §10: "seleciona por
-  // identidade estável, priorizando a fonte em foco"): a manual pick wins
+  // Select by stable key so reordering cannot change the selection; a manual pick wins
   // while it still exists; otherwise the focused source; otherwise the
   // first available — never a stale index silently pointing at whoever
   // happens to occupy that slot now.

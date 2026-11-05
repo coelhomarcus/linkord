@@ -7,10 +7,8 @@ import { getLastSweep } from '../attachments/orphanSweeper.js';
 import { outboxStats } from '../notifications/outboxWorker.js';
 import { listOnlineUserIds, participants } from '../presence/participants.js';
 
-/** Operational picture of the instance (docs/plano-rede-social.md §9
- * "Operação"): what an administrator needs to know to act, nothing decorative.
- * The instance-wide storage figure lives HERE and nowhere an ordinary account
- * can see it (§8.3). */
+/** Operational data for administrators, including instance-wide storage usage that regular
+ * accounts must not see. */
 export async function getSystemInfo() {
   const [storage, outbox, accounts, unread] = await Promise.all([
     getUsage(),

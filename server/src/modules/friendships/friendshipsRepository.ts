@@ -162,9 +162,7 @@ export async function countIncomingRequests(userId: string): Promise<number> {
   return row?.n ?? 0;
 }
 
-/** The viewer's relation to `targetId`, as shown on a profile or a DM. A
- * block by the TARGET is reported as plain `none` — never reveal a reverse
- * block (docs/plano-rede-social.md §5.4). */
+/** The viewer's relation to `targetId`. A target's block is reported as `none` to avoid revealing it. */
 export async function getRelationship(viewerId: string, targetId: string): Promise<{ relation: Relation; retryAfter: string | null }> {
   if (viewerId === targetId) return { relation: 'self', retryAfter: null };
   if (await isBlocked(viewerId, targetId)) return { relation: 'blocked', retryAfter: null };
@@ -178,12 +176,8 @@ export async function getRelationship(viewerId: string, targetId: string): Promi
   return { relation: 'none', retryAfter: isWithinCooldown(row.retryAfter) ? row.retryAfter!.toISOString() : null };
 }
 
-/** The one policy op messages.ts/socket.ts/attachmentUploads.ts actually
- * call — the write-path gate for a direct conversation
- * (docs/plano-rede-social.md §4.3). Block wins over friendship: even a
- * lingering 'accepted' row (there shouldn't be one — blockUser ends it in
- * the same transaction — but this stays defense-in-depth, per §6.1 "bloqueio
- * não é um status da amizade") never allows contact. */
+/** Gate writes in direct conversations. Blocks take precedence over friendship as defense in depth,
+ * even though blockUser also ends the friendship in the same transaction. */
 export async function canSendDirectMessage(a: string, b: string): Promise<boolean> {
   if (await isBlockedEitherWay(a, b)) return false;
   return areFriends(a, b);
@@ -193,15 +187,8 @@ export function isWithinCooldown(retryAfter: Date | null, now = new Date()): boo
   return !!retryAfter && now < retryAfter;
 }
 
-/** Writes the notification + outbox row for a friendship event in the SAME
- * transaction as the state change that caused it (§7.1 step 4). Nothing
- * consumes either table yet (no worker, no notification center — that's
- * Etapa 7+); this is the write side of a pattern etapa 5 already scoped for.
- * `dedupeKey` is deterministic per (friendship, version) so a retried write
- * can't double up. Only 'created' and 'accepted' get one — decline/cancel/
- * remove have no matching `kind` in the notifications table's CHECK
- * constraint (schema.ts), and a rejection isn't meant to be presented as a
- * hostile notification to the sender (§5.3). */
+/** Write the notification in the same transaction as the friendship change. A deterministic key
+ * makes retries idempotent. Only created and accepted requests have notification kinds. */
 async function recordFriendshipEvent(tx: Tx, recipientId: string, kind: 'friend_request' | 'friend_accepted', friendship: Friendship, eventType: string): Promise<void> {
   const dedupeKey = `${kind}:${friendship.id}:${friendship.version}`;
   await tx.insert(notifications).values({
@@ -220,8 +207,7 @@ async function recordFriendshipEvent(tx: Tx, recipientId: string, kind: 'friend_
  * a stale transition. */
 export async function requestFriendship(fromUserId: string, toUsername: string): Promise<FriendshipResult> {
   const target = await findByUsernameLower(toUsername);
-  // "não revelar bloqueio reverso" (§5.3): a nonexistent account and a
-  // block in EITHER direction produce the exact same response.
+  // A nonexistent account and a reverse block must have the same visible result.
   if (!target || target.status !== 'active' || target.id === fromUserId || await isBlockedEitherWay(fromUserId, target.id)) {
     return { code: 'user_unavailable' };
   }

@@ -161,16 +161,13 @@ export function fetchLinkPreview(url: string): Promise<LinkPreviewData> {
   return apiFetch(`/api/link-preview?url=${encodeURIComponent(url)}`);
 }
 
-/** On-demand profile fetch (Etapa 7) — for when a profile isn't already in
- * the known-users cache (usePresence.ts's `allUsers`), e.g. the author of
- * an old message who has since left the conversation. 404 covers both
- * "doesn't exist" and "not authorized to view" — same posture as the rest
- * of the social endpoints, never confirms/denies a relationship. */
+/** Fetch a profile missing from the known-users cache. A 404 covers both nonexistent and
+ * unauthorized accounts, so this endpoint does not reveal relationship state. */
 export function fetchUserProfile(userId: string): Promise<{ user: PublicUser }> {
   return apiFetch(`/api/users/${userId}/profile`);
 }
 
-// ---- social: friends, requests, blocks (Etapa 8) ----------------------------
+// ---- friends, requests, and blocks ------------------------------------------
 
 /** The minimum a friends/requests/blocks row needs — no banner/bio, the
  * server never sends a full profile to someone not yet authorized to see one. */
@@ -347,7 +344,7 @@ export function revokeInvitation(id: string): Promise<{ invitation: InvitationCa
   return apiFetch(`/api/server-invitations/${encodeURIComponent(id)}`, { method: 'DELETE' });
 }
 
-// ---- reports (Etapa 11) -----------------------------------------------------
+// ---- reports ----------------------------------------------------------------
 
 export function submitReport(input: { targetType: 'user' | 'server' | 'message'; targetId: string; category: string; details: string }): Promise<{ ok: true }> {
   return apiFetch('/api/reports', { method: 'POST', body: JSON.stringify(input) });

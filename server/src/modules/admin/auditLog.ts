@@ -8,10 +8,7 @@ import { logger } from '../../lib/logger.js';
 
 const log = logger.child({ component: 'audit' });
 
-// Append-only trail of administrative actions (docs/plano-rede-social.md
-// §6.5). Nothing in the application updates or deletes these rows, and there
-// is no route that could. Never put passwords, cookies, tokens or message
-// bodies in `detail`.
+// Append-only audit trail. Never store passwords, cookies, tokens, or message bodies in `detail`.
 
 export interface AuditActor { id: string; username: string }
 

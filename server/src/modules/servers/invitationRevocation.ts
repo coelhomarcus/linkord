@@ -9,8 +9,7 @@ import { markNotificationsRead } from '../notifications/notificationsRepository.
 // make a cycle. Every function returns the revoked ids so the caller can push
 // `invitation-updated` AFTER the commit.
 
-/** Losing the friendship or blocking invalidates a pending invitation between
- * the two, in either direction (docs/plano-rede-social.md §7.2.5, §7.3). */
+/** Losing the friendship or blocking either party invalidates their pending invitation. */
 export async function revokePendingBetween(tx: Tx, a: string, b: string): Promise<string[]> {
   const rows = await tx.update(serverInvitations)
     .set({ status: 'revoked', respondedAt: new Date(), version: sql`${serverInvitations.version} + 1` })

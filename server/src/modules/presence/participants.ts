@@ -70,13 +70,8 @@ export function broadcast(obj: { t: string; [key: string]: unknown }, exceptId?:
   }
 }
 
-/** Scoped presence broadcast (Etapa 7) — delivers to whoever has
- * `subjectUserId` in their OWN `knownPeerIds` (computed at THEIR join
- * time, see realtime/socket.ts), plus always to the subject's own other
- * tabs/devices (multi-tab profile/mic-state sync). Checking the
- * RECEIVER's cached set (not the subject's) is what makes this work even
- * when the subject has no live connection at all — e.g. notifying a
- * friend that an account got deleted. */
+/** Deliver to peers recorded at socket join and the subject's other tabs.
+ * Using each receiver's cached peers also handles subjects with no live connection. */
 export function broadcastToKnownPeers(subjectUserId: string, obj: { t: string; [key: string]: unknown }, exceptId?: string): void {
   for (const p of participants.values()) {
     if (p.id === exceptId) continue;

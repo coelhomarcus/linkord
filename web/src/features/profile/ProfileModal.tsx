@@ -5,8 +5,6 @@ import { ROUTES } from '@/shared/lib/routes';
 import { useRoom } from '@/state/RoomContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/primitives/dialog';
 import { Button } from '@/shared/ui/primitives/button';
-import { ImageLightbox } from '@/features/media/ImageLightbox';
-import { BANNER_ASPECT_RATIO } from '@/features/profile/profileLinks';
 import { fetchUserProfile } from '@/shared/api/api';
 import type { PublicUser } from '@/shared/types/protocol';
 import { EditProfileButton, ProfileActions } from '@/features/friends/ProfileActions';
@@ -25,15 +23,7 @@ interface ProfileModalProps {
   onOpenProfile: (userId: string) => void;
 }
 
-type ProfileImageSelection = {
-  src: string;
-  kind: 'avatar' | 'banner';
-};
-
-/** A profile not already in the known-users cache (Etapa 7 — see
- * usePresence.ts) needs an on-demand fetch: e.g. the author of an old
- * message who has since left the conversation. `fetchStatus` only tracks
- * that fallback path — a cache hit never touches it. */
+/** Fetch uncached profiles on demand, such as authors of older messages who have left the conversation. */
 export function ProfileModal({ userId, onClose, onOpenProfile }: ProfileModalProps) {
   const { t } = useTranslation('profile');
   const { state, allUsers, onlineUserIds } = useRoom();
@@ -42,7 +32,6 @@ export function ProfileModal({ userId, onClose, onOpenProfile }: ProfileModalPro
   const cachedUser = userId ? allUsers.get(userId) : null;
   const [fetchedUser, setFetchedUser] = useState<PublicUser | null>(null);
   const [fetchStatus, setFetchStatus] = useState<'idle' | 'loading' | 'error'>('idle');
-  const [lightboxImage, setLightboxImage] = useState<ProfileImageSelection | null>(null);
 
   const loadProfile = useCallback((id: string) => {
     setFetchStatus('loading');
@@ -98,7 +87,6 @@ export function ProfileModal({ userId, onClose, onOpenProfile }: ProfileModalPro
       )}
       {user && (
         <DialogContent
-          closeButtonVariant="overlay"
           // one row: the header is sr-only (absolutely positioned, no row of its
           // own), so the content takes the whole height and scrolls inside it
           className={cn(
@@ -116,8 +104,6 @@ export function ProfileModal({ userId, onClose, onOpenProfile }: ProfileModalPro
                 bare
                 user={user}
                 online={online}
-                onBannerClick={user.banner ? () => setLightboxImage({ src: user.banner, kind: 'banner' }) : undefined}
-                onAvatarClick={user.avatar ? () => setLightboxImage({ src: user.avatar, kind: 'avatar' }) : undefined}
                 // your own profile has no relationship to act on: the way to edit it sits by the name
                 nameAction={user.id === state.me.userId ? <EditProfileButton onNavigate={onClose} /> : undefined}
                 actions={user.id === state.me.userId ? undefined : (
@@ -175,16 +161,6 @@ export function ProfileModal({ userId, onClose, onOpenProfile }: ProfileModalPro
       )}
       {user && (
         <ReportDialog target={{ type: 'user', id: user.id, label: `@${user.username}` }} open={reportOpen} onOpenChange={setReportOpen} />
-      )}
-      {user && (
-        <ImageLightbox
-          src={lightboxImage?.src ?? ''}
-          alt={lightboxImage?.kind === 'banner' ? t('modal.banner') : t('modal.avatar')}
-          variant="profile"
-          aspectRatio={lightboxImage?.kind === 'banner' ? BANNER_ASPECT_RATIO : 1}
-          open={!!lightboxImage}
-          onOpenChange={(open) => { if (!open) setLightboxImage(null); }}
-        />
       )}
     </Dialog>
   );
