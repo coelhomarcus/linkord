@@ -3,7 +3,7 @@ import type { ComponentType, CSSProperties } from 'react';
 
 import {
   SiBehance, SiBluesky, SiDiscord, SiDribbble, SiEpicgames, SiFacebook, SiGithub, SiInstagram,
-  SiKick, SiPinterest, SiReddit, SiSnapchat, SiSoundcloud, SiSpotify, SiSteam, SiTelegram,
+  SiMyanimelist, SiKick, SiPinterest, SiReddit, SiSnapchat, SiSoundcloud, SiSpotify, SiSteam, SiTelegram,
   SiThreads, SiTiktok, SiTwitch, SiVk, SiWhatsapp, SiX, SiYoutube,
 } from 'react-icons/si';
 import { FaLinkedin, FaXbox } from 'react-icons/fa6';
@@ -13,7 +13,7 @@ export type LinkKind =
   | 'youtube' | 'twitter' | 'twitch' | 'instagram' | 'github' | 'linkedin' | 'tiktok' | 'spotify' | 'discord'
   | 'steam' | 'reddit' | 'facebook' | 'threads' | 'bluesky' | 'telegram' | 'soundcloud' | 'pinterest'
   | 'snapchat' | 'kick' | 'epicgames' | 'xbox' | 'behance' | 'dribbble' | 'vk' | 'whatsapp'
-  | 'generic';
+  | 'myanimelist' | 'generic';
 
 export interface LinkInfo {
   url: string;
@@ -39,6 +39,7 @@ export function linkInfo(rawUrl: string): LinkInfo | null {
   if (hostMatches(host, 'twitter.com') || hostMatches(host, 'x.com')) return { url: rawUrl, kind: 'twitter', label: 'X / Twitter' };
   if (hostMatches(host, 'twitch.tv')) return { url: rawUrl, kind: 'twitch', label: 'Twitch' };
   if (hostMatches(host, 'instagram.com')) return { url: rawUrl, kind: 'instagram', label: 'Instagram' };
+  if (hostMatches(host, 'myanimelist.net')) return { url: rawUrl, kind: 'myanimelist', label: 'MyAnimeList' };
   if (hostMatches(host, 'github.com')) return { url: rawUrl, kind: 'github', label: 'GitHub' };
   if (hostMatches(host, 'linkedin.com')) return { url: rawUrl, kind: 'linkedin', label: 'LinkedIn' };
   if (hostMatches(host, 'tiktok.com')) return { url: rawUrl, kind: 'tiktok', label: 'TikTok' };
@@ -69,6 +70,7 @@ const BRAND_ICONS: Record<Exclude<LinkKind, 'generic'>, ComponentType<{ size?: n
   twitch: SiTwitch,
   instagram: SiInstagram,
   github: SiGithub,
+  myanimelist: SiMyanimelist,
   linkedin: FaLinkedin,
   tiktok: SiTiktok,
   spotify: SiSpotify,

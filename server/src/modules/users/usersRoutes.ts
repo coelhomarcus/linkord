@@ -6,23 +6,11 @@ import { resolveSession } from '../auth/session.js';
 import { updateLocale } from '../auth/accounts.js';
 import { isLocale } from './locale.js';
 import { findById, publicUser } from './users.js';
-import { areFriends, friendsSince, listMutualFriends } from '../friendships/friendshipsRepository.js';
-import { shareAnyConversation } from '../conversations/conversationsRepository.js';
+import { friendsSince, listMutualFriends } from '../friendships/friendshipsRepository.js';
+import { canViewProfile } from './profileAccess.js';
 import { listSharedServers } from '../servers/serversRepository.js';
 
 type Params = { userId: string };
-
-/** §4.2.6 of the plan: knowing an id never grants access on its own — self,
- * an admin, a friend, or a shared conversation all do. Only used here (not
- * exported): the composition happens at this route-handler layer on
- * purpose, the same way realtime/socket.ts composes across domains,
- * instead of adding a users→friendships/conversations edge that would
- * cycle back (friendshipsRepository already imports users.js). */
-async function canViewProfile(viewerId: string, viewerRole: string, targetId: string): Promise<boolean> {
-  if (viewerId === targetId || viewerRole === 'admin') return true;
-  if (await areFriends(viewerId, targetId)) return true;
-  return shareAnyConversation(viewerId, targetId);
-}
 
 /** `GET /api/users/:userId/profile` — the "perfil sob demanda" fetch for
  * when a profile isn't already in the client's known-users cache (e.g. the

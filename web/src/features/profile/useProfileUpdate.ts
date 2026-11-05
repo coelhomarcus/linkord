@@ -3,7 +3,7 @@ import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
 import { DEFAULT_AVATAR_COLOR, normalizeAvatarColor } from '@/shared/Avatar';
 import { sanitizeDisplayName } from '@/shared/lib/displayName';
 import type { ClientMessage, ProfilePatch, PublicUser, ServerMessage } from '@/shared/types/protocol';
-import { MAX_BANNER_LEN, MAX_PROFILE_BIO_LEN, MAX_PROFILE_LINK_LEN, MAX_PROFILE_LINKS } from '@/shared/types/protocol';
+import { MAX_BANNER_LEN, MAX_PROFILE_BIO_LEN } from '@/shared/types/protocol';
 import type { RoomAction } from '@/state/roomReducer';
 import type { CropRect } from '@/state/RoomContext';
 import { ApiError } from '@/shared/api/api';
@@ -50,22 +50,6 @@ function sanitizeBio(value: unknown): string {
   return String(value == null ? '' : value).replace(/\r\n?/g, '\n').trim().slice(0, MAX_PROFILE_BIO_LEN);
 }
 
-function sanitizeProfileLinks(value: unknown): string[] {
-  if (!Array.isArray(value)) return [];
-  const links: string[] = [];
-  const seen = new Set<string>();
-  for (const item of value) {
-    const url = String(item == null ? '' : item).trim().slice(0, MAX_PROFILE_LINK_LEN);
-    if (!/^https?:\/\/\S+$/i.test(url)) continue;
-    const key = url.toLowerCase();
-    if (seen.has(key)) continue;
-    seen.add(key);
-    links.push(url);
-    if (links.length >= MAX_PROFILE_LINKS) break;
-  }
-  return links;
-}
-
 type ProfileResultOk = Extract<ServerMessage, { t: 'profile-result'; ok: true }>;
 type PendingEntry = { resolve: (value: ProfileResultOk) => void; reject: (err: Error) => void; timer: ReturnType<typeof setTimeout> };
 
@@ -102,7 +86,7 @@ export function useProfileUpdate(deps: ProfileUpdateDeps) {
     pendingRef.current.clear();
   }, []);
 
-  const applyConfirmed = useCallback((profile: ProfilePatch) => {
+  const applyConfirmed = useCallback((profile: ProfilePatch & { profileLinks?: string[] }) => {
     dispatch({
       type: 'SET_LOCAL_PROFILE',
       avatar: profile.avatar ?? '', avatarPoster: profile.avatarPoster ?? '', avatarColor: profile.avatarColor ?? DEFAULT_AVATAR_COLOR,
@@ -150,8 +134,8 @@ export function useProfileUpdate(deps: ProfileUpdateDeps) {
     });
   }, [isConnected, sendWs]);
 
-  /** The "Salvar perfil" path: the whole sanitized draft, all 8 fields. */
-  const updateProfile = useCallback((profile: { avatar: string; avatarPoster: string; avatarColor: string; displayName: string; banner: string; bannerPoster: string; bio: string; profileLinks: string[] }) => sendPatch({
+  /** Connections are saved independently so a stale draft cannot overwrite them. */
+  const updateProfile = useCallback((profile: { avatar: string; avatarPoster: string; avatarColor: string; displayName: string; banner: string; bannerPoster: string; bio: string }) => sendPatch({
     avatar: profile.avatar.trim().slice(0, 500),
     avatarPoster: sanitizeImageUrl(profile.avatarPoster),
     avatarColor: normalizeAvatarColor(profile.avatarColor) || DEFAULT_AVATAR_COLOR,
@@ -159,7 +143,6 @@ export function useProfileUpdate(deps: ProfileUpdateDeps) {
     banner: sanitizeImageUrl(profile.banner),
     bannerPoster: sanitizeImageUrl(profile.bannerPoster),
     bio: sanitizeBio(profile.bio),
-    profileLinks: sanitizeProfileLinks(profile.profileLinks),
   }), [sendPatch, name]);
 
   /** Persists just the image field(s) — no other key is ever present in this

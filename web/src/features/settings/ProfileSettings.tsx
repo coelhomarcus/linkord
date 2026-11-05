@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useBlocker } from 'react-router';
 import { ImageCropDialog } from './ImageCropDialog';
+import { ConnectionsSettings } from '@/features/profile/ConnectionsSettings';
 import { ProfileCard } from '@/features/profile/ProfileCard';
 import { useRoom } from '@/state/RoomContext';
 import { cn } from '@/shared/lib/utils';
@@ -16,7 +17,7 @@ import { AVATAR_MIME_TYPES, MAX_AVATAR_BYTES } from '@/shared/types/protocol';
 import { Button } from '@/shared/ui/primitives/button';
 import { describeProfileSaveError } from '@/features/profile/useProfileUpdate';
 import type { ProfileImageUploadPhase } from './uploadCroppedProfileImage';
-import { useProfileDraft, normalizeProfileDraftFields } from './useProfileDraft';
+import { useProfileDraft } from './useProfileDraft';
 import { UnsavedProfileChangesDialog } from './UnsavedProfileChangesDialog';
 
 type ProfileCropTarget = { field: 'avatar' | 'banner'; file: File; src: string };
@@ -48,21 +49,17 @@ export function ProfileSettings() {
   const [activeUpload, setActiveUpload] = useState<{ field: 'avatar' | 'banner'; phase: ProfileImageUploadPhase } | null>(null);
 
   // Avatar and banner save immediately; text fields use the draft flow.
-  // Normalize links because each socket message deserializes a new array.
-  const profileLinksKey = state.me.profileLinks.join('␟');
   const baseline = useMemo(() => ({
     displayName: state.me.displayName,
     avatarColor: normalizeAvatarColor(state.me.avatarColor) || DEFAULT_AVATAR_COLOR,
     bio: state.me.bio,
-    profileLinks: state.me.profileLinks,
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [state.me.displayName, state.me.avatarColor, state.me.bio, profileLinksKey]);
+  }), [state.me.displayName, state.me.avatarColor, state.me.bio]);
 
   const { draft, setField, dirty, saveState, error: saveError, conflict, save, discard, applyIncoming } = useProfileDraft({
     baseline,
     save: (fields) => updateProfile({
       avatar, avatarPoster, banner, bannerPoster,
-      ...normalizeProfileDraftFields(fields),
+      ...fields,
     }),
   });
   const saving = saveState === 'saving';
@@ -111,18 +108,6 @@ export function ProfileSettings() {
     } catch {
       // dialog stays open, `saveError` shows why
     }
-  }
-
-  function updateProfileLink(index: number, value: string) {
-    setField('profileLinks', draft.profileLinks.map((link, i) => (i === index ? value : link)));
-  }
-
-  function addProfileLink() {
-    setField('profileLinks', [...draft.profileLinks, '']);
-  }
-
-  function removeProfileLink(index: number) {
-    setField('profileLinks', draft.profileLinks.filter((_, i) => i !== index));
   }
 
   function handleFilePicked(field: 'avatar' | 'banner', e: ChangeEvent<HTMLInputElement>) {
@@ -213,7 +198,7 @@ export function ProfileSettings() {
             displayName: draft.displayName || state.me.name,
             username: state.me.name,
             avatar, avatarColor: draft.avatarColor, banner, bio: draft.bio,
-            profileLinks: normalizeProfileDraftFields(draft).profileLinks,
+            profileLinks: state.me.profileLinks,
             role: state.me.role,
           }}
           online
@@ -226,10 +211,7 @@ export function ProfileSettings() {
           onDisplayNameChange={(value) => setField('displayName', value)}
           onBioChange={(value) => setField('bio', value)}
           onAvatarColorChange={(value) => setField('avatarColor', value)}
-          editableLinks={draft.profileLinks}
-          onLinkChange={updateProfileLink}
-          onAddLink={addProfileLink}
-          onRemoveLink={removeProfileLink}
+          hideLinks
           fieldsDisabled={saving}
         />
         <input
@@ -295,6 +277,7 @@ export function ProfileSettings() {
           </div>
         )}
       </form>
+      <ConnectionsSettings />
 
       <UnsavedProfileChangesDialog
         open={blocker.state === 'blocked'}

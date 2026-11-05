@@ -12,6 +12,22 @@ function participant(overrides: Partial<Participant> = {}): Participant {
 }
 
 describe('roomReducer', () => {
+  it('connection changes update the account and every known session without changing other profiles', () => {
+    const first = participant();
+    const second = participant({ id: 'p2' });
+    const other = participant({ id: 'p3', userId: 'other' });
+    const state = { ...initialRoomState, me: { ...initialRoomState.me, userId: 'u1' }, participants: new Map([[first.id, first], [second.id, second], [other.id, other]]) };
+    const links = ['https://myanimelist.net/profile/Xinil'];
+    const next = roomReducer(state, { type: 'PROFILE_CONNECTIONS_CHANGED', userId: 'u1', profileLinks: links });
+    expect(next.me.profileLinks).toEqual(links);
+    expect(next.participants.get('p1')?.profileLinks).toEqual(links);
+    expect(next.participants.get('p2')?.profileLinks).toEqual(links);
+    expect(next.participants.get('p3')).toBe(other);
+    expect(state.participants.get('p1')?.profileLinks).toEqual([]);
+    const peerUpdate = roomReducer(next, { type: 'PROFILE_CONNECTIONS_CHANGED', userId: 'other', profileLinks: ['https://example.com'] });
+    expect(peerUpdate.me).toBe(next.me);
+  });
+
   it('WELCOME fills in "me" and the participant list, and clears roomError', () => {
     const state = { ...initialRoomState, roomError: 'room is full' };
     const next = roomReducer(state, {

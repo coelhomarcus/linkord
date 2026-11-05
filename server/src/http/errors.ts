@@ -42,6 +42,11 @@ export const ERROR_REGISTRY = {
   quota_exceeded: { statuses: [400, 409], channel: 'both' },
   storage_full: { statuses: [400], channel: 'http' },
 
+  invalid_connection: { statuses: [400], channel: 'http' },
+  connection_not_found: { statuses: [404], channel: 'http' },
+  connection_exists: { statuses: [409], channel: 'http' },
+  invalid_wall: { statuses: [400], channel: 'http' },
+
   // auth and accounts
   invalid_credentials: { statuses: [401], channel: 'http' },
   account_unavailable: { statuses: [403], channel: 'http' },

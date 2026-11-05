@@ -20,9 +20,6 @@
     "customColorLabel": "Choose custom color",
     "displayName": "Display name",
     "openLink": "Open {{name}}",
-    "link": "Link {{count}}",
-    "removeLink": "Remove link",
-    "addLink": "Add link",
     "admin": "Admin"
   },
   "modal": {
@@ -75,5 +72,88 @@
     "mutualFriends_one": "{{count}} mutual friend",
     "mutualFriends_other": "{{count}} mutual friends",
     "viewFull": "View full profile"
+  },
+  "integration": {
+    "url": "URL",
+    "description": "Connect your profiles and choose what to display on your Wall. Updated automatically every 24 hours.",
+    "loading": "Loading connections…",
+    "empty": "You have not added any connections yet.",
+    "pending": "Waiting for the first sync…",
+    "ready": "Synced",
+    "editConnection": "Edit connection {{name}}",
+    "removeConnection": "Remove connection {{name}}",
+    "editTitle": "Edit {{name}}",
+    "connectTitle": "Connect {{name}}",
+    "urlHint": "Enter the full website address.",
+    "usernameHint": "Enter your public username. This connection does not verify account ownership.",
+    "username": "Username",
+    "removeTitle": "Remove connection?",
+    "removeDescription": "This connection’s widgets and synced data will also be removed from your Wall.",
+    "errors": {
+      "invalid": "Enter a valid http/https URL or a valid username for this service.",
+      "duplicate": "This connection has already been added.",
+      "limit": "You can add up to eight connections.",
+      "missing": "This connection has already been removed.",
+      "rateLimited": "Wait a moment before trying again.",
+      "failed": "Could not save the connection. Try again.",
+      "load": "Could not load connections."
+    },
+    "syncErrors": {
+      "not_found": "User not found on this service.",
+      "private": "This profile’s data is not public.",
+      "rate_limited": "Service rate limit reached. We will retry automatically.",
+      "invalid_response": "The service returned unavailable or incomplete data.",
+      "unavailable": "Could not sync. We will retry automatically."
+    }
+  },
+  "wall": {
+    "title": "Wall",
+    "about": "About",
+    "profileTabs": "Profile tabs",
+    "edit": "Edit Wall",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saving": "Saving…",
+    "loading": "Loading Wall…",
+    "saveFailed": "Could not save the Wall. Check your connections and try again.",
+    "loadFailed": "Could not load the Wall.",
+    "addWidget": "Add widget",
+    "allAdded": "All available widgets have been added.",
+    "noConnections": "Connect MyAnimeList or GitHub to unlock widgets.",
+    "manageConnections": "Manage connections",
+    "emptyOwner": "Your Wall is empty. Click Edit Wall to choose your widgets.",
+    "emptyVisitor": "This user has not published any Wall widgets yet.",
+    "moveUp": "Move {{name}} up",
+    "moveDown": "Move {{name}} down",
+    "remove": "Remove {{name}}",
+    "unavailable": "Could not load data for this widget.",
+    "pending": "Data will appear after the first sync.",
+    "noItems": "No public items available.",
+    "progress": "Episodes: {{current}} / {{total}}",
+    "stale": "The last sync failed. Showing the latest available data.",
+    "updated": "Updated on {{date}}",
+    "widgets": {
+      "mal-recent-anime": "Recent anime activity",
+      "mal-favorite-anime": "Favorite anime",
+      "mal-favorite-manga": "Favorite manga",
+      "mal-favorite-characters": "Favorite characters",
+      "github-profile": "GitHub profile",
+      "github-calendar": "GitHub contributions"
+    },
+    "statuses": {
+      "watching": "Watching",
+      "completed": "Completed",
+      "onHold": "On hold",
+      "dropped": "Dropped",
+      "planned": "Plan to watch"
+    },
+    "github": {
+      "repositories": "Repositories",
+      "followers": "Followers",
+      "following": "Following",
+      "contributions": "{{total}} contributions in the last 12 months",
+      "calendar": "GitHub contribution calendar",
+      "day": "{{date}}: {{total}} contributions"
+    }
   }
 }

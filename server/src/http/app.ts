@@ -8,6 +8,7 @@ import { sendError, sendJson } from './respond.js';
 import { originGuard } from './originGuard.js';
 import { registerAuthRoutes } from '../modules/auth/routes.js';
 import { registerAttachmentRoutes } from '../modules/attachments/attachments.js';
+import { registerConnectionRoutes } from '../modules/connections/connections.js';
 import { registerProfileRoutes } from '../modules/profile/profile.js';
 import { registerMediaRoutes } from '../modules/attachments/media.js';
 import { registerLinkPreviewRoutes } from '../modules/link-preview/linkPreview.js';
@@ -98,6 +99,7 @@ export function createApp(): FastifyInstance {
   registerAuthRoutes(fastify);
   registerAttachmentRoutes(fastify);
   registerProfileRoutes(fastify);
+  registerConnectionRoutes(fastify);
   registerMediaRoutes(fastify);
   registerLinkPreviewRoutes(fastify);
   registerGifRoutes(fastify);

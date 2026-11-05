@@ -10,6 +10,8 @@ import type { RoomContextValue } from '@/state/RoomContext';
 import { SettingsPage } from '@/features/settings/SettingsPage';
 import { ProfileSaveRefused } from '@/features/profile/useProfileUpdate';
 
+vi.mock('@/features/profile/ConnectionsSettings', () => ({ ConnectionsSettings: () => <section>Conexões</section> }));
+
 vi.mock('@/state/AuthContext', () => ({
   useAuth: () => ({ logout: vi.fn() }),
 }));
@@ -90,7 +92,6 @@ describe('SettingsPage — profile', () => {
       banner: '',
       bannerPoster: '',
       bio: '',
-      profileLinks: [],
     });
   });
 
@@ -125,7 +126,6 @@ describe('SettingsPage — profile', () => {
       banner: '',
       bannerPoster: '',
       bio: '',
-      profileLinks: [],
     });
   });
 
@@ -158,11 +158,10 @@ describe('SettingsPage — profile', () => {
       banner: '',
       bannerPoster: '',
       bio: '',
-      profileLinks: [],
     });
   });
 
-  it('saves bio and profile links without empty lines', async () => {
+  it('saves bio independently from connections', async () => {
     const user = userEvent.setup();
     const updateProfile = vi.fn();
     const state = {
@@ -181,11 +180,6 @@ describe('SettingsPage — profile', () => {
     renderSettings({ state, updateProfile });
 
     await user.type(screen.getByLabelText('Bio'), 'Oi, eu sou a Fulana.');
-    expect(screen.queryByLabelText('Link 1')).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Adicionar link' }));
-    expect(screen.getByLabelText('Link 1')).toHaveFocus();
-    await user.keyboard('https://youtube.com/@fulana');
-    await user.click(screen.getByRole('button', { name: 'Adicionar link' }));
     await user.click(screen.getByRole('button', { name: 'Salvar perfil' }));
 
     expect(updateProfile).toHaveBeenCalledWith({
@@ -196,7 +190,6 @@ describe('SettingsPage — profile', () => {
       banner: '',
       bannerPoster: '',
       bio: 'Oi, eu sou a Fulana.',
-      profileLinks: ['https://youtube.com/@fulana'],
     });
   });
 
@@ -328,7 +321,7 @@ describe('SettingsPage — profile', () => {
       const room = useMemo(() => {
         const updateProfile = async (profile: {
           avatar: string; avatarPoster: string; avatarColor: string; displayName: string;
-          banner: string; bannerPoster: string; bio: string; profileLinks: string[];
+          banner: string; bannerPoster: string; bio: string;
         }) => {
           let next = baseMe;
           setMe((prev) => {
@@ -337,7 +330,6 @@ describe('SettingsPage — profile', () => {
               displayName: profile.displayName,
               avatarColor: profile.avatarColor,
               bio: profile.bio,
-              profileLinks: profile.profileLinks,
             };
             return next;
           });
@@ -345,7 +337,6 @@ describe('SettingsPage — profile', () => {
             displayName: profile.displayName,
             avatarColor: profile.avatarColor,
             bio: profile.bio,
-            profileLinks: profile.profileLinks,
           };
         };
         return createFakeRoomContextValue({ state: { ...initialRoomState, me }, updateProfile });
