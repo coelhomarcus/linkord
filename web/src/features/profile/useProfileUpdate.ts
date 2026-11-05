@@ -6,6 +6,7 @@ import type { ClientMessage, ProfilePatch, PublicUser, ServerMessage } from '@/s
 import { MAX_BANNER_LEN, MAX_PROFILE_BIO_LEN, MAX_PROFILE_LINK_LEN, MAX_PROFILE_LINKS } from '@/shared/types/protocol';
 import type { RoomAction } from '@/state/roomReducer';
 import type { CropRect } from '@/state/RoomContext';
+import { ApiError } from '@/shared/api/api';
 import { uploadCroppedProfileImage } from '@/features/settings/uploadCroppedProfileImage';
 import type { ProfileImageUploadPhase } from '@/features/settings/uploadCroppedProfileImage';
 import { i18n } from '@/shared/i18n/init';
@@ -35,6 +36,7 @@ export class ProfileSaveOffline extends Error {
 export function describeProfileSaveError(err: unknown, fallback?: string): string {
   const fallbackText = fallback ?? i18n.t('profile:save.failed');
   if (err instanceof ProfileSaveOffline || err instanceof ProfileSaveTimeout) return err.message;
+  if (err instanceof ApiError && err.code === 'upload_timeout') return err.message;
   if (err instanceof ProfileSaveRefused) return err.message || fallbackText;
   return fallbackText;
 }
