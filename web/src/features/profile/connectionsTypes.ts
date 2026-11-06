@@ -7,7 +7,6 @@ export const WIDGET_TYPES = {
 export type WidgetType = (typeof WIDGET_TYPES)[ConnectionProvider][number];
 export interface MediaItem {
   id: string; title: string; url: string; imageUrl: string | null;
-  status: string | null; progress: number | null; total: number | null;
 }
 export type WidgetData =
   | { kind: 'list'; items: MediaItem[] }

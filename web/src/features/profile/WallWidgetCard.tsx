@@ -6,10 +6,6 @@ export function WallWidgetCard({ widget }: { widget: WallWidget }) {
   const { t, i18n } = useTranslation('profile');
   const { connection, data } = widget;
   const number = (value: number) => value.toLocaleString(i18n.language);
-  function statusLabel(status: string) {
-    const key = ({ Watching: 'watching', Completed: 'completed', 'On-Hold': 'onHold', Dropped: 'dropped', 'Plan to Watch': 'planned' } as const)[status];
-    return key ? t(`wall.statuses.${key}`) : null;
-  }
   const showFooter = (connection.syncError && data) || connection.syncedAt;
   return (
     <article className="flex w-full min-w-0 flex-col gap-4 rounded-xl border border-border-strong bg-bg-secondary p-4">
@@ -18,14 +14,9 @@ export function WallWidgetCard({ widget }: { widget: WallWidget }) {
         <a href={connection.url} target="_blank" rel="noreferrer" className="max-w-[55%] flex-none truncate rounded-full bg-bg-tertiary px-2.5 py-1 text-caption font-medium text-accent-text transition-colors hover:bg-fill-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{connection.value}</a>
       </header>
       {!data && <p role="status" className="text-label text-text-muted">{t(connection.syncError ? 'wall.unavailable' : 'wall.pending')}</p>}
-      {data?.kind === 'list' && (data.items.length === 0 ? <p className="text-label text-text-muted">{t('wall.noItems')}</p> : <ul className="flex w-full flex-col gap-1">{data.items.map((item) => <li key={item.id}>
-        <a href={item.url} target="_blank" rel="noreferrer" className="flex w-full items-center gap-3 rounded-lg p-1.5 transition-colors hover:bg-fill-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-          {item.imageUrl ? <img src={item.imageUrl} alt="" loading="lazy" referrerPolicy="no-referrer" className="h-16 w-11 flex-none rounded-md bg-bg-tertiary object-cover" /> : <span className="h-16 w-11 flex-none rounded-md bg-bg-tertiary" />}
-          <span className="min-w-0 flex-1"><span className="line-clamp-2 text-label font-medium">{item.title}</span>
-            {item.status && statusLabel(item.status) && <span className="mt-1 block text-caption text-text-muted">{statusLabel(item.status)}</span>}
-            {item.progress !== null && <span className="block text-caption text-text-muted">{t('wall.progress', { current: number(item.progress), total: item.total === null ? '?' : number(item.total) })}</span>}
-            {item.progress !== null && !!item.total && <span aria-hidden className="mt-1.5 block h-1 w-full overflow-hidden rounded-full bg-fill-hover"><span className="block h-full rounded-full bg-primary" style={{ width: `${Math.min(100, (item.progress / item.total) * 100)}%` }} /></span>}
-          </span>
+      {data?.kind === 'list' && (data.items.length === 0 ? <p className="text-label text-text-muted">{t('wall.noItems')}</p> : <ul className="grid w-full grid-cols-4 gap-2">{data.items.slice(0, 8).map((item) => <li key={item.id} className="min-w-0">
+        <a href={item.url} target="_blank" rel="noreferrer" aria-label={item.title} title={item.title} className="group block aspect-[2/3] w-full overflow-hidden rounded-lg bg-bg-tertiary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          {item.imageUrl && <img src={item.imageUrl} alt="" loading="lazy" referrerPolicy="no-referrer" className="size-full object-cover transition-transform duration-200 group-hover:scale-105" />}
         </a>
       </li>)}</ul>)}
       {data?.kind === 'github-profile' && <div className="flex w-full flex-col gap-4">

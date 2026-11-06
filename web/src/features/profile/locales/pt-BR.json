@@ -129,7 +129,6 @@
     "unavailable": "Não foi possível carregar os dados deste widget.",
     "pending": "Os dados aparecerão após a primeira sincronização.",
     "noItems": "Nenhum item público disponível.",
-    "progress": "Episódios: {{current}} / {{total}}",
     "stale": "A última sincronização falhou. Exibindo os últimos dados disponíveis.",
     "updated": "Atualizado em {{date}}",
     "widgets": {
@@ -141,13 +140,6 @@
       "mal-recent-anime": "Os últimos animes que você assistiu",
       "github-profile": "Repositórios, seguidores e quem você segue",
       "github-calendar": "Sua atividade de contribuições ao longo do ano"
-    },
-    "statuses": {
-      "watching": "Assistindo",
-      "completed": "Concluído",
-      "onHold": "Em pausa",
-      "dropped": "Abandonado",
-      "planned": "Planejo assistir"
     },
     "github": {
       "repositories": "Repositórios",
