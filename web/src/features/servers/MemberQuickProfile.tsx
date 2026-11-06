@@ -1,4 +1,4 @@
-import { ArrowUpIcon, CrownIcon, PlusIcon } from '@phosphor-icons/react';
+import { ArrowUpIcon, CrownIcon, IdentificationCardIcon, PlusIcon } from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -9,7 +9,8 @@ import { Input } from '@/shared/ui/primitives/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/primitives/popover';
 import type { ServerSummary } from '@/shared/types/protocol';
 import { ProfileActions } from '@/features/friends/ProfileActions';
-import { BANNER_ASPECT_RATIO } from '@/features/profile/profileLinks';
+import { BANNER_ASPECT_RATIO, bannerStyle } from '@/features/profile/profileLinks';
+import { fetchUserProfile } from '@/shared/api/api';
 import { useRoom } from '@/state/RoomContext';
 import type { PublicUser } from '@/shared/types/protocol';
 import { cn } from '@/shared/lib/utils';
@@ -37,12 +38,25 @@ export function MemberQuickProfile({ server, member, currentUser, offline, open,
   const [messageDraft, setMessageDraft] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
   const [queuedMessage, setQueuedMessage] = useState<string | null>(null);
+  const [fetchedBanner, setFetchedBanner] = useState('');
   const sentQueuedMessageRef = useRef(false);
+  const bannerRequestedRef = useRef(false);
   const user = currentUser ?? member.user;
+  const banner = currentUser?.banner || fetchedBanner;
   const avatarPoster = 'avatarPoster' in user && typeof user.avatarPoster === 'string' ? user.avatarPoster : undefined;
   const assignable = [...server.roles].filter((role) => !role.isDefault).sort((a, b) => b.position - a.position);
   const color = memberColor(server, member.roleIds);
   const canManageRoles = !member.isOwner && user.id !== state.me.userId && hasPermission(server.permissions, PERMISSIONS.MANAGE_ROLES);
+
+  // The members endpoint only carries the minimal social fields, so a member
+  // outside the known-users cache has no banner until their profile is fetched.
+  useEffect(() => {
+    if (!open || currentUser || bannerRequestedRef.current) return;
+    bannerRequestedRef.current = true;
+    fetchUserProfile(member.user.id)
+      .then(({ user: fetched }) => setFetchedBanner(fetched.banner))
+      .catch(() => { bannerRequestedRef.current = false; });
+  }, [open, currentUser, member.user.id]);
 
   useEffect(() => {
     const direct = conversations.find((conversation) => (
@@ -110,7 +124,7 @@ export function MemberQuickProfile({ server, member, currentUser, offline, open,
         {member.isOwner && <CrownIcon size={14} weight="fill" className="flex-none text-yellow" aria-label={t('members.owner')} />}
       </PopoverTrigger>
       <PopoverContent side="left" align="start" sideOffset={8} className="w-[min(24rem,calc(100vw-1rem))] gap-0 overflow-hidden rounded-xl border-border-default bg-bg-modal p-0">
-        <div className="relative w-full" style={{ background: color || 'var(--color-accent-primary)', aspectRatio: BANNER_ASPECT_RATIO }}>
+        <div className="relative w-full" style={{ ...bannerStyle({ id: user.id, avatarColor: user.avatarColor, banner }), aspectRatio: BANNER_ASPECT_RATIO }}>
           <button
             type="button"
             aria-label={t('members.openProfile', { name: user.displayName })}
@@ -118,6 +132,9 @@ export function MemberQuickProfile({ server, member, currentUser, offline, open,
             className="absolute inset-0 block h-full w-full cursor-pointer border-0 bg-transparent p-0"
           />
           <div className="absolute right-3 top-3 z-10 flex max-w-[calc(100%-1.5rem)] flex-wrap items-center justify-end gap-1.5">
+            <Button type="button" variant="outline" size="icon-sm" aria-label={t('members.viewProfile')} onClick={openFullProfile}>
+              <IdentificationCardIcon size={16} />
+            </Button>
             <ProfileActions userId={user.id} username={user.username} displayName={user.displayName} onNavigate={() => onOpenChange(false)} showMessage={false} showFriendRequestActions={false} className="flex-row gap-1 p-0" />
           </div>
         </div>

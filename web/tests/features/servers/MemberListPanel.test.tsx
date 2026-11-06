@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithRoom } from '@tests/fixtures/roomContextFixture';
 import { groupMembers, MemberListPanel } from '@/features/servers/MemberListPanel';
 import * as serversApi from '@/features/servers/serversApi';
+import * as api from '@/shared/api/api';
 import type { ServerMemberEntry } from '@/features/servers/serversApi';
 import type { RoleSummary, ServerSummary } from '@/shared/types/protocol';
 import { initialRoomState } from '@/state/roomReducer';
@@ -11,12 +12,18 @@ import { PERMISSIONS } from '@/features/servers/permissionBits';
 
 vi.mock('@/features/friends/ProfileActions', () => ({ ProfileActions: () => null }));
 
+vi.mock('@/shared/api/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/shared/api/api')>()),
+  fetchUserProfile: vi.fn(),
+}));
+
 vi.mock('@/features/servers/serversApi', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/features/servers/serversApi')>()),
   fetchAllServerMembers: vi.fn(),
   setMemberRoles: vi.fn(),
 }));
 const mocked = vi.mocked(serversApi);
+const mockedApi = vi.mocked(api);
 
 const role = (id: string, over: Partial<RoleSummary> = {}): RoleSummary => ({
   id, name: id, color: '', position: 1, permissions: 0, hoist: false, mentionable: false, isDefault: false, ...over,
@@ -31,7 +38,11 @@ const member = (id: string, name: string, roleIds: string[] = []): ServerMemberE
 });
 const members = [member('u-ana', 'Ana', ['Mods']), member('u-bia', 'Bia', ['Quiet']), member('u-caio', 'Caio', ['Mods'])];
 
-beforeEach(() => { vi.clearAllMocks(); mocked.fetchAllServerMembers.mockResolvedValue(members); });
+beforeEach(() => {
+  vi.clearAllMocks();
+  mocked.fetchAllServerMembers.mockResolvedValue(members);
+  mockedApi.fetchUserProfile.mockRejectedValue(new Error('not stubbed'));
+});
 
 describe('groupMembers', () => {
   it('online members go under their hoisted role, everyone offline at the bottom', () => {
@@ -71,6 +82,25 @@ describe('MemberListPanel', () => {
     await user.click(screen.getByRole('button', { name: 'Adicionar cargo' }));
     await user.click(await screen.findByText('Mods', { exact: true }));
     expect(mocked.setMemberRoles).toHaveBeenCalledWith('s1', 'u-bia', ['Quiet', 'Mods']);
+  });
+
+  it('shows the member banner image in the compact profile', async () => {
+    const user = userEvent.setup();
+    mockedApi.fetchUserProfile.mockResolvedValue({ user: { ...member('u-bia', 'Bia').user, banner: 'https://cdn.test/bia.png', bio: '', profileLinks: [], role: 'user' } });
+    const { container } = renderWithRoom(<MemberListPanel server={server} onOpenProfile={vi.fn()} />);
+    await user.click(await screen.findByRole('button', { name: 'Abrir perfil de Bia' }));
+    await waitFor(() => expect(container.ownerDocument.querySelector('[style*="https://cdn.test/bia.png"]')).not.toBeNull());
+    expect(mockedApi.fetchUserProfile).toHaveBeenCalledWith('u-bia');
+  });
+
+  it('opens the full profile from the button at the top of the compact profile', async () => {
+    const user = userEvent.setup();
+    mockedApi.fetchUserProfile.mockRejectedValue(new Error('offline'));
+    const onOpenProfile = vi.fn();
+    renderWithRoom(<MemberListPanel server={server} onOpenProfile={onOpenProfile} />);
+    await user.click(await screen.findByRole('button', { name: 'Abrir perfil de Bia' }));
+    await user.click(screen.getByRole('button', { name: 'Ver perfil completo' }));
+    expect(onOpenProfile).toHaveBeenCalledWith('u-bia');
   });
 
   it('fetches nothing while kept mounted behind a closed sheet', () => {
