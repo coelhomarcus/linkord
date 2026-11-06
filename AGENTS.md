@@ -73,12 +73,11 @@ Docs are part of the change: when code changes what a doc describes, update that
 | A third-party API or service: adding, removing or changing an endpoint, credential, env var, rate limit, data sent, or what happens when it is missing or fails | [`docs/INTEGRATIONS.md`](docs/INTEGRATIONS.md) (the overview table and the service's section) |
 | Webhooks: URL, payload, cards/embeds, limits, errors, security (`modules/bots`) | [`docs/WEBHOOK.md`](docs/WEBHOOK.md) |
 | Local setup, scripts, prerequisites, the env needed to run, troubleshooting, or notes for developing profile connections and the Wall | [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) |
-| The legacy groups/bots to servers migration | [`docs/MIGRATING_GROUPS_TO_SERVERS.md`](docs/MIGRATING_GROUPS_TO_SERVERS.md) |
 | What the product does, or how it is deployed | [`README.md`](README.md) |
 | Any new or changed environment variable | [`.env.example`](.env.example), plus the doc of the feature that uses it |
 
 - Edit the existing section instead of appending a note; remove statements that are no longer true (a doc that is partly wrong is worse than a short one).
-- Keep each doc's language: `WEBHOOK.md` is Portuguese, the rest are English.
+- All documentation is written in English: every file in `docs/`, the README and `.env.example`, including headings, examples and sample data. Only text that quotes something the product really outputs stays as is (for example a server error message that is in Portuguese), and the doc should say so.
 - Never put secrets or real credentials in a doc; describe where to get them.
 - If a change fits no doc but a reader would need it, extend the closest one rather than creating a new file. `docs/` is mostly ignored by git (see `.gitignore`), so a brand-new doc needs `git add -f` or its own `!docs/NAME.md` line.
 
