@@ -10,9 +10,9 @@ import type { ProfileConnection, WallResponse, WallWidget } from '@/features/pro
 vi.mock('@/features/profile/profileApi', () => ({ fetchWall: vi.fn(), saveWall: vi.fn() }));
 const mocked = vi.mocked(api);
 const connection: ProfileConnection = { id: 'mal', provider: 'myanimelist', value: 'Xinil', url: 'https://myanimelist.net/profile/Xinil', position: 0, syncedAt: '2026-11-05T12:00:00Z', syncError: null, status: 'ready' };
-const anime: WallWidget = { connection, type: 'mal-favorite-anime', data: { kind: 'list', items: [{ id: '1', title: 'Cowboy Bebop', url: 'https://myanimelist.net/anime/1', imageUrl: null, status: null, progress: null, total: null }] } };
-const manga: WallWidget = { connection, type: 'mal-favorite-manga', data: { kind: 'list', items: [] } };
-const empty: WallResponse = { widgets: [], available: [anime, manga] };
+const anime: WallWidget = { connection, type: 'mal-recent-anime', data: { kind: 'list', items: [{ id: '1', title: 'Cowboy Bebop', url: 'https://myanimelist.net/anime/1', imageUrl: null, status: null, progress: null, total: null }] } };
+const profile: WallWidget = { connection: { ...connection, id: 'gh', provider: 'github', value: 'octocat', url: 'https://github.com/octocat' }, type: 'github-profile', data: { kind: 'github-profile', login: 'octocat', name: null, avatarUrl: null, repositories: 1, followers: 2, following: 3 } };
+const empty: WallResponse = { widgets: [], available: [anime, profile] };
 beforeEach(() => { vi.clearAllMocks(); mocked.fetchWall.mockResolvedValue(empty); });
 function renderWall(owner = true) { render(<MemoryRouter><ProfileWall userId="me" owner={owner} onNavigate={vi.fn()} /></MemoryRouter>); }
 
@@ -21,7 +21,7 @@ describe('profile Wall', () => {
     const user = userEvent.setup(); renderWall();
     await user.click(await screen.findByRole('button', { name: 'Editar Mural' }));
     expect(screen.queryByText('Cowboy Bebop')).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Animes favoritos' }));
+    await user.click(screen.getByRole('button', { name: 'Atividade recente de animes' }));
     expect(screen.getByText('Cowboy Bebop')).toBeInTheDocument();
     expect(mocked.saveWall).not.toHaveBeenCalled();
     await user.click(screen.getByRole('button', { name: 'Cancelar' }));
@@ -31,16 +31,16 @@ describe('profile Wall', () => {
   it('adds, reorders and saves only connection references, then supports removing widgets', async () => {
     const user = userEvent.setup(); renderWall();
     await user.click(await screen.findByRole('button', { name: 'Editar Mural' }));
-    await user.click(screen.getByRole('button', { name: 'Animes favoritos' }));
-    await user.click(screen.getByRole('button', { name: 'Mangás favoritos' }));
-    expect(screen.getByRole('button', { name: 'Mover Animes favoritos para cima' })).toBeDisabled();
-    await user.click(screen.getByRole('button', { name: 'Mover Mangás favoritos para cima' }));
-    const references = [{ connectionId: 'mal', type: 'mal-favorite-manga' }, { connectionId: 'mal', type: 'mal-favorite-anime' }];
-    mocked.saveWall.mockResolvedValue({ ...empty, widgets: [manga, anime] });
+    await user.click(screen.getByRole('button', { name: 'Atividade recente de animes' }));
+    await user.click(screen.getByRole('button', { name: 'Perfil do GitHub' }));
+    expect(screen.getByRole('button', { name: 'Mover Atividade recente de animes para cima' })).toBeDisabled();
+    await user.click(screen.getByRole('button', { name: 'Mover Perfil do GitHub para cima' }));
+    const references = [{ connectionId: 'gh', type: 'github-profile' }, { connectionId: 'mal', type: 'mal-recent-anime' }];
+    mocked.saveWall.mockResolvedValue({ ...empty, widgets: [profile, anime] });
     await user.click(screen.getByRole('button', { name: 'Salvar' }));
     await waitFor(() => expect(mocked.saveWall).toHaveBeenCalledWith(references));
     await user.click(await screen.findByRole('button', { name: 'Editar Mural' }));
-    await user.click(screen.getByRole('button', { name: 'Remover Animes favoritos' }));
+    await user.click(screen.getByRole('button', { name: 'Remover Atividade recente de animes' }));
     expect(screen.queryByText('Cowboy Bebop')).not.toBeInTheDocument();
   });
   it('shows published widgets to visitors without edit controls or the catalog', async () => {
@@ -53,7 +53,7 @@ describe('profile Wall', () => {
   it('preserves the editable draft when saving fails', async () => {
     const user = userEvent.setup(); mocked.saveWall.mockRejectedValue(new Error('offline')); renderWall();
     await user.click(await screen.findByRole('button', { name: 'Editar Mural' }));
-    await user.click(screen.getByRole('button', { name: 'Animes favoritos' }));
+    await user.click(screen.getByRole('button', { name: 'Atividade recente de animes' }));
     await user.click(screen.getByRole('button', { name: 'Salvar' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível salvar o Mural.');
     expect(screen.getByText('Cowboy Bebop')).toBeInTheDocument();

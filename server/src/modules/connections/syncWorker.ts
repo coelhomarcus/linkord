@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import { and, eq, gt, isNull, lte, ne, notExists, or, sql } from 'drizzle-orm';
+import { config } from '../../config/env.js';
 import { db } from '../../db/client.js';
 import { connectionSyncLimits, profileConnections } from '../../db/schema.js';
 import { ConnectionFetchError, fetchConnectionJson, fetchConnectionText, type RequestJson, type RequestText } from '../../integrations/connectionHttp.js';
@@ -40,7 +41,7 @@ async function claim(now: Date) {
   });
 }
 let running = false;
-export async function syncConnections(options: { request?: RequestJson; requestText?: RequestText; now?: Date } = {}): Promise<void> {
+export async function syncConnections(options: { request?: RequestJson; requestText?: RequestText; now?: Date; malClientId?: string } = {}): Promise<void> {
   if (running) return;
   running = true;
   try {
@@ -63,7 +64,7 @@ export async function syncConnections(options: { request?: RequestJson; requestT
           return fetchConnectionText(url, init);
         });
         const snapshot = row.provider === 'myanimelist'
-          ? await fetchMyAnimeList(row.value, request)
+          ? await fetchMyAnimeList(row.value, request, options.malClientId ?? config.MAL_CLIENT_ID)
           : await fetchGitHub(row.value, request, requestText);
         const now = options.now ?? new Date();
         await db.update(profileConnections).set({ snapshot, syncedAt: now, syncError: null, attempts: 0,

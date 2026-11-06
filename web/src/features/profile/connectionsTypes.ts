@@ -1,6 +1,6 @@
 export type ConnectionProvider = 'url' | 'myanimelist' | 'github';
 export const WIDGET_TYPES = {
-  myanimelist: ['mal-recent-anime', 'mal-favorite-anime', 'mal-favorite-manga', 'mal-favorite-characters'],
+  myanimelist: ['mal-recent-anime'],
   github: ['github-profile', 'github-calendar'],
   url: [],
 } as const;

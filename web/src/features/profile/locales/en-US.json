@@ -134,17 +134,11 @@
     "updated": "Updated on {{date}}",
     "widgets": {
       "mal-recent-anime": "Recent anime activity",
-      "mal-favorite-anime": "Favorite anime",
-      "mal-favorite-manga": "Favorite manga",
-      "mal-favorite-characters": "Favorite characters",
       "github-profile": "GitHub profile",
       "github-calendar": "GitHub contributions"
     },
     "widgetDescriptions": {
       "mal-recent-anime": "The latest anime you watched",
-      "mal-favorite-anime": "Your favorite anime from MyAnimeList",
-      "mal-favorite-manga": "Your favorite manga from MyAnimeList",
-      "mal-favorite-characters": "Your favorite characters from MyAnimeList",
       "github-profile": "Repositories, followers and who you follow",
       "github-calendar": "Your contribution activity over the year"
     },
