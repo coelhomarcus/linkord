@@ -108,7 +108,6 @@
   },
   "wall": {
     "title": "Mural",
-    "about": "Sobre",
     "profileTabs": "Abas do perfil",
     "edit": "Editar Mural",
     "cancel": "Cancelar",
@@ -117,6 +116,7 @@
     "loading": "Carregando Mural…",
     "saveFailed": "Não foi possível salvar o Mural. Confira as conexões e tente novamente.",
     "loadFailed": "Não foi possível carregar o Mural.",
+    "addWidgetHint": "Escolha o que aparece no seu Mural.",
     "addWidget": "Adicionar widget",
     "allAdded": "Todos os widgets disponíveis já foram adicionados.",
     "noConnections": "Conecte MyAnimeList ou GitHub para liberar widgets.",
@@ -134,11 +134,13 @@
     "updated": "Atualizado em {{date}}",
     "widgets": {
       "mal-recent-anime": "Atividade recente de animes",
-      "mal-favorite-anime": "Animes favoritos",
-      "mal-favorite-manga": "Mangás favoritos",
-      "mal-favorite-characters": "Personagens favoritos",
       "github-profile": "Perfil do GitHub",
       "github-calendar": "Contribuições no GitHub"
+    },
+    "widgetDescriptions": {
+      "mal-recent-anime": "Os últimos animes que você assistiu",
+      "github-profile": "Repositórios, seguidores e quem você segue",
+      "github-calendar": "Sua atividade de contribuições ao longo do ano"
     },
     "statuses": {
       "watching": "Assistindo",
@@ -150,6 +152,8 @@
     "github": {
       "repositories": "Repositórios",
       "followers": "Seguidores",
+      "less": "Menos",
+      "more": "Mais",
       "following": "Seguindo",
       "contributions": "{{total}} contribuições nos últimos 12 meses",
       "calendar": "Calendário de contribuições do GitHub",

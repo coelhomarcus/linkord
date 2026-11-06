@@ -122,6 +122,10 @@ const LIVEKIT_TOKEN_TTL_SECONDS = Number(process.env.LIVEKIT_TOKEN_TTL_SECONDS |
 // empty turns the GIF picker off.
 const KLIPY_API_KEY = (process.env.KLIPY_API_KEY || '').trim();
 
+// Application client ID for the official MyAnimeList API, which reads public lists
+// without user login. Empty leaves MyAnimeList connections unavailable.
+const MAL_CLIENT_ID = (process.env.MAL_CLIENT_ID || '').trim();
+
 // optional, dev convenience only: when DATABASE_URL points at the same DB a
 // deployed instance uses, `attachments` rows exist locally but the actual
 // FILES only live on that instance's disk (UPLOAD_DIR is always local, never
@@ -167,7 +171,7 @@ export const config = {
   RESEND_API_KEY, RESEND_FROM_EMAIL, APP_URL, AUTH_CODE_TTL_MS, AUTH_CODE_MAX_ATTEMPTS,
   PUSH_VAPID_PUBLIC_KEY, PUSH_VAPID_PRIVATE_KEY, PUSH_VAPID_SUBJECT,
   LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET, LIVEKIT_ROOM_NAME, LIVEKIT_TOKEN_TTL_SECONDS,
-  UPLOADS_REMOTE_URL, KLIPY_API_KEY,
+  UPLOADS_REMOTE_URL, KLIPY_API_KEY, MAL_CLIENT_ID,
   REGISTRATIONS_PER_IP_PER_HOUR, MAX_NEW_ACCOUNTS_PER_HOUR, MAX_CONNECTIONS_PER_USER,
   MAX_USER_STORAGE_BYTES, MAX_OWNED_SERVERS_PER_USER, MAX_SERVER_MEMBERSHIPS_PER_USER, MAX_FRIENDS, MAX_PENDING_OUTGOING_REQUESTS,
   ALLOWED_ORIGINS, IS_DEV, ORPHAN_GRACE_MS, ORPHAN_SWEEP_DRY_RUN,

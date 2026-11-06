@@ -108,7 +108,6 @@
   },
   "wall": {
     "title": "Wall",
-    "about": "About",
     "profileTabs": "Profile tabs",
     "edit": "Edit Wall",
     "cancel": "Cancel",
@@ -117,6 +116,7 @@
     "loading": "Loading Wall…",
     "saveFailed": "Could not save the Wall. Check your connections and try again.",
     "loadFailed": "Could not load the Wall.",
+    "addWidgetHint": "Choose what shows on your Wall.",
     "addWidget": "Add widget",
     "allAdded": "All available widgets have been added.",
     "noConnections": "Connect MyAnimeList or GitHub to unlock widgets.",
@@ -134,11 +134,13 @@
     "updated": "Updated on {{date}}",
     "widgets": {
       "mal-recent-anime": "Recent anime activity",
-      "mal-favorite-anime": "Favorite anime",
-      "mal-favorite-manga": "Favorite manga",
-      "mal-favorite-characters": "Favorite characters",
       "github-profile": "GitHub profile",
       "github-calendar": "GitHub contributions"
+    },
+    "widgetDescriptions": {
+      "mal-recent-anime": "The latest anime you watched",
+      "github-profile": "Repositories, followers and who you follow",
+      "github-calendar": "Your contribution activity over the year"
     },
     "statuses": {
       "watching": "Watching",
@@ -150,6 +152,8 @@
     "github": {
       "repositories": "Repositories",
       "followers": "Followers",
+      "less": "Less",
+      "more": "More",
       "following": "Following",
       "contributions": "{{total}} contributions in the last 12 months",
       "calendar": "GitHub contribution calendar",
