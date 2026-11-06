@@ -124,7 +124,7 @@ export function MemberQuickProfile({ server, member, currentUser, offline, open,
         {member.isOwner && <CrownIcon size={14} weight="fill" className="flex-none text-yellow" aria-label={t('members.owner')} />}
       </PopoverTrigger>
       <PopoverContent side="left" align="start" sideOffset={8} className="w-[min(24rem,calc(100vw-1rem))] gap-0 overflow-hidden rounded-xl border-border-default bg-bg-modal p-0">
-        <div className="relative w-full" style={{ ...(banner ? bannerStyle({ id: user.id, avatarColor: user.avatarColor, banner }) : { background: color || 'var(--color-accent-primary)' }), aspectRatio: BANNER_ASPECT_RATIO }}>
+        <div className="relative w-full" style={{ ...bannerStyle({ id: user.id, avatarColor: user.avatarColor, banner }), aspectRatio: BANNER_ASPECT_RATIO }}>
           <button
             type="button"
             aria-label={t('members.openProfile', { name: user.displayName })}
