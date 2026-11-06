@@ -92,9 +92,8 @@ describe('Wall widget cards', () => {
   });
   it('keeps only the most recent weeks that fit the calendar width', () => {
     const days = Array.from({ length: 70 }, (_, i) => ({ date: new Date(Date.UTC(2026, 0, 4 + i)).toISOString().slice(0, 10), count: i, level: 1 }));
-    const original = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientWidth');
+    const rect = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ width: 36 } as DOMRect);
     // 3 weeks fit: 3 * 10px cells + 2 * 3px gaps
-    Object.defineProperty(HTMLElement.prototype, 'clientWidth', { configurable: true, get: () => 36 });
     try {
       render(<WallWidgetCard widget={{ connection: { ...connection, provider: 'github' }, type: 'github-calendar', data: { kind: 'github-calendar', total: 4, days } }} />);
       const cells = screen.getAllByRole('img');
@@ -102,7 +101,7 @@ describe('Wall widget cards', () => {
       expect(cells[0]).toHaveAccessibleName(/49 contribuições/);
       expect(cells.at(-1)).toHaveAccessibleName(/69 contribuições/);
     } finally {
-      if (original) Object.defineProperty(HTMLElement.prototype, 'clientWidth', original); else delete (HTMLElement.prototype as { clientWidth?: number }).clientWidth;
+      rect.mockRestore();
     }
   });
 });
