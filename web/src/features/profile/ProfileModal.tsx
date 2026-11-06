@@ -13,7 +13,6 @@ import { ReportDialog } from '@/features/reports/ReportDialog';
 import { ProfileConnections } from './ProfileConnections';
 import { ProfileSidebar } from './ProfileSidebar';
 import { formatProfileDate, useProfileDetails } from './useProfileDetails';
-import { lastSeenField } from './formatLastSeen';
 
 interface ProfileModalProps {
   userId: string | null;
@@ -53,7 +52,6 @@ export function ProfileModal({ userId, onClose, onOpenProfile }: ProfileModalPro
   const details = useProfileDetails(open ? userId : null);
   const owner = !!user && user.id === state.me.userId;
   const online = !!user && onlineUserIds.has(user.id);
-  const presence = user ? lastSeenField(online, user.lastSeenAt) : null;
 
   function openServer(serverId: string) {
     navigate(ROUTES.server(serverId));
@@ -114,14 +112,7 @@ export function ProfileModal({ userId, onClose, onOpenProfile }: ProfileModalPro
                 hideLinks
                 footer={(
                   <div className="mt-6 flex flex-col gap-5">
-                    {/* presence first: it is known at once, so the rows fetched after it don't push it down */}
                     <dl className="flex flex-col gap-5">
-                      {presence && (
-                        <div>
-                          <dt className="text-label font-medium text-text-muted">{presence.label}</dt>
-                          <dd className="mt-1 text-body text-text-primary">{presence.value}</dd>
-                        </div>
-                      )}
                       {details.details && (
                         <div>
                           <dt className="text-label font-medium text-text-muted">{t('modal.memberSince')}</dt>

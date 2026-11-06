@@ -163,25 +163,12 @@ describe('ProfileModal — since when and what you have in common', () => {
     expect(vi.mocked(wallApi.fetchWall)).toHaveBeenCalledWith('u1', true, expect.any(AbortSignal));
   });
 
-  it('an offline user shows when they were last online, above the fetched dates', async () => {
+  it('never shows when the user was last online', async () => {
     renderProfile({ allUsers: new Map([[user.id, { ...user, lastSeenAt: yesterdayAt1011() }]]) });
-    const lastSeen = screen.getByText('Última vez online');
-    expect(lastSeen.nextElementSibling).toHaveTextContent('ontem às 10:11');
-    const memberSince = await screen.findByText('Membro desde');
-    expect(lastSeen.compareDocumentPosition(memberSince) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-  });
-
-  it('an online user shows the current status instead of the last visit', async () => {
-    renderProfile({ allUsers: new Map([[user.id, { ...user, lastSeenAt: yesterdayAt1011() }]]), onlineUserIds: new Set(['u1']) });
-    expect(screen.getByText('Status').nextElementSibling).toHaveTextContent('Online');
+    expect(await screen.findByText('Membro desde')).toBeInTheDocument();
     expect(screen.queryByText('Última vez online')).not.toBeInTheDocument();
-    expect(await screen.findByText('Membro desde')).toBeInTheDocument();
-  });
-
-  it('an offline user with no recorded visit reads as Offline', async () => {
-    renderProfile({ allUsers: new Map([[user.id, { ...user, lastSeenAt: null }]]) });
-    expect(screen.getByText('Status').nextElementSibling).toHaveTextContent('Offline');
-    expect(await screen.findByText('Membro desde')).toBeInTheDocument();
+    expect(screen.queryByText(/ontem às/)).not.toBeInTheDocument();
+    expect(screen.queryByText('Status')).not.toBeInTheDocument();
   });
 
   it('lists the connections under their label, one per line, opening the site', async () => {
