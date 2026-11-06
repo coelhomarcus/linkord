@@ -20,15 +20,15 @@ const closeButtonVariants = cva(
       },
       size: {
         xs: "size-6",
-        sm: "size-8",
-        md: "size-10",
+        sm: "size-7",
+        md: "size-8",
       },
     },
     defaultVariants: { variant: "ghost", size: "sm" },
   }
 )
 
-const ICON_SIZE = { xs: 13, sm: 18, md: 24 } as const
+const ICON_SIZE = { xs: 13, sm: 16, md: 18 } as const
 
 const CloseButton = forwardRef<
   HTMLButtonElement,
