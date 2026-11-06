@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { LinkIcon, PencilSimpleIcon, TrashIcon } from '@phosphor-icons/react';
+import { PencilSimpleIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '@/shared/api/api';
 import { ConfirmDialog } from '@/shared/ConfirmDialog';
 import { Button } from '@/shared/ui/primitives/button';
+import { CloseButton } from '@/shared/ui/primitives/close-button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/ui/primitives/dialog';
 import { useRoom } from '@/state/RoomContext';
 import { BrandIcon } from './profileLinks';
@@ -76,39 +78,66 @@ export function ConnectionsSettings() {
   function open(provider: ConnectionProvider, connection?: ProfileConnection) {
     setDialog({ provider, connection }); setValue(connection?.value ?? ''); setError(null);
   }
+  const full = !!data && data.connections.length >= 8;
+  const brand = (provider: ConnectionProvider) => provider === 'url' ? 'generic' : provider;
   return (
-    <section className="flex max-w-120 flex-col gap-4 rounded-lg border border-border-strong bg-bg-modal p-5" aria-labelledby="connections-settings-title">
-      <div>
-        <h2 id="connections-settings-title" className="text-title font-semibold">{t('connections')}</h2>
-        <p className="mt-1 text-label text-text-muted">{t('integration.description')}</p>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {PROVIDERS.map((provider) => (
-          <Button key={provider} type="button" variant="secondary" disabled={!data || busy || data.connections.length >= 8 || (provider !== 'url' && data.connections.some((row) => row.provider === provider))} onClick={() => open(provider)}>
-            {provider === 'url' ? <LinkIcon size={18} /> : <BrandIcon kind={provider} />}
-            {providerName(provider)}
-          </Button>
-        ))}
-      </div>
+    // the page header above already carries the title and description
+    <div className="flex flex-col gap-8">
+      <section aria-labelledby="connections-add-title" className="flex flex-col gap-3">
+        <h3 id="connections-add-title" className="text-title font-semibold">{t('integration.addTitle')}</h3>
+        <div className="flex flex-wrap gap-2">
+          {PROVIDERS.map((provider) => {
+            const unavailable = !data || busy || full || (provider !== 'url' && data.connections.some((row) => row.provider === provider));
+            return (
+              <Tooltip key={provider}>
+                <TooltipTrigger
+                  render={
+                    <button
+                      type="button"
+                      aria-label={providerName(provider)}
+                      disabled={unavailable}
+                      onClick={() => open(provider)}
+                      className="grid size-14 place-items-center rounded-xl border border-border-strong bg-bg-tertiary text-text-primary transition-colors hover:bg-fill-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-40"
+                    />
+                  }
+                >
+                  <BrandIcon kind={brand(provider)} size={28} />
+                </TooltipTrigger>
+                <TooltipContent side="bottom">{providerName(provider)}</TooltipContent>
+              </Tooltip>
+            );
+          })}
+        </div>
+      </section>
       {!data && !loadError && <p role="status" className="text-label text-text-muted">{t('integration.loading')}</p>}
       {loadError && <div role="alert" className="text-label text-red">{t('integration.errors.load')} <Button type="button" variant="ghost" size="sm" onClick={() => void load()}>{t('modal.retry')}</Button></div>}
       {data?.connections.length === 0 && <p className="text-label text-text-muted">{t('integration.empty')}</p>}
-      <ul className="flex flex-col gap-3">
-        {data?.connections.map((connection) => (
-          <li key={connection.id} className="flex items-start gap-3 rounded-md border border-border p-3">
-            <span className="mt-1 text-text-muted">{connection.provider === 'url' ? <LinkIcon size={18} /> : <BrandIcon kind={connection.provider} />}</span>
-            <div className="min-w-0 flex-1">
-              <a href={connection.url} target="_blank" rel="noreferrer" className="block truncate text-body font-medium hover:underline">{connection.provider === 'url' ? connection.value : `${providerName(connection.provider)} · ${connection.value}`}</a>
-              {connection.provider !== 'url' && <>
-                <p role="status" className="mt-1 text-caption text-text-muted">{connection.status === 'pending' ? t('integration.pending') : connection.syncError ? t(`integration.syncErrors.${(['not_found', 'private', 'rate_limited', 'invalid_response'] as const).find((key) => key === connection.syncError) ?? 'unavailable'}`) : t('integration.ready')}</p>
-                {connection.syncedAt && <p className="text-caption text-text-muted">{t('wall.updated', { date: new Date(connection.syncedAt).toLocaleString(i18n.language) })}</p>}
-              </>}
-            </div>
-            <Button type="button" variant="ghost" size="icon" aria-label={t('integration.editConnection', { name: connection.value })} disabled={busy} onClick={() => open(connection.provider, connection)}><PencilSimpleIcon size={16} /></Button>
-            <Button type="button" variant="ghost" size="icon" aria-label={t('integration.removeConnection', { name: connection.value })} disabled={busy} onClick={() => setRemoving(connection)}><TrashIcon size={16} /></Button>
-          </li>
-        ))}
-      </ul>
+      {!!data?.connections.length && (
+        <section aria-labelledby="connections-list-title" className="flex flex-col gap-3">
+          <h3 id="connections-list-title" className="text-title font-semibold">{t('integration.count', { count: data.connections.length })}</h3>
+          <ul className="flex flex-col gap-3">
+            {data.connections.map((connection) => (
+              <li key={connection.id} className="flex flex-col gap-3 rounded-xl border border-border-strong bg-bg-secondary p-4">
+                <div className="flex items-center gap-4">
+                  <span className="flex size-12 flex-none items-center justify-center text-text-primary"><BrandIcon kind={brand(connection.provider)} size={36} /></span>
+                  <div className="min-w-0 flex-1">
+                    <a href={connection.url} target="_blank" rel="noreferrer" className="block truncate text-title font-semibold hover:underline">{connection.value}</a>
+                    <p className="truncate text-label text-text-muted">{providerName(connection.provider)}</p>
+                  </div>
+                  <Button type="button" variant="ghost" size="icon" aria-label={t('integration.editConnection', { name: connection.value })} disabled={busy} onClick={() => open(connection.provider, connection)}><PencilSimpleIcon size={16} /></Button>
+                  <CloseButton variant="danger" label={t('integration.removeConnection', { name: connection.value })} disabled={busy} onClick={() => setRemoving(connection)} />
+                </div>
+                {connection.provider !== 'url' && (
+                  <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-border pt-3 text-label text-text-muted">
+                    <p role="status">{connection.status === 'pending' ? t('integration.pending') : connection.syncError ? t(`integration.syncErrors.${(['not_found', 'private', 'rate_limited', 'invalid_response'] as const).find((key) => key === connection.syncError) ?? 'unavailable'}`) : t('integration.ready')}</p>
+                    {connection.syncedAt && <p className="text-caption">{t('wall.updated', { date: new Date(connection.syncedAt).toLocaleString(i18n.language) })}</p>}
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       {error && !dialog && <p role="alert" className="text-label text-red">{error}</p>}
       <Dialog open={!!dialog} onOpenChange={(open) => { if (!open && !busy) setDialog(null); }}>
         {dialog && <DialogContent className="sm:max-w-md" showCloseButton={!busy}>
@@ -124,6 +153,6 @@ export function ConnectionsSettings() {
         </DialogContent>}
       </Dialog>
       <ConfirmDialog open={!!removing} onOpenChange={(open) => { if (!open) setRemoving(null); }} title={t('integration.removeTitle')} description={t('integration.removeDescription')} destructive onConfirm={() => { if (removing) void remove(removing); }} />
-    </section>
+    </div>
   );
 }

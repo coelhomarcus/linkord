@@ -13,7 +13,6 @@ import { ReportDialog } from '@/features/reports/ReportDialog';
 import { ProfileConnections } from './ProfileConnections';
 import { ProfileSidebar } from './ProfileSidebar';
 import { formatProfileDate, useProfileDetails } from './useProfileDetails';
-import { lastSeenField } from './formatLastSeen';
 
 interface ProfileModalProps {
   userId: string | null;
@@ -53,7 +52,6 @@ export function ProfileModal({ userId, onClose, onOpenProfile }: ProfileModalPro
   const details = useProfileDetails(open ? userId : null);
   const owner = !!user && user.id === state.me.userId;
   const online = !!user && onlineUserIds.has(user.id);
-  const presence = user ? lastSeenField(online, user.lastSeenAt) : null;
 
   function openServer(serverId: string) {
     navigate(ROUTES.server(serverId));
@@ -87,14 +85,14 @@ export function ProfileModal({ userId, onClose, onOpenProfile }: ProfileModalPro
         <DialogContent
           // one row: the header is sr-only (absolutely positioned, no row of its
           // own), so the content takes the whole height and scrolls inside it
-          className="max-h-[90vh] max-w-[calc(100%-2rem)] grid-rows-[minmax(0,1fr)] gap-0 overflow-hidden bg-bg-modal p-0 sm:max-w-4xl md:h-[min(42rem,90vh)]"
+          className="scrollbar-none max-h-[90vh] max-w-[calc(100%-2rem)] grid-rows-[minmax(0,1fr)] gap-0 overflow-hidden bg-bg-modal p-0 sm:max-w-4xl md:h-[min(42rem,90vh)]"
         >
           <DialogHeader className="sr-only">
             <DialogTitle>{t('modal.profileOf', { name: user.displayName })}</DialogTitle>
           </DialogHeader>
           {/* Each column scrolls independently on desktop; mobile uses one scroll container. */}
-          <div className="min-h-0 overflow-y-auto md:grid md:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] md:grid-rows-[minmax(0,1fr)] md:overflow-hidden">
-            <div className="md:min-h-0 md:overflow-y-auto md:border-r md:border-border">
+          <div className="scrollbar-none min-h-0 overflow-y-auto md:grid md:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] md:grid-rows-[minmax(0,1fr)] md:overflow-hidden">
+            <div className="scrollbar-none md:min-h-0 md:overflow-y-auto md:border-r md:border-border">
               <ProfileCard
                 bare
                 user={user}
@@ -114,14 +112,7 @@ export function ProfileModal({ userId, onClose, onOpenProfile }: ProfileModalPro
                 hideLinks
                 footer={(
                   <div className="mt-6 flex flex-col gap-5">
-                    {/* presence first: it is known at once, so the rows fetched after it don't push it down */}
                     <dl className="flex flex-col gap-5">
-                      {presence && (
-                        <div>
-                          <dt className="text-label font-medium text-text-muted">{presence.label}</dt>
-                          <dd className="mt-1 text-body text-text-primary">{presence.value}</dd>
-                        </div>
-                      )}
                       {details.details && (
                         <div>
                           <dt className="text-label font-medium text-text-muted">{t('modal.memberSince')}</dt>

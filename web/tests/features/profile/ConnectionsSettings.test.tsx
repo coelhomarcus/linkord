@@ -40,10 +40,10 @@ describe('connection settings', () => {
     const user = userEvent.setup(); renderSettings();
     await waitFor(() => expect(screen.getByRole('button', { name: 'URL' })).toBeEnabled());
     await user.click(screen.getByRole('button', { name: 'URL' }));
-    expect(screen.getByLabelText('URL')).toHaveAttribute('type', 'url');
+    expect(within(screen.getByRole('dialog')).getByLabelText('URL')).toHaveAttribute('type', 'url');
     await user.click(screen.getByRole('button', { name: 'Cancelar' }));
     await user.click(screen.getByRole('button', { name: 'GitHub' }));
-    expect(screen.getByLabelText('Nome de usuário')).toHaveAttribute('maxlength', '39');
+    expect(within(screen.getByRole('dialog')).getByLabelText('Nome de usuário')).toHaveAttribute('maxlength', '39');
   });
   it('enforces the count limit while preserving existing connections', async () => {
     mocked.fetchConnections.mockResolvedValue({ connections: Array.from({ length: 8 }, (_, index) => ({ ...connection, id: String(index), provider: 'url', value: `https://example.com/${index}`, url: `https://example.com/${index}`, status: 'ready' })) });

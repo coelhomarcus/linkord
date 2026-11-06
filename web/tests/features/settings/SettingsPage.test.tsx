@@ -44,6 +44,17 @@ vi.mock('@/features/settings/ImageCropDialog', () => ({
     ) : null,
 }));
 
+describe('SettingsPage — connections', () => {
+  it('lists the connections on their own tab, not on the profile tab', () => {
+    const { unmount } = renderSettings({}, '/app/settings/profile');
+    expect(screen.queryByText('Conexões', { selector: 'section' })).not.toBeInTheDocument();
+    unmount();
+    renderSettings({}, '/app/settings/connections');
+    expect(screen.getByText('Conexões', { selector: 'section' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Conexões' })).toBeInTheDocument();
+  });
+});
+
 describe('SettingsPage — profile', () => {
   it('brings the edited field back above the save bar when the bar appears', async () => {
     const user = userEvent.setup();

@@ -10,4 +10,8 @@ describe('settings catalog', () => {
   it('lists the profile as the first item of the first group', () => {
     expect(visibleGroups(false)[0]?.categories[0]?.id).toBe('profile');
   });
+
+  it('gives connections their own category right after the profile', () => {
+    expect(visibleGroups(false)[0]?.categories.slice(0, 2).map((category) => category.id)).toEqual(['profile', 'connections']);
+  });
 });

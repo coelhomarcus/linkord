@@ -75,7 +75,9 @@
   },
   "integration": {
     "url": "URL",
-    "description": "Connect your profiles and choose what to display on your Wall. Updated automatically every 24 hours.",
+    "addTitle": "Add a new connection",
+    "count_one": "{{count}} connection",
+    "count_other": "{{count}} connections",
     "loading": "Loading connections…",
     "empty": "You have not added any connections yet.",
     "pending": "Waiting for the first sync…",
