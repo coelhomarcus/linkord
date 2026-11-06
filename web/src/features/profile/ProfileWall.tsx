@@ -69,10 +69,9 @@ export function ProfileWall({ userId, owner, onNavigate }: { userId: string; own
   const choices = data?.available?.filter((widget) => !draft?.some((selection) => selectionKey(selection) === `${widget.connection.id}:${widget.type}`)) ?? [];
   return (
     <section aria-label={t('wall.title')} className="flex min-w-0 flex-col gap-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-title font-semibold">{t('wall.title')}</h2>
-        {owner && data && (draft ? <div className="flex gap-2"><Button type="button" variant="ghost" disabled={saving} onClick={() => { setDraft(null); setError(false); }}>{t('wall.cancel')}</Button><Button type="button" disabled={saving} onClick={() => void save()}>{t(saving ? 'wall.saving' : 'wall.save')}</Button></div> : <Button type="button" variant="secondary" onClick={() => setDraft(data.widgets.map((widget) => ({ connectionId: widget.connection.id, type: widget.type })))}>{t('wall.edit')}</Button>)}
-      </div>
+      {owner && data && <div className="flex justify-end gap-2">
+        {draft ? <><Button type="button" variant="ghost" disabled={saving} onClick={() => { setDraft(null); setError(false); }}>{t('wall.cancel')}</Button><Button type="button" disabled={saving} onClick={() => void save()}>{t(saving ? 'wall.saving' : 'wall.save')}</Button></> : <Button type="button" variant="secondary" onClick={() => setDraft(data.widgets.map((widget) => ({ connectionId: widget.connection.id, type: widget.type })))}>{t('wall.edit')}</Button>}
+      </div>}
       {loading && <p role="status" className="text-body text-text-muted">{t('wall.loading')}</p>}
       {error && <p role="alert" className="text-label text-red">{t(draft ? 'wall.saveFailed' : 'wall.loadFailed')} <Button type="button" variant="ghost" size="sm" onClick={() => void load()}>{t('modal.retry')}</Button></p>}
       {draft && <WidgetPicker
