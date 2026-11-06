@@ -1,0 +1,3 @@
+DELETE FROM "profile_wall_widgets" WHERE "type" IN ('mal-favorite-anime','mal-favorite-manga','mal-favorite-characters');--> statement-breakpoint
+ALTER TABLE "profile_wall_widgets" DROP CONSTRAINT "profile_wall_widgets_type_check";--> statement-breakpoint
+ALTER TABLE "profile_wall_widgets" ADD CONSTRAINT "profile_wall_widgets_type_check" CHECK ("profile_wall_widgets"."type" IN ('mal-recent-anime','github-profile','github-calendar'));

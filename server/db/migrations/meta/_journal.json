@@ -323,6 +323,13 @@
       "when": 1793919520089,
       "tag": "0045_profile_connections",
       "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1793924568668,
+      "tag": "0046_mal_official_widgets",
+      "breakpoints": true
     }
   ]
 }

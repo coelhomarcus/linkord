@@ -26,10 +26,14 @@ after(async () => { await app.close(); await pool.end(); });
 afterEach(async () => { await db.delete(connectionSyncLimits); await db.update(profileConnections).set({ nextSyncAt: new Date('2100-01-01'), leaseToken: null, leaseUntil: null }); });
 async function headers(userId: string) { return { cookie: `${config.SESSION_COOKIE}=${(await createSession(userId)).rawToken}` }; }
 const snapshot: ConnectionSnapshot = { widgets: {
-  'mal-favorite-anime': { kind: 'list', items: [{ id: '1', title: 'Published favorite', url: 'https://myanimelist.net/anime/1', imageUrl: null, status: null, progress: null, total: null }] },
-  'mal-favorite-manga': { kind: 'list', items: [{ id: '2', title: 'Unpublished favorite', url: 'https://myanimelist.net/manga/2', imageUrl: null, status: null, progress: null, total: null }] },
+  'mal-recent-anime': { kind: 'list', items: [{ id: '1', title: 'Published activity', url: 'https://myanimelist.net/anime/1', imageUrl: null, status: null, progress: null, total: null }] },
 } };
-const request: RequestJson = async (url) => url.endsWith('/favorites') ? { data: { anime: [{ mal_id: 1, title: 'Favorite' }], manga: [], characters: [] } } : url.endsWith('/userupdates') ? { data: { anime: [] } } : { data: { username: 'syncuser' } };
+const githubSnapshot: ConnectionSnapshot = { widgets: {
+  'github-profile': { kind: 'github-profile', login: 'unpublishedlogin', name: null, avatarUrl: null, repositories: 1, followers: 2, following: 3 },
+} };
+const request: RequestJson = async () => ({ data: [{ node: { id: 1, title: 'Recent', num_episodes: 12 }, list_status: { status: 'watching', num_episodes_watched: 3 } }] });
+// the worker reads the client ID from the environment, which these tests leave unset
+const sync = (options: Parameters<typeof syncConnections>[0] = {}) => syncConnections({ malClientId: 'test-client', ...options });
 async function mal(userId: string) {
   await mutateConnection(userId, 'create', { provider: 'myanimelist', value: 'syncuser' });
   return (await listConnections(userId))[0]!;
@@ -105,17 +109,20 @@ describe('profile Wall publication (real Postgres)', () => {
     const owner = await makeUser('wall'); const friend = await makeUser('friend'); const stranger = await makeUser('stranger'); const admin = await makeUser('admin', 'admin');
     const connection = await mal(owner.id);
     await db.update(profileConnections).set({ snapshot, syncedAt: new Date() }).where(eq(profileConnections.id, connection.id));
+    await mutateConnection(owner.id, 'create', { provider: 'github', value: 'octocat' });
+    const github = (await listConnections(owner.id)).find((row) => row.provider === 'github')!;
+    await db.update(profileConnections).set({ snapshot: githubSnapshot, syncedAt: new Date() }).where(eq(profileConnections.id, github.id));
     await befriend(owner.id, friend.id);
     assert.deepEqual(await readWall(owner.id), { widgets: [] });
     const auth = await headers(owner.id);
-    const saved = await app.inject({ method: 'PUT', url: '/api/me/wall', headers: auth, payload: { widgets: [{ connectionId: connection.id, type: 'mal-favorite-anime' }] } });
+    const saved = await app.inject({ method: 'PUT', url: '/api/me/wall', headers: auth, payload: { widgets: [{ connectionId: connection.id, type: 'mal-recent-anime' }] } });
     assert.equal(saved.statusCode, 200);
-    assert.equal(saved.json().available.length, 4);
+    assert.equal(saved.json().available.length, 3);
     const viewed = await app.inject({ method: 'GET', url: `/api/users/${owner.id}/wall`, headers: await headers(friend.id) });
     assert.equal(viewed.statusCode, 200);
     assert.equal(viewed.json().widgets.length, 1);
-    assert.equal(viewed.body.includes('Published favorite'), true);
-    assert.equal(viewed.body.includes('Unpublished favorite'), false);
+    assert.equal(viewed.body.includes('Published activity'), true);
+    assert.equal(viewed.body.includes('unpublishedlogin'), false);
     assert.equal(viewed.body.includes('available'), false);
     assert.equal(viewed.body.includes('snapshot'), false);
     const denied = await app.inject({ method: 'GET', url: `/api/users/${owner.id}/wall`, headers: await headers(stranger.id) });
@@ -128,13 +135,16 @@ describe('profile Wall publication (real Postgres)', () => {
   it('validates widget ownership, compatibility and duplicates, and persists ordering', async () => {
     const owner = await makeUser('order'); const another = await makeUser('foreign');
     const connection = await mal(owner.id); const foreign = await mal(another.id);
-    for (const widgets of [[{ connectionId: foreign.id, type: 'mal-favorite-anime' }], [{ connectionId: connection.id, type: 'github-calendar' }], [{ connectionId: connection.id, type: 'mal-favorite-anime' }, { connectionId: connection.id, type: 'mal-favorite-anime' }]]) {
+    await mutateConnection(owner.id, 'create', { provider: 'github', value: 'octocat' });
+    const github = (await listConnections(owner.id)).find((row) => row.provider === 'github')!;
+    for (const widgets of [[{ connectionId: foreign.id, type: 'mal-recent-anime' }], [{ connectionId: connection.id, type: 'github-calendar' }], [{ connectionId: connection.id, type: 'mal-recent-anime' }, { connectionId: connection.id, type: 'mal-recent-anime' }], [{ connectionId: connection.id, type: 'mal-favorite-anime' }]]) {
       await assert.rejects(saveWall(owner.id, widgets), (error: ConnectionMutationError) => error.code === 'invalid_wall');
     }
-    const widgets = [{ connectionId: connection.id, type: 'mal-favorite-manga' }, { connectionId: connection.id, type: 'mal-favorite-anime' }];
+    const widgets = [{ connectionId: github.id, type: 'github-profile' }, { connectionId: connection.id, type: 'mal-recent-anime' }];
     await saveWall(owner.id, widgets);
     assert.deepEqual((await readWall(owner.id)).widgets.map((widget) => widget.type), widgets.map((widget) => widget.type));
     await mutateConnection(owner.id, 'delete', {}, connection.id);
+    await mutateConnection(owner.id, 'delete', {}, github.id);
     assert.deepEqual(await readWall(owner.id), { widgets: [] });
     assert.equal((await db.select().from(profileWallWidgets).where(eq(profileWallWidgets.connectionId, connection.id))).length, 0);
   });
@@ -152,14 +162,14 @@ describe('connection sync worker (real Postgres)', () => {
       if (url.startsWith('https://api.github.com/')) { githubRequests++; return githubUserFixture; }
       return request(url);
     };
-    await syncConnections({ now, request: json, requestText: async () => githubCalendarFixture() });
+    await sync({ now, request: json, requestText: async () => githubCalendarFixture() });
     assert.equal(githubRequests, 1);
     assert.ok((await listConnections(other.id))[0]?.syncedAt);
     const [limit] = await db.select().from(connectionSyncLimits).where(eq(connectionSyncLimits.provider, 'github'));
     assert.equal(limit?.nextRequestAt.getTime(), now.getTime() + GITHUB_SYNC_INTERVAL_MS);
-    await syncConnections({ now: new Date(now.getTime() + GITHUB_SYNC_INTERVAL_MS - 1), request: json, requestText: async () => githubCalendarFixture() });
+    await sync({ now: new Date(now.getTime() + GITHUB_SYNC_INTERVAL_MS - 1), request: json, requestText: async () => githubCalendarFixture() });
     assert.equal(githubRequests, 1);
-    await syncConnections({ now: new Date(now.getTime() + GITHUB_SYNC_INTERVAL_MS), request: json, requestText: async () => githubCalendarFixture() });
+    await sync({ now: new Date(now.getTime() + GITHUB_SYNC_INTERVAL_MS), request: json, requestText: async () => githubCalendarFixture() });
     assert.equal(githubRequests, 2);
     assert.ok((await listConnections(first.id))[0]?.syncedAt);
     assert.ok((await listConnections(second.id))[0]?.syncedAt);
@@ -170,35 +180,35 @@ describe('connection sync worker (real Postgres)', () => {
     const row = (await listConnections(owner.id))[0]!;
     await db.update(profileConnections).set({ snapshot, syncedAt: new Date() }).where(eq(profileConnections.id, row.id));
     const now = new Date(Date.now() + 1000);
-    await syncConnections({ now, request: async () => githubUserFixture, requestText: async () => '<html>changed calendar</html>' });
+    await sync({ now, request: async () => githubUserFixture, requestText: async () => '<html>changed calendar</html>' });
     let saved = (await listConnections(owner.id))[0]!;
     assert.deepEqual(saved.snapshot, snapshot); assert.equal(saved.syncError, 'invalid_response');
     const later = new Date(now.getTime() + SYNC_INTERVAL_MS + 1);
-    await syncConnections({ now: later, request: async () => { throw new ConnectionFetchError('rate_limited', 3_600_000); }, requestText: async () => assert.fail('rate-limited profile must not read HTML') });
+    await sync({ now: later, request: async () => { throw new ConnectionFetchError('rate_limited', 3_600_000); }, requestText: async () => assert.fail('rate-limited profile must not read HTML') });
     saved = (await listConnections(owner.id))[0]!;
     assert.equal(saved.syncError, 'rate_limited');
     const [limit] = await db.select().from(connectionSyncLimits).where(eq(connectionSyncLimits.provider, 'github'));
     assert.equal(limit?.nextRequestAt.getTime(), later.getTime() + 3_600_000);
     const another = await makeUser('ghpaused');
     await mutateConnection(another.id, 'create', { provider: 'github', value: 'octocat' });
-    await syncConnections({ now: new Date(later.getTime() + 60_000), request: async () => assert.fail('GitHub must honor its cooldown') });
+    await sync({ now: new Date(later.getTime() + 60_000), request: async () => assert.fail('GitHub must honor its cooldown') });
     assert.equal((await listConnections(another.id))[0]?.syncedAt, null);
   });
 
   it('syncs initially, waits twenty-four hours, retains snapshots on failure, and recovers an expired lease', async () => {
     const owner = await makeUser('sync'); const connection = await mal(owner.id);
     const now = new Date(Date.now() + 1000);
-    await syncConnections({ request, now });
+    await sync({ request, now });
     let row = (await listConnections(owner.id))[0]!;
     assert.ok(row.snapshot); assert.equal(row.syncedAt?.getTime(), now.getTime());
     assert.equal(row.nextSyncAt.getTime(), now.getTime() + 24 * 60 * 60 * 1000);
     let earlyRequests = 0;
-    await syncConnections({ request: async (url) => { earlyRequests++; return request(url); }, now: new Date(now.getTime() + 12 * 60 * 60 * 1000) });
+    await sync({ request: async (url) => { earlyRequests++; return request(url); }, now: new Date(now.getTime() + 12 * 60 * 60 * 1000) });
     assert.equal(earlyRequests, 0);
     const old = row.snapshot;
     const due = new Date(now.getTime() + SYNC_INTERVAL_MS + 1);
     await db.update(profileConnections).set({ leaseToken: 'crashed-process', leaseUntil: new Date(due.getTime() - 1) }).where(eq(profileConnections.id, connection.id));
-    await syncConnections({ request: async () => { throw new ConnectionFetchError('rate_limited', 300_000); }, now: due });
+    await sync({ request: async () => { throw new ConnectionFetchError('rate_limited', 300_000); }, now: due });
     row = (await listConnections(owner.id))[0]!;
     assert.deepEqual(row.snapshot, old); assert.equal(row.syncError, 'rate_limited'); assert.equal(row.leaseToken, null);
     assert.equal(row.nextSyncAt.getTime(), due.getTime() + 300_000);
@@ -207,13 +217,13 @@ describe('connection sync worker (real Postgres)', () => {
     const owner = await makeUser('leased'); const connection = await mal(owner.id);
     const now = new Date(Date.now() + 1000);
     await db.update(profileConnections).set({ leaseToken: 'active', leaseUntil: new Date(now.getTime() + 60_000) }).where(eq(profileConnections.id, connection.id));
-    await syncConnections({ request: async () => assert.fail('active lease must not be fetched'), now });
+    await sync({ request: async () => assert.fail('active lease must not be fetched'), now });
     await db.update(profileConnections).set({ leaseToken: null, leaseUntil: null }).where(eq(profileConnections.id, connection.id));
     let release!: () => void; const pending = new Promise<void>((resolve) => { release = resolve; });
     let entered!: () => void; const started = new Promise<void>((resolve) => { entered = resolve; });
-    const first = syncConnections({ now, request: async (url) => { entered(); await pending; return request(url); } });
+    const first = sync({ now, request: async (url) => { entered(); await pending; return request(url); } });
     await started;
-    await syncConnections({ now, request: async () => assert.fail('must not overlap') });
+    await sync({ now, request: async () => assert.fail('must not overlap') });
     release(); await first;
   });
   it('discards results when the username changes or the connection is removed in flight', async () => {
@@ -221,7 +231,7 @@ describe('connection sync worker (real Postgres)', () => {
       const owner = await makeUser('stale'); const connection = await mal(owner.id);
       const now = new Date(Date.now() + 1000);
       let changed = false;
-      await syncConnections({ now, request: async (url) => {
+      await sync({ now, request: async (url) => {
         if (!changed) {
           changed = true;
           await mutateConnection(owner.id, action, { value: 'newuser' }, connection.id);
@@ -234,13 +244,13 @@ describe('connection sync worker (real Postgres)', () => {
       else { assert.equal(rows[0]?.value, 'newuser'); assert.equal(rows[0]?.snapshot, null); }
     }
   });
-  it('preserves a complete snapshot on partial provider failure and records missing or private profiles', async () => {
+  it('preserves a complete snapshot on provider failure and records missing or private profiles', async () => {
     const owner = await makeUser('failure'); const connection = await mal(owner.id);
     await db.update(profileConnections).set({ snapshot, syncedAt: new Date() }).where(eq(profileConnections.id, connection.id));
     for (const code of ['not_found', 'private', 'invalid_response']) {
       const now = new Date();
       await db.update(profileConnections).set({ nextSyncAt: new Date(0) }).where(and(eq(profileConnections.id, connection.id), eq(profileConnections.userId, owner.id)));
-      await syncConnections({ now, request: async (url) => { if (url.endsWith('/userupdates')) throw new ConnectionFetchError(code); return request(url); } });
+      await sync({ now, request: async () => { throw new ConnectionFetchError(code); } });
       const row = (await listConnections(owner.id))[0]!;
       assert.deepEqual(row.snapshot, snapshot); assert.equal(row.syncError, code); assert.equal(row.nextSyncAt.getTime(), now.getTime() + SYNC_INTERVAL_MS);
     }

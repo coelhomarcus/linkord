@@ -729,7 +729,7 @@ export const profileWallWidgets = pgTable('profile_wall_widgets', {
   position: integer('position').notNull(),
 }, (t) => [
   uniqueIndex('profile_wall_widgets_connection_type_unique').on(t.connectionId, t.type),
-  check('profile_wall_widgets_type_check', sql`${t.type} IN ('mal-recent-anime','mal-favorite-anime','mal-favorite-manga','mal-favorite-characters','github-profile','github-calendar')`),
+  check('profile_wall_widgets_type_check', sql`${t.type} IN ('mal-recent-anime','github-profile','github-calendar')`),
 ]);
 
 export const connectionSyncLimits = pgTable('connection_sync_limits', {

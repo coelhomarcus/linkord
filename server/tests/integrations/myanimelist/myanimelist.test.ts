@@ -3,33 +3,48 @@ import { describe, it } from 'node:test';
 import { fetchMyAnimeList } from '../../../src/integrations/myanimelist/myanimelist.js';
 import { ConnectionFetchError } from '../../../src/integrations/connectionHttp.js';
 
-const entry = (id: number) => ({ mal_id: id, title: `Anime ${id}`, images: { jpg: { image_url: 'https://cdn.myanimelist.net/images/test.jpg' } } });
+const entry = (id: number, extra: Record<string, unknown> = {}) => ({
+  node: { id, title: `Anime ${id}`, num_episodes: 12, main_picture: { medium: 'https://cdn.myanimelist.net/images/test.jpg' }, ...extra },
+  list_status: { status: 'watching', num_episodes_watched: 3 },
+});
 describe('MyAnimeList adapter', () => {
-  it('normalizes public favorites and recent progress, preserving provider order and capping lists', async () => {
-    const paths: string[] = [];
-    const snapshot = await fetchMyAnimeList('Xinil', async (url) => {
-      paths.push(url);
-      if (url.endsWith('/favorites')) return { data: { anime: Array.from({ length: 15 }, (_, id) => entry(id + 1)), manga: [], characters: [{ mal_id: 50, name: 'Character', images: {} }] } };
-      if (url.endsWith('/userupdates')) return { data: { anime: [{ entry: entry(12), status: 'Watching', episodes_seen: 3, episodes_total: null }] } };
-      return { data: { username: 'Xinil' } };
-    });
-    assert.equal(paths.length, 3);
-    const favorites = snapshot.widgets['mal-favorite-anime'];
-    assert.equal(favorites?.kind, 'list');
-    if (favorites?.kind !== 'list') return;
-    assert.equal(favorites.items.length, 10);
-    assert.deepEqual(favorites.items.slice(0, 2).map((item) => item.id), ['1', '2']);
+  it('reads the recent list activity from the official API with the client ID header', async () => {
+    const calls: { url: string; init?: RequestInit }[] = [];
+    const snapshot = await fetchMyAnimeList('Xinil', async (url, init) => {
+      calls.push({ url, init });
+      return { data: Array.from({ length: 15 }, (_, id) => entry(id + 1)) };
+    }, 'client-id');
+    assert.equal(calls.length, 1);
+    const url = new URL(calls[0]!.url);
+    assert.equal(url.origin + url.pathname, 'https://api.myanimelist.net/v2/users/Xinil/animelist');
+    assert.equal(url.searchParams.get('sort'), 'list_updated_at');
+    assert.deepEqual(calls[0]!.init?.headers, { 'X-MAL-CLIENT-ID': 'client-id' });
     const recent = snapshot.widgets['mal-recent-anime'];
     if (recent?.kind !== 'list') return assert.fail('missing recent activity');
-    assert.equal(recent.items[0]?.progress, 3);
+    assert.equal(recent.items.length, 10);
+    assert.deepEqual(recent.items.slice(0, 2).map((item) => item.id), ['1', '2']);
+    assert.deepEqual(recent.items[0], {
+      id: '1', title: 'Anime 1', url: 'https://myanimelist.net/anime/1', imageUrl: 'https://cdn.myanimelist.net/images/test.jpg',
+      status: 'Watching', progress: 3, total: 12,
+    });
+    assert.deepEqual(Object.keys(snapshot.widgets), ['mal-recent-anime']);
+  });
+  it('treats a zero episode count as an unknown total and ignores images from other hosts', async () => {
+    const snapshot = await fetchMyAnimeList('Xinil', async () => ({ data: [entry(7, { num_episodes: 0, main_picture: { medium: 'https://example.com/a.jpg' } })] }), 'client-id');
+    const recent = snapshot.widgets['mal-recent-anime'];
+    if (recent?.kind !== 'list') return assert.fail('missing recent activity');
     assert.equal(recent.items[0]?.total, null);
-    assert.equal(snapshot.widgets['mal-favorite-manga']?.kind, 'list');
+    assert.equal(recent.items[0]?.imageUrl, null);
   });
   it('rejects incomplete payloads instead of replacing a valid snapshot with partial data', async () => {
-    await assert.rejects(fetchMyAnimeList('Xinil', async (url) => url.endsWith('/favorites') ? { data: {} } : { data: { username: 'Xinil' } }), ConnectionFetchError);
+    await assert.rejects(fetchMyAnimeList('Xinil', async () => ({}), 'client-id'), ConnectionFetchError);
+    await assert.rejects(fetchMyAnimeList('Xinil', async () => ({ data: [{ node: { id: 1 } }] }), 'client-id'), ConnectionFetchError);
   });
-  it('accepts empty public collections and missing images', async () => {
-    const snapshot = await fetchMyAnimeList('Xinil', async (url) => url.endsWith('/favorites') ? { data: { anime: [], manga: [], characters: [] } } : url.endsWith('/userupdates') ? { data: { anime: [] } } : { data: { username: 'Xinil' } });
+  it('accepts an empty public list', async () => {
+    const snapshot = await fetchMyAnimeList('Xinil', async () => ({ data: [] }), 'client-id');
     assert.deepEqual(snapshot.widgets['mal-recent-anime'], { kind: 'list', items: [] });
+  });
+  it('is unavailable without a client ID and makes no request', async () => {
+    await assert.rejects(fetchMyAnimeList('Xinil', async () => assert.fail('must not request'), ''), (error: ConnectionFetchError) => error.code === 'unavailable');
   });
 });
