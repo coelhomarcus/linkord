@@ -63,7 +63,7 @@ GIF search and trending in the message composer.
 The "Recent anime activity" widget on a user's Wall.
 
 - **Code:** [`server/src/integrations/myanimelist/myanimelist.ts`](../server/src/integrations/myanimelist/myanimelist.ts).
-- **API:** the official v2 API, `GET https://api.myanimelist.net/v2/users/{username}/animelist` sorted by `list_updated_at`, limited to 10 entries, with the `X-MAL-CLIENT-ID` header. Public lists need only an application client ID, not a user login. Cover images are accepted only from `cdn.myanimelist.net`.
+- **API:** the official v2 API, `GET https://api.myanimelist.net/v2/users/{username}/animelist` sorted by `list_updated_at`, limited to 8 entries, with the `X-MAL-CLIENT-ID` header. Public lists need only an application client ID, not a user login. Cover images are accepted only from `cdn.myanimelist.net`.
 - **Limits of the API:** it has no favorites or characters endpoint, so recent activity is the only MyAnimeList widget.
 - **Configuration:** register an app at <https://myanimelist.net/apiconfig> and set `MAL_CLIENT_ID`.
 - **When missing:** MyAnimeList connections report `unavailable` and retry with backoff; the rest of the app is unaffected.

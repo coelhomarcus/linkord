@@ -26,12 +26,12 @@ after(async () => { await app.close(); await pool.end(); });
 afterEach(async () => { await db.delete(connectionSyncLimits); await db.update(profileConnections).set({ nextSyncAt: new Date('2100-01-01'), leaseToken: null, leaseUntil: null }); });
 async function headers(userId: string) { return { cookie: `${config.SESSION_COOKIE}=${(await createSession(userId)).rawToken}` }; }
 const snapshot: ConnectionSnapshot = { widgets: {
-  'mal-recent-anime': { kind: 'list', items: [{ id: '1', title: 'Published activity', url: 'https://myanimelist.net/anime/1', imageUrl: null, status: null, progress: null, total: null }] },
+  'mal-recent-anime': { kind: 'list', items: [{ id: '1', title: 'Published activity', url: 'https://myanimelist.net/anime/1', imageUrl: null }] },
 } };
 const githubSnapshot: ConnectionSnapshot = { widgets: {
   'github-profile': { kind: 'github-profile', login: 'unpublishedlogin', name: null, avatarUrl: null, repositories: 1, followers: 2, following: 3 },
 } };
-const request: RequestJson = async () => ({ data: [{ node: { id: 1, title: 'Recent', num_episodes: 12 }, list_status: { status: 'watching', num_episodes_watched: 3 } }] });
+const request: RequestJson = async () => ({ data: [{ node: { id: 1, title: 'Recent' } }] });
 // the worker reads the client ID from the environment, which these tests leave unset
 const sync = (options: Parameters<typeof syncConnections>[0] = {}) => syncConnections({ malClientId: 'test-client', ...options });
 async function mal(userId: string) {

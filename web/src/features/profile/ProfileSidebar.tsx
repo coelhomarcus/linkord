@@ -66,10 +66,11 @@ export function ProfileSidebar({ userId, owner, status, details, onRetry, onOpen
       onValueChange={(value) => { if (value === 'wall' || value === 'friends' || value === 'servers') setTab(value); }}
       className="min-h-0 min-w-0 flex-1 flex-col items-stretch gap-3 p-4 md:p-5"
     >
-      {/* underlined text tabs over a full-width rule, the active one bold with a
-          bar; kept clear of the dialog's close button in the corner */}
-      <TabsList aria-label={t('wall.profileTabs')} className="flex h-auto min-w-0 w-full flex-none justify-start gap-4 overflow-x-auto rounded-none border-0 border-b border-border bg-transparent p-0 whitespace-nowrap md:w-[calc(100%-2rem)]">
-        <TabsIndicator className="top-auto -bottom-px h-0.5 rounded-full bg-text-primary" />
+      {/* underlined text tabs over a full-width rule drawn as an inset shadow, so the
+          active bar stays inside the box and cannot make the list scroll vertically;
+          kept clear of the dialog's close button in the corner */}
+      <TabsList aria-label={t('wall.profileTabs')} className="flex h-auto min-w-0 w-full flex-none justify-start gap-4 overflow-x-auto overflow-y-hidden rounded-none border-0 bg-transparent p-0 shadow-[inset_0_-1px_0_var(--color-border)] whitespace-nowrap md:w-[calc(100%-2rem)]">
+        <TabsIndicator className="top-auto bottom-0 h-0.5 rounded-full bg-text-primary" />
         <TabsTrigger value="wall" className={TAB}>{t('wall.title')}</TabsTrigger>
         {!owner && (
           <TabsTrigger value="servers" className={TAB}>

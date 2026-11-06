@@ -129,7 +129,6 @@
     "unavailable": "Could not load data for this widget.",
     "pending": "Data will appear after the first sync.",
     "noItems": "No public items available.",
-    "progress": "Episodes: {{current}} / {{total}}",
     "stale": "The last sync failed. Showing the latest available data.",
     "updated": "Updated on {{date}}",
     "widgets": {
@@ -141,13 +140,6 @@
       "mal-recent-anime": "The latest anime you watched",
       "github-profile": "Repositories, followers and who you follow",
       "github-calendar": "Your contribution activity over the year"
-    },
-    "statuses": {
-      "watching": "Watching",
-      "completed": "Completed",
-      "onHold": "On hold",
-      "dropped": "Dropped",
-      "planned": "Plan to watch"
     },
     "github": {
       "repositories": "Repositories",
