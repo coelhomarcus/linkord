@@ -85,14 +85,14 @@ export function ProfileModal({ userId, onClose, onOpenProfile }: ProfileModalPro
         <DialogContent
           // one row: the header is sr-only (absolutely positioned, no row of its
           // own), so the content takes the whole height and scrolls inside it
-          className="max-h-[90vh] max-w-[calc(100%-2rem)] grid-rows-[minmax(0,1fr)] gap-0 overflow-hidden bg-bg-modal p-0 sm:max-w-4xl md:h-[min(42rem,90vh)]"
+          className="scrollbar-none max-h-[90vh] max-w-[calc(100%-2rem)] grid-rows-[minmax(0,1fr)] gap-0 overflow-hidden bg-bg-modal p-0 sm:max-w-4xl md:h-[min(42rem,90vh)]"
         >
           <DialogHeader className="sr-only">
             <DialogTitle>{t('modal.profileOf', { name: user.displayName })}</DialogTitle>
           </DialogHeader>
           {/* Each column scrolls independently on desktop; mobile uses one scroll container. */}
-          <div className="min-h-0 overflow-y-auto md:grid md:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] md:grid-rows-[minmax(0,1fr)] md:overflow-hidden">
-            <div className="md:min-h-0 md:overflow-y-auto md:border-r md:border-border">
+          <div className="scrollbar-none min-h-0 overflow-y-auto md:grid md:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] md:grid-rows-[minmax(0,1fr)] md:overflow-hidden">
+            <div className="scrollbar-none md:min-h-0 md:overflow-y-auto md:border-r md:border-border">
               <ProfileCard
                 bare
                 user={user}

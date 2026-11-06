@@ -288,6 +288,13 @@ html, body {
 *::-webkit-scrollbar-thumb { background: var(--color-surface-400); border-radius: 8px; }
 *::-webkit-scrollbar-thumb:hover { background: var(--color-surface-500); }
 
+/* Keeps scrolling (wheel, touch, keyboard) but draws no bar. Plain CSS rather than
+   a Tailwind utility on purpose: the unlayered `*` rules above would beat anything
+   in the utilities layer, and once `scrollbar-width` is set browsers ignore the
+   ::-webkit-scrollbar rules. */
+.scrollbar-none { scrollbar-width: none; }
+.scrollbar-none::-webkit-scrollbar { display: none; }
+
 .tile-fullscreen-target:fullscreen {
   /* Focused frames have inline dimensions fitted to their stage slot. */
   width: 100% !important;
