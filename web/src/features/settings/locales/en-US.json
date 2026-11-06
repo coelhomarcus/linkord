@@ -25,6 +25,10 @@
         "label": "Profile",
         "description": "Edit right on your profile. What you see here is exactly what others will see."
       },
+      "connections": {
+        "label": "Connections",
+        "description": "Connect your accounts on other services and choose what to show on your Wall. Data refreshes automatically every 24 hours."
+      },
       "account": {
         "label": "My account",
         "description": "Identity, language, email, storage and session."
@@ -72,6 +76,10 @@
     "profile": {
       "title": "Profile",
       "keywords": "photo, avatar, banner, display name, bio, links, color"
+    },
+    "connections": {
+      "title": "Connections",
+      "keywords": "github, myanimelist, anime, link, accounts, wall, widgets, social"
     },
     "identity": {
       "title": "Identity",

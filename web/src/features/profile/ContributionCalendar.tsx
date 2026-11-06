@@ -1,26 +1,12 @@
-import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useElementWidth } from '@/shared/hooks/useElementWidth';
 
 type Day = { date: string; count: number; level: number };
 
 const LEVEL_COLORS = ['bg-fill-hover', 'bg-primary/25', 'bg-primary/45', 'bg-primary/70', 'bg-primary'];
 const GAP = 3;
 const TARGET_CELL = 10;
-
-function useElementWidth<T extends HTMLElement>() {
-  const ref = useRef<T>(null);
-  const [width, setWidth] = useState(0);
-  useLayoutEffect(() => {
-    const element = ref.current;
-    if (!element) return;
-    setWidth(element.clientWidth);
-    if (typeof ResizeObserver === 'undefined') return;
-    const observer = new ResizeObserver(([entry]) => setWidth(Math.floor(entry.contentRect.width)));
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
-  return [ref, width] as const;
-}
 
 /** Sunday-first weeks, padded at the start so the first day lands on its weekday row. */
 function toWeeks(days: Day[]) {
@@ -35,7 +21,8 @@ function toWeeks(days: Day[]) {
 /** Squares stretch to fill the widget; when the width can't hold every week, the oldest ones are dropped. */
 export function ContributionCalendar({ days }: { days: Day[] }) {
   const { t, i18n } = useTranslation('profile');
-  const [ref, width] = useElementWidth<HTMLDivElement>();
+  const ref = useRef<HTMLDivElement>(null);
+  const width = useElementWidth(ref);
   const weeks = useMemo(() => toWeeks(days), [days]);
   // width is 0 until measured (and in environments without layout): show everything rather than nothing
   const fit = width > 0 ? Math.max(1, Math.floor((width + GAP) / (TARGET_CELL + GAP))) : weeks.length;

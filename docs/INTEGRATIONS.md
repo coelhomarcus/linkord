@@ -88,7 +88,7 @@ Both providers share one background worker ([`server/src/modules/connections/syn
 - Each connection is refreshed every 24 hours. MyAnimeList requests are spaced at least 1.1 seconds apart through a shared PostgreSQL limiter.
 - A failed sync keeps the last complete snapshot. `not_found`, `private` and `invalid_response` wait for the next daily cycle; `rate_limited` and `unavailable` retry with exponential backoff (honoring `Retry-After` and `X-RateLimit-Reset`).
 - HTTP helper ([`server/src/integrations/connectionHttp.ts`](../server/src/integrations/connectionHttp.ts)): 10-second timeout, redirects are an error, response bodies are capped at 2 MB, and status codes map to the errors above (404 → `not_found`, 403 → `private` or `rate_limited`, 429 → `rate_limited`).
-- Connections are listed under Settings → Profile; the owner chooses which widgets appear on the Wall. See "Profile connections and Wall" in [DEVELOPMENT.md](DEVELOPMENT.md#profile-connections-and-wall).
+- Connections are managed under Settings → Connections; the owner chooses which widgets appear on the Wall. See "Profile connections and Wall" in [DEVELOPMENT.md](DEVELOPMENT.md#profile-connections-and-wall).
 
 ## Link previews
 

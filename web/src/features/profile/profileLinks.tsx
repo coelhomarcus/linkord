@@ -93,10 +93,10 @@ const BRAND_ICONS: Record<Exclude<LinkKind, 'generic'>, ComponentType<{ size?: n
   whatsapp: SiWhatsapp,
 };
 
-export function BrandIcon({ kind }: { kind: LinkKind }) {
-  if (kind === 'generic') return <LinkIcon aria-hidden="true" size={17} />;
+export function BrandIcon({ kind, size = 17 }: { kind: LinkKind; size?: number }) {
+  if (kind === 'generic') return <LinkIcon aria-hidden="true" size={size} />;
   const Icon = BRAND_ICONS[kind];
-  return <Icon size={17} />;
+  return <Icon size={size} />;
 }
 
 // 16:9 — same shape a call tile fills via `background-size: cover` (see

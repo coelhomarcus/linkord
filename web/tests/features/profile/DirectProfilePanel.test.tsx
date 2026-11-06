@@ -41,23 +41,13 @@ describe('DirectProfilePanel', () => {
     expect(screen.getByText('1 amigo em comum')).toBeInTheDocument();
   });
 
-  it('an online user shows the current status instead of the last visit', async () => {
-    renderWithRoom(<MemoryRouter><DirectProfilePanel user={{ ...bea, lastSeenAt: yesterdayAt1011() }} onOpenProfile={vi.fn()} /></MemoryRouter>, { onlineUserIds: new Set(['u-bea']) });
-    expect(screen.getByRole('heading', { name: 'Status' }).nextElementSibling).toHaveTextContent('Online');
-    expect(screen.queryByText('Última vez online')).not.toBeInTheDocument();
-    expect(await screen.findByText('4 de mai. de 2023')).toBeInTheDocument();
-  });
-
-  it('an offline user shows when they were last online', async () => {
+  it('never shows when the user was last online, only whether they are online now', async () => {
     renderWithRoom(<MemoryRouter><DirectProfilePanel user={{ ...bea, lastSeenAt: yesterdayAt1011() }} onOpenProfile={vi.fn()} /></MemoryRouter>);
-    expect(screen.getByRole('heading', { name: 'Última vez online' }).nextElementSibling).toHaveTextContent('ontem às 10:11');
     expect(await screen.findByText('4 de mai. de 2023')).toBeInTheDocument();
-  });
-
-  it('an offline user with no recorded visit reads as Offline', async () => {
-    renderWithRoom(<MemoryRouter><DirectProfilePanel user={{ ...bea, lastSeenAt: null }} onOpenProfile={vi.fn()} /></MemoryRouter>);
-    expect(screen.getByRole('heading', { name: 'Status' }).nextElementSibling).toHaveTextContent('Offline');
-    expect(await screen.findByText('4 de mai. de 2023')).toBeInTheDocument();
+    expect(screen.queryByText('Última vez online')).not.toBeInTheDocument();
+    expect(screen.queryByText(/ontem às/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Status' })).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Offline')).toBeInTheDocument();
   });
 
   it('a mutual friend and the footer open profiles', async () => {

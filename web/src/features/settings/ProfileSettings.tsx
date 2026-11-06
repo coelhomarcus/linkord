@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next';
 
 import { useBlocker } from 'react-router';
 import { ImageCropDialog } from './ImageCropDialog';
-import { ConnectionsSettings } from '@/features/profile/ConnectionsSettings';
 import { ProfileCard } from '@/features/profile/ProfileCard';
 import { useRoom } from '@/state/RoomContext';
 import { cn } from '@/shared/lib/utils';
@@ -277,7 +276,6 @@ export function ProfileSettings() {
           </div>
         )}
       </form>
-      <ConnectionsSettings />
 
       <UnsavedProfileChangesDialog
         open={blocker.state === 'blocked'}

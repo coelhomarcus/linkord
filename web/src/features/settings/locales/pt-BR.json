@@ -25,6 +25,10 @@
         "label": "Perfil",
         "description": "Edite direto no seu perfil. O que você vê aqui é exatamente o que os outros vão ver."
       },
+      "connections": {
+        "label": "Conexões",
+        "description": "Conecte suas contas de outros serviços e escolha o que mostrar no Mural. Os dados são atualizados automaticamente a cada 24 horas."
+      },
       "account": {
         "label": "Minha conta",
         "description": "Identificação, idioma, e-mail, armazenamento e sessão."
@@ -72,6 +76,10 @@
     "profile": {
       "title": "Perfil",
       "keywords": "foto, avatar, banner, nome de exibição, bio, links, cor"
+    },
+    "connections": {
+      "title": "Conexões",
+      "keywords": "github, myanimelist, anime, link, contas, mural, widgets, redes sociais"
     },
     "identity": {
       "title": "Identificação",

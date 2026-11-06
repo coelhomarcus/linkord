@@ -8,6 +8,7 @@ import { PageHeader } from '@/shared/PageHeader';
 import { Button } from '@/shared/ui/primitives/button';
 import { ROUTES, isSettingsTab } from '@/shared/lib/routes';
 import type { SettingsTab } from '@/shared/lib/routes';
+import { ConnectionsSettings } from '@/features/profile/ConnectionsSettings';
 import { AccountSettings } from './AccountSettings';
 import { AdminLinkTab } from './AdminLinkTab';
 import { AudioVideoSettings } from './AudioVideoSettings';
@@ -27,6 +28,7 @@ interface SettingsPageProps {
 function CategoryPage({ tab, onOpenProfile }: { tab: SettingsTab; onOpenProfile: (userId: string) => void }) {
   switch (tab) {
     case 'profile': return <ProfileSettings />;
+    case 'connections': return <ConnectionsSettings />;
     case 'account': return <AccountSettings />;
     case 'privacy': return <PrivacyTab onOpenProfile={onOpenProfile} />;
     case 'av': return <AudioVideoSettings />;

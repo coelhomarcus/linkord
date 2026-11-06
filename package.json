@@ -1,7 +1,7 @@
 {
   "name": "linkord",
   "version": "1.0.0",
-  "description": "Chat e chamadas de voz/vídeo/tela em tempo real, self-hosted",
+  "description": "Self-hosted chat app with messaging, voice/video calls & screen sharing.",
   "type": "module",
   "main": "server/dist/index.js",
   "scripts": {

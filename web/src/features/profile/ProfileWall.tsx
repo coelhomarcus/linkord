@@ -76,7 +76,7 @@ export function ProfileWall({ userId, owner, onNavigate }: { userId: string; own
         hasAvailable={!!data?.available?.length}
         disabled={saving}
         onPick={(widget) => setDraft([...draft, { connectionId: widget.connection.id, type: widget.type }])}
-        onManage={() => { navigate(ROUTES.settingsTab('profile')); onNavigate(); }}
+        onManage={() => { navigate(ROUTES.settingsTab('connections')); onNavigate(); }}
       />}
       {!loading && data && widgets.length === 0 && <p className="py-8 text-center text-body text-text-muted">{t(owner ? 'wall.emptyOwner' : 'wall.emptyVisitor')}</p>}
       <div className="flex w-full min-w-0 flex-col gap-4">

@@ -3,8 +3,8 @@ import type { SettingsTab } from '@/shared/lib/routes';
 export interface SearchEntry {
   categoryId: SettingsTab;
   /** Matches a `<SettingsSection id="...">` — the destination becomes
-   * `/app/settings/:categoryId#:sectionId`. Profile has none: it's a single
-   * card, not a sequence of SettingsSection blocks. */
+   * `/app/settings/:categoryId#:sectionId`. Profile and Connections have none:
+   * each is a single page, not a sequence of SettingsSection blocks. */
   sectionId?: string;
   /** `search.<searchKey>.title` / `.keywords` (comma separated) in the
    * settings locale files. */
@@ -13,7 +13,7 @@ export interface SearchEntry {
 }
 
 type SearchKey =
-  | 'profile' | 'identity' | 'language' | 'email' | 'storage' | 'session' | 'blocked'
+  | 'profile' | 'connections' | 'identity' | 'language' | 'email' | 'storage' | 'session' | 'blocked'
   | 'microphone' | 'speaker' | 'camera' | 'system' | 'sounds'
   | 'appAppearance' | 'callAppearance' | 'imageUploads' | 'adminArea';
 
@@ -22,6 +22,7 @@ type SearchKey =
 // generated, since the sections live scattered across several files.
 export const SETTINGS_SEARCH_INDEX: SearchEntry[] = [
   { categoryId: 'profile', searchKey: 'profile' },
+  { categoryId: 'connections', searchKey: 'connections' },
   { categoryId: 'account', sectionId: 'identity', searchKey: 'identity' },
   { categoryId: 'account', sectionId: 'language', searchKey: 'language' },
   { categoryId: 'account', sectionId: 'email', searchKey: 'email' },

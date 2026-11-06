@@ -69,7 +69,7 @@ export function ProfileSidebar({ userId, owner, status, details, onRetry, onOpen
       {/* underlined text tabs over a full-width rule drawn as an inset shadow, so the
           active bar stays inside the box and cannot make the list scroll vertically;
           kept clear of the dialog's close button in the corner */}
-      <TabsList aria-label={t('wall.profileTabs')} className="flex h-auto min-w-0 w-full flex-none justify-start gap-4 overflow-x-auto overflow-y-hidden rounded-none border-0 bg-transparent p-0 shadow-[inset_0_-1px_0_var(--color-border)] whitespace-nowrap md:w-[calc(100%-2rem)]">
+      <TabsList aria-label={t('wall.profileTabs')} className="scrollbar-none flex h-auto min-w-0 w-full flex-none justify-start gap-4 overflow-x-auto overflow-y-hidden rounded-none border-0 bg-transparent p-0 shadow-[inset_0_-1px_0_var(--color-border)] whitespace-nowrap md:w-[calc(100%-2rem)]">
         <TabsIndicator className="top-auto bottom-0 h-0.5 rounded-full bg-text-primary" />
         <TabsTrigger value="wall" className={TAB}>{t('wall.title')}</TabsTrigger>
         {!owner && (
@@ -84,7 +84,7 @@ export function ProfileSidebar({ userId, owner, status, details, onRetry, onOpen
         )}
       </TabsList>
 
-      <div className="min-h-0 md:flex-1 md:overflow-y-auto md:overscroll-contain">
+      <div className="scrollbar-none min-h-0 md:flex-1 md:overflow-y-auto md:overscroll-contain">
         <TabsPanel value="wall">
           <ProfileWall userId={userId} owner={owner} onNavigate={onNavigate} />
         </TabsPanel>

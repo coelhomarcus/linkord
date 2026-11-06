@@ -75,7 +75,9 @@
   },
   "integration": {
     "url": "URL",
-    "description": "Conecte seus perfis e escolha o que mostrar no Mural. Atualização automática a cada 24 horas.",
+    "addTitle": "Adicionar uma nova conexão",
+    "count_one": "{{count}} conex\u00e3o",
+    "count_other": "{{count}} conex\u00f5es",
     "loading": "Carregando conexões…",
     "empty": "Você ainda não adicionou conexões.",
     "pending": "Aguardando a primeira sincronização…",
