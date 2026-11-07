@@ -44,10 +44,18 @@ describe('createPreviewBroker', () => {
     assert.equal(broker.request('s1', () => {}), 'capture');
   });
 
-  it('a streamer that never answers releases the waiters empty-handed', async () => {
-    const broker = createPreviewBroker({ ttlMs: 10_000, timeoutMs: 5 });
-    const answer = await new Promise<string | null>((resolve) => { broker.request('s1', resolve); });
-    assert.equal(answer, null);
+  it('a streamer that never answers releases the waiters empty-handed', (t) => {
+    // The broker unrefs its timeout so it never holds the process open; a real
+    // timer would let the event loop drain before it fires, so drive it by hand.
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const broker = createPreviewBroker({ ttlMs: 10_000, timeoutMs: 5_000 });
+    const answers: (string | null)[] = [];
+    broker.request('s1', (image) => answers.push(image));
+    broker.request('s1', (image) => answers.push(image));
+    t.mock.timers.tick(4_999);
+    assert.deepEqual(answers, []);
+    t.mock.timers.tick(1);
+    assert.deepEqual(answers, [null, null]);
     // and the next hover may ask again
     assert.equal(broker.request('s1', () => {}), 'capture');
   });
