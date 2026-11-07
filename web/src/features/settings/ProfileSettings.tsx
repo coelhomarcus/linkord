@@ -1,13 +1,18 @@
+import { PlusIcon } from '@phosphor-icons/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import type { Area } from 'react-easy-crop';
 import { useTranslation } from 'react-i18next';
 
-import { useBlocker } from 'react-router';
+import { Link, useBlocker } from 'react-router';
 import { ImageCropDialog } from './ImageCropDialog';
 import { ProfileCard } from '@/features/profile/ProfileCard';
+import { ProfileConnections } from '@/features/profile/ProfileConnections';
+import { ProfileSidebar } from '@/features/profile/ProfileSidebar';
+import { formatProfileDate, useProfileDetails } from '@/features/profile/useProfileDetails';
 import { useRoom } from '@/state/RoomContext';
 import { cn } from '@/shared/lib/utils';
+import { ROUTES } from '@/shared/lib/routes';
 import { DEFAULT_AVATAR_COLOR, normalizeAvatarColor } from '@/shared/Avatar';
 import { BANNER_ASPECT_RATIO } from '@/features/profile/profileLinks';
 import { UploadProgressModal } from '@/shared/UploadProgressModal';
@@ -23,7 +28,9 @@ type ProfileCropTarget = { field: 'avatar' | 'banner'; file: File; src: string }
 
 export function ProfileSettings() {
   const { t } = useTranslation('settings');
+  const { t: profileT } = useTranslation('profile');
   const { state, updateProfile, uploadProfileImage, removeProfileImage, activeCallConversationId } = useRoom();
+  const details = useProfileDetails(state.me.userId);
   // FloatingPip (a call kept running while browsing elsewhere) sits fixed at
   // the viewport's bottom-left, on top of whatever's there — on a narrow
   // screen that's exactly where this bar's own Descartar button lands,
@@ -183,36 +190,86 @@ export function ProfileSettings() {
     : dirty ? t('profile.unsavedNotice')
     : '';
 
+  const userId = state.me.userId;
+
   return (
     <div className="flex flex-col gap-4">
       <form
         onSubmit={handleFormSubmit}
         onPointerDownCapture={rememberTouched}
         onFocusCapture={rememberTouched}
-        className={cn('flex max-w-120 flex-col gap-3 [&_*]:scroll-mb-28', showBar && 'pb-24')}
+        className={cn('flex flex-col gap-4', showBar && 'pb-24 [&_*]:scroll-mb-28')}
       >
-        <ProfileCard
-          user={{
-            id: state.me.id || 'preview',
-            displayName: draft.displayName || state.me.name,
-            username: state.me.name,
-            avatar, avatarColor: draft.avatarColor, banner, bio: draft.bio,
-            profileLinks: state.me.profileLinks,
-            role: state.me.role,
-          }}
-          online
-          onAvatarUpload={() => avatarFileInputRef.current?.click()}
-          onAvatarRemove={() => void handleRemoveImage('avatar')}
-          avatarUploading={uploadingAvatar}
-          onBannerUpload={() => bannerFileInputRef.current?.click()}
-          onBannerRemove={() => void handleRemoveImage('banner')}
-          bannerUploading={uploadingBanner}
-          onDisplayNameChange={(value) => setField('displayName', value)}
-          onBioChange={(value) => setField('bio', value)}
-          onAvatarColorChange={(value) => setField('avatarColor', value)}
-          hideLinks
-          fieldsDisabled={saving}
-        />
+        <div className="overflow-hidden rounded-lg border border-border bg-bg-modal md:grid md:h-[min(42rem,calc(100dvh-14rem))] md:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] md:grid-rows-[minmax(0,1fr)]">
+          <div className="scrollbar-none min-w-0 md:min-h-0 md:overflow-y-auto md:border-r md:border-border">
+            <ProfileCard
+              bare
+              user={{
+                id: state.me.id || 'preview',
+                displayName: draft.displayName || state.me.name,
+                username: state.me.name,
+                avatar, avatarColor: draft.avatarColor, banner, bio: draft.bio,
+                profileLinks: state.me.profileLinks,
+                role: state.me.role,
+              }}
+              online
+              onAvatarUpload={() => avatarFileInputRef.current?.click()}
+              onAvatarRemove={() => void handleRemoveImage('avatar')}
+              avatarUploading={uploadingAvatar}
+              onBannerUpload={() => bannerFileInputRef.current?.click()}
+              onBannerRemove={() => void handleRemoveImage('banner')}
+              bannerUploading={uploadingBanner}
+              onDisplayNameChange={(value) => setField('displayName', value)}
+              onBioChange={(value) => setField('bio', value)}
+              onAvatarColorChange={(value) => setField('avatarColor', value)}
+              hideLinks
+              fieldsDisabled={saving}
+              footer={(
+                <div className="mt-5 flex flex-col gap-4">
+                  <dl className="flex flex-col gap-3">
+                    {details.details && (
+                      <div>
+                        <dt className="text-caption font-medium text-text-muted">{profileT('modal.memberSince')}</dt>
+                        <dd className="mt-0.5 text-label text-text-secondary">{formatProfileDate(details.details.memberSince)}</dd>
+                      </div>
+                    )}
+                    {details.details?.friendsSince && (
+                      <div>
+                        <dt className="text-caption font-medium text-text-muted">{profileT('modal.friendsSince')}</dt>
+                        <dd className="mt-0.5 text-label text-text-secondary">{formatProfileDate(details.details.friendsSince)}</dd>
+                      </div>
+                    )}
+                  </dl>
+                  <div className="flex flex-col gap-1.5">
+                    <h3 className="text-caption font-medium text-text-muted">{profileT('connections')}</h3>
+                    <ProfileConnections links={state.me.profileLinks} hideHeading />
+                    <Link
+                      to={ROUTES.settingsTab('connections')}
+                      className="inline-flex w-fit items-center gap-1.5 rounded-md py-1 text-label text-text-secondary transition-colors hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <PlusIcon size={14} aria-hidden />
+                      {profileT('integration.addLink')}
+                    </Link>
+                  </div>
+                </div>
+              )}
+            />
+          </div>
+          {userId && (
+            <div className="flex min-h-80 min-w-0 flex-col border-t border-border md:min-h-0 md:border-t-0">
+              <ProfileSidebar
+                userId={userId}
+                owner
+                status={details.status}
+                details={details.details}
+                onRetry={details.retry}
+                onOpenProfile={() => {}}
+                onOpenServer={() => {}}
+                onNavigate={() => {}}
+              />
+            </div>
+          )}
+        </div>
         <input
           ref={avatarFileInputRef}
           aria-label={t('profile.avatarInput')}

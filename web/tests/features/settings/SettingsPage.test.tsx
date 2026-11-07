@@ -12,6 +12,28 @@ import { ProfileSaveRefused } from '@/features/profile/useProfileUpdate';
 
 vi.mock('@/features/profile/ConnectionsSettings', () => ({ ConnectionsSettings: () => <section>Conexões</section> }));
 
+vi.mock('@/features/profile/profileApi', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/features/profile/profileApi')>();
+  return {
+    ...actual,
+    fetchWall: vi.fn(async () => ({ widgets: [], available: [] })),
+    saveWall: vi.fn(async () => ({ widgets: [], available: [] })),
+  };
+});
+
+vi.mock('@/shared/api/api', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/shared/api/api')>();
+  return {
+    ...actual,
+    fetchProfileDetails: vi.fn(async () => ({
+      memberSince: '2025-05-05T00:00:00.000Z',
+      friendsSince: null,
+      mutualFriends: { items: [], total: 0 },
+      mutualServers: { items: [], total: 0 },
+    })),
+  };
+});
+
 vi.mock('@/state/AuthContext', () => ({
   useAuth: () => ({ logout: vi.fn() }),
 }));
@@ -56,6 +78,18 @@ describe('SettingsPage — connections', () => {
 });
 
 describe('SettingsPage — profile', () => {
+  it('lays the editor out like the profile, with the wall and without the other tabs', async () => {
+    renderSettings({ state: { ...initialRoomState, me: { ...initialRoomState.me, id: 'c', userId: 'u', name: 'Fulana', displayName: 'Fulana', avatarColor: 'green' } } });
+    expect(await screen.findByRole('tab', { name: 'Mural' })).toBeInTheDocument();
+    expect(screen.getAllByRole('tab')).toHaveLength(1);
+    expect(screen.getByRole('heading', { name: 'Seus Widgets' })).toBeInTheDocument();
+    expect(await screen.findByText('Membro desde')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Adicionar conexão' })).toHaveAttribute('href', '/app/settings/connections');
+    expect(screen.queryByText('Atividade')).not.toBeInTheDocument();
+    expect(screen.queryByText('Lista de desejos')).not.toBeInTheDocument();
+    expect(screen.queryByText('Conexões', { selector: 'section' })).not.toBeInTheDocument();
+  });
+
   it('brings the edited field back above the save bar when the bar appears', async () => {
     const user = userEvent.setup();
     const scrollIntoView = vi.fn();

@@ -42,7 +42,7 @@
     "date": "{{date}} at {{time}}"
   },
   "mutuals": {
-    "title": "Shared",
+    "title": "In common",
     "friendsTitle": "Mutual friends",
     "serversTitle": "Mutual servers",
     "friends_one": "{{count}} mutual friend",
@@ -76,6 +76,7 @@
   "integration": {
     "url": "URL",
     "addTitle": "Add a new connection",
+    "addLink": "Add a connection",
     "count_one": "{{count}} connection",
     "count_other": "{{count}} connections",
     "loading": "Loading connections…",
@@ -111,7 +112,6 @@
   "wall": {
     "title": "Wall",
     "profileTabs": "Profile tabs",
-    "edit": "Edit Wall",
     "cancel": "Cancel",
     "save": "Save",
     "saving": "Saving…",
@@ -120,10 +120,11 @@
     "loadFailed": "Could not load the Wall.",
     "addWidgetHint": "Choose what shows on your Wall.",
     "addWidget": "Add widget",
+    "yours": "Your widgets",
     "allAdded": "All available widgets have been added.",
     "noConnections": "Connect MyAnimeList or GitHub to unlock widgets.",
     "manageConnections": "Manage connections",
-    "emptyOwner": "Your Wall is empty. Click Edit Wall to choose your widgets.",
+    "emptyOwner": "Your Wall is empty. Add a widget to choose what shows.",
     "emptyVisitor": "This user has not published any Wall widgets yet.",
     "moveUp": "Move {{name}} up",
     "moveDown": "Move {{name}} down",

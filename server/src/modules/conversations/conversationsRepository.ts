@@ -47,11 +47,12 @@ export function rowToSummary(row: Conversation, memberIds: string[], pinnedAt: D
   };
 }
 
-/** The account's DMs. A DM only counts as "history" once it has a message —
- * opening one (handleDirectOpen) creates the row right away so both sides
- * can chat, but that alone shouldn't plant it in anyone's sidebar. The same
- * clause covers "closed" DMs (member.hiddenAt set): hidden until a message
- * newer than the close time arrives, then it reappears on its own. */
+/** The account's DMs. A DM only counts as "history" once `lastMessageAt` is
+ * set — opening one (handleDirectOpen) creates the row right away so both
+ * sides can chat, but that alone shouldn't plant it in anyone's sidebar.
+ * A message and the start of a DM call both set it (touchConversation).
+ * The same clause covers "closed" DMs (member.hiddenAt set): hidden until
+ * something newer than the close time arrives, then it reappears on its own. */
 export async function listForUser(userId: string): Promise<ConversationSummary[]> {
   const rows = await db
     .select({ conversation: conversations, pinnedAt: conversationMembers.pinnedAt })
@@ -304,9 +305,9 @@ export async function shareAnyConversation(a: string, b: string): Promise<boolea
   return result.rows.length > 0;
 }
 
-/** A genuinely NEW message was created (send, or a fresh attachment-only
- * message) — the only thing that moves a DM to the top of the sidebar or
- * makes an otherwise-empty/closed DM start showing (see listForUser).
+/** Something that should put a DM in history and at the top of the sidebar:
+ * a genuinely new message, or a DM call that just started ringing. An edit
+ * or a delete must not come through here (see recordConversationActivity).
  * Channels keep their own order, so only a DM's summary is re-sent. */
 export async function touchConversation(conversationId: string, when = new Date()): Promise<void> {
   const [row] = await db.update(conversations).set({ lastMessageAt: when, lastActivityAt: when }).where(eq(conversations.id, conversationId)).returning();

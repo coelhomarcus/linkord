@@ -48,7 +48,7 @@ interface ConversationPanelProps {
 
 export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, detailsOpen, mediaOpen, onToggleDetails, onToggleMedia }: ConversationPanelProps) {
   const { t } = useTranslation('conversations');
-  const { state, dispatch, conversations, activeConversationId, allUsers, onlineUserIds, activeCallConversationId, servers, startDmCall } = useRoom();
+  const { state, dispatch, conversations, activeConversationId, allUsers, onlineUserIds, activeCallConversationId, startDmCall } = useRoom();
   const navigate = useNavigate();
   const { pathname, state: locationState } = useLocation();
   const { isMobile } = useSidebar();
@@ -194,16 +194,9 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
                   <UserCircleIcon size={24} weight="fill" />
                 </HeaderIcon>
               )}
-              {/* Discord's search box: a field-looking button that opens the search */}
-              <button
-                type="button"
-                onClick={onOpenSearch}
-                aria-label={t('panel.search')}
-                className="ml-2 flex h-8 w-36 items-center gap-2 rounded-lg border border-border-field bg-bg-textarea pl-2 pr-1.5 text-left text-label text-text-faint transition-colors hover:border-border-strong max-md:hidden lg:w-60"
-              >
-                <span className="min-w-0 flex-1 truncate">{t('panel.searchIn', { name: isChannel ? (servers.find((s) => s.id === conversation.serverId)?.name ?? title) : title })}</span>
-                <MagnifyingGlassIcon size={18} className="flex-none text-text-secondary" aria-hidden />
-              </button>
+              <HeaderIcon label={t('panel.search')} onClick={onOpenSearch} className="max-md:hidden">
+                <MagnifyingGlassIcon size={24} />
+              </HeaderIcon>
             </div>
             {(activeCallConversationId || !isChannel) && <Button type="button" variant="ghost" size="icon" aria-label={activeCallConversationId && activeCallConversationId !== conversation.id ? t('panel.returnToActiveCall') : callBlockedReason ?? callActionLabel} disabled={!activeCallConversationId && !!callBlockedReason} onClick={() => { if (activeCallConversationId && activeCallConversationId !== conversation.id) onOpenCall(activeCallConversationId); else startThisCall(false); }} className="flex-none text-green md:hidden"><PhoneIcon size={22} weight="fill" /></Button>}
             {!isChannel && !inThisCall && !callBlockedReason && !activeCallConversationId && <Button type="button" variant="ghost" size="icon" aria-label={t('panel.videoCall')} onClick={() => startThisCall(true)} className="flex-none md:hidden"><VideoCameraIcon size={22} weight="fill" /></Button>}

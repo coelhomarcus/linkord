@@ -108,7 +108,7 @@ export const BANNER_ASPECT_RATIO = 16 / 9;
 
 export function bannerStyle(user: { id: string; avatarColor: string; banner: string }): CSSProperties {
   const accent = colorFor(user.id, user.avatarColor);
-  if (!user.banner) return { background: `linear-gradient(135deg, ${accent}, var(--color-bg-tertiary))` };
+  if (!user.banner) return { background: accent };
   return {
     backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.04), rgba(0,0,0,0.24)), url(${JSON.stringify(user.banner)})`,
     backgroundPosition: 'center',
