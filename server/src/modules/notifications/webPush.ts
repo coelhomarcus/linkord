@@ -157,7 +157,7 @@ async function noticeFor(event: OutboxEvent, locale: Locale): Promise<PushNotice
   if (kind === 'server_invitation') {
     const [invitation] = await db.select({ status: serverInvitations.status }).from(serverInvitations).where(eq(serverInvitations.id, String(reference))).limit(1);
     if (!invitation || invitation.status !== 'pending') return null;
-    return { title: localeText(locale, 'push.serverInvitationTitle'), body: localeText(locale, 'push.serverInvitationBody'), path: '/app/friends?tab=invitations', tag: `social-${row.id}` };
+    return { title: localeText(locale, 'push.serverInvitationTitle'), body: localeText(locale, 'push.serverInvitationBody'), path: '/app/friends?tab=pending#invitations', tag: `social-${row.id}` };
   }
   const [friendship] = await db.select({ status: friendships.status }).from(friendships).where(eq(friendships.id, String(reference))).limit(1);
   if (!friendship || friendship.status !== (kind === 'friend_request' ? 'pending' : 'accepted')) return null;

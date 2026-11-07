@@ -80,7 +80,7 @@ describe('Friends routes', () => {
   it('All is the route with no query; the other views use ?tab=', () => {
     expect(friendsView('all')).toBe('/app/friends');
     expect(friendsView('online')).toBe('/app/friends?tab=online');
-    expect(friendsView('invitations')).toBe('/app/friends?tab=invitations');
+    expect(friendsView('pending')).toBe('/app/friends?tab=pending');
     expect(friendsView('add')).toBe('/app/friends?tab=add');
   });
 
@@ -92,6 +92,7 @@ describe('Friends routes', () => {
   it('Pending sections use a hash', () => {
     expect(friendsSection('received')).toBe('/app/friends?tab=pending#received');
     expect(friendsSection('sent')).toBe('/app/friends?tab=pending#sent');
+    expect(friendsSection('invitations')).toBe('/app/friends?tab=pending#invitations');
   });
 
   it('an unknown or missing value falls back to All', () => {
