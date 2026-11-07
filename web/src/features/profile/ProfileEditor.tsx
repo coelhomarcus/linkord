@@ -10,7 +10,7 @@ import type { ProfileImageUploadPhase } from '@/features/settings/uploadCroppedP
 import { useRoom } from '@/state/RoomContext';
 import { cn } from '@/shared/lib/utils';
 import { ROUTES } from '@/shared/lib/routes';
-import { DEFAULT_AVATAR_COLOR, normalizeAvatarColor } from '@/shared/Avatar';
+import { DEFAULT_AVATAR_COLOR, colorFor, normalizeAvatarColor } from '@/shared/Avatar';
 import { UploadProgressModal } from '@/shared/UploadProgressModal';
 import { formatMB } from '@/shared/lib/formatBytes';
 import { AVATAR_MIME_TYPES, MAX_AVATAR_BYTES } from '@/shared/types/protocol';
@@ -290,6 +290,7 @@ export function ProfileEditor({ online, details, onClose, registerLeaveGuard }: 
             <ProfileSidebar
               userId={userId}
               owner
+              accent={colorFor(userId, draft.avatarColor)}
               status={details.status}
               details={details.details}
               onRetry={details.retry}

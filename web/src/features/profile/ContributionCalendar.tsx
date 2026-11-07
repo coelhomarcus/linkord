@@ -1,10 +1,20 @@
 import { useMemo, useRef } from 'react';
+import type { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useElementWidth } from '@/shared/hooks/useElementWidth';
 
 type Day = { date: string; count: number; level: number };
 
-const LEVEL_COLORS = ['bg-fill-hover', 'bg-primary/25', 'bg-primary/45', 'bg-primary/70', 'bg-primary'];
+// How much of the profile's accent each contribution level takes; level 0 is
+// the neutral empty square.
+const LEVEL_STRENGTH = [0, 25, 45, 70, 100];
+
+function levelStyle(level: number, accent: string): CSSProperties | undefined {
+  const strength = LEVEL_STRENGTH[level] ?? 0;
+  if (strength === 0) return undefined;
+  return { backgroundColor: strength === 100 ? accent : `color-mix(in srgb, ${accent} ${strength}%, transparent)` };
+}
+const emptyClass = 'bg-fill-hover';
 const GAP = 3;
 const TARGET_CELL = 10;
 
@@ -19,7 +29,7 @@ function toWeeks(days: Day[]) {
 }
 
 /** Squares stretch to fill the widget; when the width can't hold every week, the oldest ones are dropped. */
-export function ContributionCalendar({ days }: { days: Day[] }) {
+export function ContributionCalendar({ days, accent }: { days: Day[]; accent: string }) {
   const { t, i18n } = useTranslation('profile');
   const ref = useRef<HTMLDivElement>(null);
   const width = useElementWidth(ref);
@@ -41,12 +51,12 @@ export function ContributionCalendar({ days }: { days: Day[] }) {
             date: new Date(`${day.date}T12:00:00Z`).toLocaleDateString(i18n.language, { timeZone: 'UTC' }),
             total: day.count.toLocaleString(i18n.language),
           });
-          return <span key={day.date} title={label} aria-label={label} role="img" className={`aspect-square rounded-[3px] ${LEVEL_COLORS[day.level] ?? LEVEL_COLORS[0]}`} />;
+          return <span key={day.date} title={label} aria-label={label} role="img" style={levelStyle(day.level, accent)} className={`aspect-square rounded-[3px] ${levelStyle(day.level, accent) ? '' : emptyClass}`} />;
         })}
       </div>
       <div aria-hidden className="mt-3 flex items-center justify-end gap-1.5 text-caption text-text-muted">
         <span>{t('wall.github.less')}</span>
-        {LEVEL_COLORS.map((color) => <span key={color} className={`size-2.5 rounded-[3px] ${color}`} />)}
+        {LEVEL_STRENGTH.map((_, level) => <span key={level} style={levelStyle(level, accent)} className={`size-2.5 rounded-[3px] ${level === 0 ? emptyClass : ''}`} />)}
         <span>{t('wall.github.more')}</span>
       </div>
     </div>
