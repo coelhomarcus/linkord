@@ -337,6 +337,13 @@
       "when": 1794017534730,
       "tag": "0047_dm_call_message",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1794084262842,
+      "tag": "0048_connection_visibility",
+      "breakpoints": true
     }
   ]
 }

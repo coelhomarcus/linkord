@@ -86,6 +86,8 @@
     "ready": "Sincronizado",
     "editConnection": "Editar conexão {{name}}",
     "removeConnection": "Remover conexão {{name}}",
+    "showOnProfile": "Exibir no perfil",
+    "showOnProfileAria": "Exibir {{name}} no perfil",
     "editTitle": "Editar {{name}}",
     "connectTitle": "Conectar {{name}}",
     "urlHint": "Informe o endereço completo do site.",

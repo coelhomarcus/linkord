@@ -4,13 +4,14 @@ import { useTranslation } from 'react-i18next';
 import { ApiError } from '@/shared/api/api';
 import { ConfirmDialog } from '@/shared/ConfirmDialog';
 import { Button } from '@/shared/ui/primitives/button';
+import { Switch } from '@/shared/ui/primitives/switch';
 import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/ui/primitives/dialog';
 import { useRoom } from '@/state/RoomContext';
 import { connectionBrand } from './connectionBrands';
 import { BrandIcon } from './profileLinks';
-import { createConnection, deleteConnection, editConnection, fetchConnections } from './profileApi';
+import { createConnection, deleteConnection, editConnection, fetchConnections, setConnectionVisibility } from './profileApi';
 import type { ConnectionProvider, ConnectionsResponse, ProfileConnection } from './connectionsTypes';
 import { SettingsSection, SettingsSections, SettingsSubheading } from '@/features/settings/SettingsLayout';
 
@@ -59,7 +60,7 @@ export function ConnectionsSettings() {
     if (!mounted.current) return;
     sequence.current++;
     setData(result);
-    if (state.me.userId) dispatch({ type: 'PROFILE_CONNECTIONS_CHANGED', userId: state.me.userId, profileLinks: result.connections.map((row) => row.url) });
+    if (state.me.userId) dispatch({ type: 'PROFILE_CONNECTIONS_CHANGED', userId: state.me.userId, profileLinks: result.connections.filter((row) => row.showOnProfile).map((row) => row.url) });
     window.dispatchEvent(new CustomEvent('profile-connections-changed', { detail: state.me.userId }));
   }
   async function save() {
@@ -69,6 +70,12 @@ export function ConnectionsSettings() {
       const result = dialog.connection ? await editConnection(dialog.connection.id, value) : await createConnection(dialog.provider, value);
       accept(result); if (mounted.current) setDialog(null);
     } catch (error) { if (mounted.current) setError(describe(error)); }
+    finally { if (mounted.current) setBusy(false); }
+  }
+  async function toggleVisibility(connection: ProfileConnection, showOnProfile: boolean) {
+    setBusy(true); setError(null);
+    try { accept(await setConnectionVisibility(connection.id, showOnProfile)); }
+    catch (error) { if (mounted.current) setError(describe(error)); }
     finally { if (mounted.current) setBusy(false); }
   }
   async function remove(connection: ProfileConnection) {
@@ -130,6 +137,16 @@ export function ConnectionsSettings() {
                   </div>
                   <Button type="button" variant="ghost" size="icon" aria-label={t('integration.editConnection', { name: connection.value })} disabled={busy} onClick={() => open(connection.provider, connection)}><PencilSimpleIcon size={16} /></Button>
                   <CloseButton variant="danger" label={t('integration.removeConnection', { name: connection.value })} disabled={busy} onClick={() => setRemoving(connection)} />
+                </div>
+                <div className="flex items-center justify-between gap-4 border-t border-border pt-3">
+                  <span className="text-body font-medium text-text-primary">{t('integration.showOnProfile')}</span>
+                  <Switch
+                    size="lg"
+                    checked={connection.showOnProfile}
+                    disabled={busy}
+                    onCheckedChange={(value) => void toggleVisibility(connection, value)}
+                    aria-label={t('integration.showOnProfileAria', { name: connection.value })}
+                  />
                 </div>
                 {connection.provider !== 'url' && (
                   <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-border pt-3 text-label text-text-muted">

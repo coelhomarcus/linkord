@@ -86,6 +86,8 @@
     "ready": "Synced",
     "editConnection": "Edit connection {{name}}",
     "removeConnection": "Remove connection {{name}}",
+    "showOnProfile": "Show on profile",
+    "showOnProfileAria": "Show {{name}} on profile",
     "editTitle": "Edit {{name}}",
     "connectTitle": "Connect {{name}}",
     "urlHint": "Enter the full website address.",
