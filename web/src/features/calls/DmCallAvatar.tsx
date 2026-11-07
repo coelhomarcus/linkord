@@ -39,7 +39,7 @@ export function DmCallAvatar({ peer, isMine, size, loading = false }: DmCallAvat
   const isDeafened = isMine ? deafened : (participant?.deafened ?? false);
   const isMuted = isMine ? !media.micActivated || media.micMuted : !!participant && (!participant.micActivated || participant.micMuted);
   const status = isDeafened ? t('dm.status.deafened') : isMuted ? t('dm.status.muted') : null;
-  const badgeSize = Math.max(20, Math.round(size * 0.3));
+  const badgeSize = Math.max(14, Math.round(size * 0.3));
 
   const handleContextMenu = useCallback((e: MouseEvent) => {
     e.preventDefault();

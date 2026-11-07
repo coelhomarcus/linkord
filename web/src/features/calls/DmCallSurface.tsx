@@ -4,7 +4,7 @@ import { useRoom } from '@/state/RoomContext';
 import { CallControlBar } from './CallControlBar';
 import { DmCallAvatar } from './DmCallAvatar';
 import type { DmCallPeer } from './DmCallAvatar';
-import { DM_AVATAR_GAP, dmAvatarSize, fitDmVideos, splitDmCallMedia } from './dmCallLayout';
+import { DM_AVATAR_GAP, DM_STRIP_AVATAR, DM_STRIP_PADDING, DM_STRIP_THUMB, dmAvatarSize, dmStripScale, fitDmVideos, splitDmCallMedia } from './dmCallLayout';
 import { Tile } from './Tile';
 import type { TileDescriptor } from './tileTypes';
 import { useAutoFocusScreenShare } from './useAutoFocusScreenShare';
@@ -13,9 +13,6 @@ import { useCallTiles } from './useCallTiles';
 // Until the bar is measured; close to its real height so nothing jumps.
 const FALLBACK_BAR_HEIGHT = 56;
 const BAR_GAP = 12;
-const SIDE_THUMB_W = 160;
-const SIDE_THUMB_H = 90;
-const SIDE_AVATAR = 56;
 // Narrower than this, the focused video keeps the whole width.
 const MIN_WIDTH_FOR_SIDE_STRIP = 560;
 
@@ -70,16 +67,19 @@ export function DmCallSurface({ participantIds, peers }: { participantIds: strin
   if (focused) {
     const others = videos.filter((d) => d !== focused);
     const showStrip = area.w >= MIN_WIDTH_FOR_SIDE_STRIP && (others.length > 0 || avatarPeers.length > 0);
+    const scale = dmStripScale(others.length, avatarPeers.length, area.h);
+    const thumbW = Math.round(DM_STRIP_THUMB.w * scale);
+    const thumbH = Math.round(DM_STRIP_THUMB.h * scale);
     content = (
       <div className="flex h-full w-full gap-3">
         <div className="flex min-h-0 min-w-0 flex-1 items-center justify-center">
           {renderVideo(focused, 'source', '100%', '100%')}
         </div>
         {showStrip && (
-          <div data-dm-call-strip className="flex flex-none flex-col items-center justify-center gap-3 overflow-y-auto" style={{ width: SIDE_THUMB_W }}>
-            {others.map((d) => renderVideo(d, 'fill', SIDE_THUMB_W, SIDE_THUMB_H))}
+          <div data-dm-call-strip className="flex flex-none flex-col items-center justify-center-safe gap-3 overflow-y-auto" style={{ width: DM_STRIP_THUMB.w, padding: DM_STRIP_PADDING }}>
+            {others.map((d) => renderVideo(d, 'fill', thumbW, thumbH))}
             {avatarPeers.map((peer) => (
-              <DmCallAvatar key={peer.id} peer={peer} isMine={isMine(peer.id)} size={SIDE_AVATAR} loading={pendingCameraIds.has(peer.id)} />
+              <DmCallAvatar key={peer.id} peer={peer} isMine={isMine(peer.id)} size={Math.round(DM_STRIP_AVATAR * scale)} loading={pendingCameraIds.has(peer.id)} />
             ))}
           </div>
         )}

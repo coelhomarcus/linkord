@@ -37,3 +37,22 @@ export function fitDmVideos(videoCount: number, avatarCount: number, width: numb
   if (!fit) return null;
   return { cols: fit.cols, tileW: Math.floor(fit.tileW), tileH: Math.floor(fit.tileH), gap: gridGap(videoCount) };
 }
+
+export const DM_STRIP_THUMB = { w: 160, h: 90 };
+export const DM_STRIP_AVATAR = 56;
+const STRIP_GAP = 12;
+/** the strip's own padding, which keeps the speaking ring from being clipped */
+export const DM_STRIP_PADDING = 4;
+// the speaking ring sits 4px outside an avatar
+const RING_OUTSET = 8;
+const MIN_STRIP_SCALE = 0.4;
+
+/** How much the strip beside a focused video shrinks so everyone in it fits
+ * the call's height; a short call would otherwise clip the last of them. */
+export function dmStripScale(videoCount: number, avatarCount: number, height: number): number {
+  const items = videoCount + avatarCount;
+  if (items === 0 || height <= 0) return 1;
+  const natural = videoCount * DM_STRIP_THUMB.h + avatarCount * (DM_STRIP_AVATAR + RING_OUTSET);
+  const room = height - 2 * DM_STRIP_PADDING - STRIP_GAP * (items - 1);
+  return Math.max(MIN_STRIP_SCALE, Math.min(1, room / natural));
+}

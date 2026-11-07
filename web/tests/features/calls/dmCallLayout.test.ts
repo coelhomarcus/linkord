@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dmAvatarSize, fitDmVideos, splitDmCallMedia } from '@/features/calls/dmCallLayout';
+import { dmAvatarSize, dmStripScale, fitDmVideos, splitDmCallMedia } from '@/features/calls/dmCallLayout';
 import type { TileDescriptor } from '@/features/calls/tileTypes';
 
 function tile(participantId: string, kind: TileDescriptor['kind'], loading = false): TileDescriptor {
@@ -37,5 +37,15 @@ describe('fitDmVideos', () => {
   it('returns nothing without video or without room', () => {
     expect(fitDmVideos(0, 2, 900, 300, 80)).toBeNull();
     expect(fitDmVideos(1, 5, 300, 300, 80)).toBeNull();
+  });
+});
+
+describe('dmStripScale', () => {
+  it('keeps full size when everyone fits and shrinks to fit a short call', () => {
+    // 90 + 64 + 12 gap + 8 padding = 174
+    expect(dmStripScale(1, 1, 300)).toBe(1);
+    expect(dmStripScale(1, 1, 174)).toBe(1);
+    expect(dmStripScale(1, 1, 97)).toBeCloseTo(0.5, 5);
+    expect(dmStripScale(1, 1, 20)).toBe(0.4);
   });
 });
