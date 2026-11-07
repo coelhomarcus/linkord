@@ -163,10 +163,11 @@ export function ServerRail({ className }: { className?: string }) {
         </Tooltip>
       )}
       <RailItem label={t('rail.home')} active={home} unread={false} badge={directUnread + pendingIncomingCount} onClick={() => go(ROUTES.home)}>
-        {/* Discord's home tile: blurple with a white logo while home is open;
-            the logo's eyes are cut out, so the tile shows through them */}
+        {/* The home tile fills with the accent while it is open. The logo's eyes
+            are cut out, so the tile shows through them; the mark itself follows
+            --accent-mark-filter so it stays readable on that fill. */}
         <span className={cn('grid size-10 place-items-center rounded-[12px] transition-colors duration-150', home ? 'bg-accent-primary' : 'bg-surface-300 group-hover/server:bg-accent-primary')}>
-          <img src="/logo.svg" alt="" draggable={false} className={cn('h-auto w-6', home ? 'brightness-0 invert' : 'group-hover/server:brightness-0 group-hover/server:invert')} />
+          <img src="/logo.svg" alt="" draggable={false} className={cn('h-auto w-6', home ? '[filter:var(--accent-mark-filter)]' : 'group-hover/server:[filter:var(--accent-mark-filter)]')} />
         </span>
       </RailItem>
       <span aria-hidden className="h-px w-8 flex-none bg-border-subtle" />
@@ -195,7 +196,7 @@ export function ServerRail({ className }: { className?: string }) {
         </SortableContext>
       </DndContext>
       <RailItem label={t('rail.add')} active={false} unread={false} onClick={() => setCreateOpen(true)}>
-        <span className="grid size-10 place-items-center rounded-[12px] bg-surface-300 text-text-primary transition-colors duration-150 group-hover/server:bg-accent-primary group-hover/server:text-white">
+        <span className="grid size-10 place-items-center rounded-[12px] bg-surface-300 text-text-primary transition-colors duration-150 group-hover/server:bg-accent-primary group-hover/server:text-primary-foreground">
           <PlusIcon size={20} weight="bold" />
         </span>
       </RailItem>
