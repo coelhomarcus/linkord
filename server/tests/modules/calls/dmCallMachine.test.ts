@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  EMPTY_DM_CALLS, RING_MS, TOMBSTONE_MS, acceptDmCall, cancelDmCall, declineDmCall, leaveDmCall, missDmCall,
+  EMPTY_DM_CALLS, RING_MS, TOMBSTONE_MS, acceptDmCall, cancelDmCall, declineDmCall, dmCallRevealsHistory, leaveDmCall, missDmCall,
   refusesImmediateJoin, startDmCall, type DmCallState,
 } from '../../../src/modules/calls/dmCallMachine.js';
 
@@ -26,6 +26,8 @@ describe('dm call session', () => {
     assert.equal(again.state.calls[0]?.id, 'call-1');
     assert.equal(again.effects[0]?.type === 'state' && again.effects[0].fresh, false);
     assert.equal(again.state.calls[0]?.startedAt, now);
+    assert.equal(dmCallRevealsHistory(started.effects[0]!), true);
+    assert.equal(dmCallRevealsHistory(again.effects[0]!), false);
   });
 
   it('treats the callee calling back as an accept', () => {
