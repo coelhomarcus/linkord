@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { NotificationEntry } from '@/shared/api/api';
-import { describeNotification, formatRelativeTime, formatUnread, notificationTarget } from '@/features/notifications/notificationText';
+import { describeNotification, formatRelativeTime, notificationTarget } from '@/features/notifications/notificationText';
 import { useLanguageForTests } from '@tests/fixtures/i18nFixture';
 
 const actor = { id: 'u-ana', username: 'ana', displayName: 'Ana', avatar: '', avatarColor: 'blurple' };
@@ -32,11 +32,6 @@ describe('notificationText', () => {
     expect(notificationTarget(base)).toBe('/app/friends?tab=pending#received');
     expect(notificationTarget({ ...base, kind: 'friend_accepted' })).toBe('/app/friends');
     expect(notificationTarget({ ...base, kind: 'server_invitation' })).toBe('/app/friends?tab=pending#invitations');
-  });
-
-  it('the counter becomes 9+', () => {
-    expect(formatUnread(3)).toBe('3');
-    expect(formatUnread(10)).toBe('9+');
   });
 
   it('relative time', () => {

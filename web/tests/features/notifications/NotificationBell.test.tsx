@@ -31,12 +31,14 @@ beforeEach(() => {
 });
 
 describe('NotificationBell', () => {
-  it('shows the unread counter and 9+ above nine', async () => {
+  it('marks an unread inbox with a dot and keeps the count in the name', async () => {
     mocked.fetchUnreadNotificationCount.mockResolvedValue({ unread: 12 });
     mocked.fetchNotifications.mockResolvedValue({ items: [], nextCursor: null });
     renderBell();
-    expect(await screen.findByText('9+')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Caixa de Entrada, 12 não lidas' })).toBeInTheDocument();
+    const button = await screen.findByRole('button', { name: 'Caixa de Entrada, 12 não lidas' });
+    expect(button.querySelector('[data-testid="unread-dot"]')).toBeInTheDocument();
+    expect(screen.queryByText('9+')).not.toBeInTheDocument();
+    expect(screen.queryByText('12')).not.toBeInTheDocument();
   });
 
   it('empty list', async () => {

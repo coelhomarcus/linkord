@@ -45,10 +45,6 @@ export function notificationTarget(entry: NotificationEntry): string {
   }
 }
 
-export function formatUnread(count: number): string {
-  return count > 9 ? '9+' : String(count);
-}
-
 export function formatRelativeTime(iso: string, now = Date.now()): string {
   const then = new Date(iso).getTime();
   if (Number.isNaN(then)) return '';
