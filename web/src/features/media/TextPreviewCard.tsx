@@ -100,7 +100,7 @@ export function TextPreviewCard({ attachment, maxWidth }: { attachment: ChatAtta
 
       {preview?.previewable && preview.content && (
         <div className="border-t border-border">
-          <div className="relative overflow-hidden px-3 py-2" style={{ maxHeight: expanded ? undefined : COLLAPSED_MAX_HEIGHT }}>
+          <div className="relative select-text overflow-hidden px-3 py-2" style={{ maxHeight: expanded ? undefined : COLLAPSED_MAX_HEIGHT }}>
             {markdown ? (
               <Suspense fallback={<pre className="whitespace-pre-wrap wrap-break-word font-mono text-caption text-text-secondary">{preview.content}</pre>}>
                 <MarkdownPreview content={preview.content} className={MARKDOWN_STYLES} />

@@ -292,7 +292,7 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
         )}
       </div>
 
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 select-text">
         {showHeader && (
           <div className="flex items-baseline gap-2">
             {message.id ? (
