@@ -351,12 +351,14 @@ export const messages = pgTable('messages', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   editedAt: timestamp('edited_at', { withTimezone: true }),
   replyTo: jsonb('reply_to'),
-  kind: varchar('kind', { length: 16 }).notNull().default('text'), // 'text' | 'server_invite' | 'call_invite'
+  kind: varchar('kind', { length: 16 }).notNull().default('text'), // 'text' | 'server_invite' | 'call_invite' | 'dm_call'
   // Keep the card as a tombstone if its invitation is deleted.
   serverInvitationId: text('server_invitation_id').references(() => serverInvitations.id, { onDelete: 'set null' }),
   // The voice channel (or DM) whose call a `call_invite` card asks the
   // recipient to join. SET NULL for the same reason as above.
   callConversationId: text('call_conversation_id').references(() => conversations.id, { onDelete: 'set null' }),
+  // Whole seconds of talk time on a dm_call. Null when the call was never answered.
+  callDurationSeconds: integer('call_duration_seconds'),
   // Set (with authorId null) on a message a bot's webhook posted. SET NULL so
   // a deleted webhook leaves its history behind instead of taking it along.
   webhookId: text('webhook_id').references(() => webhooks.id, { onDelete: 'set null' }),
@@ -390,7 +392,8 @@ export const messages = pgTable('messages', {
   index('messages_webhook_id_idx').on(t.webhookId),
   uniqueIndex('messages_webhook_delivery_key_unique').on(t.webhookId, t.webhookDeliveryKey).where(sql`${t.webhookDeliveryKey} IS NOT NULL`),
   index('messages_call_conversation_id_idx').on(t.callConversationId),
-  check('messages_kind_reference_check', sql`(${t.kind} = 'text' AND ${t.serverInvitationId} IS NULL AND ${t.callConversationId} IS NULL) OR (${t.kind} = 'server_invite' AND ${t.callConversationId} IS NULL) OR (${t.kind} = 'call_invite' AND ${t.serverInvitationId} IS NULL)`),
+  check('messages_kind_reference_check', sql`(${t.kind} = 'text' AND ${t.serverInvitationId} IS NULL AND ${t.callConversationId} IS NULL) OR (${t.kind} = 'server_invite' AND ${t.callConversationId} IS NULL) OR (${t.kind} = 'call_invite' AND ${t.serverInvitationId} IS NULL) OR (${t.kind} = 'dm_call' AND ${t.serverInvitationId} IS NULL AND ${t.callConversationId} IS NULL)`),
+  check('messages_call_duration_kind_check', sql`${t.callDurationSeconds} IS NULL OR ${t.kind} = 'dm_call'`),
 ]);
 
 /** The credential an outside system posts into a bot conversation with. Only

@@ -97,7 +97,9 @@ interface ChatMessagePayload {
   // pending copy with the stored message
   clientMessageId?: string;
   // only set for structured messages — absent means a plain text message
-  kind?: 'server_invite' | 'call_invite';
+  kind?: 'server_invite' | 'call_invite' | 'dm_call';
+  /** Whole seconds of talk time. Null when a dm_call was never answered. */
+  callDurationSeconds?: number | null;
   // the invitation's CURRENT state, resolved at read time so a card is right
   // after a refresh; null is the tombstone (its server was deleted)
   invitation?: InvitationCard | null;
@@ -114,7 +116,7 @@ interface ChatMessagePayload {
   richEmbeds?: RichEmbed[];
 }
 
-interface MessageWithAuthor {
+export interface MessageWithAuthor {
   id: number;
   conversationId: string;
   authorId: string | null;
@@ -128,6 +130,7 @@ interface MessageWithAuthor {
   kind: string;
   serverInvitationId: string | null;
   callConversationId: string | null;
+  callDurationSeconds: number | null;
   embeds: unknown;
   suppressedEmbeds: unknown;
   richEmbeds: unknown;
@@ -154,6 +157,7 @@ const messageWithAuthorSelect = {
   kind: messages.kind,
   serverInvitationId: messages.serverInvitationId,
   callConversationId: messages.callConversationId,
+  callDurationSeconds: messages.callDurationSeconds,
   embeds: messages.embeds,
   suppressedEmbeds: messages.suppressedEmbeds,
   richEmbeds: messages.richEmbeds,
@@ -181,6 +185,7 @@ function rowWithParticipant(row: Message, participant: AuthorIdentity): MessageW
     kind: row.kind,
     serverInvitationId: row.serverInvitationId,
     callConversationId: row.callConversationId,
+    callDurationSeconds: row.callDurationSeconds,
     embeds: row.embeds,
     suppressedEmbeds: row.suppressedEmbeds,
     richEmbeds: row.richEmbeds,
@@ -204,7 +209,7 @@ function authorAvatarFor(row: MessageWithAuthor): string {
  * attachments-table rows, and `reactionsByEmoji` the grouped
  * message_reactions rows for this message — neither lives in the messages
  * table itself, see modules/attachments.ts and modules/reactions.ts. */
-function rowToMessage(row: MessageWithAuthor, attachments?: Attachment[], reactionsByEmoji?: Record<string, string[]>, invitation?: InvitationCard, callInvite?: CallInviteCard): ChatMessagePayload {
+export function rowToMessage(row: MessageWithAuthor, attachments?: Attachment[], reactionsByEmoji?: Record<string, string[]>, invitation?: InvitationCard, callInvite?: CallInviteCard): ChatMessagePayload {
   const out: ChatMessagePayload = {
     msgId: row.id,
     conversationId: row.conversationId,
@@ -229,6 +234,10 @@ function rowToMessage(row: MessageWithAuthor, attachments?: Attachment[], reacti
   if (row.kind === 'call_invite') {
     out.kind = 'call_invite';
     out.callInvite = callInvite ?? null;
+  }
+  if (row.kind === 'dm_call') {
+    out.kind = 'dm_call';
+    out.callDurationSeconds = row.callDurationSeconds;
   }
   const replyTo = normalizeReplyRef(row.replyTo);
   if (replyTo) out.replyTo = replyTo;

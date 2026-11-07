@@ -1,0 +1,4 @@
+ALTER TABLE "messages" DROP CONSTRAINT "messages_kind_reference_check";--> statement-breakpoint
+ALTER TABLE "messages" ADD COLUMN "call_duration_seconds" integer;--> statement-breakpoint
+ALTER TABLE "messages" ADD CONSTRAINT "messages_call_duration_kind_check" CHECK ("messages"."call_duration_seconds" IS NULL OR "messages"."kind" = 'dm_call');--> statement-breakpoint
+ALTER TABLE "messages" ADD CONSTRAINT "messages_kind_reference_check" CHECK (("messages"."kind" = 'text' AND "messages"."server_invitation_id" IS NULL AND "messages"."call_conversation_id" IS NULL) OR ("messages"."kind" = 'server_invite' AND "messages"."call_conversation_id" IS NULL) OR ("messages"."kind" = 'call_invite' AND "messages"."server_invitation_id" IS NULL) OR ("messages"."kind" = 'dm_call' AND "messages"."server_invitation_id" IS NULL AND "messages"."call_conversation_id" IS NULL));
