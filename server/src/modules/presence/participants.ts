@@ -337,6 +337,14 @@ async function handleProfile(socket: AppSocket, msg: ProfilePatchBody | null | u
   });
 }
 
+/** Media flags describe the call the connection is in. A report with no
+ * call (a late one, after call-leave) must not turn them back on. */
+function participantInCall(socket: AppSocket): Participant | undefined {
+  const p = participants.get(socket.participantId ?? '');
+  if (!p || p.socket !== socket || !p.callConversationId) return undefined;
+  return p;
+}
+
 /** No LiveKit track equivalent for "deafened" — just a flag the client
  * announces so others can show the icon. */
 function handleDeafened(socket: AppSocket, msg: { value?: unknown }): void {
@@ -349,25 +357,26 @@ function handleDeafened(socket: AppSocket, msg: { value?: unknown }): void {
 /** Self-reported mic state (see ClientMessage 'mic-state') — the server
  * never verifies this against LiveKit, same trust model as `deafened`.
  * Lets anyone see an accurate mic-muted icon for this participant, not
- * just people connected to the same LiveKit room. */
+ * just people connected to the same LiveKit room. Ignored outside a call:
+ * a report that arrives after call-leave must not light the icon again. */
 function handleMicState(socket: AppSocket, msg: { activated?: unknown; muted?: unknown }): void {
-  const p = participants.get(socket.participantId ?? '');
-  if (!p || p.socket !== socket) return;
+  const p = participantInCall(socket);
+  if (!p) return;
   p.micActivated = !!msg.activated;
   p.micMuted = !!msg.muted;
   broadcastToKnownPeers(p.userId, { t: 'participant-updated', participant: publicParticipant(p) });
 }
 
 function handleCamera(socket: AppSocket, msg: { on?: unknown }): void {
-  const p = participants.get(socket.participantId ?? '');
-  if (!p || p.socket !== socket) return;
+  const p = participantInCall(socket);
+  if (!p) return;
   p.cameraOn = !!msg.on;
   broadcastToKnownPeers(p.userId, { t: 'participant-updated', participant: publicParticipant(p) });
 }
 
 function handleScreenShare(socket: AppSocket, msg: { on?: unknown }): void {
-  const p = participants.get(socket.participantId ?? '');
-  if (!p || p.socket !== socket) return;
+  const p = participantInCall(socket);
+  if (!p) return;
   p.sharing = !!msg.on;
   broadcastToKnownPeers(p.userId, { t: 'participant-updated', participant: publicParticipant(p) });
 }
@@ -376,8 +385,8 @@ function handleScreenShare(socket: AppSocket, msg: { on?: unknown }): void {
  * useLiveKitTrack.ts#useTrackSpeaking) — this just relays the already
  * debounced on/off transitions, not a continuous stream. */
 function handleSpeaking(socket: AppSocket, msg: { value?: unknown }): void {
-  const p = participants.get(socket.participantId ?? '');
-  if (!p || p.socket !== socket) return;
+  const p = participantInCall(socket);
+  if (!p) return;
   p.speaking = !!msg.value;
   broadcastToKnownPeers(p.userId, { t: 'participant-updated', participant: publicParticipant(p) });
 }

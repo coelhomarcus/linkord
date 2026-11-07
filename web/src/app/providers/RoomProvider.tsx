@@ -206,6 +206,10 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         // the first welcome opens nothing: the URL says what to show (the
         // route sync opens it). A reconnect reloads what was open.
         if (hasWelcomedRef.current) {
+          // The socket is new; LiveKit may still be in the call. Tell the
+          // server what the tracks are doing now, not what they were doing
+          // when the previous socket dropped.
+          callLifecycle.syncLocalMedia();
           const activeId = conversationsList.activeConversationIdRef.current;
           const stillThere = (m.conversations ?? []).some((c) => c.id === activeId)
             || (m.servers ?? []).some((server) => server.channels.some((c) => c.id === activeId));

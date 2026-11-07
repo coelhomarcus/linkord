@@ -264,6 +264,7 @@ describe('self-reported media state (mic-state / camera / screen-share / speakin
     const socket = fakeSocket(`u-${Math.random()}`);
     const p = joinP(socket, {})!;
     createdIds.push(p.id);
+    setCallConversationId(p, 'voice-1');
 
     handlers['mic-state'](socket, { activated: true, muted: false });
     assert.equal(p.micActivated, true);
@@ -276,6 +277,7 @@ describe('self-reported media state (mic-state / camera / screen-share / speakin
     const socket = fakeSocket(`u-${Math.random()}`);
     const p = joinP(socket, {})!;
     createdIds.push(p.id);
+    setCallConversationId(p, 'voice-1');
 
     handlers.camera(socket, { on: true });
     assert.equal(p.cameraOn, true);
@@ -284,10 +286,30 @@ describe('self-reported media state (mic-state / camera / screen-share / speakin
     assert.equal(p.sharing, true);
   });
 
+  test('a camera report outside a call does not turn the icon back on', () => {
+    const socket = fakeSocket(`u-${Math.random()}`);
+    const p = joinP(socket, {})!;
+    createdIds.push(p.id);
+    setCallConversationId(p, 'voice-1');
+    handlers.camera(socket, { on: true });
+    setCallConversationId(p, null);
+
+    handlers.camera(socket, { on: true });
+    handlers['mic-state'](socket, { activated: true, muted: false });
+    handlers['screen-share'](socket, { on: true });
+    handlers.speaking(socket, { value: true });
+
+    assert.equal(p.cameraOn, false);
+    assert.equal(p.micActivated, false);
+    assert.equal(p.sharing, false);
+    assert.equal(p.speaking, false);
+  });
+
   test('speaking changes the speaking field', () => {
     const socket = fakeSocket(`u-${Math.random()}`);
     const p = joinP(socket, {})!;
     createdIds.push(p.id);
+    setCallConversationId(p, 'voice-1');
 
     handlers.speaking(socket, { value: true });
     assert.equal(p.speaking, true);
@@ -297,6 +319,7 @@ describe('self-reported media state (mic-state / camera / screen-share / speakin
     const socket = fakeSocket(`u-${Math.random()}`);
     const p = joinP(socket, {})!;
     createdIds.push(p.id);
+    setCallConversationId(p, 'voice-1');
 
     const otherSocket = fakeSocket(`u-${Math.random()}`);
     handlers.camera(otherSocket, { on: true });

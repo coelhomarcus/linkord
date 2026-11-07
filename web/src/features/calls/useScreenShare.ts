@@ -85,13 +85,23 @@ export function useScreenShare(room: Room, dispatch: Dispatch<RoomAction>): Scre
     dispatch({ type: 'SET_LOCAL_SHARING', sharing: true });
   }, [dispatch, room]);
 
-  const stopSharing = useCallback(() => {
-    room.localParticipant.setScreenShareEnabled(false).catch(() => {});
+  const stopSharing = useCallback(async (): Promise<boolean> => {
+    if (room.state !== ConnectionState.Connected) {
+      dispatch({ type: 'SET_LOCAL_SHARING', sharing: false });
+      return true;
+    }
+    try {
+      await room.localParticipant.setScreenShareEnabled(false);
+    } catch (err) {
+      dispatch({ type: 'SET_SHARE_ERROR', message: i18n.t('calls:errors.screenStop', { error: (err as Error)?.message }) });
+      return false;
+    }
     dispatch({ type: 'SET_LOCAL_SHARING', sharing: false });
+    return true;
   }, [dispatch, room]);
 
   const changeSource = useCallback(async () => {
-    stopSharing();
+    if (!await stopSharing()) return;
     await startSharing();
   }, [stopSharing, startSharing]);
 

@@ -53,4 +53,19 @@ describe('useCamera — startCamera applies the saved camera', () => {
 
     expect(mediaStreamTrack.contentHint).toBe(CAMERA_CONTENT_HINT);
   });
+
+  it('does not mark the camera off when LiveKit refuses to mute it', async () => {
+    const dispatch = vi.fn();
+    const setCameraEnabled = vi.fn(async (enabled: boolean) => {
+      if (!enabled) throw new Error('still starting');
+    });
+    const room = fakeRoom(setCameraEnabled as never);
+    const { result } = renderHook(() => useCamera(room, dispatch));
+
+    await result.current.stopCamera();
+
+    expect(setCameraEnabled).toHaveBeenCalledWith(false);
+    expect(dispatch).not.toHaveBeenCalledWith({ type: 'SET_LOCAL_CAMERA', on: false });
+    expect(dispatch).toHaveBeenCalledWith({ type: 'SET_SHARE_ERROR', message: expect.stringContaining('desligar') });
+  });
 });
