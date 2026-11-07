@@ -70,6 +70,16 @@ docker compose -f docker-compose.dev.yml down
 
 This keeps the named database volume. Do not add `-v` unless you intend to delete the local database.
 
+## Run the checks
+
+There is no hosted CI; run the checks locally before pushing. This runs the server test typecheck, the frontend lint, the server and frontend tests, and the production build (which also typechecks the backend and frontend):
+
+```bash
+npm run check
+```
+
+None of these need PostgreSQL: `.env.test` supplies a placeholder `DATABASE_URL` and no unit test runs a real query. Use `npm run test:server` or `npm run test:web` to run one side only.
+
 ## Create an administrator
 
 After registering with your `REGISTRATION_CODE`, grant the account administrator access from the host:
