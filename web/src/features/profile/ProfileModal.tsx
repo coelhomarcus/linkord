@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import { ROUTES } from '@/shared/lib/routes';
@@ -7,10 +7,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/pr
 import { Button } from '@/shared/ui/primitives/button';
 import { fetchUserProfile } from '@/shared/api/api';
 import type { PublicUser } from '@/shared/types/protocol';
-import { EditProfileButton, ProfileActions } from '@/features/friends/ProfileActions';
+import { ProfileActions } from '@/features/friends/ProfileActions';
 import { ProfileCard } from './ProfileCard';
 import { ReportDialog } from '@/features/reports/ReportDialog';
 import { ProfileConnections } from './ProfileConnections';
+import { ProfileEditor } from './ProfileEditor';
+import type { LeaveGuard } from './ProfileEditor';
 import { ProfileSidebar } from './ProfileSidebar';
 import type { ProfileTab } from './ProfileSidebar';
 import { formatProfileDate, useProfileDetails } from './useProfileDetails';
@@ -55,6 +57,15 @@ export function ProfileModal({ userId, initialTab, onClose, onOpenProfile }: Pro
   const details = useProfileDetails(open ? userId : null);
   const owner = !!user && user.id === state.me.userId;
   const online = !!user && onlineUserIds.has(user.id);
+  // set while your own profile is open as the editor, which may hold the
+  // modal open to ask about unsaved changes
+  const leaveGuard = useRef<LeaveGuard | null>(null);
+  const registerLeaveGuard = useCallback((guard: LeaveGuard | null) => { leaveGuard.current = guard; }, []);
+
+  function requestClose() {
+    if (leaveGuard.current && !leaveGuard.current()) return;
+    onClose();
+  }
 
   function openServer(serverId: string) {
     navigate(ROUTES.server(serverId));
@@ -62,7 +73,7 @@ export function ProfileModal({ userId, initialTab, onClose, onOpenProfile }: Pro
   }
 
   return (
-    <Dialog open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
+    <Dialog open={open} onOpenChange={(next) => { if (!next) requestClose(); }}>
       {!user && fetchStatus === 'loading' && (
         <DialogContent className="max-w-[calc(100%-2rem)] bg-bg-modal sm:max-w-130">
           <DialogHeader className="sr-only">
@@ -93,62 +104,67 @@ export function ProfileModal({ userId, initialTab, onClose, onOpenProfile }: Pro
           <DialogHeader className="sr-only">
             <DialogTitle>{t('modal.profileOf', { name: user.displayName })}</DialogTitle>
           </DialogHeader>
-          {/* Each column scrolls independently on desktop; mobile uses one scroll container. */}
-          <div className="scrollbar-none min-h-0 overflow-y-auto md:grid md:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] md:grid-rows-[minmax(0,1fr)] md:overflow-hidden">
-            <div className="scrollbar-none md:min-h-0 md:overflow-y-auto md:border-r md:border-border">
-              <ProfileCard
-                bare
-                user={user}
-                online={online}
-                // your own profile has no relationship to act on: the way to edit it sits by the name
-                nameAction={owner ? <EditProfileButton onNavigate={onClose} /> : undefined}
-                actions={owner ? undefined : (
-                  <ProfileActions
-                    userId={user.id}
-                    username={user.username}
-                    displayName={user.displayName}
-                    onNavigate={onClose}
-                    onReport={() => setReportOpen(true)}
-                    className="p-0"
+          {owner ? (
+            // your own profile is where you edit it, as in Discord
+            <ProfileEditor online={online} details={details} onClose={onClose} registerLeaveGuard={registerLeaveGuard} />
+          ) : (
+            <>
+              {/* Each column scrolls independently on desktop; mobile uses one scroll container. */}
+              <div className="scrollbar-none min-h-0 overflow-y-auto md:grid md:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] md:grid-rows-[minmax(0,1fr)] md:overflow-hidden">
+                <div className="scrollbar-none md:min-h-0 md:overflow-y-auto md:border-r md:border-border">
+                  <ProfileCard
+                    bare
+                    user={user}
+                    online={online}
+                    actions={(
+                      <ProfileActions
+                        userId={user.id}
+                        username={user.username}
+                        displayName={user.displayName}
+                        onNavigate={onClose}
+                        onReport={() => setReportOpen(true)}
+                        className="p-0"
+                      />
+                    )}
+                    hideLinks
+                    footer={(
+                      <div className="mt-5 flex flex-col gap-4">
+                        <dl className="flex flex-col gap-3">
+                          {details.details && (
+                            <div>
+                              <dt className="text-caption font-medium text-text-muted">{t('modal.memberSince')}</dt>
+                              <dd className="mt-0.5 text-label text-text-secondary">{formatProfileDate(details.details.memberSince)}</dd>
+                            </div>
+                          )}
+                          {details.details?.friendsSince && (
+                            <div>
+                              <dt className="text-caption font-medium text-text-muted">{t('modal.friendsSince')}</dt>
+                              <dd className="mt-0.5 text-label text-text-secondary">{formatProfileDate(details.details.friendsSince)}</dd>
+                            </div>
+                          )}
+                        </dl>
+                        <ProfileConnections links={user.profileLinks ?? []} />
+                      </div>
+                    )}
                   />
-                )}
-                hideLinks
-                footer={(
-                  <div className="mt-5 flex flex-col gap-4">
-                    <dl className="flex flex-col gap-3">
-                      {details.details && (
-                        <div>
-                          <dt className="text-caption font-medium text-text-muted">{t('modal.memberSince')}</dt>
-                          <dd className="mt-0.5 text-label text-text-secondary">{formatProfileDate(details.details.memberSince)}</dd>
-                        </div>
-                      )}
-                      {details.details?.friendsSince && (
-                        <div>
-                          <dt className="text-caption font-medium text-text-muted">{t('modal.friendsSince')}</dt>
-                          <dd className="mt-0.5 text-label text-text-secondary">{formatProfileDate(details.details.friendsSince)}</dd>
-                        </div>
-                      )}
-                    </dl>
-                    <ProfileConnections links={user.profileLinks ?? []} />
-                  </div>
-                )}
-              />
-            </div>
-            <div className="flex min-h-0 min-w-0 flex-col border-t border-border md:border-t-0">
-              <ProfileSidebar
-                key={user.id}
-                userId={user.id}
-                owner={owner}
-                initialTab={initialTab}
-                status={details.status}
-                details={details.details}
-                onRetry={details.retry}
-                onOpenProfile={onOpenProfile}
-                onOpenServer={openServer}
-                onNavigate={onClose}
-              />
-            </div>
-          </div>
+                </div>
+                <div className="flex min-h-0 min-w-0 flex-col border-t border-border md:border-t-0">
+                  <ProfileSidebar
+                    key={user.id}
+                    userId={user.id}
+                    owner={false}
+                    initialTab={initialTab}
+                    status={details.status}
+                    details={details.details}
+                    onRetry={details.retry}
+                    onOpenProfile={onOpenProfile}
+                    onOpenServer={openServer}
+                    onNavigate={onClose}
+                  />
+                </div>
+              </div>
+            </>
+          )}
         </DialogContent>
       )}
       {user && (

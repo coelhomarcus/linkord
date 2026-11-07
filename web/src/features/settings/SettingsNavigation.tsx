@@ -18,21 +18,17 @@ function GroupLabel({ children }: { children: string }) {
   return <p className="select-none px-2.5 pb-1 text-caption font-semibold uppercase tracking-[0.02em] text-text-muted">{children}</p>;
 }
 
-/** Who you are, at the top of the list, as the way into your profile — a
- * plain "Perfil" row among the others was easy to miss. */
-function ProfileShortcut({ current, fromIndex = false }: { current: boolean; fromIndex?: boolean }) {
+/** Who you are, at the top of the list, as the way into your profile: it
+ * opens your own profile modal, where the profile is edited in place. */
+function ProfileShortcut({ onOpenProfile }: { onOpenProfile: (userId: string) => void }) {
   const { t } = useTranslation('settings');
   const { state } = useRoom();
   const { me } = state;
   return (
-    <AppLink
-      to={ROUTES.settingsTab('profile')}
-      state={fromIndex ? FROM_INDEX_STATE : undefined}
-      aria-current={current ? 'page' : undefined}
-      className={cn(
-        'group/profile mb-3 flex flex-none items-center gap-3 rounded-lg border border-border p-2.5 outline-none focus-visible:ring-2 focus-visible:ring-ring',
-        current ? 'bg-nav-active' : 'bg-fill-subtle hover:bg-nav-hover',
-      )}
+    <button
+      type="button"
+      onClick={() => { if (me.userId) onOpenProfile(me.userId); }}
+      className="group/profile mb-3 flex flex-none items-center gap-3 rounded-lg border border-border bg-fill-subtle p-2.5 text-left outline-none hover:bg-nav-hover focus-visible:ring-2 focus-visible:ring-ring"
     >
       <Avatar id={me.userId ?? me.id ?? 'me'} name={me.displayName} avatar={me.avatar} poster={me.avatarPoster} avatarColor={me.avatarColor} size={40} />
       <span className="min-w-0 flex-1">
@@ -42,15 +38,8 @@ function ProfileShortcut({ current, fromIndex = false }: { current: boolean; fro
           <span className="truncate">{t('nav.editProfile')}</span>
         </span>
       </span>
-    </AppLink>
+    </button>
   );
-}
-
-/** The categories listed under the profile shortcut, which stands in for the profile one. */
-function listedGroups(isAdmin: boolean) {
-  return visibleGroups(isAdmin)
-    .map((group) => ({ ...group, categories: group.categories.filter((category) => category.id !== 'profile') }))
-    .filter((group) => group.categories.length > 0);
 }
 
 function SettingsSearchField({ query, onChange, onClear }: { query: string; onChange: (value: string) => void; onClear: () => void }) {
@@ -104,18 +93,18 @@ function SettingsSearchResults({ results, query }: { results: SettingsSearchResu
 /** The permanent category sidebar of a wide settings area. One level only: a
  * per-section list under the open category did nothing visible on pages that
  * fit on screen, so the page's own titles are the way around it. */
-export function SettingsSidebar({ active, isAdmin }: { active: SettingsTab; isAdmin: boolean }) {
+export function SettingsSidebar({ active, isAdmin, onOpenProfile }: { active: SettingsTab; isAdmin: boolean; onOpenProfile: (userId: string) => void }) {
   const { t } = useTranslation('settings');
   const { query, setQuery, results } = useSettingsSearch(isAdmin);
   return (
     <nav aria-label={t('nav.ariaLabel')} className="flex w-64 flex-none flex-col overflow-y-auto border-r border-border p-3">
-      <ProfileShortcut current={active === 'profile'} />
+      <ProfileShortcut onOpenProfile={onOpenProfile} />
       <SettingsSearchField query={query} onChange={setQuery} onClear={() => setQuery('')} />
       {query ? (
         <SettingsSearchResults results={results} query={query} />
       ) : (
         <div className="flex flex-col gap-0.5">
-          {listedGroups(isAdmin).map((group) => (
+          {visibleGroups(isAdmin).map((group) => (
             <div key={group.labelKey} className="flex flex-col gap-0.5 pt-4 first:pt-0">
               <GroupLabel>{t(group.labelKey)}</GroupLabel>
               {group.categories.map((category) => {
@@ -148,18 +137,18 @@ export function SettingsSidebar({ active, isAdmin }: { active: SettingsTab; isAd
 
 /** The compact landing screen: the same groups, icons and labels as the sidebar,
  * one full-width row each. */
-export function SettingsIndex({ isAdmin }: { isAdmin: boolean }) {
+export function SettingsIndex({ isAdmin, onOpenProfile }: { isAdmin: boolean; onOpenProfile: (userId: string) => void }) {
   const { t } = useTranslation('settings');
   const { query, setQuery, results } = useSettingsSearch(isAdmin);
   return (
     <nav aria-label={t('nav.ariaLabel')} className="flex flex-col px-4 py-4 @[520px]:px-6">
-      <ProfileShortcut current={false} fromIndex />
+      <ProfileShortcut onOpenProfile={onOpenProfile} />
       <SettingsSearchField query={query} onChange={setQuery} onClear={() => setQuery('')} />
       {query ? (
         <SettingsSearchResults results={results} query={query} />
       ) : (
         <div className="flex flex-col gap-1">
-          {listedGroups(isAdmin).map((group) => (
+          {visibleGroups(isAdmin).map((group) => (
             <div key={group.labelKey} className="flex flex-col gap-0.5 pt-4 first:pt-0">
               <GroupLabel>{t(group.labelKey)}</GroupLabel>
               {group.categories.map((category) => {

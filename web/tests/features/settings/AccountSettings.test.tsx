@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
+import userEvent from '@testing-library/user-event';
+import { initialRoomState } from '@/state/roomReducer';
 import { renderWithRoom } from '@tests/fixtures/roomContextFixture';
 import { AccountSettings } from '@/features/settings/AccountSettings';
 import { formatStorage } from '@/features/settings/formatStorage';
@@ -13,7 +15,7 @@ const MB = 1024 * 1024;
 const GB = 1024 * MB;
 
 function renderAccount(storageUsage: { totalBytes: number; totalFiles: number; maxBytes: number }) {
-  return renderWithRoom(<MemoryRouter><AccountSettings /></MemoryRouter>, { storageUsage });
+  return renderWithRoom(<MemoryRouter><AccountSettings onOpenProfile={vi.fn()} /></MemoryRouter>, { storageUsage });
 }
 
 describe('formatStorage', () => {
@@ -39,8 +41,12 @@ describe('AccountSettings', () => {
     expect(bar.firstElementChild).toHaveStyle({ width: '2%' });
   });
 
-  it('links the display name to profile settings', () => {
-    renderAccount({ totalBytes: 0, totalFiles: 0, maxBytes: 5 * GB });
-    expect(screen.getByRole('link', { name: 'Editar perfil' })).toHaveAttribute('href', '/app/settings/profile');
+  it('edits the display name in your own profile', async () => {
+    const onOpenProfile = vi.fn();
+    renderWithRoom(<MemoryRouter><AccountSettings onOpenProfile={onOpenProfile} /></MemoryRouter>, {
+      state: { ...initialRoomState, me: { ...initialRoomState.me, userId: 'u-ana' } },
+    });
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Editar perfil' }));
+    expect(onOpenProfile).toHaveBeenCalledWith('u-ana');
   });
 });

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
-import { useProfileDraft } from '@/features/settings/useProfileDraft';
-import type { ProfileDraftFields } from '@/features/settings/useProfileDraft';
+import { useProfileDraft } from '@/features/profile/useProfileDraft';
+import type { ProfileDraftFields } from '@/features/profile/useProfileDraft';
 
 const baselineA: ProfileDraftFields = { displayName: 'Fulana', avatarColor: 'green', bio: 'original bio' };
 const baselineB: ProfileDraftFields = { displayName: 'Other name', avatarColor: 'blue', bio: 'different bio' };

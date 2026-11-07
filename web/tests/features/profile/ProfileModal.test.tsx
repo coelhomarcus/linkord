@@ -15,7 +15,6 @@ import { initialRoomState } from '@/state/roomReducer';
 // have their own tests (tests/features/friends/ProfileActions.test.tsx)
 vi.mock('@/features/friends/ProfileActions', () => ({
   ProfileActions: () => <div data-testid="actions" />,
-  EditProfileButton: () => <button type="button">Editar perfil</button>,
 }));
 vi.mock('@/shared/api/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/shared/api/api')>()),
@@ -202,17 +201,18 @@ describe('ProfileModal — since when and what you have in common', () => {
     expect(screen.queryByRole('heading', { name: 'Conexões' })).not.toBeInTheDocument();
   });
 
-  it('on your own profile the edit button sits on the name line, with no action row', async () => {
-    renderProfile({ state: { ...initialRoomState, me: { ...initialRoomState.me, userId: 'u1' } } });
-    const edit = await screen.findByRole('button', { name: 'Editar perfil' });
-    expect(edit.closest('div')?.parentElement).toContainElement(screen.getByRole('heading', { name: 'Marcus' }));
+  it('your own profile opens as the editor, with no action row', async () => {
+    renderProfile({ state: { ...initialRoomState, me: { ...initialRoomState.me, userId: 'u1', name: 'marcus', displayName: 'Marcus' } } });
+    expect(await screen.findByLabelText('Nome de exibição')).toBeInTheDocument();
+    expect(screen.getByLabelText('Bio')).toBeInTheDocument();
     expect(screen.queryByTestId('actions')).not.toBeInTheDocument();
   });
 
-  it("on someone else's profile the actions are below, with no edit button", async () => {
+  it("someone else's profile is read-only, with the actions below", async () => {
     renderProfile();
     expect(await screen.findByTestId('actions')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Editar perfil' })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Marcus' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Nome de exibição')).not.toBeInTheDocument();
   });
 
   it('a failed load offers to try again', async () => {

@@ -135,7 +135,7 @@ export function MemberQuickProfile({ server, member, currentUser, offline, open,
             <Button type="button" variant="outline" size="icon-sm" aria-label={t('members.viewProfile')} onClick={openFullProfile}>
               <IdentificationCardIcon size={16} />
             </Button>
-            <ProfileActions userId={user.id} username={user.username} displayName={user.displayName} onNavigate={() => onOpenChange(false)} showMessage={false} showFriendRequestActions={false} className="flex-row gap-1 p-0" />
+            <ProfileActions userId={user.id} username={user.username} displayName={user.displayName} onNavigate={() => onOpenChange(false)} onEditProfile={openFullProfile} showMessage={false} showFriendRequestActions={false} className="flex-row gap-1 p-0" />
           </div>
         </div>
         <div className="px-4 pb-4">

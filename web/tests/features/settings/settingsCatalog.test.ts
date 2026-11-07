@@ -7,11 +7,13 @@ describe('settings catalog', () => {
     expect(new Set(icons).size).toBe(icons.length);
   });
 
-  it('lists the profile as the first item of the first group', () => {
-    expect(visibleGroups(false)[0]?.categories[0]?.id).toBe('profile');
+  it('opens with the account: the profile is edited in your own profile modal, not here', () => {
+    const ids = visibleGroups(false).flatMap((group) => group.categories.map((category) => category.id));
+    expect(ids[0]).toBe('account');
+    expect(ids).not.toContain('profile');
   });
 
-  it('gives connections their own category right after the profile', () => {
-    expect(visibleGroups(false)[0]?.categories.slice(0, 2).map((category) => category.id)).toEqual(['profile', 'connections']);
+  it('gives connections their own category right after the account', () => {
+    expect(visibleGroups(false)[0]?.categories.slice(0, 2).map((category) => category.id)).toEqual(['account', 'connections']);
   });
 });

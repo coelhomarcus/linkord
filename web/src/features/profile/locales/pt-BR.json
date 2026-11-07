@@ -77,8 +77,8 @@
     "url": "URL",
     "addTitle": "Adicionar uma nova conexão",
     "addLink": "Adicionar conexão",
-    "count_one": "{{count}} conex\u00e3o",
-    "count_other": "{{count}} conex\u00f5es",
+    "count_one": "{{count}} conexão",
+    "count_other": "{{count}} conexões",
     "loading": "Carregando conexões…",
     "empty": "Você ainda não adicionou conexões.",
     "pending": "Aguardando a primeira sincronização…",
@@ -155,5 +155,43 @@
       "calendar": "Calendário de contribuições do GitHub",
       "day": "{{date}}: {{total}} contribuições"
     }
+  },
+  "editor": {
+    "fileTooLarge": "Arquivo muito grande (máximo {{max}}).",
+    "uploadFailed": {
+      "avatar": "Falha ao enviar a foto.",
+      "banner": "Falha ao enviar o banner."
+    },
+    "removeFailed": {
+      "avatar": "Não foi possível remover a foto.",
+      "banner": "Não foi possível remover o banner."
+    },
+    "avatarInput": "Selecionar foto de perfil",
+    "bannerInput": "Selecionar banner",
+    "formats": "PNG, JPEG, GIF ou WEBP, até {{max}}. Foto e banner valem assim que você confirma o recorte; nome, cor e bio só depois de salvar. Conexões são salvas separadamente.",
+    "saved": "Perfil salvo.",
+    "conflict": "Este perfil foi atualizado em outro lugar enquanto você editava.",
+    "useSaved": "Usar valores salvos",
+    "barLabel": "Salvar alterações do perfil",
+    "unsavedNotice": "Você tem alterações não salvas.",
+    "discard": "Descartar",
+    "save": "Salvar perfil",
+    "saving": "Salvando…",
+    "cropTitle": {
+      "avatar": "Recortar foto de perfil",
+      "banner": "Recortar banner"
+    },
+    "uploadingTitle": {
+      "avatar": "Enviando a foto de perfil…",
+      "banner": "Enviando o banner…"
+    }
+  },
+  "unsaved": {
+    "title": "Alterações não salvas",
+    "description": "Você editou seu perfil e ainda não salvou. O que você quer fazer?",
+    "saveAndLeave": "Salvar e sair",
+    "saving": "Salvando…",
+    "discardAndLeave": "Descartar e sair",
+    "continueEditing": "Continuar editando"
   }
 }
