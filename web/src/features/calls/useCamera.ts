@@ -1,9 +1,10 @@
 import { useCallback } from 'react';
 import type { Dispatch } from 'react';
-import { ConnectionState, VideoPresets } from 'livekit-client';
+import { ConnectionState } from 'livekit-client';
 import type { Room } from 'livekit-client';
 import type { RoomAction } from '../../state/roomReducer';
 import { loadDevicePreference } from '../settings/useDevicePreference';
+import { applyCameraContentHint, cameraCaptureOptions, cameraPublishOptions } from './videoPublish';
 import { i18n } from '@/shared/i18n/init';
 
 interface CameraApi {
@@ -27,11 +28,12 @@ export function useCamera(room: Room, dispatch: Dispatch<RoomAction>): CameraApi
       // otherwise starts on whatever device the browser defaults to,
       // ignoring the one saved in Settings.
       const savedDeviceId = loadDevicePreference('videoinput');
-      await room.localParticipant.setCameraEnabled(
+      const publication = await room.localParticipant.setCameraEnabled(
         true,
-        { resolution: { width: 1280, height: 720, frameRate: 30 }, ...(savedDeviceId ? { deviceId: savedDeviceId } : {}) },
-        { videoEncoding: VideoPresets.h720.encoding },
+        cameraCaptureOptions(savedDeviceId),
+        cameraPublishOptions(),
       );
+      applyCameraContentHint(publication?.track?.mediaStreamTrack);
     } catch (err) {
       const name = (err as DOMException)?.name;
       const denied = name === 'NotAllowedError' || name === 'NotFoundError' || name === 'AbortError';

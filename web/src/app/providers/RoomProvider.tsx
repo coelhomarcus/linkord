@@ -55,8 +55,13 @@ export function RoomProvider({ children }: { children: ReactNode }) {
   const intentionalCloseRef = useRef(false);
   const hasWelcomedRef = useRef(false);
 
+  // Adaptive stream picks the camera simulcast layer from the tile's size.
+  // `screen` counts device pixels: a plain `true` ignores a 2x display, so a
+  // retina tile stays on the soft layer while a screen share (one layer, no
+  // simulcast) stays sharp beside it. Dynacast stops encoding a layer nobody
+  // is watching.
   const [livekitRoom] = useState(() => new Room({
-    adaptiveStream: true,
+    adaptiveStream: { pixelDensity: 'screen' },
     dynacast: true,
   }));
 

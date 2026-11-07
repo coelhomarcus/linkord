@@ -1,11 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
-import { ConnectionState, VideoPresets } from 'livekit-client';
+import { ConnectionState } from 'livekit-client';
 import type { Room } from 'livekit-client';
 import { useCamera } from '@/features/calls/useCamera';
 import { saveDevicePreference } from '@/features/settings/useDevicePreference';
+import { cameraCaptureOptions, cameraPublishOptions, CAMERA_CONTENT_HINT } from '@/features/calls/videoPublish';
 
-function fakeRoom(setCameraEnabled = vi.fn(async () => undefined)) {
+function fakeRoom(setCameraEnabled: (...args: never[]) => Promise<unknown> = vi.fn(async () => undefined)) {
   return {
     state: ConnectionState.Connected,
     localParticipant: { setCameraEnabled },
@@ -29,11 +30,7 @@ describe('useCamera — startCamera applies the saved camera', () => {
 
     await result.current.startCamera();
 
-    expect(setCameraEnabled).toHaveBeenCalledWith(
-      true,
-      { resolution: { width: 1280, height: 720, frameRate: 30 }, deviceId: 'preferred-camera' },
-      { videoEncoding: VideoPresets.h720.encoding },
-    );
+    expect(setCameraEnabled).toHaveBeenCalledWith(true, cameraCaptureOptions('preferred-camera'), cameraPublishOptions());
   });
 
   it('without a saved preference, does not include deviceId in the capture options', async () => {
@@ -43,10 +40,17 @@ describe('useCamera — startCamera applies the saved camera', () => {
 
     await result.current.startCamera();
 
-    expect(setCameraEnabled).toHaveBeenCalledWith(
-      true,
-      { resolution: { width: 1280, height: 720, frameRate: 30 } },
-      { videoEncoding: VideoPresets.h720.encoding },
-    );
+    expect(setCameraEnabled).toHaveBeenCalledWith(true, cameraCaptureOptions(null), cameraPublishOptions());
+  });
+
+  it('sets the detail content hint on the track the publication returns', async () => {
+    const mediaStreamTrack = { contentHint: '' };
+    const setCameraEnabled = vi.fn(async () => ({ track: { mediaStreamTrack } }));
+    const room = fakeRoom(setCameraEnabled);
+    const { result } = renderHook(() => useCamera(room, vi.fn()));
+
+    await result.current.startCamera();
+
+    expect(mediaStreamTrack.contentHint).toBe(CAMERA_CONTENT_HINT);
   });
 });

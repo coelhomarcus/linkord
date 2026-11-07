@@ -5,6 +5,7 @@ import type { Room } from 'livekit-client';
 import type { RoomAction } from '../../state/roomReducer';
 import { loadShareQuality } from '../settings/useShareQualityPreference';
 import { SHARE_QUALITY_PRESETS } from './shareQualityPresets';
+import { screenSharePublishOptions } from './videoPublish';
 import { i18n } from '@/shared/i18n/init';
 
 interface ScreenShareApi {
@@ -55,7 +56,8 @@ export function useScreenShare(room: Room, dispatch: Dispatch<RoomAction>): Scre
       restrictOwnAudio: true,
     };
 
-    const quality = SHARE_QUALITY_PRESETS[loadShareQuality()];
+    const qualityId = loadShareQuality();
+    const quality = SHARE_QUALITY_PRESETS[qualityId];
 
     try {
       await room.localParticipant.setScreenShareEnabled(
@@ -66,14 +68,7 @@ export function useScreenShare(room: Room, dispatch: Dispatch<RoomAction>): Scre
           contentHint: quality.contentHint,
           selfBrowserSurface: 'exclude',
         },
-        {
-          // `videoEncoding` is the camera field; screen share only honors
-          // `screenShareEncoding`. One layer: a simulcast half-res layer is
-          // what a game tile would actually subscribe to.
-          screenShareEncoding: quality.encoding,
-          degradationPreference: quality.degradationPreference,
-          simulcast: false,
-        },
+        screenSharePublishOptions(qualityId),
       );
     } catch (err) {
       const name = (err as DOMException)?.name;
