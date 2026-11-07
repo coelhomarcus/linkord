@@ -163,9 +163,9 @@ export function ServerRail({ className }: { className?: string }) {
         </Tooltip>
       )}
       <RailItem label={t('rail.home')} active={home} unread={false} badge={directUnread + pendingIncomingCount} onClick={() => go(ROUTES.home)}>
-        {/* The home tile fills with the accent while it is open. The logo's eyes
-            are cut out, so the tile shows through them; the mark itself follows
-            --accent-mark-filter so it stays readable on that fill. */}
+        {/* The home tile fills with the accent while it is open or hovered.
+            The logo's eyes are cut out, so the tile shows through them; the
+            mark itself is forced white on that fill. */}
         <span className={cn('grid size-10 place-items-center rounded-[12px] transition-colors duration-150', home ? 'bg-accent-primary' : 'bg-surface-300 group-hover/server:bg-accent-primary')}>
           <img src="/logo.svg" alt="" draggable={false} className={cn('h-auto w-6', home ? '[filter:var(--accent-mark-filter)]' : 'group-hover/server:[filter:var(--accent-mark-filter)]')} />
         </span>

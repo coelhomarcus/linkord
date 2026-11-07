@@ -25,9 +25,9 @@ describe('black theme accent', () => {
     expect(black).not.toContain('#4c9cff');
   });
 
-  it('puts ink on a solid accent, because white on the logo blue is 3.1:1', () => {
+  it('puts ink on accent labels and a white mark on the home tile', () => {
     expect(black).toContain('--primary-foreground: #000000;');
-    expect(black).toContain('--accent-mark-filter: brightness(0);');
+    expect(black).toContain('--accent-mark-filter: brightness(0) invert(1);');
   });
 
   it('leaves the graphite theme on its own accent', () => {
