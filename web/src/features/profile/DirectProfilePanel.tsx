@@ -1,3 +1,4 @@
+import { AtIcon } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 
@@ -41,7 +42,11 @@ export function DirectProfilePanel({ user, onOpenProfile }: { user: PublicUser; 
         </span>
         <div className="pt-12">
           <h2 className="truncate text-[1.25rem] font-bold leading-[1.3] text-text-strong">{user.displayName}</h2>
-          <p className="truncate text-label text-text-primary">{user.username}</p>
+          {/* the same @ handle the profile modal draws, so the two read as one profile */}
+          <p className="flex min-w-0 items-center gap-0.5 text-label text-text-muted">
+            <AtIcon size={14} aria-hidden className="flex-none" />
+            <span className="truncate">{user.username}</span>
+          </p>
         </div>
         <div className="mt-4 flex flex-col gap-4">
           <section className="flex flex-col gap-3">
