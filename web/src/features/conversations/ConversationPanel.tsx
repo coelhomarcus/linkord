@@ -13,7 +13,7 @@ import { Avatar } from '@/shared/Avatar';
 import { useRoom } from '@/state/RoomContext';
 import { callParticipantIds, conversationTitle, directUser } from './conversationUtils';
 import { ChatSurface } from '@/features/chat/ChatSurface';
-import { DmCallSurface } from '@/features/calls/DmCallSurface';
+import { DmCallPane } from '@/features/calls/DmCallPane';
 import { useRelationship } from '@/features/friends/useRelationship';
 import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { cn } from '@/shared/lib/utils';
@@ -217,9 +217,7 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
             </div>
           )}
           {inThisDmCall && (
-            <div className="h-80 flex-none border-b border-border-subtle">
-              <DmCallSurface participantIds={dmCallIds} peers={dmCallPeers} />
-            </div>
+            <DmCallPane participantIds={dmCallIds} peers={dmCallPeers} />
           )}
           <div className={inThisDmCall ? 'flex min-h-[220px] min-w-0 flex-1 flex-col' : 'contents'}>
             <ChatSurface conversationId={conversation.id} onOpenProfile={onOpenProfile} />

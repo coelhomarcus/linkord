@@ -190,6 +190,7 @@
     "status": {
       "muted": "Microfone desativado",
       "deafened": "Áudio desativado"
-    }
+    },
+    "resize": "Redimensionar chamada"
   }
 }

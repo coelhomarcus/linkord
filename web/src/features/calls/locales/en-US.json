@@ -190,6 +190,7 @@
     "status": {
       "muted": "Muted",
       "deafened": "Deafened"
-    }
+    },
+    "resize": "Resize call"
   }
 }
