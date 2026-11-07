@@ -32,6 +32,55 @@ describe('stageFileInChunks', () => {
     expect(inits).toBe(2);
   });
 
+  describe('the server restarting mid-upload (a deploy)', () => {
+    const file = () => new File(['abcdef'], 'a.bin', { type: 'application/octet-stream' });
+    const proxyNotFound = () => new Response('404 page not found', { status: 404, headers: { 'Content-Type': 'text/plain' } });
+
+    // the server is "down" for the first `downMs` of fake time: requests fail like they do during a deploy
+    function serverDownFor(downMs: number, failure: () => Promise<Response>) {
+      const startedAt = Date.now();
+      const calls: string[] = [];
+      vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+        calls.push(url);
+        if (Date.now() - startedAt < downMs) return failure();
+        if (url === '/api/attachments/init') return json(201, { uploadId: 'u1', chunkSize: 3, totalChunks: 2 });
+        if (url.includes('/chunk/')) return json(200, { received: 0 });
+        return json(201, { staged: { id: 'u1', name: 'a.bin', mime: 'application/octet-stream', size: 6 } });
+      }));
+      return calls;
+    }
+
+    it('keeps retrying through a 30-second outage and finishes the upload', async () => {
+      serverDownFor(30_000, () => Promise.reject(new TypeError('Failed to fetch')));
+      const promise = stageFileInChunks({ conversationId: 'c', file: file() });
+      await vi.advanceTimersByTimeAsync(40_000);
+      await expect(promise).resolves.toMatchObject({ id: 'u1' });
+    });
+
+    it('treats the proxy answering for a missing app (404 without an app error) as an outage', async () => {
+      serverDownFor(10_000, async () => proxyNotFound());
+      const promise = stageFileInChunks({ conversationId: 'c', file: file() });
+      await vi.advanceTimersByTimeAsync(20_000);
+      await expect(promise).resolves.toMatchObject({ id: 'u1' });
+    });
+
+    it('gives up once the server has been away longer than the outage window', async () => {
+      const calls = serverDownFor(Number.POSITIVE_INFINITY, () => Promise.reject(new TypeError('Failed to fetch')));
+      const promise = stageFileInChunks({ conversationId: 'c', file: file() });
+      const outcome = expect(promise).rejects.toBeInstanceOf(TypeError);
+      await vi.advanceTimersByTimeAsync(70_000);
+      await outcome;
+      expect(calls.length).toBeGreaterThan(5);
+    });
+
+    it('an error from the app itself still fails at once', async () => {
+      const fetchMock = vi.fn(async () => json(404, { error: { code: 'upload_not_found', message: 'gone' } }));
+      vi.stubGlobal('fetch', fetchMock);
+      await expect(stageFileInChunks({ conversationId: 'c', file: file() })).rejects.toMatchObject({ status: 404, code: 'upload_not_found' });
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+  });
+
   it('a definitive error on init (403) is not retried', async () => {
     const fetchMock = vi.fn(async () => json(403, { error: { code: 'relationship_required', message: 'friends only' } }));
     vi.stubGlobal('fetch', fetchMock);
