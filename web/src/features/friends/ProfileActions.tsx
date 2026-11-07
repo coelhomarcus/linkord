@@ -1,7 +1,6 @@
 import { ChatCircleIcon, CircleNotchIcon, DotsThreeIcon, FlagIcon, PencilSimpleIcon, ProhibitIcon, UserCheckIcon, UserMinusIcon, UserPlusIcon } from '@phosphor-icons/react';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
-import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 
 import { useRoom } from '@/state/RoomContext';
@@ -10,7 +9,6 @@ import {
 } from '@/shared/api/api';
 import { Button } from '@/shared/ui/primitives/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/primitives/dropdown-menu';
-import { ROUTES } from '@/shared/lib/routes';
 import { cn } from '@/shared/lib/utils';
 import { describeSendError, formatRetryAfter } from './friendsText';
 import { SocialConfirmDialog } from './SocialConfirmDialog';
@@ -18,19 +16,18 @@ import type { SocialConfirm } from './SocialConfirmDialog';
 import { useFriends } from './FriendsContext';
 import { useRelationship } from './useRelationship';
 
-/** Takes you from your own profile to where you edit it. */
-export function EditProfileButton({ onNavigate }: { onNavigate?: () => void }) {
+/** Takes you from a glimpse of your own profile to the full one, where it is edited. */
+function EditProfileButton({ onClick }: { onClick: () => void }) {
   const { t } = useTranslation('friends');
-  const navigate = useNavigate();
   return (
-    <Button type="button" variant="secondary" size="sm" onClick={() => { navigate(ROUTES.settings); onNavigate?.(); }}>
+    <Button type="button" variant="secondary" size="sm" onClick={onClick}>
       <PencilSimpleIcon size={20} /><span>{t('profile.edit')}</span>
     </Button>
   );
 }
 
 /** Keep relationship actions beside the profile card so other card contexts stay independent. */
-export function ProfileActions({ userId, username, displayName, onNavigate, onReport, className, showMessage = true, showFriendRequestActions = true }: {
+export function ProfileActions({ userId, username, displayName, onNavigate, onReport, onEditProfile, className, showMessage = true, showFriendRequestActions = true }: {
   userId: string;
   username: string;
   displayName: string;
@@ -38,6 +35,8 @@ export function ProfileActions({ userId, username, displayName, onNavigate, onRe
   onNavigate?: () => void;
   /** offers "Denunciar" in the "more" menu, for whoever is not you */
   onReport?: () => void;
+  /** opens your own full profile, where it is edited; without it your own card offers nothing */
+  onEditProfile?: () => void;
   /** overrides the default padding (`px-4 pb-4`) when the parent lays it out */
   className?: string;
   showMessage?: boolean;
@@ -97,7 +96,7 @@ export function ProfileActions({ userId, username, displayName, onNavigate, onRe
   let actions;
   switch (relation) {
     case 'self':
-      actions = <EditProfileButton onNavigate={onNavigate} />;
+      actions = onEditProfile ? <EditProfileButton onClick={onEditProfile} /> : null;
       break;
     case 'friends':
       actions = (

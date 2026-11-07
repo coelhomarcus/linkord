@@ -1,5 +1,5 @@
 import type { ParseKeys } from 'i18next';
-import { BellIcon, GearSixIcon, HeadphonesIcon, IdentificationCardIcon, LockIcon, PlugsConnectedIcon, ShieldCheckIcon, UserIcon } from '@phosphor-icons/react';
+import { BellIcon, GearSixIcon, HeadphonesIcon, IdentificationCardIcon, LockIcon, PlugsConnectedIcon, ShieldCheckIcon } from '@phosphor-icons/react';
 
 import type { IconComponent } from '@/shared/ui/icons';
 import type { SettingsTab } from '@/shared/lib/routes';
@@ -36,8 +36,6 @@ export const SETTINGS_GROUPS: SettingsGroup[] = [
   {
     labelKey: 'catalog.groups.you',
     categories: [
-      { id: 'profile', labelKey: 'catalog.categories.profile.label', descriptionKey: 'catalog.categories.profile.description', icon: UserIcon },
-      { id: 'connections', labelKey: 'catalog.categories.connections.label', descriptionKey: 'catalog.categories.connections.description', icon: PlugsConnectedIcon },
       { id: 'account', labelKey: 'catalog.categories.account.label', descriptionKey: 'catalog.categories.account.description', icon: IdentificationCardIcon,
         sections: [
           { id: 'identity', labelKey: 'catalog.sections.identity' },
@@ -46,6 +44,7 @@ export const SETTINGS_GROUPS: SettingsGroup[] = [
           { id: 'storage', labelKey: 'catalog.sections.storage' },
           { id: 'session', labelKey: 'catalog.sections.session' },
         ] },
+      { id: 'connections', labelKey: 'catalog.categories.connections.label', descriptionKey: 'catalog.categories.connections.description', icon: PlugsConnectedIcon },
       { id: 'privacy', labelKey: 'catalog.categories.privacy.label', descriptionKey: 'catalog.categories.privacy.description', icon: LockIcon },
     ],
   },

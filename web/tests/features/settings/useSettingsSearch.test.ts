@@ -26,11 +26,11 @@ describe('useSettingsSearch', () => {
     expect(titles(result.current.results)).toContain('Câmera');
   });
 
-  it('"foto" finds Perfil via synonym (no sectionId)', () => {
+  it('"github" finds Conexões via synonym (no sectionId)', () => {
     const { result } = renderHook(() => useSettingsSearch(false));
-    act(() => result.current.setQuery('foto'));
-    expect(titles(result.current.results)).toContain('Perfil');
-    expect(result.current.results.find((r) => r.title === 'Perfil')?.entry.sectionId).toBeUndefined();
+    act(() => result.current.setQuery('github'));
+    expect(titles(result.current.results)).toContain('Conexões');
+    expect(result.current.results.find((r) => r.title === 'Conexões')?.entry.sectionId).toBeUndefined();
   });
 
   it('"som" finds Sons and/or Alto-falante', () => {

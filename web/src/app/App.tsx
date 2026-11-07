@@ -36,6 +36,7 @@ import { TileMenu } from '@/features/calls/TileMenu';
 import { SoundEmojiOverlay } from '@/features/soundboard/SoundEmojiOverlay';
 import { GlobalContextMenu } from '@/app/layout/GlobalContextMenu';
 import { ProfileModal } from '@/features/profile/ProfileModal';
+import type { ProfileTab } from '@/features/profile/ProfileSidebar';
 import { FriendsProvider } from '@/features/friends/FriendsContext';
 import { FriendsPage } from '@/features/friends/FriendsPage';
 import { NotificationsPage } from '@/features/notifications/NotificationsPage';
@@ -124,7 +125,8 @@ function Shell() {
   const conversationsRef = useRef(conversations);
   conversationsRef.current = conversations;
   const wide = useMediaQuery('(min-width: 1280px)');
-  const [profileUserId, setProfileUserId] = useState<string | null>(null);
+  const [profileTarget, setProfileTarget] = useState<{ userId: string; tab?: ProfileTab } | null>(null);
+  const openProfile = useCallback((userId: string, tab?: ProfileTab) => setProfileTarget({ userId, tab }), []);
   const [mobileShowSidebar, setMobileShowSidebar] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [memberListOpen, setMemberListOpen] = useState(loadMemberListOpen);
@@ -311,9 +313,9 @@ function Shell() {
   if (!state.joined) return <LoadingScreen reconnecting={state.reconnecting} onRetry={retryConnection} />;
 
   return (
-    <GlobalContextMenu onOpenProfile={setProfileUserId}>
+    <GlobalContextMenu onOpenProfile={openProfile}>
       <ContentLocationProvider value={contentLocation}>
-      <ServerSettingsProvider onOpenProfile={setProfileUserId}>
+      <ServerSettingsProvider onOpenProfile={openProfile}>
       <div className="flex h-full min-h-0 flex-col bg-surface-rail">
       <TopBar className="hidden md:flex" title={tabTitle === APP_TITLE ? undefined : activeConversationName} server={currentServer} />
       <SidebarProvider
@@ -329,13 +331,13 @@ function Shell() {
         {/* Discord's one framed panel: the list and the content side by side
             under a shared hairline, rounded once at its top-left corner */}
         <div className="flex min-h-0 min-w-0 flex-1 md:overflow-hidden md:rounded-tl-[12px] md:border-l md:border-t md:border-border-subtle">
-        <ConversationSidebar onOpenProfile={setProfileUserId} />
+        <ConversationSidebar onOpenProfile={openProfile} />
         <SidebarInset className={`relative min-h-0 overflow-hidden bg-surface-panel [--surface-base:var(--color-surface-panel)] ${mobileListPage ? 'max-md:hidden' : ''} ${mobileMainPage ? 'max-md:pb-[var(--mobile-navigation-height)]' : ''}`}>
           <div className="flex h-full min-h-0">
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <Routes location={contentLocation}>
-            <Route path={ROUTES.home} element={<FriendsPage onOpenProfile={setProfileUserId} />} />
-            <Route path={ROUTES.friends} element={<FriendsPage onOpenProfile={setProfileUserId} />} />
+            <Route path={ROUTES.home} element={<FriendsPage onOpenProfile={openProfile} />} />
+            <Route path={ROUTES.friends} element={<FriendsPage onOpenProfile={openProfile} />} />
             <Route path="/app/channels" element={<Navigate to={ROUTES.home} replace />} />
             <Route path="/app/channels/:serverId" element={<ServerLanding />} />
             <Route
@@ -346,7 +348,7 @@ function Shell() {
                   : joiningStage ? <CallConnectingScreen onCancel={cancelPendingCall} /> : <VoiceChannelLobby channel={voiceChannelOnPath} onJoin={() => handleOpenCall(voiceChannelOnPath.id)} />
               ) : (
                 <ConversationPanel
-                  onOpenProfile={setProfileUserId}
+                  onOpenProfile={openProfile}
                   onOpenCall={handleOpenCall}
                   onOpenSearch={() => setSearchOpen(true)}
                   detailsOpen={directShown ? profileVisible : memberListOpen}
@@ -360,14 +362,14 @@ function Shell() {
             <Route path="/app/calls/:conversationId" element={dmStageId ? <Navigate to={ROUTES.direct(dmStageId)} replace /> : <Navigate to={ROUTES.home} replace />} />
             <Route path="/invite/:code" element={<InvitePage />} />
             <Route path={ROUTES.notifications} element={<NotificationsPage />} />
-            <Route path={ROUTES.profile} element={<ProfilePage onOpenProfile={setProfileUserId} />} />
+            <Route path={ROUTES.profile} element={<ProfilePage onOpenProfile={openProfile} />} />
             <Route path={ROUTES.requests} element={<RequestsRedirect />} />
             <Route path="/app/conversations/:conversationId" element={<LegacyConversationRedirect />} />
             <Route path="*" element={<Navigate to={ROUTES.home} replace />} />
           </Routes>
           </div>
-          {membersVisible && currentServer && wide && <MemberListPanel server={currentServer} onOpenProfile={setProfileUserId} />}
-          {profilePanelUser && <DirectProfilePanel user={profilePanelUser} onOpenProfile={setProfileUserId} />}
+          {membersVisible && currentServer && wide && <MemberListPanel server={currentServer} onOpenProfile={openProfile} />}
+          {profilePanelUser && <DirectProfilePanel user={profilePanelUser} onOpenProfile={openProfile} />}
           </div>
           {inCall && <ParticipantAudioLayer participantIds={callIds} />}
           {inCall && !showStage && !viewingDmCall && (
@@ -383,12 +385,12 @@ function Shell() {
         <FloatingUserDock
           placement="shell"
           onReturnToCall={handleReturnToCall}
-          onOpenProfile={setProfileUserId}
+          onOpenProfile={openProfile}
         />
         {mobileMainPage && <MobileTabBar activeCallConversationId={activeCallConversationId} onReturnToCall={handleReturnToCall} />}
         {currentServer && !wide && (
           <Sheet open={membersVisible} onOpenChange={setMemberListPreference} side="right" ariaLabel={currentServer.name} className="w-60">
-            <MemberListPanel server={currentServer} onOpenProfile={setProfileUserId} active={membersVisible} />
+            <MemberListPanel server={currentServer} onOpenProfile={openProfile} active={membersVisible} />
           </Sheet>
         )}
         <ConversationMediaPanel
@@ -396,9 +398,9 @@ function Shell() {
           open={mediaVisible}
           onOpenChange={setMediaOpen}
         />
-        <TileMenu onOpenProfile={setProfileUserId} />
-        <ProfileModal userId={profileUserId} onClose={() => setProfileUserId(null)} onOpenProfile={setProfileUserId} />
-        <AppModals modal={modal} onClose={closeModal} onOpenProfile={setProfileUserId} />
+        <TileMenu onOpenProfile={openProfile} />
+        <ProfileModal userId={profileTarget?.userId ?? null} initialTab={profileTarget?.tab} onClose={() => setProfileTarget(null)} onOpenProfile={openProfile} />
+        <AppModals modal={modal} onClose={closeModal} onOpenProfile={openProfile} />
         <ChatSearchDialog
           open={searchOpen}
           onOpenChange={setSearchOpen}

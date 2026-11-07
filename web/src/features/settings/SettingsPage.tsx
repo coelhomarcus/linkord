@@ -15,7 +15,6 @@ import { AudioVideoSettings } from './AudioVideoSettings';
 import { NotificationsSettings } from './NotificationsSettings';
 import { PreferencesSettings } from './PreferencesSettings';
 import { PrivacyTab } from './PrivacyTab';
-import { ProfileSettings } from './ProfileSettings';
 import { SettingsContent, SettingsPageHeader } from './SettingsLayout';
 import { SettingsIndex, SettingsSidebar } from './SettingsNavigation';
 import { findCategory } from './settingsCatalog';
@@ -27,9 +26,8 @@ interface SettingsPageProps {
 
 function CategoryPage({ tab, onOpenProfile }: { tab: SettingsTab; onOpenProfile: (userId: string) => void }) {
   switch (tab) {
-    case 'profile': return <ProfileSettings />;
     case 'connections': return <ConnectionsSettings />;
-    case 'account': return <AccountSettings />;
+    case 'account': return <AccountSettings onOpenProfile={onOpenProfile} />;
     case 'privacy': return <PrivacyTab onOpenProfile={onOpenProfile} />;
     case 'av': return <AudioVideoSettings />;
     case 'notifications': return <NotificationsSettings />;
@@ -56,7 +54,7 @@ export function SettingsPage({ onOpenProfile }: SettingsPageProps) {
   // wide: no category in the URL just means "the first one", on the same URL;
   // compact: it is the index
   const showIndex = mode === 'compact' && active === null;
-  const current: SettingsTab = active ?? 'profile';
+  const current: SettingsTab = active ?? 'account';
   const category = findCategory(current);
 
   // opening another category starts at its top, with its title focused; a hash
@@ -81,7 +79,7 @@ export function SettingsPage({ onOpenProfile }: SettingsPageProps) {
 
   // an unknown category — or the admin-only one for a non-admin — falls back to
   // the first one instead of rendering an empty page
-  if (tab !== undefined && !known) return <Navigate to={ROUTES.settingsTab('profile')} replace />;
+  if (tab !== undefined && !known) return <Navigate to={ROUTES.settingsTab('account')} replace />;
 
   const compactDetail = mode === 'compact' && active !== null;
   const fromIndex = (location.state as { fromIndex?: boolean } | null)?.fromIndex === true;
@@ -103,12 +101,12 @@ export function SettingsPage({ onOpenProfile }: SettingsPageProps) {
         ) : undefined}
       />
       <div ref={areaRef} className="@container flex min-h-0 min-w-0 flex-1">
-        {mode === 'wide' ? <SettingsSidebar active={current} isAdmin={isAdmin} /> : null}
+        {mode === 'wide' ? <SettingsSidebar active={current} isAdmin={isAdmin} onOpenProfile={onOpenProfile} /> : null}
         <main ref={scrollerRef} aria-label={showIndex ? t('title') : t(category.labelKey)} className="min-h-0 min-w-0 flex-1 overflow-y-auto">
           {showIndex ? (
-            <SettingsIndex isAdmin={isAdmin} />
+            <SettingsIndex isAdmin={isAdmin} onOpenProfile={onOpenProfile} />
           ) : (
-            <SettingsContent className={current === 'profile' ? 'max-w-none' : undefined}>
+            <SettingsContent>
               <SettingsPageHeader title={t(category.labelKey)} description={t(category.descriptionKey)} headingRef={headingRef} hideTitle={compactDetail} />
               <CategoryPage tab={current} onOpenProfile={onOpenProfile} />
             </SettingsContent>

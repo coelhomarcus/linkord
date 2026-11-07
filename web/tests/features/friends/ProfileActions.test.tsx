@@ -88,7 +88,7 @@ describe('ProfileActions — what shows up only depends on the relationship', ()
 
   it('your own profile has no "more" menu to report yourself', async () => {
     mocked.fetchRelationship.mockResolvedValue({ relation: 'self', retryAfter: null });
-    renderSocial(<ProfileActions userId="me" username="eu" displayName="Eu" onReport={vi.fn()} />);
+    renderSocial(<ProfileActions userId="me" username="eu" displayName="Eu" onReport={vi.fn()} onEditProfile={vi.fn()} />);
     expect(await screen.findByRole('button', { name: 'Editar perfil' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Mais ações' })).not.toBeInTheDocument();
   });
@@ -103,9 +103,12 @@ describe('ProfileActions — what shows up only depends on the relationship', ()
     expect(mocked.unblockUser).toHaveBeenCalledWith('u-ana');
   });
 
-  it('own profile: Editar perfil, no social action', async () => {
-    renderActions('self');
-    expect(await screen.findByRole('button', { name: 'Editar perfil' })).toBeInTheDocument();
+  it('own profile: Editar perfil opens your full profile, no social action', async () => {
+    const onEditProfile = vi.fn();
+    mocked.fetchRelationship.mockResolvedValue({ relation: 'self', retryAfter: null });
+    renderSocial(<ProfileActions userId="me" username="eu" displayName="Eu" onEditProfile={onEditProfile} />);
+    await userEvent.setup().click(await screen.findByRole('button', { name: 'Editar perfil' }));
+    expect(onEditProfile).toHaveBeenCalled();
     expect(screen.queryByRole('button', { name: 'Adicionar amigo' })).not.toBeInTheDocument();
   });
 

@@ -21,10 +21,6 @@
       "admin": "Administração"
     },
     "categories": {
-      "profile": {
-        "label": "Perfil",
-        "description": "Edite direto no seu perfil. O que você vê aqui é exatamente o que os outros vão ver."
-      },
       "connections": {
         "label": "Conexões",
         "description": "Conecte suas contas de outros serviços e escolha o que mostrar no Mural. Os dados são atualizados automaticamente a cada 24 horas."
@@ -73,10 +69,6 @@
     }
   },
   "search": {
-    "profile": {
-      "title": "Perfil",
-      "keywords": "foto, avatar, banner, nome de exibição, bio, links, cor"
-    },
     "connections": {
       "title": "Conexões",
       "keywords": "github, myanimelist, anime, link, contas, mural, widgets, redes sociais"
@@ -284,44 +276,6 @@
       "label": "Compactar imagens por padrão",
       "description": "Reduz o tamanho antes de enviar. Vale para novos anexos a partir de agora. Um que você já preparou não é reprocessado."
     }
-  },
-  "profile": {
-    "fileTooLarge": "Arquivo muito grande (máximo {{max}}).",
-    "uploadFailed": {
-      "avatar": "Falha ao enviar a foto.",
-      "banner": "Falha ao enviar o banner."
-    },
-    "removeFailed": {
-      "avatar": "Não foi possível remover a foto.",
-      "banner": "Não foi possível remover o banner."
-    },
-    "avatarInput": "Selecionar foto de perfil",
-    "bannerInput": "Selecionar banner",
-    "formats": "PNG, JPEG, GIF ou WEBP, até {{max}}. Foto e banner valem assim que você confirma o recorte; nome, cor e bio só depois de salvar. Conexões são salvas separadamente.",
-    "saved": "Perfil salvo.",
-    "conflict": "Este perfil foi atualizado em outro lugar enquanto você editava.",
-    "useSaved": "Usar valores salvos",
-    "barLabel": "Salvar alterações do perfil",
-    "unsavedNotice": "Você tem alterações não salvas.",
-    "discard": "Descartar",
-    "save": "Salvar perfil",
-    "saving": "Salvando…",
-    "cropTitle": {
-      "avatar": "Recortar foto de perfil",
-      "banner": "Recortar banner"
-    },
-    "uploadingTitle": {
-      "avatar": "Enviando a foto de perfil…",
-      "banner": "Enviando o banner…"
-    }
-  },
-  "unsaved": {
-    "title": "Alterações não salvas",
-    "description": "Você editou seu perfil e ainda não salvou. O que você quer fazer?",
-    "saveAndLeave": "Salvar e sair",
-    "saving": "Salvando…",
-    "discardAndLeave": "Descartar e sair",
-    "continueEditing": "Continuar editando"
   },
   "crop": {
     "processing": "Processando imagem…",
