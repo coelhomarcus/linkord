@@ -219,6 +219,9 @@ export function RoomProvider({ children }: { children: ReactNode }) {
           // server what the tracks are doing now, not what they were doing
           // when the previous socket dropped.
           callLifecycle.syncLocalMedia();
+          // a direct call being resumed carries its own token right after this welcome
+          const serverCallId = m.dmCall?.media ? m.dmCall.conversationId : m.callConversationId;
+          callLifecycle.reconcileAfterReconnect(serverCallId, (id) => (m.conversations ?? []).some((c) => c.id === id));
           const activeId = conversationsList.activeConversationIdRef.current;
           const stillThere = (m.conversations ?? []).some((c) => c.id === activeId)
             || (m.servers ?? []).some((server) => server.channels.some((c) => c.id === activeId));

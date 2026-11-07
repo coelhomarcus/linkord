@@ -64,6 +64,29 @@ i18next + react-i18next, strings bundled (no backend). Supported languages live 
 - **Dates/numbers**: don't hardcode `'pt-BR'` in `toLocale*String` — use the active language.
 - Proper names (theme names, "Linkord") stay untranslated.
 
+## Realtime compatibility and deploys
+
+A deploy restarts the Node process while people are connected, and browsers keep running the old JS until they reload. Two things make that safe; both are easy to break without noticing.
+
+**1. The protocol version gate** (`server/src/realtime/protocolVersion.ts`, client side `web/src/shared/types/protocol.ts`).
+- Every client sends its `PROTOCOL_VERSION` in `join`. The server compares it with `MIN_PROTOCOL_VERSION` (`isClientCompatible`) and, if lower, answers `client_outdated` and disconnects. The client then stops reconnecting and replaces the whole app with `OutdatedClientScreen` ("reload the page").
+- The gate is a rule, not a reconnect check: an old tab that could technically reconnect is still refused once the minimum is raised. It also drops that person out of any call, because the server loses their connection.
+- So: **do not raise `MIN_PROTOCOL_VERSION` for a change an old client can tolerate.** Make wire changes additive instead: a new optional field in a server message (the client treats `undefined` as "old server"; see `welcome.callConversationId`), a new message type old clients ignore, a new handler that old clients simply never call. Raise the minimum only when an old client would misbehave or corrupt state (a message changing meaning, a removed field it depends on). When you do, say so in the commit body, and expect everyone to lose their calls once.
+- `PROTOCOL_VERSION` (what this build speaks) and `MIN_PROTOCOL_VERSION` (what the server accepts) are separate on purpose. Bump the first for any wire change worth knowing about; bump the second only as above. Keep the comment history in that file up to date.
+
+**2. Calls survive a restart** (details and rationale in [`docs/INTEGRATIONS.md`](docs/INTEGRATIONS.md#livekit)).
+- Media flows browser <-> LiveKit, so a restart never interrupts it. What a restart would lose is the server's bookkeeping: a participant's `id` is its LiveKit identity, and `participants` and the DM call `state` live in memory.
+- So call membership is written to Postgres as it changes (`call_presence`, via `setCallConversationId` in `modules/presence/participants.ts`; `dm_calls_active`, via `apply` in `modules/calls/dmCalls.ts`). On boot, `restoreCalls` in `app/bootstrap.ts` rebuilds those connections as ghosts with `socket: null` and the **same id and resume token**, held for `CALL_RESTORE_GRACE_MS`. A restart then looks exactly like a short network drop: the client's `join {id, token}` resumes the same participant and the tiles still match the LiveKit identities.
+- Rules that keep this working:
+  - The SIGTERM handler in `bootstrap.ts` must not call `removeParticipant`: removal deletes the persisted rows and tells everyone the person left, which is what a deploy must not do.
+  - Anything that changes which call a connection is in must go through `setCallConversationId`, and DM call changes through the state machine plus `apply`. Writing `callConversationId` directly skips persistence.
+  - Persistence is injected (`setCallPresenceStore`, `setDmCallStore`) so `participants.ts` and `dmCalls.ts` stay free of the database and their tests run without one. Writes are queued and their failures only logged: a database problem must never break a live call.
+  - Only membership is stored. Mic, camera, share and speaking flags are not: the client reports them again after reconnecting (`syncLocalMedia` in the `welcome` handler).
+  - A fresh join of the same account must not evict restored ghosts (`restoredGhostIds`): another tab of that account may reach the server before the tab that is in the call.
+- Client fallback: `welcome` carries `callConversationId`. If a reconnecting client is still connected to LiveKit but the server does not have it in that call (a crash with the database down, the grace window expired), `reconcileAfterReconnect` (`features/calls/useCallLifecycle.ts`) rejoins a voice channel, or leaves a DM call that no longer exists.
+- Known limits: a page reload leaves the call (the LiveKit connection lives in the page); the first deploy that introduces persistence cannot restore calls that were opened before it; old JS has no client fallback.
+- When you add state to a call, decide whether a restart should keep it. If yes, persist it with the membership; if the client can report it again, do what the media flags do.
+
 ## Documentation (`docs/`)
 
 Docs are part of the change: when code changes what a doc describes, update that doc **in the same commit**. Skip it only when nothing a doc says is affected. Pick the doc by what the change touches:

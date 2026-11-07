@@ -17,7 +17,6 @@
     "loadingMore": "Carregando mais itens"
   },
   "layout": {
-    "reconnect": "Sem conexão com o servidor. Aperte F5 para recarregar a página.",
     "retryNow": "Tentar reconectar agora",
     "waitingForServer": "Aguardando conexão com o servidor...",
     "reload": "Recarregar",

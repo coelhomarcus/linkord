@@ -6,7 +6,7 @@ import { isUploadedImage, sanitizeAvatar, sanitizeBanner, sanitizeAvatarColor, s
 import { deleteAvatarFile, isOwnedProfileImage } from '../attachments/attachmentCleanup.js';
 import { recordUserLastSeen } from '../users/users.js';
 import { runSerialized } from './profileQueue.js';
-import type { AppSocket, HandlerTable, Participant, PublicParticipant } from '../../types.js';
+import type { AppSocket, HandlerTable, Participant, PublicParticipant, SessionUser } from '../../types.js';
 import { logger } from '../../lib/logger.js';
 
 const log = logger.child({ component: 'presence' });
@@ -19,6 +19,109 @@ export const participants = new Map<string, Participant>(); // id -> participant
 
 const newId = () => crypto.randomBytes(8).toString('hex');
 const newToken = () => crypto.randomBytes(24).toString('hex');
+
+/** What a participant needs from an account — a login session at join time, a
+ * database row when a restart rebuilds one. */
+export type ParticipantProfile = Pick<SessionUser,
+  'userId' | 'username' | 'displayName' | 'avatar' | 'avatarPoster' | 'avatarColor' | 'banner' | 'bannerPoster' | 'bio' | 'profileLinks' | 'role'>;
+
+export interface RestorableCallParticipant {
+  id: string;
+  token: string;
+  conversationId: string;
+  deafened: boolean;
+  profile: ParticipantProfile;
+}
+
+/** Where call membership outlives the process. Injected (like the removal hook
+ * below) so this module stays free of the database. */
+export interface CallPresenceStore {
+  save(p: Participant): Promise<void>;
+  remove(participantId: string): Promise<void>;
+}
+
+// Ghosts rebuilt after a restart. A fresh join of the same account (another tab
+// that also lost its identity) must not evict them: their own client is still
+// on its way back.
+const restoredGhostIds = new Set<string>();
+
+let callPresenceStore: CallPresenceStore | null = null;
+export function setCallPresenceStore(store: CallPresenceStore | null): void {
+  callPresenceStore = store;
+}
+
+// Per connection, in order: a join followed at once by a leave must not end
+// with the join's row written last.
+function persistCallPresence(p: Participant): void {
+  const store = callPresenceStore;
+  if (!store) return;
+  void runSerialized(`call-presence:${p.id}`, () => store.save(p))
+    .catch((err) => log.error('failed to persist call membership', err, { participantId: p.id }));
+}
+
+function forgetCallPresence(participantId: string): void {
+  const store = callPresenceStore;
+  if (!store) return;
+  void runSerialized(`call-presence:${participantId}`, () => store.remove(participantId))
+    .catch((err) => log.error('failed to forget call membership', err, { participantId }));
+}
+
+function createParticipant(u: ParticipantProfile, id: string, token: string, socket: AppSocket | null): Participant {
+  return {
+    id,
+    token,
+    userId: u.userId,
+    socket,
+    name: u.username,
+    // u.displayName (SessionUser) already resolved a non-empty value in
+    // session.ts — sanitizeDisplayName here is just defense in depth
+    // (same pattern as sanitizeAvatar/sanitizeAvatarColor above).
+    displayName: sanitizeDisplayName(u.displayName) || u.username,
+    avatar: sanitizeAvatar(u.avatar),
+    avatarPoster: sanitizeAvatar(u.avatarPoster),
+    avatarColor: sanitizeAvatarColor(u.avatarColor),
+    banner: sanitizeBanner(u.banner),
+    bannerPoster: sanitizeBanner(u.bannerPoster),
+    bio: sanitizeBio(u.bio),
+    profileLinks: sanitizeProfileLinks(u.profileLinks),
+    role: u.role,
+    // always starts undeafened on a brand NEW connection (client starts
+    // the same way); a resume reuses the existing participant and
+    // PRESERVES the value.
+    deafened: false,
+    callConversationId: null,
+    micActivated: false,
+    micMuted: true,
+    cameraOn: false,
+    sharing: false,
+    speaking: false,
+    graceTimer: null,
+    knownPeerIds: new Set(),
+    friendPeerIds: new Set(),
+    blockedPeerIds: new Set(),
+  };
+}
+
+/** Rebuilds, after a restart, the connections that were in a call — as if
+ * their sockets had just dropped. Each waits out `graceMs` for its client to
+ * resume with the saved id and token, and is removed (leaving the call, for
+ * everyone else) if that never happens. The id is also the LiveKit identity,
+ * so a client that resumes stays matched to its own media. */
+export function restoreCallParticipants(entries: RestorableCallParticipant[], graceMs: number): number {
+  let restored = 0;
+  for (const entry of entries) {
+    if (participants.has(entry.id)) continue;
+    const p = createParticipant(entry.profile, entry.id, entry.token, null);
+    p.callConversationId = entry.conversationId;
+    p.deafened = entry.deafened;
+    p.graceTimer = setTimeout(() => removeParticipant(p), graceMs);
+    p.graceTimer.unref();
+    participants.set(p.id, p);
+    restoredGhostIds.add(p.id);
+    restored++;
+  }
+  return restored;
+}
 
 export function publicParticipant(p: Participant): PublicParticipant {
   return {
@@ -40,6 +143,7 @@ export function setCallConversationId(p: Participant, conversationId: string | n
   p.cameraOn = false;
   p.sharing = false;
   p.speaking = false;
+  persistCallPresence(p);
   broadcastToKnownPeers(p.userId, { t: 'participant-updated', participant: publicParticipant(p) });
 }
 
@@ -115,6 +219,8 @@ export function removeParticipant(p: Participant): void {
   if (participants.get(p.id) !== p) return; // already replaced by a reconnect
   if (p.graceTimer) clearTimeout(p.graceTimer);
   participants.delete(p.id);
+  restoredGhostIds.delete(p.id);
+  forgetCallPresence(p.id);
   onParticipantRemoved?.(p);
   broadcastToKnownPeers(p.userId, { t: 'participant-left', id: p.id });
   // only here (not handleClose) to respect the same grace window as
@@ -139,7 +245,7 @@ function countConnectionsOf(userId: string): number {
  * tab would hold the slot for up to RECONNECT_GRACE_MS. */
 function evictGhostsForUser(userId: string): void {
   for (const p of [...participants.values()]) {
-    if (p.userId === userId && p.socket === null) removeParticipant(p);
+    if (p.userId === userId && p.socket === null && !restoredGhostIds.has(p.id)) removeParticipant(p);
   }
 }
 
@@ -171,6 +277,7 @@ export function join(socket: AppSocket, msg: JoinMessage): { participant: Partic
     if (p.graceTimer) clearTimeout(p.graceTimer);
     p.graceTimer = null;
     p.socket = socket;
+    restoredGhostIds.delete(p.id);
   } else {
     if (participants.size >= config.MAX_PARTICIPANTS) {
       log.warn('join refused: room is full', { participants: participants.size, max: config.MAX_PARTICIPANTS });
@@ -185,39 +292,10 @@ export function join(socket: AppSocket, msg: JoinMessage): { participant: Partic
       sendSocketError(socket, 'too_many_connections', 'Você já tem conexões demais abertas. Feche alguma aba.');
       return null;
     }
-    p = {
-      id: newId(),
-      token: newToken(),
-      userId: u.userId,
-      socket,
-      name: u.username,
-      // u.displayName (SessionUser) already resolved a non-empty value in
-      // session.ts — sanitizeDisplayName here is just defense in depth
-      // (same pattern as sanitizeAvatar/sanitizeAvatarColor above).
-      displayName: sanitizeDisplayName(u.displayName) || u.username,
-      avatar: sanitizeAvatar(u.avatar),
-      avatarPoster: sanitizeAvatar(u.avatarPoster),
-      avatarColor: sanitizeAvatarColor(u.avatarColor),
-      banner: sanitizeBanner(u.banner),
-      bannerPoster: sanitizeBanner(u.bannerPoster),
-      bio: sanitizeBio(u.bio),
-      profileLinks: sanitizeProfileLinks(u.profileLinks),
-      role: u.role,
-      // always starts undeafened on a brand NEW connection (client starts
-      // the same way); a resume above reuses the existing `p` and
-      // PRESERVES the value.
-      deafened: false,
-      callConversationId: null,
-      micActivated: false,
-      micMuted: true,
-      cameraOn: false,
-      sharing: false,
-      speaking: false,
-      graceTimer: null,
-      knownPeerIds: new Set(),
-      friendPeerIds: new Set(),
-      blockedPeerIds: new Set(),
-    };
+    p = createParticipant({
+      userId: u.userId, username: u.username, displayName: u.displayName, avatar: u.avatar, avatarPoster: u.avatarPoster,
+      avatarColor: u.avatarColor, banner: u.banner, bannerPoster: u.bannerPoster, bio: u.bio, profileLinks: u.profileLinks, role: u.role,
+    }, newId(), newToken(), socket);
     participants.set(p.id, p);
   }
   socket.participantId = p.id;
@@ -358,6 +436,7 @@ function handleDeafened(socket: AppSocket, msg: { value?: unknown }): void {
   const p = participants.get(socket.participantId ?? '');
   if (!p || p.socket !== socket) return;
   p.deafened = !!msg.value;
+  if (p.callConversationId) persistCallPresence(p);
   broadcastToKnownPeers(p.userId, { t: 'participant-updated', participant: publicParticipant(p) });
 }
 

@@ -1,6 +1,9 @@
 import { syncConnections } from '../modules/connections/syncWorker.js';
 import { config } from '../config/env.js';
-import { participants as participantsMap, broadcast } from '../modules/presence/participants.js';
+import { participants as participantsMap, broadcast, restoreCallParticipants, setCallPresenceStore } from '../modules/presence/participants.js';
+import { callPresenceStore, loadCallPresence } from '../modules/presence/callPresenceRepository.js';
+import { restoreDmCalls, setDmCallStore } from '../modules/calls/dmCalls.js';
+import { dmCallStore, loadActiveDmCalls } from '../modules/calls/dmCallRepository.js';
 import { createApp } from '../http/app.js';
 import { createWsServer } from '../realtime/socket.js';
 import { describeBlockedMigration, runMigrations } from '../db/migrate.js';
@@ -25,6 +28,24 @@ process.on('unhandledRejection', (err) => {
 process.on('uncaughtException', (err) => {
   log.error('uncaughtException', err);
 });
+
+/** A restart must look like a short network drop to everyone in a call: the media
+ * lives on LiveKit and keeps flowing, so what comes back here is who was in which
+ * call (under the same ids, which are the LiveKit identities). Failing to restore
+ * is not worth refusing to boot — clients fall back to rejoining. */
+async function restoreCalls(): Promise<void> {
+  try {
+    const [presence, dmCalls] = await Promise.all([loadCallPresence(), loadActiveDmCalls()]);
+    const restored = restoreCallParticipants(presence, config.CALL_RESTORE_GRACE_MS);
+    restoreDmCalls(dmCalls);
+    if (restored > 0 || dmCalls.length > 0) log.info('calls restored', { participants: restored, dmCalls: dmCalls.length });
+  } catch (err) {
+    log.error('failed to restore calls', err);
+  }
+  // only after the load: a write before it could delete a row that is about to be restored
+  setCallPresenceStore(callPresenceStore);
+  setDmCallStore(dmCallStore);
+}
 
 export async function bootstrap(): Promise<void> {
   // neither the Docker CMD nor systemd ExecStart go through an npm script —
@@ -52,6 +73,8 @@ export async function bootstrap(): Promise<void> {
     log.error('failed to prepare the uploads folder', err);
     process.exit(1);
   }
+
+  await restoreCalls();
 
   const fastify = createApp();
   // fastify.server (the underlying http.Server) already exists once
@@ -118,6 +141,8 @@ export async function bootstrap(): Promise<void> {
       log.info('shutting down', { signal: sig });
       clearInterval(connectionSyncTimer);
       broadcast({ t: 'server-restart' });
+      // Not removeParticipant: leaving the call for everyone is exactly what a
+      // deploy must not do. The persisted rows are what the next process restores.
       for (const p of participantsMap.values()) { try { p.socket && p.socket.disconnect(true); } catch { /* socket already dying */ } }
       io.close();
       fastify.close().then(() => process.exit(0)).catch(() => process.exit(1));

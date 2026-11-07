@@ -94,6 +94,10 @@ npm run admin:grant -- <your-username>
 - If port `5432` is already in use, stop the other PostgreSQL service or change the host-side port mapping in `docker-compose.dev.yml` and update `DATABASE_URL` to match.
 - If the app cannot connect to PostgreSQL, confirm the container is healthy and that `DATABASE_URL` uses `localhost:5432`, the `linkord` database, and the local credentials above.
 
+## Restarting the server during a call
+
+Restarting the dev server (or deploying) while you are in a call should leave the call running: the clients reconnect and the server restores who was in which call from Postgres (`call_presence`, `dm_calls_active`), waiting `CALL_RESTORE_GRACE_MS` for each client. To try it, join a voice channel with two accounts, stop and start `npm run dev`, and check that both stay connected. Raising `MIN_PROTOCOL_VERSION` in `server/src/realtime/protocolVersion.ts` works against this: open tabs on the old version are refused with `client_outdated`, lose their socket and drop out of the call as far as the server is concerned. Raise it only for a change an old client cannot tolerate.
+
 ## Profile connections and Wall
 
 The Connections settings support URL, MyAnimeList and GitHub connections. Existing profile links migrate as URL connections; adding a service connection requires its username. Connections are self-declared and do not verify ownership. Only widgets explicitly added and saved by the account owner appear on their Wall. Each connection has a "Show on profile" switch (`show_on_profile`, on by default): turned off, the connection stays in the owner's settings but leaves the public links and the Wall, and its saved widgets come back when it is shown again.

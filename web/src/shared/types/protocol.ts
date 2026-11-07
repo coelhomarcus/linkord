@@ -312,6 +312,8 @@ export type ServerMessage =
       unreadByConversation?: Record<string, number>;
       storageUsage: StorageUsage;
       livekitUrl: string;
+      // the call this connection is in server-side; absent from servers that predate it
+      callConversationId?: string | null;
       // absent from servers before protocol 3 (no correlated chat sends)
       protocolVersion?: number;
       dmCall?: DmCallView;

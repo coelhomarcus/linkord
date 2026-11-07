@@ -210,3 +210,49 @@ describe('useCallLifecycle — DM media', () => {
     expect(startCamera).not.toHaveBeenCalled();
   });
 });
+
+describe('useCallLifecycle — reconnecting after the server lost the call', () => {
+  async function connectedTo(conversationId: string) {
+    const harness = setup();
+    await act(async () => { await harness.result.current.joinCall(conversationId); });
+    await act(async () => { harness.result.current.onCallToken({ ...token, conversationId }); });
+    await vi.waitFor(() => expect(harness.result.current.activeCallConversationId).toBe(conversationId));
+    harness.sendWs.mockClear();
+    return harness;
+  }
+
+  it('does nothing when the server still has this connection in the same call', async () => {
+    const { result, sendWs } = await connectedTo('c1');
+    await act(async () => { result.current.reconcileAfterReconnect('c1', () => false); });
+    expect(sendWs).not.toHaveBeenCalled();
+    expect(result.current.activeCallConversationId).toBe('c1');
+  });
+
+  it('does nothing against a server that does not report the call', async () => {
+    const { result, sendWs } = await connectedTo('c1');
+    await act(async () => { result.current.reconcileAfterReconnect(undefined, () => false); });
+    expect(sendWs).not.toHaveBeenCalled();
+  });
+
+  it('does nothing when there is no call to reconcile', async () => {
+    const { result, sendWs } = setup();
+    await act(async () => { result.current.reconcileAfterReconnect(null, () => false); });
+    expect(sendWs).not.toHaveBeenCalledWith({ t: 'call-leave' });
+    expect(sendWs).not.toHaveBeenCalledWith(expect.objectContaining({ t: 'call-join' }));
+  });
+
+  it('joins a voice channel again when the server forgot it', async () => {
+    const { result, sendWs, livekitRoom } = await connectedTo('c1');
+    await act(async () => { result.current.reconcileAfterReconnect(null, () => false); });
+    await vi.waitFor(() => expect(sendWs).toHaveBeenCalledWith({ t: 'call-join', conversationId: 'c1' }));
+    expect(livekitRoom.disconnect).toHaveBeenCalled();
+    expect(sendWs).toHaveBeenCalledWith({ t: 'call-leave' });
+  });
+
+  it('leaves a direct call for good when the server forgot it', async () => {
+    const { result, sendWs } = await connectedTo('dm1');
+    await act(async () => { result.current.reconcileAfterReconnect(null, (id) => id === 'dm1'); });
+    await vi.waitFor(() => expect(result.current.activeCallConversationId).toBeNull());
+    expect(sendWs).not.toHaveBeenCalledWith({ t: 'call-join', conversationId: 'dm1' });
+  });
+});

@@ -84,7 +84,7 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
   const callJoinError = state.callJoinError && state.callJoinError.conversationId === conversation?.id ? state.callJoinError.message : null;
   const inThisCall = !!conversation && activeCallConversationId === conversation.id;
   const inThisDmCall = conversation?.type === 'direct' && activeCallConversationId === conversation.id;
-  const callActionLabel = inThisCall ? t('panel.returnToCall') : t('panel.voiceCall');
+  const callActionLabel = t('panel.voiceCall');
   const dmCallIds = inThisDmCall && conversation ? callParticipantIds(state.me.id, state.participants, conversation.id) : [];
   const dmCallPeers = dmCallIds.map((id) => {
     if (id === state.me.id) return { id, name: state.me.displayName, avatar: state.me.avatar, avatarPoster: state.me.avatarPoster, avatarColor: state.me.avatarColor };
@@ -143,13 +143,16 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
                 </Tooltip>
               ) : (
                 <>
-                  <HeaderIcon label={callActionLabel} onClick={() => startThisCall(false)} className={cn('max-md:hidden', inThisCall && 'text-green hover:text-green')}>
-                    <PhoneIcon size={24} weight="fill" />
-                  </HeaderIcon>
+                  {/* the call pane is already shown above the chat, so there is nothing to return to */}
                   {!inThisCall && (
-                    <HeaderIcon label={t('panel.videoCall')} onClick={() => startThisCall(true)} className="max-md:hidden">
-                      <VideoCameraIcon size={24} weight="fill" />
-                    </HeaderIcon>
+                    <>
+                      <HeaderIcon label={t('panel.voiceCall')} onClick={() => startThisCall(false)} className="max-md:hidden">
+                        <PhoneIcon size={24} weight="fill" />
+                      </HeaderIcon>
+                      <HeaderIcon label={t('panel.videoCall')} onClick={() => startThisCall(true)} className="max-md:hidden">
+                        <VideoCameraIcon size={24} weight="fill" />
+                      </HeaderIcon>
+                    </>
                   )}
                 </>
               )}
@@ -170,7 +173,7 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
                 <MagnifyingGlassIcon size={24} />
               </HeaderIcon>
             </div>
-            {(activeCallConversationId || !isChannel) && <Button type="button" variant="ghost" size="icon" aria-label={activeCallConversationId && activeCallConversationId !== conversation.id ? t('panel.returnToActiveCall') : callBlockedReason ?? callActionLabel} disabled={!activeCallConversationId && !!callBlockedReason} onClick={() => { if (activeCallConversationId && activeCallConversationId !== conversation.id) onOpenCall(activeCallConversationId); else startThisCall(false); }} className="flex-none text-green md:hidden"><PhoneIcon size={22} weight="fill" /></Button>}
+            {(activeCallConversationId || !isChannel) && !inThisDmCall && <Button type="button" variant="ghost" size="icon" aria-label={activeCallConversationId && activeCallConversationId !== conversation.id ? t('panel.returnToActiveCall') : callBlockedReason ?? callActionLabel} disabled={!activeCallConversationId && !!callBlockedReason} onClick={() => { if (activeCallConversationId && activeCallConversationId !== conversation.id) onOpenCall(activeCallConversationId); else startThisCall(false); }} className="flex-none text-green md:hidden"><PhoneIcon size={22} weight="fill" /></Button>}
             {!isChannel && !inThisCall && !callBlockedReason && !activeCallConversationId && <Button type="button" variant="ghost" size="icon" aria-label={t('panel.videoCall')} onClick={() => startThisCall(true)} className="flex-none md:hidden"><VideoCameraIcon size={22} weight="fill" /></Button>}
             <DropdownMenu>
               <DropdownMenuTrigger render={<Button type="button" variant="ghost" size="icon" aria-label={t('panel.moreOptions')} className="flex-none md:hidden" />}><DotsThreeIcon size={22} /></DropdownMenuTrigger>

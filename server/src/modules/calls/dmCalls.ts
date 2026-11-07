@@ -21,6 +21,40 @@ const log = logger.child({ component: 'dm-call' });
 let state: DmCallState = EMPTY_DM_CALLS;
 const timers = new Map<string, NodeJS.Timeout>();
 
+/** Where a live call outlives the process. Injected so this module and its
+ * tests stay free of the database. */
+export interface DmCallStore {
+  save(call: DmCall): Promise<void>;
+  remove(callId: string): Promise<void>;
+}
+
+let store: DmCallStore | null = null;
+export function setDmCallStore(next: DmCallStore | null): void {
+  store = next;
+}
+
+// One queue for all calls: a call's last write must be the one that sticks,
+// and these writes are rare enough that ordering them globally costs nothing.
+let storeQueue: Promise<unknown> = Promise.resolve();
+function persist(task: (target: DmCallStore) => Promise<void>, callId: string): void {
+  const target = store;
+  if (!target) return;
+  storeQueue = storeQueue
+    .then(() => task(target))
+    .catch((err) => log.error('failed to persist a DM call', err, { callId }));
+}
+
+/** Puts the calls a previous process left behind back in play. A ring picks its
+ * timeout up where it was (one past its window ends as missed); an answered call
+ * waits for its two sides to reconnect, and ends through the usual path if they
+ * never do. */
+export function restoreDmCalls(calls: DmCall[]): void {
+  state = { ...state, calls: [...state.calls, ...calls.filter((call) => !state.calls.some((entry) => entry.id === call.id))] };
+  for (const call of calls) {
+    if (call.phase === 'ringing') armTimer(call);
+  }
+}
+
 export interface DmCallView {
   callId: string;
   conversationId: string;
@@ -109,6 +143,7 @@ function apply(step: DmCallStep): DmCallStep {
 
 function dispatch(effect: DmCallEffect): void {
   if (effect.type === 'ended') {
+    persist((target) => target.remove(effect.callId), effect.callId);
     clearTimer(effect.callId);
     clearCallFlags(effect.conversationId, effect.callerId, effect.calleeId);
     const message = { t: 'dm-call-ended', callId: effect.callId, conversationId: effect.conversationId, reason: effect.reason };
@@ -120,6 +155,7 @@ function dispatch(effect: DmCallEffect): void {
     void persistDmCallLine(effect).catch((err) => log.error('failed to record a DM call line', err));
     return;
   }
+  persist((target) => target.save(effect.call), effect.call.id);
   notify(effect.call);
   // An empty DM stays out of history until something real happens. A call is
   // that something: both people need the conversation before anyone answers,
@@ -210,6 +246,11 @@ export function peekDmCallWelcome(participant: Participant): { view: DmCallView;
   const active = activeFor(state, participant.userId);
   const shown = ringing ?? active;
   if (!shown) return null;
+  // A restart forgets which tab placed the ring; the caller's next connection takes the seat,
+  // or accepting would mint a token for a connection that no longer exists.
+  if (ringing && ringing.callerId === participant.userId && !seatTakenByOther(ringing, participant)) {
+    ringing.callerParticipantId = participant.id;
+  }
   const connect = !!active && !anotherTabHolds(participant, active.conversationId) && !seatTakenByOther(active, participant);
   if (connect && active) {
     if (active.callerId === participant.userId) active.callerParticipantId = participant.id;

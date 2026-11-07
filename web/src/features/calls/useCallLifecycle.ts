@@ -117,6 +117,16 @@ export function useCallLifecycle(deps: CallLifecycleDeps) {
     sendWs({ t: 'call-join', conversationId });
   }, [sendWs, leaveCall, dispatch]);
 
+  /** After a socket reconnect: the media may still be up while the server no
+   * longer has this connection in the call (it lost its state, or the grace window
+   * ran out). A voice channel is simply joined again; a direct call cannot be, so
+   * it is left instead of lingering as a room nobody else is in. */
+  const reconcileAfterReconnect = useCallback((serverCallId: string | null | undefined, isDirect: (conversationId: string) => boolean) => {
+    const mine = activeCallConversationIdRef.current;
+    if (serverCallId === undefined || !mine || serverCallId === mine) return;
+    void leaveCall().then(() => { if (!isDirect(mine)) void joinCall(mine); });
+  }, [leaveCall, joinCall]);
+
   const leaveCallRef = useRef(leaveCall);
   useEffect(() => { leaveCallRef.current = leaveCall; }, [leaveCall]);
 
@@ -305,6 +315,6 @@ export function useCallLifecycle(deps: CallLifecycleDeps) {
   return {
     audioUnlocked, deafened, toggleDeafened, preferMuted, setPreferMuted, reconnecting,
     activeCallConversationId, joinCall, leaveCall, armDmMedia, dropPendingCall, kickFromCall, moveToCall,
-    onCallToken, onCallMoved, onConversationDeleted, onCallJoinRejected, syncLocalMedia,
+    onCallToken, onCallMoved, onConversationDeleted, onCallJoinRejected, syncLocalMedia, reconcileAfterReconnect,
   };
 }

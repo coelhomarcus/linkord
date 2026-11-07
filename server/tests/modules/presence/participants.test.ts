@@ -4,7 +4,8 @@ import { config } from '../../../src/config/env.js';
 import type { AppSocket, Participant } from '../../../src/types.js';
 import {
   participants, join, removeParticipant, handleClose, isUserOnline, setCallConversationId, publicParticipant,
-  broadcastToKnownPeers, handlers,
+  broadcastToKnownPeers, handlers, restoreCallParticipants, setCallPresenceStore,
+  type CallPresenceStore, type RestorableCallParticipant,
 } from '../../../src/modules/presence/participants.js';
 
 // These tests only need the participant, so keep the caller's assertions concise.
@@ -426,5 +427,153 @@ describe('broadcastToKnownPeers (presence scoping)', () => {
     tab2.emitted.length = 0;
     broadcastToKnownPeers(userId, { t: 'participant-updated' });
     assert.ok(tab2.emitted.includes('participant-updated'));
+  });
+});
+
+function restorable(overrides: Partial<RestorableCallParticipant> & { userId?: string } = {}): RestorableCallParticipant {
+  const userId = overrides.userId ?? `u-${Math.random()}`;
+  return {
+    id: overrides.id ?? `restored-${Math.random()}`,
+    token: overrides.token ?? 'saved-token',
+    conversationId: overrides.conversationId ?? 'voice-1',
+    deafened: overrides.deafened ?? false,
+    profile: {
+      userId, username: userId, displayName: 'Restored', avatar: '', avatarPoster: '', avatarColor: 'blurple',
+      banner: '', bannerPoster: '', bio: '', profileLinks: [], role: 'user',
+    },
+  };
+}
+
+describe('restoreCallParticipants (a restart looks like a dropped connection)', () => {
+  test('rebuilds the participant in the grace window with the saved identity and call', () => {
+    const entry = restorable({ deafened: true });
+    createdIds.push(entry.id);
+
+    assert.equal(restoreCallParticipants([entry], 60_000), 1);
+    const ghost = participants.get(entry.id)!;
+    assert.equal(ghost.socket, null);
+    assert.equal(ghost.callConversationId, 'voice-1');
+    assert.equal(ghost.deafened, true);
+    assert.equal(ghost.displayName, 'Restored');
+    assert.ok(ghost.graceTimer);
+    assert.equal(isUserOnline(ghost.userId), false);
+  });
+
+  test('the client resumes it with the saved id and token, keeping the call', () => {
+    const entry = restorable();
+    createdIds.push(entry.id);
+    restoreCallParticipants([entry], 60_000);
+
+    const socket = fakeSocket(entry.profile.userId);
+    const resumed = joinP(socket, { id: entry.id, token: entry.token })!;
+
+    assert.equal(resumed.id, entry.id);
+    assert.equal(resumed.socket, socket);
+    assert.equal(resumed.graceTimer, null);
+    assert.equal(resumed.callConversationId, 'voice-1');
+  });
+
+  test('another account cannot resume it, and a wrong token does not either', () => {
+    const entry = restorable();
+    createdIds.push(entry.id);
+    restoreCallParticipants([entry], 60_000);
+
+    const stranger = joinP(fakeSocket(`u-${Math.random()}`), { id: entry.id, token: entry.token })!;
+    createdIds.push(stranger.id);
+    assert.notEqual(stranger.id, entry.id);
+
+    const wrongToken = joinP(fakeSocket(entry.profile.userId), { id: entry.id, token: 'nope' })!;
+    createdIds.push(wrongToken.id);
+    assert.notEqual(wrongToken.id, entry.id);
+  });
+
+  test('a fresh join of the same account does not evict the ghost still waiting for its client', () => {
+    const entry = restorable();
+    createdIds.push(entry.id);
+    restoreCallParticipants([entry], 60_000);
+
+    const otherTab = joinP(fakeSocket(entry.profile.userId), {})!;
+    createdIds.push(otherTab.id);
+
+    assert.ok(participants.has(entry.id));
+  });
+
+  test('is removed once the grace runs out without a resume', async () => {
+    const entry = restorable();
+    createdIds.push(entry.id);
+    restoreCallParticipants([entry], 10);
+
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    assert.equal(participants.has(entry.id), false);
+  });
+
+  test('does not replace a participant that is already there', () => {
+    const entry = restorable();
+    createdIds.push(entry.id);
+    restoreCallParticipants([entry], 60_000);
+    assert.equal(restoreCallParticipants([entry], 60_000), 0);
+  });
+});
+
+describe('call membership persistence', () => {
+  function recordingStore() {
+    const events: string[] = [];
+    const store: CallPresenceStore = {
+      save: async (p) => { events.push(`save:${p.id}:${p.callConversationId}:${p.deafened}`); },
+      remove: async (id) => { events.push(`remove:${id}`); },
+    };
+    return { events, store };
+  }
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 10));
+
+  test('each change is written as the state it ends up in, and a real removal forgets the connection last', async () => {
+    const { events, store } = recordingStore();
+    setCallPresenceStore(store);
+    try {
+      const p = joinP(fakeSocket(`u-${Math.random()}`), {})!;
+      createdIds.push(p.id);
+      setCallConversationId(p, 'voice-1');
+      await settle();
+      assert.deepEqual(events, [`save:${p.id}:voice-1:false`]);
+
+      handlers.deafened!(p.socket!, { value: true });
+      await settle();
+      assert.equal(events.at(-1), `save:${p.id}:voice-1:true`);
+
+      setCallConversationId(p, null);
+      removeParticipant(p);
+      await settle();
+      assert.equal(events.at(-2), `save:${p.id}:null:true`);
+      assert.equal(events.at(-1), `remove:${p.id}`);
+    } finally {
+      setCallPresenceStore(null);
+    }
+  });
+
+  test('deafening outside a call is not written', async () => {
+    const { events, store } = recordingStore();
+    setCallPresenceStore(store);
+    try {
+      const p = joinP(fakeSocket(`u-${Math.random()}`), {})!;
+      createdIds.push(p.id);
+      handlers.deafened!(p.socket!, { value: true });
+      await settle();
+      assert.deepEqual(events, []);
+    } finally {
+      setCallPresenceStore(null);
+    }
+  });
+
+  test('a failing store never breaks the call path', async () => {
+    setCallPresenceStore({ save: async () => { throw new Error('db down'); }, remove: async () => { throw new Error('db down'); } });
+    try {
+      const p = joinP(fakeSocket(`u-${Math.random()}`), {})!;
+      createdIds.push(p.id);
+      assert.doesNotThrow(() => setCallConversationId(p, 'voice-1'));
+      await settle();
+      assert.equal(p.callConversationId, 'voice-1');
+    } finally {
+      setCallPresenceStore(null);
+    }
   });
 });
