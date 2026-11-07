@@ -101,6 +101,28 @@ describe('useSocketConnection', () => {
     expect(refreshAuth).toHaveBeenCalledTimes(1);
   });
 
+  it('reconnects on its own when the server disconnects it for a restart', () => {
+    const { dispatch } = setup();
+    fake.handlers.get('server-restart')!({ t: 'server-restart' });
+    fake.handlers.get('disconnect')!('io server disconnect');
+    expect(dispatch).toHaveBeenCalledWith({ type: 'SET_RECONNECTING', value: true });
+    expect(fake.connect).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not fight another tab for the same identity: a server disconnect without a restart notice waits', () => {
+    setup();
+    fake.handlers.get('disconnect')!('io server disconnect');
+    expect(fake.connect).not.toHaveBeenCalled();
+  });
+
+  it('a restart notice is spent once the socket is back', () => {
+    setup();
+    fake.handlers.get('server-restart')!({ t: 'server-restart' });
+    fake.handlers.get('connect')!();
+    fake.handlers.get('disconnect')!('io server disconnect');
+    expect(fake.connect).not.toHaveBeenCalled();
+  });
+
   it('lets the user retry immediately', () => {
     const { result } = setup();
     act(() => result.current.retryConnection());

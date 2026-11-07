@@ -1,6 +1,6 @@
 import { syncConnections } from '../modules/connections/syncWorker.js';
 import { config } from '../config/env.js';
-import { participants as participantsMap, broadcast, restoreCallParticipants, setCallPresenceStore } from '../modules/presence/participants.js';
+import { broadcast, restoreCallParticipants, setCallPresenceStore } from '../modules/presence/participants.js';
 import { callPresenceStore, loadCallPresence } from '../modules/presence/callPresenceRepository.js';
 import { restoreDmCalls, setDmCallStore } from '../modules/calls/dmCalls.js';
 import { dmCallStore, loadActiveDmCalls } from '../modules/calls/dmCallRepository.js';
@@ -143,7 +143,11 @@ export async function bootstrap(): Promise<void> {
       broadcast({ t: 'server-restart' });
       // Not removeParticipant: leaving the call for everyone is exactly what a
       // deploy must not do. The persisted rows are what the next process restores.
-      for (const p of participantsMap.values()) { try { p.socket && p.socket.disconnect(true); } catch { /* socket already dying */ } }
+      // Not socket.disconnect() either: behind the proxy its disconnect packet
+      // reaches the browser, and a Socket.IO client never reconnects on its own
+      // after one ("io server disconnect"), so tabs sat offline until focused.
+      // io.close() only drops the transports, which every client (old builds
+      // included) treats as a network drop and reconnects from.
       io.close();
       fastify.close().then(() => process.exit(0)).catch(() => process.exit(1));
       setTimeout(() => process.exit(0), 3000).unref();
