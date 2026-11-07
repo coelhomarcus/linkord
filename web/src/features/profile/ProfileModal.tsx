@@ -12,17 +12,20 @@ import { ProfileCard } from './ProfileCard';
 import { ReportDialog } from '@/features/reports/ReportDialog';
 import { ProfileConnections } from './ProfileConnections';
 import { ProfileSidebar } from './ProfileSidebar';
+import type { ProfileTab } from './ProfileSidebar';
 import { formatProfileDate, useProfileDetails } from './useProfileDetails';
 
 interface ProfileModalProps {
   userId: string | null;
+  /** the tab it opens on; another profile opened from inside it starts on the wall */
+  initialTab?: ProfileTab;
   onClose: () => void;
   /** opens another profile in this same modal (a friend in common) */
   onOpenProfile: (userId: string) => void;
 }
 
 /** Fetch uncached profiles on demand, such as authors of older messages who have left the conversation. */
-export function ProfileModal({ userId, onClose, onOpenProfile }: ProfileModalProps) {
+export function ProfileModal({ userId, initialTab, onClose, onOpenProfile }: ProfileModalProps) {
   const { t } = useTranslation('profile');
   const { state, allUsers, onlineUserIds } = useRoom();
   const navigate = useNavigate();
@@ -136,6 +139,7 @@ export function ProfileModal({ userId, onClose, onOpenProfile }: ProfileModalPro
                 key={user.id}
                 userId={user.id}
                 owner={owner}
+                initialTab={initialTab}
                 status={details.status}
                 details={details.details}
                 onRetry={details.retry}

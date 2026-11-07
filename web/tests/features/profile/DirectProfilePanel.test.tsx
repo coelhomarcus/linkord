@@ -38,8 +38,8 @@ describe('DirectProfilePanel', () => {
     expect(screen.getByText('bea').parentElement?.querySelector('svg')).toBeInTheDocument();
     expect(screen.getByLabelText('Online')).toBeInTheDocument();
     expect(await screen.findByText('4 de mai. de 2023')).toBeInTheDocument();
-    expect(screen.getByText('1 servidor em comum')).toBeInTheDocument();
-    expect(screen.getByText('1 amigo em comum')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '1 servidor em comum' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '1 amigo em comum' })).toBeInTheDocument();
   });
 
   it('never shows when the user was last online, only whether they are online now', async () => {
@@ -59,5 +59,15 @@ describe('DirectProfilePanel', () => {
     expect(onOpenProfile).toHaveBeenCalledWith('u-luis');
     await user.click(screen.getByRole('button', { name: 'Ver perfil completo' }));
     expect(onOpenProfile).toHaveBeenCalledWith('u-bea');
+  });
+
+  it('the mutuals line under the name opens the full profile on what you have in common', async () => {
+    const onOpenProfile = vi.fn();
+    renderWithRoom(<MemoryRouter><DirectProfilePanel user={bea} onOpenProfile={onOpenProfile} /></MemoryRouter>);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: '1 amigo mútuo' }));
+    expect(onOpenProfile).toHaveBeenLastCalledWith('u-bea', 'common');
+    await user.click(screen.getByRole('button', { name: '1 servidor em comum' }));
+    expect(onOpenProfile).toHaveBeenLastCalledWith('u-bea', 'common');
   });
 });

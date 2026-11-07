@@ -122,6 +122,13 @@ describe('ProfileModal — since when and what you have in common', () => {
     expect(tabs[0]).toHaveAttribute('aria-selected', 'true');
   });
 
+  it('opens straight on the shared tab when asked to', async () => {
+    mocked.fetchProfileDetails.mockResolvedValue(details);
+    renderProfile({}, { initialTab: 'common' });
+    expect(await screen.findByRole('tab', { name: 'Em comum' })).toHaveAttribute('aria-selected', 'true');
+    expect(await screen.findByRole('button', { name: /Luis/ })).toBeVisible();
+  });
+
   it('a friend in common opens their own profile', async () => {
     mocked.fetchProfileDetails.mockResolvedValue(details);
     const { onOpenProfile } = renderProfile();

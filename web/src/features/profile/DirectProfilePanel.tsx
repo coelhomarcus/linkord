@@ -9,14 +9,16 @@ import { useRoom } from '@/state/RoomContext';
 import { ServerIcon } from '@/features/servers/ServerIcon';
 import type { PublicUser } from '@/shared/types/protocol';
 import { bannerStyle } from './profileLinks';
+import type { ProfileTab } from './ProfileSidebar';
 import { formatProfileDate, useProfileDetails } from './useProfileDetails';
 
 const SHOWN_MUTUALS = 5;
 const SECTION = 'flex flex-col gap-1';
+const MUTUAL_LINK = 'rounded-sm hover:text-text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
 /** The profile beside a DM, as Discord draws it: banner, avatar, bio, since
  * when, and what you have in common, with the full profile one click away. */
-export function DirectProfilePanel({ user, onOpenProfile }: { user: PublicUser; onOpenProfile: (userId: string) => void }) {
+export function DirectProfilePanel({ user, onOpenProfile }: { user: PublicUser; onOpenProfile: (userId: string, tab?: ProfileTab) => void }) {
   const { t } = useTranslation('profile');
   const navigate = useNavigate();
   const { onlineUserIds } = useRoom();
@@ -47,6 +49,21 @@ export function DirectProfilePanel({ user, onOpenProfile }: { user: PublicUser; 
             <AtIcon size={14} aria-hidden className="flex-none" />
             <span className="truncate">{user.username}</span>
           </p>
+          {((friends?.total ?? 0) > 0 || (servers?.total ?? 0) > 0) && (
+            <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-caption text-text-secondary">
+              {friends && friends.total > 0 && (
+                <button type="button" onClick={() => onOpenProfile(user.id, 'common')} className={MUTUAL_LINK}>
+                  {t('mutuals.friends', { count: friends.total })}
+                </button>
+              )}
+              {friends && friends.total > 0 && servers && servers.total > 0 && <span aria-hidden>•</span>}
+              {servers && servers.total > 0 && (
+                <button type="button" onClick={() => onOpenProfile(user.id, 'common')} className={MUTUAL_LINK}>
+                  {t('mutuals.servers', { count: servers.total })}
+                </button>
+              )}
+            </p>
+          )}
         </div>
         <div className="mt-4 flex flex-col gap-4">
           <section className="flex flex-col gap-3">
