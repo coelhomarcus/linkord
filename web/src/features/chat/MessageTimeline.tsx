@@ -510,7 +510,7 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
           style={{ bottom: bottomPadding + 16 }}
           className="absolute left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-label font-medium text-primary-foreground shadow-popover"
         >
-          <ArrowDownIcon size={14} />
+          <ArrowDownIcon size={14} weight="fill" />
           {pill.label}
         </button>
       )}

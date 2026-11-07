@@ -69,9 +69,9 @@ function LoginForm({ onForgotPassword }: { onForgotPassword: () => void }) {
         onChange={setPassword}
       />
       <Button type="submit" size="lg" className="mt-1 h-11 w-full" disabled={pending || !username || !password}>
-        {pending ? <CircleNotchIcon size={20} className="animate-spin" /> : <SignInIcon size={20} />}
+        {pending ? <CircleNotchIcon size={20} className="animate-spin" /> : <SignInIcon size={20} weight="fill" />}
         <span>{pending ? t('login.pending') : t('login.submit')}</span>
-        {!pending && <ArrowRightIcon size={20} className="ml-auto" />}
+        {!pending && <ArrowRightIcon size={20} weight="fill" className="ml-auto" />}
       </Button>
       <button type="button" onClick={onForgotPassword} className="self-center text-label text-text-muted transition-colors hover:text-text-primary">
         {t('login.forgot')}
@@ -181,9 +181,9 @@ function RegisterForm() {
         reserveErrorLine
       />
       <Button type="submit" size="lg" className="mt-1 h-11 w-full" disabled={pending || !username || !email || !password || !code}>
-        {pending ? <CircleNotchIcon size={20} className="animate-spin" /> : <UserPlusIcon size={20} />}
+        {pending ? <CircleNotchIcon size={20} className="animate-spin" /> : <UserPlusIcon size={20} weight="fill" />}
         <span>{pending ? t('register.pending') : t('register.submit')}</span>
-        {!pending && <ArrowRightIcon size={20} className="ml-auto" />}
+        {!pending && <ArrowRightIcon size={20} weight="fill" className="ml-auto" />}
       </Button>
       {formError && <ErrorBanner>{formError}</ErrorBanner>}
     </form>
@@ -253,9 +253,9 @@ function RecoveryForm({ onBack }: { onBack: () => void }) {
           <AuthField id="recoveryUsername" label={t('fields.username')} autoFocus autoComplete="username" leftIcon={<UserIcon size={20} />} value={identifierValue} onChange={setIdentifierValue} />
         )}
         <Button type="submit" size="lg" className="h-11 w-full" disabled={pending || !identifierValue}>
-          {pending ? <CircleNotchIcon size={20} className="animate-spin" /> : <EnvelopeIcon size={20} />}
+          {pending ? <CircleNotchIcon size={20} className="animate-spin" /> : <EnvelopeIcon size={20} weight="fill" />}
           <span>{pending ? t('recovery.sending') : t('recovery.sendCode')}</span>
-          {!pending && <ArrowRightIcon size={20} className="ml-auto" />}
+          {!pending && <ArrowRightIcon size={20} weight="fill" className="ml-auto" />}
         </Button>
         {message && <ErrorBanner>{message}</ErrorBanner>}
         <button type="button" onClick={onBack} className="flex items-center justify-center gap-1.5 text-label text-text-muted hover:text-text-primary"><ArrowLeftIcon size={16} /> {t('recovery.backToLogin')}</button>
@@ -285,7 +285,7 @@ function RecoveryForm({ onBack }: { onBack: () => void }) {
       />
       <AuthField id="recoveryPassword" label={t('fields.newPassword')} type="password" autoComplete="new-password" leftIcon={<LockIcon size={20} />} value={password} onChange={setPassword} placeholder={t('placeholders.password')} />
       <Button type="button" size="lg" className="h-11 w-full" disabled={pending || code.length !== 6 || password.length < 8} onClick={() => void submitReset()}>
-        {pending ? <CircleNotchIcon size={20} className="animate-spin" /> : status === 'success' ? <CheckCircleIcon size={20} /> : <LockIcon size={20} />}
+        {pending ? <CircleNotchIcon size={20} className="animate-spin" /> : status === 'success' ? <CheckCircleIcon size={20} weight="fill" /> : <LockIcon size={20} weight="fill" />}
         <span>{pending ? t('recovery.saving') : status === 'success' ? t('recovery.resetDone') : t('recovery.reset')}</span>
       </Button>
       {status === 'success' ? (

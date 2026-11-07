@@ -167,7 +167,7 @@ function Roles({ server }: { server: ServerSummary }) {
             <Input value={query} onChange={(event) => setQuery(event.target.value)} aria-label={t('roles.search')} placeholder={t('roles.search')} className="pl-8" />
           </div>
           <Button type="button" variant={creating ? 'secondary' : 'default'} className="mb-2" onClick={() => { setCreating((value) => !value); setNewRoleName(''); }}>
-            {creating ? <XIcon size={16} /> : <PlusIcon size={16} />} {creating ? t('cancel') : t('roles.create')}
+            {creating ? <XIcon size={16} /> : <PlusIcon size={16} weight="fill" />} {creating ? t('cancel') : t('roles.create')}
           </Button>
           {creating && (
             <form className="mb-2 flex flex-col gap-2 rounded-lg border border-border-subtle p-2" onSubmit={(event) => {

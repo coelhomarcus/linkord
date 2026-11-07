@@ -161,7 +161,7 @@ export function EmailSettings({ currentEmail }: { currentEmail: string | null })
             />
           </div>
           <Button type="button" size="lg" disabled={pending} onClick={() => void handleRequest()}>
-            {pending ? <CircleNotchIcon size={20} className="animate-spin" /> : <EnvelopeIcon size={20} />}
+            {pending ? <CircleNotchIcon size={20} className="animate-spin" /> : <EnvelopeIcon size={20} weight="fill" />}
             <span>{pending ? t('email.sending') : t('email.sendCode')}</span>
           </Button>
         </div>
@@ -190,7 +190,7 @@ export function EmailSettings({ currentEmail }: { currentEmail: string | null })
       />
       <div className="flex flex-wrap items-center gap-2">
         <Button type="button" size="sm" disabled={pending || code.length !== 6} onClick={() => void handleConfirm()}>
-          {pending ? <CircleNotchIcon size={20} className="animate-spin" /> : <CheckIcon size={20} />}
+          {pending ? <CircleNotchIcon size={20} className="animate-spin" /> : <CheckIcon size={20} weight="fill" />}
           <span>{pending ? t('email.confirming') : t('email.confirm')}</span>
         </Button>
         <Button type="button" variant="ghost" size="sm" disabled={pending} onClick={() => void handleResend()}>
