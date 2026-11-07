@@ -6,7 +6,6 @@ export const LOCAL_STORAGE_KEYS = {
   lastChannel: (serverId: string) => `ss-last-channel:${serverId}` as const,
   collapsedCategories: (serverId: string) => `ss-collapsed-categories:${serverId}` as const,
   shareQuality: 'ss-share-quality',
-  sidebarCollapsed: 'ss-sidebar-collapsed',
   notificationsEnabled: 'ss-notifications-enabled',
   compressImages: 'ss-compress-images',
   callVolumes: 'ss-call-volumes',
@@ -56,3 +55,15 @@ export const localStorageStore = {
     }
   },
 };
+
+/** Older builds saved a desktop collapse flag. The column no longer collapses,
+ * and a leftover `'1'` hid it with no control to open it again. */
+const LEGACY_SIDEBAR_COLLAPSED = 'ss-sidebar-collapsed';
+
+export function discardLegacySidebarCollapsed(): void {
+  try {
+    window.localStorage.removeItem(LEGACY_SIDEBAR_COLLAPSED);
+  } catch {
+    // Persistent preferences are best-effort when browser storage is blocked.
+  }
+}

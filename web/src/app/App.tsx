@@ -58,7 +58,6 @@ import { rightPanelsVisible } from '@/app/rightPanels';
 import { isJoiningStage } from '@/app/stageJoin';
 import { i18n } from '@/shared/i18n/init';
 import { SidebarInset, SidebarProvider } from '@/shared/ui/motion/sidebar';
-import { loadSidebarCollapsed, saveSidebarCollapsed } from '@/shared/hooks/useSidebarCollapsedPreference';
 import { loadMemberListOpen, saveMemberListOpen } from '@/features/servers/memberListPreference';
 import { TooltipProvider } from '@/shared/ui/primitives/tooltip';
 
@@ -132,11 +131,6 @@ function Shell() {
   const [mediaOpen, setMediaOpen] = useState(false);
   const pendingStageRef = useRef<string | null>(null);
 
-  const [sidebarOpen, setSidebarOpenState] = useState(() => !loadSidebarCollapsed());
-  const setSidebarOpen = useCallback((next: boolean) => {
-    setSidebarOpenState(next);
-    saveSidebarCollapsed(!next);
-  }, []);
   const setMemberListPreference = (open: boolean) => {
     setMemberListOpen(open);
     saveMemberListOpen(open);
@@ -310,8 +304,6 @@ function Shell() {
       <div className="flex h-full min-h-0 flex-col bg-surface-rail">
       <TopBar className="hidden md:flex" title={tabTitle === APP_TITLE ? undefined : activeConversationName} server={currentServer} />
       <SidebarProvider
-        open={sidebarOpen}
-        onOpenChange={setSidebarOpen}
         openMobile={mobileShowSidebar}
         onOpenMobileChange={setMobileShowSidebar}
         className="relative min-h-0 flex-1 bg-surface-rail text-text-primary [--surface-base:var(--color-surface-app)] max-md:pt-[env(safe-area-inset-top)]"
