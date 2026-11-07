@@ -42,9 +42,9 @@ function CategoryPage({ tab, onOpenProfile }: { tab: SettingsTab; onOpenProfile:
   }
 }
 
-/** Discord's user settings: wide, a column of categories growing from the
- * left edge, the open one in a 740px page beside it and the round ESC button
- * after it; narrow, an index of categories that opens one at a time. */
+/** Discord's user settings, inside the settings modal: wide, a column of
+ * categories beside the open one and the round ESC button after it; narrow,
+ * an index of categories that opens one at a time. */
 export function SettingsPage({ onOpenProfile }: SettingsPageProps) {
   const { t } = useTranslation('settings');
   const { state } = useRoom();
@@ -107,13 +107,13 @@ export function SettingsPage({ onOpenProfile }: SettingsPageProps) {
   function wide() {
     return (
       <div className="flex min-h-0 min-w-0 flex-1">
-        <div className="scrollbar-none flex flex-[1_0_218px] justify-end overflow-y-auto">
+        <div className="scrollbar-none flex flex-none overflow-y-auto border-r border-border-subtle">
           <SettingsSidebar active={current} isAdmin={isAdmin} onOpenProfile={onOpenProfile} />
         </div>
         {/* a stable gutter: a short page and a scrolling one keep the column in the same place */}
-        <main ref={scrollerRef} aria-label={t(category.labelKey)} className="@container flex min-h-0 min-w-0 flex-[1_1_800px] overflow-y-auto [scrollbar-gutter:stable]">
+        <main ref={scrollerRef} aria-label={t(category.labelKey)} className="@container flex min-h-0 min-w-0 flex-1 overflow-y-auto [scrollbar-gutter:stable]">
           {page}
-          {closeModal && <EscCloseButton onClose={closeModal} />}
+          {closeModal && <EscCloseButton onClose={closeModal} className="pt-8" />}
         </main>
       </div>
     );

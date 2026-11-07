@@ -4,10 +4,10 @@ import type { ComponentProps, ReactNode, Ref } from 'react';
 import { AppLink } from '@/shared/ui/app-link';
 import { cn } from '@/shared/lib/utils';
 
-/** The page column: Discord's 740px, starting 60px from the top in the wide
- * layout. Padding follows the settings area (container queries), not the window. */
+/** The page column, at most Discord's 740px. Padding follows the settings
+ * area (container queries), not the window. */
 export function SettingsContent({ className, ...props }: ComponentProps<'div'>) {
-  return <div className={cn('w-full min-w-0 max-w-[740px] px-4 pb-20 pt-6 @[520px]:px-6 @[960px]:px-10 @[960px]:pt-[60px]', className)} {...props} />;
+  return <div className={cn('w-full min-w-0 max-w-[740px] px-4 pb-16 pt-6 @[520px]:px-8 @[520px]:pt-8', className)} {...props} />;
 }
 
 /** The category's name, kept for screen readers and as the focus target when
