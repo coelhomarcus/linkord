@@ -110,12 +110,12 @@ describe('ProfileModal — since when and what you have in common', () => {
     expect(screen.queryByText('Amigos desde')).not.toBeInTheDocument();
   });
 
-  it('puts the Wall first beside the mutual tabs and keeps the profile card visible', async () => {
+  it('puts the Wall first beside the shared tab and keeps the profile card visible', async () => {
     mocked.fetchProfileDetails.mockResolvedValue(details);
     renderProfile();
-    await screen.findByRole('tab', { name: '2 servidores em comum' });
+    await screen.findByRole('tab', { name: 'Em comum' });
     const tabs = within(screen.getByRole('tablist', { name: 'Abas do perfil' })).getAllByRole('tab');
-    expect(tabs.map((t) => t.textContent)).toEqual(['Mural', '2 servidores em comum', '1 amigo mútuo']);
+    expect(tabs.map((t) => t.textContent)).toEqual(['Mural', 'Em comum']);
     expect(screen.getAllByRole('tablist')).toHaveLength(1);
     expect(screen.queryByRole('tab', { name: 'Sobre' })).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Marcus' })).toBeInTheDocument();
@@ -126,31 +126,33 @@ describe('ProfileModal — since when and what you have in common', () => {
     mocked.fetchProfileDetails.mockResolvedValue(details);
     const { onOpenProfile } = renderProfile();
     const interaction = userEvent.setup();
-    await interaction.click(await screen.findByRole('tab', { name: '1 amigo mútuo' }));
+    await interaction.click(await screen.findByRole('tab', { name: 'Em comum' }));
     const friend = screen.getByRole('button', { name: /Luis/ });
     expect(friend).toHaveTextContent('@luis · online');
     await interaction.click(friend);
     expect(onOpenProfile).toHaveBeenCalledWith('f1');
   });
 
-  it('a server in common opens it and closes the profile', async () => {
+  it('lists servers and friends in the same tab, and a server opens it', async () => {
     mocked.fetchProfileDetails.mockResolvedValue(details);
     const { onClose } = renderProfile();
     const interaction = userEvent.setup();
-    await interaction.click(await screen.findByRole('tab', { name: '2 servidores em comum' }));
-    expect(screen.getByRole('tab', { name: '2 servidores em comum' })).toHaveAttribute('aria-selected', 'true');
-    const panel = screen.getByRole('tabpanel', { name: '2 servidores em comum' });
+    await interaction.click(await screen.findByRole('tab', { name: 'Em comum' }));
+    expect(screen.getByRole('tab', { name: 'Em comum' })).toHaveAttribute('aria-selected', 'true');
+    const panel = screen.getByRole('tabpanel', { name: 'Em comum' });
+    expect(within(panel).getByRole('heading', { name: 'Servidores em comum' })).toBeInTheDocument();
+    expect(within(panel).getByRole('heading', { name: 'Amigos mútuos' })).toBeInTheDocument();
     expect(within(panel).getByText('5 membros')).toBeInTheDocument();
     expect(within(panel).getByText('1 membro')).toBeInTheDocument();
+    expect(within(panel).getByRole('button', { name: /Luis/ })).toBeInTheDocument();
     await interaction.click(within(panel).getByRole('button', { name: /os xerecas/ }));
     expect(onClose).toHaveBeenCalled();
   });
 
   it('says so when there is nothing in common', async () => {
     renderProfile();
-    await userEvent.setup().click(await screen.findByRole('tab', { name: '0 servidores em comum' }));
+    await userEvent.setup().click(await screen.findByRole('tab', { name: 'Em comum' }));
     expect(screen.getByText('Nenhum servidor em comum.')).toBeInTheDocument();
-    await userEvent.setup().click(screen.getByRole('tab', { name: '0 amigos mútuos' }));
     expect(screen.getByText('Nenhum amigo mútuo.')).toBeInTheDocument();
   });
 
@@ -159,7 +161,8 @@ describe('ProfileModal — since when and what you have in common', () => {
     expect(await screen.findByText('Membro desde')).toBeInTheDocument();
     expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Mural']);
     expect(screen.getByRole('tab', { name: 'Mural' })).toHaveAttribute('aria-selected', 'true');
-    expect(await screen.findByRole('button', { name: 'Editar Mural' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Adicionar widget' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Seus Widgets' })).toBeInTheDocument();
     expect(screen.queryByText(/servidores em comum|amigos mútuos/i)).not.toBeInTheDocument();
     expect(vi.mocked(wallApi.fetchWall)).toHaveBeenCalledWith('u1', true, expect.any(AbortSignal));
   });
@@ -208,10 +211,10 @@ describe('ProfileModal — since when and what you have in common', () => {
   it('a failed load offers to try again', async () => {
     mocked.fetchProfileDetails.mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce(details);
     renderProfile();
-    await userEvent.setup().click(screen.getByRole('tab', { name: 'Servidores em comum' }));
+    await userEvent.setup().click(screen.getByRole('tab', { name: 'Em comum' }));
     const retry = await screen.findByRole('button', { name: 'Tentar de novo' });
     await userEvent.setup().click(retry);
-    expect(await screen.findByRole('tab', { name: '1 amigo mútuo' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /Luis/ })).toBeInTheDocument();
   });
 
   it('keeps the Wall available when mutual details cannot be loaded', async () => {
@@ -233,29 +236,29 @@ describe('ProfileModal — since when and what you have in common', () => {
       state: me, allUsers: new Map([[user.id, user], [friend.id, friend]]),
     });
     const interaction = userEvent.setup();
-    await interaction.click(await screen.findByRole('tab', { name: '1 amigo mútuo' }));
+    await interaction.click(await screen.findByRole('tab', { name: 'Em comum' }));
     await interaction.click(screen.getByRole('button', { name: /Luis/ }));
     expect(await screen.findByRole('heading', { name: 'Luis' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Mural' })).toHaveAttribute('aria-selected', 'true');
   });
 
-  it('supports keyboard navigation from the Wall to mutual servers', async () => {
+  it('supports keyboard navigation from the Wall to what you have in common', async () => {
     mocked.fetchProfileDetails.mockResolvedValue(details);
     renderProfile();
-    await screen.findByRole('tab', { name: '2 servidores em comum' });
+    await screen.findByRole('tab', { name: 'Em comum' });
     const interaction = userEvent.setup();
     await interaction.click(screen.getByRole('tab', { name: 'Mural' }));
     await interaction.keyboard('{ArrowRight}');
-    expect(screen.getByRole('tab', { name: '2 servidores em comum' })).toHaveFocus();
+    expect(screen.getByRole('tab', { name: 'Em comum' })).toHaveFocus();
     await interaction.keyboard('{Enter}');
-    expect(screen.getByRole('tab', { name: '2 servidores em comum' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Em comum' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('heading', { name: 'Marcus' })).toBeInTheDocument();
   });
 
   it('the side panel is always there: nothing hides it', async () => {
     mocked.fetchProfileDetails.mockResolvedValue(details);
     renderProfile();
-    expect(await screen.findByRole('tab', { name: '1 amigo mútuo' })).toBeInTheDocument();
+    expect(await screen.findByRole('tab', { name: 'Em comum' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /amigos e servidores em comum/ })).not.toBeInTheDocument();
   });
 });

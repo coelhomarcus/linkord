@@ -3,7 +3,7 @@ import * as livekit from '../../integrations/livekit/livekit.js';
 import { logger } from '../../lib/logger.js';
 import { ERROR_CODES } from '../../http/errors.js';
 import type { AppSocket, HandlerTable, Participant } from '../../types.js';
-import { getConversationForUser, getDirectPeerId } from '../conversations/conversationsRepository.js';
+import { getConversationForUser, getDirectPeerId, touchConversation } from '../conversations/conversationsRepository.js';
 import { canSendDirectMessage } from '../friendships/friendshipsRepository.js';
 import { PERMISSIONS } from '../servers/permissions.js';
 import {
@@ -11,7 +11,7 @@ import {
 } from '../presence/participants.js';
 import {
   EMPTY_DM_CALLS, RING_MS, acceptDmCall, activeFor, callBetween, cancelDmCall, declineDmCall, failDmCall,
-  leaveDmCall, missDmCall, ringingFor, startDmCall,
+  dmCallRevealsHistory, leaveDmCall, missDmCall, ringingFor, startDmCall,
   type DmCall, type DmCallEffect, type DmCallEndReason, type DmCallState, type DmCallStep,
 } from './dmCallMachine.js';
 import { persistDmCallLine } from './dmCallLog.js';
@@ -121,6 +121,12 @@ function dispatch(effect: DmCallEffect): void {
     return;
   }
   notify(effect.call);
+  // An empty DM stays out of history until something real happens. A call is
+  // that something: both people need the conversation before anyone answers,
+  // or the rail has nothing to hang the call on.
+  if (dmCallRevealsHistory(effect)) {
+    void touchConversation(effect.call.conversationId).catch((err) => log.error('failed to show the DM for a call', err));
+  }
   if (effect.call.phase === 'ringing' && effect.fresh) armTimer(effect.call);
   if (effect.call.phase === 'active') {
     clearTimer(effect.call.id);

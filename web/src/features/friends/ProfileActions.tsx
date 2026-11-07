@@ -103,8 +103,8 @@ export function ProfileActions({ userId, username, displayName, onNavigate, onRe
       actions = (
         <>
           {showMessage && (
-            <Button type="button" size="sm" onClick={() => { openDirect(userId); requestChatView(); onNavigate?.(); }}>
-              <ChatCircleIcon size={20} /><span>{t('profile.message')}</span>
+            <Button type="button" size="sm" className="text-white" onClick={() => { openDirect(userId); requestChatView(); onNavigate?.(); }}>
+              <ChatCircleIcon size={20} weight="fill" className="text-white" /><span>{t('profile.message')}</span>
             </Button>
           )}
           <DropdownMenu>

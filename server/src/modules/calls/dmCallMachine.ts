@@ -44,6 +44,13 @@ export type DmCallEffect =
     durationSeconds: number | null;
   };
 
+/** A brand-new ring is what puts a never-messaged DM into both sidebars.
+ * A repeat of that ring must not bump it again; the chat line at the end
+ * is a separate write. */
+export function dmCallRevealsHistory(effect: DmCallEffect): effect is Extract<DmCallEffect, { type: 'state' }> {
+  return effect.type === 'state' && effect.fresh && effect.call.phase === 'ringing';
+}
+
 export interface DmCallStep {
   state: DmCallState;
   effects: DmCallEffect[];
