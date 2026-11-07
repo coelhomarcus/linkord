@@ -126,14 +126,8 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
                   <h2 className="truncate">{title}</h2>
                 </button>
               )}
-              {inThisDmCall && (
-                <p className="flex min-w-0 items-center gap-1 truncate text-label text-green">
-                  <PhoneIcon size={14} weight="fill" className="flex-none" />
-                  {t('panel.inThisCall')}
-                </p>
-              )}
-              {!inThisDmCall && subtitle && <span aria-hidden className="mx-1 h-6 w-px flex-none bg-border-default max-md:hidden" />}
-              {!inThisDmCall && subtitle && <p className="min-w-0 truncate text-label text-text-secondary max-md:hidden">{subtitle}</p>}
+              {subtitle && <span aria-hidden className="mx-1 h-6 w-px flex-none bg-border-default max-md:hidden" />}
+              {subtitle && <p className="min-w-0 truncate text-label text-text-secondary max-md:hidden">{subtitle}</p>}
             </div>
             <div className="flex flex-none items-center gap-2">
               {/* calls in a server happen in its voice channels */}
