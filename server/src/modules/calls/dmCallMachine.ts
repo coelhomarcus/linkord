@@ -13,6 +13,8 @@ export interface DmCall {
   video: boolean;
   phase: 'ringing' | 'active';
   startedAt: number;
+  /** Set when the callee answers. Talk time is measured from here, not from the ring. */
+  answeredAt: number | null;
 }
 
 export interface DmCallTombstone {
@@ -38,6 +40,8 @@ export type DmCallEffect =
     callerId: string;
     calleeId: string;
     reason: DmCallEndReason;
+    /** Whole seconds of talk time. Null when the call was never answered. */
+    durationSeconds: number | null;
   };
 
 export interface DmCallStep {
@@ -56,6 +60,11 @@ function isParty(call: DmCall, userId: string): boolean {
   return call.callerId === userId || call.calleeId === userId;
 }
 
+function talkSeconds(call: DmCall, now: number): number | null {
+  if (call.answeredAt == null) return null;
+  return Math.max(1, Math.floor((now - call.answeredAt) / 1000));
+}
+
 function endOne(state: DmCallState, call: DmCall, reason: DmCallEndReason, now: number): { state: DmCallState; effect: Extract<DmCallEffect, { type: 'ended' }> } {
   return {
     state: {
@@ -65,6 +74,7 @@ function endOne(state: DmCallState, call: DmCall, reason: DmCallEndReason, now: 
     effect: {
       type: 'ended', callId: call.id, conversationId: call.conversationId,
       callerId: call.callerId, calleeId: call.calleeId, reason,
+      durationSeconds: talkSeconds(call, now),
     },
   };
 }
@@ -124,6 +134,7 @@ export function startDmCall(state: DmCallState, input: {
     video: input.video,
     phase: 'ringing',
     startedAt: input.now,
+    answeredAt: null,
   };
   return { state: { ...pruned, calls: [...pruned.calls, call] }, effects: [{ type: 'state', call, fresh: true }] };
 }
@@ -140,7 +151,12 @@ export function acceptDmCall(state: DmCallState, input: {
   if (call.calleeId !== input.userId) return { state: pruned, effects: [], code: 'not-party' };
   if (call.phase === 'active') return { state: pruned, effects: [{ type: 'state', call, fresh: false }] };
   const dropped = endOthers(pruned, input.userId, call.id, input.now);
-  const accepted: DmCall = { ...call, phase: 'active', calleeParticipantId: input.participantId };
+  const accepted: DmCall = {
+    ...call,
+    phase: 'active',
+    calleeParticipantId: input.participantId,
+    answeredAt: call.answeredAt ?? input.now,
+  };
   return {
     state: { ...dropped.state, calls: dropped.state.calls.map((entry) => entry.id === call.id ? accepted : entry) },
     effects: [...dropped.effects, { type: 'state', call: accepted, fresh: true }],
