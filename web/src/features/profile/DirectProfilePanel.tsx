@@ -67,7 +67,12 @@ export function DirectProfilePanel({ user, onOpenProfile }: { user: PublicUser; 
         </div>
         <div className="mt-4 flex flex-col gap-4">
           <section className="flex flex-col gap-3">
-            {user.bio && <p className="whitespace-pre-wrap wrap-break-word text-label text-text-primary">{user.bio}</p>}
+            {user.bio && (
+              <div className={SECTION}>
+                <h3 className="text-caption font-semibold text-text-primary">{t('card.bio')}</h3>
+                <p className="select-text whitespace-pre-wrap wrap-break-word text-label text-text-secondary">{user.bio}</p>
+              </div>
+            )}
             {details && (
               <div className={SECTION}>
                 <h3 className="text-caption font-semibold text-text-primary">{t('modal.memberSince')}</h3>

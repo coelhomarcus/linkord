@@ -23,11 +23,13 @@ function Truncated({ shown, total }: { shown: number; total: number }) {
 }
 
 /** Keeps the Wall and mutual relationships beside the profile card. */
-export function ProfileSidebar({ userId, owner, initialTab = 'wall', status, details, onRetry, onOpenProfile, onOpenServer, onNavigate }: {
+export function ProfileSidebar({ userId, owner, accent, initialTab = 'wall', status, details, onRetry, onOpenProfile, onOpenServer, onNavigate }: {
   userId: string;
   /** read once, on mount: the modal opened from "what you have in common" starts there */
   initialTab?: ProfileTab;
   owner: boolean;
+  /** the profile's highlight colour (a CSS colour), which the Wall's widgets use */
+  accent: string;
   status: 'loading' | 'ready' | 'error';
   details: ProfileDetails | null;
   onRetry: () => void;
@@ -81,7 +83,7 @@ export function ProfileSidebar({ userId, owner, initialTab = 'wall', status, det
         {/* Inactive panels unmount by default, and the wall's first paint is a
             loading state, so switching away and back always flashed it. */}
         <TabsPanel value="wall" keepMounted>
-          <ProfileWall userId={userId} owner={owner} onNavigate={onNavigate} />
+          <ProfileWall userId={userId} owner={owner} accent={accent} onNavigate={onNavigate} />
         </TabsPanel>
         {!owner && (
           <TabsPanel value="common" keepMounted aria-busy={status === 'loading'}>

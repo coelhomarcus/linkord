@@ -13,28 +13,29 @@ export interface SearchEntry {
 }
 
 type SearchKey =
-  | 'connections' | 'identity' | 'language' | 'email' | 'storage' | 'session' | 'blocked'
-  | 'microphone' | 'speaker' | 'camera' | 'system' | 'sounds'
-  | 'appAppearance' | 'callAppearance' | 'imageUploads' | 'adminArea';
+  | 'accountInfo' | 'email' | 'storage' | 'session' | 'connections' | 'blocked'
+  | 'theme' | 'voice' | 'inputProfile' | 'video' | 'calls' | 'uploads'
+  | 'desktopNotifications' | 'sounds' | 'language' | 'timeFormat' | 'adminArea';
 
 // One entry per SettingsSection that exists today (grep '<SettingsSection id='
 // across features/settings/*.tsx to keep this honest) — curated, not
 // generated, since the sections live scattered across several files.
 export const SETTINGS_SEARCH_INDEX: SearchEntry[] = [
-  { categoryId: 'connections', searchKey: 'connections' },
-  { categoryId: 'account', sectionId: 'identity', searchKey: 'identity' },
-  { categoryId: 'account', sectionId: 'language', searchKey: 'language' },
-  { categoryId: 'account', sectionId: 'email', searchKey: 'email' },
+  { categoryId: 'account', sectionId: 'account-info', searchKey: 'accountInfo' },
+  { categoryId: 'account', sectionId: 'account-info', searchKey: 'email' },
   { categoryId: 'account', sectionId: 'storage', searchKey: 'storage' },
   { categoryId: 'account', sectionId: 'session', searchKey: 'session' },
+  { categoryId: 'connections', searchKey: 'connections' },
   { categoryId: 'privacy', sectionId: 'blocked', searchKey: 'blocked' },
-  { categoryId: 'av', sectionId: 'microphone', searchKey: 'microphone' },
-  { categoryId: 'av', sectionId: 'speaker', searchKey: 'speaker' },
-  { categoryId: 'av', sectionId: 'camera', searchKey: 'camera' },
-  { categoryId: 'notifications', sectionId: 'system', searchKey: 'system' },
+  { categoryId: 'appearance', sectionId: 'theme', searchKey: 'theme' },
+  { categoryId: 'av', sectionId: 'voice', searchKey: 'voice' },
+  { categoryId: 'av', sectionId: 'input-profile', searchKey: 'inputProfile' },
+  { categoryId: 'av', sectionId: 'video', searchKey: 'video' },
+  { categoryId: 'av', sectionId: 'calls', searchKey: 'calls' },
+  { categoryId: 'chat', sectionId: 'uploads', searchKey: 'uploads' },
+  { categoryId: 'notifications', sectionId: 'overview', searchKey: 'desktopNotifications' },
   { categoryId: 'notifications', sectionId: 'sounds', searchKey: 'sounds' },
-  { categoryId: 'prefs', sectionId: 'app-appearance', searchKey: 'appAppearance' },
-  { categoryId: 'prefs', sectionId: 'call-appearance', searchKey: 'callAppearance' },
-  { categoryId: 'prefs', sectionId: 'image-uploads', searchKey: 'imageUploads' },
+  { categoryId: 'language', sectionId: 'language', searchKey: 'language' },
+  { categoryId: 'language', sectionId: 'time-format', searchKey: 'timeFormat' },
   { categoryId: 'moderation', sectionId: 'admin-area', searchKey: 'adminArea', adminOnly: true },
 ];

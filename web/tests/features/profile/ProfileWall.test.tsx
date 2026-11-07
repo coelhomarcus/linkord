@@ -9,12 +9,12 @@ import type { ProfileConnection, WallResponse, WallWidget } from '@/features/pro
 
 vi.mock('@/features/profile/profileApi', () => ({ fetchWall: vi.fn(), saveWall: vi.fn() }));
 const mocked = vi.mocked(api);
-const connection: ProfileConnection = { id: 'mal', provider: 'myanimelist', value: 'Xinil', url: 'https://myanimelist.net/profile/Xinil', position: 0, syncedAt: '2026-11-05T12:00:00Z', syncError: null, status: 'ready' };
+const connection: ProfileConnection = { id: 'mal', provider: 'myanimelist', value: 'Xinil', url: 'https://myanimelist.net/profile/Xinil', position: 0, showOnProfile: true, syncedAt: '2026-11-05T12:00:00Z', syncError: null, status: 'ready' };
 const anime: WallWidget = { connection, type: 'mal-recent-anime', data: { kind: 'list', items: [{ id: '1', title: 'Cowboy Bebop', url: 'https://myanimelist.net/anime/1', imageUrl: null }] } };
 const profile: WallWidget = { connection: { ...connection, id: 'gh', provider: 'github', value: 'octocat', url: 'https://github.com/octocat' }, type: 'github-profile', data: { kind: 'github-profile', login: 'octocat', name: null, avatarUrl: null, repositories: 1, followers: 2, following: 3 } };
 const empty: WallResponse = { widgets: [], available: [anime, profile] };
 beforeEach(() => { vi.clearAllMocks(); mocked.fetchWall.mockResolvedValue(empty); });
-function renderWall(owner = true) { render(<MemoryRouter><ProfileWall userId="me" owner={owner} onNavigate={vi.fn()} /></MemoryRouter>); }
+function renderWall(owner = true) { render(<MemoryRouter><ProfileWall userId="me" owner={owner} accent="#3366ff" onNavigate={vi.fn()} /></MemoryRouter>); }
 
 describe('profile Wall', () => {
   it('starts empty and keeps available data unpublished until explicitly saved', async () => {
@@ -69,17 +69,17 @@ describe('profile Wall', () => {
 
 describe('Wall widget cards', () => {
   it('distinguishes pending and unavailable data and keeps stale cached data visible', () => {
-    const { rerender } = render(<WallWidgetCard widget={{ ...anime, data: null, connection: { ...connection, syncedAt: null } }} />);
+    const { rerender } = render(<WallWidgetCard widget={{ ...anime, data: null, connection: { ...connection, syncedAt: null } }} accent="#3366ff" />);
     expect(screen.getByRole('status')).toHaveTextContent('Os dados aparecerão após a primeira sincronização.');
-    rerender(<WallWidgetCard widget={{ ...anime, data: null, connection: { ...connection, syncError: 'private' } }} />);
+    rerender(<WallWidgetCard widget={{ ...anime, data: null, connection: { ...connection, syncError: 'private' } }} accent="#3366ff" />);
     expect(screen.getByRole('status')).toHaveTextContent('Não foi possível carregar os dados deste widget.');
-    rerender(<WallWidgetCard widget={{ ...anime, connection: { ...connection, syncError: 'unavailable' } }} />);
+    rerender(<WallWidgetCard widget={{ ...anime, connection: { ...connection, syncError: 'unavailable' } }} accent="#3366ff" />);
     expect(screen.getByRole('link', { name: 'Cowboy Bebop' })).toBeInTheDocument();
     expect(screen.getByText(/A última sincronização falhou/)).toBeInTheDocument();
     expect(screen.queryByText(/Atualizado em/)).not.toBeInTheDocument();
   });
   it('names the profile link with the service and the user, and keeps the logo out of that name', () => {
-    render(<WallWidgetCard widget={anime} />);
+    render(<WallWidgetCard widget={anime} accent="#3366ff" />);
     const link = screen.getByRole('link', { name: 'MyAnimeList, @Xinil' });
     expect(link).toHaveAttribute('href', connection.url);
     expect(link).not.toHaveTextContent('MyAnimeList');
@@ -98,23 +98,32 @@ describe('Wall widget cards', () => {
   });
   it('shows only the covers of the first eight recent anime, without titles or progress', () => {
     const items = Array.from({ length: 10 }, (_, i) => ({ id: String(i), title: `Anime ${i}`, url: `https://myanimelist.net/anime/${i}`, imageUrl: `https://cdn.myanimelist.net/${i}.jpg` }));
-    render(<WallWidgetCard widget={{ ...anime, data: { kind: 'list', items } }} />);
+    render(<WallWidgetCard widget={{ ...anime, data: { kind: 'list', items } }} accent="#3366ff" />);
     expect(screen.getAllByRole('link', { name: /^Anime / })).toHaveLength(8);
     expect(screen.queryByRole('link', { name: 'Anime 8' })).not.toBeInTheDocument();
     expect(screen.queryByText('Anime 0')).not.toBeInTheDocument();
   });
   it('renders a contribution calendar with localized day descriptions', () => {
-    render(<WallWidgetCard widget={{ connection: { ...connection, provider: 'github' }, type: 'github-calendar', data: { kind: 'github-calendar', total: 4, days: [{ date: '2026-11-01', count: 4, level: 3 }] } }} />);
+    render(<WallWidgetCard widget={{ connection: { ...connection, provider: 'github' }, type: 'github-calendar', data: { kind: 'github-calendar', total: 4, days: [{ date: '2026-11-01', count: 4, level: 3 }] } }} accent="#3366ff" />);
     expect(screen.getByRole('group', { name: 'Calendário de contribuições do GitHub' })).toBeInTheDocument();
     expect(screen.getByRole('img', { name: /4 contribuições/ })).toBeInTheDocument();
     expect(screen.getByText('4 contribuições nos últimos 12 meses')).toBeInTheDocument();
+  });
+  it('draws the calendar with the profile accent, and leaves empty days neutral', () => {
+    const days = [{ date: '2026-11-01', count: 0, level: 0 }, { date: '2026-11-02', count: 9, level: 4 }];
+    render(<WallWidgetCard widget={{ connection: { ...connection, provider: 'github' }, type: 'github-calendar', data: { kind: 'github-calendar', total: 9, days } }} accent="#ff8800" />);
+    const [empty, busiest] = screen.getAllByRole('img');
+    expect(busiest).toHaveStyle({ backgroundColor: '#ff8800' });
+    expect(busiest).not.toHaveClass('bg-primary');
+    expect(empty).toHaveClass('bg-fill-hover');
+    expect(empty.getAttribute('style')).toBeNull();
   });
   it('keeps only the most recent weeks that fit the calendar width', () => {
     const days = Array.from({ length: 70 }, (_, i) => ({ date: new Date(Date.UTC(2026, 0, 4 + i)).toISOString().slice(0, 10), count: i, level: 1 }));
     const rect = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ width: 36 } as DOMRect);
     // 3 weeks fit: 3 * 10px cells + 2 * 3px gaps
     try {
-      render(<WallWidgetCard widget={{ connection: { ...connection, provider: 'github' }, type: 'github-calendar', data: { kind: 'github-calendar', total: 4, days } }} />);
+      render(<WallWidgetCard widget={{ connection: { ...connection, provider: 'github' }, type: 'github-calendar', data: { kind: 'github-calendar', total: 4, days } }} accent="#3366ff" />);
       const cells = screen.getAllByRole('img');
       expect(cells).toHaveLength(21);
       expect(cells[0]).toHaveAccessibleName(/49 contribuições/);

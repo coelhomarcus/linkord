@@ -93,6 +93,7 @@
     "edit": "Editar canal"
   },
   "members": {
+    "bio": "Bio",
     "label": "Membros",
     "online": "Disponível",
     "offline": "Offline",

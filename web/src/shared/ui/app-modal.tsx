@@ -35,12 +35,15 @@ export function AppModal({ label, onClose, size = 'lg', children }: {
       <DialogContent
         showCloseButton={false}
         aria-label={label}
+        // The dialog primitive caps its height at 100dvh - 2rem, which left a strip of the app
+        // showing under a full-height modal. max-h-dvh replaces that cap; max-h-none would not,
+        // since tailwind-merge keeps it beside the cap and the cap can win.
         className={cn(
-          'top-1/2 left-1/2 max-w-none gap-0 overflow-hidden border border-border bg-surface-panel p-0 text-text-primary [--surface-base:var(--color-surface-panel)] sm:max-w-none max-md:h-dvh max-md:w-screen max-md:rounded-none max-md:border-0 max-md:ring-0 max-md:pt-[env(safe-area-inset-top)] max-md:pb-[env(safe-area-inset-bottom)]',
+          'top-1/2 left-1/2 max-w-none gap-0 overflow-hidden border border-border bg-surface-panel p-0 text-text-primary [--surface-base:var(--color-surface-panel)] sm:max-w-none max-md:h-dvh max-md:max-h-dvh max-md:w-screen max-md:rounded-none max-md:border-0 max-md:ring-0 max-md:pt-[env(safe-area-inset-top)] max-md:pb-[env(safe-area-inset-bottom)]',
           size === 'md' && 'h-[min(40rem,calc(100dvh-3rem))] w-[min(56rem,calc(100vw-3rem))]',
           size === 'form' && 'h-[min(54rem,calc(100dvh-3rem))] w-[min(64rem,calc(100vw-3rem))]',
           size === 'lg' && 'h-[min(54rem,calc(100dvh-3rem))] w-[min(76rem,calc(100vw-3rem))]',
-          size === 'fullscreen' && 'inset-0 top-0 left-0 h-dvh w-screen translate-x-0 translate-y-0 rounded-none border-0 bg-surface-app [--surface-base:var(--color-surface-app)] data-open:zoom-in-105 data-closed:zoom-out-105',
+          size === 'fullscreen' && 'inset-0 top-0 left-0 h-dvh max-h-dvh w-screen translate-x-0 translate-y-0 rounded-none border-0 bg-surface-app [--surface-base:var(--color-surface-app)] data-open:zoom-in-105 data-closed:zoom-out-105',
         )}
       >
         <AppModalContext.Provider value={onClose}>

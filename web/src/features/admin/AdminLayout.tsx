@@ -85,7 +85,7 @@ export function AdminLayout() {
   }, [pathname]);
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="flex h-full min-h-0 select-text flex-col">
       <PageHeader
         title={compactSection ? t(section.labelKey as never) : t('layout.title')}
         subtitle={mode === 'wide' && section ? t(section.labelKey as never) : undefined}

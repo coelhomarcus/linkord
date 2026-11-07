@@ -40,35 +40,43 @@ export function PrivacyTab({ onOpenProfile }: { onOpenProfile: (userId: string) 
 
   return (
     <SettingsSections>
-    <SettingsSection
-      id="blocked"
-      title={t('catalog.sections.blocked')}
-      description={t('privacy.description')}
-    >
-      <ActionFeedback feedback={feedback} onClear={clearFeedback} />
-      {list.status === 'loading' && <p className="py-4 text-center text-label text-text-muted">{t('privacy.loading')}</p>}
-      {list.status === 'error' && (
-        <div className="flex items-center gap-2 rounded-md bg-red/12 px-2.5 py-1.5 text-label text-red-text">
-          <span className="min-w-0 flex-1">{t('privacy.loadFailed')}</span>
-          <button type="button" onClick={list.retry} className="flex-none font-medium underline-offset-2 hover:underline">{t('privacy.retry')}</button>
-        </div>
-      )}
-      {list.status === 'ready' && list.items.length === 0 && (
-        <p className="py-4 text-center text-label text-text-muted">{t('privacy.empty')}</p>
-      )}
+      <SettingsSection id="blocked" title={t('catalog.sections.blocked')} description={t('privacy.description')} contentClassName="gap-3">
+        <ActionFeedback feedback={feedback} onClear={clearFeedback} />
+        {list.status === 'loading' && (
+          // the same height as a few rows, so the page does not jump when they arrive
+          <div role="status" aria-label={t('privacy.loading')} className="flex flex-col gap-1">
+            {[0, 1, 2].map((i) => (
+              <div key={i} aria-hidden className="flex h-[60px] items-center gap-3 px-2">
+                <span className="size-10 flex-none animate-pulse rounded-full bg-fill-hover" />
+                <span className="h-3.5 w-40 animate-pulse rounded-sm bg-fill-hover" />
+              </div>
+            ))}
+          </div>
+        )}
+        {list.status === 'error' && (
+          <div className="flex items-center gap-2 rounded-md bg-red/12 px-2.5 py-1.5 text-label text-red-text">
+            <span className="min-w-0 flex-1">{t('privacy.loadFailed')}</span>
+            <button type="button" onClick={list.retry} className="flex-none font-medium underline-offset-2 hover:underline">{t('privacy.retry')}</button>
+          </div>
+        )}
+        {list.status === 'ready' && list.items.length === 0 && (
+          <p className="rounded-lg border border-border-subtle px-4 py-6 text-center text-label text-text-muted">{t('privacy.empty')}</p>
+        )}
 
-      <div className="flex flex-col divide-y divide-border">
-        {list.items.map(({ user }) => (
-          <SocialUserRow key={user.id} user={user} onOpenProfile={() => onOpenProfile(user.id)}>
-            <Button type="button" variant="secondary" size="sm" disabled={pending.isPending(user.id)} onClick={() => void handleUnblock(user.id)}>
-              {t('privacy.unblock')}
-            </Button>
-          </SocialUserRow>
-        ))}
-      </div>
+        {list.items.length > 0 && (
+          <div className="flex flex-col divide-y divide-border-subtle">
+            {list.items.map(({ user }) => (
+              <SocialUserRow key={user.id} user={user} onOpenProfile={() => onOpenProfile(user.id)}>
+                <Button type="button" variant="secondary" size="sm" disabled={pending.isPending(user.id)} onClick={() => void handleUnblock(user.id)}>
+                  {t('privacy.unblock')}
+                </Button>
+              </SocialUserRow>
+            ))}
+          </div>
+        )}
 
-      {list.status === 'ready' && <LoadMoreFooter list={list} />}
-    </SettingsSection>
+        {list.status === 'ready' && <LoadMoreFooter list={list} />}
+      </SettingsSection>
     </SettingsSections>
   );
 }

@@ -20,6 +20,7 @@ import { Textarea } from '@/shared/ui/primitives/textarea';
 import { ReportDialog } from '@/features/reports/ReportDialog';
 import { ReactionEmojiPicker } from '@/features/chat/ReactionEmojiPicker';
 import { formatTime } from '@/shared/lib/formatChatTime';
+import { useTimeFormat } from '@/shared/lib/timeFormat';
 import { mentionsUser } from '@/shared/lib/mentions';
 import { cn } from '@/shared/lib/utils';
 import { useKeepPopoverWarm } from '@/shared/hooks/useKeepPopoverWarm';
@@ -132,6 +133,8 @@ function PendingStatus({ entry, offline, onRetry, onDiscard }: { entry: OutboxEn
 
 export function MessageRow({ message, showHeader, highlighted, allUsers, mentionLookup, onOpenProfile, onReply, onJumpTo, pending }: MessageRowProps) {
   const { t } = useTranslation('chat');
+  // re-renders the timestamp when the time format changes in settings
+  useTimeFormat();
   const deletedAuthorName = t('deletedAuthor');
   const {
     state, conversations, servers, serverMemberRoleIds, editChatMessage, reactToChatMessage, editingMsgId, setEditingMsgId, retryPendingMessage, discardPendingMessage,
@@ -292,7 +295,7 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
         )}
       </div>
 
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 select-text">
         {showHeader && (
           <div className="flex items-baseline gap-2">
             {message.id ? (

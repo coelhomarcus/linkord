@@ -4,18 +4,21 @@ import { useTranslation } from 'react-i18next';
 import { ApiError } from '@/shared/api/api';
 import { ConfirmDialog } from '@/shared/ConfirmDialog';
 import { Button } from '@/shared/ui/primitives/button';
+import { Switch } from '@/shared/ui/primitives/switch';
 import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/ui/primitives/dialog';
 import { useRoom } from '@/state/RoomContext';
 import { connectionBrand } from './connectionBrands';
 import { BrandIcon } from './profileLinks';
-import { createConnection, deleteConnection, editConnection, fetchConnections } from './profileApi';
+import { createConnection, deleteConnection, editConnection, fetchConnections, setConnectionVisibility } from './profileApi';
 import type { ConnectionProvider, ConnectionsResponse, ProfileConnection } from './connectionsTypes';
+import { SettingsSection, SettingsSections, SettingsSubheading } from '@/features/settings/SettingsLayout';
 
 const PROVIDERS = ['url', 'myanimelist', 'github'] as const;
 export function ConnectionsSettings() {
   const { t, i18n } = useTranslation('profile');
+  const { t: tSettings } = useTranslation('settings');
   const { state, dispatch } = useRoom();
   const [data, setData] = useState<ConnectionsResponse | null>(null);
   const [loadError, setLoadError] = useState(false);
@@ -57,7 +60,7 @@ export function ConnectionsSettings() {
     if (!mounted.current) return;
     sequence.current++;
     setData(result);
-    if (state.me.userId) dispatch({ type: 'PROFILE_CONNECTIONS_CHANGED', userId: state.me.userId, profileLinks: result.connections.map((row) => row.url) });
+    if (state.me.userId) dispatch({ type: 'PROFILE_CONNECTIONS_CHANGED', userId: state.me.userId, profileLinks: result.connections.filter((row) => row.showOnProfile).map((row) => row.url) });
     window.dispatchEvent(new CustomEvent('profile-connections-changed', { detail: state.me.userId }));
   }
   async function save() {
@@ -67,6 +70,12 @@ export function ConnectionsSettings() {
       const result = dialog.connection ? await editConnection(dialog.connection.id, value) : await createConnection(dialog.provider, value);
       accept(result); if (mounted.current) setDialog(null);
     } catch (error) { if (mounted.current) setError(describe(error)); }
+    finally { if (mounted.current) setBusy(false); }
+  }
+  async function toggleVisibility(connection: ProfileConnection, showOnProfile: boolean) {
+    setBusy(true); setError(null);
+    try { accept(await setConnectionVisibility(connection.id, showOnProfile)); }
+    catch (error) { if (mounted.current) setError(describe(error)); }
     finally { if (mounted.current) setBusy(false); }
   }
   async function remove(connection: ProfileConnection) {
@@ -82,10 +91,10 @@ export function ConnectionsSettings() {
   const full = !!data && data.connections.length >= 8;
   const brand = (provider: ConnectionProvider) => provider === 'url' ? 'generic' : provider;
   return (
-    // the page header above already carries the title and description
-    <div className="flex flex-col gap-8">
-      <section aria-labelledby="connections-add-title" className="flex flex-col gap-3">
-        <h3 id="connections-add-title" className="text-title font-semibold">{t('integration.addTitle')}</h3>
+    <SettingsSections>
+    <SettingsSection title={tSettings('catalog.categories.connections')} description={t('integration.description')} contentClassName="gap-8">
+      <section aria-labelledby="connections-add-title" className="flex flex-col gap-4">
+        <SettingsSubheading><span id="connections-add-title">{t('integration.addTitle')}</span></SettingsSubheading>
         <div className="flex flex-wrap gap-2">
           {PROVIDERS.map((provider) => {
             const unavailable = !data || busy || full || (provider !== 'url' && data.connections.some((row) => row.provider === provider));
@@ -98,7 +107,7 @@ export function ConnectionsSettings() {
                       aria-label={providerName(provider)}
                       disabled={unavailable}
                       onClick={() => open(provider)}
-                      className="grid size-14 place-items-center rounded-xl border border-border-strong bg-bg-tertiary text-text-primary transition-colors hover:bg-fill-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-40"
+                      className="grid size-12 place-items-center rounded-lg border border-border-strong bg-fill-subtle text-text-primary transition-colors hover:bg-fill-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-40"
                     />
                   }
                 >
@@ -110,23 +119,34 @@ export function ConnectionsSettings() {
           })}
         </div>
       </section>
-      {!data && !loadError && <p role="status" className="text-label text-text-muted">{t('integration.loading')}</p>}
+      {/* the size of one connection card, so the list arriving moves nothing below it */}
+      {!data && !loadError && <div role="status" aria-label={t('integration.loading')} className="h-[120px] animate-pulse rounded-lg border border-border-subtle bg-fill-subtle" />}
       {loadError && <div role="alert" className="text-label text-red">{t('integration.errors.load')} <Button type="button" variant="ghost" size="sm" onClick={() => void load()}>{t('modal.retry')}</Button></div>}
-      {data?.connections.length === 0 && <p className="text-label text-text-muted">{t('integration.empty')}</p>}
+      {data?.connections.length === 0 && <p className="rounded-lg border border-border-subtle px-4 py-6 text-center text-label text-text-muted">{t('integration.empty')}</p>}
       {!!data?.connections.length && (
-        <section aria-labelledby="connections-list-title" className="flex flex-col gap-3">
-          <h3 id="connections-list-title" className="text-title font-semibold">{t('integration.count', { count: data.connections.length })}</h3>
+        <section aria-labelledby="connections-list-title" className="flex flex-col gap-4">
+          <SettingsSubheading><span id="connections-list-title">{t('integration.count', { count: data.connections.length })}</span></SettingsSubheading>
           <ul className="flex flex-col gap-3">
             {data.connections.map((connection) => (
-              <li key={connection.id} className="flex flex-col gap-3 rounded-xl border border-border-strong bg-bg-secondary p-4">
+              <li key={connection.id} className="flex flex-col gap-3 rounded-lg border border-border-strong bg-fill-subtle p-4">
                 <div className="flex items-center gap-4">
                   <span className="flex size-12 flex-none items-center justify-center text-text-primary"><BrandIcon kind={brand(connection.provider)} size={36} /></span>
                   <div className="min-w-0 flex-1">
-                    <a href={connection.url} target="_blank" rel="noreferrer" className="block truncate text-title font-semibold hover:underline">{connection.value}</a>
+                    <a href={connection.url} target="_blank" rel="noreferrer" className="block truncate text-body font-semibold text-text-primary hover:underline">{connection.value}</a>
                     <p className="truncate text-label text-text-muted">{providerName(connection.provider)}</p>
                   </div>
                   <Button type="button" variant="ghost" size="icon" aria-label={t('integration.editConnection', { name: connection.value })} disabled={busy} onClick={() => open(connection.provider, connection)}><PencilSimpleIcon size={16} /></Button>
                   <CloseButton variant="danger" label={t('integration.removeConnection', { name: connection.value })} disabled={busy} onClick={() => setRemoving(connection)} />
+                </div>
+                <div className="flex items-center justify-between gap-4 border-t border-border pt-3">
+                  <span className="text-body font-medium text-text-primary">{t('integration.showOnProfile')}</span>
+                  <Switch
+                    size="lg"
+                    checked={connection.showOnProfile}
+                    disabled={busy}
+                    onCheckedChange={(value) => void toggleVisibility(connection, value)}
+                    aria-label={t('integration.showOnProfileAria', { name: connection.value })}
+                  />
                 </div>
                 {connection.provider !== 'url' && (
                   <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-border pt-3 text-label text-text-muted">
@@ -154,6 +174,7 @@ export function ConnectionsSettings() {
         </DialogContent>}
       </Dialog>
       <ConfirmDialog open={!!removing} onOpenChange={(open) => { if (!open) setRemoving(null); }} title={t('integration.removeTitle')} description={t('integration.removeDescription')} destructive onConfirm={() => { if (removing) void remove(removing); }} />
-    </div>
+    </SettingsSection>
+    </SettingsSections>
   );
 }

@@ -16,7 +16,8 @@ function WidgetMessage({ children }: { children: string }) {
   return <p role="status" className="rounded-lg bg-bg-tertiary px-3 py-3 text-label text-text-muted">{children}</p>;
 }
 
-export function WallWidgetCard({ widget }: { widget: WallWidget }) {
+/** `accent` is the profile owner's highlight colour, which the widgets draw with. */
+export function WallWidgetCard({ widget, accent }: { widget: WallWidget; accent: string }) {
   const { t, i18n } = useTranslation('profile');
   const { connection, data } = widget;
   const brand = connectionBrand(connection.provider);
@@ -51,7 +52,7 @@ export function WallWidgetCard({ widget }: { widget: WallWidget }) {
           <p className="text-title font-semibold">{number(data.total)}</p>
           <p className="text-caption text-text-muted">{t('wall.github.contributions', { total: number(data.total) })}</p>
         </div>
-        <ContributionCalendar days={data.days} />
+        <ContributionCalendar days={data.days} accent={accent} />
       </div>}
       {showFooter && <footer className="mt-auto">
         <p className="rounded-lg bg-bg-tertiary px-3 py-2 text-caption text-text-muted">{t('wall.stale')}</p>

@@ -23,7 +23,7 @@ export class ConnectionMutationError extends Error {
   constructor(status: number, code: ErrorCode) { super(code); this.status = status; this.code = code; }
 }
 export function connectionDto(row: ProfileConnection) {
-  return { id: row.id, provider: row.provider, value: row.value, url: row.url, position: row.position,
+  return { id: row.id, provider: row.provider, value: row.value, url: row.url, position: row.position, showOnProfile: row.showOnProfile,
     syncedAt: row.syncedAt?.toISOString() ?? null, syncError: row.syncError,
     status: row.provider === 'url' ? 'ready' : row.syncError ? 'error' : row.syncedAt ? 'ready' : 'pending' };
 }
@@ -43,6 +43,13 @@ export async function mutateConnection(userId: string, action: 'create' | 'edit'
     } else {
       const provider = current?.provider ?? body.provider;
       if (current && body.provider !== undefined && body.provider !== provider) throw new ConnectionMutationError(400, 'invalid_connection');
+      if (body.showOnProfile !== undefined && typeof body.showOnProfile !== 'boolean') throw new ConnectionMutationError(400, 'invalid_connection');
+      // an edit may only flip the visibility, with no new value to validate
+      if (current && body.value === undefined) {
+        if (body.showOnProfile === undefined) throw new ConnectionMutationError(400, 'invalid_connection');
+        await tx.update(profileConnections).set({ showOnProfile: body.showOnProfile as boolean }).where(eq(profileConnections.id, current.id));
+        return project(tx, userId);
+      }
       const input = parseConnection(provider, body.value);
       if (!input) throw new ConnectionMutationError(400, 'invalid_connection');
       if (action === 'create' && rows.length >= MAX_CONNECTIONS) throw new ConnectionMutationError(409, 'quota_exceeded');
@@ -50,25 +57,44 @@ export async function mutateConnection(userId: string, action: 'create' | 'edit'
         throw new ConnectionMutationError(409, 'connection_exists');
       }
       if (current) {
+        const visibility = typeof body.showOnProfile === 'boolean' ? { showOnProfile: body.showOnProfile } : {};
         if (current.value !== input.value) {
-          await tx.update(profileConnections).set({ ...input, snapshot: null, syncedAt: null, syncError: null,
+          await tx.update(profileConnections).set({ ...input, ...visibility, snapshot: null, syncedAt: null, syncError: null,
             nextSyncAt: new Date(), attempts: 0, leaseToken: null, leaseUntil: null }).where(eq(profileConnections.id, current.id));
+        } else if ('showOnProfile' in visibility) {
+          await tx.update(profileConnections).set(visibility).where(eq(profileConnections.id, current.id));
         }
       } else {
         await tx.insert(profileConnections).values({ id: crypto.randomUUID(), userId, ...input,
+          showOnProfile: typeof body.showOnProfile === 'boolean' ? body.showOnProfile : true,
           position: Math.max(-1, ...rows.map((row) => row.position)) + 1 });
       }
     }
-    const updated = await tx.select().from(profileConnections).where(eq(profileConnections.userId, userId)).orderBy(profileConnections.position);
-    await tx.update(users).set({ profileLinks: updated.map((row) => row.url), updatedAt: new Date() }).where(eq(users.id, userId));
-    return updated.map(connectionDto);
+    return project(tx, userId);
   });
+}
+
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/** The connections after a change, and the public links rebuilt from the
+ * ones shown on the profile. */
+async function project(tx: Tx, userId: string) {
+  const updated = await tx.select().from(profileConnections).where(eq(profileConnections.userId, userId)).orderBy(profileConnections.position);
+  await tx.update(users).set({ profileLinks: publicLinks(updated), updatedAt: new Date() }).where(eq(users.id, userId));
+  return updated.map(connectionDto);
+}
+
+/** What other people see of someone's connections: only the ones shown on the profile. */
+export function publicLinks(rows: Pick<ProfileConnection, 'url' | 'showOnProfile'>[]): string[] {
+  return rows.filter((row) => row.showOnProfile).map((row) => row.url);
 }
 export async function saveWall(userId: string, input: unknown): Promise<void> {
   if (!Array.isArray(input) || input.length > 6) throw new ConnectionMutationError(400, 'invalid_wall');
   await db.transaction(async (tx) => {
     await tx.select({ id: users.id }).from(users).where(eq(users.id, userId)).for('update');
-    const connections = await tx.select().from(profileConnections).where(eq(profileConnections.userId, userId));
+    // a hidden connection's widgets are neither offered nor touched here, so
+    // showing it again brings them back where they were
+    const connections = (await tx.select().from(profileConnections).where(eq(profileConnections.userId, userId))).filter((row) => row.showOnProfile);
     const selected: WallSelection[] = [];
     const seen = new Set<string>();
     for (const value of input) {
@@ -91,9 +117,10 @@ export async function readWall(userId: string, owner = false) {
   const view = (connection: ProfileConnection, type: WidgetType) => ({
     connection: connectionDto(connection), type, data: connection.snapshot?.widgets[type] ?? null,
   });
-  const widgets = selected.map(({ connection, widget }) => view(connection, widget.type));
+  const widgets = selected.filter(({ connection }) => connection.showOnProfile).map(({ connection, widget }) => view(connection, widget.type));
   if (!owner) return { widgets };
-  const available = (await listConnections(userId)).flatMap((connection) => WIDGET_TYPES[connection.provider].map((type) => view(connection, type)));
+  const available = (await listConnections(userId)).filter((connection) => connection.showOnProfile)
+    .flatMap((connection) => WIDGET_TYPES[connection.provider].map((type) => view(connection, type)));
   return { widgets, available };
 }
 
@@ -115,7 +142,7 @@ export function registerConnectionRoutes(app: FastifyInstance): void {
     try {
       const connections = await mutateConnection(me.userId, action, body, request.params.id);
       invalidateSessionsForUser(me.userId);
-      publishProfileConnections(me.userId, connections.map((row) => row.url));
+      publishProfileConnections(me.userId, publicLinks(connections));
       sendJson(reply, action === 'create' ? 201 : 200, { connections });
       if (action !== 'delete') void syncConnections().catch((err) => log.error('failed to start connection sync', err));
     } catch (error) {

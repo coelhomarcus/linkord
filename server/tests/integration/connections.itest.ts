@@ -132,6 +132,42 @@ describe('profile Wall publication (real Postgres)', () => {
     await makeServerWithMembers(owner.id, [stranger.id]);
     assert.equal((await app.inject({ method: 'GET', url: `/api/users/${owner.id}/wall`, headers: await headers(stranger.id) })).statusCode, 200);
   });
+  it('hides a connection from the public links and the Wall without losing its widgets', async () => {
+    const owner = await makeUser('hide'); const friend = await makeUser('hidefriend');
+    await befriend(owner.id, friend.id);
+    const connection = await mal(owner.id);
+    await db.update(profileConnections).set({ snapshot, syncedAt: new Date() }).where(eq(profileConnections.id, connection.id));
+    await mutateConnection(owner.id, 'create', { provider: 'url', value: 'https://example.com/kept' });
+    await saveWall(owner.id, [{ connectionId: connection.id, type: 'mal-recent-anime' }]);
+    const auth = await headers(owner.id);
+
+    const hidden = await app.inject({ method: 'PATCH', url: `/api/me/connections/${connection.id}`, headers: auth, payload: { showOnProfile: false } });
+    assert.equal(hidden.statusCode, 200);
+    assert.equal(hidden.json().connections.find((row: { id: string }) => row.id === connection.id).showOnProfile, false);
+    const [row] = await db.select().from(users).where(eq(users.id, owner.id));
+    assert.deepEqual(row?.profileLinks, ['https://example.com/kept']);
+    assert.equal((await listConnections(owner.id)).find((item) => item.id === connection.id)?.value, 'syncuser');
+
+    const viewed = await app.inject({ method: 'GET', url: `/api/users/${owner.id}/wall`, headers: await headers(friend.id) });
+    assert.deepEqual(viewed.json().widgets, []);
+    const mine = await readWall(owner.id, true);
+    assert.deepEqual(mine.widgets, []);
+    assert.equal(mine.available?.some((widget) => widget.connection.id === connection.id), false);
+    // saving the Wall while it is hidden neither accepts it nor drops its saved widget
+    await assert.rejects(saveWall(owner.id, [{ connectionId: connection.id, type: 'mal-recent-anime' }]), ConnectionMutationError);
+    await saveWall(owner.id, []);
+
+    await app.inject({ method: 'PATCH', url: `/api/me/connections/${connection.id}`, headers: auth, payload: { showOnProfile: true } });
+    const back = await app.inject({ method: 'GET', url: `/api/users/${owner.id}/wall`, headers: await headers(friend.id) });
+    assert.equal(back.json().widgets.length, 1);
+    const [after] = await db.select().from(users).where(eq(users.id, owner.id));
+    assert.deepEqual(after?.profileLinks, [connection.url, 'https://example.com/kept']);
+
+    const bad = await app.inject({ method: 'PATCH', url: `/api/me/connections/${connection.id}`, headers: auth, payload: { showOnProfile: 'no' } });
+    assert.equal(bad.statusCode, 400);
+    const empty = await app.inject({ method: 'PATCH', url: `/api/me/connections/${connection.id}`, headers: auth, payload: {} });
+    assert.equal(empty.statusCode, 400);
+  });
   it('validates widget ownership, compatibility and duplicates, and persists ordering', async () => {
     const owner = await makeUser('order'); const another = await makeUser('foreign');
     const connection = await mal(owner.id); const foreign = await mal(another.id);

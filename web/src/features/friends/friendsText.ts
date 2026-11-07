@@ -1,4 +1,5 @@
 import { i18n } from '@/shared/i18n/init';
+import { timeOptions } from '@/shared/lib/timeFormat';
 import { ApiError } from '@/shared/api/api';
 import type { FriendRequestOutcome } from '@/shared/api/api';
 import { ERROR_CODES } from '@/shared/api/errorCodes';
@@ -13,7 +14,7 @@ export function normalizeUsernameInput(raw: string): string {
 export function formatRetryAfter(iso: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleString(i18n.language, { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  return date.toLocaleString(i18n.language, { day: '2-digit', month: '2-digit', ...timeOptions(i18n.language) });
 }
 
 export function describeSendError(err: unknown): string {

@@ -368,10 +368,20 @@ button:not(:disabled) {
   * {
     @apply border-border outline-ring/50;
   }
-  /* The app's chrome isn't text to copy: pressing a row, a tab or a button,
-     or dragging across one, must never start a selection. What people write
-     (messages, code, fields) stays selectable; fields say so explicitly, since
-     WebKit can otherwise inherit "none" into an input inside such a control. */
+  /* The app is a tool, not a document: headers, sidebars, profile chrome and
+     labels are not text to copy, so nothing is selectable by default. What
+     people write or need to copy opts back in with `select-text` (messages,
+     bios, code, invite and webhook values, the admin area). Fields say so
+     explicitly, since WebKit can otherwise inherit "none" into an input. */
+  body {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  /* a placeholder is a hint, never content */
+  ::placeholder {
+    -webkit-user-select: none;
+    user-select: none;
+  }
   button, [role="button"], [role="tab"], [role="menuitem"], [role="menuitemcheckbox"], [role="menuitemradio"], [role="option"], [role="tooltip"], label, summary {
     user-select: none;
   }

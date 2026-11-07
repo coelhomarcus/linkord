@@ -9,6 +9,7 @@ import toggleOffUrl from 'uisfx/sounds/soft/toggle-off.mp3?url';
 import toggleOnUrl from 'uisfx/sounds/soft/toggle-on.mp3?url';
 import unlockUrl from 'uisfx/sounds/soft/unlock.mp3?url';
 import wakeUrl from 'uisfx/sounds/soft/wake.mp3?url';
+import { soundGroupEnabled, type SoundGroup } from './soundPreferences';
 
 // UI SFX (uisfx), "soft" pack, named by what happened rather than what it
 // sounds like. Changing the pack means changing the folder in these imports.
@@ -31,6 +32,20 @@ export const SPEAKER_TEST_SOUND_URL = notificationUrl;
 
 export type SoundName = keyof typeof SOUND_FILES;
 
+/** Which settings switch silences each sound; everything a call does is one group. */
+const SOUND_GROUPS: Record<SoundName, SoundGroup> = {
+  newMessage: 'message',
+  mention: 'mention',
+  muted: 'call',
+  unmuted: 'call',
+  deafened: 'call',
+  undeafened: 'call',
+  userLeave: 'call',
+  incomingUser: 'call',
+  screenshare: 'call',
+  camera: 'call',
+};
+
 const preloaded = new Map<SoundName, HTMLAudioElement>();
 
 let volume = 1;
@@ -50,7 +65,9 @@ export function preloadSounds(): void {
   }
 }
 
-export function playSound(name: SoundName): void {
+/** `force` plays even a silenced sound: the preview button in settings. */
+export function playSound(name: SoundName, { force = false }: { force?: boolean } = {}): void {
+  if (!force && !soundGroupEnabled(SOUND_GROUPS[name])) return;
   const warm = preloaded.get(name);
   const audio = warm && warm.paused ? warm : new Audio(SOUND_FILES[name]);
   if (audio === warm) audio.currentTime = 0;

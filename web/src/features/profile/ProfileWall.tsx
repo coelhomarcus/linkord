@@ -10,7 +10,7 @@ import { WidgetPicker } from './WidgetPicker';
 import type { WallResponse, WallSelection } from './connectionsTypes';
 
 const selectionKey = (value: WallSelection) => `${value.connectionId}:${value.type}`;
-export function ProfileWall({ userId, owner, onNavigate }: { userId: string; owner: boolean; onNavigate: () => void }) {
+export function ProfileWall({ userId, owner, accent, onNavigate }: { userId: string; owner: boolean; accent: string; onNavigate: () => void }) {
   const { t } = useTranslation('profile');
   const navigate = useNavigate();
   const [data, setData] = useState<WallResponse | null>(null);
@@ -93,7 +93,7 @@ export function ProfileWall({ userId, owner, onNavigate }: { userId: string; own
       <div className="flex w-full min-w-0 flex-col gap-4">
         {widgets.map((widget, index) => {
           const name = t(`wall.widgets.${widget.type}`);
-          const card = <WallWidgetCard widget={widget} />;
+          const card = <WallWidgetCard widget={widget} accent={accent} />;
           if (!draft) return <div key={`${widget.connection.id}:${widget.type}`} className="w-full min-w-0">{card}</div>;
           // the controls sit in their own row above the card, in flow, so they can never cover its content
           return <div key={`${widget.connection.id}:${widget.type}`} className="flex w-full min-w-0 flex-col gap-3 rounded-xl border border-dashed border-border-strong p-3">

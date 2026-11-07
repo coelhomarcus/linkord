@@ -34,6 +34,7 @@ describe('DirectProfilePanel', () => {
   it('shows who the DM is with, since when, and what you share', async () => {
     renderWithRoom(<MemoryRouter><DirectProfilePanel user={bea} onOpenProfile={vi.fn()} /></MemoryRouter>, { onlineUserIds: new Set(['u-bea']) });
     expect(screen.getByRole('heading', { name: 'Bea' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Bio' })).toBeInTheDocument();
     expect(screen.getByText('oi, eu sou a Bea')).toBeInTheDocument();
     expect(screen.getByText('bea').parentElement?.querySelector('svg')).toBeInTheDocument();
     expect(screen.getByLabelText('Online')).toBeInTheDocument();

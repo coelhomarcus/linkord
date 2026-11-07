@@ -338,7 +338,7 @@ function Invites({ server }: { server: ServerSummary }) {
                 {invite.creator && <Avatar id={invite.creator.id} name={invite.creator.displayName} avatar={invite.creator.avatar} avatarColor={invite.creator.avatarColor} size={24} />}
                 <span className="truncate text-text-primary">{invite.creator?.displayName ?? '—'}</span>
               </span>
-              <code role="cell" className="truncate font-mono text-text-primary" title={inviteUrl(invite.code)}>{invite.code}</code>
+              <code role="cell" className="select-text truncate font-mono text-text-primary" title={inviteUrl(invite.code)}>{invite.code}</code>
               <span role="cell" className="font-mono text-text-primary">{invite.maxUses ? `${invite.uses}/${invite.maxUses}` : invite.uses}</span>
               <span role="cell" className="truncate font-mono text-text-primary">{invite.expiresAt ? new Date(invite.expiresAt).toLocaleString(i18n.language, { dateStyle: 'short', timeStyle: 'short' }) : t('invites.never')}</span>
               <span role="cell" className="flex justify-end">

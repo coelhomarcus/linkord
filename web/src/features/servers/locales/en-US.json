@@ -93,6 +93,7 @@
     "edit": "Edit Channel"
   },
   "members": {
+    "bio": "Bio",
     "label": "Members",
     "online": "Online",
     "offline": "Offline",
