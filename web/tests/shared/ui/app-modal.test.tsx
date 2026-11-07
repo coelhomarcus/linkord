@@ -15,6 +15,18 @@ describe('AppModal', () => {
     expect(screen.getByRole('dialog', { name: 'Ajustes' })).toHaveTextContent('conteúdo');
   });
 
+  it('a full-height modal lifts the dialog height cap, or the app shows through under it', () => {
+    render(<AppModal label="Servidor" size="fullscreen" onClose={vi.fn()}><p>conteúdo</p></AppModal>);
+    const dialog = screen.getByRole('dialog', { name: 'Servidor' });
+    expect(dialog).toHaveClass('h-dvh', 'max-h-dvh');
+    expect(dialog).not.toHaveClass('max-h-[calc(100dvh-2rem)]');
+  });
+
+  it('on a phone every size is full height, so the cap is lifted there too', () => {
+    render(<AppModal label="Ajustes" onClose={vi.fn()}><p>conteúdo</p></AppModal>);
+    expect(screen.getByRole('dialog', { name: 'Ajustes' })).toHaveClass('max-md:h-dvh', 'max-md:max-h-dvh');
+  });
+
   it('asks its owner to close on Escape', async () => {
     const onClose = vi.fn();
     render(<AppModal label="Ajustes" onClose={onClose}><p>conteúdo</p></AppModal>);
