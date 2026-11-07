@@ -245,8 +245,8 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
   if (message.kind === 'dm_call') {
     const answered = message.callDurationSeconds != null;
     return (
-      <div className="flex items-baseline gap-2 px-4 py-1 text-label text-text-secondary" data-msg-id={message.msgId}>
-        <PhoneIcon size={16} weight="fill" className={answered ? 'text-green' : 'text-red'} aria-hidden />
+      <div className="flex items-center gap-2 px-4 py-1 text-label text-text-secondary" data-msg-id={message.msgId}>
+        <PhoneIcon size={16} weight="fill" className={cn('block shrink-0', answered ? 'text-green' : 'text-red')} aria-hidden />
         <span>{dmCallLine({ viewerId: state.me.userId, callerId: message.id, callerName: message.name, durationSeconds: message.callDurationSeconds ?? null }, t)}</span>
         <time className="text-caption text-text-muted" dateTime={new Date(message.ts).toISOString()}>{formatTime(message.ts)}</time>
       </div>
