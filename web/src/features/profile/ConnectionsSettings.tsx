@@ -8,6 +8,7 @@ import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/ui/primitives/dialog';
 import { useRoom } from '@/state/RoomContext';
+import { connectionBrand } from './connectionBrands';
 import { BrandIcon } from './profileLinks';
 import { createConnection, deleteConnection, editConnection, fetchConnections } from './profileApi';
 import type { ConnectionProvider, ConnectionsResponse, ProfileConnection } from './connectionsTypes';
@@ -74,7 +75,7 @@ export function ConnectionsSettings() {
     catch (error) { if (mounted.current) setError(describe(error)); }
     finally { if (mounted.current) setBusy(false); }
   }
-  const providerName = (provider: ConnectionProvider) => provider === 'url' ? t('integration.url') : provider === 'github' ? 'GitHub' : 'MyAnimeList';
+  const providerName = (provider: ConnectionProvider) => connectionBrand(provider)?.name ?? t('integration.url');
   function open(provider: ConnectionProvider, connection?: ProfileConnection) {
     setDialog({ provider, connection }); setValue(connection?.value ?? ''); setError(null);
   }

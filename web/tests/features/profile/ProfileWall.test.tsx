@@ -78,6 +78,24 @@ describe('Wall widget cards', () => {
     expect(screen.getByText(/A última sincronização falhou/)).toBeInTheDocument();
     expect(screen.queryByText(/Atualizado em/)).not.toBeInTheDocument();
   });
+  it('names the profile link with the service and the user, and keeps the logo out of that name', () => {
+    render(<WallWidgetCard widget={anime} />);
+    const link = screen.getByRole('link', { name: 'MyAnimeList, @Xinil' });
+    expect(link).toHaveAttribute('href', connection.url);
+    expect(link).not.toHaveTextContent('MyAnimeList');
+    expect(screen.getByRole('heading', { name: 'Atividade recente de animes' })).toBeInTheDocument();
+  });
+  it('groups widgets still off the Wall by service, with the account named once', async () => {
+    const user = userEvent.setup();
+    renderWall();
+    await user.click(await screen.findByRole('button', { name: 'Editar Mural' }));
+    expect(screen.getByRole('heading', { name: 'MyAnimeList' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'GitHub' })).toBeInTheDocument();
+    expect(screen.getByText('@Xinil')).toBeInTheDocument();
+    expect(screen.getByText('@octocat')).toBeInTheDocument();
+    expect(screen.queryByText(/GitHub ·/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Atividade recente de animes' })).toBeInTheDocument();
+  });
   it('shows only the covers of the first eight recent anime, without titles or progress', () => {
     const items = Array.from({ length: 10 }, (_, i) => ({ id: String(i), title: `Anime ${i}`, url: `https://myanimelist.net/anime/${i}`, imageUrl: `https://cdn.myanimelist.net/${i}.jpg` }));
     render(<WallWidgetCard widget={{ ...anime, data: { kind: 'list', items } }} />);
