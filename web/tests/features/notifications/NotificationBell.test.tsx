@@ -19,7 +19,7 @@ const entry = (over: Partial<NotificationEntry> = {}): NotificationEntry => ({
   id: 'n1', kind: 'friend_request', at: new Date().toISOString(), read: false, friendshipId: 'f1', invitationId: null, actor: ana, server: null, ...over,
 });
 
-function Where() { const l = useLocation(); return <p data-testid="where">{l.pathname}{l.search}</p>; }
+function Where() { const l = useLocation(); return <p data-testid="where">{l.pathname}{l.search}{l.hash}</p>; }
 const renderBell = () => renderSocial(<NotificationStateProvider><NotificationBell /><Routes><Route path="*" element={<Where />} /></Routes></NotificationStateProvider>);
 
 beforeEach(() => {
@@ -31,12 +31,14 @@ beforeEach(() => {
 });
 
 describe('NotificationBell', () => {
-  it('shows the unread counter and 9+ above nine', async () => {
+  it('marks an unread inbox with a dot and keeps the count in the name', async () => {
     mocked.fetchUnreadNotificationCount.mockResolvedValue({ unread: 12 });
     mocked.fetchNotifications.mockResolvedValue({ items: [], nextCursor: null });
     renderBell();
-    expect(await screen.findByText('9+')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Caixa de Entrada, 12 não lidas' })).toBeInTheDocument();
+    const button = await screen.findByRole('button', { name: 'Caixa de Entrada, 12 não lidas' });
+    expect(button.querySelector('[data-testid="unread-dot"]')).toBeInTheDocument();
+    expect(screen.queryByText('9+')).not.toBeInTheDocument();
+    expect(screen.queryByText('12')).not.toBeInTheDocument();
   });
 
   it('empty list', async () => {
@@ -73,7 +75,7 @@ describe('NotificationBell', () => {
     await user.click(await screen.findByRole('button', { name: 'Caixa de Entrada, 1 não lida' }));
     await user.click(await screen.findByText('Ana convidou você para o servidor Squad'));
     expect(mocked.markNotificationsRead).toHaveBeenCalledWith({ ids: ['n1'] });
-    expect(screen.getByTestId('where')).toHaveTextContent('/app/friends?tab=invitations');
+    expect(screen.getByTestId('where')).toHaveTextContent('/app/friends?tab=pending#invitations');
   });
 
   it('an already-read item does not call the API on click', async () => {
@@ -161,6 +163,6 @@ describe('NotificationsPage', () => {
     renderSocial(<NotificationStateProvider><NotificationsPage /><Where /></NotificationStateProvider>, { path: '/app/notifications' });
     expect(await screen.findByText('Ana enviou uma solicitação de amizade')).toBeInTheDocument();
     await userEvent.setup().click(screen.getByText('Ana enviou uma solicitação de amizade'));
-    expect(screen.getByTestId('where')).toHaveTextContent('/app/friends?tab=pending');
+    expect(screen.getByTestId('where')).toHaveTextContent('/app/friends?tab=pending#received');
   });
 });

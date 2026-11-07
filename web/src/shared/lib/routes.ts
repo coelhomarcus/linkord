@@ -9,9 +9,9 @@ export function isSettingsTab(value: string | undefined): value is SettingsTab {
 
 /** The views of the unified Friends page. The view lives in the URL
  * (`?tab=`), so history, links and notifications all mean the same thing. */
-const FRIENDS_VIEWS = ['all', 'online', 'pending', 'invitations', 'add'] as const;
+const FRIENDS_VIEWS = ['all', 'online', 'pending', 'add'] as const;
 export type FriendsView = (typeof FRIENDS_VIEWS)[number];
-export type FriendsSection = 'received' | 'sent';
+export type FriendsSection = 'received' | 'sent' | 'invitations';
 
 /** An unknown or missing value is "everyone" — never an empty page. */
 export function parseFriendsView(raw: string | null | undefined): FriendsView {

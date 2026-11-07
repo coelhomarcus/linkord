@@ -50,7 +50,7 @@ export function EmailRequiredModal() {
           />
           {error && <p className="text-label text-red">{error}</p>}
           <Button type="submit" disabled={pending || !email}>
-            {pending ? <CircleNotchIcon size={20} className="animate-spin" /> : <EnvelopeIcon size={20} />}
+            {pending ? <CircleNotchIcon size={20} className="animate-spin" /> : <EnvelopeIcon size={20} weight="fill" />}
             {pending ? t('emailRequired.saving') : t('emailRequired.submit')}
           </Button>
           <Button type="button" variant="ghost" onClick={() => void logout()}>

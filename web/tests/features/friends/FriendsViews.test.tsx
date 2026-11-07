@@ -36,20 +36,22 @@ describe('Amigos — the view comes from the URL', () => {
     expect(screen.getByRole('link', { name: 'Todos' })).toHaveAttribute('aria-current', 'page');
   });
 
-  it('?tab=pending opens Pendentes with Recebidas and Enviadas on the same page', async () => {
+  it('?tab=pending opens Pendentes with requests and invitations on the same page', async () => {
     mocked.fetchFriendRequests.mockImplementation(async (direction) => (direction === 'incoming' ? page(ana) : page(bea)));
     at('/app/friends?tab=pending');
     expect(await screen.findByRole('heading', { level: 2, name: 'Recebidas' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 2, name: 'Enviadas' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Convites de servidor' })).toBeInTheDocument();
     expect(await screen.findByText('Ana')).toBeInTheDocument();
     expect(await screen.findByText('Bea')).toBeInTheDocument();
     expect(mocked.fetchFriends).not.toHaveBeenCalled();
   });
 
-  it('?tab=invitations opens directly on Convites', async () => {
+  it('?tab=invitations lands on Pendentes, where the invitations are', async () => {
     at('/app/friends?tab=invitations');
     expect(await screen.findByText('Nenhum convite de servidor pendente.')).toBeInTheDocument();
-    expect(mocked.fetchFriendRequests).not.toHaveBeenCalled();
+    expect(screen.getByRole('heading', { level: 2, name: 'Recebidas' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Convites' })).not.toBeInTheDocument();
   });
 
   it('?tab=add opens the form and the username to share', async () => {
@@ -79,11 +81,11 @@ describe('Amigos — the view comes from the URL', () => {
     expect(screen.getByLabelText('Buscar nos seus amigos')).toHaveValue('an');
   });
 
-  it('mode badges distinguish requests and invitations', async () => {
+  it('the Pendentes badge counts requests and invitations together', async () => {
     mocked.fetchRequestSummary.mockResolvedValue({ incoming: 2, invitations: 1 });
     at('/app/friends');
-    expect(await screen.findByLabelText('2 solicitações aguardando resposta')).toBeInTheDocument();
-    expect(screen.getByLabelText('1 convites aguardando resposta')).toBeInTheDocument();
+    expect(await screen.findByLabelText('3 aguardando resposta')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Convites' })).not.toBeInTheDocument();
   });
 });
 
@@ -136,10 +138,11 @@ describe('Amigos — Pendentes', () => {
     at('/app/friends?tab=pending');
     expect(await screen.findByText('Nenhuma solicitação recebida.')).toBeInTheDocument();
     expect(screen.getByText('Você não tem solicitações enviadas.')).toBeInTheDocument();
+    expect(screen.getByText('Nenhum convite de servidor pendente.')).toBeInTheDocument();
   });
 });
 
-describe('Amigos — search in Pendentes and Convites (on the server, before pagination)', () => {
+describe('Amigos — search in Pendentes (on the server, before pagination)', () => {
   it('Pendentes sends ?q= to both received and sent', async () => {
     at('/app/friends?tab=pending&q=ana');
     await waitFor(() => {
@@ -152,13 +155,13 @@ describe('Amigos — search in Pendentes and Convites (on the server, before pag
   it('a search with no results says so (not "nenhuma solicitacao")', async () => {
     at('/app/friends?tab=pending&q=zzz');
     // The two sections load independently, so wait for both rather than the first to appear.
-    await waitFor(() => expect(screen.getAllByText('Nenhum resultado para esta busca.')).toHaveLength(2));
+    await waitFor(() => expect(screen.getAllByText('Nenhum resultado para esta busca.')).toHaveLength(3));
   });
 
-  it('Convites sends ?q= and shows an empty search state', async () => {
+  it('the same search also filters invitations', async () => {
     at('/app/friends?tab=invitations&q=squad');
     await waitFor(() => expect(mocked.fetchReceivedInvitations).toHaveBeenCalledWith(null, 'squad'));
-    expect(await screen.findByText('Nenhum resultado para esta busca.')).toBeInTheDocument();
+    expect(await screen.findAllByText('Nenhum resultado para esta busca.')).toHaveLength(3);
   });
 
   it('typing in the Pendentes search writes ?q= without switching views', async () => {
@@ -178,7 +181,7 @@ describe('Friends — group invitations', () => {
     mocked.fetchReceivedInvitations.mockResolvedValue({ items: [entry], nextCursor: null });
     mocked.acceptInvitation.mockResolvedValue({ invitation: {} as never });
     mocked.declineInvitation.mockResolvedValue({ invitation: {} as never });
-    at('/app/friends?tab=invitations');
+    at('/app/friends?tab=pending');
 
     expect(await screen.findByText('Squad')).toBeInTheDocument();
     expect(screen.getByText(/3 membros$/)).toBeInTheDocument(); // regression: a stray "}" once trailed it
@@ -192,7 +195,7 @@ describe('Friends — group invitations', () => {
     const user = userEvent.setup();
     mocked.fetchReceivedInvitations.mockResolvedValue({ items: [entry], nextCursor: null });
     mocked.acceptInvitation.mockRejectedValue(new api.ApiError(409, 'server_full', 'x'));
-    at('/app/friends?tab=invitations');
+    at('/app/friends?tab=pending');
 
     await user.click(await screen.findByRole('button', { name: 'Entrar' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('O servidor está cheio.');
@@ -264,7 +267,7 @@ describe('Amigos — robust actions and lists (E5)', () => {
     const entry = { id: 'inv-1', at: '2026-01-01T00:00:00.000Z', server: { id: 'g', name: 'Squad', icon: '', memberCount: 3 }, inviter: ana };
     mocked.fetchReceivedInvitations.mockResolvedValue({ items: [entry], nextCursor: null });
     mocked.acceptInvitation.mockRejectedValue(new api.ApiError(409, 'server_full', 'x'));
-    at('/app/friends?tab=invitations');
+    at('/app/friends?tab=pending');
     await user.click(await screen.findByRole('button', { name: 'Entrar' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('O servidor está cheio.');
     await waitFor(() => expect(mocked.fetchReceivedInvitations.mock.calls.length).toBeGreaterThan(1));

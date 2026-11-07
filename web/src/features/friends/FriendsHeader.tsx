@@ -13,20 +13,20 @@ import { AppLink } from '@/shared/ui/app-link';
 
 export type FriendsHeaderLayout = 'inline' | 'row' | 'select';
 
-const MODES = ['all', 'online', 'pending', 'invitations'] as const satisfies readonly FriendsView[];
+const MODES = ['all', 'online', 'pending'] as const satisfies readonly FriendsView[];
 
-/** How many actions wait on this account in each view — only pending/invitations have one. */
+/** Friend requests and server invitations both live under Pendentes. */
 function useModeCounts(): Partial<Record<FriendsView, number>> {
-  const { pendingFriendRequestCount, pendingInvitationCount } = useFriends();
-  return { pending: pendingFriendRequestCount, invitations: pendingInvitationCount };
+  const { pendingIncomingCount } = useFriends();
+  return { pending: pendingIncomingCount };
 }
 
-function ModeBadge({ count, view }: { count: number; view: 'pending' | 'invitations' }) {
+function ModeBadge({ count }: { count: number }) {
   const { t } = useTranslation('friends');
-  return <CountBadge label={t(`badge.${view}`, { count })}>{count > 99 ? '99+' : count}</CountBadge>;
+  return <CountBadge label={t('badge.pending', { count })}>{count > 99 ? '99+' : count}</CountBadge>;
 }
 
-/** The four list views, as links: the URL is the state, so Back/Forward and
+/** The list views, as links: the URL is the state, so Back/Forward and
  * shared links mean the same view. */
 export function FriendsModeNav({ view, className }: { view: FriendsView; className?: string }) {
   const { t } = useTranslation('friends');
@@ -48,7 +48,7 @@ export function FriendsModeNav({ view, className }: { view: FriendsView; classNa
           >
             {current && <ActiveFill />}
             <span>{t(`views.${mode}`)}</span>
-            {count > 0 && (mode === 'pending' || mode === 'invitations') && <ModeBadge count={count} view={mode} />}
+            {count > 0 && mode === 'pending' && <ModeBadge count={count} />}
           </AppLink>
         );
       })}
@@ -56,7 +56,7 @@ export function FriendsModeNav({ view, className }: { view: FriendsView; classNa
   );
 }
 
-/** The same four views as one labelled select, for a narrow page area. */
+/** The same views as one labelled select, for a narrow page area. */
 export function FriendsModeSelect({ view }: { view: FriendsView }) {
   const { t } = useTranslation('friends');
   const counts = useModeCounts();

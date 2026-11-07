@@ -9,11 +9,9 @@ import { ServerIcon } from '@/features/servers/ServerIcon';
 import { ActionFeedback } from './ActionFeedback';
 import type { Feedback } from './ActionFeedback';
 import { useFriends } from './FriendsContext';
-import { ListSearch } from './ListSearch';
 import { ListSectionHeader } from './ListSectionHeader';
 import { LoadMoreFooter } from './LoadMoreFooter';
 import { usePendingIds } from './usePendingIds';
-import { useUrlSearch } from '@/shared/hooks/useUrlSearch';
 import { FadeIn, RevealList, RevealRow, SocialRowsSkeleton } from './listReveal';
 import { useLoadingPhase } from './useLoadingPhase';
 import { useRememberedList } from './useRememberedList';
@@ -22,13 +20,12 @@ import { i18n } from '@/shared/i18n/init';
 const HEADING_ID = 'invitations-title';
 const invitationKey = (entry: ReceivedInvitationEntry) => entry.id;
 
-export function ServerInvitationsView({ query, onQueryChange, onOpenProfile }: { query: string; onQueryChange: (next: string) => void; onOpenProfile: (userId: string) => void }) {
+export function ServerInvitationsView({ search, onOpenProfile }: { search: string; onOpenProfile: (userId: string) => void }) {
   const { t } = useTranslation('friends');
   const { revision, bump } = useFriends();
   const pending = usePendingIds();
   const [feedback, setFeedback] = useState<Feedback>(null);
   const clearFeedback = useCallback(() => setFeedback(null), []);
-  const { value, setValue, search } = useUrlSearch(query, onQueryChange);
   const fetchPage = useCallback((cursor: string | null) => fetchReceivedInvitations(cursor, search), [search]);
   const list = useRememberedList(fetchPage, `invitations|${search}`, { revision, getKey: invitationKey });
   const phase = useLoadingPhase(list.status === 'loading');
@@ -92,15 +89,12 @@ export function ServerInvitationsView({ query, onQueryChange, onOpenProfile }: {
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <ListSearch value={value} onChange={setValue} label={t('invitations.searchLabel')} />
-      <section aria-labelledby={HEADING_ID} className="flex flex-col gap-2">
+    <section id="invitations" aria-labelledby={HEADING_ID} className="flex scroll-mt-4 flex-col gap-2">
         <ListSectionHeader id={HEADING_ID} title={t('invitations.title')} />
         <ActionFeedback feedback={feedback} onClear={clearFeedback} />
         {body}
         {phase === 'content' && list.status === 'ready' && <LoadMoreFooter list={list} className="pt-2" />}
-      </section>
-    </div>
+    </section>
   );
 }
 
