@@ -461,7 +461,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
             // Discord's desktop composer sends on Enter alone; the button stays for touch
             className="flex-none rounded-full md:hidden"
           >
-            <ArrowUpIcon size={20} />
+            <ArrowUpIcon size={20} weight="fill" />
           </Button>
         </div>
       </div>

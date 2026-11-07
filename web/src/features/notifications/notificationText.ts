@@ -1,6 +1,6 @@
 import { i18n } from '@/shared/i18n/init';
 import type { NotificationEntry } from '@/shared/api/api';
-import { ROUTES, friendsSection, friendsView } from '@/shared/lib/routes';
+import { ROUTES, friendsSection } from '@/shared/lib/routes';
 
 type NotificationTextKey =
   | 'unknownActor'
@@ -39,14 +39,10 @@ export function notificationTarget(entry: NotificationEntry): string {
   switch (entry.kind) {
     case 'friend_request': return friendsSection('received');
     case 'friend_accepted': return ROUTES.friends;
-    case 'server_invitation': return friendsView('invitations');
+    case 'server_invitation': return friendsSection('invitations');
     // opened by jumping to the message itself (see NotificationBell), not by a route
     case 'mention': return ROUTES.home;
   }
-}
-
-export function formatUnread(count: number): string {
-  return count > 9 ? '9+' : String(count);
 }
 
 export function formatRelativeTime(iso: string, now = Date.now()): string {

@@ -27,7 +27,7 @@ describe('RequestsRedirect (links antigos)', () => {
 
   it('/app/requests?tab=invitations vai para os convites', () => {
     at('/app/requests?tab=invitations');
-    expect(screen.getByTestId('where')).toHaveTextContent('/app/friends?tab=invitations');
+    expect(screen.getByTestId('where')).toHaveTextContent('/app/friends?tab=pending#invitations');
   });
 
   it('com barra final e tab desconhecida ainda cai nas recebidas', () => {

@@ -10,7 +10,6 @@ import { AddFriendView } from './AddFriendView';
 import { AddFriendButton, FriendsModeNav, FriendsModeSelect } from './FriendsHeader';
 import type { FriendsHeaderLayout } from './FriendsHeader';
 import { FriendsList } from './FriendsList';
-import { ServerInvitationsView } from './ServerInvitationsView';
 import { PendingRequestsView } from './PendingRequestsView';
 
 // Where the header switches arrangement, measured on the page AREA (the space
@@ -23,13 +22,14 @@ function headerLayoutFor(width: number): FriendsHeaderLayout {
   return width >= ROW_MIN ? 'row' : 'select';
 }
 
-/** Friends, pending requests, server invitations and adding people — one page. The
- * view (`?tab=`) and the search (`?q=`) live in the URL. */
+/** Friends, pending requests (including server invitations) and adding people —
+ * one page. The view (`?tab=`) and the search (`?q=`) live in the URL. */
 export function FriendsPage({ onOpenProfile }: { onOpenProfile: (userId: string) => void }) {
   const { t } = useTranslation('friends');
   const [params, setParams] = useSearchParams();
   const rawTab = params.get('tab');
-  const view = parseFriendsView(rawTab);
+  // invitations used to be their own tab; they now sit inside Pendentes
+  const view = rawTab === 'invitations' ? 'pending' : parseFriendsView(rawTab);
   const query = params.get('q') ?? '';
   const areaRef = useRef<HTMLDivElement | null>(null);
   const layout = headerLayoutFor(useElementWidth(areaRef));
@@ -37,6 +37,12 @@ export function FriendsPage({ onOpenProfile }: { onOpenProfile: (userId: string)
 
   // an unknown (or redundant `all`) tab is normalised in place, never an empty page
   useEffect(() => {
+    if (rawTab === 'invitations') {
+      const next = new URLSearchParams(params);
+      next.set('tab', 'pending');
+      setParams(next, { replace: true });
+      return;
+    }
     if (rawTab === null || (rawTab !== 'all' && rawTab === view)) return;
     const next = new URLSearchParams(params);
     next.delete('tab');
@@ -72,7 +78,6 @@ export function FriendsPage({ onOpenProfile }: { onOpenProfile: (userId: string)
           <FriendsList key={view} view={view} query={query} onQueryChange={setQuery} onOpenProfile={onOpenProfile} />
         )}
         {view === 'pending' && <PendingRequestsView query={query} onQueryChange={setQuery} onOpenProfile={onOpenProfile} />}
-        {view === 'invitations' && <ServerInvitationsView query={query} onQueryChange={setQuery} onOpenProfile={onOpenProfile} />}
         {view === 'add' && <AddFriendView />}
       </main>
       {wide && <ActiveNowPanel />}

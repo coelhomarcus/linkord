@@ -25,8 +25,8 @@ describe('black theme accent', () => {
     expect(black).not.toContain('#4c9cff');
   });
 
-  it('puts ink on accent labels and a white mark on the home tile', () => {
-    expect(black).toContain('--primary-foreground: #000000;');
+  it('puts white type on accent labels and a white mark on the home tile', () => {
+    expect(black).toContain('--primary-foreground: #ffffff;');
     expect(black).toContain('--accent-mark-filter: brightness(0) invert(1);');
   });
 

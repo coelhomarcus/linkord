@@ -122,7 +122,7 @@ export function FriendsList({ view, query, onQueryChange, onOpenProfile }: {
           <p className="text-body font-medium text-text-primary">{t('list.emptyTitle')}</p>
           <p className="max-w-sm text-label text-text-muted">{t('list.emptyText')}</p>
           <div className="flex flex-wrap justify-center gap-2">
-            <Button type="button" size="sm" onClick={() => navigate(friendsView('add'))}><UserPlusIcon size={20} /><span>{t('addFriend')}</span></Button>
+            <Button type="button" size="sm" onClick={() => navigate(friendsView('add'))}><UserPlusIcon size={20} weight="fill" /><span>{t('addFriend')}</span></Button>
             <Button type="button" variant="secondary" size="sm" onClick={() => void handleCopyUsername()}>
               {copied ? <CheckIcon size={20} /> : <CopyIcon size={20} />}
               <span>{copied ? t('add.copied') : t('add.copy', { username: state.me.name })}</span>

@@ -2,13 +2,14 @@ import { useEffect } from 'react';
 import { useLocation } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { FriendRequestList } from './FriendRequestList';
+import { ServerInvitationsView } from './ServerInvitationsView';
 import { useFriends } from './FriendsContext';
 import { ListSearch } from './ListSearch';
 import { ListSectionHeader } from './ListSectionHeader';
 import { useUrlSearch } from '@/shared/hooks/useUrlSearch';
 
-/** Received and sent requests in one scroll, each with its own pagination. The
- * hash (#received / #sent) is a direct link to a section. */
+/** Received and sent requests, plus server invitations, in one scroll. The
+ * hash (#received / #sent / #invitations) is a direct link to a section. */
 export function PendingRequestsView({ query, onQueryChange, onOpenProfile }: { query: string; onQueryChange: (next: string) => void; onOpenProfile: (userId: string) => void }) {
   const { t } = useTranslation('friends');
   const { pendingFriendRequestCount } = useFriends();
@@ -30,6 +31,7 @@ export function PendingRequestsView({ query, onQueryChange, onOpenProfile }: { q
         <ListSectionHeader id="sent-title" title={t('requests.sent')} />
         <FriendRequestList direction="outgoing" search={search} headingId="sent-title" onOpenProfile={onOpenProfile} />
       </section>
+      <ServerInvitationsView search={search} onOpenProfile={onOpenProfile} />
     </div>
   );
 }

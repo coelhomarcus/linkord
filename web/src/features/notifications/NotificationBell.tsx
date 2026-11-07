@@ -6,9 +6,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/primitives/
 import { buttonVariants } from '@/shared/ui/primitives/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
 import { cn } from '@/shared/lib/utils';
-import { CountBadge } from '@/shared/CountBadge';
 import { NotificationList } from './NotificationList';
-import { formatUnread } from './notificationText';
 import { useNotificationActions } from './useNotificationActions';
 import { NotificationStateProvider } from './NotificationStateProvider';
 import { useHasNotificationState } from './useUnreadNotifications';
@@ -37,11 +35,7 @@ function NotificationBellContent({ collapsed, onNavigate }: { collapsed: boolean
           : cn(buttonVariants({ variant: 'ghost', size: 'icon-sm' }), 'relative flex-none text-text-secondary hover:text-text-primary')}
       >
         <TrayIcon size={20} weight="fill" />
-        {unread > 0 && (
-          <CountBadge decorative className="absolute -right-1 -top-1">
-            {formatUnread(unread)}
-          </CountBadge>
-        )}
+        {unread > 0 && <span aria-hidden data-testid="unread-dot" className="absolute right-1 top-1 size-2 rounded-full bg-primary" />}
       </PopoverTrigger>
       {/* Discord's inbox: a dark panel under the title bar, its title with the
           tray, and square actions on the right */}

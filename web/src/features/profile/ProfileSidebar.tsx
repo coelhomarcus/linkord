@@ -76,11 +76,13 @@ export function ProfileSidebar({ userId, owner, status, details, onRetry, onOpen
       </TabsList>
 
       <div className="scrollbar-none min-h-0 md:flex-1 md:overflow-y-auto md:overscroll-contain">
-        <TabsPanel value="wall">
+        {/* Inactive panels unmount by default, and the wall's first paint is a
+            loading state, so switching away and back always flashed it. */}
+        <TabsPanel value="wall" keepMounted>
           <ProfileWall userId={userId} owner={owner} onNavigate={onNavigate} />
         </TabsPanel>
         {!owner && (
-          <TabsPanel value="common" aria-busy={status === 'loading'}>
+          <TabsPanel value="common" keepMounted aria-busy={status === 'loading'}>
             {mutualsFallback ?? (
               <div className="flex flex-col gap-5">
                 <section className="flex flex-col gap-0.5">

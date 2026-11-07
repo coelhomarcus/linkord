@@ -4,12 +4,10 @@
     "ariaLabel": "Visualização de Amigos",
     "all": "Todos",
     "online": "Online",
-    "pending": "Pendentes",
-    "invitations": "Convites"
+    "pending": "Pendentes"
   },
   "badge": {
-    "pending": "{{count}} solicitações aguardando resposta",
-    "invitations": "{{count}} convites aguardando resposta"
+    "pending": "{{count}} aguardando resposta"
   },
   "addFriend": "Adicionar amigo",
   "feedback": {

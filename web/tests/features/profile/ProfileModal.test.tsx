@@ -217,11 +217,25 @@ describe('ProfileModal — since when and what you have in common', () => {
     expect(await screen.findByRole('button', { name: /Luis/ })).toBeInTheDocument();
   });
 
+  it('does not reload the wall when switching to what you have in common', async () => {
+    mocked.fetchProfileDetails.mockResolvedValue(details);
+    renderProfile();
+    expect(await screen.findByText('Este usuário ainda não publicou widgets no Mural.')).toBeInTheDocument();
+    const calls = vi.mocked(wallApi.fetchWall).mock.calls.length;
+    const interaction = userEvent.setup();
+    await interaction.click(screen.getByRole('tab', { name: 'Em comum' }));
+    await interaction.click(screen.getByRole('tab', { name: 'Mural' }));
+    expect(screen.getByText('Este usuário ainda não publicou widgets no Mural.')).toBeInTheDocument();
+    expect(screen.queryByText('Carregando Mural…')).not.toBeInTheDocument();
+    expect(vi.mocked(wallApi.fetchWall).mock.calls.length).toBe(calls);
+  });
+
   it('keeps the Wall available when mutual details cannot be loaded', async () => {
     mocked.fetchProfileDetails.mockRejectedValue(new Error('offline'));
     renderProfile();
     expect(await screen.findByText('Este usuário ainda não publicou widgets no Mural.')).toBeInTheDocument();
-    expect(screen.queryByText('Não foi possível carregar o que vocês têm em comum.')).not.toBeInTheDocument();
+    const wall = screen.getByRole('tabpanel', { name: 'Mural' });
+    expect(within(wall).queryByText('Não foi possível carregar o que vocês têm em comum.')).not.toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Mural' })).toHaveAttribute('aria-selected', 'true');
   });
 

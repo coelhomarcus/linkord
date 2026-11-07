@@ -153,7 +153,7 @@ export function ProfileActions({ userId, username, displayName, onNavigate, onRe
         <span className="text-label text-text-muted">{t('profile.retryAfter', { when: formatRetryAfter(retryAfter) })}</span>
       ) : (
         <Button type="button" size="sm" disabled={pending} onClick={() => void run(() => sendFriendRequest(username), 'send')}>
-          {spinner ?? <UserPlusIcon size={20} />}<span>{t('profile.add')}</span>
+          {spinner ?? <UserPlusIcon size={20} weight="fill" />}<span>{t('profile.add')}</span>
         </Button>
       );
   }

@@ -4,12 +4,10 @@
     "ariaLabel": "Friends view",
     "all": "All",
     "online": "Online",
-    "pending": "Pending",
-    "invitations": "Invitations"
+    "pending": "Pending"
   },
   "badge": {
-    "pending": "{{count}} requests awaiting reply",
-    "invitations": "{{count}} invitations awaiting reply"
+    "pending": "{{count}} awaiting a reply"
   },
   "addFriend": "Add friend",
   "feedback": {
