@@ -19,7 +19,7 @@ function renderWall(owner = true) { render(<MemoryRouter><ProfileWall userId="me
 describe('profile Wall', () => {
   it('starts empty and keeps available data unpublished until explicitly saved', async () => {
     const user = userEvent.setup(); renderWall();
-    await user.click(await screen.findByRole('button', { name: 'Editar Mural' }));
+    await user.click(await screen.findByRole('button', { name: 'Adicionar widget' }));
     expect(screen.queryByRole('link', { name: 'Cowboy Bebop' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Atividade recente de animes' }));
     expect(screen.getByRole('link', { name: 'Cowboy Bebop' })).toBeInTheDocument();
@@ -30,7 +30,7 @@ describe('profile Wall', () => {
   });
   it('adds, reorders and saves only connection references, then supports removing widgets', async () => {
     const user = userEvent.setup(); renderWall();
-    await user.click(await screen.findByRole('button', { name: 'Editar Mural' }));
+    await user.click(await screen.findByRole('button', { name: 'Adicionar widget' }));
     await user.click(screen.getByRole('button', { name: 'Atividade recente de animes' }));
     await user.click(screen.getByRole('button', { name: 'Perfil do GitHub' }));
     expect(screen.getByRole('button', { name: 'Mover Atividade recente de animes para cima' })).toBeDisabled();
@@ -39,20 +39,20 @@ describe('profile Wall', () => {
     mocked.saveWall.mockResolvedValue({ ...empty, widgets: [profile, anime] });
     await user.click(screen.getByRole('button', { name: 'Salvar' }));
     await waitFor(() => expect(mocked.saveWall).toHaveBeenCalledWith(references));
-    await user.click(await screen.findByRole('button', { name: 'Editar Mural' }));
+    await user.click(await screen.findByRole('button', { name: 'Adicionar widget' }));
     await user.click(screen.getByRole('button', { name: 'Remover Atividade recente de animes' }));
     expect(screen.queryByRole('link', { name: 'Cowboy Bebop' })).not.toBeInTheDocument();
   });
   it('shows published widgets to visitors without edit controls or the catalog', async () => {
     mocked.fetchWall.mockResolvedValue({ widgets: [anime] }); renderWall(false);
     expect(await screen.findByRole('link', { name: 'Cowboy Bebop' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Editar Mural' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Adicionar widget' })).not.toBeInTheDocument();
     expect(screen.queryByText('Adicionar widget')).not.toBeInTheDocument();
     expect(mocked.fetchWall).toHaveBeenCalledWith('me', false, expect.any(AbortSignal));
   });
   it('preserves the editable draft when saving fails', async () => {
     const user = userEvent.setup(); mocked.saveWall.mockRejectedValue(new Error('offline')); renderWall();
-    await user.click(await screen.findByRole('button', { name: 'Editar Mural' }));
+    await user.click(await screen.findByRole('button', { name: 'Adicionar widget' }));
     await user.click(screen.getByRole('button', { name: 'Atividade recente de animes' }));
     await user.click(screen.getByRole('button', { name: 'Salvar' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível salvar o Mural.');
@@ -88,7 +88,7 @@ describe('Wall widget cards', () => {
   it('groups widgets still off the Wall by service, with the account named once', async () => {
     const user = userEvent.setup();
     renderWall();
-    await user.click(await screen.findByRole('button', { name: 'Editar Mural' }));
+    await user.click(await screen.findByRole('button', { name: 'Adicionar widget' }));
     expect(screen.getByRole('heading', { name: 'MyAnimeList' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'GitHub' })).toBeInTheDocument();
     expect(screen.getByText('@Xinil')).toBeInTheDocument();

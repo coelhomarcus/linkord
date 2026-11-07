@@ -76,6 +76,7 @@
   "integration": {
     "url": "URL",
     "addTitle": "Adicionar uma nova conexão",
+    "addLink": "Adicionar conexão",
     "count_one": "{{count}} conex\u00e3o",
     "count_other": "{{count}} conex\u00f5es",
     "loading": "Carregando conexões…",
@@ -111,7 +112,6 @@
   "wall": {
     "title": "Mural",
     "profileTabs": "Abas do perfil",
-    "edit": "Editar Mural",
     "cancel": "Cancelar",
     "save": "Salvar",
     "saving": "Salvando…",
@@ -120,10 +120,11 @@
     "loadFailed": "Não foi possível carregar o Mural.",
     "addWidgetHint": "Escolha o que aparece no seu Mural.",
     "addWidget": "Adicionar widget",
+    "yours": "Seus Widgets",
     "allAdded": "Todos os widgets disponíveis já foram adicionados.",
     "noConnections": "Conecte MyAnimeList ou GitHub para liberar widgets.",
     "manageConnections": "Gerenciar conexões",
-    "emptyOwner": "Seu Mural está vazio. Clique em Editar Mural para escolher seus widgets.",
+    "emptyOwner": "Seu Mural está vazio. Adicione um widget para escolher o que aparece.",
     "emptyVisitor": "Este usuário ainda não publicou widgets no Mural.",
     "moveUp": "Mover {{name}} para cima",
     "moveDown": "Mover {{name}} para baixo",

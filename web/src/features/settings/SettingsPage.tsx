@@ -108,7 +108,7 @@ export function SettingsPage({ onOpenProfile }: SettingsPageProps) {
           {showIndex ? (
             <SettingsIndex isAdmin={isAdmin} />
           ) : (
-            <SettingsContent>
+            <SettingsContent className={current === 'profile' ? 'max-w-none' : undefined}>
               <SettingsPageHeader title={t(category.labelKey)} description={t(category.descriptionKey)} headingRef={headingRef} hideTitle={compactDetail} />
               <CategoryPage tab={current} onOpenProfile={onOpenProfile} />
             </SettingsContent>
