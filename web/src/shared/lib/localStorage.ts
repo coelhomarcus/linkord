@@ -23,6 +23,8 @@ export const LOCAL_STORAGE_KEYS = {
   memberListOpen: 'ss-member-list-open',
   dmCallHeight: 'ss-dm-call-height',
   legacyNoiseSuppression: 'ss-noise-suppression',
+  timeFormat: 'ss-time-format',
+  sounds: 'ss-sounds',
 } as const;
 
 type RegistryValue = (typeof LOCAL_STORAGE_KEYS)[keyof typeof LOCAL_STORAGE_KEYS];
