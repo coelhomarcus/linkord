@@ -70,13 +70,17 @@ export function DmCallSurface({ participantIds, peers }: { participantIds: strin
     const scale = dmStripScale(others.length, avatarPeers.length, area.h);
     const thumbW = Math.round(DM_STRIP_THUMB.w * scale);
     const thumbH = Math.round(DM_STRIP_THUMB.h * scale);
+    // content box of the strip plus its padding: anything narrower scrolls sideways
+    const stripWidth = DM_STRIP_THUMB.w + 2 * DM_STRIP_PADDING;
     content = (
       <div className="flex h-full w-full gap-3">
+        {/* mirrors the strip so the video sits in the middle of the call, not of what the strip leaves */}
+        {showStrip && <div aria-hidden data-dm-call-strip-spacer className="flex-none" style={{ width: stripWidth }} />}
         <div className="flex min-h-0 min-w-0 flex-1 items-center justify-center">
           {renderVideo(focused, 'source', '100%', '100%')}
         </div>
         {showStrip && (
-          <div data-dm-call-strip className="flex flex-none flex-col items-center justify-center-safe gap-3 overflow-y-auto" style={{ width: DM_STRIP_THUMB.w, padding: DM_STRIP_PADDING }}>
+          <div data-dm-call-strip className="flex flex-none flex-col items-center justify-center-safe gap-3 overflow-x-hidden overflow-y-auto" style={{ width: stripWidth, padding: DM_STRIP_PADDING }}>
             {others.map((d) => renderVideo(d, 'fill', thumbW, thumbH))}
             {avatarPeers.map((peer) => (
               <DmCallAvatar key={peer.id} peer={peer} isMine={isMine(peer.id)} size={Math.round(DM_STRIP_AVATAR * scale)} loading={pendingCameraIds.has(peer.id)} />

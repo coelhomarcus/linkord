@@ -86,4 +86,17 @@ describe('DmCallSurface', () => {
     expect(strip?.querySelector('[data-testid="avatar-a"]')).not.toBeNull();
     expect(strip?.querySelector('[data-testid="avatar-b"]')).not.toBeNull();
   });
+
+  it('centers the focused video by mirroring the strip, and never scrolls the strip sideways', () => {
+    tiles.current = [tile('a', 'screen'), tile('a', 'avatar'), tile('b', 'avatar')];
+    renderWithRoom(<DmCallSurface participantIds={['a', 'b']} peers={peers} />, {
+      state: { ...initialRoomState, focusedId: 'a:screen', focusOrigin: 'automatic' },
+    });
+    const strip = document.querySelector<HTMLElement>('[data-dm-call-strip]')!;
+    const spacer = document.querySelector<HTMLElement>('[data-dm-call-strip-spacer]');
+    expect(spacer?.style.width).toBe(strip.style.width);
+    expect(strip).toHaveClass('overflow-x-hidden');
+    // 160px thumbnails plus the strip's 4px padding on each side
+    expect(strip.style.width).toBe('168px');
+  });
 });
