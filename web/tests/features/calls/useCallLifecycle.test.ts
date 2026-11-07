@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
-import { DisconnectReason, RoomEvent } from 'livekit-client';
+import { DisconnectReason, RoomEvent, Track } from 'livekit-client';
 import type { Room } from 'livekit-client';
 import { useCallLifecycle } from '@/features/calls/useCallLifecycle';
 
@@ -31,13 +31,14 @@ function setup(connect: () => Promise<void> = async () => undefined, extras: {
   const livekitRoom = fakeRoom(connect);
   const activateMic = vi.fn(extras.activateMic ?? (async () => undefined));
   const setMicMuted = vi.fn(extras.setMicMuted ?? (async (_muted: boolean) => undefined));
+  const startCamera = vi.fn(async () => undefined);
   const { result } = renderHook(() => useCallLifecycle({
     livekitRoom, dispatch, sendWs,
     stopCamera: vi.fn(), stopSharing: vi.fn(),
-    activateMic, setMicMuted, leaveMic: vi.fn(async () => undefined),
+    activateMic, setMicMuted, leaveMic: vi.fn(async () => undefined), startCamera,
     cameraOn: false, sharing: false,
   }));
-  return { result, dispatch, sendWs, livekitRoom, activateMic, setMicMuted };
+  return { result, dispatch, sendWs, livekitRoom, activateMic, setMicMuted, startCamera };
 }
 
 const token = { conversationId: 'c1', livekitUrl: 'wss://lk', livekitToken: 't' };
@@ -149,5 +150,63 @@ describe('useCallLifecycle — moving between voice channels', () => {
 
     await vi.waitFor(() => expect(sendWs).toHaveBeenCalledWith({ t: 'call-join', conversationId: 'voice-2' }));
     expect(sendWs).toHaveBeenCalledWith({ t: 'call-leave' });
+  });
+});
+
+describe('useCallLifecycle — what a publication actually means', () => {
+  it('reports a muted camera as off, to the server and to the local button', () => {
+    const { sendWs, dispatch, livekitRoom } = setup();
+    livekitRoom.localParticipant.getTrackPublication = ((source: Track.Source) => (
+      source === Track.Source.Camera ? { isMuted: true, track: { mediaStreamTrack: { readyState: 'live' } } } : undefined
+    )) as typeof livekitRoom.localParticipant.getTrackPublication;
+
+    act(() => { livekitRoom.emit(RoomEvent.TrackMuted, { source: Track.Source.Camera }, { identity: 'me' }); });
+
+    expect(sendWs).toHaveBeenCalledWith({ t: 'camera', on: false });
+    expect(dispatch).toHaveBeenCalledWith({ type: 'SET_LOCAL_CAMERA', on: false });
+  });
+
+  it('keeps a paused screen share on, and drops one whose capture has ended', () => {
+    const { sendWs, dispatch, livekitRoom } = setup();
+    const publication = { isMuted: true, track: { mediaStreamTrack: { readyState: 'live' as string } } };
+    livekitRoom.localParticipant.getTrackPublication = ((source: Track.Source) => (
+      source === Track.Source.ScreenShare ? publication : undefined
+    )) as typeof livekitRoom.localParticipant.getTrackPublication;
+
+    act(() => { livekitRoom.emit(RoomEvent.TrackMuted, { source: Track.Source.ScreenShare }, { identity: 'me' }); });
+    expect(sendWs).toHaveBeenCalledWith({ t: 'screen-share', on: true });
+    expect(dispatch).toHaveBeenCalledWith({ type: 'SET_LOCAL_SHARING', sharing: true });
+
+    publication.track.mediaStreamTrack.readyState = 'ended';
+    sendWs.mockClear();
+    act(() => { livekitRoom.emit(RoomEvent.TrackMuted, { source: Track.Source.ScreenShare }, { identity: 'me' }); });
+    expect(sendWs).toHaveBeenCalledWith({ t: 'screen-share', on: false });
+  });
+
+  it('ignores another participant muting their own camera', () => {
+    const { sendWs, livekitRoom } = setup();
+    act(() => { livekitRoom.emit(RoomEvent.TrackMuted, { source: Track.Source.Camera }, { identity: 'someone-else' }); });
+    expect(sendWs).not.toHaveBeenCalledWith(expect.objectContaining({ t: 'camera' }));
+  });
+});
+
+describe('useCallLifecycle — DM media', () => {
+  it('ignores a token until this tab is armed, then connects and starts the camera for a video call', async () => {
+    const { result, livekitRoom, startCamera } = setup();
+    act(() => { result.current.onCallToken(token); });
+    expect(livekitRoom.connect).not.toHaveBeenCalled();
+
+    act(() => { result.current.armDmMedia('c1', true); });
+    await act(async () => { result.current.onCallToken(token); });
+    await vi.waitFor(() => expect(livekitRoom.connect).toHaveBeenCalledWith('wss://lk', 't'));
+    expect(startCamera).toHaveBeenCalledOnce();
+  });
+
+  it('a voice DM connects without turning the camera on', async () => {
+    const { result, livekitRoom, startCamera } = setup();
+    act(() => { result.current.armDmMedia('c1', false); });
+    await act(async () => { result.current.onCallToken(token); });
+    await vi.waitFor(() => expect(livekitRoom.connect).toHaveBeenCalled());
+    expect(startCamera).not.toHaveBeenCalled();
   });
 });

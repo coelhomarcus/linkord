@@ -1,13 +1,11 @@
 /* Palettes — semantic tokens only. The Old theme is the base palette in
    index.css @theme, so it needs no block here. */
 
-/* Black: Discord's Onyx. Every surface of the shell is the same black, so the
+/* Black: Onyx surfaces. Every surface of the shell is the same black, so the
    hairline borders alone draw the layout; what floats (menus, modals, the
-   inbox) is a near-black of its own with a slightly stronger edge. The values
-   are Onyx's own, read off its screens. */
+   inbox) is a near-black of its own with a slightly stronger edge. The accent
+   is the logo blue (#2b99e7), not Onyx's blurple. */
 html[data-theme="black"] {
-  /* links keep their own, deeper blue so they stay apart from the blurple accent */
-  --color-link: #4c9cff;
   /* solid, so the status-dot ring on a row can match them exactly */
   --color-message-hover: #121214;
   --color-nav-hover: #18181a;
@@ -63,10 +61,17 @@ html[data-theme="black"] {
   /* the user panel's edge, a shade darker than the shell's hairlines */
   --color-border-panel: #181819;
 
-  --color-accent-primary: #5865f2;
-  --color-accent-hover: #4752c4;
-  --color-accent-text: #7983f5;
-  --color-border-accent: #5865f2;
+  /* exact logo blue. White on it is only 3.1:1, so marks and labels on a
+     solid accent use ink (--primary-foreground), not white. */
+  --color-accent-primary: #2b99e7;
+  /* same hue, darker: a pressed or hovered fill */
+  --color-accent-hover: #177bc3;
+  /* same hue, one step lighter, so it stays 4.5:1 on the lightest black surface */
+  --color-accent-text: #3ea2e9;
+  --color-border-accent: #2b99e7;
+  --primary-foreground: #000000;
+  /* white mark on the other themes; ink here, because the tile is the logo blue */
+  --accent-mark-filter: brightness(0);
 
   --color-red-text: #da6863;
 

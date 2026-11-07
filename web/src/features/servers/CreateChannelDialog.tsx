@@ -68,7 +68,7 @@ export function CreateChannelDialog({ server, target, onClose }: { server: Serve
                   <button key={option} type="button" role="radio" aria-checked={checked} onClick={() => setType(option)}
                     className="group/option flex items-start gap-4 text-left">
                     <span aria-hidden className={cn('mt-0.5 grid size-5 flex-none place-items-center rounded-full', checked ? 'bg-accent-primary' : 'border-2 border-text-faint group-hover/option:border-text-secondary')}>
-                      {checked && <span className="size-2 rounded-full bg-white" />}
+                      {checked && <span className="size-2 rounded-full bg-primary-foreground" />}
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="flex items-center gap-2 text-body font-medium text-text-primary">

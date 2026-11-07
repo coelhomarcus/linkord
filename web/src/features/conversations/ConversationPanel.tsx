@@ -1,4 +1,4 @@
-import { ArrowLeftIcon, DotsThreeIcon, HashIcon, ImageIcon, MagnifyingGlassIcon, PhoneIcon, UserCircleIcon, UsersThreeIcon } from '@phosphor-icons/react';
+import { ArrowLeftIcon, DotsThreeIcon, HashIcon, ImageIcon, MagnifyingGlassIcon, PhoneIcon, UserCircleIcon, UsersThreeIcon, VideoCameraIcon } from '@phosphor-icons/react';
 import type { ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
@@ -47,7 +47,7 @@ interface ConversationPanelProps {
 
 export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, detailsOpen, mediaOpen, onToggleDetails, onToggleMedia }: ConversationPanelProps) {
   const { t } = useTranslation('conversations');
-  const { state, dispatch, conversations, activeConversationId, allUsers, onlineUserIds, activeCallConversationId, servers } = useRoom();
+  const { state, dispatch, conversations, activeConversationId, allUsers, onlineUserIds, activeCallConversationId, servers, startDmCall } = useRoom();
   const navigate = useNavigate();
   const { pathname, state: locationState } = useLocation();
   const { isMobile } = useSidebar();
@@ -89,7 +89,14 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
         : null;
   const callJoinError = state.callJoinError && state.callJoinError.conversationId === conversation?.id ? state.callJoinError.message : null;
   const inThisCall = !!conversation && activeCallConversationId === conversation.id;
-  const callActionLabel = inThisCall ? t('panel.returnToCall') : t('panel.joinCall');
+  const callActionLabel = inThisCall ? t('panel.returnToCall') : t('panel.voiceCall');
+  function startThisCall(video: boolean) {
+    if (!conversation || inThisCall) {
+      if (conversation) onOpenCall(conversation.id);
+      return;
+    }
+    startDmCall(conversation.id, video);
+  }
   const detailsLabel = t('panel.members');
 
   return (
@@ -145,16 +152,23 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
                 <Tooltip>
                   {/* a disabled button gets no pointer events, so the tooltip hangs off a wrapper */}
                   <TooltipTrigger render={<span tabIndex={0} className="inline-flex rounded-lg focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 max-md:hidden" />}>
-                    <button type="button" disabled aria-label={t('panel.joinCall')} className={cn(HEADER_ICON, 'opacity-40')}>
+                    <button type="button" disabled aria-label={t('panel.voiceCall')} className={cn(HEADER_ICON, 'opacity-40')}>
                       <PhoneIcon size={24} weight="fill" />
                     </button>
                   </TooltipTrigger>
                   <TooltipContent side="bottom">{callBlockedReason}</TooltipContent>
                 </Tooltip>
               ) : (
-                <HeaderIcon label={callActionLabel} onClick={() => onOpenCall(conversation.id)} className={cn('max-md:hidden', inThisCall && 'text-green hover:text-green')}>
-                  <PhoneIcon size={24} weight="fill" />
-                </HeaderIcon>
+                <>
+                  <HeaderIcon label={callActionLabel} onClick={() => startThisCall(false)} className={cn('max-md:hidden', inThisCall && 'text-green hover:text-green')}>
+                    <PhoneIcon size={24} weight="fill" />
+                  </HeaderIcon>
+                  {!inThisCall && (
+                    <HeaderIcon label={t('panel.videoCall')} onClick={() => startThisCall(true)} className="max-md:hidden">
+                      <VideoCameraIcon size={24} weight="fill" />
+                    </HeaderIcon>
+                  )}
+                </>
               )}
               <HeaderIcon label={t('panel.media')} pressed={mediaOpen} onClick={onToggleMedia} className="max-md:hidden">
                 <ImageIcon size={24} weight={mediaOpen ? 'fill' : 'regular'} />
@@ -180,13 +194,14 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
                 <MagnifyingGlassIcon size={18} className="flex-none text-text-secondary" aria-hidden />
               </button>
             </div>
-            {(activeCallConversationId || !isChannel) && <Button type="button" variant="ghost" size="icon" aria-label={activeCallConversationId && activeCallConversationId !== conversation.id ? t('panel.returnToActiveCall') : callBlockedReason ?? callActionLabel} disabled={!activeCallConversationId && !!callBlockedReason} onClick={() => onOpenCall(activeCallConversationId ?? conversation.id)} className="flex-none text-green md:hidden"><PhoneIcon size={22} weight="fill" /></Button>}
+            {(activeCallConversationId || !isChannel) && <Button type="button" variant="ghost" size="icon" aria-label={activeCallConversationId && activeCallConversationId !== conversation.id ? t('panel.returnToActiveCall') : callBlockedReason ?? callActionLabel} disabled={!activeCallConversationId && !!callBlockedReason} onClick={() => { if (activeCallConversationId && activeCallConversationId !== conversation.id) onOpenCall(activeCallConversationId); else startThisCall(false); }} className="flex-none text-green md:hidden"><PhoneIcon size={22} weight="fill" /></Button>}
+            {!isChannel && !inThisCall && !callBlockedReason && !activeCallConversationId && <Button type="button" variant="ghost" size="icon" aria-label={t('panel.videoCall')} onClick={() => startThisCall(true)} className="flex-none md:hidden"><VideoCameraIcon size={22} weight="fill" /></Button>}
             <DropdownMenu>
               <DropdownMenuTrigger render={<Button type="button" variant="ghost" size="icon" aria-label={t('panel.moreOptions')} className="flex-none md:hidden" />}><DotsThreeIcon size={22} /></DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={onOpenSearch}><MagnifyingGlassIcon size={18} />{t('panel.search')}</DropdownMenuItem>
                 <DropdownMenuItem onClick={onToggleMedia}><ImageIcon size={18} />{t('panel.media')}</DropdownMenuItem>
-                {activeCallConversationId && activeCallConversationId !== conversation.id && !isChannel && <DropdownMenuItem disabled={!!callBlockedReason} onClick={() => onOpenCall(conversation.id)}><PhoneIcon size={18} />{t('panel.joinThisCall')}</DropdownMenuItem>}
+                {activeCallConversationId && activeCallConversationId !== conversation.id && !isChannel && <DropdownMenuItem disabled={!!callBlockedReason} onClick={() => startThisCall(false)}><PhoneIcon size={18} />{t('panel.voiceCall')}</DropdownMenuItem>}
               </DropdownMenuContent>
             </DropdownMenu>
           </header>

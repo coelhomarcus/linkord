@@ -11,14 +11,15 @@ import * as soundboard from '../modules/soundboard/soundboard.js';
 import * as floodControl from './floodControl.js';
 import * as chat from '../modules/messages/messages.js';
 import * as conversations from '../modules/conversations/conversations.js';
-import { listForUser, getConversationForUser, getDirectPeerId, unreadCountsForUser } from '../modules/conversations/conversationsRepository.js';
+import { listForUser, getConversationForUser, unreadCountsForUser } from '../modules/conversations/conversationsRepository.js';
 import { listServersForUser } from '../modules/servers/serverSummaries.js';
 import { PERMISSIONS } from '../modules/servers/permissions.js';
-import { canSendDirectMessage } from '../modules/friendships/friendshipsRepository.js';
-import { ERROR_CODES, type ErrorCode } from '../http/errors.js';
+import { type ErrorCode } from '../http/errors.js';
 import { getUserUsage } from '../modules/attachments/attachmentQuota.js';
 import * as moderation from '../modules/moderation/moderation.js';
 import * as streamPreview from '../modules/calls/streamPreview.js';
+import * as dmCalls from '../modules/calls/dmCalls.js';
+import { refusesImmediateJoin } from '../modules/calls/dmCallMachine.js';
 import { parseCookies } from '../http/cookies.js';
 import { resolveSession } from '../modules/auth/session.js';
 import { isSocketOriginAllowed } from '../http/originGuard.js';
@@ -40,6 +41,7 @@ const handlers: HandlerTable = Object.assign(
   conversations.handlers,
   moderation.handlers,
   streamPreview.handlers,
+  dmCalls.handlers,
 );
 
 interface JoinMessage {
@@ -66,6 +68,7 @@ const ACTION_LIMITS: Record<string, { windowMs: number; max: number }> = {
   'stream-preview-request': { windowMs: 10_000, max: 20 },
   'stream-preview-frame': { windowMs: 10_000, max: 10 },
   'call-move': { windowMs: 10_000, max: 10 },
+  'dm-call-start': { windowMs: 30_000, max: 5 },
 };
 
 /** 'join' is the one special case in the dispatch: only participants.ts
@@ -84,9 +87,10 @@ async function handleJoin(socket: AppSocket, msg: JoinMessage): Promise<void> {
   if (!joined) return;
   const { participant: p, justCameOnline } = joined;
   await applyPeerVisibility(p);
-  // LiveKit token is NOT minted here anymore — just having the tab open/
-  // logged in shouldn't open a real call session. That now only happens
-  // in handleCallJoin, when someone joins a voice channel or a DM call.
+  // LiveKit token is NOT minted here for merely being online. A voice channel
+  // gets one from call-join. A DM gets one only after the other person accepts,
+  // or here when this connection is resuming an active DM and no other tab holds it.
+  const dmCall = dmCalls.peekDmCallWelcome(p);
   const [conversationList, serverList] = await Promise.all([listForUser(p.userId), listServersForUser(p.userId)]);
   const textChannelIds = serverList.flatMap((server) => server.channels.filter((c) => c.type === 'text').map((c) => c.id));
   send(socket, {
@@ -114,18 +118,19 @@ async function handleJoin(socket: AppSocket, msg: JoinMessage): Promise<void> {
     unreadByConversation: await unreadCountsForUser(p.userId, [...conversationList.map((c) => c.id), ...textChannelIds]),
     storageUsage: await getUserUsage(p.userId),
     livekitUrl: config.LIVEKIT_URL,
+    ...(dmCall ? { dmCall: dmCall.view } : {}),
     // lets a newer client use what this server supports (3: correlated,
     // idempotent chat sends) and fall back otherwise
     protocolVersion: PROTOCOL_VERSION,
   });
   broadcastToKnownPeers(p.userId, { t: 'participant-joined', participant: publicParticipant(p) }, p.id);
   if (justCameOnline) broadcastToKnownPeers(p.userId, { t: 'user-online', userId: p.userId });
+  if (dmCall?.connect) await dmCalls.finishDmCallWelcome(p);
   log.info('joined', { participantId: p.id, username: p.name, ip: socket.ip });
 }
 
-/** Actually joins a call — a server's voice channel or a DM: mints a
- * LiveKit token for that conversation's room (roomNameFor) and sets
- * `p.callConversationId`. A voice channel takes CONNECT there. */
+/** Joins a voice channel: mints a LiveKit token for that room and sets
+ * `p.callConversationId`. A DM is refused here; its token waits for an accept. */
 export async function handleCallJoin(socket: AppSocket, msg: { conversationId?: string }): Promise<void> {
   const p = participantsMap.get(socket.participantId ?? '');
   if (!p || p.socket !== socket) return;
@@ -140,13 +145,10 @@ export async function handleCallJoin(socket: AppSocket, msg: { conversationId?: 
     sendSocketError(socket, 'call-not-allowed', 'Chamadas acontecem nos canais de voz.');
     return;
   }
-  // §4.3: "iniciar chamada privada" is explicitly in the restricted-contact
-  // list — a private call token is just another way to reach someone who
-  // isn't (or is no longer) a friend. No-ops for channels (getDirectPeerId
-  // returns null there).
-  const peerId = await getDirectPeerId(conversationId, p.userId);
-  if (peerId && !(await canSendDirectMessage(p.userId, peerId))) {
-    sendSocketError(socket, ERROR_CODES.relationshipRequired, 'Vocês precisam ser amigos pra iniciar essa chamada.');
+  // A DM token only leaves the server after the callee accepts. call-join
+  // stays the immediate path for voice channels.
+  if (refusesImmediateJoin(conversation.type)) {
+    sendSocketError(socket, 'call-not-allowed', 'Chamadas privadas começam com um toque. Espere a outra pessoa atender.');
     return;
   }
   let livekitToken: string;
@@ -164,7 +166,9 @@ export async function handleCallJoin(socket: AppSocket, msg: { conversationId?: 
 function handleCallLeave(socket: AppSocket): void {
   const p = participantsMap.get(socket.participantId ?? '');
   if (!p || p.socket !== socket) return;
+  const conversationId = p.callConversationId;
   setCallConversationId(p, null);
+  if (conversationId) dmCalls.leaveActiveDmCall(p.userId, conversationId);
 }
 
 /** Runs a handler (sync or async) isolated from errors — otherwise an

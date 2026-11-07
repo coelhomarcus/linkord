@@ -111,18 +111,18 @@ export function ProfileModal({ userId, onClose, onOpenProfile }: ProfileModalPro
                 )}
                 hideLinks
                 footer={(
-                  <div className="mt-6 flex flex-col gap-5">
-                    <dl className="flex flex-col gap-5">
+                  <div className="mt-5 flex flex-col gap-4">
+                    <dl className="flex flex-col gap-3">
                       {details.details && (
                         <div>
-                          <dt className="text-label font-medium text-text-muted">{t('modal.memberSince')}</dt>
-                          <dd className="mt-1 text-body text-text-primary">{formatProfileDate(details.details.memberSince)}</dd>
+                          <dt className="text-caption font-medium text-text-muted">{t('modal.memberSince')}</dt>
+                          <dd className="mt-0.5 text-label text-text-secondary">{formatProfileDate(details.details.memberSince)}</dd>
                         </div>
                       )}
                       {details.details?.friendsSince && (
                         <div>
-                          <dt className="text-label font-medium text-text-muted">{t('modal.friendsSince')}</dt>
-                          <dd className="mt-1 text-body text-text-primary">{formatProfileDate(details.details.friendsSince)}</dd>
+                          <dt className="text-caption font-medium text-text-muted">{t('modal.friendsSince')}</dt>
+                          <dd className="mt-0.5 text-label text-text-secondary">{formatProfileDate(details.details.friendsSince)}</dd>
                         </div>
                       )}
                     </dl>

@@ -4,6 +4,7 @@ import { conversations } from '../../db/schema.js';
 import { participants, setCallConversationId } from '../presence/participants.js';
 import { dmKeyFor } from '../conversations/conversationsRepository.js';
 import { evictFromCall } from '../../integrations/livekit/livekit.js';
+import { endDmCallBetween } from './dmCalls.js';
 import { logger } from '../../lib/logger.js';
 
 const log = logger.child({ component: 'calls' });
@@ -33,6 +34,7 @@ export async function revokeDirectCallAccess(a: string, b: string): Promise<void
   try {
     const [dm] = await db.select({ id: conversations.id }).from(conversations).where(eq(conversations.dmKey, dmKeyFor(a, b))).limit(1);
     if (!dm) return;
+    endDmCallBetween(a, b);
     await Promise.all([revokeCallAccess(a, dm.id), revokeCallAccess(b, dm.id)]);
   } catch (err) {
     log.error('failed to revoke direct call access', err);

@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Dispatch } from 'react';
-import { DisconnectReason, RoomEvent, Track } from 'livekit-client';
+import { ConnectionState, DisconnectReason, RoomEvent, Track } from 'livekit-client';
 import type { Room } from 'livekit-client';
 import type { LocalTrackPublication, Track as LKTrack } from 'livekit-client';
 import { playSound } from '@/shared/sounds';
 import { useTrackSpeaking } from '@/features/calls/useLiveKitTrack';
+import { cameraIsTransmitting, screenIsSharing } from '@/features/calls/mediaPublication';
 import type { RoomAction } from '@/state/roomReducer';
 import type { ClientMessage } from '@/shared/types/protocol';
 import { logger } from '@/shared/lib/logger';
@@ -16,11 +17,12 @@ interface CallLifecycleDeps {
   livekitRoom: Room;
   dispatch: Dispatch<RoomAction>;
   sendWs: (msg: ClientMessage) => void;
-  stopCamera: () => void;
-  stopSharing: () => void;
+  stopCamera: () => void | Promise<void>;
+  stopSharing: () => void | Promise<void>;
   activateMic: () => Promise<void>;
   setMicMuted: (muted: boolean) => Promise<void>;
   leaveMic: () => Promise<void>;
+  startCamera: () => Promise<void>;
   cameraOn: boolean;
   sharing: boolean;
 }
@@ -34,7 +36,7 @@ interface CallLifecycleDeps {
  * creates the single `Room` instance and threads it through all of them,
  * this hook included, in the same call. */
 export function useCallLifecycle(deps: CallLifecycleDeps) {
-  const { livekitRoom, dispatch, sendWs, stopCamera, stopSharing, activateMic, setMicMuted, leaveMic, cameraOn, sharing } = deps;
+  const { livekitRoom, dispatch, sendWs, stopCamera, stopSharing, activateMic, setMicMuted, leaveMic, startCamera, cameraOn, sharing } = deps;
 
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   useEffect(() => {
@@ -79,6 +81,8 @@ export function useCallLifecycle(deps: CallLifecycleDeps) {
   const [activeCallConversationId, setActiveCallConversationIdState] = useState<string | null>(null);
   const activeCallConversationIdRef = useRef<string | null>(null);
   const pendingCallConversationIdRef = useRef<string | null>(null);
+  const switchingRef = useRef<Promise<void> | null>(null);
+  const videoAfterConnectRef = useRef(false);
   const setActiveCallConversationId = useCallback((id: string | null) => {
     activeCallConversationIdRef.current = id;
     setActiveCallConversationIdState(id);
@@ -93,13 +97,16 @@ export function useCallLifecycle(deps: CallLifecycleDeps) {
   }, [deafened, setMicMuted, sendWs]);
 
   const leaveCall = useCallback(async () => {
-    if (cameraOn) stopCamera();
-    if (sharing) stopSharing();
+    const leaving = activeCallConversationIdRef.current;
+    if (cameraOn) await stopCamera();
+    if (sharing) await stopSharing();
     await leaveMic();
     livekitRoom.disconnect();
     sendWs({ t: 'call-leave' });
-    pendingCallConversationIdRef.current = null;
-    setActiveCallConversationId(null);
+    // A DM can arm its own pending id while this leave is still stopping the
+    // previous room. Only drop the id that belonged to the call we left.
+    if (pendingCallConversationIdRef.current === leaving) pendingCallConversationIdRef.current = null;
+    if (activeCallConversationIdRef.current === leaving) setActiveCallConversationId(null);
   }, [cameraOn, sharing, stopCamera, stopSharing, leaveMic, livekitRoom, sendWs, setActiveCallConversationId]);
 
   const joinCall = useCallback(async (conversationId: string) => {
@@ -121,13 +128,43 @@ export function useCallLifecycle(deps: CallLifecycleDeps) {
    * account's own permissions, and the same mute/deafen it had). */
   const onCallMoved = useCallback((conversationId: string) => { void joinCall(conversationId); }, [joinCall]);
 
+  /** A DM token is about to arrive. Leaving a voice channel first must not
+   * throw away the id this tab is waiting to connect to. */
+  const dropPendingCall = useCallback((conversationId: string) => {
+    if (pendingCallConversationIdRef.current !== conversationId) return;
+    pendingCallConversationIdRef.current = null;
+    videoAfterConnectRef.current = false;
+  }, []);
+
+  const armDmMedia = useCallback((conversationId: string, video: boolean) => {
+    const current = activeCallConversationIdRef.current;
+    if (current === conversationId && livekitRoom.state === ConnectionState.Connected) return;
+    videoAfterConnectRef.current = video;
+    pendingCallConversationIdRef.current = conversationId;
+    if (current && current !== conversationId) {
+      const pendingLeave = leaveCall();
+      switchingRef.current = pendingLeave;
+      void pendingLeave.finally(() => {
+        if (switchingRef.current === pendingLeave) switchingRef.current = null;
+      });
+    }
+  }, [leaveCall, livekitRoom]);
+
   const onCallToken = useCallback((m: { conversationId: string; livekitUrl: string; livekitToken: string }) => {
     if (m.conversationId !== pendingCallConversationIdRef.current) return;
-    livekitRoom.connect(m.livekitUrl, m.livekitToken)
-      .then(async () => {
-        await activateMic();
-        if (preferMutedRef.current || deafenedRef.current) await setMicMuted(true);
-      })
+    if (activeCallConversationIdRef.current === m.conversationId && livekitRoom.state === ConnectionState.Connected) return;
+    const connect = async () => {
+      if (switchingRef.current) await switchingRef.current;
+      if (pendingCallConversationIdRef.current !== m.conversationId) return;
+      await livekitRoom.connect(m.livekitUrl, m.livekitToken);
+      await activateMic();
+      if (preferMutedRef.current || deafenedRef.current) await setMicMuted(true);
+      if (videoAfterConnectRef.current) {
+        videoAfterConnectRef.current = false;
+        await startCamera();
+      }
+    };
+    void connect()
       .catch((err) => {
         log.error('LiveKit connect failed', err, { conversationId: m.conversationId });
         // Already left (or switched calls) while connecting — that rejection
@@ -144,7 +181,7 @@ export function useCallLifecycle(deps: CallLifecycleDeps) {
         dispatch({ type: 'SET_CALL_JOIN_ERROR', error: { conversationId: m.conversationId, message: i18n.t('calls:errors.joinCall') } });
       });
     setActiveCallConversationId(m.conversationId);
-  }, [livekitRoom, activateMic, setMicMuted, setActiveCallConversationId, sendWs, dispatch]);
+  }, [livekitRoom, activateMic, setMicMuted, startCamera, setActiveCallConversationId, sendWs, dispatch]);
 
   /** If a conversation currently in a call gets deleted out from under us
    * (admin action), leave it — same as clicking "leave call" ourselves. */
@@ -167,13 +204,17 @@ export function useCallLifecycle(deps: CallLifecycleDeps) {
   useEffect(() => {
     const onDisconnected = (reason?: DisconnectReason) => {
       if (reason === DisconnectReason.CLIENT_INITIATED) return;
-      if (cameraOn) stopCamera();
-      if (sharing) stopSharing();
+      // The room is already gone, so stopping the devices only clears our
+      // own flags. call-leave is what drops the camera/mic/share the server
+      // is still advertising to everyone else.
+      if (cameraOn) void stopCamera();
+      if (sharing) void stopSharing();
+      sendWs({ t: 'call-leave' });
       setActiveCallConversationId(null);
     };
     livekitRoom.on(RoomEvent.Disconnected, onDisconnected);
     return () => { livekitRoom.off(RoomEvent.Disconnected, onDisconnected); };
-  }, [livekitRoom, stopCamera, stopSharing, setActiveCallConversationId, cameraOn, sharing]);
+  }, [livekitRoom, stopCamera, stopSharing, setActiveCallConversationId, cameraOn, sharing, sendWs]);
 
   useEffect(() => {
     const onLocalUnpublished = (pub: LocalTrackPublication) => {
@@ -206,6 +247,7 @@ export function useCallLifecycle(deps: CallLifecycleDeps) {
   }, [livekitRoom, sendWs]);
 
   const [localMic, setLocalMic] = useState<{ track: LKTrack | null; muted: boolean }>({ track: null, muted: true });
+  const syncLocalMediaRef = useRef<() => void>(() => {});
   useEffect(() => {
     function reportMic() {
       const pub = livekitRoom.localParticipant.getTrackPublication(Track.Source.Microphone);
@@ -213,10 +255,21 @@ export function useCallLifecycle(deps: CallLifecycleDeps) {
       sendWs({ t: 'mic-state', activated: !!pub, muted: pub ? pub.isMuted : true });
     }
     function reportCamera() {
-      sendWs({ t: 'camera', on: !!livekitRoom.localParticipant.getTrackPublication(Track.Source.Camera) });
+      const publication = livekitRoom.localParticipant.getTrackPublication(Track.Source.Camera);
+      const on = cameraIsTransmitting(publication);
+      dispatch({ type: 'SET_LOCAL_CAMERA', on });
+      sendWs({ t: 'camera', on });
     }
     function reportSharing() {
-      sendWs({ t: 'screen-share', on: !!livekitRoom.localParticipant.getTrackPublication(Track.Source.ScreenShare) });
+      const publication = livekitRoom.localParticipant.getTrackPublication(Track.Source.ScreenShare);
+      const on = screenIsSharing(publication);
+      dispatch({ type: 'SET_LOCAL_SHARING', sharing: on });
+      sendWs({ t: 'screen-share', on });
+    }
+    function reportLocalMedia() {
+      reportMic();
+      reportCamera();
+      reportSharing();
     }
     const onPublishChange = (pub: { source: Track.Source }) => {
       if (pub.source === Track.Source.Microphone) reportMic();
@@ -224,19 +277,25 @@ export function useCallLifecycle(deps: CallLifecycleDeps) {
       if (pub.source === Track.Source.ScreenShare) reportSharing();
     };
     const onMuteChange = (pub: { source: Track.Source }, participant: { identity: string }) => {
-      if (participant.identity === livekitRoom.localParticipant.identity && pub.source === Track.Source.Microphone) reportMic();
+      if (participant.identity !== livekitRoom.localParticipant.identity) return;
+      onPublishChange(pub);
     };
     livekitRoom.on(RoomEvent.LocalTrackPublished, onPublishChange);
     livekitRoom.on(RoomEvent.LocalTrackUnpublished, onPublishChange);
     livekitRoom.on(RoomEvent.TrackMuted, onMuteChange);
     livekitRoom.on(RoomEvent.TrackUnmuted, onMuteChange);
+    livekitRoom.on(RoomEvent.Reconnected, reportLocalMedia);
+    syncLocalMediaRef.current = reportLocalMedia;
     return () => {
       livekitRoom.off(RoomEvent.LocalTrackPublished, onPublishChange);
       livekitRoom.off(RoomEvent.LocalTrackUnpublished, onPublishChange);
       livekitRoom.off(RoomEvent.TrackMuted, onMuteChange);
       livekitRoom.off(RoomEvent.TrackUnmuted, onMuteChange);
+      livekitRoom.off(RoomEvent.Reconnected, reportLocalMedia);
     };
-  }, [livekitRoom, sendWs]);
+  }, [livekitRoom, sendWs, dispatch]);
+
+  const syncLocalMedia = useCallback(() => { syncLocalMediaRef.current(); }, []);
 
   const isSpeakingLocal = useTrackSpeaking(localMic.track, localMic.muted);
   useEffect(() => {
@@ -245,7 +304,7 @@ export function useCallLifecycle(deps: CallLifecycleDeps) {
 
   return {
     audioUnlocked, deafened, toggleDeafened, preferMuted, setPreferMuted, reconnecting,
-    activeCallConversationId, joinCall, leaveCall, kickFromCall, moveToCall,
-    onCallToken, onCallMoved, onConversationDeleted, onCallJoinRejected,
+    activeCallConversationId, joinCall, leaveCall, armDmMedia, dropPendingCall, kickFromCall, moveToCall,
+    onCallToken, onCallMoved, onConversationDeleted, onCallJoinRejected, syncLocalMedia,
   };
 }

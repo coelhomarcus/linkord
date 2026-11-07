@@ -38,3 +38,5 @@ docs/*
 # the webhook integration guide is the one doc meant for whoever integrates
 !docs/WEBHOOK.md
 !docs/MIGRATING_GROUPS_TO_SERVERS.md
+!docs/screenshots/
+!docs/screenshots/**

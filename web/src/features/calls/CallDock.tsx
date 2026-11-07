@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { GearIcon, MicrophoneIcon, MicrophoneSlashIcon, MonitorIcon, PhoneSlashIcon, SpeakerHighIcon, SpeakerSlashIcon, VideoCameraIcon, VideoCameraSlashIcon } from '@phosphor-icons/react';
 import { useLocation, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
@@ -22,6 +23,24 @@ const DOCK_NEUTRAL = 'text-text-secondary hover:bg-fill-hover hover:text-text-pr
 const DOCK_RED = 'bg-red/12 text-red-text hover:bg-red/20';
 const DOCK_GREEN = 'bg-green-solid text-white hover:bg-green-hover';
 
+function formatCallDuration(startedAt: number, now: number): string {
+  const total = Math.max(0, Math.floor((now - startedAt) / 1000));
+  const minutes = Math.floor(total / 60);
+  const seconds = total % 60;
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+}
+
+function useCallDuration(startedAt: number | null): string | null {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (startedAt == null) return;
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [startedAt]);
+  if (startedAt == null) return null;
+  return formatCallDuration(startedAt, now);
+}
+
 interface CallDockProps {
   /** the call's name, like Discord's channel line under "Voz conectada", leads back to it */
   onReturnToCall: () => void;
@@ -36,7 +55,7 @@ interface CallDockProps {
 export function CallDock({ onReturnToCall, onOpenProfile, layout = 'wide', onNavigate }: CallDockProps) {
   const { t } = useTranslation('calls');
   const {
-    state, conversations, allUsers, activeCallConversationId,
+    state, conversations, allUsers, activeCallConversationId, dmStartedAt,
     startCamera, stopCamera, startSharing, stopSharing, activateMic, toggleMicMuted,
     deafened, toggleDeafened, leaveCall, preferMuted, setPreferMuted, reconnecting,
   } = useRoom();
@@ -45,6 +64,7 @@ export function CallDock({ onReturnToCall, onOpenProfile, layout = 'wide', onNav
   const compact = layout === 'compact';
   const onSettings = pathname.startsWith(ROUTES.settings);
   const inCall = !!activeCallConversationId;
+  const duration = useCallDuration(inCall ? dmStartedAt : null);
   const myMedia = useParticipantMedia(state.me.id ?? '');
   const cameraOn = state.me.cameraOn;
   const sharing = state.me.sharing;
@@ -103,7 +123,7 @@ export function CallDock({ onReturnToCall, onOpenProfile, layout = 'wide', onNav
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1">
               <CallPingIndicator />
-              <p className="text-label font-semibold text-green">{t('controls.inCall')}</p>
+              <p className="text-label font-semibold text-green">{duration ? t('controls.inCallFor', { time: duration }) : t('controls.inCall')}</p>
             </div>
             <button type="button" onClick={onReturnToCall} className="block max-w-full truncate text-left text-caption text-text-secondary hover:text-text-primary hover:underline">{title}</button>
           </div>

@@ -271,6 +271,10 @@ export type ClientMessage =
   | { t: 'typing'; conversationId: string; value: boolean }
   | { t: 'call-join'; conversationId: string }
   | { t: 'call-leave' }
+  | { t: 'dm-call-start'; conversationId: string; video?: boolean }
+  | { t: 'dm-call-accept'; callId: string }
+  | { t: 'dm-call-decline'; callId: string }
+  | { t: 'dm-call-cancel'; callId: string }
   | { t: 'call-kick'; participantId: string }
   | { t: 'call-move'; participantId: string; conversationId: string }
   | { t: 'stream-preview-request'; participantId: string }
@@ -279,6 +283,20 @@ export type ClientMessage =
   | { t: 'soundboard-play'; conversationId: string; soundId: string }
   | { t: 'leave' }
   | { t: 'ping' };
+
+export type DmCallEndReason = 'declined' | 'cancelled' | 'missed' | 'ended' | 'failed';
+
+/** What one account sees of a private call. `media` is true only for the tab that should connect. */
+export interface DmCallView {
+  callId: string;
+  conversationId: string;
+  video: boolean;
+  phase: 'outgoing' | 'incoming' | 'active';
+  callerId: string;
+  peerId: string;
+  startedAt: number;
+  media: boolean;
+}
 
 export type ServerMessage =
   | { t: 'profile-connections-changed'; userId: string; profileLinks: string[] }
@@ -294,8 +312,11 @@ export type ServerMessage =
       livekitUrl: string;
       // absent from servers before protocol 3 (no correlated chat sends)
       protocolVersion?: number;
+      dmCall?: DmCallView;
     }
   | { t: 'call-token'; conversationId: string; livekitUrl: string; livekitToken: string }
+  | ({ t: 'dm-call' } & DmCallView)
+  | { t: 'dm-call-ended'; callId: string; conversationId: string; reason: DmCallEndReason }
   // a moderator moved this connection: it already left its call, join this one
   | { t: 'call-moved'; conversationId: string }
   // someone hovered this connection's "ao vivo" badge: send a frame of the share

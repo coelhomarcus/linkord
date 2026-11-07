@@ -15,6 +15,31 @@ function pngBytes(width: number, height: number): Uint8Array {
   ));
 }
 
+/** Magick's JPEG writer drops the orientation tag, so the fixture carries its own EXIF. */
+function withExifOrientation(jpeg: Uint8Array, orientation: number): Uint8Array {
+  const payload = new Uint8Array([
+    0x45, 0x78, 0x69, 0x66, 0x00, 0x00,
+    0x49, 0x49, 0x2a, 0x00,
+    0x08, 0x00, 0x00, 0x00,
+    0x01, 0x00,
+    0x12, 0x01, 0x03, 0x00, 0x01, 0x00, 0x00, 0x00, orientation, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00,
+  ]);
+  const app1 = new Uint8Array(4 + payload.length);
+  app1[0] = 0xff;
+  app1[1] = 0xe1;
+  const length = payload.length + 2;
+  app1[2] = length >> 8;
+  app1[3] = length & 0xff;
+  app1.set(payload, 4);
+  const out = new Uint8Array(jpeg.length + app1.length);
+  out[0] = jpeg[0]!;
+  out[1] = jpeg[1]!;
+  out.set(app1, 2);
+  out.set(jpeg.subarray(2), 2 + app1.length);
+  return out;
+}
+
 function fromBase64(value: string): Uint8Array {
   const binary = atob(value);
   const bytes = new Uint8Array(binary.length);
@@ -42,6 +67,28 @@ describe('cropProfileImage', () => {
     expect(blob.type).toBe('image/gif');
     const frames = await ImageMagick.readCollection(new Uint8Array(await blob.arrayBuffer()), (images) => images.length);
     expect(frames).toBe(2);
+  });
+
+  it('crops a JPEG using the orientation the browser shows', async () => {
+    // Stored 6×10 with EXIF RightTop: a browser lays it out as 10×6, and the cropper reports that.
+    const stored = withExifOrientation(ImageMagick.read(MagickColors.Red, 6, 10, (image) => (
+      image.write(MagickFormat.Jpeg, (data) => data.slice())
+    )), 6);
+    const blob = await cropProfileImage(stored, { x: 0, y: 0, width: 10, height: 6 }, 'image/jpeg');
+    const again = await ImageMagick.read(new Uint8Array(await blob.arrayBuffer()), (image) => ({
+      width: image.width,
+      height: image.height,
+    }));
+    expect(again).toEqual({ width: 10, height: 6 });
+  });
+
+  it('keeps a crop that rounding pushed one pixel past the edge', async () => {
+    const blob = await cropProfileImage(pngBytes(8, 5), { x: 0, y: 0, width: 9, height: 5 }, 'image/png');
+    const again = await ImageMagick.read(new Uint8Array(await blob.arrayBuffer()), (image) => ({
+      width: image.width,
+      height: image.height,
+    }));
+    expect(again).toEqual({ width: 8, height: 5 });
   });
 
   it('rejects a crop outside the image', async () => {

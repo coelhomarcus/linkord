@@ -23,6 +23,7 @@ import { useMessageSearch } from '@/features/chat/useMessageSearch';
 import { useStorageUsage } from '@/features/chat/useStorageUsage';
 import { usePresence } from '@/state/hooks/usePresence';
 import { useCallLifecycle } from '@/features/calls/useCallLifecycle';
+import { useDmCall } from '@/features/calls/useDmCall';
 import { captureScreenPreview } from '@/features/calls/captureScreenPreview';
 import { streamPreviewStore } from '@/features/calls/streamPreviewStore';
 import { useRoomSettings } from '@/features/settings/useRoomSettings';
@@ -55,8 +56,13 @@ export function RoomProvider({ children }: { children: ReactNode }) {
   const intentionalCloseRef = useRef(false);
   const hasWelcomedRef = useRef(false);
 
+  // Adaptive stream picks the camera simulcast layer from the tile's size.
+  // `screen` counts device pixels: a plain `true` ignores a 2x display, so a
+  // retina tile stays on the soft layer while a screen share (one layer, no
+  // simulcast) stays sharp beside it. Dynacast stops encoding a layer nobody
+  // is watching.
   const [livekitRoom] = useState(() => new Room({
-    adaptiveStream: true,
+    adaptiveStream: { pixelDensity: 'screen' },
     dynacast: true,
   }));
 
@@ -130,8 +136,16 @@ export function RoomProvider({ children }: { children: ReactNode }) {
   const roomSettings = useRoomSettings();
 
   const callLifecycle = useCallLifecycle({
-    livekitRoom, dispatch, sendWs, stopCamera, stopSharing, activateMic, setMicMuted, leaveMic,
+    livekitRoom, dispatch, sendWs, stopCamera, stopSharing, activateMic, setMicMuted, leaveMic, startCamera,
     cameraOn: state.me.cameraOn, sharing: state.me.sharing,
+  });
+  const dmCall = useDmCall({
+    sendWs,
+    armDmMedia: callLifecycle.armDmMedia,
+    leaveCall: callLifecycle.leaveCall,
+    dropPendingCall: callLifecycle.dropPendingCall,
+    activeCallId: () => callLifecycle.activeCallConversationId,
+    myUserId: () => myUserIdRef.current,
   });
   const soundboardEvents = useSoundboardEvents({
     activeCallConversationId: callLifecycle.activeCallConversationId,
@@ -201,14 +215,25 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         // the first welcome opens nothing: the URL says what to show (the
         // route sync opens it). A reconnect reloads what was open.
         if (hasWelcomedRef.current) {
+          // The socket is new; LiveKit may still be in the call. Tell the
+          // server what the tracks are doing now, not what they were doing
+          // when the previous socket dropped.
+          callLifecycle.syncLocalMedia();
           const activeId = conversationsList.activeConversationIdRef.current;
           const stillThere = (m.conversations ?? []).some((c) => c.id === activeId)
             || (m.servers ?? []).some((server) => server.channels.some((c) => c.id === activeId));
           if (activeId && activeViewRef.current === 'chat' && stillThere) sendWs({ t: 'conversation-open', conversationId: activeId });
         }
         hasWelcomedRef.current = true;
+        if (m.dmCall) dmCall.onDmCall(m.dmCall);
         break;
       }
+      case 'dm-call':
+        dmCall.onDmCall(m);
+        break;
+      case 'dm-call-ended':
+        dmCall.onEnded(m);
+        break;
       case 'call-token':
         callLifecycle.onCallToken(m);
         break;
@@ -375,12 +400,16 @@ export function RoomProvider({ children }: { children: ReactNode }) {
           disconnectIntentionally();
           dispatch({ type: 'SET_ROOM_ERROR', message: m.message || i18n.t('room.tooManyConnections') });
         } else if (m.code === ERROR_CODES.quota_exceeded || m.code === ERROR_CODES.forbidden || m.code === ERROR_CODES.conflict || m.code === ERROR_CODES.not_found) {
-          setActionError(m.message);
+          const started = dmCall.consumeStartAttempt();
+          if (started) dispatch({ type: 'SET_CALL_JOIN_ERROR', error: { conversationId: started, message: m.message } });
+          else setActionError(m.message);
         } else if (m.code === ERROR_CODES['livekit-unavailable']) {
           // also answers a moderator's kick from inside a call, where the call UI is open
           if (!callLifecycle.onCallJoinRejected(m.message)) dispatch({ type: 'SET_SHARE_ERROR', message: m.message });
         } else if (m.code === ERROR_CODES['call-not-allowed'] || m.code === ERROR_CODES.relationship_required) {
-          if (!callLifecycle.onCallJoinRejected(m.message)) log.warn('unhandled server error', { code: m.code, message: m.message, report: true });
+          const started = dmCall.consumeStartAttempt();
+          if (started) dispatch({ type: 'SET_CALL_JOIN_ERROR', error: { conversationId: started, message: m.message } });
+          else if (!callLifecycle.onCallJoinRejected(m.message)) log.warn('unhandled server error', { code: m.code, message: m.message, report: true });
         } else if (m.code === ERROR_CODES['message-not-found']) {
           chatMessages.cancelPendingJump();
           messageSearch.setSearchErrorMessage(m.message);
@@ -390,7 +419,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         break;
     }
   }, [
-    dispatch, conversationsList, serversList, presence, attachmentsUpload, openConversation, sendWs, callLifecycle,
+    dispatch, conversationsList, serversList, presence, attachmentsUpload, openConversation, sendWs, callLifecycle, dmCall,
     messageSearch, chatMessages, typingIndicator, disconnectIntentionally, profileUpdate, soundboardEvents, livekitRoom,
   ]);
 
@@ -423,6 +452,8 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         livekitRoom, notifyActiveView,
         registerRequestChatView, requestChatView, registerOpenCall, openCall,
         activeCallConversationId: callLifecycle.activeCallConversationId, joinCall: callLifecycle.joinCall, leaveCall: callLifecycle.leaveCall,
+        startDmCall: dmCall.startDmCall, acceptDmCall: dmCall.acceptDmCall, declineDmCall: dmCall.declineDmCall, cancelDmCall: dmCall.cancelDmCall,
+        dmCall: dmCall.dmCall, dmStartedAt: dmCall.dmStartedAt, dmStageConversationId: dmCall.dmStageConversationId, clearDmStage: dmCall.clearDmStage,
         startSharing, stopSharing, changeSource, pauseSharePreview, resumeSharePreview,
         shareQuality: roomSettings.shareQuality, setShareQuality: roomSettings.setShareQuality,
         startCamera, stopCamera, activateMic, toggleMicMuted,

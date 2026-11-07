@@ -34,6 +34,8 @@
     "needFriends": "You need to be friends to make calls.",
     "returnToCall": "Back to the call",
     "joinCall": "Join the call",
+    "voiceCall": "Call",
+    "videoCall": "Video call",
     "returnToActiveCall": "Back to the active call",
     "moreOptions": "More conversation options",
     "joinThisCall": "Join this conversation's call",

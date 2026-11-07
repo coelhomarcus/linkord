@@ -22,6 +22,7 @@
     "leaveCall": "Leave call",
     "returnToCall": "Return to call",
     "inCall": "In a call",
+    "inCallFor": "In a call · {{time}}",
     "myProfile": "My profile",
     "statusOnline": "Online",
     "statusReconnecting": "Reconnecting…",
@@ -142,7 +143,9 @@
     "videoConnectionFailed": "Couldn't connect to the video server. Check your connection and try again.",
     "microphoneAccess": "Couldn't access the microphone: {{error}}",
     "cameraAccess": "Couldn't access the camera: {{error}}",
+    "cameraStop": "Couldn't turn the camera off: {{error}}",
     "screenCapture": "Couldn't capture the screen: {{error}}",
+    "screenStop": "Couldn't stop sharing: {{error}}",
     "screenLoopback": "Your browser can't separate Linkord's audio from the entire screen, so it was shared without audio to prevent echo. Share a tab or window to include audio.",
     "pausePreview": "Couldn't pause the preview: {{error}}",
     "resumePreview": "Couldn't resume the preview: {{error}}",
@@ -170,5 +173,19 @@
       "rateLimited": "Invite sent a moment ago. Wait a bit.",
       "notInCall": "Join the call to invite someone."
     }
+  },
+  "dm": {
+    "incomingVoice": "Voice call",
+    "incomingVideo": "Video call",
+    "calling": "Calling…",
+    "accept": "Accept",
+    "decline": "Decline",
+    "cancel": "Cancel",
+    "declined": "Call declined",
+    "cancelled": "Call cancelled",
+    "missed": "Missed call",
+    "ended": "Call ended",
+    "failed": "Couldn't connect the call",
+    "someone": "Someone"
   }
 }

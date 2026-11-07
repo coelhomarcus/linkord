@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import type { CSSProperties, HTMLAttributes, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { discardLegacySidebarCollapsed } from '@/shared/lib/localStorage';
 import { cn } from '@/shared/lib/utils';
 import { SidePanel } from './side-panel';
 import { Sheet } from './sheet';
@@ -33,10 +34,8 @@ type SidebarStyle = CSSProperties & {
   '--sidebar-overlay-offset'?: string;
 };
 
-/** Owns the conversation list's two states: shown/hidden as a column (a saved
- * preference) and open/closed as a drawer (only while the screen is narrow).
- * Either can be controlled or left to this component. ⌘/Ctrl+B toggles
- * whichever applies. */
+/** Owns the conversation list: a column that stays open from 1024px, and a
+ * drawer below that. ⌘/Ctrl+B toggles the drawer only. */
 export function SidebarProvider({ open, defaultOpen = true, onOpenChange, openMobile, onOpenMobileChange, className, style, children, ...props }: Omit<HTMLAttributes<HTMLDivElement>, 'style'> & {
   open?: boolean;
   defaultOpen?: boolean;
@@ -64,8 +63,7 @@ export function SidebarProvider({ open, defaultOpen = true, onOpenChange, openMo
 
   const toggleSidebar = useCallback(() => {
     if (isOverlay) setOpenMobile(!drawerOpen);
-    else setOpen(!columnOpen);
-  }, [columnOpen, drawerOpen, isOverlay, setOpen, setOpenMobile]);
+  }, [drawerOpen, isOverlay, setOpenMobile]);
 
   // widening past the drawer range must not leave it "open", to pop back up
   // the next time the window narrows
@@ -75,6 +73,8 @@ export function SidebarProvider({ open, defaultOpen = true, onOpenChange, openMo
     list.addEventListener('change', onChange);
     return () => list.removeEventListener('change', onChange);
   }, [setOpenMobile]);
+
+  useEffect(() => { discardLegacySidebarCollapsed(); }, []);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {

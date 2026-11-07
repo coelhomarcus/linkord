@@ -96,10 +96,11 @@ describe('ProfileModal — since when and what you have in common', () => {
   it('shows since when the account exists and since when you are friends', async () => {
     mocked.fetchProfileDetails.mockResolvedValue(details);
     renderProfile();
-    expect(await screen.findByText('Membro desde')).toBeInTheDocument();
-    expect(screen.getByText('4 de mai. de 2023')).toBeInTheDocument();
-    expect(screen.getByText('Amigos desde')).toBeInTheDocument();
-    expect(screen.getByText('12 de mar. de 2026')).toBeInTheDocument();
+    const memberSince = await screen.findByText('Membro desde');
+    expect(memberSince).toHaveClass('text-caption');
+    expect(screen.getByText('4 de mai. de 2023')).toHaveClass('text-label');
+    expect(screen.getByText('Amigos desde')).toHaveClass('text-caption');
+    expect(screen.getByText('12 de mar. de 2026')).toHaveClass('text-label');
   });
 
   it('leaves out "Amigos desde" when you are not friends', async () => {
@@ -175,8 +176,13 @@ describe('ProfileModal — since when and what you have in common', () => {
     mocked.fetchProfileDetails.mockResolvedValue(details);
     renderProfile({ allUsers: new Map([[user.id, { ...user, profileLinks: ['https://open.spotify.com/user/x', 'https://github.com/marcus'] }]]) });
     expect(await screen.findByRole('heading', { name: 'Conexões' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Abrir Spotify' })).toHaveAttribute('href', 'https://open.spotify.com/user/x');
-    expect(screen.getByRole('link', { name: 'Abrir GitHub' })).toHaveAttribute('href', 'https://github.com/marcus');
+    const spotify = screen.getByRole('link', { name: 'Abrir Spotify' });
+    const github = screen.getByRole('link', { name: 'Abrir GitHub' });
+    expect(spotify).toHaveAttribute('href', 'https://open.spotify.com/user/x');
+    expect(spotify).toHaveTextContent('Spotify');
+    expect(github).toHaveAttribute('href', 'https://github.com/marcus');
+    expect(github).toHaveTextContent('GitHub');
+    expect(spotify.closest('ul')).toHaveClass('flex-col');
   });
 
   it('has no Conexões section for a profile without links', async () => {

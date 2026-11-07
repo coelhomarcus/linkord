@@ -27,6 +27,7 @@ import { ConversationPanel } from '@/features/conversations/ConversationPanel';
 import { ConversationMediaPanel } from '@/features/conversations/ConversationMediaPanel';
 import { ChatSearchDialog } from '@/features/chat/ChatSearchDialog';
 import { Stage } from '@/features/calls/Stage';
+import { DmCallOverlay } from '@/features/calls/DmCallOverlay';
 import { CallConnectingScreen } from '@/features/calls/CallConnectingScreen';
 import { ParticipantAudioLayer } from '@/features/calls/ParticipantAudioLayer';
 import { FloatingPip } from '@/features/calls/FloatingPip';
@@ -58,7 +59,6 @@ import { rightPanelsVisible } from '@/app/rightPanels';
 import { isJoiningStage } from '@/app/stageJoin';
 import { i18n } from '@/shared/i18n/init';
 import { SidebarInset, SidebarProvider } from '@/shared/ui/motion/sidebar';
-import { loadSidebarCollapsed, saveSidebarCollapsed } from '@/shared/hooks/useSidebarCollapsedPreference';
 import { loadMemberListOpen, saveMemberListOpen } from '@/features/servers/memberListPreference';
 import { TooltipProvider } from '@/shared/ui/primitives/tooltip';
 
@@ -91,6 +91,7 @@ function Shell() {
   const {
     state, dispatch, livekitRoom, closeTileMenu, sendWs, retryConnection, notifyActiveView, registerRequestChatView, registerOpenCall,
     activeCallConversationId, activeConversationId, joinCall, leaveCall, conversations, allUsers, servers,
+    dmStageConversationId, clearDmStage, dmCall,
     serverMemberRevision, setServerMemberSnapshot,
   } = useRoom();
   const roomError = state.roomError;
@@ -132,11 +133,6 @@ function Shell() {
   const [mediaOpen, setMediaOpen] = useState(false);
   const pendingStageRef = useRef<string | null>(null);
 
-  const [sidebarOpen, setSidebarOpenState] = useState(() => !loadSidebarCollapsed());
-  const setSidebarOpen = useCallback((next: boolean) => {
-    setSidebarOpenState(next);
-    saveSidebarCollapsed(!next);
-  }, []);
   const setMemberListPreference = (open: boolean) => {
     setMemberListOpen(open);
     saveMemberListOpen(open);
@@ -179,6 +175,13 @@ function Shell() {
     navigate(stagePath(conversationId), { state: { from: currentPath() } });
   }
 
+  useEffect(() => {
+    if (!dmStageConversationId) return;
+    pendingStageRef.current = dmStageConversationId;
+    navigate(stagePath(dmStageConversationId), { state: { from: currentPath() } });
+    clearDmStage();
+  }, [dmStageConversationId, navigate, clearDmStage]);
+
   // re-registered every render: the handler closes over the current location
   useEffect(() => { registerOpenCall(handleOpenCall); });
 
@@ -199,12 +202,13 @@ function Shell() {
   const leaveStagePath = (id: string) => (voiceChannelOnPath ? ROUTES.server(voiceChannelOnPath.serverId!) : ROUTES.direct(id));
   useEffect(() => {
     if (showStage && pendingStageRef.current === stageConversationId) pendingStageRef.current = null;
+    if (dmCall?.phase === 'ended' && pendingStageRef.current === dmStageId) pendingStageRef.current = null;
     // a voice channel without its call is the lobby, not somewhere to leave
     if (!dmStageId || !state.joined || showStage) return;
     if (pendingStageRef.current === dmStageId && state.callJoinError?.conversationId !== dmStageId) return;
     pendingStageRef.current = null;
     navigate(ROUTES.direct(dmStageId), { replace: true });
-  }, [dmStageId, stageConversationId, showStage, state.joined, state.callJoinError, navigate]);
+  }, [dmStageId, stageConversationId, showStage, state.joined, state.callJoinError, navigate, dmCall]);
   // A moderator's move lands this connection in another channel's call
   // without it navigating anywhere: whoever was watching the old channel's
   // stage follows the call to the new one instead of being left at a lobby.
@@ -261,9 +265,8 @@ function Shell() {
   const { details: detailsVisible, media: mediaVisible } = rightPanelsVisible({
     detailsOpen: directShown ? profilePanelOpen && wide : memberListOpen, mediaOpen, onChatPage: !!visibleConversationId, stageShown: showStage, conversationType: shownType,
   });
-  // the media panel takes the profile's place without forgetting it was open
   const membersVisible = detailsVisible && !directShown;
-  const profileVisible = detailsVisible && directShown && !mediaVisible;
+  const profileVisible = detailsVisible && directShown;
   const profilePanelUser = profileVisible ? directUser(activeConversation, state.me.userId, allUsers) : null;
   const setDetails = (open: boolean) => (directShown ? setProfilePanelOpen(open) : setMemberListPreference(open));
   const activeConversationName = conversationTitle(activeConversation, state.me.userId, allUsers);
@@ -311,14 +314,13 @@ function Shell() {
       <div className="flex h-full min-h-0 flex-col bg-surface-rail">
       <TopBar className="hidden md:flex" title={tabTitle === APP_TITLE ? undefined : activeConversationName} server={currentServer} />
       <SidebarProvider
-        open={sidebarOpen}
-        onOpenChange={setSidebarOpen}
         openMobile={mobileShowSidebar}
         onOpenMobileChange={setMobileShowSidebar}
         className="relative min-h-0 flex-1 bg-surface-rail text-text-primary [--surface-base:var(--color-surface-app)] max-md:pt-[env(safe-area-inset-top)]"
         style={{ minHeight: 0, '--sidebar-width': 'var(--spacing-sidebar)', '--sidebar-width-mobile': '24rem', '--sidebar-overlay-offset': '4.5rem', '--mobile-navigation-height': `calc(4rem + var(--safe-bottom) + ${inCall ? '3rem' : '0rem'})` } as CSSProperties}
       >
         <ReconnectBanner />
+        <DmCallOverlay />
         <AccessNotice />
         <ServerRail className="hidden md:flex" />
         {/* Discord's one framed panel: the list and the content side by side
@@ -346,8 +348,8 @@ function Shell() {
                   onOpenSearch={() => setSearchOpen(true)}
                   detailsOpen={directShown ? profileVisible : memberListOpen}
                   mediaOpen={mediaVisible}
-                  onOpenDetails={() => { setMediaOpen(false); setDetails(true); }}
-                  onToggleDetails={() => { setMediaOpen(false); setDetails(directShown ? !(membersVisible || profileVisible) : !memberListOpen); }}
+                  onOpenDetails={() => { setDetails(true); }}
+                  onToggleDetails={() => { setDetails(directShown ? !(membersVisible || profileVisible) : !memberListOpen); }}
                   onToggleMedia={() => { setMediaOpen(!mediaVisible); }}
                 />
               )}

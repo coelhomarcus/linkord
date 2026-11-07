@@ -12,6 +12,7 @@
     "build": "npm run build:server && npm run build:web",
     "build:server": "tsc -p server/tsconfig.json",
     "build:web": "npm run build --prefix web",
+    "check": "npm run typecheck:server:tests && npm run lint --prefix web && npm test && npm run build",
     "check:dead-code": "knip",
     "test": "npm run test:server && npm run test:web",
     "test:server": "node --env-file-if-exists=.env.test --import tsx --test \"server/tests/**/*.test.ts\"",

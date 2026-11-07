@@ -2,7 +2,7 @@ import { LinkIcon } from '@phosphor-icons/react';
 import type { ComponentType, CSSProperties } from 'react';
 
 import {
-  SiBehance, SiBluesky, SiDiscord, SiDribbble, SiEpicgames, SiFacebook, SiGithub, SiInstagram,
+  SiBehance, SiBluesky, SiDiscord, SiDribbble, SiEpicgames, SiFacebook, SiGithub, SiIgdb, SiInstagram,
   SiMyanimelist, SiKick, SiPinterest, SiReddit, SiSnapchat, SiSoundcloud, SiSpotify, SiSteam, SiTelegram,
   SiThreads, SiTiktok, SiTwitch, SiVk, SiWhatsapp, SiX, SiYoutube,
 } from 'react-icons/si';
@@ -13,7 +13,7 @@ export type LinkKind =
   | 'youtube' | 'twitter' | 'twitch' | 'instagram' | 'github' | 'linkedin' | 'tiktok' | 'spotify' | 'discord'
   | 'steam' | 'reddit' | 'facebook' | 'threads' | 'bluesky' | 'telegram' | 'soundcloud' | 'pinterest'
   | 'snapchat' | 'kick' | 'epicgames' | 'xbox' | 'behance' | 'dribbble' | 'vk' | 'whatsapp'
-  | 'myanimelist' | 'generic';
+  | 'myanimelist' | 'igdb' | 'generic';
 
 export interface LinkInfo {
   url: string;
@@ -71,6 +71,7 @@ const BRAND_ICONS: Record<Exclude<LinkKind, 'generic'>, ComponentType<{ size?: n
   instagram: SiInstagram,
   github: SiGithub,
   myanimelist: SiMyanimelist,
+  igdb: SiIgdb,
   linkedin: FaLinkedin,
   tiktok: SiTiktok,
   spotify: SiSpotify,

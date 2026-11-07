@@ -85,7 +85,7 @@ export function ProfileWall({ userId, owner, onNavigate }: { userId: string; own
           const card = <WallWidgetCard widget={widget} />;
           if (!draft) return <div key={`${widget.connection.id}:${widget.type}`} className="w-full min-w-0">{card}</div>;
           // the controls sit in their own row above the card, in flow, so they can never cover its content
-          return <div key={`${widget.connection.id}:${widget.type}`} className="flex w-full min-w-0 flex-col gap-2 rounded-2xl border border-dashed border-border-strong p-2">
+          return <div key={`${widget.connection.id}:${widget.type}`} className="flex w-full min-w-0 flex-col gap-3 rounded-xl border border-dashed border-border-strong p-3">
             <div className="flex items-center justify-between gap-2 px-1">
               <span aria-hidden className="flex size-6 items-center justify-center rounded-full bg-bg-tertiary text-caption font-semibold text-text-secondary">{index + 1}</span>
               <div className="flex gap-1">
