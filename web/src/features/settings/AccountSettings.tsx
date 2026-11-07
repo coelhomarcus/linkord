@@ -4,17 +4,15 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/state/AuthContext';
 import { useRoom } from '@/state/RoomContext';
 import { Button } from '@/shared/ui/primitives/button';
-import { ROUTES } from '@/shared/lib/routes';
 import { EmailSettings } from './EmailSettings';
 import { formatStorage } from './formatStorage';
 import { LanguageSetting } from './LanguageSetting';
 import { SettingsRow, SettingsSection, SettingsSections } from './SettingsLayout';
-import { AppLink } from '@/shared/ui/app-link';
 
 // any usage at all stays visible as a sliver instead of an empty track
 const MIN_VISIBLE_PERCENT = 2;
 
-export function AccountSettings() {
+export function AccountSettings({ onOpenProfile }: { onOpenProfile: (userId: string) => void }) {
   const { t } = useTranslation('settings');
   const { state, storageUsage, activeCallConversationId } = useRoom();
   const { logout, user } = useAuth();
@@ -38,7 +36,7 @@ export function AccountSettings() {
           description={t('account.displayName.description')}
         >
           <span className="break-words text-body text-text-primary">{state.me.displayName}</span>
-          <AppLink to={ROUTES.settingsTab('profile')} className="text-text-secondary underline underline-offset-2 hover:text-text-primary">{t('account.editProfile')}</AppLink>
+          <button type="button" onClick={() => { if (state.me.userId) onOpenProfile(state.me.userId); }} className="text-text-secondary underline underline-offset-2 hover:text-text-primary">{t('account.editProfile')}</button>
         </SettingsRow>
       </SettingsSection>
 

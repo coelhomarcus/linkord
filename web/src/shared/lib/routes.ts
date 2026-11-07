@@ -1,6 +1,6 @@
 // Shared because the router and feature links need the same paths; features must not import app/.
 
-const SETTINGS_TABS = ['profile', 'connections', 'account', 'av', 'notifications', 'prefs', 'privacy', 'moderation'] as const;
+const SETTINGS_TABS = ['connections', 'account', 'av', 'notifications', 'prefs', 'privacy', 'moderation'] as const;
 export type SettingsTab = (typeof SETTINGS_TABS)[number];
 
 export function isSettingsTab(value: string | undefined): value is SettingsTab {

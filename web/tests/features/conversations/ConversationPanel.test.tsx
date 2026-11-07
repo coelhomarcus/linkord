@@ -62,7 +62,7 @@ describe('ConversationPanel — call button', () => {
     const { onOpenCall } = renderPanel({ activeCallConversationId: 'c1' });
     await vi.waitFor(() => expect(screen.getAllByRole('button', { name: 'Voltar à chamada' })[0]).toBeInTheDocument());
     expect(screen.getByText('Em uma chamada')).toBeInTheDocument();
-    expect(screen.getByTestId('dm-call-avatars')).toBeInTheDocument();
+    expect(screen.getByTestId('dm-call')).toBeInTheDocument();
     fireEvent.click(screen.getAllByRole('button', { name: 'Voltar à chamada' })[0]!);
     expect(onOpenCall).not.toHaveBeenCalled();
   });

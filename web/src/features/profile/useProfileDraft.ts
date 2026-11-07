@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { describeProfileSaveError } from '@/features/profile/useProfileUpdate';
+import { describeProfileSaveError } from './useProfileUpdate';
 
 export interface ProfileDraftFields {
   displayName: string;

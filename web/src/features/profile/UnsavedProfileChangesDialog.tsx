@@ -17,7 +17,7 @@ interface UnsavedProfileChangesDialogProps {
 export function UnsavedProfileChangesDialog({
   open, saving, error, onContinueEditing, onDiscardAndLeave, onSaveAndLeave,
 }: UnsavedProfileChangesDialogProps) {
-  const { t } = useTranslation('settings');
+  const { t } = useTranslation('profile');
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!next) onContinueEditing(); }}>
       <DialogContent className="max-h-[90vh] max-w-[calc(100%-2rem)] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden bg-bg-modal p-0 sm:max-w-100">

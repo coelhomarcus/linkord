@@ -21,10 +21,6 @@
       "admin": "Administration"
     },
     "categories": {
-      "profile": {
-        "label": "Profile",
-        "description": "Edit right on your profile. What you see here is exactly what others will see."
-      },
       "connections": {
         "label": "Connections",
         "description": "Connect your accounts on other services and choose what to show on your Wall. Data refreshes automatically every 24 hours."
@@ -73,10 +69,6 @@
     }
   },
   "search": {
-    "profile": {
-      "title": "Profile",
-      "keywords": "photo, avatar, banner, display name, bio, links, color"
-    },
     "connections": {
       "title": "Connections",
       "keywords": "github, myanimelist, anime, link, accounts, wall, widgets, social"
@@ -283,44 +275,6 @@
       "label": "Compress images by default",
       "description": "Reduces the size before sending. Applies to new attachments from now on. One you've already prepared isn't reprocessed."
     }
-  },
-  "profile": {
-    "fileTooLarge": "File too large (maximum {{max}}).",
-    "uploadFailed": {
-      "avatar": "Failed to upload the photo.",
-      "banner": "Failed to upload the banner."
-    },
-    "removeFailed": {
-      "avatar": "Couldn't remove the photo.",
-      "banner": "Couldn't remove the banner."
-    },
-    "avatarInput": "Select profile photo",
-    "bannerInput": "Select banner",
-    "formats": "PNG, JPEG, GIF or WEBP, up to {{max}}. Photo and banner apply as soon as you confirm the crop; name, color and bio only after saving. Connections are saved separately.",
-    "saved": "Profile saved.",
-    "conflict": "This profile was updated elsewhere while you were editing.",
-    "useSaved": "Use saved values",
-    "barLabel": "Save profile changes",
-    "unsavedNotice": "You have unsaved changes.",
-    "discard": "Discard",
-    "save": "Save profile",
-    "saving": "Saving…",
-    "cropTitle": {
-      "avatar": "Crop profile photo",
-      "banner": "Crop banner"
-    },
-    "uploadingTitle": {
-      "avatar": "Uploading the profile photo…",
-      "banner": "Uploading the banner…"
-    }
-  },
-  "unsaved": {
-    "title": "Unsaved changes",
-    "description": "You edited your profile and haven't saved yet. What do you want to do?",
-    "saveAndLeave": "Save and leave",
-    "saving": "Saving…",
-    "discardAndLeave": "Discard and leave",
-    "continueEditing": "Keep editing"
   },
   "crop": {
     "processing": "Processing image…",

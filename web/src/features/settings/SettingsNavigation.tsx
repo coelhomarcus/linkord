@@ -1,7 +1,9 @@
-import { CaretRightIcon, MagnifyingGlassIcon } from '@phosphor-icons/react';
+import { CaretRightIcon, MagnifyingGlassIcon, PencilSimpleIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { iconWeight } from '@/shared/ui/icons';
 
+import { Avatar } from '@/shared/Avatar';
+import { useRoom } from '@/state/RoomContext';
 import { ROUTES } from '@/shared/lib/routes';
 import type { SettingsTab } from '@/shared/lib/routes';
 import { cn } from '@/shared/lib/utils';
@@ -14,6 +16,30 @@ import { AppLink } from '@/shared/ui/app-link';
 
 function GroupLabel({ children }: { children: string }) {
   return <p className="select-none px-2.5 pb-1 text-caption font-semibold uppercase tracking-[0.02em] text-text-muted">{children}</p>;
+}
+
+/** Who you are, at the top of the list, as the way into your profile: it
+ * opens your own profile modal, where the profile is edited in place. */
+function ProfileShortcut({ onOpenProfile }: { onOpenProfile: (userId: string) => void }) {
+  const { t } = useTranslation('settings');
+  const { state } = useRoom();
+  const { me } = state;
+  return (
+    <button
+      type="button"
+      onClick={() => { if (me.userId) onOpenProfile(me.userId); }}
+      className="group/profile mb-3 flex flex-none items-center gap-3 rounded-lg border border-border bg-fill-subtle p-2.5 text-left outline-none hover:bg-nav-hover focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      <Avatar id={me.userId ?? me.id ?? 'me'} name={me.displayName} avatar={me.avatar} poster={me.avatarPoster} avatarColor={me.avatarColor} size={40} />
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-body font-semibold text-text-primary">{me.displayName}</span>
+        <span className="flex items-center gap-1 text-caption text-text-muted group-hover/profile:text-text-secondary">
+          <PencilSimpleIcon size={12} aria-hidden className="flex-none" />
+          <span className="truncate">{t('nav.editProfile')}</span>
+        </span>
+      </span>
+    </button>
+  );
 }
 
 function SettingsSearchField({ query, onChange, onClear }: { query: string; onChange: (value: string) => void; onClear: () => void }) {
@@ -67,11 +93,12 @@ function SettingsSearchResults({ results, query }: { results: SettingsSearchResu
 /** The permanent category sidebar of a wide settings area. One level only: a
  * per-section list under the open category did nothing visible on pages that
  * fit on screen, so the page's own titles are the way around it. */
-export function SettingsSidebar({ active, isAdmin }: { active: SettingsTab; isAdmin: boolean }) {
+export function SettingsSidebar({ active, isAdmin, onOpenProfile }: { active: SettingsTab; isAdmin: boolean; onOpenProfile: (userId: string) => void }) {
   const { t } = useTranslation('settings');
   const { query, setQuery, results } = useSettingsSearch(isAdmin);
   return (
     <nav aria-label={t('nav.ariaLabel')} className="flex w-64 flex-none flex-col overflow-y-auto border-r border-border p-3">
+      <ProfileShortcut onOpenProfile={onOpenProfile} />
       <SettingsSearchField query={query} onChange={setQuery} onClear={() => setQuery('')} />
       {query ? (
         <SettingsSearchResults results={results} query={query} />
@@ -110,11 +137,12 @@ export function SettingsSidebar({ active, isAdmin }: { active: SettingsTab; isAd
 
 /** The compact landing screen: the same groups, icons and labels as the sidebar,
  * one full-width row each. */
-export function SettingsIndex({ isAdmin }: { isAdmin: boolean }) {
+export function SettingsIndex({ isAdmin, onOpenProfile }: { isAdmin: boolean; onOpenProfile: (userId: string) => void }) {
   const { t } = useTranslation('settings');
   const { query, setQuery, results } = useSettingsSearch(isAdmin);
   return (
     <nav aria-label={t('nav.ariaLabel')} className="flex flex-col px-4 py-4 @[520px]:px-6">
+      <ProfileShortcut onOpenProfile={onOpenProfile} />
       <SettingsSearchField query={query} onChange={setQuery} onClear={() => setQuery('')} />
       {query ? (
         <SettingsSearchResults results={results} query={query} />

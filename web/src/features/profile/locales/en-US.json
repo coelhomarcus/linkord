@@ -155,5 +155,43 @@
       "calendar": "GitHub contribution calendar",
       "day": "{{date}}: {{total}} contributions"
     }
+  },
+  "editor": {
+    "fileTooLarge": "File too large (maximum {{max}}).",
+    "uploadFailed": {
+      "avatar": "Failed to upload the photo.",
+      "banner": "Failed to upload the banner."
+    },
+    "removeFailed": {
+      "avatar": "Couldn't remove the photo.",
+      "banner": "Couldn't remove the banner."
+    },
+    "avatarInput": "Select profile photo",
+    "bannerInput": "Select banner",
+    "formats": "PNG, JPEG, GIF or WEBP, up to {{max}}. Photo and banner apply as soon as you confirm the crop; name, color and bio only after saving. Connections are saved separately.",
+    "saved": "Profile saved.",
+    "conflict": "This profile was updated elsewhere while you were editing.",
+    "useSaved": "Use saved values",
+    "barLabel": "Save profile changes",
+    "unsavedNotice": "You have unsaved changes.",
+    "discard": "Discard",
+    "save": "Save profile",
+    "saving": "Saving…",
+    "cropTitle": {
+      "avatar": "Crop profile photo",
+      "banner": "Crop banner"
+    },
+    "uploadingTitle": {
+      "avatar": "Uploading the profile photo…",
+      "banner": "Uploading the banner…"
+    }
+  },
+  "unsaved": {
+    "title": "Unsaved changes",
+    "description": "You edited your profile and haven't saved yet. What do you want to do?",
+    "saveAndLeave": "Save and leave",
+    "saving": "Saving…",
+    "discardAndLeave": "Discard and leave",
+    "continueEditing": "Keep editing"
   }
 }

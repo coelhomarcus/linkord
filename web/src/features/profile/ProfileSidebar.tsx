@@ -10,7 +10,7 @@ import { ServerIcon } from '@/features/servers/ServerIcon';
 import { ProfileWall } from './ProfileWall';
 import type { ProfileDetails } from '@/shared/api/api';
 
-type Tab = 'wall' | 'common';
+export type ProfileTab = 'wall' | 'common';
 
 const TAB = 'h-11 shrink-0 rounded-none px-0 text-body font-semibold text-text-muted hover:text-text-secondary data-active:text-text-primary';
 const ROW = 'flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-fill-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
@@ -23,8 +23,10 @@ function Truncated({ shown, total }: { shown: number; total: number }) {
 }
 
 /** Keeps the Wall and mutual relationships beside the profile card. */
-export function ProfileSidebar({ userId, owner, status, details, onRetry, onOpenProfile, onOpenServer, onNavigate }: {
+export function ProfileSidebar({ userId, owner, initialTab = 'wall', status, details, onRetry, onOpenProfile, onOpenServer, onNavigate }: {
   userId: string;
+  /** read once, on mount: the modal opened from "what you have in common" starts there */
+  initialTab?: ProfileTab;
   owner: boolean;
   status: 'loading' | 'ready' | 'error';
   details: ProfileDetails | null;
@@ -35,7 +37,7 @@ export function ProfileSidebar({ userId, owner, status, details, onRetry, onOpen
 }) {
   const { t } = useTranslation('profile');
   const { onlineUserIds } = useRoom();
-  const [tab, setTab] = useState<Tab>('wall');
+  const [tab, setTab] = useState<ProfileTab>(initialTab);
   const friends = details?.mutualFriends;
   const servers = details?.mutualServers;
 

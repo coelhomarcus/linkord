@@ -186,6 +186,11 @@
     "missed": "Chamada não atendida",
     "ended": "Chamada encerrada",
     "failed": "Não foi possível conectar a chamada",
-    "someone": "Alguém"
+    "someone": "Alguém",
+    "status": {
+      "muted": "Microfone desativado",
+      "deafened": "Áudio desativado"
+    },
+    "resize": "Redimensionar chamada"
   }
 }
