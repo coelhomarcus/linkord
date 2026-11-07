@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { ArrowBendUpLeftIcon, CopyIcon, DotsThreeIcon, FlagIcon, PencilSimpleIcon, SmileyIcon, TrashIcon, UsersIcon } from '@phosphor-icons/react';
+import { ArrowBendUpLeftIcon, CopyIcon, DotsThreeIcon, FlagIcon, PencilSimpleIcon, PhoneIcon, SmileyIcon, TrashIcon, UsersIcon } from '@phosphor-icons/react';
 import { GroupAvatar } from '@/features/conversations/GroupAvatar';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
@@ -33,6 +33,7 @@ import { withPendingReactions } from './reactionState';
 import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { useMessageDeleteConfirm } from './useMessageDeleteConfirm';
 import { memberColor } from '@/features/servers/serverUtils';
+import { dmCallLine } from './dmCallLine';
 
 // A bot's message is usually something to acknowledge or flag — a deploy, an
 // alert — so its toolbar answers in one click, before the rest of the actions.
@@ -239,6 +240,17 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
   function clearTouchPress() {
     pressOrigin.current = null;
     setMobilePressing(false);
+  }
+
+  if (message.kind === 'dm_call') {
+    const answered = message.callDurationSeconds != null;
+    return (
+      <div className="flex items-baseline gap-2 px-4 py-1 text-label text-text-secondary" data-msg-id={message.msgId}>
+        <PhoneIcon size={16} weight="fill" className={answered ? 'text-green' : 'text-red'} aria-hidden />
+        <span>{dmCallLine({ viewerId: state.me.userId, callerId: message.id, callerName: message.name, durationSeconds: message.callDurationSeconds ?? null }, t)}</span>
+        <time className="text-caption text-text-muted" dateTime={new Date(message.ts).toISOString()}>{formatTime(message.ts)}</time>
+      </div>
+    );
   }
 
   return (
