@@ -217,7 +217,7 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
             </div>
           )}
           {inThisDmCall && (
-            <div className="border-b border-border-subtle">
+            <div className="h-80 flex-none border-b border-border-subtle">
               <DmCallSurface participantIds={dmCallIds} peers={dmCallPeers} />
             </div>
           )}
