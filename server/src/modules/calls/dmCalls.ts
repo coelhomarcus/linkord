@@ -14,6 +14,7 @@ import {
   leaveDmCall, missDmCall, ringingFor, startDmCall,
   type DmCall, type DmCallEffect, type DmCallEndReason, type DmCallState, type DmCallStep,
 } from './dmCallMachine.js';
+import { persistDmCallLine } from './dmCallLog.js';
 
 const log = logger.child({ component: 'dm-call' });
 
@@ -116,6 +117,7 @@ function dispatch(effect: DmCallEffect): void {
         if (participant.userId === userId) send(participant.socket, message);
       }
     }
+    void persistDmCallLine(effect).catch((err) => log.error('failed to record a DM call line', err));
     return;
   }
   notify(effect.call);

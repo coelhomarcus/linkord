@@ -272,6 +272,20 @@ async function serializeRows(rows: MessageWithAuthor[]): Promise<ChatMessagePayl
   ));
 }
 
+/** Loads a message that was just inserted and sends it to the conversation,
+ * the same way a normal send does. Callers own the insert. */
+export async function announceStoredMessage(messageId: number): Promise<void> {
+  const [row] = await db.select(messageWithAuthorSelect).from(messages)
+    .leftJoin(users, eq(users.id, messages.authorId))
+    .where(eq(messages.id, messageId))
+    .limit(1);
+  if (!row) return;
+  const [message] = await serializeRows([row]);
+  if (!message) return;
+  await touchConversation(message.conversationId, row.createdAt);
+  await broadcastToConversationMembers(message.conversationId, { t: 'chat', message });
+}
+
 /** Client opening a conversation — sends the last CHAT_HISTORY_LIMIT messages
  * to just THIS socket (no broadcast). Older pages are fetched on demand via
  * 'load-more-messages' (see handleLoadMoreMessages below). */
