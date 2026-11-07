@@ -29,7 +29,7 @@ export function DmCallSurface({ participantIds, peers }: { participantIds: strin
   }, [state.focusOrigin, state.focusedId, dispatch]);
 
   return (
-    <div className={media ? 'flex min-h-[220px] flex-1 flex-col' : 'flex h-[280px] flex-none flex-col'}>
+    <div className={media ? 'relative flex min-h-[220px] flex-1 flex-col' : 'relative flex h-[280px] flex-none flex-col'}>
       {media ? (
         <div data-testid="dm-call-tiles" className="min-h-0 flex-1">
           <TileGrid descriptors={descriptors} focusedId={state.focusedId} onCapacityChange={handleCapacityChange} />

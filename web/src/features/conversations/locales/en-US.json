@@ -21,12 +21,14 @@
     "close": "Close the conversation with {{name}}",
     "noMatch": "No conversation found.",
     "empty": "Your conversations show up here.",
-    "rowUnread": "{{name}}, {{count}} unread"
+    "rowUnread": "{{name}}, {{count}} unread",
+    "inThisCall": "In a call"
   },
   "panel": {
     "back": "Back to conversations",
     "viewProfile": "View profile",
     "inCall": "In the call",
+    "inThisCall": "In a call",
     "media": "Media and links",
     "search": "Search messages",
     "searchIn": "Search {{name}}",

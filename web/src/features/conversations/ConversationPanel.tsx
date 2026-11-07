@@ -11,8 +11,9 @@ import { Button } from '@/shared/ui/primitives/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
 import { Avatar } from '@/shared/Avatar';
 import { useRoom } from '@/state/RoomContext';
-import { conversationTitle, directUser } from './conversationUtils';
+import { callParticipantIds, conversationTitle, directUser } from './conversationUtils';
 import { ChatSurface } from '@/features/chat/ChatSurface';
+import { DmCallSurface } from '@/features/calls/DmCallSurface';
 import { useRelationship } from '@/features/friends/useRelationship';
 import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { cn } from '@/shared/lib/utils';
@@ -89,12 +90,16 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
         : null;
   const callJoinError = state.callJoinError && state.callJoinError.conversationId === conversation?.id ? state.callJoinError.message : null;
   const inThisCall = !!conversation && activeCallConversationId === conversation.id;
+  const inThisDmCall = conversation?.type === 'direct' && activeCallConversationId === conversation.id;
   const callActionLabel = inThisCall ? t('panel.returnToCall') : t('panel.voiceCall');
+  const dmCallIds = inThisDmCall && conversation ? callParticipantIds(state.me.id, state.participants, conversation.id) : [];
+  const dmCallPeers = dmCallIds.map((id) => {
+    if (id === state.me.id) return { id, name: state.me.displayName, avatar: state.me.avatar, avatarPoster: state.me.avatarPoster, avatarColor: state.me.avatarColor };
+    const participant = state.participants.get(id);
+    return { id, name: participant?.displayName ?? '', avatar: participant?.avatar ?? '', avatarPoster: participant?.avatarPoster, avatarColor: participant?.avatarColor ?? '' };
+  });
   function startThisCall(video: boolean) {
-    if (!conversation || inThisCall) {
-      if (conversation) onOpenCall(conversation.id);
-      return;
-    }
+    if (!conversation || inThisCall) return;
     startDmCall(conversation.id, video);
   }
   const detailsLabel = t('panel.members');
@@ -128,8 +133,14 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
                   <h2 className="truncate">{title}</h2>
                 </button>
               )}
-              {subtitle && <span aria-hidden className="mx-1 h-6 w-px flex-none bg-border-default max-md:hidden" />}
-              {subtitle && <p className="min-w-0 truncate text-label text-text-secondary max-md:hidden">{subtitle}</p>}
+              {inThisDmCall && (
+                <p className="flex min-w-0 items-center gap-1 truncate text-label text-green">
+                  <PhoneIcon size={14} weight="fill" className="flex-none" />
+                  {t('panel.inThisCall')}
+                </p>
+              )}
+              {!inThisDmCall && subtitle && <span aria-hidden className="mx-1 h-6 w-px flex-none bg-border-default max-md:hidden" />}
+              {!inThisDmCall && subtitle && <p className="min-w-0 truncate text-label text-text-secondary max-md:hidden">{subtitle}</p>}
             </div>
             {callParticipants.length > 0 && (
               <Tooltip>
@@ -212,7 +223,14 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
               <CloseButton size="xs" label={t('panel.dismissNotice')} onClick={() => dispatch({ type: 'SET_CALL_JOIN_ERROR', error: null })} />
             </div>
           )}
-          <ChatSurface conversationId={conversation.id} onOpenProfile={onOpenProfile} />
+          {inThisDmCall && (
+            <div className="border-b border-border-subtle">
+              <DmCallSurface participantIds={dmCallIds} peers={dmCallPeers} />
+            </div>
+          )}
+          <div className={inThisDmCall ? 'flex min-h-[220px] min-w-0 flex-1 flex-col' : 'contents'}>
+            <ChatSurface conversationId={conversation.id} onOpenProfile={onOpenProfile} />
+          </div>
         </>
       ) : (
         <>

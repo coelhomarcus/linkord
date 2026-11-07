@@ -56,13 +56,15 @@ describe('ConversationPanel — call button', () => {
     expect(onOpenCall).not.toHaveBeenCalled();
   });
 
-  it('already in this call: the button says Voltar à chamada and still opens the stage', async () => {
+  it('already in this call: the call stays above the chat and the button does not leave', async () => {
     mockedApi.fetchRequestSummary.mockResolvedValue({ incoming: 0, invitations: 0 });
     mockedApi.fetchRelationship.mockResolvedValue({ relation: 'friends', retryAfter: null });
     const { onOpenCall } = renderPanel({ activeCallConversationId: 'c1' });
     await vi.waitFor(() => expect(screen.getAllByRole('button', { name: 'Voltar à chamada' })[0]).toBeInTheDocument());
+    expect(screen.getByText('Em uma chamada')).toBeInTheDocument();
+    expect(screen.getByTestId('dm-call-avatars')).toBeInTheDocument();
     fireEvent.click(screen.getAllByRole('button', { name: 'Voltar à chamada' })[0]!);
-    expect(onOpenCall).toHaveBeenCalledWith('c1');
+    expect(onOpenCall).not.toHaveBeenCalled();
   });
 
   it('non-friend: the button stays disabled', async () => {
