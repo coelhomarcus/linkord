@@ -20,7 +20,7 @@ export function AppModals({ modal, onClose, onOpenProfile }: {
   const { t } = useTranslation('common');
   if (modal === 'settings') {
     return (
-      <AppModal label={t('layout.settings')} size="form" onClose={onClose}>
+      <AppModal label={t('layout.settings')} size="fullscreen" onClose={onClose}>
         <Routes>
           <Route path="/app/settings/:tab?" element={<SettingsPage onOpenProfile={onOpenProfile} />} />
         </Routes>

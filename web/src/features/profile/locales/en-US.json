@@ -75,6 +75,7 @@
   },
   "integration": {
     "url": "URL",
+    "description": "These are your accounts on other services. Connecting them here shows what you do there on your Wall. The data refreshes automatically every 24 hours.",
     "addTitle": "Add a new connection",
     "addLink": "Add a connection",
     "count_one": "{{count}} connection",

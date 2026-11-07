@@ -20,10 +20,18 @@ describe('useSettingsSearch', () => {
     expect(result.current.results).toEqual([]);
   });
 
-  it('"camera" (no accent) finds "Câmera"', () => {
+  it('"camera" (no accent) finds the video section through its synonym "câmera"', () => {
     const { result } = renderHook(() => useSettingsSearch(false));
     act(() => result.current.setQuery('camera'));
-    expect(titles(result.current.results)).toContain('Câmera');
+    expect(titles(result.current.results)).toContain('Vídeo');
+  });
+
+  it('"12 horas" finds the time format, under Idioma e hora', () => {
+    const { result } = renderHook(() => useSettingsSearch(false));
+    act(() => result.current.setQuery('12 horas'));
+    const found = result.current.results.find((r) => r.title === 'Formato de tempo');
+    expect(found?.categoryLabel).toBe('Idioma e hora');
+    expect(found?.entry).toMatchObject({ categoryId: 'language', sectionId: 'time-format' });
   });
 
   it('"github" finds Conexões via synonym (no sectionId)', () => {
@@ -63,7 +71,7 @@ describe('useSettingsSearch in English', () => {
   it('searches the English titles and synonyms', () => {
     const { result } = renderHook(() => useSettingsSearch(false));
     act(() => result.current.setQuery('webcam'));
-    expect(titles(result.current.results)).toContain('Camera');
+    expect(titles(result.current.results)).toContain('Video');
     act(() => result.current.setQuery('alto-falante'));
     expect(result.current.results).toEqual([]);
   });

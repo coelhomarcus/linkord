@@ -75,6 +75,7 @@
   },
   "integration": {
     "url": "URL",
+    "description": "Estas são contas de outros serviços. Conectá-las aqui mostra o que você faz por lá no seu Mural. Os dados são atualizados automaticamente a cada 24 horas.",
     "addTitle": "Adicionar uma nova conexão",
     "addLink": "Adicionar conexão",
     "count_one": "{{count}} conexão",

@@ -31,7 +31,18 @@ describe('formatStorage', () => {
 describe('AccountSettings', () => {
   it('describes the quota in pt-BR, with the file count in the singular when it is one', () => {
     renderAccount({ totalBytes: 8.3 * MB, totalFiles: 1, maxBytes: 5 * GB });
-    expect(screen.getByText('8,3 MB de 5 GB da sua cota usados, 1 arquivo enviado.')).toBeInTheDocument();
+    expect(screen.getByText('8,3 MB de 5 GB')).toBeInTheDocument();
+    expect(screen.getByText('1 arquivo enviado.')).toBeInTheDocument();
+  });
+
+  it('lists the account information as rows, with the email hidden up to the @', () => {
+    renderWithRoom(<MemoryRouter><AccountSettings onOpenProfile={vi.fn()} /></MemoryRouter>, {
+      state: { ...initialRoomState, me: { ...initialRoomState.me, userId: 'u-ana', name: 'ana', displayName: 'Ana Lima' } },
+    });
+    expect(screen.getByRole('heading', { name: 'Informações da conta' })).toBeInTheDocument();
+    expect(screen.getByText('Nome de usuário')).toBeInTheDocument();
+    expect(screen.getByText('Ana Lima')).toBeInTheDocument();
+    expect(screen.getByText('***@example.com')).toBeInTheDocument();
   });
 
   it('keeps any usage visible on the bar while reporting the real value', () => {
@@ -46,7 +57,8 @@ describe('AccountSettings', () => {
     renderWithRoom(<MemoryRouter><AccountSettings onOpenProfile={onOpenProfile} /></MemoryRouter>, {
       state: { ...initialRoomState, me: { ...initialRoomState.me, userId: 'u-ana' } },
     });
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Editar perfil' }));
+    // the first "Editar" is the display name's; the email has its own
+    await userEvent.setup().click(screen.getAllByRole('button', { name: 'Editar' })[0]!);
     expect(onOpenProfile).toHaveBeenCalledWith('u-ana');
   });
 });

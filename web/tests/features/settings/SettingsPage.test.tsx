@@ -65,7 +65,7 @@ describe('SettingsPage — category navigation', () => {
   it('opens the category named in the URL and marks it as the current page', () => {
     renderSettings({ state: userState }, '/app/settings/privacy');
     expect(screen.getByText('lista de bloqueados')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Privacidade' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: 'Dados e privacidade' })).toHaveAttribute('aria-current', 'page');
   });
 
   it('keeps the sidebar one level deep: an open category lists no sections under it', () => {
@@ -86,6 +86,21 @@ describe('SettingsPage — category navigation', () => {
     expect(screen.getByTestId('where')).toHaveTextContent('/app/settings/account');
     renderRouted({ state: userState }, '/app/settings/profile');
     expect(screen.getAllByTestId('where').at(-1)).toHaveTextContent('/app/settings/account');
+  });
+
+  it('the old Preferences tab lands on Appearance, where its first setting now lives', () => {
+    renderRouted({ state: userState }, '/app/settings/prefs');
+    expect(screen.getByTestId('where')).toHaveTextContent('/app/settings/appearance');
+  });
+
+  it('groups the categories like Discord: user settings, then app settings', () => {
+    renderSettings({ state: userState });
+    const nav = screen.getByRole('navigation', { name: 'Categorias de ajustes' });
+    expect(within(nav).getAllByRole('link').map((link) => link.textContent)).toEqual([
+      'Minha conta', 'Conexões', 'Dados e privacidade', 'Aparência', 'Voz e vídeo', 'Chat', 'Notificações', 'Idioma e hora',
+    ]);
+    expect(within(nav).getByText('Configurações de usuário')).toBeInTheDocument();
+    expect(within(nav).getByText('Configurações do app')).toBeInTheDocument();
   });
 
   it('administration does not appear for a non-admin (not even by URL)', () => {
@@ -112,7 +127,7 @@ describe('SettingsPage — category navigation', () => {
   it('clicking a category navigates to its route', async () => {
     const user = userEvent.setup();
     renderRouted({ state: userState });
-    await user.click(screen.getByRole('link', { name: 'Privacidade' }));
+    await user.click(screen.getByRole('link', { name: 'Dados e privacidade' }));
     expect(screen.getByTestId('where')).toHaveTextContent('/app/settings/privacy');
     expect(screen.getByText('lista de bloqueados')).toBeInTheDocument();
   });
@@ -120,11 +135,11 @@ describe('SettingsPage — category navigation', () => {
   it('searching and picking a result navigates to the destination and moves focus there (not just scroll)', async () => {
     const user = userEvent.setup();
     renderRouted({ state: userState });
-    await user.type(screen.getByLabelText('Buscar nas configurações'), 'camera');
-    await user.click(screen.getByText('Câmera'));
+    await user.type(screen.getByLabelText('Buscar'), 'camera');
+    await user.click(screen.getByText('Vídeo'));
 
     expect(screen.getByTestId('where')).toHaveTextContent('/app/settings/av');
-    expect(document.activeElement?.id).toBe('camera');
+    expect(document.activeElement?.id).toBe('video');
   });
 });
 
@@ -142,13 +157,13 @@ describe('SettingsPage — compact mode (index and detail)', () => {
 
     await user.click(screen.getByRole('button', { name: 'Voltar às configurações' }));
     expect(screen.getByTestId('where')).toHaveTextContent(/^\/app\/settings$/);
-    expect(screen.getByRole('link', { name: 'Privacidade' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Dados e privacidade' })).toBeInTheDocument();
   });
 
   it('from the index, opening a category and going back walks the history (does not push the index again)', async () => {
     const user = userEvent.setup();
     renderRouted({ state: userState }, '/app/settings');
-    await user.click(screen.getByRole('link', { name: 'Privacidade' }));
+    await user.click(screen.getByRole('link', { name: 'Dados e privacidade' }));
     expect(screen.getByTestId('where')).toHaveTextContent('/app/settings/privacy');
     await user.click(screen.getByRole('button', { name: 'Voltar às configurações' }));
     expect(screen.getByTestId('where')).toHaveTextContent(/^\/app\/settings$/);

@@ -27,23 +27,36 @@ beforeEach(() => {
 });
 
 async function requestCode(user: ReturnType<typeof userEvent.setup>, email: string) {
-  await user.click(screen.getByRole('button', { name: 'Alterar e-mail' }));
+  await user.click(screen.getByRole('button', { name: 'Editar' }));
   await user.clear(screen.getByLabelText('Novo e-mail'));
   await user.type(screen.getByLabelText('Novo e-mail'), email);
   await user.click(screen.getByRole('button', { name: 'Enviar código' }));
 }
 
 describe('EmailSettings', () => {
-  it('starts by showing only the current email, with no form open', () => {
+  it('starts with the address hidden up to the @ and no form open; Mostrar reveals it', async () => {
+    const user = userEvent.setup();
     render(<EmailSettings currentEmail="fulana@example.com" />);
-    expect(screen.getByText('fulana@example.com')).toBeInTheDocument();
+    expect(screen.getByText('******@example.com')).toBeInTheDocument();
+    expect(screen.queryByText('fulana@example.com')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Novo e-mail')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Mostrar' }));
+    expect(screen.getByText('fulana@example.com')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Ocultar' }));
+    expect(screen.getByText('******@example.com')).toBeInTheDocument();
+  });
+
+  it('offers to add an address when there is none', () => {
+    render(<EmailSettings currentEmail={null} />);
+    expect(screen.getByText('Nenhum e-mail cadastrado.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Adicionar' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Mostrar' })).not.toBeInTheDocument();
   });
 
   it('changing email opens the form; canceling closes it without calling the API', async () => {
     const user = userEvent.setup();
     render(<EmailSettings currentEmail="fulana@example.com" />);
-    await user.click(screen.getByRole('button', { name: 'Alterar e-mail' }));
+    await user.click(screen.getByRole('button', { name: 'Editar' }));
     expect(screen.getByLabelText('Novo e-mail')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Cancelar' }));
@@ -54,7 +67,7 @@ describe('EmailSettings', () => {
   it('validates empty, invalid, and same-as-current before calling the API', async () => {
     const user = userEvent.setup();
     render(<EmailSettings currentEmail="fulana@example.com" />);
-    await user.click(screen.getByRole('button', { name: 'Alterar e-mail' }));
+    await user.click(screen.getByRole('button', { name: 'Editar' }));
 
     // pre-filled with the current address for convenience — the "same as
     // current" case is covered separately, this one needs a blank field

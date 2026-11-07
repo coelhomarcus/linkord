@@ -6,14 +6,18 @@ import { Navigate, useLocation, useNavigate, useParams } from 'react-router';
 import { useRoom } from '@/state/RoomContext';
 import { PageHeader } from '@/shared/PageHeader';
 import { Button } from '@/shared/ui/primitives/button';
-import { ROUTES, isSettingsTab } from '@/shared/lib/routes';
+import { useAppModalClose } from '@/shared/ui/app-modal';
+import { EscCloseButton } from '@/shared/ui/esc-close-button';
+import { LEGACY_SETTINGS_TABS, ROUTES, isSettingsTab } from '@/shared/lib/routes';
 import type { SettingsTab } from '@/shared/lib/routes';
 import { ConnectionsSettings } from '@/features/profile/ConnectionsSettings';
 import { AccountSettings } from './AccountSettings';
 import { AdminLinkTab } from './AdminLinkTab';
+import { AppearanceSettings } from './AppearanceSettings';
 import { AudioVideoSettings } from './AudioVideoSettings';
+import { ChatSettings } from './ChatSettings';
+import { LanguageSettings } from './LanguageSettings';
 import { NotificationsSettings } from './NotificationsSettings';
-import { PreferencesSettings } from './PreferencesSettings';
 import { PrivacyTab } from './PrivacyTab';
 import { SettingsContent, SettingsPageHeader } from './SettingsLayout';
 import { SettingsIndex, SettingsSidebar } from './SettingsNavigation';
@@ -26,22 +30,28 @@ interface SettingsPageProps {
 
 function CategoryPage({ tab, onOpenProfile }: { tab: SettingsTab; onOpenProfile: (userId: string) => void }) {
   switch (tab) {
-    case 'connections': return <ConnectionsSettings />;
     case 'account': return <AccountSettings onOpenProfile={onOpenProfile} />;
+    case 'connections': return <ConnectionsSettings />;
     case 'privacy': return <PrivacyTab onOpenProfile={onOpenProfile} />;
+    case 'appearance': return <AppearanceSettings />;
     case 'av': return <AudioVideoSettings />;
+    case 'chat': return <ChatSettings />;
     case 'notifications': return <NotificationsSettings />;
-    case 'prefs': return <PreferencesSettings />;
+    case 'language': return <LanguageSettings />;
     case 'moderation': return <AdminLinkTab />;
   }
 }
 
+/** Discord's user settings: wide, a column of categories growing from the
+ * left edge, the open one in a 740px page beside it and the round ESC button
+ * after it; narrow, an index of categories that opens one at a time. */
 export function SettingsPage({ onOpenProfile }: SettingsPageProps) {
   const { t } = useTranslation('settings');
   const { state } = useRoom();
   const { tab } = useParams<{ tab?: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const closeModal = useAppModalClose();
   const areaRef = useRef<HTMLDivElement | null>(null);
   const scrollerRef = useRef<HTMLElement | null>(null);
   const headingRef = useRef<HTMLHeadingElement | null>(null);
@@ -58,10 +68,9 @@ export function SettingsPage({ onOpenProfile }: SettingsPageProps) {
   const category = findCategory(current);
 
   // opening another category starts at its top, with its title focused; a hash
-  // (/app/settings/av#camera) wins and scrolls to — and focuses — that
-  // section instead (a search result is exactly this: SettingsSection
-  // carries tabIndex={-1} on purpose for this to land somewhere real, not
-  // just scroll past it).
+  // (/app/settings/av#video) wins and scrolls to — and focuses — that section
+  // instead (a search result is exactly this: SettingsSection carries
+  // tabIndex={-1} on purpose for this to land somewhere real).
   useEffect(() => {
     if (firstRender.current) {
       firstRender.current = false;
@@ -77,15 +86,44 @@ export function SettingsPage({ onOpenProfile }: SettingsPageProps) {
     headingRef.current?.focus({ preventScroll: true });
   }, [current, showIndex, location.hash]);
 
-  // an unknown category — or the admin-only one for a non-admin — falls back to
-  // the first one instead of rendering an empty page
-  if (tab !== undefined && !known) return <Navigate to={ROUTES.settingsTab('account')} replace />;
+  if (tab !== undefined && !known) {
+    const legacy = LEGACY_SETTINGS_TABS[tab];
+    // an unknown category — or the admin-only one for a non-admin — falls back
+    // to the first one instead of rendering an empty page
+    return <Navigate to={ROUTES.settingsTab(legacy ?? 'account')} replace />;
+  }
 
-  const compactDetail = mode === 'compact' && active !== null;
-  const fromIndex = (location.state as { fromIndex?: boolean } | null)?.fromIndex === true;
+  const page = (
+    <SettingsContent>
+      <SettingsPageHeader title={t(category.labelKey)} headingRef={headingRef} />
+      <CategoryPage tab={current} onOpenProfile={onOpenProfile} />
+    </SettingsContent>
+  );
 
-  return (
-    <div className="flex h-full min-h-0 flex-col">
+  // the measured wrapper stays the same element in both modes, so the
+  // observer keeps watching it after a switch
+  return <div ref={areaRef} className="flex h-full min-h-0 min-w-0 flex-col">{mode === 'wide' ? wide() : compact()}</div>;
+
+  function wide() {
+    return (
+      <div className="flex min-h-0 min-w-0 flex-1">
+        <div className="scrollbar-none flex flex-[1_0_218px] justify-end overflow-y-auto">
+          <SettingsSidebar active={current} isAdmin={isAdmin} onOpenProfile={onOpenProfile} />
+        </div>
+        {/* a stable gutter: a short page and a scrolling one keep the column in the same place */}
+        <main ref={scrollerRef} aria-label={t(category.labelKey)} className="@container flex min-h-0 min-w-0 flex-[1_1_800px] overflow-y-auto [scrollbar-gutter:stable]">
+          {page}
+          {closeModal && <EscCloseButton onClose={closeModal} />}
+        </main>
+      </div>
+    );
+  }
+
+  function compact() {
+    const compactDetail = active !== null;
+    const fromIndex = (location.state as { fromIndex?: boolean } | null)?.fromIndex === true;
+    return (
+      <>
       <PageHeader
         title={compactDetail ? t(category.labelKey) : t('title')}
         leading={compactDetail ? (
@@ -100,19 +138,10 @@ export function SettingsPage({ onOpenProfile }: SettingsPageProps) {
           </Button>
         ) : undefined}
       />
-      <div ref={areaRef} className="@container flex min-h-0 min-w-0 flex-1">
-        {mode === 'wide' ? <SettingsSidebar active={current} isAdmin={isAdmin} onOpenProfile={onOpenProfile} /> : null}
-        <main ref={scrollerRef} aria-label={showIndex ? t('title') : t(category.labelKey)} className="min-h-0 min-w-0 flex-1 overflow-y-auto">
-          {showIndex ? (
-            <SettingsIndex isAdmin={isAdmin} onOpenProfile={onOpenProfile} />
-          ) : (
-            <SettingsContent>
-              <SettingsPageHeader title={t(category.labelKey)} description={t(category.descriptionKey)} headingRef={headingRef} hideTitle={compactDetail} />
-              <CategoryPage tab={current} onOpenProfile={onOpenProfile} />
-            </SettingsContent>
-          )}
-        </main>
-      </div>
-    </div>
-  );
+      <main ref={scrollerRef} aria-label={showIndex ? t('title') : t(category.labelKey)} className="@container min-h-0 min-w-0 flex-1 overflow-y-auto [scrollbar-gutter:stable]">
+        {showIndex ? <SettingsIndex isAdmin={isAdmin} onOpenProfile={onOpenProfile} /> : page}
+      </main>
+      </>
+    );
+  }
 }

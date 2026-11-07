@@ -38,7 +38,7 @@ Linkord is a self-hosted place to chat and call with friends. Talk in direct mes
   Manage users, servers, webhooks, reports, audit history, and orphaned uploads from `/admin`.
 
 - **Your preferences**
-  Set up your profile, account security, audio and video devices, notifications, privacy, and interface preferences.
+  Set up your profile, account and email, connected accounts, blocked people, theme, voice and video devices, which notification sounds play, language and 12- or 24-hour time.
 
 ## 🚀 Development
 

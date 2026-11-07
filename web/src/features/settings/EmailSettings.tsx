@@ -9,11 +9,20 @@ import { Input } from '@/shared/ui/primitives/input';
 import { confirmEmailChange, requestEmailChange } from '@/shared/api/api';
 import { describeApiError } from '@/shared/api/errorText';
 import { OTPInput, type OTPStatus } from '@/shared/ui/motion/otp-input';
+import { cn } from '@/shared/lib/utils';
+import { SETTINGS_ACTION_BUTTON, SettingsRow } from './SettingsLayout';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // RFC 5321's own limit — just enough to keep the input from growing forever,
 // the server is still the real authority on what's a valid address.
 const MAX_EMAIL_LEN = 254;
+
+/** `ana@gmail.com` → `***@gmail.com`: as many stars as the hidden part has letters. */
+function maskEmail(email: string): string {
+  const at = email.lastIndexOf('@');
+  if (at <= 0) return '*'.repeat(email.length);
+  return `${'*'.repeat(at)}${email.slice(at)}`;
+}
 
 type Phase = 'view' | 'edit' | 'requested' | 'success';
 
@@ -36,6 +45,7 @@ export function EmailSettings({ currentEmail }: { currentEmail: string | null })
   // success message before anyone could read it (caught only in the
   // browser, not by a test — nothing here exercises AuthContext for real).
   const [phase, setPhase] = useState<Phase>('view');
+  const [revealed, setRevealed] = useState(false);
   const [email, setEmail] = useState('');
   const [validationError, setValidationError] = useState<EmailValidationError | null>(null);
   // Frozen the moment a code is requested — editing again means starting a
@@ -124,88 +134,108 @@ export function EmailSettings({ currentEmail }: { currentEmail: string | null })
     }
   }
 
-  if (phase === 'success') {
-    return (
-      <p className="flex items-center gap-1.5 text-label text-green">
-        <CheckCircleIcon size={16} aria-hidden /> {t('email.changed', { email: targetEmail })}
-      </p>
-    );
-  }
-
-  if (phase === 'view') {
-    return (
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="break-all text-body text-text-primary">{currentEmail ?? t('email.none')}</span>
-        <Button type="button" variant="secondary" size="sm" onClick={startEdit}>
-          <span>{t('email.change')}</span>
+  // Discord hides the address until asked: only what comes after the @ shows.
+  const shown = currentEmail ? (revealed ? currentEmail : maskEmail(currentEmail)) : null;
+  const row = (
+    <SettingsRow label={t('email.label')}>
+      <span className="flex min-w-0 flex-wrap items-baseline justify-end gap-x-2">
+        <span className={cn('break-all text-body font-medium text-text-primary', revealed && 'select-text')}>{shown ?? t('email.none')}</span>
+        {currentEmail && (
+          <button type="button" onClick={() => setRevealed((value) => !value)} className="text-body font-medium text-accent-text hover:underline">
+            {revealed ? t('email.hide') : t('email.show')}
+          </button>
+        )}
+      </span>
+      {phase === 'view' && (
+        <Button type="button" variant="secondary" size="lg" className={SETTINGS_ACTION_BUTTON} onClick={startEdit}>
+          {currentEmail ? t('email.change') : t('email.add')}
         </Button>
-      </div>
-    );
-  }
+      )}
+    </SettingsRow>
+  );
 
-  if (phase === 'edit') {
-    return (
-      <div className="flex flex-col gap-3">
-        <p className="text-label text-text-muted">{t('email.changeHint')}</p>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-          <div className="min-w-0 flex-1">
-            <Label htmlFor="accountEmail" className="text-label text-text-muted">{t('email.newLabel')}</Label>
-            <Input
-              id="accountEmail"
-              type="email"
-              autoComplete="email"
-              autoFocus
-              maxLength={MAX_EMAIL_LEN}
-              value={email}
-              onChange={(event) => { setEmail(event.target.value); setValidationError(null); }}
-            />
-          </div>
-          <Button type="button" size="lg" disabled={pending} onClick={() => void handleRequest()}>
-            {pending ? <CircleNotchIcon size={20} className="animate-spin" /> : <EnvelopeIcon size={20} weight="fill" />}
-            <span>{pending ? t('email.sending') : t('email.sendCode')}</span>
-          </Button>
-        </div>
-        <Button type="button" variant="ghost" size="sm" className="w-fit" disabled={pending} onClick={() => setPhase('view')}>
-          <span>{t('email.cancel')}</span>
-        </Button>
-        {(validationError ?? error) && <p role="alert" className="text-label text-red">{validationError ? t(`email.validation.${validationError}`) : error}</p>}
-      </div>
-    );
-  }
+  if (phase === 'view') return row;
 
   return (
-    <div className="flex flex-col gap-3">
-      <p className="text-label text-text-muted">{t('email.codeSent', { email: targetEmail })}</p>
-      <OTPInput
-        label={t('email.codeLabel')}
-        hint={t('email.codeHint')}
-        errorMessage={error ?? t('email.codeError')}
-        successMessage={t('email.codeSuccess')}
-        value={code}
-        status={otpStatus}
-        disabled={pending}
-        onChange={(value) => { setCode(value); setOtpStatus('idle'); setError(null); }}
-        onComplete={(value) => { void handleConfirm(value); }}
-        aria-label={t('email.codeAria')}
-      />
-      <div className="flex flex-wrap items-center gap-2">
-        <Button type="button" size="sm" disabled={pending || code.length !== 6} onClick={() => void handleConfirm()}>
-          {pending ? <CircleNotchIcon size={20} className="animate-spin" /> : <CheckIcon size={20} weight="fill" />}
-          <span>{pending ? t('email.confirming') : t('email.confirm')}</span>
-        </Button>
-        <Button type="button" variant="ghost" size="sm" disabled={pending} onClick={() => void handleResend()}>
-          <span>{resent ? t('email.resent') : t('email.resend')}</span>
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          disabled={pending}
-          onClick={() => { setPhase('edit'); setCode(''); setError(null); setOtpStatus('idle'); }}
-        >
-          <span>{t('email.useOther')}</span>
-        </Button>
-      </div>
+    <div className="flex flex-col gap-4">
+      {row}
+      <div className="rounded-lg border border-border-subtle bg-fill-subtle p-4">{flow()}</div>
     </div>
   );
+
+  function flow() {
+    if (phase === 'success') {
+      return (
+        <p className="flex items-center gap-1.5 text-label text-green">
+          <CheckCircleIcon size={16} aria-hidden /> {t('email.changed', { email: targetEmail })}
+        </p>
+      );
+    }
+
+    if (phase === 'edit') {
+      return (
+        <div className="flex flex-col gap-3">
+          <p className="text-label text-text-muted">{t('email.changeHint')}</p>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+            <div className="min-w-0 flex-1">
+              <Label htmlFor="accountEmail" className="text-label text-text-muted">{t('email.newLabel')}</Label>
+              <Input
+                id="accountEmail"
+                type="email"
+                autoComplete="email"
+                autoFocus
+                maxLength={MAX_EMAIL_LEN}
+                value={email}
+                onChange={(event) => { setEmail(event.target.value); setValidationError(null); }}
+              />
+            </div>
+            <Button type="button" size="lg" disabled={pending} onClick={() => void handleRequest()}>
+              {pending ? <CircleNotchIcon size={20} className="animate-spin" /> : <EnvelopeIcon size={20} weight="fill" />}
+              <span>{pending ? t('email.sending') : t('email.sendCode')}</span>
+            </Button>
+          </div>
+          <Button type="button" variant="ghost" size="sm" className="w-fit" disabled={pending} onClick={() => setPhase('view')}>
+            <span>{t('email.cancel')}</span>
+          </Button>
+          {(validationError ?? error) && <p role="alert" className="text-label text-red">{validationError ? t(`email.validation.${validationError}`) : error}</p>}
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex flex-col gap-3">
+        <p className="text-label text-text-muted">{t('email.codeSent', { email: targetEmail })}</p>
+        <OTPInput
+          label={t('email.codeLabel')}
+          hint={t('email.codeHint')}
+          errorMessage={error ?? t('email.codeError')}
+          successMessage={t('email.codeSuccess')}
+          value={code}
+          status={otpStatus}
+          disabled={pending}
+          onChange={(value) => { setCode(value); setOtpStatus('idle'); setError(null); }}
+          onComplete={(value) => { void handleConfirm(value); }}
+          aria-label={t('email.codeAria')}
+        />
+        <div className="flex flex-wrap items-center gap-2">
+          <Button type="button" size="sm" disabled={pending || code.length !== 6} onClick={() => void handleConfirm()}>
+            {pending ? <CircleNotchIcon size={20} className="animate-spin" /> : <CheckIcon size={20} weight="fill" />}
+            <span>{pending ? t('email.confirming') : t('email.confirm')}</span>
+          </Button>
+          <Button type="button" variant="ghost" size="sm" disabled={pending} onClick={() => void handleResend()}>
+            <span>{resent ? t('email.resent') : t('email.resend')}</span>
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={pending}
+            onClick={() => { setPhase('edit'); setCode(''); setError(null); setOtpStatus('idle'); }}
+          >
+            <span>{t('email.useOther')}</span>
+          </Button>
+        </div>
+      </div>
+    );
+  }
 }

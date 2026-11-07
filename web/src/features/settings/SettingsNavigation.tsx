@@ -15,7 +15,7 @@ import type { SettingsSearchResult } from './useSettingsSearch';
 import { AppLink } from '@/shared/ui/app-link';
 
 function GroupLabel({ children }: { children: string }) {
-  return <p className="select-none px-2.5 pb-1 text-caption font-semibold uppercase tracking-[0.02em] text-text-muted">{children}</p>;
+  return <p className="truncate px-2.5 pb-1.5 text-label font-medium text-text-muted">{children}</p>;
 }
 
 /** Who you are, at the top of the list, as the way into your profile: it
@@ -74,7 +74,7 @@ function SettingsSearchResults({ results, query }: { results: SettingsSearchResu
         const to = entry.sectionId ? `${ROUTES.settingsTab(entry.categoryId)}#${entry.sectionId}` : ROUTES.settingsTab(entry.categoryId);
         return (
           <AppLink
-            key={`${entry.categoryId}-${entry.sectionId ?? ''}`}
+            key={entry.searchKey}
             to={to}
             className="flex min-h-11 items-center gap-3 rounded-md px-2.5 text-body font-medium text-text-primary outline-none hover:bg-nav-hover focus-visible:ring-2 focus-visible:ring-ring"
           >
@@ -97,15 +97,16 @@ export function SettingsSidebar({ active, isAdmin, onOpenProfile }: { active: Se
   const { t } = useTranslation('settings');
   const { query, setQuery, results } = useSettingsSearch(isAdmin);
   return (
-    <nav aria-label={t('nav.ariaLabel')} className="flex w-64 flex-none flex-col overflow-y-auto border-r border-border p-3">
+    <nav aria-label={t('nav.ariaLabel')} className="flex w-[218px] flex-none flex-col py-[60px] pl-5 pr-1.5">
       <ProfileShortcut onOpenProfile={onOpenProfile} />
       <SettingsSearchField query={query} onChange={setQuery} onClear={() => setQuery('')} />
       {query ? (
         <SettingsSearchResults results={results} query={query} />
       ) : (
-        <div className="flex flex-col gap-0.5">
-          {visibleGroups(isAdmin).map((group) => (
-            <div key={group.labelKey} className="flex flex-col gap-0.5 pt-4 first:pt-0">
+        <div className="flex flex-col">
+          {visibleGroups(isAdmin).map((group, index) => (
+            <div key={group.labelKey} className="flex flex-col">
+              {index > 0 && <span aria-hidden className="mx-2.5 my-2 h-px flex-none bg-border-subtle" />}
               <GroupLabel>{t(group.labelKey)}</GroupLabel>
               {group.categories.map((category) => {
                 const Icon = category.icon;
@@ -116,13 +117,13 @@ export function SettingsSidebar({ active, isAdmin, onOpenProfile }: { active: Se
                     to={ROUTES.settingsTab(category.id)}
                     aria-current={current ? 'page' : undefined}
                     className={cn(
-                      'relative isolate flex h-9 items-center gap-2 rounded-md px-2.5 text-body font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                      current ? 'text-text-primary' : 'text-text-muted hover:bg-nav-hover hover:text-text-secondary',
+                      'relative isolate mb-0.5 flex h-8 flex-none items-center gap-2 rounded-lg px-2.5 text-body font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                      current ? 'text-text-strong' : 'text-text-secondary hover:bg-nav-hover hover:text-text-primary',
                     )}
                   >
                     {/* Discord/Fluxer: a plain light-gray fill for the active item, no accent color */}
-                    {current && <ActiveFill />}
-                    <Icon size={20} weight={iconWeight(current)} aria-hidden className="flex-none" />
+                    {current && <ActiveFill className="rounded-lg" />}
+                    <Icon size={18} weight={iconWeight(current)} aria-hidden className="flex-none" />
                     <span className="truncate">{t(category.labelKey)}</span>
                   </AppLink>
                 );
