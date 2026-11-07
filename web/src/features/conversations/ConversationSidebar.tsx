@@ -61,10 +61,7 @@ function DirectRow({ conversation, active, onClick, onClose }: {
         <span className="min-w-0 flex-1">
           <span className={cn('block truncate text-body', unread ? 'font-semibold' : 'font-medium')}>{title}</span>
           {inCall && (
-            <span className="flex items-center gap-1 text-label text-green">
-              <PhoneIcon size={12} weight="fill" />
-              {t('sidebar.inThisCall')}
-            </span>
+            <span className="block truncate text-label text-green">{t('sidebar.inThisCall')}</span>
           )}
         </span>
       </button>

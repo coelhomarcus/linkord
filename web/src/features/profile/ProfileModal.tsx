@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/pr
 import { Button } from '@/shared/ui/primitives/button';
 import { fetchUserProfile } from '@/shared/api/api';
 import type { PublicUser } from '@/shared/types/protocol';
+import { colorFor } from '@/shared/Avatar';
 import { ProfileActions } from '@/features/friends/ProfileActions';
 import { ProfileCard } from './ProfileCard';
 import { ReportDialog } from '@/features/reports/ReportDialog';
@@ -153,6 +154,7 @@ export function ProfileModal({ userId, initialTab, onClose, onOpenProfile }: Pro
                     key={user.id}
                     userId={user.id}
                     owner={false}
+                    accent={colorFor(user.id, user.avatarColor)}
                     initialTab={initialTab}
                     status={details.status}
                     details={details.details}

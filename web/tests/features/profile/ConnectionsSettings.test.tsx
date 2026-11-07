@@ -8,9 +8,9 @@ import { initialRoomState } from '@/state/roomReducer';
 import { renderWithRoom } from '@tests/fixtures/roomContextFixture';
 import type { ConnectionsResponse, ProfileConnection } from '@/features/profile/connectionsTypes';
 
-vi.mock('@/features/profile/profileApi', () => ({ fetchConnections: vi.fn(), createConnection: vi.fn(), editConnection: vi.fn(), deleteConnection: vi.fn() }));
+vi.mock('@/features/profile/profileApi', () => ({ fetchConnections: vi.fn(), createConnection: vi.fn(), editConnection: vi.fn(), deleteConnection: vi.fn(), setConnectionVisibility: vi.fn() }));
 const mocked = vi.mocked(api);
-const connection: ProfileConnection = { id: 'mal', provider: 'myanimelist', value: 'Xinil', url: 'https://myanimelist.net/profile/Xinil', position: 0, syncedAt: null, syncError: null, status: 'pending' };
+const connection: ProfileConnection = { id: 'mal', provider: 'myanimelist', value: 'Xinil', url: 'https://myanimelist.net/profile/Xinil', position: 0, showOnProfile: true, syncedAt: null, syncError: null, status: 'pending' };
 const empty: ConnectionsResponse = { connections: [] };
 beforeEach(() => { vi.clearAllMocks(); mocked.fetchConnections.mockResolvedValue(empty); });
 function renderSettings() {
@@ -35,6 +35,19 @@ describe('connection settings', () => {
     expect(dispatch).toHaveBeenCalledWith({ type: 'PROFILE_CONNECTIONS_CHANGED', userId: 'me', profileLinks: [connection.url] });
     expect(screen.getByText('Aguardando a primeira sincronização…')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'MyAnimeList' })).toBeDisabled();
+  });
+  it('hides a connection from the profile with its switch, and drops it from the local profile links', async () => {
+    const user = userEvent.setup(); const { dispatch } = renderSettings();
+    const other = { ...connection, id: 'site', provider: 'url' as const, value: 'https://example.com', url: 'https://example.com', status: 'ready' as const };
+    mocked.fetchConnections.mockResolvedValue({ connections: [connection, other] });
+    const toggle = await screen.findByRole('switch', { name: 'Exibir Xinil no perfil' });
+    expect(toggle).toBeChecked();
+    const hidden = { connections: [{ ...connection, showOnProfile: false }, other] };
+    mocked.setConnectionVisibility.mockResolvedValue(hidden); mocked.fetchConnections.mockResolvedValue(hidden);
+    await user.click(toggle);
+    expect(mocked.setConnectionVisibility).toHaveBeenCalledWith('mal', false);
+    await waitFor(() => expect(screen.getByRole('switch', { name: 'Exibir Xinil no perfil' })).not.toBeChecked());
+    expect(dispatch).toHaveBeenLastCalledWith({ type: 'PROFILE_CONNECTIONS_CHANGED', userId: 'me', profileLinks: ['https://example.com'] });
   });
   it('opens URL and GitHub dialogs with the appropriate input', async () => {
     const user = userEvent.setup(); renderSettings();

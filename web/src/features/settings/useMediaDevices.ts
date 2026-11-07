@@ -12,15 +12,17 @@ interface DeviceOption {
   label: string;
 }
 
-/** `ready`: normal picker. `unsupported`: no navigator.mediaDevices at all
+/** `checking`: the first silent listing hasn't answered yet — drawn as the
+ * picker itself, disabled, so the row keeps its shape when the answer lands.
+ * `ready`: normal picker. `unsupported`: no navigator.mediaDevices at all
  * (insecure context, old browser) — asking again would never help.
  * `permission-needed`: never asked, or the labels just aren't populated
  * yet. `permission-denied`: explicitly asked (requestPermission) and still
  * got nothing — also wouldn't help to ask again, the browser won't re-prompt.
  * `no-devices`: supported and permitted, but the list is genuinely empty. */
-type MediaDevicesStatus = 'ready' | 'unsupported' | 'permission-needed' | 'permission-denied' | 'no-devices';
+export type MediaDevicesStatus = 'checking' | 'ready' | 'unsupported' | 'permission-needed' | 'permission-denied' | 'no-devices';
 
-interface MediaDevicesApi {
+export interface MediaDevicesApi {
   devices: DeviceOption[];
   activeDeviceId: string | undefined;
   status: MediaDevicesStatus;
@@ -36,7 +38,7 @@ interface MediaDevicesApi {
 export function useMediaDevices(room: LKRoom, kind: MediaDeviceKind): MediaDevicesApi {
   const [devices, setDevices] = useState<DeviceOption[]>([]);
   const [activeDeviceId, setActiveDeviceId] = useState<string | undefined>(undefined);
-  const [status, setStatus] = useState<MediaDevicesStatus>('permission-needed');
+  const [status, setStatus] = useState<MediaDevicesStatus>('checking');
   const [switching, setSwitching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const appliedSavedRef = useRef(false);

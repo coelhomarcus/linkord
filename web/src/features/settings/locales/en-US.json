@@ -1,14 +1,9 @@
 {
   "title": "Settings",
   "back": "Back to settings",
-  "language": {
-    "label": "Language",
-    "description": "Interface language. Applies on all your devices.",
-    "saveFailed": "Couldn't save the language. Try again."
-  },
   "nav": {
     "ariaLabel": "Settings categories",
-    "search": "Search settings",
+    "search": "Search",
     "clearSearch": "Clear search",
     "noResults": "Nothing found for \"{{query}}\".",
     "editProfile": "Edit profile",
@@ -16,118 +11,102 @@
   },
   "catalog": {
     "groups": {
-      "you": "You",
-      "app": "App",
+      "you": "User settings",
+      "app": "App settings",
       "admin": "Administration"
     },
     "categories": {
-      "connections": {
-        "label": "Connections",
-        "description": "Connect your accounts on other services and choose what to show on your Wall. Data refreshes automatically every 24 hours."
-      },
-      "account": {
-        "label": "My account",
-        "description": "Identity, language, email, storage and session."
-      },
-      "privacy": {
-        "label": "Privacy",
-        "description": "Who you've blocked and what that changes."
-      },
-      "av": {
-        "label": "Audio and video",
-        "description": "Devices and your microphone processing."
-      },
-      "notifications": {
-        "label": "Notifications",
-        "description": "System alerts and app sounds."
-      },
-      "prefs": {
-        "label": "Preferences",
-        "description": "How the call looks and how images are sent. Applies only to this browser and doesn't follow your account across devices."
-      },
-      "moderation": {
-        "label": "Administration",
-        "description": "Access to the instance's admin area."
-      }
+      "account": "My account",
+      "connections": "Connections",
+      "privacy": "Data & privacy",
+      "appearance": "Appearance",
+      "av": "Voice & video",
+      "chat": "Chat",
+      "notifications": "Notifications",
+      "language": "Language & time",
+      "moderation": "Administration"
     },
     "sections": {
-      "identity": "Identity",
-      "language": "Language",
-      "email": "Email",
-      "storage": "Attachment storage",
+      "accountInfo": "Account information",
+      "storage": "Storage",
       "session": "Session",
-      "blocked": "Blocked people",
-      "microphone": "Audio input",
-      "speaker": "Audio output",
-      "camera": "Video",
-      "system": "System notifications",
+      "blocked": "Blocked accounts",
+      "theme": "Theme",
+      "voice": "Voice",
+      "video": "Video",
+      "calls": "Calls",
+      "uploads": "Images & files",
+      "overview": "Overview",
       "sounds": "Sounds",
-      "appAppearance": "App appearance",
-      "callAppearance": "Call appearance",
-      "imageUploads": "Image uploads",
+      "language": "Language",
+      "timeFormat": "Time format",
       "adminArea": "Admin area"
     }
   },
   "search": {
-    "connections": {
-      "title": "Connections",
-      "keywords": "github, myanimelist, anime, link, accounts, wall, widgets, social"
-    },
-    "identity": {
-      "title": "Identity",
-      "keywords": "username, handle, admin"
-    },
-    "language": {
-      "title": "Language",
-      "keywords": "idioma, português, portuguese, english, translate"
+    "accountInfo": {
+      "title": "Account information",
+      "keywords": "username, display name, admin, account"
     },
     "email": {
       "title": "Email",
       "keywords": "e-mail, change email, confirm email, code"
     },
     "storage": {
-      "title": "Attachment storage",
+      "title": "Storage",
       "keywords": "space, quota, files, storage"
     },
     "session": {
       "title": "Session",
       "keywords": "sign out, logout, end session"
     },
+    "connections": {
+      "title": "Connections",
+      "keywords": "github, myanimelist, anime, link, accounts, wall, widgets, social"
+    },
     "blocked": {
-      "title": "Blocked people",
-      "keywords": "blocked, unblock, block"
+      "title": "Blocked accounts",
+      "keywords": "blocked, unblock, block, privacy"
     },
-    "microphone": {
-      "title": "Microphone",
-      "keywords": "mic, audio input, device"
+    "theme": {
+      "title": "Theme",
+      "keywords": "theme, colors, black, old, graphite, appearance"
     },
-    "speaker": {
-      "title": "Speaker",
-      "keywords": "audio output, sound, headphones"
+    "voice": {
+      "title": "Voice",
+      "keywords": "microphone, mic, speaker, headphones, volume, mic test, input, output"
     },
-    "camera": {
-      "title": "Camera",
-      "keywords": "video, webcam"
+    "inputProfile": {
+      "title": "Input profile",
+      "keywords": "voice isolation, studio, noise, echo, processing"
     },
-    "system": {
-      "title": "System notifications",
-      "keywords": "permission, alerts, messages"
+    "video": {
+      "title": "Video",
+      "keywords": "video, webcam, camera, preview"
+    },
+    "calls": {
+      "title": "Calls",
+      "keywords": "banner, statistics, hide participants, tiles"
+    },
+    "uploads": {
+      "title": "Images & files",
+      "keywords": "compress, image, attachment"
+    },
+    "desktopNotifications": {
+      "title": "Desktop notifications",
+      "keywords": "permission, alerts, messages, push, desktop"
     },
     "sounds": {
       "title": "Sounds",
-      "keywords": "volume, sound, test sound, mute"
+      "keywords": "volume, sound, test sound, mute, message, mention, call, preview"
     },
-    "appAppearance": {
-      "title": "App appearance",
-      "keywords": "theme, colors, black, old, graphite, appearance"
+    "language": {
+      "title": "Language",
+      "keywords": "idioma, português, portuguese, english, translate"
     },
-    "callAppearance": {
-      "title": "Call appearance",
-      "keywords": "banner, statistics, hide participants, tiles"
-    },
-    "imageUploads": {
-      "title": "Image uploads",
-      "keywords": "compress, image, attachment"
+    "timeFormat": {
+      "title": "Time format",
+      "keywords": "time, clock, 12-hour, 24-hour, am, pm"
     },
     "adminArea": {
       "title": "Admin area",
@@ -136,18 +115,21 @@
   },
   "account": {
     "username": {
-      "label": "Username",
-      "description": "Fixed, can't be changed."
+      "label": "Username"
     },
     "admin": "Admin",
     "displayName": {
-      "label": "Display name",
-      "description": "It's what shows up for everyone."
+      "label": "Display name"
     },
-    "editProfile": "Edit profile",
-    "storageBar": "Storage used",
-    "storageUsage_one": "{{used}} of {{max}} of your quota used, {{count}} file uploaded.",
-    "storageUsage_other": "{{used}} of {{max}} of your quota used, {{count}} files uploaded.",
+    "edit": "Edit",
+    "storage": {
+      "label": "Uploaded attachments",
+      "bar": "Storage used",
+      "usage_zero": "No files uploaded.",
+      "usage_one": "{{count}} file uploaded.",
+      "usage_other": "{{count}} files uploaded.",
+      "amount": "{{used}} of {{max}}"
+    },
     "logout": {
       "label": "Sign out",
       "description": "Ends the session in this browser.",
@@ -157,7 +139,7 @@
   },
   "email": {
     "none": "No email on file.",
-    "change": "Change email",
+    "change": "Edit",
     "changeHint": "Used to recover your account. The change will be confirmed with a code.",
     "newLabel": "New email",
     "sendCode": "Send code",
@@ -184,7 +166,11 @@
       "sendFailed": "Couldn't send the code.",
       "resendFailed": "Couldn't resend the code.",
       "confirmFailed": "Couldn't confirm the email."
-    }
+    },
+    "label": "Email",
+    "show": "Show",
+    "hide": "Hide",
+    "add": "Add"
   },
   "privacy": {
     "description": "People you block can't message you or call you in a private conversation. Unblocking doesn't restore the friendship: you have to add each other again.",
@@ -210,15 +196,24 @@
       "no-devices": "No devices found."
     },
     "allowAccess": "Allow access to see device names",
+    "allowAccessShort": "Allow access",
     "systemDefault": "System default",
     "switchHelp": "The change applies right away, even during a call.",
-    "micTest": "Test microphone",
-    "stopTest": "Stop test",
     "micLevel": "Microphone level",
-    "speakerTest": "Test",
     "playing": "Playing…",
-    "previewStart": "Start preview",
-    "previewStop": "Stop preview"
+    "micVolume": "Microphone volume",
+    "speakerVolume": "Speaker volume",
+    "micTest": "Mic test",
+    "micTestStop": "Stop test",
+    "speakerTest": "Test speaker",
+    "inputProfile": "Input profile",
+    "videoTest": "Test video",
+    "videoTestStop": "Stop video",
+    "videoPreview": "Camera preview",
+    "mirror": {
+      "label": "Mirror my camera",
+      "description": "Only your own preview is mirrored; everyone else sees the normal image."
+    }
   },
   "deviceErrors": {
     "switchFailed": "Couldn't switch the device. Try again.",
@@ -231,7 +226,7 @@
     "speakerFailed": "Couldn't play the test sound."
   },
   "notifications": {
-    "label": "Linkord notifications",
+    "label": "Enable desktop notifications",
     "description": "Messages, mentions, friend requests and invitations, even with the app closed.",
     "status": {
       "default": "Permission required. The browser will ask when you turn this on.",
@@ -240,7 +235,6 @@
     },
     "ios": "On iPhone, add Linkord to your Home Screen, open it from the icon and come back here to turn on notifications.",
     "pushUnavailable": "Push unavailable: check the server configuration.",
-    "preparing": "Preparing notifications...",
     "errors": {
       "blocked": "Notifications blocked. Allow access in your browser settings to enable them.",
       "unavailable": "Push notifications unavailable. Check the app installation and the server configuration.",
@@ -248,16 +242,37 @@
     },
     "volume": {
       "label": "Notification volume",
-      "description": "Mute/unmute, deafen, join/leave call, camera, screen and new message.",
-      "muted": "Muted",
-      "test": "Test sound"
+      "muted": "Muted"
+    },
+    "preview": "Preview sound",
+    "sounds": {
+      "message": {
+        "label": "New message"
+      },
+      "mention": {
+        "label": "Someone mentions you"
+      },
+      "call": {
+        "label": "Call sounds",
+        "description": "Mute and unmute, deafen, someone joining or leaving, camera and screen."
+      },
+      "muteAll": {
+        "label": "Disable all notification sounds",
+        "description": "Silences every sound above. Your choices are kept and come back when you turn this off."
+      }
+    },
+    "related": "Related settings",
+    "relatedAv": {
+      "label": "Voice & video",
+      "description": "Microphone, speaker, camera and how your voice is processed."
     }
   },
-  "prefs": {
-    "theme": {
-      "label": "Color theme",
-      "description": "Changes the interface's backgrounds, text and buttons on this device."
-    },
+  "appearance": {
+    "themes": "Themes",
+    "themeAria": "{{name}} theme",
+    "description": "Changes the interface's backgrounds, text and buttons on this device."
+  },
+  "calls": {
     "banners": {
       "label": "Show participant banners",
       "description": "Shows the profile banner as the background of call cards.",
@@ -270,10 +285,31 @@
     "stats": {
       "label": "Show statistics",
       "description": "Bitrate and time live in each stream's menu."
-    },
+    }
+  },
+  "chat": {
     "compress": {
       "label": "Compress images by default",
       "description": "Reduces the size before sending. Applies to new attachments from now on. One you've already prepared isn't reprocessed."
+    }
+  },
+  "language": {
+    "label": "Select a language",
+    "description": "Interface language. Applies on all your devices.",
+    "saveFailed": "Couldn't save the language. Try again."
+  },
+  "timeFormat": {
+    "auto": {
+      "label": "Auto",
+      "description": "Follows the chosen language ({{example}})."
+    },
+    "12h": {
+      "label": "12-hour",
+      "description": "{{example}}"
+    },
+    "24h": {
+      "label": "24-hour",
+      "description": "{{example}}"
     }
   },
   "crop": {

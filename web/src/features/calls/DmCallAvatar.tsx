@@ -4,7 +4,6 @@ import type { MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Avatar } from '@/shared/Avatar';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
 import { cn } from '@/shared/lib/utils';
 import { useRoom } from '@/state/RoomContext';
 import { useIsSpeaking, useParticipantMedia } from './useLiveKitTrack';
@@ -48,52 +47,48 @@ export function DmCallAvatar({ peer, isMine, size, loading = false }: DmCallAvat
   }, [openTileMenu, peer.id]);
 
   return (
-    <Tooltip>
-      <TooltipTrigger
-        render={<div />}
-        data-dm-call-avatar={peer.id}
-        data-speaking={speaking || undefined}
-        aria-label={status ? `${peer.name}, ${status}` : peer.name}
-        onContextMenu={handleContextMenu}
-        className="relative flex-none rounded-full outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-        style={{ width: size, height: size }}
-      >
-        <Avatar
-          id={peer.id}
-          name={peer.name}
-          avatar={peer.avatar}
-          poster={peer.avatarPoster}
-          frozen={!speaking}
-          avatarColor={peer.avatarColor}
-          size={size}
-          className={cn(loading && 'opacity-50')}
-        />
-        {/* positioned outside the layout so talking never shifts the row */}
+    <div
+      data-dm-call-avatar={peer.id}
+      data-speaking={speaking || undefined}
+      aria-label={status ? `${peer.name}, ${status}` : peer.name}
+      onContextMenu={handleContextMenu}
+      className="relative flex-none rounded-full outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+      style={{ width: size, height: size }}
+    >
+      <Avatar
+        id={peer.id}
+        name={peer.name}
+        avatar={peer.avatar}
+        poster={peer.avatarPoster}
+        frozen={!speaking}
+        avatarColor={peer.avatarColor}
+        size={size}
+        className={cn(loading && 'opacity-50')}
+      />
+      {/* positioned outside the layout so talking never shifts the row */}
+      <span
+        aria-hidden
+        className={cn(
+          'pointer-events-none absolute -inset-1 rounded-full border-[3px] transition-colors duration-100',
+          speaking ? 'border-green' : 'border-transparent',
+        )}
+      />
+      {loading && (
+        <CircleNotchIcon aria-hidden size={Math.max(20, size / 3)} className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 animate-spin text-text-muted" />
+      )}
+      {status && (
         <span
-          aria-hidden
-          className={cn(
-            'pointer-events-none absolute -inset-1 rounded-full border-[3px] transition-colors duration-100',
-            speaking ? 'border-green' : 'border-transparent',
-          )}
-        />
-        {loading && (
-          <CircleNotchIcon aria-hidden size={Math.max(20, size / 3)} className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 animate-spin text-text-muted" />
-        )}
-        {status && (
-          <span
-            role="img"
-            aria-label={status}
-            data-dm-call-status={isDeafened ? 'deafened' : 'muted'}
-            className="absolute -bottom-0.5 -right-0.5 grid place-items-center rounded-full bg-red text-white ring-4 ring-bg-call"
-            style={{ width: badgeSize, height: badgeSize }}
-          >
-            {isDeafened
-              ? <SpeakerSlashIcon size={Math.round(badgeSize * 0.6)} weight="fill" />
-              : <MicrophoneSlashIcon size={Math.round(badgeSize * 0.6)} weight="fill" />}
-          </span>
-        )}
-      </TooltipTrigger>
-      <TooltipContent side="bottom">{peer.name}</TooltipContent>
-    </Tooltip>
+          role="img"
+          aria-label={status}
+          data-dm-call-status={isDeafened ? 'deafened' : 'muted'}
+          className="absolute -bottom-0.5 -right-0.5 grid place-items-center rounded-full bg-red text-white ring-4 ring-bg-call"
+          style={{ width: badgeSize, height: badgeSize }}
+        >
+          {isDeafened
+            ? <SpeakerSlashIcon size={Math.round(badgeSize * 0.6)} weight="fill" />
+            : <MicrophoneSlashIcon size={Math.round(badgeSize * 0.6)} weight="fill" />}
+        </span>
+      )}
+    </div>
   );
 }

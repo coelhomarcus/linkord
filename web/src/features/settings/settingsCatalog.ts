@@ -1,5 +1,5 @@
 import type { ParseKeys } from 'i18next';
-import { BellIcon, GearSixIcon, HeadphonesIcon, IdentificationCardIcon, LockIcon, PlugsConnectedIcon, ShieldCheckIcon } from '@phosphor-icons/react';
+import { BellIcon, ChatCircleTextIcon, IdentificationCardIcon, LockIcon, MicrophoneIcon, PaintBrushIcon, PlugsConnectedIcon, ShieldCheckIcon, TranslateIcon } from '@phosphor-icons/react';
 
 import type { IconComponent } from '@/shared/ui/icons';
 import type { SettingsTab } from '@/shared/lib/routes';
@@ -7,20 +7,11 @@ import type { SettingsTab } from '@/shared/lib/routes';
 /** An i18n key of the `settings` namespace. */
 type SettingsKey = ParseKeys<'settings'>;
 
-/** A titled block of a category: `id` is the `<SettingsSection id>` it points at. */
-interface SettingsSectionRef {
-  id: string;
-  labelKey: SettingsKey;
-}
-
 export interface SettingsCategory {
   id: SettingsTab;
   labelKey: SettingsKey;
-  /** one line under the page title */
-  descriptionKey: SettingsKey;
   icon: IconComponent;
   adminOnly?: boolean;
-  sections?: SettingsSectionRef[];
 }
 
 export interface SettingsGroup {
@@ -30,47 +21,31 @@ export interface SettingsGroup {
 
 // One catalog feeds the desktop sidebar and the compact index, so the two can't
 // drift apart. Ids are the public URLs (/app/settings/:id): labels can change,
-// ids can't. Labels are i18n keys, resolved where they are rendered so a
-// language switch needs no reload.
+// ids can't (a retired id goes to LEGACY_SETTINGS_TABS). Labels are i18n keys,
+// resolved where they are rendered so a language switch needs no reload.
 export const SETTINGS_GROUPS: SettingsGroup[] = [
   {
     labelKey: 'catalog.groups.you',
     categories: [
-      { id: 'account', labelKey: 'catalog.categories.account.label', descriptionKey: 'catalog.categories.account.description', icon: IdentificationCardIcon,
-        sections: [
-          { id: 'identity', labelKey: 'catalog.sections.identity' },
-          { id: 'language', labelKey: 'catalog.sections.language' },
-          { id: 'email', labelKey: 'catalog.sections.email' },
-          { id: 'storage', labelKey: 'catalog.sections.storage' },
-          { id: 'session', labelKey: 'catalog.sections.session' },
-        ] },
-      { id: 'connections', labelKey: 'catalog.categories.connections.label', descriptionKey: 'catalog.categories.connections.description', icon: PlugsConnectedIcon },
-      { id: 'privacy', labelKey: 'catalog.categories.privacy.label', descriptionKey: 'catalog.categories.privacy.description', icon: LockIcon },
+      { id: 'account', labelKey: 'catalog.categories.account', icon: IdentificationCardIcon },
+      { id: 'connections', labelKey: 'catalog.categories.connections', icon: PlugsConnectedIcon },
+      { id: 'privacy', labelKey: 'catalog.categories.privacy', icon: LockIcon },
     ],
   },
   {
     labelKey: 'catalog.groups.app',
     categories: [
-      { id: 'av', labelKey: 'catalog.categories.av.label', descriptionKey: 'catalog.categories.av.description', icon: HeadphonesIcon,
-        sections: [
-          { id: 'microphone', labelKey: 'catalog.sections.microphone' },
-          { id: 'speaker', labelKey: 'catalog.sections.speaker' },
-          { id: 'camera', labelKey: 'catalog.sections.camera' },
-        ] },
-      { id: 'notifications', labelKey: 'catalog.categories.notifications.label', descriptionKey: 'catalog.categories.notifications.description', icon: BellIcon,
-        sections: [{ id: 'system', labelKey: 'catalog.sections.system' }, { id: 'sounds', labelKey: 'catalog.sections.sounds' }] },
-      { id: 'prefs', labelKey: 'catalog.categories.prefs.label', descriptionKey: 'catalog.categories.prefs.description', icon: GearSixIcon,
-        sections: [
-          { id: 'app-appearance', labelKey: 'catalog.sections.appAppearance' },
-          { id: 'call-appearance', labelKey: 'catalog.sections.callAppearance' },
-          { id: 'image-uploads', labelKey: 'catalog.sections.imageUploads' },
-        ] },
+      { id: 'appearance', labelKey: 'catalog.categories.appearance', icon: PaintBrushIcon },
+      { id: 'av', labelKey: 'catalog.categories.av', icon: MicrophoneIcon },
+      { id: 'chat', labelKey: 'catalog.categories.chat', icon: ChatCircleTextIcon },
+      { id: 'notifications', labelKey: 'catalog.categories.notifications', icon: BellIcon },
+      { id: 'language', labelKey: 'catalog.categories.language', icon: TranslateIcon },
     ],
   },
   {
     labelKey: 'catalog.groups.admin',
     categories: [
-      { id: 'moderation', labelKey: 'catalog.categories.moderation.label', descriptionKey: 'catalog.categories.moderation.description', icon: ShieldCheckIcon, adminOnly: true },
+      { id: 'moderation', labelKey: 'catalog.categories.moderation', icon: ShieldCheckIcon, adminOnly: true },
     ],
   },
 ];

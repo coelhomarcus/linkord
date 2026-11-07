@@ -96,7 +96,7 @@ npm run admin:grant -- <your-username>
 
 ## Profile connections and Wall
 
-The Connections settings support URL, MyAnimeList and GitHub connections. Existing profile links migrate as URL connections; adding a service connection requires its username. Connections are self-declared and do not verify ownership. Only widgets explicitly added and saved by the account owner appear on their Wall.
+The Connections settings support URL, MyAnimeList and GitHub connections. Existing profile links migrate as URL connections; adding a service connection requires its username. Connections are self-declared and do not verify ownership. Only widgets explicitly added and saved by the account owner appear on their Wall. Each connection has a "Show on profile" switch (`show_on_profile`, on by default): turned off, the connection stays in the owner's settings but leaves the public links and the Wall, and its saved widgets come back when it is shown again.
 
 MyAnimeList uses the official API (`https://api.myanimelist.net/v2`), which reads public anime lists with only an application client ID — no user login. Register an app at https://myanimelist.net/apiconfig and set `MAL_CLIENT_ID`; without it MyAnimeList connections stay unavailable. The official API has no favorites endpoint, so the only MyAnimeList widget is recent anime activity (the eight most recently updated list entries, shown as a grid of covers). The worker synchronizes on connection and every twenty-four hours. Private lists and unavailable data are not imported. Failures preserve the last complete snapshot and retry automatically.
 
@@ -104,4 +104,4 @@ GitHub requires no token or OAuth setup. The server reads the public profile thr
 
 The worker starts with the API process, checks due connections every minute, and coordinates leases and provider request limits through PostgreSQL. Viewing a profile reads saved snapshots and never contacts the provider APIs. No separate scheduler or Redis service is required. Check `connection-sync` logs for failures; disconnecting deletes the connection snapshot and its widgets.
 
-Connection CRUD uses `/api/me/connections`; Wall configuration uses `/api/me/wall`, and authorized profile viewers read `/api/users/:userId/wall`. `profileLinks` remains a read-only URL projection in profile payloads. Protocol version 7 requires old clients to reload before changing profiles.
+Connection CRUD uses `/api/me/connections` (`PATCH /api/me/connections/:id` with `{ "showOnProfile": boolean }` and no `value` only changes the visibility); Wall configuration uses `/api/me/wall`, and authorized profile viewers read `/api/users/:userId/wall`. `profileLinks` remains a read-only URL projection in profile payloads, made of the connections shown on the profile. Protocol version 7 requires old clients to reload before changing profiles.

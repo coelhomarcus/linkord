@@ -1,14 +1,9 @@
 {
   "title": "Ajustes",
   "back": "Voltar às configurações",
-  "language": {
-    "label": "Idioma",
-    "description": "Idioma da interface. Vale em todos os seus dispositivos.",
-    "saveFailed": "Não foi possível salvar o idioma. Tente de novo."
-  },
   "nav": {
     "ariaLabel": "Categorias de ajustes",
-    "search": "Buscar nas configurações",
+    "search": "Buscar",
     "clearSearch": "Limpar busca",
     "noResults": "Nada encontrado para \"{{query}}\".",
     "editProfile": "Editar perfil",
@@ -16,118 +11,102 @@
   },
   "catalog": {
     "groups": {
-      "you": "Você",
-      "app": "Aplicativo",
+      "you": "Configurações de usuário",
+      "app": "Configurações do app",
       "admin": "Administração"
     },
     "categories": {
-      "connections": {
-        "label": "Conexões",
-        "description": "Conecte suas contas de outros serviços e escolha o que mostrar no Mural. Os dados são atualizados automaticamente a cada 24 horas."
-      },
-      "account": {
-        "label": "Minha conta",
-        "description": "Identificação, idioma, e-mail, armazenamento e sessão."
-      },
-      "privacy": {
-        "label": "Privacidade",
-        "description": "Quem você bloqueou e o que isso muda."
-      },
-      "av": {
-        "label": "Áudio e vídeo",
-        "description": "Dispositivos e o processamento do seu microfone."
-      },
-      "notifications": {
-        "label": "Notificações",
-        "description": "Avisos do sistema e sons do app."
-      },
-      "prefs": {
-        "label": "Preferências",
-        "description": "Como a chamada aparece e como imagens são enviadas. Vale só neste navegador e não acompanha a conta entre dispositivos."
-      },
-      "moderation": {
-        "label": "Administração",
-        "description": "Acesso à área administrativa da instância."
-      }
+      "account": "Minha conta",
+      "connections": "Conexões",
+      "privacy": "Dados e privacidade",
+      "appearance": "Aparência",
+      "av": "Voz e vídeo",
+      "chat": "Chat",
+      "notifications": "Notificações",
+      "language": "Idioma e hora",
+      "moderation": "Administração"
     },
     "sections": {
-      "identity": "Identificação",
-      "language": "Idioma",
-      "email": "E-mail",
-      "storage": "Armazenamento de anexos",
+      "accountInfo": "Informações da conta",
+      "storage": "Armazenamento",
       "session": "Sessão",
-      "blocked": "Pessoas bloqueadas",
-      "microphone": "Entrada de áudio",
-      "speaker": "Saída de áudio",
-      "camera": "Vídeo",
-      "system": "Notificações do sistema",
+      "blocked": "Contas bloqueadas",
+      "theme": "Tema",
+      "voice": "Voz",
+      "video": "Vídeo",
+      "calls": "Chamadas",
+      "uploads": "Imagens e arquivos",
+      "overview": "Visão geral",
       "sounds": "Sons",
-      "appAppearance": "Aparência do app",
-      "callAppearance": "Aparência da chamada",
-      "imageUploads": "Envio de imagens",
+      "language": "Idioma",
+      "timeFormat": "Formato de tempo",
       "adminArea": "Área administrativa"
     }
   },
   "search": {
-    "connections": {
-      "title": "Conexões",
-      "keywords": "github, myanimelist, anime, link, contas, mural, widgets, redes sociais"
-    },
-    "identity": {
-      "title": "Identificação",
-      "keywords": "nome de usuário, username, admin"
-    },
-    "language": {
-      "title": "Idioma",
-      "keywords": "language, português, inglês, english, traduzir"
+    "accountInfo": {
+      "title": "Informações da conta",
+      "keywords": "nome de usuário, username, nome de exibição, admin, conta"
     },
     "email": {
       "title": "E-mail",
       "keywords": "email, trocar e-mail, confirmar e-mail, código"
     },
     "storage": {
-      "title": "Armazenamento de anexos",
+      "title": "Armazenamento",
       "keywords": "espaço, cota, arquivos, storage"
     },
     "session": {
       "title": "Sessão",
       "keywords": "sair, logout, encerrar sessão"
     },
+    "connections": {
+      "title": "Conexões",
+      "keywords": "github, myanimelist, anime, link, contas, mural, widgets, redes sociais"
+    },
     "blocked": {
-      "title": "Pessoas bloqueadas",
-      "keywords": "bloqueado, desbloquear, bloquear"
+      "title": "Contas bloqueadas",
+      "keywords": "bloqueado, desbloquear, bloquear, privacidade"
     },
-    "microphone": {
-      "title": "Microfone",
-      "keywords": "mic, entrada de áudio, dispositivo"
+    "theme": {
+      "title": "Tema",
+      "keywords": "tema, cores, black, preto, old, antigo, graphite, grafite, aparência"
     },
-    "speaker": {
-      "title": "Alto-falante",
-      "keywords": "saída de áudio, som, fone"
+    "voice": {
+      "title": "Voz",
+      "keywords": "microfone, mic, alto-falante, fone, volume, testar microfone, entrada, saída"
     },
-    "camera": {
-      "title": "Câmera",
-      "keywords": "vídeo, webcam"
+    "inputProfile": {
+      "title": "Perfil de entrada",
+      "keywords": "isolamento de voz, estúdio, ruído, eco, processamento"
     },
-    "system": {
-      "title": "Notificações do sistema",
-      "keywords": "permissão, avisos, mensagens"
+    "video": {
+      "title": "Vídeo",
+      "keywords": "vídeo, webcam, câmera, prévia"
+    },
+    "calls": {
+      "title": "Chamadas",
+      "keywords": "banner, estatísticas, ocultar participantes, tiles"
+    },
+    "uploads": {
+      "title": "Imagens e arquivos",
+      "keywords": "compactar, imagem, anexo"
+    },
+    "desktopNotifications": {
+      "title": "Notificações na área de trabalho",
+      "keywords": "permissão, avisos, mensagens, push, área de trabalho"
     },
     "sounds": {
       "title": "Sons",
-      "keywords": "volume, som, testar som, mudo"
+      "keywords": "volume, som, testar som, mudo, mensagem, menção, chamada, prévia"
     },
-    "appAppearance": {
-      "title": "Aparência do app",
-      "keywords": "tema, cores, black, preto, old, antigo, graphite, grafite, aparência"
+    "language": {
+      "title": "Idioma",
+      "keywords": "language, português, inglês, english, traduzir"
     },
-    "callAppearance": {
-      "title": "Aparência da chamada",
-      "keywords": "banner, estatísticas, ocultar participantes, tiles"
-    },
-    "imageUploads": {
-      "title": "Envio de imagens",
-      "keywords": "compactar, imagem, anexo"
+    "timeFormat": {
+      "title": "Formato de tempo",
+      "keywords": "hora, horário, 12 horas, 24 horas, am, pm"
     },
     "adminArea": {
       "title": "Área administrativa",
@@ -136,19 +115,21 @@
   },
   "account": {
     "username": {
-      "label": "Nome de usuário",
-      "description": "Fixo, não pode ser trocado."
+      "label": "Nome de usuário"
     },
     "admin": "Admin",
     "displayName": {
-      "label": "Nome de exibição",
-      "description": "É o que aparece para todo mundo."
+      "label": "Nome de exibição"
     },
-    "editProfile": "Editar perfil",
-    "storageBar": "Armazenamento usado",
-    "storageUsage_zero": "{{used}} de {{max}} da sua cota usados, nenhum arquivo enviado.",
-    "storageUsage_one": "{{used}} de {{max}} da sua cota usados, {{count}} arquivo enviado.",
-    "storageUsage_other": "{{used}} de {{max}} da sua cota usados, {{count}} arquivos enviados.",
+    "edit": "Editar",
+    "storage": {
+      "label": "Anexos enviados",
+      "bar": "Armazenamento usado",
+      "usage_zero": "Nenhum arquivo enviado.",
+      "usage_one": "{{count}} arquivo enviado.",
+      "usage_other": "{{count}} arquivos enviados.",
+      "amount": "{{used}} de {{max}}"
+    },
     "logout": {
       "label": "Sair da conta",
       "description": "Encerra a sessão neste navegador.",
@@ -158,7 +139,7 @@
   },
   "email": {
     "none": "Nenhum e-mail cadastrado.",
-    "change": "Alterar e-mail",
+    "change": "Editar",
     "changeHint": "Usado para recuperar sua conta. A alteração será confirmada por código.",
     "newLabel": "Novo e-mail",
     "sendCode": "Enviar código",
@@ -185,7 +166,11 @@
       "sendFailed": "Não foi possível enviar o código.",
       "resendFailed": "Não foi possível reenviar o código.",
       "confirmFailed": "Não foi possível confirmar o e-mail."
-    }
+    },
+    "label": "E-mail",
+    "show": "Mostrar",
+    "hide": "Ocultar",
+    "add": "Adicionar"
   },
   "privacy": {
     "description": "Quem você bloqueia não consegue te enviar mensagens nem te ligar em conversa privada. Desbloquear não devolve a amizade: vocês precisam se adicionar de novo.",
@@ -211,15 +196,24 @@
       "no-devices": "Nenhum dispositivo encontrado."
     },
     "allowAccess": "Permitir acesso pra ver os nomes dos dispositivos",
+    "allowAccessShort": "Permitir acesso",
     "systemDefault": "Padrão do sistema",
     "switchHelp": "A troca vale na hora, mesmo durante uma chamada.",
-    "micTest": "Testar microfone",
-    "stopTest": "Parar teste",
     "micLevel": "Nível do microfone",
-    "speakerTest": "Testar",
     "playing": "Tocando…",
-    "previewStart": "Ativar prévia",
-    "previewStop": "Parar prévia"
+    "micVolume": "Volume do microfone",
+    "speakerVolume": "Volume do alto-falante",
+    "micTest": "Teste do microfone",
+    "micTestStop": "Parar teste",
+    "speakerTest": "Testar alto-falante",
+    "inputProfile": "Perfil de entrada",
+    "videoTest": "Testar vídeo",
+    "videoTestStop": "Parar vídeo",
+    "videoPreview": "Prévia da câmera",
+    "mirror": {
+      "label": "Espelhar minha câmera",
+      "description": "Só a sua prévia fica espelhada; quem assiste vê a imagem normal."
+    }
   },
   "deviceErrors": {
     "switchFailed": "Não foi possível trocar o dispositivo. Tente de novo.",
@@ -232,7 +226,7 @@
     "speakerFailed": "Não foi possível tocar o som de teste."
   },
   "notifications": {
-    "label": "Notificações do Linkord",
+    "label": "Ativar notificações na área de trabalho",
     "description": "Mensagens, menções, solicitações de amizade e convites, mesmo com o app fechado.",
     "status": {
       "default": "Permissão necessária. O navegador vai perguntar quando você ativar.",
@@ -241,7 +235,6 @@
     },
     "ios": "No iPhone, adicione o Linkord à Tela de Início, abra pelo ícone e volte aqui para ativar as notificações.",
     "pushUnavailable": "Push indisponível: confira a configuração do servidor.",
-    "preparing": "Preparando notificações...",
     "errors": {
       "blocked": "Notificações bloqueadas. Permita o acesso nas configurações do navegador para habilitar.",
       "unavailable": "Notificações push indisponíveis. Verifique a instalação do app e a configuração do servidor.",
@@ -249,16 +242,37 @@
     },
     "volume": {
       "label": "Volume das notificações",
-      "description": "Mutar/desmutar, ensurdecer, entrar/sair da chamada, câmera, tela e mensagem nova.",
-      "muted": "Mudo",
-      "test": "Testar som"
+      "muted": "Mudo"
+    },
+    "preview": "Prévia do som",
+    "sounds": {
+      "message": {
+        "label": "Nova mensagem"
+      },
+      "mention": {
+        "label": "Menção a você"
+      },
+      "call": {
+        "label": "Sons da chamada",
+        "description": "Mutar e desmutar, ensurdecer, alguém entrando ou saindo, câmera e tela."
+      },
+      "muteAll": {
+        "label": "Desativar todos os sons de notificação",
+        "description": "Silencia todos os sons acima. As suas escolhas ficam salvas e voltam quando você desativar isso."
+      }
+    },
+    "related": "Configurações relacionadas",
+    "relatedAv": {
+      "label": "Voz e vídeo",
+      "description": "Microfone, alto-falante, câmera e o processamento da sua voz."
     }
   },
-  "prefs": {
-    "theme": {
-      "label": "Tema de cores",
-      "description": "Muda fundos, textos e botões da interface neste dispositivo."
-    },
+  "appearance": {
+    "themes": "Temas",
+    "themeAria": "Tema {{name}}",
+    "description": "Muda fundos, textos e botões da interface neste dispositivo."
+  },
+  "calls": {
     "banners": {
       "label": "Mostrar banners dos participantes",
       "description": "Exibe o banner do perfil como fundo dos cartões da chamada.",
@@ -271,10 +285,31 @@
     "stats": {
       "label": "Mostrar estatísticas",
       "description": "Bitrate e tempo no ar no menu de cada transmissão."
-    },
+    }
+  },
+  "chat": {
     "compress": {
       "label": "Compactar imagens por padrão",
       "description": "Reduz o tamanho antes de enviar. Vale para novos anexos a partir de agora. Um que você já preparou não é reprocessado."
+    }
+  },
+  "language": {
+    "label": "Selecione um idioma",
+    "description": "Idioma da interface. Vale em todos os seus dispositivos.",
+    "saveFailed": "Não foi possível salvar o idioma. Tente de novo."
+  },
+  "timeFormat": {
+    "auto": {
+      "label": "Auto",
+      "description": "Segue o idioma escolhido ({{example}})."
+    },
+    "12h": {
+      "label": "12 horas",
+      "description": "{{example}}"
+    },
+    "24h": {
+      "label": "24 horas",
+      "description": "{{example}}"
     }
   },
   "crop": {

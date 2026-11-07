@@ -27,8 +27,6 @@
   "panel": {
     "back": "Back to conversations",
     "viewProfile": "View profile",
-    "inCall": "In the call",
-    "inThisCall": "In a call",
     "media": "Media and links",
     "search": "Search messages",
     "searchIn": "Search {{name}}",

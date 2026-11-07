@@ -20,6 +20,15 @@ function fakeRoom(activeDeviceId: string | undefined = undefined) {
 }
 
 describe('useMediaDevices', () => {
+  it('starts as "checking" until the first listing answers, so the picker is drawn (disabled) from the start', async () => {
+    let answer: (list: MediaDeviceInfo[]) => void = () => {};
+    vi.spyOn(Room, 'getLocalDevices').mockReturnValue(new Promise((resolve) => { answer = resolve; }));
+    const { result } = renderHook(() => useMediaDevices(fakeRoom('mic-1'), 'audioinput'));
+    expect(result.current.status).toBe('checking');
+    answer([{ deviceId: 'mic-1', label: 'Mic', kind: 'audioinput', groupId: 'g' } as MediaDeviceInfo]);
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+  });
+
   it('without navigator.mediaDevices, the selector stays empty instead of throwing from the effect', async () => {
     vi.spyOn(Room, 'getLocalDevices').mockRejectedValue(new TypeError("Cannot read properties of undefined (reading 'enumerateDevices')"));
     const room = fakeRoom();

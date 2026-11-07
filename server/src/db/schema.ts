@@ -709,6 +709,8 @@ export const profileConnections = pgTable('profile_connections', {
   value: text('value').notNull(),
   url: text('url').notNull(),
   position: integer('position').notNull(),
+  /** off: kept for the owner, but left out of the public links and the Wall */
+  showOnProfile: boolean('show_on_profile').notNull().default(true),
   snapshot: jsonb('snapshot').$type<ConnectionSnapshot>(),
   syncedAt: timestamp('synced_at', { withTimezone: true }),
   nextSyncAt: timestamp('next_sync_at', { withTimezone: true }).notNull().defaultNow(),

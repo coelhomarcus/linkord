@@ -4,11 +4,22 @@ import { useRoom } from '@/state/RoomContext';
 import { isPushSubscriptionActive, notificationPermissionState } from '@/shared/notifications';
 import type { NotificationPermissionState } from '@/shared/notifications';
 import { disablePush, enablePush, preparePush, pushSupported, type PushSetup } from '@/shared/pushNotifications';
+import { MicrophoneIcon } from '@phosphor-icons/react';
+import { ROUTES } from '@/shared/lib/routes';
 import { playSound } from '@/shared/sounds';
+import type { SoundName } from '@/shared/sounds';
+import { setSoundPreference, useSoundPreferences } from '@/shared/soundPreferences';
+import type { SoundPreferences } from '@/shared/soundPreferences';
 import { Slider } from '@/shared/ui/primitives/slider';
 import { Switch } from '@/shared/ui/primitives/switch';
-import { Button } from '@/shared/ui/primitives/button';
-import { SettingsRow, SettingsSection, SettingsSections } from './SettingsLayout';
+import { SettingsLinkRow, SettingsNotice, SettingsRow, SettingsRowList, SettingsSection, SettingsSections, SettingsSubheading } from './SettingsLayout';
+
+/** Each switchable group of sounds, and the one its preview plays. */
+const SOUND_ROWS: { key: Exclude<keyof SoundPreferences, 'muteAll'>; preview: SoundName; described?: boolean }[] = [
+  { key: 'message', preview: 'newMessage' },
+  { key: 'mention', preview: 'mention' },
+  { key: 'call', preview: 'incomingUser', described: true },
+];
 
 export function NotificationsSettings() {
   const { t } = useTranslation('settings');
@@ -19,6 +30,7 @@ export function NotificationsSettings() {
   const [preparing, setPreparing] = useState(true);
   const [active, setActive] = useState(isPushSubscriptionActive);
   const [busy, setBusy] = useState(false);
+  const sounds = useSoundPreferences();
 
   useEffect(() => {
     let current = true;
@@ -98,27 +110,74 @@ export function NotificationsSettings() {
   const effectivelyOn = notificationsEnabled && permission === 'granted' && active;
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
+  // One notice at most, chosen from what is already known on the first paint;
+  // "push unavailable" only once the check is done, and nothing is shown while
+  // it runs (the switch is just disabled), so the page never grows and shrinks.
+  const notice = permission === 'denied' || permission === 'unsupported'
+    ? t(`notifications.status.${permission}`)
+    : isIOS && !pushSupported()
+      ? t('notifications.ios')
+      : !preparing && !setup && pushSupported()
+        ? t('notifications.pushUnavailable')
+        : null;
+  const hint = permission === 'default' ? t('notifications.status.default') : null;
+
   return (
     <SettingsSections>
-      <SettingsSection id="system" title={t('catalog.sections.system')}>
-        <SettingsRow label={t('notifications.label')} description={t('notifications.description')}>
-          <Switch checked={effectivelyOn} disabled={preparing || busy} onCheckedChange={(v) => void handleToggleNotifications(v)} aria-label={t('notifications.label')} />
+      <SettingsSection id="overview" title={t('catalog.sections.overview')}>
+        {notice && <SettingsNotice>{notice}</SettingsNotice>}
+        <SettingsRow
+          label={t('notifications.label')}
+          description={hint ? <>{t('notifications.description')} {hint}</> : t('notifications.description')}
+        >
+          <Switch size="lg" checked={effectivelyOn} disabled={preparing || busy} onCheckedChange={(v) => void handleToggleNotifications(v)} aria-label={t('notifications.label')} />
         </SettingsRow>
-        {permission !== 'granted' && <p className="text-label text-text-muted">{t(`notifications.status.${permission}`)}</p>}
-        {isIOS && !pushSupported() && <p className="text-label text-text-muted">{t('notifications.ios')}</p>}
-        {!preparing && !setup && pushSupported() && <p className="text-label text-text-muted">{t('notifications.pushUnavailable')}</p>}
-        {preparing && <p className="text-label text-text-muted">{t('notifications.preparing')}</p>}
         {notificationsError && <p role="alert" className="text-label text-red">{notificationsError}</p>}
       </SettingsSection>
 
       <SettingsSection id="sounds" title={t('catalog.sections.sounds')}>
-        <SettingsRow label={t('notifications.volume.label')} description={t('notifications.volume.description')}>
-          <span className="text-label tabular-nums text-text-muted">{percent === 0 ? t('notifications.volume.muted') : `${percent}%`}</span>
-        </SettingsRow>
-        <Slider aria-label={t('notifications.volume.label')} value={[percent]} onValueChange={handleVolumeChange} min={0} max={100} />
-        <Button type="button" variant="outline" size="sm" className="w-fit" onClick={() => playSound('newMessage')}>
-          <span>{t('notifications.volume.test')}</span>
-        </Button>
+        <div className="flex flex-col gap-4">
+          <SettingsRow label={t('notifications.volume.label')}>
+            <span className="text-label tabular-nums text-text-muted">{percent === 0 ? t('notifications.volume.muted') : `${percent}%`}</span>
+          </SettingsRow>
+          <Slider aria-label={t('notifications.volume.label')} value={[percent]} onValueChange={handleVolumeChange} min={0} max={100} />
+        </div>
+
+        <SettingsRowList>
+          {SOUND_ROWS.map(({ key, preview, described }) => {
+            const label = t(`notifications.sounds.${key}.label`);
+            return (
+              <SettingsRow
+                key={key}
+                label={label}
+                disabled={sounds.muteAll}
+                description={(
+                  <>
+                    {described && <span className="block">{t('notifications.sounds.call.description')}</span>}
+                    <button type="button" onClick={() => playSound(preview, { force: true })} className="font-medium text-accent-text hover:underline">
+                      {t('notifications.preview')}
+                    </button>
+                  </>
+                )}
+              >
+                <Switch size="lg" checked={sounds[key]} disabled={sounds.muteAll} onCheckedChange={(value) => setSoundPreference(key, value)} aria-label={label} />
+              </SettingsRow>
+            );
+          })}
+          <SettingsRow label={t('notifications.sounds.muteAll.label')} description={t('notifications.sounds.muteAll.description')}>
+            <Switch size="lg" checked={sounds.muteAll} onCheckedChange={(value) => setSoundPreference('muteAll', value)} aria-label={t('notifications.sounds.muteAll.label')} />
+          </SettingsRow>
+        </SettingsRowList>
+
+        <div className="flex flex-col gap-4">
+          <SettingsSubheading muted>{t('notifications.related')}</SettingsSubheading>
+          <SettingsLinkRow
+            to={ROUTES.settingsTab('av')}
+            icon={<MicrophoneIcon size={24} weight="fill" />}
+            label={t('notifications.relatedAv.label')}
+            description={t('notifications.relatedAv.description')}
+          />
+        </div>
       </SettingsSection>
     </SettingsSections>
   );

@@ -88,7 +88,7 @@ export function ServerInviteDialog({ server, channelId, open, onOpenChange }: {
         <div className="flex flex-col gap-2 border-t border-border-subtle px-6 pb-6 pt-4">
           <span className="text-body font-semibold text-text-primary">{t('invite.orLink')}</span>
           <div className="flex h-11 items-center gap-2 rounded-lg border border-border-field bg-bg-textarea py-1 pl-3 pr-1">
-            <code className="min-w-0 flex-1 truncate font-sans text-body text-text-primary">{link ?? t('invite.generating')}</code>
+            <code className="min-w-0 flex-1 select-text truncate font-sans text-body text-text-primary">{link ?? t('invite.generating')}</code>
             <Button type="button" disabled={!link} onClick={() => { if (link) navigator.clipboard.writeText(link).then(() => setCopied(true)).catch(() => {}); }} className={cn('w-20', copied && 'bg-green-solid hover:bg-green-hover')}>
               {copied ? t('invite.copied') : t('invite.copy')}
             </Button>

@@ -17,6 +17,8 @@ export interface WallSelection { connectionId: string; type: WidgetType }
 
 export interface ProfileConnection {
   id: string; provider: ConnectionProvider; value: string; url: string; position: number;
+  /** off: still yours, but left out of your profile's links and Wall */
+  showOnProfile: boolean;
   syncedAt: string | null; syncError: string | null; status: 'ready' | 'pending' | 'error';
 }
 export interface ConnectionsResponse { connections: ProfileConnection[] }

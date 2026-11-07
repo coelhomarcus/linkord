@@ -1,0 +1,1 @@
+ALTER TABLE "profile_connections" ADD COLUMN "show_on_profile" boolean DEFAULT true NOT NULL;

@@ -38,23 +38,24 @@ export function MemberQuickProfile({ server, member, currentUser, offline, open,
   const [messageDraft, setMessageDraft] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
   const [queuedMessage, setQueuedMessage] = useState<string | null>(null);
-  const [fetchedBanner, setFetchedBanner] = useState('');
+  const [fetchedProfile, setFetchedProfile] = useState({ banner: '', bio: '' });
   const sentQueuedMessageRef = useRef(false);
   const bannerRequestedRef = useRef(false);
   const user = currentUser ?? member.user;
-  const banner = currentUser?.banner || fetchedBanner;
+  const banner = currentUser?.banner || fetchedProfile.banner;
+  const bio = currentUser?.bio || fetchedProfile.bio;
   const avatarPoster = 'avatarPoster' in user && typeof user.avatarPoster === 'string' ? user.avatarPoster : undefined;
   const assignable = [...server.roles].filter((role) => !role.isDefault).sort((a, b) => b.position - a.position);
   const color = memberColor(server, member.roleIds);
   const canManageRoles = !member.isOwner && user.id !== state.me.userId && hasPermission(server.permissions, PERMISSIONS.MANAGE_ROLES);
 
   // The members endpoint only carries the minimal social fields, so a member
-  // outside the known-users cache has no banner until their profile is fetched.
+  // outside the known-users cache has no banner or bio until their profile is fetched.
   useEffect(() => {
     if (!open || currentUser || bannerRequestedRef.current) return;
     bannerRequestedRef.current = true;
     fetchUserProfile(member.user.id)
-      .then(({ user: fetched }) => setFetchedBanner(fetched.banner))
+      .then(({ user: fetched }) => setFetchedProfile({ banner: fetched.banner, bio: fetched.bio }))
       .catch(() => { bannerRequestedRef.current = false; });
   }, [open, currentUser, member.user.id]);
 
@@ -164,6 +165,13 @@ export function MemberQuickProfile({ server, member, currentUser, offline, open,
               <p className="truncate text-label text-text-secondary">@{user.username}</p>
             </div>
           </div>
+
+          {bio && (
+            <div className="mt-4">
+              <h3 className="text-caption font-semibold text-text-primary">{t('members.bio')}</h3>
+              <p className="scrollbar-none mt-0.5 max-h-28 select-text overflow-y-auto whitespace-pre-wrap wrap-break-word text-label text-text-secondary">{bio}</p>
+            </div>
+          )}
 
           <div className="mt-4 flex flex-wrap items-center gap-1.5">
             {member.roleIds.map((roleId) => {

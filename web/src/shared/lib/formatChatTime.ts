@@ -1,4 +1,5 @@
 import { i18n } from '@/shared/i18n/init';
+import { timeOptions } from '@/shared/lib/timeFormat';
 
 
 function isSameDay(a: Date, b: Date): boolean {
@@ -8,7 +9,7 @@ function isSameDay(a: Date, b: Date): boolean {
 export function formatTime(ts: number): string {
   const date = new Date(ts);
   const now = new Date();
-  const time = date.toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' });
+  const time = date.toLocaleTimeString(i18n.language, timeOptions(i18n.language));
   if (isSameDay(date, now)) return time;
   const yesterday = new Date(now);
   yesterday.setDate(now.getDate() - 1);

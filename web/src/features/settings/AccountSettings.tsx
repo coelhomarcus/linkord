@@ -6,8 +6,7 @@ import { useRoom } from '@/state/RoomContext';
 import { Button } from '@/shared/ui/primitives/button';
 import { EmailSettings } from './EmailSettings';
 import { formatStorage } from './formatStorage';
-import { LanguageSetting } from './LanguageSetting';
-import { SettingsRow, SettingsSection, SettingsSections } from './SettingsLayout';
+import { SETTINGS_ACTION_BUTTON, SettingsRow, SettingsSection, SettingsSections } from './SettingsLayout';
 
 // any usage at all stays visible as a sliver instead of an empty track
 const MIN_VISIBLE_PERCENT = 2;
@@ -22,44 +21,40 @@ export function AccountSettings({ onOpenProfile }: { onOpenProfile: (userId: str
 
   return (
     <SettingsSections>
-      <SettingsSection id="identity" title={t('catalog.sections.identity')}>
-        <SettingsRow label={t('account.username.label')} description={t('account.username.description')}>
-          <span className="break-all text-body text-text-primary">@{state.me.name}</span>
+      <SettingsSection id="account-info" title={t('catalog.sections.accountInfo')}>
+        <SettingsRow label={t('account.username.label')}>
           {state.me.role === 'admin' && (
             <span className="flex w-fit items-center gap-1 rounded-sm bg-primary/15 px-1.5 py-0.5 text-caption font-medium text-accent-text">
               <ShieldCheckIcon size={16} aria-hidden /> {t('account.admin')}
             </span>
           )}
+          <span className="select-text break-all text-body font-medium text-text-primary">{state.me.name}</span>
         </SettingsRow>
-        <SettingsRow
-          label={t('account.displayName.label')}
-          description={t('account.displayName.description')}
-        >
-          <span className="break-words text-body text-text-primary">{state.me.displayName}</span>
-          <button type="button" onClick={() => { if (state.me.userId) onOpenProfile(state.me.userId); }} className="text-text-secondary underline underline-offset-2 hover:text-text-primary">{t('account.editProfile')}</button>
+        <SettingsRow label={t('account.displayName.label')}>
+          <span className="break-words text-body font-medium text-text-primary">{state.me.displayName}</span>
+          <Button type="button" variant="secondary" size="lg" className={SETTINGS_ACTION_BUTTON} onClick={() => { if (state.me.userId) onOpenProfile(state.me.userId); }}>
+            {t('account.edit')}
+          </Button>
         </SettingsRow>
-      </SettingsSection>
-
-      <LanguageSetting />
-
-      <SettingsSection id="email" title={t('catalog.sections.email')}>
         <EmailSettings currentEmail={user?.email ?? null} />
       </SettingsSection>
 
-      <SettingsSection id="storage" title={t('catalog.sections.storage')}>
+      <SettingsSection id="storage" title={t('catalog.sections.storage')} contentClassName="gap-3">
+        <SettingsRow label={t('account.storage.label')} description={t('account.storage.usage', { count: storageUsage.totalFiles })}>
+          <span className="text-body font-medium tabular-nums text-text-primary">
+            {t('account.storage.amount', { used: formatStorage(storageUsage.totalBytes), max: formatStorage(storageUsage.maxBytes) })}
+          </span>
+        </SettingsRow>
         <div
           role="progressbar"
-          aria-label={t('account.storageBar')}
+          aria-label={t('account.storage.bar')}
           aria-valuemin={0}
           aria-valuemax={100}
           aria-valuenow={Math.round(usedPercent)}
-          className="h-2 w-full overflow-hidden rounded-full bg-bg-hover"
+          className="h-2 w-full overflow-hidden rounded-full bg-fill-active"
         >
           <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${barPercent}%` }} />
         </div>
-        <p className="text-label text-text-muted">
-          {t('account.storageUsage', { used: formatStorage(storageUsage.totalBytes), max: formatStorage(storageUsage.maxBytes), count: storageUsage.totalFiles })}
-        </p>
       </SettingsSection>
 
       <SettingsSection id="session" title={t('catalog.sections.session')}>
@@ -67,8 +62,8 @@ export function AccountSettings({ onOpenProfile }: { onOpenProfile: (userId: str
           label={t('account.logout.label')}
           description={inCall ? t('account.logout.descriptionInCall') : t('account.logout.description')}
         >
-          <Button type="button" variant="outline" size="sm" className="text-red hover:bg-red/12" onClick={logout}>
-            <SignOutIcon size={16} aria-hidden />
+          <Button type="button" variant="danger-outline" size="lg" className={SETTINGS_ACTION_BUTTON} onClick={logout}>
+            <SignOutIcon size={18} aria-hidden />
             <span>{t('account.logout.button')}</span>
           </Button>
         </SettingsRow>

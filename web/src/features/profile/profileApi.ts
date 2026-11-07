@@ -8,6 +8,9 @@ export function createConnection(provider: ConnectionProvider, value: string) {
 export function editConnection(id: string, value: string) {
   return apiFetch<ConnectionsResponse>(`/api/me/connections/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify({ value }) });
 }
+export function setConnectionVisibility(id: string, showOnProfile: boolean) {
+  return apiFetch<ConnectionsResponse>(`/api/me/connections/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify({ showOnProfile }) });
+}
 export function deleteConnection(id: string) {
   return apiFetch<ConnectionsResponse>(`/api/me/connections/${encodeURIComponent(id)}`, { method: 'DELETE' });
 }
