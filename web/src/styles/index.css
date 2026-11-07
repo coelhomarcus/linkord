@@ -349,8 +349,7 @@ button:not(:disabled) {
   --popover-foreground: var(--color-text-primary);
   --primary: var(--color-accent-primary);
   --primary-foreground: #ffffff;
-  /* a mark drawn on an accent fill. Black overrides this: white on the logo
-     blue is only 3.1:1, so that theme uses ink instead. */
+  /* the home tile's logo, drawn white on the accent fill */
   --accent-mark-filter: brightness(0) invert(1);
   --secondary: var(--color-bg-selected);
   --secondary-foreground: var(--color-text-primary);

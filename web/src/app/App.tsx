@@ -163,10 +163,12 @@ function Shell() {
     [activeCallConversationId, state.me.id, state.participants]
   );
 
-  /** Where a call's stage shows: a voice channel's own URL, or a DM's call page. */
+  /** Where a call shows: a voice channel's own URL, or the DM the call belongs to. */
   function stagePath(conversationId: string): string {
     const conversation = conversationsRef.current.find((c) => c.id === conversationId);
-    return conversation?.type === 'voice' && conversation.serverId ? ROUTES.channel(conversation.serverId, conversation.id) : ROUTES.call(conversationId);
+    if (conversation?.type === 'voice' && conversation.serverId) return ROUTES.channel(conversation.serverId, conversation.id);
+    if (conversation?.type === 'direct') return ROUTES.direct(conversation.id);
+    return ROUTES.call(conversationId);
   }
 
   function handleOpenCall(conversationId: string) {
@@ -199,6 +201,7 @@ function Shell() {
   const voiceChannelOnPath = pathConversation?.type === 'voice' ? pathConversation : null;
   const stageConversationId = dmStageId ?? voiceChannelOnPath?.id ?? null;
   const showStage = !!stageConversationId && stageConversationId === activeCallConversationId;
+  const viewingDmCall = pathConversation?.type === 'direct' && pathConversation.id === activeCallConversationId;
   const leaveStagePath = (id: string) => (voiceChannelOnPath ? ROUTES.server(voiceChannelOnPath.serverId!) : ROUTES.direct(id));
   useEffect(() => {
     if (showStage && pendingStageRef.current === stageConversationId) pendingStageRef.current = null;
@@ -354,11 +357,7 @@ function Shell() {
                 />
               )}
             />
-            <Route path="/app/calls/:conversationId" element={stageConversationId ? (
-              showStage
-                ? <Stage allIds={callIds} onBack={() => { if ((contentLocation.state as { from?: unknown } | null)?.from) navigate(-1); else navigate(ROUTES.direct(stageConversationId), { replace: true }); }} />
-                : <CallConnectingScreen onCancel={cancelPendingCall} />
-            ) : <Navigate to={ROUTES.home} replace />} />
+            <Route path="/app/calls/:conversationId" element={dmStageId ? <Navigate to={ROUTES.direct(dmStageId)} replace /> : <Navigate to={ROUTES.home} replace />} />
             <Route path="/invite/:code" element={<InvitePage />} />
             <Route path={ROUTES.notifications} element={<NotificationsPage />} />
             <Route path={ROUTES.profile} element={<ProfilePage onOpenProfile={setProfileUserId} />} />
@@ -371,7 +370,7 @@ function Shell() {
           {profilePanelUser && <DirectProfilePanel user={profilePanelUser} onOpenProfile={setProfileUserId} />}
           </div>
           {inCall && <ParticipantAudioLayer participantIds={callIds} />}
-          {inCall && !showStage && (
+          {inCall && !showStage && !viewingDmCall && (
             <FloatingPip
               allIds={callIds}
               onExpand={handleReturnToCall}

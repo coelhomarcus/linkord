@@ -9,6 +9,7 @@ import { logger } from '../../lib/logger.js';
 import { canSendDirectMessage } from '../friendships/friendshipsRepository.js';
 import { resolveLocale, type Locale } from '../users/locale.js';
 import { localeText } from '../users/localeText.js';
+import { formatCallLength } from '../calls/callLength.js';
 
 const log = logger.child({ component: 'web-push' });
 
@@ -111,6 +112,13 @@ async function noticeFor(event: OutboxEvent, locale: Locale): Promise<PushNotice
     const text = row.message.text.replace(/\s+/g, ' ').trim().slice(0, 120);
     const title = conversation.type === 'direct' ? name : `#${conversation.title} · ${row.serverName ?? ''}`;
     const path = conversationPath(conversation);
+    if (row.message.kind === 'dm_call') {
+      const duration = row.message.callDurationSeconds;
+      const body = duration == null
+        ? localeText(locale, 'push.dmCall', { name })
+        : localeText(locale, 'push.dmCallLasted', { name, duration: formatCallLength(duration, locale) });
+      return { title, body, path, tag: `chat-${conversation.id}` };
+    }
     if (row.message.kind === 'call_invite' && row.message.callConversationId) {
       const [channel] = await db.select({ name: conversations.title, serverName: servers.name }).from(conversations)
         .innerJoin(servers, eq(servers.id, conversations.serverId))

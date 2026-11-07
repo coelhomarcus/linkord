@@ -38,7 +38,7 @@ function inVoice(): Participant {
 
 function CurrentPath() { return <span data-testid="current-path">{useLocation().pathname}</span>; }
 
-function renderSidebar(path = '/app/channels/@me', overrides: { unreadByConversation?: Map<string, number>; participants?: Map<string, Participant>; openCall?: () => void } = {}) {
+function renderSidebar(path = '/app/channels/@me', overrides: { unreadByConversation?: Map<string, number>; participants?: Map<string, Participant>; openCall?: () => void; activeCallConversationId?: string | null } = {}) {
   const conversations = [direct('dm-bea', 'u-bea'), direct('dm-caio', 'u-caio'), ...server.channels.map((c) => channelConversation(server, c))];
   return renderSocial(
     <SidebarProvider open onOpenChange={vi.fn()} openMobile={false} onOpenMobileChange={vi.fn()}>
@@ -52,6 +52,7 @@ function renderSidebar(path = '/app/channels/@me', overrides: { unreadByConversa
         servers: [server],
         allUsers: new Map([['u-bea', bea], ['u-caio', caio]]),
         unreadByConversation: overrides.unreadByConversation ?? new Map(),
+        ...(overrides.activeCallConversationId !== undefined ? { activeCallConversationId: overrides.activeCallConversationId } : {}),
         ...(overrides.openCall ? { openCall: overrides.openCall } : {}),
       },
       path,
@@ -90,6 +91,12 @@ describe('ConversationSidebar — home', () => {
     await userEvent.setup().type(screen.getByRole('textbox', { name: 'Encontre ou comece uma conversa' }), 'cai');
     expect(screen.queryByRole('button', { name: 'Bea' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Caio' })).toBeInTheDocument();
+  });
+
+  it('shows that this DM is in a call', () => {
+    renderSidebar('/app/channels/@me', { activeCallConversationId: 'dm-bea' });
+    expect(screen.getByRole('button', { name: 'Bea' })).toHaveTextContent('Em uma chamada');
+    expect(screen.getByRole('button', { name: 'Caio' })).not.toHaveTextContent('Em uma chamada');
   });
 
   it('shows a DM\'s unread count on its row', () => {
