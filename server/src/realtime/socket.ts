@@ -118,6 +118,8 @@ async function handleJoin(socket: AppSocket, msg: JoinMessage): Promise<void> {
     unreadByConversation: await unreadCountsForUser(p.userId, [...conversationList.map((c) => c.id), ...textChannelIds]),
     storageUsage: await getUserUsage(p.userId),
     livekitUrl: config.LIVEKIT_URL,
+    // lets a reconnecting client notice the server no longer has it in the call it is still connected to
+    callConversationId: p.callConversationId,
     ...(dmCall ? { dmCall: dmCall.view } : {}),
     // lets a newer client use what this server supports (3: correlated,
     // idempotent chat sends) and fall back otherwise

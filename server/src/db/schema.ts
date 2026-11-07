@@ -608,6 +608,36 @@ export const pushSubscriptions = pgTable('push_subscriptions', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [index('push_subscriptions_user_id_idx').on(t.userId)]);
 
+/** A connection that is in a call right now. Lets a restarted server rebuild the
+ * participant under the same id (the LiveKit identity) and token, so a deploy
+ * looks like a short network drop to everyone in the call. Only membership is
+ * kept: mic, camera and share flags are re-reported by the client on reconnect. */
+export const callPresence = pgTable('call_presence', {
+  participantId: text('participant_id').primaryKey(),
+  token: text('token').notNull(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  conversationId: text('conversation_id').notNull().references(() => conversations.id, { onDelete: 'cascade' }),
+  deafened: boolean('deafened').notNull().default(false),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index('call_presence_user_id_idx').on(t.userId)]);
+
+/** A ringing or answered DM call, mirrored from the in-memory state machine so
+ * a restart does not drop it. A row exists only while the call is live. */
+export const dmCallsActive = pgTable('dm_calls_active', {
+  id: text('id').primaryKey(),
+  conversationId: text('conversation_id').notNull().references(() => conversations.id, { onDelete: 'cascade' }),
+  callerId: text('caller_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  calleeId: text('callee_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  callerParticipantId: text('caller_participant_id').notNull(),
+  calleeParticipantId: text('callee_participant_id'),
+  video: boolean('video').notNull(),
+  phase: varchar('phase', { length: 8 }).$type<'ringing' | 'active'>().notNull(),
+  startedAt: bigint('started_at', { mode: 'number' }).notNull(),
+  answeredAt: bigint('answered_at', { mode: 'number' }),
+}, (t) => [
+  check('dm_calls_active_phase_check', sql`${t.phase} IN ('ringing','active')`),
+]);
+
 export type User = typeof users.$inferSelect;
 export type Session = typeof sessions.$inferSelect;
 export type AuthCode = typeof authCodes.$inferSelect;
