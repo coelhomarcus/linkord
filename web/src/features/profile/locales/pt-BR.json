@@ -133,6 +133,7 @@
     "noItems": "Nenhum item público disponível.",
     "stale": "A última sincronização falhou. Exibindo os últimos dados disponíveis.",
     "updated": "Atualizado em {{date}}",
+    "profileLink": "{{service}}, @{{user}}",
     "widgets": {
       "mal-recent-anime": "Atividade recente de animes",
       "github-profile": "Perfil do GitHub",

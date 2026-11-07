@@ -133,6 +133,7 @@
     "noItems": "No public items available.",
     "stale": "The last sync failed. Showing the latest available data.",
     "updated": "Updated on {{date}}",
+    "profileLink": "{{service}}, @{{user}}",
     "widgets": {
       "mal-recent-anime": "Recent anime activity",
       "github-profile": "GitHub profile",

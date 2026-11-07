@@ -54,8 +54,9 @@ export interface Participant {
   // self-reported by the client (see realtime/participants.ts handlers for
   // 'mic-state'/'camera'/'screen-share'/'speaking') — the server never
   // verifies these against LiveKit itself, same trust model as `deafened`.
-  // Reset to their defaults on every call join/leave (setCallConversationId),
-  // so a stale value never survives a call switch.
+  // Reset on every call join/leave, and ignored while there is no call, so
+  // a muted camera (still published) reported as off cannot be revived by
+  // a late message.
   micActivated: boolean;
   micMuted: boolean;
   cameraOn: boolean;

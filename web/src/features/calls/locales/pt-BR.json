@@ -22,6 +22,7 @@
     "leaveCall": "Sair da chamada",
     "returnToCall": "Voltar à chamada",
     "inCall": "Em chamada",
+    "inCallFor": "Em chamada · {{time}}",
     "myProfile": "Meu perfil",
     "statusOnline": "Disponível",
     "statusReconnecting": "Reconectando…",
@@ -142,7 +143,9 @@
     "videoConnectionFailed": "Não foi possível conectar ao servidor de vídeo. Verifique sua conexão e tente de novo.",
     "microphoneAccess": "Não foi possível acessar o microfone: {{error}}",
     "cameraAccess": "Não foi possível acessar a câmera: {{error}}",
+    "cameraStop": "Não foi possível desligar a câmera: {{error}}",
     "screenCapture": "Não foi possível capturar a tela: {{error}}",
+    "screenStop": "Não foi possível parar o compartilhamento: {{error}}",
     "screenLoopback": "Seu navegador não separa o áudio do Linkord da tela inteira, então ela foi compartilhada sem áudio para evitar retorno. Compartilhe uma aba ou janela para incluir áudio.",
     "pausePreview": "Não foi possível pausar a prévia: {{error}}",
     "resumePreview": "Não foi possível retomar a prévia: {{error}}",
@@ -170,5 +173,19 @@
       "rateLimited": "Convite enviado há pouco. Espere um pouco.",
       "notInCall": "Entre na chamada para convidar."
     }
+  },
+  "dm": {
+    "incomingVoice": "Chamada de voz",
+    "incomingVideo": "Chamada de vídeo",
+    "calling": "Chamando…",
+    "accept": "Atender",
+    "decline": "Recusar",
+    "cancel": "Cancelar",
+    "declined": "Chamada recusada",
+    "cancelled": "Chamada cancelada",
+    "missed": "Chamada não atendida",
+    "ended": "Chamada encerrada",
+    "failed": "Não foi possível conectar a chamada",
+    "someone": "Alguém"
   }
 }

@@ -75,8 +75,8 @@ export function FriendsModeSelect({ view }: { view: FriendsView }) {
   );
 }
 
-/** Discord's "Adicionar amigo": a blurple pill beside the views, which turns
- * into blurple text on its own page. */
+/** "Adicionar amigo": an accent pill beside the views, which turns into
+ * accent text on its own page. */
 export function AddFriendButton({ active }: { active: boolean }) {
   const { t } = useTranslation('friends');
   return (

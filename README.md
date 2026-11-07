@@ -10,12 +10,6 @@
   <a href="https://github.com/coelhomarcus/Linkord/issues"><b>Issues</b></a>
 </p>
 
-<p align="center">
-  <a href="https://github.com/coelhomarcus/Linkord/actions/workflows/test.yml">
-    <img src="https://github.com/coelhomarcus/Linkord/actions/workflows/test.yml/badge.svg" alt="CI">
-  </a>
-</p>
-
 <br />
 
 Linkord is a self-hosted place to chat and call with friends. Talk in direct messages, or create private servers with text and voice channels, roles, and invitations. There is no public server directory: people join through a friend or an invite link.
@@ -80,6 +74,7 @@ See [`.env.example`](.env.example) for all server, database, session, LiveKit, p
 ### Tests
 
 ```bash
+npm run check         # typecheck, lint, tests, and production build
 npm test              # backend and frontend
 npm run test:server   # backend only
 npm run test:web      # frontend only
@@ -102,7 +97,7 @@ Backend tests run with Node's test runner; frontend tests use Vitest and React T
 
 ## 🤝 Contributing
 
-Found a bug or have an idea? [Open an issue](https://github.com/coelhomarcus/Linkord/issues). Before opening a pull request, run `npm test` and `npm run build`. See [AGENTS.md](AGENTS.md) for repository conventions.
+Found a bug or have an idea? [Open an issue](https://github.com/coelhomarcus/Linkord/issues). Before opening a pull request, run `npm run check`. See [AGENTS.md](AGENTS.md) for repository conventions.
 
 For the production checklist to migrate legacy groups and bots into servers, see the [migration runbook](docs/MIGRATING_GROUPS_TO_SERVERS.md).
 

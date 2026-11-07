@@ -2,6 +2,7 @@ import { createContext, useContext } from 'react';
 import type { Dispatch, MutableRefObject } from 'react';
 import type { Room } from 'livekit-client';
 import type { ChatMessage, ClientMessage, Conversation, PublicUser, ReactionEmoji, SearchResult, ServerSummary, StorageUsage } from '@/shared/types/protocol';
+import type { DmCallNotice } from '@/features/calls/useDmCall';
 import type { RoomAction, RoomState } from './roomReducer';
 import type { TileKind } from '../features/calls/tileTypes';
 import type { OutboxEntry } from '@/features/chat/useMessageOutbox';
@@ -74,6 +75,16 @@ export interface RoomContextValue {
   activeCallConversationId: string | null;
   joinCall: (conversationId: string) => void;
   leaveCall: () => Promise<void>;
+  /** Rings the other person in a DM. The LiveKit token arrives only after they accept. */
+  startDmCall: (conversationId: string, video: boolean) => void;
+  acceptDmCall: () => void;
+  declineDmCall: () => void;
+  cancelDmCall: () => void;
+  dmCall: DmCallNotice | null;
+  /** Set while this tab is in an active DM, so the dock can show how long it has lasted. */
+  dmStartedAt: number | null;
+  dmStageConversationId: string | null;
+  clearDmStage: () => void;
   startSharing: () => Promise<void>;
   stopSharing: () => void;
   /** Stops and immediately restarts the capture with a fresh native picker —

@@ -247,7 +247,7 @@ function VideoChrome({
           type="button"
               aria-label={t('player.playVideo')}
           onClick={togglePlay}
-          className="absolute left-1/2 top-1/2 flex size-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-black/65 text-white shadow-popover transition-colors hover:bg-primary focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="absolute left-1/2 top-1/2 flex size-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-black/65 text-white shadow-popover transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
         >
           <PlayIcon size={22} fill="currentColor" className="ml-0.5" />
         </button>
@@ -494,7 +494,7 @@ function AudioPlayerInner({ src, title, className, onError }: AudioPlayerProps) 
           type="button"
           aria-label={playing ? t('player.pause') : t('player.play')}
           onClick={togglePlay}
-          className="flex size-8 flex-none items-center justify-center rounded-full bg-primary text-white transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="flex size-8 flex-none items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
         >
           {playing ? <PauseIcon size={14} fill="currentColor" /> : <PlayIcon size={14} fill="currentColor" className="ml-0.5" />}
         </button>

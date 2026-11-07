@@ -6,13 +6,13 @@ export interface SidebarContextValue {
   isMobile: boolean;
   /** the conversation list is a drawer (< 1024px), opened with `openMobile` */
   isOverlay: boolean;
-  /** the list as a column: shown or hidden (the saved preference) */
+  /** the list as a column. Stays shown from 1024px; below that the drawer uses `openMobile`. */
   open: boolean;
   /** the list as a drawer: open or closed */
   openMobile: boolean;
   setOpen: (open: boolean) => void;
   setOpenMobile: (open: boolean) => void;
-  /** whichever of the two applies at this width */
+  /** ⌘/Ctrl+B toggles the drawer below 1024px. The desktop column stays open. */
   toggleSidebar: () => void;
   /** the drawer is portaled to <body>, so it can't inherit these from the wrapper */
   sheetVars: CSSProperties;

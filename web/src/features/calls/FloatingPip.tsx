@@ -135,7 +135,7 @@ export function FloatingPip({ allIds, onExpand, hideOnMobile = false }: Floating
               const i = descriptors.findIndex((d) => d.key === current.key);
               setManualKey(descriptors[(i - 1 + descriptors.length) % descriptors.length]!.key);
             }}
-            className="absolute left-1 top-1/2 -translate-y-1/2 bg-bg-tertiary/75 text-text-primary hover:bg-primary"
+            className="absolute left-1 top-1/2 -translate-y-1/2 bg-bg-tertiary/75 text-text-primary hover:bg-primary hover:text-primary-foreground"
           >
             <CaretLeftIcon size={14} />
           </Button>
@@ -149,7 +149,7 @@ export function FloatingPip({ allIds, onExpand, hideOnMobile = false }: Floating
               const i = descriptors.findIndex((d) => d.key === current.key);
               setManualKey(descriptors[(i + 1) % descriptors.length]!.key);
             }}
-            className="absolute right-1 top-1/2 -translate-y-1/2 bg-bg-tertiary/75 text-text-primary hover:bg-primary"
+            className="absolute right-1 top-1/2 -translate-y-1/2 bg-bg-tertiary/75 text-text-primary hover:bg-primary hover:text-primary-foreground"
           >
             <CaretRightIcon size={14} />
           </Button>
