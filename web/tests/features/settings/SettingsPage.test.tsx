@@ -452,7 +452,7 @@ describe('SettingsPage — category navigation', () => {
     renderSettings({ state: userState }, '/app/settings/privacy');
     expect(screen.getByText('lista de bloqueados')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Privacidade' })).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByRole('link', { name: 'Perfil' })).not.toHaveAttribute('aria-current');
+    expect(screen.getByRole('link', { name: /Editar perfil/ })).not.toHaveAttribute('aria-current');
   });
 
   it('keeps the sidebar one level deep: an open category lists no sections under it', () => {
@@ -465,7 +465,7 @@ describe('SettingsPage — category navigation', () => {
     renderRouted({ state: userState }, '/app/settings');
     expect(screen.getByLabelText('Nome de exibição')).toBeInTheDocument();
     expect(screen.getByTestId('where')).toHaveTextContent('/app/settings');
-    expect(screen.getByRole('link', { name: 'Perfil' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: /Editar perfil/ })).toHaveAttribute('aria-current', 'page');
   });
 
   it('unknown category falls back to profile instead of rendering an empty page', () => {
@@ -478,6 +478,14 @@ describe('SettingsPage — category navigation', () => {
     renderRouted({ state: userState }, '/app/settings/moderation');
     expect(screen.getByTestId('where')).toHaveTextContent('/app/settings/profile');
     expect(screen.queryByRole('link', { name: 'Administração' })).not.toBeInTheDocument();
+  });
+
+  it('opens the list with who you are and the way to edit your profile, not a profile row', () => {
+    renderSettings({ state: userState }, '/app/settings/account');
+    const shortcut = within(screen.getByRole('navigation', { name: 'Categorias de ajustes' })).getByRole('link', { name: /Editar perfil/ });
+    expect(shortcut).toHaveTextContent('Ana');
+    expect(shortcut).toHaveAttribute('href', '/app/settings/profile');
+    expect(screen.queryByRole('link', { name: 'Perfil' })).not.toBeInTheDocument();
   });
 
   it('admin sees the administration category', () => {

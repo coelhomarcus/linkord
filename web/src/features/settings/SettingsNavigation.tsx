@@ -1,7 +1,9 @@
-import { CaretRightIcon, MagnifyingGlassIcon } from '@phosphor-icons/react';
+import { CaretRightIcon, MagnifyingGlassIcon, PencilSimpleIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { iconWeight } from '@/shared/ui/icons';
 
+import { Avatar } from '@/shared/Avatar';
+import { useRoom } from '@/state/RoomContext';
 import { ROUTES } from '@/shared/lib/routes';
 import type { SettingsTab } from '@/shared/lib/routes';
 import { cn } from '@/shared/lib/utils';
@@ -14,6 +16,41 @@ import { AppLink } from '@/shared/ui/app-link';
 
 function GroupLabel({ children }: { children: string }) {
   return <p className="select-none px-2.5 pb-1 text-caption font-semibold uppercase tracking-[0.02em] text-text-muted">{children}</p>;
+}
+
+/** Who you are, at the top of the list, as the way into your profile — a
+ * plain "Perfil" row among the others was easy to miss. */
+function ProfileShortcut({ current, fromIndex = false }: { current: boolean; fromIndex?: boolean }) {
+  const { t } = useTranslation('settings');
+  const { state } = useRoom();
+  const { me } = state;
+  return (
+    <AppLink
+      to={ROUTES.settingsTab('profile')}
+      state={fromIndex ? FROM_INDEX_STATE : undefined}
+      aria-current={current ? 'page' : undefined}
+      className={cn(
+        'group/profile mb-3 flex flex-none items-center gap-3 rounded-lg border border-border p-2.5 outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        current ? 'bg-nav-active' : 'bg-fill-subtle hover:bg-nav-hover',
+      )}
+    >
+      <Avatar id={me.userId ?? me.id ?? 'me'} name={me.displayName} avatar={me.avatar} poster={me.avatarPoster} avatarColor={me.avatarColor} size={40} />
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-body font-semibold text-text-primary">{me.displayName}</span>
+        <span className="flex items-center gap-1 text-caption text-text-muted group-hover/profile:text-text-secondary">
+          <PencilSimpleIcon size={12} aria-hidden className="flex-none" />
+          <span className="truncate">{t('nav.editProfile')}</span>
+        </span>
+      </span>
+    </AppLink>
+  );
+}
+
+/** The categories listed under the profile shortcut, which stands in for the profile one. */
+function listedGroups(isAdmin: boolean) {
+  return visibleGroups(isAdmin)
+    .map((group) => ({ ...group, categories: group.categories.filter((category) => category.id !== 'profile') }))
+    .filter((group) => group.categories.length > 0);
 }
 
 function SettingsSearchField({ query, onChange, onClear }: { query: string; onChange: (value: string) => void; onClear: () => void }) {
@@ -72,12 +109,13 @@ export function SettingsSidebar({ active, isAdmin }: { active: SettingsTab; isAd
   const { query, setQuery, results } = useSettingsSearch(isAdmin);
   return (
     <nav aria-label={t('nav.ariaLabel')} className="flex w-64 flex-none flex-col overflow-y-auto border-r border-border p-3">
+      <ProfileShortcut current={active === 'profile'} />
       <SettingsSearchField query={query} onChange={setQuery} onClear={() => setQuery('')} />
       {query ? (
         <SettingsSearchResults results={results} query={query} />
       ) : (
         <div className="flex flex-col gap-0.5">
-          {visibleGroups(isAdmin).map((group) => (
+          {listedGroups(isAdmin).map((group) => (
             <div key={group.labelKey} className="flex flex-col gap-0.5 pt-4 first:pt-0">
               <GroupLabel>{t(group.labelKey)}</GroupLabel>
               {group.categories.map((category) => {
@@ -115,12 +153,13 @@ export function SettingsIndex({ isAdmin }: { isAdmin: boolean }) {
   const { query, setQuery, results } = useSettingsSearch(isAdmin);
   return (
     <nav aria-label={t('nav.ariaLabel')} className="flex flex-col px-4 py-4 @[520px]:px-6">
+      <ProfileShortcut current={false} fromIndex />
       <SettingsSearchField query={query} onChange={setQuery} onClear={() => setQuery('')} />
       {query ? (
         <SettingsSearchResults results={results} query={query} />
       ) : (
         <div className="flex flex-col gap-1">
-          {visibleGroups(isAdmin).map((group) => (
+          {listedGroups(isAdmin).map((group) => (
             <div key={group.labelKey} className="flex flex-col gap-0.5 pt-4 first:pt-0">
               <GroupLabel>{t(group.labelKey)}</GroupLabel>
               {group.categories.map((category) => {
