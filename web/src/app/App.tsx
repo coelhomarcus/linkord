@@ -10,7 +10,6 @@ import { EmailRequiredModal } from '@/features/auth/EmailRequiredModal';
 import { RoomErrorScreen } from '@/app/layout/RoomErrorScreen';
 import { OutdatedClientScreen } from '@/app/layout/OutdatedClientScreen';
 import { LoadingScreen } from '@/app/layout/LoadingScreen';
-import { ReconnectBanner } from '@/app/layout/ReconnectBanner';
 import { AccessNotice } from '@/app/layout/AccessNotice';
 import { ConversationSidebar } from '@/features/conversations/ConversationSidebar';
 import { ServerRail } from '@/features/servers/ServerRail';
@@ -324,7 +323,6 @@ function Shell() {
         className="relative min-h-0 flex-1 bg-surface-rail text-text-primary [--surface-base:var(--color-surface-app)] max-md:pt-[env(safe-area-inset-top)]"
         style={{ minHeight: 0, '--sidebar-width': 'var(--spacing-sidebar)', '--sidebar-width-mobile': '24rem', '--sidebar-overlay-offset': '4.5rem', '--mobile-navigation-height': `calc(4rem + var(--safe-bottom) + ${inCall ? '3rem' : '0rem'})` } as CSSProperties}
       >
-        <ReconnectBanner />
         <DmCallOverlay />
         <AccessNotice />
         <ServerRail className="hidden md:flex" />
