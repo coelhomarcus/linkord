@@ -1,19 +1,12 @@
 import { useCallback } from 'react';
-import { Avatar } from '@/shared/Avatar';
 import { useRoom } from '@/state/RoomContext';
 import { CallControlBar } from './CallControlBar';
+import { DmCallAvatar } from './DmCallAvatar';
+import type { DmCallPeer } from './DmCallAvatar';
 import { dmCallHasMedia } from './dmCallMedia';
 import { TileGrid } from './TileGrid';
 import { useAutoFocusScreenShare } from './useAutoFocusScreenShare';
 import { useCallTiles } from './useCallTiles';
-
-export interface DmCallPeer {
-  id: string;
-  name: string;
-  avatar: string;
-  avatarPoster?: string;
-  avatarColor: string;
-}
 
 /** The private call inside its DM: avatars until anyone publishes a camera or a screen. */
 export function DmCallSurface({ participantIds, peers }: { participantIds: string[]; peers: DmCallPeer[] }) {
@@ -37,7 +30,7 @@ export function DmCallSurface({ participantIds, peers }: { participantIds: strin
       ) : (
         <div data-testid="dm-call-avatars" className="flex min-h-0 flex-1 items-center justify-center gap-6">
           {peers.map((peer) => (
-            <Avatar key={peer.id} id={peer.id} name={peer.name} avatar={peer.avatar} poster={peer.avatarPoster} avatarColor={peer.avatarColor} size={96} />
+            <DmCallAvatar key={peer.id} peer={peer} isMine={peer.id === state.me.id} size={96} />
           ))}
         </div>
       )}
