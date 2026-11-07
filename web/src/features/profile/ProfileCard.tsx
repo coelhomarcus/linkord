@@ -281,7 +281,12 @@ export function ProfileCard({
         {onBioChange ? (
           <EditableBio value={user.bio} onChange={onBioChange} disabled={fieldsDisabled} />
         ) : (
-          user.bio && <p className="mt-4 select-text whitespace-pre-wrap text-body leading-relaxed text-text-secondary">{user.bio}</p>
+          user.bio && (
+            <div className="mt-4">
+              <h3 className="text-caption font-medium text-text-muted">{t('card.bio')}</h3>
+              <p className="mt-0.5 select-text whitespace-pre-wrap wrap-break-word text-label text-text-secondary">{user.bio}</p>
+            </div>
+          )
         )}
 
         {hideLinks ? null : (

@@ -93,6 +93,24 @@ describe('MemberListPanel', () => {
     expect(mockedApi.fetchUserProfile).toHaveBeenCalledWith('u-bia');
   });
 
+  it('shows the bio under a title in the compact profile once the profile is fetched', async () => {
+    const user = userEvent.setup();
+    mockedApi.fetchUserProfile.mockResolvedValue({ user: { ...member('u-bia', 'Bia').user, banner: '', bio: 'plays too much chess', profileLinks: [], role: 'user' } });
+    renderWithRoom(<MemberListPanel server={server} onOpenProfile={vi.fn()} />);
+    await user.click(await screen.findByRole('button', { name: 'Abrir perfil de Bia' }));
+    expect(await screen.findByText('plays too much chess')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Bio' })).toBeInTheDocument();
+  });
+
+  it('shows no bio title for a member without a bio', async () => {
+    const user = userEvent.setup();
+    mockedApi.fetchUserProfile.mockResolvedValue({ user: { ...member('u-bia', 'Bia').user, banner: '', bio: '', profileLinks: [], role: 'user' } });
+    renderWithRoom(<MemberListPanel server={server} onOpenProfile={vi.fn()} />);
+    await user.click(await screen.findByRole('button', { name: 'Abrir perfil de Bia' }));
+    await waitFor(() => expect(mockedApi.fetchUserProfile).toHaveBeenCalled());
+    expect(screen.queryByRole('heading', { name: 'Bio' })).not.toBeInTheDocument();
+  });
+
   it('opens the full profile from the button at the top of the compact profile', async () => {
     const user = userEvent.setup();
     mockedApi.fetchUserProfile.mockRejectedValue(new Error('offline'));

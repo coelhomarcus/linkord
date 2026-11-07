@@ -102,6 +102,21 @@ describe('ProfileModal — since when and what you have in common', () => {
     expect(screen.getByText('12 de mar. de 2026')).toHaveClass('text-label');
   });
 
+  it('titles the bio like the other fields, and leaves the title out without a bio', async () => {
+    mocked.fetchProfileDetails.mockResolvedValue(details);
+    renderProfile({ allUsers: new Map([[user.id, { ...user, bio: 'hello there' }]]) });
+    expect(screen.getByText('hello there')).toHaveClass('text-label');
+    expect(screen.getByRole('heading', { name: 'Bio' })).toHaveClass('text-caption');
+    await screen.findByText('Membro desde');
+  });
+
+  it('shows no bio title when the user has no bio', async () => {
+    mocked.fetchProfileDetails.mockResolvedValue(details);
+    renderProfile();
+    await screen.findByText('Membro desde');
+    expect(screen.queryByRole('heading', { name: 'Bio' })).not.toBeInTheDocument();
+  });
+
   it('leaves out "Amigos desde" when you are not friends', async () => {
     mocked.fetchProfileDetails.mockResolvedValue({ ...details, friendsSince: null });
     renderProfile();
