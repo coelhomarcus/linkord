@@ -25,7 +25,6 @@ test.describe('auth', () => {
     const context = await browser.newContext({ baseURL: BASE_URL, locale: 'pt-BR' });
     const page = await context.newPage();
     await page.goto('/');
-    await page.getByRole('tab', { name: 'Entrar' }).click().catch(() => {});
 
     await page.getByLabel('Usuário').fill(alice.username);
     await page.getByLabel('Senha', { exact: true }).fill('not-the-password');

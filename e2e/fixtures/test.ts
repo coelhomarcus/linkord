@@ -35,22 +35,23 @@ async function newContext(browser: Browser): Promise<BrowserContext> {
 }
 
 function wrap(id: string, username: string, password: string, context: BrowserContext): User {
-  let first: Page | null = null;
-  const page = async () => {
-    if (!first) {
-      first = await context.newPage();
-      await first.goto('/app');
-    }
+  // The helpers listen to the page's socket and console, so they are attached
+  // before the first navigation: the app connects as soon as it loads.
+  let first: AppPage | null = null;
+  const open = async (path: string) => {
+    const app = new AppPage(await context.newPage());
+    await app.page.goto(path);
+    return app;
+  };
+  const app = async () => {
+    first ??= await open('/app');
     return first;
   };
   return {
-    id, username, password, context, api: context.request, page,
-    app: async () => new AppPage(await page()),
-    newTab: async (path = '/app') => {
-      const tab = await context.newPage();
-      await tab.goto(path);
-      return new AppPage(tab);
-    },
+    id, username, password, context, api: context.request,
+    page: async (): Promise<Page> => (await app()).page,
+    app,
+    newTab: open,
   };
 }
 

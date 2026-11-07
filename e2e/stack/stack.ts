@@ -76,6 +76,16 @@ export async function outage(seconds: number): Promise<void> {
   await waitHealthy();
 }
 
+/** The app container is gone (after SIGTERM): the proxy has nothing behind it. */
+export function stopApp(): void {
+  compose(['stop', '-t', '10', 'app']);
+}
+
+export async function startApp(): Promise<void> {
+  compose(['start', 'app']);
+  await waitHealthy();
+}
+
 export function down(): void {
   if (!readState()) return;
   compose(['down', '-v', '--remove-orphans']);

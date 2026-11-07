@@ -17,6 +17,9 @@ export default defineConfig({
     baseURL: BASE_URL,
     channel: 'chrome',
     headless: process.env.E2E_HEADED !== '1',
+    // a missing element fails the step quickly instead of eating the whole test timeout
+    actionTimeout: 15_000,
+    navigationTimeout: 30_000,
     trace: 'retain-on-failure',
     video: 'retain-on-failure',
     screenshot: 'only-on-failure',

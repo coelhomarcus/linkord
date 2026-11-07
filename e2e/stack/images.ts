@@ -29,6 +29,10 @@ export interface BaseVersion {
   minProtocolVersion: number;
   /** whether that version already persists call membership (see AGENTS.md) */
   restoresCalls: boolean;
+  /** Whether that version's shutdown leaves tabs able to reconnect on their own.
+   * An older one sent each socket a disconnect, after which Socket.IO only
+   * reconnects when the tab is focused again. */
+  shutdownLetsTabsReconnect: boolean;
 }
 
 function showFile(sha: string, file: string): string {
@@ -55,6 +59,7 @@ export function baseVersion(): BaseVersion {
     protocolVersion: readConstant(protocol, 'PROTOCOL_VERSION'),
     minProtocolVersion: readConstant(protocol, 'MIN_PROTOCOL_VERSION'),
     restoresCalls: showFile(sha, 'server/src/db/schema.ts').includes("pgTable('call_presence'"),
+    shutdownLetsTabsReconnect: !showFile(sha, 'server/src/app/bootstrap.ts').includes('.disconnect(true)'),
   };
   if (!imageExists(image)) {
     const checkout = mkdtempSync(path.join(tmpdir(), 'linkord-e2e-base-'));

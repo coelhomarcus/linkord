@@ -126,6 +126,13 @@ npm test                                       # test:server + test:web
 
 A change that touches a real flow (upload, call, conversations, auth) deserves live manual verification (`npm run dev`, 2 accounts), not just automated tests.
 
+**End-to-end suite (`e2e/`, Playwright).** Real Chrome sessions for several accounts against a production-shaped Docker stack (app behind Traefik, LiveKit, throwaway Postgres); setup and commands in [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md#end-to-end-tests). Run the matching project when a change touches what it covers, and add a spec when you add a user-facing flow:
+- `npm run test:e2e:features`: every feature, one spec per area (`e2e/specs/features/<area>.spec.ts`).
+- `npm run test:e2e:restart`: anything a redeploy must survive (realtime, calls, chat sends, uploads, the shutdown path).
+- `npm run test:e2e:upgrade`: wire or protocol changes, migrations, anything an old tab talks to (production version vs the working tree).
+
+Rules for specs: set data up through the app's HTTP routes (`e2e/fixtures/api.ts`), never by writing to the database, since the app caches memberships in memory; find elements the way a person does, by role and pt-BR label (the English-only rule applies to everything else, as in `web/tests`); never `.click().catch(() => {})` on something that may not exist (it waits for the whole action timeout); a step that sends a socket message right after a restart waits for the tab's `welcome` first (`waitForSocketEvent`).
+
 ## Code Conventions
 
 No Portuguese comments in any source. Comments and identifiers in English; follow the existing language of surrounding prose.
