@@ -72,13 +72,6 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
   const online = other ? onlineUserIds.has(other.id) : false;
   // a DM's presence lives on the profile (side panel and modal), not here
   const subtitle = isChannel ? conversation?.topic ?? '' : '';
-  // `state.participants` only ever holds OTHER people (the server excludes
-  // yourself from it) — my own row in this list has to come from `state.me`
-  // instead, gated on whether I'm actually the one in this call.
-  const otherCallParticipants = [...state.participants.values()].filter((p) => p.callConversationId === conversation?.id);
-  const callParticipants = conversation && activeCallConversationId === conversation.id
-    ? [{ id: state.me.userId ?? 'me', displayName: state.me.displayName, avatar: state.me.avatar, avatarPoster: state.me.avatarPoster, avatarColor: state.me.avatarColor }, ...otherCallParticipants]
-    : otherCallParticipants;
   const directPeerId = conversation?.type === 'direct' ? (conversation.memberIds.find((id) => id !== state.me.userId) ?? null) : null;
   const { state: relationship } = useRelationship(directPeerId);
   // Same stance as DirectComposerGate: only a confirmed answer disables the
@@ -142,21 +135,6 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
               {!inThisDmCall && subtitle && <span aria-hidden className="mx-1 h-6 w-px flex-none bg-border-default max-md:hidden" />}
               {!inThisDmCall && subtitle && <p className="min-w-0 truncate text-label text-text-secondary max-md:hidden">{subtitle}</p>}
             </div>
-            {callParticipants.length > 0 && (
-              <Tooltip>
-                <TooltipTrigger render={<div className="hidden flex-none items-center -space-x-2 md:flex" />}>
-                  {callParticipants.slice(0, 4).map((p) => (
-                    <Avatar key={p.id} id={p.id} name={p.displayName} avatar={p.avatar} poster={p.avatarPoster} animateOnHover avatarColor={p.avatarColor} size={24} className="ring-2 ring-surface-panel" />
-                  ))}
-                  {callParticipants.length > 4 && (
-                    <span className="grid size-6 place-items-center rounded-full bg-bg-tertiary text-micro font-semibold text-text-secondary ring-2 ring-surface-panel">
-                      +{callParticipants.length - 4}
-                    </span>
-                  )}
-                </TooltipTrigger>
-                <TooltipContent side="bottom">{t('panel.inCall')}</TooltipContent>
-              </Tooltip>
-            )}
             <div className="flex flex-none items-center gap-2">
               {/* calls in a server happen in its voice channels */}
               {isChannel ? null : callBlockedReason ? (
