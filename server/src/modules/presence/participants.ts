@@ -105,10 +105,17 @@ export function listOnlineUserIds(): string[] {
   return [...ids];
 }
 
+/** The call module hears about a connection that is actually gone, not one sitting in the reconnect grace window. */
+let onParticipantRemoved: ((p: Participant) => void) | null = null;
+export function setParticipantRemovedHook(fn: (p: Participant) => void): void {
+  onParticipantRemoved = fn;
+}
+
 export function removeParticipant(p: Participant): void {
   if (participants.get(p.id) !== p) return; // already replaced by a reconnect
   if (p.graceTimer) clearTimeout(p.graceTimer);
   participants.delete(p.id);
+  onParticipantRemoved?.(p);
   broadcastToKnownPeers(p.userId, { t: 'participant-left', id: p.id });
   // only here (not handleClose) to respect the same grace window as
   // 'participant-left' — a brief network drop shouldn't flicker offline.

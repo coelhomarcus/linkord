@@ -27,6 +27,7 @@ import { ConversationPanel } from '@/features/conversations/ConversationPanel';
 import { ConversationMediaPanel } from '@/features/conversations/ConversationMediaPanel';
 import { ChatSearchDialog } from '@/features/chat/ChatSearchDialog';
 import { Stage } from '@/features/calls/Stage';
+import { DmCallOverlay } from '@/features/calls/DmCallOverlay';
 import { CallConnectingScreen } from '@/features/calls/CallConnectingScreen';
 import { ParticipantAudioLayer } from '@/features/calls/ParticipantAudioLayer';
 import { FloatingPip } from '@/features/calls/FloatingPip';
@@ -90,6 +91,7 @@ function Shell() {
   const {
     state, dispatch, livekitRoom, closeTileMenu, sendWs, retryConnection, notifyActiveView, registerRequestChatView, registerOpenCall,
     activeCallConversationId, activeConversationId, joinCall, leaveCall, conversations, allUsers, servers,
+    dmStageConversationId, clearDmStage, dmCall,
     serverMemberRevision, setServerMemberSnapshot,
   } = useRoom();
   const roomError = state.roomError;
@@ -173,6 +175,13 @@ function Shell() {
     navigate(stagePath(conversationId), { state: { from: currentPath() } });
   }
 
+  useEffect(() => {
+    if (!dmStageConversationId) return;
+    pendingStageRef.current = dmStageConversationId;
+    navigate(stagePath(dmStageConversationId), { state: { from: currentPath() } });
+    clearDmStage();
+  }, [dmStageConversationId, navigate, clearDmStage]);
+
   // re-registered every render: the handler closes over the current location
   useEffect(() => { registerOpenCall(handleOpenCall); });
 
@@ -193,12 +202,13 @@ function Shell() {
   const leaveStagePath = (id: string) => (voiceChannelOnPath ? ROUTES.server(voiceChannelOnPath.serverId!) : ROUTES.direct(id));
   useEffect(() => {
     if (showStage && pendingStageRef.current === stageConversationId) pendingStageRef.current = null;
+    if (dmCall?.phase === 'ended' && pendingStageRef.current === dmStageId) pendingStageRef.current = null;
     // a voice channel without its call is the lobby, not somewhere to leave
     if (!dmStageId || !state.joined || showStage) return;
     if (pendingStageRef.current === dmStageId && state.callJoinError?.conversationId !== dmStageId) return;
     pendingStageRef.current = null;
     navigate(ROUTES.direct(dmStageId), { replace: true });
-  }, [dmStageId, stageConversationId, showStage, state.joined, state.callJoinError, navigate]);
+  }, [dmStageId, stageConversationId, showStage, state.joined, state.callJoinError, navigate, dmCall]);
   // A moderator's move lands this connection in another channel's call
   // without it navigating anywhere: whoever was watching the old channel's
   // stage follows the call to the new one instead of being left at a lobby.
@@ -310,6 +320,7 @@ function Shell() {
         style={{ minHeight: 0, '--sidebar-width': 'var(--spacing-sidebar)', '--sidebar-width-mobile': '24rem', '--sidebar-overlay-offset': '4.5rem', '--mobile-navigation-height': `calc(4rem + var(--safe-bottom) + ${inCall ? '3rem' : '0rem'})` } as CSSProperties}
       >
         <ReconnectBanner />
+        <DmCallOverlay />
         <AccessNotice />
         <ServerRail className="hidden md:flex" />
         {/* Discord's one framed panel: the list and the content side by side

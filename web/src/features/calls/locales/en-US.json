@@ -22,6 +22,7 @@
     "leaveCall": "Leave call",
     "returnToCall": "Return to call",
     "inCall": "In a call",
+    "inCallFor": "In a call · {{time}}",
     "myProfile": "My profile",
     "statusOnline": "Online",
     "statusReconnecting": "Reconnecting…",
@@ -172,5 +173,19 @@
       "rateLimited": "Invite sent a moment ago. Wait a bit.",
       "notInCall": "Join the call to invite someone."
     }
+  },
+  "dm": {
+    "incomingVoice": "Voice call",
+    "incomingVideo": "Video call",
+    "calling": "Calling…",
+    "accept": "Accept",
+    "decline": "Decline",
+    "cancel": "Cancel",
+    "declined": "Call declined",
+    "cancelled": "Call cancelled",
+    "missed": "Missed call",
+    "ended": "Call ended",
+    "failed": "Couldn't connect the call",
+    "someone": "Someone"
   }
 }

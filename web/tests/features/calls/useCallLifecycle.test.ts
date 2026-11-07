@@ -31,13 +31,14 @@ function setup(connect: () => Promise<void> = async () => undefined, extras: {
   const livekitRoom = fakeRoom(connect);
   const activateMic = vi.fn(extras.activateMic ?? (async () => undefined));
   const setMicMuted = vi.fn(extras.setMicMuted ?? (async (_muted: boolean) => undefined));
+  const startCamera = vi.fn(async () => undefined);
   const { result } = renderHook(() => useCallLifecycle({
     livekitRoom, dispatch, sendWs,
     stopCamera: vi.fn(), stopSharing: vi.fn(),
-    activateMic, setMicMuted, leaveMic: vi.fn(async () => undefined),
+    activateMic, setMicMuted, leaveMic: vi.fn(async () => undefined), startCamera,
     cameraOn: false, sharing: false,
   }));
-  return { result, dispatch, sendWs, livekitRoom, activateMic, setMicMuted };
+  return { result, dispatch, sendWs, livekitRoom, activateMic, setMicMuted, startCamera };
 }
 
 const token = { conversationId: 'c1', livekitUrl: 'wss://lk', livekitToken: 't' };
@@ -186,5 +187,26 @@ describe('useCallLifecycle — what a publication actually means', () => {
     const { sendWs, livekitRoom } = setup();
     act(() => { livekitRoom.emit(RoomEvent.TrackMuted, { source: Track.Source.Camera }, { identity: 'someone-else' }); });
     expect(sendWs).not.toHaveBeenCalledWith(expect.objectContaining({ t: 'camera' }));
+  });
+});
+
+describe('useCallLifecycle — DM media', () => {
+  it('ignores a token until this tab is armed, then connects and starts the camera for a video call', async () => {
+    const { result, livekitRoom, startCamera } = setup();
+    act(() => { result.current.onCallToken(token); });
+    expect(livekitRoom.connect).not.toHaveBeenCalled();
+
+    act(() => { result.current.armDmMedia('c1', true); });
+    await act(async () => { result.current.onCallToken(token); });
+    await vi.waitFor(() => expect(livekitRoom.connect).toHaveBeenCalledWith('wss://lk', 't'));
+    expect(startCamera).toHaveBeenCalledOnce();
+  });
+
+  it('a voice DM connects without turning the camera on', async () => {
+    const { result, livekitRoom, startCamera } = setup();
+    act(() => { result.current.armDmMedia('c1', false); });
+    await act(async () => { result.current.onCallToken(token); });
+    await vi.waitFor(() => expect(livekitRoom.connect).toHaveBeenCalled());
+    expect(startCamera).not.toHaveBeenCalled();
   });
 });

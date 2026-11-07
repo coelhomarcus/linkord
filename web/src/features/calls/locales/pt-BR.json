@@ -22,6 +22,7 @@
     "leaveCall": "Sair da chamada",
     "returnToCall": "Voltar à chamada",
     "inCall": "Em chamada",
+    "inCallFor": "Em chamada · {{time}}",
     "myProfile": "Meu perfil",
     "statusOnline": "Disponível",
     "statusReconnecting": "Reconectando…",
@@ -172,5 +173,19 @@
       "rateLimited": "Convite enviado há pouco. Espere um pouco.",
       "notInCall": "Entre na chamada para convidar."
     }
+  },
+  "dm": {
+    "incomingVoice": "Chamada de voz",
+    "incomingVideo": "Chamada de vídeo",
+    "calling": "Chamando…",
+    "accept": "Atender",
+    "decline": "Recusar",
+    "cancel": "Cancelar",
+    "declined": "Chamada recusada",
+    "cancelled": "Chamada cancelada",
+    "missed": "Chamada não atendida",
+    "ended": "Chamada encerrada",
+    "failed": "Não foi possível conectar a chamada",
+    "someone": "Alguém"
   }
 }
