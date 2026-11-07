@@ -56,14 +56,14 @@ describe('ConversationPanel — call button', () => {
     expect(onOpenCall).not.toHaveBeenCalled();
   });
 
-  it('already in this call: the call stays above the chat and the button does not leave', async () => {
+  it('already in this call: the call stays above the chat and the header has no call buttons', async () => {
     mockedApi.fetchRequestSummary.mockResolvedValue({ incoming: 0, invitations: 0 });
     mockedApi.fetchRelationship.mockResolvedValue({ relation: 'friends', retryAfter: null });
-    const { onOpenCall } = renderPanel({ activeCallConversationId: 'c1' });
-    await vi.waitFor(() => expect(screen.getAllByRole('button', { name: 'Voltar à chamada' })[0]).toBeInTheDocument());
-    expect(screen.getByTestId('dm-call')).toBeInTheDocument();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Voltar à chamada' })[0]!);
-    expect(onOpenCall).not.toHaveBeenCalled();
+    renderPanel({ activeCallConversationId: 'c1' });
+    await vi.waitFor(() => expect(screen.getByTestId('dm-call')).toBeInTheDocument());
+    expect(screen.queryByRole('button', { name: 'Voltar à chamada' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Ligar' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Ligar com vídeo' })).not.toBeInTheDocument();
   });
 
   it('non-friend: the button stays disabled', async () => {

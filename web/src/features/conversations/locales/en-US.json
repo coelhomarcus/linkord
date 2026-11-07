@@ -32,7 +32,6 @@
     "searchIn": "Search {{name}}",
     "blocked": "You can't call while this person is blocked.",
     "needFriends": "You need to be friends to make calls.",
-    "returnToCall": "Back to the call",
     "joinCall": "Join the call",
     "voiceCall": "Call",
     "videoCall": "Video call",
