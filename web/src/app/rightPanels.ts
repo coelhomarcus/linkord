@@ -15,10 +15,10 @@ export function rightPanelsVisible(input: {
   const chatShown = input.onChatPage && !input.stageShown && input.conversationType !== null;
   // the details are a text channel's member list, or the profile beside a DM
   const hasDetails = input.conversationType === 'text' || input.conversationType === 'direct';
-  // Text channels share the side-panel slot with media; keep the saved member
-  // list preference so it returns when media closes.
+  // Media is a modal over the chat. The member list and the DM profile are the
+  // page behind it, so opening media must not change whether they show.
   return {
-    details: chatShown && hasDetails && input.detailsOpen && (input.conversationType !== 'text' || !input.mediaOpen),
+    details: chatShown && hasDetails && input.detailsOpen,
     media: chatShown && input.mediaOpen,
   };
 }

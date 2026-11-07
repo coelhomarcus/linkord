@@ -261,9 +261,8 @@ function Shell() {
   const { details: detailsVisible, media: mediaVisible } = rightPanelsVisible({
     detailsOpen: directShown ? profilePanelOpen && wide : memberListOpen, mediaOpen, onChatPage: !!visibleConversationId, stageShown: showStage, conversationType: shownType,
   });
-  // the media panel takes the profile's place without forgetting it was open
   const membersVisible = detailsVisible && !directShown;
-  const profileVisible = detailsVisible && directShown && !mediaVisible;
+  const profileVisible = detailsVisible && directShown;
   const profilePanelUser = profileVisible ? directUser(activeConversation, state.me.userId, allUsers) : null;
   const setDetails = (open: boolean) => (directShown ? setProfilePanelOpen(open) : setMemberListPreference(open));
   const activeConversationName = conversationTitle(activeConversation, state.me.userId, allUsers);
@@ -346,8 +345,8 @@ function Shell() {
                   onOpenSearch={() => setSearchOpen(true)}
                   detailsOpen={directShown ? profileVisible : memberListOpen}
                   mediaOpen={mediaVisible}
-                  onOpenDetails={() => { setMediaOpen(false); setDetails(true); }}
-                  onToggleDetails={() => { setMediaOpen(false); setDetails(directShown ? !(membersVisible || profileVisible) : !memberListOpen); }}
+                  onOpenDetails={() => { setDetails(true); }}
+                  onToggleDetails={() => { setDetails(directShown ? !(membersVisible || profileVisible) : !memberListOpen); }}
                   onToggleMedia={() => { setMediaOpen(!mediaVisible); }}
                 />
               )}
