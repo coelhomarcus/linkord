@@ -76,6 +76,7 @@ describe('Wall widget cards', () => {
     rerender(<WallWidgetCard widget={{ ...anime, connection: { ...connection, syncError: 'unavailable' } }} />);
     expect(screen.getByRole('link', { name: 'Cowboy Bebop' })).toBeInTheDocument();
     expect(screen.getByText(/A última sincronização falhou/)).toBeInTheDocument();
+    expect(screen.queryByText(/Atualizado em/)).not.toBeInTheDocument();
   });
   it('shows only the covers of the first eight recent anime, without titles or progress', () => {
     const items = Array.from({ length: 10 }, (_, i) => ({ id: String(i), title: `Anime ${i}`, url: `https://myanimelist.net/anime/${i}`, imageUrl: `https://cdn.myanimelist.net/${i}.jpg` }));

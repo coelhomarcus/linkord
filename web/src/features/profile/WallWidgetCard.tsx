@@ -6,7 +6,7 @@ export function WallWidgetCard({ widget }: { widget: WallWidget }) {
   const { t, i18n } = useTranslation('profile');
   const { connection, data } = widget;
   const number = (value: number) => value.toLocaleString(i18n.language);
-  const showFooter = (connection.syncError && data) || connection.syncedAt;
+  const showFooter = Boolean(connection.syncError && data);
   return (
     <article className="flex w-full min-w-0 flex-col gap-4 rounded-xl border border-border-strong bg-bg-secondary p-4">
       <header className="flex min-w-0 items-center justify-between gap-3">
@@ -30,9 +30,8 @@ export function WallWidgetCard({ widget }: { widget: WallWidget }) {
         <p className="text-label text-text-secondary">{t('wall.github.contributions', { total: number(data.total) })}</p>
         <ContributionCalendar days={data.days} />
       </div>}
-      {showFooter && <footer className="mt-auto flex flex-col gap-0.5 border-t border-border pt-3 text-caption text-text-muted">
-        {connection.syncError && data && <p>{t('wall.stale')}</p>}
-        {connection.syncedAt && <p>{t('wall.updated', { date: new Date(connection.syncedAt).toLocaleString(i18n.language) })}</p>}
+      {showFooter && <footer className="mt-auto border-t border-border pt-3 text-caption text-text-muted">
+        <p>{t('wall.stale')}</p>
       </footer>}
     </article>
   );
