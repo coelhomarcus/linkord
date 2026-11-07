@@ -186,6 +186,10 @@
     "missed": "Missed call",
     "ended": "Call ended",
     "failed": "Couldn't connect the call",
-    "someone": "Someone"
+    "someone": "Someone",
+    "status": {
+      "muted": "Muted",
+      "deafened": "Deafened"
+    }
   }
 }
