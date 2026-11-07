@@ -8,16 +8,18 @@ import { CSS } from '@dnd-kit/utilities';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
-import { ROUTES, isHomePath, serverIdFromPath } from '@/shared/lib/routes';
+import { ROUTES, callConversationIdFromPath, conversationIdFromPath, isHomePath, serverIdFromPath } from '@/shared/lib/routes';
 import { cn } from '@/shared/lib/utils';
 import { useContentLocation } from '@/shared/lib/contentLocation';
 import { useSidebar } from '@/shared/ui/motion/sidebar-context';
 import { CountBadge } from '@/shared/CountBadge';
+import { Avatar } from '@/shared/Avatar';
 import { useFriends } from '@/features/friends/FriendsContext';
 import { useRoom } from '@/state/RoomContext';
 import { ServerIcon } from './ServerIcon';
 import { CreateServerDialog } from './CreateServerDialog';
 import { liveCallIds, serverHasLiveCall, serverUnread } from './serverUtils';
+import { railDirects } from './railDirects';
 import { saveServerOrder } from './serversApi';
 
 // the rail is one column: a dragged server only travels up and down it
@@ -121,7 +123,7 @@ export function ServerRail({ className }: { className?: string }) {
   const { t } = useTranslation('servers');
   const navigate = useNavigate();
   const { pathname } = useContentLocation();
-  const { state, servers, conversations, unreadByConversation, reorderServers, activeCallConversationId } = useRoom();
+  const { state, servers, conversations, unreadByConversation, reorderServers, activeCallConversationId, allUsers, dmCall } = useRoom();
   const callIds = useMemo(() => liveCallIds(state.participants.values(), activeCallConversationId), [state.participants, activeCallConversationId]);
   // a press only becomes a drag past a few pixels, so a click still opens the server
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
@@ -146,10 +148,10 @@ export function ServerRail({ className }: { className?: string }) {
   const go = (to: string) => { navigate(to); if (drawer) setOpenMobile(true); };
   const currentServerId = serverIdFromPath(pathname);
   const home = isHomePath(pathname) || pathname.startsWith('/app/calls/');
-  const directUnread = useMemo(
-    () => conversations.reduce((sum, c) => sum + (c.type === 'direct' ? unreadByConversation.get(c.id) ?? 0 : 0), 0),
-    [conversations, unreadByConversation],
-  );
+  const directs = useMemo(() => railDirects({
+    conversations, myUserId: state.me.userId, unreadByConversation, activeCallConversationId, dmCall,
+  }), [conversations, state.me.userId, unreadByConversation, activeCallConversationId, dmCall]);
+  const openConversationId = conversationIdFromPath(pathname) ?? callConversationIdFromPath(pathname);
 
   return (
     <nav aria-label={t('rail.label')} className={cn('flex w-[72px] flex-none flex-col items-center gap-2 overflow-y-auto bg-surface-rail pb-[max(0.75rem,var(--dock-clearance,0px))] [scrollbar-width:none] max-md:pt-3', className)}>
@@ -162,7 +164,7 @@ export function ServerRail({ className }: { className?: string }) {
           <TooltipContent side="right">{t('rail.showList')}</TooltipContent>
         </Tooltip>
       )}
-      <RailItem label={t('rail.home')} active={home} unread={false} badge={directUnread + pendingIncomingCount} onClick={() => go(ROUTES.home)}>
+      <RailItem label={t('rail.home')} active={home} unread={false} badge={pendingIncomingCount} onClick={() => go(ROUTES.home)}>
         {/* The home tile fills with the accent while it is open or hovered.
             The logo's eyes are cut out, so the tile shows through them; the
             mark itself is forced white on that fill. */}
@@ -170,6 +172,25 @@ export function ServerRail({ className }: { className?: string }) {
           <img src="/logo.svg" alt="" draggable={false} className={cn('h-auto w-6', home ? '[filter:var(--accent-mark-filter)]' : 'group-hover/server:[filter:var(--accent-mark-filter)]')} />
         </span>
       </RailItem>
+      {directs.map((row) => {
+        const person = allUsers.get(row.peerId);
+        const name = person?.displayName || row.peerId;
+        return (
+          <RailItem
+            key={row.conversationId}
+            label={name}
+            active={openConversationId === row.conversationId}
+            unread={row.unread > 0}
+            badge={row.unread}
+            badgeLabel={row.unread > 0 ? t('rail.unread', { count: row.unread }) : undefined}
+            badgeClassName="bg-red text-white"
+            liveCall={row.inCall ? t('rail.liveCall') : undefined}
+            onClick={() => go(ROUTES.direct(row.conversationId))}
+          >
+            <Avatar id={row.peerId} name={name} avatar={person?.avatar ?? ''} poster={person?.avatarPoster} avatarColor={person?.avatarColor ?? ''} size={40} />
+          </RailItem>
+        );
+      })}
       <span aria-hidden className="h-px w-8 flex-none bg-border-subtle" />
       <DndContext sensors={sensors} collisionDetection={closestCenter} modifiers={[alongRail]} onDragStart={() => { draggedAtRef.current = Date.now(); }} onDragEnd={handleDragEnd} onDragCancel={() => { draggedAtRef.current = Date.now(); }}>
         <SortableContext items={servers.map((s) => s.id)} strategy={verticalListSortingStrategy}>
