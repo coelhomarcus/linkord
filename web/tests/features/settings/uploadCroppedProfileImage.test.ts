@@ -93,6 +93,19 @@ describe('uploadCroppedProfileImage', () => {
     expect(phases).toEqual(['processing', 'processing', 'uploading']);
   });
 
+  it('uploads the cropped bytes when the draft store is unavailable', async () => {
+    setProfileImageDraftDriver({
+      get: async () => { throw new Error('indexedDB blocked'); },
+      put: async () => { throw new Error('indexedDB blocked'); },
+      del: async () => { throw new Error('indexedDB blocked'); },
+    });
+    uploadWithProgress.mockResolvedValue({ avatar: '/uploads/novo' });
+
+    await expect(uploadCroppedProfileImage(file, crop)).resolves.toEqual({ avatar: '/uploads/novo' });
+    expect(cropProfileImage).toHaveBeenCalledOnce();
+    expect(uploadWithProgress).toHaveBeenCalledOnce();
+  });
+
   it('can drop a leftover draft', async () => {
     await driver.put('k', cropped);
     await deleteProfileImageDraft('k');

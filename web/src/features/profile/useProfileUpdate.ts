@@ -8,6 +8,7 @@ import type { RoomAction } from '@/state/roomReducer';
 import type { CropRect } from '@/state/RoomContext';
 import { ApiError } from '@/shared/api/api';
 import { uploadCroppedProfileImage } from '@/features/settings/uploadCroppedProfileImage';
+import { ProfileImageCropError } from '@/features/settings/cropProfileImage';
 import type { ProfileImageUploadPhase } from '@/features/settings/uploadCroppedProfileImage';
 import { i18n } from '@/shared/i18n/init';
 
@@ -36,8 +37,11 @@ export class ProfileSaveOffline extends Error {
 export function describeProfileSaveError(err: unknown, fallback?: string): string {
   const fallbackText = fallback ?? i18n.t('profile:save.failed');
   if (err instanceof ProfileSaveOffline || err instanceof ProfileSaveTimeout) return err.message;
-  if (err instanceof ApiError && err.code === 'upload_timeout') return err.message;
   if (err instanceof ProfileSaveRefused) return err.message || fallbackText;
+  // Crop, network and server refusals already carry a sentence for the user.
+  // The fallback is only for an unexpected throw, so a banner failure does
+  // not hide which step actually stopped.
+  if (err instanceof ProfileImageCropError || err instanceof ApiError) return err.message || fallbackText;
   return fallbackText;
 }
 

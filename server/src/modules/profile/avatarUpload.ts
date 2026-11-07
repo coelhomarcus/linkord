@@ -64,6 +64,7 @@ export async function encodeAndStoreProfileImage(
     outMime = mime;
   } catch (err) {
     if (err instanceof ProfileImageProcessingError) throw err;
+    log.warn('avatar image could not be read', { err: err instanceof Error ? err.message : String(err) });
     throw new ProfileImageProcessingError(
       'crop_failed',
       'Não foi possível processar a imagem.',
