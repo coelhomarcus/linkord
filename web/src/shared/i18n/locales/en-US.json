@@ -17,7 +17,6 @@
     "loadingMore": "Loading more items"
   },
   "layout": {
-    "reconnect": "Disconnected from the server. Press F5 to reload the page.",
     "retryNow": "Reconnect now",
     "waitingForServer": "Waiting for the server connection...",
     "reload": "Reload",
