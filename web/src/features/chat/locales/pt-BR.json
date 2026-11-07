@@ -131,6 +131,20 @@
     "open": "Abrir {{name}}",
     "openIndexed": "Abrir {{name}} ({{index}} de {{total}})"
   },
+  "dmCall": {
+    "you": "Você iniciou uma chamada.",
+    "youLasted": "Você iniciou uma chamada que durou {{duration}}.",
+    "them": "{{name}} iniciou uma chamada.",
+    "themLasted": "{{name}} iniciou uma chamada que durou {{duration}}.",
+    "someone": "Alguém",
+    "second_one": "{{count}} segundo",
+    "second_other": "{{count}} segundos",
+    "minute_one": "{{count}} minuto",
+    "minute_other": "{{count}} minutos",
+    "hour_one": "{{count}} hora",
+    "hour_other": "{{count}} horas",
+    "hourMinute": "{{hours}} e {{minutes}}"
+  },
   "preview": {
     "invite": "Convite para o servidor {{title}}",
     "inviteUnavailable": "Convite indisponível",

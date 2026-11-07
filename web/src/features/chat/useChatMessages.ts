@@ -474,7 +474,7 @@ export function useChatMessages(deps: ChatMessagesDeps) {
         conversationName: conversationTitle(conversationsRef.current.find((c) => c.id === conversationId), myUserIdRef.current, allUsersRef.current),
         senderId: m.message.id,
         senderName: (m.message.id ? allUsersRef.current.get(m.message.id)?.displayName : undefined) ?? m.message.name,
-        text: messagePreviewText(m.message),
+        text: messagePreviewText(m.message, myUserIdRef.current),
         mentioned,
       });
     }

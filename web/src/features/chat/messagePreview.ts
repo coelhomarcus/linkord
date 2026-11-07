@@ -1,11 +1,23 @@
 import { i18n } from '@/shared/i18n/init';
 import type { ChatMessage } from '@/shared/types/protocol';
 import { gifMessageUrl } from '@/features/gifs/klipyMedia';
+import { dmCallLine } from './dmCallLine';
 
 /** One-line text for a message wherever the body itself can't be shown
  * (sidebar subtitle, desktop notification). Invite cards have an empty
  * `text`, so without this they would read as an attachment. */
-export function messagePreviewText(message: Pick<ChatMessage, 'text' | 'kind' | 'invitation' | 'callInvite' | 'richEmbeds'>): string {
+export function messagePreviewText(
+  message: Pick<ChatMessage, 'text' | 'kind' | 'invitation' | 'callInvite' | 'richEmbeds'> & Partial<Pick<ChatMessage, 'id' | 'name' | 'callDurationSeconds'>>,
+  viewerId?: string | null,
+): string {
+  if (message.kind === 'dm_call') {
+    return dmCallLine({
+      viewerId: viewerId ?? null,
+      callerId: message.id ?? null,
+      callerName: message.name ?? '',
+      durationSeconds: message.callDurationSeconds ?? null,
+    }, i18n.getFixedT(null, 'chat'));
+  }
   if (message.kind === 'server_invite') {
     return message.invitation ? i18n.t('chat:preview.invite', { title: message.invitation.serverName }) : i18n.t('chat:preview.inviteUnavailable');
   }

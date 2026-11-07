@@ -1,4 +1,4 @@
-import { PlusIcon, UsersIcon, XIcon } from '@phosphor-icons/react';
+import { PhoneIcon, PlusIcon, UsersIcon, XIcon } from '@phosphor-icons/react';
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
@@ -24,11 +24,12 @@ function DirectRow({ conversation, active, onClick, onClose }: {
   conversation: Conversation; active: boolean; onClick: () => void; onClose: () => void;
 }) {
   const { t } = useTranslation('conversations');
-  const { state, allUsers, onlineUserIds, unreadByConversation } = useRoom();
+  const { state, allUsers, onlineUserIds, unreadByConversation, activeCallConversationId } = useRoom();
   const title = conversationTitle(conversation, state.me.userId, allUsers);
   const other = directUser(conversation, state.me.userId, allUsers);
   const unread = unreadByConversation.get(conversation.id) ?? 0;
   const online = other ? onlineUserIds.has(other.id) : false;
+  const inCall = activeCallConversationId === conversation.id;
   return (
     <li data-conversation-id={conversation.id} data-user-id={other?.id} className="group/dm relative mx-2">
       <button
@@ -38,7 +39,8 @@ function DirectRow({ conversation, active, onClick, onClose }: {
         aria-label={unread > 0 ? t('sidebar.rowUnread', { name: title, count: unread }) : title}
         aria-current={active ? 'page' : undefined}
         className={cn(
-          'relative isolate flex h-11 w-full items-center gap-3 rounded-lg px-2 text-left',
+          'relative isolate flex w-full items-center gap-3 rounded-lg px-2 text-left',
+          inCall ? 'h-auto min-h-11 py-1' : 'h-11',
           unread > 0 ? 'pr-10' : 'group-hover/dm:pr-10 group-focus-within/dm:pr-10',
           active ? 'cutout-active text-text-primary' : cn('cutout md:hover:cutout-subtle md:hover:bg-nav-hover', unread ? 'text-text-primary' : 'text-text-muted md:hover:text-text-primary'),
         )}
@@ -48,9 +50,23 @@ function DirectRow({ conversation, active, onClick, onClose }: {
           {other
             ? <Avatar id={other.id} name={other.displayName} avatar={other.avatar} poster={other.avatarPoster} animateOnHover avatarColor={other.avatarColor} size={32} />
             : <span className="block size-8 rounded-full bg-fill-hover" />}
-          <span className={cn('absolute -bottom-0.5 -right-0.5 size-3.5 rounded-full border-[3px] border-(--cutout)', online ? 'bg-green' : 'bg-text-muted')} />
+          {inCall ? (
+            <span className="absolute -bottom-0.5 -right-0.5 grid size-4 place-items-center rounded-full border-[3px] border-(--cutout) bg-green text-black">
+              <PhoneIcon size={10} weight="fill" />
+            </span>
+          ) : (
+            <span className={cn('absolute -bottom-0.5 -right-0.5 size-3.5 rounded-full border-[3px] border-(--cutout)', online ? 'bg-green' : 'bg-text-muted')} />
+          )}
         </span>
-        <span className={cn('min-w-0 flex-1 truncate text-body', unread ? 'font-semibold' : 'font-medium')}>{title}</span>
+        <span className="min-w-0 flex-1">
+          <span className={cn('block truncate text-body', unread ? 'font-semibold' : 'font-medium')}>{title}</span>
+          {inCall && (
+            <span className="flex items-center gap-1 text-label text-green">
+              <PhoneIcon size={12} weight="fill" />
+              {t('sidebar.inThisCall')}
+            </span>
+          )}
+        </span>
       </button>
       {unread > 0 && (
         <CountBadge decorative className="pointer-events-none absolute right-2 top-1/2 h-5 min-w-5 -translate-y-1/2 px-1.5 text-micro transition-transform duration-200 ease-out group-hover/dm:-translate-x-7 group-focus-within/dm:-translate-x-7">

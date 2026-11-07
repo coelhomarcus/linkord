@@ -16,6 +16,11 @@ describe('messagePreviewText', () => {
     expect(messagePreviewText({ text: '', kind: 'call_invite', callInvite: { channelId: 'g1', channelName: 'Geral', serverId: 's', serverName: 'Squad', serverIcon: '' } })).toBe('Convite para o canal de voz Geral');
     expect(messagePreviewText({ text: '', kind: 'call_invite', callInvite: null })).toBe('Convite para chamada indisponível');
   });
+  it('a dm call line uses the viewer sentence', () => {
+    expect(messagePreviewText({ text: '', kind: 'dm_call', id: 'a', name: 'Marcus', callDurationSeconds: 90 }, 'b')).toBe('Marcus iniciou uma chamada que durou 1 minuto.');
+    expect(messagePreviewText({ text: '', kind: 'dm_call', id: 'a', name: 'Marcus', callDurationSeconds: null }, 'a')).toBe('Você iniciou uma chamada.');
+  });
+
   it('an invitation with no server is "indisponível", never "Anexo"', () => {
     expect(messagePreviewText({ text: '', kind: 'server_invite', invitation: null })).toBe('Convite indisponível');
   });

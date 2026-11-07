@@ -22,7 +22,8 @@ export function messagePermissions(
   me: { userId: string | null; role: string },
   conversation?: Pick<Conversation, 'type' | 'permissions'> | null,
 ): MessagePermissions {
-  const isInvite = message.kind === 'server_invite' || message.kind === 'call_invite';
+  const isCallLog = message.kind === 'dm_call';
+  const isInvite = message.kind === 'server_invite' || message.kind === 'call_invite' || isCallLog;
   const isMine = !!me.userId && message.id === me.userId;
   // in a channel the server's roles decide; a DM leaves the friendship gate to the server
   const channel = conversation?.permissions;
@@ -32,7 +33,7 @@ export function messagePermissions(
     reply: !isInvite && may(PERMISSIONS.SEND_MESSAGES),
     copy: !!message.text,
     edit: isMine && !isInvite,
-    delete: isMine || me.role === 'admin' || (channel !== undefined && hasPermission(channel, PERMISSIONS.MANAGE_MESSAGES)),
+    delete: !isCallLog && (isMine || me.role === 'admin' || (channel !== undefined && hasPermission(channel, PERMISSIONS.MANAGE_MESSAGES))),
     report: !isMine && !isInvite && !!message.id,
     // taking the only thing a message has is deleting it; an admin may take
     // anyone's attachment out

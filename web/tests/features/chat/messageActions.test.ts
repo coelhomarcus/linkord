@@ -31,6 +31,10 @@ describe('messagePermissions', () => {
     expect(messagePermissions(msg({ kind: 'server_invite', text: '' }), { userId: 'autor', role: 'user' })).toEqual({ react: false, reply: false, copy: false, edit: false, delete: true, report: false, removeAttachment: false, removeEmbed: false });
   });
 
+  it('dm call line: nothing, including delete', () => {
+    expect(messagePermissions(msg({ kind: 'dm_call', text: '', callDurationSeconds: null }), { userId: 'autor', role: 'admin' })).toEqual({ react: false, reply: false, copy: false, edit: false, delete: false, report: false, removeAttachment: false, removeEmbed: false });
+  });
+
   it('call invite card: no react, reply, edit or report, but its author may delete it', () => {
     expect(messagePermissions(msg({ kind: 'call_invite', text: '' }), { userId: 'autor', role: 'user' })).toEqual({ react: false, reply: false, copy: false, edit: false, delete: true, report: false, removeAttachment: false, removeEmbed: false });
   });

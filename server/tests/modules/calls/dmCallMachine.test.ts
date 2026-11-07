@@ -68,6 +68,21 @@ describe('dm call session', () => {
     assert.equal(forgotten.state.calls.length, 0);
   });
 
+  it('counts talk time from the answer, not the ring', () => {
+    const started = ring();
+    const accepted = acceptDmCall(started.state, { callId: 'call-1', userId: 'b', participantId: 'pb', now: now + 10_000 });
+    const ended = leaveDmCall(accepted.state, { conversationId: 'dm-1', userId: 'a', now: now + 70_000 });
+    const effect = ended.effects.find((entry) => entry.type === 'ended');
+    assert.equal(effect?.type === 'ended' && effect.durationSeconds, 60);
+  });
+
+  it('gives an unanswered call no duration', () => {
+    const declined = declineDmCall(ring().state, { callId: 'call-1', userId: 'b', now: now + 1 });
+    const effect = declined.effects[0];
+    assert.equal(effect?.type === 'ended' && effect.reason, 'declined');
+    assert.equal(effect?.type === 'ended' && effect.durationSeconds, null);
+  });
+
   it('an active DM ends when one side leaves, and a ring does not', () => {
     const started = ring();
     assert.equal(leaveDmCall(started.state, { conversationId: 'dm-1', userId: 'a', now: now + 1 }).effects.length, 0);

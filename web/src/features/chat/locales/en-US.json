@@ -130,6 +130,20 @@
     "open": "Open {{name}}",
     "openIndexed": "Open {{name}} ({{index}} of {{total}})"
   },
+  "dmCall": {
+    "you": "You started a call.",
+    "youLasted": "You started a call that lasted {{duration}}.",
+    "them": "{{name}} started a call.",
+    "themLasted": "{{name}} started a call that lasted {{duration}}.",
+    "someone": "Someone",
+    "second_one": "{{count}} second",
+    "second_other": "{{count}} seconds",
+    "minute_one": "{{count}} minute",
+    "minute_other": "{{count}} minutes",
+    "hour_one": "{{count}} hour",
+    "hour_other": "{{count}} hours",
+    "hourMinute": "{{hours}} and {{minutes}}"
+  },
   "preview": {
     "invite": "Invitation to the server {{title}}",
     "inviteUnavailable": "Invitation unavailable",

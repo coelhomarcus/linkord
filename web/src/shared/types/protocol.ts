@@ -75,7 +75,9 @@ export interface ChatMessage {
   editedAt?: number;
   reactions?: Partial<Record<ReactionEmoji, string[]>>;
   attachments?: ChatAttachment[];
-  kind?: 'text' | 'server_invite' | 'call_invite';
+  kind?: 'text' | 'server_invite' | 'call_invite' | 'dm_call';
+  /** Whole seconds of talk time on a dm_call. Null when nobody answered. */
+  callDurationSeconds?: number | null;
   // `null` on a group_invite message = the group is gone (tombstone)
   invitation?: InvitationCard | null;
   // the group whose call a call_invite asks to join; `null` once it's gone

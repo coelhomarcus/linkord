@@ -61,8 +61,8 @@ html[data-theme="black"] {
   /* the user panel's edge, a shade darker than the shell's hairlines */
   --color-border-panel: #181819;
 
-  /* exact logo blue. White on it is only 3.1:1, so marks and labels on a
-     solid accent use ink (--primary-foreground), not white. */
+  /* exact logo blue. White type on it is only 3.1:1, so labels on a solid
+     accent use ink (--primary-foreground). The home mark stays white. */
   --color-accent-primary: #2b99e7;
   /* same hue, darker: a pressed or hovered fill */
   --color-accent-hover: #177bc3;
@@ -70,8 +70,8 @@ html[data-theme="black"] {
   --color-accent-text: #3ea2e9;
   --color-border-accent: #2b99e7;
   --primary-foreground: #000000;
-  /* white mark on the other themes; ink here, because the tile is the logo blue */
-  --accent-mark-filter: brightness(0);
+  /* the home tile's logo is white on the blue, in every theme */
+  --accent-mark-filter: brightness(0) invert(1);
 
   --color-red-text: #da6863;
 

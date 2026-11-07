@@ -58,9 +58,10 @@ export function buildTimelineItems(messages: ChatMessage[], pending: OutboxEntry
       lastMsg = null;
       unreadInserted = true;
     }
-    const showHeader = !lastMsg || lastMsg.id !== message.id || message.ts - lastMsg.ts > GROUP_GAP_MS;
+    const isCallLog = message.kind === 'dm_call';
+    const showHeader = !isCallLog && (!lastMsg || lastMsg.id !== message.id || message.ts - lastMsg.ts > GROUP_GAP_MS);
     items.push({ type: 'message', key: messageKey(message), message, showHeader, ...(entry ? { pending: entry } : {}) });
-    lastMsg = message;
+    lastMsg = isCallLog ? null : message;
   }
   return items;
 }

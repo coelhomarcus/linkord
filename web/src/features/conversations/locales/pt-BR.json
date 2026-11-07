@@ -21,12 +21,14 @@
     "close": "Fechar a conversa com {{name}}",
     "noMatch": "Nenhuma conversa encontrada.",
     "empty": "Suas conversas aparecem aqui.",
-    "rowUnread": "{{name}}, {{count}} não lidas"
+    "rowUnread": "{{name}}, {{count}} não lidas",
+    "inThisCall": "Em uma chamada"
   },
   "panel": {
     "back": "Voltar para conversas",
     "viewProfile": "Ver perfil",
     "inCall": "Na chamada",
+    "inThisCall": "Em uma chamada",
     "media": "Mídias e links",
     "search": "Buscar mensagens",
     "searchIn": "Buscar {{name}}",

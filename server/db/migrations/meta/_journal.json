@@ -330,6 +330,13 @@
       "when": 1793924568668,
       "tag": "0046_mal_official_widgets",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1794017534730,
+      "tag": "0047_dm_call_message",
+      "breakpoints": true
     }
   ]
 }
