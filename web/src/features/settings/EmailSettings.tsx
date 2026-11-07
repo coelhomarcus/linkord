@@ -160,7 +160,7 @@ export function EmailSettings({ currentEmail }: { currentEmail: string | null })
               onChange={(event) => { setEmail(event.target.value); setValidationError(null); }}
             />
           </div>
-          <Button type="button" size="sm" disabled={pending} onClick={() => void handleRequest()}>
+          <Button type="button" size="lg" disabled={pending} onClick={() => void handleRequest()}>
             {pending ? <CircleNotchIcon size={20} className="animate-spin" /> : <EnvelopeIcon size={20} />}
             <span>{pending ? t('email.sending') : t('email.sendCode')}</span>
           </Button>
