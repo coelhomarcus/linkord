@@ -185,7 +185,7 @@ The `upgrade` project adapts to what the base version can do and says so in the 
 | `features/dm-call` | Decline, cancel, an answered call with audio both ways and its line in the chat, a video call. |
 | `features/webhooks` | Text and cards through the ingress (token in the URL and in the header), invalid payloads, rotating and deleting the URL, permission. |
 | `features/soundboard` | A sound uploaded to the server reaches everyone in the call. |
-| `features/profile` | Display name and bio reaching a friend live, mutual friends. |
+| `features/profile` | Display name and bio reaching a friend live, mutual friends, the games widgets on offer with no connection (the picker reports the search unavailable, as the stack has no IGDB credentials), and games saved with the Wall reaching a friend in order. |
 | `features/reports-admin` | Reporting a message, the admin deleting it for everyone, suspending an account. |
 | `features/settings` | The account's language following it to another browser. |
 | `restart/voice` | A voice call survives a redeploy: the tab nobody touched reconnects on its own (the socket drop is a transport close, never `io server disconnect`), and someone joining after the deploy lands in the same call, with audio both ways. |
@@ -212,9 +212,19 @@ To develop the widgets locally:
 - MyAnimeList needs `MAL_CLIENT_ID` (register an app at <https://myanimelist.net/apiconfig>); without it, MyAnimeList connections stay unavailable.
 - Syncing runs in the API process: a new connection is fetched within a minute, then every 24 hours. Viewing a profile only reads stored snapshots. Check the `connection-sync` logs when a widget stays empty.
 
+### Games widgets
+
+The four games widgets (favorite game, games I like, games in rotation, want to play) are not tied to a connection: they are always on offer to the owner when editing the Wall, and their data is what the owner picked, kept in `profile_games`. Locally:
+
+- Searching needs `IGDB_CLIENT_ID` and `IGDB_CLIENT_SECRET` (a Twitch developer app, see [INTEGRATIONS.md](INTEGRATIONS.md#igdb)). Without them the widgets still appear and the picker says the search is unavailable, which is what the end-to-end suite sees.
+- The lists are saved together with the Wall: `PUT /api/me/wall` takes `{ "widgets": [{ "connectionId": null, "type": "igdb-liked-games" }], "games": { "liked": [<snapshot>] } }`. A list left out of `games` is untouched; a list present replaces the stored one. A snapshot is `{ igdbId, name, slug, coverImageId, releaseYear }`. Lists stay saved when their widget is taken off the Wall.
+- `profile_wall_widgets.connection_id` is null for these widgets, so the table also carries `user_id`; the type decides which of the two a row has (a check constraint keeps them consistent).
+- `GET /api/games/search?q=` is the search proxy and shares `connection_sync_limits` (the `igdb` row) for its request pacing.
+- A tab still running a build from before the games widgets cannot draw one: opening the Wall of someone who added a games widget fails in that tab until it reloads.
+
 API: connections at `/api/me/connections` (`PATCH /api/me/connections/:id` with only `{ "showOnProfile": boolean }` changes the visibility), the Wall layout at `/api/me/wall`, and another user's Wall at `/api/users/:userId/wall`. `profileLinks` in profile payloads is a read-only list of the URLs shown on the profile.
 
-How each provider is called, its limits and what happens when it fails are in [INTEGRATIONS.md](INTEGRATIONS.md#myanimelist).
+How each provider is called, its limits and what happens when it fails are in [INTEGRATIONS.md](INTEGRATIONS.md#myanimelist) and, for games, [INTEGRATIONS.md](INTEGRATIONS.md#igdb).
 
 ## Troubleshooting
 

@@ -12,6 +12,7 @@ Every external service Linkord talks to, what it is used for, who makes the call
 | [KLIPY](#klipy) | GIF picker | Browser | `KLIPY_API_KEY` | No |
 | [MyAnimeList](#myanimelist) | Profile Wall widget | Server (background worker) | `MAL_CLIENT_ID` | No |
 | [GitHub](#github) | Profile Wall widgets | Server (background worker) | None | No |
+| [IGDB](#igdb) | Game search for the Wall's games widgets | Server (on demand) | `IGDB_CLIENT_ID`, `IGDB_CLIENT_SECRET` | No |
 | [Arbitrary websites](#link-previews) | Link preview cards | Server | None | Built in |
 | [YouTube and Twitch](#embedded-players) | Inline players for pasted links | Browser | None | Built in |
 
@@ -89,7 +90,29 @@ Both providers share one background worker ([`server/src/modules/connections/syn
 - Each connection is refreshed every 24 hours. MyAnimeList requests are spaced at least 1.1 seconds apart through a shared PostgreSQL limiter.
 - A failed sync keeps the last complete snapshot. `not_found`, `private` and `invalid_response` wait for the next daily cycle; `rate_limited` and `unavailable` retry with exponential backoff (honoring `Retry-After` and `X-RateLimit-Reset`).
 - HTTP helper ([`server/src/integrations/connectionHttp.ts`](../server/src/integrations/connectionHttp.ts)): 10-second timeout, redirects are an error, response bodies are capped at 2 MB, and status codes map to the errors above (404 → `not_found`, 403 → `private` or `rate_limited`, 429 → `rate_limited`).
-- Connections are managed under Settings → Connections; the owner chooses which widgets appear on the Wall. See "Profile connections and Wall" in [DEVELOPMENT.md](DEVELOPMENT.md#profile-connections-and-wall).
+- Connections are managed under Settings → Connections; the owner chooses which widgets appear on the Wall. The games widgets are the exception: they need no connection (see [IGDB](#igdb)). See "Profile connections and Wall" in [DEVELOPMENT.md](DEVELOPMENT.md#profile-connections-and-wall).
+
+## IGDB
+
+Game search behind the four games widgets of the Wall (favorite game, games I like, games in rotation, want to play). Unlike MyAnimeList and GitHub there is **no connected account and no background sync**: the owner picks games by hand, and the server calls IGDB only while someone is searching.
+
+- **Code:** [`server/src/integrations/igdb/igdb.ts`](../server/src/integrations/igdb/igdb.ts) (client and token), [`server/src/modules/games/`](../server/src/modules/games) (search, limits, saved lists). The picker is `web/src/features/games/`.
+- **Auth:** IGDB signs in as a Twitch app. `POST https://id.twitch.tv/oauth2/token` with `grant_type=client_credentials` returns a token, which the server keeps in memory until a minute before it expires and replaces once when a request comes back 401. Simultaneous searches share one token request.
+- **Search:** `GET /api/games/search?q=` (signed-in users only) runs `POST https://api.igdb.com/v4/games` with `search "…"; fields name,slug,first_release_date,cover.image_id; where version_parent = null; limit 10;` (editions are left out). The query is escaped for Apicalypse. The browser never talks to IGDB and never sees the credentials.
+- **Rate limit:** IGDB allows about 4 requests per second per Client ID and answers 429 beyond that. Protections, in order:
+  1. The text is normalized (lowercase, collapsed spaces, 2 to 64 characters); a shorter or longer one is a 400 without any request.
+  2. Results are cached per normalized query for 6 hours (500 entries, shared by everyone).
+  3. Identical searches in flight share one request.
+  4. Each user may start 20 searches per minute that miss the cache; cache hits and shared searches are free (`429 rate_limited` with `Retry-After`).
+  5. A PostgreSQL-coordinated slot (the `igdb` row of `connection_sync_limits`, one request per 300 ms, so about 3.3 per second across all instances) paces the actual requests. A search waits up to 2 seconds for a slot, then answers 429 with `Retry-After`. When IGDB itself answers 429, the same row holds everybody back for its `Retry-After` (at least a second).
+  The client adds a 400 ms debounce, a 2-character minimum, cancellation of the previous request, and an in-memory cache per normalized query.
+- **Errors on the wire:** `503 games_unavailable` (no credentials), `502 games_search_failed` (IGDB failed, timed out or sent an unrecognizable payload), `429 rate_limited`, `400 invalid_request`. Failures are never cached.
+- **What is stored:** when a game is picked, the client sends back its snapshot (`igdbId`, name, slug, cover `image_id`, release year) and the server saves it in `profile_games`; viewing a profile never calls IGDB. The snapshot comes from the browser, so it is validated strictly (sizes, character sets, no duplicates, list limits) and the server builds the links itself: covers only on `images.igdb.com` (`t_cover_small` in search, `t_cover_big` on the Wall) and game pages on `www.igdb.com`. A person can only misname their own picks. Snapshots are not refreshed afterwards.
+- **Limits:** one favorite; eight games in each of the other lists.
+- **Configuration:** register an app at <https://dev.twitch.tv/console> (the Twitch account needs two-factor authentication; the OAuth redirect URL is not used, `http://localhost` works) and set `IGDB_CLIENT_ID` and `IGDB_CLIENT_SECRET`.
+- **When missing:** if either is empty, searching answers `games_unavailable` and the picker says so; the widgets stay available and games already saved still show. The server boots normally.
+- **Data sent:** only the search text typed (normalized) goes to IGDB, together with the app's credentials; nothing identifies the user.
+- **Terms:** IGDB is free for non-commercial use under the Twitch Developer Service Agreement; commercial use needs a partnership with IGDB. The Wall links to igdb.com from each games widget and the picker credits IGDB as the source of the covers and data; the IGDB docs I read ask for nothing more.
 
 ## Link previews
 

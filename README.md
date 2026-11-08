@@ -38,7 +38,7 @@ Linkord is a self-hosted place to chat and call with friends. Talk in direct mes
   Manage users, servers, webhooks, reports, audit history, and orphaned uploads from `/admin`.
 
 - **Profile and Wall**
-  Show connected accounts on your profile and pick widgets for your Wall: recent anime from MyAnimeList, your GitHub profile and contribution calendar.
+  Show connected accounts on your profile and pick widgets for your Wall: recent anime from MyAnimeList, your GitHub profile and contribution calendar, and your favorite, liked, current and wished-for games, searched on IGDB.
 
 - **Your preferences**
   Set up your profile, account and email, connected accounts, blocked people, theme, voice and video devices, which notification sounds play, language and 12- or 24-hour time.

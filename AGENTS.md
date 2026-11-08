@@ -44,11 +44,11 @@ server/src/
   http/                 # app.ts (Fastify), cookies.ts, respond.ts, errors.ts, originGuard.ts
   realtime/             # socket.ts — combines every module's `handlers` into one dispatch table;
                         # protocolVersion.ts, floodControl.ts
-  integrations/<name>/  # external service adapters: livekit/, github/, myanimelist/ (+ connectionHttp.ts)
+  integrations/<name>/  # external service adapters: livekit/, github/, myanimelist/, igdb/ (+ connectionHttp.ts)
   net/                  # safeRequest.ts, ssrfGuard.ts — every request to a user-chosen URL
   lib/                  # logger.ts
   modules/<domain>/     # admin, attachments, auth, blocks, bots, calls, connections, conversations,
-                        # friendships, gifs, limits, link-preview, logs, messages, migration,
+                        # friendships, games, gifs, limits, link-preview, logs, messages, migration,
                         # moderation, notifications, presence, profile, reports, servers,
                         # soundboard, users
   scripts/              # CLI scripts behind `npm run db:*`, `admin:*`, `test:integration`
