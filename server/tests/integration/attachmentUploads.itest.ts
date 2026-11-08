@@ -11,7 +11,7 @@ import { config } from '../../src/config/env.js';
 import { attachments as attachmentsTable, messageSendOperations, messages, serverMembers, stagedAttachments } from '../../src/db/schema.js';
 import { invalidateAllServers } from '../../src/modules/servers/serverAccess.js';
 import { getByMessageIds } from '../../src/modules/attachments/attachments.js';
-import { getUserUsage } from '../../src/modules/attachments/attachmentQuota.js';
+import { getUsage } from '../../src/modules/attachments/attachmentQuota.js';
 import { STAGED_TTL_MS, stagedFileIds, sweepExpiredStaged } from '../../src/modules/attachments/stagedAttachments.js';
 import { handlers as chatHandlers } from '../../src/modules/messages/messages.js';
 import { registerAttachmentRoutes } from '../../src/modules/attachments/attachments.js';
@@ -67,18 +67,34 @@ describe('staged upload and batch publishing (real Postgres)', () => {
     }
   };
 
-  it('staging does not publish anything, does not serve the file to anyone, and counts toward the quota', async () => {
-    const { owner, conversationId, cookie } = await member();
-    const before = await getUserUsage(owner.id);
+  it('staging does not publish anything, does not serve the file to anyone, and counts toward the storage ceiling', async () => {
+    const { conversationId, cookie } = await member();
+    const before = await getUsage();
     const id = await stage(cookie, conversationId);
 
     assert.equal((await db.select().from(messages).where(eq(messages.conversationId, conversationId))).length, 0);
     assert.equal((await db.select().from(attachmentsTable).where(eq(attachmentsTable.id, id))).length, 0);
     const served = await app.inject({ method: 'GET', url: `/uploads/${id}`, headers: { cookie } });
     assert.equal(served.statusCode, 404);
-    const after = await getUserUsage(owner.id);
-    assert.ok(after.totalBytes >= before.totalBytes + bigPng.length, 'staged bytes count toward the quota');
+    const after = await getUsage();
+    assert.ok(after.totalBytes >= before.totalBytes + bigPng.length, 'staged bytes count toward the instance total');
     assert.ok((await stagedFileIds()).includes(id), 'the orphan sweep sees the staged file');
+  });
+
+  it('takes a file up to the configured size and refuses one byte more, with no quota of the account in the way', async () => {
+    const { conversationId, cookie } = await member();
+    const init = (totalSize: number) => app.inject({ method: 'POST', url: '/api/attachments/init', headers: { cookie }, payload: { conversationId, fileName: 'big.bin', mimeType: 'application/octet-stream', totalSize } });
+    assert.equal(config.MAX_ATTACHMENT_BYTES, 512 * 1024 * 1024);
+    const tooBig = await init(config.MAX_ATTACHMENT_BYTES + 1);
+    assert.equal(tooBig.statusCode, 400); assert.equal(tooBig.json().error.code, 'invalid_size');
+    // ten files at the limit reserve 5 GB, past the old 5 GB per-account quota, and all are accepted
+    const ids: string[] = [];
+    for (let i = 0; i < 10; i++) {
+      const accepted = await init(config.MAX_ATTACHMENT_BYTES);
+      assert.equal(accepted.statusCode, 201, accepted.body);
+      ids.push((accepted.json() as { uploadId: string }).uploadId);
+    }
+    for (const id of ids) await app.inject({ method: 'DELETE', url: `/api/attachments/${id}`, headers: { cookie } });
   });
 
   it('repeating complete after success returns the same staged file', async () => {

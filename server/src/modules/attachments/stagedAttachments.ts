@@ -50,13 +50,13 @@ export async function sweepExpiredStaged(now = Date.now()): Promise<number> {
   return removed.length;
 }
 
-/** Bytes waiting in staging — for one owner, or the whole instance. They
- * are on disk already, so they count against the quota like stored files. */
-export async function stagedBytes(ownerId?: string): Promise<{ bytes: number; files: number }> {
+/** Bytes waiting in staging across the instance. They are on disk already,
+ * so they count against the storage ceiling like stored files. */
+export async function stagedBytes(): Promise<{ bytes: number; files: number }> {
   const [row] = await db.select({
     bytes: sql<number>`coalesce(sum(${stagedAttachments.size} + coalesce(${stagedAttachments.thumbSize}, 0)), 0)::float8`,
     files: sql<number>`count(*)::int`,
-  }).from(stagedAttachments).where(ownerId ? eq(stagedAttachments.ownerId, ownerId) : undefined);
+  }).from(stagedAttachments);
   return { bytes: Number(row?.bytes ?? 0), files: Number(row?.files ?? 0) };
 }
 

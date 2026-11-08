@@ -3,7 +3,7 @@ import fsStreams from 'node:fs'; // only for createReadStream/createWriteStream 
 import path from 'node:path';
 import { config } from '../../config/env.js';
 
-// Chunked upload for MAX_ATTACHMENT_BYTES (2GB): a single POST that size
+// Chunked upload for files up to MAX_ATTACHMENT_BYTES (512MB by default): a single POST that size
 // wouldn't survive most proxies or be safe to buffer in memory. Upload
 // session state lives on disk only (no DB table) — deployment is single-
 // instance, so there's no need to share it across processes. `uploadId`
@@ -64,7 +64,7 @@ export function expectedChunkLength(manifest: UploadManifest, index: number): nu
 }
 
 /** Streams chunks in order into the final file — never Buffer.concat, which
- * is exactly what a 2GB upload needs to avoid. */
+ * is exactly what an upload of hundreds of MB needs to avoid. */
 export async function assembleChunks(uploadId: string, manifest: UploadManifest, destPath: string): Promise<void> {
   const writeStream = fsStreams.createWriteStream(destPath);
   try {
@@ -87,27 +87,16 @@ export async function assembleChunks(uploadId: string, manifest: UploadManifest,
 }
 
 // Reserve declared sizes before chunks reach the database so concurrent uploads cannot bypass
-// the quota. Release a reservation only after its files are deleted; failed completes keep their
+// the instance-wide storage ceiling. Release a reservation only after its files are deleted; failed completes keep their
 // chunks retryable. The stale-upload sweep rebuilds these in-memory totals after restart.
 const pendingUploadBytes = new Map<string, number>();
 
-// Kept in sync with pendingUploadBytes so per-account quotas include in-flight uploads.
-const pendingUploadOwners = new Map<string, string>();
-
-export function reserveUpload(uploadId: string, bytes: number, userId: string): void {
+export function reserveUpload(uploadId: string, bytes: number): void {
   pendingUploadBytes.set(uploadId, bytes);
-  pendingUploadOwners.set(uploadId, userId);
 }
 
 export function releaseUpload(uploadId: string): void {
   pendingUploadBytes.delete(uploadId);
-  pendingUploadOwners.delete(uploadId);
-}
-
-export function getReservedBytesForUser(userId: string): number {
-  let sum = 0;
-  for (const [id, owner] of pendingUploadOwners) if (owner === userId) sum += pendingUploadBytes.get(id) ?? 0;
-  return sum;
 }
 
 export function getReservedBytes(): number {
@@ -152,12 +141,10 @@ export async function sweepStaleUploads(): Promise<void> {
     const dir = path.join(tmpRoot, id);
     let createdAtMs: number;
     let totalSize: number | undefined;
-    let ownerId: string | undefined;
     try {
       const manifest: UploadManifest = JSON.parse(await fs.readFile(path.join(dir, 'manifest.json'), 'utf8'));
       createdAtMs = new Date(manifest.createdAt).getTime();
       totalSize = manifest.totalSize;
-      ownerId = manifest.userId;
     } catch {
       // manifest missing/corrupt — fall back to the folder's creation time
       // so it can still be swept.
@@ -170,8 +157,8 @@ export async function sweepStaleUploads(): Promise<void> {
     if (Date.now() - createdAtMs > config.UPLOAD_SESSION_TTL_MS) {
       await fs.rm(dir, { recursive: true, force: true }).catch(() => {});
       releaseUpload(id);
-    } else if (totalSize != null && ownerId) {
-      reserveUpload(id, totalSize, ownerId);
+    } else if (totalSize != null) {
+      reserveUpload(id, totalSize);
     }
   }
 }

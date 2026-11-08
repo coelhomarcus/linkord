@@ -37,9 +37,8 @@ export const ERROR_REGISTRY = {
   user_not_found: { statuses: [404], channel: 'http' },
   relationship_required: { statuses: [403], channel: 'both' },
   cooldown: { statuses: [409], channel: 'http' },
-  // 400: the account's storage quota (upload init); 409: a count quota that needs
-  // another action first (friends, pending requests, servers)
-  quota_exceeded: { statuses: [400, 409], channel: 'both' },
+  // a count quota that needs another action first (friends, pending requests, servers)
+  quota_exceeded: { statuses: [409], channel: 'both' },
   storage_full: { statuses: [400], channel: 'http' },
 
   invalid_connection: { statuses: [400], channel: 'http' },

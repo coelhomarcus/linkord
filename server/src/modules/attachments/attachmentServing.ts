@@ -220,7 +220,7 @@ export function decodeUtf8Prefix(buffer: Buffer): string | null {
  * card. Deliberately a SEPARATE endpoint from serveUpload/`/uploads/:id`
  * rather than just adding text/* to INLINE_MIME_TYPES there: serveUpload has
  * no concept of "first N KB only" (a text attachment can be up to
- * MAX_ATTACHMENT_BYTES = 2GiB) and no binary-sniffing — both of which matter
+ * MAX_ATTACHMENT_BYTES, 512MB by default) and no binary-sniffing — both of which matter
  * here but would be out of place bolted onto the real-download path. */
 export async function handleAttachmentPreview(request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply): Promise<void> {
   const cookies = parseCookies(request.headers.cookie || '');
