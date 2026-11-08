@@ -37,6 +37,22 @@ async function chooseWidget(user: ReturnType<typeof userEvent.setup>, name: stri
   if (GROUP_OF[name]) await user.click(within(dialog).getByRole('button', { name: GROUP_OF[name] }));
   await user.click(within(dialog).getByRole('button', { name }));
 }
+/** jsdom has no layout: place each widget row 200px below the previous one, so dragging with the keyboard has somewhere to go. */
+function layOutRows() {
+  return vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+    const row = this.closest('[data-wall-widget]');
+    const index = row ? Array.from(row.parentElement!.children).indexOf(row) : 0;
+    const top = index * 200;
+    return { x: 0, y: top, left: 0, top, width: 400, height: 180, right: 400, bottom: top + 180, toJSON: () => ({}) } as DOMRect;
+  });
+}
+async function dragUp(user: ReturnType<typeof userEvent.setup>, name: string) {
+  const handle = screen.getByRole('button', { name: `Reordenar ${name}` });
+  handle.focus();
+  await user.keyboard(' ');
+  await user.keyboard('{ArrowUp}');
+  await user.keyboard(' ');
+}
 const saveBar = () => screen.queryByRole('region', { name: 'Salvar alterações do Mural' });
 describe('profile Wall', () => {
   it('lets the owner edit without a mode to enter, and shows no save bar until something changes', async () => {
@@ -44,6 +60,9 @@ describe('profile Wall', () => {
     expect(await addWidgetButton()).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Cowboy Bebop' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Remover Atividade recente de animes' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Reordenar Atividade recente de animes' })).toBeInTheDocument();
+    // no dashed frame and no arrow buttons any more: a handle to drag and a floating delete
+    expect(screen.queryByRole('button', { name: /para cima|para baixo/ })).not.toBeInTheDocument();
     expect(saveBar()).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Salvar' })).not.toBeInTheDocument();
   });
@@ -155,8 +174,9 @@ describe('profile Wall', () => {
     mocked.fetchWall.mockResolvedValue({ widgets: [], available: [anime, profile] }); renderWall();
     await chooseWidget(user, 'Atividade recente de animes');
     await chooseWidget(user, 'Perfil do GitHub');
-    expect(screen.getByRole('button', { name: 'Mover Atividade recente de animes para cima' })).toBeDisabled();
-    await user.click(screen.getByRole('button', { name: 'Mover Perfil do GitHub para cima' }));
+    const rows = layOutRows();
+    await dragUp(user, 'Perfil do GitHub');
+    rows.mockRestore();
     const references = [{ connectionId: 'gh', type: 'github-profile' }, { connectionId: 'mal', type: 'mal-recent-anime' }];
     mocked.saveWall.mockResolvedValue({ widgets: [profile, anime], available: [anime, profile] });
     await user.click(screen.getByRole('button', { name: 'Salvar' }));
@@ -169,17 +189,35 @@ describe('profile Wall', () => {
   it('saves a reordering of the widgets already there', async () => {
     const user = userEvent.setup();
     mocked.fetchWall.mockResolvedValue({ widgets: [anime, profile], available: [anime, profile] }); renderWall();
-    await user.click(await screen.findByRole('button', { name: 'Mover Perfil do GitHub para cima' }));
+    await screen.findByRole('button', { name: 'Reordenar Perfil do GitHub' });
+    const rows = layOutRows();
+    await dragUp(user, 'Perfil do GitHub');
+    rows.mockRestore();
+    expect(saveBar()).toBeInTheDocument();
     mocked.saveWall.mockResolvedValue({ widgets: [profile, anime], available: [anime, profile] });
     await user.click(screen.getByRole('button', { name: 'Salvar' }));
     await waitFor(() => expect(mocked.saveWall).toHaveBeenCalledWith([{ connectionId: 'gh', type: 'github-profile' }, { connectionId: 'mal', type: 'mal-recent-anime' }]));
+  });
+
+  it('leaves the order alone when a drag is cancelled with Escape', async () => {
+    const user = userEvent.setup();
+    mocked.fetchWall.mockResolvedValue({ widgets: [anime, profile], available: [anime, profile] }); renderWall();
+    const handle = await screen.findByRole('button', { name: 'Reordenar Perfil do GitHub' });
+    const rows = layOutRows();
+    handle.focus();
+    await user.keyboard(' ');
+    await user.keyboard('{ArrowUp}');
+    await user.keyboard('{Escape}');
+    rows.mockRestore();
+    expect(saveBar()).not.toBeInTheDocument();
+    expect(screen.getAllByRole('heading', { level: 3 }).map((heading) => heading.textContent)).toEqual(expect.arrayContaining(['Atividade recente de animes', 'Perfil do GitHub']));
   });
 
   it('shows published widgets to visitors without edit controls, catalog or bar', async () => {
     mocked.fetchWall.mockResolvedValue({ widgets: [anime] }); renderWall(false);
     expect(await screen.findByRole('link', { name: 'Cowboy Bebop' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Adicionar widget' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Remover|Mover/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Remover|Mover|Reordenar/ })).not.toBeInTheDocument();
     expect(saveBar()).not.toBeInTheDocument();
     expect(mocked.fetchWall).toHaveBeenCalledWith('me', false, expect.any(AbortSignal));
   });

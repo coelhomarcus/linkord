@@ -117,7 +117,7 @@ describe('ProfileEditor', () => {
     await user.click(screen.getByRole('button', { name: 'Cor do perfil: Verde' }));
     await user.click(await screen.findByRole('button', { name: 'Usar Fuchsia' }));
     await user.click(screen.getByRole('button', { name: 'Salvar perfil' }));
-    expect(await screen.findByRole('status')).toHaveTextContent('Perfil salvo.');
+    expect(await screen.findByText('Perfil salvo.')).toHaveAttribute('role', 'status');
 
     expect(updateProfile).toHaveBeenCalledWith({
       avatar: '',
@@ -290,7 +290,7 @@ describe('ProfileEditor', () => {
     await user.upload(screen.getByLabelText('Selecionar foto de perfil'), new File(['conteudo'], 'foto.gif', { type: 'image/gif' }));
     await user.click(screen.getByRole('button', { name: 'Confirmar recorte' }));
 
-    expect(await screen.findByRole('status')).toHaveTextContent('Processando imagem…');
+    expect((await screen.findByText('Processando imagem…')).closest('[role="status"]')).not.toBeNull();
     expect(screen.queryByText('Enviando a foto de perfil…')).not.toBeInTheDocument();
 
     finishUpload?.();
@@ -391,7 +391,7 @@ describe('ProfileEditor', () => {
     await user.type(screen.getByLabelText('Bio'), 'Bio nova');
     await user.click(screen.getByRole('button', { name: 'Salvar perfil' }));
 
-    expect(await screen.findByRole('status')).toHaveTextContent('Perfil salvo.');
+    expect(await screen.findByText('Perfil salvo.')).toHaveAttribute('role', 'status');
     expect(screen.queryByText('Usar valores salvos')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Salvar perfil' })).not.toBeInTheDocument();
   });

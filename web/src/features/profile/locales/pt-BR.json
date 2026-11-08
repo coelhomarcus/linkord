@@ -125,8 +125,6 @@
     "manageConnections": "Gerenciar conexões",
     "emptyOwner": "Seu Mural está vazio. Adicione um widget para escolher o que aparece.",
     "emptyVisitor": "Este usuário ainda não publicou widgets no Mural.",
-    "moveUp": "Mover {{name}} para cima",
-    "moveDown": "Mover {{name}} para baixo",
     "remove": "Remover {{name}}",
     "unavailable": "Não foi possível carregar os dados deste widget.",
     "pending": "Os dados aparecerão após a primeira sincronização.",
@@ -185,7 +183,16 @@
     "connectTitle": "Conecte sua conta do {{service}}",
     "connectHint": "Os widgets do {{service}} aparecem aqui assim que a conta estiver conectada. A titularidade da conta não é verificada.",
     "connect": "Conectar",
-    "connecting": "Conectando…"
+    "connecting": "Conectando…",
+    "sortable": {
+      "role": "widget reordenável",
+      "handle": "Reordenar {{name}}",
+      "instructions": "Para reordenar, pressione espaço ou Enter, use as setas para cima e para baixo e pressione espaço ou Enter de novo para soltar. Esc cancela.",
+      "picked": "Você pegou {{name}}, na posição {{position}} de {{total}}.",
+      "moved": "{{name}} está na posição {{position}} de {{total}}.",
+      "dropped": "{{name}} ficou na posição {{position}} de {{total}}.",
+      "cancelled": "Cancelado. {{name}} voltou para a posição {{position}}."
+    }
   },
   "editor": {
     "fileTooLarge": "Arquivo muito grande (máximo {{max}}).",

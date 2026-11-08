@@ -125,8 +125,6 @@
     "manageConnections": "Manage connections",
     "emptyOwner": "Your Wall is empty. Add a widget to choose what shows.",
     "emptyVisitor": "This user has not published any Wall widgets yet.",
-    "moveUp": "Move {{name}} up",
-    "moveDown": "Move {{name}} down",
     "remove": "Remove {{name}}",
     "unavailable": "Could not load data for this widget.",
     "pending": "Data will appear after the first sync.",
@@ -185,7 +183,16 @@
     "connectTitle": "Connect your {{service}} account",
     "connectHint": "The {{service}} widgets show up here once the account is connected. Account ownership is not verified.",
     "connect": "Connect",
-    "connecting": "Connecting…"
+    "connecting": "Connecting…",
+    "sortable": {
+      "role": "reorderable widget",
+      "handle": "Reorder {{name}}",
+      "instructions": "To reorder, press Space or Enter, use the up and down arrows, and press Space or Enter again to drop. Escape cancels.",
+      "picked": "Picked up {{name}}, at position {{position}} of {{total}}.",
+      "moved": "{{name}} is at position {{position}} of {{total}}.",
+      "dropped": "{{name}} was dropped at position {{position}} of {{total}}.",
+      "cancelled": "Cancelled. {{name}} went back to position {{position}}."
+    }
   },
   "editor": {
     "fileTooLarge": "File too large (maximum {{max}}).",
