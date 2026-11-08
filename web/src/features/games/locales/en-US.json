@@ -1,28 +1,15 @@
 {
-  "editor": {
-    "title": {
-      "favorite": "Favorite game",
-      "liked": "Games I like",
-      "playing": "Games in rotation",
-      "wishlist": "Want to play"
-    },
-    "selected": "{{selected}} of {{max}}",
-    "pickedList": "Chosen games: {{title}}",
-    "empty": "No games chosen yet.",
-    "moveUp": "Move {{name}} up",
-    "moveDown": "Move {{name}} down",
-    "remove": "Remove {{name}}",
+  "picker": {
+    "title": "Choose a game",
     "searchLabel": "Search for a game",
     "searchPlaceholder": "Game name",
     "hint": "Type at least {{min}} letters to search.",
     "loading": "Searching games…",
     "noResults": "No games found for “{{query}}”.",
     "resultsList": "Search results",
-    "add": "Add {{name}}",
-    "choose": "Pick {{name}} as favorite",
+    "choose": "Choose {{name}}",
     "alreadyAdded": "{{name}} is already in the list",
     "added": "In the list",
-    "full": "The list is full ({{max}} games). Remove a game to add another.",
     "retry": "Try again",
     "source": "Game covers and data: IGDB",
     "errors": {

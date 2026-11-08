@@ -100,7 +100,7 @@ export function ProfileModal({ userId, initialTab, onClose, onOpenProfile }: Pro
         <DialogContent
           // one row: the header is sr-only (absolutely positioned, no row of its
           // own), so the content takes the whole height and scrolls inside it
-          className="scrollbar-none max-h-[90vh] max-w-[calc(100%-2rem)] grid-rows-[minmax(0,1fr)] gap-0 overflow-hidden bg-bg-modal p-0 sm:max-w-4xl md:h-[min(42rem,90vh)]"
+          className="scrollbar-none max-h-[92dvh] max-w-[calc(100%-2rem)] grid-rows-[minmax(0,1fr)] gap-0 overflow-hidden bg-bg-modal p-0 sm:max-w-4xl md:h-[min(52rem,92dvh)]"
         >
           <DialogHeader className="sr-only">
             <DialogTitle>{t('modal.profileOf', { name: user.displayName })}</DialogTitle>

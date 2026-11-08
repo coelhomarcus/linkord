@@ -115,7 +115,6 @@
   "wall": {
     "title": "Mural",
     "profileTabs": "Abas do perfil",
-    "cancel": "Cancelar",
     "save": "Salvar",
     "saving": "Salvando…",
     "loading": "Carregando Mural…",
@@ -124,7 +123,6 @@
     "addWidgetHint": "Escolha o que aparece no seu Mural.",
     "addWidget": "Adicionar widget",
     "yours": "Seus Widgets",
-    "allAdded": "Todos os widgets disponíveis já foram adicionados.",
     "manageConnections": "Gerenciar conexões",
     "emptyOwner": "Seu Mural está vazio. Adicione um widget para escolher o que aparece.",
     "emptyVisitor": "Este usuário ainda não publicou widgets no Mural.",
@@ -166,10 +164,29 @@
       "day": "{{date}}: {{total}} contribuições"
     },
     "noGames": "Nenhum jogo escolhido ainda.",
-    "gamesSource": "{{service}}, fonte dos dados dos jogos",
-    "chooseGames": "Escolher jogos",
-    "doneGames": "Fechar",
-    "gamesToggle": "{{action}}: {{name}}"
+    "games": {
+      "add": "Adicionar jogo a {{widget}}",
+      "replace": "Trocar {{name}}",
+      "remove": "Remover {{name}}",
+      "moveEarlier": "Mover {{name}} para antes",
+      "moveLater": "Mover {{name}} para depois"
+    },
+    "addWidgetTitle": "Adicionar widget de perfil",
+    "categories": "Tipos de widget",
+    "added": "Adicionado",
+    "unsaved": "Não se esqueça de salvar suas alterações!",
+    "reset": "Redefinir",
+    "barLabel": "Salvar alterações do Mural",
+    "groups": {
+      "igdb": "Jogos",
+      "myanimelist": "Anime",
+      "github": "GitHub"
+    },
+    "cancel": "Cancelar",
+    "connectTitle": "Conecte sua conta do {{service}}",
+    "connectHint": "Os widgets do {{service}} aparecem aqui assim que a conta estiver conectada. A titularidade da conta não é verificada.",
+    "connect": "Conectar",
+    "connecting": "Conectando…"
   },
   "editor": {
     "fileTooLarge": "Arquivo muito grande (máximo {{max}}).",

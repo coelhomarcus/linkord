@@ -69,6 +69,7 @@ function EditableBio({ value, onChange, disabled }: { value: string; onChange: (
 
   return (
     <div className="mt-4 flex flex-col items-end gap-1">
+      <h3 className="self-start text-caption font-medium text-text-muted">{t('card.bio')}</h3>
       <textarea
         ref={ref}
         aria-label={t('card.bio')}

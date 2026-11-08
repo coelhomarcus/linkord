@@ -16,6 +16,7 @@ import { formatMB } from '@/shared/lib/formatBytes';
 import { AVATAR_MIME_TYPES, MAX_AVATAR_BYTES } from '@/shared/types/protocol';
 import { Button } from '@/shared/ui/primitives/button';
 import { ProfileCard } from './ProfileCard';
+import { FLOATING_BAR_SLOT_CLASS, FloatingBar, FloatingBarSlotProvider } from './FloatingBar';
 import { ProfileConnections } from './ProfileConnections';
 import { ProfileSidebar } from './ProfileSidebar';
 import { BANNER_ASPECT_RATIO } from './profileLinks';
@@ -213,9 +214,10 @@ export function ProfileEditor({ online, details, onClose, registerLeaveGuard }: 
   }, [showBar]);
 
   const userId = state.me.userId;
+  const [barSlot, setBarSlot] = useState<HTMLElement | null>(null);
 
   return (
-    <>
+    <FloatingBarSlotProvider value={barSlot}>
       <form
         onSubmit={handleFormSubmit}
         onPointerDownCapture={rememberTouched}
@@ -318,11 +320,7 @@ export function ProfileEditor({ online, details, onClose, registerLeaveGuard }: 
         />
 
         {showBar && (
-          <div
-            role="region"
-            aria-label={t('editor.barLabel')}
-            className="absolute bottom-4 left-1/2 z-10 flex w-[min(100%-2rem,28rem)] -translate-x-1/2 flex-wrap items-center justify-between gap-3 rounded-xl border border-border-strong bg-bg-floating/95 px-4 py-3 shadow-popover backdrop-blur-xl"
-          >
+          <FloatingBar label={t('editor.barLabel')}>
             {justSaved && !saving && saveState !== 'error' ? (
               <p role="status" className="text-label font-medium text-green">{t('editor.saved')}</p>
             ) : (
@@ -342,8 +340,9 @@ export function ProfileEditor({ online, details, onClose, registerLeaveGuard }: 
                 </Button>
               </div>
             )}
-          </div>
+          </FloatingBar>
         )}
+        <div ref={setBarSlot} className={FLOATING_BAR_SLOT_CLASS} />
       </form>
 
       <UnsavedProfileChangesDialog
@@ -372,6 +371,6 @@ export function ProfileEditor({ online, details, onClose, registerLeaveGuard }: 
         title={activeUpload?.field === 'banner' ? t('editor.uploadingTitle.banner') : t('editor.uploadingTitle.avatar')}
         progress={activeUpload?.field === 'banner' ? bannerUploadProgress : avatarUploadProgress}
       />
-    </>
+    </FloatingBarSlotProvider>
   );
 }

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { PencilSimpleIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
-import { ApiError } from '@/shared/api/api';
 import { ConfirmDialog } from '@/shared/ConfirmDialog';
 import { Button } from '@/shared/ui/primitives/button';
 import { Switch } from '@/shared/ui/primitives/switch';
@@ -11,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { useRoom } from '@/state/RoomContext';
 import { connectionBrand } from './connectionBrands';
 import { BrandIcon } from './profileLinks';
+import { describeConnectionError } from './connectionErrors';
 import { createConnection, deleteConnection, editConnection, fetchConnections, setConnectionVisibility } from './profileApi';
 import type { ConnectionProvider, ConnectionsResponse, ProfileConnection } from './connectionsTypes';
 import { SettingsSection, SettingsSections, SettingsSubheading } from '@/features/settings/SettingsLayout';
@@ -44,18 +44,6 @@ export function ConnectionsSettings() {
     window.addEventListener('profile-connections-changed', refresh);
     return () => { mounted.current = false; clearInterval(timer); window.removeEventListener('profile-connections-changed', refresh); };
   }, [load]);
-  function describe(error: unknown) {
-    if (error instanceof ApiError) {
-      switch (error.code) {
-        case 'invalid_connection': return t('integration.errors.invalid');
-        case 'connection_exists': return t('integration.errors.duplicate');
-        case 'quota_exceeded': return t('integration.errors.limit');
-        case 'connection_not_found': return t('integration.errors.missing');
-        case 'rate_limited': return t('integration.errors.rateLimited');
-      }
-    }
-    return t('integration.errors.failed');
-  }
   function accept(result: ConnectionsResponse) {
     if (!mounted.current) return;
     sequence.current++;
@@ -69,19 +57,19 @@ export function ConnectionsSettings() {
     try {
       const result = dialog.connection ? await editConnection(dialog.connection.id, value) : await createConnection(dialog.provider, value);
       accept(result); if (mounted.current) setDialog(null);
-    } catch (error) { if (mounted.current) setError(describe(error)); }
+    } catch (error) { if (mounted.current) setError(describeConnectionError(error)); }
     finally { if (mounted.current) setBusy(false); }
   }
   async function toggleVisibility(connection: ProfileConnection, showOnProfile: boolean) {
     setBusy(true); setError(null);
     try { accept(await setConnectionVisibility(connection.id, showOnProfile)); }
-    catch (error) { if (mounted.current) setError(describe(error)); }
+    catch (error) { if (mounted.current) setError(describeConnectionError(error)); }
     finally { if (mounted.current) setBusy(false); }
   }
   async function remove(connection: ProfileConnection) {
     setBusy(true); setError(null);
     try { accept(await deleteConnection(connection.id)); }
-    catch (error) { if (mounted.current) setError(describe(error)); }
+    catch (error) { if (mounted.current) setError(describeConnectionError(error)); }
     finally { if (mounted.current) setBusy(false); }
   }
   const providerName = (provider: ConnectionProvider) => connectionBrand(provider)?.name ?? t('integration.url');
