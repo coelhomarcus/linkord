@@ -232,6 +232,23 @@ describe('ProfileModal — since when and what you have in common', () => {
     expect(screen.queryByLabelText('Nome de exibição')).not.toBeInTheDocument();
   });
 
+  it("someone else's custom status shows as a bubble beside the avatar, with no owner buttons", async () => {
+    renderProfile({
+      onlineUserIds: new Set(['u1']),
+      presenceByUser: new Map([['u1', { status: 'online', customStatus: { emoji: '🎮', text: 'jogando Elden Ring', expiresAt: null } }]]),
+    });
+    const text = await screen.findByText('jogando Elden Ring');
+    expect(text.closest('[data-custom-status-bubble]')).not.toBeNull();
+    expect(screen.queryByRole('button', { name: 'Editar status personalizado' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Definir status personalizado' })).not.toBeInTheDocument();
+  });
+
+  it('your own profile invites you to set a custom status, opening the editor', async () => {
+    renderProfile({ state: { ...initialRoomState, me: { ...initialRoomState.me, userId: 'u1', name: 'marcus', displayName: 'Marcus' } } });
+    await userEvent.setup().click(await screen.findByRole('button', { name: 'Definir status personalizado' }));
+    expect(await screen.findByRole('dialog', { name: 'Status personalizado' })).toBeInTheDocument();
+  });
+
   it('a failed load offers to try again', async () => {
     mocked.fetchProfileDetails.mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce(details);
     renderProfile();

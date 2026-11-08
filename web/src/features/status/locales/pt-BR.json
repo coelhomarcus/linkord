@@ -56,5 +56,9 @@
   "errors": {
     "saveFailed": "Não foi possível mudar seu status. Tente de novo.",
     "offline": "Sem conexão agora. Tente de novo quando voltar."
+  },
+  "bubble": {
+    "invite": "Como está o seu dia?",
+    "actions": "Ações do status personalizado"
   }
 }

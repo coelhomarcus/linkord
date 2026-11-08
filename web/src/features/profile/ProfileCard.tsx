@@ -13,7 +13,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { cn } from '@/shared/lib/utils';
 import { ProfileColorPicker } from './ProfileColorPicker';
 import { StatusDot } from '@/features/status/StatusDot';
-import { CustomStatusText } from '@/features/status/CustomStatusText';
+import { CustomStatusBubble } from '@/features/status/CustomStatusBubble';
 import type { DisplayStatus } from '@/features/status/statusDisplay';
 import type { CustomStatus } from '@/shared/types/protocol';
 
@@ -34,6 +34,9 @@ interface ProfileCardProps {
   /** the presence dot on the avatar; left out, there is none */
   status?: DisplayStatus;
   customStatus?: CustomStatus | null;
+  /** makes the custom status bubble the owner's: edit and clear it, or an invitation when there is none */
+  onEditCustomStatus?: () => void;
+  onClearCustomStatus?: () => void;
   onAvatarClick?: () => void;
   onBannerClick?: () => void;
   onAvatarUpload?: () => void;
@@ -93,7 +96,7 @@ function EditableBio({ value, onChange, disabled }: { value: string; onChange: (
 }
 
 export function ProfileCard({
-  user, status, customStatus, onAvatarClick, onBannerClick,
+  user, status, customStatus, onEditCustomStatus, onClearCustomStatus, onAvatarClick, onBannerClick,
   onAvatarUpload, onAvatarRemove, avatarUploading,
   onBannerUpload, onBannerRemove, bannerUploading,
   className,
@@ -193,11 +196,16 @@ export function ProfileCard({
             {status && <StatusDot status={status} labelled className="absolute right-1 bottom-1 size-5 border-4 text-bg-modal" />}
           </div>
 
-          {onAvatarColorChange && (
-            <div className="mb-1">
-              <ProfileColorPicker userId={user.id} value={user.avatarColor} disabled={fieldsDisabled} onChange={onAvatarColorChange} />
-            </div>
-          )}
+          {/* the bubble straddles the banner's edge, its tail pointing down at the avatar; the colour
+              picker (editor only) sits under it at the avatar's foot */}
+          <div className="flex min-w-0 flex-1 flex-col gap-4 self-stretch pt-6">
+            <CustomStatusBubble custom={customStatus ?? null} onEdit={onEditCustomStatus} onClear={onClearCustomStatus} className="ml-1" />
+            {onAvatarColorChange && (
+              <div className="mt-auto mb-1">
+                <ProfileColorPicker userId={user.id} value={user.avatarColor} disabled={fieldsDisabled} onChange={onAvatarColorChange} />
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="mt-3 flex min-w-0 flex-col gap-1">
@@ -232,7 +240,6 @@ export function ProfileCard({
               </span>
             )}
           </div>
-          <CustomStatusText custom={customStatus ?? null} className="mt-1 text-label text-text-secondary" />
         </div>
 
         {actions && <div className="mt-4">{actions}</div>}

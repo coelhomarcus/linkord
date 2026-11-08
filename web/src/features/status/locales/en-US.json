@@ -56,5 +56,9 @@
   "errors": {
     "saveFailed": "Couldn't change your status. Try again.",
     "offline": "You're offline right now. Try again once you're back."
+  },
+  "bubble": {
+    "invite": "How's your day going?",
+    "actions": "Custom status actions"
   }
 }

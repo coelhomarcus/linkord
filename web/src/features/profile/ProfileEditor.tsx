@@ -26,6 +26,7 @@ import { formatProfileDate } from './useProfileDetails';
 import type { useProfileDetails } from './useProfileDetails';
 import { useProfileDraft } from './useProfileDraft';
 import type { DisplayStatus } from '@/features/status/statusDisplay';
+import { useCustomStatusActions } from '@/features/status/useCustomStatusActions';
 import type { CustomStatus } from '@/shared/types/protocol';
 
 type ProfileCropTarget = { field: 'avatar' | 'banner'; file: File; src: string };
@@ -65,6 +66,8 @@ export function ProfileEditor({ status, customStatus, details, onClose, register
   const [activeUpload, setActiveUpload] = useState<{ field: 'avatar' | 'banner'; phase: ProfileImageUploadPhase } | null>(null);
   // what to do once the unsaved-changes prompt is answered (close, or follow a link)
   const [pendingLeave, setPendingLeave] = useState<(() => void) | null>(null);
+  const [customStatusError, setCustomStatusError] = useState<string | null>(null);
+  const customStatusActions = useCustomStatusActions(setCustomStatusError);
 
   // Avatar and banner save immediately; text fields use the draft flow.
   const baseline = useMemo(() => ({
@@ -245,6 +248,8 @@ export function ProfileEditor({ status, customStatus, details, onClose, register
             }}
             status={status}
             customStatus={customStatus}
+            onEditCustomStatus={() => { setCustomStatusError(null); customStatusActions.openEditor(); }}
+            onClearCustomStatus={() => { setCustomStatusError(null); customStatusActions.clear(); }}
             onAvatarUpload={() => avatarFileInputRef.current?.click()}
             onAvatarRemove={() => void handleRemoveImage('avatar')}
             avatarUploading={uploadingAvatar}
@@ -268,6 +273,7 @@ export function ProfileEditor({ status, customStatus, details, onClose, register
                 )}
                 {avatarError && <p role="alert" className="text-label text-red">{avatarError}</p>}
                 {bannerError && <p role="alert" className="text-label text-red">{bannerError}</p>}
+                {customStatusError && <p role="alert" className="text-label text-red">{customStatusError}</p>}
                 <dl className="flex flex-col gap-3">
                   {details.details && (
                     <div>
@@ -334,6 +340,8 @@ export function ProfileEditor({ status, customStatus, details, onClose, register
         )}
         <div ref={setBarSlot} className={FLOATING_BAR_SLOT_CLASS} />
       </form>
+
+      {customStatusActions.dialog}
 
       <UnsavedProfileChangesDialog
         open={pendingLeave !== null}
