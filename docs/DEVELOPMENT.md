@@ -30,7 +30,7 @@ DATABASE_SSL=0
 COOKIE_SECURE=0
 ```
 
-The example file uses placeholder database credentials, so update `DATABASE_URL` as shown. Set `REGISTRATION_CODE` to a value you can use when creating a local account. `LIVEKIT_URL`, `LIVEKIT_API_KEY`, and `LIVEKIT_API_SECRET` are only needed to use voice, video, and screen sharing.
+The example file uses placeholder database credentials, so update `DATABASE_URL` as shown. Set `REGISTRATION_CODE` to a value you can use when creating a local account. `LIVEKIT_URL`, `LIVEKIT_API_KEY`, and `LIVEKIT_API_SECRET` are only needed for voice, video, and screen sharing; see [Voice and video locally](#voice-and-video-locally).
 
 ## Start PostgreSQL
 
@@ -70,23 +70,23 @@ docker compose -f docker-compose.dev.yml down
 
 This keeps the named database volume. Do not add `-v` unless you intend to delete the local database.
 
-## Run the checks
+## Voice and video locally
 
-There is no hosted CI; run the checks locally before pushing. This runs the server test typecheck, the frontend lint, the server and frontend tests, and the production build (which also typechecks the backend and frontend):
-
-```bash
-npm run check
-```
-
-None of these need PostgreSQL: `.env.test` supplies a placeholder `DATABASE_URL` and no unit test runs a real query. Use `npm run test:server` or `npm run test:web` to run one side only.
-
-## Create an administrator
-
-After registering with your `REGISTRATION_CODE`, grant the account administrator access from the host:
+Calls need a LiveKit server. LiveKit Cloud works, but a local dev server in Docker needs no account:
 
 ```bash
-npm run admin:grant -- <your-username>
+docker run --rm -p 7880:7880 -p 7881:7881 -p 7882:7882/udp livekit/livekit-server --dev --bind 0.0.0.0 --node-ip 127.0.0.1
 ```
+
+Then, in `.env`:
+
+```dotenv
+LIVEKIT_URL=ws://localhost:7880
+LIVEKIT_API_KEY=devkey
+LIVEKIT_API_SECRET=secret
+```
+
+`--dev` uses that fixed key pair; `--node-ip 127.0.0.1` makes the media reachable from browsers on this machine. To try a call you need two accounts in separate browser sessions (a normal and a private window, or [Sample data](#sample-data)). This is the same LiveKit setup the end-to-end suite runs.
 
 ## Sample data
 
@@ -97,6 +97,24 @@ npm run db:seed
 ```
 
 It creates four accounts (`ana`, `bruno`, `carla`, `davi`; the shared password is printed at the end and defined at the top of `server/src/scripts/seedDev.ts`), friendships and a pending request, two DMs, and a server ("Equipe do projeto") with `#geral`, a read-only `#avisos` fed by a webhook, a voice channel and a hoisted moderators role. It runs only with `NODE_ENV=development` (the script sets it) against a database on `localhost`, and is safe to run again: rows that exist are left alone. Restart `npm run dev` afterwards, because the server caches memberships in memory.
+
+## Create an administrator
+
+After registering with your `REGISTRATION_CODE`, grant the account administrator access from the host:
+
+```bash
+npm run admin:grant -- <your-username>
+```
+
+## Run the checks
+
+There is no hosted CI; run the checks locally before pushing. This runs the server test typecheck, the frontend lint, the server and frontend tests, and the production build (which also typechecks the backend and frontend):
+
+```bash
+npm run check
+```
+
+None of these need PostgreSQL: `.env.test` supplies a placeholder `DATABASE_URL` and no unit test runs a real query. Use `npm run test:server` or `npm run test:web` to run one side only.
 
 ## Scripts
 
@@ -121,16 +139,6 @@ Every script runs from the repository root.
 | `npm run admin:grant -- <username>` / `admin:revoke` | Gives or takes administrator access. |
 
 The scripts behind the `db:*`, `admin:*` and `test:integration` commands live in `server/src/scripts/`; each starts with a comment on what it does and how to call it.
-
-## Troubleshooting
-
-- If the database is not ready, check `docker compose -f docker-compose.dev.yml ps` and `docker compose -f docker-compose.dev.yml logs postgres`.
-- If port `5432` is already in use, stop the other PostgreSQL service or change the host-side port mapping in `docker-compose.dev.yml` and update `DATABASE_URL` to match.
-- If the app cannot connect to PostgreSQL, confirm the container is healthy and that `DATABASE_URL` uses `localhost:5432`, the `linkord` database, and the local credentials above.
-
-## Restarting the server during a call
-
-Restarting the dev server (or deploying) while you are in a call should leave the call running: the clients reconnect and the server restores who was in which call from Postgres (`call_presence`, `dm_calls_active`), waiting `CALL_RESTORE_GRACE_MS` for each client. To try it, join a voice channel with two accounts, stop and start `npm run dev`, and check that both stay connected. Raising `MIN_PROTOCOL_VERSION` in `server/src/realtime/protocolVersion.ts` works against this: open tabs on the old version are refused with `client_outdated`, lose their socket and drop out of the call as far as the server is concerned. Raise it only for a change an old client cannot tolerate.
 
 ## End-to-end tests
 
@@ -190,14 +198,26 @@ The `restart` specs are the guard for the deploy behaviour described in `AGENTS.
 
 When you add a user-facing flow, add it to the matching spec (or a new `features/<area>.spec.ts`) and to this table.
 
+## Restarting the server during a call
+
+Restarting `npm run dev` (or deploying) while you are in a call should leave the call running: the clients reconnect and the server restores who was in which call. To see it, join a voice channel with two accounts, stop and start `npm run dev`, and check that both stay connected without touching either tab. The rules that keep this working are in `AGENTS.md` ("Realtime compatibility and deploys"), and the `restart` end-to-end specs check it on every run.
+
 ## Profile connections and Wall
 
-The Connections settings support URL, MyAnimeList and GitHub connections. Existing profile links migrate as URL connections; adding a service connection requires its username. Connections are self-declared and do not verify ownership. Only widgets explicitly added and saved by the account owner appear on their Wall. Each connection has a "Show on profile" switch (`show_on_profile`, on by default): turned off, the connection stays in the owner's settings but leaves the public links and the Wall, and its saved widgets come back when it is shown again.
+Connections (Settings → Connections) can be a URL, a MyAnimeList account or a GitHub account. They are self-declared: ownership is not verified. Each has a "Show on profile" switch (`show_on_profile`, on by default); turned off, the connection stays in the owner's settings but leaves the public links and the Wall, and its saved widgets come back when it is shown again. Only widgets the owner added and saved appear on their Wall.
 
-MyAnimeList uses the official API (`https://api.myanimelist.net/v2`), which reads public anime lists with only an application client ID — no user login. Register an app at https://myanimelist.net/apiconfig and set `MAL_CLIENT_ID`; without it MyAnimeList connections stay unavailable. The official API has no favorites endpoint, so the only MyAnimeList widget is recent anime activity (the eight most recently updated list entries, shown as a grid of covers). The worker synchronizes on connection and every twenty-four hours. Private lists and unavailable data are not imported. Failures preserve the last complete snapshot and retry automatically.
+To develop the widgets locally:
 
-GitHub requires no token or OAuth setup. The server reads the public profile through `GET https://api.github.com/users/{username}` and extracts daily contribution counts from the public `https://github.com/users/{username}/contributions` calendar. The calendar is HTML, not a versioned API, so markup changes may require an adapter update; unrecognized or incomplete calendars preserve the previous snapshot. Anonymous REST access is limited to 60 requests per hour per IP. PostgreSQL coordinates one GitHub sync every 65 seconds across server instances, and rate-limit responses postpone the provider until its cooldown expires. Connections share this queue and refresh every twenty-four hours once synced; other traffic sharing the server's outbound IP can reduce the available quota. No credentials, user cookies, or private data are requested.
+- GitHub needs no setup.
+- MyAnimeList needs `MAL_CLIENT_ID` (register an app at <https://myanimelist.net/apiconfig>); without it, MyAnimeList connections stay unavailable.
+- Syncing runs in the API process: a new connection is fetched within a minute, then every 24 hours. Viewing a profile only reads stored snapshots. Check the `connection-sync` logs when a widget stays empty.
 
-The worker starts with the API process, checks due connections every minute, and coordinates leases and provider request limits through PostgreSQL. Viewing a profile reads saved snapshots and never contacts the provider APIs. No separate scheduler or Redis service is required. Check `connection-sync` logs for failures; disconnecting deletes the connection snapshot and its widgets.
+API: connections at `/api/me/connections` (`PATCH /api/me/connections/:id` with only `{ "showOnProfile": boolean }` changes the visibility), the Wall layout at `/api/me/wall`, and another user's Wall at `/api/users/:userId/wall`. `profileLinks` in profile payloads is a read-only list of the URLs shown on the profile.
 
-Connection CRUD uses `/api/me/connections` (`PATCH /api/me/connections/:id` with `{ "showOnProfile": boolean }` and no `value` only changes the visibility); Wall configuration uses `/api/me/wall`, and authorized profile viewers read `/api/users/:userId/wall`. `profileLinks` remains a read-only URL projection in profile payloads, made of the connections shown on the profile. Protocol version 7 requires old clients to reload before changing profiles.
+How each provider is called, its limits and what happens when it fails are in [INTEGRATIONS.md](INTEGRATIONS.md#myanimelist).
+
+## Troubleshooting
+
+- If the database is not ready, check `docker compose -f docker-compose.dev.yml ps` and `docker compose -f docker-compose.dev.yml logs postgres`.
+- If port `5432` is already in use, stop the other PostgreSQL service or change the host-side port mapping in `docker-compose.dev.yml` and update `DATABASE_URL` to match.
+- If the app cannot connect to PostgreSQL, confirm the container is healthy and that `DATABASE_URL` uses `localhost:5432`, the `linkord` database, and the local credentials above.

@@ -37,6 +37,9 @@ Linkord is a self-hosted place to chat and call with friends. Talk in direct mes
 - **Administration**
   Manage users, servers, webhooks, reports, audit history, and orphaned uploads from `/admin`.
 
+- **Profile and Wall**
+  Show connected accounts on your profile and pick widgets for your Wall: recent anime from MyAnimeList, your GitHub profile and contribution calendar.
+
 - **Your preferences**
   Set up your profile, account and email, connected accounts, blocked people, theme, voice and video devices, which notification sounds play, language and 12- or 24-hour time.
 
@@ -58,31 +61,16 @@ The container applies pending migrations on startup by default. Set `MIGRATE_ON_
 
 See [`.env.example`](.env.example) for all server, database, session, LiveKit, push, upload, and rate limit settings. In production, set `APP_URL` to the public HTTPS origin and configure a stable Web Push VAPID key pair. For iPhone and iPad, users must add Linkord to the Home Screen before enabling Push notifications.
 
-## 🧰 Command reference
-
-| Command | What it does |
-| --- | --- |
-| `npm run dev` | Starts the API in watch mode and the Vite development server |
-| `npm run build` | Builds the backend and frontend for production |
-| `npm start` | Starts the compiled backend |
-| `npm run db:generate` | Generates a migration from the Drizzle schema |
-| `npm run db:migrate` | Applies pending database migrations |
-| `npm run db:seed` | Fills the local database with sample accounts, DMs and a server |
-| `npm run admin:grant -- <username>` | Grants admin access to an account |
-| `npm run db:preflight` / `db:repair` | Checks and repairs legacy data before a migration |
-| `npm run db:rehearse` | Rehearses migrations on temporary databases |
-
-### Tests
+## 🧰 Commands
 
 ```bash
-npm run check         # typecheck, lint, tests, and production build
-npm test              # backend and frontend
-npm run test:server   # backend only
-npm run test:web      # frontend only
+npm run dev           # API and web app in watch mode
+npm run db:seed       # sample accounts, DMs and a server in the local database
+npm run check         # typecheck, lint, unit tests and production build
 npm run test:e2e      # real browsers against a Docker stack (needs Docker and Chrome)
 ```
 
-Backend tests run with Node's test runner; frontend tests use Vitest and React Testing Library. Both run without a production database or LiveKit. Database migration rehearsal is separate and uses throwaway local databases. The end-to-end suite (Playwright) drives several accounts through every feature, a redeploy and an upgrade from the production version. Every script, and what the E2E specs cover, is listed in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md#scripts).
+Unit tests use Node's test runner (backend) and Vitest with React Testing Library (frontend), and need neither a database nor LiveKit. The end-to-end suite (Playwright) drives several accounts through every feature, a redeploy and an upgrade from the production version. Every script, and what each end-to-end spec covers, is in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md#scripts).
 
 ## 🛠️ Built with
 
@@ -100,8 +88,6 @@ Backend tests run with Node's test runner; frontend tests use Vitest and React T
 ## 🤝 Contributing
 
 Found a bug or have an idea? [Open an issue](https://github.com/coelhomarcus/Linkord/issues). Before opening a pull request, run `npm run check`. See [AGENTS.md](AGENTS.md) for repository conventions.
-
-For the production checklist to migrate legacy groups and bots into servers, see the [migration runbook](docs/MIGRATING_GROUPS_TO_SERVERS.md).
 
 ## License
 
