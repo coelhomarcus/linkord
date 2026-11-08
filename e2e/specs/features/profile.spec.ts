@@ -203,7 +203,8 @@ test.describe('profile on a phone', () => {
     await a.page.getByRole('button', { name: /^Cor do perfil: / }).tap();
 
     const hue = a.page.getByRole('slider', { name: 'Matiz' });
-    expect(await takesFingertip(hue)).toBe(true);
+    // polled: the popover opens with a zoom, and a bar measured mid-animation is still scaled down
+    await expect.poll(() => takesFingertip(hue)).toBe(true);
     for (const swatch of await a.page.getByRole('button', { name: /^Usar / }).all()) {
       expect((await swatch.boundingBox())!.width).toBeGreaterThanOrEqual(44);
     }
