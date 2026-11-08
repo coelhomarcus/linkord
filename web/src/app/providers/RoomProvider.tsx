@@ -229,6 +229,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         }
         hasWelcomedRef.current = true;
         if (m.dmCall) dmCall.onDmCall(m.dmCall);
+        dmCall.onReconnected(m.dmCall ?? null);
         break;
       }
       case 'dm-call':

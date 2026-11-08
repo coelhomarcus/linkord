@@ -54,4 +54,73 @@ describe('useDmCall', () => {
     expect(outgoing.sendWs).toHaveBeenCalledWith({ t: 'dm-call-cancel', callId: 'k' });
     expect(outgoing.armDmMedia).not.toHaveBeenCalled();
   });
+
+  describe('an answer given while the socket is down', () => {
+    function offline() {
+      const harness = setup();
+      harness.sendWs.mockReturnValue(false);
+      act(() => harness.result.current.onDmCall(incoming));
+      return harness;
+    }
+
+    it('accepting offline goes out after the reconnect, to the call still ringing', () => {
+      const { result, sendWs } = offline();
+      act(() => result.current.acceptDmCall());
+      expect(sendWs).toHaveBeenCalledTimes(1);
+
+      sendWs.mockReturnValue(true);
+      act(() => result.current.onDmCall(incoming));
+      act(() => result.current.onReconnected(incoming));
+      expect(sendWs).toHaveBeenCalledTimes(2);
+      expect(sendWs).toHaveBeenLastCalledWith({ t: 'dm-call-accept', callId: 'k' });
+    });
+
+    it('is dropped when the reconnect brings no call, or another one', () => {
+      const gone = offline();
+      act(() => gone.result.current.acceptDmCall());
+      gone.sendWs.mockReturnValue(true);
+      act(() => gone.result.current.onReconnected(null));
+      expect(gone.sendWs).toHaveBeenCalledTimes(1);
+
+      const other = offline();
+      act(() => other.result.current.declineDmCall());
+      other.sendWs.mockReturnValue(true);
+      act(() => other.result.current.onReconnected({ ...incoming, callId: 'another' }));
+      expect(other.sendWs).toHaveBeenCalledTimes(1);
+    });
+
+    it('is dropped when the call already became active or ended meanwhile', () => {
+      const active = offline();
+      act(() => active.result.current.acceptDmCall());
+      active.sendWs.mockReturnValue(true);
+      act(() => active.result.current.onReconnected({ ...incoming, phase: 'active', media: true }));
+      expect(active.sendWs).toHaveBeenCalledTimes(1);
+
+      const ended = offline();
+      act(() => ended.result.current.acceptDmCall());
+      act(() => ended.result.current.onEnded({ callId: 'k', conversationId: 'c1', reason: 'cancelled' }));
+      ended.sendWs.mockReturnValue(true);
+      act(() => ended.result.current.onReconnected(incoming));
+      expect(ended.sendWs).toHaveBeenCalledTimes(1);
+    });
+
+    it('a cancel waits for the same outgoing ring', () => {
+      const harness = setup();
+      harness.sendWs.mockReturnValue(false);
+      const outgoing: DmCallView = { ...incoming, phase: 'outgoing', callerId: 'me', peerId: 'peer' };
+      act(() => harness.result.current.onDmCall(outgoing));
+      act(() => harness.result.current.cancelDmCall());
+      harness.sendWs.mockReturnValue(true);
+      act(() => harness.result.current.onReconnected(outgoing));
+      expect(harness.sendWs).toHaveBeenLastCalledWith({ t: 'dm-call-cancel', callId: 'k' });
+    });
+
+    it('an answer that left normally is not sent again on a later reconnect', () => {
+      const { result, sendWs } = setup();
+      act(() => result.current.onDmCall(incoming));
+      act(() => result.current.acceptDmCall());
+      act(() => result.current.onReconnected(incoming));
+      expect(sendWs).toHaveBeenCalledTimes(1);
+    });
+  });
 });

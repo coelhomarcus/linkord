@@ -39,13 +39,14 @@ test.describe('a DM call across a redeploy', () => {
     await a.page.getByRole('button', { name: 'Ligar', exact: true }).first().click();
     await expect(b.page.getByRole('button', { name: 'Atender' })).toBeVisible();
 
-    // Answering is a socket message: a click while the tab is still reconnecting
-    // is dropped (the card stays, nothing tells the user). Answer once it is back.
-    const bobBack = b.waitForSocketEvent('welcome', 60_000);
-    await deploy();
-    await bobBack;
-
+    // Answer while Bob's tab is still disconnected: the answer has to wait for
+    // the reconnect and go out then (useDmCall's unsent answer), not vanish.
+    const disconnectsBefore = b.socketDisconnects.length;
+    const deploying = deploy();
+    await expect.poll(() => b.socketDisconnects.length, { timeout: 30_000 }).toBeGreaterThan(disconnectsBefore);
     await b.page.getByRole('button', { name: 'Atender' }).click();
+    await deploying;
+
     await a.expectTilesFor([alice.username, bob.username]);
     await b.expectTilesFor([alice.username, bob.username]);
     await a.expectRemoteAudio(1);
