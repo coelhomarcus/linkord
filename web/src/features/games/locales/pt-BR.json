@@ -1,0 +1,34 @@
+{
+  "editor": {
+    "title": {
+      "favorite": "Jogo favorito",
+      "liked": "Jogos que eu gosto",
+      "playing": "Jogos em rotação",
+      "wishlist": "Quero jogar"
+    },
+    "selected": "{{selected}} de {{max}}",
+    "pickedList": "Jogos escolhidos: {{title}}",
+    "empty": "Nenhum jogo escolhido ainda.",
+    "moveUp": "Mover {{name}} para cima",
+    "moveDown": "Mover {{name}} para baixo",
+    "remove": "Remover {{name}}",
+    "searchLabel": "Buscar jogo",
+    "searchPlaceholder": "Nome do jogo",
+    "hint": "Digite pelo menos {{min}} letras para buscar.",
+    "loading": "Buscando jogos…",
+    "noResults": "Nenhum jogo encontrado para “{{query}}”.",
+    "resultsList": "Resultados da busca",
+    "add": "Adicionar {{name}}",
+    "choose": "Escolher {{name}} como favorito",
+    "alreadyAdded": "{{name}} já está na lista",
+    "added": "Na lista",
+    "full": "A lista está cheia ({{max}} jogos). Remova um jogo para adicionar outro.",
+    "retry": "Tentar de novo",
+    "source": "Capas e dados dos jogos: IGDB",
+    "errors": {
+      "unavailable": "A busca de jogos está indisponível no momento.",
+      "busy": "Muitas buscas ao mesmo tempo. Tente de novo em instantes.",
+      "failed": "Não foi possível buscar jogos. Tente de novo em instantes."
+    }
+  }
+}

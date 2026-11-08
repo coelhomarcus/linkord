@@ -5,6 +5,7 @@ import type chat from '@/features/chat/locales/pt-BR.json';
 import type conversations from '@/features/conversations/locales/pt-BR.json';
 import type friends from '@/features/friends/locales/pt-BR.json';
 import type gifs from '@/features/gifs/locales/pt-BR.json';
+import type games from '@/features/games/locales/pt-BR.json';
 import type navigation from '@/features/navigation/locales/pt-BR.json';
 import type notifications from '@/features/notifications/locales/pt-BR.json';
 import type calls from '@/features/calls/locales/pt-BR.json';
@@ -30,6 +31,7 @@ declare module 'i18next' {
       conversations: typeof conversations;
       friends: typeof friends;
       gifs: typeof gifs;
+      games: typeof games;
       navigation: typeof navigation;
       notifications: typeof notifications;
       calls: typeof calls;

@@ -125,7 +125,6 @@
     "addWidget": "Adicionar widget",
     "yours": "Seus Widgets",
     "allAdded": "Todos os widgets disponíveis já foram adicionados.",
-    "noConnections": "Conecte MyAnimeList ou GitHub para liberar widgets.",
     "manageConnections": "Gerenciar conexões",
     "emptyOwner": "Seu Mural está vazio. Adicione um widget para escolher o que aparece.",
     "emptyVisitor": "Este usuário ainda não publicou widgets no Mural.",
@@ -141,12 +140,20 @@
     "widgets": {
       "mal-recent-anime": "Atividade recente de animes",
       "github-profile": "Perfil do GitHub",
-      "github-calendar": "Contribuições no GitHub"
+      "github-calendar": "Contribuições no GitHub",
+      "igdb-favorite-game": "Jogo favorito",
+      "igdb-liked-games": "Jogos que eu gosto",
+      "igdb-playing-games": "Jogos em rotação",
+      "igdb-wishlist-games": "Quero jogar"
     },
     "widgetDescriptions": {
       "mal-recent-anime": "Os últimos animes que você assistiu",
       "github-profile": "Repositórios, seguidores e quem você segue",
-      "github-calendar": "Sua atividade de contribuições ao longo do ano"
+      "github-calendar": "Sua atividade de contribuições ao longo do ano",
+      "igdb-favorite-game": "O jogo da sua vida, com a capa em destaque",
+      "igdb-liked-games": "Jogos que você curte, em uma grade de capas",
+      "igdb-playing-games": "O que você está jogando agora",
+      "igdb-wishlist-games": "Sua lista de desejos"
     },
     "github": {
       "repositories": "Repositórios",
@@ -157,7 +164,12 @@
       "contributions": "{{total}} contribuições nos últimos 12 meses",
       "calendar": "Calendário de contribuições do GitHub",
       "day": "{{date}}: {{total}} contribuições"
-    }
+    },
+    "noGames": "Nenhum jogo escolhido ainda.",
+    "gamesSource": "{{service}}, fonte dos dados dos jogos",
+    "chooseGames": "Escolher jogos",
+    "doneGames": "Fechar",
+    "gamesToggle": "{{action}}: {{name}}"
   },
   "editor": {
     "fileTooLarge": "Arquivo muito grande (máximo {{max}}).",

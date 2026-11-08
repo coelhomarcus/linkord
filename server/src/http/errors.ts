@@ -46,6 +46,9 @@ export const ERROR_REGISTRY = {
   connection_not_found: { statuses: [404], channel: 'http' },
   connection_exists: { statuses: [409], channel: 'http' },
   invalid_wall: { statuses: [400], channel: 'http' },
+  // 503: IGDB credentials are not configured; 502: IGDB itself failed or answered nonsense
+  games_unavailable: { statuses: [503], channel: 'http' },
+  games_search_failed: { statuses: [502], channel: 'http' },
 
   // auth and accounts
   invalid_credentials: { statuses: [401], channel: 'http' },
