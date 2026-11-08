@@ -201,6 +201,26 @@ The `restart` specs are the guard for the deploy behaviour described in `AGENTS.
 
 When you add a user-facing flow, add it to the matching spec (or a new `features/<area>.spec.ts`) and to this table.
 
+## Data retention
+
+Tables that grow with use are trimmed by one daily sweep (`modules/retention/`), started two minutes after boot and then every 24 hours. Each table has its own setting, in days; `0` keeps the records forever. All of them are in `.env.example`.
+
+| Setting | Default | What it trims |
+| --- | --- | --- |
+| `AUDIT_RETENTION_DAYS` | `0` (forever) | `admin_audit_logs`, by creation time |
+| `DATA_REPAIRS_RETENTION_DAYS` | `0` (forever) | `data_repairs`, the log of legacy-data repairs run before a migration. It is small and is the only record of what a repair changed, so it is kept unless you set a limit |
+| `NOTIFICATION_READ_RETENTION_DAYS` | `30` | notifications, by the time they were read |
+| `NOTIFICATION_UNREAD_RETENTION_DAYS` | `90` | notifications never read, by creation time |
+| `OUTBOX_RETENTION_DAYS` | `7` | delivered `outbox_events`, by the time they were delivered. Events that ran out of attempts stay, so an administrator can see them |
+
+Login sessions (deleted when they expire) and chat send operations (a fixed 7 days) have their own cleanup and no setting.
+
+- **Batches:** the sweep deletes at most 1000 rows per statement, oldest first, with a short pause between statements, so a table with a large backlog is never locked for long. The first run after enabling a limit on a big table can therefore take a while; later runs only remove a day's worth.
+- **Report:** `/admin/system` lists each table's limit and what the last sweep deleted (the report lives in memory, so it is empty after a restart until the next sweep). A sweep that deleted something, or failed on a table, also leaves a `retention.sweep` entry in the audit log. A table that fails is logged and does not stop the others.
+- **Invalid values:** a setting that is not a whole number of days (`-1`, `1.5`, `abc`) stops the server at boot, so a typo cannot silently start or stop deleting an audit trail.
+- **New tables:** a table that needs retention (the per-server audit log) calls `registerRetentionTarget` from `modules/retention/retentionTargets.ts` with a `key`, a `days()` reader backed by its own env variable, and a `deleteBatch(cutoff, limit)` that deletes at most `limit` rows older than `cutoff`. The sweep, the admin page and the audit entry pick it up with no other change. Add the variable to `config/env.ts` (through `parseRetentionDays`), to `.env.example` and to the table above, plus a label under `system.retentionTables` in the admin locales.
+- **Tests:** `server/tests/modules/retention/` covers the batching and the `0` rule without a database; `server/tests/integration/retention.itest.ts` covers each table against Postgres (`npm run test:integration`).
+
 ## Restarting the server during a call
 
 Restarting `npm run dev` (or deploying) while you are in a call should leave the call running: the clients reconnect and the server restores who was in which call. To see it, join a voice channel with two accounts, stop and start `npm run dev`, and check that both stay connected without touching either tab. The rules that keep this working are in `AGENTS.md` ("Realtime compatibility and deploys"), and the `restart` end-to-end specs check it on every run.

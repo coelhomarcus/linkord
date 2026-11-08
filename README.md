@@ -35,7 +35,7 @@ Linkord is a self-hosted place to chat and call with friends. Talk in direct mes
   Receive alerts for messages, mentions, friend requests, and invites, even when Linkord is closed. The app icon can also show an unread badge where the browser supports it.
 
 - **Administration**
-  Manage users, servers, webhooks, reports, audit history, and orphaned uploads from `/admin`.
+  Manage users, servers, webhooks, reports, audit history, orphaned uploads, and the data retention report from `/admin`.
 
 - **Profile and Wall**
   Show connected accounts on your profile and pick widgets for your Wall: recent anime from MyAnimeList, your GitHub profile and contribution calendar, and your favorite, liked, current and wished-for games, searched on IGDB.

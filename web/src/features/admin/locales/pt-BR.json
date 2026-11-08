@@ -231,7 +231,8 @@
     "server.assign_owner": "Dono atribuído",
     "server.delete": "Servidor excluído",
     "server.owner_succession": "Sucessão de dono",
-    "webhook.revoke": "Webhook revogado"
+    "webhook.revoke": "Webhook revogado",
+    "retention.sweep": "Retenção aplicada"
   },
   "detail": {
     "fullHistory": "Histórico completo",
@@ -494,7 +495,24 @@
     "verifyDescription": "Procura os órfãos sem apagar nada. Percorre o disco, então rode só quando precisar.",
     "deleteDescription": "Pede um motivo e faz uma nova varredura: pode apagar um conjunto diferente do da prévia.",
     "deleteFailed": "{{count}} arquivo(s) não puderam ser apagados.",
-    "deleteDialog": "A prévia de {{when}} achou {{count}} arquivo(s) ({{size}}). Ao confirmar, o servidor faz uma nova varredura e apaga o que encontrar. Não há como desfazer."
+    "deleteDialog": "A prévia de {{when}} achou {{count}} arquivo(s) ({{size}}). Ao confirmar, o servidor faz uma nova varredura e apaga o que encontrar. Não há como desfazer.",
+    "retentionTitle": "Retenção de dados",
+    "retentionDescription": "Quanto tempo cada tipo de registro é mantido. A varredura diária apaga o que passou do prazo, em lotes; o prazo vem das variáveis *_RETENTION_DAYS do servidor.",
+    "retentionForever": "guardado para sempre",
+    "retentionDays_one": "{{count}} dia",
+    "retentionDays_other": "{{count}} dias",
+    "retentionLast": "Última varredura {{when}}: {{count}} registro(s) apagado(s).",
+    "retentionLastNone": "Nenhum registro passou do prazo na última varredura ({{when}}).",
+    "retentionNever": "A varredura ainda não rodou desde que o servidor iniciou.",
+    "retentionTableDeleted": "{{count}} apagado(s)",
+    "retentionTableFailed": "falhou",
+    "retentionTables": {
+      "admin_audit_logs": "Auditoria da instância",
+      "data_repairs": "Reparos de dados da migração",
+      "notifications_read": "Notificações lidas",
+      "notifications_unread": "Notificações não lidas",
+      "outbox_events": "Fila de eventos entregues"
+    }
   },
   "auditDetails": {
     "yes": "sim",

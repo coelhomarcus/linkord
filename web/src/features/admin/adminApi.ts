@@ -133,6 +133,11 @@ export const fetchAudit = (filters: { actor?: string; targetType?: string; targe
 export interface SweepResult {
   at: string; dryRun: boolean; scanned: number; orphanCount: number; orphanBytes: number; deleted: number; failed: number; recent: number; missingFiles: number;
 }
+export interface RetentionTargetResult { key: string; days: number; cutoff: string | null; deleted: number; batches: number; failed: boolean }
+export interface RetentionInfo {
+  targets: { key: string; days: number }[];
+  last: { at: string; durationMs: number; targets: RetentionTargetResult[] } | null;
+}
 export interface SystemInfo {
   storage: { usedBytes: number; files: number; maxBytes: number };
   connections: { live: number; onlineAccounts: number; max: number; perAccountMax: number };
@@ -140,6 +145,7 @@ export interface SystemInfo {
   livekit: { configured: boolean };
   outbox: { pending: number; failed: number };
   notifications: { unread: number };
+  retention: RetentionInfo;
   orphanSweep: { dryRunByDefault: boolean; /** absent on a server that predates it */ graceMs?: number; last: SweepResult | null };
 }
 

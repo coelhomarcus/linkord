@@ -4,7 +4,7 @@ import { Button } from '@/shared/ui/primitives/button';
 import { formatFileSize } from '@/shared/lib/formatBytes';
 import { SettingsNotice } from '@/shared/ui/settings-layout';
 import { fetchSystem, sweepOrphans } from './adminApi';
-import type { SweepResult } from './adminApi';
+import type { RetentionInfo, SweepResult } from './adminApi';
 import { AdminActionRow, AdminFieldRow, AdminFields, AdminPageTitle, AdminSection } from './AdminSection';
 import { ReasonDialog } from './ReasonDialog';
 import { describeAdminError } from './adminErrors';
@@ -63,6 +63,32 @@ function SweepCard({ title, result, tone }: { title: string; result: SweepResult
         </p>
       )}
     </div>
+  );
+}
+
+function RetentionSection({ retention }: { retention: RetentionInfo }) {
+  const { t } = useTranslation('admin');
+  const last = retention.last;
+  const lastByKey = new Map(last?.targets.map((target) => [target.key, target]));
+  const totalDeleted = last?.targets.reduce((sum, target) => sum + target.deleted, 0) ?? 0;
+  return (
+    <AdminSection id="retention" title={t('system.retentionTitle')} description={t('system.retentionDescription')}>
+      <AdminFields>
+        {retention.targets.map(({ key, days }) => {
+          const result = lastByKey.get(key);
+          return (
+            <AdminFieldRow key={key} label={t(`system.retentionTables.${key}` as never, { defaultValue: key })}>
+              {days > 0 ? t('system.retentionDays', { count: days }) : t('system.retentionForever')}
+              {result && result.deleted > 0 && <span className="text-text-muted"> · {t('system.retentionTableDeleted', { count: result.deleted })}</span>}
+              {result?.failed && <span className="text-red-text"> · {t('system.retentionTableFailed')}</span>}
+            </AdminFieldRow>
+          );
+        })}
+      </AdminFields>
+      <p className="text-label text-text-muted">
+        {last ? t(totalDeleted > 0 ? 'system.retentionLast' : 'system.retentionLastNone', { when: formatWhen(last.at), count: totalDeleted }) : t('system.retentionNever')}
+      </p>
+    </AdminSection>
   );
 }
 
@@ -152,6 +178,8 @@ export function SystemPage() {
             <AdminFieldRow label={t('system.unread')}>{info.notifications.unread} <span className="text-text-muted">{t('system.unreadNote')}</span></AdminFieldRow>
           </AdminFields>
         </AdminSection>
+
+        <RetentionSection retention={info.retention} />
 
         <AdminSection
           id="maintenance"

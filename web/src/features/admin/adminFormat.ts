@@ -21,7 +21,7 @@ export function formatDateShort(iso: string | null | undefined): string {
 }
 
 export const ACTION_LABELS: Record<string, string> = {
-  'user.suspend': 'Conta suspensa', 'user.grant_admin': 'Admin concedido', 'user.revoke_admin': 'Admin removido', 'storage.sweep_orphans': 'Órfãos coletados', 'storage.orphan_delete': 'Falha ao apagar órfão', 'user.reactivate': 'Conta reativada', 'user.revoke_sessions': 'Sessões revogadas', 'user.delete': 'Conta excluída',
+  'user.suspend': 'Conta suspensa', 'user.grant_admin': 'Admin concedido', 'user.revoke_admin': 'Admin removido', 'storage.sweep_orphans': 'Órfãos coletados', 'storage.orphan_delete': 'Falha ao apagar órfão', 'retention.sweep': 'Retenção aplicada', 'user.reactivate': 'Conta reativada', 'user.revoke_sessions': 'Sessões revogadas', 'user.delete': 'Conta excluída',
   'user.delete.avatar_cleanup': 'Limpeza da foto', 'group.suspend': 'Grupo suspenso', 'group.reactivate': 'Grupo reativado',
   'group.assign_owner': 'Dono atribuído', 'group.delete': 'Grupo excluído', 'group.owner_succession': 'Sucessão de dono',
   'bot.suspend': 'Bot suspenso', 'bot.reactivate': 'Bot reativado', 'bot.assign_owner': 'Dono do bot atribuído', 'bot.delete': 'Bot excluído',

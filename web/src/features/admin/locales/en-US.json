@@ -231,7 +231,8 @@
     "server.assign_owner": "Owner assigned",
     "server.delete": "Server deleted",
     "server.owner_succession": "Owner succession",
-    "webhook.revoke": "Webhook revoked"
+    "webhook.revoke": "Webhook revoked",
+    "retention.sweep": "Retention applied"
   },
   "detail": {
     "fullHistory": "Full history",
@@ -494,7 +495,24 @@
     "verifyDescription": "Looks for orphans without deleting anything. It walks the disk, so run it only when needed.",
     "deleteDescription": "Asks for a reason and sweeps again: it may delete a different set than the preview.",
     "deleteFailed": "{{count}} file(s) could not be deleted.",
-    "deleteDialog": "The preview from {{when}} found {{count}} file(s) ({{size}}). On confirm, the server sweeps again and deletes what it finds. This cannot be undone."
+    "deleteDialog": "The preview from {{when}} found {{count}} file(s) ({{size}}). On confirm, the server sweeps again and deletes what it finds. This cannot be undone.",
+    "retentionTitle": "Data retention",
+    "retentionDescription": "How long each kind of record is kept. The daily sweep deletes what is past its limit, in batches; the limit comes from the server's *_RETENTION_DAYS variables.",
+    "retentionForever": "kept forever",
+    "retentionDays_one": "{{count}} day",
+    "retentionDays_other": "{{count}} days",
+    "retentionLast": "Last sweep {{when}}: {{count}} record(s) deleted.",
+    "retentionLastNone": "No record was past its limit in the last sweep ({{when}}).",
+    "retentionNever": "The sweep has not run since the server started.",
+    "retentionTableDeleted": "{{count}} deleted",
+    "retentionTableFailed": "failed",
+    "retentionTables": {
+      "admin_audit_logs": "Instance audit log",
+      "data_repairs": "Migration data repairs",
+      "notifications_read": "Read notifications",
+      "notifications_unread": "Unread notifications",
+      "outbox_events": "Delivered event queue"
+    }
   },
   "auditDetails": {
     "yes": "yes",

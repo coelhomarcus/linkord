@@ -1,10 +1,10 @@
 import crypto from 'node:crypto';
 import { and, eq, inArray, isNull, lt, lte, or, sql } from 'drizzle-orm';
 import { db } from '../../db/client.js';
-import { notifications, outboxEvents, type OutboxEvent } from '../../db/schema.js';
+import { outboxEvents, type OutboxEvent } from '../../db/schema.js';
 import { notifySocialChanged } from '../presence/knownPeers.js';
 import { deliverWebPush } from './webPush.js';
-import { OUTBOX_BATCH, OUTBOX_CONCURRENCY, OUTBOX_LEASE_MS, OUTBOX_MAX_ATTEMPTS, OUTBOX_RETENTION_DAYS, NOTIFICATION_READ_RETENTION_DAYS, NOTIFICATION_UNREAD_RETENTION_DAYS, daysAgo, nextOutboxState, outboxRetryDelayMs } from './notificationsPolicy.js';
+import { OUTBOX_BATCH, OUTBOX_CONCURRENCY, OUTBOX_LEASE_MS, OUTBOX_MAX_ATTEMPTS, nextOutboxState, outboxRetryDelayMs } from './notificationsPolicy.js';
 import { logger } from '../../lib/logger.js';
 
 const log = logger.child({ component: 'outbox' });
@@ -78,20 +78,6 @@ export async function drainOutbox(): Promise<{ processed: number; failed: number
   } finally {
     draining = false;
   }
-}
-
-/** Remove old read notifications and processed outbox rows; retain unread notifications longer. */
-export async function pruneNotifications(now = new Date()): Promise<{ notifications: number; outbox: number }> {
-  const readCut = daysAgo(NOTIFICATION_READ_RETENTION_DAYS, now);
-  const unreadCut = daysAgo(NOTIFICATION_UNREAD_RETENTION_DAYS, now);
-  const outboxCut = daysAgo(OUTBOX_RETENTION_DAYS, now);
-  const oldRead = await db.delete(notifications)
-    .where(sql`${notifications.readAt} is not null and ${notifications.readAt} < ${readCut.toISOString()}::timestamptz`).returning({ id: notifications.id });
-  const oldUnread = await db.delete(notifications)
-    .where(and(isNull(notifications.readAt), lt(notifications.createdAt, unreadCut))).returning({ id: notifications.id });
-  const oldOutbox = await db.delete(outboxEvents)
-    .where(sql`${outboxEvents.processedAt} is not null and ${outboxEvents.processedAt} < ${outboxCut.toISOString()}::timestamptz`).returning({ id: outboxEvents.id });
-  return { notifications: oldRead.length + oldUnread.length, outbox: oldOutbox.length };
 }
 
 export async function outboxStats(): Promise<{ pending: number; failed: number }> {

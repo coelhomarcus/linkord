@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { OUTBOX_MAX_ATTEMPTS, daysAgo, isOutboxFailed, nextOutboxState, outboxRetryDelayMs } from '../../../src/modules/notifications/notificationsPolicy.js';
+import { OUTBOX_MAX_ATTEMPTS, isOutboxFailed, nextOutboxState, outboxRetryDelayMs } from '../../../src/modules/notifications/notificationsPolicy.js';
 
 describe('nextOutboxState', () => {
   it('successful delivery marks processed and counts the attempt', () => {
@@ -30,12 +30,5 @@ describe('outboxRetryDelayMs', () => {
   it('waits for a push service Retry-After even when it exceeds the local backoff', () => {
     assert.equal(outboxRetryDelayMs(1, 120_000), 120_000);
     assert.equal(outboxRetryDelayMs(2, 10_000), 60_000);
-  });
-});
-
-describe('daysAgo', () => {
-  it('goes back the exact number of days', () => {
-    const now = new Date('2026-09-30T12:00:00Z');
-    assert.equal(daysAgo(30, now).toISOString(), '2026-08-31T12:00:00.000Z');
   });
 });
