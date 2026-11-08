@@ -6,22 +6,29 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import { ROUTES } from '@/shared/lib/routes';
 import { Button } from '@/shared/ui/primitives/button';
+import { AddWidgetDialog } from './AddWidgetDialog';
+import { FloatingBar } from './FloatingBar';
 import { fetchWall, saveWall } from './profileApi';
 import { WallWidgetCard } from './WallWidgetCard';
-import { WidgetPicker } from './WidgetPicker';
 import type { WallResponse, WallSelection, WallWidget } from './connectionsTypes';
 
 const selectionKey = (value: WallSelection) => `${value.connectionId ?? 'games'}:${value.type}`;
 const widgetKey = (widget: WallWidget) => selectionKey({ connectionId: widget.connection?.id ?? null, type: widget.type });
+const selectionOf = (widget: WallWidget): WallSelection => ({ connectionId: widget.connection?.id ?? null, type: widget.type });
+
+/** The owner's Wall is always editable, as the profile itself is: a change waits in a draft until Save in the
+ * floating bar, and Reset puts the saved Wall back. A visitor only sees the published widgets. */
 export function ProfileWall({ userId, owner, accent, onNavigate }: { userId: string; owner: boolean; accent: string; onNavigate: () => void }) {
   const { t } = useTranslation('profile');
   const navigate = useNavigate();
   const [data, setData] = useState<WallResponse | null>(null);
+  // the order and choice of widgets, once changed; null while it is as the server has it
   const [draft, setDraft] = useState<WallSelection[] | null>(null);
   // the lists edited in this draft; a list not in here is as the server has it
   const [gamesDraft, setGamesDraft] = useState<Partial<GameLists>>({});
   // the place a game is being chosen for: a position in the list, which is its end for a new game
   const [picking, setPicking] = useState<{ list: GameList; widgetName: string; index: number } | null>(null);
+  const [adding, setAdding] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -35,7 +42,11 @@ export function ProfileWall({ userId, owner, accent, onNavigate }: { userId: str
     controller.current = new AbortController();
     try {
       const result = await fetchWall(userId, owner, controller.current.signal);
-      if (mounted.current && current === sequence.current) { setData(result); setError(false); setDraft((previous) => previous?.filter((selection) => result.available?.some((widget) => widgetKey(widget) === selectionKey(selection))) ?? null); }
+      if (mounted.current && current === sequence.current) {
+        setData(result); setError(false);
+        // a widget that is no longer on offer (its connection was hidden or removed) leaves the draft
+        setDraft((previous) => previous?.filter((selection) => result.available?.some((widget) => widgetKey(widget) === selectionKey(selection))) ?? null);
+      }
     } catch { if (mounted.current && current === sequence.current) setError(true); }
     finally { if (mounted.current && current === sequence.current) setLoading(false); }
   }, [userId, owner]);
@@ -47,36 +58,24 @@ export function ProfileWall({ userId, owner, accent, onNavigate }: { userId: str
     window.addEventListener('profile-connections-changed', refresh);
     return () => { mounted.current = false; cancelLoad(); clearInterval(timer); window.removeEventListener('profile-connections-changed', refresh); };
   }, [load, userId, cancelLoad]);
+
+  const dirty = draft !== null || Object.keys(gamesDraft).length > 0;
   useEffect(() => {
-    if (!draft) return;
+    if (!dirty) return;
     const preventUnload = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
     window.addEventListener('beforeunload', preventUnload);
     return () => window.removeEventListener('beforeunload', preventUnload);
-  }, [draft]);
-  async function save() {
-    if (!draft || saving) return;
-    setSaving(true); setError(false);
-    sequence.current++; controller.current?.abort();
-    try {
-      const result = await (Object.keys(gamesDraft).length ? saveWall(draft, gamesDraft) : saveWall(draft));
-      if (mounted.current) { sequence.current++; setData(result); closeDraft(); }
-    } catch { if (mounted.current) setError(true); }
-    finally { if (mounted.current) setSaving(false); }
-  }
-  function closeDraft() { setDraft(null); setGamesDraft({}); setPicking(null); }
-  function move(index: number, direction: number) {
-    if (!draft) return;
-    const next = [...draft];
-    [next[index], next[index + direction]] = [next[index + direction], next[index]];
-    setDraft(next);
-  }
+  }, [dirty]);
+
+  // what the owner is arranging: the draft, or the saved Wall until something changes
+  const selections: WallSelection[] = draft ?? data?.widgets.map(selectionOf) ?? [];
   // while editing, a games widget shows the picks made so far
   const withDraftGames = (widget: WallWidget): WallWidget => {
     const list = gameListOf(widget.type);
     const items = list && gamesDraft[list];
     return items ? { ...widget, data: { kind: 'games', items } } : widget;
   };
-  const widgets = draft ? draft.flatMap((selection) => {
+  const widgets = owner ? selections.flatMap((selection) => {
     const widget = data?.available?.find((value) => widgetKey(value) === selectionKey(selection));
     return widget ? [withDraftGames(widget)] : [];
   }) : data?.widgets ?? [];
@@ -92,28 +91,50 @@ export function ProfileWall({ userId, owner, accent, onNavigate }: { userId: str
     setGames(picking.list, picking.list === 'favorite' ? [chosen] : picking.index < items.length ? items.map((item, i) => (i === picking.index ? chosen : item)) : [...items, chosen]);
     setPicking(null);
   }
-  const choices = data?.available?.filter((widget) => !draft?.some((selection) => selectionKey(selection) === widgetKey(widget))) ?? [];
+  function move(index: number, direction: number) {
+    const next = [...selections];
+    [next[index], next[index + direction]] = [next[index + direction]!, next[index]!];
+    setDraft(next);
+  }
+  function reset() { setDraft(null); setGamesDraft({}); setPicking(null); setError(false); }
+  async function save() {
+    if (!dirty || saving) return;
+    setSaving(true); setError(false);
+    sequence.current++; controller.current?.abort();
+    try {
+      const result = await (Object.keys(gamesDraft).length ? saveWall(selections, gamesDraft) : saveWall(selections));
+      if (mounted.current) { sequence.current++; setData(result); setDraft(null); setGamesDraft({}); }
+    } catch { if (mounted.current) setError(true); }
+    finally { if (mounted.current) setSaving(false); }
+  }
+
+  const bar = owner && dirty && (
+    <FloatingBar label={t('wall.barLabel')}>
+      {error
+        ? <p role="alert" className="text-label text-red">{t('wall.saveFailed')}</p>
+        : <p className="text-label text-text-muted">{t(saving ? 'wall.saving' : 'wall.unsaved')}</p>}
+      <div className="flex gap-2">
+        <Button type="button" variant="secondary" size="sm" disabled={saving} onClick={reset}>{t('wall.reset')}</Button>
+        <Button type="button" size="sm" disabled={saving} onClick={() => void save()}>{t(saving ? 'wall.saving' : 'wall.save')}</Button>
+      </div>
+    </FloatingBar>
+  );
   return (
-    <section aria-label={t('wall.title')} className="flex min-w-0 flex-col gap-5">
+    // room under the last widget for the floating bar, which would otherwise cover it
+    <section aria-label={t('wall.title')} className={`flex min-w-0 flex-col gap-5 ${bar ? 'pb-36' : ''}`}>
       {loading && <p role="status" className="text-body text-text-muted">{t('wall.loading')}</p>}
-      {error && <p role="alert" className="text-label text-red">{t(draft ? 'wall.saveFailed' : 'wall.loadFailed')} <Button type="button" variant="ghost" size="sm" onClick={() => void load()}>{t('modal.retry')}</Button></p>}
-      {owner && !draft && (
+      {error && !dirty && <p role="alert" className="text-label text-red">{t('wall.loadFailed')} <Button type="button" variant="ghost" size="sm" onClick={() => void load()}>{t('modal.retry')}</Button></p>}
+      {owner && (
         <div className="flex items-center justify-between gap-3">
           <h3 className="text-body font-semibold text-text-primary">{t('wall.yours')}</h3>
           {data && (
-            <Button type="button" variant="secondary" size="sm" onClick={() => setDraft(data.widgets.map((widget) => ({ connectionId: widget.connection?.id ?? null, type: widget.type })))}>
+            <Button type="button" variant="secondary" size="sm" disabled={saving} onClick={() => setAdding(true)}>
               <PlusIcon size={14} aria-hidden />
               <span>{t('wall.addWidget')}</span>
             </Button>
           )}
         </div>
       )}
-      {draft && <WidgetPicker
-        choices={choices}
-        disabled={saving}
-        onPick={(widget) => setDraft([...draft, { connectionId: widget.connection?.id ?? null, type: widget.type }])}
-        onManage={() => { navigate(ROUTES.settingsTab('connections')); onNavigate(); }}
-      />}
       {!loading && data && widgets.length === 0 && <p className="py-8 text-center text-body text-text-muted">{t(owner ? 'wall.emptyOwner' : 'wall.emptyVisitor')}</p>}
       <div className="flex w-full min-w-0 flex-col gap-4">
         {widgets.map((widget, index) => {
@@ -127,8 +148,8 @@ export function ProfileWall({ userId, owner, accent, onNavigate }: { userId: str
             onRemove: (position: number) => setGames(list, items.filter((_, i) => i !== position)),
             onMove: (position: number, direction: -1 | 1) => { const next = [...items]; [next[position], next[position + direction]] = [next[position + direction]!, next[position]!]; setGames(list, next); },
           } : undefined;
-          const card = <WallWidgetCard widget={widget} accent={accent} gameEditor={draft ? gameEditor : undefined} />;
-          if (!draft) return <div key={widgetKey(widget)} className="w-full min-w-0">{card}</div>;
+          const card = <WallWidgetCard widget={widget} accent={accent} gameEditor={owner ? gameEditor : undefined} />;
+          if (!owner) return <div key={widgetKey(widget)} className="w-full min-w-0">{card}</div>;
           // the controls sit in their own row above the card, in flow, so they can never cover its content
           return <div key={widgetKey(widget)} className="flex w-full min-w-0 flex-col gap-3 rounded-xl border border-dashed border-border-strong p-3">
             <div className="flex items-center justify-between gap-2 px-1">
@@ -136,19 +157,24 @@ export function ProfileWall({ userId, owner, accent, onNavigate }: { userId: str
               <div className="flex gap-1">
                 <Button type="button" variant="ghost" size="icon" disabled={saving || index === 0} aria-label={t('wall.moveUp', { name })} onClick={() => move(index, -1)}><ArrowUpIcon size={16} /></Button>
                 <Button type="button" variant="ghost" size="icon" disabled={saving || index === widgets.length - 1} aria-label={t('wall.moveDown', { name })} onClick={() => move(index, 1)}><ArrowDownIcon size={16} /></Button>
-                <Button type="button" variant="ghost" size="icon" disabled={saving} aria-label={t('wall.remove', { name })} className="text-red-text hover:text-red-text" onClick={() => setDraft(draft.filter((selection) => selectionKey(selection) !== widgetKey(widget)))}><TrashIcon size={16} /></Button>
+                <Button type="button" variant="ghost" size="icon" disabled={saving} aria-label={t('wall.remove', { name })} className="text-red-text hover:text-red-text" onClick={() => setDraft(selections.filter((selection) => selectionKey(selection) !== widgetKey(widget)))}><TrashIcon size={16} /></Button>
               </div>
             </div>
             {card}
           </div>;
         })}
       </div>
+      {owner && data && <AddWidgetDialog
+        open={adding}
+        available={data.available ?? []}
+        added={(widget) => selections.some((selection) => selectionKey(selection) === widgetKey(widget))}
+        onPick={(widget) => { setDraft([...selections, selectionOf(widget)]); setAdding(false); }}
+        onManage={() => { setAdding(false); navigate(ROUTES.settingsTab('connections')); onNavigate(); }}
+        onOpenChange={setAdding}
+      />}
       <GamePickerDialog open={!!picking} widgetName={picking?.widgetName ?? ''} taken={picking ? gamesOf(picking.list).map((game) => game.igdbId) : []}
         onPick={chooseGame} onOpenChange={(open) => { if (!open) setPicking(null); }} />
-      {owner && data && draft && <div className="flex justify-end gap-2">
-        <Button type="button" variant="ghost" disabled={saving} onClick={() => { closeDraft(); setError(false); }}>{t('wall.cancel')}</Button>
-        <Button type="button" disabled={saving} onClick={() => void save()}>{t(saving ? 'wall.saving' : 'wall.save')}</Button>
-      </div>}
+      {bar}
     </section>
   );
 }

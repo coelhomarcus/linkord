@@ -115,7 +115,6 @@
   "wall": {
     "title": "Wall",
     "profileTabs": "Profile tabs",
-    "cancel": "Cancel",
     "save": "Save",
     "saving": "Saving…",
     "loading": "Loading Wall…",
@@ -124,7 +123,6 @@
     "addWidgetHint": "Choose what shows on your Wall.",
     "addWidget": "Add widget",
     "yours": "Your widgets",
-    "allAdded": "All available widgets have been added.",
     "manageConnections": "Manage connections",
     "emptyOwner": "Your Wall is empty. Add a widget to choose what shows.",
     "emptyVisitor": "This user has not published any Wall widgets yet.",
@@ -173,7 +171,19 @@
       "remove": "Remove {{name}}",
       "moveEarlier": "Move {{name}} earlier",
       "moveLater": "Move {{name}} later"
-    }
+    },
+    "addWidgetTitle": "Add profile widget",
+    "categories": "Widget types",
+    "added": "Added",
+    "unsaved": "Don't forget to save your changes!",
+    "reset": "Reset",
+    "barLabel": "Save changes to the Wall",
+    "groups": {
+      "igdb": "Games",
+      "myanimelist": "Anime",
+      "github": "GitHub"
+    },
+    "cancel": "Cancel"
   },
   "editor": {
     "fileTooLarge": "File too large (maximum {{max}}).",

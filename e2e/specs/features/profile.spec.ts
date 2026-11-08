@@ -47,17 +47,21 @@ test.describe('profile', () => {
     await a.page.getByRole('button', { name: 'Meu perfil' }).filter({ hasText: 'Meu perfil' }).click();
     await a.page.getByRole('tab', { name: 'Mural' }).click();
     await a.page.getByRole('button', { name: 'Adicionar widget' }).click();
-    await a.page.getByRole('button', { name: 'Jogo favorito' }).click();
+    // the catalog is a window over the profile; the games widgets are there with no connection
+    await a.page.getByRole('dialog', { name: 'Adicionar widget de perfil' }).getByRole('button', { name: 'Jogo favorito' }).click();
     // an empty place opens the search in a window; the e2e stack has no IGDB credentials, so it says so
     await a.page.getByRole('button', { name: 'Adicionar jogo a Jogo favorito' }).click();
     await a.page.getByRole('searchbox', { name: 'Buscar jogo' }).fill('zelda');
-    await expect(a.page.getByRole('dialog').getByText('A busca de jogos está indisponível no momento.')).toBeVisible();
+    await expect(a.page.getByRole('dialog', { name: 'Escolher jogo' }).getByText('A busca de jogos está indisponível no momento.')).toBeVisible();
     await a.page.keyboard.press('Escape');
-    await expect(a.page.getByRole('dialog').filter({ hasText: 'Escolher jogo' })).toBeHidden();
-    await a.page.getByRole('button', { name: 'Salvar', exact: true }).click();
-    await expect(a.page.getByRole('button', { name: 'Adicionar widget' })).toBeVisible();
+    await expect(a.page.getByRole('dialog', { name: 'Escolher jogo' })).toBeHidden();
+    // the Save bar floats over the profile; nothing is published before it
+    const bar = a.page.getByRole('region', { name: 'Salvar alterações do Mural' });
+    await expect(bar.getByText('Não se esqueça de salvar suas alterações!')).toBeVisible();
+    expect((await (await bob.api.get(`/api/users/${alice.id}/wall`)).json() as { widgets: unknown[] }).widgets).toEqual([]);
+    await bar.getByRole('button', { name: 'Salvar' }).click();
+    await expect(bar).toBeHidden();
     await expect(a.page.getByRole('article').getByRole('heading', { name: 'Jogo favorito' })).toBeVisible();
-    await expect(a.page.getByText('Nenhum jogo escolhido ainda.')).toBeVisible();
 
     const wall = await (await bob.api.get(`/api/users/${alice.id}/wall`)).json() as { widgets: { type: string; connection: unknown }[] };
     expect(wall.widgets.map((widget) => [widget.type, widget.connection])).toEqual([['igdb-favorite-game', null]]);

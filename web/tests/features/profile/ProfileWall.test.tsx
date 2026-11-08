@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { ProfileWall } from '@/features/profile/ProfileWall';
@@ -22,54 +22,293 @@ const empty: WallResponse = { widgets: [], available: [anime, profile] };
 beforeEach(() => { vi.clearAllMocks(); mocked.fetchWall.mockResolvedValue(empty); });
 function renderWall(owner = true) { render(<MemoryRouter><ProfileWall userId="me" owner={owner} accent="#3366ff" onNavigate={vi.fn()} /></MemoryRouter>); }
 
+const gameWidget = (type: 'igdb-favorite-game' | 'igdb-liked-games' | 'igdb-playing-games' | 'igdb-wishlist-games', items: GameItem[] = []): WallWidget => ({ connection: null, type, data: { kind: 'games', items } });
+const gameChoices = [gameWidget('igdb-favorite-game'), gameWidget('igdb-liked-games'), gameWidget('igdb-playing-games'), gameWidget('igdb-wishlist-games')];
+// like the server, `available` holds the same data as the widgets already on the Wall
+const withAvailable = (widgets: WallWidget[], extra: WallWidget[] = []): WallResponse => ({ widgets, available: [...extra, ...gameChoices.map((choice) => widgets.find((widget) => widget.type === choice.type) ?? choice)] });
+const names = { favorite: 'Jogo favorito', liked: 'Jogos que eu gosto', playing: 'Jogos em rotação', wishlist: 'Quero jogar' };
+const addWidgetButton = () => screen.findByRole('button', { name: 'Adicionar widget' });
+async function chooseWidget(user: ReturnType<typeof userEvent.setup>, name: string) {
+  await user.click(await addWidgetButton());
+  await user.click(await screen.findByRole('button', { name }));
+}
+const saveBar = () => screen.queryByRole('region', { name: 'Salvar alterações do Mural' });
 describe('profile Wall', () => {
-  it('starts empty and keeps available data unpublished until explicitly saved', async () => {
-    const user = userEvent.setup(); renderWall();
-    await user.click(await screen.findByRole('button', { name: 'Adicionar widget' }));
-    expect(screen.queryByRole('link', { name: 'Cowboy Bebop' })).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Atividade recente de animes' }));
+  it('lets the owner edit without a mode to enter, and shows no save bar until something changes', async () => {
+    mocked.fetchWall.mockResolvedValue({ widgets: [anime], available: [anime, profile, ...gameChoices] }); renderWall();
+    expect(await addWidgetButton()).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Cowboy Bebop' })).toBeInTheDocument();
-    expect(mocked.saveWall).not.toHaveBeenCalled();
-    await user.click(screen.getByRole('button', { name: 'Cancelar' }));
+    expect(screen.getByRole('button', { name: 'Remover Atividade recente de animes' })).toBeEnabled();
+    expect(saveBar()).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Salvar' })).not.toBeInTheDocument();
+  });
+
+  it('opens the catalog in a window with the groups beside the widgets, and nothing is added until one is chosen', async () => {
+    const user = userEvent.setup();
+    mocked.fetchWall.mockResolvedValue({ widgets: [], available: [anime, profile, ...gameChoices] }); renderWall();
+    await user.click(await addWidgetButton());
+    const dialog = await screen.findByRole('dialog', { name: 'Adicionar widget de perfil' });
+    const groups = within(within(dialog).getByRole('navigation', { name: 'Tipos de widget' }));
+    expect(groups.getByRole('button', { name: 'Jogos' })).toHaveAttribute('aria-current', 'true');
+    for (const name of Object.values(names)) expect(within(dialog).getByRole('button', { name })).toBeInTheDocument();
+    await user.click(groups.getByRole('button', { name: 'Anime' }));
+    expect(within(dialog).getByRole('button', { name: 'Atividade recente de animes' })).toBeInTheDocument();
+    expect(within(dialog).queryByRole('button', { name: names.favorite })).not.toBeInTheDocument();
+    await user.click(groups.getByRole('button', { name: 'GitHub' }));
+    expect(within(dialog).getByRole('button', { name: 'Perfil do GitHub' })).toBeInTheDocument();
+    expect(saveBar()).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Cowboy Bebop' })).not.toBeInTheDocument();
+  });
+
+  it('offers the games widgets with no connection at all, and no group that needs one', async () => {
+    const user = userEvent.setup();
+    mocked.fetchWall.mockResolvedValue({ widgets: [], available: gameChoices }); renderWall();
+    await user.click(await addWidgetButton());
+    const dialog = await screen.findByRole('dialog');
+    const groups = within(within(dialog).getByRole('navigation', { name: 'Tipos de widget' }));
+    expect(groups.getAllByRole('button').map((button) => button.textContent)).toEqual(['Jogos', 'Gerenciar conexões']);
+    for (const name of Object.values(names)) expect(within(dialog).getByRole('button', { name })).toBeInTheDocument();
+  });
+
+  it('keeps a widget already on the Wall in the catalog, marked as added and not choosable', async () => {
+    const user = userEvent.setup();
+    mocked.fetchWall.mockResolvedValue(withAvailable([gameWidget('igdb-liked-games')])); renderWall();
+    await user.click(await addWidgetButton());
+    const added = await screen.findByRole('button', { name: names.liked });
+    expect(added).toBeDisabled();
+    expect(within(added).getByText('Adicionado')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: names.favorite })).toBeEnabled();
+  });
+
+  it('adds a widget, closes the window, and raises the floating bar over the profile', async () => {
+    const user = userEvent.setup();
+    mocked.fetchWall.mockResolvedValue({ widgets: [], available: [anime, profile] }); renderWall();
+    await user.click(await addWidgetButton());
+    await user.click(await screen.findByRole('button', { name: 'Atividade recente de animes' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(screen.getByRole('link', { name: 'Cowboy Bebop' })).toBeInTheDocument();
+    const bar = saveBar()!;
+    expect(within(bar).getByText('Não se esqueça de salvar suas alterações!')).toBeInTheDocument();
+    expect(within(bar).getByRole('button', { name: 'Redefinir' })).toBeEnabled();
+    expect(within(bar).getByRole('button', { name: 'Salvar' })).toBeEnabled();
+    expect(mocked.saveWall).not.toHaveBeenCalled();
+    // there is no Cancel / Save pair at the end of the Wall any more
+    expect(screen.queryByRole('button', { name: 'Cancelar' })).not.toBeInTheDocument();
+  });
+
+  it('puts the saved Wall back with Reset, and the bar goes away', async () => {
+    const user = userEvent.setup();
+    mocked.fetchWall.mockResolvedValue({ widgets: [anime], available: [anime, profile] }); renderWall();
+    await user.click(await screen.findByRole('button', { name: 'Remover Atividade recente de animes' }));
+    expect(screen.queryByRole('link', { name: 'Cowboy Bebop' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Redefinir' }));
+    expect(screen.getByRole('link', { name: 'Cowboy Bebop' })).toBeInTheDocument();
+    expect(saveBar()).not.toBeInTheDocument();
     expect(mocked.saveWall).not.toHaveBeenCalled();
   });
+
   it('adds, reorders and saves only connection references, then supports removing widgets', async () => {
-    const user = userEvent.setup(); renderWall();
-    await user.click(await screen.findByRole('button', { name: 'Adicionar widget' }));
-    await user.click(screen.getByRole('button', { name: 'Atividade recente de animes' }));
+    const user = userEvent.setup();
+    mocked.fetchWall.mockResolvedValue({ widgets: [], available: [anime, profile] }); renderWall();
+    await chooseWidget(user, 'Atividade recente de animes');
+    await user.click(await addWidgetButton());
+    await user.click(await screen.findByRole('button', { name: 'GitHub' }));
     await user.click(screen.getByRole('button', { name: 'Perfil do GitHub' }));
     expect(screen.getByRole('button', { name: 'Mover Atividade recente de animes para cima' })).toBeDisabled();
     await user.click(screen.getByRole('button', { name: 'Mover Perfil do GitHub para cima' }));
     const references = [{ connectionId: 'gh', type: 'github-profile' }, { connectionId: 'mal', type: 'mal-recent-anime' }];
-    mocked.saveWall.mockResolvedValue({ ...empty, widgets: [profile, anime] });
+    mocked.saveWall.mockResolvedValue({ widgets: [profile, anime], available: [anime, profile] });
     await user.click(screen.getByRole('button', { name: 'Salvar' }));
     await waitFor(() => expect(mocked.saveWall).toHaveBeenCalledWith(references));
-    await user.click(await screen.findByRole('button', { name: 'Adicionar widget' }));
+    await waitFor(() => expect(saveBar()).not.toBeInTheDocument());
     await user.click(screen.getByRole('button', { name: 'Remover Atividade recente de animes' }));
     expect(screen.queryByRole('link', { name: 'Cowboy Bebop' })).not.toBeInTheDocument();
   });
-  it('shows published widgets to visitors without edit controls or the catalog', async () => {
+
+  it('saves a reordering of the widgets already there', async () => {
+    const user = userEvent.setup();
+    mocked.fetchWall.mockResolvedValue({ widgets: [anime, profile], available: [anime, profile] }); renderWall();
+    await user.click(await screen.findByRole('button', { name: 'Mover Perfil do GitHub para cima' }));
+    mocked.saveWall.mockResolvedValue({ widgets: [profile, anime], available: [anime, profile] });
+    await user.click(screen.getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(mocked.saveWall).toHaveBeenCalledWith([{ connectionId: 'gh', type: 'github-profile' }, { connectionId: 'mal', type: 'mal-recent-anime' }]));
+  });
+
+  it('shows published widgets to visitors without edit controls, catalog or bar', async () => {
     mocked.fetchWall.mockResolvedValue({ widgets: [anime] }); renderWall(false);
     expect(await screen.findByRole('link', { name: 'Cowboy Bebop' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Adicionar widget' })).not.toBeInTheDocument();
-    expect(screen.queryByText('Adicionar widget')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Remover|Mover/ })).not.toBeInTheDocument();
+    expect(saveBar()).not.toBeInTheDocument();
     expect(mocked.fetchWall).toHaveBeenCalledWith('me', false, expect.any(AbortSignal));
   });
-  it('preserves the editable draft when saving fails', async () => {
-    const user = userEvent.setup(); mocked.saveWall.mockRejectedValue(new Error('offline')); renderWall();
-    await user.click(await screen.findByRole('button', { name: 'Adicionar widget' }));
-    await user.click(screen.getByRole('button', { name: 'Atividade recente de animes' }));
+
+  it('preserves the draft and the bar when saving fails', async () => {
+    const user = userEvent.setup(); mocked.saveWall.mockRejectedValue(new Error('offline'));
+    mocked.fetchWall.mockResolvedValue({ widgets: [], available: [anime, profile] }); renderWall();
+    await chooseWidget(user, 'Atividade recente de animes');
     await user.click(screen.getByRole('button', { name: 'Salvar' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível salvar o Mural.');
     expect(screen.getByRole('link', { name: 'Cowboy Bebop' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Salvar' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Redefinir' })).toBeEnabled();
   });
+
+  it('asks the browser to confirm leaving while there is something unsaved', async () => {
+    const user = userEvent.setup();
+    mocked.fetchWall.mockResolvedValue({ widgets: [], available: [anime] }); renderWall();
+    const leave = () => { const event = new Event('beforeunload', { cancelable: true }); window.dispatchEvent(event); return event.defaultPrevented; };
+    await addWidgetButton();
+    expect(leave()).toBe(false);
+    await chooseWidget(user, 'Atividade recente de animes');
+    expect(leave()).toBe(true);
+    await user.click(screen.getByRole('button', { name: 'Redefinir' }));
+    expect(leave()).toBe(false);
+  });
+
   it('offers a retry after a failed initial load and renders an empty visitor Wall', async () => {
     const user = userEvent.setup(); mocked.fetchWall.mockRejectedValueOnce(new Error('offline')); renderWall(false);
     expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível carregar o Mural.');
     await user.click(screen.getByRole('button', { name: 'Tentar de novo' }));
     expect(await screen.findByText('Este usuário ainda não publicou widgets no Mural.')).toBeInTheDocument();
+  });
+
+  it('sends the manage-connections shortcut away from the window', async () => {
+    const user = userEvent.setup();
+    mocked.fetchWall.mockResolvedValue({ widgets: [], available: gameChoices }); renderWall();
+    await user.click(await addWidgetButton());
+    await user.click(await screen.findByRole('button', { name: 'Gerenciar conexões' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+});
+
+describe('games widgets on the Wall', () => {
+  beforeEach(() => { clearGameSearchCache(); searchGames.mockReset(); searchGames.mockResolvedValue({ games: [game(1), game(2), game(3)] }); });
+  const pickInDialog = async (user: ReturnType<typeof userEvent.setup>, name: string, text = 'zelda') => {
+    await user.type(await screen.findByRole('searchbox', { name: 'Buscar jogo' }), text);
+    await user.click(await screen.findByRole('button', { name }, { timeout: 3000 }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  };
+  const startWith = (response: WallResponse) => { mocked.fetchWall.mockResolvedValue(response); renderWall(); return userEvent.setup(); };
+
+  it('shows a new games widget as empty places to fill, with no search open', async () => {
+    const user = startWith({ widgets: [], available: gameChoices });
+    await chooseWidget(user, names.liked);
+    expect(screen.getAllByRole('button', { name: 'Adicionar jogo a Jogos que eu gosto' })).toHaveLength(8);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('shows the games of a widget already on the Wall as editable covers, with no mode to enter', async () => {
+    startWith(withAvailable([gameWidget('igdb-liked-games', [game(5)])]));
+    expect(await screen.findByRole('button', { name: 'Trocar Game 5' })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Adicionar jogo a Jogos que eu gosto' })).toHaveLength(7);
+    expect(saveBar()).not.toBeInTheDocument();
+  });
+
+  it('fills a place by searching in a window over the page, and keeps the widget its size', async () => {
+    const user = startWith({ widgets: [], available: gameChoices });
+    await chooseWidget(user, names.liked);
+    const before = screen.getAllByRole('listitem').length;
+    await user.click(screen.getAllByRole('button', { name: 'Adicionar jogo a Jogos que eu gosto' })[0]!);
+    expect(await screen.findByRole('dialog', { name: 'Escolher jogo' })).toBeInTheDocument();
+    await pickInDialog(user, 'Escolher Game 2 (2002)');
+    expect(screen.getByRole('button', { name: 'Trocar Game 2' })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Adicionar jogo a Jogos que eu gosto' })).toHaveLength(7);
+    // a game took the place of an empty one: the grid is still eight places
+    expect(screen.getAllByRole('listitem').length).toBe(before);
+  });
+
+  it('picks a favorite, saves the connection-free selection with the snapshot, and nothing else', async () => {
+    const user = startWith({ widgets: [], available: [...gameChoices, anime] });
+    await chooseWidget(user, names.favorite);
+    await user.click(screen.getByRole('button', { name: 'Adicionar jogo a Jogo favorito' }));
+    await pickInDialog(user, 'Escolher Game 1 (2001)');
+    expect(screen.getByText('Game 1')).toBeInTheDocument();
+    mocked.saveWall.mockResolvedValue({ widgets: [gameWidget('igdb-favorite-game', [game(1)])], available: gameChoices });
+    await user.click(screen.getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(mocked.saveWall).toHaveBeenCalledWith(
+      [{ connectionId: null, type: 'igdb-favorite-game' }],
+      { favorite: [expect.objectContaining({ igdbId: 1 })] },
+    ));
+    expect(mocked.saveWall.mock.calls[0]![1]!.favorite).toHaveLength(1);
+  });
+
+  it('saves a change to the games alone with the widgets as they are', async () => {
+    const user = startWith(withAvailable([gameWidget('igdb-liked-games', [game(5)]), gameWidget('igdb-wishlist-games', [game(6)])]));
+    await user.click(await screen.findByRole('button', { name: 'Remover Game 5' }));
+    mocked.saveWall.mockResolvedValue({ widgets: [], available: gameChoices });
+    await user.click(screen.getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(mocked.saveWall).toHaveBeenCalled());
+    expect(mocked.saveWall.mock.calls[0]![0]).toEqual([{ connectionId: null, type: 'igdb-liked-games' }, { connectionId: null, type: 'igdb-wishlist-games' }]);
+    expect(mocked.saveWall.mock.calls[0]![1]).toEqual({ liked: [] });
+  });
+
+  it('replaces a game in its own place, not at the end', async () => {
+    const user = startWith(withAvailable([gameWidget('igdb-liked-games', [game(5), game(6), game(7)])]));
+    await user.click(await screen.findByRole('button', { name: 'Trocar Game 6' }));
+    await pickInDialog(user, 'Escolher Game 2 (2002)');
+    mocked.saveWall.mockResolvedValue({ widgets: [], available: gameChoices });
+    await user.click(screen.getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(mocked.saveWall).toHaveBeenCalled());
+    expect(mocked.saveWall.mock.calls[0]![1]!.liked!.map((item) => item.igdbId)).toEqual([5, 2, 7]);
+  });
+
+  it('swaps the favorite for another game', async () => {
+    const user = startWith(withAvailable([gameWidget('igdb-favorite-game', [game(9)])]));
+    await user.click(await screen.findByRole('button', { name: 'Trocar Game 9' }));
+    await pickInDialog(user, 'Escolher Game 1 (2001)');
+    mocked.saveWall.mockResolvedValue({ widgets: [], available: gameChoices });
+    await user.click(screen.getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(mocked.saveWall).toHaveBeenCalled());
+    expect(mocked.saveWall.mock.calls[0]![1]!.favorite!.map((item) => item.igdbId)).toEqual([1]);
+  });
+
+  it('removes and reorders on the covers, and offers the freed place again', async () => {
+    const user = startWith(withAvailable([gameWidget('igdb-liked-games', [game(5), game(6), game(7)])]));
+    expect(await screen.findByRole('button', { name: 'Mover Game 5 para antes' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Mover Game 7 para depois' })).toBeDisabled();
+    await user.click(screen.getByRole('button', { name: 'Mover Game 7 para antes' }));
+    await user.click(screen.getByRole('button', { name: 'Remover Game 5' }));
+    expect(screen.getAllByRole('button', { name: 'Adicionar jogo a Jogos que eu gosto' })).toHaveLength(6);
+    mocked.saveWall.mockResolvedValue({ widgets: [], available: gameChoices });
+    await user.click(screen.getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(mocked.saveWall).toHaveBeenCalled());
+    expect(mocked.saveWall.mock.calls[0]![1]!.liked!.map((item) => item.igdbId)).toEqual([7, 6]);
+  });
+
+  it('does not let a game already in the list be chosen again', async () => {
+    const user = startWith(withAvailable([gameWidget('igdb-liked-games', [game(1)])]));
+    await user.click((await screen.findAllByRole('button', { name: 'Adicionar jogo a Jogos que eu gosto' }))[0]!);
+    await user.type(await screen.findByRole('searchbox', { name: 'Buscar jogo' }), 'zelda');
+    expect(await screen.findByRole('button', { name: 'Game 1 (2001) já está na lista' }, { timeout: 3000 })).toBeDisabled();
+  });
+
+  it('forgets the unsaved picks on Reset', async () => {
+    const user = startWith(withAvailable([gameWidget('igdb-liked-games', [game(5)])]));
+    await user.click(await screen.findByRole('button', { name: 'Remover Game 5' }));
+    expect(screen.queryByRole('button', { name: 'Trocar Game 5' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Redefinir' }));
+    expect(screen.getByRole('button', { name: 'Trocar Game 5' })).toBeInTheDocument();
+    expect(saveBar()).not.toBeInTheDocument();
+    expect(mocked.saveWall).not.toHaveBeenCalled();
+  });
+
+  it('keeps the picks when saving fails', async () => {
+    mocked.saveWall.mockRejectedValue(new Error('offline'));
+    const user = startWith(withAvailable([gameWidget('igdb-liked-games', [game(5)])]));
+    await user.click(await screen.findByRole('button', { name: 'Remover Game 5' }));
+    await user.click(screen.getByRole('button', { name: 'Salvar' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível salvar o Mural.');
+    expect(screen.getAllByRole('button', { name: 'Adicionar jogo a Jogos que eu gosto' })).toHaveLength(8);
+    expect(screen.getByRole('button', { name: 'Salvar' })).toBeEnabled();
+  });
+
+  it('shows visitors the games as covers only: no controls, no empty places, no window', async () => {
+    mocked.fetchWall.mockResolvedValue({ widgets: [gameWidget('igdb-favorite-game', [game(1)]), gameWidget('igdb-liked-games', [game(2), game(3)])] }); renderWall(false);
+    expect(await screen.findByRole('heading', { name: 'Jogo favorito' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Game 3' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Adicionar jogo|Trocar|Remover/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });
 
@@ -90,17 +329,6 @@ describe('Wall widget cards', () => {
     expect(link).toHaveAttribute('href', connection.url);
     expect(link).not.toHaveTextContent('MyAnimeList');
     expect(screen.getByRole('heading', { name: 'Atividade recente de animes' })).toBeInTheDocument();
-  });
-  it('groups widgets still off the Wall by service, with the account named once', async () => {
-    const user = userEvent.setup();
-    renderWall();
-    await user.click(await screen.findByRole('button', { name: 'Adicionar widget' }));
-    expect(screen.getByRole('heading', { name: 'MyAnimeList' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'GitHub' })).toBeInTheDocument();
-    expect(screen.getByText('@Xinil')).toBeInTheDocument();
-    expect(screen.getByText('@octocat')).toBeInTheDocument();
-    expect(screen.queryByText(/GitHub ·/)).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Atividade recente de animes' })).toBeInTheDocument();
   });
   it('shows only the covers of the first eight recent anime, without titles or progress', () => {
     const items = Array.from({ length: 10 }, (_, i) => ({ id: String(i), title: `Anime ${i}`, url: `https://myanimelist.net/anime/${i}`, imageUrl: `https://cdn.myanimelist.net/${i}.jpg` }));
@@ -137,153 +365,6 @@ describe('Wall widget cards', () => {
     } finally {
       rect.mockRestore();
     }
-  });
-});
-
-const gameWidget = (type: 'igdb-favorite-game' | 'igdb-liked-games' | 'igdb-playing-games' | 'igdb-wishlist-games', items: GameItem[] = []): WallWidget => ({ connection: null, type, data: { kind: 'games', items } });
-const gameChoices = [gameWidget('igdb-favorite-game'), gameWidget('igdb-liked-games'), gameWidget('igdb-playing-games'), gameWidget('igdb-wishlist-games')];
-// like the server, `available` holds the same data as the widgets already on the Wall
-const withAvailable = (...widgets: WallWidget[]): WallResponse => ({ widgets, available: gameChoices.map((choice) => widgets.find((widget) => widget.type === choice.type) ?? choice) });
-const names = { favorite: 'Jogo favorito', liked: 'Jogos que eu gosto', playing: 'Jogos em rotação', wishlist: 'Quero jogar' };
-
-describe('games widgets on the Wall', () => {
-  beforeEach(() => { clearGameSearchCache(); searchGames.mockReset(); searchGames.mockResolvedValue({ games: [game(1), game(2), game(3)] }); });
-  const startEditing = async (response: WallResponse) => {
-    const user = userEvent.setup();
-    mocked.fetchWall.mockResolvedValue(response); renderWall();
-    await user.click(await screen.findByRole('button', { name: 'Adicionar widget' }));
-    return user;
-  };
-  const pickInDialog = async (user: ReturnType<typeof userEvent.setup>, name: string, text = 'zelda') => {
-    await user.type(await screen.findByRole('searchbox', { name: 'Buscar jogo' }), text);
-    await user.click(await screen.findByRole('button', { name }, { timeout: 3000 }));
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-  };
-
-  it('offers all four to someone with no connections, under IGDB', async () => {
-    await startEditing({ widgets: [], available: gameChoices });
-    expect(screen.getByRole('heading', { name: 'IGDB' })).toBeInTheDocument();
-    for (const name of Object.values(names)) expect(screen.getByRole('button', { name })).toBeInTheDocument();
-    expect(screen.queryByText(/^@/)).not.toBeInTheDocument();
-    expect(screen.queryByText('Conecte MyAnimeList ou GitHub para liberar widgets.')).not.toBeInTheDocument();
-  });
-
-  it('shows a new games widget as empty places to fill, with no search open', async () => {
-    const user = await startEditing({ widgets: [], available: gameChoices });
-    await user.click(screen.getByRole('button', { name: names.liked }));
-    expect(screen.getAllByRole('button', { name: 'Adicionar jogo a Jogos que eu gosto' })).toHaveLength(8);
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(screen.queryByRole('searchbox')).not.toBeInTheDocument();
-  });
-
-  it('fills a place by searching in a window over the page, and keeps the widget its size', async () => {
-    const user = await startEditing({ widgets: [], available: gameChoices });
-    await user.click(screen.getByRole('button', { name: names.liked }));
-    const before = screen.getAllByRole('listitem').length;
-    await user.click(screen.getAllByRole('button', { name: 'Adicionar jogo a Jogos que eu gosto' })[0]!);
-    expect(await screen.findByRole('dialog')).toBeInTheDocument();
-    await pickInDialog(user, 'Escolher Game 2 (2002)');
-    expect(screen.getByRole('button', { name: 'Trocar Game 2' })).toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: 'Adicionar jogo a Jogos que eu gosto' })).toHaveLength(7);
-    // a game took the place of an empty one: the grid is still eight places
-    expect(screen.getAllByRole('listitem').length).toBe(before);
-  });
-
-  it('picks a favorite, saves the connection-free selection with the snapshot, and nothing else', async () => {
-    const user = await startEditing({ widgets: [], available: [...gameChoices, anime] });
-    await user.click(screen.getByRole('button', { name: names.favorite }));
-    await user.click(screen.getByRole('button', { name: 'Adicionar jogo a Jogo favorito' }));
-    await pickInDialog(user, 'Escolher Game 1 (2001)');
-    expect(screen.getByText('Game 1')).toBeInTheDocument();
-    mocked.saveWall.mockResolvedValue({ widgets: [gameWidget('igdb-favorite-game', [game(1)])], available: gameChoices });
-    await user.click(screen.getByRole('button', { name: 'Salvar' }));
-    await waitFor(() => expect(mocked.saveWall).toHaveBeenCalledWith(
-      [{ connectionId: null, type: 'igdb-favorite-game' }],
-      { favorite: [expect.objectContaining({ igdbId: 1 })] },
-    ));
-    expect(mocked.saveWall.mock.calls[0]![1]!.favorite).toHaveLength(1);
-  });
-
-  it('replaces a game in its own place, not at the end', async () => {
-    const liked = gameWidget('igdb-liked-games', [game(5), game(6), game(7)]);
-    const user = await startEditing(withAvailable(liked));
-    await user.click(screen.getByRole('button', { name: 'Trocar Game 6' }));
-    await pickInDialog(user, 'Escolher Game 2 (2002)');
-    mocked.saveWall.mockResolvedValue({ widgets: [], available: gameChoices });
-    await user.click(screen.getByRole('button', { name: 'Salvar' }));
-    await waitFor(() => expect(mocked.saveWall).toHaveBeenCalled());
-    expect(mocked.saveWall.mock.calls[0]![1]!.liked!.map((item) => item.igdbId)).toEqual([5, 2, 7]);
-  });
-
-  it('swaps the favorite for another game', async () => {
-    const user = await startEditing(withAvailable(gameWidget('igdb-favorite-game', [game(9)])));
-    await user.click(screen.getByRole('button', { name: 'Trocar Game 9' }));
-    await pickInDialog(user, 'Escolher Game 1 (2001)');
-    mocked.saveWall.mockResolvedValue({ widgets: [], available: gameChoices });
-    await user.click(screen.getByRole('button', { name: 'Salvar' }));
-    await waitFor(() => expect(mocked.saveWall).toHaveBeenCalled());
-    expect(mocked.saveWall.mock.calls[0]![1]!.favorite!.map((item) => item.igdbId)).toEqual([1]);
-  });
-
-  it('removes and reorders on the covers, and offers the freed place again', async () => {
-    const liked = gameWidget('igdb-liked-games', [game(5), game(6), game(7)]);
-    const user = await startEditing(withAvailable(liked));
-    expect(screen.getByRole('button', { name: 'Mover Game 5 para antes' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Mover Game 7 para depois' })).toBeDisabled();
-    await user.click(screen.getByRole('button', { name: 'Mover Game 7 para antes' }));
-    await user.click(screen.getByRole('button', { name: 'Remover Game 5' }));
-    expect(screen.getAllByRole('button', { name: 'Adicionar jogo a Jogos que eu gosto' })).toHaveLength(6);
-    mocked.saveWall.mockResolvedValue({ widgets: [], available: gameChoices });
-    await user.click(screen.getByRole('button', { name: 'Salvar' }));
-    await waitFor(() => expect(mocked.saveWall).toHaveBeenCalled());
-    expect(mocked.saveWall.mock.calls[0]![1]!.liked!.map((item) => item.igdbId)).toEqual([7, 6]);
-  });
-
-  it('does not let a game already in the list be chosen again', async () => {
-    const user = await startEditing(withAvailable(gameWidget('igdb-liked-games', [game(1)])));
-    await user.click(screen.getAllByRole('button', { name: 'Adicionar jogo a Jogos que eu gosto' })[0]!);
-    await user.type(await screen.findByRole('searchbox', { name: 'Buscar jogo' }), 'zelda');
-    expect(await screen.findByRole('button', { name: 'Game 1 (2001) já está na lista' }, { timeout: 3000 })).toBeDisabled();
-    await user.keyboard('{Escape}');
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-    expect(screen.getByRole('button', { name: 'Trocar Game 1' })).toBeInTheDocument();
-  });
-
-  it('sends only the lists that were edited, and nothing when none was', async () => {
-    const user = await startEditing(withAvailable(gameWidget('igdb-liked-games', [game(5)]), gameWidget('igdb-wishlist-games', [game(6)])));
-    mocked.saveWall.mockResolvedValue({ widgets: [], available: gameChoices });
-    await user.click(screen.getByRole('button', { name: 'Salvar' }));
-    await waitFor(() => expect(mocked.saveWall).toHaveBeenCalledWith([{ connectionId: null, type: 'igdb-liked-games' }, { connectionId: null, type: 'igdb-wishlist-games' }]));
-    expect(mocked.saveWall.mock.calls[0]).toHaveLength(1);
-  });
-
-  it('forgets the unsaved picks on cancel', async () => {
-    const user = await startEditing(withAvailable(gameWidget('igdb-liked-games', [game(5)])));
-    await user.click(screen.getByRole('button', { name: 'Remover Game 5' }));
-    expect(screen.queryByRole('button', { name: 'Trocar Game 5' })).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Cancelar' }));
-    expect(screen.getByRole('link', { name: 'Game 5' })).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Adicionar widget' }));
-    expect(screen.getByRole('button', { name: 'Trocar Game 5' })).toBeInTheDocument();
-    expect(mocked.saveWall).not.toHaveBeenCalled();
-  });
-
-  it('keeps the picks when saving fails', async () => {
-    mocked.saveWall.mockRejectedValue(new Error('offline'));
-    const user = await startEditing(withAvailable(gameWidget('igdb-liked-games', [game(5)])));
-    await user.click(screen.getByRole('button', { name: 'Remover Game 5' }));
-    await user.click(screen.getByRole('button', { name: 'Salvar' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível salvar o Mural.');
-    expect(screen.queryByRole('button', { name: 'Trocar Game 5' })).not.toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: 'Adicionar jogo a Jogos que eu gosto' })).toHaveLength(8);
-  });
-
-  it('shows visitors the games as covers only: no controls, no empty places, no window', async () => {
-    mocked.fetchWall.mockResolvedValue({ widgets: [gameWidget('igdb-favorite-game', [game(1)]), gameWidget('igdb-liked-games', [game(2), game(3)])] }); renderWall(false);
-    expect(await screen.findByRole('heading', { name: 'Jogo favorito' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Game 3' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Adicionar jogo|Trocar|Remover/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });
 
