@@ -22,7 +22,7 @@ export class ConnectionMutationError extends Error {
   readonly code: ErrorCode;
   constructor(status: number, code: ErrorCode) { super(code); this.status = status; this.code = code; }
 }
-export function connectionDto(row: ProfileConnection) {
+function connectionDto(row: ProfileConnection) {
   return { id: row.id, provider: row.provider, value: row.value, url: row.url, position: row.position, showOnProfile: row.showOnProfile,
     syncedAt: row.syncedAt?.toISOString() ?? null, syncError: row.syncError,
     status: row.provider === 'url' ? 'ready' : row.syncError ? 'error' : row.syncedAt ? 'ready' : 'pending' };
@@ -85,7 +85,7 @@ async function project(tx: Tx, userId: string) {
 }
 
 /** What other people see of someone's connections: only the ones shown on the profile. */
-export function publicLinks(rows: Pick<ProfileConnection, 'url' | 'showOnProfile'>[]): string[] {
+function publicLinks(rows: Pick<ProfileConnection, 'url' | 'showOnProfile'>[]): string[] {
   return rows.filter((row) => row.showOnProfile).map((row) => row.url);
 }
 export async function saveWall(userId: string, input: unknown): Promise<void> {
