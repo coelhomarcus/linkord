@@ -37,6 +37,9 @@ Linkord is a self-hosted place to chat and call with friends. Talk in direct mes
 - **Presence status**
   Pick how you appear from the user panel: Available, Idle (also set automatically after a few minutes away, configurable per device), Do Not Disturb (no push and no notification sounds; notifications still land in the list) or Invisible (you look offline to everyone but keep using the app). Invisible still shows you inside a call you join, to the people who can see that call, the same way your voice and video do. Add a custom status with an emoji, a short text and an optional expiry, or pick a game from your rotation. Your status follows your account to every device.
 
+- **Server audit log**
+  Each server keeps a log in its settings of who kicked, banned, changed roles, channels, permissions, invites, webhooks or sounds, moved someone out of a voice channel, or deleted someone else's message, with what changed and when. Members with the "View audit log" permission can filter it by person, action, target and period. Entries are kept for 90 days by default (`SERVER_AUDIT_RETENTION_DAYS`).
+
 - **Administration**
   Manage users, servers, webhooks, reports, audit history, orphaned uploads, and the data retention report from `/admin`.
 

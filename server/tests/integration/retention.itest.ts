@@ -149,12 +149,12 @@ describe('retention sweep, end to end (real Postgres)', () => {
 
   it('a table registered later is swept, reported, and does not stop the built-in ones', async () => {
     const calls: number[] = [];
-    registerRetentionTarget({ key: 'server_audit_logs', days: () => 14, deleteBatch: async (_cutoff, limit) => { calls.push(limit); return 4; } });
-    assert.throws(() => registerRetentionTarget({ key: 'server_audit_logs', days: () => 1, deleteBatch: async () => 0 }), /already registered/);
+    registerRetentionTarget({ key: 'later_table', days: () => 14, deleteBatch: async (_cutoff, limit) => { calls.push(limit); return 4; } });
+    assert.throws(() => registerRetentionTarget({ key: 'later_table', days: () => 1, deleteBatch: async () => 0 }), /already registered/);
 
     const result = await sweepRetention({ ...fast, batchSize: 100 });
     assert.deepEqual(calls, [100]);
-    assert.equal(result.targets.at(-1)!.key, 'server_audit_logs');
+    assert.equal(result.targets.at(-1)!.key, 'later_table');
     assert.equal(result.targets.at(-1)!.deleted, 4);
     assert.ok(result.targets.some((t) => t.key === 'outbox_events'));
     assert.equal(getLastRetentionSweep(), result);

@@ -3,7 +3,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { and, eq } from 'drizzle-orm';
 import { config } from '../../config/env.js';
 import { db } from '../../db/client.js';
-import { channelPermissionOverwrites, conversations, serverCategories } from '../../db/schema.js';
+import { channelPermissionOverwrites, conversations, serverCategories, users } from '../../db/schema.js';
 import { sendJson, sendError, jsonBody } from '../../http/respond.js';
 import { deleteForConversation } from '../attachments/attachmentCleanup.js';
 import { revokeCallAccess } from '../calls/callAccess.js';
@@ -14,6 +14,7 @@ import { sanitizeCategoryName, sanitizeChannelName, sanitizeTopic } from './serv
 import { sendServerUpdateToMembers } from './serverSummaries.js';
 import { requireServerMember, requireSession, type ServerActor } from './serverHttp.js';
 import type { ChannelType } from './serverTemplate.js';
+import { createdFields, diffFields, recordServerAudit } from './serverAuditLog.js';
 import { logger } from '../../lib/logger.js';
 
 const log = logger.child({ component: 'channels' });
@@ -64,7 +65,10 @@ async function handleCreateChannel(request: FastifyRequest<{ Params: ServerParam
   const categoryId = typeof body.categoryId === 'string' && actor.snapshot.categories.some((c) => c.id === body.categoryId) ? body.categoryId : null;
   const position = actor.snapshot.channels.filter((c) => c.categoryId === categoryId).reduce((max, c) => Math.max(max, c.position + 1), 0);
   const id = crypto.randomUUID();
-  await db.insert(conversations).values({ id, type, title: name, createdBy: actor.userId, serverId, categoryId, position, updatedAt: new Date() });
+  await db.transaction(async (tx) => {
+    await tx.insert(conversations).values({ id, type, title: name, createdBy: actor.userId, serverId, categoryId, position, updatedAt: new Date() });
+    await recordServerAudit(tx, { serverId, actorId: actor.userId, action: 'channel.create', targetType: 'channel', targetId: id, targetLabel: name, changes: createdFields({ name, type }) });
+  });
   await changed(serverId);
   log.info('channel created', { serverId, channelId: id, type });
   sendJson(reply, 201, { channelId: id });
@@ -84,10 +88,15 @@ async function handleUpdateChannel(request: FastifyRequest<{ Params: ChannelPara
   }
   if (body.topic !== undefined) updates.topic = sanitizeTopic(body.topic);
   if (body.permissionsSynced === true) updates.permissionsSynced = true;
+  const changes = diffFields({ name: channel.title, topic: channel.topic, permissionsSynced: channel.permissionsSynced },
+    { name: updates.title, topic: updates.topic, permissionsSynced: updates.permissionsSynced }, ['name', 'topic', 'permissionsSynced']);
   await db.transaction(async (tx) => {
     await tx.update(conversations).set(updates).where(eq(conversations.id, channelId));
     // following the category again drops the channel's own rules
     if (updates.permissionsSynced) await tx.delete(channelPermissionOverwrites).where(eq(channelPermissionOverwrites.channelId, channelId));
+    if (changes.length) {
+      await recordServerAudit(tx, { serverId: actor.snapshot.server.id, actorId: actor.userId, action: 'channel.update', targetType: 'channel', targetId: channelId, targetLabel: updates.title ?? channel.title, changes });
+    }
   });
   await changed(actor.snapshot.server.id);
   sendJson(reply, 200, { ok: true });
@@ -97,9 +106,13 @@ async function handleDeleteChannel(request: FastifyRequest<{ Params: ChannelPara
   const target = await requireChannelManager(request, reply, String(request.params.channelId || ''));
   if (!target) return;
   const { actor, channelId } = target;
+  const channel = actor.snapshot.channels.find((c) => c.id === channelId)!;
   const inCall = [...participants.values()].filter((p) => p.callConversationId === channelId).map((p) => p.userId);
   await deleteForConversation(channelId);
-  await db.delete(conversations).where(eq(conversations.id, channelId));
+  await db.transaction(async (tx) => {
+    await tx.delete(conversations).where(eq(conversations.id, channelId));
+    await recordServerAudit(tx, { serverId: actor.snapshot.server.id, actorId: actor.userId, action: 'channel.delete', targetType: 'channel', targetId: channelId, targetLabel: channel.title, extra: { type: channel.type } });
+  });
   for (const userId of new Set(inCall)) void revokeCallAccess(userId, channelId);
   await changed(actor.snapshot.server.id);
   log.info('channel deleted', { serverId: actor.snapshot.server.id, channelId, actorId: actor.userId });
@@ -117,7 +130,10 @@ async function handleCreateCategory(request: FastifyRequest<{ Params: ServerPara
   }
   const id = crypto.randomUUID();
   const position = actor.snapshot.categories.reduce((max, c) => Math.max(max, c.position + 1), 0);
-  await db.insert(serverCategories).values({ id, serverId, name, position });
+  await db.transaction(async (tx) => {
+    await tx.insert(serverCategories).values({ id, serverId, name, position });
+    await recordServerAudit(tx, { serverId, actorId: actor.userId, action: 'category.create', targetType: 'category', targetId: id, targetLabel: name, changes: createdFields({ name }) });
+  });
   await changed(serverId);
   sendJson(reply, 201, { categoryId: id });
 }
@@ -139,7 +155,13 @@ async function handleUpdateCategory(request: FastifyRequest<{ Params: CategoryPa
   if (!actor) return;
   const name = sanitizeCategoryName(jsonBody(request.body).name);
   if (!name) return sendError(reply, 400, 'invalid_name', 'Dê um nome à categoria.');
-  await db.update(serverCategories).set({ name }).where(eq(serverCategories.id, categoryId));
+  const before = actor.snapshot.categories.find((c) => c.id === categoryId)!.name;
+  await db.transaction(async (tx) => {
+    await tx.update(serverCategories).set({ name }).where(eq(serverCategories.id, categoryId));
+    if (name !== before) {
+      await recordServerAudit(tx, { serverId: actor.snapshot.server.id, actorId: actor.userId, action: 'category.update', targetType: 'category', targetId: categoryId, targetLabel: name, changes: [{ key: 'name', before, after: name }] });
+    }
+  });
   await changed(actor.snapshot.server.id);
   sendJson(reply, 200, { ok: true });
 }
@@ -162,6 +184,8 @@ async function handleDeleteCategory(request: FastifyRequest<{ Params: CategoryPa
     }
     await tx.update(conversations).set({ permissionsSynced: false, categoryId: null }).where(eq(conversations.categoryId, categoryId));
     await tx.delete(serverCategories).where(eq(serverCategories.id, categoryId));
+    const name = actor.snapshot.categories.find((c) => c.id === categoryId)?.name ?? '';
+    await recordServerAudit(tx, { serverId: actor.snapshot.server.id, actorId: actor.userId, action: 'category.delete', targetType: 'category', targetId: categoryId, targetLabel: name });
   });
   await changed(actor.snapshot.server.id);
   sendJson(reply, 200, { ok: true });
@@ -251,9 +275,15 @@ async function handleSetOverwrite(request: FastifyRequest<{ Params: OverwritePar
   const grantable = grantableBits(actor, targetId, kind);
   if (((allow | deny) & ~grantable) !== 0) return sendError(reply, 403, 'hierarchy', 'Você não pode mexer em permissões que você não tem.');
 
+  // what applied to this role or member there before: a synced channel's rules are its category's
+  const channel = kind === 'channel' ? actor.snapshot.channels.find((c) => c.id === targetId)! : null;
+  const effectiveTarget = channel?.permissionsSynced && channel.categoryId ? channel.categoryId : targetId;
+  const previous = (actor.snapshot.overwrites.get(effectiveTarget) ?? []).find((o) => (roleId ? o.roleId === roleId : o.userId === userId));
+  const changes = diffFields({ allow: previous?.allow ?? 0, deny: previous?.deny ?? 0 }, { allow, deny }, ['allow', 'deny']);
+  const targetLabel = channel ? channel.title : actor.snapshot.categories.find((c) => c.id === targetId)!.name;
+
   await db.transaction(async (tx) => {
-    if (kind === 'channel') {
-      const channel = actor.snapshot.channels.find((c) => c.id === targetId)!;
+    if (channel) {
       if (channel.permissionsSynced && channel.categoryId) {
         const inherited = await tx.select().from(channelPermissionOverwrites).where(eq(channelPermissionOverwrites.categoryId, channel.categoryId));
         if (inherited.length) {
@@ -271,6 +301,15 @@ async function handleSetOverwrite(request: FastifyRequest<{ Params: OverwritePar
         id: crypto.randomUUID(), serverId,
         channelId: kind === 'channel' ? targetId : null, categoryId: kind === 'category' ? targetId : null,
         roleId, userId, allow, deny,
+      });
+    }
+    if (changes.length) {
+      const [subjectUser] = userId ? await tx.select({ username: users.username }).from(users).where(eq(users.id, userId)).limit(1) : [];
+      await recordServerAudit(tx, {
+        serverId, actorId: actor.userId, action: 'permissions.update', targetType: kind, targetId, targetLabel, changes,
+        extra: roleId
+          ? { subjectType: 'role', subjectId: roleId, subjectLabel: actor.snapshot.roles.find((r) => r.id === roleId)!.name }
+          : { subjectType: 'user', subjectId: userId, subjectLabel: subjectUser?.username ?? '' },
       });
     }
   });

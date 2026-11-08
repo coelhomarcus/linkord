@@ -134,7 +134,8 @@
       "moderation": "Moderação"
     },
     "icon": "Ícone",
-    "iconHint": "Recomendamos uma imagem de, pelo menos, 512x512."
+    "iconHint": "Recomendamos uma imagem de, pelo menos, 512x512.",
+    "auditLog": "Registro de auditoria"
   },
   "roles": {
     "hint": "Use cargos para organizar os membros e definir o que cada um pode fazer. Cargos mais acima mandam nos de baixo.",
@@ -271,7 +272,8 @@
     "STREAM": "Vídeo e tela",
     "MOVE_MEMBERS": "Desconectar membros",
     "USE_SOUNDBOARD": "Usar soundboard",
-    "MANAGE_EXPRESSIONS": "Gerenciar expressões"
+    "MANAGE_EXPRESSIONS": "Gerenciar expressões",
+    "VIEW_AUDIT_LOG": "Ver registro de auditoria"
   },
   "permissionHints": {
     "ADMINISTRATOR": "Concede todas as permissões e ignora as regras de cada canal. Cuidado ao dar esta.",
@@ -292,7 +294,8 @@
     "STREAM": "Ligar a câmera e compartilhar a tela.",
     "MOVE_MEMBERS": "Mover membros abaixo do seu cargo entre canais de voz, ou desconectá-los.",
     "USE_SOUNDBOARD": "Tocar e adicionar sons do soundboard.",
-    "MANAGE_EXPRESSIONS": "Editar e remover os sons de qualquer pessoa."
+    "MANAGE_EXPRESSIONS": "Editar e remover os sons de qualquer pessoa.",
+    "VIEW_AUDIT_LOG": "Ver quem mudou o quê no servidor."
   },
   "voiceMembers": {
     "inChannel": "Na chamada de {{channel}}",
@@ -313,6 +316,160 @@
       "volume": "Volume de {{name}}",
       "moveTo": "Mover para",
       "disconnect": "Desconectar"
+    }
+  },
+  "auditLog": {
+    "hint": "Quem mudou o quê neste servidor, e quando. Os registros mais antigos são apagados com o tempo.",
+    "filters": {
+      "user": "Filtrar por usuário",
+      "allUsers": "Todos",
+      "action": "Filtrar por ação",
+      "allActions": "Todas",
+      "from": "De",
+      "to": "Até",
+      "target": "Alvo: {{name}}",
+      "clearTarget": "Remover filtro de alvo",
+      "clear": "Limpar filtros"
+    },
+    "empty": "Nada foi registrado ainda.",
+    "emptyFiltered": "Nenhum registro com esses filtros.",
+    "loading": "Carregando…",
+    "loadMore": "Carregar mais",
+    "details": "Detalhes",
+    "unknownUser": "Conta excluída",
+    "actions": {
+      "server": {
+        "update": "Atualizar servidor",
+        "transfer": "Transferir servidor"
+      },
+      "member": {
+        "kick": "Expulsar membro",
+        "ban": "Banir membro",
+        "unban": "Revogar banimento",
+        "roles_update": "Alterar cargos do membro",
+        "voice_disconnect": "Desconectar da voz",
+        "voice_move": "Mover na voz"
+      },
+      "role": {
+        "create": "Criar cargo",
+        "update": "Atualizar cargo",
+        "delete": "Excluir cargo",
+        "reorder": "Reordenar cargos"
+      },
+      "channel": {
+        "create": "Criar canal",
+        "update": "Atualizar canal",
+        "delete": "Excluir canal"
+      },
+      "category": {
+        "create": "Criar categoria",
+        "update": "Atualizar categoria",
+        "delete": "Excluir categoria"
+      },
+      "permissions": {
+        "update": "Alterar permissões"
+      },
+      "invite": {
+        "create": "Criar convite",
+        "revoke": "Revogar convite"
+      },
+      "webhook": {
+        "create": "Criar webhook",
+        "update": "Atualizar webhook",
+        "rotate": "Trocar token do webhook",
+        "delete": "Excluir webhook"
+      },
+      "message": {
+        "delete": "Apagar mensagem"
+      },
+      "sound": {
+        "create": "Adicionar som",
+        "update": "Editar som",
+        "delete": "Remover som"
+      }
+    },
+    "sentences": {
+      "server": {
+        "update": "<actor>{{actor}}</actor> atualizou o servidor",
+        "transfer": "<actor>{{actor}}</actor> transferiu o servidor para <target>{{target}}</target>"
+      },
+      "member": {
+        "kick": "<actor>{{actor}}</actor> expulsou <target>{{target}}</target>",
+        "ban": "<actor>{{actor}}</actor> baniu <target>{{target}}</target>",
+        "unban": "<actor>{{actor}}</actor> revogou o banimento de <target>{{target}}</target>",
+        "roles_update": "<actor>{{actor}}</actor> alterou os cargos de <target>{{target}}</target>",
+        "voice_disconnect": "<actor>{{actor}}</actor> desconectou <target>{{target}}</target> de <b>{{channel}}</b>",
+        "voice_move": "<actor>{{actor}}</actor> moveu <target>{{target}}</target> de canal de voz"
+      },
+      "role": {
+        "create": "<actor>{{actor}}</actor> criou o cargo <target>{{target}}</target>",
+        "update": "<actor>{{actor}}</actor> atualizou o cargo <target>{{target}}</target>",
+        "delete": "<actor>{{actor}}</actor> excluiu o cargo <target>{{target}}</target>",
+        "reorder": "<actor>{{actor}}</actor> reordenou os cargos"
+      },
+      "channel": {
+        "create": "<actor>{{actor}}</actor> criou o canal <target>{{target}}</target>",
+        "update": "<actor>{{actor}}</actor> atualizou o canal <target>{{target}}</target>",
+        "delete": "<actor>{{actor}}</actor> excluiu o canal <target>{{target}}</target>"
+      },
+      "category": {
+        "create": "<actor>{{actor}}</actor> criou a categoria <target>{{target}}</target>",
+        "update": "<actor>{{actor}}</actor> atualizou a categoria <target>{{target}}</target>",
+        "delete": "<actor>{{actor}}</actor> excluiu a categoria <target>{{target}}</target>"
+      },
+      "permissions": {
+        "update": "<actor>{{actor}}</actor> alterou as permissões de <b>{{subject}}</b> em <target>{{target}}</target>"
+      },
+      "invite": {
+        "create": "<actor>{{actor}}</actor> criou o convite <target>{{target}}</target>",
+        "revoke": "<actor>{{actor}}</actor> revogou o convite <target>{{target}}</target>"
+      },
+      "webhook": {
+        "create": "<actor>{{actor}}</actor> criou o webhook <target>{{target}}</target>",
+        "update": "<actor>{{actor}}</actor> atualizou o webhook <target>{{target}}</target>",
+        "rotate": "<actor>{{actor}}</actor> trocou o token do webhook <target>{{target}}</target>",
+        "delete": "<actor>{{actor}}</actor> excluiu o webhook <target>{{target}}</target>"
+      },
+      "message": {
+        "delete": "<actor>{{actor}}</actor> apagou uma mensagem de <b>{{author}}</b> em <b>{{channel}}</b>"
+      },
+      "sound": {
+        "create": "<actor>{{actor}}</actor> adicionou o som <target>{{target}}</target>",
+        "update": "<actor>{{actor}}</actor> editou o som <target>{{target}}</target>",
+        "delete": "<actor>{{actor}}</actor> removeu o som <target>{{target}}</target>"
+      }
+    },
+    "fields": {
+      "name": "Nome",
+      "icon": "Ícone",
+      "topic": "Tópico",
+      "permissionsSynced": "Sincronizado com a categoria",
+      "color": "Cor",
+      "permissions": "Permissões",
+      "hoist": "Exibir separadamente",
+      "mentionable": "Mencionável",
+      "order": "Ordem",
+      "roles": "Cargos",
+      "allow": "Permitidas",
+      "deny": "Negadas",
+      "maxUses": "Usos máximos",
+      "expiresAt": "Expira em",
+      "channel": "Canal",
+      "type": "Tipo",
+      "emoji": "Emoji",
+      "volume": "Volume",
+      "avatar": "Avatar",
+      "reason": "Motivo"
+    },
+    "values": {
+      "yes": "Sim",
+      "no": "Não",
+      "none": "nenhum",
+      "image": "imagem",
+      "text": "texto",
+      "voice": "voz",
+      "before": "Antes",
+      "after": "Depois"
     }
   }
 }

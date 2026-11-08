@@ -306,13 +306,14 @@ Tables that grow with use are trimmed by one daily sweep (`modules/retention/`),
 | `NOTIFICATION_READ_RETENTION_DAYS` | `30` | notifications, by the time they were read |
 | `NOTIFICATION_UNREAD_RETENTION_DAYS` | `90` | notifications never read, by creation time |
 | `OUTBOX_RETENTION_DAYS` | `7` | delivered `outbox_events`, by the time they were delivered. Events that ran out of attempts stay, so an administrator can see them |
+| `SERVER_AUDIT_RETENTION_DAYS` | `90` | `server_audit_logs`, each server's own audit log shown in its settings, by creation time. It is a moderation aid for the server, not instance evidence, so it expires by default |
 
 Login sessions (deleted when they expire) and chat send operations (a fixed 7 days) have their own cleanup and no setting.
 
 - **Batches:** the sweep deletes at most 1000 rows per statement, oldest first, with a short pause between statements, so a table with a large backlog is never locked for long. The first run after enabling a limit on a big table can therefore take a while; later runs only remove a day's worth.
 - **Report:** `/admin/system` lists each table's limit and what the last sweep deleted (the report lives in memory, so it is empty after a restart until the next sweep). A sweep that deleted something, or failed on a table, also leaves a `retention.sweep` entry in the audit log. A table that fails is logged and does not stop the others.
 - **Invalid values:** a setting that is not a whole number of days (`-1`, `1.5`, `abc`) stops the server at boot, so a typo cannot silently start or stop deleting an audit trail.
-- **New tables:** a table that needs retention (the per-server audit log) calls `registerRetentionTarget` from `modules/retention/retentionTargets.ts` with a `key`, a `days()` reader backed by its own env variable, and a `deleteBatch(cutoff, limit)` that deletes at most `limit` rows older than `cutoff`. The sweep, the admin page and the audit entry pick it up with no other change. Add the variable to `config/env.ts` (through `parseRetentionDays`), to `.env.example` and to the table above, plus a label under `system.retentionTables` in the admin locales.
+- **New tables:** a table that needs retention either gets an entry in the built-in list of `modules/retention/retentionTargets.ts` or calls `registerRetentionTarget` from there from `modules/retention/retentionTargets.ts` with a `key`, a `days()` reader backed by its own env variable, and a `deleteBatch(cutoff, limit)` that deletes at most `limit` rows older than `cutoff`. The sweep, the admin page and the audit entry pick it up with no other change. Add the variable to `config/env.ts` (through `parseRetentionDays`), to `.env.example` and to the table above, plus a label under `system.retentionTables` in the admin locales.
 - **Tests:** `server/tests/modules/retention/` covers the batching and the `0` rule without a database; `server/tests/integration/retention.itest.ts` covers each table against Postgres (`npm run test:integration`).
 
 ## Restarting the server during a call

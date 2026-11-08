@@ -285,6 +285,33 @@ export const serverBans = pgTable('server_bans', {
   primaryKey({ columns: [t.serverId, t.userId] }),
 ]);
 
+/** A server's own audit log: who changed what in it, shown to members with
+ * VIEW_AUDIT_LOG. Written in the same transaction as the change it records
+ * (modules/servers/serverAuditLog.ts). Actor and target are ids plus a label
+ * snapshot with no foreign key, so an entry outlives the account, role or
+ * channel it names; the log itself goes with its server. `detail` holds the
+ * before/after of what changed, never message bodies or tokens. */
+export const serverAuditLogs = pgTable('server_audit_logs', {
+  id: text('id').primaryKey(),
+  serverId: text('server_id').notNull().references(() => servers.id, { onDelete: 'cascade' }),
+  actorId: text('actor_id'),
+  actorLabel: text('actor_label').notNull().default(''),
+  action: varchar('action', { length: 48 }).notNull(),
+  targetType: varchar('target_type', { length: 16 }).notNull(),
+  targetId: text('target_id').notNull().default(''),
+  targetLabel: text('target_label').notNull().default(''),
+  reason: text('reason').notNull().default(''),
+  detail: jsonb('detail').$type<Record<string, unknown>>().notNull().default({}),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  index('server_audit_server_created_idx').on(t.serverId, t.createdAt, t.id),
+  index('server_audit_server_actor_idx').on(t.serverId, t.actorId, t.createdAt),
+  index('server_audit_server_action_idx').on(t.serverId, t.action, t.createdAt),
+  index('server_audit_server_target_idx').on(t.serverId, t.targetId, t.createdAt),
+  // the retention sweep picks the oldest rows across every server
+  index('server_audit_created_idx').on(t.createdAt),
+]);
+
 /** One row per canonical account pair. `requestedBy` identifies who is waiting while the
  * request is pending; `version` prevents stale accepts from racing newer requests. */
 export const friendships = pgTable('friendships', {
@@ -667,6 +694,7 @@ export type ServerRole = typeof serverRoles.$inferSelect;
 export type ServerCategory = typeof serverCategories.$inferSelect;
 export type ChannelPermissionOverwrite = typeof channelPermissionOverwrites.$inferSelect;
 export type ServerInvite = typeof serverInvites.$inferSelect;
+export type ServerAuditLog = typeof serverAuditLogs.$inferSelect;
 
 /** Append-only record of administrative actions. No foreign keys on purpose:
  * the trail must outlive the account or group it is about (and the admin who

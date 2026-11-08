@@ -508,6 +508,7 @@
     "retentionTableFailed": "failed",
     "retentionTables": {
       "admin_audit_logs": "Instance audit log",
+      "server_audit_logs": "Server audit logs",
       "data_repairs": "Migration data repairs",
       "notifications_read": "Read notifications",
       "notifications_unread": "Unread notifications",

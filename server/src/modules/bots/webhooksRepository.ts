@@ -47,9 +47,9 @@ export async function createWebhook(tx: Tx, conversationId: string, createdBy: s
 
 /** Replaces the token in place: the webhook keeps its id, so the old URL
  * stops working the moment the new one exists. */
-export async function rotateWebhookToken(webhookId: string): Promise<WebhookSecret> {
+export async function rotateWebhookToken(webhookId: string, executor: Tx = db): Promise<WebhookSecret> {
   const token = generateWebhookToken();
-  await db.update(webhooks).set({ tokenHash: hashWebhookToken(token), tokenRotatedAt: new Date() }).where(eq(webhooks.id, webhookId));
+  await executor.update(webhooks).set({ tokenHash: hashWebhookToken(token), tokenRotatedAt: new Date() }).where(eq(webhooks.id, webhookId));
   return { id: webhookId, token };
 }
 

@@ -508,6 +508,7 @@
     "retentionTableFailed": "falhou",
     "retentionTables": {
       "admin_audit_logs": "Auditoria da instância",
+      "server_audit_logs": "Auditoria dos servidores",
       "data_repairs": "Reparos de dados da migração",
       "notifications_read": "Notificações lidas",
       "notifications_unread": "Notificações não lidas",

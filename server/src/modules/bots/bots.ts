@@ -10,6 +10,7 @@ import { deleteAvatarFile, isOwnedProfileImage } from '../attachments/attachment
 import { hasPermission, PERMISSIONS } from '../servers/permissions.js';
 import { channelPermissionsIn, loadServerSnapshot } from '../servers/serverAccess.js';
 import { requireSession } from '../servers/serverHttp.js';
+import { createdFields, diffFields, recordServerAudit } from '../servers/serverAuditLog.js';
 import { createWebhook, rotateWebhookToken, toWebhookInfo, type WebhookSecret } from './webhooksRepository.js';
 import { logger } from '../../lib/logger.js';
 
@@ -35,7 +36,7 @@ function sanitizeWebhookName(value: unknown): string | null {
 
 /** The caller holding MANAGE_WEBHOOKS in a text channel. Anyone else — a
  * non-member included — gets the same answer as a missing channel. */
-async function requireWebhookManager(request: FastifyRequest, reply: FastifyReply, channelId: string): Promise<{ userId: string } | null> {
+async function requireWebhookManager(request: FastifyRequest, reply: FastifyReply, channelId: string): Promise<{ userId: string; serverId: string } | null> {
   const sess = await requireSession(request, reply);
   if (!sess) return null;
   const [channel] = await db.select({ serverId: conversations.serverId, type: conversations.type }).from(conversations).where(eq(conversations.id, channelId)).limit(1);
@@ -44,8 +45,10 @@ async function requireWebhookManager(request: FastifyRequest, reply: FastifyRepl
     sendError(reply, 404, 'not_found', 'Canal não encontrado.');
     return null;
   }
-  return sess;
+  return { userId: sess.userId, serverId: snapshot.server.id };
 }
+
+const channelName = async (channelId: string) => (await db.select({ title: conversations.title }).from(conversations).where(eq(conversations.id, channelId)).limit(1))[0]?.title ?? '';
 
 async function findChannelWebhook(channelId: string, webhookId: string) {
   const [row] = await db.select().from(webhooks).where(and(eq(webhooks.id, webhookId), eq(webhooks.conversationId, channelId))).limit(1);
@@ -71,7 +74,12 @@ async function handleCreate(request: FastifyRequest<{ Params: ChannelParams }>, 
   if (!name) return sendError(reply, 400, 'invalid_name', 'Dê um nome ao webhook.');
   const [{ value: existing } = { value: 0 }] = await db.select({ value: count() }).from(webhooks).where(eq(webhooks.conversationId, channelId));
   if (existing >= config.MAX_WEBHOOKS_PER_CHANNEL) return sendError(reply, 409, 'quota_exceeded', 'O canal já tem o máximo de webhooks.');
-  const secret = await db.transaction((tx) => createWebhook(tx, channelId, sess.userId, name));
+  const channel = await channelName(channelId);
+  const secret = await db.transaction(async (tx) => {
+    const created = await createWebhook(tx, channelId, sess.userId, name);
+    await recordServerAudit(tx, { serverId: sess.serverId, actorId: sess.userId, action: 'webhook.create', targetType: 'webhook', targetId: created.id, targetLabel: name, changes: createdFields({ name, channel }) });
+    return created;
+  });
   log.info('webhook created', { channelId, webhookId: secret.id, actorId: sess.userId });
   const [row] = await db.select().from(webhooks).where(eq(webhooks.id, secret.id)).limit(1);
   sendJson(reply, 201, { webhook: { ...toWebhookInfo(row!), ...withUrl(secret) } });
@@ -95,7 +103,14 @@ async function handleUpdate(request: FastifyRequest<{ Params: WebhookParams }>, 
     if (!avatar) updates.avatar = '';
     else if (isUploadedImage(avatar) && (await isOwnedProfileImage(avatar, sess.userId))) updates.avatar = avatar;
   }
-  const [row] = await db.update(webhooks).set(updates).where(eq(webhooks.id, webhookId)).returning();
+  const changes = diffFields({ name: webhook.name, avatar: webhook.avatar }, updates, ['name', 'avatar']);
+  const row = await db.transaction(async (tx) => {
+    const [updated] = await tx.update(webhooks).set(updates).where(eq(webhooks.id, webhookId)).returning();
+    if (updated && changes.length) {
+      await recordServerAudit(tx, { serverId: sess.serverId, actorId: sess.userId, action: 'webhook.update', targetType: 'webhook', targetId: webhookId, targetLabel: updated.name, changes });
+    }
+    return updated;
+  });
   if (updates.avatar !== undefined && webhook.avatar && webhook.avatar !== updates.avatar) {
     deleteAvatarFile(webhook.avatar).catch((err) => log.error('failed to delete old webhook avatar', err, { webhookId }));
   }
@@ -111,8 +126,13 @@ async function handleRotate(request: FastifyRequest<{ Params: WebhookParams }>, 
   if (!floodControl.allow(`webhook-rotate:${sess.userId}`, { windowMs: 60_000, max: 10 })) {
     return sendError(reply, 429, 'rate_limited', 'Muitas trocas de token em pouco tempo. Espere um pouco.');
   }
-  if (!(await findChannelWebhook(channelId, webhookId))) return sendError(reply, 404, 'not_found', 'Webhook não encontrado.');
-  const secret = await rotateWebhookToken(webhookId);
+  const webhook = await findChannelWebhook(channelId, webhookId);
+  if (!webhook) return sendError(reply, 404, 'not_found', 'Webhook não encontrado.');
+  const secret = await db.transaction(async (tx) => {
+    const rotated = await rotateWebhookToken(webhookId, tx);
+    await recordServerAudit(tx, { serverId: sess.serverId, actorId: sess.userId, action: 'webhook.rotate', targetType: 'webhook', targetId: webhookId, targetLabel: webhook.name });
+    return rotated;
+  });
   log.info('webhook token rotated', { channelId, webhookId });
   sendJson(reply, 200, { webhook: withUrl(secret) });
 }
@@ -120,10 +140,15 @@ async function handleRotate(request: FastifyRequest<{ Params: WebhookParams }>, 
 /** Its messages stay in the channel, shown as an unnamed bot. */
 async function handleDelete(request: FastifyRequest<{ Params: WebhookParams }>, reply: FastifyReply): Promise<void> {
   const { channelId, webhookId } = request.params;
-  if (!(await requireWebhookManager(request, reply, channelId))) return;
+  const sess = await requireWebhookManager(request, reply, channelId);
+  if (!sess) return;
   const webhook = await findChannelWebhook(channelId, webhookId);
   if (!webhook) return sendError(reply, 404, 'not_found', 'Webhook não encontrado.');
-  await db.delete(webhooks).where(eq(webhooks.id, webhookId));
+  const channel = await channelName(channelId);
+  await db.transaction(async (tx) => {
+    await tx.delete(webhooks).where(eq(webhooks.id, webhookId));
+    await recordServerAudit(tx, { serverId: sess.serverId, actorId: sess.userId, action: 'webhook.delete', targetType: 'webhook', targetId: webhookId, targetLabel: webhook.name, extra: { channel } });
+  });
   if (webhook.avatar) deleteAvatarFile(webhook.avatar).catch((err) => log.error('failed to delete webhook avatar', err, { webhookId }));
   sendJson(reply, 200, { ok: true });
 }

@@ -1,7 +1,7 @@
 import { and, inArray, isNotNull, isNull, lt } from 'drizzle-orm';
 import { config } from '../../config/env.js';
 import { db } from '../../db/client.js';
-import { adminAuditLogs, dataRepairs, notifications, outboxEvents } from '../../db/schema.js';
+import { adminAuditLogs, dataRepairs, notifications, outboxEvents, serverAuditLogs } from '../../db/schema.js';
 import type { RetentionTarget } from './retentionPolicy.js';
 
 // Every table that grows with use and has a retention setting. Each batch is its own short
@@ -16,6 +16,17 @@ const builtIn: RetentionTarget[] = [
     days: () => config.AUDIT_RETENTION_DAYS,
     async deleteBatch(cutoff, limit) {
       const t = adminAuditLogs;
+      const rows = await db.delete(t)
+        .where(inArray(t.id, db.select({ id: t.id }).from(t).where(lt(t.createdAt, cutoff)).orderBy(t.createdAt).limit(limit)))
+        .returning({ id: t.id });
+      return rows.length;
+    },
+  },
+  {
+    key: 'server_audit_logs',
+    days: () => config.SERVER_AUDIT_RETENTION_DAYS,
+    async deleteBatch(cutoff, limit) {
+      const t = serverAuditLogs;
       const rows = await db.delete(t)
         .where(inArray(t.id, db.select({ id: t.id }).from(t).where(lt(t.createdAt, cutoff)).orderBy(t.createdAt).limit(limit)))
         .returning({ id: t.id });
@@ -71,7 +82,7 @@ const builtIn: RetentionTarget[] = [
 
 const registered: RetentionTarget[] = [];
 
-/** The hook for tables that appear later (the per-server audit log): register one target next to the
+/** The hook for tables that appear later: register one target next to the
  * table's code and the daily sweep, the admin page and the audit entry all pick it up. */
 export function registerRetentionTarget(target: RetentionTarget): void {
   if ([...builtIn, ...registered].some((t) => t.key === target.key)) throw new Error(`retention target "${target.key}" is already registered`);

@@ -22,6 +22,7 @@ export interface CreatedServer {
 export const PERMISSIONS = {
   VIEW_CHANNEL: 1 << 7,
   SEND_MESSAGES: 1 << 8,
+  VIEW_AUDIT_LOG: 1 << 19,
 } as const;
 
 export async function createServer(api: APIRequestContext, name: string): Promise<CreatedServer> {

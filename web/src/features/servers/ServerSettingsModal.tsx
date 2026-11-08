@@ -29,8 +29,9 @@ import {
 import { can, memberColor } from './serverUtils';
 import { inviteUrl } from './inviteCode';
 import { RoleColorPicker } from './RoleColorPicker';
+import { ServerAuditLog } from './ServerAuditLog';
 
-type TabKey = 'overview' | 'roles' | 'members' | 'invites' | 'bans' | 'soundboard' | 'delete';
+type TabKey = 'overview' | 'roles' | 'members' | 'invites' | 'bans' | 'auditLog' | 'soundboard' | 'delete';
 
 function useAction() {
   const [error, setError] = useState<string | null>(null);
@@ -396,7 +397,10 @@ export function ServerSettingsModal({ server, onClose, onOpenProfile }: { server
       ...(can(server, PERMISSIONS.MANAGE_ROLES) ? [{ key: 'roles' as const, label: t('settings.roles') }] : []),
       ...(can(server, PERMISSIONS.MANAGE_SERVER) ? [{ key: 'invites' as const, label: t('settings.invites') }] : []),
     ]),
-    ...grouped(t('settings.groups.moderation'), can(server, PERMISSIONS.BAN_MEMBERS) ? [{ key: 'bans' as const, label: t('settings.bans') }] : []),
+    ...grouped(t('settings.groups.moderation'), [
+      ...(can(server, PERMISSIONS.VIEW_AUDIT_LOG) ? [{ key: 'auditLog' as const, label: t('settings.auditLog') }] : []),
+      ...(can(server, PERMISSIONS.BAN_MEMBERS) ? [{ key: 'bans' as const, label: t('settings.bans') }] : []),
+    ]),
     ...(isOwner ? [{ key: 'delete' as const, label: t('settings.delete'), danger: true }] : []),
   ];
   const [tab, setTab] = useState<TabKey>(tabs[0]!.key);
@@ -410,6 +414,7 @@ export function ServerSettingsModal({ server, onClose, onOpenProfile }: { server
       {tab === 'members' && <Members server={server} onOpenProfile={onOpenProfile} />}
       {tab === 'invites' && <Invites server={server} />}
       {tab === 'bans' && <Bans server={server} />}
+      {tab === 'auditLog' && <ServerAuditLog server={server} />}
       {tab === 'soundboard' && (
         <>
           <SectionTitle>{t('settings.soundboard')}</SectionTitle>

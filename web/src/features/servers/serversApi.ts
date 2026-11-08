@@ -73,3 +73,32 @@ export const createWebhook = (channelId: string, name: string) => apiFetch<{ web
 export const updateWebhook = (channelId: string, webhookId: string, changes: { name?: string; avatar?: string }) => apiFetch<{ webhook: WebhookInfo }>(`/api/channels/${id(channelId)}/webhooks/${id(webhookId)}`, json('PATCH', changes));
 export const rotateWebhook = (channelId: string, webhookId: string) => apiFetch<{ webhook: { id: string; token: string; url: string } }>(`/api/channels/${id(channelId)}/webhooks/${id(webhookId)}/rotate`, json('POST'));
 export const deleteWebhook = (channelId: string, webhookId: string) => apiFetch(`/api/channels/${id(channelId)}/webhooks/${id(webhookId)}`, json('DELETE'));
+
+export const SERVER_AUDIT_ACTIONS = [
+  'server.update', 'server.transfer',
+  'member.kick', 'member.ban', 'member.unban', 'member.roles_update', 'member.voice_disconnect', 'member.voice_move',
+  'role.create', 'role.update', 'role.delete', 'role.reorder',
+  'channel.create', 'channel.update', 'channel.delete',
+  'category.create', 'category.update', 'category.delete',
+  'permissions.update',
+  'invite.create', 'invite.revoke',
+  'webhook.create', 'webhook.update', 'webhook.rotate', 'webhook.delete',
+  'message.delete',
+  'sound.create', 'sound.update', 'sound.delete',
+] as const;
+export type ServerAuditAction = (typeof SERVER_AUDIT_ACTIONS)[number];
+export interface AuditChange { key: string; before: unknown; after: unknown }
+export interface ServerAuditEntry {
+  id: string; at: string; action: string;
+  actorId: string | null; actorLabel: string; actor: SocialUser | null;
+  targetType: string; targetId: string; targetLabel: string; targetUser: SocialUser | null;
+  reason: string;
+  detail: { changes?: AuditChange[]; [key: string]: unknown };
+}
+export interface ServerAuditFilters { action?: string; actor?: string; target?: string; from?: string; to?: string }
+export function fetchServerAuditLog(serverId: string, filters: ServerAuditFilters, cursor: string | null = null): Promise<{ items: ServerAuditEntry[]; nextCursor: string | null }> {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries({ ...filters, cursor })) if (value) query.set(key, value);
+  const qs = query.toString();
+  return apiFetch(`/api/servers/${id(serverId)}/audit-log${qs ? `?${qs}` : ''}`);
+}
