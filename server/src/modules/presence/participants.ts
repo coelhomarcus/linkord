@@ -166,7 +166,7 @@ export function hiddenFromPeers(p: Participant): boolean {
 }
 
 /** `participant-updated` for one connection, kept to the account's own tabs while it is hidden. */
-export function broadcastParticipantUpdate(p: Participant): void {
+function broadcastParticipantUpdate(p: Participant): void {
   const msg = { t: 'participant-updated', participant: publicParticipant(p) };
   if (hiddenFromPeers(p)) sendToUser(p.userId, msg);
   else broadcastToKnownPeers(p.userId, msg);

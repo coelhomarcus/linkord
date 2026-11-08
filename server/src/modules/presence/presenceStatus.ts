@@ -152,7 +152,7 @@ function scheduleExpiry(userId: string): void {
 /** Puts a new status in memory and tells everyone who should hear about it. Turning invisible looks,
  * to peers, exactly like the account going offline (its connections outside a call leave, then
  * `user-offline`); turning visible again looks like it coming back. */
-export function applyAccountStatus(userId: string, next: AccountStatus): void {
+function applyAccountStatus(userId: string, next: AccountStatus): void {
   const wasInvisible = getAccountStatus(userId).status === 'invisible';
   setAccountStatus(userId, next);
   scheduleExpiry(userId);

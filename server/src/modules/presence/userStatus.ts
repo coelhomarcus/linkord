@@ -2,7 +2,7 @@
 // connection. A leaf module (no imports back into presence) so participants.ts can ask "is this account
 // invisible?" without a cycle; loading, saving and announcing live in presenceStatus.ts.
 
-export const PRESENCE_STATUSES = ['online', 'idle', 'dnd', 'invisible'] as const;
+const PRESENCE_STATUSES = ['online', 'idle', 'dnd', 'invisible'] as const;
 export type PresenceStatus = (typeof PRESENCE_STATUSES)[number];
 /** What other people can see: invisible reads as offline, so it is never shown. */
 export type VisibleStatus = Exclude<PresenceStatus, 'invisible'>;
