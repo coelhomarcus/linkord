@@ -127,6 +127,8 @@ npm test                                       # test:server + test:web
 
 A change that touches a real flow (upload, call, conversations, auth) deserves live manual verification (`npm run dev`, 2 accounts), not just automated tests.
 
+**Scripts and sample data.** Every `npm run` script is listed, with what it does, in [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md#scripts); look there before writing a one-off. `npm run db:seed` fills a local database with sample accounts, DMs and a server (`server/src/scripts/seedDev.ts`). A new script in `server/src/scripts/` gets a header comment, a `package.json` entry and a row in that table, or nobody will know it exists.
+
 **End-to-end suite (`e2e/`, Playwright).** Real Chrome sessions for several accounts against a production-shaped Docker stack (app behind Traefik, LiveKit, throwaway Postgres); setup and commands in [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md#end-to-end-tests). Run the matching project when a change touches what it covers, and add a spec when you add a user-facing flow:
 - `npm run test:e2e:features`: every feature, one spec per area (`e2e/specs/features/<area>.spec.ts`).
 - `npm run test:e2e:restart`: anything a redeploy must survive (realtime, calls, chat sends, uploads, the shutdown path).

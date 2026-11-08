@@ -67,6 +67,7 @@ See [`.env.example`](.env.example) for all server, database, session, LiveKit, p
 | `npm start` | Starts the compiled backend |
 | `npm run db:generate` | Generates a migration from the Drizzle schema |
 | `npm run db:migrate` | Applies pending database migrations |
+| `npm run db:seed` | Fills the local database with sample accounts, DMs and a server |
 | `npm run admin:grant -- <username>` | Grants admin access to an account |
 | `npm run db:preflight` / `db:repair` | Checks and repairs legacy data before a migration |
 | `npm run db:rehearse` | Rehearses migrations on temporary databases |
@@ -78,9 +79,10 @@ npm run check         # typecheck, lint, tests, and production build
 npm test              # backend and frontend
 npm run test:server   # backend only
 npm run test:web      # frontend only
+npm run test:e2e      # real browsers against a Docker stack (needs Docker and Chrome)
 ```
 
-Backend tests run with Node's test runner; frontend tests use Vitest and React Testing Library. Both run without a production database or LiveKit. Database migration rehearsal is separate and uses throwaway local databases.
+Backend tests run with Node's test runner; frontend tests use Vitest and React Testing Library. Both run without a production database or LiveKit. Database migration rehearsal is separate and uses throwaway local databases. The end-to-end suite (Playwright) drives several accounts through every feature, a redeploy and an upgrade from the production version. Every script, and what the E2E specs cover, is listed in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md#scripts).
 
 ## 🛠️ Built with
 

@@ -88,6 +88,40 @@ After registering with your `REGISTRATION_CODE`, grant the account administrator
 npm run admin:grant -- <your-username>
 ```
 
+## Sample data
+
+To get a populated app without clicking through sign-ups, seed the local database:
+
+```bash
+npm run db:seed
+```
+
+It creates four accounts (`ana`, `bruno`, `carla`, `davi`; the shared password is printed at the end and defined at the top of `server/src/scripts/seedDev.ts`), friendships and a pending request, two DMs, and a server ("Equipe do projeto") with `#geral`, a read-only `#avisos` fed by a webhook, a voice channel and a hoisted moderators role. It runs only with `NODE_ENV=development` (the script sets it) against a database on `localhost`, and is safe to run again: rows that exist are left alone. Restart `npm run dev` afterwards, because the server caches memberships in memory.
+
+## Scripts
+
+Every script runs from the repository root.
+
+| Script | What it does |
+| --- | --- |
+| `npm run dev` | API (Fastify, `:3000`) and web (Vite, `:5173`) in watch mode. |
+| `npm run build` / `npm start` | Production build of both, and the built server. |
+| `npm run check` | Everything that should pass before pushing: server test typecheck, web lint, server and web tests, build. |
+| `npm run test:server` / `npm run test:web` | Unit tests of one side (`node --test`, Vitest). No database needed. |
+| `npm run test:integration` | `server/tests/integration/*.itest.ts` against a throwaway database it creates and drops on your local Postgres. |
+| `npm run test:e2e` (and `:features`, `:restart`, `:upgrade`) | The browser suite, see [End-to-end tests](#end-to-end-tests). Needs Docker and Chrome. |
+| `npm run check:dead-code` | `knip`: unused files, exports and dependencies across `server/`, `web/` and `e2e/`. |
+| `npm run db:migrate` | Applies pending migrations. The server also does it on boot unless `MIGRATE_ON_BOOT=0`. |
+| `npm run db:generate` | Generates a migration from changes to `server/src/db/schema.ts`. Rename the file to describe the change. |
+| `npm run db:seed` | Sample data for local development, see [Sample data](#sample-data). |
+| `npm run db:studio` | Drizzle Studio, a browser UI over the database in `DATABASE_URL`. |
+| `npm run db:preflight` | Read-only inventory of legacy data that would block a migration (exit code 1 means blocked; `-- --json` for machine output). |
+| `npm run db:repair` | Repairs the legacy relationship rows `db:preflight` reports, without creating friendships or invitations. |
+| `npm run db:rehearse` | Rehearses the migrations on throwaway local databases before they run for real. |
+| `npm run admin:grant -- <username>` / `admin:revoke` | Gives or takes administrator access. |
+
+The scripts behind the `db:*`, `admin:*` and `test:integration` commands live in `server/src/scripts/`; each starts with a comment on what it does and how to call it.
+
 ## Troubleshooting
 
 - If the database is not ready, check `docker compose -f docker-compose.dev.yml ps` and `docker compose -f docker-compose.dev.yml logs postgres`.
@@ -122,7 +156,39 @@ Each run builds `linkord-e2e:head` from the working tree (uncommitted changes in
 
 The `upgrade` project adapts to what the base version can do and says so in the report's annotations: if it predates call persistence it expects old tabs to rejoin their call, if its shutdown still disconnects sockets it focuses old tabs to bring them back, and if the working tree raised `MIN_PROTOCOL_VERSION` past the base's protocol it only expects the update screen. A failure keeps a trace, video and screenshot: `npm run report --prefix e2e` opens the HTML report, and `npx playwright show-trace <trace.zip>` (from `e2e/`) replays it step by step.
 
-Specs set up their data through the app's HTTP routes (sign-up, invites, friend requests), never by writing to the database: the app caches memberships in memory and would not see such rows until a restart.
+### How a spec runs
+
+1. Global setup builds the app image and starts the stack (`e2e/stack/`); every test shares it, so tests run one at a time.
+2. A spec asks the `users` fixture for accounts (`e2e/fixtures/test.ts`). Each is a real sign-up in its own browser context, with its own cookies and storage, like separate people on separate machines. Chrome gets a fake camera and microphone, so calls carry real audio and video through LiveKit.
+3. Data is set up through the app's HTTP routes (`e2e/fixtures/api.ts`: servers, invites, friend requests, channels, permissions), never by writing to the database: the app caches memberships in memory and would not see such rows until a restart.
+4. The spec drives the UI by role and pt-BR label (`e2e/fixtures/app.ts`), and checks what a person would see: messages, call tiles, playing audio tracks. It can also wait for a server event to reach a tab (`waitForSocketEvent`) and read the reason of each socket disconnect.
+5. Restart and upgrade specs change the server under the open tabs: `deploy()` recreates the app container (SIGTERM, then a new one, like a Dokploy redeploy), `stopApp()`/`startApp()` keep it down for a while.
+
+### What is covered
+
+| Spec | What it checks |
+| --- | --- |
+| `features/auth` | Sign-up with and without the invitation code, the login form (wrong password refused), session across reloads, logout. |
+| `features/friends` | Request from the form accepted in Pending, decline, cancel, block (no messages or calls) and unblock. |
+| `features/dm` | Talking in a DM, the unread count until it is opened, no DM without friendship. |
+| `features/chat` | Messages shown once on both sides, typing indicator, reply, edit, delete, reactions, search, image attachment. |
+| `features/servers` | Creating from the rail, invite link, new channels, a channel hidden from `@everyone`, a read-only channel, kick, ban and unban, deleting the server. |
+| `features/voice` | Seeing and hearing each other, mute and camera seen by the other side, leaving, a moderator moving and disconnecting a member. |
+| `features/dm-call` | Decline, cancel, an answered call with audio both ways and its line in the chat, a video call. |
+| `features/webhooks` | Text and cards through the ingress (token in the URL and in the header), invalid payloads, rotating and deleting the URL, permission. |
+| `features/soundboard` | A sound uploaded to the server reaches everyone in the call. |
+| `features/profile` | Display name and bio reaching a friend live, mutual friends. |
+| `features/reports-admin` | Reporting a message, the admin deleting it for everyone, suspending an account. |
+| `features/settings` | The account's language following it to another browser. |
+| `restart/voice` | A voice call survives a redeploy: the tab nobody touched reconnects on its own (the socket drop is a transport close, never `io server disconnect`), and someone joining after the deploy lands in the same call, with audio both ways. |
+| `restart/dm-call` | An answered DM call survives a redeploy; a ring survives it and can be answered, even with the click made while the tab is still disconnected. |
+| `restart/chat` | A message written while the server is down, and one sent the moment the deploy starts, are stored and shown exactly once. |
+| `restart/upload` | A 40 MB upload, throttled to 1 MB/s, survives a 10 s and a 30 s outage, and the stored file is byte for byte the original (sha256). |
+| `upgrade/upgrade` | Tabs opened on the production version and tabs on the working tree, after the upgrade: messages both ways, a friend request accepted in an old tab, and the voice call that was going on before the deploy. |
+
+The `restart` specs are the guard for the deploy behaviour described in `AGENTS.md` ("Realtime compatibility and deploys"): built against a tree without the reconnect, upload or DM-answer fixes, they fail.
+
+When you add a user-facing flow, add it to the matching spec (or a new `features/<area>.spec.ts`) and to this table.
 
 ## Profile connections and Wall
 
