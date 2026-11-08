@@ -81,10 +81,8 @@ function Overview({ server }: { server: ServerSummary }) {
       <form className="flex flex-col gap-2" onSubmit={(e) => { e.preventDefault(); void nameBar.save(() => updateServer(server.id, { name })); }}>
         <label htmlFor="server-settings-name" className="text-body font-medium text-text-primary">{t('create.name')}</label>
         <Input id="server-settings-name" value={name} maxLength={100} onChange={(e) => setName(e.target.value)} />
-        {nameBar.visible && (
-          <FloatingBar label={t('bar.server')} status={nameBar.status} error={nameBar.error} saveDisabled={!name.trim()}
-            onReset={() => { setName(server.name); nameBar.clearError(); }} />
-        )}
+        <FloatingBar open={nameBar.visible} label={t('bar.server')} status={nameBar.status} error={nameBar.error} saveDisabled={!name.trim()}
+          onReset={() => { setName(server.name); nameBar.clearError(); }} />
       </form>
       <hr className="border-border-subtle" />
       <section className="flex items-start justify-between gap-6 max-sm:flex-col">
@@ -250,10 +248,8 @@ function Roles({ server }: { server: ServerSummary }) {
         </form>
       </div>
       {/* under both columns, not in the form's: the form column is too narrow for the bar on one line */}
-      {bar.visible && (
-        <FloatingBar label={t('bar.role', { name: role.name })} status={bar.status} error={bar.error} saveDisabled={saveBlocked}
-          onReset={() => { setDraft(role); bar.clearError(); }} onSave={saveRole} />
-      )}
+      <FloatingBar open={bar.visible} label={t('bar.role', { name: role.name })} status={bar.status} error={bar.error} saveDisabled={saveBlocked}
+        onReset={() => { setDraft(role); bar.clearError(); }} onSave={saveRole} />
       <ConfirmDialog open={confirmDelete} onOpenChange={setConfirmDelete} title={t('roles.deleteTitle', { name: role.name })} description={t('roles.deleteDescription')}
         destructive confirmLabel={t('roles.delete')} onConfirm={() => void run(async () => { await deleteRole(role.id); setSelectedId(sorted[0]!.id); })} />
     </>

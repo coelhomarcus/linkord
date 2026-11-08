@@ -152,6 +152,9 @@
   --shadow-popover: 0 18px 60px rgb(0 0 0 / 0.5);
 
   --default-transition-duration: 150ms;
+  /* EASE_OUT of shared/lib/ease.ts: the one curve for anything appearing or
+     moving into place (ease-out-expo) */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 
   --animate-sweep: sweep 1.15s ease-in-out infinite;
   --animate-float-up: float-up 3s ease-out forwards;
@@ -227,7 +230,42 @@
   animation: long-press-progress var(--long-press-delay, 500ms) linear forwards;
 }
 
+/* Durations (also in shared/lib/ease.ts as DURATION): 100ms for a popup
+   leaving and for hover/focus feedback, 150ms for a popup appearing or a
+   modal leaving, 200ms for a modal appearing and for things moving into
+   place. Exits are
+   shorter than entrances: nothing waits on them, and they are hidden from
+   input as they start (Base UI's popups; the floating save bar is inert). */
+
+/* Popovers, menus, selects and tooltips. With tw-animate's animate-in/out,
+   which reads these two variables. */
+@utility motion-popup {
+  --tw-duration: 150ms;
+  --tw-ease: var(--ease-out-expo);
+  &[data-closed] { --tw-duration: 100ms; }
+}
+
+/* A dialog and its backdrop: the entrance, the exit and the dimming of a
+   dialog while another is open over it (a filter transition). */
+@utility motion-modal {
+  --tw-duration: 200ms;
+  --tw-ease: var(--ease-out-expo);
+  transition-duration: 200ms;
+  transition-timing-function: var(--ease-out-expo);
+  &[data-closed] { --tw-duration: 150ms; }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  /* Every animate-in/animate-out in the app (popovers, menus, tooltips,
+     dialogs, the save bar) keeps its fade and drops its zoom and slide: the
+     last @keyframes of a name wins, so these replace tw-animate's. */
+  @keyframes enter {
+    from { opacity: var(--tw-enter-opacity, 1); }
+  }
+  @keyframes exit {
+    to { opacity: var(--tw-exit-opacity, 1); }
+  }
+
   /* the highlight alone says "held"; a moving bar is the part to drop */
   [data-long-pressing][data-message-id]::after {
     display: none;

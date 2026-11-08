@@ -358,14 +358,13 @@ export function ProfileEditor({ status, customStatus, details, onClose, register
           onChange={(e) => handleFilePicked('banner', e)}
         />
 
-        {showBar && (
-          <FloatingBar
-            label={t('editor.barLabel')}
-            status={saving ? 'saving' : saveState === 'error' ? 'error' : justSaved ? 'saved' : 'pending'}
-            error={saveError}
-            onReset={dirty ? discard : undefined}
-          />
-        )}
+        <FloatingBar
+          open={showBar}
+          label={t('editor.barLabel')}
+          status={saving ? 'saving' : saveState === 'error' ? 'error' : justSaved ? 'saved' : 'pending'}
+          error={saveError}
+          onReset={dirty ? discard : undefined}
+        />
         {/* a phone's modal runs under the home indicator: the bars rest above it */}
         <div ref={setBarSlot} className={cn(FLOATING_BAR_SLOT_CLASS, 'bottom-[calc(1rem+var(--safe-bottom))] md:bottom-4')} />
       </form>

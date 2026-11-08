@@ -18,7 +18,7 @@ export interface GameCoversEditor {
 
 const cover = (game: GameItem): Cover => ({ id: String(game.igdbId), title: game.name, url: game.url, imageUrl: game.imageUrl });
 // a control takes clicks only while it shows: hidden, it would catch a click meant for the cover
-const CONTROL = 'pointer-events-none group-hover:pointer-events-auto group-focus-within:pointer-events-auto in-data-[tapped=true]:pointer-events-auto flex size-7 items-center justify-center rounded-md bg-black/65 text-white transition-colors hover:bg-black/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-40';
+const CONTROL = 'pointer-events-none group-hover:pointer-events-auto group-focus-within:pointer-events-auto in-data-[tapped=true]:pointer-events-auto flex size-7 items-center justify-center rounded-md bg-black/65 text-white transition-colors duration-100 hover:bg-black/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-40';
 
 /** An empty place in the grid, where the next game goes. */
 function EmptySlot({ editor }: { editor: GameCoversEditor }) {
@@ -82,7 +82,7 @@ function EditableCover({ game, index, count, editor }: { game: GameItem; index: 
       <div onClick={() => setTapped((value) => !value)} className={`${COVER_BOX} ${GAME_ASPECT}`}>
         <CoverFace item={cover(game)} />
       </div>
-      <div data-tapped={tapped} className="pointer-events-none absolute inset-0 grid grid-cols-2 place-content-center place-items-center gap-1 rounded-lg bg-black/55 p-1 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 data-[tapped=true]:opacity-100">
+      <div data-tapped={tapped} className="pointer-events-none absolute inset-0 grid grid-cols-2 place-content-center place-items-center gap-1 rounded-lg bg-black/55 p-1 opacity-0 transition-opacity duration-150 ease-out-expo group-focus-within:opacity-100 group-hover:opacity-100 data-[tapped=true]:opacity-100">
         <button type="button" disabled={editor.disabled} aria-label={t('wall.games.replace', { name })} title={t('wall.games.replace', { name })} className={CONTROL} onClick={() => editor.onReplace(index)}><PencilSimpleIcon size={15} /></button>
         <button type="button" disabled={editor.disabled} aria-label={t('wall.games.remove', { name })} title={t('wall.games.remove', { name })} className={CONTROL} onClick={() => editor.onRemove(index)}><TrashIcon size={15} /></button>
         {count > 1 && <>

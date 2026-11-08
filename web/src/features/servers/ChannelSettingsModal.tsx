@@ -249,10 +249,8 @@ export function ChannelSettingsModal({ server, channel, onClose }: { server: Ser
               <Textarea value={topic} maxLength={1024} rows={3} placeholder={t('channelSettings.topicPlaceholder')} onChange={(e) => setTopic(e.target.value)} />
             </label>
           )}
-          {bar.visible && (
-            <FloatingBar label={t('bar.channel', { name: channel.name })} status={bar.status} error={bar.error} saveDisabled={!name.trim()}
-              onReset={() => { setName(channel.name); setTopic(channel.topic); bar.clearError(); }} />
-          )}
+          <FloatingBar open={bar.visible} label={t('bar.channel', { name: channel.name })} status={bar.status} error={bar.error} saveDisabled={!name.trim()}
+            onReset={() => { setName(channel.name); setTopic(channel.topic); bar.clearError(); }} />
         </form>
       )}
       {tab === 'permissions' && <Permissions server={server} channel={channel} />}
