@@ -6,7 +6,7 @@ export const WIDGET_TYPES = {
   url: [],
 } as const;
 type ConnectionWidgetType = (typeof WIDGET_TYPES)[ConnectionProvider][number];
-type WidgetType = ConnectionWidgetType | GameWidgetType;
+export type WidgetType = ConnectionWidgetType | GameWidgetType;
 interface MediaItem {
   id: string; title: string; url: string; imageUrl: string | null;
 }

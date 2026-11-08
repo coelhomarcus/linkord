@@ -112,7 +112,7 @@ Game search behind the four games widgets of the Wall (favorite game, games I li
 - **Configuration:** register an app at <https://dev.twitch.tv/console> (the Twitch account needs two-factor authentication; the OAuth redirect URL is not used, `http://localhost` works) and set `IGDB_CLIENT_ID` and `IGDB_CLIENT_SECRET`.
 - **When missing:** if either is empty, searching answers `games_unavailable` and the picker says so; the widgets stay available and games already saved still show. The server boots normally.
 - **Data sent:** only the search text typed (normalized) goes to IGDB, together with the app's credentials; nothing identifies the user.
-- **Terms:** IGDB is free for non-commercial use under the Twitch Developer Service Agreement; commercial use needs a partnership with IGDB. The Wall links to igdb.com from each games widget and the picker credits IGDB as the source of the covers and data; the IGDB docs I read ask for nothing more.
+- **Terms:** IGDB is free for non-commercial use under the Twitch Developer Service Agreement; commercial use needs a partnership with IGDB. Each game cover on the Wall links to its page on igdb.com and the game picker credits IGDB as the source of the covers and data; the IGDB docs read so far ask for nothing more.
 
 ## Link previews
 

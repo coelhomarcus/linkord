@@ -31,6 +31,9 @@ function DialogOverlay({
   )
 }
 
+// A dialog opened from inside another one gets no backdrop of its own (there is one for the whole
+// stack), so the dialog underneath darkens itself while another is open over it: every level of
+// the stack reads as further back than the one above.
 function DialogContent({
   className,
   children,
@@ -50,7 +53,7 @@ function DialogContent({
       <DialogPrimitive.Popup
         data-slot="dialog-content"
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 grid max-h-[calc(100dvh-2rem)] w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto rounded-[12px] border border-border-default bg-bg-modal p-6 text-body text-popover-foreground duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          "fixed top-1/2 left-1/2 z-50 grid max-h-[calc(100dvh-2rem)] w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto rounded-[12px] border border-border-default bg-bg-modal p-6 text-body text-popover-foreground duration-100 outline-none transition-[filter] sm:max-w-sm data-nested-dialog-open:brightness-[0.35] data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
           className
         )}
         {...props}
