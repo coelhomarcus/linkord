@@ -4,7 +4,9 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { REPO_DIR } from './stack';
 
-export const HEAD_IMAGE = 'linkord-e2e:head';
+/** E2E_HEAD_IMAGE runs the suite against an image built elsewhere (to check
+ * that a spec catches a regression, build the broken tree and point here). */
+export const HEAD_IMAGE = process.env.E2E_HEAD_IMAGE || 'linkord-e2e:head';
 
 function run(cmd: string, args: string[], cwd = REPO_DIR): string {
   return execFileSync(cmd, args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'], maxBuffer: 64 * 1024 * 1024 });
@@ -17,6 +19,7 @@ function imageExists(tag: string): boolean {
 /** The working tree as it is now, uncommitted changes included. Rebuilt every
  * run; Docker's layer cache keeps an unchanged tree fast. */
 export function buildHeadImage(): string {
+  if (process.env.E2E_HEAD_IMAGE) return HEAD_IMAGE;
   run('docker', ['build', '-q', '-t', HEAD_IMAGE, '.']);
   return HEAD_IMAGE;
 }
