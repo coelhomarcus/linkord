@@ -81,6 +81,40 @@ describe('staged upload and batch publishing (real Postgres)', () => {
     assert.ok((await stagedFileIds()).includes(id), 'the orphan sweep sees the staged file');
   });
 
+  it('a voice message keeps its duration and waveform from init through staging to the published attachment', async () => {
+    const { owner, conversationId, cookie } = await member();
+    const audio = Buffer.from('fake-opus-bytes');
+    const voice = { durationMs: 4200, waveform: Buffer.from([10, 200, 90]).toString('base64') };
+    const init = await app.inject({
+      method: 'POST', url: '/api/attachments/init', headers: { cookie },
+      payload: { conversationId, fileName: 'voice-message.webm', mimeType: 'audio/webm;codecs=opus', totalSize: audio.length, voice },
+    });
+    assert.equal(init.statusCode, 201, init.body);
+    const { uploadId } = init.json() as { uploadId: string };
+    await app.inject({ method: 'POST', url: `/api/attachments/${uploadId}/chunk/0`, headers: { cookie, 'content-type': 'application/octet-stream' }, payload: audio });
+    const complete = await app.inject({ method: 'POST', url: `/api/attachments/${uploadId}/complete`, headers: { cookie }, payload: {} });
+    assert.equal(complete.statusCode, 201, complete.body);
+    assert.deepEqual((complete.json() as { staged: { voice?: unknown; mime: string } }).staged, { id: uploadId, name: 'voice-message.webm', mime: 'audio/webm', size: audio.length, voice });
+
+    const result = await correlatedSend(owner, conversationId, [uploadId]) as { message?: { attachments?: { voice?: unknown }[] } };
+    assert.deepEqual(result.message?.attachments?.[0]?.voice, voice);
+    const [row] = await db.select().from(attachmentsTable).where(eq(attachmentsTable.id, uploadId));
+    assert.equal(row?.voiceDurationMs, 4200);
+  });
+
+  it('refuses voice metadata the recorder could not have produced', async () => {
+    const { conversationId, cookie } = await member();
+    const init = (mimeType: string, voice: unknown) => app.inject({
+      method: 'POST', url: '/api/attachments/init', headers: { cookie },
+      payload: { conversationId, fileName: 'x', mimeType, totalSize: 10, voice },
+    });
+    for (const [mime, voice] of [['image/png', { durationMs: 1000, waveform: 'AA==' }], ['audio/webm', { durationMs: 60 * 60 * 1000, waveform: 'AA==' }], ['audio/webm', { durationMs: 1000, waveform: '' }]] as const) {
+      const res = await init(mime, voice);
+      assert.equal(res.statusCode, 400, `${mime} ${JSON.stringify(voice)}`);
+      assert.equal(res.json().error.code, 'invalid_voice');
+    }
+  });
+
   it('takes a file up to the configured size and refuses one byte more, with no quota of the account in the way', async () => {
     const { conversationId, cookie } = await member();
     const init = (totalSize: number) => app.inject({ method: 'POST', url: '/api/attachments/init', headers: { cookie }, payload: { conversationId, fileName: 'big.bin', mimeType: 'application/octet-stream', totalSize } });

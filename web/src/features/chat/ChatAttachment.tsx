@@ -4,13 +4,14 @@ import { FileAttachmentCard, FILE_CARD_MAX_WIDTH } from '@/features/media/FileAt
 import { ImageLightbox } from '@/features/media/ImageLightbox';
 import { AudioPlayer, VideoPlayer } from '@/features/media/MediaPlayers';
 import { TextPreviewCard } from '@/features/media/TextPreviewCard';
+import { VoiceMessagePlayer } from '@/features/voiceMessages/VoiceMessagePlayer';
 import { useCachedImageSrc } from '@/shared/hooks/useCachedImageSrc';
 import { availableAttachmentWidth, useChatSurfaceWidth } from '../../shared/lib/chatSurfaceWidth';
 import { cn } from '../../shared/lib/utils';
 
 export const IMAGE_MIME_TYPES = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp']);
 export const VIDEO_MIME_TYPES = new Set(['video/mp4', 'video/webm', 'video/ogg']);
-const AUDIO_MIME_TYPES = new Set(['audio/mpeg', 'audio/ogg', 'audio/wav', 'audio/mp4']);
+const AUDIO_MIME_TYPES = new Set(['audio/mpeg', 'audio/ogg', 'audio/wav', 'audio/mp4', 'audio/webm']);
 // Mirrors server/src/modules/attachments.ts#TEXT_PREVIEW_EXTENSIONS and
 // features/media/filePresentation.ts#TEXT_CODE_EXTENSIONS — no shared
 // package between those, so this is duplicated on purpose, same as the mime
@@ -77,6 +78,18 @@ export function ChatAttachment({ attachment, edgeToEdge }: ChatAttachmentProps) 
         src={url}
         title={attachment.name}
         className={edgeToEdge ? 'rounded-lg border-0' : undefined}
+      />
+    );
+  }
+
+  if (attachment.voice && attachment.mime.startsWith('audio/')) {
+    return (
+      <VoiceMessagePlayer
+        src={url}
+        name={attachment.name}
+        durationMs={attachment.voice.durationMs}
+        waveform={attachment.voice.waveform}
+        className={edgeToEdge ? 'border-0 bg-transparent px-0' : 'mt-1.5'}
       />
     );
   }

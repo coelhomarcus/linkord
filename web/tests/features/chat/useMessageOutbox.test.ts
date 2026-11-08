@@ -171,6 +171,15 @@ describe('useMessageOutbox — batches with attachments', () => {
     expect(sent[0]).toMatchObject({ text: 'legenda', attachmentIds: ['a'.repeat(32), 'b'.repeat(32)] });
   });
 
+  it('a voice message stages with its metadata and shows it while pending', async () => {
+    const { result, stageFile } = setupBatch();
+    const voice = { durationMs: 4200, waveform: 'AAEC' };
+    act(() => { result.current.enqueue('c', '', undefined, [{ file: new File(['x'], 'voice-message.webm', { type: 'audio/webm' }), compress: false, voice }]); });
+    await flush();
+    expect(stageFile).toHaveBeenCalledWith(expect.objectContaining({ voice }));
+    expect(result.current.pendingByConversation.get('c')![0]!.attachments![0]).toMatchObject({ voice, previewUrl: null });
+  });
+
   it('at most two files upload at the same time', async () => {
     const { result, calls } = setupBatch();
     act(() => { result.current.enqueue('c', '', undefined, [file('1.pdf'), file('2.pdf'), file('3.pdf')]); });

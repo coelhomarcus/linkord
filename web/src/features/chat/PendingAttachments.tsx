@@ -6,6 +6,7 @@ import { FILE_CARD_MAX_WIDTH } from '@/features/media/FileAttachmentCard';
 import { UploadProgressBar } from '@/shared/UploadProgressBar';
 import { cn } from '@/shared/lib/utils';
 import type { OutboxAttachment } from './useMessageOutbox';
+import { VoiceMessagePlayer } from '@/features/voiceMessages/VoiceMessagePlayer';
 
 // Keep drafts available when an upload fails so the user can retry.
 function statusLabel(attachment: OutboxAttachment): string {
@@ -26,6 +27,16 @@ export function PendingAttachments({ attachments }: { attachments: OutboxAttachm
     <div className="mt-1.5 flex flex-wrap gap-2">
       {attachments.map((attachment) => {
         const done = attachment.progress >= 1;
+
+        if (attachment.voice) {
+          return (
+            <div key={attachment.localId} className="flex w-80 max-w-full flex-col gap-1">
+              <VoiceMessagePlayer src={null} durationMs={attachment.voice.durationMs} waveform={attachment.voice.waveform} className={cn('w-full', attachment.failed && 'border-red/50')} />
+              <p className={cn('text-caption', attachment.failed ? 'text-red' : 'text-text-muted')}>{statusLabel(attachment)}</p>
+              {!attachment.failed && !done && <UploadProgressBar progress={attachment.progress} />}
+            </div>
+          );
+        }
 
         if (attachment.previewUrl) {
           return (

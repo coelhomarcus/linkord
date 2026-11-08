@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { ArrowBendUpLeftIcon, ArrowsInSimpleIcon, ArrowUpIcon, GifIcon, ImageSquareIcon, PaperclipIcon, PlusCircleIcon, SmileyIcon } from '@phosphor-icons/react';
-import { forwardRef, useEffect, useId, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { forwardRef, useCallback, useEffect, useId, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, ClipboardEvent, KeyboardEvent as ReactKeyboardEvent, SyntheticEvent } from 'react';
 
 import { CloseButton } from '@/shared/ui/primitives/close-button';
@@ -16,7 +16,7 @@ import { useKeepPopoverWarm } from '@/shared/hooks/useKeepPopoverWarm';
 import { formatSizeLimit } from '@/shared/lib/formatBytes';
 import { cn } from '@/shared/lib/utils';
 import { useRoom } from '@/state/RoomContext';
-import { readDraft, useConversationDraft, type PendingAttachment } from './conversationDrafts';
+import { readDraft, updateConversationDraft, useConversationDraft, type PendingAttachment } from './conversationDrafts';
 import { MAX_ATTACHMENTS_PER_MESSAGE } from '@/shared/types/protocol';
 import type { PublicUser } from '@/shared/types/protocol';
 import { GifPicker } from '@/features/gifs/GifPicker';
@@ -25,6 +25,9 @@ import type { Gif } from '@/features/gifs/klipy';
 import { useGifConfig } from '@/features/gifs/useGifConfig';
 import { fetchAllServerMembers } from '@/features/servers/serversApi';
 import { directUser } from '@/features/conversations/conversationUtils';
+import { VoiceMicButton, VoiceNoticeBanner, VoiceRecordingBar, VoiceReviewBar } from '@/features/voiceMessages/VoiceComposer';
+import { isVoiceShortcut, useComposerVoice } from '@/features/voiceMessages/useComposerVoice';
+import type { VoiceTake } from '@/features/voiceMessages/useVoiceRecorder';
 
 // How often notifyTyping actually emits typing:true while the user keeps
 // typing (leading-edge: fires right away after being idle, then throttles),
@@ -57,10 +60,10 @@ export interface MessageComposerHandle {
 
 export const MessageComposer = forwardRef<MessageComposerHandle, { conversationId: string }>(function MessageComposer({ conversationId }, ref) {
   const { t } = useTranslation('chat');
-  const { state, allUsers, conversations, serverMemberRevision, sendChatMessage, queueMessageWithFiles, sendTyping, replyingTo, setReplyingTo, compressImagesDefault, setCompressImagesDefault, maxAttachmentBytes } = useRoom();
+  const { state, allUsers, conversations, serverMemberRevision, sendChatMessage, queueMessageWithFiles, sendTyping, replyingTo, setReplyingTo, compressImagesDefault, setCompressImagesDefault, maxAttachmentBytes, activeCallConversationId } = useRoom();
   const accountId = state.me.userId ?? '';
   const [draft, updateDraft] = useConversationDraft(accountId, conversationId);
-  const { text, pendingFiles, attachError } = draft;
+  const { text, pendingFiles, attachError, voice: voiceTake } = draft;
   const setText = (next: string) => updateDraft(() => ({ text: next }));
   const [compressImages, setCompressImages] = useState(compressImagesDefault);
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
@@ -90,6 +93,43 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
   const disabled = !state.joined;
   const tooLong = text.length > MAX_MESSAGE_LEN;
   const canSubmit = !disabled && !tooLong && (text.trim().length > 0 || pendingFiles.length > 0);
+
+  const saveVoiceTake = useCallback((take: VoiceTake, recordedIn: string) => {
+    updateConversationDraft(accountId, recordedIn, () => ({ voice: take }));
+  }, [accountId]);
+  // goes out on its own, like a GIF: the text being typed stays in the field
+  const sendVoiceTake = useCallback((take: VoiceTake, recordedIn: string) => {
+    if (take.file.size > maxAttachmentBytes) {
+      updateConversationDraft(accountId, recordedIn, () => ({ voice: take, attachError: t('composer.tooLarge', { name: take.file.name, max: formatSizeLimit(maxAttachmentBytes) }) }));
+      return;
+    }
+    const here = conversationIdRef.current === recordedIn;
+    queueMessageWithFiles(recordedIn, '', here ? replyingTo?.msgId : undefined, [{ file: take.file, compress: false, voice: { durationMs: take.durationMs, waveform: take.waveform } }]);
+    updateConversationDraft(accountId, recordedIn, (d) => ({ voice: d.voice === take ? null : d.voice, attachError: null }));
+    if (here) setReplyingTo(null);
+  }, [accountId, maxAttachmentBytes, queueMessageWithFiles, replyingTo, setReplyingTo, t]);
+  const voice = useComposerVoice({ conversationId, inCall: !!activeCallConversationId, saveTake: saveVoiceTake, sendTake: sendVoiceTake });
+  // another tab or device of this account is in a call: recording works, but
+  // that call may hear it (this tab can't tell whether it's the same computer)
+  const otherConnectionInCall = useMemo(() => {
+    for (const p of state.participants.values()) {
+      if (p.userId === state.me.userId && p.id !== state.me.id && p.callConversationId) return true;
+    }
+    return false;
+  }, [state.participants, state.me.userId, state.me.id]);
+
+  function handleVoiceKeys(event: ReactKeyboardEvent<HTMLDivElement>) {
+    if (isVoiceShortcut(event)) { event.preventDefault(); voice.toggleFromShortcut(); return; }
+    if (event.key === 'Escape') { event.preventDefault(); voice.cancelTake(); }
+  }
+
+  // the text row comes back after a take: give the caret back to it
+  const voiceBusy = voice.active || !!voiceTake;
+  const wasVoiceBusyRef = useRef(voiceBusy);
+  useEffect(() => {
+    if (wasVoiceBusyRef.current && !voiceBusy) textareaRef.current?.focus();
+    wasVoiceBusyRef.current = voiceBusy;
+  }, [voiceBusy]);
 
   // Keeps the arrow-key-highlighted mention option visible — without this,
   // ArrowDown/ArrowUp move mentionSelectedIndex past the dropdown's visible
@@ -284,6 +324,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
       if (event.key === 'Enter' || event.key === 'Tab') { event.preventDefault(); selectMention(mentionCandidates[mentionSelectedIndex]!); return; }
       if (event.key === 'Escape') { event.preventDefault(); setMentionQuery(null); return; }
     }
+    if (isVoiceShortcut(event)) { event.preventDefault(); voice.toggleFromShortcut(); return; }
     if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing) return;
     event.preventDefault();
     void submit();
@@ -377,92 +418,118 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
         <ComposerAttachmentTray files={pendingFiles} onRemove={removeFile} fallbackFocusRef={textareaRef} />
 
         {attachError && <p role="alert" className="mx-2 mt-2 rounded-md border border-red/20 bg-red/10 px-3 py-2 text-label text-red">{attachError}</p>}
+        {voice.noticeText && <VoiceNoticeBanner text={voice.noticeText} onDismiss={voice.dismissNotice} />}
 
         <div className="flex items-end gap-1 px-2 py-[9px]">
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={<Button type="button" variant="ghost" size="icon" aria-label={t('composer.add')} disabled={disabled} className={iconButton} />}
-            >
-              <PlusCircleIcon size={24} weight="fill" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent side="top" align="start" className="w-72">
-              <DropdownMenuItem onClick={() => fileInputRef.current?.click()}><PaperclipIcon size={16} />{t('composer.attachFiles')}</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => imageInputRef.current?.click()}><ImageSquareIcon size={16} />{t('composer.sendImages')}</DropdownMenuItem>
-              {gifConfig?.enabled && <DropdownMenuItem className="md:hidden" onClick={() => setMobileGifOpen(true)}><GifIcon size={16} />{t('composer.gif')}</DropdownMenuItem>}
-              <DropdownMenuItem className="md:hidden" onClick={() => setMobileEmojiOpen(true)}><SmileyIcon size={16} />{t('composer.insertEmoji')}</DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuCheckboxItem checked={compressImages} onCheckedChange={toggleCompress}>
-                <ArrowsInSimpleIcon size={16} />{t('composer.compress')}
-              </DropdownMenuCheckboxItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Textarea
-            ref={textareaRef}
-            value={text}
-            onChange={(event) => {
-              const value = event.target.value;
-              setText(value);
-              if (value.trim()) notifyTyping(); else stopTyping();
-              syncMentionQuery(value, event.target.selectionStart ?? value.length);
-            }}
-            onSelect={handleTextareaSelect}
-            onKeyDown={handleKeyDown}
-            onPaste={handlePaste}
-            disabled={disabled}
-            rows={1}
-            aria-label={t('composer.message')}
-            aria-invalid={tooLong || undefined}
-            aria-describedby={showCounter ? counterId : undefined}
-            placeholder={pendingFiles.length ? t('composer.addCaption') : messagePlaceholder}
-            className="min-h-9 max-h-40 flex-1 resize-none rounded-none border-none bg-transparent px-1 py-1.5 text-body shadow-none placeholder:text-text-faint focus-visible:ring-0"
-          />
-          {showCounter && (
-            <span id={counterId} className={cn('flex-none self-end px-1 pb-2.5 text-caption tabular-nums', tooLong ? 'font-semibold text-red' : 'text-text-muted')}>
-              {remaining}
-            </span>
-          )}
-          {/* each popover trigger in a box of its own: the focus guards it adds
-              while open must not become flex items of this row */}
-          {gifConfig?.enabled && (
-            <div className="flex flex-none max-md:hidden">
-            <Popover open={gifPickerOpen} onOpenChange={setGifPickerOpen}>
-              <PopoverTrigger
-                render={<Button type="button" variant="ghost" size="icon" aria-label={t('composer.sendGif')} disabled={disabled} className={`${iconButton} max-md:hidden`} />}
+          {/* one slot, whatever it shows: the mic button after it must stay the
+              same element across a take, or a held press loses its pointer */}
+          {voice.active ? (
+            <VoiceRecordingBar
+              view={voice.view}
+              onCancel={voice.cancelTake}
+              onSend={voice.stopAndSend}
+              sendDisabled={disabled}
+              otherCallWarning={otherConnectionInCall}
+              onKeyDown={handleVoiceKeys}
+            />
+          ) : voiceTake ? (
+            <VoiceReviewBar
+              take={voiceTake}
+              onDiscard={() => updateDraft(() => ({ voice: null, attachError: null }))}
+              onSend={() => sendVoiceTake(voiceTake, conversationId)}
+              sendDisabled={disabled}
+            />
+          ) : (
+            <>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={<Button type="button" variant="ghost" size="icon" aria-label={t('composer.add')} disabled={disabled} className={iconButton} />}
               >
-                <span aria-hidden className="rounded-[4px] border-2 border-current px-[3px] py-[2px] text-[9px] font-extrabold leading-none tracking-wide">GIF</span>
+                <PlusCircleIcon size={24} weight="fill" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="top" align="start" className="w-72">
+                <DropdownMenuItem onClick={() => fileInputRef.current?.click()}><PaperclipIcon size={16} />{t('composer.attachFiles')}</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => imageInputRef.current?.click()}><ImageSquareIcon size={16} />{t('composer.sendImages')}</DropdownMenuItem>
+                {gifConfig?.enabled && <DropdownMenuItem className="md:hidden" onClick={() => setMobileGifOpen(true)}><GifIcon size={16} />{t('composer.gif')}</DropdownMenuItem>}
+                <DropdownMenuItem className="md:hidden" onClick={() => setMobileEmojiOpen(true)}><SmileyIcon size={16} />{t('composer.insertEmoji')}</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuCheckboxItem checked={compressImages} onCheckedChange={toggleCompress}>
+                  <ArrowsInSimpleIcon size={16} />{t('composer.compress')}
+                </DropdownMenuCheckboxItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Textarea
+              ref={textareaRef}
+              value={text}
+              onChange={(event) => {
+                const value = event.target.value;
+                setText(value);
+                if (value.trim()) notifyTyping(); else stopTyping();
+                syncMentionQuery(value, event.target.selectionStart ?? value.length);
+              }}
+              onSelect={handleTextareaSelect}
+              onKeyDown={handleKeyDown}
+              onPaste={handlePaste}
+              disabled={disabled}
+              rows={1}
+              aria-label={t('composer.message')}
+              aria-invalid={tooLong || undefined}
+              aria-describedby={showCounter ? counterId : undefined}
+              placeholder={pendingFiles.length ? t('composer.addCaption') : messagePlaceholder}
+              className="min-h-9 max-h-40 flex-1 resize-none rounded-none border-none bg-transparent px-1 py-1.5 text-body shadow-none placeholder:text-text-faint focus-visible:ring-0"
+            />
+            {showCounter && (
+              <span id={counterId} className={cn('flex-none self-end px-1 pb-2.5 text-caption tabular-nums', tooLong ? 'font-semibold text-red' : 'text-text-muted')}>
+                {remaining}
+              </span>
+            )}
+            {/* each popover trigger in a box of its own: the focus guards it adds
+                while open must not become flex items of this row */}
+            {gifConfig?.enabled && (
+              <div className="flex flex-none max-md:hidden">
+              <Popover open={gifPickerOpen} onOpenChange={setGifPickerOpen}>
+                <PopoverTrigger
+                  render={<Button type="button" variant="ghost" size="icon" aria-label={t('composer.sendGif')} disabled={disabled} className={`${iconButton} max-md:hidden`} />}
+                >
+                  <span aria-hidden className="rounded-[4px] border-2 border-current px-[3px] py-[2px] text-[9px] font-extrabold leading-none tracking-wide">GIF</span>
+                </PopoverTrigger>
+                <PopoverContent className="w-[26rem] max-w-[calc(100vw-1.5rem)] rounded-[12px] border-border-default bg-bg-modal p-0" side="top" align="end" sideOffset={12}>
+                  <GifPicker config={gifConfig} onPick={sendGif} />
+                </PopoverContent>
+              </Popover>
+              </div>
+            )}
+            <div className="flex flex-none max-md:hidden">
+            <Popover open={emojiPickerOpen} onOpenChange={setEmojiPickerOpen}>
+              <PopoverTrigger
+                render={<Button type="button" variant="ghost" size="icon" aria-label={t('composer.insertEmoji')} disabled={disabled} className={`${iconButton} max-md:hidden`} />}
+              >
+                <SmileyIcon size={24} weight="fill" />
               </PopoverTrigger>
-              <PopoverContent className="w-[26rem] max-w-[calc(100vw-1.5rem)] rounded-[12px] border-border-default bg-bg-modal p-0" side="top" align="end" sideOffset={12}>
-                <GifPicker config={gifConfig} onPick={sendGif} />
+              <PopoverContent keepMounted={emojiPickerWarmed} className="w-[22rem] rounded-[12px] border-border-default bg-bg-modal p-0" side="top" align="end" sideOffset={12}>
+                <EmojiPicker className="h-[26rem] w-full" onEmojiSelect={({ emoji }) => insertEmoji(emoji)}>
+                  <EmojiPickerSearch />
+                  <EmojiPickerContent />
+                </EmojiPicker>
               </PopoverContent>
             </Popover>
             </div>
+            </>
           )}
-          <div className="flex flex-none max-md:hidden">
-          <Popover open={emojiPickerOpen} onOpenChange={setEmojiPickerOpen}>
-            <PopoverTrigger
-              render={<Button type="button" variant="ghost" size="icon" aria-label={t('composer.insertEmoji')} disabled={disabled} className={`${iconButton} max-md:hidden`} />}
+          {!voiceTake && <VoiceMicButton handlers={voice.micHandlers} view={voice.view} disabled={disabled && !voice.active} />}
+          {!voiceBusy && (
+            <Button
+              type="button"
+              size="icon"
+              aria-label={t('composer.send')}
+              disabled={!canSubmit}
+              onClick={() => void submit()}
+              // Discord's desktop composer sends on Enter alone; the button stays for touch
+              className="flex-none rounded-full md:hidden"
             >
-              <SmileyIcon size={24} weight="fill" />
-            </PopoverTrigger>
-            <PopoverContent keepMounted={emojiPickerWarmed} className="w-[22rem] rounded-[12px] border-border-default bg-bg-modal p-0" side="top" align="end" sideOffset={12}>
-              <EmojiPicker className="h-[26rem] w-full" onEmojiSelect={({ emoji }) => insertEmoji(emoji)}>
-                <EmojiPickerSearch />
-                <EmojiPickerContent />
-              </EmojiPicker>
-            </PopoverContent>
-          </Popover>
-          </div>
-          <Button
-            type="button"
-            size="icon"
-            aria-label={t('composer.send')}
-            disabled={!canSubmit}
-            onClick={() => void submit()}
-            // Discord's desktop composer sends on Enter alone; the button stays for touch
-            className="flex-none rounded-full md:hidden"
-          >
-            <ArrowUpIcon size={20} weight="fill" />
-          </Button>
+              <ArrowUpIcon size={20} weight="fill" />
+            </Button>
+          )}
         </div>
       </div>
       {gifConfig?.enabled && <Dialog open={mobileGifOpen} onOpenChange={setMobileGifOpen}>

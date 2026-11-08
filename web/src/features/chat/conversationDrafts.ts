@@ -1,4 +1,5 @@
 import { useCallback, useSyncExternalStore } from 'react';
+import type { VoiceTake } from '@/features/voiceMessages/useVoiceRecorder';
 
 export interface PendingAttachment {
   id: string;
@@ -10,6 +11,8 @@ export interface ConversationDraft {
   text: string;
   pendingFiles: PendingAttachment[];
   attachError: string | null;
+  /** A recorded voice message waiting for review; it goes out on its own. */
+  voice: VoiceTake | null;
 }
 
 // The composer is one instance shared by every conversation, and a batch's
@@ -18,7 +21,7 @@ export interface ConversationDraft {
 // keyed by conversation, instead of in component state where a late callback
 // would clear whatever conversation is open by then.
 
-const EMPTY_DRAFT: ConversationDraft = { text: '', pendingFiles: [], attachError: null };
+const EMPTY_DRAFT: ConversationDraft = { text: '', pendingFiles: [], attachError: null, voice: null };
 const STORAGE_PREFIX = 'linkord:draft:v1:';
 const PERSIST_DELAY_MS = 300;
 
@@ -38,7 +41,7 @@ function readStoredText(key: string): string {
   }
 }
 
-// Only the text survives a reload: File objects can't be stored, and
+// Only the text survives a reload: File objects (a voice take's too) can't be stored, and
 // pretending the files are still attached would be a lie.
 function persistText(key: string, text: string): void {
   const pending = persistTimers.get(key);
@@ -74,12 +77,13 @@ export function readDraft(accountId: string, conversationId: string): Conversati
   return getDraft(draftKey(accountId, conversationId));
 }
 
-function updateDraft(accountId: string, conversationId: string, update: (draft: ConversationDraft) => Partial<ConversationDraft>): void {
+export function updateConversationDraft(accountId: string, conversationId: string, update: (draft: ConversationDraft) => Partial<ConversationDraft>): void {
   const key = draftKey(accountId, conversationId);
   const prev = getDraft(key);
   const next = { ...prev, ...update(prev) };
   const kept = new Set(next.pendingFiles);
   revokePreviews(prev.pendingFiles.filter((file) => !kept.has(file)));
+  if (prev.voice && prev.voice !== next.voice) URL.revokeObjectURL(prev.voice.url);
   drafts.set(key, next);
   if (next.text !== prev.text) persistText(key, next.text);
   for (const listener of listeners) listener();
@@ -93,7 +97,10 @@ function subscribe(listener: () => void): () => void {
 /** Drops every draft, in memory and in sessionStorage — on logout, so the
  * next account in this tab never sees the previous one's unsent text. */
 export function clearAllDrafts(): void {
-  for (const draft of drafts.values()) revokePreviews(draft.pendingFiles);
+  for (const draft of drafts.values()) {
+    revokePreviews(draft.pendingFiles);
+    if (draft.voice) URL.revokeObjectURL(draft.voice.url);
+  }
   drafts.clear();
   for (const timer of persistTimers.values()) clearTimeout(timer);
   persistTimers.clear();
@@ -112,7 +119,7 @@ export function useConversationDraft(accountId: string, conversationId: string) 
   const key = draftKey(accountId, conversationId);
   const draft = useSyncExternalStore(subscribe, () => getDraft(key));
   const update = useCallback(
-    (fn: (draft: ConversationDraft) => Partial<ConversationDraft>) => updateDraft(accountId, conversationId, fn),
+    (fn: (draft: ConversationDraft) => Partial<ConversationDraft>) => updateConversationDraft(accountId, conversationId, fn),
     [accountId, conversationId],
   );
   return [draft, update] as const;

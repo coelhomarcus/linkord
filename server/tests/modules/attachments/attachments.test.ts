@@ -86,6 +86,7 @@ describe('isPreviewable', () => {
     return {
       id: 'a'.repeat(32), messageId: 1, uploaderId: null, fileName: 'notas.md', mimeType: 'text/markdown',
       size: 100, createdAt: new Date(), thumbId: null, isThumbnail: false, position: 0, width: null, height: null, placeholder: null,
+      voiceDurationMs: null, voiceWaveform: null,
       ...overrides,
     };
   }
