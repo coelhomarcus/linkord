@@ -170,8 +170,6 @@
     "addWidgetTitle": "Add profile widget",
     "categories": "Widget types",
     "added": "Added",
-    "unsaved": "Don't forget to save your changes!",
-    "reset": "Reset",
     "barLabel": "Save changes to the Wall",
     "groups": {
       "igdb": "Games",
@@ -193,6 +191,13 @@
       "cancelled": "Cancelled. {{name}} went back to position {{position}}."
     }
   },
+  "bar": {
+    "unsaved": "Don't forget to save your changes!",
+    "reset": "Reset",
+    "save": "Save",
+    "saving": "Saving…",
+    "saved": "Changes saved."
+  },
   "editor": {
     "fileTooLarge": "File too large (maximum {{max}}).",
     "uploadFailed": {
@@ -205,14 +210,9 @@
     },
     "avatarInput": "Select profile photo",
     "bannerInput": "Select banner",
-    "saved": "Profile saved.",
     "conflict": "This profile was updated elsewhere while you were editing.",
     "useSaved": "Use saved values",
     "barLabel": "Save profile changes",
-    "unsavedNotice": "You have unsaved changes.",
-    "discard": "Discard",
-    "save": "Save profile",
-    "saving": "Saving…",
     "cropTitle": {
       "avatar": "Crop profile photo",
       "banner": "Crop banner"

@@ -321,27 +321,12 @@ export function ProfileEditor({ online, details, onClose, registerLeaveGuard }: 
         />
 
         {showBar && (
-          <FloatingBar label={t('editor.barLabel')}>
-            {justSaved && !saving && saveState !== 'error' ? (
-              <p role="status" className="text-label font-medium text-green">{t('editor.saved')}</p>
-            ) : (
-              <p role={saveState === 'error' ? 'alert' : undefined} className={saveState === 'error' ? 'text-label text-red' : 'text-label text-text-muted'}>
-                {saveState === 'error' ? saveError : saving ? t('editor.saving') : t('editor.unsavedNotice')}
-              </p>
-            )}
-            {(dirty || saving || saveState === 'error') && (
-              <div className="flex gap-2">
-                {dirty && (
-                  <Button type="button" variant="ghost" size="sm" disabled={saving} onClick={discard}>
-                    <span>{t('editor.discard')}</span>
-                  </Button>
-                )}
-                <Button type="submit" size="sm" disabled={saving}>
-                  <span>{saving ? t('editor.saving') : t('editor.save')}</span>
-                </Button>
-              </div>
-            )}
-          </FloatingBar>
+          <FloatingBar
+            label={t('editor.barLabel')}
+            status={saving ? 'saving' : saveState === 'error' ? 'error' : justSaved ? 'saved' : 'pending'}
+            error={saveError}
+            onReset={dirty ? discard : undefined}
+          />
         )}
         <div ref={setBarSlot} className={FLOATING_BAR_SLOT_CLASS} />
       </form>

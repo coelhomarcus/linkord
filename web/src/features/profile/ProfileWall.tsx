@@ -121,15 +121,13 @@ export function ProfileWall({ userId, owner, accent, onNavigate }: { userId: str
   });
 
   const bar = owner && dirty && (
-    <FloatingBar label={t('wall.barLabel')}>
-      {error
-        ? <p role="alert" className="text-label text-red">{t('wall.saveFailed')}</p>
-        : <p className="text-label text-text-muted">{t(saving ? 'wall.saving' : 'wall.unsaved')}</p>}
-      <div className="flex gap-2">
-        <Button type="button" variant="secondary" size="sm" disabled={saving} onClick={reset}>{t('wall.reset')}</Button>
-        <Button type="button" size="sm" disabled={saving} onClick={() => void save()}>{t(saving ? 'wall.saving' : 'wall.save')}</Button>
-      </div>
-    </FloatingBar>
+    <FloatingBar
+      label={t('wall.barLabel')}
+      status={saving ? 'saving' : error ? 'error' : 'pending'}
+      error={t('wall.saveFailed')}
+      onReset={reset}
+      onSave={() => void save()}
+    />
   );
   return (
     // room under the last widget for the floating bar, which would otherwise cover it

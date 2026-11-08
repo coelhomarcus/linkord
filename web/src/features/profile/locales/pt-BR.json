@@ -170,8 +170,6 @@
     "addWidgetTitle": "Adicionar widget de perfil",
     "categories": "Tipos de widget",
     "added": "Adicionado",
-    "unsaved": "Não se esqueça de salvar suas alterações!",
-    "reset": "Redefinir",
     "barLabel": "Salvar alterações do Mural",
     "groups": {
       "igdb": "Jogos",
@@ -193,6 +191,13 @@
       "cancelled": "Cancelado. {{name}} voltou para a posição {{position}}."
     }
   },
+  "bar": {
+    "unsaved": "Não se esqueça de salvar suas alterações!",
+    "reset": "Redefinir",
+    "save": "Salvar",
+    "saving": "Salvando…",
+    "saved": "Alterações salvas."
+  },
   "editor": {
     "fileTooLarge": "Arquivo muito grande (máximo {{max}}).",
     "uploadFailed": {
@@ -205,14 +210,9 @@
     },
     "avatarInput": "Selecionar foto de perfil",
     "bannerInput": "Selecionar banner",
-    "saved": "Perfil salvo.",
     "conflict": "Este perfil foi atualizado em outro lugar enquanto você editava.",
     "useSaved": "Usar valores salvos",
     "barLabel": "Salvar alterações do perfil",
-    "unsavedNotice": "Você tem alterações não salvas.",
-    "discard": "Descartar",
-    "save": "Salvar perfil",
-    "saving": "Salvando…",
     "cropTitle": {
       "avatar": "Recortar foto de perfil",
       "banner": "Recortar banner"
