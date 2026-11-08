@@ -8,7 +8,7 @@ import { ROUTES } from '@/shared/lib/routes';
 import { Button } from '@/shared/ui/primitives/button';
 import { AddWidgetDialog } from './AddWidgetDialog';
 import { FloatingBar } from './FloatingBar';
-import { fetchWall, saveWall } from './profileApi';
+import { createConnection, fetchWall, saveWall } from './profileApi';
 import { WallWidgetCard } from './WallWidgetCard';
 import type { WallResponse, WallSelection, WallWidget } from './connectionsTypes';
 
@@ -170,6 +170,12 @@ export function ProfileWall({ userId, owner, accent, onNavigate }: { userId: str
         added={(widget) => selections.some((selection) => selectionKey(selection) === widgetKey(widget))}
         onPick={(widget) => { setDraft([...selections, selectionOf(widget)]); setAdding(false); }}
         onManage={() => { setAdding(false); navigate(ROUTES.settingsTab('connections')); onNavigate(); }}
+        onConnect={async (provider, username) => {
+          await createConnection(provider, username);
+          // the settings page and the profile's links listen for this too
+          window.dispatchEvent(new CustomEvent('profile-connections-changed', { detail: userId }));
+          await load();
+        }}
         onOpenChange={setAdding}
       />}
       <GamePickerDialog open={!!picking} widgetName={picking?.widgetName ?? ''} taken={picking ? gamesOf(picking.list).map((game) => game.igdbId) : []}

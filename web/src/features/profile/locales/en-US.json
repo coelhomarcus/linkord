@@ -164,7 +164,6 @@
       "day": "{{date}}: {{total}} contributions"
     },
     "noGames": "No games chosen yet.",
-    "gamesSource": "{{service}}, the source of the game data",
     "games": {
       "add": "Add a game to {{widget}}",
       "replace": "Replace {{name}}",
@@ -183,7 +182,11 @@
       "myanimelist": "Anime",
       "github": "GitHub"
     },
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "connectTitle": "Connect your {{service}} account",
+    "connectHint": "The {{service}} widgets show up here once the account is connected. Account ownership is not verified.",
+    "connect": "Connect",
+    "connecting": "Connecting…"
   },
   "editor": {
     "fileTooLarge": "File too large (maximum {{max}}).",

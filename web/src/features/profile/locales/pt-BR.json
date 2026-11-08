@@ -164,7 +164,6 @@
       "day": "{{date}}: {{total}} contribuições"
     },
     "noGames": "Nenhum jogo escolhido ainda.",
-    "gamesSource": "{{service}}, fonte dos dados dos jogos",
     "games": {
       "add": "Adicionar jogo a {{widget}}",
       "replace": "Trocar {{name}}",
@@ -183,7 +182,11 @@
       "myanimelist": "Anime",
       "github": "GitHub"
     },
-    "cancel": "Cancelar"
+    "cancel": "Cancelar",
+    "connectTitle": "Conecte sua conta do {{service}}",
+    "connectHint": "Os widgets do {{service}} aparecem aqui assim que a conta estiver conectada. A titularidade da conta não é verificada.",
+    "connect": "Conectar",
+    "connecting": "Conectando…"
   },
   "editor": {
     "fileTooLarge": "Arquivo muito grande (máximo {{max}}).",

@@ -5,13 +5,14 @@ import { MemoryRouter } from 'react-router';
 import { ProfileWall } from '@/features/profile/ProfileWall';
 import { WallWidgetCard } from '@/features/profile/WallWidgetCard';
 import * as api from '@/features/profile/profileApi';
+import { ApiError } from '@/shared/api/api';
 import * as gamesApi from '@/features/games/gamesApi';
 import { clearGameSearchCache } from '@/features/games/useGameSearch';
 import type { GameItem } from '@/features/games/types';
 import { game } from '../games/fixtures';
 import type { ProfileConnection, WallResponse, WallWidget } from '@/features/profile/connectionsTypes';
 
-vi.mock('@/features/profile/profileApi', () => ({ fetchWall: vi.fn(), saveWall: vi.fn() }));
+vi.mock('@/features/profile/profileApi', () => ({ fetchWall: vi.fn(), saveWall: vi.fn(), createConnection: vi.fn() }));
 vi.mock('@/features/games/gamesApi', () => ({ searchGames: vi.fn() }));
 const mocked = vi.mocked(api);
 const searchGames = vi.mocked(gamesApi.searchGames);
@@ -28,9 +29,13 @@ const gameChoices = [gameWidget('igdb-favorite-game'), gameWidget('igdb-liked-ga
 const withAvailable = (widgets: WallWidget[], extra: WallWidget[] = []): WallResponse => ({ widgets, available: [...extra, ...gameChoices.map((choice) => widgets.find((widget) => widget.type === choice.type) ?? choice)] });
 const names = { favorite: 'Jogo favorito', liked: 'Jogos que eu gosto', playing: 'Jogos em rotação', wishlist: 'Quero jogar' };
 const addWidgetButton = () => screen.findByRole('button', { name: 'Adicionar widget' });
+// the window opens on the games; the other widgets are under their own group
+const GROUP_OF: Record<string, string> = { 'Atividade recente de animes': 'Anime', 'Perfil do GitHub': 'GitHub', 'Contribuições no GitHub': 'GitHub' };
 async function chooseWidget(user: ReturnType<typeof userEvent.setup>, name: string) {
   await user.click(await addWidgetButton());
-  await user.click(await screen.findByRole('button', { name }));
+  const dialog = await screen.findByRole('dialog', { name: 'Adicionar widget de perfil' });
+  if (GROUP_OF[name]) await user.click(within(dialog).getByRole('button', { name: GROUP_OF[name] }));
+  await user.click(within(dialog).getByRole('button', { name }));
 }
 const saveBar = () => screen.queryByRole('region', { name: 'Salvar alterações do Mural' });
 describe('profile Wall', () => {
@@ -60,14 +65,53 @@ describe('profile Wall', () => {
     expect(screen.queryByRole('link', { name: 'Cowboy Bebop' })).not.toBeInTheDocument();
   });
 
-  it('offers the games widgets with no connection at all, and no group that needs one', async () => {
+  it('lists every kind of widget, with plain text groups, even with no connection at all', async () => {
     const user = userEvent.setup();
     mocked.fetchWall.mockResolvedValue({ widgets: [], available: gameChoices }); renderWall();
     await user.click(await addWidgetButton());
     const dialog = await screen.findByRole('dialog');
-    const groups = within(within(dialog).getByRole('navigation', { name: 'Tipos de widget' }));
-    expect(groups.getAllByRole('button').map((button) => button.textContent)).toEqual(['Jogos', 'Gerenciar conexões']);
+    const nav = within(dialog).getByRole('navigation', { name: 'Tipos de widget' });
+    expect(within(nav).getAllByRole('button').map((button) => button.textContent)).toEqual(['Jogos', 'Anime', 'GitHub', 'Gerenciar conexões']);
+    expect(nav.querySelector('svg')).toBeNull();
     for (const name of Object.values(names)) expect(within(dialog).getByRole('button', { name })).toBeInTheDocument();
+    // a service with no account shows its widgets, locked, under a form to connect it
+    await user.click(within(nav).getByRole('button', { name: 'GitHub' }));
+    expect(within(dialog).getByText('Conecte sua conta do GitHub')).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Perfil do GitHub' })).toBeDisabled();
+    expect(within(dialog).getByRole('button', { name: 'Contribuições no GitHub' })).toBeDisabled();
+  });
+
+  it('connects an account from the window, and its widgets become choosable there', async () => {
+    const user = userEvent.setup();
+    mocked.fetchWall.mockResolvedValue({ widgets: [], available: gameChoices }); renderWall();
+    const changed = vi.fn(); window.addEventListener('profile-connections-changed', changed);
+    await user.click(await addWidgetButton());
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Anime' }));
+    mocked.createConnection.mockResolvedValue({ connections: [] });
+    mocked.fetchWall.mockResolvedValue({ widgets: [], available: [anime, ...gameChoices] });
+    await user.type(within(dialog).getByLabelText('Nome de usuário'), 'Xinil');
+    await user.click(within(dialog).getByRole('button', { name: 'Conectar' }));
+    expect(mocked.createConnection).toHaveBeenCalledWith('myanimelist', 'Xinil');
+    expect(await within(dialog).findByRole('button', { name: 'Atividade recente de animes' })).toBeEnabled();
+    expect(within(dialog).queryByText('Conecte sua conta do MyAnimeList')).not.toBeInTheDocument();
+    expect(changed).toHaveBeenCalled();
+    window.removeEventListener('profile-connections-changed', changed);
+    await user.click(within(dialog).getByRole('button', { name: 'Atividade recente de animes' }));
+    expect(await screen.findByRole('link', { name: 'Cowboy Bebop' })).toBeInTheDocument();
+  });
+
+  it('says why an account could not be connected, and keeps the form', async () => {
+    const user = userEvent.setup();
+    mocked.fetchWall.mockResolvedValue({ widgets: [], available: gameChoices }); renderWall();
+    await user.click(await addWidgetButton());
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'GitHub' }));
+    mocked.createConnection.mockRejectedValue(new ApiError(400, 'invalid_connection', 'x'));
+    await user.type(within(dialog).getByLabelText('Nome de usuário'), 'bad--name');
+    await user.click(within(dialog).getByRole('button', { name: 'Conectar' }));
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent('Informe uma URL http/https válida ou um nome de usuário válido para o serviço.');
+    expect(within(dialog).getByRole('button', { name: 'Conectar' })).toBeEnabled();
   });
 
   it('keeps a widget already on the Wall in the catalog, marked as added and not choosable', async () => {
@@ -83,8 +127,7 @@ describe('profile Wall', () => {
   it('adds a widget, closes the window, and raises the floating bar over the profile', async () => {
     const user = userEvent.setup();
     mocked.fetchWall.mockResolvedValue({ widgets: [], available: [anime, profile] }); renderWall();
-    await user.click(await addWidgetButton());
-    await user.click(await screen.findByRole('button', { name: 'Atividade recente de animes' }));
+    await chooseWidget(user, 'Atividade recente de animes');
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(screen.getByRole('link', { name: 'Cowboy Bebop' })).toBeInTheDocument();
     const bar = saveBar()!;
@@ -111,9 +154,7 @@ describe('profile Wall', () => {
     const user = userEvent.setup();
     mocked.fetchWall.mockResolvedValue({ widgets: [], available: [anime, profile] }); renderWall();
     await chooseWidget(user, 'Atividade recente de animes');
-    await user.click(await addWidgetButton());
-    await user.click(await screen.findByRole('button', { name: 'GitHub' }));
-    await user.click(screen.getByRole('button', { name: 'Perfil do GitHub' }));
+    await chooseWidget(user, 'Perfil do GitHub');
     expect(screen.getByRole('button', { name: 'Mover Atividade recente de animes para cima' })).toBeDisabled();
     await user.click(screen.getByRole('button', { name: 'Mover Perfil do GitHub para cima' }));
     const references = [{ connectionId: 'gh', type: 'github-profile' }, { connectionId: 'mal', type: 'mal-recent-anime' }];
@@ -328,7 +369,9 @@ describe('Wall widget cards', () => {
     const link = screen.getByRole('link', { name: 'MyAnimeList, @Xinil' });
     expect(link).toHaveAttribute('href', connection.url);
     expect(link).not.toHaveTextContent('MyAnimeList');
-    expect(screen.getByRole('heading', { name: 'Atividade recente de animes' })).toBeInTheDocument();
+    // the service's mark sits inside the account badge, not before the title
+    expect(link.querySelector('svg')).not.toBeNull();
+    expect(screen.getByRole('heading', { name: 'Atividade recente de animes' }).querySelector('svg')).toBeNull();
   });
   it('shows only the covers of the first eight recent anime, without titles or progress', () => {
     const items = Array.from({ length: 10 }, (_, i) => ({ id: String(i), title: `Anime ${i}`, url: `https://myanimelist.net/anime/${i}`, imageUrl: `https://cdn.myanimelist.net/${i}.jpg` }));
@@ -383,7 +426,9 @@ describe('games widget cards', () => {
     expect(cover.closest('ul')).toBeNull();
     // large enough to be the point of the widget, not so large it fills the card
     expect(cover.parentElement).toHaveClass('w-28', 'sm:w-32');
-    expect(screen.getByRole('link', { name: 'IGDB, fonte dos dados dos jogos' })).toHaveAttribute('href', 'https://www.igdb.com');
+    // a games widget has no account behind it: no badge, and no logo before the title
+    expect(screen.queryByRole('link', { name: /IGDB/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Jogo favorito' }).querySelector('svg')).toBeNull();
   });
   it('shows a list as a grid of covers, eight at most, all 264x352', () => {
     render1(gameWidget('igdb-playing-games', Array.from({ length: 10 }, (_, i) => game(i + 1))));

@@ -38,9 +38,9 @@ export function WallWidgetCard({ widget, accent, gameEditor }: { widget: WallWid
   const showFooter = Boolean(connection?.syncError && data);
   return (
     <article className="flex w-full min-w-0 flex-col gap-4 rounded-xl border border-border-strong bg-bg-secondary p-4">
-      {brand && <WidgetHeader title={t(`wall.widgets.${widget.type}`)} brand={brand} link={connection
-        ? { label: `@${connection.value}`, href: connection.url, accessibleName: t('wall.profileLink', { service: brand.name, user: connection.value }) }
-        : { label: brand.name, href: 'https://www.igdb.com', accessibleName: t('wall.gamesSource', { service: brand.name }) }} />}
+      <WidgetHeader title={t(`wall.widgets.${widget.type}`)} account={connection && brand
+        ? { brand, username: connection.value, href: connection.url, accessibleName: t('wall.profileLink', { service: brand.name, user: connection.value }) }
+        : undefined} />
       {!data && <WidgetMessage>{t(connection?.syncError ? 'wall.unavailable' : 'wall.pending')}</WidgetMessage>}
       {data?.kind === 'list' && (data.items.length === 0
         ? <WidgetMessage>{t('wall.noItems')}</WidgetMessage>
