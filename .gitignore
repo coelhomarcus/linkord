@@ -38,3 +38,9 @@ docs/*
 # the webhook integration guide is the one doc meant for whoever integrates
 !docs/WEBHOOK.md
 !docs/MIGRATING_GROUPS_TO_SERVERS.md
+
+# end-to-end suite (e2e/): reports, traces and the per-run stack state
+e2e/report/
+e2e/test-results/
+e2e/.e2e.env
+e2e/.e2e-state.json

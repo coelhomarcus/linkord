@@ -79,11 +79,14 @@ A deploy restarts the Node process while people are connected, and browsers keep
 - So call membership is written to Postgres as it changes (`call_presence`, via `setCallConversationId` in `modules/presence/participants.ts`; `dm_calls_active`, via `apply` in `modules/calls/dmCalls.ts`). On boot, `restoreCalls` in `app/bootstrap.ts` rebuilds those connections as ghosts with `socket: null` and the **same id and resume token**, held for `CALL_RESTORE_GRACE_MS`. A restart then looks exactly like a short network drop: the client's `join {id, token}` resumes the same participant and the tiles still match the LiveKit identities.
 - Rules that keep this working:
   - The SIGTERM handler in `bootstrap.ts` must not call `removeParticipant`: removal deletes the persisted rows and tells everyone the person left, which is what a deploy must not do.
+  - It must not call `socket.disconnect()` either, only `io.close()`. Behind the production proxy the disconnect packet reaches the browser, and Socket.IO never reconnects on its own after `io server disconnect`: the tab keeps its LiveKit media but stops hearing about the call (people who join later are invisible and silent to it) until it is focused. `io.close()` drops the transports, which every client build treats as a network drop. Clients also reconnect after a server disconnect that follows a `server-restart` message (`useSocketConnection.ts`), but not after one without it: a duplicated tab resuming the same identity would kick the other one in a loop.
   - Anything that changes which call a connection is in must go through `setCallConversationId`, and DM call changes through the state machine plus `apply`. Writing `callConversationId` directly skips persistence.
   - Persistence is injected (`setCallPresenceStore`, `setDmCallStore`) so `participants.ts` and `dmCalls.ts` stay free of the database and their tests run without one. Writes are queued and their failures only logged: a database problem must never break a live call.
   - Only membership is stored. Mic, camera, share and speaking flags are not: the client reports them again after reconnecting (`syncLocalMedia` in the `welcome` handler).
   - A fresh join of the same account must not evict restored ghosts (`restoredGhostIds`): another tab of that account may reach the server before the tab that is in the call.
 - Client fallback: `welcome` carries `callConversationId`. If a reconnecting client is still connected to LiveKit but the server does not have it in that call (a crash with the database down, the grace window expired), `reconcileAfterReconnect` (`features/calls/useCallLifecycle.ts`) rejoins a voice channel, or leaves a DM call that no longer exists.
+- A DM call answer (accept, decline, cancel) clicked while the socket is down is kept and sent after the next `welcome`, only if the same call is still waiting for it (`onReconnected` in `features/calls/useDmCall.ts`); other one-shot socket actions are not queued, so a new one that matters during a reconnect needs the same treatment.
+- Chat and uploads ride out a restart too, and must keep doing so: a chat send waits in the outbox (`features/chat/useMessageOutbox.ts`) while offline and is resent with the same `clientMessageId` after the next `welcome` (the server answers a duplicate with the original, so nothing is stored twice). An upload keeps its session on disk, a chunk sent again overwrites the same piece, and the client (`shared/lib/chunkedUpload.ts`) retries init, chunks and complete for up to 60 s of outage, counting a response without the app's error envelope (the proxy's 404/502 while the container is swapped) as an outage. Both were checked against a real restart behind Traefik.
 - Known limits: a page reload leaves the call (the LiveKit connection lives in the page); the first deploy that introduces persistence cannot restore calls that were opened before it; old JS has no client fallback.
 - When you add state to a call, decide whether a restart should keep it. If yes, persist it with the membership; if the client can report it again, do what the media flags do.
 
@@ -123,6 +126,13 @@ npm test                                       # test:server + test:web
 ```
 
 A change that touches a real flow (upload, call, conversations, auth) deserves live manual verification (`npm run dev`, 2 accounts), not just automated tests.
+
+**End-to-end suite (`e2e/`, Playwright).** Real Chrome sessions for several accounts against a production-shaped Docker stack (app behind Traefik, LiveKit, throwaway Postgres); setup and commands in [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md#end-to-end-tests). Run the matching project when a change touches what it covers, and add a spec when you add a user-facing flow:
+- `npm run test:e2e:features`: every feature, one spec per area (`e2e/specs/features/<area>.spec.ts`).
+- `npm run test:e2e:restart`: anything a redeploy must survive (realtime, calls, chat sends, uploads, the shutdown path).
+- `npm run test:e2e:upgrade`: wire or protocol changes, migrations, anything an old tab talks to (production version vs the working tree).
+
+Rules for specs: set data up through the app's HTTP routes (`e2e/fixtures/api.ts`), never by writing to the database, since the app caches memberships in memory; find elements the way a person does, by role and pt-BR label (the English-only rule applies to everything else, as in `web/tests`); never `.click().catch(() => {})` on something that may not exist (it waits for the whole action timeout); a step that sends a socket message right after a restart waits for the tab's `welcome` first (`waitForSocketEvent`).
 
 ## Code Conventions
 

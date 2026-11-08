@@ -67,7 +67,16 @@ export function useSocketConnection(deps: SocketConnectionDeps) {
       if (event.persisted && document.visibilityState === 'visible') retryConnection();
     };
 
+    // The server says this right before a restart (deploy). A server that then
+    // disconnects the socket explicitly leaves Socket.IO with no automatic retry.
+    // Only after this notice: a duplicated tab that resumes the same identity also
+    // gets a server disconnect, and reconnecting from that would kick the other tab
+    // back and forth.
+    let serverRestarting = false;
+    socket.on('server-restart', () => { serverRestarting = true; });
+
     socket.on('connect', () => {
+      serverRestarting = false;
       clearTimeout(authRetryTimer);
       log.info('socket connected');
       const saved = loadIdentity();
@@ -82,6 +91,7 @@ export function useSocketConnection(deps: SocketConnectionDeps) {
       if (intentionalCloseRef.current) return;
       log.warn('socket disconnected unexpectedly', { reason });
       dispatch({ type: 'SET_RECONNECTING', value: true });
+      if (reason === 'io server disconnect' && serverRestarting) socket.connect();
     });
 
     socket.on('connect_error', (err: Error & { data?: { code?: string } }) => {

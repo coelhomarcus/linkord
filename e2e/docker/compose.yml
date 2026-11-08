@@ -1,0 +1,63 @@
+# The end-to-end stack: the app behind Traefik (as in production behind
+# Dokploy), a LiveKit dev server and its own throwaway Postgres. Driven by
+# e2e/stack/stack.ts; never shares anything with the dev database.
+name: linkord-e2e
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: linkord
+      POSTGRES_PASSWORD: linkord
+      POSTGRES_DB: linkord
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U linkord -d linkord"]
+      interval: 1s
+      timeout: 3s
+      retries: 30
+
+  livekit:
+    image: livekit/livekit-server:latest
+    command: ["--dev", "--bind", "0.0.0.0", "--node-ip", "127.0.0.1"]
+    ports:
+      - "7880:7880"
+      - "7881:7881"
+      - "7882:7882/udp"
+
+  app:
+    image: ${APP_IMAGE:?set APP_IMAGE}
+    env_file: ../.e2e.env
+    environment:
+      DATABASE_URL: postgres://linkord:linkord@postgres:5432/linkord
+      # The browser reaches LiveKit at lk.localhost (Chrome resolves any
+      # *.localhost to this machine); inside the container the same name
+      # has to point at the host, where LiveKit's port is published.
+      LIVEKIT_URL: ws://lk.localhost:7880
+      LIVEKIT_API_KEY: devkey
+      LIVEKIT_API_SECRET: secret
+      LIVEKIT_ROOM_NAME: e2e
+      APP_URL: http://localhost:8080
+      COOKIE_SECURE: "0"
+      REGISTRATIONS_PER_IP_PER_HOUR: "100000"
+      MAX_NEW_ACCOUNTS_PER_HOUR: "100000"
+      MAX_CONNECTIONS_PER_USER: "20"
+    extra_hosts:
+      - "lk.localhost:host-gateway"
+    volumes:
+      - uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  proxy:
+    image: traefik:v3.3
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./dynamic.yml:/etc/traefik/dynamic.yml:ro
+
+volumes:
+  uploads:
