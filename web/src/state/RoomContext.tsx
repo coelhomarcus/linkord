@@ -1,7 +1,7 @@
 import { createContext, useContext } from 'react';
 import type { Dispatch, MutableRefObject } from 'react';
 import type { Room } from 'livekit-client';
-import type { ChatMessage, ClientMessage, Conversation, PublicUser, ReactionEmoji, SearchResult, ServerSummary, StorageUsage } from '@/shared/types/protocol';
+import type { ChatMessage, ClientMessage, Conversation, PublicUser, ReactionEmoji, SearchResult, ServerSummary } from '@/shared/types/protocol';
 import type { DmCallNotice } from '@/features/calls/useDmCall';
 import type { RoomAction, RoomState } from './roomReducer';
 import type { TileKind } from '../features/calls/tileTypes';
@@ -217,7 +217,8 @@ export interface RoomContextValue {
   searchError: string | null;
   clearSearchError: () => void;
   searchMessages: (query: string, conversationId?: string) => void;
-  storageUsage: StorageUsage;
+  /** the largest file the server takes, from `welcome` */
+  maxAttachmentBytes: number;
 }
 
 export const RoomContext = createContext<RoomContextValue | null>(null);

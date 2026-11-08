@@ -5,36 +5,12 @@ import userEvent from '@testing-library/user-event';
 import { initialRoomState } from '@/state/roomReducer';
 import { renderWithRoom } from '@tests/fixtures/roomContextFixture';
 import { AccountSettings } from '@/features/settings/AccountSettings';
-import { formatStorage } from '@/features/settings/formatStorage';
 
 vi.mock('@/state/AuthContext', () => ({
   useAuth: () => ({ logout: vi.fn(), user: { email: 'ana@example.com' } }),
 }));
 
-const MB = 1024 * 1024;
-const GB = 1024 * MB;
-
-function renderAccount(storageUsage: { totalBytes: number; totalFiles: number; maxBytes: number }) {
-  return renderWithRoom(<MemoryRouter><AccountSettings onOpenProfile={vi.fn()} /></MemoryRouter>, { storageUsage });
-}
-
-describe('formatStorage', () => {
-  it('uses MB below a gigabyte and GB from there up, in pt-BR', () => {
-    expect(formatStorage(12.4 * MB)).toBe('12,4 MB');
-    expect(formatStorage(0)).toBe('0 MB');
-    expect(formatStorage(GB / 2)).toBe('512 MB');
-    expect(formatStorage(1.5 * GB)).toBe('1,5 GB');
-    expect(formatStorage(5 * GB)).toBe('5 GB');
-  });
-});
-
 describe('AccountSettings', () => {
-  it('describes the quota in pt-BR, with the file count in the singular when it is one', () => {
-    renderAccount({ totalBytes: 8.3 * MB, totalFiles: 1, maxBytes: 5 * GB });
-    expect(screen.getByText('8,3 MB de 5 GB')).toBeInTheDocument();
-    expect(screen.getByText('1 arquivo enviado.')).toBeInTheDocument();
-  });
-
   it('lists the account information as rows, with the email hidden up to the @', () => {
     renderWithRoom(<MemoryRouter><AccountSettings onOpenProfile={vi.fn()} /></MemoryRouter>, {
       state: { ...initialRoomState, me: { ...initialRoomState.me, userId: 'u-ana', name: 'ana', displayName: 'Ana Lima' } },
@@ -45,11 +21,10 @@ describe('AccountSettings', () => {
     expect(screen.getByText('***@example.com')).toBeInTheDocument();
   });
 
-  it('keeps any usage visible on the bar while reporting the real value', () => {
-    renderAccount({ totalBytes: MB, totalFiles: 4, maxBytes: 5 * GB });
-    const bar = screen.getByRole('progressbar', { name: 'Armazenamento usado' });
-    expect(bar).toHaveAttribute('aria-valuenow', '0');
-    expect(bar.firstElementChild).toHaveStyle({ width: '2%' });
+  it('has no storage section: accounts have no storage quota of their own', () => {
+    renderWithRoom(<MemoryRouter><AccountSettings onOpenProfile={vi.fn()} /></MemoryRouter>);
+    expect(screen.queryByRole('heading', { name: 'Armazenamento' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
   });
 
   it('edits the display name in your own profile', async () => {

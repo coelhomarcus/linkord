@@ -28,7 +28,6 @@
     },
     "sections": {
       "accountInfo": "Informações da conta",
-      "storage": "Armazenamento",
       "session": "Sessão",
       "blocked": "Contas bloqueadas",
       "theme": "Tema",
@@ -51,10 +50,6 @@
     "email": {
       "title": "E-mail",
       "keywords": "email, trocar e-mail, confirmar e-mail, código"
-    },
-    "storage": {
-      "title": "Armazenamento",
-      "keywords": "espaço, cota, arquivos, storage"
     },
     "session": {
       "title": "Sessão",
@@ -122,14 +117,6 @@
       "label": "Nome de exibição"
     },
     "edit": "Editar",
-    "storage": {
-      "label": "Anexos enviados",
-      "bar": "Armazenamento usado",
-      "usage_zero": "Nenhum arquivo enviado.",
-      "usage_one": "{{count}} arquivo enviado.",
-      "usage_other": "{{count}} arquivos enviados.",
-      "amount": "{{used}} de {{max}}"
-    },
     "logout": {
       "label": "Sair da conta",
       "description": "Encerra a sessão neste navegador.",

@@ -1,4 +1,3 @@
-import { sendUsageToUser } from '../attachments/attachmentQuota.js';
 import { isActiveAdmin } from '../admin/adminAuth.js';
 import { recordAudit } from '../admin/auditLog.js';
 import { eq, and, desc, asc, lt, gt, gte, inArray, sql } from 'drizzle-orm';
@@ -762,7 +761,6 @@ async function removeAttachment(p: Participant, msg: { msgId?: unknown; attachme
     ? await db.update(messages).set({ editedAt: new Date() }).where(eq(messages.id, row.id)).returning()
     : [row];
   // the author's quota just got room back
-  if (row.authorId) void sendUsageToUser(row.authorId).catch(() => {});
   if (!isAuthor) {
     // moderation, so it leaves a trail — ids only, never the message body
     await recordAudit({
@@ -878,7 +876,6 @@ async function deleteMessage(p: Participant, msg: { msgId?: unknown }): Promise<
   await deleteForMessage(msgId);
   await db.delete(messages).where(eq(messages.id, msgId));
   // the author's quota just got room back
-  if (existing.authorId) void sendUsageToUser(existing.authorId).catch(() => {});
   await recordConversationActivity(existing.conversationId);
   if (!isAuthor && !isChannelModerator) {
     // moderation, so it leaves a trail — ids only, never the message body

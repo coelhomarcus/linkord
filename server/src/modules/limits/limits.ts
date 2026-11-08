@@ -1,17 +1,15 @@
 import { and, eq, or, sql } from 'drizzle-orm';
 import { config } from '../../config/env.js';
 import { db } from '../../db/client.js';
-import { attachments, friendships, messages, serverMembers, servers } from '../../db/schema.js';
+import { friendships, serverMembers, servers } from '../../db/schema.js';
 import type { Tx } from '../users/userPairLock.js';
-import { stagedBytes } from '../attachments/stagedAttachments.js';
 
 // Per-account quota values live in config; this module defines what each quota counts.
 
-export type LimitKind = 'storage' | 'ownedServers' | 'serverMemberships' | 'friends' | 'pendingRequests';
+export type LimitKind = 'ownedServers' | 'serverMemberships' | 'friends' | 'pendingRequests';
 
 export const limitMax = (kind: LimitKind, cfg = config): number => {
   switch (kind) {
-    case 'storage': return cfg.MAX_USER_STORAGE_BYTES;
     case 'ownedServers': return cfg.MAX_OWNED_SERVERS_PER_USER;
     case 'serverMemberships': return cfg.MAX_SERVER_MEMBERSHIPS_PER_USER;
     case 'friends': return cfg.MAX_FRIENDS;
@@ -49,18 +47,7 @@ export async function countPendingOutgoing(userId: string, executor: Executor = 
   return row?.n ?? 0;
 }
 
-/** Bytes attributable to the account: every file (thumbnails included, they
- * take disk too) on a message it authored. Avatars/banners are not counted
- * here, same as the instance-wide figure (attachmentQuota.getUsage). */
-export async function getUserStorageBytes(userId: string): Promise<number> {
-  const [row] = await db.select({ bytes: sql<number>`coalesce(sum(${attachments.size}), 0)::float8` }).from(attachments)
-    .innerJoin(messages, eq(messages.id, attachments.messageId))
-    .where(eq(messages.authorId, userId));
-  return Number(row?.bytes ?? 0) + (await stagedBytes(userId)).bytes;
-}
-
 export interface UserLimits {
-  storage: { used: number; max: number };
   ownedServers: { used: number; max: number };
   serverMemberships: { used: number; max: number };
   friends: { used: number; max: number };
@@ -70,11 +57,10 @@ export interface UserLimits {
 /** What the account itself may see about its own quotas — the instance-wide
  * total is an administrative figure (§8.3). */
 export async function getUserLimits(userId: string): Promise<UserLimits> {
-  const [storage, ownedServers, serverMemberships, friends, pendingRequests] = await Promise.all([
-    getUserStorageBytes(userId), countOwnedServers(userId), countServerMemberships(userId), countFriends(userId), countPendingOutgoing(userId),
+  const [ownedServers, serverMemberships, friends, pendingRequests] = await Promise.all([
+    countOwnedServers(userId), countServerMemberships(userId), countFriends(userId), countPendingOutgoing(userId),
   ]);
   return {
-    storage: { used: storage, max: limitMax('storage') },
     ownedServers: { used: ownedServers, max: limitMax('ownedServers') },
     serverMemberships: { used: serverMemberships, max: limitMax('serverMemberships') },
     friends: { used: friends, max: limitMax('friends') },

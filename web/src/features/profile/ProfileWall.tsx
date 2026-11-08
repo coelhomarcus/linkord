@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowDownIcon, ArrowUpIcon, PlusIcon, TrashIcon } from '@phosphor-icons/react';
+import { PlusIcon } from '@phosphor-icons/react';
+import { arrayMove } from '@dnd-kit/sortable';
 import { GamePickerDialog } from '@/features/games/GamePickerDialog';
 import { forWidget, gameListOf, type GameItem, type GameList, type GameLists } from '@/features/games/types';
 import { useTranslation } from 'react-i18next';
@@ -9,6 +10,7 @@ import { Button } from '@/shared/ui/primitives/button';
 import { AddWidgetDialog } from './AddWidgetDialog';
 import { FloatingBar } from './FloatingBar';
 import { createConnection, fetchWall, saveWall } from './profileApi';
+import { SortableWall } from './SortableWall';
 import { WallWidgetCard } from './WallWidgetCard';
 import type { WallResponse, WallSelection, WallWidget } from './connectionsTypes';
 
@@ -91,11 +93,6 @@ export function ProfileWall({ userId, owner, accent, onNavigate }: { userId: str
     setGames(picking.list, picking.list === 'favorite' ? [chosen] : picking.index < items.length ? items.map((item, i) => (i === picking.index ? chosen : item)) : [...items, chosen]);
     setPicking(null);
   }
-  function move(index: number, direction: number) {
-    const next = [...selections];
-    [next[index], next[index + direction]] = [next[index + direction]!, next[index]!];
-    setDraft(next);
-  }
   function reset() { setDraft(null); setGamesDraft({}); setPicking(null); setError(false); }
   async function save() {
     if (!dirty || saving) return;
@@ -107,6 +104,21 @@ export function ProfileWall({ userId, owner, accent, onNavigate }: { userId: str
     } catch { if (mounted.current) setError(true); }
     finally { if (mounted.current) setSaving(false); }
   }
+
+  // the widgets as cards; the owner's also carry the editing controls of the games widgets
+  const entries = widgets.map((widget) => {
+    const name = t(`wall.widgets.${widget.type}`);
+    const list = gameListOf(widget.type);
+    const items = list ? gamesOf(list) : [];
+    const gameEditor = list ? {
+      disabled: saving, widgetName: name,
+      onAdd: () => setPicking({ list, widgetName: name, index: items.length }),
+      onReplace: (position: number) => setPicking({ list, widgetName: name, index: position }),
+      onRemove: (position: number) => setGames(list, items.filter((_, i) => i !== position)),
+      onMove: (position: number, direction: -1 | 1) => { const next = [...items]; [next[position], next[position + direction]] = [next[position + direction]!, next[position]!]; setGames(list, next); },
+    } : undefined;
+    return { id: widgetKey(widget), name, content: <WallWidgetCard widget={widget} accent={accent} gameEditor={owner ? gameEditor : undefined} /> };
+  });
 
   const bar = owner && dirty && (
     <FloatingBar label={t('wall.barLabel')}>
@@ -136,34 +148,14 @@ export function ProfileWall({ userId, owner, accent, onNavigate }: { userId: str
         </div>
       )}
       {!loading && data && widgets.length === 0 && <p className="py-8 text-center text-body text-text-muted">{t(owner ? 'wall.emptyOwner' : 'wall.emptyVisitor')}</p>}
-      <div className="flex w-full min-w-0 flex-col gap-4">
-        {widgets.map((widget, index) => {
-          const name = t(`wall.widgets.${widget.type}`);
-          const list = gameListOf(widget.type);
-          const items = list ? gamesOf(list) : [];
-          const gameEditor = list ? {
-            disabled: saving, widgetName: name,
-            onAdd: () => setPicking({ list, widgetName: name, index: items.length }),
-            onReplace: (position: number) => setPicking({ list, widgetName: name, index: position }),
-            onRemove: (position: number) => setGames(list, items.filter((_, i) => i !== position)),
-            onMove: (position: number, direction: -1 | 1) => { const next = [...items]; [next[position], next[position + direction]] = [next[position + direction]!, next[position]!]; setGames(list, next); },
-          } : undefined;
-          const card = <WallWidgetCard widget={widget} accent={accent} gameEditor={owner ? gameEditor : undefined} />;
-          if (!owner) return <div key={widgetKey(widget)} className="w-full min-w-0">{card}</div>;
-          // the controls sit in their own row above the card, in flow, so they can never cover its content
-          return <div key={widgetKey(widget)} className="flex w-full min-w-0 flex-col gap-3 rounded-xl border border-dashed border-border-strong p-3">
-            <div className="flex items-center justify-between gap-2 px-1">
-              <span aria-hidden className="flex size-6 items-center justify-center rounded-full bg-bg-tertiary text-caption font-semibold text-text-secondary">{index + 1}</span>
-              <div className="flex gap-1">
-                <Button type="button" variant="ghost" size="icon" disabled={saving || index === 0} aria-label={t('wall.moveUp', { name })} onClick={() => move(index, -1)}><ArrowUpIcon size={16} /></Button>
-                <Button type="button" variant="ghost" size="icon" disabled={saving || index === widgets.length - 1} aria-label={t('wall.moveDown', { name })} onClick={() => move(index, 1)}><ArrowDownIcon size={16} /></Button>
-                <Button type="button" variant="ghost" size="icon" disabled={saving} aria-label={t('wall.remove', { name })} className="text-red-text hover:text-red-text" onClick={() => setDraft(selections.filter((selection) => selectionKey(selection) !== widgetKey(widget)))}><TrashIcon size={16} /></Button>
-              </div>
-            </div>
-            {card}
-          </div>;
-        })}
-      </div>
+      {owner
+        ? <SortableWall
+          widgets={entries}
+          disabled={saving}
+          onMove={(from, to) => setDraft(arrayMove(selections, from, to))}
+          onRemove={(id) => setDraft(selections.filter((selection) => selectionKey(selection) !== id))}
+        />
+        : <div className="flex w-full min-w-0 flex-col gap-4">{entries.map((entry) => <div key={entry.id} className="w-full min-w-0">{entry.content}</div>)}</div>}
       {owner && data && <AddWidgetDialog
         open={adding}
         available={data.available ?? []}

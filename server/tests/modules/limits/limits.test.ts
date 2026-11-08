@@ -25,11 +25,10 @@ describe('limitMax', () => {
     assert.equal(limitMax('serverMemberships'), config.MAX_SERVER_MEMBERSHIPS_PER_USER);
     assert.equal(limitMax('friends'), config.MAX_FRIENDS);
     assert.equal(limitMax('pendingRequests'), config.MAX_PENDING_OUTGOING_REQUESTS);
-    assert.equal(limitMax('storage'), config.MAX_USER_STORAGE_BYTES);
   });
 
   it('the defaults are finite and positive (no limit "forgotten" at zero or NaN)', () => {
-    for (const kind of ['storage', 'ownedServers', 'serverMemberships', 'friends', 'pendingRequests'] as const) {
+    for (const kind of ['ownedServers', 'serverMemberships', 'friends', 'pendingRequests'] as const) {
       const max = limitMax(kind);
       assert.ok(Number.isFinite(max) && max > 0, `${kind}=${max}`);
     }

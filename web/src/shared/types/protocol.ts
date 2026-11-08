@@ -27,7 +27,7 @@ export type ReactionEmoji = string;
 /** Wire protocol version this build speaks; the server refuses older ones
  * (client_outdated). Keep in sync with server/src/realtime/protocolVersion.ts
  * — version 7 moves connection edits out of profile patches. */
-export const PROTOCOL_VERSION = 7;
+export const PROTOCOL_VERSION = 8;
 
 export interface ChatReplyRef {
   msgId: number;
@@ -127,7 +127,8 @@ export interface ChatAttachment {
   // base64 ThumbHash: a blurred stand-in to paint while the image loads
   placeholder?: string;
 }
-export const MAX_ATTACHMENT_BYTES = 2 * 1024 * 1024 * 1024;
+// the server's default per-file limit; `welcome.maxAttachmentBytes` says what this server really takes
+export const DEFAULT_MAX_ATTACHMENT_BYTES = 512 * 1024 * 1024;
 export const MAX_ATTACHMENTS_PER_MESSAGE = 4;
 export const MAX_AVATAR_BYTES = 12 * 1024 * 1024;
 export const AVATAR_MIME_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'] as const;
@@ -143,12 +144,6 @@ export interface SearchResult {
   avatar: string;
   ts: number;
   snippet: string;
-}
-
-export interface StorageUsage {
-  totalBytes: number;
-  totalFiles: number;
-  maxBytes: number;
 }
 
 /** A DM, or a server channel seen as a place to chat. The server sends a DM
@@ -308,7 +303,8 @@ export type ServerMessage =
       conversations: DirectSummary[]; servers: ServerSummary[]; knownUsers: PublicUser[]; onlineUserIds: string[]; friendIds: string[];
       // conversation id → unread count (capped at 100); absent from servers before persisted unread
       unreadByConversation?: Record<string, number>;
-      storageUsage: StorageUsage;
+      // the largest file this server takes; absent from servers before protocol 8
+      maxAttachmentBytes?: number;
       livekitUrl: string;
       // the call this connection is in server-side; absent from servers that predate it
       callConversationId?: string | null;
@@ -368,7 +364,6 @@ export type ServerMessage =
   | { t: 'user-online'; userId: string }
   | { t: 'user-offline'; userId: string; lastSeenAt?: string | null }
   | { t: 'user-deleted'; userId: string }
-  | ({ t: 'storage-usage' } & StorageUsage)
   // answers the `profile` patch of the same requestId, once the server has
   // actually persisted it (or refused to) — never inferred from
   // `participant-updated`, which a different account's edit also triggers

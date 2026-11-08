@@ -5,18 +5,12 @@ import { useAuth } from '@/state/AuthContext';
 import { useRoom } from '@/state/RoomContext';
 import { Button } from '@/shared/ui/primitives/button';
 import { EmailSettings } from './EmailSettings';
-import { formatStorage } from './formatStorage';
 import { SETTINGS_ACTION_BUTTON, SettingsRow, SettingsSection, SettingsSections } from './SettingsLayout';
-
-// any usage at all stays visible as a sliver instead of an empty track
-const MIN_VISIBLE_PERCENT = 2;
 
 export function AccountSettings({ onOpenProfile }: { onOpenProfile: (userId: string) => void }) {
   const { t } = useTranslation('settings');
-  const { state, storageUsage, activeCallConversationId } = useRoom();
+  const { state, activeCallConversationId } = useRoom();
   const { logout, user } = useAuth();
-  const usedPercent = storageUsage.maxBytes ? Math.min(100, (storageUsage.totalBytes / storageUsage.maxBytes) * 100) : 0;
-  const barPercent = storageUsage.totalBytes > 0 ? Math.max(MIN_VISIBLE_PERCENT, usedPercent) : 0;
   const inCall = activeCallConversationId !== null;
 
   return (
@@ -37,24 +31,6 @@ export function AccountSettings({ onOpenProfile }: { onOpenProfile: (userId: str
           </Button>
         </SettingsRow>
         <EmailSettings currentEmail={user?.email ?? null} />
-      </SettingsSection>
-
-      <SettingsSection id="storage" title={t('catalog.sections.storage')} contentClassName="gap-3">
-        <SettingsRow label={t('account.storage.label')} description={t('account.storage.usage', { count: storageUsage.totalFiles })}>
-          <span className="text-body font-medium tabular-nums text-text-primary">
-            {t('account.storage.amount', { used: formatStorage(storageUsage.totalBytes), max: formatStorage(storageUsage.maxBytes) })}
-          </span>
-        </SettingsRow>
-        <div
-          role="progressbar"
-          aria-label={t('account.storage.bar')}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={Math.round(usedPercent)}
-          className="h-2 w-full overflow-hidden rounded-full bg-fill-active"
-        >
-          <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${barPercent}%` }} />
-        </div>
       </SettingsSection>
 
       <SettingsSection id="session" title={t('catalog.sections.session')}>

@@ -20,7 +20,6 @@ import type { ChatView } from '@/features/chat/useChatMessages';
 import { useTypingIndicator } from '@/state/hooks/useTypingIndicator';
 import { useSoundboardEvents } from '@/features/soundboard/useSoundboardEvents';
 import { useMessageSearch } from '@/features/chat/useMessageSearch';
-import { useStorageUsage } from '@/features/chat/useStorageUsage';
 import { usePresence } from '@/state/hooks/usePresence';
 import { useCallLifecycle } from '@/features/calls/useCallLifecycle';
 import { useDmCall } from '@/features/calls/useDmCall';
@@ -30,6 +29,7 @@ import { useRoomSettings } from '@/features/settings/useRoomSettings';
 import { useProfileUpdate } from '@/features/profile/useProfileUpdate';
 import { preloadSounds } from '@/shared/sounds';
 import { setNotificationClickHandler } from '@/shared/notifications';
+import { DEFAULT_MAX_ATTACHMENT_BYTES } from '@/shared/types/protocol';
 import type { ClientMessage, Conversation, ServerMessage } from '@/shared/types/protocol';
 import { logger } from '@/shared/lib/logger';
 import { ERROR_CODES } from '@/shared/api/errorCodes';
@@ -127,7 +127,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
   });
   useEffect(() => { markActiveSeenRef.current = chatMessages.markActiveSeen; }, [chatMessages.markActiveSeen]);
   const messageSearch = useMessageSearch(sendWs);
-  const attachmentsUpload = useStorageUsage();
+  const [maxAttachmentBytes, setMaxAttachmentBytes] = useState(DEFAULT_MAX_ATTACHMENT_BYTES);
 
   const { startSharing, stopSharing, changeSource, pauseSharePreview, resumeSharePreview } = useScreenShare(livekitRoom, dispatch);
   const { startCamera, stopCamera } = useCamera(livekitRoom, dispatch);
@@ -211,7 +211,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         serversList.setInitial(m.servers ?? []);
         chatMessages.onWelcome(m.unreadByConversation);
         presence.setInitial(m.knownUsers, m.onlineUserIds, m.friendIds);
-        attachmentsUpload.setStorageUsage(m.storageUsage);
+        setMaxAttachmentBytes(m.maxAttachmentBytes ?? DEFAULT_MAX_ATTACHMENT_BYTES);
         // the first welcome opens nothing: the URL says what to show (the
         // route sync opens it). A reconnect reloads what was open.
         if (hasWelcomedRef.current) {
@@ -385,9 +385,6 @@ export function RoomProvider({ children }: { children: ReactNode }) {
       case 'user-deleted':
         presence.onUserDeleted(m);
         break;
-      case 'storage-usage':
-        attachmentsUpload.onStorageUsage(m);
-        break;
       case 'profile-result':
         profileUpdate.handleProfileResult(m);
         break;
@@ -423,7 +420,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         break;
     }
   }, [
-    dispatch, conversationsList, serversList, presence, attachmentsUpload, openConversation, sendWs, callLifecycle, dmCall,
+    dispatch, conversationsList, serversList, presence, openConversation, sendWs, callLifecycle, dmCall,
     messageSearch, chatMessages, typingIndicator, disconnectIntentionally, profileUpdate, soundboardEvents, livekitRoom,
   ]);
 
@@ -507,7 +504,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         clearPendingJumpTarget: chatMessages.clearPendingJumpTarget, jumpToMessage: chatMessages.jumpToMessage,
         searchResults: messageSearch.searchResults, searchLoading: messageSearch.searchLoading, searchError: messageSearch.searchError,
         clearSearchError: messageSearch.clearSearchError, searchMessages: messageSearch.searchMessages,
-        storageUsage: attachmentsUpload.storageUsage,
+        maxAttachmentBytes,
       }}
     >
       {children}

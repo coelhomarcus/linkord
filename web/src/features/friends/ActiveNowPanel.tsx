@@ -59,7 +59,7 @@ export function ActiveNowPanel() {
                       </span>
                     </span>
                   </span>
-                  <span className="mt-2 flex items-center gap-1.5 rounded-md bg-fill-subtle px-2 py-1.5 text-caption text-text-secondary">
+                  <span className="mt-3 flex items-center gap-1.5 text-caption text-text-secondary">
                     <SpeakerHighIcon size={16} weight="fill" className="flex-none text-green" />
                     <span className="flex -space-x-1.5">
                       {friends.slice(0, 5).map((friend) => (

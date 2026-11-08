@@ -41,7 +41,11 @@ const MAX_INVITEES_PER_REQUEST = 20;
 // anchored to the repo root (not cwd) — inside Docker this is /app/uploads
 // (matches the external bind mount); in `npm run dev` it's <repo>/uploads.
 const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(import.meta.dirname, '..', '..', '..', 'uploads');
-const MAX_ATTACHMENT_BYTES = 2 * 1024 * 1024 * 1024;
+// the largest single file anyone may upload; uploads are chunked, so this is bounded by disk, not by proxies
+const MAX_ATTACHMENT_BYTES = Number(process.env.MAX_ATTACHMENT_BYTES || 512 * 1024 * 1024);
+if (!Number.isSafeInteger(MAX_ATTACHMENT_BYTES) || MAX_ATTACHMENT_BYTES <= 0) {
+  throw new Error('MAX_ATTACHMENT_BYTES must be a positive whole number of bytes (see .env.example).');
+}
 const MAX_STORAGE_BYTES = 30 * 1024 * 1024 * 1024;
 // comfortably under common proxy limits (e.g. Cloudflare Free/Pro caps
 // request bodies around 100MB)
@@ -148,8 +152,7 @@ const UPLOADS_REMOTE_URL = (process.env.UPLOADS_REMOTE_URL || '').trim().replace
 const REGISTRATIONS_PER_IP_PER_HOUR = Number(process.env.REGISTRATIONS_PER_IP_PER_HOUR || 5);
 const MAX_NEW_ACCOUNTS_PER_HOUR = Number(process.env.MAX_NEW_ACCOUNTS_PER_HOUR || 30);
 const MAX_CONNECTIONS_PER_USER = Number(process.env.MAX_CONNECTIONS_PER_USER || 5);
-// per-account quotas
-const MAX_USER_STORAGE_BYTES = Number(process.env.MAX_USER_STORAGE_BYTES || 5 * 1024 * 1024 * 1024);
+// per-account quotas (storage has none: only the instance-wide MAX_STORAGE_BYTES)
 const MAX_OWNED_SERVERS_PER_USER = Number(process.env.MAX_OWNED_SERVERS_PER_USER || process.env.MAX_OWNED_GROUPS_PER_USER || 20);
 const MAX_SERVER_MEMBERSHIPS_PER_USER = Number(process.env.MAX_SERVER_MEMBERSHIPS_PER_USER || process.env.MAX_GROUP_MEMBERSHIPS_PER_USER || 100);
 const MAX_FRIENDS = Number(process.env.MAX_FRIENDS || 500);
@@ -182,6 +185,6 @@ export const config = {
   LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET, LIVEKIT_ROOM_NAME, LIVEKIT_TOKEN_TTL_SECONDS,
   UPLOADS_REMOTE_URL, KLIPY_API_KEY, MAL_CLIENT_ID, IGDB_CLIENT_ID, IGDB_CLIENT_SECRET,
   REGISTRATIONS_PER_IP_PER_HOUR, MAX_NEW_ACCOUNTS_PER_HOUR, MAX_CONNECTIONS_PER_USER,
-  MAX_USER_STORAGE_BYTES, MAX_OWNED_SERVERS_PER_USER, MAX_SERVER_MEMBERSHIPS_PER_USER, MAX_FRIENDS, MAX_PENDING_OUTGOING_REQUESTS,
+  MAX_OWNED_SERVERS_PER_USER, MAX_SERVER_MEMBERSHIPS_PER_USER, MAX_FRIENDS, MAX_PENDING_OUTGOING_REQUESTS,
   ALLOWED_ORIGINS, IS_DEV, ORPHAN_GRACE_MS, ORPHAN_SWEEP_DRY_RUN,
 };

@@ -17,7 +17,7 @@ import { formatSizeLimit } from '@/shared/lib/formatBytes';
 import { cn } from '@/shared/lib/utils';
 import { useRoom } from '@/state/RoomContext';
 import { readDraft, useConversationDraft, type PendingAttachment } from './conversationDrafts';
-import { MAX_ATTACHMENT_BYTES, MAX_ATTACHMENTS_PER_MESSAGE } from '@/shared/types/protocol';
+import { MAX_ATTACHMENTS_PER_MESSAGE } from '@/shared/types/protocol';
 import type { PublicUser } from '@/shared/types/protocol';
 import { GifPicker } from '@/features/gifs/GifPicker';
 import { reportGifShared } from '@/features/gifs/klipy';
@@ -57,7 +57,7 @@ export interface MessageComposerHandle {
 
 export const MessageComposer = forwardRef<MessageComposerHandle, { conversationId: string }>(function MessageComposer({ conversationId }, ref) {
   const { t } = useTranslation('chat');
-  const { state, allUsers, conversations, serverMemberRevision, sendChatMessage, queueMessageWithFiles, sendTyping, replyingTo, setReplyingTo, compressImagesDefault, setCompressImagesDefault } = useRoom();
+  const { state, allUsers, conversations, serverMemberRevision, sendChatMessage, queueMessageWithFiles, sendTyping, replyingTo, setReplyingTo, compressImagesDefault, setCompressImagesDefault, maxAttachmentBytes } = useRoom();
   const accountId = state.me.userId ?? '';
   const [draft, updateDraft] = useConversationDraft(accountId, conversationId);
   const { text, pendingFiles, attachError } = draft;
@@ -209,8 +209,8 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
         error = t('composer.maxAttachments', { count: MAX_ATTACHMENTS_PER_MESSAGE });
         break;
       }
-      if (file.size > MAX_ATTACHMENT_BYTES) {
-        error = t('composer.tooLarge', { name: file.name, max: formatSizeLimit(MAX_ATTACHMENT_BYTES) });
+      if (file.size > maxAttachmentBytes) {
+        error = t('composer.tooLarge', { name: file.name, max: formatSizeLimit(maxAttachmentBytes) });
         continue;
       }
       accepted.push({

@@ -81,4 +81,36 @@ test.describe('profile', () => {
     expect(wall.widgets[0]!.data.items.map((item) => item.name)).toEqual(['Game 2', 'Game 1']);
     expect(wall.widgets[0]!.data.items[0]!.imageUrl).toBe('https://images.igdb.com/igdb/image/upload/t_cover_big/co1abc.jpg');
   });
+
+  test('widgets are reordered by dragging the handle beside them, and removed with the button under it', async ({ users }) => {
+    const alice = await users.create('alice');
+    const saved = await alice.api.put('/api/me/wall', { data: { widgets: [
+      { connectionId: null, type: 'igdb-favorite-game' }, { connectionId: null, type: 'igdb-wishlist-games' }, { connectionId: null, type: 'igdb-liked-games' },
+    ] } });
+    expect(saved.status()).toBe(200);
+    const a = await alice.app();
+    await a.page.goto('/app/profile');
+    await a.page.getByRole('button', { name: 'Meu perfil' }).filter({ hasText: 'Meu perfil' }).click();
+    await a.page.getByRole('tab', { name: 'Mural' }).click();
+
+    // the second widget, still inside the modal's viewport, dragged above the first
+    const handle = a.page.getByRole('button', { name: 'Reordenar Quero jogar' });
+    const target = a.page.getByRole('article').filter({ hasText: 'Jogo favorito' });
+    await a.page.getByRole('article').filter({ hasText: 'Quero jogar' }).hover();
+    const from = (await handle.boundingBox())!;
+    const to = (await target.boundingBox())!;
+    await a.page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+    await a.page.mouse.down();
+    await a.page.mouse.move(from.x + from.width / 2, to.y + 10, { steps: 12 });
+    await a.page.mouse.move(from.x + from.width / 2, to.y + 5, { steps: 4 });
+    await a.page.mouse.up();
+    await a.page.getByRole('article').filter({ hasText: 'Jogos que eu gosto' }).hover();
+    await a.page.getByRole('button', { name: 'Remover Jogos que eu gosto' }).click();
+
+    const bar = a.page.getByRole('region', { name: 'Salvar alterações do Mural' });
+    await bar.getByRole('button', { name: 'Salvar' }).click();
+    await expect(bar).toBeHidden();
+    const wall = await (await alice.api.get(`/api/users/${alice.id}/wall`)).json() as { widgets: { type: string }[] };
+    expect(wall.widgets.map((widget) => widget.type)).toEqual(['igdb-wishlist-games', 'igdb-favorite-game']);
+  });
 });

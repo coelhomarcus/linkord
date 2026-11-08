@@ -461,8 +461,8 @@ export const attachments = pgTable('attachments', {
   uploaderId: text('uploader_id').references(() => users.id, { onDelete: 'set null' }),
   fileName: text('file_name').notNull(),
   mimeType: text('mime_type').notNull(),
-  // bigint (not integer): the attachment cap is 2GiB (MAX_ATTACHMENT_BYTES),
-  // which overflows Postgres's int4 (max 2,147,483,647) by 1 byte. mode:
+  // bigint (not integer): the attachment cap is configurable (MAX_ATTACHMENT_BYTES)
+  // and may be set past Postgres's int4 (max 2,147,483,647). mode:
   // 'number' is safe here — a real file size never gets close to
   // Number.MAX_SAFE_INTEGER.
   size: bigint('size', { mode: 'number' }).notNull(),

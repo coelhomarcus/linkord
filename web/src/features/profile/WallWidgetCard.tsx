@@ -1,6 +1,7 @@
 import { BookOpenIcon, UserIcon, UsersIcon } from '@phosphor-icons/react';
 import type { ComponentType } from 'react';
 import { useTranslation } from 'react-i18next';
+import { readableAccent } from './accentColor';
 import { widgetBrand } from './connectionBrands';
 import { ContributionCalendar } from './ContributionCalendar';
 import { WidgetHeader } from './WidgetHeader';
@@ -28,7 +29,7 @@ function CoverGrid({ items }: { items: Cover[] }) {
   );
 }
 
-/** `accent` is the profile owner's highlight colour, which the widgets draw with.
+/** `accent` is the profile owner's highlight colour, which the widgets draw with (made readable first).
  * `gameEditor` is set while the owner edits the Wall, and turns a games widget into a grid to fill. */
 export function WallWidgetCard({ widget, accent, gameEditor }: { widget: WallWidget; accent: string; gameEditor?: GameCoversEditor }) {
   const { t, i18n } = useTranslation('profile');
@@ -66,7 +67,7 @@ export function WallWidgetCard({ widget, accent, gameEditor }: { widget: WallWid
           <p className="text-title font-semibold">{number(data.total)}</p>
           <p className="text-caption text-text-muted">{t('wall.github.contributions', { total: number(data.total) })}</p>
         </div>
-        <ContributionCalendar days={data.days} accent={accent} />
+        <ContributionCalendar days={data.days} accent={readableAccent(accent)} />
       </div>}
       {showFooter && <footer className="mt-auto">
         <p className="rounded-lg bg-bg-tertiary px-3 py-2 text-caption text-text-muted">{t('wall.stale')}</p>
