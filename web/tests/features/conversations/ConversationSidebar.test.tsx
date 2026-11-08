@@ -93,6 +93,17 @@ describe('ConversationSidebar — home', () => {
     expect(screen.getByRole('button', { name: 'Caio' })).toBeInTheDocument();
   });
 
+  it('a search that matches no DM says so and can be cleared', async () => {
+    const user = userEvent.setup();
+    renderSidebar();
+    const box = screen.getByRole('textbox', { name: 'Encontre ou comece uma conversa' });
+    await user.type(box, 'zzz');
+    expect(screen.getByText('Nenhuma conversa encontrada')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Limpar busca' }));
+    expect(box).toHaveValue('');
+    expect(screen.getByRole('button', { name: 'Bea' })).toBeInTheDocument();
+  });
+
   it('shows that this DM is in a call', () => {
     renderSidebar('/app/channels/@me', { activeCallConversationId: 'dm-bea' });
     expect(screen.getByRole('button', { name: 'Bea' })).toHaveTextContent('Em uma chamada');

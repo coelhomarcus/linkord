@@ -38,9 +38,25 @@ describe('filters live in the URL', () => {
     const u = userEvent.setup();
     mocked.fetchAudit.mockResolvedValue({ items: [], nextCursor: null });
     renderAdmin(<AuditPage />, { path: '/admin/audit', pattern: '/admin/audit' });
-    await screen.findByText('Nenhum registro para esses filtros.');
+    await screen.findByText('Nenhuma ação registrada');
     await u.type(screen.getByLabelText('Administrador'), 'a|b');
     await waitFor(() => expect(mocked.fetchAudit).toHaveBeenLastCalledWith(expect.objectContaining({ actor: 'a|b', action: '', targetId: '' }), null));
+  });
+});
+
+describe('empty lists', () => {
+  it('with no filter, says there is nothing yet; with one, offers to clear it', async () => {
+    const u = userEvent.setup();
+    mocked.fetchAdminUsers.mockResolvedValue({ items: [], nextCursor: null });
+    renderAdmin(<UsersPage />, { path: '/admin/users?status=suspended', pattern: '/admin/users' });
+    expect(await screen.findByText('Nada com esses filtros')).toBeInTheDocument();
+    expect(screen.queryByText('Nenhuma conta ainda')).not.toBeInTheDocument();
+
+    // the toolbar has its own "Limpar filtros"; the empty state's is the last one
+    await u.click(screen.getAllByRole('button', { name: 'Limpar filtros' }).at(-1)!);
+    expect(await screen.findByText('Nenhuma conta ainda')).toBeInTheDocument();
+    expect(mocked.fetchAdminUsers).toHaveBeenLastCalledWith(expect.objectContaining({ status: undefined }), null);
+    expect(screen.queryByRole('button', { name: 'Limpar filtros' })).not.toBeInTheDocument();
   });
 });
 

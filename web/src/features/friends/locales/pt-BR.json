@@ -50,15 +50,19 @@
     "results_other": "{{count}} resultados",
     "friends_one": "{{count}} amigo",
     "friends_other": "{{count}} amigos",
-    "noResults": "Nenhum resultado para esta busca.",
-    "noneOnline": "Nenhum amigo online agora.",
-    "noneFound": "Nenhum amigo encontrado.",
+    "noResults": "Nenhum resultado",
+    "noneOnline": "Ninguém online agora",
+    "noneFound": "Nenhum amigo encontrado",
     "message": "Mensagem",
     "messageTo": "Enviar mensagem para {{name}}",
     "moreFor": "Mais ações para {{name}}",
     "viewProfile": "Ver perfil",
     "removeFriend": "Remover amizade",
-    "block": "Bloquear"
+    "block": "Bloquear",
+    "noneOnlineText": "Quando um amigo ficar online, ele aparece aqui.",
+    "viewAll": "Ver todos os amigos",
+    "noResultsText": "Nada corresponde a “{{query}}”. Confira a grafia ou tente outro nome.",
+    "clearSearch": "Limpar busca"
   },
   "requests": {
     "searchLabel": "Buscar nas solicitações",
@@ -67,21 +71,23 @@
     "waiting": "{{count}} aguardando resposta",
     "loading": "Carregando solicitações…",
     "loadFailed": "Não foi possível carregar as solicitações.",
-    "noneIncoming": "Nenhuma solicitação recebida.",
-    "noneOutgoing": "Você não tem solicitações enviadas.",
+    "noneIncoming": "Nenhuma solicitação recebida",
+    "noneOutgoing": "Nenhuma solicitação enviada",
     "accept": "Aceitar",
     "decline": "Recusar",
     "cancel": "Cancelar",
     "accepted": "Solicitação aceita.",
     "declined": "Solicitação recusada.",
-    "cancelled": "Solicitação cancelada."
+    "cancelled": "Solicitação cancelada.",
+    "noneIncomingText": "Quando alguém te adicionar, a solicitação aparece aqui.",
+    "noneOutgoingText": "Adicione alguém pelo @nome de usuário para começar."
   },
   "invitations": {
     "searchLabel": "Buscar nos convites",
     "title": "Convites de servidor",
     "loading": "Carregando convites…",
     "loadFailed": "Não foi possível carregar os convites.",
-    "none": "Nenhum convite de servidor pendente.",
+    "none": "Nenhum convite de servidor",
     "from": "de",
     "join": "Entrar",
     "decline": "Recusar",
@@ -91,7 +97,8 @@
     "quotaExceeded": "Você já participa do máximo de servidores permitido.",
     "members_zero": "{{count}} membros",
     "members_one": "{{count}} membro",
-    "members_other": "{{count}} membros"
+    "members_other": "{{count}} membros",
+    "noneText": "Quando alguém te convidar para um servidor, o convite aparece aqui."
   },
   "loadMore": {
     "refreshFailed": "Não foi possível atualizar a lista.",

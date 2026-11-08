@@ -18,7 +18,7 @@
   "reset": "Reset",
   "close": "Close",
   "channels": "Channels",
-  "noChannels": "No channels here yet.",
+  "noChannels": "No channels here",
   "suspended": "This server was suspended by the administrators.",
   "create": {
     "title": "Create Your Server",
@@ -331,8 +331,8 @@
       "clearTarget": "Remove target filter",
       "clear": "Clear filters"
     },
-    "empty": "Nothing has been recorded yet.",
-    "emptyFiltered": "No entries match these filters.",
+    "empty": "Nothing recorded yet",
+    "emptyFiltered": "No entries match these filters",
     "loading": "Loading…",
     "loadMore": "Load more",
     "details": "Details",
@@ -470,6 +470,10 @@
       "voice": "voice",
       "before": "Before",
       "after": "After"
-    }
-  }
+    },
+    "emptyText": "Changes to roles, channels, members and invites are recorded here.",
+    "emptyFilteredText": "Adjust or clear the filters to see everything."
+  },
+  "noChannelsCanCreate": "Create the first channel to get the conversation going.",
+  "noChannelsText": "When there is a channel you can see, it shows up here."
 }

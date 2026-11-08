@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/shared/ui/primitives/button';
+import { EmptyState } from '@/shared/ui/empty-state';
 import { fetchBlocks, unblockUser } from '@/shared/api/api';
 import { SocialUserRow } from '@/features/friends/SocialUserRow';
 import { useFriends } from '@/features/friends/FriendsContext';
@@ -65,7 +66,7 @@ export function PrivacyTab({ onOpenProfile }: { onOpenProfile: (userId: string) 
           </div>
         )}
         {list.status === 'ready' && list.items.length === 0 && (
-          <p className="rounded-lg border border-border-subtle px-4 py-6 text-center text-label text-text-muted">{t('privacy.empty')}</p>
+          <EmptyState size="compact" illustration="shield" title={t('privacy.empty')} description={t('privacy.emptyText')} className="rounded-lg border border-border-subtle" />
         )}
 
         {list.items.length > 0 && (

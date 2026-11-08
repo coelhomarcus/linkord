@@ -5,6 +5,8 @@ import { defaultRangeExtractor, useVirtualizer, type Range } from '@tanstack/rea
 
 import { buildMentionLookup } from '@/shared/lib/mentions';
 import { useRoom } from '@/state/RoomContext';
+import { EmptyState } from '@/shared/ui/empty-state';
+import { conversationTitle } from '@/features/conversations/conversationUtils';
 import type { ChatMessage } from '@/shared/types/protocol';
 import { MessageRow } from './MessageRow';
 import { ArrivalMotion } from './ArrivalMotion';
@@ -53,6 +55,7 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
   const {
     messagesByConversation,
     allUsers,
+    conversations,
     hasMoreByConversation,
     loadingOlderByConversation,
     loadOlderMessages,
@@ -83,6 +86,7 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
   const isLoadingNewer = loadingNewerByConversation.has(conversationId);
   const pending = pendingByConversation.get(conversationId) ?? EMPTY_PENDING;
   const { userId: myUserId, displayName: myName, avatar: myAvatar } = state.me;
+  const conversation = conversations.find((c) => c.id === conversationId);
   const items = useMemo(
     () => buildTimelineItems(messages, pending, { userId: myUserId, name: myName, avatar: myAvatar }, unreadStartByConversation.get(conversationId)),
     [messages, pending, myUserId, myName, myAvatar, unreadStartByConversation, conversationId],
@@ -451,7 +455,13 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
         {isLoadingOlder && <p className="absolute inset-x-0 top-2 z-10 select-none text-center text-label text-text-muted">{t('timeline.loadingOlder')}</p>}
         {items.length === 0 ? (
           <div className="flex min-h-[45vh] select-none items-center justify-center px-6 text-center text-label text-text-muted">
-            {historyArrived ? 'Nenhuma mensagem ainda.' : (
+            {historyArrived ? (
+              <EmptyState
+                illustration={conversation?.type === 'direct' ? 'bubble' : 'hash'}
+                title={t('timeline.emptyTitle')}
+                description={conversation && t(conversation.type === 'direct' ? 'timeline.emptyDirect' : 'timeline.emptyChannel', { name: conversationTitle(conversation, myUserId, allUsers) })}
+              />
+            ) : (
               // only shown if the history is slow: a quick one would flash it for a frame
               <span role="status" className="animate-in fade-in-0 duration-200 [animation-delay:300ms] [animation-fill-mode:both]">{t('timeline.loading')}</span>
             )}

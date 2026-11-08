@@ -4,6 +4,7 @@ import { Trans, useTranslation } from 'react-i18next';
 import { Avatar } from '@/shared/Avatar';
 import { describeApiError } from '@/shared/api/errorText';
 import { Button } from '@/shared/ui/primitives/button';
+import { EmptyState } from '@/shared/ui/empty-state';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/primitives/select';
 import type { ServerSummary } from '@/shared/types/protocol';
 import { PERMISSIONS, hasPermission, type PermissionName } from './permissionBits';
@@ -253,7 +254,14 @@ export function ServerAuditLog({ server }: { server: ServerSummary }) {
       </div>
       {error && <p role="alert" className="text-label text-red">{error}</p>}
       {!loading && !error && items.length === 0 && (
-        <p className="text-label text-text-secondary">{t(filtered ? 'auditLog.emptyFiltered' : 'auditLog.empty')}</p>
+        filtered ? (
+          <EmptyState
+            illustration="filter"
+            title={t('auditLog.emptyFiltered')}
+            description={t('auditLog.emptyFilteredText')}
+            action={<Button type="button" variant="secondary" size="sm" onClick={() => setFilters(NO_FILTERS)}>{t('auditLog.filters.clear')}</Button>}
+          />
+        ) : <EmptyState illustration="document" title={t('auditLog.empty')} description={t('auditLog.emptyText')} />
       )}
       {items.length > 0 && (
         <ul aria-label={t('settings.auditLog')} aria-busy={loading} className="flex flex-col divide-y divide-border-subtle">

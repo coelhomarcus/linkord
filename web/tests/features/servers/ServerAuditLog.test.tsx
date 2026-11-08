@@ -63,8 +63,11 @@ describe('ServerAuditLog', () => {
     mocked.fetchServerAuditLog.mockResolvedValue({ items: [], nextCursor: null });
     await userEvent.click(within(list).getAllByRole('button', { name: 'Bob' })[0]!);
     await waitFor(() => expect(mocked.fetchServerAuditLog.mock.lastCall?.[1]).toMatchObject({ target: bob.id }));
-    expect(await screen.findByText('Nenhum registro com esses filtros.')).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'Limpar filtros' }));
+    expect(await screen.findByText('Nenhum registro com esses filtros')).toBeInTheDocument();
+    // the filter bar's button and the empty state's do the same thing
+    const clearButtons = screen.getAllByRole('button', { name: 'Limpar filtros' });
+    expect(clearButtons).toHaveLength(2);
+    await userEvent.click(clearButtons.at(-1)!);
     await waitFor(() => expect(mocked.fetchServerAuditLog.mock.lastCall?.[1]).not.toHaveProperty('target'));
   });
 

@@ -4,6 +4,8 @@ import { type LinkProps } from 'react-router';
 import { Button } from '@/shared/ui/primitives/button';
 import { cn } from '@/shared/lib/utils';
 import { SettingsNotice } from '@/shared/ui/settings-layout';
+import { EmptyState } from '@/shared/ui/empty-state';
+import type { EmptyIllustrationName } from '@/shared/ui/empty-state';
 import type { AuditRow } from './adminApi';
 import { actionLabel, formatWhen } from './adminFormat';
 import type { AdminDetailStatus } from './useAdminDetail';
@@ -48,7 +50,7 @@ export function Badge({ value }: { value: string }) {
 
 export function AuditList({ items, empty }: { items: AuditRow[]; empty?: string }) {
   const { t } = useTranslation('admin');
-  if (items.length === 0) return <p className="py-4 text-label text-text-muted">{empty ?? t('audit.empty')}</p>;
+  if (items.length === 0) return <EmptyState size="compact" illustration="document" title={empty ?? t('audit.empty')} />;
   return (
     <ul className="flex flex-col divide-y divide-border-subtle">
       {items.map((row) => (
@@ -83,11 +85,21 @@ interface ChromeList {
 /** Loading / error / empty / "load more" chrome shared by every admin table.
  * Every state `useCursorList` can be in has a face here: a failed next page and
  * a failed re-read never replace the rows already on screen. */
-export function ListChrome({ list, empty, emptyAction, skeleton, children }: {
+/** What an empty list says when no filter explains it: the first time, before there is any data. */
+export interface ListEmpty {
+  illustration: EmptyIllustrationName;
+  title: string;
+  description?: string;
+  /** a history inside a detail page, not a page of its own */
+  compact?: boolean;
+}
+
+export function ListChrome({ list, empty, onClearFilters, skeleton, children }: {
   list: ChromeList;
-  empty: string;
-  /** shown under the empty message (e.g. "Limpar filtros") */
-  emptyAction?: ReactNode;
+  empty: ListEmpty;
+  /** present when a filter differs from its default: an empty list is then the
+   * filters' doing, so it says that and offers to clear them instead */
+  onClearFilters?: () => void;
   /** the shape of the rows while the first page loads (AdminSkeletons) */
   skeleton?: ReactNode;
   children: ReactNode;
@@ -103,12 +115,20 @@ export function ListChrome({ list, empty, emptyAction, skeleton, children }: {
     );
   }
   if (list.items.length === 0) {
-    return (
-      <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border-subtle px-4 py-12 text-center">
-        <p className="text-body text-text-muted">{empty}</p>
-        {emptyAction}
-      </div>
-    );
+    if (onClearFilters) {
+      return (
+        <EmptyState
+          illustration="filter"
+          title={t('chrome.filteredTitle')}
+          description={t('chrome.filteredText')}
+          action={<Button type="button" variant="secondary" size="sm" onClick={onClearFilters}>{t('ui.clearFilters')}</Button>}
+          className="rounded-xl border border-dashed border-border-subtle"
+        />
+      );
+    }
+    return empty.compact
+      ? <EmptyState size="compact" illustration={empty.illustration} title={empty.title} description={empty.description} />
+      : <EmptyState illustration={empty.illustration} title={empty.title} description={empty.description} className="rounded-xl border border-dashed border-border-subtle" />;
   }
   return (
     <>

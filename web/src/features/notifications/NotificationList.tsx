@@ -1,8 +1,8 @@
-import { TrayIcon } from '@phosphor-icons/react';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { Button } from '@/shared/ui/primitives/button';
+import { EmptyState } from '@/shared/ui/empty-state';
 import { Avatar } from '@/shared/Avatar';
 import { ServerIcon } from '@/features/servers/ServerIcon';
 import { LoadMoreFooter } from '@/features/friends/LoadMoreFooter';
@@ -41,13 +41,7 @@ export function NotificationList({ onSelect, onDismiss, fullPage = false }: { on
   }
   if (list.items.length === 0) {
     return (
-      <div className="flex flex-col items-center px-6 py-10 text-center">
-        <span aria-hidden className="mb-5 grid size-20 place-items-center rounded-full bg-surface-app text-text-secondary">
-          <TrayIcon size={36} weight="fill" />
-        </span>
-        <p className="text-[1.25rem] font-bold text-text-strong">{t('list.emptyTitle')}</p>
-        <p className="mt-1 text-label text-text-secondary">{t('list.empty')}</p>
-      </div>
+      <EmptyState size={fullPage ? 'default' : 'compact'} illustration="bell" title={t('list.emptyTitle')} description={t('list.empty')} />
     );
   }
 

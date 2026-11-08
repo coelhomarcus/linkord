@@ -5,9 +5,10 @@
     "ariaLabel": "Settings categories",
     "search": "Search",
     "clearSearch": "Clear search",
-    "noResults": "Nothing found for \"{{query}}\".",
+    "noResults": "No setting matches “{{query}}”.",
     "editProfile": "Edit profile",
-    "sectionsOf": "Sections of {{category}}"
+    "sectionsOf": "Sections of {{category}}",
+    "noResultsTitle": "Nothing found"
   },
   "catalog": {
     "groups": {
@@ -170,8 +171,9 @@
     "loading": "Loading…",
     "loadFailed": "Couldn't load the list.",
     "retry": "Try again",
-    "empty": "You haven't blocked anyone.",
-    "unblock": "Unblock"
+    "empty": "You haven't blocked anyone",
+    "unblock": "Unblock",
+    "emptyText": "Anyone you block shows up here, and you can unblock them any time."
   },
   "adminLink": {
     "label": "Users, servers, reports and audit",

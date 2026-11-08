@@ -29,7 +29,7 @@ describe('PrivacyTab', () => {
     await user.click(screen.getByRole('button', { name: 'Desbloquear' }));
 
     expect(mocked.unblockUser).toHaveBeenCalledWith('u-ana');
-    await waitFor(() => expect(screen.getByText('Você não bloqueou ninguém.')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('Você não bloqueou ninguém')).toBeInTheDocument());
   });
 
   it('does not show presence for blocked users', async () => {

@@ -1,11 +1,15 @@
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router';
 import { Button } from '@/shared/ui/primitives/button';
+import { EmptyState } from '@/shared/ui/empty-state';
+import { friendsView } from '@/shared/lib/routes';
 import { acceptFriendRequest, cancelFriendRequest, declineFriendRequest, fetchFriendRequests } from '@/shared/api/api';
 import type { SocialEntry } from '@/shared/api/api';
 import { ActionFeedback } from './ActionFeedback';
 import type { Feedback } from './ActionFeedback';
 import { LoadMoreFooter } from './LoadMoreFooter';
+import { SearchEmpty } from './SearchEmpty';
 import { SocialUserRow } from './SocialUserRow';
 import { useFriends } from './FriendsContext';
 import { usePendingIds } from './usePendingIds';
@@ -31,6 +35,7 @@ export function FriendRequestList({ direction, search = '', headingId, onOpenPro
   onOpenProfile: (userId: string) => void;
 }) {
   const { t } = useTranslation('friends');
+  const navigate = useNavigate();
   const { revision, bump } = useFriends();
   const pending = usePendingIds();
   const [feedback, setFeedback] = useState<Feedback>(null);
@@ -67,9 +72,17 @@ export function FriendRequestList({ direction, search = '', headingId, onOpenPro
   } else if (list.items.length === 0) {
     body = (
       <FadeIn skip={list.restored}>
-        <p className="select-none py-10 text-center text-label text-text-muted">
-          {search ? t('list.noResults') : direction === 'incoming' ? t('requests.noneIncoming') : t('requests.noneOutgoing')}
-        </p>
+        {search ? <SearchEmpty query={search} compact />
+          : direction === 'incoming' ? <EmptyState size="compact" illustration="mail" title={t('requests.noneIncoming')} description={t('requests.noneIncomingText')} />
+          : (
+            <EmptyState
+              size="compact"
+              illustration="mail"
+              title={t('requests.noneOutgoing')}
+              description={t('requests.noneOutgoingText')}
+              action={<Button type="button" variant="secondary" size="sm" onClick={() => navigate(friendsView('add'))}>{t('addFriend')}</Button>}
+            />
+          )}
       </FadeIn>
     );
   } else {

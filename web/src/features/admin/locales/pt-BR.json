@@ -30,7 +30,9 @@
     "refresh": "Atualizar",
     "loadMoreFailed": "Não foi possível carregar mais.",
     "loadMore": "Carregar mais",
-    "actionDoneStale": "Ação concluída, mas não foi possível atualizar os dados. O que você vê pode estar desatualizado."
+    "actionDoneStale": "Ação concluída, mas não foi possível atualizar os dados. O que você vê pode estar desatualizado.",
+    "filteredTitle": "Nada com esses filtros",
+    "filteredText": "Ajuste ou limpe os filtros para ver tudo."
   },
   "layout": {
     "title": "Administração",
@@ -68,7 +70,7 @@
     "targetId": "ID do alvo",
     "requestId": "ID da requisição",
     "rawData": "Ver dados brutos",
-    "empty": "Nenhuma ação registrada.",
+    "empty": "Nenhuma ação registrada",
     "server": "Servidor",
     "webhook": "Webhook"
   },
@@ -116,9 +118,6 @@
     "report_other": "denúncias carregadas",
     "record_one": "registro carregado",
     "record_other": "registros carregados",
-    "noAccounts": "Nenhuma conta encontrada.",
-    "noReports": "Nenhuma denúncia nesta fila.",
-    "noRecords": "Nenhum registro para esses filtros.",
     "accounts": "Contas",
     "reports": "Denúncias",
     "searchReports": "Buscar denúncias",
@@ -156,8 +155,6 @@
     "server_other": "servidores carregados",
     "webhook_one": "webhook carregado",
     "webhook_other": "webhooks carregados",
-    "noServers": "Nenhum servidor encontrado.",
-    "noWebhooks": "Nenhum webhook encontrado.",
     "servers": "Servidores",
     "webhooks": "Webhooks",
     "channels": "Canais",
@@ -237,7 +234,7 @@
   "detail": {
     "fullHistory": "Histórico completo",
     "historyDescription": "Tudo o que a administração registrou sobre esta conta, da ação mais recente à mais antiga.",
-    "noHistory": "Nenhuma ação registrada sobre esta conta.",
+    "noHistory": "Nenhuma ação registrada sobre esta conta",
     "deleted": "Conta excluída.",
     "backToList": "Voltar à lista",
     "notFound": "Conta não encontrada.",
@@ -309,12 +306,13 @@
     "serversDescription": "Os servidores de que a conta participa e se ela é dona de cada um.",
     "serverUnnamed": "Servidor sem nome",
     "serverOwner": "Dona do servidor",
-    "storageValue": "{{size}} em {{count}} arquivo(s)"
+    "storageValue": "{{size}} em {{count}} arquivo(s)",
+    "noServersTitle": "Não participa de nenhum servidor"
   },
   "entity": {
     "fullHistoryServer": "Histórico completo",
     "historyServerDescription": "Tudo o que a administração registrou sobre este servidor, da ação mais recente à mais antiga.",
-    "noServerHistory": "Nenhuma ação registrada sobre este servidor.",
+    "noServerHistory": "Nenhuma ação registrada sobre este servidor",
     "serverDeleted": "Servidor excluído.",
     "serverNotFound": "Servidor não encontrado.",
     "serverLoadFailed": "Não foi possível carregar o servidor.",
@@ -344,7 +342,7 @@
     "serverOwnerAssignment": "{{current}} Novo dono: @{{username}}. Quem era dono passa a membro. Você não entra no servidor.",
     "fullHistoryWebhook": "Histórico completo",
     "historyWebhookDescription": "Tudo o que a administração registrou sobre este webhook, da ação mais recente à mais antiga.",
-    "noWebhookHistory": "Nenhuma ação registrada sobre este webhook.",
+    "noWebhookHistory": "Nenhuma ação registrada sobre este webhook",
     "webhookNotFound": "Webhook não encontrado.",
     "webhookLoadFailed": "Não foi possível carregar o webhook.",
     "backWebhooks": "← Webhooks",
@@ -527,6 +525,28 @@
       "failed": "Falhas",
       "orphanBytes": "Tamanho dos órfãos",
       "missingFiles": "Registros sem arquivo"
+    }
+  },
+  "emptyList": {
+    "users": {
+      "title": "Nenhuma conta ainda",
+      "text": "As contas aparecem aqui assim que alguém se cadastrar."
+    },
+    "reports": {
+      "title": "Nenhuma denúncia aberta",
+      "text": "Tudo em dia. Novas denúncias aparecem aqui."
+    },
+    "servers": {
+      "title": "Nenhum servidor ainda",
+      "text": "Os servidores criados no Linkord aparecem aqui."
+    },
+    "webhooks": {
+      "title": "Nenhum webhook ainda",
+      "text": "Os webhooks criados nos canais aparecem aqui."
+    },
+    "audit": {
+      "title": "Nenhuma ação registrada",
+      "text": "O que os administradores fizerem fica registrado aqui."
     }
   }
 }

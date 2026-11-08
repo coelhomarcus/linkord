@@ -30,7 +30,9 @@
     "refresh": "Refresh",
     "loadMoreFailed": "Could not load more.",
     "loadMore": "Load more",
-    "actionDoneStale": "The action completed, but the data could not be refreshed. What you see may be out of date."
+    "actionDoneStale": "The action completed, but the data could not be refreshed. What you see may be out of date.",
+    "filteredTitle": "Nothing matches these filters",
+    "filteredText": "Adjust or clear the filters to see everything."
   },
   "layout": {
     "title": "Administration",
@@ -68,7 +70,7 @@
     "targetId": "Target ID",
     "requestId": "Request ID",
     "rawData": "View raw data",
-    "empty": "No actions recorded.",
+    "empty": "No actions recorded",
     "server": "Server",
     "webhook": "Webhook"
   },
@@ -116,9 +118,6 @@
     "report_other": "reports loaded",
     "record_one": "record loaded",
     "record_other": "records loaded",
-    "noAccounts": "No accounts found.",
-    "noReports": "No reports in this queue.",
-    "noRecords": "No records match these filters.",
     "accounts": "Accounts",
     "reports": "Reports",
     "searchReports": "Search reports",
@@ -156,8 +155,6 @@
     "server_other": "servers loaded",
     "webhook_one": "webhook loaded",
     "webhook_other": "webhooks loaded",
-    "noServers": "No servers found.",
-    "noWebhooks": "No webhooks found.",
     "servers": "Servers",
     "webhooks": "Webhooks",
     "channels": "Channels",
@@ -237,7 +234,7 @@
   "detail": {
     "fullHistory": "Full history",
     "historyDescription": "Everything administration recorded about this account, newest action first.",
-    "noHistory": "No actions recorded for this account.",
+    "noHistory": "No actions recorded for this account",
     "deleted": "Account deleted.",
     "backToList": "Back to list",
     "notFound": "Account not found.",
@@ -309,12 +306,13 @@
     "serversDescription": "The servers this account is in, and whether it owns each one.",
     "serverUnnamed": "Unnamed server",
     "serverOwner": "Server owner",
-    "storageValue": "{{size}} in {{count}} file(s)"
+    "storageValue": "{{size}} in {{count}} file(s)",
+    "noServersTitle": "Not in any server"
   },
   "entity": {
     "fullHistoryServer": "Full history",
     "historyServerDescription": "Everything the administration recorded about this server, newest first.",
-    "noServerHistory": "No actions recorded for this server.",
+    "noServerHistory": "No actions recorded for this server",
     "serverDeleted": "Server deleted.",
     "serverNotFound": "Server not found.",
     "serverLoadFailed": "Could not load the server.",
@@ -344,7 +342,7 @@
     "serverOwnerAssignment": "{{current}} New owner: @{{username}}. The previous owner becomes a member. You do not join the server.",
     "fullHistoryWebhook": "Full history",
     "historyWebhookDescription": "Everything the administration recorded about this webhook, newest first.",
-    "noWebhookHistory": "No actions recorded for this webhook.",
+    "noWebhookHistory": "No actions recorded for this webhook",
     "webhookNotFound": "Webhook not found.",
     "webhookLoadFailed": "Could not load the webhook.",
     "backWebhooks": "← Webhooks",
@@ -527,6 +525,28 @@
       "failed": "Failures",
       "orphanBytes": "Size of the orphans",
       "missingFiles": "Records with no file"
+    }
+  },
+  "emptyList": {
+    "users": {
+      "title": "No accounts yet",
+      "text": "Accounts show up here as soon as someone signs up."
+    },
+    "reports": {
+      "title": "No open reports",
+      "text": "All caught up. New reports show up here."
+    },
+    "servers": {
+      "title": "No servers yet",
+      "text": "Servers created on Linkord show up here."
+    },
+    "webhooks": {
+      "title": "No webhooks yet",
+      "text": "Webhooks created in channels show up here."
+    },
+    "audit": {
+      "title": "No actions recorded",
+      "text": "What administrators do is recorded here."
     }
   }
 }

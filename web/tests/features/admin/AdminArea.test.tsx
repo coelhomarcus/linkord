@@ -55,11 +55,11 @@ describe('AdminArea', () => {
     const u = userEvent.setup();
     const dispatch = vi.fn();
     renderAdmin(<AdminArea />, { path: '/admin/users', pattern: '/admin/*', room: { ...adminRoom(), dispatch } });
-    expect(await screen.findByText('Nenhuma conta encontrada.')).toBeInTheDocument();
+    expect(await screen.findByText('Nenhuma conta ainda')).toBeInTheDocument();
 
     act(() => reportAdminAccessLost());
     expect(screen.getByRole('alert')).toHaveTextContent('Você não tem mais acesso à administração');
-    expect(screen.queryByText('Nenhuma conta encontrada.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Nenhuma conta ainda')).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Grupos' })).not.toBeInTheDocument();
 
     await u.click(screen.getByRole('button', { name: 'Voltar às conversas' }));
@@ -69,11 +69,11 @@ describe('AdminArea', () => {
 
   it('a request answered 401 replaces the pages with "session ended" and re-reads the auth state', async () => {
     renderAdmin(<AdminArea />, { path: '/admin/users', pattern: '/admin/*' });
-    expect(await screen.findByText('Nenhuma conta encontrada.')).toBeInTheDocument();
+    expect(await screen.findByText('Nenhuma conta ainda')).toBeInTheDocument();
 
     act(() => reportAdminSessionEnded());
     expect(screen.getByRole('alert')).toHaveTextContent('Sua sessão terminou');
-    expect(screen.queryByText('Nenhuma conta encontrada.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Nenhuma conta ainda')).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Grupos' })).not.toBeInTheDocument();
     expect(refreshAuth).toHaveBeenCalledTimes(1);
   });

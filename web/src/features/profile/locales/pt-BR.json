@@ -120,7 +120,7 @@
     "addWidget": "Adicionar widget",
     "yours": "Seus Widgets",
     "manageConnections": "Gerenciar conexões",
-    "emptyOwner": "Seu Mural está vazio. Adicione um widget para escolher o que aparece.",
+    "emptyOwner": "Use “Adicionar widget” para escolher o que aparece no seu perfil. Conectar contas libera mais opções.",
     "emptyVisitor": "Este usuário ainda não publicou widgets no Mural.",
     "remove": "Remover {{name}}",
     "unavailable": "Não foi possível carregar os dados deste widget.",
@@ -187,7 +187,10 @@
       "moved": "{{name}} está na posição {{position}} de {{total}}.",
       "dropped": "{{name}} ficou na posição {{position}} de {{total}}.",
       "cancelled": "Cancelado. {{name}} voltou para a posição {{position}}."
-    }
+    },
+    "emptyOwnerTitle": "Seu Mural está vazio",
+    "emptyVisitorTitle": "Nada no Mural ainda",
+    "connectAccounts": "Conectar contas"
   },
   "bar": {
     "unsaved": "Não se esqueça de salvar suas alterações!",

@@ -112,7 +112,10 @@
     "all": "All",
     "scopeAria": "Search all conversations",
     "searching": "Searching…",
-    "none": "No messages found."
+    "none": "No messages found",
+    "noneText": "Try other words.",
+    "noneTextScoped": "Try other words or search every conversation.",
+    "searchEverywhere": "Search every conversation"
   },
   "code": {
     "copied": "Code copied",
@@ -124,7 +127,10 @@
     "loadingOlder": "Loading earlier messages...",
     "loading": "Loading messages…",
     "log": "Messages",
-    "newMessages": "New Messages"
+    "newMessages": "New Messages",
+    "emptyTitle": "No messages yet",
+    "emptyDirect": "This is the beginning of your conversation with {{name}}. Why not say hi?",
+    "emptyChannel": "This is the beginning of #{{name}}. Send the first message."
   },
   "media": {
     "open": "Open {{name}}",

@@ -18,7 +18,7 @@
   "reset": "Redefinir",
   "close": "Fechar",
   "channels": "Canais",
-  "noChannels": "Nenhum canal por aqui ainda.",
+  "noChannels": "Nenhum canal por aqui",
   "suspended": "Este servidor foi suspenso pela administração.",
   "create": {
     "title": "Criar seu servidor",
@@ -331,8 +331,8 @@
       "clearTarget": "Remover filtro de alvo",
       "clear": "Limpar filtros"
     },
-    "empty": "Nada foi registrado ainda.",
-    "emptyFiltered": "Nenhum registro com esses filtros.",
+    "empty": "Nada registrado ainda",
+    "emptyFiltered": "Nenhum registro com esses filtros",
     "loading": "Carregando…",
     "loadMore": "Carregar mais",
     "details": "Detalhes",
@@ -470,6 +470,10 @@
       "voice": "voz",
       "before": "Antes",
       "after": "Depois"
-    }
-  }
+    },
+    "emptyText": "Mudanças em cargos, canais, membros e convites ficam registradas aqui.",
+    "emptyFilteredText": "Ajuste ou limpe os filtros para ver tudo."
+  },
+  "noChannelsCanCreate": "Crie o primeiro canal para a conversa começar.",
+  "noChannelsText": "Quando houver um canal que você possa ver, ele aparece aqui."
 }

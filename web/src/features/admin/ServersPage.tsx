@@ -85,7 +85,7 @@ export function ServersPage() {
         summary={list.status === 'ready' && list.items.length > 0 ? `${list.items.length} ${t('ui.server', { count: list.items.length })}${list.hasMore ? t('ui.moreResults') : ''}` : undefined}
         onClear={active ? clear : undefined}
       />
-      <ListChrome list={list} empty={t('ui.noServers')} skeleton={tableFits ? <AdminTableSkeleton columns={7} identity /> : <AdminStackedSkeleton />}>
+      <ListChrome list={list} empty={{ illustration: 'servers', title: t('emptyList.servers.title'), description: t('emptyList.servers.text') }} onClearFilters={active ? clear : undefined} skeleton={tableFits ? <AdminTableSkeleton columns={7} identity /> : <AdminStackedSkeleton />}>
         {tableFits ? (
           <AdminTable caption={t('ui.servers')}>
             <thead>

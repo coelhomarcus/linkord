@@ -120,7 +120,7 @@
     "addWidget": "Add widget",
     "yours": "Your widgets",
     "manageConnections": "Manage connections",
-    "emptyOwner": "Your Wall is empty. Add a widget to choose what shows.",
+    "emptyOwner": "Use “Add widget” to choose what shows on your profile. Connecting accounts unlocks more options.",
     "emptyVisitor": "This user has not published any Wall widgets yet.",
     "remove": "Remove {{name}}",
     "unavailable": "Could not load data for this widget.",
@@ -187,7 +187,10 @@
       "moved": "{{name}} is at position {{position}} of {{total}}.",
       "dropped": "{{name}} was dropped at position {{position}} of {{total}}.",
       "cancelled": "Cancelled. {{name}} went back to position {{position}}."
-    }
+    },
+    "emptyOwnerTitle": "Your Wall is empty",
+    "emptyVisitorTitle": "Nothing on the Wall yet",
+    "connectAccounts": "Connect accounts"
   },
   "bar": {
     "unsaved": "Don't forget to save your changes!",

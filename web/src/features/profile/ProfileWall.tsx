@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import { ROUTES } from '@/shared/lib/routes';
 import { Button } from '@/shared/ui/primitives/button';
+import { EmptyState } from '@/shared/ui/empty-state';
 import { AddWidgetDialog } from './AddWidgetDialog';
 import { FloatingBar } from './FloatingBar';
 import { createConnection, fetchWall, saveWall } from './profileApi';
@@ -121,6 +122,7 @@ export function ProfileWall({ userId, owner, accent, onNavigate }: { userId: str
     return { id: widgetKey(widget), name, content: <WallWidgetCard widget={widget} accent={accent} gameEditor={owner ? gameEditor : undefined} /> };
   });
 
+  const wallEmpty = !loading && !!data && widgets.length === 0;
   const bar = owner && dirty && (
     <FloatingBar
       label={t('wall.barLabel')}
@@ -147,7 +149,15 @@ export function ProfileWall({ userId, owner, accent, onNavigate }: { userId: str
         </div>
       )}
       {loading && <WallSkeleton label={t('wall.loading')} />}
-      {!loading && data && widgets.length === 0 && <p className="py-8 text-center text-body text-text-muted">{t(owner ? 'wall.emptyOwner' : 'wall.emptyVisitor')}</p>}
+      {wallEmpty && (owner ? (
+        <EmptyState
+          illustration="wall"
+          title={t('wall.emptyOwnerTitle')}
+          description={t('wall.emptyOwner')}
+          // the add-widget button is already in the header right above; connecting accounts is the next step
+          action={<Button type="button" variant="secondary" size="sm" onClick={() => { navigate(ROUTES.settingsTab('connections')); onNavigate(); }}>{t('wall.connectAccounts')}</Button>}
+        />
+      ) : <EmptyState illustration="wall" title={t('wall.emptyVisitorTitle')} description={t('wall.emptyVisitor')} />)}
       {owner
         ? <SortableWall
           widgets={entries}

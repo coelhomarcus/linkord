@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 
 import { ActiveFill } from '@/shared/ui/active-fill';
+import { EmptyState } from '@/shared/ui/empty-state';
+import { Button } from '@/shared/ui/primitives/button';
 import { Sidebar } from '@/shared/ui/motion/sidebar';
 import { useSidebar } from '@/shared/ui/motion/sidebar-context';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
@@ -147,7 +149,23 @@ function DirectList({ onNavigate }: { onNavigate: () => void }) {
             />
           ))}
         </ul>
-        {directs.length === 0 && <p className="select-none px-4 py-6 text-center text-label text-text-muted">{query.trim() ? t('sidebar.noMatch') : t('sidebar.empty')}</p>}
+        {directs.length === 0 && (query.trim() ? (
+          <EmptyState
+            size="compact"
+            illustration="search"
+            title={t('sidebar.noMatch')}
+            description={t('sidebar.noMatchText', { query: query.trim() })}
+            action={<Button type="button" variant="secondary" size="sm" onClick={() => setQuery('')}>{t('sidebar.clearSearch')}</Button>}
+          />
+        ) : (
+          <EmptyState
+            size="compact"
+            illustration="chat"
+            title={t('sidebar.emptyTitle')}
+            description={t('sidebar.empty')}
+            action={<Button type="button" variant="secondary" size="sm" onClick={() => setNewOpen(true)}><PlusIcon size={16} aria-hidden />{t('sidebar.startConversation')}</Button>}
+          />
+        ))}
       </div>
       <NewDirectDialog open={newOpen} onOpenChange={setNewOpen} onOpened={onNavigate} />
     </div>
