@@ -28,6 +28,7 @@ import {
 } from './serversApi';
 import { can, memberColor } from './serverUtils';
 import { inviteUrl } from './inviteCode';
+import { RoleColorPicker } from './RoleColorPicker';
 
 type TabKey = 'overview' | 'roles' | 'members' | 'invites' | 'bans' | 'soundboard' | 'delete';
 
@@ -218,10 +219,10 @@ function Roles({ server }: { server: ServerSummary }) {
               <span className="text-body font-medium text-text-primary">{t('roles.name')}</span>
               <Input value={draft.name} disabled={draft.isDefault} maxLength={100} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
             </label>
-            <label className="flex flex-col gap-1.5">
-              <span className="text-body font-medium text-text-primary">{t('roles.color')}</span>
-              <input type="color" value={draft.color || '#99aab5'} onChange={(e) => setDraft({ ...draft, color: e.target.value })} className="h-10 w-14 cursor-pointer rounded-lg border border-border-field bg-transparent" />
-            </label>
+            <div className="flex flex-col gap-1.5">
+              <span aria-hidden className="text-body font-medium text-text-primary">{t('roles.color')}</span>
+              <RoleColorPicker value={draft.color} onChange={(color) => setDraft({ ...draft, color })} />
+            </div>
           </div>
           {!draft.isDefault && (
             <>

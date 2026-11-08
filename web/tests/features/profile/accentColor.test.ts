@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { isTooDarkForAccent, MIN_ACCENT_LIGHTNESS, readableAccent } from '@/features/profile/accentColor';
-import { hexToOklch, withMinLightness } from '@/features/profile/colorMath';
+import { hexToOklch, withMinLightness } from '@/shared/lib/colorMath';
 
 describe('readable accent', () => {
   it('lightens a colour too dark for the dark surfaces of the Wall, keeping its hue', () => {

@@ -151,7 +151,26 @@
     "down": "Descer",
     "search": "Buscar cargos",
     "memberCount": "{{count}} membros",
-    "noResults": "Nenhum cargo encontrado."
+    "noResults": "Nenhum cargo encontrado.",
+    "noColor": "Sem cor",
+    "colorTrigger": "Cor do cargo: {{name}}",
+    "colors": {
+      "teal": "Turquesa",
+      "green": "Verde",
+      "blue": "Azul",
+      "purple": "Roxo",
+      "pink": "Rosa",
+      "yellow": "Amarelo",
+      "orange": "Laranja",
+      "red": "Vermelho",
+      "grey": "Cinza",
+      "slate": "Ardósia",
+      "mint": "Menta",
+      "sky": "Céu",
+      "lavender": "Lavanda",
+      "rose": "Rosé",
+      "gold": "Dourado"
+    }
   },
   "invites": {
     "none": "Nenhum convite ativo.",

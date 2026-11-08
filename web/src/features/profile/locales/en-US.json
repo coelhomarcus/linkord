@@ -16,7 +16,6 @@
     "changeAvatar": "Change profile picture",
     "removeAvatar": "Remove picture",
     "viewAvatar": "View profile picture full screen",
-    "useColor": "Use {{name}}",
     "displayName": "Display name",
     "openLink": "Open {{name}}",
     "admin": "Admin"
@@ -232,15 +231,8 @@
     "continueEditing": "Keep editing"
   },
   "colorPicker": {
-    "title": "Profile color",
     "label": "Color",
     "trigger": "Profile color: {{name}}",
-    "saturation": "Saturation and brightness",
-    "saturationValue": "Saturation {{saturation}}%, brightness {{brightness}}%",
-    "hue": "Hue",
-    "hex": "Color hex code",
-    "eyedropper": "Pick a color from the screen",
-    "presets": "Presets",
     "darkNote": "A dark color: Wall widgets show it lighter, like the dot, so it stays visible."
   }
 }

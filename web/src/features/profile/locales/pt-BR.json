@@ -16,7 +16,6 @@
     "changeAvatar": "Alterar foto de perfil",
     "removeAvatar": "Remover foto",
     "viewAvatar": "Ver foto de perfil em tela cheia",
-    "useColor": "Usar {{name}}",
     "displayName": "Nome de exibição",
     "openLink": "Abrir {{name}}",
     "admin": "Admin"
@@ -232,15 +231,8 @@
     "continueEditing": "Continuar editando"
   },
   "colorPicker": {
-    "title": "Cor do perfil",
     "label": "Cor",
     "trigger": "Cor do perfil: {{name}}",
-    "saturation": "Saturação e brilho",
-    "saturationValue": "Saturação {{saturation}}%, brilho {{brightness}}%",
-    "hue": "Matiz",
-    "hex": "Código hexadecimal da cor",
-    "eyedropper": "Pegar uma cor da tela",
-    "presets": "Predefinições",
     "darkNote": "Cor escura: nos widgets do Mural ela aparece mais clara, como na bolinha, para continuar visível."
   }
 }

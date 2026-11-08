@@ -151,7 +151,26 @@
     "down": "Move down",
     "search": "Search roles",
     "memberCount": "{{count}} members",
-    "noResults": "No roles found."
+    "noResults": "No roles found.",
+    "noColor": "No color",
+    "colorTrigger": "Role color: {{name}}",
+    "colors": {
+      "teal": "Teal",
+      "green": "Green",
+      "blue": "Blue",
+      "purple": "Purple",
+      "pink": "Pink",
+      "yellow": "Yellow",
+      "orange": "Orange",
+      "red": "Red",
+      "grey": "Grey",
+      "slate": "Slate",
+      "mint": "Mint",
+      "sky": "Sky",
+      "lavender": "Lavender",
+      "rose": "Rose",
+      "gold": "Gold"
+    }
   },
   "invites": {
     "none": "No active invites.",
