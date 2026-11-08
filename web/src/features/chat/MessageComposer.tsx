@@ -92,7 +92,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
   const canSubmit = !disabled && !tooLong && (text.trim().length > 0 || pendingFiles.length > 0);
 
   // Keeps the arrow-key-highlighted mention option visible — without this,
-  // ArrowDown/ArrowUpIcon move mentionSelectedIndex past the dropdown's visible
+  // ArrowDown/ArrowUp move mentionSelectedIndex past the dropdown's visible
   // rows (it's capped at max-h-56) with no compensating scroll.
   useEffect(() => {
     mentionOptionRefs.current[mentionSelectedIndex]?.scrollIntoView({ block: 'nearest' });
@@ -280,7 +280,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
     // arrows move the selection instead of the caret.
     if (mentionQuery && mentionCandidates.length) {
       if (event.key === 'ArrowDown') { event.preventDefault(); setMentionSelectedIndex((i) => (i + 1) % mentionCandidates.length); return; }
-      if (event.key === 'ArrowUpIcon') { event.preventDefault(); setMentionSelectedIndex((i) => (i - 1 + mentionCandidates.length) % mentionCandidates.length); return; }
+      if (event.key === 'ArrowUp') { event.preventDefault(); setMentionSelectedIndex((i) => (i - 1 + mentionCandidates.length) % mentionCandidates.length); return; }
       if (event.key === 'Enter' || event.key === 'Tab') { event.preventDefault(); selectMention(mentionCandidates[mentionSelectedIndex]!); return; }
       if (event.key === 'Escape') { event.preventDefault(); setMentionQuery(null); return; }
     }
