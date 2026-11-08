@@ -3,7 +3,7 @@ import { config } from '../../config/env.js';
 import { sendJson, sendError, jsonBody } from '../../http/respond.js';
 import { parseCookies } from '../../http/cookies.js';
 import { resolveSession } from '../auth/session.js';
-import { countAppBadge, countUnread, deleteAllNotifications, deleteNotification, listNotifications, markRead } from './notificationsRepository.js';
+import { countAppBadge, countUnread, deleteAllNotifications, deleteNotification, getPushShowContent, listNotifications, markRead, setPushShowContent } from './notificationsRepository.js';
 import { pushAvailable, validPushSubscription, savePushSubscription, removePushSubscription } from './webPush.js';
 
 async function session(request: FastifyRequest, reply: FastifyReply): Promise<{ userId: string } | null> {
@@ -34,6 +34,20 @@ export function registerNotificationRoutes(fastify: FastifyInstance): void {
     if (typeof body.endpoint !== 'string' || body.endpoint.length > 2048) return sendError(reply, 400, 'invalid_request', 'Assinatura push inválida.');
     await removePushSubscription(sess.userId, body.endpoint);
     sendJson(reply, 200, { ok: true });
+  });
+
+  fastify.get('/api/notifications/push/preferences', async (request, reply) => {
+    const sess = await session(request, reply);
+    if (sess) sendJson(reply, 200, { showContent: await getPushShowContent(sess.userId) });
+  });
+
+  fastify.patch('/api/notifications/push/preferences', async (request, reply) => {
+    const sess = await session(request, reply);
+    if (!sess) return;
+    const { showContent } = jsonBody(request.body);
+    if (typeof showContent !== 'boolean') return sendError(reply, 400, 'invalid_request', 'Informe showContent como verdadeiro ou falso.');
+    await setPushShowContent(sess.userId, showContent);
+    sendJson(reply, 200, { showContent });
   });
 
   fastify.get('/api/notifications', async (request: FastifyRequest<{ Querystring: { cursor?: string } }>, reply) => {

@@ -89,7 +89,7 @@
     },
     "desktopNotifications": {
       "title": "Desktop notifications",
-      "keywords": "permission, alerts, messages, push, desktop"
+      "keywords": "permission, alerts, messages, push, desktop, privacy, content, message text, preview"
     },
     "sounds": {
       "title": "Sounds",
@@ -222,10 +222,15 @@
     },
     "ios": "On iPhone, add Linkord to your Home Screen, open it from the icon and come back here to turn on notifications.",
     "pushUnavailable": "Push unavailable: check the server configuration.",
+    "showContent": {
+      "label": "Show message text",
+      "description": "Turn off so notifications only show who wrote and where, without the message itself."
+    },
     "errors": {
       "blocked": "Notifications blocked. Allow access in your browser settings to enable them.",
       "unavailable": "Push notifications unavailable. Check the app installation and the server configuration.",
-      "enableFailed": "Couldn't turn on notifications. Check the app's permission and try again."
+      "enableFailed": "Couldn't turn on notifications. Check the app's permission and try again.",
+      "saveFailed": "Couldn't save this option. Try again."
     },
     "volume": {
       "label": "Notification volume",

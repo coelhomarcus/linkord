@@ -89,7 +89,7 @@
     },
     "desktopNotifications": {
       "title": "Notificações na área de trabalho",
-      "keywords": "permissão, avisos, mensagens, push, área de trabalho"
+      "keywords": "permissão, avisos, mensagens, push, área de trabalho, privacidade, conteúdo, texto da mensagem, prévia"
     },
     "sounds": {
       "title": "Sons",
@@ -222,10 +222,15 @@
     },
     "ios": "No iPhone, adicione o Linkord à Tela de Início, abra pelo ícone e volte aqui para ativar as notificações.",
     "pushUnavailable": "Push indisponível: confira a configuração do servidor.",
+    "showContent": {
+      "label": "Mostrar o texto das mensagens",
+      "description": "Desative para as notificações mostrarem só quem escreveu e onde, sem o conteúdo da mensagem."
+    },
     "errors": {
       "blocked": "Notificações bloqueadas. Permita o acesso nas configurações do navegador para habilitar.",
       "unavailable": "Notificações push indisponíveis. Verifique a instalação do app e a configuração do servidor.",
-      "enableFailed": "Não foi possível ativar as notificações. Confira a permissão do app e tente novamente."
+      "enableFailed": "Não foi possível ativar as notificações. Confira a permissão do app e tente novamente.",
+      "saveFailed": "Não foi possível salvar essa opção. Tente novamente."
     },
     "volume": {
       "label": "Volume das notificações",

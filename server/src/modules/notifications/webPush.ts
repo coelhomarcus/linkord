@@ -85,7 +85,7 @@ async function lastReadMessageId(conversation: Conversation, userId: string): Pr
 }
 
 /** The message, its author and the channel it is in, only if the reader can still see it. */
-async function visibleMessage(messageId: number, userId: string) {
+async function visibleMessage(messageId: number, userId: string, showContent: boolean) {
   const [row] = await db.select({ message: messages, author: users, webhookName: webhooks.name, serverName: servers.name })
     .from(messages)
     .innerJoin(conversations, eq(conversations.id, messages.conversationId))
@@ -100,7 +100,7 @@ async function visibleMessage(messageId: number, userId: string) {
   const name = row.author ? row.author.displayName || row.author.username : row.message.webhookId ? row.webhookName || 'Bot' : 'Alguém';
   return {
     message: row.message, conversation, name, avatar: pushAvatarPath(row.author),
-    direct: conversation.type === 'direct', serverName: row.serverName ?? '', text: previewText(row.message.text),
+    direct: conversation.type === 'direct', serverName: row.serverName ?? '', text: showContent ? previewText(row.message.text) : '',
   };
 }
 
@@ -110,11 +110,11 @@ async function userCard(userId: string) {
   return user ?? null;
 }
 
-async function noticeFor(event: OutboxEvent, locale: Locale): Promise<PushNotice | null> {
+async function noticeFor(event: OutboxEvent, locale: Locale, showContent: boolean): Promise<PushNotice | null> {
   const payload = event.payload as Record<string, unknown>;
   if (event.type === 'chat_message_push') {
     if (!Number.isSafeInteger(payload.messageId)) return null;
-    const found = await visibleMessage(payload.messageId as number, event.audienceUserId);
+    const found = await visibleMessage(payload.messageId as number, event.audienceUserId, showContent);
     if (!found || (await lastReadMessageId(found.conversation, event.audienceUserId)) >= found.message.id) return null;
     const [mention] = await db.select({ id: notifications.id }).from(notifications).where(and(
       eq(notifications.recipientId, event.audienceUserId), eq(notifications.kind, 'mention'),
@@ -151,7 +151,7 @@ async function noticeFor(event: OutboxEvent, locale: Locale): Promise<PushNotice
   )).limit(1);
   if (!row) return null;
   if (kind === 'mention') {
-    const found = await visibleMessage(Number(reference), event.audienceUserId);
+    const found = await visibleMessage(Number(reference), event.audienceUserId, showContent);
     if (!found) return null;
     const text = mentionNoticeText({
       direct: found.direct, name: found.name, text: found.text, channelTitle: found.conversation.title, serverName: found.serverName,
@@ -181,10 +181,10 @@ async function noticeFor(event: OutboxEvent, locale: Locale): Promise<PushNotice
 export async function deliverWebPush(event: OutboxEvent): Promise<PushDeliveryResult> {
   const done = { delivered: true, retryAfterMs: 0 };
   if (!pushAvailable) return done;
-  const [recipient] = await db.select({ status: users.status, locale: users.locale }).from(users).where(eq(users.id, event.audienceUserId)).limit(1);
+  const [recipient] = await db.select({ status: users.status, locale: users.locale, showContent: users.pushShowContent }).from(users).where(eq(users.id, event.audienceUserId)).limit(1);
   if (!recipient || recipient.status !== 'active') return done;
   const locale = resolveLocale(recipient.locale);
-  const notice = await noticeFor(event, locale);
+  const notice = await noticeFor(event, locale, recipient.showContent);
   if (!notice) return done;
   const subscriptions = await db.select().from(pushSubscriptions).where(eq(pushSubscriptions.userId, event.audienceUserId));
   if (!subscriptions.length) return done;
