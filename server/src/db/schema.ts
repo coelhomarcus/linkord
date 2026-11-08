@@ -790,6 +790,19 @@ export const profileGames = pgTable('profile_games', {
   check('profile_games_list_check', sql`${t.list} IN ('favorite','liked','playing','wishlist')`),
 ]);
 
+/** Attempt counters that guard against brute force (login, recovery codes, sign-up), kept in the
+ * database so a restart or a deploy does not hand out fresh attempts. One row per key (a SHA-256 of it, so
+ * no email, username or address is stored) and window:
+ * the row is reset in place when its window ends, and swept once it is over (modules/auth/ratelimit.ts). */
+export const rateLimitWindows = pgTable('rate_limit_windows', {
+  key: varchar('key', { length: 64 }).primaryKey(),
+  count: integer('count').notNull(),
+  windowEndsAt: timestamp('window_ends_at', { withTimezone: true }).notNull(),
+  blockedUntil: timestamp('blocked_until', { withTimezone: true }),
+}, (t) => [
+  index('rate_limit_windows_window_ends_idx').on(t.windowEndsAt),
+]);
+
 export const connectionSyncLimits = pgTable('connection_sync_limits', {
   provider: varchar('provider', { length: 16 }).primaryKey(),
   nextRequestAt: timestamp('next_request_at', { withTimezone: true }).notNull().defaultNow(),

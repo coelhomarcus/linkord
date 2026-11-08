@@ -8,6 +8,7 @@ import { createApp } from '../http/app.js';
 import { createWsServer } from '../realtime/socket.js';
 import { describeBlockedMigration, runMigrations } from '../db/migrate.js';
 import { sweepExpiredSessions } from '../modules/auth/session.js';
+import { sweepExpiredRateLimits } from '../modules/auth/ratelimit.js';
 import { sweepSendOperations } from '../modules/messages/sendOperations.js';
 import { sweepExpiredStaged } from '../modules/attachments/stagedAttachments.js';
 import { ensureUploadDir, sweepStaleUploads } from '../modules/attachments/uploadSession.js';
@@ -101,6 +102,12 @@ export async function bootstrap(): Promise<void> {
     sweepExpiredSessions().catch((err) => log.error('failed to clean up expired sessions', err));
   }, 60 * 60 * 1000);
   sessionSweepTimer.unref();
+
+  // brute-force counters (login, recovery, sign-up): a row whose window is over is dead weight
+  const rateLimitSweepTimer = setInterval(() => {
+    sweepExpiredRateLimits().catch((err) => log.error('failed to clean up expired rate limit windows', err));
+  }, 15 * 60 * 1000);
+  rateLimitSweepTimer.unref();
 
   // same cadence — upload session TTL is 24h (config.UPLOAD_SESSION_TTL_MS),
   // checking hourly is enough to avoid orphaned chunks piling up on disk.

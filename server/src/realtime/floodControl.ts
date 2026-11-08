@@ -1,13 +1,14 @@
 // Per-account sliding-window action limiter for the realtime socket.
 // Unlike modules/auth/ratelimit.ts (built around FAILED attempts, blocked
-// until they age out), every call here is otherwise-legitimate traffic —
+// until their window ends, and stored in Postgres), every call here is otherwise-legitimate traffic —
 // this just caps how many of a given action one account can fire within a
 // window, dropping anything past that. Keyed by userId (not the
 // per-connection participant id), so a flood spread across multiple tabs/
 // reconnects from the same compromised account still gets capped in
-// aggregate. In-memory only, matching the rest of this server's realtime
-// state (participants, ratelimit.ts) — doesn't need to survive a restart or
-// be shared across instances.
+// aggregate. In-memory only, on purpose: it just caps short bursts, so a
+// restart forgetting the windows costs nothing, and a database write per
+// socket event would be the expensive part. Limits that guard against brute
+// force (login, codes, sign-up) are in ratelimit.ts instead.
 
 interface Rule {
   windowMs: number;
