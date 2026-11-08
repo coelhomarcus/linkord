@@ -164,6 +164,21 @@ describe('ProfileEditor', () => {
     });
   });
 
+  it('an edit while the bar confirms the save shows the pending bar and Save again at once', async () => {
+    const user = userEvent.setup();
+    renderEditor({ state: { ...initialRoomState, me: { ...initialRoomState.me, id: 'c', userId: 'u', name: 'Fulana', displayName: 'Fulana', avatarColor: 'green' } }, updateProfile: vi.fn() });
+
+    const input = screen.getByLabelText('Nome de exibição');
+    await user.type(input, 'X');
+    await user.click(screen.getByRole('button', { name: 'Salvar' }));
+    expect(await screen.findByText('Alterações salvas.')).toBeInTheDocument();
+
+    await user.type(input, 'Y');
+    expect(screen.queryByText('Alterações salvas.')).not.toBeInTheDocument();
+    expect(screen.getByText('Não se esqueça de salvar suas alterações!')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Salvar' })).toBeEnabled();
+  });
+
   it('saves a custom color (outside the presets) typed in the color picker', async () => {
     const user = userEvent.setup();
     const updateProfile = vi.fn();

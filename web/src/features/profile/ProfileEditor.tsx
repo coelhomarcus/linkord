@@ -16,7 +16,7 @@ import { formatMB } from '@/shared/lib/formatBytes';
 import { AVATAR_MIME_TYPES, MAX_AVATAR_BYTES } from '@/shared/types/protocol';
 import { Button } from '@/shared/ui/primitives/button';
 import { ProfileCard } from './ProfileCard';
-import { FLOATING_BAR_SLOT_CLASS, FloatingBar, FloatingBarSlotProvider } from '@/shared/FloatingBar';
+import { FLOATING_BAR_SLOT_CLASS, FloatingBar, FloatingBarSlotProvider, SAVED_BAR_MS } from '@/shared/FloatingBar';
 import { ProfileConnections } from './ProfileConnections';
 import { ProfileSidebar } from './ProfileSidebar';
 import { BANNER_ASPECT_RATIO } from './profileLinks';
@@ -24,7 +24,7 @@ import { UnsavedProfileChangesDialog } from './UnsavedProfileChangesDialog';
 import { describeProfileSaveError } from './useProfileUpdate';
 import { formatProfileDate } from './useProfileDetails';
 import type { useProfileDetails } from './useProfileDetails';
-import { useProfileDraft } from './useProfileDraft';
+import { useProfileDraft, type ProfileDraftFields } from './useProfileDraft';
 import type { DisplayStatus } from '@/features/status/statusDisplay';
 import { useCustomStatusActions } from '@/features/status/useCustomStatusActions';
 import type { CustomStatus } from '@/shared/types/protocol';
@@ -97,9 +97,14 @@ export function ProfileEditor({ status, customStatus, details, onClose, register
   const [justSaved, setJustSaved] = useState(false);
   useEffect(() => {
     if (!justSaved) return;
-    const timeout = window.setTimeout(() => setJustSaved(false), 2200);
+    const timeout = window.setTimeout(() => setJustSaved(false), SAVED_BAR_MS);
     return () => window.clearTimeout(timeout);
   }, [justSaved]);
+  // an edit made while the bar still confirms the last save is a new pending change: show it, and Save, at once
+  function edit<K extends keyof ProfileDraftFields>(key: K, value: ProfileDraftFields[K]) {
+    setJustSaved(false);
+    setField(key, value);
+  }
 
   // Closing the modal (Esc, the X, the backdrop) with a dirty draft asks
   // first instead of silently dropping it.
@@ -256,9 +261,9 @@ export function ProfileEditor({ status, customStatus, details, onClose, register
             onBannerUpload={() => bannerFileInputRef.current?.click()}
             onBannerRemove={() => void handleRemoveImage('banner')}
             bannerUploading={uploadingBanner}
-            onDisplayNameChange={(value) => setField('displayName', value)}
-            onBioChange={(value) => setField('bio', value)}
-            onAvatarColorChange={(value) => setField('avatarColor', value)}
+            onDisplayNameChange={(value) => edit('displayName', value)}
+            onBioChange={(value) => edit('bio', value)}
+            onAvatarColorChange={(value) => edit('avatarColor', value)}
             hideLinks
             fieldsDisabled={saving}
             footer={(
