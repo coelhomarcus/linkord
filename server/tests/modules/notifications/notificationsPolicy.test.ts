@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { OUTBOX_MAX_ATTEMPTS, isOutboxFailed, nextOutboxState, outboxRetryDelayMs } from '../../../src/modules/notifications/notificationsPolicy.js';
+import { OUTBOX_MAX_ATTEMPTS, isOutboxFailed, nextOutboxState, outboxRetryDelayMs, recipientAcceptsPush } from '../../../src/modules/notifications/notificationsPolicy.js';
 
 describe('nextOutboxState', () => {
   it('successful delivery marks processed and counts the attempt', () => {
@@ -30,5 +30,18 @@ describe('outboxRetryDelayMs', () => {
   it('waits for a push service Retry-After even when it exceeds the local backoff', () => {
     assert.equal(outboxRetryDelayMs(1, 120_000), 120_000);
     assert.equal(outboxRetryDelayMs(2, 10_000), 60_000);
+  });
+});
+
+describe('push recipients', () => {
+  it('delivers to an active account in any status but do not disturb', () => {
+    for (const presenceStatus of ['online', 'idle', 'invisible']) {
+      assert.equal(recipientAcceptsPush({ status: 'active', presenceStatus }), true);
+    }
+  });
+
+  it('drops the push for do not disturb and for a suspended account', () => {
+    assert.equal(recipientAcceptsPush({ status: 'active', presenceStatus: 'dnd' }), false);
+    assert.equal(recipientAcceptsPush({ status: 'suspended', presenceStatus: 'online' }), false);
   });
 });

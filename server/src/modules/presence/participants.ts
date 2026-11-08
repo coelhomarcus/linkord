@@ -6,6 +6,7 @@ import { isUploadedImage, sanitizeAvatar, sanitizeBanner, sanitizeAvatarColor, s
 import { deleteAvatarFile, isOwnedProfileImage } from '../attachments/attachmentCleanup.js';
 import { recordUserLastSeen } from '../users/users.js';
 import { runSerialized } from './profileQueue.js';
+import { effectiveStatus, getAccountStatus, isInvisible, type CustomStatus, type PresenceStatus, type VisibleStatus } from './userStatus.js';
 import type { AppSocket, HandlerTable, Participant, PublicParticipant, SessionUser } from '../../types.js';
 import { logger } from '../../lib/logger.js';
 
@@ -95,6 +96,7 @@ function createParticipant(u: ParticipantProfile, id: string, token: string, soc
     cameraOn: false,
     sharing: false,
     speaking: false,
+    idle: false,
     graceTimer: null,
     knownPeerIds: new Set(),
     friendPeerIds: new Set(),
@@ -137,6 +139,7 @@ export function publicParticipant(p: Participant): PublicParticipant {
  * notifies everyone. Also resets self-reported media flags: a fresh join/leave
  * means previous call state no longer applies. */
 export function setCallConversationId(p: Participant, conversationId: string | null): void {
+  const wasHidden = hiddenFromPeers(p);
   p.callConversationId = conversationId;
   p.micActivated = false;
   p.micMuted = true;
@@ -144,7 +147,41 @@ export function setCallConversationId(p: Participant, conversationId: string | n
   p.sharing = false;
   p.speaking = false;
   persistCallPresence(p);
-  broadcastToKnownPeers(p.userId, { t: 'participant-updated', participant: publicParticipant(p) });
+  const hidden = hiddenFromPeers(p);
+  if (wasHidden === hidden) {
+    broadcastParticipantUpdate(p);
+    return;
+  }
+  // an invisible account shows up in the call it joins (and only there), so peers learn about this
+  // connection now, and forget it again when it leaves; its own tabs always knew it
+  sendToUser(p.userId, { t: 'participant-updated', participant: publicParticipant(p) });
+  broadcastToPeers(p.userId, hidden ? { t: 'participant-left', id: p.id } : { t: 'participant-joined', participant: publicParticipant(p) });
+}
+
+/** An invisible account's connection outside any call: nobody but the account itself hears about it.
+ * Inside a call it stays visible to everyone who can see that call (the product decision is in the
+ * README), the same way the tiles and LiveKit media already show it. */
+export function hiddenFromPeers(p: Participant): boolean {
+  return isInvisible(p.userId) && !p.callConversationId;
+}
+
+/** `participant-updated` for one connection, kept to the account's own tabs while it is hidden. */
+export function broadcastParticipantUpdate(p: Participant): void {
+  const msg = { t: 'participant-updated', participant: publicParticipant(p) };
+  if (hiddenFromPeers(p)) sendToUser(p.userId, msg);
+  else broadcastToKnownPeers(p.userId, msg);
+}
+
+/** `participant-joined` for a new or resumed connection, to everyone but itself. */
+export function announceParticipantJoined(p: Participant): void {
+  const msg = { t: 'participant-joined', participant: publicParticipant(p) };
+  if (!hiddenFromPeers(p)) {
+    broadcastToKnownPeers(p.userId, msg, p.id);
+    return;
+  }
+  for (const other of participants.values()) {
+    if (other.userId === p.userId && other.id !== p.id) send(other.socket, msg);
+  }
 }
 
 /** Address of who connected — used for logging only. */
@@ -184,6 +221,15 @@ export function broadcastToKnownPeers(subjectUserId: string, obj: { t: string; [
   }
 }
 
+/** Like broadcastToKnownPeers, minus the subject's own tabs: for what only other people need to hear
+ * (the account turning invisible does not make it offline to itself). */
+export function broadcastToPeers(subjectUserId: string, obj: { t: string; [key: string]: unknown }): void {
+  for (const p of participants.values()) {
+    if (p.userId === subjectUserId || !p.knownPeerIds.has(subjectUserId) || p.blockedPeerIds.has(subjectUserId)) continue;
+    send(p.socket, obj);
+  }
+}
+
 /** Sends `obj` to every live connection of one account (multi-tab/device
  * fan-out for events only that account should see). */
 export function sendToUser(userId: string, obj: { t: string; [key: string]: unknown }): void {
@@ -209,6 +255,44 @@ export function listOnlineUserIds(): string[] {
   return [...ids];
 }
 
+/** Online as other people see it: connected and not invisible. */
+export function isUserVisiblyOnline(userId: string): boolean {
+  return !isInvisible(userId) && isUserOnline(userId);
+}
+
+/** listOnlineUserIds without invisible accounts — everything a person can see goes through this one;
+ * the raw list is for administration only. */
+export function listVisibleOnlineUserIds(): string[] {
+  return listOnlineUserIds().filter((userId) => !isInvisible(userId));
+}
+
+function everyConnectionIdle(userId: string): boolean {
+  let live = 0;
+  for (const p of participants.values()) {
+    if (p.userId !== userId || !p.socket) continue;
+    if (!p.idle) return false;
+    live++;
+  }
+  return live > 0;
+}
+
+/** The account's status as its owner sees it: the chosen one, with automatic idle applied. */
+export function ownEffectiveStatus(userId: string): PresenceStatus {
+  return effectiveStatus(getAccountStatus(userId).status, everyConnectionIdle(userId));
+}
+
+export interface VisiblePresence {
+  status: VisibleStatus;
+  customStatus: CustomStatus | null;
+}
+
+/** What other people see of an account right now, or null while it reads as offline to them
+ * (no live connection, or invisible). A custom status shows only alongside a visible status. */
+export function visiblePresenceOf(userId: string): VisiblePresence | null {
+  if (!isUserVisiblyOnline(userId)) return null;
+  return { status: ownEffectiveStatus(userId) as VisibleStatus, customStatus: getAccountStatus(userId).customStatus };
+}
+
 /** The call module hears about a connection that is actually gone, not one sitting in the reconnect grace window. */
 let onParticipantRemoved: ((p: Participant) => void) | null = null;
 export function setParticipantRemovedHook(fn: (p: Participant) => void): void {
@@ -218,20 +302,32 @@ export function setParticipantRemovedHook(fn: (p: Participant) => void): void {
 export function removeParticipant(p: Participant): void {
   if (participants.get(p.id) !== p) return; // already replaced by a reconnect
   if (p.graceTimer) clearTimeout(p.graceTimer);
+  const wasHidden = hiddenFromPeers(p);
   participants.delete(p.id);
   restoredGhostIds.delete(p.id);
   forgetCallPresence(p.id);
   onParticipantRemoved?.(p);
-  broadcastToKnownPeers(p.userId, { t: 'participant-left', id: p.id });
+  if (wasHidden) sendToUser(p.userId, { t: 'participant-left', id: p.id });
+  else broadcastToKnownPeers(p.userId, { t: 'participant-left', id: p.id });
   // only here (not handleClose) to respect the same grace window as
   // 'participant-left' — a brief network drop shouldn't flicker offline.
-  if (!isUserOnline(p.userId)) {
+  // An invisible account already reads as offline, and recording when it really left would tell
+  // its peers exactly what invisibility hides.
+  if (!isUserOnline(p.userId) && !isInvisible(p.userId)) {
     const lastSeenAt = new Date();
     void recordUserLastSeen(p.userId, lastSeenAt).catch((err) => {
       log.error('failed to persist lastSeenAt', err, { userId: p.userId });
     });
     broadcastToKnownPeers(p.userId, { t: 'user-offline', userId: p.userId, lastSeenAt: lastSeenAt.toISOString() });
   }
+  onAccountConnectionsChanged?.(p.userId);
+}
+
+/** presenceStatus.ts hears when an account loses a connection: its automatic idle may change, and an
+ * account with no connection left drops its in-memory status. */
+let onAccountConnectionsChanged: ((userId: string) => void) | null = null;
+export function setAccountConnectionsChangedHook(fn: ((userId: string) => void) | null): void {
+  onAccountConnectionsChanged = fn;
 }
 
 function countConnectionsOf(userId: string): number {
@@ -407,7 +503,7 @@ async function handleProfile(socket: AppSocket, msg: ProfilePatchBody | null | u
       other.bannerPoster = nextBannerPoster;
       other.bio = nextBio;
       other.profileLinks = nextProfileLinks;
-      broadcastToKnownPeers(other.userId, { t: 'participant-updated', participant: publicParticipant(other) });
+      broadcastParticipantUpdate(other);
     }
     if (requestId) send(socket, { t: 'profile-result', requestId, ok: true, ...nextProfile });
     // deletes the OLD photo file(s) if they were one of our uploads and
@@ -437,7 +533,7 @@ function handleDeafened(socket: AppSocket, msg: { value?: unknown }): void {
   if (!p || p.socket !== socket) return;
   p.deafened = !!msg.value;
   if (p.callConversationId) persistCallPresence(p);
-  broadcastToKnownPeers(p.userId, { t: 'participant-updated', participant: publicParticipant(p) });
+  broadcastParticipantUpdate(p);
 }
 
 /** Self-reported mic state (see ClientMessage 'mic-state') — the server
@@ -450,21 +546,21 @@ function handleMicState(socket: AppSocket, msg: { activated?: unknown; muted?: u
   if (!p) return;
   p.micActivated = !!msg.activated;
   p.micMuted = !!msg.muted;
-  broadcastToKnownPeers(p.userId, { t: 'participant-updated', participant: publicParticipant(p) });
+  broadcastParticipantUpdate(p);
 }
 
 function handleCamera(socket: AppSocket, msg: { on?: unknown }): void {
   const p = participantInCall(socket);
   if (!p) return;
   p.cameraOn = !!msg.on;
-  broadcastToKnownPeers(p.userId, { t: 'participant-updated', participant: publicParticipant(p) });
+  broadcastParticipantUpdate(p);
 }
 
 function handleScreenShare(socket: AppSocket, msg: { on?: unknown }): void {
   const p = participantInCall(socket);
   if (!p) return;
   p.sharing = !!msg.on;
-  broadcastToKnownPeers(p.userId, { t: 'participant-updated', participant: publicParticipant(p) });
+  broadcastParticipantUpdate(p);
 }
 
 /** Detected 100% client-side (real audio level via Web Audio, see
@@ -474,7 +570,7 @@ function handleSpeaking(socket: AppSocket, msg: { value?: unknown }): void {
   const p = participantInCall(socket);
   if (!p) return;
   p.speaking = !!msg.value;
-  broadcastToKnownPeers(p.userId, { t: 'participant-updated', participant: publicParticipant(p) });
+  broadcastParticipantUpdate(p);
 }
 
 // tab closing/reloading: leaves the room immediately, without the reconnect

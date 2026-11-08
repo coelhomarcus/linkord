@@ -7,9 +7,13 @@
 // Version 9 drops pinned conversations (`conversation-pin`, `conversation-pinned` and `pinnedAt`): the
 // server ignores the unknown message and an old tab reads a missing `pinnedAt` as "not pinned", so the
 // minimum stays at 7.
+// Version 10 adds presence status: `presence-set`/`presence-activity` from the client, `presence-status`,
+// `my-status` and `presence-result` from the server, `presence`/`myStatus` in the welcome and in
+// `presence-sync`. All additive: an old tab ignores them and shows everyone online as plain "online"
+// (an invisible account is still left out of its lists), so the minimum stays at 7.
 // Raising MIN_PROTOCOL_VERSION also drops open tabs out of their calls (they are refused and
 // disconnect), so keep it for changes an old client cannot tolerate.
-export const PROTOCOL_VERSION = 9;
+export const PROTOCOL_VERSION = 10;
 export const MIN_PROTOCOL_VERSION = 7;
 
 export function isClientCompatible(version: unknown): boolean {

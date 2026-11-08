@@ -2,9 +2,11 @@ import type { Server as HttpServer } from 'node:http';
 import { Server, type Socket } from 'socket.io';
 import { config } from '../config/env.js';
 import {
-  participants as participantsMap, join, send, sendSocketError, broadcastToKnownPeers, publicParticipant, handleClose, ipOf,
-  setCallConversationId, handlers as participantHandlers,
+  participants as participantsMap, join, send, sendSocketError, broadcastToKnownPeers, handleClose, ipOf,
+  setCallConversationId, handlers as participantHandlers, announceParticipantJoined,
 } from '../modules/presence/participants.js';
+import { isInvisible } from '../modules/presence/userStatus.js';
+import * as presenceStatus from '../modules/presence/presenceStatus.js';
 import { applyPeerVisibility, buildPresenceSnapshot } from '../modules/presence/knownPeers.js';
 import * as livekit from '../integrations/livekit/livekit.js';
 import * as soundboard from '../modules/soundboard/soundboard.js';
@@ -35,6 +37,7 @@ const log = logger.child({ component: 'socket' });
 const handlers: HandlerTable = Object.assign(
   {},
   participantHandlers,
+  presenceStatus.handlers,
   soundboard.handlers,
   chat.handlers,
   conversations.handlers,
@@ -68,6 +71,9 @@ const ACTION_LIMITS: Record<string, { windowMs: number; max: number }> = {
   'stream-preview-frame': { windowMs: 10_000, max: 10 },
   'call-move': { windowMs: 10_000, max: 10 },
   'dm-call-start': { windowMs: 30_000, max: 5 },
+  'presence-set': { windowMs: 60_000, max: 20 },
+  // a client reports a change of state, not every input; a tab flapping on the threshold stays under this
+  'presence-activity': { windowMs: 60_000, max: 30 },
 };
 
 /** 'join' is the one special case in the dispatch: only participants.ts
@@ -82,8 +88,13 @@ async function handleJoin(socket: AppSocket, msg: JoinMessage): Promise<void> {
     setTimeout(() => { try { socket.disconnect(true); } catch { /* already gone */ } }, 100).unref();
     return;
   }
+  // before the connection exists: nothing may announce it as "online" while it is meant to be invisible
+  await presenceStatus.loadAccountStatus(socket.user.userId);
   const joined = join(socket, msg);
-  if (!joined) return;
+  if (!joined) {
+    presenceStatus.releaseAccountStatusIfUnused(socket.user.userId);
+    return;
+  }
   const { participant: p, justCameOnline } = joined;
   await applyPeerVisibility(p);
   // LiveKit token is NOT minted here for merely being online. A voice channel
@@ -127,8 +138,10 @@ async function handleJoin(socket: AppSocket, msg: JoinMessage): Promise<void> {
     // idempotent chat sends) and fall back otherwise
     protocolVersion: PROTOCOL_VERSION,
   });
-  broadcastToKnownPeers(p.userId, { t: 'participant-joined', participant: publicParticipant(p) }, p.id);
-  if (justCameOnline) broadcastToKnownPeers(p.userId, { t: 'user-online', userId: p.userId });
+  announceParticipantJoined(p);
+  // the status before `user-online`, so nobody sees "online" for an instant before "do not disturb"
+  presenceStatus.syncPresence(p.userId);
+  if (justCameOnline && !isInvisible(p.userId)) broadcastToKnownPeers(p.userId, { t: 'user-online', userId: p.userId });
   if (dmCall?.connect) await dmCalls.finishDmCallWelcome(p);
   log.info('joined', { participantId: p.id, username: p.name, ip: socket.ip });
 }

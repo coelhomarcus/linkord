@@ -3,7 +3,7 @@ import Fastify, { type FastifyError, type FastifyInstance, type FastifyReply, ty
 import fastifyStatic from '@fastify/static';
 import fastifyCompress from '@fastify/compress';
 import { config } from '../config/env.js';
-import { listOnlineUserIds, participants } from '../modules/presence/participants.js';
+import { listVisibleOnlineUserIds, participants } from '../modules/presence/participants.js';
 import { sendError, sendJson } from './respond.js';
 import { originGuard } from './originGuard.js';
 import { registerAuthRoutes } from '../modules/auth/routes.js';
@@ -111,7 +111,7 @@ export function createApp(): FastifyInstance {
   registerLinkPreviewRoutes(fastify);
   registerGifRoutes(fastify);
   registerGameRoutes(fastify);
-  registerFriendshipRoutes(fastify, { onlineUserIds: listOnlineUserIds });
+  registerFriendshipRoutes(fastify, { onlineUserIds: listVisibleOnlineUserIds });
   registerBlockRoutes(fastify);
   registerUserRoutes(fastify);
   registerServerRoutes(fastify);

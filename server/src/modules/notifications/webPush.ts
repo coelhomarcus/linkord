@@ -6,6 +6,7 @@ import { db } from '../../db/client.js';
 import { channelReadStates, conversationMembers, conversations, friendships, messages, notifications, pushDeliveryReceipts, pushSubscriptions, serverInvitations, servers, users, webhooks, type Conversation, type OutboxEvent } from '../../db/schema.js';
 import { getConversationForUser } from '../conversations/conversationsRepository.js';
 import { logger } from '../../lib/logger.js';
+import { recipientAcceptsPush } from './notificationsPolicy.js';
 import { canSendDirectMessage } from '../friendships/friendshipsRepository.js';
 import { resolveLocale, type Locale } from '../users/locale.js';
 import { chatNoticeText, type ChatNoticeInput, friendAcceptedNoticeText, friendRequestNoticeText, mentionNoticeText, previewText, pushAvatarPath, serverInvitationNoticeText, type PushNotice } from './pushNotices.js';
@@ -181,8 +182,10 @@ async function noticeFor(event: OutboxEvent, locale: Locale, showContent: boolea
 export async function deliverWebPush(event: OutboxEvent): Promise<PushDeliveryResult> {
   const done = { delivered: true, retryAfterMs: 0 };
   if (!pushAvailable) return done;
-  const [recipient] = await db.select({ status: users.status, locale: users.locale, showContent: users.pushShowContent }).from(users).where(eq(users.id, event.audienceUserId)).limit(1);
-  if (!recipient || recipient.status !== 'active') return done;
+  const [recipient] = await db.select({
+    status: users.status, locale: users.locale, showContent: users.pushShowContent, presenceStatus: users.presenceStatus,
+  }).from(users).where(eq(users.id, event.audienceUserId)).limit(1);
+  if (!recipient || !recipientAcceptsPush(recipient)) return done;
   const locale = resolveLocale(recipient.locale);
   const notice = await noticeFor(event, locale, recipient.showContent);
   if (!notice) return done;

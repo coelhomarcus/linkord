@@ -51,6 +51,7 @@ Browser push notifications, delivered through each browser vendor's push service
 - **Sender avatar:** the payload adds `avatar` (an own `/uploads/<id>` path, the still frame of an animated avatar when there is one) next to the app `icon`. Uploads need the session cookie, so `web/public/sw.js` fetches the image itself and inlines it as the notification icon (2.5 s timeout, 300 KB cap), falling back to the app icon on any failure. External avatar URLs are never used. The iOS declarative format ignores `avatar` and `renotify` and always shows the app icon.
 - **Delivery:** payloads use `aes128gcm`; the TTL is one hour for chat messages and 24 hours for everything else. Delivery honors the service's `Retry-After` and is driven by the notification outbox worker.
 - **Configuration:** `PUSH_VAPID_PUBLIC_KEY`, `PUSH_VAPID_PRIVATE_KEY` and `PUSH_VAPID_SUBJECT`. They must be set **together** — setting only some makes the server refuse to start. Generate them with `npx web-push generate-vapid-keys`. In production `APP_URL` must use HTTPS.
+- **Do not disturb:** a recipient whose `users.presence_status` is `dnd` at delivery time gets no push (`recipientAcceptsPush` in `notificationsPolicy.ts`). The event is marked processed, not postponed: the notification stays in the in-app list, and nothing piles up for the moment the status changes back.
 - **When missing:** push is simply unavailable (`pushAvailable` is false) and nothing is sent.
 
 ## KLIPY

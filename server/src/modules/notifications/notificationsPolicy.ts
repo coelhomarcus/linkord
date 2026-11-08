@@ -24,3 +24,10 @@ export function outboxRetryDelayMs(attempts: number, retryAfterMs = 0): number {
 }
 
 export const isOutboxFailed = (state: { processed: boolean; attempts: number }): boolean => !state.processed && state.attempts >= OUTBOX_MAX_ATTEMPTS;
+
+/** Whether a push reaches this account at all. "Do not disturb" drops it for good, not until later:
+ * the notification itself is still in the list, and a pile of stale pushes arriving the moment
+ * someone turns it off would be the disturbance. */
+export function recipientAcceptsPush(recipient: { status: string; presenceStatus: string }): boolean {
+  return recipient.status === 'active' && recipient.presenceStatus !== 'dnd';
+}

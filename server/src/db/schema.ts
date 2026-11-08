@@ -46,6 +46,13 @@ export const users = pgTable('users', {
   // false keeps message text out of push notifications (they show who and where only). It is read
   // by the server when it builds the push, so it lives on the account, not in the browser.
   pushShowContent: boolean('push_show_content').notNull().default(true),
+  // The presence status the person picked (see modules/presence/userStatus.ts). On the account so it
+  // holds on every device, and so push delivery can honour 'dnd' without asking the socket layer.
+  presenceStatus: varchar('presence_status', { length: 16 }).notNull().default('online'),
+  // '' text and emoji mean no custom status. A past expiry reads as none (it is also cleared then).
+  customStatusEmoji: varchar('custom_status_emoji', { length: 64 }).notNull().default(''),
+  customStatusText: varchar('custom_status_text', { length: 128 }).notNull().default(''),
+  customStatusExpiresAt: timestamp('custom_status_expires_at', { withTimezone: true }),
   // Last time the account actually went offline (last live socket gone,
   // after the reconnect grace). Null until the first disconnect after this
   // column existed — the migration backfills from sessions.last_seen_at.
@@ -61,6 +68,7 @@ export const users = pgTable('users', {
   // expression (see auth/users.ts), or Postgres won't use this index.
   uniqueIndex('users_username_lower_key').on(sql`lower(${t.username})`),
   uniqueIndex('users_email_lower_key').on(sql`lower(${t.email})`),
+  check('users_presence_status_check', sql`${t.presenceStatus} IN ('online','idle','dnd','invisible')`),
 ]);
 
 /** Login session. The key is the sha256 of the cookie value, never the raw
