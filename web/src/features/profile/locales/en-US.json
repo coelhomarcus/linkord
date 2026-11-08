@@ -125,7 +125,6 @@
     "addWidget": "Add widget",
     "yours": "Your widgets",
     "allAdded": "All available widgets have been added.",
-    "noConnections": "Connect MyAnimeList or GitHub to unlock widgets.",
     "manageConnections": "Manage connections",
     "emptyOwner": "Your Wall is empty. Add a widget to choose what shows.",
     "emptyVisitor": "This user has not published any Wall widgets yet.",
@@ -141,12 +140,20 @@
     "widgets": {
       "mal-recent-anime": "Recent anime activity",
       "github-profile": "GitHub profile",
-      "github-calendar": "GitHub contributions"
+      "github-calendar": "GitHub contributions",
+      "igdb-favorite-game": "Favorite game",
+      "igdb-liked-games": "Games I like",
+      "igdb-playing-games": "Games in rotation",
+      "igdb-wishlist-games": "Want to play"
     },
     "widgetDescriptions": {
       "mal-recent-anime": "The latest anime you watched",
       "github-profile": "Repositories, followers and who you follow",
-      "github-calendar": "Your contribution activity over the year"
+      "github-calendar": "Your contribution activity over the year",
+      "igdb-favorite-game": "The game of your life, with its cover on show",
+      "igdb-liked-games": "Games you enjoy, in a grid of covers",
+      "igdb-playing-games": "What you are playing right now",
+      "igdb-wishlist-games": "Your wishlist"
     },
     "github": {
       "repositories": "Repositories",
@@ -157,7 +164,12 @@
       "contributions": "{{total}} contributions in the last 12 months",
       "calendar": "GitHub contribution calendar",
       "day": "{{date}}: {{total}} contributions"
-    }
+    },
+    "noGames": "No games chosen yet.",
+    "gamesSource": "{{service}}, the source of the game data",
+    "chooseGames": "Choose games",
+    "doneGames": "Close",
+    "gamesToggle": "{{action}}: {{name}}"
   },
   "editor": {
     "fileTooLarge": "File too large (maximum {{max}}).",

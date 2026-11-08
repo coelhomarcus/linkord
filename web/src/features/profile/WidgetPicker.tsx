@@ -1,9 +1,9 @@
 import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/shared/ui/primitives/button';
-import { connectionBrand, type ServiceBrand } from './connectionBrands';
+import { widgetBrand, type ServiceBrand } from './connectionBrands';
 import { BrandIcon } from './profileLinks';
-import type { ConnectionProvider, WallWidget } from './connectionsTypes';
+import type { WallWidget } from './connectionsTypes';
 
 function WidgetChoice({ widget, brand, disabled, onPick }: { widget: WallWidget; brand: ServiceBrand; disabled: boolean; onPick: () => void }) {
   const { t } = useTranslation('profile');
@@ -29,20 +29,23 @@ function WidgetChoice({ widget, brand, disabled, onPick }: { widget: WallWidget;
   );
 }
 
+// the games widgets have no connection: they are IGDB's group
+const serviceOf = (widget: WallWidget) => widget.connection?.provider ?? 'igdb';
 function groupByService(choices: WallWidget[]) {
-  const groups: { provider: ConnectionProvider; widgets: WallWidget[] }[] = [];
+  const groups: { service: string; brand: ServiceBrand; widgets: WallWidget[] }[] = [];
   for (const widget of choices) {
-    const group = groups.find((entry) => entry.provider === widget.connection.provider);
+    const brand = widgetBrand(widget);
+    if (!brand) continue;
+    const group = groups.find((entry) => entry.service === serviceOf(widget));
     if (group) group.widgets.push(widget);
-    else groups.push({ provider: widget.connection.provider, widgets: [widget] });
+    else groups.push({ service: serviceOf(widget), brand, widgets: [widget] });
   }
   return groups;
 }
 
 /** The catalog of widgets not on the Wall yet, shown while editing. */
-export function WidgetPicker({ choices, hasAvailable, disabled, onPick, onManage }: {
+export function WidgetPicker({ choices, disabled, onPick, onManage }: {
   choices: WallWidget[];
-  hasAvailable: boolean;
   disabled: boolean;
   onPick: (widget: WallWidget) => void;
   onManage: () => void;
@@ -58,25 +61,24 @@ export function WidgetPicker({ choices, hasAvailable, disabled, onPick, onManage
         </div>
         <Button type="button" variant="ghost" size="sm" disabled={disabled} onClick={onManage}>{t('wall.manageConnections')}</Button>
       </div>
-      {groups.map(({ provider, widgets }) => {
-        const brand = connectionBrand(provider);
-        if (!brand) return null;
+      {groups.map(({ service, brand, widgets }) => {
+        const connection = widgets[0].connection;
         return (
-          <section key={provider} aria-label={brand.name} className="flex flex-col gap-2">
+          <section key={service} aria-label={brand.name} className="flex flex-col gap-2">
             <div className="flex min-w-0 items-baseline justify-between gap-3">
               <h4 className="flex min-w-0 items-center gap-2 text-label font-semibold">
                 <span aria-hidden className="flex flex-none text-text-primary"><BrandIcon kind={brand.kind} size={14} /></span>
                 <span className="truncate">{brand.name}</span>
               </h4>
-              <p className="truncate text-caption text-text-muted">@{widgets[0].connection.value}</p>
+              {connection && <p className="truncate text-caption text-text-muted">@{connection.value}</p>}
             </div>
             <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2">
-              {widgets.map((widget) => <WidgetChoice key={`${widget.connection.id}:${widget.type}`} widget={widget} brand={brand} disabled={disabled} onPick={() => onPick(widget)} />)}
+              {widgets.map((widget) => <WidgetChoice key={`${widget.connection?.id ?? 'games'}:${widget.type}`} widget={widget} brand={brand} disabled={disabled} onPick={() => onPick(widget)} />)}
             </div>
           </section>
         );
       })}
-      {choices.length === 0 && <p className="rounded-lg border border-dashed border-border-strong px-3 py-4 text-center text-label text-text-muted">{t(hasAvailable ? 'wall.allAdded' : 'wall.noConnections')}</p>}
+      {choices.length === 0 && <p className="rounded-lg border border-dashed border-border-strong px-3 py-4 text-center text-label text-text-muted">{t('wall.allAdded')}</p>}
     </div>
   );
 }

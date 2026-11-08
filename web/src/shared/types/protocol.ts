@@ -133,8 +133,6 @@ export const MAX_AVATAR_BYTES = 12 * 1024 * 1024;
 export const AVATAR_MIME_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'] as const;
 export const MAX_BANNER_LEN = 500;
 export const MAX_PROFILE_BIO_LEN = 300;
-export const MAX_PROFILE_LINKS = 8;
-export const MAX_PROFILE_LINK_LEN = 300;
 
 export interface SearchResult {
   msgId: number;

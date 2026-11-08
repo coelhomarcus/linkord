@@ -117,7 +117,7 @@ describe('profile Wall publication (real Postgres)', () => {
     const auth = await headers(owner.id);
     const saved = await app.inject({ method: 'PUT', url: '/api/me/wall', headers: auth, payload: { widgets: [{ connectionId: connection.id, type: 'mal-recent-anime' }] } });
     assert.equal(saved.statusCode, 200);
-    assert.equal(saved.json().available.length, 3);
+    assert.equal(saved.json().available.length, 7);
     const viewed = await app.inject({ method: 'GET', url: `/api/users/${owner.id}/wall`, headers: await headers(friend.id) });
     assert.equal(viewed.statusCode, 200);
     assert.equal(viewed.json().widgets.length, 1);
@@ -152,7 +152,7 @@ describe('profile Wall publication (real Postgres)', () => {
     assert.deepEqual(viewed.json().widgets, []);
     const mine = await readWall(owner.id, true);
     assert.deepEqual(mine.widgets, []);
-    assert.equal(mine.available?.some((widget) => widget.connection.id === connection.id), false);
+    assert.equal(mine.available?.some((widget) => widget.connection?.id === connection.id), false);
     // saving the Wall while it is hidden neither accepts it nor drops its saved widget
     await assert.rejects(saveWall(owner.id, [{ connectionId: connection.id, type: 'mal-recent-anime' }]), ConnectionMutationError);
     await saveWall(owner.id, []);

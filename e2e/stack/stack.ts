@@ -3,7 +3,7 @@ import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import path from 'node:path';
 
-export const E2E_DIR = path.resolve(import.meta.dirname, '..');
+const E2E_DIR = path.resolve(import.meta.dirname, '..');
 export const REPO_DIR = path.resolve(E2E_DIR, '..');
 export const BASE_URL = 'http://localhost:8080';
 const COMPOSE_FILE = path.join(E2E_DIR, 'docker', 'compose.yml');
@@ -25,7 +25,7 @@ function readState(): StackState | null {
 
 /** The image the app service runs right now. Kept in a file because Playwright
  * runs global setup, workers and teardown in different processes. */
-export function currentImage(): string {
+function currentImage(): string {
   const state = readState();
   if (!state) throw new Error('the e2e stack is not up');
   return state.image;
@@ -39,7 +39,7 @@ export function registrationCode(): string {
   return match[1]!;
 }
 
-export async function waitHealthy(timeoutMs = 60_000): Promise<void> {
+async function waitHealthy(timeoutMs = 60_000): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     try {
@@ -67,15 +67,6 @@ export async function deploy(image: string = currentImage()): Promise<void> {
   await waitHealthy();
 }
 
-/** Takes the app away for `seconds` (SIGTERM, then nothing listening), as a
- * slow deploy would, and brings the same image back. */
-export async function outage(seconds: number): Promise<void> {
-  compose(['stop', '-t', '10', 'app']);
-  await sleep(seconds * 1000);
-  compose(['start', 'app']);
-  await waitHealthy();
-}
-
 /** The app container is gone (after SIGTERM): the proxy has nothing behind it. */
 export function stopApp(): void {
   compose(['stop', '-t', '10', 'app']);
@@ -92,7 +83,7 @@ export function down(): void {
   rmSync(STATE_FILE, { force: true });
 }
 
-export function logs(lines = 200): string {
+function logs(lines = 200): string {
   try { return compose(['logs', '--no-color', '--tail', String(lines), 'app']); } catch { return '(no logs)'; }
 }
 

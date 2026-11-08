@@ -1,10 +1,12 @@
 import crypto from 'node:crypto';
-import { and, asc, eq, inArray } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, or } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { profileConnections, profileWallWidgets, users, type ProfileConnection } from '../../db/schema.js';
 import type { ErrorCode } from '../../http/errors.js';
 import { MAX_CONNECTIONS, parseConnection } from './policy.js';
-import { WIDGET_TYPES, type WallSelection, type WidgetType } from './types.js';
+import { WIDGET_TYPES, type ConnectionWidgetType, type WallSelection, type WidgetType } from './types.js';
+import { parseGameLists, readGameLists, replaceGameLists } from '../games/gameLists.js';
+import { GAME_LISTS, GAME_WIDGET_TYPES, gameListOf } from '../games/types.js';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { config } from '../../config/env.js';
 import { parseCookies } from '../../http/cookies.js';
@@ -22,7 +24,7 @@ export class ConnectionMutationError extends Error {
   readonly code: ErrorCode;
   constructor(status: number, code: ErrorCode) { super(code); this.status = status; this.code = code; }
 }
-export function connectionDto(row: ProfileConnection) {
+function connectionDto(row: ProfileConnection) {
   return { id: row.id, provider: row.provider, value: row.value, url: row.url, position: row.position, showOnProfile: row.showOnProfile,
     syncedAt: row.syncedAt?.toISOString() ?? null, syncError: row.syncError,
     status: row.provider === 'url' ? 'ready' : row.syncError ? 'error' : row.syncedAt ? 'ready' : 'pending' };
@@ -85,11 +87,15 @@ async function project(tx: Tx, userId: string) {
 }
 
 /** What other people see of someone's connections: only the ones shown on the profile. */
-export function publicLinks(rows: Pick<ProfileConnection, 'url' | 'showOnProfile'>[]): string[] {
+function publicLinks(rows: Pick<ProfileConnection, 'url' | 'showOnProfile'>[]): string[] {
   return rows.filter((row) => row.showOnProfile).map((row) => row.url);
 }
-export async function saveWall(userId: string, input: unknown): Promise<void> {
-  if (!Array.isArray(input) || input.length > 6) throw new ConnectionMutationError(400, 'invalid_wall');
+// every widget a person can have, with room to spare: one per game list plus three per connection service
+const MAX_WALL_WIDGETS = 10;
+export async function saveWall(userId: string, input: unknown, gameInput?: unknown): Promise<void> {
+  if (!Array.isArray(input) || input.length > MAX_WALL_WIDGETS) throw new ConnectionMutationError(400, 'invalid_wall');
+  const lists = parseGameLists(gameInput);
+  if (!lists) throw new ConnectionMutationError(400, 'invalid_wall');
   await db.transaction(async (tx) => {
     await tx.select({ id: users.id }).from(users).where(eq(users.id, userId)).for('update');
     // a hidden connection's widgets are neither offered nor touched here, so
@@ -100,27 +106,49 @@ export async function saveWall(userId: string, input: unknown): Promise<void> {
     for (const value of input) {
       if (!value || typeof value !== 'object' || Array.isArray(value)) throw new ConnectionMutationError(400, 'invalid_wall');
       const { connectionId, type } = value as Record<string, unknown>;
-      const row = connections.find((item) => item.id === connectionId);
-      if (!row || typeof type !== 'string' || !(WIDGET_TYPES[row.provider] as readonly string[]).includes(type)) throw new ConnectionMutationError(400, 'invalid_wall');
-      const key = `${row.id}:${type}`;
+      if (typeof type !== 'string') throw new ConnectionMutationError(400, 'invalid_wall');
+      let selection: WallSelection;
+      if (gameListOf(type)) {
+        // the games widgets have no connection
+        if (connectionId !== null && connectionId !== undefined) throw new ConnectionMutationError(400, 'invalid_wall');
+        selection = { connectionId: null, type: type as WidgetType };
+      } else {
+        const row = connections.find((item) => item.id === connectionId);
+        if (!row || !(WIDGET_TYPES[row.provider] as readonly string[]).includes(type)) throw new ConnectionMutationError(400, 'invalid_wall');
+        selection = { connectionId: row.id, type: type as ConnectionWidgetType };
+      }
+      const key = `${selection.connectionId ?? 'games'}:${type}`;
       if (seen.has(key)) throw new ConnectionMutationError(400, 'invalid_wall');
-      seen.add(key); selected.push({ connectionId: row.id, type: type as WidgetType });
+      seen.add(key); selected.push(selection);
     }
-    if (connections.length) await tx.delete(profileWallWidgets).where(inArray(profileWallWidgets.connectionId, connections.map((row) => row.id)));
-    if (selected.length) await tx.insert(profileWallWidgets).values(selected.map((value, position) => ({ id: crypto.randomUUID(), ...value, position })));
+    const visible = connections.map((row) => row.id);
+    await tx.delete(profileWallWidgets).where(and(eq(profileWallWidgets.userId, userId),
+      visible.length ? or(isNull(profileWallWidgets.connectionId), inArray(profileWallWidgets.connectionId, visible)) : isNull(profileWallWidgets.connectionId)));
+    if (selected.length) await tx.insert(profileWallWidgets).values(selected.map((value, position) => ({ id: crypto.randomUUID(), userId, ...value, position })));
+    // the picks are kept even for a list whose widget is off the Wall, so adding it back restores them
+    await replaceGameLists(tx, userId, lists);
   });
 }
 export async function readWall(userId: string, owner = false) {
   const selected = await db.select({ connection: profileConnections, widget: profileWallWidgets }).from(profileWallWidgets)
-    .innerJoin(profileConnections, eq(profileWallWidgets.connectionId, profileConnections.id))
-    .where(eq(profileConnections.userId, userId)).orderBy(profileWallWidgets.position);
-  const view = (connection: ProfileConnection, type: WidgetType) => ({
+    .leftJoin(profileConnections, eq(profileWallWidgets.connectionId, profileConnections.id))
+    .where(eq(profileWallWidgets.userId, userId)).orderBy(profileWallWidgets.position);
+  const games = await readGameLists(db, userId);
+  const view = (connection: ProfileConnection, type: ConnectionWidgetType) => ({
     connection: connectionDto(connection), type, data: connection.snapshot?.widgets[type] ?? null,
   });
-  const widgets = selected.filter(({ connection }) => connection.showOnProfile).map(({ connection, widget }) => view(connection, widget.type));
+  const gameView = (type: WidgetType) => ({ connection: null, type, data: { kind: 'games' as const, items: games[gameListOf(type)!] } });
+  const widgets = selected.flatMap(({ connection, widget }): (ReturnType<typeof view> | ReturnType<typeof gameView>)[] => {
+    if (!connection) return [gameView(widget.type)];
+    return connection.showOnProfile ? [view(connection, widget.type as ConnectionWidgetType)] : [];
+  });
   if (!owner) return { widgets };
-  const available = (await listConnections(userId)).filter((connection) => connection.showOnProfile)
-    .flatMap((connection) => WIDGET_TYPES[connection.provider].map((type) => view(connection, type)));
+  // the games widgets are always on offer: they need no account
+  const available = [
+    ...(await listConnections(userId)).filter((connection) => connection.showOnProfile)
+      .flatMap((connection) => WIDGET_TYPES[connection.provider].map((type) => view(connection, type))),
+    ...GAME_LISTS.map((list) => gameView(GAME_WIDGET_TYPES[list])),
+  ];
   return { widgets, available };
 }
 
@@ -160,7 +188,8 @@ export function registerConnectionRoutes(app: FastifyInstance): void {
     const me = await session(request, reply); if (!me) return;
     if (!allow(`wall:${me.userId}`, { windowMs: 60_000, max: 20 })) return sendError(reply, 429, 'rate_limited', 'Tente novamente em instantes.');
     try {
-      await saveWall(me.userId, jsonBody(request.body).widgets);
+      const body = jsonBody(request.body);
+      await saveWall(me.userId, body.widgets, body.games);
       sendJson(reply, 200, await readWall(me.userId, true));
     } catch (error) {
       if (error instanceof ConnectionMutationError) return sendError(reply, error.status, error.code, 'Seleção de widgets inválida.');
