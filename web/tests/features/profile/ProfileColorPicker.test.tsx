@@ -109,6 +109,16 @@ describe('profile colour picker', () => {
     await waitFor(() => expect(value()).toBe('#123456'));
   });
 
+  it('warns that a dark colour shows lighter on the Wall, and only then', async () => {
+    const { unmount } = render(<Harness initial="#000000" />);
+    let picker = await open('Cor do perfil: #000000');
+    expect(within(picker).getByRole('note')).toHaveTextContent('Cor escura: nos widgets do Mural ela aparece mais clara');
+    unmount();
+    render(<Harness />);
+    picker = await open();
+    expect(within(picker).queryByRole('note')).not.toBeInTheDocument();
+  });
+
   it('cannot be opened while the profile is saving', () => {
     render(<Harness disabled />);
     expect(screen.getByRole('button', { name: 'Cor do perfil: Verde' })).toBeDisabled();

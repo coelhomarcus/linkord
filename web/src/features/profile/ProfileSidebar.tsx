@@ -79,7 +79,9 @@ export function ProfileSidebar({ userId, owner, accent, initialTab = 'wall', sta
         {!owner && <TabsTrigger value="common" className={TAB}>{t('mutuals.title')}</TabsTrigger>}
       </TabsList>
 
-      <div className="scrollbar-none min-h-0 md:flex-1 md:overflow-y-auto md:overscroll-contain">
+      {/* the scroll box reaches the column's edges (content stays where it was), so the Wall's controls that
+          float over a widget's corner are not cut off by it */}
+      <div className="scrollbar-none min-h-0 md:-mx-5 md:flex-1 md:overflow-y-auto md:overscroll-contain md:px-5">
         {/* Inactive panels unmount by default, and the wall's first paint is a
             loading state, so switching away and back always flashed it. */}
         <TabsPanel value="wall" keepMounted>

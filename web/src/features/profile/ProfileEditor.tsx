@@ -284,7 +284,6 @@ export function ProfileEditor({ online, details, onClose, registerLeaveGuard }: 
                     {t('integration.addLink')}
                   </button>
                 </div>
-                <p className="text-caption text-text-muted">{t('editor.formats', { max: formatMB(MAX_AVATAR_BYTES) })}</p>
               </div>
             )}
           />

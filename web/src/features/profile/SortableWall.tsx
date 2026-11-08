@@ -12,8 +12,9 @@ export interface SortableWidget { id: string; name: string; content: ReactNode }
 // widgets only go up and down: the column is one widget wide
 const verticalOnly: Modifier = ({ transform }) => ({ ...transform, x: 0 });
 
-// shown on hover or keyboard focus; always where there is no hover to reveal them
-const REVEAL = 'opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100';
+// shown while the widget is hovered or a control has keyboard focus; always where there is no hover
+const REVEAL = 'pointer-events-none opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100';
+const FLOATING = 'flex size-7 items-center justify-center rounded-full border border-border-strong bg-bg-floating shadow-popover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50';
 
 function Row({ widget, disabled, onRemove }: { widget: SortableWidget; disabled: boolean; onRemove: () => void }) {
   const { t } = useTranslation('profile');
@@ -22,20 +23,20 @@ function Row({ widget, disabled, onRemove }: { widget: SortableWidget; disabled:
   });
   const style: CSSProperties = { transform: CSS.Translate.toString(transform), transition };
   return (
-    <div ref={setNodeRef} style={style} data-wall-widget className={cn('group relative w-full min-w-0 pl-9', isDragging && 'z-10')}>
-      {/* the controls sit in a gutter beside the card, so they never cover what it shows */}
-      <div className={cn('absolute top-3 left-0 flex flex-col items-center gap-2', isDragging ? 'opacity-100' : REVEAL)}>
+    <div ref={setNodeRef} style={style} data-wall-widget className={cn('group relative w-full min-w-0', isDragging && 'z-10')}>
+      {/* the controls float over the card's top-left corner and take no room of their own */}
+      <div className={cn('absolute top-3 -left-3 z-10 flex flex-col items-center gap-1.5', isDragging ? 'opacity-100' : REVEAL)}>
         <button
           ref={setActivatorNodeRef}
           type="button"
           disabled={disabled}
           aria-label={t('wall.sortable.handle', { name: widget.name })}
           title={t('wall.sortable.handle', { name: widget.name })}
-          className="flex size-7 cursor-grab touch-none items-center justify-center rounded-md text-text-muted transition-colors hover:bg-fill-hover hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing disabled:pointer-events-none disabled:opacity-50"
+          className={cn(FLOATING, 'cursor-grab touch-none text-text-secondary hover:bg-fill-hover hover:text-text-primary active:cursor-grabbing')}
           {...attributes}
           {...listeners}
         >
-          <DotsSixVerticalIcon size={20} weight="bold" />
+          <DotsSixVerticalIcon size={16} weight="bold" />
         </button>
         <button
           type="button"
@@ -43,7 +44,7 @@ function Row({ widget, disabled, onRemove }: { widget: SortableWidget; disabled:
           aria-label={t('wall.remove', { name: widget.name })}
           title={t('wall.remove', { name: widget.name })}
           onClick={onRemove}
-          className="flex size-7 items-center justify-center rounded-full border border-border-strong bg-bg-floating text-red-text shadow-popover transition-colors hover:bg-red hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+          className={cn(FLOATING, 'text-red-text hover:border-red hover:bg-red hover:text-white')}
         >
           <TrashIcon size={14} />
         </button>

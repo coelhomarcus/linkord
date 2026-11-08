@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { AVATAR_COLOR_OPTIONS, colorFor } from '@/shared/Avatar';
 import { cn } from '@/shared/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/primitives/popover';
+import { isTooDarkForAccent, readableAccent } from './accentColor';
 import { hexOf, presetHex } from './avatarPresets';
 import { contrastOn, hexToHsv, hsvToHex, parseHex, type Hsv } from './colorMath';
 
@@ -166,6 +167,12 @@ function Picker({ value, disabled, onChange }: { value: string; disabled?: boole
           </button>
         )}
       </div>
+      {isTooDarkForAccent(current) && (
+        <p role="note" className="flex items-start gap-2 text-caption text-text-muted">
+          <span aria-hidden className="mt-0.5 size-3 flex-none rounded-full" style={{ background: readableAccent(current) }} />
+          <span>{t('colorPicker.darkNote')}</span>
+        </p>
+      )}
       <div className="flex flex-col gap-2">
         <span className="text-caption font-medium text-text-muted">{t('colorPicker.presets')}</span>
         <div className="grid grid-cols-8 gap-1.5">

@@ -424,6 +424,13 @@ describe('Wall widget cards', () => {
     expect(screen.getByRole('img', { name: /4 contribuições/ })).toBeInTheDocument();
     expect(screen.getByText('4 contribuições nos últimos 12 meses')).toBeInTheDocument();
   });
+  it('draws the calendar with a lighter version of a profile colour too dark to read', () => {
+    const days = [{ date: '2026-11-02', count: 9, level: 4 }];
+    render(<WallWidgetCard widget={{ connection: { ...connection, provider: 'github' }, type: 'github-calendar', data: { kind: 'github-calendar', total: 9, days } }} accent="#000000" />);
+    const busiest = screen.getByRole('img');
+    expect(busiest).not.toHaveStyle({ backgroundColor: '#000000' });
+    expect(busiest.style.backgroundColor).not.toBe('');
+  });
   it('draws the calendar with the profile accent, and leaves empty days neutral', () => {
     const days = [{ date: '2026-11-01', count: 0, level: 0 }, { date: '2026-11-02', count: 9, level: 4 }];
     render(<WallWidgetCard widget={{ connection: { ...connection, provider: 'github' }, type: 'github-calendar', data: { kind: 'github-calendar', total: 9, days } }} accent="#ff8800" />);

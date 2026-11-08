@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { AVATAR_COLOR_OPTIONS } from '@/shared/Avatar';
 import { PRESET_OKLCH, hexOf, presetHex } from '@/features/profile/avatarPresets';
-import { contrastOn, hexToHsv, hsvToHex, oklchToHex, parseHex } from '@/features/profile/colorMath';
+import { contrastOn, hexToHsv, hexToOklch, hsvToHex, oklchToHex, parseHex } from '@/features/profile/colorMath';
 
 describe('colour conversions', () => {
   it('reads a hex colour with or without #, short or long, and nothing else', () => {
@@ -23,6 +23,16 @@ describe('colour conversions', () => {
     expect(oklchToHex(0, 0, 0)).toBe('#000000');
     // the reference value of pure red in OKLCH
     expect(oklchToHex(0.627955, 0.257683, 29.234)).toBe('#ff0000');
+  });
+  it('reads a hex colour back into OKLCH', () => {
+    for (const [l, c, h] of [[0.55, 0.15, 275], [0.7, 0.1, 40], [0.3, 0.05, 150]] as const) {
+      const back = hexToOklch(oklchToHex(l, c, h));
+      expect(back.l).toBeCloseTo(l, 2);
+      expect(back.c).toBeCloseTo(c, 2);
+      // the 8-bit round trip moves the hue by a fraction of a degree
+      expect(Math.abs(back.h - h)).toBeLessThan(1.5);
+    }
+    expect(hexToOklch('#ffffff').l).toBeCloseTo(1, 3);
   });
   it('picks a readable tick colour for a swatch', () => {
     expect(contrastOn('#ffffff')).toBe('#000000');
