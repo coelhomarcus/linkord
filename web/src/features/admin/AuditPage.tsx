@@ -6,15 +6,16 @@ import { useUrlSearch } from '@/shared/hooks/useUrlSearch';
 import { fetchAudit } from './adminApi';
 import type { AuditRow } from './adminApi';
 import { ACTION_LABELS, actionLabel, dayStartIso, formatWhenShort, nextDayStartIso, reportTargetLabel } from './adminFormat';
-import { AdminDateField, AdminListToolbar, AdminSelectField } from './AdminListToolbar';
+import { AdminDateField, AdminListToolbar, AdminSelectField, AdminTextField } from './AdminListToolbar';
 import { AuditRowDetails } from './AuditRowDetails';
-import { AdminTable, AdminTd, AdminTh, AdminTr } from './AdminTable';
+import { AdminTable, AdminTd, AdminTh, AdminTr, AdminStackedList } from './AdminTable';
 import { ListChrome } from './adminUi';
 import { useAdminList } from './useAdminList';
 import { useAdminTableFits } from './useAdminMode';
 import { useAdminQuery } from './useAdminQuery';
 import type { QuerySchema } from './useAdminQuery';
 import { AppLink } from '@/shared/ui/app-link';
+import { AdminPageTitle } from './AdminSection';
 
 // group and bot stay filterable: records from before servers still carry them
 const TARGET_TYPES = ['all', 'user', 'server', 'webhook', 'group', 'bot', 'message', 'report', 'system'] as const;
@@ -145,24 +146,18 @@ export function AuditPage() {
 
   // a code the labels don't know (a link, an older record) is kept, not silently reset
   const actionOptions = [{ value: '', label: t('ui.allActions') }, ...(action && !ACTION_LABELS[action] ? [{ value: action, label: `${action} (${t('audit.unknownCode')})` }] : []), ...Object.keys(ACTION_LABELS).sort((a, b) => actionLabel(a).localeCompare(actionLabel(b), undefined, { sensitivity: 'base' })).map((value) => ({ value, label: actionLabel(value) }))];
-  const field = 'h-9 rounded-md border border-border bg-fill-subtle px-2.5 text-label text-text-primary outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
   return (
     <div className="flex flex-col gap-4">
+      <AdminPageTitle title={t('nav.audit')} description={t('pages.audit')} />
       <AdminListToolbar
         filters={(
           <>
             <AdminSelectField<string> label={t('ui.action')} value={action} onChange={(next) => update({ action: next })} options={actionOptions} />
             <AdminSelectField<string> label={t('ui.targetType')} value={filters.targetType} onChange={(next) => update({ targetType: next })}
               options={[{ value: 'all', label: t('ui.all') }, ...TARGET_TYPES.filter((targetType) => targetType !== 'all').map((targetType) => ({ value: targetType, label: reportTargetLabel(targetType) }))]} />
-            <label className="flex min-w-40 flex-1 flex-col gap-1 text-caption text-text-muted">
-              {t('ui.administrator')}
-              <input aria-label={t('ui.administrator')} placeholder={t('ui.userOrId')} value={actor.value} onChange={(e) => actor.setValue(e.target.value)} className={field} />
-            </label>
-            <label className="flex min-w-40 flex-1 flex-col gap-1 text-caption text-text-muted">
-              {t('ui.targetId')}
-              <input aria-label={t('ui.targetId')} placeholder={t('ui.exactId')} value={target.value} onChange={(e) => target.setValue(e.target.value)} className={field} />
-            </label>
+            <AdminTextField label={t('ui.administrator')} placeholder={t('ui.userOrId')} value={actor.value} onChange={actor.setValue} />
+            <AdminTextField label={t('ui.targetId')} placeholder={t('ui.exactId')} value={target.value} onChange={target.setValue} />
           </>
         )}
         advanced={(
@@ -187,7 +182,7 @@ export function AuditPage() {
             <tbody>{list.items.map((row) => <WideRow key={row.id} row={row} />)}</tbody>
           </AdminTable>
         ) : (
-          <ul className="flex flex-col divide-y divide-border-subtle rounded-lg border border-border">{list.items.map((row) => <CompactRow key={row.id} row={row} />)}</ul>
+          <AdminStackedList>{list.items.map((row) => <CompactRow key={row.id} row={row} />)}</AdminStackedList>
         )}
       </ListChrome>
     </div>

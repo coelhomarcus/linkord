@@ -6,7 +6,7 @@ import { fetchAdminReports } from './adminApi';
 import type { AdminReportRow } from './adminApi';
 import { reportTargetLabel, formatWhen, formatWhenShort } from './adminFormat';
 import { AdminListToolbar, AdminSelectField } from './AdminListToolbar';
-import { AdminTable, AdminTd, AdminTh, AdminTr } from './AdminTable';
+import { AdminTable, AdminTd, AdminTh, AdminTr, AdminStackedList } from './AdminTable';
 import { Badge, ListChrome } from './adminUi';
 import { fromList } from './useAdminBack';
 import { useAdminList } from './useAdminList';
@@ -14,6 +14,7 @@ import { useAdminTableFits } from './useAdminMode';
 import { useAdminQuery } from './useAdminQuery';
 import type { QuerySchema } from './useAdminQuery';
 import { AppLink } from '@/shared/ui/app-link';
+import { AdminPageTitle } from './AdminSection';
 
 type Queue = 'open' | 'reviewing' | 'closed';
 type TargetFilter = 'all' | 'user' | 'server' | 'message';
@@ -49,6 +50,7 @@ export function ReportsPage() {
 
   return (
     <div className="flex flex-col gap-4">
+      <AdminPageTitle title={t('nav.reports')} description={t('pages.reports')} />
       <AdminListToolbar
         filters={(
           <>
@@ -82,7 +84,7 @@ export function ReportsPage() {
             </tbody>
           </AdminTable>
         ) : (
-          <ul className="flex flex-col divide-y divide-border-subtle rounded-lg border border-border">
+          <AdminStackedList>
             {list.items.map((r) => (
               <li key={r.id} className="flex flex-col gap-2 p-3">
                 <ReportLink report={r} from={origin} />
@@ -94,7 +96,7 @@ export function ReportsPage() {
                 </div>
               </li>
             ))}
-          </ul>
+          </AdminStackedList>
         )}
       </ListChrome>
     </div>

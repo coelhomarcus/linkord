@@ -66,7 +66,7 @@ export function reportTargetLabel(target: string): string {
   return i18n.t(`admin:audit.${target}` as never, { defaultValue: fallback });
 }
 
-export const REPORT_RESOLUTION_LABEL: Record<string, string> = {
+const REPORT_RESOLUTION_LABEL: Record<string, string> = {
   no_action: 'Resolvida sem ação', user_suspended: 'Conta suspensa', server_suspended: 'Servidor suspenso', group_suspended: 'Grupo suspenso', message_deleted: 'Mensagem apagada',
 };
 

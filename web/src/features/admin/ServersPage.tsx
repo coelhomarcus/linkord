@@ -10,7 +10,7 @@ import { fetchAdminServers } from './adminApi';
 import type { AdminServerRow } from './adminApi';
 import { formatDateShort, formatWhen } from './adminFormat';
 import { AdminListToolbar, AdminSelectField } from './AdminListToolbar';
-import { AdminTable, AdminTd, AdminTh, AdminTr } from './AdminTable';
+import { AdminTable, AdminTd, AdminTh, AdminTr, AdminStackedList } from './AdminTable';
 import { Badge, ListChrome } from './adminUi';
 import { CopyIdButton } from './CopyIdButton';
 import { fromList } from './useAdminBack';
@@ -19,6 +19,7 @@ import { useAdminTableFits } from './useAdminMode';
 import { useAdminQuery } from './useAdminQuery';
 import type { QuerySchema } from './useAdminQuery';
 import { AppLink } from '@/shared/ui/app-link';
+import { AdminPageTitle } from './AdminSection';
 
 type StatusFilter = 'all' | 'active' | 'suspended' | 'orphan';
 
@@ -72,6 +73,7 @@ export function ServersPage() {
 
   return (
     <div className="flex flex-col gap-4">
+      <AdminPageTitle title={t('nav.servers')} description={t('pages.servers')} />
       <AdminListToolbar
         search={{ value: query, onChange: setQuery, placeholder: t('ui.searchNameOrId'), label: t('ui.searchServers') }}
         filters={(
@@ -104,7 +106,7 @@ export function ServersPage() {
             </tbody>
           </AdminTable>
         ) : (
-          <ul className="flex flex-col divide-y divide-border-subtle rounded-lg border border-border">
+          <AdminStackedList>
             {list.items.map((g) => (
               <li key={g.id} className="flex flex-col gap-2 p-3">
                 <div className="flex items-center gap-2">
@@ -119,7 +121,7 @@ export function ServersPage() {
                 </div>
               </li>
             ))}
-          </ul>
+          </AdminStackedList>
         )}
       </ListChrome>
     </div>

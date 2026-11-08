@@ -13,7 +13,7 @@ import { AdminEntityHeader } from './AdminEntityHeader';
 import { AdminActionRow, AdminFieldRow, AdminFields, AdminSection } from './AdminSection';
 import { ReasonDialog } from './ReasonDialog';
 import { formatWhen } from './adminFormat';
-import { AdminTextLink, AuditList, Badge, DetailStatusView, ListChrome, RefreshFailedNotice } from './adminUi';
+import { AdminTextLink, AuditList, Badge, DetailStatusView, ListChrome, RefreshFailedNotice, AdminBackLink } from './adminUi';
 import { RESTORE_LIST, useAdminBack } from './useAdminBack';
 import { useAdminDetail } from './useAdminDetail';
 import { useAdminQuery } from './useAdminQuery';
@@ -92,8 +92,8 @@ function ServerDetail({ id }: { id: string }) {
   const ownerDialog = typeof dialog === 'object' && dialog !== null ? dialog.owner : null;
 
   return (
-    <div className="flex flex-col gap-5">
-      <AdminTextLink to={back} state={RESTORE_LIST} className="w-fit text-caption text-text-muted">{t('entity.backServers')}</AdminTextLink>
+    <div className="flex flex-col gap-6">
+      <AdminBackLink to={back} state={RESTORE_LIST}>{t('entity.backServers')}</AdminBackLink>
       {refreshFailed && <RefreshFailedNotice refreshing={refreshing} onRetry={() => void refresh()} />}
 
       <AdminEntityHeader

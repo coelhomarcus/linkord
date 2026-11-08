@@ -10,7 +10,7 @@ import { AdminEntityHeader } from './AdminEntityHeader';
 import { AdminActionRow, AdminFieldRow, AdminFields, AdminSection } from './AdminSection';
 import { ReasonDialog } from './ReasonDialog';
 import { formatWhen } from './adminFormat';
-import { AdminTextLink, AuditList, Badge, DetailStatusView, ListChrome, RefreshFailedNotice } from './adminUi';
+import { AuditList, Badge, DetailStatusView, ListChrome, RefreshFailedNotice, AdminBackLink } from './adminUi';
 import { RESTORE_LIST, useAdminBack } from './useAdminBack';
 import { useAdminDetail } from './useAdminDetail';
 import { useAdminQuery } from './useAdminQuery';
@@ -54,8 +54,8 @@ function WebhookDetail({ id }: { id: string }) {
 
   const { webhook } = detail;
   return (
-    <div className="flex flex-col gap-5">
-      <AdminTextLink to={back} state={RESTORE_LIST} className="w-fit text-caption text-text-muted">{t('entity.backWebhooks')}</AdminTextLink>
+    <div className="flex flex-col gap-6">
+      <AdminBackLink to={back} state={RESTORE_LIST}>{t('entity.backWebhooks')}</AdminBackLink>
       {refreshFailed && <RefreshFailedNotice refreshing={refreshing} onRetry={() => void refresh()} />}
 
       <AdminEntityHeader

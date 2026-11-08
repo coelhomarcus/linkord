@@ -10,7 +10,7 @@ import { fetchAdminWebhooks } from './adminApi';
 import type { AdminWebhookRow } from './adminApi';
 import { formatDateShort, formatWhen, formatWhenShort } from './adminFormat';
 import { AdminListToolbar } from './AdminListToolbar';
-import { AdminTable, AdminTd, AdminTh, AdminTr } from './AdminTable';
+import { AdminTable, AdminTd, AdminTh, AdminTr, AdminStackedList } from './AdminTable';
 import { ListChrome } from './adminUi';
 import { CopyIdButton } from './CopyIdButton';
 import { fromList } from './useAdminBack';
@@ -19,6 +19,7 @@ import { useAdminTableFits } from './useAdminMode';
 import { useAdminQuery } from './useAdminQuery';
 import type { QuerySchema } from './useAdminQuery';
 import { AppLink } from '@/shared/ui/app-link';
+import { AdminPageTitle } from './AdminSection';
 
 const QUERY: QuerySchema<'q'> = { q: { default: '' } };
 
@@ -66,6 +67,7 @@ export function WebhooksPage() {
 
   return (
     <div className="flex flex-col gap-4">
+      <AdminPageTitle title={t('nav.webhooks')} description={t('pages.webhooks')} />
       <AdminListToolbar
         search={{ value: query, onChange: setQuery, placeholder: t('ui.searchNameOrServer'), label: t('ui.searchWebhooks') }}
         summary={list.status === 'ready' && list.items.length > 0 ? `${list.items.length} ${t('ui.webhook', { count: list.items.length })}${list.hasMore ? t('ui.moreResults') : ''}` : undefined}
@@ -93,7 +95,7 @@ export function WebhooksPage() {
             </tbody>
           </AdminTable>
         ) : (
-          <ul className="flex flex-col divide-y divide-border-subtle rounded-lg border border-border">
+          <AdminStackedList>
             {list.items.map((w) => (
               <li key={w.id} className="flex flex-col gap-2 p-3">
                 <div className="flex items-center gap-2">
@@ -107,7 +109,7 @@ export function WebhooksPage() {
                 </div>
               </li>
             ))}
-          </ul>
+          </AdminStackedList>
         )}
       </ListChrome>
     </div>

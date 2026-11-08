@@ -11,7 +11,7 @@ import { AdminEntityHeader } from './AdminEntityHeader';
 import { AdminActionRow, AdminFieldRow, AdminFields, AdminSection } from './AdminSection';
 import { ReasonDialog } from './ReasonDialog';
 import { reportResolutionLabel, reportTargetLabel, formatWhen } from './adminFormat';
-import { AdminTextLink, AuditList, Badge, DetailStatusView, RefreshFailedNotice } from './adminUi';
+import { AdminTextLink, AuditList, Badge, DetailStatusView, RefreshFailedNotice, AdminBackLink } from './adminUi';
 import { RESTORE_LIST, useAdminBack } from './useAdminBack';
 import { useAdminDetail } from './useAdminDetail';
 import { AppLink } from '@/shared/ui/app-link';
@@ -77,8 +77,8 @@ function ReportDetail({ id }: { id: string }) {
   }));
 
   return (
-    <div className="flex flex-col gap-5">
-      <AdminTextLink to={back} state={RESTORE_LIST} className="w-fit text-caption text-text-muted">{t('report.back')}</AdminTextLink>
+    <div className="flex flex-col gap-6">
+      <AdminBackLink to={back} state={RESTORE_LIST}>{t('report.back')}</AdminBackLink>
       {refreshFailed && <RefreshFailedNotice refreshing={refreshing} onRetry={() => void refresh()} />}
 
       <AdminEntityHeader

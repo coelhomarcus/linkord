@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { type LinkProps } from 'react-router';
 import { Button } from '@/shared/ui/primitives/button';
 import { cn } from '@/shared/lib/utils';
+import { SettingsNotice } from '@/shared/ui/settings-layout';
 import type { AuditRow } from './adminApi';
 import { actionLabel, formatWhen } from './adminFormat';
 import type { AdminDetailStatus } from './useAdminDetail';
@@ -13,6 +14,7 @@ const TONES: Record<string, string> = {
   open: 'bg-yellow/15 text-yellow', reviewing: 'bg-primary/15 text-accent-text',
   resolved: 'bg-green/15 text-green', dismissed: 'bg-fill-active text-text-muted',
   admin: 'bg-primary/15 text-accent-text', user: 'bg-fill-active text-text-muted',
+  failed: 'bg-red/15 text-red-text',
 };
 /** In-flow navigation that used to be a raw underlined `<AppLink>`. */
 export function AdminTextLink({ to, state, children, className }: {
@@ -28,9 +30,18 @@ export function AdminTextLink({ to, state, children, className }: {
   );
 }
 
+/** The way back to the list a detail page was opened from, above its header. */
+export function AdminBackLink({ to, state, children }: { to: LinkProps['to']; state?: unknown; children: ReactNode }) {
+  return (
+    <AppLink to={to} state={state} className="w-fit rounded-md text-label font-medium text-text-muted outline-none transition-colors hover:text-text-primary focus-visible:ring-2 focus-visible:ring-ring">
+      {children}
+    </AppLink>
+  );
+}
+
 export function Badge({ value }: { value: string }) {
   const { t } = useTranslation('admin');
-  return <span className={cn('inline-flex flex-none rounded-sm px-1.5 py-0.5 text-micro font-medium', TONES[value] ?? 'bg-fill-active text-text-muted')}>{t(`status.${value}`, { defaultValue: value })}</span>;
+  return <span className={cn('inline-flex flex-none items-center rounded-full px-2 py-0.5 text-caption font-medium', TONES[value] ?? 'bg-fill-active text-text-muted')}>{t(`status.${value}`, { defaultValue: value })}</span>;
 }
 
 export function AuditList({ items, empty }: { items: AuditRow[]; empty?: string }) {
@@ -39,10 +50,10 @@ export function AuditList({ items, empty }: { items: AuditRow[]; empty?: string 
   return (
     <ul className="flex flex-col divide-y divide-border-subtle">
       {items.map((row) => (
-        <li key={row.id} className="flex flex-col gap-0.5 py-2.5 text-label">
+        <li key={row.id} className="flex flex-col gap-1 py-3.5 text-label first:pt-0 last:pb-0">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-medium text-text-primary">{actionLabel(row.action)}</span>
-            {row.result === 'failed' && <span className="rounded-sm bg-red/15 px-1.5 py-0.5 text-micro font-medium text-red-text">{t('status.failed')}</span>}
+            {row.result === 'failed' && <Badge value="failed" />}
             <span className="text-caption text-text-muted">{formatWhen(row.at)}</span>
           </div>
           <p className="text-caption text-text-muted">
@@ -78,7 +89,7 @@ export function ListChrome({ list, empty, emptyAction, children }: {
   children: ReactNode;
 }) {
   const { t } = useTranslation('admin');
-  if (list.status === 'loading') return <p className="py-8 text-center text-label text-text-muted">{t('chrome.loading')}</p>;
+  if (list.status === 'loading') return <p role="status" className="py-10 text-center text-label text-text-muted">{t('chrome.loading')}</p>;
   if (list.status === 'error') {
     return (
       <div className="flex flex-col items-center gap-3 py-8 text-center">
@@ -89,8 +100,8 @@ export function ListChrome({ list, empty, emptyAction, children }: {
   }
   if (list.items.length === 0) {
     return (
-      <div className="flex flex-col items-center gap-3 py-10 text-center">
-        <p className="text-label text-text-muted">{empty}</p>
+      <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border-subtle px-4 py-12 text-center">
+        <p className="text-body text-text-muted">{empty}</p>
         {emptyAction}
       </div>
     );
@@ -98,10 +109,9 @@ export function ListChrome({ list, empty, emptyAction, children }: {
   return (
     <>
       {list.stale && (
-        <div role="alert" className="flex flex-wrap items-center gap-3 rounded-lg border border-yellow/30 bg-yellow/10 px-3 py-2 text-label text-text-primary">
-          <p className="min-w-0 flex-1">{t('chrome.stale')}</p>
-          <Button type="button" variant="secondary" size="sm" disabled={list.refreshing} onClick={list.retry}>{list.refreshing ? t('chrome.refreshing') : t('chrome.refresh')}</Button>
-        </div>
+        <SettingsNotice tone="warning" action={<Button type="button" variant="secondary" size="sm" disabled={list.refreshing} onClick={list.retry}>{list.refreshing ? t('chrome.refreshing') : t('chrome.refresh')}</Button>}>
+          {t('chrome.stale')}
+        </SettingsNotice>
       )}
       <div className="flex flex-col">{children}</div>
       {list.loadMoreError && <p role="alert" className="text-center text-caption text-red-text">{t('chrome.loadMoreFailed')}</p>}
@@ -147,9 +157,8 @@ export function DetailStatusView({ status, missing, failed, backTo, backLabel, o
 export function RefreshFailedNotice({ refreshing, onRetry }: { refreshing: boolean; onRetry: () => void }) {
   const { t } = useTranslation('admin');
   return (
-    <div role="alert" className="flex flex-wrap items-center gap-3 rounded-lg border border-yellow/30 bg-yellow/10 px-3 py-2 text-label text-text-primary">
-      <p className="min-w-0 flex-1">{t('chrome.actionDoneStale')}</p>
-      <Button type="button" variant="secondary" size="sm" disabled={refreshing} onClick={onRetry}>{refreshing ? t('chrome.refreshing') : t('chrome.refresh')}</Button>
-    </div>
+    <SettingsNotice tone="warning" action={<Button type="button" variant="secondary" size="sm" disabled={refreshing} onClick={onRetry}>{refreshing ? t('chrome.refreshing') : t('chrome.refresh')}</Button>}>
+      {t('chrome.actionDoneStale')}
+    </SettingsNotice>
   );
 }

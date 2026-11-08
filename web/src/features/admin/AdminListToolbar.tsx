@@ -7,7 +7,8 @@ import { Button } from '@/shared/ui/primitives/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/primitives/select';
 import { cn } from '@/shared/lib/utils';
 
-const FIELD = 'h-9 rounded-md border border-border bg-fill-subtle px-2.5 text-label text-text-primary outline-none focus-visible:ring-2 focus-visible:ring-ring';
+const FIELD = 'h-10 rounded-lg border border-border bg-fill-subtle px-3 text-label text-text-primary outline-none focus-visible:ring-2 focus-visible:ring-ring';
+const FIELD_LABEL = 'flex min-w-0 flex-col gap-1.5 text-caption font-medium text-text-muted';
 
 export function AdminSelectField<T extends string>({ label, value, onChange, options }: {
   label: string;
@@ -17,10 +18,10 @@ export function AdminSelectField<T extends string>({ label, value, onChange, opt
 }) {
   const selected = options.find((option) => option.value === value)?.label ?? value;
   return (
-    <label className="flex min-w-0 flex-col gap-1 text-caption text-text-muted">
+    <label className={FIELD_LABEL}>
       {label}
       <Select value={value} onValueChange={(next) => { if (next) onChange(next as T); }}>
-        <SelectTrigger aria-label={label} className="w-full min-w-36">
+        <SelectTrigger aria-label={label} className="h-10 w-full min-w-36">
           <SelectValue>{() => selected}</SelectValue>
         </SelectTrigger>
         <SelectContent align="start">
@@ -33,9 +34,19 @@ export function AdminSelectField<T extends string>({ label, value, onChange, opt
   );
 }
 
+/** A free-text filter (an id, a name) with its label above, like the select and date filters beside it. */
+export function AdminTextField({ label, value, placeholder, onChange }: { label: string; value: string; placeholder?: string; onChange: (next: string) => void }) {
+  return (
+    <label className={cn(FIELD_LABEL, 'min-w-40 flex-1')}>
+      {label}
+      <input aria-label={label} placeholder={placeholder} value={value} onChange={(event) => onChange(event.target.value)} className={cn(FIELD, 'placeholder:text-text-muted')} />
+    </label>
+  );
+}
+
 export function AdminDateField({ label, value, onChange }: { label: string; value: string; onChange: (next: string) => void }) {
   return (
-    <label className="flex min-w-0 flex-col gap-1 text-caption text-text-muted">
+    <label className={FIELD_LABEL}>
       {label}
       <input type="date" value={value} onChange={(event) => onChange(event.target.value)} className={FIELD} />
     </label>
@@ -65,7 +76,7 @@ export function AdminListToolbar({ search, filters, advanced, advancedActive, su
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-end gap-3">
         {search && (
-          <div className="flex h-9 min-w-56 flex-1 items-center gap-2 rounded-md border border-border bg-fill-subtle px-3">
+          <div className="flex h-10 min-w-56 flex-1 items-center gap-2 rounded-lg border border-border bg-fill-subtle px-3 focus-within:border-border-accent">
             <MagnifyingGlassIcon size={20} aria-hidden className="flex-none text-text-muted" />
             <input
               value={search.value}
@@ -78,7 +89,7 @@ export function AdminListToolbar({ search, filters, advanced, advancedActive, su
         )}
         {filters}
         {advanced && (
-          <Button type="button" variant="secondary" size="sm" className="h-9" aria-expanded={open} aria-controls={panelId} onClick={() => setAdvancedOpen((v) => !v)}>
+          <Button type="button" variant="secondary" className="h-10" aria-expanded={open} aria-controls={panelId} onClick={() => setAdvancedOpen((v) => !v)}>
             {t('ui.moreFilters')}
             <CaretDownIcon size={16} aria-hidden className={cn('transition-transform', open && 'rotate-180')} />
           </Button>
