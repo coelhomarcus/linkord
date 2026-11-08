@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { FLOATING_BAR_SLOT_CLASS, FloatingBar, FloatingBarSlotProvider } from '@/features/profile/FloatingBar';
+import { FLOATING_BAR_SLOT_CLASS, FloatingBar, FloatingBarSlotProvider } from '@/shared/FloatingBar';
 
 function WithSlot() {
   const [slot, setSlot] = useState<HTMLElement | null>(null);
@@ -55,6 +55,11 @@ describe('floating bars', () => {
     expect(screen.getByText('Salvando…', { selector: 'p' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Redefinir' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Salvando…' })).toBeDisabled();
+  });
+  it('keeps Reset but blocks Save when the edits cannot be saved as they are', () => {
+    render(<FloatingBar label="Barra" status="pending" saveDisabled onReset={() => {}} />);
+    expect(screen.getByRole('button', { name: 'Redefinir' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Salvar' })).toBeDisabled();
   });
   it('announces the error instead of the reminder and keeps the buttons to try again', () => {
     render(<FloatingBar label="Barra" status="error" error="Falhou feio." onReset={() => {}} />);

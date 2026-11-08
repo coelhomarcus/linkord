@@ -9,7 +9,7 @@ import { ROUTES } from '@/shared/lib/routes';
 import { Button } from '@/shared/ui/primitives/button';
 import { EmptyState } from '@/shared/ui/empty-state';
 import { AddWidgetDialog } from './AddWidgetDialog';
-import { FloatingBar } from './FloatingBar';
+import { FloatingBar } from '@/shared/FloatingBar';
 import { createConnection, fetchWall, saveWall } from './profileApi';
 import { SortableWall } from './SortableWall';
 import { WallSkeleton } from './WallSkeleton';

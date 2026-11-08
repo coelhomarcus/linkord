@@ -192,13 +192,6 @@
     "emptyVisitorTitle": "Nada no Mural ainda",
     "connectAccounts": "Conectar contas"
   },
-  "bar": {
-    "unsaved": "Não se esqueça de salvar suas alterações!",
-    "reset": "Redefinir",
-    "save": "Salvar",
-    "saving": "Salvando…",
-    "saved": "Alterações salvas."
-  },
   "editor": {
     "fileTooLarge": "Arquivo muito grande (máximo {{max}}).",
     "uploadFailed": {

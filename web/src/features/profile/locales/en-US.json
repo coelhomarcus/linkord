@@ -192,13 +192,6 @@
     "emptyVisitorTitle": "Nothing on the Wall yet",
     "connectAccounts": "Connect accounts"
   },
-  "bar": {
-    "unsaved": "Don't forget to save your changes!",
-    "reset": "Reset",
-    "save": "Save",
-    "saving": "Saving…",
-    "saved": "Changes saved."
-  },
   "editor": {
     "fileTooLarge": "File too large (maximum {{max}}).",
     "uploadFailed": {

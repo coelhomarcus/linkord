@@ -125,5 +125,12 @@
     "eyedropper": "Pegar uma cor da tela",
     "presets": "Predefinições",
     "useColor": "Usar {{name}}"
+  },
+  "saveBar": {
+    "unsaved": "Não se esqueça de salvar suas alterações!",
+    "reset": "Redefinir",
+    "save": "Salvar",
+    "saving": "Salvando…",
+    "saved": "Alterações salvas."
   }
 }

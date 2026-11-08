@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import type { Area } from 'react-easy-crop';
 import { Avatar } from '@/shared/Avatar';
 import { ConfirmDialog } from '@/shared/ConfirmDialog';
+import { FloatingBar } from '@/shared/FloatingBar';
 import { Button } from '@/shared/ui/primitives/button';
 import { Input } from '@/shared/ui/primitives/input';
 import { Switch } from '@/shared/ui/primitives/switch';
@@ -30,6 +31,7 @@ import { can, memberColor } from './serverUtils';
 import { inviteUrl } from './inviteCode';
 import { RoleColorPicker } from './RoleColorPicker';
 import { ServerAuditLog } from './ServerAuditLog';
+import { useSaveBar } from './useSaveBar';
 
 type TabKey = 'overview' | 'roles' | 'members' | 'invites' | 'bans' | 'auditLog' | 'soundboard' | 'delete';
 
@@ -54,6 +56,7 @@ function Overview({ server }: { server: ServerSummary }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const { error, run } = useAction();
   useEffect(() => setName(server.name), [server.name]);
+  const nameBar = useSaveBar(name, name !== server.name);
 
   function pick(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -75,10 +78,13 @@ function Overview({ server }: { server: ServerSummary }) {
   return (
     <>
       <SectionTitle>{t('settings.overview')}</SectionTitle>
-      <form className="flex flex-col gap-2" onSubmit={(e) => { e.preventDefault(); void run(() => updateServer(server.id, { name })); }}>
+      <form className="flex flex-col gap-2" onSubmit={(e) => { e.preventDefault(); void nameBar.save(() => updateServer(server.id, { name })); }}>
         <label htmlFor="server-settings-name" className="text-body font-medium text-text-primary">{t('create.name')}</label>
         <Input id="server-settings-name" value={name} maxLength={100} onChange={(e) => setName(e.target.value)} />
-        <Button type="submit" className="mt-2 self-start" disabled={!name.trim() || name === server.name}>{t('save')}</Button>
+        {nameBar.visible && (
+          <FloatingBar label={t('bar.server')} status={nameBar.status} error={nameBar.error} saveDisabled={!name.trim()}
+            onReset={() => { setName(server.name); nameBar.clearError(); }} />
+        )}
       </form>
       <hr className="border-border-subtle" />
       <section className="flex items-start justify-between gap-6 max-sm:flex-col">
@@ -146,9 +152,15 @@ function Roles({ server }: { server: ServerSummary }) {
     return () => { cancelled = true; };
   }, [server.id, revision]);
   const dirty = JSON.stringify(draft) !== JSON.stringify(role);
+  const bar = useSaveBar(draft, dirty);
+  const saveBlocked = !draft.isDefault && !draft.name.trim();
   const movable = sorted.filter((r) => !r.isDefault);
   const visibleRoles = sorted.filter((item) => item.name.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
   const memberCounts = new Map(sorted.map((item) => [item.id, members.filter((member) => member.roleIds.includes(item.id)).length]));
+
+  function saveRole() {
+    void bar.save(() => updateRole(role.id, { name: draft.isDefault ? undefined : draft.name, color: draft.color, permissions: draft.permissions, hoist: draft.hoist, mentionable: draft.mentionable }));
+  }
 
   async function move(roleId: string, delta: 1 | -1) {
     const lowestFirst = [...movable].reverse().map((r) => r.id);
@@ -211,10 +223,7 @@ function Roles({ server }: { server: ServerSummary }) {
             {visibleRoles.length === 0 && <p className="px-2 py-3 text-caption text-text-muted">{t('roles.noResults')}</p>}
           </div>
         </div>
-        <form className="flex min-w-0 flex-1 flex-col gap-4" onSubmit={(e) => {
-          e.preventDefault();
-          void run(() => updateRole(role.id, { name: draft.isDefault ? undefined : draft.name, color: draft.color, permissions: draft.permissions, hoist: draft.hoist, mentionable: draft.mentionable }));
-        }}>
+        <form className="flex min-w-0 flex-1 flex-col gap-4" onSubmit={(e) => { e.preventDefault(); if (!saveBlocked) saveRole(); }}>
           <div className="flex items-end gap-3">
             <label className="flex flex-1 flex-col gap-1.5">
               <span className="text-body font-medium text-text-primary">{t('roles.name')}</span>
@@ -233,13 +242,18 @@ function Roles({ server }: { server: ServerSummary }) {
           )}
           <PermissionSwitches value={draft.permissions} onChange={(permissions) => setDraft({ ...draft, permissions })} />
           <ErrorLine error={error} />
-          <div className="sticky bottom-0 flex items-center gap-2 border-t border-border-subtle bg-surface-app py-3">
-            <Button type="submit" disabled={!dirty}>{t('save')}</Button>
-            {dirty && <Button type="button" variant="ghost" onClick={() => setDraft(role)}>{t('reset')}</Button>}
-            {!role.isDefault && <Button type="button" variant="destructive" className="ml-auto" onClick={() => setConfirmDelete(true)}><TrashIcon size={16} /> {t('roles.delete')}</Button>}
-          </div>
+          {!role.isDefault && (
+            <div className="flex justify-end border-t border-border-subtle pt-3">
+              <Button type="button" variant="destructive" onClick={() => setConfirmDelete(true)}><TrashIcon size={16} /> {t('roles.delete')}</Button>
+            </div>
+          )}
         </form>
       </div>
+      {/* under both columns, not in the form's: the form column is too narrow for the bar on one line */}
+      {bar.visible && (
+        <FloatingBar label={t('bar.role', { name: role.name })} status={bar.status} error={bar.error} saveDisabled={saveBlocked}
+          onReset={() => { setDraft(role); bar.clearError(); }} onSave={saveRole} />
+      )}
       <ConfirmDialog open={confirmDelete} onOpenChange={setConfirmDelete} title={t('roles.deleteTitle', { name: role.name })} description={t('roles.deleteDescription')}
         destructive confirmLabel={t('roles.delete')} onConfirm={() => void run(async () => { await deleteRole(role.id); setSelectedId(sorted[0]!.id); })} />
     </>

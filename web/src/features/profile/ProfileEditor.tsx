@@ -16,7 +16,7 @@ import { formatMB } from '@/shared/lib/formatBytes';
 import { AVATAR_MIME_TYPES, MAX_AVATAR_BYTES } from '@/shared/types/protocol';
 import { Button } from '@/shared/ui/primitives/button';
 import { ProfileCard } from './ProfileCard';
-import { FLOATING_BAR_SLOT_CLASS, FloatingBar, FloatingBarSlotProvider } from './FloatingBar';
+import { FLOATING_BAR_SLOT_CLASS, FloatingBar, FloatingBarSlotProvider } from '@/shared/FloatingBar';
 import { ProfileConnections } from './ProfileConnections';
 import { ProfileSidebar } from './ProfileSidebar';
 import { BANNER_ASPECT_RATIO } from './profileLinks';
