@@ -10,7 +10,7 @@ import { ActionFeedback } from '@/features/friends/ActionFeedback';
 import type { Feedback } from '@/features/friends/ActionFeedback';
 import { LoadMoreFooter } from '@/features/friends/LoadMoreFooter';
 import type { SocialEntry } from '@/shared/api/api';
-import { SettingsSection, SettingsSections } from './SettingsLayout';
+import { SettingsSection, SettingsSections } from '@/shared/ui/settings-layout';
 
 const blockedKey = (entry: SocialEntry) => entry.user.id;
 

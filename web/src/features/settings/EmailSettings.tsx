@@ -10,7 +10,7 @@ import { confirmEmailChange, requestEmailChange } from '@/shared/api/api';
 import { describeApiError } from '@/shared/api/errorText';
 import { OTPInput, type OTPStatus } from '@/shared/ui/motion/otp-input';
 import { cn } from '@/shared/lib/utils';
-import { SETTINGS_ACTION_BUTTON, SettingsRow } from './SettingsLayout';
+import { SETTINGS_ACTION_BUTTON, SettingsRow } from '@/shared/ui/settings-layout';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // RFC 5321's own limit — just enough to keep the input from growing forever,

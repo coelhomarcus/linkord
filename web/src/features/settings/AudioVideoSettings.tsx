@@ -11,7 +11,7 @@ import type { InputProfile } from '@/features/calls/audioPreferences';
 import { applyInputGain } from '@/features/calls/inputGain';
 import { applyInputProfile } from '@/features/calls/inputProfile';
 import { CameraPreview, DeviceSelect, MicTest, SpeakerTestLink } from './DevicePicker';
-import { SettingsDivider, SettingsRadioGroup, SettingsRow, SettingsSection, SettingsSections, SettingsSubheading } from './SettingsLayout';
+import { SettingsDivider, SettingsRadioGroup, SettingsRow, SettingsSection, SettingsSections, SettingsSubheading } from '@/shared/ui/settings-layout';
 import { useMediaDevices } from './useMediaDevices';
 import type { MediaDevicesStatus } from './useMediaDevices';
 

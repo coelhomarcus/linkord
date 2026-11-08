@@ -19,7 +19,7 @@ import { ChatSettings } from './ChatSettings';
 import { LanguageSettings } from './LanguageSettings';
 import { NotificationsSettings } from './NotificationsSettings';
 import { PrivacyTab } from './PrivacyTab';
-import { SettingsContent, SettingsPageHeader } from './SettingsLayout';
+import { SettingsContent, SettingsPageHeader } from '@/shared/ui/settings-layout';
 import { SettingsIndex, SettingsSidebar } from './SettingsNavigation';
 import { findCategory } from './settingsCatalog';
 import { useSettingsLayout } from './useSettingsLayout';

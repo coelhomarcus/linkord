@@ -13,7 +13,7 @@ import { BrandIcon } from './profileLinks';
 import { describeConnectionError } from './connectionErrors';
 import { createConnection, deleteConnection, editConnection, fetchConnections, setConnectionVisibility } from './profileApi';
 import type { ConnectionProvider, ConnectionsResponse, ProfileConnection } from './connectionsTypes';
-import { SettingsSection, SettingsSections, SettingsSubheading } from '@/features/settings/SettingsLayout';
+import { SettingsSection, SettingsSections, SettingsSubheading } from '@/shared/ui/settings-layout';
 
 const PROVIDERS = ['url', 'myanimelist', 'github'] as const;
 export function ConnectionsSettings() {

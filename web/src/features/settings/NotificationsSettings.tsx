@@ -12,7 +12,7 @@ import { setSoundPreference, useSoundPreferences } from '@/shared/soundPreferenc
 import type { SoundPreferences } from '@/shared/soundPreferences';
 import { Slider } from '@/shared/ui/primitives/slider';
 import { Switch } from '@/shared/ui/primitives/switch';
-import { SettingsLinkRow, SettingsNotice, SettingsRow, SettingsRowList, SettingsSection, SettingsSections, SettingsSubheading } from './SettingsLayout';
+import { SettingsLinkRow, SettingsNotice, SettingsRow, SettingsRowList, SettingsSection, SettingsSections, SettingsSubheading } from '@/shared/ui/settings-layout';
 
 /** Each switchable group of sounds, and the one its preview plays. */
 const SOUND_ROWS: { key: Exclude<keyof SoundPreferences, 'muteAll'>; preview: SoundName; described?: boolean }[] = [
