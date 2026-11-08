@@ -7,6 +7,10 @@
 /* bundled rather than fetched: a self-hosted install shouldn't reach out to a font CDN */
 @import "@fontsource-variable/figtree";
 
+/* A device whose main input is a finger (phones, tablets without a trackpad):
+   where long press replaces right-click and message text is not selectable. */
+@custom-variant touch-first (@media (hover: none) and (pointer: coarse));
+
 @theme {
   /* evenly spaced steps that stay apart on a dim screen; the base stays off
      pure black so near-white text doesn't halo against it */
@@ -176,53 +180,57 @@
   50% { opacity: 0.5; }
 }
 
-@keyframes message-press-progress {
+@keyframes long-press-progress {
   to { transform: scaleX(1); }
 }
 
-@media (max-width: 767px) and (hover: none) {
-  .mobile-message-press-target {
+/* Selection and the native callout on touch. The whole app is a long-press
+   surface (GlobalContextMenu), and Base UI's trigger already turns the iOS
+   callout off on it. Message text is the one surface that is also
+   selectable, so on a touch-first device it is not, except for its links
+   (whose native long press stays) and after "Select text" in the menu. */
+@media (hover: none) and (pointer: coarse) {
+  .message-press-text {
     -webkit-user-select: none;
     user-select: none;
     -webkit-touch-callout: none;
   }
 
-  .mobile-message-press-target a {
+  .message-press-text a,
+  [data-text-selection-enabled] .message-press-text {
     -webkit-user-select: text;
     user-select: text;
     -webkit-touch-callout: default;
-  }
-
-  [data-text-selection-enabled] .mobile-message-press-target {
-    -webkit-user-select: text;
-    user-select: text;
-    -webkit-touch-callout: default;
-  }
-
-  [data-mobile-pressing='true'] {
-    background: var(--color-message-hover);
-  }
-
-  [data-mobile-pressing='true']::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 1rem;
-    right: 1rem;
-    height: 2px;
-    border-radius: 999px;
-    background: var(--color-accent-primary);
-    pointer-events: none;
-    transform: scaleX(0);
-    transform-origin: left;
-    animation: message-press-progress 500ms linear forwards;
   }
 }
 
+/* Held finger on a row (useLongPress via GlobalContextMenu). The attribute
+   goes on in the pointerdown that starts the timer and comes off when it
+   fires or the press ends, and --long-press-delay is the timer's own value,
+   so the bar fills exactly as long as the press takes. */
+[data-long-pressing] {
+  background: var(--color-message-hover);
+}
+
+[data-long-pressing][data-message-id]::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 1rem;
+  right: 1rem;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--color-accent-primary);
+  pointer-events: none;
+  transform: scaleX(0);
+  transform-origin: left;
+  animation: long-press-progress var(--long-press-delay, 500ms) linear forwards;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  [data-mobile-pressing='true']::after {
-    animation: none;
-    transform: scaleX(1);
+  /* the highlight alone says "held"; a moving bar is the part to drop */
+  [data-long-pressing][data-message-id]::after {
+    display: none;
   }
 }
 

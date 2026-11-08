@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react';
+import type { MouseEvent as ReactMouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useLongPress } from '@/shared/hooks/useLongPress';
 import { browserRecorderEnv, useVoiceRecorder, type RecorderEnv, type RecorderNotice, type VoiceTake } from './useVoiceRecorder';
 import { voiceFileName } from './voiceFormat';
 
@@ -50,7 +51,6 @@ export function useComposerVoice({ conversationId, inCall, saveTake, sendTake, e
   const recorder = useVoiceRecorder({ onTake, env: recorderEnv });
   const { view, start, stop, cancel, lock, prime, dismissNotice } = recorder;
   const active = view.phase !== 'idle';
-  const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const begin = useCallback((mode: 'locked' | 'hold') => {
     setComposerNotice(null);
@@ -79,41 +79,38 @@ export function useComposerVoice({ conversationId, inCall, saveTake, sendTake, e
     }
   }, [inCall, stop]);
 
-  const clearHoldTimer = () => {
-    if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
-    holdTimerRef.current = null;
-  };
-  useEffect(() => clearHoldTimer, []);
-
-  const pressedRef = useRef(false);
-  const release = (cancelled: boolean) => {
-    if (!pressedRef.current) return;
-    pressedRef.current = false;
-    if (holdTimerRef.current) {
-      clearHoldTimer();
-      if (!cancelled) begin('locked');
-      return;
-    }
-    if (!active) return;
-    // a hold that is still waiting on the permission prompt carries on hands-free
-    if (view.mode === 'hold' && view.phase === 'requesting') lock();
-    else if (view.mode === 'hold' || !cancelled) stop();
-  };
+  // a press that starts during a hands-free take is "stop", acted on at release
+  const pressStartedActiveRef = useRef(false);
+  const press = useLongPress({
+    delay: HOLD_MS,
+    pointerTypes: 'all',
+    // the finger may slide off the button while holding, and a timeline
+    // scrolling under it (new messages) must not end the take
+    tolerance: Infinity,
+    cancelOnScroll: false,
+    capturePointer: true,
+    onStart() {
+      prime();
+      pressStartedActiveRef.current = active;
+    },
+    onLongPress() {
+      if (!pressStartedActiveRef.current) begin('hold');
+    },
+    onEnd(_press, end) {
+      if (pressStartedActiveRef.current) {
+        if (end !== 'cancel') stop();
+        return;
+      }
+      if (end === 'tap') { begin('locked'); return; }
+      if (!active) return;
+      // a hold that is still waiting on the permission prompt carries on hands-free
+      if (view.mode === 'hold' && view.phase === 'requesting') lock();
+      else if (view.mode === 'hold') stop();
+    },
+  });
 
   const micHandlers = {
-    onPointerDown(event: ReactPointerEvent<HTMLButtonElement>) {
-      if (event.button !== 0) return;
-      prime();
-      event.currentTarget.setPointerCapture?.(event.pointerId);
-      pressedRef.current = true;
-      // during a hands-free take the button is "stop", acted on at release
-      if (active) return;
-      clearHoldTimer();
-      holdTimerRef.current = setTimeout(() => { holdTimerRef.current = null; begin('hold'); }, HOLD_MS);
-    },
-    onPointerUp() { release(false); },
-    // a touch turned into a scroll: a hold take ends there, a pending press is dropped
-    onPointerCancel() { release(true); },
+    ...press,
     onClick(event: ReactMouseEvent<HTMLButtonElement>) {
       // pointer presses are handled above; detail 0 is Enter/Space
       if (event.detail !== 0) return;
@@ -121,7 +118,6 @@ export function useComposerVoice({ conversationId, inCall, saveTake, sendTake, e
       prime();
       begin('locked');
     },
-    onContextMenu(event: ReactMouseEvent) { event.preventDefault(); },
   };
 
   /** The keyboard shortcut: starts a take, or ends the one running. */

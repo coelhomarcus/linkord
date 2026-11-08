@@ -3,7 +3,6 @@ import { ArrowBendUpLeftIcon, CopyIcon, DotsThreeIcon, FlagIcon, PencilSimpleIco
 import { GroupAvatar } from '@/features/conversations/GroupAvatar';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
-import type { TouchEvent as ReactTouchEvent } from 'react';
 
 import { Avatar } from '@/shared/Avatar';
 import { MessageMedia } from './MessageMedia';
@@ -145,8 +144,6 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
   const [editError, setEditError] = useState<string | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
   const [mobileSelected, setMobileSelected] = useState(false);
-  const [mobilePressing, setMobilePressing] = useState(false);
-  const pressOrigin = useRef<{ x: number; y: number } | null>(null);
   const rowRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     if (!mobileSelected) return;
@@ -219,32 +216,6 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
     }
   }
 
-  function handleTouchStart(event: ReactTouchEvent<HTMLDivElement>) {
-    const target = event.target instanceof Element ? event.target : null;
-    const touch = event.touches[0];
-    if (pending || isEditing || event.touches.length !== 1 || !touch
-      || target?.closest('a, button, input, textarea, [contenteditable], [data-download-url]')
-      || rowRef.current?.hasAttribute('data-text-selection-enabled')
-      || window.getSelection()?.toString()) return;
-    pressOrigin.current = { x: touch.clientX, y: touch.clientY };
-    setMobilePressing(true);
-  }
-
-  function handleTouchMove(event: ReactTouchEvent<HTMLDivElement>) {
-    const touch = event.touches[0];
-    const origin = pressOrigin.current;
-    if (!origin || !touch || event.touches.length !== 1) return;
-    if (Math.abs(touch.clientX - origin.x) > 10 || Math.abs(touch.clientY - origin.y) > 10) {
-      pressOrigin.current = null;
-      setMobilePressing(false);
-    }
-  }
-
-  function clearTouchPress() {
-    pressOrigin.current = null;
-    setMobilePressing(false);
-  }
-
   if (message.kind === 'dm_call') {
     const answered = message.callDurationSeconds != null;
     return (
@@ -260,16 +231,10 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
     <div
       ref={rowRef}
       onPointerUp={() => { if (window.getSelection()?.toString()) setMobileSelected(true); }}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={clearTouchPress}
-      onTouchCancel={clearTouchPress}
-      onContextMenu={clearTouchPress}
       // pending rows have no server id yet: nothing may jump to or act on them
       data-msg-id={pending ? undefined : message.msgId}
       data-message-id={pending ? undefined : message.msgId}
       data-pending={pending?.state}
-      data-mobile-pressing={mobilePressing || undefined}
       data-avatar-hover
       className={cn(
         'group/row relative flex gap-3 rounded-md px-4 py-0.5 transition-colors duration-100',
@@ -364,7 +329,7 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
               <InviteCard invitation={message.invitation} />
             ) : (
             <>
-              <div className={cn('mobile-message-press-target text-body leading-[1.375rem] text-text-secondary', pending && pending.state !== 'failed' && 'opacity-60')}>
+              <div className={cn('message-press-text text-body leading-[1.375rem] text-text-secondary', pending && pending.state !== 'failed' && 'opacity-60')}>
                 <ChatMessageText
                   text={message.text}
                   mentionLookup={mentionLookup}

@@ -318,7 +318,8 @@
       "unmuteForMe": "Unmute",
       "volume": "{{name}}'s volume",
       "moveTo": "Move to",
-      "disconnect": "Disconnect"
+      "disconnect": "Disconnect",
+      "more": "More actions for {{name}}"
     }
   },
   "auditLog": {
