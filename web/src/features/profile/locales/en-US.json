@@ -17,7 +17,6 @@
     "removeAvatar": "Remove picture",
     "viewAvatar": "View profile picture full screen",
     "useColor": "Use {{name}}",
-    "customColorLabel": "Choose custom color",
     "displayName": "Display name",
     "openLink": "Open {{name}}",
     "admin": "Admin"
@@ -225,5 +224,16 @@
     "saving": "Saving…",
     "discardAndLeave": "Discard and leave",
     "continueEditing": "Keep editing"
+  },
+  "colorPicker": {
+    "title": "Profile color",
+    "label": "Color",
+    "trigger": "Profile color: {{name}}",
+    "saturation": "Saturation and brightness",
+    "saturationValue": "Saturation {{saturation}}%, brightness {{brightness}}%",
+    "hue": "Hue",
+    "hex": "Color hex code",
+    "eyedropper": "Pick a color from the screen",
+    "presets": "Presets"
   }
 }

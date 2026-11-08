@@ -206,8 +206,10 @@ export function ProfileEditor({ online, details, onClose, registerLeaveGuard }: 
   // made it appear can end up underneath it. Scroll that field back above
   // the bar; the columns' scroll-margin leaves room for it.
   const lastTouchedRef = useRef<HTMLElement | null>(null);
-  function rememberTouched(e: { target: EventTarget }) {
-    if (e.target instanceof HTMLElement) lastTouchedRef.current = e.target;
+  function rememberTouched(e: { target: EventTarget; currentTarget: EventTarget }) {
+    // a popover (the colour picker) is portalled out of the form, but its events still bubble through it:
+    // the field to bring back is the one in the form that opened it, not something in the popover
+    if (e.target instanceof HTMLElement && e.currentTarget instanceof HTMLElement && e.currentTarget.contains(e.target)) lastTouchedRef.current = e.target;
   }
   useEffect(() => {
     if (showBar) lastTouchedRef.current?.scrollIntoView?.({ block: 'nearest' });

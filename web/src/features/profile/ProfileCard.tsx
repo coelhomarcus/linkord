@@ -1,9 +1,9 @@
-import { ArrowSquareOutIcon, AtIcon, CameraIcon, CheckIcon, CircleNotchIcon, PaletteIcon, PencilSimpleIcon, SealCheckIcon, TrashIcon, UploadSimpleIcon } from '@phosphor-icons/react';
+import { ArrowSquareOutIcon, AtIcon, CameraIcon, CircleNotchIcon, PencilSimpleIcon, SealCheckIcon, TrashIcon, UploadSimpleIcon } from '@phosphor-icons/react';
 import { useLayoutEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Avatar, AVATAR_COLOR_OPTIONS } from '@/shared/Avatar';
+import { Avatar } from '@/shared/Avatar';
 import { BANNER_ASPECT_RATIO, BrandIcon, bannerStyle, linkInfo } from '@/features/profile/profileLinks';
 import type { LinkInfo } from '@/features/profile/profileLinks';
 import { MAX_DISPLAY_NAME_LEN } from '@/shared/lib/displayName';
@@ -11,6 +11,7 @@ import { MAX_PROFILE_BIO_LEN } from '@/shared/types/protocol';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/primitives/dropdown-menu';
 import { cn } from '@/shared/lib/utils';
+import { ProfileColorPicker } from './ProfileColorPicker';
 
 interface ProfileCardData {
   id: string;
@@ -95,7 +96,6 @@ export function ProfileCard({
 }: ProfileCardProps) {
   const { t } = useTranslation('profile');
   const links = (user.profileLinks ?? []).map(linkInfo).filter((item): item is LinkInfo => !!item);
-  const isCustomAvatarColor = !AVATAR_COLOR_OPTIONS.some((option) => option.value === user.avatarColor);
 
   return (
     <div className={cn('overflow-hidden bg-bg-modal', !bare && 'rounded-lg border border-border-strong', className)}>
@@ -193,52 +193,8 @@ export function ProfileCard({
           </div>
 
           {onAvatarColorChange && (
-            <div className="mb-1 flex flex-wrap items-center gap-1.5">
-              {AVATAR_COLOR_OPTIONS.map((option) => {
-                const selected = user.avatarColor === option.value;
-                return (
-                  <Tooltip key={option.value}>
-                    <TooltipTrigger
-                      render={
-                        <button
-                          type="button"
-                          aria-label={t('card.useColor', { name: t(`common:${option.labelKey}`, { defaultValue: option.labelKey }) })}
-                          aria-pressed={selected}
-                          disabled={fieldsDisabled}
-                          onClick={() => onAvatarColorChange(option.value)}
-                          className={cn(
-                            'grid h-5 w-5 place-items-center rounded-full border transition focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60',
-                            selected ? 'border-text-primary ring-2 ring-ring/40 ring-offset-1 ring-offset-bg-modal' : 'border-border-strong hover:border-text-muted'
-                          )}
-                          style={{ background: option.css }}
-                        />
-                      }
-                    >
-                      {selected && <CheckIcon size={11} weight="bold" className="pointer-events-none text-white drop-shadow" />}
-                    </TooltipTrigger>
-                        <TooltipContent side="top">{t(`common:${option.labelKey}`, { defaultValue: option.labelKey })}</TooltipContent>
-                  </Tooltip>
-                );
-              })}
-              <label
-                className={cn(
-                  'relative flex h-5 w-5 items-center justify-center rounded-full border transition focus-within:outline-none focus-within:ring-3 focus-within:ring-ring/40',
-                  isCustomAvatarColor ? 'border-text-primary ring-2 ring-ring/40 ring-offset-1 ring-offset-bg-modal' : 'border-border-strong hover:border-text-muted'
-                )}
-              >
-                <input
-                  type="color"
-                  aria-label={t('card.customColorLabel')}
-                  aria-pressed={isCustomAvatarColor}
-                  disabled={fieldsDisabled}
-                  value={isCustomAvatarColor ? user.avatarColor : '#6b7280'}
-                  onChange={(e) => onAvatarColorChange(e.target.value)}
-                  className="avatar-color-custom-input h-5 w-5 cursor-pointer disabled:cursor-default disabled:opacity-60"
-                />
-                <span className="pointer-events-none absolute inset-0 m-auto flex h-2.5 w-2.5 items-center justify-center">
-                  {isCustomAvatarColor ? <CheckIcon size={10} weight="bold" className="text-white drop-shadow" /> : <PaletteIcon size={9} className="text-white/90 drop-shadow" />}
-                </span>
-              </label>
+            <div className="mb-1">
+              <ProfileColorPicker userId={user.id} value={user.avatarColor} disabled={fieldsDisabled} onChange={onAvatarColorChange} />
             </div>
           )}
         </div>

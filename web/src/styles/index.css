@@ -306,18 +306,6 @@ button:not(:disabled) {
   cursor: pointer;
 }
 
-.avatar-color-custom-input {
-  -webkit-appearance: none;
-  appearance: none;
-  border: none;
-  background: none;
-  padding: 0;
-}
-.avatar-color-custom-input::-webkit-color-swatch-wrapper { padding: 0; border-radius: 9999px; }
-.avatar-color-custom-input::-webkit-color-swatch { border: none; border-radius: 9999px; }
-.avatar-color-custom-input::-moz-color-swatch { border: none; border-radius: 9999px; }
-
-
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
