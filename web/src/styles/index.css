@@ -253,6 +253,23 @@
   --cutout: var(--cutout-active, color-mix(in srgb, var(--surface-base, var(--color-surface-app)), white 10%));
 }
 
+/* A control drawn smaller than a fingertip still takes a 44px tap on a touch screen: the hit area
+   grows around it, the drawing does not. The element must be positioned (relative or absolute), have
+   no ::after of its own, and sit at least 44px from the centre of any neighbour that does the same. */
+@utility touch-target {
+  @media (pointer: coarse) {
+    &::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: max(100%, 44px);
+      height: max(100%, 44px);
+      transform: translate(-50%, -50%);
+    }
+  }
+}
+
 /* The document itself never scrolls: on iOS a scrollable document rubber-bands
    the whole app under the tab bar, and focusing the composer pans it on top of
    our own keyboard compensation. #root is pinned to the visual viewport instead

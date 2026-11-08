@@ -163,7 +163,12 @@
       "replace": "Trocar {{name}}",
       "remove": "Remover {{name}}",
       "moveEarlier": "Mover {{name}} para antes",
-      "moveLater": "Mover {{name}} para depois"
+      "moveLater": "Mover {{name}} para depois",
+      "options": "Opções de {{name}}",
+      "replaceItem": "Trocar jogo",
+      "removeItem": "Remover jogo",
+      "moveEarlierItem": "Mover para antes",
+      "moveLaterItem": "Mover para depois"
     },
     "addWidgetTitle": "Adicionar widget de perfil",
     "categories": "Tipos de widget",
@@ -186,7 +191,11 @@
       "picked": "Você pegou {{name}}, na posição {{position}} de {{total}}.",
       "moved": "{{name}} está na posição {{position}} de {{total}}.",
       "dropped": "{{name}} ficou na posição {{position}} de {{total}}.",
-      "cancelled": "Cancelado. {{name}} voltou para a posição {{position}}."
+      "cancelled": "Cancelado. {{name}} voltou para a posição {{position}}.",
+      "options": "Opções de {{name}}",
+      "moveUp": "Mover para cima",
+      "moveDown": "Mover para baixo",
+      "removeItem": "Remover do Mural"
     },
     "emptyOwnerTitle": "Seu Mural está vazio",
     "emptyVisitorTitle": "Nada no Mural ainda",

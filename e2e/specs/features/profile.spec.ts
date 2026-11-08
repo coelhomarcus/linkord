@@ -1,4 +1,5 @@
 import { test, expect } from '../../fixtures/test';
+import type { Locator, Page } from '@playwright/test';
 import { befriend } from '../../fixtures/api';
 
 test.describe('profile', () => {
@@ -113,5 +114,103 @@ test.describe('profile', () => {
     await expect(bar).toBeHidden();
     const wall = await (await alice.api.get(`/api/users/${alice.id}/wall`)).json() as { widgets: { type: string }[] };
     expect(wall.widgets.map((widget) => widget.type)).toEqual(['igdb-wishlist-games', 'igdb-favorite-game']);
+  });
+});
+
+/** Whether a tap anywhere in the 44px square around the control's centre lands on it (where that square is
+ * on the screen at all: a control at the edge is only tapped from the side the screen has). */
+async function takesFingertip(control: Locator): Promise<boolean> {
+  return control.evaluate((element) => {
+    const box = element.getBoundingClientRect();
+    const x = box.left + box.width / 2;
+    const y = box.top + box.height / 2;
+    const onScreen = ([px, py]: number[]) => px! >= 0 && py! >= 0 && px! < innerWidth && py! < innerHeight;
+    return [[x - 21, y], [x + 21, y], [x, y - 21], [x, y + 21]].filter(onScreen).every(([px, py]) => {
+      const hit = document.elementFromPoint(px!, py!);
+      return !!hit && (hit === element || element.contains(hit));
+    });
+  });
+}
+
+/** A real finger drag (touch events through the DevTools protocol, as a phone sends them): the page
+ * decides between scrolling and dragging exactly as it would under a finger. */
+async function touchDrag(page: Page, from: { x: number; y: number }, toY: number) {
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [from] });
+  const steps = 12;
+  for (let step = 1; step <= steps; step++) {
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: from.x, y: from.y + ((toY - from.y) * step) / steps }] });
+  }
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await cdp.detach();
+}
+
+test.describe('profile on a phone', () => {
+  const game = (igdbId: number) => ({ igdbId, name: `Game ${igdbId}`, slug: `game-${igdbId}`, coverImageId: null, releaseYear: 2001 });
+
+  test('the profile fills the screen and the Wall is edited with a finger alone', async ({ users }) => {
+    const alice = await users.create('alice', { device: 'phone' });
+    const saved = await alice.api.put('/api/me/wall', { data: {
+      widgets: [{ connectionId: null, type: 'igdb-favorite-game' }, { connectionId: null, type: 'igdb-liked-games' }],
+      games: { favorite: [game(9)], liked: [game(1), game(2)] },
+    } });
+    expect(saved.status()).toBe(200);
+    const a = await alice.app();
+    const page = a.page;
+    await page.goto('/app/profile');
+    await page.getByRole('button', { name: 'Meu perfil' }).filter({ hasText: 'Meu perfil' }).tap();
+
+    const dialog = page.getByRole('dialog', { name: /^Perfil de / });
+    await expect(dialog).toBeVisible();
+    // once the opening animation is over
+    await expect.poll(() => dialog.boundingBox()).toEqual({ x: 0, y: 0, width: 390, height: 844 });
+
+    // a cover is one button that opens its actions: no invisible control over it to remove the game by accident
+    const cover = page.getByRole('button', { name: 'Opções de Game 1' });
+    await expect(page.getByRole('button', { name: 'Remover Game 1' })).toHaveCount(0);
+    await cover.tap();
+    await page.getByRole('menuitem', { name: 'Mover para depois' }).tap();
+    await expect(page.getByRole('button', { name: /^Opções de Game / })).toHaveText(['Game 9', 'Game 2', 'Game 1']);
+
+    // the controls beside a widget are drawn small but take a fingertip
+    const first = page.getByRole('article').filter({ hasText: 'Jogo favorito' });
+    await first.evaluate((article) => article.scrollIntoView({ block: 'start' }));
+    const handle = page.getByRole('button', { name: 'Reordenar Jogos que eu gosto' });
+    expect(await takesFingertip(handle)).toBe(true);
+    expect(await takesFingertip(page.getByRole('button', { name: 'Opções de Jogos que eu gosto' }))).toBe(true);
+
+    // a finger on the handle drags the widget instead of scrolling the profile
+    const from = (await handle.boundingBox())!;
+    const above = (await first.boundingBox())!;
+    await touchDrag(page, { x: from.x + from.width / 2, y: from.y + from.height / 2 }, above.y + 5);
+    await expect(page.getByRole('article').getByRole('heading', { level: 3 })).toHaveText(['Jogos que eu gosto', 'Jogo favorito']);
+
+    // the save bar's buttons take a fingertip too, and nothing is published before them
+    const bar = page.getByRole('region', { name: 'Salvar alterações do Mural' });
+    expect(await takesFingertip(bar.getByRole('button', { name: 'Salvar' }))).toBe(true);
+    await bar.getByRole('button', { name: 'Salvar' }).tap();
+    await expect(bar).toBeHidden();
+    const wall = await (await alice.api.get(`/api/users/${alice.id}/wall`)).json() as { widgets: { type: string; data: { items: { name: string }[] } }[] };
+    expect(wall.widgets.map((widget) => widget.type)).toEqual(['igdb-liked-games', 'igdb-favorite-game']);
+    expect(wall.widgets[0]!.data.items.map((item) => item.name)).toEqual(['Game 2', 'Game 1']);
+  });
+
+  test('the colour picker is sized for a finger and its hex field does not make iOS zoom', async ({ users }) => {
+    const alice = await users.create('alice', { device: 'phone' });
+    const a = await alice.app();
+    await a.page.goto('/app/profile');
+    await a.page.getByRole('button', { name: 'Meu perfil' }).filter({ hasText: 'Meu perfil' }).tap();
+    await a.page.getByRole('button', { name: /^Cor do perfil: / }).tap();
+
+    const hue = a.page.getByRole('slider', { name: 'Matiz' });
+    expect(await takesFingertip(hue)).toBe(true);
+    for (const swatch of await a.page.getByRole('button', { name: /^Usar / }).all()) {
+      expect((await swatch.boundingBox())!.width).toBeGreaterThanOrEqual(44);
+    }
+    // iOS zooms the whole page into a field whose text is under 16px
+    expect(await a.page.getByLabel('Código hexadecimal da cor').evaluate((input) => getComputedStyle(input).fontSize)).toBe('16px');
+
+    await a.page.getByRole('button', { name: 'Usar Verde', exact: true }).tap();
+    await expect(a.page.getByRole('button', { name: 'Cor do perfil: Verde', exact: true })).toBeVisible();
   });
 });

@@ -101,8 +101,11 @@ export function ProfileModal({ userId, initialTab, onClose, onOpenProfile }: Pro
       {user && (
         <DialogContent
           // one row: the header is sr-only (absolutely positioned, no row of its
-          // own), so the content takes the whole height and scrolls inside it
-          className="scrollbar-none max-h-[92dvh] max-w-[calc(100%-2rem)] grid-rows-[minmax(0,1fr)] gap-0 overflow-hidden bg-bg-modal p-0 sm:max-w-4xl md:h-[min(52rem,92dvh)]"
+          // own), so the content takes the whole height and scrolls inside it.
+          // On a phone it is the whole screen, sized to the visual viewport (App
+          // keeps those variables in step), so a keyboard shrinks it and the
+          // floating save bar rests above the keys instead of behind them.
+          className="scrollbar-none top-[var(--app-viewport-top,0px)] left-0 h-[var(--app-viewport-height,100dvh)] max-h-[var(--app-viewport-height,100dvh)] max-w-none translate-x-0 translate-y-0 grid-rows-[minmax(0,1fr)] gap-0 overflow-hidden rounded-none border-0 bg-bg-modal p-0 pt-[env(safe-area-inset-top)] pb-(--safe-bottom) sm:max-w-none md:top-1/2 md:left-1/2 md:h-[min(52rem,92dvh)] md:max-h-[92dvh] md:max-w-4xl md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-[12px] md:border md:pt-0 md:pb-0 [&>[data-slot=dialog-close]]:top-[calc(0.75rem+env(safe-area-inset-top))] md:[&>[data-slot=dialog-close]]:top-3"
         >
           <DialogHeader className="sr-only">
             <DialogTitle>{t('modal.profileOf', { name: user.displayName })}</DialogTitle>

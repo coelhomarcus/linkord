@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { CaretLeftIcon, CaretRightIcon, PencilSimpleIcon, PlusIcon, TrashIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { GAME_LIST_LIMITS, type GameItem, type GameList } from '@/features/games/types';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/primitives/dropdown-menu';
 import { COVER_BOX, CoverFace, CoverLink, GAME_ASPECT, type Cover } from './CoverLink';
+import { useTouchFirst } from './useTouchFirst';
 
 /** What the owner can do to the games of a widget while editing the Wall. */
 export interface GameCoversEditor {
@@ -15,7 +17,8 @@ export interface GameCoversEditor {
 }
 
 const cover = (game: GameItem): Cover => ({ id: String(game.igdbId), title: game.name, url: game.url, imageUrl: game.imageUrl });
-const CONTROL = 'pointer-events-auto flex size-7 items-center justify-center rounded-md bg-black/65 text-white transition-colors hover:bg-black/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-40';
+// a control takes clicks only while it shows: hidden, it would catch a click meant for the cover
+const CONTROL = 'pointer-events-none group-hover:pointer-events-auto group-focus-within:pointer-events-auto in-data-[tapped=true]:pointer-events-auto flex size-7 items-center justify-center rounded-md bg-black/65 text-white transition-colors hover:bg-black/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-40';
 
 /** An empty place in the grid, where the next game goes. */
 function EmptySlot({ editor }: { editor: GameCoversEditor }) {
@@ -28,7 +31,48 @@ function EmptySlot({ editor }: { editor: GameCoversEditor }) {
   );
 }
 
-/** A cover being edited: its controls show on hover or focus, and on a tap where there is no hover. */
+const MENU_ITEM = 'pointer-coarse:min-h-11';
+
+/** A cover being edited on a touch screen: four controls drawn over a cover a few fingers wide would be too
+ * small to hit, so a tap on the cover opens them as a menu instead. */
+function TouchCover({ game, index, count, editor }: { game: GameItem; index: number; count: number; editor: GameCoversEditor }) {
+  const { t } = useTranslation('profile');
+  const name = game.name;
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        disabled={editor.disabled}
+        aria-label={t('wall.games.options', { name })}
+        className={`${COVER_BOX} ${GAME_ASPECT} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 data-popup-open:ring-2 data-popup-open:ring-ring`}
+      >
+        <CoverFace item={cover(game)} />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start">
+        <DropdownMenuItem className={MENU_ITEM} onClick={() => editor.onReplace(index)}>
+          <PencilSimpleIcon size={16} aria-hidden />
+          <span>{t('wall.games.replaceItem')}</span>
+        </DropdownMenuItem>
+        {count > 1 && <>
+          <DropdownMenuItem className={MENU_ITEM} disabled={index === 0} onClick={() => editor.onMove(index, -1)}>
+            <CaretLeftIcon size={16} aria-hidden />
+            <span>{t('wall.games.moveEarlierItem')}</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem className={MENU_ITEM} disabled={index === count - 1} onClick={() => editor.onMove(index, 1)}>
+            <CaretRightIcon size={16} aria-hidden />
+            <span>{t('wall.games.moveLaterItem')}</span>
+          </DropdownMenuItem>
+        </>}
+        <DropdownMenuItem className={MENU_ITEM} variant="destructive" onClick={() => editor.onRemove(index)}>
+          <TrashIcon size={16} aria-hidden />
+          <span>{t('wall.games.removeItem')}</span>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+/** A cover being edited with a mouse: its controls show on hover or focus, and on a tap from a touch screen
+ * on a computer that has a mouse too. */
 function EditableCover({ game, index, count, editor }: { game: GameItem; index: number; count: number; editor: GameCoversEditor }) {
   const { t } = useTranslation('profile');
   const [tapped, setTapped] = useState(false);
@@ -54,8 +98,10 @@ function EditableCover({ game, index, count, editor }: { game: GameItem; index: 
  * Seen by a visitor only the games are drawn; the owner editing also gets the empty places. */
 export function GameCovers({ list, games, editor }: { list: GameList; games: GameItem[]; editor?: GameCoversEditor }) {
   const limit = GAME_LIST_LIMITS[list];
+  const touch = useTouchFirst();
+  const Editable = touch ? TouchCover : EditableCover;
   const tile = (game: GameItem, index: number) => editor
-    ? <EditableCover game={game} index={index} count={games.length} editor={editor} />
+    ? <Editable game={game} index={index} count={games.length} editor={editor} />
     : <CoverLink item={cover(game)} aspect={GAME_ASPECT} />;
 
   if (list === 'favorite') {

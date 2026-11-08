@@ -12,7 +12,7 @@ import { UserStatusDot } from '@/features/status/UserStatus';
 
 export type ProfileTab = 'wall' | 'common';
 
-const TAB = 'h-11 shrink-0 rounded-none px-0 text-body font-semibold text-text-muted hover:text-text-secondary data-active:text-text-primary';
+const TAB = 'touch-target relative h-11 shrink-0 rounded-none px-0 text-body font-semibold text-text-muted hover:text-text-secondary data-active:text-text-primary';
 const ROW = 'flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-fill-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
 /** Says how much of a capped list is shown, when it is not all of it. */

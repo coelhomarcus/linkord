@@ -141,7 +141,7 @@ export function ProfileWall({ userId, owner, accent, onNavigate }: { userId: str
           <h3 className="text-body font-semibold text-text-primary">{t('wall.yours')}</h3>
           {/* there while loading too, so the header doesn't grow when the Wall arrives */}
           {(data || loading) && (
-            <Button type="button" variant="secondary" size="sm" disabled={saving || !data} onClick={() => setAdding(true)}>
+            <Button type="button" variant="secondary" size="sm" className="touch-target relative" disabled={saving || !data} onClick={() => setAdding(true)}>
               <PlusIcon size={14} aria-hidden />
               <span>{t('wall.addWidget')}</span>
             </Button>
@@ -155,7 +155,7 @@ export function ProfileWall({ userId, owner, accent, onNavigate }: { userId: str
           title={t('wall.emptyOwnerTitle')}
           description={t('wall.emptyOwner')}
           // the add-widget button is already in the header right above; connecting accounts is the next step
-          action={<Button type="button" variant="secondary" size="sm" onClick={() => { navigate(ROUTES.settingsTab('connections')); onNavigate(); }}>{t('wall.connectAccounts')}</Button>}
+          action={<Button type="button" variant="secondary" size="sm" className="touch-target relative" onClick={() => { navigate(ROUTES.settingsTab('connections')); onNavigate(); }}>{t('wall.connectAccounts')}</Button>}
         />
       ) : <EmptyState illustration="wall" title={t('wall.emptyVisitorTitle')} description={t('wall.emptyVisitor')} />)}
       {owner

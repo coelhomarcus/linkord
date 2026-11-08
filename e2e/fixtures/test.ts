@@ -17,20 +17,26 @@ export interface User {
   newTab(path?: string): Promise<AppPage>;
 }
 
+/** `phone`: the context is a touch phone (390x844, touch, mobile), so `(hover: none)` and
+ * `(pointer: coarse)` match and the app shows its compact layout. */
+export interface DeviceOptions { device?: 'desktop' | 'phone' }
+
 export interface Users {
   /** A fresh account in its own browser context (own cookies, own storage),
    * registered through the real sign-up route. */
-  create(prefix?: string): Promise<User>;
+  create(prefix?: string, options?: DeviceOptions): Promise<User>;
   /** A context for an account that already exists, logged in through the real form. */
   login(username: string, password: string): Promise<User>;
 }
 
-async function newContext(browser: Browser): Promise<BrowserContext> {
+async function newContext(browser: Browser, { device = 'desktop' }: DeviceOptions = {}): Promise<BrowserContext> {
   return browser.newContext({
     baseURL: BASE_URL,
     locale: 'pt-BR',
-    viewport: { width: 1280, height: 800 },
     permissions: ['microphone', 'camera'],
+    ...(device === 'phone'
+      ? { viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, hasTouch: true, isMobile: true }
+      : { viewport: { width: 1280, height: 800 } }),
   });
 }
 
@@ -59,8 +65,8 @@ export const test = base.extend<{ users: Users }>({
   users: async ({ browser }, use) => {
     const contexts: BrowserContext[] = [];
     await use({
-      async create(prefix = 'u') {
-        const context = await newContext(browser);
+      async create(prefix = 'u', options) {
+        const context = await newContext(browser, options);
         contexts.push(context);
         const username = `${prefix.slice(0, 8)}${randomBytes(4).toString('hex')}`;
         const password = randomBytes(12).toString('hex');

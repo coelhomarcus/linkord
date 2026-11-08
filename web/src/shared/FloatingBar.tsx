@@ -44,8 +44,8 @@ export function FloatingBar({ label, status, error, onReset, onSave, saveDisable
       )}
       {status !== 'saved' && (
         <div className="ml-auto flex gap-2">
-          {onReset && <Button type="button" variant="secondary" size="sm" disabled={saving} onClick={onReset}>{t('saveBar.reset')}</Button>}
-          <Button type={onSave ? 'button' : 'submit'} size="sm" disabled={saving || saveDisabled} onClick={onSave}>{t(saving ? 'saveBar.saving' : 'saveBar.save')}</Button>
+          {onReset && <Button type="button" variant="secondary" size="sm" className="touch-target relative" disabled={saving} onClick={onReset}>{t('saveBar.reset')}</Button>}
+          <Button type={onSave ? 'button' : 'submit'} size="sm" className="touch-target relative" disabled={saving || saveDisabled} onClick={onSave}>{t(saving ? 'saveBar.saving' : 'saveBar.save')}</Button>
         </div>
       )}
     </div>

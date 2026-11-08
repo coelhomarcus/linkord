@@ -66,6 +66,8 @@ interface ProfileCardProps {
   hideLinks?: boolean;
 }
 
+const TOUCH_BADGE = 'flex items-center justify-center rounded-full [@media(hover:none)]:size-10 [@media(hover:none)]:bg-black/55 [@media(hover:none)]:text-white';
+
 function EditableBio({ value, onChange, disabled }: { value: string; onChange: (value: string) => void; disabled?: boolean }) {
   const { t } = useTranslation('profile');
   const ref = useRef<HTMLTextAreaElement | null>(null);
@@ -121,7 +123,10 @@ export function ProfileCard({
                 />
               }
             >
-              {bannerUploading ? <CircleNotchIcon size={24} className="animate-spin" /> : <CameraIcon size={24} />}
+              {/* with no hover to reveal it, a touch screen always shows the camera, so the banner reads as editable */}
+              <span className={TOUCH_BADGE}>
+                {bannerUploading ? <CircleNotchIcon size={24} className="animate-spin" /> : <CameraIcon size={24} />}
+              </span>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="center" className="w-max min-w-0">
               <DropdownMenuItem onClick={onBannerUpload}>
@@ -165,7 +170,9 @@ export function ProfileCard({
                       />
                     }
                   >
-                    {avatarUploading ? <CircleNotchIcon size={20} className="animate-spin" /> : <CameraIcon size={20} />}
+                    <span className={TOUCH_BADGE}>
+                      {avatarUploading ? <CircleNotchIcon size={20} className="animate-spin" /> : <CameraIcon size={20} />}
+                    </span>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" className="w-max min-w-0">
                     <DropdownMenuItem onClick={onAvatarUpload}>

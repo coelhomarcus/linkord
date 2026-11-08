@@ -62,7 +62,7 @@ function DialogContent({
         {showCloseButton && (
           <DialogPrimitive.Close
             data-slot="dialog-close"
-            render={<CloseButton variant={closeButtonVariant} size="md" className="absolute top-3 right-3 z-10" />}
+            render={<CloseButton variant={closeButtonVariant} size="md" className="absolute top-3 right-3 z-10 touch-target" />}
           />
         )}
       </DialogPrimitive.Popup>

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
@@ -512,7 +512,7 @@ describe('games widget cards', () => {
     expect(screen.getAllByRole('button', { name: 'Adicionar jogo a Jogos que eu gosto' })).toHaveLength(6);
     expect(screen.getAllByRole('listitem')).toHaveLength(8);
   });
-  it('reveals the controls of a cover on a tap, where there is no hover', async () => {
+  it('reveals the controls of a cover on a tap from a touch screen on a computer with a mouse', async () => {
     const user = userEvent.setup();
     const editor = { disabled: false, widgetName: 'x', onAdd: vi.fn(), onReplace: vi.fn(), onRemove: vi.fn(), onMove: vi.fn() };
     render(<WallWidgetCard widget={gameWidget('igdb-liked-games', [game(1)])} accent="#3366ff" gameEditor={editor} />);
@@ -523,6 +523,12 @@ describe('games widget cards', () => {
     await user.click(screen.getByRole('button', { name: 'Remover Game 1' }));
     expect(editor.onRemove).toHaveBeenCalledWith(0);
   });
+  it('lets a hidden cover control take no click, so a click meant for the cover never removes the game', () => {
+    const editor = { disabled: false, widgetName: 'x', onAdd: vi.fn(), onReplace: vi.fn(), onRemove: vi.fn(), onMove: vi.fn() };
+    render(<WallWidgetCard widget={gameWidget('igdb-liked-games', [game(1)])} accent="#3366ff" gameEditor={editor} />);
+    // jsdom has no hover: the class is what keeps the invisible button out of the way of a pointer
+    expect(screen.getByRole('button', { name: 'Remover Game 1' })).toHaveClass('pointer-events-none');
+  });
   it('says what a game is when it has no cover, and when nothing was chosen', () => {
     const { rerender } = render1(gameWidget('igdb-wishlist-games', [game(4, { imageUrl: null, coverImageId: null })]));
     expect(screen.getByRole('link', { name: 'Game 4' }).querySelector('img')).toBeNull();
@@ -531,5 +537,68 @@ describe('games widget cards', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Nenhum jogo escolhido ainda.');
     rerender(<WallWidgetCard widget={gameWidget('igdb-favorite-game')} accent="#3366ff" />);
     expect(screen.getByRole('status')).toHaveTextContent('Nenhum jogo escolhido ainda.');
+  });
+});
+
+/** A phone or tablet: the main pointer cannot hover. */
+function onTouchScreen() {
+  return vi.spyOn(window, 'matchMedia').mockImplementation((query: string) => ({
+    matches: query === '(hover: none)', media: query, onchange: null,
+    addListener: () => {}, removeListener: () => {}, addEventListener: () => {}, removeEventListener: () => {}, dispatchEvent: () => false,
+  }) as unknown as MediaQueryList);
+}
+
+describe('the Wall on a touch screen', () => {
+  let media: ReturnType<typeof onTouchScreen>;
+  beforeEach(() => { media = onTouchScreen(); });
+  afterEach(() => media.mockRestore());
+
+  it('opens the actions of a cover as a menu on a tap, with no hidden buttons over it to hit', async () => {
+    const user = userEvent.setup();
+    const editor = { disabled: false, widgetName: 'Jogos que eu gosto', onAdd: vi.fn(), onReplace: vi.fn(), onRemove: vi.fn(), onMove: vi.fn() };
+    render(<WallWidgetCard widget={gameWidget('igdb-liked-games', [game(1), game(2)])} accent="#3366ff" gameEditor={editor} />);
+    expect(screen.queryByRole('button', { name: 'Remover Game 1' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Opções de Game 1' }));
+    expect(await screen.findByRole('menuitem', { name: 'Mover para antes' })).toHaveAttribute('aria-disabled', 'true');
+    await user.click(screen.getByRole('menuitem', { name: 'Mover para depois' }));
+    expect(editor.onMove).toHaveBeenCalledWith(0, 1);
+
+    await user.click(screen.getByRole('button', { name: 'Opções de Game 2' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Trocar jogo' }));
+    expect(editor.onReplace).toHaveBeenCalledWith(1);
+    await user.click(screen.getByRole('button', { name: 'Opções de Game 2' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Remover jogo' }));
+    expect(editor.onRemove).toHaveBeenCalledWith(1);
+  });
+
+  it('offers no moves for a lone game', async () => {
+    const user = userEvent.setup();
+    const editor = { disabled: false, widgetName: 'Jogo favorito', onAdd: vi.fn(), onReplace: vi.fn(), onRemove: vi.fn(), onMove: vi.fn() };
+    render(<WallWidgetCard widget={gameWidget('igdb-favorite-game', [game(1)])} accent="#3366ff" gameEditor={editor} />);
+    await user.click(screen.getByRole('button', { name: 'Opções de Game 1' }));
+    expect(await screen.findByRole('menuitem', { name: 'Trocar jogo' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Mover para antes' })).not.toBeInTheDocument();
+  });
+
+  it('moves and removes a widget from its menu, which is how a screen reader there reorders without a keyboard', async () => {
+    const user = userEvent.setup();
+    renderWall();
+    await chooseWidget(user, 'Atividade recente de animes');
+    await chooseWidget(user, 'Perfil do GitHub');
+    // the trash beside the handle becomes the menu: a finger aiming at the handle cannot drop a widget
+    expect(screen.queryByRole('button', { name: 'Remover Perfil do GitHub' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Reordenar Perfil do GitHub' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Opções de Perfil do GitHub' }));
+    expect(await screen.findByRole('menuitem', { name: 'Mover para baixo' })).toHaveAttribute('aria-disabled', 'true');
+    await user.click(screen.getByRole('menuitem', { name: 'Mover para cima' }));
+    expect(screen.getAllByRole('heading', { level: 3 }).map((heading) => heading.textContent)).toEqual(['Seus Widgets', 'Perfil do GitHub', 'Atividade recente de animes']);
+
+    await user.click(screen.getByRole('button', { name: 'Opções de Atividade recente de animes' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Remover do Mural' }));
+    mocked.saveWall.mockResolvedValue({ widgets: [profile], available: [anime, profile] });
+    await user.click(screen.getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(mocked.saveWall).toHaveBeenCalledWith([{ connectionId: 'gh', type: 'github-profile' }]));
   });
 });

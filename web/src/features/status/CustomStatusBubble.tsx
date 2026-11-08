@@ -35,7 +35,7 @@ export function CustomStatusBubble({ custom, onEdit, onClear, className }: {
           aria-label={t('menu.setCustom')}
           className={cn(
             SHELL,
-            'flex max-w-full items-center gap-1.5 rounded-2xl px-3 py-1.5 text-left text-label text-text-muted transition-colors hover:text-text-primary focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none',
+            'touch-target relative flex max-w-full items-center gap-1.5 rounded-2xl px-3 py-1.5 text-left text-label text-text-muted transition-colors hover:text-text-primary focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none',
           )}
         >
           <PlusIcon size={14} weight="bold" className="flex-none" />
@@ -70,7 +70,8 @@ export function CustomStatusBubble({ custom, onEdit, onClear, className }: {
           role="group"
           aria-label={t('bubble.actions')}
           className={cn(
-            'absolute -top-7 right-0 flex rounded-md p-0.5 shadow-popover transition-opacity',
+            // fingertip-sized on a touch screen, and spaced so the two 44px hit areas do not overlap
+            'absolute -top-7 right-0 flex rounded-md p-0.5 shadow-popover transition-opacity pointer-coarse:-top-11 pointer-coarse:gap-2',
             'bg-popover border border-border-strong',
             'opacity-0 group-hover/bubble:opacity-100 focus-within:opacity-100 pointer-coarse:opacity-100',
           )}
@@ -79,7 +80,7 @@ export function CustomStatusBubble({ custom, onEdit, onClear, className }: {
             type="button"
             onClick={onEdit}
             aria-label={t('menu.editCustom')}
-            className="grid size-6 place-items-center rounded-sm text-text-secondary hover:bg-fill-hover hover:text-text-primary focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
+            className="touch-target relative grid size-6 place-items-center rounded-sm pointer-coarse:size-9 text-text-secondary hover:bg-fill-hover hover:text-text-primary focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
           >
             <PencilSimpleIcon size={14} />
           </button>
@@ -88,7 +89,7 @@ export function CustomStatusBubble({ custom, onEdit, onClear, className }: {
               type="button"
               onClick={onClear}
               aria-label={t('menu.clearCustom')}
-              className="grid size-6 place-items-center rounded-sm text-text-secondary hover:bg-red/12 hover:text-red-text focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
+              className="touch-target relative grid size-6 place-items-center rounded-sm pointer-coarse:size-9 text-text-secondary hover:bg-red/12 hover:text-red-text focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
             >
               <TrashIcon size={14} />
             </button>
