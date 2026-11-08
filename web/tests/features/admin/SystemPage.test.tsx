@@ -17,6 +17,7 @@ const info = (over: Partial<adminApi.SystemInfo> = {}): adminApi.SystemInfo => (
   connections: { live: 4, onlineAccounts: 3, max: 50, perAccountMax: 5 },
   accounts: { total: 20, newLastHour: 2, newPerHourCap: 30, activeAdmins: 2, suspended: 1 },
   livekit: { configured: true }, outbox: { pending: 0, failed: 0 }, notifications: { unread: 7 },
+  retention: { targets: [{ key: 'admin_audit_logs', days: 0 }, { key: 'outbox_events', days: 7 }], last: null },
   orphanSweep: { dryRunByDefault: true, graceMs: 24 * 3600_000, last: null }, ...over,
 });
 const open = () => renderAdmin(<SystemPage />, { path: '/admin/system', pattern: '/admin/system' });
@@ -78,5 +79,34 @@ describe.skip('SystemPage', () => {
       await u.click(await screen.findByRole('button', { name: 'Verificar órfãos' }));
       expect(await screen.findByRole('alert')).toHaveTextContent('Já existe uma varredura de arquivos em andamento.');
     });
+  });
+});
+
+describe('SystemPage retention section', () => {
+  it('shows each table\'s limit, "forever" for 0, and what the last sweep deleted', async () => {
+    mocked.fetchSystem.mockResolvedValue(info({
+      retention: {
+        targets: [{ key: 'admin_audit_logs', days: 0 }, { key: 'outbox_events', days: 7 }, { key: 'notifications_read', days: 30 }],
+        last: {
+          at: '2026-01-01T00:00:00.000Z', durationMs: 20,
+          targets: [
+            { key: 'admin_audit_logs', days: 0, cutoff: null, deleted: 0, batches: 0, failed: false },
+            { key: 'outbox_events', days: 7, cutoff: '2025-12-25T00:00:00.000Z', deleted: 12, batches: 1, failed: false },
+            { key: 'notifications_read', days: 30, cutoff: '2025-12-02T00:00:00.000Z', deleted: 0, batches: 0, failed: true },
+          ],
+        },
+      },
+    }));
+    open();
+    expect(await screen.findByText('Retenção de dados')).toBeInTheDocument();
+    expect(screen.getByText('Auditoria da instância').nextSibling).toHaveTextContent('guardado para sempre');
+    expect(screen.getByText('Fila de eventos entregues').nextSibling).toHaveTextContent('7 dias · 12 apagado(s)');
+    expect(screen.getByText('Notificações lidas').nextSibling).toHaveTextContent('30 dias · falhou');
+    expect(screen.getByText(/12 registro\(s\) apagado\(s\)/)).toBeInTheDocument();
+  });
+
+  it('says so when the sweep has not run since the server started', async () => {
+    open();
+    expect(await screen.findByText('A varredura ainda não rodou desde que o servidor iniciou.')).toBeInTheDocument();
   });
 });

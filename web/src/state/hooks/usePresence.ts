@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { Participant, PublicUser, ServerMessage } from '@/shared/types/protocol';
+import type { Participant, PublicUser, ServerMessage, VisiblePresence } from '@/shared/types/protocol';
 
 function mergeUserFromParticipant(prev: Map<string, PublicUser>, participant: Participant): Map<string, PublicUser> {
   const existing = prev.get(participant.userId);
@@ -37,10 +37,33 @@ export function usePresence() {
   // against this instead of allUsers directly.
   const [friendUserIds, setFriendUserIds] = useState<Set<string>>(new Set());
 
-  const setInitial = useCallback((users: PublicUser[], onlineIds: string[], friendIds: string[]) => {
+  // Status and custom status of online people whose status is not the plain default. A missing
+  // entry for someone online means "online"; nothing is kept for anyone offline.
+  const [presenceByUser, setPresenceByUser] = useState<Map<string, VisiblePresence>>(new Map());
+
+  const setInitial = useCallback((users: PublicUser[], onlineIds: string[], friendIds: string[], presence?: Record<string, VisiblePresence>) => {
     setAllUsers(new Map(users.map((u) => [u.id, u])));
     setOnlineUserIds(new Set(onlineIds));
     setFriendUserIds(new Set(friendIds));
+    setPresenceByUser(new Map(Object.entries(presence ?? {})));
+  }, []);
+
+  const onPresenceStatus = useCallback((m: Extract<ServerMessage, { t: 'presence-status' }>) => {
+    setPresenceByUser((prev) => {
+      const next = new Map(prev);
+      if (m.status === 'online' && !m.customStatus) next.delete(m.userId);
+      else next.set(m.userId, { status: m.status, customStatus: m.customStatus });
+      return next;
+    });
+  }, []);
+
+  const forgetPresence = useCallback((userId: string) => {
+    setPresenceByUser((prev) => {
+      if (!prev.has(userId)) return prev;
+      const next = new Map(prev);
+      next.delete(userId);
+      return next;
+    });
   }, []);
 
   const onParticipantJoined = useCallback((m: Extract<ServerMessage, { t: 'participant-joined' }>) => {
@@ -53,6 +76,7 @@ export function usePresence() {
     setOnlineUserIds((prev) => (prev.has(m.userId) ? prev : new Set(prev).add(m.userId)));
   }, []);
   const onUserOffline = useCallback((m: Extract<ServerMessage, { t: 'user-offline' }>) => {
+    forgetPresence(m.userId);
     setOnlineUserIds((prev) => {
       if (!prev.has(m.userId)) return prev;
       const next = new Set(prev);
@@ -67,8 +91,9 @@ export function usePresence() {
       next.set(m.userId, { ...existing, lastSeenAt: m.lastSeenAt });
       return next;
     });
-  }, []);
+  }, [forgetPresence]);
   const onUserDeleted = useCallback((m: Extract<ServerMessage, { t: 'user-deleted' }>) => {
+    forgetPresence(m.userId);
     setAllUsers((prev) => {
       if (!prev.has(m.userId)) return prev;
       const next = new Map(prev);
@@ -81,10 +106,10 @@ export function usePresence() {
       next.delete(m.userId);
       return next;
     });
-  }, []);
+  }, [forgetPresence]);
 
   return {
-    allUsers, allUsersRef, setAllUsers, onlineUserIds, friendUserIds, setInitial,
-    onParticipantJoined, onParticipantUpdated, onUserOnline, onUserOffline, onUserDeleted,
+    allUsers, allUsersRef, setAllUsers, onlineUserIds, friendUserIds, presenceByUser, setInitial,
+    onParticipantJoined, onParticipantUpdated, onUserOnline, onUserOffline, onUserDeleted, onPresenceStatus,
   };
 }

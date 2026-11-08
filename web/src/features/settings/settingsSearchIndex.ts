@@ -13,7 +13,7 @@ export interface SearchEntry {
 }
 
 type SearchKey =
-  | 'accountInfo' | 'email' | 'session' | 'connections' | 'blocked'
+  | 'accountInfo' | 'email' | 'session' | 'connections' | 'blocked' | 'presence'
   | 'theme' | 'voice' | 'inputProfile' | 'video' | 'calls' | 'uploads'
   | 'desktopNotifications' | 'sounds' | 'language' | 'timeFormat' | 'adminArea';
 
@@ -25,6 +25,7 @@ export const SETTINGS_SEARCH_INDEX: SearchEntry[] = [
   { categoryId: 'account', sectionId: 'account-info', searchKey: 'email' },
   { categoryId: 'account', sectionId: 'session', searchKey: 'session' },
   { categoryId: 'connections', searchKey: 'connections' },
+  { categoryId: 'privacy', sectionId: 'presence', searchKey: 'presence' },
   { categoryId: 'privacy', sectionId: 'blocked', searchKey: 'blocked' },
   { categoryId: 'appearance', sectionId: 'theme', searchKey: 'theme' },
   { categoryId: 'av', sectionId: 'voice', searchKey: 'voice' },

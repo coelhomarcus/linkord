@@ -5,9 +5,10 @@
     "ariaLabel": "Categorias de ajustes",
     "search": "Buscar",
     "clearSearch": "Limpar busca",
-    "noResults": "Nada encontrado para \"{{query}}\".",
+    "noResults": "Nenhum ajuste corresponde a “{{query}}”.",
     "editProfile": "Editar perfil",
-    "sectionsOf": "Seções de {{category}}"
+    "sectionsOf": "Seções de {{category}}",
+    "noResultsTitle": "Nada encontrado"
   },
   "catalog": {
     "groups": {
@@ -39,7 +40,8 @@
       "sounds": "Sons",
       "language": "Idioma",
       "timeFormat": "Formato de tempo",
-      "adminArea": "Área administrativa"
+      "adminArea": "Área administrativa",
+      "presence": "Status"
     }
   },
   "search": {
@@ -89,7 +91,7 @@
     },
     "desktopNotifications": {
       "title": "Notificações na área de trabalho",
-      "keywords": "permissão, avisos, mensagens, push, área de trabalho"
+      "keywords": "permissão, avisos, mensagens, push, área de trabalho, privacidade, conteúdo, texto da mensagem, prévia"
     },
     "sounds": {
       "title": "Sons",
@@ -106,6 +108,10 @@
     "adminArea": {
       "title": "Área administrativa",
       "keywords": "admin, denúncia, auditoria, usuários, servidores"
+    },
+    "presence": {
+      "title": "Status",
+      "keywords": "status, ausente, ausente automaticamente, inativo, presença"
     }
   },
   "account": {
@@ -165,8 +171,9 @@
     "loading": "Carregando…",
     "loadFailed": "Não foi possível carregar a lista.",
     "retry": "Tentar de novo",
-    "empty": "Você não bloqueou ninguém.",
-    "unblock": "Desbloquear"
+    "empty": "Você não bloqueou ninguém",
+    "unblock": "Desbloquear",
+    "emptyText": "Quem você bloquear aparece aqui, e dá para desbloquear quando quiser."
   },
   "adminLink": {
     "label": "Usuários, servidores, denúncias e auditoria",
@@ -222,10 +229,15 @@
     },
     "ios": "No iPhone, adicione o Linkord à Tela de Início, abra pelo ícone e volte aqui para ativar as notificações.",
     "pushUnavailable": "Push indisponível: confira a configuração do servidor.",
+    "showContent": {
+      "label": "Mostrar o texto das mensagens",
+      "description": "Desative para as notificações mostrarem só quem escreveu e onde, sem o conteúdo da mensagem."
+    },
     "errors": {
       "blocked": "Notificações bloqueadas. Permita o acesso nas configurações do navegador para habilitar.",
       "unavailable": "Notificações push indisponíveis. Verifique a instalação do app e a configuração do servidor.",
-      "enableFailed": "Não foi possível ativar as notificações. Confira a permissão do app e tente novamente."
+      "enableFailed": "Não foi possível ativar as notificações. Confira a permissão do app e tente novamente.",
+      "saveFailed": "Não foi possível salvar essa opção. Tente novamente."
     },
     "volume": {
       "label": "Volume das notificações",

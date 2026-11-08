@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 
 import { ActiveFill } from '@/shared/ui/active-fill';
+import { EmptyState } from '@/shared/ui/empty-state';
+import { Button } from '@/shared/ui/primitives/button';
 import { Sidebar } from '@/shared/ui/motion/sidebar';
 import { useSidebar } from '@/shared/ui/motion/sidebar-context';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
@@ -19,16 +21,20 @@ import { ServerRail } from '@/features/servers/ServerRail';
 import { ChannelList } from '@/features/servers/ChannelList';
 import { conversationMatchesQuery, conversationTitle, directUser } from './conversationUtils';
 import { NewDirectDialog } from './NewDirectDialog';
+import { StatusDot } from '@/features/status/StatusDot';
+import { CustomStatusText } from '@/features/status/CustomStatusText';
+import { useCustomStatus, useUserStatus } from '@/features/status/statusDisplay';
 
 function DirectRow({ conversation, active, onClick, onClose }: {
   conversation: Conversation; active: boolean; onClick: () => void; onClose: () => void;
 }) {
   const { t } = useTranslation('conversations');
-  const { state, allUsers, onlineUserIds, unreadByConversation, activeCallConversationId } = useRoom();
+  const { state, allUsers, unreadByConversation, activeCallConversationId } = useRoom();
   const title = conversationTitle(conversation, state.me.userId, allUsers);
   const other = directUser(conversation, state.me.userId, allUsers);
   const unread = unreadByConversation.get(conversation.id) ?? 0;
-  const online = other ? onlineUserIds.has(other.id) : false;
+  const status = useUserStatus(other?.id);
+  const customStatus = useCustomStatus(other?.id);
   const inCall = activeCallConversationId === conversation.id;
   return (
     <li data-conversation-id={conversation.id} data-user-id={other?.id} className="group/dm relative mx-2">
@@ -55,13 +61,15 @@ function DirectRow({ conversation, active, onClick, onClose }: {
               <PhoneIcon size={10} weight="fill" />
             </span>
           ) : (
-            <span className={cn('absolute -bottom-0.5 -right-0.5 size-3.5 rounded-full border-[3px] border-(--cutout)', online ? 'bg-green' : 'bg-text-muted')} />
+            <StatusDot status={status} className="absolute -bottom-0.5 -right-0.5 size-3.5 border-[3px] text-(--cutout)" />
           )}
         </span>
         <span className="min-w-0 flex-1">
           <span className={cn('block truncate text-body', unread ? 'font-semibold' : 'font-medium')}>{title}</span>
-          {inCall && (
+          {inCall ? (
             <span className="block truncate text-label text-green">{t('sidebar.inThisCall')}</span>
+          ) : (
+            <CustomStatusText custom={customStatus} className="text-caption text-text-muted" />
           )}
         </span>
       </button>
@@ -141,7 +149,23 @@ function DirectList({ onNavigate }: { onNavigate: () => void }) {
             />
           ))}
         </ul>
-        {directs.length === 0 && <p className="select-none px-4 py-6 text-center text-label text-text-muted">{query.trim() ? t('sidebar.noMatch') : t('sidebar.empty')}</p>}
+        {directs.length === 0 && (query.trim() ? (
+          <EmptyState
+            size="compact"
+            illustration="search"
+            title={t('sidebar.noMatch')}
+            description={t('sidebar.noMatchText', { query: query.trim() })}
+            action={<Button type="button" variant="secondary" size="sm" onClick={() => setQuery('')}>{t('sidebar.clearSearch')}</Button>}
+          />
+        ) : (
+          <EmptyState
+            size="compact"
+            illustration="chat"
+            title={t('sidebar.emptyTitle')}
+            description={t('sidebar.empty')}
+            action={<Button type="button" variant="secondary" size="sm" onClick={() => setNewOpen(true)}><PlusIcon size={16} aria-hidden />{t('sidebar.startConversation')}</Button>}
+          />
+        ))}
       </div>
       <NewDirectDialog open={newOpen} onOpenChange={setNewOpen} onOpened={onNavigate} />
     </div>

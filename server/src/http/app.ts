@@ -3,10 +3,11 @@ import Fastify, { type FastifyError, type FastifyInstance, type FastifyReply, ty
 import fastifyStatic from '@fastify/static';
 import fastifyCompress from '@fastify/compress';
 import { config } from '../config/env.js';
-import { listOnlineUserIds, participants } from '../modules/presence/participants.js';
+import { listVisibleOnlineUserIds, participants } from '../modules/presence/participants.js';
 import { sendError, sendJson } from './respond.js';
 import { originGuard } from './originGuard.js';
 import { registerAuthRoutes } from '../modules/auth/routes.js';
+import { RateLimitUnavailableError } from '../modules/auth/ratelimit.js';
 import { registerAttachmentRoutes } from '../modules/attachments/attachments.js';
 import { registerConnectionRoutes } from '../modules/connections/connections.js';
 import { registerProfileRoutes } from '../modules/profile/profile.js';
@@ -72,6 +73,11 @@ export function createApp(): FastifyInstance {
   // frontend depends on the old codes (invalid_json etc.), so accepting
   // Fastify's native ones going forward is safe.
   fastify.setErrorHandler((err: FastifyError, _request: FastifyRequest, reply: FastifyReply) => {
+    // fail closed: without the counters a brute-force limit cannot be enforced, so the attempt is refused (already logged where it failed)
+    if (err instanceof RateLimitUnavailableError) {
+      reply.header('Retry-After', '30');
+      return sendError(reply, 503, 'rate_limit_unavailable', 'Não foi possível verificar suas tentativas agora. Tente novamente em instantes.');
+    }
     const status = err.statusCode ?? 500;
     const code = err.code || 'internal_error';
     if (status >= 500) log.error('error in a route', err, { reqId: _request.id, method: _request.method, url: loggablePath(_request) });
@@ -105,7 +111,7 @@ export function createApp(): FastifyInstance {
   registerLinkPreviewRoutes(fastify);
   registerGifRoutes(fastify);
   registerGameRoutes(fastify);
-  registerFriendshipRoutes(fastify, { onlineUserIds: listOnlineUserIds });
+  registerFriendshipRoutes(fastify, { onlineUserIds: listVisibleOnlineUserIds });
   registerBlockRoutes(fastify);
   registerUserRoutes(fastify);
   registerServerRoutes(fastify);

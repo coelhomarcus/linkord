@@ -1,0 +1,1 @@
+ALTER TABLE "users" ADD COLUMN "push_show_content" boolean DEFAULT true NOT NULL;

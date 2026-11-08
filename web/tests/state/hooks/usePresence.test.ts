@@ -33,4 +33,31 @@ describe('usePresence', () => {
     }));
     expect(result.current.allUsers.get('peer')).toMatchObject({ avatar: '/uploads/a.gif', avatarPoster: '/uploads/a.webp' });
   });
+
+  it('keeps the status of online people and forgets it when they go offline', () => {
+    const { result } = renderHook(() => usePresence());
+    act(() => result.current.setInitial([peer], ['peer'], ['peer'], { peer: { status: 'dnd', customStatus: null } }));
+    expect(result.current.presenceByUser.get('peer')?.status).toBe('dnd');
+
+    const custom = { emoji: '🎮', text: 'jogando', expiresAt: null };
+    act(() => result.current.onPresenceStatus({ t: 'presence-status', userId: 'peer', status: 'idle', customStatus: custom }));
+    expect(result.current.presenceByUser.get('peer')).toEqual({ status: 'idle', customStatus: custom });
+
+    act(() => result.current.onUserOffline({ t: 'user-offline', userId: 'peer' }));
+    expect(result.current.presenceByUser.has('peer')).toBe(false);
+  });
+
+  it('a plain "online" without a custom status needs no entry', () => {
+    const { result } = renderHook(() => usePresence());
+    act(() => result.current.setInitial([peer], ['peer'], ['peer'], { peer: { status: 'dnd', customStatus: null } }));
+    act(() => result.current.onPresenceStatus({ t: 'presence-status', userId: 'peer', status: 'online', customStatus: null }));
+    expect(result.current.presenceByUser.has('peer')).toBe(false);
+  });
+
+  it('a snapshot from a server without statuses reads as everyone plain online', () => {
+    const { result } = renderHook(() => usePresence());
+    act(() => result.current.setInitial([peer], ['peer'], ['peer'], { peer: { status: 'dnd', customStatus: null } }));
+    act(() => result.current.setInitial([peer], ['peer'], ['peer']));
+    expect(result.current.presenceByUser.size).toBe(0);
+  });
 });

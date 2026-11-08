@@ -18,7 +18,7 @@
   "reset": "Reset",
   "close": "Close",
   "channels": "Channels",
-  "noChannels": "No channels here yet.",
+  "noChannels": "No channels here",
   "suspended": "This server was suspended by the administrators.",
   "create": {
     "title": "Create Your Server",
@@ -134,7 +134,8 @@
       "moderation": "Moderation"
     },
     "icon": "Icon",
-    "iconHint": "We recommend an image of at least 512x512."
+    "iconHint": "We recommend an image of at least 512x512.",
+    "auditLog": "Audit log"
   },
   "roles": {
     "hint": "Use roles to group your members and set what each one can do. Higher roles outrank lower ones.",
@@ -151,7 +152,26 @@
     "down": "Move down",
     "search": "Search roles",
     "memberCount": "{{count}} members",
-    "noResults": "No roles found."
+    "noResults": "No roles found.",
+    "noColor": "No color",
+    "colorTrigger": "Role color: {{name}}",
+    "colors": {
+      "teal": "Teal",
+      "green": "Green",
+      "blue": "Blue",
+      "purple": "Purple",
+      "pink": "Pink",
+      "yellow": "Yellow",
+      "orange": "Orange",
+      "red": "Red",
+      "grey": "Grey",
+      "slate": "Slate",
+      "mint": "Mint",
+      "sky": "Sky",
+      "lavender": "Lavender",
+      "rose": "Rose",
+      "gold": "Gold"
+    }
   },
   "invites": {
     "none": "No active invites.",
@@ -252,7 +272,8 @@
     "STREAM": "Video and Screen",
     "MOVE_MEMBERS": "Disconnect Members",
     "USE_SOUNDBOARD": "Use Soundboard",
-    "MANAGE_EXPRESSIONS": "Manage Expressions"
+    "MANAGE_EXPRESSIONS": "Manage Expressions",
+    "VIEW_AUDIT_LOG": "View audit log"
   },
   "permissionHints": {
     "ADMINISTRATOR": "Grants every permission and bypasses channel rules. Be careful granting this.",
@@ -273,7 +294,8 @@
     "STREAM": "Turn on the camera and share the screen.",
     "MOVE_MEMBERS": "Move members below your role between voice channels, or disconnect them.",
     "USE_SOUNDBOARD": "Play and add soundboard sounds.",
-    "MANAGE_EXPRESSIONS": "Edit and remove anyone's sounds."
+    "MANAGE_EXPRESSIONS": "Edit and remove anyone's sounds.",
+    "VIEW_AUDIT_LOG": "See who changed what in the server."
   },
   "voiceMembers": {
     "inChannel": "In the {{channel}} call",
@@ -295,5 +317,163 @@
       "moveTo": "Move to",
       "disconnect": "Disconnect"
     }
-  }
+  },
+  "auditLog": {
+    "hint": "Who changed what in this server, and when. Older entries are deleted over time.",
+    "filters": {
+      "user": "Filter by user",
+      "allUsers": "All",
+      "action": "Filter by action",
+      "allActions": "All",
+      "from": "From",
+      "to": "To",
+      "target": "Target: {{name}}",
+      "clearTarget": "Remove target filter",
+      "clear": "Clear filters"
+    },
+    "empty": "Nothing recorded yet",
+    "emptyFiltered": "No entries match these filters",
+    "loading": "Loading…",
+    "loadMore": "Load more",
+    "details": "Details",
+    "unknownUser": "Deleted account",
+    "actions": {
+      "server": {
+        "update": "Update server",
+        "transfer": "Transfer server"
+      },
+      "member": {
+        "kick": "Kick member",
+        "ban": "Ban member",
+        "unban": "Revoke ban",
+        "roles_update": "Change member roles",
+        "voice_disconnect": "Disconnect from voice",
+        "voice_move": "Move in voice"
+      },
+      "role": {
+        "create": "Create role",
+        "update": "Update role",
+        "delete": "Delete role",
+        "reorder": "Reorder roles"
+      },
+      "channel": {
+        "create": "Create channel",
+        "update": "Update channel",
+        "delete": "Delete channel"
+      },
+      "category": {
+        "create": "Create category",
+        "update": "Update category",
+        "delete": "Delete category"
+      },
+      "permissions": {
+        "update": "Change permissions"
+      },
+      "invite": {
+        "create": "Create invite",
+        "revoke": "Revoke invite"
+      },
+      "webhook": {
+        "create": "Create webhook",
+        "update": "Update webhook",
+        "rotate": "Reset webhook token",
+        "delete": "Delete webhook"
+      },
+      "message": {
+        "delete": "Delete message"
+      },
+      "sound": {
+        "create": "Add sound",
+        "update": "Edit sound",
+        "delete": "Remove sound"
+      }
+    },
+    "sentences": {
+      "server": {
+        "update": "<actor>{{actor}}</actor> updated the server",
+        "transfer": "<actor>{{actor}}</actor> transferred the server to <target>{{target}}</target>"
+      },
+      "member": {
+        "kick": "<actor>{{actor}}</actor> kicked <target>{{target}}</target>",
+        "ban": "<actor>{{actor}}</actor> banned <target>{{target}}</target>",
+        "unban": "<actor>{{actor}}</actor> revoked the ban on <target>{{target}}</target>",
+        "roles_update": "<actor>{{actor}}</actor> changed the roles of <target>{{target}}</target>",
+        "voice_disconnect": "<actor>{{actor}}</actor> disconnected <target>{{target}}</target> from <b>{{channel}}</b>",
+        "voice_move": "<actor>{{actor}}</actor> moved <target>{{target}}</target> to another voice channel"
+      },
+      "role": {
+        "create": "<actor>{{actor}}</actor> created the role <target>{{target}}</target>",
+        "update": "<actor>{{actor}}</actor> updated the role <target>{{target}}</target>",
+        "delete": "<actor>{{actor}}</actor> deleted the role <target>{{target}}</target>",
+        "reorder": "<actor>{{actor}}</actor> reordered the roles"
+      },
+      "channel": {
+        "create": "<actor>{{actor}}</actor> created the channel <target>{{target}}</target>",
+        "update": "<actor>{{actor}}</actor> updated the channel <target>{{target}}</target>",
+        "delete": "<actor>{{actor}}</actor> deleted the channel <target>{{target}}</target>"
+      },
+      "category": {
+        "create": "<actor>{{actor}}</actor> created the category <target>{{target}}</target>",
+        "update": "<actor>{{actor}}</actor> updated the category <target>{{target}}</target>",
+        "delete": "<actor>{{actor}}</actor> deleted the category <target>{{target}}</target>"
+      },
+      "permissions": {
+        "update": "<actor>{{actor}}</actor> changed the permissions of <b>{{subject}}</b> in <target>{{target}}</target>"
+      },
+      "invite": {
+        "create": "<actor>{{actor}}</actor> created the invite <target>{{target}}</target>",
+        "revoke": "<actor>{{actor}}</actor> revoked the invite <target>{{target}}</target>"
+      },
+      "webhook": {
+        "create": "<actor>{{actor}}</actor> created the webhook <target>{{target}}</target>",
+        "update": "<actor>{{actor}}</actor> updated the webhook <target>{{target}}</target>",
+        "rotate": "<actor>{{actor}}</actor> reset the token of the webhook <target>{{target}}</target>",
+        "delete": "<actor>{{actor}}</actor> deleted the webhook <target>{{target}}</target>"
+      },
+      "message": {
+        "delete": "<actor>{{actor}}</actor> deleted a message by <b>{{author}}</b> in <b>{{channel}}</b>"
+      },
+      "sound": {
+        "create": "<actor>{{actor}}</actor> added the sound <target>{{target}}</target>",
+        "update": "<actor>{{actor}}</actor> edited the sound <target>{{target}}</target>",
+        "delete": "<actor>{{actor}}</actor> removed the sound <target>{{target}}</target>"
+      }
+    },
+    "fields": {
+      "name": "Name",
+      "icon": "Icon",
+      "topic": "Topic",
+      "permissionsSynced": "Synced with category",
+      "color": "Color",
+      "permissions": "Permissions",
+      "hoist": "Shown separately",
+      "mentionable": "Mentionable",
+      "order": "Order",
+      "roles": "Roles",
+      "allow": "Allowed",
+      "deny": "Denied",
+      "maxUses": "Max uses",
+      "expiresAt": "Expires",
+      "channel": "Channel",
+      "type": "Type",
+      "emoji": "Emoji",
+      "volume": "Volume",
+      "avatar": "Avatar",
+      "reason": "Reason"
+    },
+    "values": {
+      "yes": "Yes",
+      "no": "No",
+      "none": "none",
+      "image": "image",
+      "text": "text",
+      "voice": "voice",
+      "before": "Before",
+      "after": "After"
+    },
+    "emptyText": "Changes to roles, channels, members and invites are recorded here.",
+    "emptyFilteredText": "Adjust or clear the filters to see everything."
+  },
+  "noChannelsCanCreate": "Create the first channel to get the conversation going.",
+  "noChannelsText": "When there is a channel you can see, it shows up here."
 }

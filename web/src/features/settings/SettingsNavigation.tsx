@@ -13,6 +13,7 @@ import { FROM_INDEX_STATE, findCategory, visibleGroups } from './settingsCatalog
 import { useSettingsSearch } from './useSettingsSearch';
 import type { SettingsSearchResult } from './useSettingsSearch';
 import { AppLink } from '@/shared/ui/app-link';
+import { EmptyState } from '@/shared/ui/empty-state';
 
 function GroupLabel({ children }: { children: string }) {
   return <p className="truncate px-2.5 pb-1.5 text-label font-medium text-text-muted">{children}</p>;
@@ -64,7 +65,8 @@ function SettingsSearchField({ query, onChange, onClear }: { query: string; onCh
 function SettingsSearchResults({ results, query }: { results: SettingsSearchResult[]; query: string }) {
   const { t } = useTranslation('settings');
   if (results.length === 0) {
-    return <p className="px-2.5 py-4 text-label text-text-muted">{t('nav.noResults', { query })}</p>;
+    // the search field above already has its own clear button
+    return <EmptyState size="compact" illustration="search" title={t('nav.noResultsTitle')} description={t('nav.noResults', { query })} className="px-2" />;
   }
   return (
     <div className="flex flex-col gap-0.5">

@@ -1,4 +1,4 @@
-// Pure rules of the outbox worker and of notification retention.
+// Pure rules of the outbox worker. How long old rows are kept lives in modules/retention.
 
 export const OUTBOX_MAX_ATTEMPTS = 8;
 export const OUTBOX_BATCH = 50;
@@ -7,9 +7,6 @@ export const OUTBOX_POLL_MS = 2_000;
 export const OUTBOX_LEASE_MS = 120_000;
 const OUTBOX_RETRY_BASE_MS = 30_000;
 const OUTBOX_RETRY_MAX_MS = 15 * 60_000;
-export const OUTBOX_RETENTION_DAYS = 7;
-export const NOTIFICATION_READ_RETENTION_DAYS = 30;
-export const NOTIFICATION_UNREAD_RETENTION_DAYS = 90;
 
 export interface OutboxState { processed: boolean; attempts: number }
 
@@ -28,4 +25,9 @@ export function outboxRetryDelayMs(attempts: number, retryAfterMs = 0): number {
 
 export const isOutboxFailed = (state: { processed: boolean; attempts: number }): boolean => !state.processed && state.attempts >= OUTBOX_MAX_ATTEMPTS;
 
-export const daysAgo = (days: number, now = new Date()): Date => new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+/** Whether a push reaches this account at all. "Do not disturb" drops it for good, not until later:
+ * the notification itself is still in the list, and a pile of stale pushes arriving the moment
+ * someone turns it off would be the disturbance. */
+export function recipientAcceptsPush(recipient: { status: string; presenceStatus: string }): boolean {
+  return recipient.status === 'active' && recipient.presenceStatus !== 'dnd';
+}

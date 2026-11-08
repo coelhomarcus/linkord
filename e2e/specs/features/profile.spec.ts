@@ -15,8 +15,9 @@ test.describe('profile', () => {
     await a.page.getByRole('button', { name: 'Meu perfil' }).filter({ hasText: 'Meu perfil' }).click();
     await a.page.getByLabel('Nome de exibição').fill('Alice Testes');
     await a.page.getByPlaceholder('Fale um pouco sobre você...').fill('bio escrita pelo teste');
-    await a.page.getByRole('button', { name: 'Salvar perfil' }).click();
-    await expect(a.page.getByText('Perfil salvo.')).toBeVisible();
+    const bar = a.page.getByRole('region', { name: 'Salvar alterações do perfil' });
+    await bar.getByRole('button', { name: 'Salvar' }).click();
+    await expect(a.page.getByText('Alterações salvas.')).toBeVisible();
 
     // Bob still has the DM open: the new name reaches him without a reload
     await expect(b.page.getByText('Alice Testes').first()).toBeVisible();

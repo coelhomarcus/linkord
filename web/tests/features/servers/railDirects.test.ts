@@ -5,7 +5,7 @@ import { railDirects } from '@/features/servers/railDirects';
 function dm(id: string, peer: string, lastMessageAt: number, type: Conversation['type'] = 'direct'): Conversation {
   return {
     id, type, title: type === 'direct' ? '' : 'Geral', memberIds: type === 'direct' ? ['me', peer] : [],
-    serverId: type === 'direct' ? null : 's', lastMessageAt, createdAt: 0, updatedAt: 0, pinnedAt: null,
+    serverId: type === 'direct' ? null : 's', lastMessageAt, createdAt: 0, updatedAt: 0,
   };
 }
 

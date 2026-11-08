@@ -152,6 +152,7 @@
   --animate-sweep: sweep 1.15s ease-in-out infinite;
   --animate-float-up: float-up 3s ease-out forwards;
   --animate-typing-dot: typing-dot 1.4s ease-in-out infinite;
+  --animate-skeleton: skeleton-pulse 1.8s ease-in-out infinite;
 }
 
 @keyframes sweep {
@@ -169,6 +170,10 @@
 @keyframes typing-dot {
   0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
   30% { transform: translateY(-2px); opacity: 1; }
+}
+
+@keyframes skeleton-pulse {
+  50% { opacity: 0.5; }
 }
 
 @keyframes message-press-progress {

@@ -7,6 +7,7 @@ import { useRoom } from '@/state/RoomContext';
 import { blockUser, fetchFriends, removeFriend } from '@/shared/api/api';
 import type { SocialEntry, SocialUser } from '@/shared/api/api';
 import { Button } from '@/shared/ui/primitives/button';
+import { EmptyState } from '@/shared/ui/empty-state';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/primitives/dropdown-menu';
 import { friendsView } from '@/shared/lib/routes';
 import { ActionFeedback } from './ActionFeedback';
@@ -17,6 +18,7 @@ import { LoadMoreFooter } from './LoadMoreFooter';
 import { SocialConfirmDialog } from './SocialConfirmDialog';
 import type { SocialConfirm } from './SocialConfirmDialog';
 import { SocialUserRow } from './SocialUserRow';
+import { SearchEmpty } from './SearchEmpty';
 import { useFriends } from './FriendsContext';
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
 
@@ -117,17 +119,21 @@ export function FriendsList({ view, query, onQueryChange, onOpenProfile }: {
       )}
 
       {isEmptyAccount && (
-        <FadeIn className="flex select-none flex-col items-center gap-3 py-10 text-center">
-          <UserIcon size={32} className="text-text-muted" />
-          <p className="text-body font-medium text-text-primary">{t('list.emptyTitle')}</p>
-          <p className="max-w-sm text-label text-text-muted">{t('list.emptyText')}</p>
-          <div className="flex flex-wrap justify-center gap-2">
-            <Button type="button" size="sm" onClick={() => navigate(friendsView('add'))}><UserPlusIcon size={20} weight="fill" /><span>{t('addFriend')}</span></Button>
-            <Button type="button" variant="secondary" size="sm" onClick={() => void handleCopyUsername()}>
-              {copied ? <CheckIcon size={20} /> : <CopyIcon size={20} />}
-              <span>{copied ? t('add.copied') : t('add.copy', { username: state.me.name })}</span>
-            </Button>
-          </div>
+        <FadeIn>
+          <EmptyState
+            illustration="people"
+            title={t('list.emptyTitle')}
+            description={t('list.emptyText')}
+            action={(
+              <>
+                <Button type="button" size="sm" onClick={() => navigate(friendsView('add'))}><UserPlusIcon size={20} weight="fill" /><span>{t('addFriend')}</span></Button>
+                <Button type="button" variant="secondary" size="sm" onClick={() => void handleCopyUsername()}>
+                  {copied ? <CheckIcon size={20} /> : <CopyIcon size={20} />}
+                  <span>{copied ? t('add.copied') : t('add.copy', { username: state.me.name })}</span>
+                </Button>
+              </>
+            )}
+          />
         </FadeIn>
       )}
 
@@ -136,11 +142,15 @@ export function FriendsList({ view, query, onQueryChange, onOpenProfile }: {
           <FadeIn skip={list.restored}><ListSectionHeader id="friends-list-title" title={view === 'online' ? t('views.online') : t('list.sectionAll')} count={countText} /></FadeIn>
           {visible.length === 0 ? (
             <FadeIn skip={list.restored}>
-              <p className="select-none py-8 text-center text-label text-text-muted">
-                {search
-                  ? t('list.noResults')
-                  : view === 'online' ? t('list.noneOnline') : t('list.noneFound')}
-              </p>
+              {search ? <SearchEmpty query={search} onClear={() => setValue('')} />
+                : view === 'online' ? (
+                  <EmptyState
+                    illustration="person"
+                    title={t('list.noneOnline')}
+                    description={t('list.noneOnlineText')}
+                    action={<Button type="button" variant="secondary" size="sm" onClick={() => navigate(friendsView('all'))}>{t('list.viewAll')}</Button>}
+                  />
+                ) : <EmptyState illustration="people" title={t('list.noneFound')} />}
             </FadeIn>
           ) : (
             <RevealList restored={list.restored}>

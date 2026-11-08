@@ -38,9 +38,25 @@ describe('filters live in the URL', () => {
     const u = userEvent.setup();
     mocked.fetchAudit.mockResolvedValue({ items: [], nextCursor: null });
     renderAdmin(<AuditPage />, { path: '/admin/audit', pattern: '/admin/audit' });
-    await screen.findByText('Nenhum registro para esses filtros.');
+    await screen.findByText('Nenhuma ação registrada');
     await u.type(screen.getByLabelText('Administrador'), 'a|b');
     await waitFor(() => expect(mocked.fetchAudit).toHaveBeenLastCalledWith(expect.objectContaining({ actor: 'a|b', action: '', targetId: '' }), null));
+  });
+});
+
+describe('empty lists', () => {
+  it('with no filter, says there is nothing yet; with one, offers to clear it', async () => {
+    const u = userEvent.setup();
+    mocked.fetchAdminUsers.mockResolvedValue({ items: [], nextCursor: null });
+    renderAdmin(<UsersPage />, { path: '/admin/users?status=suspended', pattern: '/admin/users' });
+    expect(await screen.findByText('Nada com esses filtros')).toBeInTheDocument();
+    expect(screen.queryByText('Nenhuma conta ainda')).not.toBeInTheDocument();
+
+    // the toolbar has its own "Limpar filtros"; the empty state's is the last one
+    await u.click(screen.getAllByRole('button', { name: 'Limpar filtros' }).at(-1)!);
+    expect(await screen.findByText('Nenhuma conta ainda')).toBeInTheDocument();
+    expect(mocked.fetchAdminUsers).toHaveBeenLastCalledWith(expect.objectContaining({ status: undefined }), null);
+    expect(screen.queryByRole('button', { name: 'Limpar filtros' })).not.toBeInTheDocument();
   });
 });
 
@@ -73,5 +89,28 @@ describe('back from a detail', () => {
       adminRoom(),
     );
     expect(await screen.findByRole('link', { name: '← Usuários' })).toHaveAttribute('data-to', '/admin/users');
+  });
+});
+
+describe('while the first read is in flight', () => {
+  it('a list shows rows of the table it will become, and says it is loading', async () => {
+    mocked.fetchAdminUsers.mockImplementation(() => new Promise(() => {}));
+    renderAdmin(<UsersPage />, { path: '/admin/users', pattern: '/admin/users' });
+
+    const status = await screen.findByRole('status');
+    expect(status).toHaveTextContent('Carregando…');
+    expect(status).toHaveClass('sr-only');
+    const region = status.closest('[aria-busy="true"]')!;
+    expect(region).not.toBeNull();
+    expect(region.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(6);
+  });
+
+  it('a detail page shows the shape of its header until the account arrives', async () => {
+    mocked.fetchAdminUser.mockImplementation(() => new Promise(() => {}));
+    renderAdmin(<UserDetailPage />, { path: '/admin/users/u1', pattern: '/admin/users/:id' });
+
+    expect(await screen.findByRole('status')).toHaveTextContent('Carregando…');
+    expect(document.querySelector('[aria-busy="true"] .size-16[data-slot="skeleton"]')).not.toBeNull();
+    expect(screen.queryByRole('heading')).not.toBeInTheDocument();
   });
 });

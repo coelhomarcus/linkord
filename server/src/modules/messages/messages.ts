@@ -21,6 +21,7 @@ import {
 } from '../conversations/conversationsRepository.js';
 import { hasPermission, PERMISSIONS } from '../servers/permissions.js';
 import { channelPermissions } from '../servers/serverAccess.js';
+import { recordServerAudit } from '../servers/serverAuditLog.js';
 import { canSendDirectMessage } from '../friendships/friendshipsRepository.js';
 import { resolveDisplayName } from '../users/users.js';
 import * as attachments from '../attachments/attachments.js';
@@ -859,8 +860,8 @@ async function deleteMessage(p: Participant, msg: { msgId?: unknown }): Promise<
   const conversation = await getConversationForUser(existing.conversationId, p.userId);
   if (!conversation) return { code: 'conversation_not_found', message: 'Conversa não encontrada.' };
   const isAuthor = existing.authorId === p.userId;
-  // a server's own moderators keep its channels tidy — that's running the
-  // server, not instance moderation, so it isn't audited
+  // a server's own moderators keep its channels tidy: that is running the
+  // server, so it goes to the server's audit log rather than the instance's
   const isChannelModerator = isServerChannel(conversation)
     && hasPermission(await channelPermissions(conversation.serverId, conversation.id, p.userId), PERMISSIONS.MANAGE_MESSAGES);
   // admin authority is re-read, not taken from the connection's frozen role (§7.5)
@@ -874,7 +875,17 @@ async function deleteMessage(p: Participant, msg: { msgId?: unknown }): Promise<
   // attachments row disappears via CASCADE, but nothing would know which
   // file to delete anymore (see attachments/attachmentCleanup.ts).
   await deleteForMessage(msgId);
-  await db.delete(messages).where(eq(messages.id, msgId));
+  await db.transaction(async (tx) => {
+    await tx.delete(messages).where(eq(messages.id, msgId));
+    if (!isAuthor && isChannelModerator) {
+      const [author] = existing.authorId ? await tx.select({ username: users.username }).from(users).where(eq(users.id, existing.authorId)).limit(1) : [];
+      // ids and names only, never the message body
+      await recordServerAudit(tx, {
+        serverId: conversation.serverId, actorId: p.userId, action: 'message.delete', targetType: 'message', targetId: String(msgId),
+        extra: { channelId: conversation.id, channel: conversation.title, authorId: existing.authorId, author: author?.username ?? '' },
+      });
+    }
+  });
   // the author's quota just got room back
   await recordConversationActivity(existing.conversationId);
   if (!isAuthor && !isChannelModerator) {

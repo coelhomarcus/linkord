@@ -18,6 +18,7 @@ import { deleteServerCompletely } from './serverDeletion.js';
 import { pageServerMembers } from './serverMembers.js';
 import { createInvitations, normalizeInviteeIds, type InviteResult } from './serverInvitationsRepository.js';
 import { requireServerMember, requireSession } from './serverHttp.js';
+import { diffFields, listServerAudit, recordServerAudit, SERVER_AUDIT_ACTIONS } from './serverAuditLog.js';
 import { logger } from '../../lib/logger.js';
 
 const log = logger.child({ component: 'servers' });
@@ -81,7 +82,11 @@ async function handleUpdate(request: FastifyRequest<{ Params: ServerParams }>, r
   }
   if (updates.name === undefined && updates.icon === undefined) return sendJson(reply, 200, { ok: true });
   const previousIcon = actor.snapshot.server.icon;
-  await db.update(servers).set(updates).where(eq(servers.id, serverId));
+  const changes = diffFields({ name: actor.snapshot.server.name, icon: previousIcon }, updates, ['name', 'icon']);
+  await db.transaction(async (tx) => {
+    await tx.update(servers).set(updates).where(eq(servers.id, serverId));
+    if (changes.length) await recordServerAudit(tx, { serverId, actorId: actor.userId, action: 'server.update', targetType: 'server', targetId: serverId, targetLabel: updates.name ?? actor.snapshot.server.name, changes });
+  });
   invalidateServer(serverId);
   if (updates.icon !== undefined && previousIcon && previousIcon !== updates.icon) {
     deleteAvatarFile(previousIcon).catch((err) => log.error('failed to delete old server icon', err, { serverId }));
@@ -141,7 +146,7 @@ async function handleUnban(request: FastifyRequest<{ Params: MemberParams }>, re
   const serverId = String(request.params.serverId || '');
   const actor = await requireServerMember(request, reply, serverId, PERMISSIONS.BAN_MEMBERS);
   if (!actor) return;
-  if (!(await unbanMember(serverId, String(request.params.userId || '')))) return sendError(reply, 404, 'not_found', 'Essa pessoa não está banida.');
+  if (!(await unbanMember(serverId, actor.userId, String(request.params.userId || '')))) return sendError(reply, 404, 'not_found', 'Essa pessoa não está banida.');
   sendJson(reply, 200, { ok: true });
 }
 
@@ -178,6 +183,24 @@ async function handleMembers(request: FastifyRequest<{ Params: ServerParams; Que
   sendJson(reply, 200, page);
 }
 
+type AuditQuery = { action?: string; actor?: string; target?: string; from?: string; to?: string; cursor?: string };
+
+/** The server's audit log, filtered by action, actor, target and period. A
+ * member without VIEW_AUDIT_LOG gets 403, an outsider 404 — like any other
+ * server route. */
+async function handleAuditLog(request: FastifyRequest<{ Params: ServerParams; Querystring: AuditQuery }>, reply: FastifyReply): Promise<void> {
+  const serverId = String(request.params.serverId || '');
+  const actor = await requireServerMember(request, reply, serverId, PERMISSIONS.VIEW_AUDIT_LOG);
+  if (!actor) return;
+  const q = request.query;
+  const text = (value: unknown) => (typeof value === 'string' ? value.trim().slice(0, 128) : '') || undefined;
+  const action = text(q.action);
+  if (action && !(SERVER_AUDIT_ACTIONS as readonly string[]).includes(action)) return sendError(reply, 400, 'invalid_request', 'Ação desconhecida.');
+  const page = await listServerAudit(serverId, { action, actorId: text(q.actor), targetId: text(q.target), from: text(q.from), to: text(q.to) }, text(q.cursor));
+  if (page === 'invalid_cursor') return sendError(reply, 400, 'invalid_cursor', 'Cursor inválido.');
+  sendJson(reply, 200, page);
+}
+
 async function handleReorder(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   const sess = await requireSession(request, reply);
   if (!sess) return;
@@ -195,6 +218,7 @@ export function registerServerRoutes(fastify: FastifyInstance): void {
   fastify.post('/api/servers/:serverId/leave', handleLeave);
   fastify.post('/api/servers/:serverId/transfer', handleTransfer);
   fastify.get('/api/servers/:serverId/members', handleMembers);
+  fastify.get('/api/servers/:serverId/audit-log', handleAuditLog);
   fastify.delete('/api/servers/:serverId/members/:userId', handleKick);
   fastify.get('/api/servers/:serverId/bans', handleListBans);
   fastify.put('/api/servers/:serverId/bans/:userId', handleBan);

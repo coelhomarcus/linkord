@@ -69,7 +69,9 @@ describe('ProfileModal', () => {
 
     const content = document.querySelector('[data-slot="dialog-content"]')!;
     expect(content.querySelector('.border-strong')).toBeNull();
-    expect(content.querySelector('.rounded-xl.border')).toBeNull();
+    // the Wall's widget cards (and their loading shapes) are bordered on purpose
+    const bordered = [...content.querySelectorAll('.rounded-xl.border')].filter((element) => !element.closest('section[aria-label="Mural"]'));
+    expect(bordered).toEqual([]);
     expect(content.querySelector('[data-slot="dialog-close"]')!.className).toContain('bg-bg-control');
     expect(content.querySelector('[data-slot="dialog-close"]')!.className).toContain('border-border-control');
   });

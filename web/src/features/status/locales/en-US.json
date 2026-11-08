@@ -1,0 +1,60 @@
+{
+  "statuses": {
+    "online": "Available",
+    "idle": "Idle",
+    "dnd": "Do Not Disturb",
+    "invisible": "Invisible",
+    "offline": "Offline"
+  },
+  "descriptions": {
+    "online": "Everyone can see you are around.",
+    "idle": "Shows you as away until you change it.",
+    "dnd": "No push notifications and no sounds. They still land in your list.",
+    "invisible": "You appear offline but can keep using Linkord as usual."
+  },
+  "menu": {
+    "trigger": "Status and profile",
+    "viewProfile": "View profile",
+    "setCustom": "Set a custom status",
+    "editCustom": "Edit custom status",
+    "clearCustom": "Clear custom status",
+    "status": "Status",
+    "reconnecting": "Reconnecting…"
+  },
+  "custom": {
+    "title": "Custom status",
+    "description": "Shown to anyone who sees you online: on your profile, in member lists and in conversations.",
+    "emoji": "Emoji",
+    "chooseEmoji": "Choose an emoji",
+    "clearEmoji": "Remove emoji",
+    "searchEmoji": "Search emoji",
+    "text": "Text",
+    "textPlaceholder": "What's happening?",
+    "clearAfter": "Clear after",
+    "expiry": {
+      "30m": "30 minutes",
+      "1h": "1 hour",
+      "4h": "4 hours",
+      "today": "Today",
+      "never": "Don't clear"
+    },
+    "fromRotation": "From your games in rotation",
+    "playing": "playing {{game}}",
+    "save": "Save",
+    "saving": "Saving…",
+    "cancel": "Cancel",
+    "clear": "Clear status",
+    "until": "until {{time}}"
+  },
+  "autoIdle": {
+    "label": "Go idle automatically",
+    "description": "After a while without using this device, you show as idle. Applies to this browser only, and only while your status is Available.",
+    "off": "Never",
+    "minutes_one": "After {{count}} minute",
+    "minutes_other": "After {{count}} minutes"
+  },
+  "errors": {
+    "saveFailed": "Couldn't change your status. Try again.",
+    "offline": "You're offline right now. Try again once you're back."
+  }
+}

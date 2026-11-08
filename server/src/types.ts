@@ -62,6 +62,9 @@ export interface Participant {
   cameraOn: boolean;
   sharing: boolean;
   speaking: boolean;
+  // reported by this connection's client after a stretch without input (see 'presence-activity');
+  // an account set to "online" reads as idle only while all its live connections are idle
+  idle: boolean;
   graceTimer: ReturnType<typeof setTimeout> | null;
   // Friends ∪ members of every conversation this account is in — computed
   // ONCE per connection (handleJoin, realtime/socket.ts), not on every

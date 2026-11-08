@@ -27,6 +27,8 @@ import { captureScreenPreview } from '@/features/calls/captureScreenPreview';
 import { streamPreviewStore } from '@/features/calls/streamPreviewStore';
 import { useRoomSettings } from '@/features/settings/useRoomSettings';
 import { useProfileUpdate } from '@/features/profile/useProfileUpdate';
+import { useOwnStatus } from '@/features/status/useOwnStatus';
+import { useIdleReporter } from '@/features/status/useIdleReporter';
 import { preloadSounds } from '@/shared/sounds';
 import { setNotificationClickHandler } from '@/shared/notifications';
 import { DEFAULT_MAX_ATTACHMENT_BYTES } from '@/shared/types/protocol';
@@ -157,6 +159,8 @@ export function RoomProvider({ children }: { children: ReactNode }) {
   });
 
   const tileMenu = useTileMenu();
+  const { ownStatus, setPresence, onSnapshot: onStatusSnapshot, onMyStatus, onResult: onPresenceResult } = useOwnStatus({ sendWs });
+  const { onWelcome: onIdleWelcome } = useIdleReporter({ sendWs });
 
   /** The FULL "open a conversation" behavior — cursor move (conversationsList)
    * plus resetting this conversation's unread/reply/editing state
@@ -210,7 +214,9 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         conversationsList.setInitial(m.conversations ?? []);
         serversList.setInitial(m.servers ?? []);
         chatMessages.onWelcome(m.unreadByConversation);
-        presence.setInitial(m.knownUsers, m.onlineUserIds, m.friendIds);
+        presence.setInitial(m.knownUsers, m.onlineUserIds, m.friendIds, m.presence);
+        onStatusSnapshot(m.myStatus);
+        onIdleWelcome();
         setMaxAttachmentBytes(m.maxAttachmentBytes ?? DEFAULT_MAX_ATTACHMENT_BYTES);
         // the first welcome opens nothing: the URL says what to show (the
         // route sync opens it). A reconnect reloads what was open.
@@ -308,9 +314,6 @@ export function RoomProvider({ children }: { children: ReactNode }) {
       case 'conversation-updated':
         conversationsList.onConversationUpdated(m);
         break;
-      case 'conversation-pinned':
-        conversationsList.onConversationPinned(m);
-        break;
       case 'conversation-read':
         chatMessages.onConversationRead(m);
         break;
@@ -374,7 +377,17 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         break;
       case 'presence-sync':
         dispatch({ type: 'PARTICIPANTS_SYNC', participants: m.participants });
-        presence.setInitial(m.knownUsers, m.onlineUserIds, m.friendIds);
+        presence.setInitial(m.knownUsers, m.onlineUserIds, m.friendIds, m.presence);
+        if (m.myStatus) onStatusSnapshot(m.myStatus);
+        break;
+      case 'presence-status':
+        presence.onPresenceStatus(m);
+        break;
+      case 'my-status':
+        onMyStatus(m);
+        break;
+      case 'presence-result':
+        onPresenceResult(m);
         break;
       case 'user-online':
         presence.onUserOnline(m);
@@ -422,6 +435,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
   }, [
     dispatch, conversationsList, serversList, presence, openConversation, sendWs, callLifecycle, dmCall,
     messageSearch, chatMessages, typingIndicator, disconnectIntentionally, profileUpdate, soundboardEvents, livekitRoom,
+    onStatusSnapshot, onMyStatus, onPresenceResult, onIdleWelcome,
   ]);
 
   const { retryConnection } = useSocketConnection({ socketRef, intentionalCloseRef, sendWs, dispatch, refreshAuth, onMessage: handleServerMessage });
@@ -473,7 +487,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         servers: serversList.servers, serverMemberRevision: serversList.memberRevision,
         serverMemberRoleIds: serversList.memberRoleIds, setServerMemberSnapshot: serversList.setMemberSnapshot,
         reorderServers: serversList.reorderLocally,
-        openConversation, openDirect: conversationsList.openDirect, closeConversation, pinConversation: conversationsList.pinConversation,
+        openConversation, openDirect: conversationsList.openDirect, closeConversation,
         messagesByConversation: chatMessages.messagesByConversation, hasMoreByConversation: chatMessages.hasMoreByConversation,
         loadingOlderByConversation: chatMessages.loadingOlderByConversation, loadOlderMessages: chatMessages.loadOlderMessages,
         loadNewerMessages: chatMessages.loadNewerMessages, loadingNewerByConversation: chatMessages.loadingNewerByConversation,
@@ -483,6 +497,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         unreadStartByConversation: chatMessages.unreadStartByConversation,
         typingByConversation: typingIndicator.typingByConversation, sendTyping: typingIndicator.sendTyping,
         allUsers: presence.allUsers, onlineUserIds: presence.onlineUserIds, friendUserIds: presence.friendUserIds,
+        presenceByUser: presence.presenceByUser, ownStatus, setPresence,
         kickFromCall: callLifecycle.kickFromCall, moveToCall: callLifecycle.moveToCall,
         actionError, clearActionError: () => setActionError(null),
         accessNotice, clearAccessNotice: () => setAccessNotice(null),

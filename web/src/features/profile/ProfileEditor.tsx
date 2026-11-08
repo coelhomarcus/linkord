@@ -25,6 +25,8 @@ import { describeProfileSaveError } from './useProfileUpdate';
 import { formatProfileDate } from './useProfileDetails';
 import type { useProfileDetails } from './useProfileDetails';
 import { useProfileDraft } from './useProfileDraft';
+import type { DisplayStatus } from '@/features/status/statusDisplay';
+import type { CustomStatus } from '@/shared/types/protocol';
 
 type ProfileCropTarget = { field: 'avatar' | 'banner'; file: File; src: string };
 
@@ -34,8 +36,9 @@ export type LeaveGuard = () => boolean;
 
 /** Your own profile modal, editable in place: the same layout everyone else
  * sees, with the name, bio, colour and images changed right where they show. */
-export function ProfileEditor({ online, details, onClose, registerLeaveGuard }: {
-  online: boolean;
+export function ProfileEditor({ status, customStatus, details, onClose, registerLeaveGuard }: {
+  status: DisplayStatus;
+  customStatus: CustomStatus | null;
   details: ReturnType<typeof useProfileDetails>;
   onClose: () => void;
   /** hands the modal the check it runs before closing, and `null` on unmount */
@@ -240,7 +243,8 @@ export function ProfileEditor({ online, details, onClose, registerLeaveGuard }: 
               profileLinks: state.me.profileLinks,
               role: state.me.role,
             }}
-            online={online}
+            status={status}
+            customStatus={customStatus}
             onAvatarUpload={() => avatarFileInputRef.current?.click()}
             onAvatarRemove={() => void handleRemoveImage('avatar')}
             avatarUploading={uploadingAvatar}
@@ -321,27 +325,12 @@ export function ProfileEditor({ online, details, onClose, registerLeaveGuard }: 
         />
 
         {showBar && (
-          <FloatingBar label={t('editor.barLabel')}>
-            {justSaved && !saving && saveState !== 'error' ? (
-              <p role="status" className="text-label font-medium text-green">{t('editor.saved')}</p>
-            ) : (
-              <p role={saveState === 'error' ? 'alert' : undefined} className={saveState === 'error' ? 'text-label text-red' : 'text-label text-text-muted'}>
-                {saveState === 'error' ? saveError : saving ? t('editor.saving') : t('editor.unsavedNotice')}
-              </p>
-            )}
-            {(dirty || saving || saveState === 'error') && (
-              <div className="flex gap-2">
-                {dirty && (
-                  <Button type="button" variant="ghost" size="sm" disabled={saving} onClick={discard}>
-                    <span>{t('editor.discard')}</span>
-                  </Button>
-                )}
-                <Button type="submit" size="sm" disabled={saving}>
-                  <span>{saving ? t('editor.saving') : t('editor.save')}</span>
-                </Button>
-              </div>
-            )}
-          </FloatingBar>
+          <FloatingBar
+            label={t('editor.barLabel')}
+            status={saving ? 'saving' : saveState === 'error' ? 'error' : justSaved ? 'saved' : 'pending'}
+            error={saveError}
+            onReset={dirty ? discard : undefined}
+          />
         )}
         <div ref={setBarSlot} className={FLOATING_BAR_SLOT_CLASS} />
       </form>

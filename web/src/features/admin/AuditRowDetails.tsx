@@ -2,30 +2,24 @@ import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { formatFileSize } from '@/shared/lib/formatBytes';
 import type { AuditRow } from './adminApi';
-import { ACTION_LABELS, REPORT_RESOLUTION_LABEL } from './adminFormat';
+import { i18n } from '@/shared/i18n/init';
+import { ACTION_LABELS, reportResolutionLabel } from './adminFormat';
 import { AdminFieldRow, AdminFields } from './AdminSection';
 
 /** Past this, the raw JSON is cut: a metadata blob must not take over the screen. */
 const JSON_LIMIT = 2000;
 
-const KEY_LABELS: Record<string, string> = {
-  resolution: 'Desfecho',
-  newOwnerId: 'Novo dono (ID)',
-  previousOwnerIds: 'Donos anteriores (IDs)',
-  deleted: 'Apagados',
-  failed: 'Falhas',
-  orphanBytes: 'Tamanho dos órfãos',
-  missingFiles: 'Registros sem arquivo',
-};
+// metadata keys the audit knows how to name; any other shows as itself
+const KNOWN_KEYS = ['resolution', 'newOwnerId', 'previousOwnerIds', 'deleted', 'failed', 'orphanBytes', 'missingFiles'];
 
 type Primitive = string | number | boolean;
 const isPrimitive = (value: unknown): value is Primitive => ['string', 'number', 'boolean'].includes(typeof value);
 
 function renderValue(key: string, value: Primitive | Primitive[]): ReactNode {
   if (Array.isArray(value)) return value.length === 0 ? '-' : <span className="break-all">{value.join(', ')}</span>;
-  if (key === 'resolution' && typeof value === 'string') return REPORT_RESOLUTION_LABEL[value] ?? value;
+  if (key === 'resolution' && typeof value === 'string') return reportResolutionLabel(value);
   if (key === 'orphanBytes' && typeof value === 'number') return formatFileSize(value);
-  if (typeof value === 'boolean') return value ? 'sim' : 'não';
+  if (typeof value === 'boolean') return i18n.t(value ? 'admin:auditDetails.yes' : 'admin:auditDetails.no');
   return <span className="break-all">{String(value)}</span>;
 }
 
@@ -37,7 +31,7 @@ function splitDetail(detail: Record<string, unknown>): { pairs: { key: string; l
   const rest: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(detail)) {
     if (isPrimitive(value) || (Array.isArray(value) && value.every(isPrimitive))) {
-      pairs.push({ key, label: KEY_LABELS[key] ?? key, value: renderValue(key, value) });
+      pairs.push({ key, label: KNOWN_KEYS.includes(key) ? i18n.t(`admin:auditDetails.keys.${key}` as never) : key, value: renderValue(key, value) });
     } else {
       rest[key] = value;
     }
@@ -53,7 +47,7 @@ function RawJson({ value }: { value: Record<string, unknown> }) {
     <details className="text-caption text-text-muted">
       <summary className="cursor-pointer select-none py-1">{t('audit.rawData')}</summary>
       <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-all rounded-md bg-fill-inset p-3 font-mono text-text-secondary">{cut ? `${text.slice(0, JSON_LIMIT)}\n…` : text}</pre>
-      {cut && <p className="mt-1">Mostrando os primeiros {JSON_LIMIT} caracteres.</p>}
+      {cut && <p className="mt-1">{t('auditDetails.cut', { count: JSON_LIMIT })}</p>}
     </details>
   );
 }

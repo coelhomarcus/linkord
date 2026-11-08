@@ -68,7 +68,9 @@ describe('FriendsPage', () => {
   it('an empty Online tab says no one is online right now (only after the query)', async () => {
     mocked.fetchFriends.mockImplementation(async (_cursor, _q, status) => (status === 'online' ? page() : page(ana)));
     renderSocial(<FriendsPage onOpenProfile={vi.fn()} />, { room: { state: me }, path: '/app/friends?tab=online' });
-    expect(await screen.findByText('Nenhum amigo online agora.')).toBeInTheDocument();
+    expect(await screen.findByText('Ninguém online agora')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Ver todos os amigos' }));
+    expect(await screen.findByText('Ana')).toBeInTheDocument();
   });
 
   it('adding by @username normalizes the text and shows the result', async () => {

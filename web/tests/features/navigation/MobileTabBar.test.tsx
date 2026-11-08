@@ -16,7 +16,7 @@ vi.mock('@/shared/api/api', async (importOriginal) => ({
 const mocked = vi.mocked(api);
 const conversation: Conversation = {
   id: 'c1', type: 'text', title: 'Equipe', serverId: 's1', memberIds: [], lastMessageAt: null,
-  createdAt: 0, updatedAt: 0, pinnedAt: null,
+  createdAt: 0, updatedAt: 0,
 };
 const direct: Conversation = { ...conversation, id: 'd1', type: 'direct', title: '', serverId: null, memberIds: ['me', 'ana'] };
 const server: ServerSummary = {

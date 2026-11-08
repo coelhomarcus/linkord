@@ -289,7 +289,7 @@ describe('MessageComposer — mentions (@)', () => {
 
   const conversation: Conversation = {
     id: 'conv-1', type: 'direct', serverId: null, title: '',
-    memberIds: ['u-ana', 'u-andre'], lastMessageAt: null, createdAt: 1, updatedAt: 1, pinnedAt: null,
+    memberIds: ['u-ana', 'u-andre'], lastMessageAt: null, createdAt: 1, updatedAt: 1,
   };
 
   function renderComposer(overrides: Partial<Parameters<typeof renderWithRoom>[1]> = {}) {

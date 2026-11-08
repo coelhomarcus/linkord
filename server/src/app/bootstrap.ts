@@ -8,12 +8,14 @@ import { createApp } from '../http/app.js';
 import { createWsServer } from '../realtime/socket.js';
 import { describeBlockedMigration, runMigrations } from '../db/migrate.js';
 import { sweepExpiredSessions } from '../modules/auth/session.js';
+import { sweepExpiredRateLimits } from '../modules/auth/ratelimit.js';
 import { sweepSendOperations } from '../modules/messages/sendOperations.js';
 import { sweepExpiredStaged } from '../modules/attachments/stagedAttachments.js';
 import { ensureUploadDir, sweepStaleUploads } from '../modules/attachments/uploadSession.js';
 import { SweepInProgressError, sweepOrphans } from '../modules/attachments/orphanSweeper.js';
-import { drainOutbox, pruneNotifications } from '../modules/notifications/outboxWorker.js';
+import { drainOutbox } from '../modules/notifications/outboxWorker.js';
 import { OUTBOX_POLL_MS } from '../modules/notifications/notificationsPolicy.js';
+import { RetentionSweepInProgressError, sweepRetention } from '../modules/retention/retentionSweeper.js';
 import { logger } from '../lib/logger.js';
 
 const log = logger.child({ component: 'process' });
@@ -101,6 +103,12 @@ export async function bootstrap(): Promise<void> {
   }, 60 * 60 * 1000);
   sessionSweepTimer.unref();
 
+  // brute-force counters (login, recovery, sign-up): a row whose window is over is dead weight
+  const rateLimitSweepTimer = setInterval(() => {
+    sweepExpiredRateLimits().catch((err) => log.error('failed to clean up expired rate limit windows', err));
+  }, 15 * 60 * 1000);
+  rateLimitSweepTimer.unref();
+
   // same cadence — upload session TTL is 24h (config.UPLOAD_SESSION_TTL_MS),
   // checking hourly is enough to avoid orphaned chunks piling up on disk.
   const uploadSweepTimer = setInterval(() => {
@@ -110,16 +118,20 @@ export async function bootstrap(): Promise<void> {
   uploadSweepTimer.unref();
 
   // Transactional outbox: drain the events written with each social change
-  // (safety net for a lost live emit), and prune what no longer needs to live.
+  // (safety net for a lost live emit).
   const pumpOutbox = () => drainOutbox()
     .then((r) => { if (r.failed > 0) log.warn('outbox events failed to deliver', r); else if (r.processed > 0) log.debug('outbox drained', r); })
     .catch((err) => log.error('failed to drain', err));
   const outboxTimer = setInterval(pumpOutbox, OUTBOX_POLL_MS);
   outboxTimer.unref();
-  const pruneTimer = setInterval(() => {
-    pruneNotifications().catch((err) => log.error('failed to prune', err));
-  }, 24 * 60 * 60 * 1000);
-  pruneTimer.unref();
+  // Old audit entries, notifications and outbox rows, per the *_RETENTION_DAYS settings.
+  // Also shortly after boot: a process that is redeployed more often than daily would
+  // otherwise never get to run it.
+  const sweepRetentionRows = () => sweepRetention()
+    .catch((err) => { if (!(err instanceof RetentionSweepInProgressError)) log.error('retention sweep failed', err); });
+  setTimeout(sweepRetentionRows, 120_000).unref();
+  const retentionTimer = setInterval(sweepRetentionRows, 24 * 60 * 60 * 1000);
+  retentionTimer.unref();
   const sendOpsTimer = setInterval(() => {
     sweepSendOperations().catch((err) => log.error('failed to prune chat send operations', err));
   }, 24 * 60 * 60 * 1000);

@@ -1,4 +1,5 @@
-import { participants, send, publicParticipant, listOnlineUserIds } from './participants.js';
+import { participants, send, publicParticipant, listVisibleOnlineUserIds, hiddenFromPeers, visiblePresenceOf, type VisiblePresence } from './participants.js';
+import { ownStatusPayload } from './presenceStatus.js';
 import { listFriendIds } from '../friendships/friendshipsRepository.js';
 import { listBlockedEitherWayIds } from '../blocks/blocksRepository.js';
 import { listConversationMemberIds } from '../conversations/conversationsRepository.js';
@@ -38,14 +39,24 @@ export async function applyPeerVisibility(p: Participant): Promise<void> {
  * `knownUsers`: the client resolves its OWN authorship/membership rows from
  * the same cache as everyone else's. */
 export async function buildPresenceSnapshot(p: Participant) {
+  const onlineUserIds = listVisibleOnlineUserIds().filter((id) => p.knownPeerIds.has(id) && !p.blockedPeerIds.has(id));
+  // only the online peers whose status is not the plain default: a client reads a missing entry as "online"
+  const presence: Record<string, VisiblePresence> = {};
+  for (const id of onlineUserIds) {
+    const entry = visiblePresenceOf(id);
+    if (entry && (entry.status !== 'online' || entry.customStatus)) presence[id] = entry;
+  }
   return {
     knownUsers: await listUsersByIds([p.userId, ...p.knownPeerIds]),
     // knownUsers keeps blocked peers (shared history still needs their
     // names); everything LIVE about them is withheld
     participants: [...participants.values()]
-      .filter((o) => o.id !== p.id && p.knownPeerIds.has(o.userId) && !p.blockedPeerIds.has(o.userId))
+      .filter((o) => o.id !== p.id && p.knownPeerIds.has(o.userId) && !p.blockedPeerIds.has(o.userId) && !hiddenFromPeers(o))
       .map(publicParticipant),
-    onlineUserIds: listOnlineUserIds().filter((id) => p.knownPeerIds.has(id) && !p.blockedPeerIds.has(id)),
+    onlineUserIds,
+    // both added in protocol 10; an older tab ignores them and shows everyone online as "online"
+    presence,
+    myStatus: ownStatusPayload(p.userId),
     // the friend SUBSET of knownUsers — lets the client offer "message this
     // person" only for an actual friend, not every conversation co-member
     // knownUsers also carries (see Participant#friendPeerIds).

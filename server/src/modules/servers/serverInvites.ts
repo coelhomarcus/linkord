@@ -13,6 +13,7 @@ import { serverPermissions } from './serverAccess.js';
 import { addServerMember, countServerMembers, isBanned, isServerMember, lockServer } from './serversRepository.js';
 import { announceNewMember } from './serverInvitationsRepository.js';
 import { requireServerMember, requireSession } from './serverHttp.js';
+import { createdFields, recordServerAudit } from './serverAuditLog.js';
 import { logger } from '../../lib/logger.js';
 
 const log = logger.child({ component: 'server-invites' });
@@ -69,10 +70,17 @@ async function handleCreate(request: FastifyRequest<{ Params: ServerParams }>, r
   const maxAge = MAX_AGE_SECONDS.includes(Number(body.maxAgeSeconds)) ? Number(body.maxAgeSeconds) : 7 * 24 * 60 * 60;
   const maxUses = MAX_USES.includes(Number(body.maxUses)) ? Number(body.maxUses) : 0;
   const channelId = typeof body.channelId === 'string' && actor.snapshot.channels.some((c) => c.id === body.channelId) ? body.channelId : null;
-  const [invite] = await db.insert(serverInvites).values({
-    code: newInviteCode(), serverId, channelId, createdBy: actor.userId,
-    maxUses: maxUses || null, expiresAt: maxAge ? new Date(Date.now() + maxAge * 1000) : null,
-  }).returning();
+  const invite = await db.transaction(async (tx) => {
+    const [row] = await tx.insert(serverInvites).values({
+      code: newInviteCode(), serverId, channelId, createdBy: actor.userId,
+      maxUses: maxUses || null, expiresAt: maxAge ? new Date(Date.now() + maxAge * 1000) : null,
+    }).returning();
+    await recordServerAudit(tx, {
+      serverId, actorId: actor.userId, action: 'invite.create', targetType: 'invite', targetId: row!.code, targetLabel: row!.code,
+      changes: createdFields({ maxUses: row!.maxUses, expiresAt: row!.expiresAt?.toISOString() ?? null, channel: actor.snapshot.channels.find((c) => c.id === channelId)?.title }),
+    });
+    return row;
+  });
   sendJson(reply, 201, { invite: inviteView(invite!) });
 }
 
@@ -94,7 +102,10 @@ async function handleRevoke(request: FastifyRequest<{ Params: CodeParams }>, rep
   if (!invite || invite.revokedAt) return sendError(reply, 404, 'invalid_invite', 'Convite não encontrado.');
   const manages = hasPermission(await serverPermissions(invite.serverId, sess.userId), PERMISSIONS.MANAGE_SERVER);
   if (invite.createdBy !== sess.userId && !manages) return sendError(reply, 404, 'invalid_invite', 'Convite não encontrado.');
-  await db.update(serverInvites).set({ revokedAt: new Date() }).where(eq(serverInvites.code, invite.code));
+  await db.transaction(async (tx) => {
+    await tx.update(serverInvites).set({ revokedAt: new Date() }).where(eq(serverInvites.code, invite.code));
+    await recordServerAudit(tx, { serverId: invite.serverId, actorId: sess.userId, action: 'invite.revoke', targetType: 'invite', targetId: invite.code, targetLabel: invite.code, extra: { createdBy: invite.createdBy } });
+  });
   sendJson(reply, 200, { ok: true });
 }
 

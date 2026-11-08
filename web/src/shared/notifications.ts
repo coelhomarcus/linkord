@@ -1,6 +1,7 @@
 
 import { i18n } from '@/shared/i18n/init';
 import { LOCAL_STORAGE_KEYS, localStorageStore } from '@/shared/lib/localStorage';
+import { isDoNotDisturb } from '@/shared/doNotDisturb';
 
 export function loadNotificationsEnabled(): boolean {
   const stored = localStorageStore.get(LOCAL_STORAGE_KEYS.notificationsEnabled);
@@ -68,7 +69,7 @@ export interface IncomingChatEvent {
 }
 
 export function notifyIncomingChatMessage(evt: IncomingChatEvent): void {
-  if (!enabled) return;
+  if (!enabled || isDoNotDisturb()) return;
   if (pushSubscriptionActive) return;
   if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
 

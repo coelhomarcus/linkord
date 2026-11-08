@@ -14,6 +14,7 @@ import { getUsage } from '../attachments/attachmentQuota.js';
 import { hasPermission, PERMISSIONS } from '../servers/permissions.js';
 import { channelPermissionsIn, loadServerSnapshot, basePermissionsIn } from '../servers/serverAccess.js';
 import { broadcastToServerMembers } from '../servers/serverSummaries.js';
+import { createdFields, diffFields, recordServerAudit } from '../servers/serverAuditLog.js';
 import { participants, send } from '../presence/participants.js';
 import * as floodControl from '../../realtime/floodControl.js';
 import { parseWav } from './soundFile.js';
@@ -167,6 +168,7 @@ async function handleUpload(
       const [row] = await tx.insert(serverSounds).values({
         id, serverId, uploaderId: userId, name, emoji, volume, size: buffer.length, durationMs: wav.durationMs,
       }).returning();
+      await recordServerAudit(tx, { serverId, actorId: userId, action: 'sound.create', targetType: 'sound', targetId: id, targetLabel: name, changes: createdFields({ name, emoji }) });
       return row!;
     });
   } catch (err) {
@@ -219,7 +221,14 @@ async function handleUpdate(request: FastifyRequest<SoundParams>, reply: Fastify
   }
   if (!Object.keys(updates).length) return sendError(reply, 400, 'invalid_request', 'Nada para alterar.');
 
-  const [row] = await db.update(serverSounds).set(updates).where(eq(serverSounds.id, sound.id)).returning();
+  const changes = diffFields(sound, updates, ['name', 'emoji', 'volume']);
+  const row = await db.transaction(async (tx) => {
+    const [updated] = await tx.update(serverSounds).set(updates).where(eq(serverSounds.id, sound.id)).returning();
+    if (updated && changes.length) {
+      await recordServerAudit(tx, { serverId, actorId: userId, action: 'sound.update', targetType: 'sound', targetId: sound.id, targetLabel: updated.name, changes });
+    }
+    return updated;
+  });
   if (!row) return sendError(reply, 404, 'not_found', 'Som não encontrado.');
   const [uploader] = row.uploaderId ? await db.select().from(users).where(eq(users.id, row.uploaderId)).limit(1) : [];
   notifyChanged(serverId);
@@ -236,7 +245,13 @@ async function handleDelete(request: FastifyRequest<SoundParams>, reply: Fastify
   if (!sound) return sendError(reply, 404, 'not_found', 'Som não encontrado.');
   if (!canEditSound(sound, userId, access.permissions)) return sendError(reply, 403, 'forbidden', 'Só quem enviou o som ou quem gerencia expressões pode removê-lo.');
 
-  const deleted = await db.delete(serverSounds).where(eq(serverSounds.id, sound.id)).returning({ id: serverSounds.id });
+  const deleted = await db.transaction(async (tx) => {
+    const rows = await tx.delete(serverSounds).where(eq(serverSounds.id, sound.id)).returning({ id: serverSounds.id });
+    if (rows.length) {
+      await recordServerAudit(tx, { serverId, actorId: userId, action: 'sound.delete', targetType: 'sound', targetId: sound.id, targetLabel: sound.name, extra: { uploaderId: sound.uploaderId } });
+    }
+    return rows;
+  });
   if (deleted.length) {
     await fs.unlink(filePathFor(sound.id)).catch((err: NodeJS.ErrnoException) => {
       if (err.code !== 'ENOENT') log.warn('failed to delete sound file', { soundId: sound.id, err: err.message });

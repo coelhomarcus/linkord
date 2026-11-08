@@ -71,8 +71,6 @@
     "download": "Baixar",
     "copy": "Copiar",
     "viewProfile": "Ver perfil",
-    "unpinConversation": "Desafixar conversa",
-    "pinConversation": "Fixar conversa",
     "closeConversation": "Fechar conversa",
     "removeEmbedTitle": "Remover incorporação",
     "removeAttachmentTitle": "Remover anexo",
@@ -117,5 +115,15 @@
       "invalid_invite": "Esse convite é inválido ou expirou.",
       "hierarchy": "Isso está acima do seu cargo."
     }
+  },
+  "colorPicker": {
+    "title": "Escolher cor",
+    "saturation": "Saturação e brilho",
+    "saturationValue": "Saturação {{saturation}}%, brilho {{brightness}}%",
+    "hue": "Matiz",
+    "hex": "Código hexadecimal da cor",
+    "eyedropper": "Pegar uma cor da tela",
+    "presets": "Predefinições",
+    "useColor": "Usar {{name}}"
   }
 }

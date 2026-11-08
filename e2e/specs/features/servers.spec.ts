@@ -98,3 +98,41 @@ test.describe('servers', () => {
     expect((await bob.api.get(`/api/servers/${server.id}/members`)).ok()).toBe(false);
   });
 });
+
+test.describe('server audit log', () => {
+  test('a moderator action shows in the audit log, which a plain member cannot open', async ({ users }) => {
+    const alice = await users.create('alice');
+    const bob = await users.create('bob');
+    const carol = await users.create('carol');
+    const server = await createServer(alice.api, 'E2E audit');
+    const code = await createInvite(alice.api, server.id);
+    await acceptInvite(bob.api, code);
+    await acceptInvite(carol.api, code);
+    expect((await alice.api.delete(`/api/servers/${server.id}/members/${carol.id}`)).ok()).toBe(true);
+    await createChannel(alice.api, server.id, 'registro');
+
+    const a = await alice.app();
+    await a.openChannel(server.id, server.text.id);
+    // the header's menu button, not the rail icon of the same name
+    await a.page.getByRole('button', { name: 'E2E audit', exact: true, expanded: false }).click();
+    await a.page.getByRole('menuitem', { name: 'Configurações do servidor' }).click();
+    await a.page.getByRole('button', { name: 'Registro de auditoria' }).click();
+    const log = a.page.getByRole('list', { name: 'Registro de auditoria' });
+    await expect(log.getByText(`expulsou`)).toBeVisible();
+    await expect(log.getByRole('button', { name: carol.username })).toBeVisible();
+    await expect(log.getByText('criou o canal')).toBeVisible();
+
+    // filtering by the person acted on leaves only what happened to them
+    await log.getByRole('button', { name: carol.username }).click();
+    await expect(log.getByText('criou o canal')).toHaveCount(0);
+    await expect(log.getByText('expulsou')).toBeVisible();
+
+    expect((await bob.api.get(`/api/servers/${server.id}/audit-log`)).status()).toBe(403);
+    const auditor = await alice.api.post(`/api/servers/${server.id}/roles`, { data: { name: 'Auditor', permissions: PERMISSIONS.VIEW_AUDIT_LOG } });
+    const { roleId } = await auditor.json();
+    expect((await alice.api.put(`/api/servers/${server.id}/members/${bob.id}/roles`, { data: { roleIds: [roleId] } })).ok()).toBe(true);
+    const page = await bob.api.get(`/api/servers/${server.id}/audit-log?action=member.kick`);
+    expect(page.status()).toBe(200);
+    expect((await page.json()).items).toHaveLength(1);
+  });
+});

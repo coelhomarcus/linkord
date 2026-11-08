@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useRoom } from '@/state/RoomContext';
 import { Switch } from '@/shared/ui/primitives/switch';
-import { SettingsRow, SettingsSection, SettingsSections } from './SettingsLayout';
+import { SettingsRow, SettingsSection, SettingsSections } from '@/shared/ui/settings-layout';
 
 export function ChatSettings() {
   const { t } = useTranslation('settings');

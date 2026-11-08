@@ -11,6 +11,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/pr
 import { Input } from '@/shared/ui/primitives/input';
 import { Switch } from '@/shared/ui/primitives/switch';
 import { Label } from '@/shared/ui/primitives/label';
+import { Button } from '@/shared/ui/primitives/button';
+import { EmptyState } from '@/shared/ui/empty-state';
 
 const DEBOUNCE_MS = 300;
 
@@ -117,7 +119,13 @@ export function ChatSearchDialog({ open, onOpenChange, activeConversationId, act
               <p className="select-none px-1 py-4 text-center text-label text-text-muted">{t('search.searching')}</p>
             )}
             {!searchLoading && trimmed && searchResults.length === 0 && (
-              <p className="select-none px-1 py-4 text-center text-label text-text-muted">{t('search.none')}</p>
+              <EmptyState
+                size="compact"
+                illustration="search"
+                title={t('search.none')}
+                description={scopeAll ? t('search.noneText') : t('search.noneTextScoped')}
+                action={!scopeAll && <Button type="button" variant="secondary" size="sm" onClick={() => setScopeAll(true)}>{t('search.searchEverywhere')}</Button>}
+              />
             )}
             {!searchLoading && searchResults.map((result) => (
               <SearchResultRow key={result.msgId} result={result} showConversation={scopeAll} onSelect={() => handleSelect(result)} />
