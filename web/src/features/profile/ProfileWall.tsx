@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowDownIcon, ArrowUpIcon, PlusIcon, TrashIcon } from '@phosphor-icons/react';
-import { GameListEditor } from '@/features/games/GameListEditor';
-import { gameListOf, type GameItem, type GameList, type GameLists } from '@/features/games/types';
+import { GamePickerDialog } from '@/features/games/GamePickerDialog';
+import { forWidget, gameListOf, type GameItem, type GameList, type GameLists } from '@/features/games/types';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import { ROUTES } from '@/shared/lib/routes';
@@ -20,7 +20,8 @@ export function ProfileWall({ userId, owner, accent, onNavigate }: { userId: str
   const [draft, setDraft] = useState<WallSelection[] | null>(null);
   // the lists edited in this draft; a list not in here is as the server has it
   const [gamesDraft, setGamesDraft] = useState<Partial<GameLists>>({});
-  const [editingGames, setEditingGames] = useState<GameList | null>(null);
+  // the place a game is being chosen for: a position in the list, which is its end for a new game
+  const [picking, setPicking] = useState<{ list: GameList; widgetName: string; index: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -62,7 +63,7 @@ export function ProfileWall({ userId, owner, accent, onNavigate }: { userId: str
     } catch { if (mounted.current) setError(true); }
     finally { if (mounted.current) setSaving(false); }
   }
-  function closeDraft() { setDraft(null); setGamesDraft({}); setEditingGames(null); }
+  function closeDraft() { setDraft(null); setGamesDraft({}); setPicking(null); }
   function move(index: number, direction: number) {
     if (!draft) return;
     const next = [...draft];
@@ -79,6 +80,18 @@ export function ProfileWall({ userId, owner, accent, onNavigate }: { userId: str
     const widget = data?.available?.find((value) => widgetKey(value) === selectionKey(selection));
     return widget ? [withDraftGames(widget)] : [];
   }) : data?.widgets ?? [];
+  const gamesOf = (list: GameList): GameItem[] => {
+    const shown = widgets.find((widget) => gameListOf(widget.type) === list)?.data;
+    return shown?.kind === 'games' ? shown.items : [];
+  };
+  const setGames = (list: GameList, items: GameItem[]) => setGamesDraft((previous) => ({ ...previous, [list]: items }));
+  function chooseGame(game: GameItem) {
+    if (!picking) return;
+    const items = gamesOf(picking.list);
+    const chosen = forWidget(game);
+    setGames(picking.list, picking.list === 'favorite' ? [chosen] : picking.index < items.length ? items.map((item, i) => (i === picking.index ? chosen : item)) : [...items, chosen]);
+    setPicking(null);
+  }
   const choices = data?.available?.filter((widget) => !draft?.some((selection) => selectionKey(selection) === widgetKey(widget))) ?? [];
   return (
     <section aria-label={t('wall.title')} className="flex min-w-0 flex-col gap-5">
@@ -98,7 +111,7 @@ export function ProfileWall({ userId, owner, accent, onNavigate }: { userId: str
       {draft && <WidgetPicker
         choices={choices}
         disabled={saving}
-        onPick={(widget) => { setDraft([...draft, { connectionId: widget.connection?.id ?? null, type: widget.type }]); setEditingGames(gameListOf(widget.type)); }}
+        onPick={(widget) => setDraft([...draft, { connectionId: widget.connection?.id ?? null, type: widget.type }])}
         onManage={() => { navigate(ROUTES.settingsTab('connections')); onNavigate(); }}
       />}
       {!loading && data && widgets.length === 0 && <p className="py-8 text-center text-body text-text-muted">{t(owner ? 'wall.emptyOwner' : 'wall.emptyVisitor')}</p>}
@@ -106,7 +119,15 @@ export function ProfileWall({ userId, owner, accent, onNavigate }: { userId: str
         {widgets.map((widget, index) => {
           const name = t(`wall.widgets.${widget.type}`);
           const list = gameListOf(widget.type);
-          const card = <WallWidgetCard widget={widget} accent={accent} />;
+          const items = list ? gamesOf(list) : [];
+          const gameEditor = list ? {
+            disabled: saving, widgetName: name,
+            onAdd: () => setPicking({ list, widgetName: name, index: items.length }),
+            onReplace: (position: number) => setPicking({ list, widgetName: name, index: position }),
+            onRemove: (position: number) => setGames(list, items.filter((_, i) => i !== position)),
+            onMove: (position: number, direction: -1 | 1) => { const next = [...items]; [next[position], next[position + direction]] = [next[position + direction]!, next[position]!]; setGames(list, next); },
+          } : undefined;
+          const card = <WallWidgetCard widget={widget} accent={accent} gameEditor={draft ? gameEditor : undefined} />;
           if (!draft) return <div key={widgetKey(widget)} className="w-full min-w-0">{card}</div>;
           // the controls sit in their own row above the card, in flow, so they can never cover its content
           return <div key={widgetKey(widget)} className="flex w-full min-w-0 flex-col gap-3 rounded-xl border border-dashed border-border-strong p-3">
@@ -119,15 +140,11 @@ export function ProfileWall({ userId, owner, accent, onNavigate }: { userId: str
               </div>
             </div>
             {card}
-            {list && <>
-              <Button type="button" variant="secondary" size="sm" className="self-start" disabled={saving} aria-expanded={editingGames === list} aria-label={t('wall.gamesToggle', { action: t(editingGames === list ? 'wall.doneGames' : 'wall.chooseGames'), name })}
-                onClick={() => setEditingGames(editingGames === list ? null : list)}>{t(editingGames === list ? 'wall.doneGames' : 'wall.chooseGames')}</Button>
-              {editingGames === list && <GameListEditor list={list} games={(widget.data?.kind === 'games' ? widget.data.items : []) as GameItem[]} disabled={saving}
-                onChange={(items) => setGamesDraft((previous) => ({ ...previous, [list]: items }))} />}
-            </>}
           </div>;
         })}
       </div>
+      <GamePickerDialog open={!!picking} widgetName={picking?.widgetName ?? ''} taken={picking ? gamesOf(picking.list).map((game) => game.igdbId) : []}
+        onPick={chooseGame} onOpenChange={(open) => { if (!open) setPicking(null); }} />
       {owner && data && draft && <div className="flex justify-end gap-2">
         <Button type="button" variant="ghost" disabled={saving} onClick={() => { closeDraft(); setError(false); }}>{t('wall.cancel')}</Button>
         <Button type="button" disabled={saving} onClick={() => void save()}>{t(saving ? 'wall.saving' : 'wall.save')}</Button>

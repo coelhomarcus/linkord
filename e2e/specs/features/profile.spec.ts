@@ -48,11 +48,13 @@ test.describe('profile', () => {
     await a.page.getByRole('tab', { name: 'Mural' }).click();
     await a.page.getByRole('button', { name: 'Adicionar widget' }).click();
     await a.page.getByRole('button', { name: 'Jogo favorito' }).click();
-    // the e2e stack has no IGDB credentials: the picker opens and says so
+    // an empty place opens the search in a window; the e2e stack has no IGDB credentials, so it says so
+    await a.page.getByRole('button', { name: 'Adicionar jogo a Jogo favorito' }).click();
     await a.page.getByRole('searchbox', { name: 'Buscar jogo' }).fill('zelda');
-    await expect(a.page.getByText('A busca de jogos está indisponível no momento.')).toBeVisible();
+    await expect(a.page.getByRole('dialog').getByText('A busca de jogos está indisponível no momento.')).toBeVisible();
+    await a.page.keyboard.press('Escape');
+    await expect(a.page.getByRole('dialog').filter({ hasText: 'Escolher jogo' })).toBeHidden();
     await a.page.getByRole('button', { name: 'Salvar', exact: true }).click();
-    // the editor and the draft card show the same text until the save is done
     await expect(a.page.getByRole('button', { name: 'Adicionar widget' })).toBeVisible();
     await expect(a.page.getByRole('article').getByRole('heading', { name: 'Jogo favorito' })).toBeVisible();
     await expect(a.page.getByText('Nenhum jogo escolhido ainda.')).toBeVisible();

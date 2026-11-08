@@ -5,7 +5,9 @@ import { widgetBrand } from './connectionBrands';
 import { ContributionCalendar } from './ContributionCalendar';
 import { WidgetHeader } from './WidgetHeader';
 import type { WallWidget } from './connectionsTypes';
-import type { GameItem } from '@/features/games/types';
+import { gameListOf } from '@/features/games/types';
+import { ANIME_ASPECT, CoverLink, type Cover } from './CoverLink';
+import { GameCovers, type GameCoversEditor } from './GameCovers';
 
 const STATS = [
   { key: 'repositories', icon: BookOpenIcon },
@@ -17,37 +19,18 @@ function WidgetMessage({ children }: { children: string }) {
   return <p role="status" className="rounded-lg bg-bg-tertiary px-3 py-3 text-label text-text-muted">{children}</p>;
 }
 
-interface Cover { id: string; title: string; url: string; imageUrl: string | null }
-/** The 4x2 grid of covers; a cover with no picture still says what it is. */
+/** The 4x2 grid of anime covers. */
 function CoverGrid({ items }: { items: Cover[] }) {
   return (
     <ul className="grid w-full grid-cols-4 gap-2">{items.slice(0, 8).map((item) => <li key={item.id} className="min-w-0">
-      <a href={item.url} target="_blank" rel="noreferrer" aria-label={item.title} title={item.title} className="group flex aspect-[2/3] w-full items-center justify-center overflow-hidden rounded-lg bg-bg-tertiary shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-        {item.imageUrl
-          ? <img src={item.imageUrl} alt="" loading="lazy" referrerPolicy="no-referrer" className="size-full object-cover transition-transform duration-200 group-hover:scale-105" />
-          : <span aria-hidden className="line-clamp-4 px-1 text-center text-caption text-text-muted">{item.title}</span>}
-      </a>
+      <CoverLink item={item} aspect={ANIME_ASPECT} />
     </li>)}</ul>
   );
 }
 
-const gameCover = (game: GameItem): Cover => ({ id: String(game.igdbId), title: game.name, url: game.url, imageUrl: game.imageUrl });
-
-/** The favorite is one game, so its cover is shown large with its name beside it. */
-function FavoriteGame({ game }: { game: GameItem }) {
-  return (
-    <div className="flex w-full min-w-0 items-center gap-4">
-      <div className="w-28 flex-none"><CoverGrid items={[gameCover(game)]} /></div>
-      <div className="min-w-0">
-        <p className="text-title font-semibold [overflow-wrap:anywhere]">{game.name}</p>
-        {game.releaseYear && <p className="text-body text-text-secondary">{game.releaseYear}</p>}
-      </div>
-    </div>
-  );
-}
-
-/** `accent` is the profile owner's highlight colour, which the widgets draw with. */
-export function WallWidgetCard({ widget, accent }: { widget: WallWidget; accent: string }) {
+/** `accent` is the profile owner's highlight colour, which the widgets draw with.
+ * `gameEditor` is set while the owner edits the Wall, and turns a games widget into a grid to fill. */
+export function WallWidgetCard({ widget, accent, gameEditor }: { widget: WallWidget; accent: string; gameEditor?: GameCoversEditor }) {
   const { t, i18n } = useTranslation('profile');
   const { connection, data } = widget;
   const brand = widgetBrand(widget);
@@ -62,9 +45,9 @@ export function WallWidgetCard({ widget, accent }: { widget: WallWidget; accent:
       {data?.kind === 'list' && (data.items.length === 0
         ? <WidgetMessage>{t('wall.noItems')}</WidgetMessage>
         : <CoverGrid items={data.items.map((item) => ({ id: item.id, title: item.title, url: item.url, imageUrl: item.imageUrl }))} />)}
-      {data?.kind === 'games' && (data.items.length === 0
+      {data?.kind === 'games' && (data.items.length === 0 && !gameEditor
         ? <WidgetMessage>{t('wall.noGames')}</WidgetMessage>
-        : widget.type === 'igdb-favorite-game' ? <FavoriteGame game={data.items[0]!} /> : <CoverGrid items={data.items.map(gameCover)} />)}
+        : <GameCovers list={gameListOf(widget.type)!} games={data.items} editor={gameEditor} />)}
       {data?.kind === 'github-profile' && <div className="flex w-full flex-col gap-4">
         <div className="flex items-center gap-3">
           {data.avatarUrl && <img src={data.avatarUrl} alt="" loading="lazy" referrerPolicy="no-referrer" className="size-16 flex-none rounded-full" />}

@@ -167,9 +167,13 @@
     },
     "noGames": "Nenhum jogo escolhido ainda.",
     "gamesSource": "{{service}}, fonte dos dados dos jogos",
-    "chooseGames": "Escolher jogos",
-    "doneGames": "Fechar",
-    "gamesToggle": "{{action}}: {{name}}"
+    "games": {
+      "add": "Adicionar jogo a {{widget}}",
+      "replace": "Trocar {{name}}",
+      "remove": "Remover {{name}}",
+      "moveEarlier": "Mover {{name}} para antes",
+      "moveLater": "Mover {{name}} para depois"
+    }
   },
   "editor": {
     "fileTooLarge": "Arquivo muito grande (máximo {{max}}).",
