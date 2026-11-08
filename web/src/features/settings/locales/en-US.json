@@ -39,7 +39,8 @@
       "sounds": "Sounds",
       "language": "Language",
       "timeFormat": "Time format",
-      "adminArea": "Admin area"
+      "adminArea": "Admin area",
+      "presence": "Status"
     }
   },
   "search": {
@@ -106,6 +107,10 @@
     "adminArea": {
       "title": "Admin area",
       "keywords": "admin, report, audit, users, servers"
+    },
+    "presence": {
+      "title": "Status",
+      "keywords": "status, idle, away, auto idle, inactive, presence"
     }
   },
   "account": {

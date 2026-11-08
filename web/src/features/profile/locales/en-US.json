@@ -63,8 +63,6 @@
   },
   "panel": {
     "label": "User profile",
-    "online": "Online",
-    "offline": "Offline",
     "mutualServers_one": "{{count}} mutual server",
     "mutualServers_other": "{{count}} mutual servers",
     "mutualFriends_one": "{{count}} mutual friend",

@@ -11,11 +11,12 @@ import type { Feedback } from '@/features/friends/ActionFeedback';
 import { LoadMoreFooter } from '@/features/friends/LoadMoreFooter';
 import type { SocialEntry } from '@/shared/api/api';
 import { SettingsSection, SettingsSections } from '@/shared/ui/settings-layout';
+import { AutoIdleSetting } from '@/features/status/AutoIdleSetting';
 
 const blockedKey = (entry: SocialEntry) => entry.user.id;
 
-/** Blocked accounts. Only YOUR blocks are listed — who blocked you is never
- * exposed anywhere. */
+/** How you appear to others (automatic idle) and the accounts you blocked. Only YOUR blocks are
+ * listed — who blocked you is never exposed anywhere. */
 export function PrivacyTab({ onOpenProfile }: { onOpenProfile: (userId: string) => void }) {
   const { t } = useTranslation('settings');
   const { revision, bump } = useFriends();
@@ -40,6 +41,9 @@ export function PrivacyTab({ onOpenProfile }: { onOpenProfile: (userId: string) 
 
   return (
     <SettingsSections>
+      <SettingsSection id="presence" title={t('catalog.sections.presence')}>
+        <AutoIdleSetting />
+      </SettingsSection>
       <SettingsSection id="blocked" title={t('catalog.sections.blocked')} description={t('privacy.description')} contentClassName="gap-3">
         <ActionFeedback feedback={feedback} onClear={clearFeedback} />
         {list.status === 'loading' && (

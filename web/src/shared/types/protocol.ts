@@ -26,8 +26,33 @@ export type ReactionEmoji = string;
 
 /** Wire protocol version this build speaks; the server refuses older ones
  * (client_outdated). Keep in sync with server/src/realtime/protocolVersion.ts
- * — version 9 drops pinned conversations. */
-export const PROTOCOL_VERSION = 9;
+ * — version 10 adds presence status. */
+export const PROTOCOL_VERSION = 10;
+
+/** Mirrors server/src/modules/presence/userStatus.ts. */
+export type PresenceStatus = 'online' | 'idle' | 'dnd' | 'invisible';
+/** What other people can see: invisible reads as offline and is never sent. */
+type VisibleStatus = Exclude<PresenceStatus, 'invisible'>;
+
+export interface CustomStatus {
+  emoji: string;
+  text: string;
+  /** ISO time it stops showing, null for never */
+  expiresAt: string | null;
+}
+
+/** Someone else's status while they appear online. */
+export interface VisiblePresence {
+  status: VisibleStatus;
+  customStatus: CustomStatus | null;
+}
+
+/** The account's own status: `status` is what was picked, `effective` adds automatic idle. */
+export interface OwnStatus {
+  status: PresenceStatus;
+  effective: PresenceStatus;
+  customStatus: CustomStatus | null;
+}
 
 export interface ChatReplyRef {
   msgId: number;
@@ -242,6 +267,10 @@ export type ProfilePatch = Partial<{
 export type ClientMessage =
   | { t: 'join'; id?: string; token?: string; v: number }
   | ({ t: 'profile'; requestId: string } & ProfilePatch)
+  // either field may be left out; customStatus null clears it
+  | { t: 'presence-set'; requestId?: string; status?: PresenceStatus; customStatus?: CustomStatus | null }
+  // this tab stopped (or started again) being used; feeds automatic idle
+  | { t: 'presence-activity'; idle: boolean }
   | { t: 'deafened'; value: boolean }
   | { t: 'mic-state'; activated: boolean; muted: boolean }
   | { t: 'camera'; on: boolean }
@@ -308,6 +337,9 @@ export type ServerMessage =
       callConversationId?: string | null;
       // absent from servers before protocol 3 (no correlated chat sends)
       protocolVersion?: number;
+      // both absent from servers before protocol 10: everyone online reads as plain "online"
+      presence?: Record<string, VisiblePresence>;
+      myStatus?: OwnStatus;
       dmCall?: DmCallView;
     }
   | { t: 'call-token'; conversationId: string; livekitUrl: string; livekitToken: string }
@@ -357,7 +389,15 @@ export type ServerMessage =
   | { t: 'social-changed' }
   // the scoped snapshot re-sent when this connection's known peers change
   // (same shape the welcome carries)
-  | { t: 'presence-sync'; knownUsers: PublicUser[]; participants: Participant[]; onlineUserIds: string[]; friendIds: string[] }
+  | {
+      t: 'presence-sync'; knownUsers: PublicUser[]; participants: Participant[]; onlineUserIds: string[]; friendIds: string[];
+      presence?: Record<string, VisiblePresence>; myStatus?: OwnStatus;
+    }
+  // someone online changed status or custom status (never sent for "invisible": that is user-offline)
+  | ({ t: 'presence-status'; userId: string } & VisiblePresence)
+  // this account's status, changed from another tab or device, by automatic idle, or by expiry
+  | ({ t: 'my-status' } & OwnStatus)
+  | { t: 'presence-result'; requestId: string; ok: boolean }
   | { t: 'user-online'; userId: string }
   | { t: 'user-offline'; userId: string; lastSeenAt?: string | null }
   | { t: 'user-deleted'; userId: string }

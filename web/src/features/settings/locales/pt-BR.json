@@ -39,7 +39,8 @@
       "sounds": "Sons",
       "language": "Idioma",
       "timeFormat": "Formato de tempo",
-      "adminArea": "Área administrativa"
+      "adminArea": "Área administrativa",
+      "presence": "Status"
     }
   },
   "search": {
@@ -106,6 +107,10 @@
     "adminArea": {
       "title": "Área administrativa",
       "keywords": "admin, denúncia, auditoria, usuários, servidores"
+    },
+    "presence": {
+      "title": "Status",
+      "keywords": "status, ausente, ausente automaticamente, inativo, presença"
     }
   },
   "account": {

@@ -63,8 +63,6 @@
   },
   "panel": {
     "label": "Perfil do usuário",
-    "online": "Online",
-    "offline": "Offline",
     "mutualServers_one": "{{count}} servidor em comum",
     "mutualServers_other": "{{count}} servidores em comum",
     "mutualFriends_one": "{{count}} amigo em comum",

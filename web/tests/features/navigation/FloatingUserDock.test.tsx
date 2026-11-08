@@ -43,14 +43,14 @@ describe('FloatingUserDock', () => {
     renderDock();
     expect(dock()).toHaveAttribute('data-user-dock', 'wide');
     expect(dock()!.style.width).toBe('calc(72px + var(--sidebar-width) - 1rem)');
-    expect(screen.getByRole('button', { name: 'Meu perfil' })).toHaveTextContent('Fulana');
+    expect(screen.getByRole('button', { name: 'Status e perfil' })).toHaveTextContent('Fulana');
   });
 
   it('narrows to a column of icons beside the rail when the list is hidden', () => {
     renderDock({ open: false });
     expect(dock()).toHaveAttribute('data-user-dock', 'compact');
     expect(dock()!.style.width).toBe('3rem');
-    expect(screen.getByRole('button', { name: 'Meu perfil' })).not.toHaveTextContent('Fulana');
+    expect(screen.getByRole('button', { name: 'Status e perfil' })).not.toHaveTextContent('Fulana');
   });
 
   it('is a column of icons too while the list is a drawer (768 to 1023px)', () => {

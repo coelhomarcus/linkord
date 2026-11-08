@@ -12,6 +12,10 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/primitives/dropdown-menu';
 import { cn } from '@/shared/lib/utils';
 import { ProfileColorPicker } from './ProfileColorPicker';
+import { StatusDot } from '@/features/status/StatusDot';
+import { CustomStatusText } from '@/features/status/CustomStatusText';
+import type { DisplayStatus } from '@/features/status/statusDisplay';
+import type { CustomStatus } from '@/shared/types/protocol';
 
 interface ProfileCardData {
   id: string;
@@ -27,7 +31,9 @@ interface ProfileCardData {
 
 interface ProfileCardProps {
   user: ProfileCardData;
-  online?: boolean;
+  /** the presence dot on the avatar; left out, there is none */
+  status?: DisplayStatus;
+  customStatus?: CustomStatus | null;
   onAvatarClick?: () => void;
   onBannerClick?: () => void;
   onAvatarUpload?: () => void;
@@ -87,7 +93,7 @@ function EditableBio({ value, onChange, disabled }: { value: string; onChange: (
 }
 
 export function ProfileCard({
-  user, online, onAvatarClick, onBannerClick,
+  user, status, customStatus, onAvatarClick, onBannerClick,
   onAvatarUpload, onAvatarRemove, avatarUploading,
   onBannerUpload, onBannerRemove, bannerUploading,
   className,
@@ -184,12 +190,7 @@ export function ProfileCard({
             ) : (
               <Avatar id={user.id} name={user.displayName} avatar={user.avatar} avatarColor={user.avatarColor} size={92} />
             )}
-            {online && <span className="absolute right-1 bottom-1 h-5 w-5 rounded-full border-4 border-bg-modal bg-green" />}
-            {online === false && (
-              <span aria-hidden className="absolute right-1 bottom-1 grid h-5 w-5 place-items-center rounded-full border-4 border-bg-modal bg-text-muted">
-                <span className="size-1.5 rounded-full bg-bg-modal" />
-              </span>
-            )}
+            {status && <StatusDot status={status} labelled className="absolute right-1 bottom-1 size-5 border-4 text-bg-modal" />}
           </div>
 
           {onAvatarColorChange && (
@@ -231,6 +232,7 @@ export function ProfileCard({
               </span>
             )}
           </div>
+          <CustomStatusText custom={customStatus ?? null} className="mt-1 text-label text-text-secondary" />
         </div>
 
         {actions && <div className="mt-4">{actions}</div>}

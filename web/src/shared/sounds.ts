@@ -10,6 +10,7 @@ import toggleOnUrl from 'uisfx/sounds/soft/toggle-on.mp3?url';
 import unlockUrl from 'uisfx/sounds/soft/unlock.mp3?url';
 import wakeUrl from 'uisfx/sounds/soft/wake.mp3?url';
 import { soundGroupEnabled, type SoundGroup } from './soundPreferences';
+import { isDoNotDisturb } from './doNotDisturb';
 
 // UI SFX (uisfx), "soft" pack, named by what happened rather than what it
 // sounds like. Changing the pack means changing the folder in these imports.
@@ -65,9 +66,14 @@ export function preloadSounds(): void {
   }
 }
 
+/** Groups that tell you something happened elsewhere; "do not disturb" silences these. The call group
+ * stays: those sounds answer what you just did, or happen in a call you chose to be in. */
+const INTERRUPTING_GROUPS = new Set<SoundGroup>(['message', 'mention']);
+
 /** `force` plays even a silenced sound: the preview button in settings. */
 export function playSound(name: SoundName, { force = false }: { force?: boolean } = {}): void {
   if (!force && !soundGroupEnabled(SOUND_GROUPS[name])) return;
+  if (!force && isDoNotDisturb() && INTERRUPTING_GROUPS.has(SOUND_GROUPS[name])) return;
   const warm = preloaded.get(name);
   const audio = warm && warm.paused ? warm : new Audio(SOUND_FILES[name]);
   if (audio === warm) audio.currentTime = 0;

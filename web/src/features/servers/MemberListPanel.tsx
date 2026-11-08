@@ -29,7 +29,7 @@ export function groupMembers(server: ServerSummary, members: ServerMemberEntry[]
  * animation: nothing is fetched until it is shown. */
 export function MemberListPanel({ server, onOpenProfile, active = true }: { server: ServerSummary; onOpenProfile: (userId: string) => void; active?: boolean }) {
   const { t } = useTranslation('servers');
-  const { state, onlineUserIds, serverMemberRevision, allUsers, setServerMemberSnapshot } = useRoom();
+  const { state, onlineUserIds, serverMemberRevision, allUsers, setServerMemberSnapshot, ownStatus } = useRoom();
   const revision = serverMemberRevision.get(server.id) ?? 0;
   const [members, setMembers] = useState<ServerMemberEntry[] | null>(null);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
@@ -45,9 +45,11 @@ export function MemberListPanel({ server, onOpenProfile, active = true }: { serv
     return () => { cancelled = true; };
   }, [active, server.id, revision, server.roles, setServerMemberSnapshot]);
 
-  // the server's presence snapshot only covers other people, never the viewer
+  // the server's presence snapshot only covers other people, never the viewer; invisible, you sit
+  // under offline, where everyone else sees you
   const meId = state.me.userId;
-  const online = useMemo(() => (meId ? new Set(onlineUserIds).add(meId) : onlineUserIds), [onlineUserIds, meId]);
+  const meShown = !!meId && ownStatus.status !== 'invisible';
+  const online = useMemo(() => (meShown ? new Set(onlineUserIds).add(meId) : onlineUserIds), [onlineUserIds, meId, meShown]);
   const sections = useMemo(
     () => (members ? groupMembers(server, members, online, { online: t('members.online'), offline: t('members.offline') }) : []),
     [members, server, online, t],

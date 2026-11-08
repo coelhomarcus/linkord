@@ -2,6 +2,9 @@ import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Avatar } from '@/shared/Avatar';
 import type { SocialUser } from '@/shared/api/api';
+import { UserStatusDot } from '@/features/status/UserStatus';
+import { CustomStatusText } from '@/features/status/CustomStatusText';
+import { useCustomStatus } from '@/features/status/statusDisplay';
 
 export function SocialUserRow({ user, online, subtitle, onOpenProfile, children }: {
   user: SocialUser;
@@ -12,6 +15,7 @@ export function SocialUserRow({ user, online, subtitle, onOpenProfile, children 
   children?: ReactNode;
 }) {
   const { t } = useTranslation('friends');
+  const customStatus = useCustomStatus(online !== undefined ? user.id : null);
   return (
     <div className="group/row cutout -mx-2.5 flex h-[62px] items-center gap-3 rounded-lg px-2.5 transition-colors hover:cutout-subtle hover:bg-nav-hover">
       <button
@@ -22,20 +26,19 @@ export function SocialUserRow({ user, online, subtitle, onOpenProfile, children 
       >
         <div className="relative flex-none">
           <Avatar id={user.id} name={user.displayName} avatar={user.avatar} avatarColor={user.avatarColor} size={32} />
-          {online !== undefined && (
-            <span
-              aria-hidden
-              className={`absolute -bottom-0.5 -right-0.5 size-3.5 rounded-full border-[3px] border-(--cutout) ${online ? 'bg-green' : 'bg-text-muted'}`}
-            />
-          )}
+          {online !== undefined && <UserStatusDot userId={user.id} className="absolute -bottom-0.5 -right-0.5 size-3.5 border-[3px] text-(--cutout)" />}
         </div>
         <div className="min-w-0">
           <p className="truncate text-body font-semibold text-text-primary">{user.displayName}</p>
-          <p className="truncate text-label text-text-secondary">
-            @{user.username}
-            {online !== undefined && <span className="sr-only">{online ? t('row.online') : t('row.offline')}</span>}
-            {subtitle ? ` · ${subtitle}` : ''}
-          </p>
+          {online && customStatus ? (
+            <CustomStatusText custom={customStatus} className="text-label text-text-secondary" />
+          ) : (
+            <p className="truncate text-label text-text-secondary">
+              @{user.username}
+              {subtitle ? ` · ${subtitle}` : ''}
+            </p>
+          )}
+          {online !== undefined && <span className="sr-only">{online ? t('row.online') : t('row.offline')}</span>}
         </div>
       </button>
       {children && <div className="flex flex-none items-center gap-2.5">{children}</div>}

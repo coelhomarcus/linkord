@@ -23,8 +23,6 @@
     "returnToCall": "Return to call",
     "inCall": "In a call",
     "inCallFor": "In a call · {{time}}",
-    "myProfile": "My profile",
-    "statusOnline": "Online",
     "statusReconnecting": "Reconnecting…",
     "settings": "Settings",
     "previousStream": "Previous stream",

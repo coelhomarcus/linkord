@@ -31,13 +31,30 @@ beforeEach(() => {
 });
 
 describe('DirectProfilePanel', () => {
+  it('shows the status and custom status of someone online', () => {
+    renderWithRoom(<MemoryRouter><DirectProfilePanel user={bea} onOpenProfile={vi.fn()} /></MemoryRouter>, {
+      onlineUserIds: new Set(['u-bea']),
+      presenceByUser: new Map([['u-bea', { status: 'dnd', customStatus: { emoji: '🎮', text: 'jogando Elden Ring', expiresAt: null } }]]),
+    });
+    expect(screen.getByRole('img', { name: 'Não perturbe' })).toBeInTheDocument();
+    expect(screen.getByText('jogando Elden Ring')).toBeInTheDocument();
+  });
+
+  it('shows someone offline without their custom status', () => {
+    renderWithRoom(<MemoryRouter><DirectProfilePanel user={bea} onOpenProfile={vi.fn()} /></MemoryRouter>, {
+      presenceByUser: new Map([['u-bea', { status: 'online', customStatus: { emoji: '', text: 'stale', expiresAt: null } }]]),
+    });
+    expect(screen.getByRole('img', { name: 'Offline' })).toBeInTheDocument();
+    expect(screen.queryByText('stale')).not.toBeInTheDocument();
+  });
+
   it('shows who the DM is with, since when, and what you share', async () => {
     renderWithRoom(<MemoryRouter><DirectProfilePanel user={bea} onOpenProfile={vi.fn()} /></MemoryRouter>, { onlineUserIds: new Set(['u-bea']) });
     expect(screen.getByRole('heading', { name: 'Bea' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Bio' })).toBeInTheDocument();
     expect(screen.getByText('oi, eu sou a Bea')).toBeInTheDocument();
     expect(screen.getByText('bea').parentElement?.querySelector('svg')).toBeInTheDocument();
-    expect(screen.getByLabelText('Online')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Disponível' })).toBeInTheDocument();
     expect(await screen.findByText('4 de mai. de 2023')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '1 servidor em comum' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '1 amigo em comum' })).toBeInTheDocument();

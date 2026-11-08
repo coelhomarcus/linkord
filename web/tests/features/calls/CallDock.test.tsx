@@ -1,4 +1,5 @@
 import { fireEvent, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 import { initialRoomState } from '@/state/roomReducer';
@@ -38,10 +39,12 @@ function renderDock(room: Parameters<typeof renderWithRoom>[1] = {}, {
 }
 
 describe('CallDock — idle', () => {
-  it('opens the account profile from the dock', () => {
+  it('opens the account profile from the status menu', async () => {
     const onOpenProfile = vi.fn();
     renderDock({}, { onOpenProfile });
-    fireEvent.click(screen.getByRole('button', { name: 'Meu perfil' }));
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Status e perfil' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Ver perfil' }));
     expect(onOpenProfile).toHaveBeenCalledWith('me');
   });
 
@@ -92,7 +95,7 @@ describe('CallDock — in a call', () => {
     renderDock({ activeCallConversationId: 'conv-1' });
     expect(screen.getByText('Fulana')).toBeInTheDocument();
     expect(screen.getByText('Disponível')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Meu perfil' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Status e perfil' })).toBeInTheDocument();
   });
 
   it('shows the account name and status while idle', () => {

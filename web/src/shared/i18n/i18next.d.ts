@@ -17,6 +17,7 @@ import type admin from '@/features/admin/locales/pt-BR.json';
 import type settings from '@/features/settings/locales/pt-BR.json';
 import type soundboard from '@/features/soundboard/locales/pt-BR.json';
 import type servers from '@/features/servers/locales/pt-BR.json';
+import type status from '@/features/status/locales/pt-BR.json';
 
 // pt-BR is the source of truth for key names: other languages are checked
 // against it by tests/shared/i18n/localeParity.test.ts. A feature that moves
@@ -43,6 +44,7 @@ declare module 'i18next' {
       settings: typeof settings;
       soundboard: typeof soundboard;
       servers: typeof servers;
+      status: typeof status;
     };
   }
 }

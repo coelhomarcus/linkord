@@ -34,6 +34,9 @@ Linkord is a self-hosted place to chat and call with friends. Talk in direct mes
 - **Web Push**
   Receive alerts for messages, mentions, friend requests, and invites, even when Linkord is closed. The app icon can also show an unread badge where the browser supports it.
 
+- **Presence status**
+  Pick how you appear from the user panel: Available, Idle (also set automatically after a few minutes away, configurable per device), Do Not Disturb (no push and no notification sounds; notifications still land in the list) or Invisible (you look offline to everyone but keep using the app). Invisible still shows you inside a call you join, to the people who can see that call, the same way your voice and video do. Add a custom status with an emoji, a short text and an optional expiry, or pick a game from your rotation. Your status follows your account to every device.
+
 - **Administration**
   Manage users, servers, webhooks, reports, audit history, orphaned uploads, and the data retention report from `/admin`.
 

@@ -196,6 +196,7 @@ The `upgrade` project adapts to what the base version can do and says so in the 
 | `features/profile` | Display name and bio reaching a friend live, mutual friends, the games widgets on offer with no connection (the picker reports the search unavailable, as the stack has no IGDB credentials), games saved with the Wall reaching a friend in order, and widgets reordered by dragging their handle and removed with the button under it. |
 | `features/reports-admin` | Reporting a message, the admin deleting it for everyone, suspending an account. |
 | `features/settings` | The account's language following it to another browser. |
+| `features/presence` | A status and custom status set on one device reaching the account's other device and a friend live, invisible reading as offline (custom status and online friends list included), and the status kept across a reload. |
 | `restart/voice` | A voice call survives a redeploy: the tab nobody touched reconnects on its own (the socket drop is a transport close, never `io server disconnect`), and someone joining after the deploy lands in the same call, with audio both ways. |
 | `restart/dm-call` | An answered DM call survives a redeploy; a ring survives it and can be answered, even with the click made while the tab is still disconnected. |
 | `restart/chat` | A message written while the server is down, and one sent the moment the deploy starts, are stored and shown exactly once. |
