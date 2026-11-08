@@ -188,3 +188,12 @@ export async function markRead(userId: string, ids: string[] | 'all'): Promise<n
   const rows = await db.update(notifications).set({ readAt: new Date() }).where(scope).returning({ id: notifications.id });
   return rows.length;
 }
+
+export async function getPushShowContent(userId: string): Promise<boolean> {
+  const [row] = await db.select({ showContent: users.pushShowContent }).from(users).where(eq(users.id, userId)).limit(1);
+  return row?.showContent ?? true;
+}
+
+export async function setPushShowContent(userId: string, showContent: boolean): Promise<void> {
+  await db.update(users).set({ pushShowContent: showContent }).where(eq(users.id, userId));
+}

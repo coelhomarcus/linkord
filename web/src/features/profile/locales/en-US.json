@@ -16,7 +16,6 @@
     "changeAvatar": "Change profile picture",
     "removeAvatar": "Remove picture",
     "viewAvatar": "View profile picture full screen",
-    "useColor": "Use {{name}}",
     "displayName": "Display name",
     "openLink": "Open {{name}}",
     "admin": "Admin"
@@ -64,8 +63,6 @@
   },
   "panel": {
     "label": "User profile",
-    "online": "Online",
-    "offline": "Offline",
     "mutualServers_one": "{{count}} mutual server",
     "mutualServers_other": "{{count}} mutual servers",
     "mutualFriends_one": "{{count}} mutual friend",
@@ -123,7 +120,7 @@
     "addWidget": "Add widget",
     "yours": "Your widgets",
     "manageConnections": "Manage connections",
-    "emptyOwner": "Your Wall is empty. Add a widget to choose what shows.",
+    "emptyOwner": "Use “Add widget” to choose what shows on your profile. Connecting accounts unlocks more options.",
     "emptyVisitor": "This user has not published any Wall widgets yet.",
     "remove": "Remove {{name}}",
     "unavailable": "Could not load data for this widget.",
@@ -171,8 +168,6 @@
     "addWidgetTitle": "Add profile widget",
     "categories": "Widget types",
     "added": "Added",
-    "unsaved": "Don't forget to save your changes!",
-    "reset": "Reset",
     "barLabel": "Save changes to the Wall",
     "groups": {
       "igdb": "Games",
@@ -192,7 +187,17 @@
       "moved": "{{name}} is at position {{position}} of {{total}}.",
       "dropped": "{{name}} was dropped at position {{position}} of {{total}}.",
       "cancelled": "Cancelled. {{name}} went back to position {{position}}."
-    }
+    },
+    "emptyOwnerTitle": "Your Wall is empty",
+    "emptyVisitorTitle": "Nothing on the Wall yet",
+    "connectAccounts": "Connect accounts"
+  },
+  "bar": {
+    "unsaved": "Don't forget to save your changes!",
+    "reset": "Reset",
+    "save": "Save",
+    "saving": "Saving…",
+    "saved": "Changes saved."
   },
   "editor": {
     "fileTooLarge": "File too large (maximum {{max}}).",
@@ -206,14 +211,9 @@
     },
     "avatarInput": "Select profile photo",
     "bannerInput": "Select banner",
-    "saved": "Profile saved.",
     "conflict": "This profile was updated elsewhere while you were editing.",
     "useSaved": "Use saved values",
     "barLabel": "Save profile changes",
-    "unsavedNotice": "You have unsaved changes.",
-    "discard": "Discard",
-    "save": "Save profile",
-    "saving": "Saving…",
     "cropTitle": {
       "avatar": "Crop profile photo",
       "banner": "Crop banner"
@@ -232,15 +232,8 @@
     "continueEditing": "Keep editing"
   },
   "colorPicker": {
-    "title": "Profile color",
     "label": "Color",
     "trigger": "Profile color: {{name}}",
-    "saturation": "Saturation and brightness",
-    "saturationValue": "Saturation {{saturation}}%, brightness {{brightness}}%",
-    "hue": "Hue",
-    "hex": "Color hex code",
-    "eyedropper": "Pick a color from the screen",
-    "presets": "Presets",
     "darkNote": "A dark color: Wall widgets show it lighter, like the dot, so it stays visible."
   }
 }

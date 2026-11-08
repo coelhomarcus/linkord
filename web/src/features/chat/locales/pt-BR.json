@@ -113,7 +113,10 @@
     "all": "Todas",
     "scopeAria": "Buscar em todas as conversas",
     "searching": "Buscando…",
-    "none": "Nenhuma mensagem encontrada."
+    "none": "Nenhuma mensagem encontrada",
+    "noneText": "Tente outras palavras.",
+    "noneTextScoped": "Tente outras palavras ou busque em todas as conversas.",
+    "searchEverywhere": "Buscar em todas as conversas"
   },
   "code": {
     "copied": "Código copiado",
@@ -125,7 +128,10 @@
     "loadingOlder": "Carregando mensagens anteriores...",
     "loading": "Carregando mensagens…",
     "log": "Mensagens",
-    "newMessages": "Novas Mensagens"
+    "newMessages": "Novas Mensagens",
+    "emptyTitle": "Nenhuma mensagem ainda",
+    "emptyDirect": "Este é o começo da sua conversa com {{name}}. Que tal dizer oi?",
+    "emptyChannel": "Este é o começo de #{{name}}. Mande a primeira mensagem."
   },
   "media": {
     "open": "Abrir {{name}}",

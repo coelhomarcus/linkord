@@ -12,7 +12,7 @@ const bea: PublicUser = {
 
 const conv = (id: string, over: Partial<Conversation> = {}): Conversation => ({
   id, type: 'direct', title: '', memberIds: ['me', 'u-bea'], serverId: null,
-  lastMessageAt: null, createdAt: 1, updatedAt: 1, pinnedAt: null, ...over,
+  lastMessageAt: null, createdAt: 1, updatedAt: 1, ...over,
 });
 
 const users = new Map([['u-bea', bea]]);

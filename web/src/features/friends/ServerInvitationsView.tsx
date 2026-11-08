@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/shared/ui/primitives/button';
+import { EmptyState } from '@/shared/ui/empty-state';
 import { ApiError, acceptInvitation, declineInvitation, fetchReceivedInvitations } from '@/shared/api/api';
 import type { ReceivedInvitationEntry } from '@/shared/api/api';
 import { ERROR_CODES } from '@/shared/api/errorCodes';
@@ -11,6 +12,7 @@ import type { Feedback } from './ActionFeedback';
 import { useFriends } from './FriendsContext';
 import { ListSectionHeader } from './ListSectionHeader';
 import { LoadMoreFooter } from './LoadMoreFooter';
+import { SearchEmpty } from './SearchEmpty';
 import { usePendingIds } from './usePendingIds';
 import { FadeIn, RevealList, RevealRow, SocialRowsSkeleton } from './listReveal';
 import { useLoadingPhase } from './useLoadingPhase';
@@ -58,7 +60,12 @@ export function ServerInvitationsView({ search, onOpenProfile }: { search: strin
       </div>
     );
   } else if (list.items.length === 0) {
-    body = <FadeIn skip={list.restored}><p className="select-none py-10 text-center text-label text-text-muted">{search ? t('list.noResults') : t('invitations.none')}</p></FadeIn>;
+    body = (
+      <FadeIn skip={list.restored}>
+        {search ? <SearchEmpty query={search} compact />
+          : <EmptyState size="compact" illustration="servers" title={t('invitations.none')} description={t('invitations.noneText')} />}
+      </FadeIn>
+    );
   } else {
     body = (
       <RevealList restored={list.restored}>

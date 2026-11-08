@@ -33,6 +33,25 @@ self.addEventListener('fetch', (event) => {
   })());
 });
 
+// Uploads need the session cookie, which the browser's own icon loader may not send, so the
+// worker fetches the sender's avatar itself and inlines it. Any failure keeps the app icon.
+async function avatarIcon(avatar) {
+  try {
+    const target = new URL(avatar, self.location.origin);
+    if (target.origin !== self.location.origin || !/^\/uploads\/[0-9a-f]{32}$/.test(target.pathname)) return null;
+    const response = await self.fetch(target.pathname, { credentials: 'same-origin', signal: AbortSignal.timeout(2500) });
+    if (!response.ok) return null;
+    const type = response.headers.get('content-type') || '';
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    if (!type.startsWith('image/') || bytes.length > 300_000) return null;
+    let binary = '';
+    for (let i = 0; i < bytes.length; i += 8192) binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
+    return `data:${type};base64,${btoa(binary)}`;
+  } catch {
+    return null;
+  }
+}
+
 self.addEventListener('push', (event) => {
   let notice;
   try { notice = event.data?.json()?.notification; } catch { /* still show a visible fallback */ }
@@ -43,13 +62,19 @@ self.addEventListener('push', (event) => {
     const target = new URL(notice?.navigate, self.location.origin);
     if (target.origin === self.location.origin && target.pathname.startsWith('/app/')) path = target.pathname + target.search + target.hash;
   } catch { /* keep the safe default */ }
-  const notification = self.registration.showNotification(title, {
-    body,
-    icon: '/icons/icon-192.png',
-    badge: '/icons/notification-badge-96.png',
-    tag: typeof notice?.tag === 'string' ? notice.tag : 'linkord',
-    data: { path },
-  });
+  const tag = typeof notice?.tag === 'string' ? notice.tag : 'linkord';
+  const notification = (async () => {
+    const avatar = typeof notice?.avatar === 'string' ? await avatarIcon(notice.avatar) : null;
+    await self.registration.showNotification(title, {
+      body,
+      icon: avatar || '/icons/icon-192.png',
+      badge: '/icons/notification-badge-96.png',
+      tag,
+      // the browser rejects renotify without a tag
+      renotify: notice?.renotify === true && !!tag,
+      data: { path },
+    });
+  })();
   const badge = (async () => {
     if (typeof self.navigator?.setAppBadge !== 'function') return;
     const requestId = ++badgeRequestId;

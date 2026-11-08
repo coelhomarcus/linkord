@@ -5,7 +5,7 @@
 // server/tests/modules/servers/permissions.test.ts fails if the two drift.
 //
 // Stored as a Postgres integer and combined with JS bitwise operators, both
-// of which top out at 31 usable bits; 19 are in use.
+// of which top out at 31 usable bits; 20 are in use.
 export const PERMISSIONS = {
   ADMINISTRATOR: 1 << 0,
   MANAGE_SERVER: 1 << 1,
@@ -26,6 +26,7 @@ export const PERMISSIONS = {
   MOVE_MEMBERS: 1 << 16,
   USE_SOUNDBOARD: 1 << 17,
   MANAGE_EXPRESSIONS: 1 << 18,
+  VIEW_AUDIT_LOG: 1 << 19,
 } as const;
 
 export const ALL_PERMISSIONS = Object.values(PERMISSIONS).reduce((all, bit) => all | bit, 0);

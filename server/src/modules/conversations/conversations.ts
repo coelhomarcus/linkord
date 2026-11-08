@@ -35,7 +35,7 @@ async function handleDirectOpen(socket: AppSocket, msg: { userId?: string }): Pr
   send(socket, {
     t: 'conversation-opened',
     conversationId: conversation.id,
-    conversation: rowToSummary(conversation, [p.userId, otherUserId], null),
+    conversation: rowToSummary(conversation, [p.userId, otherUserId]),
   });
   // a peer this connection has never had in its known set (a brand-new DM,
   // or one that predates the connection) — without this the client gets a
@@ -66,25 +66,7 @@ async function handleConversationClose(socket: AppSocket, msg: { conversationId?
   sendToUser(p.userId, { t: 'conversation-deleted', conversationId });
 }
 
-/** Per-member DM pin — a personal sort-to-top on the caller's own
- * sidebar, doesn't touch the conversation or anyone else's row. */
-async function handleConversationPin(socket: AppSocket, msg: { conversationId?: string; pinned?: boolean }): Promise<void> {
-  const p = participants.get(socket.participantId ?? '');
-  if (!p || p.socket !== socket) return;
-  const conversationId = String(msg.conversationId || '');
-  if (!conversationId) return;
-  const conversation = await getConversationForUser(conversationId, p.userId);
-  if (!conversation || conversation.type !== 'direct') return;
-
-  const [updated] = await db.update(conversationMembers)
-    .set({ pinnedAt: msg.pinned ? new Date() : null })
-    .where(and(eq(conversationMembers.conversationId, conversationId), eq(conversationMembers.userId, p.userId)))
-    .returning({ pinnedAt: conversationMembers.pinnedAt });
-  sendToUser(p.userId, { t: 'conversation-pinned', conversationId, pinnedAt: updated?.pinnedAt ? updated.pinnedAt.getTime() : null });
-}
-
 export const handlers: HandlerTable = {
   'direct-open': handleDirectOpen,
   'conversation-close': handleConversationClose,
-  'conversation-pin': handleConversationPin,
 };

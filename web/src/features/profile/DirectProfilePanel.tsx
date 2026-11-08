@@ -5,12 +5,12 @@ import { useTranslation } from 'react-i18next';
 import { Avatar } from '@/shared/Avatar';
 import { Button } from '@/shared/ui/primitives/button';
 import { ROUTES } from '@/shared/lib/routes';
-import { useRoom } from '@/state/RoomContext';
 import { ServerIcon } from '@/features/servers/ServerIcon';
 import type { PublicUser } from '@/shared/types/protocol';
 import { bannerStyle } from './profileLinks';
 import type { ProfileTab } from './ProfileSidebar';
 import { formatProfileDate, useProfileDetails } from './useProfileDetails';
+import { UserCustomStatus, UserStatusDot } from '@/features/status/UserStatus';
 
 const SHOWN_MUTUALS = 5;
 const SECTION = 'flex flex-col gap-1';
@@ -21,9 +21,7 @@ const MUTUAL_LINK = 'rounded-sm hover:text-text-primary hover:underline focus-vi
 export function DirectProfilePanel({ user, onOpenProfile }: { user: PublicUser; onOpenProfile: (userId: string, tab?: ProfileTab) => void }) {
   const { t } = useTranslation('profile');
   const navigate = useNavigate();
-  const { onlineUserIds } = useRoom();
   const { details } = useProfileDetails(user.id);
-  const online = onlineUserIds.has(user.id);
   const servers = details?.mutualServers;
   const friends = details?.mutualFriends;
 
@@ -37,10 +35,7 @@ export function DirectProfilePanel({ user, onOpenProfile }: { user: PublicUser; 
       <div className="relative px-4 pb-4">
         <span className="absolute -top-12 left-3 rounded-full border-[6px] border-bg-card">
           <Avatar id={user.id} name={user.displayName} avatar={user.avatar} poster={user.avatarPoster} animateOnHover avatarColor={user.avatarColor} size={80} />
-          <span
-            aria-label={online ? t('panel.online') : t('panel.offline')}
-            className={`absolute bottom-0.5 right-0.5 size-5 rounded-full border-4 border-bg-card ${online ? 'bg-green' : 'bg-text-muted'}`}
-          />
+          <UserStatusDot userId={user.id} labelled className="absolute bottom-0.5 right-0.5 size-5 border-4 text-bg-card" />
         </span>
         <div className="pt-12">
           <h2 className="truncate text-[1.25rem] font-bold leading-[1.3] text-text-strong">{user.displayName}</h2>
@@ -49,6 +44,7 @@ export function DirectProfilePanel({ user, onOpenProfile }: { user: PublicUser; 
             <AtIcon size={14} aria-hidden className="flex-none" />
             <span className="truncate">{user.username}</span>
           </p>
+          <UserCustomStatus userId={user.id} className="mt-1.5 text-label text-text-secondary" />
           {((friends?.total ?? 0) > 0 || (servers?.total ?? 0) > 0) && (
             <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-caption text-text-secondary">
               {friends && friends.total > 0 && (

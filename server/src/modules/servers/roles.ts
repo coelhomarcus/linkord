@@ -9,6 +9,7 @@ import { ALL_PERMISSIONS, canManageRole, hasPermission, highestRolePosition, out
 import { invalidateServer, memberInput } from './serverAccess.js';
 import { broadcastToServerMembers, sendServerUpdateToMembers } from './serverSummaries.js';
 import { requireServerMember, requireSession, type ServerActor } from './serverHttp.js';
+import { createdFields, diffFields, recordServerAudit } from './serverAuditLog.js';
 
 // Roles: creating, editing, ordering and handing them out. The hierarchy
 // rule runs through all of it — nobody touches a role at or above their own
@@ -63,14 +64,18 @@ async function handleCreate(request: FastifyRequest<{ Params: ServerParams }>, r
   const permissions = Number(body.permissions ?? 0) & ALL_PERMISSIONS;
   if ((permissions & ~grantable(actor)) !== 0) return sendError(reply, 403, 'hierarchy', 'Você não pode dar permissões que você não tem.');
   const id = crypto.randomUUID();
+  const color = typeof body.color === 'string' && COLOR_RE.test(body.color) ? body.color.toLowerCase() : '';
   // new roles start at the bottom, right above @everyone
   await db.transaction(async (tx) => {
     await tx.update(serverRoles).set({ position: sql`${serverRoles.position} + 1` })
       .where(and(eq(serverRoles.serverId, serverId), gte(serverRoles.position, 1)));
     await tx.insert(serverRoles).values({
-      id, serverId, name, position: 1, permissions,
-      color: typeof body.color === 'string' && COLOR_RE.test(body.color) ? body.color.toLowerCase() : '',
+      id, serverId, name, position: 1, permissions, color,
       hoist: body.hoist === true, mentionable: body.mentionable === true,
+    });
+    await recordServerAudit(tx, {
+      serverId, actorId: actor.userId, action: 'role.create', targetType: 'role', targetId: id, targetLabel: name,
+      changes: createdFields({ name, color, permissions }),
     });
   });
   await changed(serverId);
@@ -98,7 +103,13 @@ async function handleUpdate(request: FastifyRequest<{ Params: RoleParams }>, rep
   }
   if (body.hoist !== undefined && !role.isDefault) updates.hoist = body.hoist === true;
   if (body.mentionable !== undefined && !role.isDefault) updates.mentionable = body.mentionable === true;
-  if (Object.keys(updates).length) await db.update(serverRoles).set(updates).where(eq(serverRoles.id, roleId));
+  const changes = diffFields(role, updates, ['name', 'color', 'permissions', 'hoist', 'mentionable']);
+  if (changes.length) {
+    await db.transaction(async (tx) => {
+      await tx.update(serverRoles).set(updates).where(eq(serverRoles.id, roleId));
+      await recordServerAudit(tx, { serverId: role.serverId, actorId: actor.userId, action: 'role.update', targetType: 'role', targetId: roleId, targetLabel: updates.name ?? role.name, changes });
+    });
+  }
   await changed(actor.snapshot.server.id);
   sendJson(reply, 200, { ok: true });
 }
@@ -108,7 +119,10 @@ async function handleDelete(request: FastifyRequest<{ Params: RoleParams }>, rep
   const target = await requireRoleManager(request, reply, roleId);
   if (!target) return;
   if (target.role.isDefault) return sendError(reply, 403, 'forbidden', 'O @everyone não pode ser apagado.');
-  await db.delete(serverRoles).where(eq(serverRoles.id, roleId));
+  await db.transaction(async (tx) => {
+    await tx.delete(serverRoles).where(eq(serverRoles.id, roleId));
+    await recordServerAudit(tx, { serverId: target.role.serverId, actorId: target.actor.userId, action: 'role.delete', targetType: 'role', targetId: roleId, targetLabel: target.role.name });
+  });
   await changed(target.actor.snapshot.server.id);
   sendJson(reply, 200, { ok: true });
 }
@@ -133,8 +147,15 @@ async function handleOrder(request: FastifyRequest<{ Params: ServerParams }>, re
       return sendError(reply, 403, 'hierarchy', 'Você só pode reordenar cargos abaixo do seu.');
     }
   }
+  const nameOf = (id: string) => roles.find((r) => r.id === id)!.name;
+  const before = [...roles].sort((a, b) => a.position - b.position).map((r) => r.name);
+  const after = order.map(nameOf);
   await db.transaction(async (tx) => {
     for (const [index, id] of order.entries()) await tx.update(serverRoles).set({ position: index + 1 }).where(eq(serverRoles.id, id));
+    // lowest first, the way the request sends them
+    if (before.join('\n') !== after.join('\n')) {
+      await recordServerAudit(tx, { serverId, actorId: actor.userId, action: 'role.reorder', targetType: 'server', targetId: serverId, targetLabel: actor.snapshot.server.name, changes: [{ key: 'order', before, after }] });
+    }
   });
   await changed(serverId);
   sendJson(reply, 200, { ok: true });
@@ -159,11 +180,15 @@ async function handleSetMemberRoles(request: FastifyRequest<{ Params: MemberPara
   for (const id of touched) {
     if (!canManageRole(actor.member, assignable.find((r) => r.id === id)!, actor.snapshot.roles)) return sendError(reply, 403, 'hierarchy', 'Esse cargo está acima do seu.');
   }
+  const roleNames = (ids: Iterable<string>) => [...ids].map((id) => assignable.find((r) => r.id === id)?.name).filter((n): n is string => !!n).sort();
   await db.transaction(async (tx) => {
     const removed = [...current].filter((id) => !wanted.has(id));
     if (removed.length) await tx.delete(serverMemberRoles).where(and(eq(serverMemberRoles.userId, userId), inArray(serverMemberRoles.roleId, removed)));
     const added = [...wanted].filter((id) => !current.has(id));
     if (added.length) await tx.insert(serverMemberRoles).values(added.map((roleId) => ({ serverId, userId, roleId }))).onConflictDoNothing();
+    if (touched.length) {
+      await recordServerAudit(tx, { serverId, actorId: actor.userId, action: 'member.roles_update', targetType: 'user', targetId: userId, changes: [{ key: 'roles', before: roleNames(current), after: roleNames(wanted) }] });
+    }
   });
   await changed(serverId);
   await broadcastToServerMembers(serverId, { t: 'server-member-updated', serverId, userId, roleIds: [...wanted] });

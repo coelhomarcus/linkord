@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { notifyIncomingChatMessage, setNotificationsModuleEnabled } from '@/shared/notifications';
 import type { IncomingChatEvent } from '@/shared/notifications';
+import { setDoNotDisturb } from '@/shared/doNotDisturb';
 
 interface FakeNotificationInstance {
   title: string;
@@ -54,6 +55,14 @@ describe('notifyIncomingChatMessage', () => {
     setNotificationsModuleEnabled(false);
     notifyIncomingChatMessage(baseEvent());
     vi.runAllTimers();
+    expect(created).toHaveLength(0);
+  });
+
+  it('does not create a notification in do not disturb', () => {
+    setDoNotDisturb(true);
+    notifyIncomingChatMessage(baseEvent());
+    vi.runAllTimers();
+    setDoNotDisturb(false);
     expect(created).toHaveLength(0);
   });
 

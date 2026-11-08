@@ -3,7 +3,7 @@ import { ErrorBanner } from '@/shared/ErrorBanner';
 import { LANGUAGES, isLanguage } from '@/shared/i18n/languages';
 import { TIME_FORMATS, setTimeFormat, timeOptions, useTimeFormat } from '@/shared/lib/timeFormat';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/primitives/select';
-import { SettingsRadioGroup, SettingsSection, SettingsSections } from './SettingsLayout';
+import { SettingsRadioGroup, SettingsSection, SettingsSections } from '@/shared/ui/settings-layout';
 import { useLanguageSetting } from './useLanguageSetting';
 
 // an afternoon time, so 12 and 24 hours read differently

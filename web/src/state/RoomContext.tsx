@@ -1,7 +1,8 @@
 import { createContext, useContext } from 'react';
 import type { Dispatch, MutableRefObject } from 'react';
 import type { Room } from 'livekit-client';
-import type { ChatMessage, ClientMessage, Conversation, PublicUser, ReactionEmoji, SearchResult, ServerSummary } from '@/shared/types/protocol';
+import type { ChatMessage, ClientMessage, Conversation, OwnStatus, PublicUser, ReactionEmoji, SearchResult, ServerSummary, VisiblePresence } from '@/shared/types/protocol';
+import type { PresencePatch } from '@/features/status/useOwnStatus';
 import type { DmCallNotice } from '@/features/calls/useDmCall';
 import type { RoomAction, RoomState } from './roomReducer';
 import type { TileKind } from '../features/calls/tileTypes';
@@ -146,7 +147,6 @@ export interface RoomContextValue {
   openConversation: (conversationId: string) => void;
   openDirect: (userId: string) => void;
   closeConversation: (conversationId: string) => void;
-  pinConversation: (conversationId: string, pinned: boolean) => void;
   messagesByConversation: Map<string, ChatMessage[]>;
   hasMoreByConversation: Map<string, boolean>;
   loadingOlderByConversation: Set<string>;
@@ -164,6 +164,12 @@ export interface RoomContextValue {
   windowGenerationByConversation: Map<string, number>;
   allUsers: Map<string, PublicUser>;
   onlineUserIds: Set<string>;
+  /** Status of online people whose status is not plain "online" (see usePresence.ts). */
+  presenceByUser: Map<string, VisiblePresence>;
+  /** This account's status, as every one of its tabs and devices sees it. */
+  ownStatus: OwnStatus;
+  /** Rejects with a sentence for the user when the server refused it or never answered. */
+  setPresence: (patch: PresencePatch) => Promise<void>;
   /** The friend subset of allUsers — see usePresence.ts's own comment. */
   friendUserIds: Set<string>;
   kickFromCall: (participantId: string) => void;

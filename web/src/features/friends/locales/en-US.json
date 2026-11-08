@@ -50,15 +50,19 @@
     "results_other": "{{count}} results",
     "friends_one": "{{count}} friend",
     "friends_other": "{{count}} friends",
-    "noResults": "No results for this search.",
-    "noneOnline": "No friends online right now.",
-    "noneFound": "No friends found.",
+    "noResults": "No results",
+    "noneOnline": "No one's online right now",
+    "noneFound": "No friends found",
     "message": "Message",
     "messageTo": "Send message to {{name}}",
     "moreFor": "More actions for {{name}}",
     "viewProfile": "View profile",
     "removeFriend": "Remove friend",
-    "block": "Block"
+    "block": "Block",
+    "noneOnlineText": "When a friend comes online, they show up here.",
+    "viewAll": "See all friends",
+    "noResultsText": "Nothing matches “{{query}}”. Check the spelling or try another name.",
+    "clearSearch": "Clear search"
   },
   "requests": {
     "searchLabel": "Search requests",
@@ -67,21 +71,23 @@
     "waiting": "{{count}} awaiting reply",
     "loading": "Loading requests…",
     "loadFailed": "Couldn't load the requests.",
-    "noneIncoming": "No requests received.",
-    "noneOutgoing": "You have no sent requests.",
+    "noneIncoming": "No requests received",
+    "noneOutgoing": "No sent requests",
     "accept": "Accept",
     "decline": "Decline",
     "cancel": "Cancel",
     "accepted": "Request accepted.",
     "declined": "Request declined.",
-    "cancelled": "Request cancelled."
+    "cancelled": "Request cancelled.",
+    "noneIncomingText": "When someone adds you, their request shows up here.",
+    "noneOutgoingText": "Add someone by their @username to get started."
   },
   "invitations": {
     "searchLabel": "Search invitations",
     "title": "Server invitations",
     "loading": "Loading invitations…",
     "loadFailed": "Couldn't load the invitations.",
-    "none": "No pending server invitations.",
+    "none": "No server invitations",
     "from": "from",
     "join": "Join",
     "decline": "Decline",
@@ -91,7 +97,8 @@
     "quotaExceeded": "You're already in the maximum number of servers allowed.",
     "members_zero": "{{count}} members",
     "members_one": "{{count}} member",
-    "members_other": "{{count}} members"
+    "members_other": "{{count}} members",
+    "noneText": "When someone invites you to a server, the invitation shows up here."
   },
   "loadMore": {
     "refreshFailed": "Couldn't refresh the list.",

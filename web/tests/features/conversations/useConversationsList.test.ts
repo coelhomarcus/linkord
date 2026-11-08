@@ -5,7 +5,7 @@ import { useConversationsList } from '@/features/conversations/useConversationsL
 
 const conv = (id: string, over: Partial<Conversation> = {}): Conversation => ({
   id, type: 'direct', title: '', serverId: null, memberIds: ['me', 'peer'],
-  lastMessageAt: null, createdAt: 1, updatedAt: 1, pinnedAt: null, ...over,
+  lastMessageAt: null, createdAt: 1, updatedAt: 1, ...over,
 });
 
 describe('useConversationsList — conversation-updated', () => {
@@ -24,38 +24,34 @@ describe('useConversationsList — conversation-updated', () => {
   });
 });
 
-describe('useConversationsList — conversation-opened/conversation-created respect the pinned item', () => {
-  it('opening a new conversation (DM or a channel) does not push the pinned one down', () => {
-    // handleDirectOpen/handleGroupCreate on the server both send
-    // 'conversation-opened' for a brand-new conversation the client never
-    // had — reproduces exactly that: a pinned conversation already in the
-    // list, then a new one arrives.
+describe('useConversationsList — conversation-opened/conversation-created keep the list ordered by activity', () => {
+  it('opening a new conversation puts it by its last message, not blindly on top', () => {
     const { result } = renderHook(() => useConversationsList(vi.fn()));
-    act(() => result.current.setInitial([conv('pinned', { pinnedAt: 5000, lastMessageAt: 1000 })]));
+    act(() => result.current.setInitial([conv('busy', { lastMessageAt: 5000 })]));
     act(() => result.current.onConversationOpened(
-      { t: 'conversation-opened', conversationId: 'new', conversation: conv('new', { lastMessageAt: 9999 }) },
+      { t: 'conversation-opened', conversationId: 'new', conversation: conv('new', { lastMessageAt: 1000 }) },
       vi.fn(),
     ));
-    expect(result.current.conversations.map((c) => c.id)).toEqual(['pinned', 'new']);
+    expect(result.current.conversations.map((c) => c.id)).toEqual(['busy', 'new']);
   });
 
-  it('reopening an already-known conversation also keeps the pinned one on top', () => {
+  it('reopening an already-known conversation re-sorts it by its new last message', () => {
     const { result } = renderHook(() => useConversationsList(vi.fn()));
     act(() => result.current.setInitial([
-      conv('pinned', { pinnedAt: 5000, lastMessageAt: 1000 }),
+      conv('recent', { lastMessageAt: 5000 }),
       conv('existing', { lastMessageAt: 2000 }),
     ]));
     act(() => result.current.onConversationOpened(
       { t: 'conversation-opened', conversationId: 'existing', conversation: conv('existing', { lastMessageAt: 9999 }) },
       vi.fn(),
     ));
-    expect(result.current.conversations.map((c) => c.id)).toEqual(['pinned', 'existing']);
+    expect(result.current.conversations.map((c) => c.id)).toEqual(['existing', 'recent']);
   });
 
-  it('conversation-created also respects the pinned item', () => {
+  it('conversation-created is ordered by activity too', () => {
     const { result } = renderHook(() => useConversationsList(vi.fn()));
-    act(() => result.current.setInitial([conv('pinned', { pinnedAt: 5000, lastMessageAt: 1000 })]));
-    act(() => result.current.onConversationCreated({ t: 'conversation-created', conversation: conv('new', { lastMessageAt: 9999 }) }));
-    expect(result.current.conversations.map((c) => c.id)).toEqual(['pinned', 'new']);
+    act(() => result.current.setInitial([conv('busy', { lastMessageAt: 5000 })]));
+    act(() => result.current.onConversationCreated({ t: 'conversation-created', conversation: conv('new', { lastMessageAt: 1000 }) }));
+    expect(result.current.conversations.map((c) => c.id)).toEqual(['busy', 'new']);
   });
 });

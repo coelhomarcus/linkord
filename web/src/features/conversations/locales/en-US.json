@@ -19,10 +19,14 @@
     "directMessages": "Direct Messages",
     "newDirect": "Create DM",
     "close": "Close the conversation with {{name}}",
-    "noMatch": "No conversation found.",
-    "empty": "Your conversations show up here.",
+    "noMatch": "No conversation found",
+    "empty": "Your conversations show up here. Start one with a friend.",
     "rowUnread": "{{name}}, {{count}} unread",
-    "inThisCall": "In a call"
+    "inThisCall": "In a call",
+    "emptyTitle": "No conversations yet",
+    "startConversation": "New conversation",
+    "noMatchText": "Nothing matches “{{query}}”.",
+    "clearSearch": "Clear search"
   },
   "panel": {
     "back": "Back to conversations",

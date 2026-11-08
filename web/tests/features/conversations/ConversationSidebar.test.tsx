@@ -15,7 +15,7 @@ const bea: PublicUser = { id: 'u-bea', username: 'bea', displayName: 'Bea', avat
 const caio: PublicUser = { ...bea, id: 'u-caio', username: 'caio', displayName: 'Caio' };
 
 const direct = (id: string, peer: string): Conversation => ({
-  id, type: 'direct', title: '', serverId: null, memberIds: ['me', peer], lastMessageAt: Date.now(), createdAt: 0, updatedAt: 0, pinnedAt: null,
+  id, type: 'direct', title: '', serverId: null, memberIds: ['me', peer], lastMessageAt: Date.now(), createdAt: 0, updatedAt: 0,
 });
 
 const everyone = PERMISSIONS.VIEW_CHANNEL | PERMISSIONS.SEND_MESSAGES | PERMISSIONS.CONNECT | PERMISSIONS.CREATE_INVITE;
@@ -91,6 +91,17 @@ describe('ConversationSidebar — home', () => {
     await userEvent.setup().type(screen.getByRole('textbox', { name: 'Encontre ou comece uma conversa' }), 'cai');
     expect(screen.queryByRole('button', { name: 'Bea' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Caio' })).toBeInTheDocument();
+  });
+
+  it('a search that matches no DM says so and can be cleared', async () => {
+    const user = userEvent.setup();
+    renderSidebar();
+    const box = screen.getByRole('textbox', { name: 'Encontre ou comece uma conversa' });
+    await user.type(box, 'zzz');
+    expect(screen.getByText('Nenhuma conversa encontrada')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Limpar busca' }));
+    expect(box).toHaveValue('');
+    expect(screen.getByRole('button', { name: 'Bea' })).toBeInTheDocument();
   });
 
   it('shows that this DM is in a call', () => {

@@ -1,5 +1,5 @@
 import { AVATAR_COLOR_OPTIONS } from '@/shared/Avatar';
-import { oklchToHex, parseHex } from './colorMath';
+import { oklchToHex, parseHex } from '@/shared/lib/colorMath';
 
 /** The presets as the stylesheet defines them (`--color-avatar-*` in styles/index.css; a test keeps the two
  * the same), so the picker can place its cursor on a preset and draw its tick in a readable colour. */

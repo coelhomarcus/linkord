@@ -11,4 +11,33 @@ services:
       - "3000:3000"
     volumes:
       - ./uploads:/app/uploads
+      - ./backups:/app/backups
     mem_reservation: 512m
+    # The image already runs as `node`; these keep a compromised process from gaining more than that.
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  # Scheduled backups, off by default: `docker compose --profile backup up -d backup`.
+  # One backup at start and then every BACKUP_INTERVAL_SECONDS (default one day) into ./backups,
+  # keeping the newest BACKUP_KEEP. Copy ./backups off this machine too; see docs/DEVELOPMENT.md#backup-and-restore.
+  backup:
+    profiles: ["backup"]
+    build: .
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./uploads:/app/uploads:ro
+      - ./backups:/app/backups
+    healthcheck:
+      disable: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    command:
+      - sh
+      - -c
+      - 'while true; do node server/dist/scripts/backup.js || echo "backup failed" >&2; sleep "$${BACKUP_INTERVAL_SECONDS:-86400}"; done'

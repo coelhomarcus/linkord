@@ -15,7 +15,7 @@ const mocked = vi.mocked(api);
 const peer: PublicUser = { id: 'peer', username: 'peer', displayName: 'Peer', avatar: '', avatarColor: 'blurple', banner: '', bio: '', profileLinks: [], role: 'user' };
 const conversation = (over: Partial<Conversation>): Conversation => ({
   id: 'c1', type: 'direct', title: '', serverId: null, memberIds: ['me', 'peer'],
-  lastMessageAt: null, createdAt: 0, updatedAt: 0, pinnedAt: null, ...over,
+  lastMessageAt: null, createdAt: 0, updatedAt: 0, ...over,
 });
 const me = { ...initialRoomState, joined: true, me: { ...initialRoomState.me, userId: 'me' } };
 

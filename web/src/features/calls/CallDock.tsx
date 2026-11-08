@@ -11,6 +11,10 @@ import { useParticipantMedia } from './useLiveKitTrack';
 import { CallPingIndicator } from './CallPingIndicator';
 import { cn } from '@/shared/lib/utils';
 import { ROUTES } from '@/shared/lib/routes';
+import { StatusMenu } from '@/features/status/StatusMenu';
+import { StatusDot } from '@/features/status/StatusDot';
+import { CustomStatusText } from '@/features/status/CustomStatusText';
+import { useCustomStatus } from '@/features/status/statusDisplay';
 
 const MIC_PROBLEM_LABEL_KEY = {
   'not-found': 'micProblem.notFoundLabel',
@@ -52,13 +56,27 @@ interface CallDockProps {
   onNavigate?: () => void;
 }
 
+/** A status change the server refused, shown in the dock for a few seconds. */
+function useTransientError(ms = 5000) {
+  const [message, setMessage] = useState<string | null>(null);
+  useEffect(() => {
+    if (!message) return;
+    const timer = window.setTimeout(() => setMessage(null), ms);
+    return () => window.clearTimeout(timer);
+  }, [message, ms]);
+  return [message, setMessage] as const;
+}
+
 export function CallDock({ onReturnToCall, onOpenProfile, layout = 'wide', onNavigate }: CallDockProps) {
   const { t } = useTranslation('calls');
+  const { t: tStatus } = useTranslation('status');
   const {
     state, conversations, allUsers, activeCallConversationId, dmStartedAt,
     startCamera, stopCamera, startSharing, stopSharing, activateMic, toggleMicMuted,
-    deafened, toggleDeafened, leaveCall, preferMuted, setPreferMuted, reconnecting,
+    deafened, toggleDeafened, leaveCall, preferMuted, setPreferMuted, reconnecting, ownStatus,
   } = useRoom();
+  const customStatus = useCustomStatus(state.me.userId);
+  const [statusError, setStatusError] = useTransientError();
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const compact = layout === 'compact';
@@ -130,28 +148,39 @@ export function CallDock({ onReturnToCall, onOpenProfile, layout = 'wide', onNav
           {leaveButton}
         </div>
       ))}
+      {statusError && <p role="alert" className="mb-1.5 px-1 text-caption text-red-text">{statusError}</p>}
       <div className={cn('flex items-center gap-0.5', compact && 'flex-col')}>
-        <button
-          type="button"
-          onClick={() => { if (state.me.userId) onOpenProfile(state.me.userId); }}
-          aria-label={t('controls.myProfile')}
-          className={cn(
-            'flex items-center gap-2 rounded-lg text-left transition-colors hover:bg-fill-hover',
-            compact ? 'p-0.5' : 'min-w-0 flex-1 py-1 pl-1 pr-2',
+        <StatusMenu
+          side={compact ? 'right' : 'top'}
+          onOpenProfile={() => { if (state.me.userId) onOpenProfile(state.me.userId); }}
+          onError={setStatusError}
+          trigger={(
+            <button
+              type="button"
+              aria-label={tStatus('menu.trigger')}
+              className={cn(
+                'flex items-center gap-2 rounded-lg text-left transition-colors hover:bg-fill-hover data-popup-open:bg-fill-hover',
+                compact ? 'p-0.5' : 'min-w-0 flex-1 py-1 pl-1 pr-2',
+              )}
+            >
+              <span className="relative flex-none">
+                <Avatar id={state.me.userId ?? state.me.id ?? 'me'} name={state.me.displayName} avatar={state.me.avatar} avatarColor={state.me.avatarColor} size={32} />
+                {/* your chosen status while connected; gray while the connection is being re-established */}
+                <StatusDot status={reconnecting ? 'reconnecting' : ownStatus.effective} labelled={!reconnecting} className="absolute -bottom-0.5 -right-0.5 size-3.5 border-[3px] text-surface-app" />
+              </span>
+              {!compact && (
+                <span className="min-w-0 leading-tight">
+                  <span className="block truncate text-label font-semibold text-text-primary">{state.me.displayName}</span>
+                  {reconnecting
+                    ? <span className="block truncate text-caption text-text-secondary">{t('controls.statusReconnecting')}</span>
+                    : customStatus
+                      ? <CustomStatusText custom={customStatus} className="text-caption text-text-secondary" />
+                      : <span className="block truncate text-caption text-text-secondary">{tStatus(`statuses.${ownStatus.effective}`)}</span>}
+                </span>
+              )}
+            </button>
           )}
-        >
-          <span className="relative flex-none">
-            <Avatar id={state.me.userId ?? state.me.id ?? 'me'} name={state.me.displayName} avatar={state.me.avatar} avatarColor={state.me.avatarColor} size={32} />
-            {/* you are online while this is on screen; gray while the connection is being re-established */}
-            <span aria-hidden data-status={reconnecting ? 'reconnecting' : 'online'} className={cn('absolute -bottom-0.5 -right-0.5 size-3.5 rounded-full border-[3px] border-surface-app', reconnecting ? 'bg-text-muted' : 'bg-green')} />
-          </span>
-          {!compact && (
-            <span className="min-w-0 leading-tight">
-              <span className="block truncate text-label font-semibold text-text-primary">{state.me.displayName}</span>
-              <span className="block truncate text-caption text-text-secondary">{reconnecting ? t('controls.statusReconnecting') : t('controls.statusOnline')}</span>
-            </span>
-          )}
-        </button>
+        />
         <Tooltip>
           <TooltipTrigger
             onClick={onMic}

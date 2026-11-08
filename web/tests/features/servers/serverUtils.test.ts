@@ -69,5 +69,6 @@ describe('server helpers', () => {
   it('settings open for anyone who can manage something there', () => {
     expect(canOpenSettings(server({ permissions: PERMISSIONS.SEND_MESSAGES }))).toBe(false);
     expect(canOpenSettings(server({ permissions: PERMISSIONS.KICK_MEMBERS }))).toBe(true);
+    expect(canOpenSettings(server({ permissions: PERMISSIONS.VIEW_AUDIT_LOG }))).toBe(true);
   });
 });

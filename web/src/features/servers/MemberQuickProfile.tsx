@@ -17,6 +17,7 @@ import { cn } from '@/shared/lib/utils';
 import { hasPermission, PERMISSIONS } from './permissionBits';
 import { setMemberRoles, type ServerMemberEntry } from './serversApi';
 import { memberColor } from './serverUtils';
+import { UserCustomStatus, UserStatusDot } from '@/features/status/UserStatus';
 
 interface MemberQuickProfileProps {
   server: ServerSummary;
@@ -119,9 +120,12 @@ export function MemberQuickProfile({ server, member, currentUser, offline, open,
       >
         <span className="relative flex-none">
           <Avatar id={user.id} name={user.displayName} avatar={user.avatar} poster={avatarPoster} animateOnHover avatarColor={user.avatarColor} size={32} />
-          {!offline && <span className="absolute -bottom-0.5 -right-0.5 size-3.5 rounded-full border-[3px] border-(--cutout) bg-green" />}
+          {!offline && <UserStatusDot userId={user.id} className="absolute -bottom-0.5 -right-0.5 size-3.5 border-[3px] text-(--cutout)" />}
         </span>
-        <span className="min-w-0 flex-1 truncate text-body font-medium text-text-primary" style={color ? { color } : undefined}>{user.displayName}</span>
+        <span className="min-w-0 flex-1 leading-tight">
+          <span className="block truncate text-body font-medium text-text-primary" style={color ? { color } : undefined}>{user.displayName}</span>
+          {!offline && <UserCustomStatus userId={user.id} className="text-caption text-text-muted" />}
+        </span>
         {member.isOwner && <CrownIcon size={14} weight="fill" className="flex-none text-yellow" aria-label={t('members.owner')} />}
       </PopoverTrigger>
       <PopoverContent side="left" align="start" sideOffset={8} className="w-[min(24rem,calc(100vw-1rem))] gap-0 overflow-hidden rounded-xl border-border-default bg-bg-modal p-0">
@@ -149,12 +153,7 @@ export function MemberQuickProfile({ server, member, currentUser, offline, open,
             >
               <Avatar id={user.id} name={user.displayName} avatar={user.avatar} poster={avatarPoster} animateOnHover avatarColor={user.avatarColor} size={72} />
             </button>
-            <span
-              aria-label={offline ? t('members.offline') : t('members.online')}
-              className={`absolute bottom-1 right-1 grid size-5 place-items-center rounded-full border-4 border-bg-modal ${offline ? 'bg-text-muted' : 'bg-green'}`}
-            >
-              {offline && <span className="size-1.5 rounded-full bg-bg-modal" />}
-            </span>
+            <UserStatusDot userId={user.id} labelled className="absolute bottom-1 right-1 size-5 border-4 text-bg-modal" />
           </div>
           <div className="mt-2 flex items-start justify-between gap-3">
             <div className="min-w-0">
@@ -163,6 +162,7 @@ export function MemberQuickProfile({ server, member, currentUser, offline, open,
                 {member.isOwner && <CrownIcon size={14} weight="fill" className="flex-none text-yellow" aria-label={t('members.owner')} />}
               </h2>
               <p className="truncate text-label text-text-secondary">@{user.username}</p>
+              <UserCustomStatus userId={user.id} className="mt-1 text-label text-text-secondary" />
             </div>
           </div>
 

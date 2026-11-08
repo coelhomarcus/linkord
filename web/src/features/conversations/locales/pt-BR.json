@@ -19,10 +19,14 @@
     "directMessages": "Mensagens diretas",
     "newDirect": "Criar DM",
     "close": "Fechar a conversa com {{name}}",
-    "noMatch": "Nenhuma conversa encontrada.",
-    "empty": "Suas conversas aparecem aqui.",
+    "noMatch": "Nenhuma conversa encontrada",
+    "empty": "Suas conversas aparecem aqui. Comece uma com um amigo.",
     "rowUnread": "{{name}}, {{count}} não lidas",
-    "inThisCall": "Em uma chamada"
+    "inThisCall": "Em uma chamada",
+    "emptyTitle": "Nenhuma conversa ainda",
+    "startConversation": "Nova conversa",
+    "noMatchText": "Nada corresponde a “{{query}}”.",
+    "clearSearch": "Limpar busca"
   },
   "panel": {
     "back": "Voltar para conversas",

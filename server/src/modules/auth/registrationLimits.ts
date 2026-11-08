@@ -2,7 +2,7 @@ import { gte, sql } from 'drizzle-orm';
 import { config } from '../../config/env.js';
 import { db } from '../../db/client.js';
 import { users } from '../../db/schema.js';
-import * as floodControl from '../../realtime/floodControl.js';
+import { consume } from './ratelimit.js';
 
 export type RegistrationGate = 'ok' | 'ip_limited' | 'paused';
 
@@ -18,12 +18,13 @@ export function isRegistrationPaused(recentAccounts: number, cap = config.MAX_NE
  * account is created, so a typo never spends the caller's budget. Two brakes:
  * a per-IP hourly cap, and an instance-wide cap on new accounts per hour (the
  * public sign-up must not be able to fill the room or the database faster
- * than someone can react). The DB count is the source of truth, so it
- * survives restarts and works across the deploy's processes. */
+ * than someone can react). Both counters are in the database, so
+ * they survive restarts and are shared by every process. */
 export async function checkRegistrationAllowed(ip: string): Promise<RegistrationGate> {
   const [row] = await db.select({ n: sql<number>`count(*)::int` }).from(users)
     .where(gte(users.createdAt, new Date(Date.now() - HOUR_MS)));
   if (isRegistrationPaused(row?.n ?? 0)) return 'paused';
-  if (!floodControl.allow(`register:${ip}`, { windowMs: HOUR_MS, max: config.REGISTRATIONS_PER_IP_PER_HOUR })) return 'ip_limited';
+  const perIp = await consume(`register:${ip}`, { windowMs: HOUR_MS, max: config.REGISTRATIONS_PER_IP_PER_HOUR });
+  if (!perIp.allowed) return 'ip_limited';
   return 'ok';
 }

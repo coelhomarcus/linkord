@@ -9,6 +9,7 @@ import { invalidateServer, loadServerSnapshot, memberInput } from './serverAcces
 import { lockServer, serverMemberIds } from './serversRepository.js';
 import { broadcastToServerMembers, sendServerRemoved, sendServerUpdateToMembers } from './serverSummaries.js';
 import { deleteServerCompletely } from './serverDeletion.js';
+import { recordServerAudit } from './serverAuditLog.js';
 
 export type RemovalDecision = 'allow' | 'forbidden' | 'owner_must_transfer' | 'not_member';
 
@@ -76,6 +77,9 @@ export async function removeMember(serverId: string, actorId: string, targetId: 
     if (kind === 'ban') {
       await tx.insert(serverBans).values({ serverId, userId: targetId, bannedBy: actorId, reason: reason.slice(0, 512) }).onConflictDoNothing();
     }
+    if (kind !== 'leave') {
+      await recordServerAudit(tx, { serverId, actorId, action: kind === 'ban' ? 'member.ban' : 'member.kick', targetType: 'user', targetId, reason: kind === 'ban' ? reason : '' });
+    }
     return { code: 'ok', remaining: snapshot.members.size - 1 };
   });
   invalidateServer(serverId);
@@ -109,6 +113,7 @@ export async function transferOwnership(serverId: string, actorId: string, newOw
     const decision = decideTransfer({ actorIsOwner: server.ownerId === actorId, targetIsMember: !!target, isSelf: actorId === newOwnerId });
     if (decision !== 'allow') return { code: decision };
     await tx.update(servers).set({ ownerId: newOwnerId, updatedAt: new Date() }).where(eq(servers.id, serverId));
+    await recordServerAudit(tx, { serverId, actorId, action: 'server.transfer', targetType: 'user', targetId: newOwnerId });
     return { code: 'ok' };
   });
   invalidateServer(serverId);
@@ -116,9 +121,13 @@ export async function transferOwnership(serverId: string, actorId: string, newOw
   return result;
 }
 
-export async function unbanMember(serverId: string, userId: string): Promise<boolean> {
-  const deleted = await db.delete(serverBans).where(and(eq(serverBans.serverId, serverId), eq(serverBans.userId, userId))).returning();
-  return deleted.length > 0;
+export async function unbanMember(serverId: string, actorId: string, userId: string): Promise<boolean> {
+  return db.transaction(async (tx) => {
+    const deleted = await tx.delete(serverBans).where(and(eq(serverBans.serverId, serverId), eq(serverBans.userId, userId))).returning();
+    if (!deleted.length) return false;
+    await recordServerAudit(tx, { serverId, actorId, action: 'member.unban', targetType: 'user', targetId: userId });
+    return true;
+  });
 }
 
 /** The member's own rail order: `serverIds` in the order they want them. Ids

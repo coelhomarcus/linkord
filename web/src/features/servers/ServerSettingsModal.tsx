@@ -28,8 +28,10 @@ import {
 } from './serversApi';
 import { can, memberColor } from './serverUtils';
 import { inviteUrl } from './inviteCode';
+import { RoleColorPicker } from './RoleColorPicker';
+import { ServerAuditLog } from './ServerAuditLog';
 
-type TabKey = 'overview' | 'roles' | 'members' | 'invites' | 'bans' | 'soundboard' | 'delete';
+type TabKey = 'overview' | 'roles' | 'members' | 'invites' | 'bans' | 'auditLog' | 'soundboard' | 'delete';
 
 function useAction() {
   const [error, setError] = useState<string | null>(null);
@@ -218,10 +220,10 @@ function Roles({ server }: { server: ServerSummary }) {
               <span className="text-body font-medium text-text-primary">{t('roles.name')}</span>
               <Input value={draft.name} disabled={draft.isDefault} maxLength={100} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
             </label>
-            <label className="flex flex-col gap-1.5">
-              <span className="text-body font-medium text-text-primary">{t('roles.color')}</span>
-              <input type="color" value={draft.color || '#99aab5'} onChange={(e) => setDraft({ ...draft, color: e.target.value })} className="h-10 w-14 cursor-pointer rounded-lg border border-border-field bg-transparent" />
-            </label>
+            <div className="flex flex-col gap-1.5">
+              <span aria-hidden className="text-body font-medium text-text-primary">{t('roles.color')}</span>
+              <RoleColorPicker value={draft.color} onChange={(color) => setDraft({ ...draft, color })} />
+            </div>
           </div>
           {!draft.isDefault && (
             <>
@@ -395,7 +397,10 @@ export function ServerSettingsModal({ server, onClose, onOpenProfile }: { server
       ...(can(server, PERMISSIONS.MANAGE_ROLES) ? [{ key: 'roles' as const, label: t('settings.roles') }] : []),
       ...(can(server, PERMISSIONS.MANAGE_SERVER) ? [{ key: 'invites' as const, label: t('settings.invites') }] : []),
     ]),
-    ...grouped(t('settings.groups.moderation'), can(server, PERMISSIONS.BAN_MEMBERS) ? [{ key: 'bans' as const, label: t('settings.bans') }] : []),
+    ...grouped(t('settings.groups.moderation'), [
+      ...(can(server, PERMISSIONS.VIEW_AUDIT_LOG) ? [{ key: 'auditLog' as const, label: t('settings.auditLog') }] : []),
+      ...(can(server, PERMISSIONS.BAN_MEMBERS) ? [{ key: 'bans' as const, label: t('settings.bans') }] : []),
+    ]),
     ...(isOwner ? [{ key: 'delete' as const, label: t('settings.delete'), danger: true }] : []),
   ];
   const [tab, setTab] = useState<TabKey>(tabs[0]!.key);
@@ -409,6 +414,7 @@ export function ServerSettingsModal({ server, onClose, onOpenProfile }: { server
       {tab === 'members' && <Members server={server} onOpenProfile={onOpenProfile} />}
       {tab === 'invites' && <Invites server={server} />}
       {tab === 'bans' && <Bans server={server} />}
+      {tab === 'auditLog' && <ServerAuditLog server={server} />}
       {tab === 'soundboard' && (
         <>
           <SectionTitle>{t('settings.soundboard')}</SectionTitle>

@@ -43,6 +43,16 @@ export const users = pgTable('users', {
   // what e-mails and push notifications are written in, which is why it
   // lives on the account instead of only in the browser.
   locale: varchar('locale', { length: 16 }).notNull().default('pt-BR'),
+  // false keeps message text out of push notifications (they show who and where only). It is read
+  // by the server when it builds the push, so it lives on the account, not in the browser.
+  pushShowContent: boolean('push_show_content').notNull().default(true),
+  // The presence status the person picked (see modules/presence/userStatus.ts). On the account so it
+  // holds on every device, and so push delivery can honour 'dnd' without asking the socket layer.
+  presenceStatus: varchar('presence_status', { length: 16 }).notNull().default('online'),
+  // '' text and emoji mean no custom status. A past expiry reads as none (it is also cleared then).
+  customStatusEmoji: varchar('custom_status_emoji', { length: 64 }).notNull().default(''),
+  customStatusText: varchar('custom_status_text', { length: 128 }).notNull().default(''),
+  customStatusExpiresAt: timestamp('custom_status_expires_at', { withTimezone: true }),
   // Last time the account actually went offline (last live socket gone,
   // after the reconnect grace). Null until the first disconnect after this
   // column existed — the migration backfills from sessions.last_seen_at.
@@ -58,6 +68,7 @@ export const users = pgTable('users', {
   // expression (see auth/users.ts), or Postgres won't use this index.
   uniqueIndex('users_username_lower_key').on(sql`lower(${t.username})`),
   uniqueIndex('users_email_lower_key').on(sql`lower(${t.email})`),
+  check('users_presence_status_check', sql`${t.presenceStatus} IN ('online','idle','dnd','invisible')`),
 ]);
 
 /** Login session. The key is the sha256 of the cookie value, never the raw
@@ -132,9 +143,6 @@ export const conversationMembers = pgTable('conversation_members', {
   // leaves their own history list without deleting anything). listForUser
   // hides it again until a message newer than this arrives.
   hiddenAt: timestamp('hidden_at', { withTimezone: true }),
-  // per-member pin — purely a personal sidebar preference, doesn't touch the
-  // conversation itself or anyone else's row. Pinned DMs sort first.
-  pinnedAt: timestamp('pinned_at', { withTimezone: true }),
   joinedAt: timestamp('joined_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
   uniqueIndex('conversation_members_conversation_user_key').on(t.conversationId, t.userId),
@@ -275,6 +283,33 @@ export const serverBans = pgTable('server_bans', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
   primaryKey({ columns: [t.serverId, t.userId] }),
+]);
+
+/** A server's own audit log: who changed what in it, shown to members with
+ * VIEW_AUDIT_LOG. Written in the same transaction as the change it records
+ * (modules/servers/serverAuditLog.ts). Actor and target are ids plus a label
+ * snapshot with no foreign key, so an entry outlives the account, role or
+ * channel it names; the log itself goes with its server. `detail` holds the
+ * before/after of what changed, never message bodies or tokens. */
+export const serverAuditLogs = pgTable('server_audit_logs', {
+  id: text('id').primaryKey(),
+  serverId: text('server_id').notNull().references(() => servers.id, { onDelete: 'cascade' }),
+  actorId: text('actor_id'),
+  actorLabel: text('actor_label').notNull().default(''),
+  action: varchar('action', { length: 48 }).notNull(),
+  targetType: varchar('target_type', { length: 16 }).notNull(),
+  targetId: text('target_id').notNull().default(''),
+  targetLabel: text('target_label').notNull().default(''),
+  reason: text('reason').notNull().default(''),
+  detail: jsonb('detail').$type<Record<string, unknown>>().notNull().default({}),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  index('server_audit_server_created_idx').on(t.serverId, t.createdAt, t.id),
+  index('server_audit_server_actor_idx').on(t.serverId, t.actorId, t.createdAt),
+  index('server_audit_server_action_idx').on(t.serverId, t.action, t.createdAt),
+  index('server_audit_server_target_idx').on(t.serverId, t.targetId, t.createdAt),
+  // the retention sweep picks the oldest rows across every server
+  index('server_audit_created_idx').on(t.createdAt),
 ]);
 
 /** One row per canonical account pair. `requestedBy` identifies who is waiting while the
@@ -659,6 +694,7 @@ export type ServerRole = typeof serverRoles.$inferSelect;
 export type ServerCategory = typeof serverCategories.$inferSelect;
 export type ChannelPermissionOverwrite = typeof channelPermissionOverwrites.$inferSelect;
 export type ServerInvite = typeof serverInvites.$inferSelect;
+export type ServerAuditLog = typeof serverAuditLogs.$inferSelect;
 
 /** Append-only record of administrative actions. No foreign keys on purpose:
  * the trail must outlive the account or group it is about (and the admin who
@@ -788,6 +824,19 @@ export const profileGames = pgTable('profile_games', {
   uniqueIndex('profile_games_list_game_unique').on(t.userId, t.list, t.igdbId),
   index('profile_games_user_list_idx').on(t.userId, t.list, t.position),
   check('profile_games_list_check', sql`${t.list} IN ('favorite','liked','playing','wishlist')`),
+]);
+
+/** Attempt counters that guard against brute force (login, recovery codes, sign-up), kept in the
+ * database so a restart or a deploy does not hand out fresh attempts. One row per key (a SHA-256 of it, so
+ * no email, username or address is stored) and window:
+ * the row is reset in place when its window ends, and swept once it is over (modules/auth/ratelimit.ts). */
+export const rateLimitWindows = pgTable('rate_limit_windows', {
+  key: varchar('key', { length: 64 }).primaryKey(),
+  count: integer('count').notNull(),
+  windowEndsAt: timestamp('window_ends_at', { withTimezone: true }).notNull(),
+  blockedUntil: timestamp('blocked_until', { withTimezone: true }),
+}, (t) => [
+  index('rate_limit_windows_window_ends_idx').on(t.windowEndsAt),
 ]);
 
 export const connectionSyncLimits = pgTable('connection_sync_limits', {

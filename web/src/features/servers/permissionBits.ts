@@ -21,6 +21,7 @@ export const PERMISSIONS = {
   MOVE_MEMBERS: 1 << 16,
   USE_SOUNDBOARD: 1 << 17,
   MANAGE_EXPRESSIONS: 1 << 18,
+  VIEW_AUDIT_LOG: 1 << 19,
 } as const;
 
 export type PermissionName = keyof typeof PERMISSIONS;

@@ -108,13 +108,15 @@ npm run admin:grant -- <your-username>
 
 ## Run the checks
 
-There is no hosted CI; run the checks locally before pushing. This runs the server test typecheck, the frontend lint, the server and frontend tests, and the production build (which also typechecks the backend and frontend):
+There is no hosted CI; run the checks locally before pushing. This runs the server test typecheck, the frontend lint, the dependency audit, the server and frontend tests, and the production build (which also typechecks the backend and frontend):
 
 ```bash
 npm run check
 ```
 
-None of these need PostgreSQL: `.env.test` supplies a placeholder `DATABASE_URL` and no unit test runs a real query. Use `npm run test:server` or `npm run test:web` to run one side only.
+The audit step (`npm run check:audit`) runs `npm audit --omit=dev --audit-level=high` for the root and `web/`, so it fails on a high or critical advisory in anything that ships and needs network access to the npm registry. Dev-only tooling is left out on purpose; `npm audit fix` updates the lockfile within the declared ranges. Keep build-only packages (the shadcn CLI, Tailwind, Vite plugins) in `devDependencies` of `web/`: the Docker image builds the web app with every dependency installed and ships only the output.
+
+None of the tests need PostgreSQL: `.env.test` supplies a placeholder `DATABASE_URL` and no unit test runs a real query. Use `npm run test:server` or `npm run test:web` to run one side only.
 
 ## Scripts
 
@@ -124,10 +126,11 @@ Every script runs from the repository root.
 | --- | --- |
 | `npm run dev` | API (Fastify, `:3000`) and web (Vite, `:5173`) in watch mode. |
 | `npm run build` / `npm start` | Production build of both, and the built server. |
-| `npm run check` | Everything that should pass before pushing: server test typecheck, web lint, server and web tests, build. |
+| `npm run check` | Everything that should pass before pushing: server test typecheck, web lint, dependency audit, server and web tests, build. |
 | `npm run test:server` / `npm run test:web` | Unit tests of one side (`node --test`, Vitest). No database needed. |
 | `npm run test:integration` | `server/tests/integration/*.itest.ts` against a throwaway database it creates and drops on your local Postgres. |
 | `npm run test:e2e` (and `:features`, `:restart`, `:upgrade`) | The browser suite, see [End-to-end tests](#end-to-end-tests). Needs Docker and Chrome. |
+| `npm run check:audit` | `npm audit --omit=dev --audit-level=high` for the root and `web/`; fails on high or critical advisories in shipped dependencies. Part of `npm run check`. |
 | `npm run check:dead-code` | `knip`: unused files, exports and dependencies across `server/`, `web/` and `e2e/`. |
 | `npm run db:migrate` | Applies pending migrations. The server also does it on boot unless `MIGRATE_ON_BOOT=0`. |
 | `npm run db:generate` | Generates a migration from changes to `server/src/db/schema.ts`. Rename the file to describe the change. |
@@ -136,6 +139,9 @@ Every script runs from the repository root.
 | `npm run db:preflight` | Read-only inventory of legacy data that would block a migration (exit code 1 means blocked; `-- --json` for machine output). |
 | `npm run db:repair` | Repairs the legacy relationship rows `db:preflight` reports, without creating friendships or invitations. |
 | `npm run db:rehearse` | Rehearses the migrations on throwaway local databases before they run for real. |
+| `npm run backup` | One backup of `DATABASE_URL` and `UPLOAD_DIR` into `BACKUP_DIR`, then rotation. See [Backup and restore](#backup-and-restore). |
+| `npm run restore -- [<backup>] --confirm <database>` | Restores a backup into an empty database and uploads folder, and checks the result. |
+| `npm run backup:rehearse` | Backup, restore and a boot of the app on throwaway local databases. Needs `pg_dump` and `pg_restore`. |
 | `npm run admin:grant -- <username>` / `admin:revoke` | Gives or takes administrator access. |
 
 The scripts behind the `db:*`, `admin:*` and `test:integration` commands live in `server/src/scripts/`; each starts with a comment on what it does and how to call it.
@@ -159,6 +165,8 @@ npm run test:e2e
 - `npm run test:e2e:features`: every feature on the working tree's build.
 - `npm run test:e2e:restart`: calls, messages and uploads across a redeploy of the same build.
 - `npm run test:e2e:upgrade`: tabs opened on the production version (`origin/main`, or `E2E_BASE_REF`) while the server is upgraded to the working tree.
+
+The app image runs as the non-root `node` user, while the base version of the upgrade specs may still run as root. `deploy()` in `e2e/stack/stack.ts` therefore runs the `chown -R node:node /app/uploads` that the README asks for before an upgrade.
 
 Each run builds `linkord-e2e:head` from the working tree (uncommitted changes included; Docker's cache keeps an unchanged tree fast), starts the stack, runs, and removes it. The base version is built once per commit and reused. `E2E_KEEP_STACK=1` leaves the stack up at `http://localhost:8080`, `E2E_HEADED=1` shows the browsers, `E2E_RETRIES=0` turns retries off, and `E2E_HEAD_IMAGE=<tag>` runs against an image you built yourself instead of the working tree (build a deliberately broken tree to check that a spec catches the regression).
 
@@ -188,6 +196,7 @@ The `upgrade` project adapts to what the base version can do and says so in the 
 | `features/profile` | Display name and bio reaching a friend live, mutual friends, the games widgets on offer with no connection (the picker reports the search unavailable, as the stack has no IGDB credentials), games saved with the Wall reaching a friend in order, and widgets reordered by dragging their handle and removed with the button under it. |
 | `features/reports-admin` | Reporting a message, the admin deleting it for everyone, suspending an account. |
 | `features/settings` | The account's language following it to another browser. |
+| `features/presence` | A status and custom status set on one device reaching the account's other device and a friend live, invisible reading as offline (custom status and online friends list included), and the status kept across a reload. |
 | `restart/voice` | A voice call survives a redeploy: the tab nobody touched reconnects on its own (the socket drop is a transport close, never `io server disconnect`), and someone joining after the deploy lands in the same call, with audio both ways. |
 | `restart/dm-call` | An answered DM call survives a redeploy; a ring survives it and can be answered, even with the click made while the tab is still disconnected. |
 | `restart/chat` | A message written while the server is down, and one sent the moment the deploy starts, are stored and shown exactly once. |
@@ -198,9 +207,155 @@ The `restart` specs are the guard for the deploy behaviour described in `AGENTS.
 
 When you add a user-facing flow, add it to the matching spec (or a new `features/<area>.spec.ts`) and to this table.
 
+## Backup and restore
+
+`npm run backup` is the supported way to back up a deployment, `npm run restore` the way back. Both act only on the database and uploads folder the app is configured with (`DATABASE_URL`, `UPLOAD_DIR`); there is no option to aim them at another one.
+
+A backup is one folder in `BACKUP_DIR` (default `./backups`, `/app/backups` in the image), named by UTC time:
+
+```
+linkord-backup-20261108T015300Z/
+  database.dump     pg_dump, custom format
+  uploads.tar.gz    UPLOAD_DIR without tmp/
+  manifest.json     row count of every table, migrations, file counts, SHA-256 of both files
+```
+
+It is written as `<name>.partial` and renamed only when complete, so a crashed run never looks like a backup. Then everything but the newest `BACKUP_KEEP` backups is deleted. Rotation only deletes folders named exactly like the ones above that hold a `manifest.json`, so a shared folder keeps its other files, and it runs only after a new backup succeeded, so a failing disk never shrinks the history. A `.partial` folder older than a day (a crashed run) is cleaned up too.
+
+| Setting | Default | What it does |
+| --- | --- | --- |
+| `BACKUP_DIR` | `<repo>/backups` | Where backups are written and read. It cannot be inside `UPLOAD_DIR` (the archive would contain every earlier backup). |
+| `BACKUP_KEEP` | `7` | How many backups rotation keeps. A whole number, at least 1; anything else stops the run. |
+| `BACKUP_INTERVAL_SECONDS` | `86400` | Only for the `backup` compose service: the pause between backups. |
+| `PG_DUMP_BIN`, `PG_RESTORE_BIN` | `pg_dump`, `pg_restore` | Path of the PostgreSQL client tools. |
+
+The tools need `pg_dump` and `pg_restore` at least as new as the database server (the Docker image installs `postgresql-client`, the latest Alpine ships) and `tar`. On a Mac without the client tools, point the variables at a wrapper that runs them in the dev database container. The connection arrives in `PG*` variables and data goes through stdin and stdout, so this works:
+
+```sh
+#!/bin/sh
+# pg_dump-in-docker; the pg_restore twin is the same with pg_restore
+exec docker exec -i -e PGPASSWORD -e PGUSER -e PGDATABASE -e PGHOST -e PGPORT linkord-postgres-1 pg_dump "$@"
+```
+
+### Consistency between the database and the files
+
+The backup runs while people use the app, in this order:
+
+1. It opens a repeatable-read transaction, reads every table's row count and the id of every file the database refers to, and exports the snapshot. `pg_dump --snapshot` dumps that same instant, so the dump, the counts and the ids always agree, however busy the chat is.
+2. Only then does it archive `UPLOAD_DIR`. A file is written before the row that points at it, so every row in the dump already has its file. (The other order, files first, would miss the attachment of a message sent in between.)
+
+What can still differ, and what happens:
+
+- **A file deleted after the snapshot** (someone deleted a message while the archive was running): the dump has the row, the archive lacks the file. The manifest counts it (`missingFromArchive`), the backup logs a warning and the restore reports it as a warning, since the message would show a broken attachment but nothing else is lost.
+- **A file uploaded after the snapshot**: it is in the archive with no row. Harmless; the orphan sweep lists it in `/admin/system` and removes it once `ORPHAN_SWEEP_DRY_RUN=0`.
+- **Uploads in progress** (`UPLOAD_DIR/tmp/`, chunks of a file the person is still sending): not archived, since half a file is no use. After a restore the person picks the file again.
+- **Staged files** (uploaded and waiting for the message to be sent): the `staged_attachments` rows and their files are both included, and they expire 24 hours later as usual.
+- **Not in the backup:** the `.env` (database credentials, `LIVEKIT_*`, and above all the Web Push VAPID keys, without which every browser's push subscription stops working) and LiveKit itself. Keep the `.env` in your password manager or secrets store. The dump holds password hashes, sessions and every message, so treat a backup like the database itself, and encrypt it if it leaves your machine.
+
+### Running it in Docker
+
+The app image carries the scripts and the client tools, and the compose file mounts `./backups` into the `app` container. The container runs as `node` (uid 1000), so `./backups` and `./uploads` must be owned by `1000:1000` (see the README).
+
+```bash
+docker compose exec app node server/dist/scripts/backup.js
+```
+
+To schedule it, pick one:
+
+- **Compose service** (nothing to install on the host): `docker compose --profile backup up -d backup` takes a backup at start and then every `BACKUP_INTERVAL_SECONDS`, reading `./uploads` read-only. Set `BACKUP_KEEP` and `BACKUP_INTERVAL_SECONDS` in `.env`.
+- **Host cron**, which fixes the time of day: `0 3 * * * cd /srv/linkord && flock -n backups/.lock docker compose exec -T app node server/dist/scripts/backup.js >> backups/backup.log 2>&1` (`flock` stops a slow backup from overlapping the next one).
+
+A backup on the same disk as the data does not survive that disk. Keep `./backups` on another volume (set `BACKUP_DIR`, or mount a different host path over `/app/backups`), and copy it off the machine after each run, for example from the same cron line: `rclone copy backups remote:linkord-backups`, `aws s3 sync backups s3://my-bucket/linkord`, or `rsync -a backups/ other-host:linkord-backups/`. Rotation here only prunes the local folder; set a lifecycle rule on the remote copy.
+
+### Restoring on a new server
+
+1. Install the app and put the `.env` in place. Point `DATABASE_URL` at a new, empty database, and make sure `UPLOAD_DIR` (`./uploads`) is empty or missing (in Docker, an empty folder owned by `1000:1000`).
+2. Copy the backup folder into `BACKUP_DIR`.
+3. With the app stopped, run it. The first run only says what it would do and asks for `--confirm`; the database name you type must match the one in `DATABASE_URL`:
+
+```bash
+npm run restore -- latest --confirm linkord
+# in Docker:
+docker compose run --rm --no-deps app node server/dist/scripts/restore.js latest --confirm linkord
+```
+
+4. Start the app. It applies no migration, because the dump already has them all; if the app is newer than the backup it applies the newer ones as on any upgrade (an older app cannot read a newer database).
+
+`latest` can be replaced with a folder name inside `BACKUP_DIR` or a path. The restore refuses, before changing anything, when:
+
+- the backup's checksums do not match its manifest (a damaged or modified copy);
+- `--confirm` is missing or is not the target database's name;
+- the database already has tables (drop and recreate it yourself if that is what you want), or the uploads folder has files (it never overwrites).
+
+`pg_restore` runs in a single transaction and stops at the first error, so a failed restore leaves the database empty, and the uploads are extracted only after it succeeds.
+
+Afterwards it checks the result and prints it: every table has the number of rows the backup recorded, the migrations are all there, the number of extracted files is right, and every attachment, thumbnail, sound and staged file has its file on disk (the same comparison `/admin/system` makes). A mismatch exits with code 3. Warnings (the cases listed above) exit 0, or 3 with `--strict`. Other failures exit 1, a missing confirmation 2.
+
+### Rehearsal
+
+`npm run backup:rehearse` runs the whole path on throwaway `linkord_rehearsal_*` databases of the local Postgres (the one in `DATABASE_URL`, which must be local) and temp folders: seeds chat data and files, takes four backups with `BACKUP_KEEP=2`, restores the last into an empty database, then starts the real server on it and checks a sign-in and the byte-for-byte download of an attachment and an avatar. It also covers the refusals (no confirmation, a damaged backup, a non-empty target) and the deleted-file warning. Run it after changing the schema or anything in `server/src/scripts/backup/`; `-- --keep` leaves the databases and folders for inspection. The unit tests in `server/tests/scripts/backup/` need neither a database nor the PostgreSQL tools.
+
+## Data retention
+
+Tables that grow with use are trimmed by one daily sweep (`modules/retention/`), started two minutes after boot and then every 24 hours. Each table has its own setting, in days; `0` keeps the records forever. All of them are in `.env.example`.
+
+| Setting | Default | What it trims |
+| --- | --- | --- |
+| `AUDIT_RETENTION_DAYS` | `0` (forever) | `admin_audit_logs`, by creation time |
+| `DATA_REPAIRS_RETENTION_DAYS` | `0` (forever) | `data_repairs`, the log of legacy-data repairs run before a migration. It is small and is the only record of what a repair changed, so it is kept unless you set a limit |
+| `NOTIFICATION_READ_RETENTION_DAYS` | `30` | notifications, by the time they were read |
+| `NOTIFICATION_UNREAD_RETENTION_DAYS` | `90` | notifications never read, by creation time |
+| `OUTBOX_RETENTION_DAYS` | `7` | delivered `outbox_events`, by the time they were delivered. Events that ran out of attempts stay, so an administrator can see them |
+| `SERVER_AUDIT_RETENTION_DAYS` | `90` | `server_audit_logs`, each server's own audit log shown in its settings, by creation time. It is a moderation aid for the server, not instance evidence, so it expires by default |
+
+Login sessions (deleted when they expire) and chat send operations (a fixed 7 days) have their own cleanup and no setting.
+
+- **Batches:** the sweep deletes at most 1000 rows per statement, oldest first, with a short pause between statements, so a table with a large backlog is never locked for long. The first run after enabling a limit on a big table can therefore take a while; later runs only remove a day's worth.
+- **Report:** `/admin/system` lists each table's limit and what the last sweep deleted (the report lives in memory, so it is empty after a restart until the next sweep). A sweep that deleted something, or failed on a table, also leaves a `retention.sweep` entry in the audit log. A table that fails is logged and does not stop the others.
+- **Invalid values:** a setting that is not a whole number of days (`-1`, `1.5`, `abc`) stops the server at boot, so a typo cannot silently start or stop deleting an audit trail.
+- **New tables:** a table that needs retention either gets an entry in the built-in list of `modules/retention/retentionTargets.ts` or calls `registerRetentionTarget` from there from `modules/retention/retentionTargets.ts` with a `key`, a `days()` reader backed by its own env variable, and a `deleteBatch(cutoff, limit)` that deletes at most `limit` rows older than `cutoff`. The sweep, the admin page and the audit entry pick it up with no other change. Add the variable to `config/env.ts` (through `parseRetentionDays`), to `.env.example` and to the table above, plus a label under `system.retentionTables` in the admin locales.
+- **Tests:** `server/tests/modules/retention/` covers the batching and the `0` rule without a database; `server/tests/integration/retention.itest.ts` covers each table against Postgres (`npm run test:integration`).
+
 ## Restarting the server during a call
 
 Restarting `npm run dev` (or deploying) while you are in a call should leave the call running: the clients reconnect and the server restores who was in which call. To see it, join a voice channel with two accounts, stop and start `npm run dev`, and check that both stay connected without touching either tab. The rules that keep this working are in `AGENTS.md` ("Realtime compatibility and deploys"), and the `restart` end-to-end specs check it on every run.
+
+## Brute-force limits
+
+Failed logins (per account and per address), recovery and email-change code requests, wrong invite codes and sign-ups per address are counted in the `rate_limit_windows` table (`modules/auth/ratelimit.ts`), so a restart or a deploy does not give anyone fresh attempts and several instances would share one count.
+
+- **Shape:** one row per key and fixed window (`count`, `window_ends_at`, `blocked_until`). A hit is a single atomic upsert; when the window is over the row is reset in place by the next hit. The key is stored as a SHA-256, so the table never holds an email, a username or an address.
+- **Limits:** 10 failures per key in 15 minutes for logins and invite codes, 10 requests per key in 15 minutes for recovery and email-change codes, `REGISTRATIONS_PER_IP_PER_HOUR` sign-ups per address per hour. The per-code attempt ceiling (`AUTH_CODE_MAX_ATTEMPTS`) already lives in `auth_codes`.
+- **Cleanup:** `sweepExpiredRateLimits` runs every 15 minutes from `app/bootstrap.ts` and deletes rows whose window is over.
+- **Fail closed:** if the database cannot answer, the attempt is refused with `503 rate_limit_unavailable` (and `Retry-After`) instead of being let through. Clearing the counters after a correct password is best effort, so a database hiccup there does not turn a valid login into an error.
+- **Not here, on purpose:** socket flood control (`realtime/floodControl.ts`), link previews, game searches and similar per-minute quotas stay in memory. They only cap short bursts of legitimate traffic, losing them on a restart costs nothing, and a database write per socket event would be the expensive part.
+- **New brute-force limit** (for example the 2FA code of LINKORD-35): use `checkBlocked` / `recordFailure` / `reset` for mistakes, or `consume` for requests that are counted whether they succeed or not, with a key namespace of its own. Tests are in `server/tests/integration/rateLimits.itest.ts`.
+
+## Single-instance assumption
+
+The server is written for **one process**. Running two behind a load balancer is unsupported and breaks things quietly, so the README tells operators not to. This section is the inventory for whoever decides to change that; nothing here is planned work.
+
+What lives in the memory (or on the local disk) of the process, and what a second instance would get wrong:
+
+| State | Where | What goes wrong with two instances | What it would need |
+| --- | --- | --- | --- |
+| Socket.IO rooms and broadcasts | `realtime/socket.ts` (no adapter) | An event emitted on one instance never reaches the sockets connected to the other | A shared adapter (Redis or Postgres) and sticky sessions for the transport upgrade |
+| Presence, call participants, resume tokens, restored ghosts | `modules/presence/participants.ts` | "Online" lists, call tiles and `join {id, token}` resumes only know the sockets of their own instance. Call membership is persisted for restarts (`call_presence`), but it is read back only at boot by `restoreCalls` | Presence and participants in shared storage, and `restoreCalls` made aware of which instance owns a connection |
+| DM call state machine and ring timers | `modules/calls/dmCalls.ts` | The timers and the live state are per process; `dm_calls_active` is only read at boot | The state machine driven from shared storage, with the timeout owned by one instance |
+| Socket flood control | `realtime/floodControl.ts` | Per-instance windows. Kept in memory on purpose: it only caps short bursts, and a restart forgetting them costs nothing | Shared counters |
+| Link preview rate limit, cache and in-flight requests | `modules/link-preview/linkPreview.ts` | Per-instance quota, and the same URL is fetched once per instance | Shared counters; the cache can stay per instance |
+| Login session cache (60 s) | `modules/auth/session.ts` | A logout, ban or profile save invalidates the cache of one instance only; the other keeps the old session for up to 60 s | Invalidation broadcast to every instance, or no cache |
+| Server snapshot cache (roles, members, channels, overwrites) | `modules/servers/serverAccess.ts` | `invalidateServer` clears one instance. The others keep serving stale permissions until they restart | Invalidation broadcast, or a version check on each read |
+| Game search cache | `modules/games/gameSearch.ts` | Harmless: only a cache. The IGDB request pacing already goes through a Postgres slot (`igdbLimiter.ts`) | Nothing |
+| Upload reservations and the init lock | `modules/attachments/uploadSession.ts` (`pendingUploadBytes`, `withInitLock`, `completingUploads`) | The storage quota check and the "one complete per upload" guard only see their own instance | Reservations in Postgres, and a database lock in place of the in-memory one |
+| Uploaded files and chunks | `./uploads` on the local disk | An instance cannot read what the other stored. The orphan sweep also compares one disk with one database | A shared volume or object storage |
+| Presence status, automatic idle and custom status expiry | `modules/presence/userStatus.ts`, `presenceStatus.ts` | The chosen status is saved on the account, but the copy in memory, the per-connection idle flags and the expiry timer are per process: a change made on one instance is announced only to the sockets of that instance | Status changes broadcast to every instance, and the expiry owned by one of them |
+| Profile edit serialization | `modules/presence/profileQueue.ts` | Two tabs of one account on different instances can patch the profile out of order | A per-account database lock |
+| Embed backfill guard, retention and orphan sweep reports | `modules/messages/messageEmbeds.ts`, `modules/retention/`, `modules/attachments/orphanSweeper.ts` | A repeated backfill is wasted work; the admin page shows the report of whichever instance answered | Optional: an advisory lock, and reports stored in the database |
+
+Already safe with several instances, because they coordinate through Postgres: the brute-force counters (failed logins, recovery and email-change requests, wrong invite codes, sign-ups per address; see below), the outbox drain (rows are claimed with `skip locked` and a lease), the profile connection sync, the IGDB request pacing, user-pair locks, and the report-resolution advisory lock.
+
+When you add state that lives in the process, add a row to the table above.
 
 ## Profile connections and Wall
 

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { fetchPushShowContent, updatePushShowContent } from '@/features/notifications/pushPreferences';
 import { useRoom } from '@/state/RoomContext';
 import { isPushSubscriptionActive, notificationPermissionState } from '@/shared/notifications';
 import type { NotificationPermissionState } from '@/shared/notifications';
@@ -12,7 +13,7 @@ import { setSoundPreference, useSoundPreferences } from '@/shared/soundPreferenc
 import type { SoundPreferences } from '@/shared/soundPreferences';
 import { Slider } from '@/shared/ui/primitives/slider';
 import { Switch } from '@/shared/ui/primitives/switch';
-import { SettingsLinkRow, SettingsNotice, SettingsRow, SettingsRowList, SettingsSection, SettingsSections, SettingsSubheading } from './SettingsLayout';
+import { SettingsLinkRow, SettingsNotice, SettingsRow, SettingsRowList, SettingsSection, SettingsSections, SettingsSubheading } from '@/shared/ui/settings-layout';
 
 /** Each switchable group of sounds, and the one its preview plays. */
 const SOUND_ROWS: { key: Exclude<keyof SoundPreferences, 'muteAll'>; preview: SoundName; described?: boolean }[] = [
@@ -31,6 +32,8 @@ export function NotificationsSettings() {
   const [active, setActive] = useState(isPushSubscriptionActive);
   const [busy, setBusy] = useState(false);
   const sounds = useSoundPreferences();
+  // null until the account's value arrives, so the switch never flashes the wrong state
+  const [showContent, setShowContent] = useState<boolean | null>(null);
 
   useEffect(() => {
     let current = true;
@@ -40,6 +43,24 @@ export function NotificationsSettings() {
     }).catch(() => { if (current) setSetup(null); }).finally(() => { if (current) setPreparing(false); });
     return () => { current = false; };
   }, []);
+
+  useEffect(() => {
+    let current = true;
+    void fetchPushShowContent().then((preference) => { if (current) setShowContent(preference.showContent); }).catch(() => {});
+    return () => { current = false; };
+  }, []);
+
+  async function handleToggleShowContent(next: boolean) {
+    const previous = showContent;
+    setShowContent(next);
+    setNotificationsError(null);
+    try {
+      await updatePushShowContent(next);
+    } catch {
+      setShowContent(previous);
+      setNotificationsError(t('notifications.errors.saveFailed'));
+    }
+  }
 
   // The browser permission can change behind the app's back — revoked from
   // the browser's own settings, for instance — so a value read once at
@@ -131,6 +152,9 @@ export function NotificationsSettings() {
           description={hint ? <>{t('notifications.description')} {hint}</> : t('notifications.description')}
         >
           <Switch size="lg" checked={effectivelyOn} disabled={preparing || busy} onCheckedChange={(v) => void handleToggleNotifications(v)} aria-label={t('notifications.label')} />
+        </SettingsRow>
+        <SettingsRow label={t('notifications.showContent.label')} description={t('notifications.showContent.description')}>
+          <Switch size="lg" checked={showContent ?? true} disabled={showContent === null} onCheckedChange={(v) => void handleToggleShowContent(v)} aria-label={t('notifications.showContent.label')} />
         </SettingsRow>
         {notificationsError && <p role="alert" className="text-label text-red">{notificationsError}</p>}
       </SettingsSection>

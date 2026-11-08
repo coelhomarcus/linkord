@@ -5,7 +5,7 @@ import { useAuth } from '@/state/AuthContext';
 import { useRoom } from '@/state/RoomContext';
 import { Button } from '@/shared/ui/primitives/button';
 import { EmailSettings } from './EmailSettings';
-import { SETTINGS_ACTION_BUTTON, SettingsRow, SettingsSection, SettingsSections } from './SettingsLayout';
+import { SETTINGS_ACTION_BUTTON, SettingsRow, SettingsSection, SettingsSections } from '@/shared/ui/settings-layout';
 
 export function AccountSettings({ onOpenProfile }: { onOpenProfile: (userId: string) => void }) {
   const { t } = useTranslation('settings');

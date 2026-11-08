@@ -34,8 +34,14 @@ Linkord is a self-hosted place to chat and call with friends. Talk in direct mes
 - **Web Push**
   Receive alerts for messages, mentions, friend requests, and invites, even when Linkord is closed. The app icon can also show an unread badge where the browser supports it.
 
+- **Presence status**
+  Pick how you appear from the user panel: Available, Idle (also set automatically after a few minutes away, configurable per device), Do Not Disturb (no push and no notification sounds; notifications still land in the list) or Invisible (you look offline to everyone but keep using the app). Invisible still shows you inside a call you join, to the people who can see that call, the same way your voice and video do. Add a custom status with an emoji, a short text and an optional expiry, or pick a game from your rotation. Your status follows your account to every device.
+
+- **Server audit log**
+  Each server keeps a log in its settings of who kicked, banned, changed roles, channels, permissions, invites, webhooks or sounds, moved someone out of a voice channel, or deleted someone else's message, with what changed and when. Members with the "View audit log" permission can filter it by person, action, target and period. Entries are kept for 90 days by default (`SERVER_AUDIT_RETENTION_DAYS`).
+
 - **Administration**
-  Manage users, servers, webhooks, reports, audit history, and orphaned uploads from `/admin`.
+  Manage users, servers, webhooks, reports, audit history, orphaned uploads, and the data retention report from `/admin`.
 
 - **Profile and Wall**
   Show connected accounts on your profile and pick widgets for your Wall: recent anime from MyAnimeList, your GitHub profile and contribution calendar, and your favorite, liked, current and wished-for games, searched on IGDB.
@@ -57,7 +63,22 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
-The container applies pending migrations on startup by default. Set `MIGRATE_ON_BOOT=0` to run migrations separately with `npm run db:migrate`. The compose file persists uploaded files in `./uploads`; back up that directory and the database together.
+The container applies pending migrations on startup by default. Set `MIGRATE_ON_BOOT=0` to run migrations separately with `npm run db:migrate`. The compose file persists uploaded files in `./uploads` and backups in `./backups`.
+
+**The container does not run as root.** The process runs as the `node` user (uid 1000) and cannot write to its own code, only to `./uploads` and `./backups`. Compose also sets `no-new-privileges` and drops every Linux capability. Docker creates a missing bind-mounted folder owned by root, so on a **new install** create both folders first, and on an **existing install** change the owner once before deploying this version, or uploads and backups fail with a permission error (the Dokploy volume path works the same way):
+
+```bash
+mkdir -p uploads backups
+sudo chown -R 1000:1000 uploads backups
+```
+
+To confirm it, `docker compose exec app id` prints `uid=1000(node)`.
+
+**Run a single instance.** Linkord does not scale horizontally today: do not put replicas behind a load balancer. The server keeps live state in the memory of its own process (who is online and in which call, caches, socket flood limits, upload reservations) and Socket.IO has no shared adapter, so a second instance would not see the first one's users, calls or limits. Uploaded files also live on the local `./uploads` disk. What would have to change for several instances is listed in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md#single-instance-assumption).
+
+### Backups
+
+The database and `./uploads` have to be backed up together, and Linkord does it for you: `npm run backup` (in the container, `docker compose exec app node server/dist/scripts/backup.js`) writes a dated folder with a `pg_dump`, an archive of the uploads and a manifest to `./backups`, and keeps the newest `BACKUP_KEEP` (default 7). Running it does not stop the app. To schedule it, start the optional compose service with `docker compose --profile backup up -d backup`, or call the command from the host's cron. `npm run restore` brings a backup back into an empty database and folder on a new server and checks that everything came across. Copy `./backups` off the machine as well, and keep your `.env` somewhere safe: it is not in the backup. The full guide, with the restore steps, is in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md#backup-and-restore).
 
 See [`.env.example`](.env.example) for all server, database, session, LiveKit, push, upload, and rate limit settings. In production, set `APP_URL` to the public HTTPS origin and configure a stable Web Push VAPID key pair. For iPhone and iPad, users must add Linkord to the Home Screen before enabling Push notifications.
 
@@ -66,6 +87,7 @@ See [`.env.example`](.env.example) for all server, database, session, LiveKit, p
 ```bash
 npm run dev           # API and web app in watch mode
 npm run db:seed       # sample accounts, DMs and a server in the local database
+npm run backup        # database dump + uploads archive in ./backups, with rotation
 npm run check         # typecheck, lint, unit tests and production build
 npm run test:e2e      # real browsers against a Docker stack (needs Docker and Chrome)
 ```

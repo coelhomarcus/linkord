@@ -45,7 +45,8 @@ export const canMoveInto = (channel: { permissions?: number }, meIsAdmin: boolea
 /** Whether anything in server settings is the member's to change. */
 export function canOpenSettings(server: ServerSummary): boolean {
   return can(server, PERMISSIONS.MANAGE_SERVER) || can(server, PERMISSIONS.MANAGE_ROLES) || can(server, PERMISSIONS.MANAGE_CHANNELS)
-    || can(server, PERMISSIONS.KICK_MEMBERS) || can(server, PERMISSIONS.BAN_MEMBERS) || can(server, PERMISSIONS.MANAGE_EXPRESSIONS);
+    || can(server, PERMISSIONS.KICK_MEMBERS) || can(server, PERMISSIONS.BAN_MEMBERS) || can(server, PERMISSIONS.MANAGE_EXPRESSIONS)
+    || can(server, PERMISSIONS.VIEW_AUDIT_LOG);
 }
 
 export function serverUnread(server: ServerSummary, unreadByConversation: Map<string, number>): number {

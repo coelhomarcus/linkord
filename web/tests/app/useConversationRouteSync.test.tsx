@@ -11,7 +11,7 @@ import { useConversationRouteSync } from '@/app/useConversationRouteSync';
 
 const conv = (id: string): Conversation => ({
   id, type: 'text', title: id, serverId: 's1', memberIds: [], lastMessageAt: null,
-  createdAt: 0, updatedAt: 0, pinnedAt: null,
+  createdAt: 0, updatedAt: 0,
 });
 const joined = { ...initialRoomState, joined: true };
 

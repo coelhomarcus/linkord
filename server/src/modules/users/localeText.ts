@@ -1,9 +1,9 @@
 import type { Locale } from './locale.js';
 
 type TextKey =
-  | 'push.mentionedTitle' | 'push.mentionedBody' | 'push.serverInvitationTitle' | 'push.serverInvitationBody'
-  | 'push.friendRequestTitle' | 'push.friendRequestBody' | 'push.friendAcceptedTitle' | 'push.friendAcceptedBody'
-  | 'push.chatEmptyBody' | 'push.chatSentBody_one' | 'push.chatSentBody_other' | 'push.callInviteBody'
+  | 'push.mentionChannelTitle' | 'push.mentionDirectTitle' | 'push.serverInvitationTitle' | 'push.serverInvitationBody'
+  | 'push.friendRequestTitle' | 'push.friendAcceptedTitle'
+  | 'push.chatEmptyBody' | 'push.chatEmptyBodyDirect' | 'push.callInviteBody' | 'push.callInviteBodyDirect'
   | 'push.dmCall' | 'push.dmCallLasted'
   | 'push.callSecond_one' | 'push.callSecond_other' | 'push.callMinute_one' | 'push.callMinute_other'
   | 'push.callHour_one' | 'push.callHour_other' | 'push.callHourMinute'
@@ -13,14 +13,15 @@ type TextKey =
 
 const TEXT: Record<Locale, Record<TextKey, string>> = {
   'pt-BR': {
-    'push.mentionedTitle': 'Você foi mencionado', 'push.mentionedBody': 'Abra a conversa para ver a mensagem.',
-    'push.serverInvitationTitle': 'Convite para servidor', 'push.serverInvitationBody': 'Você recebeu um convite no Linkord.',
-    'push.friendRequestTitle': 'Solicitação de amizade', 'push.friendRequestBody': 'Você recebeu uma solicitação no Linkord.',
-    'push.friendAcceptedTitle': 'Solicitação aceita', 'push.friendAcceptedBody': 'Uma pessoa aceitou sua solicitação.',
-    'push.chatEmptyBody': '{{name}} enviou uma mensagem', 'push.chatSentBody_one': '{{name}} enviou {{count}} mensagem', 'push.chatSentBody_other': '{{name}} enviou {{count}} mensagens',
+    'push.mentionChannelTitle': '{{name}} em #{{channel}} · {{server}}', 'push.mentionDirectTitle': '{{name}} mencionou você',
+    'push.serverInvitationTitle': 'Convite para {{server}}', 'push.serverInvitationBody': '{{name}} convidou você',
+    'push.friendRequestTitle': '{{name}} enviou um pedido de amizade',
+    'push.friendAcceptedTitle': '{{name}} aceitou seu pedido de amizade',
+    'push.chatEmptyBody': '{{name}} enviou uma mensagem', 'push.chatEmptyBodyDirect': 'Enviou uma mensagem',
     'push.callInviteBody': '{{name}} chamou você para o canal de voz {{channel}} em {{server}}',
-    'push.dmCall': '{{name}} iniciou uma chamada.',
-    'push.dmCallLasted': '{{name}} iniciou uma chamada que durou {{duration}}.',
+    'push.callInviteBodyDirect': 'Chamou você para o canal de voz {{channel}} em {{server}}',
+    'push.dmCall': 'Iniciou uma chamada',
+    'push.dmCallLasted': 'Iniciou uma chamada · {{duration}}',
     'push.callSecond_one': '{{count}} segundo', 'push.callSecond_other': '{{count}} segundos',
     'push.callMinute_one': '{{count}} minuto', 'push.callMinute_other': '{{count}} minutos',
     'push.callHour_one': '{{count}} hora', 'push.callHour_other': '{{count}} horas',
@@ -34,14 +35,15 @@ const TEXT: Record<Locale, Record<TextKey, string>> = {
     'server.voiceCategory': 'Canais de voz', 'server.voiceChannel': 'Geral',
   },
   'en-US': {
-    'push.mentionedTitle': 'You were mentioned', 'push.mentionedBody': 'Open the conversation to see the message.',
-    'push.serverInvitationTitle': 'Server invitation', 'push.serverInvitationBody': 'You received an invitation on Linkord.',
-    'push.friendRequestTitle': 'Friend request', 'push.friendRequestBody': 'You received a friend request on Linkord.',
-    'push.friendAcceptedTitle': 'Request accepted', 'push.friendAcceptedBody': 'Someone accepted your friend request.',
-    'push.chatEmptyBody': '{{name}} sent a message', 'push.chatSentBody_one': '{{name}} sent {{count}} message', 'push.chatSentBody_other': '{{name}} sent {{count}} messages',
+    'push.mentionChannelTitle': '{{name}} in #{{channel}} · {{server}}', 'push.mentionDirectTitle': '{{name}} mentioned you',
+    'push.serverInvitationTitle': 'Invitation to {{server}}', 'push.serverInvitationBody': '{{name}} invited you',
+    'push.friendRequestTitle': '{{name}} sent you a friend request',
+    'push.friendAcceptedTitle': '{{name}} accepted your friend request',
+    'push.chatEmptyBody': '{{name}} sent a message', 'push.chatEmptyBodyDirect': 'Sent a message',
     'push.callInviteBody': '{{name}} invited you to the {{channel}} voice channel in {{server}}',
-    'push.dmCall': '{{name}} started a call.',
-    'push.dmCallLasted': '{{name}} started a call that lasted {{duration}}.',
+    'push.callInviteBodyDirect': 'Invited you to the {{channel}} voice channel in {{server}}',
+    'push.dmCall': 'Started a call',
+    'push.dmCallLasted': 'Started a call · {{duration}}',
     'push.callSecond_one': '{{count}} second', 'push.callSecond_other': '{{count}} seconds',
     'push.callMinute_one': '{{count}} minute', 'push.callMinute_other': '{{count}} minutes',
     'push.callHour_one': '{{count}} hour', 'push.callHour_other': '{{count}} hours',

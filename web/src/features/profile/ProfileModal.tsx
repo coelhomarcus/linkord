@@ -17,6 +17,7 @@ import type { LeaveGuard } from './ProfileEditor';
 import { ProfileSidebar } from './ProfileSidebar';
 import type { ProfileTab } from './ProfileSidebar';
 import { formatProfileDate, useProfileDetails } from './useProfileDetails';
+import { useCustomStatus, useUserStatus } from '@/features/status/statusDisplay';
 
 interface ProfileModalProps {
   userId: string | null;
@@ -30,7 +31,7 @@ interface ProfileModalProps {
 /** Fetch uncached profiles on demand, such as authors of older messages who have left the conversation. */
 export function ProfileModal({ userId, initialTab, onClose, onOpenProfile }: ProfileModalProps) {
   const { t } = useTranslation('profile');
-  const { state, allUsers, onlineUserIds } = useRoom();
+  const { state, allUsers } = useRoom();
   const navigate = useNavigate();
   const [reportOpen, setReportOpen] = useState(false);
   const cachedUser = userId ? allUsers.get(userId) : null;
@@ -57,7 +58,8 @@ export function ProfileModal({ userId, initialTab, onClose, onOpenProfile }: Pro
   const open = !!userId && (!!user || fetchStatus !== 'idle');
   const details = useProfileDetails(open ? userId : null);
   const owner = !!user && user.id === state.me.userId;
-  const online = !!user && onlineUserIds.has(user.id);
+  const status = useUserStatus(user?.id);
+  const customStatus = useCustomStatus(user?.id);
   // set while your own profile is open as the editor, which may hold the
   // modal open to ask about unsaved changes
   const leaveGuard = useRef<LeaveGuard | null>(null);
@@ -107,7 +109,7 @@ export function ProfileModal({ userId, initialTab, onClose, onOpenProfile }: Pro
           </DialogHeader>
           {owner ? (
             // your own profile is where you edit it, as in Discord
-            <ProfileEditor online={online} details={details} onClose={onClose} registerLeaveGuard={registerLeaveGuard} />
+            <ProfileEditor status={status} customStatus={customStatus} details={details} onClose={onClose} registerLeaveGuard={registerLeaveGuard} />
           ) : (
             <>
               {/* Each column scrolls independently on desktop; mobile uses one scroll container. */}
@@ -116,7 +118,8 @@ export function ProfileModal({ userId, initialTab, onClose, onOpenProfile }: Pro
                   <ProfileCard
                     bare
                     user={user}
-                    online={online}
+                    status={status}
+                    customStatus={customStatus}
                     actions={(
                       <ProfileActions
                         userId={user.id}

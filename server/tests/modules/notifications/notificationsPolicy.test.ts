@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { OUTBOX_MAX_ATTEMPTS, daysAgo, isOutboxFailed, nextOutboxState, outboxRetryDelayMs } from '../../../src/modules/notifications/notificationsPolicy.js';
+import { OUTBOX_MAX_ATTEMPTS, isOutboxFailed, nextOutboxState, outboxRetryDelayMs, recipientAcceptsPush } from '../../../src/modules/notifications/notificationsPolicy.js';
 
 describe('nextOutboxState', () => {
   it('successful delivery marks processed and counts the attempt', () => {
@@ -33,9 +33,15 @@ describe('outboxRetryDelayMs', () => {
   });
 });
 
-describe('daysAgo', () => {
-  it('goes back the exact number of days', () => {
-    const now = new Date('2026-09-30T12:00:00Z');
-    assert.equal(daysAgo(30, now).toISOString(), '2026-08-31T12:00:00.000Z');
+describe('push recipients', () => {
+  it('delivers to an active account in any status but do not disturb', () => {
+    for (const presenceStatus of ['online', 'idle', 'invisible']) {
+      assert.equal(recipientAcceptsPush({ status: 'active', presenceStatus }), true);
+    }
+  });
+
+  it('drops the push for do not disturb and for a suspended account', () => {
+    assert.equal(recipientAcceptsPush({ status: 'active', presenceStatus: 'dnd' }), false);
+    assert.equal(recipientAcceptsPush({ status: 'suspended', presenceStatus: 'online' }), false);
   });
 });

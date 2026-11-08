@@ -12,12 +12,15 @@ import { AdminEntityHeader } from './AdminEntityHeader';
 import { AdminActionRow, AdminFieldRow, AdminFields, AdminSection } from './AdminSection';
 import { ReasonDialog } from './ReasonDialog';
 import { formatWhen } from './adminFormat';
-import { AdminTextLink, AuditList, Badge, DetailStatusView, ListChrome, RefreshFailedNotice } from './adminUi';
+import { AdminTextLink, AuditList, Badge, DetailStatusView, ListChrome, RefreshFailedNotice, AdminBackLink } from './adminUi';
 import { RESTORE_LIST, useAdminBack } from './useAdminBack';
 import { useAdminDetail } from './useAdminDetail';
 import { useAdminQuery } from './useAdminQuery';
 import type { QuerySchema } from './useAdminQuery';
 import { AppLink } from '@/shared/ui/app-link';
+import { AuditListSkeleton } from './AdminSkeletons';
+import { EmptyState } from '@/shared/ui/empty-state';
+import { SettingsNotice } from '@/shared/ui/settings-layout';
 
 type Dialog = 'suspend' | 'reactivate' | 'revoke' | 'delete' | 'grant-admin' | 'revoke-admin' | null;
 
@@ -40,7 +43,7 @@ function UserHistory({ id, revision }: { id: string; revision: string }) {
   const list = useCursorList(fetchPage, id, { getKey: (row) => row.id, revision });
   return (
     <AdminSection title={t('detail.fullHistory')} description={t('detail.historyDescription')}>
-      <ListChrome list={list} empty={t('detail.noHistory')}><AuditList items={list.items} /></ListChrome>
+      <ListChrome list={list} empty={{ illustration: 'document', title: t('detail.noHistory'), compact: true }} skeleton={<AuditListSkeleton />}><AuditList items={list.items} /></ListChrome>
     </AdminSection>
   );
 }
@@ -71,13 +74,11 @@ function UserDetail({ id }: { id: string }) {
   };
 
   return (
-    <div className="flex flex-col gap-5">
-      <AdminTextLink to={back} state={RESTORE_LIST} className="w-fit text-caption text-text-muted">{t('detail.backUsers')}</AdminTextLink>
+    <div className="flex flex-col gap-6">
+      <AdminBackLink to={back} state={RESTORE_LIST}>{t('detail.backUsers')}</AdminBackLink>
       {refreshFailed && <RefreshFailedNotice refreshing={refreshing} onRetry={() => void refresh()} />}
       {ownSessionsEnded && (
-        <p role="status" className="rounded-lg border border-yellow/30 bg-yellow/10 px-3 py-2 text-label text-text-primary">
-          {t('detail.sessionsEnded')}
-        </p>
+        <SettingsNotice>{t('detail.sessionsEnded')}</SettingsNotice>
       )}
 
       <AdminEntityHeader
@@ -110,7 +111,7 @@ function UserDetail({ id }: { id: string }) {
               {suspended ? t('detail.suspendedAt', { when: formatWhen(user.statusChangedAt), reason: user.statusReason }) : t('detail.active')}
             </AdminFieldRow>
             <AdminFieldRow label={t('ui.role')}>{isAdmin ? t('detail.administrator') : t('detail.regularAccount')}</AdminFieldRow>
-            <AdminFieldRow label={t('detail.storage')}>{formatFileSize(storage.bytes)} em {storage.files} {t('detail.files')}</AdminFieldRow>
+            <AdminFieldRow label={t('detail.storage')}>{t('detail.storageValue', { size: formatFileSize(storage.bytes), count: storage.files })}</AdminFieldRow>
             <AdminFieldRow label={t('detail.servers')}>
               {servers.length === 0 ? t('detail.noServers') : <AdminTextLink to={{ search: '?tab=servers' }}>{t('detail.viewServers', { count: servers.length })}</AdminTextLink>}
             </AdminFieldRow>
@@ -121,7 +122,7 @@ function UserDetail({ id }: { id: string }) {
 
       {tab === 'servers' && (
         <AdminSection title={t('detail.servers')} description={t('detail.serversDescription')}>
-          {servers.length === 0 ? <p className="text-label text-text-muted">{t('detail.noServers')}</p> : (
+          {servers.length === 0 ? <EmptyState size="compact" illustration="servers" title={t('detail.noServersTitle')} /> : (
             <ul className="flex flex-col divide-y divide-border-subtle">
               {servers.map((g) => (
                 <li key={g.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5">

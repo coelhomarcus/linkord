@@ -64,6 +64,8 @@ export const ERROR_REGISTRY = {
   email_taken: { statuses: [409], channel: 'http' },
   email_already_set: { statuses: [409], channel: 'http' },
   email_unavailable: { statuses: [503], channel: 'http' },
+  // the attempt counters (login, recovery, sign-up) could not be read: refused rather than let through
+  rate_limit_unavailable: { statuses: [503], channel: 'http' },
   push_unavailable: { statuses: [503], channel: 'http' },
   same_email: { statuses: [400], channel: 'http' },
   weak_password: { statuses: [400], channel: 'http' },

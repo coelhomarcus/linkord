@@ -4,11 +4,11 @@ import { useTranslation } from 'react-i18next';
 import { Avatar } from '@/shared/Avatar';
 import { Button } from '@/shared/ui/primitives/button';
 import { Tabs, TabsIndicator, TabsList, TabsPanel, TabsTrigger } from '@/shared/ui/primitives/tabs';
-import { cn } from '@/shared/lib/utils';
 import { useRoom } from '@/state/RoomContext';
 import { ServerIcon } from '@/features/servers/ServerIcon';
 import { ProfileWall } from './ProfileWall';
 import type { ProfileDetails } from '@/shared/api/api';
+import { UserStatusDot } from '@/features/status/UserStatus';
 
 export type ProfileTab = 'wall' | 'common';
 
@@ -125,7 +125,7 @@ export function ProfileSidebar({ userId, owner, accent, initialTab = 'wall', sta
                             <button type="button" onClick={() => onOpenProfile(friend.id)} className={ROW}>
                               <span className="relative flex-none">
                                 <Avatar id={friend.id} name={friend.displayName} avatar={friend.avatar} avatarColor={friend.avatarColor} size={40} />
-                                <span aria-hidden className={cn('absolute -bottom-0.5 -right-0.5 size-3.5 rounded-full border-2 border-bg-modal', online ? 'bg-green' : 'bg-text-muted')} />
+                                <UserStatusDot userId={friend.id} className="absolute -bottom-0.5 -right-0.5 size-3.5 border-2 text-bg-modal" />
                               </span>
                               <span className="min-w-0 flex-1">
                                 <span className="block truncate text-label font-semibold text-text-primary">{friend.displayName}</span>

@@ -24,7 +24,7 @@ const user = (id: string, displayName: string): PublicUser => ({
 });
 const channel: Conversation = {
   id: 'g1', type: 'voice', title: 'Squad', serverId: 's1', memberIds: [],
-  lastMessageAt: null, createdAt: 1, updatedAt: 1, pinnedAt: null,
+  lastMessageAt: null, createdAt: 1, updatedAt: 1,
 };
 const users = new Map([user('me', 'Eu'), user('ana', 'Ana'), user('bia', 'Bia'), user('caio', 'Caio'), user('duda', 'Duda')].map((u) => [u.id, u]));
 const duda = { id: 'conn-duda', userId: 'duda', callConversationId: 'g1' } as Participant;

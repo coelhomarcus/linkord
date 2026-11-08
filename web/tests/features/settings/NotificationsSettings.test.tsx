@@ -18,6 +18,8 @@ const push = vi.hoisted(() => ({
 }));
 vi.mock('@/shared/sounds', () => ({ playSound: (...args: unknown[]) => playSound(...args) }));
 vi.mock('@/shared/pushNotifications', () => push);
+const preferences = vi.hoisted(() => ({ fetchPushShowContent: vi.fn(), updatePushShowContent: vi.fn() }));
+vi.mock('@/features/notifications/pushPreferences', () => preferences);
 
 const setup = { registration: { pushManager: { getSubscription: vi.fn() } }, publicKey: new Uint8Array([1]) };
 
@@ -50,6 +52,8 @@ beforeEach(() => {
   push.enablePush.mockReset().mockImplementation(async () => { FakeNotification.permission = 'granted'; });
   push.disablePush.mockReset().mockResolvedValue(undefined);
   push.pushSupported.mockReset().mockReturnValue(true);
+  preferences.fetchPushShowContent.mockReset().mockResolvedValue({ showContent: true });
+  preferences.updatePushShowContent.mockReset().mockImplementation(async (showContent: boolean) => ({ showContent }));
 });
 
 afterEach(() => {
@@ -166,5 +170,30 @@ describe('NotificationsSettings', () => {
     await userEvent.setup().click(screen.getByRole('switch', { name: SWITCH }));
     expect(push.disablePush).toHaveBeenCalledOnce();
     expect(setNotificationsEnabled).toHaveBeenCalledWith(false);
+  });
+
+  describe('message text in push notifications', () => {
+    const TEXT_SWITCH = 'Mostrar o texto das mensagens';
+
+    it('shows the account value and saves a change', async () => {
+      preferences.fetchPushShowContent.mockResolvedValue({ showContent: false });
+      renderNotifications();
+      const toggle = screen.getByRole('switch', { name: TEXT_SWITCH });
+      await waitFor(() => expect(toggle).not.toHaveAttribute('data-disabled'));
+      expect(toggle).toHaveAttribute('aria-checked', 'false');
+      await userEvent.click(toggle);
+      expect(preferences.updatePushShowContent).toHaveBeenCalledWith(true);
+      await waitFor(() => expect(toggle).toHaveAttribute('aria-checked', 'true'));
+    });
+
+    it('goes back to the saved value and warns when saving fails', async () => {
+      preferences.updatePushShowContent.mockRejectedValue(new Error('offline'));
+      renderNotifications();
+      const toggle = screen.getByRole('switch', { name: TEXT_SWITCH });
+      await waitFor(() => expect(toggle).not.toHaveAttribute('data-disabled'));
+      await userEvent.click(toggle);
+      expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível salvar essa opção.');
+      expect(toggle).toHaveAttribute('aria-checked', 'true');
+    });
   });
 });

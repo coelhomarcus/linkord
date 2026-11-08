@@ -174,7 +174,7 @@ describe("Stage — capacity fallback (TileGrid can't fit everyone -> automatic 
   describe('invite tile', () => {
     const conversation = (type: 'voice' | 'direct') => ({
       id: 'c1', type, title: 'Squad', serverId: type === 'voice' ? 's1' : null, memberIds: ['me', 'ana'],
-      lastMessageAt: null, createdAt: 1, updatedAt: 1, pinnedAt: null,
+      lastMessageAt: null, createdAt: 1, updatedAt: 1,
     });
     const lastExtraTile = () => tileGridSpy.mock.calls.at(-1)![0].extraTile as React.ReactElement<{ conversationId: string }> | undefined;
 

@@ -17,6 +17,9 @@ import { DmCallPane } from '@/features/calls/DmCallPane';
 import { useRelationship } from '@/features/friends/useRelationship';
 import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { cn } from '@/shared/lib/utils';
+import { StatusDot } from '@/features/status/StatusDot';
+import { CustomStatusText } from '@/features/status/CustomStatusText';
+import { useCustomStatus, useUserStatus } from '@/features/status/statusDisplay';
 
 // Discord's header icons: bare 24px glyphs, gray at rest, white while hovered
 // or while the panel they toggle is open
@@ -48,7 +51,7 @@ interface ConversationPanelProps {
 
 export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, detailsOpen, mediaOpen, onToggleDetails, onToggleMedia }: ConversationPanelProps) {
   const { t } = useTranslation('conversations');
-  const { state, dispatch, conversations, activeConversationId, allUsers, onlineUserIds, activeCallConversationId, startDmCall } = useRoom();
+  const { state, dispatch, conversations, activeConversationId, allUsers, activeCallConversationId, startDmCall } = useRoom();
   const navigate = useNavigate();
   const { pathname, state: locationState } = useLocation();
   const { isMobile } = useSidebar();
@@ -69,8 +72,9 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
   }
   const title = conversationTitle(conversation, state.me.userId, allUsers);
   const other = directUser(conversation, state.me.userId, allUsers);
-  const online = other ? onlineUserIds.has(other.id) : false;
-  // a DM's presence lives on the profile (side panel and modal), not here
+  const status = useUserStatus(other?.id);
+  // a DM's header carries the other person's custom status where a channel has its topic
+  const customStatus = useCustomStatus(other?.id);
   const subtitle = isChannel ? conversation?.topic ?? '' : '';
   const directPeerId = conversation?.type === 'direct' ? (conversation.memberIds.find((id) => id !== state.me.userId) ?? null) : null;
   const { state: relationship } = useRelationship(directPeerId);
@@ -113,7 +117,7 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
                 aria-label={t('panel.viewProfile')}
               >
                 <Avatar id={other.id} name={other.displayName} avatar={other.avatar} poster={other.avatarPoster} animateOnHover avatarColor={other.avatarColor} size={24} />
-                <span aria-hidden className={cn('absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border-2 border-surface-panel', online ? 'bg-green' : 'bg-text-muted')} />
+                <StatusDot status={status} className="absolute -bottom-0.5 -right-0.5 size-2.5 border-2 text-surface-panel" />
               </button>
             ) : (
               <HashIcon size={24} className="flex-none text-text-muted" aria-hidden />
@@ -128,6 +132,12 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
               )}
               {subtitle && <span aria-hidden className="mx-1 h-6 w-px flex-none bg-border-default max-md:hidden" />}
               {subtitle && <p className="min-w-0 truncate text-label text-text-secondary max-md:hidden">{subtitle}</p>}
+              {!isChannel && customStatus && (
+                <>
+                  <span aria-hidden className="mx-1 h-6 w-px flex-none bg-border-default max-md:hidden" />
+                  <CustomStatusText custom={customStatus} className="text-label text-text-secondary max-md:hidden" />
+                </>
+              )}
             </div>
             <div className="flex flex-none items-center gap-2">
               {/* calls in a server happen in its voice channels */}

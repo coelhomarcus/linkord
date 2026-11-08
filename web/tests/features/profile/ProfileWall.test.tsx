@@ -55,6 +55,25 @@ async function dragUp(user: ReturnType<typeof userEvent.setup>, name: string) {
 }
 const saveBar = () => screen.queryByRole('region', { name: 'Salvar alterações do Mural' });
 describe('profile Wall', () => {
+  it('holds the place of the widgets while the Wall loads, and tells screen readers', async () => {
+    let resolve!: (value: WallResponse) => void;
+    mocked.fetchWall.mockReturnValue(new Promise((done) => { resolve = done; }));
+    renderWall();
+
+    // the drag-and-drop announcer is a status too
+    const status = screen.getByText('Carregando Mural…');
+    expect(status).toHaveAttribute('role', 'status');
+    expect(status.closest('[aria-busy="true"]')!.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(0);
+    // the header's button is already there, so the header does not grow when the Wall arrives
+    expect(screen.getByRole('button', { name: 'Adicionar widget' })).toBeDisabled();
+
+    resolve({ widgets: [anime], available: [anime, profile] });
+    expect(await screen.findByRole('link', { name: 'Cowboy Bebop' })).toBeInTheDocument();
+    expect(screen.queryByText('Carregando Mural…')).not.toBeInTheDocument();
+    expect(document.querySelector('[aria-busy="true"]')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Adicionar widget' })).toBeEnabled();
+  });
+
   it('lets the owner edit without a mode to enter, and shows no save bar until something changes', async () => {
     mocked.fetchWall.mockResolvedValue({ widgets: [anime], available: [anime, profile, ...gameChoices] }); renderWall();
     expect(await addWidgetButton()).toBeInTheDocument();

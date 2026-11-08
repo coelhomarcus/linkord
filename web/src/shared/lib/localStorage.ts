@@ -25,6 +25,7 @@ export const LOCAL_STORAGE_KEYS = {
   legacyNoiseSuppression: 'ss-noise-suppression',
   timeFormat: 'ss-time-format',
   sounds: 'ss-sounds',
+  autoIdleMinutes: 'ss-auto-idle-minutes',
 } as const;
 
 type RegistryValue = (typeof LOCAL_STORAGE_KEYS)[keyof typeof LOCAL_STORAGE_KEYS];

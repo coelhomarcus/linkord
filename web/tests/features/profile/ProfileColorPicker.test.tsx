@@ -4,13 +4,13 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import userEvent from '@testing-library/user-event';
 import { ProfileColorPicker } from '@/features/profile/ProfileColorPicker';
 import { presetHex } from '@/features/profile/avatarPresets';
-import { hexToHsv } from '@/features/profile/colorMath';
+import { hexToHsv } from '@/shared/lib/colorMath';
 
 function Harness({ initial = 'green', onChange, disabled }: { initial?: string; onChange?: (value: string) => void; disabled?: boolean }) {
   const [value, setValue] = useState(initial);
   return <><ProfileColorPicker userId="u1" value={value} disabled={disabled} onChange={(next) => { setValue(next); onChange?.(next); }} /><output data-testid="value">{value}</output></>;
 }
-const open = async (name = 'Cor do perfil: Verde') => { await userEvent.click(screen.getByRole('button', { name })); return screen.findByRole('group', { name: 'Cor do perfil' }); };
+const open = async (name = 'Cor do perfil: Verde') => { await userEvent.click(screen.getByRole('button', { name })); return screen.findByRole('group', { name: 'Escolher cor' }); };
 const value = () => screen.getByTestId('value').textContent;
 afterEach(() => { delete (window as { EyeDropper?: unknown }).EyeDropper; });
 

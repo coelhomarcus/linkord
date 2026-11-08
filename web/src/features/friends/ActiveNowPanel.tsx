@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Avatar } from '@/shared/Avatar';
+import { EmptyState } from '@/shared/ui/empty-state';
 import { useRoom } from '@/state/RoomContext';
 import type { Conversation, Participant } from '@/shared/types/protocol';
 
@@ -32,10 +33,7 @@ export function ActiveNowPanel() {
     <aside aria-label={t('activeNow.title')} className="flex w-[360px] flex-none flex-col overflow-y-auto border-l border-border-subtle px-4 py-4">
       <h2 className="mb-4 text-[1.25rem] font-bold leading-[1.2] text-text-primary">{t('activeNow.title')}</h2>
       {calls.length === 0 ? (
-        <div className="px-4 py-6 text-center">
-          <p className="text-body font-semibold text-text-primary">{t('activeNow.emptyTitle')}</p>
-          <p className="mt-1 text-label text-text-muted">{t('activeNow.emptyText')}</p>
-        </div>
+        <EmptyState size="compact" illustration="speaker" title={t('activeNow.emptyTitle')} description={t('activeNow.emptyText')} />
       ) : (
         <ul className="flex flex-col gap-2">
           {calls.map(({ conversation, friends }) => {

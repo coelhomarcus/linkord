@@ -49,7 +49,7 @@ describe('Amigos — the view comes from the URL', () => {
 
   it('?tab=invitations lands on Pendentes, where the invitations are', async () => {
     at('/app/friends?tab=invitations');
-    expect(await screen.findByText('Nenhum convite de servidor pendente.')).toBeInTheDocument();
+    expect(await screen.findByText('Nenhum convite de servidor')).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 2, name: 'Recebidas' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Convites' })).not.toBeInTheDocument();
   });
@@ -136,9 +136,9 @@ describe('Amigos — Pendentes', () => {
 
   it('each section says when it is empty, without looking like an error', async () => {
     at('/app/friends?tab=pending');
-    expect(await screen.findByText('Nenhuma solicitação recebida.')).toBeInTheDocument();
-    expect(screen.getByText('Você não tem solicitações enviadas.')).toBeInTheDocument();
-    expect(screen.getByText('Nenhum convite de servidor pendente.')).toBeInTheDocument();
+    expect(await screen.findByText('Nenhuma solicitação recebida')).toBeInTheDocument();
+    expect(screen.getByText('Nenhuma solicitação enviada')).toBeInTheDocument();
+    expect(screen.getByText('Nenhum convite de servidor')).toBeInTheDocument();
   });
 });
 
@@ -155,13 +155,13 @@ describe('Amigos — search in Pendentes (on the server, before pagination)', ()
   it('a search with no results says so (not "nenhuma solicitacao")', async () => {
     at('/app/friends?tab=pending&q=zzz');
     // The two sections load independently, so wait for both rather than the first to appear.
-    await waitFor(() => expect(screen.getAllByText('Nenhum resultado para esta busca.')).toHaveLength(3));
+    await waitFor(() => expect(screen.getAllByText('Nenhum resultado')).toHaveLength(3));
   });
 
   it('the same search also filters invitations', async () => {
     at('/app/friends?tab=invitations&q=squad');
     await waitFor(() => expect(mocked.fetchReceivedInvitations).toHaveBeenCalledWith(null, 'squad'));
-    expect(await screen.findAllByText('Nenhum resultado para esta busca.')).toHaveLength(3);
+    expect(await screen.findAllByText('Nenhum resultado')).toHaveLength(3);
   });
 
   it('typing in the Pendentes search writes ?q= without switching views', async () => {

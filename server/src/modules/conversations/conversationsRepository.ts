@@ -32,10 +32,9 @@ export interface ConversationSummary {
   lastMessageAt: number | null;
   createdAt: number;
   updatedAt: number;
-  pinnedAt: number | null;
 }
 
-export function rowToSummary(row: Conversation, memberIds: string[], pinnedAt: Date | null): ConversationSummary {
+export function rowToSummary(row: Conversation, memberIds: string[]): ConversationSummary {
   return {
     id: row.id,
     type: 'direct',
@@ -43,7 +42,6 @@ export function rowToSummary(row: Conversation, memberIds: string[], pinnedAt: D
     lastMessageAt: row.lastMessageAt ? row.lastMessageAt.getTime() : null,
     createdAt: row.createdAt.getTime(),
     updatedAt: row.updatedAt.getTime(),
-    pinnedAt: pinnedAt ? pinnedAt.getTime() : null,
   };
 }
 
@@ -55,7 +53,7 @@ export function rowToSummary(row: Conversation, memberIds: string[], pinnedAt: D
  * something newer than the close time arrives, then it reappears on its own. */
 export async function listForUser(userId: string): Promise<ConversationSummary[]> {
   const rows = await db
-    .select({ conversation: conversations, pinnedAt: conversationMembers.pinnedAt })
+    .select({ conversation: conversations })
     .from(conversationMembers)
     .innerJoin(conversations, eq(conversations.id, conversationMembers.conversationId))
     .where(and(
@@ -67,14 +65,9 @@ export async function listForUser(userId: string): Promise<ConversationSummary[]
         sql`${conversations.lastMessageAt} > ${conversationMembers.hiddenAt}`,
       ),
     ))
-    // pinned first (most recently pinned first among those), then by the
-    // newest message — deliberately lastMessageAt, so an edit or delete of an
-    // old message never resorts the sidebar (see schema.ts#conversations)
-    .orderBy(
-      desc(sql`${conversationMembers.pinnedAt} is not null`),
-      desc(conversationMembers.pinnedAt),
-      desc(sql`coalesce(${conversations.lastMessageAt}, ${conversations.createdAt})`),
-    );
+    // newest message first — deliberately lastMessageAt, so an edit or delete
+    // of an old message never resorts the sidebar (see schema.ts#conversations)
+    .orderBy(desc(sql`coalesce(${conversations.lastMessageAt}, ${conversations.createdAt})`));
 
   const ids = rows.map((r) => r.conversation.id);
   const members = new Map<string, string[]>();
@@ -83,7 +76,7 @@ export async function listForUser(userId: string): Promise<ConversationSummary[]
       .from(conversationMembers).where(inArray(conversationMembers.conversationId, ids));
     for (const row of memberRows) members.set(row.conversationId, [...(members.get(row.conversationId) ?? []), row.userId]);
   }
-  return rows.map((r) => rowToSummary(r.conversation, members.get(r.conversation.id) ?? [], r.pinnedAt));
+  return rows.map((r) => rowToSummary(r.conversation, members.get(r.conversation.id) ?? []));
 }
 
 // the badge reads "99+" past this, so counting further is wasted work
@@ -175,20 +168,19 @@ export async function markReadUpTo(conversation: Conversation, userId: string, m
 }
 
 async function directMemberRows(conversationId: string) {
-  return db.select({ userId: conversationMembers.userId, pinnedAt: conversationMembers.pinnedAt })
+  return db.select({ userId: conversationMembers.userId })
     .from(conversationMembers).where(eq(conversationMembers.conversationId, conversationId));
 }
 
-/** Sends the CURRENT state of one DM to both members, each with their OWN
- * `pinnedAt` (a per-member column — a shared payload would reset the other
- * side's pin on a client that replaces by id). */
+/** Sends the CURRENT state of one DM to both members. */
 async function sendConversationUpdateToMembers(t: 'conversation-created' | 'conversation-updated', row: Conversation): Promise<void> {
   if (isServerChannel(row)) return;
   const memberRows = await directMemberRows(row.id);
   const memberIds = memberRows.map((r) => r.userId);
-  for (const { userId, pinnedAt } of memberRows) {
+  const summary = rowToSummary(row, memberIds);
+  for (const { userId } of memberRows) {
     for (const p of participants.values()) {
-      if (p.userId === userId) send(p.socket, { t, conversation: rowToSummary(row, memberIds, pinnedAt) });
+      if (p.userId === userId) send(p.socket, { t, conversation: summary });
     }
   }
 }

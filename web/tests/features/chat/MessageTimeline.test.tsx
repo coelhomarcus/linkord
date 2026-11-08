@@ -272,12 +272,12 @@ describe('MessageTimeline — arrival animation', () => {
 describe('MessageTimeline — before the history arrives', () => {
   it('a conversation whose history has not come back yet does not claim to be empty', () => {
     renderTimeline({ messagesByConversation: new Map() });
-    expect(screen.queryByText('Nenhuma mensagem ainda.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Nenhuma mensagem ainda')).not.toBeInTheDocument();
     expect(screen.getByRole('status')).toHaveTextContent('Carregando mensagens…');
   });
 
   it('once an empty history arrives, it says so', () => {
     renderTimeline({ messagesByConversation: new Map([['conv-1', []]]) });
-    expect(screen.getByText('Nenhuma mensagem ainda.')).toBeInTheDocument();
+    expect(screen.getByText('Nenhuma mensagem ainda')).toBeInTheDocument();
   });
 });

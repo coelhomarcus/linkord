@@ -13,11 +13,12 @@ import { AdminEntityHeader } from './AdminEntityHeader';
 import { AdminActionRow, AdminFieldRow, AdminFields, AdminSection } from './AdminSection';
 import { ReasonDialog } from './ReasonDialog';
 import { formatWhen } from './adminFormat';
-import { AdminTextLink, AuditList, Badge, DetailStatusView, ListChrome, RefreshFailedNotice } from './adminUi';
+import { AdminTextLink, AuditList, Badge, DetailStatusView, ListChrome, RefreshFailedNotice, AdminBackLink } from './adminUi';
 import { RESTORE_LIST, useAdminBack } from './useAdminBack';
 import { useAdminDetail } from './useAdminDetail';
 import { useAdminQuery } from './useAdminQuery';
 import type { QuerySchema } from './useAdminQuery';
+import { AuditListSkeleton } from './AdminSkeletons';
 import { AppLink } from '@/shared/ui/app-link';
 
 type Dialog = 'suspend' | 'reactivate' | 'delete' | { owner: AdminServerMember } | null;
@@ -44,7 +45,7 @@ function ServerHistory({ id, revision }: { id: string; revision: string }) {
   const list = useCursorList(fetchPage, id, { getKey: (row) => row.id, revision });
   return (
     <AdminSection title={t('entity.fullHistoryServer')} description={t('entity.historyServerDescription')}>
-      <ListChrome list={list} empty={t('entity.noServerHistory')}><AuditList items={list.items} /></ListChrome>
+      <ListChrome list={list} empty={{ illustration: 'document', title: t('entity.noServerHistory'), compact: true }} skeleton={<AuditListSkeleton />}><AuditList items={list.items} /></ListChrome>
     </AdminSection>
   );
 }
@@ -92,8 +93,8 @@ function ServerDetail({ id }: { id: string }) {
   const ownerDialog = typeof dialog === 'object' && dialog !== null ? dialog.owner : null;
 
   return (
-    <div className="flex flex-col gap-5">
-      <AdminTextLink to={back} state={RESTORE_LIST} className="w-fit text-caption text-text-muted">{t('entity.backServers')}</AdminTextLink>
+    <div className="flex flex-col gap-6">
+      <AdminBackLink to={back} state={RESTORE_LIST}>{t('entity.backServers')}</AdminBackLink>
       {refreshFailed && <RefreshFailedNotice refreshing={refreshing} onRetry={() => void refresh()} />}
 
       <AdminEntityHeader

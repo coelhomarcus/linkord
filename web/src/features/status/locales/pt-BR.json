@@ -1,0 +1,60 @@
+{
+  "statuses": {
+    "online": "Disponível",
+    "idle": "Ausente",
+    "dnd": "Não perturbe",
+    "invisible": "Invisível",
+    "offline": "Offline"
+  },
+  "descriptions": {
+    "online": "Todo mundo vê que você está por aqui.",
+    "idle": "Aparece como ausente até você trocar.",
+    "dnd": "Sem notificações push e sem sons. Elas continuam na sua lista.",
+    "invisible": "Você aparece offline, mas continua usando o Linkord normalmente."
+  },
+  "menu": {
+    "trigger": "Status e perfil",
+    "viewProfile": "Ver perfil",
+    "setCustom": "Definir status personalizado",
+    "editCustom": "Editar status personalizado",
+    "clearCustom": "Limpar status personalizado",
+    "status": "Status",
+    "reconnecting": "Reconectando…"
+  },
+  "custom": {
+    "title": "Status personalizado",
+    "description": "Aparece para quem vê você online: no perfil, na lista de membros e nas conversas.",
+    "emoji": "Emoji",
+    "chooseEmoji": "Escolher emoji",
+    "clearEmoji": "Remover emoji",
+    "searchEmoji": "Buscar emoji",
+    "text": "Texto",
+    "textPlaceholder": "O que está rolando?",
+    "clearAfter": "Limpar depois de",
+    "expiry": {
+      "30m": "30 minutos",
+      "1h": "1 hora",
+      "4h": "4 horas",
+      "today": "Hoje",
+      "never": "Não limpar"
+    },
+    "fromRotation": "Dos seus jogos em rotação",
+    "playing": "jogando {{game}}",
+    "save": "Salvar",
+    "saving": "Salvando…",
+    "cancel": "Cancelar",
+    "clear": "Limpar status",
+    "until": "até {{time}}"
+  },
+  "autoIdle": {
+    "label": "Ficar ausente automaticamente",
+    "description": "Depois de um tempo sem usar este dispositivo, você aparece como ausente. Vale só para este navegador, e só enquanto seu status for Disponível.",
+    "off": "Nunca",
+    "minutes_one": "Após {{count}} minuto",
+    "minutes_other": "Após {{count}} minutos"
+  },
+  "errors": {
+    "saveFailed": "Não foi possível mudar seu status. Tente de novo.",
+    "offline": "Sem conexão agora. Tente de novo quando voltar."
+  }
+}

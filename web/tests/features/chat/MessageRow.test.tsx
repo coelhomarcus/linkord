@@ -34,7 +34,7 @@ describe('MessageRow — quick reactions in a read-only channel', () => {
   // read-only: reacting is all a member can do there (a webhook's announcements)
   const conversation = (type: 'readOnly' | 'writable') => ({
     id: 'conv-1', type: 'text' as const, title: 'x', serverId: 's1', memberIds: [], lastMessageAt: null,
-    createdAt: 0, updatedAt: 0, pinnedAt: null,
+    createdAt: 0, updatedAt: 0,
     permissions: PERMISSIONS.VIEW_CHANNEL | PERMISSIONS.ADD_REACTIONS | (type === 'writable' ? PERMISSIONS.SEND_MESSAGES : 0),
   });
   const renderIn = (type: 'readOnly' | 'writable', message = makeMessage({ id: null, name: 'Deploys', bot: true })) => {
@@ -127,7 +127,7 @@ describe('MessageRow', () => {
     renderWithRoom(
       <MessageRow message={makeMessage()} showHeader highlighted={false} allUsers={new Map()} mentionLookup={new Map()} onOpenProfile={noop} onReply={noop} onJumpTo={noop} />,
       {
-        conversations: [{ id: 'conv-1', type: 'text', title: 'general', serverId: 's1', memberIds: [], lastMessageAt: null, createdAt: 0, updatedAt: 0, pinnedAt: null, topic: '', categoryId: null, position: 0, permissions: 0 }],
+        conversations: [{ id: 'conv-1', type: 'text', title: 'general', serverId: 's1', memberIds: [], lastMessageAt: null, createdAt: 0, updatedAt: 0, topic: '', categoryId: null, position: 0, permissions: 0 }],
         servers: [server],
         serverMemberRoleIds: new Map([['s1', new Map([['user-2', ['role-blue']]])]]),
       },

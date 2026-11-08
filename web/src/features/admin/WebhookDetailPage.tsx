@@ -10,11 +10,12 @@ import { AdminEntityHeader } from './AdminEntityHeader';
 import { AdminActionRow, AdminFieldRow, AdminFields, AdminSection } from './AdminSection';
 import { ReasonDialog } from './ReasonDialog';
 import { formatWhen } from './adminFormat';
-import { AdminTextLink, AuditList, Badge, DetailStatusView, ListChrome, RefreshFailedNotice } from './adminUi';
+import { AuditList, Badge, DetailStatusView, ListChrome, RefreshFailedNotice, AdminBackLink } from './adminUi';
 import { RESTORE_LIST, useAdminBack } from './useAdminBack';
 import { useAdminDetail } from './useAdminDetail';
 import { useAdminQuery } from './useAdminQuery';
 import type { QuerySchema } from './useAdminQuery';
+import { AuditListSkeleton } from './AdminSkeletons';
 import { AppLink } from '@/shared/ui/app-link';
 
 const TABS = ['overview', 'moderation', 'history'] as const;
@@ -34,7 +35,7 @@ function WebhookHistory({ id, revision }: { id: string; revision: string }) {
   const list = useCursorList(fetchPage, id, { getKey: (row) => row.id, revision });
   return (
     <AdminSection title={t('entity.fullHistoryWebhook')} description={t('entity.historyWebhookDescription')}>
-      <ListChrome list={list} empty={t('entity.noWebhookHistory')}><AuditList items={list.items} /></ListChrome>
+      <ListChrome list={list} empty={{ illustration: 'document', title: t('entity.noWebhookHistory'), compact: true }} skeleton={<AuditListSkeleton />}><AuditList items={list.items} /></ListChrome>
     </AdminSection>
   );
 }
@@ -54,8 +55,8 @@ function WebhookDetail({ id }: { id: string }) {
 
   const { webhook } = detail;
   return (
-    <div className="flex flex-col gap-5">
-      <AdminTextLink to={back} state={RESTORE_LIST} className="w-fit text-caption text-text-muted">{t('entity.backWebhooks')}</AdminTextLink>
+    <div className="flex flex-col gap-6">
+      <AdminBackLink to={back} state={RESTORE_LIST}>{t('entity.backWebhooks')}</AdminBackLink>
       {refreshFailed && <RefreshFailedNotice refreshing={refreshing} onRetry={() => void refresh()} />}
 
       <AdminEntityHeader

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useRoom } from '@/state/RoomContext';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
 import { cn } from '@/shared/lib/utils';
-import { SettingsSection, SettingsSections, SettingsSubheading } from './SettingsLayout';
+import { SettingsSection, SettingsSections, SettingsSubheading } from '@/shared/ui/settings-layout';
 import { COLOR_THEME_IDS, COLOR_THEME_LABELS } from './useColorThemePreference';
 import type { ColorThemeId } from './useColorThemePreference';
 

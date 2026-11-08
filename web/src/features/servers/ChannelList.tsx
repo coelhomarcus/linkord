@@ -12,6 +12,8 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/shared/ui/primitives/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
+import { Button } from '@/shared/ui/primitives/button';
+import { EmptyState } from '@/shared/ui/empty-state';
 import { describeApiError } from '@/shared/api/errorText';
 import { ROUTES } from '@/shared/lib/routes';
 import { cn } from '@/shared/lib/utils';
@@ -196,7 +198,19 @@ export function ChannelList({ server, activeChannelId, onNavigate, onOpenProfile
               </section>
             );
           })}
-          {server.channels.length === 0 && <p className="px-4 py-6 text-center text-label text-text-muted">{t('noChannels')}</p>}
+          {server.channels.length === 0 && (
+            <EmptyState
+              size="compact"
+              illustration="hash"
+              title={t('noChannels')}
+              description={canManageChannels ? t('noChannelsCanCreate') : t('noChannelsText')}
+              action={canManageChannels && (
+                <Button type="button" variant="secondary" size="sm" onClick={() => setCreateTarget({ kind: 'channel', categoryId: null })}>
+                  <PlusIcon size={16} aria-hidden />{t('menu.createChannel')}
+                </Button>
+              )}
+            />
+          )}
         </nav>
       )}
 

@@ -32,9 +32,8 @@ describe('locale', () => {
   });
 
   it('renders push and email copy in the recipient locale', () => {
-    assert.equal(localeText('pt-BR', 'push.mentionedTitle'), 'Você foi mencionado');
-    assert.equal(localeText('en-US', 'push.mentionedTitle'), 'You were mentioned');
-    assert.equal(localeText('en-US', 'push.chatSentBody_other', { name: 'Ana', count: 3 }), 'Ana sent 3 messages');
+    assert.equal(localeText('pt-BR', 'push.mentionDirectTitle', { name: 'Ana' }), 'Ana mencionou você');
+    assert.equal(localeText('en-US', 'push.mentionDirectTitle', { name: 'Ana' }), 'Ana mentioned you');
     assert.match(localeText('en-US', 'email.recoveryAccountLine', { username: 'ana', email: 'ana@example.com' }), /ana@example\.com/);
   });
 });

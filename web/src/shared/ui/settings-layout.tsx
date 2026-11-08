@@ -4,6 +4,9 @@ import type { ComponentProps, ReactNode, Ref } from 'react';
 import { AppLink } from '@/shared/ui/app-link';
 import { cn } from '@/shared/lib/utils';
 
+// The page blocks of the settings-style areas (settings, administration): a column of sections with a
+// title each, and rows of "what it is" on the left beside its value or control on the right.
+
 /** The page column, at most Discord's 740px. Padding follows the settings
  * area (container queries), not the window. */
 export function SettingsContent({ className, ...props }: ComponentProps<'div'>) {
@@ -163,18 +166,19 @@ export function SettingsRadioGroup<T extends string>({ label, value, options, on
   );
 }
 
-/** The blue-edged notice at the top of a section. */
-export function SettingsNotice({ children, tone = 'info' }: { children: ReactNode; tone?: 'info' | 'danger' }) {
+const NOTICE_TONES = {
+  info: { box: 'border-accent-primary/70 bg-accent-primary/8', icon: 'text-accent-primary' },
+  warning: { box: 'border-yellow/60 bg-yellow/8', icon: 'text-yellow' },
+  danger: { box: 'border-red/60 bg-red/8', icon: 'text-red' },
+} as const;
+
+/** The colour-edged notice at the top of a section; `action` sits at its end (a "Refresh" button). */
+export function SettingsNotice({ children, tone = 'info', action }: { children: ReactNode; tone?: keyof typeof NOTICE_TONES; action?: ReactNode }) {
   return (
-    <div
-      role={tone === 'danger' ? 'alert' : 'status'}
-      className={cn(
-        'flex items-start gap-3 rounded-lg border px-4 py-3 text-label',
-        tone === 'danger' ? 'border-red/60 bg-red/8 text-text-primary' : 'border-accent-primary/70 bg-accent-primary/8 text-text-primary',
-      )}
-    >
-      <InfoIcon size={20} weight="fill" aria-hidden className={cn('mt-px flex-none', tone === 'danger' ? 'text-red' : 'text-accent-primary')} />
-      <div className="min-w-0 flex-1">{children}</div>
+    <div role={tone === 'info' ? 'status' : 'alert'} className={cn('flex flex-wrap items-start gap-3 rounded-lg border px-4 py-3 text-label text-text-primary', NOTICE_TONES[tone].box)}>
+      <InfoIcon size={20} weight="fill" aria-hidden className={cn('mt-px flex-none', NOTICE_TONES[tone].icon)} />
+      <div className="min-w-0 flex-1 basis-48">{children}</div>
+      {action && <div className="flex flex-none items-center">{action}</div>}
     </div>
   );
 }

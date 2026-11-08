@@ -9,7 +9,7 @@ import type { CallInviteCard as CallInvite, Conversation, Participant } from '@/
 const invite: CallInvite = { channelId: 'g1', channelName: 'Squad', serverId: 's1', serverName: 'Servidor', serverIcon: '' };
 const channel: Conversation = {
   id: 'g1', type: 'voice', title: 'Squad', serverId: 's1', memberIds: ['me', 'ana'],
-  lastMessageAt: null, createdAt: 1, updatedAt: 1, pinnedAt: null,
+  lastMessageAt: null, createdAt: 1, updatedAt: 1,
 };
 const ana = { id: 'conn-ana', userId: 'ana', displayName: 'Ana', avatar: '', avatarPoster: '', avatarColor: '', callConversationId: 'g1' } as Participant;
 

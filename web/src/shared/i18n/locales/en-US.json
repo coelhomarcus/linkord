@@ -71,8 +71,6 @@
     "download": "Download",
     "copy": "Copy",
     "viewProfile": "View profile",
-    "unpinConversation": "Unpin conversation",
-    "pinConversation": "Pin conversation",
     "closeConversation": "Close conversation",
     "removeEmbedTitle": "Remove embed",
     "removeAttachmentTitle": "Remove attachment",
@@ -117,5 +115,15 @@
       "invalid_invite": "This invite is invalid or has expired.",
       "hierarchy": "That is above your role."
     }
+  },
+  "colorPicker": {
+    "title": "Choose a color",
+    "saturation": "Saturation and brightness",
+    "saturationValue": "Saturation {{saturation}}%, brightness {{brightness}}%",
+    "hue": "Hue",
+    "hex": "Color hex code",
+    "eyedropper": "Pick a color from the screen",
+    "presets": "Presets",
+    "useColor": "Use {{name}}"
   }
 }

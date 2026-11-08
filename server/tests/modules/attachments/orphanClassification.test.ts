@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { classifyOrphans } from '../../../src/modules/attachments/orphanSweeper.js';
+import { classifyOrphans } from '../../../src/modules/attachments/orphanClassification.js';
 
 const HOUR = 60 * 60 * 1000;
 const NOW = 1_000_000 * HOUR;

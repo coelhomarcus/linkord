@@ -1,4 +1,4 @@
-import { hexToOklch, parseHex, withMinLightness } from './colorMath';
+import { hexToOklch, parseHex, withMinLightness } from '@/shared/lib/colorMath';
 
 // Every theme is dark: below this OKLCH lightness an accent stops standing out from the surfaces the Wall
 // draws it on. The presets sit at 0.55 and read well; this leaves them alone.

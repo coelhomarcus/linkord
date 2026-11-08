@@ -116,8 +116,8 @@ describe('ProfileEditor', () => {
 
     await user.click(screen.getByRole('button', { name: 'Cor do perfil: Verde' }));
     await user.click(await screen.findByRole('button', { name: 'Usar Fuchsia' }));
-    await user.click(screen.getByRole('button', { name: 'Salvar perfil' }));
-    expect(await screen.findByText('Perfil salvo.')).toHaveAttribute('role', 'status');
+    await user.click(screen.getByRole('button', { name: 'Salvar' }));
+    expect(await screen.findByText('Alterações salvas.')).toHaveAttribute('role', 'status');
 
     expect(updateProfile).toHaveBeenCalledWith({
       avatar: '',
@@ -151,7 +151,7 @@ describe('ProfileEditor', () => {
     const input = screen.getByLabelText('Nome de exibição');
     await user.clear(input);
     await user.type(input, 'Apelido Legal');
-    await user.click(screen.getByRole('button', { name: 'Salvar perfil' }));
+    await user.click(screen.getByRole('button', { name: 'Salvar' }));
 
     expect(updateProfile).toHaveBeenCalledWith({
       avatar: '',
@@ -187,7 +187,7 @@ describe('ProfileEditor', () => {
     await user.clear(hex);
     await user.type(hex, 'a1b2c3');
     await user.keyboard('{Escape}');
-    await user.click(screen.getByRole('button', { name: 'Salvar perfil' }));
+    await user.click(screen.getByRole('button', { name: 'Salvar' }));
 
     expect(updateProfile).toHaveBeenCalledWith({
       avatar: '',
@@ -219,7 +219,7 @@ describe('ProfileEditor', () => {
     renderEditor({ state, updateProfile });
 
     await user.type(screen.getByLabelText('Bio'), 'Oi, eu sou a Fulana.');
-    await user.click(screen.getByRole('button', { name: 'Salvar perfil' }));
+    await user.click(screen.getByRole('button', { name: 'Salvar' }));
 
     expect(updateProfile).toHaveBeenCalledWith({
       avatar: '',
@@ -335,10 +335,10 @@ describe('ProfileEditor', () => {
     renderEditor({ state, updateProfile });
 
     await user.type(screen.getByLabelText('Bio'), 'edição pendente');
-    await user.click(screen.getByRole('button', { name: 'Salvar perfil' }));
+    await user.click(screen.getByRole('button', { name: 'Salvar' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Você está enviando rápido demais.');
-    expect(screen.queryByText('Perfil salvo.')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Salvar perfil' })).toBeEnabled();
+    expect(screen.queryByText('Alterações salvas.')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Salvar' })).toBeEnabled();
   });
 
   it('does not show the conflict banner after a successful save updates state.me', async () => {
@@ -389,11 +389,11 @@ describe('ProfileEditor', () => {
 
     render(<Harness />);
     await user.type(screen.getByLabelText('Bio'), 'Bio nova');
-    await user.click(screen.getByRole('button', { name: 'Salvar perfil' }));
+    await user.click(screen.getByRole('button', { name: 'Salvar' }));
 
-    expect(await screen.findByText('Perfil salvo.')).toHaveAttribute('role', 'status');
+    expect(await screen.findByText('Alterações salvas.')).toHaveAttribute('role', 'status');
     expect(screen.queryByText('Usar valores salvos')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Salvar perfil' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Salvar' })).not.toBeInTheDocument();
   });
 
   it('discarding reverts fields to the last confirmed values and hides the bar', async () => {
@@ -406,10 +406,10 @@ describe('ProfileEditor', () => {
 
     const bio = screen.getByLabelText('Bio');
     await user.type(bio, ' e mais um pedaço');
-    await user.click(screen.getByRole('button', { name: 'Descartar' }));
+    await user.click(screen.getByRole('button', { name: 'Redefinir' }));
 
     expect(bio).toHaveValue('bio original');
-    expect(screen.queryByRole('button', { name: 'Salvar perfil' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Salvar' })).not.toBeInTheDocument();
   });
 });
 

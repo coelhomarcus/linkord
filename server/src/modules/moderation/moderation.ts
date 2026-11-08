@@ -7,6 +7,7 @@ import { hasPermission, outranks, PERMISSIONS } from '../servers/permissions.js'
 import { channelPermissionsIn, loadServerSnapshot, memberInput } from '../servers/serverAccess.js';
 import { isActiveAdmin } from '../admin/adminAuth.js';
 import { recordAudit } from '../admin/auditLog.js';
+import { recordServerAudit } from '../servers/serverAuditLog.js';
 import { ERROR_CODES } from '../../http/errors.js';
 import type { AppSocket, HandlerTable } from '../../types.js';
 import { logger } from '../../lib/logger.js';
@@ -14,9 +15,10 @@ import { logger } from '../../lib/logger.js';
 const log = logger.child({ component: 'audit' });
 
 // Disconnecting someone from a voice channel, or moving them to another (a
-// member with MOVE_MEMBERS there who outranks them, or an instance admin). Account deletion,
-// suspension and the rest of the administrative actions live in
-// modules/admin/ (HTTP, audited).
+// member with MOVE_MEMBERS there who outranks them, or an instance admin). A
+// server moderator's action goes to that server's audit log, an instance
+// admin's to the instance trail. Account deletion, suspension and the rest of
+// the administrative actions live in modules/admin/ (HTTP, audited).
 
 /** Kick-from-call authority: MOVE_MEMBERS in the voice channel and a higher
  * place in the role hierarchy than the target. Instance admins keep their
@@ -43,7 +45,7 @@ async function handleCallKick(socket: AppSocket, msg: { participantId?: string }
   if (!target || !target.callConversationId) return; // already left — race with another admin, or stale UI
 
   const callId = target.callConversationId;
-  const [callConversation] = await db.select({ serverId: conversations.serverId }).from(conversations).where(eq(conversations.id, callId)).limit(1);
+  const [callConversation] = await db.select({ serverId: conversations.serverId, title: conversations.title }).from(conversations).where(eq(conversations.id, callId)).limit(1);
   if (!callConversation?.serverId) return;
 
   const snapshot = await loadServerSnapshot(callConversation.serverId);
@@ -51,13 +53,13 @@ async function handleCallKick(socket: AppSocket, msg: { participantId?: string }
   const targetMember = snapshot ? memberInput(snapshot, target.userId) : null;
   const actorIsAdmin = await isActiveAdmin(p.userId);
   const actorCanMove = !!snapshot && !!actor && hasPermission(channelPermissionsIn(snapshot, callId, p.userId), PERMISSIONS.MOVE_MEMBERS);
-  const allowed = canKickFromCall({
-    actorIsAdmin,
+  const asModerator = canKickFromCall({
+    actorIsAdmin: false,
     actorCanMove,
     // someone no longer in the server is always below whoever moderates it
     actorOutranksTarget: !!snapshot && !!actor && (!targetMember || outranks(actor, targetMember, snapshot.roles)),
   });
-  if (!allowed) {
+  if (!asModerator && !actorIsAdmin) {
     sendSocketError(socket, ERROR_CODES.forbidden, 'Você não tem permissão para remover essa pessoa da chamada.');
     return;
   }
@@ -74,8 +76,13 @@ async function handleCallKick(socket: AppSocket, msg: { participantId?: string }
   // participant-updated, so every OTHER connected client's UI (tiles) updates for free.
   setCallConversationId(target, null);
 
-  // acting as an instance admin (not as the server's own moderator) is an audited moderation action
-  if (actorIsAdmin && !actorCanMove) {
+  // nothing to roll back if this fails: the person is already out of the call
+  if (asModerator) {
+    await recordServerAudit(db, {
+      serverId: callConversation.serverId, actorId: p.userId, action: 'member.voice_disconnect', targetType: 'user', targetId: target.userId,
+      extra: { channelId: callId, channel: callConversation.title },
+    }).catch((err) => log.error('member.voice_disconnect', err));
+  } else {
     await recordAudit({
       actor: { id: p.userId, username: p.name }, action: 'call.kick', targetType: 'user', targetId: target.userId, targetLabel: target.name,
       detail: { conversationId: callId },
@@ -113,7 +120,7 @@ async function handleCallMove(socket: AppSocket, msg: { participantId?: string; 
   const sourceId = target?.callConversationId;
   if (!target || !sourceId || sourceId === destinationId) return; // left meanwhile, or already there
 
-  const rows = await db.select({ id: conversations.id, serverId: conversations.serverId, type: conversations.type })
+  const rows = await db.select({ id: conversations.id, serverId: conversations.serverId, type: conversations.type, title: conversations.title })
     .from(conversations).where(inArray(conversations.id, [sourceId, destinationId]));
   const source = rows.find((r) => r.id === sourceId);
   const destination = rows.find((r) => r.id === destinationId);
@@ -125,14 +132,15 @@ async function handleCallMove(socket: AppSocket, msg: { participantId?: string; 
   const actorIsAdmin = await isActiveAdmin(p.userId);
   const can = (channelId: string, userId: string, bit: number) => !!snapshot && hasPermission(channelPermissionsIn(snapshot, channelId, userId), bit);
   const actorCanMove = !!actor && can(sourceId, p.userId, PERMISSIONS.MOVE_MEMBERS);
-  const allowed = canMoveInCall({
-    actorIsAdmin,
+  const decide = (asAdmin: boolean) => canMoveInCall({
+    actorIsAdmin: asAdmin,
     actorCanMove,
     actorCanConnectToDestination: can(destinationId, p.userId, PERMISSIONS.CONNECT),
     actorOutranksTarget: !!snapshot && !!actor && !!targetMember && outranks(actor, targetMember, snapshot.roles),
     targetCanConnectToDestination: can(destinationId, target.userId, PERMISSIONS.CONNECT),
   });
-  if (!allowed) {
+  const asModerator = decide(false);
+  if (!asModerator && !decide(actorIsAdmin)) {
     sendSocketError(socket, ERROR_CODES.forbidden, 'Você não tem permissão para mover essa pessoa para esse canal.');
     return;
   }
@@ -147,7 +155,12 @@ async function handleCallMove(socket: AppSocket, msg: { participantId?: string; 
   setCallConversationId(target, null);
   send(target.socket, { t: 'call-moved', conversationId: destinationId });
 
-  if (actorIsAdmin && !actorCanMove) {
+  if (asModerator) {
+    await recordServerAudit(db, {
+      serverId: source.serverId, actorId: p.userId, action: 'member.voice_move', targetType: 'user', targetId: target.userId,
+      changes: [{ key: 'channel', before: source.title, after: destination.title }],
+    }).catch((err) => log.error('member.voice_move', err));
+  } else {
     await recordAudit({
       actor: { id: p.userId, username: p.name }, action: 'call.move', targetType: 'user', targetId: target.userId, targetLabel: target.name,
       detail: { from: sourceId, to: destinationId },

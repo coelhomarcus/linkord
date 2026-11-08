@@ -10,7 +10,7 @@ function sortServers(list: ServerSummary[]): ServerSummary[] {
 export function channelConversation(server: ServerSummary, channel: ServerSummary['channels'][number]): Conversation {
   return {
     id: channel.id, type: channel.type, title: channel.name, memberIds: [], serverId: server.id,
-    lastMessageAt: null, createdAt: server.createdAt, updatedAt: server.createdAt, pinnedAt: null,
+    lastMessageAt: null, createdAt: server.createdAt, updatedAt: server.createdAt,
     topic: channel.topic, categoryId: channel.categoryId, position: channel.position, permissions: channel.permissions,
   };
 }

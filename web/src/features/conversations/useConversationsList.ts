@@ -7,19 +7,14 @@ function toDirectConversation(summary: DirectSummary): Conversation {
   return { ...summary, title: '', serverId: null };
 }
 
-/** Mirrors listForUser's own ORDER BY (server/src/modules/conversations.ts)
- * — pinned first (most recently pinned first among those), then everyone
- * else by recency. Used both for the optimistic pin re-sort and for
- * re-sorting after any incremental update that could change ordering.
+/** Mirrors listForUser's own ORDER BY (server/src/modules/conversations.ts):
+ * newest activity first. Used for re-sorting after any incremental update
+ * that could change ordering.
  * Deliberately `lastMessageAt ?? createdAt`, not `updatedAt` — a rename or
  * a message edit/delete must not resort the sidebar, only a genuinely NEW
  * message does (server-side: schema.ts#conversations, touchConversation). */
 function sortConversations(list: Conversation[]): Conversation[] {
-  return [...list].sort((a, b) => (
-    Number(!!b.pinnedAt) - Number(!!a.pinnedAt)
-    || (b.pinnedAt ?? 0) - (a.pinnedAt ?? 0)
-    || (b.lastMessageAt ?? b.createdAt) - (a.lastMessageAt ?? a.createdAt)
-  ));
+  return [...list].sort((a, b) => (b.lastMessageAt ?? b.createdAt) - (a.lastMessageAt ?? a.createdAt));
 }
 
 /** The DM list + which conversation (DM or channel) is currently open. Message
@@ -67,17 +62,6 @@ export function useConversationsList(sendWs: (msg: ClientMessage) => void) {
     if (conversationId === activeConversationIdRef.current) clearActiveConversation();
   }, [clearActiveConversation]);
 
-  const pinConversation = useCallback((conversationId: string, pinned: boolean) => {
-    // Optimistic re-sort so the row jumps immediately instead of waiting on
-    // the round-trip; the real 'conversation-pinned' broadcast (below)
-    // settles it — including for this same tab, since it's a no-op once
-    // the optimistic value already matches.
-    const next = sortConversations(conversationsRef.current.map((c) => (c.id === conversationId ? { ...c, pinnedAt: pinned ? Date.now() : null } : c)));
-    conversationsRef.current = next;
-    setConversations(next);
-    sendWs({ t: 'conversation-pin', conversationId, pinned });
-  }, [sendWs]);
-
   /** A DM now belongs on this client's list for the first time — upsert by
    * id (same merge onConversationOpened does), but never switches the active
    * conversation; that's what 'conversation-opened' is for. */
@@ -91,7 +75,7 @@ export function useConversationsList(sendWs: (msg: ClientMessage) => void) {
   }, []);
 
   /** A conversation changed (rename, avatar, or message activity bumping
-   * lastMessageAt/updatedAt) — replace by id and re-sort, since activity/pin
+   * lastMessageAt/updatedAt) — replace by id and re-sort, since activity
    * ordering could have changed. An update for one this client does NOT have
    * yet is an insert: it is exactly how the other person learns a DM exists.
    * An empty DM is never listed; the first message or the start of a call
@@ -108,16 +92,6 @@ export function useConversationsList(sendWs: (msg: ClientMessage) => void) {
     setConversations(next);
   }, []);
 
-  /** Syncs pin state pushed from ANOTHER of this user's own sessions/tabs —
-   * this tab's own pinConversation() already applied it optimistically, so
-   * this is a no-op for the tab that acted and a sync for the others. */
-  const onConversationPinned = useCallback((m: Extract<ServerMessage, { t: 'conversation-pinned' }>) => {
-    if (!conversationsRef.current.some((c) => c.id === m.conversationId)) return;
-    const next = sortConversations(conversationsRef.current.map((c) => (c.id === m.conversationId ? { ...c, pinnedAt: m.pinnedAt } : c)));
-    conversationsRef.current = next;
-    setConversations(next);
-  }, []);
-
   /** `openConversationFull` is RoomProvider's composed openConversation
    * (cursor + unread/reply/editing clear + sendWs) — passed in at call
    * time since this handler needs the FULL behavior, not just the cursor
@@ -128,9 +102,7 @@ export function useConversationsList(sendWs: (msg: ClientMessage) => void) {
     // opener instead so it can still be rendered/typed into for this
     // session; it becomes "real" history for everyone once a message
     // is actually sent (touchConversation broadcasts the list then).
-    // Re-sorted like every other list-changing handler here — this is also
-    // what fires for a brand-new DM, so skipping the sort used to let it
-    // land above a pinned conversation instead of respecting pinnedAt.
+    // Re-sorted like every other list-changing handler here.
     const conversation = toDirectConversation(m.conversation);
     const idx = conversationsRef.current.findIndex((c) => c.id === conversation.id);
     const base = idx === -1
@@ -155,8 +127,8 @@ export function useConversationsList(sendWs: (msg: ClientMessage) => void) {
   return {
     conversations, conversationsRef, activeConversationId, activeConversationIdRef,
     setInitial, setActiveConversation, clearActiveConversation, removeConversation,
-    openDirect, pinConversation,
+    openDirect,
     onConversationCreated, onConversationUpdated,
-    onConversationPinned, onConversationOpened, onConversationDeleted,
+    onConversationOpened, onConversationDeleted,
   };
 }

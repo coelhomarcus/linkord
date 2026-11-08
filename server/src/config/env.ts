@@ -169,7 +169,27 @@ const ORPHAN_GRACE_MS = 24 * 60 * 60 * 1000;
 // run a real one by hand from /admin). Deleting files is opt-in on purpose.
 const ORPHAN_SWEEP_DRY_RUN = process.env.ORPHAN_SWEEP_DRY_RUN !== '0';
 
+// ---- retention (days a kind of record is kept; 0 = keep forever) ----
+// An invalid value stops the boot instead of falling back: a typo must not quietly start
+// deleting an audit trail, or quietly keep one that was meant to expire.
+export function parseRetentionDays(name: string, raw: string | undefined, fallback: number): number {
+  const text = (raw ?? '').trim();
+  if (text === '') return fallback;
+  const days = Number(text);
+  if (!Number.isSafeInteger(days) || days < 0) throw new Error(`${name} must be a whole number of days, 0 or more (0 keeps the records forever; see .env.example).`);
+  return days;
+}
+// the audit trail and data_repairs are evidence: they are kept unless an operator opts in to expiry
+const AUDIT_RETENTION_DAYS = parseRetentionDays('AUDIT_RETENTION_DAYS', process.env.AUDIT_RETENTION_DAYS, 0);
+const DATA_REPAIRS_RETENTION_DAYS = parseRetentionDays('DATA_REPAIRS_RETENTION_DAYS', process.env.DATA_REPAIRS_RETENTION_DAYS, 0);
+const NOTIFICATION_READ_RETENTION_DAYS = parseRetentionDays('NOTIFICATION_READ_RETENTION_DAYS', process.env.NOTIFICATION_READ_RETENTION_DAYS, 30);
+const NOTIFICATION_UNREAD_RETENTION_DAYS = parseRetentionDays('NOTIFICATION_UNREAD_RETENTION_DAYS', process.env.NOTIFICATION_UNREAD_RETENTION_DAYS, 90);
+const OUTBOX_RETENTION_DAYS = parseRetentionDays('OUTBOX_RETENTION_DAYS', process.env.OUTBOX_RETENTION_DAYS, 7);
+// a server's own log is a moderation aid, not instance evidence: it expires by default
+const SERVER_AUDIT_RETENTION_DAYS = parseRetentionDays('SERVER_AUDIT_RETENTION_DAYS', process.env.SERVER_AUDIT_RETENTION_DAYS, 90);
+
 export const config = {
+  AUDIT_RETENTION_DAYS, DATA_REPAIRS_RETENTION_DAYS, NOTIFICATION_READ_RETENTION_DAYS, NOTIFICATION_UNREAD_RETENTION_DAYS, OUTBOX_RETENTION_DAYS, SERVER_AUDIT_RETENTION_DAYS,
   PORT, HOST_BIND, MAX_PARTICIPANTS, TRUST_PROXY, MAX_MSG_BYTES, RECONNECT_GRACE_MS, CALL_RESTORE_GRACE_MS,
   MAX_AVATAR_LEN, MAX_BANNER_LEN, MAX_PROFILE_BIO_LEN, MAX_PROFILE_LINKS, MAX_PROFILE_LINK_LEN,
   MAX_CHAT_LEN, CHAT_HISTORY_LIMIT, SEARCH_RESULT_LIMIT, MAX_SEARCH_QUERY_LEN, MAX_ATTACHMENTS_PER_MESSAGE,

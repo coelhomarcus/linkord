@@ -58,11 +58,11 @@ function setSessionCookie(request: FastifyRequest, reply: FastifyReply, rawToken
 async function handleRegister(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   // REGISTRATION_CODE is the only gate keeping a self-hosted instance
   // private — without a lockout here it's brute-forceable at unlimited
-  // speed. Same IP-lockout scheme as login (see ratelimit.ts), but its own
+  // speed. Same IP-lockout scheme as login (see ratelimit.ts, stored in Postgres), but its own
   // key namespace so failed logins/registrations from one IP don't block
   // the other.
   const ipKey = `reg-ip:${ipOfRequest(request)}`;
-  const ipBlockedSec = ratelimit.checkBlocked(ipKey);
+  const ipBlockedSec = await ratelimit.checkBlocked(ipKey);
   if (ipBlockedSec) {
     reply.header('Retry-After', String(ipBlockedSec));
     return sendError(reply, 429, 'rate_limited', 'Muitas tentativas. Tente novamente mais tarde.');
@@ -79,11 +79,11 @@ async function handleRegister(request: FastifyRequest, reply: FastifyReply): Pro
   // "open by a forgotten config."
   if (!config.REGISTRATION_CODE) return sendError(reply, 403, 'registration_closed', 'Registro fechado.');
   if (!safeCompare(code, config.REGISTRATION_CODE)) {
-    ratelimit.recordFailure(ipKey);
+    await ratelimit.recordFailure(ipKey);
     log.warn('registration with a wrong invite code', { ip: ipKey });
     return sendError(reply, 403, 'invalid_code', 'Código de convite inválido.');
   }
-  ratelimit.reset(ipKey);
+  await ratelimit.reset(ipKey);
 
   if (!USERNAME_RE.test(username)) {
     return sendError(reply, 400, 'invalid_username', `Nome de usuário deve ter entre ${config.MIN_USERNAME_LEN} e ${config.MAX_USERNAME_LEN} caracteres (letras, números, . _ -).`);
@@ -132,7 +132,7 @@ async function handleRegister(request: FastifyRequest, reply: FastifyReply): Pro
 
 async function handleLogin(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   const ipKey = `ip:${ipOfRequest(request)}`;
-  const ipBlockedSec = ratelimit.checkBlocked(ipKey);
+  const ipBlockedSec = await ratelimit.checkBlocked(ipKey);
   if (ipBlockedSec) {
     reply.header('Retry-After', String(ipBlockedSec));
     return sendError(reply, 429, 'rate_limited', 'Muitas tentativas. Tente novamente mais tarde.');
@@ -143,7 +143,7 @@ async function handleLogin(request: FastifyRequest, reply: FastifyReply): Promis
   const password = String(body.password == null ? '' : body.password);
   const userKey = `user:${username.toLowerCase()}`;
 
-  const userBlockedSec = ratelimit.checkBlocked(userKey);
+  const userBlockedSec = await ratelimit.checkBlocked(userKey);
   if (userBlockedSec) {
     reply.header('Retry-After', String(userBlockedSec));
     return sendError(reply, 429, 'rate_limited', 'Muitas tentativas. Tente novamente mais tarde.');
@@ -156,14 +156,14 @@ async function handleLogin(request: FastifyRequest, reply: FastifyReply): Promis
   const ok = await verifyPassword(password, user ? user.passwordHash : DUMMY_HASH);
 
   if (!user || !ok) {
-    ratelimit.recordFailure(ipKey);
-    ratelimit.recordFailure(userKey);
+    await ratelimit.recordFailure(ipKey);
+    await ratelimit.recordFailure(userKey);
     log.warn('login failed', { username, ip: ipOfRequest(request) });
     return sendError(reply, 401, 'invalid_credentials', 'Usuário ou senha inválidos.');
   }
 
-  ratelimit.reset(ipKey);
-  ratelimit.reset(userKey);
+  // the password was right, so a failure to clear the counters must not turn it into a refused login
+  await Promise.all([ratelimit.reset(ipKey), ratelimit.reset(userKey)]).catch(() => {});
 
   // only reachable with the right password, so it leaks nothing about who exists
   if (user.status !== 'active') {
@@ -266,13 +266,13 @@ async function handleRecoveryRequest(request: FastifyRequest, reply: FastifyRepl
 
   const ipKey = `recovery-ip:${ipOfRequest(request)}`;
   const identifierKey = `recovery-${identifier.type}:${identifier.value.toLowerCase()}`;
-  const blocked = ratelimit.checkBlocked(ipKey) || ratelimit.checkBlocked(identifierKey);
+  const blocked = (await ratelimit.checkBlocked(ipKey)) || (await ratelimit.checkBlocked(identifierKey));
   if (blocked) {
     reply.header('Retry-After', String(blocked));
     return sendError(reply, 429, 'rate_limited', 'Muitas solicitações. Tente novamente mais tarde.');
   }
-  ratelimit.recordFailure(ipKey);
-  ratelimit.recordFailure(identifierKey);
+  await ratelimit.recordFailure(ipKey);
+  await ratelimit.recordFailure(identifierKey);
 
   const user = await findUserByIdentifier(identifier);
   if (user?.email) {
@@ -330,12 +330,12 @@ async function handleEmailChangeRequest(request: FastifyRequest, reply: FastifyR
   const existing = await findByEmailLower(email);
   if (existing && existing.id !== sess.userId) return sendError(reply, 409, 'email_taken', 'Esse e-mail já está em uso.');
   const changeKey = `email-change:${sess.userId}`;
-  const blocked = ratelimit.checkBlocked(changeKey);
+  const blocked = await ratelimit.checkBlocked(changeKey);
   if (blocked) {
     reply.header('Retry-After', String(blocked));
     return sendError(reply, 429, 'rate_limited', 'Muitas solicitações. Tente novamente mais tarde.');
   }
-  ratelimit.recordFailure(changeKey);
+  await ratelimit.recordFailure(changeKey);
   try {
     await issueAndSendCode(sess.userId, email, sess.username, 'email_change', resolveLocale(sess.locale));
   } catch {

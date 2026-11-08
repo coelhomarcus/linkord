@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/shared/ui/primitives/button';
 import { ROUTES } from '@/shared/lib/routes';
-import { SettingsRow, SettingsSection, SettingsSections } from './SettingsLayout';
+import { SettingsRow, SettingsSection, SettingsSections } from '@/shared/ui/settings-layout';
 
 /** The old Moderation tab is gone: administration has its own area now
  * (/admin), with audited actions, so this only points there. */
