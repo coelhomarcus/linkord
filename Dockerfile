@@ -21,6 +21,10 @@ FROM node:22-alpine
 ENV NODE_ENV=production
 WORKDIR /app
 
+# pg_dump and pg_restore for server/dist/scripts/backup.js and restore.js (see "Backup and restore" in docs/DEVELOPMENT.md).
+# The client must be at least as new as the database server; the package follows the latest Alpine release.
+RUN apk add --no-cache postgresql-client
+
 COPY --from=server-deps /app/node_modules ./node_modules
 COPY package.json ./
 COPY --from=server-build /app/server/dist ./server/dist

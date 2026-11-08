@@ -139,6 +139,9 @@ Every script runs from the repository root.
 | `npm run db:preflight` | Read-only inventory of legacy data that would block a migration (exit code 1 means blocked; `-- --json` for machine output). |
 | `npm run db:repair` | Repairs the legacy relationship rows `db:preflight` reports, without creating friendships or invitations. |
 | `npm run db:rehearse` | Rehearses the migrations on throwaway local databases before they run for real. |
+| `npm run backup` | One backup of `DATABASE_URL` and `UPLOAD_DIR` into `BACKUP_DIR`, then rotation. See [Backup and restore](#backup-and-restore). |
+| `npm run restore -- [<backup>] --confirm <database>` | Restores a backup into an empty database and uploads folder, and checks the result. |
+| `npm run backup:rehearse` | Backup, restore and a boot of the app on throwaway local databases. Needs `pg_dump` and `pg_restore`. |
 | `npm run admin:grant -- <username>` / `admin:revoke` | Gives or takes administrator access. |
 
 The scripts behind the `db:*`, `admin:*` and `test:integration` commands live in `server/src/scripts/`; each starts with a comment on what it does and how to call it.
@@ -200,6 +203,94 @@ The `upgrade` project adapts to what the base version can do and says so in the 
 The `restart` specs are the guard for the deploy behaviour described in `AGENTS.md` ("Realtime compatibility and deploys"): built against a tree without the reconnect, upload or DM-answer fixes, they fail.
 
 When you add a user-facing flow, add it to the matching spec (or a new `features/<area>.spec.ts`) and to this table.
+
+## Backup and restore
+
+`npm run backup` is the supported way to back up a deployment, `npm run restore` the way back. Both act only on the database and uploads folder the app is configured with (`DATABASE_URL`, `UPLOAD_DIR`); there is no option to aim them at another one.
+
+A backup is one folder in `BACKUP_DIR` (default `./backups`, `/app/backups` in the image), named by UTC time:
+
+```
+linkord-backup-20261108T015300Z/
+  database.dump     pg_dump, custom format
+  uploads.tar.gz    UPLOAD_DIR without tmp/
+  manifest.json     row count of every table, migrations, file counts, SHA-256 of both files
+```
+
+It is written as `<name>.partial` and renamed only when complete, so a crashed run never looks like a backup. Then everything but the newest `BACKUP_KEEP` backups is deleted. Rotation only deletes folders named exactly like the ones above that hold a `manifest.json`, so a shared folder keeps its other files, and it runs only after a new backup succeeded, so a failing disk never shrinks the history. A `.partial` folder older than a day (a crashed run) is cleaned up too.
+
+| Setting | Default | What it does |
+| --- | --- | --- |
+| `BACKUP_DIR` | `<repo>/backups` | Where backups are written and read. It cannot be inside `UPLOAD_DIR` (the archive would contain every earlier backup). |
+| `BACKUP_KEEP` | `7` | How many backups rotation keeps. A whole number, at least 1; anything else stops the run. |
+| `BACKUP_INTERVAL_SECONDS` | `86400` | Only for the `backup` compose service: the pause between backups. |
+| `PG_DUMP_BIN`, `PG_RESTORE_BIN` | `pg_dump`, `pg_restore` | Path of the PostgreSQL client tools. |
+
+The tools need `pg_dump` and `pg_restore` at least as new as the database server (the Docker image installs `postgresql-client`, the latest Alpine ships) and `tar`. On a Mac without the client tools, point the variables at a wrapper that runs them in the dev database container. The connection arrives in `PG*` variables and data goes through stdin and stdout, so this works:
+
+```sh
+#!/bin/sh
+# pg_dump-in-docker; the pg_restore twin is the same with pg_restore
+exec docker exec -i -e PGPASSWORD -e PGUSER -e PGDATABASE -e PGHOST -e PGPORT linkord-postgres-1 pg_dump "$@"
+```
+
+### Consistency between the database and the files
+
+The backup runs while people use the app, in this order:
+
+1. It opens a repeatable-read transaction, reads every table's row count and the id of every file the database refers to, and exports the snapshot. `pg_dump --snapshot` dumps that same instant, so the dump, the counts and the ids always agree, however busy the chat is.
+2. Only then does it archive `UPLOAD_DIR`. A file is written before the row that points at it, so every row in the dump already has its file. (The other order, files first, would miss the attachment of a message sent in between.)
+
+What can still differ, and what happens:
+
+- **A file deleted after the snapshot** (someone deleted a message while the archive was running): the dump has the row, the archive lacks the file. The manifest counts it (`missingFromArchive`), the backup logs a warning and the restore reports it as a warning, since the message would show a broken attachment but nothing else is lost.
+- **A file uploaded after the snapshot**: it is in the archive with no row. Harmless; the orphan sweep lists it in `/admin/system` and removes it once `ORPHAN_SWEEP_DRY_RUN=0`.
+- **Uploads in progress** (`UPLOAD_DIR/tmp/`, chunks of a file the person is still sending): not archived, since half a file is no use. After a restore the person picks the file again.
+- **Staged files** (uploaded and waiting for the message to be sent): the `staged_attachments` rows and their files are both included, and they expire 24 hours later as usual.
+- **Not in the backup:** the `.env` (database credentials, `LIVEKIT_*`, and above all the Web Push VAPID keys, without which every browser's push subscription stops working) and LiveKit itself. Keep the `.env` in your password manager or secrets store. The dump holds password hashes, sessions and every message, so treat a backup like the database itself, and encrypt it if it leaves your machine.
+
+### Running it in Docker
+
+The app image carries the scripts and the client tools, and the compose file mounts `./backups` into the `app` container:
+
+```bash
+docker compose exec app node server/dist/scripts/backup.js
+```
+
+To schedule it, pick one:
+
+- **Compose service** (nothing to install on the host): `docker compose --profile backup up -d backup` takes a backup at start and then every `BACKUP_INTERVAL_SECONDS`, reading `./uploads` read-only. Set `BACKUP_KEEP` and `BACKUP_INTERVAL_SECONDS` in `.env`.
+- **Host cron**, which fixes the time of day: `0 3 * * * cd /srv/linkord && flock -n backups/.lock docker compose exec -T app node server/dist/scripts/backup.js >> backups/backup.log 2>&1` (`flock` stops a slow backup from overlapping the next one).
+
+A backup on the same disk as the data does not survive that disk. Keep `./backups` on another volume (set `BACKUP_DIR`, or mount a different host path over `/app/backups`), and copy it off the machine after each run, for example from the same cron line: `rclone copy backups remote:linkord-backups`, `aws s3 sync backups s3://my-bucket/linkord`, or `rsync -a backups/ other-host:linkord-backups/`. Rotation here only prunes the local folder; set a lifecycle rule on the remote copy.
+
+### Restoring on a new server
+
+1. Install the app and put the `.env` in place. Point `DATABASE_URL` at a new, empty database, and make sure `UPLOAD_DIR` (`./uploads`) is empty or missing.
+2. Copy the backup folder into `BACKUP_DIR`.
+3. With the app stopped, run it. The first run only says what it would do and asks for `--confirm`; the database name you type must match the one in `DATABASE_URL`:
+
+```bash
+npm run restore -- latest --confirm linkord
+# in Docker:
+docker compose run --rm --no-deps app node server/dist/scripts/restore.js latest --confirm linkord
+```
+
+4. Start the app. It applies no migration, because the dump already has them all; if the app is newer than the backup it applies the newer ones as on any upgrade (an older app cannot read a newer database).
+
+`latest` can be replaced with a folder name inside `BACKUP_DIR` or a path. The restore refuses, before changing anything, when:
+
+- the backup's checksums do not match its manifest (a damaged or modified copy);
+- `--confirm` is missing or is not the target database's name;
+- the database already has tables (drop and recreate it yourself if that is what you want), or the uploads folder has files (it never overwrites).
+
+`pg_restore` runs in a single transaction and stops at the first error, so a failed restore leaves the database empty, and the uploads are extracted only after it succeeds.
+
+Afterwards it checks the result and prints it: every table has the number of rows the backup recorded, the migrations are all there, the number of extracted files is right, and every attachment, thumbnail, sound and staged file has its file on disk (the same comparison `/admin/system` makes). A mismatch exits with code 3. Warnings (the cases listed above) exit 0, or 3 with `--strict`. Other failures exit 1, a missing confirmation 2.
+
+### Rehearsal
+
+`npm run backup:rehearse` runs the whole path on throwaway `linkord_rehearsal_*` databases of the local Postgres (the one in `DATABASE_URL`, which must be local) and temp folders: seeds chat data and files, takes four backups with `BACKUP_KEEP=2`, restores the last into an empty database, then starts the real server on it and checks a sign-in and the byte-for-byte download of an attachment and an avatar. It also covers the refusals (no confirmation, a damaged backup, a non-empty target) and the deleted-file warning. Run it after changing the schema or anything in `server/src/scripts/backup/`; `-- --keep` leaves the databases and folders for inspection. The unit tests in `server/tests/scripts/backup/` need neither a database nor the PostgreSQL tools.
 
 ## Data retention
 
