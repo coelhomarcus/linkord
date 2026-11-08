@@ -1,4 +1,4 @@
-import { ArrowBendUpLeftIcon, CopyIcon, DownloadSimpleIcon, FileXIcon, FlagIcon, LinkBreakIcon, PencilSimpleIcon, PushPinIcon, PushPinSlashIcon, TrashIcon, UserIcon, UsersIcon, XIcon } from '@phosphor-icons/react';
+import { ArrowBendUpLeftIcon, CopyIcon, DownloadSimpleIcon, FileXIcon, FlagIcon, LinkBreakIcon, PencilSimpleIcon, TrashIcon, UserIcon, UsersIcon, XIcon } from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ReactNode } from 'react';
@@ -40,7 +40,7 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
   const {
     state,
     activeConversationId, messagesByConversation, reactToChatMessage, setReplyingTo, setEditingMsgId,
-    conversations, closeConversation, pinConversation, openReactionParticipants, removeChatAttachment, suppressChatEmbed,
+    conversations, closeConversation, openReactionParticipants, removeChatAttachment, suppressChatEmbed,
   } = useRoom();
   const [hasSelection, setHasSelection] = useState(false);
   const [downloadTarget, setDownloadTarget] = useState<{ url: string; name: string } | null>(null);
@@ -337,10 +337,6 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
           )}
           {showConversationBlock && targetConversation && (
             <>
-              <ContextMenuItem onClick={() => pinConversation(targetConversation.id, !targetConversation.pinnedAt)}>
-                {targetConversation.pinnedAt ? <PushPinSlashIcon size={16} /> : <PushPinIcon size={16} />}
-                <span>{targetConversation.pinnedAt ? t('contextMenu.unpinConversation') : t('contextMenu.pinConversation')}</span>
-              </ContextMenuItem>
               {targetConversation.type === 'direct' && (
                 <ContextMenuItem onClick={() => closeConversation(targetConversation.id)}>
                   <XIcon size={16} />

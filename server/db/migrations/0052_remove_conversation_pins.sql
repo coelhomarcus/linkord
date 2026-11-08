@@ -1,0 +1,1 @@
+ALTER TABLE "conversation_members" DROP COLUMN "pinned_at";

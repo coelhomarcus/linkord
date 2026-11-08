@@ -146,7 +146,6 @@ export interface RoomContextValue {
   openConversation: (conversationId: string) => void;
   openDirect: (userId: string) => void;
   closeConversation: (conversationId: string) => void;
-  pinConversation: (conversationId: string, pinned: boolean) => void;
   messagesByConversation: Map<string, ChatMessage[]>;
   hasMoreByConversation: Map<string, boolean>;
   loadingOlderByConversation: Set<string>;

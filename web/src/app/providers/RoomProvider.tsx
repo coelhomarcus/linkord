@@ -308,9 +308,6 @@ export function RoomProvider({ children }: { children: ReactNode }) {
       case 'conversation-updated':
         conversationsList.onConversationUpdated(m);
         break;
-      case 'conversation-pinned':
-        conversationsList.onConversationPinned(m);
-        break;
       case 'conversation-read':
         chatMessages.onConversationRead(m);
         break;
@@ -473,7 +470,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         servers: serversList.servers, serverMemberRevision: serversList.memberRevision,
         serverMemberRoleIds: serversList.memberRoleIds, setServerMemberSnapshot: serversList.setMemberSnapshot,
         reorderServers: serversList.reorderLocally,
-        openConversation, openDirect: conversationsList.openDirect, closeConversation, pinConversation: conversationsList.pinConversation,
+        openConversation, openDirect: conversationsList.openDirect, closeConversation,
         messagesByConversation: chatMessages.messagesByConversation, hasMoreByConversation: chatMessages.hasMoreByConversation,
         loadingOlderByConversation: chatMessages.loadingOlderByConversation, loadOlderMessages: chatMessages.loadOlderMessages,
         loadNewerMessages: chatMessages.loadNewerMessages, loadingNewerByConversation: chatMessages.loadingNewerByConversation,

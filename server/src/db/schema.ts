@@ -135,9 +135,6 @@ export const conversationMembers = pgTable('conversation_members', {
   // leaves their own history list without deleting anything). listForUser
   // hides it again until a message newer than this arrives.
   hiddenAt: timestamp('hidden_at', { withTimezone: true }),
-  // per-member pin — purely a personal sidebar preference, doesn't touch the
-  // conversation itself or anyone else's row. Pinned DMs sort first.
-  pinnedAt: timestamp('pinned_at', { withTimezone: true }),
   joinedAt: timestamp('joined_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
   uniqueIndex('conversation_members_conversation_user_key').on(t.conversationId, t.userId),

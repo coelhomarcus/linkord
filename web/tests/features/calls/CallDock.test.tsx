@@ -8,7 +8,7 @@ import type { Conversation } from '@/shared/types/protocol';
 
 const group: Conversation = {
   id: 'conv-1', type: 'voice', title: 'os xerecas', serverId: 's1', memberIds: ['me'],
-  lastMessageAt: null, createdAt: 0, updatedAt: 0, pinnedAt: null,
+  lastMessageAt: null, createdAt: 0, updatedAt: 0,
 };
 
 const me = { ...initialRoomState, me: { ...initialRoomState.me, userId: 'me', displayName: 'Fulana' } };

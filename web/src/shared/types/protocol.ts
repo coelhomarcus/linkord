@@ -26,8 +26,8 @@ export type ReactionEmoji = string;
 
 /** Wire protocol version this build speaks; the server refuses older ones
  * (client_outdated). Keep in sync with server/src/realtime/protocolVersion.ts
- * — version 7 moves connection edits out of profile patches. */
-export const PROTOCOL_VERSION = 8;
+ * — version 9 drops pinned conversations. */
+export const PROTOCOL_VERSION = 9;
 
 export interface ChatReplyRef {
   msgId: number;
@@ -161,7 +161,6 @@ export interface Conversation {
   lastMessageAt: number | null;
   createdAt: number;
   updatedAt: number;
-  pinnedAt: number | null;
   topic?: string;
   categoryId?: string | null;
   position?: number;
@@ -252,7 +251,6 @@ export type ClientMessage =
   | { t: 'conversation-mark-read'; conversationId: string; msgId: number }
   | { t: 'direct-open'; userId: string }
   | { t: 'conversation-close'; conversationId: string }
-  | { t: 'conversation-pin'; conversationId: string; pinned: boolean }
   | { t: 'load-more-messages'; conversationId: string; beforeMsgId: number; requestId?: string }
   | { t: 'load-messages-after'; conversationId: string; afterMsgId: number; requestId?: string }
   | { t: 'load-messages-around'; conversationId: string; msgId: number; requestId?: string }
@@ -330,7 +328,6 @@ export type ServerMessage =
   | { t: 'server-member-added'; serverId: string; userId: string }
   | { t: 'server-member-removed'; serverId: string; userId: string }
   | { t: 'server-member-updated'; serverId: string; userId: string; roleIds: string[] }
-  | { t: 'conversation-pinned'; conversationId: string; pinnedAt: number | null }
   | { t: 'conversation-read'; conversationId: string; lastReadMessageId: number }
   | { t: 'conversation-history'; conversationId: string; messages: ChatMessage[]; hasMore: boolean; firstUnreadMessageId?: number | null }
   | { t: 'conversation-history-more'; conversationId: string; messages: ChatMessage[]; hasMore: boolean; requestId?: string }

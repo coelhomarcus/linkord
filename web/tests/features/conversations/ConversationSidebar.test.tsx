@@ -15,7 +15,7 @@ const bea: PublicUser = { id: 'u-bea', username: 'bea', displayName: 'Bea', avat
 const caio: PublicUser = { ...bea, id: 'u-caio', username: 'caio', displayName: 'Caio' };
 
 const direct = (id: string, peer: string): Conversation => ({
-  id, type: 'direct', title: '', serverId: null, memberIds: ['me', peer], lastMessageAt: Date.now(), createdAt: 0, updatedAt: 0, pinnedAt: null,
+  id, type: 'direct', title: '', serverId: null, memberIds: ['me', peer], lastMessageAt: Date.now(), createdAt: 0, updatedAt: 0,
 });
 
 const everyone = PERMISSIONS.VIEW_CHANNEL | PERMISSIONS.SEND_MESSAGES | PERMISSIONS.CONNECT | PERMISSIONS.CREATE_INVITE;

@@ -6,7 +6,7 @@ import { renderWithRoom } from '@tests/fixtures/roomContextFixture';
 import { ActiveNowPanel } from '@/features/friends/ActiveNowPanel';
 import type { Conversation, Participant, ServerSummary } from '@/shared/types/protocol';
 
-const voice: Conversation = { id: 'voz', type: 'voice', title: 'Geral', serverId: 's1', memberIds: [], lastMessageAt: null, createdAt: 0, updatedAt: 0, pinnedAt: null };
+const voice: Conversation = { id: 'voz', type: 'voice', title: 'Geral', serverId: 's1', memberIds: [], lastMessageAt: null, createdAt: 0, updatedAt: 0 };
 const server = { id: 's1', name: 'Squad', icon: '', channels: [], categories: [], roles: [] } as unknown as ServerSummary;
 const inCall = (userId: string, name: string, callConversationId: string | null = 'voz') =>
   ({ id: `p-${userId}`, userId, displayName: name, avatar: '', avatarPoster: '', avatarColor: '', callConversationId }) as Participant;

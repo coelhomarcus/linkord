@@ -26,7 +26,7 @@ const joinedState = { ...initialRoomState, joined: true };
 describe('ConversationPanel — call button', () => {
   const direct: Conversation = {
     id: 'c1', type: 'direct', title: '', serverId: null, memberIds: ['me', 'peer'],
-    lastMessageAt: null, createdAt: 0, updatedAt: 0, pinnedAt: null,
+    lastMessageAt: null, createdAt: 0, updatedAt: 0,
   };
   const me = { ...joinedState, me: { ...initialRoomState.me, userId: 'me' } };
 
@@ -96,7 +96,7 @@ describe('ConversationPanel — call button', () => {
 describe('ConversationPanel — DM header', () => {
   const direct: Conversation = {
     id: 'c1', type: 'direct', title: '', serverId: null, memberIds: ['me', 'peer'],
-    lastMessageAt: null, createdAt: 0, updatedAt: 0, pinnedAt: null,
+    lastMessageAt: null, createdAt: 0, updatedAt: 0,
   };
   const peer: PublicUser = {
     id: 'peer', username: 'peer', displayName: 'Peer', avatar: '', avatarColor: 'blurple',
@@ -145,7 +145,7 @@ describe('ConversationPanel — DM header', () => {
 describe('ConversationPanel — right panel buttons', () => {
   const group: Conversation = {
     id: 'g1', type: 'text', title: 'Time', serverId: 's1', memberIds: ['me', 'peer'],
-    lastMessageAt: null, createdAt: 0, updatedAt: 0, pinnedAt: null,
+    lastMessageAt: null, createdAt: 0, updatedAt: 0,
   };
   const me = { ...joinedState, me: { ...initialRoomState.me, userId: 'me' } };
 
@@ -183,7 +183,7 @@ describe('ConversationPanel — right panel buttons', () => {
 describe('ConversationPanel — phone list route', () => {
   const group: Conversation = {
     id: 'g1', type: 'text', title: 'Squad', serverId: 's1', memberIds: ['me'],
-    lastMessageAt: null, createdAt: 0, updatedAt: 0, pinnedAt: null,
+    lastMessageAt: null, createdAt: 0, updatedAt: 0,
   };
 
   function renderAt(path: string) {
@@ -221,7 +221,7 @@ describe('ConversationPanel — phone list route', () => {
 describe('ConversationPanel — phone Voltar', () => {
   const group: Conversation = {
     id: 'g1', type: 'text', title: 'Squad', serverId: 's1', memberIds: ['me'],
-    lastMessageAt: null, createdAt: 0, updatedAt: 0, pinnedAt: null,
+    lastMessageAt: null, createdAt: 0, updatedAt: 0,
   };
   function WhereAmI() {
     const navigate = useNavigate();
