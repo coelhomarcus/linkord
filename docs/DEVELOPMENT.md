@@ -166,6 +166,8 @@ npm run test:e2e
 - `npm run test:e2e:restart`: calls, messages and uploads across a redeploy of the same build.
 - `npm run test:e2e:upgrade`: tabs opened on the production version (`origin/main`, or `E2E_BASE_REF`) while the server is upgraded to the working tree.
 
+The app image runs as the non-root `node` user, while the base version of the upgrade specs may still run as root. `deploy()` in `e2e/stack/stack.ts` therefore runs the `chown -R node:node /app/uploads` that the README asks for before an upgrade.
+
 Each run builds `linkord-e2e:head` from the working tree (uncommitted changes included; Docker's cache keeps an unchanged tree fast), starts the stack, runs, and removes it. The base version is built once per commit and reused. `E2E_KEEP_STACK=1` leaves the stack up at `http://localhost:8080`, `E2E_HEADED=1` shows the browsers, `E2E_RETRIES=0` turns retries off, and `E2E_HEAD_IMAGE=<tag>` runs against an image you built yourself instead of the working tree (build a deliberately broken tree to check that a spec catches the regression).
 
 The `upgrade` project adapts to what the base version can do and says so in the report's annotations: if it predates call persistence it expects old tabs to rejoin their call, if its shutdown still disconnects sockets it focuses old tabs to bring them back, and if the working tree raised `MIN_PROTOCOL_VERSION` past the base's protocol it only expects the update screen. A failure keeps a trace, video and screenshot: `npm run report --prefix e2e` opens the HTML report, and `npx playwright show-trace <trace.zip>` (from `e2e/`) replays it step by step.
@@ -251,7 +253,7 @@ What can still differ, and what happens:
 
 ### Running it in Docker
 
-The app image carries the scripts and the client tools, and the compose file mounts `./backups` into the `app` container:
+The app image carries the scripts and the client tools, and the compose file mounts `./backups` into the `app` container. The container runs as `node` (uid 1000), so `./backups` and `./uploads` must be owned by `1000:1000` (see the README).
 
 ```bash
 docker compose exec app node server/dist/scripts/backup.js
@@ -266,7 +268,7 @@ A backup on the same disk as the data does not survive that disk. Keep `./backup
 
 ### Restoring on a new server
 
-1. Install the app and put the `.env` in place. Point `DATABASE_URL` at a new, empty database, and make sure `UPLOAD_DIR` (`./uploads`) is empty or missing.
+1. Install the app and put the `.env` in place. Point `DATABASE_URL` at a new, empty database, and make sure `UPLOAD_DIR` (`./uploads`) is empty or missing (in Docker, an empty folder owned by `1000:1000`).
 2. Copy the backup folder into `BACKUP_DIR`.
 3. With the app stopped, run it. The first run only says what it would do and asks for `--confirm`; the database name you type must match the one in `DATABASE_URL`:
 

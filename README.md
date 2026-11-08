@@ -57,7 +57,16 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
-The container applies pending migrations on startup by default. Set `MIGRATE_ON_BOOT=0` to run migrations separately with `npm run db:migrate`. The compose file persists uploaded files in `./uploads`.
+The container applies pending migrations on startup by default. Set `MIGRATE_ON_BOOT=0` to run migrations separately with `npm run db:migrate`. The compose file persists uploaded files in `./uploads` and backups in `./backups`.
+
+**The container does not run as root.** The process runs as the `node` user (uid 1000) and cannot write to its own code, only to `./uploads` and `./backups`. Compose also sets `no-new-privileges` and drops every Linux capability. Docker creates a missing bind-mounted folder owned by root, so on a **new install** create both folders first, and on an **existing install** change the owner once before deploying this version, or uploads and backups fail with a permission error (the Dokploy volume path works the same way):
+
+```bash
+mkdir -p uploads backups
+sudo chown -R 1000:1000 uploads backups
+```
+
+To confirm it, `docker compose exec app id` prints `uid=1000(node)`.
 
 **Run a single instance.** Linkord does not scale horizontally today: do not put replicas behind a load balancer. The server keeps live state in the memory of its own process (who is online and in which call, caches, login and flood rate limits, upload reservations) and Socket.IO has no shared adapter, so a second instance would not see the first one's users, calls or limits. Uploaded files also live on the local `./uploads` disk. What would have to change for several instances is listed in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md#single-instance-assumption).
 
