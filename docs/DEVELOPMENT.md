@@ -225,6 +225,32 @@ Login sessions (deleted when they expire) and chat send operations (a fixed 7 da
 
 Restarting `npm run dev` (or deploying) while you are in a call should leave the call running: the clients reconnect and the server restores who was in which call. To see it, join a voice channel with two accounts, stop and start `npm run dev`, and check that both stay connected without touching either tab. The rules that keep this working are in `AGENTS.md` ("Realtime compatibility and deploys"), and the `restart` end-to-end specs check it on every run.
 
+## Single-instance assumption
+
+The server is written for **one process**. Running two behind a load balancer is unsupported and breaks things quietly, so the README tells operators not to. This section is the inventory for whoever decides to change that; nothing here is planned work.
+
+What lives in the memory (or on the local disk) of the process, and what a second instance would get wrong:
+
+| State | Where | What goes wrong with two instances | What it would need |
+| --- | --- | --- | --- |
+| Socket.IO rooms and broadcasts | `realtime/socket.ts` (no adapter) | An event emitted on one instance never reaches the sockets connected to the other | A shared adapter (Redis or Postgres) and sticky sessions for the transport upgrade |
+| Presence, call participants, resume tokens, restored ghosts | `modules/presence/participants.ts` | "Online" lists, call tiles and `join {id, token}` resumes only know the sockets of their own instance. Call membership is persisted for restarts (`call_presence`), but it is read back only at boot by `restoreCalls` | Presence and participants in shared storage, and `restoreCalls` made aware of which instance owns a connection |
+| DM call state machine and ring timers | `modules/calls/dmCalls.ts` | The timers and the live state are per process; `dm_calls_active` is only read at boot | The state machine driven from shared storage, with the timeout owned by one instance |
+| Login rate limit | `modules/auth/ratelimit.ts` | Each instance counts failures on its own, so the limit is multiplied by the number of instances. Persisting it in Postgres is tracked as LINKORD-43 and is the first step in this direction | Attempts stored in Postgres |
+| Socket flood control | `realtime/floodControl.ts` | Same: per-instance windows | Shared counters |
+| Link preview rate limit, cache and in-flight requests | `modules/link-preview/linkPreview.ts` | Per-instance quota, and the same URL is fetched once per instance | Shared counters; the cache can stay per instance |
+| Login session cache (60 s) | `modules/auth/session.ts` | A logout, ban or profile save invalidates the cache of one instance only; the other keeps the old session for up to 60 s | Invalidation broadcast to every instance, or no cache |
+| Server snapshot cache (roles, members, channels, overwrites) | `modules/servers/serverAccess.ts` | `invalidateServer` clears one instance. The others keep serving stale permissions until they restart | Invalidation broadcast, or a version check on each read |
+| Game search cache | `modules/games/gameSearch.ts` | Harmless: only a cache. The IGDB request pacing already goes through a Postgres slot (`igdbLimiter.ts`) | Nothing |
+| Upload reservations and the init lock | `modules/attachments/uploadSession.ts` (`pendingUploadBytes`, `withInitLock`, `completingUploads`) | The storage quota check and the "one complete per upload" guard only see their own instance | Reservations in Postgres, and a database lock in place of the in-memory one |
+| Uploaded files and chunks | `./uploads` on the local disk | An instance cannot read what the other stored. The orphan sweep also compares one disk with one database | A shared volume or object storage |
+| Profile edit serialization | `modules/presence/profileQueue.ts` | Two tabs of one account on different instances can patch the profile out of order | A per-account database lock |
+| Embed backfill guard, retention and orphan sweep reports | `modules/messages/messageEmbeds.ts`, `modules/retention/`, `modules/attachments/orphanSweeper.ts` | A repeated backfill is wasted work; the admin page shows the report of whichever instance answered | Optional: an advisory lock, and reports stored in the database |
+
+Already safe with several instances, because they coordinate through Postgres: the outbox drain (rows are claimed with `skip locked` and a lease), the profile connection sync, the IGDB request pacing, user-pair locks, and the report-resolution advisory lock.
+
+When you add state that lives in the process, add a row to the table above.
+
 ## Profile connections and Wall
 
 Connections (Settings → Connections) can be a URL, a MyAnimeList account or a GitHub account. They are self-declared: ownership is not verified. Each has a "Show on profile" switch (`show_on_profile`, on by default); turned off, the connection stays in the owner's settings but leaves the public links and the Wall, and its saved widgets come back when it is shown again. Only widgets the owner added and saved appear on their Wall.
