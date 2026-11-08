@@ -17,7 +17,6 @@
     "removeAvatar": "Remove picture",
     "viewAvatar": "View profile picture full screen",
     "useColor": "Use {{name}}",
-    "customColorLabel": "Choose custom color",
     "displayName": "Display name",
     "openLink": "Open {{name}}",
     "admin": "Admin"
@@ -126,8 +125,6 @@
     "manageConnections": "Manage connections",
     "emptyOwner": "Your Wall is empty. Add a widget to choose what shows.",
     "emptyVisitor": "This user has not published any Wall widgets yet.",
-    "moveUp": "Move {{name}} up",
-    "moveDown": "Move {{name}} down",
     "remove": "Remove {{name}}",
     "unavailable": "Could not load data for this widget.",
     "pending": "Data will appear after the first sync.",
@@ -186,7 +183,16 @@
     "connectTitle": "Connect your {{service}} account",
     "connectHint": "The {{service}} widgets show up here once the account is connected. Account ownership is not verified.",
     "connect": "Connect",
-    "connecting": "Connecting…"
+    "connecting": "Connecting…",
+    "sortable": {
+      "role": "reorderable widget",
+      "handle": "Reorder {{name}}",
+      "instructions": "To reorder, press Space or Enter, use the up and down arrows, and press Space or Enter again to drop. Escape cancels.",
+      "picked": "Picked up {{name}}, at position {{position}} of {{total}}.",
+      "moved": "{{name}} is at position {{position}} of {{total}}.",
+      "dropped": "{{name}} was dropped at position {{position}} of {{total}}.",
+      "cancelled": "Cancelled. {{name}} went back to position {{position}}."
+    }
   },
   "editor": {
     "fileTooLarge": "File too large (maximum {{max}}).",
@@ -200,7 +206,6 @@
     },
     "avatarInput": "Select profile photo",
     "bannerInput": "Select banner",
-    "formats": "PNG, JPEG, GIF or WEBP, up to {{max}}. Photo and banner apply as soon as you confirm the crop; name, color and bio only after saving. Connections are saved separately.",
     "saved": "Profile saved.",
     "conflict": "This profile was updated elsewhere while you were editing.",
     "useSaved": "Use saved values",
@@ -225,5 +230,17 @@
     "saving": "Saving…",
     "discardAndLeave": "Discard and leave",
     "continueEditing": "Keep editing"
+  },
+  "colorPicker": {
+    "title": "Profile color",
+    "label": "Color",
+    "trigger": "Profile color: {{name}}",
+    "saturation": "Saturation and brightness",
+    "saturationValue": "Saturation {{saturation}}%, brightness {{brightness}}%",
+    "hue": "Hue",
+    "hex": "Color hex code",
+    "eyedropper": "Pick a color from the screen",
+    "presets": "Presets",
+    "darkNote": "A dark color: Wall widgets show it lighter, like the dot, so it stays visible."
   }
 }

@@ -11,11 +11,10 @@ import { newId, filePathFor } from './attachmentStorage.js';
 import { generateThumbnail, readImageDimensions, readImagePlaceholder, THUMBNAIL_SOURCE_MIME_TYPES } from './attachmentThumbnails.js';
 import { discardStaged, findOwnedStaged, stageFile } from './stagedAttachments.js';
 import type { StagedAttachment } from '../../db/schema.js';
-import { getUsage, sendUsageToUser } from './attachmentQuota.js';
-import { exceedsLimit, getUserStorageBytes, limitMax } from '../limits/limits.js';
+import { getUsage } from './attachmentQuota.js';
 import {
   tmpDirFor, manifestPathFor, chunkPathFor, readManifest, expectedChunkLength, assembleChunks, sanitizeFileName,
-  reserveUpload, releaseUpload, getReservedBytes, getReservedBytesForUser, withInitLock, completingUploads,
+  reserveUpload, releaseUpload, getReservedBytes, withInitLock, completingUploads,
 } from './uploadSession.js';
 import type { UploadManifest } from './uploadSession.js';
 import * as floodControl from '../../realtime/floodControl.js';
@@ -81,20 +80,13 @@ export async function handleAttachmentInit(request: FastifyRequest, reply: Fasti
   // bytes can be sent — see uploadSession.ts#pendingUploadBytes for why this
   // has to be check-then-reserve, atomically, rather than just checking
   // getUsage().
-  const reserved = await withInitLock(async (): Promise<'ok' | 'storage_full' | 'quota_exceeded'> => {
-    // the account's own quota first: what it already stored + what it already
-    // has in flight + this file. Then the instance-wide ceiling.
-    const own = (await getUserStorageBytes(sess.userId)) + getReservedBytesForUser(sess.userId);
-    if (exceedsLimit(own, limitMax('storage'), totalSize)) return 'quota_exceeded';
+  // there is no per-account quota: only each file's size and the instance-wide ceiling
+  const reserved = await withInitLock(async (): Promise<'ok' | 'storage_full'> => {
     const usage = await getUsage();
     if (usage.totalBytes + getReservedBytes() + totalSize > config.MAX_STORAGE_BYTES) return 'storage_full';
-    reserveUpload(uploadId, totalSize, sess.userId);
+    reserveUpload(uploadId, totalSize);
     return 'ok';
   });
-  if (reserved === 'quota_exceeded') {
-    log.info('upload refused: account storage quota', { userId: sess.userId, totalSize });
-    return sendError(reply, 400, 'quota_exceeded', 'Você atingiu o seu limite de armazenamento. Apague arquivos seus antes de enviar mais.');
-  }
   if (reserved === 'storage_full') {
     log.warn('upload refused: instance storage is full', { userId: sess.userId, totalSize });
     return sendError(reply, 400, 'storage_full', 'Armazenamento cheio (30GB no total). Apague arquivos antigos antes de enviar mais.');
@@ -241,7 +233,6 @@ async function completeStaged(reply: FastifyReply, manifest: UploadManifest, use
   await fs.rm(tmpDirFor(uploadId), { recursive: true, force: true })
     .catch((err) => log.error('failed to delete chunks after assembly', err));
   releaseUpload(uploadId);
-  await sendUsageToUser(userId);
   log.info('upload staged', { uploadId, userId, conversationId: manifest.conversationId, bytes: manifest.totalSize });
   sendJson(reply, 201, { staged: stagedPayload(staged) });
 }
@@ -260,6 +251,6 @@ export async function handleAttachmentCancel(request: FastifyRequest<{ Params: {
     releaseUpload(uploadId);
   }
   // or a file that finished staging and was then dropped from the batch
-  if (await discardStaged(uploadId, sess.userId)) await sendUsageToUser(sess.userId);
+  await discardStaged(uploadId, sess.userId);
   sendJson(reply, 200, { ok: true });
 }

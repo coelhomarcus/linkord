@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import userEvent from '@testing-library/user-event';
 import { initialRoomState } from '@/state/roomReducer';
@@ -84,11 +84,13 @@ describe('ProfileEditor', () => {
     Element.prototype.scrollIntoView = scrollIntoView;
     try {
       renderEditor({ state: { ...initialRoomState, me: { ...initialRoomState.me, id: 'c', userId: 'u', name: 'Fulana', displayName: 'Fulana', avatarColor: 'green' } } });
-      const swatch = screen.getByRole('button', { name: 'Usar Fuchsia' });
-      await user.click(swatch);
+      const trigger = screen.getByRole('button', { name: 'Cor do perfil: Verde' });
+      await user.click(trigger);
+      await user.click(await screen.findByRole('button', { name: 'Usar Fuchsia' }));
 
       expect(screen.getByRole('region', { name: 'Salvar alterações do perfil' })).toBeInTheDocument();
-      expect(scrollIntoView.mock.contexts).toContain(swatch);
+      // the colour field in the profile, not the swatch inside the popover
+      expect(scrollIntoView.mock.contexts).toContain(trigger);
     } finally {
       Element.prototype.scrollIntoView = original;
     }
@@ -112,9 +114,10 @@ describe('ProfileEditor', () => {
 
     renderEditor({ state, updateProfile });
 
-    await user.click(screen.getByRole('button', { name: 'Usar Fuchsia' }));
+    await user.click(screen.getByRole('button', { name: 'Cor do perfil: Verde' }));
+    await user.click(await screen.findByRole('button', { name: 'Usar Fuchsia' }));
     await user.click(screen.getByRole('button', { name: 'Salvar perfil' }));
-    expect(await screen.findByRole('status')).toHaveTextContent('Perfil salvo.');
+    expect(await screen.findByText('Perfil salvo.')).toHaveAttribute('role', 'status');
 
     expect(updateProfile).toHaveBeenCalledWith({
       avatar: '',
@@ -161,7 +164,7 @@ describe('ProfileEditor', () => {
     });
   });
 
-  it('saves a custom color (outside the presets) chosen in the color picker', async () => {
+  it('saves a custom color (outside the presets) typed in the color picker', async () => {
     const user = userEvent.setup();
     const updateProfile = vi.fn();
     const state = {
@@ -179,7 +182,11 @@ describe('ProfileEditor', () => {
 
     renderEditor({ state, updateProfile });
 
-    fireEvent.change(screen.getByLabelText('Escolher cor personalizada'), { target: { value: '#a1b2c3' } });
+    await user.click(screen.getByRole('button', { name: 'Cor do perfil: Verde' }));
+    const hex = await screen.findByLabelText('Código hexadecimal da cor');
+    await user.clear(hex);
+    await user.type(hex, 'a1b2c3');
+    await user.keyboard('{Escape}');
     await user.click(screen.getByRole('button', { name: 'Salvar perfil' }));
 
     expect(updateProfile).toHaveBeenCalledWith({
@@ -283,7 +290,7 @@ describe('ProfileEditor', () => {
     await user.upload(screen.getByLabelText('Selecionar foto de perfil'), new File(['conteudo'], 'foto.gif', { type: 'image/gif' }));
     await user.click(screen.getByRole('button', { name: 'Confirmar recorte' }));
 
-    expect(await screen.findByRole('status')).toHaveTextContent('Processando imagem…');
+    expect((await screen.findByText('Processando imagem…')).closest('[role="status"]')).not.toBeNull();
     expect(screen.queryByText('Enviando a foto de perfil…')).not.toBeInTheDocument();
 
     finishUpload?.();
@@ -384,7 +391,7 @@ describe('ProfileEditor', () => {
     await user.type(screen.getByLabelText('Bio'), 'Bio nova');
     await user.click(screen.getByRole('button', { name: 'Salvar perfil' }));
 
-    expect(await screen.findByRole('status')).toHaveTextContent('Perfil salvo.');
+    expect(await screen.findByText('Perfil salvo.')).toHaveAttribute('role', 'status');
     expect(screen.queryByText('Usar valores salvos')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Salvar perfil' })).not.toBeInTheDocument();
   });

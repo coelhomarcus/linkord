@@ -15,7 +15,6 @@ import { listForUser, getConversationForUser, unreadCountsForUser } from '../mod
 import { listServersForUser } from '../modules/servers/serverSummaries.js';
 import { PERMISSIONS } from '../modules/servers/permissions.js';
 import { type ErrorCode } from '../http/errors.js';
-import { getUserUsage } from '../modules/attachments/attachmentQuota.js';
 import * as moderation from '../modules/moderation/moderation.js';
 import * as streamPreview from '../modules/calls/streamPreview.js';
 import * as dmCalls from '../modules/calls/dmCalls.js';
@@ -116,7 +115,10 @@ async function handleJoin(socket: AppSocket, msg: JoinMessage): Promise<void> {
     conversations: conversationList,
     servers: serverList,
     unreadByConversation: await unreadCountsForUser(p.userId, [...conversationList.map((c) => c.id), ...textChannelIds]),
-    storageUsage: await getUserUsage(p.userId),
+    // the largest file this server takes, so the composer refuses a bigger one before uploading it
+    maxAttachmentBytes: config.MAX_ATTACHMENT_BYTES,
+    // tabs from before accounts lost their storage quota (protocol 7) read this; nothing counts it any more
+    storageUsage: { totalBytes: 0, totalFiles: 0, maxBytes: 0 },
     livekitUrl: config.LIVEKIT_URL,
     // lets a reconnecting client notice the server no longer has it in the call it is still connected to
     callConversationId: p.callConversationId,

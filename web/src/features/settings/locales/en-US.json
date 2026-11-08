@@ -28,7 +28,6 @@
     },
     "sections": {
       "accountInfo": "Account information",
-      "storage": "Storage",
       "session": "Session",
       "blocked": "Blocked accounts",
       "theme": "Theme",
@@ -51,10 +50,6 @@
     "email": {
       "title": "Email",
       "keywords": "e-mail, change email, confirm email, code"
-    },
-    "storage": {
-      "title": "Storage",
-      "keywords": "space, quota, files, storage"
     },
     "session": {
       "title": "Session",
@@ -122,14 +117,6 @@
       "label": "Display name"
     },
     "edit": "Edit",
-    "storage": {
-      "label": "Uploaded attachments",
-      "bar": "Storage used",
-      "usage_zero": "No files uploaded.",
-      "usage_one": "{{count}} file uploaded.",
-      "usage_other": "{{count}} files uploaded.",
-      "amount": "{{used}} of {{max}}"
-    },
     "logout": {
       "label": "Sign out",
       "description": "Ends the session in this browser.",

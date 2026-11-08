@@ -154,6 +154,21 @@ describe('MessageComposer', () => {
     expect(queueMessageWithFiles).toHaveBeenCalledWith('conv-1', '', undefined, [{ file: original, compress: true }]);
   });
 
+  it('refuses a file over the limit the server announced, and takes one at the limit', async () => {
+    const user = userEvent.setup();
+    const queueMessageWithFiles = vi.fn();
+    const { container } = renderWithRoom(<MessageComposer conversationId="conv-1" />, {
+      state: joinedState, maxAttachmentBytes: 10, queueMessageWithFiles,
+    });
+    const input = container.querySelector<HTMLInputElement>('input[type="file"]')!;
+    await user.upload(input, new File(['x'.repeat(11)], 'grande.bin', { type: 'application/octet-stream' }));
+    expect(await screen.findByText(/"grande.bin" é grande demais/)).toBeInTheDocument();
+    const atLimit = new File(['x'.repeat(10)], 'certo.bin', { type: 'application/octet-stream' });
+    await user.upload(input, atLimit);
+    await user.click(screen.getByRole('button', { name: 'Enviar mensagem' }));
+    expect(queueMessageWithFiles).toHaveBeenCalledWith('conv-1', '', undefined, [expect.objectContaining({ file: atLimit })]);
+  });
+
   it('with the toggle off, the batch goes to the outbox without marking compression', async () => {
     const user = userEvent.setup();
     const queueMessageWithFiles = vi.fn();

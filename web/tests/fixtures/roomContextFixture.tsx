@@ -5,6 +5,7 @@ import { Room } from 'livekit-client';
 import { RoomContext } from '@/state/RoomContext';
 import type { RoomContextValue } from '@/state/RoomContext';
 import { initialRoomState } from '@/state/roomReducer';
+import { DEFAULT_MAX_ATTACHMENT_BYTES } from '@/shared/types/protocol';
 
 export function createFakeRoomContextValue(overrides: Partial<RoomContextValue> = {}): RoomContextValue {
   const noop = () => {};
@@ -140,7 +141,7 @@ export function createFakeRoomContextValue(overrides: Partial<RoomContextValue> 
     searchError: null,
     clearSearchError: noop,
     searchMessages: noop,
-    storageUsage: { totalBytes: 0, totalFiles: 0, maxBytes: 0 },
+    maxAttachmentBytes: DEFAULT_MAX_ATTACHMENT_BYTES,
   };
   return { ...base, ...overrides };
 }
