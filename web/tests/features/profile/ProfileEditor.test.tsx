@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import userEvent from '@testing-library/user-event';
@@ -9,6 +9,8 @@ import { RoomContext } from '@/state/RoomContext';
 import type { RoomContextValue } from '@/state/RoomContext';
 import { ProfileModal } from '@/features/profile/ProfileModal';
 import { ProfileSaveRefused } from '@/features/profile/useProfileUpdate';
+import * as profileApi from '@/features/profile/profileApi';
+import type { WallWidget } from '@/features/profile/connectionsTypes';
 import type { PublicUser } from '@/shared/types/protocol';
 
 vi.mock('@/features/profile/profileApi', async (importOriginal) => {
@@ -498,6 +500,86 @@ describe('ProfileEditor — closing with a pending draft', () => {
     const user = userEvent.setup();
     const { onClose } = renderEditor({ state: userState });
     await screen.findByLabelText('Bio');
+    await user.keyboard('{Escape}');
+    expect(screen.queryByText('Alterações não salvas')).not.toBeInTheDocument();
+    expect(onClose).toHaveBeenCalled();
+  });
+});
+
+describe('ProfileEditor — closing with a pending Wall draft', () => {
+  const userState = { ...initialRoomState, me: { ...initialRoomState.me, id: 'conn-1', userId: 'user-1', name: 'Fulana', displayName: 'Fulana', bio: 'bio original' } };
+  const favorite: WallWidget = { connection: null, type: 'igdb-favorite-game', data: { kind: 'games', items: [] } };
+  const fetchWall = vi.mocked(profileApi.fetchWall);
+  const saveWall = vi.mocked(profileApi.saveWall);
+  beforeEach(() => {
+    saveWall.mockReset();
+    fetchWall.mockResolvedValue({ widgets: [], available: [favorite] });
+  });
+
+  /** Adds a widget to the Wall, which leaves a draft only the Wall's own bar would save. */
+  async function addWidget(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(await screen.findByRole('button', { name: 'Adicionar widget' }));
+    await user.click(within(await screen.findByRole('dialog', { name: 'Adicionar widget de perfil' })).getByRole('button', { name: 'Jogo favorito' }));
+    await screen.findByRole('region', { name: 'Salvar alterações do Mural' });
+  }
+
+  it('asks before closing, and discarding drops the Wall draft without saving it', async () => {
+    const user = userEvent.setup();
+    const { onClose } = renderEditor({ state: userState });
+    await addWidget(user);
+    await user.keyboard('{Escape}');
+    expect(await screen.findByText('Alterações não salvas')).toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: 'Descartar e sair' }));
+    expect(onClose).toHaveBeenCalled();
+    expect(saveWall).not.toHaveBeenCalled();
+  });
+
+  it('save and leave saves the Wall, and the profile only if it changed, then closes', async () => {
+    const user = userEvent.setup();
+    const updateProfile = vi.fn();
+    saveWall.mockResolvedValue({ widgets: [favorite], available: [favorite] });
+    const { onClose } = renderEditor({ state: userState, updateProfile });
+    await addWidget(user);
+    await user.keyboard('{Escape}');
+    await user.click(await screen.findByRole('button', { name: 'Salvar e sair' }));
+    expect(saveWall).toHaveBeenCalledWith([{ connectionId: null, type: 'igdb-favorite-game' }]);
+    expect(updateProfile).not.toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it('keeps the dialog open and says why when the Wall cannot be saved', async () => {
+    const user = userEvent.setup();
+    saveWall.mockRejectedValue(new Error('offline'));
+    const { onClose } = renderEditor({ state: userState });
+    await addWidget(user);
+    await user.keyboard('{Escape}');
+    await user.click(await screen.findByRole('button', { name: 'Salvar e sair' }));
+    const dialog = screen.getByRole('dialog', { name: 'Alterações não salvas' });
+    expect(await within(dialog).findByText('Não foi possível salvar o Mural. Confira as conexões e tente novamente.')).toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('asks before the Wall sends you to the connections settings too', async () => {
+    const user = userEvent.setup();
+    const { onClose } = renderEditor({ state: userState });
+    await addWidget(user);
+    await user.click(screen.getByRole('button', { name: 'Adicionar widget' }));
+    await user.click(within(await screen.findByRole('dialog', { name: 'Adicionar widget de perfil' })).getByRole('button', { name: 'Gerenciar conexões' }));
+    await screen.findByText('Alterações não salvas');
+    expect(onClose).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: 'Descartar e sair' }));
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it('closes at once once the Wall is saved with its own bar', async () => {
+    const user = userEvent.setup();
+    saveWall.mockResolvedValue({ widgets: [favorite], available: [favorite] });
+    const { onClose } = renderEditor({ state: userState });
+    await addWidget(user);
+    await user.click(within(screen.getByRole('region', { name: 'Salvar alterações do Mural' })).getByRole('button', { name: 'Salvar' }));
+    await vi.waitFor(() => expect(screen.queryByRole('region', { name: 'Salvar alterações do Mural' })).not.toBeInTheDocument());
     await user.keyboard('{Escape}');
     expect(screen.queryByText('Alterações não salvas')).not.toBeInTheDocument();
     expect(onClose).toHaveBeenCalled();

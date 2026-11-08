@@ -6,7 +6,7 @@ import { Button } from '@/shared/ui/primitives/button';
 import { Tabs, TabsIndicator, TabsList, TabsPanel, TabsTrigger } from '@/shared/ui/primitives/tabs';
 import { useRoom } from '@/state/RoomContext';
 import { ServerIcon } from '@/features/servers/ServerIcon';
-import { ProfileWall } from './ProfileWall';
+import { ProfileWall, type WallDraft } from './ProfileWall';
 import type { ProfileDetails } from '@/shared/api/api';
 import { UserStatusDot } from '@/features/status/UserStatus';
 
@@ -23,7 +23,7 @@ function Truncated({ shown, total }: { shown: number; total: number }) {
 }
 
 /** Keeps the Wall and mutual relationships beside the profile card. */
-export function ProfileSidebar({ userId, owner, accent, initialTab = 'wall', status, details, onRetry, onOpenProfile, onOpenServer, onNavigate }: {
+export function ProfileSidebar({ userId, owner, accent, initialTab = 'wall', status, details, onRetry, onOpenProfile, onOpenServer, onLeave, onWallDraftChange }: {
   userId: string;
   /** read once, on mount: the modal opened from "what you have in common" starts there */
   initialTab?: ProfileTab;
@@ -35,7 +35,9 @@ export function ProfileSidebar({ userId, owner, accent, initialTab = 'wall', sta
   onRetry: () => void;
   onOpenProfile: (userId: string) => void;
   onOpenServer: (serverId: string) => void;
-  onNavigate: () => void;
+  /** goes to another page from the Wall: `go` navigates, and the profile decides when */
+  onLeave: (go: () => void) => void;
+  onWallDraftChange?: (draft: WallDraft | null) => void;
 }) {
   const { t } = useTranslation('profile');
   const { onlineUserIds } = useRoom();
@@ -85,7 +87,7 @@ export function ProfileSidebar({ userId, owner, accent, initialTab = 'wall', sta
         {/* Inactive panels unmount by default, and the wall's first paint is a
             loading state, so switching away and back always flashed it. */}
         <TabsPanel value="wall" keepMounted>
-          <ProfileWall userId={userId} owner={owner} accent={accent} onNavigate={onNavigate} />
+          <ProfileWall userId={userId} owner={owner} accent={accent} onLeave={onLeave} onDraftChange={onWallDraftChange} />
         </TabsPanel>
         {!owner && (
           <TabsPanel value="common" keepMounted aria-busy={status === 'loading'}>

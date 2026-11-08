@@ -1,5 +1,5 @@
 import { PlusIcon } from '@phosphor-icons/react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import type { Area } from 'react-easy-crop';
 import { useTranslation } from 'react-i18next';
@@ -19,6 +19,7 @@ import { ProfileCard } from './ProfileCard';
 import { FLOATING_BAR_SLOT_CLASS, FloatingBar, FloatingBarSlotProvider, SAVED_BAR_MS } from '@/shared/FloatingBar';
 import { ProfileConnections } from './ProfileConnections';
 import { ProfileSidebar } from './ProfileSidebar';
+import type { WallDraft } from './ProfileWall';
 import { BANNER_ASPECT_RATIO } from './profileLinks';
 import { UnsavedProfileChangesDialog } from './UnsavedProfileChangesDialog';
 import { describeProfileSaveError } from './useProfileUpdate';
@@ -67,6 +68,11 @@ export function ProfileEditor({ status, customStatus, details, onClose, register
   // what to do once the unsaved-changes prompt is answered (close, or follow a link)
   const [pendingLeave, setPendingLeave] = useState<(() => void) | null>(null);
   const [customStatusError, setCustomStatusError] = useState<string | null>(null);
+  // the Wall's unsaved change, if any: it has its own Save, but closing the profile drops it all the same
+  const wallDraft = useRef<WallDraft | null>(null);
+  const onWallDraftChange = useCallback((next: WallDraft | null) => { wallDraft.current = next; }, []);
+  const [wallSaving, setWallSaving] = useState(false);
+  const [wallSaveError, setWallSaveError] = useState<string | null>(null);
   const customStatusActions = useCustomStatusActions(setCustomStatusError);
 
   // Avatar and banner save immediately; text fields use the draft flow.
@@ -110,7 +116,8 @@ export function ProfileEditor({ status, customStatus, details, onClose, register
   // first instead of silently dropping it.
   useEffect(() => {
     registerLeaveGuard(() => {
-      if (!dirty) return true;
+      if (!dirty && !wallDraft.current) return true;
+      setWallSaveError(null);
       setPendingLeave(() => onClose);
       return false;
     });
@@ -118,8 +125,10 @@ export function ProfileEditor({ status, customStatus, details, onClose, register
   }, [registerLeaveGuard, dirty, onClose]);
 
   function leave(action: () => void) {
-    if (dirty) setPendingLeave(() => action);
-    else action();
+    if (dirty || wallDraft.current) {
+      setWallSaveError(null);
+      setPendingLeave(() => action);
+    } else action();
   }
 
   async function handleSave() {
@@ -139,17 +148,30 @@ export function ProfileEditor({ status, customStatus, details, onClose, register
 
   async function handleSaveAndLeave() {
     try {
-      await save();
-      const action = pendingLeave;
-      setPendingLeave(null);
-      action?.();
+      if (dirty) await save();
     } catch {
       // dialog stays open, `saveError` shows why
+      return;
     }
+    const wall = wallDraft.current;
+    if (wall) {
+      setWallSaveError(null);
+      setWallSaving(true);
+      const saved = await wall.save();
+      setWallSaving(false);
+      if (!saved) {
+        setWallSaveError(t('wall.saveFailed'));
+        return;
+      }
+    }
+    const action = pendingLeave;
+    setPendingLeave(null);
+    action?.();
   }
 
   function handleDiscardAndLeave() {
     discard();
+    wallDraft.current?.reset();
     const action = pendingLeave;
     setPendingLeave(null);
     action?.();
@@ -314,7 +336,8 @@ export function ProfileEditor({ status, customStatus, details, onClose, register
               onRetry={details.retry}
               onOpenProfile={() => {}}
               onOpenServer={() => {}}
-              onNavigate={() => leave(onClose)}
+              onLeave={(go) => leave(() => { go(); onClose(); })}
+              onWallDraftChange={onWallDraftChange}
             />
           </div>
         )}
@@ -351,8 +374,8 @@ export function ProfileEditor({ status, customStatus, details, onClose, register
 
       <UnsavedProfileChangesDialog
         open={pendingLeave !== null}
-        saving={saving}
-        error={saveError}
+        saving={saving || wallSaving}
+        error={saveError ?? wallSaveError}
         onContinueEditing={() => setPendingLeave(null)}
         onDiscardAndLeave={handleDiscardAndLeave}
         onSaveAndLeave={() => void handleSaveAndLeave()}

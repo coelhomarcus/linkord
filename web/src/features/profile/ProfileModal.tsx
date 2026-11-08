@@ -167,7 +167,7 @@ export function ProfileModal({ userId, initialTab, onClose, onOpenProfile }: Pro
                     onRetry={details.retry}
                     onOpenProfile={onOpenProfile}
                     onOpenServer={openServer}
-                    onNavigate={onClose}
+                    onLeave={(go) => { go(); onClose(); }}
                   />
                 </div>
               </div>

@@ -20,9 +20,24 @@ const selectionKey = (value: WallSelection) => `${value.connectionId ?? 'games'}
 const widgetKey = (widget: WallWidget) => selectionKey({ connectionId: widget.connection?.id ?? null, type: widget.type });
 const selectionOf = (widget: WallWidget): WallSelection => ({ connectionId: widget.connection?.id ?? null, type: widget.type });
 
+/** An unsaved change to the owner's Wall, as the profile editor sees it when the profile is about to close. */
+export interface WallDraft {
+  /** resolves to whether the Wall was saved; a failure keeps the draft */
+  save: () => Promise<boolean>;
+  reset: () => void;
+}
+
 /** The owner's Wall is always editable, as the profile itself is: a change waits in a draft until Save in the
- * floating bar, and Reset puts the saved Wall back. A visitor only sees the published widgets. */
-export function ProfileWall({ userId, owner, accent, onNavigate }: { userId: string; owner: boolean; accent: string; onNavigate: () => void }) {
+ * floating bar, and Reset puts the saved Wall back. A visitor only sees the published widgets.
+ * `onLeave` is how it goes to another page: `go` navigates, and the profile decides when (it may ask about
+ * unsaved changes first). `onDraftChange` hears of the draft as it comes and goes. */
+export function ProfileWall({ userId, owner, accent, onLeave, onDraftChange }: {
+  userId: string;
+  owner: boolean;
+  accent: string;
+  onLeave: (go: () => void) => void;
+  onDraftChange?: (draft: WallDraft | null) => void;
+}) {
   const { t } = useTranslation('profile');
   const navigate = useNavigate();
   const [data, setData] = useState<WallResponse | null>(null);
@@ -96,16 +111,23 @@ export function ProfileWall({ userId, owner, accent, onNavigate }: { userId: str
     setPicking(null);
   }
   function reset() { setDraft(null); setGamesDraft({}); setPicking(null); setError(false); }
-  async function save() {
-    if (!dirty || saving) return;
+  async function save(): Promise<boolean> {
+    if (!dirty) return true;
+    if (saving) return false;
     setSaving(true); setError(false);
     sequence.current++; controller.current?.abort();
     try {
       const result = await (Object.keys(gamesDraft).length ? saveWall(selections, gamesDraft) : saveWall(selections));
       if (mounted.current) { sequence.current++; setData(result); setDraft(null); setGamesDraft({}); }
-    } catch { if (mounted.current) setError(true); }
-    finally { if (mounted.current) setSaving(false); }
+      return true;
+    } catch {
+      if (mounted.current) setError(true);
+      return false;
+    } finally { if (mounted.current) setSaving(false); }
   }
+  // save and reset close over this render's draft, so the profile is handed fresh ones after every render
+  useEffect(() => { onDraftChange?.(owner && dirty ? { save, reset } : null); });
+  useEffect(() => () => onDraftChange?.(null), [onDraftChange]);
 
   // the widgets as cards; the owner's also carry the editing controls of the games widgets
   const entries = widgets.map((widget) => {
@@ -155,7 +177,7 @@ export function ProfileWall({ userId, owner, accent, onNavigate }: { userId: str
           title={t('wall.emptyOwnerTitle')}
           description={t('wall.emptyOwner')}
           // the add-widget button is already in the header right above; connecting accounts is the next step
-          action={<Button type="button" variant="secondary" size="sm" className="touch-target relative" onClick={() => { navigate(ROUTES.settingsTab('connections')); onNavigate(); }}>{t('wall.connectAccounts')}</Button>}
+          action={<Button type="button" variant="secondary" size="sm" className="touch-target relative" onClick={() => onLeave(() => navigate(ROUTES.settingsTab('connections')))}>{t('wall.connectAccounts')}</Button>}
         />
       ) : <EmptyState illustration="wall" title={t('wall.emptyVisitorTitle')} description={t('wall.emptyVisitor')} />)}
       {owner
@@ -171,7 +193,7 @@ export function ProfileWall({ userId, owner, accent, onNavigate }: { userId: str
         available={data.available ?? []}
         added={(widget) => selections.some((selection) => selectionKey(selection) === widgetKey(widget))}
         onPick={(widget) => { setDraft([...selections, selectionOf(widget)]); setAdding(false); }}
-        onManage={() => { setAdding(false); navigate(ROUTES.settingsTab('connections')); onNavigate(); }}
+        onManage={() => { setAdding(false); onLeave(() => navigate(ROUTES.settingsTab('connections'))); }}
         onConnect={async (provider, username) => {
           await createConnection(provider, username);
           // the settings page and the profile's links listen for this too

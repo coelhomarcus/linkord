@@ -21,7 +21,7 @@ const anime: WallWidget = { connection, type: 'mal-recent-anime', data: { kind: 
 const profile: WallWidget = { connection: { ...connection, id: 'gh', provider: 'github', value: 'octocat', url: 'https://github.com/octocat' }, type: 'github-profile', data: { kind: 'github-profile', login: 'octocat', name: null, avatarUrl: null, repositories: 1, followers: 2, following: 3 } };
 const empty: WallResponse = { widgets: [], available: [anime, profile] };
 beforeEach(() => { vi.clearAllMocks(); mocked.fetchWall.mockResolvedValue(empty); });
-function renderWall(owner = true) { render(<MemoryRouter><ProfileWall userId="me" owner={owner} accent="#3366ff" onNavigate={vi.fn()} /></MemoryRouter>); }
+function renderWall(owner = true) { render(<MemoryRouter><ProfileWall userId="me" owner={owner} accent="#3366ff" onLeave={(go) => go()} /></MemoryRouter>); }
 
 const gameWidget = (type: 'igdb-favorite-game' | 'igdb-liked-games' | 'igdb-playing-games' | 'igdb-wishlist-games', items: GameItem[] = []): WallWidget => ({ connection: null, type, data: { kind: 'games', items } });
 const gameChoices = [gameWidget('igdb-favorite-game'), gameWidget('igdb-liked-games'), gameWidget('igdb-playing-games'), gameWidget('igdb-wishlist-games')];
