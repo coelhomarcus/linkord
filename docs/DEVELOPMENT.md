@@ -108,13 +108,15 @@ npm run admin:grant -- <your-username>
 
 ## Run the checks
 
-There is no hosted CI; run the checks locally before pushing. This runs the server test typecheck, the frontend lint, the server and frontend tests, and the production build (which also typechecks the backend and frontend):
+There is no hosted CI; run the checks locally before pushing. This runs the server test typecheck, the frontend lint, the dependency audit, the server and frontend tests, and the production build (which also typechecks the backend and frontend):
 
 ```bash
 npm run check
 ```
 
-None of these need PostgreSQL: `.env.test` supplies a placeholder `DATABASE_URL` and no unit test runs a real query. Use `npm run test:server` or `npm run test:web` to run one side only.
+The audit step (`npm run check:audit`) runs `npm audit --omit=dev --audit-level=high` for the root and `web/`, so it fails on a high or critical advisory in anything that ships and needs network access to the npm registry. Dev-only tooling is left out on purpose; `npm audit fix` updates the lockfile within the declared ranges. Keep build-only packages (the shadcn CLI, Tailwind, Vite plugins) in `devDependencies` of `web/`: the Docker image builds the web app with every dependency installed and ships only the output.
+
+None of the tests need PostgreSQL: `.env.test` supplies a placeholder `DATABASE_URL` and no unit test runs a real query. Use `npm run test:server` or `npm run test:web` to run one side only.
 
 ## Scripts
 
@@ -124,10 +126,11 @@ Every script runs from the repository root.
 | --- | --- |
 | `npm run dev` | API (Fastify, `:3000`) and web (Vite, `:5173`) in watch mode. |
 | `npm run build` / `npm start` | Production build of both, and the built server. |
-| `npm run check` | Everything that should pass before pushing: server test typecheck, web lint, server and web tests, build. |
+| `npm run check` | Everything that should pass before pushing: server test typecheck, web lint, dependency audit, server and web tests, build. |
 | `npm run test:server` / `npm run test:web` | Unit tests of one side (`node --test`, Vitest). No database needed. |
 | `npm run test:integration` | `server/tests/integration/*.itest.ts` against a throwaway database it creates and drops on your local Postgres. |
 | `npm run test:e2e` (and `:features`, `:restart`, `:upgrade`) | The browser suite, see [End-to-end tests](#end-to-end-tests). Needs Docker and Chrome. |
+| `npm run check:audit` | `npm audit --omit=dev --audit-level=high` for the root and `web/`; fails on high or critical advisories in shipped dependencies. Part of `npm run check`. |
 | `npm run check:dead-code` | `knip`: unused files, exports and dependencies across `server/`, `web/` and `e2e/`. |
 | `npm run db:migrate` | Applies pending migrations. The server also does it on boot unless `MIGRATE_ON_BOOT=0`. |
 | `npm run db:generate` | Generates a migration from changes to `server/src/db/schema.ts`. Rename the file to describe the change. |
