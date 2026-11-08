@@ -14,12 +14,14 @@
   },
   "menu": {
     "trigger": "Status and profile",
-    "viewProfile": "View profile",
     "setCustom": "Set a custom status",
     "editCustom": "Edit custom status",
     "clearCustom": "Clear custom status",
-    "status": "Status",
-    "reconnecting": "Reconnecting…"
+    "reconnecting": "Reconnecting…",
+    "editProfile": "Edit profile",
+    "currentStatus": "Status: {{status}}",
+    "copyId": "Copy user ID",
+    "idCopied": "Copied!"
   },
   "custom": {
     "title": "Custom status",

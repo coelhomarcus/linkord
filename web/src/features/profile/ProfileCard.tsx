@@ -32,7 +32,7 @@ interface ProfileCardData {
 interface ProfileCardProps {
   user: ProfileCardData;
   /** the presence dot on the avatar; left out, there is none */
-  status?: DisplayStatus;
+  status?: DisplayStatus | 'reconnecting';
   customStatus?: CustomStatus | null;
   /** makes the custom status bubble the owner's: edit and clear it, or an invitation when there is none */
   onEditCustomStatus?: () => void;

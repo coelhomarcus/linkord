@@ -2,9 +2,18 @@ import { test, expect } from '../../fixtures/test';
 import { befriend } from '../../fixtures/api';
 import type { AppPage } from '../../fixtures/app';
 
-async function pickStatus(app: AppPage, name: RegExp): Promise<void> {
+/** Opens the user panel's card; the status row in it opens the four statuses. */
+async function openCard(app: AppPage) {
   await app.page.getByRole('button', { name: 'Status e perfil' }).click();
+  return app.page.getByRole('dialog', { name: 'Status e perfil' });
+}
+
+async function pickStatus(app: AppPage, name: RegExp): Promise<void> {
+  const card = await openCard(app);
+  await card.getByRole('button', { name: /^Status: / }).click();
   await app.page.getByRole('menuitemradio', { name }).click();
+  await app.page.keyboard.press('Escape');
+  await expect(card).toBeHidden();
 }
 
 test.describe('presence status', () => {
@@ -25,8 +34,8 @@ test.describe('presence status', () => {
     await expect(dot).toHaveAttribute('data-status', 'dnd');
     await expect(phone.page.getByRole('button', { name: 'Status e perfil' }).getByRole('img', { name: 'Não perturbe' })).toBeVisible();
 
-    await phone.page.getByRole('button', { name: 'Status e perfil' }).click();
-    await phone.page.getByRole('menuitem', { name: 'Definir status personalizado' }).click();
+    // the custom status lives in the bubble beside the card's avatar
+    await (await openCard(phone)).getByRole('button', { name: 'Definir status personalizado' }).click();
     await phone.page.getByLabel('Texto').fill('testando a presença');
     await phone.page.getByRole('button', { name: 'Salvar' }).click();
     await expect(row).toContainText('testando a presença');
