@@ -305,7 +305,7 @@ export function TileMenu({ onOpenProfile }: TileMenuProps) {
               >
                 {muted ? <SpeakerSlashIcon size={16} /> : <SpeakerHighIcon size={16} />}
               </button>
-              <Slider value={[volume]} onValueChange={handleVolumeChange} min={0} max={100} />
+              <Slider aria-label={t('menu.volume')} value={[volume]} onValueChange={handleVolumeChange} min={0} max={100} />
             </div>
           </>
         )}
