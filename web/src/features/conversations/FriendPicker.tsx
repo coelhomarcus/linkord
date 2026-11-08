@@ -9,6 +9,7 @@ import { cn } from '@/shared/lib/utils';
 import { fetchFriends } from '@/shared/api/api';
 import type { SocialUser } from '@/shared/api/api';
 import { useCursorList } from '@/shared/hooks/useCursorList';
+import { Skeleton, SkeletonGroup } from '@/shared/ui/primitives/skeleton';
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
 
 interface FriendPickerProps {
@@ -47,7 +48,17 @@ export function FriendPicker({ selected, onToggle, excludeIds, inputId, maxHeigh
       </div>
       <div className={cn('-mx-2 min-h-0 overflow-y-auto', maxHeightClass)}>
         {list.status === 'loading' ? (
-          <p className="px-3 py-8 text-center text-label text-text-muted">{t('friendPicker.loading')}</p>
+          <SkeletonGroup label={t('friendPicker.loading')}>
+            {['w-28', 'w-36', 'w-24', 'w-32'].map((width, index) => (
+              <div key={index} className="flex items-center gap-3 px-2 py-2">
+                <Skeleton shape="circle" className="size-8" />
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="flex h-[1lh] items-center text-body"><Skeleton shape="text" className={width} /></span>
+                  <span className="flex h-[1lh] items-center text-label"><Skeleton shape="text" className="h-2.5 w-20" /></span>
+                </span>
+              </div>
+            ))}
+          </SkeletonGroup>
         ) : list.status === 'error' ? (
           <div className="flex flex-col items-center gap-2 px-3 py-6">
             <p className="text-label text-text-muted">{t('friendPicker.loadFailed')}</p>

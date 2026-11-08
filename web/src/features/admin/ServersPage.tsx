@@ -19,6 +19,7 @@ import { useAdminTableFits } from './useAdminMode';
 import { useAdminQuery } from './useAdminQuery';
 import type { QuerySchema } from './useAdminQuery';
 import { AppLink } from '@/shared/ui/app-link';
+import { AdminStackedSkeleton, AdminTableSkeleton } from './AdminSkeletons';
 import { AdminPageTitle } from './AdminSection';
 
 type StatusFilter = 'all' | 'active' | 'suspended' | 'orphan';
@@ -80,10 +81,11 @@ export function ServersPage() {
           <AdminSelectField<StatusFilter> label={t('ui.state')} value={filter} onChange={(next) => update({ filter: next })}
             options={[{ value: 'all', label: t('ui.all') }, { value: 'active', label: t('ui.active') }, { value: 'suspended', label: t('ui.suspended') }, { value: 'orphan', label: t('ui.noOwner') }]} />
         )}
+        loading={list.status === 'loading'}
         summary={list.status === 'ready' && list.items.length > 0 ? `${list.items.length} ${t('ui.server', { count: list.items.length })}${list.hasMore ? t('ui.moreResults') : ''}` : undefined}
         onClear={active ? clear : undefined}
       />
-      <ListChrome list={list} empty={t('ui.noServers')}>
+      <ListChrome list={list} empty={t('ui.noServers')} skeleton={tableFits ? <AdminTableSkeleton columns={7} identity /> : <AdminStackedSkeleton />}>
         {tableFits ? (
           <AdminTable caption={t('ui.servers')}>
             <thead>

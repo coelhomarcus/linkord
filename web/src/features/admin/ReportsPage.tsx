@@ -14,6 +14,7 @@ import { useAdminTableFits } from './useAdminMode';
 import { useAdminQuery } from './useAdminQuery';
 import type { QuerySchema } from './useAdminQuery';
 import { AppLink } from '@/shared/ui/app-link';
+import { AdminStackedSkeleton, AdminTableSkeleton } from './AdminSkeletons';
 import { AdminPageTitle } from './AdminSection';
 
 type Queue = 'open' | 'reviewing' | 'closed';
@@ -60,10 +61,11 @@ export function ReportsPage() {
               options={[{ value: 'all', label: t('ui.all') }, { value: 'user', label: t('ui.accountsPlural') }, { value: 'server', label: t('ui.servers') }, { value: 'message', label: t('ui.messagesPlural') }]} />
           </>
         )}
+        loading={list.status === 'loading'}
         summary={list.status === 'ready' && list.items.length > 0 ? `${list.items.length} ${t('ui.report', { count: list.items.length })}${list.hasMore ? t('ui.moreResults') : ''}` : undefined}
         onClear={active ? clear : undefined}
       />
-      <ListChrome list={list} empty={t('ui.noReports')}>
+      <ListChrome list={list} empty={t('ui.noReports')} skeleton={tableFits ? <AdminTableSkeleton columns={5} /> : <AdminStackedSkeleton />}>
         {tableFits ? (
           <AdminTable caption={t('ui.reports')}>
             <thead>

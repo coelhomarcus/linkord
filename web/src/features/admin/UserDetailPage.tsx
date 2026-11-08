@@ -18,6 +18,7 @@ import { useAdminDetail } from './useAdminDetail';
 import { useAdminQuery } from './useAdminQuery';
 import type { QuerySchema } from './useAdminQuery';
 import { AppLink } from '@/shared/ui/app-link';
+import { AuditListSkeleton } from './AdminSkeletons';
 import { SettingsNotice } from '@/shared/ui/settings-layout';
 
 type Dialog = 'suspend' | 'reactivate' | 'revoke' | 'delete' | 'grant-admin' | 'revoke-admin' | null;
@@ -41,7 +42,7 @@ function UserHistory({ id, revision }: { id: string; revision: string }) {
   const list = useCursorList(fetchPage, id, { getKey: (row) => row.id, revision });
   return (
     <AdminSection title={t('detail.fullHistory')} description={t('detail.historyDescription')}>
-      <ListChrome list={list} empty={t('detail.noHistory')}><AuditList items={list.items} /></ListChrome>
+      <ListChrome list={list} empty={t('detail.noHistory')} skeleton={<AuditListSkeleton />}><AuditList items={list.items} /></ListChrome>
     </AdminSection>
   );
 }

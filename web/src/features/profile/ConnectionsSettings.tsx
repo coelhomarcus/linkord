@@ -13,6 +13,7 @@ import { BrandIcon } from './profileLinks';
 import { describeConnectionError } from './connectionErrors';
 import { createConnection, deleteConnection, editConnection, fetchConnections, setConnectionVisibility } from './profileApi';
 import type { ConnectionProvider, ConnectionsResponse, ProfileConnection } from './connectionsTypes';
+import { Skeleton, SkeletonGroup } from '@/shared/ui/primitives/skeleton';
 import { SettingsSection, SettingsSections, SettingsSubheading } from '@/shared/ui/settings-layout';
 
 const PROVIDERS = ['url', 'myanimelist', 'github'] as const;
@@ -108,7 +109,7 @@ export function ConnectionsSettings() {
         </div>
       </section>
       {/* the size of one connection card, so the list arriving moves nothing below it */}
-      {!data && !loadError && <div role="status" aria-label={t('integration.loading')} className="h-[120px] animate-pulse rounded-lg border border-border-subtle bg-fill-subtle" />}
+      {!data && !loadError && <SkeletonGroup label={t('integration.loading')}><Skeleton className="h-[120px] w-full rounded-lg" /></SkeletonGroup>}
       {loadError && <div role="alert" className="text-label text-red">{t('integration.errors.load')} <Button type="button" variant="ghost" size="sm" onClick={() => void load()}>{t('modal.retry')}</Button></div>}
       {data?.connections.length === 0 && <p className="rounded-lg border border-border-subtle px-4 py-6 text-center text-label text-text-muted">{t('integration.empty')}</p>}
       {!!data?.connections.length && (

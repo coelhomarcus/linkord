@@ -11,6 +11,7 @@ import type { Feedback } from '@/features/friends/ActionFeedback';
 import { LoadMoreFooter } from '@/features/friends/LoadMoreFooter';
 import type { SocialEntry } from '@/shared/api/api';
 import { SettingsSection, SettingsSections } from '@/shared/ui/settings-layout';
+import { Skeleton, SkeletonGroup } from '@/shared/ui/primitives/skeleton';
 import { AutoIdleSetting } from '@/features/status/AutoIdleSetting';
 
 const blockedKey = (entry: SocialEntry) => entry.user.id;
@@ -48,14 +49,14 @@ export function PrivacyTab({ onOpenProfile }: { onOpenProfile: (userId: string) 
         <ActionFeedback feedback={feedback} onClear={clearFeedback} />
         {list.status === 'loading' && (
           // the same height as a few rows, so the page does not jump when they arrive
-          <div role="status" aria-label={t('privacy.loading')} className="flex flex-col gap-1">
+          <SkeletonGroup label={t('privacy.loading')} className="flex flex-col gap-1">
             {[0, 1, 2].map((i) => (
-              <div key={i} aria-hidden className="flex h-[60px] items-center gap-3 px-2">
-                <span className="size-10 flex-none animate-pulse rounded-full bg-fill-hover" />
-                <span className="h-3.5 w-40 animate-pulse rounded-sm bg-fill-hover" />
+              <div key={i} className="flex h-[60px] items-center gap-3 px-2">
+                <Skeleton shape="circle" className="size-10" />
+                <Skeleton shape="text" className="h-3.5 w-40" />
               </div>
             ))}
-          </div>
+          </SkeletonGroup>
         )}
         {list.status === 'error' && (
           <div className="flex items-center gap-2 rounded-md bg-red/12 px-2.5 py-1.5 text-label text-red-text">

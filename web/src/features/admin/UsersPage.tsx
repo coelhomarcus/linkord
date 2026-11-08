@@ -19,6 +19,7 @@ import { useAdminTableFits } from './useAdminMode';
 import { useAdminQuery } from './useAdminQuery';
 import type { QuerySchema } from './useAdminQuery';
 import { AppLink } from '@/shared/ui/app-link';
+import { AdminStackedSkeleton, AdminTableSkeleton } from './AdminSkeletons';
 import { AdminPageTitle } from './AdminSection';
 
 type StatusFilter = 'all' | 'active' | 'suspended';
@@ -98,10 +99,11 @@ export function UsersPage() {
           </>
         )}
         advancedActive={filters.from !== '' || filters.to !== ''}
+        loading={list.status === 'loading'}
         summary={list.status === 'ready' && list.items.length > 0 ? `${list.items.length} ${t('ui.account', { count: list.items.length })}${list.hasMore ? t('ui.moreResults') : ''}` : undefined}
         onClear={active ? clear : undefined}
       />
-      <ListChrome list={list} empty={t('ui.noAccounts')}>
+      <ListChrome list={list} empty={t('ui.noAccounts')} skeleton={tableFits ? <AdminTableSkeleton columns={6} identity /> : <AdminStackedSkeleton />}>
         {tableFits ? (
           <AdminTable caption={t('ui.accounts')}>
             <thead>

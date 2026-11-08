@@ -8,6 +8,8 @@ import type { AuditRow } from './adminApi';
 import { actionLabel, formatWhen } from './adminFormat';
 import type { AdminDetailStatus } from './useAdminDetail';
 import { AppLink } from '@/shared/ui/app-link';
+import { SkeletonGroup } from '@/shared/ui/primitives/skeleton';
+import { AdminDetailSkeleton, AdminStackedSkeleton } from './AdminSkeletons';
 
 const TONES: Record<string, string> = {
   active: 'bg-green/15 text-green', suspended: 'bg-red/15 text-red-text',
@@ -81,15 +83,17 @@ interface ChromeList {
 /** Loading / error / empty / "load more" chrome shared by every admin table.
  * Every state `useCursorList` can be in has a face here: a failed next page and
  * a failed re-read never replace the rows already on screen. */
-export function ListChrome({ list, empty, emptyAction, children }: {
+export function ListChrome({ list, empty, emptyAction, skeleton, children }: {
   list: ChromeList;
   empty: string;
   /** shown under the empty message (e.g. "Limpar filtros") */
   emptyAction?: ReactNode;
+  /** the shape of the rows while the first page loads (AdminSkeletons) */
+  skeleton?: ReactNode;
   children: ReactNode;
 }) {
   const { t } = useTranslation('admin');
-  if (list.status === 'loading') return <p role="status" className="py-10 text-center text-label text-text-muted">{t('chrome.loading')}</p>;
+  if (list.status === 'loading') return <SkeletonGroup label={t('chrome.loading')}>{skeleton ?? <AdminStackedSkeleton />}</SkeletonGroup>;
   if (list.status === 'error') {
     return (
       <div className="flex flex-col items-center gap-3 py-8 text-center">
@@ -126,7 +130,7 @@ export function ListChrome({ list, empty, emptyAction, children }: {
 
 /** What a detail page shows until it has data: loading, "gone", or a failed read
  * with a retry. Renders nothing once the data is there. */
-export function DetailStatusView({ status, missing, failed, backTo, backLabel, onRetry }: {
+export function DetailStatusView({ status, missing, failed, backTo, backLabel, onRetry, skeleton }: {
   status: AdminDetailStatus;
   /** Account not found. */
   missing: string;
@@ -135,9 +139,11 @@ export function DetailStatusView({ status, missing, failed, backTo, backLabel, o
   backTo: string;
   backLabel: string;
   onRetry: () => void;
+  /** the shape of the page while it loads; an entity page's by default */
+  skeleton?: ReactNode;
 }) {
   const { t } = useTranslation('admin');
-  if (status === 'loading') return <p className="py-8 text-center text-label text-text-muted">{t('chrome.loading')}</p>;
+  if (status === 'loading') return <SkeletonGroup label={t('chrome.loading')}>{skeleton ?? <AdminDetailSkeleton />}</SkeletonGroup>;
   if (status === 'missing') {
     return <p className="py-8 text-center text-label text-text-muted">{missing} <AdminTextLink to={backTo}>{backLabel}</AdminTextLink></p>;
   }

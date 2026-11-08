@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import type { ServerSummary } from '@/shared/types/protocol';
 import { PERMISSIONS, hasPermission, type PermissionName } from './permissionBits';
 import { SectionTitle } from './SettingsShell';
+import { Skeleton, SkeletonGroup } from '@/shared/ui/primitives/skeleton';
 import {
   SERVER_AUDIT_ACTIONS, fetchAllServerMembers, fetchServerAuditLog,
   type AuditChange, type ServerAuditAction, type ServerAuditEntry, type ServerMemberEntry,
@@ -263,7 +264,20 @@ export function ServerAuditLog({ server }: { server: ServerSummary }) {
           ))}
         </ul>
       )}
-      {loading && <p className="text-label text-text-muted">{t('auditLog.loading')}</p>}
+      {loading && items.length === 0 && (
+        <SkeletonGroup label={t('auditLog.loading')} className="flex flex-col divide-y divide-border-subtle">
+          {['w-64', 'w-48', 'w-56', 'w-40'].map((width, index) => (
+            <div key={index} className="flex gap-3 py-3">
+              <Skeleton shape="circle" className="size-9" />
+              <div className="flex min-w-0 flex-1 flex-col gap-1">
+                <span className="flex h-[1lh] items-center text-label"><Skeleton shape="text" className={width} /></span>
+                <span className="flex h-[1lh] items-center text-caption"><Skeleton shape="text" className="h-2.5 w-24" /></span>
+              </div>
+            </div>
+          ))}
+        </SkeletonGroup>
+      )}
+      {loading && items.length > 0 && <p role="status" className="text-label text-text-muted">{t('auditLog.loading')}</p>}
       {cursor && !loading && <Button type="button" variant="secondary" className="self-start" onClick={() => void loadMore()}>{t('auditLog.loadMore')}</Button>}
     </>
   );

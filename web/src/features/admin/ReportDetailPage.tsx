@@ -14,6 +14,7 @@ import { reportResolutionLabel, reportTargetLabel, formatWhen } from './adminFor
 import { AdminTextLink, AuditList, Badge, DetailStatusView, RefreshFailedNotice, AdminBackLink } from './adminUi';
 import { RESTORE_LIST, useAdminBack } from './useAdminBack';
 import { useAdminDetail } from './useAdminDetail';
+import { AdminDetailSkeleton } from './AdminSkeletons';
 import { AppLink } from '@/shared/ui/app-link';
 
 /** What the admin picked in the decision form: close with an action on the
@@ -58,7 +59,7 @@ function ReportDetail({ id }: { id: string }) {
   const [dialog, setDialog] = useState<Dialog>(null);
   const [selected, setSelected] = useState<OutcomeId | null>(null);
 
-  if (!detail) return <DetailStatusView status={status} missing={t('report.notFound')} failed={t('report.loadFailed')} backTo={back} backLabel={t('common.back')} onRetry={reload} />;
+  if (!detail) return <DetailStatusView status={status} missing={t('report.notFound')} failed={t('report.loadFailed')} backTo={back} backLabel={t('common.back')} onRetry={reload} skeleton={<AdminDetailSkeleton tabs={false} />} />;
 
   const { report, history } = detail;
   const closed = report.status === 'resolved' || report.status === 'dismissed';

@@ -19,6 +19,7 @@ import { useAdminTableFits } from './useAdminMode';
 import { useAdminQuery } from './useAdminQuery';
 import type { QuerySchema } from './useAdminQuery';
 import { AppLink } from '@/shared/ui/app-link';
+import { AdminStackedSkeleton, AdminTableSkeleton } from './AdminSkeletons';
 import { AdminPageTitle } from './AdminSection';
 
 const QUERY: QuerySchema<'q'> = { q: { default: '' } };
@@ -70,10 +71,11 @@ export function WebhooksPage() {
       <AdminPageTitle title={t('nav.webhooks')} description={t('pages.webhooks')} />
       <AdminListToolbar
         search={{ value: query, onChange: setQuery, placeholder: t('ui.searchNameOrServer'), label: t('ui.searchWebhooks') }}
+        loading={list.status === 'loading'}
         summary={list.status === 'ready' && list.items.length > 0 ? `${list.items.length} ${t('ui.webhook', { count: list.items.length })}${list.hasMore ? t('ui.moreResults') : ''}` : undefined}
         onClear={active ? clear : undefined}
       />
-      <ListChrome list={list} empty={t('ui.noWebhooks')}>
+      <ListChrome list={list} empty={t('ui.noWebhooks')} skeleton={tableFits ? <AdminTableSkeleton columns={6} identity /> : <AdminStackedSkeleton />}>
         {tableFits ? (
           <AdminTable caption={t('ui.webhooks')}>
             <thead>

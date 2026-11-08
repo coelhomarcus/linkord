@@ -15,6 +15,7 @@ import { RESTORE_LIST, useAdminBack } from './useAdminBack';
 import { useAdminDetail } from './useAdminDetail';
 import { useAdminQuery } from './useAdminQuery';
 import type { QuerySchema } from './useAdminQuery';
+import { AuditListSkeleton } from './AdminSkeletons';
 import { AppLink } from '@/shared/ui/app-link';
 
 const TABS = ['overview', 'moderation', 'history'] as const;
@@ -34,7 +35,7 @@ function WebhookHistory({ id, revision }: { id: string; revision: string }) {
   const list = useCursorList(fetchPage, id, { getKey: (row) => row.id, revision });
   return (
     <AdminSection title={t('entity.fullHistoryWebhook')} description={t('entity.historyWebhookDescription')}>
-      <ListChrome list={list} empty={t('entity.noWebhookHistory')}><AuditList items={list.items} /></ListChrome>
+      <ListChrome list={list} empty={t('entity.noWebhookHistory')} skeleton={<AuditListSkeleton />}><AuditList items={list.items} /></ListChrome>
     </AdminSection>
   );
 }

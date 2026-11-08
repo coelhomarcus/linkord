@@ -11,6 +11,7 @@ import { AddWidgetDialog } from './AddWidgetDialog';
 import { FloatingBar } from './FloatingBar';
 import { createConnection, fetchWall, saveWall } from './profileApi';
 import { SortableWall } from './SortableWall';
+import { WallSkeleton } from './WallSkeleton';
 import { WallWidgetCard } from './WallWidgetCard';
 import type { WallResponse, WallSelection, WallWidget } from './connectionsTypes';
 
@@ -132,19 +133,20 @@ export function ProfileWall({ userId, owner, accent, onNavigate }: { userId: str
   return (
     // room under the last widget for the floating bar, which would otherwise cover it
     <section aria-label={t('wall.title')} className={`flex min-w-0 flex-col gap-5 ${bar ? 'pb-36' : ''}`}>
-      {loading && <p role="status" className="text-body text-text-muted">{t('wall.loading')}</p>}
       {error && !dirty && <p role="alert" className="text-label text-red">{t('wall.loadFailed')} <Button type="button" variant="ghost" size="sm" onClick={() => void load()}>{t('modal.retry')}</Button></p>}
       {owner && (
         <div className="flex items-center justify-between gap-3">
           <h3 className="text-body font-semibold text-text-primary">{t('wall.yours')}</h3>
-          {data && (
-            <Button type="button" variant="secondary" size="sm" disabled={saving} onClick={() => setAdding(true)}>
+          {/* there while loading too, so the header doesn't grow when the Wall arrives */}
+          {(data || loading) && (
+            <Button type="button" variant="secondary" size="sm" disabled={saving || !data} onClick={() => setAdding(true)}>
               <PlusIcon size={14} aria-hidden />
               <span>{t('wall.addWidget')}</span>
             </Button>
           )}
         </div>
       )}
+      {loading && <WallSkeleton label={t('wall.loading')} />}
       {!loading && data && widgets.length === 0 && <p className="py-8 text-center text-body text-text-muted">{t(owner ? 'wall.emptyOwner' : 'wall.emptyVisitor')}</p>}
       {owner
         ? <SortableWall

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useRoom } from '@/state/RoomContext';
 import type { ServerSummary } from '@/shared/types/protocol';
 import { fetchAllServerMembers, type ServerMemberEntry } from './serversApi';
+import { Skeleton, SkeletonGroup } from '@/shared/ui/primitives/skeleton';
 import { MemberQuickProfile } from './MemberQuickProfile';
 
 interface Section { key: string; label: string; members: ServerMemberEntry[] }
@@ -57,7 +58,7 @@ export function MemberListPanel({ server, onOpenProfile, active = true }: { serv
 
   return (
     <aside aria-label={t('members.label')} className="flex h-full w-[264px] flex-none flex-col overflow-y-auto border-l border-border-subtle bg-surface-app px-2 py-4">
-      {members === null && <p className="px-2 text-label text-text-muted">{t('members.loading')}</p>}
+      {members === null && <MemberListSkeleton label={t('members.loading')} />}
       {sections.map((section) => (
         <section key={section.key} className="mb-4">
           <h3 className="select-none px-2 pb-1 text-label font-medium text-text-secondary">{t('members.section', { name: section.label, count: section.members.length })}</h3>
@@ -87,5 +88,22 @@ export function MemberListPanel({ server, onOpenProfile, active = true }: { serv
         </section>
       ))}
     </aside>
+  );
+}
+
+const MEMBER_NAME_WIDTHS = ['w-24', 'w-32', 'w-20', 'w-28', 'w-36', 'w-24', 'w-16', 'w-28'];
+
+/** The section heading and 42px rows of the list, so the members drop into place. */
+function MemberListSkeleton({ label }: { label: string }) {
+  return (
+    <SkeletonGroup label={label} className="mb-4">
+      <div className="flex h-[1lh] items-center px-2 pb-1 text-label box-content"><Skeleton shape="text" className="w-20" /></div>
+      {MEMBER_NAME_WIDTHS.map((width, index) => (
+        <div key={index} className="flex h-[42px] items-center gap-3 px-2">
+          <Skeleton shape="circle" className="size-8" />
+          <Skeleton shape="text" className={width} />
+        </div>
+      ))}
+    </SkeletonGroup>
   );
 }

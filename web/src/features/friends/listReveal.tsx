@@ -2,12 +2,9 @@ import type { ReactNode } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { EASE_OUT } from '@/shared/lib/ease';
 import { cn } from '@/shared/lib/utils';
+import { Skeleton, SkeletonGroup } from '@/shared/ui/primitives/skeleton';
 
 type SkeletonKind = 'friend' | 'incoming-request' | 'outgoing-request' | 'invitation';
-
-function Placeholder({ className }: { className: string }) {
-  return <div aria-hidden className={cn('rounded-sm bg-fill-subtle', className)} />;
-}
 
 function UserRowSkeleton({ kind }: { kind: Exclude<SkeletonKind, 'invitation'> }) {
   const actions = kind === 'friend'
@@ -17,14 +14,14 @@ function UserRowSkeleton({ kind }: { kind: Exclude<SkeletonKind, 'invitation'> }
       : ['h-8 w-20 rounded-lg'];
 
   return (
-    <div aria-hidden className="-mx-2.5 flex h-[62px] animate-pulse items-center gap-3 px-2.5">
-      <div className="size-8 flex-none rounded-full bg-fill-subtle" />
+    <div className="-mx-2.5 flex h-[62px] items-center gap-3 px-2.5">
+      <Skeleton shape="circle" className="size-8" />
       <div className="flex min-w-0 flex-1 flex-col gap-2">
-        <Placeholder className="h-3 w-32" />
-        <Placeholder className="h-2.5 w-24" />
+        <Skeleton shape="text" className="w-32" />
+        <Skeleton shape="text" className="h-2.5 w-24" />
       </div>
       <div className="flex flex-none items-center gap-2.5">
-        {actions.map((className, index) => <Placeholder key={index} className={className} />)}
+        {actions.map((className, index) => <Skeleton key={index} className={className} />)}
       </div>
     </div>
   );
@@ -32,18 +29,18 @@ function UserRowSkeleton({ kind }: { kind: Exclude<SkeletonKind, 'invitation'> }
 
 function InvitationRowSkeleton() {
   return (
-    <div aria-hidden className="flex animate-pulse flex-wrap items-center gap-3 rounded-md px-3 py-3">
-      <div className="size-10 flex-none rounded-[30%] bg-fill-subtle" />
+    <div className="flex flex-wrap items-center gap-3 rounded-md px-3 py-3">
+      <Skeleton className="size-10 rounded-[30%]" />
       <div className="flex min-w-0 flex-1 basis-48 flex-col gap-2">
-        <Placeholder className="h-4 w-36 max-w-full" />
+        <Skeleton shape="text" className="h-4 w-36" />
         <div className="flex items-center gap-2">
-          <Placeholder className="h-3 w-24" />
-          <Placeholder className="h-3 w-16" />
+          <Skeleton shape="text" className="w-24" />
+          <Skeleton shape="text" className="w-16" />
         </div>
       </div>
       <div className="flex flex-none items-center gap-1.5">
-        <Placeholder className="h-8 w-14 rounded-lg" />
-        <Placeholder className="h-8 w-16 rounded-lg" />
+        <Skeleton className="h-8 w-14 rounded-lg" />
+        <Skeleton className="h-8 w-16 rounded-lg" />
       </div>
     </div>
   );
@@ -53,13 +50,13 @@ function InvitationRowSkeleton() {
 export function SocialRowsSkeleton({ label, rows = 4, kind = 'friend' }: { label: string; rows?: number; kind?: SkeletonKind }) {
   return (
     <FadeIn>
-      <div role="status" aria-label={label} className="flex flex-col">
+      <SkeletonGroup label={label} className="flex flex-col">
         {Array.from({ length: rows }, (_, index) => (
           kind === 'invitation'
             ? <InvitationRowSkeleton key={index} />
             : <UserRowSkeleton key={index} kind={kind} />
         ))}
-      </div>
+      </SkeletonGroup>
     </FadeIn>
   );
 }

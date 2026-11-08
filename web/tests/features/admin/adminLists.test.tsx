@@ -75,3 +75,26 @@ describe('back from a detail', () => {
     expect(await screen.findByRole('link', { name: '← Usuários' })).toHaveAttribute('data-to', '/admin/users');
   });
 });
+
+describe('while the first read is in flight', () => {
+  it('a list shows rows of the table it will become, and says it is loading', async () => {
+    mocked.fetchAdminUsers.mockImplementation(() => new Promise(() => {}));
+    renderAdmin(<UsersPage />, { path: '/admin/users', pattern: '/admin/users' });
+
+    const status = await screen.findByRole('status');
+    expect(status).toHaveTextContent('Carregando…');
+    expect(status).toHaveClass('sr-only');
+    const region = status.closest('[aria-busy="true"]')!;
+    expect(region).not.toBeNull();
+    expect(region.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(6);
+  });
+
+  it('a detail page shows the shape of its header until the account arrives', async () => {
+    mocked.fetchAdminUser.mockImplementation(() => new Promise(() => {}));
+    renderAdmin(<UserDetailPage />, { path: '/admin/users/u1', pattern: '/admin/users/:id' });
+
+    expect(await screen.findByRole('status')).toHaveTextContent('Carregando…');
+    expect(document.querySelector('[aria-busy="true"] .size-16[data-slot="skeleton"]')).not.toBeNull();
+    expect(screen.queryByRole('heading')).not.toBeInTheDocument();
+  });
+});

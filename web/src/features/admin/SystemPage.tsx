@@ -10,6 +10,7 @@ import { ReasonDialog } from './ReasonDialog';
 import { describeAdminError } from './adminErrors';
 import { formatWhen } from './adminFormat';
 import { AdminTextLink, DetailStatusView } from './adminUi';
+import { AdminSectionsSkeleton } from './AdminSkeletons';
 import { useAdminDetail } from './useAdminDetail';
 
 const AUDIT_SWEEP_FAILURES = '/admin/audit?action=storage.orphan_delete';
@@ -122,7 +123,7 @@ export function SystemPage() {
     return (
       <div className="flex flex-col gap-6">
         {title}
-        <DetailStatusView status={status} missing={t('common.systemUnavailable')} failed={t('common.systemLoadFailed')} backTo="/admin/users" backLabel={t('common.back')} onRetry={reload} />
+        <DetailStatusView status={status} missing={t('common.systemUnavailable')} failed={t('common.systemLoadFailed')} backTo="/admin/users" backLabel={t('common.back')} onRetry={reload} skeleton={<AdminSectionsSkeleton />} />
       </div>
     );
   }

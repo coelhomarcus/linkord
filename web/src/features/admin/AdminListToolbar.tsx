@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/shared/ui/primitives/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/primitives/select';
+import { Skeleton } from '@/shared/ui/primitives/skeleton';
 import { cn } from '@/shared/lib/utils';
 
 const FIELD = 'h-10 rounded-lg border border-border bg-fill-subtle px-3 text-label text-text-primary outline-none focus-visible:ring-2 focus-visible:ring-ring';
@@ -56,7 +57,7 @@ export function AdminDateField({ label, value, onChange }: { label: string; valu
 /** Search, inline filters, an optional "more filters" disclosure and a one-line
  * summary of what is loaded. Fields wrap instead of overflowing, so the same
  * toolbar serves the wide and the compact layout. */
-export function AdminListToolbar({ search, filters, advanced, advancedActive, summary, onClear }: {
+export function AdminListToolbar({ search, filters, advanced, advancedActive, summary, loading = false, onClear }: {
   /** omitted for a list with nothing to search by */
   search?: { value: string; onChange: (next: string) => void; placeholder: string; label: string };
   filters?: ReactNode;
@@ -64,6 +65,8 @@ export function AdminListToolbar({ search, filters, advanced, advancedActive, su
   advanced?: ReactNode;
   advancedActive?: boolean;
   summary?: ReactNode;
+  /** the first page is loading: the summary line is held so the list below does not move when it arrives */
+  loading?: boolean;
   /** present when any filter differs from its default */
   onClear?: () => void;
 }) {
@@ -96,9 +99,11 @@ export function AdminListToolbar({ search, filters, advanced, advancedActive, su
         )}
       </div>
       {advanced && open && <div id={panelId} className="flex flex-wrap items-end gap-3">{advanced}</div>}
-      {(summary || onClear) && (
+      {(summary || onClear || loading) && (
         <div className="flex flex-wrap items-center gap-3 text-caption text-text-muted">
-          {summary && <p aria-live="polite">{summary}</p>}
+          {summary
+            ? <p aria-live="polite">{summary}</p>
+            : loading && <span className="flex h-[1lh] items-center"><Skeleton shape="text" className="h-2.5 w-20" /></span>}
           {onClear && <Button type="button" variant="ghost" size="xs" onClick={onClear}>{t('ui.clearFilters')}</Button>}
         </div>
       )}

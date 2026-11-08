@@ -15,6 +15,7 @@ import { useAdminTableFits } from './useAdminMode';
 import { useAdminQuery } from './useAdminQuery';
 import type { QuerySchema } from './useAdminQuery';
 import { AppLink } from '@/shared/ui/app-link';
+import { AdminStackedSkeleton, AdminTableSkeleton } from './AdminSkeletons';
 import { AdminPageTitle } from './AdminSection';
 
 // group and bot stay filterable: records from before servers still carry them
@@ -168,10 +169,11 @@ export function AuditPage() {
           </>
         )}
         advancedActive={from !== '' || to !== ''}
+        loading={list.status === 'loading'}
         summary={list.status === 'ready' && list.items.length > 0 ? `${list.items.length} ${t('ui.record', { count: list.items.length })}${list.hasMore ? t('ui.moreResults') : ''}` : undefined}
         onClear={active ? clear : undefined}
       />
-      <ListChrome list={list} empty={t('ui.noRecords')}>
+      <ListChrome list={list} empty={t('ui.noRecords')} skeleton={tableFits ? <AdminTableSkeleton columns={5} /> : <AdminStackedSkeleton />}>
         {tableFits ? (
           <AdminTable caption={t('ui.auditRecords')} className="min-w-[560px] table-fixed">
             <thead>
