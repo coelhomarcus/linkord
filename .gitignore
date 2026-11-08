@@ -34,10 +34,11 @@ npm-debug.log*
 bun.lock
 
 PLAN.md
+# docs/ also holds local notes, plans and QA screenshots; only these are part of the repository
 docs/*
-# the webhook integration guide is the one doc meant for whoever integrates
 !docs/WEBHOOK.md
-!docs/MIGRATING_GROUPS_TO_SERVERS.md
+!docs/DEVELOPMENT.md
+!docs/INTEGRATIONS.md
 
 # end-to-end suite (e2e/): reports, traces and the per-run stack state
 e2e/report/

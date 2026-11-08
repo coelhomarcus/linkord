@@ -17,7 +17,7 @@ export interface DmCall {
   answeredAt: number | null;
 }
 
-export interface DmCallTombstone {
+interface DmCallTombstone {
   id: string;
   conversationId: string;
   reason: DmCallEndReason;

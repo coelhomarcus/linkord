@@ -8,7 +8,7 @@ import { DmCallSurface } from './DmCallSurface';
 import { DEFAULT_DM_CALL_HEIGHT, MIN_DM_CALL_HEIGHT, clampDmCallHeight, loadDmCallHeight, saveDmCallHeight } from './dmCallHeightPreference';
 
 /** what the chat below always keeps, so the composer never leaves the screen */
-export const MIN_DM_CHAT_HEIGHT = 220;
+const MIN_DM_CHAT_HEIGHT = 220;
 const KEY_STEP = 16;
 
 interface DmCallPaneProps {

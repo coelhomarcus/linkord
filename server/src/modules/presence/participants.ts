@@ -22,7 +22,7 @@ const newToken = () => crypto.randomBytes(24).toString('hex');
 
 /** What a participant needs from an account — a login session at join time, a
  * database row when a restart rebuilds one. */
-export type ParticipantProfile = Pick<SessionUser,
+type ParticipantProfile = Pick<SessionUser,
   'userId' | 'username' | 'displayName' | 'avatar' | 'avatarPoster' | 'avatarColor' | 'banner' | 'bannerPoster' | 'bio' | 'profileLinks' | 'role'>;
 
 export interface RestorableCallParticipant {

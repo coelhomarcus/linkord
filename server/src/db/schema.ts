@@ -1,4 +1,5 @@
 import type { ConnectionProvider, ConnectionSnapshot, WidgetType } from '../modules/connections/types.js';
+import type { GameList } from '../modules/games/types.js';
 import { pgTable, text, varchar, timestamp, integer, bigint, jsonb, serial, boolean, uniqueIndex, index, primaryKey, check, customType, foreignKey, type AnyPgColumn } from 'drizzle-orm/pg-core';
 import { sql, type SQL } from 'drizzle-orm';
 
@@ -759,12 +760,34 @@ export type ProfileConnection = typeof profileConnections.$inferSelect;
 
 export const profileWallWidgets = pgTable('profile_wall_widgets', {
   id: text('id').primaryKey(),
-  connectionId: text('connection_id').notNull().references(() => profileConnections.id, { onDelete: 'cascade' }),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  /** null for the games widgets: they have no external account, their data is `profile_games` */
+  connectionId: text('connection_id').references(() => profileConnections.id, { onDelete: 'cascade' }),
   type: varchar('type', { length: 32 }).$type<WidgetType>().notNull(),
   position: integer('position').notNull(),
 }, (t) => [
   uniqueIndex('profile_wall_widgets_connection_type_unique').on(t.connectionId, t.type),
-  check('profile_wall_widgets_type_check', sql`${t.type} IN ('mal-recent-anime','github-profile','github-calendar')`),
+  uniqueIndex('profile_wall_widgets_games_unique').on(t.userId, t.type).where(sql`${t.connectionId} IS NULL`),
+  index('profile_wall_widgets_user_idx').on(t.userId, t.position),
+  check('profile_wall_widgets_type_check', sql`${t.type} IN ('mal-recent-anime','github-profile','github-calendar','igdb-favorite-game','igdb-liked-games','igdb-playing-games','igdb-wishlist-games')`),
+  check('profile_wall_widgets_owner_check', sql`(${t.connectionId} IS NULL) = (${t.type} LIKE 'igdb-%')`),
+]);
+
+/** The games a user picked, one row per game and list. Name and cover are copied when picked. */
+export const profileGames = pgTable('profile_games', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  list: varchar('list', { length: 16 }).$type<GameList>().notNull(),
+  igdbId: integer('igdb_id').notNull(),
+  name: text('name').notNull(),
+  slug: text('slug').notNull(),
+  coverImageId: varchar('cover_image_id', { length: 40 }),
+  releaseYear: integer('release_year'),
+  position: integer('position').notNull(),
+}, (t) => [
+  uniqueIndex('profile_games_list_game_unique').on(t.userId, t.list, t.igdbId),
+  index('profile_games_user_list_idx').on(t.userId, t.list, t.position),
+  check('profile_games_list_check', sql`${t.list} IN ('favorite','liked','playing','wishlist')`),
 ]);
 
 export const connectionSyncLimits = pgTable('connection_sync_limits', {

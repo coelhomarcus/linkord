@@ -1,4 +1,5 @@
 import { apiFetch } from '@/shared/api/api';
+import { gameSnapshot, type GameLists } from '@/features/games/types';
 import type { ConnectionProvider, ConnectionsResponse, WallResponse, WallSelection } from './connectionsTypes';
 
 export function fetchConnections(signal?: AbortSignal) { return apiFetch<ConnectionsResponse>('/api/me/connections', { signal }); }
@@ -17,6 +18,8 @@ export function deleteConnection(id: string) {
 export function fetchWall(userId: string, owner: boolean, signal?: AbortSignal) {
   return apiFetch<WallResponse>(owner ? '/api/me/wall' : `/api/users/${encodeURIComponent(userId)}/wall`, { signal });
 }
-export function saveWall(widgets: WallSelection[]) {
-  return apiFetch<WallResponse>('/api/me/wall', { method: 'PUT', body: JSON.stringify({ widgets }) });
+/** `games` holds only the lists that were edited: the others stay as they are on the server. */
+export function saveWall(widgets: WallSelection[], games?: Partial<GameLists>) {
+  const lists = games && Object.fromEntries(Object.entries(games).map(([list, items]) => [list, items.map(gameSnapshot)]));
+  return apiFetch<WallResponse>('/api/me/wall', { method: 'PUT', body: JSON.stringify(lists ? { widgets, games: lists } : { widgets }) });
 }

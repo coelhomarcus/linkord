@@ -351,6 +351,13 @@
       "when": 1794086369232,
       "tag": "0049_call_continuity",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1794102042434,
+      "tag": "0050_profile_games",
+      "breakpoints": true
     }
   ]
 }

@@ -1,4 +1,4 @@
-import { expect, type APIRequestContext, type APIResponse } from '@playwright/test';
+import type { APIRequestContext, APIResponse } from '@playwright/test';
 
 /** Server-side setup through the app's own HTTP routes, never raw SQL: the
  * app caches memberships in memory, so only its own flows are visible to it. */
@@ -8,7 +8,7 @@ async function ok<T>(response: APIResponse, what: string): Promise<T> {
   return (await response.json().catch(() => ({}))) as T;
 }
 
-export interface Channel { id: string; name: string; type: 'text' | 'voice' }
+interface Channel { id: string; name: string; type: 'text' | 'voice' }
 export interface CreatedServer {
   id: string;
   name: string;
@@ -54,11 +54,11 @@ export async function acceptInvite(api: APIRequestContext, code: string): Promis
   await ok(await api.post(`/api/invites/${code}/accept`, { data: {} }), 'accept invite');
 }
 
-export async function sendFriendRequest(api: APIRequestContext, username: string): Promise<void> {
+async function sendFriendRequest(api: APIRequestContext, username: string): Promise<void> {
   await ok(await api.post('/api/friend-requests', { data: { username } }), 'send friend request');
 }
 
-export async function acceptFriendRequest(api: APIRequestContext, fromUserId: string): Promise<void> {
+async function acceptFriendRequest(api: APIRequestContext, fromUserId: string): Promise<void> {
   await ok(await api.post(`/api/friend-requests/${fromUserId}/accept`, { data: {} }), 'accept friend request');
 }
 
@@ -66,13 +66,4 @@ export async function acceptFriendRequest(api: APIRequestContext, fromUserId: st
 export async function befriend(a: { api: APIRequestContext; id: string }, b: { api: APIRequestContext; username: string }): Promise<void> {
   await sendFriendRequest(a.api, b.username);
   await acceptFriendRequest(b.api, a.id);
-}
-
-export async function me(api: APIRequestContext): Promise<{ id: string; username: string }> {
-  const body = await ok<{ user: { id: string; username: string } }>(await api.get('/api/auth/me'), 'me');
-  return body.user;
-}
-
-export async function expectStatus(response: APIResponse, status: number): Promise<void> {
-  expect(response.status(), await response.text()).toBe(status);
 }

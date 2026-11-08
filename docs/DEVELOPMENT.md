@@ -30,7 +30,7 @@ DATABASE_SSL=0
 COOKIE_SECURE=0
 ```
 
-The example file uses placeholder database credentials, so update `DATABASE_URL` as shown. Set `REGISTRATION_CODE` to a value you can use when creating a local account. `LIVEKIT_URL`, `LIVEKIT_API_KEY`, and `LIVEKIT_API_SECRET` are only needed to use voice, video, and screen sharing.
+The example file uses placeholder database credentials, so update `DATABASE_URL` as shown. Set `REGISTRATION_CODE` to a value you can use when creating a local account. `LIVEKIT_URL`, `LIVEKIT_API_KEY`, and `LIVEKIT_API_SECRET` are only needed for voice, video, and screen sharing; see [Voice and video locally](#voice-and-video-locally).
 
 ## Start PostgreSQL
 
@@ -70,6 +70,42 @@ docker compose -f docker-compose.dev.yml down
 
 This keeps the named database volume. Do not add `-v` unless you intend to delete the local database.
 
+## Voice and video locally
+
+Calls need a LiveKit server. LiveKit Cloud works, but a local dev server in Docker needs no account:
+
+```bash
+docker run --rm -p 7880:7880 -p 7881:7881 -p 7882:7882/udp livekit/livekit-server --dev --bind 0.0.0.0 --node-ip 127.0.0.1
+```
+
+Then, in `.env`:
+
+```dotenv
+LIVEKIT_URL=ws://localhost:7880
+LIVEKIT_API_KEY=devkey
+LIVEKIT_API_SECRET=secret
+```
+
+`--dev` uses that fixed key pair; `--node-ip 127.0.0.1` makes the media reachable from browsers on this machine. To try a call you need two accounts in separate browser sessions (a normal and a private window, or [Sample data](#sample-data)). This is the same LiveKit setup the end-to-end suite runs.
+
+## Sample data
+
+To get a populated app without clicking through sign-ups, seed the local database:
+
+```bash
+npm run db:seed
+```
+
+It creates four accounts (`ana`, `bruno`, `carla`, `davi`; the shared password is printed at the end and defined at the top of `server/src/scripts/seedDev.ts`), friendships and a pending request, two DMs, and a server ("Equipe do projeto") with `#geral`, a read-only `#avisos` fed by a webhook, a voice channel and a hoisted moderators role. It runs only with `NODE_ENV=development` (the script sets it) against a database on `localhost`, and is safe to run again: rows that exist are left alone. Restart `npm run dev` afterwards, because the server caches memberships in memory.
+
+## Create an administrator
+
+After registering with your `REGISTRATION_CODE`, grant the account administrator access from the host:
+
+```bash
+npm run admin:grant -- <your-username>
+```
+
 ## Run the checks
 
 There is no hosted CI; run the checks locally before pushing. This runs the server test typecheck, the frontend lint, the server and frontend tests, and the production build (which also typechecks the backend and frontend):
@@ -80,23 +116,29 @@ npm run check
 
 None of these need PostgreSQL: `.env.test` supplies a placeholder `DATABASE_URL` and no unit test runs a real query. Use `npm run test:server` or `npm run test:web` to run one side only.
 
-## Create an administrator
+## Scripts
 
-After registering with your `REGISTRATION_CODE`, grant the account administrator access from the host:
+Every script runs from the repository root.
 
-```bash
-npm run admin:grant -- <your-username>
-```
+| Script | What it does |
+| --- | --- |
+| `npm run dev` | API (Fastify, `:3000`) and web (Vite, `:5173`) in watch mode. |
+| `npm run build` / `npm start` | Production build of both, and the built server. |
+| `npm run check` | Everything that should pass before pushing: server test typecheck, web lint, server and web tests, build. |
+| `npm run test:server` / `npm run test:web` | Unit tests of one side (`node --test`, Vitest). No database needed. |
+| `npm run test:integration` | `server/tests/integration/*.itest.ts` against a throwaway database it creates and drops on your local Postgres. |
+| `npm run test:e2e` (and `:features`, `:restart`, `:upgrade`) | The browser suite, see [End-to-end tests](#end-to-end-tests). Needs Docker and Chrome. |
+| `npm run check:dead-code` | `knip`: unused files, exports and dependencies across `server/`, `web/` and `e2e/`. |
+| `npm run db:migrate` | Applies pending migrations. The server also does it on boot unless `MIGRATE_ON_BOOT=0`. |
+| `npm run db:generate` | Generates a migration from changes to `server/src/db/schema.ts`. Rename the file to describe the change. |
+| `npm run db:seed` | Sample data for local development, see [Sample data](#sample-data). |
+| `npm run db:studio` | Drizzle Studio, a browser UI over the database in `DATABASE_URL`. |
+| `npm run db:preflight` | Read-only inventory of legacy data that would block a migration (exit code 1 means blocked; `-- --json` for machine output). |
+| `npm run db:repair` | Repairs the legacy relationship rows `db:preflight` reports, without creating friendships or invitations. |
+| `npm run db:rehearse` | Rehearses the migrations on throwaway local databases before they run for real. |
+| `npm run admin:grant -- <username>` / `admin:revoke` | Gives or takes administrator access. |
 
-## Troubleshooting
-
-- If the database is not ready, check `docker compose -f docker-compose.dev.yml ps` and `docker compose -f docker-compose.dev.yml logs postgres`.
-- If port `5432` is already in use, stop the other PostgreSQL service or change the host-side port mapping in `docker-compose.dev.yml` and update `DATABASE_URL` to match.
-- If the app cannot connect to PostgreSQL, confirm the container is healthy and that `DATABASE_URL` uses `localhost:5432`, the `linkord` database, and the local credentials above.
-
-## Restarting the server during a call
-
-Restarting the dev server (or deploying) while you are in a call should leave the call running: the clients reconnect and the server restores who was in which call from Postgres (`call_presence`, `dm_calls_active`), waiting `CALL_RESTORE_GRACE_MS` for each client. To try it, join a voice channel with two accounts, stop and start `npm run dev`, and check that both stay connected. Raising `MIN_PROTOCOL_VERSION` in `server/src/realtime/protocolVersion.ts` works against this: open tabs on the old version are refused with `client_outdated`, lose their socket and drop out of the call as far as the server is concerned. Raise it only for a change an old client cannot tolerate.
+The scripts behind the `db:*`, `admin:*` and `test:integration` commands live in `server/src/scripts/`; each starts with a comment on what it does and how to call it.
 
 ## End-to-end tests
 
@@ -122,16 +164,70 @@ Each run builds `linkord-e2e:head` from the working tree (uncommitted changes in
 
 The `upgrade` project adapts to what the base version can do and says so in the report's annotations: if it predates call persistence it expects old tabs to rejoin their call, if its shutdown still disconnects sockets it focuses old tabs to bring them back, and if the working tree raised `MIN_PROTOCOL_VERSION` past the base's protocol it only expects the update screen. A failure keeps a trace, video and screenshot: `npm run report --prefix e2e` opens the HTML report, and `npx playwright show-trace <trace.zip>` (from `e2e/`) replays it step by step.
 
-Specs set up their data through the app's HTTP routes (sign-up, invites, friend requests), never by writing to the database: the app caches memberships in memory and would not see such rows until a restart.
+### How a spec runs
+
+1. Global setup builds the app image and starts the stack (`e2e/stack/`); every test shares it, so tests run one at a time.
+2. A spec asks the `users` fixture for accounts (`e2e/fixtures/test.ts`). Each is a real sign-up in its own browser context, with its own cookies and storage, like separate people on separate machines. Chrome gets a fake camera and microphone, so calls carry real audio and video through LiveKit.
+3. Data is set up through the app's HTTP routes (`e2e/fixtures/api.ts`: servers, invites, friend requests, channels, permissions), never by writing to the database: the app caches memberships in memory and would not see such rows until a restart.
+4. The spec drives the UI by role and pt-BR label (`e2e/fixtures/app.ts`), and checks what a person would see: messages, call tiles, playing audio tracks. It can also wait for a server event to reach a tab (`waitForSocketEvent`) and read the reason of each socket disconnect.
+5. Restart and upgrade specs change the server under the open tabs: `deploy()` recreates the app container (SIGTERM, then a new one, like a Dokploy redeploy), `stopApp()`/`startApp()` keep it down for a while.
+
+### What is covered
+
+| Spec | What it checks |
+| --- | --- |
+| `features/auth` | Sign-up with and without the invitation code, the login form (wrong password refused), session across reloads, logout. |
+| `features/friends` | Request from the form accepted in Pending, decline, cancel, block (no messages or calls) and unblock. |
+| `features/dm` | Talking in a DM, the unread count until it is opened, no DM without friendship. |
+| `features/chat` | Messages shown once on both sides, typing indicator, reply, edit, delete, reactions, search, image attachment. |
+| `features/servers` | Creating from the rail, invite link, new channels, a channel hidden from `@everyone`, a read-only channel, kick, ban and unban, deleting the server. |
+| `features/voice` | Seeing and hearing each other, mute and camera seen by the other side, leaving, a moderator moving and disconnecting a member. |
+| `features/dm-call` | Decline, cancel, an answered call with audio both ways and its line in the chat, a video call. |
+| `features/webhooks` | Text and cards through the ingress (token in the URL and in the header), invalid payloads, rotating and deleting the URL, permission. |
+| `features/soundboard` | A sound uploaded to the server reaches everyone in the call. |
+| `features/profile` | Display name and bio reaching a friend live, mutual friends, the games widgets on offer with no connection (the picker reports the search unavailable, as the stack has no IGDB credentials), and games saved with the Wall reaching a friend in order. |
+| `features/reports-admin` | Reporting a message, the admin deleting it for everyone, suspending an account. |
+| `features/settings` | The account's language following it to another browser. |
+| `restart/voice` | A voice call survives a redeploy: the tab nobody touched reconnects on its own (the socket drop is a transport close, never `io server disconnect`), and someone joining after the deploy lands in the same call, with audio both ways. |
+| `restart/dm-call` | An answered DM call survives a redeploy; a ring survives it and can be answered, even with the click made while the tab is still disconnected. |
+| `restart/chat` | A message written while the server is down, and one sent the moment the deploy starts, are stored and shown exactly once. |
+| `restart/upload` | A 40 MB upload, throttled to 1 MB/s, survives a 10 s and a 30 s outage, and the stored file is byte for byte the original (sha256). |
+| `upgrade/upgrade` | Tabs opened on the production version and tabs on the working tree, after the upgrade: messages both ways, a friend request accepted in an old tab, and the voice call that was going on before the deploy. |
+
+The `restart` specs are the guard for the deploy behaviour described in `AGENTS.md` ("Realtime compatibility and deploys"): built against a tree without the reconnect, upload or DM-answer fixes, they fail.
+
+When you add a user-facing flow, add it to the matching spec (or a new `features/<area>.spec.ts`) and to this table.
+
+## Restarting the server during a call
+
+Restarting `npm run dev` (or deploying) while you are in a call should leave the call running: the clients reconnect and the server restores who was in which call. To see it, join a voice channel with two accounts, stop and start `npm run dev`, and check that both stay connected without touching either tab. The rules that keep this working are in `AGENTS.md` ("Realtime compatibility and deploys"), and the `restart` end-to-end specs check it on every run.
 
 ## Profile connections and Wall
 
-The Connections settings support URL, MyAnimeList and GitHub connections. Existing profile links migrate as URL connections; adding a service connection requires its username. Connections are self-declared and do not verify ownership. Only widgets explicitly added and saved by the account owner appear on their Wall. Each connection has a "Show on profile" switch (`show_on_profile`, on by default): turned off, the connection stays in the owner's settings but leaves the public links and the Wall, and its saved widgets come back when it is shown again.
+Connections (Settings → Connections) can be a URL, a MyAnimeList account or a GitHub account. They are self-declared: ownership is not verified. Each has a "Show on profile" switch (`show_on_profile`, on by default); turned off, the connection stays in the owner's settings but leaves the public links and the Wall, and its saved widgets come back when it is shown again. Only widgets the owner added and saved appear on their Wall.
 
-MyAnimeList uses the official API (`https://api.myanimelist.net/v2`), which reads public anime lists with only an application client ID — no user login. Register an app at https://myanimelist.net/apiconfig and set `MAL_CLIENT_ID`; without it MyAnimeList connections stay unavailable. The official API has no favorites endpoint, so the only MyAnimeList widget is recent anime activity (the eight most recently updated list entries, shown as a grid of covers). The worker synchronizes on connection and every twenty-four hours. Private lists and unavailable data are not imported. Failures preserve the last complete snapshot and retry automatically.
+To develop the widgets locally:
 
-GitHub requires no token or OAuth setup. The server reads the public profile through `GET https://api.github.com/users/{username}` and extracts daily contribution counts from the public `https://github.com/users/{username}/contributions` calendar. The calendar is HTML, not a versioned API, so markup changes may require an adapter update; unrecognized or incomplete calendars preserve the previous snapshot. Anonymous REST access is limited to 60 requests per hour per IP. PostgreSQL coordinates one GitHub sync every 65 seconds across server instances, and rate-limit responses postpone the provider until its cooldown expires. Connections share this queue and refresh every twenty-four hours once synced; other traffic sharing the server's outbound IP can reduce the available quota. No credentials, user cookies, or private data are requested.
+- GitHub needs no setup.
+- MyAnimeList needs `MAL_CLIENT_ID` (register an app at <https://myanimelist.net/apiconfig>); without it, MyAnimeList connections stay unavailable.
+- Syncing runs in the API process: a new connection is fetched within a minute, then every 24 hours. Viewing a profile only reads stored snapshots. Check the `connection-sync` logs when a widget stays empty.
 
-The worker starts with the API process, checks due connections every minute, and coordinates leases and provider request limits through PostgreSQL. Viewing a profile reads saved snapshots and never contacts the provider APIs. No separate scheduler or Redis service is required. Check `connection-sync` logs for failures; disconnecting deletes the connection snapshot and its widgets.
+### Games widgets
 
-Connection CRUD uses `/api/me/connections` (`PATCH /api/me/connections/:id` with `{ "showOnProfile": boolean }` and no `value` only changes the visibility); Wall configuration uses `/api/me/wall`, and authorized profile viewers read `/api/users/:userId/wall`. `profileLinks` remains a read-only URL projection in profile payloads, made of the connections shown on the profile. Protocol version 7 requires old clients to reload before changing profiles.
+The four games widgets (favorite game, games I like, games in rotation, want to play) are not tied to a connection: they are always on offer to the owner when editing the Wall, and their data is what the owner picked, kept in `profile_games`. Locally:
+
+- Searching needs `IGDB_CLIENT_ID` and `IGDB_CLIENT_SECRET` (a Twitch developer app, see [INTEGRATIONS.md](INTEGRATIONS.md#igdb)). Without them the widgets still appear and the picker says the search is unavailable, which is what the end-to-end suite sees.
+- The lists are saved together with the Wall: `PUT /api/me/wall` takes `{ "widgets": [{ "connectionId": null, "type": "igdb-liked-games" }], "games": { "liked": [<snapshot>] } }`. A list left out of `games` is untouched; a list present replaces the stored one. A snapshot is `{ igdbId, name, slug, coverImageId, releaseYear }`. Lists stay saved when their widget is taken off the Wall.
+- `profile_wall_widgets.connection_id` is null for these widgets, so the table also carries `user_id`; the type decides which of the two a row has (a check constraint keeps them consistent).
+- `GET /api/games/search?q=` is the search proxy and shares `connection_sync_limits` (the `igdb` row) for its request pacing.
+- A tab still running a build from before the games widgets cannot draw one: opening the Wall of someone who added a games widget fails in that tab until it reloads.
+
+API: connections at `/api/me/connections` (`PATCH /api/me/connections/:id` with only `{ "showOnProfile": boolean }` changes the visibility), the Wall layout at `/api/me/wall`, and another user's Wall at `/api/users/:userId/wall`. `profileLinks` in profile payloads is a read-only list of the URLs shown on the profile.
+
+How each provider is called, its limits and what happens when it fails are in [INTEGRATIONS.md](INTEGRATIONS.md#myanimelist) and, for games, [INTEGRATIONS.md](INTEGRATIONS.md#igdb).
+
+## Troubleshooting
+
+- If the database is not ready, check `docker compose -f docker-compose.dev.yml ps` and `docker compose -f docker-compose.dev.yml logs postgres`.
+- If port `5432` is already in use, stop the other PostgreSQL service or change the host-side port mapping in `docker-compose.dev.yml` and update `DATABASE_URL` to match.
+- If the app cannot connect to PostgreSQL, confirm the container is healthy and that `DATABASE_URL` uses `localhost:5432`, the `linkord` database, and the local credentials above.

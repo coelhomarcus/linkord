@@ -28,6 +28,7 @@ import { registerReportRoutes } from '../modules/reports/reports.js';
 import { registerAdminRoutes } from '../modules/admin/adminRoutes.js';
 import { registerSoundboardRoutes } from '../modules/soundboard/soundboard.js';
 import { registerGifRoutes } from '../modules/gifs/gifs.js';
+import { registerGameRoutes } from '../modules/games/games.js';
 import { registerBotRoutes } from '../modules/bots/bots.js';
 import { registerWebhookIngressRoutes } from '../modules/bots/webhookIngress.js';
 import { logger } from '../lib/logger.js';
@@ -103,6 +104,7 @@ export function createApp(): FastifyInstance {
   registerMediaRoutes(fastify);
   registerLinkPreviewRoutes(fastify);
   registerGifRoutes(fastify);
+  registerGameRoutes(fastify);
   registerFriendshipRoutes(fastify, { onlineUserIds: listOnlineUserIds });
   registerBlockRoutes(fastify);
   registerUserRoutes(fastify);
