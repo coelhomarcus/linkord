@@ -1,0 +1,11 @@
+http:
+  routers:
+    app:
+      rule: "PathPrefix(`/`)"
+      entryPoints: [web]
+      service: app
+  services:
+    app:
+      loadBalancer:
+        servers:
+          - url: "http://app:3000"

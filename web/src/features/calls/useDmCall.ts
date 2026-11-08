@@ -12,12 +12,18 @@ export interface DmCallNotice {
 }
 
 interface DmCallDeps {
-  sendWs: (msg: ClientMessage) => void;
+  /** false when the socket is down and the message went nowhere */
+  sendWs: (msg: ClientMessage) => boolean | void;
   armDmMedia: (conversationId: string, video: boolean) => void;
   leaveCall: () => Promise<void>;
   dropPendingCall: (conversationId: string) => void;
   activeCallId: () => string | null;
   myUserId: () => string | null;
+}
+
+interface UnsentAnswer {
+  t: 'dm-call-accept' | 'dm-call-decline' | 'dm-call-cancel';
+  callId: string;
 }
 
 function noticeFrom(view: DmCallView, phase: DmCallNotice['phase'], reason?: DmCallEndReason): DmCallNotice {
@@ -43,6 +49,9 @@ export function useDmCall(deps: DmCallDeps) {
     noticeRef.current = notice;
   });
   const startAttemptRef = useRef<string | null>(null);
+  // An answer given while the socket was down (a redeploy, a network blip):
+  // clicking "Atender" then must not be lost without a word.
+  const unsentAnswerRef = useRef<UnsentAnswer | null>(null);
 
   const clearStage = useCallback(() => setStageConversationId(null), []);
 
@@ -63,6 +72,7 @@ export function useDmCall(deps: DmCallDeps) {
   }, []);
 
   const onEnded = useCallback((msg: { callId: string; conversationId: string; reason: DmCallEndReason }) => {
+    if (unsentAnswerRef.current?.callId === msg.callId) unsentAnswerRef.current = null;
     const { leaveCall, dropPendingCall, activeCallId } = depsRef.current;
     if (activeCallId() === msg.conversationId) void leaveCall();
     else dropPendingCall(msg.conversationId);
@@ -95,20 +105,36 @@ export function useDmCall(deps: DmCallDeps) {
     depsRef.current.sendWs({ t: 'dm-call-start', conversationId, video });
   }, []);
 
+  const answer = useCallback((t: UnsentAnswer['t'], callId: string) => {
+    const sent = depsRef.current.sendWs({ t, callId });
+    unsentAnswerRef.current = sent === false ? { t, callId } : null;
+  }, []);
+
   const acceptDmCall = useCallback(() => {
     const current = noticeRef.current;
-    if (current?.phase === 'incoming') depsRef.current.sendWs({ t: 'dm-call-accept', callId: current.callId });
-  }, []);
+    if (current?.phase === 'incoming') answer('dm-call-accept', current.callId);
+  }, [answer]);
 
   const declineDmCall = useCallback(() => {
     const current = noticeRef.current;
-    if (current?.phase === 'incoming') depsRef.current.sendWs({ t: 'dm-call-decline', callId: current.callId });
-  }, []);
+    if (current?.phase === 'incoming') answer('dm-call-decline', current.callId);
+  }, [answer]);
 
   const cancelDmCall = useCallback(() => {
     const current = noticeRef.current;
-    if (current?.phase === 'outgoing') depsRef.current.sendWs({ t: 'dm-call-cancel', callId: current.callId });
-  }, []);
+    if (current?.phase === 'outgoing') answer('dm-call-cancel', current.callId);
+  }, [answer]);
+
+  /** After every welcome, with the call it carries (if any): an answer that never
+   * left goes out now, but only to the same call still waiting for it. A call
+   * that ended or was answered elsewhere meanwhile drops it. */
+  const onReconnected = useCallback((view: DmCallView | null) => {
+    const unsent = unsentAnswerRef.current;
+    unsentAnswerRef.current = null;
+    if (!unsent || !view || view.callId !== unsent.callId) return;
+    const waiting = unsent.t === 'dm-call-cancel' ? view.phase === 'outgoing' : view.phase === 'incoming';
+    if (waiting) answer(unsent.t, unsent.callId);
+  }, [answer]);
 
   const consumeStartAttempt = useCallback((): string | null => {
     const conversationId = startAttemptRef.current;
@@ -127,6 +153,7 @@ export function useDmCall(deps: DmCallDeps) {
     cancelDmCall,
     onDmCall,
     onEnded,
+    onReconnected,
     consumeStartAttempt,
   };
 }

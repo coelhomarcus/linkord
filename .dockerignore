@@ -1,0 +1,14 @@
+# The Dockerfile installs dependencies and builds inside the image; host
+# copies would only slow the context down or, for native modules, replace the
+# Linux builds with this machine's.
+**/node_modules
+**/dist
+.git
+uploads
+e2e
+docs
+.claude
+# never part of an image
+.env
+.env.*
+!.env.example

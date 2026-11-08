@@ -11,11 +11,16 @@ interface InitResponse {
   totalChunks: number;
 }
 
+// Every error the app itself sends carries a code. A response without one came
+// from the proxy in front of it, which answers 404 or 502 while a deploy swaps
+// the container: the request was never seen, so it is worth sending again.
+const PROXY_ERROR = 'proxy_error';
+
 async function toApiError(res: Response): Promise<ApiError> {
   let body: unknown = null;
   try { body = await res.json(); } catch {  }
   const err = (body && typeof body === 'object' ? (body as { error?: { code?: string; message?: string } }).error : null) || {};
-  return new ApiError(res.status, err.code || 'unknown_error', err.message || i18n.t('errors.unexpected'), res.headers.get('Retry-After') ?? undefined);
+  return new ApiError(res.status, err.code || PROXY_ERROR, err.message || i18n.t('errors.unexpected'), res.headers.get('Retry-After') ?? undefined);
 }
 
 async function runWithConcurrency(count: number, limit: number, task: (i: number) => Promise<void>): Promise<void> {
@@ -36,19 +41,24 @@ async function runWithConcurrency(count: number, limit: number, task: (i: number
   if (firstError !== undefined) throw firstError;
 }
 
-const MAX_CHUNK_RETRIES = 3;
 const MAX_CONCURRENT_CHUNKS = 3;
 const RETRY_BASE_MS = 500;
-const MAX_INIT_RATE_LIMIT_WAITS = 3;
+const RETRY_MAX_DELAY_MS = 5_000;
+// How long a request keeps being retried while the server is unreachable. A
+// deploy takes the app away for a few seconds to tens of seconds, and the
+// upload is kept on the server's disk, so it resumes where it stopped.
+const OUTAGE_WINDOW_MS = 60_000;
+const MAX_RATE_LIMIT_WAITS = 3;
 const MAX_RETRY_AFTER_MS = 60_000;
 
 export interface StagedFile { id: string; name: string; mime: string; size: number; thumbId?: string }
 
-// A 4xx says the request itself is wrong (no access, too big, gone) —
-// sending it again can't help. Timeouts, rate limits and 5xx can.
+// A 4xx from the app says the request itself is wrong (no access, too big,
+// gone) — sending it again can't help. Timeouts, rate limits, 5xx and the
+// proxy answering for an app that is restarting can.
 function isRetryable(err: unknown): boolean {
   if (!(err instanceof ApiError)) return true; // network failure
-  return err.status >= 500 || err.status === 408 || err.status === 429;
+  return err.status >= 500 || err.status === 408 || err.status === 429 || err.code === PROXY_ERROR;
 }
 
 function wait(ms: number, signal?: AbortSignal): Promise<void> {
@@ -56,6 +66,36 @@ function wait(ms: number, signal?: AbortSignal): Promise<void> {
     const timer = setTimeout(resolve, ms);
     signal?.addEventListener('abort', () => { clearTimeout(timer); reject(signal.reason); }, { once: true });
   });
+}
+
+/** Runs one request until it succeeds, it fails for good, or the server has
+ * been away longer than OUTAGE_WINDOW_MS. A rate limit is waited out (its
+ * Retry-After) a few times instead, since the server is up and answering. */
+async function retrying<T>(attempt: () => Promise<T>, signal?: AbortSignal): Promise<T> {
+  const started = Date.now();
+  let rateLimitWaits = 0;
+  for (let tries = 0; ; tries++) {
+    try {
+      return await attempt();
+    } catch (err) {
+      if (signal?.aborted || !isRetryable(err)) throw err;
+      let delay = Math.min(RETRY_MAX_DELAY_MS, RETRY_BASE_MS * 2 ** tries);
+      if (err instanceof ApiError && err.status === 429) {
+        if (rateLimitWaits++ >= MAX_RATE_LIMIT_WAITS) throw err;
+        const seconds = Number(err.retryAfter);
+        if (Number.isFinite(seconds) && seconds > 0) delay = Math.min(MAX_RETRY_AFTER_MS, seconds * 1000);
+      } else if (Date.now() - started + delay > OUTAGE_WINDOW_MS) {
+        throw err;
+      }
+      await wait(delay, signal);
+    }
+  }
+}
+
+async function post(url: string, body: BodyInit, contentType: string, signal?: AbortSignal): Promise<Response> {
+  const res = await fetch(url, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': contentType }, body, signal });
+  if (!res.ok) throw await toApiError(res);
+  return res;
 }
 
 interface UploadRun {
@@ -70,23 +110,8 @@ interface UploadRun {
  * correlated `chat` send — see stageFileInChunks below, its only caller. */
 async function runUpload({ conversationId, file, onProgress, signal }: UploadRun): Promise<unknown> {
   if (!conversationId) throw new ApiError(400, 'missing_conversation', i18n.t('upload.missingConversation'));
-  let initRes: Response;
-  // several batches in a row can hit the server's per-minute cap on new
-  // uploads; wait out its Retry-After rather than failing the file
-  for (let attempt = 0; ; attempt++) {
-    initRes = await fetch('/api/attachments/init', {
-      method: 'POST',
-      credentials: 'same-origin',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ conversationId, fileName: file.name, mimeType: file.type || 'application/octet-stream', totalSize: file.size }),
-      signal,
-    });
-    if (initRes.ok) break;
-    const err = await toApiError(initRes);
-    if (err.status !== 429 || attempt >= MAX_INIT_RATE_LIMIT_WAITS) throw err;
-    const seconds = Number(err.retryAfter);
-    await wait(Math.min(MAX_RETRY_AFTER_MS, Number.isFinite(seconds) && seconds > 0 ? seconds * 1000 : RETRY_BASE_MS * 2 ** attempt), signal);
-  }
+  const initBody = JSON.stringify({ conversationId, fileName: file.name, mimeType: file.type || 'application/octet-stream', totalSize: file.size });
+  const initRes = await retrying(() => post('/api/attachments/init', initBody, 'application/json', signal), signal);
   const { uploadId, chunkSize, totalChunks } = await initRes.json() as InitResponse;
 
   const sentPerChunk = new Array(totalChunks).fill(0);
@@ -96,58 +121,27 @@ async function runUpload({ conversationId, file, onProgress, signal }: UploadRun
     onProgress?.(sent / file.size);
   }
 
+  // a chunk sent again overwrites the same piece on the server, so a retry after
+  // a restart picks the upload up where it stopped
   async function uploadChunk(index: number): Promise<void> {
     const start = index * chunkSize;
     const end = Math.min(start + chunkSize, file.size);
     const blob = file.slice(start, end);
-    for (let attempt = 0; ; attempt++) {
-      try {
-        const res = await fetch(`/api/attachments/${uploadId}/chunk/${index}`, {
-          method: 'POST',
-          credentials: 'same-origin',
-          headers: { 'Content-Type': 'application/octet-stream' },
-          body: blob,
-          signal,
-        });
-        if (!res.ok) throw await toApiError(res);
-        sentPerChunk[index] = blob.size;
-        reportProgress();
-        return;
-      } catch (err) {
-        if (signal?.aborted || attempt >= MAX_CHUNK_RETRIES || !isRetryable(err)) throw err;
-        await wait(RETRY_BASE_MS * 2 ** attempt, signal);
-      }
-    }
+    await retrying(() => post(`/api/attachments/${uploadId}/chunk/${index}`, blob, 'application/octet-stream', signal), signal);
+    sentPerChunk[index] = blob.size;
+    reportProgress();
   }
 
   try {
     await runWithConcurrency(totalChunks, MAX_CONCURRENT_CHUNKS, uploadChunk);
+    // complete is safe to repeat (the server answers a repeat with the same
+    // staged file), so a lost reply is retried instead of failing the file
+    const completeRes = await retrying(() => post(`/api/attachments/${uploadId}/complete`, '{}', 'application/json', signal), signal);
+    return await completeRes.json();
   } catch (err) {
     if (!signal?.aborted) log.error('upload failed', err, { uploadId, bytes: file.size, type: file.type, chunks: totalChunks });
     fetch(`/api/attachments/${uploadId}`, { method: 'DELETE', credentials: 'same-origin' }).catch(() => {});
     throw err;
-  }
-
-  // complete is safe to repeat (the server answers a repeat with the same
-  // staged file), so a lost reply is retried instead of failing the file
-  for (let attempt = 0; ; attempt++) {
-    try {
-      const completeRes = await fetch(`/api/attachments/${uploadId}/complete`, {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
-        signal,
-      });
-      if (!completeRes.ok) throw await toApiError(completeRes);
-      return await completeRes.json();
-    } catch (err) {
-      if (signal?.aborted || attempt >= MAX_CHUNK_RETRIES || !isRetryable(err)) {
-        fetch(`/api/attachments/${uploadId}`, { method: 'DELETE', credentials: 'same-origin' }).catch(() => {});
-        throw err;
-      }
-      await wait(RETRY_BASE_MS * 2 ** attempt, signal);
-    }
   }
 }
 
