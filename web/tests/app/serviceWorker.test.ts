@@ -39,6 +39,37 @@ describe('push service worker', () => {
     }));
   });
 
+  it('shows the sender avatar as the icon and alerts again for a repeated tag', async () => {
+    const { handlers, showNotification, fetch } = worker();
+    fetch.mockResolvedValueOnce(new Response(new Uint8Array([1, 2, 3]), { status: 200, headers: { 'content-type': 'image/jpeg' } }));
+    let pending: Promise<unknown> = Promise.resolve();
+    handlers.get('push')!({
+      data: { json: () => ({ notification: { title: 'Ana', body: 'oi', navigate: 'https://linkord.test/app/channels/@me/abc', tag: 'chat-abc', renotify: true, avatar: 'https://linkord.test/uploads/' + 'a'.repeat(32) } }) },
+      waitUntil: (promise) => { pending = promise; },
+    });
+    await pending;
+    expect(fetch).toHaveBeenCalledWith('/uploads/' + 'a'.repeat(32), expect.objectContaining({ credentials: 'same-origin' }));
+    expect(showNotification).toHaveBeenCalledWith('Ana', expect.objectContaining({ icon: 'data:image/jpeg;base64,AQID', renotify: true, tag: 'chat-abc' }));
+  });
+
+  it('keeps the app icon when the avatar is foreign or cannot be fetched', async () => {
+    const { handlers, showNotification, fetch } = worker();
+    let pending: Promise<unknown> = Promise.resolve();
+    handlers.get('push')!({
+      data: { json: () => ({ notification: { title: 'Ana', body: 'oi', tag: 'chat-abc', avatar: 'https://evil.test/uploads/' + 'a'.repeat(32) } }) },
+      waitUntil: (promise) => { pending = promise; },
+    });
+    await pending;
+    expect(fetch).not.toHaveBeenCalledWith(expect.stringContaining('/uploads/'), expect.anything());
+    fetch.mockResolvedValueOnce(new Response(null, { status: 404 }));
+    handlers.get('push')!({
+      data: { json: () => ({ notification: { title: 'Ana', body: 'oi', tag: 'chat-abc', avatar: '/uploads/' + 'b'.repeat(32) } }) },
+      waitUntil: (promise) => { pending = promise; },
+    });
+    await pending;
+    expect(showNotification).toHaveBeenLastCalledWith('Ana', expect.objectContaining({ icon: '/icons/icon-192.png', renotify: false }));
+  });
+
   it('uses the server count for the app icon while showing a push notification', async () => {
     const badge = { setAppBadge: vi.fn(async () => {}), clearAppBadge: vi.fn(async () => {}) };
     const { handlers, showNotification, fetch } = worker([], badge);

@@ -8,8 +8,7 @@ import { getConversationForUser } from '../conversations/conversationsRepository
 import { logger } from '../../lib/logger.js';
 import { canSendDirectMessage } from '../friendships/friendshipsRepository.js';
 import { resolveLocale, type Locale } from '../users/locale.js';
-import { localeText } from '../users/localeText.js';
-import { formatCallLength } from '../calls/callLength.js';
+import { chatNoticeText, type ChatNoticeInput, friendAcceptedNoticeText, friendRequestNoticeText, mentionNoticeText, previewText, pushAvatarPath, serverInvitationNoticeText, type PushNotice } from './pushNotices.js';
 
 const log = logger.child({ component: 'web-push' });
 
@@ -53,8 +52,6 @@ export async function removePushSubscription(userId: string, endpoint: string): 
   await db.delete(pushSubscriptions).where(and(eq(pushSubscriptions.userId, userId), eq(pushSubscriptions.endpoint, endpoint)));
 }
 
-interface PushNotice { title: string; body: string; path: string; tag: string }
-
 interface PushDeliveryResult { delivered: boolean; retryAfterMs: number }
 
 export function retryAfterDelayMs(headers: unknown, now = Date.now()): number {
@@ -87,47 +84,56 @@ async function lastReadMessageId(conversation: Conversation, userId: string): Pr
   return row?.id ?? 0;
 }
 
+/** The message, its author and the channel it is in, only if the reader can still see it. */
+async function visibleMessage(messageId: number, userId: string) {
+  const [row] = await db.select({ message: messages, author: users, webhookName: webhooks.name, serverName: servers.name })
+    .from(messages)
+    .innerJoin(conversations, eq(conversations.id, messages.conversationId))
+    .leftJoin(servers, eq(servers.id, conversations.serverId))
+    .leftJoin(users, eq(users.id, messages.authorId))
+    .leftJoin(webhooks, eq(webhooks.id, messages.webhookId))
+    .where(eq(messages.id, messageId)).limit(1);
+  // re-checked at delivery: the reader may have lost the channel since
+  const conversation = row ? await getConversationForUser(row.message.conversationId, userId) : null;
+  if (!row || !conversation) return null;
+  if (conversation.type === 'direct' && row.message.authorId && !(await canSendDirectMessage(row.message.authorId, userId))) return null;
+  const name = row.author ? row.author.displayName || row.author.username : row.message.webhookId ? row.webhookName || 'Bot' : 'Alguém';
+  return {
+    message: row.message, conversation, name, avatar: pushAvatarPath(row.author),
+    direct: conversation.type === 'direct', serverName: row.serverName ?? '', text: previewText(row.message.text),
+  };
+}
+
+async function userCard(userId: string) {
+  const [user] = await db.select({ username: users.username, displayName: users.displayName, avatar: users.avatar, avatarPoster: users.avatarPoster })
+    .from(users).where(eq(users.id, userId)).limit(1);
+  return user ?? null;
+}
+
 async function noticeFor(event: OutboxEvent, locale: Locale): Promise<PushNotice | null> {
   const payload = event.payload as Record<string, unknown>;
   if (event.type === 'chat_message_push') {
     if (!Number.isSafeInteger(payload.messageId)) return null;
-    const [row] = await db.select({ message: messages, author: users, webhookName: webhooks.name, serverName: servers.name })
-      .from(messages)
-      .innerJoin(conversations, eq(conversations.id, messages.conversationId))
-      .leftJoin(servers, eq(servers.id, conversations.serverId))
-      .leftJoin(users, eq(users.id, messages.authorId))
-      .leftJoin(webhooks, eq(webhooks.id, messages.webhookId))
-      .where(eq(messages.id, payload.messageId as number)).limit(1);
-    // re-checked at delivery: the reader may have lost the channel since
-    const conversation = row ? await getConversationForUser(row.message.conversationId, event.audienceUserId) : null;
-    if (!row || !conversation || (await lastReadMessageId(conversation, event.audienceUserId)) >= row.message.id) return null;
-    if (conversation.type === 'direct' && row.message.authorId
-      && !(await canSendDirectMessage(row.message.authorId, event.audienceUserId))) return null;
+    const found = await visibleMessage(payload.messageId as number, event.audienceUserId);
+    if (!found || (await lastReadMessageId(found.conversation, event.audienceUserId)) >= found.message.id) return null;
     const [mention] = await db.select({ id: notifications.id }).from(notifications).where(and(
       eq(notifications.recipientId, event.audienceUserId), eq(notifications.kind, 'mention'),
-      eq(notifications.messageId, row.message.id), isNull(notifications.readAt),
+      eq(notifications.messageId, found.message.id), isNull(notifications.readAt),
     )).limit(1);
     if (mention) return null;
-    const name = row.author ? row.author.displayName || row.author.username : row.message.webhookId ? row.webhookName || 'Bot' : 'Alguém';
-    const text = row.message.text.replace(/\s+/g, ' ').trim().slice(0, 120);
-    const title = conversation.type === 'direct' ? name : `#${conversation.title} · ${row.serverName ?? ''}`;
-    const path = conversationPath(conversation);
-    if (row.message.kind === 'dm_call') {
-      const duration = row.message.callDurationSeconds;
-      const body = duration == null
-        ? localeText(locale, 'push.dmCall', { name })
-        : localeText(locale, 'push.dmCallLasted', { name, duration: formatCallLength(duration, locale) });
-      return { title, body, path, tag: `chat-${conversation.id}` };
-    }
-    if (row.message.kind === 'call_invite' && row.message.callConversationId) {
+    let invitedChannel: ChatNoticeInput['invitedChannel'] = null;
+    if (found.message.kind === 'call_invite' && found.message.callConversationId) {
       const [channel] = await db.select({ name: conversations.title, serverName: servers.name }).from(conversations)
         .innerJoin(servers, eq(servers.id, conversations.serverId))
-        .where(eq(conversations.id, row.message.callConversationId)).limit(1);
-      if (channel) {
-        return { title, body: localeText(locale, 'push.callInviteBody', { name, channel: channel.name, server: channel.serverName }), path, tag: `chat-${conversation.id}` };
-      }
+        .where(eq(conversations.id, found.message.callConversationId)).limit(1);
+      invitedChannel = channel ?? null;
     }
-    return { title, body: text ? `${name}: ${text}` : localeText(locale, 'push.chatEmptyBody', { name }), path, tag: `chat-${conversation.id}` };
+    const text = chatNoticeText({
+      direct: found.direct, name: found.name, text: found.text, channelTitle: found.conversation.title, serverName: found.serverName,
+      kind: found.message.kind, callDurationSeconds: found.message.callDurationSeconds, invitedChannel,
+    }, locale);
+    // each message in a burst replaces the previous one (same tag) but still alerts
+    return { ...text, path: conversationPath(found.conversation), tag: `chat-${found.conversation.id}`, avatar: found.avatar, renotify: true };
   }
 
   const kind = event.type === 'friend_request_created' ? 'friend_request'
@@ -145,25 +151,31 @@ async function noticeFor(event: OutboxEvent, locale: Locale): Promise<PushNotice
   )).limit(1);
   if (!row) return null;
   if (kind === 'mention') {
-    const [message] = await db.select({ conversationId: messages.conversationId, authorId: messages.authorId })
-      .from(messages).where(eq(messages.id, Number(reference))).limit(1);
-    const conversation = message ? await getConversationForUser(message.conversationId, event.audienceUserId) : null;
-    if (!message || !conversation) return null;
-    if (conversation.type === 'direct' && message.authorId
-      && !(await canSendDirectMessage(message.authorId, event.audienceUserId))) return null;
-    return { title: localeText(locale, 'push.mentionedTitle'), body: localeText(locale, 'push.mentionedBody'),
-      path: conversationPath(conversation), tag: `mention-${row.id}` };
+    const found = await visibleMessage(Number(reference), event.audienceUserId);
+    if (!found) return null;
+    const text = mentionNoticeText({
+      direct: found.direct, name: found.name, text: found.text, channelTitle: found.conversation.title, serverName: found.serverName,
+    }, locale);
+    return { ...text, path: conversationPath(found.conversation), tag: `mention-${row.id}`, avatar: found.avatar };
   }
   if (kind === 'server_invitation') {
-    const [invitation] = await db.select({ status: serverInvitations.status }).from(serverInvitations).where(eq(serverInvitations.id, String(reference))).limit(1);
+    const [invitation] = await db.select({ status: serverInvitations.status, serverName: servers.name, inviterId: serverInvitations.inviterId })
+      .from(serverInvitations).innerJoin(servers, eq(servers.id, serverInvitations.serverId))
+      .where(eq(serverInvitations.id, String(reference))).limit(1);
     if (!invitation || invitation.status !== 'pending') return null;
-    return { title: localeText(locale, 'push.serverInvitationTitle'), body: localeText(locale, 'push.serverInvitationBody'), path: '/app/friends?tab=pending#invitations', tag: `social-${row.id}` };
+    const inviter = await userCard(invitation.inviterId);
+    if (!inviter) return null;
+    const text = serverInvitationNoticeText({ inviterName: inviter.displayName || inviter.username, serverName: invitation.serverName }, locale);
+    return { ...text, path: '/app/friends?tab=pending#invitations', tag: `social-${row.id}`, avatar: pushAvatarPath(inviter) };
   }
-  const [friendship] = await db.select({ status: friendships.status }).from(friendships).where(eq(friendships.id, String(reference))).limit(1);
+  const [friendship] = await db.select({ status: friendships.status, low: friendships.userLowId, high: friendships.userHighId })
+    .from(friendships).where(eq(friendships.id, String(reference))).limit(1);
   if (!friendship || friendship.status !== (kind === 'friend_request' ? 'pending' : 'accepted')) return null;
-  return { title: localeText(locale, kind === 'friend_request' ? 'push.friendRequestTitle' : 'push.friendAcceptedTitle'),
-    body: localeText(locale, kind === 'friend_request' ? 'push.friendRequestBody' : 'push.friendAcceptedBody'),
-    path: kind === 'friend_request' ? '/app/friends?tab=pending#received' : '/app/friends', tag: `social-${row.id}` };
+  // whoever the reader is not: the sender of a request, or the person who accepted theirs
+  const person = await userCard(friendship.low === event.audienceUserId ? friendship.high : friendship.low);
+  if (!person) return null;
+  const text = kind === 'friend_request' ? friendRequestNoticeText(person, locale) : friendAcceptedNoticeText(person, locale);
+  return { ...text, path: kind === 'friend_request' ? '/app/friends?tab=pending#received' : '/app/friends', tag: `social-${row.id}`, avatar: pushAvatarPath(person) };
 }
 
 export async function deliverWebPush(event: OutboxEvent): Promise<PushDeliveryResult> {
@@ -186,6 +198,8 @@ export async function deliverWebPush(event: OutboxEvent): Promise<PushDeliveryRe
     icon: new URL('/icons/icon-192.png', config.APP_URL).href,
     badge: new URL('/icons/notification-badge-96.png', config.APP_URL).href,
     navigate: new URL(notice.path, config.APP_URL).href, tag: notice.tag, lang: locale,
+    // extras the declarative (Safari) format ignores; the worker uses them on the other browsers
+    ...(notice.avatar ? { avatar: notice.avatar } : {}), ...(notice.renotify ? { renotify: true } : {}),
   } });
   const topic = crypto.createHash('sha256').update(notice.tag).digest('base64url').slice(0, 32);
   const results = await Promise.all(pending.map(async (sub): Promise<PushDeliveryResult> => {
