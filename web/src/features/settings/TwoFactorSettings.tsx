@@ -11,7 +11,7 @@ import { Button } from '@/shared/ui/primitives/button';
 import { Input } from '@/shared/ui/primitives/input';
 import { Label } from '@/shared/ui/primitives/label';
 import { Switch } from '@/shared/ui/primitives/switch';
-import { SettingsNotice, SettingsRow } from '@/shared/ui/settings-layout';
+import { SETTINGS_INLINE_PANEL, SettingsNotice, SettingsRow } from '@/shared/ui/settings-layout';
 
 type Phase = 'idle' | 'enable-password' | 'enable-code' | 'disable-password';
 
@@ -100,7 +100,7 @@ export function TwoFactorSettings({ status, onChange }: { status: SecurityStatus
         <SettingsNotice tone="info">{t(`security.twoFactor.unavailable.${unavailable}`)}</SettingsNotice>
       )}
       {(phase === 'enable-password' || phase === 'disable-password') && (
-        <form onSubmit={submitPassword} className="flex flex-col gap-3 rounded-lg border border-border-subtle bg-fill-subtle p-4">
+        <form onSubmit={submitPassword} className={`flex flex-col gap-3 ${SETTINGS_INLINE_PANEL}`}>
           <p className="text-label text-text-muted">
             {phase === 'enable-password' ? t('security.twoFactor.enableHint') : t('security.twoFactor.disableHint')}
           </p>
@@ -108,7 +108,7 @@ export function TwoFactorSettings({ status, onChange }: { status: SecurityStatus
             <Label htmlFor="twoFactorPassword" className="text-label text-text-muted">{t('security.twoFactor.password')}</Label>
             <Input id="twoFactorPassword" type="password" autoComplete="current-password" autoFocus value={password} onChange={(e) => { setPassword(e.target.value); setError(null); }} />
           </div>
-          {error && <p role="alert" className="text-label text-red">{error}</p>}
+          {error && <p role="alert" className="text-label text-red-text">{error}</p>}
           <div className="flex flex-wrap items-center gap-2">
             <Button type="submit" size="sm" variant={phase === 'disable-password' ? 'destructive' : 'default'} disabled={pending || !password}>
               {pending ? <CircleNotchIcon size={20} className="animate-spin" /> : phase === 'enable-password' ? <EnvelopeIcon size={20} weight="fill" /> : null}
@@ -121,7 +121,7 @@ export function TwoFactorSettings({ status, onChange }: { status: SecurityStatus
         </form>
       )}
       {phase === 'enable-code' && (
-        <div className="flex flex-col gap-3 rounded-lg border border-border-subtle bg-fill-subtle p-4">
+        <div className={`flex flex-col gap-3 ${SETTINGS_INLINE_PANEL}`}>
           <p className="text-label text-text-muted">{t('security.twoFactor.codeSent')}</p>
           <OTPInput
             label={t('security.twoFactor.codeLabel')}

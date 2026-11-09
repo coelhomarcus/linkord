@@ -66,7 +66,6 @@ export const ERROR_REGISTRY = {
   username_taken: { statuses: [409], channel: 'http' },
   invalid_email: { statuses: [400], channel: 'http' },
   email_taken: { statuses: [409], channel: 'http' },
-  email_already_set: { statuses: [409], channel: 'http' },
   email_unavailable: { statuses: [503], channel: 'http' },
   // no Resend credentials: two-step login cannot be turned on (it would have no way to send the code)
   email_not_configured: { statuses: [503], channel: 'http' },
@@ -104,6 +103,7 @@ export const ERROR_REGISTRY = {
   size_mismatch: { statuses: [400], channel: 'http' },
   empty_file: { statuses: [400], channel: 'http' },
   crop_failed: { statuses: [400], channel: 'http' },
+  invalid_crop: { statuses: [400], channel: 'http' },
   invalid_report: { statuses: [400], channel: 'http' },
 
   // server soundboard

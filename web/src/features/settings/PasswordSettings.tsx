@@ -5,12 +5,11 @@ import { useTranslation } from 'react-i18next';
 
 import { changePassword } from '@/shared/api/api';
 import { describeApiError } from '@/shared/api/errorText';
+import { MIN_PASSWORD_LEN } from '@/features/auth/credentialRules';
 import { Button } from '@/shared/ui/primitives/button';
 import { Input } from '@/shared/ui/primitives/input';
 import { Label } from '@/shared/ui/primitives/label';
-import { SETTINGS_ACTION_BUTTON, SettingsRow } from '@/shared/ui/settings-layout';
-
-const MIN_PASSWORD_LEN = 8;
+import { SETTINGS_ACTION_BUTTON, SETTINGS_INLINE_PANEL, SettingsRow } from '@/shared/ui/settings-layout';
 
 /** Changing the password keeps this device signed in and ends every other session (`onChanged` lets the
  * session list refresh). */
@@ -62,7 +61,7 @@ export function PasswordSettings({ onChanged }: { onChanged: () => void }) {
         </p>
       )}
       {open && (
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3 rounded-lg border border-border-subtle bg-fill-subtle p-4">
+        <form onSubmit={handleSubmit} className={`flex flex-col gap-3 ${SETTINGS_INLINE_PANEL}`}>
           <div>
             <Label htmlFor="currentPassword" className="text-label text-text-muted">{t('security.password.current')}</Label>
             <Input id="currentPassword" type="password" autoComplete="current-password" autoFocus value={current} onChange={(e) => { setCurrent(e.target.value); setError(null); }} />
@@ -71,7 +70,7 @@ export function PasswordSettings({ onChanged }: { onChanged: () => void }) {
             <Label htmlFor="newPassword" className="text-label text-text-muted">{t('security.password.new')}</Label>
             <Input id="newPassword" type="password" autoComplete="new-password" value={next} onChange={(e) => { setNext(e.target.value); setError(null); }} />
           </div>
-          {error && <p role="alert" className="text-label text-red">{error}</p>}
+          {error && <p role="alert" className="text-label text-red-text">{error}</p>}
           <div className="flex flex-wrap items-center gap-2">
             <Button type="submit" size="sm" disabled={pending || !current || !next}>
               {pending ? <CircleNotchIcon size={20} className="animate-spin" /> : <LockIcon size={20} weight="fill" />}

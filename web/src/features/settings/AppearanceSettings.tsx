@@ -11,8 +11,8 @@ import type { ColorThemeId } from './useColorThemePreference';
 // the theme even while another one is active.
 const THEME_SWATCH: Record<ColorThemeId, string> = {
   black: '#000000',
-  linkord: 'oklch(16% 0.004 275)',
-  discord: 'oklch(25% 0.007 265)',
+  old: 'oklch(16% 0.004 275)',
+  graphite: 'oklch(25% 0.007 265)',
 };
 
 export function AppearanceSettings() {

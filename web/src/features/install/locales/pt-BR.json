@@ -1,0 +1,19 @@
+{
+  "install": "Instalar",
+  "banner": {
+    "title": "Instale o Linkord",
+    "prompt": "Abra em uma janela própria, com ícone no seu aparelho e notificações mesmo com o navegador fechado.",
+    "ios": "Toque em Compartilhar e escolha “Adicionar à Tela de Início”. As notificações só funcionam no iPhone com o app instalado.",
+    "dismiss": "Dispensar"
+  },
+  "settings": {
+    "prompt": {
+      "label": "Instalar o Linkord",
+      "description": "Abre em uma janela própria, com ícone no seu aparelho e notificações mesmo com o navegador fechado."
+    },
+    "ios": {
+      "label": "Adicionar à Tela de Início",
+      "description": "Toque em Compartilhar no Safari e escolha “Adicionar à Tela de Início”. As notificações só funcionam no iPhone com o app instalado."
+    }
+  }
+}

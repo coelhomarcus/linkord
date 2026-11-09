@@ -113,7 +113,7 @@ export function ChatSearchDialog({ open, onOpenChange, activeConversationId, act
             </div>
           </div>
 
-          {searchError && <p className="flex-none text-label text-red">{searchError}</p>}
+          {searchError && <p className="flex-none text-label text-red-text">{searchError}</p>}
 
           <div className="flex min-h-0 flex-1 flex-col gap-1">
             {searchLoading && (

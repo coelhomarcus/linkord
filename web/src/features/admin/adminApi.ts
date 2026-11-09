@@ -133,12 +133,14 @@ export const fetchAudit = (filters: { actor?: string; targetType?: string; targe
 export interface SweepResult {
   at: string; dryRun: boolean; scanned: number; orphanCount: number; orphanBytes: number; deleted: number; failed: number; recent: number; missingFiles: number;
 }
-export interface RetentionTargetResult { key: string; days: number; cutoff: string | null; deleted: number; batches: number; failed: boolean }
+interface RetentionTargetResult { key: string; days: number; cutoff: string | null; deleted: number; batches: number; failed: boolean }
 export interface RetentionInfo {
   targets: { key: string; days: number }[];
   last: { at: string; durationMs: number; targets: RetentionTargetResult[] } | null;
 }
 export interface SystemInfo {
+  /** when this server process started, i.e. the last deploy or restart */
+  startedAt: string;
   storage: { usedBytes: number; files: number; maxBytes: number };
   connections: { live: number; onlineAccounts: number; max: number; perAccountMax: number };
   accounts: { total: number; newLastHour: number; newPerHourCap: number; activeAdmins: number; suspended: number };

@@ -18,7 +18,14 @@
       (function () {
         var key = 'linkord.colorTheme';
         var raw = localStorage.getItem(key);
-        var shells = { black: '#000000', linkord: '#0d0d0f', discord: '#202225' };
+        var shells = { black: '#000000', old: '#0d0d0f', graphite: '#202225' };
+        // Ids stored before the rename; keep in step with LEGACY_COLOR_THEME_IDS
+        // in useColorThemePreference.ts.
+        var legacy = { linkord: 'old', discord: 'graphite' };
+        if (Object.prototype.hasOwnProperty.call(legacy, raw)) {
+          raw = legacy[raw];
+          try { localStorage.setItem(key, raw); } catch (e) {}
+        }
         var id = Object.prototype.hasOwnProperty.call(shells, raw) ? raw : 'black';
         document.documentElement.dataset.theme = id;
         var bg = shells[id];

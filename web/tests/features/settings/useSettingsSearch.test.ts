@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { normalizeSearchText, useSettingsSearch } from '@/features/settings/useSettingsSearch';
+import { startInstallPromptCapture } from '@/features/install/installPrompt';
 import { useLanguageForTests } from '@tests/fixtures/i18nFixture';
 
 function titles(results: ReturnType<typeof useSettingsSearch>['results']): string[] {
@@ -62,6 +63,22 @@ describe('useSettingsSearch', () => {
     const admin = renderHook(() => useSettingsSearch(true));
     act(() => admin.result.current.setQuery('admin'));
     expect(titles(admin.result.current.results)).toContain('Área administrativa');
+  });
+});
+
+describe('useSettingsSearch install entry', () => {
+  it('is not listed where the page has no install section, and is once the browser offers one', () => {
+    const stop = startInstallPromptCapture();
+    try {
+      const { result } = renderHook(() => useSettingsSearch(false));
+      act(() => result.current.setQuery('instalar'));
+      expect(titles(result.current.results)).not.toContain('Instalar o app');
+
+      act(() => { window.dispatchEvent(new Event('beforeinstallprompt')); });
+      expect(result.current.results.find((r) => r.title === 'Instalar o app')?.entry).toMatchObject({ categoryId: 'notifications', sectionId: 'install' });
+    } finally {
+      stop();
+    }
   });
 });
 

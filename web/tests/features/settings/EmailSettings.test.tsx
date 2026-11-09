@@ -30,6 +30,7 @@ async function requestCode(user: ReturnType<typeof userEvent.setup>, email: stri
   await user.click(screen.getByRole('button', { name: 'Editar' }));
   await user.clear(screen.getByLabelText('Novo e-mail'));
   await user.type(screen.getByLabelText('Novo e-mail'), email);
+  await user.type(screen.getByLabelText('Senha atual'), 'minha senha atual');
   await user.click(screen.getByRole('button', { name: 'Enviar código' }));
 }
 
@@ -69,6 +70,7 @@ describe('EmailSettings', () => {
     render(<EmailSettings currentEmail="fulana@example.com" />);
     await user.click(screen.getByRole('button', { name: 'Editar' }));
 
+    await user.type(screen.getByLabelText('Senha atual'), 'minha senha atual');
     // pre-filled with the current address for convenience — the "same as
     // current" case is covered separately, this one needs a blank field
     await user.clear(screen.getByLabelText('Novo e-mail'));
@@ -94,9 +96,32 @@ describe('EmailSettings', () => {
 
     await requestCode(user, 'nova@example.com');
 
-    expect(requestEmailChange).toHaveBeenCalledWith('nova@example.com');
+    expect(requestEmailChange).toHaveBeenCalledWith('nova@example.com', 'minha senha atual');
     expect(screen.getByText(/nova@example\.com/)).toBeInTheDocument();
     expect(screen.getByLabelText(codeLabel)).toBeInTheDocument();
+  });
+
+  it('asks for the current password before calling the API', async () => {
+    const user = userEvent.setup();
+    render(<EmailSettings currentEmail="fulana@example.com" />);
+    await user.click(screen.getByRole('button', { name: 'Editar' }));
+    await user.clear(screen.getByLabelText('Novo e-mail'));
+    await user.type(screen.getByLabelText('Novo e-mail'), 'nova@example.com');
+    await user.click(screen.getByRole('button', { name: 'Enviar código' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Informe sua senha atual.');
+    expect(requestEmailChange).not.toHaveBeenCalled();
+  });
+
+  it('a wrong password shows the reason and keeps the form', async () => {
+    requestEmailChange.mockRejectedValue(new ApiError(403, 'invalid_password', 'Senha incorreta.'));
+    const user = userEvent.setup();
+    render(<EmailSettings currentEmail="fulana@example.com" />);
+
+    await requestCode(user, 'nova@example.com');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Senha incorreta.');
+    expect(screen.getByLabelText('Senha atual')).toBeInTheDocument();
+    expect(screen.queryByLabelText(codeLabel)).not.toBeInTheDocument();
   });
 
   it('error sending the code shows the reason and keeps the form', async () => {
@@ -164,7 +189,7 @@ describe('EmailSettings', () => {
 
     await user.click(screen.getByRole('button', { name: 'Reenviar código' }));
     expect(requestEmailChange).toHaveBeenCalledTimes(2);
-    expect(requestEmailChange).toHaveBeenLastCalledWith('nova@example.com');
+    expect(requestEmailChange).toHaveBeenLastCalledWith('nova@example.com', 'minha senha atual');
     expect(await screen.findByRole('button', { name: 'Código reenviado' })).toBeInTheDocument();
   });
 

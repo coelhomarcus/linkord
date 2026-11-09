@@ -45,7 +45,9 @@
       "presence": "Status",
       "password": "Password",
       "twoFactor": "Two-step verification",
-      "sessions": "Active sessions"
+      "loginAlerts": "Sign-in alerts",
+      "sessions": "Active sessions",
+      "install": "Install the app"
     }
   },
   "search": {
@@ -101,6 +103,10 @@
       "title": "Sounds",
       "keywords": "volume, sound, test sound, mute, message, mention, call, preview"
     },
+    "install": {
+      "title": "Install the app",
+      "keywords": "install, installation, app, pwa, home screen, shortcut, icon, add to home screen"
+    },
     "language": {
       "title": "Language",
       "keywords": "idioma, português, portuguese, english, translate"
@@ -124,6 +130,10 @@
     "twoFactor": {
       "title": "Two-step verification",
       "keywords": "2fa, two-factor, two-step, code, verification, security"
+    },
+    "loginAlerts": {
+      "title": "Sign-in alerts",
+      "keywords": "new login, sign-in alert, email, notification, new device, security"
     },
     "sessions": {
       "title": "Active sessions",
@@ -149,7 +159,8 @@
   "email": {
     "none": "No email on file.",
     "change": "Edit",
-    "changeHint": "Used to recover your account. The change will be confirmed with a code.",
+    "changeHint": "Used to recover your account. We ask for your current password, and the change is confirmed with a code sent to the new email.",
+    "passwordLabel": "Current password",
     "newLabel": "New email",
     "sendCode": "Send code",
     "sending": "Sending…",
@@ -169,6 +180,7 @@
     "validation": {
       "required": "Enter an email.",
       "invalid": "Enter a valid email.",
+      "passwordRequired": "Enter your current password.",
       "same": "Enter an email different from the current one."
     },
     "errors": {
@@ -186,7 +198,6 @@
     "unblockFailed": "Couldn't unblock. Try again.",
     "loading": "Loading…",
     "loadFailed": "Couldn't load the list.",
-    "retry": "Try again",
     "empty": "You haven't blocked anyone",
     "unblock": "Unblock",
     "emptyText": "Anyone you block shows up here, and you can unblock them any time."
@@ -327,23 +338,9 @@
       "description": "{{example}}"
     }
   },
-  "crop": {
-    "processing": "Processing image…",
-    "processingDescription": "Preparing the image for upload. Animated GIFs can take a few seconds.",
-    "cancel": "Cancel",
-    "save": "Save",
-    "errors": {
-      "loadProcessor": "Couldn't load the image processor.",
-      "outOfBounds": "Crop is outside the image bounds.",
-      "invalidCrop": "Invalid crop.",
-      "processFailed": "Couldn't process the image."
-    },
-    "zoom": "Zoom"
-  },
   "security": {
     "loading": "Loading…",
     "loadFailed": "Could not load.",
-    "retry": "Try again",
     "cancel": "Cancel",
     "password": {
       "label": "Account password",
@@ -382,12 +379,24 @@
       "confirmFailed": "Could not turn it on.",
       "disableFailed": "Could not turn it off."
     },
+    "loginAlerts": {
+      "label": "Email me about new sign-ins",
+      "descriptionOff": "Off. You will not be emailed when a new browser signs in to your account.",
+      "descriptionOn": "On. We email the account when a browser it has not used in the last 30 days signs in, so you can end the session if it was not you.",
+      "unavailable": {
+        "noDelivery": "Sending email is not set up on this server, so sign-in alerts cannot be sent.",
+        "noEmail": "Set an email in My account to receive sign-in alerts."
+      },
+      "failed": "Could not save the change."
+    },
     "sessions": {
       "description": "The browsers signed in to your account.",
       "descriptionIdle_one": "The browsers signed in to your account. A session unused for {{count}} day ends on its own.",
       "descriptionIdle_other": "The browsers signed in to your account. A session unused for {{count}} days ends on its own.",
       "browserOn": "{{browser}} on {{os}}",
       "unknownDevice": "Unknown browser",
+      "unknownBrowserOn": "Unknown on {{os}}",
+      "automated": "App or script",
       "current": "This session",
       "activeNow": "Active now",
       "lastSeen": "Last used: {{time}}",

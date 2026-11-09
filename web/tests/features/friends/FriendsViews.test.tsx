@@ -161,7 +161,8 @@ describe('Amigos — search in Pendentes (on the server, before pagination)', ()
   it('the same search also filters invitations', async () => {
     at('/app/friends?tab=invitations&q=squad');
     await waitFor(() => expect(mocked.fetchReceivedInvitations).toHaveBeenCalledWith(null, 'squad'));
-    expect(await screen.findAllByText('Nenhum resultado')).toHaveLength(3);
+    // The sections load independently, so wait for all three rather than the first to appear.
+    await waitFor(() => expect(screen.getAllByText('Nenhum resultado')).toHaveLength(3));
   });
 
   it('typing in the Pendentes search writes ?q= without switching views', async () => {

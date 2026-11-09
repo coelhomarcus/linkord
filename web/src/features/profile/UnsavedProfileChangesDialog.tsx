@@ -28,7 +28,7 @@ export function UnsavedProfileChangesDialog({
           <DialogDescription className="select-none text-body text-text-secondary">
             {t('unsaved.description')}
           </DialogDescription>
-          {error && <p role="alert" className="mt-3 text-label text-red">{error}</p>}
+          {error && <p role="alert" className="mt-3 text-label text-red-text">{error}</p>}
         </div>
         {/* Three real choices with long labels never fit one row at this
             dialog's width — always stacked. DialogFooter's own default
@@ -40,7 +40,7 @@ export function UnsavedProfileChangesDialog({
           <Button type="button" className="w-full" onClick={onSaveAndLeave} disabled={saving}>
             <span>{saving ? t('unsaved.saving') : t('unsaved.saveAndLeave')}</span>
           </Button>
-          <Button type="button" variant="outline" className="w-full text-red hover:bg-red/12" onClick={onDiscardAndLeave} disabled={saving}>
+          <Button type="button" variant="danger-outline" className="w-full" onClick={onDiscardAndLeave} disabled={saving}>
             <span>{t('unsaved.discardAndLeave')}</span>
           </Button>
           <Button type="button" variant="ghost" className="w-full" onClick={onContinueEditing} disabled={saving}>

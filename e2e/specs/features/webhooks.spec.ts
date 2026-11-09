@@ -1,6 +1,7 @@
 import { test, expect } from '../../fixtures/test';
 import { acceptInvite, createInvite, createServer } from '../../fixtures/api';
 import { BASE_URL } from '../../stack/stack';
+import { gifInfo, threeFrameGif } from '../../fixtures/images';
 
 // docs/WEBHOOK.md is the contract these follow.
 test.describe('webhooks', () => {
@@ -41,6 +42,28 @@ test.describe('webhooks', () => {
     expect((await alice.api.delete(`/api/channels/${server.text.id}/webhooks/${webhook.id}`)).ok()).toBe(true);
     expect((await outside.post(new URL(fresh.url).pathname, { data: { content: 'depois de excluir' } })).ok()).toBe(false);
     await outside.dispose();
+  });
+
+  test('a webhook picture picked in the channel settings is cut on the server', async ({ users }) => {
+    const alice = await users.create('alice');
+    const server = await createServer(alice.api, 'E2E webhook picture');
+    expect((await alice.api.post(`/api/channels/${server.text.id}/webhooks`, { data: { name: 'Deploy bot' } })).status()).toBe(201);
+    const a = await alice.app();
+    await a.openChannel(server.id, server.text.id);
+
+    await a.page.getByRole('button', { name: 'Editar canal' }).click();
+    await a.page.getByRole('button', { name: 'Integrações' }).click();
+    const chooser = a.page.waitForEvent('filechooser');
+    await a.page.getByRole('button', { name: 'Imagem do webhook Deploy bot' }).click();
+    await (await chooser).setFiles(threeFrameGif());
+    const crop = a.page.getByRole('dialog', { name: 'Alterar imagem' });
+    await crop.getByRole('button', { name: 'Salvar' }).click();
+    await expect(crop).toHaveCount(0);
+
+    const avatar = async () => (await (await alice.api.get(`/api/channels/${server.text.id}/webhooks`)).json() as { webhooks: { avatar: string }[] }).webhooks[0]!.avatar;
+    await expect.poll(avatar).toMatch(/^\/uploads\//);
+    const bytes = await (await alice.api.get(await avatar())).body();
+    expect(gifInfo(Buffer.from(bytes))).toEqual({ width: 200, height: 200, frames: 3 });
   });
 
   // the route answers 404, not 403: it doesn't confirm the channel to someone who can't manage it

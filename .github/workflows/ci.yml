@@ -1,0 +1,84 @@
+name: CI
+
+# The checks AGENTS.md asks for before calling a change done, split in three
+# jobs that run side by side. None needs PostgreSQL: `.env.test` only satisfies
+# the import guard of `server/src/db/client.ts`. The browser suite has its own
+# workflow (e2e.yml).
+on:
+  push:
+    branches: [main, develop]
+    paths-ignore: ['docs/**', '**/*.md']
+  pull_request:
+    paths-ignore: ['docs/**', '**/*.md']
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  server:
+    name: Server
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      - name: Typecheck (production build)
+        run: npm run build:server
+      - name: Typecheck tests
+        run: npm run typecheck:server:tests
+      - name: Test
+        run: npm run test:server
+
+  web:
+    name: Web
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci --prefix web
+      - name: Lint
+        run: npm run lint --prefix web
+      - name: Test
+        run: npm run test --prefix web
+      # `tsc -b` typechecks the app before `vite build`
+      - name: Typecheck and build
+        run: npm run build --prefix web
+
+  hygiene:
+    name: Audit and dead code
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            web/package-lock.json
+            e2e/package-lock.json
+      - name: Audit shipped dependencies
+        run: npm run check:audit
+      # knip reads all three workspaces, so each needs its packages
+      - run: npm ci && npm ci --prefix web && npm ci --prefix e2e
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+      - name: Dead code
+        run: npm run check:dead-code
+      - name: Typecheck e2e
+        run: npm run typecheck --prefix e2e

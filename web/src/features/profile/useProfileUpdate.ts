@@ -5,11 +5,9 @@ import { sanitizeDisplayName } from '@/shared/lib/displayName';
 import type { ClientMessage, ProfilePatch, PublicUser, ServerMessage } from '@/shared/types/protocol';
 import { MAX_BANNER_LEN, MAX_PROFILE_BIO_LEN } from '@/shared/types/protocol';
 import type { RoomAction } from '@/state/roomReducer';
-import type { CropRect } from '@/state/RoomContext';
+import type { CropRect } from '@/shared/lib/imageCrop';
 import { ApiError } from '@/shared/api/api';
-import { uploadCroppedProfileImage } from '@/features/settings/uploadCroppedProfileImage';
-import { ProfileImageCropError } from '@/features/settings/cropProfileImage';
-import type { ProfileImageUploadPhase } from '@/features/settings/uploadCroppedProfileImage';
+import { uploadCroppedProfileImage } from '@/shared/api/uploadCroppedProfileImage';
 import { i18n } from '@/shared/i18n/init';
 
 const PROFILE_SAVE_TIMEOUT_MS = 15_000;
@@ -38,10 +36,10 @@ export function describeProfileSaveError(err: unknown, fallback?: string): strin
   const fallbackText = fallback ?? i18n.t('profile:save.failed');
   if (err instanceof ProfileSaveOffline || err instanceof ProfileSaveTimeout) return err.message;
   if (err instanceof ProfileSaveRefused) return err.message || fallbackText;
-  // Crop, network and server refusals already carry a sentence for the user.
-  // The fallback is only for an unexpected throw, so a banner failure does
-  // not hide which step actually stopped.
-  if (err instanceof ProfileImageCropError || err instanceof ApiError) return err.message || fallbackText;
+  // Network and server refusals (a bad crop included) already carry a
+  // sentence for the user. The fallback is only for an unexpected throw, so a
+  // banner failure does not hide which step actually stopped.
+  if (err instanceof ApiError) return err.message || fallbackText;
   return fallbackText;
 }
 
@@ -162,9 +160,8 @@ export function useProfileUpdate(deps: ProfileUpdateDeps) {
     body: Blob,
     crop: CropRect,
     onProgress?: (fraction: number) => void,
-    onPhaseChange?: (phase: ProfileImageUploadPhase) => void,
   ): Promise<string> => {
-    const res = await uploadCroppedProfileImage(body, crop, onProgress, onPhaseChange);
+    const res = await uploadCroppedProfileImage(body, crop, onProgress);
     await applyImagePatch(field, res.avatar, res.avatarPoster ?? '');
     return res.avatar;
   }, [applyImagePatch]);

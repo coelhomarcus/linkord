@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { ImageCropDialog } from '@/features/settings/ImageCropDialog';
+import { ImageCropDialog } from '@/shared/ImageCropDialog';
 
 vi.mock('react-easy-crop', () => ({
   default: () => <div data-testid="cropper" />,
@@ -22,7 +22,7 @@ describe('ImageCropDialog', () => {
     );
 
     expect(screen.getByRole('status')).toHaveTextContent('Processando imagem…');
-    expect(screen.getByText('Preparando a imagem para o upload. GIFs animados podem levar alguns segundos.')).toBeInTheDocument();
+    expect(screen.getByText('Enviando e recortando a imagem. GIFs animados podem levar alguns segundos.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Cancelar' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Salvar' })).toBeDisabled();
     expect(screen.getByRole('dialog')).toHaveAttribute('aria-busy', 'true');

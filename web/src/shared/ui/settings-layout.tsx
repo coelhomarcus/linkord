@@ -185,3 +185,6 @@ export function SettingsNotice({ children, tone = 'info', action }: { children: 
 
 /** The dark "Edit" / "Add" button beside a value. */
 export const SETTINGS_ACTION_BUTTON = 'h-10 min-w-24 px-4 text-body';
+
+/** The box a row opens below itself for a short flow (a password to confirm, a code to type). */
+export const SETTINGS_INLINE_PANEL = 'rounded-lg border border-border-subtle bg-fill-subtle p-4';

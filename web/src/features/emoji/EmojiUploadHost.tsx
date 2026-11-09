@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import type { Area } from 'react-easy-crop';
 import { useTranslation } from 'react-i18next';
 
-import { ImageCropDialog } from '@/features/settings/ImageCropDialog';
-import { cropProfileImage, ProfileImageCropError } from '@/features/settings/cropProfileImage';
-import { describeEmojiError, uploadServerEmoji } from './serverEmojisApi';
+import { ImageCropDialog } from '@/shared/ImageCropDialog';
+import { formatMB } from '@/shared/lib/formatBytes';
+import { describeEmojiError, MAX_EMOJI_UPLOAD_BYTES, uploadServerEmoji } from './serverEmojisApi';
 import { freeEmojiName, registerEmojiUploadOpener } from './emojiUploadRequest';
 import { emojiNamesInServer } from './myEmojis';
 import { invalidateServerEmojis } from './useServerEmojis';
@@ -13,8 +13,6 @@ import { invalidateServerEmojis } from './useServerEmojis';
 // picker's "add emoji" tile both ask it, and it lives outside both, so a
 // picker that closes as the file dialog opens doesn't take the crop with it.
 
-// what the client sends: small enough for a quick upload, twice the stored size
-const UPLOAD_DIMENSION = 256;
 const ACCEPT = 'image/png,image/jpeg,image/gif,image/webp';
 
 export function EmojiUploadHost() {
@@ -37,21 +35,21 @@ export function EmojiUploadHost() {
     const file = files?.[0];
     const target = targetRef.current;
     if (!file || !target) return;
-    setError(null);
+    // told at once, over the picture, rather than after a crop the server would refuse with a bare 413
+    setError(file.size > MAX_EMOJI_UPLOAD_BYTES ? t('upload.fileTooLarge', { max: formatMB(MAX_EMOJI_UPLOAD_BYTES) }) : null);
     setCrop({ ...target, file, src: URL.createObjectURL(file) });
   }
 
   async function confirm(area: Area) {
-    if (!crop) return;
+    if (!crop || crop.file.size > MAX_EMOJI_UPLOAD_BYTES) return;
     setUploading(true);
     setError(null);
     try {
-      const image = await cropProfileImage(new Uint8Array(await crop.file.arrayBuffer()), area, crop.file.type, { maxDimension: UPLOAD_DIMENSION, still: 'png' });
-      await uploadServerEmoji(crop.serverId, image, freeEmojiName(crop.file.name, crop.taken ?? emojiNamesInServer(crop.serverId)));
+      await uploadServerEmoji(crop.serverId, crop.file, freeEmojiName(crop.file.name, crop.taken ?? emojiNamesInServer(crop.serverId)), area);
       invalidateServerEmojis(crop.serverId);
       setCrop(null);
     } catch (err) {
-      setError(err instanceof ProfileImageCropError ? err.message : describeEmojiError(err, 'emoji:upload.uploadFailed'));
+      setError(describeEmojiError(err, 'emoji:upload.uploadFailed'));
     } finally {
       setUploading(false);
     }

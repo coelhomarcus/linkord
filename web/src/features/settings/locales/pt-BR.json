@@ -45,7 +45,9 @@
       "presence": "Status",
       "password": "Senha",
       "twoFactor": "Verificação em duas etapas",
-      "sessions": "Sessões ativas"
+      "loginAlerts": "Avisos de login",
+      "sessions": "Sessões ativas",
+      "install": "Instalar o app"
     }
   },
   "search": {
@@ -101,6 +103,10 @@
       "title": "Sons",
       "keywords": "volume, som, testar som, mudo, mensagem, menção, chamada, prévia"
     },
+    "install": {
+      "title": "Instalar o app",
+      "keywords": "instalar, instalação, app, pwa, tela de início, atalho, ícone, adicionar à tela de início"
+    },
     "language": {
       "title": "Idioma",
       "keywords": "language, português, inglês, english, traduzir"
@@ -124,6 +130,10 @@
     "twoFactor": {
       "title": "Verificação em duas etapas",
       "keywords": "2fa, dois fatores, duas etapas, código, verificação, segurança"
+    },
+    "loginAlerts": {
+      "title": "Avisos de login",
+      "keywords": "novo login, aviso de login, e-mail, notificação, novo dispositivo, segurança"
     },
     "sessions": {
       "title": "Sessões ativas",
@@ -149,7 +159,8 @@
   "email": {
     "none": "Nenhum e-mail cadastrado.",
     "change": "Editar",
-    "changeHint": "Usado para recuperar sua conta. A alteração será confirmada por código.",
+    "changeHint": "Usado para recuperar sua conta. Pedimos sua senha atual e a alteração é confirmada por código enviado ao novo e-mail.",
+    "passwordLabel": "Senha atual",
     "newLabel": "Novo e-mail",
     "sendCode": "Enviar código",
     "sending": "Enviando…",
@@ -169,6 +180,7 @@
     "validation": {
       "required": "Informe um e-mail.",
       "invalid": "Informe um e-mail válido.",
+      "passwordRequired": "Informe sua senha atual.",
       "same": "Informe um e-mail diferente do atual."
     },
     "errors": {
@@ -186,7 +198,6 @@
     "unblockFailed": "Não foi possível desbloquear. Tente de novo.",
     "loading": "Carregando…",
     "loadFailed": "Não foi possível carregar a lista.",
-    "retry": "Tentar de novo",
     "empty": "Você não bloqueou ninguém",
     "unblock": "Desbloquear",
     "emptyText": "Quem você bloquear aparece aqui, e dá para desbloquear quando quiser."
@@ -327,23 +338,9 @@
       "description": "{{example}}"
     }
   },
-  "crop": {
-    "processing": "Processando imagem…",
-    "processingDescription": "Preparando a imagem para o upload. GIFs animados podem levar alguns segundos.",
-    "cancel": "Cancelar",
-    "save": "Salvar",
-    "errors": {
-      "loadProcessor": "Não foi possível carregar o processador de imagem.",
-      "outOfBounds": "Recorte fora dos limites da imagem.",
-      "invalidCrop": "Recorte inválido.",
-      "processFailed": "Não foi possível processar a imagem."
-    },
-    "zoom": "Zoom"
-  },
   "security": {
     "loading": "Carregando…",
     "loadFailed": "Não foi possível carregar.",
-    "retry": "Tentar de novo",
     "cancel": "Cancelar",
     "password": {
       "label": "Senha da conta",
@@ -382,12 +379,24 @@
       "confirmFailed": "Não foi possível ativar.",
       "disableFailed": "Não foi possível desativar."
     },
+    "loginAlerts": {
+      "label": "Avisar por e-mail sobre novos logins",
+      "descriptionOff": "Desativado. Você não receberá e-mail quando um novo navegador entrar na sua conta.",
+      "descriptionOn": "Ativado. Enviamos um e-mail à conta quando entra um navegador que ela não usava nos últimos 30 dias, para você encerrar a sessão se não foi você.",
+      "unavailable": {
+        "noDelivery": "O envio de e-mail não está configurado neste servidor, então os avisos de login não podem ser enviados.",
+        "noEmail": "Cadastre um e-mail em Minha conta para receber os avisos de login."
+      },
+      "failed": "Não foi possível salvar a alteração."
+    },
     "sessions": {
       "description": "Os navegadores conectados à sua conta.",
       "descriptionIdle_one": "Os navegadores conectados à sua conta. Uma sessão sem uso por {{count}} dia é encerrada sozinha.",
       "descriptionIdle_other": "Os navegadores conectados à sua conta. Uma sessão sem uso por {{count}} dias é encerrada sozinha.",
       "browserOn": "{{browser}} em {{os}}",
       "unknownDevice": "Navegador desconhecido",
+      "unknownBrowserOn": "Desconhecido no {{os}}",
+      "automated": "Aplicativo ou script",
       "current": "Esta sessão",
       "activeNow": "Ativa agora",
       "lastSeen": "Último uso: {{time}}",

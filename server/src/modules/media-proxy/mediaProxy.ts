@@ -33,7 +33,7 @@ const REDIRECT_MAX_AGE_S = 24 * 60 * 60;
 // only fetches that miss the cache count: a Wall full of covers others have
 // already seen costs nothing
 export const USER_RULE = { windowMs: 60_000, max: 120 };
-export const GLOBAL_RULE = { windowMs: 60_000, max: 1200 };
+const GLOBAL_RULE = { windowMs: 60_000, max: 1200 };
 const ACCEPT = 'image/avif,image/webp,image/png,image/jpeg,image/gif,image/x-icon;q=0.9,image/*;q=0.5';
 // An SVG is a document that can carry script, and this is served from our own
 // origin, so it is never passed on: it is drawn into a PNG instead (many sites'
@@ -190,7 +190,7 @@ export function createMediaProxy({ fetch = (upstream) => fetchImage(upstream), n
   };
 }
 
-export type MediaProxy = ReturnType<typeof createMediaProxy>;
+type MediaProxy = ReturnType<typeof createMediaProxy>;
 
 const MESSAGES: Record<MediaProxyError['code'], string> = {
   rate_limited: 'Muitas imagens novas em pouco tempo. Tente novamente em instantes.',

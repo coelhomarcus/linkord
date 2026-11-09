@@ -32,7 +32,7 @@ export function PendingAttachments({ attachments }: { attachments: OutboxAttachm
           return (
             <div key={attachment.localId} className="flex w-80 max-w-full flex-col gap-1">
               <VoiceMessagePlayer src={null} durationMs={attachment.voice.durationMs} waveform={attachment.voice.waveform} className={cn('w-full', attachment.failed && 'border-red/50')} />
-              <p className={cn('text-caption', attachment.failed ? 'text-red' : 'text-text-muted')}>{statusLabel(attachment)}</p>
+              <p className={cn('text-caption', attachment.failed ? 'text-red-text' : 'text-text-muted')}>{statusLabel(attachment)}</p>
               {!attachment.failed && !done && <UploadProgressBar progress={attachment.progress} />}
             </div>
           );
@@ -46,7 +46,7 @@ export function PendingAttachments({ attachments }: { attachments: OutboxAttachm
             >
               <img src={attachment.previewUrl} alt={attachment.name} className={cn('size-full object-cover', !done && 'opacity-60')} />
               {attachment.failed ? (
-                <span className="absolute right-1.5 top-1.5 rounded-full bg-bg-primary/80 p-0.5 text-red" aria-label="Falhou">
+                <span className="absolute right-1.5 top-1.5 rounded-full bg-bg-primary/80 p-0.5 text-red" aria-label={i18n.t('chat:pending.attachmentFailed')}>
                   <WarningCircleIcon size={16} />
                 </span>
               ) : !done && (
@@ -68,7 +68,7 @@ export function PendingAttachments({ attachments }: { attachments: OutboxAttachm
                 be uploading — indented to align under the name, past the
                 icon column (size-10 + gap-3) */}
             <div className="pl-13">
-              <p className={cn('text-caption', attachment.failed ? 'text-red' : 'text-text-muted')}>{statusLabel(attachment)}</p>
+              <p className={cn('text-caption', attachment.failed ? 'text-red-text' : 'text-text-muted')}>{statusLabel(attachment)}</p>
               {!attachment.failed && !done && <div className="mt-1"><UploadProgressBar progress={attachment.progress} /></div>}
             </div>
           </div>

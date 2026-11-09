@@ -8,14 +8,11 @@ import { Button } from '@/shared/ui/primitives/button';
 import { Input } from '@/shared/ui/primitives/input';
 import { confirmEmailChange, requestEmailChange } from '@/shared/api/api';
 import { describeApiError } from '@/shared/api/errorText';
+import { EMAIL_RE, MAX_EMAIL_LEN } from '@/features/auth/credentialRules';
 import { OTPInput, type OTPStatus } from '@/shared/ui/motion/otp-input';
+import { useTransientFlag } from '@/shared/hooks/useTransientFlag';
 import { cn } from '@/shared/lib/utils';
-import { SETTINGS_ACTION_BUTTON, SettingsRow } from '@/shared/ui/settings-layout';
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-// RFC 5321's own limit — just enough to keep the input from growing forever,
-// the server is still the real authority on what's a valid address.
-const MAX_EMAIL_LEN = 254;
+import { SETTINGS_ACTION_BUTTON, SETTINGS_INLINE_PANEL, SettingsRow } from '@/shared/ui/settings-layout';
 
 /** `ana@gmail.com` → `***@gmail.com`: as many stars as the hidden part has letters. */
 function maskEmail(email: string): string {
@@ -26,7 +23,7 @@ function maskEmail(email: string): string {
 
 type Phase = 'view' | 'edit' | 'requested' | 'success';
 
-type EmailValidationError = 'required' | 'invalid' | 'same';
+type EmailValidationError = 'required' | 'invalid' | 'same' | 'passwordRequired';
 
 function validateNewEmail(value: string, currentEmail: string | null): EmailValidationError | null {
   if (!value) return 'required';
@@ -47,6 +44,8 @@ export function EmailSettings({ currentEmail }: { currentEmail: string | null })
   const [phase, setPhase] = useState<Phase>('view');
   const [revealed, setRevealed] = useState(false);
   const [email, setEmail] = useState('');
+  // Kept while the code is pending so a resend can ask again; dropped on success and on leaving the flow.
+  const [password, setPassword] = useState('');
   const [validationError, setValidationError] = useState<EmailValidationError | null>(null);
   // Frozen the moment a code is requested — editing again means starting a
   // fresh request, never silently confirming a different address than the
@@ -56,7 +55,7 @@ export function EmailSettings({ currentEmail }: { currentEmail: string | null })
   const [otpStatus, setOtpStatus] = useState<OTPStatus>('idle');
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const [resent, setResent] = useState(false);
+  const [resent, flashResent] = useTransientFlag();
   // `pending` alone isn't enough to stop onComplete (typing the 6th digit)
   // and the "Confirmar e-mail" click from both firing handleConfirm in the
   // same tick, before the setPending(true) render has committed.
@@ -68,28 +67,29 @@ export function EmailSettings({ currentEmail }: { currentEmail: string | null })
     return () => window.clearTimeout(timeout);
   }, [phase]);
 
-  useEffect(() => {
-    if (!resent) return;
-    const timeout = window.setTimeout(() => setResent(false), 2200);
-    return () => window.clearTimeout(timeout);
-  }, [resent]);
-
   function startEdit() {
     setEmail(currentEmail ?? '');
     setValidationError(null);
     setError(null);
+    setPassword('');
     setPhase('edit');
+  }
+
+  function leave() {
+    setPassword('');
+    setPhase('view');
   }
 
   async function handleRequest() {
     const trimmed = email.trim();
     const invalid = validateNewEmail(trimmed, currentEmail);
     if (invalid) { setValidationError(invalid); return; }
+    if (!password) { setValidationError('passwordRequired'); return; }
     setValidationError(null);
     setError(null);
     setPending(true);
     try {
-      await requestEmailChange(trimmed);
+      await requestEmailChange(trimmed, password);
       setTargetEmail(trimmed);
       setCode('');
       setOtpStatus('idle');
@@ -105,8 +105,8 @@ export function EmailSettings({ currentEmail }: { currentEmail: string | null })
     setError(null);
     setPending(true);
     try {
-      await requestEmailChange(targetEmail);
-      setResent(true);
+      await requestEmailChange(targetEmail, password);
+      flashResent();
     } catch (err) {
       setError(describeApiError(err, 'settings:email.errors.resendFailed'));
     } finally {
@@ -123,6 +123,7 @@ export function EmailSettings({ currentEmail }: { currentEmail: string | null })
     try {
       await confirmEmailChange(targetEmail, nextCode);
       setOtpStatus('success');
+      setPassword('');
       setPhase('success');
       await refresh();
     } catch (err) {
@@ -159,7 +160,7 @@ export function EmailSettings({ currentEmail }: { currentEmail: string | null })
   return (
     <div className="flex flex-col gap-4">
       {row}
-      <div className="rounded-lg border border-border-subtle bg-fill-subtle p-4">{flow()}</div>
+      <div className={SETTINGS_INLINE_PANEL}>{flow()}</div>
     </div>
   );
 
@@ -176,17 +177,27 @@ export function EmailSettings({ currentEmail }: { currentEmail: string | null })
       return (
         <div className="flex flex-col gap-3">
           <p className="text-label text-text-muted">{t('email.changeHint')}</p>
+          <div>
+            <Label htmlFor="accountEmail" className="text-label text-text-muted">{t('email.newLabel')}</Label>
+            <Input
+              id="accountEmail"
+              type="email"
+              autoComplete="email"
+              autoFocus
+              maxLength={MAX_EMAIL_LEN}
+              value={email}
+              onChange={(event) => { setEmail(event.target.value); setValidationError(null); }}
+            />
+          </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
             <div className="min-w-0 flex-1">
-              <Label htmlFor="accountEmail" className="text-label text-text-muted">{t('email.newLabel')}</Label>
+              <Label htmlFor="accountEmailPassword" className="text-label text-text-muted">{t('email.passwordLabel')}</Label>
               <Input
-                id="accountEmail"
-                type="email"
-                autoComplete="email"
-                autoFocus
-                maxLength={MAX_EMAIL_LEN}
-                value={email}
-                onChange={(event) => { setEmail(event.target.value); setValidationError(null); }}
+                id="accountEmailPassword"
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(event) => { setPassword(event.target.value); setValidationError(null); setError(null); }}
               />
             </div>
             <Button type="button" size="lg" disabled={pending} onClick={() => void handleRequest()}>
@@ -194,10 +205,10 @@ export function EmailSettings({ currentEmail }: { currentEmail: string | null })
               <span>{pending ? t('email.sending') : t('email.sendCode')}</span>
             </Button>
           </div>
-          <Button type="button" variant="ghost" size="sm" className="w-fit" disabled={pending} onClick={() => setPhase('view')}>
+          <Button type="button" variant="ghost" size="sm" className="w-fit" disabled={pending} onClick={leave}>
             <span>{t('email.cancel')}</span>
           </Button>
-          {(validationError ?? error) && <p role="alert" className="text-label text-red">{validationError ? t(`email.validation.${validationError}`) : error}</p>}
+          {(validationError ?? error) && <p role="alert" className="text-label text-red-text">{validationError ? t(`email.validation.${validationError}`) : error}</p>}
         </div>
       );
     }

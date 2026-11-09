@@ -110,7 +110,7 @@ function LiveInviteCard({ invitation }: { invitation: InvitationCard }) {
         <p className="mb-2 text-caption text-text-muted">{t('invite.hint')}</p>
       )}
       {footer}
-      {error && <p role="alert" className="mt-2 text-caption text-red">{error}</p>}
+      {error && <p role="alert" className="mt-2 text-caption text-red-text">{error}</p>}
     </div>
   );
 }

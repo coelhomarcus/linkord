@@ -110,7 +110,7 @@ export function ConnectionsSettings() {
       </section>
       {/* the size of one connection card, so the list arriving moves nothing below it */}
       {!data && !loadError && <SkeletonGroup label={t('integration.loading')}><Skeleton className="h-[120px] w-full rounded-lg" /></SkeletonGroup>}
-      {loadError && <div role="alert" className="text-label text-red">{t('integration.errors.load')} <Button type="button" variant="ghost" size="sm" onClick={() => void load()}>{t('modal.retry')}</Button></div>}
+      {loadError && <div role="alert" className="text-label text-red-text">{t('integration.errors.load')} <Button type="button" variant="ghost" size="sm" onClick={() => void load()}>{t('modal.retry')}</Button></div>}
       {data?.connections.length === 0 && <p className="rounded-lg border border-border-subtle px-4 py-6 text-center text-label text-text-muted">{t('integration.empty')}</p>}
       {!!data?.connections.length && (
         <section aria-labelledby="connections-list-title" className="flex flex-col gap-4">
@@ -148,7 +148,7 @@ export function ConnectionsSettings() {
           </ul>
         </section>
       )}
-      {error && !dialog && <p role="alert" className="text-label text-red">{error}</p>}
+      {error && !dialog && <p role="alert" className="text-label text-red-text">{error}</p>}
       <Dialog open={!!dialog} onOpenChange={(open) => { if (!open && !busy) setDialog(null); }}>
         {dialog && <DialogContent className="sm:max-w-md" showCloseButton={!busy}>
           <DialogHeader><DialogTitle>{t(dialog.connection ? 'integration.editTitle' : 'integration.connectTitle', { name: providerName(dialog.provider) })}</DialogTitle><DialogDescription>{t(dialog.provider === 'url' ? 'integration.urlHint' : 'integration.usernameHint')}</DialogDescription></DialogHeader>
@@ -157,7 +157,7 @@ export function ConnectionsSettings() {
               {t(dialog.provider === 'url' ? 'integration.url' : 'integration.username')}
               <input autoFocus required disabled={busy} type={dialog.provider === 'url' ? 'url' : 'text'} value={value} onChange={(event) => setValue(event.target.value)} maxLength={dialog.provider === 'url' ? 300 : dialog.provider === 'github' ? 39 : 16} autoComplete="off" spellCheck={false} className="rounded-md border border-border-strong bg-bg-tertiary px-3 py-2 text-body outline-none focus:border-primary" />
             </label>
-            {error && <p role="alert" className="text-label text-red">{error}</p>}
+            {error && <p role="alert" className="text-label text-red-text">{error}</p>}
             <div className="flex justify-end gap-2"><Button type="button" variant="ghost" disabled={busy} onClick={() => setDialog(null)}>{t('wall.cancel')}</Button><Button type="submit" disabled={busy || !value.trim()}>{t(busy ? 'wall.saving' : 'wall.save')}</Button></div>
           </form>
         </DialogContent>}

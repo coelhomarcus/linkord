@@ -17,13 +17,13 @@ describe('applyColorTheme', () => {
   });
 
   it('sets data-theme and theme-color meta', () => {
-    applyColorTheme('discord');
-    expect(document.documentElement.dataset.theme).toBe('discord');
+    applyColorTheme('graphite');
+    expect(document.documentElement.dataset.theme).toBe('graphite');
     expect(document.querySelector('meta[name="theme-color"]')?.getAttribute('content')).toBe('#202225');
   });
 
   it('paints the browser chrome with each theme\'s shell color', () => {
-    applyColorTheme('linkord');
+    applyColorTheme('old');
     expect(document.querySelector('meta[name="theme-color"]')?.getAttribute('content')).toBe('#0d0d0f');
     applyColorTheme('black');
     expect(document.querySelector('meta[name="theme-color"]')?.getAttribute('content')).toBe('#000000');

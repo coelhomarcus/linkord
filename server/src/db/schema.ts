@@ -48,6 +48,8 @@ export const users = pgTable('users', {
   pushShowContent: boolean('push_show_content').notNull().default(true),
   // Two-step login: with it on, a right password only earns a code sent to `email` (auth/routes.ts).
   twoFactorEmail: boolean('two_factor_email').notNull().default(false),
+  // Email the account when a new browser signs in (modules/auth/loginAlert.ts).
+  loginAlertEmail: boolean('login_alert_email').notNull().default(true),
   // The presence status the person picked (see modules/presence/userStatus.ts). On the account so it
   // holds on every device, and so push delivery can honour 'dnd' without asking the socket layer.
   presenceStatus: varchar('presence_status', { length: 16 }).notNull().default('online'),
@@ -90,6 +92,18 @@ export const sessions = pgTable('sessions', {
 }, (t) => [
   index('sessions_user_id_idx').on(t.userId),
   uniqueIndex('sessions_id_key').on(t.id),
+]);
+
+/** The browsers an account has signed in from lately, kept apart from `sessions` because logging out
+ * deletes the session row and a plain re-login must not read as a new browser. `fingerprint` is the
+ * sha256 of the address plus the user agent, so no raw address is kept here. */
+export const knownLogins = pgTable('known_logins', {
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  fingerprint: text('fingerprint').notNull(),
+  lastLoginAt: timestamp('last_login_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  primaryKey({ columns: [t.userId, t.fingerprint] }),
+  index('known_logins_last_login_at_idx').on(t.lastLoginAt),
 ]);
 
 /** Short-lived one-time codes for account recovery and email changes. Only

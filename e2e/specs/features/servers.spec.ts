@@ -1,7 +1,31 @@
 import { test, expect } from '../../fixtures/test';
 import { PERMISSIONS, acceptInvite, createChannel, createInvite, createServer, setChannelOverwrite } from '../../fixtures/api';
+import { gifInfo, threeFrameGif } from '../../fixtures/images';
 
 test.describe('servers', () => {
+  test('an icon picked in the server settings is cut on the server, animation and all', async ({ users }) => {
+    const alice = await users.create('alice');
+    const server = await createServer(alice.api, 'E2E icon');
+    const a = await alice.app();
+    await a.openChannel(server.id, server.text.id);
+
+    // the header's menu button, not the rail icon of the same name
+    await a.page.getByRole('button', { name: 'E2E icon', exact: true, expanded: false }).click();
+    await a.page.getByRole('menuitem', { name: 'Configurações do servidor' }).click();
+    const chooser = a.page.waitForEvent('filechooser');
+    await a.page.getByRole('button', { name: 'Alterar ícone' }).click();
+    await (await chooser).setFiles(threeFrameGif());
+    const crop = a.page.getByRole('dialog', { name: 'Alterar ícone' });
+    await crop.getByRole('button', { name: 'Salvar' }).click();
+    await expect(crop).toHaveCount(0);
+
+    // a fresh account has no picture of its own: the one upload on screen is the icon
+    const icon = a.page.locator('img[src^="/uploads/"]').first();
+    await expect(icon).toHaveAttribute('src', /^\/uploads\//);
+    const bytes = await (await alice.api.get((await icon.getAttribute('src'))!)).body();
+    expect(gifInfo(Buffer.from(bytes))).toEqual({ width: 200, height: 200, frames: 3 });
+  });
+
   test('creating a server from the rail lands in its #geral', async ({ users }) => {
     const alice = await users.create('alice');
     const a = await alice.app();

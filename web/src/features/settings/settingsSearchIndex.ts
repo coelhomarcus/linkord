@@ -10,12 +10,14 @@ export interface SearchEntry {
    * settings locale files. */
   searchKey: SearchKey;
   adminOnly?: boolean;
+  /** Listed only where the page has this section at all (installing is not possible everywhere). */
+  requiresInstall?: boolean;
 }
 
 type SearchKey =
-  | 'accountInfo' | 'email' | 'session' | 'password' | 'twoFactor' | 'sessions' | 'connections' | 'blocked' | 'presence'
+  | 'accountInfo' | 'email' | 'session' | 'password' | 'twoFactor' | 'loginAlerts' | 'sessions' | 'connections' | 'blocked' | 'presence'
   | 'theme' | 'voice' | 'inputProfile' | 'video' | 'calls' | 'uploads'
-  | 'desktopNotifications' | 'sounds' | 'language' | 'timeFormat' | 'adminArea';
+  | 'desktopNotifications' | 'sounds' | 'language' | 'timeFormat' | 'adminArea' | 'install';
 
 // One entry per SettingsSection that exists today (grep '<SettingsSection id='
 // across features/settings/*.tsx to keep this honest) — curated, not
@@ -26,6 +28,7 @@ export const SETTINGS_SEARCH_INDEX: SearchEntry[] = [
   { categoryId: 'account', sectionId: 'session', searchKey: 'session' },
   { categoryId: 'security', sectionId: 'password', searchKey: 'password' },
   { categoryId: 'security', sectionId: 'two-factor', searchKey: 'twoFactor' },
+  { categoryId: 'security', sectionId: 'login-alerts', searchKey: 'loginAlerts' },
   { categoryId: 'security', sectionId: 'sessions', searchKey: 'sessions' },
   { categoryId: 'connections', searchKey: 'connections' },
   { categoryId: 'privacy', sectionId: 'presence', searchKey: 'presence' },
@@ -38,6 +41,7 @@ export const SETTINGS_SEARCH_INDEX: SearchEntry[] = [
   { categoryId: 'chat', sectionId: 'uploads', searchKey: 'uploads' },
   { categoryId: 'notifications', sectionId: 'overview', searchKey: 'desktopNotifications' },
   { categoryId: 'notifications', sectionId: 'sounds', searchKey: 'sounds' },
+  { categoryId: 'notifications', sectionId: 'install', searchKey: 'install', requiresInstall: true },
   { categoryId: 'language', sectionId: 'language', searchKey: 'language' },
   { categoryId: 'language', sectionId: 'time-format', searchKey: 'timeFormat' },
   { categoryId: 'moderation', sectionId: 'admin-area', searchKey: 'adminArea', adminOnly: true },
