@@ -79,7 +79,7 @@ export async function bootstrap(): Promise<void> {
   // on deploy would take everything down instead of attachments alone
   const unwritable = await unwritableUploadDirs();
   if (unwritable.length > 0) {
-    log.error('uploads folder is not writable: attachments and voice messages will fail. On the host, give the mounted folder to uid 1000 (chown -R 1000:1000 <host path>); see "Docker deployment" in the README', undefined, { dirs: unwritable, uid: process.getuid?.() });
+    log.error('uploads folder is not writable: attachments and voice messages will fail. On the host, give the mounted folder to uid 1000 (chown -R 1000:1000 <host path>); see "Folders and permissions" in docs/DEPLOY.md', undefined, { dirs: unwritable, uid: process.getuid?.() });
   }
 
   await restoreCalls();

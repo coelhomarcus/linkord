@@ -39,6 +39,7 @@ docs/*
 !docs/WEBHOOK.md
 !docs/DEVELOPMENT.md
 !docs/INTEGRATIONS.md
+!docs/DEPLOY.md
 
 # end-to-end suite (e2e/): reports, traces and the per-run stack state
 e2e/report/
