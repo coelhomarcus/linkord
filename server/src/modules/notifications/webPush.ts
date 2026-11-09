@@ -131,7 +131,7 @@ async function noticeFor(event: OutboxEvent, locale: Locale, showContent: boolea
     }
     const text = chatNoticeText({
       direct: found.direct, name: found.name, text: found.text, channelTitle: found.conversation.title, serverName: found.serverName,
-      kind: found.message.kind, callDurationSeconds: found.message.callDurationSeconds, invitedChannel,
+      kind: found.message.kind, sticker: !!found.message.stickerId, callDurationSeconds: found.message.callDurationSeconds, invitedChannel,
     }, locale);
     // each message in a burst replaces the previous one (same tag) but still alerts
     return { ...text, path: conversationPath(found.conversation), tag: `chat-${found.conversation.id}`, avatar: found.avatar, renotify: true };

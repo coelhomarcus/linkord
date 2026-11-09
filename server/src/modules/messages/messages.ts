@@ -48,6 +48,7 @@ import { voicePayload, type VoiceMeta } from '../attachments/voiceMessages.js';
 import { emojiUsageKeys, recordExpressionUsage } from '../emojis/expressionUsage.js';
 import { customReactionId } from '../emojis/customEmojiTokens.js';
 import { sanitizeCustomEmojis, usableEmojis } from '../emojis/serverEmojis.js';
+import { isStickerId, loadStickerCards, usableSticker, type StickerCard } from '../stickers/serverStickers.js';
 
 const log = logger.child({ component: 'audit' });
 
@@ -118,6 +119,9 @@ interface ChatMessagePayload {
   bot?: true;
   // the structured cards the bot sent with it (title, color, fields...)
   richEmbeds?: RichEmbed[];
+  // the message is this sticker (its text is empty); null once the sticker
+  // was deleted, so it reads "unavailable" rather than blank
+  sticker?: StickerCard | null;
 }
 
 export interface MessageWithAuthor {
@@ -138,6 +142,7 @@ export interface MessageWithAuthor {
   embeds: unknown;
   suppressedEmbeds: unknown;
   richEmbeds: unknown;
+  stickerId: string | null;
   // null unless the bot's webhook posted it; '' is a bot without a title/photo
   botName: string | null;
   botAvatar: string | null;
@@ -165,6 +170,7 @@ const messageWithAuthorSelect = {
   embeds: messages.embeds,
   suppressedEmbeds: messages.suppressedEmbeds,
   richEmbeds: messages.richEmbeds,
+  stickerId: messages.stickerId,
   // read live from the webhook, so a rename shows on its whole history
   botName: sql<string | null>`case when ${messages.webhookId} is null then null else coalesce((select ${webhooks.name} from ${webhooks} where ${webhooks.id} = ${messages.webhookId}), '') end`,
   botAvatar: sql<string | null>`case when ${messages.webhookId} is null then null else (select ${webhooks.avatar} from ${webhooks} where ${webhooks.id} = ${messages.webhookId}) end`,
@@ -193,6 +199,7 @@ function rowWithParticipant(row: Message, participant: AuthorIdentity): MessageW
     embeds: row.embeds,
     suppressedEmbeds: row.suppressedEmbeds,
     richEmbeds: row.richEmbeds,
+    stickerId: row.stickerId,
     botName: participant.bot?.name ?? null,
     botAvatar: participant.bot?.avatar ?? null,
   };
@@ -213,7 +220,7 @@ function authorAvatarFor(row: MessageWithAuthor): string {
  * attachments-table rows, and `reactionsByEmoji` the grouped
  * message_reactions rows for this message — neither lives in the messages
  * table itself, see modules/attachments.ts and modules/reactions.ts. */
-export function rowToMessage(row: MessageWithAuthor, attachments?: Attachment[], reactionsByEmoji?: Record<string, string[]>, invitation?: InvitationCard, callInvite?: CallInviteCard): ChatMessagePayload {
+export function rowToMessage(row: MessageWithAuthor, attachments?: Attachment[], reactionsByEmoji?: Record<string, string[]>, invitation?: InvitationCard, callInvite?: CallInviteCard, sticker?: StickerCard): ChatMessagePayload {
   const out: ChatMessagePayload = {
     msgId: row.id,
     conversationId: row.conversationId,
@@ -227,6 +234,7 @@ export function rowToMessage(row: MessageWithAuthor, attachments?: Attachment[],
   const richEmbeds = storedRichEmbeds(row.richEmbeds);
   if (richEmbeds.length) out.richEmbeds = richEmbeds;
   if (row.editedAt) out.editedAt = row.editedAt.getTime();
+  if (row.stickerId) out.sticker = sticker ?? null;
   const embeds = storedEmbedsFor(row.text, row.embeds, row.suppressedEmbeds);
   if (embeds.length) out.embeds = embeds.map(withProxiedImages);
   const suppressed = suppressedLinksFor(row.text, row.suppressedEmbeds);
@@ -264,16 +272,19 @@ async function serializeRows(rows: MessageWithAuthor[]): Promise<ChatMessagePayl
   const messageIds = rows.map((r) => r.id);
   const cardIds = rows.flatMap((r) => (r.kind === 'server_invite' && r.serverInvitationId ? [r.serverInvitationId] : []));
   const callChannelIds = rows.flatMap((r) => (r.kind === 'call_invite' && r.callConversationId ? [r.callConversationId] : []));
-  const [attachmentByMessageId, reactionsByMessageId, cards, callCards] = await Promise.all([
+  const stickerIds = rows.flatMap((r) => (r.stickerId ? [r.stickerId] : []));
+  const [attachmentByMessageId, reactionsByMessageId, cards, callCards, stickerCards] = await Promise.all([
     attachments.getByMessageIds(messageIds),
     reactions.getByMessageIds(messageIds),
     loadInvitationCards(cardIds),
     loadCallInviteCards(callChannelIds),
+    loadStickerCards(stickerIds),
   ]);
   return rows.map((r) => rowToMessage(
     r, attachmentByMessageId.get(r.id), reactionsByMessageId.get(r.id),
     r.serverInvitationId ? cards.get(r.serverInvitationId) : undefined,
     r.callConversationId ? callCards.get(r.callConversationId) : undefined,
+    r.stickerId ? stickerCards.get(r.stickerId) : undefined,
   ));
 }
 
@@ -524,6 +535,7 @@ interface ChatSendRequest {
   requestId?: unknown;
   clientMessageId?: unknown;
   attachmentIds?: unknown;
+  stickerId?: unknown;
 }
 
 const ATTACHMENT_ID_RE = /^[0-9a-f]{32}$/;
@@ -573,8 +585,12 @@ async function handleChat(socket: AppSocket, msg: ChatSendRequest): Promise<void
     const rawText = String(msg.text ?? '').trim();
     const attachmentIds = parseAttachmentIds(msg.attachmentIds);
     if (!attachmentIds) return fail('invalid_message', `Anexos inválidos (máximo ${config.MAX_ATTACHMENTS_PER_MESSAGE}).`);
+    const stickerId = msg.stickerId == null ? null : msg.stickerId;
+    if (stickerId !== null && !isStickerId(stickerId)) return fail('invalid_message', 'Figurinha inválida.');
+    // a sticker is the whole message, like on Discord: nothing rides with it
+    if (stickerId && (rawText || attachmentIds.length)) return fail('invalid_message', 'Uma figurinha vai sozinha na mensagem.');
     // a batch may go without a caption; a plain message may not be empty
-    if (!conversationId || (!rawText && !attachmentIds.length)) return fail('invalid_message', 'Mensagem vazia.');
+    if (!conversationId || (!rawText && !attachmentIds.length && !stickerId)) return fail('invalid_message', 'Mensagem vazia.');
     // never cut it silently: the client shows a counter instead
     if (rawText.length > config.MAX_CHAT_LEN) return fail('message_too_long', `A mensagem passa de ${config.MAX_CHAT_LEN} caracteres.`);
     const conversation = await getConversationForUser(conversationId, p.userId);
@@ -588,6 +604,9 @@ async function handleChat(socket: AppSocket, msg: ChatSendRequest): Promise<void
     if (peerId && !(await canSendDirectMessage(p.userId, peerId))) {
       return fail(ERROR_CODES.relationshipRequired, 'Vocês precisam ser amigos pra conversar por aqui.');
     }
+    // only its server's members may send it, wherever they send it
+    const sticker = stickerId ? await usableSticker(p.userId, stickerId) : null;
+    if (stickerId && !sticker) return fail('sticker_unavailable', 'Essa figurinha não está mais disponível pra você.');
     const replyTo = await buildReplyRef(conversationId, msg.replyTo);
     // what is stored; the hash below stays on what was sent, so a retry of
     // the same send still matches its first attempt
@@ -597,8 +616,8 @@ async function handleChat(socket: AppSocket, msg: ChatSendRequest): Promise<void
       outcome = await insertMessageOnce({
         authorId: p.userId,
         clientMessageId,
-        payloadHash: sendPayloadHash({ conversationId, text: rawText, replyTo: replyTo?.msgId ?? null, attachmentIds }),
-        values: { conversationId, authorId: p.userId, text, replyTo: replyTo || null },
+        payloadHash: sendPayloadHash({ conversationId, text: rawText, replyTo: replyTo?.msgId ?? null, attachmentIds, stickerId }),
+        values: { conversationId, authorId: p.userId, text, replyTo: replyTo || null, stickerId },
         // access was re-checked above, at publish time, not only at upload init
         attach: attachmentIds.length
           ? (tx, row) => publishStaged(tx, { ids: attachmentIds, ownerId: p.userId, conversationId, messageId: row.id })
@@ -620,7 +639,7 @@ async function handleChat(socket: AppSocket, msg: ChatSendRequest): Promise<void
       if (!existing) return fail('message_deleted', 'Essa mensagem foi enviada e depois apagada.');
       return sendChatResult(socket, msg, { message: { ...existing, clientMessageId } });
     }
-    const message = { ...rowToMessage(rowWithParticipant(outcome.row, p), outcome.attachments), clientMessageId };
+    const message = { ...rowToMessage(rowWithParticipant(outcome.row, p), outcome.attachments, undefined, undefined, undefined, sticker ?? undefined), clientMessageId };
     // answered before the broadcast: a failure fanning out must not make a
     // persisted send look failed and invite a retry
     sendChatResult(socket, msg, { message });
@@ -629,6 +648,7 @@ async function handleChat(socket: AppSocket, msg: ChatSendRequest): Promise<void
     void unfurlMessage(outcome.row, p.userId);
     void notifyMentions({ id: outcome.row.id, conversationId, text, authorId: p.userId });
     void recordExpressionUsage(p.userId, 'emoji', emojiUsageKeys(text));
+    if (sticker) void recordExpressionUsage(p.userId, 'sticker', [sticker.id]);
   } catch (err) {
     log.error('correlated chat send failed', err, { userId: p.userId });
     fail('internal_error', 'Não foi possível enviar agora.');
@@ -687,6 +707,7 @@ async function editMessage(p: Participant, msg: { msgId?: unknown; text?: string
   const [existing] = await db.select().from(messages).where(eq(messages.id, msgId)).limit(1);
   if (!existing) return { code: 'not_found', message: 'Essa mensagem não existe mais.' };
   if (existing.authorId !== p.userId || existing.kind !== 'text') return { code: 'forbidden', message: 'Você só pode editar as suas mensagens.' };
+  if (existing.stickerId) return { code: 'forbidden', message: 'Uma figurinha não pode ser editada.' };
   if (!(await conversationExistsForUser(existing.conversationId, p.userId))) return { code: 'conversation_not_found', message: 'Conversa não encontrada.' };
   // §4.3: editing an old message while contact is restricted would be a
   // backdoor around the send-gate above — closing that is the specific
@@ -714,12 +735,14 @@ async function editMessage(p: Participant, msg: { msgId?: unknown; text?: string
  * RoomProvider.tsx), so leaving out its attachments or reactions made them
  * disappear for everyone. */
 async function broadcastChanged(row: Message, author: AuthorIdentity): Promise<void> {
-  const [attachment, reactionsByEmoji] = await Promise.all([
+  const [attachment, reactionsByEmoji, stickerCards] = await Promise.all([
     attachments.getByMessageIds([row.id]).then((m) => m.get(row.id)),
     reactions.getByMessageIds([row.id]).then((m) => m.get(row.id)),
+    loadStickerCards(row.stickerId ? [row.stickerId] : []),
   ]);
   await recordConversationActivity(row.conversationId);
-  await broadcastToConversationMembers(row.conversationId, { t: 'chat-edited', message: rowToMessage(rowWithParticipant(row, author), attachment, reactionsByEmoji) });
+  const sticker = row.stickerId ? stickerCards.get(row.stickerId) : undefined;
+  await broadcastToConversationMembers(row.conversationId, { t: 'chat-edited', message: rowToMessage(rowWithParticipant(row, author), attachment, reactionsByEmoji, undefined, undefined, sticker) });
 }
 
 /** A text message in a conversation the actor still belongs to, for what
