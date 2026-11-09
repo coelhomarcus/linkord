@@ -4,7 +4,7 @@ import { after, afterEach, before, beforeEach, describe, it, mock } from 'node:t
 import { and, eq } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { config } from '../../src/config/env.js';
-import { adminAuditLogs, authCodes, sessions, users } from '../../src/db/schema.js';
+import { adminAuditLogs, authCodes, rateLimitWindows, sessions, users } from '../../src/db/schema.js';
 import { createApp } from '../../src/http/app.js';
 import { hashPassword } from '../../src/modules/auth/password.js';
 import { createSession, resolveSession, sweepExpiredSessions, touchSessions } from '../../src/modules/auth/session.js';
@@ -399,6 +399,61 @@ describe('idle expiry', () => {
     // the write is fire-and-forget; give it a moment to land
     for (let i = 0; i < 50 && (await lastSeenOf(stale.tokenHash)) < Date.now() - 60_000; i++) await new Promise((r) => setTimeout(r, 20));
     assert.ok((await lastSeenOf(stale.tokenHash)) > Date.now() - 60_000);
+  });
+});
+
+describe('guessing password reset codes', () => {
+  const reset = (identifier: Record<string, unknown>, code: string, ip = freshIp()) =>
+    call('POST', '/api/auth/recovery/reset', { ip, payload: { ...identifier, code, password: 'another new password' } });
+
+  it('requesting a new code does not restore the guess budget', async () => {
+    const user = await makeAccount();
+    const ask = () => call('POST', '/api/auth/recovery/request', { payload: { username: user.username } });
+    await ask();
+    let right = lastCode();
+    // every guess comes from a different address, so only the per-account counter can stop them
+    for (let i = 0; i < FAILURE_RULE.max; i++) {
+      if (i > 0 && i % config.AUTH_CODE_MAX_ATTEMPTS === 0) { await ask(); right = lastCode(); }
+      assert.equal((await reset({ username: user.username }, wrongCode(right))).status, 400);
+    }
+    const blocked = await reset({ username: user.username }, right);
+    assert.equal(blocked.status, 429);
+    assert.ok(Number(blocked.headers['retry-after']) > 0);
+    // naming the account by email lands on the same counter
+    assert.equal((await reset({ email: user.email }, right)).status, 429);
+    assert.equal((await login(user.username)).status, 200);
+  });
+
+  it('blocks an address across accounts', async () => {
+    const ip = freshIp();
+    for (let i = 0; i < FAILURE_RULE.max; i++) await reset({ username: `ghost_${uid().slice(0, 10)}` }, '123456', ip);
+    assert.equal((await reset({ username: `ghost_${uid().slice(0, 10)}` }, '123456', ip)).status, 429);
+  });
+
+  it('answers a missing account like an existing one', async () => {
+    const username = `ghost_${uid().slice(0, 10)}`;
+    for (let i = 0; i < FAILURE_RULE.max; i++) assert.equal((await reset({ username }, '123456')).status, 400);
+    assert.equal((await reset({ username }, '123456')).status, 429);
+  });
+
+  it('a correct reset clears the account counter', async () => {
+    const user = await makeAccount();
+    await call('POST', '/api/auth/recovery/request', { payload: { username: user.username } });
+    const right = lastCode();
+    for (let i = 0; i < 3; i++) await reset({ username: user.username }, wrongCode(right));
+    assert.equal((await reset({ username: user.username }, right)).status, 200);
+    const key = crypto.createHash('sha256').update(`reset-code:${user.id}`).digest('hex');
+    assert.equal((await db.select().from(rateLimitWindows).where(eq(rateLimitWindows.key, key))).length, 0);
+  });
+
+  it('asking by username and by email shares one send budget per account', async () => {
+    const user = await makeAccount();
+    for (let i = 0; i < 8; i++) {
+      const res = await call('POST', '/api/auth/recovery/request', { payload: i % 2 ? { username: user.username } : { email: user.email } });
+      assert.equal(res.status, 200);
+    }
+    // the answer never changes, but past the account's ceiling nothing goes out
+    assert.equal(mailbox.length, 5);
   });
 });
 
