@@ -149,7 +149,8 @@
   "email": {
     "none": "Nenhum e-mail cadastrado.",
     "change": "Editar",
-    "changeHint": "Usado para recuperar sua conta. A alteração será confirmada por código.",
+    "changeHint": "Usado para recuperar sua conta. Pedimos sua senha atual e a alteração é confirmada por código enviado ao novo e-mail.",
+    "passwordLabel": "Senha atual",
     "newLabel": "Novo e-mail",
     "sendCode": "Enviar código",
     "sending": "Enviando…",
@@ -169,6 +170,7 @@
     "validation": {
       "required": "Informe um e-mail.",
       "invalid": "Informe um e-mail válido.",
+      "passwordRequired": "Informe sua senha atual.",
       "same": "Informe um e-mail diferente do atual."
     },
     "errors": {

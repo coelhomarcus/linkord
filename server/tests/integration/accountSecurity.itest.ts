@@ -273,6 +273,37 @@ describe('turning two-step login on and off', () => {
   });
 });
 
+describe('changing the email', () => {
+  it('needs the current password before any code is sent, and only then moves the address', async () => {
+    const user = await makeAccount();
+    const { cookie } = await cookieFor(user.id);
+    const target = `moved_${user.id.slice(0, 8)}@example.test`;
+    const request = (payload: Record<string, unknown>) => call('POST', '/api/auth/email/change/request', { cookie, payload });
+
+    const missing = await request({ email: target });
+    assert.equal(missing.status, 403);
+    assert.equal(missing.body.error.code, 'invalid_password');
+    const wrong = await request({ email: target, password: 'nope' });
+    assert.equal(wrong.status, 403);
+    assert.equal(wrong.body.error.code, 'invalid_password');
+    assert.equal(mailbox.length, 0, 'no code goes to the new address without the password');
+
+    assert.equal((await request({ email: target, password: PASSWORD })).status, 200);
+    assert.deepEqual(mailbox.at(-1)?.to, [target]);
+    const confirmed = await call('POST', '/api/auth/email/change/confirm', { cookie, payload: { email: target, code: lastCode() } });
+    assert.equal(confirmed.status, 200);
+    assert.equal(confirmed.body.user.email, target);
+  });
+
+  it('a wrong password does not reveal whether the address is taken', async () => {
+    const user = await makeAccount();
+    const other = await makeAccount();
+    const { cookie } = await cookieFor(user.id);
+    const res = await call('POST', '/api/auth/email/change/request', { cookie, payload: { email: other.email, password: 'nope' } });
+    assert.equal(res.body.error.code, 'invalid_password');
+  });
+});
+
 describe('the session list', () => {
   it('lists the account sessions with their origin, marking this one', async () => {
     const user = await makeAccount();

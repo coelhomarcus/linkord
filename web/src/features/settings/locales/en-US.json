@@ -149,7 +149,8 @@
   "email": {
     "none": "No email on file.",
     "change": "Edit",
-    "changeHint": "Used to recover your account. The change will be confirmed with a code.",
+    "changeHint": "Used to recover your account. We ask for your current password, and the change is confirmed with a code sent to the new email.",
+    "passwordLabel": "Current password",
     "newLabel": "New email",
     "sendCode": "Send code",
     "sending": "Sending…",
@@ -169,6 +170,7 @@
     "validation": {
       "required": "Enter an email.",
       "invalid": "Enter a valid email.",
+      "passwordRequired": "Enter your current password.",
       "same": "Enter an email different from the current one."
     },
     "errors": {

@@ -162,8 +162,8 @@ export function linkEmail(email: string): Promise<{ user: ApiUser }> {
   return apiFetch('/api/auth/email/link', { method: 'POST', body: JSON.stringify({ email }) });
 }
 
-export function requestEmailChange(email: string): Promise<{ ok: true }> {
-  return apiFetch('/api/auth/email/change/request', { method: 'POST', body: JSON.stringify({ email }) });
+export function requestEmailChange(email: string, password: string): Promise<{ ok: true }> {
+  return apiFetch('/api/auth/email/change/request', { method: 'POST', body: JSON.stringify({ email, password }) });
 }
 
 export function confirmEmailChange(email: string, code: string): Promise<{ user: ApiUser }> {

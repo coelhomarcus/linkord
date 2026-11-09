@@ -244,8 +244,10 @@ describe('other limits moved to the database', () => {
 
   it('email change requests are limited per account', async () => {
     const user = await makeUser('ec');
+    const password = 'correct horse battery';
+    await db.update(users).set({ passwordHash: await hashPassword(password) }).where(eq(users.id, user.id));
     const cookie = `${config.SESSION_COOKIE}=${(await createSession(user.id)).rawToken}`;
-    const request = () => app.inject({ method: 'POST', url: '/api/auth/email/change/request', payload: { email: `new_${uid().slice(0, 8)}@example.com` }, headers: { cookie } });
+    const request = () => app.inject({ method: 'POST', url: '/api/auth/email/change/request', payload: { email: `new_${uid().slice(0, 8)}@example.com`, password }, headers: { cookie } });
     // the mail itself is not configured here (503 email_unavailable), but the attempt is still counted
     for (let i = 0; i < FAILURE_RULE.max; i++) await request();
     assert.equal((await request()).statusCode, 429);

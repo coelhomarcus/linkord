@@ -479,6 +479,9 @@ async function handleEmailChangeRequest(request: FastifyRequest, reply: FastifyR
   const sess = await sessionForRequest(request);
   if (!sess) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
   const body = jsonBody(request.body);
+  // Asked before anything else, so a stolen session cannot probe which addresses are taken, and cannot
+  // point the account's recovery at an address of its own, which would bypass the password checks.
+  if (!(await confirmPassword(reply, sess, String(body.password == null ? '' : body.password)))) return;
   const email = normalizeEmail(String(body.email == null ? '' : body.email));
   if (!isValidEmail(email)) return sendError(reply, 400, 'invalid_email', 'Informe um e-mail válido.');
   if (sess.email && normalizeEmail(sess.email) === email) return sendError(reply, 400, 'same_email', 'Informe um e-mail diferente do atual.');
