@@ -2,7 +2,6 @@ import { ArrowSquareOutIcon, PlayIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import ReactPlayer from 'react-player';
 
 import type { DetectedEmbed } from '@/shared/lib/chatEmbeds';
 import { getCachedLinkPreview, loadLinkPreview } from '@/shared/lib/linkPreviewCache';
@@ -12,6 +11,7 @@ import { availableAttachmentWidth, useChatSurfaceWidth } from '@/shared/lib/chat
 import { VideoPlayer } from './MediaPlayers';
 import { embedImageAspect, previewImageSize } from './embedImageBox';
 import { canLoadMediaUrl } from './mediaUrl';
+import { youtubeEmbedUrl } from './youtubeEmbedUrl';
 
 interface GenericEmbedProps {
   embed: DetectedEmbed;
@@ -30,6 +30,37 @@ const KNOWN_SITE: Partial<Record<DetectedEmbed['kind'], { name: string; favicon:
   'twitch-vod': { name: 'Twitch', favicon: 'https://www.twitch.tv/favicon.ico' },
   'twitch-clip': { name: 'Twitch', favicon: 'https://www.twitch.tv/favicon.ico' },
 };
+
+/** The thumbnail until clicked, then YouTube's own player in an iframe. */
+function YouTubePlayer({ embed, thumbnail }: { embed: DetectedEmbed; thumbnail: string }) {
+  const { t } = useTranslation('media');
+  const [loaded, setLoaded] = useState(false);
+
+  if (loaded) {
+    return (
+      <iframe
+        src={youtubeEmbedUrl(embed.youtubeId!, embed.url)}
+        title="YouTube"
+        className="h-full w-full"
+        allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+        allowFullScreen
+      />
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={() => setLoaded(true)}
+      aria-label={t('player.playVideo')}
+      className="relative flex size-full items-center justify-center focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+    >
+      <img src={thumbnail} alt="" className="absolute inset-0 size-full object-cover" />
+      <span className="relative flex h-12 w-12 items-center justify-center rounded-full bg-red text-white">
+        <PlayIcon size={18} fill="currentColor" />
+      </span>
+    </button>
+  );
+}
 
 function TwitchPlayer({ embed }: { embed: DetectedEmbed }) {
   const { t } = useTranslation('media');
@@ -140,18 +171,7 @@ export function GenericEmbed({ embed, className = '', edgeToEdge, preview }: Gen
   if (embed.kind === 'youtube') {
     media = (
       <div className="aspect-video w-full bg-black">
-        <ReactPlayer
-          src={embed.url}
-          light={image || `https://i.ytimg.com/vi/${embed.youtubeId}/hqdefault.jpg`}
-          controls
-          width="100%"
-          height="100%"
-          playIcon={
-            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-red text-white">
-              <PlayIcon size={18} fill="currentColor" />
-            </span>
-          }
-        />
+        <YouTubePlayer embed={embed} thumbnail={image || `https://i.ytimg.com/vi/${embed.youtubeId}/hqdefault.jpg`} />
       </div>
     );
   } else if (embed.kind === 'twitch-channel' || embed.kind === 'twitch-vod' || embed.kind === 'twitch-clip') {

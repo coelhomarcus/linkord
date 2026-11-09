@@ -6,6 +6,7 @@ import { config } from '../config/env.js';
 import { listVisibleOnlineUserIds, participants } from '../modules/presence/participants.js';
 import { sendError, sendJson } from './respond.js';
 import { originGuard } from './originGuard.js';
+import { securityHeaders } from './securityHeaders.js';
 import { registerAuthRoutes } from '../modules/auth/routes.js';
 import { RateLimitUnavailableError } from '../modules/auth/ratelimit.js';
 import { registerAttachmentRoutes } from '../modules/attachments/attachments.js';
@@ -24,6 +25,7 @@ import { registerServerInviteRoutes } from '../modules/servers/serverInvites.js'
 import { registerCallInviteRoutes } from '../modules/calls/callInvites.js';
 import { registerNotificationRoutes } from '../modules/notifications/notificationsRoutes.js';
 import { registerClientLogRoutes } from '../modules/logs/clientLogs.js';
+import { registerCspReportRoutes } from '../modules/logs/cspReports.js';
 import { registerLimitsRoutes } from '../modules/limits/limitsRoutes.js';
 import { registerReportRoutes } from '../modules/reports/reports.js';
 import { registerAdminRoutes } from '../modules/admin/adminRoutes.js';
@@ -95,6 +97,7 @@ export function createApp(): FastifyInstance {
   // static/JSON responses, which previously relied on a CDN's own gzip.
   fastify.register(fastifyCompress);
 
+  fastify.addHook('onRequest', securityHeaders(PUBLIC_DIR));
   fastify.addHook('onRequest', originGuard);
   // correlation id: the same value the request lines and errors carry, so a
   // report from the client ("x-request-id: req-7") finds the server side
@@ -126,6 +129,7 @@ export function createApp(): FastifyInstance {
   registerReportRoutes(fastify);
   registerLimitsRoutes(fastify);
   registerClientLogRoutes(fastify);
+  registerCspReportRoutes(fastify);
   registerNotificationRoutes(fastify);
   registerAdminRoutes(fastify);
 

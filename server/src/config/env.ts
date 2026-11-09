@@ -160,6 +160,10 @@ const MAX_PENDING_OUTGOING_REQUESTS = Number(process.env.MAX_PENDING_OUTGOING_RE
 // extra browser origins allowed to call the API/socket (comma-separated), on
 // top of APP_URL and the request's own host — see http/originGuard.ts.
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '').split(',').map((o) => o.trim().replace(/\/+$/, '')).filter(Boolean);
+// '1' sends the Content-Security-Policy as Report-Only: violations are reported
+// (POST /api/csp-reports, logged) but nothing is blocked. For trying out a
+// change to the policy; see http/securityHeaders.ts.
+const CSP_REPORT_ONLY = process.env.CSP_REPORT_ONLY === '1';
 // production-like unless NODE_ENV says otherwise; only used to allow the Vite dev origin.
 const IS_DEV = process.env.NODE_ENV === 'development' || (!process.env.NODE_ENV && !process.env.APP_URL);
 // files on disk with no `attachments` row are only collected after this long,
@@ -206,5 +210,5 @@ export const config = {
   UPLOADS_REMOTE_URL, KLIPY_API_KEY, MAL_CLIENT_ID, IGDB_CLIENT_ID, IGDB_CLIENT_SECRET,
   REGISTRATIONS_PER_IP_PER_HOUR, MAX_NEW_ACCOUNTS_PER_HOUR, MAX_CONNECTIONS_PER_USER,
   MAX_OWNED_SERVERS_PER_USER, MAX_SERVER_MEMBERSHIPS_PER_USER, MAX_FRIENDS, MAX_PENDING_OUTGOING_REQUESTS,
-  ALLOWED_ORIGINS, IS_DEV, ORPHAN_GRACE_MS, ORPHAN_SWEEP_DRY_RUN,
+  ALLOWED_ORIGINS, CSP_REPORT_ONLY, IS_DEV, ORPHAN_GRACE_MS, ORPHAN_SWEEP_DRY_RUN,
 };

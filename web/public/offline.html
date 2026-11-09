@@ -31,7 +31,7 @@
       </svg>
       <h1 data-pt="Sem conexão" data-en="Offline">Sem conexão</h1>
       <p data-pt="O Linkord precisa de internet para funcionar. Confira sua conexão e tente de novo." data-en="Linkord needs an internet connection to work. Check your connection and try again.">O Linkord precisa de internet para funcionar. Confira sua conexão e tente de novo.</p>
-      <button type="button" onclick="location.reload()">Tentar de novo</button>
+      <button type="button" id="retry">Tentar de novo</button>
     </main>
     <script>
       (function () {
@@ -44,8 +44,11 @@
       }());
     </script>
     <script>
+      // a listener, not onclick="": the Content-Security-Policy allows this
+      // page's inline scripts by hash, and an inline handler has none
+      document.getElementById('retry').addEventListener('click', function () { location.reload(); });
       // back online: no need to wait for a click
-      window.addEventListener('online', () => location.reload());
+      window.addEventListener('online', function () { location.reload(); });
     </script>
   </body>
 </html>

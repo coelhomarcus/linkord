@@ -61,13 +61,22 @@ function wrap(id: string, username: string, password: string, context: BrowserCo
   };
 }
 
+/** Chrome's console line for a blocked (or, in Report-Only, reported) load or script. */
+const CSP_VIOLATION = /Content Security Policy/i;
+
 export const test = base.extend<{ users: Users }>({
   users: async ({ browser }, use) => {
     const contexts: BrowserContext[] = [];
+    // every flow the suite drives must work under the app's real policy
+    const cspViolations: string[] = [];
+    const track = (context: BrowserContext) => {
+      contexts.push(context);
+      context.on('console', (message) => { if (CSP_VIOLATION.test(message.text())) cspViolations.push(message.text()); });
+    };
     await use({
       async create(prefix = 'u', options) {
         const context = await newContext(browser, options);
-        contexts.push(context);
+        track(context);
         const username = `${prefix.slice(0, 8)}${randomBytes(4).toString('hex')}`;
         const password = randomBytes(12).toString('hex');
         const response = await context.request.post('/api/auth/register', {
@@ -79,7 +88,7 @@ export const test = base.extend<{ users: Users }>({
       },
       async login(username, password) {
         const context = await newContext(browser);
-        contexts.push(context);
+        track(context);
         const response = await context.request.post('/api/auth/login', { data: { username, password } });
         if (!response.ok()) throw new Error(`login ${username}: HTTP ${response.status()} ${await response.text()}`);
         const { user } = await response.json() as { user: { id: string } };
@@ -87,6 +96,7 @@ export const test = base.extend<{ users: Users }>({
       },
     });
     for (const context of contexts) await context.close().catch(() => {});
+    expect(cspViolations, 'Content-Security-Policy violations in the browser console').toEqual([]);
   },
 });
 
