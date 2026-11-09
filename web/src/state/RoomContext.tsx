@@ -11,7 +11,6 @@ import type { ChatView } from '@/features/chat/useChatMessages';
 import type { ReactionParticipantsTarget } from '@/features/chat/reactionParticipants';
 import type { ShareQualityId } from '@/features/calls/shareQualityPresets';
 import type { ColorThemeId } from '@/features/settings/useColorThemePreference';
-import type { ProfileImageUploadPhase } from '@/features/settings/uploadCroppedProfileImage';
 import type { FloatingSoundEmoji } from '@/features/soundboard/useSoundboardEvents';
 
 export interface TileDomHandle {
@@ -109,7 +108,7 @@ export interface RoomContextValue {
   updateProfile: (profile: { avatar: string; avatarPoster: string; avatarColor: string; displayName: string; banner: string; bannerPoster: string; bio: string }) => Promise<unknown>;
   /** Crops locally, uploads the result, then persists ONLY that image
    * field — never whatever else happens to be typed in the profile form. */
-  uploadProfileImage: (field: 'avatar' | 'banner', file: Blob, crop: CropRect, onProgress?: (fraction: number) => void, onPhaseChange?: (phase: ProfileImageUploadPhase) => void) => Promise<string>;
+  uploadProfileImage: (field: 'avatar' | 'banner', file: Blob, crop: CropRect, onProgress?: (fraction: number) => void) => Promise<string>;
   /** Same isolation as `uploadProfileImage`, for "remover foto/banner". */
   removeProfileImage: (field: 'avatar' | 'banner') => Promise<unknown>;
   menuTarget: { key: string; participantId: string; kind: TileKind; rect: AnchorRect } | null;

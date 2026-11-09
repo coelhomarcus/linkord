@@ -14,6 +14,7 @@ import { createdFields, diffFields, recordServerAudit } from '../servers/serverA
 import { toSocialUser, type SocialUser } from '../users/users.js';
 import * as floodControl from '../../realtime/floodControl.js';
 import { encodeEmoji, MAX_EMOJI_UPLOAD_BYTES } from './emojiFile.js';
+import { parseCropParam } from '../attachments/imageCrop.js';
 import { customEmojiIds, rewriteCustomEmojis } from './customEmojiTokens.js';
 import { logger } from '../../lib/logger.js';
 
@@ -126,8 +127,9 @@ async function handleMine(request: FastifyRequest, reply: FastifyReply): Promise
   sendJson(reply, 200, { servers: [...byServer].map(([serverId, emojis]) => ({ serverId, emojis })) });
 }
 
-/** Raw image body (the client already cropped it); the name rides in the query string. */
-async function handleUpload(request: FastifyRequest<ServerParams & { Querystring: { name?: string } }>, reply: FastifyReply): Promise<void> {
+/** Raw image body, the original file; the name and the crop
+ * (`x,y,width,height`) ride in the query string. */
+async function handleUpload(request: FastifyRequest<ServerParams & { Querystring: { name?: string; crop?: string } }>, reply: FastifyReply): Promise<void> {
   const serverId = request.params.serverId;
   // an emoji takes one of the server's slots for everyone, like a sound
   const actor = await requireServerMember(request, reply, serverId, PERMISSIONS.CREATE_EXPRESSIONS);
@@ -141,7 +143,10 @@ async function handleUpload(request: FastifyRequest<ServerParams & { Querystring
 
   const buffer = request.body as Buffer;
   if (!buffer || buffer.length === 0) return sendError(reply, 400, 'empty_file', 'Arquivo vazio.');
-  const encoded = await encodeEmoji(buffer);
+  const crop = parseCropParam(request.query.crop);
+  if (request.query.crop !== undefined && !crop) return sendError(reply, 400, 'invalid_crop', 'Recorte inválido.');
+  const encoded = await encodeEmoji(buffer, crop);
+  if (encoded === 'invalid_crop') return sendError(reply, 400, 'invalid_crop', 'Recorte fora dos limites da imagem.');
   if (encoded === 'invalid_image') return sendError(reply, 400, 'invalid_image', 'Não foi possível ler essa imagem.');
   if (encoded === 'emoji_too_large') return sendError(reply, 400, 'emoji_too_large', 'Esse emoji fica pesado demais. Tente uma animação mais curta.');
 

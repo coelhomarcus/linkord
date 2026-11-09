@@ -17,9 +17,9 @@ interface ImageCropDialogProps {
   processing?: boolean;
   error?: string | null;
   onCancel: () => void;
-  // Just the crop rect — pixels are cut with ImageMagick WASM after confirm
-  // (see cropProfileImage.ts) so animated GIFs/WebPs stay animated instead
-  // of being flattened by a <canvas> round-trip.
+  // Just the crop rect — the server cuts the pixels from the original file,
+  // so animated GIFs/WebPs stay animated instead of being flattened by a
+  // <canvas> round-trip.
   onConfirm: (crop: Area) => void;
 }
 

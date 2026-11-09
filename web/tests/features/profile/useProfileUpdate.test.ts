@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import type { ClientMessage, PublicUser, ServerMessage } from '@/shared/types/protocol';
 import { ApiError } from '@/shared/api/api';
-import { ProfileImageCropError } from '@/features/settings/cropProfileImage';
 import {
   ProfileSaveOffline, ProfileSaveRefused, ProfileSaveTimeout, describeProfileSaveError, useProfileUpdate,
 } from '@/features/profile/useProfileUpdate';
@@ -115,7 +114,7 @@ describe('describeProfileSaveError', () => {
     expect(describeProfileSaveError(new ProfileSaveRefused('x', 'Motivo do servidor.'))).toBe('Motivo do servidor.');
     expect(describeProfileSaveError(new Error('outra coisa'))).toBe('Não foi possível salvar o perfil. Tente de novo.');
     expect(describeProfileSaveError(new Error('x'), 'Mensagem própria.')).toBe('Mensagem própria.');
-    expect(describeProfileSaveError(new ProfileImageCropError('bounds', 'Recorte fora dos limites da imagem.'), 'Falha ao enviar o banner.')).toBe('Recorte fora dos limites da imagem.');
+    expect(describeProfileSaveError(new ApiError(400, 'invalid_crop', 'Recorte fora dos limites da imagem.'), 'Falha ao enviar o banner.')).toBe('Recorte fora dos limites da imagem.');
     expect(describeProfileSaveError(new ApiError(0, 'network_error', 'A conexão caiu durante o envio.'), 'Falha ao enviar o banner.')).toBe('A conexão caiu durante o envio.');
   });
 });

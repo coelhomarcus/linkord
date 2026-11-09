@@ -104,6 +104,7 @@ export const ERROR_REGISTRY = {
   size_mismatch: { statuses: [400], channel: 'http' },
   empty_file: { statuses: [400], channel: 'http' },
   crop_failed: { statuses: [400], channel: 'http' },
+  invalid_crop: { statuses: [400], channel: 'http' },
   invalid_report: { statuses: [400], channel: 'http' },
 
   // server soundboard

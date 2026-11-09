@@ -35,6 +35,7 @@
   "errors": {
     "invalid_emoji_name": "O nome precisa ter de 2 a 32 letras minúsculas, números ou _.",
     "invalid_image": "Não foi possível ler essa imagem. Use PNG, JPEG, GIF ou WebP.",
+    "invalid_crop": "Recorte fora dos limites da imagem.",
     "emoji_too_large": "Esse emoji fica pesado demais. Tente uma animação mais curta.",
     "emoji_name_taken": "Já existe um emoji com esse nome nesse servidor.",
     "emojis_full": "O servidor já usou todos os espaços desse tipo de emoji."

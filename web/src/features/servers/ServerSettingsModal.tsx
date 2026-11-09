@@ -68,13 +68,14 @@ function Overview({ server }: { server: ServerSummary }) {
 
   async function confirmCrop(area: Area) {
     if (!crop) return;
+    const { file } = crop;
     setUploading(true);
+    setCrop(null);
     await run(async () => {
-      const body = await uploadCroppedProfileImage(crop.file, area, undefined, (phase) => { if (phase === 'uploading') setCrop(null); });
+      const body = await uploadCroppedProfileImage(file, area);
       await updateServer(server.id, { icon: body.avatar });
     });
     setUploading(false);
-    setCrop(null);
   }
 
   return (

@@ -329,15 +329,9 @@
   },
   "crop": {
     "processing": "Processando imagem…",
-    "processingDescription": "Preparando a imagem para o upload. GIFs animados podem levar alguns segundos.",
+    "processingDescription": "Enviando e recortando a imagem. GIFs animados podem levar alguns segundos.",
     "cancel": "Cancelar",
     "save": "Salvar",
-    "errors": {
-      "loadProcessor": "Não foi possível carregar o processador de imagem.",
-      "outOfBounds": "Recorte fora dos limites da imagem.",
-      "invalidCrop": "Recorte inválido.",
-      "processFailed": "Não foi possível processar a imagem."
-    },
     "zoom": "Zoom"
   },
   "security": {

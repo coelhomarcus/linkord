@@ -140,15 +140,16 @@ function WebhookCard({ channel, webhook, onChanged, onReveal, onError }: {
 
   async function confirmCrop(area: Area) {
     if (!crop) return;
+    const { file } = crop;
     setUploading(true);
+    setCrop(null);
     await run(async () => {
       // the same upload as an account's picture: the server only takes an
       // image this account uploaded itself
-      const body = await uploadCroppedProfileImage(crop.file, area, undefined, (phase) => { if (phase === 'uploading') setCrop(null); });
+      const body = await uploadCroppedProfileImage(file, area);
       await updateWebhook(channel.id, webhook.id, { avatar: body.avatar });
     });
     setUploading(false);
-    setCrop(null);
   }
 
   return (

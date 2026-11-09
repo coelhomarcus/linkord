@@ -1,114 +1,44 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '@/shared/api/api';
-import { uploadCroppedProfileImage } from '@/features/settings/uploadCroppedProfileImage';
-import {
-  deleteProfileImageDraft, getProfileImageDraft, profileImageDraftKey, setProfileImageDraftDriver,
-} from '@/features/settings/profileImageDraft';
+import { cropParam, uploadCroppedProfileImage } from '@/features/settings/uploadCroppedProfileImage';
 
-const cropProfileImage = vi.hoisted(() => vi.fn());
 const uploadWithProgress = vi.hoisted(() => vi.fn());
-
-vi.mock('@/features/settings/cropProfileImage', () => ({
-  cropProfileImage,
-}));
 
 vi.mock('@/shared/lib/uploadWithProgress', () => ({
   uploadWithProgress,
 }));
 
-function memoryDriver() {
-  const store = new Map<string, Blob>();
-  return {
-    store,
-    get: async (key: string) => store.get(key),
-    put: async (key: string, blob: Blob) => { store.set(key, blob); },
-    del: async (key: string) => { store.delete(key); },
-  };
-}
-
 describe('uploadCroppedProfileImage', () => {
-  const crop = { x: 0, y: 0, width: 10, height: 10 };
-  const file = new File(['raw'], 'foto.png', { type: 'image/png' });
-  const cropped = new Blob(['cropped'], { type: 'image/jpeg' });
-  let driver: ReturnType<typeof memoryDriver>;
+  const crop = { x: 12.4, y: 0, width: 300.6, height: 300 };
+  const file = new File(['raw'], 'foto.gif', { type: 'image/gif' });
 
   beforeEach(() => {
-    driver = memoryDriver();
-    setProfileImageDraftDriver(driver);
-    cropProfileImage.mockReset();
     uploadWithProgress.mockReset();
-    cropProfileImage.mockResolvedValue(cropped);
   });
 
-  afterEach(() => {
-    setProfileImageDraftDriver(null);
-  });
+  it('sends the original file with the picked rect for the server to cut', async () => {
+    const onProgress = vi.fn();
+    uploadWithProgress.mockResolvedValue({ avatar: '/uploads/novo', avatarPoster: '/uploads/poster' });
 
-  it('crops, stores the draft, uploads it, then deletes the draft', async () => {
-    uploadWithProgress.mockResolvedValue({ avatar: '/uploads/novo' });
+    await expect(uploadCroppedProfileImage(file, crop, onProgress)).resolves.toEqual({ avatar: '/uploads/novo', avatarPoster: '/uploads/poster' });
 
-    await expect(uploadCroppedProfileImage(file, crop)).resolves.toEqual({ avatar: '/uploads/novo' });
-
-    expect(cropProfileImage).toHaveBeenCalledOnce();
     expect(uploadWithProgress).toHaveBeenCalledWith(expect.objectContaining({
-      url: '/api/avatar',
-      file: cropped,
-      headers: { 'Content-Type': 'image/jpeg' },
+      url: '/api/avatar?crop=12%2C0%2C301%2C300',
+      file,
+      headers: { 'Content-Type': 'image/gif' },
+      onProgress,
     }));
-    expect(await getProfileImageDraft(profileImageDraftKey(file, crop))).toBeUndefined();
   });
 
-  it('reports processing before uploading', async () => {
-    const phases: string[] = [];
-    uploadWithProgress.mockResolvedValue({ avatar: '/uploads/novo' });
+  it('passes a server refusal through', async () => {
+    uploadWithProgress.mockRejectedValue(new ApiError(400, 'invalid_crop', 'Recorte fora dos limites da imagem.'));
 
-    await uploadCroppedProfileImage(file, crop, undefined, (phase) => phases.push(phase));
-
-    expect(phases).toEqual(['processing', 'uploading']);
+    await expect(uploadCroppedProfileImage(file, crop)).rejects.toMatchObject({ code: 'invalid_crop' });
   });
+});
 
-  it('reuses the IndexedDB draft on retry and skips ImageMagick', async () => {
-    uploadWithProgress
-      .mockRejectedValueOnce(new ApiError(500, 'unknown_error', 'falhou'))
-      .mockResolvedValueOnce({ avatar: '/uploads/novo' });
-
-    await expect(uploadCroppedProfileImage(file, crop)).rejects.toBeInstanceOf(ApiError);
-    expect(cropProfileImage).toHaveBeenCalledOnce();
-    expect(await getProfileImageDraft(profileImageDraftKey(file, crop))).toBe(cropped);
-
-    await expect(uploadCroppedProfileImage(file, crop)).resolves.toEqual({ avatar: '/uploads/novo' });
-    expect(cropProfileImage).toHaveBeenCalledOnce();
-    expect(await getProfileImageDraft(profileImageDraftKey(file, crop))).toBeUndefined();
-  });
-
-  it('keeps the crop selection retryable when WASM processing fails', async () => {
-    const phases: string[] = [];
-    cropProfileImage.mockRejectedValueOnce(new Error('WASM failed')).mockResolvedValueOnce(cropped);
-    uploadWithProgress.mockResolvedValue({ avatar: '/uploads/novo' });
-
-    await expect(uploadCroppedProfileImage(file, crop, undefined, (phase) => phases.push(phase))).rejects.toThrow('WASM failed');
-    await expect(uploadCroppedProfileImage(file, crop, undefined, (phase) => phases.push(phase))).resolves.toEqual({ avatar: '/uploads/novo' });
-
-    expect(cropProfileImage).toHaveBeenCalledTimes(2);
-    expect(phases).toEqual(['processing', 'processing', 'uploading']);
-  });
-
-  it('uploads the cropped bytes when the draft store is unavailable', async () => {
-    setProfileImageDraftDriver({
-      get: async () => { throw new Error('indexedDB blocked'); },
-      put: async () => { throw new Error('indexedDB blocked'); },
-      del: async () => { throw new Error('indexedDB blocked'); },
-    });
-    uploadWithProgress.mockResolvedValue({ avatar: '/uploads/novo' });
-
-    await expect(uploadCroppedProfileImage(file, crop)).resolves.toEqual({ avatar: '/uploads/novo' });
-    expect(cropProfileImage).toHaveBeenCalledOnce();
-    expect(uploadWithProgress).toHaveBeenCalledOnce();
-  });
-
-  it('can drop a leftover draft', async () => {
-    await driver.put('k', cropped);
-    await deleteProfileImageDraft('k');
-    expect(await getProfileImageDraft('k')).toBeUndefined();
+describe('cropParam', () => {
+  it('rounds to whole pixels and never goes below zero', () => {
+    expect(cropParam({ x: -0.4, y: 1.5, width: 99.5, height: 100 })).toBe('0,2,100,100');
   });
 });

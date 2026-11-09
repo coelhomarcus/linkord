@@ -275,29 +275,16 @@ describe('ProfileEditor', () => {
     await user.upload(screen.getByLabelText('Selecionar foto de perfil'), file);
     await user.click(screen.getByRole('button', { name: 'Confirmar recorte' }));
 
-    // The only extra argument is the phase callback — an avatar upload can
-    // never carry whatever is currently typed into the profile form.
-    expect(uploadProfileImage).toHaveBeenCalledWith('avatar', file, { x: 0, y: 0, width: 10, height: 10 }, expect.any(Function), expect.any(Function));
-    expect(uploadProfileImage).not.toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.anything(), expect.anything(), expect.anything(), expect.anything());
+    // The only extra argument is the progress callback — an avatar upload
+    // can never carry whatever is currently typed into the profile form.
+    expect(uploadProfileImage).toHaveBeenCalledWith('avatar', file, { x: 0, y: 0, width: 10, height: 10 }, expect.any(Function));
+    expect(uploadProfileImage).not.toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.anything(), expect.anything(), expect.anything());
   });
 
-  it('shows processing before switching to the upload progress modal', async () => {
+  it('swaps the crop dialog for the upload progress modal as soon as the crop is confirmed', async () => {
     const user = userEvent.setup();
-    let finishUpload: (() => void) | undefined;
     let resolveUpload: ((value: string) => void) | undefined;
-    const uploadProfileImage = vi.fn((
-      _field: string,
-      _file: Blob,
-      _crop: { x: number; y: number; width: number; height: number },
-      _onProgress: ((fraction: number) => void) | undefined,
-      onPhaseChange?: (phase: 'processing' | 'uploading') => void,
-    ) => new Promise<string>((resolve) => {
-      resolveUpload = resolve;
-      onPhaseChange?.('processing');
-      finishUpload = () => {
-        onPhaseChange?.('uploading');
-      };
-    }));
+    const uploadProfileImage = vi.fn(() => new Promise<string>((resolve) => { resolveUpload = resolve; }));
     const state = {
       ...initialRoomState,
       me: { ...initialRoomState.me, id: 'conn-1', userId: 'user-1', name: 'Fulana', displayName: 'Fulana', avatar: '', avatarColor: 'green' },
@@ -307,11 +294,8 @@ describe('ProfileEditor', () => {
     await user.upload(screen.getByLabelText('Selecionar foto de perfil'), new File(['conteudo'], 'foto.gif', { type: 'image/gif' }));
     await user.click(screen.getByRole('button', { name: 'Confirmar recorte' }));
 
-    expect((await screen.findByText('Processando imagem…')).closest('[role="status"]')).not.toBeNull();
-    expect(screen.queryByText('Enviando a foto de perfil…')).not.toBeInTheDocument();
-
-    finishUpload?.();
     expect(await screen.findByText('Enviando a foto de perfil…')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Confirmar recorte' })).not.toBeInTheDocument();
     resolveUpload?.('/uploads/novo-avatar');
   });
 
