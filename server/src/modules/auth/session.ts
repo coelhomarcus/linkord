@@ -68,7 +68,7 @@ export async function createSession(userId: string, origin: SessionOrigin = { ip
 }
 
 /** Whether a stored session may still be used: not past its TTL nor idle past SESSION_IDLE_DAYS. */
-export function isSessionLive(row: { expiresAt: Date; lastSeenAt: Date }, now = Date.now()): boolean {
+function isSessionLive(row: { expiresAt: Date; lastSeenAt: Date }, now = Date.now()): boolean {
   if (row.expiresAt.getTime() < now) return false;
   return !(config.SESSION_IDLE_DAYS > 0 && now - row.lastSeenAt.getTime() > config.SESSION_IDLE_DAYS * DAY_MS);
 }
