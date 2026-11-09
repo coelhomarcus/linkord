@@ -18,6 +18,23 @@ export async function ensureUploadDir(): Promise<void> {
   await fs.mkdir(config.UPLOAD_DIR, { recursive: true });
 }
 
+/** The upload folders this process cannot create files in. mkdir succeeds on
+ * a folder that already exists, so a bind mount still owned by root (from
+ * before the image ran as `node`) passes the boot and only fails at the first
+ * upload; tmp/ is checked too because it may be the only part left behind. */
+export async function unwritableUploadDirs(uploadDir = config.UPLOAD_DIR): Promise<string[]> {
+  const unwritable: string[] = [];
+  for (const dir of [uploadDir, path.join(uploadDir, 'tmp')]) {
+    try {
+      await fs.access(dir, fs.constants.W_OK | fs.constants.X_OK);
+    } catch (err) {
+      // a missing tmp/ is created by the first upload, as long as its parent is writable
+      if ((err as NodeJS.ErrnoException).code !== 'ENOENT') unwritable.push(dir);
+    }
+  }
+  return unwritable;
+}
+
 export function sanitizeFileName(raw: unknown): string {
   const s = String(raw == null ? '' : raw).trim().replace(/[\r\n/\\]/g, '_').slice(0, 200);
   return s || 'arquivo';

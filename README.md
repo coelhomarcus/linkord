@@ -7,6 +7,7 @@
 <p align="center">
   <a href="#-features"><b>Features</b></a> •
   <a href="docs/DEVELOPMENT.md"><b>Development</b></a> •
+  <a href="docs/DEPLOY.md"><b>Deployment</b></a> •
   <a href="https://github.com/coelhomarcus/Linkord/issues"><b>Issues</b></a>
 </p>
 
@@ -53,36 +54,9 @@ Linkord is a self-hosted place to chat and call with friends. Talk in direct mes
 
 For local development, the frontend and backend run on the host and only PostgreSQL runs in Docker. Follow the [local development guide](docs/DEVELOPMENT.md) for setup and run instructions.
 
-## 🐳 Docker deployment
+## 🐳 Deployment
 
-The `Dockerfile` builds the web app and API into one image. Configure `.env` with your production database and secrets, then start the app:
-
-```bash
-cp .env.example .env
-# Edit .env: set DATABASE_URL, LIVEKIT_*, APP_URL, and other production values
-docker compose up -d --build
-```
-
-The container applies pending migrations on startup by default. Set `MIGRATE_ON_BOOT=0` to run migrations separately with `npm run db:migrate`. The compose file persists uploaded files in `./uploads` and backups in `./backups`.
-
-**The container does not run as root.** The process runs as the `node` user (uid 1000) and cannot write to its own code, only to `./uploads` and `./backups`. Compose also sets `no-new-privileges` and drops every Linux capability. Docker creates a missing bind-mounted folder owned by root, so on a **new install** create both folders first, and on an **existing install** change the owner once before deploying this version, or uploads and backups fail with a permission error (the Dokploy volume path works the same way):
-
-```bash
-mkdir -p uploads backups
-sudo chown -R 1000:1000 uploads backups
-```
-
-To confirm it, `docker compose exec app id` prints `uid=1000(node)`.
-
-**Run a single instance.** Linkord does not scale horizontally today: do not put replicas behind a load balancer. The server keeps live state in the memory of its own process (who is online and in which call, caches, socket flood limits, upload reservations) and Socket.IO has no shared adapter, so a second instance would not see the first one's users, calls or limits. Uploaded files also live on the local `./uploads` disk. What would have to change for several instances is listed in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md#single-instance-assumption).
-
-### Backups
-
-The database and `./uploads` have to be backed up together, and Linkord does it for you: `npm run backup` (in the container, `docker compose exec app node server/dist/scripts/backup.js`) writes a dated folder with a `pg_dump`, an archive of the uploads and a manifest to `./backups`, and keeps the newest `BACKUP_KEEP` (default 7). Running it does not stop the app. To schedule it, start the optional compose service with `docker compose --profile backup up -d backup`, or call the command from the host's cron. `npm run restore` brings a backup back into an empty database and folder on a new server and checks that everything came across. Copy `./backups` off the machine as well, and keep your `.env` somewhere safe: it is not in the backup. The full guide, with the restore steps, is in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md#backup-and-restore).
-
-**Security headers.** The server sends a Content-Security-Policy and `X-Frame-Options: DENY` on every response, built from `APP_URL`, `LIVEKIT_URL` and `KLIPY_API_KEY`, so set those to the real public URLs: a wrong `LIVEKIT_URL` blocks calls in the browser. Behind HTTPS it adds `Strict-Transport-Security`. The reverse proxy does not need to set any of these. Violations are logged as `content security policy violation`; `CSP_REPORT_ONLY=1` turns blocking off while still reporting. Details in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md#content-security-policy).
-
-See [`.env.example`](.env.example) for all server, database, session, LiveKit, push, upload, and rate limit settings. In production, set `APP_URL` to the public HTTPS origin and configure a stable Web Push VAPID key pair. For iPhone and iPad, users must add Linkord to the Home Screen before enabling Push notifications.
+Linkord ships as one Docker image (web app, API and realtime server on port 3000) next to a PostgreSQL database and a LiveKit server. It runs with Docker Compose or on Dokploy. The [deployment guide](docs/DEPLOY.md) covers the environment it needs, the folders it writes to and their permissions, updates while people are connected, security headers, backups and troubleshooting.
 
 ## 🧰 Commands
 
