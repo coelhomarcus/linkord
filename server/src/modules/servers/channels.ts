@@ -8,8 +8,8 @@ import { sendJson, sendError, jsonBody } from '../../http/respond.js';
 import { deleteForConversation } from '../attachments/attachmentCleanup.js';
 import { revokeCallAccess } from '../calls/callAccess.js';
 import { participants } from '../presence/participants.js';
-import { ALL_PERMISSIONS, canManageRole, hasPermission, PERMISSIONS } from './permissions.js';
-import { channelPermissionsIn, invalidateServer, type ServerSnapshot } from './serverAccess.js';
+import { ALL_PERMISSIONS, canManageRole, hasPermission, outranks, PERMISSIONS } from './permissions.js';
+import { channelPermissionsIn, invalidateServer, memberInput, type ServerSnapshot } from './serverAccess.js';
 import { sanitizeCategoryName, sanitizeChannelName, sanitizeTopic } from './serversRepository.js';
 import { sendServerUpdateToMembers } from './serverSummaries.js';
 import { requireServerMember, requireSession, type ServerActor } from './serverHttp.js';
@@ -269,8 +269,11 @@ async function handleSetOverwrite(request: FastifyRequest<{ Params: OverwritePar
     const role = actor.snapshot.roles.find((r) => r.id === roleId);
     if (!role) return sendError(reply, 404, 'not_found', 'Cargo não encontrado.');
     if (!role.isDefault && !canManageRole(actor.member, role, actor.snapshot.roles)) return sendError(reply, 403, 'hierarchy', 'Esse cargo está acima do seu.');
-  } else if (!actor.snapshot.members.has(userId!)) {
-    return sendError(reply, 404, 'user_not_found', 'Essa pessoa não está no servidor.');
+  } else {
+    const subject = memberInput(actor.snapshot, userId!);
+    if (!subject) return sendError(reply, 404, 'user_not_found', 'Essa pessoa não está no servidor.');
+    // the same rule as a role: a member's own rule only from someone above them
+    if (userId !== actor.userId && !outranks(actor.member, subject, actor.snapshot.roles)) return sendError(reply, 403, 'hierarchy', 'Essa pessoa está acima de você.');
   }
   const grantable = grantableBits(actor, targetId, kind);
   if (((allow | deny) & ~grantable) !== 0) return sendError(reply, 403, 'hierarchy', 'Você não pode mexer em permissões que você não tem.');

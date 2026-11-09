@@ -61,6 +61,14 @@ export function createdFields(values: Record<string, unknown>): AuditChange[] {
     .map(([key, after]) => ({ key, before: null, after }));
 }
 
+/** What a removed thing had, as changes to nothing — the entry keeps what
+ * the log would otherwise lose with the row. */
+export function deletedFields(values: Record<string, unknown>): AuditChange[] {
+  return Object.entries(values)
+    .filter(([, value]) => value !== undefined && value !== null && value !== '' && value !== 0)
+    .map(([key, before]) => ({ key, before, after: null }));
+}
+
 /** Pass the transaction of the change itself, so a change never exists
  * without its entry nor an entry without its change. Labels are snapshots
  * taken now: the log keeps naming a role or channel after it is renamed or
