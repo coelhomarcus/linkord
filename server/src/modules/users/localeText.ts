@@ -8,7 +8,7 @@ type TextKey =
   | 'push.callSecond_one' | 'push.callSecond_other' | 'push.callMinute_one' | 'push.callMinute_other'
   | 'push.callHour_one' | 'push.callHour_other' | 'push.callHourMinute'
   | 'email.recoverySubject' | 'email.changeSubject' | 'email.recoveryTitle' | 'email.changeTitle'
-  | 'email.recoveryIntro' | 'email.changeIntro' | 'email.recoveryAccountLine' | 'email.expires'
+  | 'email.recoveryIntro' | 'email.changeIntro' | 'email.recoveryAccountLine' | 'email.expires' | 'email.appLine'
   | 'email.loginSubject' | 'email.loginTitle' | 'email.loginIntro' | 'email.loginExpires'
   | 'email.twoFactorSetupSubject' | 'email.twoFactorSetupTitle' | 'email.twoFactorSetupIntro'
   | 'email.loginAlertSubject' | 'email.loginAlertTitle' | 'email.loginAlertIntro' | 'email.loginAlertDevice' | 'email.loginAlertIp'
@@ -36,6 +36,7 @@ const TEXT: Record<Locale, Record<TextKey, string>> = {
     'email.recoveryIntro': 'Use este código para redefinir a senha da sua conta Linkord:', 'email.changeIntro': 'Use este código para confirmar o novo e-mail da sua conta Linkord:',
     'email.recoveryAccountLine': 'Esse código é para a conta de usuário "{{username}}", associada a este e-mail ({{email}}).',
     'email.expires': 'O código expira em 30 minutos. Se você não solicitou isso, ignore este e-mail.',
+    'email.appLine': 'Você também pode acessar {{url}}.',
     'email.loginSubject': 'Seu código de login no Linkord', 'email.loginTitle': 'Verificação em duas etapas',
     'email.loginIntro': 'Alguém entrou com a senha da conta "{{username}}". Use este código para concluir o login:',
     'email.loginExpires': 'O código expira em 10 minutos. Se não foi você, troque sua senha agora: quem tentou entrar sabe a senha atual.',
@@ -70,6 +71,7 @@ const TEXT: Record<Locale, Record<TextKey, string>> = {
     'email.recoveryIntro': 'Use this code to reset your Linkord account password:', 'email.changeIntro': 'Use this code to confirm your new Linkord account email:',
     'email.recoveryAccountLine': 'This code is for the user account "{{username}}", associated with this email ({{email}}).',
     'email.expires': 'The code expires in 30 minutes. If you did not request this, ignore this email.',
+    'email.appLine': 'You can also open {{url}}.',
     'email.loginSubject': 'Your Linkord login code', 'email.loginTitle': 'Two-step verification',
     'email.loginIntro': 'Someone signed in with the password of the account "{{username}}". Use this code to finish signing in:',
     'email.loginExpires': 'The code expires in 10 minutes. If this was not you, change your password now: whoever tried to sign in knows the current one.',

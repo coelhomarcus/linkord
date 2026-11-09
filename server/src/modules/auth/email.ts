@@ -21,6 +21,9 @@ const COPY = {
   login: { subject: 'email.loginSubject', title: 'email.loginTitle', intro: 'email.loginIntro', expires: 'email.loginExpires' },
 } as const satisfies Record<AuthCodePurpose, Record<string, Parameters<typeof localeText>[1]>>;
 
+// Every text that goes into an email's HTML is escaped: a username or an address is never markup.
+const escapeHtml = (value: string) => value.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+
 export async function sendAuthCodeEmail(
   { to, code, purpose, username, locale }: { to: string; code: string; purpose: AuthCodePurpose; username: string; locale: Locale },
 ): Promise<void> {
@@ -33,14 +36,14 @@ export async function sendAuthCodeEmail(
   const accountLine = purpose === 'password_reset'
     ? localeText(locale, 'email.recoveryAccountLine', { username, email: to })
     : '';
-  const appLine = config.APP_URL ? `Você também pode acessar ${config.APP_URL}.` : '';
+  const appLine = config.APP_URL ? localeText(locale, 'email.appLine', { url: config.APP_URL }) : '';
   const expires = localeText(locale, copy.expires);
 
   await deliverEmail({
     to,
     subject,
     text: `${title}\n\n${intro}\n\n${code}\n\n${accountLine}\n\n${expires}\n${appLine}`,
-    html: `<h2>${title}</h2><p>${intro}</p><p style="font-size:32px;font-weight:700;letter-spacing:8px">${code}</p>${accountLine ? `<p style="color:#666">${accountLine}</p>` : ''}<p>${expires}</p><p>${appLine}</p>`,
+    html: `<h2>${escapeHtml(title)}</h2><p>${escapeHtml(intro)}</p><p style="font-size:32px;font-weight:700;letter-spacing:8px">${escapeHtml(code)}</p>${accountLine ? `<p style="color:#666">${escapeHtml(accountLine)}</p>` : ''}<p>${escapeHtml(expires)}</p>${appLine ? `<p>${escapeHtml(appLine)}</p>` : ''}`,
   });
 }
 
@@ -64,8 +67,6 @@ async function deliverEmail({ to, subject, text, html }: { to: string; subject: 
     throw new EmailDeliveryError(`Resend recusou o envio (${response.status}): ${details.slice(0, 200)}`);
   }
 }
-
-const escapeHtml = (value: string) => value.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
 /** The browser and system of a user agent, named like the session list does. */
 function deviceName(locale: Locale, userAgent: string): string {
