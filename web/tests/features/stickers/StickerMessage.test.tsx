@@ -24,6 +24,7 @@ describe('StickerMessage', () => {
   });
 
   it('says which server it is from to a member there, and not to anyone else', async () => {
+    setMyStickersForTests('me', []);
     const { unmount } = render(inRoom(<StickerMessage sticker={card} />));
     await userEvent.click(screen.getByRole('button', { name: 'Figurinha abraço' }));
     expect(await screen.findByText('De um servidor em que você não está')).toBeInTheDocument();

@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/primitives/popover';
 import { RoomContext } from '@/state/RoomContext';
 import type { StickerCard } from '@/shared/types/protocol';
-import { useKnownSticker } from './myStickers';
+import { useKnownSticker, useMyStickers } from './myStickers';
 import { stickerImageUrl } from './stickersApi';
 
 /** A sent sticker, drawn large and without a bubble, like Discord's. Clicking
@@ -14,8 +14,11 @@ import { stickerImageUrl } from './stickersApi';
 export function StickerMessage({ sticker }: { sticker: StickerCard | null }) {
   const { t } = useTranslation('stickers');
   const [broken, setBroken] = useState(false);
+  const room = useContext(RoomContext);
+  // the account's own list says whether the viewer is a member of the sticker's server
+  const mine = useMyStickers(room?.state.me.userId ?? null, !!sticker);
   const known = useKnownSticker(sticker?.id ?? '');
-  const server = useContext(RoomContext)?.servers.find((s) => s.id === known?.serverId);
+  const server = room?.servers.find((s) => s.id === known?.serverId);
 
   if (!sticker || broken) {
     return (
@@ -49,7 +52,8 @@ export function StickerMessage({ sticker }: { sticker: StickerCard | null }) {
       <PopoverContent side="top" align="start" className="flex w-64 flex-col gap-1 p-3">
         <span className="text-label font-semibold text-text-primary">{name}</span>
         {description && <span className="text-caption text-text-secondary">{description}</span>}
-        <span className="text-caption text-text-muted">{server ? t('from', { server: server.name }) : t('message.otherServer')}</span>
+        {server && <span className="text-caption text-text-muted">{t('from', { server: server.name })}</span>}
+        {!server && mine.status === 'ready' && <span className="text-caption text-text-muted">{t('message.otherServer')}</span>}
       </PopoverContent>
     </Popover>
   );
