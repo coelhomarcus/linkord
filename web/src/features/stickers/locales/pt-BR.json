@@ -1,0 +1,79 @@
+{
+  "from": "De {{server}}",
+  "picker": {
+    "search": "Encontre a figurinha perfeita",
+    "searchLabel": "Buscar figurinha",
+    "grid": "Figurinhas",
+    "sections": "Seções de figurinhas",
+    "frequent": "Utilizadas com frequência",
+    "results": "Resultados",
+    "noResults": "Nenhuma figurinha encontrada.",
+    "empty": "Nenhuma figurinha ainda. Elas são adicionadas nas configurações de um servidor.",
+    "loading": "Carregando figurinhas…",
+    "loadFailed": "Não foi possível carregar as figurinhas.",
+    "add": "Adicionar figurinha em {{server}}",
+    "hint": "Passe o cursor sobre uma figurinha para ver o nome"
+  },
+  "message": {
+    "open": "Figurinha {{name}}",
+    "named": "Figurinha: {{name}}",
+    "unavailable": "Figurinha indisponível",
+    "otherServer": "De um servidor em que você não está"
+  },
+  "panel": {
+    "title": "Figurinhas",
+    "rulesTitle": "Instruções de envio",
+    "rules": "Figurinhas podem ser estáticas (PNG, JPEG, WebP) ou animadas (APNG, GIF, WebP animado), com até {{max}}. A imagem é encaixada inteira num quadrado de 320 px, sem cortes; animações continuam animadas.",
+    "upload": "Enviar figurinha",
+    "slots_zero": "Nenhum espaço livre de {{max}}",
+    "slots_one": "{{count}} espaço livre de {{max}}",
+    "slots_other": "{{count}} espaços livres de {{max}}",
+    "empty": "Nenhuma figurinha ainda.",
+    "edit": "Editar {{name}}",
+    "delete": "Remover {{name}}",
+    "deletedUser": "Conta excluída",
+    "loading": "Carregando figurinhas…",
+    "loadFailed": "Não foi possível carregar as figurinhas.",
+    "retry": "Tentar de novo",
+    "deleteFailed": "Não foi possível remover a figurinha.",
+    "deleteConfirm": {
+      "title": "Remover figurinha?",
+      "description": "\"{{name}}\" sai do servidor. Nas mensagens antigas, ela passa a aparecer como indisponível.",
+      "confirm": "Remover"
+    }
+  },
+  "editor": {
+    "titleCreate": "Enviar figurinha",
+    "titleEdit": "Editar figurinha",
+    "rules": "PNG, APNG, JPEG, GIF ou WebP, com até {{max}}.",
+    "preview": "Prévia",
+    "file": "Arquivo",
+    "browse": "Navegar",
+    "noFile": "Escolha um arquivo",
+    "fileTooLarge": "Arquivo muito grande (máximo {{max}}).",
+    "emoji": "Emoji relacionado",
+    "emojiChosen": "Emoji relacionado: {{emoji}}",
+    "emojiPlaceholder": "Clique para selecionar",
+    "name": "Nome da figurinha",
+    "namePlaceholder": "Ex.: abraço de gatinho",
+    "description": "Descrição",
+    "descriptionPlaceholder": "O que aparece na figurinha",
+    "descriptionHint": "Lida em voz alta no lugar da imagem por leitores de tela. Opcional, até 100 caracteres.",
+    "cancel": "Deixa pra lá",
+    "submit": "Enviar",
+    "save": "Salvar",
+    "uploading": "Enviando {{percent}}%",
+    "saving": "Salvando…",
+    "uploadFailed": "Não foi possível enviar a figurinha.",
+    "saveFailed": "Não foi possível salvar a figurinha."
+  },
+  "errors": {
+    "invalid_sticker_name": "O nome precisa ter de 2 a 30 caracteres.",
+    "invalid_sticker_emoji": "Escolha um emoji relacionado.",
+    "invalid_sticker_description": "A descrição passa de 100 caracteres.",
+    "invalid_image": "Não foi possível ler essa imagem. Use PNG, APNG, JPEG, GIF ou WebP.",
+    "sticker_too_large": "Essa figurinha fica pesada demais. Tente uma animação mais curta.",
+    "sticker_name_taken": "Já existe uma figurinha com esse nome nesse servidor.",
+    "stickers_full": "O servidor já usou todos os espaços de figurinha."
+  }
+}

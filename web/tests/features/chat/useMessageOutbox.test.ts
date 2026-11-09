@@ -26,6 +26,19 @@ describe('useMessageOutbox', () => {
   beforeEach(() => { vi.useFakeTimers(); });
   afterEach(() => { vi.useRealTimers(); });
 
+  it('sends a sticker as its id, with no text, and resends it under the same key', () => {
+    const connected = { value: false };
+    const { result, sent } = setup(connected);
+    const sticker = { id: 'b'.repeat(32), name: 'abraço', description: '', animated: false };
+    act(() => { result.current.enqueue('c', '', undefined, [], sticker); });
+    expect(result.current.pendingByConversation.get('c')?.[0]?.sticker).toEqual(sticker);
+    expect(sent).toHaveLength(0);
+
+    connected.value = true;
+    act(() => result.current.onReconnected());
+    expect(sent[0]).toMatchObject({ t: 'chat', conversationId: 'c', text: '', stickerId: sticker.id });
+  });
+
   it('sends with a key and requestId; confirmation clears the pending entry and delivers the message', () => {
     const { result, sent, onConfirmed } = setup();
     act(() => { result.current.enqueue('c', 'oi'); });

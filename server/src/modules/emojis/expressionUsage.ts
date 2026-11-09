@@ -10,7 +10,7 @@ import { customEmojiIds } from './customEmojiTokens.js';
 
 const log = logger.child({ component: 'expression-usage' });
 
-export type ExpressionKind = 'emoji' | 'sound';
+export type ExpressionKind = 'emoji' | 'sound' | 'sticker';
 
 // what each account keeps per kind: plenty for a picker's "frequently used"
 // rows, few enough that the table stays tiny
@@ -70,12 +70,14 @@ async function listFrequent(userId: string, kind: ExpressionKind): Promise<Frequ
 }
 
 /** `GET /api/me/frequent-expressions` — most used first. A key may name an
- * emoji or sound that no longer exists; the client skips what it can't show. */
+ * emoji, sound or sticker that no longer exists; the client skips what it can't show. */
 async function handleFrequent(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   const sess = await requireSession(request, reply);
   if (!sess) return;
-  const [emojis, sounds] = await Promise.all([listFrequent(sess.userId, 'emoji'), listFrequent(sess.userId, 'sound')]);
-  sendJson(reply, 200, { emojis, sounds });
+  const [emojis, sounds, stickers] = await Promise.all([
+    listFrequent(sess.userId, 'emoji'), listFrequent(sess.userId, 'sound'), listFrequent(sess.userId, 'sticker'),
+  ]);
+  sendJson(reply, 200, { emojis, sounds, stickers });
 }
 
 export function registerExpressionUsageRoutes(fastify: FastifyInstance): void {

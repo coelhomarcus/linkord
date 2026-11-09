@@ -84,6 +84,8 @@ async function verifyRestore(pool: Pool, uploadDir: string, manifest: BackupMani
   const ids = await pool.query<{ id: string }>(
     `select id from attachments
      union select id from server_sounds
+     union select id from server_emojis
+     union select id from server_stickers
      union select id from staged_attachments
      union select thumb_id from staged_attachments where thumb_id is not null`);
   const { orphans, tracked, missingFiles } = classifyOrphans({ files, dbIds: new Set(ids.rows.map((r) => r.id)), now: Date.now(), graceMs: 0 });

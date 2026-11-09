@@ -1,6 +1,6 @@
 import { and, count, eq } from 'drizzle-orm';
 import { db } from '../../db/client.js';
-import { attachments, messages } from '../../db/schema.js';
+import { attachments, messages, serverStickers } from '../../db/schema.js';
 
 // Leaf module (db/schema only): both messages.ts and the attachment upload
 // flow build reply references, and attachmentUploads.ts can't import
@@ -13,6 +13,8 @@ export interface ReplyRef {
   authorId: string | null;
   text: string;
   attachmentCount?: number;
+  /** The original is a sticker: its name, or '' when it was deleted since. */
+  sticker?: string;
 }
 
 export function normalizeReplyRef(raw: unknown): ReplyRef | undefined {
@@ -27,6 +29,7 @@ export function normalizeReplyRef(raw: unknown): ReplyRef | undefined {
   };
   const attachmentCount = Number(obj.attachmentCount);
   if (Number.isFinite(attachmentCount) && attachmentCount > 0) ref.attachmentCount = attachmentCount;
+  if (typeof obj.sticker === 'string') ref.sticker = obj.sticker.slice(0, REPLY_PREVIEW_LEN);
   return ref;
 }
 
@@ -40,7 +43,7 @@ export async function buildReplyRef(conversationId: string, replyToId: unknown):
   const id = Number(replyToId);
   if (!Number.isFinite(id)) return undefined;
   const [original] = await db
-    .select({ id: messages.id, authorId: messages.authorId, text: messages.text, kind: messages.kind })
+    .select({ id: messages.id, authorId: messages.authorId, text: messages.text, kind: messages.kind, stickerId: messages.stickerId })
     .from(messages)
     .where(and(eq(messages.id, id), eq(messages.conversationId, conversationId)))
     .limit(1);
@@ -48,6 +51,11 @@ export async function buildReplyRef(conversationId: string, replyToId: unknown):
   // an invitation is what its own buttons are for
   if (!original || original.kind !== 'text') return undefined;
   const ref: ReplyRef = { msgId: original.id, authorId: original.authorId, text: original.text.slice(0, REPLY_PREVIEW_LEN) };
+  if (original.stickerId) {
+    const [sticker] = await db.select({ name: serverStickers.name }).from(serverStickers).where(eq(serverStickers.id, original.stickerId)).limit(1);
+    ref.sticker = sticker?.name ?? '';
+    return ref;
+  }
   // no caption on the original — likely an attachment-only message. Lets
   // the reply reference show "📎 N anexos" instead of a blank snippet.
   if (!ref.text) {

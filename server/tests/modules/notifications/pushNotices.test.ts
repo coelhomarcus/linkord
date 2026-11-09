@@ -20,6 +20,11 @@ describe('chat push text', () => {
     assert.equal(chatNoticeText({ ...chat, text: '' }, 'pt-BR').body, 'Ana enviou uma mensagem');
   });
 
+  it('says a sticker was sent instead of an empty message', () => {
+    assert.equal(chatNoticeText({ ...chat, text: '', sticker: true }, 'pt-BR').body, 'Ana enviou uma figurinha');
+    assert.deepEqual(chatNoticeText({ ...chat, direct: true, text: '', sticker: true }, 'en-US'), { title: 'Ana', body: 'Sent a sticker' });
+  });
+
   it('describes DM calls without repeating the name', () => {
     const call = { ...chat, direct: true, kind: 'dm_call' };
     assert.deepEqual(chatNoticeText(call, 'pt-BR'), { title: 'Ana', body: 'Iniciou uma chamada' });

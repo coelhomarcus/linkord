@@ -27,7 +27,7 @@ export type ReactionEmoji = string;
 /** Wire protocol version this build speaks; the server refuses older ones
  * (client_outdated). Keep in sync with server/src/realtime/protocolVersion.ts
  * — version 10 adds presence status. */
-export const PROTOCOL_VERSION = 14;
+export const PROTOCOL_VERSION = 15;
 
 /** Mirrors server/src/modules/presence/userStatus.ts. */
 export type PresenceStatus = 'online' | 'idle' | 'dnd' | 'invisible';
@@ -59,6 +59,8 @@ export interface ChatReplyRef {
   authorId: string | null;
   text: string;
   attachmentCount?: number;
+  /** The original is a sticker: its name, or '' when it was deleted since. */
+  sticker?: string;
 }
 
 export type InvitationStatus = 'pending' | 'accepted' | 'declined' | 'revoked' | 'expired';
@@ -119,6 +121,18 @@ export interface ChatMessage {
   bot?: true;
   // structured cards the bot sent with the message
   richEmbeds?: RichEmbed[];
+  // the message is this server sticker (its text is empty); `null` once the
+  // sticker was deleted
+  sticker?: StickerCard | null;
+}
+
+/** What a message carries about its sticker. Which server it is from is
+ * known only to that server's members (features/stickers/myStickers.ts). */
+export interface StickerCard {
+  id: string;
+  name: string;
+  description: string;
+  animated: boolean;
 }
 
 interface RichEmbedField { name: string; value: string; inline: boolean }
@@ -293,7 +307,7 @@ export type ClientMessage =
   | { t: 'load-messages-after'; conversationId: string; afterMsgId: number; requestId?: string }
   | { t: 'load-messages-around'; conversationId: string; msgId: number; requestId?: string }
   | { t: 'message-search'; query: string; conversationId?: string }
-  | { t: 'chat'; conversationId: string; text: string; replyTo?: number; requestId?: string; clientMessageId?: string; attachmentIds?: string[] }
+  | { t: 'chat'; conversationId: string; text: string; replyTo?: number; requestId?: string; clientMessageId?: string; attachmentIds?: string[]; stickerId?: string }
   | { t: 'chat-delete'; msgId: number; requestId?: string }
   | { t: 'chat-edit'; msgId: number; text: string; requestId?: string }
   | { t: 'chat-remove-attachment'; msgId: number; attachmentId: string; requestId?: string }
@@ -382,6 +396,7 @@ export type ServerMessage =
   // payload-free like social-changed: the list itself comes from GET /api/servers/:id/sounds
   | { t: 'server-sounds-changed'; serverId: string }
   | { t: 'server-emojis-changed'; serverId: string }
+  | { t: 'server-stickers-changed'; serverId: string }
   | { t: 'message-search-results'; query: string; conversationId?: string; results: SearchResult[] }
   | { t: 'chat'; message: ChatMessage }
   | { t: 'chat-send-result'; requestId: string; clientMessageId: string; message?: ChatMessage; error?: { code: string; message: string } }

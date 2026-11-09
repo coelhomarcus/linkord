@@ -442,6 +442,11 @@ export const messages = pgTable('messages', {
   // stays in the text, its card is no longer drawn, and it is never fetched
   // again. Null when none is. Pruned to the message's links on edit.
   suppressedEmbeds: jsonb('suppressed_embeds').$type<string[]>(),
+  // The server sticker the message is (its whole body: the text is empty).
+  // Deliberately no foreign key: the message keeps pointing at a deleted
+  // sticker, which is how readers know to draw "sticker unavailable" instead
+  // of a blank message (a SET NULL would erase that it ever was one).
+  stickerId: text('sticker_id'),
   // Postgres computes/maintains this itself (GENERATED ALWAYS AS ... STORED)
   // on every insert/update of `text` — never set from the app. 'portuguese'
   // config for stemming (a search for "mensagem" should also find
@@ -635,6 +640,28 @@ export const serverEmojis = pgTable('server_emojis', {
 ]);
 
 export type ServerEmoji = typeof serverEmojis.$inferSelect;
+
+/** A server's stickers: one is a whole message (`messages.sticker_id`), drawn large, sent anywhere by
+ * the server's members and seen by anyone who reads it (modules/stickers). The file is a 320px WebP
+ * stored under the sticker's id in the uploads folder and counted in the instance's storage. */
+export const serverStickers = pgTable('server_stickers', {
+  id: text('id').primaryKey(),
+  serverId: text('server_id').notNull().references(() => servers.id, { onDelete: 'cascade' }),
+  // set null, not cascade: the sticker belongs to the server, not to whoever sent it
+  uploaderId: text('uploader_id').references(() => users.id, { onDelete: 'set null' }),
+  name: varchar('name', { length: 30 }).notNull(),
+  // read aloud by screen readers in place of the picture; '' when none was given
+  description: varchar('description', { length: 100 }).notNull().default(''),
+  // one Unicode emoji the sticker stands for: what the picker's search also matches
+  emoji: varchar('emoji', { length: 16 }).notNull(),
+  animated: boolean('animated').notNull().default(false),
+  size: integer('size').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex('server_stickers_server_name_key').on(t.serverId, sql`lower(${t.name})`),
+]);
+
+export type ServerSticker = typeof serverStickers.$inferSelect;
 
 /** Inbox and read state for a social event. Typed foreign keys preserve referential integrity;
  * deterministic `dedupeKey` values make retried outbox writes idempotent. Reading a notification
@@ -906,10 +933,11 @@ export const instanceSecrets = pgTable('instance_secrets', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
-/** How often an account used each emoji (and, with kind 'sound', each soundboard sound): what the
+/** How often an account used each emoji (and, with kind 'sound', each soundboard sound; with kind
+ * 'sticker', each server sticker): what the
  * pickers and the composer's suggestions list first, the same on every device. Written by the
  * server as the expression is used, never by the client. `key` is the emoji itself, `custom:<id>`
- * for a server emoji, or the sound id. Pruned to the most used per kind (expressionUsage.ts). */
+ * for a server emoji, or the sound or sticker id. Pruned to the most used per kind (expressionUsage.ts). */
 export const userExpressionUsage = pgTable('user_expression_usage', {
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   kind: varchar('kind', { length: 8 }).notNull(),
@@ -918,5 +946,5 @@ export const userExpressionUsage = pgTable('user_expression_usage', {
   lastUsedAt: timestamp('last_used_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
   primaryKey({ columns: [t.userId, t.kind, t.key] }),
-  check('user_expression_usage_kind_check', sql`${t.kind} IN ('emoji','sound')`),
+  check('user_expression_usage_kind_check', sql`${t.kind} IN ('emoji','sound','sticker')`),
 ]);

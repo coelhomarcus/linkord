@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { CustomStatus } from '@/shared/types/protocol';
 import { timeOptions } from '@/shared/lib/timeFormat';
 import { cn } from '@/shared/lib/utils';
+import { Emoji, EmojiText } from '@/features/emoji/Emoji';
 
 const SHELL = 'border border-border-strong bg-bg-tertiary';
 
@@ -58,8 +59,8 @@ export function CustomStatusBubble({ custom, onEdit, onClear, className }: {
         data-custom-status
         className={cn(SHELL, 'flex min-w-0 items-start gap-1.5 rounded-2xl px-3 py-1.5 text-label text-text-primary')}
       >
-        {custom.emoji && <span aria-hidden={!!custom.text} className={cn('flex-none leading-5', !custom.text && 'text-heading')}>{custom.emoji}</span>}
-        {custom.text && <span className="line-clamp-2 min-w-0 leading-5 wrap-break-word">{custom.text}</span>}
+        {custom.emoji && <span aria-hidden={!!custom.text} className={cn('flex-none leading-5', !custom.text && 'text-heading')}><Emoji emoji={custom.emoji} /></span>}
+        {custom.text && <span className="line-clamp-2 min-w-0 leading-5 wrap-break-word"><EmojiText text={custom.text} /></span>}
         {until && <span className="sr-only">{until}</span>}
       </div>
       {tail}

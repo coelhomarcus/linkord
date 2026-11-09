@@ -15,6 +15,7 @@ import { inviteCodeFromLink } from '@/features/servers/inviteCode';
 import { GifMessage } from '@/features/gifs/GifMessage';
 import { gifMessageUrl } from '@/features/gifs/klipyMedia';
 import { parseMessage, previewableLinks, type Block, type Inline } from './messageMarkup';
+import { EmojiText } from '@/features/emoji/Emoji';
 
 interface RenderContext {
   /** a message of emojis alone shows them big */
@@ -55,7 +56,7 @@ function Mention({ name, ctx }: { name: string; ctx: RenderContext }) {
 function renderInline(nodes: Inline[], ctx: RenderContext): ReactNode[] {
   return nodes.map((node, index) => {
     switch (node.type) {
-      case 'text': return node.text;
+      case 'text': return <EmojiText key={index} text={node.text} emojiClassName={ctx.jumbo ? undefined : 'size-[1.375em] align-[-0.3em]'} />;
       case 'code': return <code key={index} className="rounded-sm bg-fill-code px-1 py-0.5 font-mono text-[0.875em]">{node.text}</code>;
       case 'link': return <a key={index} href={node.url} target="_blank" rel="noopener noreferrer" className="break-all text-link hover:underline">{node.url}</a>;
       case 'mention': return <Mention key={index} name={node.name} ctx={ctx} />;

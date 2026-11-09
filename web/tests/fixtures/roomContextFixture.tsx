@@ -114,6 +114,7 @@ export function createFakeRoomContextValue(overrides: Partial<RoomContextValue> 
     accessNotice: null,
     clearAccessNotice: noop,
     sendChatMessage: noop,
+    sendSticker: noop,
     pendingByConversation: new Map(),
     retryPendingMessage: noop,
     discardPendingMessage: noop,
