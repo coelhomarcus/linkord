@@ -1,5 +1,5 @@
 import { test, expect } from '../../fixtures/test';
-import { acceptInvite, createInvite, createServer } from '../../fixtures/api';
+import { PERMISSIONS, acceptInvite, createInvite, createServer, grantEveryone } from '../../fixtures/api';
 
 /** One second of a 440 Hz tone as a 16-bit mono WAV: a real, short, valid sound. */
 function toneWav(seconds = 1, sampleRate = 22_050): Buffer {
@@ -36,4 +36,34 @@ test('a sound uploaded to the server plays for everyone in the call', async ({ u
   await a.page.getByRole('button', { name: 'Efeitos sonoros' }).first().click();
   await a.page.getByRole('button', { name: 'Tocar buzina' }).click();
   await heard;
+});
+
+test('a member adds a sound from the call when @everyone may, and only then', async ({ users }) => {
+  const alice = await users.create('alice');
+  const bob = await users.create('bob');
+  const server = await createServer(alice.api, 'E2E add sound');
+  await acceptInvite(bob.api, await createInvite(alice.api, server.id));
+
+  const b = await bob.app();
+  await b.openChannel(server.id, server.text.id);
+  await b.joinVoice(server.voice.name);
+  const picker = b.page.getByRole('button', { name: 'Efeitos sonoros' }).first();
+
+  // a new server keeps adding sounds to whoever is given CREATE_EXPRESSIONS
+  await picker.click();
+  await expect(b.page.getByText('Este servidor ainda não tem sons.')).toBeVisible();
+  await expect(b.page.getByRole('button', { name: 'Adicionar som' })).toHaveCount(0);
+  await b.page.keyboard.press('Escape');
+
+  await grantEveryone(alice.api, server, PERMISSIONS.CREATE_EXPRESSIONS);
+  await picker.click();
+  await b.page.getByRole('button', { name: 'Adicionar som' }).click();
+  const editor = b.page.getByRole('dialog', { name: 'Enviar um som' });
+  await editor.getByLabel('Arquivo').setInputFiles({ name: 'tone.wav', mimeType: 'audio/wav', buffer: toneWav() });
+  await editor.getByLabel('Nome do som').fill('apito');
+  await editor.getByRole('button', { name: 'Enviar' }).click();
+  await expect(editor).toHaveCount(0);
+
+  await picker.click();
+  await expect(b.page.getByRole('button', { name: 'Tocar apito' })).toBeVisible();
 });

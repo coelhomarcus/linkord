@@ -28,6 +28,43 @@ test.describe('servers', () => {
     await expect(a.page.getByText(bob.username).first()).toBeVisible();
   });
 
+  test('a member with only @everyone invites people without any server settings to open', async ({ users }) => {
+    const alice = await users.create('alice');
+    const bob = await users.create('bob');
+    const server = await createServer(alice.api, 'E2E plain member');
+    await acceptInvite(bob.api, await createInvite(alice.api, server.id));
+    const b = await bob.app();
+    await b.openChannel(server.id, server.text.id);
+
+    // nothing in settings is a plain member's to change, so the menu does not offer them
+    await b.page.getByRole('button', { name: server.name, exact: true, expanded: false }).click();
+    await expect(b.page.getByRole('menuitem', { name: 'Convidar pessoas' })).toBeVisible();
+    await expect(b.page.getByRole('menuitem', { name: 'Configurações do servidor' })).toHaveCount(0);
+    await b.page.getByRole('menuitem', { name: 'Convidar pessoas' }).click();
+
+    const dialog = b.page.getByRole('dialog', { name: `Convidar amigos para ${server.name}` });
+    await expect(dialog.getByText(/\/invite\/[A-Za-z0-9]+/)).toBeVisible();
+    // and the link works for someone else
+    const code = (await dialog.getByText(/\/invite\//).textContent())!.split('/invite/')[1]!.trim();
+    const carol = await users.create('carol');
+    await acceptInvite(carol.api, code);
+  });
+
+  test('a voice channel without SPEAK lets a member in but keeps their microphone off', async ({ users }) => {
+    const alice = await users.create('alice');
+    const bob = await users.create('bob');
+    const server = await createServer(alice.api, 'E2E no speak');
+    await acceptInvite(bob.api, await createInvite(alice.api, server.id));
+    await setChannelOverwrite(alice.api, server.id, server.voice.id, server.everyoneRoleId, 0, PERMISSIONS.SPEAK);
+
+    const b = await bob.app();
+    await b.openChannel(server.id, server.text.id);
+    await b.joinVoice(server.voice.name);
+    const mic = b.page.getByRole('button', { name: 'Você não tem permissão para falar neste canal' }).first();
+    await expect(mic).toHaveAttribute('aria-disabled', 'true');
+    await expect(b.page.getByRole('button', { name: 'Ligar câmera' }).first()).toBeVisible();
+  });
+
   test('a new channel shows up for members, and one hidden from @everyone does not', async ({ users }) => {
     const alice = await users.create('alice');
     const bob = await users.create('bob');

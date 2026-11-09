@@ -188,11 +188,11 @@ The `upgrade` project adapts to what the base version can do and says so in the 
 | `features/friends` | Request from the form accepted in Pending, decline, cancel, block (no messages or calls) and unblock. |
 | `features/dm` | Talking in a DM, the unread count until it is opened, no DM without friendship. |
 | `features/chat` | Messages shown once on both sides, typing indicator, reply, edit, delete, reactions, search, image attachment. |
-| `features/servers` | Creating from the rail, invite link, new channels, a channel hidden from `@everyone`, a read-only channel, kick, ban and unban, deleting the server. |
+| `features/servers` | Creating from the rail, invite link, a member with only `@everyone` inviting without any server settings to open, a voice channel without `SPEAK` keeping the member's microphone off, new channels, a channel hidden from `@everyone`, a read-only channel, kick, ban and unban, deleting the server. |
 | `features/voice` | Seeing and hearing each other, mute and camera seen by the other side, leaving, a moderator moving and disconnecting a member. |
 | `features/dm-call` | Decline, cancel, an answered call with audio both ways and its line in the chat, a video call. |
 | `features/webhooks` | Text and cards through the ingress (token in the URL and in the header), invalid payloads, rotating and deleting the URL, permission. |
-| `features/soundboard` | A sound uploaded to the server reaches everyone in the call. |
+| `features/soundboard` | A sound uploaded to the server reaches everyone in the call; a member adds one from the call's sound picker once `@everyone` has `CREATE_EXPRESSIONS`, and is not offered it before. |
 | `features/profile` | Display name and bio reaching a friend live, mutual friends, the games widgets on offer with no connection (the picker reports the search unavailable, as the stack has no IGDB credentials), games saved with the Wall reaching a friend in order, and widgets reordered by dragging their handle and removed with the button under it. On a touch phone: the profile filling the screen, a game cover's actions in a menu, a widget dragged by its handle with a real finger, 44px touch targets, and a colour picker that does not make iOS zoom. |
 | `features/reports-admin` | Reporting a message, the admin deleting it for everyone, suspending an account. |
 | `features/settings` | The account's language following it to another browser. |
