@@ -8,6 +8,7 @@ import { describeApiError } from '@/shared/api/errorText';
 import { ConfirmDialog } from '@/shared/ConfirmDialog';
 import { formatTime } from '@/shared/lib/formatChatTime';
 import { Button } from '@/shared/ui/primitives/button';
+import { SETTINGS_ACTION_BUTTON } from '@/shared/ui/settings-layout';
 import { describeUserAgent } from './describeUserAgent';
 
 /** The account's signed-in browsers, this one first. Ending one signs that browser out on the spot (the
@@ -95,7 +96,7 @@ export function SessionsSettings({ sessions, onEnded }: { sessions: AccountSessi
         })}
       </ul>
       {others.length > 0 ? (
-        <Button type="button" variant="danger-outline" size="lg" className="w-fit" disabled={pendingId !== null} onClick={() => setConfirmAll(true)}>
+        <Button type="button" variant="danger-outline" size="lg" className={`w-fit ${SETTINGS_ACTION_BUTTON}`} disabled={pendingId !== null} onClick={() => setConfirmAll(true)}>
           <SignOutIcon size={18} aria-hidden />
           <span>{t('security.sessions.endOthers')}</span>
         </Button>

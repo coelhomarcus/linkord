@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/shared/ui/primitives/button';
-import { SettingsRow, SettingsSection } from '@/shared/ui/settings-layout';
+import { SETTINGS_ACTION_BUTTON, SettingsRow, SettingsSection } from '@/shared/ui/settings-layout';
 import { useInstall } from './installPrompt';
 
 /** Install entry for Settings. Absent when the app is already installed or
@@ -16,7 +16,7 @@ export function InstallSettingsSection({ title }: { title: string }) {
         label={t(`settings.${method}.label`)}
         description={t(`settings.${method}.description`)}
       >
-        {method === 'prompt' && <Button type="button" size="lg" onClick={() => void install()}>{t('install')}</Button>}
+        {method === 'prompt' && <Button type="button" variant="secondary" size="lg" className={SETTINGS_ACTION_BUTTON} onClick={() => void install()}>{t('install')}</Button>}
       </SettingsRow>
     </SettingsSection>
   );
