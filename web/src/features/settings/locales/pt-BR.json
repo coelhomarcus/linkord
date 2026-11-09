@@ -339,13 +339,6 @@
       "description": "{{example}}"
     }
   },
-  "crop": {
-    "processing": "Processando imagem…",
-    "processingDescription": "Enviando e recortando a imagem. GIFs animados podem levar alguns segundos.",
-    "cancel": "Cancelar",
-    "save": "Salvar",
-    "zoom": "Zoom"
-  },
   "security": {
     "loading": "Carregando…",
     "loadFailed": "Não foi possível carregar.",

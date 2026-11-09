@@ -5,13 +5,14 @@ import type { ChatMessage, ClientMessage, Conversation, OwnStatus, PublicUser, R
 import type { PresencePatch } from '@/features/status/useOwnStatus';
 import type { DmCallNotice } from '@/features/calls/useDmCall';
 import type { RoomAction, RoomState } from './roomReducer';
-import type { TileKind } from '../features/calls/tileTypes';
+import type { TileKind } from '@/features/calls/tileTypes';
 import type { OutboxEntry, OutboxFile } from '@/features/chat/useMessageOutbox';
 import type { ChatView } from '@/features/chat/useChatMessages';
 import type { ReactionParticipantsTarget } from '@/features/chat/reactionParticipants';
 import type { ShareQualityId } from '@/features/calls/shareQualityPresets';
 import type { ColorThemeId } from '@/features/settings/useColorThemePreference';
 import type { FloatingSoundEmoji } from '@/features/soundboard/useSoundboardEvents';
+import type { CropRect } from '@/shared/lib/imageCrop';
 
 export interface TileDomHandle {
   root: HTMLDivElement;
@@ -27,15 +28,6 @@ export interface AnchorRect {
   top: number;
   right: number;
   bottom: number;
-}
-
-// Same shape as react-easy-crop's `Area` — kept local so the state layer
-// doesn't depend on that UI library's types.
-export interface CropRect {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
 }
 
 export interface RoomContextValue {

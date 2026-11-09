@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { Area } from 'react-easy-crop';
 import { useTranslation } from 'react-i18next';
 
-import { ImageCropDialog } from '@/features/settings/ImageCropDialog';
+import { ImageCropDialog } from '@/shared/ImageCropDialog';
 import { describeEmojiError, uploadServerEmoji } from './serverEmojisApi';
 import { freeEmojiName, registerEmojiUploadOpener } from './emojiUploadRequest';
 import { emojiNamesInServer } from './myEmojis';

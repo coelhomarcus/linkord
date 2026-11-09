@@ -137,5 +137,12 @@
     "save": "Salvar",
     "saving": "Salvando…",
     "saved": "Alterações salvas."
+  },
+  "imageCrop": {
+    "processing": "Processando imagem…",
+    "processingDescription": "Enviando e recortando a imagem. GIFs animados podem levar alguns segundos.",
+    "cancel": "Cancelar",
+    "save": "Salvar",
+    "zoom": "Zoom"
   }
 }

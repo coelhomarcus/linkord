@@ -7,7 +7,7 @@ import {
 } from '@/features/profile/useProfileUpdate';
 import { useLanguageForTests } from '@tests/fixtures/i18nFixture';
 
-vi.mock('@/features/settings/uploadCroppedProfileImage', () => ({
+vi.mock('@/shared/api/uploadCroppedProfileImage', () => ({
   uploadCroppedProfileImage: vi.fn(async () => ({ avatar: '/uploads/novo', avatarPoster: '/uploads/poster' })),
 }));
 

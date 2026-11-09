@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '@/shared/api/api';
-import { cropParam, uploadCroppedProfileImage } from '@/features/settings/uploadCroppedProfileImage';
+import { uploadCroppedProfileImage } from '@/shared/api/uploadCroppedProfileImage';
 
 const uploadWithProgress = vi.hoisted(() => vi.fn());
 
@@ -34,11 +34,5 @@ describe('uploadCroppedProfileImage', () => {
     uploadWithProgress.mockRejectedValue(new ApiError(400, 'invalid_crop', 'Recorte fora dos limites da imagem.'));
 
     await expect(uploadCroppedProfileImage(file, crop)).rejects.toMatchObject({ code: 'invalid_crop' });
-  });
-});
-
-describe('cropParam', () => {
-  it('rounds to whole pixels and never goes below zero', () => {
-    expect(cropParam({ x: -0.4, y: 1.5, width: 99.5, height: 100 })).toBe('0,2,100,100');
   });
 });

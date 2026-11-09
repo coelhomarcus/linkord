@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { ImageCropDialog } from '@/features/settings/ImageCropDialog';
+import { ImageCropDialog } from '@/shared/ImageCropDialog';
 
 vi.mock('react-easy-crop', () => ({
   default: () => <div data-testid="cropper" />,

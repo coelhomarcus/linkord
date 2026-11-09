@@ -5,7 +5,7 @@ import type { Area } from 'react-easy-crop';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 
-import { ImageCropDialog } from '@/features/settings/ImageCropDialog';
+import { ImageCropDialog } from '@/shared/ImageCropDialog';
 import { useRoom } from '@/state/RoomContext';
 import { cn } from '@/shared/lib/utils';
 import { ROUTES } from '@/shared/lib/routes';

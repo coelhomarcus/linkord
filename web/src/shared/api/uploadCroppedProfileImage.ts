@@ -1,7 +1,7 @@
 import { uploadWithProgress } from '@/shared/lib/uploadWithProgress';
 import { logger } from '@/shared/lib/logger';
 import { ApiError } from '@/shared/api/api';
-import type { CropRect } from '@/state/RoomContext';
+import { cropParam, type CropRect } from '@/shared/lib/imageCrop';
 
 export interface CroppedProfileImageUpload {
   avatar: string;
@@ -9,11 +9,6 @@ export interface CroppedProfileImageUpload {
 }
 
 const log = logger.child({ component: 'profile-image' });
-
-/** The rect from the crop dialog as the server's `crop` query value. */
-export function cropParam(crop: CropRect): string {
-  return [crop.x, crop.y, crop.width, crop.height].map((n) => Math.max(0, Math.round(n))).join(',');
-}
 
 /** Sends the original file with the picked rect; the server cuts it (every
  * frame, for a GIF/WebP) and encodes what gets stored. */

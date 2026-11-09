@@ -35,13 +35,12 @@ vi.mock('@/shared/api/api', async (importOriginal) => {
   };
 });
 
-vi.mock('@/features/settings/ImageCropDialog', () => ({
-  ImageCropDialog: ({ open, processing, onConfirm, onCancel }: { open: boolean; processing?: boolean; onConfirm: (crop: { x: number; y: number; width: number; height: number }) => void; onCancel: () => void }) =>
+vi.mock('@/shared/ImageCropDialog', () => ({
+  ImageCropDialog: ({ open, onConfirm, onCancel }: { open: boolean; onConfirm: (crop: { x: number; y: number; width: number; height: number }) => void; onCancel: () => void }) =>
     open ? (
       <div>
-        {processing && <p role="status">Processando imagem…</p>}
-        <button type="button" disabled={processing} onClick={() => onConfirm({ x: 0, y: 0, width: 10, height: 10 })}>Confirmar recorte</button>
-        <button type="button" disabled={processing} onClick={onCancel}>Cancelar recorte</button>
+        <button type="button" onClick={() => onConfirm({ x: 0, y: 0, width: 10, height: 10 })}>Confirmar recorte</button>
+        <button type="button" onClick={onCancel}>Cancelar recorte</button>
       </div>
     ) : null,
 }));

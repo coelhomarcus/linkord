@@ -5,9 +5,9 @@ import { sanitizeDisplayName } from '@/shared/lib/displayName';
 import type { ClientMessage, ProfilePatch, PublicUser, ServerMessage } from '@/shared/types/protocol';
 import { MAX_BANNER_LEN, MAX_PROFILE_BIO_LEN } from '@/shared/types/protocol';
 import type { RoomAction } from '@/state/roomReducer';
-import type { CropRect } from '@/state/RoomContext';
+import type { CropRect } from '@/shared/lib/imageCrop';
 import { ApiError } from '@/shared/api/api';
-import { uploadCroppedProfileImage } from '@/features/settings/uploadCroppedProfileImage';
+import { uploadCroppedProfileImage } from '@/shared/api/uploadCroppedProfileImage';
 import { i18n } from '@/shared/i18n/init';
 
 const PROFILE_SAVE_TIMEOUT_MS = 15_000;

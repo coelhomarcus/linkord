@@ -3,8 +3,7 @@ import type { SocialUser } from '@/shared/api/api';
 import { describeApiError } from '@/shared/api/errorText';
 import { uploadWithProgress } from '@/shared/lib/uploadWithProgress';
 import { i18n } from '@/shared/i18n/init';
-import type { CropRect } from '@/state/RoomContext';
-import { cropParam } from '@/features/settings/uploadCroppedProfileImage';
+import { cropParam, type CropRect } from '@/shared/lib/imageCrop';
 
 // Mirrors server/src/modules/emojis/serverEmojis.ts.
 export const EMOJI_NAME_RE = /^[a-z0-9_]{2,32}$/;
