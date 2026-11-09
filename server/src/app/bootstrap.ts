@@ -11,7 +11,7 @@ import { sweepExpiredSessions } from '../modules/auth/session.js';
 import { sweepExpiredRateLimits } from '../modules/auth/ratelimit.js';
 import { sweepSendOperations } from '../modules/messages/sendOperations.js';
 import { sweepExpiredStaged } from '../modules/attachments/stagedAttachments.js';
-import { ensureUploadDir, sweepStaleUploads } from '../modules/attachments/uploadSession.js';
+import { ensureUploadDir, sweepStaleUploads, unwritableUploadDirs } from '../modules/attachments/uploadSession.js';
 import { SweepInProgressError, sweepOrphans } from '../modules/attachments/orphanSweeper.js';
 import { drainOutbox } from '../modules/notifications/outboxWorker.js';
 import { OUTBOX_POLL_MS } from '../modules/notifications/notificationsPolicy.js';
@@ -74,6 +74,12 @@ export async function bootstrap(): Promise<void> {
   } catch (err) {
     log.error('failed to prepare the uploads folder', err);
     process.exit(1);
+  }
+  // logged, not fatal: chat and calls work without uploads, and a crash loop
+  // on deploy would take everything down instead of attachments alone
+  const unwritable = await unwritableUploadDirs();
+  if (unwritable.length > 0) {
+    log.error('uploads folder is not writable: attachments and voice messages will fail. On the host, give the mounted folder to uid 1000 (chown -R 1000:1000 <host path>); see "Docker deployment" in the README', undefined, { dirs: unwritable, uid: process.getuid?.() });
   }
 
   await restoreCalls();

@@ -65,20 +65,42 @@ docker compose up -d --build
 
 The container applies pending migrations on startup by default. Set `MIGRATE_ON_BOOT=0` to run migrations separately with `npm run db:migrate`. The compose file persists uploaded files in `./uploads` and backups in `./backups`.
 
-**The container does not run as root.** The process runs as the `node` user (uid 1000) and cannot write to its own code, only to `./uploads` and `./backups`. Compose also sets `no-new-privileges` and drops every Linux capability. Docker creates a missing bind-mounted folder owned by root, so on a **new install** create both folders first, and on an **existing install** change the owner once before deploying this version, or uploads and backups fail with a permission error (the Dokploy volume path works the same way):
+**The container does not run as root.** The process runs as the `node` user (uid 1000) and cannot write to its own code, only to `./uploads` and `./backups`. Compose also sets `no-new-privileges` and drops every Linux capability. Docker creates a missing bind-mounted folder owned by root, so on a **new install** create both folders first, and on an **existing install** change the owner once before deploying this version, or uploads and backups fail with a permission error (on Dokploy, see below):
 
 ```bash
 mkdir -p uploads backups
 sudo chown -R 1000:1000 uploads backups
 ```
 
-To confirm it, `docker compose exec app id` prints `uid=1000(node)`.
+To confirm it, `docker compose exec app id` prints `uid=1000(node)`. Always use `-R`: a `chown` of the top folder alone leaves `tmp/` (where uploads in progress are kept) owned by root.
+
+**On Dokploy** (an application built from the `Dockerfile`), the compose file above is not used, so give the application two bind mounts yourself: a host folder on `/app/uploads` and another on `/app/backups`. Without the second one, backups are written inside the container and lost on the next deploy. On the host, as root, create both folders for uid 1000 before the first deploy (the paths are examples):
+
+```bash
+mkdir -p /srv/linkord/uploads /srv/linkord/backups
+chown -R 1000:1000 /srv/linkord/uploads /srv/linkord/backups
+```
+
+On an install that already has files, find where the folders really are and run the same `chown -R 1000:1000` on each `Source`. The container's name changes with every deploy, so take it from `docker ps` each time:
+
+```bash
+docker ps --format '{{.Names}}' | grep <app-name>
+docker inspect <container> --format '{{range .Mounts}}{{.Source}} -> {{.Destination}}{{"\n"}}{{end}}'
+```
+
+Then check from inside the container, which needs no restart after a `chown`:
+
+```bash
+docker exec <container> sh -c 'id; ls -ld /app/uploads /app/uploads/tmp /app/backups'
+```
+
+Every folder listed must belong to `node`. When one does not, the server logs `uploads folder is not writable` at startup, and every attachment and voice message fails with a 500 from `/api/attachments/init` (`EACCES` in the log). Profile pictures can still save, because they are written straight into the top folder, so they do not prove the folder is fine.
 
 **Run a single instance.** Linkord does not scale horizontally today: do not put replicas behind a load balancer. The server keeps live state in the memory of its own process (who is online and in which call, caches, socket flood limits, upload reservations) and Socket.IO has no shared adapter, so a second instance would not see the first one's users, calls or limits. Uploaded files also live on the local `./uploads` disk. What would have to change for several instances is listed in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md#single-instance-assumption).
 
 ### Backups
 
-The database and `./uploads` have to be backed up together, and Linkord does it for you: `npm run backup` (in the container, `docker compose exec app node server/dist/scripts/backup.js`) writes a dated folder with a `pg_dump`, an archive of the uploads and a manifest to `./backups`, and keeps the newest `BACKUP_KEEP` (default 7). Running it does not stop the app. To schedule it, start the optional compose service with `docker compose --profile backup up -d backup`, or call the command from the host's cron. `npm run restore` brings a backup back into an empty database and folder on a new server and checks that everything came across. Copy `./backups` off the machine as well, and keep your `.env` somewhere safe: it is not in the backup. The full guide, with the restore steps, is in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md#backup-and-restore).
+The database and `./uploads` have to be backed up together, and Linkord does it for you: `npm run backup` (in the container, `docker compose exec app node server/dist/scripts/backup.js`) writes a dated folder with a `pg_dump`, an archive of the uploads and a manifest to `./backups`, and keeps the newest `BACKUP_KEEP` (default 7). Running it does not stop the app. To schedule it, start the optional compose service with `docker compose --profile backup up -d backup`, or call the command from the host's cron (on Dokploy, `docker exec $(docker ps -qf name=<app-name>) node server/dist/scripts/backup.js`, with `/app/backups` mounted as above). `npm run restore` brings a backup back into an empty database and folder on a new server and checks that everything came across. Copy `./backups` off the machine as well, and keep your `.env` somewhere safe: it is not in the backup. The full guide, with the restore steps, is in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md#backup-and-restore).
 
 **Security headers.** The server sends a Content-Security-Policy and `X-Frame-Options: DENY` on every response, built from `APP_URL`, `LIVEKIT_URL` and `KLIPY_API_KEY`, so set those to the real public URLs: a wrong `LIVEKIT_URL` blocks calls in the browser. Behind HTTPS it adds `Strict-Transport-Security`. The reverse proxy does not need to set any of these. Violations are logged as `content security policy violation`; `CSP_REPORT_ONLY=1` turns blocking off while still reporting. Details in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md#content-security-policy).
 
