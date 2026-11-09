@@ -9,6 +9,8 @@ type TextKey =
   | 'push.callHour_one' | 'push.callHour_other' | 'push.callHourMinute'
   | 'email.recoverySubject' | 'email.changeSubject' | 'email.recoveryTitle' | 'email.changeTitle'
   | 'email.recoveryIntro' | 'email.changeIntro' | 'email.recoveryAccountLine' | 'email.expires'
+  | 'email.loginSubject' | 'email.loginTitle' | 'email.loginIntro' | 'email.loginExpires'
+  | 'email.twoFactorSetupSubject' | 'email.twoFactorSetupTitle' | 'email.twoFactorSetupIntro'
   | 'server.textCategory' | 'server.textChannel' | 'server.voiceCategory' | 'server.voiceChannel';
 
 const TEXT: Record<Locale, Record<TextKey, string>> = {
@@ -31,6 +33,11 @@ const TEXT: Record<Locale, Record<TextKey, string>> = {
     'email.recoveryIntro': 'Use este código para redefinir a senha da sua conta Linkord:', 'email.changeIntro': 'Use este código para confirmar o novo e-mail da sua conta Linkord:',
     'email.recoveryAccountLine': 'Esse código é para a conta de usuário "{{username}}", associada a este e-mail ({{email}}).',
     'email.expires': 'O código expira em 30 minutos. Se você não solicitou isso, ignore este e-mail.',
+    'email.loginSubject': 'Seu código de login no Linkord', 'email.loginTitle': 'Verificação em duas etapas',
+    'email.loginIntro': 'Alguém entrou com a senha da conta "{{username}}". Use este código para concluir o login:',
+    'email.loginExpires': 'O código expira em 10 minutos. Se não foi você, troque sua senha agora: quem tentou entrar sabe a senha atual.',
+    'email.twoFactorSetupSubject': 'Ative a verificação em duas etapas no Linkord', 'email.twoFactorSetupTitle': 'Verificação em duas etapas',
+    'email.twoFactorSetupIntro': 'Use este código para ativar a verificação em duas etapas da sua conta Linkord:',
     'server.textCategory': 'Canais de texto', 'server.textChannel': 'geral',
     'server.voiceCategory': 'Canais de voz', 'server.voiceChannel': 'Geral',
   },
@@ -53,6 +60,11 @@ const TEXT: Record<Locale, Record<TextKey, string>> = {
     'email.recoveryIntro': 'Use this code to reset your Linkord account password:', 'email.changeIntro': 'Use this code to confirm your new Linkord account email:',
     'email.recoveryAccountLine': 'This code is for the user account "{{username}}", associated with this email ({{email}}).',
     'email.expires': 'The code expires in 30 minutes. If you did not request this, ignore this email.',
+    'email.loginSubject': 'Your Linkord login code', 'email.loginTitle': 'Two-step verification',
+    'email.loginIntro': 'Someone signed in with the password of the account "{{username}}". Use this code to finish signing in:',
+    'email.loginExpires': 'The code expires in 10 minutes. If this was not you, change your password now: whoever tried to sign in knows the current one.',
+    'email.twoFactorSetupSubject': 'Turn on two-step verification on Linkord', 'email.twoFactorSetupTitle': 'Two-step verification',
+    'email.twoFactorSetupIntro': 'Use this code to turn on two-step verification for your Linkord account:',
     'server.textCategory': 'Text Channels', 'server.textChannel': 'general',
     'server.voiceCategory': 'Voice Channels', 'server.voiceChannel': 'General',
   },

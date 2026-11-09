@@ -7,7 +7,7 @@ Every external service Linkord talks to, what it is used for, who makes the call
 | Service | Purpose | Called from | Credentials | Required |
 | --- | --- | --- | --- | --- |
 | [LiveKit](#livekit) | Voice, video and screen sharing | Server (SDK) and browser | `LIVEKIT_*` | For calls |
-| [Resend](#resend) | Account recovery and email-change codes | Server | `RESEND_*` | For email flows |
+| [Resend](#resend) | Account recovery, email-change and two-step login codes | Server | `RESEND_*` | For email flows and two-step login |
 | [Web Push](#web-push) | Browser push notifications | Server | `PUSH_VAPID_*` | No |
 | [KLIPY](#klipy) | GIF picker | Browser | `KLIPY_API_KEY` | No |
 | [MyAnimeList](#myanimelist) | Profile Wall widget | Server (background worker; covers through the [media proxy](#media-proxy)) | `MAL_CLIENT_ID` | No |
@@ -33,12 +33,13 @@ Selective forwarding unit (SFU) behind every voice channel and 1:1 call.
 
 ## Resend
 
-Transactional email. Used only for the one-time codes sent for password recovery and email changes.
+Transactional email. Used only for one-time 6-digit codes: password recovery, email changes, turning on two-step login, and the second step of a login when the account has two-step login on.
 
-- **Code:** [`server/src/modules/auth/email.ts`](../server/src/modules/auth/email.ts) — one `POST https://api.resend.com/emails` with a bearer token. The text is localized to the account's language.
+- **Code:** [`server/src/modules/auth/email.ts`](../server/src/modules/auth/email.ts) — one `POST https://api.resend.com/emails` with a bearer token. The text is localized to the account's language. Codes are issued and checked in `server/src/modules/auth/codes.ts` (only their sha256 is stored): recovery, email-change and setup codes last 30 minutes, a login code 10 minutes, and each allows 5 tries. Wrong codes also count against the account in the Postgres attempt counters (`ratelimit.ts`), so resending does not buy more guesses; code emails themselves are capped at 5 per 15 minutes per account and purpose.
 - **Data sent:** the recipient address, the code, the username and `APP_URL`.
-- **Configuration:** `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `APP_URL`.
-- **When missing:** requesting a code fails with `email_not_configured`. If Resend rejects the send, the request fails with a 503 `email_delivery_failed`.
+- **Configuration:** `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `APP_URL`. `RESEND_API_URL` (default `https://api.resend.com`) is changed only by the end-to-end stack, which points it at a local mail sink.
+- **When missing:** requesting a code fails with `email_not_configured`, and two-step login cannot be turned on (Settings → Security explains why). If Resend rejects the send, the request fails with a 503 `email_delivery_failed`.
+- **Two-step login depends on it:** an account that already has two-step login on cannot finish a login while email is down or unconfigured (the login answers 503 `email_unavailable`; the code step is never skipped). Removing the `RESEND_*` variables therefore locks those accounts out until they are restored.
 
 ## Web Push
 

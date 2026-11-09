@@ -311,7 +311,7 @@ Tables that grow with use are trimmed by one daily sweep (`modules/retention/`),
 | `OUTBOX_RETENTION_DAYS` | `7` | delivered `outbox_events`, by the time they were delivered. Events that ran out of attempts stay, so an administrator can see them |
 | `SERVER_AUDIT_RETENTION_DAYS` | `90` | `server_audit_logs`, each server's own audit log shown in its settings, by creation time. It is a moderation aid for the server, not instance evidence, so it expires by default |
 
-Login sessions (deleted when they expire) and chat send operations (a fixed 7 days) have their own cleanup and no setting.
+Chat send operations (a fixed 7 days) have their own cleanup and no setting. Login sessions are deleted when they expire (`SESSION_TTL_DAYS`, default 30) or go unused for `SESSION_IDLE_DAYS` (default 14, `0` turns it off; a tab with a live socket counts as use), by an hourly sweep. The address and browser stored with each session go with it: they are kept only while the session lives and shown only to the account itself.
 
 - **Batches:** the sweep deletes at most 1000 rows per statement, oldest first, with a short pause between statements, so a table with a large backlog is never locked for long. The first run after enabling a limit on a big table can therefore take a while; later runs only remove a day's worth.
 - **Report:** `/admin/system` lists each table's limit and what the last sweep deleted (the report lives in memory, so it is empty after a restart until the next sweep). A sweep that deleted something, or failed on a table, also leaves a `retention.sweep` entry in the audit log. A table that fails is logged and does not stop the others.

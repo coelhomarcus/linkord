@@ -7,7 +7,8 @@ import { dmCallStore, loadActiveDmCalls } from '../modules/calls/dmCallRepositor
 import { createApp } from '../http/app.js';
 import { createWsServer } from '../realtime/socket.js';
 import { describeBlockedMigration, runMigrations } from '../db/migrate.js';
-import { sweepExpiredSessions } from '../modules/auth/session.js';
+import { sweepExpiredSessions, touchSessions } from '../modules/auth/session.js';
+import { liveSessionTokenHashes } from '../modules/auth/sessionConnections.js';
 import { sweepExpiredRateLimits } from '../modules/auth/ratelimit.js';
 import { sweepSendOperations } from '../modules/messages/sendOperations.js';
 import { sweepExpiredStaged } from '../modules/attachments/stagedAttachments.js';
@@ -111,10 +112,14 @@ export async function bootstrap(): Promise<void> {
   const connectionSyncTimer = setInterval(runConnectionSync, 60_000);
   connectionSyncTimer.unref();
 
-  // periodic cleanup of expired sessions — doesn't need to run per
-  // request, just enough to keep the table from growing forever.
+  // periodic cleanup of expired and idle sessions — doesn't need to run per
+  // request, just enough to keep the table from growing forever. A session
+  // behind a socket that stayed connected is in use even without requests,
+  // so it is touched first and never expires as idle under an open tab.
   const sessionSweepTimer = setInterval(() => {
-    sweepExpiredSessions().catch((err) => log.error('failed to clean up expired sessions', err));
+    touchSessions(liveSessionTokenHashes())
+      .then(() => sweepExpiredSessions())
+      .catch((err) => log.error('failed to clean up expired sessions', err));
   }, 60 * 60 * 1000);
   sessionSweepTimer.unref();
 

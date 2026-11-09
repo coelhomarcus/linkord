@@ -7,7 +7,7 @@ How to run Linkord in production, what the container expects from the host, and 
 One Docker image, built by the [`Dockerfile`](../Dockerfile), holds everything: the web app (`web/dist`), the API, the realtime server (Socket.IO on the `/ws` path) and the backup scripts with the PostgreSQL client tools. A single Node process serves all of it on port **3000**, so the reverse proxy needs one route to one port, websockets included.
 
 - **Health check:** `GET /healthz` answers `{ ok, participants, uptime }`. The image already uses it as its `HEALTHCHECK`.
-- **Behind a proxy:** the image sets `TRUST_PROXY=1`, so client addresses and `X-Forwarded-Proto` come from the proxy. With `COOKIE_SECURE=auto` (the default) the session cookie is `Secure` whenever the proxy says the request was HTTPS.
+- **Behind a proxy:** the image sets `TRUST_PROXY=1`, so client addresses (also the ones stored with each login session and shown to the account in Settings → Security) and `X-Forwarded-Proto` come from the proxy. With `COOKIE_SECURE=auto` (the default) the session cookie is `Secure` whenever the proxy says the request was HTTPS.
 - **Migrations** run at startup (`MIGRATE_ON_BOOT=1`, the default) before the server accepts connections; if one fails, the process exits with the reason in the log. Set `MIGRATE_ON_BOOT=0` to run them yourself with `node server/dist/db/migrate.js`.
 - **Not root:** the process runs as `node` (uid 1000). It cannot rewrite its own code and can only write to `/app/uploads` and `/app/backups`, which is why those two folders need the right owner on the host ([Folders and permissions](#folders-and-permissions)).
 
@@ -26,7 +26,7 @@ The variables a production instance needs:
 | `REGISTRATION_CODE` | Empty means nobody can sign up. Set a code and share it with the people you invite. |
 | `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` | The URL browsers really use to reach LiveKit (`wss://…`). The CSP only lets the browser connect there. |
 | `PUSH_VAPID_PUBLIC_KEY`, `PUSH_VAPID_PRIVATE_KEY`, `PUSH_VAPID_SUBJECT` | All three or none. Generate them once (`npx web-push generate-vapid-keys`) and keep them: new keys break every existing subscription. |
-| `RESEND_API_KEY`, `RESEND_FROM_EMAIL` | Optional. Without them, password recovery and email changes are unavailable. |
+| `RESEND_API_KEY`, `RESEND_FROM_EMAIL` | Optional. Without them, password recovery, email changes and two-step login are unavailable. Once people turn two-step login on, removing them locks those accounts out ([Resend](INTEGRATIONS.md#resend)). |
 
 Optional services (KLIPY, MyAnimeList, IGDB) and every limit are in `.env.example`. Covers, GitHub avatars, link preview pictures and YouTube thumbnails are downloaded by the server and served from its own domain, which costs outbound bandwidth and up to 64 MB of memory for the cache; `MEDIA_PROXY=0` sends browsers to those services instead ([media proxy](INTEGRATIONS.md#media-proxy)). After the first start, make yourself an administrator: `node server/dist/scripts/adminRole.js grant <username>` inside the container (`npm run admin:grant -- <username>` from a checkout).
 

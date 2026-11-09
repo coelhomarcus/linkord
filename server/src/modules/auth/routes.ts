@@ -5,14 +5,20 @@ import { config } from '../../config/env.js';
 import { sendJson, sendError, jsonBody } from '../../http/respond.js';
 import { parseCookies, serializeCookie, clearCookie, isSecureRequest } from '../../http/cookies.js';
 import { hashPassword, verifyPassword, needsRehash, DUMMY_HASH } from './password.js';
-import { createSession, resolveSession, destroyAllSessionsForUser, destroySession } from './session.js';
-import { findByEmailLower, findByUsernameLower, isValidEmail, normalizeEmail, privateUser } from '../users/users.js';
+import {
+  createSession, resolveSession, destroySession, destroyOtherSessions, destroySessionById, listSessionsForUser,
+} from './session.js';
+import { dropSessionConnections } from './sessionConnections.js';
+import { findByEmailLower, findById, findByUsernameLower, isValidEmail, normalizeEmail, privateUser } from '../users/users.js';
 import { resolveLocale } from '../users/locale.js';
 import { createUser, updateEmail, updatePassword } from './accounts.js';
 import { checkRegistrationAllowed } from './registrationLimits.js';
 import type { User } from '../../db/schema.js';
-import { issueAuthCode, verifyAuthCode, type AuthCodePurpose } from './codes.js';
-import { sendAuthCodeEmail } from './email.js';
+import { consumeLoginChallenge, findLoginChallenge, issueAuthCode, verifyAuthCode, type AuthCodePurpose } from './codes.js';
+import { isEmailDeliveryConfigured, sendAuthCodeEmail } from './email.js';
+import { clientIpOf, sessionOriginOf } from '../../http/clientInfo.js';
+import { recordAudit } from '../admin/auditLog.js';
+import type { SessionUser } from '../../types.js';
 import * as ratelimit from './ratelimit.js';
 import { db } from '../../db/client.js';
 import { users } from '../../db/schema.js';
@@ -26,12 +32,40 @@ const log = logger.child({ component: 'auth' });
 
 const USERNAME_RE = new RegExp(`^[A-Za-z0-9_.-]{${config.MIN_USERNAME_LEN},${config.MAX_USERNAME_LEN}}$`);
 
-function ipOfRequest(request: FastifyRequest): string {
-  if (config.TRUST_PROXY) {
-    const fwd = request.headers['x-forwarded-for'];
-    if (typeof fwd === 'string' && fwd.length) return fwd.split(',')[0]!.trim();
-  }
-  return request.raw.socket.remoteAddress || '?';
+const ipOfRequest = clientIpOf;
+
+// Code emails a person can ask for (a login code, a two-step setup code): a request limit, not a mistake
+// limit, so a resend button cannot become a mail cannon.
+const CODE_SEND_RULE: ratelimit.Rule = { windowMs: 15 * 60 * 1000, max: 5 };
+// Ending sessions from the list: generous for a person clicking, a ceiling for a script.
+const SESSION_ACTION_RULE: ratelimit.Rule = { windowMs: 60 * 1000, max: 30 };
+// A login challenge lives this long from its first code, however many times the code is resent.
+const LOGIN_CHALLENGE_MAX_MS = 30 * 60 * 1000;
+const CHALLENGE_RE = /^[A-Za-z0-9_-]{43}$/;
+
+// One counter of wrong codes per account, shared by the login's second step and the two-step setup:
+// each code also allows only AUTH_CODE_MAX_ATTEMPTS, but a resend starts a new code, so this is what
+// bounds guessing across codes (and it survives a restart, see ratelimit.ts).
+const codeFailuresKey = (userId: string) => `code:${userId}`;
+// Wrong current passwords on the logged-in confirmations (two-step, password change).
+const passwordConfirmKey = (userId: string) => `pw-confirm:${userId}`;
+
+const hashChallenge = (challenge: string) => crypto.createHash('sha256').update(challenge).digest('hex');
+
+/** `ana@gmail.com` → `a**@gmail.com`: enough to recognize the address on the login screen. */
+function maskEmail(email: string): string {
+  const at = email.lastIndexOf('@');
+  if (at <= 0) return '***';
+  return `${email[0]}${'*'.repeat(Math.max(2, at - 1))}${email.slice(at)}`;
+}
+
+function rateLimitedReply(reply: FastifyReply, retryAfterSec: number, message = 'Muitas tentativas. Tente novamente mais tarde.'): void {
+  reply.header('Retry-After', String(retryAfterSec));
+  sendError(reply, 429, 'rate_limited', message);
+}
+
+function auditActor(sess: SessionUser) {
+  return { id: sess.userId, username: sess.username };
 }
 
 /** Constant-time compare even when lengths differ — timingSafeEqual throws
@@ -122,7 +156,7 @@ async function handleRegister(request: FastifyRequest, reply: FastifyReply): Pro
     throw err;
   }
 
-  const { rawToken } = await createSession(user.id);
+  const { rawToken } = await createSession(user.id, sessionOriginOf(request));
   setSessionCookie(request, reply, rawToken);
   log.info('account registered', { userId: user.id, username: user.username });
   // A new account has no friends or shared conversations, so scoped presence would deliver this
@@ -177,10 +211,104 @@ async function handleLogin(request: FastifyRequest, reply: FastifyReply): Promis
       .catch(() => {});
   }
 
-  const { rawToken } = await createSession(user.id);
+  if (user.twoFactorEmail) return startLoginChallenge(reply, user);
+
+  const { rawToken } = await createSession(user.id, sessionOriginOf(request));
   setSessionCookie(request, reply, rawToken);
   log.info('login', { userId: user.id, username: user.username });
   sendJson(reply, 200, { user: privateUser(user) });
+}
+
+/** The right password with two-step login on: no session yet, a code to the account's email and a
+ * challenge the browser holds until it sends the code back. Only reachable with the right password,
+ * so the answer reveals nothing about which accounts exist. */
+async function startLoginChallenge(reply: FastifyReply, user: User): Promise<void> {
+  if (!user.email || !isEmailDeliveryConfigured()) {
+    log.error('two-step login cannot send its code', { userId: user.id, hasEmail: Boolean(user.email) });
+    return sendError(reply, 503, 'email_unavailable', 'Não foi possível enviar o código de verificação agora. Tente novamente mais tarde.');
+  }
+  const send = await ratelimit.consume(`login-code:${user.id}`, CODE_SEND_RULE);
+  if (!send.allowed) return rateLimitedReply(reply, send.retryAfterSec, 'Muitos códigos enviados. Tente novamente mais tarde.');
+
+  const challenge = crypto.randomBytes(32).toString('base64url');
+  try {
+    await issueAndSendCode(user.id, user.email, user.username, 'login', resolveLocale(user.locale), hashChallenge(challenge));
+  } catch {
+    return sendError(reply, 503, 'email_unavailable', 'Não foi possível enviar o código de verificação agora. Tente novamente mais tarde.');
+  }
+  log.info('login waiting for its emailed code', { userId: user.id });
+  sendJson(reply, 200, { twoFactor: { challenge, email: maskEmail(user.email) } });
+}
+
+type ChallengeLookup = { user: User; challengeHash: string } | { refused: true };
+
+/** Resolves the challenge of a login's second step, answering the request itself when it cannot go on. */
+async function loginChallengeFor(request: FastifyRequest, reply: FastifyReply, challenge: string): Promise<ChallengeLookup> {
+  const ipKey = `ip:${ipOfRequest(request)}`;
+  const ipBlockedSec = await ratelimit.checkBlocked(ipKey);
+  if (ipBlockedSec) { rateLimitedReply(reply, ipBlockedSec); return { refused: true }; }
+
+  const expired = (): ChallengeLookup => {
+    sendError(reply, 400, 'login_expired', 'O login expirou. Entre com sua senha de novo.');
+    return { refused: true };
+  };
+  if (!CHALLENGE_RE.test(challenge)) return expired();
+  const challengeHash = hashChallenge(challenge);
+  const found = await findLoginChallenge(challengeHash);
+  if (!found || found.startedAt.getTime() + LOGIN_CHALLENGE_MAX_MS < Date.now()) return expired();
+  const user = await findById(found.userId);
+  if (!user || !user.email) return expired();
+  if (user.status !== 'active') {
+    sendError(reply, 403, 'account_unavailable', 'Esta conta está indisponível. Fale com a administração.');
+    return { refused: true };
+  }
+  return { user, challengeHash };
+}
+
+async function handleLoginVerify(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  const body = jsonBody(request.body);
+  const challenge = String(body.challenge == null ? '' : body.challenge);
+  const code = String(body.code == null ? '' : body.code).trim();
+  const lookup = await loginChallengeFor(request, reply, challenge);
+  if ('refused' in lookup) return;
+  const { user, challengeHash } = lookup;
+  if (!/^\d{6}$/.test(code)) return sendError(reply, 400, 'invalid_code', 'Informe o código de 6 dígitos.');
+
+  const userKey = codeFailuresKey(user.id);
+  const blocked = await ratelimit.checkBlocked(userKey);
+  if (blocked) return rateLimitedReply(reply, blocked);
+
+  const result = await verifyAuthCode(user.id, 'login', user.email!, code, { challengeHash });
+  if (!result.ok) {
+    if (result.reason === 'invalid_code' || result.reason === 'too_many_attempts') {
+      await ratelimit.recordFailure(`ip:${ipOfRequest(request)}`);
+      await ratelimit.recordFailure(userKey);
+    }
+    log.warn('login code refused', { userId: user.id, reason: result.reason, ip: ipOfRequest(request) });
+    return purposeError(reply, result.reason);
+  }
+
+  await consumeLoginChallenge(challengeHash);
+  await ratelimit.reset(userKey).catch(() => {});
+  const { rawToken } = await createSession(user.id, sessionOriginOf(request));
+  setSessionCookie(request, reply, rawToken);
+  log.info('login', { userId: user.id, username: user.username, twoFactor: true });
+  sendJson(reply, 200, { user: privateUser(user) });
+}
+
+async function handleLoginResend(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  const body = jsonBody(request.body);
+  const lookup = await loginChallengeFor(request, reply, String(body.challenge == null ? '' : body.challenge));
+  if ('refused' in lookup) return;
+  const { user, challengeHash } = lookup;
+  const send = await ratelimit.consume(`login-code:${user.id}`, CODE_SEND_RULE);
+  if (!send.allowed) return rateLimitedReply(reply, send.retryAfterSec, 'Muitos códigos enviados. Tente novamente mais tarde.');
+  try {
+    await issueAndSendCode(user.id, user.email!, user.username, 'login', resolveLocale(user.locale), challengeHash);
+  } catch {
+    return sendError(reply, 503, 'email_unavailable', 'Não foi possível enviar o código de verificação agora. Tente novamente mais tarde.');
+  }
+  sendJson(reply, 200, { ok: true });
 }
 
 async function handleLogout(request: FastifyRequest, reply: FastifyReply): Promise<void> {
@@ -225,8 +353,10 @@ function sessionForRequest(request: FastifyRequest) {
   return resolveSession(cookies[config.SESSION_COOKIE]);
 }
 
-async function issueAndSendCode(userId: string, email: string, username: string, purpose: AuthCodePurpose, locale: ReturnType<typeof resolveLocale>): Promise<void> {
-  const code = await issueAuthCode(userId, purpose, email);
+async function issueAndSendCode(
+  userId: string, email: string, username: string, purpose: AuthCodePurpose, locale: ReturnType<typeof resolveLocale>, challengeHash?: string,
+): Promise<void> {
+  const code = await issueAuthCode(userId, purpose, email, challengeHash ? { challengeHash, ttlMs: config.LOGIN_CODE_TTL_MS } : {});
   try {
     await sendAuthCodeEmail({ to: email, code, purpose, username, locale });
   } catch (err) {
@@ -303,7 +433,9 @@ async function handleRecoveryReset(request: FastifyRequest, reply: FastifyReply)
   if (!result.ok) return purposeError(reply, result.reason);
 
   await updatePassword(user.id, await hashPassword(password));
-  await destroyAllSessionsForUser(user.id);
+  // whoever knew the old password is signed out everywhere, live sockets included
+  dropSessionConnections(await destroyOtherSessions(user.id, ''));
+  await recordAudit({ actor: { id: user.id, username: user.username }, action: 'account.password_reset', targetType: 'user', targetId: user.id, targetLabel: user.username, requestId: request.id });
   sendJson(reply, 200, { ok: true });
 }
 
@@ -361,9 +493,162 @@ async function handleEmailChangeConfirm(request: FastifyRequest, reply: FastifyR
   sendJson(reply, 200, { user: privateUser(user) });
 }
 
+// ---- account security: the logged-in person's own sessions, password and two-step login ----
+
+/** Checks the current password asked for before a sensitive change, under its own attempt counter.
+ * Answers the request itself (and returns false) when it is wrong or blocked. */
+async function confirmPassword(reply: FastifyReply, sess: SessionUser, password: string): Promise<boolean> {
+  const key = passwordConfirmKey(sess.userId);
+  const blocked = await ratelimit.checkBlocked(key);
+  if (blocked) { rateLimitedReply(reply, blocked); return false; }
+  const user = await findById(sess.userId);
+  if (!user || !(await verifyPassword(password, user.passwordHash))) {
+    await ratelimit.recordFailure(key);
+    log.warn('wrong current password on a security change', { userId: sess.userId });
+    sendError(reply, 403, 'invalid_password', 'Senha incorreta.');
+    return false;
+  }
+  await ratelimit.reset(key).catch(() => {});
+  return true;
+}
+
+async function handleSecurityStatus(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  const sess = await sessionForRequest(request);
+  if (!sess) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
+  const user = await findById(sess.userId);
+  if (!user) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
+  sendJson(reply, 200, {
+    twoFactorEnabled: user.twoFactorEmail,
+    emailDeliveryAvailable: isEmailDeliveryConfigured(),
+    hasEmail: Boolean(user.email),
+    sessionIdleDays: config.SESSION_IDLE_DAYS,
+  });
+}
+
+async function handleTwoFactorEnableRequest(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  const sess = await sessionForRequest(request);
+  if (!sess) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
+  const body = jsonBody(request.body);
+  if (!sess.email) return sendError(reply, 409, 'email_required', 'Adicione um e-mail à conta antes de ativar a verificação em duas etapas.');
+  if (!isEmailDeliveryConfigured()) {
+    return sendError(reply, 503, 'email_not_configured', 'O envio de e-mails não está configurado neste servidor, então a verificação em duas etapas não pode ser ativada.');
+  }
+  if (!(await confirmPassword(reply, sess, String(body.password == null ? '' : body.password)))) return;
+  const send = await ratelimit.consume(`2fa-setup:${sess.userId}`, CODE_SEND_RULE);
+  if (!send.allowed) return rateLimitedReply(reply, send.retryAfterSec, 'Muitos códigos enviados. Tente novamente mais tarde.');
+  try {
+    await issueAndSendCode(sess.userId, sess.email, sess.username, 'two_factor_setup', resolveLocale(sess.locale));
+  } catch {
+    return sendError(reply, 503, 'email_unavailable', 'Não foi possível enviar o código agora. Tente novamente mais tarde.');
+  }
+  sendJson(reply, 200, { ok: true });
+}
+
+async function handleTwoFactorEnableConfirm(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  const sess = await sessionForRequest(request);
+  if (!sess) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
+  if (!sess.email) return sendError(reply, 409, 'email_required', 'Adicione um e-mail à conta antes de ativar a verificação em duas etapas.');
+  const code = String(jsonBody(request.body).code ?? '').trim();
+  if (!/^\d{6}$/.test(code)) return sendError(reply, 400, 'invalid_code', 'Informe o código de 6 dígitos.');
+  const key = codeFailuresKey(sess.userId);
+  const blocked = await ratelimit.checkBlocked(key);
+  if (blocked) return rateLimitedReply(reply, blocked);
+  const result = await verifyAuthCode(sess.userId, 'two_factor_setup', sess.email, code);
+  if (!result.ok) {
+    if (result.reason !== 'code_expired') await ratelimit.recordFailure(key);
+    return purposeError(reply, result.reason);
+  }
+  await ratelimit.reset(key).catch(() => {});
+  await db.update(users).set({ twoFactorEmail: true, updatedAt: new Date() }).where(eq(users.id, sess.userId));
+  await recordAudit({ actor: auditActor(sess), action: 'account.two_factor_enable', targetType: 'user', targetId: sess.userId, targetLabel: sess.username, requestId: request.id });
+  log.info('two-step login turned on', { userId: sess.userId });
+  sendJson(reply, 200, { twoFactorEnabled: true });
+}
+
+async function handleTwoFactorDisable(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  const sess = await sessionForRequest(request);
+  if (!sess) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
+  if (!(await confirmPassword(reply, sess, String(jsonBody(request.body).password ?? '')))) return;
+  await db.update(users).set({ twoFactorEmail: false, updatedAt: new Date() }).where(eq(users.id, sess.userId));
+  await recordAudit({ actor: auditActor(sess), action: 'account.two_factor_disable', targetType: 'user', targetId: sess.userId, targetLabel: sess.username, requestId: request.id });
+  log.info('two-step login turned off', { userId: sess.userId });
+  sendJson(reply, 200, { twoFactorEnabled: false });
+}
+
+async function handlePasswordChange(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  const sess = await sessionForRequest(request);
+  if (!sess) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
+  const body = jsonBody(request.body);
+  const newPassword = String(body.newPassword == null ? '' : body.newPassword);
+  if (newPassword.length < config.MIN_PASSWORD_LEN || newPassword.length > config.MAX_PASSWORD_LEN) {
+    return sendError(reply, 400, 'weak_password', `Senha deve ter pelo menos ${config.MIN_PASSWORD_LEN} caracteres.`);
+  }
+  if (!(await confirmPassword(reply, sess, String(body.currentPassword == null ? '' : body.currentPassword)))) return;
+  await updatePassword(sess.userId, await hashPassword(newPassword));
+  // this device stays signed in; every other one learns the password changed by being signed out
+  const ended = await destroyOtherSessions(sess.userId, sess.tokenHash);
+  dropSessionConnections(ended);
+  await recordAudit({
+    actor: auditActor(sess), action: 'account.password_change', targetType: 'user', targetId: sess.userId, targetLabel: sess.username,
+    detail: { endedSessions: ended.length }, requestId: request.id,
+  });
+  log.info('password changed', { userId: sess.userId, endedSessions: ended.length });
+  sendJson(reply, 200, { endedSessions: ended.length });
+}
+
+async function handleListSessions(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  const sess = await sessionForRequest(request);
+  if (!sess) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
+  const list = await listSessionsForUser(sess.userId);
+  sendJson(reply, 200, {
+    sessions: list.map((s) => ({
+      id: s.id, current: s.id === sess.sessionId, ip: s.ip, userAgent: s.userAgent,
+      createdAt: s.createdAt.toISOString(), lastSeenAt: s.lastSeenAt.toISOString(),
+    })),
+  });
+}
+
+async function sessionActionAllowed(reply: FastifyReply, sess: SessionUser): Promise<boolean> {
+  const verdict = await ratelimit.consume(`session-action:${sess.userId}`, SESSION_ACTION_RULE);
+  if (!verdict.allowed) rateLimitedReply(reply, verdict.retryAfterSec);
+  return verdict.allowed;
+}
+
+async function handleEndSession(request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply): Promise<void> {
+  const sess = await sessionForRequest(request);
+  if (!sess) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
+  const id = String(request.params.id || '');
+  // this device leaves through logout, which also clears its cookie
+  if (id === sess.sessionId) return sendError(reply, 400, 'invalid_target', 'Para encerrar esta sessão, saia da conta.');
+  if (!(await sessionActionAllowed(reply, sess))) return;
+  const tokenHash = await destroySessionById(sess.userId, id);
+  if (!tokenHash) return sendError(reply, 404, 'not_found', 'Sessão não encontrada.');
+  dropSessionConnections([tokenHash]);
+  await recordAudit({
+    actor: auditActor(sess), action: 'account.session_end', targetType: 'user', targetId: sess.userId, targetLabel: sess.username,
+    detail: { sessionId: id }, requestId: request.id,
+  });
+  reply.code(204).header('Cache-Control', 'no-store').send();
+}
+
+async function handleEndOtherSessions(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  const sess = await sessionForRequest(request);
+  if (!sess) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
+  if (!(await sessionActionAllowed(reply, sess))) return;
+  const ended = await destroyOtherSessions(sess.userId, sess.tokenHash);
+  dropSessionConnections(ended);
+  await recordAudit({
+    actor: auditActor(sess), action: 'account.sessions_end_others', targetType: 'user', targetId: sess.userId, targetLabel: sess.username,
+    detail: { endedSessions: ended.length }, requestId: request.id,
+  });
+  sendJson(reply, 200, { endedSessions: ended.length });
+}
+
 export function registerAuthRoutes(fastify: FastifyInstance): void {
   fastify.post('/api/auth/register', handleRegister);
   fastify.post('/api/auth/login', handleLogin);
+  fastify.post('/api/auth/login/verify', handleLoginVerify);
+  fastify.post('/api/auth/login/resend', handleLoginResend);
   fastify.post('/api/auth/logout', handleLogout);
   fastify.get('/api/auth/me', handleMe);
   fastify.post('/api/auth/recovery/request', handleRecoveryRequest);
@@ -371,4 +656,12 @@ export function registerAuthRoutes(fastify: FastifyInstance): void {
   fastify.post('/api/auth/email/link', handleLinkEmail);
   fastify.post('/api/auth/email/change/request', handleEmailChangeRequest);
   fastify.post('/api/auth/email/change/confirm', handleEmailChangeConfirm);
+  fastify.get('/api/auth/security', handleSecurityStatus);
+  fastify.post('/api/auth/two-factor/enable/request', handleTwoFactorEnableRequest);
+  fastify.post('/api/auth/two-factor/enable/confirm', handleTwoFactorEnableConfirm);
+  fastify.post('/api/auth/two-factor/disable', handleTwoFactorDisable);
+  fastify.post('/api/auth/password', handlePasswordChange);
+  fastify.get('/api/auth/sessions', handleListSessions);
+  fastify.post('/api/auth/sessions/end-others', handleEndOtherSessions);
+  fastify.delete<{ Params: { id: string } }>('/api/auth/sessions/:id', handleEndSession);
 }

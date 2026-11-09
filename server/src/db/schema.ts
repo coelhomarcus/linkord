@@ -46,6 +46,8 @@ export const users = pgTable('users', {
   // false keeps message text out of push notifications (they show who and where only). It is read
   // by the server when it builds the push, so it lives on the account, not in the browser.
   pushShowContent: boolean('push_show_content').notNull().default(true),
+  // Two-step login: with it on, a right password only earns a code sent to `email` (auth/routes.ts).
+  twoFactorEmail: boolean('two_factor_email').notNull().default(false),
   // The presence status the person picked (see modules/presence/userStatus.ts). On the account so it
   // holds on every device, and so push delivery can honour 'dnd' without asking the socket layer.
   presenceStatus: varchar('presence_status', { length: 16 }).notNull().default('online'),
@@ -72,15 +74,22 @@ export const users = pgTable('users', {
 ]);
 
 /** Login session. The key is the sha256 of the cookie value, never the raw
- * value — a DB leak alone can't be replayed as a session. */
+ * value — a DB leak alone can't be replayed as a session. `id` is what the
+ * account's own session list shows and revokes, so the hash never leaves the
+ * server. `ip` and `userAgent` are what the login came from (personal data:
+ * shown only to the account itself, gone with the row). */
 export const sessions = pgTable('sessions', {
   tokenHash: text('token_hash').primaryKey(),
+  id: text('id').notNull(),
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  ip: varchar('ip', { length: 64 }).notNull().default(''),
+  userAgent: varchar('user_agent', { length: 512 }).notNull().default(''),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   lastSeenAt: timestamp('last_seen_at', { withTimezone: true }).notNull().defaultNow(),
   expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
 }, (t) => [
   index('sessions_user_id_idx').on(t.userId),
+  uniqueIndex('sessions_id_key').on(t.id),
 ]);
 
 /** Short-lived one-time codes for account recovery and email changes. Only
@@ -88,8 +97,11 @@ export const sessions = pgTable('sessions', {
 export const authCodes = pgTable('auth_codes', {
   id: text('id').primaryKey(),
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  purpose: varchar('purpose', { length: 32 }).notNull(), // 'password_reset' | 'email_change'
+  purpose: varchar('purpose', { length: 32 }).notNull(), // see AuthCodePurpose in auth/codes.ts
   email: varchar('email', { length: 320 }).notNull(),
+  // sha256 of the login challenge a 'login' code belongs to (null for every other purpose), so the
+  // code can only finish the login it was sent for
+  challengeHash: text('challenge_hash'),
   codeHash: text('code_hash').notNull(),
   attempts: integer('attempts').notNull().default(0),
   expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
@@ -98,6 +110,7 @@ export const authCodes = pgTable('auth_codes', {
 }, (t) => [
   index('auth_codes_user_purpose_idx').on(t.userId, t.purpose),
   index('auth_codes_email_purpose_idx').on(t.email, t.purpose),
+  index('auth_codes_challenge_hash_idx').on(t.challengeHash),
 ]);
 
 /** DMs are unique per sorted member pair; server channels share this table via `serverId`.
