@@ -140,6 +140,7 @@ test.describe('profile', () => {
     await a.page.mouse.move(from.x + from.width / 2, to.y + 10, { steps: 12 });
     await a.page.mouse.move(from.x + from.width / 2, to.y + 5, { steps: 4 });
     await a.page.mouse.up();
+    await dropSettled(a.page);
     await a.page.getByRole('article').filter({ hasText: 'Jogos que eu gosto' }).hover();
     await a.page.getByRole('button', { name: 'Remover Jogos que eu gosto' }).click();
 
@@ -166,16 +167,34 @@ async function takesFingertip(control: Locator): Promise<boolean> {
   });
 }
 
+/** Waits until the dropped widget has glided into place, as a person would before the next tap. dnd-kit
+ * swallows every click for 50 ms after a drop, so a click sent at once (a fast runner does) is ignored. */
+async function dropSettled(page: Page) {
+  await expect.poll(() => page.locator('[data-wall-widget]').evaluateAll((rows) => rows.some(
+    (row) => (row as HTMLElement).style.transform !== '' || row.getAnimations({ subtree: true }).length > 0,
+  ))).toBe(false);
+}
+
 /** A real finger drag (touch events through the DevTools protocol, as a phone sends them): the page
  * decides between scrolling and dragging exactly as it would under a finger. */
 async function touchDrag(page: Page, from: { x: number; y: number }, toY: number) {
   const cdp = await page.context().newCDPSession(page);
-  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [from] });
+  // A finger stops before it lets go. Lifting while still moving (the speed Chrome reads from when each event
+  // arrives, so it depends on the runner) starts a fling, and Chrome drops the next tap that stops it: the
+  // Save tap after the drag sent no click. Explicit timestamps keep the speed the same on any machine.
+  let time = Date.now() / 1000;
+  const send = (type: 'touchStart' | 'touchMove' | 'touchEnd', touchPoints: { x: number; y: number }[], afterMs: number) => {
+    time += afterMs / 1000;
+    return cdp.send('Input.dispatchTouchEvent', { type, touchPoints, timestamp: time });
+  };
+  await send('touchStart', [from], 0);
   const steps = 12;
+  const stepMs = Math.abs(toY - from.y) / steps;
   for (let step = 1; step <= steps; step++) {
-    await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: from.x, y: from.y + ((toY - from.y) * step) / steps }] });
+    await send('touchMove', [{ x: from.x, y: from.y + ((toY - from.y) * step) / steps }], stepMs);
   }
-  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await send('touchMove', [{ x: from.x, y: toY }], 200);
+  await send('touchEnd', [], 16);
   await cdp.detach();
 }
 
@@ -218,6 +237,7 @@ test.describe('profile on a phone', () => {
     const above = (await first.boundingBox())!;
     await touchDrag(page, { x: from.x + from.width / 2, y: from.y + from.height / 2 }, above.y + 5);
     await expect(page.getByRole('article').getByRole('heading', { level: 3 })).toHaveText(['Jogos que eu gosto', 'Jogo favorito']);
+    await dropSettled(page);
 
     // the save bar's buttons take a fingertip too, and nothing is published before them
     const bar = page.getByRole('region', { name: 'Salvar alterações do Mural' });
