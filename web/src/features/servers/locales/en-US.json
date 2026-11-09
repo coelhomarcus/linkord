@@ -147,7 +147,6 @@
     "name": "Role Name",
     "color": "Color",
     "hoist": "Display members with this role separately",
-    "mentionable": "Allow anyone to @mention this role",
     "delete": "Delete Role",
     "deleteTitle": "Delete {{name}}",
     "deleteDescription": "Whoever has this role loses the permissions it gave.",
@@ -174,6 +173,13 @@
       "lavender": "Lavender",
       "rose": "Rose",
       "gold": "Gold"
+    },
+    "everyoneNotice": "@everyone applies to every member of the server. Whatever you change here changes for everyone right away.",
+    "aboveYou": "This role is at or above your own, so you can't change it.",
+    "adminConfirm": {
+      "title": "Grant Administrator?",
+      "description": "Whoever has this role can do anything in the server, including overriding each channel's rules and changing the roles below theirs. Only give it to people you fully trust.",
+      "confirm": "Grant Administrator"
     }
   },
   "invites": {
@@ -273,16 +279,16 @@
     "CONNECT": "Connect",
     "SPEAK": "Speak",
     "STREAM": "Video and Screen",
-    "MOVE_MEMBERS": "Disconnect Members",
+    "MOVE_MEMBERS": "Move Members",
     "USE_SOUNDBOARD": "Use Soundboard",
     "MANAGE_EXPRESSIONS": "Manage Expressions",
-    "VIEW_AUDIT_LOG": "View audit log",
+    "VIEW_AUDIT_LOG": "View Audit Log",
     "CREATE_EXPRESSIONS": "Create Expressions"
   },
   "permissionHints": {
     "ADMINISTRATOR": "Grants every permission and bypasses channel rules. Be careful granting this.",
-    "MANAGE_SERVER": "Change the server's name and icon and see its invites.",
-    "MANAGE_ROLES": "Create and edit roles below yours, and change channel permissions.",
+    "MANAGE_SERVER": "Change the server's name and icon, see its active invites and revoke anyone's.",
+    "MANAGE_ROLES": "Create, edit and assign roles below yours, and change channel permissions. Only grants permissions you hold yourself.",
     "MANAGE_CHANNELS": "Create, edit, reorder and delete channels and categories.",
     "CREATE_INVITE": "Invite friends and create invite links.",
     "KICK_MEMBERS": "Remove members below your role.",

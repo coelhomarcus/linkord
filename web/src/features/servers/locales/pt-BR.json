@@ -147,7 +147,6 @@
     "name": "Nome do cargo",
     "color": "Cor",
     "hoist": "Exibir membros com este cargo separadamente",
-    "mentionable": "Permitir que qualquer um @mencione este cargo",
     "delete": "Excluir cargo",
     "deleteTitle": "Excluir {{name}}",
     "deleteDescription": "Quem tem este cargo perde as permissões que ele dava.",
@@ -174,6 +173,13 @@
       "lavender": "Lavanda",
       "rose": "Rosé",
       "gold": "Dourado"
+    },
+    "everyoneNotice": "O @everyone vale para todos os membros do servidor. O que você mudar aqui muda na hora para todo mundo.",
+    "aboveYou": "Este cargo está no seu nível ou acima, então você não pode mudá-lo.",
+    "adminConfirm": {
+      "title": "Dar Administrador?",
+      "description": "Quem tiver este cargo poderá fazer tudo no servidor, inclusive passar por cima das regras de cada canal e mexer nos cargos abaixo do seu. Só dê para quem você confia totalmente.",
+      "confirm": "Dar Administrador"
     }
   },
   "invites": {
@@ -273,7 +279,7 @@
     "CONNECT": "Conectar",
     "SPEAK": "Falar",
     "STREAM": "Vídeo e tela",
-    "MOVE_MEMBERS": "Desconectar membros",
+    "MOVE_MEMBERS": "Mover membros",
     "USE_SOUNDBOARD": "Usar soundboard",
     "MANAGE_EXPRESSIONS": "Gerenciar expressões",
     "VIEW_AUDIT_LOG": "Ver registro de auditoria",
@@ -281,8 +287,8 @@
   },
   "permissionHints": {
     "ADMINISTRATOR": "Concede todas as permissões e ignora as regras de cada canal. Cuidado ao dar esta.",
-    "MANAGE_SERVER": "Mudar o nome e o ícone do servidor e ver os convites.",
-    "MANAGE_ROLES": "Criar e editar cargos abaixo do seu, e mudar permissões de canais.",
+    "MANAGE_SERVER": "Mudar o nome e o ícone do servidor, ver os convites ativos e revogar os de qualquer pessoa.",
+    "MANAGE_ROLES": "Criar, editar e atribuir cargos abaixo do seu, e mudar as permissões dos canais. Só dá permissões que você mesmo tem.",
     "MANAGE_CHANNELS": "Criar, editar, reordenar e excluir canais e categorias.",
     "CREATE_INVITE": "Convidar amigos e gerar links de convite.",
     "KICK_MEMBERS": "Remover membros abaixo do seu cargo.",

@@ -30,6 +30,7 @@ import {
 import { can, memberColor, serverSettingsTabs, type ServerSettingsTab } from './serverUtils';
 import { inviteUrl } from './inviteCode';
 import { RoleColorPicker } from './RoleColorPicker';
+import { canAssignRole, canManageRole, grantableBits, outranks } from './roleHierarchy';
 import { ServerAuditLog } from './ServerAuditLog';
 import { useSaveBar } from './useSaveBar';
 
@@ -104,8 +105,11 @@ function Overview({ server }: { server: ServerSummary }) {
   );
 }
 
-function PermissionSwitches({ value, onChange, disabled }: { value: number; onChange: (next: number) => void; disabled?: boolean }) {
+/** `grantable`: the bits this member may change; the others stay as they
+ * are, greyed out, since the server refuses changing a bit you don't hold. */
+function PermissionSwitches({ value, onChange, disabled, grantable }: { value: number; onChange: (next: number) => void; disabled?: boolean; grantable: number }) {
   const { t } = useTranslation('servers');
+  const [confirmAdmin, setConfirmAdmin] = useState(false);
   return (
     <div className="flex flex-col gap-5">
       {PERMISSION_SECTIONS.map((section) => (
@@ -119,21 +123,32 @@ function PermissionSwitches({ value, onChange, disabled }: { value: number; onCh
                   <span className="block text-body font-medium text-text-primary">{t(`permissions.${name}`)}</span>
                   <span className="block text-label text-text-secondary">{t(`permissionHints.${name}`)}</span>
                 </span>
-                <Switch checked={hasPermission(value, bit)} disabled={disabled} onCheckedChange={(on) => onChange(on ? value | bit : value & ~bit)} />
+                <Switch checked={hasPermission(value, bit)} disabled={disabled || !hasPermission(grantable, bit)}
+                  onCheckedChange={(on) => {
+                    // everything, past every channel's rules: worth a second look
+                    if (on && bit === PERMISSIONS.ADMINISTRATOR) { setConfirmAdmin(true); return; }
+                    onChange(on ? value | bit : value & ~bit);
+                  }} />
               </label>
             );
           })}
         </section>
       ))}
+      <ConfirmDialog open={confirmAdmin} onOpenChange={setConfirmAdmin} title={t('roles.adminConfirm.title')} description={t('roles.adminConfirm.description')}
+        destructive confirmLabel={t('roles.adminConfirm.confirm')} onConfirm={() => onChange(value | PERMISSIONS.ADMINISTRATOR)} />
     </div>
   );
 }
 
 function Roles({ server }: { server: ServerSummary }) {
   const { t } = useTranslation('servers');
-  const { serverMemberRevision } = useRoom();
+  const { state, serverMemberRevision } = useRoom();
+  const me = state.me.userId;
   const sorted = [...server.roles].sort((a, b) => b.position - a.position);
-  const [selectedId, setSelectedId] = useState<string>(sorted.find((r) => !r.isDefault)?.id ?? sorted[0]!.id);
+  // open on the highest role this member can actually change
+  const [selectedId, setSelectedId] = useState<string>(
+    (sorted.find((r) => !r.isDefault && canManageRole(server, me, r)) ?? sorted.find((r) => !r.isDefault) ?? sorted[0]!).id,
+  );
   const role = server.roles.find((r) => r.id === selectedId) ?? sorted[0]!;
   const [draft, setDraft] = useState<RoleSummary>(role);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -153,6 +168,8 @@ function Roles({ server }: { server: ServerSummary }) {
   const bar = useSaveBar(draft, dirty);
   const saveBlocked = !draft.isDefault && !draft.name.trim();
   const movable = sorted.filter((r) => !r.isDefault);
+  const editable = canManageRole(server, me, role);
+  const grantable = grantableBits(server);
   const visibleRoles = sorted.filter((item) => item.name.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
   const memberCounts = new Map(sorted.map((item) => [item.id, members.filter((member) => member.roleIds.includes(item.id)).length]));
 
@@ -211,8 +228,9 @@ function Roles({ server }: { server: ServerSummary }) {
                 </button>
                 {!r.isDefault && (
                   <span className="flex gap-0.5">
-                    <button type="button" aria-label={t('roles.up')} disabled={movableIndex === 0} onClick={() => void move(r.id, 1)} className="rounded p-1 text-text-muted hover:text-text-primary disabled:opacity-30"><ArrowUpIcon size={14} /></button>
-                    <button type="button" aria-label={t('roles.down')} disabled={movableIndex === movable.length - 1} onClick={() => void move(r.id, -1)} className="rounded p-1 text-text-muted hover:text-text-primary disabled:opacity-30"><ArrowDownIcon size={14} /></button>
+                    {/* a move swaps two neighbours, so both have to be below the member's own role */}
+                    <button type="button" aria-label={t('roles.up')} disabled={movableIndex === 0 || !canManageRole(server, me, r) || !canManageRole(server, me, movable[movableIndex - 1]!)} onClick={() => void move(r.id, 1)} className="rounded p-1 text-text-muted hover:text-text-primary disabled:opacity-30"><ArrowUpIcon size={14} /></button>
+                    <button type="button" aria-label={t('roles.down')} disabled={movableIndex === movable.length - 1 || !canManageRole(server, me, r)} onClick={() => void move(r.id, -1)} className="rounded p-1 text-text-muted hover:text-text-primary disabled:opacity-30"><ArrowDownIcon size={14} /></button>
                   </span>
                 )}
               </div>
@@ -221,26 +239,25 @@ function Roles({ server }: { server: ServerSummary }) {
             {visibleRoles.length === 0 && <p className="px-2 py-3 text-caption text-text-muted">{t('roles.noResults')}</p>}
           </div>
         </div>
-        <form className="flex min-w-0 flex-1 flex-col gap-4" onSubmit={(e) => { e.preventDefault(); if (!saveBlocked) saveRole(); }}>
+        <form className="flex min-w-0 flex-1 flex-col gap-4" onSubmit={(e) => { e.preventDefault(); if (!saveBlocked && editable) saveRole(); }}>
+          {role.isDefault && <p role="note" className="rounded-md bg-fill-subtle p-3 text-label text-text-secondary">{t('roles.everyoneNotice')}</p>}
+          {!editable && <p role="note" className="rounded-md bg-fill-subtle p-3 text-label text-text-secondary">{t('roles.aboveYou')}</p>}
           <div className="flex items-end gap-3">
             <label className="flex flex-1 flex-col gap-1.5">
               <span className="text-body font-medium text-text-primary">{t('roles.name')}</span>
-              <Input value={draft.name} disabled={draft.isDefault} maxLength={100} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
+              <Input value={draft.name} disabled={draft.isDefault || !editable} maxLength={100} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
             </label>
             <div className="flex flex-col gap-1.5">
               <span aria-hidden className="text-body font-medium text-text-primary">{t('roles.color')}</span>
-              <RoleColorPicker value={draft.color} onChange={(color) => setDraft({ ...draft, color })} />
+              <RoleColorPicker value={draft.color} disabled={!editable} onChange={(color) => setDraft({ ...draft, color })} />
             </div>
           </div>
           {!draft.isDefault && (
-            <>
-              <label className="flex items-center justify-between gap-4 text-label">{t('roles.hoist')}<Switch checked={draft.hoist} onCheckedChange={(on) => setDraft({ ...draft, hoist: on })} /></label>
-              <label className="flex items-center justify-between gap-4 text-label">{t('roles.mentionable')}<Switch checked={draft.mentionable} onCheckedChange={(on) => setDraft({ ...draft, mentionable: on })} /></label>
-            </>
+            <label className="flex items-center justify-between gap-4 text-label">{t('roles.hoist')}<Switch checked={draft.hoist} disabled={!editable} onCheckedChange={(on) => setDraft({ ...draft, hoist: on })} /></label>
           )}
-          <PermissionSwitches value={draft.permissions} onChange={(permissions) => setDraft({ ...draft, permissions })} />
+          <PermissionSwitches value={draft.permissions} disabled={!editable} grantable={grantable} onChange={(permissions) => setDraft({ ...draft, permissions })} />
           <ErrorLine error={error} />
-          {!role.isDefault && (
+          {!role.isDefault && editable && (
             <div className="flex justify-end border-t border-border-subtle pt-3">
               <Button type="button" variant="destructive" onClick={() => setConfirmDelete(true)}><TrashIcon size={16} /> {t('roles.delete')}</Button>
             </div>
@@ -266,13 +283,18 @@ function Members({ server, onOpenProfile }: { server: ServerSummary; onOpenProfi
   useEffect(() => { void fetchAllServerMembers(server.id).then(setMembers).catch(() => {}); }, [server.id, revision]);
   const assignable = server.roles.filter((r) => !r.isDefault).sort((a, b) => b.position - a.position);
   const isOwner = server.ownerId === state.me.userId;
+  const me = state.me.userId;
 
   return (
     <>
       <SectionTitle>{t('settings.members')}</SectionTitle>
       <ErrorLine error={error} />
       <ul className="flex flex-col divide-y divide-border-subtle">
-        {members.map((member) => (
+        {members.map((member) => {
+          const above = outranks(server, me, { userId: member.user.id, roleIds: member.roleIds, isOwner: member.isOwner });
+          // the server takes a member's roles only from someone above them, or their own roles below the member's top
+          const reachable = above || member.user.id === me;
+          return (
           <li key={member.user.id} className="flex flex-wrap items-center gap-3 py-3">
             <button type="button" onClick={() => onOpenProfile(member.user.id)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
               <Avatar id={member.user.id} name={member.user.displayName} avatar={member.user.avatar} avatarColor={member.user.avatarColor} size={36} />
@@ -287,10 +309,11 @@ function Members({ server, onOpenProfile }: { server: ServerSummary; onOpenProfi
               <span className="flex flex-wrap gap-1">
                 {assignable.map((role) => {
                   const held = member.roleIds.includes(role.id);
+                  const changeable = reachable && (held ? canManageRole(server, me, role) : canAssignRole(server, me, role));
                   return (
-                    <button key={role.id} type="button" aria-pressed={held}
+                    <button key={role.id} type="button" aria-pressed={held} disabled={!changeable}
                       onClick={() => void run(() => setMemberRoles(server.id, member.user.id, held ? member.roleIds.filter((id) => id !== role.id) : [...member.roleIds, role.id]))}
-                      className={cn('flex items-center gap-1 rounded-full border px-2 py-0.5 text-caption', held ? 'border-border-strong bg-fill-active text-text-primary' : 'border-dashed border-border text-text-muted hover:text-text-primary')}>
+                      className={cn('flex items-center gap-1 rounded-full border px-2 py-0.5 text-caption disabled:cursor-not-allowed disabled:opacity-50', held ? 'border-border-strong bg-fill-active text-text-primary' : 'border-dashed border-border text-text-muted enabled:hover:text-text-primary')}>
                       <span className="size-2 rounded-full" style={{ background: role.color || 'var(--color-text-muted)' }} />{role.name}
                     </button>
                   );
@@ -299,13 +322,14 @@ function Members({ server, onOpenProfile }: { server: ServerSummary; onOpenProfi
             )}
             {!member.isOwner && member.user.id !== state.me.userId && (
               <span className="flex gap-1">
-                {can(server, PERMISSIONS.KICK_MEMBERS) && <Button type="button" size="sm" variant="ghost" onClick={() => setConfirm({ kind: 'kick', member })}>{t('members.kick')}</Button>}
-                {can(server, PERMISSIONS.BAN_MEMBERS) && <Button type="button" size="sm" variant="ghost" className="text-red" onClick={() => setConfirm({ kind: 'ban', member })}>{t('members.ban')}</Button>}
+                {above && can(server, PERMISSIONS.KICK_MEMBERS) && <Button type="button" size="sm" variant="ghost" onClick={() => setConfirm({ kind: 'kick', member })}>{t('members.kick')}</Button>}
+                {above && can(server, PERMISSIONS.BAN_MEMBERS) && <Button type="button" size="sm" variant="ghost" className="text-red" onClick={() => setConfirm({ kind: 'ban', member })}>{t('members.ban')}</Button>}
                 {isOwner && <Button type="button" size="sm" variant="ghost" onClick={() => setConfirm({ kind: 'transfer', member })}>{t('members.transfer')}</Button>}
               </span>
             )}
           </li>
-        ))}
+          );
+        })}
       </ul>
       <ConfirmDialog
         open={!!confirm}
