@@ -113,7 +113,12 @@
       "server_full": "Este servidor está cheio.",
       "banned": "Você foi banido desse servidor.",
       "invalid_invite": "Esse convite é inválido ou expirou.",
-      "hierarchy": "Isso está acima do seu cargo."
+      "hierarchy": "Isso está acima do seu cargo.",
+      "invalid_password": "Senha incorreta.",
+      "login_expired": "O login expirou. Entre com sua senha de novo.",
+      "email_required": "Adicione um e-mail à conta antes de ativar a verificação em duas etapas.",
+      "email_not_configured": "O envio de e-mails não está configurado neste servidor.",
+      "email_unavailable": "Não foi possível enviar o código agora. Tente novamente mais tarde."
     }
   },
   "colorPicker": {

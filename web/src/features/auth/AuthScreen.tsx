@@ -1,12 +1,12 @@
-import { ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon, CircleNotchIcon, EnvelopeIcon, EyeIcon, EyeSlashIcon, KeyIcon, LockIcon, SignInIcon, UserIcon, UserPlusIcon } from '@phosphor-icons/react';
-import { useState } from 'react';
+import { ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon, CircleNotchIcon, EnvelopeIcon, EyeIcon, EyeSlashIcon, KeyIcon, LockIcon, ShieldCheckIcon, SignInIcon, UserIcon, UserPlusIcon } from '@phosphor-icons/react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { FormEvent } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 
 import { useAuth } from '@/state/AuthContext';
-import { ApiError, requestPasswordRecovery, resetPassword } from '@/shared/api/api';
-import type { RecoveryIdentifier } from '@/shared/api/api';
+import { ApiError, requestPasswordRecovery, resendLoginCode, resetPassword } from '@/shared/api/api';
+import type { LoginChallenge, RecoveryIdentifier } from '@/shared/api/api';
 import { ErrorBanner } from '@/shared/ErrorBanner';
 import { describeApiError } from '@/shared/api/errorText';
 import { AuthField } from './AuthField';
@@ -25,6 +25,99 @@ function PasswordToggle({ visible, onToggle }: { visible: boolean; onToggle: () 
   );
 }
 
+/** The second step of a login with two-step verification: the code emailed to the account. A code
+ * that expired or ran out of tries can be replaced; a challenge that ended sends the person back to
+ * the password. */
+function TwoFactorStep({ challenge, onBack }: { challenge: LoginChallenge; onBack: (expired: boolean) => void }) {
+  const { t } = useTranslation('auth');
+  const { completeLogin } = useAuth();
+  const [code, setCode] = useState('');
+  const [status, setStatus] = useState<OTPStatus>('idle');
+  const [message, setMessage] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+  const [resent, setResent] = useState(false);
+  // typing the 6th digit and clicking the button can both submit before `pending` renders
+  const submittingRef = useRef(false);
+
+  useEffect(() => {
+    if (!resent) return;
+    const timeout = window.setTimeout(() => setResent(false), 2200);
+    return () => window.clearTimeout(timeout);
+  }, [resent]);
+
+  async function submit(nextCode = code) {
+    if (nextCode.length !== 6 || submittingRef.current) return;
+    submittingRef.current = true;
+    setMessage(null);
+    setStatus('idle');
+    setPending(true);
+    try {
+      await completeLogin(challenge.challenge, nextCode);
+      setStatus('success');
+    } catch (err) {
+      if (err instanceof ApiError && err.code === ERROR_CODES.login_expired) { onBack(true); return; }
+      setStatus('error');
+      setMessage(describeApiError(err, 'auth:twoFactor.failed'));
+    } finally {
+      setPending(false);
+      submittingRef.current = false;
+    }
+  }
+
+  async function resend() {
+    setMessage(null);
+    setPending(true);
+    try {
+      await resendLoginCode(challenge.challenge);
+      setCode('');
+      setStatus('idle');
+      setResent(true);
+    } catch (err) {
+      if (err instanceof ApiError && err.code === ERROR_CODES.login_expired) { onBack(true); return; }
+      setMessage(describeApiError(err, 'auth:twoFactor.resendFailed'));
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-1">
+        <h2 className="flex items-center gap-2 text-title font-semibold text-text-primary">
+          <ShieldCheckIcon size={22} weight="fill" aria-hidden className="text-accent-text" /> {t('twoFactor.title')}
+        </h2>
+        <p className="text-label text-text-muted">{t('twoFactor.sentTo', { email: challenge.email })}</p>
+      </div>
+      <OTPInput
+        label={t('twoFactor.codeLabel')}
+        hint={t('twoFactor.codeHint')}
+        errorMessage={message ?? t('twoFactor.codeError')}
+        successMessage={t('twoFactor.success')}
+        value={code}
+        status={status}
+        disabled={pending}
+        onChange={(value) => { setCode(value); setStatus('idle'); setMessage(null); }}
+        onComplete={(value) => { void submit(value); }}
+        autoFocus
+        aria-label={t('twoFactor.codeLabel')}
+      />
+      <Button type="button" size="lg" className="h-11 w-full" disabled={pending || code.length !== 6} onClick={() => void submit()}>
+        {pending ? <CircleNotchIcon size={20} className="animate-spin" /> : <SignInIcon size={20} weight="fill" />}
+        <span>{pending ? t('login.pending') : t('twoFactor.submit')}</span>
+      </Button>
+      {message && status !== 'error' && <ErrorBanner>{message}</ErrorBanner>}
+      <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
+        <button type="button" disabled={pending} onClick={() => void resend()} className="text-label text-text-muted hover:text-text-primary disabled:opacity-50">
+          {resent ? t('twoFactor.resent') : t('twoFactor.resend')}
+        </button>
+        <button type="button" onClick={() => onBack(false)} className="flex items-center gap-1.5 text-label text-text-muted hover:text-text-primary">
+          <ArrowLeftIcon size={16} /> {t('twoFactor.back')}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function LoginForm({ onForgotPassword }: { onForgotPassword: () => void }) {
   const { t } = useTranslation('auth');
   const { login } = useAuth();
@@ -33,18 +126,33 @@ function LoginForm({ onForgotPassword }: { onForgotPassword: () => void }) {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [challenge, setChallenge] = useState<LoginChallenge | null>(null);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
     setPending(true);
     try {
-      await login(username, password);
+      const next = await login(username, password);
+      if (next) setChallenge(next);
     } catch (err) {
       setError(describeApiError(err, 'auth:login.failed'));
     } finally {
       setPending(false);
     }
+  }
+
+  if (challenge) {
+    return (
+      <TwoFactorStep
+        challenge={challenge}
+        onBack={(expired) => {
+          setChallenge(null);
+          setPassword('');
+          setError(expired ? t('twoFactor.expired') : null);
+        }}
+      />
+    );
   }
 
   return (

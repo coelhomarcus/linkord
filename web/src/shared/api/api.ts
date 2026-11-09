@@ -65,8 +65,75 @@ export function fetchMe(): Promise<{ user: ApiUser }> {
   return apiFetch('/api/auth/me');
 }
 
-export function login(username: string, password: string): Promise<{ user: ApiUser }> {
+/** A login with two-step verification on answers with a challenge instead of the account: the session
+ * only exists once the emailed code comes back with it (`verifyLoginCode`). */
+export interface LoginChallenge {
+  challenge: string;
+  /** the account email, masked (`a***@example.com`) */
+  email: string;
+}
+
+export function login(username: string, password: string): Promise<{ user: ApiUser } | { twoFactor: LoginChallenge }> {
   return apiFetch('/api/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) });
+}
+
+export function verifyLoginCode(challenge: string, code: string): Promise<{ user: ApiUser }> {
+  return apiFetch('/api/auth/login/verify', { method: 'POST', body: JSON.stringify({ challenge, code }) });
+}
+
+export function resendLoginCode(challenge: string): Promise<{ ok: true }> {
+  return apiFetch('/api/auth/login/resend', { method: 'POST', body: JSON.stringify({ challenge }) });
+}
+
+export interface SecurityStatus {
+  twoFactorEnabled: boolean;
+  /** false when the server has no email delivery: two-step login cannot be turned on */
+  emailDeliveryAvailable: boolean;
+  hasEmail: boolean;
+  /** days without use after which a session ends; 0 = never */
+  sessionIdleDays: number;
+}
+
+export function fetchSecurityStatus(): Promise<SecurityStatus> {
+  return apiFetch('/api/auth/security');
+}
+
+export function requestTwoFactorEnable(password: string): Promise<{ ok: true }> {
+  return apiFetch('/api/auth/two-factor/enable/request', { method: 'POST', body: JSON.stringify({ password }) });
+}
+
+export function confirmTwoFactorEnable(code: string): Promise<{ twoFactorEnabled: boolean }> {
+  return apiFetch('/api/auth/two-factor/enable/confirm', { method: 'POST', body: JSON.stringify({ code }) });
+}
+
+export function disableTwoFactor(password: string): Promise<{ twoFactorEnabled: boolean }> {
+  return apiFetch('/api/auth/two-factor/disable', { method: 'POST', body: JSON.stringify({ password }) });
+}
+
+/** Keeps this session and ends every other one. */
+export function changePassword(currentPassword: string, newPassword: string): Promise<{ endedSessions: number }> {
+  return apiFetch('/api/auth/password', { method: 'POST', body: JSON.stringify({ currentPassword, newPassword }) });
+}
+
+export interface AccountSession {
+  id: string;
+  current: boolean;
+  ip: string;
+  userAgent: string;
+  createdAt: string;
+  lastSeenAt: string;
+}
+
+export function fetchSessions(): Promise<{ sessions: AccountSession[] }> {
+  return apiFetch('/api/auth/sessions');
+}
+
+export function endSession(id: string): Promise<void> {
+  return apiFetch(`/api/auth/sessions/${encodeURIComponent(id)}`, { method: 'DELETE' });
+}
+
+export function endOtherSessions(): Promise<{ endedSessions: number }> {
+  return apiFetch('/api/auth/sessions/end-others', { method: 'POST' });
 }
 
 export function register(username: string, email: string, password: string, confirmPassword: string, code: string): Promise<{ user: ApiUser }> {

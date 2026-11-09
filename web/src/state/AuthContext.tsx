@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import { fetchMe, linkEmail as apiLinkEmail, login as apiLogin, logout as apiLogout, register as apiRegister } from '@/shared/api/api';
-import type { ApiUser } from '@/shared/api/api';
+import { fetchMe, linkEmail as apiLinkEmail, login as apiLogin, logout as apiLogout, register as apiRegister, verifyLoginCode } from '@/shared/api/api';
+import type { ApiUser, LoginChallenge } from '@/shared/api/api';
 import { clearAllDrafts } from '@/features/chat/conversationDrafts';
 import { disablePush, restorePush } from '@/shared/pushNotifications';
 import { clearAppBadge } from '@/features/notifications/appBadge';
@@ -14,7 +14,9 @@ type AuthStatus = 'loading' | 'anon' | 'authed';
 interface AuthContextValue {
   status: AuthStatus;
   user: ApiUser | null;
-  login: (username: string, password: string) => Promise<void>;
+  /** null when signed in; a challenge when the account wants its emailed code first (`completeLogin`) */
+  login: (username: string, password: string) => Promise<LoginChallenge | null>;
+  completeLogin: (challenge: string, code: string) => Promise<void>;
   register: (username: string, email: string, password: string, confirmPassword: string, code: string) => Promise<void>;
   linkEmail: (email: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -85,7 +87,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [status, user]);
 
   const login = useCallback(async (username: string, password: string) => {
-    const { user: u } = await apiLogin(username, password);
+    const result = await apiLogin(username, password);
+    if ('twoFactor' in result) return result.twoFactor;
+    setUser(result.user);
+    setStatus('authed');
+    return null;
+  }, []);
+
+  const completeLogin = useCallback(async (challenge: string, code: string) => {
+    const { user: u } = await verifyLoginCode(challenge, code);
     setUser(u);
     setStatus('authed');
   }, []);
@@ -113,7 +123,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ status, user, login, register, linkEmail, logout, refresh }}>
+    <AuthContext.Provider value={{ status, user, login, completeLogin, register, linkEmail, logout, refresh }}>
       {children}
     </AuthContext.Provider>
   );

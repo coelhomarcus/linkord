@@ -229,7 +229,13 @@
     "server.delete": "Server deleted",
     "server.owner_succession": "Owner succession",
     "webhook.revoke": "Webhook revoked",
-    "retention.sweep": "Retention applied"
+    "retention.sweep": "Retention applied",
+    "account.two_factor_enable": "Two-step verification turned on",
+    "account.two_factor_disable": "Two-step verification turned off",
+    "account.password_change": "Password changed",
+    "account.password_reset": "Password reset by email",
+    "account.session_end": "Session ended by the account",
+    "account.sessions_end_others": "Other sessions ended by the account"
   },
   "detail": {
     "fullHistory": "Full history",

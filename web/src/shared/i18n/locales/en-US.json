@@ -113,7 +113,12 @@
       "server_full": "This server is full.",
       "banned": "You were banned from this server.",
       "invalid_invite": "This invite is invalid or has expired.",
-      "hierarchy": "That is above your role."
+      "hierarchy": "That is above your role.",
+      "invalid_password": "Wrong password.",
+      "login_expired": "The sign-in expired. Enter your password again.",
+      "email_required": "Add an email to the account before turning on two-step verification.",
+      "email_not_configured": "Sending email is not set up on this server.",
+      "email_unavailable": "Could not send the code right now. Try again later."
     }
   },
   "colorPicker": {

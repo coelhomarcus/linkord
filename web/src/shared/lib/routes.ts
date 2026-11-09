@@ -1,6 +1,6 @@
 // Shared because the router and feature links need the same paths; features must not import app/.
 
-const SETTINGS_TABS = ['account', 'connections', 'privacy', 'appearance', 'av', 'chat', 'notifications', 'language', 'moderation'] as const;
+const SETTINGS_TABS = ['account', 'security', 'connections', 'privacy', 'appearance', 'av', 'chat', 'notifications', 'language', 'moderation'] as const;
 export type SettingsTab = (typeof SETTINGS_TABS)[number];
 
 /** Tabs that were split up: an old link (or a bookmark) still lands on the

@@ -27,7 +27,7 @@ export type ReactionEmoji = string;
 /** Wire protocol version this build speaks; the server refuses older ones
  * (client_outdated). Keep in sync with server/src/realtime/protocolVersion.ts
  * — version 10 adds presence status. */
-export const PROTOCOL_VERSION = 13;
+export const PROTOCOL_VERSION = 14;
 
 /** Mirrors server/src/modules/presence/userStatus.ts. */
 export type PresenceStatus = 'online' | 'idle' | 'dnd' | 'invisible';
@@ -391,6 +391,9 @@ export type ServerMessage =
   | { t: 'chat-action-result'; requestId: string; error?: { code: string; message: string } }
   | { t: 'invitation-updated'; invitation: InvitationCard }
   | { t: 'role-updated'; role: 'user' | 'admin' }
+  // this tab's session was ended from another device (session list, password change); the server
+  // disconnects right after, so the tab signs out instead of trying to reconnect
+  | { t: 'session-ended' }
   | { t: 'chat-reaction-updated'; conversationId: string; msgId: number; emoji: ReactionEmoji; userIds: string[] }
   | { t: 'typing'; conversationId: string; userId: string; value: boolean }
   | { t: 'chat-attachment-added'; conversationId: string; msgId: number; attachment: ChatAttachment }

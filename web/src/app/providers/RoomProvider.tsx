@@ -370,6 +370,11 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         // an administrator granted or removed this account's admin role while it is connected
         dispatch({ type: 'SET_ROLE', role: m.role });
         break;
+      case 'session-ended':
+        // the session is already gone on the server: asking who we are finds that out and shows the
+        // sign-in screen, the same path a refused reconnect takes
+        void refreshAuth();
+        break;
       case 'invitation-updated':
         chatMessages.onInvitationUpdated(m);
         break;
@@ -448,7 +453,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
   }, [
     dispatch, conversationsList, serversList, presence, openConversation, sendWs, callLifecycle, dmCall,
     messageSearch, chatMessages, typingIndicator, disconnectIntentionally, profileUpdate, soundboardEvents, livekitRoom,
-    onStatusSnapshot, onMyStatus, onPresenceResult, onIdleWelcome,
+    onStatusSnapshot, onMyStatus, onPresenceResult, onIdleWelcome, refreshAuth,
   ]);
 
   const { retryConnection } = useSocketConnection({ socketRef, intentionalCloseRef, sendWs, dispatch, refreshAuth, onMessage: handleServerMessage });
