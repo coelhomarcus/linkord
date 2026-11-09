@@ -187,7 +187,7 @@ export function announceParticipantJoined(p: Participant): void {
 
 /** Address of who connected — used for logging only. */
 export function ipOf(socket: AppSocket): string {
-  return resolveClientIp(config.TRUST_PROXY, socket.handshake.headers['x-forwarded-for'], socket.handshake.address);
+  return resolveClientIp(config.TRUST_PROXY, socket.handshake.headers['x-forwarded-for'], socket.handshake.address, config.TRUSTED_PROXY_HOPS);
 }
 
 export function send(socket: AppSocket | null | undefined, obj: { t: string; [key: string]: unknown }): void {
