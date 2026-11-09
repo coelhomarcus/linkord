@@ -8,6 +8,7 @@ import { invalidateServer } from '../servers/serverAccess.js';
 import { sendServerUpdateToMembers } from '../servers/serverSummaries.js';
 import { serverMemberIds } from '../servers/serversRepository.js';
 import { revokeCallAccess } from '../calls/callAccess.js';
+import { enforceCallPermissions } from '../calls/callPermissions.js';
 import { recordAudit, recordAuditFailure, listAudit, type AuditActor } from './auditLog.js';
 import { logger } from '../../lib/logger.js';
 
@@ -145,6 +146,8 @@ export async function assignServerOwner(ctx: Ctx, serverId: string, newOwnerId: 
   });
   if (outcome.code !== 'ok') return outcome;
   await announce(serverId);
+  // the previous owner keeps only what their roles give
+  void enforceCallPermissions(serverId);
   log.warn('server owner assigned by an admin', { actorId: ctx.actor.id, serverId, newOwnerId });
   return { code: 'ok' };
 }

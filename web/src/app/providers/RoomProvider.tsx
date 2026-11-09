@@ -12,6 +12,7 @@ import { useScreenShare } from '@/features/calls/useScreenShare';
 import { useCallFullscreen } from '@/features/calls/useCallFullscreen';
 import { useCamera } from '@/features/calls/useCamera';
 import { useMicrophone } from '@/features/calls/useMicrophone';
+import { useEnforcePublishRights } from '@/features/calls/publishRights';
 import { useTileMenu } from '@/features/calls/useTileMenu';
 import { useConversationsList } from '@/features/conversations/useConversationsList';
 import { useServersList } from '@/features/servers/useServersList';
@@ -136,6 +137,8 @@ export function RoomProvider({ children }: { children: ReactNode }) {
   const { activateMic, toggleMicMuted, setMicMuted, leaveMic } = useMicrophone(livekitRoom, dispatch);
 
   const roomSettings = useRoomSettings();
+
+  useEnforcePublishRights(livekitRoom, { leaveMic, stopCamera, stopSharing });
 
   const callLifecycle = useCallLifecycle({
     livekitRoom, dispatch, sendWs, stopCamera, stopSharing, activateMic, setMicMuted, leaveMic, startCamera,

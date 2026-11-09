@@ -7,6 +7,7 @@ import { channelPermissionOverwrites, conversations, serverCategories, users } f
 import { sendJson, sendError, jsonBody } from '../../http/respond.js';
 import { deleteForConversation } from '../attachments/attachmentCleanup.js';
 import { revokeCallAccess } from '../calls/callAccess.js';
+import { enforceCallPermissions } from '../calls/callPermissions.js';
 import { participants } from '../presence/participants.js';
 import { ALL_PERMISSIONS, canManageRole, hasPermission, outranks, PERMISSIONS } from './permissions.js';
 import { channelPermissionsIn, invalidateServer, memberInput, type ServerSnapshot } from './serverAccess.js';
@@ -31,6 +32,7 @@ type OverwriteParams = { serverId: string; targetId: string };
 async function changed(serverId: string): Promise<void> {
   invalidateServer(serverId);
   await sendServerUpdateToMembers(serverId);
+  void enforceCallPermissions(serverId);
 }
 
 /** The caller managing the server a channel belongs to. */

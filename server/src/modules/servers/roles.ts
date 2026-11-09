@@ -6,6 +6,7 @@ import { db } from '../../db/client.js';
 import { serverMemberRoles, serverRoles } from '../../db/schema.js';
 import { sendJson, sendError, jsonBody } from '../../http/respond.js';
 import { ALL_PERMISSIONS, canManageRole, hasPermission, highestRolePosition, outranks, PERMISSIONS } from './permissions.js';
+import { enforceCallPermissions } from '../calls/callPermissions.js';
 import { invalidateServer, memberInput } from './serverAccess.js';
 import { broadcastToServerMembers, sendServerUpdateToMembers } from './serverSummaries.js';
 import { requireServerMember, requireSession, type ServerActor } from './serverHttp.js';
@@ -32,6 +33,7 @@ function sanitizeRoleName(name: unknown): string | null {
 async function changed(serverId: string): Promise<void> {
   invalidateServer(serverId);
   await sendServerUpdateToMembers(serverId);
+  void enforceCallPermissions(serverId);
 }
 
 function grantable(actor: ServerActor): number {

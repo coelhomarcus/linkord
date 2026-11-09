@@ -5,6 +5,11 @@ import { Room, Track } from 'livekit-client';
 import { initialRoomState } from '@/state/roomReducer';
 import { renderWithRoom } from '@tests/fixtures/roomContextFixture';
 import { CallControlBar } from '@/features/calls/CallControlBar';
+import { PERMISSIONS } from '@/features/servers/permissionBits';
+
+const voiceChannel = (permissions: number) => ({
+  id: 'c1', type: 'voice' as const, title: 'Geral', serverId: 's1', memberIds: [], lastMessageAt: null, createdAt: 0, updatedAt: 0, permissions,
+});
 
 describe('CallControlBar', () => {
   it('triggers toggleMicMuted when clicking the mic control', () => {
@@ -53,6 +58,34 @@ describe('CallControlBar', () => {
     unmount();
     renderWithRoom(<CallControlBar />, { activeCallConversationId: 'c1', conversations: [conversation('direct')] });
     expect(screen.queryByLabelText('Efeitos sonoros')).not.toBeInTheDocument();
+  });
+
+  it('without SPEAK in the channel, the mic button says why and does nothing', () => {
+    const activateMic = vi.fn();
+    renderWithRoom(<CallControlBar />, {
+      activateMic, activeCallConversationId: 'c1',
+      conversations: [voiceChannel(PERMISSIONS.VIEW_CHANNEL | PERMISSIONS.CONNECT | PERMISSIONS.STREAM)],
+    });
+    const mic = screen.getByLabelText('Você não tem permissão para falar neste canal');
+    expect(mic).toHaveAttribute('aria-disabled', 'true');
+    fireEvent.click(mic);
+    expect(activateMic).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('Ligar câmera')).not.toHaveAttribute('aria-disabled');
+  });
+
+  it('without STREAM in the channel, camera and screen share say why and do nothing', () => {
+    const startCamera = vi.fn();
+    const startSharing = vi.fn();
+    renderWithRoom(<CallControlBar />, {
+      startCamera, startSharing, activeCallConversationId: 'c1',
+      conversations: [voiceChannel(PERMISSIONS.VIEW_CHANNEL | PERMISSIONS.CONNECT | PERMISSIONS.SPEAK)],
+    });
+    const [camera, share] = screen.getAllByLabelText('Você não tem permissão para vídeo e tela neste canal');
+    fireEvent.click(camera!);
+    fireEvent.click(share!);
+    expect(startCamera).not.toHaveBeenCalled();
+    expect(startSharing).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('Ativar microfone')).not.toHaveAttribute('aria-disabled');
   });
 
   it('triggers leaveCall when clicking leave call', () => {

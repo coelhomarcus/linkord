@@ -11,6 +11,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/
 import { CallSettingsMenu } from './CallSettingsMenu';
 import { CameraQuickMenu, MicQuickMenu, ScreenShareQuickMenu, SpeakerQuickMenu } from './CallDeviceMenus';
 import { SoundboardButton } from '@/features/soundboard/SoundboardButton';
+import { useCallPublishRights } from './publishRights';
 import { cn } from '@/shared/lib/utils';
 
 const MIC_PROBLEM_LABEL_KEY = {
@@ -31,6 +32,8 @@ const BAR_BUTTON = 'grid size-11 flex-none place-items-center rounded-xl transit
 const BAR_BUTTON_NEUTRAL = 'bg-white/5 text-white/90 hover:bg-white/12';
 const BAR_BUTTON_RED = 'bg-red/16 text-red hover:bg-red/24';
 const BAR_BUTTON_GREEN = 'bg-green/16 text-green hover:bg-green/24';
+// a control the channel's permissions turn off: still focusable, so its tooltip says why
+const BAR_BUTTON_LOCKED = 'cursor-not-allowed bg-white/5 text-white/35';
 const BAR_ICON = 'size-[22px] max-[480px]:size-5 max-[360px]:size-[19px]';
 
 interface CallControlBarProps {
@@ -58,7 +61,10 @@ export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(fu
   // one (a later call, the mic unplugged again) has to show again.
   const [dismissedMicProblem, setDismissedMicProblem] = useState<MicProblem>(null);
   if (!micProblem && dismissedMicProblem) setDismissedMicProblem(null);
-  const micLabel = micProblem ? t(MIC_PROBLEM_LABEL_KEY[micProblem]) : !myMedia.micActivated ? t('controls.micActivate') : myMedia.micMuted ? t('controls.micUnmute') : t('controls.micMute');
+  const { canSpeak, canStream } = useCallPublishRights();
+  const micLabel = !canSpeak ? t('controls.noSpeakPermission') : micProblem ? t(MIC_PROBLEM_LABEL_KEY[micProblem]) : !myMedia.micActivated ? t('controls.micActivate') : myMedia.micMuted ? t('controls.micUnmute') : t('controls.micMute');
+  const cameraLabel = !canStream ? t('controls.noStreamPermission') : cameraOn ? t('controls.cameraOff') : t('controls.cameraOn');
+  const shareLabel = !canStream ? t('controls.noStreamPermission') : sharing ? t('controls.shareStop') : t('controls.shareStart');
 
   return (
     <div
@@ -90,12 +96,13 @@ export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(fu
         <div className="relative">
           <Tooltip>
             <TooltipTrigger
-              onClick={() => { void (myMedia.micActivated ? toggleMicMuted() : activateMic()); }}
+              onClick={() => { if (canSpeak) void (myMedia.micActivated ? toggleMicMuted() : activateMic()); }}
               aria-label={micLabel}
-              className={cn(BAR_BUTTON, 'relative', myMedia.micMuted || micProblem ? BAR_BUTTON_RED : BAR_BUTTON_NEUTRAL)}
+              aria-disabled={!canSpeak || undefined}
+              className={cn(BAR_BUTTON, 'relative', !canSpeak ? BAR_BUTTON_LOCKED : myMedia.micMuted || micProblem ? BAR_BUTTON_RED : BAR_BUTTON_NEUTRAL)}
             >
-              {myMedia.micMuted ? <MicrophoneSlashIcon size="100%" weight={iconWeight(true)} className={BAR_ICON} /> : <MicrophoneIcon size="100%" className={BAR_ICON} />}
-              {micProblem && <span aria-hidden className="absolute right-0.5 top-0.5 h-2.5 w-2.5 rounded-full border-2 border-black bg-red" />}
+              {myMedia.micMuted || !canSpeak ? <MicrophoneSlashIcon size="100%" weight={iconWeight(true)} className={BAR_ICON} /> : <MicrophoneIcon size="100%" className={BAR_ICON} />}
+              {micProblem && canSpeak && <span aria-hidden className="absolute right-0.5 top-0.5 h-2.5 w-2.5 rounded-full border-2 border-black bg-red" />}
             </TooltipTrigger>
             <TooltipContent>{micLabel}</TooltipContent>
           </Tooltip>
@@ -119,13 +126,14 @@ export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(fu
         <div className="relative">
           <Tooltip>
             <TooltipTrigger
-              onClick={() => { void (cameraOn ? stopCamera() : startCamera()); }}
-              aria-label={cameraOn ? t('controls.cameraOff') : t('controls.cameraOn')}
-              className={cn(BAR_BUTTON, cameraOn ? BAR_BUTTON_GREEN : BAR_BUTTON_NEUTRAL)}
+              onClick={() => { if (canStream || cameraOn) void (cameraOn ? stopCamera() : startCamera()); }}
+              aria-label={cameraLabel}
+              aria-disabled={(!canStream && !cameraOn) || undefined}
+              className={cn(BAR_BUTTON, cameraOn ? BAR_BUTTON_GREEN : !canStream ? BAR_BUTTON_LOCKED : BAR_BUTTON_NEUTRAL)}
             >
               {cameraOn ? <VideoCameraIcon size={22} weight={iconWeight(true)} className={BAR_ICON} /> : <VideoCameraSlashIcon size={22} className={BAR_ICON} />}
             </TooltipTrigger>
-            <TooltipContent>{cameraOn ? t('controls.cameraOff') : t('controls.cameraOn')}</TooltipContent>
+            <TooltipContent>{cameraLabel}</TooltipContent>
           </Tooltip>
           <CameraQuickMenu />
         </div>
@@ -133,13 +141,14 @@ export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(fu
         <div className="relative">
           <Tooltip>
             <TooltipTrigger
-              onClick={() => { void (sharing ? stopSharing() : startSharing()); }}
-              aria-label={sharing ? t('controls.shareStop') : t('controls.shareStart')}
-              className={cn(BAR_BUTTON, sharing ? BAR_BUTTON_GREEN : BAR_BUTTON_NEUTRAL)}
+              onClick={() => { if (canStream || sharing) void (sharing ? stopSharing() : startSharing()); }}
+              aria-label={shareLabel}
+              aria-disabled={(!canStream && !sharing) || undefined}
+              className={cn(BAR_BUTTON, sharing ? BAR_BUTTON_GREEN : !canStream ? BAR_BUTTON_LOCKED : BAR_BUTTON_NEUTRAL)}
             >
               <MonitorIcon size={22} weight={iconWeight(sharing)} className={BAR_ICON} />
             </TooltipTrigger>
-            <TooltipContent>{sharing ? t('controls.shareStop') : t('controls.shareStart')}</TooltipContent>
+            <TooltipContent>{shareLabel}</TooltipContent>
           </Tooltip>
           <ScreenShareQuickMenu />
         </div>

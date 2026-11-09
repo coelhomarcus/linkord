@@ -9,6 +9,7 @@ import { useRoom } from '@/state/RoomContext';
 import { conversationTitle } from '@/features/conversations/conversationUtils';
 import { useParticipantMedia } from './useLiveKitTrack';
 import { CallPingIndicator } from './CallPingIndicator';
+import { useCallPublishRights } from './publishRights';
 import { cn } from '@/shared/lib/utils';
 import { ROUTES } from '@/shared/lib/routes';
 import { StatusMenu } from '@/features/status/StatusMenu';
@@ -26,6 +27,8 @@ const DOCK_BUTTON = 'grid size-8 flex-none place-items-center rounded-lg transit
 const DOCK_NEUTRAL = 'text-text-secondary hover:bg-fill-hover hover:text-text-primary';
 const DOCK_RED = 'bg-red/12 text-red-text hover:bg-red/20';
 const DOCK_GREEN = 'bg-green-solid text-white hover:bg-green-hover';
+// turned off by the channel's permissions: still focusable, so its tooltip says why
+const DOCK_LOCKED = 'cursor-not-allowed text-text-muted opacity-50';
 
 function formatCallDuration(startedAt: number, now: number): string {
   const total = Math.max(0, Math.floor((now - startedAt) / 1000));
@@ -87,10 +90,14 @@ export function CallDock({ onReturnToCall, onOpenProfile, layout = 'wide', onNav
   const cameraOn = state.me.cameraOn;
   const sharing = state.me.sharing;
   const micProblem = myMedia.micActivated ? null : state.micProblem;
-  const micLabel = inCall
+  const { canSpeak, canStream } = useCallPublishRights();
+  const micLocked = inCall && !canSpeak;
+  const micLabel = micLocked ? t('controls.noSpeakPermission') : inCall
     ? (micProblem ? t(MIC_PROBLEM_LABEL_KEY[micProblem]) : !myMedia.micActivated ? t('controls.micActivate') : myMedia.micMuted ? t('controls.micUnmute') : t('controls.micMute'))
     : preferMuted ? t('controls.micUnmute') : t('controls.micMute');
-  const micMuted = inCall ? (myMedia.micMuted || !!micProblem) : preferMuted;
+  const micMuted = inCall ? (myMedia.micMuted || !!micProblem || micLocked) : preferMuted;
+  const cameraLabel = !canStream ? t('controls.noStreamPermission') : cameraOn ? t('controls.cameraOff') : t('controls.cameraOn');
+  const shareLabel = !canStream ? t('controls.noStreamPermission') : sharing ? t('controls.shareStop') : t('controls.shareStart');
   const title = conversationTitle(
     conversations.find((conversation) => conversation.id === activeCallConversationId) ?? null,
     state.me.userId,
@@ -98,6 +105,7 @@ export function CallDock({ onReturnToCall, onOpenProfile, layout = 'wide', onNav
   );
 
   function onMic() {
+    if (micLocked) return;
     if (!inCall) {
       setPreferMuted(!preferMuted);
       return;
@@ -185,7 +193,8 @@ export function CallDock({ onReturnToCall, onOpenProfile, layout = 'wide', onNav
           <TooltipTrigger
             onClick={onMic}
             aria-label={micLabel}
-            className={cn(DOCK_BUTTON, micMuted ? DOCK_RED : DOCK_NEUTRAL)}
+            aria-disabled={micLocked || undefined}
+            className={cn(DOCK_BUTTON, micLocked ? DOCK_LOCKED : micMuted ? DOCK_RED : DOCK_NEUTRAL)}
           >
             {micMuted ? <MicrophoneSlashIcon size={20} weight={iconWeight(true)} /> : <MicrophoneIcon size={20} />}
           </TooltipTrigger>
@@ -205,23 +214,25 @@ export function CallDock({ onReturnToCall, onOpenProfile, layout = 'wide', onNav
           <>
             <Tooltip>
               <TooltipTrigger
-                onClick={() => { void (cameraOn ? stopCamera() : startCamera()); }}
-                aria-label={cameraOn ? t('controls.cameraOff') : t('controls.cameraOn')}
-                className={cn(DOCK_BUTTON, cameraOn ? DOCK_GREEN : DOCK_NEUTRAL)}
+                onClick={() => { if (canStream || cameraOn) void (cameraOn ? stopCamera() : startCamera()); }}
+                aria-label={cameraLabel}
+                aria-disabled={(!canStream && !cameraOn) || undefined}
+                className={cn(DOCK_BUTTON, cameraOn ? DOCK_GREEN : !canStream ? DOCK_LOCKED : DOCK_NEUTRAL)}
               >
                 {cameraOn ? <VideoCameraIcon size={20} weight={iconWeight(true)} /> : <VideoCameraSlashIcon size={20} />}
               </TooltipTrigger>
-              <TooltipContent side={tipSide}>{cameraOn ? t('controls.cameraOff') : t('controls.cameraOn')}</TooltipContent>
+              <TooltipContent side={tipSide}>{cameraLabel}</TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger
-                onClick={() => { void (sharing ? stopSharing() : startSharing()); }}
-                aria-label={sharing ? t('controls.shareStop') : t('controls.shareStart')}
-                className={cn(DOCK_BUTTON, sharing ? DOCK_GREEN : DOCK_NEUTRAL)}
+                onClick={() => { if (canStream || sharing) void (sharing ? stopSharing() : startSharing()); }}
+                aria-label={shareLabel}
+                aria-disabled={(!canStream && !sharing) || undefined}
+                className={cn(DOCK_BUTTON, sharing ? DOCK_GREEN : !canStream ? DOCK_LOCKED : DOCK_NEUTRAL)}
               >
                 <MonitorIcon size={20} weight={iconWeight(sharing)} />
               </TooltipTrigger>
-              <TooltipContent side={tipSide}>{sharing ? t('controls.shareStop') : t('controls.shareStart')}</TooltipContent>
+              <TooltipContent side={tipSide}>{shareLabel}</TooltipContent>
             </Tooltip>
           </>
         )}

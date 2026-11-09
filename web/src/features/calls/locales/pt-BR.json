@@ -26,7 +26,9 @@
     "statusReconnecting": "Reconectando…",
     "settings": "Ajustes",
     "previousStream": "Transmissão anterior",
-    "nextStream": "Próxima transmissão"
+    "nextStream": "Próxima transmissão",
+    "noSpeakPermission": "Você não tem permissão para falar neste canal",
+    "noStreamPermission": "Você não tem permissão para vídeo e tela neste canal"
   },
   "callSettings": {
     "title": "Exibição da chamada",
@@ -150,7 +152,8 @@
     "pausePreview": "Não foi possível pausar a prévia: {{error}}",
     "resumePreview": "Não foi possível retomar a prévia: {{error}}",
     "joinCall": "Não foi possível conectar à chamada. Verifique sua conexão e tente de novo.",
-    "joinTimeout": "A chamada demorou para conectar. Tente novamente."
+    "joinTimeout": "A chamada demorou para conectar. Tente novamente.",
+    "noStreamPermission": "Você não tem permissão para vídeo e tela neste canal"
   },
   "invite": {
     "button": "Convidar para voz",

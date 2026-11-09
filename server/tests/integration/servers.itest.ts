@@ -12,6 +12,7 @@ import { PERMISSIONS, DEFAULT_EVERYONE_PERMISSIONS } from '../../src/modules/ser
 import { invalidateAllServers } from '../../src/modules/servers/serverAccess.js';
 import { listServersForUser } from '../../src/modules/servers/serverSummaries.js';
 import { handleCallJoin } from '../../src/realtime/socket.js';
+import { setCallConversationId } from '../../src/modules/presence/participants.js';
 import { cleanupParticipant, db, joinNew, makeServerWithMembers, makeUser, memberCount, pool } from './helpers.js';
 
 let app: FastifyInstance;
@@ -290,3 +291,23 @@ describe('role hierarchy: escalation paths (real Postgres)', () => {
   });
 });
 
+describe('a call follows the permissions in force (real Postgres)', () => {
+  it('taking CONNECT away from @everyone takes a plain member out of the voice channel', async () => {
+    const owner = await actor('cp'); const member = await actor('cp');
+    const { serverId, voiceChannelId } = await makeServerWithMembers(owner.id, [member.id]);
+    const m = joinNew(member);
+    try {
+      setCallConversationId(m.participant, voiceChannelId);
+      const everyone = await everyoneOf(serverId);
+      // an unrelated change leaves them where they are
+      assert.equal((await call(owner, 'PATCH', `/api/roles/${everyone.id}`, { color: '#112233' })).status, 200);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      assert.equal(m.participant.callConversationId, voiceChannelId);
+      assert.equal((await call(owner, 'PATCH', `/api/roles/${everyone.id}`, { permissions: everyone.permissions & ~PERMISSIONS.CONNECT })).status, 200);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      assert.equal(m.participant.callConversationId, null);
+    } finally {
+      cleanupParticipant(m.participant);
+    }
+  });
+});

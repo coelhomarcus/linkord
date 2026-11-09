@@ -1,4 +1,4 @@
-import { AccessToken, RoomServiceClient } from 'livekit-server-sdk';
+import { AccessToken, RoomServiceClient, TrackSource } from 'livekit-server-sdk';
 import { config } from '../../config/env.js';
 import type { Participant } from '../../types.js';
 import { logger } from '../../lib/logger.js';
@@ -16,7 +16,31 @@ export function roomNameFor(conversationId: string): string {
  * map needed. `metadata` carries the account id so a room's live participants
  * can be mapped back to an account even after their socket is gone (see
  * evictFromCall). */
-export function createToken(p: Participant, roomName: string): Promise<string> {
+/** What a participant may send into a call. A voice channel derives it from
+ * SPEAK and STREAM (modules/calls/callPermissions.ts); a DM call allows both. */
+export interface PublishRights {
+  microphone: boolean;
+  video: boolean;
+}
+
+export const ALL_PUBLISH_RIGHTS: PublishRights = { microphone: true, video: true };
+
+export function publishSources(rights: PublishRights): TrackSource[] {
+  return [
+    ...(rights.microphone ? [TrackSource.MICROPHONE] : []),
+    ...(rights.video ? [TrackSource.CAMERA, TrackSource.SCREEN_SHARE, TrackSource.SCREEN_SHARE_AUDIO] : []),
+  ];
+}
+
+/** The publish part of a grant. Enforced by the SFU itself, so a client that
+ * ignores its disabled buttons still cannot send what it may not. An empty
+ * source list means "everything" to LiveKit, so no source is canPublish false. */
+function publishGrant(rights: PublishRights): { canPublish: boolean; canPublishSources: TrackSource[] } {
+  const sources = publishSources(rights);
+  return { canPublish: sources.length > 0, canPublishSources: sources };
+}
+
+export function createToken(p: Participant, roomName: string, rights: PublishRights = ALL_PUBLISH_RIGHTS): Promise<string> {
   const at = new AccessToken(config.LIVEKIT_API_KEY, config.LIVEKIT_API_SECRET, {
     identity: p.id,
     name: p.name,
@@ -26,7 +50,7 @@ export function createToken(p: Participant, roomName: string): Promise<string> {
   at.addGrant({
     room: roomName,
     roomJoin: true,
-    canPublish: true,
+    ...publishGrant(rights),
     canSubscribe: true,
     canPublishData: false,
   });
@@ -47,6 +71,23 @@ function roomService(): RoomServiceClient {
  * on a self-hosted instance that never configured LiveKit at all. */
 export function kickParticipant(roomName: string, identity: string): Promise<void> {
   return roomService().removeParticipant(roomName, identity).then(() => undefined);
+}
+
+/** Changes what a participant already in the room may publish. LiveKit
+ * unpublishes any track whose source is no longer allowed. Every field is
+ * sent: the update replaces the whole permission, and an omitted flag would
+ * read as false (canSubscribe among them). */
+export async function updatePublishRights(
+  roomName: string, identity: string, rights: PublishRights,
+  api: Pick<RoomServiceClient, 'updateParticipant'> = roomService(),
+): Promise<void> {
+  if (!config.LIVEKIT_URL || !config.LIVEKIT_API_KEY) return;
+  await api.updateParticipant(roomName, identity, undefined, {
+    ...publishGrant(rights),
+    canSubscribe: true,
+    canPublishData: false,
+    canUpdateMetadata: false,
+  });
 }
 
 const EVICT_ATTEMPTS = 3;
