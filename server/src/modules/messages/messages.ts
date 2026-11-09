@@ -28,7 +28,7 @@ import * as attachments from '../attachments/attachments.js';
 import { deleteAttachmentOfMessage, deleteForMessage } from '../attachments/attachmentCleanup.js';
 import * as reactions from './reactions.js';
 import { buildReplyRef, normalizeReplyRef, type ReplyRef } from './replyRef.js';
-import type { LinkPreviewResult } from '../link-preview/linkPreview.js';
+import { withProxiedImages, type LinkPreviewResult } from '../link-preview/linkPreview.js';
 import { backfillEmbeds, needsEmbeds, storedEmbedsFor, suppressedLinksFor, unfurlMessage } from './messageEmbeds.js';
 import { previewableLinks } from '../link-preview/messageLinks.js';
 import { storedRichEmbeds, type RichEmbed } from '../bots/richEmbeds.js';
@@ -225,7 +225,7 @@ export function rowToMessage(row: MessageWithAuthor, attachments?: Attachment[],
   if (richEmbeds.length) out.richEmbeds = richEmbeds;
   if (row.editedAt) out.editedAt = row.editedAt.getTime();
   const embeds = storedEmbedsFor(row.text, row.embeds, row.suppressedEmbeds);
-  if (embeds.length) out.embeds = embeds;
+  if (embeds.length) out.embeds = embeds.map(withProxiedImages);
   const suppressed = suppressedLinksFor(row.text, row.suppressedEmbeds);
   if (suppressed.length) out.suppressedEmbeds = suppressed;
   if (row.kind === 'server_invite') {

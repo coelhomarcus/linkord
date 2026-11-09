@@ -75,7 +75,7 @@ describe('games widgets (real Postgres)', () => {
     assert.deepEqual(body.widgets.map((widget: { type: string }) => widget.type), ['igdb-liked-games', 'github-profile', 'igdb-favorite-game']);
     assert.deepEqual(names(body.widgets[0].data.items), ['Game 3', 'Game 1', 'Game 2']);
     assert.equal(body.widgets[0].connection, null);
-    assert.deepEqual(body.widgets[0].data.items[0], { ...game(3), url: 'https://www.igdb.com/games/game-3', imageUrl: 'https://images.igdb.com/igdb/image/upload/t_cover_big/co1abc.jpg' });
+    assert.deepEqual(body.widgets[0].data.items[0], { ...game(3), url: 'https://www.igdb.com/games/game-3', imageUrl: '/api/media-proxy/igdb/cover_big/co1abc' });
     assert.equal(body.available.length, 6);
     const viewed = await app.inject({ method: 'GET', url: `/api/users/${owner.id}/wall`, headers: await headers(friend.id) });
     assert.deepEqual(viewed.json().widgets.map((widget: { type: string }) => widget.type), ['igdb-liked-games', 'github-profile', 'igdb-favorite-game']);

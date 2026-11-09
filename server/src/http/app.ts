@@ -14,6 +14,7 @@ import { registerConnectionRoutes } from '../modules/connections/connections.js'
 import { registerProfileRoutes } from '../modules/profile/profile.js';
 import { registerMediaRoutes } from '../modules/attachments/media.js';
 import { registerLinkPreviewRoutes } from '../modules/link-preview/linkPreview.js';
+import { registerMediaProxyRoutes } from '../modules/media-proxy/mediaProxy.js';
 import { registerFriendshipRoutes } from '../modules/friendships/friendships.js';
 import { registerBlockRoutes } from '../modules/blocks/blocks.js';
 import { registerUserRoutes } from '../modules/users/usersRoutes.js';
@@ -112,6 +113,7 @@ export function createApp(): FastifyInstance {
   registerConnectionRoutes(fastify);
   registerMediaRoutes(fastify);
   registerLinkPreviewRoutes(fastify);
+  registerMediaProxyRoutes(fastify);
   registerGifRoutes(fastify);
   registerGameRoutes(fastify);
   registerFriendshipRoutes(fastify, { onlineUserIds: listVisibleOnlineUserIds });

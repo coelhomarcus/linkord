@@ -3,7 +3,9 @@ import http from 'node:http';
 import type { AddressInfo, LookupFunction } from 'node:net';
 import sharp from 'sharp';
 import assert from 'node:assert/strict';
-import { extractMetaTags, extractFavicon, safeResolve, decodeHtmlEntities, emptyResult, isRateLimited, RATE_LIMIT_MAX, fetchLinkPreviewData } from '../../../src/modules/link-preview/linkPreview.js';
+import crypto from 'node:crypto';
+import { extractMetaTags, extractFavicon, safeResolve, decodeHtmlEntities, emptyResult, isRateLimited, RATE_LIMIT_MAX, fetchLinkPreviewData, withProxiedImages } from '../../../src/modules/link-preview/linkPreview.js';
+import { setMediaProxyKey } from '../../../src/modules/media-proxy/mediaProxyUrls.js';
 
 describe('extractMetaTags / extractFavicon', () => {
   const html = `<html><head>
@@ -230,5 +232,20 @@ describe('fetchLinkPreviewData — one fetch per url at a time', () => {
     // dedupe-user-3 is at its limit, but nothing new is fetched for it
     const joined = await fetchLinkPreviewData(`${base}/joined`, 'dedupe-user-3', allowLoopback);
     assert.equal(joined, await first);
+  });
+});
+
+describe('withProxiedImages', () => {
+  before(() => setMediaProxyKey(crypto.randomBytes(32)));
+  after(() => setMediaProxyKey(null));
+
+  test('sends the picture and the favicon through our proxy, and nothing else', () => {
+    const stored = { ...emptyResult('https://example.com/post'), title: 'Post', image: 'https://example.com/og.png', video: 'https://example.com/v.mp4', favicon: 'http://example.com/favicon.ico' };
+    const sent = withProxiedImages(stored);
+    assert.match(sent.image!, /^\/api\/media-proxy\/preview\//);
+    assert.match(sent.favicon!, /^\/api\/media-proxy\/preview\//);
+    assert.equal(sent.video, 'https://example.com/v.mp4');
+    assert.equal(sent.url, 'https://example.com/post');
+    assert.equal(stored.image, 'https://example.com/og.png', 'what is stored keeps the original');
   });
 });

@@ -1,5 +1,5 @@
 import { ConnectionFetchError } from '../../integrations/connectionHttp.js';
-import { igdbCoverUrl, type IgdbClient } from '../../integrations/igdb/igdb.js';
+import type { IgdbClient } from '../../integrations/igdb/igdb.js';
 import { allow, retryAfterMs } from '../../realtime/floodControl.js';
 import { toGameItem } from './gameLists.js';
 import type { GameItem } from './types.js';
@@ -48,7 +48,7 @@ export function createGameSearch({ client, reserve, postpone, now = Date.now }: 
   async function fetchFromIgdb(query: string): Promise<GameItem[]> {
     try {
       await reserve();
-      const games = (await client.searchGames(query)).map((game) => ({ ...toGameItem(game), imageUrl: game.coverImageId ? igdbCoverUrl(game.coverImageId, 'cover_small') : null }));
+      const games = (await client.searchGames(query)).map((game) => toGameItem(game, 'cover_small'));
       if (cache.size >= CACHE_MAX_ENTRIES) cache.delete(cache.keys().next().value!);
       cache.set(query, { games, expiresAt: now() + CACHE_TTL_MS });
       return games;

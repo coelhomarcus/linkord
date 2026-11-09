@@ -16,6 +16,7 @@ import { SweepInProgressError, sweepOrphans } from '../modules/attachments/orpha
 import { drainOutbox } from '../modules/notifications/outboxWorker.js';
 import { OUTBOX_POLL_MS } from '../modules/notifications/notificationsPolicy.js';
 import { RetentionSweepInProgressError, sweepRetention } from '../modules/retention/retentionSweeper.js';
+import { loadMediaProxyKey } from '../modules/media-proxy/mediaProxyKey.js';
 import { logger } from '../lib/logger.js';
 
 const log = logger.child({ component: 'process' });
@@ -80,6 +81,14 @@ export async function bootstrap(): Promise<void> {
   const unwritable = await unwritableUploadDirs();
   if (unwritable.length > 0) {
     log.error('uploads folder is not writable: attachments and voice messages will fail. On the host, give the mounted folder to uid 1000 (chown -R 1000:1000 <host path>); see "Folders and permissions" in docs/DEPLOY.md', undefined, { dirs: unwritable, uid: process.getuid?.() });
+  }
+
+  // before the first payload goes out: every proxied picture address in it is signed with this key
+  try {
+    await loadMediaProxyKey();
+  } catch (err) {
+    log.error('failed to load the media proxy key', err);
+    process.exit(1);
   }
 
   await restoreCalls();

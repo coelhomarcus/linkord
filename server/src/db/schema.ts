@@ -850,3 +850,11 @@ export const connectionSyncLimits = pgTable('connection_sync_limits', {
   provider: varchar('provider', { length: 16 }).primaryKey(),
   nextRequestAt: timestamp('next_request_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+/** Keys the instance makes for itself on first boot, so a deploy needs no
+ * extra configuration and every restart (or instance) signs the same way. */
+export const instanceSecrets = pgTable('instance_secrets', {
+  name: varchar('name', { length: 32 }).primaryKey(),
+  value: text('value').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});

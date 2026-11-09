@@ -28,7 +28,7 @@ The variables a production instance needs:
 | `PUSH_VAPID_PUBLIC_KEY`, `PUSH_VAPID_PRIVATE_KEY`, `PUSH_VAPID_SUBJECT` | All three or none. Generate them once (`npx web-push generate-vapid-keys`) and keep them: new keys break every existing subscription. |
 | `RESEND_API_KEY`, `RESEND_FROM_EMAIL` | Optional. Without them, password recovery and email changes are unavailable. |
 
-Optional services (KLIPY, MyAnimeList, IGDB) and every limit are in `.env.example`. After the first start, make yourself an administrator: `node server/dist/scripts/adminRole.js grant <username>` inside the container (`npm run admin:grant -- <username>` from a checkout).
+Optional services (KLIPY, MyAnimeList, IGDB) and every limit are in `.env.example`. Covers, GitHub avatars, link preview pictures and YouTube thumbnails are downloaded by the server and served from its own domain, which costs outbound bandwidth and up to 64 MB of memory for the cache; `MEDIA_PROXY=0` sends browsers to those services instead ([media proxy](INTEGRATIONS.md#media-proxy)). After the first start, make yourself an administrator: `node server/dist/scripts/adminRole.js grant <username>` inside the container (`npm run admin:grant -- <username>` from a checkout).
 
 ## Docker Compose
 
@@ -132,6 +132,7 @@ Run a single container. The server keeps live state in its own memory (who is on
 - **Attachments and voice messages fail, profile pictures work.** `POST /api/attachments/init` answers 500 and the log shows `EACCES: permission denied, mkdir '/app/uploads/tmp/…'`. A folder under the uploads mount is still owned by root: see [Folders and permissions](#folders-and-permissions). The 429s that follow are the browser retrying.
 - **Backups fail with `EACCES`.** The same, for the folder mounted on `/app/backups`, or nothing is mounted there.
 - **Calls do not connect, chat works.** Check `LIVEKIT_URL`: it must be the address browsers use, and the browser console names it in a Content-Security-Policy error if the policy blocked it. Without `LIVEKIT_*` the server logs `LiveKit is not configured` at startup.
+- **Covers, avatars or link preview pictures are missing.** The server downloads them itself, so the container needs outbound HTTPS to `images.igdb.com`, `cdn.myanimelist.net`, `avatars.githubusercontent.com`, `i.ytimg.com` and the sites people link to. The browser's network tab shows the reason on the `/api/media-proxy/...` request (`502 image_unavailable`, `429 rate_limited`, `415 not_an_image`).
 - **"Origem não permitida." (403) on every change, or the socket refuses to connect.** That is the app's own Portuguese error for a request from an origin it does not know. `APP_URL` must match the address in the browser; other addresses go in `ALLOWED_ORIGINS`.
 - **Signing in seems to work, but the next page is signed out.** The session cookie is marked `Secure` while the browser uses a plain `http://` address, so the browser drops it. Serve the app over HTTPS, or leave `COOKIE_SECURE=auto` instead of `1`.
 - **The server refuses to start** with a message about `PUSH_VAPID_*` or `APP_URL`: Web Push needs all three keys and an HTTPS `APP_URL`.
