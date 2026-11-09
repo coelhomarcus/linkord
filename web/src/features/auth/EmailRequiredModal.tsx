@@ -1,5 +1,5 @@
 import { CheckIcon, CircleNotchIcon, EnvelopeIcon, SignOutIcon } from '@phosphor-icons/react';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { FormEvent } from 'react';
 
@@ -10,6 +10,7 @@ import { Button } from '@/shared/ui/primitives/button';
 import { Input } from '@/shared/ui/primitives/input';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/ui/primitives/dialog';
 import { OTPInput, type OTPStatus } from '@/shared/ui/motion/otp-input';
+import { useTransientFlag } from '@/shared/hooks/useTransientFlag';
 import { EMAIL_RE, MAX_EMAIL_LEN } from './credentialRules';
 
 /** Blocks an account with no email until it proves it owns one. Linking goes through the same
@@ -25,15 +26,9 @@ export function EmailRequiredModal() {
   const [otpStatus, setOtpStatus] = useState<OTPStatus>('idle');
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const [resent, setResent] = useState(false);
+  const [resent, flashResent, clearResent] = useTransientFlag();
   // Typing the sixth digit and clicking confirm can both fire before `pending` has rendered.
   const confirmingRef = useRef(false);
-
-  useEffect(() => {
-    if (!resent) return;
-    const timeout = window.setTimeout(() => setResent(false), 2200);
-    return () => window.clearTimeout(timeout);
-  }, [resent]);
 
   async function handleRequest(event: FormEvent) {
     event.preventDefault();
@@ -59,7 +54,7 @@ export function EmailRequiredModal() {
     setPending(true);
     try {
       await requestEmailChange(targetEmail, password);
-      setResent(true);
+      flashResent();
     } catch (err) {
       setError(describeApiError(err, 'auth:emailRequired.resendFailed'));
     } finally {
@@ -91,7 +86,7 @@ export function EmailRequiredModal() {
     setTargetEmail(null);
     setCode('');
     setError(null);
-    setResent(false);
+    clearResent();
     setOtpStatus('idle');
   }
 

@@ -10,6 +10,7 @@ import { confirmEmailChange, requestEmailChange } from '@/shared/api/api';
 import { describeApiError } from '@/shared/api/errorText';
 import { EMAIL_RE, MAX_EMAIL_LEN } from '@/features/auth/credentialRules';
 import { OTPInput, type OTPStatus } from '@/shared/ui/motion/otp-input';
+import { useTransientFlag } from '@/shared/hooks/useTransientFlag';
 import { cn } from '@/shared/lib/utils';
 import { SETTINGS_ACTION_BUTTON, SettingsRow } from '@/shared/ui/settings-layout';
 
@@ -54,7 +55,7 @@ export function EmailSettings({ currentEmail }: { currentEmail: string | null })
   const [otpStatus, setOtpStatus] = useState<OTPStatus>('idle');
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const [resent, setResent] = useState(false);
+  const [resent, flashResent] = useTransientFlag();
   // `pending` alone isn't enough to stop onComplete (typing the 6th digit)
   // and the "Confirmar e-mail" click from both firing handleConfirm in the
   // same tick, before the setPending(true) render has committed.
@@ -65,12 +66,6 @@ export function EmailSettings({ currentEmail }: { currentEmail: string | null })
     const timeout = window.setTimeout(() => setPhase('view'), 2500);
     return () => window.clearTimeout(timeout);
   }, [phase]);
-
-  useEffect(() => {
-    if (!resent) return;
-    const timeout = window.setTimeout(() => setResent(false), 2200);
-    return () => window.clearTimeout(timeout);
-  }, [resent]);
 
   function startEdit() {
     setEmail(currentEmail ?? '');
@@ -111,7 +106,7 @@ export function EmailSettings({ currentEmail }: { currentEmail: string | null })
     setPending(true);
     try {
       await requestEmailChange(targetEmail, password);
-      setResent(true);
+      flashResent();
     } catch (err) {
       setError(describeApiError(err, 'settings:email.errors.resendFailed'));
     } finally {

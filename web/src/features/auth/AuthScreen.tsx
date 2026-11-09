@@ -1,5 +1,5 @@
 import { ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon, CircleNotchIcon, EnvelopeIcon, EyeIcon, EyeSlashIcon, KeyIcon, LockIcon, ShieldCheckIcon, SignInIcon, UserIcon, UserPlusIcon } from '@phosphor-icons/react';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { FormEvent } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
@@ -16,6 +16,7 @@ import { MIN_PASSWORD_LEN } from './credentialRules';
 import { EASE_OUT } from '@/shared/lib/ease';
 import { OTPInput, type OTPStatus } from '@/shared/ui/motion/otp-input';
 import { ERROR_CODES } from '@/shared/api/errorCodes';
+import { useTransientFlag } from '@/shared/hooks/useTransientFlag';
 
 function PasswordToggle({ visible, onToggle }: { visible: boolean; onToggle: () => void }) {
   const { t } = useTranslation('auth');
@@ -36,15 +37,9 @@ function TwoFactorStep({ challenge, onBack }: { challenge: LoginChallenge; onBac
   const [status, setStatus] = useState<OTPStatus>('idle');
   const [message, setMessage] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const [resent, setResent] = useState(false);
+  const [resent, flashResent] = useTransientFlag();
   // typing the 6th digit and clicking the button can both submit before `pending` renders
   const submittingRef = useRef(false);
-
-  useEffect(() => {
-    if (!resent) return;
-    const timeout = window.setTimeout(() => setResent(false), 2200);
-    return () => window.clearTimeout(timeout);
-  }, [resent]);
 
   async function submit(nextCode = code) {
     if (nextCode.length !== 6 || submittingRef.current) return;
@@ -72,7 +67,7 @@ function TwoFactorStep({ challenge, onBack }: { challenge: LoginChallenge; onBac
       await resendLoginCode(challenge.challenge);
       setCode('');
       setStatus('idle');
-      setResent(true);
+      flashResent();
     } catch (err) {
       if (err instanceof ApiError && err.code === ERROR_CODES.login_expired) { onBack(true); return; }
       setMessage(describeApiError(err, 'auth:twoFactor.resendFailed'));
