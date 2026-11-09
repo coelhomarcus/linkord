@@ -19,6 +19,11 @@ describe('messagePermissions', () => {
     expect(messagePermissions(msg(), { userId: 'autor', role: 'user' })).toEqual({ react: true, reply: true, copy: true, edit: true, delete: true, report: false, removeAttachment: true, removeEmbed: true });
   });
 
+  it('own sticker: reacted to, replied to and deleted, never edited or copied', () => {
+    const sticker = msg({ text: '', sticker: { id: 's', name: 'abraço', description: '', animated: false } });
+    expect(messagePermissions(sticker, { userId: 'autor', role: 'user' })).toMatchObject({ react: true, reply: true, delete: true, edit: false, copy: false });
+  });
+
   it("someone else's message: can report, cannot edit or delete", () => {
     expect(messagePermissions(msg(), { userId: 'eu', role: 'user' })).toMatchObject({ edit: false, delete: false, report: true });
   });

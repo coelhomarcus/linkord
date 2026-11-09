@@ -7,6 +7,10 @@ describe('messagePreviewText', () => {
   it('a voice message without a caption reads as one', () => {
     expect(messagePreviewText({ text: '', attachments: [{ id: 'a', name: 'v.webm', mime: 'audio/webm', size: 1, voice: { durationMs: 1000, waveform: 'AA==' } }] })).toBe('🎤 Mensagem de voz');
   });
+  it('a sticker reads as its name, or as a sticker once it was deleted', () => {
+    expect(messagePreviewText({ text: '', sticker: { id: 'x', name: 'abraço', description: '', animated: false } })).toBe('Figurinha: abraço');
+    expect(messagePreviewText({ text: '', sticker: null })).toBe('Figurinha');
+  });
   it('a GIF message reads as "GIF", not as its URL', () => expect(messagePreviewText({ text: 'https://static.klipy.com/ii/abc/md.webp' })).toBe('GIF'));
   it('names the server in an invitation', () => {
     expect(messagePreviewText({ text: '', kind: 'server_invite', invitation: { serverName: 'Squad' } as never })).toBe('Convite para o servidor Squad');

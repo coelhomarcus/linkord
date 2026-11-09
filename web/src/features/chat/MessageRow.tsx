@@ -9,6 +9,8 @@ import { MessageMedia } from './MessageMedia';
 import { InviteCard } from '@/features/chat/InviteCard';
 import { CallInviteCard } from '@/features/chat/CallInviteCard';
 import { ChatMessageText } from '@/features/chat/ChatMessageText';
+import { stickerLabel } from './messagePreview';
+import { StickerMessage } from '@/features/stickers/StickerMessage';
 import { RichEmbedCard } from './RichEmbedCard';
 import { InviteLinkCard } from '@/features/servers/InviteLinkCard';
 import { inviteCodesInText } from '@/features/servers/inviteCode';
@@ -307,6 +309,7 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
                 {replyAuthor ? `@${replyAuthor.displayName}` : deletedAuthorName}
               </span>
               {message.replyTo.text && <span className="truncate">{customEmojisAsText(message.replyTo.text)}</span>}
+              {message.replyTo.sticker !== undefined && <span className="truncate">{stickerLabel(message.replyTo.sticker)}</span>}
             </button>
           )}
 
@@ -333,6 +336,11 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
             ) : isInvite ? (
               <InviteCard invitation={message.invitation} />
             ) : (
+            message.sticker !== undefined ? (
+              <div className={cn(pending && pending.state !== 'failed' && 'opacity-60')}>
+                <StickerMessage sticker={message.sticker} />
+              </div>
+            ) : (
             <>
               <div className={cn('message-press-text text-body leading-[1.375rem] text-text-secondary', pending && pending.state !== 'failed' && 'opacity-60')}>
                 <ChatMessageText
@@ -351,6 +359,7 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
                 <MessageMedia attachments={message.attachments} />
               ) : null}
             </>
+            )
             )
           )}
         </div>

@@ -42,7 +42,7 @@ export const canMoveOutOf = (channel: { permissions?: number }, meIsAdmin: boole
 export const canMoveInto = (channel: { permissions?: number }, meIsAdmin: boolean) =>
   meIsAdmin || canInChannel(channel, PERMISSIONS.CONNECT);
 
-export type ServerSettingsTab = 'overview' | 'emojis' | 'soundboard' | 'members' | 'roles' | 'invites' | 'auditLog' | 'bans' | 'delete';
+export type ServerSettingsTab = 'overview' | 'emojis' | 'stickers' | 'soundboard' | 'members' | 'roles' | 'invites' | 'auditLog' | 'bans' | 'delete';
 
 /** The server settings pages this member may open, in the column's order.
  * The modal draws exactly these and the menu offers "settings" only when
@@ -52,6 +52,7 @@ export function serverSettingsTabs(server: ServerSummary, myUserId: string | nul
   const pages: [ServerSettingsTab, boolean][] = [
     ['overview', may(PERMISSIONS.MANAGE_SERVER)],
     ['emojis', may(PERMISSIONS.CREATE_EXPRESSIONS) || may(PERMISSIONS.MANAGE_EXPRESSIONS)],
+    ['stickers', may(PERMISSIONS.CREATE_EXPRESSIONS) || may(PERMISSIONS.MANAGE_EXPRESSIONS)],
     ['soundboard', may(PERMISSIONS.CREATE_EXPRESSIONS) || may(PERMISSIONS.MANAGE_EXPRESSIONS)],
     ['members', may(PERMISSIONS.KICK_MEMBERS) || may(PERMISSIONS.BAN_MEMBERS) || may(PERMISSIONS.MANAGE_ROLES)],
     ['roles', may(PERMISSIONS.MANAGE_ROLES)],
