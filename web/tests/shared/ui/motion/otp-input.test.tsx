@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { useState } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { OTPInput } from '@/shared/ui/motion/otp-input';
+import { OTPInput, type OTPStatus } from '@/shared/ui/motion/otp-input';
 
 describe('OTPInput', () => {
   it('fills all six slots and fires onComplete once', async () => {
@@ -23,6 +24,31 @@ describe('OTPInput', () => {
 
     expect(screen.getByText('Código inválido.')).toBeInTheDocument();
     expect(input).toHaveAttribute('aria-invalid', 'true');
+  });
+
+  it('starts a new code when typing after a rejected one', async () => {
+    const user = userEvent.setup();
+    const completed: string[] = [];
+    function Harness() {
+      const [value, setValue] = useState('');
+      const [status, setStatus] = useState<OTPStatus>('idle');
+      return (
+        <OTPInput
+          value={value}
+          status={status}
+          onChange={(next) => { setValue(next); setStatus('idle'); }}
+          onComplete={(next) => { completed.push(next); setStatus('error'); }}
+          aria-label="Código"
+        />
+      );
+    }
+    render(<Harness />);
+
+    await user.click(screen.getByLabelText('Código'));
+    await user.keyboard('000000');
+    await user.keyboard('123456');
+
+    expect(completed).toEqual(['000000', '123456']);
   });
 
   it('shows the success message', () => {

@@ -95,8 +95,11 @@ export function OTPInput({
   const insert = (raw: string, from = active) => {
     const digits = raw.replace(/\D/g, "");
     if (!digits) return;
-    const next = [...slots];
-    let index = from;
+    // a rejected code fills every slot with the caret on the last one: typing a new code there
+    // would only overwrite its last digit, so it starts over instead
+    const restart = status === "error" && slots.every((char) => char !== "");
+    const next = restart ? Array<string>(length).fill("") : [...slots];
+    let index = restart ? 0 : from;
     for (const digit of digits) {
       if (index >= length) break;
       next[index] = digit;
