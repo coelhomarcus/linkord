@@ -5,15 +5,26 @@ import { useEmojiData } from '@/features/emoji/emojiData';
 import { suggestShortcodes, withSkinTone } from '@/features/emoji/emojiSearch';
 import { noteExpressionUse, useFrequentExpressions } from '@/features/emoji/frequentExpressions';
 import { useSkinTone } from '@/features/emoji/skinTone';
+import { useMyEmojis } from '@/features/emoji/myEmojis';
+import { emojisByName } from '@/features/emoji/customEmojiText';
+import { emojiImageUrl } from '@/features/emoji/serverEmojisApi';
 import { completeClosedShortcode, emojiOptionId, getEmojiQuery, insertAtQuery, type EmojiQuery, type TextEdit } from './emojiAutocomplete';
 import type { EmojiSuggestionItem } from './EmojiSuggestions';
 
 const MAX_SUGGESTIONS = 8;
 
+interface EmojiAutocompleteOptions {
+  accountId: string | null;
+  /** the conversation's server: its emojis win a name shared with another's */
+  serverId: string | null;
+  serverName: (serverId: string) => string | undefined;
+}
+
 /** The composer's ":shortcode" suggestions: what the list shows, the keys it
  * takes over while open, and the edits a pick or a closing ":" makes. The
- * caller owns the text and applies the edits. */
-export function useEmojiAutocomplete(accountId: string | null) {
+ * caller owns the text and applies the edits. Also what a typed `:name:` of
+ * a server emoji is sent as (`byName`, for encodeCustomEmojis). */
+export function useEmojiAutocomplete({ accountId, serverId, serverName }: EmojiAutocompleteOptions) {
   const listId = useId();
   const [query, setQuery] = useState<EmojiQuery | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -21,12 +32,17 @@ export function useEmojiAutocomplete(accountId: string | null) {
   const data = useEmojiData(query !== null);
   const frequent = useFrequentExpressions(accountId, 'emojis', query !== null);
   const skinTone = useSkinTone();
+  // loaded with the composer, not with the list: a ":name:" typed in full
+  // must already know what it is when the message goes out
+  const myEmojis = useMyEmojis(accountId);
+  const byName = useMemo(() => emojisByName(myEmojis.servers, serverId), [myEmojis.servers, serverId]);
 
   const items = useMemo<EmojiSuggestionItem[]>(() => {
-    if (!query || !data) return [];
-    return suggestShortcodes(query.query, data, frequent, MAX_SUGGESTIONS, skinTone)
-      .map((s) => ({ key: s.key, shortcode: s.shortcode, emoji: s.emoji }));
-  }, [query, data, frequent, skinTone]);
+    if (!query) return [];
+    return suggestShortcodes(query.query, data, frequent, MAX_SUGGESTIONS, skinTone, byName).map((s) => (s.custom
+      ? { key: s.key, shortcode: s.shortcode, imageUrl: emojiImageUrl(s.custom.id), detail: serverName(s.custom.serverId) }
+      : { key: s.key, shortcode: s.shortcode, emoji: s.emoji }));
+  }, [query, data, frequent, skinTone, byName, serverName]);
   const open = query !== null && items.length > 0;
   const active = Math.min(activeIndex, Math.max(0, items.length - 1));
 
@@ -73,6 +89,7 @@ export function useEmojiAutocomplete(accountId: string | null) {
   }
 
   return {
+    byName,
     open,
     listId,
     query: query?.query ?? '',

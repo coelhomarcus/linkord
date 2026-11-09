@@ -14,6 +14,7 @@ import { createdFields, diffFields, recordServerAudit } from '../servers/serverA
 import { toSocialUser, type SocialUser } from '../users/users.js';
 import * as floodControl from '../../realtime/floodControl.js';
 import { encodeEmoji, MAX_EMOJI_UPLOAD_BYTES } from './emojiFile.js';
+import { customEmojiIds, rewriteCustomEmojis } from './customEmojiTokens.js';
 import { logger } from '../../lib/logger.js';
 
 const log = logger.child({ component: 'server-emojis' });
@@ -81,6 +82,14 @@ export async function usableEmojis(userId: string, ids: string[]): Promise<Map<s
     .innerJoin(serverMembers, and(eq(serverMembers.serverId, serverEmojis.serverId), eq(serverMembers.userId, userId)))
     .where(and(inArray(serverEmojis.id, unique), eq(servers.status, 'active')));
   return new Map(rows.map((row) => [row.id, row]));
+}
+
+/** The text as it should be stored when `userId` sends it: the server
+ * emojis they may use kept as tokens, any other as its `:name:`. */
+export async function sanitizeCustomEmojis(text: string, userId: string): Promise<string> {
+  const ids = customEmojiIds(text);
+  if (!ids.length) return text;
+  return rewriteCustomEmojis(text, await usableEmojis(userId, ids));
 }
 
 type ServerParams = { Params: { serverId: string } };
@@ -195,7 +204,8 @@ async function handleRename(request: FastifyRequest<EmojiParams>, reply: Fastify
       return updated;
     });
   } catch (err) {
-    if ((err as { code?: string }).code === '23505') return sendError(reply, 409, 'emoji_name_taken', 'Já existe um emoji com esse nome nesse servidor.');
+    // drizzle wraps the driver's error: unique_violation is on its cause
+    if ((err as { cause?: { code?: string } }).cause?.code === '23505') return sendError(reply, 409, 'emoji_name_taken', 'Já existe um emoji com esse nome nesse servidor.');
     throw err;
   }
   if (!row) return sendError(reply, 404, 'not_found', 'Emoji não encontrado.');
@@ -227,6 +237,22 @@ async function handleDelete(request: FastifyRequest<EmojiParams>, reply: Fastify
   reply.code(204).send();
 }
 
+const MAX_META_IDS = 50;
+
+/** `GET /api/emojis/meta?ids=a,b` — the name of emojis seen somewhere (a
+ * reaction, mostly) by someone who may not be in their server. Never which
+ * server: that stays for its members, who already have it. Ids that no
+ * longer exist are left out. */
+async function handleMeta(request: FastifyRequest<{ Querystring: { ids?: string } }>, reply: FastifyReply): Promise<void> {
+  const sess = await requireSession(request, reply);
+  if (!sess) return;
+  const ids = [...new Set(String(request.query.ids ?? '').split(','))].filter((id) => /^[0-9a-f]{32}$/.test(id)).slice(0, MAX_META_IDS);
+  const rows = ids.length
+    ? await db.select({ id: serverEmojis.id, name: serverEmojis.name, animated: serverEmojis.animated }).from(serverEmojis).where(inArray(serverEmojis.id, ids))
+    : [];
+  sendJson(reply, 200, { emojis: rows });
+}
+
 /** `GET /api/emojis/:emojiId` — open to any signed-in account, member or not:
  * a server's emoji shows up wherever its members use it (another server, a
  * DM), and whoever reads the message must see it. The id is random and
@@ -254,6 +280,7 @@ async function handleFile(request: FastifyRequest<{ Params: { emojiId: string } 
 
 export function registerServerEmojiRoutes(fastify: FastifyInstance): void {
   fastify.get('/api/me/emojis', handleMine);
+  fastify.get('/api/emojis/meta', handleMeta);
   fastify.get('/api/emojis/:emojiId', handleFile);
   fastify.get('/api/servers/:serverId/emojis', handleList);
   fastify.patch('/api/servers/:serverId/emojis/:emojiId', handleRename);

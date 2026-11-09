@@ -76,6 +76,11 @@ export function useMyEmojis(accountId: string | null, enabled = true): MyEmojisS
   return snapshot.accountId === accountId ? snapshot : EMPTY;
 }
 
+/** One of the account's server emojis, if it is (and the list is loaded). */
+export function useKnownCustomEmoji(emojiId: string): CustomEmoji | undefined {
+  return useSyncExternalStore(subscribe, () => state.byId.get(emojiId));
+}
+
 /** For tests. */
 export function setMyEmojisForTests(accountId: string, servers: ServerEmojiGroup[]): void {
   set({ accountId, status: 'ready', servers, byId: new Map(servers.flatMap((g) => g.emojis.map((e) => [e.id, e] as const))) });

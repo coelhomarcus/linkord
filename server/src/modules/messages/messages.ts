@@ -46,6 +46,8 @@ import type { AppSocket, HandlerTable, Participant } from '../../types.js';
 import { logger } from '../../lib/logger.js';
 import { voicePayload, type VoiceMeta } from '../attachments/voiceMessages.js';
 import { emojiUsageKeys, recordExpressionUsage } from '../emojis/expressionUsage.js';
+import { customReactionId } from '../emojis/customEmojiTokens.js';
+import { sanitizeCustomEmojis, usableEmojis } from '../emojis/serverEmojis.js';
 
 const log = logger.child({ component: 'audit' });
 
@@ -587,13 +589,16 @@ async function handleChat(socket: AppSocket, msg: ChatSendRequest): Promise<void
       return fail(ERROR_CODES.relationshipRequired, 'Vocês precisam ser amigos pra conversar por aqui.');
     }
     const replyTo = await buildReplyRef(conversationId, msg.replyTo);
+    // what is stored; the hash below stays on what was sent, so a retry of
+    // the same send still matches its first attempt
+    const text = await sanitizeCustomEmojis(rawText, p.userId);
     let outcome;
     try {
       outcome = await insertMessageOnce({
         authorId: p.userId,
         clientMessageId,
         payloadHash: sendPayloadHash({ conversationId, text: rawText, replyTo: replyTo?.msgId ?? null, attachmentIds }),
-        values: { conversationId, authorId: p.userId, text: rawText, replyTo: replyTo || null },
+        values: { conversationId, authorId: p.userId, text, replyTo: replyTo || null },
         // access was re-checked above, at publish time, not only at upload init
         attach: attachmentIds.length
           ? (tx, row) => publishStaged(tx, { ids: attachmentIds, ownerId: p.userId, conversationId, messageId: row.id })
@@ -622,8 +627,8 @@ async function handleChat(socket: AppSocket, msg: ChatSendRequest): Promise<void
     await touchConversation(conversationId, outcome.row.createdAt);
     await broadcastToConversationMembers(conversationId, { t: 'chat', message });
     void unfurlMessage(outcome.row, p.userId);
-    void notifyMentions({ id: outcome.row.id, conversationId, text: rawText, authorId: p.userId });
-    void recordExpressionUsage(p.userId, 'emoji', emojiUsageKeys(rawText));
+    void notifyMentions({ id: outcome.row.id, conversationId, text, authorId: p.userId });
+    void recordExpressionUsage(p.userId, 'emoji', emojiUsageKeys(text));
   } catch (err) {
     log.error('correlated chat send failed', err, { userId: p.userId });
     fail('internal_error', 'Não foi possível enviar agora.');
@@ -679,7 +684,6 @@ async function editMessage(p: Participant, msg: { msgId?: unknown; text?: string
   if (!Number.isFinite(msgId) || !rawText) return { code: 'invalid_message', message: 'Mensagem vazia.' };
   // never cut it silently: the client shows a counter instead
   if (rawText.length > config.MAX_CHAT_LEN) return { code: 'message_too_long', message: `A mensagem passa de ${config.MAX_CHAT_LEN} caracteres.` };
-  const text = sanitizeChatText(rawText);
   const [existing] = await db.select().from(messages).where(eq(messages.id, msgId)).limit(1);
   if (!existing) return { code: 'not_found', message: 'Essa mensagem não existe mais.' };
   if (existing.authorId !== p.userId || existing.kind !== 'text') return { code: 'forbidden', message: 'Você só pode editar as suas mensagens.' };
@@ -689,6 +693,7 @@ async function editMessage(p: Participant, msg: { msgId?: unknown; text?: string
   // reason edit (not delete) is restricted here.
   const peerId = await getDirectPeerId(existing.conversationId, p.userId);
   if (peerId && !(await canSendDirectMessage(p.userId, peerId))) return { code: ERROR_CODES.relationshipRequired, message: 'Vocês precisam ser amigos pra conversar por aqui.' };
+  const text = await sanitizeCustomEmojis(sanitizeChatText(rawText), p.userId);
   // previews (and removed cards) of links the edit dropped go too; new links are fetched below
   const keptSuppressed = suppressedLinksFor(text, existing.suppressedEmbeds);
   const keptEmbeds = storedEmbedsFor(text, existing.embeds, keptSuppressed);
@@ -822,7 +827,8 @@ async function handleChatReact(socket: AppSocket, msg: { msgId?: unknown; emoji?
   const msgId = Number(msg.msgId);
   const emoji = String(msg.emoji || '');
   const desired = msg.present;
-  if (!Number.isFinite(msgId) || !isSingleEmoji(emoji) || typeof desired !== 'boolean') {
+  const customId = customReactionId(emoji);
+  if (!Number.isFinite(msgId) || !(customId || isSingleEmoji(emoji)) || typeof desired !== 'boolean') {
     return fail({ code: 'invalid_message', message: 'Reação inválida.' });
   }
   const [existing] = await db.select({ conversationId: messages.conversationId, kind: messages.kind }).from(messages).where(eq(messages.id, msgId)).limit(1);
@@ -831,6 +837,10 @@ async function handleChatReact(socket: AppSocket, msg: { msgId?: unknown; emoji?
   if (!(await conversationExistsForUser(existing.conversationId, p.userId, PERMISSIONS.ADD_REACTIONS))) return fail({ code: 'conversation_not_found', message: 'Conversa não encontrada.' });
   const peerId = await getDirectPeerId(existing.conversationId, p.userId);
   if (peerId && !(await canSendDirectMessage(p.userId, peerId))) return fail({ code: ERROR_CODES.relationshipRequired, message: 'Vocês precisam ser amigos pra conversar por aqui.' });
+  // adding a server's emoji takes being its member; taking yours back never does
+  if (customId && desired && !(await usableEmojis(p.userId, [customId])).has(customId)) {
+    return fail({ code: 'forbidden', message: 'Você só pode reagir com emojis dos servidores em que está.' });
+  }
 
   const result = await reactions.setPresence(msgId, p.userId, emoji, desired);
   // a repeat that changed nothing has nothing new to tell anyone

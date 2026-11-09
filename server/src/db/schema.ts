@@ -478,7 +478,8 @@ export type MessageSendOperation = typeof messageSendOperations.$inferSelect;
 export const messageReactions = pgTable('message_reactions', {
   messageId: integer('message_id').notNull().references(() => messages.id, { onDelete: 'cascade' }),
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  emoji: varchar('emoji', { length: 16 }).notNull(), // same cap as isSingleEmoji, modules/emoji.ts
+  // a Unicode emoji (same cap as isSingleEmoji, messages/emoji.ts) or `custom:<id>` for a server emoji
+  emoji: varchar('emoji', { length: 64 }).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
   primaryKey({ columns: [t.messageId, t.userId, t.emoji] }),

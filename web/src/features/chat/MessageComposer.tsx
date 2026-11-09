@@ -32,6 +32,7 @@ import { hasPermission, PERMISSIONS } from '@/features/servers/permissionBits';
 import { noteExpressionUse } from '@/features/emoji/frequentExpressions';
 import { EmojiSuggestions } from './EmojiSuggestions';
 import { useEmojiAutocomplete } from './useEmojiAutocomplete';
+import { customEmojisAsText, encodeCustomEmojis } from '@/features/emoji/customEmojiText';
 import type { TextEdit } from './emojiAutocomplete';
 
 // How often notifyTyping actually emits typing:true while the user keeps
@@ -65,7 +66,7 @@ export interface MessageComposerHandle {
 
 export const MessageComposer = forwardRef<MessageComposerHandle, { conversationId: string }>(function MessageComposer({ conversationId }, ref) {
   const { t } = useTranslation('chat');
-  const { state, allUsers, conversations, serverMemberRevision, sendChatMessage, queueMessageWithFiles, sendTyping, replyingTo, setReplyingTo, compressImagesDefault, setCompressImagesDefault, maxAttachmentBytes, activeCallConversationId } = useRoom();
+  const { state, allUsers, conversations, servers, serverMemberRevision, sendChatMessage, queueMessageWithFiles, sendTyping, replyingTo, setReplyingTo, compressImagesDefault, setCompressImagesDefault, maxAttachmentBytes, activeCallConversationId } = useRoom();
   const accountId = state.me.userId ?? '';
   const [draft, updateDraft] = useConversationDraft(accountId, conversationId);
   const { text, pendingFiles, attachError, voice: voiceTake } = draft;
@@ -84,7 +85,8 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
   const [mentionQuery, setMentionQuery] = useState<{ start: number; query: string } | null>(null);
   const [mentionSelectedIndex, setMentionSelectedIndex] = useState(0);
   const mentionOptionRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const emojiSuggestions = useEmojiAutocomplete(state.me.userId ?? null);
+  const serverNameOf = useCallback((id: string) => servers.find((s) => s.id === id)?.name, [servers]);
+  const emojiSuggestions = useEmojiAutocomplete({ accountId: state.me.userId ?? null, serverId: conversations.find((c) => c.id === conversationId)?.serverId ?? null, serverName: serverNameOf });
   const closeEmojiSuggestions = emojiSuggestions.close;
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
@@ -102,7 +104,10 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
   // (one is an attachment too) — the server would refuse the upload
   const channelBits = conversations.find((c) => c.id === conversationId)?.permissions;
   const canAttach = channelBits === undefined || hasPermission(channelBits, PERMISSIONS.ATTACH_FILES);
-  const tooLong = text.length > MAX_MESSAGE_LEN;
+  // what goes out: a server emoji's `:name:` becomes its longer token, and
+  // the limit is the server's, on what it receives
+  const outgoing = useMemo(() => encodeCustomEmojis(text, emojiSuggestions.byName), [text, emojiSuggestions.byName]);
+  const tooLong = outgoing.length > MAX_MESSAGE_LEN;
   const canSubmit = !disabled && !tooLong && (text.trim().length > 0 || pendingFiles.length > 0);
 
   const saveVoiceTake = useCallback((take: VoiceTake, recordedIn: string) => {
@@ -307,11 +312,11 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
     // same tick would otherwise both see the text as unsent
     const current = readDraft(accountId, conversationId);
     if (!state.joined) return;
-    const trimmed = current.text.trim();
+    const trimmed = encodeCustomEmojis(current.text, emojiSuggestions.byName).trim();
     const batch = current.pendingFiles;
     if (!batch.length && !trimmed) return;
     // the server would cut it silently; the counter already says why
-    if (current.text.length > MAX_MESSAGE_LEN) return;
+    if (trimmed.length > MAX_MESSAGE_LEN) return;
     stopTyping(); // sending is proof they stopped — don't wait for the idle timeout
     setMentionQuery(null);
     emojiSuggestions.close();
@@ -400,8 +405,8 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
   const replyAuthor = replyingTo?.id ? allUsers.get(replyingTo.id) : undefined;
   const replyName = replyAuthor?.displayName ?? replyingTo?.name;
 
-  const remaining = MAX_MESSAGE_LEN - text.length;
-  const showCounter = text.length >= COUNTER_THRESHOLD;
+  const remaining = MAX_MESSAGE_LEN - outgoing.length;
+  const showCounter = outgoing.length >= COUNTER_THRESHOLD;
   // Discord's composer glyphs: 24px, gray at rest, white under the pointer
   const iconButton = 'flex-none rounded-lg text-text-secondary hover:bg-transparent hover:text-text-primary aria-expanded:bg-fill-hover aria-expanded:text-text-primary';
 
@@ -454,7 +459,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
             <ArrowBendUpLeftIcon size={16} className="flex-none text-text-muted" />
             <span className="min-w-0 flex-1 truncate text-text-muted">
               {t('composer.replyingTo')} <span className="font-medium text-text-secondary">{replyName}</span>
-              {replyingTo.text ? <span> - {replyingTo.text}</span> : null}
+              {replyingTo.text ? <span> - {customEmojisAsText(replyingTo.text)}</span> : null}
             </span>
             <CloseButton size="xs" label={t('composer.cancelReply')} onClick={() => setReplyingTo(null)} />
           </div>

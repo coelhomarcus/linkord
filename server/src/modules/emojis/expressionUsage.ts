@@ -6,6 +6,7 @@ import { userExpressionUsage } from '../../db/schema.js';
 import { sendJson } from '../../http/respond.js';
 import { requireSession } from '../servers/serverHttp.js';
 import { logger } from '../../lib/logger.js';
+import { customEmojiIds } from './customEmojiTokens.js';
 
 const log = logger.child({ component: 'expression-usage' });
 
@@ -19,12 +20,13 @@ const LISTED_PER_KIND = 40;
 const MAX_KEYS_PER_USE = 20;
 const MAX_KEY_LEN = 64;
 
-/** The emojis a message uses, each once, in order of appearance. */
+/** The emojis a message uses, each once: its server emojis (as
+ * `custom:<id>`), then its Unicode ones in order of appearance. */
 export function emojiUsageKeys(text: string): string[] {
-  const keys = new Set<string>();
+  const keys = new Set<string>(customEmojiIds(text).slice(0, MAX_KEYS_PER_USE).map((id) => `custom:${id}`));
   for (const match of text.matchAll(emojiRegex())) {
-    keys.add(match[0]);
     if (keys.size >= MAX_KEYS_PER_USE) break;
+    keys.add(match[0]);
   }
   return [...keys];
 }

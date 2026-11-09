@@ -38,6 +38,7 @@ import { logger } from '@/shared/lib/logger';
 import { ERROR_CODES } from '@/shared/api/errorCodes';
 import { i18n } from '@/shared/i18n/init';
 import { invalidateServerEmojis } from '@/features/emoji/useServerEmojis';
+import { invalidateMyEmojis } from '@/features/emoji/myEmojis';
 
 const log = logger.child({ component: 'room' });
 
@@ -109,6 +110,9 @@ export function RoomProvider({ children }: { children: ReactNode }) {
   // composes their leave/mute functions).
   const conversationsList = useConversationsList(sendWs);
   const serversList = useServersList();
+  // the account's usable server emojis follow the servers it is in
+  const serverIdsKey = serversList.servers.map((server) => server.id).join(',');
+  useEffect(() => { invalidateMyEmojis(); }, [serverIdsKey]);
   // DMs and channels as one list: chat, unread and calls look up whichever it is by id
   const allConversations = useMemo<Conversation[]>(
     () => [...conversationsList.conversations, ...serversList.channelConversations],

@@ -428,6 +428,13 @@
       "when": 1794195713896,
       "tag": "0060_server_emojis",
       "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1794196294639,
+      "tag": "0061_custom_reactions",
+      "breakpoints": true
     }
   ]
 }

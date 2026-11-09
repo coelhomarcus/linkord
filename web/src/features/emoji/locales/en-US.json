@@ -38,5 +38,8 @@
     "emoji_too_large": "That emoji comes out too heavy. Try a shorter animation.",
     "emoji_name_taken": "There's already an emoji with that name in this server.",
     "emojis_full": "The server has used all of its slots for that kind of emoji."
+  },
+  "custom": {
+    "from": "From {{server}}"
   }
 }

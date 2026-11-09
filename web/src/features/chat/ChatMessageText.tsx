@@ -8,14 +8,17 @@ import type { PublicUser } from '@/shared/types/protocol';
 import type { LinkPreviewData } from '@/shared/api/api';
 import { Avatar } from '@/shared/Avatar';
 import { cn } from '@/shared/lib/utils';
-import { isSingleEmoji } from '@/shared/lib/isSingleEmoji';
+import { emojiOnlyCount, isSingleEmoji } from '@/shared/lib/isSingleEmoji';
+import { CustomEmojiImage } from '@/features/emoji/CustomEmojiImage';
 import { ChatEmbed } from './ChatEmbed';
 import { inviteCodeFromLink } from '@/features/servers/inviteCode';
 import { GifMessage } from '@/features/gifs/GifMessage';
 import { gifMessageUrl } from '@/features/gifs/klipyMedia';
-import { parseMessage, previewableLinks, type Inline } from './messageMarkup';
+import { parseMessage, previewableLinks, type Block, type Inline } from './messageMarkup';
 
 interface RenderContext {
+  /** a message of emojis alone shows them big */
+  jumbo?: boolean;
   mentionLookup?: Map<string, PublicUser>;
   myUserId?: string | null;
   onOpenProfile?: (userId: string) => void;
@@ -56,11 +59,31 @@ function renderInline(nodes: Inline[], ctx: RenderContext): ReactNode[] {
       case 'code': return <code key={index} className="rounded-sm bg-fill-code px-1 py-0.5 font-mono text-[0.875em]">{node.text}</code>;
       case 'link': return <a key={index} href={node.url} target="_blank" rel="noopener noreferrer" className="break-all text-link hover:underline">{node.url}</a>;
       case 'mention': return <Mention key={index} name={node.name} ctx={ctx} />;
+      case 'customEmoji': return <CustomEmojiImage key={index} id={node.id} name={node.name} size={ctx.jumbo ? 'jumbo' : 'inline'} />;
       case 'bold': return <strong key={index} className="font-semibold text-text-primary">{renderInline(node.children, ctx)}</strong>;
       case 'italic': return <em key={index}>{renderInline(node.children, ctx)}</em>;
       case 'strike': return <s key={index}>{renderInline(node.children, ctx)}</s>;
     }
   });
+}
+
+// Discord's cut-off: more emojis than this and they stay text-sized
+const MAX_JUMBO_EMOJIS = 27;
+
+/** A message made of emojis alone, with at least one server emoji among
+ * them (a lone Unicode emoji is isSingleEmoji's case). */
+function isServerEmojiOnly(blocks: Block[]): boolean {
+  if (blocks.length !== 1 || blocks[0]!.type !== 'paragraph') return false;
+  let custom = 0;
+  let total = 0;
+  for (const node of blocks[0]!.children) {
+    if (node.type === 'customEmoji') { custom++; total++; continue; }
+    if (node.type !== 'text') return false;
+    const count = emojiOnlyCount(node.text);
+    if (count === null) return false;
+    total += count;
+  }
+  return custom > 0 && total <= MAX_JUMBO_EMOJIS;
 }
 
 // Highlighted HTML by language+source: remounting a row (switching
@@ -153,8 +176,8 @@ export function ChatMessageText({ text, mentionLookup, myUserId, onOpenProfile, 
       return embed ? [{ link, embed }] : [];
     });
   }, [blocks, suppressedEmbeds, noPreviews]);
-  const singleEmoji = isSingleEmoji(text);
-  const ctx: RenderContext = { mentionLookup, myUserId, onOpenProfile };
+  const jumbo = useMemo(() => isSingleEmoji(text) || isServerEmojiOnly(blocks), [text, blocks]);
+  const ctx: RenderContext = { jumbo, mentionLookup, myUserId, onOpenProfile };
   // a GIF message is only its KLIPY URL: show the GIF, not the link and a preview of it
   const gifUrl = gifMessageUrl(text);
   if (gifUrl) return <GifMessage url={gifUrl} />;
@@ -164,7 +187,7 @@ export function ChatMessageText({ text, mentionLookup, myUserId, onOpenProfile, 
       {blocks.map((block, index) => {
         switch (block.type) {
           case 'paragraph':
-            return <p key={index} className={cn('whitespace-pre-wrap wrap-break-word', singleEmoji && 'text-[48px] leading-none')}>{renderInline(block.children, ctx)}</p>;
+            return <p key={index} className={cn('whitespace-pre-wrap wrap-break-word', jumbo && 'text-[48px] leading-none')}>{renderInline(block.children, ctx)}</p>;
           case 'code':
             return <CodeBlock key={index} code={block.code} lang={block.lang} />;
           case 'quote':

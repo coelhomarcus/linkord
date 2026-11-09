@@ -9,6 +9,7 @@ import { ConfirmDialog } from '@/shared/ConfirmDialog';
 import type { ReportTarget } from '@/features/reports/reportCategories';
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from '@/shared/ui/primitives/context-menu';
 import { ReactionEmojiPicker } from '@/features/chat/ReactionEmojiPicker';
+import { customEmojisAsText } from '@/features/emoji/customEmojiText';
 import { ReactionParticipantsDialog } from '@/features/chat/ReactionParticipantsDialog';
 import { useKeepPopoverWarm } from '@/shared/hooks/useKeepPopoverWarm';
 import { messagePermissions } from '@/features/chat/messageActions';
@@ -229,7 +230,7 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
   }
 
   function handleCopyMessageText() {
-    if (targetMessage?.text) navigator.clipboard.writeText(targetMessage.text).catch(() => {});
+    if (targetMessage?.text) navigator.clipboard.writeText(customEmojisAsText(targetMessage.text)).catch(() => {});
   }
 
   function handleSelectMessageText() {
