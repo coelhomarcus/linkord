@@ -187,7 +187,7 @@ function WebhookCard({ channel, webhook, onChanged, onReveal, onError }: {
         </div>
       </div>
       <ImageCropDialog open={!!crop} imageSrc={crop?.src ?? null} aspect={1} cropShape="round" title={t('webhooks.changeAvatar')}
-        processing={uploading} onCancel={() => setCrop(null)} onConfirm={(area) => void confirmCrop(area)} />
+        onCancel={() => setCrop(null)} onConfirm={(area) => void confirmCrop(area)} />
     </li>
   );
 }

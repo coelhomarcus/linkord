@@ -26,7 +26,7 @@ export function shouldShowInstallBanner(input: { method: InstallMethod | null; d
   return input.method !== null && !input.dismissed && !input.inCall && input.sessions >= SESSIONS_BEFORE_BANNER;
 }
 
-export function isIOSDevice(): boolean {
+function isIOSDevice(): boolean {
   if (typeof navigator === 'undefined') return false;
   if (/iPad|iPhone|iPod/.test(navigator.userAgent)) return true;
   // iPadOS asks for the desktop site by default and reports itself as a Mac

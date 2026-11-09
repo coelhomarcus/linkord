@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { FormEvent } from 'react';
 
-import { useAuth } from '../../state/AuthContext';
+import { useAuth } from '@/state/AuthContext';
 import { confirmEmailChange, requestEmailChange } from '@/shared/api/api';
 import { describeApiError } from '@/shared/api/errorText';
 import { Button } from '@/shared/ui/primitives/button';

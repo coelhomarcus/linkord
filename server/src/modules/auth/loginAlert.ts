@@ -22,7 +22,7 @@ export const KNOWN_LOGIN_DAYS = 30;
 const ALERT_RULE: ratelimit.Rule = { windowMs: 60 * 60 * 1000, max: 5 };
 
 /** Same formula as the backfill in migration 0063. Only the hash is stored, never the address. */
-export function loginFingerprint(origin: SessionOrigin): string {
+function loginFingerprint(origin: SessionOrigin): string {
   return crypto.createHash('sha256').update(`${origin.ip}\n${origin.userAgent}`).digest('hex');
 }
 

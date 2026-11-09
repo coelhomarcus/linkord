@@ -102,7 +102,7 @@ function Overview({ server }: { server: ServerSummary }) {
       </section>
       <ErrorLine error={error} />
       <ImageCropDialog open={!!crop} imageSrc={crop?.src ?? null} aspect={1} cropShape="round" title={t('settings.changeIcon')}
-        processing={uploading} onCancel={() => setCrop(null)} onConfirm={(area) => void confirmCrop(area)} />
+        onCancel={() => setCrop(null)} onConfirm={(area) => void confirmCrop(area)} />
     </>
   );
 }

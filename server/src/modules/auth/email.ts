@@ -46,7 +46,7 @@ export async function sendAuthCodeEmail(
 
 /** One message through Resend. Callers decide whether a failure matters: a code request fails with it,
  * a login alert only logs it. */
-export async function deliverEmail({ to, subject, text, html }: { to: string; subject: string; text: string; html: string }): Promise<void> {
+async function deliverEmail({ to, subject, text, html }: { to: string; subject: string; text: string; html: string }): Promise<void> {
   if (!isEmailDeliveryConfigured()) {
     throw Object.assign(new EmailDeliveryError('E-mail transacional não configurado.'), { code: 'email_not_configured' });
   }
