@@ -12,6 +12,7 @@ import { CallSettingsMenu } from './CallSettingsMenu';
 import { CameraQuickMenu, MicQuickMenu, ScreenShareQuickMenu, SpeakerQuickMenu } from './CallDeviceMenus';
 import { SoundboardButton } from '@/features/soundboard/SoundboardButton';
 import { useCallPublishRights } from './publishRights';
+import { hasPermission, PERMISSIONS } from '@/features/servers/permissionBits';
 import { cn } from '@/shared/lib/utils';
 
 const MIC_PROBLEM_LABEL_KEY = {
@@ -48,11 +49,14 @@ export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(fu
   const {
     state, dispatch, startCamera, stopCamera, startSharing, stopSharing, activateMic, toggleMicMuted, deafened, toggleDeafened,
     leaveCall, reconnecting, isCallFullscreen, toggleCallFullscreen,
-    activeCallConversationId, conversations,
+    activeCallConversationId, conversations, servers,
   } = useRoom();
   // sounds belong to a server, so a 1:1 call has no soundboard
   const callChannel = conversations.find((c) => c.id === activeCallConversationId && c.type === 'voice');
   const soundboardServerId = callChannel?.serverId ?? null;
+  const callServer = servers.find((server) => server.id === soundboardServerId);
+  // the server drops a play without USE_SOUNDBOARD there, so don't offer one
+  const canUseSoundboard = !!callChannel && (callChannel.permissions === undefined || hasPermission(callChannel.permissions, PERMISSIONS.USE_SOUNDBOARD));
   const myMedia = useParticipantMedia(state.me.id ?? '');
   const cameraOn = state.me.cameraOn;
   const sharing = state.me.sharing;
@@ -153,10 +157,11 @@ export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(fu
           <ScreenShareQuickMenu />
         </div>
 
-        {soundboardServerId && callChannel && (
+        {soundboardServerId && callChannel && canUseSoundboard && (
           <SoundboardButton
             serverId={soundboardServerId}
             conversationId={callChannel.id}
+            canUpload={!!callServer && hasPermission(callServer.permissions, PERMISSIONS.CREATE_EXPRESSIONS)}
             className={cn(BAR_BUTTON, BAR_BUTTON_NEUTRAL)}
             activeClassName="bg-white/12 text-white"
             iconClassName={BAR_ICON}

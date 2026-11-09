@@ -67,9 +67,11 @@ interface SoundEditorDialogProps {
   /** edit this sound's details; without it, the dialog uploads a new one */
   sound?: ServerSound | null;
   onSaved?: () => void;
+  /** where to portal it: the call's fullscreen element, while the call is fullscreen */
+  container?: HTMLElement;
 }
 
-export function SoundEditorDialog({ serverId, open, onOpenChange, sound = null, onSaved }: SoundEditorDialogProps) {
+export function SoundEditorDialog({ serverId, open, onOpenChange, sound = null, onSaved, container }: SoundEditorDialogProps) {
   const { t } = useTranslation('soundboard');
   const editing = !!sound;
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -201,7 +203,7 @@ export function SoundEditorDialog({ serverId, open, onOpenChange, sound = null, 
 
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!submitting) onOpenChange(next); }}>
-      <DialogContent className="gap-0 p-0 text-text-primary sm:max-w-md">
+      <DialogContent container={container} className="gap-0 p-0 text-text-primary sm:max-w-md">
         <form onSubmit={(event) => void handleSubmit(event)} className="flex flex-col">
           <DialogHeader className="px-5 pt-5 pb-3">
             <DialogTitle className="text-title">{editing ? t('editor.titleEdit') : t('editor.titleCreate')}</DialogTitle>

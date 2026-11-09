@@ -51,7 +51,7 @@ export function serverSettingsTabs(server: ServerSummary, myUserId: string | nul
   const may = (bit: number) => can(server, bit);
   const pages: [ServerSettingsTab, boolean][] = [
     ['overview', may(PERMISSIONS.MANAGE_SERVER)],
-    ['soundboard', may(PERMISSIONS.MANAGE_EXPRESSIONS)],
+    ['soundboard', may(PERMISSIONS.CREATE_EXPRESSIONS) || may(PERMISSIONS.MANAGE_EXPRESSIONS)],
     ['members', may(PERMISSIONS.KICK_MEMBERS) || may(PERMISSIONS.BAN_MEMBERS) || may(PERMISSIONS.MANAGE_ROLES)],
     ['roles', may(PERMISSIONS.MANAGE_ROLES)],
     ['invites', may(PERMISSIONS.MANAGE_SERVER)],

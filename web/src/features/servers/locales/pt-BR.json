@@ -276,7 +276,8 @@
     "MOVE_MEMBERS": "Desconectar membros",
     "USE_SOUNDBOARD": "Usar soundboard",
     "MANAGE_EXPRESSIONS": "Gerenciar expressões",
-    "VIEW_AUDIT_LOG": "Ver registro de auditoria"
+    "VIEW_AUDIT_LOG": "Ver registro de auditoria",
+    "CREATE_EXPRESSIONS": "Criar expressões"
   },
   "permissionHints": {
     "ADMINISTRATOR": "Concede todas as permissões e ignora as regras de cada canal. Cuidado ao dar esta.",
@@ -296,9 +297,10 @@
     "SPEAK": "Falar nos canais de voz.",
     "STREAM": "Ligar a câmera e compartilhar a tela.",
     "MOVE_MEMBERS": "Mover membros abaixo do seu cargo entre canais de voz, ou desconectá-los.",
-    "USE_SOUNDBOARD": "Tocar e adicionar sons do soundboard.",
+    "USE_SOUNDBOARD": "Tocar os sons do soundboard nas chamadas.",
     "MANAGE_EXPRESSIONS": "Editar e remover os sons de qualquer pessoa.",
-    "VIEW_AUDIT_LOG": "Ver quem mudou o quê no servidor."
+    "VIEW_AUDIT_LOG": "Ver quem mudou o quê no servidor.",
+    "CREATE_EXPRESSIONS": "Adicionar sons ao soundboard do servidor. Cada som ocupa um dos espaços do servidor."
   },
   "voiceMembers": {
     "inChannel": "Na chamada de {{channel}}",

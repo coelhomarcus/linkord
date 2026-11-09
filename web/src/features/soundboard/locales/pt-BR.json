@@ -1,6 +1,6 @@
 {
   "panel": {
-    "description": "Sons que qualquer pessoa do servidor pode tocar durante as chamadas.",
+    "description": "Sons que os membros do servidor podem tocar durante as chamadas.",
     "upload": "Enviar som",
     "slots_zero": "Nenhum espaço livre de {{max}}",
     "slots_one": "{{count}} espaço livre de {{max}}",
@@ -61,12 +61,15 @@
     "open": "Efeitos sonoros",
     "search": "Encontre o som perfeito",
     "empty": "Este servidor ainda não tem sons.",
-    "emptyHint": "Envie sons na aba Soundboard das configurações do servidor.",
+    "emptyHint": "Peça a quem gerencia o servidor para adicionar sons.",
     "noResults": "Nenhum som encontrado.",
     "loading": "Carregando sons…",
     "loadFailed": "Não foi possível carregar os sons.",
     "volume": "Volume dos efeitos sonoros",
-    "play": "Tocar {{name}}"
+    "play": "Tocar {{name}}",
+    "add": "Adicionar som",
+    "full": "O servidor já usou todos os espaços de som",
+    "emptyHintCanAdd": "Adicione o primeiro pelo botão +."
   },
   "errors": {
     "invalid_sound": "Não foi possível ler esse áudio.",

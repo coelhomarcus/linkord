@@ -27,7 +27,7 @@ Linkord is a self-hosted place to chat and call with friends. Talk in direct mes
   Send attachments up to 512 MB each (configurable with `MAX_ATTACHMENT_BYTES`), record voice messages of up to 5 minutes from the composer (blocked while you are in a call, since the call owns the microphone), share YouTube and Twitch links with automatic embeds, react, reply, edit, delete, and search messages.
 
 - **Voice, video, and screen sharing**
-  Join calls in voice channels or DMs with LiveKit. Each server also has its own soundboard.
+  Join calls in voice channels or DMs with LiveKit. Each server also has its own soundboard, played and added to from the call's sound picker. Channel permissions decide who may connect, speak, and turn on a camera or share a screen there.
 
 - **Webhooks**
   Let deploys, monitors, and other services post into a channel. See the [webhook guide](docs/WEBHOOK.md).

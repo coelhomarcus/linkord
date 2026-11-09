@@ -3,10 +3,11 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { after, before, describe, it } from 'node:test';
-import { eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { config } from '../../src/config/env.js';
-import { serverMembers, serverSounds } from '../../src/db/schema.js';
+import { serverMembers, serverRoles, serverSounds } from '../../src/db/schema.js';
+import { PERMISSIONS } from '../../src/modules/servers/permissions.js';
 import { createApp } from '../../src/http/app.js';
 import { createSession } from '../../src/modules/auth/session.js';
 import { setCallConversationId } from '../../src/modules/presence/participants.js';
@@ -38,9 +39,17 @@ async function upload(as: Actor, serverId: string, name: string, body: Buffer = 
   return { status: res.statusCode, body: res.body ? JSON.parse(res.body) : null };
 }
 
+async function openSoundboardToEveryone(serverId: string): Promise<void> {
+  await db.update(serverRoles).set({ permissions: sql`${serverRoles.permissions} | ${PERMISSIONS.CREATE_EXPRESSIONS}` })
+    .where(and(eq(serverRoles.serverId, serverId), eq(serverRoles.isDefault, true)));
+  invalidateAllServers();
+}
+
+/** A server whose @everyone may add sounds, as every server from before CREATE_EXPRESSIONS is. */
 async function world() {
   const [owner, member, other, stranger] = await Promise.all(['own', 'mem', 'oth', 'str'].map(actor)) as [Actor, Actor, Actor, Actor];
   const { serverId, voiceChannelId } = await makeServerWithMembers(owner.id, [member.id, other.id], 'sounds');
+  await openSoundboardToEveryone(serverId);
   return { owner, member, other, stranger, serverId, voiceChannelId };
 }
 
@@ -63,6 +72,16 @@ describe('server soundboard', () => {
     assert.equal((await upload(stranger, serverId, 'nope')).status, 404);
     const strangerList = await app.inject({ method: 'GET', url: `/api/servers/${serverId}/sounds`, headers: cookie(stranger) });
     assert.equal(strangerList.statusCode, 404);
+  });
+
+  it('a new server keeps adding sounds to CREATE_EXPRESSIONS: a plain member plays but does not add', async () => {
+    const owner = await actor('own'); const member = await actor('mem');
+    const { serverId } = await makeServerWithMembers(owner.id, [member.id], 'fresh');
+    const refused = await upload(member, serverId, 'nope');
+    assert.deepEqual([refused.status, refused.body.error.code], [403, 'forbidden']);
+    assert.equal((await upload(owner, serverId, 'mine')).status, 201);
+    await openSoundboardToEveryone(serverId);
+    assert.equal((await upload(member, serverId, 'now yes')).status, 201);
   });
 
   it('refuses audio that is not WAV, or longer than the limit', async () => {

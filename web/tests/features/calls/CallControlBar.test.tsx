@@ -60,6 +60,11 @@ describe('CallControlBar', () => {
     expect(screen.queryByLabelText('Efeitos sonoros')).not.toBeInTheDocument();
   });
 
+  it('leaves the soundboard out of a voice channel without USE_SOUNDBOARD', () => {
+    renderWithRoom(<CallControlBar />, { activeCallConversationId: 'c1', conversations: [voiceChannel(PERMISSIONS.VIEW_CHANNEL | PERMISSIONS.CONNECT)] });
+    expect(screen.queryByLabelText('Efeitos sonoros')).not.toBeInTheDocument();
+  });
+
   it('without SPEAK in the channel, the mic button says why and does nothing', () => {
     const activateMic = vi.fn();
     renderWithRoom(<CallControlBar />, {

@@ -130,8 +130,9 @@ async function handleUpload(
   const serverId = String(request.params.serverId || '');
   const access = await soundboardAccess(serverId, userId);
   if (!access) return sendError(reply, 404, 'not_found', 'Servidor não encontrado.');
-  // adding to the soundboard is part of using it; curating everyone's is MANAGE_EXPRESSIONS
-  if (!hasPermission(access.permissions, PERMISSIONS.USE_SOUNDBOARD)) return sendError(reply, 403, 'forbidden', 'Você não pode usar o soundboard desse servidor.');
+  // a sound takes one of the server's few slots for everyone, so adding is
+  // its own permission rather than part of playing (USE_SOUNDBOARD)
+  if (!hasPermission(access.permissions, PERMISSIONS.CREATE_EXPRESSIONS)) return sendError(reply, 403, 'forbidden', 'Você não pode adicionar sons nesse servidor.');
 
   if (!floodControl.allow(`sound-upload:${userId}`, SOUND_UPLOAD_LIMIT)) {
     return sendError(reply, 429, 'rate_limited', 'Muitos sons enviados em pouco tempo. Tente de novo em instantes.');

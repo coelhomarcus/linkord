@@ -1,6 +1,6 @@
 {
   "panel": {
-    "description": "Sounds anyone in the server can play during calls.",
+    "description": "Sounds the server's members can play during calls.",
     "upload": "Upload sound",
     "slots_zero": "No free slots out of {{max}}",
     "slots_one": "{{count}} free slot out of {{max}}",
@@ -61,12 +61,15 @@
     "open": "Soundboard",
     "search": "Find the perfect sound",
     "empty": "This server has no sounds yet.",
-    "emptyHint": "Upload sounds in the Soundboard tab of the server settings.",
+    "emptyHint": "Ask whoever runs the server to add sounds.",
     "noResults": "No sounds found.",
     "loading": "Loading sounds…",
     "loadFailed": "Couldn't load the sounds.",
     "volume": "Soundboard volume",
-    "play": "Play {{name}}"
+    "play": "Play {{name}}",
+    "add": "Add sound",
+    "full": "The server has used all its sound slots",
+    "emptyHintCanAdd": "Add the first one with the + button."
   },
   "errors": {
     "invalid_sound": "Couldn't read that audio.",

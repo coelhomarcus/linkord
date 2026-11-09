@@ -425,7 +425,7 @@ export function ServerSettingsModal({ server, onClose, onOpenProfile }: { server
       {tab === 'soundboard' && (
         <>
           <SectionTitle>{t('settings.soundboard')}</SectionTitle>
-          <ServerSoundsPanel serverId={server.id} myUserId={state.me.userId} canManage={can(server, PERMISSIONS.MANAGE_EXPRESSIONS)} />
+          <ServerSoundsPanel serverId={server.id} myUserId={state.me.userId} canUpload={can(server, PERMISSIONS.CREATE_EXPRESSIONS)} canManage={can(server, PERMISSIONS.MANAGE_EXPRESSIONS)} />
         </>
       )}
       {tab === 'delete' && (

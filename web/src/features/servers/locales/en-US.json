@@ -276,7 +276,8 @@
     "MOVE_MEMBERS": "Disconnect Members",
     "USE_SOUNDBOARD": "Use Soundboard",
     "MANAGE_EXPRESSIONS": "Manage Expressions",
-    "VIEW_AUDIT_LOG": "View audit log"
+    "VIEW_AUDIT_LOG": "View audit log",
+    "CREATE_EXPRESSIONS": "Create Expressions"
   },
   "permissionHints": {
     "ADMINISTRATOR": "Grants every permission and bypasses channel rules. Be careful granting this.",
@@ -296,9 +297,10 @@
     "SPEAK": "Talk in voice channels.",
     "STREAM": "Turn on the camera and share the screen.",
     "MOVE_MEMBERS": "Move members below your role between voice channels, or disconnect them.",
-    "USE_SOUNDBOARD": "Play and add soundboard sounds.",
+    "USE_SOUNDBOARD": "Play soundboard sounds in calls.",
     "MANAGE_EXPRESSIONS": "Edit and remove anyone's sounds.",
-    "VIEW_AUDIT_LOG": "See who changed what in the server."
+    "VIEW_AUDIT_LOG": "See who changed what in the server.",
+    "CREATE_EXPRESSIONS": "Add sounds to the server's soundboard. Each sound takes one of the server's slots."
   },
   "voiceMembers": {
     "inChannel": "In the {{channel}} call",

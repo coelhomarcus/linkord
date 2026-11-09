@@ -1,4 +1,4 @@
-import { MagnifyingGlassIcon, MusicNotesIcon, SpeakerHighIcon, SpeakerLowIcon, SpeakerSlashIcon } from '@phosphor-icons/react';
+import { MagnifyingGlassIcon, MusicNotesIcon, PlusIcon, SpeakerHighIcon, SpeakerLowIcon, SpeakerSlashIcon } from '@phosphor-icons/react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/
 import { useRoom } from '@/state/RoomContext';
 import { cn } from '@/shared/lib/utils';
 import { useServerSounds } from './useServerSounds';
+import { SoundEditorDialog } from './SoundEditorDialog';
 import { loadSoundBuffer, loadSoundboardVolume, saveSoundboardVolume } from './soundPlayback';
 import type { ServerSound } from './soundboardApi';
 
@@ -16,18 +17,23 @@ interface SoundboardButtonProps {
   serverId: string;
   /** the call it plays in */
   conversationId: string;
+  /** CREATE_EXPRESSIONS: the picker offers adding a sound, so a member never
+   * needs the server's settings for it */
+  canUpload: boolean;
   className: string;
   activeClassName: string;
   iconClassName: string;
 }
 
-/** The call bar's soundboard: pick one of the group's sounds and everyone in
+/** The call bar's soundboard: pick one of the server's sounds and everyone in
  * the call hears it (the server fans it out, see soundboard.ts#handlePlay). */
-export function SoundboardButton({ serverId, conversationId, className, activeClassName, iconClassName }: SoundboardButtonProps) {
+export function SoundboardButton({ serverId, conversationId, canUpload, className, activeClassName, iconClassName }: SoundboardButtonProps) {
   const { t } = useTranslation('soundboard');
   const { sendWs, fullscreenElement } = useRoom();
-  const { status, sounds } = useServerSounds(serverId);
+  const { status, sounds, maxSounds, reload } = useServerSounds(serverId);
   const [open, setOpen] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const full = status === 'ready' && sounds.length >= maxSounds;
   const [query, setQuery] = useState('');
   const [volume, setVolume] = useState(() => Math.round(loadSoundboardVolume() * 100));
 
@@ -101,7 +107,7 @@ export function SoundboardButton({ serverId, conversationId, className, activeCl
           {status === 'ready' && sounds.length === 0 && (
             <div className="flex flex-col items-center gap-1 px-4 py-6 text-center">
               <p className="text-label text-text-secondary">{t('picker.empty')}</p>
-              <p className="text-caption text-text-muted">{t('picker.emptyHint')}</p>
+              <p className="text-caption text-text-muted">{canUpload ? t('picker.emptyHintCanAdd') : t('picker.emptyHint')}</p>
             </div>
           )}
           {status === 'ready' && sounds.length > 0 && visible.length === 0 && (
@@ -114,9 +120,26 @@ export function SoundboardButton({ serverId, conversationId, className, activeCl
         <div className="flex items-center gap-3 border-t border-border pt-3">
           <VolumeIcon size={18} className="flex-none text-text-muted" aria-hidden />
           <Slider aria-label={t('picker.volume')} value={[volume]} min={0} max={100} onValueChange={changeVolume} />
+          {canUpload && (
+            <Tooltip>
+              <TooltipTrigger
+                type="button"
+                aria-label={full ? t('picker.full') : t('picker.add')}
+                aria-disabled={full || undefined}
+                onClick={() => { if (full) return; setOpen(false); setAdding(true); }}
+                className={cn('grid size-8 flex-none place-items-center rounded-md text-text-secondary transition-colors hover:bg-fill-hover hover:text-text-primary', full && 'cursor-not-allowed opacity-50 hover:bg-transparent')}
+              >
+                <PlusIcon size={18} weight="bold" />
+              </TooltipTrigger>
+              <TooltipContent>{full ? t('picker.full') : t('picker.add')}</TooltipContent>
+            </Tooltip>
+          )}
         </div>
       </PopoverContent>
     </Popover>
+    {canUpload && (
+      <SoundEditorDialog serverId={serverId} open={adding} onOpenChange={setAdding} onSaved={() => void reload()} container={fullscreenElement ?? undefined} />
+    )}
     </div>
   );
 }
