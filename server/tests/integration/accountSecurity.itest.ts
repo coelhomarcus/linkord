@@ -304,6 +304,56 @@ describe('changing the email', () => {
   });
 });
 
+describe('linking an email to an account that has none', () => {
+  it('the unverified link route is gone', async () => {
+    const user = await makeAccount({ email: false });
+    const { cookie } = await cookieFor(user.id);
+    const res = await call('POST', '/api/auth/email/link', { cookie, payload: { email: `squat_${user.id.slice(0, 8)}@example.test` } });
+    assert.equal(res.status, 404);
+    const [row] = await db.select({ email: users.email }).from(users).where(eq(users.id, user.id));
+    assert.equal(row?.email, null);
+  });
+
+  it('the address is set only after the code sent to it is confirmed', async () => {
+    const user = await makeAccount({ email: false });
+    const { cookie } = await cookieFor(user.id);
+    const target = `linked_${user.id.slice(0, 8)}@example.test`;
+
+    const request = await call('POST', '/api/auth/email/change/request', { cookie, payload: { email: target, password: PASSWORD } });
+    assert.equal(request.status, 200);
+    assert.deepEqual(mailbox.at(-1)?.to, [target]);
+    const [pending] = await db.select({ email: users.email }).from(users).where(eq(users.id, user.id));
+    assert.equal(pending?.email, null, 'requesting a code does not touch the account');
+
+    const wrong = await call('POST', '/api/auth/email/change/confirm', { cookie, payload: { email: target, code: wrongCode(lastCode()) } });
+    assert.equal(wrong.status, 400);
+    const confirmed = await call('POST', '/api/auth/email/change/confirm', { cookie, payload: { email: target, code: lastCode() } });
+    assert.equal(confirmed.status, 200);
+    assert.equal(confirmed.body.user.email, target);
+  });
+
+  it('a code sent to one address cannot link another', async () => {
+    const user = await makeAccount({ email: false });
+    const { cookie } = await cookieFor(user.id);
+    const sentTo = `mine_${user.id.slice(0, 8)}@example.test`;
+    const other = `theirs_${user.id.slice(0, 8)}@example.test`;
+    await call('POST', '/api/auth/email/change/request', { cookie, payload: { email: sentTo, password: PASSWORD } });
+    const res = await call('POST', '/api/auth/email/change/confirm', { cookie, payload: { email: other, code: lastCode() } });
+    assert.equal(res.status, 400);
+    assert.equal(res.body.error.code, 'invalid_code');
+  });
+
+  it('refuses an address that already belongs to another account before any code is sent', async () => {
+    const owner = await makeAccount();
+    const user = await makeAccount({ email: false });
+    const { cookie } = await cookieFor(user.id);
+    const res = await call('POST', '/api/auth/email/change/request', { cookie, payload: { email: owner.email, password: PASSWORD } });
+    assert.equal(res.status, 409);
+    assert.equal(res.body.error.code, 'email_taken');
+    assert.equal(mailbox.length, 0);
+  });
+});
+
 describe('the session list', () => {
   it('lists the account sessions with their origin, marking this one', async () => {
     const user = await makeAccount();

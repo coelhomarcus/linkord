@@ -158,10 +158,6 @@ export function resetPassword(identifier: RecoveryIdentifier, code: string, pass
   return apiFetch('/api/auth/recovery/reset', { method: 'POST', body: JSON.stringify({ ...identifierPayload(identifier), code, password }) });
 }
 
-export function linkEmail(email: string): Promise<{ user: ApiUser }> {
-  return apiFetch('/api/auth/email/link', { method: 'POST', body: JSON.stringify({ email }) });
-}
-
 export function requestEmailChange(email: string, password: string): Promise<{ ok: true }> {
   return apiFetch('/api/auth/email/change/request', { method: 'POST', body: JSON.stringify({ email, password }) });
 }

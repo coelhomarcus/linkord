@@ -464,19 +464,6 @@ async function handleRecoveryReset(request: FastifyRequest, reply: FastifyReply)
   sendJson(reply, 200, { ok: true });
 }
 
-async function handleLinkEmail(request: FastifyRequest, reply: FastifyReply): Promise<void> {
-  const sess = await sessionForRequest(request);
-  if (!sess) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
-  const body = jsonBody(request.body);
-  const email = normalizeEmail(String(body.email == null ? '' : body.email));
-  if (!isValidEmail(email)) return sendError(reply, 400, 'invalid_email', 'Informe um e-mail válido.');
-  if (sess.email) return sendError(reply, 409, 'email_already_set', 'Esta conta já possui um e-mail.');
-  if (await findByEmailLower(email)) return sendError(reply, 409, 'email_taken', 'Esse e-mail já está em uso.');
-  const user = await updateEmail(sess.userId, email);
-  if (!user) return sendError(reply, 404, 'user_not_found', 'Conta não encontrada.');
-  sendJson(reply, 200, { user: privateUser(user) });
-}
-
 async function handleEmailChangeRequest(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   const sess = await sessionForRequest(request);
   if (!sess) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
@@ -681,7 +668,6 @@ export function registerAuthRoutes(fastify: FastifyInstance): void {
   fastify.get('/api/auth/me', handleMe);
   fastify.post('/api/auth/recovery/request', handleRecoveryRequest);
   fastify.post('/api/auth/recovery/reset', handleRecoveryReset);
-  fastify.post('/api/auth/email/link', handleLinkEmail);
   fastify.post('/api/auth/email/change/request', handleEmailChangeRequest);
   fastify.post('/api/auth/email/change/confirm', handleEmailChangeConfirm);
   fastify.get('/api/auth/security', handleSecurityStatus);
