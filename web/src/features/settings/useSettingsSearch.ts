@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useInstall } from '@/features/install/installPrompt';
 import { findCategory } from './settingsCatalog';
 import { SETTINGS_SEARCH_INDEX } from './settingsSearchIndex';
 import type { SearchEntry } from './settingsSearchIndex';
@@ -22,10 +23,11 @@ export interface SettingsSearchResult {
 export function useSettingsSearch(isAdmin: boolean) {
   const { t } = useTranslation('settings');
   const [query, setQuery] = useState('');
+  const canInstall = useInstall().method !== null;
 
   const visibleEntries = useMemo(
-    () => SETTINGS_SEARCH_INDEX.filter((entry) => isAdmin || !entry.adminOnly),
-    [isAdmin],
+    () => SETTINGS_SEARCH_INDEX.filter((entry) => (isAdmin || !entry.adminOnly) && (canInstall || !entry.requiresInstall)),
+    [isAdmin, canInstall],
   );
 
   const results = useMemo((): SettingsSearchResult[] => {

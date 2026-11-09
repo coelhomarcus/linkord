@@ -102,6 +102,10 @@
       "title": "Sounds",
       "keywords": "volume, sound, test sound, mute, message, mention, call, preview"
     },
+    "install": {
+      "title": "Install the app",
+      "keywords": "install, installation, app, pwa, home screen, shortcut, icon, add to home screen"
+    },
     "language": {
       "title": "Language",
       "keywords": "idioma, português, portuguese, english, translate"

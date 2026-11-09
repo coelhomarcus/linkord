@@ -102,6 +102,10 @@
       "title": "Sons",
       "keywords": "volume, som, testar som, mudo, mensagem, menção, chamada, prévia"
     },
+    "install": {
+      "title": "Instalar o app",
+      "keywords": "instalar, instalação, app, pwa, tela de início, atalho, ícone, adicionar à tela de início"
+    },
     "language": {
       "title": "Idioma",
       "keywords": "language, português, inglês, english, traduzir"
