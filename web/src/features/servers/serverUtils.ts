@@ -42,11 +42,46 @@ export const canMoveOutOf = (channel: { permissions?: number }, meIsAdmin: boole
 export const canMoveInto = (channel: { permissions?: number }, meIsAdmin: boolean) =>
   meIsAdmin || canInChannel(channel, PERMISSIONS.CONNECT);
 
+export type ServerSettingsTab = 'overview' | 'soundboard' | 'members' | 'roles' | 'invites' | 'auditLog' | 'bans' | 'delete';
+
+/** The server settings pages this member may open, in the column's order.
+ * The modal draws exactly these and the menu offers "settings" only when
+ * there is one, so a new page can't exist without its way in. */
+export function serverSettingsTabs(server: ServerSummary, myUserId: string | null): ServerSettingsTab[] {
+  const may = (bit: number) => can(server, bit);
+  const pages: [ServerSettingsTab, boolean][] = [
+    ['overview', may(PERMISSIONS.MANAGE_SERVER)],
+    ['soundboard', may(PERMISSIONS.MANAGE_EXPRESSIONS)],
+    ['members', may(PERMISSIONS.KICK_MEMBERS) || may(PERMISSIONS.BAN_MEMBERS) || may(PERMISSIONS.MANAGE_ROLES)],
+    ['roles', may(PERMISSIONS.MANAGE_ROLES)],
+    ['invites', may(PERMISSIONS.MANAGE_SERVER)],
+    ['auditLog', may(PERMISSIONS.VIEW_AUDIT_LOG)],
+    ['bans', may(PERMISSIONS.BAN_MEMBERS)],
+    ['delete', !!myUserId && server.ownerId === myUserId],
+  ];
+  return pages.filter(([, allowed]) => allowed).map(([key]) => key);
+}
+
 /** Whether anything in server settings is the member's to change. */
-export function canOpenSettings(server: ServerSummary): boolean {
-  return can(server, PERMISSIONS.MANAGE_SERVER) || can(server, PERMISSIONS.MANAGE_ROLES) || can(server, PERMISSIONS.MANAGE_CHANNELS)
-    || can(server, PERMISSIONS.KICK_MEMBERS) || can(server, PERMISSIONS.BAN_MEMBERS) || can(server, PERMISSIONS.MANAGE_EXPRESSIONS)
-    || can(server, PERMISSIONS.VIEW_AUDIT_LOG);
+export function canOpenSettings(server: ServerSummary, myUserId: string | null): boolean {
+  return serverSettingsTabs(server, myUserId).length > 0;
+}
+
+export type ChannelSettingsTab = 'overview' | 'permissions' | 'webhooks' | 'delete';
+
+/** The channel settings pages this member may open — the channel's gear
+ * shows only when there is one, so editing a channel's permissions
+ * (MANAGE_ROLES) or its webhooks (MANAGE_WEBHOOKS) doesn't also take
+ * MANAGE_CHANNELS. */
+export function channelSettingsTabs(server: ServerSummary, channel: ChannelSummary): ChannelSettingsTab[] {
+  const manages = canInChannel(channel, PERMISSIONS.MANAGE_CHANNELS);
+  const pages: [ChannelSettingsTab, boolean][] = [
+    ['overview', manages],
+    ['permissions', can(server, PERMISSIONS.MANAGE_ROLES)],
+    ['webhooks', channel.type === 'text' && canInChannel(channel, PERMISSIONS.MANAGE_WEBHOOKS)],
+    ['delete', manages],
+  ];
+  return pages.filter(([, allowed]) => allowed).map(([key]) => key);
 }
 
 export function serverUnread(server: ServerSummary, unreadByConversation: Map<string, number>): number {

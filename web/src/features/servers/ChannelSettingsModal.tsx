@@ -17,17 +17,16 @@ import { WebhookUrlReveal } from '@/features/bots/WebhookUrlReveal';
 import { GroupAvatar } from '@/features/conversations/GroupAvatar';
 import { ImageCropDialog } from '@/features/settings/ImageCropDialog';
 import { uploadCroppedProfileImage } from '@/features/settings/uploadCroppedProfileImage';
-import { PERMISSIONS } from './permissionBits';
 import { bitOf, channelPermissionNames } from './permissionCatalog';
 import { SectionTitle, SettingsShell, type SettingsTab } from './SettingsShell';
 import {
   createWebhook, deleteChannel, deleteWebhook, fetchOverwrites, fetchWebhooks, rotateWebhook, setOverwrite, updateChannel, updateWebhook,
   type Overwrite, type WebhookInfo,
 } from './serversApi';
-import { can, canInChannel } from './serverUtils';
+import { channelSettingsTabs, type ChannelSettingsTab } from './serverUtils';
 import { useSaveBar } from './useSaveBar';
 
-type TabKey = 'overview' | 'permissions' | 'webhooks' | 'delete';
+type TabKey = ChannelSettingsTab;
 type Tri = 'allow' | 'inherit' | 'deny';
 
 function TriState({ value, onChange }: { value: Tri; onChange: (next: Tri) => void }) {
@@ -222,13 +221,9 @@ export function ChannelSettingsModal({ server, channel, onClose }: { server: Ser
   const [error, setError] = useState<string | null>(null);
   useEffect(() => { setName(channel.name); setTopic(channel.topic); }, [channel.name, channel.topic]);
   const bar = useSaveBar({ name, topic }, name !== channel.name || topic !== channel.topic);
-  const tabs: (SettingsTab & { key: TabKey })[] = [
-    { key: 'overview', label: t('channelSettings.overview') },
-    ...(can(server, PERMISSIONS.MANAGE_ROLES) ? [{ key: 'permissions' as const, label: t('channelSettings.permissions') }] : []),
-    ...(channel.type === 'text' && canInChannel(channel, PERMISSIONS.MANAGE_WEBHOOKS) ? [{ key: 'webhooks' as const, label: t('channelSettings.webhooks') }] : []),
-    { key: 'delete', label: t('channelSettings.delete'), danger: true },
-  ];
-  const [tab, setTab] = useState<TabKey>('overview');
+  const tabs: (SettingsTab & { key: TabKey })[] = channelSettingsTabs(server, channel)
+    .map((key) => ({ key, label: t(`channelSettings.${key}`), danger: key === 'delete' || undefined }));
+  const [tab, setTab] = useState<TabKey>(tabs[0]?.key ?? 'overview');
   const heading = channel.type === 'text' ? `# ${channel.name}` : channel.name;
 
   return (

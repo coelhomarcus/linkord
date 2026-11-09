@@ -27,13 +27,13 @@ import {
   revokeInviteLink, saveRoleOrder, setMemberRoles, transferServer, unbanMember, updateRole, updateServer,
   type ServerInvite, type ServerMemberEntry,
 } from './serversApi';
-import { can, memberColor } from './serverUtils';
+import { can, memberColor, serverSettingsTabs, type ServerSettingsTab } from './serverUtils';
 import { inviteUrl } from './inviteCode';
 import { RoleColorPicker } from './RoleColorPicker';
 import { ServerAuditLog } from './ServerAuditLog';
 import { useSaveBar } from './useSaveBar';
 
-type TabKey = 'overview' | 'roles' | 'members' | 'invites' | 'bans' | 'auditLog' | 'soundboard' | 'delete';
+type TabKey = ServerSettingsTab;
 
 function useAction() {
   const [error, setError] = useState<string | null>(null);
@@ -395,24 +395,21 @@ export function ServerSettingsModal({ server, onClose, onOpenProfile }: { server
   const { t } = useTranslation('servers');
   const { state } = useRoom();
   const navigate = useNavigate();
-  const isOwner = server.ownerId === state.me.userId;
   type Tab = SettingsTab & { key: TabKey };
   // Discord's column: the server's own pages, then each group under its heading
-  const grouped = (group: string, items: Tab[]): Tab[] => items.map((item, index) => (index === 0 ? { ...item, group } : item));
-  const tabs: Tab[] = [
-    ...(can(server, PERMISSIONS.MANAGE_SERVER) ? [{ key: 'overview' as const, label: t('settings.overview') }] : []),
-    ...grouped(t('settings.groups.expressions'), [{ key: 'soundboard' as const, label: t('settings.soundboard') }]),
-    ...grouped(t('settings.groups.people'), [
-      ...(can(server, PERMISSIONS.KICK_MEMBERS) || can(server, PERMISSIONS.BAN_MEMBERS) || can(server, PERMISSIONS.MANAGE_ROLES) ? [{ key: 'members' as const, label: t('settings.members') }] : []),
-      ...(can(server, PERMISSIONS.MANAGE_ROLES) ? [{ key: 'roles' as const, label: t('settings.roles') }] : []),
-      ...(can(server, PERMISSIONS.MANAGE_SERVER) ? [{ key: 'invites' as const, label: t('settings.invites') }] : []),
-    ]),
-    ...grouped(t('settings.groups.moderation'), [
-      ...(can(server, PERMISSIONS.VIEW_AUDIT_LOG) ? [{ key: 'auditLog' as const, label: t('settings.auditLog') }] : []),
-      ...(can(server, PERMISSIONS.BAN_MEMBERS) ? [{ key: 'bans' as const, label: t('settings.bans') }] : []),
-    ]),
-    ...(isOwner ? [{ key: 'delete' as const, label: t('settings.delete'), danger: true }] : []),
-  ];
+  const groupOf: Partial<Record<TabKey, string>> = {
+    soundboard: t('settings.groups.expressions'),
+    members: t('settings.groups.people'), roles: t('settings.groups.people'), invites: t('settings.groups.people'),
+    auditLog: t('settings.groups.moderation'), bans: t('settings.groups.moderation'),
+  };
+  const tabs: Tab[] = serverSettingsTabs(server, state.me.userId).map((key, index, keys) => {
+    const group = groupOf[key];
+    return {
+      key, label: t(`settings.${key}`), danger: key === 'delete' || undefined,
+      // the heading goes on the first page of its group
+      ...(group && groupOf[keys[index - 1]!] !== group ? { group } : {}),
+    };
+  });
   const [tab, setTab] = useState<TabKey>(tabs[0]!.key);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const { error, run } = useAction();
