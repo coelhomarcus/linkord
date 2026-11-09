@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { config } from '../../config/env.js';
+import { clientIpOf } from '../../http/clientInfo.js';
 import { sendJson, sendError, jsonBody } from '../../http/respond.js';
 import * as floodControl from '../../realtime/floodControl.js';
 import { postBotMessage } from '../messages/messages.js';
@@ -44,7 +45,7 @@ function tooFast(reply: FastifyReply, key: string, rule: { windowMs: number; max
 }
 
 async function handleIngress(request: FastifyRequest<{ Params: IngressParams }>, reply: FastifyReply): Promise<void> {
-  const ipKey = `webhook-ip:${request.ip}`;
+  const ipKey = `webhook-ip:${clientIpOf(request)}`;
   if (!floodControl.allow(ipKey, PER_IP_LIMIT)) return tooFast(reply, ipKey, PER_IP_LIMIT);
 
   const webhookId = String(request.params.webhookId || '');

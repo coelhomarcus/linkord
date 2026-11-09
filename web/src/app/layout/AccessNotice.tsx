@@ -1,5 +1,6 @@
 import { UserMinusIcon } from '@phosphor-icons/react';
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { useRoom } from '@/state/RoomContext';
@@ -7,6 +8,7 @@ import { useRoom } from '@/state/RoomContext';
 const DISMISS_AFTER_MS = 10_000;
 
 export function AccessNotice() {
+  const { t } = useTranslation();
   const { accessNotice, clearAccessNotice } = useRoom();
 
   useEffect(() => {
@@ -20,7 +22,7 @@ export function AccessNotice() {
     <div role="status" className="fixed left-1/2 top-4 z-60 flex max-w-[calc(100%-2rem)] -translate-x-1/2 items-center gap-2 rounded-full border border-border-strong bg-bg-floating/90 py-2 pl-3.5 pr-2 text-label font-medium text-text-primary shadow-popover backdrop-blur-xl">
       <UserMinusIcon size={15} className="flex-none text-red-text" />
       <span className="min-w-0 truncate">{accessNotice}</span>
-      <CloseButton size="xs" label="Dispensar aviso" onClick={clearAccessNotice} />
+      <CloseButton size="xs" label={t('layout.dismissNotice')} onClick={clearAccessNotice} />
     </div>
   );
 }

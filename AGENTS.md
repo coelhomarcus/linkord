@@ -51,7 +51,11 @@ Short and quiet, from three durations (`DURATION` in `shared/lib/ease.ts`): **10
 - Popovers, menus, selects and tooltips take `motion-popup`, dialogs and their backdrop `motion-modal` (`styles/index.css`), both on tw-animate's `animate-in`/`animate-out`. Use the primitives rather than restating their timing.
 - **Reduced motion** is handled once: under `prefers-reduced-motion` the `enter`/`exit` keyframes keep only the fade, and `MotionConfig reducedMotion="user"` (`App.tsx`) does the same for Motion. Something that moves by other means (a CSS transition on `transform`/`scale`, dnd-kit, `element.animate`) checks it itself (`motion-safe:`/`motion-reduce:`, `useReducedMotion`).
 - **Never delay the interaction**: an exit plays while what it hides already takes no input (Base UI does this for popups; `FloatingBar` is `inert` while it leaves).
-- **Tests**: exits are CSS animations waited on through `getAnimations()`, which jsdom lacks, so under test things unmount at once and assertions stay synchronous. Keep new exits on that pattern; a Motion `AnimatePresence` exit would keep nodes in the DOM after the state changes.
+- **Tests**: exits are CSS animations waited on through `getAnimations()`, which jsdom lacks, so under test things unmount at once and assertions stay synchronous. Keep new exits on that pattern; a Motion `AnimatePresence` exit would keep nodes in the DOM after the state changes. Something that leaves on its own, outside Base UI, uses `useExitPresence` (`shared/hooks`) as `FloatingBar` and the install banner do.
+
+### Error colour
+
+Words that report an error or a failure (an `role="alert"` line, a "failed" label, a counter past its limit) are `text-red-text`, the lighter red made to be read on the dark surfaces; so is the label of a destructive text button. `text-red` is the fill colour: icons, indicators, required-field asterisks and `bg-red/…` tints. A destructive button takes the `danger-outline` (neutral box, red label) or `destructive` (solid red) variant rather than recolouring another one. A boxed error is `ErrorBanner`. Success is `text-green`, never a Tailwind palette green.
 
 ## Backend (`server/src/`)
 

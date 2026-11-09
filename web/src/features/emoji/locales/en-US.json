@@ -30,11 +30,13 @@
   "upload": {
     "crop": "Crop emoji",
     "uploading": "Uploading…",
-    "uploadFailed": "Couldn't upload the emoji."
+    "uploadFailed": "Couldn't upload the emoji.",
+    "fileTooLarge": "File too large (maximum {{max}})."
   },
   "errors": {
     "invalid_emoji_name": "Names need 2 to 32 lowercase letters, numbers or _.",
     "invalid_image": "Couldn't read that image. Use PNG, JPEG, GIF or WebP.",
+    "invalid_crop": "The crop falls outside the image.",
     "emoji_too_large": "That emoji comes out too heavy. Try a shorter animation.",
     "emoji_name_taken": "There's already an emoji with that name in this server.",
     "emojis_full": "The server has used all of its slots for that kind of emoji."

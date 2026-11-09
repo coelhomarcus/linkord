@@ -81,7 +81,7 @@ html[data-theme="black"] {
 }
 
 /* Graphite: neutral slate; fields sink below the panel, menus rise above it */
-html[data-theme="discord"] {
+html[data-theme="graphite"] {
   --color-surface-rail: oklch(19.00% 0.0060 265.00);
   --color-surface-000: oklch(25.00% 0.0070 265.00);
   --color-surface-100: oklch(32.00% 0.0080 265.00);

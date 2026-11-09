@@ -229,7 +229,7 @@ A `401` never says which part is wrong, on purpose. If it suddenly starts appear
 | Limit | Value |
 |---|---|
 | Sends per webhook | 30 per minute |
-| Sends per IP | 120 per minute |
+| Sends per IP | 120 per minute (the sender's address as the proxy reports it, via `TRUST_PROXY`) |
 | Body size | 64 KB |
 | Text (`content`) | 2000 characters |
 | Cards per message | 5 |

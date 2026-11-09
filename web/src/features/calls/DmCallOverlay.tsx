@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { PhoneIcon, PhoneSlashIcon, VideoCameraIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { Avatar } from '@/shared/Avatar';
-import { playSound } from '@/shared/sounds';
+import { startRingtone } from '@/shared/sounds';
 import { useRoom } from '@/state/RoomContext';
 import type { DmCallEndReason } from '@/shared/types/protocol';
 
@@ -17,14 +17,13 @@ const ENDED_KEY: Record<DmCallEndReason, 'dm.declined' | 'dm.cancelled' | 'dm.mi
 export function DmCallOverlay() {
   const { t } = useTranslation('calls');
   const { dmCall, acceptDmCall, declineDmCall, cancelDmCall, allUsers } = useRoom();
-  const ringId = dmCall && (dmCall.phase === 'incoming' || dmCall.phase === 'outgoing') ? `${dmCall.callId}:${dmCall.phase}` : null;
+  const ringPhase = dmCall?.phase === 'incoming' || dmCall?.phase === 'outgoing' ? dmCall.phase : null;
+  const ringCallId = ringPhase ? dmCall?.callId : null;
 
   useEffect(() => {
-    if (!ringId) return;
-    playSound('newMessage');
-    const timer = window.setInterval(() => playSound('newMessage'), 2500);
-    return () => window.clearInterval(timer);
-  }, [ringId]);
+    if (!ringPhase) return;
+    return startRingtone(ringPhase);
+  }, [ringCallId, ringPhase]);
 
   if (!dmCall) return null;
   const peer = allUsers.get(dmCall.peerId);

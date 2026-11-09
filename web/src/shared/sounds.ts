@@ -1,35 +1,26 @@
-import connectUrl from 'uisfx/sounds/soft/connect.mp3?url';
-import disconnectUrl from 'uisfx/sounds/soft/disconnect.mp3?url';
-import lockUrl from 'uisfx/sounds/soft/lock.mp3?url';
-import mentionUrl from 'uisfx/sounds/soft/mention.mp3?url';
-import notificationUrl from 'uisfx/sounds/soft/notification.mp3?url';
-import receiveUrl from 'uisfx/sounds/soft/receive.mp3?url';
-import startUrl from 'uisfx/sounds/soft/start.mp3?url';
-import toggleOffUrl from 'uisfx/sounds/soft/toggle-off.mp3?url';
-import toggleOnUrl from 'uisfx/sounds/soft/toggle-on.mp3?url';
-import unlockUrl from 'uisfx/sounds/soft/unlock.mp3?url';
-import wakeUrl from 'uisfx/sounds/soft/wake.mp3?url';
 import { soundGroupEnabled, type SoundGroup } from './soundPreferences';
 import { isDoNotDisturb } from './doNotDisturb';
 
-// UI SFX (uisfx), "soft" pack, named by what happened rather than what it
-// sounds like. Changing the pack means changing the folder in these imports.
+// Files live in public/audio (see the README there for sources and licences),
+// named by what happened rather than what they sound like.
 const SOUND_FILES = {
-  muted: toggleOffUrl,
-  unmuted: toggleOnUrl,
-  deafened: lockUrl,
-  undeafened: unlockUrl,
-  userLeave: disconnectUrl,
-  incomingUser: connectUrl,
-  newMessage: receiveUrl,
-  mention: mentionUrl,
-  screenshare: startUrl,
-  camera: wakeUrl,
+  muted: '/audio/muted.mp3',
+  unmuted: '/audio/unmuted.mp3',
+  deafened: '/audio/deafened.mp3',
+  undeafened: '/audio/undeafened.mp3',
+  userLeave: '/audio/user-leave.mp3',
+  incomingUser: '/audio/incoming-user.mp3',
+  newMessage: '/audio/new-message.mp3',
+  mention: '/audio/mention.mp3',
+  screenshare: '/audio/screenshare.mp3',
+  camera: '/audio/camera.mp3',
 } as const;
+
+const RINGTONE_URL = '/audio/call-ringing.mp3';
 
 /** Plain URL, not part of the pool below: the speaker test has to play on one
  * specific output device, which only a dedicated <audio> element can do. */
-export const SPEAKER_TEST_SOUND_URL = notificationUrl;
+export const SPEAKER_TEST_SOUND_URL = '/audio/speaker-test.mp3';
 
 export type SoundName = keyof typeof SOUND_FILES;
 
@@ -64,6 +55,10 @@ export function preloadSounds(): void {
     audio.load();
     preloaded.set(name, audio);
   }
+  // Only to fill the HTTP cache, so the first ring starts without a fetch.
+  const ring = new Audio(RINGTONE_URL);
+  ring.preload = 'auto';
+  ring.load();
 }
 
 /** Groups that tell you something happened elsewhere; "do not disturb" silences these. The call group
@@ -79,4 +74,16 @@ export function playSound(name: SoundName, { force = false }: { force?: boolean 
   if (audio === warm) audio.currentTime = 0;
   audio.volume = volume;
   audio.play().catch(() => {});
+}
+
+/** Rings until the returned function is called. An incoming ring is something that happened elsewhere,
+ * so "do not disturb" silences it; an outgoing one answers what you just did and stays. */
+export function startRingtone(direction: 'incoming' | 'outgoing'): () => void {
+  if (!soundGroupEnabled('call')) return () => {};
+  if (direction === 'incoming' && isDoNotDisturb()) return () => {};
+  const audio = new Audio(RINGTONE_URL);
+  audio.loop = true;
+  audio.volume = volume;
+  audio.play().catch(() => {});
+  return () => { audio.pause(); };
 }

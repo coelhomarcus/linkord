@@ -32,6 +32,17 @@ describe('MessageComposer', () => {
     vi.clearAllMocks();
   });
 
+  it('draws the placeholder as a truncating overlay that goes away once there is text', async () => {
+    const user = userEvent.setup();
+    renderWithRoom(<MessageComposer conversationId="conv-1" />, { state: joinedState });
+
+    const textarea = screen.getByPlaceholderText('Mensagem');
+    expect(screen.getByText('Mensagem', { selector: 'span[aria-hidden]' })).toHaveClass('truncate');
+
+    await user.type(textarea, 'oi');
+    expect(screen.queryByText('Mensagem', { selector: 'span[aria-hidden]' })).not.toBeInTheDocument();
+  });
+
   it('sends the message with Enter and clears the field', async () => {
     const user = userEvent.setup();
     const sendChatMessage = vi.fn(() => true);
@@ -69,6 +80,36 @@ describe('MessageComposer', () => {
 
     await user.click(sendButton);
     expect(sendChatMessage).toHaveBeenCalledWith('conv-1', 'oi', undefined);
+  });
+
+  it('the send button is neutral while empty and turns accent with text', async () => {
+    const user = userEvent.setup();
+    renderWithRoom(<MessageComposer conversationId="conv-1" />, { state: joinedState });
+
+    const sendButton = screen.getByRole('button', { name: 'Enviar mensagem' });
+    expect(sendButton).toBeDisabled();
+    expect(sendButton).not.toHaveClass('bg-primary');
+    expect(sendButton).toHaveClass('duration-100');
+
+    await user.type(screen.getByPlaceholderText('Mensagem'), 'oi');
+    expect(sendButton).toBeEnabled();
+    expect(sendButton).toHaveClass('bg-primary');
+
+    await user.clear(screen.getByPlaceholderText('Mensagem'));
+    expect(sendButton).toBeDisabled();
+    expect(sendButton).not.toHaveClass('bg-primary');
+  });
+
+  it('the send button turns accent with only an attachment and no text', async () => {
+    const user = userEvent.setup();
+    const { container } = renderWithRoom(<MessageComposer conversationId="conv-1" />, { state: joinedState });
+
+    const sendButton = screen.getByRole('button', { name: 'Enviar mensagem' });
+    expect(sendButton).not.toHaveClass('bg-primary');
+
+    await user.upload(container.querySelector<HTMLInputElement>('input[type="file"]')!, fakeFile('doc.pdf', 'application/pdf'));
+    expect(sendButton).toBeEnabled();
+    expect(sendButton).toHaveClass('bg-primary');
   });
 
   it('"+" opens the Adicionar menu; "Anexar arquivos" opens the general file picker', async () => {

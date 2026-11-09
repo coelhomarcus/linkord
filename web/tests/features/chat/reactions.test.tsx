@@ -110,6 +110,96 @@ describe('MessageReactions', () => {
   });
 });
 
+describe('MessageReactions — motion', () => {
+  const chipOf = (emoji: string) => screen.getByRole('button', { name: new RegExp(`reação ${emoji}`) }).parentElement!;
+  const countOf = (emoji: string) => screen.getByRole('button', { name: new RegExp(`reação ${emoji}`) }).querySelector('[data-roll], .tabular-nums > span')!;
+  type Reactions = Record<string, string[]>;
+  const ui = (reactions: Reactions) => <MessageReactions reactions={reactions} myUserId="me" allUsers={new Map()} onToggle={() => {}} />;
+
+  it('reactions that were there when the message rendered do not animate', () => {
+    render(ui({ '👍': ['ana', 'bia'], '🎉': ['ana'] }));
+    for (const emoji of ['👍', '🎉']) {
+      expect(chipOf(emoji)).not.toHaveAttribute('data-entering');
+      expect(chipOf(emoji)).not.toHaveAttribute('data-closed');
+      expect(countOf(emoji)).not.toHaveAttribute('data-roll');
+    }
+  });
+
+  it('a chip that arrives afterwards enters, and the ones already there stay still', () => {
+    const { rerender } = render(ui({ '👍': ['ana'] }));
+    rerender(ui({ '👍': ['ana'], '🎉': ['bia'] }));
+    expect(chipOf('🎉')).toHaveAttribute('data-entering');
+    expect(chipOf('👍')).not.toHaveAttribute('data-entering');
+  });
+
+  it('the first reaction on a message that had none enters', () => {
+    const { rerender } = render(ui({}));
+    rerender(ui({ '😂': ['ana'] }));
+    expect(chipOf('😂')).toHaveAttribute('data-entering');
+  });
+
+  it('a count that changes rolls towards the new number, and a chip that is new does not roll', () => {
+    const { rerender } = render(ui({ '👍': ['ana'] }));
+    rerender(ui({ '👍': ['ana', 'bia'], '🎉': ['ana'] }));
+    expect(countOf('👍')).toHaveAttribute('data-roll', 'up');
+    expect(countOf('👍')).toHaveTextContent('2');
+    expect(countOf('🎉')).not.toHaveAttribute('data-roll');
+    rerender(ui({ '👍': ['ana'], '🎉': ['ana'] }));
+    expect(countOf('👍')).toHaveAttribute('data-roll', 'down');
+    expect(countOf('👍')).toHaveTextContent('1');
+  });
+
+  it('a message remounted with the reactions it already has plays nothing', () => {
+    const { unmount } = render(ui({ '👍': ['ana'] }));
+    unmount();
+    render(ui({ '👍': ['ana', 'bia'] }));
+    expect(chipOf('👍')).not.toHaveAttribute('data-entering');
+    expect(countOf('👍')).not.toHaveAttribute('data-roll');
+  });
+
+  it('a removed chip is gone at once where nothing animates', () => {
+    const { rerender } = render(ui({ '👍': ['ana'], '🎉': ['bia'] }));
+    rerender(ui({ '🎉': ['bia'] }));
+    expect(screen.queryByRole('button', { name: /reação 👍/, hidden: true })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /reação 🎉/ })).toBeInTheDocument();
+  });
+
+  it('a removed chip fades out where it was with the count it had, taking no input, then unmounts', async () => {
+    let finish!: () => void;
+    const finished = new Promise<void>((resolve) => { finish = resolve; });
+    Object.defineProperty(HTMLElement.prototype, 'getAnimations', { configurable: true, value: () => [{ finished }] as unknown as Animation[] });
+    try {
+      const { rerender } = render(ui({ '👍': ['ana', 'bia'], '🎉': ['bia'] }));
+      rerender(ui({ '🎉': ['bia'] }));
+      const leaving = screen.getByRole('button', { name: /reação 👍/, hidden: true }).parentElement!;
+      expect(leaving).toHaveAttribute('data-closed');
+      expect(leaving).toHaveAttribute('inert');
+      expect(leaving).toHaveTextContent('2');
+      expect(leaving.nextElementSibling).toBe(chipOf('🎉'));
+      await act(async () => { finish(); await finished; });
+      expect(screen.queryByRole('button', { name: /reação 👍/, hidden: true })).not.toBeInTheDocument();
+    } finally {
+      delete (HTMLElement.prototype as { getAnimations?: unknown }).getAnimations;
+    }
+  });
+
+  it('the last chip fades out too, and one that comes back while leaving enters again', async () => {
+    const finished = new Promise<void>(() => {});
+    Object.defineProperty(HTMLElement.prototype, 'getAnimations', { configurable: true, value: () => [{ finished }] as unknown as Animation[] });
+    try {
+      const { rerender } = render(ui({ '👍': ['ana'] }));
+      rerender(ui({}));
+      expect(chipOf('👍')).toHaveAttribute('data-closed');
+      rerender(ui({ '👍': ['bia'] }));
+      expect(chipOf('👍')).not.toHaveAttribute('data-closed');
+      expect(chipOf('👍')).toHaveAttribute('data-entering');
+      expect(screen.getAllByRole('button', { name: /reação 👍/ })).toHaveLength(1);
+    } finally {
+      delete (HTMLElement.prototype as { getAnimations?: unknown }).getAnimations;
+    }
+  });
+});
+
 describe('ReactionParticipantsDialog', () => {
   const publicUser = (id: string, displayName: string): PublicUser => ({ id, username: id, displayName, avatar: '', avatarColor: 'blurple', banner: '', bio: '', profileLinks: [], role: 'user' });
   const allUsers = new Map([['ana', publicUser('ana', 'Ana')], ['bia', publicUser('bia', 'Bia')]]);

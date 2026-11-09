@@ -8,6 +8,7 @@ import type emoji from '@/features/emoji/locales/pt-BR.json';
 import type gifs from '@/features/gifs/locales/pt-BR.json';
 import type games from '@/features/games/locales/pt-BR.json';
 import type navigation from '@/features/navigation/locales/pt-BR.json';
+import type install from '@/features/install/locales/pt-BR.json';
 import type notifications from '@/features/notifications/locales/pt-BR.json';
 import type calls from '@/features/calls/locales/pt-BR.json';
 import type profile from '@/features/profile/locales/pt-BR.json';
@@ -37,6 +38,7 @@ declare module 'i18next' {
       gifs: typeof gifs;
       games: typeof games;
       navigation: typeof navigation;
+      install: typeof install;
       notifications: typeof notifications;
       calls: typeof calls;
       profile: typeof profile;

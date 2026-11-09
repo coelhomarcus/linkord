@@ -14,14 +14,27 @@ describe('useColorThemePreference', () => {
   });
 
   it('keeps a saved Old theme, the default before Black took over', () => {
-    saveColorTheme('linkord');
-    expect(loadColorTheme()).toBe('linkord');
+    saveColorTheme('old');
+    expect(loadColorTheme()).toBe('old');
   });
 
   it('persists a valid theme id', () => {
-    saveColorTheme('discord');
-    expect(localStorageStore.get(KEY)).toBe('discord');
-    expect(loadColorTheme()).toBe('discord');
+    saveColorTheme('graphite');
+    expect(localStorageStore.get(KEY)).toBe('graphite');
+    expect(loadColorTheme()).toBe('graphite');
+  });
+
+  it('migrates the ids stored before the rename and writes the new one back', () => {
+    for (const [legacy, current] of [['linkord', 'old'], ['discord', 'graphite']]) {
+      localStorageStore.set(KEY, legacy);
+      expect(loadColorTheme(), legacy).toBe(current);
+      expect(localStorageStore.get(KEY), legacy).toBe(current);
+    }
+  });
+
+  it('does not treat object prototype keys as legacy ids', () => {
+    localStorageStore.set(KEY, 'constructor');
+    expect(loadColorTheme()).toBe('black');
   });
 
   it('falls back to black for a theme that was removed', () => {

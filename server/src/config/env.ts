@@ -4,6 +4,17 @@ const PORT = Number(process.env.PORT || 3000);
 const HOST_BIND = process.env.HOST_BIND || '0.0.0.0';
 const MAX_PARTICIPANTS = Number(process.env.MAX_PARTICIPANTS || 50);
 const TRUST_PROXY = process.env.TRUST_PROXY === '1';
+// How many proxies in front of the server append to X-Forwarded-For. A wrong count either believes
+// an address the client wrote (too low) or drops to the first proxy's address (too high), so an
+// invalid value stops the boot instead of falling back.
+export function parseTrustedProxyHops(raw: string | undefined): number {
+  const text = (raw ?? '').trim();
+  if (text === '') return 1;
+  const hops = Number(text);
+  if (!Number.isSafeInteger(hops) || hops < 1) throw new Error('TRUSTED_PROXY_HOPS must be a whole number of proxies, 1 or more (see .env.example).');
+  return hops;
+}
+const TRUSTED_PROXY_HOPS = parseTrustedProxyHops(process.env.TRUSTED_PROXY_HOPS);
 // Socket.IO TRANSPORT cap (kills the connection if exceeded), not app
 // validation — video/uploads don't go through the socket, so 64KB is
 // plenty for signaling.
@@ -209,7 +220,7 @@ const SERVER_AUDIT_RETENTION_DAYS = parseRetentionDays('SERVER_AUDIT_RETENTION_D
 
 export const config = {
   AUDIT_RETENTION_DAYS, DATA_REPAIRS_RETENTION_DAYS, NOTIFICATION_READ_RETENTION_DAYS, NOTIFICATION_UNREAD_RETENTION_DAYS, OUTBOX_RETENTION_DAYS, SERVER_AUDIT_RETENTION_DAYS,
-  PORT, HOST_BIND, MAX_PARTICIPANTS, TRUST_PROXY, MAX_MSG_BYTES, RECONNECT_GRACE_MS, CALL_RESTORE_GRACE_MS,
+  PORT, HOST_BIND, MAX_PARTICIPANTS, TRUST_PROXY, TRUSTED_PROXY_HOPS, MAX_MSG_BYTES, RECONNECT_GRACE_MS, CALL_RESTORE_GRACE_MS,
   MAX_AVATAR_LEN, MAX_BANNER_LEN, MAX_PROFILE_BIO_LEN, MAX_PROFILE_LINKS, MAX_PROFILE_LINK_LEN,
   MAX_CHAT_LEN, CHAT_HISTORY_LIMIT, SEARCH_RESULT_LIMIT, MAX_SEARCH_QUERY_LEN, MAX_ATTACHMENTS_PER_MESSAGE,
   FRIEND_REQUEST_COOLDOWN_MS, MAX_SERVER_MEMBERS, MAX_CHANNELS_PER_SERVER, MAX_ROLES_PER_SERVER, MAX_INVITES_PER_SERVER, MAX_WEBHOOKS_PER_CHANNEL, MAX_INVITEES_PER_REQUEST,

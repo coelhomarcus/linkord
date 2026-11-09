@@ -4,8 +4,8 @@ import type { ColorThemeId } from './useColorThemePreference';
 // colors before this bundle loads.
 const SHELL_BACKGROUND: Record<ColorThemeId, string> = {
   black: '#000000',
-  linkord: '#0d0d0f',
-  discord: '#202225',
+  old: '#0d0d0f',
+  graphite: '#202225',
 };
 
 export function applyColorTheme(id: ColorThemeId): void {

@@ -183,7 +183,7 @@ describe('login through a restart', () => {
     }
   });
 
-  it('a successful login clears the counters', async () => {
+  it('a successful login clears the account counter but not the address counter', async () => {
     const username = `rl_${uid().slice(0, 12)}`;
     const password = 'correct horse battery';
     await db.insert(users).values({ id: uid(), username, passwordHash: await hashPassword(password) });
@@ -193,7 +193,19 @@ describe('login through a restart', () => {
     assert.equal((await rowOf(`user:${username}`))?.count, 3);
     assert.equal((await login(app, username, password, ip)).status, 200);
     assert.equal(await rowOf(`user:${username}`), undefined);
-    assert.equal(await rowOf(`ip:${ip}`), undefined);
+    assert.equal((await rowOf(`ip:${ip}`))?.count, 3);
+  });
+
+  it('logging in to an own account does not let an address keep spraying other usernames', async () => {
+    const username = `rl_${uid().slice(0, 12)}`;
+    const password = 'correct horse battery';
+    await db.insert(users).values({ id: uid(), username, passwordHash: await hashPassword(password) });
+    const ip = freshIp();
+
+    for (let i = 0; i < FAILURE_RULE.max - 1; i++) await login(app, `ghost_${uid().slice(0, 10)}`, 'x', ip);
+    assert.equal((await login(app, username, password, ip)).status, 200);
+    assert.equal((await login(app, `ghost_${uid().slice(0, 10)}`, 'x', ip)).status, 401);
+    assert.equal((await login(app, `ghost_${uid().slice(0, 10)}`, 'x', ip)).status, 429);
   });
 });
 
@@ -244,8 +256,10 @@ describe('other limits moved to the database', () => {
 
   it('email change requests are limited per account', async () => {
     const user = await makeUser('ec');
+    const password = 'correct horse battery';
+    await db.update(users).set({ passwordHash: await hashPassword(password) }).where(eq(users.id, user.id));
     const cookie = `${config.SESSION_COOKIE}=${(await createSession(user.id)).rawToken}`;
-    const request = () => app.inject({ method: 'POST', url: '/api/auth/email/change/request', payload: { email: `new_${uid().slice(0, 8)}@example.com` }, headers: { cookie } });
+    const request = () => app.inject({ method: 'POST', url: '/api/auth/email/change/request', payload: { email: `new_${uid().slice(0, 8)}@example.com`, password }, headers: { cookie } });
     // the mail itself is not configured here (503 email_unavailable), but the attempt is still counted
     for (let i = 0; i < FAILURE_RULE.max; i++) await request();
     assert.equal((await request()).statusCode, 429);

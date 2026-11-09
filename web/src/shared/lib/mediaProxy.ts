@@ -3,7 +3,7 @@
 // these addresses ready-made; the two built here are named by an id on a fixed
 // host, mirroring server/src/modules/media-proxy/mediaProxyUrls.ts.
 
-export const MEDIA_PROXY_PATH = '/api/media-proxy';
+const MEDIA_PROXY_PATH = '/api/media-proxy';
 
 export function igdbCoverProxyUrl(imageId: string, size: 'cover_small' | 'cover_big'): string {
   return `${MEDIA_PROXY_PATH}/igdb/${size}/${imageId}`;

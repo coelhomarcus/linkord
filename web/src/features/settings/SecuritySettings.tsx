@@ -5,6 +5,8 @@ import { fetchSecurityStatus, fetchSessions } from '@/shared/api/api';
 import type { AccountSession, SecurityStatus } from '@/shared/api/api';
 import { Skeleton, SkeletonGroup } from '@/shared/ui/primitives/skeleton';
 import { SettingsSection, SettingsSections } from '@/shared/ui/settings-layout';
+import { LoadError } from './LoadError';
+import { LoginAlertSettings } from './LoginAlertSettings';
 import { PasswordSettings } from './PasswordSettings';
 import { SessionsSettings } from './SessionsSettings';
 import { TwoFactorSettings } from './TwoFactorSettings';
@@ -40,11 +42,22 @@ export function SecuritySettings() {
 
       <SettingsSection id="two-factor" title={t('catalog.sections.twoFactor')}>
         {security.status === 'loading' && <RowsSkeleton count={1} label={t('security.loading')} />}
-        {security.status === 'error' && <LoadError onRetry={() => { setSecurity({ status: 'loading' }); loadSecurity(); }} />}
+        {security.status === 'error' && <LoadError message={t('security.loadFailed')} onRetry={() => { setSecurity({ status: 'loading' }); loadSecurity(); }} />}
         {security.status === 'ready' && (
           <TwoFactorSettings
             status={security.value}
             onChange={(enabled) => setSecurity({ status: 'ready', value: { ...security.value, twoFactorEnabled: enabled } })}
+          />
+        )}
+      </SettingsSection>
+
+      <SettingsSection id="login-alerts" title={t('catalog.sections.loginAlerts')}>
+        {security.status === 'loading' && <RowsSkeleton count={1} label={t('security.loading')} />}
+        {security.status === 'error' && <LoadError message={t('security.loadFailed')} onRetry={() => { setSecurity({ status: 'loading' }); loadSecurity(); }} />}
+        {security.status === 'ready' && (
+          <LoginAlertSettings
+            status={security.value}
+            onChange={(enabled) => setSecurity({ status: 'ready', value: { ...security.value, loginAlertEnabled: enabled } })}
           />
         )}
       </SettingsSection>
@@ -55,7 +68,7 @@ export function SecuritySettings() {
         description={idleDays > 0 ? t('security.sessions.descriptionIdle', { count: idleDays }) : t('security.sessions.description')}
       >
         {sessions.status === 'loading' && <RowsSkeleton count={2} label={t('security.loading')} />}
-        {sessions.status === 'error' && <LoadError onRetry={() => { setSessions({ status: 'loading' }); loadSessions(); }} />}
+        {sessions.status === 'error' && <LoadError message={t('security.loadFailed')} onRetry={() => { setSessions({ status: 'loading' }); loadSessions(); }} />}
         {sessions.status === 'ready' && (
           <SessionsSettings
             sessions={sessions.value}
@@ -77,15 +90,5 @@ function RowsSkeleton({ count, label }: { count: number; label: string }) {
         </div>
       ))}
     </SkeletonGroup>
-  );
-}
-
-function LoadError({ onRetry }: { onRetry: () => void }) {
-  const { t } = useTranslation('settings');
-  return (
-    <div className="flex items-center gap-2 rounded-md bg-red/12 px-2.5 py-1.5 text-label text-red-text">
-      <span className="min-w-0 flex-1">{t('security.loadFailed')}</span>
-      <button type="button" onClick={onRetry} className="flex-none font-medium underline-offset-2 hover:underline">{t('security.retry')}</button>
-    </div>
   );
 }

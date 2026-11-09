@@ -20,14 +20,14 @@ function directives(policy: string): Map<string, string[]> {
 const sha256 = (text: string) => `sha256-${crypto.createHash('sha256').update(text, 'utf8').digest('base64')}`;
 
 describe('buildContentSecurityPolicy', () => {
-  it('runs only our own scripts, compiles WebAssembly, and allows no eval', () => {
+  it('runs only our own scripts and allows neither eval nor WebAssembly', () => {
     const scriptSrc = directives(buildContentSecurityPolicy(base)).get('script-src');
-    assert.deepEqual(scriptSrc, ["'self'", "'wasm-unsafe-eval'"]);
+    assert.deepEqual(scriptSrc, ["'self'"]);
   });
 
   it('adds the inline script hashes of the build', () => {
     const scriptSrc = directives(buildContentSecurityPolicy({ ...base, scriptHashes: ['sha256-abc', 'sha256-def'] })).get('script-src');
-    assert.deepEqual(scriptSrc, ["'self'", "'wasm-unsafe-eval'", "'sha256-abc'", "'sha256-def'"]);
+    assert.deepEqual(scriptSrc, ["'self'", "'sha256-abc'", "'sha256-def'"]);
   });
 
   it('refuses to be framed and locks down base, forms and plugins', () => {

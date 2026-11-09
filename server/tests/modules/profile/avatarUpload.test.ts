@@ -42,7 +42,7 @@ function animatedGif(): Buffer {
 }
 
 describe('encodeAndStoreProfileImage', () => {
-  test('stores a still JPEG as-is and skips the poster', async () => {
+  test('without a crop, stores a still JPEG as-is and skips the poster', async () => {
     const input = await staticJpeg();
     const result = await encodeAndStoreProfileImage(input, UPLOADER_ID);
     const id = result.avatar.split('/').pop()!;
@@ -56,7 +56,7 @@ describe('encodeAndStoreProfileImage', () => {
     assert.equal(result.avatarPoster, undefined);
   });
 
-  test('keeps an already-cropped animated GIF and generates a JPEG poster', async () => {
+  test('without a crop, keeps an animated GIF and generates a JPEG poster', async () => {
     const result = await encodeAndStoreProfileImage(animatedGif(), UPLOADER_ID);
     const imageId = result.avatar.split('/').pop()!;
     const posterId = result.avatarPoster?.split('/').pop();
@@ -68,6 +68,51 @@ describe('encodeAndStoreProfileImage', () => {
     assert.equal(posterMetadata.format, 'jpeg');
     assert.equal(posterMetadata.width, 2);
     assert.equal(posterMetadata.height, 2);
+  });
+
+  test('crops a still to the picked rect, as JPEG', async () => {
+    const input = await sharp({ create: { width: 40, height: 30, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } }).png().toBuffer();
+    const result = await encodeAndStoreProfileImage(input, UPLOADER_ID, { left: 5, top: 4, width: 20, height: 20 });
+    const metadata = await sharp(await fs.readFile(filePathFor(result.avatar.split('/').pop()!))).metadata();
+
+    assert.deepEqual([metadata.format, metadata.width, metadata.height], ['jpeg', 20, 20]);
+    assert.equal(result.avatarPoster, undefined);
+  });
+
+  test('crops every frame of an animated GIF and the poster with it', async () => {
+    const frames = await Promise.all([0, 1, 2].map((i) => sharp({ create: { width: 30, height: 20, channels: 4, background: { r: i * 100, g: 0, b: 0, alpha: 1 } } }).png().toBuffer()));
+    const gif = await sharp(frames, { join: { animated: true } }).gif().toBuffer();
+    const result = await encodeAndStoreProfileImage(gif, UPLOADER_ID, { left: 10, top: 2, width: 16, height: 16 });
+    const image = await sharp(await fs.readFile(filePathFor(result.avatar.split('/').pop()!)), { animated: true }).metadata();
+    const poster = await sharp(await fs.readFile(filePathFor(result.avatarPoster!.split('/').pop()!))).metadata();
+
+    assert.deepEqual([image.format, image.width, image.pageHeight, image.pages], ['gif', 16, 16, 3]);
+    assert.deepEqual([poster.format, poster.width, poster.height], ['jpeg', 16, 16]);
+  });
+
+  test('reads the rect in the orientation the browser showed', async () => {
+    // stored 40x20 and rotated by EXIF, so the person saw it 20x40
+    const input = await sharp({ create: { width: 40, height: 20, channels: 3, background: '#3a6' } }).jpeg().withMetadata({ orientation: 6 }).toBuffer();
+    const result = await encodeAndStoreProfileImage(input, UPLOADER_ID, { left: 0, top: 20, width: 20, height: 20 });
+    const metadata = await sharp(await fs.readFile(filePathFor(result.avatar.split('/').pop()!))).metadata();
+
+    assert.deepEqual([metadata.width, metadata.height], [20, 20]);
+  });
+
+  test('pulls a rect rounded a pixel past the edge back inside', async () => {
+    const result = await encodeAndStoreProfileImage(await staticJpeg(), UPLOADER_ID, { left: 3, top: 0, width: 6, height: 5 });
+    const metadata = await sharp(await fs.readFile(filePathFor(result.avatar.split('/').pop()!))).metadata();
+
+    assert.deepEqual([metadata.width, metadata.height], [5, 5]);
+  });
+
+  test('refuses a rect outside the picture and stores nothing', async () => {
+    const input = await staticJpeg();
+    await assert.rejects(
+      () => encodeAndStoreProfileImage(input, UPLOADER_ID, { left: 4, top: 0, width: 8, height: 5 }),
+      (err: Error & { code?: string }) => err.code === 'invalid_crop',
+    );
+    assert.deepEqual(await fs.readdir(uploadDir), []);
   });
 
   test('rejects bytes that are not an image', async () => {

@@ -57,7 +57,7 @@ export function DeviceSelect({ label, devices, icon }: { label: string; devices:
     <div className="flex min-w-0 flex-col gap-2">
       <label htmlFor={controlId} className={FIELD_LABEL}>{label}</label>
       {control}
-      {error && <p role="alert" className="text-label text-red">{error}</p>}
+      {error && <p role="alert" className="text-label text-red-text">{error}</p>}
     </div>
   );
 }
@@ -96,7 +96,7 @@ export function MicTest({ deviceId, disabled, onStarted }: { deviceId: string | 
           ))}
         </div>
       </div>
-      {meter.error && <p role="alert" className="text-label text-red">{meter.error}</p>}
+      {meter.error && <p role="alert" className="text-label text-red-text">{meter.error}</p>}
     </div>
   );
 }
@@ -109,7 +109,7 @@ export function SpeakerTestLink({ deviceId }: { deviceId: string | undefined }) 
       <button type="button" disabled={testing} onClick={() => void test(deviceId)} className="font-medium text-accent-text hover:underline disabled:opacity-60">
         {testing ? t('av.playing') : t('av.speakerTest')}
       </button>
-      {error && <span role="alert" className="block text-red">{error}</span>}
+      {error && <span role="alert" className="block text-red-text">{error}</span>}
     </>
   );
 }
@@ -150,7 +150,7 @@ export function CameraPreview({ deviceId, mirrored, disabled, onStarted }: { dev
           </div>
         )}
       </div>
-      {preview.error && <p role="alert" className="text-label text-red">{preview.error}</p>}
+      {preview.error && <p role="alert" className="text-label text-red-text">{preview.error}</p>}
     </div>
   );
 }

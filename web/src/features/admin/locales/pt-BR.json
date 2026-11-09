@@ -436,6 +436,7 @@
     "refreshFailed": "Não foi possível atualizar. Os valores abaixo são da leitura das {{time}}.",
     "liveConnections": "Conexões ao vivo",
     "onlineAccounts": "Contas online",
+    "startedAt": "Servidor iniciado em",
     "storage": "Armazenamento",
     "storageDescription": "Anexos de toda a instância.",
     "accountsCapacity": "Contas e capacidade",

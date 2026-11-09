@@ -5,8 +5,7 @@ import type { Area } from 'react-easy-crop';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 
-import { ImageCropDialog } from '@/features/settings/ImageCropDialog';
-import type { ProfileImageUploadPhase } from '@/features/settings/uploadCroppedProfileImage';
+import { ImageCropDialog } from '@/shared/ImageCropDialog';
 import { useRoom } from '@/state/RoomContext';
 import { cn } from '@/shared/lib/utils';
 import { ROUTES } from '@/shared/lib/routes';
@@ -62,9 +61,9 @@ export function ProfileEditor({ status, customStatus, details, onClose, register
   const avatarFileInputRef = useRef<HTMLInputElement | null>(null);
   const bannerFileInputRef = useRef<HTMLInputElement | null>(null);
   const [cropTarget, setCropTarget] = useState<ProfileCropTarget | null>(null);
-  // The crop dialog stays mounted during WASM processing, then gives way to
-  // the blocking upload modal when the encoded blob is ready.
-  const [activeUpload, setActiveUpload] = useState<{ field: 'avatar' | 'banner'; phase: ProfileImageUploadPhase } | null>(null);
+  // the field whose picture is on its way: the crop dialog gives way to the
+  // blocking upload modal as soon as the rect is confirmed
+  const [activeUpload, setActiveUpload] = useState<'avatar' | 'banner' | null>(null);
   // what to do once the unsaved-changes prompt is answered (close, or follow a link)
   const [pendingLeave, setPendingLeave] = useState<(() => void) | null>(null);
   const [customStatusError, setCustomStatusError] = useState<string | null>(null);
@@ -205,16 +204,14 @@ export function ProfileEditor({ status, customStatus, details, onClose, register
     setError(null);
     setProgress(0);
     setUploading(true);
-    setActiveUpload({ field, phase: 'processing' });
+    setActiveUpload(field);
+    closeCropDialog();
     try {
       // Sends only avatar/avatarPoster (or banner/bannerPoster) — never the
       // profile draft, whatever it currently holds. The preview updates once
       // the server confirms it (via state.me, picked up by the sync effect
       // above), not from this call.
-      await uploadProfileImage(field, target.file, crop, setProgress, (phase) => {
-        setActiveUpload({ field, phase });
-        if (phase === 'uploading') closeCropDialog();
-      });
+      await uploadProfileImage(field, target.file, crop, setProgress);
     } catch (err) {
       setError(describeProfileSaveError(err, t(`editor.uploadFailed.${field}`)));
     } finally {
@@ -298,9 +295,9 @@ export function ProfileEditor({ status, customStatus, details, onClose, register
                     </Button>
                   </div>
                 )}
-                {avatarError && <p role="alert" className="text-label text-red">{avatarError}</p>}
-                {bannerError && <p role="alert" className="text-label text-red">{bannerError}</p>}
-                {customStatusError && <p role="alert" className="text-label text-red">{customStatusError}</p>}
+                {avatarError && <p role="alert" className="text-label text-red-text">{avatarError}</p>}
+                {bannerError && <p role="alert" className="text-label text-red-text">{bannerError}</p>}
+                {customStatusError && <p role="alert" className="text-label text-red-text">{customStatusError}</p>}
                 <dl className="flex flex-col gap-3">
                   {details.details && (
                     <div>
@@ -383,7 +380,6 @@ export function ProfileEditor({ status, customStatus, details, onClose, register
       <ImageCropDialog
         open={!!cropTarget}
         imageSrc={cropTarget?.src ?? null}
-        processing={activeUpload?.phase === 'processing'}
         error={cropTarget?.field === 'banner' ? bannerError : avatarError}
         aspect={cropTarget?.field === 'banner' ? BANNER_ASPECT_RATIO : 1}
         cropShape={cropTarget?.field === 'banner' ? 'rect' : 'round'}
@@ -393,9 +389,9 @@ export function ProfileEditor({ status, customStatus, details, onClose, register
       />
 
       <UploadProgressModal
-        open={activeUpload?.phase === 'uploading'}
-        title={activeUpload?.field === 'banner' ? t('editor.uploadingTitle.banner') : t('editor.uploadingTitle.avatar')}
-        progress={activeUpload?.field === 'banner' ? bannerUploadProgress : avatarUploadProgress}
+        open={!!activeUpload}
+        title={activeUpload === 'banner' ? t('editor.uploadingTitle.banner') : t('editor.uploadingTitle.avatar')}
+        progress={activeUpload === 'banner' ? bannerUploadProgress : avatarUploadProgress}
       />
     </FloatingBarSlotProvider>
   );

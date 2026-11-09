@@ -33,6 +33,17 @@ describe('encodeEmoji', () => {
     assert.deepEqual([meta.format, meta.width, meta.pageHeight, meta.pages], ['webp', EMOJI_SIZE_PX, EMOJI_SIZE_PX, 2]);
   });
 
+  it('cuts the picked square out of every frame before shrinking it', async () => {
+    const result = await encodeEmoji(await twoFrameGif(), { left: 10, top: 10, width: 40, height: 40 });
+    assert.ok(typeof result !== 'string');
+    const meta = await sharp(result.data, { animated: true }).metadata();
+    assert.deepEqual([meta.width, meta.pageHeight, meta.pages], [EMOJI_SIZE_PX, EMOJI_SIZE_PX, 2]);
+  });
+
+  it('refuses a crop outside the picture', async () => {
+    assert.equal(await encodeEmoji(await solid(100, 100).png().toBuffer(), { left: 50, top: 0, width: 80, height: 80 }), 'invalid_crop');
+  });
+
   it('reads what the bytes are, not what they claim', async () => {
     assert.equal(await encodeEmoji(Buffer.from('definitely not an image')), 'invalid_image');
     // SVG is an image sharp can read, but not one an emoji may be

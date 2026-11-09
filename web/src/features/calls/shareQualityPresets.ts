@@ -51,7 +51,7 @@ export const DEFAULT_SHARE_QUALITY: ShareQualityId = 'screen1080';
 // Ids saved by builds that had only two presets, so a stored choice survives.
 const LEGACY_SHARE_QUALITY: Record<string, ShareQualityId> = { game: 'game1440', screen: 'screen1080' };
 
-export function isShareQualityId(value: string): value is ShareQualityId {
+function isShareQualityId(value: string): value is ShareQualityId {
   return Object.hasOwn(SHARE_QUALITY_PRESETS, value);
 }
 

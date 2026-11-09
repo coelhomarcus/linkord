@@ -163,7 +163,7 @@ export function ProfileActions({ userId, username, displayName, onNavigate, onRe
         {actions}
         {relation !== 'self' && relation !== 'friends' && reportItem && moreMenu(reportItem)}
       </div>
-      {error && <p role="alert" className="text-label text-red">{error}</p>}
+      {error && <p role="alert" className="text-label text-red-text">{error}</p>}
       <SocialConfirmDialog
         target={confirm}
         onCancel={() => setConfirm(null)}

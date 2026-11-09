@@ -27,7 +27,7 @@ export interface VoiceTake {
   url: string;
 }
 
-export type RecorderPhase = 'idle' | 'requesting' | 'recording';
+type RecorderPhase = 'idle' | 'requesting' | 'recording';
 
 export interface RecorderView {
   phase: RecorderPhase;
@@ -66,7 +66,7 @@ export function browserRecorderEnv(fileName: (mime: string) => string): Recorder
   };
 }
 
-export function noticeForError(err: unknown): RecorderNotice {
+function noticeForError(err: unknown): RecorderNotice {
   const name = err instanceof DOMException || err instanceof Error ? err.name : '';
   if (name === 'NotAllowedError' || name === 'SecurityError') return 'denied';
   if (name === 'NotFoundError' || name === 'OverconstrainedError') return 'noDevice';

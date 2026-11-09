@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import { fetchMe, linkEmail as apiLinkEmail, login as apiLogin, logout as apiLogout, register as apiRegister, verifyLoginCode } from '@/shared/api/api';
+import { fetchMe, login as apiLogin, logout as apiLogout, register as apiRegister, verifyLoginCode } from '@/shared/api/api';
 import type { ApiUser, LoginChallenge } from '@/shared/api/api';
 import { clearAllDrafts } from '@/features/chat/conversationDrafts';
 import { disablePush, restorePush } from '@/shared/pushNotifications';
@@ -18,7 +18,6 @@ interface AuthContextValue {
   login: (username: string, password: string) => Promise<LoginChallenge | null>;
   completeLogin: (challenge: string, code: string) => Promise<void>;
   register: (username: string, email: string, password: string, confirmPassword: string, code: string) => Promise<void>;
-  linkEmail: (email: string) => Promise<void>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
 }
@@ -106,11 +105,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStatus('authed');
   }, []);
 
-  const linkEmail = useCallback(async (email: string) => {
-    const { user: u } = await apiLinkEmail(email);
-    setUser(u);
-  }, []);
-
   const logout = useCallback(async () => {
     await clearAppBadge();
     try { await disablePush(); } catch { /* a revoked endpoint is removed after the next failed delivery */ }
@@ -123,7 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ status, user, login, completeLogin, register, linkEmail, logout, refresh }}>
+    <AuthContext.Provider value={{ status, user, login, completeLogin, register, logout, refresh }}>
       {children}
     </AuthContext.Provider>
   );

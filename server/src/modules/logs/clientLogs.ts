@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { config } from '../../config/env.js';
 import { logger, type LogFields } from '../../lib/logger.js';
+import { clientIpOf } from '../../http/clientInfo.js';
 import { parseCookies } from '../../http/cookies.js';
 import { jsonBody, sendError } from '../../http/respond.js';
 import * as floodControl from '../../realtime/floodControl.js';
@@ -50,7 +51,7 @@ async function handleClientLog(request: FastifyRequest, reply: FastifyReply): Pr
   const cookies = parseCookies(request.headers.cookie || '');
   const sess = await resolveSession(cookies[config.SESSION_COOKIE]);
   // by IP and by account: a signed-out page can report too, but cannot flood
-  if (!floodControl.allow(`client-log:${request.ip}`, { windowMs: 60_000, max: 30 })) return void reply.code(204).send();
+  if (!floodControl.allow(`client-log:${clientIpOf(request)}`, { windowMs: 60_000, max: 30 })) return void reply.code(204).send();
   const entry = parseClientLog(jsonBody(request.body));
   if (!entry) return sendError(reply, 400, 'invalid_log', 'Registro inválido.');
 

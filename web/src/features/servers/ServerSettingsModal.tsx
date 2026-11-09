@@ -15,8 +15,8 @@ import { ROUTES } from '@/shared/lib/routes';
 import { cn } from '@/shared/lib/utils';
 import { useRoom } from '@/state/RoomContext';
 import type { RoleSummary, ServerSummary } from '@/shared/types/protocol';
-import { ImageCropDialog } from '@/features/settings/ImageCropDialog';
-import { uploadCroppedProfileImage } from '@/features/settings/uploadCroppedProfileImage';
+import { ImageCropDialog } from '@/shared/ImageCropDialog';
+import { uploadCroppedProfileImage } from '@/shared/api/uploadCroppedProfileImage';
 import { ServerSoundsPanel } from '@/features/soundboard/ServerSoundsPanel';
 import { ServerEmojisPanel } from '@/features/emoji/ServerEmojisPanel';
 import { hasPermission, PERMISSIONS } from './permissionBits';
@@ -47,7 +47,7 @@ function useAction() {
 }
 
 function ErrorLine({ error }: { error: string | null }) {
-  return error ? <p role="alert" className="text-label text-red">{error}</p> : null;
+  return error ? <p role="alert" className="text-label text-red-text">{error}</p> : null;
 }
 
 function Overview({ server }: { server: ServerSummary }) {
@@ -68,13 +68,14 @@ function Overview({ server }: { server: ServerSummary }) {
 
   async function confirmCrop(area: Area) {
     if (!crop) return;
+    const { file } = crop;
     setUploading(true);
+    setCrop(null);
     await run(async () => {
-      const body = await uploadCroppedProfileImage(crop.file, area, undefined, (phase) => { if (phase === 'uploading') setCrop(null); });
+      const body = await uploadCroppedProfileImage(file, area);
       await updateServer(server.id, { icon: body.avatar });
     });
     setUploading(false);
-    setCrop(null);
   }
 
   return (
@@ -101,7 +102,7 @@ function Overview({ server }: { server: ServerSummary }) {
       </section>
       <ErrorLine error={error} />
       <ImageCropDialog open={!!crop} imageSrc={crop?.src ?? null} aspect={1} cropShape="round" title={t('settings.changeIcon')}
-        processing={uploading} onCancel={() => setCrop(null)} onConfirm={(area) => void confirmCrop(area)} />
+        onCancel={() => setCrop(null)} onConfirm={(area) => void confirmCrop(area)} />
     </>
   );
 }
@@ -324,7 +325,7 @@ function Members({ server, onOpenProfile }: { server: ServerSummary; onOpenProfi
             {!member.isOwner && member.user.id !== state.me.userId && (
               <span className="flex gap-1">
                 {above && can(server, PERMISSIONS.KICK_MEMBERS) && <Button type="button" size="sm" variant="ghost" onClick={() => setConfirm({ kind: 'kick', member })}>{t('members.kick')}</Button>}
-                {above && can(server, PERMISSIONS.BAN_MEMBERS) && <Button type="button" size="sm" variant="ghost" className="text-red" onClick={() => setConfirm({ kind: 'ban', member })}>{t('members.ban')}</Button>}
+                {above && can(server, PERMISSIONS.BAN_MEMBERS) && <Button type="button" size="sm" variant="ghost" className="text-red-text" onClick={() => setConfirm({ kind: 'ban', member })}>{t('members.ban')}</Button>}
                 {isOwner && <Button type="button" size="sm" variant="ghost" onClick={() => setConfirm({ kind: 'transfer', member })}>{t('members.transfer')}</Button>}
               </span>
             )}

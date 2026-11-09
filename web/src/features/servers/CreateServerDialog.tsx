@@ -95,7 +95,7 @@ export function CreateServerDialog({ open, onOpenChange }: { open: boolean; onOp
               <Input id="server-name" value={name} maxLength={100} autoFocus onChange={(e) => setName(e.target.value)} />
               <p className="text-caption text-text-muted">{t('create.template')}</p>
             </div>
-            {error && <p role="alert" className="text-label text-red">{error}</p>}
+            {error && <p role="alert" className="text-label text-red-text">{error}</p>}
             <div className="flex items-center justify-between">
               <Button type="button" variant="ghost" onClick={() => { setStep('choose'); setError(null); }}><ArrowLeftIcon size={16} /> {t('back')}</Button>
               <Button type="submit" disabled={!name.trim() || busy}>{busy ? t('create.creating') : t('create.submit')}</Button>
@@ -112,7 +112,7 @@ export function CreateServerDialog({ open, onOpenChange }: { open: boolean; onOp
               <Label htmlFor="server-invite" className="text-body font-medium text-text-primary">{t('join.link')}</Label>
               <Input id="server-invite" value={link} autoFocus placeholder={`${window.location.origin}/invite/hTKzmak`} onChange={(e) => setLink(e.target.value)} />
             </div>
-            {error && <p role="alert" className="text-label text-red">{error}</p>}
+            {error && <p role="alert" className="text-label text-red-text">{error}</p>}
             <div className="flex items-center justify-between">
               <Button type="button" variant="ghost" onClick={() => { setStep('choose'); setError(null); }}><ArrowLeftIcon size={16} /> {t('back')}</Button>
               <Button type="submit" disabled={!link.trim() || busy}>{busy ? t('join.joining') : t('join.submit')}</Button>

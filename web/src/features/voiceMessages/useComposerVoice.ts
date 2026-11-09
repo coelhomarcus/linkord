@@ -16,7 +16,7 @@ export function isVoiceShortcut(event: { altKey: boolean; shiftKey: boolean; ctr
   return event.altKey && event.shiftKey && !event.ctrlKey && !event.metaKey && event.code === 'KeyV';
 }
 
-export type ComposerVoiceNotice = RecorderNotice | 'inCall' | 'callStarted';
+type ComposerVoiceNotice = RecorderNotice | 'inCall' | 'callStarted';
 
 interface ComposerVoiceOptions {
   conversationId: string;

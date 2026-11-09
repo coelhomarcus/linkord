@@ -68,7 +68,7 @@ export async function createSession(userId: string, origin: SessionOrigin = { ip
 }
 
 /** Whether a stored session may still be used: not past its TTL nor idle past SESSION_IDLE_DAYS. */
-export function isSessionLive(row: { expiresAt: Date; lastSeenAt: Date }, now = Date.now()): boolean {
+function isSessionLive(row: { expiresAt: Date; lastSeenAt: Date }, now = Date.now()): boolean {
   if (row.expiresAt.getTime() < now) return false;
   return !(config.SESSION_IDLE_DAYS > 0 && now - row.lastSeenAt.getTime() > config.SESSION_IDLE_DAYS * DAY_MS);
 }
@@ -149,11 +149,14 @@ export async function resolveSession(rawToken: string | undefined | null): Promi
   return value;
 }
 
-export async function destroySession(rawToken: string | undefined | null): Promise<void> {
-  if (!rawToken) return;
+/** Ends the session behind a cookie. Returns its token hash (to cut its sockets), or null when there
+ * was no token. */
+export async function destroySession(rawToken: string | undefined | null): Promise<string | null> {
+  if (!rawToken) return null;
   const tokenHash = hashToken(rawToken);
   cacheInvalidate(tokenHash);
   await db.delete(sessions).where(eq(sessions.tokenHash, tokenHash));
+  return tokenHash;
 }
 
 export async function destroyAllSessionsForUser(userId: string): Promise<void> {

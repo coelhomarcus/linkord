@@ -15,8 +15,8 @@ import { cn } from '@/shared/lib/utils';
 import type { ChannelSummary, ServerSummary } from '@/shared/types/protocol';
 import { WebhookUrlReveal } from '@/features/bots/WebhookUrlReveal';
 import { GroupAvatar } from '@/features/conversations/GroupAvatar';
-import { ImageCropDialog } from '@/features/settings/ImageCropDialog';
-import { uploadCroppedProfileImage } from '@/features/settings/uploadCroppedProfileImage';
+import { ImageCropDialog } from '@/shared/ImageCropDialog';
+import { uploadCroppedProfileImage } from '@/shared/api/uploadCroppedProfileImage';
 import { bitOf, channelPermissionNames } from './permissionCatalog';
 import { hasPermission, PERMISSIONS } from './permissionBits';
 import { canManageRole, grantableBits } from './roleHierarchy';
@@ -85,7 +85,7 @@ function Permissions({ server, channel }: { server: ServerSummary; channel: Chan
           {t('channelSettings.sync')}
         </Button>
       )}
-      {error && <p role="alert" className="text-label text-red">{error}</p>}
+      {error && <p role="alert" className="text-label text-red-text">{error}</p>}
       {!editable && <p role="note" className="rounded-md bg-fill-subtle p-3 text-label text-text-secondary">{t('roles.aboveYou')}</p>}
       <div className="flex gap-6 max-md:flex-col">
         <ul className="flex w-48 flex-none flex-col gap-0.5">
@@ -140,15 +140,16 @@ function WebhookCard({ channel, webhook, onChanged, onReveal, onError }: {
 
   async function confirmCrop(area: Area) {
     if (!crop) return;
+    const { file } = crop;
     setUploading(true);
+    setCrop(null);
     await run(async () => {
       // the same upload as an account's picture: the server only takes an
       // image this account uploaded itself
-      const body = await uploadCroppedProfileImage(crop.file, area, undefined, (phase) => { if (phase === 'uploading') setCrop(null); });
+      const body = await uploadCroppedProfileImage(file, area);
       await updateWebhook(channel.id, webhook.id, { avatar: body.avatar });
     });
     setUploading(false);
-    setCrop(null);
   }
 
   return (
@@ -186,7 +187,7 @@ function WebhookCard({ channel, webhook, onChanged, onReveal, onError }: {
         </div>
       </div>
       <ImageCropDialog open={!!crop} imageSrc={crop?.src ?? null} aspect={1} cropShape="round" title={t('webhooks.changeAvatar')}
-        processing={uploading} onCancel={() => setCrop(null)} onConfirm={(area) => void confirmCrop(area)} />
+        onCancel={() => setCrop(null)} onConfirm={(area) => void confirmCrop(area)} />
     </li>
   );
 }
@@ -263,7 +264,7 @@ export function ChannelSettingsModal({ server, channel, onClose }: { server: Ser
         <>
           <SectionTitle>{t('channelSettings.delete')}</SectionTitle>
           <p className="text-label text-text-secondary">{t('deleteChannel.description', { name: channel.name })}</p>
-          {error && <p role="alert" className="text-label text-red">{error}</p>}
+          {error && <p role="alert" className="text-label text-red-text">{error}</p>}
           <Button type="button" variant="destructive" className="self-start" onClick={() => setConfirmDelete(true)}>{t('channelSettings.delete')}</Button>
           <ConfirmDialog open={confirmDelete} onOpenChange={setConfirmDelete} title={t('deleteChannel.title', { name: channel.name })} description={t('deleteChannel.confirm')}
             destructive confirmLabel={t('channelSettings.delete')}

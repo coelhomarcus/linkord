@@ -29,7 +29,8 @@
     "tryAgain": "Try again",
     "settings": "Settings",
     "administration": "Administration",
-    "loading": "Loading…"
+    "loading": "Loading…",
+    "dismissNotice": "Dismiss notice"
   },
   "upload": {
     "missingConversation": "Conversation not provided.",
@@ -137,5 +138,12 @@
     "save": "Save",
     "saving": "Saving…",
     "saved": "Changes saved."
+  },
+  "imageCrop": {
+    "processing": "Processing image…",
+    "processingDescription": "Uploading and cropping the image. Animated GIFs can take a few seconds.",
+    "cancel": "Cancel",
+    "save": "Save",
+    "zoom": "Zoom"
   }
 }

@@ -11,8 +11,8 @@ function block(css: string, selector: string, next: string): string {
 
 describe('black theme accent', () => {
   const themes = readFileSync(join(process.cwd(), 'src/styles/themes.css'), 'utf8');
-  const black = block(themes, 'html[data-theme="black"]', 'html[data-theme="discord"]');
-  const discord = block(themes, 'html[data-theme="discord"]', '');
+  const black = block(themes, 'html[data-theme="black"]', 'html[data-theme="graphite"]');
+  const graphite = block(themes, 'html[data-theme="graphite"]', '');
   const logo = readFileSync(join(process.cwd(), 'public/logo.svg'), 'utf8');
 
   it('uses the logo blue for the accent fill, border and text', () => {
@@ -31,8 +31,8 @@ describe('black theme accent', () => {
   });
 
   it('leaves the graphite theme on its own accent', () => {
-    expect(discord).toContain('--color-accent-primary: #5865f2;');
-    expect(discord).toContain('--color-accent-hover: #4752c4;');
+    expect(graphite).toContain('--color-accent-primary: #5865f2;');
+    expect(graphite).toContain('--color-accent-hover: #4752c4;');
   });
 
   it('leaves the Old theme accent in the base palette', () => {

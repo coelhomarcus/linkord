@@ -5,12 +5,12 @@ import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent }
  * own timeout is 400-500 ms. */
 export const LONG_PRESS_DELAY_MS = 500;
 /** How far a finger may drift before the press counts as a scroll or a drag. */
-export const LONG_PRESS_TOLERANCE_PX = 10;
+const LONG_PRESS_TOLERANCE_PX = 10;
 /** A device whose main input is a finger; the same query as the `touch-first`
  * CSS variant in styles/index.css. */
 export const TOUCH_FIRST_QUERY = '(hover: none) and (pointer: coarse)';
 
-export interface LongPress {
+interface LongPress {
   target: Element;
   /** where the press started, in client coordinates */
   x: number;

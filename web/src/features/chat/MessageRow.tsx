@@ -124,7 +124,7 @@ function PendingStatus({ entry, offline, onRetry, onDiscard }: { entry: OutboxEn
   if (entry.state === 'sending') return <span className="sr-only">{t('pending.sending')}</span>;
   if (entry.state === 'unknown') return <p className="mt-0.5 text-caption text-text-muted">{t('pending.confirming')}</p>;
   return (
-    <p role="alert" className="mt-0.5 flex flex-wrap items-center gap-x-2 text-caption text-red">
+    <p role="alert" className="mt-0.5 flex flex-wrap items-center gap-x-2 text-caption text-red-text">
       <span>{entry.error ? t('pending.notSentWithError', { error: entry.error }) : t('pending.notSent')}</span>
       <button type="button" onClick={() => onRetry(entry.clientMessageId)} className="font-medium underline hover:text-text-primary">{t('pending.retry')}</button>
       <button type="button" onClick={() => onDiscard(entry.clientMessageId)} className="text-text-muted underline hover:text-text-secondary">{t('pending.discard')}</button>
@@ -320,7 +320,7 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
                 rows={1}
                 className="min-h-9 resize-none border-border-strong bg-fill-inset text-body"
               />
-              {editError && <p role="alert" className="text-caption text-red">{editError}</p>}
+              {editError && <p role="alert" className="text-caption text-red-text">{editError}</p>}
               <p className="text-caption text-text-muted">
                 {editSaving ? t('edit.saving') : (
                   <>{t('edit.escapeTo')} <button type="button" onClick={() => setEditingMsgId(null)} className="underline hover:text-text-secondary">{t('edit.cancel')}</button> · {t('edit.enterTo')} <button type="button" onClick={() => void saveEdit()} className="underline hover:text-text-secondary">{t('edit.save')}</button></>
@@ -357,7 +357,7 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
 
         {deleting && <p className="mt-0.5 text-caption text-text-muted">{t('deleting')}</p>}
         {actionError && (
-          <p role="alert" className="mt-0.5 flex items-center gap-2 text-caption text-red">
+          <p role="alert" className="mt-0.5 flex items-center gap-2 text-caption text-red-text">
             <span>{actionError}</span>
             <CloseButton size="xs" label={t('dismissNotice')} onClick={() => dismissMessageActionError(message.msgId)} />
           </p>

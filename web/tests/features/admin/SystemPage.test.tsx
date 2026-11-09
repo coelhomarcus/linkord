@@ -14,6 +14,7 @@ const sweep = (over: Partial<adminApi.SweepResult> = {}): adminApi.SweepResult =
 });
 const info = (over: Partial<adminApi.SystemInfo> = {}): adminApi.SystemInfo => ({
   storage: { usedBytes: 10 * 1024 * 1024, files: 12, maxBytes: 100 * 1024 * 1024 },
+  startedAt: '2026-01-01T00:00:00.000Z',
   connections: { live: 4, onlineAccounts: 3, max: 50, perAccountMax: 5 },
   accounts: { total: 20, newLastHour: 2, newPerHourCap: 30, activeAdmins: 2, suspended: 1 },
   livekit: { configured: true }, outbox: { pending: 0, failed: 0 }, notifications: { unread: 7 },

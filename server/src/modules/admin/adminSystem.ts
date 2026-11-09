@@ -25,6 +25,7 @@ export async function getSystemInfo() {
   const acc = accounts[0];
   return {
     storage: { usedBytes: storage.totalBytes, files: storage.totalFiles, maxBytes: storage.maxBytes },
+    startedAt: new Date(Date.now() - process.uptime() * 1000).toISOString(),
     connections: { live: participants.size, onlineAccounts: listOnlineUserIds().length, max: config.MAX_PARTICIPANTS, perAccountMax: config.MAX_CONNECTIONS_PER_USER },
     accounts: { total: acc?.total ?? 0, newLastHour: acc?.lastHour ?? 0, newPerHourCap: config.MAX_NEW_ACCOUNTS_PER_HOUR, activeAdmins: acc?.activeAdmins ?? 0, suspended: acc?.suspended ?? 0 },
     livekit: { configured: !!(config.LIVEKIT_URL && config.LIVEKIT_API_KEY && config.LIVEKIT_API_SECRET) },

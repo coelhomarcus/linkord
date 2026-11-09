@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { logger } from '../../lib/logger.js';
 import * as floodControl from '../../realtime/floodControl.js';
+import { clientIpOf } from '../../http/clientInfo.js';
 import { CSP_REPORT_PATH } from '../../http/securityHeaders.js';
 
 // Content-Security-Policy violations the browser reports, written into the
@@ -89,7 +90,7 @@ export function parseCspReports(payload: unknown): CspViolation[] {
 
 async function handleCspReport(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   // a page stuck in a loop of violations must not flood the log
-  if (floodControl.allow(`csp-report:${request.ip}`, { windowMs: 60_000, max: 30 })) {
+  if (floodControl.allow(`csp-report:${clientIpOf(request)}`, { windowMs: 60_000, max: 30 })) {
     for (const violation of parseCspReports(request.body)) log.warn('content security policy violation', { ...violation, reqId: request.id });
   }
   reply.code(204).send();

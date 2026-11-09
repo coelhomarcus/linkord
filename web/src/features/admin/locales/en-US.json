@@ -436,6 +436,7 @@
     "refreshFailed": "Could not refresh. The values below are from the read at {{time}}.",
     "liveConnections": "Live connections",
     "onlineAccounts": "Online accounts",
+    "startedAt": "Server started at",
     "storage": "Storage",
     "storageDescription": "Attachments across the instance.",
     "accountsCapacity": "Accounts and capacity",

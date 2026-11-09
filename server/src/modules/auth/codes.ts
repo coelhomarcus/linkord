@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { and, asc, desc, eq, isNull } from 'drizzle-orm';
+import { and, asc, desc, eq, isNull, lt, sql } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { authCodes } from '../../db/schema.js';
 import { config } from '../../config/env.js';
@@ -78,25 +78,44 @@ export async function verifyAuthCode(
 
   if (!record) return { ok: false, reason: 'invalid_code' };
   if (record.expiresAt.getTime() <= Date.now()) {
-    await db.update(authCodes).set({ consumedAt: new Date() }).where(eq(authCodes.id, record.id));
+    await consumeCode(record.id);
     return { ok: false, reason: 'code_expired' };
   }
-  if (record.attempts >= config.AUTH_CODE_MAX_ATTEMPTS) {
-    await db.update(authCodes).set({ consumedAt: new Date() }).where(eq(authCodes.id, record.id));
-    return { ok: false, reason: 'too_many_attempts' };
+
+  // The attempt is claimed and capped in one statement: Postgres re-checks the WHERE after waiting on
+  // the row lock, so parallel guesses cannot all read the same `attempts` and slip past the ceiling.
+  const [claimed] = await db.update(authCodes)
+    .set({ attempts: sql`${authCodes.attempts} + 1` })
+    .where(and(eq(authCodes.id, record.id), isNull(authCodes.consumedAt), lt(authCodes.attempts, config.AUTH_CODE_MAX_ATTEMPTS)))
+    .returning({ attempts: authCodes.attempts });
+  if (!claimed) {
+    // lost to a concurrent request that spent the last attempt or consumed the code
+    await consumeCode(record.id);
+    const [current] = await db.select({ attempts: authCodes.attempts }).from(authCodes).where(eq(authCodes.id, record.id));
+    const exhausted = !current || current.attempts >= config.AUTH_CODE_MAX_ATTEMPTS;
+    return { ok: false, reason: exhausted ? 'too_many_attempts' : 'invalid_code' };
   }
 
-  await db.update(authCodes).set({ attempts: record.attempts + 1 }).where(eq(authCodes.id, record.id));
   if (!codeMatches(code, record.codeHash)) {
-    if (record.attempts + 1 >= config.AUTH_CODE_MAX_ATTEMPTS) {
-      await db.update(authCodes).set({ consumedAt: new Date() }).where(eq(authCodes.id, record.id));
+    if (claimed.attempts >= config.AUTH_CODE_MAX_ATTEMPTS) {
+      await consumeCode(record.id);
       return { ok: false, reason: 'too_many_attempts' };
     }
     return { ok: false, reason: 'invalid_code' };
   }
 
-  await db.update(authCodes).set({ consumedAt: new Date() }).where(eq(authCodes.id, record.id));
-  return { ok: true, id: record.id };
+  // Only the request that flips consumed_at wins, so one correct code cannot open two sessions.
+  return (await consumeCode(record.id))
+    ? { ok: true, id: record.id }
+    : { ok: false, reason: 'invalid_code' };
+}
+
+/** True only for the caller that actually consumed the code. */
+async function consumeCode(id: string): Promise<boolean> {
+  const rows = await db.update(authCodes).set({ consumedAt: new Date() })
+    .where(and(eq(authCodes.id, id), isNull(authCodes.consumedAt)))
+    .returning({ id: authCodes.id });
+  return rows.length > 0;
 }
 
 /** The account a login challenge was issued for and when it began (its first code), or null for a

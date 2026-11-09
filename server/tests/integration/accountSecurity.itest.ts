@@ -4,11 +4,12 @@ import { after, afterEach, before, beforeEach, describe, it, mock } from 'node:t
 import { and, eq } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { config } from '../../src/config/env.js';
-import { adminAuditLogs, authCodes, sessions, users } from '../../src/db/schema.js';
+import { adminAuditLogs, authCodes, knownLogins, rateLimitWindows, sessions, users } from '../../src/db/schema.js';
 import { createApp } from '../../src/http/app.js';
 import { hashPassword } from '../../src/modules/auth/password.js';
 import { createSession, resolveSession, sweepExpiredSessions, touchSessions } from '../../src/modules/auth/session.js';
 import { FAILURE_RULE } from '../../src/modules/auth/ratelimit.js';
+import { KNOWN_LOGIN_DAYS, recordLogin, sweepKnownLogins, whenLoginAlertsSettled } from '../../src/modules/auth/loginAlert.js';
 import { participants } from '../../src/modules/presence/participants.js';
 import { db, joinNew, pool } from './helpers.js';
 
@@ -27,22 +28,26 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** Every email the app hands to Resend in a test, read back for its code. */
 let mailbox: { to: string[]; subject: string; text: string }[] = [];
-const saved = { key: config.RESEND_API_KEY, from: config.RESEND_FROM_EMAIL, idle: config.SESSION_IDLE_DAYS };
+const saved = { key: config.RESEND_API_KEY, from: config.RESEND_FROM_EMAIL, idle: config.SESSION_IDLE_DAYS, appUrl: config.APP_URL };
 
 beforeEach(() => {
   mailbox = [];
   config.RESEND_API_KEY = 're_test';
   config.RESEND_FROM_EMAIL = 'Linkord <noreply@example.test>';
+  config.APP_URL = 'https://chat.example.test';
   mock.method(globalThis, 'fetch', async (_url: string, init: RequestInit) => {
     mailbox.push(JSON.parse(String(init.body)));
     return new Response('{}', { status: 200 });
   });
 });
-afterEach(() => {
+afterEach(async () => {
+  // an alert from this test's logins must land in this test's mailbox, not the next one's
+  await whenLoginAlertsSettled();
   mock.restoreAll();
   config.RESEND_API_KEY = saved.key;
   config.RESEND_FROM_EMAIL = saved.from;
   config.SESSION_IDLE_DAYS = saved.idle;
+  config.APP_URL = saved.appUrl;
 });
 
 function lastCode(): string {
@@ -66,7 +71,7 @@ async function makeAccount(opts: { twoFactor?: boolean; email?: boolean } = {}) 
 
 interface Reply { status: number; headers: Record<string, unknown>; body: any; cookie: string | null }
 
-async function call(method: 'GET' | 'POST' | 'DELETE', url: string, opts: { payload?: Record<string, unknown>; cookie?: string; ip?: string; ua?: string } = {}): Promise<Reply> {
+async function call(method: 'GET' | 'POST' | 'PUT' | 'DELETE', url: string, opts: { payload?: Record<string, unknown>; cookie?: string; ip?: string; ua?: string } = {}): Promise<Reply> {
   const ip = opts.ip ?? freshIp();
   const res = await app.inject({
     method, url, payload: opts.payload, remoteAddress: ip,
@@ -273,6 +278,87 @@ describe('turning two-step login on and off', () => {
   });
 });
 
+describe('changing the email', () => {
+  it('needs the current password before any code is sent, and only then moves the address', async () => {
+    const user = await makeAccount();
+    const { cookie } = await cookieFor(user.id);
+    const target = `moved_${user.id.slice(0, 8)}@example.test`;
+    const request = (payload: Record<string, unknown>) => call('POST', '/api/auth/email/change/request', { cookie, payload });
+
+    const missing = await request({ email: target });
+    assert.equal(missing.status, 403);
+    assert.equal(missing.body.error.code, 'invalid_password');
+    const wrong = await request({ email: target, password: 'nope' });
+    assert.equal(wrong.status, 403);
+    assert.equal(wrong.body.error.code, 'invalid_password');
+    assert.equal(mailbox.length, 0, 'no code goes to the new address without the password');
+
+    assert.equal((await request({ email: target, password: PASSWORD })).status, 200);
+    assert.deepEqual(mailbox.at(-1)?.to, [target]);
+    const confirmed = await call('POST', '/api/auth/email/change/confirm', { cookie, payload: { email: target, code: lastCode() } });
+    assert.equal(confirmed.status, 200);
+    assert.equal(confirmed.body.user.email, target);
+  });
+
+  it('a wrong password does not reveal whether the address is taken', async () => {
+    const user = await makeAccount();
+    const other = await makeAccount();
+    const { cookie } = await cookieFor(user.id);
+    const res = await call('POST', '/api/auth/email/change/request', { cookie, payload: { email: other.email, password: 'nope' } });
+    assert.equal(res.body.error.code, 'invalid_password');
+  });
+});
+
+describe('linking an email to an account that has none', () => {
+  it('the unverified link route is gone', async () => {
+    const user = await makeAccount({ email: false });
+    const { cookie } = await cookieFor(user.id);
+    const res = await call('POST', '/api/auth/email/link', { cookie, payload: { email: `squat_${user.id.slice(0, 8)}@example.test` } });
+    assert.equal(res.status, 404);
+    const [row] = await db.select({ email: users.email }).from(users).where(eq(users.id, user.id));
+    assert.equal(row?.email, null);
+  });
+
+  it('the address is set only after the code sent to it is confirmed', async () => {
+    const user = await makeAccount({ email: false });
+    const { cookie } = await cookieFor(user.id);
+    const target = `linked_${user.id.slice(0, 8)}@example.test`;
+
+    const request = await call('POST', '/api/auth/email/change/request', { cookie, payload: { email: target, password: PASSWORD } });
+    assert.equal(request.status, 200);
+    assert.deepEqual(mailbox.at(-1)?.to, [target]);
+    const [pending] = await db.select({ email: users.email }).from(users).where(eq(users.id, user.id));
+    assert.equal(pending?.email, null, 'requesting a code does not touch the account');
+
+    const wrong = await call('POST', '/api/auth/email/change/confirm', { cookie, payload: { email: target, code: wrongCode(lastCode()) } });
+    assert.equal(wrong.status, 400);
+    const confirmed = await call('POST', '/api/auth/email/change/confirm', { cookie, payload: { email: target, code: lastCode() } });
+    assert.equal(confirmed.status, 200);
+    assert.equal(confirmed.body.user.email, target);
+  });
+
+  it('a code sent to one address cannot link another', async () => {
+    const user = await makeAccount({ email: false });
+    const { cookie } = await cookieFor(user.id);
+    const sentTo = `mine_${user.id.slice(0, 8)}@example.test`;
+    const other = `theirs_${user.id.slice(0, 8)}@example.test`;
+    await call('POST', '/api/auth/email/change/request', { cookie, payload: { email: sentTo, password: PASSWORD } });
+    const res = await call('POST', '/api/auth/email/change/confirm', { cookie, payload: { email: other, code: lastCode() } });
+    assert.equal(res.status, 400);
+    assert.equal(res.body.error.code, 'invalid_code');
+  });
+
+  it('refuses an address that already belongs to another account before any code is sent', async () => {
+    const owner = await makeAccount();
+    const user = await makeAccount({ email: false });
+    const { cookie } = await cookieFor(user.id);
+    const res = await call('POST', '/api/auth/email/change/request', { cookie, payload: { email: owner.email, password: PASSWORD } });
+    assert.equal(res.status, 409);
+    assert.equal(res.body.error.code, 'email_taken');
+    assert.equal(mailbox.length, 0);
+  });
+});
+
 describe('the session list', () => {
   it('lists the account sessions with their origin, marking this one', async () => {
     const user = await makeAccount();
@@ -306,6 +392,24 @@ describe('the session list', () => {
 
     assert.equal((await me(there.cookie)).status, 401);
     assert.equal((await me(here.cookie)).status, 200);
+    assert.ok(tab.sent.some((m) => m.event === 'session-ended'));
+    assert.equal(tab.disconnected, true);
+    assert.equal(participants.has(tab.participant.id), false);
+    assert.equal(participants.has(bystander.participant.id), true);
+    assert.equal(bystander.disconnected, false);
+  });
+
+  it('logging out cuts the sockets opened with that session, and only those', async () => {
+    const user = await makeAccount();
+    const here = await cookieFor(user.id);
+    const other = await cookieFor(user.id);
+    const tab = connectedTab(user, here.tokenHash);
+    const bystander = connectedTab(user, other.tokenHash);
+
+    const res = await call('POST', '/api/auth/logout', { cookie: here.cookie });
+    assert.equal(res.status, 204);
+
+    assert.equal((await me(here.cookie)).status, 401);
     assert.ok(tab.sent.some((m) => m.event === 'session-ended'));
     assert.equal(tab.disconnected, true);
     assert.equal(participants.has(tab.participant.id), false);
@@ -402,6 +506,61 @@ describe('idle expiry', () => {
   });
 });
 
+describe('guessing password reset codes', () => {
+  const reset = (identifier: Record<string, unknown>, code: string, ip = freshIp()) =>
+    call('POST', '/api/auth/recovery/reset', { ip, payload: { ...identifier, code, password: 'another new password' } });
+
+  it('requesting a new code does not restore the guess budget', async () => {
+    const user = await makeAccount();
+    const ask = () => call('POST', '/api/auth/recovery/request', { payload: { username: user.username } });
+    await ask();
+    let right = lastCode();
+    // every guess comes from a different address, so only the per-account counter can stop them
+    for (let i = 0; i < FAILURE_RULE.max; i++) {
+      if (i > 0 && i % config.AUTH_CODE_MAX_ATTEMPTS === 0) { await ask(); right = lastCode(); }
+      assert.equal((await reset({ username: user.username }, wrongCode(right))).status, 400);
+    }
+    const blocked = await reset({ username: user.username }, right);
+    assert.equal(blocked.status, 429);
+    assert.ok(Number(blocked.headers['retry-after']) > 0);
+    // naming the account by email lands on the same counter
+    assert.equal((await reset({ email: user.email }, right)).status, 429);
+    assert.equal((await login(user.username)).status, 200);
+  });
+
+  it('blocks an address across accounts', async () => {
+    const ip = freshIp();
+    for (let i = 0; i < FAILURE_RULE.max; i++) await reset({ username: `ghost_${uid().slice(0, 10)}` }, '123456', ip);
+    assert.equal((await reset({ username: `ghost_${uid().slice(0, 10)}` }, '123456', ip)).status, 429);
+  });
+
+  it('answers a missing account like an existing one', async () => {
+    const username = `ghost_${uid().slice(0, 10)}`;
+    for (let i = 0; i < FAILURE_RULE.max; i++) assert.equal((await reset({ username }, '123456')).status, 400);
+    assert.equal((await reset({ username }, '123456')).status, 429);
+  });
+
+  it('a correct reset clears the account counter', async () => {
+    const user = await makeAccount();
+    await call('POST', '/api/auth/recovery/request', { payload: { username: user.username } });
+    const right = lastCode();
+    for (let i = 0; i < 3; i++) await reset({ username: user.username }, wrongCode(right));
+    assert.equal((await reset({ username: user.username }, right)).status, 200);
+    const key = crypto.createHash('sha256').update(`reset-code:${user.id}`).digest('hex');
+    assert.equal((await db.select().from(rateLimitWindows).where(eq(rateLimitWindows.key, key))).length, 0);
+  });
+
+  it('asking by username and by email shares one send budget per account', async () => {
+    const user = await makeAccount();
+    for (let i = 0; i < 8; i++) {
+      const res = await call('POST', '/api/auth/recovery/request', { payload: i % 2 ? { username: user.username } : { email: user.email } });
+      assert.equal(res.status, 200);
+    }
+    // the answer never changes, but past the account's ceiling nothing goes out
+    assert.equal(mailbox.length, 5);
+  });
+});
+
 describe('changing the password', () => {
   it('signs out the other devices and keeps this one', async () => {
     const user = await makeAccount();
@@ -436,5 +595,179 @@ describe('changing the password', () => {
     assert.equal(res.status, 200);
     assert.equal((await me(a.cookie)).status, 401);
     assert.equal(tab.disconnected, true);
+  });
+});
+
+describe('new sign-in alerts', () => {
+  const CHROME_MAC = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36';
+  const FIREFOX_LINUX = 'Mozilla/5.0 (X11; Linux x86_64; rv:132.0) Gecko/20100101 Firefox/132.0';
+  const alertsTo = (email: string | null) => mailbox.filter((m) => m.to.includes(email!) && /sign-in|login|entrou/i.test(`${m.subject}`) && !/\b\d{6}\b/.test(m.text));
+
+  /** Signs in and waits for the alert, which is sent in the background. */
+  const signIn = async (username: string, ip: string, ua: string, password = PASSWORD) => {
+    const res = await call('POST', '/api/auth/login', { payload: { username, password }, ip, ua });
+    await whenLoginAlertsSettled();
+    return res;
+  };
+
+  it('emails the account about a browser it has not used lately, with where to end the session', async () => {
+    const user = await makeAccount();
+    await db.update(users).set({ locale: 'en-US' }).where(eq(users.id, user.id));
+    const ip = freshIp();
+    const res = await signIn(user.username, ip, CHROME_MAC);
+    assert.equal(res.status, 200);
+
+    const [mail] = alertsTo(user.email);
+    assert.ok(mail, 'an alert should have been sent');
+    assert.equal(mail.subject, 'New sign-in to your Linkord account');
+    assert.match(mail.text, /Browser: Chrome on macOS/);
+    assert.ok(mail.text.includes(`IP address: ${ip}`));
+    assert.match(mail.text, /Time: .* UTC/);
+    assert.ok(mail.text.includes(`${config.APP_URL}/app/settings/security#sessions`));
+  });
+
+  it('is written in the account language', async () => {
+    const user = await makeAccount();
+    await signIn(user.username, freshIp(), FIREFOX_LINUX);
+    const [mail] = alertsTo(user.email);
+    assert.equal(mail?.subject, 'Novo login na sua conta Linkord');
+    assert.match(mail!.text, /Navegador: Firefox em Linux/);
+  });
+
+  it('stays quiet when the same browser signs in again, even after logging out', async () => {
+    const user = await makeAccount();
+    const ip = freshIp();
+    const first = await signIn(user.username, ip, CHROME_MAC);
+    assert.equal(alertsTo(user.email).length, 1);
+    await call('POST', '/api/auth/logout', { cookie: first.cookie! });
+    await signIn(user.username, ip, CHROME_MAC);
+    await signIn(user.username, ip, CHROME_MAC);
+    assert.equal(alertsTo(user.email).length, 1, 'the same address and browser is not new');
+  });
+
+  it('alerts again for another address or another browser', async () => {
+    const user = await makeAccount();
+    const ip = freshIp();
+    await signIn(user.username, ip, CHROME_MAC);
+    await signIn(user.username, freshIp(), CHROME_MAC);
+    await signIn(user.username, ip, FIREFOX_LINUX);
+    assert.equal(alertsTo(user.email).length, 3);
+  });
+
+  it('stays quiet after the browser updates itself', async () => {
+    const user = await makeAccount();
+    const ip = freshIp();
+    await signIn(user.username, ip, CHROME_MAC);
+    await signIn(user.username, ip, CHROME_MAC.replace('Chrome/130.0.0.0', 'Chrome/131.0.0.0'));
+    assert.equal(alertsTo(user.email).length, 1);
+  });
+
+  it('sends one alert when the same new browser signs in twice at once', async () => {
+    const user = await makeAccount();
+    const ip = freshIp();
+    await Promise.all([
+      call('POST', '/api/auth/login', { payload: { username: user.username, password: PASSWORD }, ip, ua: CHROME_MAC }),
+      call('POST', '/api/auth/login', { payload: { username: user.username, password: PASSWORD }, ip, ua: CHROME_MAC }),
+    ]);
+    await whenLoginAlertsSettled();
+    assert.equal(alertsTo(user.email).length, 1);
+  });
+
+  it('keeps knowing the browsers the upgrade backfill recorded', async () => {
+    const user = await makeAccount();
+    const ip = freshIp();
+    // what migration 0063 wrote for a browser holding a session: sha256 of the address and the whole user agent
+    const legacy = crypto.createHash('sha256').update(`${ip}\n${CHROME_MAC}`).digest('hex');
+    await db.insert(knownLogins).values({ userId: user.id, fingerprint: legacy, lastLoginAt: new Date() });
+    await signIn(user.username, ip, CHROME_MAC);
+    assert.equal(alertsTo(user.email).length, 0);
+  });
+
+  it('treats a browser not seen for a month as new again', async () => {
+    const user = await makeAccount();
+    const ip = freshIp();
+    await signIn(user.username, ip, CHROME_MAC);
+    assert.equal(alertsTo(user.email).length, 1);
+    await db.update(knownLogins).set({ lastLoginAt: new Date(Date.now() - (KNOWN_LOGIN_DAYS + 1) * DAY_MS) }).where(eq(knownLogins.userId, user.id));
+    await signIn(user.username, ip, CHROME_MAC);
+    assert.equal(alertsTo(user.email).length, 2);
+  });
+
+  it('with two-step login, alerts once the code finishes the login and not at the password step', async () => {
+    const user = await makeAccount({ twoFactor: true });
+    const ip = freshIp();
+    const first = await call('POST', '/api/auth/login', { payload: { username: user.username, password: PASSWORD }, ip, ua: CHROME_MAC });
+    await whenLoginAlertsSettled();
+    assert.equal(alertsTo(user.email).length, 0, 'no session yet, nothing to warn about');
+
+    const done = await call('POST', '/api/auth/login/verify', { payload: { challenge: first.body.twoFactor.challenge, code: lastCode() }, ip, ua: CHROME_MAC });
+    assert.equal(done.status, 200);
+    await whenLoginAlertsSettled();
+    assert.equal(alertsTo(user.email).length, 1);
+  });
+
+  it('does not alert for the browser that registered the account', async () => {
+    const user = await makeAccount();
+    const origin = { ip: freshIp(), userAgent: CHROME_MAC };
+    assert.equal(await recordLogin(user.id, origin), true);
+    await signIn(user.username, origin.ip, origin.userAgent);
+    assert.equal(alertsTo(user.email).length, 0);
+  });
+
+  it('is skipped when the account turned it off, has no email or the server cannot send', async () => {
+    const off = await makeAccount();
+    await db.update(users).set({ loginAlertEmail: false }).where(eq(users.id, off.id));
+    assert.equal((await signIn(off.username, freshIp(), CHROME_MAC)).status, 200);
+
+    const noEmail = await makeAccount({ email: false });
+    assert.equal((await signIn(noEmail.username, freshIp(), CHROME_MAC)).status, 200);
+
+    const unconfigured = await makeAccount();
+    config.RESEND_API_KEY = '';
+    assert.equal((await signIn(unconfigured.username, freshIp(), CHROME_MAC)).status, 200);
+
+    assert.equal(mailbox.length, 0);
+  });
+
+  it('a failing email never fails the login', async () => {
+    mock.restoreAll();
+    mock.method(globalThis, 'fetch', async () => new Response('down', { status: 503 }));
+    const user = await makeAccount();
+    const res = await signIn(user.username, freshIp(), CHROME_MAC);
+    assert.equal(res.status, 200);
+    assert.equal((await me(res.cookie!)).status, 200);
+  });
+
+  it('caps the alerts one account can receive in an hour', async () => {
+    const user = await makeAccount();
+    for (let i = 0; i < 7; i++) await signIn(user.username, freshIp(), CHROME_MAC);
+    assert.equal(alertsTo(user.email).length, 5);
+  });
+
+  it('forgets browsers past the window when the sweep runs', async () => {
+    const user = await makeAccount();
+    await recordLogin(user.id, { ip: '198.51.100.1', userAgent: 'old' }, new Date(Date.now() - (KNOWN_LOGIN_DAYS + 1) * DAY_MS));
+    await recordLogin(user.id, { ip: '198.51.100.2', userAgent: 'recent' });
+    await sweepKnownLogins();
+    assert.equal((await db.select().from(knownLogins).where(eq(knownLogins.userId, user.id))).length, 1);
+  });
+});
+
+describe('the sign-in alert switch', () => {
+  it('is on by default, reported with the security status and changed by its owner only', async () => {
+    const user = await makeAccount();
+    const { cookie } = await cookieFor(user.id);
+    assert.equal((await call('GET', '/api/auth/security', { cookie })).body.loginAlertEnabled, true);
+
+    assert.equal((await call('PUT', '/api/auth/login-alerts', { payload: { enabled: false } })).status, 401);
+    assert.equal((await call('PUT', '/api/auth/login-alerts', { payload: { enabled: 'no' }, cookie })).status, 400);
+
+    const off = await call('PUT', '/api/auth/login-alerts', { payload: { enabled: false }, cookie });
+    assert.equal(off.status, 200);
+    assert.equal(off.body.loginAlertEnabled, false);
+    assert.equal((await call('GET', '/api/auth/security', { cookie })).body.loginAlertEnabled, false);
+
+    await call('PUT', '/api/auth/login-alerts', { payload: { enabled: true }, cookie });
+    assert.equal((await call('GET', '/api/auth/security', { cookie })).body.loginAlertEnabled, true);
   });
 });

@@ -102,7 +102,7 @@ function ConnectAccount({ service, onConnect }: { service: AccountService; onCon
         <Input id={inputId} value={username} disabled={busy} autoComplete="off" spellCheck={false} maxLength={service === 'github' ? 39 : 16} onChange={(event) => setUsername(event.target.value)} />
         <Button type="submit" disabled={busy || !username.trim()}>{t(busy ? 'wall.connecting' : 'wall.connect')}</Button>
       </div>
-      {error && <p role="alert" className="text-label text-red">{error}</p>}
+      {error && <p role="alert" className="text-label text-red-text">{error}</p>}
     </form>
   );
 }

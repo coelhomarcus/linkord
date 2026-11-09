@@ -37,7 +37,7 @@ export function AddFriendForm({ onSent, autoFocus }: { onSent: () => void; autoF
     }
   }
 
-  const toneClass = result?.tone === 'error' ? 'text-red' : result?.tone === 'success' ? 'text-green' : 'text-text-muted';
+  const toneClass = result?.tone === 'error' ? 'text-red-text' : result?.tone === 'success' ? 'text-green' : 'text-text-muted';
 
   return (
     <form onSubmit={handleSubmit} className="flex w-full flex-col gap-2">

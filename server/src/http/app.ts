@@ -3,9 +3,10 @@ import Fastify, { type FastifyError, type FastifyInstance, type FastifyReply, ty
 import fastifyStatic from '@fastify/static';
 import fastifyCompress from '@fastify/compress';
 import { config } from '../config/env.js';
-import { listVisibleOnlineUserIds, participants } from '../modules/presence/participants.js';
+import { listVisibleOnlineUserIds } from '../modules/presence/participants.js';
 import { sendError, sendJson } from './respond.js';
 import { originGuard } from './originGuard.js';
+import { registerHealthRoute } from './health.js';
 import { securityHeaders } from './securityHeaders.js';
 import { registerAuthRoutes } from '../modules/auth/routes.js';
 import { RateLimitUnavailableError } from '../modules/auth/ratelimit.js';
@@ -107,7 +108,7 @@ export function createApp(): FastifyInstance {
   fastify.addHook('onRequest', async (request, reply) => { reply.header('x-request-id', request.id); });
   fastify.addHook('onResponse', async (request, reply) => logRequest(request, reply.statusCode, Math.round(reply.elapsedTime)));
 
-  fastify.get('/healthz', async () => ({ ok: true, participants: participants.size, uptime: process.uptime() }));
+  registerHealthRoute(fastify);
 
   registerAuthRoutes(fastify);
   registerAttachmentRoutes(fastify);

@@ -56,7 +56,7 @@ export function livekitSources(livekitUrl: string): string[] {
 /** Chrome only accepts a Reporting-Endpoints header from an https page, and a
  * policy naming `report-to` makes it ignore `report-uri`: over plain http
  * (local runs, the e2e stack) the policy keeps to `report-uri` alone. */
-export function usesReportingApi(appUrl: string): boolean {
+function usesReportingApi(appUrl: string): boolean {
   return originOf(appUrl)?.protocol === 'https:';
 }
 
@@ -70,9 +70,7 @@ export function buildContentSecurityPolicy(input: PolicyInput): string {
   const remoteMedia = insecurePage ? ['https:', 'http:'] : ['https:'];
   const directives: Array<[string, string[]]> = [
     ['default-src', ["'self'"]],
-    // wasm-unsafe-eval compiles WebAssembly (the avatar cropper's ImageMagick)
-    // and nothing else: eval() and new Function() stay blocked
-    ['script-src', ["'self'", "'wasm-unsafe-eval'", ...input.scriptHashes.map((hash) => `'${hash}'`)]],
+    ['script-src', ["'self'", ...input.scriptHashes.map((hash) => `'${hash}'`)]],
     // inline styles stay allowed: React and the UI libraries set them, the
     // theme bootstrap and the crop dialog inject <style> elements, and a
     // style cannot run script

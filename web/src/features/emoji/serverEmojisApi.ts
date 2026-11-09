@@ -3,9 +3,12 @@ import type { SocialUser } from '@/shared/api/api';
 import { describeApiError } from '@/shared/api/errorText';
 import { uploadWithProgress } from '@/shared/lib/uploadWithProgress';
 import { i18n } from '@/shared/i18n/init';
+import { cropParam, type CropRect } from '@/shared/lib/imageCrop';
 
 // Mirrors server/src/modules/emojis/serverEmojis.ts.
 export const EMOJI_NAME_RE = /^[a-z0-9_]{2,32}$/;
+// Mirrors MAX_EMOJI_UPLOAD_BYTES in server/src/modules/emojis/emojiFile.ts: the original file, before the crop.
+export const MAX_EMOJI_UPLOAD_BYTES = 12 * 1024 * 1024;
 
 export interface ServerEmoji {
   id: string;
@@ -29,9 +32,10 @@ export function fetchServerEmojis(serverId: string): Promise<{ emojis: ServerEmo
   return apiFetch(base(serverId));
 }
 
-export async function uploadServerEmoji(serverId: string, image: Blob, name: string, onProgress?: (fraction: number) => void): Promise<ServerEmoji> {
+/** The original file and the square picked in the crop dialog: the server cuts and encodes it. */
+export async function uploadServerEmoji(serverId: string, image: Blob, name: string, crop: CropRect, onProgress?: (fraction: number) => void): Promise<ServerEmoji> {
   const { emoji } = await uploadWithProgress<{ emoji: ServerEmoji }>({
-    url: `${base(serverId)}?${new URLSearchParams({ name })}`,
+    url: `${base(serverId)}?${new URLSearchParams({ name, crop: cropParam(crop) })}`,
     file: image,
     headers: { 'Content-Type': image.type || 'application/octet-stream' },
     onProgress,
@@ -58,7 +62,7 @@ export function suggestEmojiName(fileName: string): string {
   return name.length >= 2 ? name : '';
 }
 
-const EMOJI_ERROR_CODES = new Set(['invalid_emoji_name', 'invalid_image', 'emoji_too_large', 'emoji_name_taken', 'emojis_full']);
+const EMOJI_ERROR_CODES = new Set(['invalid_emoji_name', 'invalid_image', 'invalid_crop', 'emoji_too_large', 'emoji_name_taken', 'emojis_full']);
 
 export function describeEmojiError(error: unknown, fallbackKey: string): string {
   if (error instanceof ApiError && EMOJI_ERROR_CODES.has(error.code)) return i18n.t(`emoji:errors.${error.code}` as never);
