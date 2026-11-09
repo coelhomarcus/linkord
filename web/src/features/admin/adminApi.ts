@@ -139,6 +139,8 @@ export interface RetentionInfo {
   last: { at: string; durationMs: number; targets: RetentionTargetResult[] } | null;
 }
 export interface SystemInfo {
+  /** when this server process started, i.e. the last deploy or restart */
+  startedAt: string;
   storage: { usedBytes: number; files: number; maxBytes: number };
   connections: { live: number; onlineAccounts: number; max: number; perAccountMax: number };
   accounts: { total: number; newLastHour: number; newPerHourCap: number; activeAdmins: number; suspended: number };

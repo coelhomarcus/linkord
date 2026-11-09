@@ -6,7 +6,7 @@ How to run Linkord in production, what the container expects from the host, and 
 
 One Docker image, built by the [`Dockerfile`](../Dockerfile), holds everything: the web app (`web/dist`), the API, the realtime server (Socket.IO on the `/ws` path) and the backup scripts with the PostgreSQL client tools. A single Node process serves all of it on port **3000**, so the reverse proxy needs one route to one port, websockets included.
 
-- **Health check:** `GET /healthz` answers `{ ok, participants, uptime }`. The image already uses it as its `HEALTHCHECK`.
+- **Health check:** `GET /healthz` is public and answers only `{ ok: true }`, so it reveals nothing about load or deploy times; the connection count and the server's start time are on the admin System page. The image already uses it as its `HEALTHCHECK`.
 - **Behind a proxy:** the image sets `TRUST_PROXY=1`, so client addresses (also the ones stored with each login session and shown to the account in Settings → Security) and `X-Forwarded-Proto` come from the proxy. With `COOKIE_SECURE=auto` (the default) the session cookie is `Secure` whenever the proxy says the request was HTTPS.
 - **Migrations** run at startup (`MIGRATE_ON_BOOT=1`, the default) before the server accepts connections; if one fails, the process exits with the reason in the log. Set `MIGRATE_ON_BOOT=0` to run them yourself with `node server/dist/db/migrate.js`.
 - **Not root:** the process runs as `node` (uid 1000). It cannot rewrite its own code and can only write to `/app/uploads` and `/app/backups`, which is why those two folders need the right owner on the host ([Folders and permissions](#folders-and-permissions)).

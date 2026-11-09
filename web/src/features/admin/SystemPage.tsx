@@ -153,6 +153,7 @@ export function SystemPage() {
           <AdminFields>
             <AdminFieldRow label={t('common.liveConnections')}>{t('system.connectionsValue', { live: connections.live, max: connections.max, perAccount: connections.perAccountMax })}</AdminFieldRow>
             <AdminFieldRow label={t('common.onlineAccounts')}>{connections.onlineAccounts}</AdminFieldRow>
+            <AdminFieldRow label={t('common.startedAt')}>{new Date(info.startedAt).toLocaleString(i18n.language)}</AdminFieldRow>
           </AdminFields>
         </AdminSection>
 
