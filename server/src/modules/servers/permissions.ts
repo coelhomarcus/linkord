@@ -35,7 +35,7 @@ export const PERMISSIONS = {
   USE_SOUNDBOARD: 1 << 17,
   MANAGE_EXPRESSIONS: 1 << 18,
   VIEW_AUDIT_LOG: 1 << 19,
-  // adding sounds; playing them is USE_SOUNDBOARD, curating everyone's MANAGE_EXPRESSIONS
+  // adding sounds and emojis; playing sounds is USE_SOUNDBOARD, curating everyone's MANAGE_EXPRESSIONS
   CREATE_EXPRESSIONS: 1 << 20,
 } as const;
 

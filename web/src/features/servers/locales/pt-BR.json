@@ -138,7 +138,8 @@
     },
     "icon": "Ícone",
     "iconHint": "Recomendamos uma imagem de, pelo menos, 512x512.",
-    "auditLog": "Registro de auditoria"
+    "auditLog": "Registro de auditoria",
+    "emojis": "Emojis"
   },
   "roles": {
     "hint": "Use cargos para organizar os membros e definir o que cada um pode fazer. Cargos mais acima mandam nos de baixo.",
@@ -304,9 +305,9 @@
     "STREAM": "Ligar a câmera e compartilhar a tela.",
     "MOVE_MEMBERS": "Mover membros abaixo do seu cargo entre canais de voz, ou desconectá-los.",
     "USE_SOUNDBOARD": "Tocar os sons do soundboard nas chamadas.",
-    "MANAGE_EXPRESSIONS": "Editar e remover os sons de qualquer pessoa.",
+    "MANAGE_EXPRESSIONS": "Editar e remover os sons e emojis de qualquer pessoa.",
     "VIEW_AUDIT_LOG": "Ver quem mudou o quê no servidor.",
-    "CREATE_EXPRESSIONS": "Adicionar sons ao soundboard do servidor. Cada som ocupa um dos espaços do servidor."
+    "CREATE_EXPRESSIONS": "Adicionar sons ao soundboard e emojis ao servidor. Cada um ocupa um dos espaços do servidor."
   },
   "voiceMembers": {
     "inChannel": "Na chamada de {{channel}}",
@@ -398,6 +399,11 @@
         "create": "Adicionar som",
         "update": "Editar som",
         "delete": "Remover som"
+      },
+      "emoji": {
+        "create": "Adicionar emoji",
+        "update": "Renomear emoji",
+        "delete": "Remover emoji"
       }
     },
     "sentences": {
@@ -449,6 +455,11 @@
         "create": "<actor>{{actor}}</actor> adicionou o som <target>{{target}}</target>",
         "update": "<actor>{{actor}}</actor> editou o som <target>{{target}}</target>",
         "delete": "<actor>{{actor}}</actor> removeu o som <target>{{target}}</target>"
+      },
+      "emoji": {
+        "create": "<actor>{{actor}}</actor> adicionou o emoji <target>{{target}}</target>",
+        "update": "<actor>{{actor}}</actor> renomeou o emoji <target>{{target}}</target>",
+        "delete": "<actor>{{actor}}</actor> removeu o emoji <target>{{target}}</target>"
       }
     },
     "fields": {

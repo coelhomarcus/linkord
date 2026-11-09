@@ -18,6 +18,7 @@ import type { RoleSummary, ServerSummary } from '@/shared/types/protocol';
 import { ImageCropDialog } from '@/features/settings/ImageCropDialog';
 import { uploadCroppedProfileImage } from '@/features/settings/uploadCroppedProfileImage';
 import { ServerSoundsPanel } from '@/features/soundboard/ServerSoundsPanel';
+import { ServerEmojisPanel } from '@/features/emoji/ServerEmojisPanel';
 import { hasPermission, PERMISSIONS } from './permissionBits';
 import { PERMISSION_SECTIONS, bitOf } from './permissionCatalog';
 import { ServerIcon } from './ServerIcon';
@@ -422,7 +423,7 @@ export function ServerSettingsModal({ server, onClose, onOpenProfile }: { server
   type Tab = SettingsTab & { key: TabKey };
   // Discord's column: the server's own pages, then each group under its heading
   const groupOf: Partial<Record<TabKey, string>> = {
-    soundboard: t('settings.groups.expressions'),
+    emojis: t('settings.groups.expressions'), soundboard: t('settings.groups.expressions'),
     members: t('settings.groups.people'), roles: t('settings.groups.people'), invites: t('settings.groups.people'),
     auditLog: t('settings.groups.moderation'), bans: t('settings.groups.moderation'),
   };
@@ -446,6 +447,12 @@ export function ServerSettingsModal({ server, onClose, onOpenProfile }: { server
       {tab === 'invites' && <Invites server={server} />}
       {tab === 'bans' && <Bans server={server} />}
       {tab === 'auditLog' && <ServerAuditLog server={server} />}
+      {tab === 'emojis' && (
+        <>
+          <SectionTitle>{t('settings.emojis')}</SectionTitle>
+          <ServerEmojisPanel serverId={server.id} myUserId={state.me.userId} canUpload={can(server, PERMISSIONS.CREATE_EXPRESSIONS)} canManage={can(server, PERMISSIONS.MANAGE_EXPRESSIONS)} />
+        </>
+      )}
       {tab === 'soundboard' && (
         <>
           <SectionTitle>{t('settings.soundboard')}</SectionTitle>

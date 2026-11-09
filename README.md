@@ -26,6 +26,9 @@ Linkord is a self-hosted place to chat and call with friends. Talk in direct mes
 - **Chat and media**
   Send attachments up to 512 MB each (configurable with `MAX_ATTACHMENT_BYTES`), record voice messages of up to 5 minutes from the composer (blocked while you are in a call, since the call owns the microphone), share YouTube and Twitch links with automatic embeds, react, reply, edit, delete, and search messages.
 
+- **Emojis**
+  Type `:` and two letters in the composer to pick an emoji by its shortcode, or type a whole shortcode such as `:joy:` to turn it into the emoji; the ones you use most come first, on every device. Each server can have its own emojis, up to 50 still and 50 animated, uploaded and cropped from the server's settings and stored as small WebP files.
+
 - **Voice, video, and screen sharing**
   Join calls in voice channels or DMs with LiveKit. Each server also has its own soundboard, played and added to from the call's sound picker. Channel permissions decide who may connect, speak, and turn on a camera or share a screen there.
 
@@ -39,7 +42,7 @@ Linkord is a self-hosted place to chat and call with friends. Talk in direct mes
   Pick how you appear from the profile card that opens from the user panel (it also edits your profile and copies your user ID): Available, Idle (also set automatically after a few minutes away, configurable per device), Do Not Disturb (no push and no notification sounds; notifications still land in the list) or Invisible (you look offline to everyone but keep using the app). Invisible still shows you inside a call you join, to the people who can see that call, the same way your voice and video do. Add a custom status with an emoji, a short text and an optional expiry, or pick a game from your rotation; it shows as a thought bubble beside your avatar on your profile, where you edit or clear it. Your status follows your account to every device.
 
 - **Server audit log**
-  Each server keeps a log in its settings of who kicked, banned, changed roles, channels, permissions, invites, webhooks or sounds, moved someone out of a voice channel, or deleted someone else's message, with what changed and when. Members with the "View audit log" permission can filter it by person, action, target and period. Entries are kept for 90 days by default (`SERVER_AUDIT_RETENTION_DAYS`).
+  Each server keeps a log in its settings of who kicked, banned, changed roles, channels, permissions, invites, webhooks, sounds or emojis, moved someone out of a voice channel, or deleted someone else's message, with what changed and when. Members with the "View audit log" permission can filter it by person, action, target and period. Entries are kept for 90 days by default (`SERVER_AUDIT_RETENTION_DAYS`).
 
 - **Administration**
   Manage users, servers, webhooks, reports, audit history, orphaned uploads, and the data retention report from `/admin`.

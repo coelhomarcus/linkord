@@ -32,6 +32,7 @@ import { registerReportRoutes } from '../modules/reports/reports.js';
 import { registerAdminRoutes } from '../modules/admin/adminRoutes.js';
 import { registerSoundboardRoutes } from '../modules/soundboard/soundboard.js';
 import { registerExpressionUsageRoutes } from '../modules/emojis/expressionUsage.js';
+import { registerServerEmojiRoutes } from '../modules/emojis/serverEmojis.js';
 import { registerGifRoutes } from '../modules/gifs/gifs.js';
 import { registerGameRoutes } from '../modules/games/games.js';
 import { registerBotRoutes } from '../modules/bots/bots.js';
@@ -128,6 +129,7 @@ export function createApp(): FastifyInstance {
   registerCallInviteRoutes(fastify);
   registerSoundboardRoutes(fastify);
   registerExpressionUsageRoutes(fastify);
+  registerServerEmojiRoutes(fastify);
   registerBotRoutes(fastify);
   registerWebhookIngressRoutes(fastify);
   registerReportRoutes(fastify);

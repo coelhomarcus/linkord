@@ -1,0 +1,42 @@
+{
+  "panel": {
+    "description": "Emojis any member of the server can use in messages and reactions, here and anywhere else on Linkord. The image is cropped to a square and stored at 128 px; GIFs stay animated.",
+    "upload": "Upload emoji",
+    "nameRule": "Names: 2 to 32 lowercase letters, numbers or _.",
+    "static": "Emoji",
+    "animated": "Animated emoji",
+    "slots_one": "{{count}} free slot of {{max}}",
+    "slots_other": "{{count}} free slots of {{max}}",
+    "columns": {
+      "image": "Image",
+      "name": "Name",
+      "uploadedBy": "Uploaded by"
+    },
+    "nameLabel": "Name of the emoji {{name}}",
+    "delete": "Remove {{name}}",
+    "deletedUser": "Deleted account",
+    "empty": "No emoji yet.",
+    "loading": "Loading emoji…",
+    "loadFailed": "Couldn't load the emoji.",
+    "retry": "Try again",
+    "deleteFailed": "Couldn't remove the emoji.",
+    "renameFailed": "Couldn't rename the emoji.",
+    "deleteConfirm": {
+      "title": "Remove emoji?",
+      "description": ":{{name}}: leaves the server. Old messages show it as text from then on.",
+      "confirm": "Remove"
+    }
+  },
+  "upload": {
+    "crop": "Crop emoji",
+    "uploading": "Uploading…",
+    "uploadFailed": "Couldn't upload the emoji."
+  },
+  "errors": {
+    "invalid_emoji_name": "Names need 2 to 32 lowercase letters, numbers or _.",
+    "invalid_image": "Couldn't read that image. Use PNG, JPEG, GIF or WebP.",
+    "emoji_too_large": "That emoji comes out too heavy. Try a shorter animation.",
+    "emoji_name_taken": "There's already an emoji with that name in this server.",
+    "emojis_full": "The server has used all of its slots for that kind of emoji."
+  }
+}

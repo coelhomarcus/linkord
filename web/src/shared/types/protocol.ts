@@ -381,6 +381,7 @@ export type ServerMessage =
   | { t: 'soundboard-play'; conversationId: string; serverId: string; soundId: string; participantId: string; emoji: string; volume: number }
   // payload-free like social-changed: the list itself comes from GET /api/servers/:id/sounds
   | { t: 'server-sounds-changed'; serverId: string }
+  | { t: 'server-emojis-changed'; serverId: string }
   | { t: 'message-search-results'; query: string; conversationId?: string; results: SearchResult[] }
   | { t: 'chat'; message: ChatMessage }
   | { t: 'chat-send-result'; requestId: string; clientMessageId: string; message?: ChatMessage; error?: { code: string; message: string } }

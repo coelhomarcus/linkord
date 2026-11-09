@@ -77,6 +77,7 @@ describe('server helpers', () => {
   it('settings show exactly the pages the member may use, and open only when there is one', () => {
     expect(serverSettingsTabs(server({ permissions: PERMISSIONS.BAN_MEMBERS }), 'me')).toEqual(['members', 'bans']);
     expect(serverSettingsTabs(server({ permissions: PERMISSIONS.MANAGE_SERVER }), 'me')).toEqual(['overview', 'invites']);
+    expect(serverSettingsTabs(server({ permissions: PERMISSIONS.CREATE_EXPRESSIONS }), 'me')).toEqual(['emojis', 'soundboard']);
     // managing channels happens in the channel list, not here
     expect(canOpenSettings(server({ permissions: PERMISSIONS.MANAGE_CHANNELS }), 'me')).toBe(false);
     expect(serverSettingsTabs(server({ permissions: ALL, ownerId: 'me' }), 'me')).toContain('delete');

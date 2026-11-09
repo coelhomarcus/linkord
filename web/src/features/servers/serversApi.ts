@@ -85,6 +85,7 @@ export const SERVER_AUDIT_ACTIONS = [
   'webhook.create', 'webhook.update', 'webhook.rotate', 'webhook.delete',
   'message.delete',
   'sound.create', 'sound.update', 'sound.delete',
+  'emoji.create', 'emoji.update', 'emoji.delete',
 ] as const;
 export type ServerAuditAction = (typeof SERVER_AUDIT_ACTIONS)[number];
 export interface AuditChange { key: string; before: unknown; after: unknown }

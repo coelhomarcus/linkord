@@ -70,7 +70,7 @@ The app writes to two places and nothing else:
 
 | Container path | What is there |
 | --- | --- |
-| `/app/uploads` | Every stored file: attachments, thumbnails, profile images, soundboard sounds. `tmp/` inside it holds the chunks of uploads still in progress, one folder per upload. |
+| `/app/uploads` | Every stored file: attachments, thumbnails, profile images, soundboard sounds, server emojis. `tmp/` inside it holds the chunks of uploads still in progress, one folder per upload. |
 | `/app/backups` | One dated folder per backup (`BACKUP_DIR`). |
 
 Both must belong to uid 1000 **all the way down**. Docker creates a missing bind-mounted folder owned by root, and an install from before the image switched to `node` has root-owned files and folders inside. Always use `chown -R`: changing only the top folder leaves `tmp/` owned by root, and then profile pictures still save (they are written straight into `/app/uploads`) while every attachment and voice message fails.

@@ -37,6 +37,7 @@ import type { ClientMessage, Conversation, ServerMessage } from '@/shared/types/
 import { logger } from '@/shared/lib/logger';
 import { ERROR_CODES } from '@/shared/api/errorCodes';
 import { i18n } from '@/shared/i18n/init';
+import { invalidateServerEmojis } from '@/features/emoji/useServerEmojis';
 
 const log = logger.child({ component: 'room' });
 
@@ -284,6 +285,9 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         break;
       case 'server-sounds-changed':
         soundboardEvents.onServerSoundsChanged(m);
+        break;
+      case 'server-emojis-changed':
+        invalidateServerEmojis(m.serverId);
         break;
       case 'server-created':
       case 'server-updated':

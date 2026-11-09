@@ -138,7 +138,8 @@
     },
     "icon": "Icon",
     "iconHint": "We recommend an image of at least 512x512.",
-    "auditLog": "Audit log"
+    "auditLog": "Audit log",
+    "emojis": "Emoji"
   },
   "roles": {
     "hint": "Use roles to group your members and set what each one can do. Higher roles outrank lower ones.",
@@ -304,9 +305,9 @@
     "STREAM": "Turn on the camera and share the screen.",
     "MOVE_MEMBERS": "Move members below your role between voice channels, or disconnect them.",
     "USE_SOUNDBOARD": "Play soundboard sounds in calls.",
-    "MANAGE_EXPRESSIONS": "Edit and remove anyone's sounds.",
+    "MANAGE_EXPRESSIONS": "Edit and remove anyone's sounds and emojis.",
     "VIEW_AUDIT_LOG": "See who changed what in the server.",
-    "CREATE_EXPRESSIONS": "Add sounds to the server's soundboard. Each sound takes one of the server's slots."
+    "CREATE_EXPRESSIONS": "Add sounds to the soundboard and emojis to the server. Each one takes one of the server's slots."
   },
   "voiceMembers": {
     "inChannel": "In the {{channel}} call",
@@ -398,6 +399,11 @@
         "create": "Add sound",
         "update": "Edit sound",
         "delete": "Remove sound"
+      },
+      "emoji": {
+        "create": "Add emoji",
+        "update": "Rename emoji",
+        "delete": "Remove emoji"
       }
     },
     "sentences": {
@@ -449,6 +455,11 @@
         "create": "<actor>{{actor}}</actor> added the sound <target>{{target}}</target>",
         "update": "<actor>{{actor}}</actor> edited the sound <target>{{target}}</target>",
         "delete": "<actor>{{actor}}</actor> removed the sound <target>{{target}}</target>"
+      },
+      "emoji": {
+        "create": "<actor>{{actor}}</actor> added the emoji <target>{{target}}</target>",
+        "update": "<actor>{{actor}}</actor> renamed the emoji <target>{{target}}</target>",
+        "delete": "<actor>{{actor}}</actor> removed the emoji <target>{{target}}</target>"
       }
     },
     "fields": {

@@ -589,6 +589,25 @@ export const serverSounds = pgTable('server_sounds', {
 
 export type ServerSound = typeof serverSounds.$inferSelect;
 
+/** A server's own emojis, used as `<:name:id>` (`<a:name:id>` when animated) in messages and as
+ * `custom:<id>` reactions anywhere by its members (modules/emojis). The file is a 128px WebP stored
+ * under the emoji's id in the uploads folder and counted in the instance's storage, like a sound. */
+export const serverEmojis = pgTable('server_emojis', {
+  id: text('id').primaryKey(),
+  serverId: text('server_id').notNull().references(() => servers.id, { onDelete: 'cascade' }),
+  // set null, not cascade: the emoji belongs to the server, not to whoever sent it
+  uploaderId: text('uploader_id').references(() => users.id, { onDelete: 'set null' }),
+  name: varchar('name', { length: 32 }).notNull(),
+  animated: boolean('animated').notNull().default(false),
+  size: integer('size').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex('server_emojis_server_name_key').on(t.serverId, t.name),
+  check('server_emojis_name_check', sql`${t.name} ~ '^[a-z0-9_]{2,32}$'`),
+]);
+
+export type ServerEmoji = typeof serverEmojis.$inferSelect;
+
 /** Inbox and read state for a social event. Typed foreign keys preserve referential integrity;
  * deterministic `dedupeKey` values make retried outbox writes idempotent. Reading a notification
  * does not change the friendship or invitation state. */

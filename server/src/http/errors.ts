@@ -103,6 +103,13 @@ export const ERROR_REGISTRY = {
   sound_too_long: { statuses: [400], channel: 'http' },
   soundboard_full: { statuses: [409], channel: 'http' },
 
+  // server emojis
+  invalid_emoji_name: { statuses: [400], channel: 'http' },
+  invalid_image: { statuses: [400], channel: 'http' },
+  emoji_too_large: { statuses: [400], channel: 'http' },
+  emoji_name_taken: { statuses: [409], channel: 'http' },
+  emojis_full: { statuses: [409], channel: 'http' },
+
   // Admin actions.
   self_action: { statuses: [409], channel: 'http' },
   last_admin: { statuses: [409], channel: 'http' },

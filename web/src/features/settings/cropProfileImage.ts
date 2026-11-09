@@ -77,8 +77,8 @@ function cropInside(rect: { left: number; top: number; width: number; height: nu
   return fitted;
 }
 
-function fitGeometry(): MagickGeometry {
-  const geometry = new MagickGeometry(MAX_PROFILE_IMAGE_DIMENSION, MAX_PROFILE_IMAGE_DIMENSION);
+function fitGeometry(maxDimension: number): MagickGeometry {
+  const geometry = new MagickGeometry(maxDimension, maxDimension);
   // ImageMagick `>` — shrink only when a side exceeds the ceiling.
   geometry.greater = true;
   return geometry;
@@ -86,8 +86,12 @@ function fitGeometry(): MagickGeometry {
 
 /** Crops every frame (so a GIF/WebP stays animated) and encodes the way
  * the old sharp path did: animated WebP stays WebP, other animations stay
- * GIF, stills become JPEG. Output is capped at 4096 on the long side. */
-export async function cropProfileImage(bytes: Uint8Array, crop: CropRect, mime: string): Promise<Blob> {
+ * GIF, stills become JPEG (PNG with `still: 'png'`, which keeps
+ * transparency). Output is capped at `maxDimension` on the long side. */
+export async function cropProfileImage(
+  bytes: Uint8Array, crop: CropRect, mime: string,
+  { maxDimension = MAX_PROFILE_IMAGE_DIMENSION, still: stillFormat = 'jpeg' }: { maxDimension?: number; still?: 'jpeg' | 'png' } = {},
+): Promise<Blob> {
   await initializeProfileImageMagick();
   const requested = roundedCrop(crop);
 
@@ -105,7 +109,7 @@ export async function cropProfileImage(bytes: Uint8Array, crop: CropRect, mime: 
       const rect = cropInside(requested, source.width, source.height);
 
       const cropGeometry = new MagickGeometry(rect.left, rect.top, rect.width, rect.height);
-      const resize = fitGeometry();
+      const resize = fitGeometry(maxDimension);
       for (const frame of images) {
         frame.crop(cropGeometry);
         frame.resetPage();
@@ -121,6 +125,7 @@ export async function cropProfileImage(bytes: Uint8Array, crop: CropRect, mime: 
         return images.write(MagickFormat.Gif, (data) => new Blob([data.slice()], { type: 'image/gif' }));
       }
       const still = images[0]!;
+      if (stillFormat === 'png') return still.write(MagickFormat.Png, (data) => new Blob([data.slice()], { type: 'image/png' }));
       still.quality = 92;
       return still.write(MagickFormat.Jpeg, (data) => new Blob([data.slice()], { type: 'image/jpeg' }));
     });
