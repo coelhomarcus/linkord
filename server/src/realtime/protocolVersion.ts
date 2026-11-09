@@ -23,9 +23,12 @@
 // Version 14 adds `session-ended`, sent right before the server cuts a socket whose session the account
 // ended (from its session list or a password change). An old tab ignores it and sits on "reconnecting"
 // until its next reconnect is refused, which signs it out, so the minimum stays at 7.
+// Version 15 adds server stickers: `stickerId` on `chat` from the client, an optional `sticker` on
+// messages (and on reply references) and `server-stickers-changed`. An old tab shows a sticker as an
+// empty message and ignores the new message, so the minimum stays at 7.
 // Raising MIN_PROTOCOL_VERSION also drops open tabs out of their calls (they are refused and
 // disconnect), so keep it for changes an old client cannot tolerate.
-export const PROTOCOL_VERSION = 14;
+export const PROTOCOL_VERSION = 15;
 export const MIN_PROTOCOL_VERSION = 7;
 
 export function isClientCompatible(version: unknown): boolean {

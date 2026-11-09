@@ -24,10 +24,11 @@ export const SERVER_AUDIT_ACTIONS = [
   'message.delete',
   'sound.create', 'sound.update', 'sound.delete',
   'emoji.create', 'emoji.update', 'emoji.delete',
+  'sticker.create', 'sticker.update', 'sticker.delete',
 ] as const;
 
 type ServerAuditAction = (typeof SERVER_AUDIT_ACTIONS)[number];
-type ServerAuditTargetType = 'server' | 'user' | 'role' | 'channel' | 'category' | 'invite' | 'webhook' | 'message' | 'sound' | 'emoji';
+type ServerAuditTargetType = 'server' | 'user' | 'role' | 'channel' | 'category' | 'invite' | 'webhook' | 'message' | 'sound' | 'emoji' | 'sticker';
 
 /** One field that changed. The client renders these generically, so a new
  * field needs a label there, not a new shape here. */

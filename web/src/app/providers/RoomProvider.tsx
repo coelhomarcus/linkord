@@ -39,6 +39,8 @@ import { ERROR_CODES } from '@/shared/api/errorCodes';
 import { i18n } from '@/shared/i18n/init';
 import { invalidateServerEmojis } from '@/features/emoji/useServerEmojis';
 import { invalidateMyEmojis } from '@/features/emoji/myEmojis';
+import { invalidateMyStickers } from '@/features/stickers/myStickers';
+import { invalidateServerStickers } from '@/features/stickers/useServerStickers';
 import { invalidateMySounds } from '@/features/soundboard/useMySounds';
 
 const log = logger.child({ component: 'room' });
@@ -111,10 +113,10 @@ export function RoomProvider({ children }: { children: ReactNode }) {
   // composes their leave/mute functions).
   const conversationsList = useConversationsList(sendWs);
   const serversList = useServersList();
-  // the account's usable server emojis and sounds follow the servers it is
-  // in, and what it may do there
+  // the account's usable server emojis, stickers and sounds follow the
+  // servers it is in, and what it may do there
   const serverIdsKey = serversList.servers.map((server) => `${server.id}:${server.permissions}`).join(',');
-  useEffect(() => { invalidateMyEmojis(); invalidateMySounds(); }, [serverIdsKey]);
+  useEffect(() => { invalidateMyEmojis(); invalidateMyStickers(); invalidateMySounds(); }, [serverIdsKey]);
   // DMs and channels as one list: chat, unread and calls look up whichever it is by id
   const allConversations = useMemo<Conversation[]>(
     () => [...conversationsList.conversations, ...serversList.channelConversations],
@@ -294,6 +296,9 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         break;
       case 'server-emojis-changed':
         invalidateServerEmojis(m.serverId);
+        break;
+      case 'server-stickers-changed':
+        invalidateServerStickers(m.serverId);
         break;
       case 'server-created':
       case 'server-updated':
@@ -520,7 +525,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         actionError, clearActionError: () => setActionError(null),
         accessNotice, clearAccessNotice: () => setAccessNotice(null),
         socialRevision,
-        sendChatMessage: chatMessages.sendChatMessage, deleteChatMessage: chatMessages.deleteChatMessage,
+        sendChatMessage: chatMessages.sendChatMessage, sendSticker: chatMessages.sendSticker, deleteChatMessage: chatMessages.deleteChatMessage,
         pendingByConversation: chatMessages.pendingByConversation,
         retryPendingMessage: chatMessages.retryPendingMessage, discardPendingMessage: chatMessages.discardPendingMessage,
         queueMessageWithFiles: chatMessages.queueMessageWithFiles,

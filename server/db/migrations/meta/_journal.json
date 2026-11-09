@@ -449,6 +449,13 @@
       "when": 1794250835636,
       "tag": "0063_login_alerts",
       "breakpoints": true
+    },
+    {
+      "idx": 64,
+      "version": "7",
+      "when": 1794257791194,
+      "tag": "0064_server_stickers",
+      "breakpoints": true
     }
   ]
 }

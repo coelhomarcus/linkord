@@ -2,12 +2,12 @@ import { useEffect, useSyncExternalStore } from 'react';
 import { apiFetch } from '@/shared/api/api';
 
 // What the account uses most, as counted by the server when a message, a
-// reaction or a sound goes out (server/src/modules/emojis/expressionUsage.ts),
+// reaction, a sticker or a sound goes out (server/src/modules/emojis/expressionUsage.ts),
 // so the composer, the reaction picker and the soundboard rank alike on every
 // device. A use made here is counted locally at once too: the list must not
 // wait for a refetch to move.
 
-export type FrequentKind = 'emojis' | 'sounds';
+export type FrequentKind = 'emojis' | 'sounds' | 'stickers';
 
 interface FrequentEntry {
   key: string;
@@ -19,9 +19,10 @@ interface FrequentState {
   status: 'idle' | 'loading' | 'ready' | 'error';
   emojis: FrequentEntry[];
   sounds: FrequentEntry[];
+  stickers: FrequentEntry[];
 }
 
-let state: FrequentState = { accountId: null, status: 'idle', emojis: [], sounds: [] };
+let state: FrequentState = { accountId: null, status: 'idle', emojis: [], sounds: [], stickers: [] };
 const listeners = new Set<() => void>();
 
 function set(next: FrequentState): void {
@@ -41,12 +42,17 @@ function sorted(entries: FrequentEntry[]): FrequentEntry[] {
 
 function load(accountId: string): void {
   if (state.accountId === accountId && (state.status === 'loading' || state.status === 'ready')) return;
-  set({ accountId, status: 'loading', emojis: state.accountId === accountId ? state.emojis : [], sounds: state.accountId === accountId ? state.sounds : [] });
-  apiFetch<{ emojis: FrequentEntry[]; sounds: FrequentEntry[] }>('/api/me/frequent-expressions')
+  const same = state.accountId === accountId;
+  set({ accountId, status: 'loading', emojis: same ? state.emojis : [], sounds: same ? state.sounds : [], stickers: same ? state.stickers : [] });
+  // `stickers` is missing from a server older than stickers
+  apiFetch<{ emojis: FrequentEntry[]; sounds: FrequentEntry[]; stickers?: FrequentEntry[] }>('/api/me/frequent-expressions')
     .then((res) => {
       if (state.accountId !== accountId) return;
       // uses counted here while the request was out are kept on top of it
-      set({ accountId, status: 'ready', emojis: merge(res.emojis, state.emojis), sounds: merge(res.sounds, state.sounds) });
+      set({
+        accountId, status: 'ready',
+        emojis: merge(res.emojis, state.emojis), sounds: merge(res.sounds, state.sounds), stickers: merge(res.stickers ?? [], state.stickers),
+      });
     })
     .catch(() => { if (state.accountId === accountId) set({ ...state, status: 'error' }); });
 }
@@ -98,5 +104,5 @@ function keysOf(snapshot: FrequentState, kind: FrequentKind): string[] {
 
 /** For tests. */
 export function resetFrequentExpressions(): void {
-  set({ accountId: null, status: 'idle', emojis: [], sounds: [] });
+  set({ accountId: null, status: 'idle', emojis: [], sounds: [], stickers: [] });
 }

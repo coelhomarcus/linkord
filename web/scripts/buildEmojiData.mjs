@@ -1,7 +1,10 @@
 // Builds web/public/emoji-data/<lang>/emojis.json from the pinned
 // emojibase-data devDependency: one compact file per language that the emoji
 // picker and the composer's :shortcode: suggestions both read. Served by us,
-// never by a CDN. Run it after bumping emojibase-data:
+// never by a CDN. An emoji (or a skin tone of it) the pinned Twemoji has no
+// picture for is left out, so the picker never offers one drawn by the
+// system's font instead. Run it after bumping emojibase-data or
+// @discordapp/twemoji:
 //
 //   npm run emoji:data
 //
@@ -25,6 +28,15 @@ const COMPONENT_GROUP = 2;
 const github = require('emojibase-data/en/shortcodes/github.json');
 const iamcal = require('emojibase-data/en/shortcodes/iamcal.json');
 const version = require('emojibase-data/package.json').version;
+const twemojiDir = path.join(path.dirname(require.resolve('@discordapp/twemoji/package.json')), 'dist', 'svg');
+const twemoji = new Set(fs.readdirSync(twemojiDir).map((file) => file.replace(/\.svg$/, '')));
+
+/** Mirrors twemojiUrls in src/features/emoji/twemoji.ts. */
+function hasPicture(emoji) {
+  const points = [...emoji].map((char) => char.codePointAt(0));
+  const name = (keep) => points.filter((point) => keep || point !== 0xfe0f).map((point) => point.toString(16)).join('-');
+  return twemoji.has(name(points.includes(0x200d))) || twemoji.has(name(false));
+}
 
 const asList = (value) => (value == null ? [] : Array.isArray(value) ? value : [value]);
 
@@ -35,7 +47,7 @@ function shortcodesFor(hexcode) {
 for (const lang of LANGS) {
   const data = require(`emojibase-data/${lang}/data.json`);
   const emojis = data
-    .filter((e) => typeof e.group === 'number' && e.group !== COMPONENT_GROUP)
+    .filter((e) => typeof e.group === 'number' && e.group !== COMPONENT_GROUP && hasPicture(e.emoji))
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
     .map((e) => {
       const skins = (e.skins ?? [])
@@ -43,7 +55,7 @@ for (const lang of LANGS) {
         .sort((a, b) => a.tone - b.tone)
         .map((s) => s.emoji);
       const entry = [e.emoji, e.label, e.group, shortcodesFor(e.hexcode), e.tags ?? []];
-      if (skins.length === 5) entry.push(skins);
+      if (skins.length === 5 && skins.every(hasPicture)) entry.push(skins);
       return entry;
     });
   const dir = path.join(outRoot, lang);

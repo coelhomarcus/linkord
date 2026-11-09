@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import { config } from '../../config/env.js';
 import { db } from '../../db/client.js';
-import { attachments, serverEmojis, serverSounds } from '../../db/schema.js';
+import { attachments, serverEmojis, serverSounds, serverStickers } from '../../db/schema.js';
 import { recordAudit, recordAuditFailure, type AuditActor } from '../admin/auditLog.js';
 import { filePathFor } from './attachmentStorage.js';
 import { classifyOrphans, FILE_ID_RE, type DiskFile } from './orphanClassification.js';
@@ -83,6 +83,7 @@ async function runSweep(opts: { dryRun: boolean; actor: AuditActor | null; reque
     ...(await db.select({ id: attachments.id }).from(attachments)).map((r) => r.id),
     ...(await db.select({ id: serverSounds.id }).from(serverSounds)).map((r) => r.id),
     ...(await db.select({ id: serverEmojis.id }).from(serverEmojis)).map((r) => r.id),
+    ...(await db.select({ id: serverStickers.id }).from(serverStickers)).map((r) => r.id),
   ]);
   const { orphans, recent, missingFiles } = classifyOrphans({ files, dbIds, now: Date.now(), graceMs: config.ORPHAN_GRACE_MS });
 

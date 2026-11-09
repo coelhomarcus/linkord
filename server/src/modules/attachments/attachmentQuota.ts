@@ -1,7 +1,7 @@
 import { sql } from 'drizzle-orm';
 import { config } from '../../config/env.js';
 import { db } from '../../db/client.js';
-import { attachments as attachmentsTable, serverEmojis, serverSounds } from '../../db/schema.js';
+import { attachments as attachmentsTable, serverEmojis, serverSounds, serverStickers } from '../../db/schema.js';
 import { stagedBytes } from './stagedAttachments.js';
 
 export interface UsageInfo {
@@ -10,7 +10,7 @@ export interface UsageInfo {
   maxBytes: number;
 }
 
-/** Counts committed files, sounds and server emojis on every request. Include profile images too: frequent
+/** Counts committed files, sounds, server emojis and stickers on every request. Include profile images too: frequent
  * replacements contribute to write volume even when each account keeps only one current image.
  * This instance-wide figure is the only storage limit: accounts have no quota of their own. */
 export async function getUsage(): Promise<UsageInfo> {
@@ -23,10 +23,13 @@ export async function getUsage(): Promise<UsageInfo> {
   const [emojis] = await db
     .select({ totalBytes: sql<number>`coalesce(sum(${serverEmojis.size}), 0)`, totalFiles: sql<number>`count(*)` })
     .from(serverEmojis);
+  const [stickers] = await db
+    .select({ totalBytes: sql<number>`coalesce(sum(${serverStickers.size}), 0)`, totalFiles: sql<number>`count(*)` })
+    .from(serverStickers);
   const staged = await stagedBytes();
   return {
-    totalBytes: Number(row!.totalBytes) + Number(sounds!.totalBytes) + Number(emojis!.totalBytes) + staged.bytes,
-    totalFiles: Number(row!.totalFiles) + Number(sounds!.totalFiles) + Number(emojis!.totalFiles) + staged.files,
+    totalBytes: Number(row!.totalBytes) + Number(sounds!.totalBytes) + Number(emojis!.totalBytes) + Number(stickers!.totalBytes) + staged.bytes,
+    totalFiles: Number(row!.totalFiles) + Number(sounds!.totalFiles) + Number(emojis!.totalFiles) + Number(stickers!.totalFiles) + staged.files,
     maxBytes: config.MAX_STORAGE_BYTES,
   };
 }

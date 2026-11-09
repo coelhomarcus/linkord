@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { cn } from '@/shared/lib/utils';
 import { emojiOptionId } from './emojiAutocomplete';
+import { Emoji } from '@/features/emoji/Emoji';
 
 export interface EmojiSuggestionItem {
   key: string;
@@ -60,7 +61,7 @@ export function EmojiSuggestions({ id, query, items, activeIndex, onPick, onHove
           >
             {item.imageUrl
               ? <img src={item.imageUrl} alt="" className="size-6 flex-none object-contain" draggable={false} />
-              : <span className="w-6 flex-none text-center text-[20px] leading-none">{item.emoji}</span>}
+              : <span className="w-6 flex-none text-center text-[20px] leading-none"><Emoji emoji={item.emoji!} /></span>}
             <span className="min-w-0 flex-1 truncate text-label font-medium">:{item.shortcode}:</span>
             {item.detail && <span className="max-w-[40%] flex-none truncate text-caption text-text-muted">{item.detail}</span>}
           </div>

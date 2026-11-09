@@ -3,7 +3,7 @@ import type { Locale } from './locale.js';
 type TextKey =
   | 'push.mentionChannelTitle' | 'push.mentionDirectTitle' | 'push.serverInvitationTitle' | 'push.serverInvitationBody'
   | 'push.friendRequestTitle' | 'push.friendAcceptedTitle'
-  | 'push.chatEmptyBody' | 'push.chatEmptyBodyDirect' | 'push.callInviteBody' | 'push.callInviteBodyDirect'
+  | 'push.chatEmptyBody' | 'push.chatEmptyBodyDirect' | 'push.stickerBody' | 'push.stickerBodyDirect' | 'push.callInviteBody' | 'push.callInviteBodyDirect'
   | 'push.dmCall' | 'push.dmCallLasted'
   | 'push.callSecond_one' | 'push.callSecond_other' | 'push.callMinute_one' | 'push.callMinute_other'
   | 'push.callHour_one' | 'push.callHour_other' | 'push.callHourMinute'
@@ -23,6 +23,7 @@ const TEXT: Record<Locale, Record<TextKey, string>> = {
     'push.friendRequestTitle': '{{name}} enviou um pedido de amizade',
     'push.friendAcceptedTitle': '{{name}} aceitou seu pedido de amizade',
     'push.chatEmptyBody': '{{name}} enviou uma mensagem', 'push.chatEmptyBodyDirect': 'Enviou uma mensagem',
+    'push.stickerBody': '{{name}} enviou uma figurinha', 'push.stickerBodyDirect': 'Enviou uma figurinha',
     'push.callInviteBody': '{{name}} chamou você para o canal de voz {{channel}} em {{server}}',
     'push.callInviteBodyDirect': 'Chamou você para o canal de voz {{channel}} em {{server}}',
     'push.dmCall': 'Iniciou uma chamada',
@@ -58,6 +59,7 @@ const TEXT: Record<Locale, Record<TextKey, string>> = {
     'push.friendRequestTitle': '{{name}} sent you a friend request',
     'push.friendAcceptedTitle': '{{name}} accepted your friend request',
     'push.chatEmptyBody': '{{name}} sent a message', 'push.chatEmptyBodyDirect': 'Sent a message',
+    'push.stickerBody': '{{name}} sent a sticker', 'push.stickerBodyDirect': 'Sent a sticker',
     'push.callInviteBody': '{{name}} invited you to the {{channel}} voice channel in {{server}}',
     'push.callInviteBodyDirect': 'Invited you to the {{channel}} voice channel in {{server}}',
     'push.dmCall': 'Started a call',

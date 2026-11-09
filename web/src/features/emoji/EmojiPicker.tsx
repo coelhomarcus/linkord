@@ -22,6 +22,7 @@ import { setSkinTone, useSkinTone } from './skinTone';
 import { emojiImageUrl } from './serverEmojisApi';
 import { requestEmojiUpload } from './emojiUploadRequest';
 import { buildRows, buildSections, searchItems, type EmojiCategoryKey, type PickerItem, type PickerRow, type PickerSection } from './emojiPickerModel';
+import { Emoji } from './Emoji';
 
 export interface EmojiPick {
   /** a reaction's value: the emoji, or custom:<id> */
@@ -234,13 +235,13 @@ export function EmojiPicker({ onPick, allowCustom = true, className, autoFocus =
             aria-label={t('picker.skinTone')}
             className="grid size-10 flex-none place-items-center rounded-lg text-[22px] leading-none transition-colors duration-100 hover:bg-fill-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            {TONE_HANDS[skinTone] ?? SIDEBAR_HAND}
+            <Emoji emoji={TONE_HANDS[skinTone] ?? SIDEBAR_HAND} />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="min-w-0">
             <DropdownMenuRadioGroup value={String(skinTone)} onValueChange={(value) => setSkinTone(Number(value))}>
               {TONE_HANDS.map((hand, tone) => (
                 <DropdownMenuRadioItem key={hand} value={String(tone)} aria-label={t(`picker.tones.${tone}` as 'picker.tones.0')}>
-                  <span className="text-[20px] leading-none">{hand}</span>
+                  <span className="text-[20px] leading-none"><Emoji emoji={hand} /></span>
                 </DropdownMenuRadioItem>
               ))}
             </DropdownMenuRadioGroup>
@@ -326,7 +327,7 @@ export function EmojiPicker({ onPick, allowCustom = true, className, autoFocus =
                       >
                         {item.custom
                           ? <img src={emojiImageUrl(item.custom.id)} alt="" loading="lazy" draggable={false} className="size-8 object-contain" />
-                          : <span aria-hidden>{item.emoji}</span>}
+                          : <Emoji emoji={item.emoji!} className="size-8" />}
                       </button>
                     );
                   })}
@@ -360,7 +361,7 @@ export function EmojiPicker({ onPick, allowCustom = true, className, autoFocus =
           <>
             {preview.custom
               ? <img src={emojiImageUrl(preview.custom.id)} alt="" className="size-7 flex-none object-contain" />
-              : <span aria-hidden className="text-[26px] leading-none">{preview.emoji}</span>}
+              : <span aria-hidden className="text-[26px] leading-none"><Emoji emoji={preview.emoji!} /></span>}
             <span className="min-w-0 truncate text-label font-semibold text-text-primary">:{preview.shortcode}:</span>
             {preview.custom && <span className="min-w-0 truncate text-caption text-text-muted">{serverById.get(preview.custom.serverId)?.name}</span>}
           </>

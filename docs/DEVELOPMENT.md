@@ -147,7 +147,7 @@ Every script runs from the repository root.
 | `npm run restore -- [<backup>] --confirm <database>` | Restores a backup into an empty database and uploads folder, and checks the result. |
 | `npm run backup:rehearse` | Backup, restore and a boot of the app on throwaway local databases. Needs `pg_dump` and `pg_restore`. |
 | `npm run admin:grant -- <username>` / `admin:revoke` | Gives or takes administrator access. |
-| `npm run emoji:data` | Rebuilds `web/public/emoji-data/<lang>/emojis.json` (the emoji picker's and the composer's `:shortcode:` data) from the pinned `emojibase-data` devDependency of `web/`. Run it after bumping that package. |
+| `npm run emoji:data` | Rebuilds `web/public/emoji-data/<lang>/emojis.json` (the emoji picker's and the composer's `:shortcode:` data) from the pinned `emojibase-data` devDependency of `web/`, leaving out the emojis (and skin tones) the pinned `@discordapp/twemoji` has no picture for. Run it after bumping either package. Twemoji's SVGs themselves are copied by the Vite build to `/assets/twemoji/<version>/` (served from `node_modules` in development), so a bump only needs `npm install` and this script. |
 
 The scripts behind the `db:*`, `admin:*` and `test:integration` commands live in `server/src/scripts/`; each starts with a comment on what it does and how to call it.
 
@@ -199,6 +199,7 @@ The `upgrade` project adapts to what the base version can do and says so in the 
 | `features/webhooks` | Text and cards through the ingress (token in the URL and in the header), invalid payloads, rotating and deleting the URL, permission; a webhook picture picked in the channel settings and cropped on the server. |
 | `features/soundboard` | A sound uploaded to the server reaches everyone in the call; a member adds one from the call's sound picker once `@everyone` has `CREATE_EXPRESSIONS`, and is not offered it before; a sound from another server of the player's plays in the call and someone outside that server fetches it (the play's token). |
 | `features/emoji` | `:shortcode:` suggestions and a full shortcode turning into its emoji; a server emoji picked from the picker in a DM with someone outside that server, who sees the picture, and typed in another server's channel; uploading and cropping one from the server's settings. |
+| `features/stickers` | Uploading an animated sticker from the server's settings with its related emoji, name and description; sending one from the composer's sticker picker into a DM with someone outside its server, who sees it at 320 px, is told it comes from a server they are not in, has none to send, and replies quoting it by name; the message reading as unavailable once the sticker is deleted. |
 | `features/profile` | Display name and bio reaching a friend live, an animated GIF picked as photo and as banner and cropped on the server (frames, size and the photo's still poster), mutual friends, the games widgets on offer with no connection (the picker reports the search unavailable, as the stack has no IGDB credentials), games saved with the Wall reaching a friend in order, and widgets reordered by dragging their handle and removed with the button under it. On a touch phone: the profile filling the screen, a game cover's actions in a menu, a widget dragged by its handle with a real finger, 44px touch targets, and a colour picker that does not make iOS zoom. |
 | `features/reports-admin` | Reporting a message, the admin deleting it for everyone, suspending an account. |
 | `features/settings` | The account's language following it to another browser. |
@@ -296,7 +297,7 @@ docker compose run --rm --no-deps app node server/dist/scripts/restore.js latest
 
 `pg_restore` runs in a single transaction and stops at the first error, so a failed restore leaves the database empty, and the uploads are extracted only after it succeeds.
 
-Afterwards it checks the result and prints it: every table has the number of rows the backup recorded, the migrations are all there, the number of extracted files is right, and every attachment, thumbnail, sound, server emoji and staged file has its file on disk (the same comparison `/admin/system` makes). A mismatch exits with code 3. Warnings (the cases listed above) exit 0, or 3 with `--strict`. Other failures exit 1, a missing confirmation 2.
+Afterwards it checks the result and prints it: every table has the number of rows the backup recorded, the migrations are all there, the number of extracted files is right, and every attachment, thumbnail, sound, server emoji, sticker and staged file has its file on disk (the same comparison `/admin/system` makes). A mismatch exits with code 3. Warnings (the cases listed above) exit 0, or 3 with `--strict`. Other failures exit 1, a missing confirmation 2.
 
 ### Rehearsal
 

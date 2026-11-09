@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { ArrowBendUpLeftIcon, ArrowsInSimpleIcon, ArrowUpIcon, GifIcon, ImageSquareIcon, PaperclipIcon, PlusCircleIcon, SmileyIcon } from '@phosphor-icons/react';
+import { ArrowBendUpLeftIcon, ArrowsInSimpleIcon, ArrowUpIcon, GifIcon, ImageSquareIcon, PaperclipIcon, PlusCircleIcon, SmileyIcon, StickerIcon } from '@phosphor-icons/react';
 import { forwardRef, useCallback, useEffect, useId, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, ClipboardEvent, KeyboardEvent as ReactKeyboardEvent, SyntheticEvent } from 'react';
 
@@ -29,10 +29,13 @@ import type { VoiceTake } from '@/features/voiceMessages/useVoiceRecorder';
 import { hasPermission, PERMISSIONS } from '@/features/servers/permissionBits';
 import type { EmojiPick } from '@/features/emoji/EmojiPicker';
 import { ExpressionPicker, type ExpressionTab } from './ExpressionPicker';
+import { stickerLabel } from './messagePreview';
+import type { MySticker } from '@/features/stickers/myStickers';
 import { EmojiSuggestions } from './EmojiSuggestions';
 import { useEmojiAutocomplete } from './useEmojiAutocomplete';
 import { customEmojisAsText, encodeCustomEmojis } from '@/features/emoji/customEmojiText';
 import type { TextEdit } from './emojiAutocomplete';
+import { EmojiText } from '@/features/emoji/Emoji';
 
 // How often notifyTyping actually emits typing:true while the user keeps
 // typing (leading-edge: fires right away after being idle, then throttles),
@@ -65,17 +68,18 @@ export interface MessageComposerHandle {
 
 export const MessageComposer = forwardRef<MessageComposerHandle, { conversationId: string }>(function MessageComposer({ conversationId }, ref) {
   const { t } = useTranslation('chat');
-  const { state, allUsers, conversations, servers, serverMemberRevision, sendChatMessage, queueMessageWithFiles, sendTyping, replyingTo, setReplyingTo, compressImagesDefault, setCompressImagesDefault, maxAttachmentBytes, activeCallConversationId } = useRoom();
+  const { state, allUsers, conversations, servers, serverMemberRevision, sendChatMessage, sendSticker: sendStickerMessage, queueMessageWithFiles, sendTyping, replyingTo, setReplyingTo, compressImagesDefault, setCompressImagesDefault, maxAttachmentBytes, activeCallConversationId } = useRoom();
   const accountId = state.me.userId ?? '';
   const [draft, updateDraft] = useConversationDraft(accountId, conversationId);
   const { text, pendingFiles, attachError, voice: voiceTake } = draft;
   const setText = (next: string) => updateDraft(() => ({ text: next }));
   const [compressImages, setCompressImages] = useState(compressImagesDefault);
-  // which of the composer's two buttons (GIF, emoji) has the expressions
-  // open; each opens on its own tab, and either can switch. On a phone they
+  // which of the composer's buttons (GIF, sticker, emoji) has the expressions
+  // open; each opens on its own tab, and any can switch. On a phone they
   // open in a sheet instead.
   const [expressions, setExpressions] = useState<ExpressionTab | null>(null);
   const [gifPopoverTab, setGifPopoverTab] = useState<ExpressionTab>('gifs');
+  const [stickerPopoverTab, setStickerPopoverTab] = useState<ExpressionTab>('stickers');
   const [emojiPopoverTab, setEmojiPopoverTab] = useState<ExpressionTab>('emoji');
   const [mobileTab, setMobileTab] = useState<ExpressionTab>('emoji');
   const [mobileExpressions, setMobileExpressions] = useState(false);
@@ -87,6 +91,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
   function openExpressions(tab: ExpressionTab | null) {
     setExpressions(tab);
     if (tab === 'gifs') setGifPopoverTab('gifs');
+    if (tab === 'stickers') setStickerPopoverTab('stickers');
     if (tab === 'emoji') setEmojiPopoverTab('emoji');
   }
   function openMobileExpressions(tab: ExpressionTab) {
@@ -363,6 +368,16 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
     textareaRef.current?.focus();
   }
 
+  // same as a GIF: its own message right away, the field left as it is
+  function sendSticker(sticker: MySticker) {
+    if (!state.joined) return;
+    setExpressions(null);
+    setMobileExpressions(false);
+    sendStickerMessage(conversationId, { id: sticker.id, name: sticker.name, description: sticker.description, animated: sticker.animated }, replyingTo?.msgId);
+    setReplyingTo(null);
+    textareaRef.current?.focus();
+  }
+
   function handleKeyDown(event: ReactKeyboardEvent<HTMLTextAreaElement>) {
     if (emojiSuggestions.handleKeyDown(event, text, applyEdit)) return;
     // the mention dropdown intercepts navigation/confirm keys FIRST — while
@@ -473,7 +488,8 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
             <ArrowBendUpLeftIcon size={16} className="flex-none text-text-muted" />
             <span className="min-w-0 flex-1 truncate text-text-muted">
               {t('composer.replyingTo')} <span className="font-medium text-text-secondary">{replyName}</span>
-              {replyingTo.text ? <span> - {customEmojisAsText(replyingTo.text)}</span> : null}
+              {replyingTo.text ? <span> - <EmojiText text={customEmojisAsText(replyingTo.text)} /></span> : null}
+              {replyingTo.sticker !== undefined && <span> - {stickerLabel(replyingTo.sticker?.name)}</span>}
             </span>
             <CloseButton size="xs" label={t('composer.cancelReply')} onClick={() => setReplyingTo(null)} />
           </div>
@@ -516,6 +532,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
                 {canAttach && <DropdownMenuItem onClick={() => fileInputRef.current?.click()}><PaperclipIcon size={16} />{t('composer.attachFiles')}</DropdownMenuItem>}
                 {canAttach && <DropdownMenuItem onClick={() => imageInputRef.current?.click()}><ImageSquareIcon size={16} />{t('composer.sendImages')}</DropdownMenuItem>}
                 {gifConfig?.enabled && <DropdownMenuItem className="md:hidden" onClick={() => openMobileExpressions('gifs')}><GifIcon size={16} />{t('composer.gif')}</DropdownMenuItem>}
+                <DropdownMenuItem className="md:hidden" onClick={() => openMobileExpressions('stickers')}><StickerIcon size={16} />{t('composer.sticker')}</DropdownMenuItem>
                 <DropdownMenuItem className="md:hidden" onClick={() => openMobileExpressions('emoji')}><SmileyIcon size={16} />{t('composer.insertEmoji')}</DropdownMenuItem>
                 {canAttach && (
                   <>
@@ -579,12 +596,26 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
                 </PopoverTrigger>
                 <PopoverContent className="w-[28rem] max-w-[calc(100vw-1.5rem)] rounded-[12px] border-border-default bg-bg-modal p-0" side="top" align="end" sideOffset={12}>
                   {expressions === 'gifs' && (
-                    <ExpressionPicker tab={gifPopoverTab} onTabChange={setGifPopoverTab} gifConfig={gifConfig} onGif={sendGif} onEmoji={insertEmoji} />
+                    <ExpressionPicker tab={gifPopoverTab} onTabChange={setGifPopoverTab} gifConfig={gifConfig} onGif={sendGif} onSticker={sendSticker} onEmoji={insertEmoji} />
                   )}
                 </PopoverContent>
               </Popover>
               </div>
             )}
+            <div className="flex flex-none max-md:hidden">
+            <Popover open={expressions === 'stickers'} onOpenChange={(open) => openExpressions(open ? 'stickers' : null)}>
+              <PopoverTrigger
+                render={<Button type="button" variant="ghost" size="icon" aria-label={t('composer.sendSticker')} disabled={disabled} className={`${iconButton} max-md:hidden`} />}
+              >
+                <StickerIcon size={24} weight="fill" />
+              </PopoverTrigger>
+              <PopoverContent className="w-[28rem] max-w-[calc(100vw-1.5rem)] rounded-[12px] border-border-default bg-bg-modal p-0" side="top" align="end" sideOffset={12}>
+                {expressions === 'stickers' && (
+                  <ExpressionPicker tab={stickerPopoverTab} onTabChange={setStickerPopoverTab} gifConfig={gifConfig} onGif={sendGif} onSticker={sendSticker} onEmoji={insertEmoji} />
+                )}
+              </PopoverContent>
+            </Popover>
+            </div>
             <div className="flex flex-none max-md:hidden">
             <Popover open={expressions === 'emoji'} onOpenChange={(open) => openExpressions(open ? 'emoji' : null)}>
               <PopoverTrigger
@@ -594,7 +625,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
               </PopoverTrigger>
               <PopoverContent keepMounted={emojiPopoverWarmed} className="w-[28rem] max-w-[calc(100vw-1.5rem)] rounded-[12px] border-border-default bg-bg-modal p-0" side="top" align="end" sideOffset={12}>
                 {emojiPopoverWarmed && (
-                  <ExpressionPicker tab={emojiPopoverTab} onTabChange={setEmojiPopoverTab} gifConfig={gifConfig} onGif={sendGif} onEmoji={insertEmoji} />
+                  <ExpressionPicker tab={emojiPopoverTab} onTabChange={setEmojiPopoverTab} gifConfig={gifConfig} onGif={sendGif} onSticker={sendSticker} onEmoji={insertEmoji} />
                 )}
               </PopoverContent>
             </Popover>
@@ -619,9 +650,9 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
           )}
         </div>
       </div>
-      <Sheet open={mobileExpressions} onOpenChange={setMobileExpressions} side="bottom" ariaLabel={t(mobileTab === 'gifs' ? 'composer.sendGif' : 'composer.insertEmoji')} className="bg-bg-modal md:hidden">
+      <Sheet open={mobileExpressions} onOpenChange={setMobileExpressions} side="bottom" ariaLabel={t(mobileTab === 'gifs' ? 'composer.sendGif' : mobileTab === 'stickers' ? 'composer.sendSticker' : 'composer.insertEmoji')} className="bg-bg-modal md:hidden">
         {mobileExpressionsWarmed && (
-          <ExpressionPicker tab={mobileTab} onTabChange={setMobileTab} gifConfig={gifConfig} onGif={sendGif} onEmoji={insertEmoji} autoFocus={false} className="[&_[data-slot=emoji-picker]]:h-[min(26rem,65dvh)]" />
+          <ExpressionPicker tab={mobileTab} onTabChange={setMobileTab} gifConfig={gifConfig} onGif={sendGif} onSticker={sendSticker} onEmoji={insertEmoji} autoFocus={false} className="[&_[data-slot=emoji-picker]]:h-[min(26rem,65dvh)] [&_[data-slot=sticker-picker]]:h-[min(26rem,65dvh)]" />
         )}
       </Sheet>
     </div>

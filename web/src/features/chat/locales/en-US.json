@@ -46,6 +46,7 @@
     "attachFiles": "Attach files",
     "sendImages": "Send images",
     "gif": "GIF",
+    "sticker": "Sticker",
     "insertEmoji": "Insert emoji",
     "compress": "Compress images (WebP)",
     "message": "Message",
@@ -53,6 +54,7 @@
     "messageDirect": "Message @{{name}}",
     "addCaption": "Add a caption",
     "sendGif": "Send GIF",
+    "sendSticker": "Send sticker",
     "send": "Send message",
     "dropToAttach": "Drop to attach",
     "removeFile": "Remove {{name}}",
@@ -160,7 +162,9 @@
     "callInvite": "Invite to the voice channel {{title}}",
     "callInviteUnavailable": "Call invite unavailable",
     "notice": "Notice",
-    "attachment": "Attachment"
+    "attachment": "Attachment",
+    "sticker": "Sticker: {{name}}",
+    "stickerUnnamed": "Sticker"
   },
   "errors": {
     "unknown": "unknown error",
@@ -187,6 +191,7 @@
   "expressions": {
     "label": "Expressions",
     "gifs": "GIFs",
+    "stickers": "Stickers",
     "emoji": "Emoji"
   }
 }

@@ -139,7 +139,8 @@
     "icon": "Icon",
     "iconHint": "We recommend an image of at least 512x512.",
     "auditLog": "Audit log",
-    "emojis": "Emoji"
+    "emojis": "Emoji",
+    "stickers": "Stickers"
   },
   "roles": {
     "hint": "Use roles to group your members and set what each one can do. Higher roles outrank lower ones.",
@@ -404,6 +405,11 @@
         "create": "Add emoji",
         "update": "Rename emoji",
         "delete": "Remove emoji"
+      },
+      "sticker": {
+        "create": "Add sticker",
+        "update": "Edit sticker",
+        "delete": "Remove sticker"
       }
     },
     "sentences": {
@@ -460,6 +466,11 @@
         "create": "<actor>{{actor}}</actor> added the emoji <target>{{target}}</target>",
         "update": "<actor>{{actor}}</actor> renamed the emoji <target>{{target}}</target>",
         "delete": "<actor>{{actor}}</actor> removed the emoji <target>{{target}}</target>"
+      },
+      "sticker": {
+        "create": "<actor>{{actor}}</actor> added the sticker <target>{{target}}</target>",
+        "update": "<actor>{{actor}}</actor> edited the sticker <target>{{target}}</target>",
+        "delete": "<actor>{{actor}}</actor> removed the sticker <target>{{target}}</target>"
       }
     },
     "fields": {
@@ -482,7 +493,8 @@
       "emoji": "Emoji",
       "volume": "Volume",
       "avatar": "Avatar",
-      "reason": "Reason"
+      "reason": "Reason",
+      "description": "Description"
     },
     "values": {
       "yes": "Yes",

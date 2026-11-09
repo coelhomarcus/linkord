@@ -21,6 +21,7 @@ function row(over: Partial<MessageWithAuthor> = {}): MessageWithAuthor {
     embeds: null,
     suppressedEmbeds: null,
     richEmbeds: null,
+    stickerId: null,
     botName: null,
     botAvatar: null,
     ...over,

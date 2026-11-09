@@ -7,6 +7,7 @@ import type { PublicUser, ReactionEmoji } from '@/shared/types/protocol';
 import { CustomEmojiImage } from '@/features/emoji/CustomEmojiImage';
 import { customReactionId } from '@/features/emoji/customEmojiText';
 import { useCustomEmojiName } from '@/features/emoji/emojiNames';
+import { Emoji } from '@/features/emoji/Emoji';
 
 interface MessageReactionsProps {
   reactions: Partial<Record<ReactionEmoji, string[]>>;
@@ -25,7 +26,7 @@ function useReactionLabel(emoji: ReactionEmoji): string {
 
 function ReactionGlyph({ emoji, label }: { emoji: ReactionEmoji; label: string }) {
   const customId = customReactionId(emoji);
-  return customId ? <CustomEmojiImage id={customId} name={label.slice(1, -1)} size="reaction" tooltip={false} /> : <span>{emoji}</span>;
+  return customId ? <CustomEmojiImage id={customId} name={label.slice(1, -1)} size="reaction" tooltip={false} /> : <Emoji emoji={emoji} className="size-4" />;
 }
 
 type ReactionEntry = [ReactionEmoji, string[]];

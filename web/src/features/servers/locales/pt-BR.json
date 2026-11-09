@@ -139,7 +139,8 @@
     "icon": "Ícone",
     "iconHint": "Recomendamos uma imagem de, pelo menos, 512x512.",
     "auditLog": "Registro de auditoria",
-    "emojis": "Emojis"
+    "emojis": "Emojis",
+    "stickers": "Figurinhas"
   },
   "roles": {
     "hint": "Use cargos para organizar os membros e definir o que cada um pode fazer. Cargos mais acima mandam nos de baixo.",
@@ -404,6 +405,11 @@
         "create": "Adicionar emoji",
         "update": "Renomear emoji",
         "delete": "Remover emoji"
+      },
+      "sticker": {
+        "create": "Adicionar figurinha",
+        "update": "Editar figurinha",
+        "delete": "Remover figurinha"
       }
     },
     "sentences": {
@@ -460,6 +466,11 @@
         "create": "<actor>{{actor}}</actor> adicionou o emoji <target>{{target}}</target>",
         "update": "<actor>{{actor}}</actor> renomeou o emoji <target>{{target}}</target>",
         "delete": "<actor>{{actor}}</actor> removeu o emoji <target>{{target}}</target>"
+      },
+      "sticker": {
+        "create": "<actor>{{actor}}</actor> adicionou a figurinha <target>{{target}}</target>",
+        "update": "<actor>{{actor}}</actor> editou a figurinha <target>{{target}}</target>",
+        "delete": "<actor>{{actor}}</actor> removeu a figurinha <target>{{target}}</target>"
       }
     },
     "fields": {
@@ -482,7 +493,8 @@
       "emoji": "Emoji",
       "volume": "Volume",
       "avatar": "Avatar",
-      "reason": "Motivo"
+      "reason": "Motivo",
+      "description": "Descrição"
     },
     "values": {
       "yes": "Sim",

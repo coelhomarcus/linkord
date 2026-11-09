@@ -13,6 +13,7 @@ import { fetchWall } from '@/features/profile/profileApi';
 import type { GameItem } from '@/features/games/types';
 import { timeOptions } from '@/shared/lib/timeFormat';
 import { EXPIRY_CHOICES, expiresAtFor, liveCustomStatus, type ExpiryChoice } from './statusDisplay';
+import { Emoji } from '@/features/emoji/Emoji';
 
 /** Mirrors CUSTOM_STATUS_TEXT_MAX on the server (modules/presence/userStatus.ts). */
 const CUSTOM_STATUS_TEXT_MAX = 128;
@@ -107,7 +108,7 @@ export function CustomStatusDialog({ open, onOpenChange }: { open: boolean; onOp
                     aria-label={emoji ? `${t('custom.chooseEmoji')}: ${emoji}` : t('custom.chooseEmoji')}
                     className="grid size-8 flex-none place-items-center rounded-md text-text-muted transition-colors hover:bg-fill-hover hover:text-text-primary"
                   >
-                    {emoji ? <span className="text-[20px] leading-none">{emoji}</span> : <SmileyIcon size={20} />}
+                    {emoji ? <span className="text-[20px] leading-none"><Emoji emoji={emoji} /></span> : <SmileyIcon size={20} />}
                   </PopoverTrigger>
                   <PopoverContent className="w-[22rem] max-w-[calc(100vw-1rem)] p-0" side="bottom" align="start">
                     {/* a status shows on every server, to people outside them: Unicode only */}

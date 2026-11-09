@@ -1,0 +1,79 @@
+{
+  "from": "From {{server}}",
+  "picker": {
+    "search": "Find the perfect sticker",
+    "searchLabel": "Search stickers",
+    "grid": "Stickers",
+    "sections": "Sticker sections",
+    "frequent": "Frequently used",
+    "results": "Results",
+    "noResults": "No stickers found.",
+    "empty": "No stickers yet. They are added in a server's settings.",
+    "loading": "Loading stickers…",
+    "loadFailed": "Couldn't load the stickers.",
+    "add": "Add a sticker to {{server}}",
+    "hint": "Hover over a sticker to see its name"
+  },
+  "message": {
+    "open": "Sticker {{name}}",
+    "named": "Sticker: {{name}}",
+    "unavailable": "Sticker unavailable",
+    "otherServer": "From a server you're not in"
+  },
+  "panel": {
+    "title": "Stickers",
+    "rulesTitle": "Upload requirements",
+    "rules": "Stickers can be still (PNG, JPEG, WebP) or animated (APNG, GIF, animated WebP), up to {{max}}. The picture is fitted whole into a 320 px square, never cropped; animations stay animated.",
+    "upload": "Upload sticker",
+    "slots_zero": "No free slots out of {{max}}",
+    "slots_one": "{{count}} free slot out of {{max}}",
+    "slots_other": "{{count}} free slots out of {{max}}",
+    "empty": "No stickers yet.",
+    "edit": "Edit {{name}}",
+    "delete": "Remove {{name}}",
+    "deletedUser": "Deleted account",
+    "loading": "Loading stickers…",
+    "loadFailed": "Couldn't load the stickers.",
+    "retry": "Try again",
+    "deleteFailed": "Couldn't remove the sticker.",
+    "deleteConfirm": {
+      "title": "Remove sticker?",
+      "description": "\"{{name}}\" leaves the server. Older messages will show it as unavailable.",
+      "confirm": "Remove"
+    }
+  },
+  "editor": {
+    "titleCreate": "Upload sticker",
+    "titleEdit": "Edit sticker",
+    "rules": "PNG, APNG, JPEG, GIF or WebP, up to {{max}}.",
+    "preview": "Preview",
+    "file": "File",
+    "browse": "Browse",
+    "noFile": "Choose a file",
+    "fileTooLarge": "File too large (up to {{max}}).",
+    "emoji": "Related emoji",
+    "emojiChosen": "Related emoji: {{emoji}}",
+    "emojiPlaceholder": "Click to choose",
+    "name": "Sticker name",
+    "namePlaceholder": "E.g. kitten hug",
+    "description": "Description",
+    "descriptionPlaceholder": "What the sticker shows",
+    "descriptionHint": "Read aloud in place of the picture by screen readers. Optional, up to 100 characters.",
+    "cancel": "Never mind",
+    "submit": "Upload",
+    "save": "Save",
+    "uploading": "Uploading {{percent}}%",
+    "saving": "Saving…",
+    "uploadFailed": "Couldn't upload the sticker.",
+    "saveFailed": "Couldn't save the sticker."
+  },
+  "errors": {
+    "invalid_sticker_name": "The name must be 2 to 30 characters.",
+    "invalid_sticker_emoji": "Choose a related emoji.",
+    "invalid_sticker_description": "The description is over 100 characters.",
+    "invalid_image": "Couldn't read that image. Use PNG, APNG, JPEG, GIF or WebP.",
+    "sticker_too_large": "That sticker comes out too heavy. Try a shorter animation.",
+    "sticker_name_taken": "There's already a sticker with that name in this server.",
+    "stickers_full": "The server has used all of its sticker slots."
+  }
+}

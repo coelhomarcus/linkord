@@ -35,6 +35,7 @@ export function buildTimelineItems(messages: ChatMessage[], pending: OutboxEntry
         ts: entry.createdAt,
         replyTo: entry.replyTo,
         clientMessageId: entry.clientMessageId,
+        ...(entry.sticker ? { sticker: entry.sticker } : {}),
       },
     });
   });

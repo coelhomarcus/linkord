@@ -46,6 +46,7 @@
     "attachFiles": "Anexar arquivos",
     "sendImages": "Enviar imagens",
     "gif": "GIF",
+    "sticker": "Figurinha",
     "insertEmoji": "Inserir emoji",
     "compress": "Compactar imagens (WebP)",
     "message": "Mensagem",
@@ -53,6 +54,7 @@
     "messageDirect": "Conversar com @{{name}}",
     "addCaption": "Adicionar legenda",
     "sendGif": "Enviar GIF",
+    "sendSticker": "Enviar figurinha",
     "send": "Enviar mensagem",
     "dropToAttach": "Solte para anexar",
     "removeFile": "Remover {{name}}",
@@ -161,7 +163,9 @@
     "callInvite": "Convite para o canal de voz {{title}}",
     "callInviteUnavailable": "Convite para chamada indisponível",
     "notice": "Aviso",
-    "attachment": "Anexo"
+    "attachment": "Anexo",
+    "sticker": "Figurinha: {{name}}",
+    "stickerUnnamed": "Figurinha"
   },
   "errors": {
     "unknown": "erro desconhecido",
@@ -188,6 +192,7 @@
   "expressions": {
     "label": "Expressões",
     "gifs": "GIFs",
+    "stickers": "Figurinha",
     "emoji": "Emoji"
   }
 }

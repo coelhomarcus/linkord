@@ -9,12 +9,13 @@ describe('CustomStatusBubble', () => {
   it('shows the emoji and text, hiding the emoji from assistive tech when there is text', () => {
     render(<CustomStatusBubble custom={status} />);
     expect(screen.getByText('jogando Elden Ring')).toBeInTheDocument();
-    expect(screen.getByText('🎮')).toHaveAttribute('aria-hidden', 'true');
+    // the Twemoji picture sits inside the span that is hidden or announced
+    expect(screen.getByText('🎮').closest('[aria-hidden]')).toHaveAttribute('aria-hidden', 'true');
   });
 
   it('an emoji alone is announced', () => {
     render(<CustomStatusBubble custom={{ emoji: '🌙', text: '', expiresAt: null }} />);
-    expect(screen.getByText('🌙')).toHaveAttribute('aria-hidden', 'false');
+    expect(screen.getByText('🌙').closest('[aria-hidden]')).toHaveAttribute('aria-hidden', 'false');
   });
 
   it('a visitor sees nothing without a status, and no owner buttons with one', () => {

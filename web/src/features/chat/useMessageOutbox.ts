@@ -2,7 +2,7 @@ import { i18n } from '@/shared/i18n/init';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { discardStagedFile, stageFileInChunks, type StagedFile } from '@/shared/lib/chunkedUpload';
 import { compressImageFile } from '@/shared/lib/compressImageFile';
-import type { ChatMessage, ChatReplyRef, ClientMessage, ServerMessage, VoiceMeta } from '@/shared/types/protocol';
+import type { ChatMessage, ChatReplyRef, ClientMessage, ServerMessage, StickerCard, VoiceMeta } from '@/shared/types/protocol';
 import { markArrival } from './arrivals';
 
 /** `uploading`: files still being staged; the message itself waits. */
@@ -35,6 +35,8 @@ export interface OutboxEntry {
   state: OutboxState;
   error?: string;
   attachments?: OutboxAttachment[];
+  /** the message is this sticker (its text is empty) */
+  sticker?: StickerCard;
 }
 
 // No answer in this long and the send is "unknown": it may or may not have
@@ -127,6 +129,7 @@ export function useMessageOutbox({ sendWs, onConfirmed, stageFile = stageFileInC
       t: 'chat', conversationId: entry.conversationId, text: entry.text,
       ...(tracked.replyToMsgId ? { replyTo: tracked.replyToMsgId } : {}),
       ...(attachmentIds.length ? { attachmentIds } : {}),
+      ...(entry.sticker ? { stickerId: entry.sticker.id } : {}),
       requestId: tracked.requestId, clientMessageId: entry.clientMessageId,
     });
     // offline: it waits for the next welcome instead of counting as a try
@@ -216,10 +219,13 @@ export function useMessageOutbox({ sendWs, onConfirmed, stageFile = stageFileInC
     publish();
   }, [compress, discardStaged, publish, stageFile, update, updateAttachment, withFileSlot]);
 
-  const enqueue = useCallback((conversationId: string, text: string, replyTo?: ChatReplyRef, files: OutboxFile[] = []) => {
+  const enqueue = useCallback((conversationId: string, text: string, replyTo?: ChatReplyRef, files: OutboxFile[] = [], sticker?: StickerCard) => {
     const clientMessageId = crypto.randomUUID();
     const tracked: Tracking = {
-      entry: { clientMessageId, conversationId, text, replyTo, createdAt: Date.now(), state: files.length ? 'uploading' : 'sending' },
+      entry: {
+        clientMessageId, conversationId, text, replyTo, createdAt: Date.now(), state: files.length ? 'uploading' : 'sending',
+        ...(sticker ? { sticker } : {}),
+      },
       replyToMsgId: replyTo?.msgId,
       files: new Map(),
       attempts: 0,

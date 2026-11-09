@@ -15,10 +15,11 @@ export function isValidClientMessageId(value: unknown): value is string {
 
 /** Canonical hash of what a send asks for — the key alone can't tell a
  * retry from a reused key with different content. */
-export function sendPayloadHash(payload: { conversationId: string; text: string; replyTo: number | null; attachmentIds?: string[] }): string {
+export function sendPayloadHash(payload: { conversationId: string; text: string; replyTo: number | null; attachmentIds?: string[]; stickerId?: string | null }): string {
   const parts: unknown[] = [payload.conversationId, payload.text, payload.replyTo];
   // appended only when present, so a text-only send hashes as it always has
   if (payload.attachmentIds?.length) parts.push(payload.attachmentIds);
+  if (payload.stickerId) parts.push({ sticker: payload.stickerId });
   return crypto.createHash('sha256').update(JSON.stringify(parts)).digest('hex');
 }
 

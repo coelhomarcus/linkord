@@ -43,6 +43,8 @@ export interface ChatNoticeInput {
   channelTitle: string;
   serverName: string;
   kind: string;
+  /** The message is a sticker (its text is empty). */
+  sticker?: boolean;
   /** Present on a finished DM call. */
   callDurationSeconds: number | null;
   /** Voice channel a `call_invite` message points at. */
@@ -65,6 +67,7 @@ export function chatNoticeText(input: ChatNoticeInput, locale: Locale): { title:
     const vars = { channel: input.invitedChannel.name, server: input.invitedChannel.serverName };
     return { title, body: direct ? localeText(locale, 'push.callInviteBodyDirect', vars) : localeText(locale, 'push.callInviteBody', { name, ...vars }) };
   }
+  if (input.sticker) return { title, body: localeText(locale, direct ? 'push.stickerBodyDirect' : 'push.stickerBody', { name }) };
   if (!input.text) return { title, body: localeText(locale, direct ? 'push.chatEmptyBodyDirect' : 'push.chatEmptyBody', { name }) };
   return { title, body: direct ? input.text : `${name}: ${input.text}` };
 }

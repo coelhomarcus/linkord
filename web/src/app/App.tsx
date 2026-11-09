@@ -37,6 +37,7 @@ import { TileMenu } from '@/features/calls/TileMenu';
 import { SoundEmojiOverlay } from '@/features/soundboard/SoundEmojiOverlay';
 import { GlobalContextMenu } from '@/app/layout/GlobalContextMenu';
 import { EmojiUploadHost } from '@/features/emoji/EmojiUploadHost';
+import { StickerEditorHost } from '@/features/stickers/StickerEditorHost';
 import { ReactionSheetHost } from '@/features/chat/ReactionSheetHost';
 import { ProfileModal } from '@/features/profile/ProfileModal';
 import type { ProfileTab } from '@/features/profile/ProfileSidebar';
@@ -405,6 +406,7 @@ function Shell() {
         <ProfileModal userId={profileTarget?.userId ?? null} initialTab={profileTarget?.tab} onClose={() => setProfileTarget(null)} onOpenProfile={openProfile} />
         <AppModals modal={modal} onClose={closeModal} onOpenProfile={openProfile} />
         <EmojiUploadHost />
+        <StickerEditorHost />
         <ReactionSheetHost />
         <ChatSearchDialog
           open={searchOpen}

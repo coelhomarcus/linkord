@@ -13,7 +13,7 @@ import { MAX_WINDOW, withNewerMessages, withOlderPage, withPresentPage } from '.
 import { markArrival } from './arrivals';
 import { createMessageSoundThrottle } from './messageSoundThrottle';
 import type { ReactionParticipantsTarget } from './reactionParticipants';
-import type { ChatMessage, ClientMessage, Conversation, PublicUser, ReactionEmoji, ServerMessage } from '@/shared/types/protocol';
+import type { ChatMessage, ClientMessage, Conversation, PublicUser, ReactionEmoji, ServerMessage, StickerCard } from '@/shared/types/protocol';
 
 /** Adds `message` once, in msgId order — a send's result and its broadcast
  * both deliver it, in either order, and it may land after newer messages. */
@@ -298,7 +298,11 @@ export function useChatMessages(deps: ChatMessagesDeps) {
   // only for drawing the pending copy; the server builds the real reference
   const pendingReplyRef = useCallback((conversationId: string, replyTo?: number) => {
     const original = replyTo ? messagesByConversationRef.current.get(conversationId)?.find((msg) => msg.msgId === replyTo) : undefined;
-    return original ? { msgId: original.msgId, authorId: original.id, text: original.text.slice(0, 120) } : undefined;
+    if (!original) return undefined;
+    return {
+      msgId: original.msgId, authorId: original.id, text: original.text.slice(0, 120),
+      ...(original.sticker !== undefined ? { sticker: original.sticker?.name ?? '' } : {}),
+    };
   }, []);
 
   /** A batch goes through the outbox: staged, then published with its
@@ -313,6 +317,12 @@ export function useChatMessages(deps: ChatMessagesDeps) {
     if (!trimmed) return;
     returnToPresentIfBehind(conversationId);
     enqueuePending(conversationId, trimmed, pendingReplyRef(conversationId, replyTo));
+  }, [enqueuePending, pendingReplyRef, returnToPresentIfBehind]);
+
+  /** A sticker is a message of its own, through the outbox like any send. */
+  const sendSticker = useCallback((conversationId: string, sticker: StickerCard, replyTo?: number) => {
+    returnToPresentIfBehind(conversationId);
+    enqueuePending(conversationId, '', pendingReplyRef(conversationId, replyTo), [], sticker);
   }, [enqueuePending, pendingReplyRef, returnToPresentIfBehind]);
 
   /** Every welcome, including after a reconnect: resends whatever was still
@@ -578,7 +588,7 @@ export function useChatMessages(deps: ChatMessagesDeps) {
   return {
     messagesByConversation, hasMoreByConversation, hasMoreAfterByConversation, loadingOlderByConversation, unreadByConversation, unreadStartByConversation,
     clearUnread, markActiveSeen, loadOlderMessages, pendingJumpTarget, clearPendingJumpTarget, cancelPendingJump, jumpToMessage,
-    sendChatMessage, deleteChatMessage, editChatMessage, reactToChatMessage, removeChatAttachment, suppressChatEmbed,
+    sendChatMessage, sendSticker, deleteChatMessage, editChatMessage, reactToChatMessage, removeChatAttachment, suppressChatEmbed,
     onWelcome, onChatSendResult: outbox.onChatSendResult, queueMessageWithFiles,
     onChatActionResult: actionRequests.onChatActionResult,
     deletingMsgIds, messageActionErrors, dismissMessageActionError,

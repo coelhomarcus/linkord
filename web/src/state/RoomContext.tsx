@@ -1,7 +1,7 @@
 import { createContext, useContext } from 'react';
 import type { Dispatch, MutableRefObject } from 'react';
 import type { Room } from 'livekit-client';
-import type { ChatMessage, ClientMessage, Conversation, OwnStatus, PublicUser, ReactionEmoji, SearchResult, ServerSummary, VisiblePresence } from '@/shared/types/protocol';
+import type { ChatMessage, ClientMessage, Conversation, OwnStatus, PublicUser, ReactionEmoji, SearchResult, ServerSummary, StickerCard, VisiblePresence } from '@/shared/types/protocol';
 import type { PresencePatch } from '@/features/status/useOwnStatus';
 import type { DmCallNotice } from '@/features/calls/useDmCall';
 import type { RoomAction, RoomState } from './roomReducer';
@@ -176,6 +176,7 @@ export interface RoomContextValue {
   clearAccessNotice: () => void;
   /** False when nothing was sent (empty text, or the socket is down). */
   sendChatMessage: (conversationId: string, text: string, replyTo?: number) => void;
+  sendSticker: (conversationId: string, sticker: StickerCard, replyTo?: number) => void;
   /** Your sends the server hasn't confirmed yet, per conversation, in order. */
   pendingByConversation: Map<string, OutboxEntry[]>;
   retryPendingMessage: (clientMessageId: string) => void;
