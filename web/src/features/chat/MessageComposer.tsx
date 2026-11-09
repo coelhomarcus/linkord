@@ -28,6 +28,7 @@ import { directUser } from '@/features/conversations/conversationUtils';
 import { VoiceMicButton, VoiceNoticeBanner, VoiceRecordingBar, VoiceReviewBar } from '@/features/voiceMessages/VoiceComposer';
 import { isVoiceShortcut, useComposerVoice } from '@/features/voiceMessages/useComposerVoice';
 import type { VoiceTake } from '@/features/voiceMessages/useVoiceRecorder';
+import { hasPermission, PERMISSIONS } from '@/features/servers/permissionBits';
 
 // How often notifyTyping actually emits typing:true while the user keeps
 // typing (leading-edge: fires right away after being idle, then throttles),
@@ -91,6 +92,10 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
   const typingIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isTypingRef = useRef(false);
   const disabled = !state.joined;
+  // a channel without ATTACH_FILES: no files, pictures or voice messages
+  // (one is an attachment too) — the server would refuse the upload
+  const channelBits = conversations.find((c) => c.id === conversationId)?.permissions;
+  const canAttach = channelBits === undefined || hasPermission(channelBits, PERMISSIONS.ATTACH_FILES);
   const tooLong = text.length > MAX_MESSAGE_LEN;
   const canSubmit = !disabled && !tooLong && (text.trim().length > 0 || pendingFiles.length > 0);
 
@@ -119,7 +124,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
   }, [state.participants, state.me.userId, state.me.id]);
 
   function handleVoiceKeys(event: ReactKeyboardEvent<HTMLDivElement>) {
-    if (isVoiceShortcut(event)) { event.preventDefault(); voice.toggleFromShortcut(); return; }
+    if (isVoiceShortcut(event)) { event.preventDefault(); if (canAttach) voice.toggleFromShortcut(); return; }
     if (event.key === 'Escape') { event.preventDefault(); voice.cancelTake(); }
   }
 
@@ -240,7 +245,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
   }
 
   function addFiles(files: File[]) {
-    if (!files.length) return;
+    if (!files.length || !canAttach) return;
     const remainingSlots = MAX_ATTACHMENTS_PER_MESSAGE - readDraft(accountId, conversationId).pendingFiles.length;
     const accepted: PendingAttachment[] = [];
     let error: string | null = null;
@@ -324,7 +329,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
       if (event.key === 'Enter' || event.key === 'Tab') { event.preventDefault(); selectMention(mentionCandidates[mentionSelectedIndex]!); return; }
       if (event.key === 'Escape') { event.preventDefault(); setMentionQuery(null); return; }
     }
-    if (isVoiceShortcut(event)) { event.preventDefault(); voice.toggleFromShortcut(); return; }
+    if (isVoiceShortcut(event)) { event.preventDefault(); if (canAttach) voice.toggleFromShortcut(); return; }
     if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing) return;
     event.preventDefault();
     void submit();
@@ -354,6 +359,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
   }
 
   function handlePaste(event: ClipboardEvent<HTMLTextAreaElement>) {
+    if (!canAttach) return;
     const files = Array.from(event.clipboardData.items)
       .filter((item) => item.type.startsWith('image/'))
       .map((item) => item.getAsFile())
@@ -443,19 +449,24 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
             <>
             <DropdownMenu>
               <DropdownMenuTrigger
-                render={<Button type="button" variant="ghost" size="icon" aria-label={t('composer.add')} disabled={disabled} className={iconButton} />}
+                // without files, what is left (GIF, emoji) only lives in this menu on a phone
+                render={<Button type="button" variant="ghost" size="icon" aria-label={t('composer.add')} disabled={disabled} className={cn(iconButton, !canAttach && 'md:hidden')} />}
               >
                 <PlusCircleIcon size={24} weight="fill" />
               </DropdownMenuTrigger>
               <DropdownMenuContent side="top" align="start" className="w-72">
-                <DropdownMenuItem onClick={() => fileInputRef.current?.click()}><PaperclipIcon size={16} />{t('composer.attachFiles')}</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => imageInputRef.current?.click()}><ImageSquareIcon size={16} />{t('composer.sendImages')}</DropdownMenuItem>
+                {canAttach && <DropdownMenuItem onClick={() => fileInputRef.current?.click()}><PaperclipIcon size={16} />{t('composer.attachFiles')}</DropdownMenuItem>}
+                {canAttach && <DropdownMenuItem onClick={() => imageInputRef.current?.click()}><ImageSquareIcon size={16} />{t('composer.sendImages')}</DropdownMenuItem>}
                 {gifConfig?.enabled && <DropdownMenuItem className="md:hidden" onClick={() => setMobileGifOpen(true)}><GifIcon size={16} />{t('composer.gif')}</DropdownMenuItem>}
                 <DropdownMenuItem className="md:hidden" onClick={() => setMobileEmojiOpen(true)}><SmileyIcon size={16} />{t('composer.insertEmoji')}</DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuCheckboxItem checked={compressImages} onCheckedChange={toggleCompress}>
-                  <ArrowsInSimpleIcon size={16} />{t('composer.compress')}
-                </DropdownMenuCheckboxItem>
+                {canAttach && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuCheckboxItem checked={compressImages} onCheckedChange={toggleCompress}>
+                      <ArrowsInSimpleIcon size={16} />{t('composer.compress')}
+                    </DropdownMenuCheckboxItem>
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
             <Textarea
@@ -516,7 +527,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
             </div>
             </>
           )}
-          {!voiceTake && <VoiceMicButton handlers={voice.micHandlers} view={voice.view} disabled={disabled && !voice.active} />}
+          {!voiceTake && canAttach && <VoiceMicButton handlers={voice.micHandlers} view={voice.view} disabled={disabled && !voice.active} />}
           {!voiceBusy && (
             <Button
               type="button"
