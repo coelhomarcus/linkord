@@ -394,6 +394,24 @@ describe('the session list', () => {
     assert.equal(bystander.disconnected, false);
   });
 
+  it('logging out cuts the sockets opened with that session, and only those', async () => {
+    const user = await makeAccount();
+    const here = await cookieFor(user.id);
+    const other = await cookieFor(user.id);
+    const tab = connectedTab(user, here.tokenHash);
+    const bystander = connectedTab(user, other.tokenHash);
+
+    const res = await call('POST', '/api/auth/logout', { cookie: here.cookie });
+    assert.equal(res.status, 204);
+
+    assert.equal((await me(here.cookie)).status, 401);
+    assert.ok(tab.sent.some((m) => m.event === 'session-ended'));
+    assert.equal(tab.disconnected, true);
+    assert.equal(participants.has(tab.participant.id), false);
+    assert.equal(participants.has(bystander.participant.id), true);
+    assert.equal(bystander.disconnected, false);
+  });
+
   it('refuses this session, an unknown one and someone else\'s', async () => {
     const user = await makeAccount();
     const here = await cookieFor(user.id);

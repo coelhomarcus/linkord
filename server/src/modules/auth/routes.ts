@@ -320,7 +320,8 @@ async function handleLoginResend(request: FastifyRequest, reply: FastifyReply): 
 
 async function handleLogout(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   const cookies = parseCookies(request.headers.cookie || '');
-  await destroySession(cookies[config.SESSION_COOKIE]);
+  const tokenHash = await destroySession(cookies[config.SESSION_COOKIE]);
+  if (tokenHash) dropSessionConnections([tokenHash]);
   reply.header('Set-Cookie', clearCookie(config.SESSION_COOKIE, { secure: isSecureRequest(request.raw) }));
   reply.code(204).header('Cache-Control', 'no-store').send();
 }

@@ -149,11 +149,14 @@ export async function resolveSession(rawToken: string | undefined | null): Promi
   return value;
 }
 
-export async function destroySession(rawToken: string | undefined | null): Promise<void> {
-  if (!rawToken) return;
+/** Ends the session behind a cookie. Returns its token hash (to cut its sockets), or null when there
+ * was no token. */
+export async function destroySession(rawToken: string | undefined | null): Promise<string | null> {
+  if (!rawToken) return null;
   const tokenHash = hashToken(rawToken);
   cacheInvalidate(tokenHash);
   await db.delete(sessions).where(eq(sessions.tokenHash, tokenHash));
+  return tokenHash;
 }
 
 export async function destroyAllSessionsForUser(userId: string): Promise<void> {
