@@ -62,6 +62,31 @@ export function contentDispositionFor(kind: 'inline' | 'attachment', fileName: s
   return `${kind}; filename="${asciiFallback}"; filename*=UTF-8''${encodeURIComponent(fileName)}`;
 }
 
+/** Resolves a single-range `Range` header against the file size. `null` means
+ * "no usable range" (absent or malformed, so the caller serves the whole file);
+ * `bytes=-N` is a suffix: the last N bytes, not bytes 0-N (players read an MP4's
+ * trailing `moov` atom this way). */
+export function parseByteRange(
+  header: string | undefined,
+  size: number,
+): { start: number; end: number } | 'unsatisfiable' | null {
+  const match = RANGE_RE.exec(header || '');
+  if (!match || (!match[1] && !match[2])) return null;
+  let start: number;
+  let end: number;
+  if (!match[1]) {
+    const suffixLength = Number(match[2]);
+    if (!Number.isSafeInteger(suffixLength) || suffixLength === 0 || size === 0) return 'unsatisfiable';
+    start = Math.max(0, size - suffixLength);
+    end = size - 1;
+  } else {
+    start = Number(match[1]);
+    end = match[2] ? Number(match[2]) : size - 1;
+  }
+  if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start > end || end >= size) return 'unsatisfiable';
+  return { start, end };
+}
+
 /** `messageId === null` rows are avatars/banners — public by design, any
  * logged-in user can already see anyone's profile picture. Everything else
  * is a chat attachment, gated by the SAME conversation-membership rule used
@@ -154,13 +179,12 @@ export async function serveUpload(request: FastifyRequest<{ Params: { id: string
   // byte offset and a seek attempt just snaps back to wherever playback
   // already reached (it can only play what it's already downloaded
   // sequentially from the start).
-  const range = RANGE_RE.exec(request.headers.range || '');
+  const range = parseByteRange(request.headers.range, size);
   if (range) {
-    const start = range[1] ? Number(range[1]) : 0;
-    const end = range[2] ? Number(range[2]) : size - 1;
-    if (!Number.isInteger(start) || !Number.isInteger(end) || start > end || end >= size) {
+    if (range === 'unsatisfiable') {
       return reply.code(416).header('Content-Range', `bytes */${size}`).send();
     }
+    const { start, end } = range;
     // `return` (not a bare `.send()` call) matters here: without it, this
     // async function's own promise resolves before Fastify's onSend
     // pipeline finishes piping the stream (nothing here is awaited after
