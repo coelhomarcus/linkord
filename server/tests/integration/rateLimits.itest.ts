@@ -183,7 +183,7 @@ describe('login through a restart', () => {
     }
   });
 
-  it('a successful login clears the counters', async () => {
+  it('a successful login clears the account counter but not the address counter', async () => {
     const username = `rl_${uid().slice(0, 12)}`;
     const password = 'correct horse battery';
     await db.insert(users).values({ id: uid(), username, passwordHash: await hashPassword(password) });
@@ -193,7 +193,19 @@ describe('login through a restart', () => {
     assert.equal((await rowOf(`user:${username}`))?.count, 3);
     assert.equal((await login(app, username, password, ip)).status, 200);
     assert.equal(await rowOf(`user:${username}`), undefined);
-    assert.equal(await rowOf(`ip:${ip}`), undefined);
+    assert.equal((await rowOf(`ip:${ip}`))?.count, 3);
+  });
+
+  it('logging in to an own account does not let an address keep spraying other usernames', async () => {
+    const username = `rl_${uid().slice(0, 12)}`;
+    const password = 'correct horse battery';
+    await db.insert(users).values({ id: uid(), username, passwordHash: await hashPassword(password) });
+    const ip = freshIp();
+
+    for (let i = 0; i < FAILURE_RULE.max - 1; i++) await login(app, `ghost_${uid().slice(0, 10)}`, 'x', ip);
+    assert.equal((await login(app, username, password, ip)).status, 200);
+    assert.equal((await login(app, `ghost_${uid().slice(0, 10)}`, 'x', ip)).status, 401);
+    assert.equal((await login(app, `ghost_${uid().slice(0, 10)}`, 'x', ip)).status, 429);
   });
 });
 

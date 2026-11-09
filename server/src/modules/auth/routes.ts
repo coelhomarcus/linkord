@@ -201,8 +201,10 @@ async function handleLogin(request: FastifyRequest, reply: FastifyReply): Promis
     return sendError(reply, 401, 'invalid_credentials', 'Usuário ou senha inválidos.');
   }
 
-  // the password was right, so a failure to clear the counters must not turn it into a refused login
-  await Promise.all([ratelimit.reset(ipKey), ratelimit.reset(userKey)]).catch(() => {});
+  // The address key is left to expire with its window: anyone holding one valid account could otherwise
+  // wipe their address's count between rounds and spray every username. A failure to clear the account's
+  // counter must not turn a right password into a refused login.
+  await ratelimit.reset(userKey).catch(() => {});
 
   // only reachable with the right password, so it leaks nothing about who exists
   if (user.status !== 'active') {
