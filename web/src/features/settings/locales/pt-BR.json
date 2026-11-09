@@ -321,6 +321,7 @@
       "outOfBounds": "Recorte fora dos limites da imagem.",
       "invalidCrop": "Recorte inválido.",
       "processFailed": "Não foi possível processar a imagem."
-    }
+    },
+    "zoom": "Zoom"
   }
 }

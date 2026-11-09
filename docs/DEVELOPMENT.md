@@ -175,9 +175,9 @@ The `upgrade` project adapts to what the base version can do and says so in the 
 ### How a spec runs
 
 1. Global setup builds the app image and starts the stack (`e2e/stack/`); every test shares it, so tests run one at a time.
-2. A spec asks the `users` fixture for accounts (`e2e/fixtures/test.ts`). Each is a real sign-up in its own browser context, with its own cookies and storage, like separate people on separate machines. Chrome gets a fake camera and microphone, so calls carry real audio and video through LiveKit.
+2. A spec asks the `users` fixture for accounts (`e2e/fixtures/test.ts`). Each is a real sign-up in its own browser context, with its own cookies and storage, like separate people on separate machines. `users.create(prefix, { device: 'phone' })` makes that context a touch phone (390x844, `hasTouch`, `isMobile`): the app shows its compact layout, `tap()` works, and a real finger drag can be sent through the DevTools protocol (`touchDrag` in `specs/features/profile.spec.ts`). Chrome gets a fake camera and microphone, so calls carry real audio and video through LiveKit.
 3. Data is set up through the app's HTTP routes (`e2e/fixtures/api.ts`: servers, invites, friend requests, channels, permissions), never by writing to the database: the app caches memberships in memory and would not see such rows until a restart.
-4. The spec drives the UI by role and pt-BR label (`e2e/fixtures/app.ts`), and checks what a person would see: messages, call tiles, playing audio tracks. It can also wait for a server event to reach a tab (`waitForSocketEvent`) and read the reason of each socket disconnect.
+4. The spec drives the UI by role and pt-BR label (`e2e/fixtures/app.ts`), and checks what a person would see: messages, call tiles, playing audio tracks. It can also wait for a server event to reach a tab (`waitForSocketEvent`) and read the reason of each socket disconnect. Every context of the fixture also watches its console: a Content-Security-Policy violation (Chrome logs `… violates the following Content Security Policy directive`) fails the test when it ends, so each flow is checked under the real policy.
 5. Restart and upgrade specs change the server under the open tabs: `deploy()` recreates the app container (SIGTERM, then a new one, like a Dokploy redeploy), `stopApp()`/`startApp()` keep it down for a while.
 
 ### What is covered
@@ -193,9 +193,10 @@ The `upgrade` project adapts to what the base version can do and says so in the 
 | `features/dm-call` | Decline, cancel, an answered call with audio both ways and its line in the chat, a video call. |
 | `features/webhooks` | Text and cards through the ingress (token in the URL and in the header), invalid payloads, rotating and deleting the URL, permission. |
 | `features/soundboard` | A sound uploaded to the server reaches everyone in the call. |
-| `features/profile` | Display name and bio reaching a friend live, mutual friends, the games widgets on offer with no connection (the picker reports the search unavailable, as the stack has no IGDB credentials), games saved with the Wall reaching a friend in order, and widgets reordered by dragging their handle and removed with the button under it. |
+| `features/profile` | Display name and bio reaching a friend live, mutual friends, the games widgets on offer with no connection (the picker reports the search unavailable, as the stack has no IGDB credentials), games saved with the Wall reaching a friend in order, and widgets reordered by dragging their handle and removed with the button under it. On a touch phone: the profile filling the screen, a game cover's actions in a menu, a widget dragged by its handle with a real finger, 44px touch targets, and a colour picker that does not make iOS zoom. |
 | `features/reports-admin` | Reporting a message, the admin deleting it for everyone, suspending an account. |
 | `features/settings` | The account's language following it to another browser. |
+| `features/security` | Another site cannot frame the app, a script from another origin is refused and the violation reaches `/api/csp-reports`, and a YouTube link opens YouTube's player as an iframe with none of their scripts in the page. |
 | `features/presence` | A status and custom status set on one device reaching the account's other device and a friend live, invisible reading as offline (custom status and online friends list included), and the status kept across a reload. |
 | `restart/voice` | A voice call survives a redeploy: the tab nobody touched reconnects on its own (the socket drop is a transport close, never `io server disconnect`), and someone joining after the deploy lands in the same call, with audio both ways. |
 | `restart/dm-call` | An answered DM call survives a redeploy; a ring survives it and can be answered, even with the click made while the tab is still disconnected. |
@@ -330,6 +331,23 @@ Failed logins (per account and per address), recovery and email-change code requ
 - **Fail closed:** if the database cannot answer, the attempt is refused with `503 rate_limit_unavailable` (and `Retry-After`) instead of being let through. Clearing the counters after a correct password is best effort, so a database hiccup there does not turn a valid login into an error.
 - **Not here, on purpose:** socket flood control (`realtime/floodControl.ts`), link previews, game searches and similar per-minute quotas stay in memory. They only cap short bursts of legitimate traffic, losing them on a restart costs nothing, and a database write per socket event would be the expensive part.
 - **New brute-force limit** (for example the 2FA code of LINKORD-35): use `checkBlocked` / `recordFailure` / `reset` for mistakes, or `consume` for requests that are counted whether they succeed or not, with a key namespace of its own. Tests are in `server/tests/integration/rateLimits.itest.ts`.
+
+## Content-Security-Policy
+
+The server sends a Content-Security-Policy with every response it serves, built in [`server/src/http/securityHeaders.ts`](../server/src/http/securityHeaders.ts) from `.env` (`APP_URL`, `LIVEKIT_URL`, `KLIPY_API_KEY`). It is the second barrier if user content (messages, names, previews) ever slips past escaping, and with `frame-ancestors 'none'` and `X-Frame-Options: DENY` no other site can put Linkord in a frame. Behind HTTPS it also sends `Strict-Transport-Security` (one year, without `includeSubDomains`).
+
+- **Scripts** run only from our own origin. The two small inline scripts in `web/index.html` and the one in `web/public/offline.html` are allowed by their SHA-256, computed at boot from the built files, so editing them needs nothing else. Inline event handlers (`onclick="…"`) cannot be hashed: use `addEventListener`. `'wasm-unsafe-eval'` is there for the avatar cropper's ImageMagick; `eval` and `new Function` stay blocked. A library that loads a third-party script into the page (YouTube's iframe API, for one) is not allowed: embed the provider's player as an iframe instead.
+- **Styles** keep `'unsafe-inline'`: React, Motion and Base UI set inline styles and a few libraries inject `<style>` elements. A style cannot run script.
+- **Images and media** load from any `https:` host (plus `http:` when `APP_URL` itself is http) because link previews and the Wall show pictures from any site. This shrinks to `'self'` once those go through our own image proxy (LINKORD-42).
+- **Connections** go to our own origin and websocket, to `LIVEKIT_URL` over both ws and http (any `*.livekit.cloud` host for LiveKit Cloud, which hands out regional URLs), and to `https://api.klipy.com` when `KLIPY_API_KEY` is set.
+- **Frames:** only the YouTube and Twitch players (`frame-src`).
+- `/api/*` responses get `default-src 'none'; frame-ancestors 'none'`: JSON loads nothing.
+
+The Vite dev server (`npm run dev`, port 5173) does not send the policy, since it serves the page itself with its own inline scripts. To see the policy in action, build and run the production server (`npm run build`, then `npm start` on port 3000) or run the end-to-end suite, which uses the production image.
+
+**Adding a domain.** When a feature needs the browser to reach a new host, add it to the matching directive in `buildContentSecurityPolicy` (a constant next to `EMBED_FRAMES` or `KLIPY_API`, made conditional on its env variable if it has one), add a case to `server/tests/http/securityHeaders.test.ts`, and run the feature's end-to-end spec: a blocked request shows up in the browser console as `… violates the following Content Security Policy directive` and in the server log as `content security policy violation`.
+
+**Reports and trying out a change.** Browsers post violations to `POST /api/csp-reports`: Firefox and Safari through `report-uri`, Chrome through the Reporting API (`report-to` and the `Reporting-Endpoints` header, batched about a minute) when `APP_URL` is https. Over plain http Chrome ignores `Reporting-Endpoints` and, if the policy named `report-to`, would send nothing at all, so there the policy only has `report-uri`. The server logs each one at `warn` without URL queries, at most 30 a minute per address. To roll out a riskier change, set `CSP_REPORT_ONLY=1`: the same policy is sent as `Content-Security-Policy-Report-Only`, so nothing is blocked and every violation is reported. Remove it once the log stays quiet.
 
 ## Single-instance assumption
 

@@ -1,10 +1,12 @@
 import {
-  ArrowsLeftRightIcon, ChatCircleIcon, MicrophoneSlashIcon, PhoneSlashIcon, SpeakerHighIcon, SpeakerSimpleSlashIcon,
+  ArrowsLeftRightIcon, ChatCircleIcon, DotsThreeIcon, MicrophoneSlashIcon, PhoneSlashIcon, SpeakerHighIcon, SpeakerSimpleSlashIcon,
   SpeakerSlashIcon, UserIcon, VideoCameraIcon,
 } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
 import type { DragEvent, MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import { TOUCH_FIRST_QUERY } from '@/shared/hooks/useLongPress';
+import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
 import { Avatar, colorFor } from '@/shared/Avatar';
 import { iconWeight } from '@/shared/ui/icons';
 import {
@@ -200,12 +202,21 @@ export function VoiceMembers({ server, channel, onOpenProfile, drag, onDragChang
       isMe: false, speaking: p.speaking, micMuted: !p.micActivated || p.micMuted, deafened: p.deafened, cameraOn: p.cameraOn, sharing: p.sharing,
     }));
   const people = inThisCall ? [me, ...others] : others;
-  const canDrag = canMoveOutOf(channel, state.me.role === 'admin');
+  // On a touch-first device the browser would start a drag from the same long
+  // press that opens the menu (and cancel the press); "Move to" in the menu
+  // does the same job there.
+  const touchFirst = useMediaQuery(TOUCH_FIRST_QUERY);
+  const canDrag = !touchFirst && canMoveOutOf(channel, state.me.role === 'admin');
   if (!people.length) return null;
 
   function openMenu(person: VoicePerson, event: MouseEvent) {
     event.preventDefault();
     setMenu({ person, x: event.clientX, y: event.clientY });
+  }
+
+  function openMenuFromButton(person: VoicePerson, event: MouseEvent<HTMLButtonElement>) {
+    const rect = event.currentTarget.getBoundingClientRect();
+    setMenu({ person, x: rect.left, y: rect.bottom });
   }
 
   function startDrag(person: VoicePerson, event: DragEvent) {
@@ -244,6 +255,13 @@ export function VoiceMembers({ server, channel, onOpenProfile, drag, onDragChang
                 <span className="truncate">{person.displayName}</span>
               </button>
               <VoiceStatus person={person} previewable={!person.isMe} />
+              {/* right-click and long press open the same menu; this is the way
+                  for a keyboard or a screen reader, shown only once focused */}
+              <button type="button" aria-label={t('voiceMembers.menu.more', { name: person.displayName })} aria-haspopup="menu"
+                onClick={(event) => openMenuFromButton(person, event)}
+                className="sr-only flex-none rounded-sm text-text-muted outline-none focus-visible:not-sr-only focus-visible:ring-2 focus-visible:ring-ring">
+                <DotsThreeIcon size={16} weight="bold" />
+              </button>
             </li>
           );
         })}

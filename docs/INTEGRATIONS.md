@@ -28,7 +28,7 @@ Selective forwarding unit (SFU) behind every voice channel and 1:1 call.
 - **Server → LiveKit:** `livekit-server-sdk` signs a short-lived access token per call (`createToken`, lifetime `LIVEKIT_TOKEN_TTL_SECONDS`, default 300) scoped to one room named `${LIVEKIT_ROOM_NAME}-${conversationId}`. When membership is revoked, `RoomServiceClient` lists and removes the account's participants (`evictFromCall`, three attempts with backoff). Failures are logged and never roll back the database change.
 - **Browser → LiveKit:** a voice channel still joins immediately: `call-join` returns `livekitUrl` and a token, and the client connects to LiveKit directly. A direct conversation does not. `call-join` on a DM is refused. The caller rings with `dm-call-start`; the token is minted for both people only after `dm-call-accept`, on the tab that started the call and the tab that accepted it. The API key and secret never leave the server. Camera and screen share are published separately (`web/src/features/calls/videoPublish.ts`). The camera captures at an ideal 1080p30 — the browser negotiates down when the webcam cannot — and simulcasts 30 fps layers (360p floor, 720p, then the full capture capped at 3 Mbps) with degradation set to keep resolution. Screen share stays a single layer at the selected preset (1440p60 / 6 Mbps or 1080p30 / 4.5 Mbps). The room enables adaptive stream at the display's pixel density and dynacast, so a viewer receives the camera layer that fits the tile and the publisher stops sending layers nobody is watching.
 - **Restarts:** media flows between the browsers and LiveKit, so a deploy does not cut it. The server keeps who is in which call in Postgres and restores it on boot, holding each connection for `CALL_RESTORE_GRACE_MS` (default 90 s) while its client reconnects under the same LiveKit identity. How that works, and the rules that keep it working, are in `AGENTS.md` ("Realtime compatibility and deploys").
-- **Configuration:** `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, `LIVEKIT_ROOM_NAME`, `LIVEKIT_TOKEN_TTL_SECONDS`, `CALL_RESTORE_GRACE_MS`.
+- **Configuration:** `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, `LIVEKIT_ROOM_NAME`, `LIVEKIT_TOKEN_TTL_SECONDS`, `CALL_RESTORE_GRACE_MS`. `LIVEKIT_URL` is also what the Content-Security-Policy lets the browser connect to (over ws and http; any `*.livekit.cloud` host for LiveKit Cloud), so it must be the URL clients really use.
 - **When missing:** the server boots and logs `LiveKit is not configured`; calls, camera and screen sharing fail.
 
 ## Resend
@@ -61,7 +61,7 @@ GIF search and trending in the message composer.
 - **Code:** [`web/src/features/gifs/klipy.ts`](../web/src/features/gifs/klipy.ts) calls `https://api.klipy.com/api/v1`; the server side is [`server/src/modules/gifs/gifs.ts`](../server/src/modules/gifs/gifs.ts).
 - **Browser only, on purpose:** KLIPY's terms require requests and media loads to come from the user's own client. The server therefore does not proxy anything; `GET /api/gifs/config` hands the key to signed-in users (`Cache-Control: no-store`) so it stays out of the bundle and the repository.
 - **Data sent:** KLIPY keys its "recent GIFs" and analytics by a customer ID. We send `sha256("klipy:" + userId)` truncated to 32 characters — stable per user, but not our real account ID.
-- **Configuration:** `KLIPY_API_KEY`.
+- **Configuration:** `KLIPY_API_KEY`. When it is set, the Content-Security-Policy lets the browser connect to `https://api.klipy.com`; the GIFs themselves load from `static*.klipy.com` under the policy's general `https:` image and media sources.
 - **When missing:** the config endpoint reports `enabled: false` and the GIF button is hidden.
 
 ## MyAnimeList
@@ -134,7 +134,7 @@ Cards (title, description, image, favicon) for links pasted in chat. Unlike the 
 Pasted YouTube and Twitch links render as inline players. These are loaded **by the user's browser** from the providers' own domains; the server only classifies the URL.
 
 - **Code:** [`web/src/features/media/GenericEmbed.tsx`](../web/src/features/media/GenericEmbed.tsx).
-- **YouTube:** `react-player`, shown as a click-to-play thumbnail (the preview image, falling back to `i.ytimg.com`).
+- **YouTube:** a click-to-play thumbnail (the preview image, falling back to `i.ytimg.com`) that becomes a plain `www.youtube.com/embed` iframe, starting at the link's `t`/`start` time. YouTube's script API is not used: it would have to run in our page, which the Content-Security-Policy does not allow.
 - **Twitch:** channel, VOD and clip embeds from `player.twitch.tv` and `clips.twitch.tv`, passing the current hostname as the required `parent` parameter.
 - No credentials are involved.
 
@@ -147,4 +147,5 @@ Pasted YouTube and Twitch links render as inline players. These are loaded **by 
 5. **Respect rate limits.** For background work, reuse the connection-sync queue and its PostgreSQL-coordinated limits instead of calling providers per profile view; map provider status codes to the shared error codes.
 6. **Preserve good data.** A failed or malformed response must never replace a previously valid snapshot.
 7. **Test with injected requests.** Adapters take their `request` function as a parameter so tests never hit the network; follow the pattern in `server/tests/integrations/`.
-8. **Document it here:** the table above, the data that leaves our system, and what happens when the credential is missing.
+8. **Allow it in the Content-Security-Policy** if the browser talks to it: add the host to `server/src/http/securityHeaders.ts` (see "Content-Security-Policy" in [DEVELOPMENT.md](DEVELOPMENT.md#content-security-policy)). The browser never loads a provider's script into our page.
+9. **Document it here:** the table above, the data that leaves our system, and what happens when the credential is missing.

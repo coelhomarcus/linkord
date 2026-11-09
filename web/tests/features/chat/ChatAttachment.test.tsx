@@ -19,6 +19,19 @@ describe('ChatAttachment', () => {
     __resetPreviewCacheForTests();
   });
 
+  it('a voice message gets the voice player with its recorded duration, not the generic audio player', () => {
+    render(<ChatAttachment attachment={{ id: 'voice-id', name: 'voice-message.webm', mime: 'audio/webm', size: 9, voice: { durationMs: 65_000, waveform: 'AH//' } }} />);
+    expect(screen.getByRole('group', { name: 'Mensagem de voz, 1:05' })).toBeInTheDocument();
+    expect(screen.getByText('1:05')).toBeInTheDocument();
+    expect(document.querySelector('audio')).toHaveAttribute('src', '/uploads/voice-id');
+  });
+
+  it('plain audio/webm (not a voice message) still plays inline', () => {
+    render(<ChatAttachment attachment={{ id: 'a-id', name: 'clip.webm', mime: 'audio/webm', size: 9 }} />);
+    expect(document.querySelector('audio')).toHaveAttribute('src', '/uploads/a-id');
+    expect(screen.queryByRole('slider', { name: 'Posição da mensagem de voz' })).not.toBeInTheDocument();
+  });
+
   it('image uses the thumbnail (thumbId) when it exists, not the original', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, blob: async () => new Blob() })));
     const { container } = render(<ChatAttachment attachment={{ id: 'img-id', thumbId: 'thumb-id', name: 'foto.png', mime: 'image/png', size: 789 }} />);

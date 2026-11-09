@@ -321,6 +321,7 @@
       "outOfBounds": "Crop is outside the image bounds.",
       "invalidCrop": "Invalid crop.",
       "processFailed": "Couldn't process the image."
-    }
+    },
+    "zoom": "Zoom"
   }
 }

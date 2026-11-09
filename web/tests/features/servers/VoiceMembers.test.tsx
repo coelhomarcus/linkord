@@ -129,6 +129,14 @@ describe('VoiceMembers — opening a profile and the member menu', () => {
     expect(onOpenProfile).toHaveBeenCalledWith('u-bea');
   });
 
+  it('the "more actions" button opens the same menu, for a keyboard or a screen reader', async () => {
+    const { onOpenProfile } = renderList();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Mais ações de Bea' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Ver perfil' }));
+    expect(onOpenProfile).toHaveBeenCalledWith('u-bea');
+  });
+
   it('without MOVE_MEMBERS the menu has nothing to move or disconnect', async () => {
     renderList();
     fireEvent.contextMenu(row('Bea'));
@@ -192,6 +200,17 @@ describe('VoiceMembers — dragging someone to another channel', () => {
     drag(row('Bea'), channel('v3'));
     drag(row('Bea'), channel('v1'));
     expect(moveToCall).not.toHaveBeenCalled();
+  });
+
+  it('on a touch-first device nobody is draggable: a long press there opens the menu, which can move them', () => {
+    const matchMedia = vi.fn((query: string) => ({ matches: query === '(hover: none) and (pointer: coarse)', addEventListener: vi.fn(), removeEventListener: vi.fn() }));
+    vi.stubGlobal('matchMedia', matchMedia);
+    try {
+      renderList({ permissions: MOVER });
+      expect(row('Bea')).not.toHaveAttribute('draggable');
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it('without MOVE_MEMBERS nobody can be dragged', () => {

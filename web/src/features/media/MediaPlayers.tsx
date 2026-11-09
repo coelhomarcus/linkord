@@ -178,7 +178,7 @@ function VolumeSlider({ muted, volume, onChange, className }: {
         max={100}
         step={1}
         onValueChange={onChange}
-        className="[&_[data-slot=slider-thumb]]:size-2.5"
+        size="sm"
       />
     </div>
   );
@@ -261,7 +261,8 @@ function VideoChrome({
           step={0.1}
           disabled={!duration}
           onValueChange={(value) => seek(value)}
-          className="[&_[data-slot=slider-range]]:bg-primary [&_[data-slot=slider-thumb]]:size-2.5 [&_[data-slot=slider-track]]:bg-white/25"
+          size="sm"
+          className="[&_[data-slot=slider-track]]:bg-white/25"
         />
         <div className="flex min-w-0 items-center gap-0.5 text-text-secondary [&_button:hover]:bg-white/10 [&_button:hover]:text-white">
           <MediaButton label={playing ? t('player.pause') : t('player.play')} onClick={togglePlay}>
@@ -506,7 +507,8 @@ function AudioPlayerInner({ src, title, className, onError }: AudioPlayerProps) 
           step={0.1}
           disabled={!duration}
           onValueChange={(value) => seek(value)}
-          className="min-w-0 flex-1 [&_[data-slot=slider-range]]:bg-primary [&_[data-slot=slider-thumb]]:size-2.5 [&_[data-slot=slider-track]]:bg-bg-hover"
+          size="sm"
+          className="min-w-0 flex-1 [&_[data-slot=slider-track]]:bg-bg-hover"
         />
 
         <div className="flex flex-none items-center gap-0.5">

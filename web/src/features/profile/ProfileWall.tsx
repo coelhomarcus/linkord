@@ -9,7 +9,7 @@ import { ROUTES } from '@/shared/lib/routes';
 import { Button } from '@/shared/ui/primitives/button';
 import { EmptyState } from '@/shared/ui/empty-state';
 import { AddWidgetDialog } from './AddWidgetDialog';
-import { FloatingBar } from './FloatingBar';
+import { FloatingBar } from '@/shared/FloatingBar';
 import { createConnection, fetchWall, saveWall } from './profileApi';
 import { SortableWall } from './SortableWall';
 import { WallSkeleton } from './WallSkeleton';
@@ -20,9 +20,24 @@ const selectionKey = (value: WallSelection) => `${value.connectionId ?? 'games'}
 const widgetKey = (widget: WallWidget) => selectionKey({ connectionId: widget.connection?.id ?? null, type: widget.type });
 const selectionOf = (widget: WallWidget): WallSelection => ({ connectionId: widget.connection?.id ?? null, type: widget.type });
 
+/** An unsaved change to the owner's Wall, as the profile editor sees it when the profile is about to close. */
+export interface WallDraft {
+  /** resolves to whether the Wall was saved; a failure keeps the draft */
+  save: () => Promise<boolean>;
+  reset: () => void;
+}
+
 /** The owner's Wall is always editable, as the profile itself is: a change waits in a draft until Save in the
- * floating bar, and Reset puts the saved Wall back. A visitor only sees the published widgets. */
-export function ProfileWall({ userId, owner, accent, onNavigate }: { userId: string; owner: boolean; accent: string; onNavigate: () => void }) {
+ * floating bar, and Reset puts the saved Wall back. A visitor only sees the published widgets.
+ * `onLeave` is how it goes to another page: `go` navigates, and the profile decides when (it may ask about
+ * unsaved changes first). `onDraftChange` hears of the draft as it comes and goes. */
+export function ProfileWall({ userId, owner, accent, onLeave, onDraftChange }: {
+  userId: string;
+  owner: boolean;
+  accent: string;
+  onLeave: (go: () => void) => void;
+  onDraftChange?: (draft: WallDraft | null) => void;
+}) {
   const { t } = useTranslation('profile');
   const navigate = useNavigate();
   const [data, setData] = useState<WallResponse | null>(null);
@@ -96,16 +111,23 @@ export function ProfileWall({ userId, owner, accent, onNavigate }: { userId: str
     setPicking(null);
   }
   function reset() { setDraft(null); setGamesDraft({}); setPicking(null); setError(false); }
-  async function save() {
-    if (!dirty || saving) return;
+  async function save(): Promise<boolean> {
+    if (!dirty) return true;
+    if (saving) return false;
     setSaving(true); setError(false);
     sequence.current++; controller.current?.abort();
     try {
       const result = await (Object.keys(gamesDraft).length ? saveWall(selections, gamesDraft) : saveWall(selections));
       if (mounted.current) { sequence.current++; setData(result); setDraft(null); setGamesDraft({}); }
-    } catch { if (mounted.current) setError(true); }
-    finally { if (mounted.current) setSaving(false); }
+      return true;
+    } catch {
+      if (mounted.current) setError(true);
+      return false;
+    } finally { if (mounted.current) setSaving(false); }
   }
+  // save and reset close over this render's draft, so the profile is handed fresh ones after every render
+  useEffect(() => { onDraftChange?.(owner && dirty ? { save, reset } : null); });
+  useEffect(() => () => onDraftChange?.(null), [onDraftChange]);
 
   // the widgets as cards; the owner's also carry the editing controls of the games widgets
   const entries = widgets.map((widget) => {
@@ -123,8 +145,10 @@ export function ProfileWall({ userId, owner, accent, onNavigate }: { userId: str
   });
 
   const wallEmpty = !loading && !!data && widgets.length === 0;
-  const bar = owner && dirty && (
+  const showBar = owner && dirty;
+  const bar = owner && (
     <FloatingBar
+      open={dirty}
       label={t('wall.barLabel')}
       status={saving ? 'saving' : error ? 'error' : 'pending'}
       error={t('wall.saveFailed')}
@@ -134,14 +158,14 @@ export function ProfileWall({ userId, owner, accent, onNavigate }: { userId: str
   );
   return (
     // room under the last widget for the floating bar, which would otherwise cover it
-    <section aria-label={t('wall.title')} className={`flex min-w-0 flex-col gap-5 ${bar ? 'pb-36' : ''}`}>
+    <section aria-label={t('wall.title')} className={`flex min-w-0 flex-col gap-5 ${showBar ? 'pb-36' : ''}`}>
       {error && !dirty && <p role="alert" className="text-label text-red">{t('wall.loadFailed')} <Button type="button" variant="ghost" size="sm" onClick={() => void load()}>{t('modal.retry')}</Button></p>}
       {owner && (
         <div className="flex items-center justify-between gap-3">
           <h3 className="text-body font-semibold text-text-primary">{t('wall.yours')}</h3>
           {/* there while loading too, so the header doesn't grow when the Wall arrives */}
           {(data || loading) && (
-            <Button type="button" variant="secondary" size="sm" disabled={saving || !data} onClick={() => setAdding(true)}>
+            <Button type="button" variant="secondary" size="sm" className="touch-target relative" disabled={saving || !data} onClick={() => setAdding(true)}>
               <PlusIcon size={14} aria-hidden />
               <span>{t('wall.addWidget')}</span>
             </Button>
@@ -155,7 +179,7 @@ export function ProfileWall({ userId, owner, accent, onNavigate }: { userId: str
           title={t('wall.emptyOwnerTitle')}
           description={t('wall.emptyOwner')}
           // the add-widget button is already in the header right above; connecting accounts is the next step
-          action={<Button type="button" variant="secondary" size="sm" onClick={() => { navigate(ROUTES.settingsTab('connections')); onNavigate(); }}>{t('wall.connectAccounts')}</Button>}
+          action={<Button type="button" variant="secondary" size="sm" className="touch-target relative" onClick={() => onLeave(() => navigate(ROUTES.settingsTab('connections')))}>{t('wall.connectAccounts')}</Button>}
         />
       ) : <EmptyState illustration="wall" title={t('wall.emptyVisitorTitle')} description={t('wall.emptyVisitor')} />)}
       {owner
@@ -171,7 +195,7 @@ export function ProfileWall({ userId, owner, accent, onNavigate }: { userId: str
         available={data.available ?? []}
         added={(widget) => selections.some((selection) => selectionKey(selection) === widgetKey(widget))}
         onPick={(widget) => { setDraft([...selections, selectionOf(widget)]); setAdding(false); }}
-        onManage={() => { setAdding(false); navigate(ROUTES.settingsTab('connections')); onNavigate(); }}
+        onManage={() => { setAdding(false); onLeave(() => navigate(ROUTES.settingsTab('connections'))); }}
         onConnect={async (provider, username) => {
           await createConnection(provider, username);
           // the settings page and the profile's links listen for this too

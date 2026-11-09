@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { FLOATING_BAR_SLOT_CLASS, FloatingBar, FloatingBarSlotProvider } from '@/features/profile/FloatingBar';
+import { FLOATING_BAR_SLOT_CLASS, FloatingBar, FloatingBarSlotProvider } from '@/shared/FloatingBar';
 
 function WithSlot() {
   const [slot, setSlot] = useState<HTMLElement | null>(null);
@@ -56,6 +56,11 @@ describe('floating bars', () => {
     expect(screen.getByRole('button', { name: 'Redefinir' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Salvando…' })).toBeDisabled();
   });
+  it('keeps Reset but blocks Save when the edits cannot be saved as they are', () => {
+    render(<FloatingBar label="Barra" status="pending" saveDisabled onReset={() => {}} />);
+    expect(screen.getByRole('button', { name: 'Redefinir' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Salvar' })).toBeDisabled();
+  });
   it('announces the error instead of the reminder and keeps the buttons to try again', () => {
     render(<FloatingBar label="Barra" status="error" error="Falhou feio." onReset={() => {}} />);
     expect(screen.getByRole('alert')).toHaveTextContent('Falhou feio.');
@@ -66,5 +71,33 @@ describe('floating bars', () => {
     render(<FloatingBar label="Barra" status="saved" />);
     expect(screen.getByRole('status')).toHaveTextContent('Alterações salvas.');
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  });
+  it('is not there while closed, and goes as soon as it closes where nothing animates', () => {
+    const { rerender } = render(<FloatingBar open={false} label="Barra" status="pending" />);
+    expect(screen.queryByRole('region')).not.toBeInTheDocument();
+    rerender(<FloatingBar open label="Barra" status="pending" />);
+    expect(screen.getByRole('region', { name: 'Barra' })).toHaveAttribute('data-open');
+    rerender(<FloatingBar open={false} label="Barra" status="pending" />);
+    expect(screen.queryByRole('region')).not.toBeInTheDocument();
+  });
+  it('plays its exit with what it showed last, taking no clicks, and unmounts when the exit ends', async () => {
+    let finish!: () => void;
+    const finished = new Promise<void>((resolve) => { finish = resolve; });
+    const getAnimations = vi.fn(() => [{ finished }] as unknown as Animation[]);
+    Object.defineProperty(HTMLElement.prototype, 'getAnimations', { configurable: true, value: getAnimations });
+    try {
+      const { rerender } = render(<FloatingBar open label="Barra" status="saved" />);
+      // the confirmation times out: the bar closes and its status falls back to pending at once
+      rerender(<FloatingBar open={false} label="Barra" status="pending" onReset={() => {}} />);
+      const bar = screen.getByRole('region', { name: 'Barra', hidden: true });
+      expect(bar).toHaveAttribute('data-closed');
+      expect(bar).toHaveAttribute('inert');
+      expect(bar).toHaveTextContent('Alterações salvas.');
+      expect(within(bar).queryByRole('button', { hidden: true })).not.toBeInTheDocument();
+      await act(async () => { finish(); await finished; });
+      expect(screen.queryByRole('region', { hidden: true })).not.toBeInTheDocument();
+    } finally {
+      delete (HTMLElement.prototype as { getAnimations?: unknown }).getAnimations;
+    }
   });
 });

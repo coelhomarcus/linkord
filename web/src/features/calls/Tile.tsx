@@ -8,6 +8,7 @@ import { useRoom } from '@/state/RoomContext';
 import { useParticipantMedia, useAttachTrack, useIsSpeaking, useConnectionQuality, useWatchScreenShare } from './useLiveKitTrack';
 import { useMuteForMe } from './useMuteForMe';
 import { useTileSizing } from './useTileSizing';
+import { TileMenuButton } from './TileMenuButton';
 import { tileKey } from './tileTypes';
 import type { TileKind } from './tileTypes';
 import { Avatar, colorFor } from '@/shared/Avatar';
@@ -210,6 +211,12 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
           <CellSignalNoneIcon size={16} className="flex-none text-red" />
         )}
       </div>
+
+      <TileMenuButton
+        name={name || t('tile.participant')}
+        onOpen={(rect) => openTileMenu(key, participantId, kind, rect)}
+        className="right-1.5 top-1.5"
+      />
 
       {hasMutableAudio && mutedForMe && (
         <Button

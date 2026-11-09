@@ -1,6 +1,7 @@
 import { ApiError } from '@/shared/api/api';
 import { i18n } from '@/shared/i18n/init';
 import { logger } from '@/shared/lib/logger';
+import type { VoiceMeta } from '@/shared/types/protocol';
 
 const log = logger.child({ component: 'upload' });
 
@@ -51,7 +52,7 @@ const OUTAGE_WINDOW_MS = 60_000;
 const MAX_RATE_LIMIT_WAITS = 3;
 const MAX_RETRY_AFTER_MS = 60_000;
 
-export interface StagedFile { id: string; name: string; mime: string; size: number; thumbId?: string }
+export interface StagedFile { id: string; name: string; mime: string; size: number; thumbId?: string; voice?: VoiceMeta }
 
 // A 4xx from the app says the request itself is wrong (no access, too big,
 // gone) — sending it again can't help. Timeouts, rate limits, 5xx and the
@@ -101,6 +102,7 @@ async function post(url: string, body: BodyInit, contentType: string, signal?: A
 interface UploadRun {
   conversationId: string;
   file: File;
+  voice?: VoiceMeta;
   onProgress?: (fraction: number) => void;
   signal?: AbortSignal;
 }
@@ -108,9 +110,9 @@ interface UploadRun {
 /** Stages the file: uploaded in chunks, but not published to anyone. The
  * message that carries it (with the whole batch) is created later by one
  * correlated `chat` send — see stageFileInChunks below, its only caller. */
-async function runUpload({ conversationId, file, onProgress, signal }: UploadRun): Promise<unknown> {
+async function runUpload({ conversationId, file, voice, onProgress, signal }: UploadRun): Promise<unknown> {
   if (!conversationId) throw new ApiError(400, 'missing_conversation', i18n.t('upload.missingConversation'));
-  const initBody = JSON.stringify({ conversationId, fileName: file.name, mimeType: file.type || 'application/octet-stream', totalSize: file.size });
+  const initBody = JSON.stringify({ conversationId, fileName: file.name, mimeType: file.type || 'application/octet-stream', totalSize: file.size, ...(voice ? { voice } : {}) });
   const initRes = await retrying(() => post('/api/attachments/init', initBody, 'application/json', signal), signal);
   const { uploadId, chunkSize, totalChunks } = await initRes.json() as InitResponse;
 
@@ -147,7 +149,7 @@ async function runUpload({ conversationId, file, onProgress, signal }: UploadRun
 
 /** Uploads the file without publishing it; the message that carries it is
  * created later, with the whole batch, by one correlated chat send. */
-export async function stageFileInChunks(options: { conversationId: string; file: File; onProgress?: (fraction: number) => void; signal?: AbortSignal }): Promise<StagedFile> {
+export async function stageFileInChunks(options: UploadRun): Promise<StagedFile> {
   const body = await runUpload(options) as { staged: StagedFile };
   return body.staged;
 }

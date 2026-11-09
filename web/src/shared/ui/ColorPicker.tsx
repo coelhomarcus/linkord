@@ -15,7 +15,7 @@ type EyeDropperWindow = Window & { EyeDropper?: new () => { open: () => Promise<
 const STEP = 0.01;
 const BIG_STEP = 0.1;
 const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
-const THUMB = 'pointer-events-none absolute size-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-[0_0_0_1px_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.5)]';
+const THUMB = 'pointer-events-none absolute size-4 pointer-coarse:size-6 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-[0_0_0_1px_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.5)]';
 
 /** A 2D slider: saturation left to right, brightness bottom to top. Dragged with a pointer, or moved with the arrows. */
 function SaturationArea({ hsv, onChange }: { hsv: Hsv; onChange: (hsv: Hsv) => void }) {
@@ -83,7 +83,8 @@ function HueSlider({ hsv, onChange }: { hsv: Hsv; onChange: (hsv: Hsv) => void }
       onPointerDown={(event) => { event.currentTarget.setPointerCapture?.(event.pointerId); fromPointer(event); }}
       onPointerMove={(event) => { if (event.buttons & 1) fromPointer(event); }}
       onKeyDown={onKeyDown}
-      className="relative h-3 w-full cursor-pointer touch-none rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      // a 12px bar is too thin to land a finger on: on a touch screen it takes touches 16px above and below
+      className="relative h-3 w-full cursor-pointer touch-none rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:my-2 pointer-coarse:after:absolute pointer-coarse:after:inset-x-0 pointer-coarse:after:-inset-y-4 pointer-coarse:after:content-['']"
       style={{ background: 'linear-gradient(to right, #f00 0%, #ff0 17%, #0f0 33%, #0ff 50%, #00f 67%, #f0f 83%, #f00 100%)' }}
     >
       <span aria-hidden className={cn(THUMB, 'top-1/2')} style={{ left: `${(hsv.h / 360) * 100}%`, background: `hsl(${hsv.h} 100% 50%)` }} />
@@ -137,10 +138,11 @@ function Panel({ value, current, presets, noneLabel, note, onChange }: {
       <SaturationArea hsv={hsv} onChange={pick} />
       <HueSlider hsv={hsv} onChange={pick} />
       <div className="flex items-center gap-2">
-        <span aria-hidden className="size-9 flex-none rounded-lg border border-border-strong" style={{ background: value || noneLabel === undefined ? current : 'transparent' }} />
+        <span aria-hidden className="size-9 flex-none rounded-lg border border-border-strong pointer-coarse:size-11" style={{ background: value || noneLabel === undefined ? current : 'transparent' }} />
         <label htmlFor={hexId} className="sr-only">{t('colorPicker.hex')}</label>
-        <div className="flex h-9 min-w-0 flex-1 items-center rounded-lg border border-border-field bg-bg-textarea px-2.5 focus-within:border-border-accent">
+        <div className="flex h-9 min-w-0 flex-1 items-center rounded-lg border pointer-coarse:h-11 border-border-field bg-bg-textarea px-2.5 focus-within:border-border-accent">
           <span aria-hidden className="text-label text-text-muted">#</span>
+          {/* 16px on a touch screen: iOS zooms the whole page into a field with smaller text */}
           <input
             id={hexId}
             value={editing ? text : value || noneLabel === undefined ? current.slice(1) : ''}
@@ -151,12 +153,12 @@ function Panel({ value, current, presets, noneLabel, note, onChange }: {
             spellCheck={false}
             autoComplete="off"
             maxLength={7}
-            className="min-w-0 flex-1 bg-transparent pl-1 font-mono text-label uppercase text-text-primary outline-none placeholder:text-text-muted/60"
+            className="min-w-0 flex-1 bg-transparent pl-1 font-mono text-label uppercase pointer-coarse:text-body text-text-primary outline-none placeholder:text-text-muted/60"
           />
         </div>
         {eyeDropper && (
           <button type="button" aria-label={t('colorPicker.eyedropper')} title={t('colorPicker.eyedropper')} onClick={() => void sample()}
-            className="flex size-9 flex-none items-center justify-center rounded-lg border border-border-control bg-bg-control text-text-strong transition-colors hover:bg-bg-control-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            className="flex size-9 flex-none items-center justify-center rounded-lg border border-border-control pointer-coarse:size-11 bg-bg-control text-text-strong transition-colors hover:bg-bg-control-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
             <EyedropperIcon size={16} />
           </button>
         )}
@@ -165,7 +167,8 @@ function Panel({ value, current, presets, noneLabel, note, onChange }: {
       {(presets.length > 0 || noneLabel) && (
         <div className="flex flex-col gap-2">
           <span className="text-caption font-medium text-text-muted">{t('colorPicker.presets')}</span>
-          <div className="grid grid-cols-8 gap-1.5">
+          {/* five to a row on a touch screen, so every swatch is a fingertip wide */}
+          <div className="grid grid-cols-8 gap-1.5 pointer-coarse:grid-cols-5 pointer-coarse:gap-2.5">
             {noneLabel !== undefined && (
               <button type="button" aria-label={noneLabel} title={noneLabel} aria-pressed={value === ''} onClick={() => onChange('')}
                 className={cn(SWATCH, 'border border-border-strong text-text-muted', value === '' && SELECTED)}>
@@ -220,7 +223,7 @@ export function ColorPicker({ value, presets = [], noneLabel, fallback = '#99aab
     // a disabled picker (a save in progress, say) closes
     <Popover open={open && !disabled} onOpenChange={setOpen}>
       <PopoverTrigger disabled={disabled} aria-label={triggerLabel} className={triggerClassName}>{children}</PopoverTrigger>
-      <PopoverContent side="bottom" align="start" className="w-64 gap-3 p-3">
+      <PopoverContent side="bottom" align="start" className="w-64 gap-3 p-3 pointer-coarse:w-76">
         <Panel value={value} current={current} presets={presets} noneLabel={noneLabel} note={note} onChange={onChange} />
       </PopoverContent>
     </Popover>

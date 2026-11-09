@@ -13,7 +13,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { cn } from '@/shared/lib/utils';
 import { ProfileColorPicker } from './ProfileColorPicker';
 import { StatusDot } from '@/features/status/StatusDot';
-import { CustomStatusText } from '@/features/status/CustomStatusText';
+import { CustomStatusBubble } from '@/features/status/CustomStatusBubble';
 import type { DisplayStatus } from '@/features/status/statusDisplay';
 import type { CustomStatus } from '@/shared/types/protocol';
 
@@ -32,8 +32,11 @@ interface ProfileCardData {
 interface ProfileCardProps {
   user: ProfileCardData;
   /** the presence dot on the avatar; left out, there is none */
-  status?: DisplayStatus;
+  status?: DisplayStatus | 'reconnecting';
   customStatus?: CustomStatus | null;
+  /** makes the custom status bubble the owner's: edit and clear it, or an invitation when there is none */
+  onEditCustomStatus?: () => void;
+  onClearCustomStatus?: () => void;
   onAvatarClick?: () => void;
   onBannerClick?: () => void;
   onAvatarUpload?: () => void;
@@ -62,6 +65,8 @@ interface ProfileCardProps {
   /** leaves the link icons out, for a footer that lists them its own way */
   hideLinks?: boolean;
 }
+
+const TOUCH_BADGE = 'flex items-center justify-center rounded-full [@media(hover:none)]:size-10 [@media(hover:none)]:bg-black/55 [@media(hover:none)]:text-white';
 
 function EditableBio({ value, onChange, disabled }: { value: string; onChange: (value: string) => void; disabled?: boolean }) {
   const { t } = useTranslation('profile');
@@ -93,7 +98,7 @@ function EditableBio({ value, onChange, disabled }: { value: string; onChange: (
 }
 
 export function ProfileCard({
-  user, status, customStatus, onAvatarClick, onBannerClick,
+  user, status, customStatus, onEditCustomStatus, onClearCustomStatus, onAvatarClick, onBannerClick,
   onAvatarUpload, onAvatarRemove, avatarUploading,
   onBannerUpload, onBannerRemove, bannerUploading,
   className,
@@ -118,7 +123,10 @@ export function ProfileCard({
                 />
               }
             >
-              {bannerUploading ? <CircleNotchIcon size={24} className="animate-spin" /> : <CameraIcon size={24} />}
+              {/* with no hover to reveal it, a touch screen always shows the camera, so the banner reads as editable */}
+              <span className={TOUCH_BADGE}>
+                {bannerUploading ? <CircleNotchIcon size={24} className="animate-spin" /> : <CameraIcon size={24} />}
+              </span>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="center" className="w-max min-w-0">
               <DropdownMenuItem onClick={onBannerUpload}>
@@ -162,7 +170,9 @@ export function ProfileCard({
                       />
                     }
                   >
-                    {avatarUploading ? <CircleNotchIcon size={20} className="animate-spin" /> : <CameraIcon size={20} />}
+                    <span className={TOUCH_BADGE}>
+                      {avatarUploading ? <CircleNotchIcon size={20} className="animate-spin" /> : <CameraIcon size={20} />}
+                    </span>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" className="w-max min-w-0">
                     <DropdownMenuItem onClick={onAvatarUpload}>
@@ -193,11 +203,16 @@ export function ProfileCard({
             {status && <StatusDot status={status} labelled className="absolute right-1 bottom-1 size-5 border-4 text-bg-modal" />}
           </div>
 
-          {onAvatarColorChange && (
-            <div className="mb-1">
-              <ProfileColorPicker userId={user.id} value={user.avatarColor} disabled={fieldsDisabled} onChange={onAvatarColorChange} />
-            </div>
-          )}
+          {/* the bubble straddles the banner's edge, its tail pointing down at the avatar; the colour
+              picker (editor only) sits under it at the avatar's foot */}
+          <div className="flex min-w-0 flex-1 flex-col gap-4 self-stretch pt-6">
+            <CustomStatusBubble custom={customStatus ?? null} onEdit={onEditCustomStatus} onClear={onClearCustomStatus} className="ml-1" />
+            {onAvatarColorChange && (
+              <div className="mt-auto mb-1">
+                <ProfileColorPicker userId={user.id} value={user.avatarColor} disabled={fieldsDisabled} onChange={onAvatarColorChange} />
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="mt-3 flex min-w-0 flex-col gap-1">
@@ -232,7 +247,6 @@ export function ProfileCard({
               </span>
             )}
           </div>
-          <CustomStatusText custom={customStatus ?? null} className="mt-1 text-label text-text-secondary" />
         </div>
 
         {actions && <div className="mt-4">{actions}</div>}

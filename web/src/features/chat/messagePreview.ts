@@ -7,7 +7,7 @@ import { dmCallLine } from './dmCallLine';
  * (sidebar subtitle, desktop notification). Invite cards have an empty
  * `text`, so without this they would read as an attachment. */
 export function messagePreviewText(
-  message: Pick<ChatMessage, 'text' | 'kind' | 'invitation' | 'callInvite' | 'richEmbeds'> & Partial<Pick<ChatMessage, 'id' | 'name' | 'callDurationSeconds'>>,
+  message: Pick<ChatMessage, 'text' | 'kind' | 'invitation' | 'callInvite' | 'richEmbeds'> & Partial<Pick<ChatMessage, 'id' | 'name' | 'callDurationSeconds' | 'attachments'>>,
   viewerId?: string | null,
 ): string {
   if (message.kind === 'dm_call') {
@@ -25,6 +25,7 @@ export function messagePreviewText(
     return message.callInvite ? i18n.t('chat:preview.callInvite', { title: message.callInvite.channelName }) : i18n.t('chat:preview.callInviteUnavailable');
   }
   if (gifMessageUrl(message.text)) return 'GIF';
+  if (!message.text && message.attachments?.[0]?.voice) return `🎤 ${i18n.t('voiceMessages:preview')}`;
   // a bot may send only a card: its title says what it's about
   const card = message.richEmbeds?.[0];
   return message.text || card?.title || card?.description || (card ? i18n.t('chat:preview.notice') : i18n.t('chat:preview.attachment'));

@@ -1,5 +1,5 @@
 import { PlusIcon } from '@phosphor-icons/react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import type { Area } from 'react-easy-crop';
 import { useTranslation } from 'react-i18next';
@@ -16,16 +16,18 @@ import { formatMB } from '@/shared/lib/formatBytes';
 import { AVATAR_MIME_TYPES, MAX_AVATAR_BYTES } from '@/shared/types/protocol';
 import { Button } from '@/shared/ui/primitives/button';
 import { ProfileCard } from './ProfileCard';
-import { FLOATING_BAR_SLOT_CLASS, FloatingBar, FloatingBarSlotProvider } from './FloatingBar';
+import { FLOATING_BAR_SLOT_CLASS, FloatingBar, FloatingBarSlotProvider, SAVED_BAR_MS } from '@/shared/FloatingBar';
 import { ProfileConnections } from './ProfileConnections';
 import { ProfileSidebar } from './ProfileSidebar';
+import type { WallDraft } from './ProfileWall';
 import { BANNER_ASPECT_RATIO } from './profileLinks';
 import { UnsavedProfileChangesDialog } from './UnsavedProfileChangesDialog';
 import { describeProfileSaveError } from './useProfileUpdate';
 import { formatProfileDate } from './useProfileDetails';
 import type { useProfileDetails } from './useProfileDetails';
-import { useProfileDraft } from './useProfileDraft';
+import { useProfileDraft, type ProfileDraftFields } from './useProfileDraft';
 import type { DisplayStatus } from '@/features/status/statusDisplay';
+import { useCustomStatusActions } from '@/features/status/useCustomStatusActions';
 import type { CustomStatus } from '@/shared/types/protocol';
 
 type ProfileCropTarget = { field: 'avatar' | 'banner'; file: File; src: string };
@@ -65,6 +67,13 @@ export function ProfileEditor({ status, customStatus, details, onClose, register
   const [activeUpload, setActiveUpload] = useState<{ field: 'avatar' | 'banner'; phase: ProfileImageUploadPhase } | null>(null);
   // what to do once the unsaved-changes prompt is answered (close, or follow a link)
   const [pendingLeave, setPendingLeave] = useState<(() => void) | null>(null);
+  const [customStatusError, setCustomStatusError] = useState<string | null>(null);
+  // the Wall's unsaved change, if any: it has its own Save, but closing the profile drops it all the same
+  const wallDraft = useRef<WallDraft | null>(null);
+  const onWallDraftChange = useCallback((next: WallDraft | null) => { wallDraft.current = next; }, []);
+  const [wallSaving, setWallSaving] = useState(false);
+  const [wallSaveError, setWallSaveError] = useState<string | null>(null);
+  const customStatusActions = useCustomStatusActions(setCustomStatusError);
 
   // Avatar and banner save immediately; text fields use the draft flow.
   const baseline = useMemo(() => ({
@@ -94,15 +103,21 @@ export function ProfileEditor({ status, customStatus, details, onClose, register
   const [justSaved, setJustSaved] = useState(false);
   useEffect(() => {
     if (!justSaved) return;
-    const timeout = window.setTimeout(() => setJustSaved(false), 2200);
+    const timeout = window.setTimeout(() => setJustSaved(false), SAVED_BAR_MS);
     return () => window.clearTimeout(timeout);
   }, [justSaved]);
+  // an edit made while the bar still confirms the last save is a new pending change: show it, and Save, at once
+  function edit<K extends keyof ProfileDraftFields>(key: K, value: ProfileDraftFields[K]) {
+    setJustSaved(false);
+    setField(key, value);
+  }
 
   // Closing the modal (Esc, the X, the backdrop) with a dirty draft asks
   // first instead of silently dropping it.
   useEffect(() => {
     registerLeaveGuard(() => {
-      if (!dirty) return true;
+      if (!dirty && !wallDraft.current) return true;
+      setWallSaveError(null);
       setPendingLeave(() => onClose);
       return false;
     });
@@ -110,8 +125,10 @@ export function ProfileEditor({ status, customStatus, details, onClose, register
   }, [registerLeaveGuard, dirty, onClose]);
 
   function leave(action: () => void) {
-    if (dirty) setPendingLeave(() => action);
-    else action();
+    if (dirty || wallDraft.current) {
+      setWallSaveError(null);
+      setPendingLeave(() => action);
+    } else action();
   }
 
   async function handleSave() {
@@ -131,17 +148,30 @@ export function ProfileEditor({ status, customStatus, details, onClose, register
 
   async function handleSaveAndLeave() {
     try {
-      await save();
-      const action = pendingLeave;
-      setPendingLeave(null);
-      action?.();
+      if (dirty) await save();
     } catch {
       // dialog stays open, `saveError` shows why
+      return;
     }
+    const wall = wallDraft.current;
+    if (wall) {
+      setWallSaveError(null);
+      setWallSaving(true);
+      const saved = await wall.save();
+      setWallSaving(false);
+      if (!saved) {
+        setWallSaveError(t('wall.saveFailed'));
+        return;
+      }
+    }
+    const action = pendingLeave;
+    setPendingLeave(null);
+    action?.();
   }
 
   function handleDiscardAndLeave() {
     discard();
+    wallDraft.current?.reset();
     const action = pendingLeave;
     setPendingLeave(null);
     action?.();
@@ -245,15 +275,17 @@ export function ProfileEditor({ status, customStatus, details, onClose, register
             }}
             status={status}
             customStatus={customStatus}
+            onEditCustomStatus={() => { setCustomStatusError(null); customStatusActions.openEditor(); }}
+            onClearCustomStatus={() => { setCustomStatusError(null); customStatusActions.clear(); }}
             onAvatarUpload={() => avatarFileInputRef.current?.click()}
             onAvatarRemove={() => void handleRemoveImage('avatar')}
             avatarUploading={uploadingAvatar}
             onBannerUpload={() => bannerFileInputRef.current?.click()}
             onBannerRemove={() => void handleRemoveImage('banner')}
             bannerUploading={uploadingBanner}
-            onDisplayNameChange={(value) => setField('displayName', value)}
-            onBioChange={(value) => setField('bio', value)}
-            onAvatarColorChange={(value) => setField('avatarColor', value)}
+            onDisplayNameChange={(value) => edit('displayName', value)}
+            onBioChange={(value) => edit('bio', value)}
+            onAvatarColorChange={(value) => edit('avatarColor', value)}
             hideLinks
             fieldsDisabled={saving}
             footer={(
@@ -268,6 +300,7 @@ export function ProfileEditor({ status, customStatus, details, onClose, register
                 )}
                 {avatarError && <p role="alert" className="text-label text-red">{avatarError}</p>}
                 {bannerError && <p role="alert" className="text-label text-red">{bannerError}</p>}
+                {customStatusError && <p role="alert" className="text-label text-red">{customStatusError}</p>}
                 <dl className="flex flex-col gap-3">
                   {details.details && (
                     <div>
@@ -282,7 +315,7 @@ export function ProfileEditor({ status, customStatus, details, onClose, register
                   <button
                     type="button"
                     onClick={() => leave(() => { navigate(ROUTES.settingsTab('connections')); onClose(); })}
-                    className="inline-flex w-fit items-center gap-1.5 rounded-md py-1 text-label text-text-secondary transition-colors hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="touch-target relative inline-flex w-fit items-center gap-1.5 rounded-md py-1 text-label text-text-secondary transition-colors hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <PlusIcon size={14} aria-hidden />
                     {t('integration.addLink')}
@@ -303,7 +336,8 @@ export function ProfileEditor({ status, customStatus, details, onClose, register
               onRetry={details.retry}
               onOpenProfile={() => {}}
               onOpenServer={() => {}}
-              onNavigate={() => leave(onClose)}
+              onLeave={(go) => leave(() => { go(); onClose(); })}
+              onWallDraftChange={onWallDraftChange}
             />
           </div>
         )}
@@ -324,21 +358,23 @@ export function ProfileEditor({ status, customStatus, details, onClose, register
           onChange={(e) => handleFilePicked('banner', e)}
         />
 
-        {showBar && (
-          <FloatingBar
-            label={t('editor.barLabel')}
-            status={saving ? 'saving' : saveState === 'error' ? 'error' : justSaved ? 'saved' : 'pending'}
-            error={saveError}
-            onReset={dirty ? discard : undefined}
-          />
-        )}
-        <div ref={setBarSlot} className={FLOATING_BAR_SLOT_CLASS} />
+        <FloatingBar
+          open={showBar}
+          label={t('editor.barLabel')}
+          status={saving ? 'saving' : saveState === 'error' ? 'error' : justSaved ? 'saved' : 'pending'}
+          error={saveError}
+          onReset={dirty ? discard : undefined}
+        />
+        {/* a phone's modal runs under the home indicator: the bars rest above it */}
+        <div ref={setBarSlot} className={cn(FLOATING_BAR_SLOT_CLASS, 'bottom-[calc(1rem+var(--safe-bottom))] md:bottom-4')} />
       </form>
+
+      {customStatusActions.dialog}
 
       <UnsavedProfileChangesDialog
         open={pendingLeave !== null}
-        saving={saving}
-        error={saveError}
+        saving={saving || wallSaving}
+        error={saveError ?? wallSaveError}
         onContinueEditing={() => setPendingLeave(null)}
         onDiscardAndLeave={handleDiscardAndLeave}
         onSaveAndLeave={() => void handleSaveAndLeave()}

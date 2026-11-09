@@ -325,6 +325,18 @@ describe('MessageComposer — mentions (@)', () => {
     expect(screen.queryByText('Ana Silva')).not.toBeInTheDocument();
   });
 
+  it('arrow keys move the highlighted candidate both ways, wrapping around', async () => {
+    const user = userEvent.setup();
+    renderComposer();
+
+    const textarea = screen.getByPlaceholderText(/^Conversar/);
+    await user.type(textarea, 'oi @an');
+    await screen.findByText('Ana Silva');
+    // ana, andre: up from the first wraps to the last
+    await user.keyboard('{ArrowUp}{Enter}');
+    expect(textarea).toHaveValue('oi @andre ');
+  });
+
   it('clicking a candidate inserts the mention', async () => {
     const user = userEvent.setup();
     renderComposer();

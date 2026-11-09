@@ -47,7 +47,8 @@
     "participant": "participant",
     "stoppedWatching": "You stopped watching",
     "previewPaused": "Preview paused",
-    "hiddenVideo": "Video hidden"
+    "hiddenVideo": "Video hidden",
+    "moreActions": "More actions for {{name}}"
   },
   "tileGrid": {
     "participants_one": "{{count}} participant",
@@ -76,7 +77,8 @@
     "bitrate": "Bitrate: {{value}} kbps",
     "resolution": "Resolution: {{value}}",
     "onAir": "On air: {{value}}",
-    "removeFromCall": "Remove from call"
+    "removeFromCall": "Remove from call",
+    "volume": "Volume"
   },
   "devices": {
     "permission": "Allow access to devices",

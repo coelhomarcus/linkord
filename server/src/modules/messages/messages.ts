@@ -44,6 +44,7 @@ import { loadCallInviteCards, type CallInviteCard } from '../calls/callInviteCar
 import { revokeInvitationForDeletedCard } from '../servers/serverInvitationsRepository.js';
 import type { AppSocket, HandlerTable, Participant } from '../../types.js';
 import { logger } from '../../lib/logger.js';
+import { voicePayload, type VoiceMeta } from '../attachments/voiceMessages.js';
 
 const log = logger.child({ component: 'audit' });
 
@@ -92,7 +93,7 @@ interface ChatMessagePayload {
   editedAt?: number;
   replyTo?: ReplyRef;
   reactions?: Record<string, string[]>;
-  attachments?: { id: string; name: string; mime: string; size: number; thumbId?: string; width?: number; height?: number; placeholder?: string }[];
+  attachments?: { id: string; name: string; mime: string; size: number; thumbId?: string; width?: number; height?: number; placeholder?: string; voice?: VoiceMeta }[];
   // the author's send key, echoed back so their client can reconcile its
   // pending copy with the stored message
   clientMessageId?: string;
@@ -247,6 +248,7 @@ export function rowToMessage(row: MessageWithAuthor, attachments?: Attachment[],
       id: a.id, name: a.fileName, mime: a.mimeType, size: a.size, ...(a.thumbId ? { thumbId: a.thumbId } : {}),
       ...(a.width && a.height ? { width: a.width, height: a.height } : {}),
       ...(a.placeholder ? { placeholder: a.placeholder } : {}),
+      ...voicePayload(a),
     }));
   }
   return out;
