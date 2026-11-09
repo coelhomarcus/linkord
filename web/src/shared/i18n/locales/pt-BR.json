@@ -29,7 +29,8 @@
     "tryAgain": "Tentar de novo",
     "settings": "Ajustes",
     "administration": "Administração",
-    "loading": "Carregando…"
+    "loading": "Carregando…",
+    "dismissNotice": "Dispensar aviso"
   },
   "upload": {
     "missingConversation": "Conversa não informada.",

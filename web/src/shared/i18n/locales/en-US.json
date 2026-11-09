@@ -29,7 +29,8 @@
     "tryAgain": "Try again",
     "settings": "Settings",
     "administration": "Administration",
-    "loading": "Loading…"
+    "loading": "Loading…",
+    "dismissNotice": "Dismiss notice"
   },
   "upload": {
     "missingConversation": "Conversation not provided.",

@@ -46,7 +46,7 @@ export function PendingAttachments({ attachments }: { attachments: OutboxAttachm
             >
               <img src={attachment.previewUrl} alt={attachment.name} className={cn('size-full object-cover', !done && 'opacity-60')} />
               {attachment.failed ? (
-                <span className="absolute right-1.5 top-1.5 rounded-full bg-bg-primary/80 p-0.5 text-red" aria-label="Falhou">
+                <span className="absolute right-1.5 top-1.5 rounded-full bg-bg-primary/80 p-0.5 text-red" aria-label={i18n.t('chat:pending.attachmentFailed')}>
                   <WarningCircleIcon size={16} />
                 </span>
               ) : !done && (
