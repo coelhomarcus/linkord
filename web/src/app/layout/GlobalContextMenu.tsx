@@ -271,7 +271,7 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
             resize when "+" swaps the quick reactions for the full picker;
             every other block is a handful of short text items, so those keep
             the component's own natural width. */}
-        <ContextMenuContent keepMounted={emojiPickerWarmed} className={showMessageBlock && can?.react ? 'w-75' : undefined}>
+        <ContextMenuContent keepMounted={emojiPickerWarmed} className={showMessageBlock && can?.react ? 'w-[22rem] max-w-[calc(100vw-1rem)]' : undefined}>
           {showMessageBlock && targetMessage && (
             <>
               {can?.react && (
@@ -282,6 +282,7 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
                     quickRowClassName="justify-between pb-1"
                     onPick={(emoji) => handleReact(targetMessage.msgId, emoji)}
                     onMore={() => setFullEmojiPicker(true)}
+                    onClose={() => contextMenuActionsRef.current?.close()}
                   />
                   <ContextMenuSeparator />
                 </>

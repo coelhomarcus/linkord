@@ -20,8 +20,8 @@ import { logger } from '../../lib/logger.js';
 const log = logger.child({ component: 'server-emojis' });
 
 // Discord's base tier: static and animated slots are counted apart
-export const MAX_STATIC_EMOJIS = 50;
-export const MAX_ANIMATED_EMOJIS = 50;
+const MAX_STATIC_EMOJIS = 50;
+const MAX_ANIMATED_EMOJIS = 50;
 const EMOJI_UPLOAD_LIMIT = { windowMs: 60_000, max: 10 };
 const NAME_RE = /^[a-z0-9_]{2,32}$/;
 

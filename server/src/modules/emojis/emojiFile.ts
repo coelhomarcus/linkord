@@ -9,7 +9,7 @@ export const EMOJI_SIZE_PX = 128;
 // a cropped upload the client already shrank; what's past this isn't an emoji
 export const MAX_EMOJI_UPLOAD_BYTES = 2 * 1024 * 1024;
 // a long animation at 128px can still come out heavy; past this it's refused
-export const MAX_EMOJI_FILE_BYTES = 512 * 1024;
+const MAX_EMOJI_FILE_BYTES = 512 * 1024;
 const MAX_SOURCE_DIMENSION = 4096;
 const MAX_FRAMES = 300;
 const ACCEPTED_FORMATS = new Set(['png', 'jpeg', 'gif', 'webp']);

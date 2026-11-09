@@ -184,5 +184,10 @@
     "ended": "A chamada terminou",
     "notMember": "Você não faz mais parte desse canal.",
     "unavailable": "Convite para chamada indisponível"
+  },
+  "expressions": {
+    "label": "Expressões",
+    "gifs": "GIFs",
+    "emoji": "Emoji"
   }
 }

@@ -7,6 +7,7 @@ import { MessageComposer } from '@/features/chat/MessageComposer';
 import { clearAllDrafts } from '@/features/chat/conversationDrafts';
 import type { GifConfig } from '@/shared/api/api';
 import * as klipy from '@/features/gifs/klipy';
+import { primeTestEmojiData } from '@tests/fixtures/emojiDataFixture';
 
 const config = vi.hoisted(() => ({ current: null as GifConfig | null }));
 vi.mock('@/features/gifs/useGifConfig', () => ({ useGifConfig: () => config.current }));
@@ -65,5 +66,18 @@ describe('MessageComposer — GIFs', () => {
     expect(sendChatMessage).toHaveBeenCalledWith('conv-1', gif.full.url, undefined);
     expect(mocked.reportGifShared).toHaveBeenCalledWith(enabled, 'hello-1', '');
     expect(screen.getByPlaceholderText('Mensagem')).toHaveValue('rascunho');
+  });
+
+  it('the GIF picker and the emoji picker are tabs of one panel', async () => {
+    config.current = enabled;
+    primeTestEmojiData();
+    const user = userEvent.setup();
+    renderWithRoom(<MessageComposer conversationId="conv-1" />, { state: joinedState });
+
+    await user.click(screen.getByRole('button', { name: 'Enviar GIF' }));
+    expect(screen.getByRole('tab', { name: 'GIFs' })).toHaveAttribute('aria-selected', 'true');
+    await user.click(screen.getByRole('tab', { name: 'Emoji' }));
+    await user.click(await screen.findByRole('gridcell', { name: '🐶 dog face' }));
+    expect(screen.getByPlaceholderText('Mensagem')).toHaveValue('🐶');
   });
 });

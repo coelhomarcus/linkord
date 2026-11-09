@@ -38,7 +38,6 @@
     "@twinkleplop/yaml": "^0.1.7",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "frimousse": "^0.3.0",
     "i18next": "^26.6.0",
     "livekit-client": "^2.22.0",
     "motion": "^13.2.0",

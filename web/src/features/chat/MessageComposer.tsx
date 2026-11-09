@@ -5,9 +5,8 @@ import type { ChangeEvent, ClipboardEvent, KeyboardEvent as ReactKeyboardEvent, 
 
 import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { Button } from '@/shared/ui/primitives/button';
-import { EmojiPicker, EmojiPickerContent, EmojiPickerSearch } from '@/shared/ui/primitives/emoji-picker';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/primitives/popover';
-import { Dialog, DialogContent } from '@/shared/ui/primitives/dialog';
+import { Sheet } from '@/shared/ui/motion/sheet';
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/shared/ui/primitives/dropdown-menu';
 import { Textarea } from '@/shared/ui/primitives/textarea';
 import { Avatar } from '@/shared/Avatar';
@@ -19,7 +18,6 @@ import { useRoom } from '@/state/RoomContext';
 import { readDraft, updateConversationDraft, useConversationDraft, type PendingAttachment } from './conversationDrafts';
 import { MAX_ATTACHMENTS_PER_MESSAGE } from '@/shared/types/protocol';
 import type { PublicUser } from '@/shared/types/protocol';
-import { GifPicker } from '@/features/gifs/GifPicker';
 import { reportGifShared } from '@/features/gifs/klipy';
 import type { Gif } from '@/features/gifs/klipy';
 import { useGifConfig } from '@/features/gifs/useGifConfig';
@@ -29,7 +27,8 @@ import { VoiceMicButton, VoiceNoticeBanner, VoiceRecordingBar, VoiceReviewBar } 
 import { isVoiceShortcut, useComposerVoice } from '@/features/voiceMessages/useComposerVoice';
 import type { VoiceTake } from '@/features/voiceMessages/useVoiceRecorder';
 import { hasPermission, PERMISSIONS } from '@/features/servers/permissionBits';
-import { noteExpressionUse } from '@/features/emoji/frequentExpressions';
+import type { EmojiPick } from '@/features/emoji/EmojiPicker';
+import { ExpressionPicker, type ExpressionTab } from './ExpressionPicker';
 import { EmojiSuggestions } from './EmojiSuggestions';
 import { useEmojiAutocomplete } from './useEmojiAutocomplete';
 import { customEmojisAsText, encodeCustomEmojis } from '@/features/emoji/customEmojiText';
@@ -72,14 +71,28 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
   const { text, pendingFiles, attachError, voice: voiceTake } = draft;
   const setText = (next: string) => updateDraft(() => ({ text: next }));
   const [compressImages, setCompressImages] = useState(compressImagesDefault);
-  const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
-  const [gifPickerOpen, setGifPickerOpen] = useState(false);
-  const [mobileEmojiOpen, setMobileEmojiOpen] = useState(false);
-  const [mobileGifOpen, setMobileGifOpen] = useState(false);
+  // which of the composer's two buttons (GIF, emoji) has the expressions
+  // open; each opens on its own tab, and either can switch. On a phone they
+  // open in a sheet instead.
+  const [expressions, setExpressions] = useState<ExpressionTab | null>(null);
+  const [gifPopoverTab, setGifPopoverTab] = useState<ExpressionTab>('gifs');
+  const [emojiPopoverTab, setEmojiPopoverTab] = useState<ExpressionTab>('emoji');
+  const [mobileTab, setMobileTab] = useState<ExpressionTab>('emoji');
+  const [mobileExpressions, setMobileExpressions] = useState(false);
   const gifConfig = useGifConfig();
-  // once opened, keeps the picker mounted (hidden) instead of paying its
-  // dataset fetch/measure cost again on every open — see useKeepPopoverWarm.
-  const emojiPickerWarmed = useKeepPopoverWarm(emojiPickerOpen);
+  // once opened, the emoji picker stays mounted (hidden): its search and
+  // scroll are still there next time, and nothing is measured again — see useKeepPopoverWarm
+  const emojiPopoverWarmed = useKeepPopoverWarm(expressions === 'emoji');
+  const mobileExpressionsWarmed = useKeepPopoverWarm(mobileExpressions);
+  function openExpressions(tab: ExpressionTab | null) {
+    setExpressions(tab);
+    if (tab === 'gifs') setGifPopoverTab('gifs');
+    if (tab === 'emoji') setEmojiPopoverTab('emoji');
+  }
+  function openMobileExpressions(tab: ExpressionTab) {
+    setMobileTab(tab);
+    setMobileExpressions(true);
+  }
   // active "@query" under the cursor, or null when not mentioning anyone
   // right now (see getMentionQuery) — drives the autocomplete dropdown.
   const [mentionQuery, setMentionQuery] = useState<{ start: number; query: string } | null>(null);
@@ -341,8 +354,8 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
   // being typed stays in the field, and only the reply target is used up
   function sendGif(gif: Gif, query: string) {
     if (!state.joined || gifConfig?.enabled !== true) return;
-    setGifPickerOpen(false);
-    setMobileGifOpen(false);
+    setExpressions(null);
+    setMobileExpressions(false);
     sendChatMessage(conversationId, gif.full.url, replyingTo?.msgId);
     setReplyingTo(null);
     reportGifShared(gifConfig, gif.slug, query);
@@ -372,14 +385,14 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
     addFiles(files);
   }
 
-  function insertEmoji(emoji: string) {
+  // a server emoji goes in as its :name:, like one typed; it is sent as its token
+  function insertEmoji({ text: emoji }: EmojiPick) {
     const el = textareaRef.current;
     const start = el?.selectionStart ?? text.length;
     const end = el?.selectionEnd ?? text.length;
     setText(text.slice(0, start) + emoji + text.slice(end));
-    noteExpressionUse('emojis', [emoji]);
-    setEmojiPickerOpen(false);
-    setMobileEmojiOpen(false);
+    setExpressions(null);
+    setMobileExpressions(false);
     setMentionQuery(null);
     emojiSuggestions.close();
     // caret restore has to wait for the controlled value to actually reach
@@ -501,8 +514,8 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
               <DropdownMenuContent side="top" align="start" className="w-72">
                 {canAttach && <DropdownMenuItem onClick={() => fileInputRef.current?.click()}><PaperclipIcon size={16} />{t('composer.attachFiles')}</DropdownMenuItem>}
                 {canAttach && <DropdownMenuItem onClick={() => imageInputRef.current?.click()}><ImageSquareIcon size={16} />{t('composer.sendImages')}</DropdownMenuItem>}
-                {gifConfig?.enabled && <DropdownMenuItem className="md:hidden" onClick={() => setMobileGifOpen(true)}><GifIcon size={16} />{t('composer.gif')}</DropdownMenuItem>}
-                <DropdownMenuItem className="md:hidden" onClick={() => setMobileEmojiOpen(true)}><SmileyIcon size={16} />{t('composer.insertEmoji')}</DropdownMenuItem>
+                {gifConfig?.enabled && <DropdownMenuItem className="md:hidden" onClick={() => openMobileExpressions('gifs')}><GifIcon size={16} />{t('composer.gif')}</DropdownMenuItem>}
+                <DropdownMenuItem className="md:hidden" onClick={() => openMobileExpressions('emoji')}><SmileyIcon size={16} />{t('composer.insertEmoji')}</DropdownMenuItem>
                 {canAttach && (
                   <>
                     <DropdownMenuSeparator />
@@ -543,33 +556,35 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
               </span>
             )}
             {/* each popover trigger in a box of its own: the focus guards it adds
-                while open must not become flex items of this row */}
+                while open must not become flex items of this row. Both buttons
+                open the same picker, each on its own tab. */}
             {gifConfig?.enabled && (
               <div className="flex flex-none max-md:hidden">
-              <Popover open={gifPickerOpen} onOpenChange={setGifPickerOpen}>
+              <Popover open={expressions === 'gifs'} onOpenChange={(open) => openExpressions(open ? 'gifs' : null)}>
                 <PopoverTrigger
                   render={<Button type="button" variant="ghost" size="icon" aria-label={t('composer.sendGif')} disabled={disabled} className={`${iconButton} max-md:hidden`} />}
                 >
                   <span aria-hidden className="rounded-[4px] border-2 border-current px-[3px] py-[2px] text-[9px] font-extrabold leading-none tracking-wide">GIF</span>
                 </PopoverTrigger>
-                <PopoverContent className="w-[26rem] max-w-[calc(100vw-1.5rem)] rounded-[12px] border-border-default bg-bg-modal p-0" side="top" align="end" sideOffset={12}>
-                  <GifPicker config={gifConfig} onPick={sendGif} />
+                <PopoverContent className="w-[28rem] max-w-[calc(100vw-1.5rem)] rounded-[12px] border-border-default bg-bg-modal p-0" side="top" align="end" sideOffset={12}>
+                  {expressions === 'gifs' && (
+                    <ExpressionPicker tab={gifPopoverTab} onTabChange={setGifPopoverTab} gifConfig={gifConfig} onGif={sendGif} onEmoji={insertEmoji} />
+                  )}
                 </PopoverContent>
               </Popover>
               </div>
             )}
             <div className="flex flex-none max-md:hidden">
-            <Popover open={emojiPickerOpen} onOpenChange={setEmojiPickerOpen}>
+            <Popover open={expressions === 'emoji'} onOpenChange={(open) => openExpressions(open ? 'emoji' : null)}>
               <PopoverTrigger
                 render={<Button type="button" variant="ghost" size="icon" aria-label={t('composer.insertEmoji')} disabled={disabled} className={`${iconButton} max-md:hidden`} />}
               >
                 <SmileyIcon size={24} weight="fill" />
               </PopoverTrigger>
-              <PopoverContent keepMounted={emojiPickerWarmed} className="w-[22rem] rounded-[12px] border-border-default bg-bg-modal p-0" side="top" align="end" sideOffset={12}>
-                <EmojiPicker className="h-[26rem] w-full" onEmojiSelect={({ emoji }) => insertEmoji(emoji)}>
-                  <EmojiPickerSearch />
-                  <EmojiPickerContent />
-                </EmojiPicker>
+              <PopoverContent keepMounted={emojiPopoverWarmed} className="w-[28rem] max-w-[calc(100vw-1.5rem)] rounded-[12px] border-border-default bg-bg-modal p-0" side="top" align="end" sideOffset={12}>
+                {emojiPopoverWarmed && (
+                  <ExpressionPicker tab={emojiPopoverTab} onTabChange={setEmojiPopoverTab} gifConfig={gifConfig} onGif={sendGif} onEmoji={insertEmoji} />
+                )}
               </PopoverContent>
             </Popover>
             </div>
@@ -591,19 +606,11 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
           )}
         </div>
       </div>
-      {gifConfig?.enabled && <Dialog open={mobileGifOpen} onOpenChange={setMobileGifOpen}>
-        <DialogContent aria-label={t('composer.sendGif')} className="w-[calc(100vw-1rem)] max-w-md bg-bg-modal p-2 md:hidden">
-          <GifPicker config={gifConfig} onPick={sendGif} />
-        </DialogContent>
-      </Dialog>}
-      <Dialog open={mobileEmojiOpen} onOpenChange={setMobileEmojiOpen}>
-        <DialogContent aria-label={t('composer.insertEmoji')} className="w-[calc(100vw-1rem)] max-w-md bg-bg-modal p-2 md:hidden">
-          <EmojiPicker className="h-[min(22rem,60dvh)] w-full" onEmojiSelect={({ emoji }) => insertEmoji(emoji)}>
-            <EmojiPickerSearch />
-            <EmojiPickerContent />
-          </EmojiPicker>
-        </DialogContent>
-      </Dialog>
+      <Sheet open={mobileExpressions} onOpenChange={setMobileExpressions} side="bottom" ariaLabel={t(mobileTab === 'gifs' ? 'composer.sendGif' : 'composer.insertEmoji')} className="bg-bg-modal md:hidden">
+        {mobileExpressionsWarmed && (
+          <ExpressionPicker tab={mobileTab} onTabChange={setMobileTab} gifConfig={gifConfig} onGif={sendGif} onEmoji={insertEmoji} autoFocus={false} className="[&_[data-slot=emoji-picker]]:h-[min(26rem,65dvh)]" />
+        )}
+      </Sheet>
     </div>
   );
 });

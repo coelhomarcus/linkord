@@ -41,5 +41,38 @@
   },
   "custom": {
     "from": "De {{server}}"
+  },
+  "picker": {
+    "search": "Encontre o emoji perfeito",
+    "searchLabel": "Buscar emoji",
+    "grid": "Emojis",
+    "sections": "Seções de emojis",
+    "frequent": "Utilizados com frequência",
+    "results": "Resultados",
+    "noResults": "Nenhum emoji encontrado.",
+    "loading": "Carregando emojis…",
+    "categories": {
+      "people": "Pessoas",
+      "nature": "Natureza",
+      "food": "Comida",
+      "activities": "Atividades",
+      "travel": "Viagens",
+      "objects": "Objetos",
+      "symbols": "Símbolos",
+      "flags": "Bandeiras"
+    },
+    "collapse": "Recolher {{section}}",
+    "expand": "Expandir {{section}}",
+    "add": "Adicionar emoji em {{server}}",
+    "skinTone": "Tom de pele",
+    "tones": {
+      "0": "Padrão",
+      "1": "Clara",
+      "2": "Média-clara",
+      "3": "Média",
+      "4": "Média-escura",
+      "5": "Escura"
+    },
+    "hint": "Passe o cursor sobre um emoji para ver o nome"
   }
 }

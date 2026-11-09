@@ -81,6 +81,11 @@ export function useKnownCustomEmoji(emojiId: string): CustomEmoji | undefined {
   return useSyncExternalStore(subscribe, () => state.byId.get(emojiId));
 }
 
+/** The names a server's emojis already use, as far as this account knows. */
+export function emojiNamesInServer(serverId: string): Set<string> {
+  return new Set(state.servers.find((group) => group.serverId === serverId)?.emojis.map((e) => e.name) ?? []);
+}
+
 /** For tests. */
 export function setMyEmojisForTests(accountId: string, servers: ServerEmojiGroup[]): void {
   set({ accountId, status: 'ready', servers, byId: new Map(servers.flatMap((g) => g.emojis.map((e) => [e.id, e] as const))) });

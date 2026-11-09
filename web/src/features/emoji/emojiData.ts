@@ -29,7 +29,7 @@ type RawEntry = [string, string, number, string[], string[], string[]?];
 
 export type EmojiDataLang = 'pt' | 'en';
 
-export function emojiDataLang(language: string | undefined = i18n.language): EmojiDataLang {
+function emojiDataLang(language: string | undefined = i18n.language): EmojiDataLang {
   return language?.toLowerCase().startsWith('pt') ? 'pt' : 'en';
 }
 
@@ -52,7 +52,7 @@ export function buildEmojiData(raw: RawEntry[]): EmojiData {
 const loads = new Map<EmojiDataLang, Promise<EmojiData>>();
 const loaded = new Map<EmojiDataLang, EmojiData>();
 
-export function loadEmojiData(lang: EmojiDataLang = emojiDataLang()): Promise<EmojiData> {
+function loadEmojiData(lang: EmojiDataLang = emojiDataLang()): Promise<EmojiData> {
   let pending = loads.get(lang);
   if (!pending) {
     pending = fetch(`/emoji-data/${lang}/emojis.json`)

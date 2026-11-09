@@ -92,11 +92,11 @@ function ReactionButton({ onPick }: { onPick: (emoji: string) => void }) {
       </PopoverTrigger>
       <PopoverContent
         keepMounted={warmed}
-        className={fullPickerOpen ? 'w-75 p-0' : 'w-auto p-1.5'}
+        className={fullPickerOpen ? 'w-[22rem] max-w-[calc(100vw-1rem)] p-0' : 'w-auto p-1.5'}
         side="top"
         align="center"
       >
-        <ReactionEmojiPicker fullPickerOpen={fullPickerOpen} warmed={warmed} onPick={pick} onMore={() => setFullPickerOpen(true)} />
+        <ReactionEmojiPicker fullPickerOpen={fullPickerOpen} warmed={warmed} onPick={pick} onMore={() => setFullPickerOpen(true)} onClose={() => setOpen(false)} />
       </PopoverContent>
     </Popover>
   );

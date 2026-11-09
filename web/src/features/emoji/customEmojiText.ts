@@ -29,7 +29,7 @@ export function customReactionId(key: string): string | null {
   return key.startsWith(REACTION_PREFIX) && /^[0-9a-f]{32}$/.test(key.slice(REACTION_PREFIX.length)) ? key.slice(REACTION_PREFIX.length) : null;
 }
 
-export function customEmojiToken(emoji: Pick<CustomEmoji, 'id' | 'name' | 'animated'>): string {
+function customEmojiToken(emoji: Pick<CustomEmoji, 'id' | 'name' | 'animated'>): string {
   return `<${emoji.animated ? 'a' : ''}:${emoji.name}:${emoji.id}>`;
 }
 

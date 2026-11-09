@@ -57,7 +57,7 @@ export async function recordExpressionUsage(userId: string, kind: ExpressionKind
   }
 }
 
-export interface FrequentExpression {
+interface FrequentExpression {
   key: string;
   count: number;
 }

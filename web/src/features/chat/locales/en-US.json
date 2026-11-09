@@ -183,5 +183,10 @@
     "ended": "The call has ended",
     "notMember": "You can no longer see this channel.",
     "unavailable": "Call invite unavailable"
+  },
+  "expressions": {
+    "label": "Expressions",
+    "gifs": "GIFs",
+    "emoji": "Emoji"
   }
 }

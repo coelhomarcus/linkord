@@ -1,23 +1,15 @@
 import { TrashIcon, UploadSimpleIcon } from '@phosphor-icons/react';
-import { useEffect, useRef, useState } from 'react';
-import type { Area } from 'react-easy-crop';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Avatar } from '@/shared/Avatar';
 import { ConfirmDialog } from '@/shared/ConfirmDialog';
 import { Button } from '@/shared/ui/primitives/button';
 import { cn } from '@/shared/lib/utils';
-import { ImageCropDialog } from '@/features/settings/ImageCropDialog';
-import { cropProfileImage, ProfileImageCropError } from '@/features/settings/cropProfileImage';
-import {
-  deleteServerEmoji, describeEmojiError, EMOJI_NAME_RE, emojiImageUrl, renameServerEmoji, suggestEmojiName, uploadServerEmoji,
-} from './serverEmojisApi';
+import { deleteServerEmoji, describeEmojiError, EMOJI_NAME_RE, emojiImageUrl, renameServerEmoji } from './serverEmojisApi';
+import { requestEmojiUpload } from './emojiUploadRequest';
 import type { ServerEmoji } from './serverEmojisApi';
 import { useServerEmojis } from './useServerEmojis';
-
-// what the client sends: small enough for a quick upload, twice the stored size
-const UPLOAD_DIMENSION = 256;
-const ACCEPT = 'image/png,image/jpeg,image/gif,image/webp';
 
 interface ServerEmojisPanelProps {
   serverId: string;
@@ -28,59 +20,18 @@ interface ServerEmojisPanelProps {
   canManage: boolean;
 }
 
-/** A name not taken yet in this server, from the file's name. */
-function freeName(fileName: string, taken: Set<string>): string {
-  const base = suggestEmojiName(fileName) || 'emoji';
-  if (!taken.has(base)) return base;
-  for (let n = 2; ; n++) {
-    const suffix = `_${n}`;
-    const candidate = base.slice(0, 32 - suffix.length) + suffix;
-    if (!taken.has(candidate)) return candidate;
-  }
-}
-
 /** The server's emojis, as a page of its settings, Discord-style: upload
  * (crop first), the name edited in place, remove. */
 export function ServerEmojisPanel({ serverId, myUserId, canUpload, canManage }: ServerEmojisPanelProps) {
   const { t } = useTranslation('emoji');
   const { status, emojis, limits, reload } = useServerEmojis(serverId);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const [crop, setCrop] = useState<{ file: File; src: string } | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [cropError, setCropError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ServerEmoji | null>(null);
-
-  useEffect(() => () => { if (crop) URL.revokeObjectURL(crop.src); }, [crop]);
 
   const still = emojis.filter((e) => !e.animated);
   const animated = emojis.filter((e) => e.animated);
   const full = still.length >= limits.static && animated.length >= limits.animated;
   const canEdit = (emoji: ServerEmoji) => canManage || (!!myUserId && emoji.uploader?.id === myUserId);
-
-  function pickFile(files: FileList | null) {
-    const file = files?.[0];
-    if (!file) return;
-    setError(null);
-    setCropError(null);
-    setCrop({ file, src: URL.createObjectURL(file) });
-  }
-
-  async function confirmCrop(area: Area) {
-    if (!crop) return;
-    setUploading(true);
-    setCropError(null);
-    try {
-      const image = await cropProfileImage(new Uint8Array(await crop.file.arrayBuffer()), area, crop.file.type, { maxDimension: UPLOAD_DIMENSION, still: 'png' });
-      await uploadServerEmoji(serverId, image, freeName(crop.file.name, new Set(emojis.map((e) => e.name))));
-      setCrop(null);
-      await reload();
-    } catch (err) {
-      setCropError(err instanceof ProfileImageCropError ? err.message : describeEmojiError(err, 'emoji:upload.uploadFailed'));
-    } finally {
-      setUploading(false);
-    }
-  }
 
   async function handleDelete() {
     const target = deleteTarget;
@@ -157,13 +108,10 @@ export function ServerEmojisPanel({ serverId, myUserId, canUpload, canManage }: 
         <p className="text-label text-text-secondary">{t('panel.description')}</p>
         <p className="text-caption text-text-muted">{t('panel.nameRule')}</p>
         {canUpload && (
-          <>
-            <input ref={fileInputRef} type="file" accept={ACCEPT} hidden onChange={(event) => { pickFile(event.target.files); event.target.value = ''; }} />
-            <Button type="button" onClick={() => fileInputRef.current?.click()} disabled={status !== 'ready' || full} className="gap-2 self-start">
-              <UploadSimpleIcon size={16} />
-              {t('panel.upload')}
-            </Button>
-          </>
+          <Button type="button" onClick={() => { setError(null); requestEmojiUpload(serverId, new Set(emojis.map((e) => e.name))); }} disabled={status !== 'ready' || full} className="gap-2 self-start">
+            <UploadSimpleIcon size={16} />
+            {t('panel.upload')}
+          </Button>
         )}
       </div>
 
@@ -183,17 +131,6 @@ export function ServerEmojisPanel({ serverId, myUserId, canUpload, canManage }: 
         </div>
       )}
 
-      <ImageCropDialog
-        open={!!crop}
-        imageSrc={crop?.src ?? null}
-        aspect={1}
-        cropShape="rect"
-        title={t('upload.crop')}
-        processing={uploading}
-        error={cropError}
-        onCancel={() => setCrop(null)}
-        onConfirm={(area) => void confirmCrop(area)}
-      />
       <ConfirmDialog
         open={!!deleteTarget}
         onOpenChange={(next) => { if (!next) setDeleteTarget(null); }}

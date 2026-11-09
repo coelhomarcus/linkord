@@ -73,7 +73,8 @@ function trapTab(event: KeyboardEvent<HTMLDivElement>, panel: HTMLDivElement | n
 }
 
 /** A modal panel sliding in from one edge, for narrow screens: the conversation
- * list from the left, group details / media from the right.
+ * list from the left, group details / media from the right, the emoji picker
+ * from the bottom.
  *
  * It stays mounted while closed — like the desktop column, its content (a
  * search typed, a scroll position) is still there when it opens again — and
@@ -82,7 +83,7 @@ function trapTab(event: KeyboardEvent<HTMLDivElement>, panel: HTMLDivElement | n
 export function Sheet({ open, onOpenChange, side, ariaLabel, dismissLabel, className, backdropClassName, style, children }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  side: 'left' | 'right';
+  side: 'left' | 'right' | 'bottom';
   ariaLabel: string;
   /** the backdrop's label: it is a button that closes the sheet */
   dismissLabel?: string;
@@ -99,6 +100,7 @@ export function Sheet({ open, onOpenChange, side, ariaLabel, dismissLabel, class
 
   const visibility = open ? 'visible' : 'hidden';
   const offscreen = side === 'left' ? '-100%' : '100%';
+  const slide = side === 'bottom' ? { y: open ? '0%' : offscreen } : { x: open ? '0%' : offscreen };
 
   // Two fixed layers in a box-less wrapper: the backdrop spans the viewport and
   // paints the scrim, the panel is inset off one side and paints its own surface.
@@ -122,7 +124,7 @@ export function Sheet({ open, onOpenChange, side, ariaLabel, dismissLabel, class
         inert={!open}
         tabIndex={-1}
         initial={false}
-        animate={reduce ? { opacity: open ? 1 : 0, visibility } : { x: open ? '0%' : offscreen, visibility }}
+        animate={reduce ? { opacity: open ? 1 : 0, visibility } : { ...slide, visibility }}
         transition={reduce ? FADE : SLIDE}
         onKeyDown={(event) => {
           if (event.key === 'Escape') {
@@ -133,10 +135,10 @@ export function Sheet({ open, onOpenChange, side, ariaLabel, dismissLabel, class
           }
         }}
         className={cn(
-          'fixed inset-y-0 flex h-dvh flex-col overflow-hidden pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] shadow-popover outline-none will-change-transform',
-          side === 'left'
-            ? 'left-0 border-r border-border'
-            : 'right-0 w-80 max-w-[85vw] border-l border-border bg-surface-panel [--surface-base:var(--color-surface-panel)]',
+          'fixed flex flex-col overflow-hidden pb-[env(safe-area-inset-bottom)] shadow-popover outline-none will-change-transform',
+          side === 'bottom' ? 'inset-x-0 bottom-0 max-h-[85dvh] rounded-t-2xl border-t border-border' : 'inset-y-0 h-dvh pt-[env(safe-area-inset-top)]',
+          side === 'left' && 'left-0 border-r border-border',
+          side === 'right' && 'right-0 w-80 max-w-[85vw] border-l border-border bg-surface-panel [--surface-base:var(--color-surface-panel)]',
           open ? 'pointer-events-auto' : 'pointer-events-none',
           className,
         )}
