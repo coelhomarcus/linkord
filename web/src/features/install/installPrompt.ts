@@ -133,14 +133,14 @@ export function useInstall(): InstallState {
   return { method, install };
 }
 
-export interface InstallBanner {
+export interface InstallBannerState {
   method: InstallMethod | null;
   visible: boolean;
   install: () => Promise<void>;
   dismiss: () => void;
 }
 
-export function useInstallBanner(inCall: boolean): InstallBanner {
+export function useInstallBanner(inCall: boolean): InstallBannerState {
   const { method, install } = useInstall();
   const [dismissed, setDismissed] = useState(isDismissed);
   const [sessions] = useState(readInstallSessions);
