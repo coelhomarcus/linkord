@@ -59,16 +59,20 @@
   "picker": {
     "open": "Efeitos sonoros",
     "search": "Encontre o som perfeito",
-    "empty": "Este servidor ainda não tem sons.",
-    "emptyHint": "Peça a quem gerencia o servidor para adicionar sons.",
+    "empty": "Nenhum dos seus servidores tem sons ainda.",
+    "emptyHint": "Peça a quem gerencia um servidor para adicionar sons.",
     "noResults": "Nenhum som encontrado.",
     "loading": "Carregando sons…",
     "loadFailed": "Não foi possível carregar os sons.",
     "volume": "Volume dos efeitos sonoros",
     "play": "Tocar {{name}}",
-    "add": "Adicionar som",
-    "full": "O servidor já usou todos os espaços de som",
-    "emptyHintCanAdd": "Adicione o primeiro pelo botão +."
+    "emptyHintCanAdd": "Adicione o primeiro pelo botão + de um servidor.",
+    "frequent": "Utilizados com frequência",
+    "sections": "Servidores do soundboard",
+    "collapse": "Recolher {{section}}",
+    "expand": "Expandir {{section}}",
+    "addTo": "Adicionar som em {{server}}",
+    "fullIn": "{{server}} já usou todos os espaços de som"
   },
   "errors": {
     "invalid_sound": "Não foi possível ler esse áudio.",

@@ -30,7 +30,7 @@ Linkord is a self-hosted place to chat and call with friends. Talk in direct mes
   Type `:` and two letters in the composer to pick an emoji by its shortcode, or type a whole shortcode such as `:joy:` to turn it into the emoji; the ones you use most come first, on every device. The emoji picker (in the composer next to GIFs, in reactions and in your status) has search, frequently used emojis, a section per server, the standard categories, a skin tone choice and a preview; on a phone it opens as a bottom sheet. Each server can have its own emojis, up to 50 still and 50 animated, uploaded and cropped from the server's settings and stored as small WebP files. Its members use them anywhere, in other servers and DMs too, in messages and as reactions, and whoever reads the message sees the picture even from outside that server. A deleted emoji stays in old messages as its `:name:`.
 
 - **Voice, video, and screen sharing**
-  Join calls in voice channels or DMs with LiveKit. Each server also has its own soundboard, played and added to from the call's sound picker. Channel permissions decide who may connect, speak, and turn on a camera or share a screen there.
+  Join calls in voice channels or DMs with LiveKit. Each server also has its own soundboard, added to from the call's sound picker. That picker lists the sounds of every server you may use the soundboard of, frequently used ones first, and works in DM calls too: a sound from another server plays for everyone in the call, members of that server or not. Channel permissions decide who may connect, speak, and turn on a camera or share a screen there.
 
 - **Webhooks**
   Let deploys, monitors, and other services post into a channel. See the [webhook guide](docs/WEBHOOK.md).

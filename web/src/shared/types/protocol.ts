@@ -27,7 +27,7 @@ export type ReactionEmoji = string;
 /** Wire protocol version this build speaks; the server refuses older ones
  * (client_outdated). Keep in sync with server/src/realtime/protocolVersion.ts
  * — version 10 adds presence status. */
-export const PROTOCOL_VERSION = 12;
+export const PROTOCOL_VERSION = 13;
 
 /** Mirrors server/src/modules/presence/userStatus.ts. */
 export type PresenceStatus = 'online' | 'idle' | 'dnd' | 'invisible';
@@ -311,7 +311,7 @@ export type ClientMessage =
   | { t: 'stream-preview-request'; participantId: string }
   // answers a `stream-preview-capture`: a JPEG data URL of the shared screen
   | { t: 'stream-preview-frame'; image: string }
-  | { t: 'soundboard-play'; conversationId: string; soundId: string }
+  | { t: 'soundboard-play'; conversationId: string; serverId?: string; soundId: string }
   | { t: 'leave' }
   | { t: 'ping' };
 
@@ -378,7 +378,7 @@ export type ServerMessage =
   | { t: 'participant-joined'; participant: Participant }
   | { t: 'participant-updated'; participant: Participant }
   | { t: 'participant-left'; id: string }
-  | { t: 'soundboard-play'; conversationId: string; serverId: string; soundId: string; participantId: string; emoji: string; volume: number }
+  | { t: 'soundboard-play'; conversationId: string; serverId: string; soundId: string; participantId: string; emoji: string; volume: number; fileToken?: string }
   // payload-free like social-changed: the list itself comes from GET /api/servers/:id/sounds
   | { t: 'server-sounds-changed'; serverId: string }
   | { t: 'server-emojis-changed'; serverId: string }

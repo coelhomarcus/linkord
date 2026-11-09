@@ -35,12 +35,13 @@ export function saveSoundboardVolume(value: number): void {
 }
 
 /** Fetched and decoded once per sound; a sound's file never changes (an edit
- * only touches name/emoji/volume), so the decoded buffer stays valid. */
-export function loadSoundBuffer(serverId: string, soundId: string): Promise<AudioBuffer> {
+ * only touches name/emoji/volume), so the decoded buffer stays valid. `token`
+ * comes with a play from a server the listener may not be in. */
+export function loadSoundBuffer(serverId: string, soundId: string, token?: string): Promise<AudioBuffer> {
   const key = `${serverId}:${soundId}`;
   let pending = buffers.get(key);
   if (!pending) {
-    pending = fetch(soundFileUrl(serverId, soundId), { credentials: 'same-origin' })
+    pending = fetch(soundFileUrl(serverId, soundId, token), { credentials: 'same-origin' })
       .then((res) => {
         if (!res.ok) throw new Error(`sound ${res.status}`);
         return res.arrayBuffer();
@@ -79,7 +80,7 @@ export function playBuffer(buffer: AudioBuffer, gain: number, startSec = 0, endS
 }
 
 /** A group sound at its own volume times this listener's soundboard volume. */
-export async function playServerSound(serverId: string, soundId: string, volume: number): Promise<PlayingSound> {
-  const buffer = await loadSoundBuffer(serverId, soundId);
+export async function playServerSound(serverId: string, soundId: string, volume: number, token?: string): Promise<PlayingSound> {
+  const buffer = await loadSoundBuffer(serverId, soundId, token);
   return playBuffer(buffer, (volume / 100) * loadSoundboardVolume());
 }

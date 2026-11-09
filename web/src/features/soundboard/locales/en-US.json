@@ -59,16 +59,20 @@
   "picker": {
     "open": "Soundboard",
     "search": "Find the perfect sound",
-    "empty": "This server has no sounds yet.",
-    "emptyHint": "Ask whoever runs the server to add sounds.",
+    "empty": "None of your servers has sounds yet.",
+    "emptyHint": "Ask whoever manages a server to add sounds.",
     "noResults": "No sounds found.",
     "loading": "Loading sounds…",
     "loadFailed": "Couldn't load the sounds.",
     "volume": "Soundboard volume",
     "play": "Play {{name}}",
-    "add": "Add sound",
-    "full": "The server has used all its sound slots",
-    "emptyHintCanAdd": "Add the first one with the + button."
+    "emptyHintCanAdd": "Add the first one with a server's + button.",
+    "frequent": "Frequently used",
+    "sections": "Soundboard servers",
+    "collapse": "Collapse {{section}}",
+    "expand": "Expand {{section}}",
+    "addTo": "Add a sound to {{server}}",
+    "fullIn": "{{server}} has used all of its sound slots"
   },
   "errors": {
     "invalid_sound": "Couldn't read that audio.",

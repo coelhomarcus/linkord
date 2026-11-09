@@ -15,7 +15,8 @@ import { deleteServerCompletely } from '../../src/modules/servers/serverDeletion
 import { invalidateAllServers } from '../../src/modules/servers/serverAccess.js';
 import { handlers, MAX_SOUNDS_PER_SERVER } from '../../src/modules/soundboard/soundboard.js';
 import { silentWav } from '../modules/soundboard/wavFixture.js';
-import { cleanupParticipant, db, joinNew, makeServerWithMembers, makeUser, pool } from './helpers.js';
+import { befriend, cleanupParticipant, db, joinNew, makeServerWithMembers, makeUser, pool } from './helpers.js';
+import { getOrCreateDirect } from '../../src/modules/conversations/conversationsRepository.js';
 
 let app: FastifyInstance;
 before(async () => { app = createApp(); await app.ready(); });
@@ -158,6 +159,64 @@ describe('server soundboard', () => {
     } finally {
       for (const j of [a, b, c]) cleanupParticipant(j.participant);
     }
+  });
+
+  it('a member of another server plays its sounds here; listeners outside it fetch the file with the play\'s token', async () => {
+    const { owner, member, serverId: home } = await world();
+    const { body } = await upload(member, home, 'from home');
+    // a second server where the member is, with someone who is not in the first
+    const [guest] = await Promise.all(['gst'].map(actor)) as [Actor];
+    const away = await makeServerWithMembers(owner.id, [member.id, guest.id], 'away');
+    const a = joinNew(member);
+    const g = joinNew(guest);
+    try {
+      setCallConversationId(a.participant, away.voiceChannelId);
+      setCallConversationId(g.participant, away.voiceChannelId);
+      await handlers['soundboard-play']!(a.socket, { conversationId: away.voiceChannelId, serverId: home, soundId: body.sound.id });
+      const play = g.sent.find((m) => m.event === 'soundboard-play')?.payload;
+      assert.equal(play?.serverId, home);
+      assert.equal(typeof play?.fileToken, 'string');
+
+      const url = `/api/servers/${home}/sounds/${body.sound.id}/file`;
+      assert.equal((await app.inject({ method: 'GET', url, headers: cookie(guest) })).statusCode, 404, 'not without the token');
+      assert.equal((await app.inject({ method: 'GET', url: `${url}?token=${encodeURIComponent(play.fileToken)}`, headers: cookie(guest) })).statusCode, 200);
+      assert.equal((await app.inject({ method: 'GET', url: `${url}?token=${encodeURIComponent(play.fileToken)}x`, headers: cookie(guest) })).statusCode, 404, 'a token is for exactly that sound');
+
+      // the guest isn't in the sound's server: they can't play it themselves
+      await handlers['soundboard-play']!(g.socket, { conversationId: away.voiceChannelId, serverId: home, soundId: body.sound.id });
+      assert.equal(a.sent.filter((m) => m.event === 'soundboard-play').length, 1);
+    } finally {
+      for (const j of [a, g]) cleanupParticipant(j.participant);
+    }
+  });
+
+  it('plays in a DM call too', async () => {
+    const { owner, member, serverId } = await world();
+    const { body } = await upload(member, serverId, 'dm');
+    await befriend(member.id, owner.id);
+    const { conversation: dm } = await getOrCreateDirect(member.id, owner.id, member.id);
+    const a = joinNew(member);
+    const b = joinNew(owner);
+    try {
+      setCallConversationId(a.participant, dm.id);
+      setCallConversationId(b.participant, dm.id);
+      await handlers['soundboard-play']!(a.socket, { conversationId: dm.id, serverId, soundId: body.sound.id });
+      assert.equal(b.sent.filter((m) => m.event === 'soundboard-play').length, 1);
+      // without saying whose sound, a DM call has no server to take it from
+      await handlers['soundboard-play']!(a.socket, { conversationId: dm.id, soundId: body.sound.id });
+      assert.equal(b.sent.filter((m) => m.event === 'soundboard-play').length, 1);
+    } finally {
+      for (const j of [a, b]) cleanupParticipant(j.participant);
+    }
+  });
+
+  it('lists every server whose soundboard the account may use, with whether it may add', async () => {
+    const { owner, member, serverId } = await world();
+    await upload(owner, serverId, 'listed');
+    const mine = await app.inject({ method: 'GET', url: '/api/me/sounds', headers: cookie(member) });
+    const entry = JSON.parse(mine.body).servers.find((s: { serverId: string }) => s.serverId === serverId);
+    assert.deepEqual(entry.sounds.map((s: { name: string }) => s.name), ['listed']);
+    assert.equal(entry.canAdd, true);
   });
 
   it('deleting the server deletes its sound files', async () => {

@@ -51,12 +51,15 @@ export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(fu
     leaveCall, reconnecting, isCallFullscreen, toggleCallFullscreen,
     activeCallConversationId, conversations, servers,
   } = useRoom();
-  // sounds belong to a server, so a 1:1 call has no soundboard
-  const callChannel = conversations.find((c) => c.id === activeCallConversationId && c.type === 'voice');
-  const soundboardServerId = callChannel?.serverId ?? null;
-  const callServer = servers.find((server) => server.id === soundboardServerId);
+  // sounds come from any server the person may use the soundboard of, so a
+  // DM call has one too; in a voice channel, the channel must allow it
+  const callConversation = conversations.find((c) => c.id === activeCallConversationId);
+  const callChannel = callConversation?.type === 'voice' ? callConversation : undefined;
+  const hasSoundboards = servers.some((server) => hasPermission(server.permissions, PERMISSIONS.USE_SOUNDBOARD));
   // the server drops a play without USE_SOUNDBOARD there, so don't offer one
-  const canUseSoundboard = !!callChannel && (callChannel.permissions === undefined || hasPermission(callChannel.permissions, PERMISSIONS.USE_SOUNDBOARD));
+  const canUseSoundboard = callChannel
+    ? callChannel.permissions === undefined || hasPermission(callChannel.permissions, PERMISSIONS.USE_SOUNDBOARD)
+    : callConversation?.type === 'direct' && hasSoundboards;
   const myMedia = useParticipantMedia(state.me.id ?? '');
   const cameraOn = state.me.cameraOn;
   const sharing = state.me.sharing;
@@ -157,11 +160,10 @@ export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(fu
           <ScreenShareQuickMenu />
         </div>
 
-        {soundboardServerId && callChannel && canUseSoundboard && (
+        {callConversation && canUseSoundboard && (
           <SoundboardButton
-            serverId={soundboardServerId}
-            conversationId={callChannel.id}
-            canUpload={!!callServer && hasPermission(callServer.permissions, PERMISSIONS.CREATE_EXPRESSIONS)}
+            conversationId={callConversation.id}
+            callServerId={callChannel?.serverId ?? null}
             className={cn(BAR_BUTTON, BAR_BUTTON_NEUTRAL)}
             activeClassName="bg-white/12 text-white"
             iconClassName={BAR_ICON}

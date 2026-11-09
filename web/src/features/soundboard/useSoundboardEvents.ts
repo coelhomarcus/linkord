@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ServerMessage } from '@/shared/types/protocol';
 import { logger } from '@/shared/lib/logger';
 import { invalidateServerSounds } from './useServerSounds';
+import { invalidateMySounds } from './useMySounds';
 import { playServerSound } from './soundPlayback';
 
 const log = logger.child({ component: 'soundboard' });
@@ -45,13 +46,14 @@ export function useSoundboardEvents({ activeCallConversationId, deafened }: Soun
     if (m.conversationId !== call.activeCallConversationId) return;
     floatEmoji(m.participantId, m.emoji || FALLBACK_EMOJI);
     if (call.deafened) return;
-    playServerSound(m.serverId, m.soundId, m.volume).catch((err: unknown) => {
+    playServerSound(m.serverId, m.soundId, m.volume, m.fileToken).catch((err: unknown) => {
       log.warn('could not play soundboard sound', { soundId: m.soundId, err: err instanceof Error ? err.message : String(err) });
     });
   }, [floatEmoji]);
 
   const onServerSoundsChanged = useCallback((m: Extract<ServerMessage, { t: 'server-sounds-changed' }>) => {
     invalidateServerSounds(m.serverId);
+    invalidateMySounds();
   }, []);
 
   return { floatingEmojis, onSoundboardPlay, onServerSoundsChanged };
