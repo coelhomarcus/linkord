@@ -77,7 +77,7 @@ export function ImageCropDialog({ open, imageSrc, aspect, cropShape, title, proc
               step={0.01}
             />
           </div>
-          {error && !processing && <p role="alert" className="text-label text-red">{error}</p>}
+          {error && !processing && <p role="alert" className="text-label text-red-text">{error}</p>}
         </div>
 
         <DialogFooter className="border-border-subtle bg-bg-tertiary/60 px-6 py-4">

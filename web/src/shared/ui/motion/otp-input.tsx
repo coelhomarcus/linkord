@@ -256,7 +256,7 @@ export function OTPInput({
           ) : null}
         </AnimatePresence>
       </fieldset>
-      {message ? <p aria-live="polite" className={cn("text-label", showSuccess ? "text-emerald-500" : status === "error" ? "text-destructive" : "text-muted-foreground")}>{message}</p> : null}
+      {message ? <p aria-live="polite" className={cn("text-label", showSuccess ? "text-emerald-500" : status === "error" ? "text-red-text" : "text-muted-foreground")}>{message}</p> : null}
     </div>
   );
 }

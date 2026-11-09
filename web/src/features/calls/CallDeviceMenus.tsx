@@ -92,7 +92,7 @@ function DeviceSubmenu({ room, kind, title, label }: { room: Room; kind: MediaDe
               </DropdownMenuOptionItem>
             ))}
           </DropdownMenuRadioGroup>
-          {error && <p role="alert" className="px-2 py-2 text-label text-red">{error}</p>}
+          {error && <p role="alert" className="px-2 py-2 text-label text-red-text">{error}</p>}
         </>
       )}
     </ValueSubmenu>

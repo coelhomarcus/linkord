@@ -50,7 +50,7 @@ export function SessionsSettings({ sessions, onEnded }: { sessions: AccountSessi
 
   return (
     <div className="flex flex-col gap-3">
-      {error && <p role="alert" className="text-label text-red">{error}</p>}
+      {error && <p role="alert" className="text-label text-red-text">{error}</p>}
       <ul aria-label={t('catalog.sections.sessions')} className="flex flex-col divide-y divide-border-subtle rounded-lg border border-border-subtle">
         {ordered.map((session) => {
           const device = describeUserAgent(session.userAgent);

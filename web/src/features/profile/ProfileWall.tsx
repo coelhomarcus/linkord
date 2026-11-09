@@ -159,7 +159,7 @@ export function ProfileWall({ userId, owner, accent, onLeave, onDraftChange }: {
   return (
     // room under the last widget for the floating bar, which would otherwise cover it
     <section aria-label={t('wall.title')} className={`flex min-w-0 flex-col gap-5 ${showBar ? 'pb-36' : ''}`}>
-      {error && !dirty && <p role="alert" className="text-label text-red">{t('wall.loadFailed')} <Button type="button" variant="ghost" size="sm" onClick={() => void load()}>{t('modal.retry')}</Button></p>}
+      {error && !dirty && <p role="alert" className="text-label text-red-text">{t('wall.loadFailed')} <Button type="button" variant="ghost" size="sm" onClick={() => void load()}>{t('modal.retry')}</Button></p>}
       {owner && (
         <div className="flex items-center justify-between gap-3">
           <h3 className="text-body font-semibold text-text-primary">{t('wall.yours')}</h3>

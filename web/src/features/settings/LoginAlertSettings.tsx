@@ -47,7 +47,7 @@ export function LoginAlertSettings({ status, onChange }: { status: SecurityStatu
         />
       </SettingsRow>
       {unavailable && <SettingsNotice tone="info">{t(`security.loginAlerts.unavailable.${unavailable}`)}</SettingsNotice>}
-      {error && <p role="alert" className="text-label text-red">{error}</p>}
+      {error && <p role="alert" className="text-label text-red-text">{error}</p>}
     </div>
   );
 }

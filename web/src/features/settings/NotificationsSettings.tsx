@@ -157,7 +157,7 @@ export function NotificationsSettings() {
         <SettingsRow label={t('notifications.showContent.label')} description={t('notifications.showContent.description')}>
           <Switch size="lg" checked={showContent ?? true} disabled={showContent === null} onCheckedChange={(v) => void handleToggleShowContent(v)} aria-label={t('notifications.showContent.label')} />
         </SettingsRow>
-        {notificationsError && <p role="alert" className="text-label text-red">{notificationsError}</p>}
+        {notificationsError && <p role="alert" className="text-label text-red-text">{notificationsError}</p>}
       </SettingsSection>
 
       <SettingsSection id="sounds" title={t('catalog.sections.sounds')}>

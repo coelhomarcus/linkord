@@ -252,7 +252,7 @@ export function ServerAuditLog({ server }: { server: ServerSummary }) {
           </div>
         )}
       </div>
-      {error && <p role="alert" className="text-label text-red">{error}</p>}
+      {error && <p role="alert" className="text-label text-red-text">{error}</p>}
       {!loading && !error && items.length === 0 && (
         filtered ? (
           <EmptyState

@@ -295,9 +295,9 @@ export function ProfileEditor({ status, customStatus, details, onClose, register
                     </Button>
                   </div>
                 )}
-                {avatarError && <p role="alert" className="text-label text-red">{avatarError}</p>}
-                {bannerError && <p role="alert" className="text-label text-red">{bannerError}</p>}
-                {customStatusError && <p role="alert" className="text-label text-red">{customStatusError}</p>}
+                {avatarError && <p role="alert" className="text-label text-red-text">{avatarError}</p>}
+                {bannerError && <p role="alert" className="text-label text-red-text">{bannerError}</p>}
+                {customStatusError && <p role="alert" className="text-label text-red-text">{customStatusError}</p>}
                 <dl className="flex flex-col gap-3">
                   {details.details && (
                     <div>

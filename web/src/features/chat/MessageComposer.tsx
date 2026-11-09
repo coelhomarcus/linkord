@@ -481,7 +481,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
 
         <ComposerAttachmentTray files={pendingFiles} onRemove={removeFile} fallbackFocusRef={textareaRef} />
 
-        {attachError && <p role="alert" className="mx-2 mt-2 rounded-md border border-red/20 bg-red/10 px-3 py-2 text-label text-red">{attachError}</p>}
+        {attachError && <p role="alert" className="mx-2 mt-2 rounded-md border border-red/20 bg-red/10 px-3 py-2 text-label text-red-text">{attachError}</p>}
         {voice.noticeText && <VoiceNoticeBanner text={voice.noticeText} onDismiss={voice.dismissNotice} />}
 
         <div className="flex items-end gap-1 px-2 py-[9px]">
@@ -562,7 +562,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
             )}
             </div>
             {showCounter && (
-              <span id={counterId} className={cn('flex-none self-end px-1 pb-2.5 text-caption tabular-nums', tooLong ? 'font-semibold text-red' : 'text-text-muted')}>
+              <span id={counterId} className={cn('flex-none self-end px-1 pb-2.5 text-caption tabular-nums', tooLong ? 'font-semibold text-red-text' : 'text-text-muted')}>
                 {remaining}
               </span>
             )}

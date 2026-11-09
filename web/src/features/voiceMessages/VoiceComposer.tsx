@@ -64,7 +64,7 @@ export function VoiceRecordingBar({ view, onCancel, onSend, sendDisabled, otherC
           </Button>
         )}
         <span aria-hidden className={cn('size-2.5 flex-none rounded-full bg-red', view.phase === 'recording' && 'animate-pulse')} />
-        <span role="timer" aria-label={t('elapsed')} className={cn('flex-none text-label tabular-nums', nearLimit ? 'font-semibold text-red' : 'text-text-primary')}>
+        <span role="timer" aria-label={t('elapsed')} className={cn('flex-none text-label tabular-nums', nearLimit ? 'font-semibold text-red-text' : 'text-text-primary')}>
           {view.phase === 'requesting' ? t('requesting') : formatVoiceDuration(view.elapsedMs)}
         </span>
         <span className="flex-none text-caption tabular-nums text-text-muted">/ {formatVoiceDuration(MAX_VOICE_DURATION_MS)}</span>
@@ -130,7 +130,7 @@ export function VoiceReviewBar({ take, onDiscard, onSend, sendDisabled }: {
 export function VoiceNoticeBanner({ text, onDismiss }: { text: string; onDismiss: () => void }) {
   const { t } = useTranslation('voiceMessages');
   return (
-    <div role="alert" className="mx-2 mt-2 flex items-start gap-2 rounded-md border border-red/20 bg-red/10 py-2 pl-3 pr-1.5 text-label text-red">
+    <div role="alert" className="mx-2 mt-2 flex items-start gap-2 rounded-md border border-red/20 bg-red/10 py-2 pl-3 pr-1.5 text-label text-red-text">
       <span className="min-w-0 flex-1">{text}</span>
       <CloseButton size="xs" label={t('dismissNotice')} onClick={onDismiss} />
     </div>

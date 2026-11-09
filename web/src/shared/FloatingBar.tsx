@@ -63,7 +63,7 @@ export function FloatingBar({ open = true, label, status, error, onReset, onSave
         {status === 'saved' ? (
           <p role="status" className="text-label font-medium text-green">{t('saveBar.saved')}</p>
         ) : status === 'error' ? (
-          <p role="alert" className="text-label text-red">{error}</p>
+          <p role="alert" className="text-label text-red-text">{error}</p>
         ) : (
           <p className="text-label text-text-muted">{t(saving ? 'saveBar.saving' : 'saveBar.unsaved')}</p>
         )}

@@ -108,7 +108,7 @@ export function TwoFactorSettings({ status, onChange }: { status: SecurityStatus
             <Label htmlFor="twoFactorPassword" className="text-label text-text-muted">{t('security.twoFactor.password')}</Label>
             <Input id="twoFactorPassword" type="password" autoComplete="current-password" autoFocus value={password} onChange={(e) => { setPassword(e.target.value); setError(null); }} />
           </div>
-          {error && <p role="alert" className="text-label text-red">{error}</p>}
+          {error && <p role="alert" className="text-label text-red-text">{error}</p>}
           <div className="flex flex-wrap items-center gap-2">
             <Button type="submit" size="sm" variant={phase === 'disable-password' ? 'destructive' : 'default'} disabled={pending || !password}>
               {pending ? <CircleNotchIcon size={20} className="animate-spin" /> : phase === 'enable-password' ? <EnvelopeIcon size={20} weight="fill" /> : null}

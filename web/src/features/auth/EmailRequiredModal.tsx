@@ -125,7 +125,7 @@ export function EmailRequiredModal() {
                 {t('emailRequired.useOther')}
               </Button>
             </div>
-            {error && otpStatus !== 'error' && <p role="alert" className="text-label text-red">{error}</p>}
+            {error && otpStatus !== 'error' && <p role="alert" className="text-label text-red-text">{error}</p>}
           </div>
         ) : (
           <form onSubmit={handleRequest} className="flex flex-col gap-3">
@@ -147,7 +147,7 @@ export function EmailRequiredModal() {
               value={password}
               onChange={(event) => { setPassword(event.target.value); setError(null); }}
             />
-            {error && <p role="alert" className="text-label text-red">{error}</p>}
+            {error && <p role="alert" className="text-label text-red-text">{error}</p>}
             <Button type="submit" disabled={pending || !email || !password}>
               {pending ? <CircleNotchIcon size={20} className="animate-spin" /> : <EnvelopeIcon size={20} weight="fill" />}
               {pending ? t('emailRequired.sending') : t('emailRequired.submit')}

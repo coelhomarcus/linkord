@@ -32,7 +32,7 @@ export function PendingAttachments({ attachments }: { attachments: OutboxAttachm
           return (
             <div key={attachment.localId} className="flex w-80 max-w-full flex-col gap-1">
               <VoiceMessagePlayer src={null} durationMs={attachment.voice.durationMs} waveform={attachment.voice.waveform} className={cn('w-full', attachment.failed && 'border-red/50')} />
-              <p className={cn('text-caption', attachment.failed ? 'text-red' : 'text-text-muted')}>{statusLabel(attachment)}</p>
+              <p className={cn('text-caption', attachment.failed ? 'text-red-text' : 'text-text-muted')}>{statusLabel(attachment)}</p>
               {!attachment.failed && !done && <UploadProgressBar progress={attachment.progress} />}
             </div>
           );
@@ -68,7 +68,7 @@ export function PendingAttachments({ attachments }: { attachments: OutboxAttachm
                 be uploading — indented to align under the name, past the
                 icon column (size-10 + gap-3) */}
             <div className="pl-13">
-              <p className={cn('text-caption', attachment.failed ? 'text-red' : 'text-text-muted')}>{statusLabel(attachment)}</p>
+              <p className={cn('text-caption', attachment.failed ? 'text-red-text' : 'text-text-muted')}>{statusLabel(attachment)}</p>
               {!attachment.failed && !done && <div className="mt-1"><UploadProgressBar progress={attachment.progress} /></div>}
             </div>
           </div>

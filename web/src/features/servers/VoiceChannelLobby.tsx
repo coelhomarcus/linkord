@@ -26,7 +26,7 @@ export function VoiceChannelLobby({ channel, onJoin }: { channel: Conversation; 
           })}
         </div>
       )}
-      {error && <p role="alert" className="text-label text-red">{error}</p>}
+      {error && <p role="alert" className="text-label text-red-text">{error}</p>}
       <Button type="button" onClick={onJoin} disabled={!canInChannel(channel, PERMISSIONS.CONNECT)} className="bg-green-solid px-6 hover:bg-green-solid/90">
         {canInChannel(channel, PERMISSIONS.CONNECT) ? t('voice.join') : t('voice.noAccess')}
       </Button>

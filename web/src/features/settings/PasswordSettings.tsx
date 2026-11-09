@@ -70,7 +70,7 @@ export function PasswordSettings({ onChanged }: { onChanged: () => void }) {
             <Label htmlFor="newPassword" className="text-label text-text-muted">{t('security.password.new')}</Label>
             <Input id="newPassword" type="password" autoComplete="new-password" value={next} onChange={(e) => { setNext(e.target.value); setError(null); }} />
           </div>
-          {error && <p role="alert" className="text-label text-red">{error}</p>}
+          {error && <p role="alert" className="text-label text-red-text">{error}</p>}
           <div className="flex flex-wrap items-center gap-2">
             <Button type="submit" size="sm" disabled={pending || !current || !next}>
               {pending ? <CircleNotchIcon size={20} className="animate-spin" /> : <LockIcon size={20} weight="fill" />}

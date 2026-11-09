@@ -28,7 +28,7 @@ export function UnsavedProfileChangesDialog({
           <DialogDescription className="select-none text-body text-text-secondary">
             {t('unsaved.description')}
           </DialogDescription>
-          {error && <p role="alert" className="mt-3 text-label text-red">{error}</p>}
+          {error && <p role="alert" className="mt-3 text-label text-red-text">{error}</p>}
         </div>
         {/* Three real choices with long labels never fit one row at this
             dialog's width — always stacked. DialogFooter's own default

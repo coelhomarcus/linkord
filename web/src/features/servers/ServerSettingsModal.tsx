@@ -47,7 +47,7 @@ function useAction() {
 }
 
 function ErrorLine({ error }: { error: string | null }) {
-  return error ? <p role="alert" className="text-label text-red">{error}</p> : null;
+  return error ? <p role="alert" className="text-label text-red-text">{error}</p> : null;
 }
 
 function Overview({ server }: { server: ServerSummary }) {

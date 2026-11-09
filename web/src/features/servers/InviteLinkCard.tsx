@@ -57,7 +57,7 @@ export function InviteLinkCard({ code, own = false, page = false }: { code: stri
         <div className="flex items-center gap-3">
           <span className="grid size-12 place-items-center rounded-2xl bg-red/15 text-red"><EnvelopeSimpleIcon size={26} weight="fill" /></span>
           <span className="text-left">
-            <span className="block text-title font-semibold text-red">{t('inviteCard.invalid')}</span>
+            <span className="block text-title font-semibold text-red-text">{t('inviteCard.invalid')}</span>
             <span className="block text-label text-text-muted">{t('inviteCard.invalidHint')}</span>
           </span>
         </div>
@@ -75,7 +75,7 @@ export function InviteLinkCard({ code, own = false, page = false }: { code: stri
           </Button>
         </div>
       )}
-      {error && <p role="alert" className="mt-2 text-caption text-red">{error}</p>}
+      {error && <p role="alert" className="mt-2 text-caption text-red-text">{error}</p>}
     </div>
   );
 }

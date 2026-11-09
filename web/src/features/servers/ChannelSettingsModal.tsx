@@ -85,7 +85,7 @@ function Permissions({ server, channel }: { server: ServerSummary; channel: Chan
           {t('channelSettings.sync')}
         </Button>
       )}
-      {error && <p role="alert" className="text-label text-red">{error}</p>}
+      {error && <p role="alert" className="text-label text-red-text">{error}</p>}
       {!editable && <p role="note" className="rounded-md bg-fill-subtle p-3 text-label text-text-secondary">{t('roles.aboveYou')}</p>}
       <div className="flex gap-6 max-md:flex-col">
         <ul className="flex w-48 flex-none flex-col gap-0.5">
@@ -264,7 +264,7 @@ export function ChannelSettingsModal({ server, channel, onClose }: { server: Ser
         <>
           <SectionTitle>{t('channelSettings.delete')}</SectionTitle>
           <p className="text-label text-text-secondary">{t('deleteChannel.description', { name: channel.name })}</p>
-          {error && <p role="alert" className="text-label text-red">{error}</p>}
+          {error && <p role="alert" className="text-label text-red-text">{error}</p>}
           <Button type="button" variant="destructive" className="self-start" onClick={() => setConfirmDelete(true)}>{t('channelSettings.delete')}</Button>
           <ConfirmDialog open={confirmDelete} onOpenChange={setConfirmDelete} title={t('deleteChannel.title', { name: channel.name })} description={t('deleteChannel.confirm')}
             destructive confirmLabel={t('channelSettings.delete')}

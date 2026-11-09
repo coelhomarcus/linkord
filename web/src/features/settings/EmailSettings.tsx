@@ -208,7 +208,7 @@ export function EmailSettings({ currentEmail }: { currentEmail: string | null })
           <Button type="button" variant="ghost" size="sm" className="w-fit" disabled={pending} onClick={leave}>
             <span>{t('email.cancel')}</span>
           </Button>
-          {(validationError ?? error) && <p role="alert" className="text-label text-red">{validationError ? t(`email.validation.${validationError}`) : error}</p>}
+          {(validationError ?? error) && <p role="alert" className="text-label text-red-text">{validationError ? t(`email.validation.${validationError}`) : error}</p>}
         </div>
       );
     }
