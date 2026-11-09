@@ -3,9 +3,10 @@ import { fireEvent, screen } from '@testing-library/react';
 import { DmCallOverlay } from '@/features/calls/DmCallOverlay';
 import { renderWithRoom } from '@tests/fixtures/roomContextFixture';
 import type { DmCallNotice } from '@/features/calls/useDmCall';
+import { startRingtone } from '@/shared/sounds';
 import type { PublicUser } from '@/shared/types/protocol';
 
-vi.mock('@/shared/sounds', () => ({ playSound: vi.fn() }));
+vi.mock('@/shared/sounds', () => ({ playSound: vi.fn(), startRingtone: vi.fn(() => () => {}) }));
 
 const peer: PublicUser = {
   id: 'peer', username: 'ana', displayName: 'Ana', avatar: '', avatarColor: '#335577',
@@ -49,5 +50,21 @@ describe('DmCallOverlay', () => {
     expect(screen.getByRole('dialog', { name: 'Chamada recusada' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Atender' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Cancelar' })).not.toBeInTheDocument();
+  });
+
+  it('rings while the call is waiting and stops when the card goes away', () => {
+    const stop = vi.fn();
+    vi.mocked(startRingtone).mockReturnValueOnce(stop);
+    const { unmount } = renderCard(notice({ phase: 'outgoing' }));
+    expect(startRingtone).toHaveBeenLastCalledWith('outgoing');
+    expect(stop).not.toHaveBeenCalled();
+    unmount();
+    expect(stop).toHaveBeenCalledOnce();
+  });
+
+  it('does not ring for a call that already ended', () => {
+    vi.mocked(startRingtone).mockClear();
+    renderCard(notice({ phase: 'ended', reason: 'declined' }));
+    expect(startRingtone).not.toHaveBeenCalled();
   });
 });
