@@ -114,8 +114,10 @@
     }
   },
   "quality": {
-    "game": "Jogo (1440p, 60 fps)",
-    "screen": "Tela (1080p, 30 fps)"
+    "game1440": "Jogo (1440p, 60 fps)",
+    "screen1440": "Tela (1440p, 30 fps)",
+    "game1080": "Jogo (1080p, 60 fps)",
+    "screen1080": "Tela (1080p, 30 fps)"
   },
   "connection": {
     "good": "Conexão boa",

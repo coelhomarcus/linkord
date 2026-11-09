@@ -5,6 +5,7 @@ import {
   applyCameraContentHint, cameraCaptureOptions, cameraPublishOptions, screenSharePublishOptions,
 } from '@/features/calls/videoPublish';
 import { SHARE_QUALITY_PRESETS } from '@/features/calls/shareQualityPresets';
+import type { ShareQualityId } from '@/features/calls/shareQualityPresets';
 
 describe('video publish options', () => {
   it('captures the camera at an ideal 1080p30 and publishes LiveKit\'s 1080p encoding', () => {
@@ -40,8 +41,8 @@ describe('video publish options', () => {
     expect(() => applyCameraContentHint(undefined)).not.toThrow();
   });
 
-  it('leaves screen share as one layer at the existing presets', () => {
-    for (const id of ['game', 'screen'] as const) {
+  it('leaves screen share as one layer at every preset', () => {
+    for (const id of Object.keys(SHARE_QUALITY_PRESETS) as ShareQualityId[]) {
       const quality = SHARE_QUALITY_PRESETS[id];
       expect(screenSharePublishOptions(id)).toEqual({
         screenShareEncoding: quality.encoding,

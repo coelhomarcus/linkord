@@ -114,8 +114,10 @@
     }
   },
   "quality": {
-    "game": "Game (1440p, 60 fps)",
-    "screen": "Screen (1080p, 30 fps)"
+    "game1440": "Game (1440p, 60 fps)",
+    "screen1440": "Screen (1440p, 30 fps)",
+    "game1080": "Game (1080p, 60 fps)",
+    "screen1080": "Screen (1080p, 30 fps)"
   },
   "connection": {
     "good": "Good connection",
