@@ -7,6 +7,8 @@ import { cropParam, type CropRect } from '@/shared/lib/imageCrop';
 
 // Mirrors server/src/modules/emojis/serverEmojis.ts.
 export const EMOJI_NAME_RE = /^[a-z0-9_]{2,32}$/;
+// Mirrors MAX_EMOJI_UPLOAD_BYTES in server/src/modules/emojis/emojiFile.ts: the original file, before the crop.
+export const MAX_EMOJI_UPLOAD_BYTES = 12 * 1024 * 1024;
 
 export interface ServerEmoji {
   id: string;

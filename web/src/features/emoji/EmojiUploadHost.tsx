@@ -3,7 +3,8 @@ import type { Area } from 'react-easy-crop';
 import { useTranslation } from 'react-i18next';
 
 import { ImageCropDialog } from '@/shared/ImageCropDialog';
-import { describeEmojiError, uploadServerEmoji } from './serverEmojisApi';
+import { formatMB } from '@/shared/lib/formatBytes';
+import { describeEmojiError, MAX_EMOJI_UPLOAD_BYTES, uploadServerEmoji } from './serverEmojisApi';
 import { freeEmojiName, registerEmojiUploadOpener } from './emojiUploadRequest';
 import { emojiNamesInServer } from './myEmojis';
 import { invalidateServerEmojis } from './useServerEmojis';
@@ -34,12 +35,13 @@ export function EmojiUploadHost() {
     const file = files?.[0];
     const target = targetRef.current;
     if (!file || !target) return;
-    setError(null);
+    // told at once, over the picture, rather than after a crop the server would refuse with a bare 413
+    setError(file.size > MAX_EMOJI_UPLOAD_BYTES ? t('upload.fileTooLarge', { max: formatMB(MAX_EMOJI_UPLOAD_BYTES) }) : null);
     setCrop({ ...target, file, src: URL.createObjectURL(file) });
   }
 
   async function confirm(area: Area) {
-    if (!crop) return;
+    if (!crop || crop.file.size > MAX_EMOJI_UPLOAD_BYTES) return;
     setUploading(true);
     setError(null);
     try {

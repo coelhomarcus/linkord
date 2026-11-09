@@ -30,7 +30,8 @@
   "upload": {
     "crop": "Recortar emoji",
     "uploading": "Enviando…",
-    "uploadFailed": "Não foi possível enviar o emoji."
+    "uploadFailed": "Não foi possível enviar o emoji.",
+    "fileTooLarge": "Arquivo muito grande (máximo {{max}})."
   },
   "errors": {
     "invalid_emoji_name": "O nome precisa ter de 2 a 32 letras minúsculas, números ou _.",
