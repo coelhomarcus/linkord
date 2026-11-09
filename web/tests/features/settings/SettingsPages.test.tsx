@@ -25,7 +25,7 @@ describe('AppearanceSettings', () => {
     expect(screen.getByRole('radio', { name: 'Tema Black' })).toHaveAttribute('aria-checked', 'true');
     expect(screen.getByRole('radio', { name: 'Tema Graphite' })).toHaveAttribute('aria-checked', 'false');
     await userEvent.setup().click(screen.getByRole('radio', { name: 'Tema Graphite' }));
-    expect(setColorTheme).toHaveBeenCalledWith('discord');
+    expect(setColorTheme).toHaveBeenCalledWith('graphite');
   });
 });
 

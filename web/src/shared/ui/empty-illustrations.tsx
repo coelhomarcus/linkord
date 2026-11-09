@@ -3,7 +3,7 @@ import type { CSSProperties, ReactNode } from 'react';
 /* Every colour is mixed against the surface the illustration sits on
    (`--surface-base`, set by the shell, panels and modals) instead of a fixed
    grey: the Black theme paints every surface #000, so a fixed fill would vanish
-   there while it reads fine on Old and Discord. Solid mixes (not alpha) keep
+   there while it reads fine on Old and Graphite. Solid mixes (not alpha) keep
    overlapping shapes from showing through each other. */
 const BASE = 'var(--surface-base, var(--color-surface-app))';
 const mix = (color: string, amount: number) => `color-mix(in oklab, ${color} ${amount}%, ${BASE})`;
