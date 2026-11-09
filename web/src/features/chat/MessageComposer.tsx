@@ -606,11 +606,13 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
             <Button
               type="button"
               size="icon"
+              // neutral until there is something to send, so it doesn't look actionable
+              variant={canSubmit ? 'default' : 'secondary'}
               aria-label={t('composer.send')}
               disabled={!canSubmit}
               onClick={() => void submit()}
               // Discord's desktop composer sends on Enter alone; the button stays for touch
-              className="flex-none rounded-full md:hidden"
+              className="flex-none rounded-full transition-colors duration-100 md:hidden"
             >
               <ArrowUpIcon size={20} weight="fill" />
             </Button>
