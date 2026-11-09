@@ -149,7 +149,7 @@ The scripts behind the `db:*`, `admin:*` and `test:integration` commands live in
 
 ## End-to-end tests
 
-`e2e/` drives the real app in Chrome with several accounts at once, against a Docker stack shaped like production: the app image behind Traefik, a LiveKit dev server and a throwaway Postgres (`e2e/docker/compose.yml`). Nothing touches the dev database.
+`e2e/` drives the real app in Chrome with several accounts at once, against a Docker stack shaped like production: the app image behind Traefik, a LiveKit dev server, a throwaway Postgres and a mail sink in place of Resend (`e2e/docker/compose.yml`). Nothing touches the dev database, and no email leaves the machine: the app's `RESEND_API_URL` points at the sink (`e2e/docker/mailsink.mjs`), and a spec reads the codes it received with `emailCount`/`waitForEmailCode` (`e2e/stack/stack.ts`).
 
 Prerequisites: Docker and Google Chrome. Install the suite's own dependencies once (no browser is downloaded; Playwright uses the installed Chrome):
 
@@ -185,7 +185,7 @@ The `upgrade` project adapts to what the base version can do and says so in the 
 
 | Spec | What it checks |
 | --- | --- |
-| `features/auth` | Sign-up with and without the invitation code, the login form (wrong password refused), session across reloads, logout. |
+| `features/auth` | Sign-up with and without the invitation code, the login form (wrong password refused), session across reloads, logout. Two-step login turned on from Settings → Security with the emailed code, then a login that needs the next code (a wrong one refused); ending another session from the session list signs that browser out without a reload. |
 | `features/friends` | Request from the form accepted in Pending, decline, cancel, block (no messages or calls) and unblock. |
 | `features/dm` | Talking in a DM, the unread count until it is opened, no DM without friendship. |
 | `features/chat` | Messages shown once on both sides, typing indicator, reply, edit, delete, reactions, search, image attachment. |
