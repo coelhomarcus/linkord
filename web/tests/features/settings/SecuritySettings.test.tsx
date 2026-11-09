@@ -9,6 +9,7 @@ import { useLanguageForTests } from '@tests/fixtures/i18nFixture';
 const api = {
   fetchSecurityStatus: vi.fn(),
   fetchSessions: vi.fn(),
+  setLoginAlerts: vi.fn(),
   requestTwoFactorEnable: vi.fn(),
   confirmTwoFactorEnable: vi.fn(),
   disableTwoFactor: vi.fn(),
@@ -21,6 +22,7 @@ vi.mock('@/shared/api/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/shared/api/api')>()),
   fetchSecurityStatus: (...args: unknown[]) => api.fetchSecurityStatus(...args),
   fetchSessions: (...args: unknown[]) => api.fetchSessions(...args),
+  setLoginAlerts: (...args: unknown[]) => api.setLoginAlerts(...args),
   requestTwoFactorEnable: (...args: unknown[]) => api.requestTwoFactorEnable(...args),
   confirmTwoFactorEnable: (...args: unknown[]) => api.confirmTwoFactorEnable(...args),
   disableTwoFactor: (...args: unknown[]) => api.disableTwoFactor(...args),
@@ -30,7 +32,7 @@ vi.mock('@/shared/api/api', async (importOriginal) => ({
 }));
 
 const status = (patch: Partial<SecurityStatus> = {}): SecurityStatus => ({
-  twoFactorEnabled: false, emailDeliveryAvailable: true, hasEmail: true, sessionIdleDays: 14, ...patch,
+  twoFactorEnabled: false, loginAlertEnabled: true, emailDeliveryAvailable: true, hasEmail: true, sessionIdleDays: 14, ...patch,
 });
 
 const now = new Date().toISOString();
@@ -194,5 +196,47 @@ describe('SecuritySettings in English', () => {
     expect(await screen.findByRole('switch', { name: 'Email code at sign-in' })).toBeInTheDocument();
     expect(await screen.findByText('Chrome on macOS')).toBeInTheDocument();
     expect(screen.getByText('This session')).toBeInTheDocument();
+  });
+});
+
+describe('SecuritySettings: sign-in alerts', () => {
+  const alertSwitch = () => screen.findByRole('switch', { name: 'Avisar por e-mail sobre novos logins' });
+
+  it('is on by default and turns off with one click', async () => {
+    const user = userEvent.setup();
+    api.setLoginAlerts.mockResolvedValue({ loginAlertEnabled: false });
+    render(<SecuritySettings />);
+
+    const toggle = await alertSwitch();
+    expect(toggle).toBeChecked();
+    await user.click(toggle);
+
+    expect(api.setLoginAlerts).toHaveBeenCalledWith(false);
+    await waitFor(() => expect(toggle).not.toBeChecked());
+  });
+
+  it('keeps the old state and says so when saving fails', async () => {
+    const user = userEvent.setup();
+    api.setLoginAlerts.mockRejectedValue(new Error('network'));
+    render(<SecuritySettings />);
+
+    const toggle = await alertSwitch();
+    await user.click(toggle);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível salvar a alteração.');
+    expect(toggle).toBeChecked();
+  });
+
+  it('is disabled with the reason when the account has no email or the server cannot send', async () => {
+    api.fetchSecurityStatus.mockResolvedValue(status({ hasEmail: false }));
+    const { unmount } = render(<SecuritySettings />);
+    expect(await alertSwitch()).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByText('Cadastre um e-mail em Minha conta para receber os avisos de login.')).toBeInTheDocument();
+    unmount();
+
+    api.fetchSecurityStatus.mockResolvedValue(status({ emailDeliveryAvailable: false }));
+    render(<SecuritySettings />);
+    expect(await alertSwitch()).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByText(/avisos de login não podem ser enviados/)).toBeInTheDocument();
   });
 });

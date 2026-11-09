@@ -16,6 +16,7 @@ import { checkRegistrationAllowed } from './registrationLimits.js';
 import type { User } from '../../db/schema.js';
 import { consumeLoginChallenge, findLoginChallenge, issueAuthCode, verifyAuthCode, type AuthCodePurpose } from './codes.js';
 import { isEmailDeliveryConfigured, sendAuthCodeEmail } from './email.js';
+import { noticeLogin, noticeRegistration } from './loginAlert.js';
 import { clientIpOf, sessionOriginOf } from '../../http/clientInfo.js';
 import { recordAudit } from '../admin/auditLog.js';
 import type { SessionUser } from '../../types.js';
@@ -161,7 +162,9 @@ async function handleRegister(request: FastifyRequest, reply: FastifyReply): Pro
     throw err;
   }
 
-  const { rawToken } = await createSession(user.id, sessionOriginOf(request));
+  const origin = sessionOriginOf(request);
+  const { rawToken } = await createSession(user.id, origin);
+  noticeRegistration(user.id, origin);
   setSessionCookie(request, reply, rawToken);
   log.info('account registered', { userId: user.id, username: user.username });
   // A new account has no friends or shared conversations, so scoped presence would deliver this
@@ -220,7 +223,9 @@ async function handleLogin(request: FastifyRequest, reply: FastifyReply): Promis
 
   if (user.twoFactorEmail) return startLoginChallenge(reply, user);
 
-  const { rawToken } = await createSession(user.id, sessionOriginOf(request));
+  const origin = sessionOriginOf(request);
+  const { rawToken } = await createSession(user.id, origin);
+  noticeLogin(user, origin);
   setSessionCookie(request, reply, rawToken);
   log.info('login', { userId: user.id, username: user.username });
   sendJson(reply, 200, { user: privateUser(user) });
@@ -297,7 +302,9 @@ async function handleLoginVerify(request: FastifyRequest, reply: FastifyReply): 
 
   await consumeLoginChallenge(challengeHash);
   await ratelimit.reset(userKey).catch(() => {});
-  const { rawToken } = await createSession(user.id, sessionOriginOf(request));
+  const origin = sessionOriginOf(request);
+  const { rawToken } = await createSession(user.id, origin);
+  noticeLogin(user, origin);
   setSessionCookie(request, reply, rawToken);
   log.info('login', { userId: user.id, username: user.username, twoFactor: true });
   sendJson(reply, 200, { user: privateUser(user) });
@@ -535,6 +542,7 @@ async function handleSecurityStatus(request: FastifyRequest, reply: FastifyReply
   if (!user) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
   sendJson(reply, 200, {
     twoFactorEnabled: user.twoFactorEmail,
+    loginAlertEnabled: user.loginAlertEmail,
     emailDeliveryAvailable: isEmailDeliveryConfigured(),
     hasEmail: Boolean(user.email),
     sessionIdleDays: config.SESSION_IDLE_DAYS,
@@ -589,6 +597,16 @@ async function handleTwoFactorDisable(request: FastifyRequest, reply: FastifyRep
   await recordAudit({ actor: auditActor(sess), action: 'account.two_factor_disable', targetType: 'user', targetId: sess.userId, targetLabel: sess.username, requestId: request.id });
   log.info('two-step login turned off', { userId: sess.userId });
   sendJson(reply, 200, { twoFactorEnabled: false });
+}
+
+async function handleLoginAlertSet(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  const sess = await sessionForRequest(request);
+  if (!sess) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
+  const enabled = jsonBody(request.body).enabled;
+  if (typeof enabled !== 'boolean') return sendError(reply, 400, 'invalid_request', 'Informe se o aviso deve ficar ativo.');
+  await db.update(users).set({ loginAlertEmail: enabled, updatedAt: new Date() }).where(eq(users.id, sess.userId));
+  log.info('login alerts changed', { userId: sess.userId, enabled });
+  sendJson(reply, 200, { loginAlertEnabled: enabled });
 }
 
 async function handlePasswordChange(request: FastifyRequest, reply: FastifyReply): Promise<void> {
@@ -675,6 +693,7 @@ export function registerAuthRoutes(fastify: FastifyInstance): void {
   fastify.post('/api/auth/two-factor/enable/request', handleTwoFactorEnableRequest);
   fastify.post('/api/auth/two-factor/enable/confirm', handleTwoFactorEnableConfirm);
   fastify.post('/api/auth/two-factor/disable', handleTwoFactorDisable);
+  fastify.put('/api/auth/login-alerts', handleLoginAlertSet);
   fastify.post('/api/auth/password', handlePasswordChange);
   fastify.get('/api/auth/sessions', handleListSessions);
   fastify.post('/api/auth/sessions/end-others', handleEndOtherSessions);

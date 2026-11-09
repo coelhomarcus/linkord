@@ -51,7 +51,7 @@ Linkord is a self-hosted place to chat and call with friends. Talk in direct mes
   Show connected accounts on your profile and pick widgets for your Wall: recent anime from MyAnimeList, your GitHub profile and contribution calendar, and your favorite, liked, current and wished-for games, searched on IGDB.
 
 - **Account security**
-  Turn on two-step login, which asks for a code sent to your email after the password. See every browser signed in to your account (browser, system, address, when it signed in and was last used) and end any of them, or all but this one: the other browser is signed out at once. Changing your password keeps you signed in here and signs out everywhere else. A session left unused for 14 days (configurable) ends on its own.
+  Turn on two-step login, which asks for a code sent to your email after the password. Get an email when a browser you have not used lately signs in to your account (on by default, with a link to end that session). See every browser signed in to your account (browser, system, address, when it signed in and was last used) and end any of them, or all but this one: the other browser is signed out at once. Changing your password keeps you signed in here and signs out everywhere else. A session left unused for 14 days (configurable) ends on its own.
 
 - **Your preferences**
   Set up your profile, account and email, connected accounts, blocked people, theme, voice and video devices, which notification sounds play, language and 12- or 24-hour time. The app can be installed: a dismissible banner offers it after a few visits (never during a call), the Notifications page keeps an entry for it, and on iPhone it explains Share → Add to Home Screen, which Web Push needs.

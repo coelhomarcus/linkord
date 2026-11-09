@@ -87,6 +87,8 @@ export function resendLoginCode(challenge: string): Promise<{ ok: true }> {
 
 export interface SecurityStatus {
   twoFactorEnabled: boolean;
+  /** email when a browser the account has not used lately signs in */
+  loginAlertEnabled: boolean;
   /** false when the server has no email delivery: two-step login cannot be turned on */
   emailDeliveryAvailable: boolean;
   hasEmail: boolean;
@@ -96,6 +98,10 @@ export interface SecurityStatus {
 
 export function fetchSecurityStatus(): Promise<SecurityStatus> {
   return apiFetch('/api/auth/security');
+}
+
+export function setLoginAlerts(enabled: boolean): Promise<{ loginAlertEnabled: boolean }> {
+  return apiFetch('/api/auth/login-alerts', { method: 'PUT', body: JSON.stringify({ enabled }) });
 }
 
 export function requestTwoFactorEnable(password: string): Promise<{ ok: true }> {

@@ -8,6 +8,7 @@ import { createApp } from '../http/app.js';
 import { createWsServer } from '../realtime/socket.js';
 import { describeBlockedMigration, runMigrations } from '../db/migrate.js';
 import { sweepExpiredSessions, touchSessions } from '../modules/auth/session.js';
+import { sweepKnownLogins } from '../modules/auth/loginAlert.js';
 import { liveSessionTokenHashes } from '../modules/auth/sessionConnections.js';
 import { sweepExpiredRateLimits } from '../modules/auth/ratelimit.js';
 import { sweepSendOperations } from '../modules/messages/sendOperations.js';
@@ -119,6 +120,7 @@ export async function bootstrap(): Promise<void> {
   const sessionSweepTimer = setInterval(() => {
     touchSessions(liveSessionTokenHashes())
       .then(() => sweepExpiredSessions())
+      .then(() => sweepKnownLogins())
       .catch((err) => log.error('failed to clean up expired sessions', err));
   }, 60 * 60 * 1000);
   sessionSweepTimer.unref();

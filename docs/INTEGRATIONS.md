@@ -7,7 +7,7 @@ Every external service Linkord talks to, what it is used for, who makes the call
 | Service | Purpose | Called from | Credentials | Required |
 | --- | --- | --- | --- | --- |
 | [LiveKit](#livekit) | Voice, video and screen sharing | Server (SDK) and browser | `LIVEKIT_*` | For calls |
-| [Resend](#resend) | Account recovery, email-change and two-step login codes | Server | `RESEND_*` | For email flows and two-step login |
+| [Resend](#resend) | Account recovery, email-change and two-step login codes, new sign-in alerts | Server | `RESEND_*` | For email flows and two-step login |
 | [Web Push](#web-push) | Browser push notifications | Server | `PUSH_VAPID_*` | No |
 | [KLIPY](#klipy) | GIF picker | Browser | `KLIPY_API_KEY` | No |
 | [MyAnimeList](#myanimelist) | Profile Wall widget | Server (background worker; covers through the [media proxy](#media-proxy)) | `MAL_CLIENT_ID` | No |
@@ -33,12 +33,13 @@ Selective forwarding unit (SFU) behind every voice channel and 1:1 call.
 
 ## Resend
 
-Transactional email. Used only for one-time 6-digit codes: password recovery, email changes (including linking an address to an older account that has none), turning on two-step login, and the second step of a login when the account has two-step login on.
+Transactional email. Used for one-time 6-digit codes (password recovery, email changes including linking an address to an older account that has none, turning on two-step login, and the second step of a login when the account has two-step login on) and for one notice, the new sign-in alert.
 
 - **Code:** [`server/src/modules/auth/email.ts`](../server/src/modules/auth/email.ts) — one `POST https://api.resend.com/emails` with a bearer token. The text is localized to the account's language. Codes are issued and checked in `server/src/modules/auth/codes.ts` (only their sha256 is stored): recovery, email-change and setup codes last 30 minutes (requesting an email-change code, which is also how an account without an email links its first address, also needs the account's current password, like turning two-step login on or off, so a stolen session alone cannot redirect recovery to another address), a login code 10 minutes, and each allows 5 tries. Wrong codes also count against the account (and, for password reset, the address) in the Postgres attempt counters (`ratelimit.ts`), so resending does not buy more guesses; code emails themselves are capped at 5 per 15 minutes per account and purpose.
-- **Data sent:** the recipient address, the code, the username and `APP_URL`.
+- **New sign-in alert:** `sendLoginAlertEmail` in the same file, triggered by `noticeLogin` in [`server/src/modules/auth/loginAlert.ts`](../server/src/modules/auth/loginAlert.ts) after a password login or the second step of a two-step login creates a session (registration never alerts; it only records its browser). It names the browser and system (same parsing as the session list, copied to `modules/auth/describeUserAgent.ts` and pinned to the web copy by a test), the IP address, the approximate time in UTC and a link to Settings → Security → Active sessions, in the account's language. A browser is its address plus its user agent; one seen in the last 30 days (`known_logins`, kept apart from `sessions` because logging out deletes the session) does not alert, so ordinary re-logins stay quiet. It is sent in the background and a failure is only logged, so it never fails a login. Only when delivery is configured, the account has an email and the account's switch (Settings → Security, on by default, `users.login_alert_email`) is on; at most 5 per hour per account.
+- **Data sent:** the recipient address, the code, the username and `APP_URL`; for the sign-in alert, also the browser and system, the IP address and the time.
 - **Configuration:** `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `APP_URL`. `RESEND_API_URL` (default `https://api.resend.com`) is changed only by the end-to-end stack, which points it at a local mail sink.
-- **When missing:** requesting a code fails with `email_not_configured`, and two-step login cannot be turned on (Settings → Security explains why). An older account that has no email stays on the "link your email" screen, since an address is only stored once its code is confirmed. If Resend rejects the send, the request fails with a 503 `email_delivery_failed`.
+- **When missing:** requesting a code fails with `email_not_configured`, and two-step login cannot be turned on (Settings → Security explains why); sign-in alerts are skipped silently, and their switch is disabled with the reason. An older account that has no email stays on the "link your email" screen, since an address is only stored once its code is confirmed. If Resend rejects the send, the request fails with a 503 `email_delivery_failed`.
 - **Two-step login depends on it:** an account that already has two-step login on cannot finish a login while email is down or unconfigured (the login answers 503 `email_unavailable`; the code step is never skipped). Removing the `RESEND_*` variables therefore locks those accounts out until they are restored.
 
 ## Web Push

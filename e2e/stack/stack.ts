@@ -103,11 +103,12 @@ export async function emailCount(to: string): Promise<number> {
   return (await emailsTo(to)).length;
 }
 
-/** The 6-digit code of the first email `to` receives after the first `seen` ones, waiting for it. */
+/** The 6-digit code of the first email `to` receives after the first `seen` ones, waiting for it. Emails
+ * without a code (the new sign-in alert) are skipped. */
 export async function waitForEmailCode(to: string, seen: number, timeoutMs = 15_000): Promise<string> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    const code = (await emailsTo(to))[seen]?.text.match(/\b(\d{6})\b/)?.[1];
+    const code = (await emailsTo(to)).slice(seen).map((mail) => mail.text.match(/\b(\d{6})\b/)?.[1]).find(Boolean);
     if (code) return code;
     await sleep(200);
   }

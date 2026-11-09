@@ -45,6 +45,7 @@
       "presence": "Status",
       "password": "Password",
       "twoFactor": "Two-step verification",
+      "loginAlerts": "Sign-in alerts",
       "sessions": "Active sessions",
       "install": "Install the app"
     }
@@ -129,6 +130,10 @@
     "twoFactor": {
       "title": "Two-step verification",
       "keywords": "2fa, two-factor, two-step, code, verification, security"
+    },
+    "loginAlerts": {
+      "title": "Sign-in alerts",
+      "keywords": "new login, sign-in alert, email, notification, new device, security"
     },
     "sessions": {
       "title": "Active sessions",
@@ -382,6 +387,16 @@
       "sendFailed": "Could not send the code.",
       "confirmFailed": "Could not turn it on.",
       "disableFailed": "Could not turn it off."
+    },
+    "loginAlerts": {
+      "label": "Email me about new sign-ins",
+      "descriptionOff": "Off. You will not be emailed when a new browser signs in to your account.",
+      "descriptionOn": "On. We email the account when a browser it has not used in the last 30 days signs in, so you can end the session if it was not you.",
+      "unavailable": {
+        "noDelivery": "Sending email is not set up on this server, so sign-in alerts cannot be sent.",
+        "noEmail": "Set an email in My account to receive sign-in alerts."
+      },
+      "failed": "Could not save the change."
     },
     "sessions": {
       "description": "The browsers signed in to your account.",

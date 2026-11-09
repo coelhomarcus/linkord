@@ -45,6 +45,7 @@
       "presence": "Status",
       "password": "Senha",
       "twoFactor": "Verificação em duas etapas",
+      "loginAlerts": "Avisos de login",
       "sessions": "Sessões ativas",
       "install": "Instalar o app"
     }
@@ -129,6 +130,10 @@
     "twoFactor": {
       "title": "Verificação em duas etapas",
       "keywords": "2fa, dois fatores, duas etapas, código, verificação, segurança"
+    },
+    "loginAlerts": {
+      "title": "Avisos de login",
+      "keywords": "novo login, aviso de login, e-mail, notificação, novo dispositivo, segurança"
     },
     "sessions": {
       "title": "Sessões ativas",
@@ -382,6 +387,16 @@
       "sendFailed": "Não foi possível enviar o código.",
       "confirmFailed": "Não foi possível ativar.",
       "disableFailed": "Não foi possível desativar."
+    },
+    "loginAlerts": {
+      "label": "Avisar por e-mail sobre novos logins",
+      "descriptionOff": "Desativado. Você não receberá e-mail quando um novo navegador entrar na sua conta.",
+      "descriptionOn": "Ativado. Enviamos um e-mail à conta quando entra um navegador que ela não usava nos últimos 30 dias, para você encerrar a sessão se não foi você.",
+      "unavailable": {
+        "noDelivery": "O envio de e-mail não está configurado neste servidor, então os avisos de login não podem ser enviados.",
+        "noEmail": "Cadastre um e-mail em Minha conta para receber os avisos de login."
+      },
+      "failed": "Não foi possível salvar a alteração."
     },
     "sessions": {
       "description": "Os navegadores conectados à sua conta.",

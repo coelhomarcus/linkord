@@ -11,6 +11,9 @@ type TextKey =
   | 'email.recoveryIntro' | 'email.changeIntro' | 'email.recoveryAccountLine' | 'email.expires'
   | 'email.loginSubject' | 'email.loginTitle' | 'email.loginIntro' | 'email.loginExpires'
   | 'email.twoFactorSetupSubject' | 'email.twoFactorSetupTitle' | 'email.twoFactorSetupIntro'
+  | 'email.loginAlertSubject' | 'email.loginAlertTitle' | 'email.loginAlertIntro' | 'email.loginAlertDevice' | 'email.loginAlertIp'
+  | 'email.loginAlertTime' | 'email.loginAlertAction' | 'email.loginAlertOptOut'
+  | 'email.deviceBrowserOn' | 'email.deviceUnknownBrowserOn' | 'email.deviceUnknown' | 'email.deviceAutomated'
   | 'server.textCategory' | 'server.textChannel' | 'server.voiceCategory' | 'server.voiceChannel';
 
 const TEXT: Record<Locale, Record<TextKey, string>> = {
@@ -38,6 +41,13 @@ const TEXT: Record<Locale, Record<TextKey, string>> = {
     'email.loginExpires': 'O código expira em 10 minutos. Se não foi você, troque sua senha agora: quem tentou entrar sabe a senha atual.',
     'email.twoFactorSetupSubject': 'Ative a verificação em duas etapas no Linkord', 'email.twoFactorSetupTitle': 'Verificação em duas etapas',
     'email.twoFactorSetupIntro': 'Use este código para ativar a verificação em duas etapas da sua conta Linkord:',
+    'email.loginAlertSubject': 'Novo login na sua conta Linkord', 'email.loginAlertTitle': 'Novo login na sua conta',
+    'email.loginAlertIntro': 'Um navegador que não usava sua conta "{{username}}" há um tempo acabou de entrar nela.',
+    'email.loginAlertDevice': 'Navegador: {{device}}', 'email.loginAlertIp': 'Endereço IP: {{ip}}', 'email.loginAlertTime': 'Horário: {{time}}',
+    'email.loginAlertAction': 'Se não foi você, encerre essa sessão e troque sua senha em Configurações → Segurança:',
+    'email.loginAlertOptOut': 'Você pode desativar este aviso em Configurações → Segurança.',
+    'email.deviceBrowserOn': '{{browser}} em {{os}}', 'email.deviceUnknownBrowserOn': 'Desconhecido no {{os}}',
+    'email.deviceUnknown': 'Navegador desconhecido', 'email.deviceAutomated': 'Aplicativo ou script',
     'server.textCategory': 'Canais de texto', 'server.textChannel': 'geral',
     'server.voiceCategory': 'Canais de voz', 'server.voiceChannel': 'Geral',
   },
@@ -65,6 +75,13 @@ const TEXT: Record<Locale, Record<TextKey, string>> = {
     'email.loginExpires': 'The code expires in 10 minutes. If this was not you, change your password now: whoever tried to sign in knows the current one.',
     'email.twoFactorSetupSubject': 'Turn on two-step verification on Linkord', 'email.twoFactorSetupTitle': 'Two-step verification',
     'email.twoFactorSetupIntro': 'Use this code to turn on two-step verification for your Linkord account:',
+    'email.loginAlertSubject': 'New sign-in to your Linkord account', 'email.loginAlertTitle': 'New sign-in to your account',
+    'email.loginAlertIntro': 'A browser that has not used your account "{{username}}" for a while just signed in to it.',
+    'email.loginAlertDevice': 'Browser: {{device}}', 'email.loginAlertIp': 'IP address: {{ip}}', 'email.loginAlertTime': 'Time: {{time}}',
+    'email.loginAlertAction': 'If this was not you, end that session and change your password in Settings → Security:',
+    'email.loginAlertOptOut': 'You can turn this alert off in Settings → Security.',
+    'email.deviceBrowserOn': '{{browser}} on {{os}}', 'email.deviceUnknownBrowserOn': 'Unknown on {{os}}',
+    'email.deviceUnknown': 'Unknown browser', 'email.deviceAutomated': 'App or script',
     'server.textCategory': 'Text Channels', 'server.textChannel': 'general',
     'server.voiceCategory': 'Voice Channels', 'server.voiceChannel': 'General',
   },

@@ -4,11 +4,12 @@ import { after, afterEach, before, beforeEach, describe, it, mock } from 'node:t
 import { and, eq } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { config } from '../../src/config/env.js';
-import { adminAuditLogs, authCodes, rateLimitWindows, sessions, users } from '../../src/db/schema.js';
+import { adminAuditLogs, authCodes, knownLogins, rateLimitWindows, sessions, users } from '../../src/db/schema.js';
 import { createApp } from '../../src/http/app.js';
 import { hashPassword } from '../../src/modules/auth/password.js';
 import { createSession, resolveSession, sweepExpiredSessions, touchSessions } from '../../src/modules/auth/session.js';
 import { FAILURE_RULE } from '../../src/modules/auth/ratelimit.js';
+import { KNOWN_LOGIN_DAYS, recordLogin, sweepKnownLogins, whenLoginAlertsSettled } from '../../src/modules/auth/loginAlert.js';
 import { participants } from '../../src/modules/presence/participants.js';
 import { db, joinNew, pool } from './helpers.js';
 
@@ -27,22 +28,26 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** Every email the app hands to Resend in a test, read back for its code. */
 let mailbox: { to: string[]; subject: string; text: string }[] = [];
-const saved = { key: config.RESEND_API_KEY, from: config.RESEND_FROM_EMAIL, idle: config.SESSION_IDLE_DAYS };
+const saved = { key: config.RESEND_API_KEY, from: config.RESEND_FROM_EMAIL, idle: config.SESSION_IDLE_DAYS, appUrl: config.APP_URL };
 
 beforeEach(() => {
   mailbox = [];
   config.RESEND_API_KEY = 're_test';
   config.RESEND_FROM_EMAIL = 'Linkord <noreply@example.test>';
+  config.APP_URL = 'https://chat.example.test';
   mock.method(globalThis, 'fetch', async (_url: string, init: RequestInit) => {
     mailbox.push(JSON.parse(String(init.body)));
     return new Response('{}', { status: 200 });
   });
 });
-afterEach(() => {
+afterEach(async () => {
+  // an alert from this test's logins must land in this test's mailbox, not the next one's
+  await whenLoginAlertsSettled();
   mock.restoreAll();
   config.RESEND_API_KEY = saved.key;
   config.RESEND_FROM_EMAIL = saved.from;
   config.SESSION_IDLE_DAYS = saved.idle;
+  config.APP_URL = saved.appUrl;
 });
 
 function lastCode(): string {
@@ -66,7 +71,7 @@ async function makeAccount(opts: { twoFactor?: boolean; email?: boolean } = {}) 
 
 interface Reply { status: number; headers: Record<string, unknown>; body: any; cookie: string | null }
 
-async function call(method: 'GET' | 'POST' | 'DELETE', url: string, opts: { payload?: Record<string, unknown>; cookie?: string; ip?: string; ua?: string } = {}): Promise<Reply> {
+async function call(method: 'GET' | 'POST' | 'PUT' | 'DELETE', url: string, opts: { payload?: Record<string, unknown>; cookie?: string; ip?: string; ua?: string } = {}): Promise<Reply> {
   const ip = opts.ip ?? freshIp();
   const res = await app.inject({
     method, url, payload: opts.payload, remoteAddress: ip,
@@ -590,5 +595,150 @@ describe('changing the password', () => {
     assert.equal(res.status, 200);
     assert.equal((await me(a.cookie)).status, 401);
     assert.equal(tab.disconnected, true);
+  });
+});
+
+describe('new sign-in alerts', () => {
+  const CHROME_MAC = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36';
+  const FIREFOX_LINUX = 'Mozilla/5.0 (X11; Linux x86_64; rv:132.0) Gecko/20100101 Firefox/132.0';
+  const alertsTo = (email: string | null) => mailbox.filter((m) => m.to.includes(email!) && /sign-in|login|entrou/i.test(`${m.subject}`) && !/\b\d{6}\b/.test(m.text));
+
+  /** Signs in and waits for the alert, which is sent in the background. */
+  const signIn = async (username: string, ip: string, ua: string, password = PASSWORD) => {
+    const res = await call('POST', '/api/auth/login', { payload: { username, password }, ip, ua });
+    await whenLoginAlertsSettled();
+    return res;
+  };
+
+  it('emails the account about a browser it has not used lately, with where to end the session', async () => {
+    const user = await makeAccount();
+    await db.update(users).set({ locale: 'en-US' }).where(eq(users.id, user.id));
+    const ip = freshIp();
+    const res = await signIn(user.username, ip, CHROME_MAC);
+    assert.equal(res.status, 200);
+
+    const [mail] = alertsTo(user.email);
+    assert.ok(mail, 'an alert should have been sent');
+    assert.equal(mail.subject, 'New sign-in to your Linkord account');
+    assert.match(mail.text, /Browser: Chrome on macOS/);
+    assert.ok(mail.text.includes(`IP address: ${ip}`));
+    assert.match(mail.text, /Time: .* UTC/);
+    assert.ok(mail.text.includes(`${config.APP_URL}/app/settings/security#sessions`));
+  });
+
+  it('is written in the account language', async () => {
+    const user = await makeAccount();
+    await signIn(user.username, freshIp(), FIREFOX_LINUX);
+    const [mail] = alertsTo(user.email);
+    assert.equal(mail?.subject, 'Novo login na sua conta Linkord');
+    assert.match(mail!.text, /Navegador: Firefox em Linux/);
+  });
+
+  it('stays quiet when the same browser signs in again, even after logging out', async () => {
+    const user = await makeAccount();
+    const ip = freshIp();
+    const first = await signIn(user.username, ip, CHROME_MAC);
+    assert.equal(alertsTo(user.email).length, 1);
+    await call('POST', '/api/auth/logout', { cookie: first.cookie! });
+    await signIn(user.username, ip, CHROME_MAC);
+    await signIn(user.username, ip, CHROME_MAC);
+    assert.equal(alertsTo(user.email).length, 1, 'the same address and browser is not new');
+  });
+
+  it('alerts again for another address or another browser', async () => {
+    const user = await makeAccount();
+    const ip = freshIp();
+    await signIn(user.username, ip, CHROME_MAC);
+    await signIn(user.username, freshIp(), CHROME_MAC);
+    await signIn(user.username, ip, FIREFOX_LINUX);
+    assert.equal(alertsTo(user.email).length, 3);
+  });
+
+  it('treats a browser not seen for a month as new again', async () => {
+    const user = await makeAccount();
+    const ip = freshIp();
+    await signIn(user.username, ip, CHROME_MAC);
+    assert.equal(alertsTo(user.email).length, 1);
+    await db.update(knownLogins).set({ lastLoginAt: new Date(Date.now() - (KNOWN_LOGIN_DAYS + 1) * DAY_MS) }).where(eq(knownLogins.userId, user.id));
+    await signIn(user.username, ip, CHROME_MAC);
+    assert.equal(alertsTo(user.email).length, 2);
+  });
+
+  it('with two-step login, alerts once the code finishes the login and not at the password step', async () => {
+    const user = await makeAccount({ twoFactor: true });
+    const ip = freshIp();
+    const first = await call('POST', '/api/auth/login', { payload: { username: user.username, password: PASSWORD }, ip, ua: CHROME_MAC });
+    await whenLoginAlertsSettled();
+    assert.equal(alertsTo(user.email).length, 0, 'no session yet, nothing to warn about');
+
+    const done = await call('POST', '/api/auth/login/verify', { payload: { challenge: first.body.twoFactor.challenge, code: lastCode() }, ip, ua: CHROME_MAC });
+    assert.equal(done.status, 200);
+    await whenLoginAlertsSettled();
+    assert.equal(alertsTo(user.email).length, 1);
+  });
+
+  it('does not alert for the browser that registered the account', async () => {
+    const user = await makeAccount();
+    const origin = { ip: freshIp(), userAgent: CHROME_MAC };
+    assert.equal(await recordLogin(user.id, origin), true);
+    await signIn(user.username, origin.ip, origin.userAgent);
+    assert.equal(alertsTo(user.email).length, 0);
+  });
+
+  it('is skipped when the account turned it off, has no email or the server cannot send', async () => {
+    const off = await makeAccount();
+    await db.update(users).set({ loginAlertEmail: false }).where(eq(users.id, off.id));
+    assert.equal((await signIn(off.username, freshIp(), CHROME_MAC)).status, 200);
+
+    const noEmail = await makeAccount({ email: false });
+    assert.equal((await signIn(noEmail.username, freshIp(), CHROME_MAC)).status, 200);
+
+    const unconfigured = await makeAccount();
+    config.RESEND_API_KEY = '';
+    assert.equal((await signIn(unconfigured.username, freshIp(), CHROME_MAC)).status, 200);
+
+    assert.equal(mailbox.length, 0);
+  });
+
+  it('a failing email never fails the login', async () => {
+    mock.restoreAll();
+    mock.method(globalThis, 'fetch', async () => new Response('down', { status: 503 }));
+    const user = await makeAccount();
+    const res = await signIn(user.username, freshIp(), CHROME_MAC);
+    assert.equal(res.status, 200);
+    assert.equal((await me(res.cookie!)).status, 200);
+  });
+
+  it('caps the alerts one account can receive in an hour', async () => {
+    const user = await makeAccount();
+    for (let i = 0; i < 7; i++) await signIn(user.username, freshIp(), CHROME_MAC);
+    assert.equal(alertsTo(user.email).length, 5);
+  });
+
+  it('forgets browsers past the window when the sweep runs', async () => {
+    const user = await makeAccount();
+    await recordLogin(user.id, { ip: '198.51.100.1', userAgent: 'old' }, new Date(Date.now() - (KNOWN_LOGIN_DAYS + 1) * DAY_MS));
+    await recordLogin(user.id, { ip: '198.51.100.2', userAgent: 'recent' });
+    await sweepKnownLogins();
+    assert.equal((await db.select().from(knownLogins).where(eq(knownLogins.userId, user.id))).length, 1);
+  });
+});
+
+describe('the sign-in alert switch', () => {
+  it('is on by default, reported with the security status and changed by its owner only', async () => {
+    const user = await makeAccount();
+    const { cookie } = await cookieFor(user.id);
+    assert.equal((await call('GET', '/api/auth/security', { cookie })).body.loginAlertEnabled, true);
+
+    assert.equal((await call('PUT', '/api/auth/login-alerts', { payload: { enabled: false } })).status, 401);
+    assert.equal((await call('PUT', '/api/auth/login-alerts', { payload: { enabled: 'no' }, cookie })).status, 400);
+
+    const off = await call('PUT', '/api/auth/login-alerts', { payload: { enabled: false }, cookie });
+    assert.equal(off.status, 200);
+    assert.equal(off.body.loginAlertEnabled, false);
+    assert.equal((await call('GET', '/api/auth/security', { cookie })).body.loginAlertEnabled, false);
+
+    await call('PUT', '/api/auth/login-alerts', { payload: { enabled: true }, cookie });
+    assert.equal((await call('GET', '/api/auth/security', { cookie })).body.loginAlertEnabled, true);
   });
 });

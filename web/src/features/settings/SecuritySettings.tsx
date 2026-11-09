@@ -5,6 +5,7 @@ import { fetchSecurityStatus, fetchSessions } from '@/shared/api/api';
 import type { AccountSession, SecurityStatus } from '@/shared/api/api';
 import { Skeleton, SkeletonGroup } from '@/shared/ui/primitives/skeleton';
 import { SettingsSection, SettingsSections } from '@/shared/ui/settings-layout';
+import { LoginAlertSettings } from './LoginAlertSettings';
 import { PasswordSettings } from './PasswordSettings';
 import { SessionsSettings } from './SessionsSettings';
 import { TwoFactorSettings } from './TwoFactorSettings';
@@ -45,6 +46,17 @@ export function SecuritySettings() {
           <TwoFactorSettings
             status={security.value}
             onChange={(enabled) => setSecurity({ status: 'ready', value: { ...security.value, twoFactorEnabled: enabled } })}
+          />
+        )}
+      </SettingsSection>
+
+      <SettingsSection id="login-alerts" title={t('catalog.sections.loginAlerts')}>
+        {security.status === 'loading' && <RowsSkeleton count={1} label={t('security.loading')} />}
+        {security.status === 'error' && <LoadError onRetry={() => { setSecurity({ status: 'loading' }); loadSecurity(); }} />}
+        {security.status === 'ready' && (
+          <LoginAlertSettings
+            status={security.value}
+            onChange={(enabled) => setSecurity({ status: 'ready', value: { ...security.value, loginAlertEnabled: enabled } })}
           />
         )}
       </SettingsSection>
