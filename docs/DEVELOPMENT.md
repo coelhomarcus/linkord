@@ -143,12 +143,13 @@ Every script runs from the repository root.
 | `npm run restore -- [<backup>] --confirm <database>` | Restores a backup into an empty database and uploads folder, and checks the result. |
 | `npm run backup:rehearse` | Backup, restore and a boot of the app on throwaway local databases. Needs `pg_dump` and `pg_restore`. |
 | `npm run admin:grant -- <username>` / `admin:revoke` | Gives or takes administrator access. |
+| `npm run emoji:data` | Rebuilds `web/public/emoji-data/<lang>/emojis.json` (the emoji picker's and the composer's `:shortcode:` data) from the pinned `emojibase-data` devDependency of `web/`. Run it after bumping that package. |
 
 The scripts behind the `db:*`, `admin:*` and `test:integration` commands live in `server/src/scripts/`; each starts with a comment on what it does and how to call it.
 
 ## End-to-end tests
 
-`e2e/` drives the real app in Chrome with several accounts at once, against a Docker stack shaped like production: the app image behind Traefik, a LiveKit dev server and a throwaway Postgres (`e2e/docker/compose.yml`). Nothing touches the dev database.
+`e2e/` drives the real app in Chrome with several accounts at once, against a Docker stack shaped like production: the app image behind Traefik, a LiveKit dev server, a throwaway Postgres and a mail sink in place of Resend (`e2e/docker/compose.yml`). Nothing touches the dev database, and no email leaves the machine: the app's `RESEND_API_URL` points at the sink (`e2e/docker/mailsink.mjs`), and a spec reads the codes it received with `emailCount`/`waitForEmailCode` (`e2e/stack/stack.ts`).
 
 Prerequisites: Docker and Google Chrome. Install the suite's own dependencies once (no browser is downloaded; Playwright uses the installed Chrome):
 
@@ -184,15 +185,16 @@ The `upgrade` project adapts to what the base version can do and says so in the 
 
 | Spec | What it checks |
 | --- | --- |
-| `features/auth` | Sign-up with and without the invitation code, the login form (wrong password refused), session across reloads, logout. |
+| `features/auth` | Sign-up with and without the invitation code, the login form (wrong password refused), session across reloads, logout. Two-step login turned on from Settings → Security with the emailed code, then a login that needs the next code (a wrong one refused); ending another session from the session list signs that browser out without a reload. |
 | `features/friends` | Request from the form accepted in Pending, decline, cancel, block (no messages or calls) and unblock. |
 | `features/dm` | Talking in a DM, the unread count until it is opened, no DM without friendship. |
 | `features/chat` | Messages shown once on both sides, typing indicator, reply, edit, delete, reactions, search, image attachment. |
-| `features/servers` | Creating from the rail, invite link, new channels, a channel hidden from `@everyone`, a read-only channel, kick, ban and unban, deleting the server. |
+| `features/servers` | Creating from the rail, invite link, a member with only `@everyone` inviting without any server settings to open, a voice channel without `SPEAK` keeping the member's microphone off, new channels, a channel hidden from `@everyone`, a read-only channel, kick, ban and unban, deleting the server. |
 | `features/voice` | Seeing and hearing each other, mute and camera seen by the other side, leaving, a moderator moving and disconnecting a member. |
 | `features/dm-call` | Decline, cancel, an answered call with audio both ways and its line in the chat, a video call. |
 | `features/webhooks` | Text and cards through the ingress (token in the URL and in the header), invalid payloads, rotating and deleting the URL, permission. |
-| `features/soundboard` | A sound uploaded to the server reaches everyone in the call. |
+| `features/soundboard` | A sound uploaded to the server reaches everyone in the call; a member adds one from the call's sound picker once `@everyone` has `CREATE_EXPRESSIONS`, and is not offered it before; a sound from another server of the player's plays in the call and someone outside that server fetches it (the play's token). |
+| `features/emoji` | `:shortcode:` suggestions and a full shortcode turning into its emoji; a server emoji picked from the picker in a DM with someone outside that server, who sees the picture, and typed in another server's channel; uploading and cropping one from the server's settings. |
 | `features/profile` | Display name and bio reaching a friend live, mutual friends, the games widgets on offer with no connection (the picker reports the search unavailable, as the stack has no IGDB credentials), games saved with the Wall reaching a friend in order, and widgets reordered by dragging their handle and removed with the button under it. On a touch phone: the profile filling the screen, a game cover's actions in a menu, a widget dragged by its handle with a real finger, 44px touch targets, and a colour picker that does not make iOS zoom. |
 | `features/reports-admin` | Reporting a message, the admin deleting it for everyone, suspending an account. |
 | `features/settings` | The account's language following it to another browser. |
@@ -290,7 +292,7 @@ docker compose run --rm --no-deps app node server/dist/scripts/restore.js latest
 
 `pg_restore` runs in a single transaction and stops at the first error, so a failed restore leaves the database empty, and the uploads are extracted only after it succeeds.
 
-Afterwards it checks the result and prints it: every table has the number of rows the backup recorded, the migrations are all there, the number of extracted files is right, and every attachment, thumbnail, sound and staged file has its file on disk (the same comparison `/admin/system` makes). A mismatch exits with code 3. Warnings (the cases listed above) exit 0, or 3 with `--strict`. Other failures exit 1, a missing confirmation 2.
+Afterwards it checks the result and prints it: every table has the number of rows the backup recorded, the migrations are all there, the number of extracted files is right, and every attachment, thumbnail, sound, server emoji and staged file has its file on disk (the same comparison `/admin/system` makes). A mismatch exits with code 3. Warnings (the cases listed above) exit 0, or 3 with `--strict`. Other failures exit 1, a missing confirmation 2.
 
 ### Rehearsal
 
@@ -309,7 +311,7 @@ Tables that grow with use are trimmed by one daily sweep (`modules/retention/`),
 | `OUTBOX_RETENTION_DAYS` | `7` | delivered `outbox_events`, by the time they were delivered. Events that ran out of attempts stay, so an administrator can see them |
 | `SERVER_AUDIT_RETENTION_DAYS` | `90` | `server_audit_logs`, each server's own audit log shown in its settings, by creation time. It is a moderation aid for the server, not instance evidence, so it expires by default |
 
-Login sessions (deleted when they expire) and chat send operations (a fixed 7 days) have their own cleanup and no setting.
+Chat send operations (a fixed 7 days) have their own cleanup and no setting. Login sessions are deleted when they expire (`SESSION_TTL_DAYS`, default 30) or go unused for `SESSION_IDLE_DAYS` (default 14, `0` turns it off; a tab with a live socket counts as use), by an hourly sweep. The address and browser stored with each session go with it: they are kept only while the session lives and shown only to the account itself.
 
 - **Batches:** the sweep deletes at most 1000 rows per statement, oldest first, with a short pause between statements, so a table with a large backlog is never locked for long. The first run after enabling a limit on a big table can therefore take a while; later runs only remove a day's worth.
 - **Report:** `/admin/system` lists each table's limit and what the last sweep deleted (the report lives in memory, so it is empty after a restart until the next sweep). A sweep that deleted something, or failed on a table, also leaves a `retention.sweep` entry in the audit log. A table that fails is logged and does not stop the others.
@@ -338,7 +340,7 @@ The server sends a Content-Security-Policy with every response it serves, built 
 
 - **Scripts** run only from our own origin. The two small inline scripts in `web/index.html` and the one in `web/public/offline.html` are allowed by their SHA-256, computed at boot from the built files, so editing them needs nothing else. Inline event handlers (`onclick="…"`) cannot be hashed: use `addEventListener`. `'wasm-unsafe-eval'` is there for the avatar cropper's ImageMagick; `eval` and `new Function` stay blocked. A library that loads a third-party script into the page (YouTube's iframe API, for one) is not allowed: embed the provider's player as an iframe instead.
 - **Styles** keep `'unsafe-inline'`: React, Motion and Base UI set inline styles and a few libraries inject `<style>` elements. A style cannot run script.
-- **Images and media** load from any `https:` host (plus `http:` when `APP_URL` itself is http) because link previews and the Wall show pictures from any site. This shrinks to `'self'` once those go through our own image proxy (LINKORD-42).
+- **Images and media** load from any `https:` host (plus `http:` when `APP_URL` itself is http). The Wall's covers and avatars, link preview pictures and YouTube thumbnails come from our own [media proxy](INTEGRATIONS.md#media-proxy), but GIFs (KLIPY's terms), direct image and video links pasted in chat, webhook embed images and the redirects of `MEDIA_PROXY=0` still load from their own hosts.
 - **Connections** go to our own origin and websocket, to `LIVEKIT_URL` over both ws and http (any `*.livekit.cloud` host for LiveKit Cloud, which hands out regional URLs), and to `https://api.klipy.com` when `KLIPY_API_KEY` is set.
 - **Frames:** only the YouTube and Twitch players (`frame-src`).
 - `/api/*` responses get `default-src 'none'; frame-ancestors 'none'`: JSON loads nothing.

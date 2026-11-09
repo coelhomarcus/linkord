@@ -10,6 +10,7 @@ import { logger } from '@/shared/lib/logger';
 import { getAudioPreferences } from './audioPreferences';
 import { applyInputGain } from './inputGain';
 import { captureOptionsForProfile } from './inputProfile';
+import { mayPublish } from './publishRights';
 
 const log = logger.child({ component: 'microphone' });
 
@@ -54,6 +55,9 @@ export function useMicrophone(room: Room, dispatch: Dispatch<RoomAction>): Micro
     activatingRef.current = true;
     try {
       await waitForConnection(room);
+      // a channel without SPEAK: the SFU would refuse the track, and the call
+      // join (which calls this on its own) must not read that as a broken mic
+      if (!mayPublish(room.localParticipant.permissions, Track.Source.Microphone)) return;
       // Without this, a freshly created track always starts on whatever
       // device the browser picks by default — the device saved in Settings
       // (useMediaDevices#selectDevice) only ever got applied to an ALREADY

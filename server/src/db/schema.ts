@@ -46,6 +46,8 @@ export const users = pgTable('users', {
   // false keeps message text out of push notifications (they show who and where only). It is read
   // by the server when it builds the push, so it lives on the account, not in the browser.
   pushShowContent: boolean('push_show_content').notNull().default(true),
+  // Two-step login: with it on, a right password only earns a code sent to `email` (auth/routes.ts).
+  twoFactorEmail: boolean('two_factor_email').notNull().default(false),
   // The presence status the person picked (see modules/presence/userStatus.ts). On the account so it
   // holds on every device, and so push delivery can honour 'dnd' without asking the socket layer.
   presenceStatus: varchar('presence_status', { length: 16 }).notNull().default('online'),
@@ -72,15 +74,22 @@ export const users = pgTable('users', {
 ]);
 
 /** Login session. The key is the sha256 of the cookie value, never the raw
- * value — a DB leak alone can't be replayed as a session. */
+ * value — a DB leak alone can't be replayed as a session. `id` is what the
+ * account's own session list shows and revokes, so the hash never leaves the
+ * server. `ip` and `userAgent` are what the login came from (personal data:
+ * shown only to the account itself, gone with the row). */
 export const sessions = pgTable('sessions', {
   tokenHash: text('token_hash').primaryKey(),
+  id: text('id').notNull(),
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  ip: varchar('ip', { length: 64 }).notNull().default(''),
+  userAgent: varchar('user_agent', { length: 512 }).notNull().default(''),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   lastSeenAt: timestamp('last_seen_at', { withTimezone: true }).notNull().defaultNow(),
   expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
 }, (t) => [
   index('sessions_user_id_idx').on(t.userId),
+  uniqueIndex('sessions_id_key').on(t.id),
 ]);
 
 /** Short-lived one-time codes for account recovery and email changes. Only
@@ -88,8 +97,11 @@ export const sessions = pgTable('sessions', {
 export const authCodes = pgTable('auth_codes', {
   id: text('id').primaryKey(),
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  purpose: varchar('purpose', { length: 32 }).notNull(), // 'password_reset' | 'email_change'
+  purpose: varchar('purpose', { length: 32 }).notNull(), // see AuthCodePurpose in auth/codes.ts
   email: varchar('email', { length: 320 }).notNull(),
+  // sha256 of the login challenge a 'login' code belongs to (null for every other purpose), so the
+  // code can only finish the login it was sent for
+  challengeHash: text('challenge_hash'),
   codeHash: text('code_hash').notNull(),
   attempts: integer('attempts').notNull().default(0),
   expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
@@ -98,6 +110,7 @@ export const authCodes = pgTable('auth_codes', {
 }, (t) => [
   index('auth_codes_user_purpose_idx').on(t.userId, t.purpose),
   index('auth_codes_email_purpose_idx').on(t.email, t.purpose),
+  index('auth_codes_challenge_hash_idx').on(t.challengeHash),
 ]);
 
 /** DMs are unique per sorted member pair; server channels share this table via `serverId`.
@@ -478,7 +491,8 @@ export type MessageSendOperation = typeof messageSendOperations.$inferSelect;
 export const messageReactions = pgTable('message_reactions', {
   messageId: integer('message_id').notNull().references(() => messages.id, { onDelete: 'cascade' }),
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  emoji: varchar('emoji', { length: 16 }).notNull(), // same cap as isSingleEmoji, modules/emoji.ts
+  // a Unicode emoji (same cap as isSingleEmoji, messages/emoji.ts) or `custom:<id>` for a server emoji
+  emoji: varchar('emoji', { length: 64 }).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
   primaryKey({ columns: [t.messageId, t.userId, t.emoji] }),
@@ -588,6 +602,25 @@ export const serverSounds = pgTable('server_sounds', {
 ]);
 
 export type ServerSound = typeof serverSounds.$inferSelect;
+
+/** A server's own emojis, used as `<:name:id>` (`<a:name:id>` when animated) in messages and as
+ * `custom:<id>` reactions anywhere by its members (modules/emojis). The file is a 128px WebP stored
+ * under the emoji's id in the uploads folder and counted in the instance's storage, like a sound. */
+export const serverEmojis = pgTable('server_emojis', {
+  id: text('id').primaryKey(),
+  serverId: text('server_id').notNull().references(() => servers.id, { onDelete: 'cascade' }),
+  // set null, not cascade: the emoji belongs to the server, not to whoever sent it
+  uploaderId: text('uploader_id').references(() => users.id, { onDelete: 'set null' }),
+  name: varchar('name', { length: 32 }).notNull(),
+  animated: boolean('animated').notNull().default(false),
+  size: integer('size').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex('server_emojis_server_name_key').on(t.serverId, t.name),
+  check('server_emojis_name_check', sql`${t.name} ~ '^[a-z0-9_]{2,32}$'`),
+]);
+
+export type ServerEmoji = typeof serverEmojis.$inferSelect;
 
 /** Inbox and read state for a social event. Typed foreign keys preserve referential integrity;
  * deterministic `dedupeKey` values make retried outbox writes idempotent. Reading a notification
@@ -850,3 +883,26 @@ export const connectionSyncLimits = pgTable('connection_sync_limits', {
   provider: varchar('provider', { length: 16 }).primaryKey(),
   nextRequestAt: timestamp('next_request_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+/** Keys the instance makes for itself on first boot, so a deploy needs no
+ * extra configuration and every restart (or instance) signs the same way. */
+export const instanceSecrets = pgTable('instance_secrets', {
+  name: varchar('name', { length: 32 }).primaryKey(),
+  value: text('value').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** How often an account used each emoji (and, with kind 'sound', each soundboard sound): what the
+ * pickers and the composer's suggestions list first, the same on every device. Written by the
+ * server as the expression is used, never by the client. `key` is the emoji itself, `custom:<id>`
+ * for a server emoji, or the sound id. Pruned to the most used per kind (expressionUsage.ts). */
+export const userExpressionUsage = pgTable('user_expression_usage', {
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  kind: varchar('kind', { length: 8 }).notNull(),
+  key: varchar('key', { length: 64 }).notNull(),
+  count: integer('count').notNull().default(1),
+  lastUsedAt: timestamp('last_used_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  primaryKey({ columns: [t.userId, t.kind, t.key] }),
+  check('user_expression_usage_kind_check', sql`${t.kind} IN ('emoji','sound')`),
+]);

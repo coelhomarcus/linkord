@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 
 import type { DetectedEmbed } from '@/shared/lib/chatEmbeds';
 import { getCachedLinkPreview, loadLinkPreview } from '@/shared/lib/linkPreviewCache';
+import { youtubeThumbnailProxyUrl } from '@/shared/lib/mediaProxy';
 import { useNearViewport } from './useNearViewport';
 import type { LinkPreviewData } from '@/shared/api/api';
 import { availableAttachmentWidth, useChatSurfaceWidth } from '@/shared/lib/chatSurfaceWidth';
@@ -171,7 +172,7 @@ export function GenericEmbed({ embed, className = '', edgeToEdge, preview }: Gen
   if (embed.kind === 'youtube') {
     media = (
       <div className="aspect-video w-full bg-black">
-        <YouTubePlayer embed={embed} thumbnail={image || `https://i.ytimg.com/vi/${embed.youtubeId}/hqdefault.jpg`} />
+        <YouTubePlayer embed={embed} thumbnail={image || youtubeThumbnailProxyUrl(embed.youtubeId!)} />
       </div>
     );
   } else if (embed.kind === 'twitch-channel' || embed.kind === 'twitch-vod' || embed.kind === 'twitch-clip') {

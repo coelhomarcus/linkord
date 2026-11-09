@@ -34,6 +34,8 @@ export function ChatSurface({ conversationId, onOpenProfile }: { conversationId:
   // no composer, no typing, nothing to drop files into
   const shown = conversations.find((c) => c.id === conversationId);
   const readOnly = shown?.permissions !== undefined && !hasPermission(shown.permissions, PERMISSIONS.SEND_MESSAGES);
+  // the server already drops ATTACH_FILES with SEND_MESSAGES, so this covers both
+  const noFiles = shown?.permissions !== undefined && !hasPermission(shown.permissions, PERMISSIONS.ATTACH_FILES);
   const composerRef = useRef<MessageComposerHandle>(null);
   const composerWrapRef = useRef<HTMLDivElement | null>(null);
   const [composerHeight, setComposerHeight] = useState(0);
@@ -56,13 +58,13 @@ export function ChatSurface({ conversationId, onOpenProfile }: { conversationId:
   }, []);
 
   function handleDragEnter(e: DragEvent<HTMLDivElement>) {
-    if (readOnly || !state.joined || !hasFiles(e)) return;
+    if (noFiles || !state.joined || !hasFiles(e)) return;
     e.preventDefault();
     dragDepthRef.current += 1;
     setDragActive(true);
   }
   function handleDragOver(e: DragEvent<HTMLDivElement>) {
-    if (readOnly || !state.joined || !hasFiles(e)) return;
+    if (noFiles || !state.joined || !hasFiles(e)) return;
     e.preventDefault();
   }
   function handleDragLeave(e: DragEvent<HTMLDivElement>) {
@@ -72,7 +74,7 @@ export function ChatSurface({ conversationId, onOpenProfile }: { conversationId:
     if (dragDepthRef.current === 0) setDragActive(false);
   }
   function handleDrop(e: DragEvent<HTMLDivElement>) {
-    if (!state.joined || !hasFiles(e)) return;
+    if (noFiles || !state.joined || !hasFiles(e)) return;
     e.preventDefault();
     dragDepthRef.current = 0;
     setDragActive(false);

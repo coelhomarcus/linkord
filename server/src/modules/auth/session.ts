@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { eq, lt } from 'drizzle-orm';
+import { and, desc, eq, inArray, lt, ne, or } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { sessions, users } from '../../db/schema.js';
 import { config } from '../../config/env.js';
@@ -13,9 +13,20 @@ import { resolveLocale } from '../users/locale.js';
 // HTTP request would be a WAN round-trip per reconnect. Hence a 60s
 // in-memory cache; profile saves and logout/account deletion invalidate the
 // affected entries explicitly.
+//
+// `lastSeenAt` feeds the account's session list and the idle expiry
+// (SESSION_IDLE_DAYS). It is rewritten at most once a minute per session: a
+// cached session is not read at all, and a read only writes when the stored
+// value is older than that. A socket that stays connected makes no request,
+// so the periodic sweep touches the sessions behind live sockets instead.
 
 const SESSION_CACHE_TTL_MS = 60 * 1000;
-const LAST_SEEN_STALE_MS = 60 * 60 * 1000; // only rewrites lastSeenAt if older than 1h
+const LAST_SEEN_STALE_MS = 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function idleCutoff(): Date | null {
+  return config.SESSION_IDLE_DAYS > 0 ? new Date(Date.now() - config.SESSION_IDLE_DAYS * DAY_MS) : null;
+}
 
 interface CacheEntry {
   value: SessionUser;
@@ -43,14 +54,23 @@ function cacheInvalidate(tokenHash: string): void {
   cache.delete(tokenHash);
 }
 
+export interface SessionOrigin { ip: string; userAgent: string }
+
 /** Creates a new session and returns the RAW token (goes in the cookie) —
  * never persisted in plaintext, only the hash. */
-export async function createSession(userId: string): Promise<{ rawToken: string; expiresAt: Date }> {
+export async function createSession(userId: string, origin: SessionOrigin = { ip: '', userAgent: '' }): Promise<{ rawToken: string; expiresAt: Date; id: string }> {
   const rawToken = crypto.randomBytes(32).toString('base64url');
   const tokenHash = hashToken(rawToken);
-  const expiresAt = new Date(Date.now() + config.SESSION_TTL_DAYS * 24 * 60 * 60 * 1000);
-  await db.insert(sessions).values({ tokenHash, userId, expiresAt });
-  return { rawToken, expiresAt };
+  const id = crypto.randomUUID();
+  const expiresAt = new Date(Date.now() + config.SESSION_TTL_DAYS * DAY_MS);
+  await db.insert(sessions).values({ tokenHash, id, userId, expiresAt, ip: origin.ip.slice(0, 64), userAgent: origin.userAgent.slice(0, 512) });
+  return { rawToken, expiresAt, id };
+}
+
+/** Whether a stored session may still be used: not past its TTL nor idle past SESSION_IDLE_DAYS. */
+export function isSessionLive(row: { expiresAt: Date; lastSeenAt: Date }, now = Date.now()): boolean {
+  if (row.expiresAt.getTime() < now) return false;
+  return !(config.SESSION_IDLE_DAYS > 0 && now - row.lastSeenAt.getTime() > config.SESSION_IDLE_DAYS * DAY_MS);
 }
 
 /** Resolves a raw token (from a cookie) to the session's owner, or null if
@@ -64,6 +84,7 @@ export async function resolveSession(rawToken: string | undefined | null): Promi
   const [row] = await db
     .select({
       tokenHash: sessions.tokenHash,
+      sessionId: sessions.id,
       expiresAt: sessions.expiresAt,
       lastSeenAt: sessions.lastSeenAt,
       userId: users.id,
@@ -87,8 +108,15 @@ export async function resolveSession(rawToken: string | undefined | null): Promi
     .limit(1);
 
   // a suspended account holds no session, whatever the DB row says
-  if (!row || row.expiresAt.getTime() < Date.now() || row.status !== 'active') {
+  if (!row || row.status !== 'active') {
     cacheInvalidate(tokenHash);
+    return null;
+  }
+  if (!isSessionLive(row)) {
+    cacheInvalidate(tokenHash);
+    // an idle one would otherwise wait for the sweep; deleting it now keeps the session list honest
+    // (awaited: it only happens once per dead session, and the refusal must not be undone by a race)
+    await db.delete(sessions).where(eq(sessions.tokenHash, tokenHash)).catch(() => {});
     return null;
   }
 
@@ -99,6 +127,7 @@ export async function resolveSession(rawToken: string | undefined | null): Promi
 
   const value: SessionUser = {
     tokenHash,
+    sessionId: row.sessionId,
     userId: row.userId,
     username: row.username,
     email: row.email,
@@ -132,10 +161,57 @@ export async function destroyAllSessionsForUser(userId: string): Promise<void> {
   invalidateSessionsForUser(userId);
 }
 
-/** Clears expired sessions from the DB — called periodically at boot
- * (src/index.ts), not per request. */
+export interface SessionSummary {
+  id: string;
+  ip: string;
+  userAgent: string;
+  createdAt: Date;
+  lastSeenAt: Date;
+}
+
+/** The account's usable sessions, most recently used first. */
+export async function listSessionsForUser(userId: string): Promise<SessionSummary[]> {
+  const rows = await db.select({
+    id: sessions.id, ip: sessions.ip, userAgent: sessions.userAgent, createdAt: sessions.createdAt,
+    lastSeenAt: sessions.lastSeenAt, expiresAt: sessions.expiresAt,
+  }).from(sessions).where(eq(sessions.userId, userId)).orderBy(desc(sessions.lastSeenAt));
+  const now = Date.now();
+  return rows.filter((row) => isSessionLive(row, now)).map(({ expiresAt: _expiresAt, ...rest }) => rest);
+}
+
+/** Ends one session of the account by its public id. Returns the ended session's token hash (to cut
+ * its sockets), or null when the account has no such session. */
+export async function destroySessionById(userId: string, sessionId: string): Promise<string | null> {
+  const [row] = await db.delete(sessions)
+    .where(and(eq(sessions.userId, userId), eq(sessions.id, sessionId)))
+    .returning({ tokenHash: sessions.tokenHash });
+  if (!row) return null;
+  cacheInvalidate(row.tokenHash);
+  return row.tokenHash;
+}
+
+/** Ends every session of the account except `keepTokenHash`. Returns the ended token hashes. */
+export async function destroyOtherSessions(userId: string, keepTokenHash: string): Promise<string[]> {
+  const rows = await db.delete(sessions)
+    .where(and(eq(sessions.userId, userId), ne(sessions.tokenHash, keepTokenHash)))
+    .returning({ tokenHash: sessions.tokenHash });
+  for (const row of rows) cacheInvalidate(row.tokenHash);
+  return rows.map((row) => row.tokenHash);
+}
+
+/** Marks sessions as just used — for the ones behind a socket that stayed connected, which otherwise
+ * make no request that would refresh `lastSeenAt` and would expire as idle under a live tab. */
+export async function touchSessions(tokenHashes: string[]): Promise<void> {
+  if (tokenHashes.length === 0) return;
+  await db.update(sessions).set({ lastSeenAt: new Date() }).where(inArray(sessions.tokenHash, tokenHashes));
+}
+
+/** Clears expired and idle sessions from the DB — called periodically at boot
+ * (app/bootstrap.ts), not per request. */
 export async function sweepExpiredSessions(): Promise<void> {
-  await db.delete(sessions).where(lt(sessions.expiresAt, new Date()));
+  const idle = idleCutoff();
+  const expired = lt(sessions.expiresAt, new Date());
+  await db.delete(sessions).where(idle ? or(expired, lt(sessions.lastSeenAt, idle)) : expired);
 }
 
 /** Called by modules/moderation.ts when deleting an account — the sessions

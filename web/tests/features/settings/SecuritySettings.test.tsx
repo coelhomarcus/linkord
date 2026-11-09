@@ -1,0 +1,179 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { SecuritySettings } from '@/features/settings/SecuritySettings';
+import { ApiError } from '@/shared/api/api';
+import type { AccountSession, SecurityStatus } from '@/shared/api/api';
+import { useLanguageForTests } from '@tests/fixtures/i18nFixture';
+
+const api = {
+  fetchSecurityStatus: vi.fn(),
+  fetchSessions: vi.fn(),
+  requestTwoFactorEnable: vi.fn(),
+  confirmTwoFactorEnable: vi.fn(),
+  disableTwoFactor: vi.fn(),
+  changePassword: vi.fn(),
+  endSession: vi.fn(),
+  endOtherSessions: vi.fn(),
+};
+
+vi.mock('@/shared/api/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/shared/api/api')>()),
+  fetchSecurityStatus: (...args: unknown[]) => api.fetchSecurityStatus(...args),
+  fetchSessions: (...args: unknown[]) => api.fetchSessions(...args),
+  requestTwoFactorEnable: (...args: unknown[]) => api.requestTwoFactorEnable(...args),
+  confirmTwoFactorEnable: (...args: unknown[]) => api.confirmTwoFactorEnable(...args),
+  disableTwoFactor: (...args: unknown[]) => api.disableTwoFactor(...args),
+  changePassword: (...args: unknown[]) => api.changePassword(...args),
+  endSession: (...args: unknown[]) => api.endSession(...args),
+  endOtherSessions: (...args: unknown[]) => api.endOtherSessions(...args),
+}));
+
+const status = (patch: Partial<SecurityStatus> = {}): SecurityStatus => ({
+  twoFactorEnabled: false, emailDeliveryAvailable: true, hasEmail: true, sessionIdleDays: 14, ...patch,
+});
+
+const now = new Date().toISOString();
+const SESSIONS: AccountSession[] = [
+  { id: 'other', current: false, ip: '198.51.100.2', userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36 Edg/130.0.0.0', createdAt: now, lastSeenAt: now },
+  { id: 'here', current: true, ip: '203.0.113.7', userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36', createdAt: now, lastSeenAt: now },
+  { id: 'phone', current: false, ip: '192.0.2.9', userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1', createdAt: now, lastSeenAt: now },
+];
+
+beforeEach(() => {
+  for (const fn of Object.values(api)) fn.mockReset();
+  api.fetchSecurityStatus.mockResolvedValue(status());
+  api.fetchSessions.mockResolvedValue({ sessions: SESSIONS });
+});
+
+const switchOf = () => screen.findByRole('switch', { name: 'Código por e-mail ao entrar' });
+
+describe('SecuritySettings: two-step verification', () => {
+  it('turns on after the password and the emailed code', async () => {
+    const user = userEvent.setup();
+    api.requestTwoFactorEnable.mockResolvedValue({ ok: true });
+    api.confirmTwoFactorEnable.mockResolvedValue({ twoFactorEnabled: true });
+    render(<SecuritySettings />);
+
+    await user.click(await switchOf());
+    await user.type(screen.getByLabelText('Senha atual'), 'my password');
+    await user.click(screen.getByRole('button', { name: 'Enviar código' }));
+    expect(api.requestTwoFactorEnable).toHaveBeenCalledWith('my password');
+
+    await user.type(screen.getByLabelText('Código de ativação'), '123456');
+    await waitFor(() => expect(api.confirmTwoFactorEnable).toHaveBeenCalledWith('123456'));
+    expect(await switchOf()).toBeChecked();
+  });
+
+  it('shows the server refusal for a wrong password and stays off', async () => {
+    const user = userEvent.setup();
+    api.requestTwoFactorEnable.mockRejectedValue(new ApiError(403, 'invalid_password', 'Senha incorreta.'));
+    render(<SecuritySettings />);
+    await user.click(await switchOf());
+    await user.type(screen.getByLabelText('Senha atual'), 'wrong');
+    await user.click(screen.getByRole('button', { name: 'Enviar código' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Senha incorreta.');
+    expect(await switchOf()).not.toBeChecked();
+  });
+
+  it('turns off with the password', async () => {
+    const user = userEvent.setup();
+    api.fetchSecurityStatus.mockResolvedValue(status({ twoFactorEnabled: true }));
+    api.disableTwoFactor.mockResolvedValue({ twoFactorEnabled: false });
+    render(<SecuritySettings />);
+    await user.click(await switchOf());
+    await user.type(screen.getByLabelText('Senha atual'), 'my password');
+    await user.click(screen.getByRole('button', { name: 'Desativar' }));
+    expect(api.disableTwoFactor).toHaveBeenCalledWith('my password');
+    await waitFor(async () => expect(await switchOf()).not.toBeChecked());
+  });
+
+  it('explains why it cannot be turned on without email delivery', async () => {
+    api.fetchSecurityStatus.mockResolvedValue(status({ emailDeliveryAvailable: false }));
+    render(<SecuritySettings />);
+    expect(await switchOf()).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByText(/O envio de e-mails não está configurado neste servidor/)).toBeInTheDocument();
+  });
+
+  it('asks for an email first when the account has none', async () => {
+    api.fetchSecurityStatus.mockResolvedValue(status({ hasEmail: false }));
+    render(<SecuritySettings />);
+    expect(await switchOf()).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByText(/Adicione um e-mail em Minha conta/)).toBeInTheDocument();
+  });
+});
+
+describe('SecuritySettings: sessions', () => {
+  it('lists this session first, named by browser and system, without an end button', async () => {
+    render(<SecuritySettings />);
+    const list = await screen.findByRole('list', { name: 'Sessões ativas' });
+    const rows = within(list).getAllByRole('listitem');
+    expect(rows[0]).toHaveTextContent('Chrome em macOS');
+    expect(rows[0]).toHaveTextContent('Esta sessão');
+    expect(within(rows[0]!).queryByRole('button')).toBeNull();
+    expect(rows[1]).toHaveTextContent('Edge em Windows');
+    expect(rows[1]).toHaveTextContent('198.51.100.2');
+    expect(rows[2]).toHaveTextContent('Safari em iOS');
+    expect(screen.getByText(/sem uso por 14 dias/)).toBeInTheDocument();
+  });
+
+  it('ends one session and drops it from the list', async () => {
+    const user = userEvent.setup();
+    api.endSession.mockResolvedValue(undefined);
+    render(<SecuritySettings />);
+    await user.click(await screen.findByRole('button', { name: 'Encerrar sessão: Edge em Windows' }));
+    expect(api.endSession).toHaveBeenCalledWith('other');
+    await waitFor(() => expect(screen.queryByText('Edge em Windows')).not.toBeInTheDocument());
+    expect(screen.getByText('Safari em iOS')).toBeInTheDocument();
+  });
+
+  it('ends all the others after a confirmation', async () => {
+    const user = userEvent.setup();
+    api.endOtherSessions.mockResolvedValue({ endedSessions: 2 });
+    render(<SecuritySettings />);
+    await user.click(await screen.findByRole('button', { name: 'Encerrar todas as outras' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent('2 outros navegadores serão desconectados');
+    await user.click(within(dialog).getByRole('button', { name: 'Encerrar todas as outras' }));
+    await waitFor(() => expect(api.endOtherSessions).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getByText('Nenhuma outra sessão ativa.')).toBeInTheDocument());
+    expect(screen.getByText('Chrome em macOS')).toBeInTheDocument();
+  });
+});
+
+describe('SecuritySettings: password', () => {
+  it('changes the password, says how many sessions ended and reloads the list', async () => {
+    const user = userEvent.setup();
+    api.changePassword.mockResolvedValue({ endedSessions: 2 });
+    render(<SecuritySettings />);
+    await user.click(await screen.findByRole('button', { name: 'Alterar' }));
+    await user.type(screen.getByLabelText('Senha atual'), 'old password');
+    await user.type(screen.getByLabelText('Nova senha'), 'a new password');
+    await user.click(screen.getByRole('button', { name: 'Salvar senha' }));
+    expect(api.changePassword).toHaveBeenCalledWith('old password', 'a new password');
+    expect(await screen.findByText('Senha alterada. 2 outras sessões foram encerradas.')).toBeInTheDocument();
+    expect(api.fetchSessions).toHaveBeenCalledTimes(2);
+  });
+
+  it('refuses a short new password before calling the server', async () => {
+    const user = userEvent.setup();
+    render(<SecuritySettings />);
+    await user.click(await screen.findByRole('button', { name: 'Alterar' }));
+    await user.type(screen.getByLabelText('Senha atual'), 'old password');
+    await user.type(screen.getByLabelText('Nova senha'), 'short');
+    await user.click(screen.getByRole('button', { name: 'Salvar senha' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('pelo menos 8 caracteres');
+    expect(api.changePassword).not.toHaveBeenCalled();
+  });
+});
+
+describe('SecuritySettings in English', () => {
+  useLanguageForTests('en-US');
+
+  it('translates the sections and the session names', async () => {
+    render(<SecuritySettings />);
+    expect(await screen.findByRole('switch', { name: 'Email code at sign-in' })).toBeInTheDocument();
+    expect(await screen.findByText('Chrome on macOS')).toBeInTheDocument();
+    expect(screen.getByText('This session')).toBeInTheDocument();
+  });
+});

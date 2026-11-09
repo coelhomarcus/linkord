@@ -1,11 +1,12 @@
 import { useCallback, useRef } from 'react';
 import type { Dispatch } from 'react';
-import { ConnectionState } from 'livekit-client';
+import { ConnectionState, Track } from 'livekit-client';
 import type { Room } from 'livekit-client';
 import type { RoomAction } from '../../state/roomReducer';
 import { loadDevicePreference } from '../settings/useDevicePreference';
 import { applyCameraContentHint, cameraCaptureOptions, cameraPublishOptions } from './videoPublish';
 import { i18n } from '@/shared/i18n/init';
+import { mayPublish } from './publishRights';
 
 interface CameraApi {
   startCamera: () => Promise<void>;
@@ -25,6 +26,10 @@ export function useCamera(room: Room, dispatch: Dispatch<RoomAction>): CameraApi
   const startCamera = useCallback(() => run(async () => {
     if (room.state !== ConnectionState.Connected) {
       dispatch({ type: 'SET_SHARE_ERROR', message: i18n.t('calls:errors.videoConnecting') });
+      return;
+    }
+    if (!mayPublish(room.localParticipant.permissions, Track.Source.Camera)) {
+      dispatch({ type: 'SET_SHARE_ERROR', message: i18n.t('calls:errors.noStreamPermission') });
       return;
     }
     if (!navigator.mediaDevices?.getUserMedia) {

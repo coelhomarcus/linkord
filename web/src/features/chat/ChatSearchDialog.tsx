@@ -6,6 +6,7 @@ import { useRoom } from '../../state/RoomContext';
 import { Avatar } from '../../shared/Avatar';
 import { formatTime } from '../../shared/lib/formatChatTime';
 import { renderSearchSnippet } from '../../shared/lib/searchSnippet';
+import { customEmojisAsText } from '@/features/emoji/customEmojiText';
 import type { SearchResult } from '@/shared/types/protocol';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/primitives/dialog';
 import { Input } from '@/shared/ui/primitives/input';
@@ -45,7 +46,7 @@ function SearchResultRow({ result, showConversation, onSelect }: { result: Searc
           )}
           <span className="flex-none text-caption text-text-muted">{formatTime(result.ts)}</span>
         </div>
-        <p className="truncate text-body text-text-secondary">{renderSearchSnippet(result.snippet)}</p>
+        <p className="truncate text-body text-text-secondary">{renderSearchSnippet(customEmojisAsText(result.snippet))}</p>
       </div>
     </button>
   );

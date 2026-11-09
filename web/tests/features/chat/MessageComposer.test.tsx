@@ -9,6 +9,7 @@ import { clearAllDrafts } from '@/features/chat/conversationDrafts';
 import type { Conversation, PublicUser } from '@/shared/types/protocol';
 import { fileName } from '@tests/fixtures/fileNameMatcher';
 import * as serversApi from '@/features/servers/serversApi';
+import { PERMISSIONS } from '@/features/servers/permissionBits';
 
 vi.mock('@/features/servers/serversApi', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/features/servers/serversApi')>()),
@@ -83,6 +84,26 @@ describe('MessageComposer', () => {
     expect(clicked[0]!.accept).toBe('');
     expect(container.contains(clicked[0]!)).toBe(true);
     clickSpy.mockRestore();
+  });
+
+  it('in a channel without ATTACH_FILES, offers no files, pictures or voice message, and ignores a pasted image', async () => {
+    const user = userEvent.setup();
+    const channel: Conversation = {
+      id: 'ch-1', type: 'text', title: 'geral', memberIds: [], serverId: 's1', lastMessageAt: null, createdAt: 0, updatedAt: 0,
+      permissions: PERMISSIONS.VIEW_CHANNEL | PERMISSIONS.SEND_MESSAGES,
+    };
+    const queueMessageWithFiles = vi.fn();
+    renderWithRoom(<MessageComposer conversationId="ch-1" />, { state: joinedState, conversations: [channel], queueMessageWithFiles });
+    expect(screen.queryByRole('button', { name: 'Gravar mensagem de voz' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Adicionar' }));
+    expect(screen.queryByRole('menuitem', { name: 'Anexar arquivos' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Enviar imagens' })).not.toBeInTheDocument();
+    await user.keyboard('{Escape}');
+
+    const textarea = screen.getByRole('textbox');
+    fireEvent.paste(textarea, { clipboardData: { items: [{ type: 'image/png', getAsFile: () => fakeFile('shot.png', 'image/png') }] } });
+    await user.type(textarea, 'hi{Enter}');
+    expect(queueMessageWithFiles).not.toHaveBeenCalled();
   });
 
   it('sending images from the + menu opens an images-only picker', async () => {

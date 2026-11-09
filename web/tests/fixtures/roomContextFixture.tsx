@@ -49,7 +49,7 @@ export function createFakeRoomContextValue(overrides: Partial<RoomContextValue> 
     changeSource: asyncNoop,
     pauseSharePreview: asyncNoop,
     resumeSharePreview: asyncNoop,
-    shareQuality: 'game',
+    shareQuality: 'screen1080',
     setShareQuality: noop,
     startCamera: asyncNoop,
     stopCamera: noop,

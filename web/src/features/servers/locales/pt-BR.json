@@ -138,7 +138,8 @@
     },
     "icon": "Ícone",
     "iconHint": "Recomendamos uma imagem de, pelo menos, 512x512.",
-    "auditLog": "Registro de auditoria"
+    "auditLog": "Registro de auditoria",
+    "emojis": "Emojis"
   },
   "roles": {
     "hint": "Use cargos para organizar os membros e definir o que cada um pode fazer. Cargos mais acima mandam nos de baixo.",
@@ -147,7 +148,6 @@
     "name": "Nome do cargo",
     "color": "Cor",
     "hoist": "Exibir membros com este cargo separadamente",
-    "mentionable": "Permitir que qualquer um @mencione este cargo",
     "delete": "Excluir cargo",
     "deleteTitle": "Excluir {{name}}",
     "deleteDescription": "Quem tem este cargo perde as permissões que ele dava.",
@@ -174,6 +174,13 @@
       "lavender": "Lavanda",
       "rose": "Rosé",
       "gold": "Dourado"
+    },
+    "everyoneNotice": "O @everyone vale para todos os membros do servidor. O que você mudar aqui muda na hora para todo mundo.",
+    "aboveYou": "Este cargo está no seu nível ou acima, então você não pode mudá-lo.",
+    "adminConfirm": {
+      "title": "Dar Administrador?",
+      "description": "Quem tiver este cargo poderá fazer tudo no servidor, inclusive passar por cima das regras de cada canal e mexer nos cargos abaixo do seu. Só dê para quem você confia totalmente.",
+      "confirm": "Dar Administrador"
     }
   },
   "invites": {
@@ -273,15 +280,16 @@
     "CONNECT": "Conectar",
     "SPEAK": "Falar",
     "STREAM": "Vídeo e tela",
-    "MOVE_MEMBERS": "Desconectar membros",
+    "MOVE_MEMBERS": "Mover membros",
     "USE_SOUNDBOARD": "Usar soundboard",
     "MANAGE_EXPRESSIONS": "Gerenciar expressões",
-    "VIEW_AUDIT_LOG": "Ver registro de auditoria"
+    "VIEW_AUDIT_LOG": "Ver registro de auditoria",
+    "CREATE_EXPRESSIONS": "Criar expressões"
   },
   "permissionHints": {
     "ADMINISTRATOR": "Concede todas as permissões e ignora as regras de cada canal. Cuidado ao dar esta.",
-    "MANAGE_SERVER": "Mudar o nome e o ícone do servidor e ver os convites.",
-    "MANAGE_ROLES": "Criar e editar cargos abaixo do seu, e mudar permissões de canais.",
+    "MANAGE_SERVER": "Mudar o nome e o ícone do servidor, ver os convites ativos e revogar os de qualquer pessoa.",
+    "MANAGE_ROLES": "Criar, editar e atribuir cargos abaixo do seu, e mudar as permissões dos canais. Só dá permissões que você mesmo tem.",
     "MANAGE_CHANNELS": "Criar, editar, reordenar e excluir canais e categorias.",
     "CREATE_INVITE": "Convidar amigos e gerar links de convite.",
     "KICK_MEMBERS": "Remover membros abaixo do seu cargo.",
@@ -296,9 +304,10 @@
     "SPEAK": "Falar nos canais de voz.",
     "STREAM": "Ligar a câmera e compartilhar a tela.",
     "MOVE_MEMBERS": "Mover membros abaixo do seu cargo entre canais de voz, ou desconectá-los.",
-    "USE_SOUNDBOARD": "Tocar e adicionar sons do soundboard.",
-    "MANAGE_EXPRESSIONS": "Editar e remover os sons de qualquer pessoa.",
-    "VIEW_AUDIT_LOG": "Ver quem mudou o quê no servidor."
+    "USE_SOUNDBOARD": "Tocar os sons do soundboard nas chamadas.",
+    "MANAGE_EXPRESSIONS": "Editar e remover os sons e emojis de qualquer pessoa.",
+    "VIEW_AUDIT_LOG": "Ver quem mudou o quê no servidor.",
+    "CREATE_EXPRESSIONS": "Adicionar sons ao soundboard e emojis ao servidor. Cada um ocupa um dos espaços do servidor."
   },
   "voiceMembers": {
     "inChannel": "Na chamada de {{channel}}",
@@ -390,6 +399,11 @@
         "create": "Adicionar som",
         "update": "Editar som",
         "delete": "Remover som"
+      },
+      "emoji": {
+        "create": "Adicionar emoji",
+        "update": "Renomear emoji",
+        "delete": "Remover emoji"
       }
     },
     "sentences": {
@@ -441,6 +455,11 @@
         "create": "<actor>{{actor}}</actor> adicionou o som <target>{{target}}</target>",
         "update": "<actor>{{actor}}</actor> editou o som <target>{{target}}</target>",
         "delete": "<actor>{{actor}}</actor> removeu o som <target>{{target}}</target>"
+      },
+      "emoji": {
+        "create": "<actor>{{actor}}</actor> adicionou o emoji <target>{{target}}</target>",
+        "update": "<actor>{{actor}}</actor> renomeou o emoji <target>{{target}}</target>",
+        "delete": "<actor>{{actor}}</actor> removeu o emoji <target>{{target}}</target>"
       }
     },
     "fields": {

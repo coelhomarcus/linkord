@@ -267,8 +267,8 @@ export function TileMenu({ onOpenProfile }: TileMenuProps) {
               </DropdownMenuSubTrigger>
               <DropdownMenuSubContent container={fullscreenElement ?? undefined}>
                 <DropdownMenuRadioGroup value={shareQuality} onValueChange={(v) => setShareQuality(v as ShareQualityId)}>
-                  {(Object.entries(SHARE_QUALITY_PRESETS) as [ShareQualityId, typeof SHARE_QUALITY_PRESETS[ShareQualityId]][]).map(([id, preset]) => (
-                    <DropdownMenuRadioItem key={id} value={id}><ShareQualityIcon id={id} /><span>{t(`quality.${preset.labelKey}`)}</span></DropdownMenuRadioItem>
+                  {(Object.keys(SHARE_QUALITY_PRESETS) as ShareQualityId[]).map((id) => (
+                    <DropdownMenuRadioItem key={id} value={id}><ShareQualityIcon id={id} /><span>{t(`quality.${id}`)}</span></DropdownMenuRadioItem>
                   ))}
                 </DropdownMenuRadioGroup>
               </DropdownMenuSubContent>

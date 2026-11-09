@@ -62,9 +62,10 @@ export function usesReportingApi(appUrl: string): boolean {
 
 /** The Content-Security-Policy for every page and file the app serves. */
 export function buildContentSecurityPolicy(input: PolicyInput): string {
-  // link previews, profile widgets and GIFs show pictures and videos from any
-  // site until those go through our own proxy (LINKORD-42); a page served
-  // over plain http (local runs, the e2e stack) also shows http ones
+  // GIFs (KLIPY's terms), media links pasted in chat, webhook embed images and
+  // MEDIA_PROXY=0's redirects load from any site; the rest of the third-party
+  // pictures come through modules/media-proxy. A page served over plain http
+  // (local runs, the e2e stack) also shows http ones
   const insecurePage = originOf(input.appUrl)?.protocol === 'http:';
   const remoteMedia = insecurePage ? ['https:', 'http:'] : ['https:'];
   const directives: Array<[string, string[]]> = [

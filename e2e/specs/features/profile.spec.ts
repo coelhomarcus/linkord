@@ -81,7 +81,7 @@ test.describe('profile', () => {
     expect(saved.status()).toBe(200);
     const wall = await (await bob.api.get(`/api/users/${alice.id}/wall`)).json() as { widgets: { data: { items: { name: string; imageUrl: string }[] } }[] };
     expect(wall.widgets[0]!.data.items.map((item) => item.name)).toEqual(['Game 2', 'Game 1']);
-    expect(wall.widgets[0]!.data.items[0]!.imageUrl).toBe('https://images.igdb.com/igdb/image/upload/t_cover_big/co1abc.jpg');
+    expect(wall.widgets[0]!.data.items[0]!.imageUrl).toBe('/api/media-proxy/igdb/cover_big/co1abc');
   });
 
   test('widgets are reordered by dragging the handle beside them, and removed with the button under it', async ({ users }) => {

@@ -81,6 +81,49 @@ describe('computeChannelPermissions', () => {
     assert.ok(!hasPermission(permissions, P.ATTACH_FILES));
   });
 
+  it('applies @everyone, then the held roles together, then the member — the narrower rule wins', () => {
+    const overwrites = [
+      { roleId: 'everyone', userId: null, allow: P.MANAGE_MESSAGES, deny: P.ADD_REACTIONS | P.SEND_MESSAGES },
+      { roleId: 'helper', userId: null, allow: P.SEND_MESSAGES, deny: P.MANAGE_MESSAGES },
+      { roleId: null, userId: 'h', allow: P.ADD_REACTIONS, deny: 0 },
+    ];
+    const plain = computeChannelPermissions(member('u'), roles, overwrites);
+    assert.ok(hasPermission(plain, P.MANAGE_MESSAGES) && !hasPermission(plain, P.SEND_MESSAGES) && !hasPermission(plain, P.ADD_REACTIONS));
+    const helped = computeChannelPermissions(member('h', ['helper']), roles, overwrites);
+    assert.ok(hasPermission(helped, P.SEND_MESSAGES) && hasPermission(helped, P.ADD_REACTIONS) && !hasPermission(helped, P.MANAGE_MESSAGES));
+  });
+
+  it('a role overwrite of a role the member does not hold changes nothing for them', () => {
+    const overwrites = [{ roleId: 'mod', userId: null, allow: 0, deny: P.SEND_MESSAGES }];
+    assert.ok(hasPermission(computeChannelPermissions(member('h', ['helper']), roles, overwrites), P.SEND_MESSAGES));
+  });
+
+  it('an allow of VIEW_CHANNEL brings back the base bits the overwrites left alone', () => {
+    const overwrites = [
+      { roleId: 'everyone', userId: null, allow: 0, deny: P.VIEW_CHANNEL },
+      { roleId: null, userId: 'u', allow: P.VIEW_CHANNEL, deny: 0 },
+    ];
+    assert.equal(computeChannelPermissions(member('u'), roles, overwrites), DEFAULT_EVERYONE_PERMISSIONS);
+  });
+
+  it('without VIEW_CHANNEL every other allow is void, even the member\'s own', () => {
+    const overwrites = [{ roleId: null, userId: 'u', allow: P.MANAGE_MESSAGES | P.SEND_MESSAGES, deny: P.VIEW_CHANNEL }];
+    assert.equal(computeChannelPermissions(member('u'), roles, overwrites), 0);
+  });
+
+  it('an allow of ATTACH_FILES does not survive a deny of SEND_MESSAGES', () => {
+    const overwrites = [{ roleId: 'everyone', userId: null, allow: P.ATTACH_FILES, deny: P.SEND_MESSAGES }];
+    assert.ok(!hasPermission(computeChannelPermissions(member('u'), roles, overwrites), P.ATTACH_FILES));
+  });
+
+  it('ADMINISTRATOR given by a role makes every overwrite irrelevant, but not by an overwrite', () => {
+    const overwrites = [{ roleId: 'everyone', userId: null, allow: P.ADMINISTRATOR, deny: 0 }];
+    // an overwrite cannot make someone an administrator: only the bit itself comes through
+    const permissions = computeChannelPermissions(member('u'), roles, overwrites);
+    assert.notEqual(permissions, ALL_PERMISSIONS);
+    assert.ok(!hasPermission(permissions, P.MANAGE_SERVER));
+  });
+
   it('ignores overwrites for the owner and administrators', () => {
     const overwrites = [{ roleId: 'everyone', userId: null, allow: 0, deny: P.VIEW_CHANNEL }];
     assert.equal(computeChannelPermissions(member('o', [], true), roles, overwrites), ALL_PERMISSIONS);
@@ -100,6 +143,22 @@ describe('role hierarchy', () => {
     assert.ok(!canManageRole(member('m', ['mod']), mod, roles));
     assert.ok(!canManageRole(member('h', ['helper']), everyone, roles));
     assert.ok(canManageRole(member('o', [], true), admin, roles));
+  });
+
+  it('two roles at the same position do not outrank each other', () => {
+    const twinA: RoleInput = { id: 'twin-a', permissions: P.MANAGE_ROLES | P.KICK_MEMBERS, position: 2, isDefault: false };
+    const twinB: RoleInput = { id: 'twin-b', permissions: P.MANAGE_ROLES, position: 2, isDefault: false };
+    const twins = [everyone, twinA, twinB];
+    assert.ok(!outranks(member('a', ['twin-a']), member('b', ['twin-b']), twins));
+    assert.ok(!canManageRole(member('a', ['twin-a']), twinB, twins));
+  });
+
+  it('someone with no role sits with @everyone: only a member with a role outranks them', () => {
+    assert.ok(!outranks(member('u'), member('v'), roles));
+    assert.ok(outranks(member('h', ['helper']), member('v'), roles));
+    // a MANAGE_ROLES given to @everyone manages nothing above it
+    const open = [{ ...everyone, permissions: everyone.permissions | P.MANAGE_ROLES }, helper];
+    assert.ok(!canManageRole(member('u'), helper, open));
   });
 
   it('never reaches the owner or oneself', () => {

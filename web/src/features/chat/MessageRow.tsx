@@ -28,6 +28,8 @@ import type { ChatMessage, PublicUser } from '@/shared/types/protocol';
 import type { OutboxEntry } from './useMessageOutbox';
 import { PendingAttachments } from './PendingAttachments';
 import { messagePermissions } from './messageActions';
+import { customEmojisAsText, encodeCustomEmojis, emojisByName, tokensByName } from '@/features/emoji/customEmojiText';
+import { useMyEmojis } from '@/features/emoji/myEmojis';
 import { MessageReactions } from './MessageReactions';
 import { withPendingReactions } from './reactionState';
 import { CloseButton } from '@/shared/ui/primitives/close-button';
@@ -90,11 +92,11 @@ function ReactionButton({ onPick }: { onPick: (emoji: string) => void }) {
       </PopoverTrigger>
       <PopoverContent
         keepMounted={warmed}
-        className={fullPickerOpen ? 'w-75 p-0' : 'w-auto p-1.5'}
+        className={fullPickerOpen ? 'w-[22rem] max-w-[calc(100vw-1rem)] p-0' : 'w-auto p-1.5'}
         side="top"
         align="center"
       >
-        <ReactionEmojiPicker fullPickerOpen={fullPickerOpen} warmed={warmed} onPick={pick} onMore={() => setFullPickerOpen(true)} />
+        <ReactionEmojiPicker fullPickerOpen={fullPickerOpen} warmed={warmed} onPick={pick} onMore={() => setFullPickerOpen(true)} onClose={() => setOpen(false)} />
       </PopoverContent>
     </Popover>
   );
@@ -139,7 +141,8 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
     state, conversations, servers, serverMemberRoleIds, editChatMessage, reactToChatMessage, editingMsgId, setEditingMsgId, retryPendingMessage, discardPendingMessage,
     deletingMsgIds, messageActionErrors, dismissMessageActionError, pendingReactions, openReactionParticipants,
   } = useRoom();
-  const [editText, setEditText] = useState(message.text);
+  const [editText, setEditText] = useState(() => customEmojisAsText(message.text));
+  const myEmojis = useMyEmojis(state.me.userId ?? null, false);
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
@@ -178,7 +181,9 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
   const hasReactions = Object.values(reactions).some((ids) => ids && ids.length > 0);
 
   async function saveEdit() {
-    const trimmed = editText.trim();
+    // the editor shows server emojis as :name:; each keeps pointing at the
+    // emoji it was, even when another of the account's has the same name
+    const trimmed = encodeCustomEmojis(editText, emojisByName(myEmojis.servers, conversation?.serverId), tokensByName(message.text)).trim();
     if (editSaving) return;
     if (!trimmed || trimmed === message.text) { setEditingMsgId(null); return; }
     setEditSaving(true);
@@ -195,13 +200,13 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
   }
 
   function startEdit() {
-    setEditText(message.text);
+    setEditText(customEmojisAsText(message.text));
     setEditError(null);
     setEditingMsgId(message.msgId);
   }
 
   function copyText() {
-    navigator.clipboard.writeText(message.text).catch(() => {});
+    navigator.clipboard.writeText(customEmojisAsText(message.text)).catch(() => {});
   }
 
   function handleEditKeyDown(event: ReactKeyboardEvent<HTMLTextAreaElement>) {
@@ -212,7 +217,7 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
     if (event.key === 'Escape') {
       event.preventDefault();
       setEditingMsgId(null);
-      setEditText(message.text);
+      setEditText(customEmojisAsText(message.text));
     }
   }
 
@@ -301,7 +306,7 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
               <span className="flex-none font-medium text-text-secondary">
                 {replyAuthor ? `@${replyAuthor.displayName}` : deletedAuthorName}
               </span>
-              {message.replyTo.text && <span className="truncate">{message.replyTo.text}</span>}
+              {message.replyTo.text && <span className="truncate">{customEmojisAsText(message.replyTo.text)}</span>}
             </button>
           )}
 

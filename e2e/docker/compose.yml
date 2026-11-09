@@ -1,6 +1,7 @@
 # The end-to-end stack: the app behind Traefik (as in production behind
-# Dokploy), a LiveKit dev server and its own throwaway Postgres. Driven by
-# e2e/stack/stack.ts; never shares anything with the dev database.
+# Dokploy), a LiveKit dev server, its own throwaway Postgres and a mail sink
+# standing in for Resend. Driven by e2e/stack/stack.ts; never shares anything
+# with the dev database.
 name: linkord-e2e
 
 services:
@@ -26,6 +27,21 @@ services:
       - "7881:7881"
       - "7882:7882/udp"
 
+  # Receives the app's code emails (password recovery, two-step login) so specs
+  # can read the codes back: GET http://localhost:8025/emails?to=<address>.
+  mailsink:
+    image: node:22-alpine
+    command: ["node", "/mailsink.mjs"]
+    volumes:
+      - ./mailsink.mjs:/mailsink.mjs:ro
+    ports:
+      - "8025:8025"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8025/healthz"]
+      interval: 1s
+      timeout: 3s
+      retries: 30
+
   app:
     image: ${APP_IMAGE:?set APP_IMAGE}
     env_file: ../.e2e.env
@@ -43,6 +59,11 @@ services:
       REGISTRATIONS_PER_IP_PER_HOUR: "100000"
       MAX_NEW_ACCOUNTS_PER_HOUR: "100000"
       MAX_CONNECTIONS_PER_USER: "20"
+      # email goes to the mail sink above, never to Resend (a build that predates
+      # RESEND_API_URL would call Resend, but no spec sends mail through one)
+      RESEND_API_URL: http://mailsink:8025
+      RESEND_API_KEY: e2e-not-a-real-key
+      RESEND_FROM_EMAIL: Linkord <noreply@example.test>
     extra_hosts:
       - "lk.localhost:host-gateway"
     volumes:

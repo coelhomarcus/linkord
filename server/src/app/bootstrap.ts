@@ -7,7 +7,8 @@ import { dmCallStore, loadActiveDmCalls } from '../modules/calls/dmCallRepositor
 import { createApp } from '../http/app.js';
 import { createWsServer } from '../realtime/socket.js';
 import { describeBlockedMigration, runMigrations } from '../db/migrate.js';
-import { sweepExpiredSessions } from '../modules/auth/session.js';
+import { sweepExpiredSessions, touchSessions } from '../modules/auth/session.js';
+import { liveSessionTokenHashes } from '../modules/auth/sessionConnections.js';
 import { sweepExpiredRateLimits } from '../modules/auth/ratelimit.js';
 import { sweepSendOperations } from '../modules/messages/sendOperations.js';
 import { sweepExpiredStaged } from '../modules/attachments/stagedAttachments.js';
@@ -16,6 +17,7 @@ import { SweepInProgressError, sweepOrphans } from '../modules/attachments/orpha
 import { drainOutbox } from '../modules/notifications/outboxWorker.js';
 import { OUTBOX_POLL_MS } from '../modules/notifications/notificationsPolicy.js';
 import { RetentionSweepInProgressError, sweepRetention } from '../modules/retention/retentionSweeper.js';
+import { loadMediaProxyKey } from '../modules/media-proxy/mediaProxyKey.js';
 import { logger } from '../lib/logger.js';
 
 const log = logger.child({ component: 'process' });
@@ -82,6 +84,14 @@ export async function bootstrap(): Promise<void> {
     log.error('uploads folder is not writable: attachments and voice messages will fail. On the host, give the mounted folder to uid 1000 (chown -R 1000:1000 <host path>); see "Folders and permissions" in docs/DEPLOY.md', undefined, { dirs: unwritable, uid: process.getuid?.() });
   }
 
+  // before the first payload goes out: every proxied picture address in it is signed with this key
+  try {
+    await loadMediaProxyKey();
+  } catch (err) {
+    log.error('failed to load the media proxy key', err);
+    process.exit(1);
+  }
+
   await restoreCalls();
 
   const fastify = createApp();
@@ -102,10 +112,14 @@ export async function bootstrap(): Promise<void> {
   const connectionSyncTimer = setInterval(runConnectionSync, 60_000);
   connectionSyncTimer.unref();
 
-  // periodic cleanup of expired sessions — doesn't need to run per
-  // request, just enough to keep the table from growing forever.
+  // periodic cleanup of expired and idle sessions — doesn't need to run per
+  // request, just enough to keep the table from growing forever. A session
+  // behind a socket that stayed connected is in use even without requests,
+  // so it is touched first and never expires as idle under an open tab.
   const sessionSweepTimer = setInterval(() => {
-    sweepExpiredSessions().catch((err) => log.error('failed to clean up expired sessions', err));
+    touchSessions(liveSessionTokenHashes())
+      .then(() => sweepExpiredSessions())
+      .catch((err) => log.error('failed to clean up expired sessions', err));
   }, 60 * 60 * 1000);
   sessionSweepTimer.unref();
 

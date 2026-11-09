@@ -400,6 +400,48 @@
       "when": 1794161680123,
       "tag": "0056_voice_messages",
       "breakpoints": true
+    },
+    {
+      "idx": 57,
+      "version": "7",
+      "when": 1794185642630,
+      "tag": "0057_instance_secrets",
+      "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1794191584937,
+      "tag": "0058_create_expressions",
+      "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1794195060184,
+      "tag": "0059_expression_usage",
+      "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1794195713896,
+      "tag": "0060_server_emojis",
+      "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1794196294639,
+      "tag": "0061_custom_reactions",
+      "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1794200950604,
+      "tag": "0062_account_security",
+      "breakpoints": true
     }
   ]
 }

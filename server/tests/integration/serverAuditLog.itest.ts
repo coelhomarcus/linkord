@@ -213,6 +213,8 @@ describe('server audit log: what gets recorded', () => {
 
   it('soundboard: adding, editing and removing a sound', async () => {
     const { owner, member, serverId } = await world();
+    const everyone = (await db.select().from(serverRoles).where(and(eq(serverRoles.serverId, serverId), eq(serverRoles.isDefault, true))))[0]!;
+    await call(owner, 'PATCH', `/api/roles/${everyone.id}`, { permissions: everyone.permissions | PERMISSIONS.CREATE_EXPRESSIONS });
     const res = await app.inject({
       method: 'POST', url: `/api/servers/${serverId}/sounds?name=boom`, payload: silentWav({ seconds: 1 }),
       headers: { cookie: `${config.SESSION_COOKIE}=${member.token}`, 'content-type': 'audio/wav' },

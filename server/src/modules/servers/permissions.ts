@@ -5,7 +5,15 @@
 // server/tests/modules/servers/permissions.test.ts fails if the two drift.
 //
 // Stored as a Postgres integer and combined with JS bitwise operators, both
-// of which top out at 31 usable bits; 20 are in use.
+// of which top out at 31 usable bits; 21 are in use. When they run out:
+// server_roles.permissions and the overwrites' allow/deny become bigint, the
+// math here moves to BigInt, and the wire carries the bits as a decimal
+// string in a new field next to today's number (additive, so an old tab keeps
+// reading the low 31 bits it knows).
+//
+// Every flag needs both halves: a check on the server and a place in the
+// interface where whoever holds it can use it.
+// server/tests/modules/servers/permissionCoverage.test.ts fails otherwise.
 export const PERMISSIONS = {
   ADMINISTRATOR: 1 << 0,
   MANAGE_SERVER: 1 << 1,
@@ -27,13 +35,16 @@ export const PERMISSIONS = {
   USE_SOUNDBOARD: 1 << 17,
   MANAGE_EXPRESSIONS: 1 << 18,
   VIEW_AUDIT_LOG: 1 << 19,
+  // adding sounds and emojis; playing sounds is USE_SOUNDBOARD, curating everyone's MANAGE_EXPRESSIONS
+  CREATE_EXPRESSIONS: 1 << 20,
 } as const;
 
 export const ALL_PERMISSIONS = Object.values(PERMISSIONS).reduce((all, bit) => all | bit, 0);
 
-/** What a brand-new server's @everyone can do — also what the migration
- * gives every group that becomes a server, so nobody loses anything they
- * could do in the group. */
+/** What a brand-new server's @everyone can do. Not CREATE_EXPRESSIONS: an
+ * open @everyone would let anyone fill the server's few sound slots. The
+ * servers that existed before it (groups included) got it on every role that
+ * could already add sounds, in migration 0058. */
 export const DEFAULT_EVERYONE_PERMISSIONS = PERMISSIONS.VIEW_CHANNEL | PERMISSIONS.SEND_MESSAGES
   | PERMISSIONS.ATTACH_FILES | PERMISSIONS.ADD_REACTIONS | PERMISSIONS.CREATE_INVITE
   | PERMISSIONS.CONNECT | PERMISSIONS.SPEAK | PERMISSIONS.STREAM | PERMISSIONS.USE_SOUNDBOARD;

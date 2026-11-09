@@ -7,6 +7,7 @@ import { loadShareQuality } from '../settings/useShareQualityPreference';
 import { SHARE_QUALITY_PRESETS } from './shareQualityPresets';
 import { screenSharePublishOptions } from './videoPublish';
 import { i18n } from '@/shared/i18n/init';
+import { mayPublish } from './publishRights';
 
 interface ScreenShareApi {
   startSharing: () => Promise<void>;
@@ -38,6 +39,10 @@ export function useScreenShare(room: Room, dispatch: Dispatch<RoomAction>): Scre
   const startSharing = useCallback(async () => {
     if (room.state !== ConnectionState.Connected) {
       dispatch({ type: 'SET_SHARE_ERROR', message: i18n.t('calls:errors.videoConnecting') });
+      return;
+    }
+    if (!mayPublish(room.localParticipant.permissions, Track.Source.ScreenShare)) {
+      dispatch({ type: 'SET_SHARE_ERROR', message: i18n.t('calls:errors.noStreamPermission') });
       return;
     }
     if (!navigator.mediaDevices?.getDisplayMedia) {

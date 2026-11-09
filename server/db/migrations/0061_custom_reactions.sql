@@ -1,0 +1,1 @@
+ALTER TABLE "message_reactions" ALTER COLUMN "emoji" SET DATA TYPE varchar(64);

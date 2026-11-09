@@ -6,12 +6,12 @@ describe('ReactionEmojiPicker', () => {
   it('never opened: shows only the quick row, does not mount the full picker', () => {
     render(<ReactionEmojiPicker fullPickerOpen={false} warmed={false} onPick={vi.fn()} onMore={vi.fn()} />);
     expect(screen.getByLabelText('Mais emojis')).toBeInTheDocument();
-    expect(screen.queryByPlaceholderText('Buscar emoji…')).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('Encontre o emoji perfeito')).not.toBeInTheDocument();
   });
 
   it('full picker open: shows the picker, hides the quick row', () => {
     render(<ReactionEmojiPicker fullPickerOpen warmed onPick={vi.fn()} onMore={vi.fn()} />);
-    expect(screen.getByPlaceholderText('Buscar emoji…')).toBeVisible();
+    expect(screen.getByPlaceholderText('Encontre o emoji perfeito')).toBeVisible();
     expect(screen.queryByLabelText('Mais emojis')).not.toBeInTheDocument();
   });
 
@@ -20,6 +20,6 @@ describe('ReactionEmojiPicker', () => {
     expect(screen.getByLabelText('Mais emojis')).toBeInTheDocument();
     const hiddenPicker = container.querySelector('[hidden]');
     expect(hiddenPicker).not.toBeNull();
-    expect(hiddenPicker?.querySelector('input[placeholder="Buscar emoji…"]')).not.toBeNull();
+    expect(hiddenPicker?.querySelector('input[placeholder="Encontre o emoji perfeito"]')).not.toBeNull();
   });
 });

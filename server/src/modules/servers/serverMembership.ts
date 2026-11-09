@@ -4,6 +4,7 @@ import { conversations, serverBans, serverMembers, servers } from '../../db/sche
 import { participants } from '../presence/participants.js';
 import { refreshKnownPeers } from '../presence/knownPeers.js';
 import { revokeCallAccess } from '../calls/callAccess.js';
+import { enforceCallPermissions } from '../calls/callPermissions.js';
 import { hasPermission, outranks, PERMISSIONS, computeBasePermissions } from './permissions.js';
 import { invalidateServer, loadServerSnapshot, memberInput } from './serverAccess.js';
 import { lockServer, serverMemberIds } from './serversRepository.js';
@@ -117,7 +118,11 @@ export async function transferOwnership(serverId: string, actorId: string, newOw
     return { code: 'ok' };
   });
   invalidateServer(serverId);
-  if (result.code === 'ok') await sendServerUpdateToMembers(serverId);
+  if (result.code === 'ok') {
+    await sendServerUpdateToMembers(serverId);
+    // the previous owner keeps only what their roles give
+    void enforceCallPermissions(serverId);
+  }
   return result;
 }
 

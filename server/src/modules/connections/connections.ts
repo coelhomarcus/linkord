@@ -4,7 +4,7 @@ import { db } from '../../db/client.js';
 import { profileConnections, profileWallWidgets, users, type ProfileConnection } from '../../db/schema.js';
 import type { ErrorCode } from '../../http/errors.js';
 import { MAX_CONNECTIONS, parseConnection } from './policy.js';
-import { WIDGET_TYPES, type ConnectionWidgetType, type WallSelection, type WidgetType } from './types.js';
+import { WIDGET_TYPES, type ConnectionWidgetType, type WallSelection, type WidgetData, type WidgetType } from './types.js';
 import { parseGameLists, readGameLists, replaceGameLists } from '../games/gameLists.js';
 import { GAME_LISTS, GAME_WIDGET_TYPES, gameListOf } from '../games/types.js';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
@@ -17,6 +17,7 @@ import { canViewProfile } from '../users/profileAccess.js';
 import { findById } from '../users/users.js';
 import { allow } from '../../realtime/floodControl.js';
 import { syncConnections } from './syncWorker.js';
+import { withProxiedImages } from './widgetImages.js';
 import { logger } from '../../lib/logger.js';
 
 export class ConnectionMutationError extends Error {
@@ -129,13 +130,14 @@ export async function saveWall(userId: string, input: unknown, gameInput?: unkno
     await replaceGameLists(tx, userId, lists);
   });
 }
+const proxiedWidget = (data: WidgetData | undefined) => (data ? withProxiedImages(data) : null);
 export async function readWall(userId: string, owner = false) {
   const selected = await db.select({ connection: profileConnections, widget: profileWallWidgets }).from(profileWallWidgets)
     .leftJoin(profileConnections, eq(profileWallWidgets.connectionId, profileConnections.id))
     .where(eq(profileWallWidgets.userId, userId)).orderBy(profileWallWidgets.position);
   const games = await readGameLists(db, userId);
   const view = (connection: ProfileConnection, type: ConnectionWidgetType) => ({
-    connection: connectionDto(connection), type, data: connection.snapshot?.widgets[type] ?? null,
+    connection: connectionDto(connection), type, data: proxiedWidget(connection.snapshot?.widgets[type]),
   });
   const gameView = (type: WidgetType) => ({ connection: null, type, data: { kind: 'games' as const, items: games[gameListOf(type)!] } });
   const widgets = selected.flatMap(({ connection, widget }): (ReturnType<typeof view> | ReturnType<typeof gameView>)[] => {

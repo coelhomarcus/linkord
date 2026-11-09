@@ -9,7 +9,7 @@ import { Input } from '@/shared/ui/primitives/input';
 import { Label } from '@/shared/ui/primitives/label';
 import { Slider } from '@/shared/ui/primitives/slider';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/primitives/popover';
-import { EmojiPicker, EmojiPickerContent, EmojiPickerSearch } from '@/shared/ui/primitives/emoji-picker';
+import { EmojiPicker } from '@/features/emoji/EmojiPicker';
 import { formatMB } from '@/shared/lib/formatBytes';
 import { cn } from '@/shared/lib/utils';
 import { Waveform } from './Waveform';
@@ -67,9 +67,11 @@ interface SoundEditorDialogProps {
   /** edit this sound's details; without it, the dialog uploads a new one */
   sound?: ServerSound | null;
   onSaved?: () => void;
+  /** where to portal it: the call's fullscreen element, while the call is fullscreen */
+  container?: HTMLElement;
 }
 
-export function SoundEditorDialog({ serverId, open, onOpenChange, sound = null, onSaved }: SoundEditorDialogProps) {
+export function SoundEditorDialog({ serverId, open, onOpenChange, sound = null, onSaved, container }: SoundEditorDialogProps) {
   const { t } = useTranslation('soundboard');
   const editing = !!sound;
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -201,7 +203,7 @@ export function SoundEditorDialog({ serverId, open, onOpenChange, sound = null, 
 
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!submitting) onOpenChange(next); }}>
-      <DialogContent className="gap-0 p-0 text-text-primary sm:max-w-md">
+      <DialogContent container={container} className="gap-0 p-0 text-text-primary sm:max-w-md">
         <form onSubmit={(event) => void handleSubmit(event)} className="flex flex-col">
           <DialogHeader className="px-5 pt-5 pb-3">
             <DialogTitle className="text-title">{editing ? t('editor.titleEdit') : t('editor.titleCreate')}</DialogTitle>
@@ -290,11 +292,8 @@ export function SoundEditorDialog({ serverId, open, onOpenChange, sound = null, 
                       {emoji ? <span className="text-[20px] leading-none">{emoji}</span> : <SmileyIcon size={18} className="flex-none text-text-muted" />}
                       {!emoji && <span className="truncate text-text-muted">{t('editor.emojiPlaceholder')}</span>}
                     </PopoverTrigger>
-                    <PopoverContent className="w-80 p-0" side="top" align="end">
-                      <EmojiPicker className="h-80 w-full" onEmojiSelect={({ emoji: picked }) => { setEmoji(picked); setEmojiOpen(false); }}>
-                        <EmojiPickerSearch placeholder={t('editor.searchEmoji')} />
-                        <EmojiPickerContent />
-                      </EmojiPicker>
+                    <PopoverContent className="w-[22rem] max-w-[calc(100vw-1rem)] p-0" side="top" align="end">
+                      <EmojiPicker className="h-96" allowCustom={false} onPick={(pick) => { setEmoji(pick.text); setEmojiOpen(false); }} />
                     </PopoverContent>
                   </Popover>
                   {emoji && (

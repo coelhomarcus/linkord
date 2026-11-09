@@ -1,19 +1,23 @@
 import crypto from 'node:crypto';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { and, eq, gte, inArray, sql } from 'drizzle-orm';
+import { and, eq, gt, gte, inArray, sql } from 'drizzle-orm';
 import { config } from '../../config/env.js';
 import { db } from '../../db/client.js';
 import { serverMemberRoles, serverRoles } from '../../db/schema.js';
 import { sendJson, sendError, jsonBody } from '../../http/respond.js';
 import { ALL_PERMISSIONS, canManageRole, hasPermission, highestRolePosition, outranks, PERMISSIONS } from './permissions.js';
+import { enforceCallPermissions } from '../calls/callPermissions.js';
 import { invalidateServer, memberInput } from './serverAccess.js';
 import { broadcastToServerMembers, sendServerUpdateToMembers } from './serverSummaries.js';
 import { requireServerMember, requireSession, type ServerActor } from './serverHttp.js';
-import { createdFields, diffFields, recordServerAudit } from './serverAuditLog.js';
+import { lockServer } from './serversRepository.js';
+import { createdFields, deletedFields, diffFields, recordServerAudit } from './serverAuditLog.js';
 
 // Roles: creating, editing, ordering and handing them out. The hierarchy
 // rule runs through all of it — nobody touches a role at or above their own
-// highest one, nor grants a permission they don't hold themselves.
+// highest one, nor grants a permission they don't hold themselves (not even
+// by handing out a lower role that carries it). Writes that move positions
+// hold the server row lock, so positions stay 1..n without duplicates.
 
 type ServerParams = { serverId: string };
 type RoleParams = { roleId: string };
@@ -29,6 +33,7 @@ function sanitizeRoleName(name: unknown): string | null {
 async function changed(serverId: string): Promise<void> {
   invalidateServer(serverId);
   await sendServerUpdateToMembers(serverId);
+  void enforceCallPermissions(serverId);
 }
 
 function grantable(actor: ServerActor): number {
@@ -67,6 +72,8 @@ async function handleCreate(request: FastifyRequest<{ Params: ServerParams }>, r
   const color = typeof body.color === 'string' && COLOR_RE.test(body.color) ? body.color.toLowerCase() : '';
   // new roles start at the bottom, right above @everyone
   await db.transaction(async (tx) => {
+    // without the lock, two creates both shift the same rows and both insert at 1
+    await lockServer(tx, serverId);
     await tx.update(serverRoles).set({ position: sql`${serverRoles.position} + 1` })
       .where(and(eq(serverRoles.serverId, serverId), gte(serverRoles.position, 1)));
     await tx.insert(serverRoles).values({
@@ -118,10 +125,20 @@ async function handleDelete(request: FastifyRequest<{ Params: RoleParams }>, rep
   const roleId = String(request.params.roleId || '');
   const target = await requireRoleManager(request, reply, roleId);
   if (!target) return;
-  if (target.role.isDefault) return sendError(reply, 403, 'forbidden', 'O @everyone não pode ser apagado.');
+  const { role } = target;
+  if (role.isDefault) return sendError(reply, 403, 'forbidden', 'O @everyone não pode ser apagado.');
   await db.transaction(async (tx) => {
-    await tx.delete(serverRoles).where(eq(serverRoles.id, roleId));
-    await recordServerAudit(tx, { serverId: target.role.serverId, actorId: target.actor.userId, action: 'role.delete', targetType: 'role', targetId: roleId, targetLabel: target.role.name });
+    await lockServer(tx, role.serverId);
+    const [gone] = await tx.delete(serverRoles).where(eq(serverRoles.id, roleId)).returning({ position: serverRoles.position });
+    if (!gone) return;
+    // close the gap: reordering sends positions 1..n, and a gap would make
+    // every role above it look moved to whoever may only move roles below them
+    await tx.update(serverRoles).set({ position: sql`${serverRoles.position} - 1` })
+      .where(and(eq(serverRoles.serverId, role.serverId), gt(serverRoles.position, gone.position)));
+    await recordServerAudit(tx, {
+      serverId: role.serverId, actorId: target.actor.userId, action: 'role.delete', targetType: 'role', targetId: roleId, targetLabel: role.name,
+      changes: deletedFields({ name: role.name, color: role.color, permissions: role.permissions }),
+    });
   });
   await changed(target.actor.snapshot.server.id);
   sendJson(reply, 200, { ok: true });
@@ -150,20 +167,28 @@ async function handleOrder(request: FastifyRequest<{ Params: ServerParams }>, re
   const nameOf = (id: string) => roles.find((r) => r.id === id)!.name;
   const before = [...roles].sort((a, b) => a.position - b.position).map((r) => r.name);
   const after = order.map(nameOf);
-  await db.transaction(async (tx) => {
+  const applied = await db.transaction(async (tx) => {
+    await lockServer(tx, serverId);
+    // a role created or deleted since the snapshot would leave a duplicate or a gap
+    const now = await tx.select({ id: serverRoles.id }).from(serverRoles).where(and(eq(serverRoles.serverId, serverId), eq(serverRoles.isDefault, false)));
+    if (now.length !== order.length || !now.every((r) => order.includes(r.id))) return false;
     for (const [index, id] of order.entries()) await tx.update(serverRoles).set({ position: index + 1 }).where(eq(serverRoles.id, id));
     // lowest first, the way the request sends them
     if (before.join('\n') !== after.join('\n')) {
       await recordServerAudit(tx, { serverId, actorId: actor.userId, action: 'role.reorder', targetType: 'server', targetId: serverId, targetLabel: actor.snapshot.server.name, changes: [{ key: 'order', before, after }] });
     }
+    return true;
   });
   await changed(serverId);
+  if (!applied) return sendError(reply, 409, 'conflict', 'Os cargos mudaram enquanto você reordenava. Tente de novo.');
   sendJson(reply, 200, { ok: true });
 }
 
 /** Sets the member's roles to exactly `roleIds`. Every role added or taken
  * away must be below the actor, and the member too — except the actor
- * handing themself a role below their own. */
+ * handing themself a role below their own. A role added may only carry
+ * permissions the actor could grant: otherwise MANAGE_ROLES alone would reach
+ * anything a lower role holds, ADMINISTRATOR included. */
 async function handleSetMemberRoles(request: FastifyRequest<{ Params: MemberParams }>, reply: FastifyReply): Promise<void> {
   const serverId = String(request.params.serverId || '');
   const actor = await requireServerMember(request, reply, serverId, PERMISSIONS.MANAGE_ROLES);
@@ -179,6 +204,12 @@ async function handleSetMemberRoles(request: FastifyRequest<{ Params: MemberPara
   const touched = [...wanted].filter((id) => !current.has(id)).concat([...current].filter((id) => !wanted.has(id)));
   for (const id of touched) {
     if (!canManageRole(actor.member, assignable.find((r) => r.id === id)!, actor.snapshot.roles)) return sendError(reply, 403, 'hierarchy', 'Esse cargo está acima do seu.');
+  }
+  for (const id of wanted) {
+    if (current.has(id)) continue;
+    if ((assignable.find((r) => r.id === id)!.permissions & ~grantable(actor)) !== 0) {
+      return sendError(reply, 403, 'hierarchy', 'Esse cargo dá permissões que você não tem.');
+    }
   }
   const roleNames = (ids: Iterable<string>) => [...ids].map((id) => assignable.find((r) => r.id === id)?.name).filter((n): n is string => !!n).sort();
   await db.transaction(async (tx) => {
