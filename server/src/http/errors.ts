@@ -49,6 +49,9 @@ export const ERROR_REGISTRY = {
   // 503: IGDB credentials are not configured; 502: IGDB itself failed or answered nonsense
   games_unavailable: { statuses: [503], channel: 'http' },
   games_search_failed: { statuses: [502], channel: 'http' },
+  image_unavailable: { statuses: [502], channel: 'http' },
+  not_an_image: { statuses: [415], channel: 'http' },
+  image_too_large: { statuses: [413], channel: 'http' },
 
   // auth and accounts
   invalid_credentials: { statuses: [401], channel: 'http' },
@@ -65,6 +68,14 @@ export const ERROR_REGISTRY = {
   email_taken: { statuses: [409], channel: 'http' },
   email_already_set: { statuses: [409], channel: 'http' },
   email_unavailable: { statuses: [503], channel: 'http' },
+  // no Resend credentials: two-step login cannot be turned on (it would have no way to send the code)
+  email_not_configured: { statuses: [503], channel: 'http' },
+  // two-step login needs an email on the account to send its codes to
+  email_required: { statuses: [409], channel: 'http' },
+  // the current password asked for before a sensitive change (two-step login, a new password) is wrong
+  invalid_password: { statuses: [403], channel: 'http' },
+  // the second step of a login came after its challenge ended: the person signs in with the password again
+  login_expired: { statuses: [400], channel: 'http' },
   // the attempt counters (login, recovery, sign-up) could not be read: refused rather than let through
   rate_limit_unavailable: { statuses: [503], channel: 'http' },
   push_unavailable: { statuses: [503], channel: 'http' },
@@ -99,6 +110,13 @@ export const ERROR_REGISTRY = {
   invalid_sound: { statuses: [400], channel: 'http' },
   sound_too_long: { statuses: [400], channel: 'http' },
   soundboard_full: { statuses: [409], channel: 'http' },
+
+  // server emojis
+  invalid_emoji_name: { statuses: [400], channel: 'http' },
+  invalid_image: { statuses: [400], channel: 'http' },
+  emoji_too_large: { statuses: [400], channel: 'http' },
+  emoji_name_taken: { statuses: [409], channel: 'http' },
+  emojis_full: { statuses: [409], channel: 'http' },
 
   // Admin actions.
   self_action: { statuses: [409], channel: 'http' },

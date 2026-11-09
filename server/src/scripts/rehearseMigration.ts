@@ -116,6 +116,10 @@ async function verifyConversion(pool: Pool, seed: GroupSeedManifest): Promise<vo
     channelsOk &&= (await count(pool, `select count(*) as n from conversations where id = '${groupId}' and type = 'text' and title = '${text.name}' and server_id = ${serverIdOf(groupId)}`)) === 1;
   }
   check('o grupo virou o primeiro canal de texto do servidor, com o nome do template', channelsOk);
+  // a group could add sounds, and adding became CREATE_EXPRESSIONS in 0058
+  check('o @everyone de cada grupo continua podendo adicionar sons',
+    (await count(pool, `select count(*) as n from server_roles where is_default and (permissions & ${PERMISSIONS.CREATE_EXPRESSIONS}) = 0`)) === 0
+    && (await count(pool, 'select count(*) as n from server_roles where is_default')) > 0);
   check('nenhum tipo antigo sobrou e canais não têm linhas de membro',
     (await count(pool, "select count(*) as n from conversations where type in ('group','bot')")) === 0
     && (await count(pool, 'select count(*) as n from conversation_members m join conversations c on c.id = m.conversation_id where c.server_id is not null')) === 0

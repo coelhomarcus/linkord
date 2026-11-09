@@ -12,6 +12,7 @@ import { fetchNotifications } from '@/shared/api/api';
 import type { NotificationEntry } from '@/shared/api/api';
 import { cn } from '@/shared/lib/utils';
 import { describeNotification, formatRelativeTime } from './notificationText';
+import { customEmojisAsText } from '@/features/emoji/customEmojiText';
 
 function NotificationIcon({ entry }: { entry: NotificationEntry }) {
   if (entry.kind === 'server_invitation' && entry.server) return <ServerIcon id={entry.server.id} name={entry.server.name} icon={entry.server.icon} size={36} active />;
@@ -61,7 +62,7 @@ export function NotificationList({ onSelect, onDismiss, fullPage = false }: { on
             <NotificationIcon entry={entry} />
             <span className="min-w-0 flex-1">
               <span className={cn('block text-label text-text-primary', !entry.read && 'font-medium')}>{describeNotification(entry)}</span>
-              {entry.mention?.excerpt && <span className="mt-0.5 line-clamp-2 block text-caption text-text-secondary">{entry.mention.excerpt}</span>}
+              {entry.mention?.excerpt && <span className="mt-0.5 line-clamp-2 block text-caption text-text-secondary">{customEmojisAsText(entry.mention.excerpt)}</span>}
               <span className="block text-caption text-text-muted">{formatRelativeTime(entry.at)}</span>
             </span>
             {!entry.read && <span aria-label={t('actions.unread')} className="size-2 flex-none rounded-full bg-primary" />}

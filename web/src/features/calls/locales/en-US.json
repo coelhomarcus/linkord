@@ -26,7 +26,9 @@
     "statusReconnecting": "Reconnecting…",
     "settings": "Settings",
     "previousStream": "Previous stream",
-    "nextStream": "Next stream"
+    "nextStream": "Next stream",
+    "noSpeakPermission": "You don't have permission to speak in this channel",
+    "noStreamPermission": "You don't have permission to use video or screen share in this channel"
   },
   "callSettings": {
     "title": "Call display",
@@ -112,8 +114,10 @@
     }
   },
   "quality": {
-    "game": "Game (1440p, 60 fps)",
-    "screen": "Screen (1080p, 30 fps)"
+    "game1440": "Game (1440p, 60 fps)",
+    "screen1440": "Screen (1440p, 30 fps)",
+    "game1080": "Game (1080p, 60 fps)",
+    "screen1080": "Screen (1080p, 30 fps)"
   },
   "connection": {
     "good": "Good connection",
@@ -150,7 +154,8 @@
     "pausePreview": "Couldn't pause the preview: {{error}}",
     "resumePreview": "Couldn't resume the preview: {{error}}",
     "joinCall": "Couldn't connect to the call. Check your connection and try again.",
-    "joinTimeout": "The call took too long to connect. Try again."
+    "joinTimeout": "The call took too long to connect. Try again.",
+    "noStreamPermission": "You don't have permission to use video or screen share in this channel"
   },
   "invite": {
     "button": "Invite to voice",

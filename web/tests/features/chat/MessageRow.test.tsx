@@ -287,7 +287,7 @@ describe('MessageRow — quick reactions', () => {
 
     expect(screen.getByRole('button', { name: 'Reagir com 👍' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Mais emojis' })).toBeInTheDocument();
-    expect(screen.queryByPlaceholderText('Buscar emoji…')).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('Encontre o emoji perfeito')).not.toBeInTheDocument();
   });
 
   it('clicking a quick emoji reacts right away and closes the popover', async () => {
@@ -314,7 +314,7 @@ describe('MessageRow — quick reactions', () => {
     await user.click(screen.getAllByRole('button', { name: 'Reagir' })[0]!);
     await user.click(screen.getByRole('button', { name: 'Mais emojis' }));
 
-    expect(await screen.findByPlaceholderText('Buscar emoji…')).toBeInTheDocument();
+    expect(await screen.findByPlaceholderText('Encontre o emoji perfeito')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Reagir com 👍' })).not.toBeInTheDocument();
   });
 

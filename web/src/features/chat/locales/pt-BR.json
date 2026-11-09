@@ -58,7 +58,11 @@
     "removeFile": "Remover {{name}}",
     "maxAttachments_one": "Máximo de {{count}} anexo por mensagem.",
     "maxAttachments_other": "Máximo de {{count}} anexos por mensagem.",
-    "tooLarge": "\"{{name}}\" é grande demais (máximo {{max}})."
+    "tooLarge": "\"{{name}}\" é grande demais (máximo {{max}}).",
+    "emojiSuggestions": {
+      "title": "Emojis correspondentes a {{query}}",
+      "label": "Sugestões de emoji"
+    }
   },
   "reactions": {
     "title": "Reações",
@@ -180,5 +184,10 @@
     "ended": "A chamada terminou",
     "notMember": "Você não faz mais parte desse canal.",
     "unavailable": "Convite para chamada indisponível"
+  },
+  "expressions": {
+    "label": "Expressões",
+    "gifs": "GIFs",
+    "emoji": "Emoji"
   }
 }

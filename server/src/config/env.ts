@@ -77,6 +77,10 @@ const MIGRATE_ON_BOOT = process.env.MIGRATE_ON_BOOT !== '0';
 
 const SESSION_COOKIE = process.env.SESSION_COOKIE || 'ss_session';
 const SESSION_TTL_DAYS = Number(process.env.SESSION_TTL_DAYS || 30);
+// A session nobody used for this many days ends even if its TTL has not run out (0 turns it off).
+// "Used" is any request, a socket handshake or a socket that stayed connected (see session.ts).
+const SESSION_IDLE_DAYS = Number(process.env.SESSION_IDLE_DAYS ?? 14);
+if (!Number.isFinite(SESSION_IDLE_DAYS) || SESSION_IDLE_DAYS < 0) throw new Error('SESSION_IDLE_DAYS must be 0 or a positive number of days.');
 // closed by default: fail-closed so a deploy that forgot to set this
 // doesn't become open registration.
 const REGISTRATION_CODE = process.env.REGISTRATION_CODE || '';
@@ -95,6 +99,8 @@ const MIN_PASSWORD_LEN = 8;
 const MAX_PASSWORD_LEN = 200; // hygiene cap — hashing a 1MB password would be a DoS vector
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
 const RESEND_FROM_EMAIL = process.env.RESEND_FROM_EMAIL || '';
+// Only the end-to-end stack changes this, to a local mail sink that records what would be sent.
+const RESEND_API_URL = (process.env.RESEND_API_URL || 'https://api.resend.com').trim().replace(/\/+$/, '');
 const APP_URL = (process.env.APP_URL || '').trim().replace(/\/+$/, '');
 const PUSH_VAPID_PUBLIC_KEY = (process.env.PUSH_VAPID_PUBLIC_KEY || '').trim();
 const PUSH_VAPID_PRIVATE_KEY = (process.env.PUSH_VAPID_PRIVATE_KEY || '').trim();
@@ -112,6 +118,8 @@ if (PUSH_VAPID_PUBLIC_KEY) {
 }
 const AUTH_CODE_TTL_MS = 30 * 60 * 1000;
 const AUTH_CODE_MAX_ATTEMPTS = 5;
+// The code that finishes a two-step login: short, since the person is waiting on the login screen.
+const LOGIN_CODE_TTL_MS = 10 * 60 * 1000;
 
 // LiveKit Cloud — camera/screen become real WebRTC (managed SFU).
 const LIVEKIT_URL = process.env.LIVEKIT_URL || '';
@@ -138,6 +146,13 @@ const MAL_CLIENT_ID = (process.env.MAL_CLIENT_ID || '').trim();
 // the games widgets without search: they still show what was already picked.
 const IGDB_CLIENT_ID = (process.env.IGDB_CLIENT_ID || '').trim();
 const IGDB_CLIENT_SECRET = (process.env.IGDB_CLIENT_SECRET || '').trim();
+
+// Third-party pictures (game and anime covers, GitHub avatars, link preview
+// images and favicons, YouTube thumbnails) are served from our own domain by
+// modules/media-proxy, so they show on networks that block those services
+// and never hand a viewer's IP to them. '0' saves the bandwidth: the same
+// links then redirect the browser to the service instead.
+const MEDIA_PROXY_ENABLED = process.env.MEDIA_PROXY !== '0';
 
 // optional, dev convenience only: when DATABASE_URL points at the same DB a
 // deployed instance uses, `attachments` rows exist locally but the actual
@@ -201,13 +216,13 @@ export const config = {
   UPLOAD_DIR, MAX_ATTACHMENT_BYTES, MAX_STORAGE_BYTES, MAX_AVATAR_BYTES,
   UPLOAD_CHUNK_BYTES, UPLOAD_SESSION_TTL_MS,
   DATABASE_URL, DATABASE_SSL, DATABASE_SSL_CA, MIGRATE_ON_BOOT,
-  SESSION_COOKIE, SESSION_TTL_DAYS, REGISTRATION_CODE,
+  SESSION_COOKIE, SESSION_TTL_DAYS, SESSION_IDLE_DAYS, REGISTRATION_CODE,
   COOKIE_SECURE, MAX_BODY_BYTES,
   MIN_USERNAME_LEN, MAX_USERNAME_LEN, MAX_DISPLAY_NAME_LEN, MIN_PASSWORD_LEN, MAX_PASSWORD_LEN,
-  RESEND_API_KEY, RESEND_FROM_EMAIL, APP_URL, AUTH_CODE_TTL_MS, AUTH_CODE_MAX_ATTEMPTS,
+  RESEND_API_KEY, RESEND_FROM_EMAIL, RESEND_API_URL, APP_URL, AUTH_CODE_TTL_MS, AUTH_CODE_MAX_ATTEMPTS, LOGIN_CODE_TTL_MS,
   PUSH_VAPID_PUBLIC_KEY, PUSH_VAPID_PRIVATE_KEY, PUSH_VAPID_SUBJECT,
   LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET, LIVEKIT_ROOM_NAME, LIVEKIT_TOKEN_TTL_SECONDS,
-  UPLOADS_REMOTE_URL, KLIPY_API_KEY, MAL_CLIENT_ID, IGDB_CLIENT_ID, IGDB_CLIENT_SECRET,
+  UPLOADS_REMOTE_URL, KLIPY_API_KEY, MAL_CLIENT_ID, IGDB_CLIENT_ID, IGDB_CLIENT_SECRET, MEDIA_PROXY_ENABLED,
   REGISTRATIONS_PER_IP_PER_HOUR, MAX_NEW_ACCOUNTS_PER_HOUR, MAX_CONNECTIONS_PER_USER,
   MAX_OWNED_SERVERS_PER_USER, MAX_SERVER_MEMBERSHIPS_PER_USER, MAX_FRIENDS, MAX_PENDING_OUTGOING_REQUESTS,
   ALLOWED_ORIGINS, CSP_REPORT_ONLY, IS_DEV, ORPHAN_GRACE_MS, ORPHAN_SWEEP_DRY_RUN,

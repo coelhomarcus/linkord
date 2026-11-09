@@ -22,6 +22,7 @@ export const PERMISSIONS = {
   USE_SOUNDBOARD: 1 << 17,
   MANAGE_EXPRESSIONS: 1 << 18,
   VIEW_AUDIT_LOG: 1 << 19,
+  CREATE_EXPRESSIONS: 1 << 20,
 } as const;
 
 export type PermissionName = keyof typeof PERMISSIONS;

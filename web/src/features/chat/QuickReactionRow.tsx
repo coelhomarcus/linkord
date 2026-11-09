@@ -4,7 +4,7 @@ import { PlusIcon } from '@phosphor-icons/react';
 import { cn } from '@/shared/lib/utils';
 
 // A short fixed set shown first, instead of mounting the full picker (and
-// triggering its emoji-dataset fetch, see shared/ui/primitives/emoji-picker.tsx)
+// fetching its emoji dataset, see features/emoji/emojiData.ts)
 // on every single open — most reactions are one of these anyway. The full
 // picker only mounts once "+" is actually clicked.
 const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'] as const;

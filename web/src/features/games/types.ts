@@ -1,3 +1,5 @@
+import { igdbCoverProxyUrl } from '@/shared/lib/mediaProxy';
+
 const GAME_LISTS = ['favorite', 'liked', 'playing', 'wishlist'] as const;
 export type GameList = (typeof GAME_LISTS)[number];
 
@@ -33,7 +35,7 @@ export function gameSnapshot({ igdbId, name, slug, coverImageId, releaseYear }: 
 }
 
 /** A game just picked from the search, which carries the small cover, ready for a widget that shows it big.
- * Mirrors `igdbCoverUrl` on the server, which builds the saved ones. */
+ * Mirrors `toGameItem` on the server, which builds the saved ones. */
 export function forWidget(game: GameItem): GameItem {
-  return { ...game, imageUrl: game.coverImageId ? `https://images.igdb.com/igdb/image/upload/t_cover_big/${game.coverImageId}.jpg` : null };
+  return { ...game, imageUrl: game.coverImageId ? igdbCoverProxyUrl(game.coverImageId, 'cover_big') : null };
 }

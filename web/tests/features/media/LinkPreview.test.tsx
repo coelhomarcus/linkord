@@ -175,3 +175,29 @@ describe('LinkPreview — size measured by the server', () => {
     expect(frame.className.split(/\s+/)).toContain('h-70');
   });
 });
+
+describe('LinkPreview — pictures through our own proxy', () => {
+  afterEach(() => { vi.unstubAllGlobals(); __resetLinkPreviewCacheForTests(); });
+
+  const preview = (over: Record<string, unknown>) => ({ url: 'https://ex.com', title: 'Exemplo', description: null, image: null, video: null, favicon: null, siteName: 'ex.com', themeColor: null, ...over });
+
+  it('shows the picture and favicon at the proxied addresses the server stored', () => {
+    const { container } = render(
+      <LinkPreview
+        embed={{ kind: 'link', url: 'https://ex.com' }}
+        preview={preview({ image: '/api/media-proxy/preview/sig?u=aHR0cHM6Ly9leC5jb20vb2cucG5n', favicon: '/api/media-proxy/preview/sig?u=aHR0cHM6Ly9leC5jb20vZmF2aWNvbi5pY28' })}
+      />,
+    );
+    const sources = [...container.querySelectorAll('img')].map((img) => img.getAttribute('src'));
+    expect(sources).toEqual(expect.arrayContaining(['/api/media-proxy/preview/sig?u=aHR0cHM6Ly9leC5jb20vb2cucG5n', '/api/media-proxy/preview/sig?u=aHR0cHM6Ly9leC5jb20vZmF2aWNvbi5pY28']));
+  });
+
+  it('a YouTube card without a preview picture takes the thumbnail from the proxy, not from i.ytimg.com', () => {
+    const { container } = render(
+      <LinkPreview embed={{ kind: 'youtube', url: 'https://youtu.be/dQw4w9WgXcQ', youtubeId: 'dQw4w9WgXcQ' }} preview={preview({ url: 'https://youtu.be/dQw4w9WgXcQ', title: 'Vídeo' })} />,
+    );
+    const sources = [...container.querySelectorAll('img')].map((img) => img.getAttribute('src'));
+    expect(sources).toContain('/api/media-proxy/youtube/dQw4w9WgXcQ');
+    expect(sources.some((src) => src?.includes('ytimg.com'))).toBe(false);
+  });
+});

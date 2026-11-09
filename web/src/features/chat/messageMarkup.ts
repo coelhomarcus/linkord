@@ -7,11 +7,14 @@
 // server/src/modules/link-preview/messageLinks.ts mirrors the link part of
 // this (which links get a preview card): change both together.
 
+import { CUSTOM_EMOJI_TOKEN } from '@/features/emoji/customEmojiText';
+
 export type Inline =
   | { type: 'text'; text: string }
   | { type: 'code'; text: string }
   | { type: 'link'; url: string; suppressed: boolean }
   | { type: 'mention'; name: string }
+  | { type: 'customEmoji'; name: string; id: string; animated: boolean }
   | { type: 'bold' | 'italic' | 'strike'; children: Inline[] };
 
 export type Block =
@@ -21,10 +24,11 @@ export type Block =
   | { type: 'list'; ordered: boolean; items: Inline[][] };
 
 // Order is priority at the same position: code first (nothing inside it is
-// special), then links (so "_" or "*" in a URL stay literal), then mentions
-// and the emphasis marks.
+// special), then server emojis, links (so "_" or "*" in a URL stay literal),
+// mentions and the emphasis marks.
 const INLINE_RE = new RegExp([
   '`([^`\\n]+)`',
+  CUSTOM_EMOJI_TOKEN,
   '<(https?:\\/\\/[^\\s<>]+)>',
   '(https?:\\/\\/[^\\s<>"\']+)',
   // "@" only starts a mention at the start of a word: never inside an e-mail
@@ -61,10 +65,11 @@ export function parseInline(text: string): Inline[] {
   // regex would lose its place in the outer text
   const re = new RegExp(INLINE_RE);
   for (let match = re.exec(text); match; match = re.exec(text)) {
-    const [full, code, suppressed, url, mention, bold, strike, starItalic, underItalic] = match;
+    const [full, code, emojiAnimated, emojiName, emojiId, suppressed, url, mention, bold, strike, starItalic, underItalic] = match;
     pushText(nodes, text.slice(lastIndex, match.index));
     lastIndex = match.index + full.length;
     if (code !== undefined) nodes.push({ type: 'code', text: code });
+    else if (emojiId !== undefined) nodes.push({ type: 'customEmoji', name: emojiName!, id: emojiId, animated: emojiAnimated === 'a' });
     else if (suppressed !== undefined) nodes.push({ type: 'link', url: suppressed, suppressed: true });
     else if (url !== undefined) {
       const trimmed = trimUrl(url);

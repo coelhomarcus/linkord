@@ -61,5 +61,20 @@
     "saving": "Salvando…",
     "logout": "Sair da conta",
     "failed": "Não foi possível vincular o e-mail."
+  },
+  "twoFactor": {
+    "title": "Verificação em duas etapas",
+    "sentTo": "Enviamos um código para {{email}}. Ele expira em 10 minutos.",
+    "codeLabel": "Código de verificação",
+    "codeHint": "Digite os 6 dígitos enviados para seu e-mail.",
+    "codeError": "Confira o código e tente novamente.",
+    "success": "Código confirmado.",
+    "submit": "Confirmar e entrar",
+    "failed": "Não foi possível confirmar o código.",
+    "resend": "Reenviar código",
+    "resent": "Código reenviado",
+    "resendFailed": "Não foi possível reenviar o código.",
+    "back": "Voltar",
+    "expired": "O login expirou. Entre com sua senha de novo."
   }
 }

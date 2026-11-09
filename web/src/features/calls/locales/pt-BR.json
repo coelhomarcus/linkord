@@ -26,7 +26,9 @@
     "statusReconnecting": "Reconectando…",
     "settings": "Ajustes",
     "previousStream": "Transmissão anterior",
-    "nextStream": "Próxima transmissão"
+    "nextStream": "Próxima transmissão",
+    "noSpeakPermission": "Você não tem permissão para falar neste canal",
+    "noStreamPermission": "Você não tem permissão para vídeo e tela neste canal"
   },
   "callSettings": {
     "title": "Exibição da chamada",
@@ -112,8 +114,10 @@
     }
   },
   "quality": {
-    "game": "Jogo (1440p, 60 fps)",
-    "screen": "Tela (1080p, 30 fps)"
+    "game1440": "Jogo (1440p, 60 fps)",
+    "screen1440": "Tela (1440p, 30 fps)",
+    "game1080": "Jogo (1080p, 60 fps)",
+    "screen1080": "Tela (1080p, 30 fps)"
   },
   "connection": {
     "good": "Conexão boa",
@@ -150,7 +154,8 @@
     "pausePreview": "Não foi possível pausar a prévia: {{error}}",
     "resumePreview": "Não foi possível retomar a prévia: {{error}}",
     "joinCall": "Não foi possível conectar à chamada. Verifique sua conexão e tente de novo.",
-    "joinTimeout": "A chamada demorou para conectar. Tente novamente."
+    "joinTimeout": "A chamada demorou para conectar. Tente novamente.",
+    "noStreamPermission": "Você não tem permissão para vídeo e tela neste canal"
   },
   "invite": {
     "button": "Convidar para voz",

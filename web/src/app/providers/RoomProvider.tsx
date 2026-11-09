@@ -12,6 +12,7 @@ import { useScreenShare } from '@/features/calls/useScreenShare';
 import { useCallFullscreen } from '@/features/calls/useCallFullscreen';
 import { useCamera } from '@/features/calls/useCamera';
 import { useMicrophone } from '@/features/calls/useMicrophone';
+import { useEnforcePublishRights } from '@/features/calls/publishRights';
 import { useTileMenu } from '@/features/calls/useTileMenu';
 import { useConversationsList } from '@/features/conversations/useConversationsList';
 import { useServersList } from '@/features/servers/useServersList';
@@ -36,6 +37,9 @@ import type { ClientMessage, Conversation, ServerMessage } from '@/shared/types/
 import { logger } from '@/shared/lib/logger';
 import { ERROR_CODES } from '@/shared/api/errorCodes';
 import { i18n } from '@/shared/i18n/init';
+import { invalidateServerEmojis } from '@/features/emoji/useServerEmojis';
+import { invalidateMyEmojis } from '@/features/emoji/myEmojis';
+import { invalidateMySounds } from '@/features/soundboard/useMySounds';
 
 const log = logger.child({ component: 'room' });
 
@@ -107,6 +111,10 @@ export function RoomProvider({ children }: { children: ReactNode }) {
   // composes their leave/mute functions).
   const conversationsList = useConversationsList(sendWs);
   const serversList = useServersList();
+  // the account's usable server emojis and sounds follow the servers it is
+  // in, and what it may do there
+  const serverIdsKey = serversList.servers.map((server) => `${server.id}:${server.permissions}`).join(',');
+  useEffect(() => { invalidateMyEmojis(); invalidateMySounds(); }, [serverIdsKey]);
   // DMs and channels as one list: chat, unread and calls look up whichever it is by id
   const allConversations = useMemo<Conversation[]>(
     () => [...conversationsList.conversations, ...serversList.channelConversations],
@@ -136,6 +144,8 @@ export function RoomProvider({ children }: { children: ReactNode }) {
   const { activateMic, toggleMicMuted, setMicMuted, leaveMic } = useMicrophone(livekitRoom, dispatch);
 
   const roomSettings = useRoomSettings();
+
+  useEnforcePublishRights(livekitRoom, { leaveMic, stopCamera, stopSharing });
 
   const callLifecycle = useCallLifecycle({
     livekitRoom, dispatch, sendWs, stopCamera, stopSharing, activateMic, setMicMuted, leaveMic, startCamera,
@@ -282,6 +292,9 @@ export function RoomProvider({ children }: { children: ReactNode }) {
       case 'server-sounds-changed':
         soundboardEvents.onServerSoundsChanged(m);
         break;
+      case 'server-emojis-changed':
+        invalidateServerEmojis(m.serverId);
+        break;
       case 'server-created':
       case 'server-updated':
         serversList.onServerChanged(m);
@@ -356,6 +369,11 @@ export function RoomProvider({ children }: { children: ReactNode }) {
       case 'role-updated':
         // an administrator granted or removed this account's admin role while it is connected
         dispatch({ type: 'SET_ROLE', role: m.role });
+        break;
+      case 'session-ended':
+        // the session is already gone on the server: asking who we are finds that out and shows the
+        // sign-in screen, the same path a refused reconnect takes
+        void refreshAuth();
         break;
       case 'invitation-updated':
         chatMessages.onInvitationUpdated(m);
@@ -435,7 +453,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
   }, [
     dispatch, conversationsList, serversList, presence, openConversation, sendWs, callLifecycle, dmCall,
     messageSearch, chatMessages, typingIndicator, disconnectIntentionally, profileUpdate, soundboardEvents, livekitRoom,
-    onStatusSnapshot, onMyStatus, onPresenceResult, onIdleWelcome,
+    onStatusSnapshot, onMyStatus, onPresenceResult, onIdleWelcome, refreshAuth,
   ]);
 
   const { retryConnection } = useSocketConnection({ socketRef, intentionalCloseRef, sendWs, dispatch, refreshAuth, onMessage: handleServerMessage });

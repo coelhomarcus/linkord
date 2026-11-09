@@ -2,6 +2,7 @@ import { i18n } from '@/shared/i18n/init';
 import type { ChatMessage } from '@/shared/types/protocol';
 import { gifMessageUrl } from '@/features/gifs/klipyMedia';
 import { dmCallLine } from './dmCallLine';
+import { customEmojisAsText } from '@/features/emoji/customEmojiText';
 
 /** One-line text for a message wherever the body itself can't be shown
  * (sidebar subtitle, desktop notification). Invite cards have an empty
@@ -28,5 +29,5 @@ export function messagePreviewText(
   if (!message.text && message.attachments?.[0]?.voice) return `🎤 ${i18n.t('voiceMessages:preview')}`;
   // a bot may send only a card: its title says what it's about
   const card = message.richEmbeds?.[0];
-  return message.text || card?.title || card?.description || (card ? i18n.t('chat:preview.notice') : i18n.t('chat:preview.attachment'));
+  return customEmojisAsText(message.text) || card?.title || card?.description || (card ? i18n.t('chat:preview.notice') : i18n.t('chat:preview.attachment'));
 }

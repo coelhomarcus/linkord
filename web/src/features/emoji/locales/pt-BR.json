@@ -1,0 +1,78 @@
+{
+  "panel": {
+    "description": "Emojis que qualquer membro do servidor pode usar em mensagens e reações, aqui e em qualquer outro lugar do Linkord. A imagem é recortada num quadrado e guardada em 128 px; GIFs continuam animados.",
+    "upload": "Enviar emoji",
+    "nameRule": "Nomes: de 2 a 32 letras minúsculas, números ou _.",
+    "static": "Emojis",
+    "animated": "Emojis animados",
+    "slots_one": "{{count}} espaço livre de {{max}}",
+    "slots_other": "{{count}} espaços livres de {{max}}",
+    "columns": {
+      "image": "Imagem",
+      "name": "Nome",
+      "uploadedBy": "Enviado por"
+    },
+    "nameLabel": "Nome do emoji {{name}}",
+    "delete": "Remover {{name}}",
+    "deletedUser": "Conta excluída",
+    "empty": "Nenhum emoji ainda.",
+    "loading": "Carregando emojis…",
+    "loadFailed": "Não foi possível carregar os emojis.",
+    "retry": "Tentar de novo",
+    "deleteFailed": "Não foi possível remover o emoji.",
+    "renameFailed": "Não foi possível renomear o emoji.",
+    "deleteConfirm": {
+      "title": "Remover emoji?",
+      "description": "O :{{name}}: sai do servidor. Nas mensagens antigas, ele passa a aparecer como texto.",
+      "confirm": "Remover"
+    }
+  },
+  "upload": {
+    "crop": "Recortar emoji",
+    "uploading": "Enviando…",
+    "uploadFailed": "Não foi possível enviar o emoji."
+  },
+  "errors": {
+    "invalid_emoji_name": "O nome precisa ter de 2 a 32 letras minúsculas, números ou _.",
+    "invalid_image": "Não foi possível ler essa imagem. Use PNG, JPEG, GIF ou WebP.",
+    "emoji_too_large": "Esse emoji fica pesado demais. Tente uma animação mais curta.",
+    "emoji_name_taken": "Já existe um emoji com esse nome nesse servidor.",
+    "emojis_full": "O servidor já usou todos os espaços desse tipo de emoji."
+  },
+  "custom": {
+    "from": "De {{server}}"
+  },
+  "picker": {
+    "search": "Encontre o emoji perfeito",
+    "searchLabel": "Buscar emoji",
+    "grid": "Emojis",
+    "sections": "Seções de emojis",
+    "frequent": "Utilizados com frequência",
+    "results": "Resultados",
+    "noResults": "Nenhum emoji encontrado.",
+    "loading": "Carregando emojis…",
+    "categories": {
+      "people": "Pessoas",
+      "nature": "Natureza",
+      "food": "Comida",
+      "activities": "Atividades",
+      "travel": "Viagens",
+      "objects": "Objetos",
+      "symbols": "Símbolos",
+      "flags": "Bandeiras"
+    },
+    "collapse": "Recolher {{section}}",
+    "expand": "Expandir {{section}}",
+    "add": "Adicionar emoji em {{server}}",
+    "skinTone": "Tom de pele",
+    "tones": {
+      "0": "Padrão",
+      "1": "Clara",
+      "2": "Média-clara",
+      "3": "Média",
+      "4": "Média-escura",
+      "5": "Escura"
+    },
+    "hint": "Passe o cursor sobre um emoji para ver o nome"
+  }
+}

@@ -1,9 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ChatMessageText } from '@/features/chat/ChatMessageText';
 import { buildMentionLookup } from '@/shared/lib/mentions';
 import type { PublicUser } from '@/shared/types/protocol';
+import { resetMyEmojis, setMyEmojisForTests } from '@/features/emoji/myEmojis';
+import { RoomContext, type RoomContextValue } from '@/state/RoomContext';
 
 describe('ChatMessageText', () => {
   it('renders plain text (no link) as a paragraph, with no embed', () => {
@@ -102,4 +104,37 @@ describe('ChatMessageText — link previews sent with the message', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+});
+
+describe('ChatMessageText — server emojis', () => {
+  afterEach(() => resetMyEmojis());
+
+  it('shows a server emoji inline, named by its :name:', () => {
+    render(<ChatMessageText text="oi <:wave:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa> pessoal" />);
+    const image = screen.getByRole('img', { name: ':wave:' });
+    expect(image).toHaveAttribute('src', '/api/emojis/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
+    expect(image.className).toContain('size-[1.375em]');
+  });
+
+  it('a message of emojis alone shows them big', () => {
+    render(<ChatMessageText text="<:wave:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa> <a:party:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb> 😂" />);
+    expect(screen.getByRole('img', { name: ':wave:' }).className).toContain('size-12');
+    expect(screen.getByRole('img', { name: ':party:' }).closest('p')!.className).toContain('text-[48px]');
+  });
+
+  it('an emoji that no longer exists reads as its name', () => {
+    render(<ChatMessageText text="<:gone:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa>" />);
+    fireEvent.error(screen.getByRole('img', { name: ':gone:' }));
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
+    expect(screen.getByText(':gone:')).toBeInTheDocument();
+  });
+
+  it('the tooltip names the server it comes from, for its members', async () => {
+    const user = userEvent.setup();
+    setMyEmojisForTests('me', [{ serverId: 's1', emojis: [{ id: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', name: 'wave', animated: false, serverId: 's1' }] }]);
+    const servers = [{ id: 's1', name: 'Equipe' }] as RoomContextValue['servers'];
+    render(<RoomContext.Provider value={{ servers } as RoomContextValue}><ChatMessageText text="<:wave:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa> oi" /></RoomContext.Provider>);
+    await user.hover(screen.getByRole('img', { name: ':wave:' }));
+    expect(await screen.findByText('De Equipe')).toBeInTheDocument();
+  });
 });

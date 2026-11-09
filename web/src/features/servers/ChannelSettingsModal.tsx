@@ -17,20 +17,22 @@ import { WebhookUrlReveal } from '@/features/bots/WebhookUrlReveal';
 import { GroupAvatar } from '@/features/conversations/GroupAvatar';
 import { ImageCropDialog } from '@/features/settings/ImageCropDialog';
 import { uploadCroppedProfileImage } from '@/features/settings/uploadCroppedProfileImage';
-import { PERMISSIONS } from './permissionBits';
 import { bitOf, channelPermissionNames } from './permissionCatalog';
+import { hasPermission, PERMISSIONS } from './permissionBits';
+import { canManageRole, grantableBits } from './roleHierarchy';
+import { useRoom } from '@/state/RoomContext';
 import { SectionTitle, SettingsShell, type SettingsTab } from './SettingsShell';
 import {
   createWebhook, deleteChannel, deleteWebhook, fetchOverwrites, fetchWebhooks, rotateWebhook, setOverwrite, updateChannel, updateWebhook,
   type Overwrite, type WebhookInfo,
 } from './serversApi';
-import { can, canInChannel } from './serverUtils';
+import { channelSettingsTabs, type ChannelSettingsTab } from './serverUtils';
 import { useSaveBar } from './useSaveBar';
 
-type TabKey = 'overview' | 'permissions' | 'webhooks' | 'delete';
+type TabKey = ChannelSettingsTab;
 type Tri = 'allow' | 'inherit' | 'deny';
 
-function TriState({ value, onChange }: { value: Tri; onChange: (next: Tri) => void }) {
+function TriState({ value, onChange, disabled }: { value: Tri; onChange: (next: Tri) => void; disabled?: boolean }) {
   const { t } = useTranslation('servers');
   const options: { key: Tri; icon: typeof CheckIcon; active: string }[] = [
     { key: 'deny', icon: XIcon, active: 'bg-red text-white' },
@@ -40,8 +42,8 @@ function TriState({ value, onChange }: { value: Tri; onChange: (next: Tri) => vo
   return (
     <span role="radiogroup" className="flex overflow-hidden rounded-md border border-border">
       {options.map(({ key, icon: Icon, active }) => (
-        <button key={key} type="button" role="radio" aria-checked={value === key} aria-label={t(`overwrite.${key}`)} onClick={() => onChange(key)}
-          className={cn('grid size-8 place-items-center', value === key ? active : 'text-text-muted hover:bg-fill-hover')}>
+        <button key={key} type="button" role="radio" aria-checked={value === key} aria-label={t(`overwrite.${key}`)} disabled={disabled} onClick={() => onChange(key)}
+          className={cn('grid size-8 place-items-center disabled:cursor-not-allowed', value === key ? active : 'text-text-muted enabled:hover:bg-fill-hover', disabled && 'opacity-50')}>
           <Icon size={16} weight="bold" />
         </button>
       ))}
@@ -51,13 +53,18 @@ function TriState({ value, onChange }: { value: Tri; onChange: (next: Tri) => vo
 
 function Permissions({ server, channel }: { server: ServerSummary; channel: ChannelSummary }) {
   const { t } = useTranslation('servers');
+  const { state } = useRoom();
   const roles = [...server.roles].sort((a, b) => b.position - a.position);
+  // what the server lets this member put in a channel's overwrite: bits they hold there
+  const grantable = hasPermission(server.permissions, PERMISSIONS.ADMINISTRATOR) ? grantableBits(server) : channel.permissions;
   const [roleId, setRoleId] = useState(roles.find((r) => r.isDefault)!.id);
   const [overwrites, setOverwrites] = useState<Overwrite[]>([]);
   const [error, setError] = useState<string | null>(null);
   const load = useCallback(() => fetchOverwrites(server.id, channel.id).then(({ items }) => setOverwrites(items)).catch(() => {}), [server.id, channel.id]);
   useEffect(() => { void load(); }, [load, channel.permissionsSynced]);
   const current = overwrites.find((o) => o.roleId === roleId) ?? { roleId, userId: null, allow: 0, deny: 0 };
+  const selectedRole = roles.find((r) => r.id === roleId);
+  const editable = !!selectedRole && canManageRole(server, state.me.userId, selectedRole);
 
   async function set(bit: number, value: Tri) {
     const next: Overwrite = {
@@ -79,6 +86,7 @@ function Permissions({ server, channel }: { server: ServerSummary; channel: Chan
         </Button>
       )}
       {error && <p role="alert" className="text-label text-red">{error}</p>}
+      {!editable && <p role="note" className="rounded-md bg-fill-subtle p-3 text-label text-text-secondary">{t('roles.aboveYou')}</p>}
       <div className="flex gap-6 max-md:flex-col">
         <ul className="flex w-48 flex-none flex-col gap-0.5">
           {roles.map((role) => (
@@ -100,7 +108,7 @@ function Permissions({ server, channel }: { server: ServerSummary; channel: Chan
                   <span className="block text-label font-medium">{t(`permissions.${name}`)}</span>
                   <span className="block text-caption text-text-muted">{t(`permissionHints.${name}`)}</span>
                 </span>
-                <TriState value={value} onChange={(next) => void set(bit, next)} />
+                <TriState value={value} disabled={!editable || !hasPermission(grantable, bit)} onChange={(next) => void set(bit, next)} />
               </li>
             );
           })}
@@ -222,13 +230,9 @@ export function ChannelSettingsModal({ server, channel, onClose }: { server: Ser
   const [error, setError] = useState<string | null>(null);
   useEffect(() => { setName(channel.name); setTopic(channel.topic); }, [channel.name, channel.topic]);
   const bar = useSaveBar({ name, topic }, name !== channel.name || topic !== channel.topic);
-  const tabs: (SettingsTab & { key: TabKey })[] = [
-    { key: 'overview', label: t('channelSettings.overview') },
-    ...(can(server, PERMISSIONS.MANAGE_ROLES) ? [{ key: 'permissions' as const, label: t('channelSettings.permissions') }] : []),
-    ...(channel.type === 'text' && canInChannel(channel, PERMISSIONS.MANAGE_WEBHOOKS) ? [{ key: 'webhooks' as const, label: t('channelSettings.webhooks') }] : []),
-    { key: 'delete', label: t('channelSettings.delete'), danger: true },
-  ];
-  const [tab, setTab] = useState<TabKey>('overview');
+  const tabs: (SettingsTab & { key: TabKey })[] = channelSettingsTabs(server, channel)
+    .map((key) => ({ key, label: t(`channelSettings.${key}`), danger: key === 'delete' || undefined }));
+  const [tab, setTab] = useState<TabKey>(tabs[0]?.key ?? 'overview');
   const heading = channel.type === 'text' ? `# ${channel.name}` : channel.name;
 
   return (

@@ -1,6 +1,7 @@
 import type { Locale } from '../users/locale.js';
 import { localeText } from '../users/localeText.js';
 import { formatCallLength } from '../calls/callLength.js';
+import { customEmojisAsText } from '../emojis/customEmojiTokens.js';
 
 export interface PushNotice {
   title: string;
@@ -27,7 +28,7 @@ export function pushAvatarPath(user: { avatar: string; avatarPoster: string } | 
 }
 
 export function previewText(text: string): string {
-  return text.replace(/\s+/g, ' ').trim().slice(0, 120);
+  return customEmojisAsText(text).replace(/\s+/g, ' ').trim().slice(0, 120);
 }
 
 /** `@username` under the display name, only when it adds something the title does not already say. */

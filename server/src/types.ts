@@ -9,6 +9,8 @@ export type Role = 'user' | 'admin';
  * route. */
 export interface SessionUser {
   tokenHash: string;
+  /** the session's public id (sessions.id), what the account's session list refers to */
+  sessionId: string;
   userId: string;
   username: string;
   email: string | null;

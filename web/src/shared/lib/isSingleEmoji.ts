@@ -24,3 +24,16 @@ export function isSingleEmoji(text: string): boolean {
   const graphemes = Array.from(graphemeSegmenter.segment(normalized), ({ segment }) => segment);
   return graphemes.length === 1 && isEmojiGrapheme(graphemes[0]);
 }
+
+/** How many emojis `text` is made of, ignoring whitespace; null as soon as
+ * anything else is in it. */
+export function emojiOnlyCount(text: string): number | null {
+  if (!graphemeSegmenter) return null;
+  let count = 0;
+  for (const { segment } of graphemeSegmenter.segment(text)) {
+    if (/^\s+$/.test(segment)) continue;
+    if (!isEmojiGrapheme(segment)) return null;
+    count++;
+  }
+  return count;
+}

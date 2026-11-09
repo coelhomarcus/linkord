@@ -229,7 +229,13 @@
     "server.delete": "Servidor excluído",
     "server.owner_succession": "Sucessão de dono",
     "webhook.revoke": "Webhook revogado",
-    "retention.sweep": "Retenção aplicada"
+    "retention.sweep": "Retenção aplicada",
+    "account.two_factor_enable": "Verificação em duas etapas ativada",
+    "account.two_factor_disable": "Verificação em duas etapas desativada",
+    "account.password_change": "Senha alterada",
+    "account.password_reset": "Senha redefinida por e-mail",
+    "account.session_end": "Sessão encerrada pela conta",
+    "account.sessions_end_others": "Outras sessões encerradas pela conta"
   },
   "detail": {
     "fullHistory": "Histórico completo",

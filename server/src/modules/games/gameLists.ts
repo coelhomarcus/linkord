@@ -2,14 +2,15 @@ import crypto from 'node:crypto';
 import { and, asc, eq, inArray } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { profileGames } from '../../db/schema.js';
-import { igdbCoverUrl, igdbGameUrl, isCoverImageId, isGameName, isGameSlug } from '../../integrations/igdb/igdb.js';
+import { igdbGameUrl, isCoverImageId, isGameName, isGameSlug } from '../../integrations/igdb/igdb.js';
+import { igdbCoverProxyUrl } from '../media-proxy/mediaProxyUrls.js';
 import { GAME_LIST_LIMITS, GAME_LISTS, type GameItem, type GameList, type GameLists, type GameSnapshot } from './types.js';
 
 /** A `db` or a transaction: callers choose whether the lists change together with something else. */
 type Executor = Pick<typeof db, 'select' | 'insert' | 'delete'>;
 
 export function toGameItem(game: GameSnapshot, size: 'cover_small' | 'cover_big' = 'cover_big'): GameItem {
-  return { ...game, url: igdbGameUrl(game.slug), imageUrl: game.coverImageId ? igdbCoverUrl(game.coverImageId, size) : null };
+  return { ...game, url: igdbGameUrl(game.slug), imageUrl: game.coverImageId ? igdbCoverProxyUrl(game.coverImageId, size) : null };
 }
 
 function parseGame(value: unknown): GameSnapshot | null {

@@ -3,6 +3,7 @@ import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { renderWithRoom } from '@tests/fixtures/roomContextFixture';
+import { initialRoomState } from '@/state/roomReducer';
 import { ServerSettingsModal } from '@/features/servers/ServerSettingsModal';
 import { PERMISSIONS } from '@/features/servers/permissionBits';
 import * as serversApi from '@/features/servers/serversApi';
@@ -17,9 +18,11 @@ const mocked = vi.mocked(serversApi);
 
 const everyone: RoleSummary = { id: 'r0', name: '@everyone', color: '', position: 0, permissions: PERMISSIONS.VIEW_CHANNEL, hoist: false, mentionable: false, isDefault: true };
 const mods: RoleSummary = { id: 'r1', name: 'Mods', color: '', position: 1, permissions: PERMISSIONS.VIEW_CHANNEL, hoist: false, mentionable: false, isDefault: false };
-const server = {
+// the member's own role: MANAGE_ROLES, above Mods
+const leads: RoleSummary = { id: 'r2', name: 'Leads', color: '', position: 2, permissions: PERMISSIONS.MANAGE_ROLES, hoist: false, mentionable: false, isDefault: false };
+const baseServer = {
   id: 's1', name: 'Squad', icon: '', ownerId: 'someone-else', status: 'active',
-  permissions: PERMISSIONS.MANAGE_SERVER | PERMISSIONS.MANAGE_ROLES, roles: [everyone, mods], categories: [], channels: [], myRoleIds: [],
+  permissions: PERMISSIONS.MANAGE_SERVER | PERMISSIONS.MANAGE_ROLES, roles: [everyone, mods, leads], categories: [], channels: [], myRoleIds: ['r2'],
 } as unknown as ServerSummary;
 
 beforeEach(() => {
@@ -27,8 +30,10 @@ beforeEach(() => {
   mocked.fetchAllServerMembers.mockResolvedValue([]);
 });
 
-async function open(tab: 'Visão geral' | 'Cargos') {
-  renderWithRoom(<MemoryRouter><ServerSettingsModal server={server} onClose={vi.fn()} onOpenProfile={vi.fn()} /></MemoryRouter>);
+async function open(tab: 'Visão geral' | 'Cargos', server: ServerSummary = baseServer) {
+  renderWithRoom(<MemoryRouter><ServerSettingsModal server={server} onClose={vi.fn()} onOpenProfile={vi.fn()} /></MemoryRouter>, {
+    state: { ...initialRoomState, me: { ...initialRoomState.me, userId: 'me' } },
+  });
   const user = userEvent.setup();
   await user.click(screen.getByRole('button', { name: tab }));
   return user;
@@ -65,7 +70,7 @@ describe('ServerSettingsModal — roles', () => {
     // the saved role has not come back from the server yet, and still the bar confirms the save
     expect(await within(roleBar()!).findByRole('status')).toHaveTextContent('Alterações salvas.');
 
-    await user.click(screen.getByRole('switch', { name: 'Permitir que qualquer um @mencione este cargo' }));
+    await user.type(screen.getByLabelText('Nome do cargo'), '!');
     expect(within(roleBar()!).getByRole('button', { name: 'Salvar' })).toBeEnabled();
   });
 
@@ -77,6 +82,42 @@ describe('ServerSettingsModal — roles', () => {
     expect(await within(roleBar()!).findByRole('alert')).toHaveTextContent('Sem permissão.');
     expect(within(roleBar()!).getByRole('button', { name: 'Salvar' })).toBeEnabled();
     expect(screen.getByRole('switch', { name: 'Exibir membros com este cargo separadamente' })).toBeChecked();
+  });
+
+  it('offers no mention switch: role mentions do not exist', async () => {
+    await open('Cargos');
+    expect(screen.queryByRole('switch', { name: /mencione/ })).not.toBeInTheDocument();
+  });
+
+  it('leaves the permissions the member does not hold off-limits', async () => {
+    await open('Cargos');
+    expect(screen.getByRole('switch', { name: /^Banir membros/ })).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByRole('switch', { name: /^Gerenciar cargos/ })).not.toHaveAttribute('aria-disabled', 'true');
+  });
+
+  it('a role at or above the member\'s own opens read-only, without delete', async () => {
+    const user = await open('Cargos');
+    await user.click(screen.getByRole('button', { name: /^Leads/ }));
+    expect(screen.getByRole('note')).toHaveTextContent('no seu nível ou acima');
+    expect(screen.getByLabelText('Nome do cargo')).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Excluir cargo' })).not.toBeInTheDocument();
+    // Mods sits right under Leads: moving it up would put it at the member's own level
+    expect(screen.getAllByRole('button', { name: 'Subir' })[1]).toBeDisabled();
+  });
+
+  it('@everyone says it applies to everyone at once', async () => {
+    const user = await open('Cargos');
+    await user.click(screen.getByRole('button', { name: /^@everyone/ }));
+    expect(screen.getByRole('note')).toHaveTextContent('vale para todos os membros');
+  });
+
+  it('granting Administrator asks first', async () => {
+    const user = await open('Cargos', { ...baseServer, permissions: PERMISSIONS.ADMINISTRATOR | PERMISSIONS.MANAGE_ROLES });
+    const toggle = screen.getByRole('switch', { name: /^Administrador/ });
+    await user.click(toggle);
+    expect(toggle).not.toBeChecked();
+    await user.click(within(await screen.findByRole('dialog', { name: 'Dar Administrador?' })).getByRole('button', { name: 'Dar Administrador' }));
+    expect(screen.getByRole('switch', { name: /^Administrador/ })).toBeChecked();
   });
 
   it('an emptied name cannot be saved', async () => {

@@ -17,23 +17,27 @@ export interface CreatedServer {
   voice: Channel;
   /** the @everyone role, the target for server-wide channel overwrites */
   everyoneRoleId: string;
+  /** what @everyone could do when the server was created */
+  everyonePermissions: number;
 }
 
 export const PERMISSIONS = {
   VIEW_CHANNEL: 1 << 7,
   SEND_MESSAGES: 1 << 8,
+  SPEAK: 1 << 14,
   VIEW_AUDIT_LOG: 1 << 19,
+  CREATE_EXPRESSIONS: 1 << 20,
 } as const;
 
 export async function createServer(api: APIRequestContext, name: string): Promise<CreatedServer> {
-  const body = await ok<{ server: { id: string; name: string; channels: Channel[]; roles: { id: string; isDefault: boolean }[] } }>(
+  const body = await ok<{ server: { id: string; name: string; channels: Channel[]; roles: { id: string; isDefault: boolean; permissions: number }[] } }>(
     await api.post('/api/servers', { data: { name } }), 'create server');
   const channels = body.server.channels;
   const text = channels.find((c) => c.type === 'text');
   const voice = channels.find((c) => c.type === 'voice');
   const everyone = body.server.roles.find((r) => r.isDefault);
   if (!text || !voice || !everyone) throw new Error('the server template has no text channel, voice channel or @everyone role');
-  return { id: body.server.id, name: body.server.name, channels, text, voice, everyoneRoleId: everyone.id };
+  return { id: body.server.id, name: body.server.name, channels, text, voice, everyoneRoleId: everyone.id, everyonePermissions: everyone.permissions };
 }
 
 export async function createChannel(api: APIRequestContext, serverId: string, name: string, type: 'text' | 'voice' = 'text'): Promise<string> {
@@ -44,6 +48,11 @@ export async function createChannel(api: APIRequestContext, serverId: string, na
 /** Allow/deny bits for a role on one channel (see PERMISSIONS). */
 export async function setChannelOverwrite(api: APIRequestContext, serverId: string, channelId: string, roleId: string, allow: number, deny: number): Promise<void> {
   await ok(await api.put(`/api/servers/${serverId}/overwrites/${channelId}`, { data: { roleId, allow, deny } }), 'set overwrite');
+}
+
+/** Adds bits to @everyone, on top of what a new server gives it. */
+export async function grantEveryone(api: APIRequestContext, server: CreatedServer, bits: number): Promise<void> {
+  await ok(await api.patch(`/api/roles/${server.everyoneRoleId}`, { data: { permissions: server.everyonePermissions | bits } }), 'grant @everyone');
 }
 
 export async function createInvite(api: APIRequestContext, serverId: string): Promise<string> {

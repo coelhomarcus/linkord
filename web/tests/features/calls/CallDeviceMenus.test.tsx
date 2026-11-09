@@ -184,14 +184,17 @@ describe('ScreenShareQuickMenu', () => {
     renderWithRoom(<ScreenShareQuickMenu />, {
       state: { ...initialRoomState, me: { ...initialRoomState.me, id: 'p-1' } },
       livekitRoom: fakeLivekitRoomForShare(),
-      shareQuality: 'game',
+      shareQuality: 'screen1080',
       setShareQuality,
     });
 
     await user.click(screen.getByRole('button', { name: 'Configurações de compartilhamento de tela' }));
-    await user.click(await screen.findByText('Tela (1080p, 30 fps)'));
+    for (const label of ['Jogo (1440p, 60 fps)', 'Tela (1440p, 30 fps)', 'Jogo (1080p, 60 fps)', 'Tela (1080p, 30 fps)']) {
+      expect(await screen.findByText(label)).toBeInTheDocument();
+    }
+    await user.click(screen.getByText('Jogo (1080p, 60 fps)'));
 
-    expect(setShareQuality).toHaveBeenCalledWith('screen');
+    expect(setShareQuality).toHaveBeenCalledWith('game1080');
   });
 
   it('with no active share, does not show change source or pause preview', async () => {

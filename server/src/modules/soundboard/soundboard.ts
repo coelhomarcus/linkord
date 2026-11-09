@@ -1,9 +1,10 @@
+import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { and, asc, count, eq } from 'drizzle-orm';
+import { and, asc, count, eq, inArray } from 'drizzle-orm';
 import { config } from '../../config/env.js';
 import { db } from '../../db/client.js';
-import { conversations, serverSounds, servers, users, type ServerSound, type User } from '../../db/schema.js';
+import { conversations, serverMembers, serverSounds, servers, users, type ServerSound, type User } from '../../db/schema.js';
 import { jsonBody, sendError, sendJson } from '../../http/respond.js';
 import { parseCookies } from '../../http/cookies.js';
 import { resolveSession } from '../auth/session.js';
@@ -19,6 +20,7 @@ import { participants, send } from '../presence/participants.js';
 import * as floodControl from '../../realtime/floodControl.js';
 import { parseWav } from './soundFile.js';
 import { logger } from '../../lib/logger.js';
+import { recordExpressionUsage } from '../emojis/expressionUsage.js';
 import type { AppSocket, HandlerTable } from '../../types.js';
 
 const log = logger.child({ component: 'soundboard' });
@@ -130,8 +132,9 @@ async function handleUpload(
   const serverId = String(request.params.serverId || '');
   const access = await soundboardAccess(serverId, userId);
   if (!access) return sendError(reply, 404, 'not_found', 'Servidor não encontrado.');
-  // adding to the soundboard is part of using it; curating everyone's is MANAGE_EXPRESSIONS
-  if (!hasPermission(access.permissions, PERMISSIONS.USE_SOUNDBOARD)) return sendError(reply, 403, 'forbidden', 'Você não pode usar o soundboard desse servidor.');
+  // a sound takes one of the server's few slots for everyone, so adding is
+  // its own permission rather than part of playing (USE_SOUNDBOARD)
+  if (!hasPermission(access.permissions, PERMISSIONS.CREATE_EXPRESSIONS)) return sendError(reply, 403, 'forbidden', 'Você não pode adicionar sons nesse servidor.');
 
   if (!floodControl.allow(`sound-upload:${userId}`, SOUND_UPLOAD_LIMIT)) {
     return sendError(reply, 429, 'rate_limited', 'Muitos sons enviados em pouco tempo. Tente de novo em instantes.');
@@ -261,13 +264,44 @@ async function handleDelete(request: FastifyRequest<SoundParams>, reply: Fastify
   reply.code(204).send();
 }
 
-/** Members only, revalidated on every use like a chat attachment: the ETag is
- * the immutable sound id, and the 304 only comes after the membership check. */
-async function handleFile(request: FastifyRequest<SoundParams>, reply: FastifyReply): Promise<void> {
+// A sound can play in a call of another server, or a DM call, where some of
+// the listeners aren't members of the sound's server. They get its file
+// through the token that came with that play: signed here, good for a few
+// minutes, for that one sound. The key lives only in this process: a play is
+// fetched the moment it arrives, and after a restart the next play brings a
+// fresh token anyway.
+const FILE_TOKEN_TTL_MS = 10 * 60_000;
+const fileTokenKey = crypto.randomBytes(32);
+
+function signFile(serverId: string, soundId: string, expires: number): string {
+  return crypto.createHmac('sha256', fileTokenKey).update(`${serverId}:${soundId}:${expires}`).digest('base64url');
+}
+
+export function soundFileToken(serverId: string, soundId: string, now = Date.now()): string {
+  const expires = now + FILE_TOKEN_TTL_MS;
+  return `${expires}.${signFile(serverId, soundId, expires)}`;
+}
+
+export function isValidSoundFileToken(token: unknown, serverId: string, soundId: string, now = Date.now()): boolean {
+  if (typeof token !== 'string') return false;
+  const [expiresText, signature] = token.split('.');
+  const expires = Number(expiresText);
+  if (!signature || !Number.isSafeInteger(expires) || expires < now) return false;
+  const expected = Buffer.from(signFile(serverId, soundId, expires));
+  const given = Buffer.from(signature);
+  return given.length === expected.length && crypto.timingSafeEqual(given, expected);
+}
+
+/** Members, or whoever holds the token a play of this sound came with;
+ * revalidated on every use like a chat attachment: the ETag is the immutable
+ * sound id, and the 304 only comes after the access check. */
+async function handleFile(request: FastifyRequest<SoundParams & { Querystring: { token?: string } }>, reply: FastifyReply): Promise<void> {
   const userId = await sessionUserId(request);
   if (!userId) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
   const { serverId, soundId } = request.params;
-  if (!(await soundboardAccess(serverId, userId))) return sendError(reply, 404, 'not_found', 'Servidor não encontrado.');
+  if (!isValidSoundFileToken(request.query.token, serverId, soundId) && !(await soundboardAccess(serverId, userId))) {
+    return sendError(reply, 404, 'not_found', 'Servidor não encontrado.');
+  }
   const sound = await findSound(serverId, soundId);
   if (!sound) return sendError(reply, 404, 'not_found', 'Som não encontrado.');
 
@@ -286,26 +320,73 @@ async function handleFile(request: FastifyRequest<SoundParams>, reply: FastifyRe
   reply.code(200).header('Content-Type', 'audio/wav').send(buffer);
 }
 
-/** Plays one of the server's sounds for everyone in the same voice channel.
- * Each client fetches and plays the file itself — nothing is mixed into
- * anyone's microphone. */
-async function handlePlay(socket: AppSocket, msg: { conversationId?: string; soundId?: string }): Promise<void> {
+/** Plays a sound for everyone in the caller's call: a voice channel (with
+ * USE_SOUNDBOARD there) or a DM call. The sound may come from any server the
+ * caller is in and may use the soundboard of (`serverId`; without it, an
+ * older client's, the call's own server). Each client fetches and plays the
+ * file itself — nothing is mixed into anyone's microphone. */
+async function handlePlay(socket: AppSocket, msg: { conversationId?: string; serverId?: string; soundId?: string }): Promise<void> {
   const p = participants.get(socket.participantId ?? '');
   if (!p || p.socket !== socket) return;
   const conversationId = String(msg.conversationId || '');
   const soundId = String(msg.soundId || '');
   if (!conversationId || !soundId || p.callConversationId !== conversationId) return;
-  const [channel] = await db.select({ serverId: conversations.serverId }).from(conversations).where(eq(conversations.id, conversationId)).limit(1);
-  if (!channel?.serverId) return;
-  const sound = await findSound(channel.serverId, soundId);
+  const [call] = await db.select({ serverId: conversations.serverId, type: conversations.type }).from(conversations).where(eq(conversations.id, conversationId)).limit(1);
+  if (!call || (!call.serverId && call.type !== 'direct')) return;
+  if (call.serverId) {
+    // removal from the server cuts the call too, but not in the same instant
+    const snapshot = await loadServerSnapshot(call.serverId);
+    if (!snapshot || !hasPermission(channelPermissionsIn(snapshot, conversationId, p.userId), PERMISSIONS.USE_SOUNDBOARD)) return;
+  }
+  const soundServerId = typeof msg.serverId === 'string' && msg.serverId ? msg.serverId : call.serverId;
+  if (!soundServerId) return;
+  // a sound from elsewhere takes the soundboard of its own server too
+  if (soundServerId !== call.serverId) {
+    const access = await soundboardAccess(soundServerId, p.userId);
+    if (!access || !hasPermission(access.permissions, PERMISSIONS.USE_SOUNDBOARD)) return;
+  }
+  const sound = await findSound(soundServerId, soundId);
   if (!sound) return;
-  // removal from the server cuts the call too, but not in the same instant
-  const snapshot = await loadServerSnapshot(channel.serverId);
-  if (!snapshot || !hasPermission(channelPermissionsIn(snapshot, conversationId, p.userId), PERMISSIONS.USE_SOUNDBOARD)) return;
-  const event = { t: 'soundboard-play', conversationId, serverId: channel.serverId, soundId, participantId: p.id, emoji: sound.emoji, volume: sound.volume };
+  const event = {
+    t: 'soundboard-play', conversationId, serverId: soundServerId, soundId, participantId: p.id, emoji: sound.emoji, volume: sound.volume,
+    fileToken: soundFileToken(soundServerId, soundId),
+  };
   for (const other of participants.values()) {
     if (other.callConversationId === conversationId) send(other.socket, event);
   }
+  void recordExpressionUsage(p.userId, 'sound', [soundId]);
+}
+
+/** `GET /api/me/sounds` — the sounds of every server the account may use the
+ * soundboard of, by server in the rail's order, with whether it may add one there. */
+async function handleMine(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  const userId = await sessionUserId(request);
+  if (!userId) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
+  const memberships = await db.select({ serverId: serverMembers.serverId }).from(serverMembers)
+    .innerJoin(servers, eq(servers.id, serverMembers.serverId))
+    .where(and(eq(serverMembers.userId, userId), eq(servers.status, 'active')))
+    .orderBy(asc(serverMembers.position), asc(serverMembers.joinedAt));
+  const usable: { serverId: string; canAdd: boolean }[] = [];
+  for (const { serverId } of memberships) {
+    const access = await soundboardAccess(serverId, userId);
+    if (access && hasPermission(access.permissions, PERMISSIONS.USE_SOUNDBOARD)) {
+      usable.push({ serverId, canAdd: hasPermission(access.permissions, PERMISSIONS.CREATE_EXPRESSIONS) });
+    }
+  }
+  const rows = usable.length
+    ? await db.select({ sound: serverSounds, uploader: users }).from(serverSounds)
+      .leftJoin(users, eq(users.id, serverSounds.uploaderId))
+      .where(inArray(serverSounds.serverId, usable.map((u) => u.serverId)))
+      .orderBy(asc(serverSounds.createdAt), asc(serverSounds.id))
+    : [];
+  sendJson(reply, 200, {
+    maxSounds: MAX_SOUNDS_PER_SERVER,
+    servers: usable.map(({ serverId, canAdd }) => ({
+      serverId,
+      canAdd,
+      sounds: rows.filter((r) => r.sound.serverId === serverId).map((r) => toEntry(r.sound, r.uploader)),
+    })),
+  });
 }
 
 export const handlers: HandlerTable = {
@@ -313,6 +394,7 @@ export const handlers: HandlerTable = {
 };
 
 export function registerSoundboardRoutes(fastify: FastifyInstance): void {
+  fastify.get('/api/me/sounds', handleMine);
   fastify.get('/api/servers/:serverId/sounds', handleList);
   fastify.patch('/api/servers/:serverId/sounds/:soundId', handleUpdate);
   fastify.delete('/api/servers/:serverId/sounds/:soundId', handleDelete);

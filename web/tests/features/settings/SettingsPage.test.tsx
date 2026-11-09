@@ -97,7 +97,7 @@ describe('SettingsPage — category navigation', () => {
     renderSettings({ state: userState });
     const nav = screen.getByRole('navigation', { name: 'Categorias de ajustes' });
     expect(within(nav).getAllByRole('link').map((link) => link.textContent)).toEqual([
-      'Minha conta', 'Conexões', 'Dados e privacidade', 'Aparência', 'Voz e vídeo', 'Chat', 'Notificações', 'Idioma e hora',
+      'Minha conta', 'Conexões', 'Dados e privacidade', 'Segurança', 'Aparência', 'Voz e vídeo', 'Chat', 'Notificações', 'Idioma e hora',
     ]);
     expect(within(nav).getByText('Configurações de usuário')).toBeInTheDocument();
     expect(within(nav).getByText('Configurações do app')).toBeInTheDocument();

@@ -26,34 +26,34 @@ describe('useScreenShare — quality applied to the capture', () => {
     localStorage.clear();
   });
 
-  it('without a saved preference, publishes the game preset on the screen-share encoding', async () => {
+  it('without a saved preference, publishes the 1080p30 preset on the screen-share encoding', async () => {
     const setScreenShareEnabled = vi.fn(async () => undefined);
     const room = fakeRoom({ setScreenShareEnabled });
     const { result } = renderHook(() => useScreenShare(room, vi.fn()));
 
     await result.current.startSharing();
 
-    const game = SHARE_QUALITY_PRESETS.game;
+    const preset = SHARE_QUALITY_PRESETS.screen1080;
     expect(setScreenShareEnabled).toHaveBeenCalledWith(
       true,
-      expect.objectContaining({ resolution: game.resolution, contentHint: game.contentHint }),
+      expect.objectContaining({ resolution: preset.resolution, contentHint: preset.contentHint }),
       {
-        screenShareEncoding: game.encoding,
-        degradationPreference: game.degradationPreference,
+        screenShareEncoding: preset.encoding,
+        degradationPreference: preset.degradationPreference,
         simulcast: false,
       },
     );
   });
 
   it('with a saved quality preference, the next capture uses the chosen preset', async () => {
-    saveShareQuality('screen');
+    saveShareQuality('game1080');
     const setScreenShareEnabled = vi.fn(async () => undefined);
     const room = fakeRoom({ setScreenShareEnabled });
     const { result } = renderHook(() => useScreenShare(room, vi.fn()));
 
     await result.current.startSharing();
 
-    const screenPreset = SHARE_QUALITY_PRESETS.screen;
+    const screenPreset = SHARE_QUALITY_PRESETS.game1080;
     expect(setScreenShareEnabled).toHaveBeenCalledWith(
       true,
       expect.objectContaining({ resolution: screenPreset.resolution, contentHint: screenPreset.contentHint }),
@@ -62,6 +62,21 @@ describe('useScreenShare — quality applied to the capture', () => {
         degradationPreference: screenPreset.degradationPreference,
         simulcast: false,
       },
+    );
+  });
+
+  it('reads a choice saved under the old two-preset ids', async () => {
+    localStorage.setItem('ss-share-quality', 'game');
+    const setScreenShareEnabled = vi.fn(async () => undefined);
+    const room = fakeRoom({ setScreenShareEnabled });
+    const { result } = renderHook(() => useScreenShare(room, vi.fn()));
+
+    await result.current.startSharing();
+
+    expect(setScreenShareEnabled).toHaveBeenCalledWith(
+      true,
+      expect.objectContaining({ resolution: SHARE_QUALITY_PRESETS.game1440.resolution }),
+      expect.anything(),
     );
   });
 });

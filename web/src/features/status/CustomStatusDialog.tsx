@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/shared/ui/primitives/input';
 import { Label } from '@/shared/ui/primitives/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/primitives/popover';
-import { EmojiPicker, EmojiPickerContent, EmojiPickerSearch } from '@/shared/ui/primitives/emoji-picker';
+import { EmojiPicker } from '@/features/emoji/EmojiPicker';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/primitives/select';
 import { useRoom } from '@/state/RoomContext';
 import { fetchWall } from '@/features/profile/profileApi';
@@ -109,11 +109,9 @@ export function CustomStatusDialog({ open, onOpenChange }: { open: boolean; onOp
                   >
                     {emoji ? <span className="text-[20px] leading-none">{emoji}</span> : <SmileyIcon size={20} />}
                   </PopoverTrigger>
-                  <PopoverContent className="w-80 p-0" side="bottom" align="start">
-                    <EmojiPicker className="h-80 w-full" onEmojiSelect={({ emoji: picked }) => { setEmoji(picked); setEmojiOpen(false); }}>
-                      <EmojiPickerSearch placeholder={t('custom.searchEmoji')} />
-                      <EmojiPickerContent />
-                    </EmojiPicker>
+                  <PopoverContent className="w-[22rem] max-w-[calc(100vw-1rem)] p-0" side="bottom" align="start">
+                    {/* a status shows on every server, to people outside them: Unicode only */}
+                    <EmojiPicker className="h-96" allowCustom={false} onPick={(pick) => { setEmoji(pick.text); setEmojiOpen(false); }} />
                   </PopoverContent>
                 </Popover>
                 <Input

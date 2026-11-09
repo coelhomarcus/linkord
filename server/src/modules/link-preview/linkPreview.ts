@@ -6,6 +6,7 @@ import { parseCookies } from '../../http/cookies.js';
 import { resolveSession } from '../auth/session.js';
 import { requestSafe } from '../../net/safeRequest.js';
 import { readImageDimensions } from '../attachments/attachmentThumbnails.js';
+import { proxiedImageUrl } from '../media-proxy/mediaProxyUrls.js';
 
 // GET /api/link-preview?url=<url> — server-side fetch (avoids CORS) for a
 // generic link's Open Graph tags. This means the server fetches a URL
@@ -230,6 +231,13 @@ export function safeResolve(raw: string | null | undefined, base: string): strin
   }
 }
 
+/** A preview as it goes to a browser: its pictures through our own proxy.
+ * What is cached and stored keeps the original URLs, so the proxy can be
+ * switched off, or its key replaced, without touching stored messages. */
+export function withProxiedImages(preview: LinkPreviewResult): LinkPreviewResult {
+  return { ...preview, image: proxiedImageUrl('preview', preview.image), favicon: proxiedImageUrl('preview', preview.favicon) };
+}
+
 export function emptyResult(rawUrl: string): LinkPreviewResult {
   let hostname = rawUrl;
   try { hostname = new URL(rawUrl).hostname.replace(/^www\./, ''); } catch { /* keep the raw url */ }
@@ -306,7 +314,7 @@ async function handleLinkPreview(request: FastifyRequest, reply: FastifyReply): 
   }
 
   const data = await fetchLinkPreviewData(target, sess.userId);
-  sendJson(reply, 200, data);
+  sendJson(reply, 200, withProxiedImages(data));
 }
 
 export function registerLinkPreviewRoutes(fastify: FastifyInstance): void {

@@ -61,5 +61,20 @@
     "saving": "Saving…",
     "logout": "Sign out",
     "failed": "Couldn't link the email."
+  },
+  "twoFactor": {
+    "title": "Two-step verification",
+    "sentTo": "We sent a code to {{email}}. It expires in 10 minutes.",
+    "codeLabel": "Verification code",
+    "codeHint": "Enter the 6 digits sent to your email.",
+    "codeError": "Check the code and try again.",
+    "success": "Code confirmed.",
+    "submit": "Confirm and sign in",
+    "failed": "Could not confirm the code.",
+    "resend": "Resend code",
+    "resent": "Code resent",
+    "resendFailed": "Could not resend the code.",
+    "back": "Back",
+    "expired": "The sign-in expired. Enter your password again."
   }
 }

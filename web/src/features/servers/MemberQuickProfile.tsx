@@ -18,6 +18,7 @@ import { hasPermission, PERMISSIONS } from './permissionBits';
 import { setMemberRoles, type ServerMemberEntry } from './serversApi';
 import { memberColor } from './serverUtils';
 import { UserCustomStatus, UserCustomStatusBubble, UserStatusDot } from '@/features/status/UserStatus';
+import { canAssignRole, canManageRole, outranks } from './roleHierarchy';
 
 interface MemberQuickProfileProps {
   server: ServerSummary;
@@ -48,7 +49,8 @@ export function MemberQuickProfile({ server, member, currentUser, offline, open,
   const avatarPoster = 'avatarPoster' in user && typeof user.avatarPoster === 'string' ? user.avatarPoster : undefined;
   const assignable = [...server.roles].filter((role) => !role.isDefault).sort((a, b) => b.position - a.position);
   const color = memberColor(server, member.roleIds);
-  const canManageRoles = !member.isOwner && user.id !== state.me.userId && hasPermission(server.permissions, PERMISSIONS.MANAGE_ROLES);
+  const canManageRoles = hasPermission(server.permissions, PERMISSIONS.MANAGE_ROLES)
+    && outranks(server, state.me.userId, { userId: user.id, roleIds: member.roleIds, isOwner: member.isOwner });
 
   // The members endpoint only carries the minimal social fields, so a member
   // outside the known-users cache has no banner or bio until their profile is fetched.
@@ -198,7 +200,9 @@ export function MemberQuickProfile({ server, member, currentUser, offline, open,
                     {assignable.map((role) => {
                       const held = member.roleIds.includes(role.id);
                       return (
-                        <DropdownMenuCheckboxItem key={role.id} checked={held} disabled={savingRoleId !== null} onCheckedChange={(checked) => void toggleRole(role.id, checked === true)}>
+                        <DropdownMenuCheckboxItem key={role.id} checked={held}
+                          disabled={savingRoleId !== null || !(held ? canManageRole(server, state.me.userId, role) : canAssignRole(server, state.me.userId, role))}
+                          onCheckedChange={(checked) => void toggleRole(role.id, checked === true)}>
                           <span className="size-2.5 rounded-full" style={{ background: role.color || 'var(--color-text-muted)' }} />
                           <span className="truncate">{role.name}</span>
                         </DropdownMenuCheckboxItem>

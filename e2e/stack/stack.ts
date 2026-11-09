@@ -54,7 +54,7 @@ async function waitHealthy(timeoutMs = 60_000): Promise<void> {
 export async function up(image: string): Promise<void> {
   registrationCode();
   writeFileSync(STATE_FILE, JSON.stringify({ image } satisfies StackState));
-  compose(['up', '-d', '--wait', 'postgres'], image);
+  compose(['up', '-d', '--wait', 'postgres', 'mailsink'], image);
   compose(['up', '-d', 'livekit', 'proxy', 'app'], image);
   await waitHealthy();
 }
@@ -88,6 +88,30 @@ export function down(): void {
 
 function logs(lines = 200): string {
   try { return compose(['logs', '--no-color', '--tail', String(lines), 'app']); } catch { return '(no logs)'; }
+}
+
+const MAILSINK_URL = 'http://localhost:8025';
+
+async function emailsTo(to: string): Promise<{ text: string }[]> {
+  const res = await fetch(`${MAILSINK_URL}/emails?to=${encodeURIComponent(to)}`);
+  return await res.json() as { text: string }[];
+}
+
+/** How many emails `to` has received so far: pass it to waitForEmailCode to wait for the next one.
+ * (A count, not a time: the sink's clock is the container's, not this machine's.) */
+export async function emailCount(to: string): Promise<number> {
+  return (await emailsTo(to)).length;
+}
+
+/** The 6-digit code of the first email `to` receives after the first `seen` ones, waiting for it. */
+export async function waitForEmailCode(to: string, seen: number, timeoutMs = 15_000): Promise<string> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const code = (await emailsTo(to))[seen]?.text.match(/\b(\d{6})\b/)?.[1];
+    if (code) return code;
+    await sleep(200);
+  }
+  throw new Error(`no code emailed to ${to} within ${timeoutMs} ms`);
 }
 
 /** Read-only checks against the app's database. Writes go through the app's

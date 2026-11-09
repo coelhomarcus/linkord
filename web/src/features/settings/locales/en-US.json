@@ -18,6 +18,7 @@
     },
     "categories": {
       "account": "My account",
+      "security": "Security",
       "connections": "Connections",
       "privacy": "Data & privacy",
       "appearance": "Appearance",
@@ -41,7 +42,10 @@
       "language": "Language",
       "timeFormat": "Time format",
       "adminArea": "Admin area",
-      "presence": "Status"
+      "presence": "Status",
+      "password": "Password",
+      "twoFactor": "Two-step verification",
+      "sessions": "Active sessions"
     }
   },
   "search": {
@@ -112,6 +116,18 @@
     "presence": {
       "title": "Status",
       "keywords": "status, idle, away, auto idle, inactive, presence"
+    },
+    "password": {
+      "title": "Password",
+      "keywords": "password, change password"
+    },
+    "twoFactor": {
+      "title": "Two-step verification",
+      "keywords": "2fa, two-factor, two-step, code, verification, security"
+    },
+    "sessions": {
+      "title": "Active sessions",
+      "keywords": "sessions, devices, browsers, sign out, log out other devices, security"
     }
   },
   "account": {
@@ -323,5 +339,67 @@
       "processFailed": "Couldn't process the image."
     },
     "zoom": "Zoom"
+  },
+  "security": {
+    "loading": "Loading…",
+    "loadFailed": "Could not load.",
+    "retry": "Try again",
+    "cancel": "Cancel",
+    "password": {
+      "label": "Account password",
+      "description": "Changing the password ends the sessions on your other devices. This one stays signed in.",
+      "change": "Change",
+      "current": "Current password",
+      "new": "New password",
+      "save": "Save password",
+      "saving": "Saving…",
+      "tooShort_one": "The new password needs at least {{count}} character.",
+      "tooShort_other": "The new password needs at least {{count}} characters.",
+      "failed": "Could not change the password.",
+      "changed_zero": "Password changed.",
+      "changed_one": "Password changed. {{count}} other session was ended.",
+      "changed_other": "Password changed. {{count}} other sessions were ended."
+    },
+    "twoFactor": {
+      "label": "Email code at sign-in",
+      "descriptionOff": "Off. When on, signing in with your password also asks for a code sent to the account email.",
+      "descriptionOn": "On. Signing in with your password also asks for a code sent to the account email.",
+      "unavailable": {
+        "noDelivery": "Sending email is not set up on this server, so two-step verification cannot be turned on.",
+        "noEmail": "Add an email in My account to turn on two-step verification."
+      },
+      "enableHint": "Confirm your password. Then we will send a code to the account email.",
+      "disableHint": "Confirm your password to turn off two-step verification.",
+      "password": "Current password",
+      "sendCode": "Send code",
+      "disable": "Turn off",
+      "codeSent": "We sent a code to the account email. It expires in 30 minutes.",
+      "codeLabel": "Activation code",
+      "codeHint": "Enter the 6 digits sent to your email.",
+      "codeError": "Check the code and try again.",
+      "enable": "Turn on",
+      "sendFailed": "Could not send the code.",
+      "confirmFailed": "Could not turn it on.",
+      "disableFailed": "Could not turn it off."
+    },
+    "sessions": {
+      "description": "The browsers signed in to your account.",
+      "descriptionIdle_one": "The browsers signed in to your account. A session unused for {{count}} day ends on its own.",
+      "descriptionIdle_other": "The browsers signed in to your account. A session unused for {{count}} days ends on its own.",
+      "browserOn": "{{browser}} on {{os}}",
+      "unknownDevice": "Unknown browser",
+      "current": "This session",
+      "activeNow": "Active now",
+      "lastSeen": "Last used: {{time}}",
+      "createdAt": "Signed in {{time}}",
+      "end": "End",
+      "endNamed": "End session: {{name}}",
+      "endFailed": "Could not end the session.",
+      "endOthers": "End all others",
+      "endOthersTitle": "End the other sessions?",
+      "endOthersDescription_one": "{{count}} other browser will be signed out of your account right away.",
+      "endOthersDescription_other": "{{count}} other browsers will be signed out of your account right away.",
+      "onlyThis": "No other active sessions."
+    }
   }
 }

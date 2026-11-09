@@ -36,7 +36,8 @@
     "db:generate": "node --env-file-if-exists=.env ./node_modules/drizzle-kit/bin.cjs generate",
     "db:migrate": "node --env-file-if-exists=.env --import tsx server/src/db/migrate.ts",
     "db:seed": "NODE_ENV=development node --env-file-if-exists=.env --import tsx server/src/scripts/seedDev.ts",
-    "db:studio": "node --env-file-if-exists=.env ./node_modules/drizzle-kit/bin.cjs studio"
+    "db:studio": "node --env-file-if-exists=.env ./node_modules/drizzle-kit/bin.cjs studio",
+    "emoji:data": "node web/scripts/buildEmojiData.mjs"
   },
   "engines": {
     "node": ">=22"

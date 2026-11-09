@@ -28,6 +28,8 @@ const mockedApi = vi.mocked(api);
 const role = (id: string, over: Partial<RoleSummary> = {}): RoleSummary => ({
   id, name: id, color: '', position: 1, permissions: 0, hoist: false, mentionable: false, isDefault: false, ...over,
 });
+const asMe = (userId: string) => ({ ...initialRoomState, me: { ...initialRoomState.me, userId } });
+
 const server: ServerSummary = {
   id: 's1', name: 'Squad', icon: '', ownerId: 'u-ana', status: 'active', createdAt: 0, memberCount: 3, position: 0,
   permissions: 0, myRoleIds: [], categories: [], channels: [],
@@ -76,12 +78,21 @@ describe('MemberListPanel', () => {
   it('opens a compact member profile and lets role managers assign roles there', async () => {
     const user = userEvent.setup();
     mocked.setMemberRoles.mockResolvedValue(undefined);
-    renderWithRoom(<MemberListPanel server={{ ...server, permissions: PERMISSIONS.MANAGE_ROLES }} onOpenProfile={vi.fn()} />);
+    // a manager above both roles (and Bia): Leads sits on top
+    const managing = { ...server, permissions: PERMISSIONS.MANAGE_ROLES, myRoleIds: ['Leads'], roles: [...server.roles, role('Leads', { position: 4, permissions: PERMISSIONS.MANAGE_ROLES })] };
+    renderWithRoom(<MemberListPanel server={managing} onOpenProfile={vi.fn()} />, { state: asMe('u-me') });
     await user.click(await screen.findByRole('button', { name: 'Abrir perfil de Bia' }));
     expect(screen.getByText('@u-bia')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Adicionar cargo' }));
     await user.click(await screen.findByText('Mods', { exact: true }));
     expect(mocked.setMemberRoles).toHaveBeenCalledWith('s1', 'u-bia', ['Quiet', 'Mods']);
+  });
+
+  it('a role manager not above the member gets no role controls on their profile', async () => {
+    const user = userEvent.setup();
+    renderWithRoom(<MemberListPanel server={{ ...server, permissions: PERMISSIONS.MANAGE_ROLES }} onOpenProfile={vi.fn()} />, { state: asMe('u-me') });
+    await user.click(await screen.findByRole('button', { name: 'Abrir perfil de Bia' }));
+    expect(screen.queryByRole('button', { name: 'Adicionar cargo' })).not.toBeInTheDocument();
   });
 
   it('shows the member banner image in the compact profile', async () => {

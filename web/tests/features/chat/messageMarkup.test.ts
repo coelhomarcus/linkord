@@ -93,3 +93,18 @@ describe('previewableLinks', () => {
     expect(previewableLinks(parseMessage('```\nhttps://x.com\n```'))).toEqual([]);
   });
 });
+
+describe('parseInline — server emojis', () => {
+  it('reads <:name:id> and <a:name:id> as server emojis', () => {
+    expect(parseInline('oi <:wave:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa> e <a:party:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb>')).toEqual([
+      { type: 'text', text: 'oi ' },
+      { type: 'customEmoji', name: 'wave', id: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', animated: false },
+      { type: 'text', text: ' e ' },
+      { type: 'customEmoji', name: 'party', id: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', animated: true },
+    ]);
+  });
+
+  it('leaves one inside code as code', () => {
+    expect(parseInline('`<:wave:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa>`')).toEqual([{ type: 'code', text: '<:wave:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa>' }]);
+  });
+});

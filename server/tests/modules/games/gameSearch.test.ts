@@ -40,7 +40,7 @@ describe('game search query', () => {
 describe('game search', () => {
   it('turns games into items with links built on our side and a small cover', async () => {
     const { search } = setup();
-    assert.deepEqual(await search(user, 'zelda'), [{ ...game(1), url: 'https://www.igdb.com/games/game-1', imageUrl: 'https://images.igdb.com/igdb/image/upload/t_cover_small/co1abc.jpg' }]);
+    assert.deepEqual(await search(user, 'zelda'), [{ ...game(1), url: 'https://www.igdb.com/games/game-1', imageUrl: '/api/media-proxy/igdb/cover_small/co1abc' }]);
   });
   it('rejects a short query without asking IGDB or spending a slot', async () => {
     const { search, searched, reserved } = setup();

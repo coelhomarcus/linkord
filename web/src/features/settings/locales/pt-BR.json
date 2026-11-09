@@ -18,6 +18,7 @@
     },
     "categories": {
       "account": "Minha conta",
+      "security": "Segurança",
       "connections": "Conexões",
       "privacy": "Dados e privacidade",
       "appearance": "Aparência",
@@ -41,7 +42,10 @@
       "language": "Idioma",
       "timeFormat": "Formato de tempo",
       "adminArea": "Área administrativa",
-      "presence": "Status"
+      "presence": "Status",
+      "password": "Senha",
+      "twoFactor": "Verificação em duas etapas",
+      "sessions": "Sessões ativas"
     }
   },
   "search": {
@@ -112,6 +116,18 @@
     "presence": {
       "title": "Status",
       "keywords": "status, ausente, ausente automaticamente, inativo, presença"
+    },
+    "password": {
+      "title": "Senha",
+      "keywords": "senha, trocar senha, alterar senha, password"
+    },
+    "twoFactor": {
+      "title": "Verificação em duas etapas",
+      "keywords": "2fa, dois fatores, duas etapas, código, verificação, segurança"
+    },
+    "sessions": {
+      "title": "Sessões ativas",
+      "keywords": "sessões, dispositivos, navegadores, encerrar sessão, sair de outros dispositivos, segurança"
     }
   },
   "account": {
@@ -323,5 +339,67 @@
       "processFailed": "Não foi possível processar a imagem."
     },
     "zoom": "Zoom"
+  },
+  "security": {
+    "loading": "Carregando…",
+    "loadFailed": "Não foi possível carregar.",
+    "retry": "Tentar de novo",
+    "cancel": "Cancelar",
+    "password": {
+      "label": "Senha da conta",
+      "description": "Trocar a senha encerra as sessões nos outros dispositivos. Este continua conectado.",
+      "change": "Alterar",
+      "current": "Senha atual",
+      "new": "Nova senha",
+      "save": "Salvar senha",
+      "saving": "Salvando…",
+      "tooShort_one": "A nova senha precisa de pelo menos {{count}} caractere.",
+      "tooShort_other": "A nova senha precisa de pelo menos {{count}} caracteres.",
+      "failed": "Não foi possível alterar a senha.",
+      "changed_zero": "Senha alterada.",
+      "changed_one": "Senha alterada. {{count}} outra sessão foi encerrada.",
+      "changed_other": "Senha alterada. {{count}} outras sessões foram encerradas."
+    },
+    "twoFactor": {
+      "label": "Código por e-mail ao entrar",
+      "descriptionOff": "Desativada. Com ela ativa, entrar com a senha também pede um código enviado ao e-mail da conta.",
+      "descriptionOn": "Ativada. Entrar com a senha também pede um código enviado ao e-mail da conta.",
+      "unavailable": {
+        "noDelivery": "O envio de e-mails não está configurado neste servidor, então a verificação em duas etapas não pode ser ativada.",
+        "noEmail": "Adicione um e-mail em Minha conta para poder ativar a verificação em duas etapas."
+      },
+      "enableHint": "Confirme sua senha. Depois enviaremos um código ao e-mail da conta.",
+      "disableHint": "Confirme sua senha para desativar a verificação em duas etapas.",
+      "password": "Senha atual",
+      "sendCode": "Enviar código",
+      "disable": "Desativar",
+      "codeSent": "Enviamos um código para o e-mail da conta. Ele expira em 30 minutos.",
+      "codeLabel": "Código de ativação",
+      "codeHint": "Digite os 6 dígitos enviados para seu e-mail.",
+      "codeError": "Confira o código e tente novamente.",
+      "enable": "Ativar",
+      "sendFailed": "Não foi possível enviar o código.",
+      "confirmFailed": "Não foi possível ativar.",
+      "disableFailed": "Não foi possível desativar."
+    },
+    "sessions": {
+      "description": "Os navegadores conectados à sua conta.",
+      "descriptionIdle_one": "Os navegadores conectados à sua conta. Uma sessão sem uso por {{count}} dia é encerrada sozinha.",
+      "descriptionIdle_other": "Os navegadores conectados à sua conta. Uma sessão sem uso por {{count}} dias é encerrada sozinha.",
+      "browserOn": "{{browser}} em {{os}}",
+      "unknownDevice": "Navegador desconhecido",
+      "current": "Esta sessão",
+      "activeNow": "Ativa agora",
+      "lastSeen": "Último uso: {{time}}",
+      "createdAt": "Entrou em {{time}}",
+      "end": "Encerrar",
+      "endNamed": "Encerrar sessão: {{name}}",
+      "endFailed": "Não foi possível encerrar a sessão.",
+      "endOthers": "Encerrar todas as outras",
+      "endOthersTitle": "Encerrar as outras sessões?",
+      "endOthersDescription_one": "{{count}} outro navegador será desconectado da sua conta na hora.",
+      "endOthersDescription_other": "{{count}} outros navegadores serão desconectados da sua conta na hora.",
+      "onlyThis": "Nenhuma outra sessão ativa."
+    }
   }
 }

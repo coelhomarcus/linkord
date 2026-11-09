@@ -19,6 +19,7 @@ import { ChatSettings } from './ChatSettings';
 import { LanguageSettings } from './LanguageSettings';
 import { NotificationsSettings } from './NotificationsSettings';
 import { PrivacyTab } from './PrivacyTab';
+import { SecuritySettings } from './SecuritySettings';
 import { SettingsContent, SettingsPageHeader } from '@/shared/ui/settings-layout';
 import { SettingsIndex, SettingsSidebar } from './SettingsNavigation';
 import { findCategory } from './settingsCatalog';
@@ -31,6 +32,7 @@ interface SettingsPageProps {
 function CategoryPage({ tab, onOpenProfile }: { tab: SettingsTab; onOpenProfile: (userId: string) => void }) {
   switch (tab) {
     case 'account': return <AccountSettings onOpenProfile={onOpenProfile} />;
+    case 'security': return <SecuritySettings />;
     case 'connections': return <ConnectionsSettings />;
     case 'privacy': return <PrivacyTab onOpenProfile={onOpenProfile} />;
     case 'appearance': return <AppearanceSettings />;

@@ -23,10 +23,11 @@ export const SERVER_AUDIT_ACTIONS = [
   'webhook.create', 'webhook.update', 'webhook.rotate', 'webhook.delete',
   'message.delete',
   'sound.create', 'sound.update', 'sound.delete',
+  'emoji.create', 'emoji.update', 'emoji.delete',
 ] as const;
 
 type ServerAuditAction = (typeof SERVER_AUDIT_ACTIONS)[number];
-type ServerAuditTargetType = 'server' | 'user' | 'role' | 'channel' | 'category' | 'invite' | 'webhook' | 'message' | 'sound';
+type ServerAuditTargetType = 'server' | 'user' | 'role' | 'channel' | 'category' | 'invite' | 'webhook' | 'message' | 'sound' | 'emoji';
 
 /** One field that changed. The client renders these generically, so a new
  * field needs a label there, not a new shape here. */
@@ -59,6 +60,14 @@ export function createdFields(values: Record<string, unknown>): AuditChange[] {
   return Object.entries(values)
     .filter(([, value]) => value !== undefined && value !== null && value !== '' && value !== 0)
     .map(([key, after]) => ({ key, before: null, after }));
+}
+
+/** What a removed thing had, as changes to nothing — the entry keeps what
+ * the log would otherwise lose with the row. */
+export function deletedFields(values: Record<string, unknown>): AuditChange[] {
+  return Object.entries(values)
+    .filter(([, value]) => value !== undefined && value !== null && value !== '' && value !== 0)
+    .map(([key, before]) => ({ key, before, after: null }));
 }
 
 /** Pass the transaction of the change itself, so a change never exists

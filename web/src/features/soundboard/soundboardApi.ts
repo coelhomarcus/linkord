@@ -26,8 +26,23 @@ export interface SoundDetails {
 
 const base = (serverId: string) => `/api/servers/${encodeURIComponent(serverId)}/sounds`;
 
-export function soundFileUrl(serverId: string, soundId: string): string {
-  return `${base(serverId)}/${encodeURIComponent(soundId)}/file`;
+/** `token` is what a play from another server came with: it opens the file
+ * for listeners who aren't members there. */
+export function soundFileUrl(serverId: string, soundId: string, token?: string): string {
+  const url = `${base(serverId)}/${encodeURIComponent(soundId)}/file`;
+  return token ? `${url}?token=${encodeURIComponent(token)}` : url;
+}
+
+export interface SoundboardServer {
+  serverId: string;
+  /** CREATE_EXPRESSIONS there */
+  canAdd: boolean;
+  sounds: ServerSound[];
+}
+
+/** Every server whose soundboard the account may use, in the rail's order. */
+export function fetchMySounds(): Promise<{ maxSounds: number; servers: SoundboardServer[] }> {
+  return apiFetch('/api/me/sounds');
 }
 
 export function fetchServerSounds(serverId: string): Promise<{ sounds: ServerSound[]; maxSounds: number }> {

@@ -1,4 +1,4 @@
-import { DEFAULT_SHARE_QUALITY, isShareQualityId } from '@/features/calls/shareQualityPresets';
+import { DEFAULT_SHARE_QUALITY, parseShareQualityId } from '@/features/calls/shareQualityPresets';
 import type { ShareQualityId } from '@/features/calls/shareQualityPresets';
 import { LOCAL_STORAGE_KEYS, localStorageStore } from '@/shared/lib/localStorage';
 
@@ -8,7 +8,7 @@ import { LOCAL_STORAGE_KEYS, localStorageStore } from '@/shared/lib/localStorage
 // resolution without a new prompt, so there is nothing to "apply now" to.
 export function loadShareQuality(): ShareQualityId {
   const raw = localStorageStore.get(LOCAL_STORAGE_KEYS.shareQuality);
-  return raw && isShareQualityId(raw) ? raw : DEFAULT_SHARE_QUALITY;
+  return (raw && parseShareQualityId(raw)) || DEFAULT_SHARE_QUALITY;
 }
 
 export function saveShareQuality(value: ShareQualityId): void {

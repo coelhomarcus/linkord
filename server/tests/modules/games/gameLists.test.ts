@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, it } from 'node:test';
-import { igdbCoverUrl } from '../../../src/integrations/igdb/igdb.js';
 import { parseGameLists, toGameItem } from '../../../src/modules/games/gameLists.js';
 import { GAME_LIST_LIMITS, GAME_LISTS, GAME_WIDGET_TYPES, gameListOf } from '../../../src/modules/games/types.js';
 
@@ -48,8 +47,9 @@ describe('game lists input', () => {
 });
 
 describe('game items', () => {
-  it('builds the link and the cover on the fixed IGDB hosts', () => {
-    assert.deepEqual(toGameItem(game(5)), { ...game(5), url: 'https://www.igdb.com/games/game-5', imageUrl: 'https://images.igdb.com/igdb/image/upload/t_cover_big/co1abc.jpg' });
+  it('builds the link on the IGDB host and the cover through our proxy', () => {
+    assert.deepEqual(toGameItem(game(5)), { ...game(5), url: 'https://www.igdb.com/games/game-5', imageUrl: '/api/media-proxy/igdb/cover_big/co1abc' });
+    assert.equal(toGameItem(game(5), 'cover_small').imageUrl, '/api/media-proxy/igdb/cover_small/co1abc');
     assert.equal(toGameItem(game(5, { coverImageId: null })).imageUrl, null);
   });
   it('maps every list to its own widget type and back', () => {
@@ -68,6 +68,6 @@ describe('web mirror', () => {
     assert.ok(web.includes(`GAME_LIST_LIMITS: Record<GameList, number> = { ${limits} }`));
   });
   it('builds the big cover the way the server does', () => {
-    assert.ok(web.includes(igdbCoverUrl('${game.coverImageId}', 'cover_big')));
+    assert.ok(web.includes("igdbCoverProxyUrl(game.coverImageId, 'cover_big')"));
   });
 });

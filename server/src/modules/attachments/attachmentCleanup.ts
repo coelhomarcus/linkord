@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import { and, eq, inArray, isNull, or } from 'drizzle-orm';
 import { db } from '../../db/client.js';
-import { attachments as attachmentsTable, conversations, messages, serverSounds, servers, users, webhooks } from '../../db/schema.js';
+import { attachments as attachmentsTable, conversations, messages, serverEmojis, serverSounds, servers, users, webhooks } from '../../db/schema.js';
 import { filePathFor } from './attachmentStorage.js';
 
 // Deleting the on-disk file(s) when whatever owned them (a message, a whole
@@ -57,8 +57,8 @@ export async function deleteForConversation(conversationId: string): Promise<voi
     .where(eq(messages.conversationId, conversationId)));
 }
 
-/** Every file a server owns — each channel's attachments and the
- * soundboard — before the server row (and everything cascading from it)
+/** Every file a server owns — each channel's attachments, the soundboard
+ * and the server's emojis — before the server row (and everything cascading from it)
  * is deleted. */
 export async function deleteForServer(serverId: string): Promise<void> {
   await unlinkAll(await db
@@ -68,6 +68,7 @@ export async function deleteForServer(serverId: string): Promise<void> {
     .innerJoin(conversations, eq(conversations.id, messages.conversationId))
     .where(eq(conversations.serverId, serverId)));
   await unlinkAll(await db.select({ id: serverSounds.id }).from(serverSounds).where(eq(serverSounds.serverId, serverId)));
+  await unlinkAll(await db.select({ id: serverEmojis.id }).from(serverEmojis).where(eq(serverEmojis.serverId, serverId)));
 }
 
 /** Local upload URLs are safe to claim only when the uploader owns a profile-image row for them.

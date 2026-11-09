@@ -24,7 +24,7 @@ import { PERMISSIONS } from './permissionBits';
 import { CreateChannelDialog, type CreateTarget } from './CreateChannelDialog';
 import { ServerInviteDialog } from './ServerInviteDialog';
 import { leaveServer } from './serversApi';
-import { can, canInChannel, canMoveInto, canOpenSettings, groupChannels } from './serverUtils';
+import { can, canMoveInto, canOpenSettings, channelSettingsTabs, groupChannels } from './serverUtils';
 import { useServerSettings } from './ServerSettingsContext';
 import { VoiceMembers, type VoiceDrag } from './VoiceMembers';
 
@@ -74,7 +74,7 @@ function ChannelRow({ server, channel, active, onOpen, onInvite, onOpenProfile, 
               <TooltipContent>{t('channel.invite')}</TooltipContent>
             </Tooltip>
           )}
-          {canInChannel(channel, PERMISSIONS.MANAGE_CHANNELS) && (
+          {channelSettingsTabs(server, channel).length > 0 && (
             <Tooltip>
               <TooltipTrigger onClick={() => openChannelSettings(server.id, channel.id)} aria-label={t('channel.edit')} className="rounded-sm text-text-secondary hover:text-text-primary pointer-coarse:p-2"><GearSixIcon size={16} weight="fill" /></TooltipTrigger>
               <TooltipContent>{t('channel.edit')}</TooltipContent>
@@ -94,7 +94,7 @@ export function ChannelList({ server, activeChannelId, onNavigate, onOpenProfile
 }) {
   const { t } = useTranslation('servers');
   const navigate = useNavigate();
-  const { openCall, activeCallConversationId } = useRoom();
+  const { state, openCall, activeCallConversationId } = useRoom();
   const { openServerSettings } = useServerSettings();
   const [collapsed, setCollapsed] = useState(() => loadCollapsed(server.id));
   const [inviteOpen, setInviteOpen] = useState<{ channelId?: string } | null>(null);
@@ -146,7 +146,7 @@ export function ChannelList({ server, activeChannelId, onNavigate, onOpenProfile
           </DropdownMenuTrigger>
           <DropdownMenuContent anchor={headerRef} align="center" sideOffset={-6} className="w-[220px]">
             {can(server, PERMISSIONS.CREATE_INVITE) && <DropdownMenuItem onClick={() => setInviteOpen({})}><UserPlusIcon size={18} weight="fill" />{t('menu.invite')}</DropdownMenuItem>}
-            {canOpenSettings(server) && <DropdownMenuItem onClick={() => openServerSettings(server.id)}><GearSixIcon size={18} weight="fill" />{t('menu.settings')}</DropdownMenuItem>}
+            {canOpenSettings(server, state.me.userId) && <DropdownMenuItem onClick={() => openServerSettings(server.id)}><GearSixIcon size={18} weight="fill" />{t('menu.settings')}</DropdownMenuItem>}
             {canManageChannels && <DropdownMenuItem onClick={() => setCreateTarget({ kind: 'channel', categoryId: null })}><PlusCircleIcon size={18} weight="fill" />{t('menu.createChannel')}</DropdownMenuItem>}
             {canManageChannels && <DropdownMenuItem onClick={() => setCreateTarget({ kind: 'category' })}><FolderPlusIcon size={18} weight="fill" />{t('menu.createCategory')}</DropdownMenuItem>}
             <DropdownMenuSeparator />

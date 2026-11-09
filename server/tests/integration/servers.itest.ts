@@ -4,7 +4,7 @@ import { after, before, describe, it } from 'node:test';
 import { and, asc, eq } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { config } from '../../src/config/env.js';
-import { conversations, outboxEvents, serverCategories, serverInvites, serverMembers, serverRoles } from '../../src/db/schema.js';
+import { conversations, outboxEvents, serverAuditLogs, serverCategories, serverInvites, serverMembers, serverRoles } from '../../src/db/schema.js';
 import { createApp } from '../../src/http/app.js';
 import { createSession } from '../../src/modules/auth/session.js';
 import { handlers as chatHandlers } from '../../src/modules/messages/messages.js';
@@ -12,6 +12,7 @@ import { PERMISSIONS, DEFAULT_EVERYONE_PERMISSIONS } from '../../src/modules/ser
 import { invalidateAllServers } from '../../src/modules/servers/serverAccess.js';
 import { listServersForUser } from '../../src/modules/servers/serverSummaries.js';
 import { handleCallJoin } from '../../src/realtime/socket.js';
+import { setCallConversationId } from '../../src/modules/presence/participants.js';
 import { cleanupParticipant, db, joinNew, makeServerWithMembers, makeUser, memberCount, pool } from './helpers.js';
 
 let app: FastifyInstance;
@@ -225,6 +226,85 @@ describe('voice channels (real Postgres)', () => {
       m.sent.length = 0;
       await handleCallJoin(m.socket, { conversationId: voiceChannelId });
       assert.equal(m.sent.find((s) => s.event === 'error')?.payload.code, 'call-not-allowed');
+      assert.equal(m.participant.callConversationId, null);
+    } finally {
+      cleanupParticipant(m.participant);
+    }
+  });
+});
+
+describe('role hierarchy: escalation paths (real Postgres)', () => {
+  async function setup() {
+    const owner = await actor('esc'); const manager = await actor('esc'); const target = await actor('esc');
+    const { serverId, textChannelId } = await makeServerWithMembers(owner.id, [manager.id, target.id]);
+    const bans = (await call(owner, 'POST', `/api/servers/${serverId}/roles`, { name: 'Bans', permissions: PERMISSIONS.BAN_MEMBERS })).body.roleId;
+    const admins = (await call(owner, 'POST', `/api/servers/${serverId}/roles`, { name: 'Admins', permissions: PERMISSIONS.ADMINISTRATOR })).body.roleId;
+    const plain = (await call(owner, 'POST', `/api/servers/${serverId}/roles`, { name: 'Plain' })).body.roleId;
+    const managers = (await call(owner, 'POST', `/api/servers/${serverId}/roles`, { name: 'Managers', permissions: PERMISSIONS.MANAGE_ROLES })).body.roleId;
+    // Managers on top, every other role below it
+    assert.equal((await call(owner, 'PUT', `/api/servers/${serverId}/roles/order`, { roleIds: [plain, admins, bans, managers] })).status, 200);
+    await call(owner, 'PUT', `/api/servers/${serverId}/members/${manager.id}/roles`, { roleIds: [managers] });
+    return { owner, manager, target, serverId, textChannelId, bans, admins, plain, managers };
+  }
+
+  it('MANAGE_ROLES alone hands out only roles whose permissions the manager holds, to others or to themself', async () => {
+    const { owner, manager, target, serverId, bans, admins, plain, managers } = await setup();
+    assert.equal((await call(manager, 'PUT', `/api/servers/${serverId}/members/${target.id}/roles`, { roleIds: [plain] })).status, 200);
+    assert.equal((await call(manager, 'PUT', `/api/servers/${serverId}/members/${target.id}/roles`, { roleIds: [plain, bans] })).code, 'hierarchy');
+    assert.equal((await call(manager, 'PUT', `/api/servers/${serverId}/members/${manager.id}/roles`, { roleIds: [managers, admins] })).code, 'hierarchy');
+    // taking such a role away is not a grant: still allowed
+    await call(owner, 'PUT', `/api/servers/${serverId}/members/${target.id}/roles`, { roleIds: [plain, bans] });
+    assert.equal((await call(manager, 'PUT', `/api/servers/${serverId}/members/${target.id}/roles`, { roleIds: [plain] })).status, 200);
+  });
+
+  it('a member overwrite only from someone above that member (or for oneself)', async () => {
+    const { owner, manager, target, serverId, textChannelId } = await setup();
+    const deny = { allow: 0, deny: PERMISSIONS.SEND_MESSAGES };
+    assert.equal((await call(manager, 'PUT', `/api/servers/${serverId}/overwrites/${textChannelId}`, { userId: owner.id, ...deny })).code, 'hierarchy');
+    assert.equal((await call(manager, 'PUT', `/api/servers/${serverId}/overwrites/${textChannelId}`, { userId: target.id, ...deny })).status, 200);
+    assert.equal((await call(manager, 'PUT', `/api/servers/${serverId}/overwrites/${textChannelId}`, { userId: manager.id, allow: 0, deny: PERMISSIONS.ADD_REACTIONS })).status, 200);
+  });
+
+  it('deleting a role closes the gap, so someone who is not the owner can still reorder, and the log keeps what it had', async () => {
+    const { owner, manager, serverId, bans, admins, plain } = await setup();
+    assert.equal((await call(owner, 'DELETE', `/api/roles/${admins}`)).status, 200);
+    const positions = (await db.select({ id: serverRoles.id, position: serverRoles.position }).from(serverRoles)
+      .where(and(eq(serverRoles.serverId, serverId), eq(serverRoles.isDefault, false))).orderBy(asc(serverRoles.position))).map((r) => r.position);
+    assert.deepEqual(positions, [1, 2, 3]);
+    const order = (await db.select({ id: serverRoles.id }).from(serverRoles)
+      .where(and(eq(serverRoles.serverId, serverId), eq(serverRoles.isDefault, false))).orderBy(asc(serverRoles.position))).map((r) => r.id);
+    assert.deepEqual(order.slice(0, 2), [plain, bans]);
+    assert.equal((await call(manager, 'PUT', `/api/servers/${serverId}/roles/order`, { roleIds: [bans, plain, order[2]] })).status, 200);
+    const [entry] = await db.select().from(serverAuditLogs).where(and(eq(serverAuditLogs.serverId, serverId), eq(serverAuditLogs.action, 'role.delete')));
+    const changes = (entry!.detail as { changes?: { key: string; before: unknown; after: unknown }[] }).changes ?? [];
+    assert.deepEqual(changes.find((c) => c.key === 'permissions'), { key: 'permissions', before: PERMISSIONS.ADMINISTRATOR, after: null });
+  });
+
+  it('roles created at the same time never share a position', async () => {
+    const owner = await actor('pos');
+    const { serverId } = await makeServerWithMembers(owner.id, []);
+    const created = await Promise.all(Array.from({ length: 6 }, (_, i) => call(owner, 'POST', `/api/servers/${serverId}/roles`, { name: `r${i}` })));
+    assert.ok(created.every((r) => r.status === 201));
+    const positions = (await db.select({ position: serverRoles.position }).from(serverRoles)
+      .where(and(eq(serverRoles.serverId, serverId), eq(serverRoles.isDefault, false)))).map((r) => r.position).sort((a, b) => a - b);
+    assert.deepEqual(positions, [1, 2, 3, 4, 5, 6]);
+  });
+});
+
+describe('a call follows the permissions in force (real Postgres)', () => {
+  it('taking CONNECT away from @everyone takes a plain member out of the voice channel', async () => {
+    const owner = await actor('cp'); const member = await actor('cp');
+    const { serverId, voiceChannelId } = await makeServerWithMembers(owner.id, [member.id]);
+    const m = joinNew(member);
+    try {
+      setCallConversationId(m.participant, voiceChannelId);
+      const everyone = await everyoneOf(serverId);
+      // an unrelated change leaves them where they are
+      assert.equal((await call(owner, 'PATCH', `/api/roles/${everyone.id}`, { color: '#112233' })).status, 200);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      assert.equal(m.participant.callConversationId, voiceChannelId);
+      assert.equal((await call(owner, 'PATCH', `/api/roles/${everyone.id}`, { permissions: everyone.permissions & ~PERMISSIONS.CONNECT })).status, 200);
+      await new Promise((resolve) => setTimeout(resolve, 50));
       assert.equal(m.participant.callConversationId, null);
     } finally {
       cleanupParticipant(m.participant);

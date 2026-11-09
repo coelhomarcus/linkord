@@ -3,10 +3,11 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { after, before, describe, it } from 'node:test';
-import { eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { config } from '../../src/config/env.js';
-import { serverMembers, serverSounds } from '../../src/db/schema.js';
+import { serverMembers, serverRoles, serverSounds } from '../../src/db/schema.js';
+import { PERMISSIONS } from '../../src/modules/servers/permissions.js';
 import { createApp } from '../../src/http/app.js';
 import { createSession } from '../../src/modules/auth/session.js';
 import { setCallConversationId } from '../../src/modules/presence/participants.js';
@@ -14,7 +15,8 @@ import { deleteServerCompletely } from '../../src/modules/servers/serverDeletion
 import { invalidateAllServers } from '../../src/modules/servers/serverAccess.js';
 import { handlers, MAX_SOUNDS_PER_SERVER } from '../../src/modules/soundboard/soundboard.js';
 import { silentWav } from '../modules/soundboard/wavFixture.js';
-import { cleanupParticipant, db, joinNew, makeServerWithMembers, makeUser, pool } from './helpers.js';
+import { befriend, cleanupParticipant, db, joinNew, makeServerWithMembers, makeUser, pool } from './helpers.js';
+import { getOrCreateDirect } from '../../src/modules/conversations/conversationsRepository.js';
 
 let app: FastifyInstance;
 before(async () => { app = createApp(); await app.ready(); });
@@ -38,9 +40,17 @@ async function upload(as: Actor, serverId: string, name: string, body: Buffer = 
   return { status: res.statusCode, body: res.body ? JSON.parse(res.body) : null };
 }
 
+async function openSoundboardToEveryone(serverId: string): Promise<void> {
+  await db.update(serverRoles).set({ permissions: sql`${serverRoles.permissions} | ${PERMISSIONS.CREATE_EXPRESSIONS}` })
+    .where(and(eq(serverRoles.serverId, serverId), eq(serverRoles.isDefault, true)));
+  invalidateAllServers();
+}
+
+/** A server whose @everyone may add sounds, as every server from before CREATE_EXPRESSIONS is. */
 async function world() {
   const [owner, member, other, stranger] = await Promise.all(['own', 'mem', 'oth', 'str'].map(actor)) as [Actor, Actor, Actor, Actor];
   const { serverId, voiceChannelId } = await makeServerWithMembers(owner.id, [member.id, other.id], 'sounds');
+  await openSoundboardToEveryone(serverId);
   return { owner, member, other, stranger, serverId, voiceChannelId };
 }
 
@@ -63,6 +73,16 @@ describe('server soundboard', () => {
     assert.equal((await upload(stranger, serverId, 'nope')).status, 404);
     const strangerList = await app.inject({ method: 'GET', url: `/api/servers/${serverId}/sounds`, headers: cookie(stranger) });
     assert.equal(strangerList.statusCode, 404);
+  });
+
+  it('a new server keeps adding sounds to CREATE_EXPRESSIONS: a plain member plays but does not add', async () => {
+    const owner = await actor('own'); const member = await actor('mem');
+    const { serverId } = await makeServerWithMembers(owner.id, [member.id], 'fresh');
+    const refused = await upload(member, serverId, 'nope');
+    assert.deepEqual([refused.status, refused.body.error.code], [403, 'forbidden']);
+    assert.equal((await upload(owner, serverId, 'mine')).status, 201);
+    await openSoundboardToEveryone(serverId);
+    assert.equal((await upload(member, serverId, 'now yes')).status, 201);
   });
 
   it('refuses audio that is not WAV, or longer than the limit', async () => {
@@ -139,6 +159,64 @@ describe('server soundboard', () => {
     } finally {
       for (const j of [a, b, c]) cleanupParticipant(j.participant);
     }
+  });
+
+  it('a member of another server plays its sounds here; listeners outside it fetch the file with the play\'s token', async () => {
+    const { owner, member, serverId: home } = await world();
+    const { body } = await upload(member, home, 'from home');
+    // a second server where the member is, with someone who is not in the first
+    const [guest] = await Promise.all(['gst'].map(actor)) as [Actor];
+    const away = await makeServerWithMembers(owner.id, [member.id, guest.id], 'away');
+    const a = joinNew(member);
+    const g = joinNew(guest);
+    try {
+      setCallConversationId(a.participant, away.voiceChannelId);
+      setCallConversationId(g.participant, away.voiceChannelId);
+      await handlers['soundboard-play']!(a.socket, { conversationId: away.voiceChannelId, serverId: home, soundId: body.sound.id });
+      const play = g.sent.find((m) => m.event === 'soundboard-play')?.payload;
+      assert.equal(play?.serverId, home);
+      assert.equal(typeof play?.fileToken, 'string');
+
+      const url = `/api/servers/${home}/sounds/${body.sound.id}/file`;
+      assert.equal((await app.inject({ method: 'GET', url, headers: cookie(guest) })).statusCode, 404, 'not without the token');
+      assert.equal((await app.inject({ method: 'GET', url: `${url}?token=${encodeURIComponent(play.fileToken)}`, headers: cookie(guest) })).statusCode, 200);
+      assert.equal((await app.inject({ method: 'GET', url: `${url}?token=${encodeURIComponent(play.fileToken)}x`, headers: cookie(guest) })).statusCode, 404, 'a token is for exactly that sound');
+
+      // the guest isn't in the sound's server: they can't play it themselves
+      await handlers['soundboard-play']!(g.socket, { conversationId: away.voiceChannelId, serverId: home, soundId: body.sound.id });
+      assert.equal(a.sent.filter((m) => m.event === 'soundboard-play').length, 1);
+    } finally {
+      for (const j of [a, g]) cleanupParticipant(j.participant);
+    }
+  });
+
+  it('plays in a DM call too', async () => {
+    const { owner, member, serverId } = await world();
+    const { body } = await upload(member, serverId, 'dm');
+    await befriend(member.id, owner.id);
+    const { conversation: dm } = await getOrCreateDirect(member.id, owner.id, member.id);
+    const a = joinNew(member);
+    const b = joinNew(owner);
+    try {
+      setCallConversationId(a.participant, dm.id);
+      setCallConversationId(b.participant, dm.id);
+      await handlers['soundboard-play']!(a.socket, { conversationId: dm.id, serverId, soundId: body.sound.id });
+      assert.equal(b.sent.filter((m) => m.event === 'soundboard-play').length, 1);
+      // without saying whose sound, a DM call has no server to take it from
+      await handlers['soundboard-play']!(a.socket, { conversationId: dm.id, soundId: body.sound.id });
+      assert.equal(b.sent.filter((m) => m.event === 'soundboard-play').length, 1);
+    } finally {
+      for (const j of [a, b]) cleanupParticipant(j.participant);
+    }
+  });
+
+  it('lists every server whose soundboard the account may use, with whether it may add', async () => {
+    const { owner, member, serverId } = await world();
+    await upload(owner, serverId, 'listed');
+    const mine = await app.inject({ method: 'GET', url: '/api/me/sounds', headers: cookie(member) });
+    const entry = JSON.parse(mine.body).servers.find((s: { serverId: string }) => s.serverId === serverId);
+    assert.deepEqual(entry.sounds.map((s: { name: string }) => s.name), ['listed']);
+    assert.equal(entry.canAdd, true);
   });
 
   it('deleting the server deletes its sound files', async () => {

@@ -3,7 +3,7 @@ import { db } from '../../db/client.js';
 import { messages } from '../../db/schema.js';
 import { broadcastToConversationMembers } from '../conversations/conversationsRepository.js';
 import { detectEmbed } from '../link-preview/embeds.js';
-import { fetchLinkPreviewData, type LinkPreviewResult } from '../link-preview/linkPreview.js';
+import { fetchLinkPreviewData, withProxiedImages, type LinkPreviewResult } from '../link-preview/linkPreview.js';
 import { previewableLinks } from '../link-preview/messageLinks.js';
 
 // A link card used to be fetched by every reader once its message was already
@@ -70,7 +70,7 @@ export async function unfurlMessage(message: EmbeddableMessage & { embeds?: unkn
     .where(and(eq(messages.id, message.id), eq(messages.text, message.text)))
     .returning({ id: messages.id });
   if (!stored.length) return;
-  await broadcastToConversationMembers(message.conversationId, { t: 'chat-embeds', conversationId: message.conversationId, msgId: message.id, embeds });
+  await broadcastToConversationMembers(message.conversationId, { t: 'chat-embeds', conversationId: message.conversationId, msgId: message.id, embeds: embeds.map(withProxiedImages) });
 }
 
 // messages already being filled in, so two readers opening the same history

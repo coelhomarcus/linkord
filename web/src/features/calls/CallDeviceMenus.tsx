@@ -250,8 +250,8 @@ export function ScreenShareQuickMenu({ className }: { className?: string }) {
         <DropdownMenuGroup>
           <DropdownMenuLabel className={MENU_LABEL}>{t('menu.quality')}</DropdownMenuLabel>
           <DropdownMenuRadioGroup value={shareQuality} onValueChange={(v) => { if (v) setShareQuality(v as ShareQualityId); }}>
-            {(Object.entries(SHARE_QUALITY_PRESETS) as [ShareQualityId, typeof SHARE_QUALITY_PRESETS[ShareQualityId]][]).map(([id, preset]) => (
-              <DropdownMenuOptionItem key={id} value={id}><span className="flex items-center gap-1.5"><ShareQualityIcon id={id} />{t(`quality.${preset.labelKey}`)}</span></DropdownMenuOptionItem>
+            {(Object.keys(SHARE_QUALITY_PRESETS) as ShareQualityId[]).map((id) => (
+              <DropdownMenuOptionItem key={id} value={id}><span className="flex items-center gap-1.5"><ShareQualityIcon id={id} />{t(`quality.${id}`)}</span></DropdownMenuOptionItem>
             ))}
           </DropdownMenuRadioGroup>
         </DropdownMenuGroup>

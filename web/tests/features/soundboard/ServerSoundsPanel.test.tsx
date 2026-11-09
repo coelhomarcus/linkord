@@ -19,7 +19,7 @@ afterEach(() => vi.clearAllMocks());
 
 describe('ServerSoundsPanel', () => {
   it('lists the sounds with free slots, and lets a member edit only their own', async () => {
-    render(<ServerSoundsPanel serverId="g-member" myUserId="me" canManage={false} />);
+    render(<ServerSoundsPanel serverId="g-member" myUserId="me" canUpload canManage={false} />);
     await waitFor(() => expect(screen.getByText('ba dum tss')).toBeInTheDocument());
     expect(screen.getByText('21 espaços livres de 24')).toBeInTheDocument();
     expect(screen.getByText('Conta apagada')).toBeInTheDocument();
@@ -28,8 +28,14 @@ describe('ServerSoundsPanel', () => {
     expect(screen.queryByLabelText('Remover orphan')).not.toBeInTheDocument();
   });
 
+  it('without CREATE_EXPRESSIONS there is nothing to upload with', async () => {
+    render(<ServerSoundsPanel serverId="g-curator" myUserId="me" canUpload={false} canManage />);
+    await waitFor(() => expect(screen.getByText('airhorn')).toBeInTheDocument());
+    expect(screen.queryByRole('button', { name: 'Enviar som' })).not.toBeInTheDocument();
+  });
+
   it('the owner manages every sound', async () => {
-    render(<ServerSoundsPanel serverId="g-owner" myUserId="me" canManage />);
+    render(<ServerSoundsPanel serverId="g-owner" myUserId="me" canUpload canManage />);
     await waitFor(() => expect(screen.getByText('airhorn')).toBeInTheDocument());
     expect(screen.getByLabelText('Editar airhorn')).toBeInTheDocument();
     expect(screen.getByLabelText('Remover orphan')).toBeInTheDocument();

@@ -1,5 +1,5 @@
 import type { ParseKeys } from 'i18next';
-import { BellIcon, ChatCircleTextIcon, IdentificationCardIcon, LockIcon, MicrophoneIcon, PaintBrushIcon, PlugsConnectedIcon, ShieldCheckIcon, TranslateIcon } from '@phosphor-icons/react';
+import { BellIcon, ChatCircleTextIcon, IdentificationCardIcon, KeyIcon, LockIcon, MicrophoneIcon, PaintBrushIcon, PlugsConnectedIcon, ShieldCheckIcon, TranslateIcon } from '@phosphor-icons/react';
 
 import type { IconComponent } from '@/shared/ui/icons';
 import type { SettingsTab } from '@/shared/lib/routes';
@@ -30,6 +30,7 @@ export const SETTINGS_GROUPS: SettingsGroup[] = [
       { id: 'account', labelKey: 'catalog.categories.account', icon: IdentificationCardIcon },
       { id: 'connections', labelKey: 'catalog.categories.connections', icon: PlugsConnectedIcon },
       { id: 'privacy', labelKey: 'catalog.categories.privacy', icon: LockIcon },
+      { id: 'security', labelKey: 'catalog.categories.security', icon: KeyIcon },
     ],
   },
   {

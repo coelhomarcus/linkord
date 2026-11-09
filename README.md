@@ -26,8 +26,11 @@ Linkord is a self-hosted place to chat and call with friends. Talk in direct mes
 - **Chat and media**
   Send attachments up to 512 MB each (configurable with `MAX_ATTACHMENT_BYTES`), record voice messages of up to 5 minutes from the composer (blocked while you are in a call, since the call owns the microphone), share YouTube and Twitch links with automatic embeds, react, reply, edit, delete, and search messages.
 
+- **Emojis**
+  Type `:` and two letters in the composer to pick an emoji by its shortcode, or type a whole shortcode such as `:joy:` to turn it into the emoji; the ones you use most come first, on every device. The emoji picker (in the composer next to GIFs, in reactions and in your status) has search, frequently used emojis, a section per server, the standard categories, a skin tone choice and a preview; on a phone it opens as a bottom sheet. Each server can have its own emojis, up to 50 still and 50 animated, uploaded and cropped from the server's settings and stored as small WebP files. Its members use them anywhere, in other servers and DMs too, in messages and as reactions, and whoever reads the message sees the picture even from outside that server. A deleted emoji stays in old messages as its `:name:`.
+
 - **Voice, video, and screen sharing**
-  Join calls in voice channels or DMs with LiveKit. Each server also has its own soundboard.
+  Join calls in voice channels or DMs with LiveKit. Each server also has its own soundboard, added to from the call's sound picker. That picker lists the sounds of every server you may use the soundboard of, frequently used ones first, and works in DM calls too: a sound from another server plays for everyone in the call, members of that server or not. Channel permissions decide who may connect, speak, and turn on a camera or share a screen there.
 
 - **Webhooks**
   Let deploys, monitors, and other services post into a channel. See the [webhook guide](docs/WEBHOOK.md).
@@ -39,13 +42,16 @@ Linkord is a self-hosted place to chat and call with friends. Talk in direct mes
   Pick how you appear from the profile card that opens from the user panel (it also edits your profile and copies your user ID): Available, Idle (also set automatically after a few minutes away, configurable per device), Do Not Disturb (no push and no notification sounds; notifications still land in the list) or Invisible (you look offline to everyone but keep using the app). Invisible still shows you inside a call you join, to the people who can see that call, the same way your voice and video do. Add a custom status with an emoji, a short text and an optional expiry, or pick a game from your rotation; it shows as a thought bubble beside your avatar on your profile, where you edit or clear it. Your status follows your account to every device.
 
 - **Server audit log**
-  Each server keeps a log in its settings of who kicked, banned, changed roles, channels, permissions, invites, webhooks or sounds, moved someone out of a voice channel, or deleted someone else's message, with what changed and when. Members with the "View audit log" permission can filter it by person, action, target and period. Entries are kept for 90 days by default (`SERVER_AUDIT_RETENTION_DAYS`).
+  Each server keeps a log in its settings of who kicked, banned, changed roles, channels, permissions, invites, webhooks, sounds or emojis, moved someone out of a voice channel, or deleted someone else's message, with what changed and when. Members with the "View audit log" permission can filter it by person, action, target and period. Entries are kept for 90 days by default (`SERVER_AUDIT_RETENTION_DAYS`).
 
 - **Administration**
   Manage users, servers, webhooks, reports, audit history, orphaned uploads, and the data retention report from `/admin`.
 
 - **Profile and Wall**
   Show connected accounts on your profile and pick widgets for your Wall: recent anime from MyAnimeList, your GitHub profile and contribution calendar, and your favorite, liked, current and wished-for games, searched on IGDB.
+
+- **Account security**
+  Turn on two-step login, which asks for a code sent to your email after the password. See every browser signed in to your account (browser, system, address, when it signed in and was last used) and end any of them, or all but this one: the other browser is signed out at once. Changing your password keeps you signed in here and signs out everywhere else. A session left unused for 14 days (configurable) ends on its own.
 
 - **Your preferences**
   Set up your profile, account and email, connected accounts, blocked people, theme, voice and video devices, which notification sounds play, language and 12- or 24-hour time.

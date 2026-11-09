@@ -431,7 +431,7 @@ describe('Wall widget cards', () => {
     expect(screen.getByRole('heading', { name: 'Atividade recente de animes' }).querySelector('svg')).toBeNull();
   });
   it('shows only the covers of the first eight recent anime, without titles or progress', () => {
-    const items = Array.from({ length: 10 }, (_, i) => ({ id: String(i), title: `Anime ${i}`, url: `https://myanimelist.net/anime/${i}`, imageUrl: `https://cdn.myanimelist.net/${i}.jpg` }));
+    const items = Array.from({ length: 10 }, (_, i) => ({ id: String(i), title: `Anime ${i}`, url: `https://myanimelist.net/anime/${i}`, imageUrl: `/api/media-proxy/mal/sig?u=${i}` }));
     render(<WallWidgetCard widget={{ ...anime, data: { kind: 'list', items } }} accent="#3366ff" />);
     expect(screen.getAllByRole('link', { name: /^Anime / })).toHaveLength(8);
     expect(screen.queryByRole('link', { name: 'Anime 8' })).not.toBeInTheDocument();
@@ -478,14 +478,14 @@ describe('Wall widget cards', () => {
 describe('games widget cards', () => {
   const render1 = (widget: WallWidget) => render(<WallWidgetCard widget={widget} accent="#3366ff" />);
   it('shows the favorite as one cover of a middle size, with its name and year beside it', () => {
-    render1(gameWidget('igdb-favorite-game', [game(1, { imageUrl: 'https://images.igdb.com/big.jpg' })]));
+    render1(gameWidget('igdb-favorite-game', [game(1, { imageUrl: '/api/media-proxy/igdb/cover_big/co1' })]));
     expect(screen.getByText('Game 1')).toBeInTheDocument();
     expect(screen.getByText('2001')).toBeInTheDocument();
     const cover = screen.getByRole('link', { name: 'Game 1' });
     expect(cover).toHaveAttribute('href', 'https://www.igdb.com/games/game-1');
     expect(cover).toHaveAttribute('target', '_blank');
     expect(cover).toHaveAttribute('rel', expect.stringContaining('noreferrer'));
-    expect(cover.querySelector('img')).toHaveAttribute('src', 'https://images.igdb.com/big.jpg');
+    expect(cover.querySelector('img')).toHaveAttribute('src', '/api/media-proxy/igdb/cover_big/co1');
     expect(cover).toHaveClass('aspect-[264/352]');
     expect(cover.closest('ul')).toBeNull();
     // large enough to be the point of the widget, not so large it fills the card

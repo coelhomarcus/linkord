@@ -17,12 +17,15 @@ const log = logger.child({ component: 'soundboard' });
 interface ServerSoundsPanelProps {
   serverId: string;
   myUserId: string | null;
+  /** CREATE_EXPRESSIONS: may add sounds */
+  canUpload: boolean;
+  /** MANAGE_EXPRESSIONS: may edit and remove anyone's */
   canManage: boolean;
 }
 
-/** The group's soundboard, as a tab of the group details: what's there, who
- * sent it, and — for whoever sent it or owns the group — edit and remove. */
-export function ServerSoundsPanel({ serverId, myUserId, canManage }: ServerSoundsPanelProps) {
+/** The server's soundboard, as a page of its settings: what's there, who
+ * sent it, and — for whoever sent it or manages expressions — edit and remove. */
+export function ServerSoundsPanel({ serverId, myUserId, canUpload, canManage }: ServerSoundsPanelProps) {
   const { t } = useTranslation('soundboard');
   const { status, sounds, maxSounds, reload } = useServerSounds(serverId);
   const [editorOpen, setEditorOpen] = useState(false);
@@ -67,10 +70,12 @@ export function ServerSoundsPanel({ serverId, myUserId, canManage }: ServerSound
       <div className="flex flex-col gap-3 px-1">
         <p className="text-label text-text-secondary">{t('panel.description')}</p>
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <Button type="button" onClick={openCreate} disabled={status !== 'ready' || free === 0} className="gap-2">
-            <UploadSimpleIcon size={16} />
-            {t('panel.upload')}
-          </Button>
+          {canUpload ? (
+            <Button type="button" onClick={openCreate} disabled={status !== 'ready' || free === 0} className="gap-2">
+              <UploadSimpleIcon size={16} />
+              {t('panel.upload')}
+            </Button>
+          ) : <span />}
           {status === 'ready' && (
             <span className="select-none text-caption font-medium text-text-muted">{t('panel.slots', { count: free, max: maxSounds })}</span>
           )}

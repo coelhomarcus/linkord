@@ -35,6 +35,8 @@ import { APP_TITLE, callParticipantIds, conversationDocumentTitle, conversationT
 import { TileMenu } from '@/features/calls/TileMenu';
 import { SoundEmojiOverlay } from '@/features/soundboard/SoundEmojiOverlay';
 import { GlobalContextMenu } from '@/app/layout/GlobalContextMenu';
+import { EmojiUploadHost } from '@/features/emoji/EmojiUploadHost';
+import { ReactionSheetHost } from '@/features/chat/ReactionSheetHost';
 import { ProfileModal } from '@/features/profile/ProfileModal';
 import type { ProfileTab } from '@/features/profile/ProfileSidebar';
 import { FriendsProvider } from '@/features/friends/FriendsContext';
@@ -400,6 +402,8 @@ function Shell() {
         <TileMenu onOpenProfile={openProfile} />
         <ProfileModal userId={profileTarget?.userId ?? null} initialTab={profileTarget?.tab} onClose={() => setProfileTarget(null)} onOpenProfile={openProfile} />
         <AppModals modal={modal} onClose={closeModal} onOpenProfile={openProfile} />
+        <EmojiUploadHost />
+        <ReactionSheetHost />
         <ChatSearchDialog
           open={searchOpen}
           onOpenChange={setSearchOpen}
