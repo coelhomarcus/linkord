@@ -12,6 +12,7 @@ import { describeApiError } from '@/shared/api/errorText';
 import { AuthField } from './AuthField';
 import { Button } from '@/shared/ui/primitives/button';
 import { SegmentedTabs } from './SegmentedTabs';
+import { MIN_PASSWORD_LEN } from './credentialRules';
 import { EASE_OUT } from '@/shared/lib/ease';
 import { OTPInput, type OTPStatus } from '@/shared/ui/motion/otp-input';
 import { ERROR_CODES } from '@/shared/api/errorCodes';
@@ -271,7 +272,7 @@ function RegisterForm() {
         label={t('fields.password')}
         type={showPassword ? 'text' : 'password'}
         autoComplete="new-password"
-        placeholder="Pelo menos 8 caracteres"
+        placeholder={t('placeholders.password')}
         leftIcon={<LockIcon size={20} />}
         rightSlot={<PasswordToggle visible={showPassword} onToggle={() => setShowPassword((v) => !v)} />}
         value={password}
@@ -327,7 +328,7 @@ function RecoveryForm({ onBack }: { onBack: () => void }) {
   }
 
   async function submitReset(nextCode = code) {
-    if (nextCode.length !== 6 || password.length < 8 || pending) return;
+    if (nextCode.length !== 6 || password.length < MIN_PASSWORD_LEN || pending) return;
     setMessage(null);
     setStatus('idle');
     setPending(true);
@@ -392,7 +393,7 @@ function RecoveryForm({ onBack }: { onBack: () => void }) {
         aria-label={t('recovery.codeLabel')}
       />
       <AuthField id="recoveryPassword" label={t('fields.newPassword')} type="password" autoComplete="new-password" leftIcon={<LockIcon size={20} />} value={password} onChange={setPassword} placeholder={t('placeholders.password')} />
-      <Button type="button" size="lg" className="h-11 w-full" disabled={pending || code.length !== 6 || password.length < 8} onClick={() => void submitReset()}>
+      <Button type="button" size="lg" className="h-11 w-full" disabled={pending || code.length !== 6 || password.length < MIN_PASSWORD_LEN} onClick={() => void submitReset()}>
         {pending ? <CircleNotchIcon size={20} className="animate-spin" /> : status === 'success' ? <CheckCircleIcon size={20} weight="fill" /> : <LockIcon size={20} weight="fill" />}
         <span>{pending ? t('recovery.saving') : status === 'success' ? t('recovery.resetDone') : t('recovery.reset')}</span>
       </Button>

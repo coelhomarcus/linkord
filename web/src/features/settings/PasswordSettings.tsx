@@ -5,12 +5,11 @@ import { useTranslation } from 'react-i18next';
 
 import { changePassword } from '@/shared/api/api';
 import { describeApiError } from '@/shared/api/errorText';
+import { MIN_PASSWORD_LEN } from '@/features/auth/credentialRules';
 import { Button } from '@/shared/ui/primitives/button';
 import { Input } from '@/shared/ui/primitives/input';
 import { Label } from '@/shared/ui/primitives/label';
 import { SETTINGS_ACTION_BUTTON, SettingsRow } from '@/shared/ui/settings-layout';
-
-const MIN_PASSWORD_LEN = 8;
 
 /** Changing the password keeps this device signed in and ends every other session (`onChanged` lets the
  * session list refresh). */

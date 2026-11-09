@@ -10,9 +10,7 @@ import { Button } from '@/shared/ui/primitives/button';
 import { Input } from '@/shared/ui/primitives/input';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/ui/primitives/dialog';
 import { OTPInput, type OTPStatus } from '@/shared/ui/motion/otp-input';
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const MAX_EMAIL_LEN = 254;
+import { EMAIL_RE, MAX_EMAIL_LEN } from './credentialRules';
 
 /** Blocks an account with no email until it proves it owns one. Linking goes through the same
  * emailed-code flow as an email change (the server has no unverified way to set an address). */

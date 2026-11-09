@@ -8,14 +8,10 @@ import { Button } from '@/shared/ui/primitives/button';
 import { Input } from '@/shared/ui/primitives/input';
 import { confirmEmailChange, requestEmailChange } from '@/shared/api/api';
 import { describeApiError } from '@/shared/api/errorText';
+import { EMAIL_RE, MAX_EMAIL_LEN } from '@/features/auth/credentialRules';
 import { OTPInput, type OTPStatus } from '@/shared/ui/motion/otp-input';
 import { cn } from '@/shared/lib/utils';
 import { SETTINGS_ACTION_BUTTON, SettingsRow } from '@/shared/ui/settings-layout';
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-// RFC 5321's own limit — just enough to keep the input from growing forever,
-// the server is still the real authority on what's a valid address.
-const MAX_EMAIL_LEN = 254;
 
 /** `ana@gmail.com` → `***@gmail.com`: as many stars as the hidden part has letters. */
 function maskEmail(email: string): string {
