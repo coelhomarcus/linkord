@@ -48,6 +48,10 @@ jobs:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
       - name: Test
         run: npm run test:${{ matrix.project }} --prefix e2e
+        env:
+          # Node 22.18+ strips TypeScript itself and refuses what Playwright
+          # 1.49 would compile (parameter properties); let Playwright do it
+          NODE_OPTIONS: --no-experimental-strip-types
       - name: Upload report
         if: failure()
         uses: actions/upload-artifact@v7
