@@ -1,0 +1,57 @@
+name: E2E
+
+# The Playwright suite against the production-shaped Docker stack. It takes
+# minutes per project, so it runs where it guards a release: on pull requests
+# into main (a deploy), and by hand from the Actions tab for any branch.
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      project:
+        description: Playwright project to run
+        type: choice
+        options: [all, features, restart, upgrade]
+        default: features
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    name: E2E (${{ matrix.project }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        project: ${{ fromJSON((github.event_name == 'workflow_dispatch' && inputs.project != 'all') && format('["{0}"]', inputs.project) || '["features","restart","upgrade"]') }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # the upgrade project builds the production version from origin/main
+          fetch-depth: ${{ matrix.project == 'upgrade' && '0' || '1' }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+      # Playwright drives the runner image's Google Chrome (`channel: 'chrome'`)
+      - run: npm ci --prefix e2e
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+      - name: Test
+        run: npm run test:${{ matrix.project }} --prefix e2e
+      - name: Upload report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-${{ matrix.project }}
+          path: |
+            e2e/report
+            e2e/test-results
+          retention-days: 7
