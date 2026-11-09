@@ -12,6 +12,7 @@ import { generateThumbnail, readImageDimensions, readImagePlaceholder, THUMBNAIL
 import { discardStaged, findOwnedStaged, stageFile } from './stagedAttachments.js';
 import type { StagedAttachment } from '../../db/schema.js';
 import { getUsage } from './attachmentQuota.js';
+import { parseVoiceMeta, voicePayload } from './voiceMessages.js';
 import {
   tmpDirFor, manifestPathFor, chunkPathFor, readManifest, expectedChunkLength, assembleChunks, sanitizeFileName,
   reserveUpload, releaseUpload, getReservedBytes, withInitLock, completingUploads,
@@ -73,6 +74,8 @@ export async function handleAttachmentInit(request: FastifyRequest, reply: Fasti
   if (!Number.isInteger(totalSize) || totalSize <= 0 || totalSize > config.MAX_ATTACHMENT_BYTES) {
     return sendError(reply, 400, 'invalid_size', 'Tamanho de arquivo inválido.');
   }
+  const voice = parseVoiceMeta(body.voice, mimeType);
+  if (voice === null) return sendError(reply, 400, 'invalid_voice', 'Mensagem de voz inválida.');
 
   const uploadId = newId();
 
@@ -98,7 +101,7 @@ export async function handleAttachmentInit(request: FastifyRequest, reply: Fasti
     await fs.mkdir(tmpDirFor(uploadId), { recursive: true });
     await fs.writeFile(manifestPathFor(uploadId), JSON.stringify({
       uploadId, userId: sess.userId, conversationId, fileName, mimeType, totalSize,
-      chunkSize, totalChunks, createdAt: new Date().toISOString(),
+      chunkSize, totalChunks, createdAt: new Date().toISOString(), ...(voice ? { voice } : {}),
     } satisfies UploadManifest));
   } catch (err) {
     releaseUpload(uploadId);
@@ -189,6 +192,7 @@ function stagedPayload(row: StagedAttachment) {
     id: row.id, name: row.fileName, mime: row.mimeType, size: row.size, ...(row.thumbId ? { thumbId: row.thumbId } : {}),
     ...(row.width && row.height ? { width: row.width, height: row.height } : {}),
     ...(row.placeholder ? { placeholder: row.placeholder } : {}),
+    ...voicePayload(row),
   };
 }
 
@@ -223,6 +227,7 @@ async function completeStaged(reply: FastifyReply, manifest: UploadManifest, use
       fileName: manifest.fileName, mimeType: manifest.mimeType, size: manifest.totalSize,
       thumbId: thumb?.id ?? null, thumbMimeType: thumb?.mime ?? null, thumbSize: thumb?.size ?? null,
       width: dims?.width ?? null, height: dims?.height ?? null, placeholder,
+      voiceDurationMs: manifest.voice?.durationMs ?? null, voiceWaveform: manifest.voice?.waveform ?? null,
     });
   } catch (err) {
     // chunks stay, so complete can be retried without re-uploading

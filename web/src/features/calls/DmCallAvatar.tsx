@@ -8,6 +8,7 @@ import { cn } from '@/shared/lib/utils';
 import { useRoom } from '@/state/RoomContext';
 import { useIsSpeaking, useParticipantMedia } from './useLiveKitTrack';
 import { tileKey } from './tileTypes';
+import { TileMenuButton } from './TileMenuButton';
 
 export interface DmCallPeer {
   id: string;
@@ -72,6 +73,11 @@ export function DmCallAvatar({ peer, isMine, size, loading = false }: DmCallAvat
           'pointer-events-none absolute -inset-1 rounded-full border-[3px] transition-colors duration-100',
           speaking ? 'border-green' : 'border-transparent',
         )}
+      />
+      <TileMenuButton
+        name={peer.name}
+        onOpen={(rect) => openTileMenu(tileKey(peer.id, 'avatar'), peer.id, 'avatar', rect)}
+        className="left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
       />
       {loading && (
         <CircleNotchIcon aria-hidden size={Math.max(20, size / 3)} className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 animate-spin text-text-muted" />

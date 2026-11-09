@@ -6,7 +6,7 @@ import { i18n } from '@/shared/i18n/init';
 import { notifyIncomingChatMessage } from '@/shared/notifications';
 import { messagePreviewText } from '@/features/chat/messagePreview';
 import { mentionsUsername } from '@/shared/lib/mentions';
-import { useMessageOutbox } from './useMessageOutbox';
+import { useMessageOutbox, type OutboxFile } from './useMessageOutbox';
 import { useMessageActionRequests } from './useMessageActionRequests';
 import { useReactionIntents } from './useReactionIntents';
 import { MAX_WINDOW, withNewerMessages, withOlderPage, withPresentPage } from './historyWindow';
@@ -303,7 +303,7 @@ export function useChatMessages(deps: ChatMessagesDeps) {
 
   /** A batch goes through the outbox: staged, then published with its
    * message once every file is ready. */
-  const queueMessageWithFiles = useCallback((conversationId: string, text: string, replyTo: number | undefined, files: { file: File; compress: boolean }[]) => {
+  const queueMessageWithFiles = useCallback((conversationId: string, text: string, replyTo: number | undefined, files: OutboxFile[]) => {
     returnToPresentIfBehind(conversationId);
     enqueuePending(conversationId, text.trim(), pendingReplyRef(conversationId, replyTo), files);
   }, [enqueuePending, pendingReplyRef, returnToPresentIfBehind]);

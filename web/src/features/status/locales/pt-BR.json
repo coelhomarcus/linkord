@@ -14,12 +14,14 @@
   },
   "menu": {
     "trigger": "Status e perfil",
-    "viewProfile": "Ver perfil",
     "setCustom": "Definir status personalizado",
     "editCustom": "Editar status personalizado",
     "clearCustom": "Limpar status personalizado",
-    "status": "Status",
-    "reconnecting": "Reconectando…"
+    "reconnecting": "Reconectando…",
+    "editProfile": "Editar perfil",
+    "currentStatus": "Status: {{status}}",
+    "copyId": "Copiar ID do usuário",
+    "idCopied": "Copiado!"
   },
   "custom": {
     "title": "Status personalizado",
@@ -56,5 +58,9 @@
   "errors": {
     "saveFailed": "Não foi possível mudar seu status. Tente de novo.",
     "offline": "Sem conexão agora. Tente de novo quando voltar."
+  },
+  "bubble": {
+    "invite": "Como está o seu dia?",
+    "actions": "Ações do status personalizado"
   }
 }

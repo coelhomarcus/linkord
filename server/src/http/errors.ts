@@ -28,6 +28,7 @@ export const ERROR_REGISTRY = {
   invalid_index: { statuses: [400], channel: 'http' },
   invalid_log: { statuses: [400], channel: 'http' },
   invalid_size: { statuses: [400], channel: 'http' },
+  invalid_voice: { statuses: [400], channel: 'http' },
   invalid_type: { statuses: [400], channel: 'http' },
   invalid_url: { statuses: [400], channel: 'http' },
   missing_url: { statuses: [400], channel: 'http' },

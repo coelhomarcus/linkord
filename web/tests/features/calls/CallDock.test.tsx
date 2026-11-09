@@ -39,12 +39,12 @@ function renderDock(room: Parameters<typeof renderWithRoom>[1] = {}, {
 }
 
 describe('CallDock — idle', () => {
-  it('opens the account profile from the status menu', async () => {
+  it('opens the account profile from the status card', async () => {
     const onOpenProfile = vi.fn();
     renderDock({}, { onOpenProfile });
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: 'Status e perfil' }));
-    await user.click(await screen.findByRole('menuitem', { name: 'Ver perfil' }));
+    await user.click(await screen.findByRole('button', { name: 'Editar perfil' }));
     expect(onOpenProfile).toHaveBeenCalledWith('me');
   });
 

@@ -5,6 +5,7 @@ import { initialRoomState } from '@/state/roomReducer';
 import { renderWithRoom } from '@tests/fixtures/roomContextFixture';
 import { MessageRow } from '@/features/chat/MessageRow';
 import { GlobalContextMenu } from '@/app/layout/GlobalContextMenu';
+import { LONG_PRESS_DELAY_MS } from '@/shared/hooks/useLongPress';
 import type { ChatAttachment, ChatMessage } from '@/shared/types/protocol';
 
 // the link cards' previews are not what these tests are about
@@ -133,8 +134,9 @@ describe('removing an attachment', () => {
     const { removeChatAttachment } = renderInMenu({ text: 'a foto', attachments: [photo('f1')] });
     const picture = screen.getByRole('button', { name: /^Abrir f1\.png/ });
     vi.useFakeTimers();
-    fireEvent.touchStart(picture, { touches: [{ clientX: 20, clientY: 20 }] });
-    await act(async () => { vi.advanceTimersByTime(550); });
+    fireEvent.pointerDown(picture, { pointerType: 'touch', pointerId: 1, button: 0, clientX: 20, clientY: 20 });
+    await act(async () => { vi.advanceTimersByTime(LONG_PRESS_DELAY_MS); });
+    fireEvent.pointerUp(picture, { pointerType: 'touch', pointerId: 1, button: 0, clientX: 20, clientY: 20 });
     vi.useRealTimers();
     const user = userEvent.setup();
     await user.click(await screen.findByRole('menuitem', { name: 'Remover anexo' }));

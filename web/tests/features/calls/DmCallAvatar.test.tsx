@@ -1,10 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { renderWithRoom } from '@tests/fixtures/roomContextFixture';
 import { initialRoomState } from '@/state/roomReducer';
 import type { Participant } from '@/shared/types/protocol';
 import type { ParticipantMedia } from '@/features/calls/useLiveKitTrack';
 import { DmCallAvatar } from '@/features/calls/DmCallAvatar';
+import { tileKey } from '@/features/calls/tileTypes';
 
 const speaking = vi.hoisted(() => ({ current: new Set<string>() }));
 const localMedia = vi.hoisted(() => ({ current: { micActivated: true, micMuted: false } as Partial<ParticipantMedia> }));
@@ -91,5 +93,12 @@ describe('DmCallAvatar', () => {
     renderWithRoom(<DmCallAvatar peer={ana} isMine size={80} />, { deafened: true });
     expect(statusOf('p-ana')).toBe('deafened');
     localMedia.current = { micActivated: true, micMuted: false };
+  });
+
+  it('a "more actions" button opens the tile menu without right-click or long press', async () => {
+    const openTileMenu = vi.fn();
+    renderWithRoom(<DmCallAvatar peer={bea} isMine={false} size={80} />, { openTileMenu });
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Mais ações de Bea' }));
+    expect(openTileMenu).toHaveBeenCalledWith(tileKey('p-bea', 'avatar'), 'p-bea', 'avatar', expect.objectContaining({ left: expect.any(Number) }));
   });
 });

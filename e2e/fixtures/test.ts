@@ -17,20 +17,26 @@ export interface User {
   newTab(path?: string): Promise<AppPage>;
 }
 
+/** `phone`: the context is a touch phone (390x844, touch, mobile), so `(hover: none)` and
+ * `(pointer: coarse)` match and the app shows its compact layout. */
+export interface DeviceOptions { device?: 'desktop' | 'phone' }
+
 export interface Users {
   /** A fresh account in its own browser context (own cookies, own storage),
    * registered through the real sign-up route. */
-  create(prefix?: string): Promise<User>;
+  create(prefix?: string, options?: DeviceOptions): Promise<User>;
   /** A context for an account that already exists, logged in through the real form. */
   login(username: string, password: string): Promise<User>;
 }
 
-async function newContext(browser: Browser): Promise<BrowserContext> {
+async function newContext(browser: Browser, { device = 'desktop' }: DeviceOptions = {}): Promise<BrowserContext> {
   return browser.newContext({
     baseURL: BASE_URL,
     locale: 'pt-BR',
-    viewport: { width: 1280, height: 800 },
     permissions: ['microphone', 'camera'],
+    ...(device === 'phone'
+      ? { viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, hasTouch: true, isMobile: true }
+      : { viewport: { width: 1280, height: 800 } }),
   });
 }
 
@@ -55,13 +61,22 @@ function wrap(id: string, username: string, password: string, context: BrowserCo
   };
 }
 
+/** Chrome's console line for a blocked (or, in Report-Only, reported) load or script. */
+const CSP_VIOLATION = /Content Security Policy/i;
+
 export const test = base.extend<{ users: Users }>({
   users: async ({ browser }, use) => {
     const contexts: BrowserContext[] = [];
+    // every flow the suite drives must work under the app's real policy
+    const cspViolations: string[] = [];
+    const track = (context: BrowserContext) => {
+      contexts.push(context);
+      context.on('console', (message) => { if (CSP_VIOLATION.test(message.text())) cspViolations.push(message.text()); });
+    };
     await use({
-      async create(prefix = 'u') {
-        const context = await newContext(browser);
-        contexts.push(context);
+      async create(prefix = 'u', options) {
+        const context = await newContext(browser, options);
+        track(context);
         const username = `${prefix.slice(0, 8)}${randomBytes(4).toString('hex')}`;
         const password = randomBytes(12).toString('hex');
         const response = await context.request.post('/api/auth/register', {
@@ -73,7 +88,7 @@ export const test = base.extend<{ users: Users }>({
       },
       async login(username, password) {
         const context = await newContext(browser);
-        contexts.push(context);
+        track(context);
         const response = await context.request.post('/api/auth/login', { data: { username, password } });
         if (!response.ok()) throw new Error(`login ${username}: HTTP ${response.status()} ${await response.text()}`);
         const { user } = await response.json() as { user: { id: string } };
@@ -81,6 +96,7 @@ export const test = base.extend<{ users: Users }>({
       },
     });
     for (const context of contexts) await context.close().catch(() => {});
+    expect(cspViolations, 'Content-Security-Policy violations in the browser console').toEqual([]);
   },
 });
 

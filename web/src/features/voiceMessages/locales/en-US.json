@@ -1,0 +1,36 @@
+{
+  "record": "Record voice message",
+  "recordHint": "Record a voice message: click, or hold while you talk ({{shortcut}})",
+  "stopAndReview": "Stop and review",
+  "recordingLabel": "Recording voice message",
+  "reviewLabel": "Review voice message",
+  "requesting": "Opening microphone…",
+  "elapsed": "Recorded time",
+  "releaseToReview": "Release to review",
+  "cancel": "Cancel recording",
+  "discard": "Discard voice message",
+  "send": "Send voice message",
+  "dismissNotice": "Dismiss notice",
+  "preview": "Voice message",
+  "notices": {
+    "denied": "Linkord isn't allowed to use the microphone. Allow it in the site settings (the icon next to the address) and try again.",
+    "busy": "Couldn't open the microphone. Another app may be using it, such as a call in Discord or Meet.",
+    "noDevice": "No microphone found.",
+    "unsupported": "This browser can't record audio.",
+    "failed": "Couldn't start recording. Try again.",
+    "tooShort": "Recording too short. Click to record, or hold the button while you talk.",
+    "inCall": "You're in a call. Leave it to record a voice message.",
+    "callStarted": "Recording stopped because you joined a call. It's ready to review.",
+    "silent": "We're not picking up any sound from the microphone. It may be muted or in use by another app.",
+    "otherCall": "You're in a call in another tab or device: if its microphone is open, the people in that call hear you too."
+  },
+  "player": {
+    "label": "Voice message, {{duration}}",
+    "play": "Play voice message",
+    "pause": "Pause voice message",
+    "position": "Voice message position",
+    "positionValue": "{{current}} of {{total}}",
+    "speed": "Speed {{speed}}×",
+    "failed": "Couldn't play this audio"
+  }
+}

@@ -59,13 +59,16 @@ function Option({ type, state, onPick }: { type: WidgetType; state: 'available' 
       onClick={onPick}
       className="group relative flex w-full min-w-0 items-center gap-4 rounded-xl border border-border bg-bg-secondary p-4 text-left transition-colors hover:border-border-strong hover:bg-fill-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-60"
     >
-      <span aria-hidden className="w-32 flex-none"><WidgetPreview type={type} /></span>
+      {/* narrower on a phone, where the name needs the room; the name wraps rather than being cut */}
+      <span aria-hidden className="w-24 flex-none sm:w-32"><WidgetPreview type={type} /></span>
       <span className="min-w-0 flex-1 pr-8">
-        <span aria-hidden className="block truncate text-body font-semibold text-text-primary">{name}</span>
+        <span aria-hidden className="block text-body font-semibold text-text-primary [overflow-wrap:anywhere]">{name}</span>
         <span id={descriptionId} className="mt-0.5 block text-caption text-text-muted">{t(`wall.widgetDescriptions.${type}`)}</span>
+        {/* under the description on a phone: in the corner it would sit on a name that wraps */}
+        {state === 'added' && <span aria-hidden className="mt-1.5 flex items-center gap-1 text-caption text-text-muted sm:absolute sm:top-3 sm:right-3 sm:mt-0"><CheckIcon size={14} />{t('wall.added')}</span>}
       </span>
-      {state === 'added' && <span aria-hidden className="absolute right-3 top-3 flex items-center gap-1 text-caption text-text-muted"><CheckIcon size={14} />{t('wall.added')}</span>}
-      {state === 'available' && <span aria-hidden className="absolute right-3 top-3 flex size-8 items-center justify-center rounded-full bg-primary text-primary-foreground opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"><PlusIcon size={16} /></span>}
+      {/* with no hover to reveal it, a touch screen always shows the plus */}
+      {state === 'available' && <span aria-hidden className="absolute right-3 top-3 flex size-8 items-center justify-center rounded-full bg-primary text-primary-foreground opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100 [@media(hover:none)]:opacity-100"><PlusIcon size={16} /></span>}
     </button>
   );
 }
@@ -123,12 +126,12 @@ function Body({ available, added, onPick, onManage, onConnect }: {
             type="button"
             aria-current={service === current ? 'true' : undefined}
             onClick={() => setCurrent(service)}
-            className={cn('flex flex-none items-center rounded-md px-3 py-2 text-left text-label font-medium transition-colors hover:bg-fill-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring', service === current ? 'bg-fill-hover text-text-primary' : 'text-text-secondary')}
+            className={cn('touch-target relative flex flex-none items-center rounded-md px-3 py-2 text-left text-label font-medium transition-colors hover:bg-fill-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring', service === current ? 'bg-fill-hover text-text-primary' : 'text-text-secondary')}
           >
             {t(`wall.groups.${service}`)}
           </button>
         ))}
-        <Button type="button" variant="ghost" size="sm" className="mt-auto flex-none justify-start" onClick={onManage}>{t('wall.manageConnections')}</Button>
+        <Button type="button" variant="ghost" size="sm" className="touch-target relative mt-auto flex-none justify-start" onClick={onManage}>{t('wall.manageConnections')}</Button>
       </nav>
       <div role="region" aria-label={t(`wall.groups.${current}`)} className="flex min-h-0 flex-col gap-3 overflow-y-auto p-4">
         {current !== 'igdb' && offered.length === 0

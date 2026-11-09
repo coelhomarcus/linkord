@@ -20,7 +20,7 @@ export function ProfileColorPicker({ userId, value, disabled, onChange }: { user
       disabled={disabled}
       onChange={onChange}
       triggerLabel={t('colorPicker.trigger', { name: preset ? preset.label : hexOf(value).toUpperCase() })}
-      triggerClassName="flex items-center gap-2 rounded-full border border-border-strong bg-bg-tertiary py-1 pr-2.5 pl-1 text-caption font-medium text-text-secondary transition-colors hover:bg-fill-hover hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60 data-popup-open:bg-fill-hover"
+      triggerClassName="touch-target relative flex items-center gap-2 rounded-full border border-border-strong bg-bg-tertiary py-1 pr-2.5 pl-1 text-caption font-medium text-text-secondary transition-colors hover:bg-fill-hover hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60 data-popup-open:bg-fill-hover"
       note={(hex) => isTooDarkForAccent(hex) && (
         <p role="note" className="flex items-start gap-2 text-caption text-text-muted">
           <span aria-hidden className="mt-0.5 size-3 flex-none rounded-full" style={{ background: readableAccent(hex) }} />

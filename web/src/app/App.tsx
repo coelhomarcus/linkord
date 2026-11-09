@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, Route, Routes, RouterProvider, useLocation, useNavigate, useParams } from 'react-router';
 import type { CSSProperties } from 'react';
 import type { Location } from 'react-router';
+import { MotionConfig } from 'motion/react';
 import { RoomProvider } from '@/app/providers/RoomProvider';
 import { useRoom } from '@/state/RoomContext';
 import { AuthProvider, useAuth } from '@/state/AuthContext';
@@ -459,12 +460,16 @@ function AppProviders() {
     navigator.serviceWorker.addEventListener('message', onPushNavigation);
     return () => navigator.serviceWorker.removeEventListener('message', onPushNavigation);
   }, [navigate]);
+  // "user": with reduced motion asked for, Motion drops transforms and layout moves and keeps fades, the
+  // same rule styles/index.css applies to the CSS animations
   return (
-    <AuthProvider>
-      <TooltipProvider>
-        <AuthGate />
-      </TooltipProvider>
-    </AuthProvider>
+    <MotionConfig reducedMotion="user">
+      <AuthProvider>
+        <TooltipProvider>
+          <AuthGate />
+        </TooltipProvider>
+      </AuthProvider>
+    </MotionConfig>
   );
 }
 

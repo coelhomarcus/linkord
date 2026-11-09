@@ -17,7 +17,7 @@ import { cn } from '@/shared/lib/utils';
 import { hasPermission, PERMISSIONS } from './permissionBits';
 import { setMemberRoles, type ServerMemberEntry } from './serversApi';
 import { memberColor } from './serverUtils';
-import { UserCustomStatus, UserStatusDot } from '@/features/status/UserStatus';
+import { UserCustomStatus, UserCustomStatusBubble, UserStatusDot } from '@/features/status/UserStatus';
 
 interface MemberQuickProfileProps {
   server: ServerSummary;
@@ -144,16 +144,19 @@ export function MemberQuickProfile({ server, member, currentUser, offline, open,
           </div>
         </div>
         <div className="px-4 pb-4">
-          <div className="relative -mt-9 w-fit rounded-full bg-bg-modal p-1">
-            <button
-              type="button"
-              aria-label={t('members.openProfile', { name: user.displayName })}
-              onClick={openFullProfile}
-              className="block cursor-pointer rounded-full border-0 bg-transparent p-0 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-            >
-              <Avatar id={user.id} name={user.displayName} avatar={user.avatar} poster={avatarPoster} animateOnHover avatarColor={user.avatarColor} size={72} />
-            </button>
-            <UserStatusDot userId={user.id} labelled className="absolute bottom-1 right-1 size-5 border-4 text-bg-modal" />
+          <div className="-mt-9 flex items-start gap-2">
+            <div className="relative w-fit flex-none rounded-full bg-bg-modal p-1">
+              <button
+                type="button"
+                aria-label={t('members.openProfile', { name: user.displayName })}
+                onClick={openFullProfile}
+                className="block cursor-pointer rounded-full border-0 bg-transparent p-0 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+              >
+                <Avatar id={user.id} name={user.displayName} avatar={user.avatar} poster={avatarPoster} animateOnHover avatarColor={user.avatarColor} size={72} />
+              </button>
+              <UserStatusDot userId={user.id} labelled className="absolute bottom-1 right-1 size-5 border-4 text-bg-modal" />
+            </div>
+            <UserCustomStatusBubble userId={user.id} className="mt-4 min-w-0" />
           </div>
           <div className="mt-2 flex items-start justify-between gap-3">
             <div className="min-w-0">
@@ -162,7 +165,6 @@ export function MemberQuickProfile({ server, member, currentUser, offline, open,
                 {member.isOwner && <CrownIcon size={14} weight="fill" className="flex-none text-yellow" aria-label={t('members.owner')} />}
               </h2>
               <p className="truncate text-label text-text-secondary">@{user.username}</p>
-              <UserCustomStatus userId={user.id} className="mt-1 text-label text-text-secondary" />
             </div>
           </div>
 

@@ -23,7 +23,7 @@ Linkord is a self-hosted place to chat and call with friends. Talk in direct mes
   Create servers from a ready-to-use template, organize text and voice channels into categories, and manage roles, channel permissions, invites, kicks, and bans.
 
 - **Chat and media**
-  Send attachments up to 512 MB each (configurable with `MAX_ATTACHMENT_BYTES`), share YouTube and Twitch links with automatic embeds, react, reply, edit, delete, and search messages.
+  Send attachments up to 512 MB each (configurable with `MAX_ATTACHMENT_BYTES`), record voice messages of up to 5 minutes from the composer (blocked while you are in a call, since the call owns the microphone), share YouTube and Twitch links with automatic embeds, react, reply, edit, delete, and search messages.
 
 - **Voice, video, and screen sharing**
   Join calls in voice channels or DMs with LiveKit. Each server also has its own soundboard.
@@ -35,7 +35,7 @@ Linkord is a self-hosted place to chat and call with friends. Talk in direct mes
   Receive alerts for messages, mentions, friend requests, and invites, even when Linkord is closed. The app icon can also show an unread badge where the browser supports it.
 
 - **Presence status**
-  Pick how you appear from the user panel: Available, Idle (also set automatically after a few minutes away, configurable per device), Do Not Disturb (no push and no notification sounds; notifications still land in the list) or Invisible (you look offline to everyone but keep using the app). Invisible still shows you inside a call you join, to the people who can see that call, the same way your voice and video do. Add a custom status with an emoji, a short text and an optional expiry, or pick a game from your rotation. Your status follows your account to every device.
+  Pick how you appear from the profile card that opens from the user panel (it also edits your profile and copies your user ID): Available, Idle (also set automatically after a few minutes away, configurable per device), Do Not Disturb (no push and no notification sounds; notifications still land in the list) or Invisible (you look offline to everyone but keep using the app). Invisible still shows you inside a call you join, to the people who can see that call, the same way your voice and video do. Add a custom status with an emoji, a short text and an optional expiry, or pick a game from your rotation; it shows as a thought bubble beside your avatar on your profile, where you edit or clear it. Your status follows your account to every device.
 
 - **Server audit log**
   Each server keeps a log in its settings of who kicked, banned, changed roles, channels, permissions, invites, webhooks or sounds, moved someone out of a voice channel, or deleted someone else's message, with what changed and when. Members with the "View audit log" permission can filter it by person, action, target and period. Entries are kept for 90 days by default (`SERVER_AUDIT_RETENTION_DAYS`).
@@ -79,6 +79,8 @@ To confirm it, `docker compose exec app id` prints `uid=1000(node)`.
 ### Backups
 
 The database and `./uploads` have to be backed up together, and Linkord does it for you: `npm run backup` (in the container, `docker compose exec app node server/dist/scripts/backup.js`) writes a dated folder with a `pg_dump`, an archive of the uploads and a manifest to `./backups`, and keeps the newest `BACKUP_KEEP` (default 7). Running it does not stop the app. To schedule it, start the optional compose service with `docker compose --profile backup up -d backup`, or call the command from the host's cron. `npm run restore` brings a backup back into an empty database and folder on a new server and checks that everything came across. Copy `./backups` off the machine as well, and keep your `.env` somewhere safe: it is not in the backup. The full guide, with the restore steps, is in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md#backup-and-restore).
+
+**Security headers.** The server sends a Content-Security-Policy and `X-Frame-Options: DENY` on every response, built from `APP_URL`, `LIVEKIT_URL` and `KLIPY_API_KEY`, so set those to the real public URLs: a wrong `LIVEKIT_URL` blocks calls in the browser. Behind HTTPS it adds `Strict-Transport-Security`. The reverse proxy does not need to set any of these. Violations are logged as `content security policy violation`; `CSP_REPORT_ONLY=1` turns blocking off while still reporting. Details in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md#content-security-policy).
 
 See [`.env.example`](.env.example) for all server, database, session, LiveKit, push, upload, and rate limit settings. In production, set `APP_URL` to the public HTTPS origin and configure a stable Web Push VAPID key pair. For iPhone and iPad, users must add Linkord to the Home Screen before enabling Push notifications.
 

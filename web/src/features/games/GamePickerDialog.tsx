@@ -78,7 +78,9 @@ export function GamePickerDialog({ open, widgetName, taken, onPick, onOpenChange
   // the window's content only exists while it is open, so every opening starts with an empty search
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85dvh] grid-rows-[auto_auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-w-md">
+      {/* on a phone it hangs from the top: the keyboard the search opens covers the lower half of the
+          screen, and a centred window would have its results behind it */}
+      <DialogContent className="top-[calc(var(--app-viewport-top,0px)+env(safe-area-inset-top)+1rem)] max-h-[min(85dvh,calc(var(--app-viewport-height,100dvh)-env(safe-area-inset-top)-2rem))] translate-y-0 grid-rows-[auto_auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:top-1/2 sm:max-h-[85dvh] sm:max-w-md sm:-translate-y-1/2">
         <PickerBody widgetName={widgetName} taken={taken} onPick={onPick} />
         <p className="px-4 pb-3 text-caption text-text-muted">{t('picker.source')}</p>
       </DialogContent>

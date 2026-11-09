@@ -15,6 +15,7 @@ import { messagePermissions } from '@/features/chat/messageActions';
 import { useMessageDeleteConfirm } from '@/features/chat/useMessageDeleteConfirm';
 import { useRoom } from '@/state/RoomContext';
 import { downloadFile } from '@/shared/lib/download';
+import { isTouchContextMenu, LONG_PRESS_DELAY_MS, useLongPress } from '@/shared/hooks/useLongPress';
 
 interface GlobalContextMenuProps {
   children: ReactNode;
@@ -29,11 +30,31 @@ function isEditableTarget(target: EventTarget | null): boolean {
   );
 }
 
-/** Call stage / tiles open TileMenu locally, and someone in a voice channel's
- * list opens the voice member menu — the global menu must not swallow their contextmenu. */
+/** Call stage / tiles and a DM call's avatars open TileMenu locally, and
+ * someone in a voice channel's list opens the voice member menu — the global
+ * menu must not swallow their contextmenu. */
+const DELEGATED_MENU = '[data-stage], [data-tile-kind], [data-dm-call-avatar], [data-voice-member]';
 function isDelegatedContextMenuTarget(element: Element | null): boolean {
-  return !!element?.closest('[data-stage]') || !!element?.closest('[data-tile-kind]') || !!element?.closest('[data-voice-member]');
+  return !!element?.closest(DELEGATED_MENU);
 }
+
+/** What a finger may long-press for a menu. Anything else, and any control
+ * inside these, keeps the browser's own long press (link and image menus,
+ * text selection) — except the control that *is* the row. */
+const PRESSABLE = '[data-message-id], [data-conversation-id], [data-tile-kind], [data-dm-call-avatar], [data-voice-member]';
+const ROW_CONTROL = ':is([data-conversation-id] > button, [data-voice-member] button, :is([data-attachment-id], [data-embed-link]) button)';
+const NATIVE_PRESS = 'a, button, input, textarea, select, [contenteditable], [data-download-url], [role="slider"]';
+
+function shouldLongPress(element: Element): boolean {
+  const surface = element.closest(PRESSABLE);
+  if (!surface || window.getSelection()?.toString()) return false;
+  if (element.closest('[data-text-selection-enabled]')) return false;
+  const control = element.closest(NATIVE_PRESS);
+  return !control || !surface.contains(control) || control.matches(ROW_CONTROL);
+}
+
+/** The surfaces that light up under a held finger: the row, not the whole stage. */
+const PRESS_FEEDBACK = '[data-message-id], [data-conversation-id], [data-voice-member]';
 
 export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenuProps) {
   const { t } = useTranslation('common');
@@ -65,7 +86,7 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
   const emojiPickerWarmed = useKeepPopoverWarm(fullEmojiPicker);
   const contextMenuActionsRef = useRef<ContextMenuRootActions | null>(null);
   const delegatedContextMenuRef = useRef(false);
-  const touchTargetRef = useRef<{ at: number; blocked: boolean }>({ at: 0, blocked: false });
+  const pressFeedbackRef = useRef<HTMLElement | null>(null);
   const selectionRowRef = useRef<HTMLElement | null>(null);
   const [contextMenuOpen, setContextMenuOpen] = useState(false);
   const targetMessage = messageTarget != null
@@ -93,27 +114,13 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
         selectionRowRef.current = null;
       }
     }
-    function captureTarget(e: MouseEvent | TouchEvent) {
+    function captureTarget(e: MouseEvent) {
       const element = e.target instanceof Element ? e.target : null;
-      const touch = e.type === 'touchstart';
-      const recentTouch = Date.now() - touchTargetRef.current.at < 1500;
-      if (touch && element?.closest('[data-voice-member]')) {
-        // a long press there opens the voice member menu, which handles it itself
-        touchTargetRef.current = { at: Date.now(), blocked: false };
-        return;
-      }
-      if (touch) {
-        const message = element?.closest('[data-message-id]');
-        const conversation = element?.closest('[data-conversation-id]');
-        const rowButton = conversation?.querySelector(':scope > button');
-        // Long-pressing an attachment opens its action; links and other controls keep their own long press.
-        const interactive = element?.closest('a, button, input, textarea, [contenteditable], [data-download-url]');
-        const onPartButton = !!interactive?.matches('button') && !!interactive.closest('[data-attachment-id], [data-embed-link]');
-        const blocked = (!message && !conversation) || !!window.getSelection()?.toString()
-          || !!message?.hasAttribute('data-text-selection-enabled') || (!!interactive && interactive !== rowButton && !onPartButton);
-        touchTargetRef.current = { at: Date.now(), blocked };
-        if (blocked) return;
-      } else if (recentTouch && touchTargetRef.current.blocked) {
+      // A long press on a pressable surface is ours: useLongPress swallowed
+      // the browser's event and sends its own (untrusted) one when it fires.
+      // Any other touch contextmenu is the browser's (a link, an image, text)
+      // and stays the browser's: nothing in the app may react to it.
+      if (e.isTrusted && isTouchContextMenu(e)) {
         e.stopPropagation();
         return;
       }
@@ -124,7 +131,7 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
         return;
       }
       delegatedContextMenuRef.current = false;
-      const wantsNativeMenu = isEditableTarget(e.target) || (!touch && (e as MouseEvent).shiftKey)
+      const wantsNativeMenu = isEditableTarget(e.target) || e.shiftKey
         || !!selectionRowRef.current?.contains(element);
       const downloadEl = element?.closest<HTMLElement>('[data-download-url]') ?? null;
       const messageEl = element?.closest<HTMLElement>('[data-message-id]') ?? null;
@@ -157,35 +164,55 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
 
       if (!hasVisibleItems) {
         contextMenuActionsRef.current?.close();
-        if (!touch) {
-          e.preventDefault();
-          e.stopPropagation();
-        }
+        e.preventDefault();
+        e.stopPropagation();
       }
     }
     function blockNative(e: MouseEvent) {
-      if (Date.now() - touchTargetRef.current.at < 1500 && touchTargetRef.current.blocked) return;
       if (isEditableTarget(e.target) || e.shiftKey || (e.target instanceof Node && selectionRowRef.current?.contains(e.target))) return;
       e.preventDefault();
     }
     function stopForNativeMenu(e: MouseEvent) {
-      if (Date.now() - touchTargetRef.current.at < 1500 && touchTargetRef.current.blocked) return;
       if (isEditableTarget(e.target) || e.shiftKey || (e.target instanceof Node && selectionRowRef.current?.contains(e.target))) e.stopPropagation();
     }
     document.addEventListener('pointerdown', clearSelectionMode, { capture: true });
-    document.addEventListener('touchstart', captureTarget, { capture: true, passive: true });
     document.addEventListener('contextmenu', captureTarget, { capture: true });
     document.addEventListener('contextmenu', stopForNativeMenu, { capture: true });
     document.addEventListener('contextmenu', blockNative);
     return () => {
       document.removeEventListener('pointerdown', clearSelectionMode, { capture: true });
       selectionRowRef.current?.removeAttribute('data-text-selection-enabled');
-      document.removeEventListener('touchstart', captureTarget, { capture: true });
       document.removeEventListener('contextmenu', captureTarget, { capture: true });
       document.removeEventListener('contextmenu', stopForNativeMenu, { capture: true });
       document.removeEventListener('contextmenu', blockNative);
     };
   }, [activeConversationId, messagesByConversation]);
+
+  const longPress = useLongPress({
+    shouldStart: (event) => event.target instanceof Element && shouldLongPress(event.target),
+    onStart(press) {
+      const surface = press.target.closest<HTMLElement>(PRESS_FEEDBACK);
+      if (!surface) return;
+      // the bar runs on the same constant as the timer and starts in the same event
+      surface.style.setProperty('--long-press-delay', `${LONG_PRESS_DELAY_MS}ms`);
+      surface.setAttribute('data-long-pressing', '');
+      pressFeedbackRef.current = surface;
+    },
+    onEnd() {
+      pressFeedbackRef.current?.removeAttribute('data-long-pressing');
+      pressFeedbackRef.current?.style.removeProperty('--long-press-delay');
+      pressFeedbackRef.current = null;
+    },
+    onLongPress(press) {
+      pressFeedbackRef.current?.removeAttribute('data-long-pressing');
+      // The same event a right-click sends, at the finger: this menu, TileMenu
+      // and the voice member menu all open from it, on iOS too (which never
+      // fires contextmenu for touch).
+      press.target.dispatchEvent(new MouseEvent('contextmenu', {
+        bubbles: true, cancelable: true, composed: true, clientX: press.x, clientY: press.y, button: 2, buttons: 0,
+      }));
+    },
+  });
 
   function handleReact(msgId: number, emoji: string) {
     reactToChatMessage(msgId, emoji);
@@ -219,10 +246,6 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
         open={contextMenuOpen}
         actionsRef={contextMenuActionsRef}
         onOpenChange={(open) => {
-          if (open && Date.now() - touchTargetRef.current.at < 1500 && (touchTargetRef.current.blocked || !!window.getSelection()?.toString())) {
-            setContextMenuOpen(false);
-            return;
-          }
           if (open && delegatedContextMenuRef.current) {
             delegatedContextMenuRef.current = false;
             setContextMenuOpen(false);
@@ -234,7 +257,15 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
           setFullEmojiPicker(false);
         }}
       >
-        <ContextMenuTrigger className="contents">{children}</ContextMenuTrigger>
+        <ContextMenuTrigger
+          className="contents"
+          {...longPress}
+          // Base UI's trigger has its own touch timer; useLongPress replaces it
+          // so there is one long press, with one set of rules, in the app.
+          onTouchStart={(event) => event.preventBaseUIHandler()}
+        >
+          {children}
+        </ContextMenuTrigger>
         {/* The message block is fixed at picker width so the menu doesn't
             resize when "+" swaps the quick reactions for the full picker;
             every other block is a handful of short text items, so those keep
@@ -271,7 +302,7 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
                 </ContextMenuItem>
               )}
               {can?.copy && (
-                <ContextMenuItem className="md:hidden" onClick={handleSelectMessageText}>
+                <ContextMenuItem className="hidden touch-first:flex" onClick={handleSelectMessageText}>
                   <CopyIcon size={16} />
                   <span>{t('contextMenu.selectText')}</span>
                 </ContextMenuItem>

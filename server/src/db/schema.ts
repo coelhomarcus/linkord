@@ -527,6 +527,11 @@ export const attachments = pgTable('attachments', {
   // A few dozen bytes (base64 ThumbHash) of a blurred stand-in for the image,
   // so its box is not empty while the pixels load. Same nulls as width/height.
   placeholder: text('placeholder'),
+  // Set together, only on an audio file recorded as a voice message. The
+  // duration comes from the recorder: MediaRecorder output often carries none.
+  voiceDurationMs: integer('voice_duration_ms'),
+  // base64, one byte (0-255) per bar of the player's waveform
+  voiceWaveform: text('voice_waveform'),
 }, (t) => [
   index('attachments_message_id_idx').on(t.messageId),
 ]);
@@ -550,6 +555,8 @@ export const stagedAttachments = pgTable('staged_attachments', {
   width: integer('width'),
   height: integer('height'),
   placeholder: text('placeholder'),
+  voiceDurationMs: integer('voice_duration_ms'),
+  voiceWaveform: text('voice_waveform'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
 }, (t) => [

@@ -23,7 +23,7 @@ const log = logger.child({ component: 'attachments' });
 const INLINE_MIME_TYPES = new Set([
   'image/png', 'image/jpeg', 'image/gif', 'image/webp',
   'video/mp4', 'video/webm', 'video/ogg',
-  'audio/mpeg', 'audio/ogg', 'audio/wav', 'audio/mp4',
+  'audio/mpeg', 'audio/ogg', 'audio/wav', 'audio/mp4', 'audio/webm',
 ]);
 const ID_RE = /^[0-9a-f]{32}$/; // crypto.randomUUID() without dashes, see attachmentStorage.ts#newId
 const RANGE_RE = /^bytes=(\d*)-(\d*)$/; // single-range only — the only form <video>/<audio> ever sends

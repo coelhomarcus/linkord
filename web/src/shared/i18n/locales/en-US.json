@@ -125,5 +125,12 @@
     "eyedropper": "Pick a color from the screen",
     "presets": "Presets",
     "useColor": "Use {{name}}"
+  },
+  "saveBar": {
+    "unsaved": "Don't forget to save your changes!",
+    "reset": "Reset",
+    "save": "Save",
+    "saving": "Saving…",
+    "saved": "Changes saved."
   }
 }

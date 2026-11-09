@@ -7,6 +7,10 @@
 /* bundled rather than fetched: a self-hosted install shouldn't reach out to a font CDN */
 @import "@fontsource-variable/figtree";
 
+/* A device whose main input is a finger (phones, tablets without a trackpad):
+   where long press replaces right-click and message text is not selectable. */
+@custom-variant touch-first (@media (hover: none) and (pointer: coarse));
+
 @theme {
   /* evenly spaced steps that stay apart on a dim screen; the base stays off
      pure black so near-white text doesn't halo against it */
@@ -148,6 +152,9 @@
   --shadow-popover: 0 18px 60px rgb(0 0 0 / 0.5);
 
   --default-transition-duration: 150ms;
+  /* EASE_OUT of shared/lib/ease.ts: the one curve for anything appearing or
+     moving into place (ease-out-expo) */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 
   --animate-sweep: sweep 1.15s ease-in-out infinite;
   --animate-float-up: float-up 3s ease-out forwards;
@@ -176,53 +183,92 @@
   50% { opacity: 0.5; }
 }
 
-@keyframes message-press-progress {
+@keyframes long-press-progress {
   to { transform: scaleX(1); }
 }
 
-@media (max-width: 767px) and (hover: none) {
-  .mobile-message-press-target {
+/* Selection and the native callout on touch. The whole app is a long-press
+   surface (GlobalContextMenu), and Base UI's trigger already turns the iOS
+   callout off on it. Message text is the one surface that is also
+   selectable, so on a touch-first device it is not, except for its links
+   (whose native long press stays) and after "Select text" in the menu. */
+@media (hover: none) and (pointer: coarse) {
+  .message-press-text {
     -webkit-user-select: none;
     user-select: none;
     -webkit-touch-callout: none;
   }
 
-  .mobile-message-press-target a {
+  .message-press-text a,
+  [data-text-selection-enabled] .message-press-text {
     -webkit-user-select: text;
     user-select: text;
     -webkit-touch-callout: default;
-  }
-
-  [data-text-selection-enabled] .mobile-message-press-target {
-    -webkit-user-select: text;
-    user-select: text;
-    -webkit-touch-callout: default;
-  }
-
-  [data-mobile-pressing='true'] {
-    background: var(--color-message-hover);
-  }
-
-  [data-mobile-pressing='true']::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 1rem;
-    right: 1rem;
-    height: 2px;
-    border-radius: 999px;
-    background: var(--color-accent-primary);
-    pointer-events: none;
-    transform: scaleX(0);
-    transform-origin: left;
-    animation: message-press-progress 500ms linear forwards;
   }
 }
 
+/* Held finger on a row (useLongPress via GlobalContextMenu). The attribute
+   goes on in the pointerdown that starts the timer and comes off when it
+   fires or the press ends, and --long-press-delay is the timer's own value,
+   so the bar fills exactly as long as the press takes. */
+[data-long-pressing] {
+  background: var(--color-message-hover);
+}
+
+[data-long-pressing][data-message-id]::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 1rem;
+  right: 1rem;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--color-accent-primary);
+  pointer-events: none;
+  transform: scaleX(0);
+  transform-origin: left;
+  animation: long-press-progress var(--long-press-delay, 500ms) linear forwards;
+}
+
+/* Durations (also in shared/lib/ease.ts as DURATION): 100ms for a popup
+   leaving and for hover/focus feedback, 150ms for a popup appearing or a
+   modal leaving, 200ms for a modal appearing and for things moving into
+   place. Exits are
+   shorter than entrances: nothing waits on them, and they are hidden from
+   input as they start (Base UI's popups; the floating save bar is inert). */
+
+/* Popovers, menus, selects and tooltips. With tw-animate's animate-in/out,
+   which reads these two variables. */
+@utility motion-popup {
+  --tw-duration: 150ms;
+  --tw-ease: var(--ease-out-expo);
+  &[data-closed] { --tw-duration: 100ms; }
+}
+
+/* A dialog and its backdrop: the entrance, the exit and the dimming of a
+   dialog while another is open over it (a filter transition). */
+@utility motion-modal {
+  --tw-duration: 200ms;
+  --tw-ease: var(--ease-out-expo);
+  transition-duration: 200ms;
+  transition-timing-function: var(--ease-out-expo);
+  &[data-closed] { --tw-duration: 150ms; }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  [data-mobile-pressing='true']::after {
-    animation: none;
-    transform: scaleX(1);
+  /* Every animate-in/animate-out in the app (popovers, menus, tooltips,
+     dialogs, the save bar) keeps its fade and drops its zoom and slide: the
+     last @keyframes of a name wins, so these replace tw-animate's. */
+  @keyframes enter {
+    from { opacity: var(--tw-enter-opacity, 1); }
+  }
+  @keyframes exit {
+    to { opacity: var(--tw-exit-opacity, 1); }
+  }
+
+  /* the highlight alone says "held"; a moving bar is the part to drop */
+  [data-long-pressing][data-message-id]::after {
+    display: none;
   }
 }
 
@@ -251,6 +297,23 @@
 }
 @utility cutout-active {
   --cutout: var(--cutout-active, color-mix(in srgb, var(--surface-base, var(--color-surface-app)), white 10%));
+}
+
+/* A control drawn smaller than a fingertip still takes a 44px tap on a touch screen: the hit area
+   grows around it, the drawing does not. The element must be positioned (relative or absolute), have
+   no ::after of its own, and sit at least 44px from the centre of any neighbour that does the same. */
+@utility touch-target {
+  @media (pointer: coarse) {
+    &::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: max(100%, 44px);
+      height: max(100%, 44px);
+      transform: translate(-50%, -50%);
+    }
+  }
 }
 
 /* The document itself never scrolls: on iOS a scrollable document rubber-bands

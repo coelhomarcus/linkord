@@ -33,6 +33,26 @@ web/tests/               # mirrors web/src/ — NO tests inside src/
 - **Alias `@/`** → `web/src`; **`@tests/`** → `web/tests` (configured in `vite.config.ts` and `tsconfig.app.json`). An import of a file in the same directory stays relative (`./Sibling`); any import that would need to climb out with `../` becomes `@/full/path` instead.
 - Tests ALWAYS in `web/tests/`, never inside `web/src/`.
 
+### Touch: long press, selection, sliders
+
+On a phone, long press is the right-click. There is **one** long press in the app, `useLongPress` (`shared/hooks/useLongPress.ts`), on pointer events: 500 ms (`LONG_PRESS_DELAY_MS`), cancelled by moving past 10 px, by `pointercancel` (the browser started a scroll or a drag), by a second finger, or by anything scrolling under a still finger. While a press is its own, it swallows the browser's touch `contextmenu` (Android fires one; iOS Safari never does) and the click that may follow. Never write another timer for a hold: pass `delay`, `tolerance`, `pointerTypes` (`'all'` for the composer mic, which holds with the mouse too) and `onStart`/`onEnd`.
+
+- **Context menus**: `GlobalContextMenu` runs the hook over the whole app, and on firing dispatches a `contextmenu` event at the finger. So a menu is written once, for right-click (`onContextMenu` with `clientX/Y`), and works under a finger on Android and iOS alike. To make something long-pressable add its data attribute to `PRESSABLE` there (rows: `data-message-id`, `data-conversation-id`; menus of their own: `data-tile-kind`, `data-dm-call-avatar`, `data-voice-member`, which also belong in `DELEGATED_MENU` so the global menu stays out). Inside a pressable row, links, buttons, fields and downloads keep the browser's own long press, except the button that *is* the row (`ROW_CONTROL`). Base UI's trigger has its own touch timer, turned off there with `preventBaseUIHandler`.
+- **Feedback** is derived from the press, not timed separately: the row gets `data-long-pressing` and `--long-press-delay` in the pointerdown that starts the timer, both gone when it fires or ends (`styles/index.css`).
+- **Selection and callout**: `touch-first` (`@media (hover: none) and (pointer: coarse)`, also `TOUCH_FIRST_QUERY`) is a device whose main input is a finger. There, message text (`.message-press-text`) is not selectable, except its links and after the menu's "Select text"; Base UI's trigger turns the iOS callout off on the whole app. Don't add `user-select`/`-webkit-touch-callout` rules elsewhere.
+- **Drag vs long press**: something that is both draggable and long-pressable is not draggable on `touch-first` (see `VoiceMembers.tsx`); its menu offers the move instead.
+- **No gesture-only actions**: when a menu is reachable only by right-click or long press, give it a "more actions" button reachable by keyboard and screen readers (`TileMenuButton`, the one in `VoiceMembers`): VoiceOver and TalkBack do not pass a long press through the same way.
+- **Sliders**: use `shared/ui/primitives/slider.tsx` as is (`size="sm"` for compact controls) rather than restyling the thumb from the call site; it keeps the fill ending at the thumb's centre (`thumbAlignment="edge"`) and a 44 px+ target under a finger. Every slider needs an `aria-label`.
+
+### Motion
+
+Short and quiet, from three durations (`DURATION` in `shared/lib/ease.ts`): **100 ms** for a popup leaving and hover/focus feedback, **150 ms** for a popup appearing or a modal leaving, **200 ms** for a modal appearing and things moving into place. One curve for anything appearing or moving, `EASE_OUT` (`ease-out-expo` in CSS); drawers and sheets keep `EASE_DRAWER` and their springs.
+
+- Popovers, menus, selects and tooltips take `motion-popup`, dialogs and their backdrop `motion-modal` (`styles/index.css`), both on tw-animate's `animate-in`/`animate-out`. Use the primitives rather than restating their timing.
+- **Reduced motion** is handled once: under `prefers-reduced-motion` the `enter`/`exit` keyframes keep only the fade, and `MotionConfig reducedMotion="user"` (`App.tsx`) does the same for Motion. Something that moves by other means (a CSS transition on `transform`/`scale`, dnd-kit, `element.animate`) checks it itself (`motion-safe:`/`motion-reduce:`, `useReducedMotion`).
+- **Never delay the interaction**: an exit plays while what it hides already takes no input (Base UI does this for popups; `FloatingBar` is `inert` while it leaves).
+- **Tests**: exits are CSS animations waited on through `getAnimations()`, which jsdom lacks, so under test things unmount at once and assertions stay synchronous. Keep new exits on that pattern; a Motion `AnimatePresence` exit would keep nodes in the DOM after the state changes.
+
 ## Backend (`server/src/`)
 
 ```

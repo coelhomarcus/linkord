@@ -1,0 +1,36 @@
+{
+  "record": "Gravar mensagem de voz",
+  "recordHint": "Gravar mensagem de voz: clique, ou segure enquanto fala ({{shortcut}})",
+  "stopAndReview": "Parar e revisar",
+  "recordingLabel": "Gravando mensagem de voz",
+  "reviewLabel": "Revisar mensagem de voz",
+  "requesting": "Abrindo microfone…",
+  "elapsed": "Tempo gravado",
+  "releaseToReview": "Solte para revisar",
+  "cancel": "Cancelar gravação",
+  "discard": "Descartar mensagem de voz",
+  "send": "Enviar mensagem de voz",
+  "dismissNotice": "Dispensar aviso",
+  "preview": "Mensagem de voz",
+  "notices": {
+    "denied": "O Linkord não tem permissão para usar o microfone. Libere o acesso nas configurações do site (ícone ao lado do endereço) e tente de novo.",
+    "busy": "Não foi possível abrir o microfone. Ele pode estar sendo usado por outro app, como uma chamada no Discord ou no Meet.",
+    "noDevice": "Nenhum microfone encontrado.",
+    "unsupported": "Este navegador não consegue gravar áudio.",
+    "failed": "Não foi possível começar a gravar. Tente de novo.",
+    "tooShort": "Gravação curta demais. Clique para gravar, ou segure o botão enquanto fala.",
+    "inCall": "Você está numa chamada. Saia dela para gravar uma mensagem de voz.",
+    "callStarted": "A gravação parou porque você entrou numa chamada. Ela está pronta para revisar.",
+    "silent": "Não estamos captando som do microfone. Ele pode estar mudo ou em uso por outro app.",
+    "otherCall": "Você está numa chamada em outra aba ou dispositivo: se o microfone dela estiver aberto, quem está na chamada também ouve."
+  },
+  "player": {
+    "label": "Mensagem de voz, {{duration}}",
+    "play": "Reproduzir mensagem de voz",
+    "pause": "Pausar mensagem de voz",
+    "position": "Posição da mensagem de voz",
+    "positionValue": "{{current}} de {{total}}",
+    "speed": "Velocidade {{speed}}×",
+    "failed": "Não foi possível reproduzir este áudio"
+  }
+}

@@ -2,7 +2,7 @@ import { i18n } from '@/shared/i18n/init';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { discardStagedFile, stageFileInChunks, type StagedFile } from '@/shared/lib/chunkedUpload';
 import { compressImageFile } from '@/shared/lib/compressImageFile';
-import type { ChatMessage, ChatReplyRef, ClientMessage, ServerMessage } from '@/shared/types/protocol';
+import type { ChatMessage, ChatReplyRef, ClientMessage, ServerMessage, VoiceMeta } from '@/shared/types/protocol';
 import { markArrival } from './arrivals';
 
 /** `uploading`: files still being staged; the message itself waits. */
@@ -17,6 +17,13 @@ export interface OutboxAttachment {
   /** 0..1 of the bytes; 1 once the server has the file staged */
   progress: number;
   failed: boolean;
+  voice?: VoiceMeta;
+}
+
+export interface OutboxFile {
+  file: File;
+  compress: boolean;
+  voice?: VoiceMeta;
 }
 
 export interface OutboxEntry {
@@ -42,9 +49,7 @@ const MAX_CONCURRENT_FILES = 2;
 // while the server's copies load.
 const PREVIEW_RELEASE_DELAY_MS = 10_000;
 
-interface TrackedFile {
-  file: File;
-  compress: boolean;
+interface TrackedFile extends OutboxFile {
   stagedId?: string;
   abort?: AbortController;
 }
@@ -192,7 +197,7 @@ export function useMessageOutbox({ sendWs, onConfirmed, stageFile = stageFileInC
           ? await compress(trackedFile.file).catch(() => trackedFile.file)
           : trackedFile.file;
         return stageFile({
-          conversationId, file, signal: abort.signal,
+          conversationId, file, voice: trackedFile.voice, signal: abort.signal,
           onProgress: (fraction) => { updateAttachment(clientMessageId, attachment.localId, { progress: Math.min(fraction, 0.99) }); publish(); },
         });
       }).then((staged) => {
@@ -211,7 +216,7 @@ export function useMessageOutbox({ sendWs, onConfirmed, stageFile = stageFileInC
     publish();
   }, [compress, discardStaged, publish, stageFile, update, updateAttachment, withFileSlot]);
 
-  const enqueue = useCallback((conversationId: string, text: string, replyTo?: ChatReplyRef, files: { file: File; compress: boolean }[] = []) => {
+  const enqueue = useCallback((conversationId: string, text: string, replyTo?: ChatReplyRef, files: OutboxFile[] = []) => {
     const clientMessageId = crypto.randomUUID();
     const tracked: Tracking = {
       entry: { clientMessageId, conversationId, text, replyTo, createdAt: Date.now(), state: files.length ? 'uploading' : 'sending' },
@@ -222,13 +227,13 @@ export function useMessageOutbox({ sendWs, onConfirmed, stageFile = stageFileInC
       timer: null,
     };
     if (files.length) {
-      tracked.entry.attachments = files.map(({ file, compress: shouldCompress }) => {
+      tracked.entry.attachments = files.map(({ file, compress: shouldCompress, voice }) => {
         const localId = crypto.randomUUID();
-        tracked.files.set(localId, { file, compress: shouldCompress });
+        tracked.files.set(localId, { file, compress: shouldCompress, voice });
         return {
           localId, name: file.name, mime: file.type || 'application/octet-stream', size: file.size,
           previewUrl: file.type.startsWith('image/') ? URL.createObjectURL(file) : null,
-          progress: 0, failed: false,
+          progress: 0, failed: false, ...(voice ? { voice } : {}),
         };
       });
     }

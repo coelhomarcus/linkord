@@ -5,6 +5,7 @@ import type { Area } from 'react-easy-crop';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { ConfirmDialog } from '@/shared/ConfirmDialog';
+import { FloatingBar } from '@/shared/FloatingBar';
 import { Button } from '@/shared/ui/primitives/button';
 import { Input } from '@/shared/ui/primitives/input';
 import { Textarea } from '@/shared/ui/primitives/textarea';
@@ -24,6 +25,7 @@ import {
   type Overwrite, type WebhookInfo,
 } from './serversApi';
 import { can, canInChannel } from './serverUtils';
+import { useSaveBar } from './useSaveBar';
 
 type TabKey = 'overview' | 'permissions' | 'webhooks' | 'delete';
 type Tri = 'allow' | 'inherit' | 'deny';
@@ -219,6 +221,7 @@ export function ChannelSettingsModal({ server, channel, onClose }: { server: Ser
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => { setName(channel.name); setTopic(channel.topic); }, [channel.name, channel.topic]);
+  const bar = useSaveBar({ name, topic }, name !== channel.name || topic !== channel.topic);
   const tabs: (SettingsTab & { key: TabKey })[] = [
     { key: 'overview', label: t('channelSettings.overview') },
     ...(can(server, PERMISSIONS.MANAGE_ROLES) ? [{ key: 'permissions' as const, label: t('channelSettings.permissions') }] : []),
@@ -233,8 +236,7 @@ export function ChannelSettingsModal({ server, channel, onClose }: { server: Ser
       {tab === 'overview' && (
         <form className="flex flex-col gap-4" onSubmit={(e) => {
           e.preventDefault();
-          setError(null);
-          updateChannel(channel.id, { name, topic }).catch((err: unknown) => setError(describeApiError(err)));
+          void bar.save(() => updateChannel(channel.id, { name, topic }));
         }}>
           <SectionTitle>{t('channelSettings.overview')}</SectionTitle>
           <label className="flex flex-col gap-1.5">
@@ -247,8 +249,8 @@ export function ChannelSettingsModal({ server, channel, onClose }: { server: Ser
               <Textarea value={topic} maxLength={1024} rows={3} placeholder={t('channelSettings.topicPlaceholder')} onChange={(e) => setTopic(e.target.value)} />
             </label>
           )}
-          {error && <p role="alert" className="text-label text-red">{error}</p>}
-          <Button type="submit" className="self-start" disabled={!name.trim() || (name === channel.name && topic === channel.topic)}>{t('save')}</Button>
+          <FloatingBar open={bar.visible} label={t('bar.channel', { name: channel.name })} status={bar.status} error={bar.error} saveDisabled={!name.trim()}
+            onReset={() => { setName(channel.name); setTopic(channel.topic); bar.clearError(); }} />
         </form>
       )}
       {tab === 'permissions' && <Permissions server={server} channel={channel} />}

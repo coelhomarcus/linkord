@@ -68,6 +68,7 @@ export function ImageCropDialog({ open, imageSrc, aspect, cropShape, title, proc
           <div className="flex items-center gap-3">
             <MagnifyingGlassPlusIcon size={20} className="flex-none text-text-muted" />
             <Slider
+              aria-label={t('crop.zoom')}
               value={[zoom]}
               disabled={processing}
               onValueChange={(v) => setZoom(Array.isArray(v) ? (v[0] ?? 1) : (v as number))}

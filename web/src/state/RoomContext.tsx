@@ -6,7 +6,7 @@ import type { PresencePatch } from '@/features/status/useOwnStatus';
 import type { DmCallNotice } from '@/features/calls/useDmCall';
 import type { RoomAction, RoomState } from './roomReducer';
 import type { TileKind } from '../features/calls/tileTypes';
-import type { OutboxEntry } from '@/features/chat/useMessageOutbox';
+import type { OutboxEntry, OutboxFile } from '@/features/chat/useMessageOutbox';
 import type { ChatView } from '@/features/chat/useChatMessages';
 import type { ReactionParticipantsTarget } from '@/features/chat/reactionParticipants';
 import type { ShareQualityId } from '@/features/calls/shareQualityPresets';
@@ -189,7 +189,7 @@ export interface RoomContextValue {
   retryPendingMessage: (clientMessageId: string) => void;
   /** Sends a message with files through the outbox: staged, then published
    * with the message once every file is ready. */
-  queueMessageWithFiles: (conversationId: string, text: string, replyTo: number | undefined, files: { file: File; compress: boolean }[]) => void;
+  queueMessageWithFiles: (conversationId: string, text: string, replyTo: number | undefined, files: OutboxFile[]) => void;
   discardPendingMessage: (clientMessageId: string) => void;
   /** Settles once the server answered (protocol 4); a failure lands in
    * messageActionErrors. */

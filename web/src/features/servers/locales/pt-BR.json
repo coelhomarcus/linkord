@@ -14,8 +14,11 @@
   },
   "back": "Voltar",
   "cancel": "Cancelar",
-  "save": "Salvar alterações",
-  "reset": "Redefinir",
+  "bar": {
+    "server": "Salvar alterações do servidor",
+    "role": "Salvar alterações do cargo {{name}}",
+    "channel": "Salvar alterações do canal {{name}}"
+  },
   "close": "Fechar",
   "channels": "Canais",
   "noChannels": "Nenhum canal por aqui",
@@ -315,7 +318,8 @@
       "unmuteForMe": "Reativar o som",
       "volume": "Volume de {{name}}",
       "moveTo": "Mover para",
-      "disconnect": "Desconectar"
+      "disconnect": "Desconectar",
+      "more": "Mais ações de {{name}}"
     }
   },
   "auditLog": {

@@ -10,7 +10,7 @@ import type { PublicUser } from '@/shared/types/protocol';
 import { bannerStyle } from './profileLinks';
 import type { ProfileTab } from './ProfileSidebar';
 import { formatProfileDate, useProfileDetails } from './useProfileDetails';
-import { UserCustomStatus, UserStatusDot } from '@/features/status/UserStatus';
+import { UserCustomStatusBubble, UserStatusDot } from '@/features/status/UserStatus';
 
 const SHOWN_MUTUALS = 5;
 const SECTION = 'flex flex-col gap-1';
@@ -37,6 +37,10 @@ export function DirectProfilePanel({ user, onOpenProfile }: { user: PublicUser; 
           <Avatar id={user.id} name={user.displayName} avatar={user.avatar} poster={user.avatarPoster} animateOnHover avatarColor={user.avatarColor} size={80} />
           <UserStatusDot userId={user.id} labelled className="absolute bottom-0.5 right-0.5 size-5 border-4 text-bg-card" />
         </span>
+        {/* right of the avatar (80px plus its 6px ring), straddling the banner's edge */}
+        <div className="absolute -top-5 right-4 left-27">
+          <UserCustomStatusBubble userId={user.id} />
+        </div>
         <div className="pt-12">
           <h2 className="truncate text-[1.25rem] font-bold leading-[1.3] text-text-strong">{user.displayName}</h2>
           {/* the same @ handle the profile modal draws, so the two read as one profile */}
@@ -44,7 +48,6 @@ export function DirectProfilePanel({ user, onOpenProfile }: { user: PublicUser; 
             <AtIcon size={14} aria-hidden className="flex-none" />
             <span className="truncate">{user.username}</span>
           </p>
-          <UserCustomStatus userId={user.id} className="mt-1.5 text-label text-text-secondary" />
           {((friends?.total ?? 0) > 0 || (servers?.total ?? 0) > 0) && (
             <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-caption text-text-secondary">
               {friends && friends.total > 0 && (

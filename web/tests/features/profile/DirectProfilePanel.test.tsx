@@ -37,7 +37,9 @@ describe('DirectProfilePanel', () => {
       presenceByUser: new Map([['u-bea', { status: 'dnd', customStatus: { emoji: '🎮', text: 'jogando Elden Ring', expiresAt: null } }]]),
     });
     expect(screen.getByRole('img', { name: 'Não perturbe' })).toBeInTheDocument();
-    expect(screen.getByText('jogando Elden Ring')).toBeInTheDocument();
+    // as the bubble beside the avatar, read-only: it is someone else's
+    expect(screen.getByText('jogando Elden Ring').closest('[data-custom-status-bubble]')).not.toBeNull();
+    expect(screen.queryByRole('button', { name: 'Editar status personalizado' })).not.toBeInTheDocument();
   });
 
   it('shows someone offline without their custom status', () => {

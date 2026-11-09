@@ -14,8 +14,11 @@
   },
   "back": "Back",
   "cancel": "Cancel",
-  "save": "Save Changes",
-  "reset": "Reset",
+  "bar": {
+    "server": "Save server changes",
+    "role": "Save changes to the {{name}} role",
+    "channel": "Save changes to the {{name}} channel"
+  },
   "close": "Close",
   "channels": "Channels",
   "noChannels": "No channels here",
@@ -315,7 +318,8 @@
       "unmuteForMe": "Unmute",
       "volume": "{{name}}'s volume",
       "moveTo": "Move to",
-      "disconnect": "Disconnect"
+      "disconnect": "Disconnect",
+      "more": "More actions for {{name}}"
     }
   },
   "auditLog": {

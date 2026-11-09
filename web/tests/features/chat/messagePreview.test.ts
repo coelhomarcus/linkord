@@ -4,6 +4,9 @@ import { messagePreviewText } from '@/features/chat/messagePreview';
 describe('messagePreviewText', () => {
   it('uses the text when it exists', () => expect(messagePreviewText({ text: 'oi' })).toBe('oi'));
   it('falls back to "Anexo" for empty text', () => expect(messagePreviewText({ text: '' })).toBe('Anexo'));
+  it('a voice message without a caption reads as one', () => {
+    expect(messagePreviewText({ text: '', attachments: [{ id: 'a', name: 'v.webm', mime: 'audio/webm', size: 1, voice: { durationMs: 1000, waveform: 'AA==' } }] })).toBe('🎤 Mensagem de voz');
+  });
   it('a GIF message reads as "GIF", not as its URL', () => expect(messagePreviewText({ text: 'https://static.klipy.com/ii/abc/md.webp' })).toBe('GIF'));
   it('names the server in an invitation', () => {
     expect(messagePreviewText({ text: '', kind: 'server_invite', invitation: { serverName: 'Squad' } as never })).toBe('Convite para o servidor Squad');
