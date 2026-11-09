@@ -4,6 +4,8 @@ name: E2E
 # minutes per project, so it runs where it guards a release: on pull requests
 # into main (a deploy), and by hand from the Actions tab for any branch.
 on:
+  push:
+    branches: [ci/restore-workflow]
   pull_request:
     branches: [main]
   workflow_dispatch:
