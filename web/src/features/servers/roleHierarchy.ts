@@ -15,7 +15,7 @@ export function myTopPosition(server: ServerSummary, myUserId: string | null): n
   return topPositionOf(server, server.myRoleIds);
 }
 
-export function topPositionOf(server: ServerSummary, roleIds: readonly string[]): number {
+function topPositionOf(server: ServerSummary, roleIds: readonly string[]): number {
   const held = new Set(roleIds);
   return server.roles.reduce((top, role) => (held.has(role.id) && role.position > top ? role.position : top), 0);
 }

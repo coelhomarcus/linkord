@@ -23,9 +23,9 @@ export interface PublishRights {
   video: boolean;
 }
 
-export const ALL_PUBLISH_RIGHTS: PublishRights = { microphone: true, video: true };
+const ALL_PUBLISH_RIGHTS: PublishRights = { microphone: true, video: true };
 
-export function publishSources(rights: PublishRights): TrackSource[] {
+function publishSources(rights: PublishRights): TrackSource[] {
   return [
     ...(rights.microphone ? [TrackSource.MICROPHONE] : []),
     ...(rights.video ? [TrackSource.CAMERA, TrackSource.SCREEN_SHARE, TrackSource.SCREEN_SHARE_AUDIO] : []),
