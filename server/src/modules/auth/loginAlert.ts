@@ -1,19 +1,21 @@
 import crypto from 'node:crypto';
-import { and, eq, lt } from 'drizzle-orm';
+import { and, eq, gte, lt } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { knownLogins, type User } from '../../db/schema.js';
 import { logger } from '../../lib/logger.js';
 import { resolveLocale } from '../users/locale.js';
+import { describeUserAgent } from './describeUserAgent.js';
 import { isEmailDeliveryConfigured, sendLoginAlertEmail } from './email.js';
 import * as ratelimit from './ratelimit.js';
 import type { SessionOrigin } from './session.js';
 
 const log = logger.child({ component: 'login-alert' });
 
-// "Someone signed in from a browser this account has not used lately." A browser is its address plus its
-// user agent; seeing the same pair within KNOWN_LOGIN_DAYS keeps ordinary re-logins quiet. It lives in
-// `known_logins` rather than in `sessions` because logging out deletes the session, and signing back in
-// from the same browser must not read as new.
+// "Someone signed in from a browser this account has not used lately." A browser is its address plus what
+// its user agent says it is (browser, system, phone or not): the full string changes with every browser
+// update, which would make each re-login after one read as new. Seeing the same pair within
+// KNOWN_LOGIN_DAYS keeps ordinary re-logins quiet. It lives in `known_logins` rather than in `sessions`
+// because logging out deletes the session, and signing back in from the same browser must not read as new.
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 export const KNOWN_LOGIN_DAYS = 30;
@@ -21,19 +23,43 @@ export const KNOWN_LOGIN_DAYS = 30;
 // addresses and turn this into a mail cannon aimed at the owner.
 const ALERT_RULE: ratelimit.Rule = { windowMs: 60 * 60 * 1000, max: 5 };
 
-/** Same formula as the backfill in migration 0063. Only the hash is stored, never the address. */
+const sha256 = (text: string) => crypto.createHash('sha256').update(text).digest('hex');
+
+/** Only the hash is stored, never the address. A user agent nothing is recognised in (a script, a tool) is
+ * kept whole, so two different ones from the same address stay apart. */
 function loginFingerprint(origin: SessionOrigin): string {
-  return crypto.createHash('sha256').update(`${origin.ip}\n${origin.userAgent}`).digest('hex');
+  const device = describeUserAgent(origin.userAgent);
+  const kind = device.browser || device.os
+    ? `${device.browser ?? ''}|${device.os ?? ''}|${device.mobile ? 'mobile' : 'desktop'}`
+    : origin.userAgent;
+  return sha256(`${origin.ip}\n${kind}`);
+}
+
+/** The formula of the backfill in migration 0063 (address plus the whole user agent), so the browsers that
+ * held a session at the upgrade stay known. Those rows age out after KNOWN_LOGIN_DAYS; this can go then. */
+function legacyLoginFingerprint(origin: SessionOrigin): string {
+  return sha256(`${origin.ip}\n${origin.userAgent}`);
 }
 
 /** Notes this sign-in and returns whether its browser had not been seen in the last KNOWN_LOGIN_DAYS. */
 export async function recordLogin(userId: string, origin: SessionOrigin, now = new Date()): Promise<boolean> {
   const fingerprint = loginFingerprint(origin);
-  const [previous] = await db.select({ lastLoginAt: knownLogins.lastLoginAt }).from(knownLogins)
-    .where(and(eq(knownLogins.userId, userId), eq(knownLogins.fingerprint, fingerprint))).limit(1);
-  await db.insert(knownLogins).values({ userId, fingerprint, lastLoginAt: now })
-    .onConflictDoUpdate({ target: [knownLogins.userId, knownLogins.fingerprint], set: { lastLoginAt: now } });
-  return !previous || previous.lastLoginAt.getTime() < now.getTime() - KNOWN_LOGIN_DAYS * DAY_MS;
+  const cutoff = new Date(now.getTime() - KNOWN_LOGIN_DAYS * DAY_MS);
+  const samePair = and(eq(knownLogins.userId, userId), eq(knownLogins.fingerprint, fingerprint));
+  // One statement decides: a row comes back only when this sign-in created the pair or revived a stale one.
+  // A concurrent sign-in of the same pair waits on the row and then re-checks `setWhere` against it, so two
+  // simultaneous logins never both read as new (a select first would let both see nothing).
+  const claimed = await db.insert(knownLogins).values({ userId, fingerprint, lastLoginAt: now })
+    .onConflictDoUpdate({ target: [knownLogins.userId, knownLogins.fingerprint], set: { lastLoginAt: now }, setWhere: lt(knownLogins.lastLoginAt, cutoff) })
+    .returning({ userId: knownLogins.userId });
+  if (claimed.length === 0) {
+    await db.update(knownLogins).set({ lastLoginAt: now }).where(and(samePair, lt(knownLogins.lastLoginAt, now)));
+    return false;
+  }
+  const [legacy] = await db.select({ lastLoginAt: knownLogins.lastLoginAt }).from(knownLogins)
+    .where(and(eq(knownLogins.userId, userId), eq(knownLogins.fingerprint, legacyLoginFingerprint(origin)), gte(knownLogins.lastLoginAt, cutoff)))
+    .limit(1);
+  return !legacy;
 }
 
 /** Called after a password or two-step login created a session (never for registration, which only

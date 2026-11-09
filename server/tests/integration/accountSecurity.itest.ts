@@ -654,6 +654,35 @@ describe('new sign-in alerts', () => {
     assert.equal(alertsTo(user.email).length, 3);
   });
 
+  it('stays quiet after the browser updates itself', async () => {
+    const user = await makeAccount();
+    const ip = freshIp();
+    await signIn(user.username, ip, CHROME_MAC);
+    await signIn(user.username, ip, CHROME_MAC.replace('Chrome/130.0.0.0', 'Chrome/131.0.0.0'));
+    assert.equal(alertsTo(user.email).length, 1);
+  });
+
+  it('sends one alert when the same new browser signs in twice at once', async () => {
+    const user = await makeAccount();
+    const ip = freshIp();
+    await Promise.all([
+      call('POST', '/api/auth/login', { payload: { username: user.username, password: PASSWORD }, ip, ua: CHROME_MAC }),
+      call('POST', '/api/auth/login', { payload: { username: user.username, password: PASSWORD }, ip, ua: CHROME_MAC }),
+    ]);
+    await whenLoginAlertsSettled();
+    assert.equal(alertsTo(user.email).length, 1);
+  });
+
+  it('keeps knowing the browsers the upgrade backfill recorded', async () => {
+    const user = await makeAccount();
+    const ip = freshIp();
+    // what migration 0063 wrote for a browser holding a session: sha256 of the address and the whole user agent
+    const legacy = crypto.createHash('sha256').update(`${ip}\n${CHROME_MAC}`).digest('hex');
+    await db.insert(knownLogins).values({ userId: user.id, fingerprint: legacy, lastLoginAt: new Date() });
+    await signIn(user.username, ip, CHROME_MAC);
+    assert.equal(alertsTo(user.email).length, 0);
+  });
+
   it('treats a browser not seen for a month as new again', async () => {
     const user = await makeAccount();
     const ip = freshIp();
