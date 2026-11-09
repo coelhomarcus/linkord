@@ -12,7 +12,7 @@ import { EMAIL_RE, MAX_EMAIL_LEN } from '@/features/auth/credentialRules';
 import { OTPInput, type OTPStatus } from '@/shared/ui/motion/otp-input';
 import { useTransientFlag } from '@/shared/hooks/useTransientFlag';
 import { cn } from '@/shared/lib/utils';
-import { SETTINGS_ACTION_BUTTON, SettingsRow } from '@/shared/ui/settings-layout';
+import { SETTINGS_ACTION_BUTTON, SETTINGS_INLINE_PANEL, SettingsRow } from '@/shared/ui/settings-layout';
 
 /** `ana@gmail.com` → `***@gmail.com`: as many stars as the hidden part has letters. */
 function maskEmail(email: string): string {
@@ -160,7 +160,7 @@ export function EmailSettings({ currentEmail }: { currentEmail: string | null })
   return (
     <div className="flex flex-col gap-4">
       {row}
-      <div className="rounded-lg border border-border-subtle bg-fill-subtle p-4">{flow()}</div>
+      <div className={SETTINGS_INLINE_PANEL}>{flow()}</div>
     </div>
   );
 
