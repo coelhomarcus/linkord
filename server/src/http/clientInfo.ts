@@ -1,14 +1,22 @@
 import type { FastifyRequest } from 'fastify';
 import { config } from '../config/env.js';
 
-/** The caller's address. Behind the production proxy the socket peer is the proxy itself, so the
- * forwarded header is believed only with TRUST_PROXY on: without it anyone could claim any address. */
-export function clientIpOf(request: FastifyRequest): string {
-  if (config.TRUST_PROXY) {
-    const fwd = request.headers['x-forwarded-for'];
-    if (typeof fwd === 'string' && fwd.length) return fwd.split(',')[0]!.trim();
+/** The one place that decides who a caller is, shared by HTTP routes and sockets. Behind the
+ * production proxy the socket peer is the proxy itself, so the forwarded header is believed only
+ * with `trustProxy` on: without it anyone could claim any address. */
+export function resolveClientIp(trustProxy: boolean, forwardedFor: string | string[] | undefined, peer: string | undefined): string {
+  if (trustProxy && typeof forwardedFor === 'string') {
+    const first = forwardedFor.split(',')[0]!.trim();
+    if (first) return first;
   }
-  return request.raw.socket.remoteAddress || '?';
+  return peer || '?';
+}
+
+/** The caller's address. Anything keyed on the client (rate limits, session origin, logs) goes
+ * through this, never `request.ip`: Fastify is created without `trustProxy`, so `request.ip` is
+ * the proxy's address and would put every caller in the same bucket. */
+export function clientIpOf(request: FastifyRequest): string {
+  return resolveClientIp(config.TRUST_PROXY, request.headers['x-forwarded-for'], request.raw.socket.remoteAddress);
 }
 
 /** What a session is stored with: the address and the browser, clipped to the columns' size. */

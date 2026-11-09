@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import type { ErrorCode } from '../../http/errors.js';
 import { config } from '../../config/env.js';
+import { resolveClientIp } from '../../http/clientInfo.js';
 import { updateProfile } from '../profile/profileRepository.js';
 import { isUploadedImage, sanitizeAvatar, sanitizeBanner, sanitizeAvatarColor, sanitizeDisplayName, sanitizeBio, sanitizeProfileLinks } from '../profile/sanitize.js';
 import { deleteAvatarFile, isOwnedProfileImage } from '../attachments/attachmentCleanup.js';
@@ -186,11 +187,7 @@ export function announceParticipantJoined(p: Participant): void {
 
 /** Address of who connected — used for logging only. */
 export function ipOf(socket: AppSocket): string {
-  if (config.TRUST_PROXY) {
-    const fwd = socket.handshake.headers['x-forwarded-for'];
-    if (typeof fwd === 'string' && fwd.length) return fwd.split(',')[0]!.trim();
-  }
-  return socket.handshake.address || '?';
+  return resolveClientIp(config.TRUST_PROXY, socket.handshake.headers['x-forwarded-for'], socket.handshake.address);
 }
 
 export function send(socket: AppSocket | null | undefined, obj: { t: string; [key: string]: unknown }): void {
