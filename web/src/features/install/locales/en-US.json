@@ -1,0 +1,19 @@
+{
+  "install": "Install",
+  "banner": {
+    "title": "Install Linkord",
+    "prompt": "Open it in its own window, with an icon on your device and notifications even when the browser is closed.",
+    "ios": "Tap Share and choose “Add to Home Screen”. Notifications only work on iPhone with the app installed.",
+    "dismiss": "Dismiss"
+  },
+  "settings": {
+    "prompt": {
+      "label": "Install Linkord",
+      "description": "Open it in its own window, with an icon on your device and notifications even when the browser is closed."
+    },
+    "ios": {
+      "label": "Add to Home Screen",
+      "description": "Tap Share in Safari and choose “Add to Home Screen”. Notifications only work on iPhone with the app installed."
+    }
+  }
+}

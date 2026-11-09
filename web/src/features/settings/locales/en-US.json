@@ -45,7 +45,8 @@
       "presence": "Status",
       "password": "Password",
       "twoFactor": "Two-step verification",
-      "sessions": "Active sessions"
+      "sessions": "Active sessions",
+      "install": "Install the app"
     }
   },
   "search": {

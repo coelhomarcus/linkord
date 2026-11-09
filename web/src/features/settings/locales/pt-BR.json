@@ -45,7 +45,8 @@
       "presence": "Status",
       "password": "Senha",
       "twoFactor": "Verificação em duas etapas",
-      "sessions": "Sessões ativas"
+      "sessions": "Sessões ativas",
+      "install": "Instalar o app"
     }
   },
   "search": {
