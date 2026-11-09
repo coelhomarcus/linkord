@@ -58,7 +58,11 @@
     "removeFile": "Remove {{name}}",
     "maxAttachments_one": "Maximum of {{count}} attachment per message.",
     "maxAttachments_other": "Maximum of {{count}} attachments per message.",
-    "tooLarge": "\"{{name}}\" is too large (maximum {{max}})."
+    "tooLarge": "\"{{name}}\" is too large (maximum {{max}}).",
+    "emojiSuggestions": {
+      "title": "Emojis matching {{query}}",
+      "label": "Emoji suggestions"
+    }
   },
   "reactions": {
     "title": "Reactions",

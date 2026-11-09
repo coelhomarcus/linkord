@@ -26,6 +26,7 @@ export const LOCAL_STORAGE_KEYS = {
   timeFormat: 'ss-time-format',
   sounds: 'ss-sounds',
   autoIdleMinutes: 'ss-auto-idle-minutes',
+  emojiSkinTone: 'ss-emoji-skin-tone',
 } as const;
 
 type RegistryValue = (typeof LOCAL_STORAGE_KEYS)[keyof typeof LOCAL_STORAGE_KEYS];

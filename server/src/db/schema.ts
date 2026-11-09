@@ -858,3 +858,18 @@ export const instanceSecrets = pgTable('instance_secrets', {
   value: text('value').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+/** How often an account used each emoji (and, with kind 'sound', each soundboard sound): what the
+ * pickers and the composer's suggestions list first, the same on every device. Written by the
+ * server as the expression is used, never by the client. `key` is the emoji itself, `custom:<id>`
+ * for a server emoji, or the sound id. Pruned to the most used per kind (expressionUsage.ts). */
+export const userExpressionUsage = pgTable('user_expression_usage', {
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  kind: varchar('kind', { length: 8 }).notNull(),
+  key: varchar('key', { length: 64 }).notNull(),
+  count: integer('count').notNull().default(1),
+  lastUsedAt: timestamp('last_used_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  primaryKey({ columns: [t.userId, t.kind, t.key] }),
+  check('user_expression_usage_kind_check', sql`${t.kind} IN ('emoji','sound')`),
+]);

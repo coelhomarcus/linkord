@@ -45,6 +45,7 @@ import { revokeInvitationForDeletedCard } from '../servers/serverInvitationsRepo
 import type { AppSocket, HandlerTable, Participant } from '../../types.js';
 import { logger } from '../../lib/logger.js';
 import { voicePayload, type VoiceMeta } from '../attachments/voiceMessages.js';
+import { emojiUsageKeys, recordExpressionUsage } from '../emojis/expressionUsage.js';
 
 const log = logger.child({ component: 'audit' });
 
@@ -622,6 +623,7 @@ async function handleChat(socket: AppSocket, msg: ChatSendRequest): Promise<void
     await broadcastToConversationMembers(conversationId, { t: 'chat', message });
     void unfurlMessage(outcome.row, p.userId);
     void notifyMentions({ id: outcome.row.id, conversationId, text: rawText, authorId: p.userId });
+    void recordExpressionUsage(p.userId, 'emoji', emojiUsageKeys(rawText));
   } catch (err) {
     log.error('correlated chat send failed', err, { userId: p.userId });
     fail('internal_error', 'Não foi possível enviar agora.');
@@ -833,6 +835,7 @@ async function handleChatReact(socket: AppSocket, msg: { msgId?: unknown; emoji?
   const result = await reactions.setPresence(msgId, p.userId, emoji, desired);
   // a repeat that changed nothing has nothing new to tell anyone
   if (!result.changed) return answerAction(socket, msg, null);
+  if (desired) void recordExpressionUsage(p.userId, 'emoji', [emoji]);
   const userIds = result.userIds;
   await broadcastToConversationMembers(existing.conversationId, {
     t: 'chat-reaction-updated',

@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { ArrowBendUpLeftIcon, ArrowsInSimpleIcon, ArrowUpIcon, GifIcon, ImageSquareIcon, PaperclipIcon, PlusCircleIcon, SmileyIcon } from '@phosphor-icons/react';
-import { forwardRef, useCallback, useEffect, useId, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { forwardRef, useCallback, useEffect, useId, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, ClipboardEvent, KeyboardEvent as ReactKeyboardEvent, SyntheticEvent } from 'react';
 
 import { CloseButton } from '@/shared/ui/primitives/close-button';
@@ -29,6 +29,10 @@ import { VoiceMicButton, VoiceNoticeBanner, VoiceRecordingBar, VoiceReviewBar } 
 import { isVoiceShortcut, useComposerVoice } from '@/features/voiceMessages/useComposerVoice';
 import type { VoiceTake } from '@/features/voiceMessages/useVoiceRecorder';
 import { hasPermission, PERMISSIONS } from '@/features/servers/permissionBits';
+import { noteExpressionUse } from '@/features/emoji/frequentExpressions';
+import { EmojiSuggestions } from './EmojiSuggestions';
+import { useEmojiAutocomplete } from './useEmojiAutocomplete';
+import type { TextEdit } from './emojiAutocomplete';
 
 // How often notifyTyping actually emits typing:true while the user keeps
 // typing (leading-edge: fires right away after being idle, then throttles),
@@ -80,6 +84,8 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
   const [mentionQuery, setMentionQuery] = useState<{ start: number; query: string } | null>(null);
   const [mentionSelectedIndex, setMentionSelectedIndex] = useState(0);
   const mentionOptionRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const emojiSuggestions = useEmojiAutocomplete(state.me.userId ?? null);
+  const closeEmojiSuggestions = emojiSuggestions.close;
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const counterId = useId();
@@ -171,7 +177,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
   // change too, flushing typing:false for the conversation being LEFT before
   // sendTyping starts targeting the new one, and dismissing any dropdown
   // left open from the conversation being left.
-  useEffect(() => () => { stopTyping(); setMentionQuery(null); }, [conversationId]);
+  useEffect(() => () => { stopTyping(); setMentionQuery(null); closeEmojiSuggestions(); }, [conversationId, closeEmojiSuggestions]);
 
   // Scoped to this conversation's actual members (not every registered
   // user in the room) — a big roster elsewhere shouldn't show up as
@@ -219,6 +225,24 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
   function syncMentionQuery(value: string, cursor: number) {
     setMentionQuery(getMentionQuery(value, cursor));
     setMentionSelectedIndex(0);
+    emojiSuggestions.sync(value, cursor);
+  }
+
+  // placed as soon as the edited value is in the DOM, before the next key
+  // lands: a frame later, fast typing would go where the browser left the caret
+  const pendingCaretRef = useRef<number | null>(null);
+  useLayoutEffect(() => {
+    const caret = pendingCaretRef.current;
+    if (caret === null) return;
+    pendingCaretRef.current = null;
+    textareaRef.current?.focus();
+    textareaRef.current?.setSelectionRange(caret, caret);
+  }, [text]);
+
+  function applyEdit(edit: TextEdit) {
+    pendingCaretRef.current = edit.caret;
+    setText(edit.text);
+    syncMentionQuery(edit.text, edit.caret);
   }
 
   function handleTextareaSelect(event: SyntheticEvent<HTMLTextAreaElement>) {
@@ -290,6 +314,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
     if (current.text.length > MAX_MESSAGE_LEN) return;
     stopTyping(); // sending is proof they stopped — don't wait for the idle timeout
     setMentionQuery(null);
+    emojiSuggestions.close();
     const replyTo = replyingTo?.msgId;
     const clearReplyIfStillHere = () => { if (conversationIdRef.current === conversationId) setReplyingTo(null); };
 
@@ -320,6 +345,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
   }
 
   function handleKeyDown(event: ReactKeyboardEvent<HTMLTextAreaElement>) {
+    if (emojiSuggestions.handleKeyDown(event, text, applyEdit)) return;
     // the mention dropdown intercepts navigation/confirm keys FIRST — while
     // it's open, Enter picks a mention instead of sending the message, and
     // arrows move the selection instead of the caret.
@@ -346,9 +372,11 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
     const start = el?.selectionStart ?? text.length;
     const end = el?.selectionEnd ?? text.length;
     setText(text.slice(0, start) + emoji + text.slice(end));
+    noteExpressionUse('emojis', [emoji]);
     setEmojiPickerOpen(false);
     setMobileEmojiOpen(false);
     setMentionQuery(null);
+    emojiSuggestions.close();
     // caret restore has to wait for the controlled value to actually reach
     // the DOM (this same tick's setText hasn't rendered yet).
     requestAnimationFrame(() => {
@@ -408,6 +436,17 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
               </button>
             ))}
           </div>
+        )}
+
+        {emojiSuggestions.open && !(mentionQuery && mentionCandidates.length > 0) && (
+          <EmojiSuggestions
+            id={emojiSuggestions.listId}
+            query={emojiSuggestions.query}
+            items={emojiSuggestions.items}
+            activeIndex={emojiSuggestions.activeIndex}
+            onHover={emojiSuggestions.setActiveIndex}
+            onPick={(item) => { const edit = emojiSuggestions.pick(text, item); if (edit) applyEdit(edit); }}
+          />
         )}
 
         {replyingTo && (
@@ -474,9 +513,12 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
               value={text}
               onChange={(event) => {
                 const value = event.target.value;
-                setText(value);
+                const cursor = event.target.selectionStart ?? value.length;
                 if (value.trim()) notifyTyping(); else stopTyping();
-                syncMentionQuery(value, event.target.selectionStart ?? value.length);
+                const converted = emojiSuggestions.convertTyped(event.nativeEvent, value, cursor);
+                if (converted) { applyEdit(converted); return; }
+                setText(value);
+                syncMentionQuery(value, cursor);
               }}
               onSelect={handleTextareaSelect}
               onKeyDown={handleKeyDown}
@@ -484,6 +526,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
               disabled={disabled}
               rows={1}
               aria-label={t('composer.message')}
+              {...emojiSuggestions.fieldProps}
               aria-invalid={tooLong || undefined}
               aria-describedby={showCounter ? counterId : undefined}
               placeholder={pendingFiles.length ? t('composer.addCaption') : messagePlaceholder}

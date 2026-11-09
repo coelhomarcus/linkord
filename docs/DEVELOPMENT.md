@@ -143,6 +143,7 @@ Every script runs from the repository root.
 | `npm run restore -- [<backup>] --confirm <database>` | Restores a backup into an empty database and uploads folder, and checks the result. |
 | `npm run backup:rehearse` | Backup, restore and a boot of the app on throwaway local databases. Needs `pg_dump` and `pg_restore`. |
 | `npm run admin:grant -- <username>` / `admin:revoke` | Gives or takes administrator access. |
+| `npm run emoji:data` | Rebuilds `web/public/emoji-data/<lang>/emojis.json` (the emoji picker's and the composer's `:shortcode:` data) from the pinned `emojibase-data` devDependency of `web/`. Run it after bumping that package. |
 
 The scripts behind the `db:*`, `admin:*` and `test:integration` commands live in `server/src/scripts/`; each starts with a comment on what it does and how to call it.
 
