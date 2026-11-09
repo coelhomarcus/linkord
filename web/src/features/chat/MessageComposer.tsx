@@ -35,6 +35,7 @@ import { EmojiSuggestions } from './EmojiSuggestions';
 import { useEmojiAutocomplete } from './useEmojiAutocomplete';
 import { customEmojisAsText, encodeCustomEmojis } from '@/features/emoji/customEmojiText';
 import type { TextEdit } from './emojiAutocomplete';
+import { EmojiText } from '@/features/emoji/Emoji';
 
 // How often notifyTyping actually emits typing:true while the user keeps
 // typing (leading-edge: fires right away after being idle, then throttles),
@@ -487,7 +488,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
             <ArrowBendUpLeftIcon size={16} className="flex-none text-text-muted" />
             <span className="min-w-0 flex-1 truncate text-text-muted">
               {t('composer.replyingTo')} <span className="font-medium text-text-secondary">{replyName}</span>
-              {replyingTo.text ? <span> - {customEmojisAsText(replyingTo.text)}</span> : null}
+              {replyingTo.text ? <span> - <EmojiText text={customEmojisAsText(replyingTo.text)} /></span> : null}
               {replyingTo.sticker !== undefined && <span> - {stickerLabel(replyingTo.sticker?.name)}</span>}
             </span>
             <CloseButton size="xs" label={t('composer.cancelReply')} onClick={() => setReplyingTo(null)} />

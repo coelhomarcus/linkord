@@ -11,6 +11,7 @@ import { deleteServerSound, describeSoundboardError } from './soundboardApi';
 import type { ServerSound } from './soundboardApi';
 import { playServerSound } from './soundPlayback';
 import { useServerSounds } from './useServerSounds';
+import { Emoji } from '@/features/emoji/Emoji';
 
 const log = logger.child({ component: 'soundboard' });
 
@@ -94,7 +95,7 @@ export function ServerSoundsPanel({ serverId, myUserId, canUpload, canManage }: 
           </div>
           {sounds.map((sound) => (
             <div key={sound.id} role="row" className="group grid grid-cols-[2.5rem_minmax(0,1fr)_minmax(0,0.8fr)_4rem] items-center gap-3 border-b border-border px-1.5 py-2.5 last:border-b-0">
-              <span role="cell" className="text-[24px] leading-none">{sound.emoji || <SpeakerHighIcon size={22} className="text-text-muted" />}</span>
+              <span role="cell" className="text-[24px] leading-none">{sound.emoji ? <Emoji emoji={sound.emoji} /> : <SpeakerHighIcon size={22} className="text-text-muted" />}</span>
               <span role="cell" className="flex min-w-0 items-center gap-1.5">
                 <span className="truncate text-label font-medium">{sound.name}</span>
                 <Button type="button" variant="ghost" size="icon-xs" aria-label={t('panel.preview', { name: sound.name })} onClick={() => preview(sound)} className="flex-none text-text-muted hover:text-text-primary">

@@ -9,6 +9,7 @@ import { formatMB } from '@/shared/lib/formatBytes';
 import { deleteServerSticker, describeStickerError, MAX_STICKER_UPLOAD_BYTES, stickerImageUrl, type ServerSticker } from './stickersApi';
 import { requestStickerEditor } from './stickerEditorRequest';
 import { useServerStickers } from './useServerStickers';
+import { Emoji } from '@/features/emoji/Emoji';
 
 interface ServerStickersPanelProps {
   serverId: string;
@@ -74,7 +75,7 @@ export function ServerStickersPanel({ serverId, myUserId, canUpload, canManage }
                 <li key={sticker.id} className="group relative flex flex-col items-center gap-2 rounded-lg bg-bg-tertiary px-3 pt-4 pb-3">
                   <img src={stickerImageUrl(sticker.id)} alt={sticker.description || sticker.name} draggable={false} loading="lazy" className="size-20 object-contain" />
                   <span className="flex w-full min-w-0 items-center justify-center gap-1 text-label font-semibold text-text-primary">
-                    <span aria-hidden className="flex-none">{sticker.emoji}</span>
+                    <span aria-hidden className="flex-none"><Emoji emoji={sticker.emoji} /></span>
                     <span className="truncate">{sticker.name}</span>
                   </span>
                   {sticker.uploader ? (

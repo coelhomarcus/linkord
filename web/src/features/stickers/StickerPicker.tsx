@@ -14,6 +14,7 @@ import { useMyStickers, type MySticker } from './myStickers';
 import { stickerImageUrl } from './stickersApi';
 import { requestStickerEditor } from './stickerEditorRequest';
 import { buildStickerSections, stickerSectionKey, type StickerSection } from './stickerPickerModel';
+import { Emoji } from '@/features/emoji/Emoji';
 
 const COLUMNS = 4;
 
@@ -290,7 +291,7 @@ export function StickerPicker({ onPick, className, autoFocus = true }: StickerPi
               <span className="truncate text-label font-semibold text-text-primary">{preview.name}</span>
               <span className="truncate text-caption text-text-muted">{t('from', { server: serverById.get(preview.serverId)?.name ?? '' })}</span>
             </div>
-            <span aria-hidden className="flex-none text-[22px] leading-none">{preview.emoji}</span>
+            <span aria-hidden className="flex-none text-[22px] leading-none"><Emoji emoji={preview.emoji} /></span>
           </>
         ) : (
           <span className="truncate text-caption text-text-muted">{t('picker.hint')}</span>

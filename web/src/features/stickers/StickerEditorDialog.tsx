@@ -16,6 +16,7 @@ import {
   describeStickerError, MAX_STICKER_UPLOAD_BYTES, STICKER_ACCEPT, STICKER_DESCRIPTION_MAX, STICKER_NAME_MAX, STICKER_NAME_MIN,
   stickerImageUrl, suggestStickerName, updateServerSticker, uploadServerSticker, type ServerSticker,
 } from './stickersApi';
+import { Emoji } from '@/features/emoji/Emoji';
 
 interface StickerEditorDialogProps {
   serverId: string;
@@ -157,7 +158,7 @@ export function StickerEditorDialog({ serverId, open, onOpenChange, sticker = nu
                   aria-label={emoji ? t('editor.emojiChosen', { emoji }) : t('editor.emoji')}
                   className="flex h-10 w-full items-center gap-2 rounded-md border border-border-strong bg-fill-subtle px-3 text-left text-label transition-colors duration-100 hover:bg-fill-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
                 >
-                  {emoji ? <span className="text-[20px] leading-none">{emoji}</span> : <SmileyIcon size={18} className="flex-none text-text-muted" />}
+                  {emoji ? <span className="text-[20px] leading-none"><Emoji emoji={emoji} /></span> : <SmileyIcon size={18} className="flex-none text-text-muted" />}
                   {!emoji && <span className="truncate text-text-muted">{t('editor.emojiPlaceholder')}</span>}
                 </PopoverTrigger>
                 <PopoverContent className="w-[22rem] max-w-[calc(100vw-1rem)] p-0" side="top" align="start">

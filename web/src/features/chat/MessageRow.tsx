@@ -38,6 +38,7 @@ import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { useMessageDeleteConfirm } from './useMessageDeleteConfirm';
 import { memberColor } from '@/features/servers/serverUtils';
 import { dmCallLine } from './dmCallLine';
+import { Emoji, EmojiText } from '@/features/emoji/Emoji';
 
 // A bot's message is usually something to acknowledge or flag — a deploy, an
 // alert — so its toolbar answers in one click, before the rest of the actions.
@@ -58,7 +59,7 @@ function BotQuickReactions({ reacted, onPick }: { reacted: (emoji: string) => bo
           onClick={() => onPick(emoji)}
           className={cn('text-[18px] leading-none', reacted(emoji) && 'bg-fill-active')}
         >
-          {emoji}
+          <Emoji emoji={emoji} />
         </Button>
       ))}
       <span aria-hidden className="mx-0.5 h-5 w-px flex-none bg-border" />
@@ -308,7 +309,7 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
               <span className="flex-none font-medium text-text-secondary">
                 {replyAuthor ? `@${replyAuthor.displayName}` : deletedAuthorName}
               </span>
-              {message.replyTo.text && <span className="truncate">{customEmojisAsText(message.replyTo.text)}</span>}
+              {message.replyTo.text && <span className="truncate"><EmojiText text={customEmojisAsText(message.replyTo.text)} /></span>}
               {message.replyTo.sticker !== undefined && <span className="truncate">{stickerLabel(message.replyTo.sticker)}</span>}
             </button>
           )}

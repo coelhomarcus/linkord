@@ -7,6 +7,9 @@ import { useRoom } from '@/state/RoomContext';
 import { withPendingReactions } from './reactionState';
 import { reactionParticipantName } from './reactionParticipants';
 import type { ReactionEmoji } from '@/shared/types/protocol';
+import { Emoji } from '@/features/emoji/Emoji';
+import { CustomEmojiImage } from '@/features/emoji/CustomEmojiImage';
+import { customReactionId } from '@/features/emoji/customEmojiText';
 
 /** Open the full reaction list from the message actions menu, not the hover tooltip. */
 export function ReactionParticipantsDialog() {
@@ -51,7 +54,10 @@ export function ReactionParticipantsDialog() {
                   onClick={() => setActiveEmoji(emoji)}
                   className={cn('flex items-center gap-1 rounded-full border px-2 py-0.5 text-label', emoji === shownEmoji ? 'border-primary/50 bg-primary/15' : 'border-border hover:bg-fill-hover')}
                 >
-                  <span>{emoji}</span><span className="tabular-nums">{userIds.length}</span>
+                  {customReactionId(emoji)
+                    ? <CustomEmojiImage id={customReactionId(emoji)!} name="emoji" size="reaction" tooltip={false} />
+                    : <Emoji emoji={emoji} className="size-4" />}
+                  <span className="tabular-nums">{userIds.length}</span>
                 </button>
               ))}
             </div>

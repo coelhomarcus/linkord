@@ -1,4 +1,4 @@
-const graphemeSegmenter = typeof Intl !== 'undefined' && typeof Intl.Segmenter === 'function'
+export const graphemeSegmenter = typeof Intl !== 'undefined' && typeof Intl.Segmenter === 'function'
   ? new Intl.Segmenter(undefined, { granularity: 'grapheme' })
   : null;
 
@@ -7,7 +7,8 @@ const EMOJI_PRESENTATION_RE = /\p{Emoji_Presentation}/u;
 const EXTENDED_PICTOGRAPHIC_RE = /\p{Extended_Pictographic}/u;
 const EMOJI_MODIFIER_RE = /^\p{Emoji_Modifier}$/u;
 
-function isEmojiGrapheme(grapheme: string): boolean {
+/** One grapheme that is an emoji (what is drawn as a Twemoji picture too). */
+export function isEmojiGrapheme(grapheme: string): boolean {
   if (EMOJI_MODIFIER_RE.test(grapheme)) return false;
   if (KEYCAP_RE.test(grapheme)) return true;
   if (EMOJI_PRESENTATION_RE.test(grapheme)) return true;

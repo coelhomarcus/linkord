@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { PlusIcon } from '@phosphor-icons/react';
 
 import { cn } from '@/shared/lib/utils';
+import { Emoji } from '@/features/emoji/Emoji';
 
 // A short fixed set shown first, instead of mounting the full picker (and
 // fetching its emoji dataset, see features/emoji/emojiData.ts)
@@ -22,7 +23,7 @@ export function QuickReactionRow({ onPick, onMore, className }: { onPick: (emoji
           // Discord's quick reactions: square tiles at the top of the menu
           className="grid size-9 place-items-center rounded-lg bg-bg-control text-[20px] leading-none transition-colors hover:bg-bg-control-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          {emoji}
+          <Emoji emoji={emoji} />
         </button>
       ))}
       <button
