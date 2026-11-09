@@ -117,6 +117,25 @@ describe('SecuritySettings: sessions', () => {
     expect(screen.getByText(/sem uso por 14 dias/)).toBeInTheDocument();
   });
 
+  it('names clients it cannot tell apart by system, or as an app or script, and keeps the raw agent in a tooltip', async () => {
+    const odd = 'Mozilla/5.0 (X11; Linux x86_64) SomeEngine/1.0';
+    api.fetchSessions.mockResolvedValue({
+      sessions: [
+        { id: 'here', current: true, ip: '203.0.113.7', userAgent: SESSIONS[1]!.userAgent, createdAt: now, lastSeenAt: now },
+        { id: 'odd', current: false, ip: '198.51.100.3', userAgent: odd, createdAt: now, lastSeenAt: now },
+        { id: 'script', current: false, ip: '198.51.100.4', userAgent: 'python-requests/2.31.0', createdAt: now, lastSeenAt: now },
+        { id: 'blank', current: false, ip: '198.51.100.5', userAgent: '', createdAt: now, lastSeenAt: now },
+      ],
+    });
+    render(<SecuritySettings />);
+    const rows = within(await screen.findByRole('list', { name: 'Sessões ativas' })).getAllByRole('listitem');
+    expect(rows[1]).toHaveTextContent('Desconhecido no Linux');
+    expect(screen.getByText('Desconhecido no Linux')).toHaveAttribute('title', odd);
+    expect(rows[2]).toHaveTextContent('Aplicativo ou script');
+    expect(rows[3]).toHaveTextContent('Navegador desconhecido');
+    expect(screen.getByText('Navegador desconhecido')).not.toHaveAttribute('title');
+  });
+
   it('ends one session and drops it from the list', async () => {
     const user = userEvent.setup();
     api.endSession.mockResolvedValue(undefined);

@@ -384,6 +384,8 @@
       "descriptionIdle_other": "Os navegadores conectados à sua conta. Uma sessão sem uso por {{count}} dias é encerrada sozinha.",
       "browserOn": "{{browser}} em {{os}}",
       "unknownDevice": "Navegador desconhecido",
+      "unknownBrowserOn": "Desconhecido no {{os}}",
+      "automated": "Aplicativo ou script",
       "current": "Esta sessão",
       "activeNow": "Ativa agora",
       "lastSeen": "Último uso: {{time}}",

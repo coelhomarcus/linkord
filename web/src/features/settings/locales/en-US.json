@@ -384,6 +384,8 @@
       "descriptionIdle_other": "The browsers signed in to your account. A session unused for {{count}} days ends on its own.",
       "browserOn": "{{browser}} on {{os}}",
       "unknownDevice": "Unknown browser",
+      "unknownBrowserOn": "Unknown on {{os}}",
+      "automated": "App or script",
       "current": "This session",
       "activeNow": "Active now",
       "lastSeen": "Last used: {{time}}",
