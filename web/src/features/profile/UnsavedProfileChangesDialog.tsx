@@ -40,7 +40,7 @@ export function UnsavedProfileChangesDialog({
           <Button type="button" className="w-full" onClick={onSaveAndLeave} disabled={saving}>
             <span>{saving ? t('unsaved.saving') : t('unsaved.saveAndLeave')}</span>
           </Button>
-          <Button type="button" variant="outline" className="w-full text-red hover:bg-red/12" onClick={onDiscardAndLeave} disabled={saving}>
+          <Button type="button" variant="danger-outline" className="w-full" onClick={onDiscardAndLeave} disabled={saving}>
             <span>{t('unsaved.discardAndLeave')}</span>
           </Button>
           <Button type="button" variant="ghost" className="w-full" onClick={onContinueEditing} disabled={saving}>

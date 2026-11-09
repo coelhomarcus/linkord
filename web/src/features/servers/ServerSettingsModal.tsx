@@ -325,7 +325,7 @@ function Members({ server, onOpenProfile }: { server: ServerSummary; onOpenProfi
             {!member.isOwner && member.user.id !== state.me.userId && (
               <span className="flex gap-1">
                 {above && can(server, PERMISSIONS.KICK_MEMBERS) && <Button type="button" size="sm" variant="ghost" onClick={() => setConfirm({ kind: 'kick', member })}>{t('members.kick')}</Button>}
-                {above && can(server, PERMISSIONS.BAN_MEMBERS) && <Button type="button" size="sm" variant="ghost" className="text-red" onClick={() => setConfirm({ kind: 'ban', member })}>{t('members.ban')}</Button>}
+                {above && can(server, PERMISSIONS.BAN_MEMBERS) && <Button type="button" size="sm" variant="ghost" className="text-red-text" onClick={() => setConfirm({ kind: 'ban', member })}>{t('members.ban')}</Button>}
                 {isOwner && <Button type="button" size="sm" variant="ghost" onClick={() => setConfirm({ kind: 'transfer', member })}>{t('members.transfer')}</Button>}
               </span>
             )}

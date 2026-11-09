@@ -205,8 +205,8 @@ export function OTPInput({
                 data-filled={char !== ""}
                 className={cn(
                   "relative grid h-14 w-12 place-items-center overflow-hidden rounded-lg border bg-fill-inset text-display font-semibold tabular-nums transition-colors duration-200",
-                  showSuccess ? "border-emerald-500/60 text-foreground" : status === "error" ? "border-destructive text-foreground" : char ? "border-border-strong text-foreground" : "border-border-strong text-muted-foreground",
-                  showSuccess && "ring-2 ring-emerald-500/25",
+                  showSuccess ? "border-green/60 text-foreground" : status === "error" ? "border-destructive text-foreground" : char ? "border-border-strong text-foreground" : "border-border-strong text-muted-foreground",
+                  showSuccess && "ring-2 ring-green/25",
                   status === "error" && "ring-2 ring-destructive/25",
                   isActive && !showSuccess && status !== "error" && "border-foreground/50 ring-2 ring-ring/40",
                   disabled && "opacity-50",
@@ -245,7 +245,7 @@ export function OTPInput({
               animate={reduce ? { opacity: 1 } : { scale: 1, opacity: 1 }}
               exit={reduce ? { opacity: 0 } : { scale: 0.6, opacity: 0 }}
               transition={reduce ? { duration: 0 } : { type: "spring", stiffness: 500, damping: 28 }}
-              className="pointer-events-none absolute -right-7 top-1/2 -translate-y-1/2 text-emerald-500"
+              className="pointer-events-none absolute -right-7 top-1/2 -translate-y-1/2 text-green"
               aria-hidden
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
@@ -256,7 +256,7 @@ export function OTPInput({
           ) : null}
         </AnimatePresence>
       </fieldset>
-      {message ? <p aria-live="polite" className={cn("text-label", showSuccess ? "text-emerald-500" : status === "error" ? "text-red-text" : "text-muted-foreground")}>{message}</p> : null}
+      {message ? <p aria-live="polite" className={cn("text-label", showSuccess ? "text-green" : status === "error" ? "text-red-text" : "text-muted-foreground")}>{message}</p> : null}
     </div>
   );
 }

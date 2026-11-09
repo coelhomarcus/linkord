@@ -55,7 +55,7 @@ Short and quiet, from three durations (`DURATION` in `shared/lib/ease.ts`): **10
 
 ### Error colour
 
-Words that report an error or a failure (an `role="alert"` line, a "failed" label, a counter past its limit) are `text-red-text`, the lighter red made to be read on the dark surfaces. `text-red` is the fill colour: icons, indicators, required-field asterisks, `bg-red/…` tints and destructive buttons. A boxed error is `ErrorBanner`.
+Words that report an error or a failure (an `role="alert"` line, a "failed" label, a counter past its limit) are `text-red-text`, the lighter red made to be read on the dark surfaces; so is the label of a destructive text button. `text-red` is the fill colour: icons, indicators, required-field asterisks and `bg-red/…` tints. A destructive button takes the `danger-outline` (neutral box, red label) or `destructive` (solid red) variant rather than recolouring another one. A boxed error is `ErrorBanner`. Success is `text-green`, never a Tailwind palette green.
 
 ## Backend (`server/src/`)
 
