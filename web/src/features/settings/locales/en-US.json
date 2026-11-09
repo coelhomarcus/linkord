@@ -198,7 +198,6 @@
     "unblockFailed": "Couldn't unblock. Try again.",
     "loading": "Loading…",
     "loadFailed": "Couldn't load the list.",
-    "retry": "Try again",
     "empty": "You haven't blocked anyone",
     "unblock": "Unblock",
     "emptyText": "Anyone you block shows up here, and you can unblock them any time."
@@ -342,7 +341,6 @@
   "security": {
     "loading": "Loading…",
     "loadFailed": "Could not load.",
-    "retry": "Try again",
     "cancel": "Cancel",
     "password": {
       "label": "Account password",

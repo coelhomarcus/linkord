@@ -198,7 +198,6 @@
     "unblockFailed": "Não foi possível desbloquear. Tente de novo.",
     "loading": "Carregando…",
     "loadFailed": "Não foi possível carregar a lista.",
-    "retry": "Tentar de novo",
     "empty": "Você não bloqueou ninguém",
     "unblock": "Desbloquear",
     "emptyText": "Quem você bloquear aparece aqui, e dá para desbloquear quando quiser."
@@ -342,7 +341,6 @@
   "security": {
     "loading": "Carregando…",
     "loadFailed": "Não foi possível carregar.",
-    "retry": "Tentar de novo",
     "cancel": "Cancelar",
     "password": {
       "label": "Senha da conta",

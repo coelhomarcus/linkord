@@ -14,6 +14,7 @@ import type { SocialEntry } from '@/shared/api/api';
 import { SettingsSection, SettingsSections } from '@/shared/ui/settings-layout';
 import { Skeleton, SkeletonGroup } from '@/shared/ui/primitives/skeleton';
 import { AutoIdleSetting } from '@/features/status/AutoIdleSetting';
+import { LoadError } from './LoadError';
 
 const blockedKey = (entry: SocialEntry) => entry.user.id;
 
@@ -60,10 +61,7 @@ export function PrivacyTab({ onOpenProfile }: { onOpenProfile: (userId: string) 
           </SkeletonGroup>
         )}
         {list.status === 'error' && (
-          <div className="flex items-center gap-2 rounded-md bg-red/12 px-2.5 py-1.5 text-label text-red-text">
-            <span className="min-w-0 flex-1">{t('privacy.loadFailed')}</span>
-            <button type="button" onClick={list.retry} className="flex-none font-medium underline-offset-2 hover:underline">{t('privacy.retry')}</button>
-          </div>
+          <LoadError message={t('privacy.loadFailed')} onRetry={list.retry} />
         )}
         {list.status === 'ready' && list.items.length === 0 && (
           <EmptyState size="compact" illustration="shield" title={t('privacy.empty')} description={t('privacy.emptyText')} className="rounded-lg border border-border-subtle" />
