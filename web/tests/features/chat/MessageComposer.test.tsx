@@ -32,6 +32,17 @@ describe('MessageComposer', () => {
     vi.clearAllMocks();
   });
 
+  it('draws the placeholder as a truncating overlay that goes away once there is text', async () => {
+    const user = userEvent.setup();
+    renderWithRoom(<MessageComposer conversationId="conv-1" />, { state: joinedState });
+
+    const textarea = screen.getByPlaceholderText('Mensagem');
+    expect(screen.getByText('Mensagem', { selector: 'span[aria-hidden]' })).toHaveClass('truncate');
+
+    await user.type(textarea, 'oi');
+    expect(screen.queryByText('Mensagem', { selector: 'span[aria-hidden]' })).not.toBeInTheDocument();
+  });
+
   it('sends the message with Enter and clears the field', async () => {
     const user = userEvent.setup();
     const sendChatMessage = vi.fn(() => true);

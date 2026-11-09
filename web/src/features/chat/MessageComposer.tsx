@@ -218,6 +218,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
   const peer = directUser(conversation, state.me.userId, allUsers);
   const messagePlaceholder = conversation?.serverId ? t('composer.messageChannel', { channel: conversation.title })
     : peer ? t('composer.messageDirect', { name: peer.displayName }) : t('composer.message');
+  const placeholder = pendingFiles.length ? t('composer.addCaption') : messagePlaceholder;
   const mentionCandidates = useMemo(() => {
     if (!mentionQuery) return [];
     const q = mentionQuery.query.toLowerCase();
@@ -526,6 +527,10 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
+            {/* A textarea placeholder can't be ellipsized (text-overflow ignores it) and
+                field-sizing grows the field with a wrapped one, so the real placeholder
+                stays for assistive tech but is invisible, and this overlay draws it. */}
+            <div className="relative flex min-w-0 flex-1">
             <Textarea
               ref={textareaRef}
               value={text}
@@ -547,9 +552,15 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
               {...emojiSuggestions.fieldProps}
               aria-invalid={tooLong || undefined}
               aria-describedby={showCounter ? counterId : undefined}
-              placeholder={pendingFiles.length ? t('composer.addCaption') : messagePlaceholder}
-              className="min-h-9 max-h-40 flex-1 resize-none rounded-none border-none bg-transparent px-1 py-1.5 text-body shadow-none placeholder:text-text-faint focus-visible:ring-0"
+              placeholder={placeholder}
+              className="min-h-9 max-h-40 flex-1 resize-none rounded-none border-none bg-transparent px-1 py-1.5 text-body shadow-none placeholder:whitespace-nowrap placeholder:text-transparent focus-visible:ring-0"
             />
+            {!text && (
+              <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 truncate px-1 py-1.5 text-body text-text-faint">
+                {placeholder}
+              </span>
+            )}
+            </div>
             {showCounter && (
               <span id={counterId} className={cn('flex-none self-end px-1 pb-2.5 text-caption tabular-nums', tooLong ? 'font-semibold text-red' : 'text-text-muted')}>
                 {remaining}
