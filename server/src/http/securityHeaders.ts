@@ -56,7 +56,7 @@ export function livekitSources(livekitUrl: string): string[] {
 /** Chrome only accepts a Reporting-Endpoints header from an https page, and a
  * policy naming `report-to` makes it ignore `report-uri`: over plain http
  * (local runs, the e2e stack) the policy keeps to `report-uri` alone. */
-export function usesReportingApi(appUrl: string): boolean {
+function usesReportingApi(appUrl: string): boolean {
   return originOf(appUrl)?.protocol === 'https:';
 }
 

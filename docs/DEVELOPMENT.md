@@ -108,11 +108,15 @@ npm run admin:grant -- <your-username>
 
 ## Run the checks
 
-There is no hosted CI; run the checks locally before pushing. This runs the server test typecheck, the frontend lint, the dependency audit, the server and frontend tests, and the production build (which also typechecks the backend and frontend):
+Run the checks locally before pushing. This runs the server test typecheck, the frontend lint, the dependency audit, the server and frontend tests, and the production build (which also typechecks the backend and frontend):
 
 ```bash
 npm run check
 ```
+
+GitHub Actions runs the same checks (`.github/workflows/ci.yml`) on every push to `main` and `develop` and on every pull request, unless only docs or Markdown changed. It splits them into three jobs: server (typecheck, test typecheck, tests), web (lint, tests, typecheck and build), and a third for the audit, `npm run check:dead-code` and the e2e typecheck. The dead-code check is not part of `npm run check` because knip needs the `e2e/` packages installed; run it yourself after installing them. A newer push to the same branch cancels the run in progress.
+
+The [end-to-end suite](#end-to-end-tests) has its own workflow (`.github/workflows/e2e.yml`). It runs on pull requests into `main`, the release gate, with the `features`, `restart` and `upgrade` projects as parallel jobs, and can be started for any branch from the Actions tab (Run workflow, then pick a project). It is not run on every push because each project builds the app image and takes 3 to 6 minutes on a hosted runner (about 6 minutes in all, since they run side by side). A failed job uploads the Playwright report and traces as an artifact. The job sets `NODE_OPTIONS=--no-experimental-strip-types`: Node 22.18 and later strip TypeScript themselves and reject what Playwright 1.49 compiles on its own (parameter properties), so set the same if your local Node is that recent.
 
 The audit step (`npm run check:audit`) runs `npm audit --omit=dev --audit-level=high` for the root and `web/`, so it fails on a high or critical advisory in anything that ships and needs network access to the npm registry. Dev-only tooling is left out on purpose; `npm audit fix` updates the lockfile within the declared ranges. Keep build-only packages (the shadcn CLI, Tailwind, Vite plugins) in `devDependencies` of `web/`: the Docker image builds the web app with every dependency installed and ships only the output.
 
@@ -131,7 +135,7 @@ Every script runs from the repository root.
 | `npm run test:integration` | `server/tests/integration/*.itest.ts` against a throwaway database it creates and drops on your local Postgres. |
 | `npm run test:e2e` (and `:features`, `:restart`, `:upgrade`) | The browser suite, see [End-to-end tests](#end-to-end-tests). Needs Docker and Chrome. |
 | `npm run check:audit` | `npm audit --omit=dev --audit-level=high` for the root and `web/`; fails on high or critical advisories in shipped dependencies. Part of `npm run check`. |
-| `npm run check:dead-code` | `knip`: unused files, exports and dependencies across `server/`, `web/` and `e2e/`. |
+| `npm run check:dead-code` | `knip`: unused files, exports and dependencies across `server/`, `web/` and `e2e/` (needs all three installed). Runs in CI, not part of `npm run check`. |
 | `npm run db:migrate` | Applies pending migrations. The server also does it on boot unless `MIGRATE_ON_BOOT=0`. |
 | `npm run db:generate` | Generates a migration from changes to `server/src/db/schema.ts`. Rename the file to describe the change. |
 | `npm run db:seed` | Sample data for local development, see [Sample data](#sample-data). |

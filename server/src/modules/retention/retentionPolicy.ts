@@ -1,9 +1,9 @@
 // Pure rules of the retention sweep: no database, so the batching and the "0 keeps forever"
 // rule are tested without one.
 
-export const RETENTION_BATCH_SIZE = 1000;
+const RETENTION_BATCH_SIZE = 1000;
 // a breather between batches so a table with years of backlog is never deleted in one burst
-export const RETENTION_PAUSE_MS = 100;
+const RETENTION_PAUSE_MS = 100;
 
 export interface RetentionTarget {
   /** stable name: shown in the admin page and stored in the audit entry */
@@ -14,7 +14,7 @@ export interface RetentionTarget {
   deleteBatch: (cutoff: Date, limit: number) => Promise<number>;
 }
 
-export interface RetentionTargetResult {
+interface RetentionTargetResult {
   key: string;
   days: number;
   /** null when the target keeps everything */

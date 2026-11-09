@@ -12,14 +12,14 @@ export const MEDIA_PROXY_PATH = '/api/media-proxy';
 
 /** Signed kinds, each with the host its URLs must be on (null: any public
  * host, for the pictures link previews found on arbitrary pages). */
-export const SIGNED_KINDS = {
+const SIGNED_KINDS = {
   mal: 'cdn.myanimelist.net',
   github: 'avatars.githubusercontent.com',
   preview: null,
 } as const satisfies Record<string, string | null>;
 export type SignedKind = keyof typeof SIGNED_KINDS;
 
-export const COVER_SIZES: readonly CoverSize[] = ['cover_small', 'cover_big'];
+const COVER_SIZES: readonly CoverSize[] = ['cover_small', 'cover_big'];
 const YOUTUBE_ID = /^[A-Za-z0-9_-]{11}$/;
 const MAX_TARGET_LENGTH = 2048;
 // 128 bits: unguessable, and short enough to keep the address readable
@@ -76,10 +76,10 @@ export function verifiedTarget(kind: string, signature: string, encoded: unknown
   return allowedTarget(kind as SignedKind, href);
 }
 
-export function isCoverSize(value: string): value is CoverSize {
+function isCoverSize(value: string): value is CoverSize {
   return (COVER_SIZES as readonly string[]).includes(value);
 }
-export function isYoutubeId(value: string): boolean {
+function isYoutubeId(value: string): boolean {
   return YOUTUBE_ID.test(value);
 }
 
