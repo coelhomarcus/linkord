@@ -1,6 +1,7 @@
 import { test, expect } from '../../fixtures/test';
 import type { Locator, Page } from '@playwright/test';
 import { befriend } from '../../fixtures/api';
+import { gifInfo, threeFrameGif } from '../../fixtures/images';
 
 test.describe('profile', () => {
   test('a display name and bio saved on the profile page reach a friend', async ({ users }) => {
@@ -24,6 +25,39 @@ test.describe('profile', () => {
     await expect(b.page.getByText('Alice Testes').first()).toBeVisible();
     const profile = await (await bob.api.get(`/api/users/${alice.id}/profile`)).json() as { user?: { bio?: string }; bio?: string };
     expect(profile.user?.bio ?? profile.bio).toBe('bio escrita pelo teste');
+  });
+
+  test('a GIF picked as photo and as banner is cut on the server and stays animated', async ({ users }) => {
+    const alice = await users.create('alice');
+    const a = await alice.app();
+    await a.page.goto('/app/profile');
+    await a.page.getByRole('button', { name: 'Meu perfil' }).filter({ hasText: 'Meu perfil' }).click();
+
+    const profile = async () => (await (await alice.api.get(`/api/users/${alice.id}/profile`)).json() as { user: { avatar: string; avatarPoster: string; banner: string } }).user;
+    const stored = async (url: string) => gifInfo(Buffer.from(await (await alice.api.get(url)).body()));
+    const pick = async (menu: string, dialog: string) => {
+      await a.page.getByRole('button', { name: menu }).click();
+      const chooser = a.page.waitForEvent('filechooser');
+      await a.page.getByRole('menuitem', { name: 'Enviar do computador' }).click();
+      await (await chooser).setFiles(threeFrameGif());
+      const crop = a.page.getByRole('dialog', { name: dialog });
+      await crop.getByRole('button', { name: 'Salvar' }).click();
+      await expect(crop).toHaveCount(0);
+    };
+
+    await pick('Alterar foto de perfil', 'Recortar foto de perfil');
+    await expect.poll(async () => (await profile()).avatar).toMatch(/^\/uploads\//);
+    // the dialog opens on the centred square: 200px of the 300x200 picture
+    expect(await stored((await profile()).avatar)).toEqual({ width: 200, height: 200, frames: 3 });
+    expect((await profile()).avatarPoster).toMatch(/^\/uploads\//);
+
+    await pick('Alterar banner', 'Recortar banner');
+    await expect.poll(async () => (await profile()).banner).toMatch(/^\/uploads\//);
+    // 16:9 across the whole width; the dialog rounds the height either way
+    const banner = await stored((await profile()).banner);
+    expect([banner.width, banner.frames]).toEqual([300, 3]);
+    expect(banner.height).toBeGreaterThanOrEqual(168);
+    expect(banner.height).toBeLessThanOrEqual(169);
   });
 
   test('a friend\'s profile shows the servers and friends in common', async ({ users }) => {
