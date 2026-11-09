@@ -166,7 +166,7 @@ npm run test:e2e
 - `npm run test:e2e:restart`: calls, messages and uploads across a redeploy of the same build.
 - `npm run test:e2e:upgrade`: tabs opened on the production version (`origin/main`, or `E2E_BASE_REF`) while the server is upgraded to the working tree.
 
-The app image runs as the non-root `node` user, while the base version of the upgrade specs may still run as root. `deploy()` in `e2e/stack/stack.ts` therefore runs the `chown -R node:node /app/uploads` that the README asks for before an upgrade.
+The app image runs as the non-root `node` user, while the base version of the upgrade specs may still run as root. `deploy()` in `e2e/stack/stack.ts` therefore runs the `chown -R node:node /app/uploads` that [DEPLOY.md](DEPLOY.md#folders-and-permissions) asks for before an upgrade.
 
 Each run builds `linkord-e2e:head` from the working tree (uncommitted changes included; Docker's cache keeps an unchanged tree fast), starts the stack, runs, and removes it. The base version is built once per commit and reused. `E2E_KEEP_STACK=1` leaves the stack up at `http://localhost:8080`, `E2E_HEADED=1` shows the browsers, `E2E_RETRIES=0` turns retries off, and `E2E_HEAD_IMAGE=<tag>` runs against an image you built yourself instead of the working tree (build a deliberately broken tree to check that a spec catches the regression).
 
@@ -255,7 +255,7 @@ What can still differ, and what happens:
 
 ### Running it in Docker
 
-The app image carries the scripts and the client tools, and the compose file mounts `./backups` into the `app` container. The container runs as `node` (uid 1000), so `./backups` and `./uploads` must be owned by `1000:1000` (see the README).
+The app image carries the scripts and the client tools, and the compose file mounts `./backups` into the `app` container. The container runs as `node` (uid 1000), so `./backups` and `./uploads` must be owned by `1000:1000` (see [DEPLOY.md](DEPLOY.md#folders-and-permissions)).
 
 ```bash
 docker compose exec app node server/dist/scripts/backup.js
@@ -351,7 +351,7 @@ The Vite dev server (`npm run dev`, port 5173) does not send the policy, since i
 
 ## Single-instance assumption
 
-The server is written for **one process**. Running two behind a load balancer is unsupported and breaks things quietly, so the README tells operators not to. This section is the inventory for whoever decides to change that; nothing here is planned work.
+The server is written for **one process**. Running two behind a load balancer is unsupported and breaks things quietly, so [DEPLOY.md](DEPLOY.md#one-instance-only) tells operators not to. This section is the inventory for whoever decides to change that; nothing here is planned work.
 
 What lives in the memory (or on the local disk) of the process, and what a second instance would get wrong:
 

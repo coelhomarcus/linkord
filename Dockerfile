@@ -34,7 +34,7 @@ COPY --from=web-build /app/web/dist ./web/dist
 # The code above stays owned by root and is only readable by `node`, so a compromised process (an image
 # parsing bug in sharp, say) cannot rewrite the JavaScript served to everyone. The only places the app writes
 # are the upload folder and the backups folder. A named volume copies these owners on first use; a bind mount
-# keeps the host folder's owner, which is why the README asks for `chown 1000:1000` (the uid of `node`).
+# keeps the host folder's owner, which is why docs/DEPLOY.md asks for `chown -R 1000:1000` (the uid of `node`).
 RUN mkdir -p /app/uploads /app/backups && chown node:node /app/uploads /app/backups
 USER node
 
