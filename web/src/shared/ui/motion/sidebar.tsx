@@ -119,8 +119,11 @@ export function Sidebar({ ariaLabel, className, panelClassName, children }: {
         ariaLabel={ariaLabel}
         dismissLabel={t('accessibility.navigationClose')}
         style={sheetVars}
+        // The rail stays on screen. The inset lives inside the sliding box, so
+        // the close translation clears it instead of stopping on top of the rail.
+        leadingInset="var(--sidebar-overlay-offset, 0px)"
         backdropClassName="md:left-(--sidebar-overlay-offset,0px)"
-        className={cn('w-(--sidebar-width-mobile) max-w-[88vw] bg-background md:left-(--sidebar-overlay-offset,0px)', className)}
+        className={cn('w-(--sidebar-width-mobile) max-w-[88vw] bg-background', className)}
       >
         {children}
       </Sheet>

@@ -88,4 +88,38 @@ describe('SidebarProvider', () => {
     fireEvent.keyDown(window, { key: 'b', ctrlKey: true });
     expect(localStorage.getItem('ss-channel-list-open:overlay')).toBeNull();
   });
+
+  it('slides the tablet drawer off the screen, rail inset included', () => {
+    setViewport(900);
+    render(
+      <SidebarProvider style={{ '--sidebar-width-mobile': '24rem', '--sidebar-overlay-offset': '4.5rem' }}>
+        <Sidebar ariaLabel="Conversas"><p>lista</p></Sidebar>
+      </SidebarProvider>,
+    );
+
+    // Close translates this box by its own width (-100%). The open panel is
+    // inset by the rail, so the box has to start at the screen edge and carry
+    // that inset — otherwise a rail-wide strip is still painted when the slide
+    // ends and visibility:hidden pops it away. The trailing gap carries the
+    // popover shadow off with it.
+    const panel = drawer() as HTMLElement;
+    expect(panel).toHaveClass('left-0');
+    expect(panel.className).not.toContain('sidebar-overlay-offset');
+    expect(panel).toHaveClass('pointer-events-none');
+    const lead = panel.firstElementChild as HTMLElement;
+    const face = lead.nextElementSibling as HTMLElement;
+    const bleed = panel.lastElementChild as HTMLElement;
+    expect(lead).toHaveAttribute('data-sheet-inset');
+    expect(lead.style.width).toBe('var(--sidebar-overlay-offset, 0px)');
+    expect(face).toHaveTextContent('lista');
+    expect(face.className).not.toContain('sidebar-overlay-offset');
+    expect(bleed).toHaveAttribute('data-sheet-bleed');
+    expect(bleed.style.width).toBe('64px');
+
+    fireEvent.keyDown(window, { key: 'b', ctrlKey: true });
+    expect(face).toHaveClass('pointer-events-auto');
+    expect(panel).toHaveClass('pointer-events-none');
+    fireEvent.keyDown(window, { key: 'b', ctrlKey: true });
+    expect(drawer()?.firstElementChild).toHaveAttribute('data-sheet-inset');
+  });
 });

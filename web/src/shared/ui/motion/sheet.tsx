@@ -8,6 +8,11 @@ import { useTranslation } from 'react-i18next';
 
 const SLIDE = { duration: 0.36, ease: EASE_DRAWER } as const;
 const FADE = { duration: 0.16, ease: EASE_OUT } as const;
+// `--shadow-popover` blurs 60px (styles/index.css). A -100% slide parks the
+// box's right edge on the screen edge; this much empty width after the panel
+// parks the shadow past that edge too, so nothing is left when visibility
+// turns hidden.
+const SLIDE_BLEED = '64px';
 
 const FOCUSABLE = [
   'a[href]',
@@ -79,8 +84,13 @@ function trapTab(event: KeyboardEvent<HTMLDivElement>, panel: HTMLDivElement | n
  * It stays mounted while closed — like the desktop column, its content (a
  * search typed, a scroll position) is still there when it opens again — and
  * hides itself once the slide out ends: `visibility` rides the same animation,
- * so nothing has to keep a duration in sync. While closed it is inert. */
-export function Sheet({ open, onOpenChange, side, ariaLabel, dismissLabel, className, backdropClassName, style, children }: {
+ * so nothing has to keep a duration in sync. While closed it is inert.
+ *
+ * A left sheet inset from the screen edge (`leadingInset`, the server rail on
+ * a tablet) slides as a wider box. The inset sits inside that box, ahead of
+ * the panel: the close move is -100% of the box, and translating the inset
+ * panel alone would leave the inset painted until visibility hides it. */
+export function Sheet({ open, onOpenChange, side, ariaLabel, dismissLabel, className, backdropClassName, style, leadingInset, children }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   side: 'left' | 'right' | 'bottom';
@@ -91,6 +101,8 @@ export function Sheet({ open, onOpenChange, side, ariaLabel, dismissLabel, class
   backdropClassName?: string;
   /** CSS variables the panel's classes read: it is portaled, so it inherits none */
   style?: CSSProperties;
+  /** CSS length the open panel sits in from the screen edge it slides from */
+  leadingInset?: string;
   children: ReactNode;
 }) {
   const { t } = useTranslation('common');
@@ -101,6 +113,9 @@ export function Sheet({ open, onOpenChange, side, ariaLabel, dismissLabel, class
   const visibility = open ? 'visible' : 'hidden';
   const offscreen = side === 'left' ? '-100%' : '100%';
   const slide = side === 'bottom' ? { y: open ? '0%' : offscreen } : { x: open ? '0%' : offscreen };
+  // Only a left sheet is inset from the edge it enters from. The rail stays
+  // put; the drawer has to finish its slide clear of it.
+  const inset = side === 'left' ? leadingInset : undefined;
 
   // Two fixed layers in a box-less wrapper: the backdrop spans the viewport and
   // paints the scrim, the panel is inset off one side and paints its own surface.
@@ -134,16 +149,30 @@ export function Sheet({ open, onOpenChange, side, ariaLabel, dismissLabel, class
             trapTab(event, panelRef.current);
           }
         }}
-        className={cn(
-          'fixed flex flex-col overflow-hidden pb-[env(safe-area-inset-bottom)] shadow-popover outline-none will-change-transform',
-          side === 'bottom' ? 'inset-x-0 bottom-0 max-h-[85dvh] rounded-t-2xl border-t border-border' : 'inset-y-0 h-dvh pt-[env(safe-area-inset-top)]',
-          side === 'left' && 'left-0 border-r border-border',
-          side === 'right' && 'right-0 w-80 max-w-[85vw] border-l border-border bg-surface-panel [--surface-base:var(--color-surface-panel)]',
-          open ? 'pointer-events-auto' : 'pointer-events-none',
-          className,
-        )}
+        className={inset
+          ? 'pointer-events-none fixed inset-y-0 left-0 flex h-dvh w-fit flex-row outline-none will-change-transform'
+          : cn(
+            'fixed flex flex-col overflow-hidden pb-[env(safe-area-inset-bottom)] shadow-popover outline-none will-change-transform',
+            side === 'bottom' ? 'inset-x-0 bottom-0 max-h-[85dvh] rounded-t-2xl border-t border-border' : 'inset-y-0 h-dvh pt-[env(safe-area-inset-top)]',
+            side === 'left' && 'left-0 border-r border-border',
+            side === 'right' && 'right-0 w-80 max-w-[85vw] border-l border-border bg-surface-panel [--surface-base:var(--color-surface-panel)]',
+            open ? 'pointer-events-auto' : 'pointer-events-none',
+            className,
+          )}
       >
-        {children}
+        {inset ? (
+          <>
+            <div data-sheet-inset aria-hidden className="h-full shrink-0" style={{ width: inset }} />
+            <div className={cn(
+              'flex h-full min-h-0 shrink-0 flex-col overflow-hidden border-r border-border pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] shadow-popover',
+              open ? 'pointer-events-auto' : 'pointer-events-none',
+              className,
+            )}>
+              {children}
+            </div>
+            <div data-sheet-bleed aria-hidden className="h-full shrink-0" style={{ width: SLIDE_BLEED }} />
+          </>
+        ) : children}
       </motion.div>
     </div>,
     document.body,
