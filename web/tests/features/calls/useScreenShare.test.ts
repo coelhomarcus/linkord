@@ -92,7 +92,7 @@ afterEach(() => {
 });
 
 describe('useScreenShare — quality applied to the capture', () => {
-  it('without a saved preference, captures and publishes with the 1080p30 preset', async () => {
+  it('without a saved preference, captures and publishes with the 1080p60 preset', async () => {
     const video = fakeTrack('video', { displaySurface: 'window' });
     const getDisplayMedia = stubDisplayMedia(fakeStream(video));
     const { room, publishTrack } = fakeRoom();
@@ -100,7 +100,7 @@ describe('useScreenShare — quality applied to the capture', () => {
 
     await result.current.startSharing();
 
-    const preset = SHARE_QUALITY_PRESETS.screen1080;
+    const preset = SHARE_QUALITY_PRESETS.game1080;
     expect(getDisplayMedia).toHaveBeenCalledWith(expect.objectContaining({
       video: { width: { ideal: preset.resolution.width }, height: { ideal: preset.resolution.height }, frameRate: preset.resolution.frameRate },
     }));
@@ -114,14 +114,14 @@ describe('useScreenShare — quality applied to the capture', () => {
   });
 
   it('with a saved quality preference, the next capture uses the chosen preset', async () => {
-    saveShareQuality('game1080');
+    saveShareQuality('screen1080');
     const getDisplayMedia = stubDisplayMedia(fakeStream(fakeTrack('video')));
     const { room, publishTrack } = fakeRoom();
     const { result } = renderHook(() => useScreenShare(room, vi.fn()));
 
     await result.current.startSharing();
 
-    const preset = SHARE_QUALITY_PRESETS.game1080;
+    const preset = SHARE_QUALITY_PRESETS.screen1080;
     expect(getDisplayMedia).toHaveBeenCalledWith(expect.objectContaining({
       video: expect.objectContaining({ frameRate: preset.resolution.frameRate, width: { ideal: preset.resolution.width } }),
     }));
@@ -149,7 +149,7 @@ describe('useScreenShare — quality applied to the capture', () => {
 
     await result.current.startSharing();
 
-    const { width, height, frameRate } = SHARE_QUALITY_PRESETS.screen1080.resolution;
+    const { width, height, frameRate } = SHARE_QUALITY_PRESETS.game1080.resolution;
     expect(getDisplayMedia).toHaveBeenCalledWith(expect.objectContaining({
       video: { width: { max: width }, height: { max: height }, frameRate },
     }));
