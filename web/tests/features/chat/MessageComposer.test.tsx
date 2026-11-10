@@ -514,8 +514,7 @@ describe('MessageComposer — group and role mentions', () => {
     expect(chip).toHaveTextContent('@Moderação');
     expect(chip?.firstElementChild).toHaveStyle({ color: '#ff8800' });
 
-    // the caret is put after the pick on the next frame, as a browser would before the next key
-    await act(() => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())));
+    // typed right away: the caret is already after the pick, not a frame later
     await typeInField(field, 'tudo bem?{Enter}');
     expect(sendChatMessage).toHaveBeenCalledWith('conv-1', `oi <@&${ROLE_OPEN}> tudo bem?`, undefined);
   });

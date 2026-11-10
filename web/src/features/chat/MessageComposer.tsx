@@ -293,21 +293,14 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
   }
 
   // replaces the "@query" itself (not the whole field) with "@username ",
-  // "@everyone " or a role's token — mirrors insertEmoji's cursor handling below.
+  // "@everyone " or a role's token, the caret right after it before the next
+  // key lands (applyEdit); the list keeps focus in the field (onMouseDown)
   function selectMention(candidate: MentionCandidate) {
-    const el = fieldRef.current;
     if (!mentionQuery) return;
     const before = text.slice(0, mentionQuery.start);
     const after = text.slice(mentionQuery.start + 1 + mentionQuery.query.length);
     const insertion = mentionInsertion(candidate);
-    const next = before + insertion + after;
-    setText(next);
-    setMentionQuery(null);
-    const caret = before.length + insertion.length;
-    requestAnimationFrame(() => {
-      el?.focus();
-      el?.setSelectionRange(caret, caret);
-    });
+    applyEdit({ text: before + insertion + after, caret: before.length + insertion.length });
   }
 
   function addFiles(files: File[]) {
