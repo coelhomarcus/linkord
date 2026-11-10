@@ -7,6 +7,7 @@ import { PageHeader } from '@/shared/PageHeader';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/primitives/dropdown-menu';
 import { ROUTES, conversationIdFromPath } from '@/shared/lib/routes';
 import { useSidebar } from '@/shared/ui/motion/sidebar-context';
+import { useDrawerEdgeSwipe } from './useDrawerEdgeSwipe';
 import { Button } from '@/shared/ui/primitives/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
 import { Avatar } from '@/shared/Avatar';
@@ -54,13 +55,14 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
   const { state, dispatch, conversations, activeConversationId, allUsers, activeCallConversationId, startDmCall } = useRoom();
   const navigate = useNavigate();
   const { pathname, state: locationState } = useLocation();
-  const { isMobile } = useSidebar();
+  const { isMobile, isOverlay, openMobile, setOpenMobile } = useSidebar();
   const requestedId = conversationIdFromPath(pathname);
   // On a phone the bare list route hides this panel (display: none). Mounting
   // the active chat there let its timeline settle at zero height, and the
   // browser reset its scroll when it was shown, so it opened mid-history.
   const shownId = requestedId ?? (isMobile ? null : activeConversationId);
   const conversation = conversations.find((item) => item.id === shownId) ?? null;
+  const drawerSwipe = useDrawerEdgeSwipe({ enabled: isOverlay && !!conversation, open: openMobile, setOpen: setOpenMobile });
   const isChannel = !!conversation?.serverId;
   // ConversationSidebar pushes every open with the route we came from in
   // state. Step back to that entry so the browser's back and forward (edge
@@ -102,7 +104,12 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
   const detailsLabel = t('panel.members');
 
   return (
-    <main className="flex h-full min-w-0 flex-1 flex-col text-text-primary">
+    <main
+      className="flex h-full min-w-0 flex-1 flex-col overscroll-x-none text-text-primary"
+      data-drawer-swipe={isOverlay || undefined}
+      data-swipe-pan-y={isOverlay || undefined}
+      {...drawerSwipe}
+    >
       {conversation ? (
         <>
           <header data-avatar-hover className="flex h-header flex-none items-center gap-2 bg-surface-panel px-2 md:border-b md:border-border-subtle md:px-4">

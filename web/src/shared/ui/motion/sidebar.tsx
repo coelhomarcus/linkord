@@ -100,12 +100,15 @@ export function SidebarProvider({ open, defaultOpen = true, onOpenChange, openMo
 
 /** The conversation list: a column beside the content from 1024px, a drawer
  * from the left below that. */
-export function Sidebar({ ariaLabel, className, panelClassName, children }: {
+export function Sidebar({ ariaLabel, className, panelClassName, leadingInset, children }: {
   ariaLabel: string;
   /** both forms: the column's frame and the drawer's panel */
   className?: string;
   /** the column's panel only (the drawer paints its own surface) */
   panelClassName?: string;
+  /** On a tablet the rail stays on screen and the drawer is inset by it. A
+   * phone conversation drawer carries the rail inside, so it starts at 0. */
+  leadingInset?: string | false;
   children: ReactNode;
 }) {
   const { t } = useTranslation('common');
@@ -121,7 +124,7 @@ export function Sidebar({ ariaLabel, className, panelClassName, children }: {
         style={sheetVars}
         // The rail stays on screen. The inset lives inside the sliding box, so
         // the close translation clears it instead of stopping on top of the rail.
-        leadingInset="var(--sidebar-overlay-offset, 0px)"
+        leadingInset={leadingInset === false ? undefined : (leadingInset ?? 'var(--sidebar-overlay-offset, 0px)')}
         backdropClassName="md:left-(--sidebar-overlay-offset,0px)"
         className={cn('w-(--sidebar-width-mobile) max-w-[88vw] bg-background', className)}
       >
