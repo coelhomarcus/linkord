@@ -335,7 +335,7 @@ function countConnectionsOf(userId: string): number {
 
 /** Removes ghosts (socket=null, stuck in the reconnect grace window) for
  * the SAME account before creating a new connection — otherwise a crashed
- * tab would hold the slot for up to RECONNECT_GRACE_MS. */
+ * tab would hold the slot for the whole reconnect grace. */
 function evictGhostsForUser(userId: string): void {
   for (const p of [...participants.values()]) {
     if (p.userId === userId && p.socket === null && !restoredGhostIds.has(p.id)) removeParticipant(p);
@@ -586,7 +586,8 @@ export function handleClose(socket: AppSocket): void {
   const p = participants.get(socket.participantId ?? '');
   if (!p || p.socket !== socket) return; // already replaced by a newer reconnect
   p.socket = null;
-  p.graceTimer = setTimeout(() => removeParticipant(p), config.RECONNECT_GRACE_MS);
+  const graceMs = p.callConversationId ? config.CALL_RECONNECT_GRACE_MS : config.RECONNECT_GRACE_MS;
+  p.graceTimer = setTimeout(() => removeParticipant(p), graceMs);
 }
 
 export const handlers: HandlerTable = {
