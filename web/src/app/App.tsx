@@ -32,6 +32,8 @@ import { DmCallOverlay } from '@/features/calls/DmCallOverlay';
 import { CallConnectingScreen } from '@/features/calls/CallConnectingScreen';
 import { ParticipantAudioLayer } from '@/features/calls/ParticipantAudioLayer';
 import { FloatingPip } from '@/features/calls/FloatingPip';
+import { useCallMediaSession } from '@/features/calls/useCallMediaSession';
+import { useParticipantMedia } from '@/features/calls/useLiveKitTrack';
 import { APP_TITLE, callParticipantIds, conversationDocumentTitle, conversationTitle, directUser } from '@/features/conversations/conversationUtils';
 import { TileMenu } from '@/features/calls/TileMenu';
 import { SoundEmojiOverlay } from '@/features/soundboard/SoundEmojiOverlay';
@@ -97,7 +99,7 @@ function currentPath(): string {
 function Shell() {
   const {
     state, dispatch, livekitRoom, closeTileMenu, sendWs, retryConnection, notifyActiveView, registerRequestChatView, registerOpenCall,
-    activeCallConversationId, activeConversationId, joinCall, leaveCall, conversations, allUsers, servers,
+    activeCallConversationId, activeConversationId, joinCall, leaveCall, toggleMicMuted, conversations, allUsers, servers,
     dmStageConversationId, clearDmStage, dmCall,
     serverMemberRevision, setServerMemberSnapshot,
   } = useRoom();
@@ -159,6 +161,14 @@ function Shell() {
   // Not tied to having a published mic: joining with no mic plugged in (or
   // mic permission blocked) still has to show the call and play everyone else.
   const inCall = !!activeCallConversationId;
+  const myMedia = useParticipantMedia(state.me.id ?? '');
+  useCallMediaSession({
+    inCall,
+    title: conversationTitle(conversations.find((c) => c.id === activeCallConversationId), state.me.userId, allUsers),
+    micMuted: myMedia.micActivated ? myMedia.micMuted : null,
+    toggleMic: () => { void toggleMicMuted(); },
+    hangUp: () => { void leaveCall(); },
+  });
 
   const callIds = useMemo(
     () => callParticipantIds(state.me.id, state.participants, activeCallConversationId),
