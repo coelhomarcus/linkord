@@ -406,6 +406,17 @@ API: connections at `/api/me/connections` (`PATCH /api/me/connections/:id` with 
 
 How each provider is called, its limits and what happens when it fails are in [INTEGRATIONS.md](INTEGRATIONS.md#myanimelist) and, for games, [INTEGRATIONS.md](INTEGRATIONS.md#igdb).
 
+## Sharing into the app (Web Share Target)
+
+`web/public/manifest.webmanifest` declares a `share_target`, so the installed app shows up in Android Chrome's share sheet. iOS Safari does not support it, and neither does a plain browser tab: only an installed app is offered.
+
+- The share is a `multipart/form-data` POST to `/share-target` (fields `title`, `text`, `url`, `files`). The page never sees it: `web/public/sw.js` answers it, so it has to be a production build with the worker registered (`import.meta.env.PROD`; `npm run build` and start the server). Without the worker the POST reaches the server and gets its 404.
+- The worker stores the files and a `meta` entry under `/share-target/<id>/` in Cache Storage (`linkord-share-v1`) and redirects with a 303 to `/app/share?id=<id>`, or to `?failed=1` if it could not store them (quota, unreadable body). Nothing is sent to the server at that point.
+- `features/share/SharePage.tsx` reads the entry back, lists the DMs and text channels where the account may send (and attach, when files came along), and on a pick hands the files and text to that conversation's composer (`features/chat/pendingShare.ts`). The composer adds them through its own `addFiles`, so the size limit, the attachment count and the upload are the ones a drop uses.
+- The stored copy is deleted when a conversation is picked or the page is cancelled. A share nobody finished expires after an hour: the worker sweeps on activation and on every new share, and the app sweeps on start (`sweepExpiredShares`). The cache name, path and time limit exist in both `sw.js` and `features/share/sharedPayload.ts`; change them together.
+- To try it: serve the build over HTTPS (or `localhost`), install the app on an Android phone, and share a picture from the gallery. `chrome://inspect` shows the worker, and Application → Cache storage shows `linkord-share-v1` while a share is pending.
+- Tests: the worker's side is in `web/tests/app/serviceWorker.test.ts` (the worker source runs against a fake Cache Storage), the picker in `web/tests/features/share/`, and the composer hand-off in `web/tests/features/chat/MessageComposerShare.test.tsx`.
+
 ## Troubleshooting
 
 - If the database is not ready, check `docker compose -f docker-compose.dev.yml ps` and `docker compose -f docker-compose.dev.yml logs postgres`.

@@ -15,6 +15,7 @@ import { formatSizeLimit } from '@/shared/lib/formatBytes';
 import { cn } from '@/shared/lib/utils';
 import { useRoom } from '@/state/RoomContext';
 import { readDraft, updateConversationDraft, useConversationDraft, type PendingAttachment } from './conversationDrafts';
+import { takeShare, useHasPendingShare } from './pendingShare';
 import { MAX_ATTACHMENTS_PER_MESSAGE } from '@/shared/types/protocol';
 import type { PublicUser } from '@/shared/types/protocol';
 import { reportGifShared } from '@/features/gifs/klipy';
@@ -322,6 +323,18 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
   }
 
   useImperativeHandle(ref, () => ({ addFiles }));
+
+  // A share chosen on the "send to" page: it was queued before this composer existed for the
+  // conversation, so it lands once, as if the text had been typed and the files dropped here.
+  const hasPendingShare = useHasPendingShare(accountId, conversationId);
+  useEffect(() => {
+    if (!hasPendingShare) return;
+    const share = takeShare(accountId, conversationId);
+    if (!share) return;
+    if (share.text) updateDraft((d) => ({ text: d.text ? `${d.text}\n${share.text}` : share.text }));
+    addFiles(share.files);
+    // addFiles is a fresh closure every render; the queue itself is the trigger
+  }, [hasPendingShare, accountId, conversationId]);
 
   function removeFile(id: string) {
     updateDraft((d) => ({ pendingFiles: d.pendingFiles.filter((file) => file.id !== id) }));

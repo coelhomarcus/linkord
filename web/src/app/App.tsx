@@ -44,6 +44,8 @@ import type { ProfileTab } from '@/features/profile/ProfileSidebar';
 import { FriendsProvider } from '@/features/friends/FriendsContext';
 import { FriendsPage } from '@/features/friends/FriendsPage';
 import { NotificationsPage } from '@/features/notifications/NotificationsPage';
+import { SharePage } from '@/features/share/SharePage';
+import { sweepExpiredShares } from '@/features/share/sharedPayload';
 import { NotificationStateProvider } from '@/features/notifications/NotificationStateProvider';
 import { AppBadgeSync } from '@/features/notifications/AppBadgeSync';
 import { ProfilePage } from '@/features/profile/ProfilePage';
@@ -366,6 +368,7 @@ function Shell() {
             <Route path="/app/calls/:conversationId" element={dmStageId ? <Navigate to={ROUTES.direct(dmStageId)} replace /> : <Navigate to={ROUTES.home} replace />} />
             <Route path="/invite/:code" element={<InvitePage />} />
             <Route path={ROUTES.notifications} element={<NotificationsPage />} />
+            <Route path={ROUTES.share} element={<SharePage />} />
             <Route path={ROUTES.profile} element={<ProfilePage onOpenProfile={openProfile} />} />
             <Route path={ROUTES.requests} element={<RequestsRedirect />} />
             <Route path="/app/conversations/:conversationId" element={<LegacyConversationRedirect />} />
@@ -458,6 +461,7 @@ function AppProviders() {
       clearViewportVars(root);
     };
   }, []);
+  useEffect(() => { void sweepExpiredShares(); }, []);
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return;
     const onPushNavigation = (event: MessageEvent) => {
