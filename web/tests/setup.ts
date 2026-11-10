@@ -57,3 +57,8 @@ if (typeof window !== 'undefined' && typeof window.matchMedia === 'undefined') {
     dispatchEvent: () => false,
   }) as unknown as MediaQueryList;
 }
+if (typeof Range !== 'undefined' && !Range.prototype.getBoundingClientRect) {
+  // jsdom has no layout; the message field (Lexical) measures the caret to keep it in view
+  Range.prototype.getBoundingClientRect = () => new DOMRect();
+  Range.prototype.getClientRects = () => ({ length: 0, item: () => null, [Symbol.iterator]: [][Symbol.iterator] }) as unknown as DOMRectList;
+}

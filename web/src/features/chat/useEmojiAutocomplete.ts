@@ -1,5 +1,4 @@
 import { useCallback, useId, useMemo, useState } from 'react';
-import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 
 import { useEmojiData } from '@/features/emoji/emojiData';
 import { suggestShortcodes, withSkinTone } from '@/features/emoji/emojiSearch';
@@ -54,10 +53,10 @@ export function useEmojiAutocomplete({ accountId, serverId, serverName }: EmojiA
 
   const close = useCallback(() => setQuery(null), []);
 
-  /** A ":joy:" typed in full (the closing ":" being what was just typed)
-   * turns into the emoji. Pastes and drops are left as they are. */
-  function convertTyped(input: Event, next: string, cursor: number): TextEdit | null {
-    const typed = input instanceof InputEvent && input.inputType === 'insertText' ? input.data : null;
+  /** A ":joy:" typed in full (the closing ":" being `typed`, what was just
+   * typed at the caret) turns into the emoji. Pastes and drops, which the
+   * field reports with no `typed`, are left as they are. */
+  function convertTyped(typed: string | null, next: string, cursor: number): TextEdit | null {
     if (!data || !typed?.endsWith(':') || next[cursor - 1] !== ':') return null;
     return completeClosedShortcode(next, cursor, (name) => {
       const entry = data.byShortcode.get(name);
@@ -74,8 +73,8 @@ export function useEmojiAutocomplete({ accountId, serverId, serverName }: EmojiA
   }
 
   /** True when the key belonged to the list (the caller then stops there). */
-  function handleKeyDown(event: ReactKeyboardEvent, text: string, apply: (edit: TextEdit) => void): boolean {
-    if (!open || event.nativeEvent.isComposing) return false;
+  function handleKeyDown(event: KeyboardEvent, text: string, apply: (edit: TextEdit) => void): boolean {
+    if (!open || event.isComposing) return false;
     if (event.key === 'ArrowDown') { event.preventDefault(); setActiveIndex((active + 1) % items.length); return true; }
     if (event.key === 'ArrowUp') { event.preventDefault(); setActiveIndex((active - 1 + items.length) % items.length); return true; }
     if ((event.key === 'Enter' && !event.shiftKey) || event.key === 'Tab') {

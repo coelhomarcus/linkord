@@ -51,7 +51,7 @@ test('a sticker goes into a DM with someone outside its server, who sees it and 
   await a.composer().fill('rascunho');
   await a.page.getByRole('button', { name: 'Enviar figurinha' }).click();
   await a.page.getByRole('gridcell', { name: 'cores' }).first().click();
-  await expect(a.composer()).toHaveValue('rascunho');
+  await expect(a.composer()).toHaveText('rascunho');
   await expect(a.page.locator('[data-message-id]').getByRole('img', { name: 'Três cores' })).toBeVisible();
 
   await b.openDm(dm);

@@ -1,8 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { ArrowBendUpLeftIcon, CopyIcon, DotsThreeIcon, FlagIcon, PencilSimpleIcon, PhoneIcon, SmileyIcon, TrashIcon, UsersIcon } from '@phosphor-icons/react';
 import { GroupAvatar } from '@/features/conversations/GroupAvatar';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { Avatar } from '@/shared/Avatar';
 import { MessageMedia } from './MessageMedia';
@@ -10,6 +9,7 @@ import { InviteCard } from '@/features/chat/InviteCard';
 import { CallInviteCard } from '@/features/chat/CallInviteCard';
 import { ChatMessageText } from '@/features/chat/ChatMessageText';
 import { stickerLabel } from './messagePreview';
+import { MessageField } from './messageField/MessageField';
 import { StickerMessage } from '@/features/stickers/StickerMessage';
 import { RichEmbedCard } from './RichEmbedCard';
 import { InviteLinkCard } from '@/features/servers/InviteLinkCard';
@@ -17,7 +17,6 @@ import { inviteCodesInText } from '@/features/servers/inviteCode';
 import { Button } from '@/shared/ui/primitives/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/primitives/dropdown-menu';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/primitives/popover';
-import { Textarea } from '@/shared/ui/primitives/textarea';
 import { ReportDialog } from '@/features/reports/ReportDialog';
 import { ReactionEmojiPicker } from '@/features/chat/ReactionEmojiPicker';
 import { formatTime } from '@/shared/lib/formatChatTime';
@@ -183,10 +182,16 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
   const reactions = withPendingReactions(message.reactions, message.msgId, pendingReactions, state.me.userId);
   const hasReactions = Object.values(reactions).some((ids) => ids && ids.length > 0);
 
+  // the editor shows server emojis as :name:; each keeps pointing at the
+  // emoji it was, even when another of the account's has the same name
+  const editByName = useMemo(() => emojisByName(myEmojis.servers, conversation?.serverId), [myEmojis.servers, conversation?.serverId]);
+  const editKeep = useMemo(() => tokensByName(message.text), [message.text]);
+  const resolveEditEmoji = useCallback((name: string, nth: number | null) => (
+    (!nth && editKeep.get(name)) || editByName.get(name)?.[nth ? nth - 1 : 0] || null
+  ), [editByName, editKeep]);
+
   async function saveEdit() {
-    // the editor shows server emojis as :name:; each keeps pointing at the
-    // emoji it was, even when another of the account's has the same name
-    const trimmed = encodeCustomEmojis(editText, emojisByName(myEmojis.servers, conversation?.serverId), tokensByName(message.text)).trim();
+    const trimmed = encodeCustomEmojis(editText, editByName, editKeep).trim();
     if (editSaving) return;
     if (!trimmed || trimmed === message.text) { setEditingMsgId(null); return; }
     setEditSaving(true);
@@ -212,8 +217,8 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
     navigator.clipboard.writeText(customEmojisAsText(message.text)).catch(() => {});
   }
 
-  function handleEditKeyDown(event: ReactKeyboardEvent<HTMLTextAreaElement>) {
-    if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
+  function handleEditKeyDown(event: KeyboardEvent) {
+    if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
       event.preventDefault();
       void saveEdit();
     }
@@ -316,13 +321,14 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
 
           {isEditing ? (
             <div className="flex flex-col gap-1.5 py-0.5">
-              <Textarea
+              <MessageField
                 value={editText}
-                onChange={(event) => setEditText(event.target.value)}
+                onChange={setEditText}
                 onKeyDown={handleEditKeyDown}
+                resolveCustomEmoji={resolveEditEmoji}
+                aria-label={t('edit.field')}
                 autoFocus
-                rows={1}
-                className="min-h-9 resize-none border-border-strong bg-fill-inset text-body"
+                className="max-h-60 min-h-9 overflow-y-auto rounded-lg border border-border-strong bg-fill-inset px-3 py-1.5 text-body focus:border-border-accent"
               />
               {editError && <p role="alert" className="text-caption text-red-text">{editError}</p>}
               <p className="text-caption text-text-muted">

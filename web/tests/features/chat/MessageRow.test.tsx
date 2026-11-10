@@ -5,6 +5,7 @@ import { initialRoomState } from '@/state/roomReducer';
 import { PERMISSIONS } from '@/features/servers/permissionBits';
 import { MemoryRouter } from 'react-router';
 import { renderWithRoom } from '@tests/fixtures/roomContextFixture';
+import { fieldValue, setFieldText, typeInField } from '@tests/fixtures/messageFieldFixture';
 import { MessageRow } from '@/features/chat/MessageRow';
 import type { ChatMessage, PublicUser, RoleSummary, ServerSummary } from '@/shared/types/protocol';
 import type { OutboxEntry } from '@/features/chat/useMessageOutbox';
@@ -443,25 +444,23 @@ describe('MessageRow — edit and delete with confirmation', () => {
   );
 
   it('edit refused: the editor stays open with the text and the reason', async () => {
-    const user = userEvent.setup();
     const setEditingMsgId = vi.fn();
     const editChatMessage = vi.fn(async () => { throw new Error('Vocês precisam ser amigos pra conversar por aqui.'); });
     renderMine({ editChatMessage, setEditingMsgId });
-    const editor = screen.getByRole('textbox');
-    await user.clear(editor);
-    await user.type(editor, 'texto novo{Enter}');
+    const editor = screen.getByRole('textbox', { name: 'Editar mensagem' });
+    await setFieldText(editor, '');
+    await typeInField(editor, 'texto novo{Enter}');
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Vocês precisam ser amigos');
-    expect(editor).toHaveValue('texto novo');
+    expect(fieldValue(editor)).toBe('texto novo');
     expect(setEditingMsgId).not.toHaveBeenCalledWith(null);
   });
 
   it('confirmed edit closes the editor', async () => {
-    const user = userEvent.setup();
     const setEditingMsgId = vi.fn();
     const editChatMessage = vi.fn(async () => {});
     renderMine({ editChatMessage, setEditingMsgId });
-    await user.type(screen.getByRole('textbox'), ' editado{Enter}');
+    await typeInField(screen.getByRole('textbox', { name: 'Editar mensagem' }), ' editado{Enter}');
     expect(editChatMessage).toHaveBeenCalledWith(mine.msgId, 'texto antigo editado');
     expect(setEditingMsgId).toHaveBeenCalledWith(null);
   });

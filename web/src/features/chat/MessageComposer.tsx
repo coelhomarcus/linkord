@@ -1,14 +1,13 @@
 import { useTranslation } from 'react-i18next';
 import { ArrowBendUpLeftIcon, ArrowsInSimpleIcon, ArrowUpIcon, GifIcon, ImageSquareIcon, PaperclipIcon, PlusCircleIcon, SmileyIcon, StickerIcon } from '@phosphor-icons/react';
 import { forwardRef, useCallback, useEffect, useId, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import type { ChangeEvent, ClipboardEvent, KeyboardEvent as ReactKeyboardEvent, SyntheticEvent } from 'react';
+import type { ChangeEvent, KeyboardEvent as ReactKeyboardEvent, RefObject } from 'react';
 
 import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { Button } from '@/shared/ui/primitives/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/primitives/popover';
 import { Sheet } from '@/shared/ui/motion/sheet';
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/shared/ui/primitives/dropdown-menu';
-import { Textarea } from '@/shared/ui/primitives/textarea';
 import { Avatar } from '@/shared/Avatar';
 import { ComposerAttachmentTray } from './ComposerAttachmentTray';
 import { useKeepPopoverWarm } from '@/shared/hooks/useKeepPopoverWarm';
@@ -36,6 +35,7 @@ import { useEmojiAutocomplete } from './useEmojiAutocomplete';
 import { customEmojisAsText, encodeCustomEmojis } from '@/features/emoji/customEmojiText';
 import type { TextEdit } from './emojiAutocomplete';
 import { EmojiText } from '@/features/emoji/Emoji';
+import { MessageField, type MessageFieldHandle } from './messageField/MessageField';
 
 // How often notifyTyping actually emits typing:true while the user keeps
 // typing (leading-edge: fires right away after being idle, then throttles),
@@ -109,7 +109,11 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const counterId = useId();
-  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const fieldRef = useRef<MessageFieldHandle | null>(null);
+  // the attachment tray gives focus back to the field's own element
+  const fieldElementRef = useMemo<RefObject<HTMLElement | null>>(() => ({ get current() { return fieldRef.current?.element ?? null; } }), []);
+  const { byName } = emojiSuggestions;
+  const resolveCustomEmoji = useCallback((name: string, nth: number | null) => byName.get(name)?.[nth ? nth - 1 : 0] ?? null, [byName]);
   // an upload can finish after the user moved to another conversation; the
   // reply target is global, so it's only cleared if they're still here
   const conversationIdRef = useRef(conversationId);
@@ -161,7 +165,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
   const voiceBusy = voice.active || !!voiceTake;
   const wasVoiceBusyRef = useRef(voiceBusy);
   useEffect(() => {
-    if (wasVoiceBusyRef.current && !voiceBusy) textareaRef.current?.focus();
+    if (wasVoiceBusyRef.current && !voiceBusy) fieldRef.current?.focus();
     wasVoiceBusyRef.current = voiceBusy;
   }, [voiceBusy]);
 
@@ -243,7 +247,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
   }, [allUsers, mentionQuery, directMemberIds, serverMembersKey, serverMembers]);
 
   // re-derives the active "@query" from wherever the cursor is now — called
-  // after every edit (the Textarea's onChange) and every cursor move that
+  // after every edit (the field's onChange) and every cursor move that
   // ISN'T an edit (onSelect: arrow keys, click), since either can start,
   // change, or leave a mention.
   function syncMentionQuery(value: string, cursor: number) {
@@ -259,8 +263,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
     const caret = pendingCaretRef.current;
     if (caret === null) return;
     pendingCaretRef.current = null;
-    textareaRef.current?.focus();
-    textareaRef.current?.setSelectionRange(caret, caret);
+    fieldRef.current?.setSelectionRange(caret, caret);
   }, [text]);
 
   function applyEdit(edit: TextEdit) {
@@ -269,15 +272,18 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
     syncMentionQuery(edit.text, edit.caret);
   }
 
-  function handleTextareaSelect(event: SyntheticEvent<HTMLTextAreaElement>) {
-    const el = event.currentTarget;
-    syncMentionQuery(el.value, el.selectionStart ?? 0);
+  function handleFieldChange(value: string, cursor: number, typed: string | null) {
+    if (value.trim()) notifyTyping(); else stopTyping();
+    const converted = emojiSuggestions.convertTyped(typed, value, cursor);
+    if (converted) { applyEdit(converted); return; }
+    setText(value);
+    syncMentionQuery(value, cursor);
   }
 
   // replaces the "@query" itself (not the whole field) with "@username " —
   // mirrors insertEmoji's cursor handling below.
   function selectMention(user: PublicUser) {
-    const el = textareaRef.current;
+    const el = fieldRef.current;
     if (!mentionQuery) return;
     const before = text.slice(0, mentionQuery.start);
     const after = text.slice(mentionQuery.start + 1 + mentionQuery.query.length);
@@ -365,7 +371,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
     sendChatMessage(conversationId, gif.full.url, replyingTo?.msgId);
     setReplyingTo(null);
     reportGifShared(gifConfig, gif.slug, query);
-    textareaRef.current?.focus();
+    fieldRef.current?.focus();
   }
 
   // same as a GIF: its own message right away, the field left as it is
@@ -375,10 +381,10 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
     setMobileExpressions(false);
     sendStickerMessage(conversationId, { id: sticker.id, name: sticker.name, description: sticker.description, animated: sticker.animated }, replyingTo?.msgId);
     setReplyingTo(null);
-    textareaRef.current?.focus();
+    fieldRef.current?.focus();
   }
 
-  function handleKeyDown(event: ReactKeyboardEvent<HTMLTextAreaElement>) {
+  function handleKeyDown(event: KeyboardEvent) {
     if (emojiSuggestions.handleKeyDown(event, text, applyEdit)) return;
     // the mention dropdown intercepts navigation/confirm keys FIRST — while
     // it's open, Enter picks a mention instead of sending the message, and
@@ -390,7 +396,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
       if (event.key === 'Escape') { event.preventDefault(); setMentionQuery(null); return; }
     }
     if (isVoiceShortcut(event)) { event.preventDefault(); if (canAttach) voice.toggleFromShortcut(); return; }
-    if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing) return;
+    if (event.key !== 'Enter' || event.shiftKey || event.isComposing) return;
     event.preventDefault();
     void submit();
   }
@@ -403,7 +409,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
 
   // a server emoji goes in as its :name:, like one typed; it is sent as its token
   function insertEmoji({ text: emoji }: EmojiPick) {
-    const el = textareaRef.current;
+    const el = fieldRef.current;
     const start = el?.selectionStart ?? text.length;
     const end = el?.selectionEnd ?? text.length;
     setText(text.slice(0, start) + emoji + text.slice(end));
@@ -420,8 +426,8 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
     });
   }
 
-  function handlePaste(event: ClipboardEvent<HTMLTextAreaElement>) {
-    if (!canAttach) return;
+  function handlePaste(event: ClipboardEvent) {
+    if (!canAttach || !event.clipboardData) return;
     const files = Array.from(event.clipboardData.items)
       .filter((item) => item.type.startsWith('image/'))
       .map((item) => item.getAsFile())
@@ -495,7 +501,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
           </div>
         )}
 
-        <ComposerAttachmentTray files={pendingFiles} onRemove={removeFile} fallbackFocusRef={textareaRef} />
+        <ComposerAttachmentTray files={pendingFiles} onRemove={removeFile} fallbackFocusRef={fieldElementRef} />
 
         {attachError && <p role="alert" className="mx-2 mt-2 rounded-md border border-red/20 bg-red/10 px-3 py-2 text-label text-red-text">{attachError}</p>}
         {voice.noticeText && <VoiceNoticeBanner text={voice.noticeText} onDismiss={voice.dismissNotice} />}
@@ -544,33 +550,26 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
-            {/* A textarea placeholder can't be ellipsized (text-overflow ignores it) and
-                field-sizing grows the field with a wrapped one, so the real placeholder
-                stays for assistive tech but is invisible, and this overlay draws it. */}
+            {/* The field draws no placeholder of its own (it only carries the
+                attribute, for assistive tech): this overlay does, cut with an ellipsis. */}
             <div className="relative flex min-w-0 flex-1">
-            <Textarea
-              ref={textareaRef}
+            <MessageField
+              // a conversation of its own: undo never brings back another one's draft
+              key={conversationId}
+              ref={fieldRef}
               value={text}
-              onChange={(event) => {
-                const value = event.target.value;
-                const cursor = event.target.selectionStart ?? value.length;
-                if (value.trim()) notifyTyping(); else stopTyping();
-                const converted = emojiSuggestions.convertTyped(event.nativeEvent, value, cursor);
-                if (converted) { applyEdit(converted); return; }
-                setText(value);
-                syncMentionQuery(value, cursor);
-              }}
-              onSelect={handleTextareaSelect}
+              onChange={handleFieldChange}
+              onSelect={syncMentionQuery}
               onKeyDown={handleKeyDown}
               onPaste={handlePaste}
+              resolveCustomEmoji={resolveCustomEmoji}
               disabled={disabled}
-              rows={1}
               aria-label={t('composer.message')}
               {...emojiSuggestions.fieldProps}
               aria-invalid={tooLong || undefined}
               aria-describedby={showCounter ? counterId : undefined}
               placeholder={placeholder}
-              className="min-h-9 max-h-40 flex-1 resize-none rounded-none border-none bg-transparent px-1 py-1.5 text-body shadow-none placeholder:whitespace-nowrap placeholder:text-transparent focus-visible:ring-0"
+              className="max-h-40 min-h-9 min-w-0 flex-1 overflow-y-auto px-1 py-1.5 text-body"
             />
             {!text && (
               <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 truncate px-1 py-1.5 text-body text-text-faint">

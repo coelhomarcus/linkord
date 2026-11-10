@@ -22,6 +22,7 @@
     "attachmentUploading": "Uploading file… {{percent}}%"
   },
   "edit": {
+    "field": "Edit message",
     "saving": "Saving…",
     "escapeTo": "escape to",
     "cancel": "cancel",
