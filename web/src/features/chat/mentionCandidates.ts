@@ -27,7 +27,7 @@ export function roleAndGroupCandidates(query: string, roles: readonly RoleSummar
   return [...matchingRoles, ...groups];
 }
 
-export const roleMentionToken = (roleId: string) => `<@&${roleId}>`;
+const roleMentionToken = (roleId: string) => `<@&${roleId}>`;
 
 /** What picking an entry puts in place of the "@query", followed by a space. */
 export function mentionInsertion(candidate: MentionCandidate): string {
