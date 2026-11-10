@@ -194,7 +194,7 @@ The `upgrade` project adapts to what the base version can do and says so in the 
 | `features/dm` | Talking in a DM, the unread count until it is opened, no DM without friendship. |
 | `features/chat` | Messages shown once on both sides, typing indicator, reply, edit, delete, reactions, search, image attachment. |
 | `features/servers` | Creating from the rail, invite link, a member with only `@everyone` inviting without any server settings to open, a voice channel without `SPEAK` keeping the member's microphone off, new channels, a channel hidden from `@everyone`, a read-only channel, kick, ban and unban, deleting the server; an animated GIF picked as the server icon, cropped on the server with all its frames. |
-| `features/voice` | Seeing and hearing each other, mute and camera seen by the other side, leaving, a moderator moving and disconnecting a member. |
+| `features/voice` | Seeing and hearing each other, mute and camera seen by the other side, a screen share seen by the other side until it stops, leaving, a moderator moving and disconnecting a member. |
 | `features/dm-call` | Decline, cancel, an answered call with audio both ways and its line in the chat, a video call. |
 | `features/webhooks` | Text and cards through the ingress (token in the URL and in the header), invalid payloads, rotating and deleting the URL, permission; a webhook picture picked in the channel settings and cropped on the server. |
 | `features/soundboard` | A sound uploaded to the server reaches everyone in the call; a member adds one from the call's sound picker once `@everyone` has `CREATE_EXPRESSIONS`, and is not offered it before; a sound from another server of the player's plays in the call and someone outside that server fetches it (the play's token). |

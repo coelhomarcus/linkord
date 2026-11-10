@@ -1,13 +1,14 @@
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import type { Dispatch } from 'react';
-import { ConnectionState, Track } from 'livekit-client';
-import type { Room } from 'livekit-client';
+import { ConnectionState, LocalAudioTrack, LocalVideoTrack, Track } from 'livekit-client';
+import type { LocalTrack, Room } from 'livekit-client';
 import type { RoomAction } from '../../state/roomReducer';
 import { loadShareQuality } from '../settings/useShareQualityPreference';
 import { SHARE_QUALITY_PRESETS } from './shareQualityPresets';
 import { screenSharePublishOptions } from './videoPublish';
 import { i18n } from '@/shared/i18n/init';
 import { mayPublish } from './publishRights';
+import { audioCarriesTheCall, displayCaptureOptions } from './displayCapture';
 
 interface ScreenShareApi {
   startSharing: () => Promise<void>;
@@ -19,23 +20,61 @@ interface ScreenShareApi {
   resumeSharePreview: () => Promise<void>;
 }
 
-// Capturing the whole display also captures what this tab plays — the other
-// participants' voices — and publishing it sends them their own audio back.
-// `restrictOwnAudio` is the only way to filter it out, and browsers that
-// don't implement it silently ignore the constraint, so the resulting track
-// has to be checked rather than trusted.
-async function dropAudioThatLoopsBack(room: Room): Promise<boolean> {
-  const { localParticipant } = room;
-  const surface = localParticipant.getTrackPublication(Track.Source.ScreenShare)?.track?.mediaStreamTrack.getSettings().displaySurface;
-  const audioTrack = localParticipant.getTrackPublication(Track.Source.ScreenShareAudio)?.track;
-  if (surface !== 'monitor' || !audioTrack) return false;
-  const { restrictOwnAudio } = audioTrack.mediaStreamTrack.getSettings() as { restrictOwnAudio?: boolean };
-  if (restrictOwnAudio === true) return false;
-  await localParticipant.unpublishTrack(audioTrack, true);
-  return true;
+async function captureAndPublish(room: Room, dispatch: Dispatch<RoomAction>): Promise<void> {
+  const qualityId = loadShareQuality();
+  const reportFailure = (err: unknown) => {
+    dispatch({ type: 'SET_SHARE_ERROR', message: i18n.t('calls:errors.screenCapture', { error: (err as Error)?.message }) });
+  };
+
+  let stream: MediaStream;
+  try {
+    stream = await navigator.mediaDevices.getDisplayMedia(displayCaptureOptions(qualityId));
+  } catch (err) {
+    const name = (err as DOMException)?.name;
+    if (name !== 'NotAllowedError' && name !== 'AbortError') reportFailure(err);
+    return;
+  }
+
+  const [video] = stream.getVideoTracks();
+  if (!video) {
+    stream.getTracks().forEach((t) => t.stop());
+    reportFailure(new Error('no video track'));
+    return;
+  }
+  const captured: MediaStreamTrack | undefined = stream.getAudioTracks()[0];
+  // Checked before publishing so the call never goes out, not even for the
+  // moment it would take to unpublish it.
+  const droppedAudio = captured !== undefined && audioCarriesTheCall(video, captured);
+  if (droppedAudio) captured.stop();
+  const audio = droppedAudio ? undefined : captured;
+
+  const screenVideo = new LocalVideoTrack(video, undefined, false);
+  screenVideo.source = Track.Source.ScreenShare;
+  video.contentHint = SHARE_QUALITY_PRESETS[qualityId].contentHint;
+  const tracks: LocalTrack[] = [screenVideo];
+  if (audio) {
+    const screenAudio = new LocalAudioTrack(audio, undefined, false);
+    screenAudio.source = Track.Source.ScreenShareAudio;
+    tracks.push(screenAudio);
+  }
+
+  const publishOptions = screenSharePublishOptions(qualityId);
+  try {
+    await Promise.all(tracks.map((track) => room.localParticipant.publishTrack(track, publishOptions)));
+  } catch (err) {
+    await Promise.allSettled(tracks.map((track) => room.localParticipant.unpublishTrack(track, true)));
+    tracks.forEach((track) => track.stop());
+    reportFailure(err);
+    return;
+  }
+
+  dispatch({ type: 'SET_SHARE_ERROR', message: droppedAudio ? i18n.t('calls:errors.screenLoopback') : null });
+  dispatch({ type: 'SET_LOCAL_SHARING', sharing: true });
 }
 
 export function useScreenShare(room: Room, dispatch: Dispatch<RoomAction>): ScreenShareApi {
+  const capturing = useRef(false);
+
   const startSharing = useCallback(async () => {
     if (room.state !== ConnectionState.Connected) {
       dispatch({ type: 'SET_SHARE_ERROR', message: i18n.t('calls:errors.videoConnecting') });
@@ -53,41 +92,13 @@ export function useScreenShare(room: Room, dispatch: Dispatch<RoomAction>): Scre
       dispatch({ type: 'SET_SHARE_ERROR', message: i18n.t('calls:errors.httpsRequired') });
       return;
     }
-
-    const audioConstraints = {
-      echoCancellation: false,
-      noiseSuppression: false,
-      autoGainControl: false,
-      restrictOwnAudio: true,
-    };
-
-    const qualityId = loadShareQuality();
-    const quality = SHARE_QUALITY_PRESETS[qualityId];
-
+    if (capturing.current) return;
+    capturing.current = true;
     try {
-      await room.localParticipant.setScreenShareEnabled(
-        true,
-        {
-          audio: audioConstraints,
-          resolution: quality.resolution,
-          contentHint: quality.contentHint,
-          selfBrowserSurface: 'exclude',
-        },
-        screenSharePublishOptions(qualityId),
-      );
-    } catch (err) {
-      const name = (err as DOMException)?.name;
-      const aborted = name === 'NotAllowedError' || name === 'AbortError';
-      if (!aborted) dispatch({ type: 'SET_SHARE_ERROR', message: i18n.t('calls:errors.screenCapture', { error: (err as Error)?.message }) });
-      return;
+      await captureAndPublish(room, dispatch);
+    } finally {
+      capturing.current = false;
     }
-
-    if (await dropAudioThatLoopsBack(room)) {
-      dispatch({ type: 'SET_SHARE_ERROR', message: i18n.t('calls:errors.screenLoopback') });
-    } else {
-      dispatch({ type: 'SET_SHARE_ERROR', message: null });
-    }
-    dispatch({ type: 'SET_LOCAL_SHARING', sharing: true });
   }, [dispatch, room]);
 
   const stopSharing = useCallback(async (): Promise<boolean> => {
