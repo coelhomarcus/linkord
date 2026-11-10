@@ -7,10 +7,12 @@ import { after, before, describe, it } from 'node:test';
 import Fastify, { type FastifyInstance } from 'fastify';
 import fastifyStatic from '@fastify/static';
 import {
-  buildContentSecurityPolicy, inlineScriptHashes, livekitSources, readBuildScriptHashes, securityHeaders, type PolicyInput,
+  buildContentSecurityPolicy, inlineScriptHashes, inlineStyleHashes, livekitSources, readBuildScriptHashes,
+  readBuildStyleHashes, securityHeaders, themeBootstrapStyleHashes, type PolicyInput,
 } from '../../src/http/securityHeaders.js';
 
-const base: PolicyInput = { appUrl: 'https://chat.example.com', livekitUrl: '', klipyEnabled: false, scriptHashes: [] };
+const base: PolicyInput = { appUrl: 'https://chat.example.com', livekitUrl: '', klipyEnabled: false, scriptHashes: [], styleHashes: [] };
+const ROOT = path.resolve(import.meta.dirname, '../../..');
 
 /** directive name -> its sources */
 function directives(policy: string): Map<string, string[]> {
@@ -28,6 +30,16 @@ describe('buildContentSecurityPolicy', () => {
   it('adds the inline script hashes of the build', () => {
     const scriptSrc = directives(buildContentSecurityPolicy({ ...base, scriptHashes: ['sha256-abc', 'sha256-def'] })).get('script-src');
     assert.deepEqual(scriptSrc, ["'self'", "'sha256-abc'", "'sha256-def'"]);
+  });
+
+  it('allows inline style attributes, and style elements only by hash', () => {
+    const policy = buildContentSecurityPolicy({ ...base, styleHashes: ['sha256-abc'] });
+    const parsed = directives(policy);
+    assert.deepEqual(parsed.get('style-src'), ["'self'"]);
+    assert.deepEqual(parsed.get('style-src-elem'), ["'self'", "'sha256-abc'"]);
+    assert.deepEqual(parsed.get('style-src-attr'), ["'unsafe-inline'"]);
+    assert.equal(policy.match(/unsafe-inline/g)?.length, 1);
+    assert.equal(parsed.get('style-src-elem')!.includes("'unsafe-inline'"), false);
   });
 
   it('refuses to be framed and locks down base, forms and plugins', () => {
@@ -88,6 +100,44 @@ describe('livekitSources', () => {
   });
 });
 
+describe('inline style hashes', () => {
+  it('hashes the exact text of each inline style', () => {
+    const body = '\n      html, body { background: #000; }\n    ';
+    const html = `<head><style>${body}</style><style></style><link rel="stylesheet" href="/assets/app.css"></head>`;
+    assert.deepEqual(inlineStyleHashes(html), [sha256(body)]);
+  });
+
+  it('hashes each theme background the bootstrap can write, and nothing else', () => {
+    const html = "var shells = { black: '#000000', old: '#0d0d0f', graphite: '#202225' };\nvar style = document.createElement('style');";
+    assert.deepEqual(themeBootstrapStyleHashes(html), [
+      sha256('html,body{background:#000000}'),
+      sha256('html,body{background:#0d0d0f}'),
+      sha256('html,body{background:#202225}'),
+    ]);
+    assert.deepEqual(themeBootstrapStyleHashes('<style>html{}</style>'), []);
+  });
+
+  it('reads the pages and the build manifest that ship with the app', () => {
+    const index = fs.readFileSync(path.join(ROOT, 'web/index.html'), 'utf8');
+    const offline = fs.readFileSync(path.join(ROOT, 'web/public/offline.html'), 'utf8');
+    assert.match(index, /'html,body\{background:' \+ bg \+ '}'/);
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'linkord-styles-'));
+    fs.writeFileSync(path.join(dir, 'index.html'), index);
+    fs.writeFileSync(path.join(dir, 'offline.html'), offline);
+    fs.writeFileSync(path.join(dir, 'csp-style-sources.json'), JSON.stringify({ sources: ['h1{color:blue}', '', 4] }));
+    try {
+      const hashes = readBuildStyleHashes(dir);
+      for (const color of ['#000000', '#0d0d0f', '#202225']) assert.ok(hashes.includes(sha256(`html,body{background:${color}}`)));
+      for (const hash of inlineStyleHashes(offline)) assert.ok(hashes.includes(hash));
+      assert.ok(hashes.includes(sha256('h1{color:blue}')));
+      assert.equal(hashes.includes(sha256('')), false);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+    assert.deepEqual(readBuildStyleHashes(path.join(dir, 'missing')), []);
+  });
+});
+
 describe('inlineScriptHashes', () => {
   it('hashes the exact text of each inline script and skips external ones', () => {
     const first = "\n      (function () { document.title = 'x'; }());\n    ";
@@ -104,7 +154,8 @@ describe('security headers on responses', () => {
 
   before(async () => {
     dir = fs.mkdtempSync(path.join(os.tmpdir(), 'linkord-csp-'));
-    fs.writeFileSync(path.join(dir, 'index.html'), `<!doctype html><html><head><script>${inline}</script></head><body></body></html>`);
+    fs.writeFileSync(path.join(dir, 'index.html'), `<!doctype html><html><head><script>${inline}</script><style>body{color:red}</style></head><body></body></html>`);
+    fs.writeFileSync(path.join(dir, 'csp-style-sources.json'), '{not json');
     app = Fastify();
     app.addHook('onRequest', securityHeaders(dir));
     app.get('/api/thing', async () => ({ ok: true }));
@@ -124,6 +175,9 @@ describe('security headers on responses', () => {
     const policy = String(response.headers['content-security-policy']);
     assert.match(policy, /frame-ancestors 'none'/);
     assert.ok(policy.includes(`'${sha256(inline)}'`));
+    assert.ok(policy.includes(`'${sha256('body{color:red}')}'`));
+    assert.match(policy, /style-src-elem 'self'/);
+    assert.equal(policy.includes('style-src-attr'), true);
     assert.equal(response.headers['x-frame-options'], 'DENY');
   });
 
