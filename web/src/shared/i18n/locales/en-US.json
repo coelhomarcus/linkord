@@ -78,7 +78,9 @@
     "removeEmbedDescription": "The link stays in the message; only its preview is removed for everyone.",
     "removeAttachmentDescription": "\"{{name}}\" is removed from the message for everyone and deleted. The rest of the message remains.",
     "remove": "Remove",
-    "messageFrom": "message from {{name}}"
+    "messageFrom": "message from {{name}}",
+    "markAsRead": "Mark as read",
+    "markServerAsRead": "Mark server as read"
   },
   "room": {
     "full": "The room is full. Try again later.",

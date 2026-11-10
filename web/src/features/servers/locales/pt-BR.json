@@ -48,6 +48,7 @@
   },
   "menu": {
     "invite": "Convidar pessoas",
+    "markAsRead": "Marcar como lido",
     "settings": "Configurações do servidor",
     "createChannel": "Criar canal",
     "createCategory": "Criar categoria",

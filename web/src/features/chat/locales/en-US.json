@@ -149,6 +149,7 @@
     "loading": "Loading messages…",
     "log": "Messages",
     "newMessages": "New Messages",
+    "jumpToFirstUnread": "Jump to first unread",
     "emptyTitle": "No messages yet",
     "emptyDirect": "This is the beginning of your conversation with {{name}}. Why not say hi?",
     "emptyChannel": "This is the beginning of #{{name}}. Send the first message."

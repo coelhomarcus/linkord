@@ -54,6 +54,16 @@ describe('buildTimelineItems', () => {
     expect(items.map((item) => item.type)).toEqual(['date', 'message', 'unread', 'message']);
   });
 
+  it('leaves the divider out when the first unread message is in an older page not loaded yet', () => {
+    const items = buildTimelineItems([msg(5, 'ana', 0), msg(6, 'bia', 1)], [], undefined, 2, true);
+    expect(items.some((item) => item.type === 'unread')).toBe(false);
+  });
+
+  it('with older pages unloaded, still draws it when the window starts on the first unread message', () => {
+    const items = buildTimelineItems([msg(2, 'ana', 0), msg(3, 'bia', 1)], [], undefined, 2, true);
+    expect(items.map((item) => item.type)).toEqual(['unread', 'message', 'message']);
+  });
+
   it('does not show the divider before the unread row arrives', () => {
     const items = buildTimelineItems([msg(1, 'ana', 0)], [], undefined, 2);
     expect(items.some((item) => item.type === 'unread')).toBe(false);

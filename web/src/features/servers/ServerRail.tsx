@@ -48,8 +48,11 @@ function Pill({ active, unread }: { active: boolean; unread: boolean }) {
 // unread count bottom-right, so the two never sit on each other.
 const CORNER = 'pointer-events-none absolute ring-4 ring-surface-rail';
 
-function RailItem({ label, active, unread, badge, badgeLabel, badgeClassName, liveCall, onClick, children, dragging = false, sortable }: {
+function RailItem({ label, active, unread, badge, badgeLabel, badgeClassName, liveCall, onClick, children, dragging = false, sortable, serverId, conversationId }: {
   label: string; active: boolean; unread: boolean; badge?: number; onClick: () => void; children: ReactNode;
+  /** what the app's context menu offers on a right-click: a server's or a DM's own items */
+  serverId?: string;
+  conversationId?: string;
   /** what the count means, for the item's accessible name; without it the count is left out of the name */
   badgeLabel?: string;
   badgeClassName?: string;
@@ -69,6 +72,8 @@ function RailItem({ label, active, unread, badge, badgeLabel, badgeClassName, li
         style={sortable?.style}
         onClick={onClick}
         onDragStart={blockNativeDrag}
+        data-server-id={serverId}
+        data-conversation-id={conversationId}
         aria-label={accessibleName}
         aria-current={active ? 'page' : undefined}
         className={cn(
@@ -185,6 +190,7 @@ export function ServerRail({ className }: { className?: string }) {
             badgeLabel={row.unread > 0 ? t('rail.unread', { count: row.unread }) : undefined}
             badgeClassName="bg-red text-white"
             liveCall={row.inCall ? t('rail.liveCall') : undefined}
+            conversationId={row.conversationId}
             onClick={() => go(ROUTES.direct(row.conversationId))}
           >
             <Avatar id={row.peerId} name={name} avatar={person?.avatar ?? ''} poster={person?.avatarPoster} avatarColor={person?.avatarColor ?? ''} size={40} />
@@ -200,6 +206,7 @@ export function ServerRail({ className }: { className?: string }) {
               <SortableServerItem
                 key={server.id}
                 id={server.id}
+                serverId={server.id}
                 suppressClick={suppressClick}
                 label={server.name}
                 active={server.id === currentServerId}

@@ -150,6 +150,7 @@
     "loading": "Carregando mensagens…",
     "log": "Mensagens",
     "newMessages": "Novas Mensagens",
+    "jumpToFirstUnread": "Pular para a primeira não lida",
     "emptyTitle": "Nenhuma mensagem ainda",
     "emptyDirect": "Este é o começo da sua conversa com {{name}}. Que tal dizer oi?",
     "emptyChannel": "Este é o começo de #{{name}}. Mande a primeira mensagem."

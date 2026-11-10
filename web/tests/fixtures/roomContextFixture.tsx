@@ -93,6 +93,8 @@ export function createFakeRoomContextValue(overrides: Partial<RoomContextValue> 
     loadingOlderByConversation: new Set(),
     unreadByConversation: new Map(),
     unreadStartByConversation: new Map(),
+    markConversationRead: noop,
+    markServerRead: noop,
     typingByConversation: new Map(),
     sendTyping: noop,
     loadOlderMessages: noop,

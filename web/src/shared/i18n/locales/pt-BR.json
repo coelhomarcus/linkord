@@ -78,7 +78,9 @@
     "removeEmbedDescription": "O link continua na mensagem, só a prévia dele some para todo mundo.",
     "removeAttachmentDescription": "\"{{name}}\" sai da mensagem para todo mundo e é apagado. O resto da mensagem continua.",
     "remove": "Remover",
-    "messageFrom": "mensagem de {{name}}"
+    "messageFrom": "mensagem de {{name}}",
+    "markAsRead": "Marcar como lida",
+    "markServerAsRead": "Marcar servidor como lido"
   },
   "room": {
     "full": "Sala cheia, tente mais tarde.",

@@ -209,3 +209,42 @@ describe('ChatSurface — typing does not shift the list', () => {
     expect(listHeight()).toBe(heightBefore);
   });
 });
+
+describe('ChatSurface — Esc marks the conversation read', () => {
+  const unreadState = {
+    state: joinedState,
+    activeConversationId: 'conv-1',
+    unreadStartByConversation: new Map([['conv-1', 2]]),
+  };
+
+  it('from inside the conversation, or with nothing focused while it is the open one', () => {
+    const markConversationRead = vi.fn();
+    renderWithRoom(<ChatSurface conversationId="conv-1" onOpenProfile={() => {}} />, { ...unreadState, markConversationRead });
+
+    fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Escape' });
+    expect(markConversationRead).toHaveBeenLastCalledWith('conv-1');
+    fireEvent.keyDown(document.body, { key: 'Escape' });
+    expect(markConversationRead).toHaveBeenCalledTimes(2);
+  });
+
+  it('leaves Esc to whatever handled it first, and does nothing with nothing to read', () => {
+    const markConversationRead = vi.fn();
+    const { unmount } = renderWithRoom(<ChatSurface conversationId="conv-1" onOpenProfile={() => {}} />, { ...unreadState, markConversationRead });
+    const handled = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+    handled.preventDefault();
+    screen.getByRole('textbox').dispatchEvent(handled);
+    expect(markConversationRead).not.toHaveBeenCalled();
+    unmount();
+
+    renderWithRoom(<ChatSurface conversationId="conv-1" onOpenProfile={() => {}} />, { state: joinedState, activeConversationId: 'conv-1', markConversationRead });
+    fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Escape' });
+    expect(markConversationRead).not.toHaveBeenCalled();
+  });
+
+  it('a surface showing another conversation ignores an Esc from outside it', () => {
+    const markConversationRead = vi.fn();
+    renderWithRoom(<ChatSurface conversationId="conv-1" onOpenProfile={() => {}} />, { ...unreadState, activeConversationId: 'conv-2', markConversationRead });
+    fireEvent.keyDown(document.body, { key: 'Escape' });
+    expect(markConversationRead).not.toHaveBeenCalled();
+  });
+});

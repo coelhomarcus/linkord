@@ -125,6 +125,11 @@ export function useChatMessages(deps: ChatMessagesDeps) {
   // messages after it are still unread. Once they were seen, the next arrival
   // starts a new one. State would lag behind two arrivals in the same tick.
   const unreadCountsRef = useRef(new Map<string, number>());
+  // The conversation whose divider was placed for the current visit. Its
+  // history can come again while it stays open (a reconnect, "back to the
+  // present"), and by then the server has it read: the line must stay where
+  // it was drawn, not vanish as the read state catches up.
+  const dividerVisitRef = useRef<string | null>(null);
   const [shouldChime] = useState(createMessageSoundThrottle);
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
   const [editingMsgId, setEditingMsgId] = useState<number | null>(null);
@@ -189,6 +194,31 @@ export function useChatMessages(deps: ChatMessagesDeps) {
       return next;
     });
   }, []);
+
+  const dropUnreadStart = useCallback((conversationIds: string[]) => {
+    setUnreadStartByConversation((prev) => {
+      if (!conversationIds.some((id) => prev.has(id))) return prev;
+      const next = new Map(prev);
+      for (const id of conversationIds) next.delete(id);
+      return next;
+    });
+  }, []);
+
+  /** "Mark as read" (the menu, Esc): everything up to the conversation's
+   * newest message, loaded here or not, and its new-messages line goes. */
+  const markConversationRead = useCallback((conversationId: string) => {
+    sendWs({ t: 'conversation-mark-all-read', conversationId });
+    clearUnread(conversationId);
+    dropUnreadStart([conversationId]);
+  }, [sendWs, clearUnread, dropUnreadStart]);
+
+  /** "Mark server as read": every channel this member sees in it. */
+  const markServerRead = useCallback((serverId: string) => {
+    sendWs({ t: 'server-mark-all-read', serverId });
+    const channelIds = serversRef.current.find((server) => server.id === serverId)?.channels.map((channel) => channel.id) ?? [];
+    for (const id of channelIds) clearUnread(id);
+    dropUnreadStart(channelIds);
+  }, [sendWs, serversRef, clearUnread, dropUnreadStart]);
 
   /** The active conversation's chat came (back) into view — from another page
    * or from the call stage — without being opened again: what piled up there
@@ -392,12 +422,16 @@ export function useChatMessages(deps: ChatMessagesDeps) {
   // the list visibly jumped away and back.
   const onConversationHistory = useCallback((m: Extract<ServerMessage, { t: 'conversation-history' }>) => {
     const conversationId = m.conversationId;
-    setUnreadStartByConversation((prev) => {
-      const next = new Map(prev);
-      if (m.firstUnreadMessageId != null) next.set(conversationId, m.firstUnreadMessageId);
-      else next.delete(conversationId);
-      return next;
-    });
+    const sameVisit = dividerVisitRef.current === conversationId;
+    if (conversationId === activeConversationIdRef.current) dividerVisitRef.current = conversationId;
+    if (!sameVisit) {
+      setUnreadStartByConversation((prev) => {
+        const next = new Map(prev);
+        if (m.firstUnreadMessageId != null) next.set(conversationId, m.firstUnreadMessageId);
+        else next.delete(conversationId);
+        return next;
+      });
+    }
     const loaded = messagesByConversationRef.current.get(conversationId);
     const atPresent = hasMoreAfterRef.current.get(conversationId) !== true;
     const update = loaded && atPresent ? withPresentPage(loaded, m.messages) : null;
@@ -413,7 +447,7 @@ export function useChatMessages(deps: ChatMessagesDeps) {
       setHasMoreByConversation((prev) => new Map(prev).set(conversationId, hasMore));
     }
     setHasMoreAfterByConversation((prev) => new Map(prev).set(conversationId, false));
-  }, [resetPages, bumpWindow, touchConversationCache]);
+  }, [resetPages, bumpWindow, touchConversationCache, activeConversationIdRef]);
 
   const onConversationHistoryAround = useCallback((m: Extract<ServerMessage, { t: 'conversation-history-around' }>) => {
     const pending = pendingJumpRef.current;
@@ -573,13 +607,8 @@ export function useChatMessages(deps: ChatMessagesDeps) {
       return next;
     });
     clearUnread(m.conversationId);
-    setUnreadStartByConversation((prev) => {
-      if (!prev.has(m.conversationId)) return prev;
-      const next = new Map(prev);
-      next.delete(m.conversationId);
-      return next;
-    });
-  }, [clearUnread]);
+    dropUnreadStart([m.conversationId]);
+  }, [clearUnread, dropUnreadStart]);
 
   /** Another of this user's own sessions/tabs opened this conversation (or
    * this same tab did, redundantly) — mirrors that read state here so the
@@ -591,7 +620,7 @@ export function useChatMessages(deps: ChatMessagesDeps) {
 
   return {
     messagesByConversation, hasMoreByConversation, hasMoreAfterByConversation, loadingOlderByConversation, unreadByConversation, unreadStartByConversation,
-    clearUnread, markActiveSeen, loadOlderMessages, pendingJumpTarget, clearPendingJumpTarget, cancelPendingJump, jumpToMessage,
+    clearUnread, markActiveSeen, markConversationRead, markServerRead, loadOlderMessages, pendingJumpTarget, clearPendingJumpTarget, cancelPendingJump, jumpToMessage,
     sendChatMessage, sendSticker, deleteChatMessage, editChatMessage, reactToChatMessage, removeChatAttachment, suppressChatEmbed,
     onWelcome, onChatSendResult: outbox.onChatSendResult, queueMessageWithFiles,
     onChatActionResult: actionRequests.onChatActionResult,

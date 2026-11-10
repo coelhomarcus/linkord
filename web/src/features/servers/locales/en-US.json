@@ -48,6 +48,7 @@
   },
   "menu": {
     "invite": "Invite People",
+    "markAsRead": "Mark as read",
     "settings": "Server Settings",
     "createChannel": "Create Channel",
     "createCategory": "Create Category",

@@ -16,14 +16,21 @@ const message = (msgId: number, over: Partial<ChatMessage> = {}): ChatMessage =>
   msgId, conversationId: 'dm', id: 'a', name: 'A', avatar: '', text: '', ts: 1, ...over,
 });
 
-function setup() {
+type Deps = Parameters<typeof useChatMessages>[0];
+function setupWith(over: Partial<Deps> = {}) {
   const ref = <T,>(current: T) => ({ current });
   return renderHook(() => useChatMessages({
     sendWs: vi.fn(), activeConversationIdRef: ref<string | null>('dm'), setActiveConversation: vi.fn(),
     conversationsRef: ref([]), allUsersRef: ref(new Map()), myUserIdRef: ref<string | null>('b'), myUsernameRef: ref<string | null>('b'), serversRef: ref([]),
     activeViewRef: ref<'chat' | 'call'>('chat'), clearTypingEntry: vi.fn(),
+    ...over,
   }));
 }
+const setup = () => setupWith();
+const history = (conversationId: string, firstUnreadMessageId: number | null) => ({
+  t: 'conversation-history' as const, conversationId, hasMore: false, firstUnreadMessageId,
+  messages: [message(1, { conversationId }), message(2, { conversationId })],
+});
 
 describe('useChatMessages — invitation-updated', () => {
   it('updates only the card with the same id, in any conversation', () => {
@@ -50,20 +57,67 @@ describe('useChatMessages — invitation-updated', () => {
 });
 
 describe('useChatMessages — unread', () => {
-  it('keeps the unread boundary after opening clears the badge, then removes it on the next open', () => {
-    const { result } = setup();
-    act(() => result.current.onConversationHistory({
-      t: 'conversation-history', conversationId: 'dm', hasMore: false,
-      firstUnreadMessageId: 2, messages: [message(1), message(2)],
-    }));
+  it('keeps the unread boundary after opening clears the badge, then removes it on the next visit', () => {
+    const active = { current: 'dm' as string | null };
+    const { result } = setupWith({ activeConversationIdRef: active });
+    act(() => result.current.onConversationHistory(history('dm', 2)));
     expect(result.current.unreadStartByConversation.get('dm')).toBe(2);
     act(() => result.current.clearUnread('dm'));
     expect(result.current.unreadStartByConversation.get('dm')).toBe(2);
-    act(() => result.current.onConversationHistory({
-      t: 'conversation-history', conversationId: 'dm', hasMore: false,
-      firstUnreadMessageId: null, messages: [message(1), message(2)],
-    }));
+
+    active.current = 'other';
+    act(() => result.current.onConversationHistory(history('other', null)));
+    active.current = 'dm';
+    act(() => result.current.onConversationHistory(history('dm', null)));
     expect(result.current.unreadStartByConversation.has('dm')).toBe(false);
+  });
+
+  it('the divider stays put while the conversation stays open, even when its history comes again already read', () => {
+    const { result } = setup();
+    act(() => result.current.onConversationHistory(history('dm', 2)));
+    // a reconnect (or "back to the present") asks again; by then the server has it read
+    act(() => result.current.onConversationHistory(history('dm', null)));
+    expect(result.current.unreadStartByConversation.get('dm')).toBe(2);
+    // and another tab reading it clears the badge, not the line
+    act(() => result.current.onConversationRead({ t: 'conversation-read', conversationId: 'dm', lastReadMessageId: 2 }));
+    expect(result.current.unreadStartByConversation.get('dm')).toBe(2);
+  });
+
+  it('"mark as read" asks the server for the newest message and drops the count and the divider here', () => {
+    const sendWs = vi.fn();
+    const { result } = setupWith({ sendWs, activeConversationIdRef: { current: 'elsewhere' } });
+    act(() => result.current.onChat({ t: 'chat', message: message(5, { conversationId: 'dm2' }) }));
+    expect(result.current.unreadByConversation.get('dm2')).toBe(1);
+    expect(result.current.unreadStartByConversation.get('dm2')).toBe(5);
+
+    act(() => result.current.markConversationRead('dm2'));
+    expect(sendWs).toHaveBeenCalledWith({ t: 'conversation-mark-all-read', conversationId: 'dm2' });
+    expect(result.current.unreadByConversation.has('dm2')).toBe(false);
+    expect(result.current.unreadStartByConversation.has('dm2')).toBe(false);
+  });
+
+  it('"mark server as read" sends one request and clears every channel of that server only', () => {
+    const sendWs = vi.fn();
+    const channel = (id: string, serverId: string) => ({ id, serverId, type: 'text' as const, name: id, topic: '', categoryId: null, position: 0, permissionsSynced: true, permissions: 0 });
+    const server = (id: string, channelIds: string[]) => ({
+      id, name: id, icon: '', ownerId: null, status: 'active' as const, createdAt: 0, memberCount: 1, position: 0, permissions: 0,
+      myRoleIds: [], roles: [], categories: [], channels: channelIds.map((c) => channel(c, id)),
+    });
+    const { result } = setupWith({
+      sendWs, activeConversationIdRef: { current: 'elsewhere' },
+      serversRef: { current: [server('s1', ['c1', 'c2']), server('s2', ['c3'])] },
+    });
+    act(() => {
+      result.current.onChat({ t: 'chat', message: message(1, { conversationId: 'c1' }) });
+      result.current.onChat({ t: 'chat', message: message(2, { conversationId: 'c2' }) });
+      result.current.onChat({ t: 'chat', message: message(3, { conversationId: 'c3' }) });
+    });
+
+    act(() => result.current.markServerRead('s1'));
+    expect(sendWs).toHaveBeenCalledWith({ t: 'server-mark-all-read', serverId: 's1' });
+    expect(sendWs.mock.calls.filter(([m]) => m.t === 'server-mark-all-read')).toHaveLength(1);
+    expect([...result.current.unreadByConversation.keys()]).toEqual(['c3']);
+    expect([...result.current.unreadStartByConversation.keys()]).toEqual(['c3']);
   });
 
   it('a message arriving after the divider was read moves it there; one arriving while still unread keeps it', () => {

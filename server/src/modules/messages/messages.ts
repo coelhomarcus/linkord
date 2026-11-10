@@ -16,6 +16,8 @@ import {
   getDirectPeerId,
   isServerChannel,
   markReadUpTo,
+  markServerChannelsRead,
+  newestMessageId,
   touchConversation,
   recordConversationActivity,
   visibleConversationIds,
@@ -378,6 +380,42 @@ async function handleConversationMarkRead(socket: AppSocket, msg: { conversation
     if (participant.userId === p.userId && participant.socket !== socket) send(participant.socket, { t: 'conversation-read', conversationId, lastReadMessageId: msgId });
   }
   await settleMentions(p.userId, conversationId, msgId);
+}
+
+function tellOwnTabsRead(userId: string, conversationId: string, lastReadMessageId: number): void {
+  for (const participant of participants.values()) {
+    if (participant.userId === userId) send(participant.socket, { t: 'conversation-read', conversationId, lastReadMessageId });
+  }
+}
+
+/** "Mark as read" from a conversation's menu or Esc: up to its newest
+ * message, which the client may not have loaded (a conversation it never
+ * opened, or one scrolled back to an old window). Every tab is told,
+ * including the one that asked: it only cleared what it could see. */
+async function handleConversationMarkAllRead(socket: AppSocket, msg: { conversationId?: string }): Promise<void> {
+  const p = participants.get(socket.participantId ?? '');
+  if (!p || p.socket !== socket) return;
+  const conversationId = conversationIdFrom(msg);
+  const conversation = conversationId ? await getConversationForUser(conversationId, p.userId) : null;
+  if (!conversation) return;
+  const newest = await newestMessageId(conversationId);
+  if (newest === null || !(await markReadUpTo(conversation, p.userId, newest))) return;
+  tellOwnTabsRead(p.userId, conversationId, newest);
+  await settleMentions(p.userId, conversationId, newest);
+}
+
+/** "Mark server as read" from the server's menu: every channel it can see,
+ * in one statement. */
+async function handleServerMarkAllRead(socket: AppSocket, msg: { serverId?: unknown }): Promise<void> {
+  const p = participants.get(socket.participantId ?? '');
+  if (!p || p.socket !== socket || typeof msg.serverId !== 'string' || !msg.serverId) return;
+  const marked = await markServerChannelsRead(msg.serverId, p.userId);
+  let settled = 0;
+  for (const { conversationId, lastReadMessageId } of marked) {
+    tellOwnTabsRead(p.userId, conversationId, lastReadMessageId);
+    settled += await markMentionsRead(p.userId, conversationId, lastReadMessageId);
+  }
+  if (settled) notifySocialChanged([p.userId]);
 }
 
 /** Client scrolled to the top of an already-open conversation — sends up to
@@ -1002,6 +1040,8 @@ async function handleTyping(socket: AppSocket, msg: { conversationId?: string; v
 export const handlers: HandlerTable = {
   'conversation-open': handleConversationOpen,
   'conversation-mark-read': handleConversationMarkRead,
+  'conversation-mark-all-read': handleConversationMarkAllRead,
+  'server-mark-all-read': handleServerMarkAllRead,
   'load-more-messages': handleLoadMoreMessages,
   'load-messages-around': handleLoadMessagesAround,
   'load-messages-after': handleLoadMessagesAfter,

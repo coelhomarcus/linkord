@@ -23,7 +23,10 @@ const STATUS_RAIL_HEIGHT = 20;
 const RAIL_GAP = 4;
 
 export function ChatSurface({ conversationId, onOpenProfile }: { conversationId: string; onOpenProfile: (userId: string) => void }) {
-  const { state, setReplyingTo, windowGenerationByConversation, conversations, typingByConversation, allUsers } = useRoom();
+  const {
+    state, setReplyingTo, windowGenerationByConversation, conversations, typingByConversation, allUsers,
+    activeConversationId, unreadByConversation, unreadStartByConversation, markConversationRead,
+  } = useRoom();
   // the same people TypingIndicator names: someone it can't show raises no background
   const someoneTyping = [...(typingByConversation.get(conversationId) ?? [])].some((id) => allUsers.has(id));
   // a channel the viewer can't write in (a webhook's announcements, say):
@@ -57,6 +60,26 @@ export function ChatSurface({ conversationId, onOpenProfile }: { conversationId:
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
+
+  // Esc reads the conversation, as in Discord: from anywhere inside this
+  // surface, or with nothing focused while it is the open conversation.
+  // Whatever handled Esc first (an autocomplete, an edit, a voice take, a
+  // popup with focus inside it) keeps it.
+  const hasUnread = (unreadByConversation.get(conversationId) ?? 0) > 0 || unreadStartByConversation.has(conversationId);
+  const isActive = activeConversationId === conversationId;
+  useEffect(() => {
+    if (!hasUnread) return;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== 'Escape' || event.defaultPrevented || event.isComposing) return;
+      if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+      const target = event.target instanceof Node ? event.target : null;
+      const inside = !!target && !!rootRef.current?.contains(target);
+      const unfocused = target === document.body || target === document.documentElement;
+      if (inside || (unfocused && isActive)) markConversationRead(conversationId);
+    }
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [hasUnread, isActive, conversationId, markConversationRead]);
 
   const peer = directUser(shown, state.me.userId, allUsers);
   const dropTarget: DropTarget = shown?.serverId ? { channel: shown.title } : peer ? { peer: peer.displayName } : {};

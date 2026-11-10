@@ -229,6 +229,62 @@ describe('GlobalContextMenu', () => {
     expect(onOpenProfile).toHaveBeenCalledWith('u-42');
   });
 
+  describe('mark as read', () => {
+    const conversation = (id: string, type: 'direct' | 'text') => ({
+      id, type, title: '', memberIds: [], serverId: type === 'text' ? 's1' : null, lastMessageAt: null, createdAt: 0, updatedAt: 0,
+    });
+    const server = {
+      id: 's1', name: 'Equipe', icon: '', ownerId: 'me', status: 'active' as const, createdAt: 0, memberCount: 2, position: 0,
+      permissions: 0, myRoleIds: [], roles: [], categories: [],
+      channels: [{ id: 'c1', serverId: 's1', type: 'text' as const, name: 'geral', topic: '', categoryId: null, position: 0, permissionsSynced: true, permissions: 0 }],
+    };
+
+    it('a channel or DM row with unread messages offers it and marks that conversation', async () => {
+      const user = userEvent.setup();
+      const markConversationRead = vi.fn();
+      renderWithRoom(
+        <GlobalContextMenu onOpenProfile={vi.fn()}>
+          <div data-conversation-id="c1" data-testid="channel"><button type="button">geral</button></div>
+        </GlobalContextMenu>,
+        { state: userState, conversations: [conversation('c1', 'text')], unreadByConversation: new Map([['c1', 3]]), markConversationRead },
+      );
+
+      fireEvent.contextMenu(screen.getByTestId('channel'));
+      await user.click(await screen.findByRole('menuitem', { name: 'Marcar como lida' }));
+
+      expect(markConversationRead).toHaveBeenCalledWith('c1');
+    });
+
+    it('is there but disabled when nothing is unread', async () => {
+      renderWithRoom(
+        <GlobalContextMenu onOpenProfile={vi.fn()}>
+          <div data-conversation-id="d1" data-testid="dm">Ana</div>
+        </GlobalContextMenu>,
+        { state: userState, conversations: [conversation('d1', 'direct')] },
+      );
+
+      fireEvent.contextMenu(screen.getByTestId('dm'));
+
+      expect(await screen.findByRole('menuitem', { name: 'Marcar como lida' })).toHaveAttribute('aria-disabled', 'true');
+    });
+
+    it("a server's icon offers marking the whole server read", async () => {
+      const user = userEvent.setup();
+      const markServerRead = vi.fn();
+      renderWithRoom(
+        <GlobalContextMenu onOpenProfile={vi.fn()}>
+          <button type="button" data-server-id="s1" data-testid="server">Equipe</button>
+        </GlobalContextMenu>,
+        { state: userState, servers: [server], unreadStartByConversation: new Map([['c1', 9]]), markServerRead },
+      );
+
+      fireEvent.contextMenu(screen.getByTestId('server'));
+      await user.click(await screen.findByRole('menuitem', { name: 'Marcar servidor como lido' }));
+
+      expect(markServerRead).toHaveBeenCalledWith('s1');
+    });
+  });
+
   describe('a message\'s menu', () => {
     const message = { msgId: 7, conversationId: 'c1', id: 'other', name: 'Ana', avatar: '', text: 'oi', ts: 1 } as never;
     const room = (overrides: Record<string, unknown> = {}) => ({
