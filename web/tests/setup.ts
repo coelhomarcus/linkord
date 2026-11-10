@@ -13,6 +13,17 @@ afterEach(() => {
   document.querySelector('[data-live-announcer]')?.replaceChildren();
 });
 
+// jsdom has no ClipboardEvent; Lexical's paste handler names it, so a paste
+// in the message field threw outside the test and failed the whole run.
+if (typeof globalThis.ClipboardEvent === 'undefined') {
+  globalThis.ClipboardEvent = class extends Event {
+    clipboardData: DataTransfer | null;
+    constructor(type: string, init?: ClipboardEventInit) {
+      super(type, init);
+      this.clipboardData = init?.clipboardData ?? null;
+    }
+  };
+}
 if (typeof globalThis.ResizeObserver === 'undefined') {
   globalThis.ResizeObserver = class {
     observe() {}

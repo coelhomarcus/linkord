@@ -139,7 +139,7 @@ describe('MessageComposer', () => {
     await user.keyboard('{Escape}');
 
     const textarea = screen.getByRole('textbox');
-    fireEvent.paste(textarea, { clipboardData: { items: [{ type: 'image/png', getAsFile: () => fakeFile('shot.png', 'image/png') }] } });
+    fireEvent.paste(textarea, { clipboardData: { items: [{ type: 'image/png', getAsFile: () => fakeFile('shot.png', 'image/png') }], getData: () => '' } });
     await typeInField(textarea, 'hi{Enter}');
     expect(queueMessageWithFiles).not.toHaveBeenCalled();
   });
