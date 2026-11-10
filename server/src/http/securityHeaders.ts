@@ -27,6 +27,8 @@ export interface PolicyInput {
   klipyEnabled: boolean;
   /** 'sha256-…' sources for the inline scripts of the built HTML pages */
   scriptHashes: string[];
+  /** 'sha256-…' sources for the inline stylesheets the build actually injects */
+  styleHashes: string[];
 }
 
 const originOf = (raw: string): URL | null => {
@@ -71,10 +73,18 @@ export function buildContentSecurityPolicy(input: PolicyInput): string {
   const directives: Array<[string, string[]]> = [
     ['default-src', ["'self'"]],
     ['script-src', ["'self'", ...input.scriptHashes.map((hash) => `'${hash}'`)]],
-    // inline styles stay allowed: React and the UI libraries set them, the
-    // theme bootstrap and the crop dialog inject <style> elements, and a
-    // style cannot run script
-    ['style-src', ["'self'", "'unsafe-inline'"]],
+    // style-src is only the fallback for a browser that ignores the two
+    // directives below. Anything that can render the theme (oklch: Firefox 113,
+    // Safari 15.4) already understands the split, so elements do not get
+    // 'unsafe-inline' from here.
+    ['style-src', ["'self'"]],
+    // <style> and <link>: our stylesheets, plus the hash of each inline sheet
+    // the build injects (offline page, the three theme backgrounds, the crop
+    // dialog). An injected sheet whose text matches none of them is refused.
+    ['style-src-elem', ["'self'", ...input.styleHashes.map((hash) => `'${hash}'`)]],
+    // style attributes and CSSOM assignments. React, Motion and Base UI set
+    // them while rendering; the text is not stable, so it cannot be hashed.
+    ['style-src-attr', ["'unsafe-inline'"]],
     ['img-src', ["'self'", 'data:', 'blob:', ...remoteMedia]],
     ['media-src', ["'self'", 'data:', 'blob:', ...remoteMedia]],
     ['font-src', ["'self'", 'data:']],
@@ -94,6 +104,18 @@ export function buildContentSecurityPolicy(input: PolicyInput): string {
 }
 
 const INLINE_SCRIPT_RE = /<script(\s[^>]*)?>([\s\S]*?)<\/script>/gi;
+const INLINE_STYLE_RE = /<style(\s[^>]*)?>([\s\S]*?)<\/style>/gi;
+// The theme bootstrap in web/index.html. The color list is read from the built
+// page; the concatenation around it has to stay this text or the hash misses.
+const THEME_SHELLS_RE = /var shells = \{([^}]*)\}/;
+
+/** Written by the web build (vite.config.ts). One entry per runtime `<style>`
+ * whose text is not in the HTML, today the crop dialog's stylesheet. */
+const STYLE_SOURCES_FILE = 'csp-style-sources.json';
+
+function sha256Source(text: string): string {
+  return `sha256-${crypto.createHash('sha256').update(text, 'utf8').digest('base64')}`;
+}
 
 /** 'sha256-…' of every inline <script> in an HTML document, hashed exactly as
  * the browser does (the text between the tags, untouched). */
@@ -101,9 +123,35 @@ export function inlineScriptHashes(html: string): string[] {
   const hashes: string[] = [];
   for (const [, attributes = '', body = ''] of html.matchAll(INLINE_SCRIPT_RE)) {
     if (/\ssrc\s*=/i.test(attributes) || body.length === 0) continue;
-    hashes.push(`sha256-${crypto.createHash('sha256').update(body, 'utf8').digest('base64')}`);
+    hashes.push(sha256Source(body));
   }
   return hashes;
+}
+
+/** 'sha256-…' of every inline <style> in an HTML document, same rules as scripts. */
+export function inlineStyleHashes(html: string): string[] {
+  const hashes: string[] = [];
+  for (const [, , body = ''] of html.matchAll(INLINE_STYLE_RE)) {
+    if (body.length === 0) continue;
+    hashes.push(sha256Source(body));
+  }
+  return hashes;
+}
+
+/** One hash per color the theme bootstrap may write into its `<style>` element:
+ * `html,body{background:#…}`. */
+export function themeBootstrapStyleHashes(html: string): string[] {
+  const body = THEME_SHELLS_RE.exec(html)?.[1];
+  if (!body) return [];
+  return [...body.matchAll(/['"](#[0-9a-fA-F]{3,8})['"]/g)].map((match) => sha256Source(`html,body{background:${match[1]}}`));
+}
+
+function readHtmlPages(publicDir: string): string[] {
+  const pages: string[] = [];
+  for (const page of ['index.html', 'offline.html']) {
+    try { pages.push(fs.readFileSync(path.join(publicDir, page), 'utf8')); } catch { /* not built yet */ }
+  }
+  return pages;
 }
 
 /** Hashes for the HTML pages of the frontend build, read once at boot: the
@@ -111,11 +159,28 @@ export function inlineScriptHashes(html: string): string[] {
  * started before the web build) simply contribute none. */
 export function readBuildScriptHashes(publicDir: string): string[] {
   const hashes = new Set<string>();
-  for (const page of ['index.html', 'offline.html']) {
-    let html: string;
-    try { html = fs.readFileSync(path.join(publicDir, page), 'utf8'); } catch { continue; }
+  for (const html of readHtmlPages(publicDir)) {
     for (const hash of inlineScriptHashes(html)) hashes.add(hash);
   }
+  return [...hashes];
+}
+
+/** Inline `<style>` elements of the build: the pages themselves, the theme
+ * bootstrap's backgrounds, and the runtime sheets listed in the build's
+ * `csp-style-sources.json`. Missing files contribute none. */
+export function readBuildStyleHashes(publicDir: string): string[] {
+  const hashes = new Set<string>();
+  for (const html of readHtmlPages(publicDir)) {
+    for (const hash of inlineStyleHashes(html)) hashes.add(hash);
+    for (const hash of themeBootstrapStyleHashes(html)) hashes.add(hash);
+  }
+  try {
+    const parsed: unknown = JSON.parse(fs.readFileSync(path.join(publicDir, STYLE_SOURCES_FILE), 'utf8'));
+    const sources = parsed && typeof parsed === 'object' && 'sources' in parsed ? parsed.sources : null;
+    if (Array.isArray(sources)) {
+      for (const source of sources) if (typeof source === 'string' && source.length > 0) hashes.add(sha256Source(source));
+    }
+  } catch { /* no build manifest, or it is not JSON */ }
   return [...hashes];
 }
 
@@ -128,6 +193,7 @@ export function securityHeaders(publicDir: string) {
     livekitUrl: config.LIVEKIT_URL,
     klipyEnabled: !!config.KLIPY_API_KEY,
     scriptHashes: readBuildScriptHashes(publicDir),
+    styleHashes: readBuildStyleHashes(publicDir),
   });
   const reportingApi = usesReportingApi(config.APP_URL);
   return async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {

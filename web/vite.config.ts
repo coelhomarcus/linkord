@@ -4,6 +4,7 @@ import type { Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
+import { reactEasyCropStyleSource } from './scripts/cspStyleSources.ts';
 
 // Twemoji's SVGs, the same emoji pictures on every system (Discord's own
 // package). Served from /assets/twemoji/<version>/, so the server caches them
@@ -14,6 +15,24 @@ const TWEMOJI_PATH = `/assets/twemoji/${TWEMOJI_VERSION}/`;
 // public/emoji-data is rebuilt from both packages (npm run emoji:data); its URL
 // changes with them, so a deploy never leaves a browser on the cached old list
 const EMOJIBASE_VERSION: string = JSON.parse(fs.readFileSync(path.resolve(import.meta.dirname, 'node_modules/emojibase-data/package.json'), 'utf8')).version;
+
+// The crop dialog injects its CSS at runtime, so the server cannot hash it
+// from the HTML. The string lands in dist next to index.html and is read at boot.
+const CSP_STYLE_SOURCES = 'csp-style-sources.json';
+const CROP_MODULE = path.resolve(import.meta.dirname, 'node_modules/react-easy-crop/index.module.mjs');
+
+function cspStyleSources(): Plugin {
+  let outDir = '';
+  return {
+    name: 'csp-style-sources',
+    configResolved(config) { outDir = path.resolve(config.root, config.build.outDir); },
+    writeBundle() {
+      const css = reactEasyCropStyleSource(fs.readFileSync(CROP_MODULE, 'utf8'));
+      if (!css) throw new Error('react-easy-crop stylesheet not found; style-src-elem would block the crop dialog');
+      fs.writeFileSync(path.join(outDir, CSP_STYLE_SOURCES), JSON.stringify({ sources: [css] }));
+    },
+  };
+}
 
 function twemojiAssets(): Plugin {
   let outDir = '';
@@ -37,7 +56,7 @@ function twemojiAssets(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [react(), tailwindcss(), twemojiAssets()],
+  plugins: [react(), tailwindcss(), twemojiAssets(), cspStyleSources()],
   define: {
     __TWEMOJI_PATH__: JSON.stringify(TWEMOJI_PATH),
     __EMOJI_DATA_VERSION__: JSON.stringify(`${EMOJIBASE_VERSION}-${TWEMOJI_VERSION}`),
