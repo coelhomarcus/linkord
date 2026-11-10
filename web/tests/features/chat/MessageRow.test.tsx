@@ -120,6 +120,27 @@ describe('MessageRow', () => {
     expect(screen.getByRole('button', { name: 'Fulana' })).toHaveStyle({ color: 'rgb(51, 153, 255)' });
   });
 
+  it('highlights a message whose group mention reached me, not one that only names the group', () => {
+    const server: ServerSummary = {
+      id: 's1', name: 'Squad', icon: '', ownerId: null, status: 'active', createdAt: 0, memberCount: 1,
+      position: 0, permissions: 0, myRoleIds: ['role-mods'], roles: [], categories: [], channels: [],
+    };
+    const channel = { id: 'conv-1', type: 'text' as const, title: 'general', serverId: 's1', memberIds: [], lastMessageAt: null, createdAt: 0, updatedAt: 0, topic: '', categoryId: null, position: 0, permissions: 0 };
+    const rowFor = (message: ChatMessage) => {
+      const view = renderWithRoom(
+        <MessageRow message={message} showHeader highlighted={false} allUsers={new Map()} mentionLookup={new Map()} onOpenProfile={noop} onReply={noop} onJumpTo={noop} />,
+        { state: { ...initialRoomState, me: { ...initialRoomState.me, userId: 'me' } }, conversations: [channel], servers: [server] },
+      );
+      const highlighted = document.querySelector('[data-message-id]')!.className.includes('bg-yellow');
+      view.unmount();
+      return highlighted;
+    };
+    expect(rowFor(makeMessage({ text: '@everyone' }))).toBe(false);
+    expect(rowFor(makeMessage({ text: '@everyone', mentionEveryone: true }))).toBe(true);
+    expect(rowFor(makeMessage({ text: 'oi', mentionRoleIds: ['role-mods'] }))).toBe(true);
+    expect(rowFor(makeMessage({ text: 'oi', mentionRoleIds: ['role-other'] }))).toBe(false);
+  });
+
   it('groups consecutive messages from the same author without repeating name/avatar', () => {
     const message = makeMessage({ msgId: 2 });
     renderWithRoom(

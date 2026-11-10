@@ -448,6 +448,13 @@ export const messages = pgTable('messages', {
   // sticker, which is how readers know to draw "sticker unavailable" instead
   // of a blank message (a SET NULL would erase that it ever was one).
   stickerId: text('sticker_id'),
+  // The group mentions that notified someone (modules/messages/groupMentions.ts),
+  // decided once when the message is sent or edited, with the author's
+  // permission at that moment: readers highlight a message by these, never by
+  // the text, which says "@everyone" just the same when it pinged nobody.
+  // `mentionEveryone` covers @here too.
+  mentionEveryone: boolean('mention_everyone').notNull().default(false),
+  mentionRoleIds: text('mention_role_ids').array(),
   // Postgres computes/maintains this itself (GENERATED ALWAYS AS ... STORED)
   // on every insert/update of `text` — never set from the app. Stored rather
   // than an expression index so ranking reads it instead of re-parsing every

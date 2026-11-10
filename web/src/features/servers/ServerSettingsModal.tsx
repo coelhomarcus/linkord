@@ -259,7 +259,13 @@ function Roles({ server }: { server: ServerSummary }) {
             </div>
           </div>
           {!draft.isDefault && (
-            <label className="flex items-center justify-between gap-4 text-label">{t('roles.hoist')}<Switch checked={draft.hoist} disabled={!editable} onCheckedChange={(on) => setDraft({ ...draft, hoist: on })} /></label>
+            <>
+              <label className="flex items-center justify-between gap-4 text-label">{t('roles.hoist')}<Switch checked={draft.hoist} disabled={!editable} onCheckedChange={(on) => setDraft({ ...draft, hoist: on })} /></label>
+              <label className="flex items-center justify-between gap-4 text-label">
+                <span className="flex flex-col gap-0.5">{t('roles.mentionable')}<span className="text-caption text-text-muted">{t('roles.mentionableHint')}</span></span>
+                <Switch checked={draft.mentionable} disabled={!editable} onCheckedChange={(on) => setDraft({ ...draft, mentionable: on })} />
+              </label>
+            </>
           )}
           <PermissionSwitches value={draft.permissions} disabled={!editable} grantable={grantable} onChange={(permissions) => setDraft({ ...draft, permissions })} />
           <ErrorLine error={error} />

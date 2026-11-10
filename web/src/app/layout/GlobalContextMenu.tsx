@@ -10,6 +10,7 @@ import type { ReportTarget } from '@/features/reports/reportCategories';
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from '@/shared/ui/primitives/context-menu';
 import { ReactionEmojiPicker } from '@/features/chat/ReactionEmojiPicker';
 import { customEmojisAsText } from '@/features/emoji/customEmojiText';
+import { roleMentionsAsText } from '@/features/chat/roleMentionText';
 import { ReactionParticipantsDialog } from '@/features/chat/ReactionParticipantsDialog';
 import { useKeepPopoverWarm } from '@/shared/hooks/useKeepPopoverWarm';
 import { messagePermissions } from '@/features/chat/messageActions';
@@ -63,7 +64,7 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
   const {
     state,
     activeConversationId, messagesByConversation, reactToChatMessage, setReplyingTo, setEditingMsgId,
-    conversations, closeConversation, openReactionParticipants, removeChatAttachment, suppressChatEmbed,
+    conversations, servers, closeConversation, openReactionParticipants, removeChatAttachment, suppressChatEmbed,
   } = useRoom();
   const [hasSelection, setHasSelection] = useState(false);
   const [downloadTarget, setDownloadTarget] = useState<{ url: string; name: string } | null>(null);
@@ -231,7 +232,7 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
   }
 
   function handleCopyMessageText() {
-    if (targetMessage?.text) void copyToClipboard(customEmojisAsText(targetMessage.text));
+    if (targetMessage?.text) void copyToClipboard(roleMentionsAsText(customEmojisAsText(targetMessage.text), servers));
   }
 
   function handleSelectMessageText() {

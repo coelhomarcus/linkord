@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ChatMessageText } from '@/features/chat/ChatMessageText';
 import { buildMentionLookup } from '@/shared/lib/mentions';
-import type { PublicUser } from '@/shared/types/protocol';
+import type { PublicUser, RoleSummary } from '@/shared/types/protocol';
 import { resetMyEmojis, setMyEmojisForTests } from '@/features/emoji/myEmojis';
 import { RoomContext, type RoomContextValue } from '@/state/RoomContext';
 import { liveAnnouncements } from '@tests/fixtures/announcerFixture';
@@ -140,3 +140,30 @@ describe('ChatMessageText — server emojis', () => {
     expect(await screen.findByText('De Equipe')).toBeInTheDocument();
   });
 });
+
+describe('ChatMessageText — group and role mentions', () => {
+  const ROLE = '11111111-1111-4111-8111-111111111111';
+  const GONE = '22222222-2222-4222-8222-222222222222';
+  const roles: RoleSummary[] = [{ id: ROLE, name: 'Moderação', color: '#ff8800', position: 1, permissions: 0, hoist: false, mentionable: true, isDefault: false }];
+
+  it('@everyone and @here are chips when they notified the channel', () => {
+    const { container } = render(<ChatMessageText text="@everyone e @here, reunião" roles={roles} mentionEveryone />);
+    const chips = [...container.querySelectorAll('p > span')].filter((el) => el.className.includes('rounded-sm'));
+    expect(chips.map((chip) => chip.textContent)).toEqual(['@everyone', '@here']);
+  });
+
+  it('stay plain text when their author could not notify anyone', () => {
+    const { container } = render(<ChatMessageText text="@everyone e @here, reunião" roles={roles} />);
+    expect(container.querySelector('p')?.textContent).toBe('@everyone e @here, reunião');
+    expect(container.querySelector('p span.rounded-sm')).toBeNull();
+  });
+
+  it("a role token reads @Role in the role's colour; a deleted role says so; in code it is text", () => {
+    const { container } = render(<ChatMessageText text={`oi <@&${ROLE}> e <@&${GONE}> \`<@&${ROLE}>\``} roles={roles} />);
+    const chip = container.querySelector(`[data-role-mention="${ROLE}"]`);
+    expect(chip).toHaveTextContent('@Moderação');
+    expect(chip).toHaveStyle({ color: 'rgb(255, 136, 0)' });
+    expect(container.querySelector('p')?.textContent).toBe(`oi @Moderação e @cargo-excluído <@&${ROLE}>`);
+  });
+});
+

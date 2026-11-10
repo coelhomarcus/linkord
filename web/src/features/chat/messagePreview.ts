@@ -1,8 +1,9 @@
 import { i18n } from '@/shared/i18n/init';
-import type { ChatMessage } from '@/shared/types/protocol';
+import type { ChatMessage, RoleSummary } from '@/shared/types/protocol';
 import { gifMessageUrl } from '@/features/gifs/klipyMedia';
 import { dmCallLine } from './dmCallLine';
 import { customEmojisAsText } from '@/features/emoji/customEmojiText';
+import { roleMentionsAsText } from './roleMentionText';
 
 /** One-line text for a message wherever the body itself can't be shown
  * (sidebar subtitle, desktop notification). Invite cards have an empty
@@ -10,6 +11,8 @@ import { customEmojisAsText } from '@/features/emoji/customEmojiText';
 export function messagePreviewText(
   message: Pick<ChatMessage, 'text' | 'kind' | 'invitation' | 'callInvite' | 'richEmbeds'> & Partial<Pick<ChatMessage, 'id' | 'name' | 'callDurationSeconds' | 'attachments' | 'sticker'>>,
   viewerId?: string | null,
+  /** the reader's servers, to name the roles it mentions */
+  servers: readonly { roles: readonly RoleSummary[] }[] = [],
 ): string {
   if (message.kind === 'dm_call') {
     return dmCallLine({
@@ -30,7 +33,7 @@ export function messagePreviewText(
   if (!message.text && message.attachments?.[0]?.voice) return `🎤 ${i18n.t('voiceMessages:preview')}`;
   // a bot may send only a card: its title says what it's about
   const card = message.richEmbeds?.[0];
-  return customEmojisAsText(message.text) || card?.title || card?.description || (card ? i18n.t('chat:preview.notice') : i18n.t('chat:preview.attachment'));
+  return roleMentionsAsText(customEmojisAsText(message.text), servers) || card?.title || card?.description || (card ? i18n.t('chat:preview.notice') : i18n.t('chat:preview.attachment'));
 }
 
 /** "Sticker: name", or just "Sticker" once it was deleted. */

@@ -32,3 +32,14 @@ describe('messagePreviewText', () => {
     expect(messagePreviewText({ text: '', kind: 'server_invite', invitation: null })).toBe('Convite indisponível');
   });
 });
+
+describe('messagePreviewText — role mentions', () => {
+  const ROLE = '11111111-1111-4111-8111-111111111111';
+  const servers = [{ roles: [{ id: ROLE, name: 'Moderação', color: '', position: 1, permissions: 0, hoist: false, mentionable: true, isDefault: false }] }];
+
+  it('names the role from any of the reader\'s servers, or says it was deleted', () => {
+    expect(messagePreviewText({ text: `<@&${ROLE}> ajuda` }, null, servers)).toBe('@Moderação ajuda');
+    expect(messagePreviewText({ text: `<@&${ROLE}> ajuda` }, null, [])).toBe('@cargo-excluído ajuda');
+  });
+});
+

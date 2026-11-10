@@ -20,7 +20,7 @@ function setup() {
   const ref = <T,>(current: T) => ({ current });
   return renderHook(() => useChatMessages({
     sendWs: vi.fn(), activeConversationIdRef: ref<string | null>('dm'), setActiveConversation: vi.fn(),
-    conversationsRef: ref([]), allUsersRef: ref(new Map()), myUserIdRef: ref<string | null>('b'), myUsernameRef: ref<string | null>('b'),
+    conversationsRef: ref([]), allUsersRef: ref(new Map()), myUserIdRef: ref<string | null>('b'), myUsernameRef: ref<string | null>('b'), serversRef: ref([]),
     activeViewRef: ref<'chat' | 'call'>('chat'), clearTypingEntry: vi.fn(),
   }));
 }
@@ -70,7 +70,7 @@ describe('useChatMessages — unread', () => {
     const ref = <T,>(current: T) => ({ current });
     const { result } = renderHook(() => useChatMessages({
       sendWs: vi.fn(), activeConversationIdRef: ref<string | null>('dm'), setActiveConversation: vi.fn(),
-      conversationsRef: ref([]), allUsersRef: ref(new Map()), myUserIdRef: ref<string | null>('b'), myUsernameRef: ref<string | null>('b'),
+      conversationsRef: ref([]), allUsersRef: ref(new Map()), myUserIdRef: ref<string | null>('b'), myUsernameRef: ref<string | null>('b'), serversRef: ref([]),
       activeViewRef: ref<'chat' | 'call' | 'away'>('away'), clearTypingEntry: vi.fn(),
     }));
     act(() => result.current.onConversationHistory({
@@ -103,7 +103,7 @@ describe('useChatMessages — unread', () => {
       const activeViewRef = ref<'chat' | 'call' | 'away'>('away');
       const { result } = renderHook(() => useChatMessages({
         sendWs, activeConversationIdRef: ref<string | null>('dm'), setActiveConversation: vi.fn(),
-        conversationsRef: ref([]), allUsersRef: ref(new Map()), myUserIdRef: ref<string | null>('b'), myUsernameRef: ref<string | null>('b'),
+        conversationsRef: ref([]), allUsersRef: ref(new Map()), myUserIdRef: ref<string | null>('b'), myUsernameRef: ref<string | null>('b'), serversRef: ref([]),
         activeViewRef, clearTypingEntry: vi.fn(),
       }));
       act(() => result.current.onChat({ t: 'chat', message: message(40) }));
@@ -138,7 +138,7 @@ describe('useChatMessages — unread', () => {
       const ref = <T,>(current: T) => ({ current });
       const { result } = renderHook(() => useChatMessages({
         sendWs, activeConversationIdRef: ref<string | null>('dm'), setActiveConversation: vi.fn(),
-        conversationsRef: ref([]), allUsersRef: ref(new Map()), myUserIdRef: ref<string | null>('b'), myUsernameRef: ref<string | null>('b'),
+        conversationsRef: ref([]), allUsersRef: ref(new Map()), myUserIdRef: ref<string | null>('b'), myUsernameRef: ref<string | null>('b'), serversRef: ref([]),
         activeViewRef: ref<'chat' | 'call'>('chat'), clearTypingEntry: vi.fn(),
       }));
       act(() => result.current.onChat({ t: 'chat', message: message(20) }));
@@ -193,7 +193,7 @@ describe('useChatMessages — correlated send', () => {
     const ref = <T,>(current: T) => ({ current });
     const hook = renderHook(() => useChatMessages({
       sendWs, activeConversationIdRef: ref<string | null>('dm'), setActiveConversation: vi.fn(),
-      conversationsRef: ref([]), allUsersRef: ref(new Map()), myUserIdRef: ref<string | null>('b'), myUsernameRef: ref<string | null>('b'),
+      conversationsRef: ref([]), allUsersRef: ref(new Map()), myUserIdRef: ref<string | null>('b'), myUsernameRef: ref<string | null>('b'), serversRef: ref([]),
       activeViewRef: ref<'chat' | 'call'>('chat'), clearTypingEntry: vi.fn(),
     }));
     return { ...hook, sendWs };
@@ -230,7 +230,7 @@ describe('useChatMessages — history window', () => {
     const ref = <T,>(current: T) => ({ current });
     const hook = renderHook(() => useChatMessages({
       sendWs, activeConversationIdRef: ref<string | null>('dm'), setActiveConversation: vi.fn(),
-      conversationsRef: ref([]), allUsersRef: ref(new Map()), myUserIdRef: ref<string | null>('b'), myUsernameRef: ref<string | null>('b'),
+      conversationsRef: ref([]), allUsersRef: ref(new Map()), myUserIdRef: ref<string | null>('b'), myUsernameRef: ref<string | null>('b'), serversRef: ref([]),
       activeViewRef: ref<'chat' | 'call'>('chat'), clearTypingEntry: vi.fn(),
     }));
     return { ...hook, sendWs };
@@ -346,7 +346,7 @@ describe('useChatMessages — memory', () => {
     const ref = <T,>(current: T) => ({ current });
     const { result } = renderHook(() => useChatMessages({
       sendWs: vi.fn(() => true), activeConversationIdRef: ref<string | null>('c6'), setActiveConversation: vi.fn(),
-      conversationsRef: ref([]), allUsersRef: ref(new Map()), myUserIdRef: ref<string | null>('b'), myUsernameRef: ref<string | null>('b'),
+      conversationsRef: ref([]), allUsersRef: ref(new Map()), myUserIdRef: ref<string | null>('b'), myUsernameRef: ref<string | null>('b'), serversRef: ref([]),
       activeViewRef: ref<'chat' | 'call'>('chat'), clearTypingEntry: vi.fn(),
     }));
     for (let i = 1; i <= 6; i++) {

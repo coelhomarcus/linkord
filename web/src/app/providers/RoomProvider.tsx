@@ -134,6 +134,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
     allUsersRef: presence.allUsersRef,
     myUserIdRef,
     myUsernameRef,
+    serversRef: serversList.serversRef,
     activeViewRef,
     clearTypingEntry: typingIndicator.clearTypingEntry,
   });

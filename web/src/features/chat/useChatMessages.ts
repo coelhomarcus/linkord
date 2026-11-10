@@ -5,7 +5,7 @@ import { conversationTitle } from '@/features/conversations/conversationUtils';
 import { i18n } from '@/shared/i18n/init';
 import { notifyIncomingChatMessage } from '@/shared/notifications';
 import { messagePreviewText } from '@/features/chat/messagePreview';
-import { mentionsUsername } from '@/shared/lib/mentions';
+import { groupMentionsMe, mentionsUsername } from '@/shared/lib/mentions';
 import { useMessageOutbox, type OutboxFile } from './useMessageOutbox';
 import { useMessageActionRequests } from './useMessageActionRequests';
 import { useReactionIntents } from './useReactionIntents';
@@ -13,7 +13,7 @@ import { MAX_WINDOW, withNewerMessages, withOlderPage, withPresentPage } from '.
 import { markArrival } from './arrivals';
 import { createMessageSoundThrottle } from './messageSoundThrottle';
 import type { ReactionParticipantsTarget } from './reactionParticipants';
-import type { ChatMessage, ClientMessage, Conversation, PublicUser, ReactionEmoji, ServerMessage, StickerCard } from '@/shared/types/protocol';
+import type { ChatMessage, ClientMessage, Conversation, PublicUser, ReactionEmoji, ServerMessage, ServerSummary, StickerCard } from '@/shared/types/protocol';
 
 /** Adds `message` once, in msgId order — a send's result and its broadcast
  * both deliver it, in either order, and it may land after newer messages. */
@@ -64,6 +64,8 @@ interface ChatMessagesDeps {
   allUsersRef: MutableRefObject<Map<string, PublicUser>>;
   myUserIdRef: MutableRefObject<string | null>;
   myUsernameRef: MutableRefObject<string | null>;
+  /** for the roles a group mention may have reached */
+  serversRef: MutableRefObject<ServerSummary[]>;
   activeViewRef: MutableRefObject<ChatView>;
   clearTypingEntry: (conversationId: string, userId: string) => void;
 }
@@ -73,7 +75,7 @@ interface ChatMessagesDeps {
  * result, and applying the handful of server broadcasts that patch an
  * existing message in place (edit, attachment added, reaction changed). */
 export function useChatMessages(deps: ChatMessagesDeps) {
-  const { sendWs, activeConversationIdRef, setActiveConversation, conversationsRef, allUsersRef, myUserIdRef, myUsernameRef, activeViewRef, clearTypingEntry } = deps;
+  const { sendWs, activeConversationIdRef, setActiveConversation, conversationsRef, allUsersRef, myUserIdRef, myUsernameRef, serversRef, activeViewRef, clearTypingEntry } = deps;
 
   const [messagesByConversation, setMessagesByConversation] = useState<Map<string, ChatMessage[]>>(new Map());
   const messagesByConversationRef = useRef<Map<string, ChatMessage[]>>(new Map());
@@ -477,18 +479,20 @@ export function useChatMessages(deps: ChatMessagesDeps) {
     if (m.message.id) clearTypingEntry(conversationId, m.message.id);
     const amLookingAtIt = document.hasFocus() && activeViewRef.current === 'chat' && conversationId === activeConversationIdRef.current;
     if (m.message.id !== myUserIdRef.current && !amLookingAtIt) {
-      const mentioned = mentionsUsername(m.message.text, myUsernameRef.current);
+      const serverId = conversationsRef.current.find((c) => c.id === conversationId)?.serverId;
+      const myRoleIds = serverId ? serversRef.current.find((s) => s.id === serverId)?.myRoleIds ?? [] : null;
+      const mentioned = mentionsUsername(m.message.text, myUsernameRef.current) || groupMentionsMe(m.message, myRoleIds);
       if (shouldChime(conversationId, mentioned)) playSound(mentioned ? 'mention' : 'newMessage');
       notifyIncomingChatMessage({
         conversationId,
         conversationName: conversationTitle(conversationsRef.current.find((c) => c.id === conversationId), myUserIdRef.current, allUsersRef.current),
         senderId: m.message.id,
         senderName: (m.message.id ? allUsersRef.current.get(m.message.id)?.displayName : undefined) ?? m.message.name,
-        text: messagePreviewText(m.message, myUserIdRef.current),
+        text: messagePreviewText(m.message, myUserIdRef.current, serversRef.current),
         mentioned,
       });
     }
-  }, [activeConversationIdRef, clearTypingEntry, activeViewRef, myUserIdRef, conversationsRef, allUsersRef, myUsernameRef, onPendingEcho, insertConfirmed, queueMarkRead, shouldChime]);
+  }, [activeConversationIdRef, clearTypingEntry, activeViewRef, myUserIdRef, conversationsRef, allUsersRef, myUsernameRef, serversRef, onPendingEcho, insertConfirmed, queueMarkRead, shouldChime]);
 
   const onChatDeleted = useCallback((m: Extract<ServerMessage, { t: 'chat-deleted' }>) => {
     setMessagesByConversation((prev) => {

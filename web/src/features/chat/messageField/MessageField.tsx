@@ -11,7 +11,8 @@ import { $getRoot, COMMAND_PRIORITY_CRITICAL, KEY_DOWN_COMMAND, PASTE_COMMAND, T
 
 import { cn } from '@/shared/lib/utils';
 import { CustomEmojiNode, TwemojiNode } from './emojiNodes';
-import { $convertEmojis, $fieldSelection, $fieldText, $setFieldCaret, $setFieldText, type ResolveCustomEmoji } from './fieldText';
+import { RoleMentionNode } from './roleMentionNode';
+import { $convertEmojis, $convertRoleMentions, $fieldSelection, $fieldText, $setFieldCaret, $setFieldText, type ResolveCustomEmoji, type ResolveRole } from './fieldText';
 
 /** What the composer used to ask its textarea, asked of the editor instead. */
 export interface MessageFieldHandle {
@@ -36,6 +37,8 @@ interface MessageFieldProps extends Pick<AriaAttributes, 'aria-autocomplete' | '
   onPaste?: (event: ClipboardEvent) => void;
   /** which server emoji a `:name:` stands for, if any */
   resolveCustomEmoji: ResolveCustomEmoji;
+  /** which role a `<@&id>` stands for, drawn as `@Role`; without it the token stays text */
+  resolveRole?: ResolveRole;
   placeholder?: string;
   'aria-label': string;
   disabled?: boolean;
@@ -52,7 +55,7 @@ export function MessageField(props: MessageFieldProps) {
     <LexicalComposer
       initialConfig={{
         namespace: 'message-field',
-        nodes: [TwemojiNode, CustomEmojiNode],
+        nodes: [TwemojiNode, CustomEmojiNode, RoleMentionNode],
         editable: !props.disabled,
         editorState: () => $setFieldText(props.value),
         onError: (error) => { throw error; },
@@ -81,17 +84,19 @@ export function MessageField(props: MessageFieldProps) {
   );
 }
 
-function FieldBridge({ ref, value, onChange, onSelect, onKeyDown, onPaste, resolveCustomEmoji, placeholder, disabled, autoFocus }: MessageFieldProps) {
+function FieldBridge({ ref, value, onChange, onSelect, onKeyDown, onPaste, resolveCustomEmoji, resolveRole, placeholder, disabled, autoFocus }: MessageFieldProps) {
   const [editor] = useLexicalComposerContext();
   // the text as last reported or set: a value prop equal to it is no news
   const textRef = useRef(value);
   const caretRef = useRef(value.length);
   const handlers = useRef({ onChange, onSelect, onKeyDown, onPaste });
   const resolveRef = useRef(resolveCustomEmoji);
+  const resolveRoleRef = useRef(resolveRole);
   // the latest callbacks, for listeners registered once
   useLayoutEffect(() => {
     handlers.current = { onChange, onSelect, onKeyDown, onPaste };
     resolveRef.current = resolveCustomEmoji;
+    resolveRoleRef.current = resolveRole;
   });
 
   useImperativeHandle(ref, () => ({
@@ -108,6 +113,7 @@ function FieldBridge({ ref, value, onChange, onSelect, onKeyDown, onPaste, resol
 
   useEffect(() => mergeRegister(
     editor.registerNodeTransform(TextNode, (node) => $convertEmojis(node, (name, nth) => resolveRef.current(name, nth))),
+    editor.registerNodeTransform(TextNode, (node) => $convertRoleMentions(node, (roleId) => resolveRoleRef.current?.(roleId) ?? null)),
     editor.registerUpdateListener(({ editorState, tags }) => {
       const { text, caret } = editorState.read(() => ({ text: $fieldText(), caret: $fieldSelection().start }));
       const previous = textRef.current;
@@ -139,10 +145,10 @@ function FieldBridge({ ref, value, onChange, onSelect, onKeyDown, onPaste, resol
     editor.update(() => $setFieldText(value), { discrete: true });
   }, [editor, value]);
 
-  // a server emoji list that arrives later turns the `:name:`s already there into pictures
+  // a server emoji (or role) list that arrives later turns the `:name:`s (and `<@&id>`s) already there into pictures
   useEffect(() => {
     editor.update(() => { for (const node of $getRoot().getAllTextNodes()) if (node.getType() === 'text') node.markDirty(); });
-  }, [editor, resolveCustomEmoji]);
+  }, [editor, resolveCustomEmoji, resolveRole]);
 
   useEffect(() => { editor.setEditable(!disabled); }, [editor, disabled]);
 

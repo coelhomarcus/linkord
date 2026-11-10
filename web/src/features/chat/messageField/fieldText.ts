@@ -4,7 +4,9 @@ import {
 } from 'lexical';
 
 import { splitEmoji } from '@/features/emoji/twemoji';
+import { ROLE_MENTION_TOKEN } from '@/features/chat/messageMarkup';
 import { $createCustomEmojiNode, $createTwemojiNode, $isCustomEmojiNode, $isTwemojiNode, type CustomEmojiRef } from './emojiNodes';
+import { $createRoleMentionNode, $isRoleMentionNode, type RoleRef } from './roleMentionNode';
 
 // The field as plain text: what it holds (its one paragraph, line breaks as
 // "\n"), and the caret as an offset into that text, the way a textarea has
@@ -16,6 +18,9 @@ const CUSTOM_RE = /(?<![\w:<]):([a-z0-9_]{2,32})(?:~(\d{1,2}))?:(?![\w])/g;
 const CODE_RE = /```[\s\S]*?```|`[^`\n]+`/g;
 
 export type ResolveCustomEmoji = (name: string, nth: number | null) => CustomEmojiRef | null;
+export type ResolveRole = (roleId: string) => RoleRef | null;
+
+const ROLE_RE = new RegExp(ROLE_MENTION_TOKEN, 'g');
 
 function paragraph(): ElementNode {
   const root = $getRoot();
@@ -149,7 +154,7 @@ function $revertEmojisInCode(parent: ElementNode, code: [number, number][]): boo
   let reverted = false;
   for (const child of parent.getChildren()) {
     const size = child.getTextContentSize();
-    if (($isTwemojiNode(child) || $isCustomEmojiNode(child)) && inCode(code, offset, offset + size)) {
+    if (($isTwemojiNode(child) || $isCustomEmojiNode(child) || $isRoleMentionNode(child)) && inCode(code, offset, offset + size)) {
       child.replace($createTextNode(child.getTextContent()));
       reverted = true;
     }
@@ -157,3 +162,26 @@ function $revertEmojisInCode(parent: ElementNode, code: [number, number][]): boo
   }
   return reverted;
 }
+
+/** Turns the first `<@&id>` of a plain text node whose role is known into its
+ * chip; like $convertEmojis, the transform runs again on what is left. A
+ * token in code stays text, as it is sent. */
+export function $convertRoleMentions(node: TextNode, resolve: ResolveRole): void {
+  if (node.getType() !== 'text' || !node.isSimpleText() || node.isComposing()) return;
+  const own = node.getTextContent();
+  const parent = node.getParent();
+  if (!parent || !own.includes('<@&')) return;
+  const code = codeRanges(parent.getTextContent());
+  const start = offsetBefore(node);
+  for (const match of own.matchAll(ROLE_RE)) {
+    const from = match.index;
+    const to = from + match[0].length;
+    if (inCode(code, start + from, start + to)) continue;
+    const role = resolve(match[1]!);
+    if (!role) continue;
+    const parts = node.splitText(from, to);
+    (from === 0 ? parts[0] : parts[1])?.replace($createRoleMentionNode(role));
+    return;
+  }
+}
+

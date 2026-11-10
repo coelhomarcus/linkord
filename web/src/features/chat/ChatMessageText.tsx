@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { detectEmbed } from '@/shared/lib/chatEmbeds';
 import { highlightCode } from '@/shared/lib/highlightCode';
-import type { PublicUser } from '@/shared/types/protocol';
+import type { PublicUser, RoleSummary } from '@/shared/types/protocol';
 import type { LinkPreviewData } from '@/shared/api/api';
 import { Avatar } from '@/shared/Avatar';
 import { CopyLabel, CopyStatusIcon } from '@/shared/CopyFeedback';
@@ -15,7 +15,7 @@ import { ChatEmbed } from './ChatEmbed';
 import { inviteCodeFromLink } from '@/features/servers/inviteCode';
 import { GifMessage } from '@/features/gifs/GifMessage';
 import { gifMessageUrl } from '@/features/gifs/klipyMedia';
-import { parseMessage, previewableLinks, type Block, type Inline } from './messageMarkup';
+import { GROUP_MENTION_NAMES, parseMessage, previewableLinks, type Block, type Inline } from './messageMarkup';
 import { EmojiText } from '@/features/emoji/Emoji';
 
 interface RenderContext {
@@ -24,6 +24,37 @@ interface RenderContext {
   mentionLookup?: Map<string, PublicUser>;
   myUserId?: string | null;
   onOpenProfile?: (userId: string) => void;
+  /** the roles of the channel's server, for its role mentions */
+  roles?: readonly RoleSummary[];
+  /** the server says the message's @everyone/@here notified the channel */
+  mentionEveryone?: boolean;
+}
+
+// the chip's box: h-6 matches the line box of the text around it (see Mention)
+const CHIP = 'inline-flex h-6 items-center rounded-sm px-1 align-middle font-medium';
+
+/** `@everyone`/`@here`: a chip only when it notified the channel, plain text
+ * when its author could not notify anyone with it. */
+function GroupMention({ name, ctx }: { name: string; ctx: RenderContext }) {
+  if (!ctx.mentionEveryone) return <>@{name}</>;
+  return <span className={cn(CHIP, 'bg-primary/15 text-accent-text')}>@{name}</span>;
+}
+
+/** A role, in its colour, whether or not it notified anyone (Discord's way):
+ * which role is meant is part of what was said. */
+function RoleMention({ roleId, ctx }: { roleId: string; ctx: RenderContext }) {
+  const { t } = useTranslation('chat');
+  const role = ctx.roles?.find((r) => r.id === roleId);
+  if (!role) return <>@{t('mentions.deletedRole')}</>;
+  return (
+    <span
+      data-role-mention={role.id}
+      className={cn(CHIP, !role.color && 'bg-primary/15 text-accent-text')}
+      style={role.color ? { color: role.color, backgroundColor: `color-mix(in srgb, ${role.color} 15%, transparent)` } : undefined}
+    >
+      @{role.name}
+    </span>
+  );
 }
 
 function Mention({ name, ctx }: { name: string; ctx: RenderContext }) {
@@ -60,7 +91,10 @@ function renderInline(nodes: Inline[], ctx: RenderContext): ReactNode[] {
       case 'text': return <EmojiText key={index} text={node.text} emojiClassName={ctx.jumbo ? undefined : 'size-[1.375em] align-[-0.3em]'} />;
       case 'code': return <code key={index} className="rounded-sm bg-fill-code px-1 py-0.5 font-mono text-[0.875em]">{node.text}</code>;
       case 'link': return <a key={index} href={node.url} target="_blank" rel="noopener noreferrer" className="break-all text-link hover:underline">{node.url}</a>;
-      case 'mention': return <Mention key={index} name={node.name} ctx={ctx} />;
+      case 'mention': return GROUP_MENTION_NAMES.includes(node.name.toLowerCase())
+        ? <GroupMention key={index} name={node.name} ctx={ctx} />
+        : <Mention key={index} name={node.name} ctx={ctx} />;
+      case 'roleMention': return <RoleMention key={index} roleId={node.roleId} ctx={ctx} />;
       case 'customEmoji': return <CustomEmojiImage key={index} id={node.id} name={node.name} size={ctx.jumbo ? 'jumbo' : 'inline'} />;
       case 'bold': return <strong key={index} className="font-semibold text-text-primary">{renderInline(node.children, ctx)}</strong>;
       case 'italic': return <em key={index}>{renderInline(node.children, ctx)}</em>;
@@ -156,9 +190,13 @@ interface ChatMessageTextProps {
   suppressedEmbeds?: string[];
   /** text inside something else (a bot's card): its links stay links, with no preview card of their own */
   noPreviews?: boolean;
+  /** the roles of the channel's server, for its role mentions */
+  roles?: readonly RoleSummary[];
+  /** the message's @everyone/@here notified the channel (ChatMessage.mentionEveryone) */
+  mentionEveryone?: boolean;
 }
 
-export function ChatMessageText({ text, mentionLookup, myUserId, onOpenProfile, embeds: previews, suppressedEmbeds, noPreviews }: ChatMessageTextProps) {
+export function ChatMessageText({ text, mentionLookup, myUserId, onOpenProfile, embeds: previews, suppressedEmbeds, noPreviews, roles, mentionEveryone }: ChatMessageTextProps) {
   const blocks = useMemo(() => parseMessage(text), [text]);
   // keyed by the link as written (what the server keeps for a removed card), not the embed's own url
   const embeds = useMemo(() => {
@@ -172,7 +210,7 @@ export function ChatMessageText({ text, mentionLookup, myUserId, onOpenProfile, 
     });
   }, [blocks, suppressedEmbeds, noPreviews]);
   const jumbo = useMemo(() => isSingleEmoji(text) || isServerEmojiOnly(blocks), [text, blocks]);
-  const ctx: RenderContext = { jumbo, mentionLookup, myUserId, onOpenProfile };
+  const ctx: RenderContext = { jumbo, mentionLookup, myUserId, onOpenProfile, roles, mentionEveryone };
   // a GIF message is only its KLIPY URL: show the GIF, not the link and a preview of it
   const gifUrl = gifMessageUrl(text);
   if (gifUrl) return <GifMessage url={gifUrl} />;

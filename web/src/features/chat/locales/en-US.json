@@ -5,6 +5,13 @@
   "react": "React",
   "moreEmojis": "More emojis",
   "edited": "(edited)",
+  "mentions": {
+    "title": "Mention",
+    "role": "Notifies whoever has this role",
+    "everyoneHint": "Notifies everyone who can see this channel",
+    "hereHint": "Notifies whoever is online and can see this channel",
+    "deletedRole": "deleted-role"
+  },
   "deleting": "Deleting…",
   "dismissNotice": "Dismiss notice",
   "pending": {

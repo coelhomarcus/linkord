@@ -21,7 +21,7 @@ import { ReportDialog } from '@/features/reports/ReportDialog';
 import { ReactionEmojiPicker } from '@/features/chat/ReactionEmojiPicker';
 import { formatTime } from '@/shared/lib/formatChatTime';
 import { useTimeFormat } from '@/shared/lib/timeFormat';
-import { mentionsUser } from '@/shared/lib/mentions';
+import { groupMentionsMe, mentionsUser } from '@/shared/lib/mentions';
 import { copyToClipboard } from '@/shared/lib/clipboard';
 import { cn } from '@/shared/lib/utils';
 import { useKeepPopoverWarm } from '@/shared/hooks/useKeepPopoverWarm';
@@ -31,6 +31,7 @@ import type { OutboxEntry } from './useMessageOutbox';
 import { PendingAttachments } from './PendingAttachments';
 import { messagePermissions } from './messageActions';
 import { customEmojisAsText, encodeCustomEmojis, emojisByName, tokensByName } from '@/features/emoji/customEmojiText';
+import { roleMentionsAsText } from './roleMentionText';
 import { useMyEmojis } from '@/features/emoji/myEmojis';
 import { MessageReactions } from './MessageReactions';
 import { withPendingReactions } from './reactionState';
@@ -175,7 +176,7 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
   // your own messages: you may not be in allUsers, but your still frame is known
   const displayedPoster = author ? author.avatarPoster : isMine ? state.me.avatarPoster : undefined;
   const replyAuthor = message.replyTo?.authorId ? allUsers.get(message.replyTo.authorId) : undefined;
-  const mentionsMe = !isMine && mentionsUser(message.text, mentionLookup, state.me.userId);
+  const mentionsMe = !isMine && (mentionsUser(message.text, mentionLookup, state.me.userId) || groupMentionsMe(message, messageServer?.myRoleIds ?? null));
   const isInvite = message.kind === 'server_invite' || message.kind === 'call_invite';
   const inviteCodes = useMemo(() => (isInvite ? [] : inviteCodesInText(message.text)), [isInvite, message.text]);
   const canReport = can.report;
@@ -190,6 +191,11 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
   const resolveEditEmoji = useCallback((name: string, nth: number | null) => (
     (!nth && editKeep.get(name)) || editByName.get(name)?.[nth ? nth - 1 : 0] || null
   ), [editByName, editKeep]);
+
+  const resolveEditRole = useCallback((roleId: string) => {
+    const role = messageServer?.roles.find((r) => r.id === roleId);
+    return role ? { id: role.id, name: role.name, color: role.color } : null;
+  }, [messageServer]);
 
   async function saveEdit() {
     const trimmed = encodeCustomEmojis(editText, editByName, editKeep).trim();
@@ -215,7 +221,7 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
   }
 
   function copyText() {
-    void copyToClipboard(customEmojisAsText(message.text));
+    void copyToClipboard(roleMentionsAsText(customEmojisAsText(message.text), servers));
   }
 
   function handleEditKeyDown(event: KeyboardEvent) {
@@ -315,7 +321,7 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
               <span className="flex-none font-medium text-text-secondary">
                 {replyAuthor ? `@${replyAuthor.displayName}` : deletedAuthorName}
               </span>
-              {message.replyTo.text && <span className="truncate"><EmojiText text={customEmojisAsText(message.replyTo.text)} /></span>}
+              {message.replyTo.text && <span className="truncate"><EmojiText text={roleMentionsAsText(customEmojisAsText(message.replyTo.text), servers)} /></span>}
               {message.replyTo.sticker !== undefined && <span className="truncate">{stickerLabel(message.replyTo.sticker)}</span>}
             </button>
           )}
@@ -327,6 +333,7 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
                 onChange={setEditText}
                 onKeyDown={handleEditKeyDown}
                 resolveCustomEmoji={resolveEditEmoji}
+                resolveRole={resolveEditRole}
                 aria-label={t('edit.field')}
                 autoFocus
                 className="max-h-60 min-h-9 overflow-y-auto rounded-lg border border-border-strong bg-fill-inset px-3 py-1.5 text-body focus:border-border-accent"
@@ -358,6 +365,8 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
                   onOpenProfile={onOpenProfile}
                   embeds={message.embeds}
                   suppressedEmbeds={message.suppressedEmbeds}
+                  roles={messageServer?.roles}
+                  mentionEveryone={!!message.mentionEveryone}
                 />
                 {message.editedAt && <span className="ml-1 select-none text-caption text-text-muted">{t('edited')}</span>}
               </div>

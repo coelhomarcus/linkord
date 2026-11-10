@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { ArrowBendUpLeftIcon, ArrowsInSimpleIcon, ArrowUpIcon, GifIcon, ImageSquareIcon, PaperclipIcon, PlusCircleIcon, SmileyIcon, StickerIcon } from '@phosphor-icons/react';
+import { ArrowBendUpLeftIcon, ArrowsInSimpleIcon, ArrowUpIcon, AtIcon, GifIcon, ImageSquareIcon, PaperclipIcon, PlusCircleIcon, ShieldIcon, SmileyIcon, StickerIcon } from '@phosphor-icons/react';
 import { forwardRef, useCallback, useEffect, useId, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, KeyboardEvent as ReactKeyboardEvent, RefObject } from 'react';
 
@@ -18,6 +18,8 @@ import { readDraft, updateConversationDraft, useConversationDraft, type PendingA
 import { takeShare, useHasPendingShare } from './pendingShare';
 import { MAX_ATTACHMENTS_PER_MESSAGE } from '@/shared/types/protocol';
 import type { PublicUser } from '@/shared/types/protocol';
+import { roleMentionsAsText } from './roleMentionText';
+import { mentionCandidateKey, mentionInsertion, roleAndGroupCandidates, type MentionCandidate } from './mentionCandidates';
 import { reportGifShared } from '@/features/gifs/klipy';
 import type { Gif } from '@/features/gifs/klipy';
 import { useGifConfig } from '@/features/gifs/useGifConfig';
@@ -229,7 +231,13 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
   const messagePlaceholder = conversation?.serverId ? t('composer.messageChannel', { channel: conversation.title })
     : peer ? t('composer.messageDirect', { name: peer.displayName }) : t('composer.message');
   const placeholder = pendingFiles.length ? t('composer.addCaption') : messagePlaceholder;
-  const mentionCandidates = useMemo(() => {
+  const channelServer = serverId ? servers.find((s) => s.id === serverId) : undefined;
+  const canMentionEveryone = hasPermission(conversation?.permissions ?? 0, PERMISSIONS.MENTION_EVERYONE);
+  const resolveRole = useCallback((roleId: string) => {
+    const role = channelServer?.roles.find((r) => r.id === roleId);
+    return role ? { id: role.id, name: role.name, color: role.color } : null;
+  }, [channelServer]);
+  const mentionCandidates = useMemo((): MentionCandidate[] => {
     if (!mentionQuery) return [];
     const q = mentionQuery.query.toLowerCase();
     const members: PublicUser[] = [];
@@ -241,11 +249,14 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
         if (user) members.push(user);
       }
     }
-    return members
+    const users = members
       .filter((u) => u.username.toLowerCase().startsWith(q))
       .sort((a, b) => a.username.localeCompare(b.username))
-      .slice(0, MAX_MENTION_RESULTS);
-  }, [allUsers, mentionQuery, directMemberIds, serverMembersKey, serverMembers]);
+      .slice(0, MAX_MENTION_RESULTS)
+      .map((user): MentionCandidate => ({ kind: 'user', user }));
+    // members first, then the server's roles and @everyone/@here, Discord's order
+    return channelServer ? [...users, ...roleAndGroupCandidates(mentionQuery.query, channelServer.roles, canMentionEveryone)] : users;
+  }, [allUsers, mentionQuery, directMemberIds, serverMembersKey, serverMembers, channelServer, canMentionEveryone]);
 
   // re-derives the active "@query" from wherever the cursor is now — called
   // after every edit (the field's onChange) and every cursor move that
@@ -281,14 +292,14 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
     syncMentionQuery(value, cursor);
   }
 
-  // replaces the "@query" itself (not the whole field) with "@username " —
-  // mirrors insertEmoji's cursor handling below.
-  function selectMention(user: PublicUser) {
+  // replaces the "@query" itself (not the whole field) with "@username ",
+  // "@everyone " or a role's token — mirrors insertEmoji's cursor handling below.
+  function selectMention(candidate: MentionCandidate) {
     const el = fieldRef.current;
     if (!mentionQuery) return;
     const before = text.slice(0, mentionQuery.start);
     const after = text.slice(mentionQuery.start + 1 + mentionQuery.query.length);
-    const insertion = `@${user.username} `;
+    const insertion = mentionInsertion(candidate);
     const next = before + insertion + after;
     setText(next);
     setMentionQuery(null);
@@ -466,26 +477,22 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
       <div className="relative flex flex-col rounded-lg border border-border-default bg-bg-card">
         {mentionQuery && mentionCandidates.length > 0 && (
           <div className="absolute inset-x-0 bottom-full z-20 mb-1 max-h-56 overflow-y-auto rounded-lg border border-border bg-surface-overlay py-1 shadow-popover">
-            <p className="select-none px-3 pb-1 pt-0.5 text-caption font-semibold uppercase text-text-muted">Mencionar alguém</p>
-            {mentionCandidates.map((user, i) => (
+            <p className="select-none px-3 pb-1 pt-0.5 text-caption font-semibold uppercase text-text-muted">{t('mentions.title')}</p>
+            {mentionCandidates.map((candidate, i) => (
               <button
-                key={user.id}
+                key={mentionCandidateKey(candidate)}
                 ref={(el) => { mentionOptionRefs.current[i] = el; }}
                 type="button"
                 // onMouseDown (not onClick) fires BEFORE the textarea's blur
                 // — preventDefault stops that blur from happening at all, so
                 // focus/caret position never leaves the field.
-                onMouseDown={(event) => { event.preventDefault(); selectMention(user); }}
+                onMouseDown={(event) => { event.preventDefault(); selectMention(candidate); }}
                 className={cn(
                   'flex w-full items-center gap-2 px-3 py-1.5 text-left',
                   i === mentionSelectedIndex ? 'bg-fill-hover text-text-primary' : 'text-text-secondary hover:bg-fill-subtle'
                 )}
               >
-                <Avatar id={user.id} name={user.displayName} avatar={user.avatar} avatarColor={user.avatarColor} size={24} />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-label font-medium">{user.displayName}</span>
-                  <span className="block truncate text-caption text-text-muted">@{user.username}</span>
-                </span>
+                <MentionOption candidate={candidate} />
               </button>
             ))}
           </div>
@@ -507,7 +514,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
             <ArrowBendUpLeftIcon size={16} className="flex-none text-text-muted" />
             <span className="min-w-0 flex-1 truncate text-text-muted">
               {t('composer.replyingTo')} <span className="font-medium text-text-secondary">{replyName}</span>
-              {replyingTo.text ? <span> - <EmojiText text={customEmojisAsText(replyingTo.text)} /></span> : null}
+              {replyingTo.text ? <span> - <EmojiText text={roleMentionsAsText(customEmojisAsText(replyingTo.text), servers)} /></span> : null}
               {replyingTo.sticker !== undefined && <span> - {stickerLabel(replyingTo.sticker?.name)}</span>}
             </span>
             <CloseButton size="xs" label={t('composer.cancelReply')} onClick={() => setReplyingTo(null)} />
@@ -576,6 +583,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
               onKeyDown={handleKeyDown}
               onPaste={handlePaste}
               resolveCustomEmoji={resolveCustomEmoji}
+              resolveRole={resolveRole}
               disabled={disabled}
               aria-label={t('composer.message')}
               {...emojiSuggestions.fieldProps}
@@ -670,3 +678,43 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
     </div>
   );
 });
+
+/** One entry of the "@" list: a member with their avatar, a role in its
+ * colour, or @everyone/@here with who they reach. */
+function MentionOption({ candidate }: { candidate: MentionCandidate }) {
+  const { t } = useTranslation('chat');
+  if (candidate.kind === 'user') {
+    const { user } = candidate;
+    return (
+      <>
+        <Avatar id={user.id} name={user.displayName} avatar={user.avatar} avatarColor={user.avatarColor} size={24} />
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-label font-medium">{user.displayName}</span>
+          <span className="block truncate text-caption text-text-muted">@{user.username}</span>
+        </span>
+      </>
+    );
+  }
+  if (candidate.kind === 'role') {
+    const { role } = candidate;
+    return (
+      <>
+        <ShieldIcon size={24} weight="fill" className="flex-none p-0.5" style={{ color: role.color || 'var(--color-text-muted)' }} aria-hidden />
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-label font-medium" style={role.color ? { color: role.color } : undefined}>@{role.name}</span>
+          <span className="block truncate text-caption text-text-muted">{t('mentions.role')}</span>
+        </span>
+      </>
+    );
+  }
+  return (
+    <>
+      <AtIcon size={24} className="flex-none p-0.5 text-text-muted" aria-hidden />
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-label font-medium">@{candidate.name}</span>
+        <span className="block truncate text-caption text-text-muted">{t(candidate.name === 'everyone' ? 'mentions.everyoneHint' : 'mentions.hereHint')}</span>
+      </span>
+    </>
+  );
+}
+

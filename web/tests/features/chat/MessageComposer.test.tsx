@@ -6,7 +6,7 @@ import { createFakeRoomContextValue, renderWithRoom } from '@tests/fixtures/room
 import { RoomContext } from '@/state/RoomContext';
 import { MessageComposer } from '@/features/chat/MessageComposer';
 import { clearAllDrafts } from '@/features/chat/conversationDrafts';
-import type { Conversation, PublicUser } from '@/shared/types/protocol';
+import type { Conversation, PublicUser, RoleSummary, ServerSummary } from '@/shared/types/protocol';
 import { fileName } from '@tests/fixtures/fileNameMatcher';
 import * as serversApi from '@/features/servers/serversApi';
 import { PERMISSIONS } from '@/features/servers/permissionBits';
@@ -442,6 +442,82 @@ describe('MessageComposer — mentions (@)', () => {
     expect(screen.getByText('Fora Da Conversa')).toBeInTheDocument();
     expect(screen.queryByText('André Costa')).not.toBeInTheDocument();
     expect(mockedServers.fetchAllServerMembers).toHaveBeenCalledWith('s1');
+  });
+});
+
+describe('MessageComposer — group and role mentions', () => {
+  const ROLE_OPEN = '11111111-1111-4111-8111-111111111111';
+  const ROLE_CLOSED = '22222222-2222-4222-8222-222222222222';
+  const roles: RoleSummary[] = [
+    { id: 'r-everyone', name: '@everyone', color: '', position: 0, permissions: 0, hoist: false, mentionable: true, isDefault: true },
+    { id: ROLE_OPEN, name: 'Moderação', color: '#ff8800', position: 2, permissions: 0, hoist: false, mentionable: true, isDefault: false },
+    { id: ROLE_CLOSED, name: 'Membros', color: '', position: 1, permissions: 0, hoist: false, mentionable: false, isDefault: false },
+  ];
+  const server = { id: 's1', name: 'Squad', roles, myRoleIds: [] } as unknown as ServerSummary;
+  const channel = (permissions: number): Conversation => ({
+    id: 'conv-1', type: 'text', serverId: 's1', title: 'geral', memberIds: [], lastMessageAt: null, createdAt: 1, updatedAt: 1, permissions,
+  });
+
+  beforeEach(() => mockedServers.fetchAllServerMembers.mockResolvedValue([]));
+
+  function renderChannel(permissions: number, overrides: Partial<Parameters<typeof renderWithRoom>[1]> = {}) {
+    return renderWithRoom(<MessageComposer conversationId="conv-1" />, {
+      state: joinedState, conversations: [channel(permissions)], servers: [server], ...overrides,
+    });
+  }
+  const options = () => screen.getAllByRole('button').map((b) => b.textContent ?? '').filter((text) => text.startsWith('@'));
+
+  it('without MENTION_EVERYONE offers only the roles anyone may mention', async () => {
+    renderChannel(PERMISSIONS.VIEW_CHANNEL | PERMISSIONS.SEND_MESSAGES);
+    await typeInField(screen.getByPlaceholderText(/^Conversar/), 'oi @');
+    await screen.findByText('@Moderação');
+    expect(screen.queryByText('@Membros')).not.toBeInTheDocument();
+    expect(screen.queryByText('@everyone')).not.toBeInTheDocument();
+    expect(screen.queryByText('@here')).not.toBeInTheDocument();
+  });
+
+  it('with it offers every role, then @everyone and @here, filtered by what was typed', async () => {
+    renderChannel(PERMISSIONS.VIEW_CHANNEL | PERMISSIONS.SEND_MESSAGES | PERMISSIONS.MENTION_EVERYONE);
+    const field = screen.getByPlaceholderText(/^Conversar/);
+    await typeInField(field, '@');
+    await screen.findByText('@everyone');
+    expect(options()).toEqual([
+      '@ModeraçãoNotifica quem tem este cargo',
+      '@MembrosNotifica quem tem este cargo',
+      '@everyoneNotifica todos que podem ver este canal',
+      '@hereNotifica quem está online e pode ver este canal',
+    ]);
+    // accents do not matter to the search; the @everyone role itself is never offered
+    await typeInField(field, 'mod');
+    expect(options()).toEqual(['@ModeraçãoNotifica quem tem este cargo']);
+  });
+
+  it('picking @everyone inserts it as text', async () => {
+    renderChannel(PERMISSIONS.MENTION_EVERYONE);
+    const field = screen.getByPlaceholderText(/^Conversar/);
+    await typeInField(field, 'atenção @ev');
+    await screen.findByText('@everyone');
+    await typeInField(field, '{Enter}');
+    expect(fieldValue(field)).toBe('atenção @everyone ');
+  });
+
+  it("picking a role sends its token and shows it as a chip in the role's colour", async () => {
+    const sendChatMessage = vi.fn(() => true);
+    renderChannel(0, { sendChatMessage });
+    const field = screen.getByPlaceholderText(/^Conversar/);
+    await typeInField(field, 'oi @mod');
+    await screen.findByText('@Moderação');
+    await typeInField(field, '{Enter}');
+
+    expect(fieldValue(field)).toBe(`oi <@&${ROLE_OPEN}> `);
+    const chip = field.querySelector(`[data-role-mention="${ROLE_OPEN}"]`);
+    expect(chip).toHaveTextContent('@Moderação');
+    expect(chip?.firstElementChild).toHaveStyle({ color: '#ff8800' });
+
+    // the caret is put after the pick on the next frame, as a browser would before the next key
+    await act(() => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())));
+    await typeInField(field, 'tudo bem?{Enter}');
+    expect(sendChatMessage).toHaveBeenCalledWith('conv-1', `oi <@&${ROLE_OPEN}> tudo bem?`, undefined);
   });
 });
 
