@@ -5,7 +5,7 @@ import { conversationTitle } from '@/features/conversations/conversationUtils';
 import { i18n } from '@/shared/i18n/init';
 import { notifyIncomingChatMessage } from '@/shared/notifications';
 import { messagePreviewText } from '@/features/chat/messagePreview';
-import { mentionsUsername } from '@/shared/lib/mentions';
+import { groupMentionsMe, mentionsUsername } from '@/shared/lib/mentions';
 import { useMessageOutbox, type OutboxFile } from './useMessageOutbox';
 import { useMessageActionRequests } from './useMessageActionRequests';
 import { useReactionIntents } from './useReactionIntents';
@@ -13,7 +13,7 @@ import { MAX_WINDOW, withNewerMessages, withOlderPage, withPresentPage } from '.
 import { markArrival } from './arrivals';
 import { createMessageSoundThrottle } from './messageSoundThrottle';
 import type { ReactionParticipantsTarget } from './reactionParticipants';
-import type { ChatMessage, ClientMessage, Conversation, PublicUser, ReactionEmoji, ServerMessage, StickerCard } from '@/shared/types/protocol';
+import type { ChatMessage, ClientMessage, Conversation, PublicUser, ReactionEmoji, ServerMessage, ServerSummary, StickerCard } from '@/shared/types/protocol';
 
 /** Adds `message` once, in msgId order — a send's result and its broadcast
  * both deliver it, in either order, and it may land after newer messages. */
@@ -64,6 +64,8 @@ interface ChatMessagesDeps {
   allUsersRef: MutableRefObject<Map<string, PublicUser>>;
   myUserIdRef: MutableRefObject<string | null>;
   myUsernameRef: MutableRefObject<string | null>;
+  /** for the roles a group mention may have reached */
+  serversRef: MutableRefObject<ServerSummary[]>;
   activeViewRef: MutableRefObject<ChatView>;
   clearTypingEntry: (conversationId: string, userId: string) => void;
 }
@@ -73,7 +75,7 @@ interface ChatMessagesDeps {
  * result, and applying the handful of server broadcasts that patch an
  * existing message in place (edit, attachment added, reaction changed). */
 export function useChatMessages(deps: ChatMessagesDeps) {
-  const { sendWs, activeConversationIdRef, setActiveConversation, conversationsRef, allUsersRef, myUserIdRef, myUsernameRef, activeViewRef, clearTypingEntry } = deps;
+  const { sendWs, activeConversationIdRef, setActiveConversation, conversationsRef, allUsersRef, myUserIdRef, myUsernameRef, serversRef, activeViewRef, clearTypingEntry } = deps;
 
   const [messagesByConversation, setMessagesByConversation] = useState<Map<string, ChatMessage[]>>(new Map());
   const messagesByConversationRef = useRef<Map<string, ChatMessage[]>>(new Map());
@@ -123,6 +125,11 @@ export function useChatMessages(deps: ChatMessagesDeps) {
   // messages after it are still unread. Once they were seen, the next arrival
   // starts a new one. State would lag behind two arrivals in the same tick.
   const unreadCountsRef = useRef(new Map<string, number>());
+  // The conversation whose divider was placed for the current visit. Its
+  // history can come again while it stays open (a reconnect, "back to the
+  // present"), and by then the server has it read: the line must stay where
+  // it was drawn, not vanish as the read state catches up.
+  const dividerVisitRef = useRef<string | null>(null);
   const [shouldChime] = useState(createMessageSoundThrottle);
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
   const [editingMsgId, setEditingMsgId] = useState<number | null>(null);
@@ -187,6 +194,31 @@ export function useChatMessages(deps: ChatMessagesDeps) {
       return next;
     });
   }, []);
+
+  const dropUnreadStart = useCallback((conversationIds: string[]) => {
+    setUnreadStartByConversation((prev) => {
+      if (!conversationIds.some((id) => prev.has(id))) return prev;
+      const next = new Map(prev);
+      for (const id of conversationIds) next.delete(id);
+      return next;
+    });
+  }, []);
+
+  /** "Mark as read" (the menu, Esc): everything up to the conversation's
+   * newest message, loaded here or not, and its new-messages line goes. */
+  const markConversationRead = useCallback((conversationId: string) => {
+    sendWs({ t: 'conversation-mark-all-read', conversationId });
+    clearUnread(conversationId);
+    dropUnreadStart([conversationId]);
+  }, [sendWs, clearUnread, dropUnreadStart]);
+
+  /** "Mark server as read": every channel this member sees in it. */
+  const markServerRead = useCallback((serverId: string) => {
+    sendWs({ t: 'server-mark-all-read', serverId });
+    const channelIds = serversRef.current.find((server) => server.id === serverId)?.channels.map((channel) => channel.id) ?? [];
+    for (const id of channelIds) clearUnread(id);
+    dropUnreadStart(channelIds);
+  }, [sendWs, serversRef, clearUnread, dropUnreadStart]);
 
   /** The active conversation's chat came (back) into view — from another page
    * or from the call stage — without being opened again: what piled up there
@@ -390,12 +422,16 @@ export function useChatMessages(deps: ChatMessagesDeps) {
   // the list visibly jumped away and back.
   const onConversationHistory = useCallback((m: Extract<ServerMessage, { t: 'conversation-history' }>) => {
     const conversationId = m.conversationId;
-    setUnreadStartByConversation((prev) => {
-      const next = new Map(prev);
-      if (m.firstUnreadMessageId != null) next.set(conversationId, m.firstUnreadMessageId);
-      else next.delete(conversationId);
-      return next;
-    });
+    const sameVisit = dividerVisitRef.current === conversationId;
+    if (conversationId === activeConversationIdRef.current) dividerVisitRef.current = conversationId;
+    if (!sameVisit) {
+      setUnreadStartByConversation((prev) => {
+        const next = new Map(prev);
+        if (m.firstUnreadMessageId != null) next.set(conversationId, m.firstUnreadMessageId);
+        else next.delete(conversationId);
+        return next;
+      });
+    }
     const loaded = messagesByConversationRef.current.get(conversationId);
     const atPresent = hasMoreAfterRef.current.get(conversationId) !== true;
     const update = loaded && atPresent ? withPresentPage(loaded, m.messages) : null;
@@ -411,7 +447,7 @@ export function useChatMessages(deps: ChatMessagesDeps) {
       setHasMoreByConversation((prev) => new Map(prev).set(conversationId, hasMore));
     }
     setHasMoreAfterByConversation((prev) => new Map(prev).set(conversationId, false));
-  }, [resetPages, bumpWindow, touchConversationCache]);
+  }, [resetPages, bumpWindow, touchConversationCache, activeConversationIdRef]);
 
   const onConversationHistoryAround = useCallback((m: Extract<ServerMessage, { t: 'conversation-history-around' }>) => {
     const pending = pendingJumpRef.current;
@@ -477,18 +513,20 @@ export function useChatMessages(deps: ChatMessagesDeps) {
     if (m.message.id) clearTypingEntry(conversationId, m.message.id);
     const amLookingAtIt = document.hasFocus() && activeViewRef.current === 'chat' && conversationId === activeConversationIdRef.current;
     if (m.message.id !== myUserIdRef.current && !amLookingAtIt) {
-      const mentioned = mentionsUsername(m.message.text, myUsernameRef.current);
+      const serverId = conversationsRef.current.find((c) => c.id === conversationId)?.serverId;
+      const myRoleIds = serverId ? serversRef.current.find((s) => s.id === serverId)?.myRoleIds ?? [] : null;
+      const mentioned = mentionsUsername(m.message.text, myUsernameRef.current) || groupMentionsMe(m.message, myRoleIds);
       if (shouldChime(conversationId, mentioned)) playSound(mentioned ? 'mention' : 'newMessage');
       notifyIncomingChatMessage({
         conversationId,
         conversationName: conversationTitle(conversationsRef.current.find((c) => c.id === conversationId), myUserIdRef.current, allUsersRef.current),
         senderId: m.message.id,
         senderName: (m.message.id ? allUsersRef.current.get(m.message.id)?.displayName : undefined) ?? m.message.name,
-        text: messagePreviewText(m.message, myUserIdRef.current),
+        text: messagePreviewText(m.message, myUserIdRef.current, serversRef.current),
         mentioned,
       });
     }
-  }, [activeConversationIdRef, clearTypingEntry, activeViewRef, myUserIdRef, conversationsRef, allUsersRef, myUsernameRef, onPendingEcho, insertConfirmed, queueMarkRead, shouldChime]);
+  }, [activeConversationIdRef, clearTypingEntry, activeViewRef, myUserIdRef, conversationsRef, allUsersRef, myUsernameRef, serversRef, onPendingEcho, insertConfirmed, queueMarkRead, shouldChime]);
 
   const onChatDeleted = useCallback((m: Extract<ServerMessage, { t: 'chat-deleted' }>) => {
     setMessagesByConversation((prev) => {
@@ -569,13 +607,8 @@ export function useChatMessages(deps: ChatMessagesDeps) {
       return next;
     });
     clearUnread(m.conversationId);
-    setUnreadStartByConversation((prev) => {
-      if (!prev.has(m.conversationId)) return prev;
-      const next = new Map(prev);
-      next.delete(m.conversationId);
-      return next;
-    });
-  }, [clearUnread]);
+    dropUnreadStart([m.conversationId]);
+  }, [clearUnread, dropUnreadStart]);
 
   /** Another of this user's own sessions/tabs opened this conversation (or
    * this same tab did, redundantly) — mirrors that read state here so the
@@ -587,7 +620,7 @@ export function useChatMessages(deps: ChatMessagesDeps) {
 
   return {
     messagesByConversation, hasMoreByConversation, hasMoreAfterByConversation, loadingOlderByConversation, unreadByConversation, unreadStartByConversation,
-    clearUnread, markActiveSeen, loadOlderMessages, pendingJumpTarget, clearPendingJumpTarget, cancelPendingJump, jumpToMessage,
+    clearUnread, markActiveSeen, markConversationRead, markServerRead, loadOlderMessages, pendingJumpTarget, clearPendingJumpTarget, cancelPendingJump, jumpToMessage,
     sendChatMessage, sendSticker, deleteChatMessage, editChatMessage, reactToChatMessage, removeChatAttachment, suppressChatEmbed,
     onWelcome, onChatSendResult: outbox.onChatSendResult, queueMessageWithFiles,
     onChatActionResult: actionRequests.onChatActionResult,

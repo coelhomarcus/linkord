@@ -25,11 +25,11 @@ const log = logger.child({ component: 'server-stickers' });
 
 export const STICKER_SIZE_PX = 320;
 // the original picture, as picked: a GIF found online is often a few MB
-export const MAX_STICKER_UPLOAD_BYTES = 12 * 1024 * 1024;
+const MAX_STICKER_UPLOAD_BYTES = 12 * 1024 * 1024;
 // what is stored, after the 320px WebP: past this a long animation is refused
 const MAX_STICKER_FILE_BYTES = 1024 * 1024;
 // no boosts here: one tier, more than Discord's base 5
-export const MAX_STICKERS = 30;
+const MAX_STICKERS = 30;
 const STICKER_UPLOAD_LIMIT = { windowMs: 60_000, max: 10 };
 const NAME_MIN = 2;
 const NAME_MAX = 30;
@@ -73,7 +73,7 @@ interface StickerEntry {
 }
 
 /** What the picker keeps for each sticker the account may send. */
-export interface StickerSummary {
+interface StickerSummary {
   id: string;
   name: string;
   description: string;

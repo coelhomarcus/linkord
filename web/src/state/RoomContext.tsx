@@ -144,6 +144,10 @@ export interface RoomContextValue {
   loadingOlderByConversation: Set<string>;
   unreadByConversation: Map<string, number>;
   unreadStartByConversation: Map<string, number>;
+  /** Marks a conversation read up to its newest message and drops its new-messages line. */
+  markConversationRead: (conversationId: string) => void;
+  /** Marks every channel of a server read. */
+  markServerRead: (serverId: string) => void;
   typingByConversation: Map<string, Set<string>>;
   sendTyping: (conversationId: string, value: boolean) => void;
   loadOlderMessages: (conversationId: string) => void;

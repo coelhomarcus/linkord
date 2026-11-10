@@ -95,6 +95,27 @@ export function FloatingPip({ allIds, onExpand, hideOnMobile = false }: Floating
     };
   }, [isDragging, onExpand]);
 
+  // A spot picked on a wide window can be past the edge of a narrower one
+  // (a desktop window snapped to half, an iPad turned upright): pull it back in.
+  const dragged = dragPos !== null;
+  useEffect(() => {
+    if (!dragged) return;
+    function keepInside() {
+      const box = boxRef.current;
+      const parent = box?.parentElement;
+      if (!box || !parent) return;
+      const { width, height } = parent.getBoundingClientRect();
+      setDragPos((pos) => {
+        if (!pos) return pos;
+        const x = Math.min(pos.x, Math.max(0, width - box.offsetWidth));
+        const y = Math.min(pos.y, Math.max(0, height - box.offsetHeight));
+        return x === pos.x && y === pos.y ? pos : { x, y };
+      });
+    }
+    window.addEventListener('resize', keepInside);
+    return () => window.removeEventListener('resize', keepInside);
+  }, [dragged]);
+
   // Audio-only call (nobody's camera/screen is on) — nothing to preview.
   // The rail's own green phone icon (AppNavigationRail) is the "in a call"
   // indicator and way back for this case; a floating pill duplicated it.

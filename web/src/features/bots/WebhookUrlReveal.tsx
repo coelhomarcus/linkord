@@ -1,31 +1,21 @@
-import { CheckIcon, CopyIcon, WarningIcon } from '@phosphor-icons/react';
-import { useEffect, useState } from 'react';
+import { WarningIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 
+import { CopyStatusIcon } from '@/shared/CopyFeedback';
+import { useCopyToClipboard } from '@/shared/hooks/useCopyToClipboard';
 import { Button } from '@/shared/ui/primitives/button';
-
-const COPIED_FOR_MS = 2000;
 
 function CopyField({ label, value }: { label: string; value: string }) {
   const { t } = useTranslation('bots');
-  const [copied, setCopied] = useState(false);
-  useEffect(() => {
-    if (!copied) return;
-    const timer = setTimeout(() => setCopied(false), COPIED_FOR_MS);
-    return () => clearTimeout(timer);
-  }, [copied]);
-
-  function copy() {
-    navigator.clipboard.writeText(value).then(() => setCopied(true)).catch(() => {});
-  }
+  const { copied, copy } = useCopyToClipboard();
 
   return (
     <div className="flex flex-col gap-1.5">
       <span className="text-caption font-medium text-text-muted">{label}</span>
       <div className="flex items-start gap-2 rounded-md border border-border bg-fill-subtle p-2">
         <code className="min-w-0 flex-1 select-text break-all font-mono text-caption text-text-primary">{value}</code>
-        <Button type="button" variant="ghost" size="icon-xs" aria-label={copied ? t('reveal.copied') : t('reveal.copy', { label: label.toLocaleLowerCase() })} onClick={copy} className="flex-none text-text-muted hover:text-text-primary">
-          {copied ? <CheckIcon size={14} className="text-green" /> : <CopyIcon size={14} />}
+        <Button type="button" variant="ghost" size="icon-xs" aria-label={t('reveal.copy', { label: label.toLocaleLowerCase() })} onClick={() => void copy(value)} className="flex-none text-text-muted hover:text-text-primary">
+          <CopyStatusIcon copied={copied} size={14} />
         </Button>
       </div>
     </div>

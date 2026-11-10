@@ -31,7 +31,6 @@
   },
   "add": {
     "shareTitle": "Your username",
-    "copied": "Copied",
     "copy": "Copy @{{username}}",
     "waiting_one": "You have {{count}} request awaiting reply.",
     "waiting_other": "You have {{count}} requests awaiting reply.",

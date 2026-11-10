@@ -84,9 +84,19 @@ describe('ServerSettingsModal — roles', () => {
     expect(screen.getByRole('switch', { name: 'Exibir membros com este cargo separadamente' })).toBeChecked();
   });
 
-  it('offers no mention switch: role mentions do not exist', async () => {
+  it('lets anyone mention the role once the switch is on', async () => {
+    mocked.updateRole.mockResolvedValue(undefined as never);
+    const user = await open('Cargos');
+    const mentionable = screen.getByRole('switch', { name: /^Permitir que qualquer pessoa mencione este cargo/ });
+    expect(mentionable).not.toBeChecked();
+    await user.click(mentionable);
+    await user.click(within(roleBar()!).getByRole('button', { name: 'Salvar' }));
+    expect(mocked.updateRole).toHaveBeenCalledWith('r1', expect.objectContaining({ mentionable: true }));
+  });
+
+  it('lists the mention permission among the text ones', async () => {
     await open('Cargos');
-    expect(screen.queryByRole('switch', { name: /mencione/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('switch', { name: /^Mencionar @everyone, @here e todos os cargos/ })).toBeInTheDocument();
   });
 
   it('leaves the permissions the member does not hold off-limits', async () => {

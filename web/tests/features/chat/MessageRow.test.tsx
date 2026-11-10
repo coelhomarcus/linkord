@@ -5,10 +5,12 @@ import { initialRoomState } from '@/state/roomReducer';
 import { PERMISSIONS } from '@/features/servers/permissionBits';
 import { MemoryRouter } from 'react-router';
 import { renderWithRoom } from '@tests/fixtures/roomContextFixture';
+import { fieldValue, setFieldText, typeInField } from '@tests/fixtures/messageFieldFixture';
 import { MessageRow } from '@/features/chat/MessageRow';
 import type { ChatMessage, PublicUser, RoleSummary, ServerSummary } from '@/shared/types/protocol';
 import type { OutboxEntry } from '@/features/chat/useMessageOutbox';
 import * as serversApi from '@/features/servers/serversApi';
+import { liveAnnouncements } from '@tests/fixtures/announcerFixture';
 
 vi.mock('@/features/servers/serversApi', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/features/servers/serversApi')>()),
@@ -116,6 +118,27 @@ describe('MessageRow', () => {
       },
     );
     expect(screen.getByRole('button', { name: 'Fulana' })).toHaveStyle({ color: 'rgb(51, 153, 255)' });
+  });
+
+  it('highlights a message whose group mention reached me, not one that only names the group', () => {
+    const server: ServerSummary = {
+      id: 's1', name: 'Squad', icon: '', ownerId: null, status: 'active', createdAt: 0, memberCount: 1,
+      position: 0, permissions: 0, myRoleIds: ['role-mods'], roles: [], categories: [], channels: [],
+    };
+    const channel = { id: 'conv-1', type: 'text' as const, title: 'general', serverId: 's1', memberIds: [], lastMessageAt: null, createdAt: 0, updatedAt: 0, topic: '', categoryId: null, position: 0, permissions: 0 };
+    const rowFor = (message: ChatMessage) => {
+      const view = renderWithRoom(
+        <MessageRow message={message} showHeader highlighted={false} allUsers={new Map()} mentionLookup={new Map()} onOpenProfile={noop} onReply={noop} onJumpTo={noop} />,
+        { state: { ...initialRoomState, me: { ...initialRoomState.me, userId: 'me' } }, conversations: [channel], servers: [server] },
+      );
+      const highlighted = document.querySelector('[data-message-id]')!.className.includes('bg-yellow');
+      view.unmount();
+      return highlighted;
+    };
+    expect(rowFor(makeMessage({ text: '@everyone' }))).toBe(false);
+    expect(rowFor(makeMessage({ text: '@everyone', mentionEveryone: true }))).toBe(true);
+    expect(rowFor(makeMessage({ text: 'oi', mentionRoleIds: ['role-mods'] }))).toBe(true);
+    expect(rowFor(makeMessage({ text: 'oi', mentionRoleIds: ['role-other'] }))).toBe(false);
   });
 
   it('groups consecutive messages from the same author without repeating name/avatar', () => {
@@ -340,6 +363,19 @@ describe('MessageRow — quick reactions', () => {
   });
 });
 
+describe('MessageRow — copy text', () => {
+  it('"Copiar texto" copies the message and announces it, since the menu closes', async () => {
+    const user = userEvent.setup();
+    renderWithRoom(
+      <MessageRow message={makeMessage()} showHeader highlighted={false} allUsers={new Map()} mentionLookup={new Map()} onOpenProfile={noop} onReply={noop} onJumpTo={noop} />
+    );
+    await user.click(screen.getByRole('button', { name: 'Ações da mensagem' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Copiar texto' }));
+    await expect(navigator.clipboard.readText()).resolves.toBe('Oi, tudo bem?');
+    await vi.waitFor(() => expect(liveAnnouncements()).toEqual(['Copiado']));
+  });
+});
+
 describe('MessageRow — invite links', () => {
   it('a pasted invite link to this instance shows its server card under the text', async () => {
     vi.mocked(serversApi.fetchInvitePreview).mockResolvedValue({
@@ -443,25 +479,23 @@ describe('MessageRow — edit and delete with confirmation', () => {
   );
 
   it('edit refused: the editor stays open with the text and the reason', async () => {
-    const user = userEvent.setup();
     const setEditingMsgId = vi.fn();
     const editChatMessage = vi.fn(async () => { throw new Error('Vocês precisam ser amigos pra conversar por aqui.'); });
     renderMine({ editChatMessage, setEditingMsgId });
-    const editor = screen.getByRole('textbox');
-    await user.clear(editor);
-    await user.type(editor, 'texto novo{Enter}');
+    const editor = screen.getByRole('textbox', { name: 'Editar mensagem' });
+    await setFieldText(editor, '');
+    await typeInField(editor, 'texto novo{Enter}');
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Vocês precisam ser amigos');
-    expect(editor).toHaveValue('texto novo');
+    expect(fieldValue(editor)).toBe('texto novo');
     expect(setEditingMsgId).not.toHaveBeenCalledWith(null);
   });
 
   it('confirmed edit closes the editor', async () => {
-    const user = userEvent.setup();
     const setEditingMsgId = vi.fn();
     const editChatMessage = vi.fn(async () => {});
     renderMine({ editChatMessage, setEditingMsgId });
-    await user.type(screen.getByRole('textbox'), ' editado{Enter}');
+    await typeInField(screen.getByRole('textbox', { name: 'Editar mensagem' }), ' editado{Enter}');
     expect(editChatMessage).toHaveBeenCalledWith(mine.msgId, 'texto antigo editado');
     expect(setEditingMsgId).toHaveBeenCalledWith(null);
   });

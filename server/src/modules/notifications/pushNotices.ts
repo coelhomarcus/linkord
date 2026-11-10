@@ -2,6 +2,7 @@ import type { Locale } from '../users/locale.js';
 import { localeText } from '../users/localeText.js';
 import { formatCallLength } from '../calls/callLength.js';
 import { customEmojisAsText } from '../emojis/customEmojiTokens.js';
+import { ROLE_MENTION_TOKEN } from '../link-preview/messageLinks.js';
 
 export interface PushNotice {
   title: string;
@@ -27,8 +28,14 @@ export function pushAvatarPath(user: { avatar: string; avatarPoster: string } | 
   return undefined;
 }
 
-export function previewText(text: string): string {
-  return customEmojisAsText(text).replace(/\s+/g, ' ').trim().slice(0, 120);
+const ROLE_MENTION_RE = new RegExp(ROLE_MENTION_TOKEN, 'g');
+
+/** The text as a notification shows it: server emojis as `:name:`, role
+ * mentions as `@Role` (`roleName` returns undefined for a role that is gone). */
+export function previewText(text: string, roleName: (roleId: string) => string | undefined = () => undefined, locale: Locale = 'pt-BR'): string {
+  return customEmojisAsText(text)
+    .replace(ROLE_MENTION_RE, (_token, roleId: string) => `@${roleName(roleId) ?? localeText(locale, 'push.deletedRole')}`)
+    .replace(/\s+/g, ' ').trim().slice(0, 120);
 }
 
 /** `@username` under the display name, only when it adds something the title does not already say. */

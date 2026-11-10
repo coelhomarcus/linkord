@@ -9,6 +9,7 @@ import { FakeRecorder, FakeTrack } from '@tests/fixtures/fakeRecorderEnv';
 import { MessageComposer } from '@/features/chat/MessageComposer';
 import { clearAllDrafts } from '@/features/chat/conversationDrafts';
 import type { Participant } from '@/shared/types/protocol';
+import { typeInField, fieldValue } from '@tests/fixtures/messageFieldFixture';
 
 const joinedState = { ...initialRoomState, joined: true, me: { ...initialRoomState.me, id: 'conn-me', userId: 'user-me' } };
 
@@ -85,7 +86,7 @@ describe('MessageComposer — voice messages', () => {
     const user = userEvent.setup();
     const queueMessageWithFiles = vi.fn();
     renderComposer({ queueMessageWithFiles });
-    await user.type(screen.getByRole('textbox', { name: 'Mensagem' }), 'rascunho');
+    await typeInField(screen.getByRole('textbox', { name: 'Mensagem' }), 'rascunho');
 
     await startRecording(user);
     clock = 2_000;
@@ -93,7 +94,7 @@ describe('MessageComposer — voice messages', () => {
 
     await waitFor(() => expect(queueMessageWithFiles).toHaveBeenCalledTimes(1));
     expect(screen.queryByRole('group', { name: 'Revisar mensagem de voz' })).not.toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: 'Mensagem' })).toHaveValue('rascunho');
+    expect(fieldValue(screen.getByRole('textbox', { name: 'Mensagem' }))).toBe('rascunho');
   });
 
   it('cancel and Escape throw the take away', async () => {
@@ -145,7 +146,7 @@ describe('MessageComposer — voice messages', () => {
 
     await user.click(screen.getByRole('button', { name: 'Gravar mensagem de voz' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('não tem permissão para usar o microfone');
-    await user.type(screen.getByRole('textbox', { name: 'Mensagem' }), 'ainda funciona{Enter}');
+    await typeInField(screen.getByRole('textbox', { name: 'Mensagem' }), 'ainda funciona{Enter}');
     expect(sendChatMessage).toHaveBeenCalledWith('conv-1', 'ainda funciona', undefined);
 
     await user.click(screen.getByRole('button', { name: 'Dispensar aviso' }));

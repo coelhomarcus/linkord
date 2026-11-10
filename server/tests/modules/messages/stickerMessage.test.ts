@@ -11,7 +11,7 @@ function row(over: Partial<MessageWithAuthor> = {}): MessageWithAuthor {
     id: 1, conversationId: 'c-1', authorId: 'a', authorUsername: 'ana', authorDisplayName: 'Ana', authorAvatar: '',
     text: '', createdAt: new Date(0), editedAt: null, replyTo: null, kind: 'text',
     serverInvitationId: null, callConversationId: null, callDurationSeconds: null,
-    embeds: null, suppressedEmbeds: null, richEmbeds: null, stickerId: STICKER_ID, botName: null, botAvatar: null,
+    embeds: null, suppressedEmbeds: null, richEmbeds: null, stickerId: STICKER_ID, mentionEveryone: false, mentionRoleIds: null, botName: null, botAvatar: null,
     ...over,
   };
 }
@@ -43,5 +43,14 @@ describe('sticker send key', () => {
     const base = { conversationId: 'c-1', text: '', replyTo: null };
     assert.notEqual(sendPayloadHash({ ...base, stickerId: STICKER_ID }), sendPayloadHash(base));
     assert.equal(sendPayloadHash({ ...base, text: 'oi', stickerId: null }), sendPayloadHash({ ...base, text: 'oi' }));
+  });
+});
+
+describe('group mention fields', () => {
+  it('carries what the group mentions notified, and nothing when they notified nobody', () => {
+    const plain = rowToMessage(row({ stickerId: null, text: '@everyone' }));
+    assert.equal('mentionEveryone' in plain || 'mentionRoleIds' in plain, false);
+    const pinged = rowToMessage(row({ stickerId: null, text: '@everyone', mentionEveryone: true, mentionRoleIds: ['r1'] }));
+    assert.deepEqual([pinged.mentionEveryone, pinged.mentionRoleIds], [true, ['r1']]);
   });
 });

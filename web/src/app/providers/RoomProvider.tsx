@@ -134,6 +134,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
     allUsersRef: presence.allUsersRef,
     myUserIdRef,
     myUsernameRef,
+    serversRef: serversList.serversRef,
     activeViewRef,
     clearTypingEntry: typingIndicator.clearTypingEntry,
   });
@@ -518,6 +519,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         windowGenerationByConversation: chatMessages.windowGenerationByConversation,
         unreadByConversation: chatMessages.unreadByConversation,
         unreadStartByConversation: chatMessages.unreadStartByConversation,
+        markConversationRead: chatMessages.markConversationRead, markServerRead: chatMessages.markServerRead,
         typingByConversation: typingIndicator.typingByConversation, sendTyping: typingIndicator.sendTyping,
         allUsers: presence.allUsers, onlineUserIds: presence.onlineUserIds, friendUserIds: presence.friendUserIds,
         presenceByUser: presence.presenceByUser, ownStatus, setPresence,

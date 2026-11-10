@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mentionsUsername } from '@/shared/lib/mentions';
+import { groupMentionsMe, mentionsUsername } from '@/shared/lib/mentions';
 
 describe('mentionsUsername', () => {
   it('never matches without a username', () => {
@@ -23,3 +23,17 @@ describe('mentionsUsername', () => {
     expect(mentionsUsername('lune, how are you?', 'lune')).toBe(false);
   });
 });
+
+describe('groupMentionsMe', () => {
+  it('only what the server says was notified counts, never the text', () => {
+    expect(groupMentionsMe({}, ['r1'])).toBe(false);
+    expect(groupMentionsMe({ mentionEveryone: true }, [])).toBe(true);
+    expect(groupMentionsMe({ mentionRoleIds: ['r1'] }, ['r1', 'r2'])).toBe(true);
+    expect(groupMentionsMe({ mentionRoleIds: ['r3'] }, ['r1', 'r2'])).toBe(false);
+  });
+
+  it('outside a server channel there are no groups', () => {
+    expect(groupMentionsMe({ mentionEveryone: true }, null)).toBe(false);
+  });
+});
+

@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { fetchMe, login as apiLogin, logout as apiLogout, register as apiRegister, verifyLoginCode } from '@/shared/api/api';
 import type { ApiUser, LoginChallenge } from '@/shared/api/api';
 import { clearAllDrafts } from '@/features/chat/conversationDrafts';
+import { clearPendingShares } from '@/features/chat/pendingShare';
 import { disablePush, restorePush } from '@/shared/pushNotifications';
 import { clearAppBadge } from '@/features/notifications/appBadge';
 import { applyLanguage } from '@/shared/i18n/applyLanguage';
@@ -112,6 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setNotificationsModuleEnabled(false);
     try { await apiLogout(); } catch {  }
     clearAllDrafts();
+    clearPendingShares();
     setUser(null);
     setStatus('anon');
   }, []);

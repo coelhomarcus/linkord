@@ -11,6 +11,9 @@ import tailwindcss from '@tailwindcss/vite';
 const TWEMOJI_DIR = path.resolve(import.meta.dirname, 'node_modules/@discordapp/twemoji/dist/svg');
 const TWEMOJI_VERSION: string = JSON.parse(fs.readFileSync(path.resolve(import.meta.dirname, 'node_modules/@discordapp/twemoji/package.json'), 'utf8')).version;
 const TWEMOJI_PATH = `/assets/twemoji/${TWEMOJI_VERSION}/`;
+// public/emoji-data is rebuilt from both packages (npm run emoji:data); its URL
+// changes with them, so a deploy never leaves a browser on the cached old list
+const EMOJIBASE_VERSION: string = JSON.parse(fs.readFileSync(path.resolve(import.meta.dirname, 'node_modules/emojibase-data/package.json'), 'utf8')).version;
 
 function twemojiAssets(): Plugin {
   let outDir = '';
@@ -37,6 +40,7 @@ export default defineConfig({
   plugins: [react(), tailwindcss(), twemojiAssets()],
   define: {
     __TWEMOJI_PATH__: JSON.stringify(TWEMOJI_PATH),
+    __EMOJI_DATA_VERSION__: JSON.stringify(`${EMOJIBASE_VERSION}-${TWEMOJI_VERSION}`),
   },
   resolve: {
     alias: {

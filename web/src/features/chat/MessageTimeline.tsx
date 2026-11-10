@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { ArrowDownIcon } from '@phosphor-icons/react';
+import { ArrowDownIcon, ArrowUpIcon } from '@phosphor-icons/react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { defaultRangeExtractor, useVirtualizer, type Range } from '@tanstack/react-virtual';
 
@@ -87,10 +87,16 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
   const pending = pendingByConversation.get(conversationId) ?? EMPTY_PENDING;
   const { userId: myUserId, displayName: myName, avatar: myAvatar } = state.me;
   const conversation = conversations.find((c) => c.id === conversationId);
+  const firstUnreadId = unreadStartByConversation.get(conversationId);
   const items = useMemo(
-    () => buildTimelineItems(messages, pending, { userId: myUserId, name: myName, avatar: myAvatar }, unreadStartByConversation.get(conversationId)),
-    [messages, pending, myUserId, myName, myAvatar, unreadStartByConversation, conversationId],
+    () => buildTimelineItems(messages, pending, { userId: myUserId, name: myName, avatar: myAvatar }, firstUnreadId, hasMoreBefore),
+    [messages, pending, myUserId, myName, myAvatar, firstUnreadId, hasMoreBefore],
   );
+  const unreadIndex = items.findIndex((item) => item.type === 'unread');
+  // the first unread message is in an older page than the window holds:
+  // its line is above the reader whatever the scroll position
+  const unreadInOlderPage = firstUnreadId !== undefined && unreadIndex < 0 && hasMoreBefore
+    && messages.length > 0 && messages[0]!.msgId > firstUnreadId;
 
   // Rows playing audio/video are tracked from the media events themselves
   // (they don't bubble, but they do pass the container in capture).
@@ -378,6 +384,21 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
     if (lastIndex >= items.length - 1 - PAGE_TRIGGER_ROWS && hasMoreAfter && !isLoadingNewer) loadNewerMessages(conversationId);
   }, [ready, firstIndex, lastIndex, items.length, hasMoreBefore, hasMoreAfter, isLoadingOlder, isLoadingNewer, settlingPrepend, loadOlderMessages, loadNewerMessages, conversationId]);
 
+  // Whether the new-messages line has scrolled out of view above the reader,
+  // which puts up the "jump to first unread" pill.
+  const [dividerAbove, setDividerAbove] = useState(false);
+  const unreadIndexRef = useRef(unreadIndex);
+  const updateDividerAbove = useCallback(() => {
+    const el = scrollRef.current;
+    const index = unreadIndexRef.current;
+    const row = index >= 0 ? virtualizerRef.current.measurementsCache[index] : undefined;
+    setDividerAbove(!!el && !!row && row.end <= el.scrollTop);
+  }, []);
+  useLayoutEffect(() => {
+    unreadIndexRef.current = unreadIndex;
+    if (ready) updateDividerAbove();
+  }, [ready, unreadIndex, items, updateDividerAbove]);
+
   // "At the present" drives the new-messages pill: messages appended while
   // reading above are counted instead of yanking the view down.
   const [atEnd, setAtEnd] = useState(true);
@@ -391,12 +412,13 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
       if (end) setUnseen(0);
       if (!readyRef.current) return;
       if (!settlingRef.current) captureMessageAnchorRef.current();
+      updateDividerAbove();
       const top = virtualizer.getVirtualItemForOffset(el.scrollTop);
       if (top) saveReadingPosition(surfaceId, conversationId, { key: String(top.key), offset: el.scrollTop - top.start, atEnd: end });
     };
     el.addEventListener('scroll', onScroll, { passive: true });
     return () => el.removeEventListener('scroll', onScroll);
-  }, [virtualizer, surfaceId, conversationId]);
+  }, [virtualizer, surfaceId, conversationId, updateDividerAbove]);
   const lastKey = items[items.length - 1]?.key;
   const prevLastKeyRef = useRef(lastKey);
   const prevLengthRef = useRef(items.length);
@@ -437,6 +459,13 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
   useEffect(() => () => {
     if (highlightTimeoutRef.current != null) window.clearTimeout(highlightTimeoutRef.current);
   }, []);
+
+  const showJumpToUnread = ready && !isLoadingOlder && (dividerAbove || unreadInOlderPage);
+  const jumpToFirstUnread = () => {
+    if (unreadIndex >= 0) virtualizer.scrollToIndex(unreadIndex, { align: 'start' });
+    // not loaded yet: a window around it, which opens on that message
+    else if (firstUnreadId !== undefined) jumpToMessage(conversationId, firstUnreadId);
+  };
 
   const newerCount = newerCountByConversation.get(conversationId) ?? 0;
   const pill = hasMoreAfter
@@ -513,6 +542,16 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
           </div>
         )}
       </div>
+      {showJumpToUnread && (
+        <button
+          type="button"
+          onClick={jumpToFirstUnread}
+          className="absolute left-1/2 top-3 z-10 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-label font-medium text-primary-foreground shadow-popover"
+        >
+          <ArrowUpIcon size={14} weight="fill" />
+          {t('timeline.jumpToFirstUnread')}
+        </button>
+      )}
       {pill && (
         <button
           type="button"

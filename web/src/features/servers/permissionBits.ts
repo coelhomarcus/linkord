@@ -23,6 +23,7 @@ export const PERMISSIONS = {
   MANAGE_EXPRESSIONS: 1 << 18,
   VIEW_AUDIT_LOG: 1 << 19,
   CREATE_EXPRESSIONS: 1 << 20,
+  MENTION_EVERYONE: 1 << 21,
 } as const;
 
 export type PermissionName = keyof typeof PERMISSIONS;

@@ -22,6 +22,10 @@ const MAX_MSG_BYTES = Number(process.env.MAX_MSG_BYTES || 64 * 1024);
 // how long a dropped connection's identity is held for reconnection before
 // counting as "left".
 const RECONNECT_GRACE_MS = Number(process.env.RECONNECT_GRACE_MS || 30000);
+// the same, for a connection that was in a call. Longer because Android freezes
+// a backgrounded page: a person who switches apps mid-call stops answering the
+// heartbeat, and should find the call still there when they come back.
+const CALL_RECONNECT_GRACE_MS = Number(process.env.CALL_RECONNECT_GRACE_MS || 180000);
 // how long, after a restart, the people who were in a call are held for their
 // clients to reconnect. Longer than the usual grace: a deploy plus the clients'
 // reconnect backoff routinely takes more than 30 seconds.
@@ -220,7 +224,7 @@ const SERVER_AUDIT_RETENTION_DAYS = parseRetentionDays('SERVER_AUDIT_RETENTION_D
 
 export const config = {
   AUDIT_RETENTION_DAYS, DATA_REPAIRS_RETENTION_DAYS, NOTIFICATION_READ_RETENTION_DAYS, NOTIFICATION_UNREAD_RETENTION_DAYS, OUTBOX_RETENTION_DAYS, SERVER_AUDIT_RETENTION_DAYS,
-  PORT, HOST_BIND, MAX_PARTICIPANTS, TRUST_PROXY, TRUSTED_PROXY_HOPS, MAX_MSG_BYTES, RECONNECT_GRACE_MS, CALL_RESTORE_GRACE_MS,
+  PORT, HOST_BIND, MAX_PARTICIPANTS, TRUST_PROXY, TRUSTED_PROXY_HOPS, MAX_MSG_BYTES, RECONNECT_GRACE_MS, CALL_RECONNECT_GRACE_MS, CALL_RESTORE_GRACE_MS,
   MAX_AVATAR_LEN, MAX_BANNER_LEN, MAX_PROFILE_BIO_LEN, MAX_PROFILE_LINKS, MAX_PROFILE_LINK_LEN,
   MAX_CHAT_LEN, CHAT_HISTORY_LIMIT, SEARCH_RESULT_LIMIT, MAX_SEARCH_QUERY_LEN, MAX_ATTACHMENTS_PER_MESSAGE,
   FRIEND_REQUEST_COOLDOWN_MS, MAX_SERVER_MEMBERS, MAX_CHANNELS_PER_SERVER, MAX_ROLES_PER_SERVER, MAX_INVITES_PER_SERVER, MAX_WEBHOOKS_PER_CHANNEL, MAX_INVITEES_PER_REQUEST,

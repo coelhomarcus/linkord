@@ -36,6 +36,17 @@ test.describe('voice channels', () => {
     await expect(a.page.locator('[data-tile-kind="camera"]')).toHaveCount(0);
   });
 
+  test('sharing the screen shows the share to the other member until it stops', async ({ users }) => {
+    const { bob, a, b } = await twoInVoice(users);
+    // Sharing is refused until the tab reaches LiveKit; hearing the other side proves it has.
+    await b.expectRemoteAudio(1);
+    // The fake media UI accepts the picker with a fake screen, like a person choosing one.
+    await b.page.getByRole('button', { name: 'Compartilhar tela' }).first().click();
+    await expect(a.page.locator('[data-tile-kind="screen"]').filter({ hasText: bob.username })).toBeVisible();
+    await b.page.getByRole('button', { name: 'Parar compartilhamento' }).first().click();
+    await expect(a.page.locator('[data-tile-kind="screen"]')).toHaveCount(0);
+  });
+
   test('leaving the call removes the tile for the other member', async ({ users }) => {
     const { bob, a, b } = await twoInVoice(users);
     await a.expectTilesFor([bob.username]);

@@ -1,0 +1,19 @@
+{
+  "title": "Enviar para…",
+  "subtitle_one": "{{count}} arquivo para enviar",
+  "subtitle_other": "{{count}} arquivos para enviar",
+  "subtitleText": "Texto para enviar",
+  "search": "Buscar conversa ou canal",
+  "cancel": "Cancelar",
+  "loading": "Preparando o que você compartilhou…",
+  "sections": {
+    "direct": "Mensagens diretas"
+  },
+  "empty": "Nenhuma conversa encontrada.",
+  "missing": {
+    "title": "Nada para enviar",
+    "body": "O que você compartilhou expirou ou não chegou ao Linkord. Compartilhe de novo pelo app de origem.",
+    "action": "Ir para o início"
+  },
+  "failed": "Não foi possível receber o que você compartilhou. Tente de novo."
+}

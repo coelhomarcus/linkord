@@ -2,7 +2,7 @@
 // web/src/features/chat/messageMarkup.ts (same regexes, same order, same
 // trimming, same cap), the way embeds.ts mirrors chatEmbeds.ts: the server
 // stores a preview for exactly the cards the client draws. Change one side,
-// change the other. Only what decides the links and the @mentions is kept:
+// change the other. Only what decides the links and the mentions is kept:
 // emphasis matters here just because it can wrap either.
 
 type Inline =
@@ -10,12 +10,19 @@ type Inline =
   | { type: 'code' }
   | { type: 'link'; url: string; suppressed: boolean }
   | { type: 'mention'; name: string }
+  | { type: 'roleMention'; roleId: string }
   | { type: 'emphasis'; children: Inline[] };
 
 type Block = { type: 'paragraph' | 'quote'; children: Inline[] } | { type: 'code' } | { type: 'list'; items: Inline[][] };
 
+/** A role mention, Discord's way: `<@&roleId>`. The composer shows it as
+ * `@Role name`; the token is what goes out, so a rename never breaks it.
+ * Mirrors ROLE_MENTION_TOKEN in web/src/features/chat/messageMarkup.ts. */
+export const ROLE_MENTION_TOKEN = '<@&([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})>';
+
 const INLINE_RE = new RegExp([
   '`([^`\\n]+)`',
+  ROLE_MENTION_TOKEN,
   '<(https?:\\/\\/[^\\s<>]+)>',
   '(https?:\\/\\/[^\\s<>"\']+)',
   '(?<![\\w@.])@([A-Za-z0-9_.-]{1,20})',
@@ -40,8 +47,9 @@ function parseInline(text: string): Inline[] {
   const nodes: Inline[] = [];
   const re = new RegExp(INLINE_RE);
   for (let match = re.exec(text); match; match = re.exec(text)) {
-    const [, code, suppressed, url, mention, bold, strike, starItalic, underItalic] = match;
+    const [, code, roleId, suppressed, url, mention, bold, strike, starItalic, underItalic] = match;
     if (code !== undefined) nodes.push({ type: 'code' });
+    else if (roleId !== undefined) nodes.push({ type: 'roleMention', roleId });
     else if (suppressed !== undefined) nodes.push({ type: 'link', url: suppressed, suppressed: true });
     else if (url !== undefined) {
       const trimmed = trimUrl(url);
@@ -120,21 +128,38 @@ export function previewableLinks(text: string): string[] {
   return [...new Set(urls)].slice(0, MAX_PREVIEWS);
 }
 
-function collectMentions(nodes: Inline[], out: string[]) {
+/** Who a message mentions, as its readers see it drawn: never inside code,
+ * never the tail of an e-mail address. `@everyone` and `@here` are groups,
+ * not usernames (both are reserved at sign-up). Usernames lowercased, each
+ * thing once. Whether the author may notify a group is not decided here
+ * (modules/messages/groupMentions.ts). */
+export interface MessageMentions {
+  usernames: string[];
+  everyone: boolean;
+  here: boolean;
+  roleIds: string[];
+}
+
+export const GROUP_MENTION_NAMES: readonly string[] = ['everyone', 'here'];
+
+function collectMentions(nodes: Inline[], out: { names: Set<string>; roleIds: Set<string> }) {
   for (const node of nodes) {
-    if (node.type === 'mention') out.push(node.name.toLowerCase());
+    if (node.type === 'mention') out.names.add(node.name.toLowerCase());
+    else if (node.type === 'roleMention') out.roleIds.add(node.roleId);
     else if (node.type === 'emphasis') collectMentions(node.children, out);
   }
 }
 
-/** The usernames a message @mentions, lowercased and each once — the same
- * ones the client draws as mention chips: never inside code, never the tail
- * of an e-mail address. */
-export function mentionedUsernames(text: string): string[] {
-  const names: string[] = [];
+export function messageMentions(text: string): MessageMentions {
+  const found = { names: new Set<string>(), roleIds: new Set<string>() };
   for (const block of parseMessage(text)) {
-    if (block.type === 'paragraph' || block.type === 'quote') collectMentions(block.children, names);
-    else if (block.type === 'list') block.items.forEach((item) => collectMentions(item, names));
+    if (block.type === 'paragraph' || block.type === 'quote') collectMentions(block.children, found);
+    else if (block.type === 'list') block.items.forEach((item) => collectMentions(item, found));
   }
-  return [...new Set(names)];
+  return {
+    usernames: [...found.names].filter((name) => !GROUP_MENTION_NAMES.includes(name)),
+    everyone: found.names.has('everyone'),
+    here: found.names.has('here'),
+    roleIds: [...found.roleIds],
+  };
 }

@@ -7,6 +7,7 @@ import { Avatar } from '../../shared/Avatar';
 import { formatTime } from '../../shared/lib/formatChatTime';
 import { renderSearchSnippet } from '../../shared/lib/searchSnippet';
 import { customEmojisAsText } from '@/features/emoji/customEmojiText';
+import { roleMentionsAsText } from './roleMentionText';
 import type { SearchResult } from '@/shared/types/protocol';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/primitives/dialog';
 import { Input } from '@/shared/ui/primitives/input';
@@ -25,7 +26,7 @@ interface ChatSearchDialogProps {
 }
 
 function SearchResultRow({ result, showConversation, onSelect }: { result: SearchResult; showConversation: boolean; onSelect: () => void }) {
-  const { allUsers } = useRoom();
+  const { allUsers, servers } = useRoom();
   const author = result.id ? allUsers.get(result.id) : undefined;
   const displayedName = author?.displayName ?? result.name;
   const displayedAvatar = author?.avatar ?? result.avatar;
@@ -46,7 +47,7 @@ function SearchResultRow({ result, showConversation, onSelect }: { result: Searc
           )}
           <span className="flex-none text-caption text-text-muted">{formatTime(result.ts)}</span>
         </div>
-        <p className="truncate text-body text-text-secondary">{renderSearchSnippet(customEmojisAsText(result.snippet))}</p>
+        <p className="truncate text-body text-text-secondary">{renderSearchSnippet(roleMentionsAsText(customEmojisAsText(result.snippet), servers))}</p>
       </div>
     </button>
   );

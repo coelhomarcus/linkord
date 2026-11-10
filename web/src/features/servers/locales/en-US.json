@@ -48,6 +48,7 @@
   },
   "menu": {
     "invite": "Invite People",
+    "markAsRead": "Mark as read",
     "settings": "Server Settings",
     "createChannel": "Create Channel",
     "createCategory": "Create Category",
@@ -65,7 +66,6 @@
     "orLink": "Or, send a server invite link to a friend",
     "generating": "Generating…",
     "copy": "Copy",
-    "copied": "Copied",
     "expires": "Your invite link expires in 7 days.",
     "linkFailed": "Could not create the invite link.",
     "failed": "Could not send the invites.",
@@ -149,6 +149,8 @@
     "name": "Role Name",
     "color": "Color",
     "hoist": "Display members with this role separately",
+    "mentionable": "Allow anyone to @mention this role",
+    "mentionableHint": "Members without the permission to mention @everyone can notify this role too.",
     "delete": "Delete Role",
     "deleteTitle": "Delete {{name}}",
     "deleteDescription": "Whoever has this role loses the permissions it gave.",
@@ -285,7 +287,8 @@
     "USE_SOUNDBOARD": "Use Soundboard",
     "MANAGE_EXPRESSIONS": "Manage Expressions",
     "VIEW_AUDIT_LOG": "View Audit Log",
-    "CREATE_EXPRESSIONS": "Create Expressions"
+    "CREATE_EXPRESSIONS": "Create Expressions",
+    "MENTION_EVERYONE": "Mention @everyone, @here and All Roles"
   },
   "permissionHints": {
     "ADMINISTRATOR": "Grants every permission and bypasses channel rules. Be careful granting this.",
@@ -308,7 +311,8 @@
     "USE_SOUNDBOARD": "Play soundboard sounds in calls.",
     "MANAGE_EXPRESSIONS": "Edit and remove anyone's sounds and emojis.",
     "VIEW_AUDIT_LOG": "See who changed what in the server.",
-    "CREATE_EXPRESSIONS": "Add sounds to the soundboard and emojis to the server. Each one takes one of the server's slots."
+    "CREATE_EXPRESSIONS": "Add sounds to the soundboard and emojis to the server. Each one takes one of the server's slots.",
+    "MENTION_EVERYONE": "Notify the whole channel with @everyone, whoever is online with @here, and any role, even those not marked as mentionable. Without it the mention is sent but notifies nobody."
   },
   "voiceMembers": {
     "inChannel": "In the {{channel}} call",
@@ -339,8 +343,7 @@
       "allUsers": "All",
       "action": "Filter by action",
       "allActions": "All",
-      "from": "From",
-      "to": "To",
+      "period": "Period",
       "target": "Target: {{name}}",
       "clearTarget": "Remove target filter",
       "clear": "Clear filters"

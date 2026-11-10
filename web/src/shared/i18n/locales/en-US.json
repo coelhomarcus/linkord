@@ -78,7 +78,9 @@
     "removeEmbedDescription": "The link stays in the message; only its preview is removed for everyone.",
     "removeAttachmentDescription": "\"{{name}}\" is removed from the message for everyone and deleted. The rest of the message remains.",
     "remove": "Remove",
-    "messageFrom": "message from {{name}}"
+    "messageFrom": "message from {{name}}",
+    "markAsRead": "Mark as read",
+    "markServerAsRead": "Mark server as read"
   },
   "room": {
     "full": "The room is full. Try again later.",
@@ -139,11 +141,30 @@
     "saving": "Saving…",
     "saved": "Changes saved."
   },
+  "clipboard": {
+    "copied": "Copied"
+  },
   "imageCrop": {
     "processing": "Processing image…",
     "processingDescription": "Uploading and cropping the image. Animated GIFs can take a few seconds.",
     "cancel": "Cancel",
     "save": "Save",
     "zoom": "Zoom"
+  },
+  "datePicker": {
+    "trigger": "{{label}}: {{value}}",
+    "anyDate": "Any date",
+    "since": "Since {{date}}",
+    "until": "Through {{date}}",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "pickStart": "Pick the start date",
+    "pickEnd": "Now pick the end date",
+    "clear": "Clear",
+    "presets": {
+      "today": "Today",
+      "last7": "Last 7 days",
+      "last30": "Last 30 days"
+    }
   }
 }

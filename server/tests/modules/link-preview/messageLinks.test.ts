@@ -1,6 +1,6 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { mentionedUsernames, previewableLinks } from '../../../src/modules/link-preview/messageLinks.js';
+import { messageMentions, previewableLinks } from '../../../src/modules/link-preview/messageLinks.js';
 
 // the same cases as web/tests/features/chat/messageMarkup.test.ts: the server
 // stores previews for exactly the cards the client draws
@@ -25,16 +25,28 @@ describe('previewableLinks (mirror of the client)', () => {
 });
 
 // the same rule the client uses to draw a mention chip (messageMarkup.ts)
-describe('mentionedUsernames', () => {
-  test('lowercased and each once, from paragraphs, quotes, lists and emphasis', () => {
-    assert.deepEqual(mentionedUsernames('@Ana e @bia\n> @carla\n- @davi\n**@ana** _@eva_'), ['ana', 'bia', 'carla', 'davi', 'eva']);
+describe('messageMentions', () => {
+  const usernames = (text: string) => messageMentions(text).usernames;
+  const ROLE = '3f2b8c1e-5d4a-4e6f-9a7b-1c2d3e4f5a6b';
+
+  test('usernames lowercased and each once, from paragraphs, quotes, lists and emphasis', () => {
+    assert.deepEqual(usernames('@Ana e @bia\n> @carla\n- @davi\n**@ana** _@eva_'), ['ana', 'bia', 'carla', 'davi', 'eva']);
   });
 
   test('never inside code, nor the tail of an e-mail, nor a trailing period', () => {
-    assert.deepEqual(mentionedUsernames('`@code` ana@mail.com fala com @bia.\n```\n@bloco\n```'), ['bia']);
+    assert.deepEqual(usernames('`@code` ana@mail.com fala com @bia.\n```\n@bloco\n```'), ['bia']);
   });
 
   test('a message with no mention has none', () => {
-    assert.deepEqual(mentionedUsernames('oi, tudo bem?'), []);
+    assert.deepEqual(messageMentions('oi, tudo bem?'), { usernames: [], everyone: false, here: false, roleIds: [] });
+  });
+
+  test('@everyone and @here are groups, not usernames', () => {
+    assert.deepEqual(messageMentions('@everyone e @Here, @ana'), { usernames: ['ana'], everyone: true, here: true, roleIds: [] });
+  });
+
+  test('role tokens are read outside code only, each once', () => {
+    assert.deepEqual(messageMentions(`<@&${ROLE}> **<@&${ROLE}>** \`<@&00000000-0000-4000-8000-000000000000>\``).roleIds, [ROLE]);
+    assert.deepEqual(messageMentions('`@everyone` <@&not-a-role>'), { usernames: [], everyone: false, here: false, roleIds: [] });
   });
 });

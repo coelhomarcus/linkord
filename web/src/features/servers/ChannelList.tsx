@@ -1,5 +1,5 @@
 import {
-  CaretDownIcon, CaretRightIcon, FolderPlusIcon, GearSixIcon, HashIcon, PlusCircleIcon, PlusIcon, SignOutIcon,
+  CaretDownIcon, CaretRightIcon, ChecksIcon, FolderPlusIcon, GearSixIcon, HashIcon, PlusCircleIcon, PlusIcon, SignOutIcon,
   SpeakerHighIcon, UserPlusIcon,
 } from '@phosphor-icons/react';
 import { useRef, useState } from 'react';
@@ -24,7 +24,7 @@ import { PERMISSIONS } from './permissionBits';
 import { CreateChannelDialog, type CreateTarget } from './CreateChannelDialog';
 import { ServerInviteDialog } from './ServerInviteDialog';
 import { leaveServer } from './serversApi';
-import { can, canMoveInto, canOpenSettings, channelSettingsTabs, groupChannels } from './serverUtils';
+import { can, canMoveInto, canOpenSettings, channelSettingsTabs, groupChannels, serverUnread } from './serverUtils';
 import { useServerSettings } from './ServerSettingsContext';
 import { VoiceMembers, type VoiceDrag } from './VoiceMembers';
 
@@ -56,7 +56,8 @@ function ChannelRow({ server, channel, active, onOpen, onInvite, onOpenProfile, 
   } : {};
   return (
     <li data-channel-id={channel.id} data-drop-target={accepts && dropping ? '' : undefined} {...dropHandlers}>
-      <div className={cn(
+      {/* a text channel's row opens the conversation menu (mark as read), on a long press too */}
+      <div data-conversation-id={channel.type === 'text' ? channel.id : undefined} className={cn(
         'group/channel relative isolate mx-2 flex h-8 items-center rounded-lg',
         active ? 'text-text-primary' : unread ? 'text-text-primary' : 'text-text-muted hover:bg-nav-hover hover:text-text-primary',
         accepts && dropping && 'bg-nav-hover text-text-primary ring-2 ring-ring',
@@ -94,8 +95,9 @@ export function ChannelList({ server, activeChannelId, onNavigate, onOpenProfile
 }) {
   const { t } = useTranslation('servers');
   const navigate = useNavigate();
-  const { state, openCall, activeCallConversationId } = useRoom();
+  const { state, openCall, activeCallConversationId, unreadByConversation, unreadStartByConversation, markServerRead } = useRoom();
   const { openServerSettings } = useServerSettings();
+  const hasUnread = serverUnread(server, unreadByConversation) > 0 || server.channels.some((c) => unreadStartByConversation.has(c.id));
   const [collapsed, setCollapsed] = useState(() => loadCollapsed(server.id));
   const [inviteOpen, setInviteOpen] = useState<{ channelId?: string } | null>(null);
   const [createTarget, setCreateTarget] = useState<CreateTarget | null>(null);
@@ -145,6 +147,8 @@ export function ChannelList({ server, activeChannelId, onNavigate, onOpenProfile
             <CaretDownIcon size={14} weight="bold" className="flex-none transition-transform group-aria-expanded/server-menu:rotate-180" />
           </DropdownMenuTrigger>
           <DropdownMenuContent anchor={headerRef} align="center" sideOffset={-6} className="w-[220px]">
+            <DropdownMenuItem disabled={!hasUnread} onClick={() => markServerRead(server.id)}><ChecksIcon size={18} weight="bold" />{t('menu.markAsRead')}</DropdownMenuItem>
+            <DropdownMenuSeparator />
             {can(server, PERMISSIONS.CREATE_INVITE) && <DropdownMenuItem onClick={() => setInviteOpen({})}><UserPlusIcon size={18} weight="fill" />{t('menu.invite')}</DropdownMenuItem>}
             {canOpenSettings(server, state.me.userId) && <DropdownMenuItem onClick={() => openServerSettings(server.id)}><GearSixIcon size={18} weight="fill" />{t('menu.settings')}</DropdownMenuItem>}
             {canManageChannels && <DropdownMenuItem onClick={() => setCreateTarget({ kind: 'channel', categoryId: null })}><PlusCircleIcon size={18} weight="fill" />{t('menu.createChannel')}</DropdownMenuItem>}

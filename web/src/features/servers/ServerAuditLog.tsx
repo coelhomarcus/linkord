@@ -4,6 +4,9 @@ import { Trans, useTranslation } from 'react-i18next';
 import { Avatar } from '@/shared/Avatar';
 import { describeApiError } from '@/shared/api/errorText';
 import { Button } from '@/shared/ui/primitives/button';
+import { DateRangePicker } from '@/shared/ui/primitives/date-picker';
+import { todayKey } from '@/shared/lib/calendarDay';
+import { cn } from '@/shared/lib/utils';
 import { EmptyState } from '@/shared/ui/empty-state';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/primitives/select';
 import type { ServerSummary } from '@/shared/types/protocol';
@@ -17,12 +20,11 @@ import {
 
 const ALL = 'all';
 const FIELD_LABEL = 'flex min-w-0 flex-col gap-1.5 text-caption font-medium text-text-muted';
-const DATE_FIELD = 'h-10 rounded-lg border border-border bg-fill-subtle px-3 text-label text-text-primary outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
 interface Filters { action: string; actor: string; target: { id: string; label: string } | null; from: string; to: string }
 const NO_FILTERS: Filters = { action: ALL, actor: ALL, target: null, from: '', to: '' };
 
-/** A date input's day as the instant it starts in the viewer's own time zone. */
+/** A picked day as the instant it starts in the viewer's own time zone. */
 const dayStart = (day: string): string | undefined => (day ? new Date(`${day}T00:00:00`).toISOString() : undefined);
 /** The server's upper bound is exclusive: "up to this day" is the start of the next one. */
 function nextDayStart(day: string): string | undefined {
@@ -224,17 +226,15 @@ export function ServerAuditLog({ server }: { server: ServerSummary }) {
   return (
     <>
       <SectionTitle description={t('auditLog.hint')}>{t('settings.auditLog')}</SectionTitle>
-      <div className="flex flex-col gap-3">
-        <div className="grid grid-cols-2 items-end gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto]">
+      {/* the column, not the window, decides: on a tablet it is too narrow for three fields in a row */}
+      <div className="@container flex flex-col gap-3">
+        <div className="grid grid-cols-2 items-end gap-3 @[600px]:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
           {select(t('auditLog.filters.user'), filters.actor, memberOptions, (actor) => setFilters((f) => ({ ...f, actor })))}
           {select(t('auditLog.filters.action'), filters.action, actionOptions, (action) => setFilters((f) => ({ ...f, action })))}
-          <label className={FIELD_LABEL}>
-            {t('auditLog.filters.from')}
-            <input type="date" value={filters.from} max={filters.to || undefined} onChange={(e) => setFilters((f) => ({ ...f, from: e.target.value }))} className={DATE_FIELD} />
-          </label>
-          <label className={FIELD_LABEL}>
-            {t('auditLog.filters.to')}
-            <input type="date" value={filters.to} min={filters.from || undefined} onChange={(e) => setFilters((f) => ({ ...f, to: e.target.value }))} className={DATE_FIELD} />
+          <label className={cn(FIELD_LABEL, 'col-span-2 @[600px]:col-span-1')}>
+            {t('auditLog.filters.period')}
+            <DateRangePicker label={t('auditLog.filters.period')} value={{ from: filters.from, to: filters.to }} max={todayKey()}
+              className="@[600px]:min-w-56" onChange={({ from, to }) => setFilters((f) => ({ ...f, from, to }))} />
           </label>
         </div>
         {(filters.target || filtered) && (

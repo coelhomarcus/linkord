@@ -17,7 +17,11 @@ function messageKey(message: ChatMessage): string {
   return message.clientMessageId ? `c:${message.clientMessageId}` : String(message.msgId);
 }
 
-export function buildTimelineItems(messages: ChatMessage[], pending: OutboxEntry[] = [], author?: PendingAuthor, firstUnreadMessageId?: number): TimelineItem[] {
+/** `hasOlder`: the window doesn't start at the conversation's beginning. The
+ * new-messages line then goes in only where both sides of it are loaded: a
+ * first unread message older than the window sits in a page not fetched yet,
+ * and a line at the window's top would mark the wrong place. */
+export function buildTimelineItems(messages: ChatMessage[], pending: OutboxEntry[] = [], author?: PendingAuthor, firstUnreadMessageId?: number, hasOlder = false): TimelineItem[] {
   const stored = new Set(messages.flatMap((message) => (message.clientMessageId ? [message.clientMessageId] : [])));
   const rows: { message: ChatMessage; pending?: OutboxEntry }[] = messages.map((message) => ({ message }));
   pending.forEach((entry, index) => {
@@ -44,6 +48,7 @@ export function buildTimelineItems(messages: ChatMessage[], pending: OutboxEntry
   let lastMsg: ChatMessage | null = null;
   let lastDateKey = '';
   let unreadInserted = false;
+  let storedBefore = false;
   for (const { message, pending: entry } of rows) {
     const dateKey = new Date(message.ts).toDateString();
     if (dateKey !== lastDateKey) {
@@ -52,13 +57,16 @@ export function buildTimelineItems(messages: ChatMessage[], pending: OutboxEntry
       lastMsg = null;
     }
     if (!unreadInserted && firstUnreadMessageId !== undefined && !entry && message.msgId >= firstUnreadMessageId) {
-      // two hairlines stacked read as a glitch: when the day starts with the
-      // first unread message, the new-messages line takes the date's place
-      if (items.at(-1)?.type === 'date') items.pop();
-      items.push({ type: 'unread', key: `unread-${firstUnreadMessageId}` });
-      lastMsg = null;
       unreadInserted = true;
+      if (storedBefore || !hasOlder || message.msgId === firstUnreadMessageId) {
+        // two hairlines stacked read as a glitch: when the day starts with the
+        // first unread message, the new-messages line takes the date's place
+        if (items.at(-1)?.type === 'date') items.pop();
+        items.push({ type: 'unread', key: `unread-${firstUnreadMessageId}` });
+        lastMsg = null;
+      }
     }
+    if (!entry) storedBefore = true;
     const isCallLog = message.kind === 'dm_call';
     const showHeader = !isCallLog && (!lastMsg || lastMsg.id !== message.id || message.ts - lastMsg.ts > GROUP_GAP_MS);
     items.push({ type: 'message', key: messageKey(message), message, showHeader, ...(entry ? { pending: entry } : {}) });
