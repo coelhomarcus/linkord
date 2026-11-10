@@ -29,6 +29,9 @@
         var id = Object.prototype.hasOwnProperty.call(shells, raw) ? raw : 'black';
         document.documentElement.dataset.theme = id;
         var bg = shells[id];
+        // A stylesheet, not an attribute: the app's own CSS must be able to
+        // override it. The text is exactly `html,body{background:` + one shells
+        // color + `}`; the server hashes each of those into style-src-elem.
         var style = document.createElement('style');
         style.textContent = 'html,body{background:' + bg + '}';
         document.head.appendChild(style);
