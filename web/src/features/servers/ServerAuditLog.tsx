@@ -224,8 +224,9 @@ export function ServerAuditLog({ server }: { server: ServerSummary }) {
   return (
     <>
       <SectionTitle description={t('auditLog.hint')}>{t('settings.auditLog')}</SectionTitle>
-      <div className="flex flex-col gap-3">
-        <div className="grid grid-cols-2 items-end gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto]">
+      {/* the column, not the window, decides: on a tablet it is too narrow for four fields in a row */}
+      <div className="@container flex flex-col gap-3">
+        <div className="grid grid-cols-2 items-end gap-3 @[600px]:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto]">
           {select(t('auditLog.filters.user'), filters.actor, memberOptions, (actor) => setFilters((f) => ({ ...f, actor })))}
           {select(t('auditLog.filters.action'), filters.action, actionOptions, (action) => setFilters((f) => ({ ...f, action })))}
           <label className={FIELD_LABEL}>
