@@ -139,6 +139,9 @@
     "saving": "Salvando…",
     "saved": "Alterações salvas."
   },
+  "clipboard": {
+    "copied": "Copiado"
+  },
   "imageCrop": {
     "processing": "Processando imagem…",
     "processingDescription": "Enviando e recortando a imagem. GIFs animados podem levar alguns segundos.",

@@ -15,6 +15,7 @@ import { useKeepPopoverWarm } from '@/shared/hooks/useKeepPopoverWarm';
 import { messagePermissions } from '@/features/chat/messageActions';
 import { useMessageDeleteConfirm } from '@/features/chat/useMessageDeleteConfirm';
 import { useRoom } from '@/state/RoomContext';
+import { copyToClipboard } from '@/shared/lib/clipboard';
 import { downloadFile } from '@/shared/lib/download';
 import { isTouchContextMenu, LONG_PRESS_DELAY_MS, useLongPress } from '@/shared/hooks/useLongPress';
 
@@ -222,7 +223,7 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
 
   function handleCopy() {
     const text = window.getSelection()?.toString();
-    if (text) navigator.clipboard.writeText(text).catch(() => {});
+    if (text) void copyToClipboard(text);
   }
 
   function handleDownload() {
@@ -230,7 +231,7 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
   }
 
   function handleCopyMessageText() {
-    if (targetMessage?.text) navigator.clipboard.writeText(customEmojisAsText(targetMessage.text)).catch(() => {});
+    if (targetMessage?.text) void copyToClipboard(customEmojisAsText(targetMessage.text));
   }
 
   function handleSelectMessageText() {

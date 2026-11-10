@@ -22,6 +22,7 @@ import { ReactionEmojiPicker } from '@/features/chat/ReactionEmojiPicker';
 import { formatTime } from '@/shared/lib/formatChatTime';
 import { useTimeFormat } from '@/shared/lib/timeFormat';
 import { mentionsUser } from '@/shared/lib/mentions';
+import { copyToClipboard } from '@/shared/lib/clipboard';
 import { cn } from '@/shared/lib/utils';
 import { useKeepPopoverWarm } from '@/shared/hooks/useKeepPopoverWarm';
 import { useRoom } from '@/state/RoomContext';
@@ -214,7 +215,7 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
   }
 
   function copyText() {
-    navigator.clipboard.writeText(customEmojisAsText(message.text)).catch(() => {});
+    void copyToClipboard(customEmojisAsText(message.text));
   }
 
   function handleEditKeyDown(event: KeyboardEvent) {

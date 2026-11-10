@@ -1,9 +1,11 @@
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import userEvent from '@testing-library/user-event';
 import { initialRoomState } from '@/state/roomReducer';
 import { renderWithRoom } from '@tests/fixtures/roomContextFixture';
 import { GlobalContextMenu } from '@/app/layout/GlobalContextMenu';
 import { LONG_PRESS_DELAY_MS } from '@/shared/hooks/useLongPress';
+import { liveAnnouncements } from '@tests/fixtures/announcerFixture';
 
 const userState = {
   ...initialRoomState,
@@ -47,6 +49,23 @@ describe('GlobalContextMenu', () => {
     await waitFor(() => {
       expect(document.querySelector('[data-slot="context-menu-content"][data-open]')).not.toBeInTheDocument();
     });
+  });
+
+  it('"Copiar texto" on a message copies it and announces it, since the menu closes', async () => {
+    const user = userEvent.setup();
+    const message = { msgId: 7, conversationId: 'dm-1', id: 'u-ana', name: 'Ana', avatar: '', text: 'Oi, tudo bem?', ts: 0 };
+    renderWithRoom(
+      <GlobalContextMenu onOpenProfile={vi.fn()}>
+        <div data-message-id="7" data-testid="row">{message.text}</div>
+      </GlobalContextMenu>,
+      { state: userState, activeConversationId: 'dm-1', messagesByConversation: new Map([['dm-1', [message]]]) },
+    );
+
+    fireEvent.contextMenu(screen.getByTestId('row'));
+    await user.click(await screen.findByRole('menuitem', { name: 'Copiar texto' }));
+
+    await expect(navigator.clipboard.readText()).resolves.toBe('Oi, tudo bem?');
+    await waitFor(() => expect(liveAnnouncements()).toEqual(['Copiado']));
   });
 
   describe('long press (touch)', () => {

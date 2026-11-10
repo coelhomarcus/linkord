@@ -10,6 +10,7 @@ import { MessageRow } from '@/features/chat/MessageRow';
 import type { ChatMessage, PublicUser, RoleSummary, ServerSummary } from '@/shared/types/protocol';
 import type { OutboxEntry } from '@/features/chat/useMessageOutbox';
 import * as serversApi from '@/features/servers/serversApi';
+import { liveAnnouncements } from '@tests/fixtures/announcerFixture';
 
 vi.mock('@/features/servers/serversApi', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/features/servers/serversApi')>()),
@@ -338,6 +339,19 @@ describe('MessageRow — quick reactions', () => {
     await user.click(screen.getByRole('button', { name: 'Ações da mensagem' }));
     await user.click(await screen.findByText('Ver todas as reações'));
     expect(openReactionParticipants).toHaveBeenCalledWith({ conversationId: 'conv-1', msgId: 1 });
+  });
+});
+
+describe('MessageRow — copy text', () => {
+  it('"Copiar texto" copies the message and announces it, since the menu closes', async () => {
+    const user = userEvent.setup();
+    renderWithRoom(
+      <MessageRow message={makeMessage()} showHeader highlighted={false} allUsers={new Map()} mentionLookup={new Map()} onOpenProfile={noop} onReply={noop} onJumpTo={noop} />
+    );
+    await user.click(screen.getByRole('button', { name: 'Ações da mensagem' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Copiar texto' }));
+    await expect(navigator.clipboard.readText()).resolves.toBe('Oi, tudo bem?');
+    await vi.waitFor(() => expect(liveAnnouncements()).toEqual(['Copiado']));
   });
 });
 

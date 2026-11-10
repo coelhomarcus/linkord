@@ -6,6 +6,7 @@ import { buildMentionLookup } from '@/shared/lib/mentions';
 import type { PublicUser } from '@/shared/types/protocol';
 import { resetMyEmojis, setMyEmojisForTests } from '@/features/emoji/myEmojis';
 import { RoomContext, type RoomContextValue } from '@/state/RoomContext';
+import { liveAnnouncements } from '@tests/fixtures/announcerFixture';
 
 describe('ChatMessageText', () => {
   it('renders plain text (no link) as a paragraph, with no embed', () => {
@@ -60,7 +61,8 @@ describe('ChatMessageText — formatting', () => {
     await user.click(screen.getByRole('button', { name: 'Copiar código' }));
 
     expect(writeText).toHaveBeenCalledWith('const a = 1;\nconsole.log(a);');
-    expect(await screen.findByRole('button', { name: 'Código copiado' })).toHaveTextContent('Copiado');
+    expect(screen.getByRole('button', { name: 'Copiar código' })).toHaveTextContent('Copiado');
+    expect(liveAnnouncements()).toEqual(['Copiado']);
   });
 
   it('HTML in the text shows up as text, never as an element', () => {

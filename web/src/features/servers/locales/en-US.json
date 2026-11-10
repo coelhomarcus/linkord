@@ -65,7 +65,6 @@
     "orLink": "Or, send a server invite link to a friend",
     "generating": "Generating…",
     "copy": "Copy",
-    "copied": "Copied",
     "expires": "Your invite link expires in 7 days.",
     "linkFailed": "Could not create the invite link.",
     "failed": "Could not send the invites.",

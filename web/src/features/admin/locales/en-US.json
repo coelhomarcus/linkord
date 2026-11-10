@@ -77,7 +77,6 @@
   "ui": {
     "moreFilters": "More filters",
     "clearFilters": "Clear filters",
-    "idCopied": "ID copied",
     "copyId": "Copy ID of {{name}}",
     "viewHistory": "View history of {{name}}",
     "history": "View history",

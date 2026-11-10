@@ -7,7 +7,10 @@ import { initI18n } from '@/shared/i18n/init';
 initI18n('pt-BR');
 
 afterEach(() => {
-  if (typeof document !== 'undefined') cleanup();
+  if (typeof document === 'undefined') return;
+  cleanup();
+  // the live region lives on <body>, outside what cleanup unmounts, and outlasts a test
+  document.querySelector('[data-live-announcer]')?.replaceChildren();
 });
 
 if (typeof globalThis.ResizeObserver === 'undefined') {

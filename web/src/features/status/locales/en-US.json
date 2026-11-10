@@ -20,8 +20,7 @@
     "reconnecting": "Reconnecting…",
     "editProfile": "Edit profile",
     "currentStatus": "Status: {{status}}",
-    "copyId": "Copy user ID",
-    "idCopied": "Copied!"
+    "copyId": "Copy user ID"
   },
   "custom": {
     "title": "Custom status",

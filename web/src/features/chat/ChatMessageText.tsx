@@ -1,5 +1,4 @@
 import { useTranslation } from 'react-i18next';
-import { CheckIcon, CopyIcon } from '@phosphor-icons/react';
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { detectEmbed } from '@/shared/lib/chatEmbeds';
@@ -7,6 +6,8 @@ import { highlightCode } from '@/shared/lib/highlightCode';
 import type { PublicUser } from '@/shared/types/protocol';
 import type { LinkPreviewData } from '@/shared/api/api';
 import { Avatar } from '@/shared/Avatar';
+import { CopyLabel, CopyStatusIcon } from '@/shared/CopyFeedback';
+import { useCopyToClipboard } from '@/shared/hooks/useCopyToClipboard';
 import { cn } from '@/shared/lib/utils';
 import { emojiOnlyCount, isSingleEmoji } from '@/shared/lib/isSingleEmoji';
 import { CustomEmojiImage } from '@/features/emoji/CustomEmojiImage';
@@ -92,30 +93,23 @@ function isServerEmojiOnly(blocks: Block[]): boolean {
 const highlightCache = new Map<string, string | null>();
 const MAX_HIGHLIGHTS = 100;
 
-const COPIED_FOR_MS = 2000;
-
 /** Copies the block's source as sent — never the highlighted markup. Shown on
  * hover or focus; a touch screen has no hover, so there it always shows. */
 function CopyCodeButton({ code }: { code: string }) {
   const { t } = useTranslation('chat');
-  const [copied, setCopied] = useState(false);
-  useEffect(() => {
-    if (!copied) return;
-    const timer = setTimeout(() => setCopied(false), COPIED_FOR_MS);
-    return () => clearTimeout(timer);
-  }, [copied]);
+  const { copied, copy } = useCopyToClipboard();
   return (
     <button
       type="button"
-      onClick={() => { navigator.clipboard.writeText(code).then(() => setCopied(true)).catch(() => {}); }}
-      aria-label={copied ? t('code.copied') : t('code.copy')}
+      onClick={() => void copy(code)}
+      aria-label={t('code.copy')}
       className={cn(
         'absolute right-2 top-2 flex items-center gap-1 rounded-md border border-border bg-surface-overlay px-2 py-1 text-caption font-medium text-text-secondary transition-opacity hover:text-text-primary focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [@media(hover:none)]:opacity-100',
         copied ? 'opacity-100' : 'opacity-0 group-hover/code:opacity-100',
       )}
     >
-      {copied ? <CheckIcon size={14} className="text-green" aria-hidden /> : <CopyIcon size={14} aria-hidden />}
-      {copied ? t('code.copiedLabel') : t('code.copyLabel')}
+      <CopyStatusIcon copied={copied} size={14} />
+      <CopyLabel copied={copied}>{t('code.copyLabel')}</CopyLabel>
     </button>
   );
 }
