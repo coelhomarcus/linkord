@@ -57,7 +57,6 @@
     "sendGif": "Send GIF",
     "sendSticker": "Send sticker",
     "send": "Send message",
-    "dropToAttach": "Drop to attach",
     "removeFile": "Remove {{name}}",
     "maxAttachments_one": "Maximum of {{count}} attachment per message.",
     "maxAttachments_other": "Maximum of {{count}} attachments per message.",
@@ -66,6 +65,16 @@
       "title": "Emojis matching {{query}}",
       "label": "Emoji suggestions"
     }
+  },
+  "drop": {
+    "toChannel": "Send to #{{channel}}",
+    "toDirect": "Send to @{{name}}",
+    "toConversation": "Drop to attach",
+    "notAllowedChannel": "You can't send files in #{{channel}}",
+    "notAllowedDirect": "You can't send files to @{{name}}",
+    "notAllowed": "You can't send files here",
+    "files_one": "{{count}} file",
+    "files_other": "{{count}} files"
   },
   "reactions": {
     "title": "Reactions",
