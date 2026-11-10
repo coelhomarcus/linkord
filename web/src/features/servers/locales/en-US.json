@@ -342,8 +342,7 @@
       "allUsers": "All",
       "action": "Filter by action",
       "allActions": "All",
-      "from": "From",
-      "to": "To",
+      "period": "Period",
       "target": "Target: {{name}}",
       "clearTarget": "Remove target filter",
       "clear": "Clear filters"

@@ -57,7 +57,8 @@ describe('AuditPage', () => {
       to: new Date(2026, 3, 1).toISOString(),
     }), null);
     expect(screen.getByText(/Dias no fuso/)).toBeInTheDocument();
-    expect(screen.getByLabelText('Até (inclusive)')).toHaveValue('2026-03-31');
+    const range = new Intl.DateTimeFormat('pt-BR', { day: 'numeric', month: 'short', year: 'numeric' }).formatRange(new Date(2026, 2, 1), new Date(2026, 2, 31));
+    expect(screen.getByRole('button', { name: `Período: ${range}` })).toBeInTheDocument();
   });
 
   it('is read-only: there is no edit or delete control', async () => {

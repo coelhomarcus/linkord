@@ -4,8 +4,10 @@ import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/shared/ui/primitives/button';
+import { DateRangePicker, type DateRange } from '@/shared/ui/primitives/date-picker';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/primitives/select';
 import { Skeleton } from '@/shared/ui/primitives/skeleton';
+import { todayKey } from '@/shared/lib/calendarDay';
 import { cn } from '@/shared/lib/utils';
 
 const FIELD = 'h-10 rounded-lg border border-border bg-fill-subtle px-3 text-label text-text-primary outline-none focus-visible:ring-2 focus-visible:ring-ring';
@@ -35,7 +37,7 @@ export function AdminSelectField<T extends string>({ label, value, onChange, opt
   );
 }
 
-/** A free-text filter (an id, a name) with its label above, like the select and date filters beside it. */
+/** A free-text filter (an id, a name) with its label above, like the select and period filters beside it. */
 export function AdminTextField({ label, value, placeholder, onChange }: { label: string; value: string; placeholder?: string; onChange: (next: string) => void }) {
   return (
     <label className={cn(FIELD_LABEL, 'min-w-40 flex-1')}>
@@ -45,11 +47,12 @@ export function AdminTextField({ label, value, placeholder, onChange }: { label:
   );
 }
 
-export function AdminDateField({ label, value, onChange }: { label: string; value: string; onChange: (next: string) => void }) {
+/** A period filter: one picker for both ends, which are `yyyy-mm-dd` and inclusive (`''` leaves one open). */
+export function AdminDateRangeField({ label, from, to, onChange }: { label: string; from: string; to: string; onChange: (next: DateRange) => void }) {
   return (
     <label className={FIELD_LABEL}>
       {label}
-      <input type="date" value={value} onChange={(event) => onChange(event.target.value)} className={FIELD} />
+      <DateRangePicker label={label} value={{ from, to }} max={todayKey()} className="min-w-56" onChange={onChange} />
     </label>
   );
 }

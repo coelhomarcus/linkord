@@ -342,8 +342,7 @@
       "allUsers": "Todos",
       "action": "Filtrar por ação",
       "allActions": "Todas",
-      "from": "De",
-      "to": "Até",
+      "period": "Período",
       "target": "Alvo: {{name}}",
       "clearTarget": "Remover filtro de alvo",
       "clear": "Limpar filtros"

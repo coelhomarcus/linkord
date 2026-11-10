@@ -148,5 +148,21 @@
     "cancel": "Cancelar",
     "save": "Salvar",
     "zoom": "Zoom"
+  },
+  "datePicker": {
+    "trigger": "{{label}}: {{value}}",
+    "anyDate": "Qualquer data",
+    "since": "Desde {{date}}",
+    "until": "Até {{date}}",
+    "previousMonth": "Mês anterior",
+    "nextMonth": "Próximo mês",
+    "pickStart": "Escolha a data inicial",
+    "pickEnd": "Agora escolha a data final",
+    "clear": "Limpar",
+    "presets": {
+      "today": "Hoje",
+      "last7": "Últimos 7 dias",
+      "last30": "Últimos 30 dias"
+    }
   }
 }
