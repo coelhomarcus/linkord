@@ -65,6 +65,33 @@ test.describe('chat', () => {
     await expect(b.page.locator('[data-message-id]').filter({ hasText: /^mensagem editada/ })).toHaveCount(0);
   });
 
+  test('@everyone notifies only when its author may: picked from the list by the owner, plain text from a member', async ({ users }) => {
+    const { bob, a, b } = await twoInAChannel(users);
+    const mentionCount = async () => {
+      const body = await (await bob.api.get('/api/notifications')).json() as { items: { kind: string }[] };
+      return body.items.filter((item) => item.kind === 'mention').length;
+    };
+
+    // a member without the permission is not offered it, and typing it notifies nobody
+    await b.composer().click();
+    await b.composer().pressSequentially('@ev');
+    await expect(b.page.getByRole('button', { name: /^@everyone/ })).toHaveCount(0);
+    await b.composer().fill('@everyone sem permissão');
+    await b.composer().press('Enter');
+    await a.expectMessage('@everyone sem permissão');
+    await expect(a.message('@everyone sem permissão').locator('span.rounded-sm', { hasText: '@everyone' })).toHaveCount(0);
+
+    // the owner holds it: the list offers @everyone, and the member is notified
+    await a.composer().click();
+    await a.composer().pressSequentially('@ev');
+    await a.page.getByRole('button', { name: /^@everyone/ }).click();
+    await a.composer().pressSequentially('reunião agora');
+    await a.composer().press('Enter');
+    await b.expectMessage('@everyone reunião agora');
+    await expect(b.message('@everyone reunião agora').locator('span.rounded-sm', { hasText: '@everyone' })).toBeVisible();
+    await expect.poll(mentionCount).toBe(1);
+  });
+
   test('a reaction appears for the other member and can be removed', async ({ users }) => {
     const { a, b } = await twoInAChannel(users);
     await a.send('reaja aqui');
