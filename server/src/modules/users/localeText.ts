@@ -4,7 +4,7 @@ type TextKey =
   | 'push.mentionChannelTitle' | 'push.mentionDirectTitle' | 'push.serverInvitationTitle' | 'push.serverInvitationBody'
   | 'push.friendRequestTitle' | 'push.friendAcceptedTitle'
   | 'push.chatEmptyBody' | 'push.chatEmptyBodyDirect' | 'push.stickerBody' | 'push.stickerBodyDirect' | 'push.callInviteBody' | 'push.callInviteBodyDirect'
-  | 'push.dmCall' | 'push.dmCallLasted'
+  | 'push.dmCall' | 'push.dmCallLasted' | 'push.deletedRole'
   | 'push.callSecond_one' | 'push.callSecond_other' | 'push.callMinute_one' | 'push.callMinute_other'
   | 'push.callHour_one' | 'push.callHour_other' | 'push.callHourMinute'
   | 'email.recoverySubject' | 'email.changeSubject' | 'email.recoveryTitle' | 'email.changeTitle'
@@ -19,6 +19,7 @@ type TextKey =
 const TEXT: Record<Locale, Record<TextKey, string>> = {
   'pt-BR': {
     'push.mentionChannelTitle': '{{name}} em #{{channel}} · {{server}}', 'push.mentionDirectTitle': '{{name}} mencionou você',
+    'push.deletedRole': 'cargo-excluído',
     'push.serverInvitationTitle': 'Convite para {{server}}', 'push.serverInvitationBody': '{{name}} convidou você',
     'push.friendRequestTitle': '{{name}} enviou um pedido de amizade',
     'push.friendAcceptedTitle': '{{name}} aceitou seu pedido de amizade',
@@ -55,6 +56,7 @@ const TEXT: Record<Locale, Record<TextKey, string>> = {
   },
   'en-US': {
     'push.mentionChannelTitle': '{{name}} in #{{channel}} · {{server}}', 'push.mentionDirectTitle': '{{name}} mentioned you',
+    'push.deletedRole': 'deleted-role',
     'push.serverInvitationTitle': 'Invitation to {{server}}', 'push.serverInvitationBody': '{{name}} invited you',
     'push.friendRequestTitle': '{{name}} sent you a friend request',
     'push.friendAcceptedTitle': '{{name}} accepted your friend request',

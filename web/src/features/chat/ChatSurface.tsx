@@ -1,6 +1,5 @@
-import { useTranslation } from 'react-i18next';
 import { hasPermission, PERMISSIONS } from '@/features/servers/permissionBits';
-import { UploadSimpleIcon } from '@phosphor-icons/react';
+import { directUser } from '@/features/conversations/conversationUtils';
 import { useEffect, useRef, useState } from 'react';
 import type { DragEvent } from 'react';
 
@@ -11,6 +10,8 @@ import { MessageComposer, type MessageComposerHandle } from './MessageComposer';
 import { MessageTimeline } from './MessageTimeline';
 import { TypingIndicator } from './TypingIndicator';
 import { MediaViewerProvider } from './MediaViewerProvider';
+import { DropOverlay, type DropTarget } from './DropOverlay';
+import { carriesFiles, summarizeDrag, type DragSummary } from './dragSummary';
 
 // Typing lives in a fixed-height rail above the composer, outside the box
 // the ResizeObserver measures: someone starting or stopping typing must not
@@ -21,13 +22,11 @@ const STATUS_RAIL_HEIGHT = 20;
 // fade ends exactly where the newest message does and never covers it
 const RAIL_GAP = 4;
 
-function hasFiles(e: DragEvent<HTMLDivElement>): boolean {
-  return Array.from(e.dataTransfer.types).includes('Files');
-}
-
 export function ChatSurface({ conversationId, onOpenProfile }: { conversationId: string; onOpenProfile: (userId: string) => void }) {
-  const { t } = useTranslation('chat');
-  const { state, setReplyingTo, windowGenerationByConversation, conversations, typingByConversation, allUsers } = useRoom();
+  const {
+    state, setReplyingTo, windowGenerationByConversation, conversations, typingByConversation, allUsers,
+    activeConversationId, unreadByConversation, unreadStartByConversation, markConversationRead,
+  } = useRoom();
   // the same people TypingIndicator names: someone it can't show raises no background
   const someoneTyping = [...(typingByConversation.get(conversationId) ?? [])].some((id) => allUsers.has(id));
   // a channel the viewer can't write in (a webhook's announcements, say):
@@ -39,7 +38,12 @@ export function ChatSurface({ conversationId, onOpenProfile }: { conversationId:
   const composerRef = useRef<MessageComposerHandle>(null);
   const composerWrapRef = useRef<HTMLDivElement | null>(null);
   const [composerHeight, setComposerHeight] = useState(0);
-  const [dragActive, setDragActive] = useState(false);
+  const [drag, setDrag] = useState<DragSummary | null>(null);
+  // whether the drop will land, decided as the drag comes in: besides the
+  // permission, a DM gate (not friends, blocked) leaves no composer to take it
+  const [dropAllowed, setDropAllowed] = useState(true);
+  // dragenter/dragleave fire for every child crossed, so only the outermost
+  // pair (depth back to 0) means the drag really left
   const dragDepthRef = useRef(0);
   // measured rather than assumed: the same surface renders in the main panel
   // and in the call's side panel, whose width isn't a fixed constant either
@@ -57,27 +61,60 @@ export function ChatSurface({ conversationId, onOpenProfile }: { conversationId:
     return () => observer.disconnect();
   }, []);
 
+  // Esc reads the conversation, as in Discord: from anywhere inside this
+  // surface, or with nothing focused while it is the open conversation.
+  // Whatever handled Esc first (an autocomplete, an edit, a voice take, a
+  // popup with focus inside it) keeps it.
+  const hasUnread = (unreadByConversation.get(conversationId) ?? 0) > 0 || unreadStartByConversation.has(conversationId);
+  const isActive = activeConversationId === conversationId;
+  useEffect(() => {
+    if (!hasUnread) return;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== 'Escape' || event.defaultPrevented || event.isComposing) return;
+      if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+      const target = event.target instanceof Node ? event.target : null;
+      const inside = !!target && !!rootRef.current?.contains(target);
+      const unfocused = target === document.body || target === document.documentElement;
+      if (inside || (unfocused && isActive)) markConversationRead(conversationId);
+    }
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [hasUnread, isActive, conversationId, markConversationRead]);
+
+  const peer = directUser(shown, state.me.userId, allUsers);
+  const dropTarget: DropTarget = shown?.serverId ? { channel: shown.title } : peer ? { peer: peer.displayName } : {};
+
+  function endDrag() {
+    dragDepthRef.current = 0;
+    setDrag(null);
+  }
+  // Only drags of files from outside the page: text, links and in-page drags
+  // (dnd-kit uses pointer events, the voice list drags text) are left alone.
   function handleDragEnter(e: DragEvent<HTMLDivElement>) {
-    if (noFiles || !state.joined || !hasFiles(e)) return;
+    if (!state.joined || !carriesFiles(e.dataTransfer)) return;
     e.preventDefault();
     dragDepthRef.current += 1;
-    setDragActive(true);
+    if (dragDepthRef.current > 1) return;
+    setDropAllowed(!noFiles && composerRef.current !== null);
+    setDrag(summarizeDrag(e.dataTransfer));
   }
   function handleDragOver(e: DragEvent<HTMLDivElement>) {
-    if (noFiles || !state.joined || !hasFiles(e)) return;
+    if (!state.joined || !carriesFiles(e.dataTransfer)) return;
+    // cancelled even when refused, or the browser would open the file in the tab on drop
     e.preventDefault();
+    e.dataTransfer.dropEffect = dropAllowed ? 'copy' : 'none';
   }
   function handleDragLeave(e: DragEvent<HTMLDivElement>) {
-    if (!state.joined || !hasFiles(e)) return;
+    if (!state.joined || !carriesFiles(e.dataTransfer)) return;
     e.preventDefault();
     dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
-    if (dragDepthRef.current === 0) setDragActive(false);
+    if (dragDepthRef.current === 0) setDrag(null);
   }
   function handleDrop(e: DragEvent<HTMLDivElement>) {
-    if (noFiles || !state.joined || !hasFiles(e)) return;
+    if (!state.joined || !carriesFiles(e.dataTransfer)) return;
     e.preventDefault();
-    dragDepthRef.current = 0;
-    setDragActive(false);
+    endDrag();
+    if (!dropAllowed) return;
     const files = Array.from(e.dataTransfer.files);
     if (files.length) composerRef.current?.addFiles(files);
   }
@@ -117,12 +154,7 @@ export function ChatSurface({ conversationId, onOpenProfile }: { conversationId:
           </DirectComposerGate>
         )}
       </div>
-      {dragActive && (
-        <div className="pointer-events-none absolute inset-0 z-10 m-2 flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-primary bg-(--surface-base)/90 text-text-primary">
-          <UploadSimpleIcon size={28} className="text-primary" />
-          <p className="text-body font-medium">{t('composer.dropToAttach')}</p>
-        </div>
-      )}
+      <DropOverlay drag={drag} target={dropTarget} allowed={dropAllowed} />
     </div>
   );
 }

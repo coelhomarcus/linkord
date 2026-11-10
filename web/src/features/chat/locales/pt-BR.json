@@ -5,6 +5,13 @@
   "react": "Reagir",
   "moreEmojis": "Mais emojis",
   "edited": "(editado)",
+  "mentions": {
+    "title": "Mencionar",
+    "role": "Notifica quem tem este cargo",
+    "everyoneHint": "Notifica todos que podem ver este canal",
+    "hereHint": "Notifica quem está online e pode ver este canal",
+    "deletedRole": "cargo-excluído"
+  },
   "deleting": "Apagando…",
   "dismissNotice": "Dispensar aviso",
   "pending": {
@@ -22,6 +29,7 @@
     "attachmentUploading": "Enviando arquivo… {{percent}}%"
   },
   "edit": {
+    "field": "Editar mensagem",
     "saving": "Salvando…",
     "escapeTo": "escape para",
     "cancel": "cancelar",
@@ -56,7 +64,6 @@
     "sendGif": "Enviar GIF",
     "sendSticker": "Enviar figurinha",
     "send": "Enviar mensagem",
-    "dropToAttach": "Solte para anexar",
     "removeFile": "Remover {{name}}",
     "maxAttachments_one": "Máximo de {{count}} anexo por mensagem.",
     "maxAttachments_other": "Máximo de {{count}} anexos por mensagem.",
@@ -65,6 +72,16 @@
       "title": "Emojis correspondentes a {{query}}",
       "label": "Sugestões de emoji"
     }
+  },
+  "drop": {
+    "toChannel": "Enviar para #{{channel}}",
+    "toDirect": "Enviar para @{{name}}",
+    "toConversation": "Solte para anexar",
+    "notAllowedChannel": "Você não pode enviar arquivos em #{{channel}}",
+    "notAllowedDirect": "Você não pode enviar arquivos para @{{name}}",
+    "notAllowed": "Você não pode enviar arquivos aqui",
+    "files_one": "{{count}} arquivo",
+    "files_other": "{{count}} arquivos"
   },
   "reactions": {
     "title": "Reações",
@@ -125,9 +142,7 @@
     "searchEverywhere": "Buscar em todas as conversas"
   },
   "code": {
-    "copied": "Código copiado",
     "copy": "Copiar código",
-    "copiedLabel": "Copiado",
     "copyLabel": "Copiar"
   },
   "timeline": {
@@ -135,6 +150,7 @@
     "loading": "Carregando mensagens…",
     "log": "Mensagens",
     "newMessages": "Novas Mensagens",
+    "jumpToFirstUnread": "Pular para a primeira não lida",
     "emptyTitle": "Nenhuma mensagem ainda",
     "emptyDirect": "Este é o começo da sua conversa com {{name}}. Que tal dizer oi?",
     "emptyChannel": "Este é o começo de #{{name}}. Mande a primeira mensagem."

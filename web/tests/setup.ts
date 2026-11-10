@@ -7,9 +7,23 @@ import { initI18n } from '@/shared/i18n/init';
 initI18n('pt-BR');
 
 afterEach(() => {
-  if (typeof document !== 'undefined') cleanup();
+  if (typeof document === 'undefined') return;
+  cleanup();
+  // the live region lives on <body>, outside what cleanup unmounts, and outlasts a test
+  document.querySelector('[data-live-announcer]')?.replaceChildren();
 });
 
+// jsdom has no ClipboardEvent; Lexical's paste handler names it, so a paste
+// in the message field threw outside the test and failed the whole run.
+if (typeof globalThis.ClipboardEvent === 'undefined') {
+  globalThis.ClipboardEvent = class extends Event {
+    clipboardData: DataTransfer | null;
+    constructor(type: string, init?: ClipboardEventInit) {
+      super(type, init);
+      this.clipboardData = init?.clipboardData ?? null;
+    }
+  };
+}
 if (typeof globalThis.ResizeObserver === 'undefined') {
   globalThis.ResizeObserver = class {
     observe() {}
@@ -56,4 +70,9 @@ if (typeof window !== 'undefined' && typeof window.matchMedia === 'undefined') {
     removeEventListener: () => {},
     dispatchEvent: () => false,
   }) as unknown as MediaQueryList;
+}
+if (typeof Range !== 'undefined' && !Range.prototype.getBoundingClientRect) {
+  // jsdom has no layout; the message field (Lexical) measures the caret to keep it in view
+  Range.prototype.getBoundingClientRect = () => new DOMRect();
+  Range.prototype.getClientRects = () => ({ length: 0, item: () => null, [Symbol.iterator]: [][Symbol.iterator] }) as unknown as DOMRectList;
 }

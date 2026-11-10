@@ -1,11 +1,13 @@
-import { useEffect, useRef, useState, type KeyboardEvent, type ReactElement } from 'react';
+import { useRef, useState, type KeyboardEvent, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CaretRightIcon, CheckIcon, IdentificationBadgeIcon, PencilSimpleIcon } from '@phosphor-icons/react';
+import { CaretRightIcon, IdentificationBadgeIcon, PencilSimpleIcon } from '@phosphor-icons/react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/primitives/popover';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger,
 } from '@/shared/ui/primitives/dropdown-menu';
 import { cn } from '@/shared/lib/utils';
+import { CopyLabel, CopyStatusIcon } from '@/shared/CopyFeedback';
+import { useCopyToClipboard } from '@/shared/hooks/useCopyToClipboard';
 import { useRoom } from '@/state/RoomContext';
 import type { PresenceStatus } from '@/shared/types/protocol';
 import { ProfileCard } from '@/features/profile/ProfileCard';
@@ -19,7 +21,6 @@ const ROW = cn(
   'hover:bg-fill-hover focus-visible:bg-fill-hover focus-visible:outline-none data-popup-open:bg-fill-hover',
   'disabled:cursor-default disabled:hover:bg-transparent [&>svg]:flex-none [&>svg]:text-text-secondary',
 );
-const COPIED_MS = 2000;
 
 /** The user panel's card: who you are (banner, avatar, name, links), your custom status as the
  * bubble beside the avatar, and below it your status (a submenu with the four), editing your
@@ -35,7 +36,7 @@ export function StatusMenu({ trigger, onOpenProfile, side = 'top', onError }: {
   const { state, ownStatus, setPresence, reconnecting } = useRoom();
   const [open, setOpen] = useState(false);
   const [statusMenuOpen, setStatusMenuOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const { copied, copy } = useCopyToClipboard();
   const popupRef = useRef<HTMLDivElement | null>(null);
   const customActions = useCustomStatusActions(onError);
   const custom = liveCustomStatus(ownStatus.customStatus);
@@ -43,12 +44,6 @@ export function StatusMenu({ trigger, onOpenProfile, side = 'top', onError }: {
   const userId = me.userId ?? me.id ?? '';
   const shown = reconnecting ? 'reconnecting' : ownStatus.effective;
   const statusLabel = reconnecting ? t('menu.reconnecting') : t(`statuses.${ownStatus.effective}`);
-
-  useEffect(() => {
-    if (!copied) return;
-    const timer = window.setTimeout(() => setCopied(false), COPIED_MS);
-    return () => window.clearTimeout(timer);
-  }, [copied]);
 
   function change(patch: Parameters<typeof setPresence>[0]) {
     setPresence(patch).catch((err: unknown) => onError(err instanceof Error ? err.message : t('errors.saveFailed')));
@@ -59,10 +54,6 @@ export function StatusMenu({ trigger, onOpenProfile, side = 'top', onError }: {
   function clearCustom() {
     customActions.clear();
     window.setTimeout(() => popupRef.current?.querySelector<HTMLElement>('[data-custom-status-bubble] button')?.focus());
-  }
-
-  function copyId() {
-    navigator.clipboard.writeText(userId).then(() => setCopied(true)).catch(() => {});
   }
 
   /** Up and down move between everything you can act on in the card, wrapping around. Capture phase,
@@ -149,11 +140,10 @@ export function StatusMenu({ trigger, onOpenProfile, side = 'top', onError }: {
                   </DropdownMenu>
                 </div>
                 <div className={GROUP}>
-                  <button type="button" className={ROW} onClick={copyId} disabled={!userId}>
-                    {copied ? <CheckIcon size={18} className="text-green!" /> : <IdentificationBadgeIcon size={18} />}
+                  <button type="button" className={ROW} onClick={() => void copy(userId)} disabled={!userId}>
+                    <CopyStatusIcon copied={copied} size={18} icon={IdentificationBadgeIcon} checkClassName="text-green!" />
                     <span className="min-w-0 flex-1 truncate">{t('menu.copyId')}</span>
-                    {/* announced once, while the check mark shows */}
-                    <span role="status" className="flex-none text-caption font-normal text-green">{copied ? t('menu.idCopied') : ''}</span>
+                    <span className="flex-none text-caption font-normal text-green"><CopyLabel copied={copied} /></span>
                   </button>
                 </div>
               </div>

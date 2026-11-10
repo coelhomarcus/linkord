@@ -1,14 +1,13 @@
 import { useTranslation } from 'react-i18next';
-import { ArrowBendUpLeftIcon, ArrowsInSimpleIcon, ArrowUpIcon, GifIcon, ImageSquareIcon, PaperclipIcon, PlusCircleIcon, SmileyIcon, StickerIcon } from '@phosphor-icons/react';
+import { ArrowBendUpLeftIcon, ArrowsInSimpleIcon, ArrowUpIcon, AtIcon, GifIcon, ImageSquareIcon, PaperclipIcon, PlusCircleIcon, ShieldIcon, SmileyIcon, StickerIcon } from '@phosphor-icons/react';
 import { forwardRef, useCallback, useEffect, useId, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import type { ChangeEvent, ClipboardEvent, KeyboardEvent as ReactKeyboardEvent, SyntheticEvent } from 'react';
+import type { ChangeEvent, KeyboardEvent as ReactKeyboardEvent, RefObject } from 'react';
 
 import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { Button } from '@/shared/ui/primitives/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/primitives/popover';
 import { Sheet } from '@/shared/ui/motion/sheet';
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/shared/ui/primitives/dropdown-menu';
-import { Textarea } from '@/shared/ui/primitives/textarea';
 import { Avatar } from '@/shared/Avatar';
 import { ComposerAttachmentTray } from './ComposerAttachmentTray';
 import { useKeepPopoverWarm } from '@/shared/hooks/useKeepPopoverWarm';
@@ -16,8 +15,11 @@ import { formatSizeLimit } from '@/shared/lib/formatBytes';
 import { cn } from '@/shared/lib/utils';
 import { useRoom } from '@/state/RoomContext';
 import { readDraft, updateConversationDraft, useConversationDraft, type PendingAttachment } from './conversationDrafts';
+import { takeShare, useHasPendingShare } from './pendingShare';
 import { MAX_ATTACHMENTS_PER_MESSAGE } from '@/shared/types/protocol';
 import type { PublicUser } from '@/shared/types/protocol';
+import { roleMentionsAsText } from './roleMentionText';
+import { mentionCandidateKey, mentionInsertion, roleAndGroupCandidates, type MentionCandidate } from './mentionCandidates';
 import { reportGifShared } from '@/features/gifs/klipy';
 import type { Gif } from '@/features/gifs/klipy';
 import { useGifConfig } from '@/features/gifs/useGifConfig';
@@ -36,6 +38,7 @@ import { useEmojiAutocomplete } from './useEmojiAutocomplete';
 import { customEmojisAsText, encodeCustomEmojis } from '@/features/emoji/customEmojiText';
 import type { TextEdit } from './emojiAutocomplete';
 import { EmojiText } from '@/features/emoji/Emoji';
+import { MessageField, type MessageFieldHandle } from './messageField/MessageField';
 
 // How often notifyTyping actually emits typing:true while the user keeps
 // typing (leading-edge: fires right away after being idle, then throttles),
@@ -109,7 +112,11 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const counterId = useId();
-  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const fieldRef = useRef<MessageFieldHandle | null>(null);
+  // the attachment tray gives focus back to the field's own element
+  const fieldElementRef = useMemo<RefObject<HTMLElement | null>>(() => ({ get current() { return fieldRef.current?.element ?? null; } }), []);
+  const { byName } = emojiSuggestions;
+  const resolveCustomEmoji = useCallback((name: string, nth: number | null) => byName.get(name)?.[nth ? nth - 1 : 0] ?? null, [byName]);
   // an upload can finish after the user moved to another conversation; the
   // reply target is global, so it's only cleared if they're still here
   const conversationIdRef = useRef(conversationId);
@@ -161,7 +168,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
   const voiceBusy = voice.active || !!voiceTake;
   const wasVoiceBusyRef = useRef(voiceBusy);
   useEffect(() => {
-    if (wasVoiceBusyRef.current && !voiceBusy) textareaRef.current?.focus();
+    if (wasVoiceBusyRef.current && !voiceBusy) fieldRef.current?.focus();
     wasVoiceBusyRef.current = voiceBusy;
   }, [voiceBusy]);
 
@@ -224,7 +231,13 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
   const messagePlaceholder = conversation?.serverId ? t('composer.messageChannel', { channel: conversation.title })
     : peer ? t('composer.messageDirect', { name: peer.displayName }) : t('composer.message');
   const placeholder = pendingFiles.length ? t('composer.addCaption') : messagePlaceholder;
-  const mentionCandidates = useMemo(() => {
+  const channelServer = serverId ? servers.find((s) => s.id === serverId) : undefined;
+  const canMentionEveryone = hasPermission(conversation?.permissions ?? 0, PERMISSIONS.MENTION_EVERYONE);
+  const resolveRole = useCallback((roleId: string) => {
+    const role = channelServer?.roles.find((r) => r.id === roleId);
+    return role ? { id: role.id, name: role.name, color: role.color } : null;
+  }, [channelServer]);
+  const mentionCandidates = useMemo((): MentionCandidate[] => {
     if (!mentionQuery) return [];
     const q = mentionQuery.query.toLowerCase();
     const members: PublicUser[] = [];
@@ -236,14 +249,17 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
         if (user) members.push(user);
       }
     }
-    return members
+    const users = members
       .filter((u) => u.username.toLowerCase().startsWith(q))
       .sort((a, b) => a.username.localeCompare(b.username))
-      .slice(0, MAX_MENTION_RESULTS);
-  }, [allUsers, mentionQuery, directMemberIds, serverMembersKey, serverMembers]);
+      .slice(0, MAX_MENTION_RESULTS)
+      .map((user): MentionCandidate => ({ kind: 'user', user }));
+    // members first, then the server's roles and @everyone/@here, Discord's order
+    return channelServer ? [...users, ...roleAndGroupCandidates(mentionQuery.query, channelServer.roles, canMentionEveryone)] : users;
+  }, [allUsers, mentionQuery, directMemberIds, serverMembersKey, serverMembers, channelServer, canMentionEveryone]);
 
   // re-derives the active "@query" from wherever the cursor is now — called
-  // after every edit (the Textarea's onChange) and every cursor move that
+  // after every edit (the field's onChange) and every cursor move that
   // ISN'T an edit (onSelect: arrow keys, click), since either can start,
   // change, or leave a mention.
   function syncMentionQuery(value: string, cursor: number) {
@@ -259,8 +275,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
     const caret = pendingCaretRef.current;
     if (caret === null) return;
     pendingCaretRef.current = null;
-    textareaRef.current?.focus();
-    textareaRef.current?.setSelectionRange(caret, caret);
+    fieldRef.current?.setSelectionRange(caret, caret);
   }, [text]);
 
   function applyEdit(edit: TextEdit) {
@@ -269,27 +284,23 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
     syncMentionQuery(edit.text, edit.caret);
   }
 
-  function handleTextareaSelect(event: SyntheticEvent<HTMLTextAreaElement>) {
-    const el = event.currentTarget;
-    syncMentionQuery(el.value, el.selectionStart ?? 0);
+  function handleFieldChange(value: string, cursor: number, typed: string | null) {
+    if (value.trim()) notifyTyping(); else stopTyping();
+    const converted = emojiSuggestions.convertTyped(typed, value, cursor);
+    if (converted) { applyEdit(converted); return; }
+    setText(value);
+    syncMentionQuery(value, cursor);
   }
 
-  // replaces the "@query" itself (not the whole field) with "@username " —
-  // mirrors insertEmoji's cursor handling below.
-  function selectMention(user: PublicUser) {
-    const el = textareaRef.current;
+  // replaces the "@query" itself (not the whole field) with "@username ",
+  // "@everyone " or a role's token, the caret right after it before the next
+  // key lands (applyEdit); the list keeps focus in the field (onMouseDown)
+  function selectMention(candidate: MentionCandidate) {
     if (!mentionQuery) return;
     const before = text.slice(0, mentionQuery.start);
     const after = text.slice(mentionQuery.start + 1 + mentionQuery.query.length);
-    const insertion = `@${user.username} `;
-    const next = before + insertion + after;
-    setText(next);
-    setMentionQuery(null);
-    const caret = before.length + insertion.length;
-    requestAnimationFrame(() => {
-      el?.focus();
-      el?.setSelectionRange(caret, caret);
-    });
+    const insertion = mentionInsertion(candidate);
+    applyEdit({ text: before + insertion + after, caret: before.length + insertion.length });
   }
 
   function addFiles(files: File[]) {
@@ -316,6 +327,18 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
   }
 
   useImperativeHandle(ref, () => ({ addFiles }));
+
+  // A share chosen on the "send to" page: it was queued before this composer existed for the
+  // conversation, so it lands once, as if the text had been typed and the files dropped here.
+  const hasPendingShare = useHasPendingShare(accountId, conversationId);
+  useEffect(() => {
+    if (!hasPendingShare) return;
+    const share = takeShare(accountId, conversationId);
+    if (!share) return;
+    if (share.text) updateDraft((d) => ({ text: d.text ? `${d.text}\n${share.text}` : share.text }));
+    addFiles(share.files);
+    // addFiles is a fresh closure every render; the queue itself is the trigger
+  }, [hasPendingShare, accountId, conversationId]);
 
   function removeFile(id: string) {
     updateDraft((d) => ({ pendingFiles: d.pendingFiles.filter((file) => file.id !== id) }));
@@ -365,7 +388,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
     sendChatMessage(conversationId, gif.full.url, replyingTo?.msgId);
     setReplyingTo(null);
     reportGifShared(gifConfig, gif.slug, query);
-    textareaRef.current?.focus();
+    fieldRef.current?.focus();
   }
 
   // same as a GIF: its own message right away, the field left as it is
@@ -375,10 +398,10 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
     setMobileExpressions(false);
     sendStickerMessage(conversationId, { id: sticker.id, name: sticker.name, description: sticker.description, animated: sticker.animated }, replyingTo?.msgId);
     setReplyingTo(null);
-    textareaRef.current?.focus();
+    fieldRef.current?.focus();
   }
 
-  function handleKeyDown(event: ReactKeyboardEvent<HTMLTextAreaElement>) {
+  function handleKeyDown(event: KeyboardEvent) {
     if (emojiSuggestions.handleKeyDown(event, text, applyEdit)) return;
     // the mention dropdown intercepts navigation/confirm keys FIRST — while
     // it's open, Enter picks a mention instead of sending the message, and
@@ -390,7 +413,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
       if (event.key === 'Escape') { event.preventDefault(); setMentionQuery(null); return; }
     }
     if (isVoiceShortcut(event)) { event.preventDefault(); if (canAttach) voice.toggleFromShortcut(); return; }
-    if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing) return;
+    if (event.key !== 'Enter' || event.shiftKey || event.isComposing) return;
     event.preventDefault();
     void submit();
   }
@@ -403,7 +426,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
 
   // a server emoji goes in as its :name:, like one typed; it is sent as its token
   function insertEmoji({ text: emoji }: EmojiPick) {
-    const el = textareaRef.current;
+    const el = fieldRef.current;
     const start = el?.selectionStart ?? text.length;
     const end = el?.selectionEnd ?? text.length;
     setText(text.slice(0, start) + emoji + text.slice(end));
@@ -420,8 +443,8 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
     });
   }
 
-  function handlePaste(event: ClipboardEvent<HTMLTextAreaElement>) {
-    if (!canAttach) return;
+  function handlePaste(event: ClipboardEvent) {
+    if (!canAttach || !event.clipboardData) return;
     const files = Array.from(event.clipboardData.items)
       .filter((item) => item.type.startsWith('image/'))
       .map((item) => item.getAsFile())
@@ -447,26 +470,22 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
       <div className="relative flex flex-col rounded-lg border border-border-default bg-bg-card">
         {mentionQuery && mentionCandidates.length > 0 && (
           <div className="absolute inset-x-0 bottom-full z-20 mb-1 max-h-56 overflow-y-auto rounded-lg border border-border bg-surface-overlay py-1 shadow-popover">
-            <p className="select-none px-3 pb-1 pt-0.5 text-caption font-semibold uppercase text-text-muted">Mencionar alguém</p>
-            {mentionCandidates.map((user, i) => (
+            <p className="select-none px-3 pb-1 pt-0.5 text-caption font-semibold uppercase text-text-muted">{t('mentions.title')}</p>
+            {mentionCandidates.map((candidate, i) => (
               <button
-                key={user.id}
+                key={mentionCandidateKey(candidate)}
                 ref={(el) => { mentionOptionRefs.current[i] = el; }}
                 type="button"
                 // onMouseDown (not onClick) fires BEFORE the textarea's blur
                 // — preventDefault stops that blur from happening at all, so
                 // focus/caret position never leaves the field.
-                onMouseDown={(event) => { event.preventDefault(); selectMention(user); }}
+                onMouseDown={(event) => { event.preventDefault(); selectMention(candidate); }}
                 className={cn(
                   'flex w-full items-center gap-2 px-3 py-1.5 text-left',
                   i === mentionSelectedIndex ? 'bg-fill-hover text-text-primary' : 'text-text-secondary hover:bg-fill-subtle'
                 )}
               >
-                <Avatar id={user.id} name={user.displayName} avatar={user.avatar} avatarColor={user.avatarColor} size={24} />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-label font-medium">{user.displayName}</span>
-                  <span className="block truncate text-caption text-text-muted">@{user.username}</span>
-                </span>
+                <MentionOption candidate={candidate} />
               </button>
             ))}
           </div>
@@ -488,14 +507,14 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
             <ArrowBendUpLeftIcon size={16} className="flex-none text-text-muted" />
             <span className="min-w-0 flex-1 truncate text-text-muted">
               {t('composer.replyingTo')} <span className="font-medium text-text-secondary">{replyName}</span>
-              {replyingTo.text ? <span> - <EmojiText text={customEmojisAsText(replyingTo.text)} /></span> : null}
+              {replyingTo.text ? <span> - <EmojiText text={roleMentionsAsText(customEmojisAsText(replyingTo.text), servers)} /></span> : null}
               {replyingTo.sticker !== undefined && <span> - {stickerLabel(replyingTo.sticker?.name)}</span>}
             </span>
             <CloseButton size="xs" label={t('composer.cancelReply')} onClick={() => setReplyingTo(null)} />
           </div>
         )}
 
-        <ComposerAttachmentTray files={pendingFiles} onRemove={removeFile} fallbackFocusRef={textareaRef} />
+        <ComposerAttachmentTray files={pendingFiles} onRemove={removeFile} fallbackFocusRef={fieldElementRef} />
 
         {attachError && <p role="alert" className="mx-2 mt-2 rounded-md border border-red/20 bg-red/10 px-3 py-2 text-label text-red-text">{attachError}</p>}
         {voice.noticeText && <VoiceNoticeBanner text={voice.noticeText} onDismiss={voice.dismissNotice} />}
@@ -544,33 +563,27 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
-            {/* A textarea placeholder can't be ellipsized (text-overflow ignores it) and
-                field-sizing grows the field with a wrapped one, so the real placeholder
-                stays for assistive tech but is invisible, and this overlay draws it. */}
+            {/* The field draws no placeholder of its own (it only carries the
+                attribute, for assistive tech): this overlay does, cut with an ellipsis. */}
             <div className="relative flex min-w-0 flex-1">
-            <Textarea
-              ref={textareaRef}
+            <MessageField
+              // a conversation of its own: undo never brings back another one's draft
+              key={conversationId}
+              ref={fieldRef}
               value={text}
-              onChange={(event) => {
-                const value = event.target.value;
-                const cursor = event.target.selectionStart ?? value.length;
-                if (value.trim()) notifyTyping(); else stopTyping();
-                const converted = emojiSuggestions.convertTyped(event.nativeEvent, value, cursor);
-                if (converted) { applyEdit(converted); return; }
-                setText(value);
-                syncMentionQuery(value, cursor);
-              }}
-              onSelect={handleTextareaSelect}
+              onChange={handleFieldChange}
+              onSelect={syncMentionQuery}
               onKeyDown={handleKeyDown}
               onPaste={handlePaste}
+              resolveCustomEmoji={resolveCustomEmoji}
+              resolveRole={resolveRole}
               disabled={disabled}
-              rows={1}
               aria-label={t('composer.message')}
               {...emojiSuggestions.fieldProps}
               aria-invalid={tooLong || undefined}
               aria-describedby={showCounter ? counterId : undefined}
               placeholder={placeholder}
-              className="min-h-9 max-h-40 flex-1 resize-none rounded-none border-none bg-transparent px-1 py-1.5 text-body shadow-none placeholder:whitespace-nowrap placeholder:text-transparent focus-visible:ring-0"
+              className="max-h-40 min-h-9 min-w-0 flex-1 overflow-y-auto px-1 py-1.5 text-body"
             />
             {!text && (
               <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 truncate px-1 py-1.5 text-body text-text-faint">
@@ -658,3 +671,43 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
     </div>
   );
 });
+
+/** One entry of the "@" list: a member with their avatar, a role in its
+ * colour, or @everyone/@here with who they reach. */
+function MentionOption({ candidate }: { candidate: MentionCandidate }) {
+  const { t } = useTranslation('chat');
+  if (candidate.kind === 'user') {
+    const { user } = candidate;
+    return (
+      <>
+        <Avatar id={user.id} name={user.displayName} avatar={user.avatar} avatarColor={user.avatarColor} size={24} />
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-label font-medium">{user.displayName}</span>
+          <span className="block truncate text-caption text-text-muted">@{user.username}</span>
+        </span>
+      </>
+    );
+  }
+  if (candidate.kind === 'role') {
+    const { role } = candidate;
+    return (
+      <>
+        <ShieldIcon size={24} weight="fill" className="flex-none p-0.5" style={{ color: role.color || 'var(--color-text-muted)' }} aria-hidden />
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-label font-medium" style={role.color ? { color: role.color } : undefined}>@{role.name}</span>
+          <span className="block truncate text-caption text-text-muted">{t('mentions.role')}</span>
+        </span>
+      </>
+    );
+  }
+  return (
+    <>
+      <AtIcon size={24} className="flex-none p-0.5 text-text-muted" aria-hidden />
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-label font-medium">@{candidate.name}</span>
+        <span className="block truncate text-caption text-text-muted">{t(candidate.name === 'everyone' ? 'mentions.everyoneHint' : 'mentions.hereHint')}</span>
+      </span>
+    </>
+  );
+}
+

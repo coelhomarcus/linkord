@@ -5,6 +5,7 @@ import { renderWithRoom } from '@tests/fixtures/roomContextFixture';
 import { initialRoomState } from '@/state/roomReducer';
 import { StatusMenu } from '@/features/status/StatusMenu';
 import type { OwnStatus } from '@/shared/types/protocol';
+import { liveAnnouncements } from '@tests/fixtures/announcerFixture';
 
 vi.mock('@/features/profile/profileApi', () => ({
   fetchWall: vi.fn().mockResolvedValue({ widgets: [], available: [] }),
@@ -100,7 +101,8 @@ describe('StatusMenu', () => {
     const card = await openCard(user);
     await user.click(within(card).getByRole('button', { name: /Copiar ID do usuário/ }));
     await expect(navigator.clipboard.readText()).resolves.toBe('user-42');
-    expect(within(card).getByRole('status')).toHaveTextContent('Copiado!');
+    expect(within(card).getByRole('button', { name: /Copiar ID do usuário/ })).toHaveTextContent('Copiado');
+    expect(liveAnnouncements()).toEqual(['Copiado']);
   });
 
   it('while reconnecting the status row says so and cannot be changed', async () => {

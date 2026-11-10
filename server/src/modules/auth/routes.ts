@@ -23,6 +23,7 @@ import type { SessionUser } from '../../types.js';
 import * as ratelimit from './ratelimit.js';
 import { db } from '../../db/client.js';
 import { users } from '../../db/schema.js';
+import { GROUP_MENTION_NAMES } from '../link-preview/messageLinks.js';
 import { logger } from '../../lib/logger.js';
 
 const log = logger.child({ component: 'auth' });
@@ -127,6 +128,10 @@ async function handleRegister(request: FastifyRequest, reply: FastifyReply): Pro
 
   if (!USERNAME_RE.test(username)) {
     return sendError(reply, 400, 'invalid_username', `Nome de usuário deve ter entre ${config.MIN_USERNAME_LEN} e ${config.MAX_USERNAME_LEN} caracteres (letras, números, . _ -).`);
+  }
+  // "@everyone" and "@here" notify a whole channel: an account by that name could never be mentioned alone
+  if (GROUP_MENTION_NAMES.includes(username.toLowerCase())) {
+    return sendError(reply, 409, 'username_taken', 'Esse nome de usuário ou e-mail já está em uso.');
   }
   if (!isValidEmail(email)) return sendError(reply, 400, 'invalid_email', 'Informe um e-mail válido.');
   if (password.length < config.MIN_PASSWORD_LEN || password.length > config.MAX_PASSWORD_LEN) {

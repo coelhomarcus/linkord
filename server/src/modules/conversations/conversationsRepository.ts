@@ -167,6 +167,36 @@ export async function markReadUpTo(conversation: Conversation, userId: string, m
   return (result.rowCount ?? 0) > 0;
 }
 
+/** The newest message of a conversation, or null when it has none. */
+export async function newestMessageId(conversationId: string): Promise<number | null> {
+  const result = await db.execute(sql`select max(m.id)::int as id from messages m where m.conversation_id = ${conversationId}`);
+  return (result.rows[0] as { id: number | null } | undefined)?.id ?? null;
+}
+
+/** "Mark server as read": every text channel of the server the account can
+ * see, moved to its newest message in one statement. Returns the channels
+ * whose marker actually moved, for the caller to tell the account's tabs. */
+export async function markServerChannelsRead(serverId: string, userId: string): Promise<{ conversationId: string; lastReadMessageId: number }[]> {
+  const snapshot = await loadServerSnapshot(serverId);
+  if (!snapshot) return [];
+  const channelIds = snapshot.channels
+    .filter((channel) => channel.type === 'text' && hasPermission(channelPermissionsIn(snapshot, channel.id, userId), PERMISSIONS.VIEW_CHANNEL))
+    .map((channel) => channel.id);
+  if (!channelIds.length) return [];
+  const ids = sql.join(channelIds.map((id) => sql`${id}`), sql`, `);
+  const result = await db.execute(sql`
+    insert into channel_read_states (channel_id, user_id, last_read_message_id)
+    select m.conversation_id, ${userId}, max(m.id) from messages m
+    where m.conversation_id in (${ids})
+    group by m.conversation_id
+    on conflict (channel_id, user_id) do update set last_read_message_id = excluded.last_read_message_id
+    where ${channelReadStates.lastReadMessageId} is null or ${channelReadStates.lastReadMessageId} < excluded.last_read_message_id
+    returning channel_id, last_read_message_id
+  `);
+  return (result.rows as { channel_id: string; last_read_message_id: number }[])
+    .map((row) => ({ conversationId: row.channel_id, lastReadMessageId: row.last_read_message_id }));
+}
+
 async function directMemberRows(conversationId: string) {
   return db.select({ userId: conversationMembers.userId })
     .from(conversationMembers).where(eq(conversationMembers.conversationId, conversationId));

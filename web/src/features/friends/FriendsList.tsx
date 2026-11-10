@@ -1,4 +1,4 @@
-import { ChatCircleIcon, CheckIcon, CopyIcon, DotsThreeVerticalIcon, ProhibitIcon, UserIcon, UserMinusIcon, UserPlusIcon } from '@phosphor-icons/react';
+import { ChatCircleIcon, DotsThreeVerticalIcon, ProhibitIcon, UserIcon, UserMinusIcon, UserPlusIcon } from '@phosphor-icons/react';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
@@ -18,6 +18,7 @@ import { LoadMoreFooter } from './LoadMoreFooter';
 import { SocialConfirmDialog } from './SocialConfirmDialog';
 import type { SocialConfirm } from './SocialConfirmDialog';
 import { SocialUserRow } from './SocialUserRow';
+import { CopyUsernameButton } from './CopyUsernameButton';
 import { SearchEmpty } from './SearchEmpty';
 import { useFriends } from './FriendsContext';
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
@@ -49,7 +50,6 @@ export function FriendsList({ view, query, onQueryChange, onOpenProfile }: {
   const pending = usePendingIds();
   const [feedback, setFeedback] = useState<Feedback>(null);
   const clearFeedback = useCallback(() => setFeedback(null), []);
-  const [copied, setCopied] = useState(false);
 
   // Online is decided by the server before pagination, so a friend past the first
   // page still shows. Presence is live: when it changes, the online view asks
@@ -81,14 +81,6 @@ export function FriendsList({ view, query, onQueryChange, onOpenProfile }: {
   function handleMessage(user: SocialUser) {
     openDirect(user.id);
     requestChatView();
-  }
-
-  async function handleCopyUsername() {
-    try {
-      await navigator.clipboard.writeText(`@${state.me.name}`);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch { /* clipboard blocked — nothing useful to show */ }
   }
 
   const countText = list.status !== 'ready'
@@ -127,10 +119,7 @@ export function FriendsList({ view, query, onQueryChange, onOpenProfile }: {
             action={(
               <>
                 <Button type="button" size="sm" onClick={() => navigate(friendsView('add'))}><UserPlusIcon size={20} weight="fill" /><span>{t('addFriend')}</span></Button>
-                <Button type="button" variant="secondary" size="sm" onClick={() => void handleCopyUsername()}>
-                  {copied ? <CheckIcon size={20} /> : <CopyIcon size={20} />}
-                  <span>{copied ? t('add.copied') : t('add.copy', { username: state.me.name })}</span>
-                </Button>
+                <CopyUsernameButton username={state.me.name} />
               </>
             )}
           />

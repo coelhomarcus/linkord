@@ -8,6 +8,7 @@ import { clearAllDrafts } from '@/features/chat/conversationDrafts';
 import type { GifConfig } from '@/shared/api/api';
 import * as klipy from '@/features/gifs/klipy';
 import { primeTestEmojiData } from '@tests/fixtures/emojiDataFixture';
+import { typeInField, fieldValue } from '@tests/fixtures/messageFieldFixture';
 
 const config = vi.hoisted(() => ({ current: null as GifConfig | null }));
 vi.mock('@/features/gifs/useGifConfig', () => ({ useGifConfig: () => config.current }));
@@ -55,7 +56,7 @@ describe('MessageComposer — GIFs', () => {
     const user = userEvent.setup();
     const sendChatMessage = vi.fn(() => true);
     renderWithRoom(<MessageComposer conversationId="conv-1" />, { state: joinedState, sendChatMessage });
-    await user.type(screen.getByPlaceholderText('Mensagem'), 'rascunho');
+    await typeInField(screen.getByPlaceholderText('Mensagem'), 'rascunho');
 
     await user.click(screen.getByRole('button', { name: 'Enviar GIF' }));
     // KLIPY's attribution rules
@@ -65,7 +66,7 @@ describe('MessageComposer — GIFs', () => {
 
     expect(sendChatMessage).toHaveBeenCalledWith('conv-1', gif.full.url, undefined);
     expect(mocked.reportGifShared).toHaveBeenCalledWith(enabled, 'hello-1', '');
-    expect(screen.getByPlaceholderText('Mensagem')).toHaveValue('rascunho');
+    expect(fieldValue(screen.getByPlaceholderText('Mensagem'))).toBe('rascunho');
   });
 
   it('the GIF picker and the emoji picker are tabs of one panel', async () => {
@@ -78,6 +79,6 @@ describe('MessageComposer — GIFs', () => {
     expect(screen.getByRole('tab', { name: 'GIFs' })).toHaveAttribute('aria-selected', 'true');
     await user.click(screen.getByRole('tab', { name: 'Emoji' }));
     await user.click(await screen.findByRole('gridcell', { name: '🐶 dog face' }));
-    expect(screen.getByPlaceholderText('Mensagem')).toHaveValue('🐶');
+    expect(fieldValue(screen.getByPlaceholderText('Mensagem'))).toBe('🐶');
   });
 });

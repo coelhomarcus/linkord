@@ -16,6 +16,6 @@
     "rotateFailed": "Could not generate a new URL. Try again.", "confirmTitle": "Generate new URL", "confirmDescription": "The current URL stops working immediately. Systems sending to this bot must receive the new one.", "confirm": "Generate"
   },
   "reveal": {
-    "warning": "Copy the URL now: it will not be shown again. If you lose it, use “Generate new URL” on this webhook.", "webhookUrl": "Webhook URL", "example": "Example", "embedExample": "Card example", "copied": "Copied", "copy": "Copy {{label}}", "contentExample": "Deployment complete ✅", "deployTitle": "Deployment complete", "version": "Version", "environment": "Environment", "production": "production"
+    "warning": "Copy the URL now: it will not be shown again. If you lose it, use “Generate new URL” on this webhook.", "webhookUrl": "Webhook URL", "example": "Example", "embedExample": "Card example", "copy": "Copy {{label}}", "contentExample": "Deployment complete ✅", "deployTitle": "Deployment complete", "version": "Version", "environment": "Environment", "production": "production"
   }
 }

@@ -1,31 +1,14 @@
-import { CheckIcon, CopyIcon } from '@phosphor-icons/react';
-import { useEffect, useRef, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-
+import { CopyStatusIcon } from '@/shared/CopyFeedback';
+import { useCopyToClipboard } from '@/shared/hooks/useCopyToClipboard';
 import { Button } from '@/shared/ui/primitives/button';
 
 /** Copies an entity id. Its own button (never inside a link): the row link opens
  * the detail, this only touches the clipboard. */
 export function CopyIdButton({ id, label }: { id: string; label: string }) {
-  const { t } = useTranslation('admin');
-  const [copied, setCopied] = useState(false);
-  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  useEffect(() => () => clearTimeout(timer.current), []);
-
-  async function copy() {
-    try {
-      await navigator.clipboard.writeText(id);
-    } catch {
-      return;
-    }
-    setCopied(true);
-    clearTimeout(timer.current);
-    timer.current = setTimeout(() => setCopied(false), 1500);
-  }
-
+  const { copied, copy } = useCopyToClipboard();
   return (
-    <Button type="button" variant="ghost" size="icon-sm" aria-label={copied ? t('ui.idCopied') : label} onClick={() => void copy()}>
-      {copied ? <CheckIcon size={16} aria-hidden /> : <CopyIcon size={16} aria-hidden />}
+    <Button type="button" variant="ghost" size="icon-sm" aria-label={label} onClick={() => void copy(id)}>
+      <CopyStatusIcon copied={copied} size={16} />
     </Button>
   );
 }

@@ -108,3 +108,16 @@ describe('parseInline — server emojis', () => {
     expect(parseInline('`<:wave:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa>`')).toEqual([{ type: 'code', text: '<:wave:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa>' }]);
   });
 });
+
+describe('parseInline — role mentions', () => {
+  const ROLE = '11111111-1111-4111-8111-111111111111';
+  it('a <@&id> token is a role mention, outside code only; anything else stays text', () => {
+    expect(parseInline(`oi <@&${ROLE}>!`)).toEqual([{ type: 'text', text: 'oi ' }, { type: 'roleMention', roleId: ROLE }, { type: 'text', text: '!' }]);
+    expect(parseInline(`\`<@&${ROLE}>\``)).toEqual([{ type: 'code', text: `<@&${ROLE}>` }]);
+    expect(parseInline('<@&moderacao>')).toEqual([{ type: 'text', text: '<@&moderacao>' }]);
+  });
+
+  it('@everyone and @here parse like names; the renderer tells them apart', () => {
+    expect(parseInline('@everyone @here')).toEqual([{ type: 'mention', name: 'everyone' }, { type: 'text', text: ' ' }, { type: 'mention', name: 'here' }]);
+  });
+});

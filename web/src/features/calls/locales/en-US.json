@@ -150,7 +150,7 @@
     "cameraStop": "Couldn't turn the camera off: {{error}}",
     "screenCapture": "Couldn't capture the screen: {{error}}",
     "screenStop": "Couldn't stop sharing: {{error}}",
-    "screenLoopback": "Your browser can't separate Linkord's audio from the entire screen, so it was shared without audio to prevent echo. Share a tab or window to include audio.",
+    "screenLoopback": "Your browser can't keep the call's audio out of this screen or window, so it was shared without audio so others don't hear their own voices back. Share a tab to include audio.",
     "pausePreview": "Couldn't pause the preview: {{error}}",
     "resumePreview": "Couldn't resume the preview: {{error}}",
     "joinCall": "Couldn't connect to the call. Check your connection and try again.",

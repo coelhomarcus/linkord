@@ -5,6 +5,13 @@
   "react": "React",
   "moreEmojis": "More emojis",
   "edited": "(edited)",
+  "mentions": {
+    "title": "Mention",
+    "role": "Notifies whoever has this role",
+    "everyoneHint": "Notifies everyone who can see this channel",
+    "hereHint": "Notifies whoever is online and can see this channel",
+    "deletedRole": "deleted-role"
+  },
   "deleting": "Deleting…",
   "dismissNotice": "Dismiss notice",
   "pending": {
@@ -22,6 +29,7 @@
     "attachmentUploading": "Uploading file… {{percent}}%"
   },
   "edit": {
+    "field": "Edit message",
     "saving": "Saving…",
     "escapeTo": "escape to",
     "cancel": "cancel",
@@ -56,7 +64,6 @@
     "sendGif": "Send GIF",
     "sendSticker": "Send sticker",
     "send": "Send message",
-    "dropToAttach": "Drop to attach",
     "removeFile": "Remove {{name}}",
     "maxAttachments_one": "Maximum of {{count}} attachment per message.",
     "maxAttachments_other": "Maximum of {{count}} attachments per message.",
@@ -65,6 +72,16 @@
       "title": "Emojis matching {{query}}",
       "label": "Emoji suggestions"
     }
+  },
+  "drop": {
+    "toChannel": "Send to #{{channel}}",
+    "toDirect": "Send to @{{name}}",
+    "toConversation": "Drop to attach",
+    "notAllowedChannel": "You can't send files in #{{channel}}",
+    "notAllowedDirect": "You can't send files to @{{name}}",
+    "notAllowed": "You can't send files here",
+    "files_one": "{{count}} file",
+    "files_other": "{{count}} files"
   },
   "reactions": {
     "title": "Reactions",
@@ -124,9 +141,7 @@
     "searchEverywhere": "Search every conversation"
   },
   "code": {
-    "copied": "Code copied",
     "copy": "Copy code",
-    "copiedLabel": "Copied",
     "copyLabel": "Copy"
   },
   "timeline": {
@@ -134,6 +149,7 @@
     "loading": "Loading messages…",
     "log": "Messages",
     "newMessages": "New Messages",
+    "jumpToFirstUnread": "Jump to first unread",
     "emptyTitle": "No messages yet",
     "emptyDirect": "This is the beginning of your conversation with {{name}}. Why not say hi?",
     "emptyChannel": "This is the beginning of #{{name}}. Send the first message."

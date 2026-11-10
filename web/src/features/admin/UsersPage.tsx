@@ -9,7 +9,7 @@ import { useUrlSearch } from '@/shared/hooks/useUrlSearch';
 import { fetchAdminUsers } from './adminApi';
 import type { AdminUserRow } from './adminApi';
 import { dayStartIso, formatDateShort, formatWhen, formatWhenShort, nextDayStartIso } from './adminFormat';
-import { AdminDateField, AdminListToolbar, AdminSelectField } from './AdminListToolbar';
+import { AdminDateRangeField, AdminListToolbar, AdminSelectField } from './AdminListToolbar';
 import { AdminTable, AdminTd, AdminTh, AdminTr, AdminStackedList } from './AdminTable';
 import { Badge, ListChrome } from './adminUi';
 import { CopyIdButton } from './CopyIdButton';
@@ -93,10 +93,7 @@ export function UsersPage() {
           </>
         )}
         advanced={(
-          <>
-            <AdminDateField label={t('ui.createdFrom')} value={filters.from} onChange={(from) => update({ from })} />
-            <AdminDateField label={t('ui.createdUntil')} value={filters.to} onChange={(to) => update({ to })} />
-          </>
+          <AdminDateRangeField label={t('ui.createdPeriod')} from={filters.from} to={filters.to} onChange={({ from, to }) => update({ from, to })} />
         )}
         advancedActive={filters.from !== '' || filters.to !== ''}
         loading={list.status === 'loading'}

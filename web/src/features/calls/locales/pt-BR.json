@@ -150,7 +150,7 @@
     "cameraStop": "Não foi possível desligar a câmera: {{error}}",
     "screenCapture": "Não foi possível capturar a tela: {{error}}",
     "screenStop": "Não foi possível parar o compartilhamento: {{error}}",
-    "screenLoopback": "Seu navegador não separa o áudio do Linkord da tela inteira, então ela foi compartilhada sem áudio para evitar retorno. Compartilhe uma aba ou janela para incluir áudio.",
+    "screenLoopback": "Seu navegador não consegue separar o áudio da chamada do áudio desta tela ou janela, então ela foi compartilhada sem áudio para os outros não ouvirem a própria voz de volta. Compartilhe uma aba para incluir áudio.",
     "pausePreview": "Não foi possível pausar a prévia: {{error}}",
     "resumePreview": "Não foi possível retomar a prévia: {{error}}",
     "joinCall": "Não foi possível conectar à chamada. Verifique sua conexão e tente de novo.",

@@ -48,6 +48,7 @@
   },
   "menu": {
     "invite": "Convidar pessoas",
+    "markAsRead": "Marcar como lido",
     "settings": "Configurações do servidor",
     "createChannel": "Criar canal",
     "createCategory": "Criar categoria",
@@ -65,7 +66,6 @@
     "orLink": "Ou, envie um convite do servidor a um amigo",
     "generating": "Gerando…",
     "copy": "Copiar",
-    "copied": "Copiado",
     "expires": "Seu link de convite expira em 7 dias.",
     "linkFailed": "Não foi possível gerar o link de convite.",
     "failed": "Não foi possível enviar os convites.",
@@ -149,6 +149,8 @@
     "name": "Nome do cargo",
     "color": "Cor",
     "hoist": "Exibir membros com este cargo separadamente",
+    "mentionable": "Permitir que qualquer pessoa mencione este cargo",
+    "mentionableHint": "Quem não tem a permissão de mencionar @everyone também pode notificar este cargo.",
     "delete": "Excluir cargo",
     "deleteTitle": "Excluir {{name}}",
     "deleteDescription": "Quem tem este cargo perde as permissões que ele dava.",
@@ -285,7 +287,8 @@
     "USE_SOUNDBOARD": "Usar soundboard",
     "MANAGE_EXPRESSIONS": "Gerenciar expressões",
     "VIEW_AUDIT_LOG": "Ver registro de auditoria",
-    "CREATE_EXPRESSIONS": "Criar expressões"
+    "CREATE_EXPRESSIONS": "Criar expressões",
+    "MENTION_EVERYONE": "Mencionar @everyone, @here e todos os cargos"
   },
   "permissionHints": {
     "ADMINISTRATOR": "Concede todas as permissões e ignora as regras de cada canal. Cuidado ao dar esta.",
@@ -308,7 +311,8 @@
     "USE_SOUNDBOARD": "Tocar os sons do soundboard nas chamadas.",
     "MANAGE_EXPRESSIONS": "Editar e remover os sons e emojis de qualquer pessoa.",
     "VIEW_AUDIT_LOG": "Ver quem mudou o quê no servidor.",
-    "CREATE_EXPRESSIONS": "Adicionar sons ao soundboard e emojis ao servidor. Cada um ocupa um dos espaços do servidor."
+    "CREATE_EXPRESSIONS": "Adicionar sons ao soundboard e emojis ao servidor. Cada um ocupa um dos espaços do servidor.",
+    "MENTION_EVERYONE": "Notificar o canal inteiro com @everyone, quem está online com @here, e qualquer cargo, mesmo os que não estão marcados como mencionáveis. Sem isso a menção é enviada, mas não notifica ninguém."
   },
   "voiceMembers": {
     "inChannel": "Na chamada de {{channel}}",
@@ -339,8 +343,7 @@
       "allUsers": "Todos",
       "action": "Filtrar por ação",
       "allActions": "Todas",
-      "from": "De",
-      "to": "Até",
+      "period": "Período",
       "target": "Alvo: {{name}}",
       "clearTarget": "Remover filtro de alvo",
       "clear": "Limpar filtros"

@@ -5,6 +5,7 @@ import { config } from '../../config/env.js';
 import { db } from '../../db/client.js';
 import { channelReadStates, conversationMembers, conversations, friendships, messages, notifications, pushDeliveryReceipts, pushSubscriptions, serverInvitations, servers, users, webhooks, type Conversation, type OutboxEvent } from '../../db/schema.js';
 import { getConversationForUser } from '../conversations/conversationsRepository.js';
+import { loadServerSnapshot } from '../servers/serverAccess.js';
 import { logger } from '../../lib/logger.js';
 import { recipientAcceptsPush } from './notificationsPolicy.js';
 import { canSendDirectMessage } from '../friendships/friendshipsRepository.js';
@@ -86,7 +87,7 @@ async function lastReadMessageId(conversation: Conversation, userId: string): Pr
 }
 
 /** The message, its author and the channel it is in, only if the reader can still see it. */
-async function visibleMessage(messageId: number, userId: string, showContent: boolean) {
+async function visibleMessage(messageId: number, userId: string, showContent: boolean, locale: Locale) {
   const [row] = await db.select({ message: messages, author: users, webhookName: webhooks.name, serverName: servers.name })
     .from(messages)
     .innerJoin(conversations, eq(conversations.id, messages.conversationId))
@@ -99,9 +100,12 @@ async function visibleMessage(messageId: number, userId: string, showContent: bo
   if (!row || !conversation) return null;
   if (conversation.type === 'direct' && row.message.authorId && !(await canSendDirectMessage(row.message.authorId, userId))) return null;
   const name = row.author ? row.author.displayName || row.author.username : row.message.webhookId ? row.webhookName || 'Bot' : 'Alguém';
+  const roles = showContent && conversation.serverId && row.message.text.includes('<@&')
+    ? (await loadServerSnapshot(conversation.serverId))?.roles ?? [] : [];
+  const roleName = (roleId: string) => roles.find((role) => role.id === roleId)?.name;
   return {
     message: row.message, conversation, name, avatar: pushAvatarPath(row.author),
-    direct: conversation.type === 'direct', serverName: row.serverName ?? '', text: showContent ? previewText(row.message.text) : '',
+    direct: conversation.type === 'direct', serverName: row.serverName ?? '', text: showContent ? previewText(row.message.text, roleName, locale) : '',
   };
 }
 
@@ -115,7 +119,7 @@ async function noticeFor(event: OutboxEvent, locale: Locale, showContent: boolea
   const payload = event.payload as Record<string, unknown>;
   if (event.type === 'chat_message_push') {
     if (!Number.isSafeInteger(payload.messageId)) return null;
-    const found = await visibleMessage(payload.messageId as number, event.audienceUserId, showContent);
+    const found = await visibleMessage(payload.messageId as number, event.audienceUserId, showContent, locale);
     if (!found || (await lastReadMessageId(found.conversation, event.audienceUserId)) >= found.message.id) return null;
     const [mention] = await db.select({ id: notifications.id }).from(notifications).where(and(
       eq(notifications.recipientId, event.audienceUserId), eq(notifications.kind, 'mention'),
@@ -152,7 +156,7 @@ async function noticeFor(event: OutboxEvent, locale: Locale, showContent: boolea
   )).limit(1);
   if (!row) return null;
   if (kind === 'mention') {
-    const found = await visibleMessage(Number(reference), event.audienceUserId, showContent);
+    const found = await visibleMessage(Number(reference), event.audienceUserId, showContent, locale);
     if (!found) return null;
     const text = mentionNoticeText({
       direct: found.direct, name: found.name, text: found.text, channelTitle: found.conversation.title, serverName: found.serverName,

@@ -48,7 +48,7 @@ test(':shortcode: suggestions insert an emoji, and a full shortcode turns into o
   await expect(list.getByRole('option', { name: /:laughing:/ })).toBeVisible();
   await composer.press('Enter');
   await composer.pressSequentially('e :joy:');
-  await expect(composer).toHaveValue('rindo 😆 e 😂');
+  await expect(composer).toHaveText('rindo 😆 e 😂');
   await composer.press('Enter');
   await a.expectMessage('rindo 😆 e 😂');
 });
@@ -74,7 +74,8 @@ test('a server emoji goes into a DM with someone outside the server, who sees th
   // picked from the emoji picker's section for that server
   await a.page.getByRole('button', { name: 'Inserir emoji' }).click();
   await a.page.getByRole('gridcell', { name: ':e2e_sun:' }).first().click();
-  await expect(a.composer()).toHaveValue(':e2e_sun:');
+  // drawn in the field as the picture it is sent as
+  await expect(a.composer().getByRole('img', { name: ':e2e_sun:' })).toBeVisible();
   await a.composer().press('Enter');
   await a.expectMessage(':e2e_sun:', 0);
 
@@ -110,4 +111,60 @@ test('an admin uploads and crops an emoji from the server settings', async ({ us
   await crop.getByRole('button', { name: 'Salvar' }).click();
   await expect(crop).toHaveCount(0);
   await expect(a.page.getByRole('img', { name: ':sol_nascente:' })).toBeVisible();
+});
+
+test('the message box draws emojis as they are typed and edits them as one character', async ({ users }) => {
+  const alice = await users.create('alice');
+  const bob = await users.create('bob');
+  const server = await createServer(alice.api, 'E2E emoji field');
+  const uploaded = await alice.api.post(`/api/servers/${server.id}/emojis?name=e2e_moon`, { headers: { 'Content-Type': 'image/png' }, data: squarePng() });
+  expect(uploaded.ok(), await uploaded.text()).toBe(true);
+  await befriend(alice, bob);
+  const a = await alice.app();
+  await a.openDmWith(bob.username);
+
+  const composer = a.composer();
+  await composer.click();
+  await composer.pressSequentially('lua :e2e_moon: 🎉', { delay: 20 });
+  await expect(composer.getByRole('img', { name: ':e2e_moon:' })).toBeVisible();
+  await expect(composer.locator('[data-emoji]')).toHaveText('🎉');
+
+  // Backspace takes the Twemoji, then the space, then the server emoji, each whole
+  await composer.press('Backspace');
+  await composer.press('Backspace');
+  await composer.press('Backspace');
+  await expect(composer.getByRole('img', { name: ':e2e_moon:' })).toHaveCount(0);
+  await expect(composer).toHaveText('lua ');
+
+  // emptied with select-all, it takes typing again at once
+  await composer.press('ControlOrMeta+a');
+  await composer.press('Backspace');
+  await composer.pressSequentially('de novo', { delay: 20 });
+  await expect(composer).toHaveText('de novo');
+  await composer.press('Enter');
+  await a.expectMessage('de novo');
+});
+
+test('on a touch phone, the message box takes typing with emojis and sends it', async ({ users }) => {
+  const alice = await users.create('alice', { device: 'phone' });
+  const bob = await users.create('bob');
+  const server = await createServer(alice.api, 'E2E emoji phone');
+  const uploaded = await alice.api.post(`/api/servers/${server.id}/emojis?name=e2e_star`, { headers: { 'Content-Type': 'image/png' }, data: squarePng() });
+  expect(uploaded.ok(), await uploaded.text()).toBe(true);
+  await befriend(alice, bob);
+  const a = await alice.app();
+  const dm = await a.openDmWith(bob.username);
+
+  const composer = a.composer();
+  await composer.tap();
+  await composer.pressSequentially('do celular :e2e_star: 🍕', { delay: 20 });
+  await expect(composer.getByRole('img', { name: ':e2e_star:' })).toBeVisible();
+  await a.page.getByRole('button', { name: 'Enviar mensagem' }).tap();
+  await expect(composer).toHaveText('');
+
+  const b = await bob.app();
+  await b.openDm(dm);
+  const sent = b.message('do celular');
+  await expect(sent.getByRole('img', { name: ':e2e_star:' })).toBeVisible();
+  await expect(sent.locator('[data-emoji]')).toHaveText('🍕');
 });

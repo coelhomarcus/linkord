@@ -32,6 +32,8 @@ export const ROUTES = {
   /** the friends page on its own — what a phone opens from the DM list */
   friends: '/app/friends',
   notifications: '/app/notifications',
+  /** where the system share sheet lands: choose the conversation for what was shared */
+  share: '/app/share',
   profile: '/app/profile',
   /** legacy: redirects to the pending view of Friends; new links use friendsView/friendsSection */
   requests: '/app/requests',

@@ -18,6 +18,8 @@ function row(over: Partial<MessageWithAuthor> = {}): MessageWithAuthor {
     serverInvitationId: null,
     callConversationId: null,
     callDurationSeconds: 90,
+    mentionEveryone: false,
+    mentionRoleIds: null,
     embeds: null,
     suppressedEmbeds: null,
     richEmbeds: null,

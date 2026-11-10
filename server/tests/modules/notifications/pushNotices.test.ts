@@ -73,6 +73,14 @@ describe('push helpers', () => {
     assert.equal(previewText('x'.repeat(300)).length, 120);
   });
 
+  it('shows a role mention by the role name, and a deleted role as such', () => {
+    const role = '3f2b8c1e-5d4a-4e6f-9a7b-1c2d3e4f5a6b';
+    const gone = '00000000-0000-4000-8000-000000000000';
+    const names = (id: string) => (id === role ? 'Moderação' : undefined);
+    assert.equal(previewText(`<@&${role}> e <@&${gone}>`, names), '@Moderação e @cargo-excluído');
+    assert.equal(previewText(`<@&${gone}>`, names, 'en-US'), '@deleted-role');
+  });
+
   it('uses only our own uploaded avatars, preferring the still frame', () => {
     const id = 'a'.repeat(32);
     assert.equal(pushAvatarPath({ avatar: `/uploads/${id}`, avatarPoster: '' }), `/uploads/${id}`);

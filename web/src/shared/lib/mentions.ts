@@ -25,3 +25,14 @@ export function mentionsUsername(text: string, username: string | null): boolean
   }
   return false;
 }
+
+/** Whether a message's group mentions reached the reader: its @everyone or
+ * @here, or a role the reader holds. Only what the server says they notified
+ * (`mentionEveryone`, `mentionRoleIds`) counts, never the text, which names a
+ * group just the same when its author could not notify it. `myRoleIds` is
+ * null outside a server channel. */
+export function groupMentionsMe(message: { mentionEveryone?: true; mentionRoleIds?: string[] }, myRoleIds: readonly string[] | null): boolean {
+  if (!myRoleIds) return false;
+  if (message.mentionEveryone) return true;
+  return !!message.mentionRoleIds?.some((roleId) => myRoleIds.includes(roleId));
+}

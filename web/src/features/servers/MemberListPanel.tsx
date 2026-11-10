@@ -57,7 +57,7 @@ export function MemberListPanel({ server, onOpenProfile, active = true }: { serv
   );
 
   return (
-    <aside aria-label={t('members.label')} className="flex h-full w-[264px] flex-none flex-col overflow-y-auto border-l border-border-subtle bg-surface-app px-2 py-4">
+    <aside aria-label={t('members.label')} className="flex h-full w-[264px] max-w-full flex-none flex-col overflow-y-auto border-l border-border-subtle bg-surface-app px-2 py-4">
       {members === null && <MemberListSkeleton label={t('members.loading')} />}
       {sections.map((section) => (
         <section key={section.key} className="mb-4">

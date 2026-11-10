@@ -3,7 +3,8 @@ import { recordAudit } from '../admin/auditLog.js';
 import { eq, and, desc, asc, lt, gt, gte, inArray, sql } from 'drizzle-orm';
 import { config } from '../../config/env.js';
 import { db } from '../../db/client.js';
-import { messages, users, webhooks, type Message, type Attachment } from '../../db/schema.js';
+import { conversations, messages, users, webhooks, type Message, type Attachment } from '../../db/schema.js';
+import { MESSAGE_SEARCH_CONFIGS, searchConfig } from '../../db/textSearch.js';
 import { participants, send, sendSocketError } from '../presence/participants.js';
 import { isSingleEmoji } from './emoji.js';
 import {
@@ -15,6 +16,8 @@ import {
   getDirectPeerId,
   isServerChannel,
   markReadUpTo,
+  markServerChannelsRead,
+  newestMessageId,
   touchConversation,
   recordConversationActivity,
   visibleConversationIds,
@@ -35,6 +38,7 @@ import { storedRichEmbeds, type RichEmbed } from '../bots/richEmbeds.js';
 import { markMentionsRead } from '../notifications/notificationsRepository.js';
 import { notifySocialChanged } from '../presence/knownPeers.js';
 import { notifyMentions } from './mentions.js';
+import { groupMentionColumns, NO_GROUP_MENTIONS, resolveGroupMentions } from './groupMentions.js';
 import { queueChatPush } from '../notifications/pushQueue.js';
 import { insertMessageOnce, isValidClientMessageId, sendPayloadHash } from './sendOperations.js';
 import { publishStaged, StagedUnavailableError } from '../attachments/stagedAttachments.js';
@@ -122,6 +126,11 @@ interface ChatMessagePayload {
   // the message is this sticker (its text is empty); null once the sticker
   // was deleted, so it reads "unavailable" rather than blank
   sticker?: StickerCard | null;
+  // what its @everyone/@here and role mentions notified (groupMentions.ts):
+  // readers highlight by these, not by the text, which may name a group
+  // its author could not notify
+  mentionEveryone?: true;
+  mentionRoleIds?: string[];
 }
 
 export interface MessageWithAuthor {
@@ -143,6 +152,8 @@ export interface MessageWithAuthor {
   suppressedEmbeds: unknown;
   richEmbeds: unknown;
   stickerId: string | null;
+  mentionEveryone: boolean;
+  mentionRoleIds: string[] | null;
   // null unless the bot's webhook posted it; '' is a bot without a title/photo
   botName: string | null;
   botAvatar: string | null;
@@ -171,6 +182,8 @@ const messageWithAuthorSelect = {
   suppressedEmbeds: messages.suppressedEmbeds,
   richEmbeds: messages.richEmbeds,
   stickerId: messages.stickerId,
+  mentionEveryone: messages.mentionEveryone,
+  mentionRoleIds: messages.mentionRoleIds,
   // read live from the webhook, so a rename shows on its whole history
   botName: sql<string | null>`case when ${messages.webhookId} is null then null else coalesce((select ${webhooks.name} from ${webhooks} where ${webhooks.id} = ${messages.webhookId}), '') end`,
   botAvatar: sql<string | null>`case when ${messages.webhookId} is null then null else (select ${webhooks.avatar} from ${webhooks} where ${webhooks.id} = ${messages.webhookId}) end`,
@@ -200,6 +213,8 @@ function rowWithParticipant(row: Message, participant: AuthorIdentity): MessageW
     suppressedEmbeds: row.suppressedEmbeds,
     richEmbeds: row.richEmbeds,
     stickerId: row.stickerId,
+    mentionEveryone: row.mentionEveryone,
+    mentionRoleIds: row.mentionRoleIds,
     botName: participant.bot?.name ?? null,
     botAvatar: participant.bot?.avatar ?? null,
   };
@@ -235,6 +250,8 @@ export function rowToMessage(row: MessageWithAuthor, attachments?: Attachment[],
   if (richEmbeds.length) out.richEmbeds = richEmbeds;
   if (row.editedAt) out.editedAt = row.editedAt.getTime();
   if (row.stickerId) out.sticker = sticker ?? null;
+  if (row.mentionEveryone) out.mentionEveryone = true;
+  if (row.mentionRoleIds?.length) out.mentionRoleIds = row.mentionRoleIds;
   const embeds = storedEmbedsFor(row.text, row.embeds, row.suppressedEmbeds);
   if (embeds.length) out.embeds = embeds.map(withProxiedImages);
   const suppressed = suppressedLinksFor(row.text, row.suppressedEmbeds);
@@ -365,6 +382,42 @@ async function handleConversationMarkRead(socket: AppSocket, msg: { conversation
   await settleMentions(p.userId, conversationId, msgId);
 }
 
+function tellOwnTabsRead(userId: string, conversationId: string, lastReadMessageId: number): void {
+  for (const participant of participants.values()) {
+    if (participant.userId === userId) send(participant.socket, { t: 'conversation-read', conversationId, lastReadMessageId });
+  }
+}
+
+/** "Mark as read" from a conversation's menu or Esc: up to its newest
+ * message, which the client may not have loaded (a conversation it never
+ * opened, or one scrolled back to an old window). Every tab is told,
+ * including the one that asked: it only cleared what it could see. */
+async function handleConversationMarkAllRead(socket: AppSocket, msg: { conversationId?: string }): Promise<void> {
+  const p = participants.get(socket.participantId ?? '');
+  if (!p || p.socket !== socket) return;
+  const conversationId = conversationIdFrom(msg);
+  const conversation = conversationId ? await getConversationForUser(conversationId, p.userId) : null;
+  if (!conversation) return;
+  const newest = await newestMessageId(conversationId);
+  if (newest === null || !(await markReadUpTo(conversation, p.userId, newest))) return;
+  tellOwnTabsRead(p.userId, conversationId, newest);
+  await settleMentions(p.userId, conversationId, newest);
+}
+
+/** "Mark server as read" from the server's menu: every channel it can see,
+ * in one statement. */
+async function handleServerMarkAllRead(socket: AppSocket, msg: { serverId?: unknown }): Promise<void> {
+  const p = participants.get(socket.participantId ?? '');
+  if (!p || p.socket !== socket || typeof msg.serverId !== 'string' || !msg.serverId) return;
+  const marked = await markServerChannelsRead(msg.serverId, p.userId);
+  let settled = 0;
+  for (const { conversationId, lastReadMessageId } of marked) {
+    tellOwnTabsRead(p.userId, conversationId, lastReadMessageId);
+    settled += await markMentionsRead(p.userId, conversationId, lastReadMessageId);
+  }
+  if (settled) notifySocialChanged([p.userId]);
+}
+
 /** Client scrolled to the top of an already-open conversation — sends up to
  * CHAT_HISTORY_LIMIT messages older than `beforeMsgId` (the oldest one the
  * client currently has), for it to PREPEND to existing history. */
@@ -470,6 +523,12 @@ async function handleLoadMessagesAround(socket: AppSocket, msg: { conversationId
   void backfillEmbeds(rows, p.userId);
 }
 
+// Private-Use-Area delimiters (never typed in real chat text) instead of
+// HTML — the client splits on them into plain-text/highlight React nodes
+// itself (mirrors ChatMessageText.tsx's own "never build HTML strings"
+// convention), no dangerouslySetInnerHTML anywhere.
+const HEADLINE_OPTIONS = 'StartSel=\uE000, StopSel=\uE001, MaxFragments=1, MaxWords=20, MinWords=6';
+
 /** Full-text search — `conversationId` omitted searches every accessible
  * conversation, present scopes to just that one. See db/schema.ts#messages.searchVector for the
  * indexed side; websearch_to_tsquery never throws on malformed input
@@ -487,13 +546,17 @@ async function handleMessageSearch(socket: AppSocket, msg: { query?: string; con
   if (conversationId && !(await conversationExistsForUser(conversationId, p.userId))) return;
   const searchable = conversationId ? [conversationId] : await visibleConversationIds(p.userId);
 
-  const tsQuery = sql`websearch_to_tsquery('portuguese', ${query})`;
+  // The query is parsed once per configuration the vector holds, and a message
+  // matches when any of them does (the exact word, or its stem in either language).
+  const perConfig = MESSAGE_SEARCH_CONFIGS.map((name) => ({ name, tsQuery: sql`websearch_to_tsquery(${searchConfig(name)}, ${query})` }));
+  const tsQuery = sql`(${sql.join(perConfig.map((c) => c.tsQuery), sql` || `)})`;
   const rank = sql`ts_rank(${messages.searchVector}, ${tsQuery})`;
-  // Private-Use-Area delimiters (never typed in real chat text) instead of
-  // HTML — the client splits on them into plain-text/highlight React nodes
-  // itself (mirrors ChatMessageText.tsx's own "never build HTML strings"
-  // convention), no dangerouslySetInnerHTML anywhere.
-  const snippet = sql<string>`ts_headline('portuguese', ${messages.text}, ${tsQuery}, 'StartSel=, StopSel=, MaxFragments=1, MaxWords=20, MinWords=6')`;
+  // ts_headline highlights only the words its own configuration maps onto the
+  // query, so the snippet is drawn by the first configuration that matched
+  // (an English stem match would come back unhighlighted under Portuguese).
+  const snippet = sql<string>`CASE ${sql.join(perConfig.map((c) =>
+    sql`WHEN to_tsvector(${searchConfig(c.name)}, ${messages.text}) @@ ${c.tsQuery} THEN ts_headline(${searchConfig(c.name)}, ${messages.text}, ${c.tsQuery}, ${HEADLINE_OPTIONS})`), sql` `)}
+    ELSE ts_headline(${searchConfig(MESSAGE_SEARCH_CONFIGS[0])}, ${messages.text}, ${tsQuery}, ${HEADLINE_OPTIONS}) END`;
 
   const rows = await db
     .select({ ...messageWithAuthorSelect, snippet })
@@ -611,13 +674,14 @@ async function handleChat(socket: AppSocket, msg: ChatSendRequest): Promise<void
     // what is stored; the hash below stays on what was sent, so a retry of
     // the same send still matches its first attempt
     const text = await sanitizeCustomEmojis(rawText, p.userId);
+    const groups = await resolveGroupMentions(conversation, text, { userId: p.userId });
     let outcome;
     try {
       outcome = await insertMessageOnce({
         authorId: p.userId,
         clientMessageId,
         payloadHash: sendPayloadHash({ conversationId, text: rawText, replyTo: replyTo?.msgId ?? null, attachmentIds, stickerId }),
-        values: { conversationId, authorId: p.userId, text, replyTo: replyTo || null, stickerId },
+        values: { conversationId, authorId: p.userId, text, replyTo: replyTo || null, stickerId, ...groupMentionColumns(groups) },
         // access was re-checked above, at publish time, not only at upload init
         attach: attachmentIds.length
           ? (tx, row) => publishStaged(tx, { ids: attachmentIds, ownerId: p.userId, conversationId, messageId: row.id })
@@ -646,7 +710,7 @@ async function handleChat(socket: AppSocket, msg: ChatSendRequest): Promise<void
     await touchConversation(conversationId, outcome.row.createdAt);
     await broadcastToConversationMembers(conversationId, { t: 'chat', message });
     void unfurlMessage(outcome.row, p.userId);
-    void notifyMentions({ id: outcome.row.id, conversationId, text, authorId: p.userId });
+    void notifyMentions({ id: outcome.row.id, conversationId, text, authorId: p.userId, groups });
     void recordExpressionUsage(p.userId, 'emoji', emojiUsageKeys(text));
     if (sticker) void recordExpressionUsage(p.userId, 'sticker', [sticker.id]);
   } catch (err) {
@@ -660,9 +724,12 @@ async function handleChat(socket: AppSocket, msg: ChatSendRequest): Promise<void
  * posting again (`duplicate`); once that message is deleted, the key is free. */
 export async function postBotMessage(input: { conversationId: string; webhookId: string; text: string; richEmbeds: RichEmbed[]; deliveryKey: string | null }): Promise<{ message: ChatMessagePayload; duplicate: boolean }> {
   const { conversationId, webhookId, text, richEmbeds, deliveryKey } = input;
+  const [conversation] = await db.select({ id: conversations.id, serverId: conversations.serverId }).from(conversations)
+    .where(eq(conversations.id, conversationId)).limit(1);
+  const groups = conversation ? await resolveGroupMentions(conversation, text, { webhookId }) : NO_GROUP_MENTIONS;
   const [inserted] = await db.transaction(async (tx) => {
     const rows = await tx.insert(messages)
-      .values({ conversationId, authorId: null, webhookId, text, richEmbeds: richEmbeds.length ? richEmbeds : null, webhookDeliveryKey: deliveryKey })
+      .values({ conversationId, authorId: null, webhookId, text, richEmbeds: richEmbeds.length ? richEmbeds : null, webhookDeliveryKey: deliveryKey, ...groupMentionColumns(groups) })
       .onConflictDoNothing()
       .returning({ id: messages.id });
     if (rows[0]) await queueChatPush(tx, { id: rows[0].id, conversationId, authorId: null });
@@ -679,7 +746,7 @@ export async function postBotMessage(input: { conversationId: string; webhookId:
   await broadcastToConversationMembers(conversationId, { t: 'chat', message: message! });
   // the preview fetch is throttled per caller; a webhook is its own caller
   void unfurlMessage(row!, `webhook:${webhookId}`);
-  void notifyMentions({ id: row!.id, conversationId, text, authorId: null });
+  void notifyMentions({ id: row!.id, conversationId, text, authorId: null, groups });
   return { message: message!, duplicate: false };
 }
 
@@ -708,7 +775,8 @@ async function editMessage(p: Participant, msg: { msgId?: unknown; text?: string
   if (!existing) return { code: 'not_found', message: 'Essa mensagem não existe mais.' };
   if (existing.authorId !== p.userId || existing.kind !== 'text') return { code: 'forbidden', message: 'Você só pode editar as suas mensagens.' };
   if (existing.stickerId) return { code: 'forbidden', message: 'Uma figurinha não pode ser editada.' };
-  if (!(await conversationExistsForUser(existing.conversationId, p.userId))) return { code: 'conversation_not_found', message: 'Conversa não encontrada.' };
+  const conversation = await getConversationForUser(existing.conversationId, p.userId);
+  if (!conversation) return { code: 'conversation_not_found', message: 'Conversa não encontrada.' };
   // §4.3: editing an old message while contact is restricted would be a
   // backdoor around the send-gate above — closing that is the specific
   // reason edit (not delete) is restricted here.
@@ -718,15 +786,17 @@ async function editMessage(p: Participant, msg: { msgId?: unknown; text?: string
   // previews (and removed cards) of links the edit dropped go too; new links are fetched below
   const keptSuppressed = suppressedLinksFor(text, existing.suppressedEmbeds);
   const keptEmbeds = storedEmbedsFor(text, existing.embeds, keptSuppressed);
+  // judged again, with the permission the author has now, like a new message
+  const groups = await resolveGroupMentions(conversation, text, { userId: p.userId });
   const [updated] = await db.update(messages).set({
-    text, editedAt: new Date(),
+    text, editedAt: new Date(), ...groupMentionColumns(groups),
     embeds: keptEmbeds.length ? keptEmbeds : null,
     suppressedEmbeds: keptSuppressed.length ? keptSuppressed : null,
   }).where(eq(messages.id, msgId)).returning();
   await broadcastChanged(updated!, p);
   if (needsEmbeds(updated!)) void unfurlMessage(updated!, p.userId);
   // a name the edit added is a new mention; one already notified isn't repeated
-  void notifyMentions({ id: updated!.id, conversationId: updated!.conversationId, text, authorId: p.userId });
+  void notifyMentions({ id: updated!.id, conversationId: updated!.conversationId, text, authorId: p.userId, groups });
   return null;
 }
 
@@ -970,6 +1040,8 @@ async function handleTyping(socket: AppSocket, msg: { conversationId?: string; v
 export const handlers: HandlerTable = {
   'conversation-open': handleConversationOpen,
   'conversation-mark-read': handleConversationMarkRead,
+  'conversation-mark-all-read': handleConversationMarkAllRead,
+  'server-mark-all-read': handleServerMarkAllRead,
   'load-more-messages': handleLoadMoreMessages,
   'load-messages-around': handleLoadMessagesAround,
   'load-messages-after': handleLoadMessagesAfter,

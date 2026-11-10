@@ -57,6 +57,11 @@ Short and quiet, from three durations (`DURATION` in `shared/lib/ease.ts`): **10
 
 Words that report an error or a failure (an `role="alert"` line, a "failed" label, a counter past its limit) are `text-red-text`, the lighter red made to be read on the dark surfaces; so is the label of a destructive text button. `text-red` is the fill colour: icons, indicators, required-field asterisks and `bg-red/…` tints. A destructive button takes the `danger-outline` (neutral box, red label) or `destructive` (solid red) variant rather than recolouring another one. A boxed error is `ErrorBanner`. Success is `text-green`, never a Tailwind palette green.
 
+### Copy and save confirmations
+
+- **Copy**: never call `navigator.clipboard.writeText` directly. A copy button takes `useCopyToClipboard` (`shared/hooks`) with `CopyStatusIcon` and `CopyLabel` (`shared/CopyFeedback.tsx`): the icon turns into a green check and the label reads "Copiado" for 1.5 s. A menu item that closes as it copies calls `copyToClipboard` (`shared/lib/clipboard.ts`). Both say "Copiado" through the page's one polite live region (`announce` in `shared/lib/announce.ts`), so keep the button's accessible name as it is and add no `role="status"` of your own. A copy the browser refuses shows and says nothing. In tests, read the region with `liveAnnouncements()` (`tests/fixtures/announcerFixture.ts`).
+- **Save**: a form that waits for Save confirms through `FloatingBar` ("Alterações salvas."), and nothing else: no toast or second message beside it.
+
 ## Backend (`server/src/`)
 
 ```

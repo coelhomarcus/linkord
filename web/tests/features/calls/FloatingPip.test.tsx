@@ -164,4 +164,22 @@ describe('FloatingPip — position', () => {
     renderWithRoom(<TestPip allIds={['p-2']} />, { state: { ...initialRoomState, reconnecting: true } });
     expect(box().style.bottom).toBe('max(var(--user-dock-clearance, 1rem), 5rem)');
   });
+
+  it('pulls a dragged PiP back inside when the window narrows', () => {
+    vi.mocked(useCallTiles).mockReturnValue([descriptor()]);
+    let width = 1280;
+    const rect = vi.spyOn(document.body, 'getBoundingClientRect').mockImplementation(() => ({ x: 0, y: 0, left: 0, top: 0, right: width, bottom: 800, width, height: 800 }) as DOMRect);
+    renderWithRoom(<TestPip allIds={['p-2']} />);
+    const dragHandle = currentTile().parentElement!.nextElementSibling!;
+    fireEvent.pointerDown(dragHandle, { button: 0, clientX: 0, clientY: 0 });
+    fireEvent.pointerMove(document, { clientX: 1100, clientY: 300 });
+    fireEvent.pointerUp(document);
+    expect(box().style.left).toBe('1100px');
+
+    width = 768;
+    fireEvent(window, new Event('resize'));
+    expect(box().style.left).toBe('768px');
+    expect(box().style.top).toBe('300px');
+    rect.mockRestore();
+  });
 });

@@ -21,6 +21,8 @@ export const LOCAL_STORAGE_KEYS = {
   outputVolume: 'ss-output-volume',
   soundboardVolume: 'ss-soundboard-volume',
   memberListOpen: 'ss-member-list-open',
+  memberListOverlayOpen: 'ss-member-list-open:overlay',
+  channelListOverlayOpen: 'ss-channel-list-open:overlay',
   dmCallHeight: 'ss-dm-call-height',
   legacyNoiseSuppression: 'ss-noise-suppression',
   timeFormat: 'ss-time-format',

@@ -68,6 +68,8 @@ const ACTION_LIMITS: Record<string, { windowMs: number; max: number }> = {
   profile: { windowMs: 60_000, max: 10 },
   'message-search': { windowMs: 10_000, max: 20 },
   'conversation-mark-read': { windowMs: 10_000, max: 30 },
+  'conversation-mark-all-read': { windowMs: 10_000, max: 30 },
+  'server-mark-all-read': { windowMs: 10_000, max: 10 },
   // hover-driven, and each one may wake a streamer's client to draw a frame
   'stream-preview-request': { windowMs: 10_000, max: 20 },
   'stream-preview-frame': { windowMs: 10_000, max: 10 },

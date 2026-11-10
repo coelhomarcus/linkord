@@ -1,8 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { ArrowBendUpLeftIcon, CopyIcon, DotsThreeIcon, FlagIcon, PencilSimpleIcon, PhoneIcon, SmileyIcon, TrashIcon, UsersIcon } from '@phosphor-icons/react';
 import { GroupAvatar } from '@/features/conversations/GroupAvatar';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { Avatar } from '@/shared/Avatar';
 import { MessageMedia } from './MessageMedia';
@@ -10,6 +9,7 @@ import { InviteCard } from '@/features/chat/InviteCard';
 import { CallInviteCard } from '@/features/chat/CallInviteCard';
 import { ChatMessageText } from '@/features/chat/ChatMessageText';
 import { stickerLabel } from './messagePreview';
+import { MessageField } from './messageField/MessageField';
 import { StickerMessage } from '@/features/stickers/StickerMessage';
 import { RichEmbedCard } from './RichEmbedCard';
 import { InviteLinkCard } from '@/features/servers/InviteLinkCard';
@@ -17,12 +17,12 @@ import { inviteCodesInText } from '@/features/servers/inviteCode';
 import { Button } from '@/shared/ui/primitives/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/primitives/dropdown-menu';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/primitives/popover';
-import { Textarea } from '@/shared/ui/primitives/textarea';
 import { ReportDialog } from '@/features/reports/ReportDialog';
 import { ReactionEmojiPicker } from '@/features/chat/ReactionEmojiPicker';
 import { formatTime } from '@/shared/lib/formatChatTime';
 import { useTimeFormat } from '@/shared/lib/timeFormat';
-import { mentionsUser } from '@/shared/lib/mentions';
+import { groupMentionsMe, mentionsUser } from '@/shared/lib/mentions';
+import { copyToClipboard } from '@/shared/lib/clipboard';
 import { cn } from '@/shared/lib/utils';
 import { useKeepPopoverWarm } from '@/shared/hooks/useKeepPopoverWarm';
 import { useRoom } from '@/state/RoomContext';
@@ -31,6 +31,7 @@ import type { OutboxEntry } from './useMessageOutbox';
 import { PendingAttachments } from './PendingAttachments';
 import { messagePermissions } from './messageActions';
 import { customEmojisAsText, encodeCustomEmojis, emojisByName, tokensByName } from '@/features/emoji/customEmojiText';
+import { roleMentionsAsText } from './roleMentionText';
 import { useMyEmojis } from '@/features/emoji/myEmojis';
 import { MessageReactions } from './MessageReactions';
 import { withPendingReactions } from './reactionState';
@@ -175,7 +176,7 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
   // your own messages: you may not be in allUsers, but your still frame is known
   const displayedPoster = author ? author.avatarPoster : isMine ? state.me.avatarPoster : undefined;
   const replyAuthor = message.replyTo?.authorId ? allUsers.get(message.replyTo.authorId) : undefined;
-  const mentionsMe = !isMine && mentionsUser(message.text, mentionLookup, state.me.userId);
+  const mentionsMe = !isMine && (mentionsUser(message.text, mentionLookup, state.me.userId) || groupMentionsMe(message, messageServer?.myRoleIds ?? null));
   const isInvite = message.kind === 'server_invite' || message.kind === 'call_invite';
   const inviteCodes = useMemo(() => (isInvite ? [] : inviteCodesInText(message.text)), [isInvite, message.text]);
   const canReport = can.report;
@@ -183,10 +184,21 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
   const reactions = withPendingReactions(message.reactions, message.msgId, pendingReactions, state.me.userId);
   const hasReactions = Object.values(reactions).some((ids) => ids && ids.length > 0);
 
+  // the editor shows server emojis as :name:; each keeps pointing at the
+  // emoji it was, even when another of the account's has the same name
+  const editByName = useMemo(() => emojisByName(myEmojis.servers, conversation?.serverId), [myEmojis.servers, conversation?.serverId]);
+  const editKeep = useMemo(() => tokensByName(message.text), [message.text]);
+  const resolveEditEmoji = useCallback((name: string, nth: number | null) => (
+    (!nth && editKeep.get(name)) || editByName.get(name)?.[nth ? nth - 1 : 0] || null
+  ), [editByName, editKeep]);
+
+  const resolveEditRole = useCallback((roleId: string) => {
+    const role = messageServer?.roles.find((r) => r.id === roleId);
+    return role ? { id: role.id, name: role.name, color: role.color } : null;
+  }, [messageServer]);
+
   async function saveEdit() {
-    // the editor shows server emojis as :name:; each keeps pointing at the
-    // emoji it was, even when another of the account's has the same name
-    const trimmed = encodeCustomEmojis(editText, emojisByName(myEmojis.servers, conversation?.serverId), tokensByName(message.text)).trim();
+    const trimmed = encodeCustomEmojis(editText, editByName, editKeep).trim();
     if (editSaving) return;
     if (!trimmed || trimmed === message.text) { setEditingMsgId(null); return; }
     setEditSaving(true);
@@ -209,11 +221,11 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
   }
 
   function copyText() {
-    navigator.clipboard.writeText(customEmojisAsText(message.text)).catch(() => {});
+    void copyToClipboard(roleMentionsAsText(customEmojisAsText(message.text), servers));
   }
 
-  function handleEditKeyDown(event: ReactKeyboardEvent<HTMLTextAreaElement>) {
-    if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
+  function handleEditKeyDown(event: KeyboardEvent) {
+    if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
       event.preventDefault();
       void saveEdit();
     }
@@ -309,20 +321,22 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
               <span className="flex-none font-medium text-text-secondary">
                 {replyAuthor ? `@${replyAuthor.displayName}` : deletedAuthorName}
               </span>
-              {message.replyTo.text && <span className="truncate"><EmojiText text={customEmojisAsText(message.replyTo.text)} /></span>}
+              {message.replyTo.text && <span className="truncate"><EmojiText text={roleMentionsAsText(customEmojisAsText(message.replyTo.text), servers)} /></span>}
               {message.replyTo.sticker !== undefined && <span className="truncate">{stickerLabel(message.replyTo.sticker)}</span>}
             </button>
           )}
 
           {isEditing ? (
             <div className="flex flex-col gap-1.5 py-0.5">
-              <Textarea
+              <MessageField
                 value={editText}
-                onChange={(event) => setEditText(event.target.value)}
+                onChange={setEditText}
                 onKeyDown={handleEditKeyDown}
+                resolveCustomEmoji={resolveEditEmoji}
+                resolveRole={resolveEditRole}
+                aria-label={t('edit.field')}
                 autoFocus
-                rows={1}
-                className="min-h-9 resize-none border-border-strong bg-fill-inset text-body"
+                className="max-h-60 min-h-9 overflow-y-auto rounded-lg border border-border-strong bg-fill-inset px-3 py-1.5 text-body focus:border-border-accent"
               />
               {editError && <p role="alert" className="text-caption text-red-text">{editError}</p>}
               <p className="text-caption text-text-muted">
@@ -351,6 +365,8 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
                   onOpenProfile={onOpenProfile}
                   embeds={message.embeds}
                   suppressedEmbeds={message.suppressedEmbeds}
+                  roles={messageServer?.roles}
+                  mentionEveryone={!!message.mentionEveryone}
                 />
                 {message.editedAt && <span className="ml-1 select-none text-caption text-text-muted">{t('edited')}</span>}
               </div>

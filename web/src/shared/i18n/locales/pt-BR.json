@@ -78,7 +78,9 @@
     "removeEmbedDescription": "O link continua na mensagem, só a prévia dele some para todo mundo.",
     "removeAttachmentDescription": "\"{{name}}\" sai da mensagem para todo mundo e é apagado. O resto da mensagem continua.",
     "remove": "Remover",
-    "messageFrom": "mensagem de {{name}}"
+    "messageFrom": "mensagem de {{name}}",
+    "markAsRead": "Marcar como lida",
+    "markServerAsRead": "Marcar servidor como lido"
   },
   "room": {
     "full": "Sala cheia, tente mais tarde.",
@@ -139,11 +141,30 @@
     "saving": "Salvando…",
     "saved": "Alterações salvas."
   },
+  "clipboard": {
+    "copied": "Copiado"
+  },
   "imageCrop": {
     "processing": "Processando imagem…",
     "processingDescription": "Enviando e recortando a imagem. GIFs animados podem levar alguns segundos.",
     "cancel": "Cancelar",
     "save": "Salvar",
     "zoom": "Zoom"
+  },
+  "datePicker": {
+    "trigger": "{{label}}: {{value}}",
+    "anyDate": "Qualquer data",
+    "since": "Desde {{date}}",
+    "until": "Até {{date}}",
+    "previousMonth": "Mês anterior",
+    "nextMonth": "Próximo mês",
+    "pickStart": "Escolha a data inicial",
+    "pickEnd": "Agora escolha a data final",
+    "clear": "Limpar",
+    "presets": {
+      "today": "Hoje",
+      "last7": "Últimos 7 dias",
+      "last30": "Últimos 30 dias"
+    }
   }
 }

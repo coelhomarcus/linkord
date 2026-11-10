@@ -6,10 +6,11 @@ import { createFakeRoomContextValue, renderWithRoom } from '@tests/fixtures/room
 import { RoomContext } from '@/state/RoomContext';
 import { MessageComposer } from '@/features/chat/MessageComposer';
 import { clearAllDrafts } from '@/features/chat/conversationDrafts';
-import type { Conversation, PublicUser } from '@/shared/types/protocol';
+import type { Conversation, PublicUser, RoleSummary, ServerSummary } from '@/shared/types/protocol';
 import { fileName } from '@tests/fixtures/fileNameMatcher';
 import * as serversApi from '@/features/servers/serversApi';
 import { PERMISSIONS } from '@/features/servers/permissionBits';
+import { typeInField, fieldValue, setFieldText } from '@tests/fixtures/messageFieldFixture';
 
 vi.mock('@/features/servers/serversApi', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/features/servers/serversApi')>()),
@@ -33,38 +34,35 @@ describe('MessageComposer', () => {
   });
 
   it('draws the placeholder as a truncating overlay that goes away once there is text', async () => {
-    const user = userEvent.setup();
     renderWithRoom(<MessageComposer conversationId="conv-1" />, { state: joinedState });
 
     const textarea = screen.getByPlaceholderText('Mensagem');
     expect(screen.getByText('Mensagem', { selector: 'span[aria-hidden]' })).toHaveClass('truncate');
 
-    await user.type(textarea, 'oi');
+    await typeInField(textarea, 'oi');
     expect(screen.queryByText('Mensagem', { selector: 'span[aria-hidden]' })).not.toBeInTheDocument();
   });
 
   it('sends the message with Enter and clears the field', async () => {
-    const user = userEvent.setup();
     const sendChatMessage = vi.fn(() => true);
     renderWithRoom(<MessageComposer conversationId="conv-1" />, { state: joinedState, sendChatMessage });
 
     const textarea = screen.getByPlaceholderText('Mensagem');
-    await user.type(textarea, 'ola pessoal{Enter}');
+    await typeInField(textarea, 'ola pessoal{Enter}');
 
     expect(sendChatMessage).toHaveBeenCalledWith('conv-1', 'ola pessoal', undefined);
-    expect(textarea).toHaveValue('');
+    expect(fieldValue(textarea)).toBe('');
   });
 
   it('shift+enter does not send, only breaks the line', async () => {
-    const user = userEvent.setup();
     const sendChatMessage = vi.fn(() => true);
     renderWithRoom(<MessageComposer conversationId="conv-1" />, { state: joinedState, sendChatMessage });
 
     const textarea = screen.getByPlaceholderText('Mensagem');
-    await user.type(textarea, 'linha 1{Shift>}{Enter}{/Shift}linha 2');
+    await typeInField(textarea, 'linha 1{Shift>}{Enter}{/Shift}linha 2');
 
     expect(sendChatMessage).not.toHaveBeenCalled();
-    expect(textarea).toHaveValue('linha 1\nlinha 2');
+    expect(fieldValue(textarea)).toBe('linha 1\nlinha 2');
   });
 
   it('the send button starts disabled and enables with text', async () => {
@@ -75,7 +73,7 @@ describe('MessageComposer', () => {
     const sendButton = screen.getByRole('button', { name: 'Enviar mensagem' });
     expect(sendButton).toBeDisabled();
 
-    await user.type(screen.getByPlaceholderText('Mensagem'), 'oi');
+    await typeInField(screen.getByPlaceholderText('Mensagem'), 'oi');
     expect(sendButton).toBeEnabled();
 
     await user.click(sendButton);
@@ -83,7 +81,6 @@ describe('MessageComposer', () => {
   });
 
   it('the send button is neutral while empty and turns accent with text', async () => {
-    const user = userEvent.setup();
     renderWithRoom(<MessageComposer conversationId="conv-1" />, { state: joinedState });
 
     const sendButton = screen.getByRole('button', { name: 'Enviar mensagem' });
@@ -91,11 +88,11 @@ describe('MessageComposer', () => {
     expect(sendButton).not.toHaveClass('bg-primary');
     expect(sendButton).toHaveClass('duration-100');
 
-    await user.type(screen.getByPlaceholderText('Mensagem'), 'oi');
+    await typeInField(screen.getByPlaceholderText('Mensagem'), 'oi');
     expect(sendButton).toBeEnabled();
     expect(sendButton).toHaveClass('bg-primary');
 
-    await user.clear(screen.getByPlaceholderText('Mensagem'));
+    await setFieldText(screen.getByPlaceholderText('Mensagem'), '');
     expect(sendButton).toBeDisabled();
     expect(sendButton).not.toHaveClass('bg-primary');
   });
@@ -142,8 +139,8 @@ describe('MessageComposer', () => {
     await user.keyboard('{Escape}');
 
     const textarea = screen.getByRole('textbox');
-    fireEvent.paste(textarea, { clipboardData: { items: [{ type: 'image/png', getAsFile: () => fakeFile('shot.png', 'image/png') }] } });
-    await user.type(textarea, 'hi{Enter}');
+    fireEvent.paste(textarea, { clipboardData: { items: [{ type: 'image/png', getAsFile: () => fakeFile('shot.png', 'image/png') }], getData: () => '' } });
+    await typeInField(textarea, 'hi{Enter}');
     expect(queueMessageWithFiles).not.toHaveBeenCalled();
   });
 
@@ -181,23 +178,22 @@ describe('MessageComposer', () => {
   });
 
   it('near the limit shows the counter; above it blocks sending without cutting the text', async () => {
-    const user = userEvent.setup();
     const sendChatMessage = vi.fn(() => true);
     renderWithRoom(<MessageComposer conversationId="conv-1" />, { state: joinedState, sendChatMessage });
     const textarea = screen.getByRole('textbox', { name: 'Mensagem' });
 
-    fireEvent.change(textarea, { target: { value: 'a'.repeat(1500) } });
+    await setFieldText(textarea, 'a'.repeat(1500));
     expect(screen.queryByText('500')).not.toBeInTheDocument();
 
-    fireEvent.change(textarea, { target: { value: 'a'.repeat(1900) } });
+    await setFieldText(textarea, 'a'.repeat(1900));
     expect(screen.getByText('100')).toBeInTheDocument();
 
-    fireEvent.change(textarea, { target: { value: 'a'.repeat(2010) } });
-    expect(textarea).toHaveValue('a'.repeat(2010));
+    await setFieldText(textarea, 'a'.repeat(2010));
+    expect(fieldValue(textarea)).toBe('a'.repeat(2010));
     expect(screen.getByText('-10')).toBeInTheDocument();
     expect(textarea).toHaveAttribute('aria-invalid', 'true');
     expect(screen.getByRole('button', { name: 'Enviar mensagem' })).toBeDisabled();
-    await user.type(textarea, '{Enter}');
+    await typeInField(textarea, '{Enter}');
     expect(sendChatMessage).not.toHaveBeenCalled();
   });
 
@@ -254,11 +250,11 @@ describe('MessageComposer', () => {
     });
     const doc = fakeFile('doc.pdf', 'application/pdf');
     await user.upload(container.querySelector<HTMLInputElement>('input[type="file"]')!, doc);
-    await user.type(screen.getByRole('textbox'), 'segue');
+    await typeInField(screen.getByRole('textbox'), 'segue');
     await user.click(screen.getByRole('button', { name: 'Enviar mensagem' }));
 
     expect(queueMessageWithFiles).toHaveBeenCalledWith('conv-1', 'segue', undefined, [{ file: doc, compress: true }]);
-    expect(screen.getByRole('textbox')).toHaveValue('');
+    expect(fieldValue(screen.getByRole('textbox'))).toBe('');
     expect(screen.getByRole('textbox')).toBeEnabled();
     // the tray unmounts via a framer-motion exit animation, not synchronously
     await waitFor(() => expect(screen.queryByText(fileName('doc.pdf'))).not.toBeInTheDocument());
@@ -290,38 +286,38 @@ describe('MessageComposer — typing indicator', () => {
     vi.useRealTimers();
   });
 
-  it('emits typing:true on the first keystroke, and not again inside the throttle window (3s)', () => {
+  it('emits typing:true on the first keystroke, and not again inside the throttle window (3s)', async () => {
     const sendTyping = vi.fn();
     renderWithRoom(<MessageComposer conversationId="conv-1" />, { state: joinedState, sendTyping });
 
     const textarea = screen.getByPlaceholderText('Mensagem');
-    fireEvent.change(textarea, { target: { value: 'a' } });
+    await setFieldText(textarea, 'a');
     expect(sendTyping).toHaveBeenCalledWith('conv-1', true);
     expect(sendTyping).toHaveBeenCalledTimes(1);
 
     vi.advanceTimersByTime(1000);
-    fireEvent.change(textarea, { target: { value: 'ab' } });
+    await setFieldText(textarea, 'ab');
     expect(sendTyping).toHaveBeenCalledTimes(1); // still within the 3s window, does not re-emit
   });
 
-  it('emits typing:false on its own after 5s of no typing', () => {
+  it('emits typing:false on its own after 5s of no typing', async () => {
     const sendTyping = vi.fn();
     renderWithRoom(<MessageComposer conversationId="conv-1" />, { state: joinedState, sendTyping });
 
-    fireEvent.change(screen.getByPlaceholderText('Mensagem'), { target: { value: 'oi' } });
+    await setFieldText(screen.getByPlaceholderText('Mensagem'), 'oi');
     expect(sendTyping).toHaveBeenCalledWith('conv-1', true);
 
     vi.advanceTimersByTime(5000);
     expect(sendTyping).toHaveBeenLastCalledWith('conv-1', false);
   });
 
-  it('clearing the field (deleting everything) emits typing:false right away, without waiting for idle', () => {
+  it('clearing the field (deleting everything) emits typing:false right away, without waiting for idle', async () => {
     const sendTyping = vi.fn();
     renderWithRoom(<MessageComposer conversationId="conv-1" />, { state: joinedState, sendTyping });
 
     const textarea = screen.getByPlaceholderText('Mensagem');
-    fireEvent.change(textarea, { target: { value: 'oi' } });
-    fireEvent.change(textarea, { target: { value: '' } });
+    await setFieldText(textarea, 'oi');
+    await setFieldText(textarea, '');
 
     expect(sendTyping).toHaveBeenLastCalledWith('conv-1', false);
   });
@@ -332,7 +328,7 @@ describe('MessageComposer — typing indicator', () => {
     renderWithRoom(<MessageComposer conversationId="conv-1" />, { state: joinedState, sendTyping, sendChatMessage });
 
     const textarea = screen.getByPlaceholderText('Mensagem');
-    fireEvent.change(textarea, { target: { value: 'ola' } });
+    await setFieldText(textarea, 'ola');
     fireEvent.keyDown(textarea, { key: 'Enter' });
 
     expect(sendChatMessage).toHaveBeenCalledWith('conv-1', 'ola', undefined);
@@ -362,10 +358,9 @@ describe('MessageComposer — mentions (@)', () => {
   }
 
   it('typing "@" shows only candidates who are members of this conversation', async () => {
-    const user = userEvent.setup();
     renderComposer();
 
-    await user.type(screen.getByPlaceholderText(/^Conversar/), 'oi @an');
+    await typeInField(screen.getByPlaceholderText(/^Conversar/), 'oi @an');
 
     expect(await screen.findByText('Ana Silva')).toBeInTheDocument();
     expect(screen.getByText('André Costa')).toBeInTheDocument();
@@ -373,30 +368,28 @@ describe('MessageComposer — mentions (@)', () => {
   });
 
   it('Enter with the dropdown open inserts the mention instead of sending the message', async () => {
-    const user = userEvent.setup();
     const sendChatMessage = vi.fn(() => true);
     renderComposer({ sendChatMessage });
 
     const textarea = screen.getByPlaceholderText(/^Conversar/);
-    await user.type(textarea, 'oi @an');
+    await typeInField(textarea, 'oi @an');
     await screen.findByText('Ana Silva');
-    await user.keyboard('{Enter}');
+    await typeInField(textarea, '{Enter}');
 
-    expect(textarea).toHaveValue('oi @ana ');
+    expect(fieldValue(textarea)).toBe('oi @ana ');
     expect(sendChatMessage).not.toHaveBeenCalled();
     expect(screen.queryByText('Ana Silva')).not.toBeInTheDocument();
   });
 
   it('arrow keys move the highlighted candidate both ways, wrapping around', async () => {
-    const user = userEvent.setup();
     renderComposer();
 
     const textarea = screen.getByPlaceholderText(/^Conversar/);
-    await user.type(textarea, 'oi @an');
+    await typeInField(textarea, 'oi @an');
     await screen.findByText('Ana Silva');
     // ana, andre: up from the first wraps to the last
-    await user.keyboard('{ArrowUp}{Enter}');
-    expect(textarea).toHaveValue('oi @andre ');
+    await typeInField(textarea, '{ArrowUp}{Enter}');
+    expect(fieldValue(textarea)).toBe('oi @andre ');
   });
 
   it('clicking a candidate inserts the mention', async () => {
@@ -404,30 +397,28 @@ describe('MessageComposer — mentions (@)', () => {
     renderComposer();
 
     const textarea = screen.getByPlaceholderText(/^Conversar/);
-    await user.type(textarea, '@an');
+    await typeInField(textarea, '@an');
     await user.click(await screen.findByText('André Costa'));
 
-    expect(textarea).toHaveValue('@andre ');
+    expect(fieldValue(textarea)).toBe('@andre ');
   });
 
   it('Escape closes the dropdown without changing the text or sending', async () => {
-    const user = userEvent.setup();
     renderComposer();
 
     const textarea = screen.getByPlaceholderText(/^Conversar/);
-    await user.type(textarea, '@an');
+    await typeInField(textarea, '@an');
     await screen.findByText('Ana Silva');
-    await user.keyboard('{Escape}');
+    await typeInField(textarea, '{Escape}');
 
     expect(screen.queryByText('Ana Silva')).not.toBeInTheDocument();
-    expect(textarea).toHaveValue('@an');
+    expect(fieldValue(textarea)).toBe('@an');
   });
 
   it('an "@" in the middle of a word (e.g. an email) does not open the dropdown', async () => {
-    const user = userEvent.setup();
     renderComposer();
 
-    await user.type(screen.getByPlaceholderText(/^Conversar/), 'fulano@an');
+    await typeInField(screen.getByPlaceholderText(/^Conversar/), 'fulano@an');
 
     expect(screen.queryByText('Ana Silva')).not.toBeInTheDocument();
   });
@@ -443,15 +434,89 @@ describe('MessageComposer — mentions (@)', () => {
   it("in a channel the candidates are the server's members", async () => {
     const channel: Conversation = { ...conversation, type: 'text', serverId: 's1', title: 'geral', memberIds: [] };
     mockedServers.fetchAllServerMembers.mockResolvedValue([ana, outsider].map((u) => ({ user: u, roleIds: [], isOwner: false, at: '' })));
-    const user = userEvent.setup();
     renderComposer({ conversations: [channel] });
 
-    await user.type(screen.getByPlaceholderText(/^Conversar/), 'oi @');
+    await typeInField(screen.getByPlaceholderText(/^Conversar/), 'oi @');
 
     expect(await screen.findByText('Ana Silva')).toBeInTheDocument();
     expect(screen.getByText('Fora Da Conversa')).toBeInTheDocument();
     expect(screen.queryByText('André Costa')).not.toBeInTheDocument();
     expect(mockedServers.fetchAllServerMembers).toHaveBeenCalledWith('s1');
+  });
+});
+
+describe('MessageComposer — group and role mentions', () => {
+  const ROLE_OPEN = '11111111-1111-4111-8111-111111111111';
+  const ROLE_CLOSED = '22222222-2222-4222-8222-222222222222';
+  const roles: RoleSummary[] = [
+    { id: 'r-everyone', name: '@everyone', color: '', position: 0, permissions: 0, hoist: false, mentionable: true, isDefault: true },
+    { id: ROLE_OPEN, name: 'Moderação', color: '#ff8800', position: 2, permissions: 0, hoist: false, mentionable: true, isDefault: false },
+    { id: ROLE_CLOSED, name: 'Membros', color: '', position: 1, permissions: 0, hoist: false, mentionable: false, isDefault: false },
+  ];
+  const server = { id: 's1', name: 'Squad', roles, myRoleIds: [] } as unknown as ServerSummary;
+  const channel = (permissions: number): Conversation => ({
+    id: 'conv-1', type: 'text', serverId: 's1', title: 'geral', memberIds: [], lastMessageAt: null, createdAt: 1, updatedAt: 1, permissions,
+  });
+
+  beforeEach(() => mockedServers.fetchAllServerMembers.mockResolvedValue([]));
+
+  function renderChannel(permissions: number, overrides: Partial<Parameters<typeof renderWithRoom>[1]> = {}) {
+    return renderWithRoom(<MessageComposer conversationId="conv-1" />, {
+      state: joinedState, conversations: [channel(permissions)], servers: [server], ...overrides,
+    });
+  }
+  const options = () => screen.getAllByRole('button').map((b) => b.textContent ?? '').filter((text) => text.startsWith('@'));
+
+  it('without MENTION_EVERYONE offers only the roles anyone may mention', async () => {
+    renderChannel(PERMISSIONS.VIEW_CHANNEL | PERMISSIONS.SEND_MESSAGES);
+    await typeInField(screen.getByPlaceholderText(/^Conversar/), 'oi @');
+    await screen.findByText('@Moderação');
+    expect(screen.queryByText('@Membros')).not.toBeInTheDocument();
+    expect(screen.queryByText('@everyone')).not.toBeInTheDocument();
+    expect(screen.queryByText('@here')).not.toBeInTheDocument();
+  });
+
+  it('with it offers every role, then @everyone and @here, filtered by what was typed', async () => {
+    renderChannel(PERMISSIONS.VIEW_CHANNEL | PERMISSIONS.SEND_MESSAGES | PERMISSIONS.MENTION_EVERYONE);
+    const field = screen.getByPlaceholderText(/^Conversar/);
+    await typeInField(field, '@');
+    await screen.findByText('@everyone');
+    expect(options()).toEqual([
+      '@ModeraçãoNotifica quem tem este cargo',
+      '@MembrosNotifica quem tem este cargo',
+      '@everyoneNotifica todos que podem ver este canal',
+      '@hereNotifica quem está online e pode ver este canal',
+    ]);
+    // accents do not matter to the search; the @everyone role itself is never offered
+    await typeInField(field, 'mod');
+    expect(options()).toEqual(['@ModeraçãoNotifica quem tem este cargo']);
+  });
+
+  it('picking @everyone inserts it as text', async () => {
+    renderChannel(PERMISSIONS.MENTION_EVERYONE);
+    const field = screen.getByPlaceholderText(/^Conversar/);
+    await typeInField(field, 'atenção @ev');
+    await screen.findByText('@everyone');
+    await typeInField(field, '{Enter}');
+    expect(fieldValue(field)).toBe('atenção @everyone ');
+  });
+
+  it("picking a role sends its token and shows it as a chip in the role's colour", async () => {
+    const sendChatMessage = vi.fn(() => true);
+    renderChannel(0, { sendChatMessage });
+    const field = screen.getByPlaceholderText(/^Conversar/);
+    await typeInField(field, 'oi @mod');
+    await screen.findByText('@Moderação');
+    await typeInField(field, '{Enter}');
+
+    expect(fieldValue(field)).toBe(`oi <@&${ROLE_OPEN}> `);
+    const chip = field.querySelector(`[data-role-mention="${ROLE_OPEN}"]`);
+    expect(chip).toHaveTextContent('@Moderação');
+    expect(chip?.firstElementChild).toHaveStyle({ color: '#ff8800' });
+
+    // typed right away: the caret is already after the pick, not a frame later
+    await typeInField(field, 'tudo bem?{Enter}');
+    expect(sendChatMessage).toHaveBeenCalledWith('conv-1', `oi <@&${ROLE_OPEN}> tudo bem?`, undefined);
   });
 });
 
@@ -466,16 +531,15 @@ describe('MessageComposer — per-conversation draft', () => {
   }
 
   it('each conversation has its own text; going back restores what was written', async () => {
-    const user = userEvent.setup();
     const { switchTo } = renderComposer('conv-1');
-    await user.type(screen.getByRole('textbox'), 'rascunho um');
+    await typeInField(screen.getByRole('textbox'), 'rascunho um');
 
     switchTo('conv-2');
-    expect(screen.getByRole('textbox')).toHaveValue('');
-    await user.type(screen.getByRole('textbox'), 'outro');
+    expect(fieldValue(screen.getByRole('textbox'))).toBe('');
+    await typeInField(screen.getByRole('textbox'), 'outro');
 
     switchTo('conv-1');
-    expect(screen.getByRole('textbox')).toHaveValue('rascunho um');
+    expect(fieldValue(screen.getByRole('textbox'))).toBe('rascunho um');
   });
 
   it('attachments picked in one conversation do not show up in another', async () => {
@@ -496,41 +560,41 @@ describe('MessageComposer — per-conversation draft', () => {
     const queueMessageWithFiles = vi.fn();
     const { container, switchTo } = renderComposer('conv-1', { queueMessageWithFiles, setReplyingTo });
     await user.upload(container.querySelector<HTMLInputElement>('input[type="file"]')!, fakeFile('um.pdf', 'application/pdf'));
-    await user.type(screen.getByRole('textbox'), 'legenda');
+    await typeInField(screen.getByRole('textbox'), 'legenda');
     await user.click(screen.getByRole('button', { name: 'Enviar mensagem' }));
 
     // ownership already moved to the outbox — the draft is clean before the switch
     expect(queueMessageWithFiles).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole('textbox')).toHaveValue('');
+    expect(fieldValue(screen.getByRole('textbox'))).toBe('');
     // the tray unmounts via a framer-motion exit animation, not synchronously
     await waitFor(() => expect(screen.queryByText(fileName('um.pdf'))).not.toBeInTheDocument());
 
     switchTo('conv-2');
-    await user.type(screen.getByRole('textbox'), 'texto novo');
+    await typeInField(screen.getByRole('textbox'), 'texto novo');
     switchTo('conv-1');
 
-    expect(screen.getByRole('textbox')).toHaveValue('');
+    expect(fieldValue(screen.getByRole('textbox'))).toBe('');
     switchTo('conv-2');
-    expect(screen.getByRole('textbox')).toHaveValue('texto novo');
+    expect(fieldValue(screen.getByRole('textbox'))).toBe('texto novo');
   });
 
   it('text saved in sessionStorage comes back after a page reload', () => {
     sessionStorage.setItem('linkord:draft:v1::conv-9', 'sobreviveu ao reload');
     renderComposer('conv-9');
-    expect(screen.getByRole('textbox')).toHaveValue('sobreviveu ao reload');
+    expect(fieldValue(screen.getByRole('textbox'))).toBe('sobreviveu ao reload');
   });
 
   it('clearAllDrafts (logout) erases drafts from memory and from sessionStorage', async () => {
     vi.useFakeTimers();
     try {
       const { unmount } = renderComposer('conv-1');
-      fireEvent.change(screen.getByRole('textbox'), { target: { value: 'segredo' } });
+      await setFieldText(screen.getByRole('textbox'), 'segredo');
       act(() => { vi.advanceTimersByTime(1000); });
       expect(sessionStorage.getItem('linkord:draft:v1::conv-1')).toBe('segredo');
 
       act(() => clearAllDrafts());
       expect(sessionStorage.getItem('linkord:draft:v1::conv-1')).toBeNull();
-      expect(screen.getByRole('textbox')).toHaveValue('');
+      expect(fieldValue(screen.getByRole('textbox'))).toBe('');
       unmount();
     } finally {
       vi.useRealTimers();

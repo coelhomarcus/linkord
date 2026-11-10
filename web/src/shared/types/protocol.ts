@@ -27,7 +27,7 @@ export type ReactionEmoji = string;
 /** Wire protocol version this build speaks; the server refuses older ones
  * (client_outdated). Keep in sync with server/src/realtime/protocolVersion.ts
  * — version 10 adds presence status. */
-export const PROTOCOL_VERSION = 15;
+export const PROTOCOL_VERSION = 17;
 
 /** Mirrors server/src/modules/presence/userStatus.ts. */
 export type PresenceStatus = 'online' | 'idle' | 'dnd' | 'invisible';
@@ -124,6 +124,10 @@ export interface ChatMessage {
   // the message is this server sticker (its text is empty); `null` once the
   // sticker was deleted
   sticker?: StickerCard | null;
+  // what its @everyone/@here and role mentions notified, decided by the
+  // server with the author's permission (absent: nobody, or an older server)
+  mentionEveryone?: true;
+  mentionRoleIds?: string[];
 }
 
 /** What a message carries about its sticker. Which server it is from is
@@ -301,6 +305,8 @@ export type ClientMessage =
   | { t: 'speaking'; value: boolean }
   | { t: 'conversation-open'; conversationId: string }
   | { t: 'conversation-mark-read'; conversationId: string; msgId: number }
+  | { t: 'conversation-mark-all-read'; conversationId: string }
+  | { t: 'server-mark-all-read'; serverId: string }
   | { t: 'direct-open'; userId: string }
   | { t: 'conversation-close'; conversationId: string }
   | { t: 'load-more-messages'; conversationId: string; beforeMsgId: number; requestId?: string }

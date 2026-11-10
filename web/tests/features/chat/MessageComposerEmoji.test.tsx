@@ -8,6 +8,7 @@ import { clearAllDrafts } from '@/features/chat/conversationDrafts';
 import { resetFrequentExpressions } from '@/features/emoji/frequentExpressions';
 import { resetMyEmojis, setMyEmojisForTests } from '@/features/emoji/myEmojis';
 import { primeTestEmojiData } from '@tests/fixtures/emojiDataFixture';
+import { typeInField, fieldValue } from '@tests/fixtures/messageFieldFixture';
 
 const joinedState = { ...initialRoomState, joined: true };
 
@@ -31,13 +32,12 @@ function renderComposer() {
 
 describe('MessageComposer — :shortcode: suggestions', () => {
   it('lists matches after a colon and two letters, without taking focus', async () => {
-    const user = userEvent.setup();
     const { field } = renderComposer();
 
-    await user.type(field, 'oi :l');
+    await typeInField(field, 'oi :l');
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
 
-    await user.type(field, 'au');
+    await typeInField(field, 'au');
     const list = screen.getByRole('listbox', { name: 'Sugestões de emoji' });
     expect(screen.getByText('Emojis correspondentes a :lau')).toBeInTheDocument();
     const options = screen.getAllByRole('option');
@@ -49,33 +49,30 @@ describe('MessageComposer — :shortcode: suggestions', () => {
   });
 
   it('Enter inserts the highlighted emoji instead of sending', async () => {
-    const user = userEvent.setup();
     const { field, sendChatMessage } = renderComposer();
 
-    await user.type(field, 'haha :lau{ArrowDown}{Enter}');
+    await typeInField(field, 'haha :lau{ArrowDown}{Enter}');
 
     expect(sendChatMessage).not.toHaveBeenCalled();
-    expect(field).toHaveValue('haha 🤣 ');
+    expect(fieldValue(field)).toBe('haha 🤣 ');
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
   });
 
   it('Tab inserts too, and ArrowUp wraps to the last option', async () => {
-    const user = userEvent.setup();
     const { field } = renderComposer();
 
-    await user.type(field, ':lau{ArrowUp}');
+    await typeInField(field, ':lau{ArrowUp}');
     expect(screen.getAllByRole('option')[1]).toHaveAttribute('aria-selected', 'true');
-    await user.keyboard('{ArrowUp}{Tab}');
-    expect(field).toHaveValue('😆 ');
+    await typeInField(field, '{ArrowUp}{Tab}');
+    expect(fieldValue(field)).toBe('😆 ');
   });
 
   it('Escape closes the list and Enter then sends', async () => {
-    const user = userEvent.setup();
     const { field, sendChatMessage } = renderComposer();
 
-    await user.type(field, ':lau{Escape}');
+    await typeInField(field, ':lau{Escape}');
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
-    await user.keyboard('{Enter}');
+    await typeInField(field, '{Enter}');
     expect(sendChatMessage).toHaveBeenCalledWith('conv-1', ':lau', undefined);
   });
 
@@ -83,18 +80,17 @@ describe('MessageComposer — :shortcode: suggestions', () => {
     const user = userEvent.setup();
     const { field } = renderComposer();
 
-    await user.type(field, ':jo');
+    await typeInField(field, ':jo');
     await user.click(screen.getByRole('option', { name: /:joy:/ }));
-    expect(field).toHaveValue('😂 ');
+    expect(fieldValue(field)).toBe('😂 ');
     expect(field).toHaveFocus();
   });
 
   it('a shortcode typed in full turns into its emoji', async () => {
-    const user = userEvent.setup();
     const { field } = renderComposer();
 
-    await user.type(field, 'ok :joy: e :nada:');
-    expect(field).toHaveValue('ok 😂 e :nada:');
+    await typeInField(field, 'ok :joy: e :nada:');
+    expect(fieldValue(field)).toBe('ok 😂 e :nada:');
   });
 });
 
@@ -106,30 +102,29 @@ describe('MessageComposer — server emojis', () => {
   afterEach(() => resetMyEmojis());
 
   it('suggests them as :name: and sends them as their token', async () => {
-    const user = userEvent.setup();
     const sendChatMessage = vi.fn(() => true);
     renderWithRoom(<MessageComposer conversationId="conv-1" />, { state: meState, sendChatMessage });
     const field = screen.getByPlaceholderText('Mensagem');
 
-    await user.type(field, 'olha :party');
+    await typeInField(field, 'olha :party');
     const option = screen.getByRole('option', { name: /:party_cat:/ });
     expect(option.querySelector('img')).toHaveAttribute('src', '/api/emojis/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
-    await user.keyboard('{Enter}');
-    expect(field).toHaveValue('olha :party_cat: ');
+    await typeInField(field, '{Enter}');
+    expect(fieldValue(field)).toBe('olha :party_cat: ');
 
-    await user.keyboard('{Enter}');
+    await typeInField(field, '{Enter}');
     expect(sendChatMessage).toHaveBeenCalledWith('conv-1', 'olha <a:party_cat:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa>', undefined);
   });
 
-  it('a :name: typed in full stays as text until it is sent', async () => {
-    const user = userEvent.setup();
+  it('a :name: typed in full shows as its picture in the field, and is sent as its token', async () => {
     const sendChatMessage = vi.fn(() => true);
     renderWithRoom(<MessageComposer conversationId="conv-1" />, { state: meState, sendChatMessage });
     const field = screen.getByPlaceholderText('Mensagem');
 
-    await user.type(field, ':party_cat:');
-    expect(field).toHaveValue(':party_cat:');
-    await user.keyboard('{Escape}{Enter}');
+    await typeInField(field, ':party_cat:');
+    expect(fieldValue(field)).toBe(':party_cat:');
+    expect(await screen.findByRole('img', { name: ':party_cat:' })).toHaveAttribute('src', '/api/emojis/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
+    await typeInField(field, '{Escape}{Enter}');
     expect(sendChatMessage).toHaveBeenCalledWith('conv-1', '<a:party_cat:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa>', undefined);
   });
 });

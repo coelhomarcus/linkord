@@ -14,6 +14,7 @@ vi.mock('@/features/servers/serversApi', async (importOriginal) => ({
   fetchServerAuditLog: vi.fn(), fetchAllServerMembers: vi.fn(),
 }));
 const mocked = vi.mocked(serversApi);
+const dayName = (date: Date) => new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full' }).format(date);
 
 const server = { id: 's1', name: 'Squad', icon: '', ownerId: 'me', status: 'active', permissions: PERMISSIONS.VIEW_AUDIT_LOG, roles: [], categories: [], channels: [], myRoleIds: [] } as unknown as ServerSummary;
 const alice = { id: 'u1', username: 'alice', displayName: 'Alice', avatar: '', avatarColor: 'blurple' };
@@ -69,6 +70,26 @@ describe('ServerAuditLog', () => {
     expect(clearButtons).toHaveLength(2);
     await userEvent.click(clearButtons.at(-1)!);
     await waitFor(() => expect(mocked.fetchServerAuditLog.mock.lastCall?.[1]).not.toHaveProperty('target'));
+  });
+
+  it('the period picker sends whole local days, the last one included', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 10, 10, 12));
+    try {
+      mocked.fetchServerAuditLog.mockResolvedValue({ items: [entry({})], nextCursor: null });
+      renderWithRoom(<ServerAuditLog server={server} />);
+      await screen.findByRole('listitem');
+      await userEvent.click(screen.getByRole('button', { name: 'Período: Qualquer data' }));
+      // nothing after today is in the log
+      expect(await screen.findByRole('button', { name: dayName(new Date(2026, 10, 11)) })).toHaveAttribute('aria-disabled', 'true');
+      await userEvent.click(screen.getByRole('button', { name: 'Últimos 7 dias' }));
+      await waitFor(() => expect(mocked.fetchServerAuditLog.mock.lastCall?.[1]).toMatchObject({
+        from: new Date(2026, 10, 4).toISOString(),
+        to: new Date(2026, 10, 11).toISOString(),
+      }));
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('keeps naming an account that is gone', async () => {

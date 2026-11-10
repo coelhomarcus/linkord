@@ -2,6 +2,7 @@ import type { ConnectionProvider, ConnectionSnapshot, WidgetType } from '../modu
 import type { GameList } from '../modules/games/types.js';
 import { pgTable, text, varchar, timestamp, integer, bigint, jsonb, serial, boolean, uniqueIndex, index, primaryKey, check, customType, foreignKey, type AnyPgColumn } from 'drizzle-orm/pg-core';
 import { sql, type SQL } from 'drizzle-orm';
+import { messageSearchVector } from './textSearch.js';
 
 // Postgres tsvector has no first-class drizzle column type — customType
 // just needs to know its SQL type name; the actual value is always
@@ -447,15 +448,25 @@ export const messages = pgTable('messages', {
   // sticker, which is how readers know to draw "sticker unavailable" instead
   // of a blank message (a SET NULL would erase that it ever was one).
   stickerId: text('sticker_id'),
+  // The group mentions that notified someone (modules/messages/groupMentions.ts),
+  // decided once when the message is sent or edited, with the author's
+  // permission at that moment: readers highlight a message by these, never by
+  // the text, which says "@everyone" just the same when it pinged nobody.
+  // `mentionEveryone` covers @here too.
+  mentionEveryone: boolean('mention_everyone').notNull().default(false),
+  mentionRoleIds: text('mention_role_ids').array(),
   // Postgres computes/maintains this itself (GENERATED ALWAYS AS ... STORED)
-  // on every insert/update of `text` — never set from the app. 'portuguese'
-  // config for stemming (a search for "mensagem" should also find
-  // "mensagens"); see modules/chat.ts#handleMessageSearch for the matching
-  // query side.
-  searchVector: tsvector('search_vector').generatedAlwaysAs((): SQL => sql`to_tsvector('portuguese', ${messages.text})`),
+  // on every insert/update of `text` — never set from the app. Stored rather
+  // than an expression index so ranking reads it instead of re-parsing every
+  // match. The configs it is built from are in db/textSearch.ts; the query
+  // side is modules/messages/messages.ts#handleMessageSearch.
+  searchVector: tsvector('search_vector').generatedAlwaysAs((): SQL => messageSearchVector(messages.text)),
 }, (t) => [
   index('messages_conversation_id_idx').on(t.conversationId),
   index('messages_search_vector_idx').using('gin', t.searchVector),
+  // Substring search in the media panel's links/GIFs (`ilike '%q%'`, see
+  // modules/attachments/media.ts), which a word index can't answer.
+  index('messages_text_trgm_idx').using('gin', t.text.op('gin_trgm_ops')),
   index('messages_server_invitation_id_idx').on(t.serverInvitationId),
   index('messages_webhook_id_idx').on(t.webhookId),
   uniqueIndex('messages_webhook_delivery_key_unique').on(t.webhookId, t.webhookDeliveryKey).where(sql`${t.webhookDeliveryKey} IS NOT NULL`),

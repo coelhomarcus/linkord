@@ -1,4 +1,4 @@
-import { ArrowBendUpLeftIcon, CopyIcon, DownloadSimpleIcon, FileXIcon, FlagIcon, LinkBreakIcon, PencilSimpleIcon, TrashIcon, UserIcon, UsersIcon, XIcon } from '@phosphor-icons/react';
+import { ArrowBendUpLeftIcon, ChecksIcon, CopyIcon, DownloadSimpleIcon, FileXIcon, FlagIcon, LinkBreakIcon, PencilSimpleIcon, TrashIcon, UserIcon, UsersIcon, XIcon } from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ReactNode } from 'react';
@@ -10,11 +10,14 @@ import type { ReportTarget } from '@/features/reports/reportCategories';
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from '@/shared/ui/primitives/context-menu';
 import { ReactionEmojiPicker } from '@/features/chat/ReactionEmojiPicker';
 import { customEmojisAsText } from '@/features/emoji/customEmojiText';
+import { roleMentionsAsText } from '@/features/chat/roleMentionText';
 import { ReactionParticipantsDialog } from '@/features/chat/ReactionParticipantsDialog';
 import { useKeepPopoverWarm } from '@/shared/hooks/useKeepPopoverWarm';
 import { messagePermissions } from '@/features/chat/messageActions';
 import { useMessageDeleteConfirm } from '@/features/chat/useMessageDeleteConfirm';
+import { serverUnread } from '@/features/servers/serverUtils';
 import { useRoom } from '@/state/RoomContext';
+import { copyToClipboard } from '@/shared/lib/clipboard';
 import { downloadFile } from '@/shared/lib/download';
 import { isTouchContextMenu, LONG_PRESS_DELAY_MS, useLongPress } from '@/shared/hooks/useLongPress';
 
@@ -62,7 +65,8 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
   const {
     state,
     activeConversationId, messagesByConversation, reactToChatMessage, setReplyingTo, setEditingMsgId,
-    conversations, closeConversation, openReactionParticipants, removeChatAttachment, suppressChatEmbed,
+    conversations, servers, closeConversation, openReactionParticipants, removeChatAttachment, suppressChatEmbed,
+    unreadByConversation, unreadStartByConversation, markConversationRead, markServerRead,
   } = useRoom();
   const [hasSelection, setHasSelection] = useState(false);
   const [downloadTarget, setDownloadTarget] = useState<{ url: string; name: string } | null>(null);
@@ -77,6 +81,9 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
   >(null);
   const [conversationTarget, setConversationTarget] = useState<string | null>(null);
   const [userTarget, setUserTarget] = useState<string | null>(null);
+  // a server's icon in the rail; only right-click reaches it (the rail drags
+  // under a finger), so the server's own header menu offers the same action
+  const [serverTarget, setServerTarget] = useState<string | null>(null);
   const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null);
   // the full picker only replaces the quick row after "+"; every open starts on the row
   const [fullEmojiPicker, setFullEmojiPicker] = useState(false);
@@ -101,12 +108,18 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
   const targetAttachment = can?.removeAttachment ? targetMessage?.attachments?.find((a) => a.id === attachmentTarget) : undefined;
   const targetEmbedLink = can?.removeEmbed ? embedTarget : null;
   const targetConversation = conversationTarget ? conversations.find((c) => c.id === conversationTarget) : undefined;
+  const targetServer = serverTarget ? servers.find((s) => s.id === serverTarget) : undefined;
+  // what a "mark as read" would clear: a count, or a new-messages line still drawn
+  const conversationHasUnread = (id: string) => (unreadByConversation.get(id) ?? 0) > 0 || unreadStartByConversation.has(id);
+  const serverHasUnread = !!targetServer && (serverUnread(targetServer, unreadByConversation) > 0
+    || targetServer.channels.some((c) => unreadStartByConversation.has(c.id)));
 
   const showMessageBlock = !!targetMessage;
   const showDownloadBlock = !!downloadTarget;
   const showSelectionBlock = hasSelection;
   const showConversationBlock = !!targetConversation;
   const showUserBlock = !!userTarget;
+  const showServerBlock = !!targetServer;
 
   useEffect(() => {
     function clearSelectionMode(event: PointerEvent) {
@@ -143,6 +156,7 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
       const nextConversationTarget = conversationEl?.dataset.conversationId ?? null;
       const userEl = element?.closest<HTMLElement>('[data-user-id]') ?? null;
       const nextUserTarget = userEl?.dataset.userId ?? null;
+      const nextServerTarget = element?.closest<HTMLElement>('[data-server-id]')?.dataset.serverId ?? null;
       const nextHasSelection = !wantsNativeMenu && !!window.getSelection()?.toString();
 
       setDownloadTarget(downloadEl ? { url: downloadEl.dataset.downloadUrl!, name: downloadEl.dataset.downloadName || '' } : null);
@@ -151,6 +165,7 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
       setEmbedTarget(embedEl?.dataset.embedLink ?? null);
       setConversationTarget(nextConversationTarget);
       setUserTarget(nextUserTarget);
+      setServerTarget(nextServerTarget);
       setHasSelection(nextHasSelection);
 
       if (wantsNativeMenu) return;
@@ -161,7 +176,8 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
         || !!downloadEl
         || nextHasSelection
         || !!nextConversationTarget
-        || !!nextUserTarget;
+        || !!nextUserTarget
+        || !!nextServerTarget;
 
       if (!hasVisibleItems) {
         contextMenuActionsRef.current?.close();
@@ -222,7 +238,7 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
 
   function handleCopy() {
     const text = window.getSelection()?.toString();
-    if (text) navigator.clipboard.writeText(text).catch(() => {});
+    if (text) void copyToClipboard(text);
   }
 
   function handleDownload() {
@@ -230,7 +246,7 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
   }
 
   function handleCopyMessageText() {
-    if (targetMessage?.text) navigator.clipboard.writeText(customEmojisAsText(targetMessage.text)).catch(() => {});
+    if (targetMessage?.text) void copyToClipboard(roleMentionsAsText(customEmojisAsText(targetMessage.text), servers));
   }
 
   function handleSelectMessageText() {
@@ -370,6 +386,12 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
           )}
           {showConversationBlock && targetConversation && (
             <>
+              {targetConversation.type !== 'voice' && (
+                <ContextMenuItem disabled={!conversationHasUnread(targetConversation.id)} onClick={() => markConversationRead(targetConversation.id)}>
+                  <ChecksIcon size={16} />
+                  <span>{t('contextMenu.markAsRead')}</span>
+                </ContextMenuItem>
+              )}
               {targetConversation.type === 'direct' && (
                 <ContextMenuItem onClick={() => closeConversation(targetConversation.id)}>
                   <XIcon size={16} />
@@ -377,6 +399,12 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
                 </ContextMenuItem>
               )}
             </>
+          )}
+          {showServerBlock && targetServer && (
+            <ContextMenuItem disabled={!serverHasUnread} onClick={() => markServerRead(targetServer.id)}>
+              <ChecksIcon size={16} />
+              <span>{t('contextMenu.markServerAsRead')}</span>
+            </ContextMenuItem>
           )}
         </ContextMenuContent>
       </ContextMenu>

@@ -1,9 +1,11 @@
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import userEvent from '@testing-library/user-event';
 import { initialRoomState } from '@/state/roomReducer';
 import { renderWithRoom } from '@tests/fixtures/roomContextFixture';
 import { GlobalContextMenu } from '@/app/layout/GlobalContextMenu';
 import { LONG_PRESS_DELAY_MS } from '@/shared/hooks/useLongPress';
+import { liveAnnouncements } from '@tests/fixtures/announcerFixture';
 
 const userState = {
   ...initialRoomState,
@@ -47,6 +49,23 @@ describe('GlobalContextMenu', () => {
     await waitFor(() => {
       expect(document.querySelector('[data-slot="context-menu-content"][data-open]')).not.toBeInTheDocument();
     });
+  });
+
+  it('"Copiar texto" on a message copies it and announces it, since the menu closes', async () => {
+    const user = userEvent.setup();
+    const message = { msgId: 7, conversationId: 'dm-1', id: 'u-ana', name: 'Ana', avatar: '', text: 'Oi, tudo bem?', ts: 0 };
+    renderWithRoom(
+      <GlobalContextMenu onOpenProfile={vi.fn()}>
+        <div data-message-id="7" data-testid="row">{message.text}</div>
+      </GlobalContextMenu>,
+      { state: userState, activeConversationId: 'dm-1', messagesByConversation: new Map([['dm-1', [message]]]) },
+    );
+
+    fireEvent.contextMenu(screen.getByTestId('row'));
+    await user.click(await screen.findByRole('menuitem', { name: 'Copiar texto' }));
+
+    await expect(navigator.clipboard.readText()).resolves.toBe('Oi, tudo bem?');
+    await waitFor(() => expect(liveAnnouncements()).toEqual(['Copiado']));
   });
 
   describe('long press (touch)', () => {
@@ -208,6 +227,62 @@ describe('GlobalContextMenu', () => {
     fireEvent.click(item);
 
     expect(onOpenProfile).toHaveBeenCalledWith('u-42');
+  });
+
+  describe('mark as read', () => {
+    const conversation = (id: string, type: 'direct' | 'text') => ({
+      id, type, title: '', memberIds: [], serverId: type === 'text' ? 's1' : null, lastMessageAt: null, createdAt: 0, updatedAt: 0,
+    });
+    const server = {
+      id: 's1', name: 'Equipe', icon: '', ownerId: 'me', status: 'active' as const, createdAt: 0, memberCount: 2, position: 0,
+      permissions: 0, myRoleIds: [], roles: [], categories: [],
+      channels: [{ id: 'c1', serverId: 's1', type: 'text' as const, name: 'geral', topic: '', categoryId: null, position: 0, permissionsSynced: true, permissions: 0 }],
+    };
+
+    it('a channel or DM row with unread messages offers it and marks that conversation', async () => {
+      const user = userEvent.setup();
+      const markConversationRead = vi.fn();
+      renderWithRoom(
+        <GlobalContextMenu onOpenProfile={vi.fn()}>
+          <div data-conversation-id="c1" data-testid="channel"><button type="button">geral</button></div>
+        </GlobalContextMenu>,
+        { state: userState, conversations: [conversation('c1', 'text')], unreadByConversation: new Map([['c1', 3]]), markConversationRead },
+      );
+
+      fireEvent.contextMenu(screen.getByTestId('channel'));
+      await user.click(await screen.findByRole('menuitem', { name: 'Marcar como lida' }));
+
+      expect(markConversationRead).toHaveBeenCalledWith('c1');
+    });
+
+    it('is there but disabled when nothing is unread', async () => {
+      renderWithRoom(
+        <GlobalContextMenu onOpenProfile={vi.fn()}>
+          <div data-conversation-id="d1" data-testid="dm">Ana</div>
+        </GlobalContextMenu>,
+        { state: userState, conversations: [conversation('d1', 'direct')] },
+      );
+
+      fireEvent.contextMenu(screen.getByTestId('dm'));
+
+      expect(await screen.findByRole('menuitem', { name: 'Marcar como lida' })).toHaveAttribute('aria-disabled', 'true');
+    });
+
+    it("a server's icon offers marking the whole server read", async () => {
+      const user = userEvent.setup();
+      const markServerRead = vi.fn();
+      renderWithRoom(
+        <GlobalContextMenu onOpenProfile={vi.fn()}>
+          <button type="button" data-server-id="s1" data-testid="server">Equipe</button>
+        </GlobalContextMenu>,
+        { state: userState, servers: [server], unreadStartByConversation: new Map([['c1', 9]]), markServerRead },
+      );
+
+      fireEvent.contextMenu(screen.getByTestId('server'));
+      await user.click(await screen.findByRole('menuitem', { name: 'Marcar servidor como lido' }));
+
+      expect(markServerRead).toHaveBeenCalledWith('s1');
+    });
   });
 
   describe('a message\'s menu', () => {

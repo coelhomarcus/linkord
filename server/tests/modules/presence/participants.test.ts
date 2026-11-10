@@ -1,4 +1,4 @@
-import { test, describe, afterEach } from 'node:test';
+import { test, describe, afterEach, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { config } from '../../../src/config/env.js';
 import type { AppSocket, Participant } from '../../../src/types.js';
@@ -223,6 +223,35 @@ describe('removeParticipant', () => {
     const p = joinP(fakeSocket(`u-${Math.random()}`), {})!;
     removeParticipant(p);
     assert.doesNotThrow(() => removeParticipant(p));
+  });
+});
+
+describe('reconnect grace length', () => {
+  afterEach(() => mock.timers.reset());
+
+  test('a connection outside a call is removed after RECONNECT_GRACE_MS', () => {
+    mock.timers.enable({ apis: ['setTimeout'] });
+    const socket = fakeSocket(`u-${Math.random()}`);
+    const p = joinP(socket, {})!;
+    createdIds.push(p.id);
+
+    handleClose(socket);
+    mock.timers.tick(config.RECONNECT_GRACE_MS);
+    assert.equal(participants.has(p.id), false);
+  });
+
+  test('a connection in a call is held for CALL_RECONNECT_GRACE_MS', () => {
+    mock.timers.enable({ apis: ['setTimeout'] });
+    const socket = fakeSocket(`u-${Math.random()}`);
+    const p = joinP(socket, {})!;
+    createdIds.push(p.id);
+    setCallConversationId(p, 'conv-1');
+
+    handleClose(socket);
+    mock.timers.tick(config.RECONNECT_GRACE_MS);
+    assert.equal(participants.get(p.id), p);
+    mock.timers.tick(config.CALL_RECONNECT_GRACE_MS - config.RECONNECT_GRACE_MS);
+    assert.equal(participants.has(p.id), false);
   });
 });
 

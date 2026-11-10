@@ -18,6 +18,7 @@ import type bots from '@/features/bots/locales/pt-BR.json';
 import type admin from '@/features/admin/locales/pt-BR.json';
 import type settings from '@/features/settings/locales/pt-BR.json';
 import type soundboard from '@/features/soundboard/locales/pt-BR.json';
+import type share from '@/features/share/locales/pt-BR.json';
 import type servers from '@/features/servers/locales/pt-BR.json';
 import type status from '@/features/status/locales/pt-BR.json';
 import type stickers from '@/features/stickers/locales/pt-BR.json';
@@ -49,6 +50,7 @@ declare module 'i18next' {
       admin: typeof admin;
       settings: typeof settings;
       soundboard: typeof soundboard;
+      share: typeof share;
       servers: typeof servers;
       status: typeof status;
       stickers: typeof stickers;

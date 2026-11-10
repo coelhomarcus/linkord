@@ -192,8 +192,11 @@ function Roles({ server }: { server: ServerSummary }) {
   return (
     <>
       <SectionTitle description={t('roles.hint')}>{t('settings.roles')}</SectionTitle>
-      <div className="flex gap-6 max-md:flex-col">
-        <div className="flex w-52 flex-none flex-col gap-0.5">
+      {/* side by side only when the settings column has room for both: on a
+          tablet the column is far narrower than the window */}
+      <div className="@container">
+      <div className="flex flex-col gap-6 @[560px]:flex-row">
+        <div className="flex w-full flex-none flex-col gap-0.5 @[560px]:w-52">
           <div className="relative mb-1">
             <MagnifyingGlassIcon size={16} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" />
             <Input value={query} onChange={(event) => setQuery(event.target.value)} aria-label={t('roles.search')} placeholder={t('roles.search')} className="pl-8" />
@@ -256,7 +259,13 @@ function Roles({ server }: { server: ServerSummary }) {
             </div>
           </div>
           {!draft.isDefault && (
-            <label className="flex items-center justify-between gap-4 text-label">{t('roles.hoist')}<Switch checked={draft.hoist} disabled={!editable} onCheckedChange={(on) => setDraft({ ...draft, hoist: on })} /></label>
+            <>
+              <label className="flex items-center justify-between gap-4 text-label">{t('roles.hoist')}<Switch checked={draft.hoist} disabled={!editable} onCheckedChange={(on) => setDraft({ ...draft, hoist: on })} /></label>
+              <label className="flex items-center justify-between gap-4 text-label">
+                <span className="flex flex-col gap-0.5">{t('roles.mentionable')}<span className="text-caption text-text-muted">{t('roles.mentionableHint')}</span></span>
+                <Switch checked={draft.mentionable} disabled={!editable} onCheckedChange={(on) => setDraft({ ...draft, mentionable: on })} />
+              </label>
+            </>
           )}
           <PermissionSwitches value={draft.permissions} disabled={!editable} grantable={grantable} onChange={(permissions) => setDraft({ ...draft, permissions })} />
           <ErrorLine error={error} />
@@ -266,6 +275,7 @@ function Roles({ server }: { server: ServerSummary }) {
             </div>
           )}
         </form>
+      </div>
       </div>
       {/* under both columns, not in the form's: the form column is too narrow for the bar on one line */}
       <FloatingBar open={bar.visible} label={t('bar.role', { name: role.name })} status={bar.status} error={bar.error} saveDisabled={saveBlocked}
@@ -299,7 +309,8 @@ function Members({ server, onOpenProfile }: { server: ServerSummary; onOpenProfi
           const reachable = above || member.user.id === me;
           return (
           <li key={member.user.id} className="flex flex-wrap items-center gap-3 py-3">
-            <button type="button" onClick={() => onOpenProfile(member.user.id)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+            {/* a 12rem basis, so the role chips and actions wrap under the name instead of squeezing it to a letter */}
+            <button type="button" onClick={() => onOpenProfile(member.user.id)} className="flex min-w-0 flex-[1_1_12rem] items-center gap-3 text-left">
               <Avatar id={member.user.id} name={member.user.displayName} avatar={member.user.avatar} avatarColor={member.user.avatarColor} size={36} />
               <span className="min-w-0">
                 <span className="flex items-center gap-1 truncate text-label font-semibold" style={{ color: memberColor(server, member.roleIds) || undefined }}>

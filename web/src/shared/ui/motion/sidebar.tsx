@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import type { CSSProperties, HTMLAttributes, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { discardLegacySidebarCollapsed } from '@/shared/lib/localStorage';
+import { LOCAL_STORAGE_KEYS, discardLegacySidebarCollapsed } from '@/shared/lib/localStorage';
+import { usePersistedFlag } from '@/shared/hooks/usePersistedFlag';
 import { cn } from '@/shared/lib/utils';
 import { SidePanel } from './side-panel';
 import { Sheet } from './sheet';
@@ -35,7 +36,9 @@ type SidebarStyle = CSSProperties & {
 };
 
 /** Owns the conversation list: a column that stays open from 1024px, and a
- * drawer below that. ⌘/Ctrl+B toggles the drawer only. */
+ * drawer below that. ⌘/Ctrl+B toggles the drawer only. Unless controlled, the
+ * drawer's state is remembered for its own layout: the column never reads it,
+ * and narrowing the window (or reloading) finds the drawer as it was left. */
 export function SidebarProvider({ open, defaultOpen = true, onOpenChange, openMobile, onOpenMobileChange, className, style, children, ...props }: Omit<HTMLAttributes<HTMLDivElement>, 'style'> & {
   open?: boolean;
   defaultOpen?: boolean;
@@ -45,7 +48,7 @@ export function SidebarProvider({ open, defaultOpen = true, onOpenChange, openMo
   style?: SidebarStyle;
 }) {
   const [ownOpen, setOwnOpen] = useState(defaultOpen);
-  const [ownOpenMobile, setOwnOpenMobile] = useState(false);
+  const [ownOpenMobile, setOwnOpenMobile] = usePersistedFlag(LOCAL_STORAGE_KEYS.channelListOverlayOpen, false);
   const isMobile = useMediaQuery(MOBILE_QUERY);
   const isOverlay = useMediaQuery(OVERLAY_QUERY);
   const columnOpen = open ?? ownOpen;
@@ -59,20 +62,12 @@ export function SidebarProvider({ open, defaultOpen = true, onOpenChange, openMo
   const setOpenMobile = useCallback((next: boolean) => {
     if (openMobile === undefined) setOwnOpenMobile(next);
     onOpenMobileChange?.(next);
-  }, [onOpenMobileChange, openMobile]);
+  }, [onOpenMobileChange, openMobile, setOwnOpenMobile]);
 
+  // a phone shows the list as a page, never as the drawer
   const toggleSidebar = useCallback(() => {
-    if (isOverlay) setOpenMobile(!drawerOpen);
-  }, [drawerOpen, isOverlay, setOpenMobile]);
-
-  // widening past the drawer range must not leave it "open", to pop back up
-  // the next time the window narrows
-  useEffect(() => {
-    const list = window.matchMedia(OVERLAY_QUERY);
-    const onChange = () => { if (!list.matches) setOpenMobile(false); };
-    list.addEventListener('change', onChange);
-    return () => list.removeEventListener('change', onChange);
-  }, [setOpenMobile]);
+    if (isOverlay && !isMobile) setOpenMobile(!drawerOpen);
+  }, [drawerOpen, isMobile, isOverlay, setOpenMobile]);
 
   useEffect(() => { discardLegacySidebarCollapsed(); }, []);
 

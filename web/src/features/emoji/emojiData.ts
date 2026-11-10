@@ -55,7 +55,7 @@ const loaded = new Map<EmojiDataLang, EmojiData>();
 function loadEmojiData(lang: EmojiDataLang = emojiDataLang()): Promise<EmojiData> {
   let pending = loads.get(lang);
   if (!pending) {
-    pending = fetch(`/emoji-data/${lang}/emojis.json`)
+    pending = fetch(`/emoji-data/${lang}/emojis.json?v=${__EMOJI_DATA_VERSION__}`)
       .then((res) => {
         if (!res.ok) throw new Error(`emoji data ${res.status}`);
         return res.json() as Promise<{ emojis: RawEntry[] }>;

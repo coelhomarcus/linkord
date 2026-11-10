@@ -6,7 +6,7 @@ import { useUrlSearch } from '@/shared/hooks/useUrlSearch';
 import { fetchAudit } from './adminApi';
 import type { AuditRow } from './adminApi';
 import { ACTION_LABELS, actionLabel, dayStartIso, formatWhenShort, nextDayStartIso, reportTargetLabel } from './adminFormat';
-import { AdminDateField, AdminListToolbar, AdminSelectField, AdminTextField } from './AdminListToolbar';
+import { AdminDateRangeField, AdminListToolbar, AdminSelectField, AdminTextField } from './AdminListToolbar';
 import { AuditRowDetails } from './AuditRowDetails';
 import { AdminTable, AdminTd, AdminTh, AdminTr, AdminStackedList } from './AdminTable';
 import { ListChrome } from './adminUi';
@@ -163,8 +163,7 @@ export function AuditPage() {
         )}
         advanced={(
           <>
-            <AdminDateField label={t('ui.from')} value={from} onChange={(next) => update({ from: next })} />
-            <AdminDateField label={t('ui.untilInclusive')} value={to} onChange={(next) => update({ to: next })} />
+            <AdminDateRangeField label={t('ui.period')} from={from} to={to} onChange={(next) => update(next)} />
             <p className="self-end pb-2 text-caption text-text-muted">{t('ui.timezone', { zone: TIME_ZONE })}</p>
           </>
         )}

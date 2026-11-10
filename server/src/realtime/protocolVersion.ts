@@ -26,9 +26,14 @@
 // Version 15 adds server stickers: `stickerId` on `chat` from the client, an optional `sticker` on
 // messages (and on reply references) and `server-stickers-changed`. An old tab shows a sticker as an
 // empty message and ignores the new message, so the minimum stays at 7.
+// Version 16 adds group mentions: `<@&roleId>` inside message text, and optional `mentionEveryone`
+// and `mentionRoleIds` on messages. An old tab shows a role mention as its token and does not
+// highlight a group mention, so the minimum stays at 7.
+// Version 17 adds `conversation-mark-all-read` and `server-mark-all-read` from the client, answered with
+// the existing `conversation-read`. An old tab never sends them, so the minimum stays at 7.
 // Raising MIN_PROTOCOL_VERSION also drops open tabs out of their calls (they are refused and
 // disconnect), so keep it for changes an old client cannot tolerate.
-export const PROTOCOL_VERSION = 15;
+export const PROTOCOL_VERSION = 17;
 export const MIN_PROTOCOL_VERSION = 7;
 
 export function isClientCompatible(version: unknown): boolean {

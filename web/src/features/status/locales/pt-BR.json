@@ -20,8 +20,7 @@
     "reconnecting": "Reconectando…",
     "editProfile": "Editar perfil",
     "currentStatus": "Status: {{status}}",
-    "copyId": "Copiar ID do usuário",
-    "idCopied": "Copiado!"
+    "copyId": "Copiar ID do usuário"
   },
   "custom": {
     "title": "Status personalizado",

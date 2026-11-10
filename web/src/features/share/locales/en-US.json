@@ -1,0 +1,19 @@
+{
+  "title": "Send to…",
+  "subtitle_one": "{{count}} file to send",
+  "subtitle_other": "{{count}} files to send",
+  "subtitleText": "Text to send",
+  "search": "Search conversations and channels",
+  "cancel": "Cancel",
+  "loading": "Getting what you shared ready…",
+  "sections": {
+    "direct": "Direct messages"
+  },
+  "empty": "No conversations found.",
+  "missing": {
+    "title": "Nothing to send",
+    "body": "What you shared expired or never reached Linkord. Share it again from the original app.",
+    "action": "Go to home"
+  },
+  "failed": "Couldn't receive what you shared. Try again."
+}

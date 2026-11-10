@@ -116,6 +116,10 @@ The `Content-Type` must be `application/json`.
 | `https://...` | link, with a site preview |
 | `<https://...>` | link without a preview |
 | `@username` | highlighted mention |
+| `<@&roleId>` | role mention, by the role's ID |
+| `@everyone`, `@here` | the whole channel, or the members online |
+
+A mention notifies whoever it names. `@everyone`, `@here` and roles that are not marked "Allow anyone to @mention this role" only notify when the account that created the webhook holds the "Mention @everyone, @here and All Roles" permission in that channel; otherwise they are sent as text and notify nobody.
 
 Text over 2000 characters is **rejected** (not truncated), so your system knows not everything would arrive.
 

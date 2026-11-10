@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/shared/ui/primitives/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/ui/primitives/dialog';
 import { cn } from '@/shared/lib/utils';
+import { CopyLabel, CopyStatusIcon } from '@/shared/CopyFeedback';
+import { useCopyToClipboard } from '@/shared/hooks/useCopyToClipboard';
 import { inviteToServer, type SocialUser } from '@/shared/api/api';
 import { describeApiError } from '@/shared/api/errorText';
 import { FriendPicker } from '@/features/conversations/FriendPicker';
@@ -22,7 +24,7 @@ export function ServerInviteDialog({ server, channelId, open, onOpenChange }: {
   const [sending, setSending] = useState<Set<string>>(new Set());
   const [sent, setSent] = useState<Set<string>>(new Set());
   const [link, setLink] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const { copied, copy, reset: resetCopied } = useCopyToClipboard();
   const channel = channelId ? server.channels.find((c) => c.id === channelId) ?? null : null;
   const [notes, setNotes] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -30,18 +32,12 @@ export function ServerInviteDialog({ server, channelId, open, onOpenChange }: {
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
-    setLink(null); setCopied(false); setNotes([]); setError(null); setSent(new Set());
+    setLink(null); resetCopied(); setNotes([]); setError(null); setSent(new Set());
     createInviteLink(server.id, channelId ? { channelId } : {})
       .then(({ invite }) => { if (!cancelled) setLink(inviteUrl(invite.code)); })
       .catch((err: unknown) => { if (!cancelled) setError(describeApiError(err, 'servers:invite.linkFailed')); });
     return () => { cancelled = true; };
-  }, [open, server.id, channelId]);
-
-  useEffect(() => {
-    if (!copied) return;
-    const timer = setTimeout(() => setCopied(false), 2000);
-    return () => clearTimeout(timer);
-  }, [copied]);
+  }, [open, server.id, channelId, resetCopied]);
 
   // Discord invites one friend per click: the row's button sends at once and
   // then reads Enviado
@@ -89,8 +85,9 @@ export function ServerInviteDialog({ server, channelId, open, onOpenChange }: {
           <span className="text-body font-semibold text-text-primary">{t('invite.orLink')}</span>
           <div className="flex h-11 items-center gap-2 rounded-lg border border-border-field bg-bg-textarea py-1 pl-3 pr-1">
             <code className="min-w-0 flex-1 select-text truncate font-sans text-body text-text-primary">{link ?? t('invite.generating')}</code>
-            <Button type="button" disabled={!link} onClick={() => { if (link) navigator.clipboard.writeText(link).then(() => setCopied(true)).catch(() => {}); }} className={cn('w-20', copied && 'bg-green-solid hover:bg-green-hover')}>
-              {copied ? t('invite.copied') : t('invite.copy')}
+            <Button type="button" disabled={!link} onClick={() => { if (link) void copy(link); }} className={cn('min-w-28', copied && 'bg-green-solid hover:bg-green-hover')}>
+              <CopyStatusIcon copied={copied} size={16} checkClassName="" />
+              <CopyLabel copied={copied}>{t('invite.copy')}</CopyLabel>
             </Button>
           </div>
           <span className="text-caption text-text-secondary">{t('invite.expires')}</span>

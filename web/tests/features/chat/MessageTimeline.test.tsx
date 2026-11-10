@@ -175,6 +175,63 @@ describe('MessageTimeline — jump to message', { timeout: HEAVY_RENDER_TIMEOUT 
   });
 });
 
+describe('MessageTimeline — jump to first unread', { timeout: HEAVY_RENDER_TIMEOUT }, () => {
+  const JUMP = 'Pular para a primeira não lida';
+
+  it('with the divider scrolled out above, a pill takes the reader back to it', async () => {
+    const messages = Array.from({ length: 100 }, (_, i) => message(i + 1));
+    const { container } = renderTimeline({
+      messagesByConversation: new Map([['conv-1', messages]]),
+      unreadStartByConversation: new Map([['conv-1', 20]]),
+      hasMoreByConversation: new Map([['conv-1', false]]),
+    });
+    await waitFor(() => expect(container.querySelector('[data-scroll-root]')).toHaveAttribute('data-settled'));
+    // opened at the present, eighty rows below the line
+    expect(screen.queryByRole('separator', { name: 'Novas Mensagens' })).not.toBeInTheDocument();
+
+    fireEvent.click(await screen.findByRole('button', { name: JUMP }));
+
+    expect(await screen.findByRole('separator', { name: 'Novas Mensagens' })).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole('button', { name: JUMP })).not.toBeInTheDocument());
+    const rows = [...container.querySelectorAll('[data-msg-id], [role="separator"]')].map((row) => row.getAttribute('data-msg-id') ?? 'unread');
+    expect(rows[rows.indexOf('unread') + 1]).toBe('20');
+  });
+
+  it('no pill while the divider is on screen', async () => {
+    const { container } = renderTimeline({
+      messagesByConversation: new Map([['conv-1', [message(1), message(2), message(3)]]]),
+      unreadStartByConversation: new Map([['conv-1', 2]]),
+      hasMoreByConversation: new Map([['conv-1', false]]),
+    });
+    await waitFor(() => expect(container.querySelector('[data-scroll-root]')).toHaveAttribute('data-settled'));
+    expect(screen.getByRole('separator', { name: 'Novas Mensagens' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: JUMP })).not.toBeInTheDocument();
+  });
+
+  it('first unread in a page not loaded yet: no line at the wrong place, and the pill loads a window around it', async () => {
+    const jumpToMessage = vi.fn();
+    const messages = Array.from({ length: 10 }, (_, i) => message(i + 50));
+    renderTimeline({
+      messagesByConversation: new Map([['conv-1', messages]]),
+      unreadStartByConversation: new Map([['conv-1', 10]]),
+      hasMoreByConversation: new Map([['conv-1', true]]),
+      jumpToMessage,
+    });
+    fireEvent.click(await screen.findByRole('button', { name: JUMP }));
+    expect(screen.queryByRole('separator', { name: 'Novas Mensagens' })).not.toBeInTheDocument();
+    expect(jumpToMessage).toHaveBeenCalledWith('conv-1', 10);
+  });
+
+  it('no pill without unread messages', async () => {
+    const { container } = renderTimeline({
+      messagesByConversation: new Map([['conv-1', Array.from({ length: 100 }, (_, i) => message(i + 1))]]),
+      hasMoreByConversation: new Map([['conv-1', false]]),
+    });
+    await waitFor(() => expect(container.querySelector('[data-scroll-root]')).toHaveAttribute('data-settled'));
+    expect(screen.queryByRole('button', { name: JUMP })).not.toBeInTheDocument();
+  });
+});
+
 describe('MessageTimeline — initial placement', () => {
   it('reveals history even when initial animation frames never arrive', () => {
     vi.useFakeTimers();

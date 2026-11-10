@@ -12,7 +12,9 @@
 // - group is emojibase's (0 smileys, 1 people, 3 nature, 4 food, 5 travel,
 //   6 activities, 7 objects, 8 symbols, 9 flags); components are left out
 // - shortcodes are English, like Discord's in every language (GitHub's names
-//   first, then Slack's that differ), so ":joy:" works whatever the UI says
+//   first, then Slack's that differ), so ":joy:" works whatever the UI says;
+//   an emoji too new for either gets emojibase's own English name, never a
+//   name made from the label in the UI's language
 // - skins are the five single-tone variants, light to dark, when there are
 import fs from 'node:fs';
 import path from 'node:path';
@@ -27,6 +29,7 @@ const COMPONENT_GROUP = 2;
 
 const github = require('emojibase-data/en/shortcodes/github.json');
 const iamcal = require('emojibase-data/en/shortcodes/iamcal.json');
+const emojibase = require('emojibase-data/en/shortcodes/emojibase.json');
 const version = require('emojibase-data/package.json').version;
 const twemojiDir = path.join(path.dirname(require.resolve('@discordapp/twemoji/package.json')), 'dist', 'svg');
 const twemoji = new Set(fs.readdirSync(twemojiDir).map((file) => file.replace(/\.svg$/, '')));
@@ -41,7 +44,8 @@ function hasPicture(emoji) {
 const asList = (value) => (value == null ? [] : Array.isArray(value) ? value : [value]);
 
 function shortcodesFor(hexcode) {
-  return [...new Set([...asList(github[hexcode]), ...asList(iamcal[hexcode])])];
+  const known = [...new Set([...asList(github[hexcode]), ...asList(iamcal[hexcode])])];
+  return known.length ? known : asList(emojibase[hexcode]).slice(0, 1);
 }
 
 for (const lang of LANGS) {

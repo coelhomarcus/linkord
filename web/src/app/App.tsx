@@ -32,6 +32,8 @@ import { DmCallOverlay } from '@/features/calls/DmCallOverlay';
 import { CallConnectingScreen } from '@/features/calls/CallConnectingScreen';
 import { ParticipantAudioLayer } from '@/features/calls/ParticipantAudioLayer';
 import { FloatingPip } from '@/features/calls/FloatingPip';
+import { useCallMediaSession } from '@/features/calls/useCallMediaSession';
+import { useParticipantMedia } from '@/features/calls/useLiveKitTrack';
 import { APP_TITLE, callParticipantIds, conversationDocumentTitle, conversationTitle, directUser } from '@/features/conversations/conversationUtils';
 import { TileMenu } from '@/features/calls/TileMenu';
 import { SoundEmojiOverlay } from '@/features/soundboard/SoundEmojiOverlay';
@@ -44,6 +46,8 @@ import type { ProfileTab } from '@/features/profile/ProfileSidebar';
 import { FriendsProvider } from '@/features/friends/FriendsContext';
 import { FriendsPage } from '@/features/friends/FriendsPage';
 import { NotificationsPage } from '@/features/notifications/NotificationsPage';
+import { SharePage } from '@/features/share/SharePage';
+import { sweepExpiredShares } from '@/features/share/sharedPayload';
 import { NotificationStateProvider } from '@/features/notifications/NotificationStateProvider';
 import { AppBadgeSync } from '@/features/notifications/AppBadgeSync';
 import { ProfilePage } from '@/features/profile/ProfilePage';
@@ -64,7 +68,7 @@ import { rightPanelsVisible } from '@/app/rightPanels';
 import { isJoiningStage } from '@/app/stageJoin';
 import { i18n } from '@/shared/i18n/init';
 import { SidebarInset, SidebarProvider } from '@/shared/ui/motion/sidebar';
-import { loadMemberListOpen, saveMemberListOpen } from '@/features/servers/memberListPreference';
+import { useMemberListOpen } from '@/features/servers/memberListPreference';
 import { TooltipProvider } from '@/shared/ui/primitives/tooltip';
 
 // where the content area sits when the very first URL already names a modal
@@ -95,7 +99,7 @@ function currentPath(): string {
 function Shell() {
   const {
     state, dispatch, livekitRoom, closeTileMenu, sendWs, retryConnection, notifyActiveView, registerRequestChatView, registerOpenCall,
-    activeCallConversationId, activeConversationId, joinCall, leaveCall, conversations, allUsers, servers,
+    activeCallConversationId, activeConversationId, joinCall, leaveCall, toggleMicMuted, conversations, allUsers, servers,
     dmStageConversationId, clearDmStage, dmCall,
     serverMemberRevision, setServerMemberSnapshot,
   } = useRoom();
@@ -131,18 +135,12 @@ function Shell() {
   const wide = useMediaQuery('(min-width: 1280px)');
   const [profileTarget, setProfileTarget] = useState<{ userId: string; tab?: ProfileTab } | null>(null);
   const openProfile = useCallback((userId: string, tab?: ProfileTab) => setProfileTarget({ userId, tab }), []);
-  const [mobileShowSidebar, setMobileShowSidebar] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [memberListOpen, setMemberListOpen] = useState(loadMemberListOpen);
+  const [memberListOpen, setMemberListPreference] = useMemberListOpen(wide, contentLocation.pathname);
   // A DM's profile sits beside it unless closed, as in Discord.
   const [profilePanelOpen, setProfilePanelOpen] = useState(true);
   const [mediaOpen, setMediaOpen] = useState(false);
   const pendingStageRef = useRef<string | null>(null);
-
-  const setMemberListPreference = (open: boolean) => {
-    setMemberListOpen(open);
-    saveMemberListOpen(open);
-  };
 
   useConversationRouteSync();
 
@@ -163,6 +161,14 @@ function Shell() {
   // Not tied to having a published mic: joining with no mic plugged in (or
   // mic permission blocked) still has to show the call and play everyone else.
   const inCall = !!activeCallConversationId;
+  const myMedia = useParticipantMedia(state.me.id ?? '');
+  useCallMediaSession({
+    inCall,
+    title: conversationTitle(conversations.find((c) => c.id === activeCallConversationId), state.me.userId, allUsers),
+    micMuted: myMedia.micActivated ? myMedia.micMuted : null,
+    toggleMic: () => { void toggleMicMuted(); },
+    hangUp: () => { void leaveCall(); },
+  });
 
   const callIds = useMemo(
     () => callParticipantIds(state.me.id, state.participants, activeCallConversationId),
@@ -323,8 +329,6 @@ function Shell() {
       <div className="flex h-full min-h-0 flex-col bg-surface-rail">
       <TopBar className="hidden md:flex" title={tabTitle === APP_TITLE ? undefined : activeConversationName} server={currentServer} />
       <SidebarProvider
-        openMobile={mobileShowSidebar}
-        onOpenMobileChange={setMobileShowSidebar}
         className="relative min-h-0 flex-1 bg-surface-rail text-text-primary [--surface-base:var(--color-surface-app)] max-md:pt-[env(safe-area-inset-top)]"
         style={{ minHeight: 0, '--sidebar-width': 'var(--spacing-sidebar)', '--sidebar-width-mobile': '24rem', '--sidebar-overlay-offset': '4.5rem', '--mobile-navigation-height': `calc(4rem + var(--safe-bottom) + ${inCall ? '3rem' : '0rem'})` } as CSSProperties}
       >
@@ -366,6 +370,7 @@ function Shell() {
             <Route path="/app/calls/:conversationId" element={dmStageId ? <Navigate to={ROUTES.direct(dmStageId)} replace /> : <Navigate to={ROUTES.home} replace />} />
             <Route path="/invite/:code" element={<InvitePage />} />
             <Route path={ROUTES.notifications} element={<NotificationsPage />} />
+            <Route path={ROUTES.share} element={<SharePage />} />
             <Route path={ROUTES.profile} element={<ProfilePage onOpenProfile={openProfile} />} />
             <Route path={ROUTES.requests} element={<RequestsRedirect />} />
             <Route path="/app/conversations/:conversationId" element={<LegacyConversationRedirect />} />
@@ -393,7 +398,7 @@ function Shell() {
         />
         {mobileMainPage && <MobileTabBar activeCallConversationId={activeCallConversationId} onReturnToCall={handleReturnToCall} />}
         {currentServer && !wide && (
-          <Sheet open={membersVisible} onOpenChange={setMemberListPreference} side="right" ariaLabel={currentServer.name} className="w-60">
+          <Sheet open={membersVisible} onOpenChange={setMemberListPreference} side="right" ariaLabel={currentServer.name} className="w-[264px]">
             <MemberListPanel server={currentServer} onOpenProfile={openProfile} active={membersVisible} />
           </Sheet>
         )}
@@ -458,6 +463,7 @@ function AppProviders() {
       clearViewportVars(root);
     };
   }, []);
+  useEffect(() => { void sweepExpiredShares(); }, []);
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return;
     const onPushNavigation = (event: MessageEvent) => {

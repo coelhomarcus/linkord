@@ -80,7 +80,8 @@ export class AppPage {
     await expect(this.composer()).toBeVisible();
   }
 
-  /** The message box; with files attached it asks for a caption instead. */
+  /** The message box (a rich text field carrying a placeholder attribute, like
+   * the textarea it was); with files attached it asks for a caption instead. */
   composer(): Locator {
     return this.page.getByPlaceholder(/^(Conversar (em|com) |Adicionar legenda)/);
   }
