@@ -1,6 +1,6 @@
 import { writeFileSync } from 'node:fs';
 import { test, expect, type User } from '../../fixtures/test';
-import { acceptInvite, createInvite, createServer } from '../../fixtures/api';
+import { acceptInvite, createChannel, createInvite, createServer } from '../../fixtures/api';
 import type { AppPage } from '../../fixtures/app';
 
 // a 1x1 PNG, enough for the image path (thumbnail, preview) without a fixture file
@@ -125,5 +125,83 @@ test.describe('chat', () => {
     await a.page.locator('input[type=file]:not([accept])').setInputFiles(file);
     await a.send('com imagem');
     await expect(b.message('com imagem').locator('img').first()).toBeVisible();
+  });
+});
+
+test.describe('unread', () => {
+  const NEW_MESSAGES = { name: 'Novas Mensagens' };
+  const JUMP = { name: 'Pular para a primeira não lida' };
+
+  test('the new-messages line stays put while reading, a pill jumps back to it, and Esc clears it', async ({ users }) => {
+    const alice = await users.create('alice');
+    const bob = await users.create('bob');
+    const server = await createServer(alice.api, 'E2E unread');
+    await acceptInvite(bob.api, await createInvite(alice.api, server.id));
+    const created = await alice.api.post(`/api/channels/${server.text.id}/webhooks`, { data: { name: 'Relatórios' } });
+    const { webhook } = await created.json() as { webhook: { url: string } };
+    const post = async (content: string) => expect((await alice.api.post(new URL(webhook.url).pathname, { data: { content } })).ok()).toBe(true);
+
+    // taller than the viewport, so opening at the present leaves the line above
+    await post('primeira não lida');
+    await post(Array.from({ length: 60 }, (_, i) => `linha ${i + 1}`).join('\n'));
+    const b = await bob.app();
+    await b.openChannel(server.id, server.text.id);
+
+    await b.page.getByRole('button', JUMP).click();
+    await expect(b.page.getByRole('separator', NEW_MESSAGES)).toBeVisible();
+    await expect(b.page.getByRole('button', JUMP)).toHaveCount(0);
+    const firstAfterLine = () => b.page.evaluate(() => {
+      const row = document.querySelector('[role="separator"]')?.closest('[data-index]')?.nextElementSibling;
+      return row?.querySelector('[data-message-id]')?.textContent ?? null;
+    });
+    await expect.poll(firstAfterLine).toContain('primeira não lida');
+
+    // already read on the server by now: a new arrival must not move the line
+    const arrived = b.waitForSocketEvent('chat');
+    await post('chegou enquanto lia');
+    await arrived;
+    await expect(b.page.getByRole('separator', NEW_MESSAGES)).toHaveCount(1);
+    await expect.poll(firstAfterLine).toContain('primeira não lida');
+
+    await b.page.keyboard.press('Escape');
+    await expect(b.page.getByRole('separator', NEW_MESSAGES)).toHaveCount(0);
+  });
+
+  test('mark as read from a channel row and from the server icon, seen in another tab too', async ({ users }) => {
+    const alice = await users.create('alice');
+    const bob = await users.create('bob');
+    const server = await createServer(alice.api, 'E2E lidos');
+    const second = await createChannel(alice.api, server.id, 'segundo');
+    const third = await createChannel(alice.api, server.id, 'terceiro');
+    await acceptInvite(bob.api, await createInvite(alice.api, server.id));
+    const b = await bob.app();
+    await b.openChannel(server.id, server.text.id);
+    const other = await bob.newTab('/app/friends');
+
+    const a = await alice.app();
+    await a.openChannel(server.id, second);
+    await a.send('no segundo canal');
+    await a.openChannel(server.id, third);
+    await a.send('no terceiro canal');
+    await a.send('de novo no terceiro');
+
+    const railItem = (app: typeof b, unread?: string) => app.page.getByRole('navigation', { name: 'Servidores' })
+      .getByRole('button', { name: unread ? `${server.name}, ${unread}` : server.name, exact: true });
+    await expect(railItem(b, '3 mensagens não lidas')).toBeVisible();
+    await expect(railItem(other, '3 mensagens não lidas')).toBeVisible();
+
+    await b.page.getByRole('navigation', { name: 'Canais' }).getByRole('button', { name: 'segundo', exact: true }).click({ button: 'right' });
+    await b.page.getByRole('menuitem', { name: 'Marcar como lida' }).click();
+    await expect(railItem(b, '2 mensagens não lidas')).toBeVisible();
+    await expect(railItem(other, '2 mensagens não lidas')).toBeVisible();
+
+    await railItem(b, '2 mensagens não lidas').click({ button: 'right' });
+    await b.page.getByRole('menuitem', { name: 'Marcar servidor como lido' }).click();
+    await expect(railItem(b)).toBeVisible();
+    await expect(railItem(other)).toBeVisible();
+
+    // stored, not only cleared on screen
+    await other.page.reload();
+    await expect(railItem(other)).toBeVisible();
   });
 });
