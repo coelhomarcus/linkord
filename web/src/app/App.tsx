@@ -66,7 +66,7 @@ import { rightPanelsVisible } from '@/app/rightPanels';
 import { isJoiningStage } from '@/app/stageJoin';
 import { i18n } from '@/shared/i18n/init';
 import { SidebarInset, SidebarProvider } from '@/shared/ui/motion/sidebar';
-import { loadMemberListOpen, saveMemberListOpen } from '@/features/servers/memberListPreference';
+import { useMemberListOpen } from '@/features/servers/memberListPreference';
 import { TooltipProvider } from '@/shared/ui/primitives/tooltip';
 
 // where the content area sits when the very first URL already names a modal
@@ -133,18 +133,12 @@ function Shell() {
   const wide = useMediaQuery('(min-width: 1280px)');
   const [profileTarget, setProfileTarget] = useState<{ userId: string; tab?: ProfileTab } | null>(null);
   const openProfile = useCallback((userId: string, tab?: ProfileTab) => setProfileTarget({ userId, tab }), []);
-  const [mobileShowSidebar, setMobileShowSidebar] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [memberListOpen, setMemberListOpen] = useState(loadMemberListOpen);
+  const [memberListOpen, setMemberListPreference] = useMemberListOpen(wide, contentLocation.pathname);
   // A DM's profile sits beside it unless closed, as in Discord.
   const [profilePanelOpen, setProfilePanelOpen] = useState(true);
   const [mediaOpen, setMediaOpen] = useState(false);
   const pendingStageRef = useRef<string | null>(null);
-
-  const setMemberListPreference = (open: boolean) => {
-    setMemberListOpen(open);
-    saveMemberListOpen(open);
-  };
 
   useConversationRouteSync();
 
@@ -325,8 +319,6 @@ function Shell() {
       <div className="flex h-full min-h-0 flex-col bg-surface-rail">
       <TopBar className="hidden md:flex" title={tabTitle === APP_TITLE ? undefined : activeConversationName} server={currentServer} />
       <SidebarProvider
-        openMobile={mobileShowSidebar}
-        onOpenMobileChange={setMobileShowSidebar}
         className="relative min-h-0 flex-1 bg-surface-rail text-text-primary [--surface-base:var(--color-surface-app)] max-md:pt-[env(safe-area-inset-top)]"
         style={{ minHeight: 0, '--sidebar-width': 'var(--spacing-sidebar)', '--sidebar-width-mobile': '24rem', '--sidebar-overlay-offset': '4.5rem', '--mobile-navigation-height': `calc(4rem + var(--safe-bottom) + ${inCall ? '3rem' : '0rem'})` } as CSSProperties}
       >
@@ -396,7 +388,7 @@ function Shell() {
         />
         {mobileMainPage && <MobileTabBar activeCallConversationId={activeCallConversationId} onReturnToCall={handleReturnToCall} />}
         {currentServer && !wide && (
-          <Sheet open={membersVisible} onOpenChange={setMemberListPreference} side="right" ariaLabel={currentServer.name} className="w-60">
+          <Sheet open={membersVisible} onOpenChange={setMemberListPreference} side="right" ariaLabel={currentServer.name} className="w-[264px]">
             <MemberListPanel server={currentServer} onOpenProfile={openProfile} active={membersVisible} />
           </Sheet>
         )}

@@ -12,7 +12,7 @@ export interface SidebarContextValue {
   openMobile: boolean;
   setOpen: (open: boolean) => void;
   setOpenMobile: (open: boolean) => void;
-  /** ⌘/Ctrl+B toggles the drawer below 1024px. The desktop column stays open. */
+  /** ⌘/Ctrl+B toggles the drawer from 768 to 1023px. The desktop column stays open. */
   toggleSidebar: () => void;
   /** the drawer is portaled to <body>, so it can't inherit these from the wrapper */
   sheetVars: CSSProperties;
