@@ -4,6 +4,7 @@ import { eq, and, desc, asc, lt, gt, gte, inArray, sql } from 'drizzle-orm';
 import { config } from '../../config/env.js';
 import { db } from '../../db/client.js';
 import { messages, users, webhooks, type Message, type Attachment } from '../../db/schema.js';
+import { MESSAGE_SEARCH_CONFIGS, searchConfig } from '../../db/textSearch.js';
 import { participants, send, sendSocketError } from '../presence/participants.js';
 import { isSingleEmoji } from './emoji.js';
 import {
@@ -470,6 +471,12 @@ async function handleLoadMessagesAround(socket: AppSocket, msg: { conversationId
   void backfillEmbeds(rows, p.userId);
 }
 
+// Private-Use-Area delimiters (never typed in real chat text) instead of
+// HTML — the client splits on them into plain-text/highlight React nodes
+// itself (mirrors ChatMessageText.tsx's own "never build HTML strings"
+// convention), no dangerouslySetInnerHTML anywhere.
+const HEADLINE_OPTIONS = 'StartSel=\uE000, StopSel=\uE001, MaxFragments=1, MaxWords=20, MinWords=6';
+
 /** Full-text search — `conversationId` omitted searches every accessible
  * conversation, present scopes to just that one. See db/schema.ts#messages.searchVector for the
  * indexed side; websearch_to_tsquery never throws on malformed input
@@ -487,13 +494,17 @@ async function handleMessageSearch(socket: AppSocket, msg: { query?: string; con
   if (conversationId && !(await conversationExistsForUser(conversationId, p.userId))) return;
   const searchable = conversationId ? [conversationId] : await visibleConversationIds(p.userId);
 
-  const tsQuery = sql`websearch_to_tsquery('portuguese', ${query})`;
+  // The query is parsed once per configuration the vector holds, and a message
+  // matches when any of them does (the exact word, or its stem in either language).
+  const perConfig = MESSAGE_SEARCH_CONFIGS.map((name) => ({ name, tsQuery: sql`websearch_to_tsquery(${searchConfig(name)}, ${query})` }));
+  const tsQuery = sql`(${sql.join(perConfig.map((c) => c.tsQuery), sql` || `)})`;
   const rank = sql`ts_rank(${messages.searchVector}, ${tsQuery})`;
-  // Private-Use-Area delimiters (never typed in real chat text) instead of
-  // HTML — the client splits on them into plain-text/highlight React nodes
-  // itself (mirrors ChatMessageText.tsx's own "never build HTML strings"
-  // convention), no dangerouslySetInnerHTML anywhere.
-  const snippet = sql<string>`ts_headline('portuguese', ${messages.text}, ${tsQuery}, 'StartSel=, StopSel=, MaxFragments=1, MaxWords=20, MinWords=6')`;
+  // ts_headline highlights only the words its own configuration maps onto the
+  // query, so the snippet is drawn by the first configuration that matched
+  // (an English stem match would come back unhighlighted under Portuguese).
+  const snippet = sql<string>`CASE ${sql.join(perConfig.map((c) =>
+    sql`WHEN to_tsvector(${searchConfig(c.name)}, ${messages.text}) @@ ${c.tsQuery} THEN ts_headline(${searchConfig(c.name)}, ${messages.text}, ${c.tsQuery}, ${HEADLINE_OPTIONS})`), sql` `)}
+    ELSE ts_headline(${searchConfig(MESSAGE_SEARCH_CONFIGS[0])}, ${messages.text}, ${tsQuery}, ${HEADLINE_OPTIONS}) END`;
 
   const rows = await db
     .select({ ...messageWithAuthorSelect, snippet })

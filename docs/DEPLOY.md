@@ -13,7 +13,7 @@ One Docker image, built by the [`Dockerfile`](../Dockerfile), holds everything: 
 
 ## Before you start
 
-- **PostgreSQL** 17 is what development and the tests use. The backup tools in the image follow the newest Alpine release and must be at least as new as the server.
+- **PostgreSQL** 17 is what development and the tests use. The backup tools in the image follow the newest Alpine release and must be at least as new as the server. The migrations create the `unaccent` and `pg_trgm` extensions (message search); both ship with the official images and are trusted, so the user in `DATABASE_URL` needs no superuser rights, only `CREATE` on its database (which the database's owner has). A server without the contrib extensions fails that migration at startup.
 - **LiveKit** for voice, video and screen sharing: LiveKit Cloud or a self-hosted server ([INTEGRATIONS.md](INTEGRATIONS.md#livekit)).
 - **A domain with HTTPS.** Web Push, the `Secure` cookie, `Strict-Transport-Security` and Chrome's CSP reports all need it.
 

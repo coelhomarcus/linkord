@@ -456,6 +456,13 @@
       "when": 1794257791194,
       "tag": "0064_server_stickers",
       "breakpoints": true
+    },
+    {
+      "idx": 65,
+      "version": "7",
+      "when": 1794279349480,
+      "tag": "0065_message_search_languages",
+      "breakpoints": true
     }
   ]
 }
