@@ -1,12 +1,12 @@
-// Pure rules of per-server and per-channel/DM notification settings, shared by push delivery and the
-// app badge. Mirrored on the client in web/src/features/notifications/notificationSettings.ts (sounds and
-// unread badges), and both are pinned by the same cases in their tests.
+// Pure rules of per-server and per-channel/DM notification settings, applied by push delivery (countAppBadge
+// repeats the mute test in SQL). Mirrored on the client in web/src/features/notifications/notificationSettings.ts
+// (sounds and unread badges), and both are pinned by the same cases in their tests.
 
-export const NOTIFICATION_LEVELS = ['all', 'mentions', 'nothing'] as const;
+const NOTIFICATION_LEVELS = ['all', 'mentions', 'nothing'] as const;
 export type NotificationLevel = typeof NOTIFICATION_LEVELS[number];
 
 /** What a mute may last, in minutes; 'forever' lasts until the person turns it off. */
-export const MUTE_DURATIONS_MINUTES = [15, 60, 480, 1440] as const;
+const MUTE_DURATIONS_MINUTES = [15, 60, 480, 1440] as const;
 export type MuteDuration = typeof MUTE_DURATIONS_MINUTES[number] | 'forever';
 
 export interface NotificationSetting {

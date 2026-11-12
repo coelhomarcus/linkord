@@ -3,6 +3,58 @@ import { PERMISSIONS, acceptInvite, createChannel, createInvite, createServer, s
 import { gifInfo, threeFrameGif } from '../../fixtures/images';
 
 test.describe('servers', () => {
+  test('a muted server stays quiet in the rail but still counts a mention; its settings follow the account', async ({ users }) => {
+    const alice = await users.create('alice');
+    const bob = await users.create('bob');
+    const server = await createServer(alice.api, 'E2E mute');
+    await acceptInvite(bob.api, await createInvite(alice.api, server.id));
+    const a = await alice.app();
+    await a.openChannel(server.id, server.text.id);
+    const b = await bob.app();
+    await b.openChannel(server.id, server.text.id);
+
+    await b.page.getByRole('button', { name: server.name, exact: true, expanded: false }).click();
+    await b.page.getByRole('menuitem', { name: 'Silenciar servidor' }).hover();
+    await b.page.getByRole('menuitem', { name: 'Até eu reativar' }).click();
+    // the menu plays its exit before it leaves the page
+    await expect(b.page.getByRole('menu')).toHaveCount(0);
+    await expect(b.page.locator(`[data-channel-id="${server.text.id}"]`).getByRole('img', { name: 'Silenciado' })).toBeVisible();
+
+    // the channel picks its own level from the bell in its header, over the server's default
+    await b.page.getByRole('button', { name: 'Configurações de notificação' }).click();
+    await expect(b.page.getByRole('menuitem', { name: 'O servidor está silenciado' })).toBeVisible();
+    await b.page.getByRole('menuitem', { name: 'Notificações' }).hover();
+    await expect(b.page.getByRole('menuitemradio', { name: 'Padrão do servidor (Todas as mensagens)' })).toHaveAttribute('aria-checked', 'true');
+    await b.page.getByRole('menuitemradio', { name: 'Somente @menções' }).click();
+    await expect(b.page.getByRole('menuitemradio', { name: 'Somente @menções' })).toHaveAttribute('aria-checked', 'true');
+
+    // away from the channel, plain traffic leaves no badge on the muted server's icon...
+    await b.page.goto('/app/friends');
+    const rail = b.page.getByRole('navigation', { name: 'Servidores' });
+    const plain = b.waitForSocketEvent('chat');
+    await a.send('mensagem comum');
+    await plain;
+    await expect(rail.getByRole('button', { name: server.name, exact: true })).toBeVisible();
+    // ...while a mention still does
+    await a.send(`@${bob.username} olha isso`);
+    await expect(rail.getByRole('button', { name: `${server.name}, 1 mensagem não lida` })).toBeVisible();
+
+    // another tab (another device) gets both settings from the server
+    const second = await bob.newTab(`/app/channels/${server.id}/${server.text.id}`);
+    await expect(second.composer()).toBeVisible();
+    await second.page.getByRole('button', { name: server.name, exact: true, expanded: false }).click();
+    await expect(second.page.getByRole('menuitem', { name: /^Reativar servidor/ })).toBeVisible();
+    await second.page.getByRole('menuitem', { name: 'Notificações' }).hover();
+    await expect(second.page.getByRole('menuitemradio', { name: 'Todas as mensagens' })).toHaveAttribute('aria-checked', 'true');
+    // Esc closes the submenu first, then the menu
+    await second.page.keyboard.press('Escape');
+    await second.page.keyboard.press('Escape');
+    await expect(second.page.getByRole('menu')).toHaveCount(0);
+    await second.page.getByRole('button', { name: 'Configurações de notificação' }).click();
+    await second.page.getByRole('menuitem', { name: 'Notificações' }).hover();
+    await expect(second.page.getByRole('menuitemradio', { name: 'Somente @menções' })).toHaveAttribute('aria-checked', 'true');
+  });
+
   test('an icon picked in the server settings is cut on the server, animation and all', async ({ users }) => {
     const alice = await users.create('alice');
     const server = await createServer(alice.api, 'E2E icon');
