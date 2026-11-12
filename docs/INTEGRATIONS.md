@@ -137,6 +137,8 @@ Cards (title, description, image, favicon) for links pasted in chat. Unlike the 
 - **Cost controls:** results are cached for 6 hours (500 entries, shared by everyone), and each user may trigger 20 *new* fetches per minute; cache hits are free.
 - **Pictures:** the preview's image and favicon are stored as the site gave them and sent to browsers as signed [media proxy](#media-proxy) addresses, so they load on networks that block the site and over plain http on an https page.
 - **Privacy:** the target site sees the server's IP address, not the user's, for the page and for its pictures.
+- **Direct image links:** a pasted link to a picture gets a preview too, whose image is the picture itself (any `image/*` answer, SVG and icons included, with the size read for raster formats). The chat draws that picture only from the preview's proxied address, never from the link; while the preview is missing it shows nothing, and when the server has no picture for the link it shows the "open link" fallback. The Media tab gets the same signed address with each image link (`imageUrl`).
+- **Direct video and audio links** are not proxied (that would be a streaming proxy). Their player, and a page's `og:video`, is loaded from the link's own host only after the reader clicks "Load video from …", which says that host will see their IP address.
 - **Embeddable links:** URL classification (YouTube, Twitch, direct media) is mirrored in `server/src/modules/link-preview/embeds.ts` and `web/src/shared/lib/chatEmbeds.ts`; change one, change both.
 
 ## Embedded players
@@ -157,7 +159,7 @@ Serves the third-party pictures above from our own domain, `GET /api/media-proxy
 - **Never an open proxy.** A picture is named either by an id on a fixed host, or by a URL the server already holds, signed with HMAC-SHA256:
   - `/api/media-proxy/igdb/<cover_small|cover_big>/<image_id>` → `images.igdb.com`
   - `/api/media-proxy/youtube/<video id>` → `i.ytimg.com/vi/<id>/hqdefault.jpg`
-  - `/api/media-proxy/<mal|github|preview>/<signature>?u=<base64url URL>`, built by the server when it sends a Wall or a link preview. `mal` only reaches `https://cdn.myanimelist.net`, `github` only `https://avatars.githubusercontent.com`, and `preview` any public http(s) host (the pictures the link preview found). Anything else is a 404 without a request.
+  - `/api/media-proxy/<mal|github|preview>/<signature>?u=<base64url URL>`, built by the server when it sends a Wall, a link preview or a Media tab page. `mal` only reaches `https://cdn.myanimelist.net`, `github` only `https://avatars.githubusercontent.com`, and `preview` any public http(s) host (the pictures the link preview found). Anything else is a 404 without a request.
   - Stored data keeps the original URLs; they are rewritten as they are sent, so stored messages and snapshots do not depend on the key or on the proxy being on.
 - **Signing key:** made on first boot and kept in the `instance_secrets` table, so an address a tab already holds still opens after a deploy. Nothing to configure.
 - **Safeguards:** every request goes through `net/safeRequest.ts` (IP checked at connection time). No redirects on the fixed hosts, at most 3 for previews. 8-second timeout for the whole download. 5 MB cap (a larger `Content-Length` is refused before reading). The upstream must say `image/*` **and** the bytes must be JPEG, PNG, GIF, WebP, AVIF or ICO; the response's type comes from the bytes. An SVG is never passed on, since it is a document that could run script on our origin: it is drawn into a PNG of at most 512 px with sharp (1 MB and 3-second limits), and librsvg, given bytes with no base path, loads nothing the SVG references.
@@ -165,8 +167,8 @@ Serves the third-party pictures above from our own domain, `GET /api/media-proxy
 - **Rate limits:** only fetches that miss the cache count: 120 per minute per account and 1200 per minute for the whole server (`429 rate_limited` with `Retry-After`).
 - **Errors on the wire:** `404 not_found` (unknown or tampered address), `401 unauthenticated`, `415 not_an_image`, `413 image_too_large`, `502 image_unavailable` (upstream failed, timed out or the address is private), `429 rate_limited`.
 - **Cost:** each picture is downloaded once per cache lifetime (a restart empties the cache) and then served from memory, so bandwidth grows with the number of distinct pictures and of viewers whose browser does not have them yet; memory stays under the 64 MB budget.
-- **Configuration:** `MEDIA_PROXY=0` switches the fetching off to save bandwidth: the same addresses then answer `302` to the service itself, so pictures load as before the proxy (and again depend on the viewer's network).
-- **Not covered:** GIFs (KLIPY's terms), direct image links pasted in chat, and webhook embed images still load from their own hosts.
+- **Configuration:** `MEDIA_PROXY=0` switches the fetching off to save bandwidth: the same addresses then answer `302` to the service itself, so pictures load as before the proxy (and again depend on the viewer's network, and hand the viewer's IP to each host). The policy's `img-src` then allows any `https:` host again, for those redirects.
+- **Not covered:** GIFs (KLIPY's terms) load from `*.klipy.com`, and direct video and audio links from their own host after a click (see [link previews](#link-previews)). Webhook embeds carry no pictures, and images in a Markdown attachment preview show as links unless they are on our own origin. The Content-Security-Policy's `img-src` allows only our origin and `https://*.klipy.com` while the proxy is on.
 
 ## Adding a new integration
 

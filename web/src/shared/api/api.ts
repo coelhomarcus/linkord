@@ -264,6 +264,9 @@ export interface MediaItem {
   ts: number;
   attachment?: ChatAttachment;
   embed?: DetectedEmbed;
+  /** a direct image link's picture through the media proxy; absent from an
+   * older server and for GIFs */
+  imageUrl?: string | null;
 }
 
 export interface MediaPage {

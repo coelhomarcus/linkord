@@ -11,6 +11,7 @@ import { resolveSession } from '../auth/session.js';
 import { allow, retryAfterMs } from '../../realtime/floodControl.js';
 import { resolveDisplayName } from '../users/users.js';
 import { firstEmbed, type DetectedEmbed } from '../link-preview/embeds.js';
+import { proxiedImageUrl } from '../media-proxy/mediaProxyUrls.js';
 import { escapeLike } from '../friendships/cursor.js';
 import { PG_INT4_MAX, parseSerialId } from '../../db/serialId.js';
 
@@ -93,6 +94,9 @@ interface UploadItem extends MediaBase {
 
 interface EmbedItem extends MediaBase {
   embed: DetectedEmbed;
+  /** A direct image link's picture through the media proxy: the grid never
+   * loads it from the sender's host. Absent for GIFs (KLIPY's terms). */
+  imageUrl?: string | null;
 }
 
 function conversationNameFor(row: MediaBaseRow): string {
@@ -238,7 +242,8 @@ async function fetchEmbedsPage(mode: 'links' | 'gifs', viewerId: string, before:
       cursor = row.msgId;
       const embed: DetectedEmbed | null = mode === 'gifs' ? { kind: 'image', url: row.text.trim() } : firstEmbed(row.text);
       if (embed) {
-        items.push({ ...toMediaBase(row), embed });
+        const imageUrl = mode !== 'gifs' && embed.kind === 'image' ? { imageUrl: proxiedImageUrl('preview', embed.url) } : {};
+        items.push({ ...toMediaBase(row), embed, ...imageUrl });
         if (items.length >= limit) { stoppedEarly = true; break; }
       }
     }

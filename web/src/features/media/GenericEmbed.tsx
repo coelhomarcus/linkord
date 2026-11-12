@@ -9,6 +9,7 @@ import { youtubeThumbnailProxyUrl } from '@/shared/lib/mediaProxy';
 import { useNearViewport } from './useNearViewport';
 import type { LinkPreviewData } from '@/shared/api/api';
 import { availableAttachmentWidth, useChatSurfaceWidth } from '@/shared/lib/chatSurfaceWidth';
+import { ExternalMediaGate } from './ExternalMediaGate';
 import { VideoPlayer } from './MediaPlayers';
 import { embedImageAspect, previewImageSize } from './embedImageBox';
 import { canLoadMediaUrl } from './mediaUrl';
@@ -25,11 +26,13 @@ interface GenericEmbedProps {
   preview?: LinkPreviewData;
 }
 
-const KNOWN_SITE: Partial<Record<DetectedEmbed['kind'], { name: string; favicon: string }>> = {
-  youtube: { name: 'YouTube', favicon: 'https://www.youtube.com/favicon.ico' },
-  'twitch-channel': { name: 'Twitch', favicon: 'https://www.twitch.tv/favicon.ico' },
-  'twitch-vod': { name: 'Twitch', favicon: 'https://www.twitch.tv/favicon.ico' },
-  'twitch-clip': { name: 'Twitch', favicon: 'https://www.twitch.tv/favicon.ico' },
+// no favicon of their own: a picture only ever comes from the server's
+// preview, through the media proxy
+const KNOWN_SITE: Partial<Record<DetectedEmbed['kind'], { name: string }>> = {
+  youtube: { name: 'YouTube' },
+  'twitch-channel': { name: 'Twitch' },
+  'twitch-vod': { name: 'Twitch' },
+  'twitch-clip': { name: 'Twitch' },
 };
 
 /** The thumbnail until clicked, then YouTube's own player in an iframe. */
@@ -163,7 +166,7 @@ export function GenericEmbed({ embed, className = '', edgeToEdge, preview }: Gen
   }
 
   const siteName = data.siteName || known?.name || url;
-  const candidateFavicon = data.favicon || known?.favicon;
+  const candidateFavicon = data.favicon;
   const favicon = !faviconFailed && candidateFavicon && canLoadMediaUrl(candidateFavicon) ? candidateFavicon : null;
   const playableVideo = !!video && !videoFailed;
 
@@ -179,7 +182,9 @@ export function GenericEmbed({ embed, className = '', edgeToEdge, preview }: Gen
     media = <div className="w-full bg-black"><TwitchPlayer embed={embed} /></div>;
   } else if (playableVideo) {
     media = (
-      <VideoPlayer src={video!} poster={image} className="max-w-none rounded-none border-0" onError={() => setVideoFailed(true)} />
+      <ExternalMediaGate url={video!} kind="video" poster={image} className="max-w-none rounded-none border-0">
+        <VideoPlayer src={video!} poster={image} className="max-w-none rounded-none border-0" onError={() => setVideoFailed(true)} />
+      </ExternalMediaGate>
     );
   } else if (image && !imageFailed) {
     media = (

@@ -106,7 +106,7 @@ What keeps this working, and the rules for changing it, is in [`AGENTS.md`](../A
 
 The server sets its own security headers on every response, so the proxy does not need to add any (and should not add another `Content-Security-Policy`, which browsers would enforce on top of this one):
 
-- `Content-Security-Policy`, built at startup from `APP_URL`, `LIVEKIT_URL`, `KLIPY_API_KEY` and the frontend build. A wrong `LIVEKIT_URL` blocks calls in the browser even if the server can reach LiveKit. Stylesheets are limited to this origin plus the hashes of the app's own `<style>` blocks (`style-src-elem` has no `'unsafe-inline'`). Style attributes stay allowed, because the interface sets them while it renders. A `style-src-elem` violation means a stylesheet was injected. How the hashes are collected: [DEVELOPMENT.md](DEVELOPMENT.md#content-security-policy).
+- `Content-Security-Policy`, built at startup from `APP_URL`, `LIVEKIT_URL`, `KLIPY_API_KEY`, `MEDIA_PROXY` and the frontend build. Pictures load only from this origin and KLIPY unless `MEDIA_PROXY=0`. A wrong `LIVEKIT_URL` blocks calls in the browser even if the server can reach LiveKit. Stylesheets are limited to this origin plus the hashes of the app's own `<style>` blocks (`style-src-elem` has no `'unsafe-inline'`). Style attributes stay allowed, because the interface sets them while it renders. A `style-src-elem` violation means a stylesheet was injected. How the hashes are collected: [DEVELOPMENT.md](DEVELOPMENT.md#content-security-policy).
 - `X-Frame-Options: DENY` and `frame-ancestors 'none'`: no other site can show Linkord in a frame.
 - `Strict-Transport-Security` (one year, without `includeSubDomains`) on HTTPS requests.
 
