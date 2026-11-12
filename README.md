@@ -17,53 +17,41 @@ Linkord is a self-hosted place to chat and call with friends. Talk in direct mes
 
 ## 🌟 Features
 
-- **Friends and direct messages**
-  Find people by exact `@username`, send and manage friend requests, block users, and chat or call one-to-one.
+**Chat**
+- Direct messages and private servers with text channels, organized into categories.
+- Replies, reactions, edits, deletes, and message search.
+- Attachments, voice messages, and automatic YouTube and Twitch embeds.
+- Mentions of members, roles, `@everyone` and `@here`.
+- Emojis, GIFs, and stickers, plus custom emojis and stickers per server.
+- Unread markers that sync across tabs and devices.
 
-- **Servers and channels**
-  Create servers from a ready-to-use template, organize text and voice channels into categories, and manage roles, channel permissions, invites, kicks, and bans.
+**Voice and video**
+- Voice channels and one-to-one DM calls, with camera and screen sharing.
+- A soundboard per server, usable in any call.
 
-- **Chat and media**
-  Send attachments up to 512 MB each (configurable with `MAX_ATTACHMENT_BYTES`), record voice messages of up to 5 minutes from the composer (blocked while you are in a call, since the call owns the microphone), share YouTube and Twitch links with automatic embeds, react, reply, edit, delete, and search messages (in Portuguese or English, with or without accents). Opening a conversation with unread messages draws a "New messages" line above the first one, which stays in place while you read (with a pill to jump back to it once it scrolls away). Mark a channel or DM as read from its right-click menu or with Esc while it is open, and a whole server from its icon's menu or its header menu; read state follows you to every tab and device.
+**Servers**
+- Roles, channel permissions, invite links, kicks, and bans.
+- Server templates to get started quickly.
+- Audit log of moderation and settings changes.
+- Webhooks so deploys, monitors, and other services can post into a channel ([guide](docs/WEBHOOK.md)).
 
-- **Mentions**
-  Type `@` in the composer to mention a member, a role, `@everyone` (everyone who can see the channel) or `@here` (the ones online). A mention lands in the notification list and as a push, and the message is highlighted for whoever it reached. Notifying `@everyone`, `@here` or any role takes the "Mention @everyone, @here and All Roles" permission; a role marked "Allow anyone to @mention this role" can be notified by any member. Without the permission the message is still sent, but its group mention notifies nobody.
+**People**
+- Friends by exact `@username`, friend requests, and blocking.
+- Presence (available, idle, do not disturb, invisible) and custom statuses.
+- Profile with connected accounts and a Wall of widgets: MyAnimeList, GitHub, and games from IGDB.
 
-- **Emojis**
-  Type `:` and two letters in the composer to pick an emoji by its shortcode, or type a whole shortcode such as `:joy:` to turn it into the emoji; the ones you use most come first, on every device. The emoji picker (in the composer next to GIFs, in reactions and in your status) has search, frequently used emojis, a section per server, the standard categories, a skin tone choice and a preview; on a phone it opens as a bottom sheet. Emojis are drawn as Twemoji pictures in messages, reactions, pickers, statuses and sounds, and already in the message box while you type (a server emoji too, as soon as its closing `:` is typed), so they look the same on Windows, macOS, Linux and phones, including flags, skin tones and the newer sequences a system font may lack; the text underneath stays the real emoji, for copying and screen readers. The picker only offers emojis Twemoji has a picture for. Each server can have its own emojis, up to 50 still and 50 animated, uploaded and cropped from the server's settings and stored as small WebP files. Its members use them anywhere, in other servers and DMs too, in messages and as reactions, and whoever reads the message sees the picture even from outside that server. A deleted emoji stays in old messages as its `:name:`.
+**Notifications**
+- Web Push for messages, mentions, friend requests, and invites, plus an unread badge on the app icon.
+- Notification level and mute per server, channel, and DM.
 
-- **Stickers**
-  Each server can have up to 30 stickers, still or animated (PNG, APNG, JPEG, GIF or WebP), uploaded from the server's settings with a related emoji, a name and an optional description that screen readers read in place of the picture. The picture is fitted whole into a 320 px square and stored as WebP, animated when the original was. A sticker is a message of its own, drawn large without a bubble: pick it from the composer's sticker button (a tab next to GIFs and emojis), which has search by name, description or emoji, frequently used stickers first and a section per server. Like server emojis, its members send them anywhere, in other servers and DMs too, and whoever reads the message sees the sticker even from outside that server. Stickers can be reacted to, replied to and deleted, not edited. A deleted sticker shows as unavailable in old messages.
+**Account**
+- Two-step login by email, sign-in alerts, and a list of active sessions you can end.
+- Username and password changes, account deletion, and a download of your data.
+- Themes, languages (Portuguese and English), device settings, and notification sounds.
+- Installable as an app, with share-to-Linkord on Android.
 
-- **Voice, video, and screen sharing**
-  Join calls in voice channels or DMs with LiveKit. Each server also has its own soundboard, added to from the call's sound picker. That picker lists the sounds of every server you may use the soundboard of, frequently used ones first, and works in DM calls too: a sound from another server plays for everyone in the call, members of that server or not. Channel permissions decide who may connect, speak, and turn on a camera or share a screen there.
-
-- **Webhooks**
-  Let deploys, monitors, and other services post into a channel. See the [webhook guide](docs/WEBHOOK.md).
-
-- **Web Push**
-  Receive alerts for messages, mentions, friend requests, and invites, even when Linkord is closed. The app icon can also show an unread badge where the browser supports it.
-
-- **Notification settings per server, channel, and DM**
-  From a server's, channel's or DM's menu (right-click or long press, the server header, or the bell in a channel or DM header), pick All messages, Only @mentions or Nothing, and mute it for 15 minutes, 1 hour, 8 hours, 24 hours or until you turn it back on. A channel follows its server unless you pick its own level; muting a server mutes all of its channels. The level decides which messages push and play a sound; a muted channel or DM goes quiet and drops its unread badge, while its mentions still count. The settings follow your account to every device and update live in every open tab.
-
-- **Presence status**
-  Pick how you appear from the profile card that opens from the user panel (it also edits your profile and copies your user ID): Available, Idle (also set automatically after a few minutes away, configurable per device), Do Not Disturb (no push and no notification sounds; notifications still land in the list) or Invisible (you look offline to everyone but keep using the app). Invisible still shows you inside a call you join, to the people who can see that call, the same way your voice and video do. Add a custom status with an emoji, a short text and an optional expiry, or pick a game from your rotation; it shows as a thought bubble beside your avatar on your profile, where you edit or clear it. Your status follows your account to every device.
-
-- **Server audit log**
-  Each server keeps a log in its settings of who kicked, banned, changed roles, channels, permissions, invites, webhooks, sounds, emojis or stickers, moved someone out of a voice channel, or deleted someone else's message, with what changed and when. Members with the "View audit log" permission can filter it by person, action, target and period. Entries are kept for 90 days by default (`SERVER_AUDIT_RETENTION_DAYS`).
-
-- **Administration**
-  Manage users, servers, webhooks, reports, audit history, orphaned uploads, and the data retention report from `/admin`.
-
-- **Profile and Wall**
-  Show connected accounts on your profile and pick widgets for your Wall: recent anime from MyAnimeList, your GitHub profile and contribution calendar, and your favorite, liked, current and wished-for games, searched on IGDB.
-
-- **Account security**
-  Turn on two-step login, which asks for a code sent to your email after the password. Get an email when a browser you have not used lately signs in to your account (on by default, with a link to end that session). See every browser signed in to your account (browser, system, address, when it signed in and was last used) and end any of them, or all but this one: the other browser is signed out at once. Changing your password keeps you signed in here and signs out everywhere else. Change your username from settings with your current password: it says whether a name is free as you type (in any letter case), and every signed-in browser stays signed in while the next login uses the new name. A session left unused for 14 days (configurable) ends on its own. Delete your own account from Settings → Account with your current password (and the emailed code when two-step login is on): it signs out everywhere and is deleted 14 days later, unless you sign in again before then, which cancels it. The deletion removes the account the way an admin's does (servers you own pass to their longest-standing member, an empty one is removed, your profile pictures go), and you get an email when it is scheduled and when it is done.
-
-- **Your preferences**
-  Set up your profile, account and email, connected accounts, blocked people, theme, voice and video devices, which notification sounds play, language and 12- or 24-hour time. The app can be installed: a dismissible banner offers it after a few visits (never during a call), the Notifications page keeps an entry for it, and on iPhone it explains Share → Add to Home Screen, which Web Push needs. On Android Chrome the installed app also appears in the system share sheet: share photos, videos, files, text or a link from any app, choose a conversation or channel on the "Send to…" page, and everything lands in that composer, ready to caption and send. iOS has no equivalent (Safari does not support `share_target`), so there it only works by opening the app and attaching the file. Download a copy of your data from Settings → Data & privacy (once a day): a ZIP with your profile, settings, friends and blocks, the servers you belong to, and every message you sent with its files, emailed as a link that works for 7 days while you are signed in.
+**Administration**
+- An `/admin` area for users, servers, webhooks, reports, audit history, and uploads.
 
 ## 🚀 Development
 
