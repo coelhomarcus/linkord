@@ -69,9 +69,14 @@ export function RoomProvider({ children }: { children: ReactNode }) {
   // retina tile stays on the soft layer while a screen share (one layer, no
   // simulcast) stays sharp beside it. Dynacast stops encoding a layer nobody
   // is watching.
+  // LiveKit's own page-leave handling disconnects on `beforeunload`, which
+  // fires before the "leave this page?" prompt: cancelling it left the tab
+  // without media while still in the call. The `pagehide` handler in App.tsx
+  // leaves only once the page is really going.
   const [livekitRoom] = useState(() => new Room({
     adaptiveStream: { pixelDensity: 'screen' },
     dynacast: true,
+    disconnectOnPageLeave: false,
   }));
 
   const sendWs = useCallback((msg: ClientMessage): boolean => {
