@@ -779,7 +779,12 @@ async function editMessage(p: Participant, msg: { msgId?: unknown; text?: string
   if (!conversation) return { code: 'conversation_not_found', message: 'Conversa não encontrada.' };
   // §4.3: editing an old message while contact is restricted would be a
   // backdoor around the send-gate above — closing that is the specific
-  // reason edit (not delete) is restricted here.
+  // reason edit (not delete) is restricted here. A muted member or a
+  // read-only channel is the same backdoor on a server.
+  if (isServerChannel(conversation)) {
+    const granted = await channelPermissions(conversation.serverId, conversation.id, p.userId);
+    if (!hasPermission(granted, PERMISSIONS.SEND_MESSAGES)) return { code: ERROR_CODES.forbidden, message: 'Você não pode enviar mensagens nesse canal.' };
+  }
   const peerId = await getDirectPeerId(existing.conversationId, p.userId);
   if (peerId && !(await canSendDirectMessage(p.userId, peerId))) return { code: ERROR_CODES.relationshipRequired, message: 'Vocês precisam ser amigos pra conversar por aqui.' };
   const text = await sanitizeCustomEmojis(sanitizeChatText(rawText), p.userId);

@@ -32,8 +32,9 @@ export function messagePermissions(
     react: !isInvite && may(PERMISSIONS.ADD_REACTIONS),
     reply: !isInvite && may(PERMISSIONS.SEND_MESSAGES),
     copy: !!message.text,
-    // a sticker is the whole message: nothing to edit (the server refuses too)
-    edit: isMine && !isInvite && message.sticker === undefined,
+    // a sticker is the whole message: nothing to edit; and whoever may no
+    // longer send here may not rewrite either (the server refuses both)
+    edit: isMine && !isInvite && message.sticker === undefined && may(PERMISSIONS.SEND_MESSAGES),
     delete: !isCallLog && (isMine || me.role === 'admin' || (channel !== undefined && hasPermission(channel, PERMISSIONS.MANAGE_MESSAGES))),
     report: !isMine && !isInvite && !!message.id,
     // taking the only thing a message has is deleting it; an admin may take
