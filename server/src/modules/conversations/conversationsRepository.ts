@@ -296,27 +296,38 @@ export async function getDirectPeerId(conversationId: string, userId: string): P
   return other?.userId ?? null;
 }
 
-/** Every OTHER account this user shares a DM or a server with, deduplicated
- * — the "known peers" presence-scoping set (presence/knownPeers.ts). */
+// A DM only becomes something the two accounts share once a message was sent
+// in it (the same line listForUser draws for history). `direct-open` writes
+// both membership rows before anything is said, so counting an empty DM would
+// let anyone become a "known peer" of anyone, with their presence and profile.
+const HAS_HISTORY = sql`(${conversations.type} <> 'direct' or ${conversations.lastMessageAt} is not null)`;
+
+/** Every OTHER account this user shares a DM with history, or a server, with,
+ * deduplicated — the "known peers" presence-scoping set
+ * (presence/knownPeers.ts). */
 export async function listConversationMemberIds(userId: string): Promise<string[]> {
   const rows = await db
     .select({ userId: conversationMembers.userId })
     .from(conversationMembers)
+    .innerJoin(conversations, eq(conversations.id, conversationMembers.conversationId))
     .where(and(
       sql`${conversationMembers.conversationId} IN (
         select ${conversationMembers.conversationId} from ${conversationMembers} where ${conversationMembers.userId} = ${userId}
       )`,
       sql`${conversationMembers.userId} <> ${userId}`,
+      HAS_HISTORY,
     ));
   return [...new Set([...rows.map((r) => r.userId), ...(await serverPeerIds(userId))])];
 }
 
-/** Whether `a` and `b` share a DM or a server — the profile-visibility
- * check (usersRoutes.ts), a pairwise question unlike the bulk one above. */
+/** Whether `a` and `b` share a DM with history or a server — the
+ * profile-visibility check (users/profileAccess.ts), a pairwise question
+ * unlike the bulk one above. An empty DM does not count (see HAS_HISTORY). */
 export async function shareAnyConversation(a: string, b: string): Promise<boolean> {
   const result = await db.execute(sql`
     select 1 from conversation_members x
     inner join conversation_members y on y.conversation_id = x.conversation_id and y.user_id = ${b}
+    inner join conversations c on c.id = x.conversation_id and (c.type <> 'direct' or c.last_message_at is not null)
     where x.user_id = ${a}
     union all
     select 1 from server_members x

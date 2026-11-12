@@ -1,8 +1,9 @@
 import { and, eq } from 'drizzle-orm';
 import { db } from '../../db/client.js';
-import { conversationMembers, users } from '../../db/schema.js';
+import { conversationMembers } from '../../db/schema.js';
 import { participants, send, sendToUser } from '../presence/participants.js';
 import { refreshKnownPeers } from '../presence/knownPeers.js';
+import { canSendDirectMessage } from '../friendships/friendshipsRepository.js';
 import { getOrCreateDirect, getConversationForUser, rowToSummary } from './conversationsRepository.js';
 import type { AppSocket, HandlerTable } from '../../types.js';
 
@@ -12,23 +13,23 @@ import type { AppSocket, HandlerTable } from '../../types.js';
 // etc.) lives in conversationsRepository.ts. Servers and their channels are
 // managed over HTTP (modules/servers).
 
-async function findUser(userId: string): Promise<boolean> {
-  const [row] = await db.select({ id: users.id }).from(users).where(eq(users.id, userId)).limit(1);
-  return !!row;
-}
-
 /** Creates the DM (or finds the existing one) and hands it straight to the
  * OPENER only — never broadcasts to the other side. `listForUser` won't
  * surface an empty (or closed) direct conversation, so without this the
  * opener's own client would have nothing to render for it either; sending
  * the summary directly lets them see/type into it for this session without
  * it being "real" history for anyone until an actual message is sent
- * (touchConversation already broadcasts to both sides at that point). */
+ * (touchConversation already broadcasts to both sides at that point).
+ *
+ * Gated like a send: opening a DM writes membership rows for both accounts,
+ * so with anyone it would be a way to plant a conversation with a stranger.
+ * A refusal is silent, the same as an unknown id, so it says nothing about
+ * whether the account exists or blocked the caller. */
 async function handleDirectOpen(socket: AppSocket, msg: { userId?: string }): Promise<void> {
   const p = participants.get(socket.participantId ?? '');
   if (!p || p.socket !== socket) return;
   const otherUserId = String(msg.userId || '');
-  if (!otherUserId || otherUserId === p.userId || !(await findUser(otherUserId))) return;
+  if (!otherUserId || otherUserId === p.userId || !(await canSendDirectMessage(p.userId, otherUserId))) return;
 
   const { conversation } = await getOrCreateDirect(p.userId, otherUserId, p.userId);
 
@@ -37,10 +38,9 @@ async function handleDirectOpen(socket: AppSocket, msg: { userId?: string }): Pr
     conversationId: conversation.id,
     conversation: rowToSummary(conversation, [p.userId, otherUserId]),
   });
-  // a peer this connection has never had in its known set (a brand-new DM,
-  // or one that predates the connection) — without this the client gets a
-  // conversation with a member whose profile it was never sent. Conditioned
-  // on the set rather than on "was just created" so it also self-heals.
+  // the peer is a friend, so normally already known; a set that went stale
+  // (a friendship this connection missed) would leave the client with a
+  // conversation member whose profile it was never sent, so heal it here.
   if (!p.knownPeerIds.has(otherUserId)) await refreshKnownPeers([p.userId, otherUserId]);
 }
 

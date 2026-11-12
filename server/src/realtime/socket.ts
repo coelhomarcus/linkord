@@ -69,6 +69,7 @@ const ACTION_LIMITS: Record<string, { windowMs: number; max: number }> = {
   'soundboard-play': { windowMs: 10_000, max: 6 },
   profile: { windowMs: 60_000, max: 10 },
   'message-search': { windowMs: 10_000, max: 20 },
+  'direct-open': { windowMs: 10_000, max: 10 },
   'conversation-mark-read': { windowMs: 10_000, max: 30 },
   'conversation-mark-all-read': { windowMs: 10_000, max: 30 },
   'server-mark-all-read': { windowMs: 10_000, max: 10 },
