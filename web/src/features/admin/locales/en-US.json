@@ -488,7 +488,7 @@
     "sweepRecent": "{{count}} recent one(s) spared by the grace period.",
     "sweepMissing": "{{count}} database record(s) with no file on disk (reported only, nothing is done).",
     "sweepDeleted": "{{deleted}} deleted, {{failed}} failed.",
-    "connectionsValue": "{{live}} of {{max}} (up to {{perAccount}} per account)",
+    "connectionsValue": "{{live}} of {{max}} (up to {{perAccount}} per account, {{perIp}} per address)",
     "accounts": "Accounts",
     "suspended": "Suspended",
     "activeAdmins": "Active administrators",

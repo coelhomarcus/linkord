@@ -59,6 +59,8 @@ services:
       REGISTRATIONS_PER_IP_PER_HOUR: "100000"
       MAX_NEW_ACCOUNTS_PER_HOUR: "100000"
       MAX_CONNECTIONS_PER_USER: "20"
+      # every browser of the suite connects from the same address
+      MAX_CONNECTIONS_PER_IP: "100000"
       # email goes to the mail sink above, never to Resend (a build that predates
       # RESEND_API_URL would call Resend, but no spec sends mail through one)
       RESEND_API_URL: http://mailsink:8025

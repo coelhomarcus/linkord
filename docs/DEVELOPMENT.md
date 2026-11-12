@@ -338,6 +338,16 @@ A chunked upload (`modules/attachments/`) reserves its declared size against the
 
 All of these limits are constants in `config/env.ts`; tests are in `server/tests/modules/attachments/uploadReservations.test.ts` and `server/tests/integration/attachmentUploads.itest.ts`.
 
+## Socket connection caps
+
+`join` (`modules/presence/participants.ts`) refuses a new connection past three caps, all counting **live** connections only: a ghost waiting out its reconnect grace (30 s, 180 s in a call) holds no slot, and a resume (`join {id, token}`) is never refused, since its connection already had one.
+
+- `MAX_PARTICIPANTS` (500): the whole instance, a memory guard for the one Node process rather than a room size. Past it the client gets `full` ("Sala cheia, tente mais tarde."). The server logs `connections near the instance cap` once when live connections reach 80% of it, again only after they have dropped back below.
+- `MAX_CONNECTIONS_PER_USER` (4): tabs and devices of one account.
+- `MAX_CONNECTIONS_PER_IP` (20): every account behind one address together, so a few throwaway accounts cannot fill the instance; it leaves room for a household or an office behind one public address. The address comes from `resolveClientIp`, so behind a proxy it needs `TRUST_PROXY=1`, or every client shares the proxy's address and its cap.
+
+The two last answer `too_many_connections`. The admin System page shows the live count against these caps. Tests are in `server/tests/modules/presence/participants.test.ts` (`connection caps`).
+
 ## Brute-force limits
 
 Failed logins (per account and per address), wrong password-reset codes (per account and per address), recovery and email-change code requests, username availability checks, wrong invite codes and sign-ups per address are counted in the `rate_limit_windows` table (`modules/auth/ratelimit.ts`), so a restart or a deploy does not give anyone fresh attempts and several instances would share one count.

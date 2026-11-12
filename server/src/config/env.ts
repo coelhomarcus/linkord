@@ -2,7 +2,10 @@ import path from 'node:path';
 
 const PORT = Number(process.env.PORT || 3000);
 const HOST_BIND = process.env.HOST_BIND || '0.0.0.0';
-const MAX_PARTICIPANTS = Number(process.env.MAX_PARTICIPANTS || 50);
+// Live socket connections the whole instance takes (ghosts in the reconnect grace window do not
+// count). A memory guard for one Node process, not a room size: the per-account and per-address
+// caps below are what keep a few people from filling it.
+const MAX_PARTICIPANTS = Number(process.env.MAX_PARTICIPANTS || 500);
 const TRUST_PROXY = process.env.TRUST_PROXY === '1';
 // How many proxies in front of the server append to X-Forwarded-For. A wrong count either believes
 // an address the client wrote (too low) or drops to the first proxy's address (too high), so an
@@ -200,7 +203,8 @@ const UPLOADS_REMOTE_URL = (process.env.UPLOADS_REMOTE_URL || '').trim().replace
 // ---- abuse limits (initial estimates; tune based on actual usage) ----
 const REGISTRATIONS_PER_IP_PER_HOUR = Number(process.env.REGISTRATIONS_PER_IP_PER_HOUR || 5);
 const MAX_NEW_ACCOUNTS_PER_HOUR = Number(process.env.MAX_NEW_ACCOUNTS_PER_HOUR || 30);
-const MAX_CONNECTIONS_PER_USER = Number(process.env.MAX_CONNECTIONS_PER_USER || 5);
+const MAX_CONNECTIONS_PER_USER = Number(process.env.MAX_CONNECTIONS_PER_USER || 4);
+const MAX_CONNECTIONS_PER_IP = Number(process.env.MAX_CONNECTIONS_PER_IP || 20);
 // per-account quotas (storage of sent files has none: only the instance-wide MAX_STORAGE_BYTES)
 const MAX_OWNED_SERVERS_PER_USER = Number(process.env.MAX_OWNED_SERVERS_PER_USER || process.env.MAX_OWNED_GROUPS_PER_USER || 20);
 const MAX_SERVER_MEMBERSHIPS_PER_USER = Number(process.env.MAX_SERVER_MEMBERSHIPS_PER_USER || process.env.MAX_GROUP_MEMBERSHIPS_PER_USER || 100);
@@ -257,7 +261,7 @@ export const config = {
   PUSH_VAPID_PUBLIC_KEY, PUSH_VAPID_PRIVATE_KEY, PUSH_VAPID_SUBJECT,
   LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET, LIVEKIT_ROOM_NAME, LIVEKIT_TOKEN_TTL_SECONDS,
   UPLOADS_REMOTE_URL, KLIPY_API_KEY, MAL_CLIENT_ID, IGDB_CLIENT_ID, IGDB_CLIENT_SECRET, MEDIA_PROXY_ENABLED,
-  REGISTRATIONS_PER_IP_PER_HOUR, MAX_NEW_ACCOUNTS_PER_HOUR, MAX_CONNECTIONS_PER_USER,
+  REGISTRATIONS_PER_IP_PER_HOUR, MAX_NEW_ACCOUNTS_PER_HOUR, MAX_CONNECTIONS_PER_USER, MAX_CONNECTIONS_PER_IP,
   MAX_OWNED_SERVERS_PER_USER, MAX_SERVER_MEMBERSHIPS_PER_USER, MAX_FRIENDS, MAX_PENDING_OUTGOING_REQUESTS,
   ALLOWED_ORIGINS, CSP_REPORT_ONLY, IS_DEV, ORPHAN_GRACE_MS, ORPHAN_SWEEP_DRY_RUN,
 };

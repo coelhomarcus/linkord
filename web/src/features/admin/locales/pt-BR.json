@@ -488,7 +488,7 @@
     "sweepRecent": "{{count}} recente(s) poupado(s) pela carência.",
     "sweepMissing": "{{count}} registro(s) no banco sem arquivo no disco (só relatado, nada é feito).",
     "sweepDeleted": "{{deleted}} apagado(s), {{failed}} falha(s).",
-    "connectionsValue": "{{live}} de {{max}} (até {{perAccount}} por conta)",
+    "connectionsValue": "{{live}} de {{max}} (até {{perAccount}} por conta, {{perIp}} por endereço)",
     "accounts": "Contas",
     "suspended": "Suspensas",
     "activeAdmins": "Administradores ativos",

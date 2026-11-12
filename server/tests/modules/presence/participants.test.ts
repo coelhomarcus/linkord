@@ -27,11 +27,12 @@ function fakeSocket(
     bio: string;
     profileLinks: string[];
     role: 'user' | 'admin';
-  }> = {}
+  }> = {},
+  ip = '127.0.0.1',
 ): AppSocket {
   return {
     participantId: null,
-    ip: '127.0.0.1',
+    ip,
     connected: true,
     emit: () => {},
     disconnect: () => {},
@@ -156,17 +157,93 @@ describe('join', () => {
     assert.equal(isUserOnline(userId), true);
   });
 
-  test('a full room (MAX_PARTICIPANTS) rejects a new join', () => {
-    const original = config.MAX_PARTICIPANTS;
-    config.MAX_PARTICIPANTS = participants.size + 1;
-    try {
-      const p1 = joinP(fakeSocket(`u-${Math.random()}`), {});
-      createdIds.push(p1!.id);
-      const p2 = joinP(fakeSocket(`u-${Math.random()}`), {});
-      assert.equal(p2, null);
-    } finally {
-      config.MAX_PARTICIPANTS = original;
+});
+
+describe('connection caps', () => {
+  const liveNow = () => [...participants.values()].filter((p) => p.socket).length;
+  const uniqueIp = () => `10.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}`;
+
+  function withCaps(caps: { max?: number; perUser?: number; perIp?: number }, fn: () => void): void {
+    const original = { max: config.MAX_PARTICIPANTS, perUser: config.MAX_CONNECTIONS_PER_USER, perIp: config.MAX_CONNECTIONS_PER_IP };
+    if (caps.max !== undefined) config.MAX_PARTICIPANTS = caps.max;
+    if (caps.perUser !== undefined) config.MAX_CONNECTIONS_PER_USER = caps.perUser;
+    if (caps.perIp !== undefined) config.MAX_CONNECTIONS_PER_IP = caps.perIp;
+    try { fn(); } finally {
+      config.MAX_PARTICIPANTS = original.max;
+      config.MAX_CONNECTIONS_PER_USER = original.perUser;
+      config.MAX_CONNECTIONS_PER_IP = original.perIp;
     }
+  }
+
+  function errorCodeOf(socket: AppSocket): () => string | null {
+    let code: string | null = null;
+    (socket as unknown as { emit: (t: string, m: { code?: string }) => void }).emit = (t, m) => { if (t === 'error') code = m.code ?? null; };
+    return () => code;
+  }
+
+  test('a full instance (MAX_PARTICIPANTS) rejects a new join', () => {
+    withCaps({ max: liveNow() + 1 }, () => {
+      const p1 = joinP(fakeSocket(`u-${Math.random()}`, {}, uniqueIp()), {});
+      createdIds.push(p1!.id);
+      const socket = fakeSocket(`u-${Math.random()}`, {}, uniqueIp());
+      const code = errorCodeOf(socket);
+      assert.equal(joinP(socket, {}), null);
+      assert.equal(code(), 'full');
+    });
+  });
+
+  test('connections in the reconnect grace window do not count toward the instance cap', () => {
+    withCaps({ max: liveNow() + 1 }, () => {
+      const s1 = fakeSocket(`u-${Math.random()}`, {}, uniqueIp());
+      const p1 = joinP(s1, {});
+      createdIds.push(p1!.id);
+      handleClose(s1);
+      const p2 = joinP(fakeSocket(`u-${Math.random()}`, {}, uniqueIp()), {});
+      assert.ok(p2, 'a ghost must not hold the last slot');
+      createdIds.push(p2.id);
+      assert.ok(participants.has(p1!.id), 'the ghost itself is still waiting for its client');
+    });
+  });
+
+  test('one account is held to MAX_CONNECTIONS_PER_USER', () => {
+    withCaps({ perUser: 2 }, () => {
+      const userId = `u-${Math.random()}`;
+      for (let i = 0; i < 2; i++) createdIds.push(joinP(fakeSocket(userId, {}, uniqueIp()), {})!.id);
+      const socket = fakeSocket(userId, {}, uniqueIp());
+      const code = errorCodeOf(socket);
+      assert.equal(joinP(socket, {}), null);
+      assert.equal(code(), 'too_many_connections');
+    });
+  });
+
+  test('accounts behind one address are held to MAX_CONNECTIONS_PER_IP together, others still join', () => {
+    withCaps({ perIp: 3, perUser: 2 }, () => {
+      const ip = uniqueIp();
+      createdIds.push(joinP(fakeSocket(`u-${Math.random()}`, {}, ip), {})!.id);
+      createdIds.push(joinP(fakeSocket(`u-${Math.random()}`, {}, ip), {})!.id);
+      createdIds.push(joinP(fakeSocket(`u-${Math.random()}`, {}, ip), {})!.id);
+      const socket = fakeSocket(`u-${Math.random()}`, {}, ip);
+      const code = errorCodeOf(socket);
+      assert.equal(joinP(socket, {}), null);
+      assert.equal(code(), 'too_many_connections');
+      const elsewhere = joinP(fakeSocket(`u-${Math.random()}`, {}, uniqueIp()), {});
+      assert.ok(elsewhere);
+      createdIds.push(elsewhere.id);
+    });
+  });
+
+  test('a resume is never refused by the caps: it already held its slot', () => {
+    withCaps({ max: liveNow() + 1 }, () => {
+      const userId = `u-${Math.random()}`;
+      const s1 = fakeSocket(userId, {}, uniqueIp());
+      const p1 = joinP(s1, {});
+      createdIds.push(p1!.id);
+      handleClose(s1);
+      const other = joinP(fakeSocket(`u-${Math.random()}`, {}, uniqueIp()), {});
+      createdIds.push(other!.id);
+      const resumed = joinP(fakeSocket(userId, {}, uniqueIp()), { id: p1!.id, token: p1!.token });
+      assert.equal(resumed?.id, p1!.id);
+    });
   });
 });
 

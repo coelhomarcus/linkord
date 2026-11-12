@@ -342,9 +342,38 @@ export function setAccountConnectionsChangedHook(fn: ((userId: string) => void) 
   onAccountConnectionsChanged = fn;
 }
 
-function countConnectionsOf(userId: string): number {
+/** Live connections only: a ghost waiting out its reconnect grace holds no socket, and counting it
+ * would let a few accounts that keep dropping tabs hold the whole instance for up to a call's grace. */
+function countLiveConnections(userId: string, ip: string): { total: number; ofUser: number; fromIp: number } {
+  const counts = { total: 0, ofUser: 0, fromIp: 0 };
+  for (const p of participants.values()) {
+    if (!p.socket) continue;
+    counts.total++;
+    if (p.userId === userId) counts.ofUser++;
+    if (p.socket.ip === ip) counts.fromIp++;
+  }
+  return counts;
+}
+
+const NEAR_CAPACITY_RATIO = 0.8;
+let nearCapacityWarned = false;
+
+/** One warning per approach to the cap, re-armed once usage falls back, so the logs flag a crowded
+ * instance before people start getting "full" instead of on every join. */
+function noteCapacity(live: number): void {
+  const threshold = Math.floor(config.MAX_PARTICIPANTS * NEAR_CAPACITY_RATIO);
+  if (live >= threshold && !nearCapacityWarned) {
+    nearCapacityWarned = true;
+    log.warn('connections near the instance cap', { live, max: config.MAX_PARTICIPANTS });
+  } else if (live < threshold) {
+    nearCapacityWarned = false;
+  }
+}
+
+/** Live connections across the instance, the number MAX_PARTICIPANTS caps. */
+export function liveConnectionCount(): number {
   let n = 0;
-  for (const p of participants.values()) if (p.userId === userId && p.socket) n++;
+  for (const p of participants.values()) if (p.socket) n++;
   return n;
 }
 
@@ -388,17 +417,26 @@ export function join(socket: AppSocket, msg: JoinMessage): { participant: Partic
     p.socket = socket;
     restoredGhostIds.delete(p.id);
   } else {
-    if (participants.size >= config.MAX_PARTICIPANTS) {
-      log.warn('join refused: room is full', { participants: participants.size, max: config.MAX_PARTICIPANTS });
+    const live = countLiveConnections(u.userId, socket.ip);
+    noteCapacity(live.total + 1);
+    if (live.total >= config.MAX_PARTICIPANTS) {
+      log.warn('join refused: room is full', { live: live.total, max: config.MAX_PARTICIPANTS });
       sendSocketError(socket, 'full', 'Sala cheia, tente mais tarde.');
       return null;
     }
     evictGhostsForUser(u.userId);
     // one account can't hold more than a handful of live connections (tabs,
     // devices) — otherwise a single sign-up could fill the whole room
-    if (countConnectionsOf(u.userId) >= config.MAX_CONNECTIONS_PER_USER) {
+    if (live.ofUser >= config.MAX_CONNECTIONS_PER_USER) {
       log.warn('join refused: too many connections', { userId: u.userId });
       sendSocketError(socket, 'too_many_connections', 'Você já tem conexões demais abertas. Feche alguma aba.');
+      return null;
+    }
+    // and a handful of throwaway accounts behind one address can't either; the cap leaves room
+    // for a household or an office sharing a public address
+    if (live.fromIp >= config.MAX_CONNECTIONS_PER_IP) {
+      log.warn('join refused: too many connections from one address', { userId: u.userId, ip: socket.ip });
+      sendSocketError(socket, 'too_many_connections', 'Há conexões demais abertas a partir da sua rede. Feche alguma aba e tente de novo.');
       return null;
     }
     p = createParticipant({
