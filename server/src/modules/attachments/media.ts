@@ -12,6 +12,7 @@ import { allow, retryAfterMs } from '../../realtime/floodControl.js';
 import { resolveDisplayName } from '../users/users.js';
 import { firstEmbed, type DetectedEmbed } from '../link-preview/embeds.js';
 import { escapeLike } from '../friendships/cursor.js';
+import { PG_INT4_MAX, parseSerialId } from '../../db/serialId.js';
 
 // Cursor-based media search keeps pagination stable as new messages arrive. Filter by kind in
 // the query so sparse tabs do not hide items behind other kinds. Every result is scoped to
@@ -25,10 +26,6 @@ const EMBED_BATCH_SIZE = 40;
 // avoids an expensive loop if a conversation has hundreds of non-embed links.
 // "Load more" resumes exactly from the cursor (see nextBefore).
 const EMBED_SCAN_CEILING = 400;
-// messages.id is a 4-byte `serial` — using Number.MAX_SAFE_INTEGER as the
-// "no cursor yet" sentinel overflows Postgres's int4 range. This is the
-// column's real ceiling.
-const PG_INT4_MAX = 2147483647;
 const DELETED_AUTHOR_NAME = 'Usuário apagado';
 
 const MEDIA_KINDS = ['uploads', 'images', 'videos', 'audios', 'documents', 'gifs', 'embeds'] as const;
@@ -281,8 +278,7 @@ async function handleMedia(request: FastifyRequest, reply: FastifyReply): Promis
 
   const query = request.query as Record<string, string | undefined>;
   const kind: MediaKind = MEDIA_KINDS.find((k) => k === query.kind) ?? 'uploads';
-  const beforeRaw = query.before;
-  const before = beforeRaw && /^\d+$/.test(beforeRaw) ? Number(beforeRaw) : null;
+  const before = parseSerialId(query.before);
   const limitRaw = Number(query.limit);
   const limit = Math.min(Math.max(Number.isFinite(limitRaw) && limitRaw > 0 ? limitRaw : DEFAULT_LIMIT, 1), MAX_LIMIT);
   const conversationId = query.conversationId || null;
