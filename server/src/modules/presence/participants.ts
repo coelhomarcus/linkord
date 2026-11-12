@@ -144,7 +144,9 @@ export function publicParticipant(p: Participant): PublicParticipant {
  * means previous call state no longer applies. */
 export function setCallConversationId(p: Participant, conversationId: string | null): void {
   const wasHidden = hiddenFromPeers(p);
+  const previous = p.callConversationId;
   p.callConversationId = conversationId;
+  if (previous && previous !== conversationId) onCallLeft?.(p, previous);
   p.micActivated = false;
   p.micStarting = conversationId !== null && p.reportsMicStarting;
   // a starting mic is not muted unless its client says so; older tabs still read the pair as muted
@@ -305,6 +307,14 @@ export function visiblePresenceOf(userId: string): VisiblePresence | null {
   return { status: ownEffectiveStatus(userId) as VisibleStatus, customStatus: getAccountStatus(userId).customStatus };
 }
 
+/** Hears that a connection is no longer in a call it was in (it left, moved, was removed, or its
+ * grace ran out), so its media connection can be closed too: the socket state alone leaves it
+ * listening. Injected, like the presence store, to keep this module free of LiveKit. */
+let onCallLeft: ((p: Participant, conversationId: string) => void) | null = null;
+export function setCallLeftHook(fn: ((p: Participant, conversationId: string) => void) | null): void {
+  onCallLeft = fn;
+}
+
 /** The call module hears about a connection that is actually gone, not one sitting in the reconnect grace window. */
 let onParticipantRemoved: ((p: Participant) => void) | null = null;
 export function setParticipantRemovedHook(fn: (p: Participant) => void): void {
@@ -319,6 +329,7 @@ export function removeParticipant(p: Participant): void {
   restoredGhostIds.delete(p.id);
   forgetCallPresence(p.id);
   onParticipantRemoved?.(p);
+  if (p.callConversationId) onCallLeft?.(p, p.callConversationId);
   if (wasHidden) sendToUser(p.userId, { t: 'participant-left', id: p.id });
   else broadcastToKnownPeers(p.userId, { t: 'participant-left', id: p.id });
   // only here (not handleClose) to respect the same grace window as

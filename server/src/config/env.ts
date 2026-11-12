@@ -165,10 +165,11 @@ const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET || '';
 // prefix for each call's LiveKit room name (see
 // integrations/livekit/livekit.ts) — one room per voice channel or DM, not a single shared one.
 const LIVEKIT_ROOM_NAME = process.env.LIVEKIT_ROOM_NAME || 'linkord-room';
-// A token only gates ENTERING a room; LiveKit can't recall one already issued,
-// so a short life bounds how long a removed member could still reconnect with
-// an old token (removal also evicts live connections, see evictFromCall).
-const LIVEKIT_TOKEN_TTL_SECONDS = Number(process.env.LIVEKIT_TOKEN_TTL_SECONDS || 300);
+// A token only gates ENTERING a room and the client uses it the moment it arrives;
+// LiveKit can't recall one already issued, so a short life bounds how long a
+// removed member could still reconnect with it (the call room sweep in
+// modules/calls/callRoomSync.ts removes whoever does).
+const LIVEKIT_TOKEN_TTL_SECONDS = Number(process.env.LIVEKIT_TOKEN_TTL_SECONDS || 60);
 
 // KLIPY (GIFs). Their terms want API calls made from the user's browser, so
 // this key is handed to signed-in clients (modules/gifs) rather than used here;
