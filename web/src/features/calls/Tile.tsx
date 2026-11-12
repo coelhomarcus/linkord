@@ -6,6 +6,7 @@ import { ConnectionQuality } from 'livekit-client';
 
 import { useRoom } from '@/state/RoomContext';
 import { useParticipantMedia, useAttachTrack, useIsSpeaking, useConnectionQuality, useWatchScreenShare } from './useLiveKitTrack';
+import { participantMicMuted, useOwnMic } from './micState';
 import { useMuteForMe } from './useMuteForMe';
 import { useTileSizing } from './useTileSizing';
 import { TileMenuButton } from './TileMenuButton';
@@ -48,6 +49,10 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
   const isDeafened = isMine ? deafened : (participant?.deafened ?? false);
 
   const media = useParticipantMedia(participantId);
+  const myMic = useOwnMic();
+  // someone else's mic before LiveKit has their track comes from the server's
+  // mirror, which knows it is still starting rather than muted
+  const micMuted = isMine ? myMic.muted : media.micActivated || !participant ? media.micMuted : participantMicMuted(participant);
   const isSpeaking = useIsSpeaking(participantId);
   const connectionQuality = useConnectionQuality(participantId);
   const { hasAudio: hasMutableAudio, muted: mutedForMe, toggleMute: toggleMuteForMe } = useMuteForMe(participantId, kind, isMine);
@@ -200,7 +205,7 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
         {isDeafened ? (
           <SpeakerSlashIcon size={16} weight="fill" className="flex-none text-red" />
         ) : (
-          kind !== 'screen' && media.micMuted && (
+          kind !== 'screen' && micMuted && (
             <MicrophoneSlashIcon size={16} weight="fill" className="flex-none text-red" />
           )
         )}

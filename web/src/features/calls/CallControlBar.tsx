@@ -6,7 +6,7 @@ import { iconWeight } from '@/shared/ui/icons';
 import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { useRoom } from '../../state/RoomContext';
 import type { MicProblem } from '@/state/roomReducer';
-import { useParticipantMedia } from './useLiveKitTrack';
+import { useOwnMic } from './micState';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
 import { CallSettingsMenu } from './CallSettingsMenu';
 import { CameraQuickMenu, MicQuickMenu, ScreenShareQuickMenu, SpeakerQuickMenu } from './CallDeviceMenus';
@@ -47,7 +47,7 @@ interface CallControlBarProps {
 export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(function CallControlBar({ hudVisible = true }, ref) {
   const { t } = useTranslation('calls');
   const {
-    state, dispatch, startCamera, stopCamera, startSharing, stopSharing, activateMic, toggleMicMuted, deafened, toggleDeafened,
+    state, dispatch, startCamera, stopCamera, startSharing, stopSharing, activateMic, toggleMicMuted, deafened, toggleDeafened, preferMuted, setPreferMuted,
     leaveCall, reconnecting, isCallFullscreen, toggleCallFullscreen,
     activeCallConversationId, conversations, servers,
   } = useRoom();
@@ -60,16 +60,16 @@ export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(fu
   const canUseSoundboard = callChannel
     ? callChannel.permissions === undefined || hasPermission(callChannel.permissions, PERMISSIONS.USE_SOUNDBOARD)
     : callConversation?.type === 'direct' && hasSoundboards;
-  const myMedia = useParticipantMedia(state.me.id ?? '');
+  const myMic = useOwnMic();
   const cameraOn = state.me.cameraOn;
   const sharing = state.me.sharing;
-  const micProblem = myMedia.micActivated ? null : state.micProblem;
+  const micProblem = myMic.activated ? null : state.micProblem;
   // Dismissing hides this occurrence only: once the problem clears, the next
   // one (a later call, the mic unplugged again) has to show again.
   const [dismissedMicProblem, setDismissedMicProblem] = useState<MicProblem>(null);
   if (!micProblem && dismissedMicProblem) setDismissedMicProblem(null);
   const { canSpeak, canStream } = useCallPublishRights();
-  const micLabel = !canSpeak ? t('controls.noSpeakPermission') : micProblem ? t(MIC_PROBLEM_LABEL_KEY[micProblem]) : !myMedia.micActivated ? t('controls.micActivate') : myMedia.micMuted ? t('controls.micUnmute') : t('controls.micMute');
+  const micLabel = !canSpeak ? t('controls.noSpeakPermission') : micProblem ? t(MIC_PROBLEM_LABEL_KEY[micProblem]) : !myMic.activated && !myMic.starting ? t('controls.micActivate') : myMic.muted ? t('controls.micUnmute') : t('controls.micMute');
   const cameraLabel = !canStream ? t('controls.noStreamPermission') : cameraOn ? t('controls.cameraOff') : t('controls.cameraOn');
   const shareLabel = !canStream ? t('controls.noStreamPermission') : sharing ? t('controls.shareStop') : t('controls.shareStart');
 
@@ -103,12 +103,16 @@ export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(fu
         <div className="relative">
           <Tooltip>
             <TooltipTrigger
-              onClick={() => { if (canSpeak) void (myMedia.micActivated ? toggleMicMuted() : activateMic()); }}
+              onClick={() => {
+                if (!canSpeak) return;
+                if (myMic.starting) setPreferMuted(!preferMuted);
+                else void (myMic.activated ? toggleMicMuted() : activateMic());
+              }}
               aria-label={micLabel}
               aria-disabled={!canSpeak || undefined}
-              className={cn(BAR_BUTTON, 'relative', !canSpeak ? BAR_BUTTON_LOCKED : myMedia.micMuted || micProblem ? BAR_BUTTON_RED : BAR_BUTTON_NEUTRAL)}
+              className={cn(BAR_BUTTON, 'relative', !canSpeak ? BAR_BUTTON_LOCKED : myMic.muted || micProblem ? BAR_BUTTON_RED : BAR_BUTTON_NEUTRAL)}
             >
-              {myMedia.micMuted || !canSpeak ? <MicrophoneSlashIcon size="100%" weight={iconWeight(true)} className={BAR_ICON} /> : <MicrophoneIcon size="100%" className={BAR_ICON} />}
+              {myMic.muted || !canSpeak ? <MicrophoneSlashIcon size="100%" weight={iconWeight(true)} className={BAR_ICON} /> : <MicrophoneIcon size="100%" className={BAR_ICON} />}
               {micProblem && canSpeak && <span aria-hidden className="absolute right-0.5 top-0.5 h-2.5 w-2.5 rounded-full border-2 border-black bg-red" />}
             </TooltipTrigger>
             <TooltipContent>{micLabel}</TooltipContent>

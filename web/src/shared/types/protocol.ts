@@ -17,6 +17,8 @@ export interface Participant {
   callConversationId: string | null;
   micActivated: boolean;
   micMuted: boolean;
+  /** Joined a call and the mic is not settled yet (protocol 18; absent from an older server). */
+  micStarting?: boolean;
   cameraOn: boolean;
   sharing: boolean;
   speaking: boolean;
@@ -27,7 +29,7 @@ export type ReactionEmoji = string;
 /** Wire protocol version this build speaks; the server refuses older ones
  * (client_outdated). Keep in sync with server/src/realtime/protocolVersion.ts
  * — version 10 adds presence status. */
-export const PROTOCOL_VERSION = 17;
+export const PROTOCOL_VERSION = 18;
 
 /** Mirrors server/src/modules/presence/userStatus.ts. */
 export type PresenceStatus = 'online' | 'idle' | 'dnd' | 'invisible';
@@ -299,7 +301,7 @@ export type ClientMessage =
   // this tab stopped (or started again) being used; feeds automatic idle
   | { t: 'presence-activity'; idle: boolean }
   | { t: 'deafened'; value: boolean }
-  | { t: 'mic-state'; activated: boolean; muted: boolean }
+  | { t: 'mic-state'; activated: boolean; muted: boolean; starting?: boolean }
   | { t: 'camera'; on: boolean }
   | { t: 'screen-share'; on: boolean }
   | { t: 'speaking'; value: boolean }

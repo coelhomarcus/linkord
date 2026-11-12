@@ -55,6 +55,8 @@ export interface RoomContextValue {
   /** Mute the next join even before a LiveKit mic track exists. */
   preferMuted: boolean;
   setPreferMuted: (muted: boolean) => void;
+  /** A join's mic is still being opened; see useOwnMic. */
+  micStarting: boolean;
   reconnecting: boolean;
   livekitRoom: Room;
   notifyActiveView: (view: ChatView) => void;

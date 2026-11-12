@@ -61,6 +61,25 @@ export function useCallLifecycle(deps: CallLifecycleDeps) {
     setPreferMutedState(muted);
   }, []);
 
+  // From a call token until its mic settles; each start gets its own number so
+  // an earlier join that finishes late cannot end a newer one's start.
+  const [micStarting, setMicStarting] = useState(false);
+  const micStartingRef = useRef(false);
+  const micStartSeqRef = useRef(0);
+  const reportMicRef = useRef<() => void>(() => {});
+  const startMic = useCallback((): number => {
+    micStartingRef.current = true;
+    setMicStarting(true);
+    sendWs({ t: 'mic-state', activated: false, muted: preferMutedRef.current || deafenedRef.current, starting: true });
+    return ++micStartSeqRef.current;
+  }, [sendWs]);
+  const settleMic = useCallback((seq: number) => {
+    if (seq !== micStartSeqRef.current || !micStartingRef.current) return;
+    micStartingRef.current = false;
+    setMicStarting(false);
+    reportMicRef.current();
+  }, []);
+
   // LiveKit retries the connection on its own on a network hiccup — this just
   // surfaces that it's happening, distinct from RoomEvent.Disconnected below
   // (which means the retry gave up, or we hung up on purpose).
@@ -163,12 +182,17 @@ export function useCallLifecycle(deps: CallLifecycleDeps) {
   const onCallToken = useCallback((m: { conversationId: string; livekitUrl: string; livekitToken: string }) => {
     if (m.conversationId !== pendingCallConversationIdRef.current) return;
     if (activeCallConversationIdRef.current === m.conversationId && livekitRoom.state === ConnectionState.Connected) return;
+    const micStart = startMic();
     const connect = async () => {
-      if (switchingRef.current) await switchingRef.current;
-      if (pendingCallConversationIdRef.current !== m.conversationId) return;
-      await livekitRoom.connect(m.livekitUrl, m.livekitToken);
-      await activateMic();
-      if (preferMutedRef.current || deafenedRef.current) await setMicMuted(true);
+      try {
+        if (switchingRef.current) await switchingRef.current;
+        if (pendingCallConversationIdRef.current !== m.conversationId) return;
+        await livekitRoom.connect(m.livekitUrl, m.livekitToken);
+        await activateMic();
+        if (preferMutedRef.current || deafenedRef.current) await setMicMuted(true);
+      } finally {
+        settleMic(micStart);
+      }
       if (videoAfterConnectRef.current) {
         videoAfterConnectRef.current = false;
         await startCamera();
@@ -191,7 +215,7 @@ export function useCallLifecycle(deps: CallLifecycleDeps) {
         dispatch({ type: 'SET_CALL_JOIN_ERROR', error: { conversationId: m.conversationId, message: i18n.t('calls:errors.joinCall') } });
       });
     setActiveCallConversationId(m.conversationId);
-  }, [livekitRoom, activateMic, setMicMuted, startCamera, setActiveCallConversationId, sendWs, dispatch]);
+  }, [livekitRoom, activateMic, setMicMuted, startCamera, setActiveCallConversationId, sendWs, dispatch, startMic, settleMic]);
 
   /** If a conversation currently in a call gets deleted out from under us
    * (admin action), leave it — same as clicking "leave call" ourselves. */
@@ -262,7 +286,7 @@ export function useCallLifecycle(deps: CallLifecycleDeps) {
     function reportMic() {
       const pub = livekitRoom.localParticipant.getTrackPublication(Track.Source.Microphone);
       setLocalMic({ track: pub?.track ?? null, muted: pub ? pub.isMuted : true });
-      sendWs({ t: 'mic-state', activated: !!pub, muted: pub ? pub.isMuted : true });
+      sendWs({ t: 'mic-state', activated: !!pub, muted: pub ? pub.isMuted : true, starting: micStartingRef.current });
     }
     function reportCamera() {
       const publication = livekitRoom.localParticipant.getTrackPublication(Track.Source.Camera);
@@ -296,6 +320,7 @@ export function useCallLifecycle(deps: CallLifecycleDeps) {
     livekitRoom.on(RoomEvent.TrackUnmuted, onMuteChange);
     livekitRoom.on(RoomEvent.Reconnected, reportLocalMedia);
     syncLocalMediaRef.current = reportLocalMedia;
+    reportMicRef.current = reportMic;
     return () => {
       livekitRoom.off(RoomEvent.LocalTrackPublished, onPublishChange);
       livekitRoom.off(RoomEvent.LocalTrackUnpublished, onPublishChange);
@@ -313,7 +338,7 @@ export function useCallLifecycle(deps: CallLifecycleDeps) {
   }, [isSpeakingLocal, sendWs]);
 
   return {
-    audioUnlocked, deafened, toggleDeafened, preferMuted, setPreferMuted, reconnecting,
+    audioUnlocked, deafened, toggleDeafened, preferMuted, setPreferMuted, micStarting, reconnecting,
     activeCallConversationId, joinCall, leaveCall, armDmMedia, dropPendingCall, kickFromCall, moveToCall,
     onCallToken, onCallMoved, onConversationDeleted, onCallJoinRejected, syncLocalMedia, reconcileAfterReconnect,
   };

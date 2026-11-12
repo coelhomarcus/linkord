@@ -6,7 +6,8 @@ import { useTranslation } from 'react-i18next';
 import { Avatar } from '@/shared/Avatar';
 import { cn } from '@/shared/lib/utils';
 import { useRoom } from '@/state/RoomContext';
-import { useIsSpeaking, useParticipantMedia } from './useLiveKitTrack';
+import { useIsSpeaking } from './useLiveKitTrack';
+import { participantMicMuted, useOwnMic } from './micState';
 import { tileKey } from './tileTypes';
 import { TileMenuButton } from './TileMenuButton';
 
@@ -31,13 +32,13 @@ interface DmCallAvatarProps {
 export function DmCallAvatar({ peer, isMine, size, loading = false }: DmCallAvatarProps) {
   const { t } = useTranslation('calls');
   const { state, deafened, openTileMenu } = useRoom();
-  const media = useParticipantMedia(peer.id);
+  const myMic = useOwnMic();
   const speaking = useIsSpeaking(peer.id);
   const participant = isMine ? null : state.participants.get(peer.id);
   // Your own mic is read from LiveKit, like the dock; someone else's comes from
   // the server's mirror, which is already right before their LiveKit track lands.
   const isDeafened = isMine ? deafened : (participant?.deafened ?? false);
-  const isMuted = isMine ? !media.micActivated || media.micMuted : !!participant && (!participant.micActivated || participant.micMuted);
+  const isMuted = isMine ? myMic.muted : !!participant && participantMicMuted(participant);
   const status = isDeafened ? t('dm.status.deafened') : isMuted ? t('dm.status.muted') : null;
   const badgeSize = Math.max(14, Math.round(size * 0.3));
 

@@ -31,10 +31,15 @@
 // highlight a group mention, so the minimum stays at 7.
 // Version 17 adds `conversation-mark-all-read` and `server-mark-all-read` from the client, answered with
 // the existing `conversation-read`. An old tab never sends them, so the minimum stays at 7.
+// Version 18 adds `micStarting` on participants and an optional `starting` in `mic-state`: a call's mic
+// reads as starting, not muted, until the client reports it settled. Only a version 18 tab is put in
+// that state (an older one would never clear it), and an old tab reads the participant as muted
+// while it lasts, as before, so the minimum stays at 7.
 // Raising MIN_PROTOCOL_VERSION also drops open tabs out of their calls (they are refused and
 // disconnect), so keep it for changes an old client cannot tolerate.
-export const PROTOCOL_VERSION = 17;
+export const PROTOCOL_VERSION = 18;
 export const MIN_PROTOCOL_VERSION = 7;
+export const MIC_STARTING_PROTOCOL_VERSION = 18;
 
 export function isClientCompatible(version: unknown): boolean {
   return typeof version === 'number' && Number.isInteger(version) && version >= MIN_PROTOCOL_VERSION;

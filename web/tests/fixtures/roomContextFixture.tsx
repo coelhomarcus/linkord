@@ -25,6 +25,7 @@ export function createFakeRoomContextValue(overrides: Partial<RoomContextValue> 
     deafened: false,
     toggleDeafened: noop,
     preferMuted: false,
+    micStarting: false,
     setPreferMuted: noop,
     reconnecting: false,
     livekitRoom: new Room(),
