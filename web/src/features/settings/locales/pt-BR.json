@@ -53,7 +53,7 @@
   "search": {
     "accountInfo": {
       "title": "Informações da conta",
-      "keywords": "nome de usuário, username, nome de exibição, admin, conta"
+      "keywords": "nome de usuário, username, trocar nome de usuário, nome de exibição, admin, conta"
     },
     "email": {
       "title": "E-mail",
@@ -142,7 +142,23 @@
   },
   "account": {
     "username": {
-      "label": "Nome de usuário"
+      "label": "Nome de usuário",
+      "description": "Usado para entrar na conta e para te mencionarem com @.",
+      "edit": "Editar nome de usuário",
+      "newLabel": "Novo nome de usuário",
+      "passwordLabel": "Senha atual",
+      "rules": "De {{min}} a {{max}} caracteres: letras, números, . _ -",
+      "checking": "Verificando disponibilidade…",
+      "available": "{{username}} está disponível.",
+      "checkFailed": "Não foi possível verificar agora. O nome será conferido ao salvar.",
+      "sessionsNote": "Você continua conectado em todos os dispositivos. No próximo login, entre com o novo nome.",
+      "cancel": "Cancelar",
+      "barLabel": "Nome de usuário",
+      "errors": {
+        "taken": "Esse nome de usuário já está em uso.",
+        "invalid": "Use de {{min}} a {{max}} caracteres: letras, números, . _ -",
+        "saveFailed": "Não foi possível alterar o nome de usuário. Tente de novo."
+      }
     },
     "admin": "Admin",
     "displayName": {

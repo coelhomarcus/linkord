@@ -164,6 +164,22 @@ export function resetPassword(identifier: RecoveryIdentifier, code: string, pass
   return apiFetch('/api/auth/recovery/reset', { method: 'POST', body: JSON.stringify({ ...identifierPayload(identifier), code, password }) });
 }
 
+export interface UsernameAvailability {
+  username: string;
+  /** free for this account: nobody else has it in any letter case (the account's own name is free) */
+  available: boolean;
+  /** exactly the account's current name, so there is nothing to change */
+  current: boolean;
+}
+
+export function checkUsernameAvailability(username: string, signal?: AbortSignal): Promise<UsernameAvailability> {
+  return apiFetch(`/api/auth/username/availability?username=${encodeURIComponent(username)}`, { signal });
+}
+
+export function changeUsername(username: string, password: string): Promise<{ user: ApiUser }> {
+  return apiFetch('/api/auth/username', { method: 'POST', body: JSON.stringify({ username, password }) });
+}
+
 export function requestEmailChange(email: string, password: string): Promise<{ ok: true }> {
   return apiFetch('/api/auth/email/change/request', { method: 'POST', body: JSON.stringify({ email, password }) });
 }

@@ -53,7 +53,7 @@
   "search": {
     "accountInfo": {
       "title": "Account information",
-      "keywords": "username, display name, admin, account"
+      "keywords": "username, change username, display name, admin, account"
     },
     "email": {
       "title": "Email",
@@ -142,7 +142,23 @@
   },
   "account": {
     "username": {
-      "label": "Username"
+      "label": "Username",
+      "description": "Used to sign in and for people to mention you with @.",
+      "edit": "Edit username",
+      "newLabel": "New username",
+      "passwordLabel": "Current password",
+      "rules": "{{min}} to {{max}} characters: letters, numbers, . _ -",
+      "checking": "Checking availability…",
+      "available": "{{username}} is available.",
+      "checkFailed": "Couldn't check right now. The name will be checked when you save.",
+      "sessionsNote": "You stay signed in on every device. Next time you sign in, use the new name.",
+      "cancel": "Cancel",
+      "barLabel": "Username",
+      "errors": {
+        "taken": "That username is already taken.",
+        "invalid": "Use {{min}} to {{max}} characters: letters, numbers, . _ -",
+        "saveFailed": "Couldn't change the username. Try again."
+      }
     },
     "admin": "Admin",
     "displayName": {

@@ -178,6 +178,16 @@ function broadcastParticipantUpdate(p: Participant): void {
   else broadcastToKnownPeers(p.userId, msg);
 }
 
+/** After the account's username changed: every live connection of it carries the new name, so @mention
+ * suggestions and member lists of people online with it stop offering the old one. */
+export function renameParticipants(userId: string, username: string): void {
+  for (const p of participants.values()) {
+    if (p.userId !== userId || p.name === username) continue;
+    p.name = username;
+    broadcastParticipantUpdate(p);
+  }
+}
+
 /** `participant-joined` for a new or resumed connection, to everyone but itself. */
 export function announceParticipantJoined(p: Participant): void {
   const msg = { t: 'participant-joined', participant: publicParticipant(p) };
@@ -405,9 +415,10 @@ export function join(socket: AppSocket, msg: JoinMessage): { participant: Partic
   return { participant: p, justCameOnline: !wasOnline };
 }
 
-/** Avatar, avatar background color, and displayName are all editable —
- * `name` stays the account's immutable username (used for @mentions/login,
- * never shown as-is once displayName exists). An empty/whitespace-only
+/** Avatar, avatar background color, and displayName are all editable here —
+ * `name` is the account's username (used for @mentions/login, never shown
+ * as-is once displayName exists), changed only by the password-confirmed
+ * rename in settings (renameParticipants). An empty/whitespace-only
  * displayName resets back to the username, same idea as avatarColor
  * falling back to the default on an invalid value. Persisted to survive
  * reconnects/other tabs. */

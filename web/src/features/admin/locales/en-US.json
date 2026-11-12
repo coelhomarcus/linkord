@@ -229,6 +229,7 @@
     "retention.sweep": "Retention applied",
     "account.two_factor_enable": "Two-step verification turned on",
     "account.two_factor_disable": "Two-step verification turned off",
+    "account.username_change": "Username changed",
     "account.password_change": "Password changed",
     "account.password_reset": "Password reset by email",
     "account.session_end": "Session ended by the account",

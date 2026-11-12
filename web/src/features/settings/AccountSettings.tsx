@@ -1,10 +1,11 @@
-import { ShieldCheckIcon, SignOutIcon } from '@phosphor-icons/react';
+import { SignOutIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '@/state/AuthContext';
 import { useRoom } from '@/state/RoomContext';
 import { Button } from '@/shared/ui/primitives/button';
 import { EmailSettings } from './EmailSettings';
+import { UsernameSettings } from './UsernameSettings';
 import { SETTINGS_ACTION_BUTTON, SettingsRow, SettingsSection, SettingsSections } from '@/shared/ui/settings-layout';
 
 export function AccountSettings({ onOpenProfile }: { onOpenProfile: (userId: string) => void }) {
@@ -16,14 +17,7 @@ export function AccountSettings({ onOpenProfile }: { onOpenProfile: (userId: str
   return (
     <SettingsSections>
       <SettingsSection id="account-info" title={t('catalog.sections.accountInfo')}>
-        <SettingsRow label={t('account.username.label')}>
-          {state.me.role === 'admin' && (
-            <span className="flex w-fit items-center gap-1 rounded-sm bg-primary/15 px-1.5 py-0.5 text-caption font-medium text-accent-text">
-              <ShieldCheckIcon size={16} aria-hidden /> {t('account.admin')}
-            </span>
-          )}
-          <span className="select-text break-all text-body font-medium text-text-primary">{state.me.name}</span>
-        </SettingsRow>
+        <UsernameSettings />
         <SettingsRow label={t('account.displayName.label')}>
           <span className="break-words text-body font-medium text-text-primary">{state.me.displayName}</span>
           <Button type="button" variant="secondary" size="lg" className={SETTINGS_ACTION_BUTTON} onClick={() => { if (state.me.userId) onOpenProfile(state.me.userId); }}>

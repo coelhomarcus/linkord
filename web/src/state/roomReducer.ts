@@ -88,6 +88,7 @@ export type RoomAction =
   | { type: 'SET_ROOM_ERROR'; message: string | null }
   | { type: 'SET_LOCAL_SHARING'; sharing: boolean }
   | { type: 'SET_ROLE'; role: 'user' | 'admin' }
+  | { type: 'SET_LOCAL_USERNAME'; name: string }
   | { type: 'SET_CLIENT_OUTDATED' }
   | { type: 'SET_LOCAL_CAMERA'; on: boolean }
   // `origin` records whether a person chose this focus themselves — an
@@ -147,10 +148,13 @@ export function roomReducer(state: RoomState, action: RoomAction): RoomState {
       return { ...state, participants };
     }
     case 'PARTICIPANT_UPDATED': {
-      if (!state.participants.has(action.participant.id)) return state;
+      // a rename made in another tab of this account reaches this one as an update of its own connection
+      const renamed = action.participant.userId === state.me.userId && action.participant.name !== state.me.name;
+      const me = renamed ? { ...state.me, name: action.participant.name } : state.me;
+      if (!state.participants.has(action.participant.id)) return renamed ? { ...state, me } : state;
       const participants = new Map(state.participants);
       participants.set(action.participant.id, action.participant);
-      return { ...state, participants };
+      return { ...state, me, participants };
     }
     case 'PARTICIPANT_LEFT': {
       if (!state.participants.has(action.id)) return state;
@@ -216,6 +220,8 @@ export function roomReducer(state: RoomState, action: RoomAction): RoomState {
       return { ...state, clientOutdated: true };
     case 'SET_ROLE':
       return { ...state, me: { ...state.me, role: action.role } };
+    case 'SET_LOCAL_USERNAME':
+      return state.me.name === action.name ? state : { ...state, me: { ...state.me, name: action.name } };
     case 'SET_LOCAL_SHARING':
       return {
         ...state,

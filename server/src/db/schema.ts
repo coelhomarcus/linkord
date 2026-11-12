@@ -10,8 +10,8 @@ import { messageSearchVector } from './textSearch.js';
 // written from the app, so there's no fromDriver/toDriver to define.
 const tsvector = customType<{ data: string }>({ dataType: () => 'tsvector' });
 
-/** An account. `username` is immutable and the room's unique login/mention
- * handle. `displayName` is the free-form, non-unique name shown everywhere
+/** An account. `username` is the room's unique login/mention handle,
+ * changed only by the password-confirmed rename in settings. `displayName` is the free-form, non-unique name shown everywhere
  * else — '' means "not set", every read site falls back to `username` (see
  * auth/users.ts#resolveDisplayName). */
 export const users = pgTable('users', {

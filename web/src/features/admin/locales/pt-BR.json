@@ -229,6 +229,7 @@
     "retention.sweep": "Retenção aplicada",
     "account.two_factor_enable": "Verificação em duas etapas ativada",
     "account.two_factor_disable": "Verificação em duas etapas desativada",
+    "account.username_change": "Nome de usuário alterado",
     "account.password_change": "Senha alterada",
     "account.password_reset": "Senha redefinida por e-mail",
     "account.session_end": "Sessão encerrada pela conta",
