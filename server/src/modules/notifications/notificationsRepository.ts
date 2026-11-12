@@ -124,6 +124,15 @@ export async function listNotifications(userId: string, cursorRaw?: string): Pro
   };
 }
 
+/** Unread mentions per conversation: what a muted channel or DM still shows as its badge. */
+export async function unreadMentionCounts(userId: string): Promise<Record<string, number>> {
+  const rows = await db.select({ conversationId: messages.conversationId, n: sql<number>`count(*)::int` })
+    .from(notifications).innerJoin(messages, eq(messages.id, notifications.messageId))
+    .where(and(eq(notifications.recipientId, userId), eq(notifications.kind, 'mention'), isNull(notifications.readAt)))
+    .groupBy(messages.conversationId);
+  return Object.fromEntries(rows.map((row) => [row.conversationId, row.n]));
+}
+
 export async function countUnread(userId: string): Promise<number> {
   const [row] = await db.select({ n: sql<number>`count(*)::int` }).from(notifications)
     .where(and(eq(notifications.recipientId, userId), isNull(notifications.readAt)));

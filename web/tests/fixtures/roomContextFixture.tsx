@@ -6,6 +6,7 @@ import { RoomContext } from '@/state/RoomContext';
 import type { RoomContextValue } from '@/state/RoomContext';
 import { initialRoomState } from '@/state/roomReducer';
 import { DEFAULT_MAX_ATTACHMENT_BYTES } from '@/shared/types/protocol';
+import { DEFAULT_POLICY, EMPTY_NOTIFICATION_SETTINGS } from '@/features/notifications/notificationSettings';
 
 export function createFakeRoomContextValue(overrides: Partial<RoomContextValue> = {}): RoomContextValue {
   const noop = () => {};
@@ -94,6 +95,12 @@ export function createFakeRoomContextValue(overrides: Partial<RoomContextValue> 
     loadingOlderByConversation: new Set(),
     unreadByConversation: new Map(),
     unreadStartByConversation: new Map(),
+    mentionsByConversation: new Map(),
+    // tests that only set unread counts see them as badges, as nothing is muted
+    badgeByConversation: overrides.unreadByConversation ?? new Map(),
+    notificationSettings: EMPTY_NOTIFICATION_SETTINGS,
+    notificationPolicyFor: () => DEFAULT_POLICY,
+    updateNotificationSetting: asyncNoop,
     markConversationRead: noop,
     markServerRead: noop,
     typingByConversation: new Map(),

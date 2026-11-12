@@ -29,7 +29,21 @@ export type ReactionEmoji = string;
 /** Wire protocol version this build speaks; the server refuses older ones
  * (client_outdated). Keep in sync with server/src/realtime/protocolVersion.ts
  * — version 10 adds presence status. */
-export const PROTOCOL_VERSION = 18;
+export const PROTOCOL_VERSION = 19;
+
+/** One server's or one channel/DM's notification setting (protocol 19). `level` null inherits: a channel
+ * from its server, a server or a DM from "all". `mutedUntil` (ISO) is only read while `muted`, and null
+ * there means until turned off. */
+export interface NotificationSetting {
+  level: 'all' | 'mentions' | 'nothing' | null;
+  muted: boolean;
+  mutedUntil: string | null;
+}
+
+export interface NotificationSettings {
+  servers: Record<string, NotificationSetting>;
+  conversations: Record<string, NotificationSetting>;
+}
 
 /** Mirrors server/src/modules/presence/userStatus.ts. */
 export type PresenceStatus = 'online' | 'idle' | 'dnd' | 'invisible';
@@ -361,6 +375,9 @@ export type ServerMessage =
       conversations: DirectSummary[]; servers: ServerSummary[]; knownUsers: PublicUser[]; onlineUserIds: string[]; friendIds: string[];
       // conversation id → unread count (capped at 100); absent from servers before persisted unread
       unreadByConversation?: Record<string, number>;
+      // both absent from servers before protocol 19: nothing muted, and no mention counts of their own
+      notificationSettings?: NotificationSettings;
+      mentionsByConversation?: Record<string, number>;
       // the largest file this server takes; absent from servers before protocol 8
       maxAttachmentBytes?: number;
       livekitUrl: string;
@@ -423,6 +440,8 @@ export type ServerMessage =
   // payload-free: "your friends/requests/blocks changed, refetch" — the data
   // itself only ever travels over the authorized HTTP endpoints
   | { t: 'social-changed' }
+  // the account changed a setting in some tab (this one included); null is back to the default
+  | { t: 'notification-settings'; scope: 'server' | 'conversation'; id: string; setting: NotificationSetting | null }
   // the scoped snapshot re-sent when this connection's known peers change
   // (same shape the welcome carries)
   | {

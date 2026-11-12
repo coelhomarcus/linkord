@@ -15,6 +15,7 @@ import * as chat from '../modules/messages/messages.js';
 import * as conversations from '../modules/conversations/conversations.js';
 import { listForUser, getConversationForUser, unreadCountsForUser } from '../modules/conversations/conversationsRepository.js';
 import { listNotificationSettings } from '../modules/notifications/notificationSettings.js';
+import { unreadMentionCounts } from '../modules/notifications/notificationsRepository.js';
 import { listServersForUser } from '../modules/servers/serverSummaries.js';
 import { PERMISSIONS } from '../modules/servers/permissions.js';
 import { type ErrorCode } from '../http/errors.js';
@@ -131,8 +132,10 @@ async function handleJoin(socket: AppSocket, msg: JoinMessage): Promise<void> {
     conversations: conversationList,
     servers: serverList,
     unreadByConversation: await unreadCountsForUser(p.userId, [...conversationList.map((c) => c.id), ...textChannelIds]),
-    // per server and channel/DM levels and mutes (protocol 19); kept current by `notification-settings`
+    // per server and channel/DM levels and mutes (protocol 19), kept current by `notification-settings`,
+    // and the unread mentions a muted conversation still shows
     notificationSettings: await listNotificationSettings(p.userId),
+    mentionsByConversation: await unreadMentionCounts(p.userId),
     // the largest file this server takes, so the composer refuses a bigger one before uploading it
     maxAttachmentBytes: config.MAX_ATTACHMENT_BYTES,
     // tabs from before accounts lost their storage quota (protocol 7) read this; nothing counts it any more

@@ -30,6 +30,8 @@ import { useRoomSettings } from '@/features/settings/useRoomSettings';
 import { useProfileUpdate } from '@/features/profile/useProfileUpdate';
 import { useOwnStatus } from '@/features/status/useOwnStatus';
 import { useIdleReporter } from '@/features/status/useIdleReporter';
+import { useNotificationSettings } from '@/features/notifications/useNotificationSettings';
+import { badgeCounts, policyAlerts } from '@/features/notifications/notificationSettings';
 import { preloadSounds } from '@/shared/sounds';
 import { setNotificationClickHandler } from '@/shared/notifications';
 import { DEFAULT_MAX_ATTACHMENT_BYTES } from '@/shared/types/protocol';
@@ -131,6 +133,12 @@ export function RoomProvider({ children }: { children: ReactNode }) {
   allConversationsRef.current = allConversations;
   const presence = usePresence();
   const typingIndicator = useTypingIndicator(sendWs, myUserIdRef);
+  const notificationSettings = useNotificationSettings();
+  const { policyNow, onWelcome: onNotificationSettingsWelcome, onChanged: onNotificationSettingsChanged } = notificationSettings;
+  const alertsFor = useCallback((conversationId: string, mentioned: boolean) => {
+    const serverId = allConversationsRef.current.find((c) => c.id === conversationId)?.serverId ?? null;
+    return policyAlerts(policyNow({ id: conversationId, serverId }), mentioned);
+  }, [policyNow]);
   const chatMessages = useChatMessages({
     sendWs,
     activeConversationIdRef: conversationsList.activeConversationIdRef,
@@ -142,7 +150,14 @@ export function RoomProvider({ children }: { children: ReactNode }) {
     serversRef: serversList.serversRef,
     activeViewRef,
     clearTypingEntry: typingIndicator.clearTypingEntry,
+    alertsFor,
   });
+  // what rows, server icons and tabs count: a muted conversation keeps only its mentions
+  const { policyFor } = notificationSettings;
+  const badgeByConversation = useMemo(
+    () => badgeCounts(allConversations, chatMessages.unreadByConversation, chatMessages.mentionsByConversation, policyFor),
+    [allConversations, chatMessages.unreadByConversation, chatMessages.mentionsByConversation, policyFor],
+  );
   useEffect(() => { markActiveSeenRef.current = chatMessages.markActiveSeen; }, [chatMessages.markActiveSeen]);
   const messageSearch = useMessageSearch(sendWs);
   const [maxAttachmentBytes, setMaxAttachmentBytes] = useState(DEFAULT_MAX_ATTACHMENT_BYTES);
@@ -231,7 +246,8 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         });
         conversationsList.setInitial(m.conversations ?? []);
         serversList.setInitial(m.servers ?? []);
-        chatMessages.onWelcome(m.unreadByConversation);
+        chatMessages.onWelcome(m.unreadByConversation, m.mentionsByConversation);
+        onNotificationSettingsWelcome(m.notificationSettings);
         presence.setInitial(m.knownUsers, m.onlineUserIds, m.friendIds, m.presence);
         onStatusSnapshot(m.myStatus);
         onIdleWelcome();
@@ -404,6 +420,9 @@ export function RoomProvider({ children }: { children: ReactNode }) {
       case 'social-changed':
         setSocialRevision((n) => n + 1);
         break;
+      case 'notification-settings':
+        onNotificationSettingsChanged(m);
+        break;
       case 'presence-sync':
         dispatch({ type: 'PARTICIPANTS_SYNC', participants: m.participants });
         presence.setInitial(m.knownUsers, m.onlineUserIds, m.friendIds, m.presence);
@@ -464,7 +483,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
   }, [
     dispatch, conversationsList, serversList, presence, openConversation, sendWs, callLifecycle, dmCall,
     messageSearch, chatMessages, typingIndicator, disconnectIntentionally, profileUpdate, soundboardEvents, livekitRoom,
-    onStatusSnapshot, onMyStatus, onPresenceResult, onIdleWelcome, refreshAuth,
+    onStatusSnapshot, onMyStatus, onPresenceResult, onIdleWelcome, refreshAuth, onNotificationSettingsWelcome, onNotificationSettingsChanged,
   ]);
 
   const { retryConnection } = useSocketConnection({ socketRef, intentionalCloseRef, sendWs, dispatch, refreshAuth, onMessage: handleServerMessage });
@@ -524,6 +543,9 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         windowGenerationByConversation: chatMessages.windowGenerationByConversation,
         unreadByConversation: chatMessages.unreadByConversation,
         unreadStartByConversation: chatMessages.unreadStartByConversation,
+        mentionsByConversation: chatMessages.mentionsByConversation, badgeByConversation,
+        notificationSettings: notificationSettings.settings, notificationPolicyFor: policyFor,
+        updateNotificationSetting: notificationSettings.update,
         markConversationRead: chatMessages.markConversationRead, markServerRead: chatMessages.markServerRead,
         typingByConversation: typingIndicator.typingByConversation, sendTyping: typingIndicator.sendTyping,
         allUsers: presence.allUsers, onlineUserIds: presence.onlineUserIds, friendUserIds: presence.friendUserIds,

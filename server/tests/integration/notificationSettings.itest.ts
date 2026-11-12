@@ -7,7 +7,7 @@ import { config } from '../../src/config/env.js';
 import { conversationMembers, conversations, messages, notifications, notificationSettings, servers } from '../../src/db/schema.js';
 import { createApp } from '../../src/http/app.js';
 import { createSession } from '../../src/modules/auth/session.js';
-import { countAppBadge } from '../../src/modules/notifications/notificationsRepository.js';
+import { countAppBadge, markRead, unreadMentionCounts } from '../../src/modules/notifications/notificationsRepository.js';
 import { notificationPolicyFor, updateNotificationSetting } from '../../src/modules/notifications/notificationSettings.js';
 import { db, makeServerWithMembers, makeUser, pool } from './helpers.js';
 
@@ -140,5 +140,25 @@ describe('app badge with a muted DM (real Postgres)', () => {
     assert.equal(await countAppBadge(a.id), 1);
     await updateNotificationSetting(a.id, 'conversation', dm, { mute: false });
     assert.equal(await countAppBadge(a.id), 2);
+  });
+});
+
+describe('unreadMentionCounts (real Postgres)', () => {
+  it('counts unread mentions per conversation, for the welcome', async () => {
+    const owner = await makeUser('nm');
+    const reader = await makeUser('nm');
+    const { textChannelId } = await makeServerWithMembers(owner.id, [reader.id]);
+    const dm = await makeDirect(owner.id, reader.id);
+    const mention = async (conversationId: string) => {
+      const id = crypto.randomUUID();
+      await db.insert(notifications).values({ id, recipientId: reader.id, kind: 'mention', messageId: await post(conversationId, owner.id), dedupeKey: id });
+      return id;
+    };
+    await mention(textChannelId);
+    const read = await mention(textChannelId);
+    await mention(dm);
+    await markRead(reader.id, [read]);
+    assert.deepEqual(await unreadMentionCounts(reader.id), { [textChannelId]: 1, [dm]: 1 });
+    assert.deepEqual(await unreadMentionCounts(owner.id), {});
   });
 });

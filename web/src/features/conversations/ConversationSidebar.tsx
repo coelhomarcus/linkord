@@ -1,4 +1,4 @@
-import { PhoneIcon, PlusIcon, UsersIcon, XIcon } from '@phosphor-icons/react';
+import { BellSlashIcon, PhoneIcon, PlusIcon, UsersIcon, XIcon } from '@phosphor-icons/react';
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
@@ -29,10 +29,12 @@ function DirectRow({ conversation, active, onClick, onClose }: {
   conversation: Conversation; active: boolean; onClick: () => void; onClose: () => void;
 }) {
   const { t } = useTranslation('conversations');
-  const { state, allUsers, unreadByConversation, activeCallConversationId } = useRoom();
+  const { t: tn } = useTranslation('notifications');
+  const { state, allUsers, badgeByConversation, notificationPolicyFor, activeCallConversationId } = useRoom();
   const title = conversationTitle(conversation, state.me.userId, allUsers);
   const other = directUser(conversation, state.me.userId, allUsers);
-  const unread = unreadByConversation.get(conversation.id) ?? 0;
+  const unread = badgeByConversation.get(conversation.id) ?? 0;
+  const muted = notificationPolicyFor({ id: conversation.id }).muted;
   const status = useUserStatus(other?.id);
   const customStatus = useCustomStatus(other?.id);
   const inCall = activeCallConversationId === conversation.id;
@@ -42,7 +44,7 @@ function DirectRow({ conversation, active, onClick, onClose }: {
         type="button"
         onClick={onClick}
         data-avatar-hover
-        aria-label={unread > 0 ? t('sidebar.rowUnread', { name: title, count: unread }) : title}
+        aria-label={`${unread > 0 ? t('sidebar.rowUnread', { name: title, count: unread }) : title}${muted ? `, ${tn('preferences.muted')}` : ''}`}
         aria-current={active ? 'page' : undefined}
         className={cn(
           'relative isolate flex w-full items-center gap-3 rounded-lg px-2 text-left',
@@ -65,7 +67,10 @@ function DirectRow({ conversation, active, onClick, onClose }: {
           )}
         </span>
         <span className="min-w-0 flex-1">
-          <span className={cn('block truncate text-body', unread ? 'font-semibold' : 'font-medium')}>{title}</span>
+          <span className="flex min-w-0 items-center gap-1">
+            <span className={cn('truncate text-body', unread ? 'font-semibold' : 'font-medium', muted && !active && !unread && 'opacity-60')}>{title}</span>
+            {muted && <BellSlashIcon size={14} className="flex-none text-text-muted" aria-label={tn('preferences.muted')} role="img" />}
+          </span>
           {inCall ? (
             <span className="block truncate text-label text-green">{t('sidebar.inThisCall')}</span>
           ) : (

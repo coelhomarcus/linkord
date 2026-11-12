@@ -36,5 +36,37 @@
     "hours_other": "{{count}} hrs ago",
     "days_one": "{{count}} day ago",
     "days_other": "{{count}} days ago"
+  },
+  "preferences": {
+    "menu": "Notifications",
+    "headerButton": "Notification settings",
+    "levels": {
+      "all": "All messages",
+      "mentions": "Only @mentions",
+      "nothing": "Nothing"
+    },
+    "inherit": "Server default ({{level}})",
+    "mute": {
+      "server": "Mute server",
+      "channel": "Mute channel",
+      "direct": "Mute conversation",
+      "for15": "For 15 minutes",
+      "for60": "For 1 hour",
+      "for480": "For 8 hours",
+      "for1440": "For 24 hours",
+      "forever": "Until I turn it back on"
+    },
+    "unmute": {
+      "server": "Unmute server",
+      "channel": "Unmute channel",
+      "direct": "Unmute conversation"
+    },
+    "mutedUntil": "Muted until {{time}}",
+    "mutedForever": "Muted until you turn it back on",
+    "mutedByServer": "The server is muted",
+    "muted": "Muted",
+    "updateFailed": "Couldn't change the notifications. Try again.",
+    "mentionCount_one": "{{count}} mention",
+    "mentionCount_other": "{{count}} mentions"
   }
 }
