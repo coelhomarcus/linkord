@@ -591,14 +591,50 @@ function participantInCall(socket: AppSocket): Participant | undefined {
   return p;
 }
 
+// Media flags arrive as often as a client cares to send them and each one fans out to every known
+// peer, so a connection's flag broadcasts are coalesced: the first goes out at once, anything within
+// FLAG_UPDATE_INTERVAL_MS of the last is folded into one trailing update with the latest state.
+// Dropping them instead would leave a stale icon.
+export const FLAG_UPDATE_INTERVAL_MS = 250;
+const flagUpdates = new WeakMap<Participant, { lastSentAt: number; timer: NodeJS.Timeout | null; persist: boolean }>();
+
+function publishFlags(p: Participant, persist = false): void {
+  let state = flagUpdates.get(p);
+  if (!state) {
+    state = { lastSentAt: 0, timer: null, persist: false };
+    flagUpdates.set(p, state);
+  }
+  state.persist ||= persist;
+  if (state.timer) return;
+  const pending = state;
+  const flush = () => {
+    pending.timer = null;
+    pending.lastSentAt = Date.now();
+    const shouldPersist = pending.persist;
+    pending.persist = false;
+    // gone, or replaced by a newer connection with the same id, in the meantime
+    if (participants.get(p.id) !== p) return;
+    if (shouldPersist && p.callConversationId) persistCallPresence(p);
+    broadcastParticipantUpdate(p);
+  };
+  const wait = pending.lastSentAt + FLAG_UPDATE_INTERVAL_MS - Date.now();
+  if (wait <= 0) {
+    flush();
+    return;
+  }
+  pending.timer = setTimeout(flush, wait);
+  pending.timer.unref();
+}
+
 /** No LiveKit track equivalent for "deafened" — just a flag the client
  * announces so others can show the icon. */
 function handleDeafened(socket: AppSocket, msg: { value?: unknown }): void {
   const p = participants.get(socket.participantId ?? '');
   if (!p || p.socket !== socket) return;
-  p.deafened = !!msg.value;
-  if (p.callConversationId) persistCallPresence(p);
-  broadcastParticipantUpdate(p);
+  const deafened = !!msg.value;
+  if (p.deafened === deafened) return;
+  p.deafened = deafened;
+  publishFlags(p, true);
 }
 
 /** Self-reported mic state (see ClientMessage 'mic-state') — the server
@@ -609,24 +645,28 @@ function handleDeafened(socket: AppSocket, msg: { value?: unknown }): void {
 function handleMicState(socket: AppSocket, msg: { activated?: unknown; muted?: unknown; starting?: unknown }): void {
   const p = participantInCall(socket);
   if (!p) return;
-  p.micActivated = !!msg.activated;
-  p.micMuted = !!msg.muted;
-  p.micStarting = msg.starting === true;
-  broadcastParticipantUpdate(p);
+  const activated = !!msg.activated;
+  const muted = !!msg.muted;
+  const starting = msg.starting === true;
+  if (p.micActivated === activated && p.micMuted === muted && p.micStarting === starting) return;
+  p.micActivated = activated;
+  p.micMuted = muted;
+  p.micStarting = starting;
+  publishFlags(p);
 }
 
 function handleCamera(socket: AppSocket, msg: { on?: unknown }): void {
   const p = participantInCall(socket);
-  if (!p) return;
+  if (!p || p.cameraOn === !!msg.on) return;
   p.cameraOn = !!msg.on;
-  broadcastParticipantUpdate(p);
+  publishFlags(p);
 }
 
 function handleScreenShare(socket: AppSocket, msg: { on?: unknown }): void {
   const p = participantInCall(socket);
-  if (!p) return;
+  if (!p || p.sharing === !!msg.on) return;
   p.sharing = !!msg.on;
-  broadcastParticipantUpdate(p);
+  publishFlags(p);
 }
 
 /** Detected 100% client-side (real audio level via Web Audio, see
@@ -634,9 +674,9 @@ function handleScreenShare(socket: AppSocket, msg: { on?: unknown }): void {
  * debounced on/off transitions, not a continuous stream. */
 function handleSpeaking(socket: AppSocket, msg: { value?: unknown }): void {
   const p = participantInCall(socket);
-  if (!p) return;
+  if (!p || p.speaking === !!msg.value) return;
   p.speaking = !!msg.value;
-  broadcastParticipantUpdate(p);
+  publishFlags(p);
 }
 
 // tab closing/reloading: leaves the room immediately, without the reconnect

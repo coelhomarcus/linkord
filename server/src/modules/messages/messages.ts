@@ -1023,17 +1023,36 @@ async function handleChatDelete(socket: AppSocket, msg: { msgId?: unknown; reque
 }
 
 
+// A permission granted to typing is remembered per connection and conversation for this long: a
+// composer reports every few seconds, and each check is several queries on the shared pool. Only a
+// grant is kept, so access taken away stops the indicator within this window at worst.
+export const TYPING_PERMISSION_TTL_MS = 5_000;
+const typingPermissions = new WeakMap<AppSocket, Map<string, number>>();
+
+async function canSignalTyping(socket: AppSocket, conversationId: string, userId: string): Promise<boolean> {
+  const now = Date.now();
+  let granted = typingPermissions.get(socket);
+  if ((granted?.get(conversationId) ?? 0) > now) return true;
+  const conversation = await getConversationForUser(conversationId, userId, PERMISSIONS.SEND_MESSAGES);
+  if (!conversation || !(await assertCanWriteToConversation(socket, conversationId, userId))) return false;
+  if (!granted) {
+    granted = new Map();
+    typingPermissions.set(socket, granted);
+  }
+  for (const [id, until] of granted) if (until <= now) granted.delete(id);
+  granted.set(conversationId, now + TYPING_PERMISSION_TTL_MS);
+  return true;
+}
+
 // No DB write at all — pure ephemeral fan-out, same spirit as
-// speaking/deafened (realtime/participants.ts). The client is responsible
-// for throttling emits (see MessageComposer.tsx); this only relays.
+// speaking/deafened (realtime/participants.ts). The client throttles its
+// emits (see MessageComposer.tsx); the server caps them too (ACTION_LIMITS).
 async function handleTyping(socket: AppSocket, msg: { conversationId?: string; value?: unknown }): Promise<void> {
   const p = participants.get(socket.participantId ?? '');
   if (!p || p.socket !== socket) return;
   const conversationId = conversationIdFrom(msg);
   if (!conversationId) return;
-  const conversation = await getConversationForUser(conversationId, p.userId, PERMISSIONS.SEND_MESSAGES);
-  if (!conversation) return;
-  if (!(await assertCanWriteToConversation(socket, conversationId, p.userId))) return;
+  if (!(await canSignalTyping(socket, conversationId, p.userId))) return;
   await broadcastToConversationMembers(conversationId, {
     t: 'typing',
     conversationId,

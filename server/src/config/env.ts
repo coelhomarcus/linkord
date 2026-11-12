@@ -107,6 +107,9 @@ const DATABASE_SSL = process.env.DATABASE_SSL === '1';
 // literal multi-line value or a single-line one with escaped "\n"s (the
 // common way to fit a PEM into a one-line .env/Dokploy variable).
 const DATABASE_SSL_CA = (process.env.DATABASE_SSL_CA || '').replace(/\\n/g, '\n').trim();
+// Connections the one process keeps to Postgres. Every HTTP request and socket event shares them,
+// so too few turns one slow burst into timeouts for everyone else; Postgres allows 100 by default.
+const DATABASE_POOL_MAX = Math.max(1, Number(process.env.DATABASE_POOL_MAX) || 10);
 // runs pending migrations before accepting connections — on by default
 // since neither deploy path (Docker CMD, systemd ExecStart) goes through
 // an npm script.
@@ -254,7 +257,7 @@ export const config = {
   FRIEND_REQUEST_COOLDOWN_MS, MAX_SERVER_MEMBERS, MAX_CHANNELS_PER_SERVER, MAX_ROLES_PER_SERVER, MAX_INVITES_PER_SERVER, MAX_WEBHOOKS_PER_CHANNEL, MAX_INVITEES_PER_REQUEST,
   UPLOAD_DIR, MAX_ATTACHMENT_BYTES, MAX_STORAGE_BYTES, MAX_AVATAR_BYTES,
   UPLOAD_CHUNK_BYTES, UPLOAD_SESSION_TTL_MS, UPLOAD_IDLE_TTL_MS, MAX_OPEN_UPLOADS_PER_USER, MAX_PENDING_UPLOAD_BYTES_PER_USER, EXPORT_DIR, DATA_EXPORT_TTL_MS, DATA_EXPORT_INTERVAL_MS, ACCOUNT_DELETION_GRACE_DAYS,
-  DATABASE_URL, DATABASE_SSL, DATABASE_SSL_CA, MIGRATE_ON_BOOT,
+  DATABASE_URL, DATABASE_SSL, DATABASE_SSL_CA, DATABASE_POOL_MAX, MIGRATE_ON_BOOT,
   SESSION_COOKIE, SESSION_TTL_DAYS, SESSION_IDLE_DAYS, REGISTRATION_CODE,
   COOKIE_SECURE, MAX_BODY_BYTES,
   MIN_USERNAME_LEN, MAX_USERNAME_LEN, MAX_DISPLAY_NAME_LEN, MIN_PASSWORD_LEN, MAX_PASSWORD_LEN,

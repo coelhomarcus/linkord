@@ -8,6 +8,7 @@ import { getConversationForUser, visibleConversationIds } from '../conversations
 import { sendJson, sendError } from '../../http/respond.js';
 import { parseCookies } from '../../http/cookies.js';
 import { resolveSession } from '../auth/session.js';
+import { allow, retryAfterMs } from '../../realtime/floodControl.js';
 import { resolveDisplayName } from '../users/users.js';
 import { firstEmbed, type DetectedEmbed } from '../link-preview/embeds.js';
 import { escapeLike } from '../friendships/cursor.js';
@@ -264,10 +265,19 @@ export async function fetchMediaPage(kind: MediaKind, viewerId: string, before: 
   return fetchUploadsPage(kind, viewerId, before, limit, scope, q);
 }
 
+// A link or GIF search scans up to EMBED_SCAN_CEILING rows with a substring match, so a scripted
+// client could keep the shared database pool busy; the panel debounces its search and pages on scroll.
+export const MEDIA_REQUEST_LIMIT = { windowMs: 10_000, max: 30 };
+
 async function handleMedia(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   const cookies = parseCookies(request.headers.cookie || '');
   const sess = await resolveSession(cookies[config.SESSION_COOKIE]);
   if (!sess) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
+  const limitKey = `media:${sess.userId}`;
+  if (!allow(limitKey, MEDIA_REQUEST_LIMIT)) {
+    reply.header('Retry-After', String(Math.max(1, Math.ceil(retryAfterMs(limitKey, MEDIA_REQUEST_LIMIT) / 1000))));
+    return sendError(reply, 429, 'rate_limited', 'Muitas buscas seguidas. Espere um pouco.');
+  }
 
   const query = request.query as Record<string, string | undefined>;
   const kind: MediaKind = MEDIA_KINDS.find((k) => k === query.kind) ?? 'uploads';

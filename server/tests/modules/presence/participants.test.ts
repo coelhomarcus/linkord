@@ -4,7 +4,7 @@ import { config } from '../../../src/config/env.js';
 import type { AppSocket, Participant } from '../../../src/types.js';
 import {
   participants, join, removeParticipant, handleClose, isUserOnline, setCallConversationId, publicParticipant,
-  broadcastToKnownPeers, handlers, restoreCallParticipants, setCallPresenceStore,
+  broadcastToKnownPeers, handlers, restoreCallParticipants, setCallPresenceStore, FLAG_UPDATE_INTERVAL_MS,
   type CallPresenceStore, type RestorableCallParticipant,
 } from '../../../src/modules/presence/participants.js';
 
@@ -463,6 +463,60 @@ describe('self-reported media state (mic-state / camera / screen-share / speakin
   });
 });
 
+describe('media flag broadcasts', () => {
+  function watchedCaller() {
+    const socket = fakeSocket(`u-${Math.random()}`);
+    const p = joinP(socket, {})!;
+    createdIds.push(p.id);
+    setCallConversationId(p, 'voice-1');
+    const updates: Array<Record<string, unknown>> = [];
+    const watcher = fakeSocket(`u-${Math.random()}`);
+    (watcher as unknown as { emit: (t: string, obj: { t: string; participant?: Record<string, unknown> }) => void }).emit = (_t, obj) => {
+      if (obj.t === 'participant-updated' && obj.participant) updates.push(obj.participant);
+    };
+    const peer = joinP(watcher, {})!;
+    createdIds.push(peer.id);
+    peer.knownPeerIds.add(p.userId);
+    return { socket, p, updates };
+  }
+
+  test('a burst goes out once at once and once more with the state it ended in', (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: 1_000_000 });
+    const { socket, updates } = watchedCaller();
+
+    for (let i = 0; i < 50; i += 1) handlers.speaking(socket, { value: i % 2 === 0 });
+    handlers.camera(socket, { on: true });
+    assert.equal(updates.length, 1);
+    assert.equal(updates[0]!.speaking, true);
+
+    t.mock.timers.tick(FLAG_UPDATE_INTERVAL_MS);
+    assert.equal(updates.length, 2);
+    assert.equal(updates[1]!.speaking, false);
+    assert.equal(updates[1]!.cameraOn, true);
+  });
+
+  test('a report that changes nothing is not broadcast', (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: 1_000_000 });
+    const { socket, updates } = watchedCaller();
+
+    handlers.speaking(socket, { value: false });
+    handlers.camera(socket, { on: false });
+    handlers['screen-share'](socket, { on: false });
+    t.mock.timers.tick(FLAG_UPDATE_INTERVAL_MS);
+    assert.equal(updates.length, 0);
+  });
+
+  test('a connection gone before the trailing update sends nothing', (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: 1_000_000 });
+    const { socket, p, updates } = watchedCaller();
+    handlers.speaking(socket, { value: true });
+    handlers.speaking(socket, { value: false });
+    participants.delete(p.id);
+    t.mock.timers.tick(FLAG_UPDATE_INTERVAL_MS);
+    assert.equal(updates.length, 1);
+  });
+});
+
 describe('broadcastToKnownPeers (presence scoping)', () => {
   function fakeSocketWithSpy(userId: string): { socket: AppSocket; emitted: string[]; payloads: Array<{ t: string; [key: string]: unknown }> } {
     const emitted: string[] = [];
@@ -680,6 +734,27 @@ describe('call membership persistence', () => {
       await settle();
       assert.equal(events.at(-2), `save:${p.id}:null:true`);
       assert.equal(events.at(-1), `remove:${p.id}`);
+    } finally {
+      setCallPresenceStore(null);
+    }
+  });
+
+  test('toggling deafen in a burst writes once at once and once with the final state', async (t) => {
+    const { events, store } = recordingStore();
+    setCallPresenceStore(store);
+    try {
+      t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: 1_000_000 });
+      const p = joinP(fakeSocket(`u-${Math.random()}`), {})!;
+      createdIds.push(p.id);
+      setCallConversationId(p, 'voice-1');
+      for (let i = 0; i < 40; i += 1) handlers.deafened!(p.socket!, { value: i % 2 === 0 });
+      handlers.deafened!(p.socket!, { value: true });
+      t.mock.timers.tick(FLAG_UPDATE_INTERVAL_MS);
+      t.mock.timers.reset();
+      await settle();
+      // the call join, the first toggle and one trailing write; each save reads the live participant
+      assert.equal(events.length, 3);
+      assert.equal(events.at(-1), `save:${p.id}:voice-1:true`);
     } finally {
       setCallPresenceStore(null);
     }

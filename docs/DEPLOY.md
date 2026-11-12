@@ -21,7 +21,7 @@ The variables a production instance needs:
 
 | Variable | What to put there |
 | --- | --- |
-| `DATABASE_URL` | The database the app owns. `DATABASE_SSL=1` when it is reached over TLS. |
+| `DATABASE_URL` | The database the app owns. `DATABASE_SSL=1` when it is reached over TLS. `DATABASE_POOL_MAX` (default 10) is how many connections it keeps open; keep it below the server's `max_connections`. |
 | `APP_URL` | The public origin, `https://chat.example.com`, no trailing slash. Used in emails, push, the origin check and the Content-Security-Policy. |
 | `REGISTRATION_CODE` | Empty means nobody can sign up. Set a code and share it with the people you invite. |
 | `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` | The URL browsers really use to reach LiveKit (`wss://…`). The CSP only lets the browser connect there. |
