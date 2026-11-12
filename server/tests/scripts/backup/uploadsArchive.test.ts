@@ -14,10 +14,12 @@ const A = 'a'.repeat(32);
 const B = 'b'.repeat(32);
 
 describe('createUploadsArchive / extractUploadsArchive', () => {
-  it('archives stored files without tmp/, and extracts them unchanged', async () => {
+  it('archives stored files without tmp/ and exports/, and extracts them unchanged', async () => {
     const uploads = path.join(dir, 'uploads');
     await fs.mkdir(path.join(uploads, 'tmp', 'session1'), { recursive: true });
     await fs.writeFile(path.join(uploads, 'tmp', 'session1', '000000'), 'half an upload');
+    await fs.mkdir(path.join(uploads, 'exports'), { recursive: true });
+    await fs.writeFile(path.join(uploads, 'exports', '6f1c1a52-3b55-4a5e-9a51-7f7f7f7f7f7f.zip'), 'someone\'s data');
     await fs.writeFile(path.join(uploads, A), 'first file');
     await fs.writeFile(path.join(uploads, B), 'second file, longer');
     await fs.writeFile(path.join(uploads, 'name with spaces.txt'), 'odd name');
@@ -35,6 +37,7 @@ describe('createUploadsArchive / extractUploadsArchive', () => {
     assert.equal(await fs.readFile(path.join(restored, A), 'utf8'), 'first file');
     assert.equal(await fs.readFile(path.join(restored, 'name with spaces.txt'), 'utf8'), 'odd name');
     await assert.rejects(fs.stat(path.join(restored, 'tmp')));
+    await assert.rejects(fs.stat(path.join(restored, 'exports')));
   });
 
   it('writes no archive for a folder with nothing to keep', async () => {

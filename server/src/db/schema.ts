@@ -468,6 +468,8 @@ export const messages = pgTable('messages', {
   searchVector: tsvector('search_vector').generatedAlwaysAs((): SQL => messageSearchVector(messages.text)),
 }, (t) => [
   index('messages_conversation_id_idx').on(t.conversationId),
+  // what one account sent, in order: the data export (modules/data-export) reads it in id batches
+  index('messages_author_id_idx').on(t.authorId, t.id),
   index('messages_search_vector_idx').using('gin', t.searchVector),
   // Substring search in the media panel's links/GIFs (`ilike '%q%'`, see
   // modules/attachments/media.ts), which a word index can't answer.

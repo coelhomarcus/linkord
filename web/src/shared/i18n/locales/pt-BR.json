@@ -99,6 +99,7 @@
       "invalid_credentials": "Usuário ou senha inválidos.",
       "account_unavailable": "Esta conta está indisponível. Fale com a administração.",
       "account_deleted": "Esta conta foi excluída a pedido do titular.",
+      "export_expired": "Este link expirou. Peça uma nova cópia em Configurações → Conta.",
       "registration_closed": "Registro fechado.",
       "invalid_code": "Código inválido.",
       "code_expired": "Código expirado. Solicite um novo código.",

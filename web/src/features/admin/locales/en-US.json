@@ -236,7 +236,10 @@
     "account.session_end": "Session ended by the account",
     "account.sessions_end_others": "Other sessions ended by the account",
     "account.deletion_schedule": "Account deletion scheduled by the account",
-    "account.deletion_cancel": "Account deletion cancelled by signing in"
+    "account.deletion_cancel": "Account deletion cancelled by signing in",
+    "account.data_export_request": "Data copy requested",
+    "account.data_export_download": "Data copy downloaded",
+    "account.data_export": "Data copy"
   },
   "detail": {
     "fullHistory": "Full history",
