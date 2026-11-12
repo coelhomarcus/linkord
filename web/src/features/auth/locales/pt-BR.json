@@ -1,5 +1,6 @@
 {
   "tagline": "Converse e faça chamadas com seus amigos",
+  "deletionScheduled": "Sua conta será excluída em {{date}}. Para cancelar, é só entrar de novo antes dessa data.",
   "tabs": {
     "ariaLabel": "Entrar ou criar conta",
     "login": "Entrar",

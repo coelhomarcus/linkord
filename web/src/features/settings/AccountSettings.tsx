@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/state/AuthContext';
 import { useRoom } from '@/state/RoomContext';
 import { Button } from '@/shared/ui/primitives/button';
+import { DeleteAccountSettings } from './DeleteAccountSettings';
 import { EmailSettings } from './EmailSettings';
 import { UsernameSettings } from './UsernameSettings';
 import { SETTINGS_ACTION_BUTTON, SettingsRow, SettingsSection, SettingsSections } from '@/shared/ui/settings-layout';
@@ -37,6 +38,10 @@ export function AccountSettings({ onOpenProfile }: { onOpenProfile: (userId: str
             <span>{t('account.logout.button')}</span>
           </Button>
         </SettingsRow>
+      </SettingsSection>
+
+      <SettingsSection id="delete-account" title={t('catalog.sections.deleteAccount')}>
+        <DeleteAccountSettings />
       </SettingsSection>
     </SettingsSections>
   );

@@ -8,6 +8,7 @@ import { useAuth } from '@/state/AuthContext';
 import { ApiError, requestPasswordRecovery, resendLoginCode, resetPassword } from '@/shared/api/api';
 import type { LoginChallenge, RecoveryIdentifier } from '@/shared/api/api';
 import { ErrorBanner } from '@/shared/ErrorBanner';
+import { SettingsNotice } from '@/shared/ui/settings-layout';
 import { describeApiError } from '@/shared/api/errorText';
 import { AuthField } from './AuthField';
 import { Button } from '@/shared/ui/primitives/button';
@@ -404,7 +405,8 @@ function RecoveryForm({ onBack }: { onBack: () => void }) {
 }
 
 export function AuthScreen() {
-  const { t } = useTranslation('auth');
+  const { t, i18n } = useTranslation('auth');
+  const { accountNotice } = useAuth();
   const [tab, setTab] = useState<'login' | 'register'>('login');
   const [recovery, setRecovery] = useState(false);
   const reduce = useReducedMotion();
@@ -420,6 +422,12 @@ export function AuthScreen() {
             <p className="text-label text-text-muted">{t('tagline')}</p>
           </div>
         </div>
+
+        {accountNotice?.kind === 'deletionScheduled' && (
+          <SettingsNotice>
+            {t('deletionScheduled', { date: new Date(accountNotice.dueAt).toLocaleDateString(i18n.language, { day: 'numeric', month: 'long', year: 'numeric' }) })}
+          </SettingsNotice>
+        )}
 
         <motion.div layout={!reduce} className="w-full overflow-hidden rounded-xl border border-border bg-surface-panel p-6 shadow-panel">
           <div className="flex w-full flex-col gap-5">

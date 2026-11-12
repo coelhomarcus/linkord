@@ -11,7 +11,7 @@ import { EmailRequiredModal } from '@/features/auth/EmailRequiredModal';
 import { RoomErrorScreen } from '@/app/layout/RoomErrorScreen';
 import { OutdatedClientScreen } from '@/app/layout/OutdatedClientScreen';
 import { LoadingScreen } from '@/app/layout/LoadingScreen';
-import { AccessNotice } from '@/app/layout/AccessNotice';
+import { AccessNotice, AccountNotice } from '@/app/layout/AccessNotice';
 import { InstallBanner } from '@/features/install/InstallBanner';
 import { ConversationSidebar } from '@/features/conversations/ConversationSidebar';
 import { ServerRail } from '@/features/servers/ServerRail';
@@ -334,6 +334,7 @@ function Shell() {
       >
         <DmCallOverlay />
         <AccessNotice />
+        <AccountNotice />
         <InstallBanner />
         <ServerRail className="hidden md:flex" />
         {/* Discord's one framed panel: the list and the content side by side

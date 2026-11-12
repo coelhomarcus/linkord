@@ -9,7 +9,7 @@ import { findDownload, getExportStatus, requestDataExport } from './dataExport.j
 
 // /api/account/data-export — asking for a copy of your data, its state, and downloading it.
 
-const SETTINGS_SECTION = '/app/settings/account#data-export';
+const SETTINGS_SECTION = '/app/settings/privacy#data-export';
 
 function sessionFor(request: FastifyRequest) {
   return resolveSession(parseCookies(request.headers.cookie || '')[config.SESSION_COOKIE]);
@@ -40,7 +40,7 @@ async function handleDownload(request: FastifyRequest<{ Params: { id: string } }
   // download from settings, rather than to a JSON error
   if (!sess) return reply.code(302).header('Cache-Control', 'no-store').header('Location', SETTINGS_SECTION).send();
   const found = await findDownload(sess.userId, String(request.params.id || ''));
-  if (found.code === 'expired') return sendError(reply, 410, 'export_expired', 'Este link expirou. Peça uma nova cópia em Configurações → Conta.');
+  if (found.code === 'expired') return sendError(reply, 410, 'export_expired', 'Este link expirou. Peça uma nova cópia em Configurações → Dados e privacidade.');
   if (found.code !== 'ok') return sendError(reply, 404, 'not_found', 'Cópia não encontrada.');
   await recordAudit({
     actor: { id: sess.userId, username: sess.username }, action: 'account.data_export_download', targetType: 'user', targetId: sess.userId,
