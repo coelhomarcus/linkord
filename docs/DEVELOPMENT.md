@@ -328,6 +328,16 @@ Chat send operations (a fixed 7 days) have their own cleanup and no setting. Log
 
 Restarting `npm run dev` (or deploying) while you are in a call should leave the call running: the clients reconnect and the server restores who was in which call. To see it, join a voice channel with two accounts, stop and start `npm run dev`, and check that both stay connected without touching either tab. The rules that keep this working are in `AGENTS.md` ("Realtime compatibility and deploys"), and the `restart` end-to-end specs check it on every run.
 
+## Upload limits
+
+A chunked upload (`modules/attachments/`) reserves its declared size against the instance's storage ceiling (`MAX_STORAGE_BYTES`, 30 GB) at `init`, before any byte arrives, so two uploads cannot both take the last free space. Because that reservation costs nothing to make, it is bounded:
+
+- **Per account**, checked at `init`: at most `MAX_OPEN_UPLOADS_PER_USER` (8) open sessions, and at most `MAX_PENDING_UPLOAD_BYTES_PER_USER` not yet sent, counting the declared size of open sessions plus the account's staged files (one full message of the largest files: `MAX_ATTACHMENTS_PER_MESSAGE` × `MAX_ATTACHMENT_BYTES`, 2 GB by default). Past either, `init` answers `409 quota_exceeded`. Files already sent have no per-account quota.
+- **Idle sessions**: a session that receives no chunk for `UPLOAD_IDLE_TTL_MS` (15 minutes) loses its reservation and its chunks. A chunk counts from its first byte, so a slow link is not cut off mid-chunk. `init` drops idle sessions before it counts, and the sweep (at boot and hourly) does the same from the files' modification times, which is also how the reservations come back after a restart. Any session still goes after `UPLOAD_SESSION_TTL_MS` (24 hours).
+- **Every path that writes a file** (attachment `complete`, profile images, emojis, stickers, sounds) checks the ceiling with `hasRoomFor` (`attachmentQuota.ts`), which counts the open reservations, so none of them can spend space promised to an upload in progress.
+
+All of these limits are constants in `config/env.ts`; tests are in `server/tests/modules/attachments/uploadReservations.test.ts` and `server/tests/integration/attachmentUploads.itest.ts`.
+
 ## Brute-force limits
 
 Failed logins (per account and per address), wrong password-reset codes (per account and per address), recovery and email-change code requests, username availability checks, wrong invite codes and sign-ups per address are counted in the `rate_limit_windows` table (`modules/auth/ratelimit.ts`), so a restart or a deploy does not give anyone fresh attempts and several instances would share one count.
@@ -372,7 +382,7 @@ What lives in the memory (or on the local disk) of the process, and what a secon
 | Login session cache (60 s) | `modules/auth/session.ts` | A logout, ban or profile save invalidates the cache of one instance only; the other keeps the old session for up to 60 s | Invalidation broadcast to every instance, or no cache |
 | Server snapshot cache (roles, members, channels, overwrites) | `modules/servers/serverAccess.ts` | `invalidateServer` clears one instance. The others keep serving stale permissions until they restart | Invalidation broadcast, or a version check on each read |
 | Game search cache | `modules/games/gameSearch.ts` | Harmless: only a cache. The IGDB request pacing already goes through a Postgres slot (`igdbLimiter.ts`) | Nothing |
-| Upload reservations and the init lock | `modules/attachments/uploadSession.ts` (`pendingUploadBytes`, `withInitLock`, `completingUploads`) | The storage quota check and the "one complete per upload" guard only see their own instance | Reservations in Postgres, and a database lock in place of the in-memory one |
+| Upload reservations and the init lock | `modules/attachments/uploadSession.ts` (`pendingUploads`, `withInitLock`, `completingUploads`) | The storage ceiling check, the per-account upload caps and the "one complete per upload" guard only see their own instance | Reservations in Postgres, and a database lock in place of the in-memory one |
 | Uploaded files and chunks | `./uploads` on the local disk | An instance cannot read what the other stored. The orphan sweep also compares one disk with one database | A shared volume or object storage |
 | Data export files | `EXPORT_DIR` (`modules/data-export/`) | The job claims queued exports with `skip locked`, but the ZIP lands on the disk of the instance that built it, and at boot each instance queues again every export marked as being built | A shared volume, and a lease on the `running` rows instead of the boot reset |
 | Presence status, automatic idle and custom status expiry | `modules/presence/userStatus.ts`, `presenceStatus.ts` | The chosen status is saved on the account, but the copy in memory, the per-connection idle flags and the expiry timer are per process: a change made on one instance is announced only to the sockets of that instance | Status changes broadcast to every instance, and the expiry owned by one of them |

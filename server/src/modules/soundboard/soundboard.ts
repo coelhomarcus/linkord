@@ -11,7 +11,7 @@ import { resolveSession } from '../auth/session.js';
 import { toSocialUser, type SocialUser } from '../users/users.js';
 import { isSingleEmoji } from '../messages/emoji.js';
 import { newId, filePathFor } from '../attachments/attachmentStorage.js';
-import { getUsage } from '../attachments/attachmentQuota.js';
+import { hasRoomFor } from '../attachments/attachmentQuota.js';
 import { hasPermission, PERMISSIONS } from '../servers/permissions.js';
 import { channelPermissionsIn, loadServerSnapshot, basePermissionsIn } from '../servers/serverAccess.js';
 import { broadcastToServerMembers } from '../servers/serverSummaries.js';
@@ -152,8 +152,7 @@ async function handleUpload(
   if (!wav) return sendError(reply, 400, 'invalid_sound', 'Não foi possível ler esse áudio.');
   if (wav.durationMs > MAX_SOUND_DURATION_MS) return sendError(reply, 400, 'sound_too_long', 'O som pode ter no máximo 5 segundos.');
 
-  const usage = await getUsage();
-  if (usage.totalBytes + buffer.length > config.MAX_STORAGE_BYTES) {
+  if (!(await hasRoomFor(buffer.length))) {
     log.warn('sound upload refused: instance storage is full', { userId, size: buffer.length });
     return sendError(reply, 400, 'storage_full', 'Armazenamento cheio. Tente novamente mais tarde.');
   }

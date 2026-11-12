@@ -135,6 +135,7 @@ export async function bootstrap(): Promise<void> {
 
   // same cadence — upload session TTL is 24h (config.UPLOAD_SESSION_TTL_MS),
   // checking hourly is enough to avoid orphaned chunks piling up on disk.
+  // Idle reservations need no faster timer: init drops them before counting.
   const uploadSweepTimer = setInterval(() => {
     sweepStaleUploads().catch((err) => log.error('failed to clean up abandoned uploads', err));
     sweepExpiredStaged().catch((err) => log.error('failed to clean up expired staged attachments', err));

@@ -68,6 +68,17 @@ const UPLOAD_CHUNK_BYTES = 8 * 1024 * 1024;
 // abandoned upload session (UPLOAD_DIR/tmp/<uploadId>) expiry — swept at
 // boot and hourly.
 const UPLOAD_SESSION_TTL_MS = 24 * 60 * 60 * 1000;
+// An open upload holds its declared size against MAX_STORAGE_BYTES before any
+// byte arrives, so one that stops receiving chunks gives it back after this
+// long. Long enough for the client's three concurrent 8 MB chunks on a slow
+// link (a chunk in flight counts as activity from its first byte).
+const UPLOAD_IDLE_TTL_MS = 15 * 60 * 1000;
+// Per account, so no single account can reserve the instance's free space:
+// open sessions at once (the composer runs two files at a time per tab), and
+// bytes not yet sent (declared size of open sessions plus staged files), one
+// full message of the largest files.
+const MAX_OPEN_UPLOADS_PER_USER = 8;
+const MAX_PENDING_UPLOAD_BYTES_PER_USER = MAX_ATTACHMENTS_PER_MESSAGE * MAX_ATTACHMENT_BYTES;
 // Data exports (modules/data-export): the ZIPs wait here until downloaded or expired. Inside the uploads
 // folder by default, so the volume that already persists uploads keeps them across a deploy.
 const EXPORT_DIR = process.env.EXPORT_DIR || path.join(UPLOAD_DIR, 'exports');
@@ -190,7 +201,7 @@ const UPLOADS_REMOTE_URL = (process.env.UPLOADS_REMOTE_URL || '').trim().replace
 const REGISTRATIONS_PER_IP_PER_HOUR = Number(process.env.REGISTRATIONS_PER_IP_PER_HOUR || 5);
 const MAX_NEW_ACCOUNTS_PER_HOUR = Number(process.env.MAX_NEW_ACCOUNTS_PER_HOUR || 30);
 const MAX_CONNECTIONS_PER_USER = Number(process.env.MAX_CONNECTIONS_PER_USER || 5);
-// per-account quotas (storage has none: only the instance-wide MAX_STORAGE_BYTES)
+// per-account quotas (storage of sent files has none: only the instance-wide MAX_STORAGE_BYTES)
 const MAX_OWNED_SERVERS_PER_USER = Number(process.env.MAX_OWNED_SERVERS_PER_USER || process.env.MAX_OWNED_GROUPS_PER_USER || 20);
 const MAX_SERVER_MEMBERSHIPS_PER_USER = Number(process.env.MAX_SERVER_MEMBERSHIPS_PER_USER || process.env.MAX_GROUP_MEMBERSHIPS_PER_USER || 100);
 const MAX_FRIENDS = Number(process.env.MAX_FRIENDS || 500);
@@ -237,7 +248,7 @@ export const config = {
   MAX_CHAT_LEN, CHAT_HISTORY_LIMIT, SEARCH_RESULT_LIMIT, MAX_SEARCH_QUERY_LEN, MAX_ATTACHMENTS_PER_MESSAGE,
   FRIEND_REQUEST_COOLDOWN_MS, MAX_SERVER_MEMBERS, MAX_CHANNELS_PER_SERVER, MAX_ROLES_PER_SERVER, MAX_INVITES_PER_SERVER, MAX_WEBHOOKS_PER_CHANNEL, MAX_INVITEES_PER_REQUEST,
   UPLOAD_DIR, MAX_ATTACHMENT_BYTES, MAX_STORAGE_BYTES, MAX_AVATAR_BYTES,
-  UPLOAD_CHUNK_BYTES, UPLOAD_SESSION_TTL_MS, EXPORT_DIR, DATA_EXPORT_TTL_MS, DATA_EXPORT_INTERVAL_MS, ACCOUNT_DELETION_GRACE_DAYS,
+  UPLOAD_CHUNK_BYTES, UPLOAD_SESSION_TTL_MS, UPLOAD_IDLE_TTL_MS, MAX_OPEN_UPLOADS_PER_USER, MAX_PENDING_UPLOAD_BYTES_PER_USER, EXPORT_DIR, DATA_EXPORT_TTL_MS, DATA_EXPORT_INTERVAL_MS, ACCOUNT_DELETION_GRACE_DAYS,
   DATABASE_URL, DATABASE_SSL, DATABASE_SSL_CA, MIGRATE_ON_BOOT,
   SESSION_COOKIE, SESSION_TTL_DAYS, SESSION_IDLE_DAYS, REGISTRATION_CODE,
   COOKIE_SECURE, MAX_BODY_BYTES,

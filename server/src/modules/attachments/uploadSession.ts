@@ -108,20 +108,60 @@ export async function assembleChunks(uploadId: string, manifest: UploadManifest,
 // Reserve declared sizes before chunks reach the database so concurrent uploads cannot bypass
 // the instance-wide storage ceiling. Release a reservation only after its files are deleted; failed completes keep their
 // chunks retryable. The stale-upload sweep rebuilds these in-memory totals after restart.
-const pendingUploadBytes = new Map<string, number>();
+// Each one remembers its account (the per-account caps at init) and when it
+// last saw a chunk: a reservation that stops receiving any is given back
+// after UPLOAD_IDLE_TTL_MS, so declaring sizes without sending bytes cannot
+// hold the instance's free space for long.
+interface Reservation { userId: string; bytes: number; lastActivityMs: number }
+const pendingUploads = new Map<string, Reservation>();
 
-export function reserveUpload(uploadId: string, bytes: number): void {
-  pendingUploadBytes.set(uploadId, bytes);
+export function reserveUpload(uploadId: string, userId: string, bytes: number, lastActivityMs = Date.now()): void {
+  pendingUploads.set(uploadId, { userId, bytes, lastActivityMs });
 }
 
 export function releaseUpload(uploadId: string): void {
-  pendingUploadBytes.delete(uploadId);
+  pendingUploads.delete(uploadId);
 }
 
-export function getReservedBytes(): number {
+/** A chunk started arriving or was written: the session is alive. */
+export function touchUpload(uploadId: string, now = Date.now()): void {
+  const reservation = pendingUploads.get(uploadId);
+  if (reservation && reservation.lastActivityMs < now) reservation.lastActivityMs = now;
+}
+
+/** Everything reserved, minus `exceptUploadId` (an upload checking the room
+ * for itself, whose own reservation is already in the sum). */
+export function getReservedBytes(exceptUploadId?: string): number {
   let sum = 0;
-  for (const bytes of pendingUploadBytes.values()) sum += bytes;
+  for (const [id, { bytes }] of pendingUploads) if (id !== exceptUploadId) sum += bytes;
   return sum;
+}
+
+export function openUploadsOf(userId: string): { count: number; bytes: number } {
+  let count = 0;
+  let bytes = 0;
+  for (const reservation of pendingUploads.values()) {
+    if (reservation.userId !== userId) continue;
+    count += 1;
+    bytes += reservation.bytes;
+  }
+  return { count, bytes };
+}
+
+function isIdle(lastActivityMs: number, now: number): boolean {
+  return now - lastActivityMs > config.UPLOAD_IDLE_TTL_MS;
+}
+
+/** Drops the sessions that have had no chunk for UPLOAD_IDLE_TTL_MS, files
+ * and reservation. Called by init before it counts reservations, so an idle
+ * one never refuses anybody, whatever the sweep's cadence. */
+export async function expireIdleUploads(now = Date.now()): Promise<number> {
+  const idle = [...pendingUploads].filter(([id, r]) => isIdle(r.lastActivityMs, now) && !completingUploads.has(id)).map(([id]) => id);
+  for (const id of idle) {
+    releaseUpload(id);
+    await fs.rm(tmpDirFor(id), { recursive: true, force: true }).catch(() => {});
+  }
+  return idle.length;
 }
 
 // Serializes the check-then-reserve section of init() across concurrent
@@ -142,12 +182,15 @@ export function withInitLock<T>(fn: () => Promise<T>): Promise<T> {
 export const completingUploads = new Set<string>();
 
 /** Cleans up abandoned upload sessions (tab closed / browser crash before
- * complete or cancel) — called at boot and hourly. Also re-declares the
- * quota reservation (see pendingUploadBytes) for every session still on
- * disk: at boot this REBUILDS the in-memory map from scratch (a restart
- * wipes it, but chunks already on disk don't disappear), and on the hourly
- * runs it's a harmless no-op re-set. */
-export async function sweepStaleUploads(): Promise<void> {
+ * complete or cancel, or a client that declared a size and never sent it) —
+ * called at boot and hourly. A session goes once it is older than
+ * UPLOAD_SESSION_TTL_MS or idle past UPLOAD_IDLE_TTL_MS. Also re-declares
+ * the reservation (see pendingUploads) for every session still on disk: at
+ * boot this REBUILDS the in-memory map from scratch (a restart wipes it, but
+ * chunks already on disk don't disappear), its last activity being the
+ * newest file in the session's folder; on the hourly runs it keeps the newer
+ * of that and what memory saw. */
+export async function sweepStaleUploads(now = Date.now()): Promise<void> {
   const tmpRoot = path.join(config.UPLOAD_DIR, 'tmp');
   let ids: string[];
   try {
@@ -157,13 +200,13 @@ export async function sweepStaleUploads(): Promise<void> {
     throw err;
   }
   for (const id of ids) {
+    if (completingUploads.has(id)) continue;
     const dir = path.join(tmpRoot, id);
     let createdAtMs: number;
-    let totalSize: number | undefined;
+    let manifest: UploadManifest | null = null;
     try {
-      const manifest: UploadManifest = JSON.parse(await fs.readFile(path.join(dir, 'manifest.json'), 'utf8'));
+      manifest = JSON.parse(await fs.readFile(path.join(dir, 'manifest.json'), 'utf8')) as UploadManifest;
       createdAtMs = new Date(manifest.createdAt).getTime();
-      totalSize = manifest.totalSize;
     } catch {
       // manifest missing/corrupt — fall back to the folder's creation time
       // so it can still be swept.
@@ -173,11 +216,28 @@ export async function sweepStaleUploads(): Promise<void> {
         continue;
       }
     }
-    if (Date.now() - createdAtMs > config.UPLOAD_SESSION_TTL_MS) {
+    // no manifest, no reservation: such a folder only waits out the full TTL
+    const lastActivityMs = manifest
+      ? Math.max(createdAtMs, await newestFileMs(dir), pendingUploads.get(id)?.lastActivityMs ?? 0)
+      : null;
+    if (now - createdAtMs > config.UPLOAD_SESSION_TTL_MS || (lastActivityMs !== null && isIdle(lastActivityMs, now))) {
       await fs.rm(dir, { recursive: true, force: true }).catch(() => {});
       releaseUpload(id);
-    } else if (totalSize != null) {
-      reserveUpload(id, totalSize);
+    } else if (manifest && lastActivityMs !== null) {
+      reserveUpload(id, manifest.userId, manifest.totalSize, lastActivityMs);
     }
   }
+}
+
+async function newestFileMs(dir: string): Promise<number> {
+  let newest = 0;
+  try {
+    for (const name of await fs.readdir(dir)) {
+      const { mtimeMs } = await fs.stat(path.join(dir, name)).catch(() => ({ mtimeMs: 0 }));
+      if (mtimeMs > newest) newest = mtimeMs;
+    }
+  } catch {
+    // vanished while sweeping (cancelled or completed): nothing to keep alive
+  }
+  return newest;
 }
