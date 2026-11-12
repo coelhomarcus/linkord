@@ -7,7 +7,7 @@ import { Avatar } from '@/shared/Avatar';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
 import { useRoom } from '@/state/RoomContext';
 import { conversationTitle } from '@/features/conversations/conversationUtils';
-import { useParticipantMedia } from './useLiveKitTrack';
+import { useOwnMic } from './micState';
 import { CallPingIndicator } from './CallPingIndicator';
 import { useCallPublishRights } from './publishRights';
 import { cn } from '@/shared/lib/utils';
@@ -86,16 +86,16 @@ export function CallDock({ onReturnToCall, onOpenProfile, layout = 'wide', onNav
   const onSettings = pathname.startsWith(ROUTES.settings);
   const inCall = !!activeCallConversationId;
   const duration = useCallDuration(inCall ? dmStartedAt : null);
-  const myMedia = useParticipantMedia(state.me.id ?? '');
+  const myMic = useOwnMic();
   const cameraOn = state.me.cameraOn;
   const sharing = state.me.sharing;
-  const micProblem = myMedia.micActivated ? null : state.micProblem;
+  const micProblem = myMic.activated ? null : state.micProblem;
   const { canSpeak, canStream } = useCallPublishRights();
   const micLocked = inCall && !canSpeak;
   const micLabel = micLocked ? t('controls.noSpeakPermission') : inCall
-    ? (micProblem ? t(MIC_PROBLEM_LABEL_KEY[micProblem]) : !myMedia.micActivated ? t('controls.micActivate') : myMedia.micMuted ? t('controls.micUnmute') : t('controls.micMute'))
+    ? (micProblem ? t(MIC_PROBLEM_LABEL_KEY[micProblem]) : !myMic.activated && !myMic.starting ? t('controls.micActivate') : myMic.muted ? t('controls.micUnmute') : t('controls.micMute'))
     : preferMuted ? t('controls.micUnmute') : t('controls.micMute');
-  const micMuted = inCall ? (myMedia.micMuted || !!micProblem || micLocked) : preferMuted;
+  const micMuted = inCall ? (myMic.muted || !!micProblem || micLocked) : preferMuted;
   const cameraLabel = !canStream ? t('controls.noStreamPermission') : cameraOn ? t('controls.cameraOff') : t('controls.cameraOn');
   const shareLabel = !canStream ? t('controls.noStreamPermission') : sharing ? t('controls.shareStop') : t('controls.shareStart');
   const title = conversationTitle(
@@ -106,12 +106,13 @@ export function CallDock({ onReturnToCall, onOpenProfile, layout = 'wide', onNav
 
   function onMic() {
     if (micLocked) return;
-    if (!inCall) {
+    // a starting mic takes the preference the join applies once it is published
+    if (!inCall || myMic.starting) {
       setPreferMuted(!preferMuted);
       return;
     }
-    if (myMedia.micActivated) {
-      setPreferMuted(!myMedia.micMuted);
+    if (myMic.activated) {
+      setPreferMuted(!myMic.muted);
       void toggleMicMuted();
       return;
     }

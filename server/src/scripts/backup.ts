@@ -7,7 +7,7 @@ import { backupSettings } from './backup/settings.js';
 // One backup = one folder in BACKUP_DIR (default ./backups), named by UTC time:
 //   linkord-backup-20261108T015300Z/
 //     database.dump    pg_dump, custom format
-//     uploads.tar.gz   UPLOAD_DIR without tmp/ (chunks of unfinished uploads)
+//     uploads.tar.gz   UPLOAD_DIR without tmp/ (chunks of unfinished uploads) and exports/ (data exports)
 //     manifest.json    row counts, checksums, what the restore will check
 // then everything but the newest BACKUP_KEEP (default 7) is deleted.
 //

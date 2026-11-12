@@ -68,6 +68,9 @@ interface ChatMessagesDeps {
   serversRef: MutableRefObject<ServerSummary[]>;
   activeViewRef: MutableRefObject<ChatView>;
   clearTypingEntry: (conversationId: string, userId: string) => void;
+  /** Whether an incoming message may play a sound or show a notification here (the conversation's
+   * notification level and mute). Absent: always. */
+  alertsFor?: (conversationId: string, mentioned: boolean) => boolean;
 }
 
 /** Message history + composition state for every open conversation:
@@ -76,6 +79,8 @@ interface ChatMessagesDeps {
  * existing message in place (edit, attachment added, reaction changed). */
 export function useChatMessages(deps: ChatMessagesDeps) {
   const { sendWs, activeConversationIdRef, setActiveConversation, conversationsRef, allUsersRef, myUserIdRef, myUsernameRef, serversRef, activeViewRef, clearTypingEntry } = deps;
+  const alertsForRef = useRef(deps.alertsFor);
+  useEffect(() => { alertsForRef.current = deps.alertsFor; }, [deps.alertsFor]);
 
   const [messagesByConversation, setMessagesByConversation] = useState<Map<string, ChatMessage[]>>(new Map());
   const messagesByConversationRef = useRef<Map<string, ChatMessage[]>>(new Map());
@@ -121,6 +126,9 @@ export function useChatMessages(deps: ChatMessagesDeps) {
   const pageRequestsRef = useRef(new Map<string, { requestId: string; timer: ReturnType<typeof setTimeout> }>());
   const [unreadByConversation, setUnreadByConversation] = useState<Map<string, number>>(new Map());
   const [unreadStartByConversation, setUnreadStartByConversation] = useState<Map<string, number>>(new Map());
+  // unread mentions per conversation: the badge a muted conversation still shows. They are read together
+  // with the conversation (the server settles them on the same read), so they clear with its unread count.
+  const [mentionsByConversation, setMentionsByConversation] = useState<Map<string, number>>(new Map());
   // The counts, readable synchronously: a divider only stays put while the
   // messages after it are still unread. Once they were seen, the next arrival
   // starts a new one. State would lag behind two arrivals in the same tick.
@@ -187,12 +195,14 @@ export function useChatMessages(deps: ChatMessagesDeps) {
 
   const clearUnread = useCallback((conversationId: string) => {
     unreadCountsRef.current.delete(conversationId);
-    setUnreadByConversation((prev) => {
+    const drop = (prev: Map<string, number>) => {
       if (!prev.has(conversationId)) return prev;
       const next = new Map(prev);
       next.delete(conversationId);
       return next;
-    });
+    };
+    setUnreadByConversation(drop);
+    setMentionsByConversation(drop);
   }, []);
 
   const dropUnreadStart = useCallback((conversationIds: string[]) => {
@@ -360,12 +370,13 @@ export function useChatMessages(deps: ChatMessagesDeps) {
   /** Every welcome, including after a reconnect: resends whatever was still
    * unconfirmed from before the (re)connection. */
   // a server from before persisted unread sends none: keep the session's own count then
-  const onWelcome = useCallback((unread: Record<string, number> | undefined) => {
+  const onWelcome = useCallback((unread: Record<string, number> | undefined, mentions?: Record<string, number>) => {
     onOutboxReconnected();
     if (unread) {
       unreadCountsRef.current = new Map(Object.entries(unread));
       setUnreadByConversation(new Map(unreadCountsRef.current));
     }
+    if (mentions) setMentionsByConversation(new Map(Object.entries(mentions)));
   }, [onOutboxReconnected]);
   const dismissMessageActionError = useCallback((msgId: number) => {
     setMessageActionErrors((prev) => { if (!prev.has(msgId)) return prev; const next = new Map(prev); next.delete(msgId); return next; });
@@ -493,9 +504,16 @@ export function useChatMessages(deps: ChatMessagesDeps) {
       markArrival(m.message.clientMessageId ? `c:${m.message.clientMessageId}` : String(m.message.msgId));
       insertConfirmed(m.message);
     }
+    const fromSomeoneElse = m.message.id !== myUserIdRef.current;
+    let mentioned = false;
+    if (fromSomeoneElse) {
+      const serverId = conversationsRef.current.find((c) => c.id === conversationId)?.serverId;
+      const myRoleIds = serverId ? serversRef.current.find((s) => s.id === serverId)?.myRoleIds ?? [] : null;
+      mentioned = mentionsUsername(m.message.text, myUsernameRef.current) || groupMentionsMe(m.message, myRoleIds);
+    }
     // your own message is never unread — it can land in a conversation you
     // left (an upload finishing after a switch, or another tab/device)
-    if (m.message.id !== myUserIdRef.current) {
+    if (fromSomeoneElse) {
       // the active conversation only counts as read while its chat is on screen:
       // from the friends page it is still active, but nobody is looking at it
       if (conversationId !== activeConversationIdRef.current || activeViewRef.current !== 'chat') {
@@ -503,6 +521,7 @@ export function useChatMessages(deps: ChatMessagesDeps) {
         unreadCountsRef.current.set(conversationId, unreadBefore + 1);
         setUnreadByConversation((prev) => new Map(prev).set(conversationId, (prev.get(conversationId) || 0) + 1));
         setUnreadStartByConversation((prev) => unreadBefore > 0 && prev.has(conversationId) ? prev : new Map(prev).set(conversationId, m.message.msgId));
+        if (mentioned) setMentionsByConversation((prev) => new Map(prev).set(conversationId, (prev.get(conversationId) ?? 0) + 1));
       } else {
         // not counted here, so the server mustn't count it on the next load either
         queueMarkRead(conversationId, m.message.msgId);
@@ -512,10 +531,8 @@ export function useChatMessages(deps: ChatMessagesDeps) {
     // their typing:false (or the local expiry timer) to catch up.
     if (m.message.id) clearTypingEntry(conversationId, m.message.id);
     const amLookingAtIt = document.hasFocus() && activeViewRef.current === 'chat' && conversationId === activeConversationIdRef.current;
-    if (m.message.id !== myUserIdRef.current && !amLookingAtIt) {
-      const serverId = conversationsRef.current.find((c) => c.id === conversationId)?.serverId;
-      const myRoleIds = serverId ? serversRef.current.find((s) => s.id === serverId)?.myRoleIds ?? [] : null;
-      const mentioned = mentionsUsername(m.message.text, myUsernameRef.current) || groupMentionsMe(m.message, myRoleIds);
+    // a muted conversation, or one whose level leaves this message out, stays quiet: no sound, no notification
+    if (fromSomeoneElse && !amLookingAtIt && (alertsForRef.current?.(conversationId, mentioned) ?? true)) {
       if (shouldChime(conversationId, mentioned)) playSound(mentioned ? 'mention' : 'newMessage');
       notifyIncomingChatMessage({
         conversationId,
@@ -619,7 +636,7 @@ export function useChatMessages(deps: ChatMessagesDeps) {
   }, [clearUnread]);
 
   return {
-    messagesByConversation, hasMoreByConversation, hasMoreAfterByConversation, loadingOlderByConversation, unreadByConversation, unreadStartByConversation,
+    messagesByConversation, hasMoreByConversation, hasMoreAfterByConversation, loadingOlderByConversation, unreadByConversation, unreadStartByConversation, mentionsByConversation,
     clearUnread, markActiveSeen, markConversationRead, markServerRead, loadOlderMessages, pendingJumpTarget, clearPendingJumpTarget, cancelPendingJump, jumpToMessage,
     sendChatMessage, sendSticker, deleteChatMessage, editChatMessage, reactToChatMessage, removeChatAttachment, suppressChatEmbed,
     onWelcome, onChatSendResult: outbox.onChatSendResult, queueMessageWithFiles,

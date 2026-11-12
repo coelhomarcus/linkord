@@ -19,7 +19,8 @@ export function useSaveBar(draft: unknown, dirty: boolean) {
     return () => window.clearTimeout(timeout);
   }, [saved]);
 
-  async function save(persist: () => Promise<unknown>) {
+  /** `describeError` words a failure the form knows better than the generic code text. */
+  async function save(persist: () => Promise<unknown>, describeError: (err: unknown) => string = describeApiError) {
     setSaving(true);
     setError(null);
     setSaved(null);
@@ -27,7 +28,7 @@ export function useSaveBar(draft: unknown, dirty: boolean) {
       await persist();
       setSaved(current);
     } catch (err) {
-      setError(describeApiError(err));
+      setError(describeError(err));
     } finally {
       setSaving(false);
     }

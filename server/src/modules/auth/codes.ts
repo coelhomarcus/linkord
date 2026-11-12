@@ -6,8 +6,9 @@ import { config } from '../../config/env.js';
 import { normalizeEmail } from '../users/users.js';
 
 /** `two_factor_setup` proves the account's email works before two-step login is turned on; `login`
- * is the second step of a login (tied to its challenge, see `challengeHash`). */
-export type AuthCodePurpose = 'password_reset' | 'email_change' | 'two_factor_setup' | 'login';
+ * is the second step of a login (tied to its challenge, see `challengeHash`); `account_deletion` is the
+ * second step of deleting the account when two-step login is on. */
+export type AuthCodePurpose = 'password_reset' | 'email_change' | 'two_factor_setup' | 'login' | 'account_deletion';
 
 interface CodeScope {
   /** a login code belongs to one login challenge: another login neither cancels nor accepts it */

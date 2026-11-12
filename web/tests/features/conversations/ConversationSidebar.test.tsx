@@ -162,9 +162,11 @@ describe('ConversationSidebar — on a phone', () => {
     expect(screen.getByRole('main', { name: 'Os Xerecas' })).toHaveTextContent('geral');
   });
 
-  it('is not drawn while a conversation is open', () => {
+  it('while a conversation is open the list is a closed drawer, not a page', () => {
     setViewport(390);
     renderSidebar('/app/channels/@me/dm-bea');
     expect(screen.queryByRole('main', { name: 'Mensagens diretas' })).not.toBeInTheDocument();
+    const drawer = document.body.querySelector('[role="dialog"][aria-label="Mensagens diretas"]');
+    expect(drawer).toHaveAttribute('inert');
   });
 });

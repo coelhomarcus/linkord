@@ -14,6 +14,10 @@ type TextKey =
   | 'email.loginAlertSubject' | 'email.loginAlertTitle' | 'email.loginAlertIntro' | 'email.loginAlertDevice' | 'email.loginAlertIp'
   | 'email.loginAlertTime' | 'email.loginAlertAction' | 'email.loginAlertOptOut'
   | 'email.deviceBrowserOn' | 'email.deviceUnknownBrowserOn' | 'email.deviceUnknown' | 'email.deviceAutomated'
+  | 'email.deletionCodeSubject' | 'email.deletionCodeTitle' | 'email.deletionCodeIntro'
+  | 'email.deletionScheduledSubject' | 'email.deletionScheduledTitle' | 'email.deletionScheduledIntro' | 'email.deletionScheduledCancel'
+  | 'email.deletionDoneSubject' | 'email.deletionDoneTitle' | 'email.deletionDoneIntro'
+  | 'email.exportReadySubject' | 'email.exportReadyTitle' | 'email.exportReadyIntro' | 'email.exportReadyExpires'
   | 'server.textCategory' | 'server.textChannel' | 'server.voiceCategory' | 'server.voiceChannel';
 
 const TEXT: Record<Locale, Record<TextKey, string>> = {
@@ -51,6 +55,16 @@ const TEXT: Record<Locale, Record<TextKey, string>> = {
     'email.loginAlertOptOut': 'Você pode desativar este aviso em Configurações → Segurança.',
     'email.deviceBrowserOn': '{{browser}} em {{os}}', 'email.deviceUnknownBrowserOn': 'Desconhecido no {{os}}',
     'email.deviceUnknown': 'Navegador desconhecido', 'email.deviceAutomated': 'Aplicativo ou script',
+    'email.deletionCodeSubject': 'Confirme a exclusão da sua conta Linkord', 'email.deletionCodeTitle': 'Exclusão de conta',
+    'email.deletionCodeIntro': 'Use este código para confirmar a exclusão da conta "{{username}}":',
+    'email.deletionScheduledSubject': 'Sua conta Linkord será excluída', 'email.deletionScheduledTitle': 'Exclusão de conta agendada',
+    'email.deletionScheduledIntro': 'A conta "{{username}}" será excluída em {{date}}, com seu perfil, amizades e arquivos. Os servidores que você criou passam para o membro mais antigo.',
+    'email.deletionScheduledCancel': 'Mudou de ideia? Entre na sua conta antes dessa data e a exclusão é cancelada. Se não foi você, entre agora e troque sua senha.',
+    'email.deletionDoneSubject': 'Sua conta Linkord foi excluída', 'email.deletionDoneTitle': 'Conta excluída',
+    'email.deletionDoneIntro': 'A conta "{{username}}" foi excluída, como você pediu. Este é o último e-mail que enviamos para ela.',
+    'email.exportReadySubject': 'Seus dados do Linkord estão prontos', 'email.exportReadyTitle': 'Cópia dos seus dados',
+    'email.exportReadyIntro': 'A cópia dos dados da conta "{{username}}" que você pediu está pronta. Baixe-a com a conta conectada:',
+    'email.exportReadyExpires': 'O link vale até {{date}}. Depois disso, peça uma nova cópia em Configurações → Dados e privacidade.',
     'server.textCategory': 'Canais de texto', 'server.textChannel': 'geral',
     'server.voiceCategory': 'Canais de voz', 'server.voiceChannel': 'Geral',
   },
@@ -88,6 +102,16 @@ const TEXT: Record<Locale, Record<TextKey, string>> = {
     'email.loginAlertOptOut': 'You can turn this alert off in Settings → Security.',
     'email.deviceBrowserOn': '{{browser}} on {{os}}', 'email.deviceUnknownBrowserOn': 'Unknown on {{os}}',
     'email.deviceUnknown': 'Unknown browser', 'email.deviceAutomated': 'App or script',
+    'email.deletionCodeSubject': 'Confirm deleting your Linkord account', 'email.deletionCodeTitle': 'Account deletion',
+    'email.deletionCodeIntro': 'Use this code to confirm deleting the account "{{username}}":',
+    'email.deletionScheduledSubject': 'Your Linkord account will be deleted', 'email.deletionScheduledTitle': 'Account deletion scheduled',
+    'email.deletionScheduledIntro': 'The account "{{username}}" will be deleted on {{date}}, with its profile, friends and files. The servers you created pass to their longest-standing member.',
+    'email.deletionScheduledCancel': 'Changed your mind? Sign in to your account before that date and the deletion is cancelled. If this was not you, sign in now and change your password.',
+    'email.deletionDoneSubject': 'Your Linkord account was deleted', 'email.deletionDoneTitle': 'Account deleted',
+    'email.deletionDoneIntro': 'The account "{{username}}" was deleted, as you asked. This is the last email we send to it.',
+    'email.exportReadySubject': 'Your Linkord data is ready', 'email.exportReadyTitle': 'A copy of your data',
+    'email.exportReadyIntro': 'The copy of the data of the account "{{username}}" you asked for is ready. Download it while signed in to the account:',
+    'email.exportReadyExpires': 'The link works until {{date}}. After that, ask for a new copy in Settings → Data & privacy.',
     'server.textCategory': 'Text Channels', 'server.textChannel': 'general',
     'server.voiceCategory': 'Voice Channels', 'server.voiceChannel': 'General',
   },

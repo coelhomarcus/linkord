@@ -40,6 +40,8 @@ import { useMessageDeleteConfirm } from './useMessageDeleteConfirm';
 import { memberColor } from '@/features/servers/serverUtils';
 import { dmCallLine } from './dmCallLine';
 import { Emoji, EmojiText } from '@/features/emoji/Emoji';
+import { useSwipeToReply } from './useSwipeToReply';
+import { SWIPE } from '@/shared/lib/swipe';
 
 // A bot's message is usually something to acknowledge or flag — a deploy, an
 // alert — so its toolbar answers in one click, before the rest of the actions.
@@ -181,6 +183,7 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
   const inviteCodes = useMemo(() => (isInvite ? [] : inviteCodesInText(message.text)), [isInvite, message.text]);
   const canReport = can.report;
   const isEditing = !pending && !isInvite && editingMsgId === message.msgId;
+  const swipe = useSwipeToReply({ enabled: can.reply && !pending && !isEditing, onReply });
   const reactions = withPendingReactions(message.reactions, message.msgId, pendingReactions, state.me.userId);
   const hasReactions = Object.values(reactions).some((ids) => ids && ids.length > 0);
 
@@ -248,6 +251,19 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
   }
 
   return (
+    <div className={cn('relative', showHeader ? 'mt-[17px]' : 'mt-0')}>
+      {swipe.enabled && (
+        <div
+          aria-hidden
+          className={cn(
+            'pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3',
+            swipe.armed ? 'text-accent-text' : 'text-text-muted',
+          )}
+          style={{ opacity: Math.min(1, swipe.offset / SWIPE.replyCommitPx) }}
+        >
+          <ArrowBendUpLeftIcon size={22} />
+        </div>
+      )}
     <div
       ref={rowRef}
       onPointerUp={() => { if (window.getSelection()?.toString()) setMobileSelected(true); }}
@@ -256,9 +272,11 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
       data-message-id={pending ? undefined : message.msgId}
       data-pending={pending?.state}
       data-avatar-hover
+      data-swipe-pan-y={swipe.enabled || undefined}
+      {...swipe.handlers}
+      style={swipe.offset ? { transform: `translateX(${swipe.offset}px)` } : undefined}
       className={cn(
         'group/row relative flex gap-3 rounded-md px-4 py-0.5 transition-colors duration-100',
-        showHeader ? 'mt-[17px]' : 'mt-0',
         'hover:bg-message-hover',
         mentionsMe && 'bg-yellow/[0.06] hover:bg-yellow/[0.08]',
         highlighted && 'bg-primary/10',
@@ -464,6 +482,7 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
       {reportOpen && (
         <ReportDialog target={{ type: 'message', id: String(message.msgId), label: t('actions.reportLabel', { name: displayedName }) }} open onOpenChange={setReportOpen} />
       )}
+    </div>
     </div>
   );
 }

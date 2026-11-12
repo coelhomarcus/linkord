@@ -68,6 +68,14 @@ const UPLOAD_CHUNK_BYTES = 8 * 1024 * 1024;
 // abandoned upload session (UPLOAD_DIR/tmp/<uploadId>) expiry — swept at
 // boot and hourly.
 const UPLOAD_SESSION_TTL_MS = 24 * 60 * 60 * 1000;
+// Data exports (modules/data-export): the ZIPs wait here until downloaded or expired. Inside the uploads
+// folder by default, so the volume that already persists uploads keeps them across a deploy.
+const EXPORT_DIR = process.env.EXPORT_DIR || path.join(UPLOAD_DIR, 'exports');
+// how long a finished export can be downloaded, and how often an account may ask for one
+const DATA_EXPORT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const DATA_EXPORT_INTERVAL_MS = 24 * 60 * 60 * 1000;
+// Between asking to delete the account and the deletion: signing in again within it cancels.
+const ACCOUNT_DELETION_GRACE_DAYS = 14;
 // avatar — same folder/route as attachments, smaller cap, one per account,
 // excluded from the attachment quota.
 const MAX_AVATAR_BYTES = 12 * 1024 * 1024;
@@ -229,7 +237,7 @@ export const config = {
   MAX_CHAT_LEN, CHAT_HISTORY_LIMIT, SEARCH_RESULT_LIMIT, MAX_SEARCH_QUERY_LEN, MAX_ATTACHMENTS_PER_MESSAGE,
   FRIEND_REQUEST_COOLDOWN_MS, MAX_SERVER_MEMBERS, MAX_CHANNELS_PER_SERVER, MAX_ROLES_PER_SERVER, MAX_INVITES_PER_SERVER, MAX_WEBHOOKS_PER_CHANNEL, MAX_INVITEES_PER_REQUEST,
   UPLOAD_DIR, MAX_ATTACHMENT_BYTES, MAX_STORAGE_BYTES, MAX_AVATAR_BYTES,
-  UPLOAD_CHUNK_BYTES, UPLOAD_SESSION_TTL_MS,
+  UPLOAD_CHUNK_BYTES, UPLOAD_SESSION_TTL_MS, EXPORT_DIR, DATA_EXPORT_TTL_MS, DATA_EXPORT_INTERVAL_MS, ACCOUNT_DELETION_GRACE_DAYS,
   DATABASE_URL, DATABASE_SSL, DATABASE_SSL_CA, MIGRATE_ON_BOOT,
   SESSION_COOKIE, SESSION_TTL_DAYS, SESSION_IDLE_DAYS, REGISTRATION_CODE,
   COOKIE_SECURE, MAX_BODY_BYTES,

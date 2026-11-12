@@ -17,8 +17,9 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/
 import { cn } from '@/shared/lib/utils';
 import { useRoom } from '@/state/RoomContext';
 import type { ChannelSummary, ServerSummary } from '@/shared/types/protocol';
-import { useIsSpeaking, useParticipantMedia } from '@/features/calls/useLiveKitTrack';
+import { useIsSpeaking } from '@/features/calls/useLiveKitTrack';
 import { useMuteForMe } from '@/features/calls/useMuteForMe';
+import { participantMicMuted, useOwnMic } from '@/features/calls/micState';
 import { useStreamPreview } from '@/features/calls/streamPreviewStore';
 import { canMoveInto, canMoveOutOf } from './serverUtils';
 
@@ -49,12 +50,12 @@ interface VoicePerson {
  * the dock read it: speaking lights up for you too, not just for the others. */
 function useMyVoicePerson(): VoicePerson {
   const { state, deafened } = useRoom();
-  const media = useParticipantMedia(state.me.id ?? '');
+  const myMic = useOwnMic();
   const speaking = useIsSpeaking(state.me.id ?? '');
   return {
     id: state.me.id ?? 'me', userId: state.me.userId ?? 'me', displayName: state.me.displayName,
     avatar: state.me.avatar, avatarPoster: state.me.avatarPoster, avatarColor: state.me.avatarColor, isMe: true,
-    speaking, micMuted: !media.micActivated || media.micMuted, deafened, cameraOn: state.me.cameraOn, sharing: state.me.sharing,
+    speaking, micMuted: myMic.muted, deafened, cameraOn: state.me.cameraOn, sharing: state.me.sharing,
   };
 }
 
@@ -199,7 +200,7 @@ export function VoiceMembers({ server, channel, onOpenProfile, drag, onDragChang
     .filter((p) => p.callConversationId === channel.id)
     .map((p) => ({
       id: p.id, userId: p.userId, displayName: p.displayName, avatar: p.avatar, avatarPoster: p.avatarPoster, avatarColor: p.avatarColor,
-      isMe: false, speaking: p.speaking, micMuted: !p.micActivated || p.micMuted, deafened: p.deafened, cameraOn: p.cameraOn, sharing: p.sharing,
+      isMe: false, speaking: p.speaking, micMuted: participantMicMuted(p), deafened: p.deafened, cameraOn: p.cameraOn, sharing: p.sharing,
     }));
   const people = inThisCall ? [me, ...others] : others;
   // On a touch-first device the browser would start a drag from the same long

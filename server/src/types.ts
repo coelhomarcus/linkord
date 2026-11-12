@@ -61,6 +61,11 @@ export interface Participant {
   // a late message.
   micActivated: boolean;
   micMuted: boolean;
+  // true from a call join until the client reports its mic settled (published, refused, missing):
+  // with nothing published yet the mic would otherwise read as muted for that whole wait
+  micStarting: boolean;
+  // only clients from protocol 18 clear micStarting, so an older tab never starts in that state
+  reportsMicStarting: boolean;
   cameraOn: boolean;
   sharing: boolean;
   speaking: boolean;
@@ -101,6 +106,7 @@ export interface PublicParticipant {
   callConversationId: string | null;
   micActivated: boolean;
   micMuted: boolean;
+  micStarting: boolean;
   cameraOn: boolean;
   sharing: boolean;
   speaking: boolean;

@@ -14,12 +14,13 @@ import type { SocialEntry } from '@/shared/api/api';
 import { SettingsSection, SettingsSections } from '@/shared/ui/settings-layout';
 import { Skeleton, SkeletonGroup } from '@/shared/ui/primitives/skeleton';
 import { AutoIdleSetting } from '@/features/status/AutoIdleSetting';
+import { DataExportSettings } from './DataExportSettings';
 import { LoadError } from './LoadError';
 
 const blockedKey = (entry: SocialEntry) => entry.user.id;
 
-/** How you appear to others (automatic idle) and the accounts you blocked. Only YOUR blocks are
- * listed — who blocked you is never exposed anywhere. */
+/** How you appear to others (automatic idle), the accounts you blocked and a copy of your data. Only
+ * YOUR blocks are listed — who blocked you is never exposed anywhere. */
 export function PrivacyTab({ onOpenProfile }: { onOpenProfile: (userId: string) => void }) {
   const { t } = useTranslation('settings');
   const { revision, bump } = useFriends();
@@ -80,6 +81,9 @@ export function PrivacyTab({ onOpenProfile }: { onOpenProfile: (userId: string) 
         )}
 
         {list.status === 'ready' && <LoadMoreFooter list={list} />}
+      </SettingsSection>
+      <SettingsSection id="data-export" title={t('catalog.sections.dataExport')}>
+        <DataExportSettings />
       </SettingsSection>
     </SettingsSections>
   );

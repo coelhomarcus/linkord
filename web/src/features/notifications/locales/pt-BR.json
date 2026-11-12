@@ -36,5 +36,37 @@
     "hours_other": "há {{count}} h",
     "days_one": "há {{count}} d",
     "days_other": "há {{count}} d"
+  },
+  "preferences": {
+    "menu": "Notificações",
+    "headerButton": "Configurações de notificação",
+    "levels": {
+      "all": "Todas as mensagens",
+      "mentions": "Somente @menções",
+      "nothing": "Nada"
+    },
+    "inherit": "Padrão do servidor ({{level}})",
+    "mute": {
+      "server": "Silenciar servidor",
+      "channel": "Silenciar canal",
+      "direct": "Silenciar conversa",
+      "for15": "Por 15 minutos",
+      "for60": "Por 1 hora",
+      "for480": "Por 8 horas",
+      "for1440": "Por 24 horas",
+      "forever": "Até eu reativar"
+    },
+    "unmute": {
+      "server": "Reativar servidor",
+      "channel": "Reativar canal",
+      "direct": "Reativar conversa"
+    },
+    "mutedUntil": "Silenciado até {{time}}",
+    "mutedForever": "Silenciado até você reativar",
+    "mutedByServer": "O servidor está silenciado",
+    "muted": "Silenciado",
+    "updateFailed": "Não foi possível alterar as notificações. Tente de novo.",
+    "mentionCount_one": "{{count}} menção",
+    "mentionCount_other": "{{count}} menções"
   }
 }

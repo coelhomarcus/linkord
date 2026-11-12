@@ -10,6 +10,7 @@ import { runSerialized } from './profileQueue.js';
 import { effectiveStatus, getAccountStatus, isInvisible, type CustomStatus, type PresenceStatus, type VisibleStatus } from './userStatus.js';
 import type { AppSocket, HandlerTable, Participant, PublicParticipant, SessionUser } from '../../types.js';
 import { logger } from '../../lib/logger.js';
+import { MIC_STARTING_PROTOCOL_VERSION } from '../../realtime/protocolVersion.js';
 
 const log = logger.child({ component: 'presence' });
 
@@ -94,6 +95,8 @@ function createParticipant(u: ParticipantProfile, id: string, token: string, soc
     callConversationId: null,
     micActivated: false,
     micMuted: true,
+    micStarting: false,
+    reportsMicStarting: false,
     cameraOn: false,
     sharing: false,
     speaking: false,
@@ -132,7 +135,7 @@ export function publicParticipant(p: Participant): PublicParticipant {
     avatar: p.avatar, avatarPoster: p.avatarPoster, avatarColor: p.avatarColor,
     banner: p.banner, bannerPoster: p.bannerPoster, bio: p.bio, profileLinks: p.profileLinks, role: p.role,
     deafened: p.deafened, callConversationId: p.callConversationId,
-    micActivated: p.micActivated, micMuted: p.micMuted, cameraOn: p.cameraOn, sharing: p.sharing, speaking: p.speaking,
+    micActivated: p.micActivated, micMuted: p.micMuted, micStarting: p.micStarting, cameraOn: p.cameraOn, sharing: p.sharing, speaking: p.speaking,
   };
 }
 
@@ -143,7 +146,9 @@ export function setCallConversationId(p: Participant, conversationId: string | n
   const wasHidden = hiddenFromPeers(p);
   p.callConversationId = conversationId;
   p.micActivated = false;
-  p.micMuted = true;
+  p.micStarting = conversationId !== null && p.reportsMicStarting;
+  // a starting mic is not muted unless its client says so; older tabs still read the pair as muted
+  p.micMuted = !p.micStarting;
   p.cameraOn = false;
   p.sharing = false;
   p.speaking = false;
@@ -171,6 +176,16 @@ function broadcastParticipantUpdate(p: Participant): void {
   const msg = { t: 'participant-updated', participant: publicParticipant(p) };
   if (hiddenFromPeers(p)) sendToUser(p.userId, msg);
   else broadcastToKnownPeers(p.userId, msg);
+}
+
+/** After the account's username changed: every live connection of it carries the new name, so @mention
+ * suggestions and member lists of people online with it stop offering the old one. */
+export function renameParticipants(userId: string, username: string): void {
+  for (const p of participants.values()) {
+    if (p.userId !== userId || p.name === username) continue;
+    p.name = username;
+    broadcastParticipantUpdate(p);
+  }
 }
 
 /** `participant-joined` for a new or resumed connection, to everyone but itself. */
@@ -345,6 +360,7 @@ function evictGhostsForUser(userId: string): void {
 interface JoinMessage {
   id?: string;
   token?: string;
+  v?: unknown;
 }
 
 /** Creates or resumes the connection's participant (same identity if a
@@ -392,14 +408,17 @@ export function join(socket: AppSocket, msg: JoinMessage): { participant: Partic
     participants.set(p.id, p);
   }
   socket.participantId = p.id;
+  // a resume may come from a reloaded tab on another build
+  p.reportsMicStarting = typeof msg.v === 'number' && msg.v >= MIC_STARTING_PROTOCOL_VERSION;
   // caller (handleJoin, realtime/socket.ts) computes p.knownPeerIds and
   // broadcasts 'user-online' itself — that field doesn't exist yet here.
   return { participant: p, justCameOnline: !wasOnline };
 }
 
-/** Avatar, avatar background color, and displayName are all editable —
- * `name` stays the account's immutable username (used for @mentions/login,
- * never shown as-is once displayName exists). An empty/whitespace-only
+/** Avatar, avatar background color, and displayName are all editable here —
+ * `name` is the account's username (used for @mentions/login, never shown
+ * as-is once displayName exists), changed only by the password-confirmed
+ * rename in settings (renameParticipants). An empty/whitespace-only
  * displayName resets back to the username, same idea as avatarColor
  * falling back to the default on an invalid value. Persisted to survive
  * reconnects/other tabs. */
@@ -538,11 +557,12 @@ function handleDeafened(socket: AppSocket, msg: { value?: unknown }): void {
  * Lets anyone see an accurate mic-muted icon for this participant, not
  * just people connected to the same LiveKit room. Ignored outside a call:
  * a report that arrives after call-leave must not light the icon again. */
-function handleMicState(socket: AppSocket, msg: { activated?: unknown; muted?: unknown }): void {
+function handleMicState(socket: AppSocket, msg: { activated?: unknown; muted?: unknown; starting?: unknown }): void {
   const p = participantInCall(socket);
   if (!p) return;
   p.micActivated = !!msg.activated;
   p.micMuted = !!msg.muted;
+  p.micStarting = msg.starting === true;
   broadcastParticipantUpdate(p);
 }
 

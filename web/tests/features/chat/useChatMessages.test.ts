@@ -242,6 +242,32 @@ describe('useChatMessages — new message sound', () => {
   });
 });
 
+describe('useChatMessages — notification settings', () => {
+  it('stays quiet where alertsFor says no, and still counts the message as unread', () => {
+    vi.mocked(playSound).mockClear();
+    vi.mocked(notifyIncomingChatMessage).mockClear();
+    const alertsFor = vi.fn((conversationId: string, mentioned: boolean) => conversationId !== 'muted' || mentioned);
+    const { result } = setupWith({ alertsFor });
+    act(() => result.current.onChat({ t: 'chat', message: message(70, { conversationId: 'muted', text: 'oi' }) }));
+    expect(alertsFor).toHaveBeenCalledWith('muted', false);
+    expect(playSound).not.toHaveBeenCalled();
+    expect(notifyIncomingChatMessage).not.toHaveBeenCalled();
+    expect(result.current.unreadByConversation.get('muted')).toBe(1);
+  });
+
+  it('counts unread mentions apart, and clears them with the unread count', () => {
+    const { result } = setup();
+    act(() => result.current.onWelcome({ c1: 3 }, { c1: 1 }));
+    expect(result.current.mentionsByConversation.get('c1')).toBe(1);
+    act(() => result.current.onChat({ t: 'chat', message: message(80, { conversationId: 'c1', text: 'oi @b' }) }));
+    act(() => result.current.onChat({ t: 'chat', message: message(81, { conversationId: 'c1', text: 'oi' }) }));
+    expect(result.current.mentionsByConversation.get('c1')).toBe(2);
+    expect(result.current.unreadByConversation.get('c1')).toBe(5);
+    act(() => result.current.onConversationRead({ t: 'conversation-read', conversationId: 'c1', lastReadMessageId: 81 }));
+    expect(result.current.mentionsByConversation.has('c1')).toBe(false);
+  });
+});
+
 describe('useChatMessages — correlated send', () => {
   function setupWith(sendWs = vi.fn(() => true)) {
     const ref = <T,>(current: T) => ({ current });

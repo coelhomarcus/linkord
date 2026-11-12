@@ -29,6 +29,7 @@ import { registerNotificationRoutes } from '../modules/notifications/notificatio
 import { registerClientLogRoutes } from '../modules/logs/clientLogs.js';
 import { registerCspReportRoutes } from '../modules/logs/cspReports.js';
 import { registerLimitsRoutes } from '../modules/limits/limitsRoutes.js';
+import { registerDataExportRoutes } from '../modules/data-export/dataExportRoutes.js';
 import { registerReportRoutes } from '../modules/reports/reports.js';
 import { registerAdminRoutes } from '../modules/admin/adminRoutes.js';
 import { registerSoundboardRoutes } from '../modules/soundboard/soundboard.js';
@@ -137,6 +138,7 @@ export function createApp(): FastifyInstance {
   registerWebhookIngressRoutes(fastify);
   registerReportRoutes(fastify);
   registerLimitsRoutes(fastify);
+  registerDataExportRoutes(fastify);
   registerClientLogRoutes(fastify);
   registerCspReportRoutes(fastify);
   registerNotificationRoutes(fastify);

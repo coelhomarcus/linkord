@@ -1,9 +1,10 @@
 import { and, asc, desc, eq, sql } from 'drizzle-orm';
 import { db } from '../../db/client.js';
-import { attachments, messages, serverMembers, servers, users } from '../../db/schema.js';
+import { attachments, dataExports, messages, serverMembers, servers, users } from '../../db/schema.js';
 import { destroyAllSessionsForUser, invalidateSessionsForUser } from '../auth/session.js';
 import { broadcastToKnownPeers, listOnlineUserIds, participants, sendToUser } from '../presence/participants.js';
 import { deleteAvatarFile } from '../attachments/attachmentCleanup.js';
+import { deleteExportFiles } from '../data-export/exportStorage.js';
 import { announceRevocations } from '../servers/serverInvitationsRepository.js';
 import { revokePendingForUser } from '../servers/invitationRevocation.js';
 import { invalidateServer } from '../servers/serverAccess.js';
@@ -23,14 +24,17 @@ export type UserActionResult<T = object> = ({ code: 'ok' } & T) | { code: 'not_f
 export const CLI_ACTOR_ID = 'cli';
 
 interface Ctx { actor: AuditActor; reason: string; requestId: string }
+/** The account deletion the person asked for runs from a sweep, with no one acting: `actor` is null. */
+interface PurgeCtx { actor: AuditActor | null; reason: string; requestId: string }
 
 /** Locks every admin row (stable order) and then the target — so two admins
  * suspending/deleting each other, or the last two admins racing, serialize
  * and each sees the other's effect. */
 async function lockAdminsAndTarget(tx: Parameters<Parameters<typeof db.transaction>[0]>[0], targetId: string, actorId: string) {
   const admins = (await tx.execute(sql`select id, status from users where role = 'admin' order by id for update`)).rows as { id: string; status: string }[];
-  const [target] = (await tx.execute(sql`select id, username, role, status, avatar from users where id = ${targetId} for update`)).rows as
-    { id: string; username: string; role: string; status: string; avatar: string }[];
+  const [target] = (await tx.execute(sql`
+    select id, username, role, status, avatar, avatar_poster, banner, banner_poster, email, locale, deletion_due_at
+    from users where id = ${targetId} for update`)).rows as unknown as LockedTarget[];
   // The actor was checked as an admin BEFORE this transaction; a concurrent
   // demotion or suspension may have landed since, so it is re-checked under the
   // lock. The CLI is not an account and is exempt.
@@ -115,24 +119,29 @@ export async function revokeUserSessions(ctx: Ctx, targetId: string): Promise<Us
   return { code: 'ok' };
 }
 
-/** Deletes an account (§7.4/§7.5). Every server it OWNS first passes to the
- * member who has been there longest — under the server row lock, in the same
- * transaction as the delete — so no server is ever left without an owner. A
- * server with nobody else left is emptied by the delete and removed right
- * after (files included). */
-export async function deleteUserAccount(ctx: Ctx, targetId: string, confirm: string): Promise<UserActionResult> {
-  const [known] = await db.select({ username: users.username }).from(users).where(eq(users.id, targetId)).limit(1);
-  if (!known) return { code: 'not_found' };
-  if (confirm.trim().toLowerCase() !== known.username.toLowerCase()) return { code: 'confirmation_mismatch' };
+interface LockedTarget {
+  id: string; username: string; role: string; status: string;
+  avatar: string; avatar_poster: string; banner: string; banner_poster: string;
+  email: string | null; locale: string; deletion_due_at: Date | null;
+}
 
+type PurgeCheck = (locked: { target: LockedTarget; activeAdminCount: number; actorStillAdmin: boolean }) => UserActionResult['code'];
+
+export interface PurgedAccount { username: string; email: string | null; locale: string; servers: number; successions: number }
+
+/** Deletes an account (§7.4/§7.5), for an admin or for the deletion the person asked for
+ * (auth/accountDeletion.ts). `check` decides, under the row locks, whether it may go on. Every server
+ * the account OWNS first passes to the member who has been there longest — under the server row lock,
+ * in the same transaction as the delete — so no server is ever left without an owner. A server with
+ * nobody else left is emptied by the delete and removed right after (files included). */
+export async function purgeUserAccount(ctx: PurgeCtx, targetId: string, check: PurgeCheck): Promise<UserActionResult<{ account: PurgedAccount }>> {
   const outcome = await db.transaction(async (tx): Promise<UserActionResult<{
-    username: string; avatar: string; serverIds: string[]; successions: { serverId: string; newOwnerId: string }[];
+    target: LockedTarget; serverIds: string[]; successions: { serverId: string; newOwnerId: string }[]; exportIds: string[];
   }>> => {
-    const { activeAdminCount, target, actorStillAdmin } = await lockAdminsAndTarget(tx, targetId, ctx.actor.id);
-    if (!actorStillAdmin) return { code: 'forbidden' };
+    const { activeAdminCount, target, actorStillAdmin } = await lockAdminsAndTarget(tx, targetId, ctx.actor?.id ?? CLI_ACTOR_ID);
     if (!target) return { code: 'not_found' };
-    const decision = decideUserAction({ action: 'delete', actorId: ctx.actor.id, targetId, targetRole: target.role, targetStatus: target.status, activeAdminCount });
-    if (decision !== 'allow') return { code: decision };
+    const decision = check({ target, activeAdminCount, actorStillAdmin });
+    if (decision !== 'ok') return { code: decision };
 
     const memberships = await tx.select({ serverId: serverMembers.serverId }).from(serverMembers)
       .where(eq(serverMembers.userId, targetId)).orderBy(asc(serverMembers.serverId));
@@ -156,14 +165,17 @@ export async function deleteUserAccount(ctx: Ctx, targetId: string, confirm: str
       }, tx);
     }
 
+    // the rows cascade with the account; their files are removed after the commit
+    const exportIds = (await tx.select({ id: dataExports.id }).from(dataExports).where(eq(dataExports.userId, targetId))).map((r) => r.id);
     await tx.delete(users).where(eq(users.id, targetId));
     await recordAudit({
       actor: ctx.actor, action: 'user.delete', targetType: 'user', targetId, targetLabel: target.username, reason: ctx.reason,
       detail: { servers: memberships.length, successions: successions.length }, requestId: ctx.requestId,
     }, tx);
-    return { code: 'ok', username: target.username, avatar: target.avatar, serverIds: memberships.map((m) => m.serverId), successions };
+    return { code: 'ok', target, serverIds: memberships.map((m) => m.serverId), successions, exportIds };
   });
   if (outcome.code !== 'ok') return outcome;
+  const { target } = outcome;
 
   // the sessions cascaded away with the row; live connections still need cutting
   await destroyAllSessionsForUser(targetId);
@@ -181,14 +193,34 @@ export async function deleteUserAccount(ctx: Ctx, targetId: string, confirm: str
     await sendServerUpdateToMembers(serverId);
     await broadcastToServerMembers(serverId, { t: 'server-member-removed', serverId, userId: targetId });
   }
-  log.warn('account deleted', { actorId: ctx.actor.id, targetId, servers: outcome.serverIds.length, successions: outcome.successions.length });
+  log.warn('account deleted', { actorId: ctx.actor?.id ?? null, targetId, servers: outcome.serverIds.length, successions: outcome.successions.length });
 
-  if (outcome.avatar) {
-    await deleteAvatarFile(outcome.avatar).catch((err) => recordAuditFailure(
-      { actor: ctx.actor, action: 'user.delete.avatar_cleanup', targetType: 'user', targetId, targetLabel: outcome.username, requestId: ctx.requestId }, err,
+  for (const image of [target.avatar, target.avatar_poster, target.banner, target.banner_poster]) {
+    if (!image) continue;
+    await deleteAvatarFile(image).catch((err) => recordAuditFailure(
+      { actor: ctx.actor, action: 'user.delete.avatar_cleanup', targetType: 'user', targetId, targetLabel: target.username, requestId: ctx.requestId }, err,
     ));
   }
-  return { code: 'ok' };
+  await deleteExportFiles(outcome.exportIds).catch((err) => recordAuditFailure(
+    { actor: ctx.actor, action: 'user.delete.export_cleanup', targetType: 'user', targetId, targetLabel: target.username, requestId: ctx.requestId }, err,
+  ));
+  return {
+    code: 'ok',
+    account: { username: target.username, email: target.email, locale: target.locale, servers: outcome.serverIds.length, successions: outcome.successions.length },
+  };
+}
+
+/** An admin deleting someone else's account, confirmed by typing its username. */
+export async function deleteUserAccount(ctx: Ctx, targetId: string, confirm: string): Promise<UserActionResult> {
+  const [known] = await db.select({ username: users.username }).from(users).where(eq(users.id, targetId)).limit(1);
+  if (!known) return { code: 'not_found' };
+  if (confirm.trim().toLowerCase() !== known.username.toLowerCase()) return { code: 'confirmation_mismatch' };
+  const result = await purgeUserAccount(ctx, targetId, ({ target, activeAdminCount, actorStillAdmin }) => {
+    if (!actorStillAdmin) return 'forbidden';
+    const decision = decideUserAction({ action: 'delete', actorId: ctx.actor?.id ?? CLI_ACTOR_ID, targetId, targetRole: target.role, targetStatus: target.status, activeAdminCount });
+    return decision === 'allow' ? 'ok' : decision;
+  });
+  return result.code === 'ok' ? { code: 'ok' } : result;
 }
 
 // ---- reads -------------------------------------------------------------------

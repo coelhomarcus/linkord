@@ -307,9 +307,7 @@ describe('MessageTimeline — reading position and active media', { timeout: HEA
 });
 
 describe('MessageTimeline — arrival animation', () => {
-  // an animated row sits inside the entrance wrapper; any other row is a
-  // direct child of the positioned, measured wrapper
-  const animated = (container: HTMLElement, id: number) => !container.querySelector(`[data-msg-id="${id}"]`)!.parentElement!.hasAttribute('data-index');
+  const animated = (container: HTMLElement, id: number) => !!container.querySelector(`[data-msg-id="${id}"]`)!.closest('[data-arrival]');
 
   it('a message that just arrived animates in once; remounting does not repeat it', async () => {
     const messages = [message(1), message(2)];

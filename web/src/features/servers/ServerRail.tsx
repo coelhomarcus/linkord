@@ -128,7 +128,7 @@ export function ServerRail({ className }: { className?: string }) {
   const { t } = useTranslation('servers');
   const navigate = useNavigate();
   const { pathname } = useContentLocation();
-  const { state, servers, conversations, unreadByConversation, reorderServers, activeCallConversationId, allUsers, dmCall } = useRoom();
+  const { state, servers, conversations, badgeByConversation, reorderServers, activeCallConversationId, allUsers, dmCall } = useRoom();
   const callIds = useMemo(() => liveCallIds(state.participants.values(), activeCallConversationId), [state.participants, activeCallConversationId]);
   // a press only becomes a drag past a few pixels, so a click still opens the server
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
@@ -154,8 +154,8 @@ export function ServerRail({ className }: { className?: string }) {
   const currentServerId = serverIdFromPath(pathname);
   const home = isHomePath(pathname) || pathname.startsWith('/app/calls/');
   const directs = useMemo(() => railDirects({
-    conversations, myUserId: state.me.userId, unreadByConversation, activeCallConversationId, dmCall,
-  }), [conversations, state.me.userId, unreadByConversation, activeCallConversationId, dmCall]);
+    conversations, myUserId: state.me.userId, unreadByConversation: badgeByConversation, activeCallConversationId, dmCall,
+  }), [conversations, state.me.userId, badgeByConversation, activeCallConversationId, dmCall]);
   const openConversationId = conversationIdFromPath(pathname) ?? callConversationIdFromPath(pathname);
 
   return (
@@ -201,7 +201,7 @@ export function ServerRail({ className }: { className?: string }) {
       <DndContext sensors={sensors} collisionDetection={closestCenter} modifiers={[alongRail]} onDragStart={() => { draggedAtRef.current = Date.now(); }} onDragEnd={handleDragEnd} onDragCancel={() => { draggedAtRef.current = Date.now(); }}>
         <SortableContext items={servers.map((s) => s.id)} strategy={verticalListSortingStrategy}>
           {servers.map((server) => {
-            const unread = serverUnread(server, unreadByConversation);
+            const unread = serverUnread(server, badgeByConversation);
             return (
               <SortableServerItem
                 key={server.id}

@@ -193,6 +193,12 @@
    selectable, so on a touch-first device it is not, except for its links
    (whose native long press stays) and after "Select text" in the menu. */
 @media (hover: none) and (pointer: coarse) {
+  /* Leave vertical pans to the browser; a claimed horizontal swipe takes
+     the pointer only after it has left the long-press lock. */
+  [data-swipe-pan-y] {
+    touch-action: pan-y;
+  }
+
   .message-press-text {
     -webkit-user-select: none;
     user-select: none;

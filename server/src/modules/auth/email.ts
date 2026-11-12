@@ -19,6 +19,7 @@ const COPY = {
   email_change: { subject: 'email.changeSubject', title: 'email.changeTitle', intro: 'email.changeIntro', expires: 'email.expires' },
   two_factor_setup: { subject: 'email.twoFactorSetupSubject', title: 'email.twoFactorSetupTitle', intro: 'email.twoFactorSetupIntro', expires: 'email.expires' },
   login: { subject: 'email.loginSubject', title: 'email.loginTitle', intro: 'email.loginIntro', expires: 'email.loginExpires' },
+  account_deletion: { subject: 'email.deletionCodeSubject', title: 'email.deletionCodeTitle', intro: 'email.deletionCodeIntro', expires: 'email.expires' },
 } as const satisfies Record<AuthCodePurpose, Record<string, Parameters<typeof localeText>[1]>>;
 
 // Every text that goes into an email's HTML is escaped: a username or an address is never markup.
@@ -83,8 +84,7 @@ export async function sendLoginAlertEmail(
   const subject = localeText(locale, 'email.loginAlertSubject');
   const title = localeText(locale, 'email.loginAlertTitle');
   const intro = localeText(locale, 'email.loginAlertIntro', { username });
-  // UTC with its name spelled out: the server does not know the reader's time zone.
-  const time = `${new Intl.DateTimeFormat(locale, { dateStyle: 'long', timeStyle: 'short', timeZone: 'UTC' }).format(at)} UTC`;
+  const time = emailDate(locale, at);
   const details = [
     localeText(locale, 'email.loginAlertDevice', { device: deviceName(locale, userAgent) }),
     localeText(locale, 'email.loginAlertIp', { ip: ip || '?' }),
@@ -100,4 +100,44 @@ export async function sendLoginAlertEmail(
     text: `${title}\n\n${intro}\n\n${details.join('\n')}\n\n${action}\n${link}\n\n${optOut}`,
     html: `<h2>${escapeHtml(title)}</h2><p>${escapeHtml(intro)}</p><ul>${details.map((line) => `<li>${escapeHtml(line)}</li>`).join('')}</ul><p>${escapeHtml(action)}</p>${link ? `<p><a href="${escapeHtml(link)}">${escapeHtml(link)}</a></p>` : ''}<p style="color:#666">${escapeHtml(optOut)}</p>`,
   });
+}
+
+/** A date for an email, in UTC with its name spelled out: the server does not know the reader's time zone. */
+function emailDate(locale: Locale, at: Date): string {
+  return `${new Intl.DateTimeFormat(locale, { dateStyle: 'long', timeStyle: 'short', timeZone: 'UTC' }).format(at)} UTC`;
+}
+
+/** A plain notice: a title, its paragraphs and an optional link, the same in text and HTML. */
+async function deliverNotice(to: string, subject: string, title: string, paragraphs: string[], link = ''): Promise<void> {
+  const [first = '', ...rest] = paragraphs;
+  await deliverEmail({
+    to,
+    subject,
+    text: [title, first, link, ...rest].filter(Boolean).join('\n\n'),
+    html: `<h2>${escapeHtml(title)}</h2><p>${escapeHtml(first)}</p>${link ? `<p><a href="${escapeHtml(link)}">${escapeHtml(link)}</a></p>` : ''}${rest.map((p) => `<p>${escapeHtml(p)}</p>`).join('')}`,
+  });
+}
+
+export async function sendAccountDeletionScheduledEmail(
+  { to, username, locale, dueAt }: { to: string; username: string; locale: Locale; dueAt: Date },
+): Promise<void> {
+  await deliverNotice(to, localeText(locale, 'email.deletionScheduledSubject'), localeText(locale, 'email.deletionScheduledTitle'), [
+    localeText(locale, 'email.deletionScheduledIntro', { username, date: emailDate(locale, dueAt) }),
+    localeText(locale, 'email.deletionScheduledCancel'),
+  ], config.APP_URL);
+}
+
+export async function sendAccountDeletedEmail({ to, username, locale }: { to: string; username: string; locale: Locale }): Promise<void> {
+  await deliverNotice(to, localeText(locale, 'email.deletionDoneSubject'), localeText(locale, 'email.deletionDoneTitle'), [
+    localeText(locale, 'email.deletionDoneIntro', { username }),
+  ]);
+}
+
+export async function sendDataExportReadyEmail(
+  { to, username, locale, link, expiresAt }: { to: string; username: string; locale: Locale; link: string; expiresAt: Date },
+): Promise<void> {
+  await deliverNotice(to, localeText(locale, 'email.exportReadySubject'), localeText(locale, 'email.exportReadyTitle'), [
+    localeText(locale, 'email.exportReadyIntro', { username }),
+    localeText(locale, 'email.exportReadyExpires', { date: emailDate(locale, expiresAt) }),
+  ], link);
 }

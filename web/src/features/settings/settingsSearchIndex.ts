@@ -15,7 +15,7 @@ export interface SearchEntry {
 }
 
 type SearchKey =
-  | 'accountInfo' | 'email' | 'session' | 'password' | 'twoFactor' | 'loginAlerts' | 'sessions' | 'connections' | 'blocked' | 'presence'
+  | 'accountInfo' | 'email' | 'session' | 'deleteAccount' | 'dataExport' | 'password' | 'twoFactor' | 'loginAlerts' | 'sessions' | 'connections' | 'blocked' | 'presence'
   | 'theme' | 'voice' | 'inputProfile' | 'video' | 'calls' | 'uploads'
   | 'desktopNotifications' | 'sounds' | 'language' | 'timeFormat' | 'adminArea' | 'install';
 
@@ -26,6 +26,7 @@ export const SETTINGS_SEARCH_INDEX: SearchEntry[] = [
   { categoryId: 'account', sectionId: 'account-info', searchKey: 'accountInfo' },
   { categoryId: 'account', sectionId: 'account-info', searchKey: 'email' },
   { categoryId: 'account', sectionId: 'session', searchKey: 'session' },
+  { categoryId: 'account', sectionId: 'delete-account', searchKey: 'deleteAccount' },
   { categoryId: 'security', sectionId: 'password', searchKey: 'password' },
   { categoryId: 'security', sectionId: 'two-factor', searchKey: 'twoFactor' },
   { categoryId: 'security', sectionId: 'login-alerts', searchKey: 'loginAlerts' },
@@ -33,6 +34,7 @@ export const SETTINGS_SEARCH_INDEX: SearchEntry[] = [
   { categoryId: 'connections', searchKey: 'connections' },
   { categoryId: 'privacy', sectionId: 'presence', searchKey: 'presence' },
   { categoryId: 'privacy', sectionId: 'blocked', searchKey: 'blocked' },
+  { categoryId: 'privacy', sectionId: 'data-export', searchKey: 'dataExport' },
   { categoryId: 'appearance', sectionId: 'theme', searchKey: 'theme' },
   { categoryId: 'av', sectionId: 'voice', searchKey: 'voice' },
   { categoryId: 'av', sectionId: 'input-profile', searchKey: 'inputProfile' },

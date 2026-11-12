@@ -1,4 +1,4 @@
-import { PhoneIcon, PlusIcon, UsersIcon, XIcon } from '@phosphor-icons/react';
+import { BellSlashIcon, PhoneIcon, PlusIcon, UsersIcon, XIcon } from '@phosphor-icons/react';
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
@@ -29,10 +29,12 @@ function DirectRow({ conversation, active, onClick, onClose }: {
   conversation: Conversation; active: boolean; onClick: () => void; onClose: () => void;
 }) {
   const { t } = useTranslation('conversations');
-  const { state, allUsers, unreadByConversation, activeCallConversationId } = useRoom();
+  const { t: tn } = useTranslation('notifications');
+  const { state, allUsers, badgeByConversation, notificationPolicyFor, activeCallConversationId } = useRoom();
   const title = conversationTitle(conversation, state.me.userId, allUsers);
   const other = directUser(conversation, state.me.userId, allUsers);
-  const unread = unreadByConversation.get(conversation.id) ?? 0;
+  const unread = badgeByConversation.get(conversation.id) ?? 0;
+  const muted = notificationPolicyFor({ id: conversation.id }).muted;
   const status = useUserStatus(other?.id);
   const customStatus = useCustomStatus(other?.id);
   const inCall = activeCallConversationId === conversation.id;
@@ -42,7 +44,7 @@ function DirectRow({ conversation, active, onClick, onClose }: {
         type="button"
         onClick={onClick}
         data-avatar-hover
-        aria-label={unread > 0 ? t('sidebar.rowUnread', { name: title, count: unread }) : title}
+        aria-label={`${unread > 0 ? t('sidebar.rowUnread', { name: title, count: unread }) : title}${muted ? `, ${tn('preferences.muted')}` : ''}`}
         aria-current={active ? 'page' : undefined}
         className={cn(
           'relative isolate flex w-full items-center gap-3 rounded-lg px-2 text-left',
@@ -65,7 +67,10 @@ function DirectRow({ conversation, active, onClick, onClose }: {
           )}
         </span>
         <span className="min-w-0 flex-1">
-          <span className={cn('block truncate text-body', unread ? 'font-semibold' : 'font-medium')}>{title}</span>
+          <span className="flex min-w-0 items-center gap-1">
+            <span className={cn('truncate text-body', unread ? 'font-semibold' : 'font-medium', muted && !active && !unread && 'opacity-60')}>{title}</span>
+            {muted && <BellSlashIcon size={14} className="flex-none text-text-muted" aria-label={tn('preferences.muted')} role="img" />}
+          </span>
           {inCall ? (
             <span className="block truncate text-label text-green">{t('sidebar.inThisCall')}</span>
           ) : (
@@ -143,7 +148,7 @@ function DirectList({ onNavigate }: { onNavigate: () => void }) {
             <DirectRow
               key={conversation.id}
               conversation={conversation}
-              active={!isMobile && conversation.id === visibleId}
+              active={conversation.id === visibleId}
               onClick={() => select(conversation.id)}
               onClose={() => { closeConversation(conversation.id); if (visibleId === conversation.id) navigate(ROUTES.home, { replace: true }); }}
             />
@@ -183,18 +188,28 @@ export function ConversationSidebar({ onOpenProfile }: { onOpenProfile: (userId:
   const server = serverId ? servers.find((s) => s.id === serverId) ?? null : null;
   const afterNavigate = () => { if (isOverlay) setOpenMobile(false); };
   const content = server
-    ? <ChannelList server={server} activeChannelId={isMobile ? null : conversationIdFromPath(pathname)} onNavigate={afterNavigate} onOpenProfile={onOpenProfile} />
+    ? <ChannelList server={server} activeChannelId={conversationIdFromPath(pathname)} onNavigate={afterNavigate} onOpenProfile={onOpenProfile} />
     : <DirectList onNavigate={afterNavigate} />;
 
   if (isMobile) {
     // a phone shows the column as its own page, only where nothing is open
     const listPage = pathname === ROUTES.home || pathname === '/app/channels' || (!!serverId && !conversationIdFromPath(pathname));
-    if (!listPage) return null;
+    if (listPage) {
+      return (
+        <main aria-label={server?.name ?? t('sidebar.title')} className="flex min-h-0 min-w-0 flex-1 bg-bg-primary pb-[var(--mobile-navigation-height)] text-text-primary">
+          <ServerRail />
+          <div className="flex min-w-0 flex-1 flex-col rounded-tl-xl bg-bg-secondary">{content}</div>
+        </main>
+      );
+    }
+    // in a conversation the same list is a drawer, opened by the edge swipe
     return (
-      <main aria-label={server?.name ?? t('sidebar.title')} className="flex min-h-0 min-w-0 flex-1 bg-bg-primary pb-[var(--mobile-navigation-height)] text-text-primary">
-        <ServerRail />
-        <div className="flex min-w-0 flex-1 flex-col rounded-tl-xl bg-bg-secondary">{content}</div>
-      </main>
+      <Sidebar ariaLabel={server?.name ?? t('sidebar.title')} leadingInset={false} className="text-text-primary">
+        <div className="flex h-full min-h-0">
+          <ServerRail />
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-bg-secondary">{content}</div>
+        </div>
+      </Sidebar>
     );
   }
   return (

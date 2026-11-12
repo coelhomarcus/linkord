@@ -202,6 +202,7 @@
     "user.revoke_sessions": "Sessions revoked",
     "user.delete": "Account deleted",
     "user.delete.avatar_cleanup": "Avatar cleanup",
+    "user.delete.export_cleanup": "Data copy cleanup",
     "group.suspend": "Group suspended",
     "group.reactivate": "Group reactivated",
     "group.assign_owner": "Owner assigned",
@@ -229,10 +230,16 @@
     "retention.sweep": "Retention applied",
     "account.two_factor_enable": "Two-step verification turned on",
     "account.two_factor_disable": "Two-step verification turned off",
+    "account.username_change": "Username changed",
     "account.password_change": "Password changed",
     "account.password_reset": "Password reset by email",
     "account.session_end": "Session ended by the account",
-    "account.sessions_end_others": "Other sessions ended by the account"
+    "account.sessions_end_others": "Other sessions ended by the account",
+    "account.deletion_schedule": "Account deletion scheduled by the account",
+    "account.deletion_cancel": "Account deletion cancelled by signing in",
+    "account.data_export_request": "Data copy requested",
+    "account.data_export_download": "Data copy downloaded",
+    "account.data_export": "Data copy"
   },
   "detail": {
     "fullHistory": "Full history",

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { initialRoomState } from '@/state/roomReducer';
@@ -509,6 +509,50 @@ describe('MessageRow — edit and delete with confirmation', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Não foi possível apagar');
     fireEvent.click(screen.getByRole('button', { name: 'Dispensar aviso' }));
     expect(dismissMessageActionError).toHaveBeenCalledWith(mine.msgId);
+  });
+});
+
+describe('MessageRow — swipe to reply', () => {
+  const originalMatchMedia = window.matchMedia;
+  afterEach(() => { window.matchMedia = originalMatchMedia; });
+
+  function touchFirst() {
+    window.matchMedia = ((query: string) => ({
+      matches: query === '(hover: none) and (pointer: coarse)',
+      media: query, onchange: null,
+      addListener: () => {}, removeListener: () => {}, addEventListener: () => {}, removeEventListener: () => {}, dispatchEvent: () => false,
+    })) as typeof window.matchMedia;
+  }
+
+  const touch = (x: number, y: number) => ({ pointerType: 'touch', pointerId: 1, button: 0, clientX: x, clientY: y });
+
+  it('a right swipe past the threshold starts a reply', () => {
+    touchFirst();
+    const onReply = vi.fn();
+    Object.defineProperty(navigator, 'vibrate', { value: vi.fn(() => true), configurable: true });
+    renderWithRoom(
+      <MessageRow message={makeMessage()} showHeader highlighted={false} allUsers={new Map()} mentionLookup={new Map()} onOpenProfile={noop} onReply={onReply} onJumpTo={noop} />,
+      { state: { ...initialRoomState, me: { ...initialRoomState.me, userId: 'me' } } },
+    );
+    const row = screen.getByText('Oi, tudo bem?').closest('[data-message-id]')!;
+    fireEvent.pointerDown(row, touch(80, 40));
+    fireEvent.pointerMove(row, touch(80 + 56, 42));
+    fireEvent.pointerUp(row, touch(80 + 56, 42));
+    expect(onReply).toHaveBeenCalledTimes(1);
+  });
+
+  it('a vertical move does not start a reply', () => {
+    touchFirst();
+    const onReply = vi.fn();
+    renderWithRoom(
+      <MessageRow message={makeMessage()} showHeader highlighted={false} allUsers={new Map()} mentionLookup={new Map()} onOpenProfile={noop} onReply={onReply} onJumpTo={noop} />,
+      { state: { ...initialRoomState, me: { ...initialRoomState.me, userId: 'me' } } },
+    );
+    const row = screen.getByText('Oi, tudo bem?').closest('[data-message-id]')!;
+    fireEvent.pointerDown(row, touch(80, 40));
+    fireEvent.pointerMove(row, touch(84, 70));
+    fireEvent.pointerUp(row, touch(84, 70));
+    expect(onReply).not.toHaveBeenCalled();
   });
 });
 

@@ -73,11 +73,14 @@ export interface LoginChallenge {
   email: string;
 }
 
-export function login(username: string, password: string): Promise<{ user: ApiUser } | { twoFactor: LoginChallenge }> {
+/** `deletionCancelled`: this sign-in cancelled the account's scheduled deletion. */
+export interface SignedIn { user: ApiUser; deletionCancelled?: true }
+
+export function login(username: string, password: string): Promise<SignedIn | { twoFactor: LoginChallenge }> {
   return apiFetch('/api/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) });
 }
 
-export function verifyLoginCode(challenge: string, code: string): Promise<{ user: ApiUser }> {
+export function verifyLoginCode(challenge: string, code: string): Promise<SignedIn> {
   return apiFetch('/api/auth/login/verify', { method: 'POST', body: JSON.stringify({ challenge, code }) });
 }
 
@@ -164,6 +167,22 @@ export function resetPassword(identifier: RecoveryIdentifier, code: string, pass
   return apiFetch('/api/auth/recovery/reset', { method: 'POST', body: JSON.stringify({ ...identifierPayload(identifier), code, password }) });
 }
 
+export interface UsernameAvailability {
+  username: string;
+  /** free for this account: nobody else has it in any letter case (the account's own name is free) */
+  available: boolean;
+  /** exactly the account's current name, so there is nothing to change */
+  current: boolean;
+}
+
+export function checkUsernameAvailability(username: string, signal?: AbortSignal): Promise<UsernameAvailability> {
+  return apiFetch(`/api/auth/username/availability?username=${encodeURIComponent(username)}`, { signal });
+}
+
+export function changeUsername(username: string, password: string): Promise<{ user: ApiUser }> {
+  return apiFetch('/api/auth/username', { method: 'POST', body: JSON.stringify({ username, password }) });
+}
+
 export function requestEmailChange(email: string, password: string): Promise<{ ok: true }> {
   return apiFetch('/api/auth/email/change/request', { method: 'POST', body: JSON.stringify({ email, password }) });
 }
@@ -171,6 +190,39 @@ export function requestEmailChange(email: string, password: string): Promise<{ o
 export function confirmEmailChange(email: string, code: string): Promise<{ user: ApiUser }> {
   return apiFetch('/api/auth/email/change/confirm', { method: 'POST', body: JSON.stringify({ email, code }) });
 }
+
+/** Deleting your own account: with two-step login on, the password earns an emailed code first
+ * (`confirmAccountDeletion`); otherwise the deletion is scheduled at once. Either way the account is then
+ * signed out everywhere, this browser included. */
+export function requestAccountDeletion(password: string): Promise<{ deletionDueAt: string } | { codeRequired: true; email: string }> {
+  return apiFetch('/api/auth/account/deletion/request', { method: 'POST', body: JSON.stringify({ password }) });
+}
+
+export function confirmAccountDeletion(code: string): Promise<{ deletionDueAt: string }> {
+  return apiFetch('/api/auth/account/deletion/confirm', { method: 'POST', body: JSON.stringify({ code }) });
+}
+
+export interface DataExport {
+  id: string;
+  status: 'pending' | 'running' | 'ready' | 'failed' | 'expired';
+  requestedAt: string;
+  completedAt: string | null;
+  expiresAt: string | null;
+  sizeBytes: number | null;
+}
+
+/** The latest copy of the account's data, and when another may be asked for (null: now). */
+export interface DataExportStatus { latest: DataExport | null; nextRequestAt: string | null }
+
+export function fetchDataExportStatus(): Promise<DataExportStatus> {
+  return apiFetch('/api/account/data-export');
+}
+
+export function requestDataExport(): Promise<{ export: DataExport }> {
+  return apiFetch('/api/account/data-export', { method: 'POST' });
+}
+
+export const dataExportDownloadUrl = (id: string) => `/api/account/data-export/${encodeURIComponent(id)}/download`;
 
 export function logout(): Promise<void> {
   return apiFetch('/api/auth/logout', { method: 'POST' });

@@ -7,11 +7,13 @@ import { runTool, sha256OfFile } from './postgresTools.js';
 
 // The uploads folder as one `.tar.gz`. `tmp/` holds chunked uploads still in
 // progress (half a file is useless on its own and the client starts that upload
-// again), so it is left out. The archive is built from an explicit list of names
+// again), so it is left out. So is `exports/` (the default EXPORT_DIR): data
+// exports are copies of personal data that expire within days, and a person can
+// ask for a new one; a backup kept for weeks must not hold them. The archive is built from an explicit list of names
 // rather than a directory walk by tar, so the exclusion does not depend on which
 // tar (GNU, BSD, busybox) is installed.
 
-const SKIPPED_TOP_LEVEL = new Set(['tmp']);
+const SKIPPED_TOP_LEVEL = new Set(['tmp', 'exports']);
 
 export interface UploadsArchive {
   /** null when the folder had nothing to archive, in which case no file was written */

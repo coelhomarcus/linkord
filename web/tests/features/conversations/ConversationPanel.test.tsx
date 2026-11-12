@@ -218,6 +218,63 @@ describe('ConversationPanel — phone list route', () => {
   });
 });
 
+describe('ConversationPanel — edge swipe opens the list', () => {
+  const direct: Conversation = {
+    id: 'c1', type: 'direct', title: '', serverId: null, memberIds: ['me', 'peer'],
+    lastMessageAt: null, createdAt: 0, updatedAt: 0,
+  };
+
+  afterEach(() => { vi.restoreAllMocks(); });
+
+  it('a right swipe from the left edge opens the drawer; a vertical move does not', () => {
+    vi.spyOn(window, 'matchMedia').mockImplementation((query) => ({
+      matches: query === '(max-width: 1023px)' || query === '(hover: none) and (pointer: coarse)',
+      media: query, onchange: null,
+      addListener: () => {}, removeListener: () => {}, addEventListener: () => {}, removeEventListener: () => {}, dispatchEvent: () => false,
+    }) as MediaQueryList);
+    const onOpenMobileChange = vi.fn();
+    renderSocial(
+      <SidebarProvider openMobile={false} onOpenMobileChange={onOpenMobileChange}>
+        <ConversationPanel onOpenProfile={() => {}} onOpenCall={() => {}} onOpenSearch={() => {}} detailsOpen={false} mediaOpen={false} onOpenDetails={() => {}} onToggleDetails={() => {}} onToggleMedia={() => {}} />
+      </SidebarProvider>,
+      { path: '/app/channels/@me/c1', room: { state: { ...joinedState, me: { ...joinedState.me, userId: 'me' } }, conversations: [direct], activeConversationId: 'c1' } },
+    );
+    const panel = screen.getByRole('main');
+    vi.spyOn(panel, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 390, 800));
+    const touch = (x: number, y: number) => ({ pointerType: 'touch', pointerId: 1, button: 0, clientX: x, clientY: y });
+    fireEvent.pointerDown(panel, touch(12, 200));
+    fireEvent.pointerMove(panel, touch(12 + 64, 204));
+    fireEvent.pointerUp(panel, touch(12 + 64, 204));
+    expect(onOpenMobileChange).toHaveBeenCalledWith(true);
+
+    onOpenMobileChange.mockClear();
+    fireEvent.pointerDown(panel, touch(12, 200));
+    fireEvent.pointerMove(panel, touch(16, 240));
+    fireEvent.pointerUp(panel, touch(16, 240));
+    expect(onOpenMobileChange).not.toHaveBeenCalled();
+  });
+
+  it('a left swipe closes the open drawer', () => {
+    vi.spyOn(window, 'matchMedia').mockImplementation((query) => ({
+      matches: query === '(max-width: 1023px)' || query === '(hover: none) and (pointer: coarse)',
+      media: query, onchange: null,
+      addListener: () => {}, removeListener: () => {}, addEventListener: () => {}, removeEventListener: () => {}, dispatchEvent: () => false,
+    }) as MediaQueryList);
+    const onOpenMobileChange = vi.fn();
+    renderSocial(
+      <SidebarProvider openMobile onOpenMobileChange={onOpenMobileChange}>
+        <ConversationPanel onOpenProfile={() => {}} onOpenCall={() => {}} onOpenSearch={() => {}} detailsOpen={false} mediaOpen={false} onOpenDetails={() => {}} onToggleDetails={() => {}} onToggleMedia={() => {}} />
+      </SidebarProvider>,
+      { path: '/app/channels/@me/c1', room: { state: { ...joinedState, me: { ...joinedState.me, userId: 'me' } }, conversations: [direct], activeConversationId: 'c1' } },
+    );
+    const touch = (x: number, y: number) => ({ pointerType: 'touch', pointerId: 1, button: 0, clientX: x, clientY: y });
+    fireEvent.pointerDown(document.body, touch(200, 200));
+    fireEvent.pointerMove(document.body, touch(200 - 64, 204));
+    fireEvent.pointerUp(document.body, touch(200 - 64, 204));
+    expect(onOpenMobileChange).toHaveBeenCalledWith(false);
+  });
+});
+
 describe('ConversationPanel — phone Voltar', () => {
   const group: Conversation = {
     id: 'g1', type: 'text', title: 'Squad', serverId: 's1', memberIds: ['me'],

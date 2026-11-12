@@ -2,11 +2,14 @@ import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { AuthScreen } from '@/features/auth/AuthScreen';
 import { useLanguageForTests } from '@tests/fixtures/i18nFixture';
+import type { AccountNotice } from '@/state/AuthContext';
 
+const auth = vi.hoisted(() => ({ accountNotice: null as AccountNotice | null }));
 vi.mock('@/state/AuthContext', () => ({
   useAuth: () => ({
     login: vi.fn(),
     register: vi.fn(),
+    accountNotice: auth.accountNotice,
   }),
 }));
 
@@ -18,6 +21,16 @@ describe('AuthScreen', () => {
     expect(screen.getByRole('heading', { name: 'Linkord' })).toHaveClass('text-text-primary');
     expect(screen.getByRole('tab', { name: 'Entrar' })).toBeInTheDocument();
     expect(container.querySelector('canvas')).toBeNull();
+  });
+
+  it('tells a person who just asked to delete the account when it happens and how to cancel', () => {
+    auth.accountNotice = { kind: 'deletionScheduled', dueAt: '2026-11-26T12:00:00.000Z' };
+    try {
+      render(<AuthScreen />);
+      expect(screen.getByRole('status')).toHaveTextContent('Sua conta será excluída em 26 de novembro de 2026. Para cancelar, é só entrar de novo antes dessa data.');
+    } finally {
+      auth.accountNotice = null;
+    }
   });
 });
 

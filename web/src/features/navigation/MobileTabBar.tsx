@@ -18,14 +18,14 @@ import { useRoom } from '@/state/RoomContext';
 export function MobileTabBar({ activeCallConversationId, onReturnToCall }: { activeCallConversationId: string | null; onReturnToCall: () => void }) {
   const { t } = useTranslation('navigation');
   const { pathname } = useContentLocation();
-  const { state, conversations, servers, unreadByConversation, allUsers } = useRoom();
+  const { state, conversations, servers, badgeByConversation, allUsers } = useRoom();
   const { pendingIncomingCount } = useFriends();
   const { unread: notificationsUnread } = useUnreadNotifications();
   const directUnread = useMemo(
-    () => conversations.reduce((sum, c) => sum + (c.type === 'direct' ? unreadByConversation.get(c.id) ?? 0 : 0), 0),
-    [conversations, unreadByConversation],
+    () => conversations.reduce((sum, c) => sum + (c.type === 'direct' ? badgeByConversation.get(c.id) ?? 0 : 0), 0),
+    [conversations, badgeByConversation],
   );
-  const serversUnread = useMemo(() => servers.reduce((sum, server) => sum + serverUnread(server, unreadByConversation), 0), [servers, unreadByConversation]);
+  const serversUnread = useMemo(() => servers.reduce((sum, server) => sum + serverUnread(server, badgeByConversation), 0), [servers, badgeByConversation]);
   const call = conversations.find((item) => item.id === activeCallConversationId);
   const currentServerId = serverIdFromPath(pathname);
   // the Servers tab goes back to the server last open, its channel list on screen

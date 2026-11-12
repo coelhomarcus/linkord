@@ -13,6 +13,8 @@ import type { ShareQualityId } from '@/features/calls/shareQualityPresets';
 import type { ColorThemeId } from '@/features/settings/useColorThemePreference';
 import type { FloatingSoundEmoji } from '@/features/soundboard/useSoundboardEvents';
 import type { CropRect } from '@/shared/lib/imageCrop';
+import type { NotificationPolicy, NotificationSettingChange, NotificationSettings } from '@/features/notifications/notificationSettings';
+import type { NotificationScope, PolicyTarget } from '@/features/notifications/useNotificationSettings';
 
 export interface TileDomHandle {
   root: HTMLDivElement;
@@ -55,6 +57,8 @@ export interface RoomContextValue {
   /** Mute the next join even before a LiveKit mic track exists. */
   preferMuted: boolean;
   setPreferMuted: (muted: boolean) => void;
+  /** A join's mic is still being opened; see useOwnMic. */
+  micStarting: boolean;
   reconnecting: boolean;
   livekitRoom: Room;
   notifyActiveView: (view: ChatView) => void;
@@ -144,6 +148,19 @@ export interface RoomContextValue {
   loadingOlderByConversation: Set<string>;
   unreadByConversation: Map<string, number>;
   unreadStartByConversation: Map<string, number>;
+  /** Unread mentions per conversation (cleared with its unread count). */
+  mentionsByConversation: Map<string, number>;
+  /** What a row, a server icon or a tab shows: the unread count, or only the mentions of a muted conversation.
+   * Use it for anything that displays a count; unreadByConversation stays the read state. */
+  badgeByConversation: Map<string, number>;
+  /** The account's per-server and per-channel/DM notification settings. */
+  notificationSettings: NotificationSettings;
+  /** The level and mute that apply to a conversation now (a channel inherits from its server). */
+  notificationPolicyFor: (target: PolicyTarget) => NotificationPolicy;
+  /** Whether a server's or a channel/DM's own setting is muted now, apart from what it inherits. */
+  isNotificationMuted: (scope: NotificationScope, id: string) => boolean;
+  /** Changes one setting; rejects with the server's error. */
+  updateNotificationSetting: (scope: NotificationScope, id: string, change: NotificationSettingChange) => Promise<void>;
   /** Marks a conversation read up to its newest message and drops its new-messages line. */
   markConversationRead: (conversationId: string) => void;
   /** Marks every channel of a server read. */
