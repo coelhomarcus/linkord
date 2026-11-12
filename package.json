@@ -53,17 +53,21 @@
     "sharp": "^0.35.5",
     "socket.io": "^4.8.4",
     "thumbhash": "^0.1.1",
-    "web-push": "^3.6.7"
+    "web-push": "^3.6.7",
+    "yazl": "^3.3.1"
   },
   "devDependencies": {
     "@types/node": "^22.20.1",
     "@types/pg": "^8.23.1",
     "@types/web-push": "^3.6.4",
+    "@types/yauzl": "^3.4.0",
+    "@types/yazl": "^3.3.1",
     "concurrently": "^9.2.1",
     "drizzle-kit": "^0.31.10",
     "knip": "^6.44.1",
     "tsx": "^4.23.13",
-    "typescript": "~6.0.2"
+    "typescript": "~6.0.2",
+    "yauzl": "^3.4.0"
   },
   "overrides": {
     "@livekit/protocol": "1.45.7"

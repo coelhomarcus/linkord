@@ -12,6 +12,7 @@ export function ArrivalMotion({ surfaceId, itemKey, children }: { surfaceId: str
   if (!animate) return <>{children}</>;
   return (
     <motion.div
+      data-arrival
       initial={reduced ? { opacity: 0 } : { opacity: 0, y: 6 }}
       animate={reduced ? { opacity: 1 } : { opacity: 1, y: 0 }}
       transition={{ duration: reduced ? 0.12 : 0.16, ease: 'easeOut' }}

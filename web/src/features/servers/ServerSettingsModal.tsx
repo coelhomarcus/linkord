@@ -34,7 +34,7 @@ import { inviteUrl } from './inviteCode';
 import { RoleColorPicker } from './RoleColorPicker';
 import { canAssignRole, canManageRole, grantableBits, outranks } from './roleHierarchy';
 import { ServerAuditLog } from './ServerAuditLog';
-import { useSaveBar } from './useSaveBar';
+import { useSaveBar } from '@/shared/hooks/useSaveBar';
 
 type TabKey = ServerSettingsTab;
 

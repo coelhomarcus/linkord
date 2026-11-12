@@ -2,6 +2,7 @@ import { useCallback, useState, useSyncExternalStore } from 'react';
 
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
 import { LOCAL_STORAGE_KEYS, localStorageStore } from '@/shared/lib/localStorage';
+import { iosStandalone, isIOSDevice } from '@/shared/lib/displayMode';
 
 /** Chromium's install event; not part of lib.dom. */
 export interface BeforeInstallPromptEvent extends Event {
@@ -24,18 +25,6 @@ export function installMethod(input: { standalone: boolean; canPrompt: boolean; 
 
 export function shouldShowInstallBanner(input: { method: InstallMethod | null; dismissed: boolean; sessions: number; inCall: boolean }): boolean {
   return input.method !== null && !input.dismissed && !input.inCall && input.sessions >= SESSIONS_BEFORE_BANNER;
-}
-
-function isIOSDevice(): boolean {
-  if (typeof navigator === 'undefined') return false;
-  if (/iPad|iPhone|iPod/.test(navigator.userAgent)) return true;
-  // iPadOS asks for the desktop site by default and reports itself as a Mac
-  return navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
-}
-
-/** iOS Safari has no display-mode media query for a Home Screen app on older versions, only this flag. */
-function iosStandalone(): boolean {
-  return typeof navigator !== 'undefined' && (navigator as Navigator & { standalone?: boolean }).standalone === true;
 }
 
 export function isDismissed(): boolean {

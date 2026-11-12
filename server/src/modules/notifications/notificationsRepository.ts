@@ -124,6 +124,15 @@ export async function listNotifications(userId: string, cursorRaw?: string): Pro
   };
 }
 
+/** Unread mentions per conversation: what a muted channel or DM still shows as its badge. */
+export async function unreadMentionCounts(userId: string): Promise<Record<string, number>> {
+  const rows = await db.select({ conversationId: messages.conversationId, n: sql<number>`count(*)::int` })
+    .from(notifications).innerJoin(messages, eq(messages.id, notifications.messageId))
+    .where(and(eq(notifications.recipientId, userId), eq(notifications.kind, 'mention'), isNull(notifications.readAt)))
+    .groupBy(messages.conversationId);
+  return Object.fromEntries(rows.map((row) => [row.conversationId, row.n]));
+}
+
 export async function countUnread(userId: string): Promise<number> {
   const [row] = await db.select({ n: sql<number>`count(*)::int` }).from(notifications)
     .where(and(eq(notifications.recipientId, userId), isNull(notifications.readAt)));
@@ -133,15 +142,23 @@ export async function countUnread(userId: string): Promise<number> {
 /** Unread DMs plus unread notifications — like Discord, a server channel's
  * traffic only reaches the icon through a mention. A DM mention already
  * counts through its unread message, and a server invitation card and its
- * unread notification describe one event, so each is counted once. */
+ * unread notification describe one event, so each is counted once. A muted
+ * DM's messages do not count (notification_settings), but its mentions do,
+ * as a muted channel's mentions always have. */
 export async function countAppBadge(userId: string): Promise<number> {
   const result = await db.execute(sql`
+    with muted_dms as (
+      select ns.conversation_id from notification_settings ns
+      where ns.user_id = ${userId} and ns.conversation_id is not null
+        and ns.muted and (ns.muted_until is null or ns.muted_until > now())
+    )
     select (
       select count(*) from conversation_members cm
       inner join conversations c on c.id = cm.conversation_id
       inner join messages m on m.conversation_id = cm.conversation_id
       where cm.user_id = ${userId}
         and c.type = 'direct'
+        and c.id not in (select conversation_id from muted_dms)
         and (cm.hidden_at is null or c.last_message_at > cm.hidden_at)
         and m.id > coalesce(cm.last_read_message_id, 0)
         and m.created_at > cm.joined_at
@@ -159,7 +176,8 @@ export async function countAppBadge(userId: string): Promise<number> {
       select count(*) from notifications n
       left join messages mm on mm.id = n.message_id
       left join conversations mc on mc.id = mm.conversation_id
-      where n.recipient_id = ${userId} and n.read_at is null and (n.kind <> 'mention' or mc.type <> 'direct')
+      where n.recipient_id = ${userId} and n.read_at is null
+        and (n.kind <> 'mention' or mc.type <> 'direct' or mc.id in (select conversation_id from muted_dms))
     ) as count
   `);
   return Number(result.rows[0]?.count ?? 0);

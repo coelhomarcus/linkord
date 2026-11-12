@@ -70,8 +70,10 @@ The app writes to two places and nothing else:
 
 | Container path | What is there |
 | --- | --- |
-| `/app/uploads` | Every stored file: attachments, thumbnails, profile images, soundboard sounds, server emojis and stickers. `tmp/` inside it holds the chunks of uploads still in progress, one folder per upload. |
+| `/app/uploads` | Every stored file: attachments, thumbnails, profile images, soundboard sounds, server emojis and stickers. `tmp/` inside it holds the chunks of uploads still in progress, one folder per upload. `exports/` holds the ZIPs of "Download my data" (`EXPORT_DIR`, see below). |
 | `/app/backups` | One dated folder per backup (`BACKUP_DIR`). |
+
+**Data exports.** A person can ask for a copy of their data in Settings → Data & privacy. A background job builds a ZIP of their profile, settings, friends, blocks, servers, the messages they sent and those messages' files, writes it to `EXPORT_DIR` (default `/app/uploads/exports`, created on first use) and emails a link; the file can be downloaded by that account for 7 days, then an hourly sweep deletes it. Each ZIP is about the size of the person's attachments, so budget disk for the largest accounts asking at once (one request per account per day). Leaving `EXPORT_DIR` at its default keeps the files on the uploads volume, so a redeploy does not lose a ready export; a path outside a mounted volume works too, but a deploy then drops the ready files and their links answer 404 until the person asks again. Backups leave `exports/` out: the copies expire within days and can be rebuilt on request.
 
 Both must belong to uid 1000 **all the way down**. Docker creates a missing bind-mounted folder owned by root, and an install from before the image switched to `node` has root-owned files and folders inside. Always use `chown -R`: changing only the top folder leaves `tmp/` owned by root, and then profile pictures still save (they are written straight into `/app/uploads`) while every attachment and voice message fails.
 
@@ -112,7 +114,7 @@ Violations are logged as `content security policy violation`, with the directive
 
 ## Backups
 
-The database and the uploads have to be backed up together, and the image does it: `node server/dist/scripts/backup.js` writes a dated folder with a `pg_dump`, an archive of `/app/uploads` (without `tmp/`) and a manifest to `/app/backups`, and keeps the newest `BACKUP_KEEP` (7 by default). It does not stop the app.
+The database and the uploads have to be backed up together, and the image does it: `node server/dist/scripts/backup.js` writes a dated folder with a `pg_dump`, an archive of `/app/uploads` (without `tmp/` and `exports/`) and a manifest to `/app/backups`, and keeps the newest `BACKUP_KEEP` (7 by default). It does not stop the app.
 
 ```bash
 # Docker Compose

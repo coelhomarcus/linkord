@@ -1,12 +1,14 @@
-import { ArrowLeftIcon, DotsThreeIcon, HashIcon, ImageIcon, MagnifyingGlassIcon, PhoneIcon, UserCircleIcon, UsersThreeIcon, VideoCameraIcon } from '@phosphor-icons/react';
+import { ArrowLeftIcon, BellIcon, BellSlashIcon, DotsThreeIcon, HashIcon, ImageIcon, MagnifyingGlassIcon, PhoneIcon, UserCircleIcon, UsersThreeIcon, VideoCameraIcon } from '@phosphor-icons/react';
+import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 
 import { PageHeader } from '@/shared/PageHeader';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/primitives/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/shared/ui/primitives/dropdown-menu';
 import { ROUTES, conversationIdFromPath } from '@/shared/lib/routes';
 import { useSidebar } from '@/shared/ui/motion/sidebar-context';
+import { useDrawerEdgeSwipe } from './useDrawerEdgeSwipe';
 import { Button } from '@/shared/ui/primitives/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
 import { Avatar } from '@/shared/Avatar';
@@ -20,6 +22,8 @@ import { cn } from '@/shared/lib/utils';
 import { StatusDot } from '@/features/status/StatusDot';
 import { CustomStatusText } from '@/features/status/CustomStatusText';
 import { useCustomStatus, useUserStatus } from '@/features/status/statusDisplay';
+import { NotificationMenuItems, type NotificationTarget } from '@/features/notifications/NotificationMenuItems';
+import { mutedUntilText } from '@/features/notifications/mutedUntilText';
 
 // Discord's header icons: bare 24px glyphs, gray at rest, white while hovered
 // or while the panel they toggle is open
@@ -33,6 +37,32 @@ function HeaderIcon({ label, pressed, onClick, className, children }: { label: s
       </TooltipTrigger>
       <TooltipContent side="bottom">{label}</TooltipContent>
     </Tooltip>
+  );
+}
+
+/** The channel or DM's notification menu. The bell crosses out while the conversation is muted, on its own
+ * or through its server; the tooltip then says until when. */
+function NotificationHeaderButton({ target }: { target: Extract<NotificationTarget, { scope: 'conversation' }> }) {
+  const { t } = useTranslation('notifications');
+  const { notificationSettings, notificationPolicyFor, isNotificationMuted } = useRoom();
+  const [open, setOpen] = useState(false);
+  const muted = notificationPolicyFor(target).muted;
+  const own = notificationSettings.conversations[target.id];
+  const label = t('preferences.headerButton');
+  const hint = !muted ? label
+    : isNotificationMuted('conversation', target.id) ? mutedUntilText(own?.mutedUntil ?? null) : t('preferences.mutedByServer');
+  return (
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <Tooltip disabled={open}>
+        <TooltipTrigger render={<DropdownMenuTrigger aria-label={label} className={cn(HEADER_ICON, 'max-md:hidden')} />}>
+          {muted ? <BellSlashIcon size={24} weight="fill" /> : <BellIcon size={24} weight="fill" />}
+        </TooltipTrigger>
+        <TooltipContent side="bottom">{hint}</TooltipContent>
+      </Tooltip>
+      <DropdownMenuContent align="end" className="min-w-56">
+        <NotificationMenuItems target={target} />
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -54,13 +84,14 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
   const { state, dispatch, conversations, activeConversationId, allUsers, activeCallConversationId, startDmCall } = useRoom();
   const navigate = useNavigate();
   const { pathname, state: locationState } = useLocation();
-  const { isMobile } = useSidebar();
+  const { isMobile, isOverlay, openMobile, setOpenMobile } = useSidebar();
   const requestedId = conversationIdFromPath(pathname);
   // On a phone the bare list route hides this panel (display: none). Mounting
   // the active chat there let its timeline settle at zero height, and the
   // browser reset its scroll when it was shown, so it opened mid-history.
   const shownId = requestedId ?? (isMobile ? null : activeConversationId);
   const conversation = conversations.find((item) => item.id === shownId) ?? null;
+  const drawerSwipe = useDrawerEdgeSwipe({ enabled: isOverlay && !!conversation, open: openMobile, setOpen: setOpenMobile });
   const isChannel = !!conversation?.serverId;
   // ConversationSidebar pushes every open with the route we came from in
   // state. Step back to that entry so the browser's back and forward (edge
@@ -102,7 +133,12 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
   const detailsLabel = t('panel.members');
 
   return (
-    <main className="flex h-full min-w-0 flex-1 flex-col text-text-primary">
+    <main
+      className="flex h-full min-w-0 flex-1 flex-col overscroll-x-none text-text-primary"
+      data-drawer-swipe={isOverlay || undefined}
+      data-swipe-pan-y={isOverlay || undefined}
+      {...drawerSwipe}
+    >
       {conversation ? (
         <>
           <header data-avatar-hover className="flex h-header flex-none items-center gap-2 bg-surface-panel px-2 md:border-b md:border-border-subtle md:px-4">
@@ -166,6 +202,7 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
                   )}
                 </>
               )}
+              {conversation.type !== 'voice' && <NotificationHeaderButton target={{ scope: 'conversation', id: conversation.id, serverId: conversation.serverId ?? null }} />}
               <HeaderIcon label={t('panel.media')} pressed={mediaOpen} onClick={onToggleMedia} className="max-md:hidden">
                 <ImageIcon size={24} weight={mediaOpen ? 'fill' : 'regular'} />
               </HeaderIcon>
@@ -191,6 +228,12 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
                 <DropdownMenuItem onClick={onOpenSearch}><MagnifyingGlassIcon size={18} />{t('panel.search')}</DropdownMenuItem>
                 <DropdownMenuItem onClick={onToggleMedia}><ImageIcon size={18} />{t('panel.media')}</DropdownMenuItem>
                 {activeCallConversationId && activeCallConversationId !== conversation.id && !isChannel && <DropdownMenuItem disabled={!!callBlockedReason} onClick={() => startThisCall(false)}><PhoneIcon size={18} />{t('panel.voiceCall')}</DropdownMenuItem>}
+                {conversation.type !== 'voice' && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <NotificationMenuItems target={{ scope: 'conversation', id: conversation.id, serverId: conversation.serverId ?? null }} />
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </header>

@@ -79,6 +79,24 @@ describe('roomReducer', () => {
     expect(next.participants.get('p1')?.deafened).toBe(true);
   });
 
+  it("PARTICIPANT_UPDATED carries a rename of this account to `me`, even from a connection not in the room", () => {
+    const state = { ...initialRoomState, me: { ...initialRoomState.me, userId: 'u1', name: 'ana' } };
+    const next = roomReducer(state, { type: 'PARTICIPANT_UPDATED', participant: participant({ id: 'other-tab', userId: 'u1', name: 'ana.lima' }) });
+    expect(next.me.name).toBe('ana.lima');
+    expect(next.participants.has('other-tab')).toBe(false);
+  });
+
+  it("PARTICIPANT_UPDATED leaves `me` alone for someone else's name", () => {
+    const state = { ...initialRoomState, me: { ...initialRoomState.me, userId: 'u1', name: 'ana' } };
+    const next = roomReducer(state, { type: 'PARTICIPANT_UPDATED', participant: participant({ id: 'ghost', userId: 'u2', name: 'bia' }) });
+    expect(next).toBe(state);
+  });
+
+  it('SET_LOCAL_USERNAME renames `me`', () => {
+    const next = roomReducer({ ...initialRoomState, me: { ...initialRoomState.me, name: 'ana' } }, { type: 'SET_LOCAL_USERNAME', name: 'Ana' });
+    expect(next.me.name).toBe('Ana');
+  });
+
   describe('PARTICIPANT_LEFT', () => {
     it('removes the participant and unfocuses if the focus was on THEM (prefix `${id}:`), clearing the origin too', () => {
       const state = { ...initialRoomState, participants: new Map([['p1', participant()]]), focusedId: 'p1:screen', focusOrigin: 'manual' as const };

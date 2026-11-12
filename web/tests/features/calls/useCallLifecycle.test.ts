@@ -133,6 +133,30 @@ describe('useCallLifecycle — preferMuted', () => {
   });
 });
 
+describe('useCallLifecycle — mic starting', () => {
+  it('reads as starting from the call token until the mic settles, then reports it settled', async () => {
+    let finishMic: () => void = () => {};
+    const { result, sendWs } = setup(undefined, { activateMic: () => new Promise<void>((resolve) => { finishMic = resolve; }) });
+    act(() => { result.current.setPreferMuted(true); });
+    await act(async () => { await result.current.joinCall('c1'); });
+    await act(async () => { result.current.onCallToken(token); });
+
+    expect(result.current.micStarting).toBe(true);
+    expect(sendWs).toHaveBeenCalledWith({ t: 'mic-state', activated: false, muted: true, starting: true });
+
+    await act(async () => { finishMic(); });
+    await vi.waitFor(() => expect(result.current.micStarting).toBe(false));
+    expect(sendWs).toHaveBeenLastCalledWith(expect.objectContaining({ t: 'mic-state', starting: false }));
+  });
+
+  it('a failed connect does not leave the mic starting', async () => {
+    const { result } = setup(async () => { throw new Error('could not establish signal connection'); });
+    await act(async () => { await result.current.joinCall('c1'); });
+    await act(async () => { result.current.onCallToken(token); });
+    await vi.waitFor(() => expect(result.current.micStarting).toBe(false));
+  });
+});
+
 describe('useCallLifecycle — moving between voice channels', () => {
   it('moving someone asks the server, naming who and where', () => {
     const { result, sendWs } = setup();

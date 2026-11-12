@@ -4,7 +4,8 @@ import { clearAppBadge, refreshAppBadge } from './appBadge';
 import { useUnreadNotifications } from './useUnreadNotifications';
 
 export function AppBadgeSync() {
-  const { unreadByConversation, messagesByConversation, notificationsEnabled } = useRoom();
+  // the server counts the icon from the same settings, so a mute changed anywhere refreshes it too
+  const { unreadByConversation, messagesByConversation, notificationsEnabled, notificationSettings } = useRoom();
   const { unread } = useUnreadNotifications();
   const messageUnread = useMemo(() => [...unreadByConversation.values()].reduce((total, count) => total + count, 0), [unreadByConversation]);
   const newestMessageId = useMemo(() => [...messagesByConversation.values()].reduce((latest, messages) => Math.max(latest, messages.at(-1)?.msgId ?? 0), 0), [messagesByConversation]);
@@ -34,7 +35,7 @@ export function AppBadgeSync() {
       window.removeEventListener('online', refresh);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [messageUnread, newestMessageId, unread, notificationsEnabled]);
+  }, [messageUnread, newestMessageId, unread, notificationsEnabled, notificationSettings]);
 
   return null;
 }

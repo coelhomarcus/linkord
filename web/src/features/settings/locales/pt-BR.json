@@ -47,13 +47,15 @@
       "twoFactor": "Verificação em duas etapas",
       "loginAlerts": "Avisos de login",
       "sessions": "Sessões ativas",
-      "install": "Instalar o app"
+      "install": "Instalar o app",
+      "deleteAccount": "Excluir conta",
+      "dataExport": "Seus dados"
     }
   },
   "search": {
     "accountInfo": {
       "title": "Informações da conta",
-      "keywords": "nome de usuário, username, nome de exibição, admin, conta"
+      "keywords": "nome de usuário, username, trocar nome de usuário, nome de exibição, admin, conta"
     },
     "email": {
       "title": "E-mail",
@@ -138,11 +140,35 @@
     "sessions": {
       "title": "Sessões ativas",
       "keywords": "sessões, dispositivos, navegadores, encerrar sessão, sair de outros dispositivos, segurança"
+    },
+    "deleteAccount": {
+      "title": "Excluir conta",
+      "keywords": "excluir conta, apagar conta, deletar, encerrar conta, lgpd, remover meus dados"
+    },
+    "dataExport": {
+      "title": "Baixar meus dados",
+      "keywords": "baixar dados, exportar, cópia dos dados, backup, lgpd, portabilidade, download"
     }
   },
   "account": {
     "username": {
-      "label": "Nome de usuário"
+      "label": "Nome de usuário",
+      "description": "Usado para entrar na conta e para te mencionarem com @.",
+      "edit": "Editar nome de usuário",
+      "newLabel": "Novo nome de usuário",
+      "passwordLabel": "Senha atual",
+      "rules": "De {{min}} a {{max}} caracteres: letras, números, . _ -",
+      "checking": "Verificando disponibilidade…",
+      "available": "{{username}} está disponível.",
+      "checkFailed": "Não foi possível verificar agora. O nome será conferido ao salvar.",
+      "sessionsNote": "Você continua conectado em todos os dispositivos. No próximo login, entre com o novo nome.",
+      "cancel": "Cancelar",
+      "barLabel": "Nome de usuário",
+      "errors": {
+        "taken": "Esse nome de usuário já está em uso.",
+        "invalid": "Use de {{min}} a {{max}} caracteres: letras, números, . _ -",
+        "saveFailed": "Não foi possível alterar o nome de usuário. Tente de novo."
+      }
     },
     "admin": "Admin",
     "displayName": {
@@ -154,6 +180,24 @@
       "description": "Encerra a sessão neste navegador.",
       "descriptionInCall": "Encerra a sessão neste navegador e também sai da chamada em andamento.",
       "button": "Sair da conta"
+    },
+    "delete": {
+      "label": "Excluir minha conta",
+      "description_one": "A conta é excluída {{count}} dia depois do pedido. Entrar de novo antes disso cancela.",
+      "description_other": "A conta é excluída {{count}} dias depois do pedido. Entrar de novo antes disso cancela.",
+      "open": "Excluir conta",
+      "consequences_one": "Você sairá de todos os dispositivos agora, e a conta será excluída em {{count}} dia:",
+      "consequences_other": "Você sairá de todos os dispositivos agora, e a conta será excluída em {{count}} dias:",
+      "whatGoes": "Seu perfil, amizades, bloqueios, conexões e fotos de perfil são apagados.",
+      "servers": "Os servidores que você criou passam para o membro mais antigo; um servidor sem mais ninguém é excluído.",
+      "messages": "Suas mensagens continuam nas conversas, sem o seu nome. Se quiser guardar uma cópia, baixe seus dados em Dados e privacidade antes.",
+      "cancel_one": "Mudou de ideia? Entre de novo em até {{count}} dia e a exclusão é cancelada.",
+      "cancel_other": "Mudou de ideia? Entre de novo em até {{count}} dias e a exclusão é cancelada.",
+      "password": "Senha atual",
+      "submit": "Excluir minha conta",
+      "codeSent": "Enviamos um código para {{email}}. Digite-o para confirmar a exclusão.",
+      "codeLabel": "Código de verificação",
+      "failed": "Não foi possível excluir a conta. Tente de novo."
     }
   },
   "email": {
@@ -200,7 +244,21 @@
     "loadFailed": "Não foi possível carregar a lista.",
     "empty": "Você não bloqueou ninguém",
     "unblock": "Desbloquear",
-    "emptyText": "Quem você bloquear aparece aqui, e dá para desbloquear quando quiser."
+    "emptyText": "Quem você bloquear aparece aqui, e dá para desbloquear quando quiser.",
+    "export": {
+      "label": "Baixar meus dados",
+      "description": "Uma cópia do seu perfil, configurações, amizades, bloqueios, servidores e de todas as mensagens que você enviou, com os arquivos. Avisamos por e-mail quando ficar pronta.",
+      "request": "Pedir cópia",
+      "building": "Preparando…",
+      "buildingHint": "Estamos preparando sua cópia. Você pode sair desta página: o link também chega por e-mail.",
+      "download": "Baixar",
+      "readyHint": "Sua cópia ({{size}}) fica disponível até {{date}}.",
+      "failed": "Não foi possível preparar sua cópia. Peça de novo.",
+      "expired": "O link da última cópia expirou.",
+      "nextRequest": "Você pode pedir outra cópia a partir de {{date}}.",
+      "requestFailed": "Não foi possível pedir a cópia. Tente de novo.",
+      "loadFailed": "Não foi possível carregar o estado da sua cópia."
+    }
   },
   "adminLink": {
     "label": "Usuários, servidores, denúncias e auditoria",

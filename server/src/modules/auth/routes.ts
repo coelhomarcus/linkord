@@ -11,19 +11,21 @@ import {
 import { dropSessionConnections } from './sessionConnections.js';
 import { findByEmailLower, findById, findByUsernameLower, isValidEmail, normalizeEmail, privateUser } from '../users/users.js';
 import { resolveLocale } from '../users/locale.js';
-import { createUser, updateEmail, updatePassword } from './accounts.js';
+import { createUser, updateEmail, updatePassword, updateUsername } from './accounts.js';
+import { invalidUsernameMessage, isReservedUsername, isValidUsername } from './usernameRules.js';
+import { renameParticipants } from '../presence/participants.js';
 import { checkRegistrationAllowed } from './registrationLimits.js';
 import type { User } from '../../db/schema.js';
 import { consumeLoginChallenge, findLoginChallenge, issueAuthCode, verifyAuthCode, type AuthCodePurpose } from './codes.js';
 import { isEmailDeliveryConfigured, sendAuthCodeEmail } from './email.js';
 import { noticeLogin, noticeRegistration } from './loginAlert.js';
+import { cancelScheduledDeletion, isPastDeletion, scheduleAccountDeletion } from './accountDeletion.js';
 import { clientIpOf, sessionOriginOf } from '../../http/clientInfo.js';
 import { recordAudit } from '../admin/auditLog.js';
 import type { SessionUser } from '../../types.js';
 import * as ratelimit from './ratelimit.js';
 import { db } from '../../db/client.js';
 import { users } from '../../db/schema.js';
-import { GROUP_MENTION_NAMES } from '../link-preview/messageLinks.js';
 import { logger } from '../../lib/logger.js';
 
 const log = logger.child({ component: 'auth' });
@@ -32,13 +34,16 @@ const log = logger.child({ component: 'auth' });
 // logout, and "who am I" (used by the frontend at boot to check if
 // already logged in).
 
-const USERNAME_RE = new RegExp(`^[A-Za-z0-9_.-]{${config.MIN_USERNAME_LEN},${config.MAX_USERNAME_LEN}}$`);
-
 const ipOfRequest = clientIpOf;
 
 // Code emails a person can ask for (a login code, a two-step setup code): a request limit, not a mistake
 // limit, so a resend button cannot become a mail cannon.
 const CODE_SEND_RULE: ratelimit.Rule = { windowMs: 15 * 60 * 1000, max: 5 };
+// Asking whether a username is free, as a person types (debounced): enough for someone trying names, while a
+// script listing accounts gets a few hundred names a day per account. Registration is behind an invite code, so
+// accounts are not free to multiply.
+const USERNAME_CHECK_BURST_RULE: ratelimit.Rule = { windowMs: 60 * 1000, max: 30 };
+const USERNAME_CHECK_DAILY_RULE: ratelimit.Rule = { windowMs: 24 * 60 * 60 * 1000, max: 300 };
 // Ending sessions from the list: generous for a person clicking, a ceiling for a script.
 const SESSION_ACTION_RULE: ratelimit.Rule = { windowMs: 60 * 1000, max: 30 };
 // A login challenge lives this long from its first code, however many times the code is resent.
@@ -126,11 +131,8 @@ async function handleRegister(request: FastifyRequest, reply: FastifyReply): Pro
   }
   await ratelimit.reset(ipKey);
 
-  if (!USERNAME_RE.test(username)) {
-    return sendError(reply, 400, 'invalid_username', `Nome de usuário deve ter entre ${config.MIN_USERNAME_LEN} e ${config.MAX_USERNAME_LEN} caracteres (letras, números, . _ -).`);
-  }
-  // "@everyone" and "@here" notify a whole channel: an account by that name could never be mentioned alone
-  if (GROUP_MENTION_NAMES.includes(username.toLowerCase())) {
+  if (!isValidUsername(username)) return sendError(reply, 400, 'invalid_username', invalidUsernameMessage());
+  if (isReservedUsername(username)) {
     return sendError(reply, 409, 'username_taken', 'Esse nome de usuário ou e-mail já está em uso.');
   }
   if (!isValidEmail(email)) return sendError(reply, 400, 'invalid_email', 'Informe um e-mail válido.');
@@ -219,6 +221,7 @@ async function handleLogin(request: FastifyRequest, reply: FastifyReply): Promis
     log.warn('login refused for a suspended account', { userId: user.id, username: user.username });
     return sendError(reply, 403, 'account_unavailable', 'Esta conta está indisponível. Fale com a administração.');
   }
+  if (isPastDeletion(user)) return accountDeletedError(reply);
 
   if (needsRehash(user.passwordHash)) {
     hashPassword(password)
@@ -233,7 +236,18 @@ async function handleLogin(request: FastifyRequest, reply: FastifyReply): Promis
   noticeLogin(user, origin);
   setSessionCookie(request, reply, rawToken);
   log.info('login', { userId: user.id, username: user.username });
-  sendJson(reply, 200, { user: privateUser(user) });
+  sendJson(reply, 200, await signedIn(request, user));
+}
+
+/** The answer to a sign-in that created a session. Signing in is what cancels a scheduled deletion, and
+ * the answer says so, for the client to tell the person. */
+async function signedIn(request: FastifyRequest, user: User): Promise<{ user: ReturnType<typeof privateUser>; deletionCancelled?: true }> {
+  const cancelled = await cancelScheduledDeletion({ id: user.id, username: user.username }, request.id);
+  return cancelled ? { user: privateUser(user), deletionCancelled: true } : { user: privateUser(user) };
+}
+
+function accountDeletedError(reply: FastifyReply): void {
+  sendError(reply, 403, 'account_deleted', 'Esta conta foi excluída a pedido do titular.');
 }
 
 /** The right password with two-step login on: no session yet, a code to the account's email and a
@@ -279,6 +293,10 @@ async function loginChallengeFor(request: FastifyRequest, reply: FastifyReply, c
     sendError(reply, 403, 'account_unavailable', 'Esta conta está indisponível. Fale com a administração.');
     return { refused: true };
   }
+  if (isPastDeletion(user)) {
+    accountDeletedError(reply);
+    return { refused: true };
+  }
   return { user, challengeHash };
 }
 
@@ -312,7 +330,7 @@ async function handleLoginVerify(request: FastifyRequest, reply: FastifyReply): 
   noticeLogin(user, origin);
   setSessionCookie(request, reply, rawToken);
   log.info('login', { userId: user.id, username: user.username, twoFactor: true });
-  sendJson(reply, 200, { user: privateUser(user) });
+  sendJson(reply, 200, await signedIn(request, user));
 }
 
 async function handleLoginResend(request: FastifyRequest, reply: FastifyReply): Promise<void> {
@@ -410,7 +428,7 @@ async function handleRecoveryRequest(request: FastifyRequest, reply: FastifyRepl
   if (identifier.type === 'email' && !isValidEmail(identifier.value)) {
     return sendError(reply, 400, 'invalid_email', 'Informe um e-mail válido.');
   }
-  if (identifier.type === 'username' && !USERNAME_RE.test(identifier.value)) {
+  if (identifier.type === 'username' && !isValidUsername(identifier.value)) {
     return sendError(reply, 400, 'invalid_email', 'Informe um nome de usuário válido.');
   }
 
@@ -518,6 +536,64 @@ async function handleEmailChangeConfirm(request: FastifyRequest, reply: FastifyR
   if (existing && existing.id !== sess.userId) return sendError(reply, 409, 'email_taken', 'Esse e-mail já está em uso.');
   const user = await updateEmail(sess.userId, email);
   if (!user) return sendError(reply, 404, 'user_not_found', 'Conta não encontrada.');
+  sendJson(reply, 200, { user: privateUser(user) });
+}
+
+// ---- username: the login name, unique in any letter case (users_username_lower_key) ----
+
+/** Whether `username` is free for this account. Its own name, in any letter case, is free: changing only the
+ * case is a rename like any other. Reserved names read as taken. */
+async function usernameAvailableFor(userId: string, username: string): Promise<boolean> {
+  if (isReservedUsername(username)) return false;
+  const existing = await findByUsernameLower(username);
+  return !existing || existing.id === userId;
+}
+
+async function handleUsernameAvailability(request: FastifyRequest<{ Querystring: { username?: string } }>, reply: FastifyReply): Promise<void> {
+  const sess = await sessionForRequest(request);
+  if (!sess) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
+  const username = String(request.query.username ?? '').trim();
+  if (!isValidUsername(username)) return sendError(reply, 400, 'invalid_username', invalidUsernameMessage());
+  // Counted only for well-formed names, the ones that reach the database. The daily window is consumed first so
+  // a refused burst still counts toward the day.
+  for (const [key, rule] of [[`username-check-day:${sess.userId}`, USERNAME_CHECK_DAILY_RULE], [`username-check:${sess.userId}`, USERNAME_CHECK_BURST_RULE]] as const) {
+    const verdict = await ratelimit.consume(key, rule);
+    if (!verdict.allowed) return rateLimitedReply(reply, verdict.retryAfterSec);
+  }
+  sendJson(reply, 200, {
+    username,
+    available: await usernameAvailableFor(sess.userId, username),
+    current: username === sess.username,
+  });
+}
+
+async function handleUsernameChange(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  const sess = await sessionForRequest(request);
+  if (!sess) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
+  const body = jsonBody(request.body);
+  const username = String(body.username == null ? '' : body.username).trim();
+  if (!isValidUsername(username)) return sendError(reply, 400, 'invalid_username', invalidUsernameMessage());
+  // The password before the lookup, as with the email: a stolen session cannot rename the account, which would
+  // also lock its owner out of signing in by name.
+  if (!(await confirmPassword(reply, sess, String(body.password == null ? '' : body.password)))) return;
+  const before = await findById(sess.userId);
+  if (!before) return sendError(reply, 404, 'user_not_found', 'Conta não encontrada.');
+  if (before.username === username) return sendJson(reply, 200, { user: privateUser(before) });
+  if (!(await usernameAvailableFor(sess.userId, username))) return sendError(reply, 409, 'username_taken', 'Esse nome de usuário já está em uso.');
+  let user;
+  try {
+    user = await updateUsername(sess.userId, username);
+  } catch (err: unknown) {
+    if ((err as { code?: string } | undefined)?.code === 'username_taken') return sendError(reply, 409, 'username_taken', 'Esse nome de usuário já está em uso.');
+    throw err;
+  }
+  if (!user) return sendError(reply, 404, 'user_not_found', 'Conta não encontrada.');
+  renameParticipants(user.id, user.username);
+  await recordAudit({
+    actor: { id: sess.userId, username: user.username }, action: 'account.username_change', targetType: 'user', targetId: sess.userId,
+    targetLabel: user.username, detail: { from: before.username, to: user.username }, requestId: request.id,
+  });
+  log.info('username changed', { userId: sess.userId, from: before.username, to: user.username });
   sendJson(reply, 200, { user: privateUser(user) });
 }
 
@@ -683,6 +759,61 @@ async function handleEndOtherSessions(request: FastifyRequest, reply: FastifyRep
   sendJson(reply, 200, { endedSessions: ended.length });
 }
 
+// ---- deleting your own account (accountDeletion.ts): password, then the emailed code with two-step login on ----
+
+/** Schedules the deletion and answers with its date. The account's sessions, this one included, are
+ * gone, so the cookie is cleared too. */
+async function finishDeletionRequest(request: FastifyRequest, reply: FastifyReply, sess: SessionUser): Promise<void> {
+  const result = await scheduleAccountDeletion(auditActor(sess), request.id);
+  if (result.code === 'last_admin') {
+    return sendError(reply, 409, 'last_admin', 'Você é o único administrador. Torne outra pessoa administradora antes de excluir sua conta.');
+  }
+  if (result.code !== 'ok') return sendError(reply, 404, 'user_not_found', 'Conta não encontrada.');
+  reply.header('Set-Cookie', clearCookie(config.SESSION_COOKIE, { secure: isSecureRequest(request.raw) }));
+  sendJson(reply, 200, { deletionDueAt: result.dueAt.toISOString() });
+}
+
+async function handleDeletionRequest(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  const sess = await sessionForRequest(request);
+  if (!sess) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
+  if (!(await confirmPassword(reply, sess, String(jsonBody(request.body).password ?? '')))) return;
+  const user = await findById(sess.userId);
+  if (!user) return sendError(reply, 404, 'user_not_found', 'Conta não encontrada.');
+  if (!user.twoFactorEmail) return finishDeletionRequest(request, reply, sess);
+
+  // with two-step login on, the password alone is not enough to delete the account: a code to its email
+  if (!user.email || !isEmailDeliveryConfigured()) {
+    return sendError(reply, 503, 'email_unavailable', 'Não foi possível enviar o código de verificação agora. Tente novamente mais tarde.');
+  }
+  const send = await ratelimit.consume(`deletion-code:${sess.userId}`, CODE_SEND_RULE);
+  if (!send.allowed) return rateLimitedReply(reply, send.retryAfterSec, 'Muitos códigos enviados. Tente novamente mais tarde.');
+  try {
+    await issueAndSendCode(user.id, user.email, user.username, 'account_deletion', resolveLocale(user.locale));
+  } catch {
+    return sendError(reply, 503, 'email_unavailable', 'Não foi possível enviar o código de verificação agora. Tente novamente mais tarde.');
+  }
+  sendJson(reply, 200, { codeRequired: true, email: maskEmail(user.email) });
+}
+
+async function handleDeletionConfirm(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  const sess = await sessionForRequest(request);
+  if (!sess) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
+  if (!sess.email) return sendError(reply, 400, 'invalid_code', 'Código inválido.');
+  const code = String(jsonBody(request.body).code ?? '').trim();
+  if (!/^\d{6}$/.test(code)) return sendError(reply, 400, 'invalid_code', 'Informe o código de 6 dígitos.');
+  const key = codeFailuresKey(sess.userId);
+  const blocked = await ratelimit.checkBlocked(key);
+  if (blocked) return rateLimitedReply(reply, blocked);
+  // a code is only ever issued after the password was confirmed, so it stands for both steps
+  const result = await verifyAuthCode(sess.userId, 'account_deletion', sess.email, code);
+  if (!result.ok) {
+    if (result.reason !== 'code_expired') await ratelimit.recordFailure(key);
+    return purposeError(reply, result.reason);
+  }
+  await ratelimit.reset(key).catch(() => {});
+  return finishDeletionRequest(request, reply, sess);
+}
+
 export function registerAuthRoutes(fastify: FastifyInstance): void {
   fastify.post('/api/auth/register', handleRegister);
   fastify.post('/api/auth/login', handleLogin);
@@ -694,6 +825,8 @@ export function registerAuthRoutes(fastify: FastifyInstance): void {
   fastify.post('/api/auth/recovery/reset', handleRecoveryReset);
   fastify.post('/api/auth/email/change/request', handleEmailChangeRequest);
   fastify.post('/api/auth/email/change/confirm', handleEmailChangeConfirm);
+  fastify.get<{ Querystring: { username?: string } }>('/api/auth/username/availability', handleUsernameAvailability);
+  fastify.post('/api/auth/username', handleUsernameChange);
   fastify.get('/api/auth/security', handleSecurityStatus);
   fastify.post('/api/auth/two-factor/enable/request', handleTwoFactorEnableRequest);
   fastify.post('/api/auth/two-factor/enable/confirm', handleTwoFactorEnableConfirm);
@@ -703,4 +836,6 @@ export function registerAuthRoutes(fastify: FastifyInstance): void {
   fastify.get('/api/auth/sessions', handleListSessions);
   fastify.post('/api/auth/sessions/end-others', handleEndOtherSessions);
   fastify.delete<{ Params: { id: string } }>('/api/auth/sessions/:id', handleEndSession);
+  fastify.post('/api/auth/account/deletion/request', handleDeletionRequest);
+  fastify.post('/api/auth/account/deletion/confirm', handleDeletionConfirm);
 }

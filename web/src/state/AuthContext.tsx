@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { fetchMe, login as apiLogin, logout as apiLogout, register as apiRegister, verifyLoginCode } from '@/shared/api/api';
-import type { ApiUser, LoginChallenge } from '@/shared/api/api';
+import type { ApiUser, LoginChallenge, SignedIn } from '@/shared/api/api';
 import { clearAllDrafts } from '@/features/chat/conversationDrafts';
 import { clearPendingShares } from '@/features/chat/pendingShare';
 import { disablePush, restorePush } from '@/shared/pushNotifications';
@@ -12,6 +12,10 @@ import { saveNotificationsEnabled, setNotificationsModuleEnabled } from '@/share
 
 type AuthStatus = 'loading' | 'anon' | 'authed';
 
+/** Something about the account to tell the person once: on the sign-in screen after asking to delete it,
+ * or in the app after a sign-in cancelled that. */
+export type AccountNotice = { kind: 'deletionScheduled'; dueAt: string } | { kind: 'deletionCancelled' };
+
 interface AuthContextValue {
   status: AuthStatus;
   user: ApiUser | null;
@@ -20,6 +24,10 @@ interface AuthContextValue {
   completeLogin: (challenge: string, code: string) => Promise<void>;
   register: (username: string, email: string, password: string, confirmPassword: string, code: string) => Promise<void>;
   logout: () => Promise<void>;
+  /** The deletion was scheduled and the server already ended every session: leave like a logout. */
+  leaveAfterDeletion: (dueAt: string) => Promise<void>;
+  accountNotice: AccountNotice | null;
+  clearAccountNotice: () => void;
   refresh: () => Promise<void>;
 }
 
@@ -34,6 +42,8 @@ export function useAuth(): AuthContextValue {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>('loading');
   const [user, setUser] = useState<ApiUser | null>(null);
+  const [accountNotice, setAccountNotice] = useState<AccountNotice | null>(null);
+  const clearAccountNotice = useCallback(() => setAccountNotice(null), []);
 
   const refresh = useCallback(async () => {
     try {
@@ -86,19 +96,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [status, user]);
 
+  const signIn = useCallback((result: SignedIn) => {
+    setAccountNotice(result.deletionCancelled ? { kind: 'deletionCancelled' } : null);
+    setUser(result.user);
+    setStatus('authed');
+  }, []);
+
   const login = useCallback(async (username: string, password: string) => {
     const result = await apiLogin(username, password);
     if ('twoFactor' in result) return result.twoFactor;
-    setUser(result.user);
-    setStatus('authed');
+    signIn(result);
     return null;
-  }, []);
+  }, [signIn]);
 
   const completeLogin = useCallback(async (challenge: string, code: string) => {
-    const { user: u } = await verifyLoginCode(challenge, code);
-    setUser(u);
-    setStatus('authed');
-  }, []);
+    signIn(await verifyLoginCode(challenge, code));
+  }, [signIn]);
 
   const register = useCallback(async (username: string, email: string, password: string, confirmPassword: string, code: string) => {
     const { user: u } = await apiRegister(username, email, password, confirmPassword, code);
@@ -106,20 +119,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStatus('authed');
   }, []);
 
-  const logout = useCallback(async () => {
+  const signOut = useCallback(async (endSession: boolean) => {
     await clearAppBadge();
     try { await disablePush(); } catch { /* a revoked endpoint is removed after the next failed delivery */ }
     saveNotificationsEnabled(false);
     setNotificationsModuleEnabled(false);
-    try { await apiLogout(); } catch {  }
+    if (endSession) try { await apiLogout(); } catch {  }
     clearAllDrafts();
     clearPendingShares();
     setUser(null);
     setStatus('anon');
   }, []);
 
+  const logout = useCallback(() => signOut(true), [signOut]);
+
+  const leaveAfterDeletion = useCallback(async (dueAt: string) => {
+    await signOut(false);
+    setAccountNotice({ kind: 'deletionScheduled', dueAt });
+  }, [signOut]);
+
   return (
-    <AuthContext.Provider value={{ status, user, login, completeLogin, register, logout, refresh }}>
+    <AuthContext.Provider value={{ status, user, login, completeLogin, register, logout, leaveAfterDeletion, accountNotice, clearAccountNotice, refresh }}>
       {children}
     </AuthContext.Provider>
   );

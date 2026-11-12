@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef } from 'react';
 import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react';
+import { lightHaptic } from '@/shared/lib/haptic';
+import { SWIPE } from '@/shared/lib/swipe';
 
 /** iOS and Base UI open their context menus at about this point; Android's
  * own timeout is 400-500 ms. */
 export const LONG_PRESS_DELAY_MS = 500;
 /** How far a finger may drift before the press counts as a scroll or a drag. */
-const LONG_PRESS_TOLERANCE_PX = 10;
+const LONG_PRESS_TOLERANCE_PX = SWIPE.lockPx;
 /** A device whose main input is a finger; the same query as the `touch-first`
  * CSS variant in styles/index.css. */
 export const TOUCH_FIRST_QUERY = '(hover: none) and (pointer: coarse)';
@@ -53,14 +55,6 @@ interface ActivePress extends LongPress {
 }
 
 const DEFAULT_POINTER_TYPES = ['touch', 'pen'] as const;
-
-function vibrate() {
-  // Chrome refuses vibrate() (and logs it) before the page has had a tap;
-  // iOS Safari has no vibrate at all.
-  const activation = (navigator as Navigator & { userActivation?: { hasBeenActive: boolean } }).userActivation;
-  if (activation && !activation.hasBeenActive) return;
-  try { navigator.vibrate?.(10); } catch { /* not supported */ }
-}
 
 /** Whether a contextmenu event comes from a finger (Android Chrome and
  * Firefox fire one on a long press; iOS Safari never does). */
@@ -167,7 +161,7 @@ export function useLongPress(options: LongPressOptions) {
       press.timer = null;
       press.fired = true;
       swallowClickRef.current = true;
-      vibrate();
+      lightHaptic();
       optionsRef.current.onLongPress(press);
     }, delay);
     pressRef.current = press;

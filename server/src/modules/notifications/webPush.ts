@@ -8,6 +8,8 @@ import { getConversationForUser } from '../conversations/conversationsRepository
 import { loadServerSnapshot } from '../servers/serverAccess.js';
 import { logger } from '../../lib/logger.js';
 import { recipientAcceptsPush } from './notificationsPolicy.js';
+import { notificationPolicyFor } from './notificationSettings.js';
+import { policyAlerts } from './notificationSettingsPolicy.js';
 import { canSendDirectMessage } from '../friendships/friendshipsRepository.js';
 import { resolveLocale, type Locale } from '../users/locale.js';
 import { chatNoticeText, type ChatNoticeInput, friendAcceptedNoticeText, friendRequestNoticeText, mentionNoticeText, previewText, pushAvatarPath, serverInvitationNoticeText, type PushNotice } from './pushNotices.js';
@@ -126,6 +128,7 @@ async function noticeFor(event: OutboxEvent, locale: Locale, showContent: boolea
       eq(notifications.messageId, found.message.id), isNull(notifications.readAt),
     )).limit(1);
     if (mention) return null;
+    if (!policyAlerts(await notificationPolicyFor(event.audienceUserId, found.conversation), false)) return null;
     let invitedChannel: ChatNoticeInput['invitedChannel'] = null;
     if (found.message.kind === 'call_invite' && found.message.callConversationId) {
       const [channel] = await db.select({ name: conversations.title, serverName: servers.name }).from(conversations)
@@ -157,7 +160,8 @@ async function noticeFor(event: OutboxEvent, locale: Locale, showContent: boolea
   if (!row) return null;
   if (kind === 'mention') {
     const found = await visibleMessage(Number(reference), event.audienceUserId, showContent, locale);
-    if (!found) return null;
+    // the mention stays in the list either way; only the push follows the setting
+    if (!found || !policyAlerts(await notificationPolicyFor(event.audienceUserId, found.conversation), true)) return null;
     const text = mentionNoticeText({
       direct: found.direct, name: found.name, text: found.text, channelTitle: found.conversation.title, serverName: found.serverName,
     }, locale);

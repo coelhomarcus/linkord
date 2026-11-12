@@ -1,5 +1,6 @@
 {
   "tagline": "Chat and make calls with your friends",
+  "deletionScheduled": "Your account will be deleted on {{date}}. To cancel, just sign in again before then.",
   "tabs": {
     "ariaLabel": "Sign in or create account",
     "login": "Sign in",

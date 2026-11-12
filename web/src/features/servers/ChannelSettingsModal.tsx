@@ -27,7 +27,7 @@ import {
   type Overwrite, type WebhookInfo,
 } from './serversApi';
 import { channelSettingsTabs, type ChannelSettingsTab } from './serverUtils';
-import { useSaveBar } from './useSaveBar';
+import { useSaveBar } from '@/shared/hooks/useSaveBar';
 
 type TabKey = ChannelSettingsTab;
 type Tri = 'allow' | 'inherit' | 'deny';

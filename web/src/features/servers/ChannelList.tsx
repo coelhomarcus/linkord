@@ -1,5 +1,5 @@
 import {
-  CaretDownIcon, CaretRightIcon, ChecksIcon, FolderPlusIcon, GearSixIcon, HashIcon, PlusCircleIcon, PlusIcon, SignOutIcon,
+  BellSlashIcon, CaretDownIcon, CaretRightIcon, ChecksIcon, FolderPlusIcon, GearSixIcon, HashIcon, PlusCircleIcon, PlusIcon, SignOutIcon,
   SpeakerHighIcon, UserPlusIcon,
 } from '@phosphor-icons/react';
 import { useRef, useState } from 'react';
@@ -26,6 +26,7 @@ import { ServerInviteDialog } from './ServerInviteDialog';
 import { leaveServer } from './serversApi';
 import { can, canMoveInto, canOpenSettings, channelSettingsTabs, groupChannels, serverUnread } from './serverUtils';
 import { useServerSettings } from './ServerSettingsContext';
+import { NotificationMenuItems } from '@/features/notifications/NotificationMenuItems';
 import { VoiceMembers, type VoiceDrag } from './VoiceMembers';
 
 function loadCollapsed(serverId: string): Set<string> {
@@ -37,10 +38,14 @@ function ChannelRow({ server, channel, active, onOpen, onInvite, onOpenProfile, 
   onOpenProfile: (userId: string) => void; drag: VoiceDrag | null; onDragChange: (drag: VoiceDrag | null) => void;
 }) {
   const { t } = useTranslation('servers');
-  const { state, unreadByConversation, moveToCall } = useRoom();
+  const { t: tn } = useTranslation('notifications');
+  const { state, badgeByConversation, mentionsByConversation, notificationPolicyFor, moveToCall } = useRoom();
   const { openChannelSettings } = useServerSettings();
   const [dropping, setDropping] = useState(false);
-  const unread = channel.type === 'text' ? unreadByConversation.get(channel.id) ?? 0 : 0;
+  const unread = channel.type === 'text' ? badgeByConversation.get(channel.id) ?? 0 : 0;
+  const mentions = channel.type === 'text' ? mentionsByConversation.get(channel.id) ?? 0 : 0;
+  // a muted channel reads as quiet: dimmed, its own unread hidden (only mentions still count)
+  const muted = channel.type === 'text' && notificationPolicyFor({ id: channel.id, serverId: server.id }).muted;
   const Icon = channel.type === 'voice' ? SpeakerHighIcon : HashIcon;
   // someone dragged out of another voice channel can land in this one
   const accepts = channel.type === 'voice' && !!drag && drag.fromChannelId !== channel.id && canMoveInto(channel, state.me.role === 'admin');
@@ -60,6 +65,7 @@ function ChannelRow({ server, channel, active, onOpen, onInvite, onOpenProfile, 
       <div data-conversation-id={channel.type === 'text' ? channel.id : undefined} className={cn(
         'group/channel relative isolate mx-2 flex h-8 items-center rounded-lg',
         active ? 'text-text-primary' : unread ? 'text-text-primary' : 'text-text-muted hover:bg-nav-hover hover:text-text-primary',
+        muted && !active && !unread && 'opacity-60',
         accepts && dropping && 'bg-nav-hover text-text-primary ring-2 ring-ring',
       )}>
         {active && <ActiveFill />}
@@ -67,6 +73,13 @@ function ChannelRow({ server, channel, active, onOpen, onInvite, onOpenProfile, 
         <button type="button" onClick={onOpen} aria-current={active ? 'page' : undefined} className="flex h-full min-w-0 flex-1 items-center gap-1.5 px-2 text-left">
           <Icon size={20} className={cn('flex-none', active || unread > 0 ? 'text-text-secondary' : 'text-text-muted')} />
           <span className={cn('truncate text-body', unread > 0 ? 'font-semibold' : 'font-medium')}>{channel.name}</span>
+          {muted && <BellSlashIcon size={14} className="flex-none text-text-muted" aria-label={tn('preferences.muted')} role="img" />}
+          {mentions > 0 && !active && (
+            <span className="ml-auto flex-none rounded-full bg-red px-1.5 text-label font-semibold text-white">
+              <span aria-hidden>{mentions}</span>
+              <span className="sr-only">{tn('preferences.mentionCount', { count: mentions })}</span>
+            </span>
+          )}
         </button>
         <span className={cn('flex flex-none items-center gap-1 pr-2', active ? 'flex' : 'hidden group-hover/channel:flex group-focus-within/channel:flex [@media(hover:none)]:flex')}>
           {can(server, PERMISSIONS.CREATE_INVITE) && (
@@ -148,6 +161,8 @@ export function ChannelList({ server, activeChannelId, onNavigate, onOpenProfile
           </DropdownMenuTrigger>
           <DropdownMenuContent anchor={headerRef} align="center" sideOffset={-6} className="w-[220px]">
             <DropdownMenuItem disabled={!hasUnread} onClick={() => markServerRead(server.id)}><ChecksIcon size={18} weight="bold" />{t('menu.markAsRead')}</DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <NotificationMenuItems target={{ scope: 'server', id: server.id }} />
             <DropdownMenuSeparator />
             {can(server, PERMISSIONS.CREATE_INVITE) && <DropdownMenuItem onClick={() => setInviteOpen({})}><UserPlusIcon size={18} weight="fill" />{t('menu.invite')}</DropdownMenuItem>}
             {canOpenSettings(server, state.me.userId) && <DropdownMenuItem onClick={() => openServerSettings(server.id)}><GearSixIcon size={18} weight="fill" />{t('menu.settings')}</DropdownMenuItem>}

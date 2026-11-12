@@ -303,6 +303,35 @@ describe('self-reported media state (mic-state / camera / screen-share / speakin
     assert.equal(publicParticipant(p).micMuted, false);
   });
 
+  test('a protocol 18 client joins a call with its mic starting until it reports it settled', () => {
+    const socket = fakeSocket(`u-${Math.random()}`);
+    const p = joinP(socket, { v: 18 })!;
+    createdIds.push(p.id);
+    setCallConversationId(p, 'voice-1');
+    assert.equal(publicParticipant(p).micStarting, true);
+    assert.equal(publicParticipant(p).micMuted, false);
+
+    handlers['mic-state'](socket, { activated: false, muted: true, starting: true });
+    assert.equal(p.micStarting, true);
+    assert.equal(p.micMuted, true);
+
+    handlers['mic-state'](socket, { activated: false, muted: true });
+    assert.equal(p.micStarting, false);
+
+    setCallConversationId(p, null);
+    assert.equal(p.micStarting, false);
+    assert.equal(p.micMuted, true);
+  });
+
+  test('an older client never starts in that state, since it would never clear it', () => {
+    const socket = fakeSocket(`u-${Math.random()}`);
+    const p = joinP(socket, { v: 17 })!;
+    createdIds.push(p.id);
+    setCallConversationId(p, 'voice-1');
+    assert.equal(p.micStarting, false);
+    assert.equal(p.micMuted, true);
+  });
+
   test('camera and screen-share change cameraOn/sharing', () => {
     const socket = fakeSocket(`u-${Math.random()}`);
     const p = joinP(socket, {})!;

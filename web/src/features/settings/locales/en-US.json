@@ -47,13 +47,15 @@
       "twoFactor": "Two-step verification",
       "loginAlerts": "Sign-in alerts",
       "sessions": "Active sessions",
-      "install": "Install the app"
+      "install": "Install the app",
+      "deleteAccount": "Delete account",
+      "dataExport": "Your data"
     }
   },
   "search": {
     "accountInfo": {
       "title": "Account information",
-      "keywords": "username, display name, admin, account"
+      "keywords": "username, change username, display name, admin, account"
     },
     "email": {
       "title": "Email",
@@ -138,11 +140,35 @@
     "sessions": {
       "title": "Active sessions",
       "keywords": "sessions, devices, browsers, sign out, log out other devices, security"
+    },
+    "deleteAccount": {
+      "title": "Delete account",
+      "keywords": "delete account, remove account, close account, erase, gdpr, lgpd, remove my data"
+    },
+    "dataExport": {
+      "title": "Download my data",
+      "keywords": "download data, export, copy of my data, backup, gdpr, lgpd, portability"
     }
   },
   "account": {
     "username": {
-      "label": "Username"
+      "label": "Username",
+      "description": "Used to sign in and for people to mention you with @.",
+      "edit": "Edit username",
+      "newLabel": "New username",
+      "passwordLabel": "Current password",
+      "rules": "{{min}} to {{max}} characters: letters, numbers, . _ -",
+      "checking": "Checking availability…",
+      "available": "{{username}} is available.",
+      "checkFailed": "Couldn't check right now. The name will be checked when you save.",
+      "sessionsNote": "You stay signed in on every device. Next time you sign in, use the new name.",
+      "cancel": "Cancel",
+      "barLabel": "Username",
+      "errors": {
+        "taken": "That username is already taken.",
+        "invalid": "Use {{min}} to {{max}} characters: letters, numbers, . _ -",
+        "saveFailed": "Couldn't change the username. Try again."
+      }
     },
     "admin": "Admin",
     "displayName": {
@@ -154,6 +180,24 @@
       "description": "Ends the session in this browser.",
       "descriptionInCall": "Ends the session in this browser and also leaves the call in progress.",
       "button": "Sign out"
+    },
+    "delete": {
+      "label": "Delete my account",
+      "description_one": "The account is deleted {{count}} day after you ask. Signing in again before then cancels it.",
+      "description_other": "The account is deleted {{count}} days after you ask. Signing in again before then cancels it.",
+      "open": "Delete account",
+      "consequences_one": "You will be signed out of every device now, and the account will be deleted in {{count}} day:",
+      "consequences_other": "You will be signed out of every device now, and the account will be deleted in {{count}} days:",
+      "whatGoes": "Your profile, friends, blocks, connections and profile pictures are erased.",
+      "servers": "The servers you created pass to their longest-standing member; a server with nobody else left is deleted.",
+      "messages": "Your messages stay in their conversations, without your name. To keep a copy, download your data in Data & privacy first.",
+      "cancel_one": "Changed your mind? Sign in again within {{count}} day and the deletion is cancelled.",
+      "cancel_other": "Changed your mind? Sign in again within {{count}} days and the deletion is cancelled.",
+      "password": "Current password",
+      "submit": "Delete my account",
+      "codeSent": "We sent a code to {{email}}. Type it to confirm the deletion.",
+      "codeLabel": "Verification code",
+      "failed": "Could not delete the account. Try again."
     }
   },
   "email": {
@@ -200,7 +244,21 @@
     "loadFailed": "Couldn't load the list.",
     "empty": "You haven't blocked anyone",
     "unblock": "Unblock",
-    "emptyText": "Anyone you block shows up here, and you can unblock them any time."
+    "emptyText": "Anyone you block shows up here, and you can unblock them any time.",
+    "export": {
+      "label": "Download my data",
+      "description": "A copy of your profile, settings, friends, blocks, servers and every message you sent, with its files. We email you when it is ready.",
+      "request": "Request a copy",
+      "building": "Preparing…",
+      "buildingHint": "We are preparing your copy. You can leave this page: the link also arrives by email.",
+      "download": "Download",
+      "readyHint": "Your copy ({{size}}) is available until {{date}}.",
+      "failed": "Your copy could not be prepared. Ask again.",
+      "expired": "The link to your last copy has expired.",
+      "nextRequest": "You can ask for another copy from {{date}}.",
+      "requestFailed": "Could not ask for a copy. Try again.",
+      "loadFailed": "Could not load the state of your copy."
+    }
   },
   "adminLink": {
     "label": "Users, servers, reports and audit",
