@@ -131,6 +131,8 @@ Run a single container. The server keeps live state in its own memory (who is on
 
 ## Troubleshooting
 
+- **An API call answers 500 with only "Erro interno." and a `requestId`.** The server never sends the cause of an unexpected error to the client (it may contain SQL or file paths). Search the log for that value as `reqId`: the `error in a route` line has the full error and stack. The same id is in the response's `x-request-id` header.
+
 - **Attachments and voice messages fail, profile pictures work.** `POST /api/attachments/init` answers 500 and the log shows `EACCES: permission denied, mkdir '/app/uploads/tmp/…'`. A folder under the uploads mount is still owned by root: see [Folders and permissions](#folders-and-permissions). The 429s that follow are the browser retrying.
 - **Backups fail with `EACCES`.** The same, for the folder mounted on `/app/backups`, or nothing is mounted there.
 - **Calls do not connect, chat works.** Check `LIVEKIT_URL`: it must be the address browsers use, and the browser console names it in a Content-Security-Policy error if the policy blocked it. Without `LIVEKIT_*` the server logs `LiveKit is not configured` at startup.
