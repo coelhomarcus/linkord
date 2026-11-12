@@ -35,9 +35,13 @@
 // reads as starting, not muted, until the client reports it settled. Only a version 18 tab is put in
 // that state (an older one would never clear it), and an old tab reads the participant as muted
 // while it lasts, as before, so the minimum stays at 7.
+// Version 19 adds per-server and per-channel/DM notification settings: `welcome.notificationSettings`
+// and `notification-settings` when the account changes one in any tab. An old tab ignores both and
+// keeps every sound and badge (pushes follow the setting on the server either way), so the minimum
+// stays at 7.
 // Raising MIN_PROTOCOL_VERSION also drops open tabs out of their calls (they are refused and
 // disconnect), so keep it for changes an old client cannot tolerate.
-export const PROTOCOL_VERSION = 18;
+export const PROTOCOL_VERSION = 19;
 export const MIN_PROTOCOL_VERSION = 7;
 export const MIC_STARTING_PROTOCOL_VERSION = 18;
 

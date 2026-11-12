@@ -6,7 +6,7 @@ import { aliasedTable, and, asc, eq, gt, inArray, isNull, or } from 'drizzle-orm
 import yazl from 'yazl';
 import { db } from '../../db/client.js';
 import {
-  attachments, conversationMembers, conversations, friendships, messages, profileConnections, profileGames, profileWallWidgets,
+  attachments, conversationMembers, conversations, friendships, messages, notificationSettings, profileConnections, profileGames, profileWallWidgets,
   serverMemberRoles, serverMembers, serverRoles, servers, userBlocks, users,
 } from '../../db/schema.js';
 import { filePathFor } from '../attachments/attachmentStorage.js';
@@ -63,7 +63,10 @@ async function readRecords(userId: string) {
     .from(serverMemberRoles).innerJoin(serverRoles, eq(serverRoles.id, serverMemberRoles.roleId))
     .where(eq(serverMemberRoles.userId, userId)).orderBy(asc(serverRoles.position));
 
-  return { user, connections, wallWidgets, games, friendRows, blockRows, serverRows, roleRows };
+  const notificationRows = await db.select().from(notificationSettings).where(eq(notificationSettings.userId, userId))
+    .orderBy(asc(notificationSettings.updatedAt));
+
+  return { user, connections, wallWidgets, games, friendRows, blockRows, serverRows, roleRows, notificationRows };
 }
 
 /** Where each conversation the account wrote in is, named for a person: a server channel or a DM partner. */
@@ -153,7 +156,7 @@ Dates are in UTC (ISO 8601). Messages other people sent are not included.
 export async function writeExportArchive(userId: string, destination: string, now = new Date()): Promise<number | null> {
   const records = await readRecords(userId);
   if (!records) return null;
-  const { user, connections, wallWidgets, games, friendRows, blockRows, serverRows, roleRows } = records;
+  const { user, connections, wallWidgets, games, friendRows, blockRows, serverRows, roleRows, notificationRows } = records;
 
   const files: StoredFile[] = [];
 
@@ -207,6 +210,10 @@ export async function writeExportArchive(userId: string, destination: string, no
     settings: {
       language: user.locale, presenceStatus: user.presenceStatus, pushShowsMessageText: user.pushShowContent,
       twoStepLogin: user.twoFactorEmail, newSignInAlerts: user.loginAlertEmail,
+      // per server and per channel or DM; a null level inherits, a muted row without an end lasts until turned off
+      notifications: notificationRows.map((n) => ({
+        serverId: n.serverId, conversationId: n.conversationId, level: n.level, muted: n.muted, mutedUntil: iso(n.mutedUntil),
+      })),
     },
   }), 'account.json', options);
   zip.addBuffer(json({

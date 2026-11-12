@@ -290,6 +290,26 @@ export const channelReadStates = pgTable('channel_read_states', {
   index('channel_read_states_user_id_idx').on(t.userId),
 ]);
 
+/** How loudly one account hears one server, or one channel or DM (exactly one of the two ids).
+ * `level` null inherits (a channel from its server, everything else from "all"); a mute is
+ * separate from the level, and `muted_until` null on a muted row means until it is turned off.
+ * The rule that combines them is modules/notifications/notificationSettingsPolicy.ts. */
+export const notificationSettings = pgTable('notification_settings', {
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  serverId: text('server_id').references(() => servers.id, { onDelete: 'cascade' }),
+  conversationId: text('conversation_id').references(() => conversations.id, { onDelete: 'cascade' }),
+  level: varchar('level', { length: 16 }),
+  muted: boolean('muted').notNull().default(false),
+  mutedUntil: timestamp('muted_until', { withTimezone: true }),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex('notification_settings_user_server_key').on(t.userId, t.serverId).where(sql`${t.serverId} IS NOT NULL`),
+  uniqueIndex('notification_settings_user_conversation_key').on(t.userId, t.conversationId).where(sql`${t.conversationId} IS NOT NULL`),
+  check('notification_settings_scope_check', sql`num_nonnulls(${t.serverId}, ${t.conversationId}) = 1`),
+  check('notification_settings_level_check', sql`${t.level} IS NULL OR ${t.level} IN ('all','mentions','nothing')`),
+]);
+export type NotificationSettingRow = typeof notificationSettings.$inferSelect;
+
 /** An invite link (`/invite/<code>`). Anyone signed in with the code joins,
  * unlike a friend invitation (server_invitations) which names its invitee. */
 export const serverInvites = pgTable('server_invites', {

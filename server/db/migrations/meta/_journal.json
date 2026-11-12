@@ -484,6 +484,13 @@
       "when": 1794487791906,
       "tag": "0068_messages_author_index",
       "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1794490096509,
+      "tag": "0069_notification_settings",
+      "breakpoints": true
     }
   ]
 }
