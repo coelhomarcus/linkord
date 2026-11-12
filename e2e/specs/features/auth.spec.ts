@@ -77,6 +77,33 @@ test.describe('auth', () => {
     await context.close();
   });
 
+  test('two-step login: turning it off takes a code sent to the account email, not just the password', async ({ users }) => {
+    const alice = await users.create('alice');
+    const email = `${alice.username}@example.test`;
+    const page = await alice.page();
+    await page.goto('/app/settings/security');
+
+    const toggle = page.getByRole('switch', { name: 'Código por e-mail ao entrar' });
+    await toggle.click();
+    await page.getByLabel('Senha atual').fill(alice.password);
+    let seen = await emailCount(email);
+    await page.getByRole('button', { name: 'Enviar código' }).click();
+    await page.getByLabel('Código de ativação').pressSequentially(await waitForEmailCode(email, seen));
+    await expect(toggle).toHaveAttribute('aria-checked', 'true');
+
+    await toggle.click();
+    await page.getByLabel('Senha atual').fill(alice.password);
+    seen = await emailCount(email);
+    await page.getByRole('button', { name: 'Enviar código' }).click();
+    const code = await waitForEmailCode(email, seen);
+    await expect(toggle).toHaveAttribute('aria-checked', 'true');
+    expect((await (await alice.api.get('/api/auth/security')).json()).twoFactorEnabled).toBe(true);
+
+    await page.getByLabel('Código de desativação').pressSequentially(code);
+    await expect(toggle).toHaveAttribute('aria-checked', 'false');
+    expect((await (await alice.api.get('/api/auth/security')).json()).twoFactorEnabled).toBe(false);
+  });
+
   test('ending another session from the list signs that browser out on the spot', async ({ users }) => {
     const alice = await users.create('alice');
     const laptop = await alice.page();

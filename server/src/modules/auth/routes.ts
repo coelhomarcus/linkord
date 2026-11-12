@@ -16,8 +16,8 @@ import { invalidUsernameMessage, isReservedUsername, isValidUsername } from './u
 import { renameParticipants } from '../presence/participants.js';
 import { checkRegistrationAllowed } from './registrationLimits.js';
 import type { User } from '../../db/schema.js';
-import { consumeLoginChallenge, findLoginChallenge, issueAuthCode, verifyAuthCode, type AuthCodePurpose } from './codes.js';
-import { isEmailDeliveryConfigured, sendAuthCodeEmail } from './email.js';
+import { consumeLoginChallenge, findLoginChallenge, hasLiveAuthCode, issueAuthCode, verifyAuthCode, type AuthCodePurpose } from './codes.js';
+import { isEmailDeliveryConfigured, sendAuthCodeEmail, sendEmailChangedEmail } from './email.js';
 import { isKnownBrowser, noticeLogin, noticeRegistration } from './loginAlert.js';
 import { cancelScheduledDeletion, isPastDeletion, scheduleAccountDeletion } from './accountDeletion.js';
 import { clientIpOf, sessionOriginOf } from '../../http/clientInfo.js';
@@ -532,6 +532,32 @@ async function handleEmailChangeRequest(request: FastifyRequest, reply: FastifyR
     return sendError(reply, 429, 'rate_limited', 'Muitas solicitações. Tente novamente mais tarde.');
   }
   await ratelimit.recordFailure(changeKey);
+  // With two-step login on, the current address is asked first: only once its code is confirmed does a code
+  // go to the new one, so a stolen session plus the password cannot move the account's second factor away.
+  // A live code to this new address means that step was already passed, and asking again resends it.
+  const user = await findById(sess.userId);
+  if (!user) return sendError(reply, 404, 'user_not_found', 'Conta não encontrada.');
+  if (user.twoFactorEmail && !(await hasLiveAuthCode(user.id, 'email_change', email))) {
+    return sendCurrentEmailCode(reply, user, 'email_change_current');
+  }
+  try {
+    await issueAndSendCode(sess.userId, email, sess.username, 'email_change', resolveLocale(sess.locale));
+  } catch {
+    return sendError(reply, 503, 'email_unavailable', 'Não foi possível enviar o código agora. Tente novamente mais tarde.');
+  }
+  sendJson(reply, 200, { ok: true });
+}
+
+/** With two-step login on: the code sent to the current address, which earns the code to the new one. */
+async function handleEmailChangeVerifyCurrent(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  const sess = await sessionForRequest(request);
+  if (!sess) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
+  const email = normalizeEmail(String(jsonBody(request.body).email ?? ''));
+  if (!isValidEmail(email)) return sendError(reply, 400, 'invalid_email', 'Informe um e-mail válido.');
+  if (sess.email && normalizeEmail(sess.email) === email) return sendError(reply, 400, 'same_email', 'Informe um e-mail diferente do atual.');
+  if (!(await verifyCurrentEmailCode(request, reply, sess, 'email_change_current'))) return;
+  const existing = await findByEmailLower(email);
+  if (existing && existing.id !== sess.userId) return sendError(reply, 409, 'email_taken', 'Esse e-mail já está em uso.');
   try {
     await issueAndSendCode(sess.userId, email, sess.username, 'email_change', resolveLocale(sess.locale));
   } catch {
@@ -554,7 +580,20 @@ async function handleEmailChangeConfirm(request: FastifyRequest, reply: FastifyR
   if (existing && existing.id !== sess.userId) return sendError(reply, 409, 'email_taken', 'Esse e-mail já está em uso.');
   const user = await updateEmail(sess.userId, email);
   if (!user) return sendError(reply, 404, 'user_not_found', 'Conta não encontrada.');
-  sendJson(reply, 200, { user: privateUser(user) });
+  // the address is how the account is recovered: whoever else is signed in is signed out, and the old
+  // address hears about it, so a change that was not its owner's does not go unnoticed
+  const ended = await destroyOtherSessions(sess.userId, sess.tokenHash);
+  dropSessionConnections(ended);
+  await recordAudit({
+    actor: auditActor(sess), action: 'account.email_change', targetType: 'user', targetId: sess.userId, targetLabel: sess.username,
+    detail: { endedSessions: ended.length }, requestId: request.id,
+  });
+  log.info('email changed', { userId: sess.userId, endedSessions: ended.length });
+  if (sess.email && isEmailDeliveryConfigured()) {
+    await sendEmailChangedEmail({ to: sess.email, username: user.username, locale: resolveLocale(user.locale), newEmail: maskEmail(email) })
+      .catch((err) => log.warn('could not tell the old address about an email change', { userId: sess.userId, err }));
+  }
+  sendJson(reply, 200, { user: privateUser(user), endedSessions: ended.length });
 }
 
 // ---- username: the login name, unique in any letter case (users_username_lower_key) ----
@@ -634,6 +673,52 @@ async function confirmPassword(reply: FastifyReply, sess: SessionUser, password:
   return true;
 }
 
+// With two-step login on, the account's current email is its second factor, so everything that could take that
+// factor away asks it again after the password: deleting the account, turning two-step login or sign-in alerts
+// off, and moving the address. A stolen session plus a leaked password is exactly what two-step login is for.
+const CURRENT_EMAIL_CODE_SEND_KEYS = {
+  account_deletion: 'deletion-code',
+  two_factor_disable: '2fa-disable-code',
+  login_alert_disable: 'login-alert-code',
+  email_change_current: 'email-change-current-code',
+} as const satisfies Partial<Record<AuthCodePurpose, string>>;
+type CurrentEmailPurpose = keyof typeof CURRENT_EMAIL_CODE_SEND_KEYS;
+
+/** Sends a code of `purpose` to the account's current address and answers `{ codeRequired, email }`. */
+async function sendCurrentEmailCode(reply: FastifyReply, user: User, purpose: CurrentEmailPurpose): Promise<void> {
+  if (!user.email || !isEmailDeliveryConfigured()) {
+    return sendError(reply, 503, 'email_unavailable', 'Não foi possível enviar o código de verificação agora. Tente novamente mais tarde.');
+  }
+  const send = await ratelimit.consume(`${CURRENT_EMAIL_CODE_SEND_KEYS[purpose]}:${user.id}`, CODE_SEND_RULE);
+  if (!send.allowed) return rateLimitedReply(reply, send.retryAfterSec, 'Muitos códigos enviados. Tente novamente mais tarde.');
+  try {
+    await issueAndSendCode(user.id, user.email, user.username, purpose, resolveLocale(user.locale));
+  } catch {
+    return sendError(reply, 503, 'email_unavailable', 'Não foi possível enviar o código de verificação agora. Tente novamente mais tarde.');
+  }
+  sendJson(reply, 200, { codeRequired: true, email: maskEmail(user.email) });
+}
+
+/** Checks the body's `code` against the last one of `purpose` sent to the current address, under the account's
+ * counter of wrong codes. A code is only ever sent after the password was confirmed, so it stands for both.
+ * Answers the request itself (and returns false) when it is refused. */
+async function verifyCurrentEmailCode(request: FastifyRequest, reply: FastifyReply, sess: SessionUser, purpose: CurrentEmailPurpose): Promise<boolean> {
+  if (!sess.email) { sendError(reply, 400, 'invalid_code', 'Código inválido.'); return false; }
+  const code = String(jsonBody(request.body).code ?? '').trim();
+  if (!/^\d{6}$/.test(code)) { sendError(reply, 400, 'invalid_code', 'Informe o código de 6 dígitos.'); return false; }
+  const key = codeFailuresKey(sess.userId);
+  const blocked = await ratelimit.checkBlocked(key);
+  if (blocked) { rateLimitedReply(reply, blocked); return false; }
+  const result = await verifyAuthCode(sess.userId, purpose, sess.email, code);
+  if (!result.ok) {
+    if (result.reason !== 'code_expired') await ratelimit.recordFailure(key);
+    purposeError(reply, result.reason);
+    return false;
+  }
+  await ratelimit.reset(key).catch(() => {});
+  return true;
+}
+
 async function handleSecurityStatus(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   const sess = await sessionForRequest(request);
   if (!sess) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
@@ -688,22 +773,56 @@ async function handleTwoFactorEnableConfirm(request: FastifyRequest, reply: Fast
   sendJson(reply, 200, { twoFactorEnabled: true });
 }
 
+/** The password, then (it being on) a code to the account's email: `handleTwoFactorDisableConfirm` turns it off. */
 async function handleTwoFactorDisable(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   const sess = await sessionForRequest(request);
   if (!sess) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
   if (!(await confirmPassword(reply, sess, String(jsonBody(request.body).password ?? '')))) return;
+  const user = await findById(sess.userId);
+  if (!user) return sendError(reply, 404, 'user_not_found', 'Conta não encontrada.');
+  if (!user.twoFactorEmail) return sendJson(reply, 200, { twoFactorEnabled: false });
+  return sendCurrentEmailCode(reply, user, 'two_factor_disable');
+}
+
+async function handleTwoFactorDisableConfirm(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  const sess = await sessionForRequest(request);
+  if (!sess) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
+  if (!(await verifyCurrentEmailCode(request, reply, sess, 'two_factor_disable'))) return;
   await db.update(users).set({ twoFactorEmail: false, updatedAt: new Date() }).where(eq(users.id, sess.userId));
   await recordAudit({ actor: auditActor(sess), action: 'account.two_factor_disable', targetType: 'user', targetId: sess.userId, targetLabel: sess.username, requestId: request.id });
   log.info('two-step login turned off', { userId: sess.userId });
   sendJson(reply, 200, { twoFactorEnabled: false });
 }
 
+/** Turning sign-in alerts on asks nothing. Turning them off silences the email that would tell the owner about a
+ * stranger's login, so it asks the password and, with two-step login on, a code to the account's email
+ * (`handleLoginAlertDisableConfirm`). */
 async function handleLoginAlertSet(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   const sess = await sessionForRequest(request);
   if (!sess) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
-  const enabled = jsonBody(request.body).enabled;
+  const body = jsonBody(request.body);
+  const enabled = body.enabled;
   if (typeof enabled !== 'boolean') return sendError(reply, 400, 'invalid_request', 'Informe se o aviso deve ficar ativo.');
+  if (enabled) return setLoginAlert(request, reply, sess, true);
+  if (!(await confirmPassword(reply, sess, String(body.password ?? '')))) return;
+  const user = await findById(sess.userId);
+  if (!user) return sendError(reply, 404, 'user_not_found', 'Conta não encontrada.');
+  if (user.twoFactorEmail) return sendCurrentEmailCode(reply, user, 'login_alert_disable');
+  return setLoginAlert(request, reply, sess, false);
+}
+
+async function handleLoginAlertDisableConfirm(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  const sess = await sessionForRequest(request);
+  if (!sess) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
+  if (!(await verifyCurrentEmailCode(request, reply, sess, 'login_alert_disable'))) return;
+  return setLoginAlert(request, reply, sess, false);
+}
+
+async function setLoginAlert(request: FastifyRequest, reply: FastifyReply, sess: SessionUser, enabled: boolean): Promise<void> {
   await db.update(users).set({ loginAlertEmail: enabled, updatedAt: new Date() }).where(eq(users.id, sess.userId));
+  if (!enabled) {
+    await recordAudit({ actor: auditActor(sess), action: 'account.login_alert_disable', targetType: 'user', targetId: sess.userId, targetLabel: sess.username, requestId: request.id });
+  }
   log.info('login alerts changed', { userId: sess.userId, enabled });
   sendJson(reply, 200, { loginAlertEnabled: enabled });
 }
@@ -798,37 +917,13 @@ async function handleDeletionRequest(request: FastifyRequest, reply: FastifyRepl
   const user = await findById(sess.userId);
   if (!user) return sendError(reply, 404, 'user_not_found', 'Conta não encontrada.');
   if (!user.twoFactorEmail) return finishDeletionRequest(request, reply, sess);
-
-  // with two-step login on, the password alone is not enough to delete the account: a code to its email
-  if (!user.email || !isEmailDeliveryConfigured()) {
-    return sendError(reply, 503, 'email_unavailable', 'Não foi possível enviar o código de verificação agora. Tente novamente mais tarde.');
-  }
-  const send = await ratelimit.consume(`deletion-code:${sess.userId}`, CODE_SEND_RULE);
-  if (!send.allowed) return rateLimitedReply(reply, send.retryAfterSec, 'Muitos códigos enviados. Tente novamente mais tarde.');
-  try {
-    await issueAndSendCode(user.id, user.email, user.username, 'account_deletion', resolveLocale(user.locale));
-  } catch {
-    return sendError(reply, 503, 'email_unavailable', 'Não foi possível enviar o código de verificação agora. Tente novamente mais tarde.');
-  }
-  sendJson(reply, 200, { codeRequired: true, email: maskEmail(user.email) });
+  return sendCurrentEmailCode(reply, user, 'account_deletion');
 }
 
 async function handleDeletionConfirm(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   const sess = await sessionForRequest(request);
   if (!sess) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
-  if (!sess.email) return sendError(reply, 400, 'invalid_code', 'Código inválido.');
-  const code = String(jsonBody(request.body).code ?? '').trim();
-  if (!/^\d{6}$/.test(code)) return sendError(reply, 400, 'invalid_code', 'Informe o código de 6 dígitos.');
-  const key = codeFailuresKey(sess.userId);
-  const blocked = await ratelimit.checkBlocked(key);
-  if (blocked) return rateLimitedReply(reply, blocked);
-  // a code is only ever issued after the password was confirmed, so it stands for both steps
-  const result = await verifyAuthCode(sess.userId, 'account_deletion', sess.email, code);
-  if (!result.ok) {
-    if (result.reason !== 'code_expired') await ratelimit.recordFailure(key);
-    return purposeError(reply, result.reason);
-  }
-  await ratelimit.reset(key).catch(() => {});
+  if (!(await verifyCurrentEmailCode(request, reply, sess, 'account_deletion'))) return;
   return finishDeletionRequest(request, reply, sess);
 }
 
@@ -842,6 +937,7 @@ export function registerAuthRoutes(fastify: FastifyInstance): void {
   fastify.post('/api/auth/recovery/request', handleRecoveryRequest);
   fastify.post('/api/auth/recovery/reset', handleRecoveryReset);
   fastify.post('/api/auth/email/change/request', handleEmailChangeRequest);
+  fastify.post('/api/auth/email/change/verify-current', handleEmailChangeVerifyCurrent);
   fastify.post('/api/auth/email/change/confirm', handleEmailChangeConfirm);
   fastify.get<{ Querystring: { username?: string } }>('/api/auth/username/availability', handleUsernameAvailability);
   fastify.post('/api/auth/username', handleUsernameChange);
@@ -849,7 +945,9 @@ export function registerAuthRoutes(fastify: FastifyInstance): void {
   fastify.post('/api/auth/two-factor/enable/request', handleTwoFactorEnableRequest);
   fastify.post('/api/auth/two-factor/enable/confirm', handleTwoFactorEnableConfirm);
   fastify.post('/api/auth/two-factor/disable', handleTwoFactorDisable);
+  fastify.post('/api/auth/two-factor/disable/confirm', handleTwoFactorDisableConfirm);
   fastify.put('/api/auth/login-alerts', handleLoginAlertSet);
+  fastify.post('/api/auth/login-alerts/disable/confirm', handleLoginAlertDisableConfirm);
   fastify.post('/api/auth/password', handlePasswordChange);
   fastify.get('/api/auth/sessions', handleListSessions);
   fastify.post('/api/auth/sessions/end-others', handleEndOtherSessions);

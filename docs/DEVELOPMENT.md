@@ -189,7 +189,7 @@ The `upgrade` project adapts to what the base version can do and says so in the 
 
 | Spec | What it checks |
 | --- | --- |
-| `features/auth` | Sign-up with and without the invitation code, the login form (wrong password refused), session across reloads, logout. Two-step login turned on from Settings → Security with the emailed code, then a login that needs the next code (a wrong one refused); ending another session from the session list signs that browser out without a reload. |
+| `features/auth` | Sign-up with and without the invitation code, the login form (wrong password refused), session across reloads, logout. Two-step login turned on from Settings → Security with the emailed code, then a login that needs the next code (a wrong one refused), and turning it off, which needs another emailed code after the password; ending another session from the session list signs that browser out without a reload. |
 | `features/friends` | Request from the form accepted in Pending, decline, cancel, block (no messages or calls) and unblock. |
 | `features/dm` | Talking in a DM, the unread count until it is opened, no DM without friendship; muting a DM from its row's menu drops its count live in another tab of the account, and the header bell unmutes it. |
 | `features/chat` | Messages shown once on both sides, typing indicator, reply, edit, delete, reactions, search, image attachment. The new-messages line staying in place while reading, its jump pill and Esc clearing it; mark as read from a channel row and a whole server from its rail icon, seen in a second tab and kept after a reload. |

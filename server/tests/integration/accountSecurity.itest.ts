@@ -247,10 +247,59 @@ describe('turning two-step login on and off', () => {
     assert.equal(trail.length, 1);
 
     assert.equal((await call('POST', '/api/auth/two-factor/disable', { cookie, payload: { password: 'nope' } })).status, 403);
-    const off = await call('POST', '/api/auth/two-factor/disable', { cookie, payload: { password: PASSWORD } });
+    const asked = await call('POST', '/api/auth/two-factor/disable', { cookie, payload: { password: PASSWORD } });
+    assert.equal(asked.status, 200);
+    assert.equal(asked.body.codeRequired, true);
+    const off = await call('POST', '/api/auth/two-factor/disable/confirm', { cookie, payload: { code: lastCode() } });
     assert.equal(off.body.twoFactorEnabled, false);
     const [row] = await db.select({ on: users.twoFactorEmail }).from(users).where(eq(users.id, user.id));
     assert.equal(row?.on, false);
+  });
+
+  it('turning it off takes a code sent to the current email, not just the password', async () => {
+    const user = await makeAccount({ twoFactor: true });
+    const { cookie } = await cookieFor(user.id);
+    const isOn = async () => (await db.select({ on: users.twoFactorEmail }).from(users).where(eq(users.id, user.id)))[0]?.on;
+
+    const asked = await call('POST', '/api/auth/two-factor/disable', { cookie, payload: { password: PASSWORD } });
+    assert.equal(asked.status, 200);
+    assert.deepEqual(asked.body, { codeRequired: true, email: asked.body.email });
+    assert.notEqual(asked.body.email, user.email, 'the address is masked');
+    assert.deepEqual(mailbox.at(-1)?.to, [user.email]);
+    assert.equal(await isOn(), true, 'the password alone leaves it on');
+
+    // without the code, deleting the account still asks for one
+    const deletion = await call('POST', '/api/auth/account/deletion/request', { cookie, payload: { password: PASSWORD } });
+    assert.equal(deletion.body.codeRequired, true);
+    assert.equal(deletion.body.deletionDueAt, undefined);
+
+    // the deletion code above was the last email, so ask for the turn-off code again
+    assert.equal((await call('POST', '/api/auth/two-factor/disable', { cookie, payload: { password: PASSWORD } })).status, 200);
+    const code = lastCode();
+    const wrong = await call('POST', '/api/auth/two-factor/disable/confirm', { cookie, payload: { code: wrongCode(code) } });
+    assert.equal(wrong.status, 400);
+    assert.equal(await isOn(), true);
+    const off = await call('POST', '/api/auth/two-factor/disable/confirm', { cookie, payload: { code } });
+    assert.equal(off.status, 200);
+    assert.equal(off.body.twoFactorEnabled, false);
+    assert.equal(await isOn(), false);
+  });
+
+  it('a code sent for another change cannot turn it off', async () => {
+    const user = await makeAccount({ twoFactor: true });
+    const { cookie } = await cookieFor(user.id);
+    await call('PUT', '/api/auth/login-alerts', { cookie, payload: { enabled: false, password: PASSWORD } });
+    const res = await call('POST', '/api/auth/two-factor/disable/confirm', { cookie, payload: { code: lastCode() } });
+    assert.equal(res.status, 400);
+    assert.equal(res.body.error.code, 'invalid_code');
+  });
+
+  it('turning it off when it is already off asks no code', async () => {
+    const user = await makeAccount();
+    const { cookie } = await cookieFor(user.id);
+    const res = await call('POST', '/api/auth/two-factor/disable', { cookie, payload: { password: PASSWORD } });
+    assert.deepEqual(res.body, { twoFactorEnabled: false });
+    assert.equal(mailbox.length, 0);
   });
 
   it('cannot be turned on without an email or without email delivery', async () => {
@@ -298,6 +347,62 @@ describe('changing the email', () => {
     const confirmed = await call('POST', '/api/auth/email/change/confirm', { cookie, payload: { email: target, code: lastCode() } });
     assert.equal(confirmed.status, 200);
     assert.equal(confirmed.body.user.email, target);
+  });
+
+  it('tells the old address, signs every other session out and leaves a trail', async () => {
+    const user = await makeAccount();
+    const mine = await cookieFor(user.id);
+    const other = await cookieFor(user.id);
+    const tab = connectedTab(user, other.tokenHash);
+    const target = `moved_${user.id.slice(0, 8)}@example.test`;
+
+    await call('POST', '/api/auth/email/change/request', { cookie: mine.cookie, payload: { email: target, password: PASSWORD } });
+    const confirmed = await call('POST', '/api/auth/email/change/confirm', { cookie: mine.cookie, payload: { email: target, code: lastCode() } });
+    assert.equal(confirmed.status, 200);
+    assert.equal(confirmed.body.endedSessions, 1);
+
+    const notice = mailbox.at(-1);
+    assert.deepEqual(notice?.to, [user.email]);
+    assert.ok(!notice?.text.includes(target), 'the new address is masked in the notice');
+    assert.equal((await me(other.cookie)).status, 401);
+    assert.equal(tab.disconnected, true);
+    assert.equal((await me(mine.cookie)).status, 200, 'the session that made the change stays');
+    const trail = await db.select().from(adminAuditLogs).where(and(eq(adminAuditLogs.targetId, user.id), eq(adminAuditLogs.action, 'account.email_change')));
+    assert.equal(trail.length, 1);
+  });
+
+  it('with two-step login on, the current address confirms before the new one gets a code', async () => {
+    const user = await makeAccount({ twoFactor: true });
+    const { cookie } = await cookieFor(user.id);
+    const target = `moved_${user.id.slice(0, 8)}@example.test`;
+    const request = () => call('POST', '/api/auth/email/change/request', { cookie, payload: { email: target, password: PASSWORD } });
+
+    const first = await request();
+    assert.equal(first.status, 200);
+    assert.equal(first.body.codeRequired, true);
+    assert.deepEqual(mailbox.at(-1)?.to, [user.email], 'the code goes to the current address');
+    assert.equal(mailbox.filter((m) => m.to.includes(target)).length, 0, 'nothing reaches the new address yet');
+    const currentCode = lastCode();
+
+    // the new address cannot be confirmed with the current address's code, nor by skipping that step
+    const skipped = await call('POST', '/api/auth/email/change/confirm', { cookie, payload: { email: target, code: currentCode } });
+    assert.equal(skipped.status, 400);
+    const wrong = await call('POST', '/api/auth/email/change/verify-current', { cookie, payload: { email: target, code: wrongCode(currentCode) } });
+    assert.equal(wrong.status, 400);
+
+    const verified = await call('POST', '/api/auth/email/change/verify-current', { cookie, payload: { email: target, code: currentCode } });
+    assert.equal(verified.status, 200);
+    assert.deepEqual(mailbox.at(-1)?.to, [target]);
+
+    // asking again now resends to the new address instead of starting over
+    const resent = await request();
+    assert.deepEqual(resent.body, { ok: true });
+    assert.deepEqual(mailbox.at(-1)?.to, [target]);
+
+    const confirmed = await call('POST', '/api/auth/email/change/confirm', { cookie, payload: { email: target, code: lastCode() } });
+    assert.equal(confirmed.status, 200);
+    assert.equal(confirmed.body.user.email, target);
+    assert.deepEqual(mailbox.at(-1)?.to, [user.email], 'the old address hears about it');
   });
 
   it('a wrong password does not reveal whether the address is taken', async () => {
@@ -870,12 +975,42 @@ describe('the sign-in alert switch', () => {
     assert.equal((await call('PUT', '/api/auth/login-alerts', { payload: { enabled: false } })).status, 401);
     assert.equal((await call('PUT', '/api/auth/login-alerts', { payload: { enabled: 'no' }, cookie })).status, 400);
 
-    const off = await call('PUT', '/api/auth/login-alerts', { payload: { enabled: false }, cookie });
+    const off = await call('PUT', '/api/auth/login-alerts', { payload: { enabled: false, password: PASSWORD }, cookie });
     assert.equal(off.status, 200);
     assert.equal(off.body.loginAlertEnabled, false);
     assert.equal((await call('GET', '/api/auth/security', { cookie })).body.loginAlertEnabled, false);
 
     await call('PUT', '/api/auth/login-alerts', { payload: { enabled: true }, cookie });
     assert.equal((await call('GET', '/api/auth/security', { cookie })).body.loginAlertEnabled, true);
+  });
+
+  it('turning it off asks for the password', async () => {
+    const user = await makeAccount();
+    const { cookie } = await cookieFor(user.id);
+    for (const payload of [{ enabled: false }, { enabled: false, password: 'nope' }]) {
+      const res = await call('PUT', '/api/auth/login-alerts', { payload, cookie });
+      assert.equal(res.status, 403);
+      assert.equal(res.body.error.code, 'invalid_password');
+    }
+    assert.equal((await call('GET', '/api/auth/security', { cookie })).body.loginAlertEnabled, true);
+  });
+
+  it('with two-step login on, turning it off also takes a code sent to the current email', async () => {
+    const user = await makeAccount({ twoFactor: true });
+    const { cookie } = await cookieFor(user.id);
+    const asked = await call('PUT', '/api/auth/login-alerts', { payload: { enabled: false, password: PASSWORD }, cookie });
+    assert.equal(asked.status, 200);
+    assert.equal(asked.body.codeRequired, true);
+    assert.deepEqual(mailbox.at(-1)?.to, [user.email]);
+    assert.equal((await call('GET', '/api/auth/security', { cookie })).body.loginAlertEnabled, true);
+
+    const code = lastCode();
+    assert.equal((await call('POST', '/api/auth/login-alerts/disable/confirm', { payload: { code: wrongCode(code) }, cookie })).status, 400);
+    const off = await call('POST', '/api/auth/login-alerts/disable/confirm', { payload: { code }, cookie });
+    assert.equal(off.status, 200);
+    assert.equal(off.body.loginAlertEnabled, false);
+    assert.equal((await call('GET', '/api/auth/security', { cookie })).body.loginAlertEnabled, false);
+    const trail = await db.select().from(adminAuditLogs).where(and(eq(adminAuditLogs.targetId, user.id), eq(adminAuditLogs.action, 'account.login_alert_disable')));
+    assert.equal(trail.length, 1);
   });
 });
