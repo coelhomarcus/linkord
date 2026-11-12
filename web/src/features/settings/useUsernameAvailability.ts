@@ -6,9 +6,9 @@ import { USERNAME_RE } from '@/features/auth/credentialRules';
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
 
 /** Long enough that a name is asked about once it is typed, not once per letter: the server limits the checks. */
-export const USERNAME_CHECK_DEBOUNCE_MS = 400;
+const USERNAME_CHECK_DEBOUNCE_MS = 400;
 
-export type UsernameAvailabilityStatus = 'idle' | 'current' | 'invalid' | 'checking' | 'available' | 'taken' | 'error';
+type UsernameAvailabilityStatus = 'idle' | 'current' | 'invalid' | 'checking' | 'available' | 'taken' | 'error';
 
 interface Answer { name: string; status: 'available' | 'taken' | 'error'; error?: string }
 
