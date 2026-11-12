@@ -18,7 +18,7 @@ import { checkRegistrationAllowed } from './registrationLimits.js';
 import type { User } from '../../db/schema.js';
 import { consumeLoginChallenge, findLoginChallenge, issueAuthCode, verifyAuthCode, type AuthCodePurpose } from './codes.js';
 import { isEmailDeliveryConfigured, sendAuthCodeEmail } from './email.js';
-import { noticeLogin, noticeRegistration } from './loginAlert.js';
+import { isKnownBrowser, noticeLogin, noticeRegistration } from './loginAlert.js';
 import { cancelScheduledDeletion, isPastDeletion, scheduleAccountDeletion } from './accountDeletion.js';
 import { clientIpOf, sessionOriginOf } from '../../http/clientInfo.js';
 import { recordAudit } from '../admin/auditLog.js';
@@ -59,6 +59,8 @@ const codeFailuresKey = (userId: string) => `code:${userId}`;
 // identifier gets a key too, so a block never tells an existing account from a missing one.
 const resetFailuresKey = (userId: string | null, identifier: RecoveryIdentifier) =>
   userId ? `reset-code:${userId}` : `reset-code-unknown:${identifier.type}:${identifier.value.toLowerCase()}`;
+// Stands in for a missing account wherever a lookup must cost the same as for a real one.
+const NO_USER_ID = '00000000-0000-0000-0000-000000000000';
 // Wrong current passwords on the logged-in confirmations (two-step, password change).
 const passwordConfirmKey = (userId: string) => `pw-confirm:${userId}`;
 
@@ -191,19 +193,25 @@ async function handleLogin(request: FastifyRequest, reply: FastifyReply): Promis
   const username = String(body.username == null ? '' : body.username).trim();
   const password = String(body.password == null ? '' : body.password);
   const userKey = `user:${username.toLowerCase()}`;
-
   const userBlockedSec = await ratelimit.checkBlocked(userKey);
-  if (userBlockedSec) {
-    reply.header('Retry-After', String(userBlockedSec));
-    return sendError(reply, 429, 'rate_limited', 'Muitas tentativas. Tente novamente mais tarde.');
-  }
 
   const user = await findByUsernameLower(username);
+  // Anyone can fill the account's counter from one address, so a blocked account still lets in the right
+  // password from a browser it signed in from lately. Looked up before the password and for every name, so
+  // neither the answer time nor the answer says whether the password or the account was right.
+  const knownBrowser = userBlockedSec ? await isKnownBrowser(user?.id ?? NO_USER_ID, sessionOriginOf(request)) : false;
   // a nonexistent user still verifies against a fake hash, to spend the
   // same CPU time — and the response time doesn't reveal which usernames
   // exist. The error message is also IDENTICAL for both cases.
   const ok = await verifyPassword(password, user ? user.passwordHash : DUMMY_HASH);
 
+  if (userBlockedSec && !(user && ok && knownBrowser)) {
+    // Counted whether or not the password was right: the same work for both keeps this from telling them apart.
+    await ratelimit.recordFailure(ipKey);
+    await ratelimit.recordFailure(userKey);
+    log.warn('login refused for a blocked account', { username, ip: ipOfRequest(request) });
+    return rateLimitedReply(reply, userBlockedSec);
+  }
   if (!user || !ok) {
     await ratelimit.recordFailure(ipKey);
     await ratelimit.recordFailure(userKey);
@@ -212,9 +220,10 @@ async function handleLogin(request: FastifyRequest, reply: FastifyReply): Promis
   }
 
   // The address key is left to expire with its window: anyone holding one valid account could otherwise
-  // wipe their address's count between rounds and spray every username. A failure to clear the account's
-  // counter must not turn a right password into a refused login.
-  await ratelimit.reset(userKey).catch(() => {});
+  // wipe their address's count between rounds and spray every username. A blocked account keeps its block
+  // when its owner gets through it, or each of their logins would hand the attacker a fresh round. A
+  // failure to clear the account's counter must not turn a right password into a refused login.
+  if (!userBlockedSec) await ratelimit.reset(userKey).catch(() => {});
 
   // only reachable with the right password, so it leaks nothing about who exists
   if (user.status !== 'active') {
@@ -432,24 +441,28 @@ async function handleRecoveryRequest(request: FastifyRequest, reply: FastifyRepl
     return sendError(reply, 400, 'invalid_email', 'Informe um nome de usuário válido.');
   }
 
+  // Only the address is limited per request. Nothing keyed on the name someone typed may refuse a request:
+  // anyone could fill it and keep the owner from ever getting a code.
   const ipKey = `recovery-ip:${ipOfRequest(request)}`;
-  const identifierKey = `recovery-${identifier.type}:${identifier.value.toLowerCase()}`;
-  const blocked = (await ratelimit.checkBlocked(ipKey)) || (await ratelimit.checkBlocked(identifierKey));
+  const blocked = await ratelimit.checkBlocked(ipKey);
   if (blocked) {
     reply.header('Retry-After', String(blocked));
     return sendError(reply, 429, 'rate_limited', 'Muitas solicitações. Tente novamente mais tarde.');
   }
   await ratelimit.recordFailure(ipKey);
-  await ratelimit.recordFailure(identifierKey);
 
   const user = await findUserByIdentifier(identifier);
-  // Per account, so asking by username and by email (separate buckets above) does not double the codes.
-  // A refusal here looks like success: a 429 would only exist for real accounts.
-  const sendAllowed = user?.email ? (await ratelimit.consume(`recovery-account:${user.id}`, CODE_SEND_RULE)).allowed : false;
-  if (user?.email && sendAllowed) {
-    try {
-      await issueAndSendCode(user.id, user.email, user.username, 'password_reset', resolveLocale(user.locale));
-    } catch { /* Keep the response identical so recovery never enumerates accounts. */ }
+  // Counted per account and only where a code goes out, so asking by username and by email does not double
+  // the codes. A browser the account signed in from lately has a budget of its own, which strangers asking
+  // for this account cannot spend. A refusal looks like success: a 429 would only exist for real accounts.
+  if (user?.email) {
+    const known = await isKnownBrowser(user.id, sessionOriginOf(request));
+    const send = await ratelimit.consume(`${known ? 'recovery-account-known' : 'recovery-account'}:${user.id}`, CODE_SEND_RULE);
+    if (send.allowed) {
+      try {
+        await issueAndSendCode(user.id, user.email, user.username, 'password_reset', resolveLocale(user.locale));
+      } catch { /* Keep the response identical so recovery never enumerates accounts. */ }
+    }
   }
   sendJson(reply, 200, { ok: true });
 }
@@ -473,8 +486,13 @@ async function handleRecoveryReset(request: FastifyRequest, reply: FastifyReply)
   const ipKey = `reset-ip:${ipOfRequest(request)}`;
   const user = await findUserByIdentifier(identifier);
   const accountKey = resetFailuresKey(user?.id ?? null, identifier);
-  const blocked = (await ratelimit.checkBlocked(ipKey)) || (await ratelimit.checkBlocked(accountKey));
-  if (blocked) return rateLimitedReply(reply, blocked);
+  const ipBlocked = await ratelimit.checkBlocked(ipKey);
+  if (ipBlocked) return rateLimitedReply(reply, ipBlocked);
+  // Anyone who knows the username can fill the account's counter, so a browser the account signed in from
+  // lately still gets to try its code; its guesses stay bounded by the address counter and the code's own tries.
+  const accountBlocked = await ratelimit.checkBlocked(accountKey);
+  const accountBlockedHere = accountBlocked && !(await isKnownBrowser(user?.id ?? NO_USER_ID, sessionOriginOf(request)));
+  if (accountBlockedHere) return rateLimitedReply(reply, accountBlocked);
 
   const result = user?.email ? await verifyAuthCode(user.id, 'password_reset', user.email, code) : null;
   if (!user || !result?.ok) {
@@ -486,7 +504,7 @@ async function handleRecoveryReset(request: FastifyRequest, reply: FastifyReply)
     log.warn('password reset code refused', { userId: user?.id, reason, ip: ipOfRequest(request) });
     return purposeError(reply, reason);
   }
-  await ratelimit.reset(accountKey).catch(() => {});
+  if (!accountBlocked) await ratelimit.reset(accountKey).catch(() => {});
 
   await updatePassword(user.id, await hashPassword(password));
   // whoever knew the old password is signed out everywhere, live sockets included

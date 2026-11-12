@@ -561,6 +561,114 @@ describe('guessing password reset codes', () => {
   });
 });
 
+describe('an account whose counters someone else filled', () => {
+  const OWNER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36';
+  const keyHash = (key: string) => crypto.createHash('sha256').update(key).digest('hex');
+  const countOf = async (key: string) =>
+    (await db.select().from(rateLimitWindows).where(eq(rateLimitWindows.key, keyHash(key))))[0]?.count ?? 0;
+
+  /** An account its owner signed in to from `home` before someone else started on it. */
+  async function ownedAccount() {
+    const user = await makeAccount();
+    const home = { ip: freshIp(), userAgent: OWNER_UA };
+    await recordLogin(user.id, home);
+    return { user, home };
+  }
+
+  async function lockLogin(username: string) {
+    const attacker = freshIp();
+    for (let i = 0; i < FAILURE_RULE.max; i++) assert.equal((await login(username, 'wrong password', attacker)).status, 401);
+  }
+
+  it('lets the right password in from a browser the account signed in from lately', async () => {
+    const { user, home } = await ownedAccount();
+    await lockLogin(user.username);
+
+    const owner = await call('POST', '/api/auth/login', { payload: { username: user.username, password: PASSWORD }, ip: home.ip, ua: home.userAgent });
+    assert.equal(owner.status, 200);
+    assert.ok(owner.cookie);
+    // the owner getting through does not hand whoever filled it a fresh round
+    assert.equal((await login(user.username, PASSWORD)).status, 429);
+  });
+
+  it('still refuses the known browser a wrong password, and a stranger the right one', async () => {
+    const { user, home } = await ownedAccount();
+    await lockLogin(user.username);
+
+    const wrong = await call('POST', '/api/auth/login', { payload: { username: user.username, password: 'wrong password' }, ip: home.ip, ua: home.userAgent });
+    assert.equal(wrong.status, 429);
+    // same address, another kind of browser
+    const otherBrowser = await call('POST', '/api/auth/login', { payload: { username: user.username, password: PASSWORD }, ip: home.ip, ua: 'curl/8.0' });
+    assert.equal(otherBrowser.status, 429);
+    const elsewhere = await login(user.username, PASSWORD);
+    assert.equal(elsewhere.status, 429);
+    assert.ok(Number(elsewhere.headers['retry-after']) > 0);
+  });
+
+  it('answers and counts a stranger the same whether the password was right or not', async () => {
+    const { user } = await ownedAccount();
+    await lockLogin(user.username);
+    const ip = freshIp();
+
+    const right = await login(user.username, PASSWORD, ip);
+    const wrong = await login(user.username, 'wrong password', ip);
+    assert.deepEqual([right.status, right.body], [wrong.status, wrong.body]);
+    assert.equal(await countOf(`ip:${ip}`), 2);
+  });
+
+  it('a browser not seen for a month is a stranger again', async () => {
+    const { user, home } = await ownedAccount();
+    await db.update(knownLogins).set({ lastLoginAt: new Date(Date.now() - (KNOWN_LOGIN_DAYS + 1) * DAY_MS) }).where(eq(knownLogins.userId, user.id));
+    await lockLogin(user.username);
+    const res = await call('POST', '/api/auth/login', { payload: { username: user.username, password: PASSWORD }, ip: home.ip, ua: home.userAgent });
+    assert.equal(res.status, 429);
+  });
+
+  it('recovery requests naming the account never refuse anyone', async () => {
+    const user = await makeAccount();
+    for (let i = 0; i < FAILURE_RULE.max + 2; i++) {
+      assert.equal((await call('POST', '/api/auth/recovery/request', { payload: { username: user.username } })).status, 200);
+    }
+    // only the codes that go out are counted against the account
+    assert.equal(mailbox.length, 5);
+    assert.equal(await countOf(`recovery-username:${user.username.toLowerCase()}`), 0);
+  });
+
+  it('strangers spending the recovery codes leave the owner a budget of their own', async () => {
+    const { user, home } = await ownedAccount();
+    for (let i = 0; i < 6; i++) await call('POST', '/api/auth/recovery/request', { payload: { username: user.username } });
+    assert.equal(mailbox.length, 5);
+
+    await call('POST', '/api/auth/recovery/request', { payload: { email: user.email }, ip: home.ip, ua: home.userAgent });
+    assert.equal(mailbox.length, 6);
+    const res = await call('POST', '/api/auth/recovery/reset', {
+      payload: { username: user.username, code: lastCode(), password: 'another new password' }, ip: home.ip, ua: home.userAgent,
+    });
+    assert.equal(res.status, 200);
+  });
+
+  it('a filled reset-code counter still takes the owner\'s code from a known browser', async () => {
+    const { user, home } = await ownedAccount();
+    await call('POST', '/api/auth/recovery/request', { payload: { username: user.username }, ip: home.ip, ua: home.userAgent });
+    const right = lastCode();
+    // a stranger burns guesses from many addresses until the account's counter blocks; the dead codes are replaced
+    for (let i = 0; i < FAILURE_RULE.max; i++) {
+      await call('POST', '/api/auth/recovery/reset', { payload: { username: user.username, code: wrongCode(right), password: 'whatever whatever' } });
+    }
+    const stranger = await call('POST', '/api/auth/recovery/reset', { payload: { username: user.username, code: right, password: 'whatever whatever' } });
+    assert.equal(stranger.status, 429);
+
+    await call('POST', '/api/auth/recovery/request', { payload: { username: user.username }, ip: home.ip, ua: home.userAgent });
+    const owner = await call('POST', '/api/auth/recovery/reset', {
+      payload: { username: user.username, code: lastCode(), password: 'another new password' }, ip: home.ip, ua: home.userAgent,
+    });
+    assert.equal(owner.status, 200);
+    // the owner getting through does not reopen the guessing for everyone else
+    assert.equal((await call('POST', '/api/auth/recovery/reset', { payload: { username: user.username, code: '123456', password: 'whatever whatever' } })).status, 429);
+    assert.equal((await login(user.username, 'another new password')).status, 200);
+  });
+});
+
 describe('changing the password', () => {
   it('signs out the other devices and keeps this one', async () => {
     const user = await makeAccount();
