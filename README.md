@@ -44,6 +44,9 @@ Linkord is a self-hosted place to chat and call with friends. Talk in direct mes
 - **Web Push**
   Receive alerts for messages, mentions, friend requests, and invites, even when Linkord is closed. The app icon can also show an unread badge where the browser supports it.
 
+- **Notification settings per server, channel, and DM**
+  From a server's, channel's or DM's menu (right-click or long press, the server header, or the bell in a channel or DM header), pick All messages, Only @mentions or Nothing, and mute it for 15 minutes, 1 hour, 8 hours, 24 hours or until you turn it back on. A channel follows its server unless you pick its own level; muting a server mutes all of its channels. The level decides which messages push and play a sound; a muted channel or DM goes quiet and drops its unread badge, while its mentions still count. The settings follow your account to every device and update live in every open tab.
+
 - **Presence status**
   Pick how you appear from the profile card that opens from the user panel (it also edits your profile and copies your user ID): Available, Idle (also set automatically after a few minutes away, configurable per device), Do Not Disturb (no push and no notification sounds; notifications still land in the list) or Invisible (you look offline to everyone but keep using the app). Invisible still shows you inside a call you join, to the people who can see that call, the same way your voice and video do. Add a custom status with an emoji, a short text and an optional expiry, or pick a game from your rotation; it shows as a thought bubble beside your avatar on your profile, where you edit or clear it. Your status follows your account to every device.
 

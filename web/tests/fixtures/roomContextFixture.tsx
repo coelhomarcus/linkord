@@ -101,6 +101,7 @@ export function createFakeRoomContextValue(overrides: Partial<RoomContextValue> 
     notificationSettings: EMPTY_NOTIFICATION_SETTINGS,
     notificationPolicyFor: () => DEFAULT_POLICY,
     updateNotificationSetting: asyncNoop,
+    isNotificationMuted: () => false,
     markConversationRead: noop,
     markServerRead: noop,
     typingByConversation: new Map(),

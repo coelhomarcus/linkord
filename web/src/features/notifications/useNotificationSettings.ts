@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { apiFetch } from '@/shared/api/api';
 import type { ServerMessage } from '@/shared/types/protocol';
 import {
-  EMPTY_NOTIFICATION_SETTINGS, nextMuteExpiry, resolveNotificationPolicy,
+  EMPTY_NOTIFICATION_SETTINGS, isMutedNow, nextMuteExpiry, resolveNotificationPolicy,
   type NotificationPolicy, type NotificationSetting, type NotificationSettingChange, type NotificationSettings,
 } from './notificationSettings';
 
@@ -59,11 +59,15 @@ export function useNotificationSettings() {
     conversation: settings.conversations[target.id], server: target.serverId ? settings.servers[target.serverId] : null,
   }, now), [settings, now]);
 
+  /** Whether this server's or this channel/DM's own setting is muted right now (not what it inherits). */
+  const isMuted = useCallback((scope: NotificationScope, id: string): boolean =>
+    isMutedNow(scope === 'server' ? settings.servers[id] : settings.conversations[id], now), [settings, now]);
+
   /** For event handlers that run outside render (an incoming message's sound): always the latest settings. */
   const policyNow = useCallback((target: PolicyTarget): NotificationPolicy => resolveNotificationPolicy({
     conversation: settingsRef.current.conversations[target.id],
     server: target.serverId ? settingsRef.current.servers[target.serverId] : null,
   }, Date.now()), []);
 
-  return useMemo(() => ({ settings, policyFor, policyNow, update, onWelcome, onChanged }), [settings, policyFor, policyNow, update, onWelcome, onChanged]);
+  return useMemo(() => ({ settings, policyFor, policyNow, isMuted, update, onWelcome, onChanged }), [settings, policyFor, policyNow, isMuted, update, onWelcome, onChanged]);
 }

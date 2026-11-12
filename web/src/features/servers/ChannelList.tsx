@@ -26,6 +26,7 @@ import { ServerInviteDialog } from './ServerInviteDialog';
 import { leaveServer } from './serversApi';
 import { can, canMoveInto, canOpenSettings, channelSettingsTabs, groupChannels, serverUnread } from './serverUtils';
 import { useServerSettings } from './ServerSettingsContext';
+import { NotificationMenuItems } from '@/features/notifications/NotificationMenuItems';
 import { VoiceMembers, type VoiceDrag } from './VoiceMembers';
 
 function loadCollapsed(serverId: string): Set<string> {
@@ -160,6 +161,8 @@ export function ChannelList({ server, activeChannelId, onNavigate, onOpenProfile
           </DropdownMenuTrigger>
           <DropdownMenuContent anchor={headerRef} align="center" sideOffset={-6} className="w-[220px]">
             <DropdownMenuItem disabled={!hasUnread} onClick={() => markServerRead(server.id)}><ChecksIcon size={18} weight="bold" />{t('menu.markAsRead')}</DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <NotificationMenuItems target={{ scope: 'server', id: server.id }} />
             <DropdownMenuSeparator />
             {can(server, PERMISSIONS.CREATE_INVITE) && <DropdownMenuItem onClick={() => setInviteOpen({})}><UserPlusIcon size={18} weight="fill" />{t('menu.invite')}</DropdownMenuItem>}
             {canOpenSettings(server, state.me.userId) && <DropdownMenuItem onClick={() => openServerSettings(server.id)}><GearSixIcon size={18} weight="fill" />{t('menu.settings')}</DropdownMenuItem>}

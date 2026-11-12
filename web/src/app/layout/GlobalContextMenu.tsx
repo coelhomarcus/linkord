@@ -16,6 +16,7 @@ import { useKeepPopoverWarm } from '@/shared/hooks/useKeepPopoverWarm';
 import { messagePermissions } from '@/features/chat/messageActions';
 import { useMessageDeleteConfirm } from '@/features/chat/useMessageDeleteConfirm';
 import { serverUnread } from '@/features/servers/serverUtils';
+import { NotificationMenuItems } from '@/features/notifications/NotificationMenuItems';
 import { useRoom } from '@/state/RoomContext';
 import { copyToClipboard } from '@/shared/lib/clipboard';
 import { downloadFile } from '@/shared/lib/download';
@@ -392,19 +393,32 @@ export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenu
                   <span>{t('contextMenu.markAsRead')}</span>
                 </ContextMenuItem>
               )}
+              {targetConversation.type !== 'voice' && (
+                <>
+                  <ContextMenuSeparator />
+                  <NotificationMenuItems target={{ scope: 'conversation', id: targetConversation.id, serverId: targetConversation.serverId ?? null }} />
+                </>
+              )}
               {targetConversation.type === 'direct' && (
-                <ContextMenuItem onClick={() => closeConversation(targetConversation.id)}>
-                  <XIcon size={16} />
-                  <span>{t('contextMenu.closeConversation')}</span>
-                </ContextMenuItem>
+                <>
+                  <ContextMenuSeparator />
+                  <ContextMenuItem onClick={() => closeConversation(targetConversation.id)}>
+                    <XIcon size={16} />
+                    <span>{t('contextMenu.closeConversation')}</span>
+                  </ContextMenuItem>
+                </>
               )}
             </>
           )}
           {showServerBlock && targetServer && (
-            <ContextMenuItem disabled={!serverHasUnread} onClick={() => markServerRead(targetServer.id)}>
-              <ChecksIcon size={16} />
-              <span>{t('contextMenu.markServerAsRead')}</span>
-            </ContextMenuItem>
+            <>
+              <ContextMenuItem disabled={!serverHasUnread} onClick={() => markServerRead(targetServer.id)}>
+                <ChecksIcon size={16} />
+                <span>{t('contextMenu.markServerAsRead')}</span>
+              </ContextMenuItem>
+              <ContextMenuSeparator />
+              <NotificationMenuItems target={{ scope: 'server', id: targetServer.id }} />
+            </>
           )}
         </ContextMenuContent>
       </ContextMenu>

@@ -545,7 +545,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         unreadStartByConversation: chatMessages.unreadStartByConversation,
         mentionsByConversation: chatMessages.mentionsByConversation, badgeByConversation,
         notificationSettings: notificationSettings.settings, notificationPolicyFor: policyFor,
-        updateNotificationSetting: notificationSettings.update,
+        updateNotificationSetting: notificationSettings.update, isNotificationMuted: notificationSettings.isMuted,
         markConversationRead: chatMessages.markConversationRead, markServerRead: chatMessages.markServerRead,
         typingByConversation: typingIndicator.typingByConversation, sendTyping: typingIndicator.sendTyping,
         allUsers: presence.allUsers, onlineUserIds: presence.onlineUserIds, friendUserIds: presence.friendUserIds,

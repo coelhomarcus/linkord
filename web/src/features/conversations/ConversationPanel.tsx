@@ -1,10 +1,11 @@
-import { ArrowLeftIcon, DotsThreeIcon, HashIcon, ImageIcon, MagnifyingGlassIcon, PhoneIcon, UserCircleIcon, UsersThreeIcon, VideoCameraIcon } from '@phosphor-icons/react';
+import { ArrowLeftIcon, BellIcon, BellSlashIcon, DotsThreeIcon, HashIcon, ImageIcon, MagnifyingGlassIcon, PhoneIcon, UserCircleIcon, UsersThreeIcon, VideoCameraIcon } from '@phosphor-icons/react';
+import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 
 import { PageHeader } from '@/shared/PageHeader';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/primitives/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/shared/ui/primitives/dropdown-menu';
 import { ROUTES, conversationIdFromPath } from '@/shared/lib/routes';
 import { useSidebar } from '@/shared/ui/motion/sidebar-context';
 import { useDrawerEdgeSwipe } from './useDrawerEdgeSwipe';
@@ -21,6 +22,8 @@ import { cn } from '@/shared/lib/utils';
 import { StatusDot } from '@/features/status/StatusDot';
 import { CustomStatusText } from '@/features/status/CustomStatusText';
 import { useCustomStatus, useUserStatus } from '@/features/status/statusDisplay';
+import { NotificationMenuItems, type NotificationTarget } from '@/features/notifications/NotificationMenuItems';
+import { mutedUntilText } from '@/features/notifications/mutedUntilText';
 
 // Discord's header icons: bare 24px glyphs, gray at rest, white while hovered
 // or while the panel they toggle is open
@@ -34,6 +37,32 @@ function HeaderIcon({ label, pressed, onClick, className, children }: { label: s
       </TooltipTrigger>
       <TooltipContent side="bottom">{label}</TooltipContent>
     </Tooltip>
+  );
+}
+
+/** The channel or DM's notification menu. The bell crosses out while the conversation is muted, on its own
+ * or through its server; the tooltip then says until when. */
+function NotificationHeaderButton({ target }: { target: Extract<NotificationTarget, { scope: 'conversation' }> }) {
+  const { t } = useTranslation('notifications');
+  const { notificationSettings, notificationPolicyFor, isNotificationMuted } = useRoom();
+  const [open, setOpen] = useState(false);
+  const muted = notificationPolicyFor(target).muted;
+  const own = notificationSettings.conversations[target.id];
+  const label = t('preferences.headerButton');
+  const hint = !muted ? label
+    : isNotificationMuted('conversation', target.id) ? mutedUntilText(own?.mutedUntil ?? null) : t('preferences.mutedByServer');
+  return (
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <Tooltip disabled={open}>
+        <TooltipTrigger render={<DropdownMenuTrigger aria-label={label} className={cn(HEADER_ICON, 'max-md:hidden')} />}>
+          {muted ? <BellSlashIcon size={24} weight="fill" /> : <BellIcon size={24} weight="fill" />}
+        </TooltipTrigger>
+        <TooltipContent side="bottom">{hint}</TooltipContent>
+      </Tooltip>
+      <DropdownMenuContent align="end" className="min-w-56">
+        <NotificationMenuItems target={target} />
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -173,6 +202,7 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
                   )}
                 </>
               )}
+              {conversation.type !== 'voice' && <NotificationHeaderButton target={{ scope: 'conversation', id: conversation.id, serverId: conversation.serverId ?? null }} />}
               <HeaderIcon label={t('panel.media')} pressed={mediaOpen} onClick={onToggleMedia} className="max-md:hidden">
                 <ImageIcon size={24} weight={mediaOpen ? 'fill' : 'regular'} />
               </HeaderIcon>
@@ -198,6 +228,12 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
                 <DropdownMenuItem onClick={onOpenSearch}><MagnifyingGlassIcon size={18} />{t('panel.search')}</DropdownMenuItem>
                 <DropdownMenuItem onClick={onToggleMedia}><ImageIcon size={18} />{t('panel.media')}</DropdownMenuItem>
                 {activeCallConversationId && activeCallConversationId !== conversation.id && !isChannel && <DropdownMenuItem disabled={!!callBlockedReason} onClick={() => startThisCall(false)}><PhoneIcon size={18} />{t('panel.voiceCall')}</DropdownMenuItem>}
+                {conversation.type !== 'voice' && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <NotificationMenuItems target={{ scope: 'conversation', id: conversation.id, serverId: conversation.serverId ?? null }} />
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </header>

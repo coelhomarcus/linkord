@@ -157,6 +157,8 @@ export interface RoomContextValue {
   notificationSettings: NotificationSettings;
   /** The level and mute that apply to a conversation now (a channel inherits from its server). */
   notificationPolicyFor: (target: PolicyTarget) => NotificationPolicy;
+  /** Whether a server's or a channel/DM's own setting is muted now, apart from what it inherits. */
+  isNotificationMuted: (scope: NotificationScope, id: string) => boolean;
   /** Changes one setting; rejects with the server's error. */
   updateNotificationSetting: (scope: NotificationScope, id: string, change: NotificationSettingChange) => Promise<void>;
   /** Marks a conversation read up to its newest message and drops its new-messages line. */
