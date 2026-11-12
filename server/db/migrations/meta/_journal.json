@@ -470,6 +470,13 @@
       "when": 1794280429444,
       "tag": "0066_group_mentions",
       "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1794487372076,
+      "tag": "0067_account_deletion_and_data_export",
+      "breakpoints": true
     }
   ]
 }

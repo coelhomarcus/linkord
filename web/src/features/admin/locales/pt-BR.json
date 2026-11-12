@@ -202,6 +202,7 @@
     "user.revoke_sessions": "Sessões revogadas",
     "user.delete": "Conta excluída",
     "user.delete.avatar_cleanup": "Limpeza da foto",
+    "user.delete.export_cleanup": "Limpeza das cópias de dados",
     "group.suspend": "Grupo suspenso",
     "group.reactivate": "Grupo reativado",
     "group.assign_owner": "Dono atribuído",
@@ -233,7 +234,9 @@
     "account.password_change": "Senha alterada",
     "account.password_reset": "Senha redefinida por e-mail",
     "account.session_end": "Sessão encerrada pela conta",
-    "account.sessions_end_others": "Outras sessões encerradas pela conta"
+    "account.sessions_end_others": "Outras sessões encerradas pela conta",
+    "account.deletion_schedule": "Exclusão da conta agendada pela conta",
+    "account.deletion_cancel": "Exclusão da conta cancelada ao entrar"
   },
   "detail": {
     "fullHistory": "Histórico completo",

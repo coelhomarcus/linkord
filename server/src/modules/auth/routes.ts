@@ -19,6 +19,7 @@ import type { User } from '../../db/schema.js';
 import { consumeLoginChallenge, findLoginChallenge, issueAuthCode, verifyAuthCode, type AuthCodePurpose } from './codes.js';
 import { isEmailDeliveryConfigured, sendAuthCodeEmail } from './email.js';
 import { noticeLogin, noticeRegistration } from './loginAlert.js';
+import { cancelScheduledDeletion, isPastDeletion, scheduleAccountDeletion } from './accountDeletion.js';
 import { clientIpOf, sessionOriginOf } from '../../http/clientInfo.js';
 import { recordAudit } from '../admin/auditLog.js';
 import type { SessionUser } from '../../types.js';
@@ -220,6 +221,7 @@ async function handleLogin(request: FastifyRequest, reply: FastifyReply): Promis
     log.warn('login refused for a suspended account', { userId: user.id, username: user.username });
     return sendError(reply, 403, 'account_unavailable', 'Esta conta está indisponível. Fale com a administração.');
   }
+  if (isPastDeletion(user)) return accountDeletedError(reply);
 
   if (needsRehash(user.passwordHash)) {
     hashPassword(password)
@@ -234,7 +236,18 @@ async function handleLogin(request: FastifyRequest, reply: FastifyReply): Promis
   noticeLogin(user, origin);
   setSessionCookie(request, reply, rawToken);
   log.info('login', { userId: user.id, username: user.username });
-  sendJson(reply, 200, { user: privateUser(user) });
+  sendJson(reply, 200, await signedIn(request, user));
+}
+
+/** The answer to a sign-in that created a session. Signing in is what cancels a scheduled deletion, and
+ * the answer says so, for the client to tell the person. */
+async function signedIn(request: FastifyRequest, user: User): Promise<{ user: ReturnType<typeof privateUser>; deletionCancelled?: true }> {
+  const cancelled = await cancelScheduledDeletion({ id: user.id, username: user.username }, request.id);
+  return cancelled ? { user: privateUser(user), deletionCancelled: true } : { user: privateUser(user) };
+}
+
+function accountDeletedError(reply: FastifyReply): void {
+  sendError(reply, 403, 'account_deleted', 'Esta conta foi excluída a pedido do titular.');
 }
 
 /** The right password with two-step login on: no session yet, a code to the account's email and a
@@ -280,6 +293,10 @@ async function loginChallengeFor(request: FastifyRequest, reply: FastifyReply, c
     sendError(reply, 403, 'account_unavailable', 'Esta conta está indisponível. Fale com a administração.');
     return { refused: true };
   }
+  if (isPastDeletion(user)) {
+    accountDeletedError(reply);
+    return { refused: true };
+  }
   return { user, challengeHash };
 }
 
@@ -313,7 +330,7 @@ async function handleLoginVerify(request: FastifyRequest, reply: FastifyReply): 
   noticeLogin(user, origin);
   setSessionCookie(request, reply, rawToken);
   log.info('login', { userId: user.id, username: user.username, twoFactor: true });
-  sendJson(reply, 200, { user: privateUser(user) });
+  sendJson(reply, 200, await signedIn(request, user));
 }
 
 async function handleLoginResend(request: FastifyRequest, reply: FastifyReply): Promise<void> {
@@ -742,6 +759,61 @@ async function handleEndOtherSessions(request: FastifyRequest, reply: FastifyRep
   sendJson(reply, 200, { endedSessions: ended.length });
 }
 
+// ---- deleting your own account (accountDeletion.ts): password, then the emailed code with two-step login on ----
+
+/** Schedules the deletion and answers with its date. The account's sessions, this one included, are
+ * gone, so the cookie is cleared too. */
+async function finishDeletionRequest(request: FastifyRequest, reply: FastifyReply, sess: SessionUser): Promise<void> {
+  const result = await scheduleAccountDeletion(auditActor(sess), request.id);
+  if (result.code === 'last_admin') {
+    return sendError(reply, 409, 'last_admin', 'Você é o único administrador. Torne outra pessoa administradora antes de excluir sua conta.');
+  }
+  if (result.code !== 'ok') return sendError(reply, 404, 'user_not_found', 'Conta não encontrada.');
+  reply.header('Set-Cookie', clearCookie(config.SESSION_COOKIE, { secure: isSecureRequest(request.raw) }));
+  sendJson(reply, 200, { deletionDueAt: result.dueAt.toISOString() });
+}
+
+async function handleDeletionRequest(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  const sess = await sessionForRequest(request);
+  if (!sess) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
+  if (!(await confirmPassword(reply, sess, String(jsonBody(request.body).password ?? '')))) return;
+  const user = await findById(sess.userId);
+  if (!user) return sendError(reply, 404, 'user_not_found', 'Conta não encontrada.');
+  if (!user.twoFactorEmail) return finishDeletionRequest(request, reply, sess);
+
+  // with two-step login on, the password alone is not enough to delete the account: a code to its email
+  if (!user.email || !isEmailDeliveryConfigured()) {
+    return sendError(reply, 503, 'email_unavailable', 'Não foi possível enviar o código de verificação agora. Tente novamente mais tarde.');
+  }
+  const send = await ratelimit.consume(`deletion-code:${sess.userId}`, CODE_SEND_RULE);
+  if (!send.allowed) return rateLimitedReply(reply, send.retryAfterSec, 'Muitos códigos enviados. Tente novamente mais tarde.');
+  try {
+    await issueAndSendCode(user.id, user.email, user.username, 'account_deletion', resolveLocale(user.locale));
+  } catch {
+    return sendError(reply, 503, 'email_unavailable', 'Não foi possível enviar o código de verificação agora. Tente novamente mais tarde.');
+  }
+  sendJson(reply, 200, { codeRequired: true, email: maskEmail(user.email) });
+}
+
+async function handleDeletionConfirm(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  const sess = await sessionForRequest(request);
+  if (!sess) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
+  if (!sess.email) return sendError(reply, 400, 'invalid_code', 'Código inválido.');
+  const code = String(jsonBody(request.body).code ?? '').trim();
+  if (!/^\d{6}$/.test(code)) return sendError(reply, 400, 'invalid_code', 'Informe o código de 6 dígitos.');
+  const key = codeFailuresKey(sess.userId);
+  const blocked = await ratelimit.checkBlocked(key);
+  if (blocked) return rateLimitedReply(reply, blocked);
+  // a code is only ever issued after the password was confirmed, so it stands for both steps
+  const result = await verifyAuthCode(sess.userId, 'account_deletion', sess.email, code);
+  if (!result.ok) {
+    if (result.reason !== 'code_expired') await ratelimit.recordFailure(key);
+    return purposeError(reply, result.reason);
+  }
+  await ratelimit.reset(key).catch(() => {});
+  return finishDeletionRequest(request, reply, sess);
+}
+
 export function registerAuthRoutes(fastify: FastifyInstance): void {
   fastify.post('/api/auth/register', handleRegister);
   fastify.post('/api/auth/login', handleLogin);
@@ -764,4 +836,6 @@ export function registerAuthRoutes(fastify: FastifyInstance): void {
   fastify.get('/api/auth/sessions', handleListSessions);
   fastify.post('/api/auth/sessions/end-others', handleEndOtherSessions);
   fastify.delete<{ Params: { id: string } }>('/api/auth/sessions/:id', handleEndSession);
+  fastify.post('/api/auth/account/deletion/request', handleDeletionRequest);
+  fastify.post('/api/auth/account/deletion/confirm', handleDeletionConfirm);
 }

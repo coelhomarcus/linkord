@@ -9,6 +9,7 @@ import { createWsServer } from '../realtime/socket.js';
 import { describeBlockedMigration, runMigrations } from '../db/migrate.js';
 import { sweepExpiredSessions, touchSessions } from '../modules/auth/session.js';
 import { sweepKnownLogins } from '../modules/auth/loginAlert.js';
+import { DeletionSweepInProgressError, sweepDueAccountDeletions } from '../modules/auth/accountDeletion.js';
 import { liveSessionTokenHashes } from '../modules/auth/sessionConnections.js';
 import { sweepExpiredRateLimits } from '../modules/auth/ratelimit.js';
 import { sweepSendOperations } from '../modules/messages/sendOperations.js';
@@ -158,6 +159,15 @@ export async function bootstrap(): Promise<void> {
     sweepSendOperations().catch((err) => log.error('failed to prune chat send operations', err));
   }, 24 * 60 * 60 * 1000);
   sendOpsTimer.unref();
+
+  // Accounts whose deletion grace period is over (days long, so hourly is precise enough). Also soon
+  // after boot, so a deploy never pushes a due deletion back by an hour.
+  const sweepAccountDeletions = () => sweepDueAccountDeletions()
+    .then((r) => { if (r.deleted > 0 || r.failed > 0) log.info('scheduled account deletions', r); })
+    .catch((err) => { if (!(err instanceof DeletionSweepInProgressError)) log.error('account deletion sweep failed', err); });
+  setTimeout(sweepAccountDeletions, 90_000).unref();
+  const accountDeletionTimer = setInterval(sweepAccountDeletions, 60 * 60 * 1000);
+  accountDeletionTimer.unref();
 
   // Files on disk with no row behind them (a failed unlink, a crash mid-commit).
   // The scheduled run only reports unless ORPHAN_SWEEP_DRY_RUN=0; an admin can

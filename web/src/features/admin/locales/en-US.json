@@ -202,6 +202,7 @@
     "user.revoke_sessions": "Sessions revoked",
     "user.delete": "Account deleted",
     "user.delete.avatar_cleanup": "Avatar cleanup",
+    "user.delete.export_cleanup": "Data copy cleanup",
     "group.suspend": "Group suspended",
     "group.reactivate": "Group reactivated",
     "group.assign_owner": "Owner assigned",
@@ -233,7 +234,9 @@
     "account.password_change": "Password changed",
     "account.password_reset": "Password reset by email",
     "account.session_end": "Session ended by the account",
-    "account.sessions_end_others": "Other sessions ended by the account"
+    "account.sessions_end_others": "Other sessions ended by the account",
+    "account.deletion_schedule": "Account deletion scheduled by the account",
+    "account.deletion_cancel": "Account deletion cancelled by signing in"
   },
   "detail": {
     "fullHistory": "Full history",

@@ -56,6 +56,8 @@ export const ERROR_REGISTRY = {
   // auth and accounts
   invalid_credentials: { statuses: [401], channel: 'http' },
   account_unavailable: { statuses: [403], channel: 'http' },
+  // the right password for an account whose deletion grace period is over (auth/accountDeletion.ts)
+  account_deleted: { statuses: [403], channel: 'http' },
   registration_closed: { statuses: [403], channel: 'http' },
   registration_paused: { statuses: [429], channel: 'http' },
   // 403: the registration invite code; 400: a malformed or wrong e-mail confirmation code

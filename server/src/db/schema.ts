@@ -62,10 +62,15 @@ export const users = pgTable('users', {
   // after the reconnect grace). Null until the first disconnect after this
   // column existed — the migration backfills from sessions.last_seen_at.
   lastSeenAt: timestamp('last_seen_at', { withTimezone: true }),
+  // The person asked for the account to be deleted (modules/auth/accountDeletion.ts). Signing in before
+  // `deletionDueAt` cancels it; after it, the deletion sweep removes the account. Both null otherwise.
+  deletionRequestedAt: timestamp('deletion_requested_at', { withTimezone: true }),
+  deletionDueAt: timestamp('deletion_due_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
   index('users_status_idx').on(t.status),
+  index('users_deletion_due_idx').on(t.deletionDueAt).where(sql`${t.deletionDueAt} IS NOT NULL`),
   index('users_created_at_id_idx').on(t.createdAt, t.id),
   // CASE-INSENSITIVE uniqueness: "Lune" and "lune" are the same person. The
   // chosen spelling is stored in the column; uniqueness lives in an index
@@ -787,6 +792,24 @@ export type ServerCategory = typeof serverCategories.$inferSelect;
 export type ChannelPermissionOverwrite = typeof channelPermissionOverwrites.$inferSelect;
 export type ServerInvite = typeof serverInvites.$inferSelect;
 export type ServerAuditLog = typeof serverAuditLogs.$inferSelect;
+
+/** A copy of an account's data the person asked for (modules/data-export). The ZIP lives in
+ * config.EXPORT_DIR under the row's id while `status` is 'ready' and `expiresAt` has not passed; the
+ * sweep deletes the file after that and keeps the row, which is what spaces requests out. */
+export const dataExports = pgTable('data_exports', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  status: varchar('status', { length: 16 }).notNull().default('pending'), // 'pending' | 'running' | 'ready' | 'failed' | 'expired'
+  sizeBytes: bigint('size_bytes', { mode: 'number' }),
+  requestedAt: timestamp('requested_at', { withTimezone: true }).notNull().defaultNow(),
+  startedAt: timestamp('started_at', { withTimezone: true }),
+  completedAt: timestamp('completed_at', { withTimezone: true }),
+  expiresAt: timestamp('expires_at', { withTimezone: true }),
+}, (t) => [
+  index('data_exports_user_requested_idx').on(t.userId, t.requestedAt),
+  index('data_exports_status_idx').on(t.status, t.requestedAt),
+  check('data_exports_status_check', sql`${t.status} IN ('pending','running','ready','failed','expired')`),
+]);
 
 /** Append-only record of administrative actions. No foreign keys on purpose:
  * the trail must outlive the account or group it is about (and the admin who

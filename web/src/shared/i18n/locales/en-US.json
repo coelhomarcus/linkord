@@ -98,6 +98,7 @@
     "codes": {
       "invalid_credentials": "Invalid username or password.",
       "account_unavailable": "This account is unavailable. Contact an administrator.",
+      "account_deleted": "This account was deleted at its owner's request.",
       "registration_closed": "Registration is closed.",
       "invalid_code": "Invalid code.",
       "code_expired": "Code expired. Request a new one.",
