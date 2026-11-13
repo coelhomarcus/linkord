@@ -79,7 +79,7 @@ export function TwitchPlayer({ embed }: { embed: DetectedEmbed }) {
 }
 
 /** The height of an audio player's frame: SoundCloud's compact player. */
-export const AUDIO_PLAYER_HEIGHT = 166;
+const AUDIO_PLAYER_HEIGHT = 166;
 
 /** A preview's own `player` (Vimeo, SoundCloud, Streamable…): its picture
  * with a play button until clicked, then the provider's iframe, in a box

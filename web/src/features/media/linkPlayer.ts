@@ -2,7 +2,7 @@
 // test: the server only stores a preview's `player` on these hosts, and the
 // Content-Security-Policy frames exactly them. Checked again here because a
 // frame the policy refuses would be a broken box in the card.
-export const PLAYER_HOSTS = ['youtube.com', 'youtube-nocookie.com', 'youtu.be', 'vimeo.com', 'soundcloud.com', 'twitch.tv', 'streamable.com', 'x.com', 'twitter.com'] as const;
+const PLAYER_HOSTS = ['youtube.com', 'youtube-nocookie.com', 'youtu.be', 'vimeo.com', 'soundcloud.com', 'twitch.tv', 'streamable.com', 'x.com', 'twitter.com'] as const;
 
 const onHost = (host: string, domain: string) => host === domain || host.endsWith(`.${domain}`);
 
