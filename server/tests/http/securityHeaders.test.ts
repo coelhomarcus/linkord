@@ -10,6 +10,7 @@ import {
   buildContentSecurityPolicy, inlineScriptHashes, inlineStyleHashes, livekitSources, readBuildScriptHashes,
   readBuildStyleHashes, securityHeaders, themeBootstrapStyleHashes, type PolicyInput,
 } from '../../src/http/securityHeaders.js';
+import { PLAYER_HOSTS } from '../../src/modules/link-preview/playerHosts.js';
 
 const base: PolicyInput = { appUrl: 'https://chat.example.com', livekitUrl: '', klipyEnabled: false, mediaProxyEnabled: true, scriptHashes: [], styleHashes: [] };
 const ROOT = path.resolve(import.meta.dirname, '../../..');
@@ -50,8 +51,14 @@ describe('buildContentSecurityPolicy', () => {
     assert.deepEqual(policy.get('form-action'), ["'self'"]);
   });
 
-  it('frames only the YouTube and Twitch players', () => {
-    assert.deepEqual(directives(buildContentSecurityPolicy(base)).get('frame-src'), ['https://www.youtube.com', 'https://player.twitch.tv', 'https://clips.twitch.tv']);
+  it('frames only the players on the link-preview allowlist, with their subdomains', () => {
+    const frames = directives(buildContentSecurityPolicy(base)).get('frame-src')!;
+    assert.deepEqual(frames, PLAYER_HOSTS.flatMap((domain) => [`https://${domain}`, `https://*.${domain}`]));
+    // where the players really live
+    for (const source of ['https://*.youtube.com', 'https://*.twitch.tv', 'https://*.vimeo.com', 'https://*.soundcloud.com', 'https://streamable.com']) {
+      assert.ok(frames.includes(source), source);
+    }
+    assert.equal(frames.some((source) => !source.startsWith('https://')), false);
   });
 
   it('connects to the socket, LiveKit and KLIPY only when they are configured', () => {

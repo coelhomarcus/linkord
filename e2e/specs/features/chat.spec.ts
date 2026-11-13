@@ -157,6 +157,8 @@ test.describe('link cards', () => {
   // not depend on the internet. Its pictures come from a same-origin path.
   const ARTICLE = 'https://news.e2e.example/artigo';
   const GALLERY = 'https://photos.e2e.example/album';
+  const CLIP = 'https://video.e2e.example/clipe';
+  const TRACK = 'https://music.e2e.example/faixa';
   const picture = (n: number) => `/e2e-fixture/foto-${n}.png`;
 
   async function stubPreviews(app: AppPage): Promise<void> {
@@ -171,8 +173,21 @@ test.describe('link cards', () => {
         const images = [1, 2, 3].map(picture);
         return route.fulfill({ json: { ...base, type: 'article', title: 'Um álbum', description: null, siteName: 'Fotos E2E', image: images[0], images } });
       }
+      if (url === CLIP) {
+        return route.fulfill({ json: { ...base, type: 'video', title: 'Um clipe', description: null, siteName: 'Vimeo', image: picture(1), images: [picture(1)], player: 'https://player.vimeo.com/video/76979871' } });
+      }
+      if (url === TRACK) {
+        return route.fulfill({ json: { ...base, type: 'audio', title: 'Uma faixa', description: null, siteName: 'SoundCloud', image: picture(2), images: [picture(2)], player: 'https://w.soundcloud.com/player/?visual=true&url=https%3A%2F%2Fapi.soundcloud.com%2Ftracks%2F1' } });
+      }
       return route.continue();
     });
+    // the players themselves, so the spec needs no internet: the
+    // Content-Security-Policy is checked before the request, so a frame that
+    // shows this page is one the policy allowed
+    await app.page.route(/^https:\/\/(player\.vimeo\.com|w\.soundcloud\.com)\//, (route) => route.fulfill({
+      contentType: 'text/html',
+      body: `<!doctype html><title>player</title><p>${new URL(route.request().url()).hostname}</p>`,
+    }));
   }
 
   test('an article gets its rich card, a page with several pictures a gallery that opens the viewer', async ({ users }) => {
@@ -222,6 +237,22 @@ test.describe('link cards', () => {
       viewer.getByRole('button', { name: 'Baixar' }).click(),
     ]);
     expect(download.suggestedFilename()).toMatch(/^Um álbum/);
+  });
+
+  test("a card's own Vimeo and SoundCloud players load on a click, one at a time", async ({ users }) => {
+    const { a, b } = await twoInAChannel(users);
+    await stubPreviews(b);
+    await a.send(`ouça ${CLIP} ${TRACK}`);
+    const row = b.message('ouça');
+    await row.getByRole('button', { name: 'Reproduzir vídeo' }).click();
+    const vimeo = row.locator('iframe[title="Vimeo"]');
+    await expect(vimeo).toHaveAttribute('src', /^https:\/\/player\.vimeo\.com\/video\/76979871\?autoplay=1$/);
+    await expect(row.frameLocator('iframe[title="Vimeo"]').getByText('player.vimeo.com')).toBeVisible();
+
+    await row.getByRole('button', { name: 'SoundCloud: Clique para carregar o player' }).click();
+    await expect(vimeo).toHaveCount(0);
+    await expect(row.frameLocator('iframe[title="SoundCloud"]').getByText('w.soundcloud.com')).toBeVisible();
+    await expect(row.locator('iframe[title="SoundCloud"]')).toHaveAttribute('src', /visual=false/);
   });
 
   test('two YouTube links in one message: starting the second stops the first', async ({ users }) => {

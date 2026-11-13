@@ -1,4 +1,5 @@
 import type { Lookup } from './pageFetch.js';
+import { PLAYER_HOSTS } from './playerHosts.js';
 
 // The shape of a link preview and of a resolver, shared by the resolvers and
 // linkPreview.ts. Kept apart so a resolver can build a preview without
@@ -85,10 +86,6 @@ export function safeResolve(raw: string | null | undefined, base: string): strin
     return null;
   }
 }
-
-/** Hosts whose player pages may become an iframe. Anything else that calls
- * itself a player is just a link. */
-const PLAYER_HOSTS = ['youtube.com', 'youtube-nocookie.com', 'youtu.be', 'vimeo.com', 'soundcloud.com', 'twitch.tv', 'streamable.com', 'x.com', 'twitter.com'];
 
 export function hostMatches(host: string, domains: readonly string[]): boolean {
   const h = host.toLowerCase();

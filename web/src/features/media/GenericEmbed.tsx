@@ -18,8 +18,9 @@ import { EmbedMenuButton } from './EmbedMenuButton';
 import { ExternalMediaGate } from './ExternalMediaGate';
 import { AudioPlayer, VideoPlayer } from './MediaPlayers';
 import { PreviewImage } from './PreviewImage';
-import { TwitchPlayer, YouTubePlayer } from './embedPlayers';
+import { LinkPlayer, TwitchPlayer, YouTubePlayer } from './embedPlayers';
 import { embedImageAspect, previewImageSize } from './embedImageBox';
+import { linkPlayerUrl } from './linkPlayer';
 import { canLoadMediaUrl } from './mediaUrl';
 import { useAnimatedVariant } from './useAnimatedVariant';
 import { useNearViewport } from './useNearViewport';
@@ -128,7 +129,10 @@ function GenericEmbedCard({ embed, className = '', edgeToEdge, preview, menu }: 
   const known = KNOWN_SITE[embed.kind];
   const video = data.video && canLoadMediaUrl(data.video) && !videoFailed ? data.video : null;
   const audio = data.audio && canLoadMediaUrl(data.audio) && !audioFailed ? data.audio : null;
-  if (!hasText && !image && !known && !video && !audio) {
+  // a preview stored before players were drawn, or one that has none, keeps
+  // its picture; YouTube and Twitch build their own from the link
+  const player = known ? null : linkPlayerUrl(data.player, window.location.hostname);
+  if (!hasText && !image && !known && !video && !audio && !player) {
     return (
       <a
         href={url}
@@ -175,6 +179,16 @@ function GenericEmbedCard({ embed, className = '', edgeToEdge, preview, menu }: 
     );
   } else if (known) {
     media = <div className="w-full bg-black"><TwitchPlayer embed={embed} /></div>;
+  } else if (player) {
+    media = (
+      <LinkPlayer
+        src={player}
+        kind={data.type === 'audio' ? 'audio' : 'video'}
+        title={siteName}
+        thumbnail={imageFailed ? null : drawnImage}
+        placeholder={drawnImage ? data.imagePlaceholder : null}
+      />
+    );
   } else if (video) {
     // the page's picture stands in for the video until it plays, so its size is the box's
     const posterSize = drawnImage ? previewImageSize(data) : null;
@@ -223,7 +237,7 @@ function GenericEmbedCard({ embed, className = '', edgeToEdge, preview, menu }: 
     );
   }
 
-  const thumbnail = asThumbnail && !known && !video ? picture : null;
+  const thumbnail = asThumbnail && !known && !video && !player ? picture : null;
   const accent = data.themeColor && COLOR_RE.test(data.themeColor.trim()) ? data.themeColor.trim() : null;
   const style: CSSProperties = { maxWidth, ...(accent ? { borderLeft: `4px solid ${accent}` } : {}) };
 

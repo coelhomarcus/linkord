@@ -15,7 +15,7 @@ Every external service Linkord talks to, what it is used for, who makes the call
 | [IGDB](#igdb) | Game search for the Wall's games widgets | Server (on demand; covers through the [media proxy](#media-proxy)) | `IGDB_CLIENT_ID`, `IGDB_CLIENT_SECRET` | No |
 | [Arbitrary websites](#link-previews) | Link preview cards | Server (pages, and their images through the [media proxy](#media-proxy)) | None | Built in |
 | [oEmbed providers](#oembed) (YouTube, Vimeo, SoundCloud, Spotify, X, TikTok, Reddit) | Link preview cards for their links | Server | None | Built in |
-| [YouTube and Twitch](#embedded-players) | Inline players for pasted links | Browser (players); server (YouTube thumbnails, through the [media proxy](#media-proxy)) | None | Built in |
+| [Embedded players](#embedded-players) (YouTube, Twitch, Vimeo, SoundCloud, Streamable) | Inline players for pasted links | Browser (players); server (YouTube thumbnails, through the [media proxy](#media-proxy)) | None | Built in |
 
 "Server" means the Node process in `server/`; "browser" means the web client in `web/`. The pictures these services provide (covers, avatars, preview images, favicons, YouTube thumbnails) reach the browser through our own [media proxy](#media-proxy), so they show on networks that block those domains. Apart from that, where a service is called from the browser the server does not proxy the traffic.
 
@@ -171,13 +171,14 @@ For a fixed list of providers the server asks the provider's oEmbed endpoint ins
 
 ## Embedded players
 
-Pasted YouTube and Twitch links render as inline players. These are loaded **by the user's browser** from the providers' own domains; the server only classifies the URL.
+Pasted YouTube and Twitch links, and links whose preview carries a `player` (Vimeo, SoundCloud, Streamable, any host on the player allowlist), render as inline players. These are loaded **by the user's browser** from the providers' own domains, only after a click; the server only classifies the URL or finds the player page.
 
-- **Code:** [`web/src/features/media/GenericEmbed.tsx`](../web/src/features/media/GenericEmbed.tsx), [`embedPlayers.tsx`](../web/src/features/media/embedPlayers.tsx).
+- **Code:** [`web/src/features/media/GenericEmbed.tsx`](../web/src/features/media/GenericEmbed.tsx), [`embedPlayers.tsx`](../web/src/features/media/embedPlayers.tsx), [`linkPlayer.ts`](../web/src/features/media/linkPlayer.ts).
 - **One at a time:** starting a player sends the one already playing back to its thumbnail (its iframe is unmounted: the page cannot pause a third-party player without its script API), so two videos never play over each other ([`activeEmbed.ts`](../web/src/features/media/activeEmbed.ts)). A player that leaves the screen for good (unmounted) gives its turn up.
 - **YouTube:** a click-to-play thumbnail (the preview image, falling back to `i.ytimg.com`'s `hqdefault.jpg` through `/api/media-proxy/youtube/<video id>`) that becomes a plain `www.youtube.com/embed` iframe, starting at the link's `t`/`start` time. YouTube's script API is not used: it would have to run in our page, which the Content-Security-Policy does not allow.
 - **Twitch:** channel, VOD and clip embeds from `player.twitch.tv` and `clips.twitch.tv`, passing the current hostname as the required `parent` parameter.
-- The players themselves always come from YouTube's and Twitch's own domains, so they do not play where those are blocked; only the thumbnails go through the [media proxy](#media-proxy).
+- **A preview's `player`** (Vimeo's `player.vimeo.com`, SoundCloud's `w.soundcloud.com`, Streamable's `streamable.com/e/…`): the card's picture with a play button, which becomes the provider's iframe set to start at once (`autoplay=1`; SoundCloud `auto_play=true`; a Twitch player gets `parent`). A video is a 16:9 box; an audio preview (`type` `audio`, SoundCloud) gets SoundCloud's compact player (`visual=false`) at a fixed 166 px, the same height as its button, so loading does not move the chat. The client draws it only when its host is on the allowlist, mirrored from the server in `linkPlayer.ts` (pinned by a test) and the only hosts the Content-Security-Policy's `frame-src` allows; anything else, and a preview stored without `player`, keeps its picture, which opens the media viewer.
+- The players themselves always come from the providers' own domains, so they do not play where those are blocked; only the thumbnails go through the [media proxy](#media-proxy).
 - No credentials are involved.
 
 ## Media proxy

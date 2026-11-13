@@ -120,6 +120,65 @@ describe('one player at a time', () => {
   });
 });
 
+describe("a preview's own player", () => {
+  const VIMEO = 'https://player.vimeo.com/video/76979871?h=8272103f6e';
+  const vimeo = (over: Partial<LinkPreviewData> = {}) => preview({
+    url: 'https://vimeo.com/76979871', type: 'video', siteName: 'Vimeo', title: 'Um vídeo', image: proxied('v'), images: [proxied('v')], player: VIMEO, ...over,
+  });
+  const soundcloud = preview({
+    url: 'https://soundcloud.com/a/b', type: 'audio', siteName: 'SoundCloud', title: 'Uma faixa', image: proxied('s'), images: [proxied('s')],
+    player: 'https://w.soundcloud.com/player/?visual=true&url=https%3A%2F%2Fapi.soundcloud.com%2Ftracks%2F1',
+  });
+
+  it('a video shows its picture with a play button, then the provider\'s frame, playing', async () => {
+    const user = userEvent.setup();
+    const { container } = renderCard(vimeo());
+    expect(container.querySelector('iframe')).toBeNull();
+    // the picture is the player's, not one that opens the viewer
+    expect(container.querySelector('[data-embed-image]')).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Reproduzir vídeo' }));
+    const frame = container.querySelector('iframe[title="Vimeo"]')!;
+    expect(new URL(frame.getAttribute('src')!).searchParams.get('autoplay')).toBe('1');
+    expect(frame.getAttribute('src')).toMatch(/^https:\/\/player\.vimeo\.com\/video\/76979871\?h=8272103f6e&/);
+    expect(frame.parentElement!.className).toContain('aspect-video');
+  });
+
+  it('a sound gets the compact player at a fixed height, before and after it loads', async () => {
+    const user = userEvent.setup();
+    const { container } = renderCard(soundcloud);
+    const button = screen.getByRole('button', { name: 'SoundCloud: Clique para carregar o player' });
+    expect(button.style.height).toBe('166px');
+    await user.click(button);
+    const frame = container.querySelector('iframe[title="SoundCloud"]')!;
+    expect(frame.parentElement!.style.height).toBe('166px');
+    expect(new URL(frame.getAttribute('src')!).searchParams.get('visual')).toBe('false');
+  });
+
+  it('takes turns with the other players', async () => {
+    const user = userEvent.setup();
+    const { container } = render(
+      <>
+        <LinkPreview embed={{ kind: 'youtube', url: 'https://youtu.be/aaaaaaaaaaa', youtubeId: 'aaaaaaaaaaa' }} preview={preview({ url: 'https://youtu.be/aaaaaaaaaaa' })} />
+        <LinkPreview embed={{ kind: 'link', url: 'https://vimeo.com/76979871' }} preview={vimeo()} />
+      </>,
+    );
+    const [youtube, other] = screen.getAllByRole('button', { name: 'Reproduzir vídeo' });
+    await user.click(youtube!);
+    await user.click(other!);
+    expect(container.querySelectorAll('iframe')).toHaveLength(1);
+    expect(container.querySelector('iframe')!.getAttribute('title')).toBe('Vimeo');
+  });
+
+  it('a preview stored without a player, or with one off the allowlist, keeps its picture', () => {
+    for (const player of [undefined, 'https://evil.example/player']) {
+      const { container, unmount } = renderCard(vimeo({ player, imageWidth: 1280, imageHeight: 720 }));
+      expect(screen.queryByRole('button', { name: 'Reproduzir vídeo' })).toBeNull();
+      expect(container.querySelector('[data-embed-image] button')).not.toBeNull();
+      unmount();
+    }
+  });
+});
+
 describe('animated pictures move only while in view', () => {
   it('an animated preview picture swaps to its still frame when scrolled away, at the same width', () => {
     const view = controllableIntersection();

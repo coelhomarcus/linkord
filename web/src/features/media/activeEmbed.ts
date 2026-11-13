@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useSyncExternalStore } from 'react';
 
-// One embedded player (a YouTube or Twitch iframe) at a time: starting one
+// One embedded player (a YouTube, Twitch or link-card iframe) at a time: starting one
 // takes the place of the one before, which goes back to its thumbnail, so two
 // videos never talk over each other. The iframe is unmounted rather than
 // paused: the page cannot reach into a third-party player (no script API under

@@ -3,6 +3,7 @@ import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { DetectedEmbed } from '@/shared/lib/chatEmbeds';
+import { cn } from '@/shared/lib/utils';
 import { useActiveEmbed } from './activeEmbed';
 import { PreviewImage } from './PreviewImage';
 import { youtubeEmbedUrl } from './youtubeEmbedUrl';
@@ -74,5 +75,75 @@ export function TwitchPlayer({ embed }: { embed: DetectedEmbed }) {
     <div className="aspect-video w-full">
       <iframe src={src} title="Twitch" className="h-full w-full" allowFullScreen />
     </div>
+  );
+}
+
+/** The height of an audio player's frame: SoundCloud's compact player. */
+export const AUDIO_PLAYER_HEIGHT = 166;
+
+/** A preview's own `player` (Vimeo, SoundCloud, Streamable…): its picture
+ * with a play button until clicked, then the provider's iframe, in a box
+ * that keeps its size, under the same one-player rule as YouTube. */
+export function LinkPlayer({ src, kind, title, thumbnail, placeholder }: {
+  /** an address from linkPlayerUrl */
+  src: string;
+  kind: 'video' | 'audio';
+  /** the provider, as the frame's accessible name */
+  title: string;
+  thumbnail: string | null;
+  placeholder?: string | null;
+}) {
+  const { t } = useTranslation('media');
+  const { active, play } = useActiveEmbed(useId());
+  const box = kind === 'audio' ? 'w-full' : 'aspect-video w-full';
+  const boxStyle = kind === 'audio' ? { height: AUDIO_PLAYER_HEIGHT } : undefined;
+
+  if (active) {
+    return (
+      <div className={cn(box, 'bg-black')} style={boxStyle}>
+        <iframe
+          src={src}
+          title={title}
+          className="h-full w-full"
+          allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+          allowFullScreen
+        />
+      </div>
+    );
+  }
+
+  const playIcon = (
+    <span className="relative flex h-12 w-12 flex-none items-center justify-center rounded-full bg-black/70 text-white transition-colors group-hover/play:bg-black/85">
+      <PlayIcon size={18} fill="currentColor" />
+    </span>
+  );
+  if (kind === 'audio') {
+    return (
+      <button
+        type="button"
+        onClick={play}
+        style={boxStyle}
+        className={cn(box, 'group/play flex items-center gap-3 bg-black/40 text-left transition-colors hover:bg-black/55 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-inset focus-visible:ring-ring/50')}
+      >
+        {thumbnail && (
+          <PreviewImage src={thumbnail} placeholder={placeholder} frameClassName="relative aspect-square h-full flex-none" className="size-full object-cover" />
+        )}
+        <span className={cn('flex min-w-0 items-center gap-2.5', !thumbnail && 'pl-3')}>
+          {playIcon}
+          <span className="text-label text-text-secondary">{title}: {t('embed.loadPlayer')}</span>
+        </span>
+      </button>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={play}
+      aria-label={t('player.playVideo')}
+      className={cn(box, 'group/play relative flex items-center justify-center bg-black focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-inset focus-visible:ring-ring/50')}
+    >
+      {thumbnail && <PreviewImage src={thumbnail} placeholder={placeholder} frameClassName="absolute inset-0 size-full" className="size-full object-cover" />}
+      {playIcon}
+    </button>
   );
 }
