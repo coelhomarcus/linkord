@@ -1,7 +1,7 @@
 import type { LinkPreviewData } from '@/shared/api/api';
 import type { DetectedEmbed } from '@/shared/lib/chatEmbeds';
 import { proxiedImageVariant } from '@/shared/lib/mediaProxy';
-import { canLoadMediaUrl } from '../mediaUrl';
+import { canLoadMediaUrl } from '@/features/media/mediaUrl';
 import type { ViewerItem } from './viewerItem';
 
 /** The thumbnail strip's cell size, in CSS pixels. */
