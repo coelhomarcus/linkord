@@ -36,11 +36,11 @@ export function MediaCollectionViewer({ items, index, open, onIndexChange, onOpe
   return (
     <DialogPrimitive.Root open={open && !!item} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Backdrop className="fixed inset-0 z-50 bg-black/90 duration-150 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 motion-reduce:animate-none" />
+        <DialogPrimitive.Backdrop className="fixed inset-0 z-50 bg-black/90 duration-150 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0" />
         <DialogPrimitive.Popup
           finalFocus={finalFocus}
           aria-label={item ? t('collection.itemPosition', { name: item.name, index: index + 1, total: items.length }) : t('collection.image')}
-          className="fixed inset-0 z-50 flex flex-col outline-none duration-150 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 motion-reduce:animate-none"
+          className="fixed inset-0 z-50 flex flex-col outline-none duration-150 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0"
           onClick={() => onOpenChange(false)}
           // on the popup, which holds focus while open — a window listener
           // loses to handlers elsewhere in the app that stop propagation
