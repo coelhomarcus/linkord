@@ -103,6 +103,36 @@ describe('staged upload and batch publishing (real Postgres)', () => {
     assert.equal(row?.voiceDurationMs, 4200);
   });
 
+  it('a video keeps the size its uploader\'s browser read, from init to the published attachment', async () => {
+    const { owner, conversationId, cookie } = await member();
+    const clip = Buffer.from('fake-mp4-bytes');
+    const init = await app.inject({
+      method: 'POST', url: '/api/attachments/init', headers: { cookie },
+      payload: { conversationId, fileName: 'clip.mp4', mimeType: 'video/mp4', totalSize: clip.length, video: { width: 1080, height: 1920 } },
+    });
+    assert.equal(init.statusCode, 201, init.body);
+    const { uploadId } = init.json() as { uploadId: string };
+    await app.inject({ method: 'POST', url: `/api/attachments/${uploadId}/chunk/0`, headers: { cookie, 'content-type': 'application/octet-stream' }, payload: clip });
+    const complete = await app.inject({ method: 'POST', url: `/api/attachments/${uploadId}/complete`, headers: { cookie }, payload: {} });
+    assert.equal(complete.statusCode, 201, complete.body);
+    assert.deepEqual((complete.json() as { staged: unknown }).staged, { id: uploadId, name: 'clip.mp4', mime: 'video/mp4', size: clip.length, width: 1080, height: 1920 });
+
+    const result = await correlatedSend(owner, conversationId, [uploadId]) as { message?: { attachments?: { width?: number; height?: number }[] } };
+    assert.deepEqual(result.message?.attachments?.[0], { id: uploadId, name: 'clip.mp4', mime: 'video/mp4', size: clip.length, width: 1080, height: 1920 });
+  });
+
+  it('refuses a video size no browser could have read', async () => {
+    const { conversationId, cookie } = await member();
+    for (const [mimeType, video] of [['image/png', { width: 10, height: 10 }], ['video/mp4', { width: 0, height: 10 }], ['video/mp4', { width: 1.5, height: 10 }], ['video/mp4', '640x360']] as const) {
+      const res = await app.inject({
+        method: 'POST', url: '/api/attachments/init', headers: { cookie },
+        payload: { conversationId, fileName: 'x', mimeType, totalSize: 10, video },
+      });
+      assert.equal(res.statusCode, 400, `${mimeType} ${JSON.stringify(video)}`);
+      assert.equal(res.json().error.code, 'invalid_video');
+    }
+  });
+
   it('refuses voice metadata the recorder could not have produced', async () => {
     const { conversationId, cookie } = await member();
     const init = (mimeType: string, voice: unknown) => app.inject({

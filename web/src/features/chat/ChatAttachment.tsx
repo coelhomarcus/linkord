@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useContext, useState } from 'react';
 import type { ChatAttachment as ChatAttachmentData } from '@/shared/types/protocol';
 import { FileAttachmentCard, FILE_CARD_MAX_WIDTH } from '@/features/media/FileAttachmentCard';
 import { ImageLightbox } from '@/features/media/ImageLightbox';
@@ -8,6 +8,8 @@ import { VoiceMessagePlayer } from '@/features/voiceMessages/VoiceMessagePlayer'
 import { useCachedImageSrc } from '@/shared/hooks/useCachedImageSrc';
 import { availableAttachmentWidth, useChatSurfaceWidth } from '../../shared/lib/chatSurfaceWidth';
 import { cn } from '../../shared/lib/utils';
+import { attachmentViewerItem } from './messageViewerItems';
+import { MessageMediaScopeContext } from './useMediaViewer';
 
 export const IMAGE_MIME_TYPES = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp']);
 export const VIDEO_MIME_TYPES = new Set(['video/mp4', 'video/webm', 'video/ogg']);
@@ -52,6 +54,8 @@ export function ChatAttachment({ attachment, edgeToEdge }: ChatAttachmentProps) 
   // a blob just to never be shown as an image.
   const isImage = IMAGE_MIME_TYPES.has(attachment.mime);
   const cachedThumbUrl = useCachedImageSrc(isImage ? thumbUrl : null);
+  // in a message, expanding a video opens the message's viewer on it, where it carries on
+  const scope = useContext(MessageMediaScopeContext);
 
   if (isImage) {
     return (
@@ -77,7 +81,13 @@ export function ChatAttachment({ attachment, edgeToEdge }: ChatAttachmentProps) 
       <VideoPlayer
         src={url}
         title={attachment.name}
+        width={attachment.width}
+        height={attachment.height}
         className={edgeToEdge ? 'rounded-lg border-0' : undefined}
+        onExpand={scope ? (startAt) => {
+          const item = attachmentViewerItem(attachment);
+          if (item) scope.open(item.key, [{ ...item, startAt }], 0);
+        } : undefined}
       />
     );
   }

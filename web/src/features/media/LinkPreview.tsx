@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 
 import type { DetectedEmbed } from '@/shared/lib/chatEmbeds';
-import { ImageLightbox } from './ImageLightbox';
 import { ExternalMediaGate } from './ExternalMediaGate';
 import { GenericEmbed } from './GenericEmbed';
 import { AudioPlayer, VideoPlayer } from './MediaPlayers';
@@ -14,8 +13,18 @@ import type { LinkPreviewData } from '@/shared/api/api';
 import { embedImageBox, previewImageSize, type ImageSize } from './embedImageBox';
 import { useNearViewport } from './useNearViewport';
 import { canLoadMediaUrl } from './mediaUrl';
+import { PreviewImage } from './PreviewImage';
+import { EmbedMenuButton } from './EmbedMenuButton';
+import { useAnimatedVariant } from './useAnimatedVariant';
+import { MediaViewerProvider } from '@/features/chat/MediaViewerProvider';
+import { useMediaViewer, useOpenMedia } from '@/features/chat/useMediaViewer';
+import { directImageViewerItem } from './viewer/embedViewerItems';
+import { hoverWarmHandlers } from './viewer/hoverWarm';
 
-type ProxiedImage = { src: string | null; size: ImageSize | null; failed: boolean };
+type ProxiedImage = { src: string | null; size: ImageSize | null; placeholder: string | null; animated: boolean; failed: boolean };
+
+// the Media grid sizes its columns in CSS; this covers the widest of them
+const GRID_IMAGE_WIDTH = 400;
 
 /** A direct image link's picture as the server hands it out, through our own
  * proxy: its host never sees who is reading. Stored with the message (or,
@@ -37,10 +46,10 @@ function useProxiedImage(url: string, ref: RefObject<HTMLElement | null>, enable
       .catch(() => { if (!cancelled) setFetched(null); });
     return () => { cancelled = true; };
   }, [url, near, needsFetch]);
-  if (!enabled) return { src: null, size: null, failed: false };
-  if (signed !== undefined) return { src: signed, size: null, failed: !signed };
+  if (!enabled) return { src: null, size: null, placeholder: null, animated: false, failed: false };
+  if (signed !== undefined) return { src: signed, size: null, placeholder: null, animated: false, failed: !signed };
   const data = known ?? fetched;
-  return { src: data?.image ?? null, size: previewImageSize(stored) ?? firstSize, failed: data === null || (!!data && !data.image) };
+  return { src: data?.image ?? null, size: previewImageSize(stored) ?? firstSize, placeholder: data?.imagePlaceholder ?? null, animated: !!data?.imageAnimated, failed: data === null || (!!data && !data.image) };
 }
 
 function EmbedFailedFallback({ url, className }: { url: string; className: string }) {
@@ -82,19 +91,31 @@ interface LinkPreviewProps {
   /** a direct image link's proxied address, signed by the server with the
    * media page (null: the server will not proxy it) */
   imageUrl?: string | null;
+  /** the card sits in a chat message: it gets the keyboard way into the
+   * message's menu (EmbedMenuButton) */
+  menu?: boolean;
 }
 
-export function LinkPreview({ embed, className = '', edgeToEdge, fitContainer, preview, imageUrl }: LinkPreviewProps) {
+export function LinkPreview(props: LinkPreviewProps) {
+  // a picture opens in the chat surface's viewer; on its own (a test, the media grid) it brings one
+  if (!useMediaViewer()) return <MediaViewerProvider><LinkPreviewCard {...props} /></MediaViewerProvider>;
+  return <LinkPreviewCard {...props} />;
+}
+
+function LinkPreviewCard({ embed, className = '', edgeToEdge, fitContainer, preview, imageUrl, menu }: LinkPreviewProps) {
   const [failed, setFailed] = useState(false);
-  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const openMedia = useOpenMedia();
   const surfaceWidth = useChatSurfaceWidth(384 + 120);
   const maxWidth = availableAttachmentWidth(surfaceWidth, 384);
   const boxRef = useRef<HTMLButtonElement | null>(null);
   const image = useProxiedImage(embed.url, boxRef, embed.kind === 'image', preview, imageUrl);
   const knownSize = fitContainer ? null : image.size;
+  const box = embedImageBox(knownSize, maxWidth);
+  // the box's size, not the picture's: the full one opens in the lightbox
+  const drawnSrc = useAnimatedVariant(boxRef, image.src, fitContainer ? GRID_IMAGE_WIDTH : box.width, image.animated);
 
   if (embed.kind === 'youtube' || embed.kind === 'twitch-channel' || embed.kind === 'twitch-vod' || embed.kind === 'twitch-clip' || embed.kind === 'link') {
-    return <GenericEmbed key={embed.url} embed={embed} className={className} edgeToEdge={edgeToEdge} preview={preview} />;
+    return <GenericEmbed key={embed.url} embed={embed} className={className} edgeToEdge={edgeToEdge} preview={preview} menu={menu} />;
   }
 
   // a picture comes through the proxy, so only its proxied address must be loadable
@@ -118,19 +139,24 @@ export function LinkPreview({ embed, className = '', edgeToEdge, fitContainer, p
   }
 
   const rounding = edgeToEdge ? 'rounded-lg' : 'rounded-md border border-border';
-  const box = embedImageBox(knownSize, maxWidth);
+  const openImage = () => {
+    if (!image.src) return;
+    openMedia([directImageViewerItem(embed.url, { src: image.src, width: image.size?.width, height: image.size?.height, placeholder: image.placeholder, animated: image.animated })], 0);
+  };
   return (
-    <>
+    <div className={`group/embed relative max-w-full ${fitContainer ? 'w-full' : 'w-fit'}`}>
       <button
         ref={boxRef}
         type="button"
-        onClick={() => setLightboxOpen(true)}
+        onClick={openImage}
+        {...hoverWarmHandlers(image.src, { animated: image.animated })}
         style={fitContainer ? undefined : { width: box.width, maxWidth: '100%', height: box.height }}
         className={`block max-w-full cursor-zoom-in ${fitContainer ? '' : `overflow-hidden bg-fill-subtle ${rounding}`} ${className}`}
       >
-        <img
-          src={image.src ?? undefined}
-          alt=""
+        <PreviewImage
+          src={drawnSrc ?? undefined}
+          placeholder={image.placeholder}
+          frameClassName={fitContainer ? '' : 'size-full'}
           onError={() => setFailed(true)}
           // a known size means the box has the picture's own proportions, so it
           // is filled (a pixel of rounding cropped at most); an unknown one is
@@ -138,7 +164,7 @@ export function LinkPreview({ embed, className = '', edgeToEdge, fitContainer, p
           className={fitContainer ? `block h-auto max-h-70 max-w-full w-full object-contain ${rounding}` : `block size-full ${knownSize ? 'object-cover' : 'object-contain'}`}
         />
       </button>
-      {image.src && <ImageLightbox src={image.src} alt="" open={lightboxOpen} onOpenChange={setLightboxOpen} />}
-    </>
+      {menu && <EmbedMenuButton />}
+    </div>
   );
 }

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { Avatar } from '@/shared/Avatar';
 import { MessageMedia } from './MessageMedia';
+import { MessageMediaScope } from './MessageMediaScope';
 import { InviteCard } from '@/features/chat/InviteCard';
 import { CallInviteCard } from '@/features/chat/CallInviteCard';
 import { ChatMessageText } from '@/features/chat/ChatMessageText';
@@ -316,88 +317,90 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
           </div>
         )}
 
-        <div className="w-full">
-          {message.replyTo && (
-            <button
-              type="button"
-              onClick={() => onJumpTo(message.replyTo!.msgId)}
-              className="mb-1 flex max-w-full items-center gap-1.5 truncate text-caption text-text-muted hover:text-text-secondary"
-            >
-              <ArrowBendUpLeftIcon size={12} className="flex-none -scale-x-100" />
-              {message.replyTo.authorId && (
-                <Avatar
-                  id={message.replyTo.authorId}
-                  name={replyAuthor?.displayName ?? deletedAuthorName}
-                  avatar={replyAuthor?.avatar ?? ''}
-                  poster={replyAuthor?.avatarPoster}
-                  animateOnHover
-                  avatarColor={replyAuthor?.avatarColor}
-                  size={14}
-                  className="flex-none"
-                />
-              )}
-              <span className="flex-none font-medium text-text-secondary">
-                {replyAuthor ? `@${replyAuthor.displayName}` : deletedAuthorName}
-              </span>
-              {message.replyTo.text && <span className="truncate"><EmojiText text={roleMentionsAsText(customEmojisAsText(message.replyTo.text), servers)} /></span>}
-              {message.replyTo.sticker !== undefined && <span className="truncate">{stickerLabel(message.replyTo.sticker)}</span>}
-            </button>
-          )}
-
-          {isEditing ? (
-            <div className="flex flex-col gap-1.5 py-0.5">
-              <MessageField
-                value={editText}
-                onChange={setEditText}
-                onKeyDown={handleEditKeyDown}
-                resolveCustomEmoji={resolveEditEmoji}
-                resolveRole={resolveEditRole}
-                aria-label={t('edit.field')}
-                autoFocus
-                className="max-h-60 min-h-9 overflow-y-auto rounded-lg border border-border-strong bg-fill-inset px-3 py-1.5 text-body focus:border-border-accent"
-              />
-              {editError && <p role="alert" className="text-caption text-red-text">{editError}</p>}
-              <p className="text-caption text-text-muted">
-                {editSaving ? t('edit.saving') : (
-                  <>{t('edit.escapeTo')} <button type="button" onClick={() => setEditingMsgId(null)} className="underline hover:text-text-secondary">{t('edit.cancel')}</button> · {t('edit.enterTo')} <button type="button" onClick={() => void saveEdit()} className="underline hover:text-text-secondary">{t('edit.save')}</button></>
+        <MessageMediaScope message={message}>
+          <div className="w-full">
+            {message.replyTo && (
+              <button
+                type="button"
+                onClick={() => onJumpTo(message.replyTo!.msgId)}
+                className="mb-1 flex max-w-full items-center gap-1.5 truncate text-caption text-text-muted hover:text-text-secondary"
+              >
+                <ArrowBendUpLeftIcon size={12} className="flex-none -scale-x-100" />
+                {message.replyTo.authorId && (
+                  <Avatar
+                    id={message.replyTo.authorId}
+                    name={replyAuthor?.displayName ?? deletedAuthorName}
+                    avatar={replyAuthor?.avatar ?? ''}
+                    poster={replyAuthor?.avatarPoster}
+                    animateOnHover
+                    avatarColor={replyAuthor?.avatarColor}
+                    size={14}
+                    className="flex-none"
+                  />
                 )}
-              </p>
-            </div>
-          ) : (
-            message.kind === 'call_invite' ? (
-              <CallInviteCard callInvite={message.callInvite} />
-            ) : isInvite ? (
-              <InviteCard invitation={message.invitation} />
-            ) : (
-            message.sticker !== undefined ? (
-              <div className={cn(pending && pending.state !== 'failed' && 'opacity-60')}>
-                <StickerMessage sticker={message.sticker} />
-              </div>
-            ) : (
-            <>
-              <div className={cn('message-press-text text-body leading-[1.375rem] text-text-secondary', pending && pending.state !== 'failed' && 'opacity-60')}>
-                <ChatMessageText
-                  text={message.text}
-                  mentionLookup={mentionLookup}
-                  myUserId={state.me.userId}
-                  onOpenProfile={onOpenProfile}
-                  embeds={message.embeds}
-                  suppressedEmbeds={message.suppressedEmbeds}
-                  roles={messageServer?.roles}
-                  mentionEveryone={!!message.mentionEveryone}
+                <span className="flex-none font-medium text-text-secondary">
+                  {replyAuthor ? `@${replyAuthor.displayName}` : deletedAuthorName}
+                </span>
+                {message.replyTo.text && <span className="truncate"><EmojiText text={roleMentionsAsText(customEmojisAsText(message.replyTo.text), servers)} /></span>}
+                {message.replyTo.sticker !== undefined && <span className="truncate">{stickerLabel(message.replyTo.sticker)}</span>}
+              </button>
+            )}
+
+            {isEditing ? (
+              <div className="flex flex-col gap-1.5 py-0.5">
+                <MessageField
+                  value={editText}
+                  onChange={setEditText}
+                  onKeyDown={handleEditKeyDown}
+                  resolveCustomEmoji={resolveEditEmoji}
+                  resolveRole={resolveEditRole}
+                  aria-label={t('edit.field')}
+                  autoFocus
+                  className="max-h-60 min-h-9 overflow-y-auto rounded-lg border border-border-strong bg-fill-inset px-3 py-1.5 text-body focus:border-border-accent"
                 />
-                {message.editedAt && <span className="ml-1 select-none text-caption text-text-muted">{t('edited')}</span>}
+                {editError && <p role="alert" className="text-caption text-red-text">{editError}</p>}
+                <p className="text-caption text-text-muted">
+                  {editSaving ? t('edit.saving') : (
+                    <>{t('edit.escapeTo')} <button type="button" onClick={() => setEditingMsgId(null)} className="underline hover:text-text-secondary">{t('edit.cancel')}</button> · {t('edit.enterTo')} <button type="button" onClick={() => void saveEdit()} className="underline hover:text-text-secondary">{t('edit.save')}</button></>
+                  )}
+                </p>
               </div>
-              {!pending && inviteCodes.map((code) => <InviteLinkCard key={code} code={code} own={isMine} />)}
-              {message.richEmbeds?.map((embed, index) => <RichEmbedCard key={index} embed={embed} />)}
-              {message.attachments?.length ? (
-                <MessageMedia attachments={message.attachments} />
-              ) : null}
-            </>
-            )
-            )
-          )}
-        </div>
+            ) : (
+              message.kind === 'call_invite' ? (
+                <CallInviteCard callInvite={message.callInvite} />
+              ) : isInvite ? (
+                <InviteCard invitation={message.invitation} />
+              ) : (
+              message.sticker !== undefined ? (
+                <div className={cn(pending && pending.state !== 'failed' && 'opacity-60')}>
+                  <StickerMessage sticker={message.sticker} />
+                </div>
+              ) : (
+              <>
+                <div className={cn('message-press-text text-body leading-[1.375rem] text-text-secondary', pending && pending.state !== 'failed' && 'opacity-60')}>
+                  <ChatMessageText
+                    text={message.text}
+                    mentionLookup={mentionLookup}
+                    myUserId={state.me.userId}
+                    onOpenProfile={onOpenProfile}
+                    embeds={message.embeds}
+                    suppressedEmbeds={message.suppressedEmbeds}
+                    roles={messageServer?.roles}
+                    mentionEveryone={!!message.mentionEveryone}
+                  />
+                  {message.editedAt && <span className="ml-1 select-none text-caption text-text-muted">{t('edited')}</span>}
+                </div>
+                {!pending && inviteCodes.map((code) => <InviteLinkCard key={code} code={code} own={isMine} />)}
+                {message.richEmbeds?.map((embed, index) => <RichEmbedCard key={index} embed={embed} />)}
+                {message.attachments?.length ? (
+                  <MessageMedia attachments={message.attachments} />
+                ) : null}
+              </>
+              )
+              )
+            )}
+          </div>
+        </MessageMediaScope>
 
         {deleting && <p className="mt-0.5 text-caption text-text-muted">{t('deleting')}</p>}
         {actionError && (

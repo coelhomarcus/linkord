@@ -20,13 +20,16 @@ Linkord is a self-hosted place to chat and call with friends. Talk in direct mes
 **Chat**
 - Direct messages and private servers with text channels, organized into categories.
 - Replies, reactions, edits, deletes, and message search.
-- Attachments, voice messages, and automatic YouTube and Twitch embeds.
+- Attachments, voice messages, and link cards: rich previews with galleries, YouTube and Twitch players (one playing at a time), and `||spoiler||` text and links.
+- A video player with keyboard shortcuts (Space/K, J/L, arrows, M, F, 0–9), playback speed, picture-in-picture, a frame preview when hovering the timeline, and one saved volume for every player; uploaded videos keep their shape before they load.
+- A media viewer that opens a message's pictures, link-card images, GIFs and videos as one set: zoom (wheel, pinch, double-click), pan and rotate, a thumbnail strip, download, open original, copy link or image, reply and jump to the message; swipe between items and back to close on phones.
 - Mentions of members, roles, `@everyone` and `@here`.
 - Emojis, GIFs, and stickers, plus custom emojis and stickers per server.
 - Unread markers that sync across tabs and devices.
 
 **Voice and video**
 - Voice channels and one-to-one DM calls, with camera and screen sharing.
+- One call per account: every tab and device shows the call you are in, and can take it over after asking.
 - A soundboard per server, usable in any call.
 
 **Servers**
@@ -60,18 +63,18 @@ All you need is Docker with the Compose plugin. This brings up the app, PostgreS
 ```bash
 git clone <this repository> && cd linkord
 cp .env.full.example .env.full   # fill in REGISTRATION_CODE, POSTGRES_PASSWORD, LIVEKIT_API_KEY and LIVEKIT_API_SECRET
-docker compose --env-file .env.full -f docker-compose.full.yml up -d --build
+docker compose --env-file .env.full up -d --build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) and create an account with the registration code. Emailed codes (account recovery, two-step login) are printed by `docker compose --env-file .env.full -f docker-compose.full.yml logs mailsink`. Data is kept in Docker volumes across `down` and `up`. More, including how to serve other machines over HTTPS, in [the whole stack in Docker](docs/DEVELOPMENT.md#the-whole-stack-in-docker).
+Open [http://localhost:3000](http://localhost:3000) and create an account with the registration code. Emailed codes (account recovery, two-step login) are printed by `docker compose --env-file .env.full logs mailsink`. Data is kept in Docker volumes across `down` and `up`. More, including how to serve other machines over HTTPS, in [the whole stack in Docker](docs/DEVELOPMENT.md#the-whole-stack-in-docker).
 
 ## 🚀 Development
 
-For local development, the frontend and backend run on the host and only PostgreSQL runs in Docker. Follow the [local development guide](docs/DEVELOPMENT.md) for setup and run instructions.
+For local development, the frontend and backend run on the host, and `docker compose up -d` brings up the services they use (PostgreSQL, LiveKit and a mail sink). Follow the [local development guide](docs/DEVELOPMENT.md) for setup and run instructions.
 
 ## 🐳 Deployment
 
-Linkord ships as one Docker image (web app, API and realtime server on port 3000) next to a PostgreSQL database and a LiveKit server. It runs with Docker Compose (on its own, or with PostgreSQL and LiveKit bundled by `docker-compose.full.yml`) or on Dokploy. The [deployment guide](docs/DEPLOY.md) covers the environment it needs, the folders it writes to and their permissions, updates while people are connected, security headers, backups and troubleshooting.
+Linkord ships as one Docker image (web app, API and realtime server on port 3000) next to a PostgreSQL database and a LiveKit server. It runs on Dokploy, on its own with `docker run`, or with PostgreSQL and LiveKit bundled by the `full` profile of `docker-compose.yml`. The [deployment guide](docs/DEPLOY.md) covers the environment it needs, the folders it writes to and their permissions, updates while people are connected, security headers, backups and troubleshooting.
 
 ## 🧰 Commands
 

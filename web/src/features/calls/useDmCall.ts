@@ -24,6 +24,7 @@ interface DmCallDeps {
 interface UnsentAnswer {
   t: 'dm-call-accept' | 'dm-call-decline' | 'dm-call-cancel';
   callId: string;
+  replace?: boolean;
 }
 
 function noticeFrom(view: DmCallView, phase: DmCallNotice['phase'], reason?: DmCallEndReason): DmCallNotice {
@@ -77,16 +78,20 @@ export function useDmCall(deps: DmCallDeps) {
     if (activeCallId() === msg.conversationId) void leaveCall();
     else dropPendingCall(msg.conversationId);
     setStarted((current) => current?.conversationId === msg.conversationId ? null : current);
+    // Every other ending is written into the DM as a call line, so only a
+    // failure stays on screen, until it is dismissed.
     setNotice((current) => {
       const ours = current?.callId === msg.callId;
-      if ((ours && current.phase !== 'ended') || msg.reason === 'failed') {
+      // another call ringing meanwhile keeps the dialog
+      if (current && !ours && current.phase !== 'ended') return current;
+      if (msg.reason === 'failed') {
         return {
           callId: msg.callId,
           conversationId: msg.conversationId,
-          video: current?.video ?? false,
+          video: ours ? current.video : false,
           phase: 'ended',
-          callerId: current?.callerId ?? '',
-          peerId: current?.peerId ?? '',
+          callerId: ours ? current.callerId : '',
+          peerId: ours ? current.peerId : '',
           reason: msg.reason,
         };
       }
@@ -94,25 +99,24 @@ export function useDmCall(deps: DmCallDeps) {
     });
   }, []);
 
-  useEffect(() => {
-    if (notice?.phase !== 'ended') return;
-    const timer = window.setTimeout(() => setNotice(null), 4000);
-    return () => window.clearTimeout(timer);
-  }, [notice]);
+  const dismissDmCallNotice = useCallback(() => {
+    setNotice((current) => current?.phase === 'ended' ? null : current);
+  }, []);
 
-  const startDmCall = useCallback((conversationId: string, video: boolean) => {
+  /** `replace` moves the account's call from another tab or device here (see useCallMoveGate). */
+  const startDmCall = useCallback((conversationId: string, video: boolean, replace = false) => {
     startAttemptRef.current = conversationId;
-    depsRef.current.sendWs({ t: 'dm-call-start', conversationId, video });
+    depsRef.current.sendWs(replace ? { t: 'dm-call-start', conversationId, video, replace } : { t: 'dm-call-start', conversationId, video });
   }, []);
 
-  const answer = useCallback((t: UnsentAnswer['t'], callId: string) => {
-    const sent = depsRef.current.sendWs({ t, callId });
-    unsentAnswerRef.current = sent === false ? { t, callId } : null;
+  const answer = useCallback((t: UnsentAnswer['t'], callId: string, replace = false) => {
+    const sent = depsRef.current.sendWs(replace ? { t, callId, replace } : { t, callId });
+    unsentAnswerRef.current = sent === false ? { t, callId, replace } : null;
   }, []);
 
-  const acceptDmCall = useCallback(() => {
+  const acceptDmCall = useCallback((replace = false) => {
     const current = noticeRef.current;
-    if (current?.phase === 'incoming') answer('dm-call-accept', current.callId);
+    if (current?.phase === 'incoming') answer('dm-call-accept', current.callId, replace);
   }, [answer]);
 
   const declineDmCall = useCallback(() => {
@@ -133,7 +137,7 @@ export function useDmCall(deps: DmCallDeps) {
     unsentAnswerRef.current = null;
     if (!unsent || !view || view.callId !== unsent.callId) return;
     const waiting = unsent.t === 'dm-call-cancel' ? view.phase === 'outgoing' : view.phase === 'incoming';
-    if (waiting) answer(unsent.t, unsent.callId);
+    if (waiting) answer(unsent.t, unsent.callId, unsent.replace);
   }, [answer]);
 
   const consumeStartAttempt = useCallback((): string | null => {
@@ -151,6 +155,7 @@ export function useDmCall(deps: DmCallDeps) {
     acceptDmCall,
     declineDmCall,
     cancelDmCall,
+    dismissDmCallNotice,
     onDmCall,
     onEnded,
     onReconnected,

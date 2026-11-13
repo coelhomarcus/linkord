@@ -16,7 +16,7 @@ export type Inline =
   | { type: 'mention'; name: string }
   | { type: 'roleMention'; roleId: string }
   | { type: 'customEmoji'; name: string; id: string; animated: boolean }
-  | { type: 'bold' | 'italic' | 'strike'; children: Inline[] };
+  | { type: 'bold' | 'italic' | 'strike' | 'spoiler'; children: Inline[] };
 
 export type Block =
   | { type: 'paragraph'; children: Inline[] }
@@ -43,6 +43,8 @@ const INLINE_RE = new RegExp([
   '(https?:\\/\\/[^\\s<>"\']+)',
   // "@" only starts a mention at the start of a word: never inside an e-mail
   '(?<![\\w@.])@([A-Za-z0-9_.-]{1,20})',
+  // ||hidden until clicked||, Discord's spoiler
+  '\\|\\|(.+?)\\|\\|',
   '\\*\\*(.+?)\\*\\*',
   '~~(.+?)~~',
   '\\*([^*\\s](?:[^*]*?[^*\\s])?)\\*',
@@ -75,7 +77,7 @@ export function parseInline(text: string): Inline[] {
   // regex would lose its place in the outer text
   const re = new RegExp(INLINE_RE);
   for (let match = re.exec(text); match; match = re.exec(text)) {
-    const [full, code, emojiAnimated, emojiName, emojiId, roleId, suppressed, url, mention, bold, strike, starItalic, underItalic] = match;
+    const [full, code, emojiAnimated, emojiName, emojiId, roleId, suppressed, url, mention, spoiler, bold, strike, starItalic, underItalic] = match;
     pushText(nodes, text.slice(lastIndex, match.index));
     lastIndex = match.index + full.length;
     if (code !== undefined) nodes.push({ type: 'code', text: code });
@@ -93,7 +95,8 @@ export function parseInline(text: string): Inline[] {
       nodes.push({ type: 'mention', name });
       lastIndex = match.index + 1 + name.length;
       re.lastIndex = lastIndex;
-    } else if (bold !== undefined) nodes.push({ type: 'bold', children: parseInline(bold) });
+    } else if (spoiler !== undefined) nodes.push({ type: 'spoiler', children: parseInline(spoiler) });
+    else if (bold !== undefined) nodes.push({ type: 'bold', children: parseInline(bold) });
     else if (strike !== undefined) nodes.push({ type: 'strike', children: parseInline(strike) });
     else nodes.push({ type: 'italic', children: parseInline((starItalic ?? underItalic)!) });
   }
@@ -159,23 +162,39 @@ export function parseMessage(text: string): Block[] {
   return blocks;
 }
 
-function collectInline(nodes: Inline[], out: string[]) {
+function collectInline(nodes: Inline[], out: string[], spoilered?: Set<string>, inSpoiler = false) {
   for (const node of nodes) {
-    if (node.type === 'link' && !node.suppressed) out.push(node.url);
-    else if (node.type === 'bold' || node.type === 'italic' || node.type === 'strike') collectInline(node.children, out);
+    if (node.type === 'link' && !node.suppressed) {
+      out.push(node.url);
+      if (inSpoiler) spoilered?.add(node.url);
+    } else if (node.type === 'bold' || node.type === 'italic' || node.type === 'strike' || node.type === 'spoiler') {
+      collectInline(node.children, out, spoilered, inSpoiler || node.type === 'spoiler');
+    }
   }
 }
 
-const MAX_PREVIEWS = 3;
+function eachInline(blocks: Block[], visit: (nodes: Inline[]) => void) {
+  for (const block of blocks) {
+    if (block.type === 'paragraph' || block.type === 'quote') visit(block.children);
+    else if (block.type === 'list') block.items.forEach(visit);
+  }
+}
+
+const MAX_PREVIEWS = 5;
 
 /** Links worth a preview: outside code, not wrapped in <…>, each address
- * once (query strings included — they often are the content), at most three
+ * once (query strings included — they often are the content), at most five
  * so a pasted list of links doesn't fire a request per line. */
 export function previewableLinks(blocks: Block[]): string[] {
   const urls: string[] = [];
-  for (const block of blocks) {
-    if (block.type === 'paragraph' || block.type === 'quote') collectInline(block.children, urls);
-    else if (block.type === 'list') block.items.forEach((item) => collectInline(item, urls));
-  }
+  eachInline(blocks, (nodes) => collectInline(nodes, urls));
   return [...new Set(urls)].slice(0, MAX_PREVIEWS);
+}
+
+/** The links written inside a ||spoiler||: their card stays hidden until
+ * clicked. A link written both inside and outside one counts as hidden. */
+export function spoileredLinks(blocks: Block[]): Set<string> {
+  const spoilered = new Set<string>();
+  eachInline(blocks, (nodes) => collectInline(nodes, [], spoilered));
+  return spoilered;
 }

@@ -3,6 +3,7 @@ import fsStreams from 'node:fs'; // only for createReadStream/createWriteStream 
 import path from 'node:path';
 import { config } from '../../config/env.js';
 import type { VoiceMeta } from './voiceMessages.js';
+import type { VideoDimensions } from './videoDimensions.js';
 
 // Chunked upload for files up to MAX_ATTACHMENT_BYTES (512MB by default): a single POST that size
 // wouldn't survive most proxies or be safe to buffer in memory. Upload
@@ -51,6 +52,7 @@ export interface UploadManifest {
   totalChunks: number;
   createdAt: string;
   voice?: VoiceMeta;
+  video?: VideoDimensions;
 }
 
 export function tmpDirFor(uploadId: string): string {

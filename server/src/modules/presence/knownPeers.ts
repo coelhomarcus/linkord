@@ -50,8 +50,10 @@ export async function buildPresenceSnapshot(p: Participant) {
     knownUsers: await listUsersByIds([p.userId, ...p.knownPeerIds]),
     // knownUsers keeps blocked peers (shared history still needs their
     // names); everything LIVE about them is withheld
+    // the account's own other tabs and devices too: a tab has to see the call another one is in
     participants: [...participants.values()]
-      .filter((o) => o.id !== p.id && p.knownPeerIds.has(o.userId) && !p.blockedPeerIds.has(o.userId) && !hiddenFromPeers(o))
+      .filter((o) => o.id !== p.id && (o.userId === p.userId
+        || (p.knownPeerIds.has(o.userId) && !p.blockedPeerIds.has(o.userId) && !hiddenFromPeers(o))))
       .map(publicParticipant),
     onlineUserIds,
     // both added in protocol 10; an older tab ignores them and shows everyone online as "online"

@@ -1,4 +1,6 @@
-import { ArrowsOutIcon, DownloadSimpleIcon, PauseIcon, PlayIcon, SpeakerHighIcon, SpeakerSlashIcon } from '@phosphor-icons/react';
+import {
+  ArrowsInIcon, ArrowsOutIcon, DownloadSimpleIcon, PauseIcon, PictureInPictureIcon, PlayIcon, SpeakerHighIcon, SpeakerSlashIcon,
+} from '@phosphor-icons/react';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode, RefObject } from 'react';
 import { createPortal } from 'react-dom';
@@ -13,6 +15,19 @@ import { getMediaVolumeState, setMediaVolumeState, subscribeMediaVolume } from '
 import { cn } from '@/shared/lib/utils';
 import { downloadFile } from '@/shared/lib/download';
 
+import { handleMediaKeyDown, MEDIA_KEY_SHORTCUTS } from './mediaKeyboard';
+import type { MediaKeyAction } from './mediaKeyboard';
+import { formatMediaTime } from './mediaTime';
+import { PlaybackRateMenu } from './PlaybackRateMenu';
+import { PreviewImage } from './PreviewImage';
+import { SeekPreview } from './SeekPreview';
+import { CONTROLS_IDLE_MS, useControlsVisibility } from './useControlsVisibility';
+import { useHiddenTabPause } from './useHiddenTabPause';
+import { usePictureInPicture } from './usePictureInPicture';
+import { differentShape, INLINE_VIDEO_MAX_HEIGHT, INLINE_VIDEO_MAX_WIDTH, isKnownSize, videoBoxStyle } from './videoBox';
+import type { VideoSize } from './videoBox';
+import type { PlaybackPosition } from './viewer/viewerItem';
+
 function sliderValue(value: number | readonly number[]): number {
   return typeof value === 'number' ? value : (value[0] ?? 0);
 }
@@ -21,13 +36,8 @@ function readableDuration(value: number): number {
   return Number.isFinite(value) && value > 0 ? value : 0;
 }
 
-function formatTime(seconds: number): string {
-  const safe = Math.max(0, Math.floor(seconds));
-  const hours = Math.floor(safe / 3600);
-  const minutes = Math.floor((safe % 3600) / 60);
-  const secs = safe % 60;
-  if (hours > 0) return `${hours}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-  return `${minutes}:${String(secs).padStart(2, '0')}`;
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
 }
 
 interface MediaControlsState {
@@ -36,6 +46,7 @@ interface MediaControlsState {
   playing: boolean;
   muted: boolean;
   volume: number;
+  rate: number;
 }
 
 function useMediaControls<T extends HTMLMediaElement>() {
@@ -48,6 +59,7 @@ function useMediaControls<T extends HTMLMediaElement>() {
       playing: false,
       muted: shared.muted,
       volume: shared.volume,
+      rate: 1,
     };
   });
   const [waiting, setWaiting] = useState(false);
@@ -61,6 +73,7 @@ function useMediaControls<T extends HTMLMediaElement>() {
       playing: !media.paused,
       muted: media.muted,
       volume: media.volume,
+      rate: media.playbackRate || 1,
     });
   }
 
@@ -93,23 +106,50 @@ function useMediaControls<T extends HTMLMediaElement>() {
     sync();
   }
 
-  function seek(value: number | readonly number[]) {
+  function seekTo(seconds: number) {
     const media = ref.current;
     if (!media) return;
-    const next = Math.min(state.duration || 0, Math.max(0, sliderValue(value)));
+    const duration = readableDuration(media.duration);
+    if (!duration) return;
+    const next = clamp(seconds, 0, duration);
     media.currentTime = next;
     setState((prev) => ({ ...prev, currentTime: next }));
   }
 
-  function setVolume(value: number | readonly number[]) {
+  function seek(value: number | readonly number[]) {
+    seekTo(sliderValue(value));
+  }
+
+  function seekBy(seconds: number) {
+    const media = ref.current;
+    if (media) seekTo((media.currentTime || 0) + seconds);
+  }
+
+  function seekToFraction(fraction: number) {
+    const media = ref.current;
+    if (media) seekTo(readableDuration(media.duration) * fraction);
+  }
+
+  function applyVolume(volume: number, muted: boolean) {
     const media = ref.current;
     if (!media) return;
-    const next = Math.min(100, Math.max(0, sliderValue(value))) / 100;
-    const nextMuted = next === 0;
-    media.volume = next;
-    media.muted = nextMuted;
-    setMediaVolumeState(next, nextMuted);
+    media.volume = volume;
+    media.muted = muted;
+    setMediaVolumeState(volume, muted);
     sync();
+  }
+
+  function setVolume(value: number | readonly number[]) {
+    const next = clamp(sliderValue(value), 0, 100) / 100;
+    applyVolume(next, next === 0);
+  }
+
+  /** A key step: raising unmutes, as the keys on a video site do. */
+  function changeVolumeBy(step: number) {
+    const media = ref.current;
+    if (!media) return;
+    const next = Math.round(clamp(media.volume + step, 0, 1) * 100) / 100;
+    applyVolume(next, next === 0 || (step < 0 && media.muted));
   }
 
   function toggleMute() {
@@ -117,10 +157,13 @@ function useMediaControls<T extends HTMLMediaElement>() {
     if (!media) return;
     let nextVolume = media.volume;
     if (media.muted && media.volume === 0) nextVolume = 0.7;
-    const nextMuted = !media.muted;
-    media.volume = nextVolume;
-    media.muted = nextMuted;
-    setMediaVolumeState(nextVolume, nextMuted);
+    applyVolume(nextVolume, !media.muted);
+  }
+
+  function setPlaybackRate(rate: number) {
+    const media = ref.current;
+    if (!media) return;
+    media.playbackRate = rate;
     sync();
   }
 
@@ -132,21 +175,29 @@ function useMediaControls<T extends HTMLMediaElement>() {
     setWaiting,
     togglePlay,
     seek,
+    seekBy,
+    seekToFraction,
     setVolume,
+    changeVolumeBy,
     toggleMute,
+    setPlaybackRate,
   };
 }
+
+type MediaControls = ReturnType<typeof useMediaControls<HTMLVideoElement>>;
 
 function MediaButton({
   label,
   onClick,
   className,
   children,
+  pressed,
 }: {
   label: string;
   onClick: () => void;
   className?: string;
   children: ReactNode;
+  pressed?: boolean;
 }) {
   return (
     <Button
@@ -154,6 +205,7 @@ function MediaButton({
       variant="ghost"
       size="icon-xs"
       aria-label={label}
+      aria-pressed={pressed}
       onClick={onClick}
       className={cn('size-7 flex-none [&_svg:not([class*=size-])]:size-[15px]', className)}
     >
@@ -184,12 +236,51 @@ function VolumeSlider({ muted, volume, onChange, className }: {
   );
 }
 
+function Timeline({ currentTime, duration, onSeek, className }: {
+  currentTime: number;
+  duration: number;
+  onSeek: (value: number | readonly number[]) => void;
+  className?: string;
+}) {
+  const { t } = useTranslation('media');
+  return (
+    <Slider
+      aria-label={t('player.seek')}
+      aria-valuetext={t('player.timeValue', { current: formatMediaTime(currentTime), total: formatMediaTime(duration) })}
+      value={[duration ? currentTime : 0]}
+      min={0}
+      max={duration || 1}
+      step={0.1}
+      disabled={!duration}
+      onValueChange={onSeek}
+      size="sm"
+      className={className}
+    />
+  );
+}
+
 interface VideoPlayerProps {
   src: string;
+  /** a still for the box before the first play (a page's og:image, through the proxy) */
   poster?: string | null;
+  /** the ThumbHash painted until the poster loads */
+  placeholder?: string | null;
+  /** the size the video is known to have (stored with an upload, or its
+   * poster's), so the box is right before any byte of the video loads */
+  width?: number | null;
+  height?: number | null;
   title?: string;
   className?: string;
   onError?: () => void;
+  /** the expand button hands the video to a viewer instead of the player's own fullscreen (a
+   * message's media viewer): where it was, and whether it was playing */
+  onExpand?: (at: PlaybackPosition) => void;
+  /** drawn inside a viewer: the box it may fill, and no expand button of its own */
+  fit?: { maxWidth: number; maxHeight: number };
+  /** carry on from here (the inline player the viewer was opened from) */
+  startAt?: PlaybackPosition;
+  /** start playing once it can, as a viewer opened on it does */
+  autoPlay?: boolean;
 }
 
 export function VideoPlayer(props: VideoPlayerProps) {
@@ -199,13 +290,15 @@ export function VideoPlayer(props: VideoPlayerProps) {
 interface VideoChromeProps {
   variant: 'mini' | 'fullscreen';
   portalHostRef: RefObject<HTMLDivElement | null>;
-  mediaState: MediaControlsState;
-  waiting: boolean;
-  togglePlay: () => void;
-  seek: (value: number | readonly number[]) => void;
-  setVolume: (value: number | readonly number[]) => void;
-  toggleMute: () => void;
-  onExpand?: () => void;
+  rootRef?: RefObject<HTMLDivElement | null>;
+  controls: MediaControls;
+  pip: ReturnType<typeof usePictureInPicture>;
+  /** absent inside a viewer, which is already as large as it gets */
+  onToggleExpanded?: () => void;
+  poster: string | null;
+  placeholder: string | null;
+  showPoster: boolean;
+  aspectRatio: number;
   src: string;
   title?: string;
   className?: string;
@@ -216,24 +309,77 @@ interface VideoChromeProps {
 // between the mini and fullscreen slots without unmounting, so this chrome
 // only renders the host div + overlay controls around wherever it lands.
 function VideoChrome({
-  variant, portalHostRef, mediaState: { currentTime, duration, playing, muted, volume },
-  waiting, togglePlay, seek, setVolume, toggleMute, onExpand, src, title, className, style,
+  variant, portalHostRef, rootRef, controls, pip, onToggleExpanded, poster, placeholder, showPoster, aspectRatio,
+  src, title, className, style,
 }: VideoChromeProps) {
   const { t } = useTranslation('media');
+  const { state: { currentTime, duration, playing, muted, volume, rate }, waiting } = controls;
+  const [menuOpen, setMenuOpen] = useState(false);
+  const { visible, reveal, bind } = useControlsVisibility({
+    playing,
+    idleMs: variant === 'mini' ? CONTROLS_IDLE_MS.inline : CONTROLS_IDLE_MS.expanded,
+    pinned: menuOpen,
+  });
+  // A tap on a playing video whose controls are hidden only brings them back,
+  // as on a phone's own player; a click toggles playback.
+  const tapRevealsOnly = useRef(false);
+  const silent = muted || volume === 0;
+
+  function run(action: MediaKeyAction) {
+    reveal();
+    switch (action.type) {
+      case 'togglePlay': void controls.togglePlay(); break;
+      case 'seekBy': controls.seekBy(action.seconds); break;
+      case 'seekToFraction': controls.seekToFraction(action.fraction); break;
+      case 'volumeBy': controls.changeVolumeBy(action.step); break;
+      case 'toggleMute': controls.toggleMute(); break;
+      case 'toggleExpanded': onToggleExpanded?.(); break;
+      case 'none': break;
+    }
+  }
+
   return (
     <div
-      className={cn('group/player @container/player relative overflow-hidden rounded-md border border-white/10 bg-black', className)}
+      ref={rootRef}
+      role="group"
+      aria-label={title || t('player.videoPlayer')}
+      aria-keyshortcuts={MEDIA_KEY_SHORTCUTS}
+      tabIndex={0}
+      onKeyDown={(event) => handleMediaKeyDown(event, run)}
+      {...bind}
+      className={cn(
+        'group/player @container/player relative overflow-hidden rounded-md border border-white/10 bg-black outline-none focus-visible:ring-3 focus-visible:ring-ring/50',
+        !visible && 'cursor-none',
+        className,
+      )}
       style={style}
       data-video-variant={variant}
+      data-controls-hidden={visible ? undefined : ''}
     >
       <div ref={portalHostRef} className="absolute inset-0" />
 
-      <button
-        type="button"
+      {showPoster && (poster || placeholder) && (
+        <PreviewImage
+          src={poster ?? undefined}
+          placeholder={placeholder}
+          frameClassName="pointer-events-none absolute inset-0"
+          className="size-full object-contain"
+        />
+      )}
+
+      {/* the keyboard path is the player itself (Space/K), which takes focus on this click */}
+      <div
         aria-hidden
-        tabIndex={-1}
-        onClick={togglePlay}
-        className="absolute inset-0 cursor-pointer outline-none"
+        data-video-surface=""
+        onPointerDown={(event) => { tapRevealsOnly.current = event.pointerType === 'touch' && !visible; }}
+        onClick={() => {
+          if (tapRevealsOnly.current) {
+            tapRevealsOnly.current = false;
+            return;
+          }
+          void controls.togglePlay();
+        }}
+        className="absolute inset-0 cursor-pointer"
       />
 
       {waiting && (
@@ -245,48 +391,58 @@ function VideoChrome({
       {!playing && (
         <button
           type="button"
-              aria-label={t('player.playVideo')}
-          onClick={togglePlay}
+          aria-label={t('player.playVideo')}
+          onClick={() => void controls.togglePlay()}
           className="absolute left-1/2 top-1/2 flex size-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-black/65 text-white shadow-popover transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
         >
           <PlayIcon size={22} fill="currentColor" className="ml-0.5" />
         </button>
       )}
 
-      <div className="absolute inset-x-0 bottom-0 flex flex-col gap-1.5 bg-gradient-to-t from-black/90 via-black/70 to-transparent px-2.5 pb-2 pt-8 transition-opacity md:pointer-events-none md:opacity-0 md:group-hover/player:pointer-events-auto md:group-hover/player:opacity-100 md:group-has-[:focus-visible]/player:pointer-events-auto md:group-has-[:focus-visible]/player:opacity-100">
-        <Slider
-          value={[duration ? currentTime : 0]}
-          min={0}
-          max={duration || 1}
-          step={0.1}
-          disabled={!duration}
-          onValueChange={(value) => seek(value)}
-          size="sm"
-          className="[&_[data-slot=slider-track]]:bg-white/25"
-        />
+      <div
+        data-video-controls=""
+        className={cn(
+          'absolute inset-x-0 bottom-0 flex flex-col gap-1.5 bg-gradient-to-t from-black/90 via-black/70 to-transparent px-2.5 pb-2 pt-8 transition-opacity duration-100 ease-out-expo motion-reduce:transition-none',
+          visible ? 'opacity-100' : 'pointer-events-none opacity-0',
+        )}
+      >
+        <SeekPreview src={src} duration={duration} aspectRatio={aspectRatio}>
+          <Timeline currentTime={currentTime} duration={duration} onSeek={controls.seek} className="[&_[data-slot=slider-track]]:bg-white/25" />
+        </SeekPreview>
         <div className="flex min-w-0 items-center gap-0.5 text-text-secondary [&_button:hover]:bg-white/10 [&_button:hover]:text-white">
-          <MediaButton label={playing ? t('player.pause') : t('player.play')} onClick={togglePlay}>
+          <MediaButton label={playing ? t('player.pause') : t('player.play')} onClick={() => void controls.togglePlay()}>
             {playing ? <PauseIcon size={15} fill="currentColor" /> : <PlayIcon size={15} fill="currentColor" />}
           </MediaButton>
           <span className="ml-1 hidden flex-none select-none text-caption tabular-nums text-text-muted @[15rem]/player:block">
-            {formatTime(currentTime)} / {formatTime(duration)}
+            {formatMediaTime(currentTime)} / {formatMediaTime(duration)}
           </span>
           <div className="ml-auto flex flex-none items-center gap-0.5">
-            <MediaButton label={muted || volume === 0 ? t('player.unmute') : t('player.mute')} onClick={toggleMute}>
-              {muted || volume === 0 ? <SpeakerSlashIcon size={15} /> : <SpeakerHighIcon size={15} />}
+            <PlaybackRateMenu rate={rate} onRateChange={controls.setPlaybackRate} onOpenChange={setMenuOpen} className="hidden @[17rem]/player:flex" />
+            <MediaButton label={silent ? t('player.unmute') : t('player.mute')} onClick={controls.toggleMute}>
+              {silent ? <SpeakerSlashIcon size={15} /> : <SpeakerHighIcon size={15} />}
             </MediaButton>
             <VolumeSlider
               muted={muted}
               volume={volume}
-              onChange={setVolume}
+              onChange={controls.setVolume}
               className="mr-1 hidden @[19rem]/player:block [&_[data-slot=slider-range]]:bg-white/80 [&_[data-slot=slider-track]]:bg-white/25"
             />
+            {pip.supported && (
+              <MediaButton
+                label={pip.active ? t('player.exitPictureInPicture') : t('player.pictureInPicture')}
+                pressed={pip.active}
+                onClick={pip.toggle}
+                className="hidden @[13rem]/player:inline-flex"
+              >
+                <PictureInPictureIcon size={15} weight={pip.active ? 'fill' : 'regular'} />
+              </MediaButton>
+            )}
             <MediaButton label={t('player.download')} onClick={() => downloadFile(src, title || t('player.video'))}>
               <DownloadSimpleIcon size={15} />
             </MediaButton>
-            {onExpand && (
-              <MediaButton label={t('player.fullscreen')} onClick={onExpand}>
-                <ArrowsOutIcon size={15} />
+            {onToggleExpanded && (
+              <MediaButton label={variant === 'mini' ? t('player.fullscreen') : t('player.exitFullscreen')} onClick={onToggleExpanded}>
+                {variant === 'mini' ? <ArrowsOutIcon size={15} /> : <ArrowsInIcon size={15} />}
               </MediaButton>
             )}
           </div>
@@ -303,25 +459,24 @@ function VideoChrome({
 // A portal whose *target* changes gets unmounted and remounted by React —
 // which reset playback to 0:00 — so the target has to stay the same object
 // forever and the actual move has to happen outside React's reconciliation.
-function VideoPlayerImpl({ src, poster, title, className, onError }: VideoPlayerProps) {
+function VideoPlayerImpl({ src, poster, placeholder, width, height, title, className, onError, onExpand, fit, startAt, autoPlay }: VideoPlayerProps) {
   const { t } = useTranslation('media');
-  const {
-    ref: videoRef,
-    state,
-    waiting,
-    sync,
-    setWaiting,
-    togglePlay,
-    seek,
-    setVolume,
-    toggleMute,
-  } = useMediaControls<HTMLVideoElement>();
-  const [natural, setNatural] = useState<{ width: number; height: number } | null>(null);
+  const controls = useMediaControls<HTMLVideoElement>();
+  const { ref: videoRef, sync, setWaiting } = controls;
+  const pip = usePictureInPicture(videoRef);
+  useHiddenTabPause(videoRef);
+  const hint = width && height ? { width, height } : null;
+  const [natural, setNatural] = useState<VideoSize | null>(isKnownSize(hint) ? hint : null);
+  // the poster belongs to the size it was given with; a video of another
+  // shape would show it stretched or cut until playback starts
+  const [posterFits, setPosterFits] = useState(true);
+  const [started, setStarted] = useState(false);
   const [viewport, setViewport] = useState(() => ({ width: window.innerWidth, height: window.innerHeight }));
-  const surfaceWidth = useChatSurfaceWidth(384 + 120);
+  const surfaceWidth = useChatSurfaceWidth(INLINE_VIDEO_MAX_WIDTH + 120);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const miniAnchorRef = useRef<HTMLDivElement | null>(null);
   const fullscreenAnchorRef = useRef<HTMLDivElement | null>(null);
+  const fullscreenRootRef = useRef<HTMLDivElement | null>(null);
   const hostRef = useRef<HTMLDivElement | null>(null);
   if (!hostRef.current) {
     const host = document.createElement('div');
@@ -349,30 +504,41 @@ function VideoPlayerImpl({ src, poster, title, className, onError }: VideoPlayer
 
   useEffect(() => () => { hostRef.current?.remove(); }, []);
 
+  // the position it was opened at is applied once, on the first metadata
+  const startPendingRef = useRef(!!startAt || !!autoPlay);
+
   function handleLoadedMetadata() {
     sync();
     const video = videoRef.current;
-    if (video) setNatural({ width: video.videoWidth, height: video.videoHeight });
+    if (!video) return;
+    if (startPendingRef.current) {
+      startPendingRef.current = false;
+      if (startAt && startAt.time > 0) video.currentTime = startAt.time;
+      if (startAt ? startAt.playing : autoPlay) void video.play().catch(() => {});
+    }
+    const real = { width: video.videoWidth, height: video.videoHeight };
+    if (!isKnownSize(real) || (natural && !differentShape(real, natural))) return;
+    if (natural) setPosterFits(false);
+    setNatural(real);
   }
 
   function boxStyleFor(variant: 'mini' | 'fullscreen'): CSSProperties {
-    const maxWidth = variant === 'mini'
-      ? availableAttachmentWidth(surfaceWidth, 384)
-      : Math.min(viewport.width - 64, 1152);
-    const maxHeight = variant === 'mini' ? 320 : viewport.height * 0.8;
-    if (natural && natural.width > 0 && natural.height > 0) {
-      const scale = Math.min(1, maxWidth / natural.width, maxHeight / natural.height);
-      return {
-        width: natural.width * scale,
-        maxWidth: '100%',
-        aspectRatio: `${natural.width} / ${natural.height}`,
-        maxHeight,
-      };
-    }
-    return { width: maxWidth, maxWidth: '100%', aspectRatio: '16 / 9', maxHeight };
+    if (fit && variant === 'mini') return videoBoxStyle(natural, fit.maxWidth, fit.maxHeight);
+    return variant === 'mini'
+      ? videoBoxStyle(natural, availableAttachmentWidth(surfaceWidth, INLINE_VIDEO_MAX_WIDTH), INLINE_VIDEO_MAX_HEIGHT)
+      : videoBoxStyle(natural, Math.min(viewport.width - 64, 1152), viewport.height * 0.8);
   }
 
-  const chromeProps = { mediaState: state, waiting, togglePlay, seek, setVolume, toggleMute, src, title };
+  const chromeProps = {
+    controls,
+    pip,
+    poster: posterFits ? poster ?? null : null,
+    placeholder: posterFits ? placeholder ?? null : null,
+    showPoster: !started,
+    aspectRatio: natural ? natural.width / natural.height : 16 / 9,
+    src,
+    title,
+  };
 
   return (
     <>
@@ -380,7 +546,14 @@ function VideoPlayerImpl({ src, poster, title, className, onError }: VideoPlayer
         {...chromeProps}
         variant="mini"
         portalHostRef={miniAnchorRef}
-        onExpand={() => setLightboxOpen(true)}
+        onToggleExpanded={fit ? undefined : () => {
+          if (!onExpand) { setLightboxOpen(true); return; }
+          const video = videoRef.current;
+          const at = { time: video?.currentTime ?? 0, playing: !!video && !video.paused };
+          // one copy plays at a time: the viewer's carries on from here
+          video?.pause();
+          onExpand(at);
+        }}
         className={className}
         style={boxStyleFor('mini')}
       />
@@ -390,14 +563,16 @@ function VideoPlayerImpl({ src, poster, title, className, onError }: VideoPlayer
         <video
           ref={videoRef}
           src={src}
-          poster={poster || undefined}
           preload="metadata"
           playsInline
           onLoadedMetadata={handleLoadedMetadata}
+          onDurationChange={sync}
           onTimeUpdate={sync}
-          onPlay={sync}
+          onPlay={() => { setStarted(true); sync(); }}
           onPause={sync}
+          onSeeking={() => setStarted(true)}
           onVolumeChange={sync}
+          onRateChange={sync}
           onWaiting={() => setWaiting(true)}
           onCanPlay={() => setWaiting(false)}
           onError={onError}
@@ -410,6 +585,7 @@ function VideoPlayerImpl({ src, poster, title, className, onError }: VideoPlayer
         <DialogPrimitive.Portal keepMounted>
           <DialogPrimitive.Backdrop className="fixed inset-0 z-50 bg-black/85 duration-150 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0" />
           <DialogPrimitive.Popup
+            initialFocus={fullscreenRootRef}
             className="fixed inset-0 z-50 flex cursor-zoom-out items-center justify-center pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] sm:pl-[max(2rem,env(safe-area-inset-left))] sm:pr-[max(2rem,env(safe-area-inset-right))] sm:pt-[max(2rem,env(safe-area-inset-top))] sm:pb-[max(2rem,env(safe-area-inset-bottom))] outline-none duration-150 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0"
             onClick={() => setLightboxOpen(false)}
           >
@@ -424,6 +600,8 @@ function VideoPlayerImpl({ src, poster, title, className, onError }: VideoPlayer
                 {...chromeProps}
                 variant="fullscreen"
                 portalHostRef={fullscreenAnchorRef}
+                rootRef={fullscreenRootRef}
+                onToggleExpanded={() => setLightboxOpen(false)}
                 className="border-white/10 shadow-popover"
                 style={boxStyleFor('fullscreen')}
               />
@@ -486,7 +664,7 @@ function AudioPlayerInner({ src, title, className, onError }: AudioPlayerProps) 
       <div className="flex min-w-0 items-baseline gap-2">
         <span className="min-w-0 flex-1 truncate text-label font-medium text-text-secondary">{title}</span>
         <span className="flex-none select-none text-caption tabular-nums text-text-muted">
-          {formatTime(currentTime)} / {formatTime(duration)}
+          {formatMediaTime(currentTime)} / {formatMediaTime(duration)}
         </span>
       </div>
 
@@ -500,16 +678,7 @@ function AudioPlayerInner({ src, title, className, onError }: AudioPlayerProps) 
           {playing ? <PauseIcon size={14} fill="currentColor" /> : <PlayIcon size={14} fill="currentColor" className="ml-0.5" />}
         </button>
 
-        <Slider
-          value={[duration ? currentTime : 0]}
-          min={0}
-          max={duration || 1}
-          step={0.1}
-          disabled={!duration}
-          onValueChange={(value) => seek(value)}
-          size="sm"
-          className="min-w-0 flex-1 [&_[data-slot=slider-track]]:bg-bg-hover"
-        />
+        <Timeline currentTime={currentTime} duration={duration} onSeek={seek} className="min-w-0 flex-1 [&_[data-slot=slider-track]]:bg-bg-hover" />
 
         <div className="flex flex-none items-center gap-0.5">
           <MediaButton

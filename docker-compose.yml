@@ -1,17 +1,105 @@
-# No reverse proxy/SSL here — in production this runs behind Dokploy, which
-# already has its own Traefik + automatic certificates.
+# Linkord's services, for development and for running the whole stack on one machine. Production deploys the
+# image through Dokploy (docs/DEPLOY.md); the end-to-end suite has its own disposable stack (e2e/docker/compose.yml).
+#
+#   docker compose up -d                                # development: PostgreSQL, LiveKit and the mail sink,
+#                                                       # for `npm run dev` on the host (values from `.env`)
+#   docker compose --env-file .env.full up -d --build   # the full stack: the same services plus the app
+#
+# `.env.full` (from `.env.full.example`) turns on the `full` profile and names the project `linkord`, so the full
+# stack keeps its own database and volumes apart from development's (project `linkord-dev`). Without it only the
+# development services start.
+#
+# Every port is published on 127.0.0.1 only: the image trusts X-Forwarded-For (TRUST_PROXY=1), which is safe only
+# when nothing but a proxy or this machine can reach it. To serve other machines, use the `https` profile (Caddy)
+# as docs/DEPLOY.md describes.
+#
+# No variable here is `${VAR:?required}`: Compose checks those across the whole file, profiles included, which
+# would stop `docker compose up -d` in development. The values the full stack needs are listed in .env.full.example.
+name: linkord-dev
 
 services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: linkord
+      # read only when the volume is created
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-linkord}
+      POSTGRES_DB: linkord
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U linkord -d linkord"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  livekit:
+    image: livekit/livekit-server:v1.13.11
+    restart: unless-stopped
+    command: ["--config", "/etc/livekit.yaml", "--node-ip", "${LIVEKIT_NODE_IP:-127.0.0.1}"]
+    environment:
+      # the pair the app signs tokens with; devkey/secret when unset, as in LiveKit's own dev mode
+      LIVEKIT_KEYS: "${LIVEKIT_API_KEY:-devkey}: ${LIVEKIT_API_SECRET:-secret}"
+    volumes:
+      - ./docker/livekit.yaml:/etc/livekit.yaml:ro
+    ports:
+      # signalling (WebSocket); behind Caddy in the `https` profile, so it never needs to be public
+      - "127.0.0.1:7880:7880"
+      # media: browsers send to LIVEKIT_NODE_IP on these, so a remote install publishes them on 0.0.0.0
+      - "${LIVEKIT_RTC_BIND:-127.0.0.1}:7881:7881"
+      - "${LIVEKIT_RTC_BIND:-127.0.0.1}:7882:7882/udp"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:7880"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # Prints the emails the app would send (recovery, two-step login codes) to its log. Unused once
+  # RESEND_API_URL and RESEND_API_KEY point at the real Resend.
+  mailsink:
+    image: node:22-alpine
+    restart: unless-stopped
+    command: ["node", "/mailsink.mjs"]
+    volumes:
+      - ./docker/mailsink.mjs:/mailsink.mjs:ro
+    ports:
+      # for `npm run dev` on the host (RESEND_API_URL=http://localhost:8025); the app container uses mailsink:8025
+      - "127.0.0.1:8025:8025"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8025/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
   app:
+    profiles: ["full"]
     build: .
     restart: unless-stopped
     env_file:
-      - .env
-    ports:
-      - "3000:3000"
+      - .env.full
+    environment:
+      # Taken from the same variables as the postgres and livekit services above, so they always match them.
+      DATABASE_URL: postgres://linkord:${POSTGRES_PASSWORD:-linkord}@postgres:5432/linkord
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-devkey}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-secret}
+      # what browsers connect to; the server itself reaches LiveKit over the compose network
+      LIVEKIT_URL: ${LIVEKIT_URL:-ws://localhost:7880}
+      LIVEKIT_SERVER_URL: http://livekit:7880
     volumes:
-      - ./uploads:/app/uploads
-      - ./backups:/app/backups
+      - uploads:/app/uploads
+      - backups:/app/backups
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      livekit:
+        condition: service_healthy
+      mailsink:
+        condition: service_healthy
     mem_reservation: 512m
     # The log holds client addresses on security events (failed logins, refused sign-ups); rotation is
     # what bounds how long they are kept. See docs/DEPLOY.md#logs.
@@ -26,18 +114,44 @@ services:
     cap_drop:
       - ALL
 
-  # Scheduled backups, off by default: `docker compose --profile backup up -d backup`.
-  # One backup at start and then every BACKUP_INTERVAL_SECONDS (default one day) into ./backups,
-  # keeping the newest BACKUP_KEEP. Copy ./backups off this machine too; see docs/DEVELOPMENT.md#backup-and-restore.
+  # TLS in front of the app and LiveKit, for an install other machines reach: add `https` to COMPOSE_PROFILES.
+  # Needs APP_DOMAIN and LIVEKIT_DOMAIN pointing at this machine, and ports 80 and 443 open.
+  caddy:
+    profiles: ["https"]
+    image: caddy:2.11.6-alpine
+    restart: unless-stopped
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:-}
+      LIVEKIT_DOMAIN: ${LIVEKIT_DOMAIN:-}
+    volumes:
+      - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    depends_on:
+      app:
+        condition: service_healthy
+
+  # Scheduled backups, off by default: add `backup` to COMPOSE_PROFILES. One backup at start and then every
+  # BACKUP_INTERVAL_SECONDS (default one day) into the `backups` volume, keeping the newest BACKUP_KEEP.
+  # Copy them off this machine too; see docs/DEVELOPMENT.md#backup-and-restore.
   backup:
     profiles: ["backup"]
     build: .
     restart: unless-stopped
     env_file:
-      - .env
+      - .env.full
+    environment:
+      DATABASE_URL: postgres://linkord:${POSTGRES_PASSWORD:-linkord}@postgres:5432/linkord
     volumes:
-      - ./uploads:/app/uploads:ro
-      - ./backups:/app/backups
+      - uploads:/app/uploads:ro
+      - backups:/app/backups
+    depends_on:
+      postgres:
+        condition: service_healthy
     healthcheck:
       disable: true
     security_opt:
@@ -48,3 +162,10 @@ services:
       - sh
       - -c
       - 'while true; do node server/dist/scripts/backup.js || echo "backup failed" >&2; sleep "$${BACKUP_INTERVAL_SECONDS:-86400}"; done'
+
+volumes:
+  postgres_data:
+  uploads:
+  backups:
+  caddy_data:
+  caddy_config:

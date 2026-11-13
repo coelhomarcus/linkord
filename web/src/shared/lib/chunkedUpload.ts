@@ -1,6 +1,7 @@
 import { ApiError } from '@/shared/api/api';
 import { i18n } from '@/shared/i18n/init';
 import { logger } from '@/shared/lib/logger';
+import { readVideoDimensions } from './videoDimensions';
 import type { VoiceMeta } from '@/shared/types/protocol';
 
 const log = logger.child({ component: 'upload' });
@@ -52,7 +53,17 @@ const OUTAGE_WINDOW_MS = 60_000;
 const MAX_RATE_LIMIT_WAITS = 3;
 const MAX_RETRY_AFTER_MS = 60_000;
 
-export interface StagedFile { id: string; name: string; mime: string; size: number; thumbId?: string; voice?: VoiceMeta }
+export interface StagedFile {
+  id: string;
+  name: string;
+  mime: string;
+  size: number;
+  thumbId?: string;
+  width?: number;
+  height?: number;
+  placeholder?: string;
+  voice?: VoiceMeta;
+}
 
 // A 4xx from the app says the request itself is wrong (no access, too big,
 // gone) — sending it again can't help. Timeouts, rate limits, 5xx and the
@@ -112,7 +123,12 @@ interface UploadRun {
  * correlated `chat` send — see stageFileInChunks below, its only caller. */
 async function runUpload({ conversationId, file, voice, onProgress, signal }: UploadRun): Promise<unknown> {
   if (!conversationId) throw new ApiError(400, 'missing_conversation', i18n.t('upload.missingConversation'));
-  const initBody = JSON.stringify({ conversationId, fileName: file.name, mimeType: file.type || 'application/octet-stream', totalSize: file.size, ...(voice ? { voice } : {}) });
+  // read once, before init: a retried init must not wait for it again
+  const video = file.type.startsWith('video/') ? await readVideoDimensions(file) : null;
+  const initBody = JSON.stringify({
+    conversationId, fileName: file.name, mimeType: file.type || 'application/octet-stream', totalSize: file.size,
+    ...(voice ? { voice } : {}), ...(video ? { video } : {}),
+  });
   const initRes = await retrying(() => post('/api/attachments/init', initBody, 'application/json', signal), signal);
   const { uploadId, chunkSize, totalChunks } = await initRes.json() as InitResponse;
 

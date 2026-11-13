@@ -7,7 +7,8 @@ import { getConversationForUser, getDirectPeerId, touchConversation } from '../c
 import { canSendDirectMessage } from '../friendships/friendshipsRepository.js';
 import { PERMISSIONS } from '../servers/permissions.js';
 import {
-  isUserOnline, participants, send, sendSocketError, setCallConversationId, setParticipantRemovedHook,
+  callHeldElsewhere, isUserOnline, participants, refuseCallElsewhere, releaseCallsElsewhere, send, sendSocketError,
+  setCallConversationId, setCallReplacedHook, setParticipantRemovedHook,
 } from '../presence/participants.js';
 import {
   EMPTY_DM_CALLS, RING_MS, acceptDmCall, activeFor, callBetween, cancelDmCall, declineDmCall, failDmCall,
@@ -175,7 +176,19 @@ function replayEnded(socket: Participant['socket'], callId: string, reason: DmCa
   send(socket, { t: 'dm-call-ended', callId, conversationId: prior?.conversationId ?? '', reason });
 }
 
-async function handleStart(socket: AppSocket, msg: { conversationId?: string; video?: boolean }): Promise<void> {
+/** Moves the account's side of an active call to another of its connections: that one gets the
+ * media seat and a token, and the connection that had it leaves the room (setCallConversationId). */
+async function takeSeat(call: DmCall, participant: Participant): Promise<void> {
+  if (call.callerId === participant.userId) call.callerParticipantId = participant.id;
+  else call.calleeParticipantId = participant.id;
+  persist((target) => target.save(call), call.id);
+  for (const other of participants.values()) {
+    if (other.userId === participant.userId) send(other.socket, { t: 'dm-call', ...viewFor(call, other.userId, mediaFor(call, other.id)) });
+  }
+  if (!(await mint(call, participant))) apply(failDmCall(state, call.id, Date.now()));
+}
+
+async function handleStart(socket: AppSocket, msg: { conversationId?: string; video?: boolean; replace?: unknown }): Promise<void> {
   const participant = participants.get(socket.participantId ?? '');
   if (!participant || participant.socket !== socket) return;
   const conversationId = String(msg.conversationId || '');
@@ -189,6 +202,19 @@ async function handleStart(socket: AppSocket, msg: { conversationId?: string; vi
   if (!peerId || !(await canSendDirectMessage(participant.userId, peerId))) {
     sendSocketError(socket, ERROR_CODES.relationshipRequired, 'Vocês precisam ser amigos pra iniciar essa chamada.');
     return;
+  }
+  if (callHeldElsewhere(participant)) {
+    if (msg.replace !== true) {
+      refuseCallElsewhere(participant);
+      return;
+    }
+    const active = activeFor(state, participant.userId);
+    if (active && active.conversationId === conversationId) {
+      await takeSeat(active, participant);
+      return;
+    }
+    // the person asked for the call to come here: the one elsewhere ends now, not when this ring is answered
+    releaseCallsElsewhere(participant, null);
   }
   const step = apply(startDmCall(state, {
     id: crypto.randomUUID(),
@@ -209,7 +235,15 @@ function partyAction(socket: AppSocket, callId: string, run: (participant: Parti
   if (step.code === 'ended' && step.reason) replayEnded(socket, callId, step.reason);
 }
 
-function handleAccept(socket: AppSocket, msg: { callId?: string }): void {
+function handleAccept(socket: AppSocket, msg: { callId?: string; replace?: unknown }): void {
+  const participant = participants.get(socket.participantId ?? '');
+  const ringing = state.calls.find((entry) => entry.id === msg.callId && entry.phase === 'ringing');
+  // the call elsewhere leaves when this one connects (setCallConversationId), so a replace needs nothing more here
+  if (participant && participant.socket === socket && ringing?.calleeId === participant.userId
+    && msg.replace !== true && callHeldElsewhere(participant)) {
+    refuseCallElsewhere(participant);
+    return;
+  }
   partyAction(socket, String(msg.callId || ''), (participant, callId) => acceptDmCall(state, {
     callId, userId: participant.userId, participantId: participant.id, now: Date.now(),
   }));
@@ -294,6 +328,16 @@ setParticipantRemovedHook((participant) => {
     if (active && active.conversationId === participant.callConversationId && !anotherTabHolds(participant, active.conversationId)) {
       apply(leaveDmCall(state, { conversationId: active.conversationId, userId: participant.userId, now: Date.now() }));
     }
+  }
+});
+
+// Another connection of the account entered a call: a direct call the account walked out of ends for
+// both sides, as if it hung up. One that only moved to another tab of the account carries on.
+setCallReplacedHook((evicted, conversationId, next) => {
+  if (conversationId === next) return;
+  const active = activeFor(state, evicted.userId);
+  if (active && active.conversationId === conversationId) {
+    apply(leaveDmCall(state, { conversationId, userId: evicted.userId, now: Date.now() }));
   }
 });
 

@@ -151,7 +151,7 @@ describe('ConversationMediaPanel: items', () => {
     await user.click(within(viewer).getByRole('button', { name: 'Próxima' }));
     expect(await screen.findByRole('dialog', { name: 'a.png' })).toBeInTheDocument();
     expect(screen.getByText('2 / 2')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Baixar original' })).toHaveAttribute('href', '/uploads/att1');
+    expect(screen.getByRole('link', { name: 'Abrir original' })).toHaveAttribute('href', '/uploads/att1');
   });
 
   it('plays a video in the viewer', async () => {
@@ -159,7 +159,10 @@ describe('ConversationMediaPanel: items', () => {
     renderPanel();
     await userEvent.setup().click(await screen.findByRole('button', { name: 'Abrir clipe.mp4' }));
     const viewer = await screen.findByRole('dialog', { name: 'clipe.mp4' });
-    expect(within(viewer).getByLabelText('clipe.mp4', { selector: 'video' })).toHaveAttribute('src', '/uploads/att1');
+    // the chat's own player, with its controls, not a bare <video controls>
+    const player = within(viewer).getByRole('group', { name: 'clipe.mp4' });
+    expect(player).toBeInTheDocument();
+    expect(viewer.querySelector('video')).toHaveAttribute('src', '/uploads/att1');
   });
 
   it('shows a GIF tile that opens in the viewer', async () => {

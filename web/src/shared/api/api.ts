@@ -293,6 +293,20 @@ export interface LinkPreviewData {
   /** pixel size of `image` as the server measured it; absent or null when unknown */
   imageWidth?: number | null;
   imageHeight?: number | null;
+  // Absent on previews stored before protocol 21 (see LinkPreviewResult in
+  // server/src/modules/link-preview/preview.ts).
+  type?: 'link' | 'article' | 'image' | 'video' | 'audio';
+  images?: string[];
+  imageAlt?: string | null;
+  /** base64 ThumbHash of `image`, to paint while it loads (protocol 22) */
+  imagePlaceholder?: string | null;
+  /** `image` has several frames: shown still while off screen (protocol 23) */
+  imageAnimated?: boolean;
+  audio?: string | null;
+  /** a player page on an allowlisted host, for an iframe */
+  player?: string | null;
+  authorName?: string | null;
+  authorUrl?: string | null;
 }
 
 /** The KLIPY key and this account's customer id, for the GIF picker to call

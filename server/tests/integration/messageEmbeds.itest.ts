@@ -56,11 +56,18 @@ describe('message embeds (real Postgres)', () => {
     assert.deepEqual([event.conversationId, event.msgId, event.embeds[0].title], [conversationId, row.id, 'Página /page-a']);
   });
 
-  it('one preview per card the client draws: up to three, not the ones in code or <suppressed>', async () => {
-    const { owner, row } = await seed(`${base}/page-1 \`${base}/page-code\` <${base}/page-quiet> ${base}/page-2 ${base}/page-3 ${base}/page-4`);
+  it('one preview per card the client draws: up to five, not the ones in code or <suppressed>', async () => {
+    const { owner, row } = await seed(`${base}/page-1 \`${base}/page-code\` <${base}/page-quiet> ${base}/page-2 ${base}/page-3 ${base}/page-4 ${base}/page-5 ${base}/page-6`);
     await unfurlMessage(row, owner.id, allowLoopback);
     const [stored] = await db.select().from(messages).where(eq(messages.id, row.id));
-    assert.deepEqual((stored!.embeds as { url: string }[]).map((e) => e.url), [`${base}/page-1`, `${base}/page-2`, `${base}/page-3`]);
+    assert.deepEqual((stored!.embeds as { url: string }[]).map((e) => e.url), [1, 2, 3, 4, 5].map((n) => `${base}/page-${n}`));
+  });
+
+  it('does not store a preview whose fetch failed, so a later read tries again', async () => {
+    const { owner, row } = await seed(`site down ${base}/down`);
+    await unfurlMessage(row, owner.id, allowLoopback);
+    const [stored] = await db.select().from(messages).where(eq(messages.id, row.id));
+    assert.equal(stored!.embeds, null);
   });
 
   it('does not store it if the message was edited meanwhile', async () => {

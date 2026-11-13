@@ -1,7 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import { detectEmbed } from '@/shared/lib/chatEmbeds';
 import { highlightCode } from '@/shared/lib/highlightCode';
 import type { PublicUser, RoleSummary } from '@/shared/types/protocol';
 import type { LinkPreviewData } from '@/shared/api/api';
@@ -12,10 +11,10 @@ import { cn } from '@/shared/lib/utils';
 import { emojiOnlyCount, isSingleEmoji } from '@/shared/lib/isSingleEmoji';
 import { CustomEmojiImage } from '@/features/emoji/CustomEmojiImage';
 import { ChatEmbed } from './ChatEmbed';
-import { inviteCodeFromLink } from '@/features/servers/inviteCode';
 import { GifMessage } from '@/features/gifs/GifMessage';
 import { gifMessageUrl } from '@/features/gifs/klipyMedia';
-import { GROUP_MENTION_NAMES, parseMessage, previewableLinks, type Block, type Inline } from './messageMarkup';
+import { GROUP_MENTION_NAMES, parseMessage, spoileredLinks, type Block, type Inline } from './messageMarkup';
+import { messageEmbedLinks } from './messageEmbedLinks';
 import { EmojiText } from '@/features/emoji/Emoji';
 
 interface RenderContext {
@@ -99,8 +98,35 @@ function renderInline(nodes: Inline[], ctx: RenderContext): ReactNode[] {
       case 'bold': return <strong key={index} className="font-semibold text-text-primary">{renderInline(node.children, ctx)}</strong>;
       case 'italic': return <em key={index}>{renderInline(node.children, ctx)}</em>;
       case 'strike': return <s key={index}>{renderInline(node.children, ctx)}</s>;
+      case 'spoiler': return <Spoiler key={index}>{renderInline(node.children, ctx)}</Spoiler>;
     }
   });
+}
+
+/** ||Hidden text||, Discord's way: a dark block until clicked (or Enter/Space),
+ * then the text with a faint background. While hidden, what is inside can't
+ * be read, focused or clicked (`invisible`, `inert`): a link in it stays shut. */
+function Spoiler({ children }: { children: ReactNode }) {
+  const { t } = useTranslation('chat');
+  const [revealed, setRevealed] = useState(false);
+  if (revealed) return <span className="rounded-sm bg-fill-subtle">{children}</span>;
+  return (
+    <span
+      role="button"
+      tabIndex={0}
+      aria-label={t('media.spoiler')}
+      data-spoiler="hidden"
+      onClick={(event) => { event.stopPropagation(); setRevealed(true); }}
+      onKeyDown={(event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        setRevealed(true);
+      }}
+      className="cursor-pointer rounded-sm bg-text-muted outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+    >
+      <span inert className="invisible">{children}</span>
+    </span>
+  );
 }
 
 // Discord's cut-off: more emojis than this and they stay text-sized
@@ -198,17 +224,8 @@ interface ChatMessageTextProps {
 
 export function ChatMessageText({ text, mentionLookup, myUserId, onOpenProfile, embeds: previews, suppressedEmbeds, noPreviews, roles, mentionEveryone }: ChatMessageTextProps) {
   const blocks = useMemo(() => parseMessage(text), [text]);
-  // keyed by the link as written (what the server keeps for a removed card), not the embed's own url
-  const embeds = useMemo(() => {
-    if (noPreviews) return [];
-    const removed = new Set(suppressedEmbeds ?? []);
-    return previewableLinks(blocks).flatMap((link) => {
-      // an invite to this instance gets MessageRow's server card instead
-      if (inviteCodeFromLink(link)) return [];
-      const embed = removed.has(link) ? null : detectEmbed(link);
-      return embed ? [{ link, embed }] : [];
-    });
-  }, [blocks, suppressedEmbeds, noPreviews]);
+  const embeds = useMemo(() => (noPreviews ? [] : messageEmbedLinks(blocks, suppressedEmbeds)), [blocks, suppressedEmbeds, noPreviews]);
+  const spoilered = useMemo(() => spoileredLinks(blocks), [blocks]);
   const jumbo = useMemo(() => isSingleEmoji(text) || isServerEmojiOnly(blocks), [text, blocks]);
   const ctx: RenderContext = { jumbo, mentionLookup, myUserId, onOpenProfile, roles, mentionEveryone };
   // a GIF message is only its KLIPY URL: show the GIF, not the link and a preview of it
@@ -239,7 +256,7 @@ export function ChatMessageText({ text, mentionLookup, myUserId, onOpenProfile, 
           offers removing it); `contents` keeps the card's own box and widths */}
       {embeds.map(({ link, embed }) => (
         <div key={link} data-embed-link={link} className="contents">
-          <ChatEmbed embed={embed} preview={previews?.find((preview) => preview.url === embed.url)} />
+          <ChatEmbed embed={embed} preview={previews?.find((preview) => preview.url === embed.url)} spoiler={spoilered.has(link)} />
         </div>
       ))}
     </>

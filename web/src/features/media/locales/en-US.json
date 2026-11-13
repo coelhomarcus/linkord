@@ -15,9 +15,26 @@
   "collection": {
     "itemPosition": "{{name}}, {{index}} of {{total}}",
     "image": "Image",
-    "downloadOriginal": "Download original",
     "previous": "Previous",
     "next": "Next"
+  },
+  "viewer": {
+    "download": "Download",
+    "openOriginal": "Open original",
+    "copyLink": "Copy link",
+    "copyImage": "Copy image",
+    "moreActions": "More actions",
+    "thumbnails": "Message media",
+    "zoomControls": "Zoom",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "reset": "Original size",
+    "rotateLeft": "Rotate left",
+    "rotateRight": "Rotate right",
+    "reply": "Reply",
+    "jumpToMessage": "Go to message",
+    "removeAttachment": "Remove attachment",
+    "deleteMessage": "Delete message"
   },
   "embed": {
     "previewFailed": "Could not load the preview.",
@@ -28,7 +45,13 @@
     "loadPlayer": "Click to load player",
     "loadVideo": "Load video from {{host}}",
     "loadAudio": "Load audio from {{host}}",
-    "loadNotice": "Loading it shows {{host}} your IP address."
+    "loadNotice": "Loading it shows {{host}} your IP address.",
+    "altText": "Show the image's alt text",
+    "moreActions": "More embed actions",
+    "spoiler": "Spoiler",
+    "galleryImage": "Open image {{index}} of {{count}}",
+    "galleryMore_one": "Open gallery, {{count}} more image",
+    "galleryMore_other": "Open gallery, {{count}} more images"
   },
   "player": {
     "volume": "Volume",
@@ -40,7 +63,17 @@
     "download": "Download",
     "fullscreen": "Fullscreen",
     "video": "video",
-    "audio": "audio"
+    "audio": "audio",
+    "videoPlayer": "Video player",
+    "seek": "Playback position",
+    "timeValue": "{{current}} of {{total}}",
+    "playbackRate": "Speed",
+    "playbackRateValue": "Playback speed: {{rate}}",
+    "rateValue": "{{rate}}×",
+    "normalRate": "{{rate}} (normal)",
+    "pictureInPicture": "Picture-in-picture",
+    "exitPictureInPicture": "Exit picture-in-picture",
+    "exitFullscreen": "Exit fullscreen"
   },
   "preview": {
     "showLess": "Show less",

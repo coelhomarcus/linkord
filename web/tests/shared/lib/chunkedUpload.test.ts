@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { stageFileInChunks } from '@/shared/lib/chunkedUpload';
+import { readVideoDimensions } from '@/shared/lib/videoDimensions';
+
+vi.mock('@/shared/lib/videoDimensions', () => ({ readVideoDimensions: vi.fn(async () => null) }));
 
 function json(status: number, body: unknown, headers: Record<string, string> = {}) {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', ...headers } });
@@ -86,5 +89,45 @@ describe('stageFileInChunks', () => {
     vi.stubGlobal('fetch', fetchMock);
     await expect(stageFileInChunks({ conversationId: 'c', file: new File(['a'], 'a.pdf') })).rejects.toMatchObject({ status: 403 });
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  describe('a video', () => {
+    function initBodies(fetchMock: ReturnType<typeof vi.fn>): Record<string, unknown>[] {
+      return fetchMock.mock.calls
+        .filter(([url]) => url === '/api/attachments/init')
+        .map(([, init]) => JSON.parse((init as RequestInit).body as string));
+    }
+
+    function serverAccepting() {
+      return vi.fn(async (url: string, _init?: RequestInit) => {
+        if (url === '/api/attachments/init') return json(201, { uploadId: 'u1', chunkSize: 10, totalChunks: 1 });
+        if (url.includes('/chunk/')) return json(200, { received: 0 });
+        return json(201, { staged: { id: 'u1', name: 'clip.mp4', mime: 'video/mp4', size: 3, width: 1080, height: 1920 } });
+      });
+    }
+
+    it('sends the size the browser read with init', async () => {
+      vi.mocked(readVideoDimensions).mockResolvedValueOnce({ width: 1080, height: 1920 });
+      const fetchMock = serverAccepting();
+      vi.stubGlobal('fetch', fetchMock);
+      const staged = await stageFileInChunks({ conversationId: 'c', file: new File(['abc'], 'clip.mp4', { type: 'video/mp4' }) });
+      expect(initBodies(fetchMock)).toEqual([expect.objectContaining({ video: { width: 1080, height: 1920 } })]);
+      expect(staged).toMatchObject({ width: 1080, height: 1920 });
+    });
+
+    it('uploads without a size when the browser cannot read one', async () => {
+      vi.mocked(readVideoDimensions).mockResolvedValueOnce(null);
+      const fetchMock = serverAccepting();
+      vi.stubGlobal('fetch', fetchMock);
+      await stageFileInChunks({ conversationId: 'c', file: new File(['abc'], 'clip.webm', { type: 'video/webm' }) });
+      expect(initBodies(fetchMock)[0]).not.toHaveProperty('video');
+    });
+
+    it('does not read anything that is not a video', async () => {
+      vi.mocked(readVideoDimensions).mockClear();
+      vi.stubGlobal('fetch', serverAccepting());
+      await stageFileInChunks({ conversationId: 'c', file: new File(['abc'], 'a.pdf', { type: 'application/pdf' }) });
+      expect(readVideoDimensions).not.toHaveBeenCalled();
+    });
   });
 });

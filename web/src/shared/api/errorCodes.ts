@@ -9,6 +9,7 @@ export const ERROR_CODES = {
   too_many_connections: 'too_many_connections',
   'livekit-unavailable': 'livekit-unavailable',
   'call-not-allowed': 'call-not-allowed',
+  'call-elsewhere': 'call-elsewhere',
   'message-not-found': 'message-not-found',
   // shared by HTTP and socket
   forbidden: 'forbidden',

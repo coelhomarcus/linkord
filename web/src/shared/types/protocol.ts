@@ -28,8 +28,8 @@ export type ReactionEmoji = string;
 
 /** Wire protocol version this build speaks; the server refuses older ones
  * (client_outdated). Keep in sync with server/src/realtime/protocolVersion.ts
- * — version 10 adds presence status. */
-export const PROTOCOL_VERSION = 19;
+ * — version 23 adds `imageAnimated` to link previews and `||spoiler||` text. */
+export const PROTOCOL_VERSION = 23;
 
 /** One server's or one channel/DM's notification setting (protocol 19). `level` null inherits: a channel
  * from its server, a server or a DM from "all". `mutedUntil` (ISO) is only read while `muted`, and null
@@ -336,10 +336,11 @@ export type ClientMessage =
   | { t: 'chat-suppress-embed'; msgId: number; url: string; requestId?: string }
   | { t: 'chat-react'; msgId: number; emoji: ReactionEmoji; present?: boolean; requestId?: string }
   | { t: 'typing'; conversationId: string; value: boolean }
-  | { t: 'call-join'; conversationId: string }
+  // `replace`: the person agreed to move the call the account holds on another connection to this one
+  | { t: 'call-join'; conversationId: string; replace?: boolean }
   | { t: 'call-leave' }
-  | { t: 'dm-call-start'; conversationId: string; video?: boolean }
-  | { t: 'dm-call-accept'; callId: string }
+  | { t: 'dm-call-start'; conversationId: string; video?: boolean; replace?: boolean }
+  | { t: 'dm-call-accept'; callId: string; replace?: boolean }
   | { t: 'dm-call-decline'; callId: string }
   | { t: 'dm-call-cancel'; callId: string }
   | { t: 'call-kick'; participantId: string }
@@ -395,6 +396,8 @@ export type ServerMessage =
   | { t: 'dm-call-ended'; callId: string; conversationId: string; reason: DmCallEndReason }
   // a moderator moved this connection: it already left its call, join this one
   | { t: 'call-moved'; conversationId: string }
+  // another connection of this account entered a call: this one is already out of this call
+  | { t: 'call-replaced'; conversationId: string }
   // someone hovered this connection's "ao vivo" badge: send a frame of the share
   | { t: 'stream-preview-capture' }
   // null when there is no still to show (not sharing anymore, no answer, no access)

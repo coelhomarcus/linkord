@@ -3,7 +3,8 @@ import { db } from '../../db/client.js';
 import { messages } from '../../db/schema.js';
 import { broadcastToConversationMembers } from '../conversations/conversationsRepository.js';
 import { detectEmbed } from '../link-preview/embeds.js';
-import { fetchLinkPreviewData, withProxiedImages, type LinkPreviewResult } from '../link-preview/linkPreview.js';
+import { fetchLinkPreviewData, withProxiedImages } from '../link-preview/linkPreview.js';
+import type { LinkPreviewResult } from '../link-preview/preview.js';
 import { previewableLinks } from '../link-preview/messageLinks.js';
 import { logger } from '../../lib/logger.js';
 
@@ -52,7 +53,9 @@ export function needsEmbeds(message: { text: string; embeds?: unknown; suppresse
 
 /** Fetches the previews a message is missing, stores them, and tells the
  * conversation. Best-effort: rate limited or failed, a card just keeps no
- * stored preview and readers fetch it the old way. Stored only if the text is
+ * stored preview and readers fetch it the old way. A failed fetch is not
+ * stored, so the next read tries again (a site down for a minute must not
+ * leave its message without a card for good). Stored only if the text is
  * still the one they were fetched for (an edit may have raced it). Never
  * throws. */
 export async function unfurlMessage(message: EmbeddableMessage & { embeds?: unknown }, userId: string, lookup?: Lookup): Promise<void> {
@@ -62,7 +65,8 @@ export async function unfurlMessage(message: EmbeddableMessage & { embeds?: unkn
   if (!missing.length) return;
   for (const url of missing) {
     try {
-      embeds.push(await fetchLinkPreviewData(url, userId, lookup));
+      const preview = await fetchLinkPreviewData(url, userId, lookup);
+      if (preview) embeds.push(preview);
     } catch {
       break; // rate limited: what was fetched is still worth storing
     }

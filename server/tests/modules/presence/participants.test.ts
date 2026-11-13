@@ -5,6 +5,7 @@ import type { AppSocket, Participant } from '../../../src/types.js';
 import {
   participants, join, removeParticipant, handleClose, isUserOnline, setCallConversationId, publicParticipant,
   broadcastToKnownPeers, handlers, restoreCallParticipants, setCallPresenceStore, FLAG_UPDATE_INTERVAL_MS,
+  callHeldElsewhere, refuseCallElsewhere, releaseCallsElsewhere, setCallReplacedHook,
   type CallPresenceStore, type RestorableCallParticipant,
 } from '../../../src/modules/presence/participants.js';
 
@@ -363,6 +364,111 @@ describe('setCallConversationId', () => {
     assert.equal(p.cameraOn, false);
     assert.equal(p.sharing, false);
     assert.equal(p.speaking, false);
+  });
+});
+
+describe('one call per account', () => {
+  function recordingSocket(userId: string): AppSocket & { sent: { t: string; [key: string]: unknown }[] } {
+    const sent: { t: string; [key: string]: unknown }[] = [];
+    return Object.assign(fakeSocket(userId), { sent, emit: (_event: string, payload: { t: string }) => { sent.push(payload); } });
+  }
+
+  function connect(userId: string, v?: number) {
+    const socket = recordingSocket(userId);
+    const p = joinP(socket, v === undefined ? {} : { v })!;
+    createdIds.push(p.id);
+    return { p, socket };
+  }
+
+  afterEach(() => setCallReplacedHook(null));
+
+  test('entering a call takes the account\'s other connection out of its own, and tells that tab why', () => {
+    const userId = `u-${Math.random()}`;
+    const phone = connect(userId);
+    const desktop = connect(userId);
+    setCallConversationId(phone.p, 'voice-1');
+    phone.socket.sent.length = 0;
+
+    setCallConversationId(desktop.p, 'voice-2');
+
+    assert.equal(phone.p.callConversationId, null);
+    assert.equal(desktop.p.callConversationId, 'voice-2');
+    assert.deepEqual(phone.socket.sent.find((m) => m.t === 'call-replaced'), { t: 'call-replaced', conversationId: 'voice-1' });
+  });
+
+  test('moving within the same call still leaves a single connection in it', () => {
+    const userId = `u-${Math.random()}`;
+    const phone = connect(userId);
+    const desktop = connect(userId);
+    setCallConversationId(phone.p, 'voice-1');
+
+    setCallConversationId(desktop.p, 'voice-1');
+
+    const inCall = [...participants.values()].filter((p) => p.userId === userId && p.callConversationId);
+    assert.deepEqual(inCall.map((p) => p.id), [desktop.p.id]);
+  });
+
+  test('the other tab leaves before the new one shows up, so nobody sees the account in two calls', () => {
+    const userId = `u-${Math.random()}`;
+    const phone = connect(userId);
+    const desktop = connect(userId);
+    setCallConversationId(phone.p, 'voice-1');
+    const watcher = connect(userId);
+    watcher.socket.sent.length = 0;
+
+    setCallConversationId(desktop.p, 'voice-2');
+
+    const updates = watcher.socket.sent
+      .filter((m) => m.t === 'participant-updated')
+      .map((m) => (m.participant as { id: string; callConversationId: string | null }));
+    assert.deepEqual(updates.map((u) => [u.id, u.callConversationId]), [[phone.p.id, null], [desktop.p.id, 'voice-2']]);
+  });
+
+  test('other accounts keep their calls', () => {
+    const mine = connect(`u-${Math.random()}`);
+    const theirs = connect(`u-${Math.random()}`);
+    setCallConversationId(theirs.p, 'voice-1');
+
+    setCallConversationId(mine.p, 'voice-1');
+
+    assert.equal(theirs.p.callConversationId, 'voice-1');
+  });
+
+  test('a connection waiting out its reconnect grace still holds the call', () => {
+    const userId = `u-${Math.random()}`;
+    const phone = connect(userId);
+    const desktop = connect(userId);
+    setCallConversationId(phone.p, 'voice-1');
+    handleClose(phone.socket);
+
+    assert.equal(callHeldElsewhere(desktop.p), phone.p);
+    assert.equal(callHeldElsewhere(phone.p), null);
+  });
+
+  test('the hook hears which call was left and which one replaced it', () => {
+    const userId = `u-${Math.random()}`;
+    const phone = connect(userId);
+    const desktop = connect(userId);
+    setCallConversationId(phone.p, 'dm-1');
+    const heard: unknown[] = [];
+    setCallReplacedHook((evicted, conversationId, next) => heard.push([evicted.id, conversationId, next]));
+
+    releaseCallsElsewhere(desktop.p, null);
+
+    assert.deepEqual(heard, [[phone.p.id, 'dm-1', null]]);
+    assert.equal(phone.p.callConversationId, null);
+  });
+
+  test('a protocol 20 tab is refused with call-elsewhere, an older one with the code it already handles', () => {
+    const userId = `u-${Math.random()}`;
+    const current = connect(userId, 20);
+    const old = connect(userId, 19);
+
+    refuseCallElsewhere(current.p);
+    refuseCallElsewhere(old.p);
+
+    assert.equal(current.socket.sent.find((m) => m.t === 'error')?.code, 'call-elsewhere');
+    assert.equal(old.socket.sent.find((m) => m.t === 'error')?.code, 'call-not-allowed');
   });
 });
 

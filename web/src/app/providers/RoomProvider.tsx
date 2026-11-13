@@ -24,6 +24,8 @@ import { useMessageSearch } from '@/features/chat/useMessageSearch';
 import { usePresence } from '@/state/hooks/usePresence';
 import { useCallLifecycle } from '@/features/calls/useCallLifecycle';
 import { useDmCall } from '@/features/calls/useDmCall';
+import { useCallMoveGate } from '@/features/calls/useCallMoveGate';
+import { findCallElsewhere } from '@/features/calls/callElsewhere';
 import { captureScreenPreview } from '@/features/calls/captureScreenPreview';
 import { streamPreviewStore } from '@/features/calls/streamPreviewStore';
 import { useRoomSettings } from '@/features/settings/useRoomSettings';
@@ -182,6 +184,33 @@ export function RoomProvider({ children }: { children: ReactNode }) {
     activeCallId: () => callLifecycle.activeCallConversationId,
     myUserId: () => myUserIdRef.current,
   });
+  // The server keeps an account in one call: the one another tab or device is in shows in this tab,
+  // and taking it from there is asked first.
+  const callElsewhere = useMemo(
+    () => findCallElsewhere(state.participants.values(), { id: state.me.id, userId: state.me.userId }, allConversations),
+    [state.participants, state.me.id, state.me.userId, allConversations],
+  );
+  const callElsewhereRef = useRef(callElsewhere);
+  useEffect(() => { callElsewhereRef.current = callElsewhere; }, [callElsewhere]);
+  const callMove = useCallMoveGate(() => callElsewhereRef.current !== null);
+  const { request: requestCall, onRefused: onCallElsewhereRefused } = callMove;
+  const { joinCall: joinCallNow } = callLifecycle;
+  const { startDmCall: startDmCallNow, acceptDmCall: acceptDmCallNow } = dmCall;
+  const joinCall = useCallback((conversationId: string, hooks?: { onSent?: () => void; onDropped?: () => void }) => {
+    requestCall({
+      send: (replace) => {
+        hooks?.onSent?.();
+        void joinCallNow(conversationId, { replace });
+      },
+      drop: hooks?.onDropped,
+    });
+  }, [requestCall, joinCallNow]);
+  const startDmCall = useCallback((conversationId: string, video: boolean) => {
+    requestCall({ send: (replace) => startDmCallNow(conversationId, video, replace) });
+  }, [requestCall, startDmCallNow]);
+  const acceptDmCall = useCallback(() => {
+    requestCall({ send: (replace) => acceptDmCallNow(replace) });
+  }, [requestCall, acceptDmCallNow]);
   const soundboardEvents = useSoundboardEvents({
     activeCallConversationId: callLifecycle.activeCallConversationId,
     deafened: callLifecycle.deafened,
@@ -261,7 +290,8 @@ export function RoomProvider({ children }: { children: ReactNode }) {
           callLifecycle.syncLocalMedia();
           // a direct call being resumed carries its own token right after this welcome
           const serverCallId = m.dmCall?.media ? m.dmCall.conversationId : m.callConversationId;
-          callLifecycle.reconcileAfterReconnect(serverCallId, (id) => (m.conversations ?? []).some((c) => c.id === id));
+          const heldElsewhere = m.participants.some((p) => p.userId === m.userId && p.id !== m.id && !!p.callConversationId);
+          callLifecycle.reconcileAfterReconnect(serverCallId, (id) => (m.conversations ?? []).some((c) => c.id === id), heldElsewhere);
           const activeId = conversationsList.activeConversationIdRef.current;
           const stillThere = (m.conversations ?? []).some((c) => c.id === activeId)
             || (m.servers ?? []).some((server) => server.channels.some((c) => c.id === activeId));
@@ -283,6 +313,9 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         break;
       case 'call-moved':
         callLifecycle.onCallMoved(m.conversationId);
+        break;
+      case 'call-replaced':
+        callLifecycle.onCallReplaced(m.conversationId);
         break;
       case 'stream-preview-capture':
         void captureScreenPreview(livekitRoom).then((image) => { if (image) sendWs({ t: 'stream-preview-frame', image }); });
@@ -461,6 +494,11 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         } else if (m.code === ERROR_CODES.too_many_connections) {
           disconnectIntentionally();
           dispatch({ type: 'SET_ROOM_ERROR', message: m.message || i18n.t('room.tooManyConnections') });
+        } else if (m.code === ERROR_CODES['call-elsewhere']) {
+          // another tab or device entered a call before this request arrived: ask to move it here
+          dmCall.consumeStartAttempt();
+          callLifecycle.abandonPendingJoin();
+          if (!onCallElsewhereRefused()) setActionError(m.message);
         } else if (m.code === ERROR_CODES.quota_exceeded || m.code === ERROR_CODES.forbidden || m.code === ERROR_CODES.conflict || m.code === ERROR_CODES.not_found) {
           const started = dmCall.consumeStartAttempt();
           if (started) dispatch({ type: 'SET_CALL_JOIN_ERROR', error: { conversationId: started, message: m.message } });
@@ -484,6 +522,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
     dispatch, conversationsList, serversList, presence, openConversation, sendWs, callLifecycle, dmCall,
     messageSearch, chatMessages, typingIndicator, disconnectIntentionally, profileUpdate, soundboardEvents, livekitRoom,
     onStatusSnapshot, onMyStatus, onPresenceResult, onIdleWelcome, refreshAuth, onNotificationSettingsWelcome, onNotificationSettingsChanged,
+    onCallElsewhereRefused,
   ]);
 
   const { retryConnection } = useSocketConnection({ socketRef, intentionalCloseRef, sendWs, dispatch, refreshAuth, onMessage: handleServerMessage });
@@ -514,8 +553,9 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         reconnecting: callLifecycle.reconnecting,
         livekitRoom, notifyActiveView,
         registerRequestChatView, requestChatView, registerOpenCall, openCall,
-        activeCallConversationId: callLifecycle.activeCallConversationId, joinCall: callLifecycle.joinCall, leaveCall: callLifecycle.leaveCall,
-        startDmCall: dmCall.startDmCall, acceptDmCall: dmCall.acceptDmCall, declineDmCall: dmCall.declineDmCall, cancelDmCall: dmCall.cancelDmCall,
+        activeCallConversationId: callLifecycle.activeCallConversationId, joinCall, leaveCall: callLifecycle.leaveCall,
+        callElsewhere, callMove: { open: callMove.open, confirm: callMove.confirm, cancel: callMove.cancel },
+        startDmCall, acceptDmCall, declineDmCall: dmCall.declineDmCall, cancelDmCall: dmCall.cancelDmCall, dismissDmCallNotice: dmCall.dismissDmCallNotice,
         dmCall: dmCall.dmCall, dmStartedAt: dmCall.dmStartedAt, dmStageConversationId: dmCall.dmStageConversationId, clearDmStage: dmCall.clearDmStage,
         startSharing, stopSharing, changeSource, pauseSharePreview, resumeSharePreview,
         shareQuality: roomSettings.shareQuality, setShareQuality: roomSettings.setShareQuality,
