@@ -270,6 +270,57 @@ test.describe('link cards', () => {
   });
 });
 
+test.describe('timeline scroll', () => {
+  test('a row growing near the end keeps a reader at the end there, and leaves one who scrolled up where they are', async ({ users }) => {
+    const alice = await users.create('alice');
+    const server = await createServer(alice.api, 'E2E rolagem');
+    const created = await alice.api.post(`/api/channels/${server.text.id}/webhooks`, { data: { name: 'Relatórios' } });
+    const { webhook } = await created.json() as { webhook: { url: string } };
+    const post = async (content: string) => expect((await alice.api.post(new URL(webhook.url).pathname, { data: { content } })).ok()).toBe(true);
+    // well past a screen, and under the webhook's 30 sends a minute with the arrival below
+    for (let i = 1; i <= 20; i++) await post(`mensagem ${i}\nsegunda linha\nterceira linha`);
+    const a = await alice.app();
+    await a.openChannel(server.id, server.text.id);
+    await a.page.locator('[data-scroll-root][data-settled]').waitFor();
+
+    const metrics = () => a.page.evaluate(async () => {
+      // two frames: the resize is measured, then the list re-renders
+      for (let i = 0; i < 2; i++) await new Promise((resolve) => requestAnimationFrame(resolve));
+      const el = document.querySelector<HTMLElement>('[data-scroll-root]')!;
+      return { top: el.scrollTop, fromEnd: el.scrollHeight - el.clientHeight - el.scrollTop };
+    });
+    // what a video near the end does when it learns its real shape late
+    const growLastMessage = () => a.page.evaluate(() => {
+      const rows = [...document.querySelectorAll<HTMLElement>('[data-scroll-root] [data-index]')];
+      const last = rows.sort((x, y) => Number(y.dataset.index) - Number(x.dataset.index))[0]!;
+      const grow = document.createElement('div');
+      grow.style.height = '150px';
+      last.appendChild(grow);
+    });
+    const scrollBy = (dy: number) => a.page.evaluate((delta) => document.querySelector('[data-scroll-root]')!.scrollBy(0, delta), dy);
+
+    await expect.poll(async () => (await metrics()).fromEnd).toBeLessThanOrEqual(1);
+    await growLastMessage();
+    await expect.poll(async () => (await metrics()).fromEnd).toBeLessThanOrEqual(1);
+
+    // just started scrolling up, still within the new-messages threshold
+    await scrollBy(-30);
+    const before = await metrics();
+    expect(before.fromEnd).toBeGreaterThan(20);
+    await growLastMessage();
+    for (let i = 0; i < 5; i++) expect(Math.abs((await metrics()).top - before.top)).toBeLessThanOrEqual(1);
+
+    // a new message there still brings the reader to the present
+    await scrollBy(10_000);
+    await expect.poll(async () => (await metrics()).fromEnd).toBeLessThanOrEqual(1);
+    await scrollBy(-30);
+    expect((await metrics()).fromEnd).toBeGreaterThan(20);
+    await post('chegou agora');
+    await a.expectMessage('chegou agora');
+    await expect.poll(async () => (await metrics()).fromEnd).toBeLessThanOrEqual(1);
+  });
+});
+
 test.describe('unread', () => {
   const NEW_MESSAGES = { name: 'Novas Mensagens' };
   const JUMP = { name: 'Pular para a primeira não lida' };
