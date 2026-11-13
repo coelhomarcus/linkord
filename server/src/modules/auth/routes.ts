@@ -24,6 +24,7 @@ import { clientIpOf, sessionOriginOf } from '../../http/clientInfo.js';
 import { recordAudit } from '../admin/auditLog.js';
 import type { SessionUser } from '../../types.js';
 import * as ratelimit from './ratelimit.js';
+import { usernameTag } from './logPseudonym.js';
 import { db } from '../../db/client.js';
 import { users } from '../../db/schema.js';
 import { logger } from '../../lib/logger.js';
@@ -209,13 +210,13 @@ async function handleLogin(request: FastifyRequest, reply: FastifyReply): Promis
     // Counted whether or not the password was right: the same work for both keeps this from telling them apart.
     await ratelimit.recordFailure(ipKey);
     await ratelimit.recordFailure(userKey);
-    log.warn('login refused for a blocked account', { username, ip: ipOfRequest(request) });
+    log.warn('login refused for a blocked account', { ...failedLoginName(user, username), ip: ipOfRequest(request) });
     return rateLimitedReply(reply, userBlockedSec);
   }
   if (!user || !ok) {
     await ratelimit.recordFailure(ipKey);
     await ratelimit.recordFailure(userKey);
-    log.warn('login failed', { username, ip: ipOfRequest(request) });
+    log.warn('login failed', { ...failedLoginName(user, username), ip: ipOfRequest(request) });
     return sendError(reply, 401, 'invalid_credentials', 'Usuário ou senha inválidos.');
   }
 
@@ -246,6 +247,12 @@ async function handleLogin(request: FastifyRequest, reply: FastifyReply): Promis
   setSessionCookie(request, reply, rawToken);
   log.info('login', { userId: user.id, username: user.username });
   sendJson(reply, 200, await signedIn(request, user));
+}
+
+/** Who a failed login was for, without the typed name: it may be the person's password. A name that
+ * matched an account was a real username, so its id is safe; anything else is only a tag. */
+function failedLoginName(user: User | null, typed: string): { userId: string } | { usernameTag: string } {
+  return user ? { userId: user.id } : { usernameTag: usernameTag(typed) };
 }
 
 /** The answer to a sign-in that created a session. Signing in is what cancels a scheduled deletion, and

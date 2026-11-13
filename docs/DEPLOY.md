@@ -129,6 +129,16 @@ To schedule it, use the compose `backup` service (`docker compose --profile back
 
 Run a single container. The server keeps live state in its own memory (who is online and in which call, caches, flood limits, upload reservations), Socket.IO has no shared adapter, and files live on the local disk, so a second instance behind a load balancer would not see the first one's users, calls or limits. What would have to change: [DEVELOPMENT.md](DEVELOPMENT.md#single-instance-assumption).
 
+## Logs
+
+The server writes one JSON line per record to stdout and stderr (`LOG_FORMAT=json`, the production default); keeping them is the container runtime's job. What they hold about people:
+
+- **Client addresses** only on security events: failed or refused logins, refused sign-ups and wrong invite codes, refused login or recovery codes, and refused socket connections past the per-address limit. Routine records (a socket joining, an outdated client) carry none.
+- **Failed logins never carry the typed username**, since people type their password there by mistake. A name that matched an account is logged as that account's `userId`; any other as `usernameTag`, a 12-character keyed hash that repeats for the same name until the next restart and cannot be reversed from the log.
+- **Browser errors** (`POST /api/client-logs`) are always under the `client` component with the reporting `userId`, or `null` when signed out. A signed-out page can only produce `warn` records (an `error` it sent is kept as `warn` with `reportedLevel: "error"`), so alerts on `error` only see the server and signed-in clients, and control characters in the message are replaced with spaces.
+
+Keep logs for at most **30 days**. The compose file rotates them at 5 files of 10 MB, which on a small instance is days to a few weeks; with Dokploy, or any other log collector, set the same bound in its log settings. The addresses stored with each login session (Settings → Security) are database data and follow the session, not this policy.
+
 ## Troubleshooting
 
 - **An API call answers 500 with only "Erro interno." and a `requestId`.** The server never sends the cause of an unexpected error to the client (it may contain SQL or file paths). Search the log for that value as `reqId`: the `error in a route` line has the full error and stack. The same id is in the response's `x-request-id` header.

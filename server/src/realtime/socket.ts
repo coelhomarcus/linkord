@@ -145,7 +145,7 @@ function cancelDeferredJoin(socket: AppSocket): void {
 async function handleJoin(socket: AppSocket, msg: JoinMessage): Promise<void> {
   // before anything is looked up or sent: an outdated client gets nothing but the reason
   if (!isClientCompatible(msg.v)) {
-    log.warn('join refused: outdated client', { version: msg.v ?? null, ip: socket.ip });
+    log.warn('join refused: outdated client', { version: msg.v ?? null });
     sendSocketError(socket, 'client_outdated', 'Há uma versão nova do Linkord. Atualize a página.');
     setTimeout(() => { try { socket.disconnect(true); } catch { /* already gone */ } }, 100).unref();
     return;
@@ -209,7 +209,7 @@ async function handleJoin(socket: AppSocket, msg: JoinMessage): Promise<void> {
   presenceStatus.syncPresence(p.userId);
   if (justCameOnline && !isInvisible(p.userId)) broadcastToKnownPeers(p.userId, { t: 'user-online', userId: p.userId });
   if (dmCall?.connect) await dmCalls.finishDmCallWelcome(p);
-  log.info('joined', { participantId: p.id, username: p.name, ip: socket.ip });
+  log.info('joined', { participantId: p.id, username: p.name });
 }
 
 /** Joins a voice channel: mints a LiveKit token for that room and sets
