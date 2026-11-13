@@ -186,11 +186,8 @@
     "accept": "Accept",
     "decline": "Decline",
     "cancel": "Cancel",
-    "declined": "Call declined",
-    "cancelled": "Call cancelled",
-    "missed": "Missed call",
-    "ended": "Call ended",
     "failed": "Couldn't connect the call",
+    "close": "Close",
     "someone": "Someone",
     "status": {
       "muted": "Muted",

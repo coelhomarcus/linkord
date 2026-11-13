@@ -186,11 +186,8 @@
     "accept": "Atender",
     "decline": "Recusar",
     "cancel": "Cancelar",
-    "declined": "Chamada recusada",
-    "cancelled": "Chamada cancelada",
-    "missed": "Chamada não atendida",
-    "ended": "Chamada encerrada",
     "failed": "Não foi possível conectar a chamada",
+    "close": "Fechar",
     "someone": "Alguém",
     "status": {
       "muted": "Microfone desativado",

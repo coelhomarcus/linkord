@@ -42,6 +42,7 @@ export function createFakeRoomContextValue(overrides: Partial<RoomContextValue> 
     acceptDmCall: noop,
     declineDmCall: noop,
     cancelDmCall: noop,
+    dismissDmCallNotice: noop,
     dmCall: null,
     dmStartedAt: null,
     dmStageConversationId: null,

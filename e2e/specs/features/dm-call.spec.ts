@@ -16,11 +16,15 @@ async function friendsInTheirDm(users: { create(prefix?: string): Promise<User> 
 const call = (app: AppPage, video = false) => app.page.getByRole('button', { name: video ? 'Ligar com vídeo' : 'Ligar', exact: true }).first().click();
 
 test.describe('DM calls', () => {
-  test('declining a ring tells the caller, and no call starts', async ({ users }) => {
-    const { a, b } = await friendsInTheirDm(users);
+  test('declining a ring closes the caller\'s dialog, leaves a line in the chat, and no call starts', async ({ users }) => {
+    const { alice, bob, a, b } = await friendsInTheirDm(users);
     await call(a);
+    await expect(a.page.getByRole('dialog', { name: bob.username })).toBeVisible();
     await b.page.getByRole('button', { name: 'Recusar' }).click();
-    await expect(a.page.getByText('Chamada recusada')).toBeVisible();
+    await expect(a.page.getByRole('dialog')).toHaveCount(0);
+    await expect(b.page.getByRole('dialog')).toHaveCount(0);
+    await expect(a.page.getByText('Você iniciou uma chamada.')).toBeVisible();
+    await expect(b.page.getByText(`${alice.username} iniciou uma chamada.`)).toBeVisible();
     await expect(a.tiles()).toHaveCount(0);
   });
 

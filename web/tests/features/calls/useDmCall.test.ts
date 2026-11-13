@@ -55,6 +55,42 @@ describe('useDmCall', () => {
     expect(outgoing.armDmMedia).not.toHaveBeenCalled();
   });
 
+  describe('when a call ends', () => {
+    it('clears the ringing notice, since the DM records the call', () => {
+      for (const reason of ['declined', 'cancelled', 'missed', 'ended'] as const) {
+        const { result } = setup();
+        act(() => result.current.onDmCall(incoming));
+        act(() => result.current.onEnded({ callId: 'k', conversationId: 'c1', reason }));
+        expect(result.current.dmCall).toBeNull();
+      }
+    });
+
+    it('keeps a failure on screen until it is dismissed', () => {
+      vi.useFakeTimers();
+      try {
+        const { result } = setup();
+        act(() => result.current.onDmCall(incoming));
+        act(() => result.current.onEnded({ callId: 'k', conversationId: 'c1', reason: 'failed' }));
+        expect(result.current.dmCall).toMatchObject({ phase: 'ended', reason: 'failed', peerId: 'peer' });
+        act(() => vi.advanceTimersByTime(60_000));
+        expect(result.current.dmCall?.reason).toBe('failed');
+        act(() => result.current.dismissDmCallNotice());
+        expect(result.current.dmCall).toBeNull();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('a failure of another call does not replace one that is ringing', () => {
+      const { result } = setup();
+      act(() => result.current.onDmCall(incoming));
+      act(() => result.current.onEnded({ callId: 'other', conversationId: 'c2', reason: 'failed' }));
+      expect(result.current.dmCall).toMatchObject({ callId: 'k', phase: 'incoming' });
+      act(() => result.current.dismissDmCallNotice());
+      expect(result.current.dmCall?.phase).toBe('incoming');
+    });
+  });
+
   describe('an answer given while the socket is down', () => {
     function offline() {
       const harness = setup();

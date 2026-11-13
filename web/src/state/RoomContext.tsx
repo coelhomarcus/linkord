@@ -76,6 +76,8 @@ export interface RoomContextValue {
   acceptDmCall: () => void;
   declineDmCall: () => void;
   cancelDmCall: () => void;
+  /** Closes the notice of a call that failed to connect. */
+  dismissDmCallNotice: () => void;
   dmCall: DmCallNotice | null;
   /** Set while this tab is in an active DM, so the dock can show how long it has lasted. */
   dmStartedAt: number | null;

@@ -515,7 +515,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         livekitRoom, notifyActiveView,
         registerRequestChatView, requestChatView, registerOpenCall, openCall,
         activeCallConversationId: callLifecycle.activeCallConversationId, joinCall: callLifecycle.joinCall, leaveCall: callLifecycle.leaveCall,
-        startDmCall: dmCall.startDmCall, acceptDmCall: dmCall.acceptDmCall, declineDmCall: dmCall.declineDmCall, cancelDmCall: dmCall.cancelDmCall,
+        startDmCall: dmCall.startDmCall, acceptDmCall: dmCall.acceptDmCall, declineDmCall: dmCall.declineDmCall, cancelDmCall: dmCall.cancelDmCall, dismissDmCallNotice: dmCall.dismissDmCallNotice,
         dmCall: dmCall.dmCall, dmStartedAt: dmCall.dmStartedAt, dmStageConversationId: dmCall.dmStageConversationId, clearDmStage: dmCall.clearDmStage,
         startSharing, stopSharing, changeSource, pauseSharePreview, resumeSharePreview,
         shareQuality: roomSettings.shareQuality, setShareQuality: roomSettings.setShareQuality,
