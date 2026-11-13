@@ -185,8 +185,12 @@ function Shell() {
   }
 
   function handleOpenCall(conversationId: string) {
-    pendingStageRef.current = conversationId;
-    joinCall(conversationId);
+    // "connecting" only once the join is on its way: one waiting to move the call from another tab
+    // shows the lobby, and stays there if the person keeps the call where it is
+    joinCall(conversationId, {
+      onSent: () => { pendingStageRef.current = conversationId; },
+      onDropped: () => { if (pendingStageRef.current === conversationId) pendingStageRef.current = null; },
+    });
     navigate(stagePath(conversationId), { state: { from: currentPath() } });
   }
 

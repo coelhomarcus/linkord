@@ -70,8 +70,9 @@ export interface RoomContextValue {
   registerOpenCall: (fn: (conversationId: string) => void) => void;
   openCall: (conversationId: string) => void;
   activeCallConversationId: string | null;
-  /** Asks first (callMove) when the account is in a call on another tab or device. */
-  joinCall: (conversationId: string) => void;
+  /** Asks first (callMove) when the account is in a call on another tab or device: `onSent` runs
+   * when the join actually goes out, `onDropped` when the person keeps the call where it is. */
+  joinCall: (conversationId: string, hooks?: { onSent?: () => void; onDropped?: () => void }) => void;
   /** The account's call on another tab or device, or null: the server allows one call per account. */
   callElsewhere: CallElsewhere | null;
   /** The question asked before this tab takes that call (CallMoveDialog). */

@@ -196,14 +196,20 @@ export function RoomProvider({ children }: { children: ReactNode }) {
   const { request: requestCall, onRefused: onCallElsewhereRefused } = callMove;
   const { joinCall: joinCallNow } = callLifecycle;
   const { startDmCall: startDmCallNow, acceptDmCall: acceptDmCallNow } = dmCall;
-  const joinCall = useCallback((conversationId: string) => {
-    requestCall((replace) => { void joinCallNow(conversationId, { replace }); });
+  const joinCall = useCallback((conversationId: string, hooks?: { onSent?: () => void; onDropped?: () => void }) => {
+    requestCall({
+      send: (replace) => {
+        hooks?.onSent?.();
+        void joinCallNow(conversationId, { replace });
+      },
+      drop: hooks?.onDropped,
+    });
   }, [requestCall, joinCallNow]);
   const startDmCall = useCallback((conversationId: string, video: boolean) => {
-    requestCall((replace) => startDmCallNow(conversationId, video, replace));
+    requestCall({ send: (replace) => startDmCallNow(conversationId, video, replace) });
   }, [requestCall, startDmCallNow]);
   const acceptDmCall = useCallback(() => {
-    requestCall((replace) => acceptDmCallNow(replace));
+    requestCall({ send: (replace) => acceptDmCallNow(replace) });
   }, [requestCall, acceptDmCallNow]);
   const soundboardEvents = useSoundboardEvents({
     activeCallConversationId: callLifecycle.activeCallConversationId,

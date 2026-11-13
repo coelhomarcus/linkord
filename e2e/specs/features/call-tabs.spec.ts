@@ -52,6 +52,7 @@ test.describe('one call per account across tabs', () => {
     await expect(moveDialog(second)).toHaveCount(0);
     await expect(first.page.getByText('Em chamada')).toBeVisible();
     await expect(second.page.getByText('Em chamada')).toHaveCount(0);
+    await expect(second.page.getByText('Conectando à chamada…')).toHaveCount(0);
 
     // moving it
     await second.page.getByRole('button', { name: server.voice.name, exact: true }).click();

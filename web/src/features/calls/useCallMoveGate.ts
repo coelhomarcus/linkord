@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-/** A request to enter a call; `replace` tells the server the person agreed to move the account's call here. */
-type CallAttempt = (replace: boolean) => void;
+/** A request to enter a call. `send`'s `replace` tells the server the person agreed to move the
+ * account's call here; `drop` runs when the person keeps the call where it is instead. */
+export interface CallAttempt {
+  send: (replace: boolean) => void;
+  drop?: () => void;
+}
 
 /** Asks before a call request takes the account's call away from another tab or device. A request
  * goes out at once when nothing is held elsewhere; otherwise it waits for `confirm`. If the server
@@ -15,6 +19,7 @@ export function useCallMoveGate(heldElsewhere: () => boolean) {
   useEffect(() => { heldElsewhereRef.current = heldElsewhere; });
 
   const ask = useCallback((attempt: CallAttempt) => {
+    pendingRef.current?.drop?.();
     pendingRef.current = attempt;
     setOpen(true);
   }, []);
@@ -26,7 +31,7 @@ export function useCallMoveGate(heldElsewhere: () => boolean) {
       return;
     }
     lastSentRef.current = attempt;
-    attempt(false);
+    attempt.send(false);
   }, [ask]);
 
   const onRefused = useCallback((): boolean => {
@@ -41,12 +46,14 @@ export function useCallMoveGate(heldElsewhere: () => boolean) {
     const attempt = pendingRef.current;
     pendingRef.current = null;
     setOpen(false);
-    attempt?.(true);
+    attempt?.send(true);
   }, []);
 
   const cancel = useCallback(() => {
+    const attempt = pendingRef.current;
     pendingRef.current = null;
     setOpen(false);
+    attempt?.drop?.();
   }, []);
 
   return { open, request, confirm, cancel, onRefused };
