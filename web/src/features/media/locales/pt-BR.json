@@ -28,7 +28,13 @@
     "loadPlayer": "Clique para carregar o player",
     "loadVideo": "Carregar vídeo de {{host}}",
     "loadAudio": "Carregar áudio de {{host}}",
-    "loadNotice": "Ao carregar, {{host}} vê o seu endereço IP."
+    "loadNotice": "Ao carregar, {{host}} vê o seu endereço IP.",
+    "altText": "Ver o texto alternativo da imagem",
+    "moreActions": "Mais ações da incorporação",
+    "spoiler": "Spoiler",
+    "galleryImage": "Abrir imagem {{index}} de {{count}}",
+    "galleryMore_one": "Abrir galeria, mais {{count}} imagem",
+    "galleryMore_other": "Abrir galeria, mais {{count}} imagens"
   },
   "player": {
     "volume": "Volume",

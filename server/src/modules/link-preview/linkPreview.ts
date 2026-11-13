@@ -3,6 +3,7 @@ import { config } from '../../config/env.js';
 import { sendJson, sendError } from '../../http/respond.js';
 import { parseCookies } from '../../http/cookies.js';
 import { resolveSession } from '../auth/session.js';
+import sharp from 'sharp';
 import { readImageDimensions, readImagePlaceholder } from '../attachments/attachmentThumbnails.js';
 import { mediaProxy, PREVIEW_REDIRECTS } from '../media-proxy/mediaProxy.js';
 import { allowedTarget, proxiedImageUrl } from '../media-proxy/mediaProxyUrls.js';
@@ -79,6 +80,10 @@ export function withProxiedImages(preview: LinkPreviewResult): LinkPreviewResult
   return sent;
 }
 
+async function frameCount(body: Buffer): Promise<number> {
+  try { return (await sharp(body, { animated: true }).metadata()).pages ?? 1; } catch { return 1; }
+}
+
 /** The preview's picture, fetched through the media proxy (whose cache then
  * already holds it for the readers to come): its size as displayed, and a
  * blurred placeholder, made once here instead of by every reader. A picture
@@ -93,12 +98,13 @@ async function withPictureDetails(preview: LinkPreviewResult | null, userId: str
   } catch {
     return preview;
   }
-  const [size, placeholder] = await Promise.all([readImageDimensions(body), readImagePlaceholder(body)]);
+  const [size, placeholder, frames] = await Promise.all([readImageDimensions(body), readImagePlaceholder(body), frameCount(body)]);
   return {
     ...preview,
     imageWidth: size?.width ?? preview.imageWidth,
     imageHeight: size?.height ?? preview.imageHeight,
     imagePlaceholder: placeholder,
+    ...(frames > 1 ? { imageAnimated: true } : {}),
   };
 }
 

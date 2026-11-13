@@ -300,6 +300,8 @@ export interface LinkPreviewData {
   imageAlt?: string | null;
   /** base64 ThumbHash of `image`, to paint while it loads (protocol 22) */
   imagePlaceholder?: string | null;
+  /** `image` has several frames: shown still while off screen (protocol 23) */
+  imageAnimated?: boolean;
   audio?: string | null;
   /** a player page on an allowlisted host, for an iframe */
   player?: string | null;

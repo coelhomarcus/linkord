@@ -128,6 +128,64 @@ test.describe('chat', () => {
   });
 });
 
+test.describe('link cards', () => {
+  // A page the server can't reach (a reserved name that never resolves), so it
+  // stores no preview and the reader's tab asks /api/link-preview, answered
+  // here: the stack refuses private addresses (SSRF guard), and a spec must
+  // not depend on the internet. Its pictures come from a same-origin path.
+  const ARTICLE = 'https://news.e2e.example/artigo';
+  const GALLERY = 'https://photos.e2e.example/album';
+  const picture = (n: number) => `/e2e-fixture/foto-${n}.png`;
+
+  async function stubPreviews(app: AppPage): Promise<void> {
+    await app.page.route('**/e2e-fixture/*.png', (route) => route.fulfill({ contentType: 'image/png', body: PNG }));
+    await app.page.route('**/api/link-preview?**', async (route) => {
+      const url = new URL(route.request().url()).searchParams.get('url');
+      const base = { url, video: null, favicon: null, themeColor: '#3b82f6', imageWidth: 1200, imageHeight: 630 };
+      if (url === ARTICLE) {
+        return route.fulfill({ json: { ...base, type: 'article', title: 'Uma matéria de teste', description: 'O resumo da matéria.', siteName: 'Notícias E2E', image: picture(1), images: [picture(1)] } });
+      }
+      if (url === GALLERY) {
+        const images = [1, 2, 3].map(picture);
+        return route.fulfill({ json: { ...base, type: 'article', title: 'Um álbum', description: null, siteName: 'Fotos E2E', image: images[0], images } });
+      }
+      return route.continue();
+    });
+  }
+
+  test('an article gets its rich card, a page with several pictures a gallery that opens the viewer', async ({ users }) => {
+    const { a, b } = await twoInAChannel(users);
+    await stubPreviews(b);
+    await a.send(`leia ${ARTICLE}`);
+    const article = b.message('leia').locator('[data-embed-layout="article"]');
+    await expect(article.getByRole('link', { name: 'Uma matéria de teste' })).toBeVisible();
+    await expect(article.getByText('O resumo da matéria.')).toBeVisible();
+    await expect(article.locator('[data-embed-image] img').last()).toHaveAttribute('src', picture(1));
+
+    await a.send(`fotos ${GALLERY}`);
+    const gallery = b.message('fotos');
+    await expect(gallery.getByRole('button', { name: 'Abrir imagem 1 de 3' })).toBeVisible();
+    await gallery.getByRole('button', { name: 'Abrir imagem 2 de 3' }).click();
+    const viewer = b.page.getByRole('dialog', { name: 'Um álbum' });
+    await expect(viewer).toBeVisible();
+    await expect(viewer.getByText('2 / 3')).toBeVisible();
+  });
+
+  test('two YouTube links in one message: starting the second stops the first', async ({ users }) => {
+    const { a, b } = await twoInAChannel(users);
+    await a.send('dois vídeos https://youtu.be/dQw4w9WgXcQ https://youtu.be/9bZkp7q19f0');
+    const row = b.message('dois vídeos');
+    const play = row.getByRole('button', { name: 'Reproduzir vídeo' });
+    await expect(play).toHaveCount(2);
+    await play.first().click();
+    await expect(row.locator('iframe[title="YouTube"]')).toHaveAttribute('src', /\/embed\/dQw4w9WgXcQ/);
+    await row.getByRole('button', { name: 'Reproduzir vídeo' }).click();
+    await expect(row.locator('iframe[title="YouTube"]')).toHaveCount(1);
+    await expect(row.locator('iframe[title="YouTube"]')).toHaveAttribute('src', /\/embed\/9bZkp7q19f0/);
+    await expect(row.getByRole('button', { name: 'Reproduzir vídeo' })).toHaveCount(1);
+  });
+});
+
 test.describe('unread', () => {
   const NEW_MESSAGES = { name: 'Novas Mensagens' };
   const JUMP = { name: 'Pular para a primeira não lida' };

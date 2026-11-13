@@ -19,6 +19,11 @@ describe('previewableLinks (mirror of the client)', () => {
     assert.deepEqual(previewableLinks('olha isso: https://site.com/a. e (veja https://b.com/x)'), ['https://site.com/a', 'https://b.com/x']);
   });
 
+  test('a link inside a ||spoiler|| still counts, its address whole', () => {
+    assert.deepEqual(previewableLinks('||https://ex.com/post|| e https://open.com'), ['https://ex.com/post', 'https://open.com']);
+    assert.deepEqual(messageMentions('||@ana|| oi').usernames, ['ana']);
+  });
+
   test('links inside emphasis, quotes and lists count', () => {
     assert.deepEqual(previewableLinks('**https://a.com**\n> https://b.com\n- https://c.com'), ['https://a.com', 'https://b.com', 'https://c.com']);
   });

@@ -28,8 +28,8 @@ export type ReactionEmoji = string;
 
 /** Wire protocol version this build speaks; the server refuses older ones
  * (client_outdated). Keep in sync with server/src/realtime/protocolVersion.ts
- * — version 22 adds `imagePlaceholder` to link previews. */
-export const PROTOCOL_VERSION = 22;
+ * — version 23 adds `imageAnimated` to link previews and `||spoiler||` text. */
+export const PROTOCOL_VERSION = 23;
 
 /** One server's or one channel/DM's notification setting (protocol 19). `level` null inherits: a channel
  * from its server, a server or a DM from "all". `mutedUntil` (ISO) is only read while `muted`, and null

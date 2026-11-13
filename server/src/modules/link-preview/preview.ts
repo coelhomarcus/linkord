@@ -33,6 +33,9 @@ export interface LinkPreviewResult {
   /** A blurred stand-in for `image` (base64 ThumbHash), for the box to show
    * while the picture loads, like an attachment's `placeholder`. */
   imagePlaceholder?: string | null;
+  /** `image` has more than one frame (an animated GIF or WebP): the client
+   * shows its still first frame while it is off screen. */
+  imageAnimated?: boolean;
   /** A direct audio file (its content type was checked). */
   audio?: string | null;
   /** A player page on an allowlisted host, meant for an iframe. */

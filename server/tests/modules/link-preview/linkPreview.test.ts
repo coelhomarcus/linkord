@@ -285,3 +285,27 @@ describe('fetchLinkPreviewData — cache', () => {
     assert.equal(b.title, 'Tracked');
   });
 });
+
+describe('fetchLinkPreviewData — animated pictures', () => {
+  let page: Awaited<ReturnType<typeof startPageServer>>;
+  before(async () => {
+    const frames = await Promise.all(['#f00', '#0f0'].map((background) => sharp({ create: { width: 30, height: 20, channels: 3, background } }).png().toBuffer()));
+    const gif = await sharp(frames, { join: { animated: true } }).gif({ delay: [100, 100] }).toBuffer();
+    const still = await sharp({ create: { width: 30, height: 20, channels: 3, background: '#00f' } }).png().toBuffer();
+    page = await startPageServer({
+      '/moving': (_req, res) => { res.setHeader('content-type', 'text/html'); res.end('<html><head><title>M</title><meta property="og:image" content="/a.gif"></head></html>'); },
+      '/still': (_req, res) => { res.setHeader('content-type', 'text/html'); res.end('<html><head><title>S</title><meta property="og:image" content="/s.png"></head></html>'); },
+      '/a.gif': (_req, res) => { res.setHeader('content-type', 'image/gif'); res.end(gif); },
+      '/s.png': (_req, res) => { res.setHeader('content-type', 'image/png'); res.end(still); },
+    });
+  });
+  after(() => page.close());
+
+  test('marks an animated picture, and says nothing of a still one', async () => {
+    const moving = (await fetchLinkPreviewData(`${page.base}/moving`, 'animated-user-1', loopback))!;
+    assert.equal(moving.imageAnimated, true);
+    assert.deepEqual([moving.imageWidth, moving.imageHeight], [30, 20], 'one frame\'s size');
+    const still = (await fetchLinkPreviewData(`${page.base}/still`, 'animated-user-2', loopback))!;
+    assert.equal('imageAnimated' in still, false);
+  });
+});

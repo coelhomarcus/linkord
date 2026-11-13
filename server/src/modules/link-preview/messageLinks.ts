@@ -11,7 +11,8 @@ type Inline =
   | { type: 'link'; url: string; suppressed: boolean }
   | { type: 'mention'; name: string }
   | { type: 'roleMention'; roleId: string }
-  | { type: 'emphasis'; children: Inline[] };
+  | { type: 'emphasis'; children: Inline[] }
+  | { type: 'spoiler'; children: Inline[] };
 
 type Block = { type: 'paragraph' | 'quote'; children: Inline[] } | { type: 'code' } | { type: 'list'; items: Inline[][] };
 
@@ -26,6 +27,7 @@ const INLINE_RE = new RegExp([
   '<(https?:\\/\\/[^\\s<>]+)>',
   '(https?:\\/\\/[^\\s<>"\']+)',
   '(?<![\\w@.])@([A-Za-z0-9_.-]{1,20})',
+  '\\|\\|(.+?)\\|\\|',
   '\\*\\*(.+?)\\*\\*',
   '~~(.+?)~~',
   '\\*([^*\\s](?:[^*]*?[^*\\s])?)\\*',
@@ -47,7 +49,7 @@ function parseInline(text: string): Inline[] {
   const nodes: Inline[] = [];
   const re = new RegExp(INLINE_RE);
   for (let match = re.exec(text); match; match = re.exec(text)) {
-    const [, code, roleId, suppressed, url, mention, bold, strike, starItalic, underItalic] = match;
+    const [, code, roleId, suppressed, url, mention, spoiler, bold, strike, starItalic, underItalic] = match;
     if (code !== undefined) nodes.push({ type: 'code' });
     else if (roleId !== undefined) nodes.push({ type: 'roleMention', roleId });
     else if (suppressed !== undefined) nodes.push({ type: 'link', url: suppressed, suppressed: true });
@@ -59,7 +61,8 @@ function parseInline(text: string): Inline[] {
       const name = mention.replace(/\.+$/, '');
       nodes.push({ type: 'mention', name });
       re.lastIndex = match.index + 1 + name.length;
-    } else nodes.push({ type: 'emphasis', children: parseInline((bold ?? strike ?? starItalic ?? underItalic)!) });
+    } else if (spoiler !== undefined) nodes.push({ type: 'spoiler', children: parseInline(spoiler) });
+    else nodes.push({ type: 'emphasis', children: parseInline((bold ?? strike ?? starItalic ?? underItalic)!) });
   }
   return nodes;
 }
@@ -111,7 +114,7 @@ function parseMessage(text: string): Block[] {
 function collectInline(nodes: Inline[], out: string[]) {
   for (const node of nodes) {
     if (node.type === 'link' && !node.suppressed) out.push(node.url);
-    else if (node.type === 'emphasis') collectInline(node.children, out);
+    else if (node.type === 'emphasis' || node.type === 'spoiler') collectInline(node.children, out);
   }
 }
 
@@ -146,7 +149,7 @@ function collectMentions(nodes: Inline[], out: { names: Set<string>; roleIds: Se
   for (const node of nodes) {
     if (node.type === 'mention') out.names.add(node.name.toLowerCase());
     else if (node.type === 'roleMention') out.roleIds.add(node.roleId);
-    else if (node.type === 'emphasis') collectMentions(node.children, out);
+    else if (node.type === 'emphasis' || node.type === 'spoiler') collectMentions(node.children, out);
   }
 }
 

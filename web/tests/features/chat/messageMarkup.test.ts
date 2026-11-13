@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseInline, parseMessage, previewableLinks, trimUrl } from '@/features/chat/messageMarkup';
+import { parseInline, parseMessage, previewableLinks, spoileredLinks, trimUrl } from '@/features/chat/messageMarkup';
 
 describe('parseInline', () => {
   it('bold, italic, strikethrough and code', () => {
@@ -119,5 +119,25 @@ describe('parseInline — role mentions', () => {
 
   it('@everyone and @here parse like names; the renderer tells them apart', () => {
     expect(parseInline('@everyone @here')).toEqual([{ type: 'mention', name: 'everyone' }, { type: 'text', text: ' ' }, { type: 'mention', name: 'here' }]);
+  });
+});
+
+describe('spoilers', () => {
+  it('||text|| is a spoiler, and what is inside it is still formatted', () => {
+    expect(parseInline('olha ||o **final**|| aqui')).toEqual([
+      { type: 'text', text: 'olha ' },
+      { type: 'spoiler', children: [{ type: 'text', text: 'o ' }, { type: 'bold', children: [{ type: 'text', text: 'final' }] }] },
+      { type: 'text', text: ' aqui' },
+    ]);
+  });
+
+  it('a link inside one keeps its address whole and still gets a card, marked as hidden', () => {
+    const blocks = parseMessage('||https://ex.com/post|| e https://open.com');
+    expect(previewableLinks(blocks)).toEqual(['https://ex.com/post', 'https://open.com']);
+    expect([...spoileredLinks(blocks)]).toEqual(['https://ex.com/post']);
+  });
+
+  it('a lone pair of bars is just text', () => {
+    expect(parseInline('a || b')).toEqual([{ type: 'text', text: 'a || b' }]);
   });
 });

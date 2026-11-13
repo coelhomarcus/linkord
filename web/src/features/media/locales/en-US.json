@@ -28,7 +28,13 @@
     "loadPlayer": "Click to load player",
     "loadVideo": "Load video from {{host}}",
     "loadAudio": "Load audio from {{host}}",
-    "loadNotice": "Loading it shows {{host}} your IP address."
+    "loadNotice": "Loading it shows {{host}} your IP address.",
+    "altText": "Show the image's alt text",
+    "moreActions": "More embed actions",
+    "spoiler": "Spoiler",
+    "galleryImage": "Open image {{index}} of {{count}}",
+    "galleryMore_one": "Open gallery, {{count}} more image",
+    "galleryMore_other": "Open gallery, {{count}} more images"
   },
   "player": {
     "volume": "Volume",

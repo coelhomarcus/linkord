@@ -20,7 +20,7 @@ Linkord is a self-hosted place to chat and call with friends. Talk in direct mes
 **Chat**
 - Direct messages and private servers with text channels, organized into categories.
 - Replies, reactions, edits, deletes, and message search.
-- Attachments, voice messages, and automatic YouTube and Twitch embeds.
+- Attachments, voice messages, and link cards: rich previews with galleries, YouTube and Twitch players (one playing at a time), and `||spoiler||` text and links.
 - Mentions of members, roles, `@everyone` and `@here`.
 - Emojis, GIFs, and stickers, plus custom emojis and stickers per server.
 - Unread markers that sync across tabs and devices.

@@ -178,7 +178,8 @@ describe('LinkPreview — size measured by the server', () => {
     vi.stubGlobal('fetch', respond(previewJson({ image: 'https://ex.com/og.png', imageWidth: 1200, imageHeight: 630 })));
     const { container } = render(<LinkPreview embed={{ kind: 'link', url: 'https://ex.com' }} />);
     await screen.findByText('Exemplo');
-    const frame = container.querySelector('img[src="https://ex.com/og.png"]')!.parentElement!;
+    const frame = container.querySelector<HTMLElement>('[data-embed-image]')!;
+    expect(frame.querySelector('img[src="https://ex.com/og.png"]')).not.toBeNull();
     expect(frame.style.aspectRatio).toBe('1200 / 630');
   });
 
@@ -186,7 +187,7 @@ describe('LinkPreview — size measured by the server', () => {
     vi.stubGlobal('fetch', respond(previewJson({ image: 'https://ex.com/og.png' })));
     const { container } = render(<LinkPreview embed={{ kind: 'link', url: 'https://ex.com' }} />);
     await screen.findByText('Exemplo');
-    const frame = container.querySelector('img[src="https://ex.com/og.png"]')!.parentElement!;
+    const frame = container.querySelector<HTMLElement>('[data-embed-image]')!;
     expect(frame.style.aspectRatio).toBe('');
     expect(frame.className.split(/\s+/)).toContain('h-70');
   });
@@ -231,15 +232,17 @@ describe('LinkPreview — pictures through our own proxy', () => {
     expect(sources.some((src) => src?.includes('attacker.example'))).toBe(false);
   });
 
-  it('paints the stored placeholder behind the picture until it loads', () => {
+  it('paints the stored placeholder under the picture, which fades in over it, then lets it go', async () => {
     const placeholder = 'IQgSLYZ6iHePh4h1eFeHh4dwVw==';
     const { container } = render(
       <LinkPreview embed={{ kind: 'link', url: 'https://ex.com' }} preview={preview({ image: '/api/media-proxy/preview/sig?u=b2c', imagePlaceholder: placeholder })} />,
     );
     const img = [...container.querySelectorAll('img')].find((el) => isVariantOf(el.getAttribute('src'), '/api/media-proxy/preview/sig?u=b2c'))!;
-    expect(img.style.backgroundImage).toMatch(/^url\("?data:image\/png/);
+    expect(container.querySelector('[data-preview-placeholder]')?.getAttribute('src')).toMatch(/^data:image\/png/);
+    expect(img.className.split(/\s+/)).toEqual(expect.arrayContaining(['opacity-0', 'transition-opacity', 'duration-200', 'motion-reduce:transition-none']));
     fireEvent.load(img);
-    expect(img.style.backgroundImage).toBe('');
+    expect(img.className.split(/\s+/)).toContain('opacity-100');
+    await vi.waitFor(() => expect(container.querySelector('[data-preview-placeholder]')).toBeNull());
   });
 
   it('shows the open-link fallback when the server has no picture for the link', async () => {

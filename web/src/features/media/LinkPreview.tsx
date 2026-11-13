@@ -15,9 +15,10 @@ import { embedImageBox, previewImageSize, type ImageSize } from './embedImageBox
 import { useNearViewport } from './useNearViewport';
 import { canLoadMediaUrl } from './mediaUrl';
 import { PreviewImage } from './PreviewImage';
-import { proxiedImageVariant } from '@/shared/lib/mediaProxy';
+import { EmbedMenuButton } from './EmbedMenuButton';
+import { useAnimatedVariant } from './useAnimatedVariant';
 
-type ProxiedImage = { src: string | null; size: ImageSize | null; placeholder: string | null; failed: boolean };
+type ProxiedImage = { src: string | null; size: ImageSize | null; placeholder: string | null; animated: boolean; failed: boolean };
 
 // the Media grid sizes its columns in CSS; this covers the widest of them
 const GRID_IMAGE_WIDTH = 400;
@@ -42,10 +43,10 @@ function useProxiedImage(url: string, ref: RefObject<HTMLElement | null>, enable
       .catch(() => { if (!cancelled) setFetched(null); });
     return () => { cancelled = true; };
   }, [url, near, needsFetch]);
-  if (!enabled) return { src: null, size: null, placeholder: null, failed: false };
-  if (signed !== undefined) return { src: signed, size: null, placeholder: null, failed: !signed };
+  if (!enabled) return { src: null, size: null, placeholder: null, animated: false, failed: false };
+  if (signed !== undefined) return { src: signed, size: null, placeholder: null, animated: false, failed: !signed };
   const data = known ?? fetched;
-  return { src: data?.image ?? null, size: previewImageSize(stored) ?? firstSize, placeholder: data?.imagePlaceholder ?? null, failed: data === null || (!!data && !data.image) };
+  return { src: data?.image ?? null, size: previewImageSize(stored) ?? firstSize, placeholder: data?.imagePlaceholder ?? null, animated: !!data?.imageAnimated, failed: data === null || (!!data && !data.image) };
 }
 
 function EmbedFailedFallback({ url, className }: { url: string; className: string }) {
@@ -87,9 +88,12 @@ interface LinkPreviewProps {
   /** a direct image link's proxied address, signed by the server with the
    * media page (null: the server will not proxy it) */
   imageUrl?: string | null;
+  /** the card sits in a chat message: it gets the keyboard way into the
+   * message's menu (EmbedMenuButton) */
+  menu?: boolean;
 }
 
-export function LinkPreview({ embed, className = '', edgeToEdge, fitContainer, preview, imageUrl }: LinkPreviewProps) {
+export function LinkPreview({ embed, className = '', edgeToEdge, fitContainer, preview, imageUrl, menu }: LinkPreviewProps) {
   const [failed, setFailed] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const surfaceWidth = useChatSurfaceWidth(384 + 120);
@@ -97,9 +101,12 @@ export function LinkPreview({ embed, className = '', edgeToEdge, fitContainer, p
   const boxRef = useRef<HTMLButtonElement | null>(null);
   const image = useProxiedImage(embed.url, boxRef, embed.kind === 'image', preview, imageUrl);
   const knownSize = fitContainer ? null : image.size;
+  const box = embedImageBox(knownSize, maxWidth);
+  // the box's size, not the picture's: the full one opens in the lightbox
+  const drawnSrc = useAnimatedVariant(boxRef, image.src, fitContainer ? GRID_IMAGE_WIDTH : box.width, image.animated);
 
   if (embed.kind === 'youtube' || embed.kind === 'twitch-channel' || embed.kind === 'twitch-vod' || embed.kind === 'twitch-clip' || embed.kind === 'link') {
-    return <GenericEmbed key={embed.url} embed={embed} className={className} edgeToEdge={edgeToEdge} preview={preview} />;
+    return <GenericEmbed key={embed.url} embed={embed} className={className} edgeToEdge={edgeToEdge} preview={preview} menu={menu} />;
   }
 
   // a picture comes through the proxy, so only its proxied address must be loadable
@@ -123,27 +130,29 @@ export function LinkPreview({ embed, className = '', edgeToEdge, fitContainer, p
   }
 
   const rounding = edgeToEdge ? 'rounded-lg' : 'rounded-md border border-border';
-  const box = embedImageBox(knownSize, maxWidth);
   return (
     <>
-      <button
-        ref={boxRef}
-        type="button"
-        onClick={() => setLightboxOpen(true)}
-        style={fitContainer ? undefined : { width: box.width, maxWidth: '100%', height: box.height }}
-        className={`block max-w-full cursor-zoom-in ${fitContainer ? '' : `overflow-hidden bg-fill-subtle ${rounding}`} ${className}`}
-      >
-        <PreviewImage
-          // the box's size, not the picture's: the full one opens in the lightbox
-          src={image.src ? proxiedImageVariant(image.src, { width: fitContainer ? GRID_IMAGE_WIDTH : box.width }) : undefined}
-          placeholder={image.placeholder}
-          onError={() => setFailed(true)}
-          // a known size means the box has the picture's own proportions, so it
-          // is filled (a pixel of rounding cropped at most); an unknown one is
-          // only fitted inside the fallback box, whatever shape it turns out to be
-          className={fitContainer ? `block h-auto max-h-70 max-w-full w-full object-contain ${rounding}` : `block size-full ${knownSize ? 'object-cover' : 'object-contain'}`}
-        />
-      </button>
+      <div className={`group/embed relative max-w-full ${fitContainer ? 'w-full' : 'w-fit'}`}>
+        <button
+          ref={boxRef}
+          type="button"
+          onClick={() => setLightboxOpen(true)}
+          style={fitContainer ? undefined : { width: box.width, maxWidth: '100%', height: box.height }}
+          className={`block max-w-full cursor-zoom-in ${fitContainer ? '' : `overflow-hidden bg-fill-subtle ${rounding}`} ${className}`}
+        >
+          <PreviewImage
+            src={drawnSrc ?? undefined}
+            placeholder={image.placeholder}
+            frameClassName={fitContainer ? '' : 'size-full'}
+            onError={() => setFailed(true)}
+            // a known size means the box has the picture's own proportions, so it
+            // is filled (a pixel of rounding cropped at most); an unknown one is
+            // only fitted inside the fallback box, whatever shape it turns out to be
+            className={fitContainer ? `block h-auto max-h-70 max-w-full w-full object-contain ${rounding}` : `block size-full ${knownSize ? 'object-cover' : 'object-contain'}`}
+          />
+        </button>
+        {menu && <EmbedMenuButton />}
+      </div>
       {image.src && <ImageLightbox src={image.src} alt="" open={lightboxOpen} onOpenChange={setLightboxOpen} />}
     </>
   );
