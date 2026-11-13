@@ -7,7 +7,9 @@ import { listVisibleOnlineUserIds } from '../modules/presence/participants.js';
 import { sendError } from './respond.js';
 import { handleRouteError } from './errorHandler.js';
 import { originGuard } from './originGuard.js';
-import { registerHealthRoute } from './health.js';
+import { createReadinessCheck, registerHealthRoute } from './health.js';
+import { pool } from '../db/client.js';
+import { unwritableUploadDirs } from '../modules/attachments/uploadSession.js';
 import { securityHeaders } from './securityHeaders.js';
 import { registerAuthRoutes } from '../modules/auth/routes.js';
 import { registerAttachmentRoutes } from '../modules/attachments/attachments.js';
@@ -57,7 +59,7 @@ const SLOW_REQUEST_MS = 1000;
  * health check are skipped. */
 function logRequest(request: FastifyRequest, status: number, ms: number): void {
   const route = loggablePath(request);
-  if (route === '/healthz' || !(route.startsWith('/api/') || route.startsWith('/uploads/'))) return;
+  if (route === '/healthz' || route === '/readyz' || !(route.startsWith('/api/') || route.startsWith('/uploads/'))) return;
   const fields = { reqId: request.id, method: request.method, route, status, ms };
   if (status >= 500) log.error('request failed', undefined, fields);
   else if (status === 429 || status === 403 || (status === 401 && !route.startsWith('/api/auth/'))) log.warn('request denied', fields);
@@ -91,7 +93,10 @@ export function createApp(): FastifyInstance {
   fastify.addHook('onRequest', async (request, reply) => { reply.header('x-request-id', request.id); });
   fastify.addHook('onResponse', async (request, reply) => logRequest(request, reply.statusCode, Math.round(reply.elapsedTime)));
 
-  registerHealthRoute(fastify);
+  registerHealthRoute(fastify, createReadinessCheck({
+    pingDb: () => pool.query('select 1'),
+    unwritableUploadDirs: () => unwritableUploadDirs(),
+  }));
 
   registerAuthRoutes(fastify);
   registerAttachmentRoutes(fastify);

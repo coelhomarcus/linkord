@@ -445,4 +445,4 @@ How each provider is called, its limits and what happens when it fails are in [I
 
 - If the database is not ready, check `docker compose -f docker-compose.dev.yml ps` and `docker compose -f docker-compose.dev.yml logs postgres`.
 - If port `5432` is already in use, stop the other PostgreSQL service or change the host-side port mapping in `docker-compose.dev.yml` and update `DATABASE_URL` to match.
-- If the app cannot connect to PostgreSQL, confirm the container is healthy and that `DATABASE_URL` uses `localhost:5432`, the `linkord` database, and the local credentials above.
+- If the app cannot connect to PostgreSQL, confirm the container is healthy and that `DATABASE_URL` uses `localhost:5432`, the `linkord` database, and the local credentials above. `curl localhost:3000/readyz` answers `503 {"ok":false}` while the app cannot reach the database (or write to `uploads/`) and the server log says which with a `not ready` warning; `/healthz` stays `200` as long as the process is up ([DEPLOY.md](DEPLOY.md#what-gets-deployed)).
