@@ -53,6 +53,7 @@ import { emojiUsageKeys, recordExpressionUsage } from '../emojis/expressionUsage
 import { customReactionId } from '../emojis/customEmojiTokens.js';
 import { sanitizeCustomEmojis, usableEmojis } from '../emojis/serverEmojis.js';
 import { isStickerId, loadStickerCards, usableSticker, type StickerCard } from '../stickers/serverStickers.js';
+import { parseSerialId } from '../../db/serialId.js';
 
 const log = logger.child({ component: 'audit' });
 
@@ -372,8 +373,8 @@ async function handleConversationMarkRead(socket: AppSocket, msg: { conversation
   const p = participants.get(socket.participantId ?? '');
   if (!p || p.socket !== socket) return;
   const conversationId = conversationIdFrom(msg);
-  const msgId = Number(msg.msgId);
-  if (!conversationId || !Number.isSafeInteger(msgId) || msgId <= 0) return;
+  const msgId = parseSerialId(msg.msgId);
+  if (!conversationId || msgId === null) return;
   const conversation = await getConversationForUser(conversationId, p.userId);
   if (!conversation || !(await markReadUpTo(conversation, p.userId, msgId))) return;
   for (const participant of participants.values()) {
@@ -431,8 +432,8 @@ async function handleLoadMoreMessages(socket: AppSocket, msg: { conversationId?:
   const p = participants.get(socket.participantId ?? '');
   if (!p || p.socket !== socket) return;
   const conversationId = conversationIdFrom(msg);
-  const beforeMsgId = Number(msg.beforeMsgId);
-  if (!conversationId || !Number.isFinite(beforeMsgId) || !(await conversationExistsForUser(conversationId, p.userId))) return;
+  const beforeMsgId = parseSerialId(msg.beforeMsgId);
+  if (!conversationId || beforeMsgId === null || !(await conversationExistsForUser(conversationId, p.userId))) return;
   const rows = await db
     .select(messageWithAuthorSelect)
     .from(messages)
@@ -458,8 +459,8 @@ async function handleLoadMessagesAfter(socket: AppSocket, msg: { conversationId?
   const p = participants.get(socket.participantId ?? '');
   if (!p || p.socket !== socket) return;
   const conversationId = conversationIdFrom(msg);
-  const afterMsgId = Number(msg.afterMsgId);
-  if (!conversationId || !Number.isFinite(afterMsgId) || !(await conversationExistsForUser(conversationId, p.userId))) return;
+  const afterMsgId = parseSerialId(msg.afterMsgId);
+  if (!conversationId || afterMsgId === null || !(await conversationExistsForUser(conversationId, p.userId))) return;
   const rows = await db
     .select(messageWithAuthorSelect)
     .from(messages)
@@ -487,8 +488,8 @@ async function handleLoadMessagesAround(socket: AppSocket, msg: { conversationId
   const p = participants.get(socket.participantId ?? '');
   if (!p || p.socket !== socket) return;
   const conversationId = conversationIdFrom(msg);
-  const msgId = Number(msg.msgId);
-  if (!conversationId || !Number.isFinite(msgId) || !(await conversationExistsForUser(conversationId, p.userId))) return;
+  const msgId = parseSerialId(msg.msgId);
+  if (!conversationId || msgId === null || !(await conversationExistsForUser(conversationId, p.userId))) return;
 
   // a search result can point at a message deleted since the search ran —
   // without this check the two queries below would just silently return an
@@ -766,9 +767,9 @@ function answerAction(socket: AppSocket, msg: { requestId?: unknown }, failure: 
 }
 
 async function editMessage(p: Participant, msg: { msgId?: unknown; text?: string; requestId?: unknown }): Promise<ActionFailure | null> {
-  const msgId = Number(msg.msgId);
+  const msgId = parseSerialId(msg.msgId);
   const rawText = String(msg.text ?? '').trim();
-  if (!Number.isFinite(msgId) || !rawText) return { code: 'invalid_message', message: 'Mensagem vazia.' };
+  if (msgId === null || !rawText) return { code: 'invalid_message', message: 'Mensagem vazia.' };
   // never cut it silently: the client shows a counter instead
   if (rawText.length > config.MAX_CHAT_LEN) return { code: 'message_too_long', message: `A mensagem passa de ${config.MAX_CHAT_LEN} caracteres.` };
   const [existing] = await db.select().from(messages).where(eq(messages.id, msgId)).limit(1);
@@ -779,7 +780,12 @@ async function editMessage(p: Participant, msg: { msgId?: unknown; text?: string
   if (!conversation) return { code: 'conversation_not_found', message: 'Conversa não encontrada.' };
   // §4.3: editing an old message while contact is restricted would be a
   // backdoor around the send-gate above — closing that is the specific
-  // reason edit (not delete) is restricted here.
+  // reason edit (not delete) is restricted here. A muted member or a
+  // read-only channel is the same backdoor on a server.
+  if (isServerChannel(conversation)) {
+    const granted = await channelPermissions(conversation.serverId, conversation.id, p.userId);
+    if (!hasPermission(granted, PERMISSIONS.SEND_MESSAGES)) return { code: ERROR_CODES.forbidden, message: 'Você não pode enviar mensagens nesse canal.' };
+  }
   const peerId = await getDirectPeerId(existing.conversationId, p.userId);
   if (peerId && !(await canSendDirectMessage(p.userId, peerId))) return { code: ERROR_CODES.relationshipRequired, message: 'Vocês precisam ser amigos pra conversar por aqui.' };
   const text = await sanitizeCustomEmojis(sanitizeChatText(rawText), p.userId);
@@ -820,8 +826,8 @@ async function broadcastChanged(row: Message, author: AuthorIdentity): Promise<v
  * when `adminToo`, a platform admin as well (re-read, not taken from the
  * connection's frozen role, §7.5). */
 async function removableTextMessage(p: Participant, rawId: unknown, what: string, adminToo: boolean): Promise<{ row: Message; isAuthor: boolean } | ActionFailure> {
-  const msgId = Number(rawId);
-  if (!Number.isFinite(msgId)) return { code: 'not_found', message: 'Essa mensagem não existe mais.' };
+  const msgId = parseSerialId(rawId);
+  if (msgId === null) return { code: 'not_found', message: 'Essa mensagem não existe mais.' };
   const [row] = await db.select().from(messages).where(eq(messages.id, msgId)).limit(1);
   if (!row) return { code: 'not_found', message: 'Essa mensagem não existe mais.' };
   const isAuthor = row.authorId === p.userId;
@@ -917,11 +923,11 @@ async function handleChatReact(socket: AppSocket, msg: { msgId?: unknown; emoji?
   // a desired state (present: true/false), never a toggle — repeating the
   // same request can't undo it
   const fail = (failure: ActionFailure) => answerAction(socket, msg, failure);
-  const msgId = Number(msg.msgId);
+  const msgId = parseSerialId(msg.msgId);
   const emoji = String(msg.emoji || '');
   const desired = msg.present;
   const customId = customReactionId(emoji);
-  if (!Number.isFinite(msgId) || !(customId || isSingleEmoji(emoji)) || typeof desired !== 'boolean') {
+  if (msgId === null || !(customId || isSingleEmoji(emoji)) || typeof desired !== 'boolean') {
     return fail({ code: 'invalid_message', message: 'Reação inválida.' });
   }
   const [existing] = await db.select({ conversationId: messages.conversationId, kind: messages.kind }).from(messages).where(eq(messages.id, msgId)).limit(1);
@@ -956,8 +962,8 @@ async function handleChatReact(socket: AppSocket, msg: { msgId?: unknown; emoji?
 // handleChatEdit, except admin gets delete too (never edit, see above).
 // "Clear all" no longer exists: deleting the whole conversation covers that now.
 async function deleteMessage(p: Participant, msg: { msgId?: unknown }): Promise<ActionFailure | null> {
-  const msgId = Number(msg.msgId);
-  if (!Number.isFinite(msgId)) return { code: 'not_found', message: 'Essa mensagem não existe mais.' };
+  const msgId = parseSerialId(msg.msgId);
+  if (msgId === null) return { code: 'not_found', message: 'Essa mensagem não existe mais.' };
   const [existing] = await db
     .select({ conversationId: messages.conversationId, authorId: messages.authorId, kind: messages.kind, serverInvitationId: messages.serverInvitationId })
     .from(messages)
@@ -1018,17 +1024,36 @@ async function handleChatDelete(socket: AppSocket, msg: { msgId?: unknown; reque
 }
 
 
+// A permission granted to typing is remembered per connection and conversation for this long: a
+// composer reports every few seconds, and each check is several queries on the shared pool. Only a
+// grant is kept, so access taken away stops the indicator within this window at worst.
+const TYPING_PERMISSION_TTL_MS = 5_000;
+const typingPermissions = new WeakMap<AppSocket, Map<string, number>>();
+
+async function canSignalTyping(socket: AppSocket, conversationId: string, userId: string): Promise<boolean> {
+  const now = Date.now();
+  let granted = typingPermissions.get(socket);
+  if ((granted?.get(conversationId) ?? 0) > now) return true;
+  const conversation = await getConversationForUser(conversationId, userId, PERMISSIONS.SEND_MESSAGES);
+  if (!conversation || !(await assertCanWriteToConversation(socket, conversationId, userId))) return false;
+  if (!granted) {
+    granted = new Map();
+    typingPermissions.set(socket, granted);
+  }
+  for (const [id, until] of granted) if (until <= now) granted.delete(id);
+  granted.set(conversationId, now + TYPING_PERMISSION_TTL_MS);
+  return true;
+}
+
 // No DB write at all — pure ephemeral fan-out, same spirit as
-// speaking/deafened (realtime/participants.ts). The client is responsible
-// for throttling emits (see MessageComposer.tsx); this only relays.
+// speaking/deafened (realtime/participants.ts). The client throttles its
+// emits (see MessageComposer.tsx); the server caps them too (ACTION_LIMITS).
 async function handleTyping(socket: AppSocket, msg: { conversationId?: string; value?: unknown }): Promise<void> {
   const p = participants.get(socket.participantId ?? '');
   if (!p || p.socket !== socket) return;
   const conversationId = conversationIdFrom(msg);
   if (!conversationId) return;
-  const conversation = await getConversationForUser(conversationId, p.userId, PERMISSIONS.SEND_MESSAGES);
-  if (!conversation) return;
-  if (!(await assertCanWriteToConversation(socket, conversationId, p.userId))) return;
+  if (!(await canSignalTyping(socket, conversationId, p.userId))) return;
   await broadcastToConversationMembers(conversationId, {
     t: 'typing',
     conversationId,

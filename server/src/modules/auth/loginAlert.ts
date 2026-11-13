@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { and, eq, gte, lt } from 'drizzle-orm';
+import { and, eq, gte, inArray, lt } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { knownLogins, type User } from '../../db/schema.js';
 import { logger } from '../../lib/logger.js';
@@ -60,6 +60,22 @@ export async function recordLogin(userId: string, origin: SessionOrigin, now = n
     .where(and(eq(knownLogins.userId, userId), eq(knownLogins.fingerprint, legacyLoginFingerprint(origin)), gte(knownLogins.lastLoginAt, cutoff)))
     .limit(1);
   return !legacy;
+}
+
+/** Whether this account signed in from this browser (same address and kind of browser) within
+ * KNOWN_LOGIN_DAYS. The per-account attempt counters let such a request through when strangers have filled
+ * them, so naming an account is not enough to lock its owner out. Any `userId` is fine, a missing account's
+ * included: the query costs the same, so the answer time does not tell which accounts exist. */
+export async function isKnownBrowser(userId: string, origin: SessionOrigin, now = new Date()): Promise<boolean> {
+  const cutoff = new Date(now.getTime() - KNOWN_LOGIN_DAYS * DAY_MS);
+  const [row] = await db.select({ userId: knownLogins.userId }).from(knownLogins)
+    .where(and(
+      eq(knownLogins.userId, userId),
+      inArray(knownLogins.fingerprint, [loginFingerprint(origin), legacyLoginFingerprint(origin)]),
+      gte(knownLogins.lastLoginAt, cutoff),
+    ))
+    .limit(1);
+  return Boolean(row);
 }
 
 /** Called after a password or two-step login created a session (never for registration, which only

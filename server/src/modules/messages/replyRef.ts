@@ -1,6 +1,7 @@
 import { and, count, eq } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { attachments, messages, serverStickers } from '../../db/schema.js';
+import { parseSerialId } from '../../db/serialId.js';
 
 // Leaf module (db/schema only): both messages.ts and the attachment upload
 // flow build reply references, and attachmentUploads.ts can't import
@@ -40,8 +41,8 @@ export function normalizeReplyRef(raw: unknown): ReplyRef | undefined {
  * no reference instead of failing outright. */
 export async function buildReplyRef(conversationId: string, replyToId: unknown): Promise<ReplyRef | undefined> {
   if (replyToId == null) return undefined;
-  const id = Number(replyToId);
-  if (!Number.isFinite(id)) return undefined;
+  const id = parseSerialId(replyToId);
+  if (id === null) return undefined;
   const [original] = await db
     .select({ id: messages.id, authorId: messages.authorId, text: messages.text, kind: messages.kind, stickerId: messages.stickerId })
     .from(messages)

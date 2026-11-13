@@ -1,12 +1,11 @@
 import fs from 'node:fs/promises';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { and, asc, count, eq, inArray, sql } from 'drizzle-orm';
-import { config } from '../../config/env.js';
 import { db } from '../../db/client.js';
 import { serverMembers, servers, serverStickers, users, type ServerSticker, type User } from '../../db/schema.js';
 import { jsonBody, sendError, sendJson } from '../../http/respond.js';
 import { newId, filePathFor } from '../attachments/attachmentStorage.js';
-import { getUsage } from '../attachments/attachmentQuota.js';
+import { hasRoomFor } from '../attachments/attachmentQuota.js';
 import { hasPermission, PERMISSIONS } from '../servers/permissions.js';
 import { requireServerMember, requireSession } from '../servers/serverHttp.js';
 import { broadcastToServerMembers } from '../servers/serverSummaries.js';
@@ -206,8 +205,7 @@ async function handleUpload(
   if (encoded === 'invalid_image' || encoded === 'invalid_crop') return sendError(reply, 400, 'invalid_image', 'Não foi possível ler essa imagem.');
   if (encoded === 'too_large') return sendError(reply, 400, 'sticker_too_large', 'Essa figurinha fica pesada demais. Tente uma animação mais curta.');
 
-  const usage = await getUsage();
-  if (usage.totalBytes + encoded.data.length > config.MAX_STORAGE_BYTES) {
+  if (!(await hasRoomFor(encoded.data.length))) {
     log.warn('sticker upload refused: instance storage is full', { userId, size: encoded.data.length });
     return sendError(reply, 400, 'storage_full', 'Armazenamento cheio. Tente novamente mais tarde.');
   }

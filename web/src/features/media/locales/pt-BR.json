@@ -25,7 +25,10 @@
     "twitchChannel": "twitch.tv/{{channel}}",
     "twitchVod": "VOD da Twitch",
     "twitchClip": "Clip da Twitch",
-    "loadPlayer": "Clique para carregar o player"
+    "loadPlayer": "Clique para carregar o player",
+    "loadVideo": "Carregar vídeo de {{host}}",
+    "loadAudio": "Carregar áudio de {{host}}",
+    "loadNotice": "Ao carregar, {{host}} vê o seu endereço IP."
   },
   "player": {
     "volume": "Volume",

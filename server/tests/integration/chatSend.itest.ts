@@ -2,10 +2,12 @@ import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import { after, describe, it } from 'node:test';
 import { eq } from 'drizzle-orm';
-import { conversationMembers, messageSendOperations, messages } from '../../src/db/schema.js';
+import { channelPermissionOverwrites, conversationMembers, conversations, messageSendOperations, messages } from '../../src/db/schema.js';
 import { handlers } from '../../src/modules/messages/messages.js';
 import { getOrCreateDirect } from '../../src/modules/conversations/conversationsRepository.js';
 import { sweepSendOperations } from '../../src/modules/messages/sendOperations.js';
+import { invalidateAllServers } from '../../src/modules/servers/serverAccess.js';
+import { PERMISSIONS } from '../../src/modules/servers/permissions.js';
 import { cleanupParticipant, db, joinNew, makeServerWithMembers, makeUser, pool } from './helpers.js';
 
 after(() => pool.end());
@@ -153,6 +155,28 @@ describe('edit and delete with a result (real Postgres)', () => {
       cleanupParticipant(participant);
     }
   }));
+
+  it('a member who may no longer send in the channel cannot edit there either, and nobody hears of it', async () => {
+    const owner = await makeUser('cs');
+    const member = await makeUser('cs');
+    const { serverId, textChannelId } = await makeServerWithMembers(owner.id, [member.id]);
+    const [row] = await db.insert(messages).values({ conversationId: textChannelId, authorId: member.id, text: 'original' }).returning();
+    await db.update(conversations).set({ permissionsSynced: false }).where(eq(conversations.id, textChannelId));
+    await db.insert(channelPermissionOverwrites).values({ id: crypto.randomUUID(), serverId, channelId: textChannelId, userId: member.id, deny: PERMISSIONS.SEND_MESSAGES });
+    invalidateAllServers();
+    const watcher = joinNew(owner);
+    const { socket, sent, participant } = joinNew(member);
+    try {
+      await handlers['chat-edit']!(socket, { msgId: row!.id, text: `agora @${owner.username}`, requestId: 'e4' });
+      assert.equal(actionResults(sent)[0].error.code, 'forbidden');
+      assert.equal(watcher.sent.filter((s) => s.event === 'chat-edited').length, 0);
+      const [after] = await db.select().from(messages).where(eq(messages.id, row!.id));
+      assert.deepEqual([after!.text, after!.editedAt], ['original', null]);
+    } finally {
+      cleanupParticipant(participant);
+      cleanupParticipant(watcher.participant);
+    }
+  });
 
   it('editing with overly long text answers an error without truncating', () => withMember(async (ctx) => {
     const msgId = await ownMessage(ctx);

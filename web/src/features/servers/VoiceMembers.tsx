@@ -21,7 +21,8 @@ import { useIsSpeaking } from '@/features/calls/useLiveKitTrack';
 import { useMuteForMe } from '@/features/calls/useMuteForMe';
 import { participantMicMuted, useOwnMic } from '@/features/calls/micState';
 import { useStreamPreview } from '@/features/calls/streamPreviewStore';
-import { canMoveInto, canMoveOutOf } from './serverUtils';
+import { canInChannel, canMoveInto, canMoveOutOf } from './serverUtils';
+import { PERMISSIONS } from './permissionBits';
 
 /** Who is being dragged out of which voice channel, while the drag lasts. */
 export interface VoiceDrag {
@@ -208,6 +209,8 @@ export function VoiceMembers({ server, channel, onOpenProfile, drag, onDragChang
   // does the same job there.
   const touchFirst = useMediaQuery(TOUCH_FIRST_QUERY);
   const canDrag = !touchFirst && canMoveOutOf(channel, state.me.role === 'admin');
+  // the server only hands a still to whoever could join and watch the share
+  const canPreview = canInChannel(channel, PERMISSIONS.CONNECT);
   if (!people.length) return null;
 
   function openMenu(person: VoicePerson, event: MouseEvent) {
@@ -255,7 +258,7 @@ export function VoiceMembers({ server, channel, onOpenProfile, drag, onDragChang
                 </span>
                 <span className="truncate">{person.displayName}</span>
               </button>
-              <VoiceStatus person={person} previewable={!person.isMe} />
+              <VoiceStatus person={person} previewable={canPreview && !person.isMe} />
               {/* right-click and long press open the same menu; this is the way
                   for a keyboard or a screen reader, shown only once focused */}
               <button type="button" aria-label={t('voiceMembers.menu.more', { name: person.displayName })} aria-haspopup="menu"

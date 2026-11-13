@@ -29,6 +29,9 @@
       ]
     },
     "e2e": {
+      "ignoreDependencies": [
+        "livekit-client"
+      ],
       "entry": [
         "specs/**/*.spec.ts"
       ],

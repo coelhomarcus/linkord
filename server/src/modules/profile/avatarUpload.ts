@@ -8,7 +8,7 @@ import { sendJson, sendError } from '../../http/respond.js';
 import { parseCookies } from '../../http/cookies.js';
 import { resolveSession } from '../auth/session.js';
 import { newId, filePathFor } from '../attachments/attachmentStorage.js';
-import { getUsage } from '../attachments/attachmentQuota.js';
+import { hasRoomFor } from '../attachments/attachmentQuota.js';
 import { cropPipeline, fitCrop, frameSize, parseCropParam, type CropRect } from '../attachments/imageCrop.js';
 import * as floodControl from '../../realtime/floodControl.js';
 import { logger } from '../../lib/logger.js';
@@ -162,8 +162,7 @@ export async function handleAvatarUpload(request: FastifyRequest<{ Querystring: 
   const crop = parseCropParam(request.query.crop);
   if (request.query.crop !== undefined && !crop) return sendError(reply, 400, 'invalid_crop', 'Recorte inválido.');
 
-  const usage = await getUsage();
-  if (usage.totalBytes + buffer.length > config.MAX_STORAGE_BYTES) {
+  if (!(await hasRoomFor(buffer.length))) {
     log.warn('avatar upload refused: instance storage is full', { userId: sess.userId, size: buffer.length });
     return sendError(reply, 400, 'storage_full', 'Armazenamento cheio (30GB no total). Tente novamente mais tarde.');
   }

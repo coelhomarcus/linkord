@@ -203,7 +203,7 @@
   "email": {
     "none": "No email on file.",
     "change": "Edit",
-    "changeHint": "Used to recover your account. We ask for your current password, and the change is confirmed with a code sent to the new email.",
+    "changeHint": "Used to recover your account. We ask for your current password, and the change is confirmed with a code sent to the new email. With two-step verification on, the current email gets a code too.",
     "passwordLabel": "Current password",
     "newLabel": "New email",
     "sendCode": "Send code",
@@ -235,7 +235,13 @@
     "label": "Email",
     "show": "Show",
     "hide": "Hide",
-    "add": "Add"
+    "add": "Add",
+    "currentCodeSent": "To confirm it is you, enter the code sent to your current email, {{email}}. Then we will send another one to {{newEmail}}.",
+    "currentCodeLabel": "Current email code",
+    "currentCodeAria": "Code sent to the current email",
+    "continue": "Continue",
+    "changedEndedSessions_one": "Email changed to {{email}}. {{count}} other session was ended.",
+    "changedEndedSessions_other": "Email changed to {{email}}. {{count}} other sessions were ended."
   },
   "privacy": {
     "description": "People you block can't message you or call you in a private conversation. Unblocking doesn't restore the friendship: you have to add each other again.",
@@ -424,7 +430,7 @@
         "noEmail": "Add an email in My account to turn on two-step verification."
       },
       "enableHint": "Confirm your password. Then we will send a code to the account email.",
-      "disableHint": "Confirm your password to turn off two-step verification.",
+      "disableHint": "Confirm your password. Then we will send a code to the account email to turn off two-step verification.",
       "password": "Current password",
       "sendCode": "Send code",
       "disable": "Turn off",
@@ -435,7 +441,9 @@
       "enable": "Turn on",
       "sendFailed": "Could not send the code.",
       "confirmFailed": "Could not turn it on.",
-      "disableFailed": "Could not turn it off."
+      "disableFailed": "Could not turn it off.",
+      "disableCodeSent": "Enter the code sent to {{email}}. It expires in 30 minutes.",
+      "disableCodeLabel": "Turn-off code"
     },
     "loginAlerts": {
       "label": "Email me about new sign-ins",
@@ -445,7 +453,13 @@
         "noDelivery": "Sending email is not set up on this server, so sign-in alerts cannot be sent.",
         "noEmail": "Set an email in My account to receive sign-in alerts."
       },
-      "failed": "Could not save the change."
+      "failed": "Could not save the change.",
+      "disableHint": "Confirm your password to turn off sign-in alerts.",
+      "password": "Current password",
+      "disable": "Turn off",
+      "codeSent": "Enter the code sent to {{email}}. It expires in 30 minutes.",
+      "codeLabel": "Confirmation code",
+      "codeError": "Check the code and try again."
     },
     "sessions": {
       "description": "The browsers signed in to your account.",

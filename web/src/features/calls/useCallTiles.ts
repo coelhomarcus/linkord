@@ -6,9 +6,17 @@ import { activeTrack, getParticipant, isScreenPaused, isTrackPending } from './u
 import { tileKey } from './tileTypes';
 import type { TileDescriptor } from './tileTypes';
 
+/** The server's call members, then anyone else LiveKit has in the room: the server removes such a
+ * connection, but until it does it hears and sees everything, so it is never left without a tile. */
+function tileIds(room: Room, participantIds: string[]): string[] {
+  const known = new Set(participantIds);
+  const unknown = [...room.remoteParticipants.keys()].filter((id) => !known.has(id));
+  return unknown.length > 0 ? [...participantIds, ...unknown] : participantIds;
+}
+
 function buildDescriptors(room: Room, participantIds: string[]): TileDescriptor[] {
   const out: TileDescriptor[] = [];
-  for (const id of participantIds) {
+  for (const id of tileIds(room, participantIds)) {
     const participant = getParticipant(room, id);
     if (!participant) continue;
     const hasScreen = !!activeTrack(participant, Track.Source.ScreenShare);

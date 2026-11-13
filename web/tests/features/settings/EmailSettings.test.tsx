@@ -6,12 +6,14 @@ import { ApiError } from '@/shared/api/api';
 
 const requestEmailChange = vi.fn();
 const confirmEmailChange = vi.fn();
+const verifyEmailChangeCurrent = vi.fn();
 const refresh = vi.fn();
 
 vi.mock('@/shared/api/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/shared/api/api')>()),
   requestEmailChange: (...args: unknown[]) => requestEmailChange(...args),
   confirmEmailChange: (...args: unknown[]) => confirmEmailChange(...args),
+  verifyEmailChangeCurrent: (...args: unknown[]) => verifyEmailChangeCurrent(...args),
 }));
 
 vi.mock('@/state/AuthContext', () => ({
@@ -23,6 +25,7 @@ const codeLabel = 'Código de confirmação de e-mail';
 beforeEach(() => {
   requestEmailChange.mockReset();
   confirmEmailChange.mockReset();
+  verifyEmailChangeCurrent.mockReset();
   refresh.mockReset();
 });
 
@@ -149,6 +152,47 @@ describe('EmailSettings', () => {
     // read-only view — refresh() resolving (and currentEmail changing on a
     // rerender) must not yank the confirmation off screen instantly.
     expect(screen.queryByLabelText('Novo e-mail')).not.toBeInTheDocument();
+  });
+
+  it('says how many other sessions the change signed out', async () => {
+    requestEmailChange.mockResolvedValue({ ok: true });
+    confirmEmailChange.mockResolvedValue({ user: { id: 'u1', email: 'nova@example.com' }, endedSessions: 2 });
+    const user = userEvent.setup();
+    render(<EmailSettings currentEmail="fulana@example.com" />);
+    await requestCode(user, 'nova@example.com');
+    await user.type(screen.getByLabelText(codeLabel), '123456');
+    expect(await screen.findByText('E-mail alterado para nova@example.com. 2 outras sessões foram encerradas.')).toBeInTheDocument();
+  });
+
+  it('with two-step login on, asks the current address for a code before the new one', async () => {
+    requestEmailChange.mockResolvedValue({ codeRequired: true, email: 'f***@example.com' });
+    verifyEmailChangeCurrent.mockResolvedValue({ ok: true });
+    confirmEmailChange.mockResolvedValue({ user: { id: 'u1', email: 'nova@example.com' } });
+    const user = userEvent.setup();
+    render(<EmailSettings currentEmail="fulana@example.com" />);
+    await requestCode(user, 'nova@example.com');
+
+    expect(screen.getByText(/código enviado para o e-mail atual, f\*\*\*@example\.com/)).toBeInTheDocument();
+    await user.type(screen.getByLabelText('Código enviado ao e-mail atual'), '111111');
+    expect(verifyEmailChangeCurrent).toHaveBeenCalledWith('nova@example.com', '111111');
+    expect(confirmEmailChange).not.toHaveBeenCalled();
+
+    expect(await screen.findByText('Digite o código enviado para nova@example.com. Ele expira em 30 minutos.')).toBeInTheDocument();
+    await user.type(screen.getByLabelText(codeLabel), '222222');
+    expect(await screen.findByText('E-mail alterado para nova@example.com.')).toBeInTheDocument();
+    expect(confirmEmailChange).toHaveBeenCalledWith('nova@example.com', '222222');
+  });
+
+  it('a wrong current-address code stays on that step', async () => {
+    requestEmailChange.mockResolvedValue({ codeRequired: true, email: 'f***@example.com' });
+    verifyEmailChangeCurrent.mockRejectedValue(new ApiError(400, 'invalid_code', 'Código inválido.'));
+    const user = userEvent.setup();
+    render(<EmailSettings currentEmail="fulana@example.com" />);
+    await requestCode(user, 'nova@example.com');
+    await user.type(screen.getByLabelText('Código enviado ao e-mail atual'), '000000');
+    expect(await screen.findByText('Código inválido.')).toBeInTheDocument();
+    expect(screen.getByLabelText('Código enviado ao e-mail atual')).toBeInTheDocument();
+    expect(confirmEmailChange).not.toHaveBeenCalled();
   });
 
   it('onComplete and a simultaneous click on confirm do not send two requests', async () => {

@@ -20,6 +20,9 @@ const COPY = {
   two_factor_setup: { subject: 'email.twoFactorSetupSubject', title: 'email.twoFactorSetupTitle', intro: 'email.twoFactorSetupIntro', expires: 'email.expires' },
   login: { subject: 'email.loginSubject', title: 'email.loginTitle', intro: 'email.loginIntro', expires: 'email.loginExpires' },
   account_deletion: { subject: 'email.deletionCodeSubject', title: 'email.deletionCodeTitle', intro: 'email.deletionCodeIntro', expires: 'email.expires' },
+  email_change_current: { subject: 'email.changeCurrentSubject', title: 'email.changeCurrentTitle', intro: 'email.changeCurrentIntro', expires: 'email.expires' },
+  two_factor_disable: { subject: 'email.twoFactorDisableSubject', title: 'email.twoFactorDisableTitle', intro: 'email.twoFactorDisableIntro', expires: 'email.expires' },
+  login_alert_disable: { subject: 'email.loginAlertDisableSubject', title: 'email.loginAlertDisableTitle', intro: 'email.loginAlertDisableIntro', expires: 'email.expires' },
 } as const satisfies Record<AuthCodePurpose, Record<string, Parameters<typeof localeText>[1]>>;
 
 // Every text that goes into an email's HTML is escaped: a username or an address is never markup.
@@ -125,6 +128,17 @@ export async function sendAccountDeletionScheduledEmail(
     localeText(locale, 'email.deletionScheduledIntro', { username, date: emailDate(locale, dueAt) }),
     localeText(locale, 'email.deletionScheduledCancel'),
   ], config.APP_URL);
+}
+
+/** Sent to the old address once an email change went through: that address is no longer the account's
+ * second factor, so its owner must hear about it even when the change was not theirs. */
+export async function sendEmailChangedEmail(
+  { to, username, locale, newEmail }: { to: string; username: string; locale: Locale; newEmail: string },
+): Promise<void> {
+  await deliverNotice(to, localeText(locale, 'email.changedSubject'), localeText(locale, 'email.changedTitle'), [
+    localeText(locale, 'email.changedIntro', { username, email: newEmail }),
+    localeText(locale, 'email.changedWarning'),
+  ]);
 }
 
 export async function sendAccountDeletedEmail({ to, username, locale }: { to: string; username: string; locale: Locale }): Promise<void> {

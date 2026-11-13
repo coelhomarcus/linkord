@@ -8,9 +8,12 @@ import { getConversationForUser, visibleConversationIds } from '../conversations
 import { sendJson, sendError } from '../../http/respond.js';
 import { parseCookies } from '../../http/cookies.js';
 import { resolveSession } from '../auth/session.js';
+import { allow, retryAfterMs } from '../../realtime/floodControl.js';
 import { resolveDisplayName } from '../users/users.js';
 import { firstEmbed, type DetectedEmbed } from '../link-preview/embeds.js';
+import { proxiedImageUrl } from '../media-proxy/mediaProxyUrls.js';
 import { escapeLike } from '../friendships/cursor.js';
+import { PG_INT4_MAX, parseSerialId } from '../../db/serialId.js';
 
 // Cursor-based media search keeps pagination stable as new messages arrive. Filter by kind in
 // the query so sparse tabs do not hide items behind other kinds. Every result is scoped to
@@ -24,10 +27,6 @@ const EMBED_BATCH_SIZE = 40;
 // avoids an expensive loop if a conversation has hundreds of non-embed links.
 // "Load more" resumes exactly from the cursor (see nextBefore).
 const EMBED_SCAN_CEILING = 400;
-// messages.id is a 4-byte `serial` — using Number.MAX_SAFE_INTEGER as the
-// "no cursor yet" sentinel overflows Postgres's int4 range. This is the
-// column's real ceiling.
-const PG_INT4_MAX = 2147483647;
 const DELETED_AUTHOR_NAME = 'Usuário apagado';
 
 const MEDIA_KINDS = ['uploads', 'images', 'videos', 'audios', 'documents', 'gifs', 'embeds'] as const;
@@ -95,6 +94,9 @@ interface UploadItem extends MediaBase {
 
 interface EmbedItem extends MediaBase {
   embed: DetectedEmbed;
+  /** A direct image link's picture through the media proxy: the grid never
+   * loads it from the sender's host. Absent for GIFs (KLIPY's terms). */
+  imageUrl?: string | null;
 }
 
 function conversationNameFor(row: MediaBaseRow): string {
@@ -240,7 +242,8 @@ async function fetchEmbedsPage(mode: 'links' | 'gifs', viewerId: string, before:
       cursor = row.msgId;
       const embed: DetectedEmbed | null = mode === 'gifs' ? { kind: 'image', url: row.text.trim() } : firstEmbed(row.text);
       if (embed) {
-        items.push({ ...toMediaBase(row), embed });
+        const imageUrl = mode !== 'gifs' && embed.kind === 'image' ? { imageUrl: proxiedImageUrl('preview', embed.url) } : {};
+        items.push({ ...toMediaBase(row), embed, ...imageUrl });
         if (items.length >= limit) { stoppedEarly = true; break; }
       }
     }
@@ -264,15 +267,23 @@ export async function fetchMediaPage(kind: MediaKind, viewerId: string, before: 
   return fetchUploadsPage(kind, viewerId, before, limit, scope, q);
 }
 
+// A link or GIF search scans up to EMBED_SCAN_CEILING rows with a substring match, so a scripted
+// client could keep the shared database pool busy; the panel debounces its search and pages on scroll.
+const MEDIA_REQUEST_LIMIT = { windowMs: 10_000, max: 30 };
+
 async function handleMedia(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   const cookies = parseCookies(request.headers.cookie || '');
   const sess = await resolveSession(cookies[config.SESSION_COOKIE]);
   if (!sess) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
+  const limitKey = `media:${sess.userId}`;
+  if (!allow(limitKey, MEDIA_REQUEST_LIMIT)) {
+    reply.header('Retry-After', String(Math.max(1, Math.ceil(retryAfterMs(limitKey, MEDIA_REQUEST_LIMIT) / 1000))));
+    return sendError(reply, 429, 'rate_limited', 'Muitas buscas seguidas. Espere um pouco.');
+  }
 
   const query = request.query as Record<string, string | undefined>;
   const kind: MediaKind = MEDIA_KINDS.find((k) => k === query.kind) ?? 'uploads';
-  const beforeRaw = query.before;
-  const before = beforeRaw && /^\d+$/.test(beforeRaw) ? Number(beforeRaw) : null;
+  const before = parseSerialId(query.before);
   const limitRaw = Number(query.limit);
   const limit = Math.min(Math.max(Number.isFinite(limitRaw) && limitRaw > 0 ? limitRaw : DEFAULT_LIMIT, 1), MAX_LIMIT);
   const conversationId = query.conversationId || null;

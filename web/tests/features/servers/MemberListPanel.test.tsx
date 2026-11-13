@@ -122,6 +122,18 @@ describe('MemberListPanel', () => {
     expect(screen.queryByRole('heading', { name: 'Bio' })).not.toBeInTheDocument();
   });
 
+  it('offers a quick message to a friend only, since the server opens no DM with anyone else', async () => {
+    const user = userEvent.setup();
+    const { unmount } = renderWithRoom(<MemberListPanel server={server} onOpenProfile={vi.fn()} />, { state: asMe('u-me') });
+    await user.click(await screen.findByRole('button', { name: 'Abrir perfil de Bia' }));
+    expect(screen.queryByRole('textbox', { name: 'Conversar com @Bia' })).not.toBeInTheDocument();
+    unmount();
+
+    renderWithRoom(<MemberListPanel server={server} onOpenProfile={vi.fn()} />, { state: asMe('u-me'), friendUserIds: new Set(['u-bia']) });
+    await user.click(await screen.findByRole('button', { name: 'Abrir perfil de Bia' }));
+    expect(screen.getByRole('textbox', { name: 'Conversar com @Bia' })).toBeInTheDocument();
+  });
+
   it('opens the full profile from the button at the top of the compact profile', async () => {
     const user = userEvent.setup();
     mockedApi.fetchUserProfile.mockRejectedValue(new Error('offline'));

@@ -246,6 +246,14 @@ describe('VoiceMembers — the live badge preview', () => {
     expect(screen.getByText('Prévia indisponível')).toBeInTheDocument();
   });
 
+  it('without CONNECT on the channel, the badge offers no preview and asks for none', async () => {
+    const { sendWs } = renderList({ permissions: PERMISSIONS.VIEW_CHANNEL, participants: [streaming] });
+    const badge = within(row('Bea')).getByRole('img', { name: 'Ao vivo' });
+    await userEvent.setup().hover(badge);
+    expect(screen.queryByRole('status', { name: 'Carregando prévia' })).not.toBeInTheDocument();
+    expect(sendWs).not.toHaveBeenCalledWith(expect.objectContaining({ t: 'stream-preview-request' }));
+  });
+
   it('inside the same call, hovering the live badge still shows the preview', async () => {
     const { sendWs } = renderList({ participants: [streaming], room: { activeCallConversationId: 'v1' } });
     await userEvent.setup().hover(within(row('Bea')).getByText('Ao vivo'));

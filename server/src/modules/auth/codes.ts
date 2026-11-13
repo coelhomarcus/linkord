@@ -1,14 +1,18 @@
 import crypto from 'node:crypto';
-import { and, asc, desc, eq, isNull, lt, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, isNull, lt, sql } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { authCodes } from '../../db/schema.js';
 import { config } from '../../config/env.js';
 import { normalizeEmail } from '../users/users.js';
 
 /** `two_factor_setup` proves the account's email works before two-step login is turned on; `login`
- * is the second step of a login (tied to its challenge, see `challengeHash`); `account_deletion` is the
- * second step of deleting the account when two-step login is on. */
-export type AuthCodePurpose = 'password_reset' | 'email_change' | 'two_factor_setup' | 'login' | 'account_deletion';
+ * is the second step of a login (tied to its challenge, see `challengeHash`). With two-step login on, the
+ * account's current email is the second factor of everything that could take it away: `account_deletion`,
+ * `two_factor_disable`, `login_alert_disable` and `email_change_current` (sent to the old address before
+ * `email_change` goes to the new one). */
+export type AuthCodePurpose =
+  | 'password_reset' | 'email_change' | 'email_change_current' | 'two_factor_setup' | 'two_factor_disable'
+  | 'login' | 'login_alert_disable' | 'account_deletion';
 
 interface CodeScope {
   /** a login code belongs to one login challenge: another login neither cancels nor accepts it */
@@ -109,6 +113,17 @@ export async function verifyAuthCode(
   return (await consumeCode(record.id))
     ? { ok: true, id: record.id }
     : { ok: false, reason: 'invalid_code' };
+}
+
+/** Whether an unused, unexpired code of this purpose was sent to `email`. */
+export async function hasLiveAuthCode(userId: string, purpose: AuthCodePurpose, email: string): Promise<boolean> {
+  const [row] = await db.select({ id: authCodes.id }).from(authCodes)
+    .where(and(
+      eq(authCodes.userId, userId), eq(authCodes.purpose, purpose), eq(authCodes.email, normalizeEmail(email)),
+      isNull(authCodes.consumedAt), gt(authCodes.expiresAt, new Date()),
+    ))
+    .limit(1);
+  return Boolean(row);
 }
 
 /** True only for the caller that actually consumed the code. */

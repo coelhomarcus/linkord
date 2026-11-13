@@ -142,7 +142,7 @@ export interface SystemInfo {
   /** when this server process started, i.e. the last deploy or restart */
   startedAt: string;
   storage: { usedBytes: number; files: number; maxBytes: number };
-  connections: { live: number; onlineAccounts: number; max: number; perAccountMax: number };
+  connections: { live: number; onlineAccounts: number; max: number; perAccountMax: number; perIpMax: number };
   accounts: { total: number; newLastHour: number; newPerHourCap: number; activeAdmins: number; suspended: number };
   livekit: { configured: boolean };
   outbox: { pending: number; failed: number };

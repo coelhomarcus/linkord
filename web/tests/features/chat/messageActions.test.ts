@@ -57,6 +57,13 @@ describe('messagePermissions', () => {
     expect(messagePermissions(msg(), { userId: 'adm', role: 'admin' }).removeEmbed).toBe(false);
   });
 
+  it('a channel where the author can no longer send: no edit, delete stays', () => {
+    const readOnly = { type: 'text' as const, permissions: PERMISSIONS.VIEW_CHANNEL };
+    expect(messagePermissions(msg(), { userId: 'autor', role: 'user' }, readOnly)).toMatchObject({ edit: false, delete: true, reply: false });
+    const open = { type: 'text' as const, permissions: PERMISSIONS.VIEW_CHANNEL | PERMISSIONS.SEND_MESSAGES };
+    expect(messagePermissions(msg(), { userId: 'autor', role: 'user' }, open).edit).toBe(true);
+  });
+
   it('deleted author: no one to report', () => {
     expect(messagePermissions(msg({ id: null }), { userId: 'eu', role: 'user' }).report).toBe(false);
   });

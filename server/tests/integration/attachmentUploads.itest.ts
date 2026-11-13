@@ -13,6 +13,7 @@ import { invalidateAllServers } from '../../src/modules/servers/serverAccess.js'
 import { getByMessageIds } from '../../src/modules/attachments/attachments.js';
 import { getUsage } from '../../src/modules/attachments/attachmentQuota.js';
 import { STAGED_TTL_MS, stagedFileIds, sweepExpiredStaged } from '../../src/modules/attachments/stagedAttachments.js';
+import { expireIdleUploads, getReservedBytes } from '../../src/modules/attachments/uploadSession.js';
 import { handlers as chatHandlers } from '../../src/modules/messages/messages.js';
 import { registerAttachmentRoutes } from '../../src/modules/attachments/attachments.js';
 import { createSession } from '../../src/modules/auth/session.js';
@@ -115,20 +116,89 @@ describe('staged upload and batch publishing (real Postgres)', () => {
     }
   });
 
-  it('takes a file up to the configured size and refuses one byte more, with no quota of the account in the way', async () => {
+  const initAs = (cookie: string, conversationId: string, totalSize: number) => app.inject({
+    method: 'POST', url: '/api/attachments/init', headers: { cookie },
+    payload: { conversationId, fileName: 'big.bin', mimeType: 'application/octet-stream', totalSize },
+  });
+  const cancelAll = async (cookie: string, ids: string[]) => {
+    for (const id of ids) await app.inject({ method: 'DELETE', url: `/api/attachments/${id}`, headers: { cookie } });
+  };
+
+  it('takes a file up to the configured size and refuses one byte more', async () => {
     const { conversationId, cookie } = await member();
-    const init = (totalSize: number) => app.inject({ method: 'POST', url: '/api/attachments/init', headers: { cookie }, payload: { conversationId, fileName: 'big.bin', mimeType: 'application/octet-stream', totalSize } });
     assert.equal(config.MAX_ATTACHMENT_BYTES, 512 * 1024 * 1024);
-    const tooBig = await init(config.MAX_ATTACHMENT_BYTES + 1);
+    const tooBig = await initAs(cookie, conversationId, config.MAX_ATTACHMENT_BYTES + 1);
     assert.equal(tooBig.statusCode, 400); assert.equal(tooBig.json().error.code, 'invalid_size');
-    // ten files at the limit reserve 5 GB, past the old 5 GB per-account quota, and all are accepted
+    const accepted = await initAs(cookie, conversationId, config.MAX_ATTACHMENT_BYTES);
+    assert.equal(accepted.statusCode, 201, accepted.body);
+    await cancelAll(cookie, [(accepted.json() as { uploadId: string }).uploadId]);
+  });
+
+  it('one account reserves at most one message of the largest files before sending them, and others are not affected', async () => {
+    const hoarder = await member();
+    const other = await member();
     const ids: string[] = [];
-    for (let i = 0; i < 10; i++) {
-      const accepted = await init(config.MAX_ATTACHMENT_BYTES);
+    for (let i = 0; i < config.MAX_ATTACHMENTS_PER_MESSAGE; i++) {
+      const accepted = await initAs(hoarder.cookie, hoarder.conversationId, config.MAX_ATTACHMENT_BYTES);
       assert.equal(accepted.statusCode, 201, accepted.body);
       ids.push((accepted.json() as { uploadId: string }).uploadId);
     }
-    for (const id of ids) await app.inject({ method: 'DELETE', url: `/api/attachments/${id}`, headers: { cookie } });
+    const refused = await initAs(hoarder.cookie, hoarder.conversationId, 1);
+    assert.equal(refused.statusCode, 409); assert.equal(refused.json().error.code, 'quota_exceeded');
+
+    const fine = await initAs(other.cookie, other.conversationId, 1024);
+    assert.equal(fine.statusCode, 201, fine.body);
+    await cancelAll(other.cookie, [(fine.json() as { uploadId: string }).uploadId]);
+
+    // cancelling gives the room back
+    await cancelAll(hoarder.cookie, ids.splice(0, 1));
+    const again = await initAs(hoarder.cookie, hoarder.conversationId, config.MAX_ATTACHMENT_BYTES);
+    assert.equal(again.statusCode, 201, again.body);
+    ids.push((again.json() as { uploadId: string }).uploadId);
+    await cancelAll(hoarder.cookie, ids);
+  });
+
+  it('staged files count toward what an account has not sent yet', async () => {
+    const { owner, conversationId, cookie } = await member();
+    await stage(cookie, conversationId);
+    // the thumbnail is on disk too, so it counts
+    const stagedTotal = (await db.select().from(stagedAttachments).where(eq(stagedAttachments.ownerId, owner.id)))
+      .reduce((sum, r) => sum + r.size + (r.thumbSize ?? 0), 0);
+    assert.ok(stagedTotal > bigPng.length, 'the test only proves something if a thumbnail was staged');
+    const ids: string[] = [];
+    for (let i = 0; i < config.MAX_ATTACHMENTS_PER_MESSAGE - 1; i++) {
+      ids.push((((await initAs(cookie, conversationId, config.MAX_ATTACHMENT_BYTES)).json()) as { uploadId: string }).uploadId);
+    }
+    const over = await initAs(cookie, conversationId, config.MAX_ATTACHMENT_BYTES - stagedTotal + 1);
+    assert.equal(over.statusCode, 409, over.body);
+    const fits = await initAs(cookie, conversationId, config.MAX_ATTACHMENT_BYTES - stagedTotal);
+    assert.equal(fits.statusCode, 201, fits.body);
+    ids.push((fits.json() as { uploadId: string }).uploadId);
+    await cancelAll(cookie, ids);
+  });
+
+  it('caps how many uploads one account keeps open at once', async () => {
+    const { conversationId, cookie } = await member();
+    const ids: string[] = [];
+    for (let i = 0; i < config.MAX_OPEN_UPLOADS_PER_USER; i++) {
+      const accepted = await initAs(cookie, conversationId, 10);
+      assert.equal(accepted.statusCode, 201, accepted.body);
+      ids.push((accepted.json() as { uploadId: string }).uploadId);
+    }
+    const refused = await initAs(cookie, conversationId, 10);
+    assert.equal(refused.statusCode, 409); assert.equal(refused.json().error.code, 'quota_exceeded');
+    await cancelAll(cookie, ids);
+  });
+
+  it('a reservation that never receives a chunk is given back after the idle window', async () => {
+    const { conversationId, cookie } = await member();
+    const { uploadId } = (await initAs(cookie, conversationId, config.MAX_ATTACHMENT_BYTES)).json() as { uploadId: string };
+    assert.ok(getReservedBytes() >= config.MAX_ATTACHMENT_BYTES);
+    const before = getReservedBytes();
+    assert.equal(await expireIdleUploads(Date.now() + config.UPLOAD_IDLE_TTL_MS + 1000), 1);
+    assert.equal(getReservedBytes(), before - config.MAX_ATTACHMENT_BYTES);
+    const chunk = await app.inject({ method: 'POST', url: `/api/attachments/${uploadId}/chunk/0`, headers: { cookie, 'content-type': 'application/octet-stream' }, payload: Buffer.alloc(config.UPLOAD_CHUNK_BYTES) });
+    assert.equal(chunk.statusCode, 404);
   });
 
   it('repeating complete after success returns the same staged file', async () => {

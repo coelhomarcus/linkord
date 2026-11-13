@@ -3,6 +3,7 @@ import { config } from '../config/env.js';
 import { broadcast, restoreCallParticipants, setCallPresenceStore } from '../modules/presence/participants.js';
 import { callPresenceStore, loadCallPresence } from '../modules/presence/callPresenceRepository.js';
 import { restoreDmCalls, setDmCallStore } from '../modules/calls/dmCalls.js';
+import { startCallRoomSync } from '../modules/calls/callRoomSync.js';
 import { dmCallStore, loadActiveDmCalls } from '../modules/calls/dmCallRepository.js';
 import { createApp } from '../http/app.js';
 import { createWsServer } from '../realtime/socket.js';
@@ -22,19 +23,13 @@ import { OUTBOX_POLL_MS } from '../modules/notifications/notificationsPolicy.js'
 import { RetentionSweepInProgressError, sweepRetention } from '../modules/retention/retentionSweeper.js';
 import { loadMediaProxyKey } from '../modules/media-proxy/mediaProxyKey.js';
 import { logger } from '../lib/logger.js';
+import { installProcessLifecycle } from './processLifecycle.js';
 
 const log = logger.child({ component: 'process' });
 
-// backstop behind the try/catch in each handler in realtime/socket.ts —
-// covers any async error escaping the normal message cycle (a timer, a
-// stray promise) that would otherwise kill the process (Node exits on
-// unhandledRejection/uncaughtException by default), disconnecting the room.
-process.on('unhandledRejection', (err) => {
-  log.error('unhandledRejection', err);
-});
-process.on('uncaughtException', (err) => {
-  log.error('uncaughtException', err);
-});
+// Installed at load, before anything can fail: until the server is listening, a fatal
+// error or a signal simply exits; after that, both go through the shutdown below.
+const lifecycle = installProcessLifecycle(process, log);
 
 /** A restart must look like a short network drop to everyone in a call: the media
  * lives on LiveKit and keeps flowing, so what comes back here is who was in which
@@ -96,6 +91,8 @@ export async function bootstrap(): Promise<void> {
   }
 
   await restoreCalls();
+  // LiveKit rooms follow the server's call membership from here on: anyone else is removed
+  const callRoomSyncTimer = startCallRoomSync();
 
   const fastify = createApp();
   // fastify.server (the underlying http.Server) already exists once
@@ -135,6 +132,7 @@ export async function bootstrap(): Promise<void> {
 
   // same cadence — upload session TTL is 24h (config.UPLOAD_SESSION_TTL_MS),
   // checking hourly is enough to avoid orphaned chunks piling up on disk.
+  // Idle reservations need no faster timer: init drops them before counting.
   const uploadSweepTimer = setInterval(() => {
     sweepStaleUploads().catch((err) => log.error('failed to clean up abandoned uploads', err));
     sweepExpiredStaged().catch((err) => log.error('failed to clean up expired staged attachments', err));
@@ -191,10 +189,10 @@ export async function bootstrap(): Promise<void> {
   const orphanTimer = setInterval(sweepOrphanFiles, 24 * 60 * 60 * 1000);
   orphanTimer.unref();
 
-  for (const sig of ['SIGINT', 'SIGTERM'] as const) {
-    process.on(sig, () => {
-      log.info('shutting down', { signal: sig });
+  lifecycle.ready({
+    stop() {
       clearInterval(connectionSyncTimer);
+      if (callRoomSyncTimer) clearInterval(callRoomSyncTimer);
       broadcast({ t: 'server-restart' });
       // Not removeParticipant: leaving the call for everyone is exactly what a
       // deploy must not do. The persisted rows are what the next process restores.
@@ -204,8 +202,7 @@ export async function bootstrap(): Promise<void> {
       // io.close() only drops the transports, which every client (old builds
       // included) treats as a network drop and reconnects from.
       io.close();
-      fastify.close().then(() => process.exit(0)).catch(() => process.exit(1));
-      setTimeout(() => process.exit(0), 3000).unref();
-    });
-  }
+    },
+    closeHttp: () => fastify.close(),
+  });
 }

@@ -31,6 +31,7 @@ function fakeRoom() {
     on: vi.fn((event: string, fn: () => void) => { if (!listeners.has(event)) listeners.set(event, new Set()); listeners.get(event)!.add(fn); }),
     off: vi.fn((event: string, fn: () => void) => { listeners.get(event)?.delete(fn); }),
     localParticipant: { identity: '', getTrackPublication: vi.fn(() => undefined) },
+    remoteParticipants,
     getParticipantByIdentity: vi.fn((id: string) => remoteParticipants.get(id)),
     // test-only
     addRemote(id: string) {
@@ -59,6 +60,18 @@ describe('useCallTiles', () => {
     act(() => { livekitRoom.emit(RoomEvent.Connected); });
 
     expect(result.current).toEqual([{ key: expect.any(String), participantId: 'me', kind: 'avatar', loading: false, paused: false }]);
+  });
+
+  it('gives a tile to a LiveKit participant the server does not have in the call', () => {
+    const livekitRoom = fakeRoom();
+    livekitRoom.addRemote('bia');
+    livekitRoom.addRemote('stray');
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <RoomContext.Provider value={createFakeRoomContextValue({ livekitRoom })}>{children}</RoomContext.Provider>
+    );
+    const { result } = renderHook(() => useCallTiles(['bia']), { wrapper });
+
+    expect(result.current.map((d) => d.participantId)).toEqual(['bia', 'stray']);
   });
 
   it('turning on the camera preserves the same tile key (does not remount)', () => {

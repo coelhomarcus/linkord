@@ -203,7 +203,7 @@
   "email": {
     "none": "Nenhum e-mail cadastrado.",
     "change": "Editar",
-    "changeHint": "Usado para recuperar sua conta. Pedimos sua senha atual e a alteração é confirmada por código enviado ao novo e-mail.",
+    "changeHint": "Usado para recuperar sua conta. Pedimos sua senha atual e a alteração é confirmada por código enviado ao novo e-mail. Com a verificação em duas etapas ativa, o e-mail atual também recebe um código.",
     "passwordLabel": "Senha atual",
     "newLabel": "Novo e-mail",
     "sendCode": "Enviar código",
@@ -235,7 +235,13 @@
     "label": "E-mail",
     "show": "Mostrar",
     "hide": "Ocultar",
-    "add": "Adicionar"
+    "add": "Adicionar",
+    "currentCodeSent": "Para confirmar que é você, digite o código enviado para o e-mail atual, {{email}}. Depois enviaremos outro para {{newEmail}}.",
+    "currentCodeLabel": "Código do e-mail atual",
+    "currentCodeAria": "Código enviado ao e-mail atual",
+    "continue": "Continuar",
+    "changedEndedSessions_one": "E-mail alterado para {{email}}. {{count}} outra sessão foi encerrada.",
+    "changedEndedSessions_other": "E-mail alterado para {{email}}. {{count}} outras sessões foram encerradas."
   },
   "privacy": {
     "description": "Quem você bloqueia não consegue te enviar mensagens nem te ligar em conversa privada. Desbloquear não devolve a amizade: vocês precisam se adicionar de novo.",
@@ -424,7 +430,7 @@
         "noEmail": "Adicione um e-mail em Minha conta para poder ativar a verificação em duas etapas."
       },
       "enableHint": "Confirme sua senha. Depois enviaremos um código ao e-mail da conta.",
-      "disableHint": "Confirme sua senha para desativar a verificação em duas etapas.",
+      "disableHint": "Confirme sua senha. Depois enviaremos um código ao e-mail da conta para desativar a verificação em duas etapas.",
       "password": "Senha atual",
       "sendCode": "Enviar código",
       "disable": "Desativar",
@@ -435,7 +441,9 @@
       "enable": "Ativar",
       "sendFailed": "Não foi possível enviar o código.",
       "confirmFailed": "Não foi possível ativar.",
-      "disableFailed": "Não foi possível desativar."
+      "disableFailed": "Não foi possível desativar.",
+      "disableCodeSent": "Digite o código enviado para {{email}}. Ele expira em 30 minutos.",
+      "disableCodeLabel": "Código de desativação"
     },
     "loginAlerts": {
       "label": "Avisar por e-mail sobre novos logins",
@@ -445,7 +453,13 @@
         "noDelivery": "O envio de e-mail não está configurado neste servidor, então os avisos de login não podem ser enviados.",
         "noEmail": "Cadastre um e-mail em Minha conta para receber os avisos de login."
       },
-      "failed": "Não foi possível salvar a alteração."
+      "failed": "Não foi possível salvar a alteração.",
+      "disableHint": "Confirme sua senha para desativar os avisos de login.",
+      "password": "Senha atual",
+      "disable": "Desativar",
+      "codeSent": "Digite o código enviado para {{email}}. Ele expira em 30 minutos.",
+      "codeLabel": "Código de confirmação",
+      "codeError": "Confira o código e tente novamente."
     },
     "sessions": {
       "description": "Os navegadores conectados à sua conta.",

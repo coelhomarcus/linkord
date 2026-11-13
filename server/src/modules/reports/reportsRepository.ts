@@ -6,6 +6,7 @@ import { areFriends } from '../friendships/friendshipsRepository.js';
 import { getConversationForUser, shareAnyConversation } from '../conversations/conversationsRepository.js';
 import { isServerMember } from '../servers/serversRepository.js';
 import { buildMessageSnapshot, type ReportInput } from './reportsPolicy.js';
+import { parseSerialId } from '../../db/serialId.js';
 
 export type CreateReportResult = { code: 'ok'; id: string } | { code: 'not_found' | 'invalid_target' };
 
@@ -40,8 +41,8 @@ async function resolveTarget(reporterId: string, input: ReportInput): Promise<{ 
     return row && (await isServerMember(input.targetId, reporterId)) ? { label: row.name, snapshot: {} } : { code: 'not_found' };
   }
 
-  const msgId = Number(input.targetId);
-  if (!Number.isInteger(msgId)) return { code: 'not_found' };
+  const msgId = parseSerialId(input.targetId);
+  if (msgId === null) return { code: 'not_found' };
   const [msg] = await db.select({
     text: messages.text, authorId: messages.authorId, kind: messages.kind, createdAt: messages.createdAt,
     conversationId: messages.conversationId, conversationTitle: conversations.title, authorUsername: users.username,

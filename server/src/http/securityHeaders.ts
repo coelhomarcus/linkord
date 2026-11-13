@@ -14,6 +14,10 @@ const REPORT_GROUP = 'csp';
 const EMBED_FRAMES = ['https://www.youtube.com', 'https://player.twitch.tv', 'https://clips.twitch.tv'];
 // the GIF picker calls KLIPY from the browser, as its terms require
 const KLIPY_API = 'https://api.klipy.com';
+// ...and loads its GIFs straight from static.klipy.com and its numbered
+// mirrors (no copies, no proxy). Allowed even with the picker off: GIF
+// messages already sent still show.
+const KLIPY_MEDIA = 'https://*.klipy.com';
 // LiveKit Cloud first asks the project URL for its regions and may then
 // connect to any regional host of the same domain
 const LIVEKIT_CLOUD_DOMAINS = ['livekit.cloud', 'livekit.run'];
@@ -25,6 +29,9 @@ export interface PolicyInput {
   appUrl: string;
   livekitUrl: string;
   klipyEnabled: boolean;
+  /** MEDIA_PROXY=0 answers the proxy's addresses with a redirect to the
+   * picture's own host, so pictures must then load from anywhere */
+  mediaProxyEnabled: boolean;
   /** 'sha256-…' sources for the inline scripts of the built HTML pages */
   scriptHashes: string[];
   /** 'sha256-…' sources for the inline stylesheets the build actually injects */
@@ -64,12 +71,15 @@ function usesReportingApi(appUrl: string): boolean {
 
 /** The Content-Security-Policy for every page and file the app serves. */
 export function buildContentSecurityPolicy(input: PolicyInput): string {
-  // GIFs (KLIPY's terms), media links pasted in chat, webhook embed images and
-  // MEDIA_PROXY=0's redirects load from any site; the rest of the third-party
-  // pictures come through modules/media-proxy. A page served over plain http
-  // (local runs, the e2e stack) also shows http ones
+  // Third-party pictures come through modules/media-proxy, so a picture
+  // pasted in chat never tells its host who is reading. The exceptions are
+  // KLIPY's GIFs and MEDIA_PROXY=0's redirects. Video and audio links play
+  // from their own host, only once the reader asks to load them
+  // (features/media/LinkPreview.tsx). A page served over plain http (local
+  // runs, the e2e stack) also plays http ones
   const insecurePage = originOf(input.appUrl)?.protocol === 'http:';
   const remoteMedia = insecurePage ? ['https:', 'http:'] : ['https:'];
+  const remoteImages = input.mediaProxyEnabled ? [KLIPY_MEDIA] : remoteMedia;
   const directives: Array<[string, string[]]> = [
     ['default-src', ["'self'"]],
     ['script-src', ["'self'", ...input.scriptHashes.map((hash) => `'${hash}'`)]],
@@ -85,7 +95,7 @@ export function buildContentSecurityPolicy(input: PolicyInput): string {
     // style attributes and CSSOM assignments. React, Motion and Base UI set
     // them while rendering; the text is not stable, so it cannot be hashed.
     ['style-src-attr', ["'unsafe-inline'"]],
-    ['img-src', ["'self'", 'data:', 'blob:', ...remoteMedia]],
+    ['img-src', ["'self'", 'data:', 'blob:', ...remoteImages]],
     ['media-src', ["'self'", 'data:', 'blob:', ...remoteMedia]],
     ['font-src', ["'self'", 'data:']],
     ['connect-src', ["'self'", ...socketSources(input.appUrl), ...livekitSources(input.livekitUrl), ...(input.klipyEnabled ? [KLIPY_API] : [])]],
@@ -192,6 +202,7 @@ export function securityHeaders(publicDir: string) {
     appUrl: config.APP_URL,
     livekitUrl: config.LIVEKIT_URL,
     klipyEnabled: !!config.KLIPY_API_KEY,
+    mediaProxyEnabled: config.MEDIA_PROXY_ENABLED,
     scriptHashes: readBuildScriptHashes(publicDir),
     styleHashes: readBuildStyleHashes(publicDir),
   });

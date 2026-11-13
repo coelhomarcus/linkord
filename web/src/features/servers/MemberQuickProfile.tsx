@@ -34,7 +34,7 @@ interface MemberQuickProfileProps {
 export function MemberQuickProfile({ server, member, currentUser, offline, open, onOpenChange, onOpenProfile, onRoleIdsChange }: MemberQuickProfileProps) {
   const { t } = useTranslation('servers');
   const { t: tChat } = useTranslation('chat');
-  const { state, conversations, openDirect, sendChatMessage } = useRoom();
+  const { state, conversations, friendUserIds, openDirect, sendChatMessage } = useRoom();
   const [savingRoleId, setSavingRoleId] = useState<string | null>(null);
   const [roleError, setRoleError] = useState(false);
   const [messageDraft, setMessageDraft] = useState('');
@@ -214,7 +214,8 @@ export function MemberQuickProfile({ server, member, currentUser, offline, open,
               </DropdownMenu>
             )}
           </div>
-          {user.id !== state.me.userId && (
+          {/* the server only opens a DM with a friend (the same gate as sending) */}
+          {user.id !== state.me.userId && friendUserIds.has(user.id) && (
             <form onSubmit={submitQuickMessage} className="mt-4 flex h-12 items-center gap-2 rounded-xl border border-border-control px-3 focus-within:border-border-accent">
               <Input
                 value={messageDraft}

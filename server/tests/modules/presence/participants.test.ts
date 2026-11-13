@@ -4,7 +4,7 @@ import { config } from '../../../src/config/env.js';
 import type { AppSocket, Participant } from '../../../src/types.js';
 import {
   participants, join, removeParticipant, handleClose, isUserOnline, setCallConversationId, publicParticipant,
-  broadcastToKnownPeers, handlers, restoreCallParticipants, setCallPresenceStore,
+  broadcastToKnownPeers, handlers, restoreCallParticipants, setCallPresenceStore, FLAG_UPDATE_INTERVAL_MS,
   type CallPresenceStore, type RestorableCallParticipant,
 } from '../../../src/modules/presence/participants.js';
 
@@ -27,11 +27,12 @@ function fakeSocket(
     bio: string;
     profileLinks: string[];
     role: 'user' | 'admin';
-  }> = {}
+  }> = {},
+  ip = '127.0.0.1',
 ): AppSocket {
   return {
     participantId: null,
-    ip: '127.0.0.1',
+    ip,
     connected: true,
     emit: () => {},
     disconnect: () => {},
@@ -156,17 +157,93 @@ describe('join', () => {
     assert.equal(isUserOnline(userId), true);
   });
 
-  test('a full room (MAX_PARTICIPANTS) rejects a new join', () => {
-    const original = config.MAX_PARTICIPANTS;
-    config.MAX_PARTICIPANTS = participants.size + 1;
-    try {
-      const p1 = joinP(fakeSocket(`u-${Math.random()}`), {});
-      createdIds.push(p1!.id);
-      const p2 = joinP(fakeSocket(`u-${Math.random()}`), {});
-      assert.equal(p2, null);
-    } finally {
-      config.MAX_PARTICIPANTS = original;
+});
+
+describe('connection caps', () => {
+  const liveNow = () => [...participants.values()].filter((p) => p.socket).length;
+  const uniqueIp = () => `10.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}`;
+
+  function withCaps(caps: { max?: number; perUser?: number; perIp?: number }, fn: () => void): void {
+    const original = { max: config.MAX_PARTICIPANTS, perUser: config.MAX_CONNECTIONS_PER_USER, perIp: config.MAX_CONNECTIONS_PER_IP };
+    if (caps.max !== undefined) config.MAX_PARTICIPANTS = caps.max;
+    if (caps.perUser !== undefined) config.MAX_CONNECTIONS_PER_USER = caps.perUser;
+    if (caps.perIp !== undefined) config.MAX_CONNECTIONS_PER_IP = caps.perIp;
+    try { fn(); } finally {
+      config.MAX_PARTICIPANTS = original.max;
+      config.MAX_CONNECTIONS_PER_USER = original.perUser;
+      config.MAX_CONNECTIONS_PER_IP = original.perIp;
     }
+  }
+
+  function errorCodeOf(socket: AppSocket): () => string | null {
+    let code: string | null = null;
+    (socket as unknown as { emit: (t: string, m: { code?: string }) => void }).emit = (t, m) => { if (t === 'error') code = m.code ?? null; };
+    return () => code;
+  }
+
+  test('a full instance (MAX_PARTICIPANTS) rejects a new join', () => {
+    withCaps({ max: liveNow() + 1 }, () => {
+      const p1 = joinP(fakeSocket(`u-${Math.random()}`, {}, uniqueIp()), {});
+      createdIds.push(p1!.id);
+      const socket = fakeSocket(`u-${Math.random()}`, {}, uniqueIp());
+      const code = errorCodeOf(socket);
+      assert.equal(joinP(socket, {}), null);
+      assert.equal(code(), 'full');
+    });
+  });
+
+  test('connections in the reconnect grace window do not count toward the instance cap', () => {
+    withCaps({ max: liveNow() + 1 }, () => {
+      const s1 = fakeSocket(`u-${Math.random()}`, {}, uniqueIp());
+      const p1 = joinP(s1, {});
+      createdIds.push(p1!.id);
+      handleClose(s1);
+      const p2 = joinP(fakeSocket(`u-${Math.random()}`, {}, uniqueIp()), {});
+      assert.ok(p2, 'a ghost must not hold the last slot');
+      createdIds.push(p2.id);
+      assert.ok(participants.has(p1!.id), 'the ghost itself is still waiting for its client');
+    });
+  });
+
+  test('one account is held to MAX_CONNECTIONS_PER_USER', () => {
+    withCaps({ perUser: 2 }, () => {
+      const userId = `u-${Math.random()}`;
+      for (let i = 0; i < 2; i++) createdIds.push(joinP(fakeSocket(userId, {}, uniqueIp()), {})!.id);
+      const socket = fakeSocket(userId, {}, uniqueIp());
+      const code = errorCodeOf(socket);
+      assert.equal(joinP(socket, {}), null);
+      assert.equal(code(), 'too_many_connections');
+    });
+  });
+
+  test('accounts behind one address are held to MAX_CONNECTIONS_PER_IP together, others still join', () => {
+    withCaps({ perIp: 3, perUser: 2 }, () => {
+      const ip = uniqueIp();
+      createdIds.push(joinP(fakeSocket(`u-${Math.random()}`, {}, ip), {})!.id);
+      createdIds.push(joinP(fakeSocket(`u-${Math.random()}`, {}, ip), {})!.id);
+      createdIds.push(joinP(fakeSocket(`u-${Math.random()}`, {}, ip), {})!.id);
+      const socket = fakeSocket(`u-${Math.random()}`, {}, ip);
+      const code = errorCodeOf(socket);
+      assert.equal(joinP(socket, {}), null);
+      assert.equal(code(), 'too_many_connections');
+      const elsewhere = joinP(fakeSocket(`u-${Math.random()}`, {}, uniqueIp()), {});
+      assert.ok(elsewhere);
+      createdIds.push(elsewhere.id);
+    });
+  });
+
+  test('a resume is never refused by the caps: it already held its slot', () => {
+    withCaps({ max: liveNow() + 1 }, () => {
+      const userId = `u-${Math.random()}`;
+      const s1 = fakeSocket(userId, {}, uniqueIp());
+      const p1 = joinP(s1, {});
+      createdIds.push(p1!.id);
+      handleClose(s1);
+      const other = joinP(fakeSocket(`u-${Math.random()}`, {}, uniqueIp()), {});
+      createdIds.push(other!.id);
+      const resumed = joinP(fakeSocket(userId, {}, uniqueIp()), { id: p1!.id, token: p1!.token });
+      assert.equal(resumed?.id, p1!.id);
+    });
   });
 });
 
@@ -383,6 +460,60 @@ describe('self-reported media state (mic-state / camera / screen-share / speakin
     const otherSocket = fakeSocket(`u-${Math.random()}`);
     handlers.camera(otherSocket, { on: true });
     assert.equal(p.cameraOn, false);
+  });
+});
+
+describe('media flag broadcasts', () => {
+  function watchedCaller() {
+    const socket = fakeSocket(`u-${Math.random()}`);
+    const p = joinP(socket, {})!;
+    createdIds.push(p.id);
+    setCallConversationId(p, 'voice-1');
+    const updates: Array<Record<string, unknown>> = [];
+    const watcher = fakeSocket(`u-${Math.random()}`);
+    (watcher as unknown as { emit: (t: string, obj: { t: string; participant?: Record<string, unknown> }) => void }).emit = (_t, obj) => {
+      if (obj.t === 'participant-updated' && obj.participant) updates.push(obj.participant);
+    };
+    const peer = joinP(watcher, {})!;
+    createdIds.push(peer.id);
+    peer.knownPeerIds.add(p.userId);
+    return { socket, p, updates };
+  }
+
+  test('a burst goes out once at once and once more with the state it ended in', (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: 1_000_000 });
+    const { socket, updates } = watchedCaller();
+
+    for (let i = 0; i < 50; i += 1) handlers.speaking(socket, { value: i % 2 === 0 });
+    handlers.camera(socket, { on: true });
+    assert.equal(updates.length, 1);
+    assert.equal(updates[0]!.speaking, true);
+
+    t.mock.timers.tick(FLAG_UPDATE_INTERVAL_MS);
+    assert.equal(updates.length, 2);
+    assert.equal(updates[1]!.speaking, false);
+    assert.equal(updates[1]!.cameraOn, true);
+  });
+
+  test('a report that changes nothing is not broadcast', (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: 1_000_000 });
+    const { socket, updates } = watchedCaller();
+
+    handlers.speaking(socket, { value: false });
+    handlers.camera(socket, { on: false });
+    handlers['screen-share'](socket, { on: false });
+    t.mock.timers.tick(FLAG_UPDATE_INTERVAL_MS);
+    assert.equal(updates.length, 0);
+  });
+
+  test('a connection gone before the trailing update sends nothing', (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: 1_000_000 });
+    const { socket, p, updates } = watchedCaller();
+    handlers.speaking(socket, { value: true });
+    handlers.speaking(socket, { value: false });
+    participants.delete(p.id);
+    t.mock.timers.tick(FLAG_UPDATE_INTERVAL_MS);
+    assert.equal(updates.length, 1);
   });
 });
 
@@ -603,6 +734,27 @@ describe('call membership persistence', () => {
       await settle();
       assert.equal(events.at(-2), `save:${p.id}:null:true`);
       assert.equal(events.at(-1), `remove:${p.id}`);
+    } finally {
+      setCallPresenceStore(null);
+    }
+  });
+
+  test('toggling deafen in a burst writes once at once and once with the final state', async (t) => {
+    const { events, store } = recordingStore();
+    setCallPresenceStore(store);
+    try {
+      t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: 1_000_000 });
+      const p = joinP(fakeSocket(`u-${Math.random()}`), {})!;
+      createdIds.push(p.id);
+      setCallConversationId(p, 'voice-1');
+      for (let i = 0; i < 40; i += 1) handlers.deafened!(p.socket!, { value: i % 2 === 0 });
+      handlers.deafened!(p.socket!, { value: true });
+      t.mock.timers.tick(FLAG_UPDATE_INTERVAL_MS);
+      t.mock.timers.reset();
+      await settle();
+      // the call join, the first toggle and one trailing write; each save reads the live participant
+      assert.equal(events.length, 3);
+      assert.equal(events.at(-1), `save:${p.id}:voice-1:true`);
     } finally {
       setCallPresenceStore(null);
     }

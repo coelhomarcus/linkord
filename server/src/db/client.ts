@@ -6,7 +6,7 @@ import { logger } from '../lib/logger.js';
 
 const log = logger.child({ component: 'db' });
 
-// Single Postgres connection, shared by the whole server.
+// One Postgres pool, shared by the whole server.
 if (!config.DATABASE_URL) {
   throw new Error('DATABASE_URL nao configurada — sem banco nao ha login (ver .env.example).');
 }
@@ -20,7 +20,7 @@ if (!config.DATABASE_URL) {
 // verification.
 export const pool = new Pool({
   connectionString: config.DATABASE_URL,
-  max: 5,
+  max: config.DATABASE_POOL_MAX,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 5000,
   ssl: config.DATABASE_SSL

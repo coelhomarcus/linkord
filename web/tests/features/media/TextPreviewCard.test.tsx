@@ -32,6 +32,15 @@ describe('TextPreviewCard', () => {
     expect(link.closest('a')?.getAttribute('href')).not.toBe('javascript:alert(1)');
   });
 
+  it('shows a remote markdown image as a link instead of loading it', async () => {
+    mockFetchOnce({ previewable: true, content: '![pixel](https://attacker.example/pixel.png)', truncated: false, totalSize: 44, language: 'markdown' });
+    const { container } = render(<TextPreviewCard attachment={{ id: 'md-img', name: 'notes.md', mime: 'text/markdown', size: 44 }} />);
+
+    const link = await screen.findByRole('link', { name: 'pixel' });
+    expect(link).toHaveAttribute('href', 'https://attacker.example/pixel.png');
+    expect(container.querySelector('img[src*="attacker.example"]')).toBeNull();
+  });
+
   it('a code file with no highlighting available falls back to a plain <pre>', async () => {
     mockFetchOnce({ previewable: true, content: 'print(1)', truncated: false, totalSize: 8, language: 'python' });
     render(<TextPreviewCard attachment={{ id: 'py-id', name: 'script.py', mime: 'text/x-python', size: 8 }} />);

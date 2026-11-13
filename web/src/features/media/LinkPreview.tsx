@@ -5,6 +5,7 @@ import type { RefObject } from 'react';
 
 import type { DetectedEmbed } from '@/shared/lib/chatEmbeds';
 import { ImageLightbox } from './ImageLightbox';
+import { ExternalMediaGate } from './ExternalMediaGate';
 import { GenericEmbed } from './GenericEmbed';
 import { AudioPlayer, VideoPlayer } from './MediaPlayers';
 import { availableAttachmentWidth, useChatSurfaceWidth } from '@/shared/lib/chatSurfaceWidth';
@@ -14,19 +15,32 @@ import { embedImageBox, previewImageSize, type ImageSize } from './embedImageBox
 import { useNearViewport } from './useNearViewport';
 import { canLoadMediaUrl } from './mediaUrl';
 
-/** The server's measurement of a picture behind an arbitrary URL, asked for
- * shortly before it scrolls into view. Until it answers (or if it can't
- * tell), the box keeps its fixed fallback size. */
-function useRemoteImageSize(url: string, ref: RefObject<HTMLElement | null>, enabled: boolean, stored: LinkPreviewData | undefined): ImageSize | null {
+type ProxiedImage = { src: string | null; size: ImageSize | null; failed: boolean };
+
+/** A direct image link's picture as the server hands it out, through our own
+ * proxy: its host never sees who is reading. Stored with the message (or,
+ * in the media grid, signed with the page); otherwise asked for shortly
+ * before it scrolls into view. The size is only what was known on the first
+ * frame: resizing the row when the answer arrives moved the history on phones
+ * (WebKit applies scroll compensation a frame late). */
+function useProxiedImage(url: string, ref: RefObject<HTMLElement | null>, enabled: boolean, stored: LinkPreviewData | undefined, signed: string | null | undefined): ProxiedImage {
   const near = useNearViewport(ref);
+  const known = stored ?? getCachedLinkPreview(url);
+  const [firstSize] = useState(() => previewImageSize(known));
+  const [fetched, setFetched] = useState<LinkPreviewData | null | undefined>(undefined);
+  const needsFetch = enabled && signed === undefined && !known;
   useEffect(() => {
-    // Warm the cache only: resizing the row when the answer arrives moved the
-    // history on phones (WebKit applies scroll compensation a frame late).
-    if (!enabled || !near || stored) return;
-    void loadLinkPreview(url).catch(() => {});
-  }, [url, near, enabled, stored]);
-  if (!enabled) return null;
-  return previewImageSize(stored) ?? previewImageSize(getCachedLinkPreview(url));
+    if (!needsFetch || !near) return;
+    let cancelled = false;
+    loadLinkPreview(url)
+      .then((data) => { if (!cancelled) setFetched(data); })
+      .catch(() => { if (!cancelled) setFetched(null); });
+    return () => { cancelled = true; };
+  }, [url, near, needsFetch]);
+  if (!enabled) return { src: null, size: null, failed: false };
+  if (signed !== undefined) return { src: signed, size: null, failed: !signed };
+  const data = known ?? fetched;
+  return { src: data?.image ?? null, size: previewImageSize(stored) ?? firstSize, failed: data === null || (!!data && !data.image) };
 }
 
 function EmbedFailedFallback({ url, className }: { url: string; className: string }) {
@@ -65,29 +79,42 @@ interface LinkPreviewProps {
   /** the preview the server stored with the message, when there is one: the
    * card is drawn from it at once instead of fetched */
   preview?: LinkPreviewData;
+  /** a direct image link's proxied address, signed by the server with the
+   * media page (null: the server will not proxy it) */
+  imageUrl?: string | null;
 }
 
-export function LinkPreview({ embed, className = '', edgeToEdge, fitContainer, preview }: LinkPreviewProps) {
+export function LinkPreview({ embed, className = '', edgeToEdge, fitContainer, preview, imageUrl }: LinkPreviewProps) {
   const [failed, setFailed] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const surfaceWidth = useChatSurfaceWidth(384 + 120);
   const maxWidth = availableAttachmentWidth(surfaceWidth, 384);
   const boxRef = useRef<HTMLButtonElement | null>(null);
-  const knownSize = useRemoteImageSize(embed.url, boxRef, embed.kind === 'image' && !fitContainer, preview);
+  const image = useProxiedImage(embed.url, boxRef, embed.kind === 'image', preview, imageUrl);
+  const knownSize = fitContainer ? null : image.size;
 
   if (embed.kind === 'youtube' || embed.kind === 'twitch-channel' || embed.kind === 'twitch-vod' || embed.kind === 'twitch-clip' || embed.kind === 'link') {
     return <GenericEmbed key={embed.url} embed={embed} className={className} edgeToEdge={edgeToEdge} preview={preview} />;
   }
 
-  if (!canLoadMediaUrl(embed.url)) return <EmbedFailedFallback url={embed.url} className={className} />;
-  if (failed) return <EmbedFailedFallback url={embed.url} className={className} />;
+  // a picture comes through the proxy, so only its proxied address must be loadable
+  if (!canLoadMediaUrl(embed.kind === 'image' ? image.src ?? '/' : embed.url)) return <EmbedFailedFallback url={embed.url} className={className} />;
+  if (failed || image.failed) return <EmbedFailedFallback url={embed.url} className={className} />;
 
   if (embed.kind === 'video') {
-    return <VideoPlayer src={embed.url} className={edgeToEdge ? 'rounded-lg border-0' : className} onError={() => setFailed(true)} />;
+    return (
+      <ExternalMediaGate url={embed.url} kind="video" className={className}>
+        <VideoPlayer src={embed.url} className={edgeToEdge ? 'rounded-lg border-0' : className} onError={() => setFailed(true)} />
+      </ExternalMediaGate>
+    );
   }
 
   if (embed.kind === 'audio') {
-    return <AudioPlayer src={embed.url} className={edgeToEdge ? 'max-w-full rounded-lg border-0 bg-transparent shadow-none' : className} onError={() => setFailed(true)} />;
+    return (
+      <ExternalMediaGate url={embed.url} kind="audio" className={className}>
+        <AudioPlayer src={embed.url} className={edgeToEdge ? 'max-w-full rounded-lg border-0 bg-transparent shadow-none' : className} onError={() => setFailed(true)} />
+      </ExternalMediaGate>
+    );
   }
 
   const rounding = edgeToEdge ? 'rounded-lg' : 'rounded-md border border-border';
@@ -102,7 +129,7 @@ export function LinkPreview({ embed, className = '', edgeToEdge, fitContainer, p
         className={`block max-w-full cursor-zoom-in ${fitContainer ? '' : `overflow-hidden bg-fill-subtle ${rounding}`} ${className}`}
       >
         <img
-          src={embed.url}
+          src={image.src ?? undefined}
           alt=""
           onError={() => setFailed(true)}
           // a known size means the box has the picture's own proportions, so it
@@ -111,7 +138,7 @@ export function LinkPreview({ embed, className = '', edgeToEdge, fitContainer, p
           className={fitContainer ? `block h-auto max-h-70 max-w-full w-full object-contain ${rounding}` : `block size-full ${knownSize ? 'object-cover' : 'object-contain'}`}
         />
       </button>
-      <ImageLightbox src={embed.url} alt="" open={lightboxOpen} onOpenChange={setLightboxOpen} />
+      {image.src && <ImageLightbox src={image.src} alt="" open={lightboxOpen} onOpenChange={setLightboxOpen} />}
     </>
   );
 }

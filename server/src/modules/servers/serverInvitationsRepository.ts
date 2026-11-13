@@ -366,13 +366,18 @@ export async function revokeInvitationForDeletedCard(id: string): Promise<void> 
 
 /** Pushes the card update and the list-refresh signal for ids that were
  * revoked inside someone else's transaction (block, unfriend, ownership
- * transfer) — those callers get the ids back from invitationRevocation.ts. */
+ * transfer) — those callers get the ids back from invitationRevocation.ts.
+ * Never throws: callers fire and forget, after their change committed. */
 export async function announceRevocations(ids: string[]): Promise<void> {
   if (!ids.length) return;
   await broadcastInvitationUpdates(ids);
-  const rows = await db.select({ inviterId: serverInvitations.inviterId, inviteeId: serverInvitations.inviteeId })
-    .from(serverInvitations).where(inArray(serverInvitations.id, ids));
-  for (const r of rows) notifySocialChanged([r.inviterId, r.inviteeId]);
+  try {
+    const rows = await db.select({ inviterId: serverInvitations.inviterId, inviteeId: serverInvitations.inviteeId })
+      .from(serverInvitations).where(inArray(serverInvitations.id, ids));
+    for (const r of rows) notifySocialChanged([r.inviterId, r.inviteeId]);
+  } catch (err) {
+    log.error('failed to announce revoked invitations', err);
+  }
 }
 
 // ---- lists ------------------------------------------------------------------

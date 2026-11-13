@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { createPreviewBroker, isValidPreviewImage, MAX_PREVIEW_CHARS } from '../../../src/modules/calls/streamPreview.js';
+import { createPreviewBroker, isValidPreviewImage, MAX_PREVIEW_CHARS, STREAM_PREVIEW_PERMISSIONS } from '../../../src/modules/calls/streamPreview.js';
+import { hasPermission, PERMISSIONS } from '../../../src/modules/servers/permissions.js';
 
 function clock(start = 1_000) {
   let at = start;
@@ -73,5 +74,13 @@ describe('isValidPreviewImage', () => {
     assert.equal(isValidPreviewImage('data:image/jpeg;base64,AA"><script>'), false);
     assert.equal(isValidPreviewImage(`data:image/jpeg;base64,${'A'.repeat(MAX_PREVIEW_CHARS)}`), false);
     assert.equal(isValidPreviewImage(42), false);
+  });
+});
+
+describe('STREAM_PREVIEW_PERMISSIONS', () => {
+  it('asks for what joining the call asks for, not only seeing the channel', () => {
+    assert.equal(hasPermission(PERMISSIONS.VIEW_CHANNEL, STREAM_PREVIEW_PERMISSIONS), false);
+    assert.equal(hasPermission(PERMISSIONS.CONNECT, STREAM_PREVIEW_PERMISSIONS), false);
+    assert.equal(hasPermission(PERMISSIONS.VIEW_CHANNEL | PERMISSIONS.CONNECT, STREAM_PREVIEW_PERMISSIONS), true);
   });
 });

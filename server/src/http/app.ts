@@ -1,15 +1,17 @@
 import path from 'node:path';
-import Fastify, { type FastifyError, type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
+import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify';
 import fastifyStatic from '@fastify/static';
 import fastifyCompress from '@fastify/compress';
 import { config } from '../config/env.js';
 import { listVisibleOnlineUserIds } from '../modules/presence/participants.js';
-import { sendError, sendJson } from './respond.js';
+import { sendError } from './respond.js';
+import { handleRouteError } from './errorHandler.js';
 import { originGuard } from './originGuard.js';
-import { registerHealthRoute } from './health.js';
+import { createReadinessCheck, registerHealthRoute } from './health.js';
+import { pool } from '../db/client.js';
+import { unwritableUploadDirs } from '../modules/attachments/uploadSession.js';
 import { securityHeaders } from './securityHeaders.js';
 import { registerAuthRoutes } from '../modules/auth/routes.js';
-import { RateLimitUnavailableError } from '../modules/auth/ratelimit.js';
 import { registerAttachmentRoutes } from '../modules/attachments/attachments.js';
 import { registerConnectionRoutes } from '../modules/connections/connections.js';
 import { registerProfileRoutes } from '../modules/profile/profile.js';
@@ -57,7 +59,7 @@ const SLOW_REQUEST_MS = 1000;
  * health check are skipped. */
 function logRequest(request: FastifyRequest, status: number, ms: number): void {
   const route = loggablePath(request);
-  if (route === '/healthz' || !(route.startsWith('/api/') || route.startsWith('/uploads/'))) return;
+  if (route === '/healthz' || route === '/readyz' || !(route.startsWith('/api/') || route.startsWith('/uploads/'))) return;
   const fields = { reqId: request.id, method: request.method, route, status, ms };
   if (status >= 500) log.error('request failed', undefined, fields);
   else if (status === 429 || status === 403 || (status === 401 && !route.startsWith('/api/auth/'))) log.warn('request denied', fields);
@@ -73,26 +75,7 @@ function logRequest(request: FastifyRequest, status: number, ms: number): void {
 export function createApp(): FastifyInstance {
   const fastify = Fastify({ bodyLimit: config.MAX_BODY_BYTES });
 
-  // any unhandled route error becomes JSON (never crashes the process —
-  // Fastify already catches sync exceptions and rejected promises from
-  // async handlers natively, no per-route try/catch needed). Fastify's own
-  // errors (invalid JSON, body too large) land here too, just with `.code`
-  // in FST_ERR_* format instead of the app's own codes — nothing in the
-  // frontend depends on the old codes (invalid_json etc.), so accepting
-  // Fastify's native ones going forward is safe.
-  fastify.setErrorHandler((err: FastifyError, _request: FastifyRequest, reply: FastifyReply) => {
-    // fail closed: without the counters a brute-force limit cannot be enforced, so the attempt is refused (already logged where it failed)
-    if (err instanceof RateLimitUnavailableError) {
-      reply.header('Retry-After', '30');
-      return sendError(reply, 503, 'rate_limit_unavailable', 'Não foi possível verificar suas tentativas agora. Tente novamente em instantes.');
-    }
-    const status = err.statusCode ?? 500;
-    const code = err.code || 'internal_error';
-    if (status >= 500) log.error('error in a route', err, { reqId: _request.id, method: _request.method, url: loggablePath(_request) });
-    // Fastify's own errors (FST_ERR_*, body parsing) keep their code as-is; only
-    // this handler is allowed to put a code outside the registry on the wire
-    sendJson(reply, status, { error: { code, message: err.message || 'Erro interno.' } });
-  });
+  fastify.setErrorHandler(handleRouteError);
 
   // Registered once, applies fastify-wide (it self-wraps with fastify-plugin,
   // same as @fastify/static below — nesting it wouldn't actually scope it).
@@ -110,7 +93,10 @@ export function createApp(): FastifyInstance {
   fastify.addHook('onRequest', async (request, reply) => { reply.header('x-request-id', request.id); });
   fastify.addHook('onResponse', async (request, reply) => logRequest(request, reply.statusCode, Math.round(reply.elapsedTime)));
 
-  registerHealthRoute(fastify);
+  registerHealthRoute(fastify, createReadinessCheck({
+    pingDb: () => pool.query('select 1'),
+    unwritableUploadDirs: () => unwritableUploadDirs(),
+  }));
 
   registerAuthRoutes(fastify);
   registerAttachmentRoutes(fastify);

@@ -60,6 +60,14 @@ export async function stagedBytes(): Promise<{ bytes: number; files: number }> {
   return { bytes: Number(row?.bytes ?? 0), files: Number(row?.files ?? 0) };
 }
 
+/** One account's staged bytes: part of what it has not sent yet, capped per account at init. */
+export async function stagedBytesOf(ownerId: string): Promise<number> {
+  const [row] = await db.select({
+    bytes: sql<number>`coalesce(sum(${stagedAttachments.size} + coalesce(${stagedAttachments.thumbSize}, 0)), 0)::float8`,
+  }).from(stagedAttachments).where(eq(stagedAttachments.ownerId, ownerId));
+  return Number(row?.bytes ?? 0);
+}
+
 /** Ids the orphan sweeper must treat as referenced, originals and thumbnails. */
 export async function stagedFileIds(): Promise<string[]> {
   const rows = await db.select({ id: stagedAttachments.id, thumbId: stagedAttachments.thumbId }).from(stagedAttachments);

@@ -129,7 +129,7 @@ export function MediaListItem({ item, onJump }: { item: MediaItem; onJump: (item
           <DocumentAttachmentCard name={attachment.name} size={attachment.size} mime={attachment.mime} className="min-w-0 flex-1" />
         </a>
       ) : embed ? (
-        <LinkPreview embed={embed} className="w-full max-w-full" fitContainer />
+        <LinkPreview embed={embed} imageUrl={item.imageUrl} className="w-full max-w-full" fitContainer />
       ) : null}
       <ItemMeta item={item} onJump={onJump} />
     </div>

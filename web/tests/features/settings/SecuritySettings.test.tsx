@@ -10,9 +10,11 @@ const api = {
   fetchSecurityStatus: vi.fn(),
   fetchSessions: vi.fn(),
   setLoginAlerts: vi.fn(),
+  confirmLoginAlertDisable: vi.fn(),
   requestTwoFactorEnable: vi.fn(),
   confirmTwoFactorEnable: vi.fn(),
   disableTwoFactor: vi.fn(),
+  confirmTwoFactorDisable: vi.fn(),
   changePassword: vi.fn(),
   endSession: vi.fn(),
   endOtherSessions: vi.fn(),
@@ -23,9 +25,11 @@ vi.mock('@/shared/api/api', async (importOriginal) => ({
   fetchSecurityStatus: (...args: unknown[]) => api.fetchSecurityStatus(...args),
   fetchSessions: (...args: unknown[]) => api.fetchSessions(...args),
   setLoginAlerts: (...args: unknown[]) => api.setLoginAlerts(...args),
+  confirmLoginAlertDisable: (...args: unknown[]) => api.confirmLoginAlertDisable(...args),
   requestTwoFactorEnable: (...args: unknown[]) => api.requestTwoFactorEnable(...args),
   confirmTwoFactorEnable: (...args: unknown[]) => api.confirmTwoFactorEnable(...args),
   disableTwoFactor: (...args: unknown[]) => api.disableTwoFactor(...args),
+  confirmTwoFactorDisable: (...args: unknown[]) => api.confirmTwoFactorDisable(...args),
   changePassword: (...args: unknown[]) => api.changePassword(...args),
   endSession: (...args: unknown[]) => api.endSession(...args),
   endOtherSessions: (...args: unknown[]) => api.endOtherSessions(...args),
@@ -78,16 +82,36 @@ describe('SecuritySettings: two-step verification', () => {
     expect(await switchOf()).not.toBeChecked();
   });
 
-  it('turns off with the password', async () => {
+  it('turns off only after the password and a code sent to the account email', async () => {
     const user = userEvent.setup();
     api.fetchSecurityStatus.mockResolvedValue(status({ twoFactorEnabled: true }));
-    api.disableTwoFactor.mockResolvedValue({ twoFactorEnabled: false });
+    api.disableTwoFactor.mockResolvedValue({ codeRequired: true, email: 'f***@example.com' });
+    api.confirmTwoFactorDisable.mockResolvedValue({ twoFactorEnabled: false });
     render(<SecuritySettings />);
     await user.click(await switchOf());
     await user.type(screen.getByLabelText('Senha atual'), 'my password');
-    await user.click(screen.getByRole('button', { name: 'Desativar' }));
+    await user.click(screen.getByRole('button', { name: 'Enviar código' }));
     expect(api.disableTwoFactor).toHaveBeenCalledWith('my password');
+    expect(await screen.findByText(/Digite o código enviado para f\*\*\*@example\.com/)).toBeInTheDocument();
+    expect(await switchOf()).toBeChecked();
+
+    await user.type(screen.getByLabelText('Código de desativação'), '123456');
+    await waitFor(() => expect(api.confirmTwoFactorDisable).toHaveBeenCalledWith('123456'));
     await waitFor(async () => expect(await switchOf()).not.toBeChecked());
+  });
+
+  it('a wrong turn-off code keeps it on and says why', async () => {
+    const user = userEvent.setup();
+    api.fetchSecurityStatus.mockResolvedValue(status({ twoFactorEnabled: true }));
+    api.disableTwoFactor.mockResolvedValue({ codeRequired: true, email: 'f***@example.com' });
+    api.confirmTwoFactorDisable.mockRejectedValue(new ApiError(400, 'invalid_code', 'Código inválido.'));
+    render(<SecuritySettings />);
+    await user.click(await switchOf());
+    await user.type(screen.getByLabelText('Senha atual'), 'my password');
+    await user.click(screen.getByRole('button', { name: 'Enviar código' }));
+    await user.type(await screen.findByLabelText('Código de desativação'), '000000');
+    expect(await screen.findByText('Código inválido.')).toBeInTheDocument();
+    expect(await switchOf()).toBeChecked();
   });
 
   it('explains why it cannot be turned on without email delivery', async () => {
@@ -202,7 +226,7 @@ describe('SecuritySettings in English', () => {
 describe('SecuritySettings: sign-in alerts', () => {
   const alertSwitch = () => screen.findByRole('switch', { name: 'Avisar por e-mail sobre novos logins' });
 
-  it('is on by default and turns off with one click', async () => {
+  it('is on by default and turns off after the password', async () => {
     const user = userEvent.setup();
     api.setLoginAlerts.mockResolvedValue({ loginAlertEnabled: false });
     render(<SecuritySettings />);
@@ -210,21 +234,61 @@ describe('SecuritySettings: sign-in alerts', () => {
     const toggle = await alertSwitch();
     expect(toggle).toBeChecked();
     await user.click(toggle);
+    expect(api.setLoginAlerts).not.toHaveBeenCalled();
+    expect(toggle).toBeChecked();
 
-    expect(api.setLoginAlerts).toHaveBeenCalledWith(false);
+    await user.type(screen.getByLabelText('Senha atual'), 'my password');
+    await user.click(screen.getByRole('button', { name: 'Desativar' }));
+    expect(api.setLoginAlerts).toHaveBeenCalledWith(false, 'my password');
     await waitFor(() => expect(toggle).not.toBeChecked());
   });
 
-  it('keeps the old state and says so when saving fails', async () => {
+  it('with two-step login on, turning off also takes the emailed code', async () => {
     const user = userEvent.setup();
-    api.setLoginAlerts.mockRejectedValue(new Error('network'));
+    api.fetchSecurityStatus.mockResolvedValue(status({ twoFactorEnabled: true }));
+    api.setLoginAlerts.mockResolvedValue({ codeRequired: true, email: 'f***@example.com' });
+    api.confirmLoginAlertDisable.mockResolvedValue({ loginAlertEnabled: false });
     render(<SecuritySettings />);
 
     const toggle = await alertSwitch();
     await user.click(toggle);
-
-    expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível salvar a alteração.');
+    await user.type(screen.getByLabelText('Senha atual'), 'my password');
+    await user.click(screen.getByRole('button', { name: 'Desativar' }));
+    expect(await screen.findByText(/Digite o código enviado para f\*\*\*@example\.com/)).toBeInTheDocument();
     expect(toggle).toBeChecked();
+
+    await user.type(screen.getByLabelText('Código de confirmação'), '123456');
+    await waitFor(() => expect(api.confirmLoginAlertDisable).toHaveBeenCalledWith('123456'));
+    await waitFor(() => expect(toggle).not.toBeChecked());
+  });
+
+  it('a wrong password keeps them on and says why', async () => {
+    const user = userEvent.setup();
+    api.setLoginAlerts.mockRejectedValue(new ApiError(403, 'invalid_password', 'Senha incorreta.'));
+    render(<SecuritySettings />);
+
+    const toggle = await alertSwitch();
+    await user.click(toggle);
+    await user.type(screen.getByLabelText('Senha atual'), 'wrong');
+    await user.click(screen.getByRole('button', { name: 'Desativar' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Senha incorreta.');
+    expect(toggle).toBeChecked();
+  });
+
+  it('turns back on with one click, and keeps the old state when saving fails', async () => {
+    const user = userEvent.setup();
+    api.fetchSecurityStatus.mockResolvedValue(status({ loginAlertEnabled: false }));
+    api.setLoginAlerts.mockRejectedValueOnce(new Error('network')).mockResolvedValueOnce({ loginAlertEnabled: true });
+    render(<SecuritySettings />);
+
+    const toggle = await alertSwitch();
+    await user.click(toggle);
+    expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível salvar a alteração.');
+    expect(toggle).not.toBeChecked();
+
+    await user.click(toggle);
+    expect(api.setLoginAlerts).toHaveBeenLastCalledWith(true);
+    await waitFor(() => expect(toggle).toBeChecked());
   });
 
   it('is disabled with the reason when the account has no email or the server cannot send', async () => {
