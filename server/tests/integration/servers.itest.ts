@@ -233,6 +233,26 @@ describe('voice channels (real Postgres)', () => {
   });
 });
 
+describe('one call per account (real Postgres)', () => {
+  it('a second tab of the account is refused a voice channel while the first is in a call', async () => {
+    const owner = await actor('one'); const member = await actor('one');
+    const { voiceChannelId } = await makeServerWithMembers(owner.id, [member.id]);
+    const phone = joinNew(member);
+    const desktop = joinNew(member);
+    try {
+      setCallConversationId(phone.participant, voiceChannelId);
+      await handleCallJoin(desktop.socket, { conversationId: voiceChannelId });
+
+      assert.equal(desktop.sent.find((s) => s.event === 'error')?.payload.code, 'call-not-allowed');
+      assert.equal(desktop.participant.callConversationId, null);
+      assert.equal(phone.participant.callConversationId, voiceChannelId);
+    } finally {
+      cleanupParticipant(phone.participant);
+      cleanupParticipant(desktop.participant);
+    }
+  });
+});
+
 describe('role hierarchy: escalation paths (real Postgres)', () => {
   async function setup() {
     const owner = await actor('esc'); const manager = await actor('esc'); const target = await actor('esc');
