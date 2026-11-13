@@ -46,7 +46,17 @@
     "download": "Download",
     "fullscreen": "Fullscreen",
     "video": "video",
-    "audio": "audio"
+    "audio": "audio",
+    "videoPlayer": "Video player",
+    "seek": "Playback position",
+    "timeValue": "{{current}} of {{total}}",
+    "playbackRate": "Speed",
+    "playbackRateValue": "Playback speed: {{rate}}",
+    "rateValue": "{{rate}}×",
+    "normalRate": "{{rate}} (normal)",
+    "pictureInPicture": "Picture-in-picture",
+    "exitPictureInPicture": "Exit picture-in-picture",
+    "exitFullscreen": "Exit fullscreen"
   },
   "preview": {
     "showLess": "Show less",

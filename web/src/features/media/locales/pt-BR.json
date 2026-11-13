@@ -46,7 +46,17 @@
     "download": "Baixar",
     "fullscreen": "Tela cheia",
     "video": "vídeo",
-    "audio": "áudio"
+    "audio": "áudio",
+    "videoPlayer": "Player de vídeo",
+    "seek": "Posição de reprodução",
+    "timeValue": "{{current}} de {{total}}",
+    "playbackRate": "Velocidade",
+    "playbackRateValue": "Velocidade de reprodução: {{rate}}",
+    "rateValue": "{{rate}}×",
+    "normalRate": "{{rate}} (normal)",
+    "pictureInPicture": "Picture-in-picture",
+    "exitPictureInPicture": "Sair do picture-in-picture",
+    "exitFullscreen": "Sair da tela cheia"
   },
   "preview": {
     "showLess": "Mostrar menos",

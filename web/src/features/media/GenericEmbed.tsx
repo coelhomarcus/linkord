@@ -21,6 +21,7 @@ import { embedImageAspect, previewImageSize } from './embedImageBox';
 import { canLoadMediaUrl } from './mediaUrl';
 import { useAnimatedVariant } from './useAnimatedVariant';
 import { useNearViewport } from './useNearViewport';
+import { INLINE_VIDEO_MAX_HEIGHT, videoBoxStyle } from './videoBox';
 
 interface GenericEmbedProps {
   embed: DetectedEmbed;
@@ -173,9 +174,25 @@ function GenericEmbedCard({ embed, className = '', edgeToEdge, preview, menu }: 
   } else if (known) {
     media = <div className="w-full bg-black"><TwitchPlayer embed={embed} /></div>;
   } else if (video) {
+    // the page's picture stands in for the video until it plays, so its size is the box's
+    const posterSize = drawnImage ? previewImageSize(data) : null;
     media = (
-      <ExternalMediaGate url={video} kind="video" poster={drawnImage} className="max-w-none rounded-none border-0">
-        <VideoPlayer src={video} poster={drawnImage} className="max-w-none rounded-none border-0" onError={() => setVideoFailed(true)} />
+      <ExternalMediaGate
+        url={video}
+        kind="video"
+        poster={drawnImage}
+        style={posterSize ? videoBoxStyle(posterSize, maxWidth, INLINE_VIDEO_MAX_HEIGHT) : undefined}
+        className="max-w-none rounded-none border-0"
+      >
+        <VideoPlayer
+          src={video}
+          poster={drawnImage}
+          placeholder={drawnImage ? data.imagePlaceholder : null}
+          width={posterSize?.width}
+          height={posterSize?.height}
+          className="max-w-none rounded-none border-0"
+          onError={() => setVideoFailed(true)}
+        />
       </ExternalMediaGate>
     );
   } else if (audio) {

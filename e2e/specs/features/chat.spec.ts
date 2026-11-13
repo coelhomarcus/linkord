@@ -6,6 +6,10 @@ import type { AppPage } from '../../fixtures/app';
 // a 1x1 PNG, enough for the image path (thumbnail, preview) without a fixture file
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
 
+// 64x112 (portrait), two seconds of VP8: the uploader's browser reads its size
+// before the upload, so every player can lay it out before loading it
+const WEBM = Buffer.from('GkXfo59ChoEBQveBAULygQRC84EIQoKEd2VibUKHgQJChYECGFOAZwEAAAAAAAPXEU2bdLpNu4tTq4QVSalmU6yBoU27i1OrhBZUrmtTrIHYTbuMU6uEElTDZ1OsggElTbuMU6uEHFO7a1OsggPB7AEAAAAAAABZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAVSalmsirXsYMPQkBNgI1MYXZmNjIuMTIuMTAyV0GNTGF2ZjYyLjEyLjEwMkSJiECfQAAAAAAAFlSua8iuAQAAAAAAAD/XgQFzxYh/I+YdoQ3xdJyBACK1nIN1bmSIgQCGhVZfVlA4g4EBI+ODhAX14QDgkLCBQLqBcJqBAlWwhFW5gQESVMNn/HNzoGPAgGfImkWjh0VOQ09ERVJEh41MYXZmNjIuMTIuMTAyc3PWY8CLY8WIfyPmHaEN8XRnyKFFo4dFTkNPREVSRIeUTGF2YzYyLjI4LjEwMiBsaWJ2cHhnyKFFo4hEVVJBVElPTkSHkzAwOjAwOjAyLjAwMDAwMDAwMAAfQ7Z1QhXngQCjyIEAAIBwBACdASpAAHAAAEcIhYWIhYSIAgICdaoD+AP6Agbrx86dOnTp06dOnTp03wD+6ez//uwp7pxn/+7C//yN/Hzo3/kMgKOWgQBkANEBAAEQEAAYABhYL/QACJAYAKOWgQDIANEBAAEQEAAYABhYL/QACJAYAKOWgQEsANEBAAEQEAAYABhYL/QACJAYAKOWgQGQANEBAAEQEAAYABhYL/QACJAYAKOWgQH0ANEBAAEQEAAYABhYL/QACJAYAKOWgQJYANEBAAEQEAAYABhYL/QACJAYAKOWgQK8ANEBAAEQEBRgAGFgv9AAIkBgAKOWgQMgANEBAAEQEAAYABhYL/QACJAYAKOWgQOEANEBAAEQEAAYABhYL/QACJAYAKOWgQPoANEBAAEQEAAYABhYL/QACJAYAKOWgQRMANEBAAEQEAAYABhYL/QACJAYAKOWgQSwANEBAAEQEAAYABhYL/QACJAYAKOWgQUUANEBAAEQEAAYABhYL/QACJAYAKOWgQV4ANEBAAEQEAAYABhYL/QACJAYAKOWgQXcANEBAAEQEAAYABhYL/QACJAYAKOWgQZAANEBAAEQEAAYABhYL/QACJAYAKOWgQakANEBAAEQEAAYABhYL/QACJAYAKOWgQcIANEBAAEQEBRgAGFgv9AAIkBgAKOWgQdsANEBAAEQEAAYABhYL/QACJAYABxTu2uRu4+zgQC3iveBAfGCAabwgQM=', 'base64');
+
 async function twoInAChannel(users: { create(prefix?: string): Promise<User> }): Promise<{ alice: User; bob: User; a: AppPage; b: AppPage }> {
   const alice = await users.create('alice');
   const bob = await users.create('bob');
@@ -125,6 +129,24 @@ test.describe('chat', () => {
     await a.page.locator('input[type=file]:not([accept])').setInputFiles(file);
     await a.send('com imagem');
     await expect(b.message('com imagem').locator('img').first()).toBeVisible();
+  });
+
+  test('a video attachment keeps its shape before it loads and answers the keyboard', async ({ users }, testInfo) => {
+    const { a, b } = await twoInAChannel(users);
+    // the reader never gets the file, so the box can only come from the stored size
+    await b.page.route('**/uploads/**', (route) => route.abort());
+    const file = testInfo.outputPath('vertical.webm');
+    writeFileSync(file, WEBM);
+    await a.page.locator('input[type=file]:not([accept])').setInputFiles(file);
+    await a.send('com vídeo');
+
+    await expect(b.message('com vídeo').getByRole('group', { name: 'vertical.webm' })).toHaveAttribute('style', /aspect-ratio: 64 \/ 112/);
+
+    const player = a.message('com vídeo').getByRole('group', { name: 'vertical.webm' });
+    await player.press('k');
+    await expect.poll(() => player.locator('video').first().evaluate((video: HTMLVideoElement) => !video.paused)).toBe(true);
+    await player.press('k');
+    await expect.poll(() => player.locator('video').first().evaluate((video: HTMLVideoElement) => video.paused)).toBe(true);
   });
 });
 

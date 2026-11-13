@@ -77,6 +77,8 @@ export function ChatAttachment({ attachment, edgeToEdge }: ChatAttachmentProps) 
       <VideoPlayer
         src={url}
         title={attachment.name}
+        width={attachment.width}
+        height={attachment.height}
         className={edgeToEdge ? 'rounded-lg border-0' : undefined}
       />
     );

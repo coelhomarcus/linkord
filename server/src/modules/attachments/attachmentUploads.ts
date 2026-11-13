@@ -13,6 +13,7 @@ import { discardStaged, findOwnedStaged, stageFile, stagedBytesOf } from './stag
 import type { StagedAttachment } from '../../db/schema.js';
 import { hasRoomFor } from './attachmentQuota.js';
 import { parseVoiceMeta, voicePayload } from './voiceMessages.js';
+import { parseVideoDimensions } from './videoDimensions.js';
 import {
   tmpDirFor, manifestPathFor, chunkPathFor, readManifest, expectedChunkLength, assembleChunks, sanitizeFileName,
   reserveUpload, releaseUpload, touchUpload, openUploadsOf, expireIdleUploads, withInitLock, completingUploads,
@@ -76,6 +77,8 @@ export async function handleAttachmentInit(request: FastifyRequest, reply: Fasti
   }
   const voice = parseVoiceMeta(body.voice, mimeType);
   if (voice === null) return sendError(reply, 400, 'invalid_voice', 'Mensagem de voz inválida.');
+  const video = parseVideoDimensions(body.video, mimeType);
+  if (video === null) return sendError(reply, 400, 'invalid_video', 'Dimensões de vídeo inválidas.');
 
   const uploadId = newId();
 
@@ -114,7 +117,7 @@ export async function handleAttachmentInit(request: FastifyRequest, reply: Fasti
     await fs.mkdir(tmpDirFor(uploadId), { recursive: true });
     await fs.writeFile(manifestPathFor(uploadId), JSON.stringify({
       uploadId, userId: sess.userId, conversationId, fileName, mimeType, totalSize,
-      chunkSize, totalChunks, createdAt: new Date().toISOString(), ...(voice ? { voice } : {}),
+      chunkSize, totalChunks, createdAt: new Date().toISOString(), ...(voice ? { voice } : {}), ...(video ? { video } : {}),
     } satisfies UploadManifest));
   } catch (err) {
     releaseUpload(uploadId);
@@ -234,6 +237,8 @@ async function completeStaged(reply: FastifyReply, manifest: UploadManifest, use
           await fs.unlink(filePathFor(thumbId)).catch(() => {});
         }
       }
+    } else if (manifest.video) {
+      dims = manifest.video;
     }
     staged = await stageFile({
       id: uploadId, ownerId: userId, conversationId: manifest.conversationId,
