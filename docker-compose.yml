@@ -13,6 +13,13 @@ services:
       - ./uploads:/app/uploads
       - ./backups:/app/backups
     mem_reservation: 512m
+    # The log holds client addresses on security events (failed logins, refused sign-ups); rotation is
+    # what bounds how long they are kept. See docs/DEPLOY.md#logs.
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "5"
     # The image already runs as `node`; these keep a compromised process from gaining more than that.
     security_opt:
       - no-new-privileges:true

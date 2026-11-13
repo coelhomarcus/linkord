@@ -153,6 +153,12 @@ function fetchPage(targetUrl: string, lookup?: Lookup): Promise<FetchedPage> {
     if (PROBED_IMAGE_TYPES.test(contentType)) {
       return probeImageBody(res, (size) => resolve({ html: '', finalUrl, picture: { size } }));
     }
+    if (/^image\//i.test(contentType)) {
+      // an SVG or icon: still a picture the card shows (through the proxy),
+      // just one whose size is not worth reading
+      res.destroy();
+      return resolve({ html: '', finalUrl, picture: { size: null } });
+    }
     if (!contentType.includes('text/html')) {
       // not a page and not a picture worth sizing: nothing to read, so don't
       // download it (it can be arbitrarily large)

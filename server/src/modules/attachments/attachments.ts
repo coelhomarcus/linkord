@@ -4,6 +4,7 @@ import { config } from '../../config/env.js';
 import { db } from '../../db/client.js';
 import { attachments as attachmentsTable, type Attachment } from '../../db/schema.js';
 import { handleAttachmentInit, handleAttachmentChunk, handleAttachmentComplete, handleAttachmentCancel } from './attachmentUploads.js';
+import { touchUpload } from './uploadSession.js';
 import { serveUpload, handleAttachmentPreview } from './attachmentServing.js';
 
 // Keep cleanup in a leaf module: message, conversation, presence, and moderation handlers all
@@ -44,6 +45,12 @@ export function registerAttachmentRoutes(fastify: FastifyInstance): void {
   // every other /api/* route. Chunk uploads are always binary.
   fastify.register(async (scoped) => {
     scoped.addContentTypeParser('*', { parseAs: 'buffer' }, (_req, payload, done) => done(null, payload));
-    scoped.post('/api/attachments/:id/chunk/:index', { bodyLimit: config.UPLOAD_CHUNK_BYTES }, handleAttachmentChunk);
+    scoped.post<{ Params: { id: string; index: string } }>('/api/attachments/:id/chunk/:index', {
+      bodyLimit: config.UPLOAD_CHUNK_BYTES,
+      // before the body: on a slow link a chunk takes minutes to arrive, and
+      // the session must not count as idle meanwhile. Only refreshes a
+      // reservation that exists; ownership is checked by the handler.
+      onRequest: async (request) => { touchUpload(request.params.id); },
+    }, handleAttachmentChunk);
   });
 }

@@ -9,6 +9,22 @@ export function roomNameFor(conversationId: string): string {
   return `${config.LIVEKIT_ROOM_NAME}-${conversationId}`;
 }
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** The conversation behind one of this deployment's rooms, or null for any other room on the same
+ * LiveKit project. Conversation ids are UUIDs, so `linkord-room-staging-<id>` (another deployment
+ * whose prefix extends ours) is not mistaken for one of ours. */
+export function conversationIdOfRoom(roomName: string): string | null {
+  const prefix = `${config.LIVEKIT_ROOM_NAME}-`;
+  if (!roomName.startsWith(prefix)) return null;
+  const id = roomName.slice(prefix.length);
+  return UUID.test(id) ? id : null;
+}
+
+export function isLiveKitConfigured(): boolean {
+  return !!config.LIVEKIT_URL && !!config.LIVEKIT_API_KEY;
+}
+
 /** Access token for ONE LiveKit room (one per call — voice channel or 1:1, see
  * realtime/socket.ts#handleCallJoin — `roomName` comes from
  * `${LIVEKIT_ROOM_NAME}-${conversationId}`), with the same identity (p.id/p.name)
@@ -58,7 +74,7 @@ export function createToken(p: Participant, roomName: string, rights: PublishRig
 }
 
 function roomService(): RoomServiceClient {
-  return new RoomServiceClient(config.LIVEKIT_URL, config.LIVEKIT_API_KEY, config.LIVEKIT_API_SECRET);
+  return new RoomServiceClient(config.LIVEKIT_SERVER_URL, config.LIVEKIT_API_KEY, config.LIVEKIT_API_SECRET);
 }
 
 /** Force-disconnects a participant from a LiveKit room — unlike the self-
@@ -98,6 +114,28 @@ interface RoomApi {
   listParticipants(room: string): Promise<{ identity: string; metadata?: string }[]>;
 }
 
+export interface CallRoomsApi extends RoomApi {
+  listRooms(): Promise<{ name: string }[]>;
+}
+
+export function callRoomsApi(): CallRoomsApi {
+  return roomService();
+}
+
+function isNotFound(err: unknown): boolean {
+  return /not.?found|does not exist/i.test(err instanceof Error ? err.message : String(err));
+}
+
+/** Removes one connection from a call's room. One already gone counts as removed. */
+export async function removeFromCall(conversationId: string, identity: string, api: Pick<RoomApi, 'removeParticipant'> = roomService()): Promise<void> {
+  if (!isLiveKitConfigured()) return;
+  try {
+    await api.removeParticipant(roomNameFor(conversationId), identity);
+  } catch (err) {
+    if (!isNotFound(err)) throw err;
+  }
+}
+
 /** Identities to remove: the account's live connections in this call (known
  * from the socket layer) plus anything the SFU itself lists for that account
  * — a tab that lost signaling can still be connected media-wise. */
@@ -121,7 +159,7 @@ export async function evictFromCall(
   userId: string, conversationId: string, knownIdentities: string[],
   api: RoomApi = roomService(), sleep: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms)),
 ): Promise<void> {
-  if (!config.LIVEKIT_URL || !config.LIVEKIT_API_KEY) return;
+  if (!isLiveKitConfigured()) return;
   const roomName = roomNameFor(conversationId);
   let pending = await findIdentitiesToEvict(api, roomName, userId, knownIdentities);
   for (let attempt = 1; attempt <= EVICT_ATTEMPTS && pending.length > 0; attempt++) {
@@ -131,7 +169,7 @@ export async function evictFromCall(
         await api.removeParticipant(roomName, identity);
       } catch (err) {
         // "not found" just means they were already gone
-        if (!/not.?found|does not exist/i.test(err instanceof Error ? err.message : String(err))) {
+        if (!isNotFound(err)) {
           failed.push(identity);
           log.warn('failed to remove a participant from the call', { roomName, identity, attempt, err: err instanceof Error ? err.message : String(err) });
         }

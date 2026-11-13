@@ -38,7 +38,7 @@ const log = logger.child({ component: 'socket' });
 // — register a new feature's `handlers` here, no dispatch changes needed.
 // 'join' is special-cased (see handleJoin) because welcome needs data from
 // several features.
-const handlers: HandlerTable = Object.assign(
+export const handlers: HandlerTable = Object.assign(
   {},
   participantHandlers,
   presenceStatus.handlers,
@@ -56,19 +56,30 @@ interface JoinMessage {
   v?: unknown;
 }
 
-// Rate-limit events that write to the database or trigger work on another client. Search is
-// capped because scripted clients can bypass the UI debounce; click-driven reads stay uncapped.
-// Typing is already throttled by the composer and does not touch the database.
-const ACTION_LIMITS: Record<string, { windowMs: number; max: number }> = {
+// Rate-limit events that read or write the database or trigger work on another client: a scripted
+// client skips the UI's debounces, and every handler shares one small database pool. `silent` drops
+// past the limit without an error, for events nobody waits on (a page request has its own timeout).
+// Media flags are not here: participants.ts coalesces their broadcasts instead, since dropping one
+// would leave a stale icon.
+interface ActionLimit { windowMs: number; max: number; silent?: boolean }
+export const ACTION_LIMITS: Record<string, ActionLimit> = {
   chat: { windowMs: 10_000, max: 10 },
   'chat-edit': { windowMs: 10_000, max: 10 },
   'chat-delete': { windowMs: 10_000, max: 10 },
   'chat-remove-attachment': { windowMs: 10_000, max: 10 },
   'chat-suppress-embed': { windowMs: 10_000, max: 10 },
   'chat-react': { windowMs: 10_000, max: 20 },
+  // the composer sends at most one every 3 s per conversation, plus the stop
+  typing: { windowMs: 10_000, max: 20, silent: true },
+  'conversation-open': { windowMs: 10_000, max: 40, silent: true },
+  'load-more-messages': { windowMs: 10_000, max: 30, silent: true },
+  'load-messages-after': { windowMs: 10_000, max: 30, silent: true },
+  'load-messages-around': { windowMs: 10_000, max: 20, silent: true },
+  'conversation-close': { windowMs: 10_000, max: 20, silent: true },
   'soundboard-play': { windowMs: 10_000, max: 6 },
   profile: { windowMs: 60_000, max: 10 },
   'message-search': { windowMs: 10_000, max: 20 },
+  'direct-open': { windowMs: 10_000, max: 10 },
   'conversation-mark-read': { windowMs: 10_000, max: 30 },
   'conversation-mark-all-read': { windowMs: 10_000, max: 30 },
   'server-mark-all-read': { windowMs: 10_000, max: 10 },
@@ -76,11 +87,56 @@ const ACTION_LIMITS: Record<string, { windowMs: number; max: number }> = {
   'stream-preview-request': { windowMs: 10_000, max: 20 },
   'stream-preview-frame': { windowMs: 10_000, max: 10 },
   'call-move': { windowMs: 10_000, max: 10 },
+  'call-kick': { windowMs: 10_000, max: 10 },
   'dm-call-start': { windowMs: 30_000, max: 5 },
+  'dm-call-accept': { windowMs: 10_000, max: 20, silent: true },
+  'dm-call-decline': { windowMs: 10_000, max: 20, silent: true },
+  'dm-call-cancel': { windowMs: 10_000, max: 20, silent: true },
   'presence-set': { windowMs: 60_000, max: 20 },
   // a client reports a change of state, not every input; a tab flapping on the threshold stays under this
   'presence-activity': { windowMs: 60_000, max: 30 },
 };
+
+// call-join and call-leave bypass the handler table; each one persists call membership.
+const CALL_JOIN_LIMIT: ActionLimit = { windowMs: 10_000, max: 10 };
+const CALL_LEAVE_LIMIT: ActionLimit = { windowMs: 10_000, max: 20, silent: true };
+// A join builds the whole welcome (a dozen queries). Every connection sends one, so a refused join
+// is postponed, never dropped: a tab left without a welcome would sit on the loading screen.
+const JOIN_LIMIT: ActionLimit = { windowMs: 60_000, max: 15 };
+const RATE_LIMITED_MESSAGE = 'Você está enviando rápido demais. Espere um pouco.';
+
+/** A join past JOIN_LIMIT waits for the window instead; one per socket, the latest payload wins. */
+const deferredJoins = new WeakMap<AppSocket, { timer: NodeJS.Timeout; msg: JoinMessage }>();
+
+function dispatchJoin(socket: AppSocket, msg: JoinMessage): void {
+  const key = `join:${socket.user.userId}`;
+  const pending = deferredJoins.get(socket);
+  if (pending) {
+    pending.msg = msg;
+    return;
+  }
+  if (floodControl.allow(key, JOIN_LIMIT)) {
+    safeHandle('join', socket, msg, (s, m) => handleJoin(s, m as JoinMessage));
+    return;
+  }
+  log.warn('socket join deferred by rate limit', { userId: socket.user.userId });
+  const entry = {
+    msg,
+    timer: setTimeout(() => {
+      deferredJoins.delete(socket);
+      if (socket.connected) dispatchJoin(socket, entry.msg);
+    }, Math.max(floodControl.retryAfterMs(key, JOIN_LIMIT), 100)),
+  };
+  entry.timer.unref();
+  deferredJoins.set(socket, entry);
+}
+
+function cancelDeferredJoin(socket: AppSocket): void {
+  const pending = deferredJoins.get(socket);
+  if (!pending) return;
+  clearTimeout(pending.timer);
+  deferredJoins.delete(socket);
+}
 
 /** 'join' is the one special case in the dispatch: only participants.ts
  * creates/finds the participant, but the `welcome` reply also carries chat
@@ -89,7 +145,7 @@ const ACTION_LIMITS: Record<string, { windowMs: number; max: number }> = {
 async function handleJoin(socket: AppSocket, msg: JoinMessage): Promise<void> {
   // before anything is looked up or sent: an outdated client gets nothing but the reason
   if (!isClientCompatible(msg.v)) {
-    log.warn('join refused: outdated client', { version: msg.v ?? null, ip: socket.ip });
+    log.warn('join refused: outdated client', { version: msg.v ?? null });
     sendSocketError(socket, 'client_outdated', 'Há uma versão nova do Linkord. Atualize a página.');
     setTimeout(() => { try { socket.disconnect(true); } catch { /* already gone */ } }, 100).unref();
     return;
@@ -153,7 +209,7 @@ async function handleJoin(socket: AppSocket, msg: JoinMessage): Promise<void> {
   presenceStatus.syncPresence(p.userId);
   if (justCameOnline && !isInvisible(p.userId)) broadcastToKnownPeers(p.userId, { t: 'user-online', userId: p.userId });
   if (dmCall?.connect) await dmCalls.finishDmCallWelcome(p);
-  log.info('joined', { participantId: p.id, username: p.name, ip: socket.ip });
+  log.info('joined', { participantId: p.id, username: p.name });
 }
 
 /** Joins a voice channel: mints a LiveKit token for that room and sets
@@ -218,6 +274,17 @@ function safeHandle(eventName: string, socket: AppSocket, payload: unknown, hand
   }
 }
 
+/** Counts the event against the account's window; false when it is past the limit. Keyed by
+ * account so a flood spread over several tabs is capped in aggregate. */
+function allowAction(socket: AppSocket, eventName: string, rule: ActionLimit): boolean {
+  // no participant yet (never joined): the handler's own `p.socket !== socket` guard no-ops it
+  const userId = participantsMap.get(socket.participantId ?? '')?.userId;
+  if (!userId || floodControl.allow(`${eventName}:${userId}`, rule)) return true;
+  // a flood of events nobody waits on would otherwise flood the log just as much
+  log[rule.silent ? 'debug' : 'warn']('socket action rate limited', { event: eventName, userId });
+  return false;
+}
+
 export function createWsServer(httpServer: HttpServer): Server {
   const io = new Server(httpServer, {
     path: '/ws',
@@ -251,33 +318,36 @@ export function createWsServer(httpServer: HttpServer): Server {
     socket.ip = ipOf(socket);
 
     socket.onAny((eventName: string, payload: unknown) => {
-      if (eventName === 'join') return safeHandle('join', socket, payload || {}, (s, p) => handleJoin(s, (p || {}) as JoinMessage));
+      if (eventName === 'join') return dispatchJoin(socket, ((payload || {}) as JoinMessage));
       if (eventName === 'ping') return safeHandle('ping', socket, payload || {}, (s) => send(s, { t: 'pong' }));
       if (eventName === 'call-join') {
+        if (!allowAction(socket, eventName, CALL_JOIN_LIMIT)) {
+          // the code old clients already read as a refused join, so the pending call clears
+          sendSocketError(socket, 'call-not-allowed', RATE_LIMITED_MESSAGE);
+          return;
+        }
         return safeHandle(eventName, socket, payload || {}, (s, m) => handleCallJoin(s, (m || {}) as { conversationId?: string }));
       }
-      if (eventName === 'call-leave') return safeHandle(eventName, socket, payload || {}, (s) => handleCallLeave(s));
+      if (eventName === 'call-leave') {
+        if (!allowAction(socket, eventName, CALL_LEAVE_LIMIT)) return;
+        return safeHandle(eventName, socket, payload || {}, (s) => handleCallLeave(s));
+      }
 
       const handler = handlers[eventName];
       if (!handler) return;
 
       const rule = ACTION_LIMITS[eventName];
-      if (rule) {
-        const userId = participantsMap.get(socket.participantId ?? '')?.userId;
-        // no participant yet (never joined) — the handler's own `p.socket
-        // !== socket` guard already no-ops it, nothing to rate-limit.
-        if (userId && !floodControl.allow(`${eventName}:${userId}`, rule)) {
-          log.warn('socket action rate limited', { event: eventName, userId });
-          const message = 'Você está enviando rápido demais. Espere um pouco.';
-          if (chat.rejectCorrelated(eventName, socket, payload, 'rate_limited', message)) return;
-          sendSocketError(socket, 'rate_limited', message);
-          return;
-        }
+      if (rule && !allowAction(socket, eventName, rule)) {
+        if (rule.silent) return;
+        if (chat.rejectCorrelated(eventName, socket, payload, 'rate_limited', RATE_LIMITED_MESSAGE)) return;
+        sendSocketError(socket, 'rate_limited', RATE_LIMITED_MESSAGE);
+        return;
       }
       safeHandle(eventName, socket, payload || {}, handler);
     });
 
     socket.on('disconnect', (reason) => {
+      cancelDeferredJoin(socket);
       log.debug('disconnected', { participantId: socket.participantId, reason });
       handleClose(socket);
     });

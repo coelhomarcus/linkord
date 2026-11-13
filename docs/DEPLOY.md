@@ -6,7 +6,10 @@ How to run Linkord in production, what the container expects from the host, and 
 
 One Docker image, built by the [`Dockerfile`](../Dockerfile), holds everything: the web app (`web/dist`), the API, the realtime server (Socket.IO on the `/ws` path) and the backup scripts with the PostgreSQL client tools. A single Node process serves all of it on port **3000**, so the reverse proxy needs one route to one port, websockets included.
 
-- **Health check:** `GET /healthz` is public and answers only `{ ok: true }`, so it reveals nothing about load or deploy times; the connection count and the server's start time are on the admin System page. The image already uses it as its `HEALTHCHECK`.
+- **Health checks:** two public endpoints, both answering only `{ ok: … }` so they reveal nothing about load or deploy times (the connection count and the server's start time are on the admin System page).
+  - `GET /healthz` is **liveness**: `200 { ok: true }` while the process serves HTTP. The image uses it as its `HEALTHCHECK`, and so do Dokploy and the end-to-end stack.
+  - `GET /readyz` is **readiness**: `200 { ok: true }` when PostgreSQL answers `select 1` within 1 s and the upload folders are writable, `503 { ok: false }` otherwise. The body never says what failed; the log does, as a `not ready` warning under the `health` component (and `ready again` once it recovers). The result is cached for 5 s, so probing it often adds at most one query per 5 s to the pool.
+  - Point monitoring and alerts at `/readyz`. The container's `HEALTHCHECK` stays on `/healthz` on purpose: with [one instance](#one-instance-only) there is nowhere else to route traffic, so taking the container out on a database outage only turns a 500 into the proxy's 502, and an orchestrator restarting it would also drop every call without fixing the database. Readiness becomes the routing probe only if more instances are ever run.
 - **Behind a proxy:** the image sets `TRUST_PROXY=1`, so client addresses (also the ones stored with each login session and shown to the account in Settings → Security) and `X-Forwarded-Proto` come from the proxy. The client address is the `X-Forwarded-For` entry `TRUSTED_PROXY_HOPS` places from the right (default `1`, one proxy such as Traefik), never the leftmost one, which the caller writes. If a CDN or a second proxy sits ahead of the one that reaches the container, set it to the number of proxies in the chain; set too low, callers can pick their own address and escape the per-IP limits (login, recovery, invite codes), too high, everyone shares the first proxy's address. With `COOKIE_SECURE=auto` (the default) the session cookie is `Secure` whenever the proxy says the request was HTTPS.
 - **Migrations** run at startup (`MIGRATE_ON_BOOT=1`, the default) before the server accepts connections; if one fails, the process exits with the reason in the log. Set `MIGRATE_ON_BOOT=0` to run them yourself with `node server/dist/db/migrate.js`.
 - **Not root:** the process runs as `node` (uid 1000). It cannot rewrite its own code and can only write to `/app/uploads` and `/app/backups`, which is why those two folders need the right owner on the host ([Folders and permissions](#folders-and-permissions)).
@@ -21,7 +24,7 @@ The variables a production instance needs:
 
 | Variable | What to put there |
 | --- | --- |
-| `DATABASE_URL` | The database the app owns. `DATABASE_SSL=1` when it is reached over TLS. |
+| `DATABASE_URL` | The database the app owns. `DATABASE_SSL=1` when it is reached over TLS. `DATABASE_POOL_MAX` (default 10) is how many connections it keeps open; keep it below the server's `max_connections`. |
 | `APP_URL` | The public origin, `https://chat.example.com`, no trailing slash. Used in emails, push, the origin check and the Content-Security-Policy. |
 | `REGISTRATION_CODE` | Empty means nobody can sign up. Set a code and share it with the people you invite. |
 | `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` | The URL browsers really use to reach LiveKit (`wss://…`). The CSP only lets the browser connect there. |
@@ -44,6 +47,41 @@ docker compose up -d --build
 
 The compose file also sets `no-new-privileges` and drops every Linux capability, and has an optional `backup` service ([Backups](#backups)).
 
+### The complete stack on one server
+
+[`docker-compose.full.yml`](../docker-compose.full.yml) also runs PostgreSQL and LiveKit, so a single small server needs nothing else. How to start it and what each service does is in [DEVELOPMENT.md](DEVELOPMENT.md#the-whole-stack-in-docker). Production keeps deploying through [Dokploy](#dokploy), with a managed database and LiveKit Cloud; this file fits a trial, a demo or a small private instance that accepts what comes with it: the database, the uploads and LiveKit share one machine and one disk, and nothing restarts the app on another host when that machine goes down. It runs one LiveKit node with no TURN server.
+
+By default everything is published on `127.0.0.1` only, which serves browsers on that machine. To serve other machines:
+
+1. **DNS:** two names pointing at the server, one for the app and one for LiveKit's signalling (`linkord.example.com`, `livekit.example.com`).
+2. **`.env.full`:**
+
+```dotenv
+APP_DOMAIN=linkord.example.com
+LIVEKIT_DOMAIN=livekit.example.com
+APP_URL=https://linkord.example.com
+LIVEKIT_URL=wss://livekit.example.com
+LIVEKIT_NODE_IP=<the server's public IPv4>
+LIVEKIT_RTC_BIND=0.0.0.0
+```
+
+3. **Start it with the `https` profile**, which adds Caddy in front of the app and LiveKit's signalling, with Let's Encrypt certificates kept in the `linkord_caddy_data` volume:
+
+```bash
+docker compose --env-file .env.full -f docker-compose.full.yml --profile https up -d --build
+```
+
+4. **Firewall:** open `80/tcp` and `443/tcp` (Caddy; `443/udp` too for HTTP/3), `7881/tcp` and `7882/udp` (LiveKit media). Keep `3000`, `7880` and `5432` closed; the file publishes the first two on `127.0.0.1` only and never publishes the database.
+
+Why this shape:
+
+- **The app's port stays on loopback.** The image sets `TRUST_PROXY=1`, so it takes the client address from `X-Forwarded-For`. Reachable directly, anyone could write that header and escape the per-IP limits. Caddy replaces whatever `X-Forwarded-For` a client sends with the address it saw, which is the one hop `TRUSTED_PROXY_HOPS=1` expects.
+- **HTTPS is not optional off `localhost`:** browsers only give a page the microphone and camera in a secure context, and Web Push and the `Secure` cookie need it too.
+- **LiveKit media goes straight to the server**, not through Caddy: browsers send to `LIVEKIT_NODE_IP` on `7881/tcp` and on the single UDP port `7882` (the UDP mux in [`docker/full/livekit.yaml`](../docker/full/livekit.yaml), so the firewall needs one rule rather than a range). Behind NAT, `LIVEKIT_NODE_IP` is the public address and those two ports are forwarded to the server.
+- **No TURN.** Browsers behind a firewall that allows neither UDP nor TCP to `7881` cannot join calls (chat still works). LiveKit's embedded TURN server (`turn:` in `livekit.yaml`, with its own domain and certificate, usually on `443/udp` and `5349/tcp`) solves that and is left out to keep the file small; LiveKit Cloud includes it.
+
+`TRUST_PROXY` and the other limits in [What gets deployed](#what-gets-deployed) apply unchanged. Backups: the `backup` profile, or `exec app node server/dist/scripts/backup.js`, write to the `linkord_backups` volume; copy them off the machine as [Backups](#backups) says (`docker compose … cp app:/app/backups ./backups`), and keep `.env.full` with them, since the LiveKit and database secrets are only there.
+
 ## Dokploy
 
 Create an **application** built from the repository's `Dockerfile` (the compose file is not used). Then:
@@ -56,6 +94,12 @@ Create an **application** built from the repository's `Dockerfile` (the compose 
 ```bash
 mkdir -p /srv/linkord/uploads /srv/linkord/backups
 chown -R 1000:1000 /srv/linkord/uploads /srv/linkord/backups
+```
+
+**Restart policy.** The app relies on being restarted when it exits: an uncaught exception or an unhandled promise rejection is logged as `fatal uncaughtException, shutting down` (or `unhandledRejection`), the server shuts down the same way as for a deploy (calls are restored by the next process) and exits with code 1. The compose file sets `restart: unless-stopped`. On Dokploy, the Swarm service's default restart policy (`condition: any`) already restarts it; if you changed it under the application's Swarm settings, keep the condition at `any` or `on-failure`. To check:
+
+```bash
+docker service inspect <app-name> --format '{{json .Spec.TaskTemplate.RestartPolicy}}'
 ```
 
 Dokploy runs the app as a Swarm service, so the container's name changes with every deploy (`<app-name>.1.<task id>`). Take it from `docker ps` each time you need it:
@@ -106,7 +150,7 @@ What keeps this working, and the rules for changing it, is in [`AGENTS.md`](../A
 
 The server sets its own security headers on every response, so the proxy does not need to add any (and should not add another `Content-Security-Policy`, which browsers would enforce on top of this one):
 
-- `Content-Security-Policy`, built at startup from `APP_URL`, `LIVEKIT_URL`, `KLIPY_API_KEY` and the frontend build. A wrong `LIVEKIT_URL` blocks calls in the browser even if the server can reach LiveKit. Stylesheets are limited to this origin plus the hashes of the app's own `<style>` blocks (`style-src-elem` has no `'unsafe-inline'`). Style attributes stay allowed, because the interface sets them while it renders. A `style-src-elem` violation means a stylesheet was injected. How the hashes are collected: [DEVELOPMENT.md](DEVELOPMENT.md#content-security-policy).
+- `Content-Security-Policy`, built at startup from `APP_URL`, `LIVEKIT_URL`, `KLIPY_API_KEY`, `MEDIA_PROXY` and the frontend build. Pictures load only from this origin and KLIPY unless `MEDIA_PROXY=0`. A wrong `LIVEKIT_URL` blocks calls in the browser even if the server can reach LiveKit. Stylesheets are limited to this origin plus the hashes of the app's own `<style>` blocks (`style-src-elem` has no `'unsafe-inline'`). Style attributes stay allowed, because the interface sets them while it renders. A `style-src-elem` violation means a stylesheet was injected. How the hashes are collected: [DEVELOPMENT.md](DEVELOPMENT.md#content-security-policy).
 - `X-Frame-Options: DENY` and `frame-ancestors 'none'`: no other site can show Linkord in a frame.
 - `Strict-Transport-Security` (one year, without `includeSubDomains`) on HTTPS requests.
 
@@ -129,10 +173,25 @@ To schedule it, use the compose `backup` service (`docker compose --profile back
 
 Run a single container. The server keeps live state in its own memory (who is online and in which call, caches, flood limits, upload reservations), Socket.IO has no shared adapter, and files live on the local disk, so a second instance behind a load balancer would not see the first one's users, calls or limits. What would have to change: [DEVELOPMENT.md](DEVELOPMENT.md#single-instance-assumption).
 
+## Logs
+
+The server writes one JSON line per record to stdout and stderr (`LOG_FORMAT=json`, the production default); keeping them is the container runtime's job. What they hold about people:
+
+- **Client addresses** only on security events: failed or refused logins, refused sign-ups and wrong invite codes, refused login or recovery codes, and refused socket connections past the per-address limit. Routine records (a socket joining, an outdated client) carry none.
+- **Failed logins never carry the typed username**, since people type their password there by mistake. A name that matched an account is logged as that account's `userId`; any other as `usernameTag`, a 12-character keyed hash that repeats for the same name until the next restart and cannot be reversed from the log.
+- **Browser errors** (`POST /api/client-logs`) are always under the `client` component with the reporting `userId`, or `null` when signed out. A signed-out page can only produce `warn` records (an `error` it sent is kept as `warn` with `reportedLevel: "error"`), so alerts on `error` only see the server and signed-in clients, and control characters in the message are replaced with spaces.
+
+Keep logs for at most **30 days**. The compose file rotates them at 5 files of 10 MB, which on a small instance is days to a few weeks; with Dokploy, or any other log collector, set the same bound in its log settings. The addresses stored with each login session (Settings → Security) are database data and follow the session, not this policy.
+
 ## Troubleshooting
+
+- **`/readyz` answers 503.** Search the log for `not ready`: its fields say whether `database` (unreachable, refused, or past the 1 s timeout, which also happens when every pooled connection is busy) or `uploads` (a folder that is not writable, see [Folders and permissions](#folders-and-permissions)) failed.
+
+- **An API call answers 500 with only "Erro interno." and a `requestId`.** The server never sends the cause of an unexpected error to the client (it may contain SQL or file paths). Search the log for that value as `reqId`: the `error in a route` line has the full error and stack. The same id is in the response's `x-request-id` header.
 
 - **Attachments and voice messages fail, profile pictures work.** `POST /api/attachments/init` answers 500 and the log shows `EACCES: permission denied, mkdir '/app/uploads/tmp/…'`. A folder under the uploads mount is still owned by root: see [Folders and permissions](#folders-and-permissions). The 429s that follow are the browser retrying.
 - **Backups fail with `EACCES`.** The same, for the folder mounted on `/app/backups`, or nothing is mounted there.
+- **Calls connect but nobody hears anyone, on `docker-compose.full.yml`.** `LIVEKIT_NODE_IP` is still `127.0.0.1`, or `7881/tcp` and `7882/udp` are closed or published on loopback (`LIVEKIT_RTC_BIND`). See [The complete stack on one server](#the-complete-stack-on-one-server).
 - **Calls do not connect, chat works.** Check `LIVEKIT_URL`: it must be the address browsers use, and the browser console names it in a Content-Security-Policy error if the policy blocked it. Without `LIVEKIT_*` the server logs `LiveKit is not configured` at startup.
 - **Covers, avatars or link preview pictures are missing.** The server downloads them itself, so the container needs outbound HTTPS to `images.igdb.com`, `cdn.myanimelist.net`, `avatars.githubusercontent.com`, `i.ytimg.com` and the sites people link to. The browser's network tab shows the reason on the `/api/media-proxy/...` request (`502 image_unavailable`, `429 rate_limited`, `415 not_an_image`).
 - **"Origem não permitida." (403) on every change, or the socket refuses to connect.** That is the app's own Portuguese error for a request from an origin it does not know. `APP_URL` must match the address in the browser; other addresses go in `ALLOWED_ORIGINS`.

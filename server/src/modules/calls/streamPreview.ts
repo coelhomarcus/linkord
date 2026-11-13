@@ -81,14 +81,18 @@ export function createPreviewBroker({ ttlMs, timeoutMs, now = Date.now }: { ttlM
 
 const broker = createPreviewBroker({ ttlMs: PREVIEW_TTL_MS, timeoutMs: CAPTURE_TIMEOUT_MS });
 
-/** Who may see the still: anyone who can see the voice channel it is
- * streamed in, as the channel list already shows them who is there. A DM
- * call has no channel list, so it never offers one. */
+/** The permissions a still asks for: those of joining the call, since the
+ * still is a frame of what joining would show. Seeing the channel alone
+ * (a locked voice channel listed to everyone) is not enough. */
+export const STREAM_PREVIEW_PERMISSIONS = PERMISSIONS.VIEW_CHANNEL | PERMISSIONS.CONNECT;
+
+/** Who may see the still: anyone who could join the voice channel it is
+ * streamed in. A DM call has no channel list, so it never offers one. */
 async function canSeeStream(viewerUserId: string, callConversationId: string): Promise<boolean> {
   const [call] = await db.select({ serverId: conversations.serverId }).from(conversations).where(eq(conversations.id, callConversationId)).limit(1);
   if (!call?.serverId) return false;
   const snapshot = await loadServerSnapshot(call.serverId);
-  return !!snapshot && hasPermission(channelPermissionsIn(snapshot, callConversationId, viewerUserId), PERMISSIONS.VIEW_CHANNEL);
+  return !!snapshot && hasPermission(channelPermissionsIn(snapshot, callConversationId, viewerUserId), STREAM_PREVIEW_PERMISSIONS);
 }
 
 async function handlePreviewRequest(socket: AppSocket, msg: { participantId?: string }): Promise<void> {

@@ -11,7 +11,7 @@ import {
   readBuildStyleHashes, securityHeaders, themeBootstrapStyleHashes, type PolicyInput,
 } from '../../src/http/securityHeaders.js';
 
-const base: PolicyInput = { appUrl: 'https://chat.example.com', livekitUrl: '', klipyEnabled: false, scriptHashes: [], styleHashes: [] };
+const base: PolicyInput = { appUrl: 'https://chat.example.com', livekitUrl: '', klipyEnabled: false, mediaProxyEnabled: true, scriptHashes: [], styleHashes: [] };
 const ROOT = path.resolve(import.meta.dirname, '../../..');
 
 /** directive name -> its sources */
@@ -60,11 +60,23 @@ describe('buildContentSecurityPolicy', () => {
     assert.deepEqual(connect, ["'self'", 'wss://chat.example.com', 'wss://lk.example.com', 'https://lk.example.com', 'https://api.klipy.com']);
   });
 
-  it('allows remote http media only when the app itself is served over http', () => {
-    assert.ok(!directives(buildContentSecurityPolicy(base)).get('img-src')!.includes('http:'));
+  it('loads pictures only from the app and KLIPY while the media proxy is on', () => {
+    assert.deepEqual(directives(buildContentSecurityPolicy(base)).get('img-src'), ["'self'", 'data:', 'blob:', 'https://*.klipy.com']);
     const local = directives(buildContentSecurityPolicy({ ...base, appUrl: 'http://localhost:8080' }));
-    assert.ok(local.get('img-src')!.includes('http:'));
+    assert.deepEqual(local.get('img-src'), ["'self'", 'data:', 'blob:', 'https://*.klipy.com']);
+  });
+
+  it('loads pictures from anywhere when the media proxy only redirects', () => {
+    const img = directives(buildContentSecurityPolicy({ ...base, mediaProxyEnabled: false })).get('img-src')!;
+    assert.ok(img.includes('https:'));
+    assert.ok(!img.includes('http:'));
+  });
+
+  it('allows remote http media only when the app itself is served over http', () => {
+    assert.ok(!directives(buildContentSecurityPolicy(base)).get('media-src')!.includes('http:'));
+    const local = directives(buildContentSecurityPolicy({ ...base, appUrl: 'http://localhost:8080' }));
     assert.ok(local.get('media-src')!.includes('http:'));
+    assert.ok(directives(buildContentSecurityPolicy({ ...base, appUrl: 'http://localhost:8080', mediaProxyEnabled: false })).get('img-src')!.includes('http:'));
     assert.deepEqual(local.get('connect-src'), ["'self'", 'ws://localhost:8080']);
   });
 

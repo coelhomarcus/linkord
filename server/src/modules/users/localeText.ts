@@ -18,6 +18,10 @@ type TextKey =
   | 'email.deletionScheduledSubject' | 'email.deletionScheduledTitle' | 'email.deletionScheduledIntro' | 'email.deletionScheduledCancel'
   | 'email.deletionDoneSubject' | 'email.deletionDoneTitle' | 'email.deletionDoneIntro'
   | 'email.exportReadySubject' | 'email.exportReadyTitle' | 'email.exportReadyIntro' | 'email.exportReadyExpires'
+  | 'email.changeCurrentSubject' | 'email.changeCurrentTitle' | 'email.changeCurrentIntro'
+  | 'email.twoFactorDisableSubject' | 'email.twoFactorDisableTitle' | 'email.twoFactorDisableIntro'
+  | 'email.loginAlertDisableSubject' | 'email.loginAlertDisableTitle' | 'email.loginAlertDisableIntro'
+  | 'email.changedSubject' | 'email.changedTitle' | 'email.changedIntro' | 'email.changedWarning'
   | 'server.textCategory' | 'server.textChannel' | 'server.voiceCategory' | 'server.voiceChannel';
 
 const TEXT: Record<Locale, Record<TextKey, string>> = {
@@ -65,6 +69,15 @@ const TEXT: Record<Locale, Record<TextKey, string>> = {
     'email.exportReadySubject': 'Seus dados do Linkord estão prontos', 'email.exportReadyTitle': 'Cópia dos seus dados',
     'email.exportReadyIntro': 'A cópia dos dados da conta "{{username}}" que você pediu está pronta. Baixe-a com a conta conectada:',
     'email.exportReadyExpires': 'O link vale até {{date}}. Depois disso, peça uma nova cópia em Configurações → Dados e privacidade.',
+    'email.changeCurrentSubject': 'Confirme a troca de e-mail da sua conta Linkord', 'email.changeCurrentTitle': 'Troca de e-mail',
+    'email.changeCurrentIntro': 'Alguém pediu para trocar o e-mail da conta "{{username}}". Use este código para confirmar que foi você. Se não foi, troque sua senha agora:',
+    'email.twoFactorDisableSubject': 'Confirme a desativação da verificação em duas etapas', 'email.twoFactorDisableTitle': 'Verificação em duas etapas',
+    'email.twoFactorDisableIntro': 'Use este código para desativar a verificação em duas etapas da conta "{{username}}". Se não foi você, troque sua senha agora:',
+    'email.loginAlertDisableSubject': 'Confirme a desativação dos avisos de login', 'email.loginAlertDisableTitle': 'Avisos de login',
+    'email.loginAlertDisableIntro': 'Use este código para desativar os avisos de login da conta "{{username}}". Se não foi você, troque sua senha agora:',
+    'email.changedSubject': 'O e-mail da sua conta Linkord foi trocado', 'email.changedTitle': 'E-mail trocado',
+    'email.changedIntro': 'O e-mail da conta "{{username}}" agora é {{email}}. Este endereço não recebe mais códigos nem avisos dela.',
+    'email.changedWarning': 'Se não foi você, entre em contato com o administrador do servidor o quanto antes.',
     'server.textCategory': 'Canais de texto', 'server.textChannel': 'geral',
     'server.voiceCategory': 'Canais de voz', 'server.voiceChannel': 'Geral',
   },
@@ -112,6 +125,15 @@ const TEXT: Record<Locale, Record<TextKey, string>> = {
     'email.exportReadySubject': 'Your Linkord data is ready', 'email.exportReadyTitle': 'A copy of your data',
     'email.exportReadyIntro': 'The copy of the data of the account "{{username}}" you asked for is ready. Download it while signed in to the account:',
     'email.exportReadyExpires': 'The link works until {{date}}. After that, ask for a new copy in Settings → Data & privacy.',
+    'email.changeCurrentSubject': 'Confirm changing your Linkord email', 'email.changeCurrentTitle': 'Email change',
+    'email.changeCurrentIntro': 'Someone asked to change the email of the account "{{username}}". Use this code to confirm it was you. If it was not, change your password now:',
+    'email.twoFactorDisableSubject': 'Confirm turning off two-step login', 'email.twoFactorDisableTitle': 'Two-step login',
+    'email.twoFactorDisableIntro': 'Use this code to turn off two-step login for the account "{{username}}". If it was not you, change your password now:',
+    'email.loginAlertDisableSubject': 'Confirm turning off sign-in alerts', 'email.loginAlertDisableTitle': 'Sign-in alerts',
+    'email.loginAlertDisableIntro': 'Use this code to turn off sign-in alerts for the account "{{username}}". If it was not you, change your password now:',
+    'email.changedSubject': 'Your Linkord email was changed', 'email.changedTitle': 'Email changed',
+    'email.changedIntro': 'The email of the account "{{username}}" is now {{email}}. This address no longer gets its codes or alerts.',
+    'email.changedWarning': 'If this was not you, contact the server administrator as soon as possible.',
     'server.textCategory': 'Text Channels', 'server.textChannel': 'general',
     'server.voiceCategory': 'Voice Channels', 'server.voiceChannel': 'General',
   },

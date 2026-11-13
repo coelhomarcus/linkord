@@ -13,6 +13,8 @@ describe('LinkPreview', () => {
     const user = userEvent.setup();
     vi.spyOn(window.HTMLMediaElement.prototype, 'pause').mockImplementation(() => undefined);
     const { container } = render(<LinkPreview embed={{ kind: 'video', url: 'https://cdn.example.com/video.mp4' }} />);
+    expect(container.querySelector('video')).toBeNull();
+    await user.click(screen.getByRole('button', { name: /Carregar vídeo de cdn\.example\.com/ }));
 
     const video = container.querySelector('video');
     expect(video).toHaveAttribute('src', 'https://cdn.example.com/video.mp4');
@@ -24,8 +26,11 @@ describe('LinkPreview', () => {
     expect(screen.getByRole('button', { name: 'Fechar' })).toBeInTheDocument();
   });
 
-  it('renders a direct audio embed with its own player', () => {
+  it('renders a direct audio embed with its own player', async () => {
+    const user = userEvent.setup();
     const { container } = render(<LinkPreview embed={{ kind: 'audio', url: 'https://cdn.example.com/audio.mp3' }} />);
+    expect(container.querySelector('audio')).toBeNull();
+    await user.click(screen.getByRole('button', { name: /Carregar áudio de cdn\.example\.com/ }));
 
     const audio = container.querySelector('audio');
     expect(audio).toHaveAttribute('src', 'https://cdn.example.com/audio.mp3');
@@ -35,11 +40,13 @@ describe('LinkPreview', () => {
   });
 
   describe('direct image embed', () => {
+    const stored = { url: 'https://cdn.example.com/foto.png', title: null, description: null, image: '/api/media-proxy/preview/sig?u=Zm90bw', video: null, favicon: null, siteName: 'cdn.example.com', themeColor: null };
+
     it('without fitContainer (chat message): sits in a box of fixed height and px width, so loading cannot move the history', () => {
-      const { container } = render(<LinkPreview embed={{ kind: 'image', url: 'https://cdn.example.com/foto.png' }} />);
+      const { container } = render(<LinkPreview embed={{ kind: 'image', url: 'https://cdn.example.com/foto.png' }} preview={stored} />);
 
       const img = container.querySelector('img');
-      expect(img).toHaveAttribute('src', 'https://cdn.example.com/foto.png');
+      expect(img).toHaveAttribute('src', '/api/media-proxy/preview/sig?u=Zm90bw');
       const box = img!.closest('button')!;
       // the height is what keeps the row from growing when the pixels arrive
       expect(box.style.height).toBe('280px');
@@ -52,9 +59,10 @@ describe('LinkPreview', () => {
     });
 
     it('with fitContainer (media grid): fills the real container via w-full, without the px cap', () => {
-      const { container } = render(<LinkPreview embed={{ kind: 'image', url: 'https://cdn.example.com/foto.png' }} fitContainer />);
+      const { container } = render(<LinkPreview embed={{ kind: 'image', url: 'https://cdn.example.com/foto.png' }} imageUrl="/api/media-proxy/preview/sig?u=Zm90bw" fitContainer />);
 
       const img = container.querySelector('img');
+      expect(img).toHaveAttribute('src', '/api/media-proxy/preview/sig?u=Zm90bw');
       // without this, the width cap meant for chat messages would win over
       // the class's max-w-full (same CSS property, inline always wins),
       // making the image wider than the masonry column and overlapping the
@@ -133,7 +141,7 @@ describe('LinkPreview — size measured by the server', () => {
   });
 
   it('ignores a load that reports no size (an SVG with no intrinsic dimensions)', () => {
-    vi.stubGlobal('fetch', respond(previewJson({})));
+    vi.stubGlobal('fetch', respond(previewJson({ image: '/api/media-proxy/preview/sig?u=bG9nbw' })));
     const { container } = render(<LinkPreview embed={{ kind: 'image', url: 'https://cdn.example.com/logo.svg' }} />);
     const img = container.querySelector('img')!;
     fireEvent.load(img); // naturalWidth is 0
@@ -150,10 +158,10 @@ describe('LinkPreview — size measured by the server', () => {
     expect(container.querySelector('img')!.closest('button')!.style.height).toBe('280px');
   });
 
-  it('does not ask the server in the media grid, which sizes its own cells', async () => {
+  it('does not ask the server in the media grid, which signs the address with the page', async () => {
     const fetchMock = respond(previewJson({}));
     vi.stubGlobal('fetch', fetchMock);
-    render(<LinkPreview embed={{ kind: 'image', url: 'https://cdn.example.com/x.png' }} fitContainer />);
+    render(<LinkPreview embed={{ kind: 'image', url: 'https://cdn.example.com/x.png' }} imageUrl="/api/media-proxy/preview/sig?u=eA" fitContainer />);
     await new Promise((r) => setTimeout(r, 20));
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -199,5 +207,33 @@ describe('LinkPreview — pictures through our own proxy', () => {
     const sources = [...container.querySelectorAll('img')].map((img) => img.getAttribute('src'));
     expect(sources).toContain('/api/media-proxy/youtube/dQw4w9WgXcQ');
     expect(sources.some((src) => src?.includes('ytimg.com'))).toBe(false);
+  });
+
+  it('never loads a direct image link from its own host: waits for the proxied address', async () => {
+    let answer: (body: string) => void = () => {};
+    vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>((resolve) => { answer = (body) => resolve(new Response(body, { status: 200, headers: { 'Content-Type': 'application/json' } })); })));
+    const { container } = render(<LinkPreview embed={{ kind: 'image', url: 'https://attacker.example/pixel.png' }} />);
+    expect(container.querySelector('img')).not.toHaveAttribute('src');
+
+    answer(JSON.stringify(preview({ url: 'https://attacker.example/pixel.png', image: '/api/media-proxy/preview/sig?u=cGl4ZWw' })));
+    await vi.waitFor(() => expect(container.querySelector('img')).toHaveAttribute('src', '/api/media-proxy/preview/sig?u=cGl4ZWw'));
+    const sources = [...container.querySelectorAll('img')].map((img) => img.getAttribute('src'));
+    expect(sources.some((src) => src?.includes('attacker.example'))).toBe(false);
+  });
+
+  it('shows the open-link fallback when the server has no picture for the link', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify(preview({ url: 'https://attacker.example/gone.png' })), { status: 200, headers: { 'Content-Type': 'application/json' } })));
+    render(<LinkPreview embed={{ kind: 'image', url: 'https://attacker.example/gone.png' }} />);
+    expect(await screen.findByText(/Abrir link/)).toBeInTheDocument();
+  });
+
+  it('a page video waits for a click, its poster through the proxy', async () => {
+    const user = userEvent.setup();
+    const { container } = render(
+      <LinkPreview embed={{ kind: 'link', url: 'https://ex.com' }} preview={preview({ image: '/api/media-proxy/preview/sig?u=b2c', video: 'https://video.ex.com/clip.mp4' })} />,
+    );
+    expect(container.querySelector('video')).toBeNull();
+    await user.click(screen.getByRole('button', { name: /Carregar vídeo de video\.ex\.com/ }));
+    expect(container.querySelector('video')).toHaveAttribute('src', 'https://video.ex.com/clip.mp4');
   });
 });

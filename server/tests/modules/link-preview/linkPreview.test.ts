@@ -185,6 +185,12 @@ describe('fetchLinkPreviewData — image size', () => {
     assert.equal(out.siteName, 'localhost');
   });
 
+  test('a url that is itself an SVG comes back as the image, without a size', async () => {
+    const out = await fetchLinkPreviewData(`${base}/logo.svg`, 'size-user-svg', allowLoopback);
+    assert.equal(out.image, `${base}/logo.svg`);
+    assert.deepEqual([out.imageWidth, out.imageHeight], [null, null]);
+  });
+
   test('reads only the start of a huge image', async () => {
     const started = Date.now();
     const out = await fetchLinkPreviewData(`${base}/big.png`, 'size-user-5', allowLoopback);

@@ -1,6 +1,45 @@
 # Local development
 
-Run the frontend and backend directly on your machine. Docker is used only for the local PostgreSQL database; the app itself is not run in a container during development.
+Run the frontend and backend directly on your machine. Docker is used only for the local PostgreSQL database; the app itself is not run in a container during development. To try Linkord or test a real flow against the production image instead, run [the whole stack in Docker](#the-whole-stack-in-docker).
+
+## The whole stack in Docker
+
+[`docker-compose.full.yml`](../docker-compose.full.yml) brings up a complete instance with one command: PostgreSQL, a LiveKit server, the app built from the `Dockerfile`, and a mail sink that prints the emailed codes. It needs only Docker with the Compose plugin; Node and the npm installs are not involved.
+
+```bash
+cp .env.full.example .env.full
+```
+
+Fill in the four required values in `.env.full`:
+
+```dotenv
+REGISTRATION_CODE=<anything; people need it to sign up>
+POSTGRES_PASSWORD=<openssl rand -hex 24>
+LIVEKIT_API_KEY=<openssl rand -hex 8>
+LIVEKIT_API_SECRET=<openssl rand -hex 32>
+```
+
+Then build and start it:
+
+```bash
+docker compose --env-file .env.full -f docker-compose.full.yml up -d --build
+```
+
+Open [http://localhost:3000](http://localhost:3000) and register with the code. For a call, use a second account in another browser profile or a private window.
+
+- **`--env-file .env.full` is required** on every command for this file (`ps`, `logs`, `down` too): Compose fills the file in from it, and stops with `set … in .env.full and pass --env-file .env.full` without it. The same file is also the app's environment, so any variable from `.env.example` can go there.
+- **What runs:** `postgres` (17, data in the `linkord_postgres_data` volume), `livekit` (`livekit/livekit-server`, pinned; configured by [`docker/full/livekit.yaml`](../docker/full/livekit.yaml) and given the key pair from `.env.full` as `LIVEKIT_KEYS`, so it always matches the app's), `mailsink`, and `app` once the other three are healthy. Uploads live in the `linkord_uploads` volume. The app talks to LiveKit's API over the compose network (`LIVEKIT_SERVER_URL=http://livekit:7880`), while browsers use `LIVEKIT_URL` (`ws://localhost:7880`).
+- **Ports:** only on `127.0.0.1`: the app on 3000 and LiveKit on 7880 (signalling), 7881/tcp and 7882/udp (media). The database is not published. The image trusts `X-Forwarded-For` (`TRUST_PROXY=1`), so the app must not be reachable from other machines without a proxy in front; serving other machines is described in [DEPLOY.md](DEPLOY.md#the-complete-stack-on-one-server).
+- **Emailed codes** (account recovery, two-step login, email changes) go to the mail sink and appear in its log:
+
+```bash
+docker compose --env-file .env.full -f docker-compose.full.yml logs mailsink
+```
+
+- **Administrator:** `docker compose --env-file .env.full -f docker-compose.full.yml exec app node server/dist/scripts/adminRole.js grant <username>`.
+- **Stopping:** `down` keeps the data; `up -d` brings back the same accounts, messages and files. `down -v` deletes the volumes, and with them the database and the uploads.
+- **Updating:** `git pull`, then the same `up -d --build`. Migrations run at startup.
+- **Backups:** `--profile backup` adds the scheduled `backup` service, writing to the `linkord_backups` volume (see [Running it in Docker](#running-it-in-docker)).
 
 ## Prerequisites
 
@@ -189,12 +228,13 @@ The `upgrade` project adapts to what the base version can do and says so in the 
 
 | Spec | What it checks |
 | --- | --- |
-| `features/auth` | Sign-up with and without the invitation code, the login form (wrong password refused), session across reloads, logout. Two-step login turned on from Settings → Security with the emailed code, then a login that needs the next code (a wrong one refused); ending another session from the session list signs that browser out without a reload. |
+| `features/auth` | Sign-up with and without the invitation code, the login form (wrong password refused), session across reloads, logout. Two-step login turned on from Settings → Security with the emailed code, then a login that needs the next code (a wrong one refused), and turning it off, which needs another emailed code after the password; ending another session from the session list signs that browser out without a reload. |
 | `features/friends` | Request from the form accepted in Pending, decline, cancel, block (no messages or calls) and unblock. |
 | `features/dm` | Talking in a DM, the unread count until it is opened, no DM without friendship; muting a DM from its row's menu drops its count live in another tab of the account, and the header bell unmutes it. |
 | `features/chat` | Messages shown once on both sides, typing indicator, reply, edit, delete, reactions, search, image attachment. The new-messages line staying in place while reading, its jump pill and Esc clearing it; mark as read from a channel row and a whole server from its rail icon, seen in a second tab and kept after a reload. |
 | `features/servers` | Creating from the rail, invite link, a member with only `@everyone` inviting without any server settings to open, a voice channel without `SPEAK` keeping the member's microphone off, new channels, a channel hidden from `@everyone`, a read-only channel, kick, ban and unban, deleting the server; an animated GIF picked as the server icon, cropped on the server with all its frames; muting a server from its header menu (no badge on its icon for plain messages, one for a mention), a channel's own level over the server's from the header bell, and both read back in a second tab. |
 | `features/voice` | Seeing and hearing each other, mute and camera seen by the other side, a screen share seen by the other side until it stops, leaving, a moderator moving and disconnecting a member. |
+| `features/call-membership` | A LiveKit client outside the app that kept a member's token: after the member's tab leaves the call it is removed from the room, and when it comes back with the token it shows as a tile until it is removed again; a banned member reconnecting with a kept token is removed as well. |
 | `features/dm-call` | Decline, cancel, an answered call with audio both ways and its line in the chat, a video call. |
 | `features/webhooks` | Text and cards through the ingress (token in the URL and in the header), invalid payloads, rotating and deleting the URL, permission; a webhook picture picked in the channel settings and cropped on the server. |
 | `features/soundboard` | A sound uploaded to the server reaches everyone in the call; a member adds one from the call's sound picker once `@everyone` has `CREATE_EXPRESSIONS`, and is not offered it before; a sound from another server of the player's plays in the call and someone outside that server fetches it (the play's token). |
@@ -271,6 +311,7 @@ docker compose exec app node server/dist/scripts/backup.js
 To schedule it, pick one:
 
 - **Compose service** (nothing to install on the host): `docker compose --profile backup up -d backup` takes a backup at start and then every `BACKUP_INTERVAL_SECONDS`, reading `./uploads` read-only. Set `BACKUP_KEEP` and `BACKUP_INTERVAL_SECONDS` in `.env`.
+  With [the whole stack in Docker](#the-whole-stack-in-docker) the same service is `docker compose --env-file .env.full -f docker-compose.full.yml --profile backup up -d backup`, and the backups go to the `linkord_backups` volume instead of `./backups`; copy them out with `docker compose --env-file .env.full -f docker-compose.full.yml cp app:/app/backups ./backups`.
 - **Host cron**, which fixes the time of day: `0 3 * * * cd /srv/linkord && flock -n backups/.lock docker compose exec -T app node server/dist/scripts/backup.js >> backups/backup.log 2>&1` (`flock` stops a slow backup from overlapping the next one).
 
 A backup on the same disk as the data does not survive that disk. Keep `./backups` on another volume (set `BACKUP_DIR`, or mount a different host path over `/app/backups`), and copy it off the machine after each run, for example from the same cron line: `rclone copy backups remote:linkord-backups`, `aws s3 sync backups s3://my-bucket/linkord`, or `rsync -a backups/ other-host:linkord-backups/`. Rotation here only prunes the local folder; set a lifecycle rule on the remote copy.
@@ -328,12 +369,33 @@ Chat send operations (a fixed 7 days) have their own cleanup and no setting. Log
 
 Restarting `npm run dev` (or deploying) while you are in a call should leave the call running: the clients reconnect and the server restores who was in which call. To see it, join a voice channel with two accounts, stop and start `npm run dev`, and check that both stay connected without touching either tab. The rules that keep this working are in `AGENTS.md` ("Realtime compatibility and deploys"), and the `restart` end-to-end specs check it on every run.
 
+## Upload limits
+
+A chunked upload (`modules/attachments/`) reserves its declared size against the instance's storage ceiling (`MAX_STORAGE_BYTES`, 30 GB) at `init`, before any byte arrives, so two uploads cannot both take the last free space. Because that reservation costs nothing to make, it is bounded:
+
+- **Per account**, checked at `init`: at most `MAX_OPEN_UPLOADS_PER_USER` (8) open sessions, and at most `MAX_PENDING_UPLOAD_BYTES_PER_USER` not yet sent, counting the declared size of open sessions plus the account's staged files (one full message of the largest files: `MAX_ATTACHMENTS_PER_MESSAGE` × `MAX_ATTACHMENT_BYTES`, 2 GB by default). Past either, `init` answers `409 quota_exceeded`. Files already sent have no per-account quota.
+- **Idle sessions**: a session that receives no chunk for `UPLOAD_IDLE_TTL_MS` (15 minutes) loses its reservation and its chunks. A chunk counts from its first byte, so a slow link is not cut off mid-chunk. `init` drops idle sessions before it counts, and the sweep (at boot and hourly) does the same from the files' modification times, which is also how the reservations come back after a restart. Any session still goes after `UPLOAD_SESSION_TTL_MS` (24 hours).
+- **Every path that writes a file** (attachment `complete`, profile images, emojis, stickers, sounds) checks the ceiling with `hasRoomFor` (`attachmentQuota.ts`), which counts the open reservations, so none of them can spend space promised to an upload in progress.
+
+All of these limits are constants in `config/env.ts`; tests are in `server/tests/modules/attachments/uploadReservations.test.ts` and `server/tests/integration/attachmentUploads.itest.ts`.
+
+## Socket connection caps
+
+`join` (`modules/presence/participants.ts`) refuses a new connection past three caps, all counting **live** connections only: a ghost waiting out its reconnect grace (30 s, 180 s in a call) holds no slot, and a resume (`join {id, token}`) is never refused, since its connection already had one.
+
+- `MAX_PARTICIPANTS` (500): the whole instance, a memory guard for the one Node process rather than a room size. Past it the client gets `full` ("Sala cheia, tente mais tarde."). The server logs `connections near the instance cap` once when live connections reach 80% of it, again only after they have dropped back below.
+- `MAX_CONNECTIONS_PER_USER` (4): tabs and devices of one account.
+- `MAX_CONNECTIONS_PER_IP` (20): every account behind one address together, so a few throwaway accounts cannot fill the instance; it leaves room for a household or an office behind one public address. The address comes from `resolveClientIp`, so behind a proxy it needs `TRUST_PROXY=1`, or every client shares the proxy's address and its cap.
+
+The two last answer `too_many_connections`. The admin System page shows the live count against these caps. Tests are in `server/tests/modules/presence/participants.test.ts` (`connection caps`).
+
 ## Brute-force limits
 
 Failed logins (per account and per address), wrong password-reset codes (per account and per address), recovery and email-change code requests, username availability checks, wrong invite codes and sign-ups per address are counted in the `rate_limit_windows` table (`modules/auth/ratelimit.ts`), so a restart or a deploy does not give anyone fresh attempts and several instances would share one count.
 
 - **Shape:** one row per key and fixed window (`count`, `window_ends_at`, `blocked_until`). A hit is a single atomic upsert; when the window is over the row is reset in place by the next hit. The key is stored as a SHA-256, so the table never holds an email, a username or an address.
-- **Limits:** 10 failures per key in 15 minutes for logins and invite codes, 10 wrong codes per account and per address in 15 minutes for password reset (a resend does not restore them; an unknown username or email gets a key too, so a block never reveals whether an account exists), 10 requests per key in 15 minutes for recovery and email-change codes (recovery also sends at most 5 codes per account in 15 minutes, however the account was named, with the same response when it is over), `REGISTRATIONS_PER_IP_PER_HOUR` sign-ups per address per hour, 30 username availability checks per account per minute and 300 per day (only well-formed names are counted; renaming itself is behind the current password and its attempt counter). Account-deletion codes share the 5-per-15-minutes cap of the other code emails, and wrong ones count against the same per-account counter as login codes. The per-code attempt ceiling (`AUTH_CODE_MAX_ATTEMPTS`) already lives in `auth_codes`.
+- **Limits:** 10 failures per key in 15 minutes for logins and invite codes, 10 wrong codes per account and per address in 15 minutes for password reset (a resend does not restore them; an unknown username or email gets a key too, so a block never reveals whether an account exists), 10 requests per address in 15 minutes for recovery codes and per account for email-change codes (recovery also sends at most 5 codes per account in 15 minutes, however the account was named, with the same response when it is over; nothing keyed on the typed username or email refuses a recovery request), `REGISTRATIONS_PER_IP_PER_HOUR` sign-ups per address per hour, 30 username availability checks per account per minute and 300 per day (only well-formed names are counted; renaming itself is behind the current password and its attempt counter). Account-deletion codes share the 5-per-15-minutes cap of the other code emails, and wrong ones count against the same per-account counter as login codes. The per-code attempt ceiling (`AUTH_CODE_MAX_ATTEMPTS`) already lives in `auth_codes`.
+- **Owner bypass:** anyone who knows a username can fill that account's counters, so the per-account ones never lock its owner out on their own. A browser the account signed in from in the last 30 days (`known_logins`: the same address and kind of browser, `isKnownBrowser` in `loginAlert.ts`) gets past a blocked login counter with the right password, past a blocked reset-code counter with its code, and has a recovery send budget of its own (`recovery-account-known:`). Anyone else is refused while the account is blocked, right password or not, with the same answer and the same failures counted, so the block is no oracle. Getting through does not clear the block, or each of the owner's logins would hand the attacker a fresh round. A new browser or address still waits out the window.
 - **Cleanup:** `sweepExpiredRateLimits` runs every 15 minutes from `app/bootstrap.ts` and deletes rows whose window is over.
 - **Fail closed:** if the database cannot answer, the attempt is refused with `503 rate_limit_unavailable` (and `Retry-After`) instead of being let through. A correct password clears only the account's counter, never the address's (that one expires with its window, otherwise anyone with one valid account could reset their address between rounds of password spraying); clearing is best effort, so a database hiccup there does not turn a valid login into an error.
 - **Not here, on purpose:** socket flood control (`realtime/floodControl.ts`), link previews, game searches and similar per-minute quotas stay in memory. They only cap short bursts of legitimate traffic, losing them on a restart costs nothing, and a database write per socket event would be the expensive part.
@@ -345,7 +407,8 @@ The server sends a Content-Security-Policy with every response it serves, built 
 
 - **Scripts** run only from our own origin. The two small inline scripts in `web/index.html` and the one in `web/public/offline.html` are allowed by their SHA-256, computed at boot from the built files, so editing them needs nothing else. Inline event handlers (`onclick="…"`) cannot be hashed: use `addEventListener`. `eval`, `new Function` and WebAssembly stay blocked (images are cropped on the server, with sharp). A library that loads a third-party script into the page (YouTube's iframe API, for one) is not allowed: embed the provider's player as an iframe instead.
 - **Styles.** Stylesheets load from our own origin. A `<style>` element is allowed only when its text matches a SHA-256 computed at boot, the same way as the scripts: the offline page's sheet, the theme bootstrap's three `html,body{background:…}` rules (one per color theme, read from the built `index.html`), and the crop dialog's sheet (`csp-style-sources.json`, written by the web build from the string react-easy-crop injects). `style-src-elem` has no `'unsafe-inline'`, so an injected sheet that matches none of those is refused. Style attributes stay allowed (`style-src-attr 'unsafe-inline'`): React, Motion and Base UI set them while rendering and the text is not stable enough to hash. `style-src` itself is only `'self'`. It is the fallback for a browser that ignores the split, and every browser that can render the theme already understands it.
-- **Images and media** load from any `https:` host (plus `http:` when `APP_URL` itself is http). The Wall's covers and avatars, link preview pictures and YouTube thumbnails come from our own [media proxy](INTEGRATIONS.md#media-proxy), but GIFs (KLIPY's terms), direct image and video links pasted in chat, webhook embed images and the redirects of `MEDIA_PROXY=0` still load from their own hosts.
+- **Images** load only from our own origin (`data:` and `blob:` included) and `https://*.klipy.com` (GIFs, KLIPY's terms). Every other third-party picture (the Wall's covers and avatars, link preview pictures, direct image links pasted in chat, YouTube thumbnails) comes through our own [media proxy](INTEGRATIONS.md#media-proxy), so a picture's host never learns who is reading. With `MEDIA_PROXY=0` the proxy redirects to each host, and `img-src` allows any `https:` host again (plus `http:` when `APP_URL` itself is http).
+- **Media** (`media-src`) loads from any `https:` host (plus `http:` when `APP_URL` is http): direct video and audio links play from their own host, only after the reader clicks to load them.
 - **Connections** go to our own origin and websocket, to `LIVEKIT_URL` over both ws and http (any `*.livekit.cloud` host for LiveKit Cloud, which hands out regional URLs), and to `https://api.klipy.com` when `KLIPY_API_KEY` is set.
 - **Frames:** only the YouTube and Twitch players (`frame-src`).
 - `/api/*` responses get `default-src 'none'; frame-ancestors 'none'`: JSON loads nothing.
@@ -372,7 +435,7 @@ What lives in the memory (or on the local disk) of the process, and what a secon
 | Login session cache (60 s) | `modules/auth/session.ts` | A logout, ban or profile save invalidates the cache of one instance only; the other keeps the old session for up to 60 s | Invalidation broadcast to every instance, or no cache |
 | Server snapshot cache (roles, members, channels, overwrites) | `modules/servers/serverAccess.ts` | `invalidateServer` clears one instance. The others keep serving stale permissions until they restart | Invalidation broadcast, or a version check on each read |
 | Game search cache | `modules/games/gameSearch.ts` | Harmless: only a cache. The IGDB request pacing already goes through a Postgres slot (`igdbLimiter.ts`) | Nothing |
-| Upload reservations and the init lock | `modules/attachments/uploadSession.ts` (`pendingUploadBytes`, `withInitLock`, `completingUploads`) | The storage quota check and the "one complete per upload" guard only see their own instance | Reservations in Postgres, and a database lock in place of the in-memory one |
+| Upload reservations and the init lock | `modules/attachments/uploadSession.ts` (`pendingUploads`, `withInitLock`, `completingUploads`) | The storage ceiling check, the per-account upload caps and the "one complete per upload" guard only see their own instance | Reservations in Postgres, and a database lock in place of the in-memory one |
 | Uploaded files and chunks | `./uploads` on the local disk | An instance cannot read what the other stored. The orphan sweep also compares one disk with one database | A shared volume or object storage |
 | Data export files | `EXPORT_DIR` (`modules/data-export/`) | The job claims queued exports with `skip locked`, but the ZIP lands on the disk of the instance that built it, and at boot each instance queues again every export marked as being built | A shared volume, and a lease on the `running` rows instead of the boot reset |
 | Presence status, automatic idle and custom status expiry | `modules/presence/userStatus.ts`, `presenceStatus.ts` | The chosen status is saved on the account, but the copy in memory, the per-connection idle flags and the expiry timer are per process: a change made on one instance is announced only to the sockets of that instance | Status changes broadcast to every instance, and the expiry owned by one of them |
@@ -420,6 +483,13 @@ How each provider is called, its limits and what happens when it fails are in [I
 
 ## Troubleshooting
 
+- **The whole stack in Docker** (`docker-compose.full.yml`; add `--env-file .env.full -f docker-compose.full.yml` to each command):
+  - `ps` shows which service is not healthy and `logs <service>` why. The app waits for `postgres`, `livekit` and `mailsink` to be healthy before it starts.
+  - Port 3000 or 7880 already in use: stop `npm run dev`, a LiveKit dev server or the end-to-end stack, which use the same ports.
+  - The `livekit` log says `secret is too short`: it still starts, but use a `LIVEKIT_API_SECRET` of at least 32 characters (`openssl rand -hex 32`) and restart both `livekit` and `app`.
+  - The app cannot reach the database after `POSTGRES_PASSWORD` was changed: Postgres only reads it when the volume is created. Put the old one back, or start over with `down -v` (deletes the data).
+  - A call connects but nobody hears anything: the browser is not on this machine. LiveKit tells browsers to send media to `LIVEKIT_NODE_IP` (127.0.0.1); see [DEPLOY.md](DEPLOY.md#the-complete-stack-on-one-server) for another host.
+  - The microphone is never asked for when the app is opened by IP or host name: browsers only allow it over HTTPS or on `localhost`. Use the `https` profile.
 - If the database is not ready, check `docker compose -f docker-compose.dev.yml ps` and `docker compose -f docker-compose.dev.yml logs postgres`.
 - If port `5432` is already in use, stop the other PostgreSQL service or change the host-side port mapping in `docker-compose.dev.yml` and update `DATABASE_URL` to match.
-- If the app cannot connect to PostgreSQL, confirm the container is healthy and that `DATABASE_URL` uses `localhost:5432`, the `linkord` database, and the local credentials above.
+- If the app cannot connect to PostgreSQL, confirm the container is healthy and that `DATABASE_URL` uses `localhost:5432`, the `linkord` database, and the local credentials above. `curl localhost:3000/readyz` answers `503 {"ok":false}` while the app cannot reach the database (or write to `uploads/`) and the server log says which with a `not ready` warning; `/healthz` stays `200` as long as the process is up ([DEPLOY.md](DEPLOY.md#what-gets-deployed)).

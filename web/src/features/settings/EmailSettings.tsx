@@ -6,7 +6,7 @@ import { useAuth } from '@/state/AuthContext';
 import { Label } from '@/shared/ui/primitives/label';
 import { Button } from '@/shared/ui/primitives/button';
 import { Input } from '@/shared/ui/primitives/input';
-import { confirmEmailChange, requestEmailChange } from '@/shared/api/api';
+import { confirmEmailChange, requestEmailChange, verifyEmailChangeCurrent } from '@/shared/api/api';
 import { describeApiError } from '@/shared/api/errorText';
 import { EMAIL_RE, MAX_EMAIL_LEN } from '@/features/auth/credentialRules';
 import { OTPInput, type OTPStatus } from '@/shared/ui/motion/otp-input';
@@ -21,7 +21,8 @@ function maskEmail(email: string): string {
   return `${'*'.repeat(at)}${email.slice(at)}`;
 }
 
-type Phase = 'view' | 'edit' | 'requested' | 'success';
+// `current-code`: with two-step login on, the current address confirms the change before the new one gets a code.
+type Phase = 'view' | 'edit' | 'current-code' | 'requested' | 'success';
 
 type EmailValidationError = 'required' | 'invalid' | 'same' | 'passwordRequired';
 
@@ -52,6 +53,8 @@ export function EmailSettings({ currentEmail }: { currentEmail: string | null })
   // one the code was actually sent to.
   const [targetEmail, setTargetEmail] = useState('');
   const [code, setCode] = useState('');
+  const [maskedCurrentEmail, setMaskedCurrentEmail] = useState('');
+  const [endedSessions, setEndedSessions] = useState(0);
   const [otpStatus, setOtpStatus] = useState<OTPStatus>('idle');
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -89,11 +92,16 @@ export function EmailSettings({ currentEmail }: { currentEmail: string | null })
     setError(null);
     setPending(true);
     try {
-      await requestEmailChange(trimmed, password);
+      const result = await requestEmailChange(trimmed, password);
       setTargetEmail(trimmed);
       setCode('');
       setOtpStatus('idle');
-      setPhase('requested');
+      if ('codeRequired' in result) {
+        setMaskedCurrentEmail(result.email);
+        setPhase('current-code');
+      } else {
+        setPhase('requested');
+      }
     } catch (err) {
       setError(describeApiError(err, 'settings:email.errors.sendFailed'));
     } finally {
@@ -121,7 +129,14 @@ export function EmailSettings({ currentEmail }: { currentEmail: string | null })
     setOtpStatus('idle');
     setPending(true);
     try {
-      await confirmEmailChange(targetEmail, nextCode);
+      if (phase === 'current-code') {
+        await verifyEmailChangeCurrent(targetEmail, nextCode);
+        setCode('');
+        setPhase('requested');
+        return;
+      }
+      const result = await confirmEmailChange(targetEmail, nextCode);
+      setEndedSessions(result.endedSessions ?? 0);
       setOtpStatus('success');
       setPassword('');
       setPhase('success');
@@ -168,7 +183,8 @@ export function EmailSettings({ currentEmail }: { currentEmail: string | null })
     if (phase === 'success') {
       return (
         <p className="flex items-center gap-1.5 text-label text-green">
-          <CheckCircleIcon size={16} aria-hidden /> {t('email.changed', { email: targetEmail })}
+          <CheckCircleIcon size={16} aria-hidden />{' '}
+          {endedSessions > 0 ? t('email.changedEndedSessions', { email: targetEmail, count: endedSessions }) : t('email.changed', { email: targetEmail })}
         </p>
       );
     }
@@ -213,11 +229,17 @@ export function EmailSettings({ currentEmail }: { currentEmail: string | null })
       );
     }
 
+    const askingCurrent = phase === 'current-code';
     return (
       <div className="flex flex-col gap-3">
-        <p className="text-label text-text-muted">{t('email.codeSent', { email: targetEmail })}</p>
+        <p className="text-label text-text-muted">
+          {askingCurrent
+            ? t('email.currentCodeSent', { email: maskedCurrentEmail, newEmail: targetEmail })
+            : t('email.codeSent', { email: targetEmail })}
+        </p>
         <OTPInput
-          label={t('email.codeLabel')}
+          key={phase}
+          label={askingCurrent ? t('email.currentCodeLabel') : t('email.codeLabel')}
           hint={t('email.codeHint')}
           errorMessage={error ?? t('email.codeError')}
           successMessage={t('email.codeSuccess')}
@@ -226,12 +248,12 @@ export function EmailSettings({ currentEmail }: { currentEmail: string | null })
           disabled={pending}
           onChange={(value) => { setCode(value); setOtpStatus('idle'); setError(null); }}
           onComplete={(value) => { void handleConfirm(value); }}
-          aria-label={t('email.codeAria')}
+          aria-label={askingCurrent ? t('email.currentCodeAria') : t('email.codeAria')}
         />
         <div className="flex flex-wrap items-center gap-2">
           <Button type="button" size="sm" disabled={pending || code.length !== 6} onClick={() => void handleConfirm()}>
             {pending ? <CircleNotchIcon size={20} className="animate-spin" /> : <CheckIcon size={20} weight="fill" />}
-            <span>{pending ? t('email.confirming') : t('email.confirm')}</span>
+            <span>{pending ? t('email.confirming') : askingCurrent ? t('email.continue') : t('email.confirm')}</span>
           </Button>
           <Button type="button" variant="ghost" size="sm" disabled={pending} onClick={() => void handleResend()}>
             <span>{resent ? t('email.resent') : t('email.resend')}</span>

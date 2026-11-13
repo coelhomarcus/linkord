@@ -2,7 +2,10 @@ import path from 'node:path';
 
 const PORT = Number(process.env.PORT || 3000);
 const HOST_BIND = process.env.HOST_BIND || '0.0.0.0';
-const MAX_PARTICIPANTS = Number(process.env.MAX_PARTICIPANTS || 50);
+// Live socket connections the whole instance takes (ghosts in the reconnect grace window do not
+// count). A memory guard for one Node process, not a room size: the per-account and per-address
+// caps below are what keep a few people from filling it.
+const MAX_PARTICIPANTS = Number(process.env.MAX_PARTICIPANTS || 500);
 const TRUST_PROXY = process.env.TRUST_PROXY === '1';
 // How many proxies in front of the server append to X-Forwarded-For. A wrong count either believes
 // an address the client wrote (too low) or drops to the first proxy's address (too high), so an
@@ -68,6 +71,17 @@ const UPLOAD_CHUNK_BYTES = 8 * 1024 * 1024;
 // abandoned upload session (UPLOAD_DIR/tmp/<uploadId>) expiry — swept at
 // boot and hourly.
 const UPLOAD_SESSION_TTL_MS = 24 * 60 * 60 * 1000;
+// An open upload holds its declared size against MAX_STORAGE_BYTES before any
+// byte arrives, so one that stops receiving chunks gives it back after this
+// long. Long enough for the client's three concurrent 8 MB chunks on a slow
+// link (a chunk in flight counts as activity from its first byte).
+const UPLOAD_IDLE_TTL_MS = 15 * 60 * 1000;
+// Per account, so no single account can reserve the instance's free space:
+// open sessions at once (the composer runs two files at a time per tab), and
+// bytes not yet sent (declared size of open sessions plus staged files), one
+// full message of the largest files.
+const MAX_OPEN_UPLOADS_PER_USER = 8;
+const MAX_PENDING_UPLOAD_BYTES_PER_USER = MAX_ATTACHMENTS_PER_MESSAGE * MAX_ATTACHMENT_BYTES;
 // Data exports (modules/data-export): the ZIPs wait here until downloaded or expired. Inside the uploads
 // folder by default, so the volume that already persists uploads keeps them across a deploy.
 const EXPORT_DIR = process.env.EXPORT_DIR || path.join(UPLOAD_DIR, 'exports');
@@ -93,6 +107,9 @@ const DATABASE_SSL = process.env.DATABASE_SSL === '1';
 // literal multi-line value or a single-line one with escaped "\n"s (the
 // common way to fit a PEM into a one-line .env/Dokploy variable).
 const DATABASE_SSL_CA = (process.env.DATABASE_SSL_CA || '').replace(/\\n/g, '\n').trim();
+// Connections the one process keeps to Postgres. Every HTTP request and socket event shares them,
+// so too few turns one slow burst into timeouts for everyone else; Postgres allows 100 by default.
+const DATABASE_POOL_MAX = Math.max(1, Number(process.env.DATABASE_POOL_MAX) || 10);
 // runs pending migrations before accepting connections — on by default
 // since neither deploy path (Docker CMD, systemd ExecStart) goes through
 // an npm script.
@@ -146,15 +163,19 @@ const LOGIN_CODE_TTL_MS = 10 * 60 * 1000;
 
 // LiveKit Cloud — camera/screen become real WebRTC (managed SFU).
 const LIVEKIT_URL = process.env.LIVEKIT_URL || '';
+// Where this server calls LiveKit's API, when it differs from the URL browsers use (LiveKit in the
+// same compose network, say). Defaults to LIVEKIT_URL.
+const LIVEKIT_SERVER_URL = (process.env.LIVEKIT_SERVER_URL || '').trim() || LIVEKIT_URL;
 const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY || '';
 const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET || '';
 // prefix for each call's LiveKit room name (see
 // integrations/livekit/livekit.ts) — one room per voice channel or DM, not a single shared one.
 const LIVEKIT_ROOM_NAME = process.env.LIVEKIT_ROOM_NAME || 'linkord-room';
-// A token only gates ENTERING a room; LiveKit can't recall one already issued,
-// so a short life bounds how long a removed member could still reconnect with
-// an old token (removal also evicts live connections, see evictFromCall).
-const LIVEKIT_TOKEN_TTL_SECONDS = Number(process.env.LIVEKIT_TOKEN_TTL_SECONDS || 300);
+// A token only gates ENTERING a room and the client uses it the moment it arrives;
+// LiveKit can't recall one already issued, so a short life bounds how long a
+// removed member could still reconnect with it (the call room sweep in
+// modules/calls/callRoomSync.ts removes whoever does).
+const LIVEKIT_TOKEN_TTL_SECONDS = Number(process.env.LIVEKIT_TOKEN_TTL_SECONDS || 60);
 
 // KLIPY (GIFs). Their terms want API calls made from the user's browser, so
 // this key is handed to signed-in clients (modules/gifs) rather than used here;
@@ -189,8 +210,9 @@ const UPLOADS_REMOTE_URL = (process.env.UPLOADS_REMOTE_URL || '').trim().replace
 // ---- abuse limits (initial estimates; tune based on actual usage) ----
 const REGISTRATIONS_PER_IP_PER_HOUR = Number(process.env.REGISTRATIONS_PER_IP_PER_HOUR || 5);
 const MAX_NEW_ACCOUNTS_PER_HOUR = Number(process.env.MAX_NEW_ACCOUNTS_PER_HOUR || 30);
-const MAX_CONNECTIONS_PER_USER = Number(process.env.MAX_CONNECTIONS_PER_USER || 5);
-// per-account quotas (storage has none: only the instance-wide MAX_STORAGE_BYTES)
+const MAX_CONNECTIONS_PER_USER = Number(process.env.MAX_CONNECTIONS_PER_USER || 4);
+const MAX_CONNECTIONS_PER_IP = Number(process.env.MAX_CONNECTIONS_PER_IP || 20);
+// per-account quotas (storage of sent files has none: only the instance-wide MAX_STORAGE_BYTES)
 const MAX_OWNED_SERVERS_PER_USER = Number(process.env.MAX_OWNED_SERVERS_PER_USER || process.env.MAX_OWNED_GROUPS_PER_USER || 20);
 const MAX_SERVER_MEMBERSHIPS_PER_USER = Number(process.env.MAX_SERVER_MEMBERSHIPS_PER_USER || process.env.MAX_GROUP_MEMBERSHIPS_PER_USER || 100);
 const MAX_FRIENDS = Number(process.env.MAX_FRIENDS || 500);
@@ -237,16 +259,16 @@ export const config = {
   MAX_CHAT_LEN, CHAT_HISTORY_LIMIT, SEARCH_RESULT_LIMIT, MAX_SEARCH_QUERY_LEN, MAX_ATTACHMENTS_PER_MESSAGE,
   FRIEND_REQUEST_COOLDOWN_MS, MAX_SERVER_MEMBERS, MAX_CHANNELS_PER_SERVER, MAX_ROLES_PER_SERVER, MAX_INVITES_PER_SERVER, MAX_WEBHOOKS_PER_CHANNEL, MAX_INVITEES_PER_REQUEST,
   UPLOAD_DIR, MAX_ATTACHMENT_BYTES, MAX_STORAGE_BYTES, MAX_AVATAR_BYTES,
-  UPLOAD_CHUNK_BYTES, UPLOAD_SESSION_TTL_MS, EXPORT_DIR, DATA_EXPORT_TTL_MS, DATA_EXPORT_INTERVAL_MS, ACCOUNT_DELETION_GRACE_DAYS,
-  DATABASE_URL, DATABASE_SSL, DATABASE_SSL_CA, MIGRATE_ON_BOOT,
+  UPLOAD_CHUNK_BYTES, UPLOAD_SESSION_TTL_MS, UPLOAD_IDLE_TTL_MS, MAX_OPEN_UPLOADS_PER_USER, MAX_PENDING_UPLOAD_BYTES_PER_USER, EXPORT_DIR, DATA_EXPORT_TTL_MS, DATA_EXPORT_INTERVAL_MS, ACCOUNT_DELETION_GRACE_DAYS,
+  DATABASE_URL, DATABASE_SSL, DATABASE_SSL_CA, DATABASE_POOL_MAX, MIGRATE_ON_BOOT,
   SESSION_COOKIE, SESSION_TTL_DAYS, SESSION_IDLE_DAYS, REGISTRATION_CODE,
   COOKIE_SECURE, MAX_BODY_BYTES,
   MIN_USERNAME_LEN, MAX_USERNAME_LEN, MAX_DISPLAY_NAME_LEN, MIN_PASSWORD_LEN, MAX_PASSWORD_LEN,
   RESEND_API_KEY, RESEND_FROM_EMAIL, RESEND_API_URL, APP_URL, AUTH_CODE_TTL_MS, AUTH_CODE_MAX_ATTEMPTS, LOGIN_CODE_TTL_MS,
   PUSH_VAPID_PUBLIC_KEY, PUSH_VAPID_PRIVATE_KEY, PUSH_VAPID_SUBJECT,
-  LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET, LIVEKIT_ROOM_NAME, LIVEKIT_TOKEN_TTL_SECONDS,
+  LIVEKIT_URL, LIVEKIT_SERVER_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET, LIVEKIT_ROOM_NAME, LIVEKIT_TOKEN_TTL_SECONDS,
   UPLOADS_REMOTE_URL, KLIPY_API_KEY, MAL_CLIENT_ID, IGDB_CLIENT_ID, IGDB_CLIENT_SECRET, MEDIA_PROXY_ENABLED,
-  REGISTRATIONS_PER_IP_PER_HOUR, MAX_NEW_ACCOUNTS_PER_HOUR, MAX_CONNECTIONS_PER_USER,
+  REGISTRATIONS_PER_IP_PER_HOUR, MAX_NEW_ACCOUNTS_PER_HOUR, MAX_CONNECTIONS_PER_USER, MAX_CONNECTIONS_PER_IP,
   MAX_OWNED_SERVERS_PER_USER, MAX_SERVER_MEMBERSHIPS_PER_USER, MAX_FRIENDS, MAX_PENDING_OUTGOING_REQUESTS,
   ALLOWED_ORIGINS, CSP_REPORT_ONLY, IS_DEV, ORPHAN_GRACE_MS, ORPHAN_SWEEP_DRY_RUN,
 };

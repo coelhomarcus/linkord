@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { ConnectionQuality } from 'livekit-client';
 
 import { useRoom } from '@/state/RoomContext';
-import { useParticipantMedia, useAttachTrack, useIsSpeaking, useConnectionQuality, useWatchScreenShare } from './useLiveKitTrack';
+import { getParticipant, useParticipantMedia, useAttachTrack, useIsSpeaking, useConnectionQuality, useWatchScreenShare } from './useLiveKitTrack';
 import { participantMicMuted, useOwnMic } from './micState';
 import { useMuteForMe } from './useMuteForMe';
 import { useTileSizing } from './useTileSizing';
@@ -40,7 +40,8 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   const participant = isMine ? null : state.participants.get(participantId);
-  const name = isMine ? state.me.displayName : (participant?.displayName ?? '');
+  // a LiveKit connection the server has not listed (see useCallTiles) still shows who it is
+  const name = isMine ? state.me.displayName : (participant?.displayName ?? getParticipant(livekitRoom, participantId)?.name ?? '');
   const avatar = isMine ? state.me.avatar : (participant?.avatar ?? '');
   const avatarPoster = isMine ? state.me.avatarPoster : (participant?.avatarPoster ?? '');
   const avatarColor = isMine ? state.me.avatarColor : (participant?.avatarColor ?? '');

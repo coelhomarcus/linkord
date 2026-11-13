@@ -9,13 +9,13 @@ import { PERMISSIONS } from '../servers/permissions.js';
 import { canSendDirectMessage } from '../friendships/friendshipsRepository.js';
 import { newId, filePathFor } from './attachmentStorage.js';
 import { generateThumbnail, readImageDimensions, readImagePlaceholder, THUMBNAIL_SOURCE_MIME_TYPES } from './attachmentThumbnails.js';
-import { discardStaged, findOwnedStaged, stageFile } from './stagedAttachments.js';
+import { discardStaged, findOwnedStaged, stageFile, stagedBytesOf } from './stagedAttachments.js';
 import type { StagedAttachment } from '../../db/schema.js';
-import { getUsage } from './attachmentQuota.js';
+import { hasRoomFor } from './attachmentQuota.js';
 import { parseVoiceMeta, voicePayload } from './voiceMessages.js';
 import {
   tmpDirFor, manifestPathFor, chunkPathFor, readManifest, expectedChunkLength, assembleChunks, sanitizeFileName,
-  reserveUpload, releaseUpload, getReservedBytes, withInitLock, completingUploads,
+  reserveUpload, releaseUpload, touchUpload, openUploadsOf, expireIdleUploads, withInitLock, completingUploads,
 } from './uploadSession.js';
 import type { UploadManifest } from './uploadSession.js';
 import * as floodControl from '../../realtime/floodControl.js';
@@ -80,16 +80,29 @@ export async function handleAttachmentInit(request: FastifyRequest, reply: Fasti
   const uploadId = newId();
 
   // reserve this upload's declared size against the quota BEFORE any chunk
-  // bytes can be sent — see uploadSession.ts#pendingUploadBytes for why this
+  // bytes can be sent — see uploadSession.ts#pendingUploads for why this
   // has to be check-then-reserve, atomically, rather than just checking
-  // getUsage().
-  // there is no per-account quota: only each file's size and the instance-wide ceiling
-  const reserved = await withInitLock(async (): Promise<'ok' | 'storage_full'> => {
-    const usage = await getUsage();
-    if (usage.totalBytes + getReservedBytes() + totalSize > config.MAX_STORAGE_BYTES) return 'storage_full';
-    reserveUpload(uploadId, totalSize);
+  // getUsage(). The reservation is a promise of space made before any byte
+  // arrives, so each account may only hold a bounded share of it (sessions
+  // and bytes not sent yet, staged files included), and idle ones are given
+  // back first. What an account has already sent has no quota.
+  const reserved = await withInitLock(async (): Promise<'ok' | 'too_many_uploads' | 'pending_limit' | 'storage_full'> => {
+    await expireIdleUploads();
+    const open = openUploadsOf(sess.userId);
+    if (open.count >= config.MAX_OPEN_UPLOADS_PER_USER) return 'too_many_uploads';
+    if (open.bytes + (await stagedBytesOf(sess.userId)) + totalSize > config.MAX_PENDING_UPLOAD_BYTES_PER_USER) return 'pending_limit';
+    if (!(await hasRoomFor(totalSize))) return 'storage_full';
+    reserveUpload(uploadId, sess.userId, totalSize);
     return 'ok';
   });
+  if (reserved === 'too_many_uploads') {
+    log.warn('upload refused: too many open uploads for one account', { userId: sess.userId });
+    return sendError(reply, 409, 'quota_exceeded', 'Você tem envios demais em andamento. Espere alguns terminarem.');
+  }
+  if (reserved === 'pending_limit') {
+    log.warn('upload refused: account holds too many unsent bytes', { userId: sess.userId, totalSize });
+    return sendError(reply, 409, 'quota_exceeded', 'Arquivos demais esperando envio. Envie ou descarte os anexos pendentes antes de adicionar mais.');
+  }
   if (reserved === 'storage_full') {
     log.warn('upload refused: instance storage is full', { userId: sess.userId, totalSize });
     return sendError(reply, 400, 'storage_full', 'Armazenamento cheio (30GB no total). Apague arquivos antigos antes de enviar mais.');
@@ -136,6 +149,7 @@ export async function handleAttachmentChunk(request: FastifyRequest<{ Params: { 
   if (buffer.length !== expected) return sendError(reply, 400, 'chunk_size_mismatch', 'Tamanho do pedaço não bate com o esperado.');
 
   await fs.writeFile(chunkPathFor(uploadId, index), buffer);
+  touchUpload(uploadId);
   sendJson(reply, 200, { received: index });
 }
 
@@ -176,8 +190,7 @@ export async function handleAttachmentComplete(request: FastifyRequest<{ Params:
     }
     if (receivedTotal !== manifest.totalSize) return sendError(reply, 400, 'size_mismatch', 'O tamanho recebido não corresponde ao declarado.');
 
-    const usage = await getUsage();
-    if (usage.totalBytes + manifest.totalSize > config.MAX_STORAGE_BYTES) {
+    if (!(await hasRoomFor(manifest.totalSize, uploadId))) {
       return sendError(reply, 400, 'storage_full', 'Armazenamento cheio (30GB no total). Apague arquivos antigos antes de enviar mais.');
     }
 

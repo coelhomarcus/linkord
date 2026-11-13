@@ -1,0 +1,12 @@
+# LiveKit for docker-compose.full.yml. The API key and secret are not here: compose passes them as
+# LIVEKIT_KEYS from .env.full, the same values the app signs tokens with, so the two cannot drift.
+# The address advertised to browsers comes from --node-ip (LIVEKIT_NODE_IP).
+port: 7880
+rtc:
+  # ICE over TCP, for networks that block UDP
+  tcp_port: 7881
+  # one UDP port for every peer (UDP mux) instead of a range, so a firewall needs a single rule
+  udp_port: 7882
+  use_external_ip: false
+logging:
+  level: info
