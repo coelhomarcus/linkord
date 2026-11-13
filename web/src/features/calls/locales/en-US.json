@@ -194,5 +194,17 @@
       "deafened": "Deafened"
     },
     "resize": "Resize call"
+  },
+  "move": {
+    "title": "Bring the call to this tab?",
+    "descriptionVoice": "Your account is in {{name}} on another tab or device. If you continue, it leaves the call there and joins from here.",
+    "descriptionDirect": "Your account is in a call with {{name}} on another tab or device. If you continue, it leaves the call there and joins from here.",
+    "descriptionUnknown": "Your account is in a call on another tab or device. If you continue, it leaves the call there and joins from here.",
+    "confirm": "Join from here"
+  },
+  "elsewhere": {
+    "voice": "Voice channel on another tab or device",
+    "direct": "Private call on another tab or device",
+    "bringHere": "Bring the call to this tab"
   }
 }

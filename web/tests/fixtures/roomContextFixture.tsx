@@ -37,6 +37,8 @@ export function createFakeRoomContextValue(overrides: Partial<RoomContextValue> 
     requestChatView: noop,
     activeCallConversationId: null,
     joinCall: noop,
+    callElsewhere: null,
+    callMove: { open: false, confirm: noop, cancel: noop },
     leaveCall: asyncNoop,
     startDmCall: noop,
     acceptDmCall: noop,

@@ -33,6 +33,15 @@ describe('useDmCall', () => {
     expect(armDmMedia).toHaveBeenCalledWith('c1', false);
   });
 
+  it('starting or answering with the account\'s call held elsewhere asks the server to replace it', () => {
+    const { result, sendWs } = setup('me');
+    act(() => result.current.startDmCall('c2', false, true));
+    expect(sendWs).toHaveBeenLastCalledWith({ t: 'dm-call-start', conversationId: 'c2', video: false, replace: true });
+    act(() => result.current.onDmCall(incoming));
+    act(() => result.current.acceptDmCall(true));
+    expect(sendWs).toHaveBeenLastCalledWith({ t: 'dm-call-accept', callId: 'k', replace: true });
+  });
+
   it('the caller starts the camera only when they placed a video call', () => {
     const { result, armDmMedia } = setup('me');
     act(() => result.current.onDmCall({
@@ -109,6 +118,15 @@ describe('useDmCall', () => {
       act(() => result.current.onReconnected(incoming));
       expect(sendWs).toHaveBeenCalledTimes(2);
       expect(sendWs).toHaveBeenLastCalledWith({ t: 'dm-call-accept', callId: 'k' });
+    });
+
+    it('an answer that moves the call from another tab keeps saying so when it goes out late', () => {
+      const { result, sendWs } = offline();
+      act(() => result.current.acceptDmCall(true));
+
+      sendWs.mockReturnValue(true);
+      act(() => result.current.onReconnected(incoming));
+      expect(sendWs).toHaveBeenLastCalledWith({ t: 'dm-call-accept', callId: 'k', replace: true });
     });
 
     it('is dropped when the reconnect brings no call, or another one', () => {

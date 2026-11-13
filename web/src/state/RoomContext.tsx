@@ -4,6 +4,7 @@ import type { Room } from 'livekit-client';
 import type { ChatMessage, ClientMessage, Conversation, OwnStatus, PublicUser, ReactionEmoji, SearchResult, ServerSummary, StickerCard, VisiblePresence } from '@/shared/types/protocol';
 import type { PresencePatch } from '@/features/status/useOwnStatus';
 import type { DmCallNotice } from '@/features/calls/useDmCall';
+import type { CallElsewhere } from '@/features/calls/callElsewhere';
 import type { RoomAction, RoomState } from './roomReducer';
 import type { TileKind } from '@/features/calls/tileTypes';
 import type { OutboxEntry, OutboxFile } from '@/features/chat/useMessageOutbox';
@@ -69,7 +70,12 @@ export interface RoomContextValue {
   registerOpenCall: (fn: (conversationId: string) => void) => void;
   openCall: (conversationId: string) => void;
   activeCallConversationId: string | null;
+  /** Asks first (callMove) when the account is in a call on another tab or device. */
   joinCall: (conversationId: string) => void;
+  /** The account's call on another tab or device, or null: the server allows one call per account. */
+  callElsewhere: CallElsewhere | null;
+  /** The question asked before this tab takes that call (CallMoveDialog). */
+  callMove: { open: boolean; confirm: () => void; cancel: () => void };
   leaveCall: () => Promise<void>;
   /** Rings the other person in a DM. The LiveKit token arrives only after they accept. */
   startDmCall: (conversationId: string, video: boolean) => void;

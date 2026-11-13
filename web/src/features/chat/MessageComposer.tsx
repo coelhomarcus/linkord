@@ -71,7 +71,7 @@ export interface MessageComposerHandle {
 
 export const MessageComposer = forwardRef<MessageComposerHandle, { conversationId: string }>(function MessageComposer({ conversationId }, ref) {
   const { t } = useTranslation('chat');
-  const { state, allUsers, conversations, servers, serverMemberRevision, sendChatMessage, sendSticker: sendStickerMessage, queueMessageWithFiles, sendTyping, replyingTo, setReplyingTo, compressImagesDefault, setCompressImagesDefault, maxAttachmentBytes, activeCallConversationId } = useRoom();
+  const { state, allUsers, conversations, servers, serverMemberRevision, sendChatMessage, sendSticker: sendStickerMessage, queueMessageWithFiles, sendTyping, replyingTo, setReplyingTo, compressImagesDefault, setCompressImagesDefault, maxAttachmentBytes, activeCallConversationId, callElsewhere } = useRoom();
   const accountId = state.me.userId ?? '';
   const [draft, updateDraft] = useConversationDraft(accountId, conversationId);
   const { text, pendingFiles, attachError, voice: voiceTake } = draft;
@@ -152,12 +152,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
   const voice = useComposerVoice({ conversationId, inCall: !!activeCallConversationId, saveTake: saveVoiceTake, sendTake: sendVoiceTake });
   // another tab or device of this account is in a call: recording works, but
   // that call may hear it (this tab can't tell whether it's the same computer)
-  const otherConnectionInCall = useMemo(() => {
-    for (const p of state.participants.values()) {
-      if (p.userId === state.me.userId && p.id !== state.me.id && p.callConversationId) return true;
-    }
-    return false;
-  }, [state.participants, state.me.userId, state.me.id]);
+  const otherConnectionInCall = !!callElsewhere;
 
   function handleVoiceKeys(event: ReactKeyboardEvent<HTMLDivElement>) {
     if (isVoiceShortcut(event)) { event.preventDefault(); if (canAttach) voice.toggleFromShortcut(); return; }
