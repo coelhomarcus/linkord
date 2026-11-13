@@ -23,19 +23,13 @@ import { OUTBOX_POLL_MS } from '../modules/notifications/notificationsPolicy.js'
 import { RetentionSweepInProgressError, sweepRetention } from '../modules/retention/retentionSweeper.js';
 import { loadMediaProxyKey } from '../modules/media-proxy/mediaProxyKey.js';
 import { logger } from '../lib/logger.js';
+import { installProcessLifecycle } from './processLifecycle.js';
 
 const log = logger.child({ component: 'process' });
 
-// backstop behind the try/catch in each handler in realtime/socket.ts —
-// covers any async error escaping the normal message cycle (a timer, a
-// stray promise) that would otherwise kill the process (Node exits on
-// unhandledRejection/uncaughtException by default), disconnecting the room.
-process.on('unhandledRejection', (err) => {
-  log.error('unhandledRejection', err);
-});
-process.on('uncaughtException', (err) => {
-  log.error('uncaughtException', err);
-});
+// Installed at load, before anything can fail: until the server is listening, a fatal
+// error or a signal simply exits; after that, both go through the shutdown below.
+const lifecycle = installProcessLifecycle(process, log);
 
 /** A restart must look like a short network drop to everyone in a call: the media
  * lives on LiveKit and keeps flowing, so what comes back here is who was in which
@@ -195,9 +189,8 @@ export async function bootstrap(): Promise<void> {
   const orphanTimer = setInterval(sweepOrphanFiles, 24 * 60 * 60 * 1000);
   orphanTimer.unref();
 
-  for (const sig of ['SIGINT', 'SIGTERM'] as const) {
-    process.on(sig, () => {
-      log.info('shutting down', { signal: sig });
+  lifecycle.ready({
+    stop() {
       clearInterval(connectionSyncTimer);
       if (callRoomSyncTimer) clearInterval(callRoomSyncTimer);
       broadcast({ t: 'server-restart' });
@@ -209,8 +202,7 @@ export async function bootstrap(): Promise<void> {
       // io.close() only drops the transports, which every client (old builds
       // included) treats as a network drop and reconnects from.
       io.close();
-      fastify.close().then(() => process.exit(0)).catch(() => process.exit(1));
-      setTimeout(() => process.exit(0), 3000).unref();
-    });
-  }
+    },
+    closeHttp: () => fastify.close(),
+  });
 }

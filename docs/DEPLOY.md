@@ -58,6 +58,12 @@ mkdir -p /srv/linkord/uploads /srv/linkord/backups
 chown -R 1000:1000 /srv/linkord/uploads /srv/linkord/backups
 ```
 
+**Restart policy.** The app relies on being restarted when it exits: an uncaught exception or an unhandled promise rejection is logged as `fatal uncaughtException, shutting down` (or `unhandledRejection`), the server shuts down the same way as for a deploy (calls are restored by the next process) and exits with code 1. The compose file sets `restart: unless-stopped`. On Dokploy, the Swarm service's default restart policy (`condition: any`) already restarts it; if you changed it under the application's Swarm settings, keep the condition at `any` or `on-failure`. To check:
+
+```bash
+docker service inspect <app-name> --format '{{json .Spec.TaskTemplate.RestartPolicy}}'
+```
+
 Dokploy runs the app as a Swarm service, so the container's name changes with every deploy (`<app-name>.1.<task id>`). Take it from `docker ps` each time you need it:
 
 ```bash
