@@ -1,9 +1,8 @@
-import path from 'node:path';
+import { createRequire } from 'node:module';
 import type { Browser, Page } from '@playwright/test';
 import { test, expect, type User } from '../../fixtures/test';
 import { acceptInvite, createInvite, createServer, type CreatedServer } from '../../fixtures/api';
 import type { AppPage } from '../../fixtures/app';
-import { REPO_DIR } from '../../stack/stack';
 
 interface CallToken { conversationId: string; livekitUrl: string; livekitToken: string }
 
@@ -35,7 +34,8 @@ class KeptTokenClient {
     const context = await browser.newContext();
     const page = await context.newPage();
     await page.setContent('<!doctype html><title>kept token</title>');
-    await page.addScriptTag({ path: path.join(REPO_DIR, 'web/node_modules/livekit-client/dist/livekit-client.umd.js') });
+    // the suite's own copy (CI installs only e2e/), pinned to the web app's version; `require` resolves to the UMD build
+    await page.addScriptTag({ path: createRequire(import.meta.url).resolve('livekit-client') });
     return new KeptTokenClient(page);
   }
 
@@ -47,7 +47,7 @@ class KeptTokenClient {
    */
   async connect(token: CallToken, ifCutOff: 'accept' | 'retry'): Promise<void> {
     await this.page.evaluate(async ({ livekitUrl, livekitToken, ifCutOff }) => {
-      // the suite does not depend on livekit-client; the UMD build loaded above provides it
+      // the UMD build loaded into this page provides it, not an import of the suite
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const lk = (window as unknown as { LivekitClient: any }).LivekitClient;
       for (let attempt = 1; ; attempt++) {
