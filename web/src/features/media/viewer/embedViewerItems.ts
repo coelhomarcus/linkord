@@ -5,9 +5,9 @@ import { canLoadMediaUrl } from '@/features/media/mediaUrl';
 import type { ViewerItem } from './viewerItem';
 
 /** The thumbnail strip's cell size, in CSS pixels. */
-export const VIEWER_THUMB_PX = 56;
+const VIEWER_THUMB_PX = 56;
 
-export function embedViewerKey(url: string, index: number): string {
+function embedViewerKey(url: string, index: number): string {
   return `embed:${url}#${index}`;
 }
 
