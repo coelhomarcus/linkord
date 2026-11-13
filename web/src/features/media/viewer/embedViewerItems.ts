@@ -1,6 +1,7 @@
 import type { LinkPreviewData } from '@/shared/api/api';
 import type { DetectedEmbed } from '@/shared/lib/chatEmbeds';
 import { proxiedImageVariant } from '@/shared/lib/mediaProxy';
+import { linkPlayerUrl } from '@/features/media/linkPlayer';
 import { canLoadMediaUrl } from '@/features/media/mediaUrl';
 import type { ViewerItem } from './viewerItem';
 
@@ -37,9 +38,10 @@ export function directImageViewerItem(url: string, image: { src: string; width?:
 }
 
 /** The pictures a link's card opens in the viewer, as the card draws them: a direct image link's
- * picture, or a page's picture(s). A player (YouTube, Twitch, a page's video) opens nothing, and an
- * external video or sound stays behind its click-to-load gate. Every address here is one the server
- * already handed out, through the media proxy. */
+ * picture, or a page's picture(s). A player (YouTube, Twitch, a preview's own `player`) opens
+ * nothing, since its picture is the player's thumbnail, and an external video or sound stays
+ * behind its click-to-load gate. Every address here is one the server already handed out, through
+ * the media proxy. */
 export function embedViewerItems(embed: DetectedEmbed, preview: LinkPreviewData | null | undefined): ViewerItem[] {
   if (!preview) return [];
   if (embed.kind === 'image') {
@@ -55,6 +57,7 @@ export function embedViewerItems(embed: DetectedEmbed, preview: LinkPreviewData 
   }
   if (embed.kind !== 'link') return [];
   if (preview.video && canLoadMediaUrl(preview.video)) return [];
+  if (linkPlayerUrl(preview.player, window.location.hostname)) return [];
   const images = (preview.images?.length ? preview.images : preview.image ? [preview.image] : []).filter((src) => canLoadMediaUrl(src));
   const name = preview.title || preview.siteName || embed.url;
   return images.map((src, index) => {

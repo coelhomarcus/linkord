@@ -34,16 +34,25 @@ describe('messageViewerItems', () => {
 
   it('leaves out players, external videos, removed cards and cards under a spoiler', () => {
     const items = messageViewerItems({
-      text: 'https://youtu.be/dQw4w9WgXcQ https://v.example/a.mp4 https://page.example/video https://gone.example/a ||https://secret.example/a||',
+      text: 'https://youtu.be/dQw4w9WgXcQ https://vimeo.com/1 https://v.example/a.mp4 https://page.example/video https://gone.example/a ||https://secret.example/a||',
       suppressedEmbeds: ['https://gone.example/a'],
       embeds: [
         preview({ url: 'https://youtu.be/dQw4w9WgXcQ', image: '/api/media-proxy/yt' }),
+        preview({ url: 'https://vimeo.com/1', type: 'video', image: '/api/media-proxy/vimeo', player: 'https://player.vimeo.com/video/1' }),
         preview({ url: 'https://page.example/video', image: '/api/media-proxy/poster', video: 'https://page.example/v.mp4' }),
         preview({ url: 'https://gone.example/a', image: '/api/media-proxy/gone' }),
         preview({ url: 'https://secret.example/a', image: '/api/media-proxy/secret' }),
       ],
     }, none);
     expect(items).toEqual([]);
+  });
+
+  it("keeps the picture of a card whose player is off the allowlist, which the card draws as a picture", () => {
+    const items = messageViewerItems({
+      text: 'https://page.example/v',
+      embeds: [preview({ url: 'https://page.example/v', type: 'video', image: '/api/media-proxy/p', player: 'https://evil.example/player' })],
+    }, none);
+    expect(items.map((item) => item.key)).toEqual(['embed:https://page.example/v#0']);
   });
 
   it('a GIF message is its GIF', () => {
