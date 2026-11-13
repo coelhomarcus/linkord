@@ -19,6 +19,11 @@ const EMPTY_PENDING: OutboxEntry[] = [];
 // Within this distance of the bottom the list counts as "at the present"
 // and follows new messages; farther up, the reader's place is kept.
 const AT_END_THRESHOLD = 80;
+// Only this close to the bottom does the list stay glued to it while rows
+// grow (a video learning its shape, a card arriving). A reader who has just
+// started scrolling up, still inside AT_END_THRESHOLD, keeps their place:
+// pinning them too pulled the first scroll back down every time a row grew.
+const PINNED_THRESHOLD = 8;
 // Rows from an edge at which the next page is requested.
 const PAGE_TRIGGER_ROWS = 3;
 const HIGHLIGHT_MS = 1500;
@@ -160,7 +165,9 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
     // must keep the reader's place, or following it would request the next
     // page, and the next, all the way to the present on its own
     followOnAppend: !hasMoreAfter,
-    scrollEndThreshold: AT_END_THRESHOLD,
+    // the library keeps the distance to the end, rather than the reader's
+    // row, for any resize within this distance: only when really there
+    scrollEndThreshold: PINNED_THRESHOLD,
     paddingStart: 12,
     paddingEnd: bottomPadding,
     rangeExtractor,
@@ -318,8 +325,8 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
   // view is followed by key and scrollTop takes its shift, written in the
   // same commit as the new transforms. Skipped when the first message
   // changed (a prepend is the library's and the settle loop's business) and
-  // near the end, where the library already follows every resize with the
-  // same threshold: compensating there too would count it twice.
+  // when pinned to the end, where the library already follows every resize
+  // with the same threshold: compensating there too would count it twice.
   const indexByKey = useMemo(() => new Map(items.map((item, index) => [item.key, index])), [items]);
   const followedRowRef = useRef<{ key: string; start: number; firstKey: string | undefined } | null>(null);
   const totalSizeRef = useRef(virtualizer.getTotalSize());
@@ -329,11 +336,11 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
     const prev = followedRowRef.current;
     const totalSize = virtualizer.getTotalSize();
     const distanceFromEnd = virtualizer.getDistanceFromEnd();
-    // Near the present, rows still grow as media loads; pin once per growth
+    // At the present, rows still grow as media loads; pin once per growth
     // so WebKit does not show the list jumping (custom compensation is off here).
-    if (distanceFromEnd <= AT_END_THRESHOLD && totalSize !== totalSizeRef.current) {
+    if (distanceFromEnd <= PINNED_THRESHOLD && totalSize !== totalSizeRef.current) {
       el.scrollTop = el.scrollHeight - el.clientHeight;
-    } else if (distanceFromEnd > AT_END_THRESHOLD && prev && prev.firstKey === firstKey) {
+    } else if (distanceFromEnd > PINNED_THRESHOLD && prev && prev.firstKey === firstKey) {
       const index = indexByKey.get(prev.key);
       const start = index === undefined ? undefined : virtualizer.measurementsCache[index]?.start;
       if (start !== undefined && Math.abs(start - prev.start) >= 1) el.scrollTop += start - prev.start;
@@ -423,12 +430,14 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
   const prevLastKeyRef = useRef(lastKey);
   const prevLengthRef = useRef(items.length);
   useEffect(() => {
-    if (ready && lastKey !== prevLastKeyRef.current && !atEnd && items.length > prevLengthRef.current) {
-      setUnseen((count) => count + (items.length - prevLengthRef.current));
-    }
+    const appended = ready && lastKey !== prevLastKeyRef.current && items.length > prevLengthRef.current;
+    if (appended && !atEnd) setUnseen((count) => count + (items.length - prevLengthRef.current));
+    // the library follows an append only when pinned; a reader a little
+    // above the end still counts as at the present for new messages
+    else if (appended && !hasMoreAfter) virtualizer.scrollToIndex(items.length - 1, { align: 'end' });
     prevLastKeyRef.current = lastKey;
     prevLengthRef.current = items.length;
-  }, [lastKey, items.length, atEnd, ready]);
+  }, [lastKey, items.length, atEnd, ready, hasMoreAfter, virtualizer]);
 
   const highlight = useCallback((msgId: number) => {
     if (highlightTimeoutRef.current != null) window.clearTimeout(highlightTimeoutRef.current);
