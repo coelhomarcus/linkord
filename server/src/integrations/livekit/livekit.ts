@@ -74,7 +74,7 @@ export function createToken(p: Participant, roomName: string, rights: PublishRig
 }
 
 function roomService(): RoomServiceClient {
-  return new RoomServiceClient(config.LIVEKIT_URL, config.LIVEKIT_API_KEY, config.LIVEKIT_API_SECRET);
+  return new RoomServiceClient(config.LIVEKIT_SERVER_URL, config.LIVEKIT_API_KEY, config.LIVEKIT_API_SECRET);
 }
 
 /** Force-disconnects a participant from a LiveKit room — unlike the self-

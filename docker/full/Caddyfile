@@ -1,0 +1,11 @@
+# The `https` profile of docker-compose.full.yml: TLS for the app and for LiveKit's signalling, with
+# certificates from Let's Encrypt. Browsers only give a page the microphone over HTTPS (or on localhost),
+# so a stack reached by anything but localhost needs this. Caddy replaces any X-Forwarded-For a client
+# sends with the address it saw, which is what the app's TRUST_PROXY=1 (one hop) expects.
+{$APP_DOMAIN} {
+	reverse_proxy app:3000
+}
+
+{$LIVEKIT_DOMAIN} {
+	reverse_proxy livekit:7880
+}

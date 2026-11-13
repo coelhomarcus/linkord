@@ -47,6 +47,41 @@ docker compose up -d --build
 
 The compose file also sets `no-new-privileges` and drops every Linux capability, and has an optional `backup` service ([Backups](#backups)).
 
+### The complete stack on one server
+
+[`docker-compose.full.yml`](../docker-compose.full.yml) also runs PostgreSQL and LiveKit, so a single small server needs nothing else. How to start it and what each service does is in [DEVELOPMENT.md](DEVELOPMENT.md#the-whole-stack-in-docker). Production keeps deploying through [Dokploy](#dokploy), with a managed database and LiveKit Cloud; this file fits a trial, a demo or a small private instance that accepts what comes with it: the database, the uploads and LiveKit share one machine and one disk, and nothing restarts the app on another host when that machine goes down. It runs one LiveKit node with no TURN server.
+
+By default everything is published on `127.0.0.1` only, which serves browsers on that machine. To serve other machines:
+
+1. **DNS:** two names pointing at the server, one for the app and one for LiveKit's signalling (`linkord.example.com`, `livekit.example.com`).
+2. **`.env.full`:**
+
+```dotenv
+APP_DOMAIN=linkord.example.com
+LIVEKIT_DOMAIN=livekit.example.com
+APP_URL=https://linkord.example.com
+LIVEKIT_URL=wss://livekit.example.com
+LIVEKIT_NODE_IP=<the server's public IPv4>
+LIVEKIT_RTC_BIND=0.0.0.0
+```
+
+3. **Start it with the `https` profile**, which adds Caddy in front of the app and LiveKit's signalling, with Let's Encrypt certificates kept in the `linkord_caddy_data` volume:
+
+```bash
+docker compose --env-file .env.full -f docker-compose.full.yml --profile https up -d --build
+```
+
+4. **Firewall:** open `80/tcp` and `443/tcp` (Caddy; `443/udp` too for HTTP/3), `7881/tcp` and `7882/udp` (LiveKit media). Keep `3000`, `7880` and `5432` closed; the file publishes the first two on `127.0.0.1` only and never publishes the database.
+
+Why this shape:
+
+- **The app's port stays on loopback.** The image sets `TRUST_PROXY=1`, so it takes the client address from `X-Forwarded-For`. Reachable directly, anyone could write that header and escape the per-IP limits. Caddy replaces whatever `X-Forwarded-For` a client sends with the address it saw, which is the one hop `TRUSTED_PROXY_HOPS=1` expects.
+- **HTTPS is not optional off `localhost`:** browsers only give a page the microphone and camera in a secure context, and Web Push and the `Secure` cookie need it too.
+- **LiveKit media goes straight to the server**, not through Caddy: browsers send to `LIVEKIT_NODE_IP` on `7881/tcp` and on the single UDP port `7882` (the UDP mux in [`docker/full/livekit.yaml`](../docker/full/livekit.yaml), so the firewall needs one rule rather than a range). Behind NAT, `LIVEKIT_NODE_IP` is the public address and those two ports are forwarded to the server.
+- **No TURN.** Browsers behind a firewall that allows neither UDP nor TCP to `7881` cannot join calls (chat still works). LiveKit's embedded TURN server (`turn:` in `livekit.yaml`, with its own domain and certificate, usually on `443/udp` and `5349/tcp`) solves that and is left out to keep the file small; LiveKit Cloud includes it.
+
+`TRUST_PROXY` and the other limits in [What gets deployed](#what-gets-deployed) apply unchanged. Backups: the `backup` profile, or `exec app node server/dist/scripts/backup.js`, write to the `linkord_backups` volume; copy them off the machine as [Backups](#backups) says (`docker compose … cp app:/app/backups ./backups`), and keep `.env.full` with them, since the LiveKit and database secrets are only there.
+
 ## Dokploy
 
 Create an **application** built from the repository's `Dockerfile` (the compose file is not used). Then:
@@ -156,6 +191,7 @@ Keep logs for at most **30 days**. The compose file rotates them at 5 files of 1
 
 - **Attachments and voice messages fail, profile pictures work.** `POST /api/attachments/init` answers 500 and the log shows `EACCES: permission denied, mkdir '/app/uploads/tmp/…'`. A folder under the uploads mount is still owned by root: see [Folders and permissions](#folders-and-permissions). The 429s that follow are the browser retrying.
 - **Backups fail with `EACCES`.** The same, for the folder mounted on `/app/backups`, or nothing is mounted there.
+- **Calls connect but nobody hears anyone, on `docker-compose.full.yml`.** `LIVEKIT_NODE_IP` is still `127.0.0.1`, or `7881/tcp` and `7882/udp` are closed or published on loopback (`LIVEKIT_RTC_BIND`). See [The complete stack on one server](#the-complete-stack-on-one-server).
 - **Calls do not connect, chat works.** Check `LIVEKIT_URL`: it must be the address browsers use, and the browser console names it in a Content-Security-Policy error if the policy blocked it. Without `LIVEKIT_*` the server logs `LiveKit is not configured` at startup.
 - **Covers, avatars or link preview pictures are missing.** The server downloads them itself, so the container needs outbound HTTPS to `images.igdb.com`, `cdn.myanimelist.net`, `avatars.githubusercontent.com`, `i.ytimg.com` and the sites people link to. The browser's network tab shows the reason on the `/api/media-proxy/...` request (`502 image_unavailable`, `429 rate_limited`, `415 not_an_image`).
 - **"Origem não permitida." (403) on every change, or the socket refuses to connect.** That is the app's own Portuguese error for a request from an origin it does not know. `APP_URL` must match the address in the browser; other addresses go in `ALLOWED_ORIGINS`.

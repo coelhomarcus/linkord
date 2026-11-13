@@ -1,6 +1,45 @@
 # Local development
 
-Run the frontend and backend directly on your machine. Docker is used only for the local PostgreSQL database; the app itself is not run in a container during development.
+Run the frontend and backend directly on your machine. Docker is used only for the local PostgreSQL database; the app itself is not run in a container during development. To try Linkord or test a real flow against the production image instead, run [the whole stack in Docker](#the-whole-stack-in-docker).
+
+## The whole stack in Docker
+
+[`docker-compose.full.yml`](../docker-compose.full.yml) brings up a complete instance with one command: PostgreSQL, a LiveKit server, the app built from the `Dockerfile`, and a mail sink that prints the emailed codes. It needs only Docker with the Compose plugin; Node and the npm installs are not involved.
+
+```bash
+cp .env.full.example .env.full
+```
+
+Fill in the four required values in `.env.full`:
+
+```dotenv
+REGISTRATION_CODE=<anything; people need it to sign up>
+POSTGRES_PASSWORD=<openssl rand -hex 24>
+LIVEKIT_API_KEY=<openssl rand -hex 8>
+LIVEKIT_API_SECRET=<openssl rand -hex 32>
+```
+
+Then build and start it:
+
+```bash
+docker compose --env-file .env.full -f docker-compose.full.yml up -d --build
+```
+
+Open [http://localhost:3000](http://localhost:3000) and register with the code. For a call, use a second account in another browser profile or a private window.
+
+- **`--env-file .env.full` is required** on every command for this file (`ps`, `logs`, `down` too): Compose fills the file in from it, and stops with `set … in .env.full and pass --env-file .env.full` without it. The same file is also the app's environment, so any variable from `.env.example` can go there.
+- **What runs:** `postgres` (17, data in the `linkord_postgres_data` volume), `livekit` (`livekit/livekit-server`, pinned; configured by [`docker/full/livekit.yaml`](../docker/full/livekit.yaml) and given the key pair from `.env.full` as `LIVEKIT_KEYS`, so it always matches the app's), `mailsink`, and `app` once the other three are healthy. Uploads live in the `linkord_uploads` volume. The app talks to LiveKit's API over the compose network (`LIVEKIT_SERVER_URL=http://livekit:7880`), while browsers use `LIVEKIT_URL` (`ws://localhost:7880`).
+- **Ports:** only on `127.0.0.1`: the app on 3000 and LiveKit on 7880 (signalling), 7881/tcp and 7882/udp (media). The database is not published. The image trusts `X-Forwarded-For` (`TRUST_PROXY=1`), so the app must not be reachable from other machines without a proxy in front; serving other machines is described in [DEPLOY.md](DEPLOY.md#the-complete-stack-on-one-server).
+- **Emailed codes** (account recovery, two-step login, email changes) go to the mail sink and appear in its log:
+
+```bash
+docker compose --env-file .env.full -f docker-compose.full.yml logs mailsink
+```
+
+- **Administrator:** `docker compose --env-file .env.full -f docker-compose.full.yml exec app node server/dist/scripts/adminRole.js grant <username>`.
+- **Stopping:** `down` keeps the data; `up -d` brings back the same accounts, messages and files. `down -v` deletes the volumes, and with them the database and the uploads.
+- **Updating:** `git pull`, then the same `up -d --build`. Migrations run at startup.
+- **Backups:** `--profile backup` adds the scheduled `backup` service, writing to the `linkord_backups` volume (see [Running it in Docker](#running-it-in-docker)).
 
 ## Prerequisites
 
@@ -272,6 +311,7 @@ docker compose exec app node server/dist/scripts/backup.js
 To schedule it, pick one:
 
 - **Compose service** (nothing to install on the host): `docker compose --profile backup up -d backup` takes a backup at start and then every `BACKUP_INTERVAL_SECONDS`, reading `./uploads` read-only. Set `BACKUP_KEEP` and `BACKUP_INTERVAL_SECONDS` in `.env`.
+  With [the whole stack in Docker](#the-whole-stack-in-docker) the same service is `docker compose --env-file .env.full -f docker-compose.full.yml --profile backup up -d backup`, and the backups go to the `linkord_backups` volume instead of `./backups`; copy them out with `docker compose --env-file .env.full -f docker-compose.full.yml cp app:/app/backups ./backups`.
 - **Host cron**, which fixes the time of day: `0 3 * * * cd /srv/linkord && flock -n backups/.lock docker compose exec -T app node server/dist/scripts/backup.js >> backups/backup.log 2>&1` (`flock` stops a slow backup from overlapping the next one).
 
 A backup on the same disk as the data does not survive that disk. Keep `./backups` on another volume (set `BACKUP_DIR`, or mount a different host path over `/app/backups`), and copy it off the machine after each run, for example from the same cron line: `rclone copy backups remote:linkord-backups`, `aws s3 sync backups s3://my-bucket/linkord`, or `rsync -a backups/ other-host:linkord-backups/`. Rotation here only prunes the local folder; set a lifecycle rule on the remote copy.
@@ -443,6 +483,13 @@ How each provider is called, its limits and what happens when it fails are in [I
 
 ## Troubleshooting
 
+- **The whole stack in Docker** (`docker-compose.full.yml`; add `--env-file .env.full -f docker-compose.full.yml` to each command):
+  - `ps` shows which service is not healthy and `logs <service>` why. The app waits for `postgres`, `livekit` and `mailsink` to be healthy before it starts.
+  - Port 3000 or 7880 already in use: stop `npm run dev`, a LiveKit dev server or the end-to-end stack, which use the same ports.
+  - The `livekit` log says `secret is too short`: it still starts, but use a `LIVEKIT_API_SECRET` of at least 32 characters (`openssl rand -hex 32`) and restart both `livekit` and `app`.
+  - The app cannot reach the database after `POSTGRES_PASSWORD` was changed: Postgres only reads it when the volume is created. Put the old one back, or start over with `down -v` (deletes the data).
+  - A call connects but nobody hears anything: the browser is not on this machine. LiveKit tells browsers to send media to `LIVEKIT_NODE_IP` (127.0.0.1); see [DEPLOY.md](DEPLOY.md#the-complete-stack-on-one-server) for another host.
+  - The microphone is never asked for when the app is opened by IP or host name: browsers only allow it over HTTPS or on `localhost`. Use the `https` profile.
 - If the database is not ready, check `docker compose -f docker-compose.dev.yml ps` and `docker compose -f docker-compose.dev.yml logs postgres`.
 - If port `5432` is already in use, stop the other PostgreSQL service or change the host-side port mapping in `docker-compose.dev.yml` and update `DATABASE_URL` to match.
 - If the app cannot connect to PostgreSQL, confirm the container is healthy and that `DATABASE_URL` uses `localhost:5432`, the `linkord` database, and the local credentials above. `curl localhost:3000/readyz` answers `503 {"ok":false}` while the app cannot reach the database (or write to `uploads/`) and the server log says which with a `not ready` warning; `/healthz` stays `200` as long as the process is up ([DEPLOY.md](DEPLOY.md#what-gets-deployed)).
