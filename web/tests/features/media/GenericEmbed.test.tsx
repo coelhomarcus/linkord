@@ -64,6 +64,12 @@ describe('link card layout by type', () => {
     expect(screen.getByRole('link', { name: 'Canal' })).toHaveAttribute('href', 'https://www.youtube.com/@canal');
     expect(screen.queryByText('notas do canal')).toBeNull();
   });
+
+  it('names the site once when the author is the site itself', () => {
+    renderCard(preview({ url: 'https://vimeo.com/76979871', type: 'video', title: 'Um vídeo', siteName: 'Vimeo', authorName: 'Vimeo', authorUrl: 'https://vimeo.com/staff' }));
+    expect(screen.getAllByText('Vimeo')).toHaveLength(1);
+    expect(screen.queryByRole('link', { name: 'Vimeo' })).toBeNull();
+  });
 });
 
 describe('gallery', () => {

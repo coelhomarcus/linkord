@@ -234,7 +234,8 @@ function GenericEmbedCard({ embed, className = '', edgeToEdge, preview, menu }: 
           <div className="flex min-w-0 items-center gap-1.5 pr-7 text-caption text-text-muted">
             {favicon && <img src={favicon} alt="" onError={() => setFaviconFailed(true)} className="h-3.5 w-3.5 flex-none rounded-[3px]" />}
             <span className="truncate">{siteName}</span>
-            {data.authorName && (
+            {/* oEmbed gives the provider as author for its own uploads (Vimeo's staff picks). */}
+            {data.authorName && data.authorName.toLowerCase() !== siteName.toLowerCase() && (
               <>
                 <span aria-hidden>·</span>
                 {data.authorUrl
