@@ -5,6 +5,9 @@ import { broadcastToConversationMembers } from '../conversations/conversationsRe
 import { detectEmbed } from '../link-preview/embeds.js';
 import { fetchLinkPreviewData, withProxiedImages, type LinkPreviewResult } from '../link-preview/linkPreview.js';
 import { previewableLinks } from '../link-preview/messageLinks.js';
+import { logger } from '../../lib/logger.js';
+
+const log = logger.child({ component: 'link-preview' });
 
 // A link card used to be fetched by every reader once its message was already
 // on screen, and growing from a skeleton to the full card pushed the
@@ -50,7 +53,8 @@ export function needsEmbeds(message: { text: string; embeds?: unknown; suppresse
 /** Fetches the previews a message is missing, stores them, and tells the
  * conversation. Best-effort: rate limited or failed, a card just keeps no
  * stored preview and readers fetch it the old way. Stored only if the text is
- * still the one they were fetched for (an edit may have raced it). */
+ * still the one they were fetched for (an edit may have raced it). Never
+ * throws. */
 export async function unfurlMessage(message: EmbeddableMessage & { embeds?: unknown }, userId: string, lookup?: Lookup): Promise<void> {
   const embeds = storedEmbedsFor(message.text, message.embeds, message.suppressedEmbeds);
   const have = new Set(embeds.map((embed) => embed.url));
@@ -66,11 +70,16 @@ export async function unfurlMessage(message: EmbeddableMessage & { embeds?: unkn
   if (embeds.length === have.size) return;
   const order = previewTargets(message.text, message.suppressedEmbeds);
   embeds.sort((a, b) => order.indexOf(a.url) - order.indexOf(b.url));
-  const stored = await db.update(messages).set({ embeds })
-    .where(and(eq(messages.id, message.id), eq(messages.text, message.text)))
-    .returning({ id: messages.id });
-  if (!stored.length) return;
-  await broadcastToConversationMembers(message.conversationId, { t: 'chat-embeds', conversationId: message.conversationId, msgId: message.id, embeds: embeds.map(withProxiedImages) });
+  try {
+    const stored = await db.update(messages).set({ embeds })
+      .where(and(eq(messages.id, message.id), eq(messages.text, message.text)))
+      .returning({ id: messages.id });
+    if (!stored.length) return;
+    await broadcastToConversationMembers(message.conversationId, { t: 'chat-embeds', conversationId: message.conversationId, msgId: message.id, embeds: embeds.map(withProxiedImages) });
+  } catch (err) {
+    // every caller fires and forgets, and an unhandled rejection ends the process (app/processLifecycle.ts)
+    log.warn('could not store link previews', { msgId: message.id, err: err instanceof Error ? err.message : String(err) });
+  }
 }
 
 // messages already being filled in, so two readers opening the same history
