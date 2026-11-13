@@ -1027,7 +1027,7 @@ async function handleChatDelete(socket: AppSocket, msg: { msgId?: unknown; reque
 // A permission granted to typing is remembered per connection and conversation for this long: a
 // composer reports every few seconds, and each check is several queries on the shared pool. Only a
 // grant is kept, so access taken away stops the indicator within this window at worst.
-export const TYPING_PERMISSION_TTL_MS = 5_000;
+const TYPING_PERMISSION_TTL_MS = 5_000;
 const typingPermissions = new WeakMap<AppSocket, Map<string, number>>();
 
 async function canSignalTyping(socket: AppSocket, conversationId: string, userId: string): Promise<boolean> {

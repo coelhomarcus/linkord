@@ -3,10 +3,10 @@ import { logger } from '../lib/logger.js';
 
 const log = logger.child({ component: 'health' });
 
-export const READINESS_TIMEOUT_MS = 1000;
+const READINESS_TIMEOUT_MS = 1000;
 /** A probe every second from monitoring must not become a query every second on a
  * pool of a handful of connections. */
-export const READINESS_CACHE_MS = 5000;
+const READINESS_CACHE_MS = 5000;
 
 export interface ReadinessDeps {
   pingDb: () => Promise<unknown>;

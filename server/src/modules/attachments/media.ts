@@ -269,7 +269,7 @@ export async function fetchMediaPage(kind: MediaKind, viewerId: string, before: 
 
 // A link or GIF search scans up to EMBED_SCAN_CEILING rows with a substring match, so a scripted
 // client could keep the shared database pool busy; the panel debounces its search and pages on scroll.
-export const MEDIA_REQUEST_LIMIT = { windowMs: 10_000, max: 30 };
+const MEDIA_REQUEST_LIMIT = { windowMs: 10_000, max: 30 };
 
 async function handleMedia(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   const cookies = parseCookies(request.headers.cookie || '');

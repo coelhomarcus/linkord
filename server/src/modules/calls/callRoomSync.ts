@@ -8,7 +8,7 @@ const log = logger.child({ component: 'calls' });
 /** How often the rooms are checked. Short, because a LiveKit token cannot be recalled: whoever kept
  * one (or the refreshed one LiveKit hands a connected client) can rejoin after every removal, and
  * this sweep is what finds them again. */
-export const CALL_ROOM_SWEEP_MS = 15_000;
+const CALL_ROOM_SWEEP_MS = 15_000;
 /** An identity met here after the server removed it is kicked on sight, for this long. Longer than
  * any token LiveKit refreshes for a connected client. */
 const REMOVED_MEMORY_MS = 60 * 60 * 1000;
@@ -16,7 +16,7 @@ const REMOVED_MEMORY_MS = 60 * 60 * 1000;
 /** The server's own view of a call is the only one that counts: a LiveKit identity is a connection
  * id (`Participant.id`), and it belongs in a room only while that connection is in that call. A
  * ghost waiting out its reconnect grace still is. */
-export function isExpectedInCall(identity: string, conversationId: string): boolean {
+function isExpectedInCall(identity: string, conversationId: string): boolean {
   return participants.get(identity)?.callConversationId === conversationId;
 }
 

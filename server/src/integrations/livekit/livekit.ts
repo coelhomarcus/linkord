@@ -109,7 +109,7 @@ export async function updatePublishRights(
 const EVICT_ATTEMPTS = 3;
 const EVICT_BACKOFF_MS = 1000;
 
-export interface RoomApi {
+interface RoomApi {
   removeParticipant(room: string, identity: string): Promise<unknown>;
   listParticipants(room: string): Promise<{ identity: string; metadata?: string }[]>;
 }

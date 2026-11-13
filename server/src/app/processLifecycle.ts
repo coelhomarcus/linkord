@@ -1,7 +1,7 @@
 import type { Logger } from '../lib/logger.js';
 
 /** How long a shutdown may take before the process leaves anyway (a hung close, a socket that never drains). */
-export const SHUTDOWN_DEADLINE_MS = 3000;
+const SHUTDOWN_DEADLINE_MS = 3000;
 
 export interface ShutdownSteps {
   /** Synchronous part: stop timers, tell clients a restart is coming, drop the socket transports. */
