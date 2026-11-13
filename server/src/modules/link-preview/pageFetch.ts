@@ -1,77 +1,20 @@
-import type { IncomingMessage } from 'node:http';
 import { requestSafe } from '../../net/safeRequest.js';
-import { readImageDimensions } from '../attachments/attachmentThumbnails.js';
 import { decodeBody } from './htmlMeta.js';
 
-// Everything a link preview fetches: the page, the size of its picture, the
-// type of a file it names, an oEmbed answer. The URL is chosen by whoever
+// Everything a link preview fetches: the page, the type of a file it names,
+// an oEmbed answer (its picture goes through the media proxy, linkPreview.ts). The URL is chosen by whoever
 // sent the message, a classic SSRF risk, so every request goes through
 // net/safeRequest.ts (IP checked at connection time, every redirect hop
 // checked again), and every body read is capped in bytes and time.
 
 export type Lookup = Parameters<typeof requestSafe>[4];
-export type ImageSize = { width: number; height: number };
 
 const PROBE_TIMEOUT_MS = 3000;
-// A picture's size is in its first bytes; this much is read, never more
-const IMAGE_PROBE_MAX_BYTES = 256 * 1024;
-// the first attempt to read the size, then every 4x until the cap
-const IMAGE_PROBE_FIRST_TRY_BYTES = 16 * 1024;
-// the formats sharp reads a size from here; an SVG is code, not worth parsing
-const PROBED_IMAGE_TYPES = /^image\/(png|jpe?g|gif|webp|avif)\b/i;
 // safety net for a malformed page with no `</head>`: the real cutoff is
 // semantic; YouTube's head alone can be ~700KB before the first OG tag.
 const MAX_BODY_BYTES = 1.5 * 1024 * 1024;
 const MAX_REDIRECTS = 3;
 const HEAD_CLOSE_RE = /<\/head/i;
-
-/** Reads just enough of an image response to know its size, then stops. Tries
- * early and again as more arrives, so a small picture costs one short read
- * and a big one never costs more than the cap. */
-function probeImageBody(res: IncomingMessage, done: (size: ImageSize | null) => void): void {
-  const chunks: Buffer[] = [];
-  let length = 0;
-  let nextTryAt = IMAGE_PROBE_FIRST_TRY_BYTES;
-  let trying = false;
-  let ended = false;
-  let finished = false;
-  const finish = (size: ImageSize | null) => {
-    if (finished) return;
-    finished = true;
-    res.destroy();
-    done(size);
-  };
-  const attempt = async () => {
-    trying = true;
-    const size = await readImageDimensions(Buffer.concat(chunks, length));
-    trying = false;
-    if (finished) return;
-    if (size) return finish(size);
-    if (ended || length >= IMAGE_PROBE_MAX_BYTES) return finish(null);
-    if (length >= nextTryAt) { nextTryAt *= 4; void attempt(); }
-  };
-  res.on('data', (chunk: Buffer) => {
-    if (finished) return;
-    chunks.push(chunk);
-    length += chunk.length;
-    if (!trying && (length >= nextTryAt || length >= IMAGE_PROBE_MAX_BYTES)) { nextTryAt *= 4; void attempt(); }
-  });
-  res.on('end', () => { ended = true; if (!finished && !trying) void attempt(); });
-  res.on('error', () => finish(null));
-}
-
-/** The size of a remote picture, or null. Never throws: a missing size only
- * means the client falls back to a fixed box. */
-export async function probeImageSize(imageUrl: string, lookup?: Lookup): Promise<ImageSize | null> {
-  try {
-    return await requestSafe<ImageSize | null>(imageUrl, MAX_REDIRECTS, 'image/*', (res, _finalUrl, resolve) => {
-      if (!PROBED_IMAGE_TYPES.test(String(res.headers['content-type'] || ''))) { res.destroy(); return resolve(null); }
-      probeImageBody(res, resolve);
-    }, lookup, PROBE_TIMEOUT_MS);
-  } catch {
-    return null;
-  }
-}
 
 /** The content type a URL really answers with, read from the headers alone
  * (the body is never downloaded), or null when it cannot be reached. A page
@@ -90,7 +33,7 @@ export async function probeMediaType(mediaUrl: string, lookup?: Lookup): Promise
 export type FetchedPage =
   | { kind: 'html'; html: string; finalUrl: string }
   /** the URL is a picture itself, not a page */
-  | { kind: 'image'; finalUrl: string; size: ImageSize | null }
+  | { kind: 'image'; finalUrl: string }
   /** the URL is a video or audio file itself */
   | { kind: 'video' | 'audio'; finalUrl: string }
   /** anything else: nothing to read */
@@ -100,15 +43,11 @@ export function fetchPage(targetUrl: string, lookup?: Lookup): Promise<FetchedPa
   return requestSafe<FetchedPage>(targetUrl, MAX_REDIRECTS, 'text/html,image/*;q=0.8,*/*;q=0.5', (res, finalUrl, resolve, reject) => {
     const contentType = String(res.headers['content-type'] || '');
 
-    if (PROBED_IMAGE_TYPES.test(contentType)) {
-      return probeImageBody(res, (size) => resolve({ kind: 'image', finalUrl, size }));
-    }
-    // the remaining kinds are never downloaded: they can be arbitrarily large
+    // a file is never downloaded here: it can be arbitrarily large, and a
+    // picture is read by the media proxy, which caps it
     if (/^image\//i.test(contentType)) {
-      // an SVG or icon: still a picture the card shows (through the proxy),
-      // just one whose size is not worth reading
       res.destroy();
-      return resolve({ kind: 'image', finalUrl, size: null });
+      return resolve({ kind: 'image', finalUrl });
     }
     if (/^(video|audio)\//i.test(contentType)) {
       res.destroy();

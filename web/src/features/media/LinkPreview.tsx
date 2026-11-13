@@ -14,8 +14,13 @@ import type { LinkPreviewData } from '@/shared/api/api';
 import { embedImageBox, previewImageSize, type ImageSize } from './embedImageBox';
 import { useNearViewport } from './useNearViewport';
 import { canLoadMediaUrl } from './mediaUrl';
+import { PreviewImage } from './PreviewImage';
+import { proxiedImageVariant } from '@/shared/lib/mediaProxy';
 
-type ProxiedImage = { src: string | null; size: ImageSize | null; failed: boolean };
+type ProxiedImage = { src: string | null; size: ImageSize | null; placeholder: string | null; failed: boolean };
+
+// the Media grid sizes its columns in CSS; this covers the widest of them
+const GRID_IMAGE_WIDTH = 400;
 
 /** A direct image link's picture as the server hands it out, through our own
  * proxy: its host never sees who is reading. Stored with the message (or,
@@ -37,10 +42,10 @@ function useProxiedImage(url: string, ref: RefObject<HTMLElement | null>, enable
       .catch(() => { if (!cancelled) setFetched(null); });
     return () => { cancelled = true; };
   }, [url, near, needsFetch]);
-  if (!enabled) return { src: null, size: null, failed: false };
-  if (signed !== undefined) return { src: signed, size: null, failed: !signed };
+  if (!enabled) return { src: null, size: null, placeholder: null, failed: false };
+  if (signed !== undefined) return { src: signed, size: null, placeholder: null, failed: !signed };
   const data = known ?? fetched;
-  return { src: data?.image ?? null, size: previewImageSize(stored) ?? firstSize, failed: data === null || (!!data && !data.image) };
+  return { src: data?.image ?? null, size: previewImageSize(stored) ?? firstSize, placeholder: data?.imagePlaceholder ?? null, failed: data === null || (!!data && !data.image) };
 }
 
 function EmbedFailedFallback({ url, className }: { url: string; className: string }) {
@@ -128,9 +133,10 @@ export function LinkPreview({ embed, className = '', edgeToEdge, fitContainer, p
         style={fitContainer ? undefined : { width: box.width, maxWidth: '100%', height: box.height }}
         className={`block max-w-full cursor-zoom-in ${fitContainer ? '' : `overflow-hidden bg-fill-subtle ${rounding}`} ${className}`}
       >
-        <img
-          src={image.src ?? undefined}
-          alt=""
+        <PreviewImage
+          // the box's size, not the picture's: the full one opens in the lightbox
+          src={image.src ? proxiedImageVariant(image.src, { width: fitContainer ? GRID_IMAGE_WIDTH : box.width }) : undefined}
+          placeholder={image.placeholder}
           onError={() => setFailed(true)}
           // a known size means the box has the picture's own proportions, so it
           // is filled (a pixel of rounding cropped at most); an unknown one is

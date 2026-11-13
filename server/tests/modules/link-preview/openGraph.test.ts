@@ -96,7 +96,7 @@ describe('openGraphResolver', () => {
     assert.equal(out.description, 'Plain description', 'description beats twitter:description');
     assert.deepEqual(out.images, [`${page.base}/one.png`, `${page.base}/two.png`, `${page.base}/three.png`]);
     assert.equal(out.image, `${page.base}/one.png`);
-    assert.deepEqual([out.imageWidth, out.imageHeight], [1200, 630]);
+    assert.deepEqual([out.imageWidth, out.imageHeight], [null, null], 'measured later, from the proxied picture');
     assert.equal(out.imageAlt, 'A red square');
     assert.equal(out.type, 'article');
     assert.equal(out.siteName, 'The Site');
@@ -159,7 +159,7 @@ describe('openGraphResolver', () => {
 
   test('a url that is a file describes the file', async () => {
     const image = (await resolve('/one.png'))!;
-    assert.deepEqual([image.type, image.image, image.imageWidth], ['image', `${page.base}/one.png`, 1200]);
+    assert.deepEqual([image.type, image.image, image.images], ['image', `${page.base}/one.png`, [`${page.base}/one.png`]]);
     const video = (await resolve('/raw.webm'))!;
     assert.deepEqual([video.type, video.video], ['video', `${page.base}/raw.webm`]);
     const audio = (await resolve('/raw.ogg'))!;

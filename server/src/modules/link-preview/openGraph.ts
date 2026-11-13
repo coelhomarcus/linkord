@@ -1,5 +1,5 @@
 import { allMeta, firstMeta, parsePageMeta } from './htmlMeta.js';
-import { fetchPage, probeImageSize, probeMediaType, type Lookup } from './pageFetch.js';
+import { fetchPage, probeMediaType, type Lookup } from './pageFetch.js';
 import { emptyResult, hostnameOf, isAllowlistedPlayer, MAX_IMAGES, safeResolve, type EmbedType, type LinkPreviewResult, type Resolver } from './preview.js';
 
 // The resolver every URL ends at: fetch it, and read a page's Open Graph and
@@ -61,8 +61,7 @@ async function previewFromHtml(url: string, html: string, finalUrl: string, look
 
   // A page's `og:video` is often its own HTML player, which a <video> cannot
   // play: only a file that answers as video counts.
-  const [size, videoType, audioType] = await Promise.all([
-    images[0] ? probeImageSize(images[0], lookup) : null,
+  const [videoType, audioType] = await Promise.all([
     ogVideo && ogVideo !== player ? probeMediaType(ogVideo, lookup) : null,
     ogAudio ? probeMediaType(ogAudio, lookup) : null,
   ]);
@@ -79,8 +78,9 @@ async function previewFromHtml(url: string, html: string, finalUrl: string, look
     favicon: safeResolve(iconHref, finalUrl) ?? safeResolve('/favicon.ico', finalUrl),
     siteName: firstMeta(metas, 'og:site_name', 'application-name') ?? hostnameOf(finalUrl),
     themeColor: firstMeta(metas, 'theme-color'),
-    imageWidth: size?.width ?? null,
-    imageHeight: size?.height ?? null,
+    // measured from the picture itself, in linkPreview.ts
+    imageWidth: null,
+    imageHeight: null,
     type,
     images,
     imageAlt: images.length ? firstMeta(metas, 'og:image:alt', 'twitter:image:alt') : null,
@@ -99,8 +99,8 @@ export const openGraphResolver: Resolver = {
       case 'html':
         return previewFromHtml(url, page.html, page.finalUrl, lookup);
       case 'image':
-        // a bare picture link: no page to read, but the card can still reserve its size
-        return { ...emptyResult(url), type: 'image', image: page.finalUrl, images: [page.finalUrl], imageWidth: page.size?.width ?? null, imageHeight: page.size?.height ?? null };
+        // a bare picture link: no page to read, the picture is the card
+        return { ...emptyResult(url), type: 'image', image: page.finalUrl, images: [page.finalUrl] };
       case 'video':
         return { ...emptyResult(url), type: 'video', video: page.finalUrl };
       case 'audio':

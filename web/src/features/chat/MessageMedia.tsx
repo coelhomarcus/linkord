@@ -5,7 +5,7 @@ import type { ChatAttachment as ChatAttachmentData } from '@/shared/types/protoc
 import { useCachedImageSrc } from '@/shared/hooks/useCachedImageSrc';
 import { cn } from '@/shared/lib/utils';
 import { ChatAttachment } from './ChatAttachment';
-import { placeholderDataUrl } from './placeholderImage';
+import { placeholderDataUrl } from '@/shared/lib/placeholderImage';
 import { MEDIA_MAX_WIDTH, mosaicLayout, singleImageBox, splitAttachments } from './mediaLayout';
 import { MediaViewerProvider } from './MediaViewerProvider';
 import { useMediaViewer } from './useMediaViewer';

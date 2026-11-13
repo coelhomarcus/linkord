@@ -298,6 +298,8 @@ export interface LinkPreviewData {
   type?: 'link' | 'article' | 'image' | 'video' | 'audio';
   images?: string[];
   imageAlt?: string | null;
+  /** base64 ThumbHash of `image`, to paint while it loads (protocol 22) */
+  imagePlaceholder?: string | null;
   audio?: string | null;
   /** a player page on an allowlisted host, for an iframe */
   player?: string | null;

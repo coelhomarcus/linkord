@@ -3,7 +3,9 @@ import { config } from '../../config/env.js';
 import { sendJson, sendError } from '../../http/respond.js';
 import { parseCookies } from '../../http/cookies.js';
 import { resolveSession } from '../auth/session.js';
-import { proxiedImageUrl } from '../media-proxy/mediaProxyUrls.js';
+import { readImageDimensions, readImagePlaceholder } from '../attachments/attachmentThumbnails.js';
+import { mediaProxy, PREVIEW_REDIRECTS } from '../media-proxy/mediaProxy.js';
+import { allowedTarget, proxiedImageUrl } from '../media-proxy/mediaProxyUrls.js';
 import type { Lookup } from './pageFetch.js';
 import { emptyResult, hasContent, type LinkPreviewResult } from './preview.js';
 import { canonicalUrl, runResolvers } from './resolvers.js';
@@ -77,6 +79,29 @@ export function withProxiedImages(preview: LinkPreviewResult): LinkPreviewResult
   return sent;
 }
 
+/** The preview's picture, fetched through the media proxy (whose cache then
+ * already holds it for the readers to come): its size as displayed, and a
+ * blurred placeholder, made once here instead of by every reader. A picture
+ * the proxy refuses keeps whatever the resolver knew: no reader could load it
+ * either. */
+async function withPictureDetails(preview: LinkPreviewResult | null, userId: string, lookup?: Lookup): Promise<LinkPreviewResult | null> {
+  const target = preview?.image ? allowedTarget('preview', preview.image) : null;
+  if (!preview || !target) return preview;
+  let body: Buffer;
+  try {
+    ({ body } = await mediaProxy.get(userId, { url: target.href, redirects: PREVIEW_REDIRECTS, lookup }));
+  } catch {
+    return preview;
+  }
+  const [size, placeholder] = await Promise.all([readImageDimensions(body), readImagePlaceholder(body)]);
+  return {
+    ...preview,
+    imageWidth: size?.width ?? preview.imageWidth,
+    imageHeight: size?.height ?? preview.imageHeight,
+    imagePlaceholder: placeholder,
+  };
+}
+
 // a fetch already under way for a url: a second caller (a reader and the
 // server filling in a stored preview, say) joins it instead of fetching again
 const inFlight = new Map<string, Promise<LinkPreviewResult | null>>();
@@ -98,6 +123,7 @@ export async function fetchLinkPreviewData(rawUrl: string, userId: string, looku
   }
 
   const fetching = runResolvers({ url: key, lookup })
+    .then((preview) => withPictureDetails(preview, userId, lookup))
     .then((preview) => { cacheSet(key, preview); return preview; })
     .finally(() => inFlight.delete(key));
   inFlight.set(key, fetching);

@@ -30,6 +30,9 @@ export interface LinkPreviewResult {
   /** Every picture the page names, deduplicated, at most MAX_IMAGES. */
   images?: string[];
   imageAlt?: string | null;
+  /** A blurred stand-in for `image` (base64 ThumbHash), for the box to show
+   * while the picture loads, like an attachment's `placeholder`. */
+  imagePlaceholder?: string | null;
   /** A direct audio file (its content type was checked). */
   audio?: string | null;
   /** A player page on an allowlisted host, meant for an iframe. */

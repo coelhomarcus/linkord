@@ -126,8 +126,8 @@ describe('fetchLinkPreviewData — image size', () => {
     assert.deepEqual([out.imageWidth, out.imageHeight], [null, null]);
   });
 
-  test('keeps the image url when its size cannot be read (404, SVG, not an image)', async () => {
-    for (const [path, file] of [['page-missing', 'nope.png'], ['page-svg', 'logo.svg'], ['page-text', 'notes.txt']] as const) {
+  test('keeps the image url when its size cannot be read (404, not an image)', async () => {
+    for (const [path, file] of [['page-missing', 'nope.png'], ['page-text', 'notes.txt']] as const) {
       const out = (await fetchLinkPreviewData(`${base}/${path}`, `size-user-${path}`, allowLoopback))!;
       assert.equal(out.image, `${base}/${file}`, path);
       assert.deepEqual([out.imageWidth, out.imageHeight], [null, null], path);
@@ -142,17 +142,25 @@ describe('fetchLinkPreviewData — image size', () => {
     assert.equal(out.siteName, 'localhost');
   });
 
-  test('a url that is itself an SVG comes back as the image, without a size', async () => {
+  test('an SVG is measured as the proxy draws it: its own proportions', async () => {
     const out = (await fetchLinkPreviewData(`${base}/logo.svg`, 'size-user-svg', allowLoopback))!;
     assert.equal(out.image, `${base}/logo.svg`);
-    assert.deepEqual([out.imageWidth, out.imageHeight], [null, null]);
+    assert.equal(out.imageWidth, out.imageHeight);
+    assert.ok(out.imageWidth! > 0);
   });
 
-  test('reads only the start of a huge image', async () => {
+  test('a picture past the proxy cap has no size, and is not waited on to the end', async () => {
     const started = Date.now();
     const out = (await fetchLinkPreviewData(`${base}/big.png`, 'size-user-5', allowLoopback))!;
-    assert.deepEqual([out.imageWidth, out.imageHeight], [900, 300]);
-    assert.ok(Date.now() - started < 3000, 'must not wait for the whole body');
+    assert.equal(out.image, `${base}/big.png`);
+    assert.deepEqual([out.imageWidth, out.imageHeight, out.imagePlaceholder ?? null], [null, null, null]);
+    assert.ok(Date.now() - started < 5000, 'must not wait for the whole body');
+  });
+
+  test('carries a placeholder of the picture', async () => {
+    const out = (await fetchLinkPreviewData(`${base}/page`, 'size-user-6', allowLoopback))!;
+    assert.match(out.imagePlaceholder!, /^[A-Za-z0-9+/]+=*$/);
+    assert.ok(Buffer.from(out.imagePlaceholder!, 'base64').length >= 5);
   });
 
   test('emptyResult carries no size', () => {

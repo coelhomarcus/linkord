@@ -1,5 +1,5 @@
 import { firstIframeSrc, firstParagraphText, plainText } from './htmlMeta.js';
-import { fetchJson, probeImageSize } from './pageFetch.js';
+import { fetchJson } from './pageFetch.js';
 import { emptyResult, hostMatches, isAllowlistedPlayer, safeResolve, type EmbedType, type LinkPreviewResult, type Resolver } from './preview.js';
 
 // oEmbed for a fixed list of providers. Their pages are scripts that render
@@ -99,7 +99,7 @@ function dimension(data: Record<string, unknown>, key: string): number | null {
 }
 
 /** An oEmbed answer as a preview, or null when it says nothing worth a card. */
-export async function previewFromOembed(url: string, provider: Provider, data: unknown, lookup?: Parameters<typeof probeImageSize>[1]): Promise<LinkPreviewResult | null> {
+export function previewFromOembed(url: string, provider: Provider, data: unknown): LinkPreviewResult | null {
   if (!data || typeof data !== 'object' || Array.isArray(data)) return null;
   const answer = data as Record<string, unknown>;
   const kind = field(answer, 'type');
@@ -114,13 +114,9 @@ export async function previewFromOembed(url: string, provider: Provider, data: u
   const description = (rawDescription && plainText(rawDescription)) ?? (html && provider.textFromHtml ? firstParagraphText(html) : null);
   if (!title && !description && !image) return null;
 
-  let width = photo ? dimension(answer, 'width') : dimension(answer, 'thumbnail_width');
-  let height = photo ? dimension(answer, 'height') : dimension(answer, 'thumbnail_height');
-  if (image && (!width || !height)) {
-    const size = await probeImageSize(image, lookup);
-    width = size?.width ?? null;
-    height = size?.height ?? null;
-  }
+  // linkPreview.ts measures the picture itself; these are what is known until then
+  const width = photo ? dimension(answer, 'width') : dimension(answer, 'thumbnail_width');
+  const height = photo ? dimension(answer, 'height') : dimension(answer, 'thumbnail_height');
 
   let type: EmbedType = 'link';
   if (photo) type = 'image';
@@ -156,7 +152,7 @@ export function createOembedResolver(endpointFor: (provider: Provider) => string
       const endpoint = new URL(endpointFor(provider));
       endpoint.searchParams.set('url', url);
       for (const [key, value] of Object.entries(provider.params ?? {})) endpoint.searchParams.set(key, value);
-      return previewFromOembed(url, provider, await fetchJson(endpoint.toString(), lookup), lookup);
+      return previewFromOembed(url, provider, await fetchJson(endpoint.toString(), lookup));
     },
   };
 }

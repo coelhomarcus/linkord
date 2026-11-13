@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 
 import type { DetectedEmbed } from '@/shared/lib/chatEmbeds';
 import { getCachedLinkPreview, loadLinkPreview } from '@/shared/lib/linkPreviewCache';
-import { youtubeThumbnailProxyUrl } from '@/shared/lib/mediaProxy';
+import { proxiedImageVariant, youtubeThumbnailProxyUrl } from '@/shared/lib/mediaProxy';
 import { useNearViewport } from './useNearViewport';
 import type { LinkPreviewData } from '@/shared/api/api';
 import { availableAttachmentWidth, useChatSurfaceWidth } from '@/shared/lib/chatSurfaceWidth';
@@ -13,6 +13,7 @@ import { ExternalMediaGate } from './ExternalMediaGate';
 import { VideoPlayer } from './MediaPlayers';
 import { embedImageAspect, previewImageSize } from './embedImageBox';
 import { canLoadMediaUrl } from './mediaUrl';
+import { PreviewImage } from './PreviewImage';
 import { youtubeEmbedUrl } from './youtubeEmbedUrl';
 
 interface GenericEmbedProps {
@@ -26,6 +27,8 @@ interface GenericEmbedProps {
   preview?: LinkPreviewData;
 }
 
+const FAVICON_PX = 14;
+
 // no favicon of their own: a picture only ever comes from the server's
 // preview, through the media proxy
 const KNOWN_SITE: Partial<Record<DetectedEmbed['kind'], { name: string }>> = {
@@ -36,7 +39,7 @@ const KNOWN_SITE: Partial<Record<DetectedEmbed['kind'], { name: string }>> = {
 };
 
 /** The thumbnail until clicked, then YouTube's own player in an iframe. */
-function YouTubePlayer({ embed, thumbnail }: { embed: DetectedEmbed; thumbnail: string }) {
+function YouTubePlayer({ embed, thumbnail, placeholder }: { embed: DetectedEmbed; thumbnail: string; placeholder?: string | null }) {
   const { t } = useTranslation('media');
   const [loaded, setLoaded] = useState(false);
 
@@ -58,7 +61,7 @@ function YouTubePlayer({ embed, thumbnail }: { embed: DetectedEmbed; thumbnail: 
       aria-label={t('player.playVideo')}
       className="relative flex size-full items-center justify-center focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
     >
-      <img src={thumbnail} alt="" className="absolute inset-0 size-full object-cover" />
+      <PreviewImage src={thumbnail} placeholder={placeholder} className="absolute inset-0 size-full object-cover" />
       <span className="relative flex h-12 w-12 items-center justify-center rounded-full bg-red text-white">
         <PlayIcon size={18} fill="currentColor" />
       </span>
@@ -149,6 +152,9 @@ export function GenericEmbed({ embed, className = '', edgeToEdge, preview }: Gen
   }
 
   const image = data.image && canLoadMediaUrl(data.image) ? data.image : null;
+  // drawn at the card's width, so asked for at that width (the proxy's address
+  // stays the original for anything opened in full)
+  const drawnImage = image ? proxiedImageVariant(image, { width: maxWidth }) : null;
   const video = data.video && canLoadMediaUrl(data.video) ? data.video : null;
   if (!data.title && !data.description && !image && !hasKnownPlayer) {
     return (
@@ -167,7 +173,7 @@ export function GenericEmbed({ embed, className = '', edgeToEdge, preview }: Gen
 
   const siteName = data.siteName || known?.name || url;
   const candidateFavicon = data.favicon;
-  const favicon = !faviconFailed && candidateFavicon && canLoadMediaUrl(candidateFavicon) ? candidateFavicon : null;
+  const favicon = !faviconFailed && candidateFavicon && canLoadMediaUrl(candidateFavicon) ? proxiedImageVariant(candidateFavicon, { width: FAVICON_PX }) : null;
   const playableVideo = !!video && !videoFailed;
 
   const aspect = image ? embedImageAspect(previewImageSize(data)) : null;
@@ -175,15 +181,15 @@ export function GenericEmbed({ embed, className = '', edgeToEdge, preview }: Gen
   if (embed.kind === 'youtube') {
     media = (
       <div className="aspect-video w-full bg-black">
-        <YouTubePlayer embed={embed} thumbnail={image || youtubeThumbnailProxyUrl(embed.youtubeId!)} />
+        <YouTubePlayer embed={embed} thumbnail={drawnImage || proxiedImageVariant(youtubeThumbnailProxyUrl(embed.youtubeId!), { width: maxWidth })} placeholder={drawnImage ? data.imagePlaceholder : null} />
       </div>
     );
   } else if (embed.kind === 'twitch-channel' || embed.kind === 'twitch-vod' || embed.kind === 'twitch-clip') {
     media = <div className="w-full bg-black"><TwitchPlayer embed={embed} /></div>;
   } else if (playableVideo) {
     media = (
-      <ExternalMediaGate url={video!} kind="video" poster={image} className="max-w-none rounded-none border-0">
-        <VideoPlayer src={video!} poster={image} className="max-w-none rounded-none border-0" onError={() => setVideoFailed(true)} />
+      <ExternalMediaGate url={video!} kind="video" poster={drawnImage} className="max-w-none rounded-none border-0">
+        <VideoPlayer src={video!} poster={drawnImage} className="max-w-none rounded-none border-0" onError={() => setVideoFailed(true)} />
       </ExternalMediaGate>
     );
   } else if (image && !imageFailed) {
@@ -194,9 +200,9 @@ export function GenericEmbed({ embed, className = '', edgeToEdge, preview }: Gen
         className={`w-full bg-fill-subtle ${aspect ? '' : 'h-70'}`}
         style={aspect ? { aspectRatio: aspect, maxHeight: 280 } : undefined}
       >
-        <img
-          src={image}
-          alt=""
+        <PreviewImage
+          src={drawnImage!}
+          placeholder={data.imagePlaceholder}
           onError={() => setImageFailed(true)}
           className="size-full object-cover"
         />
