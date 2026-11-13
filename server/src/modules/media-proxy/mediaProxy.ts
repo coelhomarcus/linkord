@@ -1,4 +1,3 @@
-import crypto from 'node:crypto';
 import type { IncomingMessage } from 'node:http';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import sharp from 'sharp';
@@ -9,18 +8,21 @@ import { requestSafe } from '../../net/safeRequest.js';
 import { allow, retryAfterMs } from '../../realtime/floodControl.js';
 import { resolveSession } from '../auth/session.js';
 import { igdbCoverUpstream, MEDIA_PROXY_PATH, verifiedTarget, youtubeThumbnailUpstream } from './mediaProxyUrls.js';
+import { etagOf, InvalidVariantError, parseVariant, PixelLimitError, renderVariant, variantKey, type Picture, type Variant } from './mediaVariants.js';
 
 // GET /api/media-proxy/... — third-party pictures served from our own domain,
 // so they show on networks that block those services and never tell them who
 // is looking. What may be fetched is decided in mediaProxyUrls.ts; this is the
 // fetching: through net/safeRequest.ts (SSRF), capped in time and size,
 // checked to really be a picture, cached, and rate limited on cache misses.
+// A request may ask for a smaller or WebP variant (mediaVariants.ts), made
+// from the cached original and cached beside it.
 
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const FETCH_TIMEOUT_MS = 8000;
 // a preview's picture may sit behind a redirect or two; the fixed hosts answer
 // directly, and a redirect there could only lead somewhere else
-const PREVIEW_REDIRECTS = 3;
+export const PREVIEW_REDIRECTS = 3;
 // covers and avatars change rarely, and a changed one gets a new URL
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const CACHE_MAX_BYTES = 64 * 1024 * 1024;
@@ -43,8 +45,15 @@ const MAX_SVG_BYTES = 1024 * 1024;
 const SVG_RENDER_PX = 512;
 const SVG_RENDER_TIMEOUT_S = 3;
 
-export interface ProxiedImage { body: Buffer; contentType: string; etag: string }
-export interface Upstream { url: string; redirects: number }
+type Lookup = Parameters<typeof requestSafe>[4];
+
+export type ProxiedImage = Picture;
+export interface Upstream {
+  url: string;
+  redirects: number;
+  /** a seam for tests, which can only reach loopback; not part of the cache key */
+  lookup?: Lookup;
+}
 type FailureCode = 'image_unavailable' | 'not_an_image' | 'image_too_large';
 
 export class MediaProxyError extends Error {
@@ -72,8 +81,6 @@ export function sniffImageType(bytes: Buffer): string | null {
   return null;
 }
 
-type Lookup = Parameters<typeof requestSafe>[4];
-
 /** An SVG as a PNG, or null when it is not one sharp can draw. */
 export async function rasterizeSvg(bytes: Buffer): Promise<Buffer | null> {
   if (bytes.length > MAX_SVG_BYTES || !/<svg[\s>]/i.test(bytes.subarray(0, 4096).toString('utf8'))) return null;
@@ -84,8 +91,7 @@ export async function rasterizeSvg(bytes: Buffer): Promise<Buffer | null> {
   }
 }
 
-const imageOf = (body: Buffer, contentType: string): ProxiedImage =>
-  ({ body, contentType, etag: `"${crypto.createHash('sha256').update(body).digest('base64url').slice(0, 27)}"` });
+const imageOf = (body: Buffer, contentType: string): ProxiedImage => ({ body, contentType, etag: etagOf(body) });
 
 /** One picture from upstream, read whole (up to the cap) and checked. `lookup`
  * is a seam for tests, which can only reach loopback. */
@@ -125,10 +131,12 @@ export interface MediaProxyDeps {
   now?: () => number;
 }
 
-/** The cache in front of `fetch`: pictures by upstream URL, least recently
- * used dropped first once over the byte budget; failures remembered briefly;
- * a picture already being fetched shared by everyone asking for it. */
-export function createMediaProxy({ fetch = (upstream) => fetchImage(upstream), now = Date.now }: MediaProxyDeps = {}) {
+/** The cache in front of `fetch`: pictures by upstream URL (a variant by URL
+ * and variant), least recently used dropped first once over the byte budget;
+ * failures remembered briefly; a picture already being fetched or rendered
+ * shared by everyone asking for it. */
+export function createMediaProxy({ fetch = (upstream) => fetchImage(upstream, upstream.lookup), now = Date.now }: MediaProxyDeps = {}) {
+  // keyed by upstream URL, or URL + '\n' + variant key
   const cache = new Map<string, { image: ProxiedImage; expiresAt: number }>();
   const failures = new Map<string, { code: FailureCode; expiresAt: number }>();
   const inFlight = new Map<string, Promise<ProxiedImage>>();
@@ -155,35 +163,63 @@ export function createMediaProxy({ fetch = (upstream) => fetchImage(upstream), n
     failures.set(url, { code, expiresAt: now() + FAILURE_TTL_MS });
   };
 
+  const cached = (key: string): ProxiedImage | null => {
+    const hit = cache.get(key);
+    if (hit && hit.expiresAt > now()) {
+      cache.delete(key);
+      cache.set(key, hit);
+      return hit.image;
+    }
+    drop(key);
+    const failed = failures.get(key);
+    if (failed && failed.expiresAt > now()) throw new MediaProxyError(failed.code);
+    failures.delete(key);
+    return null;
+  };
+  // only work counts: a picture or a variant others already asked for is free
+  const spend = (userId: string) => {
+    const userKey = `media-proxy:${userId}`;
+    if (!allow(userKey, USER_RULE)) throw new MediaProxyError('rate_limited', retryAfterMs(userKey, USER_RULE));
+    if (!allow('media-proxy', GLOBAL_RULE)) throw new MediaProxyError('rate_limited', retryAfterMs('media-proxy', GLOBAL_RULE));
+  };
+  const once = (key: string, work: () => Promise<ProxiedImage>): Promise<ProxiedImage> => {
+    const request = work()
+      .then((image) => { store(key, image); return image; })
+      .catch((error: unknown) => {
+        const failure = error instanceof MediaProxyError ? error : new MediaProxyError('image_unavailable');
+        if (failure.code !== 'rate_limited') remember(key, failure.code as FailureCode);
+        throw failure;
+      })
+      .finally(() => inFlight.delete(key));
+    inFlight.set(key, request);
+    return request;
+  };
+
+  async function original(userId: string, upstream: Upstream): Promise<ProxiedImage> {
+    const hit = cached(upstream.url);
+    if (hit) return hit;
+    const pending = inFlight.get(upstream.url);
+    if (pending) return pending;
+    spend(userId);
+    return once(upstream.url, () => fetch(upstream));
+  }
+
   return {
-    async get(userId: string, upstream: Upstream): Promise<ProxiedImage> {
-      const hit = cache.get(upstream.url);
-      if (hit && hit.expiresAt > now()) {
-        cache.delete(upstream.url);
-        cache.set(upstream.url, hit);
-        return hit.image;
-      }
-      drop(upstream.url);
-      const failed = failures.get(upstream.url);
-      if (failed && failed.expiresAt > now()) throw new MediaProxyError(failed.code);
-      failures.delete(upstream.url);
-      const pending = inFlight.get(upstream.url);
+    /** The picture, or its `variant` when one is asked for. */
+    async get(userId: string, upstream: Upstream, variant: Variant | null = null): Promise<ProxiedImage> {
+      if (!variant) return original(userId, upstream);
+      const key = `${upstream.url}\n${variantKey(variant)}`;
+      const hit = cached(key);
+      if (hit) return hit;
+      const pending = inFlight.get(key);
       if (pending) return pending;
-
-      const userKey = `media-proxy:${userId}`;
-      if (!allow(userKey, USER_RULE)) throw new MediaProxyError('rate_limited', retryAfterMs(userKey, USER_RULE));
-      if (!allow('media-proxy', GLOBAL_RULE)) throw new MediaProxyError('rate_limited', retryAfterMs('media-proxy', GLOBAL_RULE));
-
-      const request = fetch(upstream)
-        .then((image) => { store(upstream.url, image); return image; })
-        .catch((error: unknown) => {
-          const failure = error instanceof MediaProxyError ? error : new MediaProxyError('image_unavailable');
-          if (failure.code !== 'rate_limited') remember(upstream.url, failure.code as FailureCode);
-          throw failure;
-        })
-        .finally(() => inFlight.delete(upstream.url));
-      inFlight.set(upstream.url, request);
-      return request;
+      const source = await original(userId, upstream);
+      const joined = inFlight.get(key);
+      if (joined) return joined;
+      spend(userId);
+      return once(key, () => renderVariant(source, variant).catch((error: unknown) => {
+        throw error instanceof PixelLimitError ? new MediaProxyError('image_too_large') : error;
+      }));
     },
     /** Bytes held, for tests. */
     get cachedBytes() { return cachedBytes; },
@@ -191,6 +227,11 @@ export function createMediaProxy({ fetch = (upstream) => fetchImage(upstream), n
 }
 
 type MediaProxy = ReturnType<typeof createMediaProxy>;
+
+/** The one cache of the process: the routes serve from it, and the link
+ * preview fills it while it unfurls, so a card's picture is already there
+ * when the first reader asks for it. */
+export const mediaProxy: MediaProxy = createMediaProxy();
 
 const MESSAGES: Record<MediaProxyError['code'], string> = {
   rate_limited: 'Muitas imagens novas em pouco tempo. Tente novamente em instantes.',
@@ -209,12 +250,19 @@ const sessionUserId = async (request: FastifyRequest) =>
   (await resolveSession(parseCookies(request.headers.cookie || '')[config.SESSION_COOKIE]))?.userId ?? null;
 
 export function registerMediaProxyRoutes(app: FastifyInstance, deps: MediaProxyRouteDeps = {}): void {
-  const { proxy = createMediaProxy(), authenticate = sessionUserId, enabled = config.MEDIA_PROXY_ENABLED } = deps;
+  const { proxy = mediaProxy, authenticate = sessionUserId, enabled = config.MEDIA_PROXY_ENABLED } = deps;
 
   async function serve(request: FastifyRequest, reply: FastifyReply, upstream: Upstream | null): Promise<void> {
     const userId = await authenticate(request);
     if (!userId) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
     if (!upstream) return sendError(reply, 404, 'not_found', 'Imagem não encontrada.');
+    let variant: Variant | null;
+    try {
+      variant = parseVariant(request.query as Record<string, unknown>);
+    } catch (error) {
+      if (!(error instanceof InvalidVariantError)) throw error;
+      return sendError(reply, 400, 'invalid_variant', 'Variação de imagem inválida.');
+    }
     if (!enabled) {
       // switched off: the browser goes to the service itself, as before the proxy
       reply.header('Cache-Control', `private, max-age=${REDIRECT_MAX_AGE_S}`);
@@ -222,7 +270,7 @@ export function registerMediaProxyRoutes(app: FastifyInstance, deps: MediaProxyR
     }
     let image: ProxiedImage;
     try {
-      image = await proxy.get(userId, upstream);
+      image = await proxy.get(userId, upstream, variant);
     } catch (error) {
       if (!(error instanceof MediaProxyError)) throw error;
       if (error.status === 429) reply.header('Retry-After', String(Math.max(1, Math.ceil(error.retryAfterMs / 1000))));

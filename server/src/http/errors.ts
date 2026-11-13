@@ -29,6 +29,7 @@ export const ERROR_REGISTRY = {
   invalid_log: { statuses: [400], channel: 'http' },
   invalid_size: { statuses: [400], channel: 'http' },
   invalid_voice: { statuses: [400], channel: 'http' },
+  invalid_video: { statuses: [400], channel: 'http' },
   invalid_type: { statuses: [400], channel: 'http' },
   invalid_url: { statuses: [400], channel: 'http' },
   missing_url: { statuses: [400], channel: 'http' },
@@ -52,6 +53,7 @@ export const ERROR_REGISTRY = {
   image_unavailable: { statuses: [502], channel: 'http' },
   not_an_image: { statuses: [415], channel: 'http' },
   image_too_large: { statuses: [413], channel: 'http' },
+  invalid_variant: { statuses: [400], channel: 'http' },
 
   // auth and accounts
   invalid_credentials: { statuses: [401], channel: 'http' },
@@ -151,6 +153,8 @@ export const ERROR_REGISTRY = {
   unauthorized: { statuses: [], channel: 'socket' },
   auth_error: { statuses: [], channel: 'socket' },
   'call-not-allowed': { statuses: [], channel: 'socket' },
+  // the account is already in a call on another tab or device (protocol 20)
+  'call-elsewhere': { statuses: [], channel: 'socket' },
   'livekit-unavailable': { statuses: [], channel: 'socket' },
   'message-not-found': { statuses: [], channel: 'socket' },
   // chat-send-result refusals (a correlated send, see messages.ts)

@@ -186,16 +186,25 @@
     "accept": "Atender",
     "decline": "Recusar",
     "cancel": "Cancelar",
-    "declined": "Chamada recusada",
-    "cancelled": "Chamada cancelada",
-    "missed": "Chamada não atendida",
-    "ended": "Chamada encerrada",
     "failed": "Não foi possível conectar a chamada",
+    "close": "Fechar",
     "someone": "Alguém",
     "status": {
       "muted": "Microfone desativado",
       "deafened": "Áudio desativado"
     },
     "resize": "Redimensionar chamada"
+  },
+  "move": {
+    "title": "Trazer a chamada para esta aba?",
+    "descriptionVoice": "Sua conta está em {{name}} em outra aba ou dispositivo. Ao continuar, ela sai da chamada por lá e entra por aqui.",
+    "descriptionDirect": "Sua conta está em uma chamada com {{name}} em outra aba ou dispositivo. Ao continuar, ela sai da chamada por lá e entra por aqui.",
+    "descriptionUnknown": "Sua conta está em uma chamada em outra aba ou dispositivo. Ao continuar, ela sai da chamada por lá e entra por aqui.",
+    "confirm": "Entrar por aqui"
+  },
+  "elsewhere": {
+    "voice": "Canal de voz em outra aba ou dispositivo",
+    "direct": "Chamada privada em outra aba ou dispositivo",
+    "bringHere": "Trazer a chamada para esta aba"
   }
 }

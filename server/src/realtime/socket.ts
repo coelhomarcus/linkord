@@ -3,7 +3,7 @@ import { Server, type Socket } from 'socket.io';
 import { config } from '../config/env.js';
 import {
   participants as participantsMap, join, send, sendSocketError, broadcastToKnownPeers, handleClose, ipOf,
-  setCallConversationId, handlers as participantHandlers, announceParticipantJoined,
+  setCallConversationId, handlers as participantHandlers, announceParticipantJoined, callHeldElsewhere, refuseCallElsewhere,
 } from '../modules/presence/participants.js';
 import { isInvisible } from '../modules/presence/userStatus.js';
 import * as presenceStatus from '../modules/presence/presenceStatus.js';
@@ -213,8 +213,10 @@ async function handleJoin(socket: AppSocket, msg: JoinMessage): Promise<void> {
 }
 
 /** Joins a voice channel: mints a LiveKit token for that room and sets
- * `p.callConversationId`. A DM is refused here; its token waits for an accept. */
-export async function handleCallJoin(socket: AppSocket, msg: { conversationId?: string }): Promise<void> {
+ * `p.callConversationId`. A DM is refused here; its token waits for an accept.
+ * An account already in a call on another connection is refused unless the
+ * request says to `replace` it: that other connection then leaves. */
+export async function handleCallJoin(socket: AppSocket, msg: { conversationId?: string; replace?: unknown }): Promise<void> {
   const p = participantsMap.get(socket.participantId ?? '');
   if (!p || p.socket !== socket) return;
   const conversationId = String(msg.conversationId || '');
@@ -232,6 +234,10 @@ export async function handleCallJoin(socket: AppSocket, msg: { conversationId?: 
   // stays the immediate path for voice channels.
   if (refusesImmediateJoin(conversation.type)) {
     sendSocketError(socket, 'call-not-allowed', 'Chamadas privadas começam com um toque. Espere a outra pessoa atender.');
+    return;
+  }
+  if (msg.replace !== true && callHeldElsewhere(p)) {
+    refuseCallElsewhere(p);
     return;
   }
   // only voice channels get here, and they always belong to a server
@@ -326,7 +332,7 @@ export function createWsServer(httpServer: HttpServer): Server {
           sendSocketError(socket, 'call-not-allowed', RATE_LIMITED_MESSAGE);
           return;
         }
-        return safeHandle(eventName, socket, payload || {}, (s, m) => handleCallJoin(s, (m || {}) as { conversationId?: string }));
+        return safeHandle(eventName, socket, payload || {}, (s, m) => handleCallJoin(s, (m || {}) as { conversationId?: string; replace?: unknown }));
       }
       if (eventName === 'call-leave') {
         if (!allowAction(socket, eventName, CALL_LEAVE_LIMIT)) return;

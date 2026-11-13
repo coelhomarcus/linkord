@@ -29,6 +29,7 @@ import { ConversationMediaPanel } from '@/features/conversations/ConversationMed
 import { ChatSearchDialog } from '@/features/chat/ChatSearchDialog';
 import { Stage } from '@/features/calls/Stage';
 import { DmCallOverlay } from '@/features/calls/DmCallOverlay';
+import { CallMoveDialog } from '@/features/calls/CallMoveDialog';
 import { CallConnectingScreen } from '@/features/calls/CallConnectingScreen';
 import { ParticipantAudioLayer } from '@/features/calls/ParticipantAudioLayer';
 import { FloatingPip } from '@/features/calls/FloatingPip';
@@ -184,8 +185,12 @@ function Shell() {
   }
 
   function handleOpenCall(conversationId: string) {
-    pendingStageRef.current = conversationId;
-    joinCall(conversationId);
+    // "connecting" only once the join is on its way: one waiting to move the call from another tab
+    // shows the lobby, and stays there if the person keeps the call where it is
+    joinCall(conversationId, {
+      onSent: () => { pendingStageRef.current = conversationId; },
+      onDropped: () => { if (pendingStageRef.current === conversationId) pendingStageRef.current = null; },
+    });
     navigate(stagePath(conversationId), { state: { from: currentPath() } });
   }
 
@@ -333,6 +338,7 @@ function Shell() {
         style={{ minHeight: 0, '--sidebar-width': 'var(--spacing-sidebar)', '--sidebar-width-mobile': '24rem', '--sidebar-overlay-offset': '4.5rem', '--mobile-navigation-height': `calc(4rem + var(--safe-bottom) + ${inCall ? '3rem' : '0rem'})` } as CSSProperties}
       >
         <DmCallOverlay />
+        <CallMoveDialog />
         <AccessNotice />
         <AccountNotice />
         <InstallBanner />

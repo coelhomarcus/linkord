@@ -9,6 +9,7 @@ import {
   createMediaProxy, fetchImage, MAX_IMAGE_BYTES, MediaProxyError, rasterizeSvg, registerMediaProxyRoutes, sniffImageType, USER_RULE, type ProxiedImage, type Upstream,
 } from '../../../src/modules/media-proxy/mediaProxy.js';
 import { proxiedImageUrl, setMediaProxyKey } from '../../../src/modules/media-proxy/mediaProxyUrls.js';
+import { etagOf, parseVariant } from '../../../src/modules/media-proxy/mediaVariants.js';
 
 // A local server is the only thing a test can reach, and the real lookup
 // (rightly) refuses loopback, so the permissive one is injected here only.
@@ -190,6 +191,45 @@ describe('createMediaProxy', () => {
   });
 });
 
+describe('createMediaProxy — variants', () => {
+  const realPicture = async (): Promise<ProxiedImage> => {
+    const body = await sharp({ create: { width: 900, height: 300, channels: 3, background: '#3a6' } }).png().toBuffer();
+    return { body, contentType: 'image/png', etag: etagOf(body) };
+  };
+
+  it('caches each variant apart from the original, from one upstream fetch', async () => {
+    let calls = 0;
+    const source = await realPicture();
+    const proxy = createMediaProxy({ fetch: async () => { calls++; return source; } });
+    const upstream = { url: 'https://cdn.example/v.png', redirects: 0 };
+    const small = await proxy.get('u-variant', upstream, parseVariant({ width: '128', format: 'webp' }));
+    const large = await proxy.get('u-variant', upstream, parseVariant({ width: '400', format: 'webp' }));
+    const original = await proxy.get('u-variant', upstream);
+    assert.equal(calls, 1);
+    assert.deepEqual([(await sharp(small.body).metadata()).width, (await sharp(large.body).metadata()).width], [128, 400]);
+    assert.equal(original, source);
+    assert.equal(proxy.cachedBytes, source.body.length + small.body.length + large.body.length, 'all three held, in one budget');
+    assert.equal(await proxy.get('u-variant', upstream, parseVariant({ width: '128', format: 'webp' })), small, 'a variant is served from its own entry');
+  });
+
+  it('a variant that has to be made counts against the account, one already made does not', async () => {
+    const source = await realPicture();
+    const proxy = createMediaProxy({ fetch: async () => source });
+    const upstream = { url: 'https://cdn.example/limit.png', redirects: 0 };
+    await proxy.get('u-variant-limit', upstream);
+    for (let i = 1; i < USER_RULE.max; i++) await proxy.get('u-variant-limit', { url: `https://cdn.example/fill-${i}.png`, redirects: 0 });
+    await assert.rejects(proxy.get('u-variant-limit', upstream, parseVariant({ width: '64' })), failsWith('rate_limited'));
+    await proxy.get('u-variant-other', upstream, parseVariant({ width: '64' }));
+    assert.ok(await proxy.get('u-variant-limit', upstream, parseVariant({ width: '64' })));
+  });
+
+  it('a picture past the pixel limit answers image_too_large for its variants', async () => {
+    const bomb = await sharp({ create: { width: 7000, height: 7000, channels: 3, background: '#000' } }).png({ compressionLevel: 9 }).toBuffer();
+    const proxy = createMediaProxy({ fetch: async () => ({ body: bomb, contentType: 'image/png', etag: etagOf(bomb) }) });
+    await assert.rejects(proxy.get('u-variant-bomb', { url: 'https://cdn.example/bomb.png', redirects: 0 }, parseVariant({ width: '400' })), failsWith('image_too_large'));
+  });
+});
+
 describe('media proxy routes', () => {
   const requested: Upstream[] = [];
   const png = picture('route');
@@ -265,10 +305,35 @@ describe('media proxy routes', () => {
     await failing.close();
   });
 
+  it('serves a variant as WebP, with an ETag of its own bytes', async () => {
+    const body = await sharp({ create: { width: 640, height: 320, channels: 3, background: '#a3c' } }).jpeg().toBuffer();
+    const real = Fastify();
+    registerMediaProxyRoutes(real, { authenticate: async () => 'u-route-variant', enabled: true, proxy: createMediaProxy({ fetch: async () => ({ body, contentType: 'image/jpeg', etag: etagOf(body) }) }) });
+    const res = await real.inject({ method: 'GET', url: '/api/media-proxy/youtube/dQw4w9WgXcQ?width=256&format=webp' });
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.headers['content-type'], 'image/webp');
+    assert.equal(res.headers.etag, etagOf(res.rawPayload));
+    assert.notEqual(res.headers.etag, etagOf(body));
+    assert.equal((await sharp(res.rawPayload).metadata()).width, 256);
+    await real.close();
+  });
+
+  it('refuses a variant off the lists without fetching anything', async () => {
+    const before = requested.length;
+    for (const query of ['width=500', 'format=png', 'width=400&width=800', 'animated=true']) {
+      const res = await get(`/api/media-proxy/youtube/dQw4w9WgXcQ?${query}`);
+      assert.equal(res.statusCode, 400, query);
+      assert.equal(res.json().error.code, 'invalid_variant');
+    }
+    assert.equal(requested.length, before);
+  });
+
   it('switched off, redirects to the service instead of fetching', async () => {
     const res = await get('/api/media-proxy/igdb/cover_small/co1abc', undefined, off);
     assert.equal(res.statusCode, 302);
     assert.equal(res.headers.location, 'https://images.igdb.com/igdb/image/upload/t_cover_small/co1abc.jpg');
     assert.equal((await get('/api/media-proxy/youtube/bad', undefined, off)).statusCode, 404);
+    const variant = await get('/api/media-proxy/igdb/cover_small/co1abc?width=128&format=webp', undefined, off);
+    assert.equal(variant.headers.location, 'https://images.igdb.com/igdb/image/upload/t_cover_small/co1abc.jpg', 'the service has no variants: the original');
   });
 });

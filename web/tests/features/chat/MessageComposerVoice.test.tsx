@@ -8,7 +8,6 @@ import { createFakeRoomContextValue } from '@tests/fixtures/roomContextFixture';
 import { FakeRecorder, FakeTrack } from '@tests/fixtures/fakeRecorderEnv';
 import { MessageComposer } from '@/features/chat/MessageComposer';
 import { clearAllDrafts } from '@/features/chat/conversationDrafts';
-import type { Participant } from '@/shared/types/protocol';
 import { typeInField, fieldValue } from '@tests/fixtures/messageFieldFixture';
 
 const joinedState = { ...initialRoomState, joined: true, me: { ...initialRoomState.me, id: 'conn-me', userId: 'user-me' } };
@@ -190,8 +189,7 @@ describe('MessageComposer — voice messages', () => {
 
   it('another tab or device of this account in a call: records, with a warning', async () => {
     const user = userEvent.setup();
-    const elsewhere = { id: 'conn-other', userId: 'user-me', callConversationId: 'voice-1' } as Participant;
-    renderComposer({ state: { ...joinedState, participants: new Map([[elsewhere.id, elsewhere]]) } });
+    renderComposer({ callElsewhere: { participantId: 'conn-other', conversationId: 'voice-1', kind: 'voice' } });
     await startRecording(user);
     expect(screen.getByText(/numa chamada em outra aba ou dispositivo/)).toBeInTheDocument();
   });

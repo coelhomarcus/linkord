@@ -30,6 +30,7 @@ function Slider({
   max = 100,
   size = "default",
   "aria-label": ariaLabel,
+  "aria-valuetext": ariaValueText,
   ...props
 }: SliderPrimitive.Root.Props & {
   /** `sm` for media players' compact controls */
@@ -71,6 +72,7 @@ function Slider({
             data-slot="slider-thumb"
             key={index}
             getAriaLabel={ariaLabel ? () => ariaLabel : undefined}
+            aria-valuetext={ariaValueText}
             className={cn(
               "relative block shrink-0 rounded-full border border-ring bg-white ring-ring/50 transition-[color,box-shadow] select-none after:absolute after:content-[''] hover:ring-3 focus-visible:ring-3 focus-visible:outline-hidden active:ring-3 disabled:pointer-events-none disabled:opacity-50",
               size === "sm"

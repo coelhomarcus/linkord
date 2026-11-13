@@ -104,3 +104,31 @@ describe('CallDock — in a call', () => {
     expect(screen.getByText('Disponível')).toBeInTheDocument();
   });
 });
+
+describe('CallDock — call on another tab or device', () => {
+  const dm: Conversation = { id: 'dm-1', type: 'direct', title: '', serverId: null, memberIds: ['me', 'ana'], lastMessageAt: 1, createdAt: 0, updatedAt: 0 };
+
+  it('says which voice channel the account is in elsewhere, and offers to bring it here', async () => {
+    const openCall = vi.fn();
+    renderDock({ callElsewhere: { participantId: 'conn-phone', conversationId: 'conv-1', kind: 'voice' }, openCall });
+
+    expect(screen.getByText('Canal de voz em outra aba ou dispositivo')).toBeInTheDocument();
+    expect(screen.getByText('os xerecas')).toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Trazer a chamada para esta aba' }));
+    expect(openCall).toHaveBeenCalledWith('conv-1');
+  });
+
+  it('a direct call is brought here by calling again in that conversation', async () => {
+    const startDmCall = vi.fn();
+    renderDock({ conversations: [group, dm], callElsewhere: { participantId: 'conn-phone', conversationId: 'dm-1', kind: 'direct' }, startDmCall });
+
+    expect(screen.getByText('Chamada privada em outra aba ou dispositivo')).toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Trazer a chamada para esta aba' }));
+    expect(startDmCall).toHaveBeenCalledWith('dm-1', false);
+  });
+
+  it('a tab that is in the call itself shows only its own call', () => {
+    renderDock({ activeCallConversationId: 'conv-1', callElsewhere: { participantId: 'conn-phone', conversationId: 'conv-1', kind: 'voice' } });
+    expect(screen.queryByText('Canal de voz em outra aba ou dispositivo')).not.toBeInTheDocument();
+  });
+});

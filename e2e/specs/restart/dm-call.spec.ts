@@ -24,7 +24,7 @@ test.describe('a DM call across a redeploy', () => {
     await b.expectTilesFor([alice.username, bob.username]);
     await a.expectRemoteAudio(1);
     await b.expectRemoteAudio(1);
-    await expect(a.page.getByText('Chamada encerrada')).toHaveCount(0);
+    await expect(a.page.getByRole('dialog')).toHaveCount(0);
   });
 
   test('a ring in progress can still be answered after the redeploy', async ({ users }) => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { rgbaToThumbHash } from 'thumbhash';
-import { placeholderDataUrl } from '@/features/chat/placeholderImage';
+import { placeholderDataUrl } from '@/shared/lib/placeholderImage';
 
 const solid = (r: number, g: number, b: number, a = 255) => {
   const w = 8, h = 8, rgba = new Uint8Array(w * h * 4);

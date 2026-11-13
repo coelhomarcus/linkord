@@ -6,8 +6,8 @@ import { AppModal } from '@/shared/ui/app-modal';
 import { PageHeader } from '@/shared/PageHeader';
 import { Input } from '@/shared/ui/primitives/input';
 import { Tabs, TabsList, TabsIndicator, TabsTrigger } from '@/shared/ui/primitives/tabs';
-import { MediaCollectionViewer } from '@/features/media/MediaCollectionViewer';
-import type { ViewerItem } from '@/features/media/MediaCollectionViewer';
+import { MessageMediaViewer } from '@/features/chat/MediaViewerProvider';
+import type { MediaViewerState } from '@/features/chat/MediaViewerProvider';
 import type { MediaItem, MediaKind } from '@/shared/api/api';
 import { useRoom } from '@/state/RoomContext';
 import { MediaListItem, MediaTile } from './media/MediaItems';
@@ -30,7 +30,7 @@ export function ConversationMediaPanel({ conversationId, open, onOpenChange }: C
   const [kind, setKind] = useState<MediaKind>('uploads');
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [viewer, setViewer] = useState<{ items: ViewerItem[]; index: number } | null>(null);
+  const [viewer, setViewer] = useState<MediaViewerState | null>(null);
 
   // The tab and the search reset when the panel opens, not when it closes:
   // closing changing them would swap what is visible under the rows while it
@@ -55,7 +55,8 @@ export function ConversationMediaPanel({ conversationId, open, onOpenChange }: C
   function openViewer(item: MediaItem) {
     const entries = items.flatMap((candidate) => {
       const viewerItem = viewerItemOf(candidate);
-      return viewerItem ? [{ key: itemKey(candidate), viewerItem }] : [];
+      // each from its own message: the viewer's actions follow the item shown
+      return viewerItem ? [{ key: itemKey(candidate), viewerItem: { ...viewerItem, message: { conversationId: candidate.conversationId, msgId: candidate.msgId } } }] : [];
     });
     const index = entries.findIndex((entry) => entry.key === itemKey(item));
     if (index >= 0) setViewer({ items: entries.map((entry) => entry.viewerItem), index });
@@ -123,12 +124,13 @@ export function ConversationMediaPanel({ conversationId, open, onOpenChange }: C
         </AppModal>
       )}
 
-      <MediaCollectionViewer
-        items={viewer?.items ?? []}
-        index={viewer?.index ?? 0}
-        open={viewer !== null}
-        onIndexChange={(index) => setViewer((prev) => (prev ? { ...prev, index } : prev))}
-        onOpenChange={(next) => { if (!next) setViewer(null); }}
+      <MessageMediaViewer
+        state={viewer}
+        onChange={setViewer}
+        onJumpToMessage={(message) => {
+          onOpenChange(false);
+          jumpToMessage(message.conversationId, message.msgId);
+        }}
       />
     </>
   );

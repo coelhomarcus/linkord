@@ -3,6 +3,14 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import { __resetLinkPreviewCacheForTests } from '@/shared/lib/linkPreviewCache';
 import userEvent from '@testing-library/user-event';
 import { LinkPreview } from '@/features/media/LinkPreview';
+import { PROXY_IMAGE_SIZES } from '@/shared/lib/mediaProxy';
+
+/** A proxied address asked for as a drawn-size WebP variant of `original`. */
+function isVariantOf(src: string | null | undefined, original: string): boolean {
+  if (!src?.startsWith(`${original}&`)) return false;
+  const params = new URLSearchParams(src.split('?')[1]);
+  return params.get('format') === 'webp' && (PROXY_IMAGE_SIZES as readonly number[]).includes(Number(params.get('width')));
+}
 
 describe('LinkPreview', () => {
   afterEach(() => {
@@ -46,7 +54,7 @@ describe('LinkPreview', () => {
       const { container } = render(<LinkPreview embed={{ kind: 'image', url: 'https://cdn.example.com/foto.png' }} preview={stored} />);
 
       const img = container.querySelector('img');
-      expect(img).toHaveAttribute('src', '/api/media-proxy/preview/sig?u=Zm90bw');
+      expect(isVariantOf(img?.getAttribute('src'), '/api/media-proxy/preview/sig?u=Zm90bw')).toBe(true);
       const box = img!.closest('button')!;
       // the height is what keeps the row from growing when the pixels arrive
       expect(box.style.height).toBe('280px');
@@ -62,7 +70,7 @@ describe('LinkPreview', () => {
       const { container } = render(<LinkPreview embed={{ kind: 'image', url: 'https://cdn.example.com/foto.png' }} imageUrl="/api/media-proxy/preview/sig?u=Zm90bw" fitContainer />);
 
       const img = container.querySelector('img');
-      expect(img).toHaveAttribute('src', '/api/media-proxy/preview/sig?u=Zm90bw');
+      expect(isVariantOf(img?.getAttribute('src'), '/api/media-proxy/preview/sig?u=Zm90bw')).toBe(true);
       // without this, the width cap meant for chat messages would win over
       // the class's max-w-full (same CSS property, inline always wins),
       // making the image wider than the masonry column and overlapping the
@@ -170,7 +178,8 @@ describe('LinkPreview — size measured by the server', () => {
     vi.stubGlobal('fetch', respond(previewJson({ image: 'https://ex.com/og.png', imageWidth: 1200, imageHeight: 630 })));
     const { container } = render(<LinkPreview embed={{ kind: 'link', url: 'https://ex.com' }} />);
     await screen.findByText('Exemplo');
-    const frame = container.querySelector('img[src="https://ex.com/og.png"]')!.parentElement!;
+    const frame = container.querySelector<HTMLElement>('[data-embed-image]')!;
+    expect(frame.querySelector('img[src="https://ex.com/og.png"]')).not.toBeNull();
     expect(frame.style.aspectRatio).toBe('1200 / 630');
   });
 
@@ -178,7 +187,7 @@ describe('LinkPreview — size measured by the server', () => {
     vi.stubGlobal('fetch', respond(previewJson({ image: 'https://ex.com/og.png' })));
     const { container } = render(<LinkPreview embed={{ kind: 'link', url: 'https://ex.com' }} />);
     await screen.findByText('Exemplo');
-    const frame = container.querySelector('img[src="https://ex.com/og.png"]')!.parentElement!;
+    const frame = container.querySelector<HTMLElement>('[data-embed-image]')!;
     expect(frame.style.aspectRatio).toBe('');
     expect(frame.className.split(/\s+/)).toContain('h-70');
   });
@@ -197,7 +206,9 @@ describe('LinkPreview — pictures through our own proxy', () => {
       />,
     );
     const sources = [...container.querySelectorAll('img')].map((img) => img.getAttribute('src'));
-    expect(sources).toEqual(expect.arrayContaining(['/api/media-proxy/preview/sig?u=aHR0cHM6Ly9leC5jb20vb2cucG5n', '/api/media-proxy/preview/sig?u=aHR0cHM6Ly9leC5jb20vZmF2aWNvbi5pY28']));
+    expect(sources.some((src) => isVariantOf(src, '/api/media-proxy/preview/sig?u=aHR0cHM6Ly9leC5jb20vb2cucG5n'))).toBe(true);
+    // a 14 px favicon is asked for at the smallest size that covers it
+    expect(sources).toContain('/api/media-proxy/preview/sig?u=aHR0cHM6Ly9leC5jb20vZmF2aWNvbi5pY28&width=16&format=webp');
   });
 
   it('a YouTube card without a preview picture takes the thumbnail from the proxy, not from i.ytimg.com', () => {
@@ -205,7 +216,7 @@ describe('LinkPreview — pictures through our own proxy', () => {
       <LinkPreview embed={{ kind: 'youtube', url: 'https://youtu.be/dQw4w9WgXcQ', youtubeId: 'dQw4w9WgXcQ' }} preview={preview({ url: 'https://youtu.be/dQw4w9WgXcQ', title: 'Vídeo' })} />,
     );
     const sources = [...container.querySelectorAll('img')].map((img) => img.getAttribute('src'));
-    expect(sources).toContain('/api/media-proxy/youtube/dQw4w9WgXcQ');
+    expect(sources.some((src) => src?.startsWith('/api/media-proxy/youtube/dQw4w9WgXcQ?width='))).toBe(true);
     expect(sources.some((src) => src?.includes('ytimg.com'))).toBe(false);
   });
 
@@ -216,9 +227,22 @@ describe('LinkPreview — pictures through our own proxy', () => {
     expect(container.querySelector('img')).not.toHaveAttribute('src');
 
     answer(JSON.stringify(preview({ url: 'https://attacker.example/pixel.png', image: '/api/media-proxy/preview/sig?u=cGl4ZWw' })));
-    await vi.waitFor(() => expect(container.querySelector('img')).toHaveAttribute('src', '/api/media-proxy/preview/sig?u=cGl4ZWw'));
+    await vi.waitFor(() => expect(isVariantOf(container.querySelector('img')?.getAttribute('src'), '/api/media-proxy/preview/sig?u=cGl4ZWw')).toBe(true));
     const sources = [...container.querySelectorAll('img')].map((img) => img.getAttribute('src'));
     expect(sources.some((src) => src?.includes('attacker.example'))).toBe(false);
+  });
+
+  it('paints the stored placeholder under the picture, which fades in over it, then lets it go', async () => {
+    const placeholder = 'IQgSLYZ6iHePh4h1eFeHh4dwVw==';
+    const { container } = render(
+      <LinkPreview embed={{ kind: 'link', url: 'https://ex.com' }} preview={preview({ image: '/api/media-proxy/preview/sig?u=b2c', imagePlaceholder: placeholder })} />,
+    );
+    const img = [...container.querySelectorAll('img')].find((el) => isVariantOf(el.getAttribute('src'), '/api/media-proxy/preview/sig?u=b2c'))!;
+    expect(container.querySelector('[data-preview-placeholder]')?.getAttribute('src')).toMatch(/^data:image\/png/);
+    expect(img.className.split(/\s+/)).toEqual(expect.arrayContaining(['opacity-0', 'transition-opacity', 'duration-200', 'motion-reduce:transition-none']));
+    fireEvent.load(img);
+    expect(img.className.split(/\s+/)).toContain('opacity-100');
+    await vi.waitFor(() => expect(container.querySelector('[data-preview-placeholder]')).toBeNull());
   });
 
   it('shows the open-link fallback when the server has no picture for the link', async () => {

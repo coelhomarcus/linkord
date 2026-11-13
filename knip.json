@@ -15,7 +15,6 @@
       "ignoreDependencies": [
         "@fontsource-variable/figtree",
         "@twinkleplop/theme-github",
-        "shadcn",
         "tailwindcss",
         "tw-animate-css"
       ],

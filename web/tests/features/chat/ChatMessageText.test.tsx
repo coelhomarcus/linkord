@@ -23,6 +23,26 @@ describe('ChatMessageText', () => {
 
 });
 
+describe('ChatMessageText — spoilers', () => {
+  it('hides ||text|| until it is clicked, a link inside it out of reach', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<ChatMessageText text="o fim: ||ele vive https://ex.com/spoiler||" noPreviews />);
+    const spoiler = screen.getByRole('button', { name: 'Spoiler, toque para revelar' });
+    expect(spoiler.querySelector('[inert]')!.contains(screen.getByRole('link', { name: 'https://ex.com/spoiler' }))).toBe(true);
+    await user.click(spoiler);
+    expect(screen.queryByRole('button', { name: 'Spoiler, toque para revelar' })).toBeNull();
+    expect(container.querySelector('[inert]')).toBeNull();
+  });
+
+  it('opens from the keyboard too', async () => {
+    const user = userEvent.setup();
+    render(<ChatMessageText text="||segredo||" />);
+    screen.getByRole('button', { name: 'Spoiler, toque para revelar' }).focus();
+    await user.keyboard('{Enter}');
+    expect(screen.getByText('segredo')).toBeVisible();
+  });
+});
+
 describe('ChatMessageText — mentions', () => {
   const allUsers = new Map<string, PublicUser>([
     ['u1', { id: 'u1', username: 'Lune', displayName: 'Lune', avatar: '', avatarColor: 'fuchsia', banner: '', bio: '', profileLinks: [], role: 'admin' }],

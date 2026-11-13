@@ -156,7 +156,8 @@
   },
   "media": {
     "open": "Open {{name}}",
-    "openIndexed": "Open {{name}} ({{index}} of {{total}})"
+    "openIndexed": "Open {{name}} ({{index}} of {{total}})",
+    "spoiler": "Spoiler, tap to reveal"
   },
   "dmCall": {
     "you": "You started a call.",

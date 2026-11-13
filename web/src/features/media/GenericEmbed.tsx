@@ -1,19 +1,30 @@
-import { ArrowSquareOutIcon, PlayIcon } from '@phosphor-icons/react';
-import { useTranslation } from 'react-i18next';
+import { ArrowSquareOutIcon } from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 
 import type { DetectedEmbed } from '@/shared/lib/chatEmbeds';
 import { getCachedLinkPreview, loadLinkPreview } from '@/shared/lib/linkPreviewCache';
-import { youtubeThumbnailProxyUrl } from '@/shared/lib/mediaProxy';
-import { useNearViewport } from './useNearViewport';
+import { proxiedImageVariant, youtubeThumbnailProxyUrl } from '@/shared/lib/mediaProxy';
 import type { LinkPreviewData } from '@/shared/api/api';
 import { availableAttachmentWidth, useChatSurfaceWidth } from '@/shared/lib/chatSurfaceWidth';
+import { cn } from '@/shared/lib/utils';
+import { MediaViewerProvider } from '@/features/chat/MediaViewerProvider';
+import { useMediaViewer, useOpenMedia } from '@/features/chat/useMediaViewer';
+import { embedViewerItems } from './viewer/embedViewerItems';
+import { hoverWarmHandlers } from './viewer/hoverWarm';
+import { AltTextBadge } from './AltTextBadge';
+import { EmbedGallery } from './EmbedGallery';
+import { EmbedMenuButton } from './EmbedMenuButton';
 import { ExternalMediaGate } from './ExternalMediaGate';
-import { VideoPlayer } from './MediaPlayers';
+import { AudioPlayer, VideoPlayer } from './MediaPlayers';
+import { PreviewImage } from './PreviewImage';
+import { LinkPlayer, TwitchPlayer, YouTubePlayer } from './embedPlayers';
 import { embedImageAspect, previewImageSize } from './embedImageBox';
+import { linkPlayerUrl } from './linkPlayer';
 import { canLoadMediaUrl } from './mediaUrl';
-import { youtubeEmbedUrl } from './youtubeEmbedUrl';
+import { useAnimatedVariant } from './useAnimatedVariant';
+import { useNearViewport } from './useNearViewport';
+import { INLINE_VIDEO_MAX_HEIGHT, videoBoxStyle } from './videoBox';
 
 interface GenericEmbedProps {
   embed: DetectedEmbed;
@@ -24,7 +35,12 @@ interface GenericEmbedProps {
   edgeToEdge?: boolean;
   /** stored with the message by the server: drawn at once, never fetched */
   preview?: LinkPreviewData;
+  /** in a chat message: the keyboard way into its menu (EmbedMenuButton) */
+  menu?: boolean;
 }
+
+const FAVICON_PX = 14;
+const THUMBNAIL_PX = 80;
 
 // no favicon of their own: a picture only ever comes from the server's
 // preview, through the media proxy
@@ -35,74 +51,29 @@ const KNOWN_SITE: Partial<Record<DetectedEmbed['kind'], { name: string }>> = {
   'twitch-clip': { name: 'Twitch' },
 };
 
-/** The thumbnail until clicked, then YouTube's own player in an iframe. */
-function YouTubePlayer({ embed, thumbnail }: { embed: DetectedEmbed; thumbnail: string }) {
-  const { t } = useTranslation('media');
-  const [loaded, setLoaded] = useState(false);
+// a page's theme-color as a border: only plain colour syntax, never a value
+// that could mean something else to the style it lands in
+const COLOR_RE = /^(#[0-9a-f]{3,8}|(rgb|hsl)a?\([\d\s.,%/+-]+\)|[a-z]{3,20})$/i;
 
-  if (loaded) {
-    return (
-      <iframe
-        src={youtubeEmbedUrl(embed.youtubeId!, embed.url)}
-        title="YouTube"
-        className="h-full w-full"
-        allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
-        allowFullScreen
-      />
-    );
-  }
-  return (
-    <button
-      type="button"
-      onClick={() => setLoaded(true)}
-      aria-label={t('player.playVideo')}
-      className="relative flex size-full items-center justify-center focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-    >
-      <img src={thumbnail} alt="" className="absolute inset-0 size-full object-cover" />
-      <span className="relative flex h-12 w-12 items-center justify-center rounded-full bg-red text-white">
-        <PlayIcon size={18} fill="currentColor" />
-      </span>
-    </button>
-  );
+/** How a card is laid out, from the type the server gave the page. A preview
+ * stored before types existed keeps the layout it always had: text, then the
+ * picture full width. */
+type Layout = 'media' | 'link' | 'article';
+
+function layoutOf(data: LinkPreviewData, hasText: boolean): Layout {
+  if (!hasText && (data.type === 'image' || data.type === 'video' || data.type === 'audio')) return 'media';
+  return data.type === 'link' ? 'link' : 'article';
 }
 
-function TwitchPlayer({ embed }: { embed: DetectedEmbed }) {
-  const { t } = useTranslation('media');
-  const [loaded, setLoaded] = useState(false);
-
-  if (!loaded) {
-    const label = embed.kind === 'twitch-channel'
-      ? t('embed.twitchChannel', { channel: embed.twitchChannel })
-      : embed.kind === 'twitch-vod'
-        ? t('embed.twitchVod')
-        : t('embed.twitchClip');
-    return (
-      <button
-        type="button"
-        onClick={() => setLoaded(true)}
-        className="flex aspect-video w-full items-center justify-center gap-2.5 bg-black/40 text-left transition-colors hover:bg-black/55 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-      >
-        <span className="flex h-12 w-12 flex-none items-center justify-center rounded-full bg-[#9146FF] text-white">
-          <PlayIcon size={18} fill="currentColor" />
-        </span>
-        <span className="text-label text-text-secondary">{label}: {t('embed.loadPlayer')}</span>
-      </button>
-    );
-  }
-
-  const parent = window.location.hostname;
-  let src = '';
-  if (embed.kind === 'twitch-channel') src = `https://player.twitch.tv/?channel=${embed.twitchChannel}&parent=${parent}`;
-  if (embed.kind === 'twitch-vod') src = `https://player.twitch.tv/?video=${embed.twitchVideoId}&parent=${parent}`;
-  if (embed.kind === 'twitch-clip') src = `https://clips.twitch.tv/embed?clip=${embed.twitchClipSlug}&parent=${parent}`;
-  return (
-    <div className="aspect-video w-full">
-      <iframe src={src} title="Twitch" className="h-full w-full" allowFullScreen />
-    </div>
-  );
+export function GenericEmbed(props: GenericEmbedProps) {
+  // the viewer the gallery opens is the chat surface's; on its own (a test,
+  // a page with no chat) the card brings one
+  if (!useMediaViewer()) return <MediaViewerProvider><GenericEmbedCard {...props} /></MediaViewerProvider>;
+  return <GenericEmbedCard {...props} />;
 }
 
-export function GenericEmbed({ embed, className = '', edgeToEdge, preview }: GenericEmbedProps) {
+function GenericEmbedCard({ embed, className = '', edgeToEdge, preview, menu }: GenericEmbedProps) {
+  const openMedia = useOpenMedia();
   const cardBorderClass = edgeToEdge ? 'rounded-lg border-0' : 'rounded-md border border-border';
   const surfaceWidth = useChatSurfaceWidth(384 + 120);
   const maxWidth = availableAttachmentWidth(surfaceWidth, 384);
@@ -113,8 +84,10 @@ export function GenericEmbed({ embed, className = '', edgeToEdge, preview }: Gen
   const data = preview ?? fetched;
   const skeletonRef = useRef<HTMLDivElement | null>(null);
   const near = useNearViewport(skeletonRef);
+  const mediaRef = useRef<HTMLDivElement | null>(null);
   const [imageFailed, setImageFailed] = useState(false);
   const [videoFailed, setVideoFailed] = useState(false);
+  const [audioFailed, setAudioFailed] = useState(false);
   const [faviconFailed, setFaviconFailed] = useState(false);
 
   useEffect(() => {
@@ -125,6 +98,7 @@ export function GenericEmbed({ embed, className = '', edgeToEdge, preview }: Gen
     setData(getCachedLinkPreview(url) ?? null);
     setImageFailed(false);
     setVideoFailed(false);
+    setAudioFailed(false);
     setFaviconFailed(false);
     loadLinkPreview(url)
       .then((d) => { if (!cancelled) setData(d); })
@@ -132,8 +106,12 @@ export function GenericEmbed({ embed, className = '', edgeToEdge, preview }: Gen
     return () => { cancelled = true; };
   }, [url, near, preview]);
 
-  const known = KNOWN_SITE[embed.kind];
-  const hasKnownPlayer = !!known;
+  const image = data?.image && canLoadMediaUrl(data.image) ? data.image : null;
+  const hasText = !!(data?.title || data?.description);
+  const layout = data ? layoutOf(data, hasText) : 'article';
+  // drawn at the card's width (a thumbnail's, for a plain link), so asked for
+  // at that width; an animated one only moves while in view
+  const drawnImage = useAnimatedVariant(mediaRef, image, layout === 'link' ? THUMBNAIL_PX : maxWidth, data?.imageAnimated);
 
   if (!data) {
     return (
@@ -148,9 +126,13 @@ export function GenericEmbed({ embed, className = '', edgeToEdge, preview }: Gen
     );
   }
 
-  const image = data.image && canLoadMediaUrl(data.image) ? data.image : null;
-  const video = data.video && canLoadMediaUrl(data.video) ? data.video : null;
-  if (!data.title && !data.description && !image && !hasKnownPlayer) {
+  const known = KNOWN_SITE[embed.kind];
+  const video = data.video && canLoadMediaUrl(data.video) && !videoFailed ? data.video : null;
+  const audio = data.audio && canLoadMediaUrl(data.audio) && !audioFailed ? data.audio : null;
+  // a preview stored before players were drawn, or one that has none, keeps
+  // its picture; YouTube and Twitch build their own from the link
+  const player = known ? null : linkPlayerUrl(data.player, window.location.hostname);
+  if (!hasText && !image && !known && !video && !audio && !player) {
     return (
       <a
         href={url}
@@ -166,65 +148,144 @@ export function GenericEmbed({ embed, className = '', edgeToEdge, preview }: Gen
   }
 
   const siteName = data.siteName || known?.name || url;
-  const candidateFavicon = data.favicon;
-  const favicon = !faviconFailed && candidateFavicon && canLoadMediaUrl(candidateFavicon) ? candidateFavicon : null;
-  const playableVideo = !!video && !videoFailed;
+  const favicon = !faviconFailed && data.favicon && canLoadMediaUrl(data.favicon) ? proxiedImageVariant(data.favicon, { width: FAVICON_PX }) : null;
+  const images = (data.images?.length ? data.images : image ? [image] : []).filter((src) => canLoadMediaUrl(src));
+  const title = data.title || siteName;
+  const openImage = (index: number) => openMedia(embedViewerItems(embed, data), index);
+  const alt = data.imageAlt?.trim() || null;
 
-  const aspect = image ? embedImageAspect(previewImageSize(data)) : null;
+  // a plain link's single picture sits on the right as a thumbnail; otherwise
+  // it goes full width under the text
+  const asThumbnail = layout === 'link' && images.length === 1;
+  const picture = drawnImage && !imageFailed ? (
+    <ImageFrame size={asThumbnail ? null : previewImageSize(data)} fill={asThumbnail}>
+      <button type="button" onClick={() => openImage(0)} {...hoverWarmHandlers(images[0], { animated: data.imageAnimated })} aria-label={alt ?? title} className="block size-full cursor-zoom-in outline-none focus-visible:ring-3 focus-visible:ring-inset focus-visible:ring-ring/50">
+        <PreviewImage src={drawnImage} placeholder={data.imagePlaceholder} alt={alt ?? ''} onError={() => setImageFailed(true)} className="size-full object-cover" />
+      </button>
+      {alt && <AltTextBadge text={alt} />}
+    </ImageFrame>
+  ) : null;
+
   let media: ReactNode = null;
   if (embed.kind === 'youtube') {
     media = (
       <div className="aspect-video w-full bg-black">
-        <YouTubePlayer embed={embed} thumbnail={image || youtubeThumbnailProxyUrl(embed.youtubeId!)} />
+        <YouTubePlayer
+          embed={embed}
+          thumbnail={drawnImage || proxiedImageVariant(youtubeThumbnailProxyUrl(embed.youtubeId!), { width: maxWidth })}
+          placeholder={drawnImage ? data.imagePlaceholder : null}
+        />
       </div>
     );
-  } else if (embed.kind === 'twitch-channel' || embed.kind === 'twitch-vod' || embed.kind === 'twitch-clip') {
+  } else if (known) {
     media = <div className="w-full bg-black"><TwitchPlayer embed={embed} /></div>;
-  } else if (playableVideo) {
+  } else if (player) {
     media = (
-      <ExternalMediaGate url={video!} kind="video" poster={image} className="max-w-none rounded-none border-0">
-        <VideoPlayer src={video!} poster={image} className="max-w-none rounded-none border-0" onError={() => setVideoFailed(true)} />
+      <LinkPlayer
+        src={player}
+        kind={data.type === 'audio' ? 'audio' : 'video'}
+        title={siteName}
+        thumbnail={imageFailed ? null : drawnImage}
+        placeholder={drawnImage ? data.imagePlaceholder : null}
+      />
+    );
+  } else if (video) {
+    // the page's picture stands in for the video until it plays, so its size is the box's
+    const posterSize = drawnImage ? previewImageSize(data) : null;
+    media = (
+      <ExternalMediaGate
+        url={video}
+        kind="video"
+        poster={drawnImage}
+        style={posterSize ? videoBoxStyle(posterSize, maxWidth, INLINE_VIDEO_MAX_HEIGHT) : undefined}
+        className="max-w-none rounded-none border-0"
+      >
+        <VideoPlayer
+          src={video}
+          poster={drawnImage}
+          placeholder={drawnImage ? data.imagePlaceholder : null}
+          width={posterSize?.width}
+          height={posterSize?.height}
+          className="max-w-none rounded-none border-0"
+          onError={() => setVideoFailed(true)}
+        />
       </ExternalMediaGate>
     );
-  } else if (image && !imageFailed) {
+  } else if (audio) {
     media = (
-      // the frame is sized before the picture arrives (its measured
-      // proportions, or a fixed height when unknown): the card must not grow
-      <div
-        className={`w-full bg-fill-subtle ${aspect ? '' : 'h-70'}`}
-        style={aspect ? { aspectRatio: aspect, maxHeight: 280 } : undefined}
-      >
-        <img
-          src={image}
-          alt=""
-          onError={() => setImageFailed(true)}
-          className="size-full object-cover"
-        />
+      <div className="flex flex-col">
+        {!asThumbnail && picture}
+        <ExternalMediaGate url={audio} kind="audio" className="max-w-none rounded-none border-0">
+          <AudioPlayer src={audio} title={data.title ?? undefined} className="max-w-none rounded-none border-0" onError={() => setAudioFailed(true)} />
+        </ExternalMediaGate>
+      </div>
+    );
+  } else if (images.length > 1) {
+    media = <EmbedGallery images={images} width={maxWidth} onOpen={openImage} />;
+  } else if (!asThumbnail) {
+    media = picture;
+  }
+
+  // a picture, a video or a sound with nothing to say about it: the media
+  // alone, without a card around it
+  if (layout === 'media' && media) {
+    return (
+      <div ref={mediaRef} style={{ maxWidth }} className={cn('group/embed relative w-full overflow-hidden', cardBorderClass, className)}>
+        {media}
+        {menu && <EmbedMenuButton />}
       </div>
     );
   }
 
-  return (
-    <div style={{ maxWidth }} className={`flex w-full flex-col overflow-hidden bg-bg-tertiary ${cardBorderClass} ${className}`}>
-      <div className="flex flex-col gap-1 px-3 pt-2.5 pb-2">
-        <div className="flex items-center gap-1.5 text-caption text-text-muted">
-          {favicon && <img src={favicon} alt="" onError={() => setFaviconFailed(true)} className="h-3.5 w-3.5 flex-none rounded-[3px]" />}
-          <span className="truncate">{siteName}</span>
-        </div>
-        {data.title && (
-          <a
-            href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="line-clamp-2 text-body font-medium text-link hover:underline"
-          >
-            {data.title}
-          </a>
-        )}
-        {data.description && <p className="line-clamp-3 text-label text-text-secondary">{data.description}</p>}
-      </div>
+  const thumbnail = asThumbnail && !known && !video && !player ? picture : null;
+  const accent = data.themeColor && COLOR_RE.test(data.themeColor.trim()) ? data.themeColor.trim() : null;
+  const style: CSSProperties = { maxWidth, ...(accent ? { borderLeft: `4px solid ${accent}` } : {}) };
 
+  return (
+    <div ref={mediaRef} style={style} data-embed-layout={layout} className={cn('group/embed relative flex w-full flex-col overflow-hidden bg-bg-tertiary', cardBorderClass, className)}>
+      <div className="flex gap-3 px-3 pt-2.5 pb-2">
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <div className="flex min-w-0 items-center gap-1.5 pr-7 text-caption text-text-muted">
+            {favicon && <img src={favicon} alt="" onError={() => setFaviconFailed(true)} className="h-3.5 w-3.5 flex-none rounded-[3px]" />}
+            <span className="truncate">{siteName}</span>
+            {/* oEmbed gives the provider as author for its own uploads (Vimeo's staff picks). */}
+            {data.authorName && data.authorName.toLowerCase() !== siteName.toLowerCase() && (
+              <>
+                <span aria-hidden>·</span>
+                {data.authorUrl
+                  ? <a href={data.authorUrl} target="_blank" rel="noopener noreferrer" className="truncate hover:underline">{data.authorName}</a>
+                  : <span className="truncate">{data.authorName}</span>}
+              </>
+            )}
+          </div>
+          {data.title && (
+            <a href={url} target="_blank" rel="noopener noreferrer" className="line-clamp-2 text-body font-medium text-link hover:underline">
+              {data.title}
+            </a>
+          )}
+          {/* a video's description is its uploader's notes: noise on a card */}
+          {data.description && embed.kind !== 'youtube' && <p className="line-clamp-3 text-label text-text-secondary">{data.description}</p>}
+        </div>
+        {thumbnail && <div data-embed-thumbnail className="relative size-20 flex-none overflow-hidden rounded-md">{thumbnail}</div>}
+      </div>
       {media}
+      {menu && <EmbedMenuButton />}
+    </div>
+  );
+}
+
+/** The box a card's picture is drawn in, sized before the picture arrives so
+ * the card never grows: its measured proportions (under 280 px high), or a
+ * fixed height. A thumbnail fills the square it is put in instead. */
+function ImageFrame({ size, fill, children }: { size: ReturnType<typeof previewImageSize>; fill?: boolean; children: ReactNode }) {
+  const aspect = fill ? null : embedImageAspect(size);
+  return (
+    <div
+      data-embed-image
+      className={cn('relative bg-fill-subtle', fill ? 'size-full' : 'w-full', !fill && !aspect && 'h-70')}
+      style={aspect ? { aspectRatio: aspect, maxHeight: 280 } : undefined}
+    >
+      {children}
     </div>
   );
 }

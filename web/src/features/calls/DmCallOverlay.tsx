@@ -1,22 +1,17 @@
-import { useEffect } from 'react';
-import { PhoneIcon, PhoneSlashIcon, VideoCameraIcon } from '@phosphor-icons/react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { PhoneIcon, PhoneSlashIcon, PhoneXIcon, VideoCameraIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { Avatar } from '@/shared/Avatar';
 import { startRingtone } from '@/shared/sounds';
+import { Button } from '@/shared/ui/primitives/button';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/primitives/dialog';
+import { cn } from '@/shared/lib/utils';
 import { useRoom } from '@/state/RoomContext';
-import type { DmCallEndReason } from '@/shared/types/protocol';
-
-const ENDED_KEY: Record<DmCallEndReason, 'dm.declined' | 'dm.cancelled' | 'dm.missed' | 'dm.ended' | 'dm.failed'> = {
-  declined: 'dm.declined',
-  cancelled: 'dm.cancelled',
-  missed: 'dm.missed',
-  ended: 'dm.ended',
-  failed: 'dm.failed',
-};
 
 export function DmCallOverlay() {
   const { t } = useTranslation('calls');
-  const { dmCall, acceptDmCall, declineDmCall, cancelDmCall, allUsers } = useRoom();
+  const { dmCall, acceptDmCall, declineDmCall, cancelDmCall, dismissDmCallNotice, allUsers } = useRoom();
+  const popupRef = useRef<HTMLDivElement>(null);
   const ringPhase = dmCall?.phase === 'incoming' || dmCall?.phase === 'outgoing' ? dmCall.phase : null;
   const ringCallId = ringPhase ? dmCall?.callId : null;
 
@@ -25,53 +20,101 @@ export function DmCallOverlay() {
     return startRingtone(ringPhase);
   }, [ringCallId, ringPhase]);
 
-  if (!dmCall) return null;
-  const peer = allUsers.get(dmCall.peerId);
+  // The dialog keeps showing the last call while its exit plays.
+  const [shown, setShown] = useState(dmCall);
+  if (dmCall && dmCall !== shown) setShown(dmCall);
+
+  const failed = shown?.phase === 'ended';
+  const peer = shown ? allUsers.get(shown.peerId) : undefined;
   const name = peer?.displayName || t('dm.someone');
-  const title = dmCall.phase === 'ended'
-    ? t(ENDED_KEY[dmCall.reason ?? 'ended'])
-    : dmCall.phase === 'outgoing'
-      ? t('dm.calling')
-      : dmCall.video ? t('dm.incomingVideo') : t('dm.incomingVoice');
+  const status = shown?.phase === 'outgoing'
+    ? t('dm.calling')
+    : shown?.video ? t('dm.incomingVideo') : t('dm.incomingVoice');
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 top-4 z-50 flex justify-center px-4">
-      <div
-        role="dialog"
-        aria-label={title}
-        className="pointer-events-auto flex w-full max-w-sm items-center gap-3 rounded-xl border border-border-subtle bg-bg-floating p-3 shadow-popover"
+    <Dialog
+      open={!!dmCall}
+      // A ringing call is answered with its buttons only: Escape or a stray
+      // click outside must not decline it. A failure closes like any notice.
+      onOpenChange={(open) => { if (!open && dmCall?.phase === 'ended') dismissDmCallNotice(); }}
+      disablePointerDismissal={!failed}
+    >
+      <DialogContent
+        showCloseButton={false}
+        // Focus lands on the dialog, not on a button: the call can arrive
+        // mid-sentence and Enter must not answer it, while a screen reader
+        // still announces who is calling.
+        ref={popupRef}
+        initialFocus={popupRef}
+        className="flex flex-col items-center gap-0 px-6 pt-8 pb-6 text-center sm:max-w-80"
       >
-        <Avatar
-          id={dmCall.peerId}
-          name={name}
-          avatar={peer?.avatar ?? ''}
-          poster={peer?.avatarPoster}
-          avatarColor={peer?.avatarColor ?? ''}
-          size={48}
-        />
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-label font-semibold text-text-primary">{name}</p>
-          <p className="flex items-center gap-1 truncate text-caption text-text-secondary">
-            {dmCall.video ? <VideoCameraIcon size={14} aria-hidden /> : <PhoneIcon size={14} aria-hidden />}
-            {title}
-          </p>
-        </div>
-        {dmCall.phase === 'incoming' && (
-          <div className="flex flex-none items-center gap-2">
-            <button type="button" onClick={declineDmCall} aria-label={t('dm.decline')} className="grid size-10 place-items-center rounded-full bg-red text-white hover:bg-red-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
-              <PhoneSlashIcon size={18} weight="fill" aria-hidden />
-            </button>
-            <button type="button" onClick={acceptDmCall} aria-label={t('dm.accept')} className="grid size-10 place-items-center rounded-full bg-green-solid text-white hover:bg-green-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
-              {dmCall.video ? <VideoCameraIcon size={18} weight="fill" aria-hidden /> : <PhoneIcon size={18} weight="fill" aria-hidden />}
-            </button>
-          </div>
+        {shown && failed ? (
+          <>
+            <span className="grid size-16 place-items-center rounded-full bg-red/15 text-red" aria-hidden>
+              <PhoneXIcon size={28} weight="fill" />
+            </span>
+            <DialogTitle className="mt-4 text-title">{t('dm.failed')}</DialogTitle>
+            <Button type="button" variant="outline" className="mt-6 w-full" onClick={dismissDmCallNotice}>
+              {t('dm.close')}
+            </Button>
+          </>
+        ) : shown && (
+          <>
+            <Avatar
+              id={shown.peerId}
+              name={name}
+              avatar={peer?.avatar ?? ''}
+              poster={peer?.avatarPoster}
+              avatarColor={peer?.avatarColor ?? ''}
+              size={88}
+            />
+            <DialogTitle className="mt-4 w-full truncate text-title">{name}</DialogTitle>
+            <DialogDescription className="mt-1 flex items-center gap-1.5">
+              {shown.video ? <VideoCameraIcon size={16} aria-hidden /> : <PhoneIcon size={16} aria-hidden />}
+              {status}
+            </DialogDescription>
+            <div className="mt-8 flex justify-center gap-12">
+              {shown.phase === 'incoming' && (
+                <>
+                  <CallAnswerButton label={t('dm.decline')} tone="decline" onClick={declineDmCall}>
+                    <PhoneSlashIcon size={24} weight="fill" />
+                  </CallAnswerButton>
+                  <CallAnswerButton label={t('dm.accept')} tone="accept" onClick={acceptDmCall}>
+                    {shown.video ? <VideoCameraIcon size={24} weight="fill" /> : <PhoneIcon size={24} weight="fill" />}
+                  </CallAnswerButton>
+                </>
+              )}
+              {shown.phase === 'outgoing' && (
+                <CallAnswerButton label={t('dm.cancel')} tone="decline" onClick={cancelDmCall}>
+                  <PhoneSlashIcon size={24} weight="fill" />
+                </CallAnswerButton>
+              )}
+            </div>
+          </>
         )}
-        {dmCall.phase === 'outgoing' && (
-          <button type="button" onClick={cancelDmCall} aria-label={t('dm.cancel')} className="grid size-10 flex-none place-items-center rounded-full bg-red text-white hover:bg-red-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
-            <PhoneSlashIcon size={18} weight="fill" aria-hidden />
-          </button>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function CallAnswerButton({ label, tone, onClick, children }: {
+  label: string;
+  tone: 'accept' | 'decline';
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button type="button" onClick={onClick} className="group flex flex-col items-center gap-2 outline-none">
+      <span
+        aria-hidden
+        className={cn(
+          'grid size-14 place-items-center rounded-full text-white transition-colors duration-100 group-focus-visible:ring-3 group-focus-visible:ring-ring/50',
+          tone === 'accept' ? 'bg-green-solid group-hover:bg-green-hover' : 'bg-red group-hover:bg-red-hover',
         )}
-      </div>
-    </div>
+      >
+        {children}
+      </span>
+      <span className="text-caption text-text-secondary group-hover:text-text-primary">{label}</span>
+    </button>
   );
 }

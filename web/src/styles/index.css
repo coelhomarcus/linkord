@@ -1,6 +1,5 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "shadcn/tailwind.css";
 @import "./themes.css";
 /* code colors (every theme is dark) */
 @import "@twinkleplop/theme-github/dark";

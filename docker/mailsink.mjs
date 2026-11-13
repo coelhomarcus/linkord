@@ -1,4 +1,4 @@
-// Stands in for Resend in docker-compose.full.yml so account recovery and two-step login work without an
+// Stands in for Resend in docker-compose.yml so account recovery and two-step login work without an
 // email provider: the app sends here (RESEND_API_URL) what it would send to Resend, and this prints each
 // message, code included, to its log (`docker compose ... logs mailsink`). Nothing leaves the machine.
 import http from 'node:http';

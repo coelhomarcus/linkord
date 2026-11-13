@@ -3,15 +3,18 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { config } from '../config/env.js';
+import { PLAYER_HOSTS } from '../modules/link-preview/playerHosts.js';
 import { isSecureRequest } from './cookies.js';
 
 /** Where browsers post violations (see modules/logs/cspReports.ts). */
 export const CSP_REPORT_PATH = '/api/csp-reports';
 const REPORT_GROUP = 'csp';
 
-// Players embedded as plain iframes (features/media/GenericEmbed.tsx). No
+// Players embedded as plain iframes (features/media/GenericEmbed.tsx): the
+// hosts on the link-preview player allowlist, each with its subdomains (Vimeo
+// plays from player.vimeo.com, SoundCloud from w.soundcloud.com). No
 // third-party script runs in our page for them, so they only need frame-src.
-const EMBED_FRAMES = ['https://www.youtube.com', 'https://player.twitch.tv', 'https://clips.twitch.tv'];
+const EMBED_FRAMES = PLAYER_HOSTS.flatMap((domain) => [`https://${domain}`, `https://*.${domain}`]);
 // the GIF picker calls KLIPY from the browser, as its terms require
 const KLIPY_API = 'https://api.klipy.com';
 // ...and loads its GIFs straight from static.klipy.com and its numbered

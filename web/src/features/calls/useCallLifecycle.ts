@@ -128,23 +128,41 @@ export function useCallLifecycle(deps: CallLifecycleDeps) {
     if (activeCallConversationIdRef.current === leaving) setActiveCallConversationId(null);
   }, [cameraOn, sharing, stopCamera, stopSharing, leaveMic, livekitRoom, sendWs, setActiveCallConversationId]);
 
-  const joinCall = useCallback(async (conversationId: string) => {
+  /** `replace` moves the account's call from another tab or device here (see useCallMoveGate). */
+  const joinCall = useCallback(async (conversationId: string, options?: { replace?: boolean }) => {
     if (activeCallConversationIdRef.current === conversationId) return;
     if (activeCallConversationIdRef.current) await leaveCall();
     pendingCallConversationIdRef.current = conversationId;
     dispatch({ type: 'SET_CALL_JOIN_ERROR', error: null });
-    sendWs({ t: 'call-join', conversationId });
+    sendWs(options?.replace ? { t: 'call-join', conversationId, replace: true } : { t: 'call-join', conversationId });
   }, [sendWs, leaveCall, dispatch]);
 
   /** After a socket reconnect: the media may still be up while the server no
    * longer has this connection in the call (it lost its state, or the grace window
    * ran out). A voice channel is simply joined again; a direct call cannot be, so
-   * it is left instead of lingering as a room nobody else is in. */
-  const reconcileAfterReconnect = useCallback((serverCallId: string | null | undefined, isDirect: (conversationId: string) => boolean) => {
+   * it is left instead of lingering as a room nobody else is in. Neither is
+   * rejoined when the account's call moved to another tab meanwhile. */
+  const reconcileAfterReconnect = useCallback((serverCallId: string | null | undefined, isDirect: (conversationId: string) => boolean, heldElsewhere = false) => {
     const mine = activeCallConversationIdRef.current;
     if (serverCallId === undefined || !mine || serverCallId === mine) return;
-    void leaveCall().then(() => { if (!isDirect(mine)) void joinCall(mine); });
+    void leaveCall().then(() => { if (!isDirect(mine) && !heldElsewhere) void joinCall(mine); });
   }, [leaveCall, joinCall]);
+
+  /** Another tab or device of this account took the call: the server already
+   * has this connection out of it, so only the media is left to drop. */
+  const onCallReplaced = useCallback((conversationId: string) => {
+    if (activeCallConversationIdRef.current === conversationId) {
+      void leaveCall();
+      return;
+    }
+    if (pendingCallConversationIdRef.current === conversationId) pendingCallConversationIdRef.current = null;
+  }, [leaveCall]);
+
+  /** A join refused because the account is in a call elsewhere: nothing went
+   * wrong to report, the person is asked to move the call instead. */
+  const abandonPendingJoin = useCallback(() => {
+    pendingCallConversationIdRef.current = null;
+  }, []);
 
   const leaveCallRef = useRef(leaveCall);
   useEffect(() => { leaveCallRef.current = leaveCall; }, [leaveCall]);
@@ -340,6 +358,6 @@ export function useCallLifecycle(deps: CallLifecycleDeps) {
   return {
     audioUnlocked, deafened, toggleDeafened, preferMuted, setPreferMuted, micStarting, reconnecting,
     activeCallConversationId, joinCall, leaveCall, armDmMedia, dropPendingCall, kickFromCall, moveToCall,
-    onCallToken, onCallMoved, onConversationDeleted, onCallJoinRejected, syncLocalMedia, reconcileAfterReconnect,
+    onCallToken, onCallMoved, onCallReplaced, onConversationDeleted, onCallJoinRejected, abandonPendingJoin, syncLocalMedia, reconcileAfterReconnect,
   };
 }

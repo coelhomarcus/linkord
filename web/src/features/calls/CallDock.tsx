@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { GearIcon, MicrophoneIcon, MicrophoneSlashIcon, MonitorIcon, PhoneSlashIcon, SpeakerHighIcon, SpeakerSlashIcon, VideoCameraIcon, VideoCameraSlashIcon } from '@phosphor-icons/react';
+import { ArrowSquareInIcon, GearIcon, MicrophoneIcon, MicrophoneSlashIcon, MonitorIcon, PhoneSlashIcon, SpeakerHighIcon, SpeakerSlashIcon, VideoCameraIcon, VideoCameraSlashIcon } from '@phosphor-icons/react';
 import { useLocation, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { iconWeight } from '@/shared/ui/icons';
@@ -77,6 +77,7 @@ export function CallDock({ onReturnToCall, onOpenProfile, layout = 'wide', onNav
     state, conversations, allUsers, activeCallConversationId, dmStartedAt,
     startCamera, stopCamera, startSharing, stopSharing, activateMic, toggleMicMuted,
     deafened, toggleDeafened, leaveCall, preferMuted, setPreferMuted, reconnecting, ownStatus,
+    callElsewhere, openCall, startDmCall,
   } = useRoom();
   const customStatus = useCustomStatus(state.me.userId);
   const [statusError, setStatusError] = useTransientError();
@@ -103,6 +104,17 @@ export function CallDock({ onReturnToCall, onOpenProfile, layout = 'wide', onNav
     state.me.userId,
     allUsers,
   );
+  const elsewhere = inCall ? null : callElsewhere;
+  const elsewhereTitle = elsewhere
+    ? conversationTitle(conversations.find((conversation) => conversation.id === elsewhere.conversationId) ?? null, state.me.userId, allUsers)
+    : '';
+
+  /** Both ask first (CallMoveDialog), then take the call from the other tab. */
+  function bringCallHere() {
+    if (!elsewhere) return;
+    if (elsewhere.kind === 'direct') startDmCall(elsewhere.conversationId, false);
+    else openCall(elsewhere.conversationId);
+  }
 
   function onMic() {
     if (micLocked) return;
@@ -155,6 +167,27 @@ export function CallDock({ onReturnToCall, onOpenProfile, layout = 'wide', onNav
             <button type="button" onClick={onReturnToCall} className="block max-w-full truncate text-left text-caption text-text-secondary hover:text-text-primary hover:underline">{title}</button>
           </div>
           {leaveButton}
+        </div>
+      ))}
+      {elsewhere && (compact ? (
+        <Tooltip>
+          <TooltipTrigger onClick={bringCallHere} aria-label={t('elsewhere.bringHere')} className={cn(DOCK_BUTTON, DOCK_NEUTRAL)}>
+            <ArrowSquareInIcon size={20} />
+          </TooltipTrigger>
+          <TooltipContent side="right">{`${t(`elsewhere.${elsewhere.kind}`)} · ${elsewhereTitle}`}</TooltipContent>
+        </Tooltip>
+      ) : (
+        <div className="-mx-2 mb-2 flex items-center gap-2 border-b border-border-panel px-3 pb-2">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-label font-semibold text-text-secondary">{t(`elsewhere.${elsewhere.kind}`)}</p>
+            <p className="truncate text-caption text-text-secondary">{elsewhereTitle}</p>
+          </div>
+          <Tooltip>
+            <TooltipTrigger onClick={bringCallHere} aria-label={t('elsewhere.bringHere')} className={cn(DOCK_BUTTON, DOCK_NEUTRAL)}>
+              <ArrowSquareInIcon size={20} />
+            </TooltipTrigger>
+            <TooltipContent side="top">{t('elsewhere.bringHere')}</TooltipContent>
+          </Tooltip>
         </div>
       ))}
       {statusError && <p role="alert" className="mb-1.5 px-1 text-caption text-red-text">{statusError}</p>}

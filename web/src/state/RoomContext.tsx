@@ -4,6 +4,7 @@ import type { Room } from 'livekit-client';
 import type { ChatMessage, ClientMessage, Conversation, OwnStatus, PublicUser, ReactionEmoji, SearchResult, ServerSummary, StickerCard, VisiblePresence } from '@/shared/types/protocol';
 import type { PresencePatch } from '@/features/status/useOwnStatus';
 import type { DmCallNotice } from '@/features/calls/useDmCall';
+import type { CallElsewhere } from '@/features/calls/callElsewhere';
 import type { RoomAction, RoomState } from './roomReducer';
 import type { TileKind } from '@/features/calls/tileTypes';
 import type { OutboxEntry, OutboxFile } from '@/features/chat/useMessageOutbox';
@@ -69,13 +70,21 @@ export interface RoomContextValue {
   registerOpenCall: (fn: (conversationId: string) => void) => void;
   openCall: (conversationId: string) => void;
   activeCallConversationId: string | null;
-  joinCall: (conversationId: string) => void;
+  /** Asks first (callMove) when the account is in a call on another tab or device: `onSent` runs
+   * when the join actually goes out, `onDropped` when the person keeps the call where it is. */
+  joinCall: (conversationId: string, hooks?: { onSent?: () => void; onDropped?: () => void }) => void;
+  /** The account's call on another tab or device, or null: the server allows one call per account. */
+  callElsewhere: CallElsewhere | null;
+  /** The question asked before this tab takes that call (CallMoveDialog). */
+  callMove: { open: boolean; confirm: () => void; cancel: () => void };
   leaveCall: () => Promise<void>;
   /** Rings the other person in a DM. The LiveKit token arrives only after they accept. */
   startDmCall: (conversationId: string, video: boolean) => void;
   acceptDmCall: () => void;
   declineDmCall: () => void;
   cancelDmCall: () => void;
+  /** Closes the notice of a call that failed to connect. */
+  dismissDmCallNotice: () => void;
   dmCall: DmCallNotice | null;
   /** Set while this tab is in an active DM, so the dock can show how long it has lasted. */
   dmStartedAt: number | null;

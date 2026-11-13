@@ -6,6 +6,10 @@ import type { AppPage } from '../../fixtures/app';
 // a 1x1 PNG, enough for the image path (thumbnail, preview) without a fixture file
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
 
+// 64x112 (portrait), two seconds of VP8: the uploader's browser reads its size
+// before the upload, so every player can lay it out before loading it
+const WEBM = Buffer.from('GkXfo59ChoEBQveBAULygQRC84EIQoKEd2VibUKHgQJChYECGFOAZwEAAAAAAAPXEU2bdLpNu4tTq4QVSalmU6yBoU27i1OrhBZUrmtTrIHYTbuMU6uEElTDZ1OsggElTbuMU6uEHFO7a1OsggPB7AEAAAAAAABZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAVSalmsirXsYMPQkBNgI1MYXZmNjIuMTIuMTAyV0GNTGF2ZjYyLjEyLjEwMkSJiECfQAAAAAAAFlSua8iuAQAAAAAAAD/XgQFzxYh/I+YdoQ3xdJyBACK1nIN1bmSIgQCGhVZfVlA4g4EBI+ODhAX14QDgkLCBQLqBcJqBAlWwhFW5gQESVMNn/HNzoGPAgGfImkWjh0VOQ09ERVJEh41MYXZmNjIuMTIuMTAyc3PWY8CLY8WIfyPmHaEN8XRnyKFFo4dFTkNPREVSRIeUTGF2YzYyLjI4LjEwMiBsaWJ2cHhnyKFFo4hEVVJBVElPTkSHkzAwOjAwOjAyLjAwMDAwMDAwMAAfQ7Z1QhXngQCjyIEAAIBwBACdASpAAHAAAEcIhYWIhYSIAgICdaoD+AP6Agbrx86dOnTp06dOnTp03wD+6ez//uwp7pxn/+7C//yN/Hzo3/kMgKOWgQBkANEBAAEQEAAYABhYL/QACJAYAKOWgQDIANEBAAEQEAAYABhYL/QACJAYAKOWgQEsANEBAAEQEAAYABhYL/QACJAYAKOWgQGQANEBAAEQEAAYABhYL/QACJAYAKOWgQH0ANEBAAEQEAAYABhYL/QACJAYAKOWgQJYANEBAAEQEAAYABhYL/QACJAYAKOWgQK8ANEBAAEQEBRgAGFgv9AAIkBgAKOWgQMgANEBAAEQEAAYABhYL/QACJAYAKOWgQOEANEBAAEQEAAYABhYL/QACJAYAKOWgQPoANEBAAEQEAAYABhYL/QACJAYAKOWgQRMANEBAAEQEAAYABhYL/QACJAYAKOWgQSwANEBAAEQEAAYABhYL/QACJAYAKOWgQUUANEBAAEQEAAYABhYL/QACJAYAKOWgQV4ANEBAAEQEAAYABhYL/QACJAYAKOWgQXcANEBAAEQEAAYABhYL/QACJAYAKOWgQZAANEBAAEQEAAYABhYL/QACJAYAKOWgQakANEBAAEQEAAYABhYL/QACJAYAKOWgQcIANEBAAEQEBRgAGFgv9AAIkBgAKOWgQdsANEBAAEQEAAYABhYL/QACJAYABxTu2uRu4+zgQC3iveBAfGCAabwgQM=', 'base64');
+
 async function twoInAChannel(users: { create(prefix?: string): Promise<User> }): Promise<{ alice: User; bob: User; a: AppPage; b: AppPage }> {
   const alice = await users.create('alice');
   const bob = await users.create('bob');
@@ -125,6 +129,144 @@ test.describe('chat', () => {
     await a.page.locator('input[type=file]:not([accept])').setInputFiles(file);
     await a.send('com imagem');
     await expect(b.message('com imagem').locator('img').first()).toBeVisible();
+  });
+
+  test('a video attachment keeps its shape before it loads and answers the keyboard', async ({ users }, testInfo) => {
+    const { a, b } = await twoInAChannel(users);
+    // the reader never gets the file, so the box can only come from the stored size
+    await b.page.route('**/uploads/**', (route) => route.abort());
+    const file = testInfo.outputPath('vertical.webm');
+    writeFileSync(file, WEBM);
+    await a.page.locator('input[type=file]:not([accept])').setInputFiles(file);
+    await a.send('com vídeo');
+
+    await expect(b.message('com vídeo').getByRole('group', { name: 'vertical.webm' })).toHaveAttribute('style', /aspect-ratio: 64 \/ 112/);
+
+    const player = a.message('com vídeo').getByRole('group', { name: 'vertical.webm' });
+    await player.press('k');
+    await expect.poll(() => player.locator('video').first().evaluate((video: HTMLVideoElement) => !video.paused)).toBe(true);
+    await player.press('k');
+    await expect.poll(() => player.locator('video').first().evaluate((video: HTMLVideoElement) => video.paused)).toBe(true);
+  });
+});
+
+test.describe('link cards', () => {
+  // A page the server can't reach (a reserved name that never resolves), so it
+  // stores no preview and the reader's tab asks /api/link-preview, answered
+  // here: the stack refuses private addresses (SSRF guard), and a spec must
+  // not depend on the internet. Its pictures come from a same-origin path.
+  const ARTICLE = 'https://news.e2e.example/artigo';
+  const GALLERY = 'https://photos.e2e.example/album';
+  const CLIP = 'https://video.e2e.example/clipe';
+  const TRACK = 'https://music.e2e.example/faixa';
+  const picture = (n: number) => `/e2e-fixture/foto-${n}.png`;
+
+  async function stubPreviews(app: AppPage): Promise<void> {
+    await app.page.route('**/e2e-fixture/*.png', (route) => route.fulfill({ contentType: 'image/png', body: PNG }));
+    await app.page.route('**/api/link-preview?**', async (route) => {
+      const url = new URL(route.request().url()).searchParams.get('url');
+      const base = { url, video: null, favicon: null, themeColor: '#3b82f6', imageWidth: 1200, imageHeight: 630 };
+      if (url === ARTICLE) {
+        return route.fulfill({ json: { ...base, type: 'article', title: 'Uma matéria de teste', description: 'O resumo da matéria.', siteName: 'Notícias E2E', image: picture(1), images: [picture(1)] } });
+      }
+      if (url === GALLERY) {
+        const images = [1, 2, 3].map(picture);
+        return route.fulfill({ json: { ...base, type: 'article', title: 'Um álbum', description: null, siteName: 'Fotos E2E', image: images[0], images } });
+      }
+      if (url === CLIP) {
+        return route.fulfill({ json: { ...base, type: 'video', title: 'Um clipe', description: null, siteName: 'Vimeo', image: picture(1), images: [picture(1)], player: 'https://player.vimeo.com/video/76979871' } });
+      }
+      if (url === TRACK) {
+        return route.fulfill({ json: { ...base, type: 'audio', title: 'Uma faixa', description: null, siteName: 'SoundCloud', image: picture(2), images: [picture(2)], player: 'https://w.soundcloud.com/player/?visual=true&url=https%3A%2F%2Fapi.soundcloud.com%2Ftracks%2F1' } });
+      }
+      return route.continue();
+    });
+    // the players themselves, so the spec needs no internet: the
+    // Content-Security-Policy is checked before the request, so a frame that
+    // shows this page is one the policy allowed
+    await app.page.route(/^https:\/\/(player\.vimeo\.com|w\.soundcloud\.com)\//, (route) => route.fulfill({
+      contentType: 'text/html',
+      body: `<!doctype html><title>player</title><p>${new URL(route.request().url()).hostname}</p>`,
+    }));
+  }
+
+  test('an article gets its rich card, a page with several pictures a gallery that opens the viewer', async ({ users }) => {
+    const { a, b } = await twoInAChannel(users);
+    await stubPreviews(b);
+    await a.send(`leia ${ARTICLE}`);
+    const article = b.message('leia').locator('[data-embed-layout="article"]');
+    await expect(article.getByRole('link', { name: 'Uma matéria de teste' })).toBeVisible();
+    await expect(article.getByText('O resumo da matéria.')).toBeVisible();
+    await expect(article.locator('[data-embed-image] img').last()).toHaveAttribute('src', picture(1));
+
+    await a.send(`fotos ${GALLERY}`);
+    const gallery = b.message('fotos');
+    await expect(gallery.getByRole('button', { name: 'Abrir imagem 1 de 3' })).toBeVisible();
+    await gallery.getByRole('button', { name: 'Abrir imagem 2 de 3' }).click();
+    const viewer = b.page.getByRole('dialog', { name: 'Um álbum' });
+    await expect(viewer).toBeVisible();
+    await expect(viewer.getByText('2 / 3')).toBeVisible();
+  });
+
+  test("a message's attachment and its card's pictures open as one set: zoom, pick from the strip, download", async ({ users }, testInfo) => {
+    const { a, b } = await twoInAChannel(users);
+    await stubPreviews(b);
+    const file = testInfo.outputPath('pixel.png');
+    writeFileSync(file, PNG);
+    await a.page.locator('input[type=file]:not([accept])').setInputFiles(file);
+    await a.send(`tudo junto ${GALLERY}`);
+
+    const row = b.message('tudo junto');
+    // the card's preview has arrived, so its pictures are part of the set
+    await expect(row.getByRole('button', { name: 'Abrir imagem 1 de 3' })).toBeVisible();
+    await row.getByRole('button', { name: 'Abrir pixel.png' }).click();
+    const viewer = b.page.locator('[data-media-viewer]');
+    await expect(viewer.getByText('4 / 4')).toBeVisible();
+
+    await viewer.getByRole('button', { name: 'Aproximar' }).click();
+    await expect(viewer.getByText('125%')).toBeVisible();
+
+    await viewer.getByRole('option', { name: 'Um álbum, 1 de 4' }).click();
+    await expect(viewer.getByText('1 / 4')).toBeVisible();
+    await expect(viewer.getByRole('img', { name: 'Um álbum' })).toHaveAttribute('src', picture(1));
+    // a new item starts at rest
+    await expect(viewer.getByText('100%')).toBeVisible();
+
+    const [download] = await Promise.all([
+      b.page.waitForEvent('download'),
+      viewer.getByRole('button', { name: 'Baixar' }).click(),
+    ]);
+    expect(download.suggestedFilename()).toMatch(/^Um álbum/);
+  });
+
+  test("a card's own Vimeo and SoundCloud players load on a click, one at a time", async ({ users }) => {
+    const { a, b } = await twoInAChannel(users);
+    await stubPreviews(b);
+    await a.send(`ouça ${CLIP} ${TRACK}`);
+    const row = b.message('ouça');
+    await row.getByRole('button', { name: 'Reproduzir vídeo' }).click();
+    const vimeo = row.locator('iframe[title="Vimeo"]');
+    await expect(vimeo).toHaveAttribute('src', /^https:\/\/player\.vimeo\.com\/video\/76979871\?autoplay=1$/);
+    await expect(row.frameLocator('iframe[title="Vimeo"]').getByText('player.vimeo.com')).toBeVisible();
+
+    await row.getByRole('button', { name: 'SoundCloud: Clique para carregar o player' }).click();
+    await expect(vimeo).toHaveCount(0);
+    await expect(row.frameLocator('iframe[title="SoundCloud"]').getByText('w.soundcloud.com')).toBeVisible();
+    await expect(row.locator('iframe[title="SoundCloud"]')).toHaveAttribute('src', /visual=false/);
+  });
+
+  test('two YouTube links in one message: starting the second stops the first', async ({ users }) => {
+    const { a, b } = await twoInAChannel(users);
+    await a.send('dois vídeos https://youtu.be/dQw4w9WgXcQ https://youtu.be/9bZkp7q19f0');
+    const row = b.message('dois vídeos');
+    const play = row.getByRole('button', { name: 'Reproduzir vídeo' });
+    await expect(play).toHaveCount(2);
+    await play.first().click();
+    await expect(row.locator('iframe[title="YouTube"]')).toHaveAttribute('src', /\/embed\/dQw4w9WgXcQ/);
+    await row.getByRole('button', { name: 'Reproduzir vídeo' }).click();
+    await expect(row.locator('iframe[title="YouTube"]')).toHaveCount(1);
+    await expect(row.locator('iframe[title="YouTube"]')).toHaveAttribute('src', /\/embed\/9bZkp7q19f0/);
+    await expect(row.getByRole('button', { name: 'Reproduzir vídeo' })).toHaveCount(1);
   });
 });
 

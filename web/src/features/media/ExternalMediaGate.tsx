@@ -1,6 +1,6 @@
 import { MusicNoteIcon, PlayIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { cn } from '@/shared/lib/utils';
@@ -15,6 +15,8 @@ interface ExternalMediaGateProps {
   className?: string;
   /** a proxied still to show behind the button (a page's og:image) */
   poster?: string | null;
+  /** the box the player will take, when it is known, so the click does not resize the row */
+  style?: CSSProperties;
   /** the player, rendered only once the reader asks for it */
   children: ReactNode;
 }
@@ -23,7 +25,7 @@ interface ExternalMediaGateProps {
  * streaming proxy), so it is not touched until the reader asks: a player
  * fetches metadata on mount, which would hand every reader's IP address to
  * whoever posted the link. */
-export function ExternalMediaGate({ url, kind, className = '', poster, children }: ExternalMediaGateProps) {
+export function ExternalMediaGate({ url, kind, className = '', poster, style, children }: ExternalMediaGateProps) {
   const { t } = useTranslation('media');
   const [loaded, setLoaded] = useState(false);
   if (loaded) return <>{children}</>;
@@ -34,6 +36,7 @@ export function ExternalMediaGate({ url, kind, className = '', poster, children 
     <button
       type="button"
       onClick={() => setLoaded(true)}
+      style={style}
       className={cn('relative flex w-full max-w-sm items-center gap-3 overflow-hidden rounded-md border border-border bg-bg-tertiary px-3 py-2.5 text-left transition-colors hover:bg-bg-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50', poster && 'aspect-video justify-center', className)}
     >
       {poster && <img src={poster} alt="" className="absolute inset-0 size-full object-cover opacity-60" />}

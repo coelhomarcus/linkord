@@ -273,10 +273,62 @@ describe('useCallLifecycle — reconnecting after the server lost the call', () 
     expect(sendWs).toHaveBeenCalledWith({ t: 'call-leave' });
   });
 
+  it('does not join again when the account took its call to another tab meanwhile', async () => {
+    const { result, sendWs, livekitRoom } = await connectedTo('c1');
+    await act(async () => { result.current.reconcileAfterReconnect(null, () => false, true); });
+    await vi.waitFor(() => expect(result.current.activeCallConversationId).toBeNull());
+    expect(livekitRoom.disconnect).toHaveBeenCalled();
+    expect(sendWs).not.toHaveBeenCalledWith(expect.objectContaining({ t: 'call-join' }));
+  });
+
   it('leaves a direct call for good when the server forgot it', async () => {
     const { result, sendWs } = await connectedTo('dm1');
     await act(async () => { result.current.reconcileAfterReconnect(null, (id) => id === 'dm1'); });
     await vi.waitFor(() => expect(result.current.activeCallConversationId).toBeNull());
     expect(sendWs).not.toHaveBeenCalledWith({ t: 'call-join', conversationId: 'dm1' });
+  });
+});
+
+describe('useCallLifecycle — one call per account', () => {
+  it('a join confirmed by the person asks the server to replace the call held elsewhere', async () => {
+    const { result, sendWs } = setup();
+    await act(async () => { await result.current.joinCall('c1', { replace: true }); });
+    expect(sendWs).toHaveBeenCalledWith({ t: 'call-join', conversationId: 'c1', replace: true });
+  });
+
+  it('an ordinary join does not', async () => {
+    const { result, sendWs } = setup();
+    await act(async () => { await result.current.joinCall('c1'); });
+    expect(sendWs).toHaveBeenCalledWith({ t: 'call-join', conversationId: 'c1' });
+  });
+
+  it('another tab taking the call drops this tab\'s media and shows it out of the call', async () => {
+    const { result, livekitRoom } = setup();
+    await act(async () => { await result.current.joinCall('c1'); });
+    await act(async () => { result.current.onCallToken(token); });
+    await vi.waitFor(() => expect(result.current.activeCallConversationId).toBe('c1'));
+
+    await act(async () => { result.current.onCallReplaced('c1'); });
+
+    await vi.waitFor(() => expect(result.current.activeCallConversationId).toBeNull());
+    expect(livekitRoom.disconnect).toHaveBeenCalled();
+  });
+
+  it('a token that arrives after the call was taken elsewhere is ignored', async () => {
+    const { result, livekitRoom } = setup();
+    await act(async () => { await result.current.joinCall('c1'); });
+    act(() => { result.current.onCallReplaced('c1'); });
+    await act(async () => { result.current.onCallToken(token); });
+    expect(livekitRoom.connect).not.toHaveBeenCalled();
+  });
+
+  it('a join refused because of the call elsewhere is dropped without an error', async () => {
+    const { result, dispatch, livekitRoom } = setup();
+    await act(async () => { await result.current.joinCall('c1'); });
+    dispatch.mockClear();
+    act(() => { result.current.abandonPendingJoin(); });
+    await act(async () => { result.current.onCallToken(token); });
+    expect(dispatch).not.toHaveBeenCalled();
+    expect(livekitRoom.connect).not.toHaveBeenCalled();
   });
 });

@@ -102,7 +102,7 @@ describe('MessageMedia', () => {
     const dialog = screen.getByRole('dialog');
     expect(within(dialog).getByText('2 / 3')).toBeInTheDocument();
     expect(within(dialog).getByRole('img', { name: 'b.png' })).toHaveAttribute('src', '/uploads/b');
-    expect(within(dialog).getByRole('link', { name: 'Baixar original' })).toHaveAttribute('href', '/uploads/b');
+    expect(within(dialog).getByRole('link', { name: 'Abrir original' })).toHaveAttribute('href', '/uploads/b');
 
     fireEvent.click(within(dialog).getByRole('button', { name: 'Próxima' }));
     expect(within(dialog).getByText('3 / 3')).toBeInTheDocument();

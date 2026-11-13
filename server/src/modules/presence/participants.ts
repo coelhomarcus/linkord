@@ -10,7 +10,7 @@ import { runSerialized } from './profileQueue.js';
 import { effectiveStatus, getAccountStatus, isInvisible, type CustomStatus, type PresenceStatus, type VisibleStatus } from './userStatus.js';
 import type { AppSocket, HandlerTable, Participant, PublicParticipant, SessionUser } from '../../types.js';
 import { logger } from '../../lib/logger.js';
-import { MIC_STARTING_PROTOCOL_VERSION } from '../../realtime/protocolVersion.js';
+import { CALL_ELSEWHERE_PROTOCOL_VERSION, MIC_STARTING_PROTOCOL_VERSION } from '../../realtime/protocolVersion.js';
 
 const log = logger.child({ component: 'presence' });
 
@@ -97,6 +97,7 @@ function createParticipant(u: ParticipantProfile, id: string, token: string, soc
     micMuted: true,
     micStarting: false,
     reportsMicStarting: false,
+    knowsCallElsewhere: false,
     cameraOn: false,
     sharing: false,
     speaking: false,
@@ -143,6 +144,8 @@ export function publicParticipant(p: Participant): PublicParticipant {
  * notifies everyone. Also resets self-reported media flags: a fresh join/leave
  * means previous call state no longer applies. */
 export function setCallConversationId(p: Participant, conversationId: string | null): void {
+  // before this connection shows up in its new call, so nobody sees the account in two at once
+  if (conversationId) releaseCallsElsewhere(p, conversationId);
   const wasHidden = hiddenFromPeers(p);
   const previous = p.callConversationId;
   p.callConversationId = conversationId;
@@ -164,6 +167,43 @@ export function setCallConversationId(p: Participant, conversationId: string | n
   // connection now, and forget it again when it leaves; its own tabs always knew it
   sendToUser(p.userId, { t: 'participant-updated', participant: publicParticipant(p) });
   broadcastToPeers(p.userId, hidden ? { t: 'participant-left', id: p.id } : { t: 'participant-joined', participant: publicParticipant(p) });
+}
+
+/** Another connection of the same account that is in a call. A ghost in its reconnect grace counts:
+ * its media may still be up, and its client is on its way back to that call. */
+export function callHeldElsewhere(p: Participant): Participant | null {
+  for (const other of participants.values()) {
+    if (other.id !== p.id && other.userId === p.userId && other.callConversationId) return other;
+  }
+  return null;
+}
+
+/** Hears that a connection lost its call to another connection of the same account. `next` is the
+ * call that connection is entering (null when it only rang one): the DM module ends a direct call
+ * the account walked out of, and keeps one that only moved to another tab. */
+let onCallReplaced: ((evicted: Participant, conversationId: string, next: string | null) => void) | null = null;
+export function setCallReplacedHook(fn: ((evicted: Participant, conversationId: string, next: string | null) => void) | null): void {
+  onCallReplaced = fn;
+}
+
+/** An account is in one call at a time, across every tab and device: takes every other connection of
+ * `p`'s account out of its call and tells that tab why, so it drops its media instead of reading the
+ * removal as a network failure. */
+export function releaseCallsElsewhere(p: Participant, next: string | null): void {
+  for (const other of [...participants.values()]) {
+    if (other.id === p.id || other.userId !== p.userId || !other.callConversationId) continue;
+    const conversationId = other.callConversationId;
+    setCallConversationId(other, null);
+    send(other.socket, { t: 'call-replaced', conversationId });
+    onCallReplaced?.(other, conversationId, next);
+  }
+}
+
+/** The answer to a call request refused because the account is in a call elsewhere: a tab that knows
+ * the code offers to move the call; an older one shows the message as a refused join. */
+export function refuseCallElsewhere(p: Participant): void {
+  const message = 'Sua conta já está em uma chamada em outra aba ou dispositivo.';
+  sendSocketError(p.socket, p.knowsCallElsewhere ? 'call-elsewhere' : 'call-not-allowed', message);
 }
 
 /** An invisible account's connection outside any call: nobody but the account itself hears about it.
@@ -459,6 +499,7 @@ export function join(socket: AppSocket, msg: JoinMessage): { participant: Partic
   socket.participantId = p.id;
   // a resume may come from a reloaded tab on another build
   p.reportsMicStarting = typeof msg.v === 'number' && msg.v >= MIC_STARTING_PROTOCOL_VERSION;
+  p.knowsCallElsewhere = typeof msg.v === 'number' && msg.v >= CALL_ELSEWHERE_PROTOCOL_VERSION;
   // caller (handleJoin, realtime/socket.ts) computes p.knownPeerIds and
   // broadcasts 'user-online' itself — that field doesn't exist yet here.
   return { participant: p, justCameOnline: !wasOnline };
