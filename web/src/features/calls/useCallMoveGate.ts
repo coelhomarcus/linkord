@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 /** A request to enter a call; `replace` tells the server the person agreed to move the account's call here. */
-export type CallAttempt = (replace: boolean) => void;
+type CallAttempt = (replace: boolean) => void;
 
 /** Asks before a call request takes the account's call away from another tab or device. A request
  * goes out at once when nothing is held elsewhere; otherwise it waits for `confirm`. If the server
