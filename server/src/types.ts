@@ -66,6 +66,8 @@ export interface Participant {
   micStarting: boolean;
   // only clients from protocol 18 clear micStarting, so an older tab never starts in that state
   reportsMicStarting: boolean;
+  // only clients from protocol 20 understand a `call-elsewhere` refusal; an older tab gets `call-not-allowed`
+  knowsCallElsewhere: boolean;
   cameraOn: boolean;
   sharing: boolean;
   speaking: boolean;

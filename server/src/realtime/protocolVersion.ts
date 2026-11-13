@@ -40,11 +40,19 @@
 // when the account changes one in any tab. An old tab ignores them all and
 // keeps every sound and badge (pushes follow the setting on the server either way), so the minimum
 // stays at 7.
+// Version 20 keeps an account in one call at a time. `call-join`, `dm-call-start` and `dm-call-accept`
+// take an optional `replace`; without it, a request from an account already in a call on another
+// connection is refused with `call-elsewhere` (a version 20 tab offers to move the call) or, for an
+// older tab, the `call-not-allowed` it already shows as a refused join. The connection that loses its
+// call gets `call-replaced`; an older tab ignores it and leaves when LiveKit removes it from the room.
+// The welcome and `presence-sync` now list the account's own other connections, which old tabs already
+// received through `participant-joined`. So the minimum stays at 7.
 // Raising MIN_PROTOCOL_VERSION also drops open tabs out of their calls (they are refused and
 // disconnect), so keep it for changes an old client cannot tolerate.
-export const PROTOCOL_VERSION = 19;
+export const PROTOCOL_VERSION = 20;
 export const MIN_PROTOCOL_VERSION = 7;
 export const MIC_STARTING_PROTOCOL_VERSION = 18;
+export const CALL_ELSEWHERE_PROTOCOL_VERSION = 20;
 
 export function isClientCompatible(version: unknown): boolean {
   return typeof version === 'number' && Number.isInteger(version) && version >= MIN_PROTOCOL_VERSION;
