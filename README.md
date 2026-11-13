@@ -22,6 +22,7 @@ Linkord is a self-hosted place to chat and call with friends. Talk in direct mes
 - Replies, reactions, edits, deletes, and message search.
 - Attachments, voice messages, and link cards: rich previews with galleries, YouTube and Twitch players (one playing at a time), and `||spoiler||` text and links.
 - A video player with keyboard shortcuts (Space/K, J/L, arrows, M, F, 0–9), playback speed, picture-in-picture, a frame preview when hovering the timeline, and one saved volume for every player; uploaded videos keep their shape before they load.
+- A media viewer that opens a message's pictures, link-card images, GIFs and videos as one set: zoom (wheel, pinch, double-click), pan and rotate, a thumbnail strip, download, open original, copy link or image, reply and jump to the message; swipe between items and back to close on phones.
 - Mentions of members, roles, `@everyone` and `@here`.
 - Emojis, GIFs, and stickers, plus custom emojis and stickers per server.
 - Unread markers that sync across tabs and devices.

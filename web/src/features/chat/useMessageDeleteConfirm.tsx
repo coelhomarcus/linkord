@@ -6,7 +6,7 @@ import { useRoom } from '@/state/RoomContext';
 /** A deleted message is gone for everyone with no undo, so every delete entry
  * point asks first. Shift held while clicking skips the question — the way
  * out for someone clearing several messages in a row. */
-export function useMessageDeleteConfirm() {
+export function useMessageDeleteConfirm({ onConfirmed }: { onConfirmed?: () => void } = {}) {
   const { t } = useTranslation('chat');
   const { deleteChatMessage } = useRoom();
   // kept after closing so the text doesn't change while the dialog fades out
@@ -31,7 +31,10 @@ export function useMessageDeleteConfirm() {
         : t('deleteConfirm.description')}
       confirmLabel={t('deleteConfirm.confirm')}
       destructive
-      onConfirm={() => { if (target) void deleteChatMessage(target.msgId); }}
+      onConfirm={() => {
+        if (target) void deleteChatMessage(target.msgId);
+        onConfirmed?.();
+      }}
     />
   );
 

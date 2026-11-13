@@ -6,8 +6,9 @@ const SWIPE_POINTER_TYPES = ['touch', 'pen'] as const;
 
 export interface HorizontalSwipeOptions {
   enabled?: boolean;
-  /** Which way the finger must travel after the lock. The other way aborts. */
-  direction: 'left' | 'right';
+  /** Which way the finger must travel after the lock. The other way aborts;
+   * `either` takes both (the media viewer's previous/next). */
+  direction: 'left' | 'right' | 'either';
   commitPx?: number;
   shouldStart?: (event: PointerEvent | ReactPointerEvent<Element>) => boolean;
   onMove?: (dx: number) => void;
@@ -97,7 +98,7 @@ export function useHorizontalSwipe(options: HorizontalSwipeOptions) {
           abort();
           return;
         }
-        const wanted = current.direction === 'right' ? dx > 0 : dx < 0;
+        const wanted = current.direction === 'either' || (current.direction === 'right' ? dx > 0 : dx < 0);
         if (!wanted) {
           abort();
           return;
@@ -115,7 +116,8 @@ export function useHorizontalSwipe(options: HorizontalSwipeOptions) {
       if (!active) return;
       const dx = up.clientX - active.x;
       const commitPx = optionsRef.current.commitPx ?? SWIPE.drawerCommitPx;
-      const travelled = optionsRef.current.direction === 'right' ? dx : -dx;
+      const { direction } = optionsRef.current;
+      const travelled = direction === 'either' ? Math.abs(dx) : direction === 'right' ? dx : -dx;
       finish(dx, active.claimed && travelled >= commitPx);
     };
     const onCancel = (cancel: PointerEvent) => {

@@ -9,7 +9,9 @@ import type { LinkPreviewData } from '@/shared/api/api';
 import { availableAttachmentWidth, useChatSurfaceWidth } from '@/shared/lib/chatSurfaceWidth';
 import { cn } from '@/shared/lib/utils';
 import { MediaViewerProvider } from '@/features/chat/MediaViewerProvider';
-import { useMediaViewer } from '@/features/chat/useMediaViewer';
+import { useMediaViewer, useOpenMedia } from '@/features/chat/useMediaViewer';
+import { embedViewerItems } from './viewer/embedViewerItems';
+import { hoverWarmHandlers } from './viewer/hoverWarm';
 import { AltTextBadge } from './AltTextBadge';
 import { EmbedGallery } from './EmbedGallery';
 import { EmbedMenuButton } from './EmbedMenuButton';
@@ -70,7 +72,7 @@ export function GenericEmbed(props: GenericEmbedProps) {
 }
 
 function GenericEmbedCard({ embed, className = '', edgeToEdge, preview, menu }: GenericEmbedProps) {
-  const viewer = useMediaViewer();
+  const openMedia = useOpenMedia();
   const cardBorderClass = edgeToEdge ? 'rounded-lg border-0' : 'rounded-md border border-border';
   const surfaceWidth = useChatSurfaceWidth(384 + 120);
   const maxWidth = availableAttachmentWidth(surfaceWidth, 384);
@@ -145,7 +147,7 @@ function GenericEmbedCard({ embed, className = '', edgeToEdge, preview, menu }: 
   const favicon = !faviconFailed && data.favicon && canLoadMediaUrl(data.favicon) ? proxiedImageVariant(data.favicon, { width: FAVICON_PX }) : null;
   const images = (data.images?.length ? data.images : image ? [image] : []).filter((src) => canLoadMediaUrl(src));
   const title = data.title || siteName;
-  const openImage = (index: number) => viewer?.open(images.map((src) => ({ src, name: title })), index);
+  const openImage = (index: number) => openMedia(embedViewerItems(embed, data), index);
   const alt = data.imageAlt?.trim() || null;
 
   // a plain link's single picture sits on the right as a thumbnail; otherwise
@@ -153,7 +155,7 @@ function GenericEmbedCard({ embed, className = '', edgeToEdge, preview, menu }: 
   const asThumbnail = layout === 'link' && images.length === 1;
   const picture = drawnImage && !imageFailed ? (
     <ImageFrame size={asThumbnail ? null : previewImageSize(data)} fill={asThumbnail}>
-      <button type="button" onClick={() => openImage(0)} aria-label={alt ?? title} className="block size-full cursor-zoom-in outline-none focus-visible:ring-3 focus-visible:ring-inset focus-visible:ring-ring/50">
+      <button type="button" onClick={() => openImage(0)} {...hoverWarmHandlers(images[0], { animated: data.imageAnimated })} aria-label={alt ?? title} className="block size-full cursor-zoom-in outline-none focus-visible:ring-3 focus-visible:ring-inset focus-visible:ring-ring/50">
         <PreviewImage src={drawnImage} placeholder={data.imagePlaceholder} alt={alt ?? ''} onError={() => setImageFailed(true)} className="size-full object-cover" />
       </button>
       {alt && <AltTextBadge text={alt} />}

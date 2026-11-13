@@ -26,6 +26,7 @@ import { useHiddenTabPause } from './useHiddenTabPause';
 import { usePictureInPicture } from './usePictureInPicture';
 import { differentShape, INLINE_VIDEO_MAX_HEIGHT, INLINE_VIDEO_MAX_WIDTH, isKnownSize, videoBoxStyle } from './videoBox';
 import type { VideoSize } from './videoBox';
+import type { PlaybackPosition } from './viewer/viewerItem';
 
 function sliderValue(value: number | readonly number[]): number {
   return typeof value === 'number' ? value : (value[0] ?? 0);
@@ -271,6 +272,15 @@ interface VideoPlayerProps {
   title?: string;
   className?: string;
   onError?: () => void;
+  /** the expand button hands the video to a viewer instead of the player's own fullscreen (a
+   * message's media viewer): where it was, and whether it was playing */
+  onExpand?: (at: PlaybackPosition) => void;
+  /** drawn inside a viewer: the box it may fill, and no expand button of its own */
+  fit?: { maxWidth: number; maxHeight: number };
+  /** carry on from here (the inline player the viewer was opened from) */
+  startAt?: PlaybackPosition;
+  /** start playing once it can, as a viewer opened on it does */
+  autoPlay?: boolean;
 }
 
 export function VideoPlayer(props: VideoPlayerProps) {
@@ -283,7 +293,8 @@ interface VideoChromeProps {
   rootRef?: RefObject<HTMLDivElement | null>;
   controls: MediaControls;
   pip: ReturnType<typeof usePictureInPicture>;
-  onToggleExpanded: () => void;
+  /** absent inside a viewer, which is already as large as it gets */
+  onToggleExpanded?: () => void;
   poster: string | null;
   placeholder: string | null;
   showPoster: boolean;
@@ -322,7 +333,7 @@ function VideoChrome({
       case 'seekToFraction': controls.seekToFraction(action.fraction); break;
       case 'volumeBy': controls.changeVolumeBy(action.step); break;
       case 'toggleMute': controls.toggleMute(); break;
-      case 'toggleExpanded': onToggleExpanded(); break;
+      case 'toggleExpanded': onToggleExpanded?.(); break;
       case 'none': break;
     }
   }
@@ -429,9 +440,11 @@ function VideoChrome({
             <MediaButton label={t('player.download')} onClick={() => downloadFile(src, title || t('player.video'))}>
               <DownloadSimpleIcon size={15} />
             </MediaButton>
-            <MediaButton label={variant === 'mini' ? t('player.fullscreen') : t('player.exitFullscreen')} onClick={onToggleExpanded}>
-              {variant === 'mini' ? <ArrowsOutIcon size={15} /> : <ArrowsInIcon size={15} />}
-            </MediaButton>
+            {onToggleExpanded && (
+              <MediaButton label={variant === 'mini' ? t('player.fullscreen') : t('player.exitFullscreen')} onClick={onToggleExpanded}>
+                {variant === 'mini' ? <ArrowsOutIcon size={15} /> : <ArrowsInIcon size={15} />}
+              </MediaButton>
+            )}
           </div>
         </div>
       </div>
@@ -446,7 +459,7 @@ function VideoChrome({
 // A portal whose *target* changes gets unmounted and remounted by React —
 // which reset playback to 0:00 — so the target has to stay the same object
 // forever and the actual move has to happen outside React's reconciliation.
-function VideoPlayerImpl({ src, poster, placeholder, width, height, title, className, onError }: VideoPlayerProps) {
+function VideoPlayerImpl({ src, poster, placeholder, width, height, title, className, onError, onExpand, fit, startAt, autoPlay }: VideoPlayerProps) {
   const { t } = useTranslation('media');
   const controls = useMediaControls<HTMLVideoElement>();
   const { ref: videoRef, sync, setWaiting } = controls;
@@ -491,10 +504,18 @@ function VideoPlayerImpl({ src, poster, placeholder, width, height, title, class
 
   useEffect(() => () => { hostRef.current?.remove(); }, []);
 
+  // the position it was opened at is applied once, on the first metadata
+  const startPendingRef = useRef(!!startAt || !!autoPlay);
+
   function handleLoadedMetadata() {
     sync();
     const video = videoRef.current;
     if (!video) return;
+    if (startPendingRef.current) {
+      startPendingRef.current = false;
+      if (startAt && startAt.time > 0) video.currentTime = startAt.time;
+      if (startAt ? startAt.playing : autoPlay) void video.play().catch(() => {});
+    }
     const real = { width: video.videoWidth, height: video.videoHeight };
     if (!isKnownSize(real) || (natural && !differentShape(real, natural))) return;
     if (natural) setPosterFits(false);
@@ -502,6 +523,7 @@ function VideoPlayerImpl({ src, poster, placeholder, width, height, title, class
   }
 
   function boxStyleFor(variant: 'mini' | 'fullscreen'): CSSProperties {
+    if (fit && variant === 'mini') return videoBoxStyle(natural, fit.maxWidth, fit.maxHeight);
     return variant === 'mini'
       ? videoBoxStyle(natural, availableAttachmentWidth(surfaceWidth, INLINE_VIDEO_MAX_WIDTH), INLINE_VIDEO_MAX_HEIGHT)
       : videoBoxStyle(natural, Math.min(viewport.width - 64, 1152), viewport.height * 0.8);
@@ -524,7 +546,14 @@ function VideoPlayerImpl({ src, poster, placeholder, width, height, title, class
         {...chromeProps}
         variant="mini"
         portalHostRef={miniAnchorRef}
-        onToggleExpanded={() => setLightboxOpen(true)}
+        onToggleExpanded={fit ? undefined : () => {
+          if (!onExpand) { setLightboxOpen(true); return; }
+          const video = videoRef.current;
+          const at = { time: video?.currentTime ?? 0, playing: !!video && !video.paused };
+          // one copy plays at a time: the viewer's carries on from here
+          video?.pause();
+          onExpand(at);
+        }}
         className={className}
         style={boxStyleFor('mini')}
       />

@@ -15,9 +15,26 @@
   "collection": {
     "itemPosition": "{{name}}, {{index}} de {{total}}",
     "image": "Imagem",
-    "downloadOriginal": "Baixar original",
     "previous": "Anterior",
     "next": "Próxima"
+  },
+  "viewer": {
+    "download": "Baixar",
+    "openOriginal": "Abrir original",
+    "copyLink": "Copiar link",
+    "copyImage": "Copiar imagem",
+    "moreActions": "Mais ações",
+    "thumbnails": "Mídias da mensagem",
+    "zoomControls": "Zoom",
+    "zoomIn": "Aproximar",
+    "zoomOut": "Afastar",
+    "reset": "Tamanho original",
+    "rotateLeft": "Girar para a esquerda",
+    "rotateRight": "Girar para a direita",
+    "reply": "Responder",
+    "jumpToMessage": "Ir para a mensagem",
+    "removeAttachment": "Remover anexo",
+    "deleteMessage": "Excluir mensagem"
   },
   "embed": {
     "previewFailed": "Não foi possível carregar a prévia.",

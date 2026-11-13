@@ -3,7 +3,8 @@ import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { MediaViewerProvider } from '@/features/chat/MediaViewerProvider';
-import { useMediaViewer } from '@/features/chat/useMediaViewer';
+import { gifViewerItem } from '@/features/chat/messageViewerItems';
+import { useMediaViewer, useOpenMedia } from '@/features/chat/useMediaViewer';
 import { useInView } from '@/features/media/useInView';
 import { useNearViewport } from '@/features/media/useNearViewport';
 
@@ -14,13 +15,14 @@ import { useNearViewport } from '@/features/media/useNearViewport';
  * does not move; back on screen it comes from the browser's cache. Click opens
  * it in the same viewer as the chat's other pictures. */
 export function GifMessage({ url }: { url: string }) {
-  const viewer = useMediaViewer();
-  if (!viewer) return <MediaViewerProvider><GifMessage url={url} /></MediaViewerProvider>;
-  return <GifMessageBody url={url} open={() => viewer.open([{ src: url, name: 'GIF' }], 0)} />;
+  if (!useMediaViewer()) return <MediaViewerProvider><GifMessageBody url={url} /></MediaViewerProvider>;
+  return <GifMessageBody url={url} />;
 }
 
-function GifMessageBody({ url, open }: { url: string; open: () => void }) {
+function GifMessageBody({ url }: { url: string }) {
   const { t } = useTranslation('gifs');
+  const openMedia = useOpenMedia();
+  const open = () => openMedia([gifViewerItem(url)], 0);
   const [failed, setFailed] = useState(false);
   const boxRef = useRef<HTMLButtonElement | null>(null);
   const near = useNearViewport(boxRef);

@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { mosaicLayout } from '@/features/chat/mediaLayout';
 import { proxiedImageVariant } from '@/shared/lib/mediaProxy';
+import { hoverWarmHandlers } from './viewer/hoverWarm';
 
 // the mosaic shows at most this many; the last cell counts the rest
 const MAX_CELLS = 4;
@@ -25,6 +26,7 @@ export function EmbedGallery({ images, width, onOpen }: { images: string[]; widt
             key={src}
             type="button"
             onClick={() => onOpen(index)}
+            {...hoverWarmHandlers(src)}
             aria-label={more ? t('embed.galleryMore', { count: hidden }) : t('embed.galleryImage', { index: index + 1, count: images.length })}
             style={{ gridArea: layout.areas[index] }}
             className="relative min-h-0 min-w-0 cursor-zoom-in overflow-hidden bg-fill-subtle outline-none focus-visible:ring-3 focus-visible:ring-inset focus-visible:ring-ring/50"

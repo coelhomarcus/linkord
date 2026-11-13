@@ -193,6 +193,37 @@ test.describe('link cards', () => {
     await expect(viewer.getByText('2 / 3')).toBeVisible();
   });
 
+  test("a message's attachment and its card's pictures open as one set: zoom, pick from the strip, download", async ({ users }, testInfo) => {
+    const { a, b } = await twoInAChannel(users);
+    await stubPreviews(b);
+    const file = testInfo.outputPath('pixel.png');
+    writeFileSync(file, PNG);
+    await a.page.locator('input[type=file]:not([accept])').setInputFiles(file);
+    await a.send(`tudo junto ${GALLERY}`);
+
+    const row = b.message('tudo junto');
+    // the card's preview has arrived, so its pictures are part of the set
+    await expect(row.getByRole('button', { name: 'Abrir imagem 1 de 3' })).toBeVisible();
+    await row.getByRole('button', { name: 'Abrir pixel.png' }).click();
+    const viewer = b.page.locator('[data-media-viewer]');
+    await expect(viewer.getByText('4 / 4')).toBeVisible();
+
+    await viewer.getByRole('button', { name: 'Aproximar' }).click();
+    await expect(viewer.getByText('125%')).toBeVisible();
+
+    await viewer.getByRole('option', { name: 'Um álbum, 1 de 4' }).click();
+    await expect(viewer.getByText('1 / 4')).toBeVisible();
+    await expect(viewer.getByRole('img', { name: 'Um álbum' })).toHaveAttribute('src', picture(1));
+    // a new item starts at rest
+    await expect(viewer.getByText('100%')).toBeVisible();
+
+    const [download] = await Promise.all([
+      b.page.waitForEvent('download'),
+      viewer.getByRole('button', { name: 'Baixar' }).click(),
+    ]);
+    expect(download.suggestedFilename()).toMatch(/^Um álbum/);
+  });
+
   test('two YouTube links in one message: starting the second stops the first', async ({ users }) => {
     const { a, b } = await twoInAChannel(users);
     await a.send('dois vídeos https://youtu.be/dQw4w9WgXcQ https://youtu.be/9bZkp7q19f0');

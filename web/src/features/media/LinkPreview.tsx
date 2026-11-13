@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 
 import type { DetectedEmbed } from '@/shared/lib/chatEmbeds';
-import { ImageLightbox } from './ImageLightbox';
 import { ExternalMediaGate } from './ExternalMediaGate';
 import { GenericEmbed } from './GenericEmbed';
 import { AudioPlayer, VideoPlayer } from './MediaPlayers';
@@ -17,6 +16,10 @@ import { canLoadMediaUrl } from './mediaUrl';
 import { PreviewImage } from './PreviewImage';
 import { EmbedMenuButton } from './EmbedMenuButton';
 import { useAnimatedVariant } from './useAnimatedVariant';
+import { MediaViewerProvider } from '@/features/chat/MediaViewerProvider';
+import { useMediaViewer, useOpenMedia } from '@/features/chat/useMediaViewer';
+import { directImageViewerItem } from './viewer/embedViewerItems';
+import { hoverWarmHandlers } from './viewer/hoverWarm';
 
 type ProxiedImage = { src: string | null; size: ImageSize | null; placeholder: string | null; animated: boolean; failed: boolean };
 
@@ -93,9 +96,15 @@ interface LinkPreviewProps {
   menu?: boolean;
 }
 
-export function LinkPreview({ embed, className = '', edgeToEdge, fitContainer, preview, imageUrl, menu }: LinkPreviewProps) {
+export function LinkPreview(props: LinkPreviewProps) {
+  // a picture opens in the chat surface's viewer; on its own (a test, the media grid) it brings one
+  if (!useMediaViewer()) return <MediaViewerProvider><LinkPreviewCard {...props} /></MediaViewerProvider>;
+  return <LinkPreviewCard {...props} />;
+}
+
+function LinkPreviewCard({ embed, className = '', edgeToEdge, fitContainer, preview, imageUrl, menu }: LinkPreviewProps) {
   const [failed, setFailed] = useState(false);
-  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const openMedia = useOpenMedia();
   const surfaceWidth = useChatSurfaceWidth(384 + 120);
   const maxWidth = availableAttachmentWidth(surfaceWidth, 384);
   const boxRef = useRef<HTMLButtonElement | null>(null);
@@ -130,30 +139,32 @@ export function LinkPreview({ embed, className = '', edgeToEdge, fitContainer, p
   }
 
   const rounding = edgeToEdge ? 'rounded-lg' : 'rounded-md border border-border';
+  const openImage = () => {
+    if (!image.src) return;
+    openMedia([directImageViewerItem(embed.url, { src: image.src, width: image.size?.width, height: image.size?.height, placeholder: image.placeholder, animated: image.animated })], 0);
+  };
   return (
-    <>
-      <div className={`group/embed relative max-w-full ${fitContainer ? 'w-full' : 'w-fit'}`}>
-        <button
-          ref={boxRef}
-          type="button"
-          onClick={() => setLightboxOpen(true)}
-          style={fitContainer ? undefined : { width: box.width, maxWidth: '100%', height: box.height }}
-          className={`block max-w-full cursor-zoom-in ${fitContainer ? '' : `overflow-hidden bg-fill-subtle ${rounding}`} ${className}`}
-        >
-          <PreviewImage
-            src={drawnSrc ?? undefined}
-            placeholder={image.placeholder}
-            frameClassName={fitContainer ? '' : 'size-full'}
-            onError={() => setFailed(true)}
-            // a known size means the box has the picture's own proportions, so it
-            // is filled (a pixel of rounding cropped at most); an unknown one is
-            // only fitted inside the fallback box, whatever shape it turns out to be
-            className={fitContainer ? `block h-auto max-h-70 max-w-full w-full object-contain ${rounding}` : `block size-full ${knownSize ? 'object-cover' : 'object-contain'}`}
-          />
-        </button>
-        {menu && <EmbedMenuButton />}
-      </div>
-      {image.src && <ImageLightbox src={image.src} alt="" open={lightboxOpen} onOpenChange={setLightboxOpen} />}
-    </>
+    <div className={`group/embed relative max-w-full ${fitContainer ? 'w-full' : 'w-fit'}`}>
+      <button
+        ref={boxRef}
+        type="button"
+        onClick={openImage}
+        {...hoverWarmHandlers(image.src, { animated: image.animated })}
+        style={fitContainer ? undefined : { width: box.width, maxWidth: '100%', height: box.height }}
+        className={`block max-w-full cursor-zoom-in ${fitContainer ? '' : `overflow-hidden bg-fill-subtle ${rounding}`} ${className}`}
+      >
+        <PreviewImage
+          src={drawnSrc ?? undefined}
+          placeholder={image.placeholder}
+          frameClassName={fitContainer ? '' : 'size-full'}
+          onError={() => setFailed(true)}
+          // a known size means the box has the picture's own proportions, so it
+          // is filled (a pixel of rounding cropped at most); an unknown one is
+          // only fitted inside the fallback box, whatever shape it turns out to be
+          className={fitContainer ? `block h-auto max-h-70 max-w-full w-full object-contain ${rounding}` : `block size-full ${knownSize ? 'object-cover' : 'object-contain'}`}
+        />
+      </button>
+      {menu && <EmbedMenuButton />}
+    </div>
   );
 }

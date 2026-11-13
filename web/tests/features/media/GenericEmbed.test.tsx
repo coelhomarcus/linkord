@@ -76,7 +76,8 @@ describe('gallery', () => {
     expect(within(more).getByText('+2')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Abrir imagem 3 de 6' }));
-    expect(await screen.findByLabelText('Título, 3 de 6')).toBeInTheDocument();
+    const viewer = await screen.findByRole('dialog', { name: 'Título' });
+    expect(within(viewer).getByText('3 / 6')).toBeInTheDocument();
   });
 });
 

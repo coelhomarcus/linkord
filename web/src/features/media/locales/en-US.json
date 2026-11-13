@@ -15,9 +15,26 @@
   "collection": {
     "itemPosition": "{{name}}, {{index}} of {{total}}",
     "image": "Image",
-    "downloadOriginal": "Download original",
     "previous": "Previous",
     "next": "Next"
+  },
+  "viewer": {
+    "download": "Download",
+    "openOriginal": "Open original",
+    "copyLink": "Copy link",
+    "copyImage": "Copy image",
+    "moreActions": "More actions",
+    "thumbnails": "Message media",
+    "zoomControls": "Zoom",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "reset": "Original size",
+    "rotateLeft": "Rotate left",
+    "rotateRight": "Rotate right",
+    "reply": "Reply",
+    "jumpToMessage": "Go to message",
+    "removeAttachment": "Remove attachment",
+    "deleteMessage": "Delete message"
   },
   "embed": {
     "previewFailed": "Could not load the preview.",

@@ -7,8 +7,11 @@ import { cn } from '@/shared/lib/utils';
 import { ChatAttachment } from './ChatAttachment';
 import { placeholderDataUrl } from '@/shared/lib/placeholderImage';
 import { MEDIA_MAX_WIDTH, mosaicLayout, singleImageBox, splitAttachments } from './mediaLayout';
+import { hoverWarmHandlers } from '@/features/media/viewer/hoverWarm';
+import type { ViewerItem } from '@/features/media/viewer/viewerItem';
 import { MediaViewerProvider } from './MediaViewerProvider';
-import { useMediaViewer } from './useMediaViewer';
+import { attachmentViewerItem } from './messageViewerItems';
+import { useMediaViewer, useOpenMedia } from './useMediaViewer';
 
 // the old natural-size rule capped height at max-h-80
 const LEGACY_IMAGE_BOX_HEIGHT = 320;
@@ -51,6 +54,7 @@ function LegacyImageButton({ attachment, onOpen, className }: { attachment: Chat
       type="button"
       aria-label={t('media.open', { name: attachment.name })}
       onClick={onOpen}
+      {...warmHandlers(attachment)}
       className={className}
       style={{ width: `min(100%, ${MEDIA_MAX_WIDTH}px)`, height: LEGACY_IMAGE_BOX_HEIGHT }}
     >
@@ -63,9 +67,18 @@ function LegacyImageButton({ attachment, onOpen, className }: { attachment: Chat
  * a 2–4 mosaic), followed by its other files. Every box is sized before the
  * pixels arrive, so loading doesn't move the history. */
 export function MessageMedia({ attachments }: { attachments: ChatAttachmentData[] }) {
+  if (!useMediaViewer()) return <MediaViewerProvider><MessageMediaBody attachments={attachments} /></MediaViewerProvider>;
+  return <MessageMediaBody attachments={attachments} />;
+}
+
+/** Warms the full picture a cell opens (the cell draws the small thumbnail). */
+function warmHandlers(attachment: ChatAttachmentData) {
+  return hoverWarmHandlers(`/uploads/${attachment.id}`, { animated: attachment.mime === 'image/gif' });
+}
+
+function MessageMediaBody({ attachments }: { attachments: ChatAttachmentData[] }) {
   const { t } = useTranslation('chat');
-  const viewer = useMediaViewer();
-  if (!viewer) return <MediaViewerProvider><MessageMedia attachments={attachments} /></MediaViewerProvider>;
+  const openMedia = useOpenMedia();
   // data-attachment-id names which one a right-click is on (GlobalContextMenu
   // offers taking it out); `contents` keeps the child's own box and widths
   const tagged = (attachment: ChatAttachmentData, node: ReactNode) => (
@@ -73,7 +86,8 @@ export function MessageMedia({ attachments }: { attachments: ChatAttachmentData[
   );
 
   const { visual, files } = splitAttachments(attachments);
-  const openAt = (index: number) => viewer.open(visual.map((a) => ({ src: `/uploads/${a.id}`, name: a.name })), index);
+  const viewerItems = visual.map(attachmentViewerItem).filter((item): item is ViewerItem => item !== null);
+  const openAt = (index: number) => openMedia(viewerItems, index);
   const cellButton = 'block cursor-zoom-in overflow-hidden bg-fill-subtle focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-inset focus-visible:ring-ring/60';
 
   let pictures = null;
@@ -81,7 +95,7 @@ export function MessageMedia({ attachments }: { attachments: ChatAttachmentData[
     const attachment = visual[0]!;
     const box = singleImageBox(attachment);
     pictures = tagged(attachment, box ? (
-      <button type="button" aria-label={t('media.open', { name: attachment.name })} onClick={() => openAt(0)} style={{ width: box.width, aspectRatio: box.aspectRatio }} className={cn(cellButton, 'rounded-lg')}>
+      <button type="button" aria-label={t('media.open', { name: attachment.name })} onClick={() => openAt(0)} {...warmHandlers(attachment)} style={{ width: box.width, aspectRatio: box.aspectRatio }} className={cn(cellButton, 'rounded-lg')}>
         <MediaImage attachment={attachment} className="block size-full object-cover" />
       </button>
     ) : (
@@ -101,6 +115,7 @@ export function MessageMedia({ attachments }: { attachments: ChatAttachmentData[
               type="button"
               aria-label={t('media.openIndexed', { name: attachment.name, index: index + 1, total: visual.length })}
               onClick={() => openAt(index)}
+              {...warmHandlers(attachment)}
               className={cn(cellButton, 'size-full')}
             >
               <MediaImage attachment={attachment} className="block size-full object-cover" />
