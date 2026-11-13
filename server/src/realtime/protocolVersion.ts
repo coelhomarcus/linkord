@@ -47,9 +47,13 @@
 // call gets `call-replaced`; an older tab ignores it and leaves when LiveKit removes it from the room.
 // The welcome and `presence-sync` now list the account's own other connections, which old tabs already
 // received through `participant-joined`. So the minimum stays at 7.
+// Version 21 makes link previews richer (`embeds` on messages and `chat-embeds`): optional `type`,
+// `images`, `imageAlt`, `audio`, `player`, `authorName` and `authorUrl`, `video` only ever a checked
+// video file, and up to 5 previews per message instead of 3. An old tab ignores the new fields and
+// draws its first 3 cards, so the minimum stays at 7.
 // Raising MIN_PROTOCOL_VERSION also drops open tabs out of their calls (they are refused and
 // disconnect), so keep it for changes an old client cannot tolerate.
-export const PROTOCOL_VERSION = 20;
+export const PROTOCOL_VERSION = 21;
 export const MIN_PROTOCOL_VERSION = 7;
 export const MIC_STARTING_PROTOCOL_VERSION = 18;
 export const CALL_ELSEWHERE_PROTOCOL_VERSION = 20;

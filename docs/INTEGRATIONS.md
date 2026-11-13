@@ -14,6 +14,7 @@ Every external service Linkord talks to, what it is used for, who makes the call
 | [GitHub](#github) | Profile Wall widgets | Server (background worker; avatar through the [media proxy](#media-proxy)) | None | No |
 | [IGDB](#igdb) | Game search for the Wall's games widgets | Server (on demand; covers through the [media proxy](#media-proxy)) | `IGDB_CLIENT_ID`, `IGDB_CLIENT_SECRET` | No |
 | [Arbitrary websites](#link-previews) | Link preview cards | Server (pages, and their images through the [media proxy](#media-proxy)) | None | Built in |
+| [oEmbed providers](#oembed) (YouTube, Vimeo, SoundCloud, Spotify, X, TikTok, Reddit) | Link preview cards for their links | Server | None | Built in |
 | [YouTube and Twitch](#embedded-players) | Inline players for pasted links | Browser (players); server (YouTube thumbnails, through the [media proxy](#media-proxy)) | None | Built in |
 
 "Server" means the Node process in `server/`; "browser" means the web client in `web/`. The pictures these services provide (covers, avatars, preview images, favicons, YouTube thumbnails) reach the browser through our own [media proxy](#media-proxy), so they show on networks that block those domains. Apart from that, where a service is called from the browser the server does not proxy the traffic.
@@ -129,17 +130,41 @@ Game search behind the four games widgets of the Wall (favorite game, games I li
 
 ## Link previews
 
-Cards (title, description, image, favicon) for links pasted in chat. Unlike the services above, the destination is **any website a user chooses**, which makes it a server-side request forgery (SSRF) risk and shapes the whole design.
+Cards (title, description, pictures, favicon) for links pasted in chat. Unlike the services above, the destination is **any website a user chooses**, which makes it a server-side request forgery (SSRF) risk and shapes the whole design.
 
-- **Code:** [`server/src/modules/link-preview/linkPreview.ts`](../server/src/modules/link-preview/linkPreview.ts) and [`server/src/net/safeRequest.ts`](../server/src/net/safeRequest.ts); the endpoint is `GET /api/link-preview?url=…` for signed-in users.
+- **Code:** [`server/src/modules/link-preview/`](../server/src/modules/link-preview/): `linkPreview.ts` (endpoint, cache, rate limit), `resolvers.ts` (the chain), `openGraph.ts`, `oembed.ts`, `htmlMeta.ts` (HTML parser and charset), `pageFetch.ts` (every outbound request), and [`server/src/net/safeRequest.ts`](../server/src/net/safeRequest.ts). The endpoint is `GET /api/link-preview?url=…` for signed-in users; a message's previews are also fetched once by the server after it is sent and stored with it (`server/src/modules/messages/messageEmbeds.ts`).
+- **Resolvers:** a URL goes through an ordered chain, each resolver with `matches`, an optional `transform` (the one form of a URL that has many) and `resolve`. The first preview with content wins; a resolver that fails or finds nothing hands over to the next. Today: [oEmbed](#oembed) for a fixed list of providers, then Open Graph for everything.
+- **Open Graph:** the page is read with a real HTML parser (`htmlparser2`), only its `<head>`, ignoring `script`, `style`, `noscript`, `template` and `svg`. Title: `og:title` → `twitter:title` → `<title>`. Description: `og:description` → `description` → `twitter:description`. Pictures: every `og:image`, `og:image:url`, `og:image:secure_url`, `twitter:image` and `twitter:image:src`, deduplicated (an http/https twin counts once), at most 10; `image` is the first. Also `og:image:alt`, `og:site_name`, `theme-color`, `og:video`, `og:audio`, `og:type`, `twitter:card` and `twitter:player`.
+- **Charset:** a byte order mark, then the `Content-Type` charset, then the page's `<meta charset>` or `http-equiv` in its first 1024 bytes, then UTF-8 (Node's `TextDecoder`, so latin-1/windows-1252 pages read right).
+- **Type:** each preview says what it is: `twitter:card=photo` → `image`; `twitter:card=player` or `og:type=video.*` → `video` only when the player page is on the **player allowlist** (YouTube, youtube-nocookie, youtu.be, Vimeo, SoundCloud, Twitch, Streamable, X/Twitter, https only), kept in `player`; an `og:video` or `og:audio` elsewhere counts only when a request for it answers with a `video/*` or `audio/*` content type (headers only, the body is not downloaded), kept in `video`/`audio`; `summary_large_image` → `article`; anything else `link`. A link that is itself a picture, video or audio file becomes `image`, `video` or `audio`.
 - **Safeguards:** every outbound request goes through `safeRequest`, which validates the resolved IP **at connection time** (so DNS rebinding cannot swap in a private address) against the private and special-purpose IPv4 and IPv6 ranges in [`ssrfGuard.ts`](../server/src/net/ssrfGuard.ts) (an IPv6 address that carries an IPv4 one, such as NAT64 `64:ff9b::/96` or 6to4, is judged by that IPv4 address), follows at most 3 redirects and revalidates each hop, times out after 5 seconds, and reads at most 1.5 MB of the page (stopping at `</head>`).
-- **Image size probe:** the server reads the first bytes of the preview image (up to 256 KB, 3-second timeout) to learn its dimensions so the client can reserve space.
-- **Cost controls:** results are cached for 6 hours (500 entries, shared by everyone), and each user may trigger 20 *new* fetches per minute; cache hits are free.
-- **Pictures:** the preview's image and favicon are stored as the site gave them and sent to browsers as signed [media proxy](#media-proxy) addresses, so they load on networks that block the site and over plain http on an https page.
+- **Probes:** the server reads the first bytes of the first picture (up to 256 KB, 3-second timeout) to learn its dimensions so the client can reserve space, and the headers of an `og:video`/`og:audio` (3-second timeout).
+- **Cost controls:** results are cached in memory (500 entries, shared by everyone) under a canonical URL (YouTube's one form; `utm_*`, `fbclid`, `gclid` and similar tracking parameters and the fragment removed). A preview with content is kept 6 hours; a failed or empty one only 60 seconds, so a site that was briefly down gets its card on the next try. Each user may trigger 20 *new* fetches per minute; cache hits are free. A message gets at most 5 previews (its first 5 distinct links outside code and `<…>`).
+- **Failures:** a preview whose fetch failed is not stored with its message, so the next read of that conversation fetches it again; meanwhile the endpoint answers the domain-only card.
+- **Stored shape:** fields added since the first version (`type`, `images`, `imageAlt`, `audio`, `player`, `authorName`, `authorUrl`) are optional, because messages stored before them lack them and older tabs ignore them.
+- **Pictures:** the preview's pictures and favicon are stored as the site gave them and sent to browsers as signed [media proxy](#media-proxy) addresses, so they load on networks that block the site and over plain http on an https page.
 - **Privacy:** the target site sees the server's IP address, not the user's, for the page and for its pictures.
 - **Direct image links:** a pasted link to a picture gets a preview too, whose image is the picture itself (any `image/*` answer, SVG and icons included, with the size read for raster formats). The chat draws that picture only from the preview's proxied address, never from the link; while the preview is missing it shows nothing, and when the server has no picture for the link it shows the "open link" fallback. The Media tab gets the same signed address with each image link (`imageUrl`).
 - **Direct video and audio links** are not proxied (that would be a streaming proxy). Their player, and a page's `og:video`, is loaded from the link's own host only after the reader clicks "Load video from …", which says that host will see their IP address.
 - **Embeddable links:** URL classification (YouTube, Twitch, direct media) is mirrored in `server/src/modules/link-preview/embeds.ts` and `web/src/shared/lib/chatEmbeds.ts`; change one, change both.
+
+### oEmbed
+
+For a fixed list of providers the server asks the provider's oEmbed endpoint instead of reading the page: their pages render in the browser (X, TikTok) or are very large (YouTube), while the oEmbed answer is a small JSON document.
+
+| Provider | Links | Endpoint | Extra parameters |
+| --- | --- | --- | --- |
+| YouTube | video links in any form (`watch`, `youtu.be`, `shorts`, `embed`, `live`, nocookie), canonicalised to `youtube.com/watch?v=…&t=…` | `https://www.youtube.com/oembed` | `format=json` |
+| Vimeo | any `vimeo.com` link | `https://vimeo.com/api/oembed.json` | |
+| SoundCloud | any `soundcloud.com` link | `https://soundcloud.com/oembed` | `format=json` |
+| Spotify | any `spotify.com` link | `https://open.spotify.com/oembed` | |
+| X | `x.com`/`twitter.com` `…/status/<id>` | `https://publish.x.com/oembed` | `dnt=true` (no personalisation), `omit_script=true` (no `widgets.js`) |
+| TikTok | `…/video/<id>` | `https://www.tiktok.com/oembed` | |
+| Reddit | `…/comments/…` | `https://www.reddit.com/oembed` | |
+
+- **Sent:** the link (`url=`) and the parameters above, through `safeRequest`, from the server's IP. No credentials; the answer is capped at 64 KB and 6 seconds.
+- **Kept:** only structured fields: `title`, `description` (as plain text: SoundCloud puts markup in it), `author_name`/`author_url`, `provider_name`, `thumbnail_url` and its size (or `url` and size for a `photo`). The provider's `html` is **never stored or rendered**: for X and Reddit the plain text of its first paragraph becomes the description, and an `<iframe>` in it is kept as `player` only when its host is on the player allowlist.
+- **Failure:** an endpoint that errors, times out, answers something too large or with nothing usable hands the link over to Open Graph. Endpoints a page advertises itself (`<link type="application/json+oembed">`) are not used.
 
 ## Embedded players
 

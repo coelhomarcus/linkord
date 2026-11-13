@@ -166,10 +166,10 @@ function collectInline(nodes: Inline[], out: string[]) {
   }
 }
 
-const MAX_PREVIEWS = 3;
+const MAX_PREVIEWS = 5;
 
 /** Links worth a preview: outside code, not wrapped in <…>, each address
- * once (query strings included — they often are the content), at most three
+ * once (query strings included — they often are the content), at most five
  * so a pasted list of links doesn't fire a request per line. */
 export function previewableLinks(blocks: Block[]): string[] {
   const urls: string[] = [];

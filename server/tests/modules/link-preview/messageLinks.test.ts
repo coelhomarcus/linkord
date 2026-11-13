@@ -5,9 +5,9 @@ import { messageMentions, previewableLinks } from '../../../src/modules/link-pre
 // the same cases as web/tests/features/chat/messageMarkup.test.ts: the server
 // stores previews for exactly the cards the client draws
 describe('previewableLinks (mirror of the client)', () => {
-  test('ignores links in code and suppressed ones, dedupes and caps at three', () => {
-    const text = '`https://code.com` <https://quiet.com> https://a.com https://a.com https://b.com?q=1 https://c.com https://d.com';
-    assert.deepEqual(previewableLinks(text), ['https://a.com', 'https://b.com?q=1', 'https://c.com']);
+  test('ignores links in code and suppressed ones, dedupes and caps at five', () => {
+    const text = '`https://code.com` <https://quiet.com> https://a.com https://a.com https://b.com?q=1 https://c.com https://d.com https://e.com https://f.com';
+    assert.deepEqual(previewableLinks(text), ['https://a.com', 'https://b.com?q=1', 'https://c.com', 'https://d.com', 'https://e.com']);
   });
 
   test("a code block doesn't generate a preview", () => {

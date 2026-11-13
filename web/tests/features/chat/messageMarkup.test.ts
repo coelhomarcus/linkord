@@ -84,9 +84,9 @@ describe('parseMessage', () => {
 });
 
 describe('previewableLinks', () => {
-  it('ignores links in code and suppressed ones, dedupes and caps at three', () => {
-    const text = '`https://code.com` <https://quiet.com> https://a.com https://a.com https://b.com?q=1 https://c.com https://d.com';
-    expect(previewableLinks(parseMessage(text))).toEqual(['https://a.com', 'https://b.com?q=1', 'https://c.com']);
+  it('ignores links in code and suppressed ones, dedupes and caps at five', () => {
+    const text = '`https://code.com` <https://quiet.com> https://a.com https://a.com https://b.com?q=1 https://c.com https://d.com https://e.com https://f.com';
+    expect(previewableLinks(parseMessage(text))).toEqual(['https://a.com', 'https://b.com?q=1', 'https://c.com', 'https://d.com', 'https://e.com']);
   });
 
   it("a code block doesn't generate a preview", () => {
