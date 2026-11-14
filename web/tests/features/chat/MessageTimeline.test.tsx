@@ -262,6 +262,36 @@ describe('MessageTimeline — initial placement', () => {
   });
 });
 
+describe('MessageTimeline — the reader takes over', { timeout: HEAVY_RENDER_TIMEOUT }, () => {
+  it('scrolling up while the list is still being brought to the end keeps the reader where they went', async () => {
+    const messages = Array.from({ length: 50 }, (_, i) => message(i + 1));
+    const roomWith = (list: ChatMessage[]) => createFakeRoomContextValue({ messagesByConversation: new Map([['conv-1', list]]) });
+    const timeline = (list: ChatMessage[]) => (
+      <RoomContext.Provider value={roomWith(list)}>
+        <MessageTimeline conversationId="conv-1" onReply={() => {}} onOpenProfile={() => {}} bottomPadding={24} />
+      </RoomContext.Provider>
+    );
+    const { container, rerender } = render(timeline(messages));
+    const root = container.querySelector('[data-scroll-root]') as HTMLElement;
+    await waitFor(() => expect(root).toHaveAttribute('data-settled'));
+    const frames = (n: number) => act(async () => {
+      for (let i = 0; i < n; i++) await new Promise((resolve) => requestAnimationFrame(resolve));
+    });
+
+    // brought to the end again by an arrival, and up again by the reader
+    // before that scroll has landed for good
+    rerender(timeline([...messages, message(51)]));
+    fireEvent.wheel(root, { deltaY: -300 });
+    const readerTop = root.scrollTop - 300;
+    act(() => root.scrollTo({ top: readerTop }));
+    await frames(3);
+
+    rerender(timeline([...messages, message(51), message(52)]));
+    await frames(5);
+    expect(root.scrollTop).toBe(readerTop);
+  });
+});
+
 describe('MessageTimeline — reading position and active media', { timeout: HEAVY_RENDER_TIMEOUT }, () => {
   const scrollRootOf = (container: HTMLElement) => container.querySelector('[data-scroll-root]') as HTMLElement;
   const scrollRootTo = (root: HTMLElement, top: number) => { root.scrollTo({ top }); };
