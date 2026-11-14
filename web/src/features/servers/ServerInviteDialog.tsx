@@ -59,7 +59,7 @@ export function ServerInviteDialog({ server, channelId, open, onOpenChange }: {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[calc(100dvh-2rem)] max-w-[calc(100%-2rem)] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 text-text-primary sm:max-w-[440px]">
+      <DialogContent className="max-h-[calc(100dvh-2rem)] max-w-[calc(100%-2rem)] grid-cols-[minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 text-text-primary sm:max-w-[440px]">
         <DialogHeader className="gap-1 px-6 pt-6 pr-14">
           <DialogTitle>{t('invite.title', { name: server.name })}</DialogTitle>
           {channel && <DialogDescription>{t('invite.arrivesIn', { channel: channel.name })}</DialogDescription>}
