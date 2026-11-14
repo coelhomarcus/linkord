@@ -172,16 +172,14 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
     paddingStart: 12,
     paddingEnd: bottomPadding,
     rangeExtractor,
-    useAnimationFrameWithResizeObserver: true,
+    // A row that changes size (a card filling in, a video learning its
+    // shape) is measured in the ResizeObserver callback, after layout and
+    // before paint, and the rows below it plus scrollTop are written to the
+    // DOM right there. Going through a React render, or deferring the
+    // measurement to the next frame, painted a frame or two with the grown
+    // row over its neighbour before everything jumped into place.
+    directDomUpdates: true,
   });
-  // The library's own compensation is off: it writes scrollTop inside the
-  // measuring callback, a frame before the render that moves the rows (the
-  // single paint it relies on needs flushSync, off above). The reader's
-  // row then showed shifted by the resize for a frame and snapped back. The
-  // layout effect below compensates in the commit that moves the rows.
-  useLayoutEffect(() => {
-    virtualizer.shouldAdjustScrollPositionOnItemSizeChange = () => false;
-  }, [virtualizer]);
   const virtualItems = virtualizer.getVirtualItems();
 
   const jumpIndex = pendingJumpTarget && pendingJumpTarget.conversationId === conversationId
@@ -203,6 +201,20 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
   // the scroll listener must not record the jumps of the initial placement
   const readyRef = useRef(false);
   useEffect(() => { readyRef.current = ready; }, [ready]);
+
+  // Rows resizing above the reader (an estimate corrected on first measure,
+  // a card filling in) move everything below them, so scrollTop takes their
+  // delta and the row at the top of the view stays put. The library applies
+  // it in the same callback that moves the rows. Its default skips rows
+  // re-measured while scrolling up, which is when the reader saw them shift.
+  // At the end it keeps the distance to the end instead (scrollEndThreshold),
+  // and during the initial placement the placement loop owns the position.
+  useLayoutEffect(() => {
+    virtualizer.shouldAdjustScrollPositionOnItemSizeChange = (item) => {
+      const el = scrollRef.current;
+      return readyRef.current && !!el && item.end <= el.scrollTop;
+    };
+  }, [virtualizer]);
   // the latest placement, for the fallback below to apply before revealing
   const placeRef = useRef<(() => void) | null>(null);
   useLayoutEffect(() => {
@@ -320,36 +332,6 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
   // leading date divider's key unchanged
   const firstKey = items.find((item) => item.type === 'message')?.key;
   const prevFirstKeyRef = useRef(firstKey);
-
-  // Rows resizing above the reader (an estimate corrected on first measure,
-  // an image loading) move everything below them; the row at the top of the
-  // view is followed by key and scrollTop takes its shift, written in the
-  // same commit as the new transforms. Skipped when the first message
-  // changed (a prepend is the library's and the settle loop's business) and
-  // when pinned to the end, where the library already follows every resize
-  // with the same threshold: compensating there too would count it twice.
-  const indexByKey = useMemo(() => new Map(items.map((item, index) => [item.key, index])), [items]);
-  const followedRowRef = useRef<{ key: string; start: number; firstKey: string | undefined } | null>(null);
-  const totalSizeRef = useRef(virtualizer.getTotalSize());
-  useLayoutEffect(() => {
-    const el = scrollRef.current;
-    if (!el || !ready) { followedRowRef.current = null; return; }
-    const prev = followedRowRef.current;
-    const totalSize = virtualizer.getTotalSize();
-    const distanceFromEnd = virtualizer.getDistanceFromEnd();
-    // At the present, rows still grow as media loads; pin once per growth
-    // so WebKit does not show the list jumping (custom compensation is off here).
-    if (distanceFromEnd <= PINNED_THRESHOLD && totalSize !== totalSizeRef.current) {
-      el.scrollTop = el.scrollHeight - el.clientHeight;
-    } else if (distanceFromEnd > PINNED_THRESHOLD && prev && prev.firstKey === firstKey) {
-      const index = indexByKey.get(prev.key);
-      const start = index === undefined ? undefined : virtualizer.measurementsCache[index]?.start;
-      if (start !== undefined && Math.abs(start - prev.start) >= 1) el.scrollTop += start - prev.start;
-    }
-    const top = virtualizer.getVirtualItemForOffset(el.scrollTop);
-    followedRowRef.current = top ? { key: String(top.key), start: top.start, firstKey } : null;
-    totalSizeRef.current = totalSize;
-  });
 
   const [settlingPrepend, setSettlingPrepend] = useState(false);
   const settlingRef = useRef(false);
@@ -530,7 +512,9 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
             )}
           </div>
         ) : (
-          <div role="log" aria-label={t('timeline.log')} className="relative w-full" style={{ height: virtualizer.getTotalSize(), visibility: ready ? undefined : 'hidden' }}>
+          // height and each row's transform belong to the virtualizer
+          // (directDomUpdates): a render setting them could write back a stale value
+          <div ref={virtualizer.containerRef} role="log" aria-label={t('timeline.log')} className="relative w-full" style={{ visibility: ready ? undefined : 'hidden' }}>
             {virtualItems.map((virtualItem) => {
               const item = items[virtualItem.index]!;
               return (
@@ -541,7 +525,6 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
                   // flow-root keeps the row's own margins inside the box
                   // that gets measured, so spacing never drifts the math
                   className="absolute inset-x-0 top-0 flow-root"
-                  style={{ transform: `translateY(${virtualItem.start}px)` }}
                 >
                   {item.type === 'date' ? (
                     <div className="my-4 flex select-none items-center gap-3 px-4">
