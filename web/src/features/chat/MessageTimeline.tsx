@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { ArrowDownIcon, ArrowUpIcon } from '@phosphor-icons/react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { defaultRangeExtractor, useVirtualizer, type Range } from '@tanstack/react-virtual';
+import { defaultRangeExtractor, measureElement as measureRowElement, useVirtualizer, type Range } from '@tanstack/react-virtual';
 
 import { buildMentionLookup } from '@/shared/lib/mentions';
 import { useRoom } from '@/state/RoomContext';
@@ -10,9 +10,11 @@ import { conversationTitle } from '@/features/conversations/conversationUtils';
 import type { ChatMessage } from '@/shared/types/protocol';
 import { MessageRow } from './MessageRow';
 import { ArrivalMotion } from './ArrivalMotion';
-import { buildTimelineItems, type TimelineItem } from './messageTimelineItems';
+import { buildTimelineItems } from './messageTimelineItems';
 import type { OutboxEntry } from './useMessageOutbox';
 import { readingPositionFor, saveReadingPosition } from './readingPositions';
+import { estimateRowHeight, rememberedRowHeight, rememberRowHeight } from './rowHeights';
+import { useChatSurfaceWidth } from '@/shared/lib/chatSurfaceWidth';
 
 const EMPTY_MESSAGES: ChatMessage[] = [];
 const EMPTY_PENDING: OutboxEntry[] = [];
@@ -33,20 +35,8 @@ const PREPEND_SETTLE_FRAMES = 3;
 // this many frames in a row — and gives up waiting after the cap.
 const PLACEMENT_STABLE_FRAMES = 2;
 const PLACEMENT_MAX_FRAMES = 30;
-
-/** First guess at a row's height before it's measured; only affects how
- * far off the scrollbar is until then. */
-function estimateSize(item: TimelineItem | undefined): number {
-  if (!item) return 40;
-  if (item.type === 'date' || item.type === 'unread') return 44;
-  const message = item.message;
-  let size = item.showHeader ? 62 : 26;
-  size += Math.floor(message.text.length / 90) * 22;
-  if (message.replyTo) size += 22;
-  if (message.attachments?.length) size += 260;
-  if (message.reactions && Object.keys(message.reactions).length) size += 30;
-  return size;
-}
+// the surface's width before ChatSurface has measured it (and in tests)
+const FALLBACK_SURFACE_WIDTH = 800;
 
 export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, onOpenProfile, bottomPadding }: {
   /** Scopes the remembered reading position: two panels showing the same
@@ -79,6 +69,7 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
     state,
   } = useRoom();
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const surfaceWidth = useChatSurfaceWidth(FALLBACK_SURFACE_WIDTH);
   const [highlightedMsgId, setHighlightedMsgId] = useState<number | null>(null);
   const highlightTimeoutRef = useRef<number | null>(null);
   const mentionLookup = useMemo(() => buildMentionLookup(allUsers), [allUsers]);
@@ -156,7 +147,18 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
     useFlushSync: false,
     count: items.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: (index) => estimateSize(items[index]),
+    // a row seen before at this width starts at its measured height
+    estimateSize: (index) => {
+      const item = items[index];
+      if (!item) return 40;
+      return rememberedRowHeight(surfaceId, item, surfaceWidth) ?? estimateRowHeight(item, surfaceWidth);
+    },
+    measureElement: (element, entry, instance) => {
+      const height = measureRowElement(element, entry, instance);
+      const item = items[instance.indexFromElement(element)];
+      if (item) rememberRowHeight(surfaceId, item, surfaceWidth, height);
+      return height;
+    },
     getItemKey: (index) => items[index]?.key ?? index,
     overscan: 8,
     // the library keeps the first visible row (and the offset inside it)
@@ -172,16 +174,14 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
     paddingStart: 12,
     paddingEnd: bottomPadding,
     rangeExtractor,
-    useAnimationFrameWithResizeObserver: true,
+    // A row that changes size (a card filling in, a video learning its
+    // shape) is measured in the ResizeObserver callback, after layout and
+    // before paint, and the rows below it plus scrollTop are written to the
+    // DOM right there. Going through a React render, or deferring the
+    // measurement to the next frame, painted a frame or two with the grown
+    // row over its neighbour before everything jumped into place.
+    directDomUpdates: true,
   });
-  // The library's own compensation is off: it writes scrollTop inside the
-  // measuring callback, a frame before the render that moves the rows (the
-  // single paint it relies on needs flushSync, off above). The reader's
-  // row then showed shifted by the resize for a frame and snapped back. The
-  // layout effect below compensates in the commit that moves the rows.
-  useLayoutEffect(() => {
-    virtualizer.shouldAdjustScrollPositionOnItemSizeChange = () => false;
-  }, [virtualizer]);
   const virtualItems = virtualizer.getVirtualItems();
 
   const jumpIndex = pendingJumpTarget && pendingJumpTarget.conversationId === conversationId
@@ -203,6 +203,20 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
   // the scroll listener must not record the jumps of the initial placement
   const readyRef = useRef(false);
   useEffect(() => { readyRef.current = ready; }, [ready]);
+
+  // Rows resizing above the reader (an estimate corrected on first measure,
+  // a card filling in) move everything below them, so scrollTop takes their
+  // delta and the row at the top of the view stays put. The library applies
+  // it in the same callback that moves the rows. Its default skips rows
+  // re-measured while scrolling up, which is when the reader saw them shift.
+  // At the end it keeps the distance to the end instead (scrollEndThreshold),
+  // and during the initial placement the placement loop owns the position.
+  useLayoutEffect(() => {
+    virtualizer.shouldAdjustScrollPositionOnItemSizeChange = (item) => {
+      const el = scrollRef.current;
+      return readyRef.current && !!el && item.end <= el.scrollTop;
+    };
+  }, [virtualizer]);
   // the latest placement, for the fallback below to apply before revealing
   const placeRef = useRef<(() => void) | null>(null);
   useLayoutEffect(() => {
@@ -320,36 +334,6 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
   // leading date divider's key unchanged
   const firstKey = items.find((item) => item.type === 'message')?.key;
   const prevFirstKeyRef = useRef(firstKey);
-
-  // Rows resizing above the reader (an estimate corrected on first measure,
-  // an image loading) move everything below them; the row at the top of the
-  // view is followed by key and scrollTop takes its shift, written in the
-  // same commit as the new transforms. Skipped when the first message
-  // changed (a prepend is the library's and the settle loop's business) and
-  // when pinned to the end, where the library already follows every resize
-  // with the same threshold: compensating there too would count it twice.
-  const indexByKey = useMemo(() => new Map(items.map((item, index) => [item.key, index])), [items]);
-  const followedRowRef = useRef<{ key: string; start: number; firstKey: string | undefined } | null>(null);
-  const totalSizeRef = useRef(virtualizer.getTotalSize());
-  useLayoutEffect(() => {
-    const el = scrollRef.current;
-    if (!el || !ready) { followedRowRef.current = null; return; }
-    const prev = followedRowRef.current;
-    const totalSize = virtualizer.getTotalSize();
-    const distanceFromEnd = virtualizer.getDistanceFromEnd();
-    // At the present, rows still grow as media loads; pin once per growth
-    // so WebKit does not show the list jumping (custom compensation is off here).
-    if (distanceFromEnd <= PINNED_THRESHOLD && totalSize !== totalSizeRef.current) {
-      el.scrollTop = el.scrollHeight - el.clientHeight;
-    } else if (distanceFromEnd > PINNED_THRESHOLD && prev && prev.firstKey === firstKey) {
-      const index = indexByKey.get(prev.key);
-      const start = index === undefined ? undefined : virtualizer.measurementsCache[index]?.start;
-      if (start !== undefined && Math.abs(start - prev.start) >= 1) el.scrollTop += start - prev.start;
-    }
-    const top = virtualizer.getVirtualItemForOffset(el.scrollTop);
-    followedRowRef.current = top ? { key: String(top.key), start: top.start, firstKey } : null;
-    totalSizeRef.current = totalSize;
-  });
 
   const [settlingPrepend, setSettlingPrepend] = useState(false);
   const settlingRef = useRef(false);
@@ -530,7 +514,9 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
             )}
           </div>
         ) : (
-          <div role="log" aria-label={t('timeline.log')} className="relative w-full" style={{ height: virtualizer.getTotalSize(), visibility: ready ? undefined : 'hidden' }}>
+          // height and each row's transform belong to the virtualizer
+          // (directDomUpdates): a render setting them could write back a stale value
+          <div ref={virtualizer.containerRef} role="log" aria-label={t('timeline.log')} className="relative w-full" style={{ visibility: ready ? undefined : 'hidden' }}>
             {virtualItems.map((virtualItem) => {
               const item = items[virtualItem.index]!;
               return (
@@ -541,7 +527,6 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
                   // flow-root keeps the row's own margins inside the box
                   // that gets measured, so spacing never drifts the math
                   className="absolute inset-x-0 top-0 flow-root"
-                  style={{ transform: `translateY(${virtualItem.start}px)` }}
                 >
                   {item.type === 'date' ? (
                     <div className="my-4 flex select-none items-center gap-3 px-4">

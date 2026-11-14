@@ -36,6 +36,14 @@ export function singleImageBox(attachment: Pick<ChatAttachment, 'width' | 'heigh
   };
 }
 
+/** The height singleImageBox comes to in a message body `bodyWidth` px wide. */
+export function singleImageHeight(attachment: Pick<ChatAttachment, 'width' | 'height'>, bodyWidth: number): number | null {
+  const { width, height } = attachment;
+  if (!width || !height) return null;
+  const boxWidth = Math.min(bodyWidth, MEDIA_MAX_WIDTH, width, Math.round((SINGLE_MAX_HEIGHT * width) / height));
+  return (boxWidth * height) / width;
+}
+
 export interface MosaicLayout {
   aspectRatio: string;
   columns: string;

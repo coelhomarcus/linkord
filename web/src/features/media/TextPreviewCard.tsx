@@ -6,6 +6,7 @@ import type { ChatAttachment as ChatAttachmentData } from '@/shared/types/protoc
 import { FileAttachmentCard } from './FileAttachmentCard';
 import { downloadFile } from '@/shared/lib/download';
 import { highlightCode } from '@/shared/lib/highlightCode';
+import { useNearViewport } from './useNearViewport';
 
 // react-markdown + remark-gfm + rehype-sanitize only load when a markdown
 // file is actually previewed, not as part of the main bundle.
@@ -67,25 +68,18 @@ export function TextPreviewCard({ attachment, maxWidth }: { attachment: ChatAtta
   const markdown = isMarkdownFile(attachment.name);
   const url = `/uploads/${attachment.id}`;
 
-  // Lazy fetch — only once the card actually scrolls into view, same spirit
-  // as the `loading="lazy"` already used for image thumbnails. Skipped
-  // entirely on a cache hit (fetchedRef already true), which is what makes
-  // a remount instant instead of re-running the intersection check at all.
+  // Fetched once the card comes near the view (useNearViewport's margin), so
+  // the text it adds lands while the row is still off screen, where the list
+  // absorbs the growth; a remount is instant from the cache.
+  const near = useNearViewport(rootRef);
   useEffect(() => {
-    const el = rootRef.current;
-    if (!el || fetchedRef.current) return;
-    const observer = new IntersectionObserver((entries) => {
-      if (!entries[0]?.isIntersecting || fetchedRef.current) return;
-      fetchedRef.current = true;
-      observer.disconnect();
-      fetch(`/api/attachments/${attachment.id}/preview`, { credentials: 'same-origin' })
-        .then((res) => (res.ok ? res.json() as Promise<PreviewResponse> : { previewable: false }))
-        .then((data) => { previewCache.set(attachment.id, data); setPreview(data); })
-        .catch(() => { const fallback: PreviewResponse = { previewable: false }; previewCache.set(attachment.id, fallback); setPreview(fallback); });
-    }, { rootMargin: '200px' });
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [attachment.id]);
+    if (!near || fetchedRef.current) return;
+    fetchedRef.current = true;
+    fetch(`/api/attachments/${attachment.id}/preview`, { credentials: 'same-origin' })
+      .then((res) => (res.ok ? res.json() as Promise<PreviewResponse> : { previewable: false }))
+      .then((data) => { previewCache.set(attachment.id, data); setPreview(data); })
+      .catch(() => { const fallback: PreviewResponse = { previewable: false }; previewCache.set(attachment.id, fallback); setPreview(fallback); });
+  }, [near, attachment.id]);
 
   useEffect(() => {
     if (!preview?.previewable || !preview.content || markdown) return;

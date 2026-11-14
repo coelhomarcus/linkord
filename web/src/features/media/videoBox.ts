@@ -25,6 +25,12 @@ export function differentShape(a: VideoSize, b: VideoSize): boolean {
   return Math.abs(ratioA - ratioB) / ratioB > SAME_SHAPE_TOLERANCE;
 }
 
+/** The height of videoBoxStyle's box, for a parent at least `maxWidth` wide. */
+export function videoBoxHeight(size: VideoSize | null, maxWidth: number, maxHeight: number): number {
+  if (isKnownSize(size)) return size.height * Math.min(1, maxWidth / size.width, maxHeight / size.height);
+  return Math.min((maxWidth * 9) / 16, maxHeight);
+}
+
 /** The box a video is drawn in: its own shape, never enlarged, within the
  * caps; 16:9 at full width while the size is still unknown. */
 export function videoBoxStyle(size: VideoSize | null, maxWidth: number, maxHeight: number): CSSProperties {

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { VideoPlayer } from '@/features/media/MediaPlayers';
+import { __resetLearnedVideoSizesForTests, VideoPlayer } from '@/features/media/MediaPlayers';
 import { getMediaVolumeState, setMediaVolumeState } from '@/shared/lib/mediaVolume';
 
 const NAME = 'clip.mp4';
@@ -47,6 +47,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  __resetLearnedVideoSizesForTests();
   vi.useRealTimers();
   vi.restoreAllMocks();
   Reflect.deleteProperty(document, 'pictureInPictureEnabled');
@@ -330,6 +331,14 @@ describe('VideoPlayer box', () => {
     expect(mainVideo().preload).toBe('metadata');
     expect(player().style.aspectRatio).toBe('16 / 9');
     loadMetadata(mainVideo(), { width: 720, height: 1280 });
+    expect(player().style.aspectRatio).toBe('720 / 1280');
+  });
+
+  it('drawn again later, a video without a size starts in the shape it turned out to have', () => {
+    const first = render(<VideoPlayer src="/uploads/v1" title={NAME} />);
+    loadMetadata(mainVideo(), { width: 720, height: 1280 });
+    first.unmount();
+    render(<VideoPlayer src="/uploads/v1" title={NAME} />);
     expect(player().style.aspectRatio).toBe('720 / 1280');
   });
 

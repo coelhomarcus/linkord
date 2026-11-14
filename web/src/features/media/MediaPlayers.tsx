@@ -452,6 +452,22 @@ function VideoChrome({
   );
 }
 
+// A video stored without its size (uploads from before it was sent, links)
+// is laid out 16:9 until its metadata says otherwise; the shape it turned out
+// to have is kept for the session, so drawing it again (scrolled back to,
+// another visit) starts in the right box instead of resizing its row again.
+const MAX_LEARNED_VIDEO_SIZES = 500;
+const learnedVideoSizes = new Map<string, VideoSize>();
+function learnVideoSize(src: string, size: VideoSize) {
+  learnedVideoSizes.delete(src);
+  learnedVideoSizes.set(src, size);
+  if (learnedVideoSizes.size > MAX_LEARNED_VIDEO_SIZES) learnedVideoSizes.delete(learnedVideoSizes.keys().next().value!);
+}
+
+export function __resetLearnedVideoSizesForTests(): void {
+  learnedVideoSizes.clear();
+}
+
 // One <video> element for both the inline (mini) and fullscreen views. It's
 // portaled once into a standalone host div (created outside React and never
 // swapped), which is then physically reparented between the mini/fullscreen
@@ -466,7 +482,7 @@ function VideoPlayerImpl({ src, poster, placeholder, width, height, title, class
   const pip = usePictureInPicture(videoRef);
   useHiddenTabPause(videoRef);
   const hint = width && height ? { width, height } : null;
-  const [natural, setNatural] = useState<VideoSize | null>(isKnownSize(hint) ? hint : null);
+  const [natural, setNatural] = useState<VideoSize | null>(() => (isKnownSize(hint) ? hint : learnedVideoSizes.get(src) ?? null));
   // the poster belongs to the size it was given with; a video of another
   // shape would show it stretched or cut until playback starts
   const [posterFits, setPosterFits] = useState(true);
@@ -517,7 +533,9 @@ function VideoPlayerImpl({ src, poster, placeholder, width, height, title, class
       if (startAt ? startAt.playing : autoPlay) void video.play().catch(() => {});
     }
     const real = { width: video.videoWidth, height: video.videoHeight };
-    if (!isKnownSize(real) || (natural && !differentShape(real, natural))) return;
+    if (!isKnownSize(real)) return;
+    learnVideoSize(src, real);
+    if (natural && !differentShape(real, natural)) return;
     if (natural) setPosterFits(false);
     setNatural(real);
   }
