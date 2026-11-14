@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { ArrowDownIcon, ArrowUpIcon } from '@phosphor-icons/react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { defaultRangeExtractor, useVirtualizer, type Range } from '@tanstack/react-virtual';
+import { defaultRangeExtractor, measureElement as measureRowElement, useVirtualizer, type Range } from '@tanstack/react-virtual';
 
 import { buildMentionLookup } from '@/shared/lib/mentions';
 import { useRoom } from '@/state/RoomContext';
@@ -10,9 +10,11 @@ import { conversationTitle } from '@/features/conversations/conversationUtils';
 import type { ChatMessage } from '@/shared/types/protocol';
 import { MessageRow } from './MessageRow';
 import { ArrivalMotion } from './ArrivalMotion';
-import { buildTimelineItems, type TimelineItem } from './messageTimelineItems';
+import { buildTimelineItems } from './messageTimelineItems';
 import type { OutboxEntry } from './useMessageOutbox';
 import { readingPositionFor, saveReadingPosition } from './readingPositions';
+import { estimateRowHeight, rememberedRowHeight, rememberRowHeight } from './rowHeights';
+import { useChatSurfaceWidth } from '@/shared/lib/chatSurfaceWidth';
 
 const EMPTY_MESSAGES: ChatMessage[] = [];
 const EMPTY_PENDING: OutboxEntry[] = [];
@@ -33,20 +35,8 @@ const PREPEND_SETTLE_FRAMES = 3;
 // this many frames in a row — and gives up waiting after the cap.
 const PLACEMENT_STABLE_FRAMES = 2;
 const PLACEMENT_MAX_FRAMES = 30;
-
-/** First guess at a row's height before it's measured; only affects how
- * far off the scrollbar is until then. */
-function estimateSize(item: TimelineItem | undefined): number {
-  if (!item) return 40;
-  if (item.type === 'date' || item.type === 'unread') return 44;
-  const message = item.message;
-  let size = item.showHeader ? 62 : 26;
-  size += Math.floor(message.text.length / 90) * 22;
-  if (message.replyTo) size += 22;
-  if (message.attachments?.length) size += 260;
-  if (message.reactions && Object.keys(message.reactions).length) size += 30;
-  return size;
-}
+// the surface's width before ChatSurface has measured it (and in tests)
+const FALLBACK_SURFACE_WIDTH = 800;
 
 export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, onOpenProfile, bottomPadding }: {
   /** Scopes the remembered reading position: two panels showing the same
@@ -79,6 +69,7 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
     state,
   } = useRoom();
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const surfaceWidth = useChatSurfaceWidth(FALLBACK_SURFACE_WIDTH);
   const [highlightedMsgId, setHighlightedMsgId] = useState<number | null>(null);
   const highlightTimeoutRef = useRef<number | null>(null);
   const mentionLookup = useMemo(() => buildMentionLookup(allUsers), [allUsers]);
@@ -156,7 +147,18 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
     useFlushSync: false,
     count: items.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: (index) => estimateSize(items[index]),
+    // a row seen before at this width starts at its measured height
+    estimateSize: (index) => {
+      const item = items[index];
+      if (!item) return 40;
+      return rememberedRowHeight(surfaceId, item, surfaceWidth) ?? estimateRowHeight(item, surfaceWidth);
+    },
+    measureElement: (element, entry, instance) => {
+      const height = measureRowElement(element, entry, instance);
+      const item = items[instance.indexFromElement(element)];
+      if (item) rememberRowHeight(surfaceId, item, surfaceWidth, height);
+      return height;
+    },
     getItemKey: (index) => items[index]?.key ?? index,
     overscan: 8,
     // the library keeps the first visible row (and the offset inside it)

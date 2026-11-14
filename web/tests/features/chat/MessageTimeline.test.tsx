@@ -7,6 +7,7 @@ import type { ChatMessage } from '@/shared/types/protocol';
 import { MessageTimeline } from '@/features/chat/MessageTimeline';
 import { __resetReadingPositionsForTests, readingPositionFor } from '@/features/chat/readingPositions';
 import { __resetArrivalsForTests, markArrival } from '@/features/chat/arrivals';
+import { __resetRowHeightsForTests, rememberedRowHeight } from '@/features/chat/rowHeights';
 
 // jsdom has no layout: give the scroll container and each row a height, the
 // way the virtualizer reads them (offsetHeight), and record scrollTo calls.
@@ -48,6 +49,7 @@ beforeEach(() => {
 afterEach(() => {
   __resetReadingPositionsForTests();
   __resetArrivalsForTests();
+  __resetRowHeightsForTests();
   if (originalOffsetHeight) Object.defineProperty(HTMLElement.prototype, 'offsetHeight', originalOffsetHeight);
   if (originalScrollHeight) Object.defineProperty(Element.prototype, 'scrollHeight', originalScrollHeight);
   if (originalClientHeight) Object.defineProperty(Element.prototype, 'clientHeight', originalClientHeight);
@@ -339,6 +341,18 @@ describe('MessageTimeline — rows resizing while reading', { timeout: HEAVY_REN
     });
     expect(after.top).toBe(topBefore + 100);
     expect(after.scroll).toBe(scrollBefore + 100);
+  });
+});
+
+describe('MessageTimeline — remembered heights', { timeout: HEAVY_RENDER_TIMEOUT }, () => {
+  it('a row measured on one visit starts at that height on the next', async () => {
+    const messages = Array.from({ length: 50 }, (_, i) => message(i + 1));
+    const last = { type: 'message' as const, key: '50', message: messages[49]!, showHeader: true };
+    const first = renderTimeline({ messagesByConversation: new Map([['conv-1', messages]]) });
+    await waitFor(() => expect(first.container.querySelector('[data-scroll-root]')).toHaveAttribute('data-settled'));
+    first.unmount();
+    // the fallback width: no ChatSurface around the list here
+    expect(rememberedRowHeight('main', last, 800)).toBe(ROW);
   });
 });
 
