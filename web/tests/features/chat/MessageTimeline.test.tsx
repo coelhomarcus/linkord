@@ -7,6 +7,7 @@ import type { ChatMessage } from '@/shared/types/protocol';
 import { MessageTimeline } from '@/features/chat/MessageTimeline';
 import { __resetReadingPositionsForTests, readingPositionFor } from '@/features/chat/readingPositions';
 import { __resetArrivalsForTests, markArrival } from '@/features/chat/arrivals';
+import { __resetRowHeightsForTests, rememberedRowHeight } from '@/features/chat/rowHeights';
 
 // jsdom has no layout: give the scroll container and each row a height, the
 // way the virtualizer reads them (offsetHeight), and record scrollTo calls.
@@ -48,6 +49,7 @@ beforeEach(() => {
 afterEach(() => {
   __resetReadingPositionsForTests();
   __resetArrivalsForTests();
+  __resetRowHeightsForTests();
   if (originalOffsetHeight) Object.defineProperty(HTMLElement.prototype, 'offsetHeight', originalOffsetHeight);
   if (originalScrollHeight) Object.defineProperty(Element.prototype, 'scrollHeight', originalScrollHeight);
   if (originalClientHeight) Object.defineProperty(Element.prototype, 'clientHeight', originalClientHeight);
@@ -289,6 +291,68 @@ describe('MessageTimeline — the reader takes over', { timeout: HEAVY_RENDER_TI
     rerender(timeline([...messages, message(51), message(52)]));
     await frames(5);
     expect(root.scrollTop).toBe(readerTop);
+  });
+});
+
+describe('MessageTimeline — rows resizing while reading', { timeout: HEAVY_RENDER_TIMEOUT }, () => {
+  // a ResizeObserver the test can fire, the way a browser does after layout
+  const observers: { callback: ResizeObserverCallback; targets: Set<Element> }[] = [];
+  beforeEach(() => {
+    observers.length = 0;
+    vi.stubGlobal('ResizeObserver', class {
+      entry: { callback: ResizeObserverCallback; targets: Set<Element> };
+      constructor(callback: ResizeObserverCallback) {
+        this.entry = { callback, targets: new Set() };
+        observers.push(this.entry);
+      }
+      observe(target: Element) { this.entry.targets.add(target); }
+      unobserve(target: Element) { this.entry.targets.delete(target); }
+      disconnect() { this.entry.targets.clear(); }
+    });
+  });
+  afterEach(() => { vi.unstubAllGlobals(); });
+
+  const startOf = (row: Element) => Number(/,\s*(-?[\d.]+)px/.exec((row as HTMLElement).style.transform)?.[1]);
+
+  it('a row above the reader that grows moves the rows and the scroll position in the same callback', async () => {
+    const messages = Array.from({ length: 300 }, (_, i) => message(i + 1));
+    const { container } = renderTimeline({ messagesByConversation: new Map([['conv-1', messages]]) });
+    const root = container.querySelector('[data-scroll-root]') as HTMLElement;
+    await waitFor(() => expect(root).toHaveAttribute('data-settled'));
+    act(() => root.scrollTo({ top: 4000 }));
+    // rows scrolled in are not measured yet: each keeps its estimated size,
+    // the gap to the next one
+    const rows = () => [...container.querySelectorAll<HTMLElement>('[data-index]')];
+    await waitFor(() => expect(startOf(rows()[0]!)).toBeLessThan(root.scrollTop));
+
+    const [above, next] = rows();
+    const top = rows().findLast((row) => startOf(row) <= root.scrollTop)!;
+    expect(startOf(next!)).toBeLessThanOrEqual(root.scrollTop);
+    const observer = observers.find((o) => o.targets.has(above!))!;
+    const [scrollBefore, topBefore] = [root.scrollTop, startOf(top)];
+    const grown = startOf(next!) - startOf(above!) + 100;
+
+    // read inside act's callback, before React renders anything: nothing may
+    // wait for a render or a frame
+    let after = { scroll: 0, top: 0 };
+    act(() => {
+      observer.callback([{ target: above, borderBoxSize: [{ blockSize: grown, inlineSize: 0 }] } as unknown as ResizeObserverEntry], observer as unknown as ResizeObserver);
+      after = { scroll: root.scrollTop, top: startOf(top) };
+    });
+    expect(after.top).toBe(topBefore + 100);
+    expect(after.scroll).toBe(scrollBefore + 100);
+  });
+});
+
+describe('MessageTimeline — remembered heights', { timeout: HEAVY_RENDER_TIMEOUT }, () => {
+  it('a row measured on one visit starts at that height on the next', async () => {
+    const messages = Array.from({ length: 50 }, (_, i) => message(i + 1));
+    const last = { type: 'message' as const, key: '50', message: messages[49]!, showHeader: true };
+    const first = renderTimeline({ messagesByConversation: new Map([['conv-1', messages]]) });
+    await waitFor(() => expect(first.container.querySelector('[data-scroll-root]')).toHaveAttribute('data-settled'));
+    first.unmount();
+    // the fallback width: no ChatSurface around the list here
+    expect(rememberedRowHeight('main', last, 800)).toBe(ROW);
   });
 });
 
