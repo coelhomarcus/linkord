@@ -27,6 +27,7 @@ const PINNED_THRESHOLD = 8;
 // Rows from an edge at which the next page is requested.
 const PAGE_TRIGGER_ROWS = 3;
 const HIGHLIGHT_MS = 1500;
+const SCROLL_KEYS = new Set(['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' ']);
 const PREPEND_SETTLE_FRAMES = 3;
 // The initial placement is done once position and content height hold for
 // this many frames in a row — and gives up waiting after the cap.
@@ -426,6 +427,30 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
     el.addEventListener('scroll', onScroll, { passive: true });
     return () => el.removeEventListener('scroll', onScroll);
   }, [virtualizer, surfaceId, conversationId, updateDividerAbove]);
+  // After scrollToIndex the library keeps steering to that row for up to 5 s,
+  // until it lands there, and at the end the target moves with every row
+  // that grows. The end placement, still chasing images loading on arrival,
+  // pulled the reader's first scroll up back down; a gesture of theirs ends
+  // it. Nothing public cancels it, so its pending target is dropped.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const takeOver = () => {
+      if (readyRef.current) (virtualizer as unknown as { scrollState: unknown }).scrollState = null;
+    };
+    const onKeyDown = (event: KeyboardEvent) => { if (SCROLL_KEYS.has(event.key)) takeOver(); };
+    el.addEventListener('wheel', takeOver, { passive: true });
+    el.addEventListener('touchstart', takeOver, { passive: true });
+    // grabbing the scrollbar
+    el.addEventListener('pointerdown', takeOver);
+    el.addEventListener('keydown', onKeyDown);
+    return () => {
+      el.removeEventListener('wheel', takeOver);
+      el.removeEventListener('touchstart', takeOver);
+      el.removeEventListener('pointerdown', takeOver);
+      el.removeEventListener('keydown', onKeyDown);
+    };
+  }, [virtualizer]);
   const lastKey = items[items.length - 1]?.key;
   const prevLastKeyRef = useRef(lastKey);
   const prevLengthRef = useRef(items.length);
