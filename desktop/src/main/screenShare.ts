@@ -1,4 +1,5 @@
-import { BrowserWindow, app, desktopCapturer, ipcMain, webContents, type Session, type WebFrameMain } from 'electron';
+import { BrowserWindow, app, desktopCapturer, ipcMain, webContents, type Session } from 'electron';
+import { isAppPage } from './appPage.js';
 import { SourceSelections, sourceKind, streamsFor, type SharePicker } from './displayMedia.js';
 
 // The same names are spelled out in src/preload/index.cts, which cannot import this file
@@ -6,12 +7,6 @@ const LIST_SOURCES = 'linkord:screen-share:list-sources';
 const SELECT_SOURCE = 'linkord:screen-share:select';
 
 const THUMBNAIL = { width: 320, height: 180 };
-
-// Only the app's own top-level page may list the screen or start a share: an
-// embedded player runs other people's code
-function isAppPage(frame: WebFrameMain | null | undefined, appOrigin: string): frame is WebFrameMain {
-  return !!frame && frame.parent === null && frame.origin === appOrigin;
-}
 
 export function installScreenShare(session: Session, appOrigin: string, picker: SharePicker): void {
   const selections = new SourceSelections();
@@ -43,7 +38,7 @@ export function installScreenShare(session: Session, appOrigin: string, picker: 
 
   session.setDisplayMediaRequestHandler((request, callback) => {
     const frame = request.frame;
-    if (!isAppPage(frame, appOrigin)) {
+    if (!frame || !isAppPage(frame, appOrigin)) {
       callback(null);
       return;
     }

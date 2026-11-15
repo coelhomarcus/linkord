@@ -1,4 +1,5 @@
 import { apiFetch } from '@/shared/api/api';
+import { isDesktopApp } from '@/shared/desktop';
 import { loadNotificationsEnabled, saveNotificationsEnabled, setNotificationsModuleEnabled, setPushSubscriptionActive } from '@/shared/notifications';
 
 interface PushConfig { available: boolean; publicKey: string | null }
@@ -15,6 +16,9 @@ function decodePublicKey(value: string): Uint8Array<ArrayBuffer> {
 }
 
 export function pushSupported(): boolean {
+  // Electron exposes PushManager but has no push service behind it, so a
+  // subscription there always fails; the desktop app notifies from the page
+  if (isDesktopApp()) return false;
   return window.isSecureContext && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
 }
 

@@ -197,3 +197,47 @@ describe('NotificationsSettings', () => {
     });
   });
 });
+
+describe('NotificationsSettings — in the desktop app', () => {
+  beforeEach(() => {
+    window.linkordDesktop = { platform: 'darwin', version: '0.1.0' };
+    push.preparePush.mockResolvedValue(null);
+    push.pushSupported.mockReturnValue(false);
+  });
+  afterEach(() => { delete window.linkordDesktop; });
+
+  it('is on with the permission and the preference alone, without a push subscription', async () => {
+    FakeNotification.permission = 'granted';
+    renderNotifications({ notificationsEnabled: true });
+    await waitFor(() => expect(screen.getByRole('switch', { name: SWITCH })).toBeChecked());
+    expect(screen.getByText(/enquanto o Linkord estiver aberto/)).toBeInTheDocument();
+    expect(screen.queryByText(/Push indisponível/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('switch', { name: 'Mostrar o texto das mensagens' })).not.toBeInTheDocument();
+  });
+
+  it('turning on asks for the permission and saves the preference, without subscribing to push', async () => {
+    const setNotificationsEnabled = vi.fn();
+    const user = userEvent.setup();
+    renderNotifications({ notificationsEnabled: false, setNotificationsEnabled });
+    await waitForPreparation();
+
+    await user.click(screen.getByRole('switch', { name: SWITCH }));
+
+    expect(FakeNotification.requestPermission).toHaveBeenCalled();
+    expect(push.enablePush).not.toHaveBeenCalled();
+    expect(setNotificationsEnabled).toHaveBeenCalledWith(true);
+  });
+
+  it('a refused permission leaves it off and says why', async () => {
+    FakeNotification.requestPermission.mockResolvedValue('denied');
+    const setNotificationsEnabled = vi.fn();
+    const user = userEvent.setup();
+    renderNotifications({ notificationsEnabled: false, setNotificationsEnabled });
+    await waitForPreparation();
+
+    await user.click(screen.getByRole('switch', { name: SWITCH }));
+
+    expect(setNotificationsEnabled).not.toHaveBeenCalled();
+    expect(await screen.findByRole('alert')).toHaveTextContent('Notificações bloqueadas');
+  });
+});

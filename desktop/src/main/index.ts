@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { app, dialog, session, type BrowserWindow } from 'electron';
+import { installAppBridge } from './appBridge.js';
 import { resolveAppUrl } from './appUrl.js';
 import { guardContents } from './contentsGuard.js';
 import { capturesSystemAudio, sharePicker } from './displayMedia.js';
@@ -47,6 +48,7 @@ if (!resolved.ok) {
     const picker = sharePicker({ platform: process.platform, systemVersion: process.getSystemVersion(), env: process.env });
     installPermissionHandlers(session.defaultSession, appUrl.origin);
     installScreenShare(session.defaultSession, appUrl.origin, picker);
+    installAppBridge(appUrl.origin);
     mainWindow = createMainWindow({
       appUrl,
       stateFile: path.join(app.getPath('userData'), 'window-state.json'),

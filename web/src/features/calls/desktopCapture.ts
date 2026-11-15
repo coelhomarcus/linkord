@@ -1,41 +1,14 @@
 import { useSyncExternalStore } from 'react';
+import { desktopApp } from '@/shared/desktop';
+import type { DesktopScreenShare, DesktopSource } from '@/shared/desktop';
 
-// What the desktop app's preload exposes (desktop/src/preload/index.cts).
-// Electron shows no picker of its own for getDisplayMedia: on 'app' the page
-// lists the sources, the person picks one here, and the desktop app grants
-// that one when the share then calls getDisplayMedia. On 'system' the OS
-// shows its picker and the page just calls getDisplayMedia.
-
-export interface DesktopSource {
-  id: string;
-  name: string;
-  kind: 'screen' | 'window';
-  /** data: URL, or null when the system gave no preview */
-  thumbnail: string | null;
-  appIcon: string | null;
-}
-
-export interface DesktopScreenShare {
-  picker: 'system' | 'app';
-  /** whether the share can carry the computer's sound (Windows) */
-  systemAudio: boolean;
-  listSources: () => Promise<DesktopSource[]>;
-  select: (id: string, audio: boolean) => Promise<boolean>;
-}
-
-declare global {
-  interface Window {
-    linkordDesktop?: {
-      platform: string;
-      version: string;
-      /** absent in desktop builds older than screen sharing */
-      screenShare?: DesktopScreenShare;
-    };
-  }
-}
+// Electron shows no picker of its own for getDisplayMedia. Where the desktop
+// app has no system picker either ('app'), the page lists the sources, the
+// person picks one in DesktopSourcePicker, and the desktop app grants that one
+// when the share then calls getDisplayMedia.
 
 export function desktopScreenShare(): DesktopScreenShare | null {
-  return window.linkordDesktop?.screenShare ?? null;
+  return desktopApp()?.screenShare ?? null;
 }
 
 export interface DesktopSourceChoice {

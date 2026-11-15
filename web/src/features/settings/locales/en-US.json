@@ -313,6 +313,7 @@
   "notifications": {
     "label": "Enable desktop notifications",
     "description": "Messages, mentions, friend requests and invitations, even with the app closed.",
+    "descriptionDesktop": "Messages and mentions while Linkord is running, even with its window closed on a Mac.",
     "status": {
       "default": "Permission required. The browser will ask when you turn this on.",
       "denied": "Blocked in the browser. Allow access in your browser settings for this site.",

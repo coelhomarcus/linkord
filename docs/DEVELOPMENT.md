@@ -137,12 +137,14 @@ What the window allows:
 
 - Only the server's origin opens inside the app. Links to other sites, and redirects to them, open in the system browser; other schemes (`file:`, `smb:`…) are dropped. A same-origin `window.open` (an attachment's original) opens an app window, because the file needs the account's cookies.
 - The page gets microphone and camera, screen capture, output device selection, notifications, image copy and fullscreen, and only on the server's origin; every other permission, and every permission asked by an embedded player, is refused. On macOS the app also asks for the system's microphone or camera access the first time a call needs it.
-- The page sees `window.linkordDesktop` (`{ platform, version, screenShare }`) and nothing else from Node or Electron.
+- The page sees `window.linkordDesktop` (`{ platform, version, screenShare, focusWindow, setBadgeCount }`, typed in `web/src/shared/desktop.ts`) and nothing else from Node or Electron.
 - Screen sharing: Electron shows no picker of its own for `getDisplayMedia`, so the app uses one of two:
   - **The system's picker** on macOS 15 and later (ScreenCaptureKit), which also needs no Screen Recording permission, and the desktop portal's on Wayland.
   - **The app's own picker** (`DesktopSourcePicker` in `web/src/features/calls/`) on Windows, X11 and older macOS: the page lists the screens and windows through `linkordDesktop.screenShare`, the person picks one, and the desktop app grants only that source, once, to the next `getDisplayMedia` within a minute. The app's own windows are left out of the list. On macOS this path needs Screen Recording permission for the app.
   - The computer's sound can go with a share only on Windows (the picker shows a switch there). On macOS and Linux a share is video only.
   - `LINKORD_SYSTEM_PICKER=0` forces the app's picker, to try it on a Mac that would use the system's.
+- Notifications: Electron has no push service, so the desktop app does not use Web Push. The page shows a system notification for each new message while the app runs (with the window hidden too, on macOS), and a click brings the window back and opens the conversation. Friend requests and invitations, which only push announces, do not notify there, and the "show message text" setting (a push option) is hidden.
+- The unread count goes on the dock icon (macOS) or the launcher (Linux, where the desktop supports it); Windows shows none yet. The web app's install banner and its install entry in settings do not appear.
 - On macOS closing the window hides it and a call keeps going; Cmd+Q quits. Elsewhere closing quits.
 - If the server cannot be reached the window retries, from 1 to 30 seconds apart. The window's size and place are kept in `window-state.json` in the app's data folder (`~/Library/Application Support/Linkord` on macOS).
 

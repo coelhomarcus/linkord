@@ -1,5 +1,6 @@
 // A sandboxed preload must be CommonJS and cannot require local files, so this
-// stays one self-contained file. The channel names match src/main/screenShare.ts.
+// stays one self-contained file. The channel names match src/main/screenShare.ts
+// and src/main/appBridge.ts.
 const { contextBridge, ipcRenderer } = require('electron') as typeof import('electron');
 
 function flag(name: string): string | undefined {
@@ -12,6 +13,8 @@ function flag(name: string): string | undefined {
 contextBridge.exposeInMainWorld('linkordDesktop', Object.freeze({
   platform: process.platform,
   version: flag('linkord-desktop-version') ?? '',
+  focusWindow: () => ipcRenderer.invoke('linkord:window:focus'),
+  setBadgeCount: (count: number) => ipcRenderer.invoke('linkord:badge:set', Number(count)),
   screenShare: Object.freeze({
     picker: flag('linkord-share-picker') === 'system' ? 'system' : 'app',
     systemAudio: flag('linkord-system-audio') === '1',

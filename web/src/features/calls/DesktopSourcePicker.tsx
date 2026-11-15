@@ -9,7 +9,8 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Switch } from '@/shared/ui/primitives/switch';
 import { Tabs, TabsIndicator, TabsList, TabsPanel, TabsTrigger } from '@/shared/ui/primitives/tabs';
 import { answerDesktopSource, useDesktopSourceRequest } from './desktopCapture';
-import type { DesktopSource, DesktopSourceRequest } from './desktopCapture';
+import type { DesktopSourceRequest } from './desktopCapture';
+import type { DesktopSource } from '@/shared/desktop';
 
 /** The desktop app's stand-in for the browser's screen picker (see desktopCapture.ts). */
 export function DesktopSourcePicker() {

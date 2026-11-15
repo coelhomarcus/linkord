@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { renderWithRoom } from '@tests/fixtures/roomContextFixture';
 import { DesktopSourcePicker } from '@/features/calls/DesktopSourcePicker';
 import { chooseDesktopSource } from '@/features/calls/desktopCapture';
-import type { DesktopScreenShare, DesktopSource } from '@/features/calls/desktopCapture';
+import type { DesktopScreenShare, DesktopSource } from '@/shared/desktop';
 
 const SCREENS: DesktopSource[] = [
   { id: 'screen:1:0', name: 'Screen 1', kind: 'screen', thumbnail: 'data:image/png;base64,AA==', appIcon: null },

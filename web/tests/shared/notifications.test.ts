@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { notifyIncomingChatMessage, setNotificationsModuleEnabled } from '@/shared/notifications';
+import { notifyIncomingChatMessage, setNotificationClickHandler, setNotificationsModuleEnabled } from '@/shared/notifications';
 import type { IncomingChatEvent } from '@/shared/notifications';
 import { setDoNotDisturb } from '@/shared/doNotDisturb';
 
@@ -121,5 +121,28 @@ describe('notifyIncomingChatMessage', () => {
     notifyIncomingChatMessage(baseEvent({ mentioned: true }));
     vi.runAllTimers();
     expect(created[0]!.title).toBe('Você foi mencionado em geral');
+  });
+});
+
+describe('notifyIncomingChatMessage — in the desktop app', () => {
+  afterEach(() => { delete window.linkordDesktop; });
+
+  it('shows a page notification even with a service worker, and a click brings the window back', async () => {
+    const focusWindow = vi.fn(async () => {});
+    window.linkordDesktop = { platform: 'darwin', version: '0.1.0', focusWindow };
+    const showNotification = vi.fn();
+    vi.stubGlobal('navigator', { ...navigator, serviceWorker: { getRegistration: vi.fn(async () => ({ showNotification })) } });
+    const onClick = vi.fn();
+    setNotificationClickHandler(onClick);
+
+    notifyIncomingChatMessage(baseEvent());
+    vi.advanceTimersByTime(3000);
+
+    expect(showNotification).not.toHaveBeenCalled();
+    expect(created).toHaveLength(1);
+    created[0]!.onclick?.();
+    expect(focusWindow).toHaveBeenCalled();
+    expect(onClick).toHaveBeenCalledWith('ch-1');
+    setNotificationClickHandler(null);
   });
 });
