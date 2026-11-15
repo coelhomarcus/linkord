@@ -15,6 +15,19 @@ contextBridge.exposeInMainWorld('linkordDesktop', Object.freeze({
   version: flag('linkord-desktop-version') ?? '',
   focusWindow: () => ipcRenderer.invoke('linkord:window:focus'),
   setBadgeCount: (count: number) => ipcRenderer.invoke('linkord:badge:set', Number(count)),
+  // Present means the window has no system title bar and the page draws one
+  windowControls: Object.freeze({
+    style: (['mac', 'windows', 'linux'] as const).find((style) => style === flag('linkord-title-bar')) ?? 'linux',
+    minimize: () => ipcRenderer.invoke('linkord:window:minimize'),
+    toggleMaximize: () => ipcRenderer.invoke('linkord:window:toggle-maximize'),
+    close: () => ipcRenderer.invoke('linkord:window:close'),
+    getState: () => ipcRenderer.invoke('linkord:window:get-state'),
+    onStateChange: (callback: (state: unknown) => void) => {
+      const listener = (_event: unknown, state: unknown) => callback(state);
+      ipcRenderer.on('linkord:window:state', listener);
+      return () => { ipcRenderer.removeListener('linkord:window:state', listener); };
+    },
+  }),
   screenShare: Object.freeze({
     picker: flag('linkord-share-picker') === 'system' ? 'system' : 'app',
     systemAudio: flag('linkord-system-audio') === '1',

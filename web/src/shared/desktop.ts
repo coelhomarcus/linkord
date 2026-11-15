@@ -20,6 +20,25 @@ export interface DesktopScreenShare {
   select: (id: string, audio: boolean) => Promise<boolean>;
 }
 
+export interface DesktopWindowState {
+  maximized: boolean;
+  fullScreen: boolean;
+  focused: boolean;
+}
+
+/** The window has no system title bar: the page draws one with these buttons. */
+export interface DesktopWindowControls {
+  /** whose buttons to draw; the platform's when absent */
+  style?: 'mac' | 'windows' | 'linux';
+  minimize: () => Promise<void>;
+  toggleMaximize: () => Promise<void>;
+  /** what closing does is the desktop app's call (it hides to the tray) */
+  close: () => Promise<void>;
+  getState: () => Promise<DesktopWindowState | null>;
+  /** returns the unsubscribe */
+  onStateChange: (callback: (state: DesktopWindowState) => void) => () => void;
+}
+
 export interface LinkordDesktop {
   platform: string;
   version: string;
@@ -28,6 +47,8 @@ export interface LinkordDesktop {
   focusWindow?: () => Promise<void>;
   /** the count on the dock or launcher icon; false where the system shows none (Windows) */
   setBadgeCount?: (count: number) => Promise<boolean>;
+  /** absent in builds that keep the system title bar */
+  windowControls?: DesktopWindowControls;
 }
 
 declare global {

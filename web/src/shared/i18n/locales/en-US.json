@@ -31,7 +31,14 @@
     "administration": "Administration",
     "loading": "Loading…",
     "dismissNotice": "Dismiss notice",
-    "deletionCancelled": "Account deletion cancelled. Welcome back!"
+    "deletionCancelled": "Account deletion cancelled. Welcome back!",
+    "window": {
+      "minimize": "Minimize",
+      "maximize": "Maximize",
+      "restore": "Restore",
+      "close": "Close",
+      "controls": "Window controls"
+    }
   },
   "upload": {
     "missingConversation": "Conversation not provided.",

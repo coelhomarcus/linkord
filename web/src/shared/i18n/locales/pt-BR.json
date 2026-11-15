@@ -31,7 +31,14 @@
     "administration": "Administração",
     "loading": "Carregando…",
     "dismissNotice": "Dispensar aviso",
-    "deletionCancelled": "Exclusão da conta cancelada. Que bom ter você de volta!"
+    "deletionCancelled": "Exclusão da conta cancelada. Que bom ter você de volta!",
+    "window": {
+      "minimize": "Minimizar",
+      "maximize": "Maximizar",
+      "restore": "Restaurar",
+      "close": "Fechar",
+      "controls": "Controles da janela"
+    }
   },
   "upload": {
     "missingConversation": "Conversa não informada.",

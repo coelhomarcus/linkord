@@ -15,7 +15,8 @@ web/src/
   app/                  # composition root — nothing should import FROM app/
     App.tsx
     layout/             # app-wide screens and chrome: TopBar, GlobalContextMenu, LoadingScreen,
-                        # OutdatedClientScreen, RoomErrorScreen, ErrorBoundary, AppModals, AccessNotice
+                        # OutdatedClientScreen, RoomErrorScreen, ErrorBoundary, AppModals, AccessNotice,
+                        # DesktopFrame + WindowControls (the desktop app's own title bar)
     providers/          # RoomProvider.tsx (the room's state root)
   features/<domain>/    # admin, auth, bots (webhooks), calls, chat, conversations (DMs), friends, gifs,
                         # media, navigation, notifications, profile, reports, servers, settings, soundboard
@@ -97,7 +98,8 @@ server/tests/            # mirrors server/src/ — NO tests inside src/
 desktop/
   src/main/      # Electron main process: index.ts (app lifecycle), mainWindow.ts, session.ts
                  # (permission handlers), contentsGuard.ts (navigation and popups), plus the
-                 # rules they apply as plain modules: appUrl, navigation, permissions, windowState, loadRetry
+                 # rules they apply as plain modules: appUrl, navigation, permissions, windowState, loadRetry,
+                 # titleBar, loginItem, menus, strings, updates (tray.ts, startAtLogin.ts, updater.ts wire them)
   src/preload/   # index.cts, the only bridge into the page
   scripts/       # package.mjs (`npm run package`: bakes LINKORD_URL in, runs electron-builder)
   resources/     # installer icons; electron-builder.config.cjs sits next to package.json

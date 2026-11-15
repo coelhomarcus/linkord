@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { Menu, app, dialog, powerMonitor, session, shell, type BrowserWindow, type Tray } from 'electron';
-import { installAppBridge } from './appBridge.js';
+import { forwardWindowState, installAppBridge } from './appBridge.js';
 import { parseAppConfig, resolveAppUrl } from './appUrl.js';
 import { guardContents } from './contentsGuard.js';
 import { capturesSystemAudio, sharePicker } from './displayMedia.js';
@@ -11,6 +11,7 @@ import { installScreenShare } from './screenShare.js';
 import { installPermissionHandlers } from './session.js';
 import { launchedAtLogin, startAtLogin } from './startAtLogin.js';
 import { stringsFor } from './strings.js';
+import { titleBarStyle } from './titleBar.js';
 import { createTray } from './tray.js';
 import { installUpdater } from './updater.js';
 import { updateMode } from './updates.js';
@@ -100,6 +101,7 @@ if (!resolved.ok) {
     tray = createTray(showMainWindow);
     refreshMenus();
 
+    const barStyle = titleBarStyle({ platform: process.platform, env: process.env, isPackaged: app.isPackaged });
     const picker = sharePicker({ platform: process.platform, systemVersion: process.getSystemVersion(), env: process.env });
     installPermissionHandlers(session.defaultSession, appUrl.origin);
     installScreenShare(session.defaultSession, appUrl.origin, picker);
@@ -113,8 +115,12 @@ if (!resolved.ok) {
         `--linkord-desktop-version=${app.getVersion()}`,
         `--linkord-share-picker=${picker}`,
         `--linkord-system-audio=${capturesSystemAudio(process.platform) ? '1' : '0'}`,
+        `--linkord-title-bar=${barStyle}`,
       ],
     });
+    // Previewing another system's bar on a Mac: its buttons replace the traffic lights
+    if (process.platform === 'darwin' && barStyle !== 'mac') mainWindow.setWindowButtonVisibility(false);
+    forwardWindowState(mainWindow);
     // Closing the window only hides it (to the dock on macOS, the tray
     // elsewhere), so a call keeps going; quitting is in the tray and menu
     mainWindow.on('close', (event) => {

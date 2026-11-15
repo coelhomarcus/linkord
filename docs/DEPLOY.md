@@ -253,7 +253,7 @@ To release a version:
 2. Run **Desktop installers** with the server's address and **release** ticked. After the three builds, a job creates a draft release `v<version>` with the installers and the `latest*.yml` files. It fails if that version already has a release.
 3. Check the draft on the repository's Releases page and publish it. Installed apps see nothing until then.
 
-Use the same `url` for every release: the address is baked into the installer, so an update built for another address moves everyone to that server. The repository's releases are the desktop app's: the updater takes the newest published one, whatever it contains.
+Deploy the server before releasing a desktop version that relies on the page: the window's title bar and buttons are drawn by the web app, so a desktop build that hides the system's title bar, on a server whose web app predates the drawn one, has neither on Windows and Linux. Use the same `url` for every release: the address is baked into the installer, so an update built for another address moves everyone to that server. The repository's releases are the desktop app's: the updater takes the newest published one, whatever it contains.
 
 The app keeps its session and window state in `~/Library/Application Support/Linkord` (macOS), `%APPDATA%\Linkord` (Windows) or `~/.config/Linkord` (Linux).
 

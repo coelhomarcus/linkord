@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import { BrowserWindow, screen } from 'electron';
 import { SECURE_WEB_PREFERENCES } from './contentsGuard.js';
 import { isLoadFailure, retryDelayMs } from './loadRetry.js';
+import { titleBarOptions } from './titleBar.js';
 import { MIN_SIZE, parseWindowState, placeWindow, type WindowState } from './windowState.js';
 
 // The default theme's shell colour (web/index.html), so the window does not
@@ -36,6 +37,7 @@ export function createMainWindow(options: {
     backgroundColor: BACKGROUND,
     show: false,
     autoHideMenuBar: true,
+    ...titleBarOptions(process.platform),
     webPreferences: {
       ...SECURE_WEB_PREFERENCES,
       preload: options.preload,
