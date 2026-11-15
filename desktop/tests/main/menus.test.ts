@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import type { MenuItemConstructorOptions } from 'electron';
-import { trayMenuTemplate, type MenuActions, type MenuState } from '../../src/main/menus.js';
+import { appMenuTemplate, trayMenuTemplate, type MenuActions, type MenuState } from '../../src/main/menus.js';
 import { STRINGS } from '../../src/main/strings.js';
 
 const strings = STRINGS['en-US'];
@@ -11,20 +11,35 @@ function recorder() {
   const actions: MenuActions = {
     showWindow: () => calls.push('show'),
     setStartAtLogin: (enabled) => calls.push(`login:${enabled}`),
+    openInBrowser: () => calls.push('browser'),
     quit: () => calls.push('quit'),
   };
   return { calls, actions };
 }
 
 const state = (overrides: Partial<MenuState> = {}): MenuState => ({
+  platform: 'darwin',
   strings,
   startAtLogin: { available: true, enabled: false },
+  devTools: false,
   ...overrides,
 });
 
-const find = (items: MenuItemConstructorOptions[], label: string) => items.find((item) => item.label === label);
-const click = (item: MenuItemConstructorOptions | undefined, checked?: boolean) =>
+type Item = MenuItemConstructorOptions;
+const children = (item: Item | undefined) => (item?.submenu ?? []) as Item[];
+const flatten = (items: Item[]): Item[] => items.flatMap((item) => [item, ...flatten(children(item))]);
+const find = (items: Item[], label: string) => flatten(items).find((item) => item.label === label);
+const click = (item: Item | undefined, checked?: boolean) =>
   (item?.click as unknown as (menuItem: { checked?: boolean }) => void)({ checked });
+
+function assertNoAdjacentSeparators(items: Item[]): void {
+  for (const list of [items, ...flatten(items).map(children)]) {
+    list.forEach((item, index) => {
+      assert.ok(!(item.type === 'separator' && (index === 0 || index === list.length - 1 || list[index + 1]?.type === 'separator')),
+        'a separator at an edge or next to another');
+    });
+  }
+}
 
 describe('trayMenuTemplate', () => {
   it('opens the window and quits', () => {
@@ -47,5 +62,47 @@ describe('trayMenuTemplate', () => {
     const { actions } = recorder();
     const items = trayMenuTemplate(state({ startAtLogin: { available: false, enabled: false } }), actions);
     assert.equal(find(items, strings.startAtLogin), undefined);
+    assertNoAdjacentSeparators(items);
+  });
+});
+
+describe('appMenuTemplate', () => {
+  it('starts with the app menu on macOS and a File menu elsewhere', () => {
+    const { actions } = recorder();
+    assert.equal(appMenuTemplate(state(), actions)[0]?.label, 'Linkord');
+    assert.equal(appMenuTemplate(state({ platform: 'win32' }), actions)[0]?.label, strings.file);
+    assert.equal(appMenuTemplate(state({ platform: 'linux' }), actions)[0]?.label, strings.file);
+  });
+
+  it('keeps the edit roles, which the copy and paste shortcuts need on macOS', () => {
+    const { actions } = recorder();
+    const roles = flatten(appMenuTemplate(state(), actions)).map((item) => item.role);
+    for (const role of ['copy', 'paste', 'cut', 'selectAll', 'undo', 'quit'] as const) assert.ok(roles.includes(role), role);
+  });
+
+  it('offers start at login and opening the server in the browser', () => {
+    for (const platform of ['darwin', 'win32', 'linux'] as const) {
+      const { calls, actions } = recorder();
+      const items = appMenuTemplate(state({ platform }), actions);
+      click(find(items, strings.startAtLogin), true);
+      click(find(items, strings.openInBrowser));
+      assert.deepEqual(calls, ['login:true', 'browser'], platform);
+    }
+  });
+
+  it('shows the developer tools only in a development run', () => {
+    const { actions } = recorder();
+    const roles = (devTools: boolean) => flatten(appMenuTemplate(state({ devTools }), actions)).map((item) => item.role);
+    assert.ok(!roles(false).includes('toggleDevTools'));
+    assert.ok(roles(true).includes('toggleDevTools'));
+  });
+
+  it('never puts two separators together', () => {
+    const { actions } = recorder();
+    for (const platform of ['darwin', 'win32'] as const) {
+      for (const available of [true, false]) {
+        assertNoAdjacentSeparators(appMenuTemplate(state({ platform, startAtLogin: { available, enabled: false } }), actions));
+      }
+    }
   });
 });

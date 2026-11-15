@@ -1,12 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { Menu, app, dialog, powerMonitor, session, type BrowserWindow, type Tray } from 'electron';
+import { Menu, app, dialog, powerMonitor, session, shell, type BrowserWindow, type Tray } from 'electron';
 import { installAppBridge } from './appBridge.js';
 import { parseAppConfig, resolveAppUrl } from './appUrl.js';
 import { guardContents } from './contentsGuard.js';
 import { capturesSystemAudio, sharePicker } from './displayMedia.js';
 import { createMainWindow } from './mainWindow.js';
-import { trayMenuTemplate, type MenuActions } from './menus.js';
+import { appMenuTemplate, trayMenuTemplate, type MenuActions } from './menus.js';
 import { installScreenShare } from './screenShare.js';
 import { installPermissionHandlers } from './session.js';
 import { launchedAtLogin, startAtLogin } from './startAtLogin.js';
@@ -70,10 +70,17 @@ if (!resolved.ok) {
     const actions: MenuActions = {
       showWindow: showMainWindow,
       setStartAtLogin: (enabled) => { loginItem.setEnabled(enabled); refreshMenus(); },
+      openInBrowser: () => { shell.openExternal(appUrl.href).catch((error: unknown) => console.error('[desktop] could not open the browser', error)); },
       quit: () => app.quit(),
     };
     const refreshMenus = () => {
-      const state = { strings, startAtLogin: { available: loginItem.available, enabled: loginItem.isEnabled() } };
+      const state = {
+        platform: process.platform,
+        strings,
+        startAtLogin: { available: loginItem.available, enabled: loginItem.isEnabled() },
+        devTools: !app.isPackaged,
+      };
+      Menu.setApplicationMenu(Menu.buildFromTemplate(appMenuTemplate(state, actions)));
       tray?.setContextMenu(Menu.buildFromTemplate(trayMenuTemplate(state, actions)));
     };
     tray = createTray(showMainWindow);
