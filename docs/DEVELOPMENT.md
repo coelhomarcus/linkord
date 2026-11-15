@@ -109,6 +109,40 @@ npm run db:seed
 
 It creates four accounts (`ana`, `bruno`, `carla`, `davi`; the shared password is printed at the end and defined at the top of `server/src/scripts/seedDev.ts`), friendships and a pending request, two DMs, and a server ("Equipe do projeto") with `#geral`, a read-only `#avisos` fed by a webhook, a voice channel and a hoisted moderators role. It runs only with `NODE_ENV=development` (the script sets it) against a database on `localhost`, and is safe to run again: rows that exist are left alone. Restart `npm run dev` afterwards, because the server caches memberships in memory.
 
+## Desktop app
+
+`desktop/` is an Electron app that opens the Linkord server in its own window. It does not bundle the web app: the window loads the server's address, so the page talks to `/api` and `/ws` on its own origin, and the server's cookies, origin check and Content-Security-Policy apply as in a browser. It is a prototype: screen sharing, installers, auto-update, a tray icon and a way to pick the server from the app are not done yet.
+
+Install it once (Electron downloads its binary the first time it runs, not at install):
+
+```bash
+npm install --prefix desktop
+```
+
+With `npm run dev` running, start it from the root:
+
+```bash
+npm run dev:desktop
+```
+
+Without an address it opens `http://localhost:5173`. To open another server, set `LINKORD_URL` or pass `--url`:
+
+```bash
+LINKORD_URL=https://chat.example.com npm run dev:desktop
+```
+
+Plain `http` is accepted only for `localhost`, `127.0.0.1` and `[::1]`. A packaged build has no default and stops with an error if neither is given.
+
+What the window allows:
+
+- Only the server's origin opens inside the app. Links to other sites, and redirects to them, open in the system browser; other schemes (`file:`, `smb:`…) are dropped. A same-origin `window.open` (an attachment's original) opens an app window, because the file needs the account's cookies.
+- The page gets microphone and camera, output device selection, notifications, image copy and fullscreen, and only on the server's origin; every other permission, and every permission asked by an embedded player, is refused. On macOS the app also asks for the system's microphone or camera access the first time a call needs it.
+- The page sees `window.linkordDesktop` (`{ platform, version }`) and nothing else from Node or Electron.
+- On macOS closing the window hides it and a call keeps going; Cmd+Q quits. Elsewhere closing quits.
+- If the server cannot be reached the window retries, from 1 to 30 seconds apart. The window's size and place are kept in `window-state.json` in the app's data folder (`~/Library/Application Support/Linkord` on macOS).
+
+The page follows the system language until you log in, then the account's, as in a browser.
+
 ## Create an administrator
 
 After registering with your `REGISTRATION_CODE`, grant the account administrator access from the host:
@@ -165,7 +199,7 @@ Run the checks locally before pushing. This runs the server test typecheck, the 
 npm run check
 ```
 
-GitHub Actions runs the same checks (`.github/workflows/ci.yml`) on every push to `main` and `develop` and on every pull request, unless only docs or Markdown changed. It splits them into three jobs: server (typecheck, test typecheck, tests), web (lint, tests, typecheck and build), and a third for the audit, `npm run check:dead-code` and the e2e typecheck. The dead-code check is not part of `npm run check` because knip needs the `e2e/` packages installed; run it yourself after installing them. A newer push to the same branch cancels the run in progress.
+GitHub Actions runs the same checks (`.github/workflows/ci.yml`) on every push to `main` and `develop` and on every pull request, unless only docs or Markdown changed. It splits them into four jobs: server (typecheck, test typecheck, tests), web (lint, tests, typecheck and build), desktop (typecheck and tests, without downloading Electron), and one for the audit, `npm run check:dead-code` and the e2e typecheck. The dead-code check is not part of `npm run check` because knip needs the `e2e/` packages installed; run it yourself after installing them. A newer push to the same branch cancels the run in progress.
 
 The [end-to-end suite](#end-to-end-tests) has its own workflow (`.github/workflows/e2e.yml`). It runs on pull requests into `main`, the release gate, with the `features`, `restart` and `upgrade` projects as parallel jobs, and can be started for any branch from the Actions tab (Run workflow, then pick a project). It is not run on every push because each project builds the app image and takes 3 to 6 minutes on a hosted runner (about 6 minutes in all, since they run side by side). A failed job uploads the Playwright report and traces as an artifact. The job sets `NODE_OPTIONS=--no-experimental-strip-types`: Node 22.18 and later strip TypeScript themselves and reject what Playwright 1.49 compiles on its own (parameter properties), so set the same if your local Node is that recent.
 
@@ -180,6 +214,8 @@ Every script runs from the repository root.
 | Script | What it does |
 | --- | --- |
 | `npm run dev` | API (Fastify, `:3000`) and web (Vite, `:5173`) in watch mode. |
+| `npm run dev:desktop` | Builds and opens the [desktop app](#desktop-app) against `LINKORD_URL` (default `http://localhost:5173`). Needs `npm install --prefix desktop`. |
+| `npm run test:desktop` | The desktop app's unit tests (`node --test`). Not part of `npm test`, which does not need `desktop/` installed. |
 | `npm run build` / `npm start` | Production build of both, and the built server. |
 | `npm run check` | Everything that should pass before pushing: server test typecheck, web lint, dependency audit, server and web tests, build. |
 | `npm run test:server` / `npm run test:web` | Unit tests of one side (`node --test`, Vitest). No database needed. |
