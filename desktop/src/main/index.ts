@@ -2,7 +2,9 @@ import path from 'node:path';
 import { app, dialog, session, type BrowserWindow } from 'electron';
 import { resolveAppUrl } from './appUrl.js';
 import { guardContents } from './contentsGuard.js';
+import { capturesSystemAudio, sharePicker } from './displayMedia.js';
 import { createMainWindow } from './mainWindow.js';
+import { installScreenShare } from './screenShare.js';
 import { installPermissionHandlers } from './session.js';
 
 const resolved = resolveAppUrl({ argv: process.argv, env: process.env, isPackaged: app.isPackaged });
@@ -42,12 +44,18 @@ if (!resolved.ok) {
   app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 
   app.whenReady().then(() => {
+    const picker = sharePicker({ platform: process.platform, systemVersion: process.getSystemVersion(), env: process.env });
     installPermissionHandlers(session.defaultSession, appUrl.origin);
+    installScreenShare(session.defaultSession, appUrl.origin, picker);
     mainWindow = createMainWindow({
       appUrl,
       stateFile: path.join(app.getPath('userData'), 'window-state.json'),
       preload: path.join(import.meta.dirname, '../preload/index.cjs'),
-      version: app.getVersion(),
+      preloadArguments: [
+        `--linkord-desktop-version=${app.getVersion()}`,
+        `--linkord-share-picker=${picker}`,
+        `--linkord-system-audio=${capturesSystemAudio(process.platform) ? '1' : '0'}`,
+      ],
     });
     mainWindow.on('close', (event) => {
       if (process.platform !== 'darwin' || quitting) return;

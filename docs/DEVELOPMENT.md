@@ -111,7 +111,7 @@ It creates four accounts (`ana`, `bruno`, `carla`, `davi`; the shared password i
 
 ## Desktop app
 
-`desktop/` is an Electron app that opens the Linkord server in its own window. It does not bundle the web app: the window loads the server's address, so the page talks to `/api` and `/ws` on its own origin, and the server's cookies, origin check and Content-Security-Policy apply as in a browser. It is a prototype: screen sharing, installers, auto-update, a tray icon and a way to pick the server from the app are not done yet.
+`desktop/` is an Electron app that opens the Linkord server in its own window. It does not bundle the web app: the window loads the server's address, so the page talks to `/api` and `/ws` on its own origin, and the server's cookies, origin check and Content-Security-Policy apply as in a browser. It is a prototype: installers, auto-update, a tray icon and a way to pick the server from the app are not done yet.
 
 Install it once (Electron downloads its binary the first time it runs, not at install):
 
@@ -136,8 +136,13 @@ Plain `http` is accepted only for `localhost`, `127.0.0.1` and `[::1]`. A packag
 What the window allows:
 
 - Only the server's origin opens inside the app. Links to other sites, and redirects to them, open in the system browser; other schemes (`file:`, `smb:`…) are dropped. A same-origin `window.open` (an attachment's original) opens an app window, because the file needs the account's cookies.
-- The page gets microphone and camera, output device selection, notifications, image copy and fullscreen, and only on the server's origin; every other permission, and every permission asked by an embedded player, is refused. On macOS the app also asks for the system's microphone or camera access the first time a call needs it.
-- The page sees `window.linkordDesktop` (`{ platform, version }`) and nothing else from Node or Electron.
+- The page gets microphone and camera, screen capture, output device selection, notifications, image copy and fullscreen, and only on the server's origin; every other permission, and every permission asked by an embedded player, is refused. On macOS the app also asks for the system's microphone or camera access the first time a call needs it.
+- The page sees `window.linkordDesktop` (`{ platform, version, screenShare }`) and nothing else from Node or Electron.
+- Screen sharing: Electron shows no picker of its own for `getDisplayMedia`, so the app uses one of two:
+  - **The system's picker** on macOS 15 and later (ScreenCaptureKit), which also needs no Screen Recording permission, and the desktop portal's on Wayland.
+  - **The app's own picker** (`DesktopSourcePicker` in `web/src/features/calls/`) on Windows, X11 and older macOS: the page lists the screens and windows through `linkordDesktop.screenShare`, the person picks one, and the desktop app grants only that source, once, to the next `getDisplayMedia` within a minute. The app's own windows are left out of the list. On macOS this path needs Screen Recording permission for the app.
+  - The computer's sound can go with a share only on Windows (the picker shows a switch there). On macOS and Linux a share is video only.
+  - `LINKORD_SYSTEM_PICKER=0` forces the app's picker, to try it on a Mac that would use the system's.
 - On macOS closing the window hides it and a call keeps going; Cmd+Q quits. Elsewhere closing quits.
 - If the server cannot be reached the window retries, from 1 to 30 seconds apart. The window's size and place are kept in `window-state.json` in the app's data folder (`~/Library/Application Support/Linkord` on macOS).
 

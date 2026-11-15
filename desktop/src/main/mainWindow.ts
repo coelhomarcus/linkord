@@ -22,7 +22,8 @@ export function createMainWindow(options: {
   appUrl: URL;
   stateFile: string;
   preload: string;
-  version: string;
+  /** Read by the preload from process.argv: it cannot ask the main process synchronously. */
+  preloadArguments: string[];
 }): BrowserWindow {
   const placement = placeWindow(readState(options.stateFile), screen.getAllDisplays().map((d) => d.workArea));
   const window = new BrowserWindow({
@@ -37,7 +38,7 @@ export function createMainWindow(options: {
       ...SECURE_WEB_PREFERENCES,
       preload: options.preload,
       spellcheck: true,
-      additionalArguments: [`--linkord-desktop-version=${options.version}`],
+      additionalArguments: options.preloadArguments,
     },
   });
   if (placement.maximized) window.maximize();

@@ -5,6 +5,7 @@ import type { LocalTrack, Room } from 'livekit-client';
 import { useScreenShare } from '@/features/calls/useScreenShare';
 import { saveShareQuality } from '@/features/settings/useShareQualityPreference';
 import { SHARE_QUALITY_PRESETS } from '@/features/calls/shareQualityPresets';
+import { answerDesktopSource, useDesktopSourceRequest } from '@/features/calls/desktopCapture';
 
 function fakeTrack(kind: 'video' | 'audio', settings: Record<string, unknown> = {}) {
   return {
@@ -324,5 +325,84 @@ describe('useScreenShare — the call\'s audio never reaches the share', () => {
     const { sources } = await share('browser', {});
 
     expect(sources).toEqual([Track.Source.ScreenShare, Track.Source.ScreenShareAudio]);
+  });
+});
+
+describe('useScreenShare — in the desktop app', () => {
+  function stubDesktop(picker: 'app' | 'system', select = vi.fn(async () => true)) {
+    const listSources = vi.fn(async () => [
+      { id: 'screen:1:0', name: 'Entire Screen', kind: 'screen' as const, thumbnail: null, appIcon: null },
+      { id: 'window:42:0', name: 'Editor', kind: 'window' as const, thumbnail: null, appIcon: null },
+    ]);
+    window.linkordDesktop = { platform: 'win32', version: '0.1.0', screenShare: { picker, systemAudio: true, listSources, select } };
+    return { listSources, select };
+  }
+
+  async function pickerOpen() {
+    const { result } = renderHook(() => useDesktopSourceRequest());
+    await vi.waitFor(() => expect(result.current).not.toBeNull());
+  }
+
+  afterEach(() => { delete window.linkordDesktop; });
+
+  it('asks the in-app picker first and hands the pick to the desktop app before capturing', async () => {
+    const { select } = stubDesktop('app');
+    const getDisplayMedia = stubDisplayMedia(fakeStream(fakeTrack('video')));
+    const { room, publishTrack } = fakeRoom();
+    const { result } = renderHook(() => useScreenShare(room, vi.fn()));
+
+    const sharing = result.current.startSharing();
+    await pickerOpen();
+    expect(getDisplayMedia).not.toHaveBeenCalled();
+    answerDesktopSource({ id: 'window:42:0', audio: true });
+    await sharing;
+
+    expect(select).toHaveBeenCalledWith('window:42:0', true);
+    expect(getDisplayMedia).toHaveBeenCalledTimes(1);
+    expect(publishTrack).toHaveBeenCalled();
+  });
+
+  it('closing the in-app picker cancels quietly, without capturing', async () => {
+    stubDesktop('app');
+    const getDisplayMedia = stubDisplayMedia(fakeStream(fakeTrack('video')));
+    const dispatch = vi.fn();
+    const { room } = fakeRoom();
+    const { result } = renderHook(() => useScreenShare(room, dispatch));
+
+    const sharing = result.current.startSharing();
+    await pickerOpen();
+    answerDesktopSource(null);
+    await sharing;
+
+    expect(getDisplayMedia).not.toHaveBeenCalled();
+    expect(dispatch).not.toHaveBeenCalled();
+  });
+
+  it('reports a pick the desktop app refused', async () => {
+    stubDesktop('app', vi.fn(async () => false));
+    const getDisplayMedia = stubDisplayMedia(fakeStream(fakeTrack('video')));
+    const dispatch = vi.fn();
+    const { room } = fakeRoom();
+    const { result } = renderHook(() => useScreenShare(room, dispatch));
+
+    const sharing = result.current.startSharing();
+    await pickerOpen();
+    answerDesktopSource({ id: 'screen:1:0', audio: false });
+    await sharing;
+
+    expect(getDisplayMedia).not.toHaveBeenCalled();
+    expect(dispatch).toHaveBeenCalledWith(expect.objectContaining({ type: 'SET_SHARE_ERROR' }));
+  });
+
+  it('leaves the picking to the system picker when the desktop app uses it', async () => {
+    const { listSources } = stubDesktop('system');
+    const getDisplayMedia = stubDisplayMedia(fakeStream(fakeTrack('video')));
+    const { room } = fakeRoom();
+    const { result } = renderHook(() => useScreenShare(room, vi.fn()));
+
+    await result.current.startSharing();
+
+    expect(listSources).not.toHaveBeenCalled();
+    expect(getDisplayMedia).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,12 +1,21 @@
 // A sandboxed preload must be CommonJS and cannot require local files, so this
-// stays one self-contained file.
-const { contextBridge } = require('electron') as typeof import('electron');
+// stays one self-contained file. The channel names match src/main/screenShare.ts.
+const { contextBridge, ipcRenderer } = require('electron') as typeof import('electron');
 
-const VERSION_FLAG = '--linkord-desktop-version=';
-const version = process.argv.find((arg) => arg.startsWith(VERSION_FLAG))?.slice(VERSION_FLAG.length) ?? '';
+function flag(name: string): string | undefined {
+  const prefix = `--${name}=`;
+  return process.argv.find((arg) => arg.startsWith(prefix))?.slice(prefix.length);
+}
 
-// The web app's only way to know it runs inside the desktop app
+// The web app's only way to know it runs inside the desktop app, and to reach
+// it. Each entry is a fixed call: the page never gets ipcRenderer itself.
 contextBridge.exposeInMainWorld('linkordDesktop', Object.freeze({
   platform: process.platform,
-  version,
+  version: flag('linkord-desktop-version') ?? '',
+  screenShare: Object.freeze({
+    picker: flag('linkord-share-picker') === 'system' ? 'system' : 'app',
+    systemAudio: flag('linkord-system-audio') === '1',
+    listSources: () => ipcRenderer.invoke('linkord:screen-share:list-sources'),
+    select: (id: string, audio: boolean) => ipcRenderer.invoke('linkord:screen-share:select', String(id), audio === true),
+  }),
 }));

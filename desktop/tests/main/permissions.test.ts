@@ -8,20 +8,21 @@ const granted = (permission: string, requestingUrl = `${APP}/channels/1`, mediaT
 
 describe('isPermissionGranted', () => {
   it('grants what the app uses to its own origin', () => {
-    for (const permission of ['media', 'speaker-selection', 'notifications', 'clipboard-sanitized-write', 'fullscreen']) {
+    for (const permission of ['media', 'display-capture', 'speaker-selection', 'notifications', 'clipboard-sanitized-write', 'fullscreen']) {
       assert.equal(granted(permission), true, permission);
     }
     assert.equal(granted('notifications', APP), true, 'a bare origin from the check handler');
   });
 
   it('denies everything else', () => {
-    for (const permission of ['geolocation', 'clipboard-read', 'midiSysex', 'openExternal', 'display-capture', 'unknown']) {
+    for (const permission of ['geolocation', 'clipboard-read', 'midiSysex', 'openExternal', 'unknown']) {
       assert.equal(granted(permission), false, permission);
     }
   });
 
   it('denies other origins, embedded players included', () => {
     assert.equal(granted('media', 'https://www.youtube.com/embed/x'), false);
+    assert.equal(granted('display-capture', 'https://www.youtube.com/embed/x'), false);
     assert.equal(granted('notifications', 'http://chat.example/'), false);
     assert.equal(granted('media', 'garbage'), false);
   });

@@ -1,9 +1,11 @@
 // The browser features the web app actually uses: calls and voice messages
-// (media, plus picking the output device), notifications, copying images,
-// fullscreen video. Screen sharing goes through the display media handler, not
-// through this list.
+// (media, plus picking the output device), screen sharing, notifications,
+// copying images, fullscreen video. Granting display-capture only lets the
+// request reach the display media handler (screenShare.ts), which decides
+// what, if anything, is captured.
 const GRANTED_PERMISSIONS = new Set([
   'media',
+  'display-capture',
   'speaker-selection',
   'notifications',
   'clipboard-sanitized-write',
