@@ -11,7 +11,7 @@ module.exports = {
   appId: 'app.linkord.desktop',
   productName: 'Linkord',
   directories: { output: 'release', buildResources: 'resources' },
-  files: ['dist/**/*', '!dist/**/*.map', 'package.json'],
+  files: ['dist/**/*', '!dist/**/*.map', 'assets/**/*', 'package.json'],
   artifactName: 'Linkord-${version}-${os}-${arch}.${ext}',
   publish: null,
 

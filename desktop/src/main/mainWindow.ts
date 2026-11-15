@@ -24,6 +24,8 @@ export function createMainWindow(options: {
   preload: string;
   /** Read by the preload from process.argv: it cannot ask the main process synchronously. */
   preloadArguments: string[];
+  /** a start with the system: the window waits in the tray until it is opened */
+  startHidden: boolean;
 }): BrowserWindow {
   const placement = placeWindow(readState(options.stateFile), screen.getAllDisplays().map((d) => d.workArea));
   const window = new BrowserWindow({
@@ -43,7 +45,9 @@ export function createMainWindow(options: {
   });
   if (placement.maximized) window.maximize();
 
-  const reveal = () => { if (!window.isVisible()) window.show(); };
+  // Also on a failed load, so the retry is not an empty, invisible window;
+  // a start with the system keeps quiet until the person opens it
+  const reveal = () => { if (!options.startHidden && !window.isVisible()) window.show(); };
   window.once('ready-to-show', reveal);
 
   let saveTimer: NodeJS.Timeout | undefined;

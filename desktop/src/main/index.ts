@@ -1,13 +1,17 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { app, dialog, session, type BrowserWindow } from 'electron';
+import { Menu, app, dialog, powerMonitor, session, type BrowserWindow, type Tray } from 'electron';
 import { installAppBridge } from './appBridge.js';
 import { parseAppConfig, resolveAppUrl } from './appUrl.js';
 import { guardContents } from './contentsGuard.js';
 import { capturesSystemAudio, sharePicker } from './displayMedia.js';
 import { createMainWindow } from './mainWindow.js';
+import { trayMenuTemplate, type MenuActions } from './menus.js';
 import { installScreenShare } from './screenShare.js';
 import { installPermissionHandlers } from './session.js';
+import { launchedAtLogin, startAtLogin } from './startAtLogin.js';
+import { stringsFor } from './strings.js';
+import { createTray } from './tray.js';
 
 // A development run keeps its own session and window state, and its own
 // single-instance lock, so it can run next to an installed Linkord
@@ -42,6 +46,7 @@ if (!resolved.ok) {
 } else {
   const appUrl = resolved.url;
   let mainWindow: BrowserWindow | null = null;
+  let tray: Tray | null = null;
   let quitting = false;
 
   const showMainWindow = () => {
@@ -57,10 +62,23 @@ if (!resolved.ok) {
   app.on('second-instance', showMainWindow);
   app.on('before-quit', () => { quitting = true; });
   app.on('activate', showMainWindow);
-  // On macOS closing the window only hides it, so a call keeps going
   app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 
   app.whenReady().then(() => {
+    const strings = stringsFor(app.getPreferredSystemLanguages());
+    const loginItem = startAtLogin();
+    const actions: MenuActions = {
+      showWindow: showMainWindow,
+      setStartAtLogin: (enabled) => { loginItem.setEnabled(enabled); refreshMenus(); },
+      quit: () => app.quit(),
+    };
+    const refreshMenus = () => {
+      const state = { strings, startAtLogin: { available: loginItem.available, enabled: loginItem.isEnabled() } };
+      tray?.setContextMenu(Menu.buildFromTemplate(trayMenuTemplate(state, actions)));
+    };
+    tray = createTray(showMainWindow);
+    refreshMenus();
+
     const picker = sharePicker({ platform: process.platform, systemVersion: process.getSystemVersion(), env: process.env });
     installPermissionHandlers(session.defaultSession, appUrl.origin);
     installScreenShare(session.defaultSession, appUrl.origin, picker);
@@ -69,17 +87,24 @@ if (!resolved.ok) {
       appUrl,
       stateFile: path.join(app.getPath('userData'), 'window-state.json'),
       preload: path.join(import.meta.dirname, '../preload/index.cjs'),
+      startHidden: launchedAtLogin(),
       preloadArguments: [
         `--linkord-desktop-version=${app.getVersion()}`,
         `--linkord-share-picker=${picker}`,
         `--linkord-system-audio=${capturesSystemAudio(process.platform) ? '1' : '0'}`,
       ],
     });
+    // Closing the window only hides it (to the dock on macOS, the tray
+    // elsewhere), so a call keeps going; quitting is in the tray and menu
     mainWindow.on('close', (event) => {
-      if (process.platform !== 'darwin' || quitting) return;
+      if (quitting) return;
       event.preventDefault();
       mainWindow?.hide();
     });
+    // A logout or shutdown closes the window without before-quit: holding it
+    // open would hold the system up
+    mainWindow.on('session-end', () => { quitting = true; });
+    powerMonitor.on('shutdown', () => { quitting = true; app.quit(); });
     mainWindow.on('closed', () => { mainWindow = null; });
   });
 }

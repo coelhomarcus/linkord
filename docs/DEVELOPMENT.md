@@ -111,7 +111,7 @@ It creates four accounts (`ana`, `bruno`, `carla`, `davi`; the shared password i
 
 ## Desktop app
 
-`desktop/` is an Electron app that opens the Linkord server in its own window. It does not bundle the web app: the window loads the server's address, so the page talks to `/api` and `/ws` on its own origin, and the server's cookies, origin check and Content-Security-Policy apply as in a browser. It is a prototype: auto-update, a tray icon and a way to pick the server from the app are not done yet. Building the installers is in [DEPLOY.md](DEPLOY.md#desktop-app).
+`desktop/` is an Electron app that opens the Linkord server in its own window. It does not bundle the web app: the window loads the server's address, so the page talks to `/api` and `/ws` on its own origin, and the server's cookies, origin check and Content-Security-Policy apply as in a browser. It is a prototype: auto-update and a way to pick the server from the app are not done yet. Building the installers is in [DEPLOY.md](DEPLOY.md#desktop-app).
 
 Install it once (Electron downloads its binary the first time it runs, not at install):
 
@@ -143,9 +143,10 @@ What the window allows:
   - **The app's own picker** (`DesktopSourcePicker` in `web/src/features/calls/`) on Windows, X11 and older macOS: the page lists the screens and windows through `linkordDesktop.screenShare`, the person picks one, and the desktop app grants only that source, once, to the next `getDisplayMedia` within a minute. The app's own windows are left out of the list. On macOS this path needs Screen Recording permission for the app.
   - The computer's sound can go with a share only on Windows (the picker shows a switch there). On macOS and Linux a share is video only.
   - `LINKORD_SYSTEM_PICKER=0` forces the app's picker, to try it on a Mac that would use the system's.
-- Notifications: Electron has no push service, so the desktop app does not use Web Push. The page shows a system notification for each new message while the app runs (with the window hidden too, on macOS), and a click brings the window back and opens the conversation. Friend requests and invitations, which only push announces, do not notify there, and the "show message text" setting (a push option) is hidden.
+- Notifications: Electron has no push service, so the desktop app does not use Web Push. The page shows a system notification for each new message while the app runs (with the window hidden too), and a click brings the window back and opens the conversation. Friend requests and invitations, which only push announces, do not notify there, and the "show message text" setting (a push option) is hidden.
 - The unread count goes on the dock icon (macOS) or the launcher (Linux, where the desktop supports it); Windows shows none yet. The web app's install banner and its install entry in settings do not appear.
-- On macOS closing the window hides it and a call keeps going; Cmd+Q quits. Elsewhere closing quits.
+- Closing the window hides it and a call keeps going: to the dock on macOS, to the tray elsewhere. The tray icon (the menu bar on macOS) opens the window, turns start at login on or off and quits; on Windows and Linux a click on it brings the window back. Cmd+Q quits on macOS. On a Linux desktop without a tray (GNOME without the AppIndicator extension) a hidden window comes back by launching Linkord again.
+- Start at login is off until turned on from the tray. It uses the system's login items on macOS and Windows and an entry in `~/.config/autostart/` on Linux (the AppImage's own path, so it must stay where it is), and starts with the window hidden in the tray. A development run does not offer it, since it would register the bare Electron binary.
 - If the server cannot be reached the window retries, from 1 to 30 seconds apart. The window's size and place are kept in `window-state.json` in the app's data folder. A development run uses its own folder (`Linkord Dev`, for example `~/Library/Application Support/Linkord Dev` on macOS), so it keeps a separate session and can run next to an installed Linkord.
 
 The page follows the system language until you log in, then the account's, as in a browser.
