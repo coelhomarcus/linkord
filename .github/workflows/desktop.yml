@@ -1,0 +1,58 @@
+name: Desktop installers
+
+# Builds the desktop installers for one server, by hand from the Actions tab.
+# Each system builds its own: only macOS can make the dmg. Nothing is signed
+# (docs/DEPLOY.md, "Desktop app"), so the jobs need no secrets.
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: Address of the Linkord server the app opens (https, e.g. https://chat.example.com)
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    name: Package (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macos
+            os: macos-latest
+            target: --mac
+          - name: windows
+            os: windows-latest
+            target: --win
+          - name: linux
+            os: ubuntu-latest
+            target: --linux
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - run: npm ci --prefix desktop
+      # scripts/package.mjs refuses a missing or non-https address before
+      # electron-builder runs; the input goes through env so it never becomes shell
+      - name: Package
+        run: npm run package --prefix desktop -- ${{ matrix.target }}
+        env:
+          LINKORD_URL: ${{ inputs.url }}
+      - name: Upload installers
+        uses: actions/upload-artifact@v7
+        with:
+          name: linkord-desktop-${{ matrix.name }}
+          if-no-files-found: error
+          path: |
+            desktop/release/*.dmg
+            desktop/release/*.exe
+            desktop/release/*.AppImage
+            desktop/release/*.deb

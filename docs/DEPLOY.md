@@ -212,6 +212,8 @@ The installers land in `desktop/release/`:
 - The first build downloads Electron and the packaging tools.
 - The version in the file names is `desktop/package.json`'s.
 
+**Without a Mac**, GitHub Actions builds all of them: in the repository's Actions tab, open **Desktop installers**, choose **Run workflow**, pick the branch and type the server's address in `url` (the same rules as `LINKORD_URL`; a bad one fails each job before packaging). The workflow (`.github/workflows/desktop.yml`) runs one job per system, on macOS, Windows and Ubuntu runners, and each uploads its installers as an artifact: `linkord-desktop-macos` (both dmg files), `linkord-desktop-windows` (the exe) and `linkord-desktop-linux` (the AppImage and the deb). Download them from the run's summary page; GitHub keeps them for the repository's artifact retention period (90 days by default). It needs no secrets, since nothing is signed. One job failing does not stop the others.
+
 ### Unsigned installers
 
 Nothing is signed with a paid certificate: no Apple Developer ID or notarization, no Windows code signing. The apps work, but the systems treat them as from an unknown developer:
