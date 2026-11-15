@@ -212,7 +212,7 @@ The installers land in `desktop/release/`:
 - The first build downloads Electron and the packaging tools.
 - The version in the file names is `desktop/package.json`'s.
 
-**Without a Mac**, GitHub Actions builds all of them: in the repository's Actions tab, open **Desktop installers**, choose **Run workflow**, pick the branch and type the server's address in `url` (the same rules as `LINKORD_URL`; a bad one fails each job before packaging). The workflow (`.github/workflows/desktop.yml`) runs one job per system, on macOS, Windows and Ubuntu runners, and each uploads its installers as an artifact: `linkord-desktop-macos` (both dmg files), `linkord-desktop-windows` (the exe) and `linkord-desktop-linux` (the AppImage and the deb). Download them from the run's summary page; GitHub keeps them for the repository's artifact retention period (90 days by default). It needs no secrets, since nothing is signed. One job failing does not stop the others.
+**Without a Mac**, GitHub Actions builds all of them: in the repository's Actions tab, open **Desktop installers**, choose **Run workflow**, pick the branch and type the server's address in `url` (the same rules as `LINKORD_URL`; a bad one fails each job before packaging). The workflow (`.github/workflows/desktop.yml`) runs one job per system, on macOS, Windows and Ubuntu runners, and each uploads its installers as an artifact: `linkord-desktop-macos` (both dmg files), `linkord-desktop-windows` (the exe) and `linkord-desktop-linux` (the AppImage and the deb). Download them from the run's summary page; GitHub keeps them for the repository's artifact retention period (90 days by default). It needs no secrets, since nothing is signed. One job failing does not stop the others. Builds from the workflow look for updates in the repository's releases (next section); a build made on your machine does too only with `LINKORD_UPDATE_REPO=<owner>/<repo>` set, and otherwise never checks.
 
 ### Unsigned installers
 
@@ -234,7 +234,26 @@ It does not remove the warning on other machines; only a Developer ID with notar
 
 ### Updates and data
 
-There is no automatic update: install the new version over the old one. Most changes do not need one. The interface comes from the server, so a server deploy updates it. A desktop build older than the server keeps working, because the web app checks each feature the desktop app offers before using it. A new installer is needed only for changes in `desktop/`.
+Most changes do not need a new version. The interface comes from the server, so a server deploy updates it. A desktop build older than the server keeps working, because the web app checks each feature the desktop app offers before using it. A new installer is needed only for changes in `desktop/`.
+
+An installed app looks for a newer version 30 seconds after it starts and every 6 hours, and on demand from **Check for updates…** in the tray or the menu. It reads the latest published release of the repository it was built for (`LINKORD_UPDATE_REPO`, which the workflow sets to its own repository), and only a version number greater than its own counts:
+
+| System | What happens |
+| --- | --- |
+| Windows | Downloads the new installer in the background and installs it when Linkord quits or on **Restart to update**. |
+| Linux, AppImage | The same, replacing the AppImage file in place. |
+| macOS | Shows a notification and a **Download version …** item that opens the release page; install the dmg over the old app. macOS only lets an app replace itself with an update signed by the same Apple Developer ID, which these builds do not have. |
+| Linux, deb | Like macOS: notification and release page, then `sudo apt install ./Linkord-<version>-linux-amd64.deb`. |
+
+No key or secret is involved. The Windows and AppImage updates are checked against the SHA-512 in the release's `latest.yml` and `latest-linux.yml`, served over HTTPS by GitHub; the release is created with the workflow's own `GITHUB_TOKEN`. Anyone who can publish releases on the repository can therefore ship an update to every installed app, so keep that permission as tight as the deploy itself.
+
+To release a version:
+
+1. Raise `version` in `desktop/package.json` (and its `package-lock.json`, `npm version <x.y.z> --prefix desktop --no-git-tag-version`), and push it.
+2. Run **Desktop installers** with the server's address and **release** ticked. After the three builds, a job creates a draft release `v<version>` with the installers and the `latest*.yml` files. It fails if that version already has a release.
+3. Check the draft on the repository's Releases page and publish it. Installed apps see nothing until then.
+
+Use the same `url` for every release: the address is baked into the installer, so an update built for another address moves everyone to that server. The repository's releases are the desktop app's: the updater takes the newest published one, whatever it contains.
 
 The app keeps its session and window state in `~/Library/Application Support/Linkord` (macOS), `%APPDATA%\Linkord` (Windows) or `~/.config/Linkord` (Linux).
 

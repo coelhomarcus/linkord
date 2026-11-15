@@ -42,9 +42,6 @@ const PT_BR = {
   updateAvailableBody: 'A versão {{version}} está disponível para download.',
   updateReadyTitle: 'Atualização pronta',
   updateReadyBody: 'A versão {{version}} será instalada quando o Linkord reiniciar.',
-  updateReadyRestart: 'Reiniciar agora',
-  updateReadyLater: 'Depois',
-  updateDownloadOpen: 'Baixar',
   ok: 'OK',
 };
 
@@ -90,9 +87,6 @@ const EN_US: Strings = {
   updateAvailableBody: 'Version {{version}} is available to download.',
   updateReadyTitle: 'Update ready',
   updateReadyBody: 'Version {{version}} will be installed when Linkord restarts.',
-  updateReadyRestart: 'Restart now',
-  updateReadyLater: 'Later',
-  updateDownloadOpen: 'Download',
   ok: 'OK',
 };
 

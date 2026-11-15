@@ -6,6 +6,9 @@
 // resources/icon.png and icon-mac.png are drawn from web/public/favicon.svg's
 // mark; the macOS one keeps the system's margin around the tile.
 
+const [owner, repo] = (process.env.LINKORD_UPDATE_REPO ?? '').split('/');
+const updateRepo = owner && repo ? { owner, repo } : null;
+
 /** @type {import('electron-builder').Configuration} */
 module.exports = {
   appId: 'app.linkord.desktop',
@@ -13,7 +16,10 @@ module.exports = {
   directories: { output: 'release', buildResources: 'resources' },
   files: ['dist/**/*', '!dist/**/*.map', 'assets/**/*', 'package.json'],
   artifactName: 'Linkord-${version}-${os}-${arch}.${ext}',
-  publish: null,
+  // With a repository (scripts/package.mjs checks it), the build writes the
+  // latest*.yml files the app's updater reads from that repository's GitHub
+  // releases. Uploading them is the workflow's job (--publish never).
+  publish: updateRepo ? { provider: 'github', owner: updateRepo.owner, repo: updateRepo.repo } : null,
 
   mac: {
     target: [{ target: 'dmg', arch: ['arm64', 'x64'] }],
@@ -30,7 +36,7 @@ module.exports = {
     },
   },
 
-  // No auto-update yet: no update metadata or block maps next to the installers
+  // The app updates by downloading a whole installer, so no block maps
   dmg: { writeUpdateInfo: false },
 
   win: {

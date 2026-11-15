@@ -49,4 +49,12 @@ describe('parseAppConfig', () => {
     assert.deepEqual(parseAppConfig({ url: 3 }), {});
     assert.deepEqual(parseAppConfig(null), {});
   });
+
+  it('reads the update repository only when it is owner/repo', () => {
+    assert.deepEqual(parseAppConfig({ url: 'https://chat.example', updateRepo: 'acme/linkord' }), {
+      url: 'https://chat.example',
+      updateRepo: { owner: 'acme', repo: 'linkord' },
+    });
+    assert.deepEqual(parseAppConfig({ url: 'https://chat.example', updateRepo: 'https://github.com/acme/linkord' }), { url: 'https://chat.example' });
+  });
 });

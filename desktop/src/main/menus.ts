@@ -1,5 +1,6 @@
 import type { MenuItemConstructorOptions } from 'electron';
-import type { Strings } from './strings.js';
+import { format, type Strings } from './strings.js';
+import type { UpdateMode, UpdateStatus } from './updates.js';
 
 // Menu templates as plain data, so what each menu offers is tested without
 // Electron; index.ts builds them again whenever the state changes.
@@ -8,6 +9,7 @@ export interface MenuState {
   platform: NodeJS.Platform;
   strings: Strings;
   startAtLogin: { available: boolean; enabled: boolean };
+  update: { mode: UpdateMode; status: UpdateStatus };
   /** a development run; installers leave the developer tools out of the menu */
   devTools: boolean;
 }
@@ -15,6 +17,8 @@ export interface MenuState {
 export interface MenuActions {
   showWindow(): void;
   setStartAtLogin(enabled: boolean): void;
+  checkForUpdates(): void;
+  applyUpdate(): void;
   openInBrowser(): void;
   quit(): void;
 }
@@ -34,10 +38,20 @@ function startAtLoginItems(state: MenuState, actions: MenuActions): MenuItemCons
   }];
 }
 
+function updateItems(state: MenuState, actions: MenuActions): MenuItemConstructorOptions[] {
+  const { mode, status } = state.update;
+  const s = state.strings;
+  if (status.kind === 'downloaded') return [{ label: s.restartToUpdate, click: () => actions.applyUpdate() }];
+  if (status.kind === 'available') return [{ label: format(s.downloadUpdate, { version: status.version }), click: () => actions.applyUpdate() }];
+  if (mode === 'off') return [];
+  return [{ label: s.checkForUpdates, click: () => actions.checkForUpdates() }];
+}
+
 export function trayMenuTemplate(state: MenuState, actions: MenuActions): MenuItemConstructorOptions[] {
   return [
     { label: state.strings.open, click: () => actions.showWindow() },
     separator,
+    ...section(updateItems(state, actions)),
     ...section(startAtLoginItems(state, actions)),
     { label: state.strings.quit, click: () => actions.quit() },
   ];
@@ -87,7 +101,7 @@ export function appMenuTemplate(state: MenuState, actions: MenuActions): MenuIte
     label: s.help,
     submenu: [
       { label: s.openInBrowser, click: () => actions.openInBrowser() },
-      ...(state.platform === 'darwin' ? [] : [separator, { role: 'about', label: s.about } as const]),
+      ...(state.platform === 'darwin' ? [] : [separator, ...section(updateItems(state, actions)), { role: 'about', label: s.about } as const]),
     ],
   };
 
@@ -106,6 +120,7 @@ export function appMenuTemplate(state: MenuState, actions: MenuActions): MenuIte
       submenu: [
         { role: 'about', label: s.about },
         separator,
+        ...section(updateItems(state, actions)),
         ...section(startAtLoginItems(state, actions)),
         { role: 'services', label: s.services },
         separator,

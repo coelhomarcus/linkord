@@ -111,7 +111,7 @@ It creates four accounts (`ana`, `bruno`, `carla`, `davi`; the shared password i
 
 ## Desktop app
 
-`desktop/` is an Electron app that opens the Linkord server in its own window. It does not bundle the web app: the window loads the server's address, so the page talks to `/api` and `/ws` on its own origin, and the server's cookies, origin check and Content-Security-Policy apply as in a browser. It is a prototype: auto-update and a way to pick the server from the app are not done yet. Building the installers is in [DEPLOY.md](DEPLOY.md#desktop-app).
+`desktop/` is an Electron app that opens the Linkord server in its own window. It does not bundle the web app: the window loads the server's address, so the page talks to `/api` and `/ws` on its own origin, and the server's cookies, origin check and Content-Security-Policy apply as in a browser. Each installer is built for one server; picking the server from the app is not done. Building the installers is in [DEPLOY.md](DEPLOY.md#desktop-app).
 
 Install it once (Electron downloads its binary the first time it runs, not at install):
 
@@ -147,6 +147,7 @@ What the window allows:
 - The unread count goes on the dock icon (macOS) or the launcher (Linux, where the desktop supports it); Windows shows none yet. The web app's install banner and its install entry in settings do not appear.
 - Closing the window hides it and a call keeps going: to the dock on macOS, to the tray elsewhere. The tray icon (the menu bar on macOS) opens the window, turns start at login on or off (also in the app menu) and quits; on Windows and Linux a click on it brings the window back. Cmd+Q quits on macOS. On a Linux desktop without a tray (GNOME without the AppIndicator extension) a hidden window comes back by launching Linkord again.
 - The app has its own menu, in the system's language (Portuguese on a Portuguese system, English otherwise; the account's language lives in the page, which loads after the menu): the macOS menu bar with the usual Linkord, Edit, View, Window and Help menus, and on Windows and Linux a menu bar hidden until Alt is pressed. It holds start at login, reload and zoom, and Help → Open in browser for the server's address. The developer tools are in the View menu only in a development run.
+- Updates (Windows and AppImage install themselves, macOS and deb point to the release page) are in [DEPLOY.md](DEPLOY.md#updates-and-data). A development run never checks, nor does an installer built without `LINKORD_UPDATE_REPO`.
 - Start at login is off until turned on from the tray. It uses the system's login items on macOS and Windows and an entry in `~/.config/autostart/` on Linux (the AppImage's own path, so it must stay where it is), and starts with the window hidden in the tray. A development run does not offer it, since it would register the bare Electron binary.
 - If the server cannot be reached the window retries, from 1 to 30 seconds apart. The window's size and place are kept in `window-state.json` in the app's data folder. A development run uses its own folder (`Linkord Dev`, for example `~/Library/Application Support/Linkord Dev` on macOS), so it keeps a separate session and can run next to an installed Linkord.
 
@@ -212,7 +213,7 @@ GitHub Actions runs the same checks (`.github/workflows/ci.yml`) on every push t
 
 The [end-to-end suite](#end-to-end-tests) has its own workflow (`.github/workflows/e2e.yml`). It runs on pull requests into `main`, the release gate, with the `features`, `restart` and `upgrade` projects as parallel jobs, and can be started for any branch from the Actions tab (Run workflow, then pick a project). It is not run on every push because each project builds the app image and takes 3 to 6 minutes on a hosted runner (about 6 minutes in all, since they run side by side). A failed job uploads the Playwright report and traces as an artifact. The job sets `NODE_OPTIONS=--no-experimental-strip-types`: Node 22.18 and later strip TypeScript themselves and reject what Playwright 1.49 compiles on its own (parameter properties), so set the same if your local Node is that recent.
 
-The desktop installers have a workflow of their own (`.github/workflows/desktop.yml`), started only by hand from the Actions tab (Run workflow, then the server's address in `url`). It builds the macOS, Windows and Linux installers on runners of each system and uploads them as artifacts; see [DEPLOY.md](DEPLOY.md#building-the-installers).
+The desktop installers have a workflow of their own (`.github/workflows/desktop.yml`), started only by hand from the Actions tab (Run workflow, then the server's address in `url`). It builds the macOS, Windows and Linux installers on runners of each system and uploads them as artifacts, and with **release** ticked turns them into a draft GitHub release, which is where installed apps find updates; see [DEPLOY.md](DEPLOY.md#updates-and-data).
 
 The audit step (`npm run check:audit`) runs `npm audit --omit=dev --audit-level=high` for the root and `web/`, so it fails on a high or critical advisory in anything that ships and needs network access to the npm registry. Dev-only tooling is left out on purpose; `npm audit fix` updates the lockfile within the declared ranges. Keep build-only packages (Tailwind, Vite plugins) in `devDependencies` of `web/`: the Docker image builds the web app with every dependency installed and ships only the output.
 
@@ -226,7 +227,7 @@ Every script runs from the repository root.
 | --- | --- |
 | `npm run dev` | API (Fastify, `:3000`) and web (Vite, `:5173`) in watch mode. |
 | `npm run dev:desktop` | Builds and opens the [desktop app](#desktop-app) against `LINKORD_URL` (default `http://localhost:5173`). Needs `npm install --prefix desktop`. |
-| `npm run package:desktop` | Builds the desktop installers into `desktop/release/` for the server in `LINKORD_URL`; see [DEPLOY.md](DEPLOY.md#desktop-app). |
+| `npm run package:desktop` | Builds the desktop installers into `desktop/release/` for the server in `LINKORD_URL`, looking for updates in the GitHub repository in `LINKORD_UPDATE_REPO` (`owner/repo`, optional); see [DEPLOY.md](DEPLOY.md#desktop-app). |
 | `npm run test:desktop` | The desktop app's unit tests (`node --test`). Not part of `npm test`, which does not need `desktop/` installed. |
 | `npm run build` / `npm start` | Production build of both, and the built server. |
 | `npm run check` | Everything that should pass before pushing: server test typecheck, web lint, dependency audit, server and web tests, build. |

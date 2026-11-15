@@ -1,3 +1,5 @@
+import { parseUpdateRepo, type UpdateRepo } from './updates.js';
+
 // What the window loads: the Linkord server itself, not a bundled copy of the
 // web app. The page then talks to /api and /ws on its own origin, so the
 // server's cookies, origin guard and CSP apply unchanged, and a deploy updates
@@ -32,8 +34,12 @@ export function resolveAppUrl(input: {
 }
 
 /** app-config.json, written next to the compiled code when an installer is built. */
-export function parseAppConfig(raw: unknown): { url?: string } {
+export function parseAppConfig(raw: unknown): { url?: string; updateRepo?: UpdateRepo } {
   if (!raw || typeof raw !== 'object') return {};
-  const { url } = raw as { url?: unknown };
-  return typeof url === 'string' && url ? { url } : {};
+  const { url, updateRepo } = raw as { url?: unknown; updateRepo?: unknown };
+  const repo = parseUpdateRepo(updateRepo);
+  return {
+    ...(typeof url === 'string' && url ? { url } : {}),
+    ...(repo ? { updateRepo: repo } : {}),
+  };
 }
