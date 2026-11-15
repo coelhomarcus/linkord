@@ -1,6 +1,6 @@
 name: CI
 
-# The checks AGENTS.md asks for before calling a change done, split in three
+# The checks AGENTS.md asks for before calling a change done, split in four
 # jobs that run side by side. None needs PostgreSQL: `.env.test` only satisfies
 # the import guard of `server/src/db/client.ts`. The browser suite has its own
 # workflow (e2e.yml).
@@ -58,6 +58,24 @@ jobs:
       - name: Typecheck and build
         run: npm run build --prefix web
 
+  desktop:
+    name: Desktop
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      # Electron fetches its binary on first launch, which these steps never do
+      - run: npm ci --prefix desktop
+      - name: Typecheck
+        run: npm run typecheck --prefix desktop
+      - name: Test
+        run: npm run test --prefix desktop
+
   hygiene:
     name: Audit and dead code
     runs-on: ubuntu-latest
@@ -72,10 +90,12 @@ jobs:
             package-lock.json
             web/package-lock.json
             e2e/package-lock.json
+            desktop/package-lock.json
       - name: Audit shipped dependencies
         run: npm run check:audit
-      # knip reads all three workspaces, so each needs its packages
-      - run: npm ci && npm ci --prefix web && npm ci --prefix e2e
+      # knip reads every workspace, so each needs its packages (Electron's own
+      # binary is only fetched on first launch, which this job never does)
+      - run: npm ci && npm ci --prefix web && npm ci --prefix e2e && npm ci --prefix desktop
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
       - name: Dead code

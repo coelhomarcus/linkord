@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { renderHook } from '@testing-library/react';
 import {
-  SESSIONS_BEFORE_BANNER, dismissInstallBanner, installMethod, isDismissed, readInstallSessions, recordInstallSession, shouldShowInstallBanner,
+  SESSIONS_BEFORE_BANNER, dismissInstallBanner, installMethod, isDismissed, readInstallSessions, recordInstallSession, shouldShowInstallBanner, useInstall,
 } from '@/features/install/installPrompt';
 
 describe('installMethod', () => {
@@ -85,5 +86,15 @@ describe('storage that throws', () => {
     } finally {
       Storage.prototype.getItem = original;
     }
+  });
+});
+
+describe('useInstall in the desktop app', () => {
+  afterEach(() => { delete window.linkordDesktop; });
+
+  it('offers no install: the desktop app is the installed app', () => {
+    window.linkordDesktop = { platform: 'win32', version: '0.1.0' };
+    const { result } = renderHook(() => useInstall());
+    expect(result.current.method).toBeNull();
   });
 });

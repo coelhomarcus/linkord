@@ -72,6 +72,8 @@ Open [http://localhost:3000](http://localhost:3000) and create an account with t
 
 For local development, the frontend and backend run on the host, and `docker compose up -d` brings up the services they use (PostgreSQL, LiveKit and a mail sink). Follow the [local development guide](docs/DEVELOPMENT.md) for setup and run instructions.
 
+A desktop app for macOS, Windows and Linux is in progress in `desktop/`: an Electron window that opens your Linkord server. See [Desktop app](docs/DEVELOPMENT.md#desktop-app) for running it and [building its installers](docs/DEPLOY.md#desktop-app) for your server.
+
 ## 🐳 Deployment
 
 Linkord ships as one Docker image (web app, API and realtime server on port 3000) next to a PostgreSQL database and a LiveKit server. It runs on Dokploy, on its own with `docker run`, or with PostgreSQL and LiveKit bundled by the `full` profile of `docker-compose.yml`. The [deployment guide](docs/DEPLOY.md) covers the environment it needs, the folders it writes to and their permissions, updates while people are connected, security headers, backups and troubleshooting.
@@ -80,6 +82,7 @@ Linkord ships as one Docker image (web app, API and realtime server on port 3000
 
 ```bash
 npm run dev           # API and web app in watch mode
+npm run dev:desktop   # the desktop app against the dev server (npm install --prefix desktop first)
 npm run db:seed       # sample accounts, DMs and a server in the local database
 npm run backup        # database dump + uploads archive in ./backups, with rotation
 npm run check         # typecheck, lint, unit tests and production build

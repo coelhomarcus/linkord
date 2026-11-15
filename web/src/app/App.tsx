@@ -30,6 +30,7 @@ import { ChatSearchDialog } from '@/features/chat/ChatSearchDialog';
 import { Stage } from '@/features/calls/Stage';
 import { DmCallOverlay } from '@/features/calls/DmCallOverlay';
 import { CallMoveDialog } from '@/features/calls/CallMoveDialog';
+import { DesktopSourcePicker } from '@/features/calls/DesktopSourcePicker';
 import { CallConnectingScreen } from '@/features/calls/CallConnectingScreen';
 import { ParticipantAudioLayer } from '@/features/calls/ParticipantAudioLayer';
 import { FloatingPip } from '@/features/calls/FloatingPip';
@@ -339,6 +340,7 @@ function Shell() {
       >
         <DmCallOverlay />
         <CallMoveDialog />
+        <DesktopSourcePicker />
         <AccessNotice />
         <AccountNotice />
         <InstallBanner />

@@ -2,6 +2,7 @@
 import { i18n } from '@/shared/i18n/init';
 import { LOCAL_STORAGE_KEYS, localStorageStore } from '@/shared/lib/localStorage';
 import { isDoNotDisturb } from '@/shared/doNotDisturb';
+import { desktopApp, isDesktopApp } from '@/shared/desktop';
 
 export function loadNotificationsEnabled(): boolean {
   const stored = localStorageStore.get(LOCAL_STORAGE_KEYS.notificationsEnabled);
@@ -126,20 +127,27 @@ function flush(conversationId: string): void {
       tag: `chat-${conversationId}`,
       data: { path: `/app/conversations/${encodeURIComponent(conversationId)}` },
     };
-    if ('serviceWorker' in navigator) {
+    // The desktop app shows page notifications as the system's; a service
+    // worker's would need a push service it does not have
+    if ('serviceWorker' in navigator && !isDesktopApp()) {
       void navigator.serviceWorker.getRegistration('/').then((registration) => {
         if (registration) return registration.showNotification(title, options);
-        const notif = new Notification(title, options);
-        notif.onclick = () => { window.focus(); onClick?.(conversationId); notif.close(); };
+        showPageNotification(title, options, conversationId);
       }).catch(() => {});
     } else {
-      const notif = new Notification(title, options);
-      notif.onclick = () => {
-        window.focus();
-        onClick?.(conversationId);
-        notif.close();
-      };
+      showPageNotification(title, options, conversationId);
     }
   } catch {
   }
+}
+
+function showPageNotification(title: string, options: NotificationOptions, conversationId: string): void {
+  const notif = new Notification(title, options);
+  notif.onclick = () => {
+    window.focus();
+    // a hidden desktop window (closed on macOS) does not come back from window.focus()
+    void desktopApp()?.focusWindow?.().catch(() => {});
+    onClick?.(conversationId);
+    notif.close();
+  };
 }

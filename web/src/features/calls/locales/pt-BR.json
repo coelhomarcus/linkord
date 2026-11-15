@@ -206,5 +206,16 @@
     "voice": "Canal de voz em outra aba ou dispositivo",
     "direct": "Chamada privada em outra aba ou dispositivo",
     "bringHere": "Trazer a chamada para esta aba"
+  },
+  "desktopPicker": {
+    "title": "Compartilhar tela",
+    "screens": "Telas",
+    "windows": "Janelas",
+    "entireScreen": "Tela inteira",
+    "screenNumber": "Tela {{number}}",
+    "noWindows": "Nenhuma janela para compartilhar.",
+    "shareAudio": "Compartilhar o som do computador",
+    "cancel": "Cancelar",
+    "share": "Compartilhar"
   }
 }

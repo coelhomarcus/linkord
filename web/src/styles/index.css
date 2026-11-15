@@ -242,6 +242,25 @@
    shorter than entrances: nothing waits on them, and they are hidden from
    input as they start (Base UI's popups; the floating save bar is inert). */
 
+/* The desktop app's own title bar (app/layout/DesktopFrame.tsx): Electron moves
+   the window when a drag starts on an app-drag area, and swallows its clicks,
+   so anything clickable inside takes app-no-drag. Browsers ignore both. */
+@utility app-drag {
+  -webkit-app-region: drag;
+  app-region: drag;
+  user-select: none;
+}
+@utility app-no-drag {
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+}
+/* A popup or dialog that opens over the title bar must stay clickable there:
+   Electron's drag areas ignore what is painted on top of them */
+[role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"], [role="tooltip"] {
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+}
+
 /* Popovers, menus, selects and tooltips. With tw-animate's animate-in/out,
    which reads these two variables. */
 @utility motion-popup {

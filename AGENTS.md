@@ -2,7 +2,7 @@
 
 Instructions for agents (and humans) working in this repository. For "what is this project, how do I run it, what's the stack" see [README.md](README.md) — this file is about **how the code is organized and the conventions to follow when touching it**.
 
-Monorepo: `web/` (frontend, React + Vite + Vitest) and `server/` (backend, Fastify + Drizzle/Postgres + Socket.IO + LiveKit, `node --test`). Both TypeScript/ESM.
+Monorepo: `web/` (frontend, React + Vite + Vitest), `server/` (backend, Fastify + Drizzle/Postgres + Socket.IO + LiveKit, `node --test`) and `desktop/` (Electron window around the web app, `node --test`). All TypeScript/ESM.
 
 ## General rule: organize by feature, not by layer
 
@@ -15,7 +15,8 @@ web/src/
   app/                  # composition root — nothing should import FROM app/
     App.tsx
     layout/             # app-wide screens and chrome: TopBar, GlobalContextMenu, LoadingScreen,
-                        # OutdatedClientScreen, RoomErrorScreen, ErrorBoundary, AppModals, AccessNotice
+                        # OutdatedClientScreen, RoomErrorScreen, ErrorBoundary, AppModals, AccessNotice,
+                        # DesktopFrame + WindowControls (the desktop app's own title bar)
     providers/          # RoomProvider.tsx (the room's state root)
   features/<domain>/    # admin, auth, bots (webhooks), calls, chat, conversations (DMs), friends, gifs,
                         # media, navigation, notifications, profile, reports, servers, settings, soundboard
@@ -91,6 +92,26 @@ server/tests/            # mirrors server/src/ — NO tests inside src/
 - **Servers and channels**: a channel is a `conversations` row (`type` `text` or `voice`, with `serverId`); a DM is `type` `direct` with `conversation_members`. Access to a channel goes through `getConversationForUser(id, userId, permission)` in `conversationsRepository.ts`, which resolves the member's permissions (`modules/servers/permissions.ts`, mirrored in `web/src/features/servers/permissionBits.ts` and pinned by a test). Ask for the bit the action needs — never check membership by hand.
 - Tests ALWAYS in `server/tests/`, never inside `server/src/`.
 
+## Desktop (`desktop/`)
+
+```
+desktop/
+  src/main/      # Electron main process: index.ts (app lifecycle), mainWindow.ts, session.ts
+                 # (permission handlers), contentsGuard.ts (navigation and popups), plus the
+                 # rules they apply as plain modules: appUrl, navigation, permissions, windowState, loadRetry,
+                 # titleBar, loginItem, menus, strings, updates (tray.ts, startAtLogin.ts, updater.ts wire them)
+  src/preload/   # index.cts, the only bridge into the page
+  scripts/       # package.mjs (`npm run package`: bakes LINKORD_URL in, runs electron-builder)
+  resources/     # installer icons; electron-builder.config.cjs sits next to package.json
+desktop/tests/   # mirrors desktop/src/ — NO tests inside src/
+```
+
+- **The window loads the server, not a bundled copy of `web/`.** Same origin means the server's cookies, `originGuard` and CSP work unchanged and a deploy updates the interface. Don't load local files or add an API proxy without a reason that outweighs that.
+- **Rules live in plain modules with no `electron` import**, so `node --test` covers them without Electron; the files that import `electron` only wire those rules to events. A new decision (what to allow, where to go, how long to wait) goes in a plain module with a test.
+- **The page is untrusted as far as the main process is concerned**: `contextIsolation`, `sandbox`, no `nodeIntegration` on every window (`SECURE_WEB_PREFERENCES`). Permissions are an allowlist checked against the app's origin (`permissions.ts`); add a permission only for a feature the web app really uses.
+- **The preload is one CommonJS file** (`.cts`, a sandboxed preload can neither be ESM nor require local files). It exposes `window.linkordDesktop` and nothing else; anything more the page needs is a named function there that sends a specific IPC message, never `ipcRenderer` itself. The web side types that object in `shared/desktop.ts` (`desktopApp()`, `isDesktopApp()`); change both together, and keep the web app working when a field is missing (an older desktop build).
+- Imports are relative with `.js` extensions, as in `server/`.
+
 ## Internationalization (`web/`)
 
 i18next + react-i18next, strings bundled (no backend). Supported languages live in `web/src/shared/i18n/languages.ts` (mirrored by `server/src/modules/users/locale.ts`, pinned by a server test).
@@ -159,6 +180,10 @@ npm run test:server                            # node --test
 cd web && npx tsc -p tsconfig.app.json --noEmit
 cd web && npm run lint                         # oxlint
 cd web && npm run test                         # vitest run
+
+# desktop
+npm run typecheck --prefix desktop
+npm run test:desktop
 
 # both together
 npm run build                                  # tsc -p server + vite build

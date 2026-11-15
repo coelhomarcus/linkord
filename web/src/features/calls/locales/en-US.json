@@ -206,5 +206,16 @@
     "voice": "Voice channel on another tab or device",
     "direct": "Private call on another tab or device",
     "bringHere": "Bring the call to this tab"
+  },
+  "desktopPicker": {
+    "title": "Share your screen",
+    "screens": "Screens",
+    "windows": "Windows",
+    "entireScreen": "Entire screen",
+    "screenNumber": "Screen {{number}}",
+    "noWindows": "No windows to share.",
+    "shareAudio": "Share computer sound",
+    "cancel": "Cancel",
+    "share": "Share"
   }
 }

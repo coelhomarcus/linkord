@@ -1,0 +1,37 @@
+// A sandboxed preload must be CommonJS and cannot require local files, so this
+// stays one self-contained file. The channel names match src/main/screenShare.ts
+// and src/main/appBridge.ts.
+const { contextBridge, ipcRenderer } = require('electron') as typeof import('electron');
+
+function flag(name: string): string | undefined {
+  const prefix = `--${name}=`;
+  return process.argv.find((arg) => arg.startsWith(prefix))?.slice(prefix.length);
+}
+
+// The web app's only way to know it runs inside the desktop app, and to reach
+// it. Each entry is a fixed call: the page never gets ipcRenderer itself.
+contextBridge.exposeInMainWorld('linkordDesktop', Object.freeze({
+  platform: process.platform,
+  version: flag('linkord-desktop-version') ?? '',
+  focusWindow: () => ipcRenderer.invoke('linkord:window:focus'),
+  setBadgeCount: (count: number) => ipcRenderer.invoke('linkord:badge:set', Number(count)),
+  // Present means the window has no system title bar and the page draws one
+  windowControls: Object.freeze({
+    style: (['mac', 'windows', 'linux'] as const).find((style) => style === flag('linkord-title-bar')) ?? 'linux',
+    minimize: () => ipcRenderer.invoke('linkord:window:minimize'),
+    toggleMaximize: () => ipcRenderer.invoke('linkord:window:toggle-maximize'),
+    close: () => ipcRenderer.invoke('linkord:window:close'),
+    getState: () => ipcRenderer.invoke('linkord:window:get-state'),
+    onStateChange: (callback: (state: unknown) => void) => {
+      const listener = (_event: unknown, state: unknown) => callback(state);
+      ipcRenderer.on('linkord:window:state', listener);
+      return () => { ipcRenderer.removeListener('linkord:window:state', listener); };
+    },
+  }),
+  screenShare: Object.freeze({
+    picker: flag('linkord-share-picker') === 'system' ? 'system' : 'app',
+    systemAudio: flag('linkord-system-audio') === '1',
+    listSources: () => ipcRenderer.invoke('linkord:screen-share:list-sources'),
+    select: (id: string, audio: boolean) => ipcRenderer.invoke('linkord:screen-share:select', String(id), audio === true),
+  }),
+}));

@@ -188,6 +188,75 @@ The server writes one JSON line per record to stdout and stderr (`LOG_FORMAT=jso
 
 Keep logs for at most **30 days**. The compose file and the `docker run` above rotate them at 5 files of 10 MB, which on a small instance is days to a few weeks; with Dokploy, or any other log collector, set the same bound in its log settings. The addresses stored with each login session (Settings → Security) are database data and follow the session, not this policy.
 
+## Desktop app
+
+The desktop app (`desktop/`, Electron) is a window around one Linkord server: it loads the server's address and talks to it like a browser tab, so the server needs no change for it. Each installer is built for one server, whose address is baked in.
+
+### Building the installers
+
+```bash
+npm install --prefix desktop
+LINKORD_URL=https://chat.example.com npm run package:desktop
+```
+
+The installers land in `desktop/release/`:
+
+| System | File | Notes |
+| --- | --- | --- |
+| macOS | `Linkord-<version>-mac-arm64.dmg`, `-mac-x64.dmg` | Apple Silicon and Intel. |
+| Windows | `Linkord-<version>-win-x64.exe` | Installs for the current user, no administrator prompt. |
+| Linux | `Linkord-<version>-linux-x86_64.AppImage`, `-linux-amd64.deb` | |
+
+- `LINKORD_URL` must be `https` (plain `http` only for `localhost`); the build refuses to run without it. A different server needs its own build. Someone who has the app can still point it elsewhere with `LINKORD_URL` or `--url=<address>` at launch.
+- Without arguments the build makes the installers of the system it runs on. Pass targets after `--` for the others: `npm run package:desktop -- --win --linux`. A Mac builds all three. Linux and Windows cannot build the macOS one, which needs macOS tools.
+- The first build downloads Electron and the packaging tools.
+- The version in the file names is `desktop/package.json`'s.
+
+**Without a Mac**, GitHub Actions builds all of them: in the repository's Actions tab, open **Desktop installers**, choose **Run workflow**, pick the branch and type the server's address in `url` (the same rules as `LINKORD_URL`; a bad one fails each job before packaging). The workflow (`.github/workflows/desktop.yml`) runs one job per system, on macOS, Windows and Ubuntu runners, and each uploads its installers as an artifact: `linkord-desktop-macos` (both dmg files), `linkord-desktop-windows` (the exe) and `linkord-desktop-linux` (the AppImage and the deb). Download them from the run's summary page; GitHub keeps them for the repository's artifact retention period (90 days by default). It needs no secrets, since nothing is signed. One job failing does not stop the others. Builds from the workflow look for updates in the repository's releases (next section); a build made on your machine does too only with `LINKORD_UPDATE_REPO=<owner>/<repo>` set, and otherwise never checks.
+
+### Unsigned installers
+
+Nothing is signed with a paid certificate: no Apple Developer ID or notarization, no Windows code signing. The apps work, but the systems treat them as from an unknown developer:
+
+- **macOS**: a downloaded app is blocked the first time ("cannot be verified"). Open it once, then go to System Settings → Privacy & Security and choose **Open Anyway**; from then on it opens normally. Removing the download mark does the same: `xattr -dr com.apple.quarantine /Applications/Linkord.app`.
+- **Windows**: SmartScreen shows "Windows protected your PC". Choose **More info** → **Run anyway**. Each new version shows it again, and some antivirus tools are quicker to flag unsigned programs.
+- **Linux**: no signing is expected. Make the AppImage executable (`chmod +x`), or install the `.deb` with `sudo apt install ./Linkord-<version>-linux-amd64.deb`.
+
+**macOS permissions after an update.** The macOS build has an ad-hoc signature, the only kind possible without an Apple account. macOS remembers microphone, camera and Screen Recording access by the app's designated requirement. For an ad-hoc signature that requirement is the hash of the code (`codesign -d -r- /Applications/Linkord.app` shows `cdhash H"..."`), and it changes with every build. So macOS does not match a new version to the grants made for the previous one: expect it to ask for the microphone and camera again after each update, and a Screen Recording grant (needed only by the app's own share picker, before macOS 15) to stop applying until it is removed and granted again. Screen sharing on macOS 15 and later uses the system's picker, which needs no Screen Recording permission.
+
+Grants survive updates only when every build is signed with the same certificate, because the requirement then names the certificate instead of the code. A free self-signed certificate does this on the machines where it is set up:
+
+1. In Keychain Access, choose Certificate Assistant → Create a Certificate, with the type **Code Signing**.
+2. Mark it trusted for code signing (`codesign` refuses an untrusted identity).
+3. Sign each installed version with `codesign --force --deep --sign "<certificate name>" /Applications/Linkord.app`.
+
+It does not remove the warning on other machines; only a Developer ID with notarization does that.
+
+### Updates and data
+
+Most changes do not need a new version. The interface comes from the server, so a server deploy updates it. A desktop build older than the server keeps working, because the web app checks each feature the desktop app offers before using it. A new installer is needed only for changes in `desktop/`.
+
+An installed app looks for a newer version 30 seconds after it starts and every 6 hours, and on demand from **Check for updates…** in the tray or the menu. It reads the latest published release of the repository it was built for (`LINKORD_UPDATE_REPO`, which the workflow sets to its own repository), and only a version number greater than its own counts:
+
+| System | What happens |
+| --- | --- |
+| Windows | Downloads the new installer in the background and installs it when Linkord quits or on **Restart to update**. |
+| Linux, AppImage | The same, replacing the AppImage file in place. |
+| macOS | Shows a notification and a **Download version …** item that opens the release page; install the dmg over the old app. macOS only lets an app replace itself with an update signed by the same Apple Developer ID, which these builds do not have. |
+| Linux, deb | Like macOS: notification and release page, then `sudo apt install ./Linkord-<version>-linux-amd64.deb`. |
+
+No key or secret is involved. The Windows and AppImage updates are checked against the SHA-512 in the release's `latest.yml` and `latest-linux.yml`, served over HTTPS by GitHub; the release is created with the workflow's own `GITHUB_TOKEN`. Anyone who can publish releases on the repository can therefore ship an update to every installed app, so keep that permission as tight as the deploy itself.
+
+To release a version:
+
+1. Raise `version` in `desktop/package.json` (and its `package-lock.json`, `npm version <x.y.z> --prefix desktop --no-git-tag-version`), and push it.
+2. Run **Desktop installers** with the server's address and **release** ticked. After the three builds, a job creates a draft release `v<version>` with the installers and the `latest*.yml` files. It fails if that version already has a release.
+3. Check the draft on the repository's Releases page and publish it. Installed apps see nothing until then.
+
+Deploy the server before releasing a desktop version that relies on the page: the window's title bar and buttons are drawn by the web app, so a desktop build that hides the system's title bar, on a server whose web app predates the drawn one, has neither on Windows and Linux. Use the same `url` for every release: the address is baked into the installer, so an update built for another address moves everyone to that server. The repository's releases are the desktop app's: the updater takes the newest published one, whatever it contains.
+
+The app keeps its session and window state in `~/Library/Application Support/Linkord` (macOS), `%APPDATA%\Linkord` (Windows) or `~/.config/Linkord` (Linux).
+
 ## Troubleshooting
 
 - **`/readyz` answers 503.** Search the log for `not ready`: its fields say whether `database` (unreachable, refused, or past the 1 s timeout, which also happens when every pooled connection is busy) or `uploads` (a folder that is not writable, see [Folders and permissions](#folders-and-permissions)) failed.
