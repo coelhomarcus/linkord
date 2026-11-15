@@ -90,10 +90,12 @@ jobs:
             package-lock.json
             web/package-lock.json
             e2e/package-lock.json
+            desktop/package-lock.json
       - name: Audit shipped dependencies
         run: npm run check:audit
-      # knip reads all three workspaces, so each needs its packages
-      - run: npm ci && npm ci --prefix web && npm ci --prefix e2e
+      # knip reads every workspace, so each needs its packages (Electron's own
+      # binary is only fetched on first launch, which this job never does)
+      - run: npm ci && npm ci --prefix web && npm ci --prefix e2e && npm ci --prefix desktop
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
       - name: Dead code

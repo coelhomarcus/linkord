@@ -210,7 +210,7 @@ Run the checks locally before pushing. This runs the server test typecheck, the 
 npm run check
 ```
 
-GitHub Actions runs the same checks (`.github/workflows/ci.yml`) on every push to `main` and `develop` and on every pull request, unless only docs or Markdown changed. It splits them into four jobs: server (typecheck, test typecheck, tests), web (lint, tests, typecheck and build), desktop (typecheck and tests, without downloading Electron), and one for the audit, `npm run check:dead-code` and the e2e typecheck. The dead-code check is not part of `npm run check` because knip needs the `e2e/` packages installed; run it yourself after installing them. A newer push to the same branch cancels the run in progress.
+GitHub Actions runs the same checks (`.github/workflows/ci.yml`) on every push to `main` and `develop` and on every pull request, unless only docs or Markdown changed. It splits them into four jobs: server (typecheck, test typecheck, tests), web (lint, tests, typecheck and build), desktop (typecheck and tests, without downloading Electron), and one for the audit, `npm run check:dead-code` and the e2e typecheck. The dead-code check is not part of `npm run check` because knip needs the `e2e/` and `desktop/` packages installed; run it yourself after installing them. A newer push to the same branch cancels the run in progress.
 
 The [end-to-end suite](#end-to-end-tests) has its own workflow (`.github/workflows/e2e.yml`). It runs on pull requests into `main`, the release gate, with the `features`, `restart` and `upgrade` projects as parallel jobs, and can be started for any branch from the Actions tab (Run workflow, then pick a project). It is not run on every push because each project builds the app image and takes 3 to 6 minutes on a hosted runner (about 6 minutes in all, since they run side by side). A failed job uploads the Playwright report and traces as an artifact. The job sets `NODE_OPTIONS=--no-experimental-strip-types`: Node 22.18 and later strip TypeScript themselves and reject what Playwright 1.49 compiles on its own (parameter properties), so set the same if your local Node is that recent.
 
@@ -236,7 +236,7 @@ Every script runs from the repository root.
 | `npm run test:integration` | `server/tests/integration/*.itest.ts` against a throwaway database it creates and drops on your local Postgres. |
 | `npm run test:e2e` (and `:features`, `:restart`, `:upgrade`) | The browser suite, see [End-to-end tests](#end-to-end-tests). Needs Docker and Chrome. |
 | `npm run check:audit` | `npm audit --omit=dev --audit-level=high` for the root and `web/`; fails on high or critical advisories in shipped dependencies. Part of `npm run check`. |
-| `npm run check:dead-code` | `knip`: unused files, exports and dependencies across `server/`, `web/` and `e2e/` (needs all three installed). Runs in CI, not part of `npm run check`. |
+| `npm run check:dead-code` | `knip`: unused files, exports and dependencies across `server/`, `web/`, `e2e/` and `desktop/` (needs all four installed). Runs in CI, not part of `npm run check`. |
 | `npm run db:migrate` | Applies pending migrations. The server also does it on boot unless `MIGRATE_ON_BOOT=0`. |
 | `npm run db:generate` | Generates a migration from changes to `server/src/db/schema.ts`. Rename the file to describe the change. |
 | `npm run db:seed` | Sample data for local development, see [Sample data](#sample-data). |
