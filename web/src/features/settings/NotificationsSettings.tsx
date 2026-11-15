@@ -6,6 +6,7 @@ import { useRoom } from '@/state/RoomContext';
 import { isPushSubscriptionActive, notificationPermissionState } from '@/shared/notifications';
 import type { NotificationPermissionState } from '@/shared/notifications';
 import { disablePush, enablePush, preparePush, pushSupported, type PushSetup } from '@/shared/pushNotifications';
+import { isDesktopApp } from '@/shared/desktop';
 import { MicrophoneIcon } from '@phosphor-icons/react';
 import { ROUTES } from '@/shared/lib/routes';
 import { playSound } from '@/shared/sounds';
@@ -35,6 +36,9 @@ export function NotificationsSettings() {
   const sounds = useSoundPreferences();
   // null until the account's value arrives, so the switch never flashes the wrong state
   const [showContent, setShowContent] = useState<boolean | null>(null);
+  // The desktop app has no push service: it notifies from the page while it
+  // runs, so the browser's permission and the preference are all there is
+  const pageOnly = isDesktopApp();
 
   useEffect(() => {
     let current = true;
@@ -105,6 +109,17 @@ export function NotificationsSettings() {
       setNotificationsError(t('notifications.errors.blocked'));
       return;
     }
+    if (pageOnly) {
+      const granted = permission === 'granted' || await Notification.requestPermission() === 'granted';
+      setPermission(notificationPermissionState());
+      if (!granted) {
+        setNotificationsError(t('notifications.errors.blocked'));
+        return;
+      }
+      setNotificationsError(null);
+      setNotificationsEnabled(true);
+      return;
+    }
     if (!setup) {
       setNotificationsError(t('notifications.errors.unavailable'));
       return;
@@ -129,7 +144,7 @@ export function NotificationsSettings() {
   // on — without the browser's permission they plainly aren't, whatever
   // was saved. The preference itself is left untouched so it can resume on
   // its own the moment permission is granted again.
-  const effectivelyOn = notificationsEnabled && permission === 'granted' && active;
+  const effectivelyOn = notificationsEnabled && permission === 'granted' && (pageOnly || active);
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
   // One notice at most, chosen from what is already known on the first paint;
@@ -150,13 +165,16 @@ export function NotificationsSettings() {
         {notice && <SettingsNotice>{notice}</SettingsNotice>}
         <SettingsRow
           label={t('notifications.label')}
-          description={hint ? <>{t('notifications.description')} {hint}</> : t('notifications.description')}
+          description={hint ? <>{t(pageOnly ? 'notifications.descriptionDesktop' : 'notifications.description')} {hint}</> : t(pageOnly ? 'notifications.descriptionDesktop' : 'notifications.description')}
         >
           <Switch size="lg" checked={effectivelyOn} disabled={preparing || busy} onCheckedChange={(v) => void handleToggleNotifications(v)} aria-label={t('notifications.label')} />
         </SettingsRow>
-        <SettingsRow label={t('notifications.showContent.label')} description={t('notifications.showContent.description')}>
-          <Switch size="lg" checked={showContent ?? true} disabled={showContent === null} onCheckedChange={(v) => void handleToggleShowContent(v)} aria-label={t('notifications.showContent.label')} />
-        </SettingsRow>
+        {/* the server applies it to push only; the desktop app's notifications come from the page */}
+        {!pageOnly && (
+          <SettingsRow label={t('notifications.showContent.label')} description={t('notifications.showContent.description')}>
+            <Switch size="lg" checked={showContent ?? true} disabled={showContent === null} onCheckedChange={(v) => void handleToggleShowContent(v)} aria-label={t('notifications.showContent.label')} />
+          </SettingsRow>
+        )}
         {notificationsError && <p role="alert" className="text-label text-red-text">{notificationsError}</p>}
       </SettingsSection>
 

@@ -9,6 +9,7 @@ import { screenSharePublishOptions } from './videoPublish';
 import { i18n } from '@/shared/i18n/init';
 import { mayPublish } from './publishRights';
 import { audioCarriesTheCall, displayCaptureOptions } from './displayCapture';
+import { chooseDesktopSource, desktopScreenShare } from './desktopCapture';
 
 interface ScreenShareApi {
   startSharing: () => Promise<void>;
@@ -28,6 +29,8 @@ async function captureAndPublish(room: Room, dispatch: Dispatch<RoomAction>): Pr
 
   let stream: MediaStream;
   try {
+    const desktop = desktopScreenShare();
+    if (desktop?.picker === 'app' && !(await chooseDesktopSource(desktop))) return;
     stream = await navigator.mediaDevices.getDisplayMedia(displayCaptureOptions(qualityId));
   } catch (err) {
     const name = (err as DOMException)?.name;

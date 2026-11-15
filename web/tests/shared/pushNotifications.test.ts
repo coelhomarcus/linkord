@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { disablePush, enablePush, restorePush, type PushSetup } from '@/shared/pushNotifications';
+import { disablePush, enablePush, pushSupported, restorePush, type PushSetup } from '@/shared/pushNotifications';
 import { LOCAL_STORAGE_KEYS, localStorageStore } from '@/shared/lib/localStorage';
 
 const apiFetch = vi.hoisted(() => vi.fn());
@@ -135,5 +135,21 @@ describe('Web Push activation', () => {
     await Promise.all([restoring, disabling]);
     expect(subscribe).not.toHaveBeenCalled();
     expect(apiFetch).not.toHaveBeenCalledWith('/api/notifications/push', expect.objectContaining({ method: 'POST' }));
+  });
+});
+
+describe('Web Push in the desktop app', () => {
+  afterEach(() => { delete window.linkordDesktop; });
+
+  it('is not supported, so a launch neither asks the server nor subscribes', async () => {
+    window.linkordDesktop = { platform: 'darwin', version: '0.1.0' };
+    stubSupportedBrowser();
+    localStorageStore.set(LOCAL_STORAGE_KEYS.notificationsEnabled, '1');
+
+    expect(pushSupported()).toBe(false);
+    await restorePush();
+
+    expect(apiFetch).not.toHaveBeenCalled();
+    expect(subscribe).not.toHaveBeenCalled();
   });
 });

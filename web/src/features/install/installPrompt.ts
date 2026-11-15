@@ -3,6 +3,7 @@ import { useCallback, useState, useSyncExternalStore } from 'react';
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
 import { LOCAL_STORAGE_KEYS, localStorageStore } from '@/shared/lib/localStorage';
 import { iosStandalone, isIOSDevice } from '@/shared/lib/displayMode';
+import { isDesktopApp } from '@/shared/desktop';
 
 /** Chromium's install event; not part of lib.dom. */
 export interface BeforeInstallPromptEvent extends Event {
@@ -103,7 +104,8 @@ export interface InstallState {
 export function useInstall(): InstallState {
   const state = useSyncExternalStore(subscribe, () => captured);
   const displayModeStandalone = useMediaQuery('(display-mode: standalone)');
-  const standalone = displayModeStandalone || iosStandalone() || state.installed;
+  // the desktop app is the installed app; Electron never offers a web install anyway
+  const standalone = displayModeStandalone || iosStandalone() || state.installed || isDesktopApp();
   const method = installMethod({ standalone, canPrompt: state.prompt !== null, ios: isIOSDevice() });
 
   const install = useCallback(async () => {

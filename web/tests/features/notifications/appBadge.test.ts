@@ -46,3 +46,32 @@ describe('app icon badge', () => {
     expect(setAppBadge).toHaveBeenCalledWith(0);
   });
 });
+
+describe('app icon badge — in the desktop app', () => {
+  afterEach(() => { delete window.linkordDesktop; });
+
+  it('sets the count through the desktop app instead of the Badging API', async () => {
+    const setBadgeCount = vi.fn(async () => true);
+    window.linkordDesktop = { platform: 'darwin', version: '0.1.0', setBadgeCount };
+    const setAppBadge = vi.fn(async () => {});
+    vi.stubGlobal('navigator', { setAppBadge });
+    fetchBadge.mockResolvedValueOnce({ count: 3 });
+
+    await refreshAppBadge();
+    await clearAppBadge();
+
+    expect(setBadgeCount.mock.calls).toEqual([[3], [0]]);
+    expect(setAppBadge).not.toHaveBeenCalled();
+  });
+
+  it('still badges when the browser has no Badging API, as Electron does', async () => {
+    const setBadgeCount = vi.fn(async () => true);
+    window.linkordDesktop = { platform: 'linux', version: '0.1.0', setBadgeCount };
+    vi.stubGlobal('navigator', {});
+    fetchBadge.mockResolvedValueOnce({ count: 1 });
+
+    await refreshAppBadge();
+
+    expect(setBadgeCount).toHaveBeenCalledWith(1);
+  });
+});

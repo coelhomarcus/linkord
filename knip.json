@@ -37,6 +37,20 @@
       "project": [
         "**/*.ts"
       ]
+    },
+    "desktop": {
+      "entry": [
+        "src/main/index.ts",
+        "src/preload/index.cts",
+        "scripts/*.mjs",
+        "electron-builder.config.cjs",
+        "tests/**/*.test.ts"
+      ],
+      "project": [
+        "src/**/*.{ts,cts}",
+        "scripts/**/*.mjs",
+        "tests/**/*.ts"
+      ]
     }
   }
 }
