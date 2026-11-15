@@ -3,6 +3,8 @@
   "productName": "Linkord",
   "version": "0.1.0",
   "description": "Linkord desktop app: an Electron window around the web app.",
+  "author": "Linkord",
+  "homepage": "https://github.com/coelhomarcus/Linkord",
   "private": true,
   "type": "module",
   "main": "dist/main/index.js",
@@ -10,11 +12,13 @@
     "build": "tsc -p tsconfig.build.json",
     "start": "npm run build && electron .",
     "typecheck": "tsc -p tsconfig.json",
-    "test": "node --import tsx --test \"tests/**/*.test.ts\""
+    "test": "node --import tsx --test \"tests/**/*.test.ts\"",
+    "package": "npm run build && node scripts/package.mjs"
   },
   "devDependencies": {
     "@types/node": "22.20.5",
     "electron": "45.3.2",
+    "electron-builder": "26.18.0",
     "tsx": "4.23.15",
     "typescript": "~6.0.2"
   }

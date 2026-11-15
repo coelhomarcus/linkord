@@ -50,3 +50,6 @@ e2e/.e2e-state.json
 
 # Backups written by `npm run backup`
 /backups/
+
+# desktop installers built by `npm run package --prefix desktop`
+/desktop/release/

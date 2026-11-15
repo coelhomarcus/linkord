@@ -1,19 +1,35 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import { app, dialog, session, type BrowserWindow } from 'electron';
 import { installAppBridge } from './appBridge.js';
-import { resolveAppUrl } from './appUrl.js';
+import { parseAppConfig, resolveAppUrl } from './appUrl.js';
 import { guardContents } from './contentsGuard.js';
 import { capturesSystemAudio, sharePicker } from './displayMedia.js';
 import { createMainWindow } from './mainWindow.js';
 import { installScreenShare } from './screenShare.js';
 import { installPermissionHandlers } from './session.js';
 
-const resolved = resolveAppUrl({ argv: process.argv, env: process.env, isPackaged: app.isPackaged });
+// A development run keeps its own session and window state, and its own
+// single-instance lock, so it can run next to an installed Linkord
+if (!app.isPackaged) app.setPath('userData', path.join(app.getPath('appData'), 'Linkord Dev'));
+
+// Read only in an installed build: a development run must not pick up the
+// address of the last installer built from the same dist/
+function bundledUrl(): string | undefined {
+  if (!app.isPackaged) return undefined;
+  try {
+    return parseAppConfig(JSON.parse(fs.readFileSync(path.join(import.meta.dirname, '../app-config.json'), 'utf8'))).url;
+  } catch {
+    return undefined;
+  }
+}
+
+const resolved = resolveAppUrl({ argv: process.argv, env: process.env, isPackaged: app.isPackaged, bundledUrl: bundledUrl() });
 
 if (!resolved.ok) {
-  // Only a misconfigured build gets here; a server picker replaces this before release
+  // Only a misconfigured build gets here: `npm run package` refuses to build without an address
   const detail = resolved.reason === 'missing'
-    ? 'Set LINKORD_URL or pass --url=<address> to choose the Linkord server.'
+    ? 'This build has no Linkord server address. Set LINKORD_URL or pass --url=<address>.'
     : resolved.reason === 'insecure'
       ? `${resolved.value} uses http; only https is allowed outside this machine.`
       : `${resolved.value} is not a valid http(s) address.`;

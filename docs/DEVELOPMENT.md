@@ -111,7 +111,7 @@ It creates four accounts (`ana`, `bruno`, `carla`, `davi`; the shared password i
 
 ## Desktop app
 
-`desktop/` is an Electron app that opens the Linkord server in its own window. It does not bundle the web app: the window loads the server's address, so the page talks to `/api` and `/ws` on its own origin, and the server's cookies, origin check and Content-Security-Policy apply as in a browser. It is a prototype: installers, auto-update, a tray icon and a way to pick the server from the app are not done yet.
+`desktop/` is an Electron app that opens the Linkord server in its own window. It does not bundle the web app: the window loads the server's address, so the page talks to `/api` and `/ws` on its own origin, and the server's cookies, origin check and Content-Security-Policy apply as in a browser. It is a prototype: auto-update, a tray icon and a way to pick the server from the app are not done yet. Building the installers is in [DEPLOY.md](DEPLOY.md#desktop-app).
 
 Install it once (Electron downloads its binary the first time it runs, not at install):
 
@@ -131,7 +131,7 @@ Without an address it opens `http://localhost:5173`. To open another server, set
 LINKORD_URL=https://chat.example.com npm run dev:desktop
 ```
 
-Plain `http` is accepted only for `localhost`, `127.0.0.1` and `[::1]`. A packaged build has no default and stops with an error if neither is given.
+Plain `http` is accepted only for `localhost`, `127.0.0.1` and `[::1]`. An installed build opens the address baked in when it was built, unless one of these overrides it.
 
 What the window allows:
 
@@ -146,7 +146,7 @@ What the window allows:
 - Notifications: Electron has no push service, so the desktop app does not use Web Push. The page shows a system notification for each new message while the app runs (with the window hidden too, on macOS), and a click brings the window back and opens the conversation. Friend requests and invitations, which only push announces, do not notify there, and the "show message text" setting (a push option) is hidden.
 - The unread count goes on the dock icon (macOS) or the launcher (Linux, where the desktop supports it); Windows shows none yet. The web app's install banner and its install entry in settings do not appear.
 - On macOS closing the window hides it and a call keeps going; Cmd+Q quits. Elsewhere closing quits.
-- If the server cannot be reached the window retries, from 1 to 30 seconds apart. The window's size and place are kept in `window-state.json` in the app's data folder (`~/Library/Application Support/Linkord` on macOS).
+- If the server cannot be reached the window retries, from 1 to 30 seconds apart. The window's size and place are kept in `window-state.json` in the app's data folder. A development run uses its own folder (`Linkord Dev`, for example `~/Library/Application Support/Linkord Dev` on macOS), so it keeps a separate session and can run next to an installed Linkord.
 
 The page follows the system language until you log in, then the account's, as in a browser.
 
@@ -222,6 +222,7 @@ Every script runs from the repository root.
 | --- | --- |
 | `npm run dev` | API (Fastify, `:3000`) and web (Vite, `:5173`) in watch mode. |
 | `npm run dev:desktop` | Builds and opens the [desktop app](#desktop-app) against `LINKORD_URL` (default `http://localhost:5173`). Needs `npm install --prefix desktop`. |
+| `npm run package:desktop` | Builds the desktop installers into `desktop/release/` for the server in `LINKORD_URL`; see [DEPLOY.md](DEPLOY.md#desktop-app). |
 | `npm run test:desktop` | The desktop app's unit tests (`node --test`). Not part of `npm test`, which does not need `desktop/` installed. |
 | `npm run build` / `npm start` | Production build of both, and the built server. |
 | `npm run check` | Everything that should pass before pushing: server test typecheck, web lint, dependency audit, server and web tests, build. |

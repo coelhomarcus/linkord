@@ -13,6 +13,7 @@
     "build": "npm run build:server && npm run build:web",
     "build:server": "tsc -p server/tsconfig.json",
     "build:web": "npm run build --prefix web",
+    "package:desktop": "npm run package --prefix desktop",
     "check": "npm run typecheck:server:tests && npm run lint --prefix web && npm run check:audit && npm test && npm run build",
     "check:audit": "npm audit --omit=dev --audit-level=high && npm audit --omit=dev --audit-level=high --prefix web",
     "check:dead-code": "knip",

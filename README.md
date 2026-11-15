@@ -72,7 +72,7 @@ Open [http://localhost:3000](http://localhost:3000) and create an account with t
 
 For local development, the frontend and backend run on the host, and `docker compose up -d` brings up the services they use (PostgreSQL, LiveKit and a mail sink). Follow the [local development guide](docs/DEVELOPMENT.md) for setup and run instructions.
 
-A desktop app for macOS, Windows and Linux is in progress in `desktop/`: an Electron window that opens your Linkord server. See [Desktop app](docs/DEVELOPMENT.md#desktop-app) for running it.
+A desktop app for macOS, Windows and Linux is in progress in `desktop/`: an Electron window that opens your Linkord server. See [Desktop app](docs/DEVELOPMENT.md#desktop-app) for running it and [building its installers](docs/DEPLOY.md#desktop-app) for your server.
 
 ## 🐳 Deployment
 

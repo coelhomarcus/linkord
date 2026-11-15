@@ -16,9 +16,11 @@ export function resolveAppUrl(input: {
   argv: readonly string[];
   env: Readonly<Record<string, string | undefined>>;
   isPackaged: boolean;
+  /** the address `npm run package` baked into an installer */
+  bundledUrl?: string;
 }): AppUrlResult {
   const fromArgv = input.argv.find((arg) => arg.startsWith(URL_FLAG))?.slice(URL_FLAG.length);
-  const value = fromArgv || input.env.LINKORD_URL?.trim() || (input.isPackaged ? undefined : DEV_APP_URL);
+  const value = fromArgv || input.env.LINKORD_URL?.trim() || input.bundledUrl || (input.isPackaged ? undefined : DEV_APP_URL);
   if (!value) return { ok: false, reason: 'missing' };
 
   let url: URL;
@@ -27,4 +29,11 @@ export function resolveAppUrl(input: {
   // The session cookie must not travel in the clear to anything but this machine
   if (url.protocol === 'http:' && !LOOPBACK_HOSTS.has(url.hostname)) return { ok: false, reason: 'insecure', value };
   return { ok: true, url };
+}
+
+/** app-config.json, written next to the compiled code when an installer is built. */
+export function parseAppConfig(raw: unknown): { url?: string } {
+  if (!raw || typeof raw !== 'object') return {};
+  const { url } = raw as { url?: unknown };
+  return typeof url === 'string' && url ? { url } : {};
 }

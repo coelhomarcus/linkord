@@ -188,6 +188,54 @@ The server writes one JSON line per record to stdout and stderr (`LOG_FORMAT=jso
 
 Keep logs for at most **30 days**. The compose file and the `docker run` above rotate them at 5 files of 10 MB, which on a small instance is days to a few weeks; with Dokploy, or any other log collector, set the same bound in its log settings. The addresses stored with each login session (Settings → Security) are database data and follow the session, not this policy.
 
+## Desktop app
+
+The desktop app (`desktop/`, Electron) is a window around one Linkord server: it loads the server's address and talks to it like a browser tab, so the server needs no change for it. Each installer is built for one server, whose address is baked in.
+
+### Building the installers
+
+```bash
+npm install --prefix desktop
+LINKORD_URL=https://chat.example.com npm run package:desktop
+```
+
+The installers land in `desktop/release/`:
+
+| System | File | Notes |
+| --- | --- | --- |
+| macOS | `Linkord-<version>-mac-arm64.dmg`, `-mac-x64.dmg` | Apple Silicon and Intel. |
+| Windows | `Linkord-<version>-win-x64.exe` | Installs for the current user, no administrator prompt. |
+| Linux | `Linkord-<version>-linux-x86_64.AppImage`, `-linux-amd64.deb` | |
+
+- `LINKORD_URL` must be `https` (plain `http` only for `localhost`); the build refuses to run without it. A different server needs its own build. Someone who has the app can still point it elsewhere with `LINKORD_URL` or `--url=<address>` at launch.
+- Without arguments the build makes the installers of the system it runs on. Pass targets after `--` for the others: `npm run package:desktop -- --win --linux`. A Mac builds all three. Linux and Windows cannot build the macOS one, which needs macOS tools.
+- The first build downloads Electron and the packaging tools.
+- The version in the file names is `desktop/package.json`'s.
+
+### Unsigned installers
+
+Nothing is signed with a paid certificate: no Apple Developer ID or notarization, no Windows code signing. The apps work, but the systems treat them as from an unknown developer:
+
+- **macOS**: a downloaded app is blocked the first time ("cannot be verified"). Open it once, then go to System Settings → Privacy & Security and choose **Open Anyway**; from then on it opens normally. Removing the download mark does the same: `xattr -dr com.apple.quarantine /Applications/Linkord.app`.
+- **Windows**: SmartScreen shows "Windows protected your PC". Choose **More info** → **Run anyway**. Each new version shows it again, and some antivirus tools are quicker to flag unsigned programs.
+- **Linux**: no signing is expected. Make the AppImage executable (`chmod +x`), or install the `.deb` with `sudo apt install ./Linkord-<version>-linux-amd64.deb`.
+
+**macOS permissions after an update.** The macOS build has an ad-hoc signature, the only kind possible without an Apple account. macOS remembers microphone, camera and Screen Recording access by the app's designated requirement. For an ad-hoc signature that requirement is the hash of the code (`codesign -d -r- /Applications/Linkord.app` shows `cdhash H"..."`), and it changes with every build. So macOS does not match a new version to the grants made for the previous one: expect it to ask for the microphone and camera again after each update, and a Screen Recording grant (needed only by the app's own share picker, before macOS 15) to stop applying until it is removed and granted again. Screen sharing on macOS 15 and later uses the system's picker, which needs no Screen Recording permission.
+
+Grants survive updates only when every build is signed with the same certificate, because the requirement then names the certificate instead of the code. A free self-signed certificate does this on the machines where it is set up:
+
+1. In Keychain Access, choose Certificate Assistant → Create a Certificate, with the type **Code Signing**.
+2. Mark it trusted for code signing (`codesign` refuses an untrusted identity).
+3. Sign each installed version with `codesign --force --deep --sign "<certificate name>" /Applications/Linkord.app`.
+
+It does not remove the warning on other machines; only a Developer ID with notarization does that.
+
+### Updates and data
+
+There is no automatic update: install the new version over the old one. Most changes do not need one. The interface comes from the server, so a server deploy updates it. A desktop build older than the server keeps working, because the web app checks each feature the desktop app offers before using it. A new installer is needed only for changes in `desktop/`.
+
+The app keeps its session and window state in `~/Library/Application Support/Linkord` (macOS), `%APPDATA%\Linkord` (Windows) or `~/.config/Linkord` (Linux).
+
 ## Troubleshooting
 
 - **`/readyz` answers 503.** Search the log for `not ready`: its fields say whether `database` (unreachable, refused, or past the 1 s timeout, which also happens when every pooled connection is busy) or `uploads` (a folder that is not writable, see [Folders and permissions](#folders-and-permissions)) failed.

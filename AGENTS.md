@@ -99,6 +99,8 @@ desktop/
                  # (permission handlers), contentsGuard.ts (navigation and popups), plus the
                  # rules they apply as plain modules: appUrl, navigation, permissions, windowState, loadRetry
   src/preload/   # index.cts, the only bridge into the page
+  scripts/       # package.mjs (`npm run package`: bakes LINKORD_URL in, runs electron-builder)
+  resources/     # installer icons; electron-builder.config.cjs sits next to package.json
 desktop/tests/   # mirrors desktop/src/ — NO tests inside src/
 ```
 
