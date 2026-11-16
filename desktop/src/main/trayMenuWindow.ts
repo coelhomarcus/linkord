@@ -66,7 +66,7 @@ export function createTrayMenuWindow(onChoose: (id: string, checked: boolean) =>
       openedAt = Date.now();
       const pointer = screen.getCursorScreenPoint();
       const size = trayMenuSize(model.items);
-      const { x, y } = trayMenuPosition(pointer, size, screen.getDisplayNearestPoint(pointer).workArea);
+      const { x, y } = trayMenuPosition(pointer, size, screen.getDisplayNearestPoint(pointer).bounds);
       menu.setBounds({ x, y, ...size });
       menu.webContents.send('linkord:tray-menu:render', model);
       menu.show();

@@ -2,23 +2,32 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { TRAY_CLICK_ECHO_MS, TRAY_MENU, drawsTrayMenu, echoesTrayClick, trayMenuPosition, trayMenuSize } from '../../src/main/trayMenuLayout.js';
 
-const workArea = { x: 0, y: 0, width: 1920, height: 1040 };
+const display = { x: 0, y: 0, width: 1920, height: 1080 };
 const size = { width: 296, height: 220 };
+const shadow = TRAY_MENU.shadow;
+const menuOf = (window: { x: number; y: number }) => ({
+  left: window.x + shadow, top: window.y + shadow,
+  right: window.x + size.width - shadow, bottom: window.y + size.height - shadow,
+});
 
 describe('trayMenuPosition', () => {
-  it('opens upwards from a bottom taskbar, leftwards near the right edge', () => {
-    assert.deepEqual(trayMenuPosition({ x: 1800, y: 1060 }, size, workArea), { x: 1504, y: 820 });
+  it('puts the menu\'s bottom-right corner at the pointer on a bottom taskbar, over the taskbar as Windows does', () => {
+    const menu = menuOf(trayMenuPosition({ x: 1800, y: 1060 }, size, display));
+    assert.equal(menu.right, 1800);
+    assert.equal(menu.bottom, 1060);
   });
 
-  it('opens downwards and rightwards from a top-left tray', () => {
-    assert.deepEqual(trayMenuPosition({ x: 40, y: 10 }, size, workArea), { x: 40, y: 10 });
+  it('puts the top-left corner at the pointer on a top-left tray', () => {
+    const menu = menuOf(trayMenuPosition({ x: 40, y: 10 }, size, display));
+    assert.equal(menu.left, 40);
+    assert.equal(menu.top, 10);
   });
 
-  it('stays inside the work area of a second screen', () => {
+  it('keeps the menu, not its shadow, inside a second screen', () => {
     const second = { x: 1920, y: 0, width: 1280, height: 1000 };
-    const { x, y } = trayMenuPosition({ x: 3190, y: 1030 }, size, second);
-    assert.ok(x >= second.x && x + size.width <= second.x + second.width);
-    assert.ok(y >= second.y && y + size.height <= second.y + second.height);
+    const menu = menuOf(trayMenuPosition({ x: 3195, y: 40 }, size, second));
+    assert.ok(menu.left >= second.x && menu.right <= second.x + second.width);
+    assert.ok(menu.top >= second.y && menu.bottom <= second.y + second.height);
   });
 });
 
