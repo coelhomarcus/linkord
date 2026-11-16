@@ -217,28 +217,74 @@ describe('useScreenShare — starting', () => {
 });
 
 describe('useScreenShare — changing source', () => {
-  it('stops the current capture and reopens a new picker (ends, then starts again)', async () => {
-    const getDisplayMedia = stubDisplayMedia(fakeStream(fakeTrack('video')));
-    const { room } = fakeRoom();
-    const { result } = renderHook(() => useScreenShare(room, vi.fn()));
+  /** Starts a share, and serves its publications back as the room would. */
+  async function sharing(firstStream: MediaStream) {
+    const getDisplayMedia = stubDisplayMedia(firstStream);
+    const dispatch = vi.fn();
+    const publications = new Map<Track.Source, { track: LocalTrack }>();
+    const publishTrack = vi.fn(async (track: LocalTrack) => { publications.set(track.source, { track }); return {}; });
+    const { room, unpublishTrack } = fakeRoom({ publishTrack, getTrackPublication: vi.fn((source: Track.Source) => publications.get(source)) });
+    const { result } = renderHook(() => useScreenShare(room, dispatch));
+    await result.current.startSharing();
+    const video = publications.get(Track.Source.ScreenShare)!.track;
+    const replaceVideo = vi.spyOn(video, 'replaceTrack').mockResolvedValue(video);
+    publishTrack.mockClear();
+    dispatch.mockClear();
+    return { result, room, dispatch, publishTrack, unpublishTrack, getDisplayMedia, video, replaceVideo, publications };
+  }
+
+  it('swaps the new screen into the running share instead of ending it', async () => {
+    const first = fakeTrack('video');
+    const { result, room, dispatch, publishTrack, getDisplayMedia, replaceVideo } = await sharing(fakeStream(first));
+    const next = fakeTrack('video');
+    getDisplayMedia.mockResolvedValueOnce(fakeStream(next));
 
     await result.current.changeSource();
 
-    expect(room.localParticipant.setScreenShareEnabled).toHaveBeenCalledWith(false);
-    expect(getDisplayMedia).toHaveBeenCalledTimes(1);
+    expect(replaceVideo).toHaveBeenCalledWith(next, false);
+    expect(first.stop).toHaveBeenCalled();
+    expect(room.localParticipant.setScreenShareEnabled).not.toHaveBeenCalled();
+    expect(publishTrack).not.toHaveBeenCalled();
+    expect(dispatch).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'SET_LOCAL_SHARING' }));
   });
 
-  it('cancelling the picker while changing source does not leave "sharing" stuck at true', async () => {
-    stubDisplayMedia(async () => { throw Object.assign(new Error('cancelled'), { name: 'NotAllowedError' }); });
-    const dispatch = vi.fn();
-    const { room } = fakeRoom();
-    const { result } = renderHook(() => useScreenShare(room, dispatch));
+  it('cancelling the picker leaves the share as it was', async () => {
+    const first = fakeTrack('video');
+    const { result, room, dispatch, getDisplayMedia, replaceVideo } = await sharing(fakeStream(first));
+    getDisplayMedia.mockRejectedValueOnce(Object.assign(new Error('cancelled'), { name: 'NotAllowedError' }));
 
     await result.current.changeSource();
 
-    expect(dispatch).toHaveBeenCalledWith({ type: 'SET_LOCAL_SHARING', sharing: false });
-    expect(dispatch).not.toHaveBeenCalledWith({ type: 'SET_LOCAL_SHARING', sharing: true });
-    expect(dispatch).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'SET_SHARE_ERROR', message: expect.stringContaining('capturar') }));
+    expect(replaceVideo).not.toHaveBeenCalled();
+    expect(first.stop).not.toHaveBeenCalled();
+    expect(room.localParticipant.setScreenShareEnabled).not.toHaveBeenCalled();
+    expect(dispatch).not.toHaveBeenCalled();
+  });
+
+  it('adds the new source\'s sound when the old one had none, and removes it the other way round', async () => {
+    const { result, publishTrack, unpublishTrack, getDisplayMedia } = await sharing(fakeStream(fakeTrack('video')));
+    getDisplayMedia.mockResolvedValueOnce(fakeStream(fakeTrack('video', { displaySurface: 'browser' }), fakeTrack('audio')));
+
+    await result.current.changeSource();
+    const [added] = publishedTracks(publishTrack);
+    expect(added.source).toBe(Track.Source.ScreenShareAudio);
+
+    vi.spyOn(added, 'replaceTrack').mockResolvedValue(added);
+    getDisplayMedia.mockResolvedValueOnce(fakeStream(fakeTrack('video')));
+    await result.current.changeSource();
+    expect(unpublishTrack).toHaveBeenCalledWith(added, true);
+  });
+
+  it('publishes again when the quality changed since the share started, once the new source is picked', async () => {
+    const { result, room, publishTrack, getDisplayMedia, replaceVideo } = await sharing(fakeStream(fakeTrack('video')));
+    saveShareQuality('screen1440');
+    getDisplayMedia.mockResolvedValueOnce(fakeStream(fakeTrack('video')));
+
+    await result.current.changeSource();
+
+    expect(replaceVideo).not.toHaveBeenCalled();
+    expect(room.localParticipant.setScreenShareEnabled).toHaveBeenCalledWith(false);
+    expect(publishedTracks(publishTrack)[0]?.source).toBe(Track.Source.ScreenShare);
   });
 });
 
