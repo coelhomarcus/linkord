@@ -1,6 +1,7 @@
 /** All persistent browser storage keys used by the frontend. Keep existing
  * names stable so users keep the preferences already saved in their browser. */
 export const LOCAL_STORAGE_KEYS = {
+  desktopAppAnnounced: 'ss-desktop-app-announced',
   language: 'ss-locale',
   mediaVolume: 'ss-media-volume',
   lastChannel: (serverId: string) => `ss-last-channel:${serverId}` as const,
@@ -29,8 +30,6 @@ export const LOCAL_STORAGE_KEYS = {
   sounds: 'ss-sounds',
   autoIdleMinutes: 'ss-auto-idle-minutes',
   emojiSkinTone: 'ss-emoji-skin-tone',
-  installBannerDismissed: 'ss-install-banner-dismissed',
-  installSessions: 'ss-install-sessions',
 } as const;
 
 type RegistryValue = (typeof LOCAL_STORAGE_KEYS)[keyof typeof LOCAL_STORAGE_KEYS];

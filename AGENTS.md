@@ -18,8 +18,8 @@ web/src/
                         # OutdatedClientScreen, RoomErrorScreen, ErrorBoundary, AppModals, AccessNotice,
                         # DesktopFrame + WindowControls (the desktop app's own title bar)
     providers/          # RoomProvider.tsx (the room's state root)
-  features/<domain>/    # admin, auth, bots (webhooks), calls, chat, conversations (DMs), friends, gifs,
-                        # media, navigation, notifications, profile, reports, servers, settings, soundboard
+  features/<domain>/    # activity, admin, auth, bots (webhooks), calls, chat, conversations (DMs), desktopApp,
+                        # friends, gifs, media, navigation, notifications, profile, reports, servers, settings, soundboard
   shared/                # see criteria below
     api/ hooks/ i18n/ lib/ types/ ui/{primitives,motion}/
     Avatar.tsx, ConfirmDialog.tsx, notifications.ts, sounds.ts, ...
@@ -53,7 +53,7 @@ Short and quiet, from three durations (`DURATION` in `shared/lib/ease.ts`): **10
 - Popovers, menus, selects and tooltips take `motion-popup`, dialogs and their backdrop `motion-modal` (`styles/index.css`), both on tw-animate's `animate-in`/`animate-out`. Use the primitives rather than restating their timing.
 - **Reduced motion** is handled once: under `prefers-reduced-motion` the `enter`/`exit` keyframes keep only the fade, and `MotionConfig reducedMotion="user"` (`App.tsx`) does the same for Motion. Something that moves by other means (a CSS transition on `transform`/`scale`, dnd-kit, `element.animate`) checks it itself (`motion-safe:`/`motion-reduce:`, `useReducedMotion`).
 - **Never delay the interaction**: an exit plays while what it hides already takes no input (Base UI does this for popups; `FloatingBar` is `inert` while it leaves).
-- **Tests**: exits are CSS animations waited on through `getAnimations()`, which jsdom lacks, so under test things unmount at once and assertions stay synchronous. Keep new exits on that pattern; a Motion `AnimatePresence` exit would keep nodes in the DOM after the state changes. Something that leaves on its own, outside Base UI, uses `useExitPresence` (`shared/hooks`) as `FloatingBar` and the install banner do.
+- **Tests**: exits are CSS animations waited on through `getAnimations()`, which jsdom lacks, so under test things unmount at once and assertions stay synchronous. Keep new exits on that pattern; a Motion `AnimatePresence` exit would keep nodes in the DOM after the state changes. Something that leaves on its own, outside Base UI, uses `useExitPresence` (`shared/hooks`) as `FloatingBar` does.
 
 ### Error colour
 
@@ -78,7 +78,7 @@ server/src/
   integrations/<name>/  # external service adapters: livekit/, github/, myanimelist/, igdb/ (+ connectionHttp.ts)
   net/                  # safeRequest.ts, ssrfGuard.ts — every request to a user-chosen URL
   lib/                  # logger.ts
-  modules/<domain>/     # activity, admin, attachments, auth, blocks, bots, calls, connections, conversations,
+  modules/<domain>/     # activity, admin, attachments, auth, blocks, bots, calls, connections, conversations, desktop,
                         # friendships, games, gifs, limits, link-preview, logs, messages, migration,
                         # moderation, notifications, presence, profile, reports, servers,
                         # soundboard, users

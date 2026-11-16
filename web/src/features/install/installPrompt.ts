@@ -1,18 +1,14 @@
-import { useCallback, useState, useSyncExternalStore } from 'react';
+import { useCallback, useSyncExternalStore } from 'react';
 
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
-import { LOCAL_STORAGE_KEYS, localStorageStore } from '@/shared/lib/localStorage';
 import { iosStandalone, isIOSDevice } from '@/shared/lib/displayMode';
 import { isDesktopApp } from '@/shared/desktop';
 
 /** Chromium's install event; not part of lib.dom. */
-export interface BeforeInstallPromptEvent extends Event {
+interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
-
-/** Sessions (tabs opened) before the banner shows, so it never greets a new visitor. */
-export const SESSIONS_BEFORE_BANNER = 3;
 
 /** `prompt`: the browser hands us an install dialog to open. `ios`: no API
  * exists, the person has to use Share → Add to Home Screen. */
@@ -22,42 +18,6 @@ export function installMethod(input: { standalone: boolean; canPrompt: boolean; 
   if (input.standalone) return null;
   if (input.canPrompt) return 'prompt';
   return input.ios ? 'ios' : null;
-}
-
-export function shouldShowInstallBanner(input: { method: InstallMethod | null; dismissed: boolean; sessions: number; inCall: boolean }): boolean {
-  return input.method !== null && !input.dismissed && !input.inCall && input.sessions >= SESSIONS_BEFORE_BANNER;
-}
-
-export function isDismissed(): boolean {
-  return localStorageStore.get(LOCAL_STORAGE_KEYS.installBannerDismissed) === '1';
-}
-
-export function dismissInstallBanner(): void {
-  localStorageStore.set(LOCAL_STORAGE_KEYS.installBannerDismissed, '1');
-}
-
-export function readInstallSessions(): number {
-  const count = Number(localStorageStore.get(LOCAL_STORAGE_KEYS.installSessions));
-  return Number.isFinite(count) && count > 0 ? Math.floor(count) : 0;
-}
-
-const SESSION_COUNTED_KEY = 'ss-install-session-counted';
-// only used when session storage is blocked, so a remount still stays in one session
-let countedInMemory = false;
-
-/** Counts this tab once: a reload or a remount stays in the same session.
- * Called at startup, so the count is settled before any screen reads it. */
-export function recordInstallSession(): number {
-  try {
-    if (window.sessionStorage.getItem(SESSION_COUNTED_KEY) === '1') return readInstallSessions();
-    window.sessionStorage.setItem(SESSION_COUNTED_KEY, '1');
-  } catch {
-    if (countedInMemory) return readInstallSessions();
-    countedInMemory = true;
-  }
-  const next = readInstallSessions() + 1;
-  localStorageStore.set(LOCAL_STORAGE_KEYS.installSessions, String(next));
-  return next;
 }
 
 interface CaptureState { prompt: BeforeInstallPromptEvent | null; installed: boolean }
@@ -122,34 +82,4 @@ export function useInstall(): InstallState {
   }, []);
 
   return { method, install };
-}
-
-export interface InstallBannerState {
-  method: InstallMethod | null;
-  visible: boolean;
-  install: () => Promise<void>;
-  dismiss: () => void;
-}
-
-export function useInstallBanner(inCall: boolean): InstallBannerState {
-  const { method, install } = useInstall();
-  const [dismissed, setDismissed] = useState(isDismissed);
-  const [sessions] = useState(readInstallSessions);
-
-  const dismiss = useCallback(() => {
-    dismissInstallBanner();
-    setDismissed(true);
-  }, []);
-
-  const installFromBanner = useCallback(async () => {
-    // declining the browser's dialog is an answer too: do not ask again
-    if (!(await install())) dismiss();
-  }, [install, dismiss]);
-
-  return {
-    method,
-    visible: shouldShowInstallBanner({ method, dismissed, sessions, inCall }),
-    install: installFromBanner,
-    dismiss,
-  };
 }
