@@ -12,6 +12,7 @@ import { iconWeight } from '@/shared/ui/icons';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator,
 } from '@/shared/ui/primitives/dropdown-menu';
+import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/primitives/popover';
 import { Slider } from '@/shared/ui/primitives/slider';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
 import { cn } from '@/shared/lib/utils';
@@ -21,6 +22,8 @@ import { useIsSpeaking } from '@/features/calls/useLiveKitTrack';
 import { useMuteForMe } from '@/features/calls/useMuteForMe';
 import { participantMicMuted, useOwnMic } from '@/features/calls/micState';
 import { useStreamPreview } from '@/features/calls/streamPreviewStore';
+import { useUserActivity } from '@/features/activity/activityDisplay';
+import { ActivityCard, ActivityIcon } from '@/features/activity/ActivityLine';
 import { canInChannel, canMoveInto, canMoveOutOf } from './serverUtils';
 import { PERMISSIONS } from './permissionBits';
 
@@ -96,6 +99,26 @@ function LiveBadge({ person, previewable }: { person: VoicePerson; previewable: 
         <StreamPreviewImage participantId={person.id} name={person.displayName} />
       </TooltipContent>
     </Tooltip>
+  );
+}
+
+/** The icon of the game (or app) someone is in, beside their name. Hovering it, focusing it or
+ * tapping it opens a small card: "Jogando agora", the name and the time it has run. A tap opens it
+ * too, so a finger and a screen reader reach what a mouse sees on hover. */
+function VoiceActivity({ person }: { person: VoicePerson }) {
+  const { t } = useTranslation('activity');
+  const activity = useUserActivity(person.userId);
+  if (!activity) return null;
+  return (
+    <Popover>
+      <PopoverTrigger openOnHover delay={150} aria-label={t(`line.${activity.kind}`, { name: activity.name })}
+        className="flex flex-none rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring">
+        <ActivityIcon activity={activity} size={16} />
+      </PopoverTrigger>
+      <PopoverContent side="right" align="center" sideOffset={8} className="w-72 p-0">
+        <ActivityCard activity={activity} heading={t(`now.${activity.kind}`)} className="border-0 bg-transparent" />
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -261,6 +284,7 @@ export function VoiceMembers({ server, channel, onOpenProfile, drag, onDragChang
                 </span>
                 <span className="truncate">{person.displayName}</span>
               </button>
+              <VoiceActivity person={person} />
               <VoiceStatus person={person} previewable={canPreview && !person.isMe} />
               {/* right-click and long press open the same menu; this is the way
                   for a keyboard or a screen reader, shown only once focused */}

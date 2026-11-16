@@ -73,6 +73,26 @@ afterEach(() => {
 });
 
 describe('VoiceMembers — what everyone in the server sees', () => {
+  it("shows the game a member is playing, and a card with it on hover, focus or tap", async () => {
+    vi.useFakeTimers({ now: new Date('2026-11-16T12:00:00Z'), shouldAdvanceTime: true });
+    try {
+      const activity = { key: 'steam:271590', kind: 'playing' as const, name: 'Grand Theft Auto VI', icon: null, startedAt: new Date(Date.now() - 75_000).toISOString() };
+      renderList({ room: { onlineUserIds: new Set(['u-bea']), presenceByUser: new Map([['u-bea', { status: 'online', customStatus: null, activity }]]) } });
+      const icon = within(row('Bea')).getByRole('button', { name: 'Jogando Grand Theft Auto VI' });
+      await userEvent.setup({ advanceTimers: vi.advanceTimersByTime }).click(icon);
+      const card = await screen.findByRole('region', { name: 'Jogando Grand Theft Auto VI' });
+      expect(card).toHaveTextContent('Jogando agora');
+      expect(within(card).getByRole('timer')).toHaveTextContent(/^1:1\d$/);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('shows no game icon for someone without an activity', () => {
+    renderList();
+    expect(within(row('Bea')).queryByRole('button', { name: /^Jogando/ })).not.toBeInTheDocument();
+  });
+
   it("shows a member's mute, deafen, camera and live state, without being in the call", () => {
     renderList({ participants: [person({ id: 'p-bea', userId: 'u-bea', displayName: 'Bea', micMuted: true, deafened: true, cameraOn: true, sharing: true })] });
     const bea = row('Bea');
