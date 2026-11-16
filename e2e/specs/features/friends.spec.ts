@@ -63,6 +63,7 @@ test.describe('friends', () => {
 
     // a refusal puts the button back and says so
     await a.page.keyboard.press('Escape');
+    await expect(card).toHaveCount(0);
     await a.page.route('**/api/friend-requests', (route) => route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ error: { code: 'internal', message: 'x' } }) }));
     await open(carol.username);
     await card.getByRole('button', { name: 'Adicionar amigo' }).click();
