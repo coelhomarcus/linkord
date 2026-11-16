@@ -1,5 +1,5 @@
 import {
-  ArrowsLeftRightIcon, ChatCircleIcon, DotsThreeIcon, MicrophoneSlashIcon, PhoneSlashIcon, SpeakerHighIcon, SpeakerSimpleSlashIcon,
+  ArrowsLeftRightIcon, ChatCircleIcon, DotsThreeIcon, MicrophoneSlashIcon, MonitorPlayIcon, PhoneSlashIcon, SpeakerHighIcon, SpeakerSimpleSlashIcon,
   SpeakerSlashIcon, UserIcon, VideoCameraIcon,
 } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
@@ -14,7 +14,6 @@ import {
 } from '@/shared/ui/primitives/dropdown-menu';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/primitives/popover';
 import { Slider } from '@/shared/ui/primitives/slider';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
 import { cn } from '@/shared/lib/utils';
 import { useRoom, useRoomState } from '@/state/RoomContext';
 import type { ChannelSummary, ServerSummary } from '@/shared/types/protocol';
@@ -64,10 +63,10 @@ function useMyVoicePerson(): VoicePerson {
   };
 }
 
-/** The still of a share, asked for when the tooltip opens. The box is 16:9
- * from the first frame, so the tooltip never jumps when the picture lands;
- * an older still stays up while the fresh one is on its way. */
-function StreamPreviewImage({ participantId, name }: { participantId: string; name: string }) {
+/** The still of a share, asked for when the preview opens, with "Assistir" over it. The box is 16:9
+ * from the first frame, so the preview never jumps when the picture lands; an older still stays up
+ * while the fresh one is on its way. */
+function StreamPreview({ participantId, name, onWatch }: { participantId: string; name: string; onWatch: () => void }) {
   const { t } = useTranslation('servers');
   const { sendWs } = useRoom('sendWs');
   const preview = useStreamPreview(participantId);
@@ -79,26 +78,49 @@ function StreamPreviewImage({ participantId, name }: { participantId: string; na
     <div className="relative grid aspect-video w-64 place-items-center overflow-hidden rounded-md bg-black text-caption text-white/70">
       {preview?.image
         ? <img src={preview.image} alt={t('voiceMembers.previewOf', { name })} className="absolute inset-0 h-full w-full object-contain" />
-        : answered
-          ? <span>{t('voiceMembers.previewUnavailable')}</span>
-          : <span role="status" aria-label={t('voiceMembers.previewLoading')} className="absolute inset-0 animate-pulse bg-white/5" />}
+        : !answered && <span role="status" aria-label={t('voiceMembers.previewLoading')} className="absolute inset-0 animate-pulse bg-white/5" />}
+      <div className="relative flex flex-col items-center gap-2">
+        {!preview?.image && answered && <span>{t('voiceMembers.previewUnavailable')}</span>}
+        <button type="button" onClick={onWatch} aria-label={t('voiceMembers.watch.buttonLabel', { name })}
+          className="rounded-md bg-black/55 px-4 py-1.5 text-label font-semibold text-white outline-none backdrop-blur-sm transition-colors duration-100 hover:bg-black/75 focus-visible:ring-2 focus-visible:ring-ring">
+          {t('voiceMembers.watch.button')}
+        </button>
+      </div>
     </div>
   );
 }
 
-function LiveBadge({ person, previewable }: { person: VoicePerson; previewable: boolean }) {
+// under a finger the badge takes a larger target without moving the row (padding paid back by margin)
+const BADGE_TRIGGER = 'flex rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:-m-2 pointer-coarse:p-2';
+
+/** "Ao vivo" beside someone sharing. A click watches: in the call it puts their share in focus, outside
+ * it joins and opens the call focused on it. Hovering shows a still of the share with "Assistir" over
+ * it. On a touch-first device outside the call a tap opens that preview instead, so a stray tap on a
+ * small badge never joins a call; the member menu (long press) offers the same "Assistir". */
+function LiveBadge({ person, previewable, tapOpensPreview, onWatch }: {
+  person: VoicePerson; previewable: boolean; tapOpensPreview: boolean; onWatch: (() => void) | null;
+}) {
   const { t } = useTranslation('servers');
+  const [open, setOpen] = useState(false);
   const badge = <span className="rounded-sm bg-red px-1 text-[10px] font-bold uppercase leading-4 text-white">{t('voiceMembers.status.live')}</span>;
-  if (!previewable) return <span role="img" aria-label={t('voiceMembers.status.live')} className="flex">{badge}</span>;
+  if (!onWatch) return <span role="img" aria-label={t('voiceMembers.status.live')} className="flex">{badge}</span>;
+  const label = person.isMe ? t('voiceMembers.watch.own') : t('voiceMembers.watch.badge', { name: person.displayName });
+  if (!previewable) return <button type="button" aria-label={label} onClick={onWatch} className={BADGE_TRIGGER}>{badge}</button>;
+
+  function watch() {
+    setOpen(false);
+    onWatch?.();
+  }
   return (
-    <Tooltip>
-      <TooltipTrigger render={<span tabIndex={0} />} aria-label={t('voiceMembers.status.live')} className="flex rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring">
+    // a press is the badge's own action (below), never the popover's toggle
+    <Popover open={open} onOpenChange={(next, details) => { if (details.reason !== 'trigger-press') setOpen(next); }}>
+      <PopoverTrigger openOnHover delay={150} aria-label={label} onClick={() => (tapOpensPreview ? setOpen(true) : watch())} className={BADGE_TRIGGER}>
         {badge}
-      </TooltipTrigger>
-      <TooltipContent side="right" className="flex-col items-stretch p-1.5">
-        <StreamPreviewImage participantId={person.id} name={person.displayName} />
-      </TooltipContent>
-    </Tooltip>
+      </PopoverTrigger>
+      <PopoverContent side="right" align="center" sideOffset={8} className="w-auto p-1.5">
+        <StreamPreview participantId={person.id} name={person.displayName} onWatch={watch} />
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -124,7 +146,9 @@ function VoiceActivity({ person }: { person: VoicePerson }) {
 
 /** The icons the call dock uses, so the list reads the same: muted, not
  * listening, camera on, then the "ao vivo" badge of a share. */
-function VoiceStatus({ person, previewable }: { person: VoicePerson; previewable: boolean }) {
+function VoiceStatus({ person, previewable, tapOpensPreview, onWatch }: {
+  person: VoicePerson; previewable: boolean; tapOpensPreview: boolean; onWatch: (() => void) | null;
+}) {
   const { t } = useTranslation('servers');
   const icon = 'flex-none';
   return (
@@ -132,7 +156,7 @@ function VoiceStatus({ person, previewable }: { person: VoicePerson; previewable
       {person.micMuted && <MicrophoneSlashIcon size={16} weight={iconWeight(true)} role="img" aria-label={t('voiceMembers.status.muted')} className={cn(icon, 'text-red-text')} />}
       {person.deafened && <SpeakerSlashIcon size={16} weight={iconWeight(true)} role="img" aria-label={t('voiceMembers.status.deafened')} className={cn(icon, 'text-red-text')} />}
       {person.cameraOn && <VideoCameraIcon size={16} weight={iconWeight(true)} role="img" aria-label={t('voiceMembers.status.camera')} className={cn(icon, 'text-text-muted')} />}
-      {person.sharing && <LiveBadge person={person} previewable={previewable} />}
+      {person.sharing && <LiveBadge person={person} previewable={previewable} tapOpensPreview={tapOpensPreview} onWatch={onWatch} />}
     </span>
   );
 }
@@ -141,7 +165,7 @@ function rectAt(x: number, y: number) {
   return { getBoundingClientRect: () => DOMRect.fromRect({ x, y, width: 0, height: 0 }) };
 }
 
-interface MenuTarget { person: VoicePerson; x: number; y: number }
+interface MenuTarget { person: VoicePerson; x: number; y: number; onWatch: (() => void) | null }
 
 /** What a right click on someone in a voice channel offers: their profile
  * and a message, your own volume for them when you share the call, and for
@@ -162,6 +186,11 @@ function VoiceMemberMenu({ target, server, channel, onClose, onOpenProfile }: {
   return (
     <DropdownMenu open onOpenChange={(open) => { if (!open) onClose(); }}>
       <DropdownMenuContent anchor={rectAt(target.x, target.y)} side="bottom" align="start" sideOffset={4} className="w-60">
+        {target.onWatch && !person.isMe && (
+          <DropdownMenuItem onClick={target.onWatch}>
+            <MonitorPlayIcon size={16} /><span>{t('voiceMembers.menu.watch')}</span>
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem onClick={() => onOpenProfile(person.userId)}>
           <UserIcon size={16} /><span>{t('voiceMembers.menu.profile')}</span>
         </DropdownMenuItem>
@@ -213,12 +242,12 @@ function VoiceMemberMenu({ target, server, channel, onClose, onOpenProfile }: {
  * not listening, cameras and shares. A name opens the profile; a right click
  * opens the member menu; whoever may move members drags people between
  * channels. */
-export function VoiceMembers({ server, channel, onOpenProfile, drag, onDragChange }: {
-  server: ServerSummary; channel: ChannelSummary; onOpenProfile: (userId: string) => void;
+export function VoiceMembers({ server, channel, onOpenProfile, onNavigate, drag, onDragChange }: {
+  server: ServerSummary; channel: ChannelSummary; onOpenProfile: (userId: string) => void; onNavigate?: () => void;
   drag: VoiceDrag | null; onDragChange: (drag: VoiceDrag | null) => void;
 }) {
   const { t } = useTranslation('servers');
-  const { activeCallConversationId } = useRoom('activeCallConversationId');
+  const { activeCallConversationId, openCall } = useRoom('activeCallConversationId', 'openCall');
   const state = useRoomState('participants', 'me');
   const me = useMyVoicePerson();
   const [menu, setMenu] = useState<MenuTarget | null>(null);
@@ -239,14 +268,24 @@ export function VoiceMembers({ server, channel, onOpenProfile, drag, onDragChang
   const canPreview = canInChannel(channel, PERMISSIONS.CONNECT);
   if (!people.length) return null;
 
+  /** Their share, focused on the stage: joined first when you are not in this call, through the same
+   * openCall as the channel itself (which asks before taking the call from another tab or device). */
+  function watchOf(person: VoicePerson): (() => void) | null {
+    if (!person.sharing || !(inThisCall || canPreview)) return null;
+    return () => {
+      openCall(channel.id, { watchScreenOf: person.id });
+      onNavigate?.();
+    };
+  }
+
   function openMenu(person: VoicePerson, event: MouseEvent) {
     event.preventDefault();
-    setMenu({ person, x: event.clientX, y: event.clientY });
+    setMenu({ person, x: event.clientX, y: event.clientY, onWatch: watchOf(person) });
   }
 
   function openMenuFromButton(person: VoicePerson, event: MouseEvent<HTMLButtonElement>) {
     const rect = event.currentTarget.getBoundingClientRect();
-    setMenu({ person, x: rect.left, y: rect.bottom });
+    setMenu({ person, x: rect.left, y: rect.bottom, onWatch: watchOf(person) });
   }
 
   function startDrag(person: VoicePerson, event: DragEvent) {
@@ -285,7 +324,7 @@ export function VoiceMembers({ server, channel, onOpenProfile, drag, onDragChang
                 <span className="truncate">{person.displayName}</span>
               </button>
               <VoiceActivity person={person} />
-              <VoiceStatus person={person} previewable={canPreview && !person.isMe} />
+              <VoiceStatus person={person} previewable={canPreview && !person.isMe} tapOpensPreview={touchFirst && !inThisCall} onWatch={watchOf(person)} />
               {/* right-click and long press open the same menu; this is the way
                   for a keyboard or a screen reader, shown only once focused */}
               <button type="button" aria-label={t('voiceMembers.menu.more', { name: person.displayName })} aria-haspopup="menu"

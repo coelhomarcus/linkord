@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { Room } from 'livekit-client';
 import type { Socket } from 'socket.io-client';
 import { RoomStoreProvider } from '@/state/RoomStoreProvider';
-import type { AudioHandle, TileDomHandle } from '@/state/RoomContext';
+import type { AudioHandle, OpenCallOptions, TileDomHandle } from '@/state/RoomContext';
 import { roomReducer, initialRoomState } from '@/state/roomReducer';
 import { useAuth } from '@/state/AuthContext';
 import { saveIdentity } from '@/shared/lib/identitySession';
@@ -105,9 +105,9 @@ export function RoomProvider({ children }: { children: ReactNode }) {
   const requestChatViewRef = useRef<((conversationId?: string) => void) | null>(null);
   const registerRequestChatView = useCallback((fn: (conversationId?: string) => void) => { requestChatViewRef.current = fn; }, []);
   const requestChatView = useCallback((conversationId?: string) => { requestChatViewRef.current?.(conversationId); }, []);
-  const openCallRef = useRef<((conversationId: string) => void) | null>(null);
-  const registerOpenCall = useCallback((fn: (conversationId: string) => void) => { openCallRef.current = fn; }, []);
-  const openCall = useCallback((conversationId: string) => { openCallRef.current?.(conversationId); }, []);
+  const openCallRef = useRef<((conversationId: string, options?: OpenCallOptions) => void) | null>(null);
+  const registerOpenCall = useCallback((fn: (conversationId: string, options?: OpenCallOptions) => void) => { openCallRef.current = fn; }, []);
+  const openCall = useCallback((conversationId: string, options?: OpenCallOptions) => { openCallRef.current?.(conversationId, options); }, []);
 
   // a refusal the socket sent without a request to answer (a call kick the
   // actor may not do, a quota) — shown as a banner, since nothing else waits on it

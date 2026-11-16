@@ -5,6 +5,7 @@ import type { Location } from 'react-router';
 import { MotionConfig } from 'motion/react';
 import { RoomProvider } from '@/app/providers/RoomProvider';
 import { useRoom, useRoomState } from '@/state/RoomContext';
+import type { OpenCallOptions } from '@/state/RoomContext';
 import { useCallRoster } from '@/features/calls/callRoster';
 import { AuthProvider, useAuth } from '@/state/AuthContext';
 import { AuthScreen } from '@/features/auth/AuthScreen';
@@ -189,12 +190,17 @@ function Shell() {
     return ROUTES.call(conversationId);
   }
 
-  function handleOpenCall(conversationId: string) {
+  function handleOpenCall(conversationId: string, options?: OpenCallOptions) {
+    const watch = options?.watchScreenOf ? { conversationId, participantId: options.watchScreenOf } : null;
+    dispatch({ type: 'SET_PENDING_SCREEN_FOCUS', target: watch });
     // "connecting" only once the join is on its way: one waiting to move the call from another tab
     // shows the lobby, and stays there if the person keeps the call where it is
     joinCall(conversationId, {
       onSent: () => { pendingStageRef.current = conversationId; },
-      onDropped: () => { if (pendingStageRef.current === conversationId) pendingStageRef.current = null; },
+      onDropped: () => {
+        if (pendingStageRef.current === conversationId) pendingStageRef.current = null;
+        if (watch) dispatch({ type: 'DROP_PENDING_SCREEN_FOCUS', target: watch });
+      },
     });
     navigate(stagePath(conversationId), { state: { from: currentPath() } });
   }

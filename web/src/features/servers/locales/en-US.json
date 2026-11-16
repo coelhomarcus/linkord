@@ -325,7 +325,14 @@
     "previewOf": "{{name}}'s screen",
     "previewLoading": "Loading preview",
     "previewUnavailable": "Preview unavailable",
+    "watch": {
+      "badge": "Live: watch {{name}}'s stream",
+      "own": "Live: show your stream in focus",
+      "button": "Watch",
+      "buttonLabel": "Watch {{name}}'s stream"
+    },
     "menu": {
+      "watch": "Watch stream",
       "profile": "View profile",
       "message": "Message",
       "muteForMe": "Mute for me",

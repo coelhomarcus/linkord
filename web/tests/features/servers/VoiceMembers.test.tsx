@@ -51,15 +51,16 @@ function renderList({ permissions = MEMBER, participants = [bea], room = {} }: {
   const kickFromCall = vi.fn();
   const sendWs = vi.fn(() => true);
   const server = serverWith(permissions);
+  const openCall = vi.fn();
   renderSocial(<ChannelList server={server} activeChannelId={null} onOpenProfile={onOpenProfile} />, {
     room: {
-      servers: [server], moveToCall, kickFromCall, sendWs,
+      servers: [server], moveToCall, kickFromCall, sendWs, openCall,
       state: { ...initialRoomState, me, participants: new Map(participants.map((p) => [p.id, p])) },
       ...room,
     },
     path: '/app/channels/s1',
   });
-  return { onOpenProfile, moveToCall, kickFromCall, sendWs };
+  return { onOpenProfile, moveToCall, kickFromCall, sendWs, openCall };
 }
 
 const row = (name: string) => screen.getByRole('button', { name }).closest('li')!;
@@ -282,6 +283,101 @@ describe('VoiceMembers — the live badge preview', () => {
   });
 });
 
+describe('VoiceMembers — watching a live share', () => {
+  const streaming = person({ id: 'p-bea', userId: 'u-bea', displayName: 'Bea', sharing: true });
+  const badge = () => within(row('Bea')).getByRole('button', { name: 'Ao vivo: assistir à transmissão de Bea' });
+
+  function touchFirst() {
+    vi.stubGlobal('matchMedia', vi.fn((query: string) => ({ matches: query === '(hover: none) and (pointer: coarse)', addEventListener: vi.fn(), removeEventListener: vi.fn() })));
+  }
+  afterEach(() => { vi.unstubAllGlobals(); });
+  // jsdom has no layout, so Base UI cannot tell a pointer travelling from the badge into the preview
+  // from one leaving both: a pointer click on "Assistir" would close the preview on the way. Hovering
+  // opens it; the button is then clicked where it is (checked in a browser, where the pointer gets there).
+
+  it('outside the call, a click on "ao vivo" joins and asks for her share in focus', async () => {
+    const { openCall } = renderList({ participants: [streaming] });
+    await userEvent.setup().click(badge());
+    expect(openCall).toHaveBeenCalledWith('v1', { watchScreenOf: 'p-bea' });
+  });
+
+  it('in the same call, a click on "ao vivo" puts her share in focus through the same request', async () => {
+    const { openCall } = renderList({ participants: [streaming], room: { activeCallConversationId: 'v1' } });
+    await userEvent.setup().click(badge());
+    expect(openCall).toHaveBeenCalledWith('v1', { watchScreenOf: 'p-bea' });
+  });
+
+  it('the preview has "Assistir" over the still, which does the same and closes the preview', async () => {
+    const { openCall } = renderList({ participants: [streaming] });
+    const user = userEvent.setup();
+    await user.hover(within(row('Bea')).getByText('Ao vivo'));
+    act(() => { streamPreviewStore.set('p-bea', 'data:image/jpeg;base64,AAAA'); });
+    const watch = await screen.findByRole('button', { name: 'Assistir à transmissão de Bea' });
+    expect(watch).toHaveTextContent('Assistir');
+    fireEvent.click(watch);
+    expect(openCall).toHaveBeenCalledWith('v1', { watchScreenOf: 'p-bea' });
+    await vi.waitFor(() => expect(screen.queryByRole('img', { name: 'Tela de Bea' })).not.toBeInTheDocument());
+  });
+
+  it('"Assistir" stays offered when the still is unavailable', async () => {
+    const { openCall } = renderList({ participants: [streaming] });
+    const user = userEvent.setup();
+    await user.hover(within(row('Bea')).getByText('Ao vivo'));
+    await screen.findByRole('status', { name: 'Carregando prévia' });
+    act(() => { streamPreviewStore.set('p-bea', null); });
+    expect(screen.getByText('Prévia indisponível')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Assistir à transmissão de Bea' }));
+    expect(openCall).toHaveBeenCalledWith('v1', { watchScreenOf: 'p-bea' });
+  });
+
+  it('on a touch-first device outside the call, a tap opens the preview instead of joining', async () => {
+    touchFirst();
+    const { openCall, sendWs } = renderList({ participants: [streaming] });
+    const user = userEvent.setup();
+    await user.click(badge());
+    expect(openCall).not.toHaveBeenCalled();
+    await vi.waitFor(() => expect(sendWs).toHaveBeenCalledWith({ t: 'stream-preview-request', participantId: 'p-bea' }));
+    await user.click(await screen.findByRole('button', { name: 'Assistir à transmissão de Bea' }));
+    expect(openCall).toHaveBeenCalledWith('v1', { watchScreenOf: 'p-bea' });
+  });
+
+  it('on a touch-first device in the call, a tap focuses her share at once', async () => {
+    touchFirst();
+    const { openCall } = renderList({ participants: [streaming], room: { activeCallConversationId: 'v1' } });
+    await userEvent.setup().click(badge());
+    expect(openCall).toHaveBeenCalledWith('v1', { watchScreenOf: 'p-bea' });
+  });
+
+  it('the member menu (right click, long press, "more actions") offers "Assistir à transmissão"', async () => {
+    const { openCall } = renderList({ participants: [streaming] });
+    fireEvent.contextMenu(row('Bea'));
+    await userEvent.setup().click(await screen.findByRole('menuitem', { name: 'Assistir à transmissão' }));
+    expect(openCall).toHaveBeenCalledWith('v1', { watchScreenOf: 'p-bea' });
+  });
+
+  it('someone not sharing has nothing to watch in the menu', async () => {
+    renderList();
+    fireEvent.contextMenu(row('Bea'));
+    expect(await screen.findByRole('menuitem', { name: 'Ver perfil' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Assistir à transmissão' })).not.toBeInTheDocument();
+  });
+
+  it('without CONNECT, outside the call, "ao vivo" is only a status: nothing to join', async () => {
+    const { openCall } = renderList({ permissions: PERMISSIONS.VIEW_CHANNEL, participants: [streaming] });
+    expect(within(row('Bea')).queryByRole('button', { name: /^Ao vivo/ })).not.toBeInTheDocument();
+    fireEvent.contextMenu(row('Bea'));
+    expect(await screen.findByRole('menuitem', { name: 'Ver perfil' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Assistir à transmissão' })).not.toBeInTheDocument();
+    expect(openCall).not.toHaveBeenCalled();
+  });
+
+  it('your own badge, in the call, puts your own share in focus', async () => {
+    const { openCall } = renderList({ room: { activeCallConversationId: 'v1', state: { ...initialRoomState, me: { ...me, sharing: true }, participants: new Map([[bea.id, bea]]) } } });
+    await userEvent.setup().click(within(row('Eu')).getByRole('button', { name: 'Ao vivo: ver sua transmissão em destaque' }));
+    expect(openCall).toHaveBeenCalledWith('v1', { watchScreenOf: 'p-me' });
+  });
+});
+
 describe('VoiceMembers in English', () => {
   useLanguageForTests('en-US');
 
@@ -289,9 +385,10 @@ describe('VoiceMembers in English', () => {
     renderList({ permissions: MOVER, participants: [person({ id: 'p-bea', userId: 'u-bea', displayName: 'Bea', micMuted: true, deafened: true, sharing: true })] });
     expect(within(row('Bea')).getByRole('img', { name: 'Muted' })).toBeInTheDocument();
     expect(within(row('Bea')).getByRole('img', { name: 'Deafened' })).toBeInTheDocument();
-    expect(within(row('Bea')).getByText('Live')).toBeInTheDocument();
+    expect(within(row('Bea')).getByRole('button', { name: "Live: watch Bea's stream" })).toHaveTextContent('Live');
     fireEvent.contextMenu(row('Bea'));
     expect(await screen.findByRole('group', { name: 'Move to' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Disconnect' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Watch stream' })).toBeInTheDocument();
   });
 });
