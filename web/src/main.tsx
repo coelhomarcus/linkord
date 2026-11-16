@@ -7,7 +7,7 @@ import { installGlobalErrorHandlers } from './shared/lib/logger';
 import './styles/index.css';
 import { initI18n } from '@/shared/i18n/init';
 import { applyColorTheme } from '@/features/settings/applyColorTheme';
-import { recordInstallSession, startInstallPromptCapture } from '@/features/install/installPrompt';
+import { startInstallPromptCapture } from '@/features/install/installPrompt';
 import { loadColorTheme } from '@/features/settings/useColorThemePreference';
 
 // Hover an element and press ⌘C / Ctrl+C to copy its source for the agent.
@@ -19,7 +19,6 @@ if (import.meta.env.DEV) {
 installGlobalErrorHandlers();
 initI18n();
 startInstallPromptCapture();
-recordInstallSession();
 applyColorTheme(loadColorTheme());
 
 // Register on load only in a build. In dev, opening notification settings can

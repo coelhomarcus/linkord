@@ -14,8 +14,8 @@ export const FloatingBarSlotProvider = SlotContext.Provider;
 export const FLOATING_BAR_SLOT_CLASS = 'pointer-events-none absolute bottom-4 left-1/2 z-10 flex w-[min(100%-2rem,28rem)] -translate-x-1/2 flex-col gap-2 [&>*]:pointer-events-auto';
 const BAR = 'flex w-full flex-wrap items-center justify-between gap-3 rounded-xl border border-border-strong bg-bg-floating/95 px-4 py-3 shadow-popover backdrop-blur-xl';
 // Rises a little as it appears and sinks back as it goes; fill-mode keeps it hidden between the end of the
-// exit and the unmount. Shared with other floating cards (the install banner) so they move alike.
-export const FLOATING_BAR_MOTION = 'ease-out-expo data-open:animate-in data-open:fade-in-0 data-open:slide-in-from-bottom-2 data-open:duration-200 data-closed:animate-out data-closed:fade-out-0 data-closed:slide-out-to-bottom-2 data-closed:duration-150 data-closed:fill-mode-forwards';
+// exit and the unmount.
+const FLOATING_BAR_MOTION = 'ease-out-expo data-open:animate-in data-open:fade-in-0 data-open:slide-in-from-bottom-2 data-open:duration-200 data-closed:animate-out data-closed:fade-out-0 data-closed:slide-out-to-bottom-2 data-closed:duration-150 data-closed:fill-mode-forwards';
 
 /** How long the bar confirms a save before it goes away. */
 export const SAVED_BAR_MS = 2200;

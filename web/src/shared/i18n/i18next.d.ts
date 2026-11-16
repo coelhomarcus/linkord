@@ -22,6 +22,7 @@ import type share from '@/features/share/locales/pt-BR.json';
 import type servers from '@/features/servers/locales/pt-BR.json';
 import type status from '@/features/status/locales/pt-BR.json';
 import type activity from '@/features/activity/locales/pt-BR.json';
+import type desktopApp from '@/features/desktopApp/locales/pt-BR.json';
 import type stickers from '@/features/stickers/locales/pt-BR.json';
 import type voiceMessages from '@/features/voiceMessages/locales/pt-BR.json';
 
@@ -55,6 +56,7 @@ declare module 'i18next' {
       servers: typeof servers;
       status: typeof status;
       activity: typeof activity;
+      desktopApp: typeof desktopApp;
       stickers: typeof stickers;
       voiceMessages: typeof voiceMessages;
     };

@@ -12,7 +12,7 @@ import { RoomErrorScreen } from '@/app/layout/RoomErrorScreen';
 import { OutdatedClientScreen } from '@/app/layout/OutdatedClientScreen';
 import { LoadingScreen } from '@/app/layout/LoadingScreen';
 import { AccessNotice, AccountNotice } from '@/app/layout/AccessNotice';
-import { InstallBanner } from '@/features/install/InstallBanner';
+import { DesktopAppAnnouncement } from '@/features/desktopApp/DesktopAppAnnouncement';
 import { ConversationSidebar } from '@/features/conversations/ConversationSidebar';
 import { ServerRail } from '@/features/servers/ServerRail';
 import { MemberListPanel } from '@/features/servers/MemberListPanel';
@@ -343,7 +343,7 @@ function Shell() {
         <DesktopSourcePicker />
         <AccessNotice />
         <AccountNotice />
-        <InstallBanner />
+        <DesktopAppAnnouncement />
         <ServerRail className="hidden md:flex" />
         {/* Discord's one framed panel: the list and the content side by side
             under a shared hairline, rounded once at its top-left corner */}
