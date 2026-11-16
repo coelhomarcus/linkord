@@ -50,7 +50,7 @@ function wineProgram(args: string | undefined): string | null {
 }
 
 /** Whether a process is an entry's program. */
-export function matches(entry: CatalogEntry, process: RunningProcess, platform: NodeJS.Platform): boolean {
+function matches(entry: CatalogEntry, process: RunningProcess, platform: NodeJS.Platform): boolean {
   const name = processName(process.path);
   if (entry.exe?.includes(name)) return true;
   if (platform === 'darwin' && entry.app) {

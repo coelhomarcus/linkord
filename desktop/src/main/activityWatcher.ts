@@ -107,6 +107,28 @@ async function steamGameName(root: string | null, appId: number): Promise<string
   return null;
 }
 
+/** A macOS app's own icon: the `.icns` its Info.plist names, turned into a PNG by `sips`. Electron's
+ * app.getFileIcon is not used there: on macOS it takes the whole app down (Electron 45). */
+async function macAppIcon(exePath: string): Promise<string | null> {
+  const bundle = /^(.*?\.app)(?:\/|$)/i.exec(exePath)?.[1];
+  if (!bundle) return null;
+  const plist = path.join(bundle, 'Contents/Info.plist');
+  let name = (await run('/usr/libexec/PlistBuddy', ['-c', 'Print :CFBundleIconFile', plist])).trim();
+  if (!name) return null;
+  if (!name.endsWith('.icns')) name += '.icns';
+  const out = path.join(os.tmpdir(), `linkord-activity-icon-${process.pid}-${Date.now()}.png`);
+  await run('/usr/bin/sips', ['-s', 'format', 'png', '-Z', '64', path.join(bundle, 'Contents/Resources', name), '--out', out]);
+  const png = await fs.readFile(out).catch(() => null);
+  await fs.rm(out, { force: true }).catch(() => {});
+  return png ? `data:image/png;base64,${png.toString('base64')}` : null;
+}
+
+async function programIcon(exePath: string): Promise<string | null> {
+  if (process.platform === 'darwin') return macAppIcon(exePath);
+  const image = await app.getFileIcon(exePath, { size: 'large' }).catch(() => null);
+  return image && !image.isEmpty() ? image.toDataURL() : null;
+}
+
 async function windowsExePath(pid: number): Promise<string | null> {
   const value = (await powershell(`(Get-Process -Id ${pid} -ErrorAction SilentlyContinue).Path`)).trim();
   return value || null;
@@ -175,10 +197,7 @@ export function createActivityWatcher(options: { recentFile: string; onChange: (
     async icon(): Promise<string | null> {
       const exePath = detected?.exePath;
       if (!detected || !exePath) return null;
-      if (!icons.has(detected.key)) {
-        const image = await app.getFileIcon(exePath, { size: 'large' }).catch(() => null);
-        icons.set(detected.key, image && !image.isEmpty() ? image.toDataURL() : null);
-      }
+      if (!icons.has(detected.key)) icons.set(detected.key, await programIcon(exePath).catch(() => null));
       return icons.get(detected.key) ?? null;
     },
   };
