@@ -14,7 +14,7 @@ export interface Activity {
   key: string;
   kind: ActivityKind;
   name: string;
-  /** an image path on this server (IGDB cover through the media proxy, or an uploaded app icon), or null */
+  /** an icon stored on this server (activity/activityIcons.ts: a game's SteamGridDB icon or a program's own), or null */
   icon: string | null;
   /** ISO time it started */
   startedAt: string;
@@ -31,7 +31,6 @@ export const DEFAULT_ACTIVITY_SETTINGS: ActivitySettings = { sharing: true, hidd
 export const HIDDEN_ACTIVITIES_MAX = 200;
 const ACTIVITY_NAME_MAX = 64;
 const KEY = /^[a-z0-9][a-z0-9:._-]{0,79}$/;
-const IGDB_IMAGE = /^[a-z0-9]{1,40}$/;
 const LOCAL_ICON = /^[0-9a-f]{64}$/;
 // a start further back than this is a clock gone wrong, not a week-long session
 const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
@@ -64,10 +63,11 @@ function sanitizeName(value: unknown): string {
   return Array.from(s).slice(0, ACTIVITY_NAME_MAX).join('').trim();
 }
 
+// Tabs from before game icons still send `{ igdb: <cover id> }`: a portrait cover cropped square is
+// not an icon, so it shows as none (the glyph) until they reload.
 function iconPath(value: unknown): string | null {
   if (!value || typeof value !== 'object') return null;
-  const { igdb, local } = value as { igdb?: unknown; local?: unknown };
-  if (typeof igdb === 'string' && IGDB_IMAGE.test(igdb)) return `/api/media-proxy/igdb/cover_small/${igdb}`;
+  const { local } = value as { local?: unknown };
   if (typeof local === 'string' && LOCAL_ICON.test(local)) return `/api/activity/icons/${local}.webp`;
   return null;
 }

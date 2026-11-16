@@ -14,7 +14,6 @@ function ActivityIcon({ activity, size, className }: { activity: Activity; size:
       style={{ width: size, height: size }}
     >
       {activity.icon && !failed
-        // a game's IGDB cover is a portrait: the square shows its middle
         ? <img src={activity.icon} alt="" className="size-full object-cover" onError={() => setFailed(true)} />
         : <Fallback size={Math.round(size * 0.6)} weight="fill" aria-hidden />}
     </span>

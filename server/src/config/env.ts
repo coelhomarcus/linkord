@@ -191,6 +191,10 @@ const MAL_CLIENT_ID = (process.env.MAL_CLIENT_ID || '').trim();
 const IGDB_CLIENT_ID = (process.env.IGDB_CLIENT_ID || '').trim();
 const IGDB_CLIENT_SECRET = (process.env.IGDB_CLIENT_SECRET || '').trim();
 
+// SteamGridDB's API key, for the square icon of a game someone is playing. Empty leaves those games
+// with the program's own icon, or none.
+const STEAMGRIDDB_API_KEY = (process.env.STEAMGRIDDB_API_KEY || '').trim();
+
 // The GitHub repository ("owner/repo") whose releases carry the desktop app's installers, the same one
 // the installers update from (LINKORD_UPDATE_REPO when they are built). Set, the web app announces the
 // desktop app once on Windows computers and links to the installer; empty, it never mentions it.
@@ -273,7 +277,7 @@ export const config = {
   RESEND_API_KEY, RESEND_FROM_EMAIL, RESEND_API_URL, APP_URL, AUTH_CODE_TTL_MS, AUTH_CODE_MAX_ATTEMPTS, LOGIN_CODE_TTL_MS,
   PUSH_VAPID_PUBLIC_KEY, PUSH_VAPID_PRIVATE_KEY, PUSH_VAPID_SUBJECT,
   LIVEKIT_URL, LIVEKIT_SERVER_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET, LIVEKIT_ROOM_NAME, LIVEKIT_TOKEN_TTL_SECONDS,
-  UPLOADS_REMOTE_URL, KLIPY_API_KEY, MAL_CLIENT_ID, IGDB_CLIENT_ID, IGDB_CLIENT_SECRET, MEDIA_PROXY_ENABLED, DESKTOP_RELEASES_REPO,
+  UPLOADS_REMOTE_URL, KLIPY_API_KEY, MAL_CLIENT_ID, IGDB_CLIENT_ID, IGDB_CLIENT_SECRET, STEAMGRIDDB_API_KEY, MEDIA_PROXY_ENABLED, DESKTOP_RELEASES_REPO,
   REGISTRATIONS_PER_IP_PER_HOUR, MAX_NEW_ACCOUNTS_PER_HOUR, MAX_CONNECTIONS_PER_USER, MAX_CONNECTIONS_PER_IP,
   MAX_OWNED_SERVERS_PER_USER, MAX_SERVER_MEMBERSHIPS_PER_USER, MAX_FRIENDS, MAX_PENDING_OUTGOING_REQUESTS,
   ALLOWED_ORIGINS, CSP_REPORT_ONLY, IS_DEV, ORPHAN_GRACE_MS, ORPHAN_SWEEP_DRY_RUN,

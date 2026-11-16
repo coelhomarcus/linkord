@@ -315,7 +315,7 @@ describe('activity', () => {
 
   afterEach(() => setActivitySettingsStore(databaseActivitySettingsStore));
 
-  const minecraft = { key: 'minecraft', kind: 'playing', name: 'Minecraft', icon: { igdb: 'co49x5' }, startedAt: Date.now() - 60_000 };
+  const minecraft = { key: 'minecraft', kind: 'playing', name: 'Minecraft', icon: { local: 'a'.repeat(64) }, startedAt: Date.now() - 60_000 };
 
   async function connectWithSettings(userId: string, knownPeers: string[] = []) {
     await loadActivitySettings(userId);
@@ -339,7 +339,7 @@ describe('activity', () => {
     assert.equal(activity.key, 'minecraft');
     assert.equal(activity.name, 'Minecraft');
     assert.equal(activity.kind, 'playing');
-    assert.equal(activity.icon, '/api/media-proxy/igdb/cover_small/co49x5');
+    assert.equal(activity.icon, `/api/activity/icons/${'a'.repeat(64)}.webp`);
     assert.equal(visiblePresenceOf(alice)?.activity?.key, 'minecraft');
   });
 
@@ -362,6 +362,9 @@ describe('activity', () => {
     await report(a.socket, { key: 'Bad Key!', kind: 'playing', name: 'x' });
     assert.equal(visiblePresenceOf(alice)?.activity, undefined);
     await report(a.socket, { ...minecraft, icon: { url: 'https://evil.example/x.png' } });
+    assert.equal(visiblePresenceOf(alice)?.activity?.icon, null);
+    // what older tabs still send: a portrait cover is not an icon, so it shows the glyph instead
+    await report(a.socket, { ...minecraft, icon: { igdb: 'co49x5' } });
     assert.equal(visiblePresenceOf(alice)?.activity?.icon, null);
   });
 

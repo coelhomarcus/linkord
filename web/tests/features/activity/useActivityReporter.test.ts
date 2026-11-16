@@ -40,17 +40,36 @@ beforeEach(() => {
   localStorage.clear();
   lookup.mockReset();
   upload.mockReset();
+  upload.mockResolvedValue(null);
 });
 
 afterEach(() => { delete window.linkordDesktop; });
 
 describe('useActivityReporter', () => {
-  it('sends a detected game with its IGDB cover', async () => {
-    stubDesktop(minecraft);
-    lookup.mockResolvedValue({ name: 'Minecraft', image: 'co49x5' });
+  it('sends a detected game with the icon the server stored for it', async () => {
+    const { api } = stubDesktop(minecraft);
+    lookup.mockResolvedValue({ name: 'Minecraft', image: 'co49x5', icon: 'b'.repeat(64) });
     const { reports } = render();
-    await waitFor(() => expect(reports().at(-1)).toEqual({ key: 'minecraft', kind: 'playing', name: 'Minecraft', icon: { igdb: 'co49x5' }, startedAt: 1000 }));
+    await waitFor(() => expect(reports().at(-1)).toEqual({ key: 'minecraft', kind: 'playing', name: 'Minecraft', icon: { local: 'b'.repeat(64) }, startedAt: 1000 }));
+    expect(api.icon).not.toHaveBeenCalled();
     expect(upload).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the program\'s own icon for a game without one, never to the cover', async () => {
+    stubDesktop(minecraft);
+    lookup.mockResolvedValue({ name: 'Minecraft', image: 'co49x5', icon: null });
+    upload.mockResolvedValue('c'.repeat(64));
+    const { reports } = render();
+    await waitFor(() => expect(reports().at(-1)).toMatchObject({ key: 'minecraft', icon: { local: 'c'.repeat(64) } }));
+  });
+
+  it('looks a game up again instead of reusing a cover remembered by an older version', async () => {
+    localStorage.setItem('ss-activity-icons', JSON.stringify({ minecraft: { igdb: 'co49x5' } }));
+    stubDesktop(minecraft);
+    lookup.mockResolvedValue({ name: 'Minecraft', icon: 'b'.repeat(64) });
+    const { reports } = render();
+    await waitFor(() => expect(reports().at(-1)).toMatchObject({ icon: { local: 'b'.repeat(64) } }));
+    expect(localStorage.getItem('ss-activity-icons')).toBeNull();
   });
 
   it('sends an app with its own icon, uploaded once', async () => {
@@ -68,7 +87,7 @@ describe('useActivityReporter', () => {
 
   it('names a Steam game the desktop app could not name from the lookup', async () => {
     stubDesktop({ key: 'steam:570', kind: 'playing', name: '', steamAppId: 570, startedAt: 1 });
-    lookup.mockResolvedValue({ name: 'Dota 2', image: null });
+    lookup.mockResolvedValue({ name: 'Dota 2', image: null, icon: null });
     upload.mockResolvedValue(null);
     const { reports } = render();
     await waitFor(() => expect(reports().at(-1)).toMatchObject({ key: 'steam:570', name: 'Dota 2', icon: null }));

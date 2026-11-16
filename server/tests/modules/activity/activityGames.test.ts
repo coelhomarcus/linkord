@@ -2,7 +2,7 @@ import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ConnectionFetchError } from '../../../src/integrations/connectionHttp.js';
 import type { IgdbClient } from '../../../src/integrations/igdb/igdb.js';
-import { ActivityGameError, createActivityGameLookup, pickByName, type ActivityGameStore, type ActivityGameRow } from '../../../src/modules/activity/activityGames.js';
+import { ActivityGameError, createActivityGameLookup, parseActivityGameQuery, pickByName, type ActivityGameStore, type ActivityGameRow } from '../../../src/modules/activity/activityGames.js';
 import type { GameSnapshot } from '../../../src/modules/games/types.js';
 
 const game = (name: string, cover: string | null = 'co1'): GameSnapshot => ({ igdbId: 1, name, slug: name.toLowerCase().replace(/\W+/g, '-'), coverImageId: cover, releaseYear: 2020 });
@@ -25,7 +25,8 @@ function setup(client: Partial<IgdbClient>, now = () => 1_000_000_000_000) {
     async findSteamGame(id) { calls.push(`steam:${id}`); return client.findSteamGame ? client.findSteamGame(id) : null; },
     ...(client.configured === false ? { configured: false } : {}),
   };
-  const lookup = createActivityGameLookup({ client: full, reserve: async () => {}, postpone: async () => {}, store: mem.store, now });
+  const inner = createActivityGameLookup({ client: full, reserve: async () => {}, postpone: async () => {}, store: mem.store, now });
+  const lookup = async (userId: string, query: { steamAppId?: unknown; name?: unknown }) => inner(userId, parseActivityGameQuery(query));
   return { lookup, calls, mem };
 }
 

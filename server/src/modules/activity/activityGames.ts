@@ -7,9 +7,10 @@ import { allow, retryAfterMs } from '../../realtime/floodControl.js';
 import { normalizeQuery } from '../games/gameSearch.js';
 import type { GameSnapshot } from '../games/types.js';
 
-// The name and cover a detected game shows with ("[cover] Jogando Dota 2"). The desktop app knows a
-// Steam app id (from Steam) or a name (from its own catalog, or Steam's app manifest); IGDB turns
-// that into its own name and cover. Every answer is kept in the database, since thousands of people
+// The name a detected game shows with ("Jogando Dota 2"). The desktop app knows a Steam app id (from
+// Steam) or a name (from its own catalog, or Steam's app manifest); IGDB turns that into its own name.
+// Its cover is still answered for tabs from before game icons, which report it (the server drops it,
+// presence/activity.ts); the icon itself comes from SteamGridDB (activityGameIcons.ts). Every answer is kept in the database, since thousands of people
 // open the same few games: IGDB is asked once per game, not once per person.
 
 const FOUND_TTL_MS = 30 * 24 * 60 * 60 * 1000;
@@ -54,9 +55,26 @@ export class ActivityGameError extends Error {
 }
 
 /** The one game among the search results that has this name, else the first. */
-export function pickByName(games: GameSnapshot[], name: string): GameSnapshot | null {
+export function pickByName<T extends { name: string }>(games: T[], name: string): T | null {
   const wanted = normalizeQuery(name);
   return games.find((game) => normalizeQuery(game.name) === wanted) ?? games[0] ?? null;
+}
+
+export interface ActivityGameQuery {
+  /** `steam:<app id>` or `name:<normalized name>`: the same game asked by anyone */
+  key: string;
+  steamAppId: number | null;
+  /** the detected name, tidied, or '' */
+  name: string;
+}
+
+/** What `GET /api/activity/game` asks for; throws a 400 for a request with neither an id nor a name. */
+export function parseActivityGameQuery(query: { steamAppId?: unknown; name?: unknown }): ActivityGameQuery {
+  const steamAppId = typeof query.steamAppId === 'string' && /^\d{1,10}$/.test(query.steamAppId) ? Number(query.steamAppId) : null;
+  const name = typeof query.name === 'string' ? query.name.replace(/\s+/g, ' ').trim().slice(0, 64) : '';
+  const normalized = normalizeQuery(name);
+  if (!steamAppId && !normalized) throw new ActivityGameError(400, 'invalid_request');
+  return { key: steamAppId ? `steam:${steamAppId}` : `name:${normalized}`, steamAppId, name };
 }
 
 export function createActivityGameLookup(deps: {
@@ -100,12 +118,8 @@ export function createActivityGameLookup(deps: {
   }
 
   /** The game for a Steam app id and/or a name: from the database when known, else from IGDB. */
-  return async function lookup(userId: string, query: { steamAppId?: unknown; name?: unknown }): Promise<ActivityGame> {
-    const steamAppId = typeof query.steamAppId === 'string' && /^\d{1,10}$/.test(query.steamAppId) ? Number(query.steamAppId) : null;
-    const name = typeof query.name === 'string' ? query.name.replace(/\s+/g, ' ').trim().slice(0, 64) : '';
-    const normalized = normalizeQuery(name);
-    if (!steamAppId && !normalized) throw new ActivityGameError(400, 'invalid_request');
-    const key = steamAppId ? `steam:${steamAppId}` : `name:${normalized}`;
+  return async function lookup(userId: string, query: ActivityGameQuery): Promise<ActivityGame> {
+    const { key, steamAppId, name } = query;
     const cached = await store.get(key);
     if (cached && cached.resolvedAt + FOUND_TTL_MS > now()) return { name: cached.name, image: cached.image };
     if (!client.configured) return { name: cached?.name ?? name, image: cached?.image ?? null };

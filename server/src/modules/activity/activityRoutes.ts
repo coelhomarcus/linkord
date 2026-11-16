@@ -3,10 +3,13 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { config } from '../../config/env.js';
 import { sendError, sendJson } from '../../http/respond.js';
 import { createIgdbClient } from '../../integrations/igdb/igdb.js';
+import { createSteamGridDbClient } from '../../integrations/steamgriddb/steamgriddb.js';
+import { fetchImage } from '../media-proxy/mediaProxy.js';
 import * as floodControl from '../../realtime/floodControl.js';
 import { postponeIgdb, reserveIgdbSlot } from '../games/igdbLimiter.js';
 import { requireSession } from '../servers/serverHttp.js';
-import { ActivityGameError, createActivityGameLookup } from './activityGames.js';
+import { createActivityGameIconLookup } from './activityGameIcons.js';
+import { ActivityGameError, createActivityGameLookup, parseActivityGameQuery } from './activityGames.js';
 import { MAX_ACTIVITY_ICON_UPLOAD_BYTES, activityIconPath, isActivityIconId, storeActivityIcon } from './activityIcons.js';
 
 const lookup = createActivityGameLookup({
@@ -14,13 +17,21 @@ const lookup = createActivityGameLookup({
   reserve: () => reserveIgdbSlot(),
   postpone: postponeIgdb,
 });
+const lookupIcon = createActivityGameIconLookup({
+  client: createSteamGridDbClient({ apiKey: config.STEAMGRIDDB_API_KEY }),
+  // a fixed host answers directly: a redirect could only lead somewhere else
+  download: async (url) => (await fetchImage({ url, redirects: 0 })).body,
+  storeIcon: storeActivityIcon,
+});
 const ICON_RULE = { windowMs: 60_000, max: 10 };
 
 async function handleGame(request: FastifyRequest<{ Querystring: { steam?: string; name?: string } }>, reply: FastifyReply): Promise<void> {
   const sess = await requireSession(request, reply);
   if (!sess) return;
   try {
-    sendJson(reply, 200, await lookup(sess.userId, { steamAppId: request.query.steam, name: request.query.name }));
+    const query = parseActivityGameQuery({ steamAppId: request.query.steam, name: request.query.name });
+    const [game, icon] = await Promise.all([lookup(sess.userId, query), lookupIcon(sess.userId, query)]);
+    sendJson(reply, 200, { ...game, icon });
   } catch (error) {
     if (!(error instanceof ActivityGameError)) throw error;
     if (error.status === 429) reply.header('Retry-After', String(Math.max(1, Math.ceil(error.retryAfterMs / 1000))));

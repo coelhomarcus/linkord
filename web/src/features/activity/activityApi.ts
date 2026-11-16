@@ -1,7 +1,8 @@
 import { apiFetch } from '@/shared/api/api';
 
-/** The IGDB name and cover of a detected game (server/src/modules/activity/activityGames.ts). */
-export function lookupActivityGame(query: { steamAppId?: number; name: string }): Promise<{ name: string; image: string | null }> {
+/** A detected game's IGDB name and stored SteamGridDB icon id (server/src/modules/activity/), `icon`
+ * absent from a server before game icons. */
+export function lookupActivityGame(query: { steamAppId?: number; name: string }): Promise<{ name: string; icon?: string | null }> {
   const params = new URLSearchParams();
   if (query.steamAppId) params.set('steam', String(query.steamAppId));
   if (query.name) params.set('name', query.name);

@@ -5,7 +5,7 @@ import { renderWithRoom } from '@tests/fixtures/roomContextFixture';
 import { UserActivityCard, UserActivityInline } from '@/features/activity/ActivityLine';
 import type { Activity, VisiblePresence } from '@/shared/types/protocol';
 
-const activity: Activity = { key: 'minecraft', kind: 'playing', name: 'Minecraft', icon: '/api/media-proxy/igdb/cover_small/co1', startedAt: new Date(Date.now() - 25 * 60_000).toISOString() };
+const activity: Activity = { key: 'minecraft', kind: 'playing', name: 'Minecraft', icon: `/api/activity/icons/${'a'.repeat(64)}.webp`, startedAt: new Date(Date.now() - 25 * 60_000).toISOString() };
 
 function renderFor(ui: React.ReactElement, presence: Record<string, VisiblePresence>, online: string[]) {
   return renderWithRoom(ui, {

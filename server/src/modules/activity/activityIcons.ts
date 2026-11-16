@@ -4,11 +4,12 @@ import path from 'node:path';
 import { config } from '../../config/env.js';
 import { encodeSquareWebp } from '../emojis/emojiFile.js';
 
-// The icon of an app (or of a game IGDB does not know), as the desktop app reads it from the program
-// itself. Stored once under the hash of what was stored, so everyone running the same program shares
+// The icon of an activity: a game's from SteamGridDB (activityGameIcons.ts), or an app's (or a game's
+// SteamGridDB does not know) as the desktop app reads it from the program itself. Stored once under the hash of what was stored, so everyone running the same program shares
 // one file, and nobody can choose a name. Re-encoded here: the bytes sent are never served as they came.
 
-const ACTIVITY_ICON_PX = 64;
+// twice the largest place it shows (the profile's 48 px), for sharp edges on a dense screen
+const ACTIVITY_ICON_PX = 96;
 export const MAX_ACTIVITY_ICON_UPLOAD_BYTES = 256 * 1024;
 const MAX_ACTIVITY_ICON_BYTES = 32 * 1024;
 const ICON_ID = /^[0-9a-f]{64}$/;

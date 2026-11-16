@@ -989,6 +989,15 @@ export const activityGames = pgTable('activity_games', {
   resolvedAt: timestamp('resolved_at', { withTimezone: true }).notNull(),
 });
 
+// The SteamGridDB icon of a game someone's desktop app detected (modules/activity/activityGameIcons.ts),
+// under the same keys as activity_games; `icon_id` names a file in the activity icon store
+// (modules/activity/activityIcons.ts). A game without one is stored too, dated so it expires sooner.
+export const activityGameIcons = pgTable('activity_game_icons', {
+  key: varchar('key', { length: 96 }).primaryKey(),
+  iconId: varchar('icon_id', { length: 64 }),
+  resolvedAt: timestamp('resolved_at', { withTimezone: true }).notNull(),
+});
+
 export const connectionSyncLimits = pgTable('connection_sync_limits', {
   provider: varchar('provider', { length: 16 }).primaryKey(),
   nextRequestAt: timestamp('next_request_at', { withTimezone: true }).notNull().defaultNow(),

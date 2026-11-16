@@ -3,20 +3,28 @@ import { desktopApp, type DesktopActivity } from '@/shared/desktop';
 import type { ActivityReport, ActivitySettings, ClientMessage } from '@/shared/types/protocol';
 import { lookupActivityGame, uploadActivityIcon } from './activityApi';
 
-// Icons already resolved, by activity key, so a game played every day is looked up once
-const ICON_CACHE_KEY = 'ss-activity-icons';
+// Icons already resolved, by activity key, so a game played every day is looked up once. The first
+// version held IGDB covers, which are no longer sent: it is dropped so those games get their icon.
+const ICON_CACHE_KEY = 'ss-activity-icons-v2';
+const OLD_ICON_CACHE_KEY = 'ss-activity-icons';
 
 type IconRef = ActivityReport['icon'];
 
 function readIconCache(): Record<string, IconRef> {
-  try { return JSON.parse(localStorage.getItem(ICON_CACHE_KEY) ?? '{}') as Record<string, IconRef>; } catch { return {}; }
+  try {
+    localStorage.removeItem(OLD_ICON_CACHE_KEY);
+    return JSON.parse(localStorage.getItem(ICON_CACHE_KEY) ?? '{}') as Record<string, IconRef>;
+  } catch {
+    return {};
+  }
 }
 
 function rememberIcon(key: string, icon: IconRef): void {
   try { localStorage.setItem(ICON_CACHE_KEY, JSON.stringify({ ...readIconCache(), [key]: icon })); } catch { /* storage refused: looked up again next time */ }
 }
 
-/** The name and icon a detected activity shows with: IGDB's for a game it knows, the program's own otherwise. */
+/** The name and icon a detected activity shows with: a game's IGDB name and SteamGridDB icon when the
+ * server finds them, the program's own icon otherwise. */
 async function describe(activity: DesktopActivity, readIcon: () => Promise<string | null>): Promise<ActivityReport> {
   let name = activity.name;
   let icon: IconRef = readIconCache()[activity.key] ?? null;
@@ -24,7 +32,7 @@ async function describe(activity: DesktopActivity, readIcon: () => Promise<strin
     const game = await lookupActivityGame({ steamAppId: activity.steamAppId, name }).catch(() => null);
     if (game) {
       name = name || game.name;
-      if (game.image) icon = { igdb: game.image };
+      if (!icon && game.icon) icon = { local: game.icon };
     }
   }
   if (!icon) {
