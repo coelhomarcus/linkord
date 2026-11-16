@@ -5,6 +5,7 @@ import type { SocialUser } from '@/shared/api/api';
 import { UserStatusDot } from '@/features/status/UserStatus';
 import { CustomStatusText } from '@/features/status/CustomStatusText';
 import { useCustomStatus } from '@/features/status/statusDisplay';
+import { rememberProfilePreview } from '@/features/profile/profileCache';
 
 export function SocialUserRow({ user, online, subtitle, onOpenProfile, children }: {
   user: SocialUser;
@@ -20,7 +21,8 @@ export function SocialUserRow({ user, online, subtitle, onOpenProfile, children 
     <div className="group/row cutout -mx-2.5 flex h-[62px] items-center gap-3 rounded-lg px-2.5 transition-colors hover:cutout-subtle hover:bg-nav-hover">
       <button
         type="button"
-        onClick={onOpenProfile}
+        // the row already knows the name and avatar: the profile opens with them while the rest is read
+        onClick={() => { rememberProfilePreview(user); onOpenProfile(); }}
         aria-label={t('row.viewProfile', { name: user.displayName })}
         className="flex min-w-0 flex-1 items-center gap-3 rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >

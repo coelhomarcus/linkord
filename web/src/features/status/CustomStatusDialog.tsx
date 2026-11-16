@@ -9,7 +9,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/primitives/
 import { EmojiPicker } from '@/features/emoji/EmojiPicker';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/primitives/select';
 import { useRoom, useRoomState } from '@/state/RoomContext';
-import { fetchWall } from '@/features/profile/profileApi';
+import { wallKey, walls } from '@/features/profile/profileCache';
+import { useResource } from '@/shared/lib/resourceCache';
 import type { GameItem } from '@/features/games/types';
 import { timeOptions, useTimeFormat } from '@/shared/lib/timeFormat';
 import { EXPIRY_CHOICES, expiresAtFor, liveCustomStatus, type ExpiryChoice } from './statusDisplay';
@@ -24,17 +25,11 @@ type ExpiryValue = ExpiryChoice | 'keep';
 /** The "games in rotation" list from the Wall, for the one-click "playing …" shortcut. The Wall
  * returns it among the widgets on the profile or, when that widget is not on it, among `available`. */
 function useRotationGames(userId: string | null, enabled: boolean): GameItem[] {
-  const [games, setGames] = useState<GameItem[]>([]);
-  useEffect(() => {
-    if (!enabled || !userId) return;
-    const abort = new AbortController();
-    fetchWall(userId, true, abort.signal).then((wall) => {
-      const widget = [...wall.widgets, ...(wall.available ?? [])].find((w) => w.type === 'igdb-playing-games');
-      setGames(widget?.data?.kind === 'games' ? widget.data.items : []);
-    }).catch(() => { /* the shortcut is optional: without the list the editor still works */ });
-    return () => abort.abort();
-  }, [userId, enabled]);
-  return games;
+  // the same cached Wall the profile shows: the shortcut is there at once when it was seen
+  const wall = useResource(walls, enabled && userId ? wallKey(userId, true) : null).value;
+  const widget = wall && [...wall.widgets, ...(wall.available ?? [])].find((w) => w.type === 'igdb-playing-games');
+  // the shortcut is optional: without the list the editor still works
+  return widget?.data?.kind === 'games' ? widget.data.items : [];
 }
 
 export function CustomStatusDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {

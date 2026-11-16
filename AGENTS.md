@@ -45,6 +45,10 @@ web/tests/               # mirrors web/src/ — NO tests inside src/
 - A value or callback the provider hands out must keep its identity until it really changes (`useCallback`/`useMemo`, no inline lambdas or object literals), or everyone who reads it re-renders on every event.
 - Tests pass a fake value to `RoomStoreProvider` (`renderWithRoom` in `tests/fixtures/roomContextFixture.tsx`); to change it, pass a new object rather than mutating the old one.
 
+### Server reads shown in several places
+
+A read that more than one surface shows (a profile, its details, its Wall, a relationship) goes through `createResourceCache` (`shared/lib/resourceCache.ts`) and `useResource`: what was read before renders at once and is read again behind it, requests in flight are shared, and `clearResourceCaches()` runs on sign-out. Skeletons are only for what was never read. A change the person makes shows at once and puts the previous value back if the server refuses (`changeRelationship` in `features/friends/useRelationship.ts`). Seed a profile a list row already knows with `rememberProfilePreview`.
+
 ### React Compiler
 
 `vite build`, the dev server and Vitest all run the React Compiler (`babel-plugin-react-compiler` through `@rolldown/plugin-babel`, `web/vite.config.ts`). It memoizes every component and hook it can, so a value computed in render is recomputed only when something it reads from props, state, context or a hook changes.

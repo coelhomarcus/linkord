@@ -9,6 +9,7 @@ import { ServerIcon } from '@/features/servers/ServerIcon';
 import { ProfileWall, type WallDraft } from './ProfileWall';
 import type { ProfileDetails } from '@/shared/api/api';
 import { UserStatusDot } from '@/features/status/UserStatus';
+import { rememberProfilePreview } from './profileCache';
 
 export type ProfileTab = 'wall' | 'common';
 
@@ -124,7 +125,7 @@ export function ProfileSidebar({ userId, owner, accent, initialTab = 'wall', sta
                         const online = onlineUserIds.has(friend.id);
                         return (
                           <li key={friend.id}>
-                            <button type="button" onClick={() => onOpenProfile(friend.id)} className={ROW}>
+                            <button type="button" onClick={() => { rememberProfilePreview(friend); onOpenProfile(friend.id); }} className={ROW}>
                               <span className="relative flex-none">
                                 <Avatar id={friend.id} name={friend.displayName} avatar={friend.avatar} avatarColor={friend.avatarColor} size={40} />
                                 <UserStatusDot userId={friend.id} className="absolute -bottom-0.5 -right-0.5 size-3.5 border-2 text-bg-modal" />

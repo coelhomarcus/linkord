@@ -10,6 +10,7 @@ import type { PublicUser } from '@/shared/types/protocol';
 import { bannerStyle } from './profileLinks';
 import type { ProfileTab } from './ProfileSidebar';
 import { formatProfileDate, useProfileDetails } from './useProfileDetails';
+import { rememberProfilePreview } from './profileCache';
 import { UserCustomStatusBubble, UserStatusDot } from '@/features/status/UserStatus';
 import { UserActivityCard } from '@/features/activity/ActivityLine';
 import { useLanguage } from '@/shared/i18n/useLanguage';
@@ -104,7 +105,7 @@ export function DirectProfilePanel({ user, onOpenProfile }: { user: PublicUser; 
               <ul className="flex flex-col gap-1">
                 {friends.items.slice(0, SHOWN_MUTUALS).map((friend) => (
                   <li key={friend.id}>
-                    <button type="button" onClick={() => onOpenProfile(friend.id)} className="flex w-full items-center gap-2.5 rounded-md p-1 text-left hover:bg-fill-hover">
+                    <button type="button" onClick={() => { rememberProfilePreview(friend); onOpenProfile(friend.id); }} className="flex w-full items-center gap-2.5 rounded-md p-1 text-left hover:bg-fill-hover">
                       <Avatar id={friend.id} name={friend.displayName} avatar={friend.avatar} avatarColor={friend.avatarColor} size={32} />
                       <span className="min-w-0 flex-1 truncate text-label font-medium text-text-primary">{friend.displayName}</span>
                     </button>

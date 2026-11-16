@@ -10,7 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/primitives/
 import type { ServerSummary } from '@/shared/types/protocol';
 import { ProfileActions } from '@/features/friends/ProfileActions';
 import { BANNER_ASPECT_RATIO, bannerStyle } from '@/features/profile/profileLinks';
-import { fetchUserProfile } from '@/shared/api/api';
+import { rememberProfilePreview, useUserProfile } from '@/features/profile/profileCache';
 import { useRoom, useRoomState } from '@/state/RoomContext';
 import type { PublicUser } from '@/shared/types/protocol';
 import { cn } from '@/shared/lib/utils';
@@ -43,28 +43,20 @@ export function MemberQuickProfile({ server, member, currentUser, offline, open,
   const [messageDraft, setMessageDraft] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
   const [queuedMessage, setQueuedMessage] = useState<string | null>(null);
-  const [fetchedProfile, setFetchedProfile] = useState({ banner: '', bio: '' });
   const sentQueuedMessageRef = useRef(false);
-  const bannerRequestedRef = useRef(false);
   const user = currentUser ?? member.user;
   const activity = useUserActivity(user.id);
-  const banner = currentUser?.banner || fetchedProfile.banner;
-  const bio = currentUser?.bio || fetchedProfile.bio;
+  // the members endpoint only carries the minimal social fields: a member outside
+  // the room's known users gets banner and bio from the shared profile cache,
+  // at once when seen before, read again each time the card opens
+  const fetched = useUserProfile(open && !currentUser ? member.user.id : null).value;
+  const banner = currentUser?.banner || fetched?.banner || '';
+  const bio = currentUser?.bio || fetched?.bio || '';
   const avatarPoster = 'avatarPoster' in user && typeof user.avatarPoster === 'string' ? user.avatarPoster : undefined;
   const assignable = [...server.roles].filter((role) => !role.isDefault).sort((a, b) => b.position - a.position);
   const color = memberColor(server, member.roleIds);
   const canManageRoles = hasPermission(server.permissions, PERMISSIONS.MANAGE_ROLES)
     && outranks(server, state.me.userId, { userId: user.id, roleIds: member.roleIds, isOwner: member.isOwner });
-
-  // The members endpoint only carries the minimal social fields, so a member
-  // outside the known-users cache has no banner or bio until their profile is fetched.
-  useEffect(() => {
-    if (!open || currentUser || bannerRequestedRef.current) return;
-    bannerRequestedRef.current = true;
-    fetchUserProfile(member.user.id)
-      .then(({ user: fetched }) => setFetchedProfile({ banner: fetched.banner, bio: fetched.bio }))
-      .catch(() => { bannerRequestedRef.current = false; });
-  }, [open, currentUser, member.user.id]);
 
   useEffect(() => {
     const direct = conversations.find((conversation) => (
@@ -92,9 +84,8 @@ export function MemberQuickProfile({ server, member, currentUser, offline, open,
       onRoleIdsChange(roleIds);
     } catch {
       setRoleError(true);
-    } finally {
-      setSavingRoleId(null);
     }
+    setSavingRoleId(null);
   }
 
   function submitQuickMessage(event: FormEvent<HTMLFormElement>) {
@@ -108,6 +99,7 @@ export function MemberQuickProfile({ server, member, currentUser, offline, open,
   }
 
   function openFullProfile() {
+    rememberProfilePreview(member.user);
     onOpenChange(false);
     onOpenProfile(user.id);
   }

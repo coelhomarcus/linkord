@@ -49,6 +49,7 @@ import { invalidateMyEmojis } from '@/features/emoji/myEmojis';
 import { invalidateMyStickers } from '@/features/stickers/myStickers';
 import { invalidateServerStickers } from '@/features/stickers/useServerStickers';
 import { invalidateMySounds } from '@/features/soundboard/useMySounds';
+import { forgetProfile } from '@/features/profile/profileCache';
 
 const log = logger.child({ component: 'room' });
 
@@ -501,6 +502,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         break;
       case 'user-deleted':
         presence.onUserDeleted(m);
+        forgetProfile(m.userId);
         break;
       case 'profile-result':
         profileUpdate.handleProfileResult(m);
