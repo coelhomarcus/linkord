@@ -87,6 +87,9 @@ describe('DesktopFrame', () => {
     const { unmount } = render(<DesktopFrame><p>page</p></DesktopFrame>);
     fireEvent.doubleClick(screen.getByTestId('desktop-title-bar'));
     expect(linux.controls.toggleMaximize).toHaveBeenCalledTimes(1);
+    // a double click on one of its buttons is two clicks on that button, not a maximise
+    fireEvent.doubleClick(screen.getByRole('button', { name: 'Minimizar' }));
+    expect(linux.controls.toggleMaximize).toHaveBeenCalledTimes(1);
     unmount();
 
     // Windows does it itself: a second toggle would undo it
