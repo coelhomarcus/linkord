@@ -8,9 +8,10 @@ import { PageHeader } from '@/shared/PageHeader';
 import { Button } from '@/shared/ui/primitives/button';
 import { useAppModalClose } from '@/shared/ui/app-modal';
 import { EscCloseButton } from '@/shared/ui/esc-close-button';
-import { LEGACY_SETTINGS_TABS, ROUTES, isSettingsTab } from '@/shared/lib/routes';
+import { LEGACY_SETTINGS_SECTIONS, LEGACY_SETTINGS_TABS, ROUTES, isSettingsTab } from '@/shared/lib/routes';
 import type { SettingsTab } from '@/shared/lib/routes';
 import { ConnectionsSettings } from '@/features/profile/ConnectionsSettings';
+import { ActivitySettings } from '@/features/activity/ActivitySettings';
 import { AccountSettings } from './AccountSettings';
 import { AdminLinkTab } from './AdminLinkTab';
 import { AppearanceSettings } from './AppearanceSettings';
@@ -36,6 +37,7 @@ function CategoryPage({ tab, onOpenProfile }: { tab: SettingsTab; onOpenProfile:
     case 'account': return <AccountSettings onOpenProfile={onOpenProfile} />;
     case 'security': return <SecuritySettings />;
     case 'connections': return <ConnectionsSettings />;
+    case 'activity': return <ActivitySettings />;
     case 'privacy': return <PrivacyTab onOpenProfile={onOpenProfile} />;
     case 'appearance': return <AppearanceSettings />;
     case 'av': return <AudioVideoSettings />;
@@ -90,6 +92,9 @@ export function SettingsPage({ onOpenProfile }: SettingsPageProps) {
     scrollerRef.current?.scrollTo?.({ top: 0 });
     headingRef.current?.focus({ preventScroll: true });
   }, [current, showIndex, location.hash]);
+
+  const movedTo = LEGACY_SETTINGS_SECTIONS[`${tab}${location.hash}`];
+  if (movedTo) return <Navigate to={ROUTES.settingsTab(movedTo)} replace />;
 
   if (tab !== undefined && !known) {
     const legacy = LEGACY_SETTINGS_TABS[tab];

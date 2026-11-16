@@ -20,6 +20,7 @@
       "account": "Minha conta",
       "security": "Segurança",
       "connections": "Conexões",
+      "activity": "Atividade",
       "privacy": "Dados e privacidade",
       "appearance": "Aparência",
       "av": "Voz e vídeo",
@@ -53,8 +54,7 @@
       "dataExport": "Seus dados",
       "desktopStartup": "Inicialização",
       "desktopWindow": "Janela",
-      "desktopUpdates": "Atualizações",
-      "activity": "Atividade"
+      "desktopUpdates": "Atualizações"
     }
   },
   "search": {
@@ -167,7 +167,7 @@
       "keywords": "atualizar, atualização, versão, novidades, baixar"
     },
     "activity": {
-      "title": "Atividade",
+      "title": "Compartilhar atividade",
       "keywords": "jogando, jogo, jogos, app, apps, atividade, compartilhar, ocultar, steam, rich presence"
     }
   },

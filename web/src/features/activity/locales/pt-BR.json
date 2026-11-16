@@ -15,10 +15,15 @@
   },
   "settings": {
     "title": "Atividade",
+    "sections": {
+      "sharing": "Compartilhamento",
+      "games": "Jogos e apps"
+    },
     "share": {
       "label": "Compartilhar minha atividade",
       "description": "Mostra no seu perfil o jogo ou app que você está usando, como \"Jogando Minecraft\". Funciona no app desktop do Linkord, que só reconhece jogos e apps de uma lista conhecida."
     },
+    "gamesDescription": "Um jogo ou app oculto nunca aparece para os outros, mesmo com o compartilhamento ligado.",
     "detected": "Detectados neste computador",
     "detectedEmpty": "Nenhum jogo ou app detectado ainda. Abra um com o Linkord aberto e ele aparece aqui.",
     "hidden": "Ocultos",

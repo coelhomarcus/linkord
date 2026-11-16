@@ -22,4 +22,8 @@ describe('settings catalog', () => {
   it('gives connections their own category right after the account', () => {
     expect(visibleGroups(false, false)[0]?.categories.slice(0, 2).map((category) => category.id)).toEqual(['account', 'connections']);
   });
+
+  it('gives activity its own category beside connections, the other thing shown on your profile', () => {
+    expect(visibleGroups(false, false)[0]?.categories.map((category) => category.id)).toEqual(['account', 'connections', 'activity', 'privacy', 'security']);
+  });
 });

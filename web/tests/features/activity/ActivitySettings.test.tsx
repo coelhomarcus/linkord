@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithRoom } from '@tests/fixtures/roomContextFixture';
 import { ActivitySettings } from '@/features/activity/ActivitySettings';
@@ -19,6 +19,12 @@ function stubDesktop() {
 }
 
 describe('ActivitySettings', () => {
+  it('splits the tab into sharing and the games list', () => {
+    renderWithRoom(<ActivitySettings />, { activitySettings: { sharing: true, hidden: [] } });
+    expect(screen.getByRole('region', { name: 'Compartilhamento' })).toContainElement(screen.getByRole('switch', { name: 'Compartilhar minha atividade' }));
+    expect(screen.getByRole('region', { name: 'Jogos e apps' })).toHaveTextContent(/A detecção acontece no app desktop/);
+  });
+
   it('turns sharing off', async () => {
     const updateActivitySettings = vi.fn(async () => {});
     renderWithRoom(<ActivitySettings />, { activitySettings: { sharing: true, hidden: [] }, updateActivitySettings });
@@ -35,6 +41,15 @@ describe('ActivitySettings', () => {
     expect(updateActivitySettings).toHaveBeenLastCalledWith({ hidden: ['spotify', 'minecraft'] });
     await user.click(screen.getByRole('button', { name: 'Mostrar Spotify' }));
     expect(updateActivitySettings).toHaveBeenLastCalledWith({ hidden: [] });
+  });
+
+  it('says why hiding a game did not save, in the games section', async () => {
+    stubDesktop();
+    const updateActivitySettings = vi.fn(async () => { throw new Error('Não foi possível salvar. Tente de novo.'); });
+    renderWithRoom(<ActivitySettings />, { activitySettings: { sharing: true, hidden: [] }, updateActivitySettings });
+    await userEvent.setup().click(await screen.findByRole('button', { name: 'Ocultar Minecraft' }));
+    expect(await within(screen.getByRole('region', { name: 'Jogos e apps' })).findByText('Não foi possível salvar. Tente de novo.')).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Compartilhamento' })).queryByText('Não foi possível salvar. Tente de novo.')).not.toBeInTheDocument();
   });
 
   it('says detection needs the desktop app, in a browser', () => {
