@@ -1,7 +1,9 @@
 import fs from 'node:fs/promises';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { config } from '../../config/env.js';
+import { parseCookies } from '../../http/cookies.js';
 import { sendError, sendJson } from '../../http/respond.js';
+import { resolveSession } from '../auth/session.js';
 import { createIgdbClient } from '../../integrations/igdb/igdb.js';
 import { STEAM_ASSET_HOST } from '../../integrations/steam/steamAssets.js';
 import { createSteamGridDbClient, STEAMGRIDDB_IMAGE_HOST } from '../../integrations/steamgriddb/steamgriddb.js';
@@ -9,6 +11,9 @@ import { fetchImage } from '../media-proxy/mediaProxy.js';
 import * as floodControl from '../../realtime/floodControl.js';
 import { postponeIgdb, reserveIgdbSlot } from '../games/igdbLimiter.js';
 import { requireSession } from '../servers/serverHttp.js';
+import { canViewProfile } from '../users/profileAccess.js';
+import { findById } from '../users/users.js';
+import { readActivityHistory } from './activityHistory.js';
 import { createActivityGameIconLookup } from './activityGameIcons.js';
 import { ActivityGameError, createActivityGameLookup, parseActivityGameQuery } from './activityGames.js';
 import { MAX_ACTIVITY_ICON_UPLOAD_BYTES, activityIconPath, isActivityIconId, storeActivityIcon } from './activityIcons.js';
@@ -78,9 +83,26 @@ async function handleIcon(request: FastifyRequest<{ Params: { file: string } }>,
     .send(buffer);
 }
 
+/** `GET /api/users/:userId/activity` — the profile's "Atividade recente": the games and apps the account
+ * was last seen with, newest first. Same access and the same 404 for "no" and "doesn't exist" as the
+ * profile; empty, with `sharing: false`, while the account does not share its activity. */
+async function handleHistory(request: FastifyRequest<{ Params: { userId: string } }>, reply: FastifyReply): Promise<void> {
+  const sess = await resolveSession(parseCookies(request.headers.cookie || '')[config.SESSION_COOKIE]);
+  if (!sess) return sendError(reply, 401, 'unauthenticated', 'Não autenticado.');
+  const targetId = String(request.params.userId || '');
+  const target = targetId ? await findById(targetId) : null;
+  if (!target || !(await canViewProfile(sess.userId, sess.role, target.id))) {
+    return sendError(reply, 404, 'user_not_found', 'Conta não encontrada.');
+  }
+  const history = await readActivityHistory(target.id);
+  if (!history) return sendError(reply, 404, 'user_not_found', 'Conta não encontrada.');
+  sendJson(reply, 200, history);
+}
+
 export function registerActivityRoutes(fastify: FastifyInstance): void {
   fastify.get('/api/activity/game', handleGame);
   fastify.get('/api/activity/icons/:file', handleIcon);
+  fastify.get('/api/users/:userId/activity', handleHistory);
   // raw Buffer body, scoped so the wildcard parser doesn't reach the JSON routes
   fastify.register(async (scoped) => {
     scoped.addContentTypeParser('*', { parseAs: 'buffer' }, (_req, payload, done) => done(null, payload));

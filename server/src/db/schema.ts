@@ -1000,6 +1000,22 @@ export const activityGameIcons = pgTable('activity_game_icons', {
   resolvedAt: timestamp('resolved_at', { withTimezone: true }).notNull(),
 });
 
+// What each account played or used lately, for the profile's "Atividade recente" (modules/activity/
+// activityHistory.ts): one row per game or app, the last time others could see it, the newest
+// ACTIVITY_HISTORY_MAX kept. Only what was shown is written (sharing on, not hidden, not invisible);
+// what was hidden later is filtered out when it is read.
+export const activityHistory = pgTable('activity_history', {
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  key: varchar('key', { length: 80 }).notNull(),
+  kind: varchar('kind', { length: 16 }).notNull(),
+  name: varchar('name', { length: 64 }).notNull(),
+  icon: text('icon'),
+  lastPlayedAt: timestamp('last_played_at', { withTimezone: true }).notNull(),
+}, (t) => [
+  primaryKey({ columns: [t.userId, t.key] }),
+  index('activity_history_user_played_idx').on(t.userId, t.lastPlayedAt),
+]);
+
 export const connectionSyncLimits = pgTable('connection_sync_limits', {
   provider: varchar('provider', { length: 16 }).primaryKey(),
   nextRequestAt: timestamp('next_request_at', { withTimezone: true }).notNull().defaultNow(),
