@@ -7,7 +7,7 @@
 // activityCatalog.ts) and the Steam game Steam says is running: the report carries a key and a
 // name, never a process name, so nothing outside that list ever leaves the computer.
 
-export type ActivityKind = 'playing' | 'using';
+type ActivityKind = 'playing' | 'using';
 
 export interface Activity {
   /** what the activity is, the same on every computer: `steam:<app id>` or a catalog key */
@@ -29,7 +29,7 @@ export interface ActivitySettings {
 
 export const DEFAULT_ACTIVITY_SETTINGS: ActivitySettings = { sharing: true, hidden: [] };
 export const HIDDEN_ACTIVITIES_MAX = 200;
-export const ACTIVITY_NAME_MAX = 64;
+const ACTIVITY_NAME_MAX = 64;
 const KEY = /^[a-z0-9][a-z0-9:._-]{0,79}$/;
 const IGDB_IMAGE = /^[a-z0-9]{1,40}$/;
 const LOCAL_ICON = /^[0-9a-f]{64}$/;

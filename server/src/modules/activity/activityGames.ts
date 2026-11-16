@@ -32,7 +32,7 @@ export interface ActivityGameStore {
   set(key: string, value: ActivityGame, resolvedAt: number): Promise<void>;
 }
 
-export const databaseActivityGameStore: ActivityGameStore = {
+const databaseActivityGameStore: ActivityGameStore = {
   async get(key) {
     const [row] = await db.select().from(activityGames).where(eq(activityGames.key, key)).limit(1);
     return row ? { name: row.name, image: row.imageId, resolvedAt: row.resolvedAt.getTime() } : null;

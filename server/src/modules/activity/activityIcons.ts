@@ -8,12 +8,12 @@ import { encodeSquareWebp } from '../emojis/emojiFile.js';
 // itself. Stored once under the hash of what was stored, so everyone running the same program shares
 // one file, and nobody can choose a name. Re-encoded here: the bytes sent are never served as they came.
 
-export const ACTIVITY_ICON_PX = 64;
+const ACTIVITY_ICON_PX = 64;
 export const MAX_ACTIVITY_ICON_UPLOAD_BYTES = 256 * 1024;
 const MAX_ACTIVITY_ICON_BYTES = 32 * 1024;
 const ICON_ID = /^[0-9a-f]{64}$/;
 
-export function activityIconDir(): string {
+function activityIconDir(): string {
   return path.join(config.UPLOAD_DIR, 'activity-icons');
 }
 
