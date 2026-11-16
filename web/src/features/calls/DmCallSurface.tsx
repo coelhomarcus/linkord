@@ -112,7 +112,7 @@ export function DmCallSurface({ participantIds, peers }: { participantIds: strin
       <div ref={areaRef} data-dm-call-area={focused ? 'focus' : videos.length ? 'videos' : 'avatars'} className="min-h-0 flex-1">
         {content}
       </div>
-      <CallControlBar ref={barRef} hudVisible />
+      <CallControlBar ref={barRef} />
     </div>
   );
 }
