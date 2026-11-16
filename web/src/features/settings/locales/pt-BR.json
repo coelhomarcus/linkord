@@ -313,7 +313,7 @@
   "notifications": {
     "label": "Ativar notificações na área de trabalho",
     "description": "Mensagens, menções, solicitações de amizade e convites, mesmo com o app fechado.",
-    "descriptionDesktop": "Mensagens e menções enquanto o Linkord estiver aberto, mesmo com a janela fechada no Mac.",
+    "descriptionDesktop": "Mensagens e menções enquanto o Linkord estiver aberto, mesmo com a janela fechada.",
     "status": {
       "default": "Permissão necessária. O navegador vai perguntar quando você ativar.",
       "denied": "Bloqueadas no navegador. Permita o acesso nas configurações do navegador pra este site.",
