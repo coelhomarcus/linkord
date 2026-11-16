@@ -1,16 +1,25 @@
 import { AppWindowIcon, GameControllerIcon } from '@phosphor-icons/react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/shared/lib/utils';
 import type { Activity } from '@/shared/types/protocol';
 import { useUserActivity } from './activityDisplay';
+import { formatActivityTimer } from './activityTime';
+import { useNow } from './useNow';
 
-function ActivityIcon({ activity, size, className }: { activity: Activity; size: number; className?: string }) {
+type ActivityKind = Activity['kind'];
+
+function ActivityIcon({ activity, size, className }: { activity: Pick<Activity, 'kind' | 'icon'>; size: number; className?: string }) {
   const [failed, setFailed] = useState(false);
   const Fallback = activity.kind === 'playing' ? GameControllerIcon : AppWindowIcon;
   return (
     <span
-      className={cn('flex flex-none items-center justify-center overflow-hidden bg-fill-subtle text-text-muted', size > 24 ? 'rounded-lg' : 'rounded', className)}
+      className={cn(
+        'flex flex-none items-center justify-center overflow-hidden bg-fill-subtle text-text-muted',
+        size > 64 ? 'rounded-xl' : size > 24 ? 'rounded-lg' : 'rounded',
+        className,
+      )}
       style={{ width: size, height: size }}
     >
       {activity.icon && !failed
@@ -20,18 +29,23 @@ function ActivityIcon({ activity, size, className }: { activity: Activity; size:
   );
 }
 
-/** "há 25 minutos", kept current while it shows. */
-function useElapsed(startedAt: string): string {
+/** The kind's glyph beside a green time, as Discord draws it: a gamepad for a game, a window for an app. */
+function KindGlyph({ kind, size }: { kind: ActivityKind; size: number }) {
+  const Glyph = kind === 'playing' ? GameControllerIcon : AppWindowIcon;
+  return <Glyph size={size} weight="fill" aria-hidden className="flex-none" />;
+}
+
+/** "🎮 1:19:35" in green, ticking every second while it shows. */
+export function ActivityTimer({ activity, className }: { activity: Pick<Activity, 'kind' | 'startedAt'>; className?: string }) {
   const { t } = useTranslation('activity');
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 30_000);
-    return () => clearInterval(timer);
-  }, []);
-  const minutes = Math.max(0, Math.floor((now - Date.parse(startedAt)) / 60_000));
-  if (minutes < 1) return t('elapsed.justNow');
-  if (minutes < 60) return t('elapsed.minutes', { count: minutes });
-  return t('elapsed.hours', { hours: Math.floor(minutes / 60), minutes: minutes % 60 });
+  const now = useNow(1000);
+  const time = formatActivityTimer(now - Date.parse(activity.startedAt));
+  return (
+    <span role="timer" aria-label={t(`timer.${activity.kind}`, { time })} className={cn('flex items-center gap-1 font-mono text-caption font-semibold tabular-nums text-green', className)}>
+      <KindGlyph kind={activity.kind} size={14} />
+      <span aria-hidden>{time}</span>
+    </span>
+  );
 }
 
 /** One line under a name: "[icon] Jogando **Minecraft**". Nothing when there is no activity. */
@@ -54,17 +68,30 @@ export function UserActivityCard({ userId, className }: { userId: string; classN
   return <ActivityCard activity={activity} className={className} />;
 }
 
-function ActivityCard({ activity, className }: { activity: Activity; className?: string }) {
+/** What someone is doing now, as Discord's card shows it: a heading ("Jogando"), the icon, the name, and
+ * below it the green gamepad with the time it has run. `large` is the profile's "Atividade atual". */
+export function ActivityCard({ activity, heading, large, className, children }: {
+  activity: Activity;
+  /** defaults to the kind ("Jogando", "Usando") */
+  heading?: ReactNode;
+  large?: boolean;
+  className?: string;
+  /** anything under the timer */
+  children?: ReactNode;
+}) {
   const { t } = useTranslation('activity');
-  const elapsed = useElapsed(activity.startedAt);
   return (
-    <section aria-label={t(`line.${activity.kind}`, { name: activity.name })} className={cn('flex flex-col gap-2', className)}>
-      <h3 className="text-caption font-semibold text-text-primary">{t(`kind.${activity.kind}`)}</h3>
-      <div className="flex min-w-0 items-center gap-3">
-        <ActivityIcon activity={activity} size={48} />
-        <div className="min-w-0">
-          <p className="truncate text-label font-semibold text-text-primary">{activity.name}</p>
-          <p className="truncate text-caption text-text-muted">{elapsed}</p>
+    <section
+      aria-label={t(`line.${activity.kind}`, { name: activity.name })}
+      className={cn('flex flex-col gap-2 rounded-lg border border-border-subtle bg-fill-subtle p-3', large && 'gap-3 p-4', className)}
+    >
+      <h3 className="text-caption font-semibold text-text-secondary">{heading ?? t(`kind.${activity.kind}`)}</h3>
+      <div className={cn('flex min-w-0 items-center gap-3', large && 'gap-4')}>
+        <ActivityIcon activity={activity} size={large ? 112 : 56} />
+        <div className="flex min-w-0 flex-col gap-1">
+          <p className={cn('truncate font-semibold text-text-primary', large ? 'text-heading' : 'text-label')}>{activity.name}</p>
+          <ActivityTimer activity={activity} />
+          {children}
         </div>
       </div>
     </section>

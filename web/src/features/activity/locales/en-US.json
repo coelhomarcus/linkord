@@ -7,11 +7,35 @@
     "playing": "Playing {{name}}",
     "using": "Using {{name}}"
   },
-  "elapsed": {
-    "minutes_one": "for {{count}} minute",
-    "minutes_other": "for {{count}} minutes",
-    "hours": "for {{hours}} h {{minutes}} min",
-    "justNow": "just now"
+  "timer": {
+    "playing": "Playing for {{time}}",
+    "using": "Using for {{time}}"
+  },
+  "now": {
+    "playing": "Playing now",
+    "using": "Using now"
+  },
+  "ago": {
+    "now": "Just now",
+    "minutes": "{{count}}m ago",
+    "hours": "{{count}}h ago",
+    "days": "{{count}}d ago",
+    "weeks": "{{count}}w ago",
+    "months_one": "{{count}} month ago",
+    "months_other": "{{count}} months ago",
+    "years_one": "{{count}} year ago",
+    "years_other": "{{count}} years ago",
+    "label": "Last played: {{when}}"
+  },
+  "profile": {
+    "tab": "Activity",
+    "current": "Current activity",
+    "recent": "Recent activity",
+    "empty": "No recent activity.",
+    "private": "{{name}} doesn't share their activity.",
+    "loadFailed": "Couldn't load the activity.",
+    "retry": "Try again",
+    "loading": "Loading activity"
   },
   "settings": {
     "title": "Activity",

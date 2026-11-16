@@ -5,6 +5,8 @@ import type { SocialUser } from '@/shared/api/api';
 import { UserStatusDot } from '@/features/status/UserStatus';
 import { CustomStatusText } from '@/features/status/CustomStatusText';
 import { useCustomStatus } from '@/features/status/statusDisplay';
+import { useUserActivity } from '@/features/activity/activityDisplay';
+import { UserActivityInline } from '@/features/activity/ActivityLine';
 import { rememberProfilePreview } from '@/features/profile/profileCache';
 
 export function SocialUserRow({ user, online, subtitle, onOpenProfile, children }: {
@@ -17,6 +19,7 @@ export function SocialUserRow({ user, online, subtitle, onOpenProfile, children 
 }) {
   const { t } = useTranslation('friends');
   const customStatus = useCustomStatus(online !== undefined ? user.id : null);
+  const activity = useUserActivity(online !== undefined ? user.id : null);
   return (
     <div className="group/row cutout -mx-2.5 flex h-[62px] items-center gap-3 rounded-lg px-2.5 transition-colors hover:cutout-subtle hover:bg-nav-hover">
       <button
@@ -32,7 +35,9 @@ export function SocialUserRow({ user, online, subtitle, onOpenProfile, children 
         </div>
         <div className="min-w-0">
           <p className="truncate text-body font-semibold text-text-primary">{user.displayName}</p>
-          {online && customStatus ? (
+          {online && activity ? (
+            <UserActivityInline userId={user.id} className="text-label" />
+          ) : online && customStatus ? (
             <CustomStatusText custom={customStatus} className="text-label text-text-secondary" />
           ) : (
             <p className="truncate text-label text-text-secondary">

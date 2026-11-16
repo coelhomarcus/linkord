@@ -7,11 +7,35 @@
     "playing": "Jogando {{name}}",
     "using": "Usando {{name}}"
   },
-  "elapsed": {
-    "minutes_one": "há {{count}} minuto",
-    "minutes_other": "há {{count}} minutos",
-    "hours": "há {{hours}} h {{minutes}} min",
-    "justNow": "agora mesmo"
+  "timer": {
+    "playing": "Jogando há {{time}}",
+    "using": "Usando há {{time}}"
+  },
+  "now": {
+    "playing": "Jogando agora",
+    "using": "Usando agora"
+  },
+  "ago": {
+    "now": "Agora há pouco",
+    "minutes": "{{count}} min atrás",
+    "hours": "{{count}}h atrás",
+    "days": "{{count}}d atrás",
+    "weeks": "Há {{count}} sem.",
+    "months_one": "Há {{count}} mês",
+    "months_other": "Há {{count}} meses",
+    "years_one": "Há {{count}} ano",
+    "years_other": "Há {{count}} anos",
+    "label": "Última vez: {{when}}"
+  },
+  "profile": {
+    "tab": "Atividade",
+    "current": "Atividade atual",
+    "recent": "Atividade recente",
+    "empty": "Nenhuma atividade recente.",
+    "private": "{{name}} não compartilha a atividade.",
+    "loadFailed": "Não foi possível carregar a atividade.",
+    "retry": "Tentar de novo",
+    "loading": "Carregando atividade"
   },
   "settings": {
     "title": "Atividade",
