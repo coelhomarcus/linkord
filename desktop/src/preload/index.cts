@@ -40,6 +40,18 @@ contextBridge.exposeInMainWorld('linkordDesktop', Object.freeze({
       return () => { ipcRenderer.removeListener('linkord:settings:changed', listener); };
     },
   }),
+  // What is being played or used, from the app's own list (src/main/activityCatalog.ts)
+  activity: Object.freeze({
+    watch: (on: boolean) => ipcRenderer.invoke('linkord:activity:watch', on === true),
+    current: () => ipcRenderer.invoke('linkord:activity:current'),
+    recent: () => ipcRenderer.invoke('linkord:activity:recent'),
+    icon: () => ipcRenderer.invoke('linkord:activity:icon'),
+    onChange: (callback: (activity: unknown) => void) => {
+      const listener = (_event: unknown, activity: unknown) => callback(activity);
+      ipcRenderer.on('linkord:activity:changed', listener);
+      return () => { ipcRenderer.removeListener('linkord:activity:changed', listener); };
+    },
+  }),
   screenShare: Object.freeze({
     picker: flag('linkord-share-picker') === 'system' ? 'system' : 'app',
     systemAudio: flag('linkord-system-audio') === '1',

@@ -1,6 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { Menu, app, dialog, powerMonitor, session, shell, type BrowserWindow, type Tray } from 'electron';
+import { installActivityBridge, sendActivity } from './activityBridge.js';
+import { createActivityWatcher } from './activityWatcher.js';
 import { forwardWindowState, installAppBridge } from './appBridge.js';
 import { parseAppConfig, resolveAppUrl } from './appUrl.js';
 import { guardContents } from './contentsGuard.js';
@@ -142,6 +144,11 @@ if (!resolved.ok) {
     installPermissionHandlers(session.defaultSession, appUrl.origin);
     installScreenShare(session.defaultSession, appUrl.origin, picker);
     installAppBridge(appUrl.origin);
+    const activityWatcher = createActivityWatcher({
+      recentFile: path.join(app.getPath('userData'), 'activity-recent.json'),
+      onChange: (activity) => sendActivity(mainWindow, activity),
+    });
+    installActivityBridge(appUrl.origin, activityWatcher);
     installSettingsBridge(appUrl.origin, {
       read: settings,
       change: changeSettings,
