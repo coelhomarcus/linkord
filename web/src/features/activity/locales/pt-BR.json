@@ -24,8 +24,7 @@
     "months_one": "Há {{count}} mês",
     "months_other": "Há {{count}} meses",
     "years_one": "Há {{count}} ano",
-    "years_other": "Há {{count}} anos",
-    "label": "Última vez: {{when}}"
+    "years_other": "Há {{count}} anos"
   },
   "profile": {
     "tab": "Atividade",

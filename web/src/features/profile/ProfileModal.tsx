@@ -165,6 +165,7 @@ export function ProfileModal({ userId, initialTab, onClose, onOpenProfile }: Pro
                   <ProfileSidebar
                     key={user.id}
                     userId={user.id}
+                    name={user.displayName}
                     owner={false}
                     accent={colorFor(user.id, user.avatarColor)}
                     initialTab={initialTab}

@@ -16,3 +16,18 @@ export async function uploadActivityIcon(dataUrl: string): Promise<string> {
   const { id } = await apiFetch<{ id: string }>('/api/activity/icons', { method: 'POST', body: blob, headers: { 'Content-Type': blob.type || 'image/png' } });
   return id;
 }
+
+/** One game or app from someone's history (`GET /api/users/:userId/activity`). */
+export interface ActivityHistoryItem {
+  key: string;
+  kind: 'playing' | 'using';
+  name: string;
+  icon: string | null;
+  /** ISO time they were last seen with it */
+  lastPlayedAt: string;
+}
+
+/** What someone played or used lately, newest first; empty with `sharing: false` while they do not share it. */
+export function fetchActivityHistory(userId: string, signal?: AbortSignal): Promise<{ sharing: boolean; items: ActivityHistoryItem[] }> {
+  return apiFetch(`/api/users/${encodeURIComponent(userId)}/activity`, { signal });
+}

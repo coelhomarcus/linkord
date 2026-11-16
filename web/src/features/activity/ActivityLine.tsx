@@ -30,7 +30,7 @@ function ActivityIcon({ activity, size, className }: { activity: Pick<Activity, 
 }
 
 /** The kind's glyph beside a green time, as Discord draws it: a gamepad for a game, a window for an app. */
-function KindGlyph({ kind, size }: { kind: ActivityKind; size: number }) {
+export function KindGlyph({ kind, size }: { kind: ActivityKind; size: number }) {
   const Glyph = kind === 'playing' ? GameControllerIcon : AppWindowIcon;
   return <Glyph size={size} weight="fill" aria-hidden className="flex-none" />;
 }

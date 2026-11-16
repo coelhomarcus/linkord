@@ -134,7 +134,7 @@ describe('ProfileModal — since when and what you have in common', () => {
     renderProfile();
     await screen.findByRole('tab', { name: 'Em comum' });
     const tabs = within(screen.getByRole('tablist', { name: 'Abas do perfil' })).getAllByRole('tab');
-    expect(tabs.map((t) => t.textContent)).toEqual(['Mural', 'Em comum']);
+    expect(tabs.map((t) => t.textContent)).toEqual(['Mural', 'Atividade', 'Em comum']);
     expect(screen.getAllByRole('tablist')).toHaveLength(1);
     expect(screen.queryByRole('tab', { name: 'Sobre' })).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Marcus' })).toBeInTheDocument();
@@ -306,6 +306,8 @@ describe('ProfileModal — since when and what you have in common', () => {
     await screen.findByRole('tab', { name: 'Em comum' });
     const interaction = userEvent.setup();
     await interaction.click(screen.getByRole('tab', { name: 'Mural' }));
+    await interaction.keyboard('{ArrowRight}');
+    expect(screen.getByRole('tab', { name: 'Atividade' })).toHaveFocus();
     await interaction.keyboard('{ArrowRight}');
     expect(screen.getByRole('tab', { name: 'Em comum' })).toHaveFocus();
     await interaction.keyboard('{Enter}');

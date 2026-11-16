@@ -24,8 +24,7 @@
     "months_one": "{{count}} month ago",
     "months_other": "{{count}} months ago",
     "years_one": "{{count}} year ago",
-    "years_other": "{{count}} years ago",
-    "label": "Last played: {{when}}"
+    "years_other": "{{count}} years ago"
   },
   "profile": {
     "tab": "Activity",

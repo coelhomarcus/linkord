@@ -4,6 +4,7 @@ import type { PublicUser } from '@/shared/types/protocol';
 import { createResourceCache, useResource } from '@/shared/lib/resourceCache';
 import { fetchWall } from './profileApi';
 import type { WallResponse } from './connectionsTypes';
+import { activityHistories } from '@/features/activity/activityHistory';
 
 // One cache per resource, shared by the mini profile, the modal and the panel
 // beside a DM: a profile seen once opens at once next time, and is read again
@@ -32,6 +33,7 @@ export function forgetProfile(userId: string): void {
   userProfiles.delete(userId);
   profileDetails.delete(userId);
   walls.delete(userId);
+  activityHistories.delete(userId);
 }
 
 /** A profile outside the room's known users, read when `userId` is set. */
