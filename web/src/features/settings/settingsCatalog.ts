@@ -1,5 +1,5 @@
 import type { ParseKeys } from 'i18next';
-import { BellIcon, ChatCircleTextIcon, IdentificationCardIcon, KeyIcon, LockIcon, MicrophoneIcon, PaintBrushIcon, PlugsConnectedIcon, ShieldCheckIcon, TranslateIcon } from '@phosphor-icons/react';
+import { BellIcon, ChatCircleTextIcon, DesktopIcon, IdentificationCardIcon, KeyIcon, LockIcon, MicrophoneIcon, PaintBrushIcon, PlugsConnectedIcon, ShieldCheckIcon, TranslateIcon } from '@phosphor-icons/react';
 
 import type { IconComponent } from '@/shared/ui/icons';
 import type { SettingsTab } from '@/shared/lib/routes';
@@ -12,6 +12,8 @@ export interface SettingsCategory {
   labelKey: SettingsKey;
   icon: IconComponent;
   adminOnly?: boolean;
+  /** only inside the desktop app, which has settings of its own */
+  desktopOnly?: boolean;
 }
 
 export interface SettingsGroup {
@@ -41,6 +43,7 @@ export const SETTINGS_GROUPS: SettingsGroup[] = [
       { id: 'chat', labelKey: 'catalog.categories.chat', icon: ChatCircleTextIcon },
       { id: 'notifications', labelKey: 'catalog.categories.notifications', icon: BellIcon },
       { id: 'language', labelKey: 'catalog.categories.language', icon: TranslateIcon },
+      { id: 'desktop', labelKey: 'catalog.categories.desktop', icon: DesktopIcon, desktopOnly: true },
     ],
   },
   {
@@ -51,10 +54,15 @@ export const SETTINGS_GROUPS: SettingsGroup[] = [
   },
 ];
 
-/** The groups this account may see — an admin-only category is not listed for anyone else. */
-export function visibleGroups(isAdmin: boolean): SettingsGroup[] {
+/** Whether this page may show a category: admin-only ones to admins, desktop-only ones in the desktop app. */
+export function categoryVisible(category: Pick<SettingsCategory, 'adminOnly' | 'desktopOnly'>, isAdmin: boolean, isDesktop: boolean): boolean {
+  return (isAdmin || !category.adminOnly) && (isDesktop || !category.desktopOnly);
+}
+
+/** The groups this account may see here. */
+export function visibleGroups(isAdmin: boolean, isDesktop: boolean): SettingsGroup[] {
   return SETTINGS_GROUPS
-    .map((group) => ({ ...group, categories: group.categories.filter((category) => isAdmin || !category.adminOnly) }))
+    .map((group) => ({ ...group, categories: group.categories.filter((category) => categoryVisible(category, isAdmin, isDesktop)) }))
     .filter((group) => group.categories.length > 0);
 }
 

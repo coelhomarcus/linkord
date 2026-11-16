@@ -78,7 +78,7 @@ server/src/
   integrations/<name>/  # external service adapters: livekit/, github/, myanimelist/, igdb/ (+ connectionHttp.ts)
   net/                  # safeRequest.ts, ssrfGuard.ts — every request to a user-chosen URL
   lib/                  # logger.ts
-  modules/<domain>/     # admin, attachments, auth, blocks, bots, calls, connections, conversations,
+  modules/<domain>/     # activity, admin, attachments, auth, blocks, bots, calls, connections, conversations,
                         # friendships, games, gifs, limits, link-preview, logs, messages, migration,
                         # moderation, notifications, presence, profile, reports, servers,
                         # soundboard, users
@@ -99,8 +99,10 @@ desktop/
   src/main/      # Electron main process: index.ts (app lifecycle), mainWindow.ts, session.ts
                  # (permission handlers), contentsGuard.ts (navigation and popups), plus the
                  # rules they apply as plain modules: appUrl, navigation, permissions, windowState, loadRetry,
-                 # titleBar, loginItem, menus, strings, updates (tray.ts, startAtLogin.ts, updater.ts wire them)
-  src/preload/   # index.cts, the only bridge into the page
+                 # titleBar, loginItem, menus, strings, updates, preferences, trayMenuLayout, activityCatalog,
+                 # activityDetect (tray.ts, trayMenuWindow.ts, startAtLogin.ts, updater.ts, settingsBridge.ts,
+                 # activityWatcher.ts, activityBridge.ts wire them)
+  src/preload/   # index.cts, the only bridge into the page (trayMenu.cts serves the drawn tray menu)
   scripts/       # package.mjs (`npm run package`: bakes LINKORD_URL in, runs electron-builder)
   resources/     # installer icons; electron-builder.config.cjs sits next to package.json
 desktop/tests/   # mirrors desktop/src/ — NO tests inside src/
@@ -109,7 +111,7 @@ desktop/tests/   # mirrors desktop/src/ — NO tests inside src/
 - **The window loads the server, not a bundled copy of `web/`.** Same origin means the server's cookies, `originGuard` and CSP work unchanged and a deploy updates the interface. Don't load local files or add an API proxy without a reason that outweighs that.
 - **Rules live in plain modules with no `electron` import**, so `node --test` covers them without Electron; the files that import `electron` only wire those rules to events. A new decision (what to allow, where to go, how long to wait) goes in a plain module with a test.
 - **The page is untrusted as far as the main process is concerned**: `contextIsolation`, `sandbox`, no `nodeIntegration` on every window (`SECURE_WEB_PREFERENCES`). Permissions are an allowlist checked against the app's origin (`permissions.ts`); add a permission only for a feature the web app really uses.
-- **The preload is one CommonJS file** (`.cts`, a sandboxed preload can neither be ESM nor require local files). It exposes `window.linkordDesktop` and nothing else; anything more the page needs is a named function there that sends a specific IPC message, never `ipcRenderer` itself. The web side types that object in `shared/desktop.ts` (`desktopApp()`, `isDesktopApp()`); change both together, and keep the web app working when a field is missing (an older desktop build).
+- **Each preload is one CommonJS file** (`.cts`, a sandboxed preload can neither be ESM nor require local files). It exposes `window.linkordDesktop` and nothing else; anything more the page needs is a named function there that sends a specific IPC message, never `ipcRenderer` itself. The web side types that object in `shared/desktop.ts` (`desktopApp()`, `isDesktopApp()`); change both together, and keep the web app working when a field is missing (an older desktop build).
 - Imports are relative with `.js` extensions, as in `server/`.
 
 ## Internationalization (`web/`)

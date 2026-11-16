@@ -11,8 +11,8 @@ import { Stage } from '@/features/calls/Stage';
 vi.mock('@/features/calls/CallControlBar', () => ({
   // A real forwardRef — Stage measures this element's height, so the mock
   // has to actually accept the ref, not just ignore it like a plain div would.
-  CallControlBar: forwardRef<HTMLDivElement, { hudVisible?: boolean }>(function CallControlBar({ hudVisible }, ref) {
-    return <div ref={ref} data-testid="control-bar" data-hud-visible={hudVisible ? '1' : '0'} />;
+  CallControlBar: forwardRef<HTMLDivElement>(function CallControlBar(_props, ref) {
+    return <div ref={ref} data-testid="control-bar" />;
   }),
 }));
 
@@ -47,7 +47,7 @@ function renderStage(props: { allIds: string[] }, overrides: Partial<RoomContext
   );
 }
 
-describe('Stage — composition and integration with fullscreen/HUD', () => {
+describe('Stage — composition and integration with fullscreen', () => {
   it('attaches callStageRef to its own root element (fullscreen target)', () => {
     const callStageRef = { current: null as HTMLElement | null };
     const { container } = renderStage({ allIds: [] }, { callStageRef });
@@ -59,54 +59,12 @@ describe('Stage — composition and integration with fullscreen/HUD', () => {
     expect(document.querySelector('[data-testid="control-bar"]')).toBeInTheDocument();
   });
 
-  it('HUD starts visible (forwarded to the control bar)', () => {
-    renderStage({ allIds: [] });
-    expect(document.querySelector('[data-testid="control-bar"]')).toHaveAttribute('data-hud-visible', '1');
-  });
-
-  it('with a tile menu open (menuTarget), the HUD always stays visible regardless of idle time', () => {
-    vi.useFakeTimers();
-    try {
-      renderStage({ allIds: [] }, {
-        menuTarget: { key: 'p-2:participant', participantId: 'p-2', kind: 'camera', rect: { left: 0, top: 0, right: 0, bottom: 0 } },
-      });
-      act(() => { vi.advanceTimersByTime(10000); });
-      expect(document.querySelector('[data-testid="control-bar"]')).toHaveAttribute('data-hud-visible', '1');
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it('reconnecting also suspends the HUD auto-hide', () => {
-    vi.useFakeTimers();
-    try {
-      renderStage({ allIds: [] }, { reconnecting: true });
-      act(() => { vi.advanceTimersByTime(10000); });
-      expect(document.querySelector('[data-testid="control-bar"]')).toHaveAttribute('data-hud-visible', '1');
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it('a sharing error (shareError) suspends the HUD auto-hide', () => {
-    vi.useFakeTimers();
-    try {
-      renderStage({ allIds: [] }, {
-        state: { ...initialRoomState, shareError: 'failed' },
-      });
-      act(() => { vi.advanceTimersByTime(10000); });
-      expect(document.querySelector('[data-testid="control-bar"]')).toHaveAttribute('data-hud-visible', '1');
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it('with nothing suspending it, the HUD hides itself after the idle time', () => {
+  it('keeps the control bar however long nobody touches anything', () => {
     vi.useFakeTimers();
     try {
       renderStage({ allIds: [] });
-      act(() => { vi.advanceTimersByTime(3000); });
-      expect(document.querySelector('[data-testid="control-bar"]')).toHaveAttribute('data-hud-visible', '0');
+      act(() => { vi.advanceTimersByTime(60_000); });
+      expect(document.querySelector('[data-testid="control-bar"]')).toBeInTheDocument();
     } finally {
       vi.useRealTimers();
     }

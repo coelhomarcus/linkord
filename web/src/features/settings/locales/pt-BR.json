@@ -26,6 +26,7 @@
       "chat": "Chat",
       "notifications": "Notificações",
       "language": "Idioma e hora",
+      "desktop": "Aplicativo",
       "moderation": "Administração"
     },
     "sections": {
@@ -49,7 +50,11 @@
       "sessions": "Sessões ativas",
       "install": "Instalar o app",
       "deleteAccount": "Excluir conta",
-      "dataExport": "Seus dados"
+      "dataExport": "Seus dados",
+      "desktopStartup": "Inicialização",
+      "desktopWindow": "Janela",
+      "desktopUpdates": "Atualizações",
+      "activity": "Atividade"
     }
   },
   "search": {
@@ -148,6 +153,22 @@
     "dataExport": {
       "title": "Baixar meus dados",
       "keywords": "baixar dados, exportar, cópia dos dados, backup, lgpd, portabilidade, download"
+    },
+    "desktopStartup": {
+      "title": "Iniciar com o computador",
+      "keywords": "iniciar, inicialização, login, ligar, computador, sistema, minimizado, bandeja"
+    },
+    "desktopWindow": {
+      "title": "Manter aberto ao fechar a janela",
+      "keywords": "fechar, bandeja, barra de menus, segundo plano, janela, sair"
+    },
+    "desktopUpdates": {
+      "title": "Atualizações do aplicativo",
+      "keywords": "atualizar, atualização, versão, novidades, baixar"
+    },
+    "activity": {
+      "title": "Atividade",
+      "keywords": "jogando, jogo, jogos, app, apps, atividade, compartilhar, ocultar, steam, rich presence"
     }
   },
   "account": {
@@ -313,7 +334,7 @@
   "notifications": {
     "label": "Ativar notificações na área de trabalho",
     "description": "Mensagens, menções, solicitações de amizade e convites, mesmo com o app fechado.",
-    "descriptionDesktop": "Mensagens e menções enquanto o Linkord estiver aberto, mesmo com a janela fechada no Mac.",
+    "descriptionDesktop": "Mensagens e menções enquanto o Linkord estiver aberto, mesmo com a janela fechada.",
     "status": {
       "default": "Permissão necessária. O navegador vai perguntar quando você ativar.",
       "denied": "Bloqueadas no navegador. Permita o acesso nas configurações do navegador pra este site.",
@@ -482,6 +503,41 @@
       "endOthersDescription_one": "{{count}} outro navegador será desconectado da sua conta na hora.",
       "endOthersDescription_other": "{{count}} outros navegadores serão desconectados da sua conta na hora.",
       "onlyThis": "Nenhuma outra sessão ativa."
+    }
+  },
+  "desktop": {
+    "startAtLogin": {
+      "label": "Iniciar com o computador",
+      "description": "Abre o Linkord quando você entra no sistema."
+    },
+    "startMinimized": {
+      "label": "Iniciar minimizado",
+      "description": {
+        "mac": "Ao iniciar com o computador, o Linkord fica na barra de menus até você abri-lo.",
+        "other": "Ao iniciar com o computador, o Linkord fica na bandeja do sistema até você abri-lo."
+      }
+    },
+    "closeToTray": {
+      "label": "Manter aberto ao fechar a janela",
+      "description": {
+        "mac": "O Linkord continua na barra de menus e você segue recebendo mensagens e chamadas. Desligado, fechar a janela encerra o app.",
+        "other": "O Linkord continua na bandeja do sistema e você segue recebendo mensagens e chamadas. Desligado, fechar a janela encerra o app."
+      }
+    },
+    "updates": {
+      "version": "Versão {{version}}",
+      "automatic": "As atualizações são baixadas sozinhas e instaladas quando o Linkord reinicia.",
+      "manual": "Quando houver uma versão nova, o Linkord avisa e abre a página para baixar.",
+      "off": "Esta versão não procura atualizações.",
+      "checking": "Procurando atualizações…",
+      "upToDate": "Você está na versão mais recente.",
+      "downloading": "Baixando a versão {{version}}. Ela será instalada quando o Linkord reiniciar.",
+      "failed": "Não foi possível procurar atualizações.",
+      "available": "A versão {{version}} está disponível.",
+      "ready": "A versão {{version}} está pronta para instalar.",
+      "check": "Procurar atualizações",
+      "restart": "Reiniciar e atualizar",
+      "download": "Baixar a versão {{version}}"
     }
   }
 }

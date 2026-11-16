@@ -18,6 +18,7 @@ import { ProfileSidebar } from './ProfileSidebar';
 import type { ProfileTab } from './ProfileSidebar';
 import { formatProfileDate, useProfileDetails } from './useProfileDetails';
 import { useCustomStatus, useUserStatus } from '@/features/status/statusDisplay';
+import { UserActivityCard } from '@/features/activity/ActivityLine';
 
 interface ProfileModalProps {
   userId: string | null;
@@ -136,6 +137,7 @@ export function ProfileModal({ userId, initialTab, onClose, onOpenProfile }: Pro
                     hideLinks
                     footer={(
                       <div className="mt-5 flex flex-col gap-4">
+                        <UserActivityCard userId={user.id} />
                         <dl className="flex flex-col gap-3">
                           {details.details && (
                             <div>

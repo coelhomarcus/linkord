@@ -16,13 +16,15 @@ import { AdminLinkTab } from './AdminLinkTab';
 import { AppearanceSettings } from './AppearanceSettings';
 import { AudioVideoSettings } from './AudioVideoSettings';
 import { ChatSettings } from './ChatSettings';
+import { DesktopSettings } from './DesktopSettings';
 import { LanguageSettings } from './LanguageSettings';
 import { NotificationsSettings } from './NotificationsSettings';
 import { PrivacyTab } from './PrivacyTab';
 import { SecuritySettings } from './SecuritySettings';
 import { SettingsContent, SettingsPageHeader } from '@/shared/ui/settings-layout';
 import { SettingsIndex, SettingsSidebar } from './SettingsNavigation';
-import { findCategory } from './settingsCatalog';
+import { categoryVisible, findCategory } from './settingsCatalog';
+import { hasDesktopSettings } from './useDesktopSettings';
 import { useSettingsLayout } from './useSettingsLayout';
 
 interface SettingsPageProps {
@@ -40,6 +42,7 @@ function CategoryPage({ tab, onOpenProfile }: { tab: SettingsTab; onOpenProfile:
     case 'chat': return <ChatSettings />;
     case 'notifications': return <NotificationsSettings />;
     case 'language': return <LanguageSettings />;
+    case 'desktop': return <DesktopSettings />;
     case 'moderation': return <AdminLinkTab />;
   }
 }
@@ -61,7 +64,7 @@ export function SettingsPage({ onOpenProfile }: SettingsPageProps) {
   const firstRender = useRef(true);
   const isAdmin = state.me.role === 'admin';
 
-  const known = isSettingsTab(tab) && (tab !== 'moderation' || isAdmin);
+  const known = isSettingsTab(tab) && categoryVisible(findCategory(tab), isAdmin, hasDesktopSettings());
   const active: SettingsTab | null = known ? tab : null;
   // wide: no category in the URL just means "the first one", on the same URL;
   // compact: it is the index

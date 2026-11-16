@@ -95,6 +95,9 @@ export const ACTION_LIMITS: Record<string, ActionLimit> = {
   'presence-set': { windowMs: 60_000, max: 20 },
   // a client reports a change of state, not every input; a tab flapping on the threshold stays under this
   'presence-activity': { windowMs: 60_000, max: 30 },
+  // the desktop app reports a change of game or app, checked every few seconds at most
+  'activity-set': { windowMs: 60_000, max: 30, silent: true },
+  'activity-settings-set': { windowMs: 60_000, max: 20 },
 };
 
 // call-join and call-leave bypass the handler table; each one persists call membership.
@@ -152,6 +155,7 @@ async function handleJoin(socket: AppSocket, msg: JoinMessage): Promise<void> {
   }
   // before the connection exists: nothing may announce it as "online" while it is meant to be invisible
   await presenceStatus.loadAccountStatus(socket.user.userId);
+  await presenceStatus.loadActivitySettings(socket.user.userId);
   const joined = join(socket, msg);
   if (!joined) {
     presenceStatus.releaseAccountStatusIfUnused(socket.user.userId);
@@ -192,6 +196,8 @@ async function handleJoin(socket: AppSocket, msg: JoinMessage): Promise<void> {
     // and the unread mentions a muted conversation still shows
     notificationSettings: await listNotificationSettings(p.userId),
     mentionsByConversation: await unreadMentionCounts(p.userId),
+    // whether this account shares its activity and which it hides (protocol 24), kept current by `my-activity-settings`
+    activitySettings: presenceStatus.activitySettingsPayload(p.userId),
     // the largest file this server takes, so the composer refuses a bigger one before uploading it
     maxAttachmentBytes: config.MAX_ATTACHMENT_BYTES,
     // tabs from before accounts lost their storage quota (protocol 7) read this; nothing counts it any more

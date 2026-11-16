@@ -47,14 +47,44 @@ function updateItems(state: MenuState, actions: MenuActions): MenuItemConstructo
   return [{ label: s.checkForUpdates, click: () => actions.checkForUpdates() }];
 }
 
+/** The tray menu as data: the native menu (macOS, Linux) and the drawn one (Windows, trayMenuWindow.ts) both come from it. */
+export type TrayMenuItem =
+  | { kind: 'action'; id: 'open' | 'update' | 'quit'; label: string }
+  | { kind: 'toggle'; id: 'startAtLogin'; label: string; checked: boolean }
+  | { kind: 'separator' };
+
+export function trayMenuItems(state: MenuState): TrayMenuItem[] {
+  const s = state.strings;
+  const { mode, status } = state.update;
+  const update = status.kind === 'downloaded' ? s.restartToUpdate
+    : status.kind === 'available' ? format(s.downloadUpdate, { version: status.version })
+      : mode === 'off' ? null
+        : s.checkForUpdates;
+  const items: TrayMenuItem[] = [{ kind: 'action', id: 'open', label: s.open }, { kind: 'separator' }];
+  if (state.startAtLogin.available) items.push({ kind: 'toggle', id: 'startAtLogin', label: s.startAtLogin, checked: state.startAtLogin.enabled });
+  if (update) items.push({ kind: 'action', id: 'update', label: update });
+  if (items.at(-1)?.kind !== 'separator') items.push({ kind: 'separator' });
+  items.push({ kind: 'action', id: 'quit', label: s.quit });
+  return items;
+}
+
+/** What choosing an item does. Toggles carry the new state. */
+export function runTrayItem(state: MenuState, actions: MenuActions, id: string, checked?: boolean): void {
+  if (id === 'open') actions.showWindow();
+  else if (id === 'quit') actions.quit();
+  else if (id === 'startAtLogin') actions.setStartAtLogin(checked ?? !state.startAtLogin.enabled);
+  else if (id === 'update') {
+    if (state.update.status.kind === 'idle') actions.checkForUpdates();
+    else actions.applyUpdate();
+  }
+}
+
 export function trayMenuTemplate(state: MenuState, actions: MenuActions): MenuItemConstructorOptions[] {
-  return [
-    { label: state.strings.open, click: () => actions.showWindow() },
-    separator,
-    ...section(updateItems(state, actions)),
-    ...section(startAtLoginItems(state, actions)),
-    { label: state.strings.quit, click: () => actions.quit() },
-  ];
+  return trayMenuItems(state).map((item): MenuItemConstructorOptions => {
+    if (item.kind === 'separator') return separator;
+    if (item.kind === 'toggle') return { label: item.label, type: 'checkbox', checked: item.checked, click: (menuItem) => runTrayItem(state, actions, item.id, menuItem.checked) };
+    return { label: item.label, click: () => runTrayItem(state, actions, item.id) };
+  });
 }
 
 function editMenu(s: Strings): MenuItemConstructorOptions {

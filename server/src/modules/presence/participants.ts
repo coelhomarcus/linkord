@@ -8,6 +8,7 @@ import { deleteAvatarFile, isOwnedProfileImage } from '../attachments/attachment
 import { recordUserLastSeen } from '../users/users.js';
 import { runSerialized } from './profileQueue.js';
 import { effectiveStatus, getAccountStatus, isInvisible, type CustomStatus, type PresenceStatus, type VisibleStatus } from './userStatus.js';
+import { getActivitySettings, shownActivity, type Activity } from './activity.js';
 import type { AppSocket, HandlerTable, Participant, PublicParticipant, SessionUser } from '../../types.js';
 import { logger } from '../../lib/logger.js';
 import { CALL_ELSEWHERE_PROTOCOL_VERSION, MIC_STARTING_PROTOCOL_VERSION } from '../../realtime/protocolVersion.js';
@@ -102,6 +103,8 @@ function createParticipant(u: ParticipantProfile, id: string, token: string, soc
     sharing: false,
     speaking: false,
     idle: false,
+    activity: null,
+    activityAt: 0,
     graceTimer: null,
     knownPeerIds: new Set(),
     friendPeerIds: new Set(),
@@ -338,13 +341,29 @@ export function ownEffectiveStatus(userId: string): PresenceStatus {
 export interface VisiblePresence {
   status: VisibleStatus;
   customStatus: CustomStatus | null;
+  /** present only while there is one to show (protocol 24) */
+  activity?: Activity;
+}
+
+/** The newest activity the account's live connections reported, as its settings let others see it. */
+export function shownActivityOf(userId: string): Activity | null {
+  let newest: Participant | null = null;
+  for (const p of participants.values()) {
+    if (p.userId === userId && p.socket && p.activity && (!newest || p.activityAt > newest.activityAt)) newest = p;
+  }
+  return shownActivity(newest?.activity ?? null, getActivitySettings(userId));
 }
 
 /** What other people see of an account right now, or null while it reads as offline to them
- * (no live connection, or invisible). A custom status shows only alongside a visible status. */
+ * (no live connection, or invisible). A custom status and an activity show only alongside a visible status. */
 export function visiblePresenceOf(userId: string): VisiblePresence | null {
   if (!isUserVisiblyOnline(userId)) return null;
-  return { status: ownEffectiveStatus(userId) as VisibleStatus, customStatus: getAccountStatus(userId).customStatus };
+  const activity = shownActivityOf(userId);
+  return {
+    status: ownEffectiveStatus(userId) as VisibleStatus,
+    customStatus: getAccountStatus(userId).customStatus,
+    ...(activity ? { activity } : {}),
+  };
 }
 
 /** Hears that a connection is no longer in a call it was in (it left, moved, was removed, or its

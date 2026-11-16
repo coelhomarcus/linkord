@@ -210,6 +210,7 @@ export async function writeExportArchive(userId: string, destination: string, no
     settings: {
       language: user.locale, presenceStatus: user.presenceStatus, pushShowsMessageText: user.pushShowContent,
       twoStepLogin: user.twoFactorEmail, newSignInAlerts: user.loginAlertEmail,
+      activity: { sharing: user.activitySharing, hidden: user.hiddenActivities },
       // per server and per channel or DM; a null level inherits, a muted row without an end lasts until turned off
       notifications: notificationRows.map((n) => ({
         serverId: n.serverId, conversationId: n.conversationId, level: n.level, muted: n.muted, mutedUntil: iso(n.mutedUntil),

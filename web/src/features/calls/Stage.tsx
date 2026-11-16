@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next';
 import { useRoom } from '../../state/RoomContext';
 import { useCallTiles } from './useCallTiles';
 import { useAutoFocusScreenShare } from './useAutoFocusScreenShare';
-import { useCallHud } from './useCallHud';
 import { TileGrid } from './TileGrid';
 import { CallControlBar } from './CallControlBar';
 import { CallInviteTile } from './CallInviteTile';
@@ -26,7 +25,7 @@ const BAR_GRID_GAP = 12;
 
 export function Stage({ allIds, onBack }: StageProps) {
   const { t } = useTranslation('calls');
-  const { state, dispatch, hideAudioOnlyTiles, setHideAudioOnlyTiles, callStageRef, reconnecting, menuTarget, activeCallConversationId, conversations } = useRoom();
+  const { state, dispatch, hideAudioOnlyTiles, setHideAudioOnlyTiles, callStageRef, activeCallConversationId, conversations } = useRoom();
   const allDescriptors = useCallTiles(allIds);
   const descriptors = hideAudioOnlyTiles ? allDescriptors.filter((d) => d.kind !== 'avatar') : allDescriptors;
   const focusScreenShare = useCallback((key: string) => dispatch({ type: 'SET_FOCUSED', id: key, origin: 'automatic' }), [dispatch]);
@@ -38,11 +37,8 @@ export function Stage({ allIds, onBack }: StageProps) {
     ? activeCallConversationId
     : null;
 
-  // Keep the HUD visible while a menu, reconnect, or actionable error needs attention.
-  const suspendHud = !!menuTarget || reconnecting || !!state.shareError || !!state.micProblem || !!state.callJoinError;
   // Measure the bar and banners so the grid reserves only the space they need.
   const controlBarRef = useRef<HTMLDivElement | null>(null);
-  const { hudVisible } = useCallHud(suspendHud, controlBarRef);
   const [reservedBottom, setReservedBottom] = useState(FALLBACK_RESERVED_BOTTOM);
   useLayoutEffect(() => {
     const el = controlBarRef.current;
@@ -100,7 +96,7 @@ export function Stage({ allIds, onBack }: StageProps) {
           extraTile={inviteConversationId && descriptors.length > 0 ? <CallInviteTile conversationId={inviteConversationId} /> : undefined}
         />
       )}
-      <CallControlBar ref={controlBarRef} hudVisible={hudVisible} />
+      <CallControlBar ref={controlBarRef} />
     </main>
   );
 }

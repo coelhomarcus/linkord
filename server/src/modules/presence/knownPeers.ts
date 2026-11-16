@@ -44,7 +44,7 @@ export async function buildPresenceSnapshot(p: Participant) {
   const presence: Record<string, VisiblePresence> = {};
   for (const id of onlineUserIds) {
     const entry = visiblePresenceOf(id);
-    if (entry && (entry.status !== 'online' || entry.customStatus)) presence[id] = entry;
+    if (entry && (entry.status !== 'online' || entry.customStatus || entry.activity)) presence[id] = entry;
   }
   return {
     knownUsers: await listUsersByIds([p.userId, ...p.knownPeerIds]),

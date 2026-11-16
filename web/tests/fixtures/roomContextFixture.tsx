@@ -119,6 +119,8 @@ export function createFakeRoomContextValue(overrides: Partial<RoomContextValue> 
     presenceByUser: new Map(),
     ownStatus: { status: 'online', effective: 'online', customStatus: null },
     setPresence: async () => {},
+    activitySettings: { sharing: true, hidden: [] },
+    updateActivitySettings: async () => {},
     friendUserIds: new Set(),
     kickFromCall: noop,
     moveToCall: noop,

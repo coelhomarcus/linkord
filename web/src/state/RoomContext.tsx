@@ -1,7 +1,7 @@
 import { createContext, useContext } from 'react';
 import type { Dispatch, MutableRefObject } from 'react';
 import type { Room } from 'livekit-client';
-import type { ChatMessage, ClientMessage, Conversation, OwnStatus, PublicUser, ReactionEmoji, SearchResult, ServerSummary, StickerCard, VisiblePresence } from '@/shared/types/protocol';
+import type { ActivitySettings, ChatMessage, ClientMessage, Conversation, OwnStatus, PublicUser, ReactionEmoji, SearchResult, ServerSummary, StickerCard, VisiblePresence } from '@/shared/types/protocol';
 import type { PresencePatch } from '@/features/status/useOwnStatus';
 import type { DmCallNotice } from '@/features/calls/useDmCall';
 import type { CallElsewhere } from '@/features/calls/callElsewhere';
@@ -192,6 +192,10 @@ export interface RoomContextValue {
   ownStatus: OwnStatus;
   /** Rejects with a sentence for the user when the server refused it or never answered. */
   setPresence: (patch: PresencePatch) => Promise<void>;
+  /** Whether this account shows what it plays or uses, and which it hides (features/activity). */
+  activitySettings: ActivitySettings;
+  /** Rejects with a sentence for the user when the server refused it or never answered. */
+  updateActivitySettings: (patch: Partial<ActivitySettings>) => Promise<void>;
   /** The friend subset of allUsers — see usePresence.ts's own comment. */
   friendUserIds: Set<string>;
   kickFromCall: (participantId: string) => void;
