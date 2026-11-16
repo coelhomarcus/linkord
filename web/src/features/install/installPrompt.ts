@@ -5,7 +5,7 @@ import { iosStandalone, isIOSDevice } from '@/shared/lib/displayMode';
 import { isDesktopApp } from '@/shared/desktop';
 
 /** Chromium's install event; not part of lib.dom. */
-export interface BeforeInstallPromptEvent extends Event {
+interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
