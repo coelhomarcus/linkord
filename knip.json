@@ -41,7 +41,7 @@
     "desktop": {
       "entry": [
         "src/main/index.ts",
-        "src/preload/index.cts",
+        "src/preload/*.cts",
         "scripts/*.mjs",
         "electron-builder.config.cjs",
         "tests/**/*.test.ts"

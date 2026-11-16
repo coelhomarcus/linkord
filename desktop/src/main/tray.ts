@@ -5,7 +5,7 @@ import { Tray, nativeImage } from 'electron';
 // and Linux trays, a black template on macOS, which the menu bar tints
 const ASSETS = path.join(import.meta.dirname, '../../assets');
 
-export function createTray(showWindow: () => void): Tray {
+export function createTray(showWindow: () => void, openDrawnMenu: (() => void) | null): Tray {
   const mac = process.platform === 'darwin';
   const icon = nativeImage.createFromPath(path.join(ASSETS, mac ? 'trayTemplate.png' : 'tray.png'));
   if (mac) icon.setTemplateImage(true);
@@ -14,5 +14,7 @@ export function createTray(showWindow: () => void): Tray {
   // A click opens the menu on macOS; elsewhere it brings the window back, as
   // a closed window only went to the tray
   if (!mac) tray.on('click', showWindow);
+  // Where the app draws its own menu, a right click opens it instead of a native one
+  if (openDrawnMenu) tray.on('right-click', openDrawnMenu);
   return tray;
 }

@@ -6,7 +6,7 @@ import { parseAppConfig, resolveAppUrl } from './appUrl.js';
 import { guardContents } from './contentsGuard.js';
 import { capturesSystemAudio, sharePicker } from './displayMedia.js';
 import { createMainWindow } from './mainWindow.js';
-import { appMenuTemplate, trayMenuTemplate, type MenuActions, type MenuState } from './menus.js';
+import { appMenuTemplate, runTrayItem, trayMenuItems, trayMenuTemplate, type MenuActions, type MenuState } from './menus.js';
 import { installScreenShare } from './screenShare.js';
 import { installPermissionHandlers } from './session.js';
 import { installSettingsBridge, loadPreferences, savePreferences, sendSettings, type DesktopSettings, type SettingsChange } from './settingsBridge.js';
@@ -14,6 +14,8 @@ import { launchedAtLogin, startAtLogin } from './startAtLogin.js';
 import { format, stringsFor } from './strings.js';
 import { titleBarStyle } from './titleBar.js';
 import { createTray } from './tray.js';
+import { drawsTrayMenu } from './trayMenuLayout.js';
+import { createTrayMenuWindow } from './trayMenuWindow.js';
 import { installUpdater } from './updater.js';
 import { updateMode } from './updates.js';
 
@@ -121,13 +123,18 @@ if (!resolved.ok) {
       update: { mode: updater.mode, status: updater.status() },
       devTools: !app.isPackaged,
     });
+    const drawnMenu = drawsTrayMenu({ platform: process.platform, env: process.env, isPackaged: app.isPackaged })
+      ? createTrayMenuWindow((id, checked) => runTrayItem(menuState(), actions, id, checked))
+      : null;
     const refresh = () => {
       const state = menuState();
       Menu.setApplicationMenu(Menu.buildFromTemplate(appMenuTemplate(state, actions)));
-      tray?.setContextMenu(Menu.buildFromTemplate(trayMenuTemplate(state, actions)));
+      if (!drawnMenu) tray?.setContextMenu(Menu.buildFromTemplate(trayMenuTemplate(state, actions)));
       sendSettings(mainWindow, settings());
     };
-    tray = createTray(showMainWindow);
+    tray = createTray(showMainWindow, drawnMenu && (() => {
+      void drawnMenu.show({ title: 'Linkord', version: format(strings.version, { version: app.getVersion() }), items: trayMenuItems(menuState()) });
+    }));
     refresh();
 
     const barStyle = titleBarStyle({ platform: process.platform, env: process.env, isPackaged: app.isPackaged });
