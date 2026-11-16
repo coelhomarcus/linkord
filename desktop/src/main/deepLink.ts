@@ -12,7 +12,7 @@
 // ROUTES.channel); the message is the `?message=` that route reads
 // (messageIdFromSearch).
 
-export const DEEP_LINK_SCHEME = 'linkord';
+const DEEP_LINK_SCHEME = 'linkord';
 
 const PREFIX = /^linkord:\/\//i;
 // No app link comes near this; a longer one is not ours

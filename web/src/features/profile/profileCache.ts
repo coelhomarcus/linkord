@@ -10,7 +10,7 @@ import type { WallResponse } from './connectionsTypes';
 // behind it (stale-while-revalidate).
 
 /** Profiles of accounts outside the room's known users (`allUsers`). */
-export const userProfiles = createResourceCache<PublicUser>((userId) => fetchUserProfile(userId).then(({ user }) => user));
+const userProfiles = createResourceCache<PublicUser>((userId) => fetchUserProfile(userId).then(({ user }) => user));
 
 export const profileDetails = createResourceCache<ProfileDetails>((userId, signal) => fetchProfileDetails(userId, signal));
 

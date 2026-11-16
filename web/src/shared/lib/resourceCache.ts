@@ -2,7 +2,7 @@ import { useEffect, useSyncExternalStore } from 'react';
 
 /** What a cache knows about one key. Immutable: a change replaces the object,
  * so `useSyncExternalStore` sees it. */
-export interface ResourceEntry<V> {
+interface ResourceEntry<V> {
   /** the last answer, kept while a newer one is fetched (stale-while-revalidate) */
   value: V | undefined;
   hasValue: boolean;
