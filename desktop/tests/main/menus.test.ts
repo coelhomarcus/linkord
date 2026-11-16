@@ -124,7 +124,7 @@ describe('update items', () => {
   };
 
   it('offers a check when updates are on, and nothing when off', () => {
-    assert.ok(labels({ mode: 'notify', status: { kind: 'idle' } }).tray.includes(strings.checkForUpdates));
+    assert.ok(labels({ mode: 'install', status: { kind: 'idle' } }).tray.includes(strings.checkForUpdates));
     assert.ok(labels({ mode: 'install', status: { kind: 'idle' } }).app.includes(strings.checkForUpdates));
     const off = labels({ mode: 'off', status: { kind: 'idle' } });
     assert.ok(!off.tray.includes(strings.checkForUpdates) && !off.app.includes(strings.checkForUpdates));
@@ -133,8 +133,6 @@ describe('update items', () => {
   it('turns the check into the next step once there is an update', () => {
     const ready = labels({ mode: 'install', status: { kind: 'downloaded', version: '1.2.0' } });
     assert.ok(ready.tray.includes(strings.restartToUpdate) && !ready.tray.includes(strings.checkForUpdates));
-    const available = labels({ mode: 'notify', status: { kind: 'available', version: '1.2.0', url: 'https://github.com/o/r/releases/tag/v1.2.0' } });
-    assert.ok(available.app.includes('Download version 1.2.0'));
   });
 
   it('calls check and apply', () => {

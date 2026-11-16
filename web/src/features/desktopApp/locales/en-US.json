@@ -6,20 +6,7 @@
     "activity": "Show the game or app you are using",
     "startup": "Starts with your computer, if you want"
   },
-  "download": {
-    "windows": "Download for Windows",
-    "macArm": "Download for Mac",
-    "macIntel": "Download for Mac (Intel)",
-    "appImage": "Download for Linux",
-    "deb": "Download for Linux (.deb)"
-  },
-  "other": {
-    "windows": "Windows",
-    "macArm": "Mac with Apple Silicon",
-    "macIntel": "Mac with Intel",
-    "appImage": "AppImage",
-    "deb": ".deb package"
-  },
+  "download": "Download for Windows",
   "version": "Version {{version}}",
   "allVersions": "All versions",
   "later": "Not now"

@@ -1,5 +1,5 @@
 import type { MenuItemConstructorOptions } from 'electron';
-import { format, type Strings } from './strings.js';
+import type { Strings } from './strings.js';
 import type { UpdateMode, UpdateStatus } from './updates.js';
 
 // Menu templates as plain data, so what each menu offers is tested without
@@ -42,7 +42,6 @@ function updateItems(state: MenuState, actions: MenuActions): MenuItemConstructo
   const { mode, status } = state.update;
   const s = state.strings;
   if (status.kind === 'downloaded') return [{ label: s.restartToUpdate, click: () => actions.applyUpdate() }];
-  if (status.kind === 'available') return [{ label: format(s.downloadUpdate, { version: status.version }), click: () => actions.applyUpdate() }];
   if (mode === 'off') return [];
   return [{ label: s.checkForUpdates, click: () => actions.checkForUpdates() }];
 }
@@ -57,9 +56,8 @@ export function trayMenuItems(state: MenuState): TrayMenuItem[] {
   const s = state.strings;
   const { mode, status } = state.update;
   const update = status.kind === 'downloaded' ? s.restartToUpdate
-    : status.kind === 'available' ? format(s.downloadUpdate, { version: status.version })
-      : mode === 'off' ? null
-        : s.checkForUpdates;
+    : mode === 'off' ? null
+      : s.checkForUpdates;
   const items: TrayMenuItem[] = [{ kind: 'action', id: 'open', label: s.open }, { kind: 'separator' }];
   if (state.startAtLogin.available) items.push({ kind: 'toggle', id: 'startAtLogin', label: s.startAtLogin, checked: state.startAtLogin.enabled });
   if (update) items.push({ kind: 'action', id: 'update', label: update });

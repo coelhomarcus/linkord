@@ -6,20 +6,7 @@
     "activity": "Mostre o jogo ou app que você está usando",
     "startup": "Abre junto com o computador, se você quiser"
   },
-  "download": {
-    "windows": "Baixar para Windows",
-    "macArm": "Baixar para Mac",
-    "macIntel": "Baixar para Mac (Intel)",
-    "appImage": "Baixar para Linux",
-    "deb": "Baixar para Linux (.deb)"
-  },
-  "other": {
-    "windows": "Windows",
-    "macArm": "Mac com Apple Silicon",
-    "macIntel": "Mac com Intel",
-    "appImage": "AppImage",
-    "deb": "Pacote .deb"
-  },
+  "download": "Baixar para Windows",
   "version": "Versão {{version}}",
   "allVersions": "Todas as versões",
   "later": "Agora não"

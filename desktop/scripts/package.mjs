@@ -1,12 +1,13 @@
-// Builds the desktop installers for this machine's system with the Linkord
-// server's address baked in, unsigned (see docs/DEPLOY.md, "Desktop app").
+// Builds the Windows installer with the Linkord server's address baked in,
+// unsigned (see docs/DEPLOY.md, "Desktop app"). Windows is the only system
+// the app ships for.
 //
 //   LINKORD_URL=https://chat.example.com npm run package --prefix desktop
-//   LINKORD_URL=... npm run package --prefix desktop -- --mac --arm64
+//   LINKORD_URL=... npm run package --prefix desktop -- --dir
 //   LINKORD_URL=... LINKORD_UPDATE_REPO=owner/repo npm run package --prefix desktop
 //
-// Anything after `--` goes to electron-builder (targets, --dir, --arm64...).
-// The installers land in desktop/release/.
+// Anything after `--` goes to electron-builder (--dir...). The installer
+// lands in desktop/release/.
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -38,7 +39,7 @@ fs.writeFileSync(path.join(root, 'dist/app-config.json'), JSON.stringify({
 console.log(`Packaging for ${resolved.url.origin}${updateRepo ? `, updates from github.com/${updateRepo.owner}/${updateRepo.repo}` : ', without updates'}`);
 
 const builder = path.join(root, 'node_modules/.bin/electron-builder');
-const result = spawnSync(builder, ['--config', 'electron-builder.config.cjs', '--publish', 'never', ...process.argv.slice(2)], {
+const result = spawnSync(builder, ['--config', 'electron-builder.config.cjs', '--win', '--publish', 'never', ...process.argv.slice(2)], {
   cwd: root,
   stdio: 'inherit',
   shell: process.platform === 'win32',

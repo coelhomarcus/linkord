@@ -49,18 +49,21 @@ describe('DesktopAppAnnouncement', () => {
     expect(localStorage.getItem('ss-desktop-app-announced')).toBeNull();
   });
 
-  it('says nothing inside the desktop app, on a phone, or without a release', async () => {
+  it('says nothing inside the desktop app, outside Windows, or without a release', async () => {
     window.linkordDesktop = { platform: 'win32', version: '0.3.0' };
     const { unmount } = renderWithRoom(<DesktopAppAnnouncement />);
     expect(fetchDownloads).not.toHaveBeenCalled();
     unmount();
     delete window.linkordDesktop;
 
-    useUserAgent('Mozilla/5.0 (Linux; Android 15; Pixel 9) Chrome/142.0');
-    const phone = renderWithRoom(<DesktopAppAnnouncement />);
-    await waitFor(() => expect(fetchDownloads).toHaveBeenCalled());
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    phone.unmount();
+    for (const ua of ['Mozilla/5.0 (Linux; Android 15; Pixel 9) Chrome/142.0', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1.15']) {
+      useUserAgent(ua);
+      const other = renderWithRoom(<DesktopAppAnnouncement />);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(fetchDownloads).not.toHaveBeenCalled();
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      other.unmount();
+    }
 
     useUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/142.0');
     fetchDownloads.mockRejectedValue(new Error('404'));
