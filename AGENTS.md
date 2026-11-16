@@ -18,8 +18,8 @@ web/src/
                         # OutdatedClientScreen, RoomErrorScreen, ErrorBoundary, AppModals, AccessNotice,
                         # DesktopFrame + WindowControls (the desktop app's own title bar)
     providers/          # RoomProvider.tsx (the room's state root)
-  features/<domain>/    # admin, auth, bots (webhooks), calls, chat, conversations (DMs), friends, gifs,
-                        # media, navigation, notifications, profile, reports, servers, settings, soundboard
+  features/<domain>/    # activity, admin, auth, bots (webhooks), calls, chat, conversations (DMs), desktopApp,
+                        # friends, gifs, media, navigation, notifications, profile, reports, servers, settings, soundboard
   shared/                # see criteria below
     api/ hooks/ i18n/ lib/ types/ ui/{primitives,motion}/
     Avatar.tsx, ConfirmDialog.tsx, notifications.ts, sounds.ts, ...
@@ -78,7 +78,7 @@ server/src/
   integrations/<name>/  # external service adapters: livekit/, github/, myanimelist/, igdb/ (+ connectionHttp.ts)
   net/                  # safeRequest.ts, ssrfGuard.ts — every request to a user-chosen URL
   lib/                  # logger.ts
-  modules/<domain>/     # activity, admin, attachments, auth, blocks, bots, calls, connections, conversations,
+  modules/<domain>/     # activity, admin, attachments, auth, blocks, bots, calls, connections, conversations, desktop,
                         # friendships, games, gifs, limits, link-preview, logs, messages, migration,
                         # moderation, notifications, presence, profile, reports, servers,
                         # soundboard, users

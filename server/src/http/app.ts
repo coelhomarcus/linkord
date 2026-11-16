@@ -41,6 +41,7 @@ import { registerServerStickerRoutes } from '../modules/stickers/serverStickers.
 import { registerGifRoutes } from '../modules/gifs/gifs.js';
 import { registerGameRoutes } from '../modules/games/games.js';
 import { registerActivityRoutes } from '../modules/activity/activityRoutes.js';
+import { registerDesktopRoutes } from '../modules/desktop/desktopRoutes.js';
 import { registerBotRoutes } from '../modules/bots/bots.js';
 import { registerWebhookIngressRoutes } from '../modules/bots/webhookIngress.js';
 import { logger } from '../lib/logger.js';
@@ -109,6 +110,7 @@ export function createApp(): FastifyInstance {
   registerGifRoutes(fastify);
   registerGameRoutes(fastify);
   registerActivityRoutes(fastify);
+  registerDesktopRoutes(fastify);
   registerFriendshipRoutes(fastify, { onlineUserIds: listVisibleOnlineUserIds });
   registerBlockRoutes(fastify);
   registerUserRoutes(fastify);

@@ -12,6 +12,7 @@ Every external service Linkord talks to, what it is used for, who makes the call
 | [KLIPY](#klipy) | GIF picker | Browser | `KLIPY_API_KEY` | No |
 | [MyAnimeList](#myanimelist) | Profile Wall widget | Server (background worker; covers through the [media proxy](#media-proxy)) | `MAL_CLIENT_ID` | No |
 | [GitHub](#github) | Profile Wall widgets | Server (background worker; avatar through the [media proxy](#media-proxy)) | None | No |
+| [GitHub Releases](#github-releases) | The installers the web app links to when it announces the desktop app | Server (on demand, cached) | `DESKTOP_RELEASES_REPO` | No |
 | [IGDB](#igdb) | Game search for the Wall's games widgets; the name and cover of a game someone is playing | Server (on demand; covers through the [media proxy](#media-proxy)) | `IGDB_CLIENT_ID`, `IGDB_CLIENT_SECRET` | No |
 | [Arbitrary websites](#link-previews) | Link preview cards | Server (pages, and their images through the [media proxy](#media-proxy)) | None | Built in |
 | [oEmbed providers](#oembed) (YouTube, Vimeo, SoundCloud, Spotify, X, TikTok, Reddit) | Link preview cards for their links | Server | None | Built in |
@@ -105,6 +106,17 @@ Both providers share one background worker ([`server/src/modules/connections/syn
 - A failed sync keeps the last complete snapshot. `not_found`, `private` and `invalid_response` wait for the next daily cycle; `rate_limited` and `unavailable` retry with exponential backoff (honoring `Retry-After` and `X-RateLimit-Reset`).
 - HTTP helper ([`server/src/integrations/connectionHttp.ts`](../server/src/integrations/connectionHttp.ts)): 10-second timeout, redirects are an error, response bodies are capped at 2 MB, and status codes map to the errors above (404 → `not_found`, 403 → `private` or `rate_limited`, 429 → `rate_limited`).
 - Connections are managed under Settings → Connections; the owner chooses which widgets appear on the Wall. The games widgets are the exception: they need no connection (see [IGDB](#igdb)). See "Profile connections and Wall" in [DEVELOPMENT.md](DEVELOPMENT.md#profile-connections-and-wall).
+
+## GitHub Releases
+
+Where the web app sends people when it announces the desktop app, once per browser on a computer (`DesktopAppAnnouncement` in `web/src/features/desktopApp/`). These are the same releases the installed apps update from ([DEPLOY.md](DEPLOY.md#updates-and-data)).
+
+- **Code:** [`server/src/modules/desktop/`](../server/src/modules/desktop).
+- **Request:** `GET /api/desktop/downloads` (signed-in users only) answers the latest release's version, page and one installer link per system, read from `GET https://api.github.com/repos/<DESKTOP_RELEASES_REPO>/releases/latest` without a token. Drafts and prereleases are skipped, and only links into that repository's `releases/download/` are kept, picked by the installers' file names (`desktop/electron-builder.config.cjs`).
+- **Rate limit:** GitHub allows 60 unauthenticated requests per hour per server address. The answer is kept 15 minutes (a failure 1 minute, keeping the last good answer), and simultaneous requests share one.
+- **Configuration:** `DESKTOP_RELEASES_REPO=<owner>/<repo>`, the repository the desktop workflow publishes to (the same value it bakes in as `LINKORD_UPDATE_REPO`).
+- **When missing:** empty or malformed, the route answers `404` and the web app never announces the desktop app. A GitHub outage does the same until the next good answer.
+- **Data sent:** nothing about anyone; the browser then downloads straight from GitHub, which sees its address.
 
 ## IGDB
 

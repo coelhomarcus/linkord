@@ -1,6 +1,7 @@
 /** All persistent browser storage keys used by the frontend. Keep existing
  * names stable so users keep the preferences already saved in their browser. */
 export const LOCAL_STORAGE_KEYS = {
+  desktopAppAnnounced: 'ss-desktop-app-announced',
   language: 'ss-locale',
   mediaVolume: 'ss-media-volume',
   lastChannel: (serverId: string) => `ss-last-channel:${serverId}` as const,
