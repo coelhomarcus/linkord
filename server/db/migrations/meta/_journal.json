@@ -498,6 +498,13 @@
       "when": 1794789517837,
       "tag": "0070_activity_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "7",
+      "when": 1794789746045,
+      "tag": "0071_activity_games",
+      "breakpoints": true
     }
   ]
 }

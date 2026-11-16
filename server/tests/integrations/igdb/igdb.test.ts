@@ -36,6 +36,14 @@ describe('IGDB adapter', () => {
     assert.deepEqual(call.init.headers, { 'Client-ID': 'id', Authorization: 'Bearer token-1', Accept: 'application/json' });
     assert.equal(call.init.body, 'search "zelda"; fields name,slug,first_release_date,cover.image_id; where version_parent = null; limit 10;');
   });
+  it('finds the game listed for a Steam app id, and none for a bad id without asking', async () => {
+    const fake = fakeIgdb(() => [zelda]);
+    const client = createIgdbClient({ clientId: 'id', clientSecret: 'secret', request: fake.request });
+    assert.equal((await client.findSteamGame(570))?.name, 'The Legend of Zelda');
+    assert.equal(fake.games()[0]!.init.body, 'fields name,slug,first_release_date,cover.image_id; where external_games.uid = "570" & external_games.external_game_source = 1; limit 1;');
+    assert.equal(await client.findSteamGame(-1), null);
+    assert.equal(fake.games().length, 1);
+  });
   it('escapes quotes and backslashes so a query cannot add statements', async () => {
     const fake = fakeIgdb(() => []);
     await createIgdbClient({ clientId: 'id', clientSecret: 's', request: fake.request }).searchGames('a"; limit 500; \\');

@@ -78,7 +78,7 @@ server/src/
   integrations/<name>/  # external service adapters: livekit/, github/, myanimelist/, igdb/ (+ connectionHttp.ts)
   net/                  # safeRequest.ts, ssrfGuard.ts — every request to a user-chosen URL
   lib/                  # logger.ts
-  modules/<domain>/     # admin, attachments, auth, blocks, bots, calls, connections, conversations,
+  modules/<domain>/     # activity, admin, attachments, auth, blocks, bots, calls, connections, conversations,
                         # friendships, games, gifs, limits, link-preview, logs, messages, migration,
                         # moderation, notifications, presence, profile, reports, servers,
                         # soundboard, users

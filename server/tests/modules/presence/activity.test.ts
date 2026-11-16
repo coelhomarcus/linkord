@@ -8,7 +8,7 @@ describe('sanitizeActivityReport', () => {
   test('keeps a well-formed report and builds the icon path itself', () => {
     const local = 'a'.repeat(64);
     assert.deepEqual(sanitizeActivityReport({ key: 'spotify', kind: 'using', name: '  Spotify ', icon: { local }, startedAt: now - 1000 }, now), {
-      key: 'spotify', kind: 'using', name: 'Spotify', icon: `/api/activity/icons/${local}.png`, startedAt: new Date(now - 1000).toISOString(),
+      key: 'spotify', kind: 'using', name: 'Spotify', icon: `/api/activity/icons/${local}.webp`, startedAt: new Date(now - 1000).toISOString(),
     });
   });
 

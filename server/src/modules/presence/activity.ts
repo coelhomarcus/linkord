@@ -68,7 +68,7 @@ function iconPath(value: unknown): string | null {
   if (!value || typeof value !== 'object') return null;
   const { igdb, local } = value as { igdb?: unknown; local?: unknown };
   if (typeof igdb === 'string' && IGDB_IMAGE.test(igdb)) return `/api/media-proxy/igdb/cover_small/${igdb}`;
-  if (typeof local === 'string' && LOCAL_ICON.test(local)) return `/api/activity/icons/${local}.png`;
+  if (typeof local === 'string' && LOCAL_ICON.test(local)) return `/api/activity/icons/${local}.webp`;
   return null;
 }
 

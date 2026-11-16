@@ -980,6 +980,15 @@ export const rateLimitWindows = pgTable('rate_limit_windows', {
   index('rate_limit_windows_window_ends_idx').on(t.windowEndsAt),
 ]);
 
+// The IGDB name and cover of a game someone's desktop app detected (modules/activity/activityGames.ts),
+// keyed `steam:<app id>` or `name:<normalized name>`. A miss is stored too, dated so it expires sooner.
+export const activityGames = pgTable('activity_games', {
+  key: varchar('key', { length: 96 }).primaryKey(),
+  name: text('name').notNull(),
+  imageId: varchar('image_id', { length: 40 }),
+  resolvedAt: timestamp('resolved_at', { withTimezone: true }).notNull(),
+});
+
 export const connectionSyncLimits = pgTable('connection_sync_limits', {
   provider: varchar('provider', { length: 16 }).primaryKey(),
   nextRequestAt: timestamp('next_request_at', { withTimezone: true }).notNull().defaultNow(),
