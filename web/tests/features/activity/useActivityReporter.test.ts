@@ -64,13 +64,35 @@ describe('useActivityReporter', () => {
     await waitFor(() => expect(reports().at(-1)).toMatchObject({ key: 'minecraft', icon: { local: 'c'.repeat(64) } }));
   });
 
-  it('looks a game up again instead of reusing a cover remembered by an older version', async () => {
-    localStorage.setItem('ss-activity-icons', JSON.stringify({ minecraft: { igdb: 'co49x5' } }));
-    stubDesktop(minecraft);
-    lookup.mockResolvedValue({ name: 'Minecraft', icon: 'b'.repeat(64) });
+  it('asks the server for a game\'s icon every time it starts, sending the same program icon once', async () => {
+    const { change } = stubDesktop(null);
+    upload.mockResolvedValue('c'.repeat(64));
+    lookup.mockResolvedValueOnce({ name: 'Minecraft', icon: 'b'.repeat(64) }).mockResolvedValueOnce({ name: 'Minecraft', icon: 'd'.repeat(64) });
     const { reports } = render();
+    change(minecraft);
     await waitFor(() => expect(reports().at(-1)).toMatchObject({ icon: { local: 'b'.repeat(64) } }));
-    expect(localStorage.getItem('ss-activity-icons')).toBeNull();
+    change(null);
+    change(minecraft);
+    // a better pick on the server shows on the next game
+    await waitFor(() => expect(reports().at(-1)).toMatchObject({ icon: { local: 'd'.repeat(64) } }));
+    expect(lookup).toHaveBeenCalledTimes(2);
+    expect(lookup).toHaveBeenLastCalledWith({ steamAppId: undefined, name: 'Minecraft', ref: 'c'.repeat(64) });
+    expect(upload).toHaveBeenCalledTimes(1);
+  });
+
+  it('sends a program icon again once its picture changes, and drops what older versions kept', async () => {
+    localStorage.setItem('ss-activity-icons-v2', JSON.stringify({ minecraft: { local: 'f'.repeat(64) } }));
+    const { api, change } = stubDesktop(null);
+    upload.mockResolvedValueOnce('1'.repeat(64)).mockResolvedValueOnce('2'.repeat(64));
+    const { reports } = render();
+    change(spotify);
+    await waitFor(() => expect(reports().at(-1)).toMatchObject({ icon: { local: '1'.repeat(64) } }));
+    expect(localStorage.getItem('ss-activity-icons-v2')).toBeNull();
+    api.icon.mockResolvedValue('data:image/png;base64,BBBB');
+    change(null);
+    change(spotify);
+    await waitFor(() => expect(reports().at(-1)).toMatchObject({ icon: { local: '2'.repeat(64) } }));
+    expect(upload).toHaveBeenCalledTimes(2);
   });
 
   it('sends an app with its own icon, uploaded once', async () => {

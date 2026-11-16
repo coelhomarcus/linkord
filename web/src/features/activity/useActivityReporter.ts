@@ -3,24 +3,44 @@ import { desktopApp, type DesktopActivity } from '@/shared/desktop';
 import type { ActivityReport, ActivitySettings, ClientMessage } from '@/shared/types/protocol';
 import { lookupActivityGame, uploadActivityIcon } from './activityApi';
 
-// Icons already resolved, by activity key, so a game played every day is looked up once. The first
-// version held IGDB covers, which are no longer sent: it is dropped so those games get their icon.
-const ICON_CACHE_KEY = 'ss-activity-icons-v2';
-const OLD_ICON_CACHE_KEY = 'ss-activity-icons';
+// Program icons already stored, by a hash of the picture the desktop app read: the same picture is
+// sent once, and a program whose icon changes sends the new one. Which icon a game shows is the
+// server's choice, asked every time a game starts and never kept here, so a better pick on the server
+// reaches everyone on their next game. Earlier versions kept that choice, under these older keys.
+const UPLOADED_ICONS_KEY = 'ss-activity-uploaded-icons';
+const OLD_KEYS = ['ss-activity-icons', 'ss-activity-icons-v2'];
+const UPLOADED_MAX = 100;
 
-type IconRef = ActivityReport['icon'];
-
-function readIconCache(): Record<string, IconRef> {
+function readUploaded(): Record<string, string> {
   try {
-    localStorage.removeItem(OLD_ICON_CACHE_KEY);
-    return JSON.parse(localStorage.getItem(ICON_CACHE_KEY) ?? '{}') as Record<string, IconRef>;
+    for (const key of OLD_KEYS) localStorage.removeItem(key);
+    return JSON.parse(localStorage.getItem(UPLOADED_ICONS_KEY) ?? '{}') as Record<string, string>;
   } catch {
     return {};
   }
 }
 
-function rememberIcon(key: string, icon: IconRef): void {
-  try { localStorage.setItem(ICON_CACHE_KEY, JSON.stringify({ ...readIconCache(), [key]: icon })); } catch { /* storage refused: looked up again next time */ }
+function rememberUploaded(hash: string, id: string): void {
+  // the oldest are dropped first: insertion order is kept
+  const entries = Object.entries({ ...readUploaded(), [hash]: id }).slice(-UPLOADED_MAX);
+  try { localStorage.setItem(UPLOADED_ICONS_KEY, JSON.stringify(Object.fromEntries(entries))); } catch { /* storage refused: sent again next time */ }
+}
+
+async function pictureHash(dataUrl: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(dataUrl));
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+/** The stored id of the program's own icon, sent only when this picture was never sent before. */
+async function storedProgramIcon(readIcon: () => Promise<string | null>): Promise<string | null> {
+  const dataUrl = await readIcon().catch(() => null);
+  if (!dataUrl) return null;
+  const hash = await pictureHash(dataUrl).catch(() => null);
+  const known = hash ? readUploaded()[hash] : undefined;
+  if (known) return known;
+  const id = await uploadActivityIcon(dataUrl).catch(() => null);
+  if (id && hash) rememberUploaded(hash, id);
+  return id;
 }
 
 /** The name and icon a detected activity shows with: a game's IGDB name and icon when the server finds
@@ -28,22 +48,20 @@ function rememberIcon(key: string, icon: IconRef): void {
  * reference it picks the game's icon by (server/src/modules/activity/activityGameIcons.ts). */
 async function describe(activity: DesktopActivity, readIcon: () => Promise<string | null>): Promise<ActivityReport> {
   let name = activity.name;
-  let icon: IconRef = readIconCache()[activity.key] ?? null;
-  let uploaded: Promise<string | null> | null = null;
-  const programIcon = () => (uploaded ??= readIcon().then((dataUrl) => (dataUrl ? uploadActivityIcon(dataUrl) : null)).catch(() => null));
-  if (activity.kind === 'playing' && (!icon || !name)) {
-    const ref = icon ? null : await programIcon();
-    const game = await lookupActivityGame({ steamAppId: activity.steamAppId, name, ref }).catch(() => null);
+  let icon: ActivityReport['icon'] = null;
+  let program: Promise<string | null> | null = null;
+  const programIcon = () => (program ??= storedProgramIcon(readIcon));
+  if (activity.kind === 'playing') {
+    const game = await lookupActivityGame({ steamAppId: activity.steamAppId, name, ref: await programIcon() }).catch(() => null);
     if (game) {
       name = name || game.name;
-      if (!icon && game.icon) icon = { local: game.icon };
+      if (game.icon) icon = { local: game.icon };
     }
   }
   if (!icon) {
     const id = await programIcon();
     if (id) icon = { local: id };
   }
-  if (icon) rememberIcon(activity.key, icon);
   return { key: activity.key, kind: activity.kind, name, icon, startedAt: activity.startedAt };
 }
 
