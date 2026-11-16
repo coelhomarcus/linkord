@@ -15,6 +15,8 @@ import { SocialConfirmDialog } from './SocialConfirmDialog';
 import type { SocialConfirm } from './SocialConfirmDialog';
 import { useFriends } from './FriendsContext';
 import { useRelationship } from './useRelationship';
+import { useLanguage } from '@/shared/i18n/useLanguage';
+import { useTimeFormat } from '@/shared/lib/timeFormat';
 
 /** Takes you from a glimpse of your own profile to the full one, where it is edited. */
 function EditProfileButton({ onClick }: { onClick: () => void }) {
@@ -42,6 +44,8 @@ export function ProfileActions({ userId, username, displayName, onNavigate, onRe
   showMessage?: boolean;
   showFriendRequestActions?: boolean;
 }) {
+  const language = useLanguage();
+  const timeFormat = useTimeFormat();
   const { t } = useTranslation('friends');
   const { openDirect, requestChatView } = useRoom('openDirect', 'requestChatView');
   const { bump } = useFriends();
@@ -149,7 +153,7 @@ export function ProfileActions({ userId, username, displayName, onNavigate, onRe
       break;
     default:
       actions = retryAfter ? (
-        <span className="text-label text-text-muted">{t('profile.retryAfter', { when: formatRetryAfter(retryAfter) })}</span>
+        <span className="text-label text-text-muted">{t('profile.retryAfter', { when: formatRetryAfter(retryAfter, language, timeFormat) })}</span>
       ) : (
         <Button type="button" size="sm" disabled={pending} onClick={() => void run(() => sendFriendRequest(username), 'send')}>
           {spinner ?? <UserPlusIcon size={20} weight="fill" />}<span>{t('profile.add')}</span>

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, screen, within } from '@testing-library/react';
+import { act, fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { initialRoomState } from '@/state/roomReducer';
 import { PERMISSIONS } from '@/features/servers/permissionBits';
@@ -11,6 +11,7 @@ import type { ChatMessage, PublicUser, RoleSummary, ServerSummary } from '@/shar
 import type { OutboxEntry } from '@/features/chat/useMessageOutbox';
 import * as serversApi from '@/features/servers/serversApi';
 import { liveAnnouncements } from '@tests/fixtures/announcerFixture';
+import { setTimeFormat } from '@/shared/lib/timeFormat';
 
 vi.mock('@/features/servers/serversApi', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/features/servers/serversApi')>()),
@@ -569,5 +570,20 @@ describe('MessageRow — animated avatar', () => {
     const live = container.querySelector('img[data-avatar-live]');
     expect(live).toHaveAttribute('src', '/uploads/a.gif');
     expect(live?.closest('[data-avatar-hover]')).toHaveAttribute('data-message-id', '1');
+  });
+});
+
+describe('MessageRow — timestamp', () => {
+  afterEach(() => setTimeFormat('auto'));
+
+  it('follows a time format changed in settings while the row stays mounted', () => {
+    const ts = new Date();
+    ts.setHours(21, 5, 0, 0);
+    renderWithRoom(
+      <MessageRow message={makeMessage({ ts: ts.getTime() })} showHeader highlighted={false} allUsers={new Map()} mentionLookup={new Map()} onOpenProfile={noop} onReply={noop} onJumpTo={noop} />,
+    );
+    expect(screen.getByText('21:05')).toBeInTheDocument();
+    act(() => setTimeFormat('12h'));
+    expect(screen.getByText(/^9:05\s?PM$/i)).toBeInTheDocument();
   });
 });

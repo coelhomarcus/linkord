@@ -16,6 +16,7 @@ import { RESTORE_LIST, useAdminBack } from './useAdminBack';
 import { useAdminDetail } from './useAdminDetail';
 import { AdminDetailSkeleton } from './AdminSkeletons';
 import { AppLink } from '@/shared/ui/app-link';
+import { useLanguage } from '@/shared/i18n/useLanguage';
 
 /** What the admin picked in the decision form: close with an action on the
  * target, close without one, or dismiss. */
@@ -53,6 +54,7 @@ export function ReportDetailPage() {
  * reach this. The evidence is the stored snapshot, shown as inert text: no
  * links are followed, nothing is previewed, the live conversation is not read. */
 function ReportDetail({ id }: { id: string }) {
+  const language = useLanguage();
   const { t } = useTranslation('admin');
   const back = useAdminBack('/admin/reports');
   const { data: detail, status, refresh, mutate, refreshing, refreshFailed, reload } = useAdminDetail(id, fetchAdminReport);
@@ -85,7 +87,7 @@ function ReportDetail({ id }: { id: string }) {
       <AdminEntityHeader
         avatar={<span className="flex size-16 items-center justify-center rounded-full bg-fill-active text-text-muted"><FlagIcon size={26} aria-hidden /></span>}
         title={report.targetLabel || report.targetId}
-        subtitle={`${reportTargetLabel(report.targetType)} · ${categoryLabel(report.category)}`}
+        subtitle={`${reportTargetLabel(report.targetType, language)} · ${categoryLabel(report.category)}`}
         id={report.id}
         badges={<Badge value={report.status} />}
       />
@@ -101,13 +103,13 @@ function ReportDetail({ id }: { id: string }) {
               {authorId ? <AppLink to={`/admin/users/${authorId}`} className="hover:underline">@{String(snapshot.authorUsername ?? authorId)}</AppLink> : t('report.deletedAccount')}
             </AdminFieldRow>
             <AdminFieldRow label={t('report.conversation')}>{String(snapshot.conversationTitle ?? '-')}</AdminFieldRow>
-            <AdminFieldRow label={t('report.sentAt')}>{formatWhen(String(snapshot.sentAt ?? ''))}</AdminFieldRow>
+            <AdminFieldRow label={t('report.sentAt')}>{formatWhen(String(snapshot.sentAt ?? ''), language)}</AdminFieldRow>
           </AdminFields>
         </AdminSection>
       ) : (
         <AdminSection title={t('report.target')} description={t('report.targetDescription')}>
           <AdminFields>
-            <AdminFieldRow label={t('report.target')}>{reportTargetLabel(report.targetType)}</AdminFieldRow>
+            <AdminFieldRow label={t('report.target')}>{reportTargetLabel(report.targetType, language)}</AdminFieldRow>
             <AdminFieldRow label={t('report.name')}>{report.targetLabel || '-'}</AdminFieldRow>
             <AdminFieldRow label="ID"><span className="break-all font-mono text-caption">{report.targetId}</span></AdminFieldRow>
             {targetHref && <AdminFieldRow label={t('report.administration')}><AdminTextLink to={targetHref}>{t('report.openAdmin')}</AdminTextLink></AdminFieldRow>}
@@ -119,7 +121,7 @@ function ReportDetail({ id }: { id: string }) {
         <AdminFields>
           <AdminFieldRow label={t('report.details')}>{report.details ? <span className="whitespace-pre-wrap">{report.details}</span> : t('report.noDetails')}</AdminFieldRow>
           <AdminFieldRow label={t('report.reporter')}>{report.reporter ? `@${report.reporter}` : t('report.deletedAccount')}</AdminFieldRow>
-          <AdminFieldRow label={t('report.sentAt')}>{formatWhen(report.createdAt)}</AdminFieldRow>
+          <AdminFieldRow label={t('report.sentAt')}>{formatWhen(report.createdAt, language)}</AdminFieldRow>
           <AdminFieldRow label={t('report.assignee')}>{report.assignee ? `@${report.assignee}` : '-'}</AdminFieldRow>
         </AdminFields>
       </AdminSection>
@@ -127,9 +129,9 @@ function ReportDetail({ id }: { id: string }) {
       {closed ? (
         <AdminSection title={t('report.outcome')}>
           <AdminFields>
-            <AdminFieldRow label={t('audit.result')}>{report.status === 'dismissed' ? t('report.dismissed') : reportResolutionLabel(report.resolution)}</AdminFieldRow>
+            <AdminFieldRow label={t('audit.result')}>{report.status === 'dismissed' ? t('report.dismissed') : reportResolutionLabel(report.resolution, language)}</AdminFieldRow>
             <AdminFieldRow label="Motivo">“{report.resolutionNote}”</AdminFieldRow>
-            <AdminFieldRow label={t('status.resolved')}>{formatWhen(report.resolvedAt)}</AdminFieldRow>
+            <AdminFieldRow label={t('status.resolved')}>{formatWhen(report.resolvedAt, language)}</AdminFieldRow>
           </AdminFields>
         </AdminSection>
       ) : (

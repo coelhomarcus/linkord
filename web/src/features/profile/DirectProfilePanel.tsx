@@ -12,6 +12,7 @@ import type { ProfileTab } from './ProfileSidebar';
 import { formatProfileDate, useProfileDetails } from './useProfileDetails';
 import { UserCustomStatusBubble, UserStatusDot } from '@/features/status/UserStatus';
 import { UserActivityCard } from '@/features/activity/ActivityLine';
+import { useLanguage } from '@/shared/i18n/useLanguage';
 
 const SHOWN_MUTUALS = 5;
 const SECTION = 'flex flex-col gap-1';
@@ -20,6 +21,7 @@ const MUTUAL_LINK = 'rounded-sm hover:text-text-primary hover:underline focus-vi
 /** The profile beside a DM, as Discord draws it: banner, avatar, bio, since
  * when, and what you have in common, with the full profile one click away. */
 export function DirectProfilePanel({ user, onOpenProfile }: { user: PublicUser; onOpenProfile: (userId: string, tab?: ProfileTab) => void }) {
+  const language = useLanguage();
   const { t } = useTranslation('profile');
   const navigate = useNavigate();
   const { details } = useProfileDetails(user.id);
@@ -77,7 +79,7 @@ export function DirectProfilePanel({ user, onOpenProfile }: { user: PublicUser; 
             {details && (
               <div className={SECTION}>
                 <h3 className="text-caption font-semibold text-text-primary">{t('modal.memberSince')}</h3>
-                <p className="text-label text-text-secondary">{formatProfileDate(details.memberSince)}</p>
+                <p className="text-label text-text-secondary">{formatProfileDate(details.memberSince, language)}</p>
               </div>
             )}
           </section>

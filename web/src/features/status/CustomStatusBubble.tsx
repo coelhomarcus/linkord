@@ -1,7 +1,7 @@
 import { PencilSimpleIcon, PlusIcon, TrashIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import type { CustomStatus } from '@/shared/types/protocol';
-import { timeOptions } from '@/shared/lib/timeFormat';
+import { timeOptions, useTimeFormat } from '@/shared/lib/timeFormat';
 import { cn } from '@/shared/lib/utils';
 import { Emoji, EmojiText } from '@/features/emoji/Emoji';
 
@@ -18,6 +18,7 @@ export function CustomStatusBubble({ custom, onEdit, onClear, className }: {
   className?: string;
 }) {
   const { t, i18n } = useTranslation('status');
+  const timeFormat = useTimeFormat();
   if (!custom && !onEdit) return null;
 
   const tail = (
@@ -49,7 +50,7 @@ export function CustomStatusBubble({ custom, onEdit, onClear, className }: {
 
   const full = [custom.emoji, custom.text].filter(Boolean).join(' ');
   const until = custom.expiresAt
-    ? t('custom.until', { time: new Date(custom.expiresAt).toLocaleTimeString(i18n.language, timeOptions(i18n.language)) })
+    ? t('custom.until', { time: new Date(custom.expiresAt).toLocaleTimeString(i18n.language, timeOptions(i18n.language, timeFormat)) })
     : null;
 
   return (

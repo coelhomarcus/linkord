@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useRoom, useRoomState } from '@/state/RoomContext';
 import { fetchWall } from '@/features/profile/profileApi';
 import type { GameItem } from '@/features/games/types';
-import { timeOptions } from '@/shared/lib/timeFormat';
+import { timeOptions, useTimeFormat } from '@/shared/lib/timeFormat';
 import { EXPIRY_CHOICES, expiresAtFor, liveCustomStatus, type ExpiryChoice } from './statusDisplay';
 import { Emoji } from '@/features/emoji/Emoji';
 
@@ -39,6 +39,7 @@ function useRotationGames(userId: string | null, enabled: boolean): GameItem[] {
 
 export function CustomStatusDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const { t, i18n } = useTranslation('status');
+  const timeFormat = useTimeFormat();
   const { ownStatus, setPresence } = useRoom('ownStatus', 'setPresence');
   const state = useRoomState('me');
   const current = liveCustomStatus(ownStatus.customStatus);
@@ -65,7 +66,7 @@ export function CustomStatusDialog({ open, onOpenChange }: { open: boolean; onOp
   }, [open]);
 
   const expiryLabel = (value: ExpiryValue) => (value === 'keep' && current?.expiresAt
-    ? t('custom.until', { time: new Date(current.expiresAt).toLocaleTimeString(i18n.language, timeOptions(i18n.language)) })
+    ? t('custom.until', { time: new Date(current.expiresAt).toLocaleTimeString(i18n.language, timeOptions(i18n.language, timeFormat)) })
     : t(`custom.expiry.${value === 'keep' ? 'never' : value}`));
 
   async function save(next: { emoji: string; text: string } | null) {

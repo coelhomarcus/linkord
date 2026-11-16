@@ -19,6 +19,7 @@ import type { ProfileTab } from './ProfileSidebar';
 import { formatProfileDate, useProfileDetails } from './useProfileDetails';
 import { useCustomStatus, useUserStatus } from '@/features/status/statusDisplay';
 import { UserActivityCard } from '@/features/activity/ActivityLine';
+import { useLanguage } from '@/shared/i18n/useLanguage';
 
 interface ProfileModalProps {
   userId: string | null;
@@ -31,6 +32,7 @@ interface ProfileModalProps {
 
 /** Fetch uncached profiles on demand, such as authors of older messages who have left the conversation. */
 export function ProfileModal({ userId, initialTab, onClose, onOpenProfile }: ProfileModalProps) {
+  const language = useLanguage();
   const { t } = useTranslation('profile');
   const { allUsers } = useRoom('allUsers');
   const state = useRoomState('me');
@@ -143,13 +145,13 @@ export function ProfileModal({ userId, initialTab, onClose, onOpenProfile }: Pro
                           {details.details && (
                             <div>
                               <dt className="text-caption font-medium text-text-muted">{t('modal.memberSince')}</dt>
-                              <dd className="mt-0.5 text-label text-text-secondary">{formatProfileDate(details.details.memberSince)}</dd>
+                              <dd className="mt-0.5 text-label text-text-secondary">{formatProfileDate(details.details.memberSince, language)}</dd>
                             </div>
                           )}
                           {details.details?.friendsSince && (
                             <div>
                               <dt className="text-caption font-medium text-text-muted">{t('modal.friendsSince')}</dt>
-                              <dd className="mt-0.5 text-label text-text-secondary">{formatProfileDate(details.details.friendsSince)}</dd>
+                              <dd className="mt-0.5 text-label text-text-secondary">{formatProfileDate(details.details.friendsSince, language)}</dd>
                             </div>
                           )}
                         </dl>

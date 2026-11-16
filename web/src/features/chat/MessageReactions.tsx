@@ -8,6 +8,7 @@ import { CustomEmojiImage } from '@/features/emoji/CustomEmojiImage';
 import { customReactionId } from '@/features/emoji/customEmojiText';
 import { useCustomEmojiName } from '@/features/emoji/emojiNames';
 import { Emoji } from '@/features/emoji/Emoji';
+import { useLanguage } from '@/shared/i18n/useLanguage';
 
 interface MessageReactionsProps {
   reactions: Partial<Record<ReactionEmoji, string[]>>;
@@ -107,6 +108,7 @@ interface ReactionChipProps extends Omit<MessageReactionsProps, 'reactions'> {
 }
 
 function ReactionChip({ emoji, userIds, entering, leaving, onGone, myUserId, allUsers, onToggle }: ReactionChipProps) {
+  const language = useLanguage();
   const { t } = useTranslation('chat');
   const label = useReactionLabel(emoji);
   const ref = useRef<HTMLSpanElement>(null);
@@ -132,7 +134,7 @@ function ReactionChip({ emoji, userIds, entering, leaving, onGone, myUserId, all
   }, [leaving, emoji, onGone]);
 
   const mine = !!myUserId && userIds.includes(myUserId);
-  const names = reactionParticipantNames(userIds, allUsers, myUserId);
+  const names = reactionParticipantNames(userIds, allUsers, myUserId, language);
   return (
     <span
       ref={ref}
@@ -151,7 +153,7 @@ function ReactionChip({ emoji, userIds, entering, leaving, onGone, myUserId, all
             <button
               type="button"
               aria-pressed={mine}
-              aria-label={t(mine ? 'reactions.chipRemove' : 'reactions.chipAdd', { emoji: label, count, names: summarizeReactionParticipants(names) })}
+              aria-label={t(mine ? 'reactions.chipRemove' : 'reactions.chipAdd', { emoji: label, count, names: summarizeReactionParticipants(names, language) })}
               onClick={() => onToggle(emoji)}
               className={cn(
                 'flex h-6 items-center gap-1 rounded-full border px-1.5 text-label transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50',
@@ -168,7 +170,7 @@ function ReactionChip({ emoji, userIds, entering, leaving, onGone, myUserId, all
           </span>
         </TooltipTrigger>
         <TooltipContent>
-          <span aria-hidden>{customReactionId(emoji) ? label : emoji}</span> {reactionSummarySentence(names)}
+          <span aria-hidden>{customReactionId(emoji) ? label : emoji}</span> {reactionSummarySentence(names, language)}
         </TooltipContent>
       </Tooltip>
     </span>

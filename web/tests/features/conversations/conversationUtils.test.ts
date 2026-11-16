@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { i18n } from '@/shared/i18n/init';
 import type { Conversation, PublicUser } from '@/shared/types/protocol';
 import { conversationDocumentTitle, conversationMatchesQuery, conversationTitle } from '@/features/conversations/conversationUtils';
 import { describeInviteOutcome } from '@/features/conversations/inviteOutcome';
@@ -71,7 +72,7 @@ describe('conversation text in English', () => {
   it('describes invitation outcomes and media date groups in English', () => {
     expect(describeInviteOutcome('already_member')).toBe('is already in the server');
     const now = new Date(2026, 10, 10, 15).getTime();
-    expect(dateGroupLabel(now, now)).toBe('Today');
-    expect(dateGroupLabel(new Date(2026, 9, 1).getTime(), now)).toBe('October 2026');
+    expect(dateGroupLabel(now, i18n.language, now)).toBe('Today');
+    expect(dateGroupLabel(new Date(2026, 9, 1).getTime(), i18n.language, now)).toBe('October 2026');
   });
 });

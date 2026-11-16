@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import type { CSSProperties } from 'react';
 
 import { cn } from '@/shared/lib/utils';
-import { resolveTwemoji, resolvedTwemoji, splitEmoji, twemojiUrls } from './twemoji';
+import { resolveTwemoji, resolvedTwemoji, splitEmoji, twemojiUrls, useResolvedTwemoji } from './twemoji';
 
 interface EmojiProps {
   emoji: string;
@@ -14,14 +14,10 @@ interface EmojiProps {
  * transparent under the picture: copying, searching and screen readers get
  * the real emoji. One Twemoji lacks falls back to the system's font. */
 export function Emoji({ emoji, className }: EmojiProps) {
-  // bumped when this emoji's file is found; the answer itself lives in twemoji.ts
-  const [, setFound] = useState(0);
+  const state = useResolvedTwemoji(emoji);
   useEffect(() => {
-    let live = true;
-    if (!resolvedTwemoji(emoji)) void resolveTwemoji(emoji).then(() => { if (live) setFound((n) => n + 1); });
-    return () => { live = false; };
+    if (!resolvedTwemoji(emoji)) void resolveTwemoji(emoji);
   }, [emoji]);
-  const state = resolvedTwemoji(emoji);
 
   if (state === 'missing') return <span className={className}>{emoji}</span>;
   // until it is known which file exists, the likely one is drawn already

@@ -28,6 +28,7 @@ import { useProfileDraft, type ProfileDraftFields } from './useProfileDraft';
 import type { DisplayStatus } from '@/features/status/statusDisplay';
 import { useCustomStatusActions } from '@/features/status/useCustomStatusActions';
 import type { CustomStatus } from '@/shared/types/protocol';
+import { useLanguage } from '@/shared/i18n/useLanguage';
 
 type ProfileCropTarget = { field: 'avatar' | 'banner'; file: File; src: string };
 
@@ -45,6 +46,7 @@ export function ProfileEditor({ status, customStatus, details, onClose, register
   /** hands the modal the check it runs before closing, and `null` on unmount */
   registerLeaveGuard: (guard: LeaveGuard | null) => void;
 }) {
+  const language = useLanguage();
   const { t } = useTranslation('profile');
   const navigate = useNavigate();
   const { updateProfile, uploadProfileImage, removeProfileImage } = useRoom('updateProfile', 'uploadProfileImage', 'removeProfileImage');
@@ -303,7 +305,7 @@ export function ProfileEditor({ status, customStatus, details, onClose, register
                   {details.details && (
                     <div>
                       <dt className="text-caption font-medium text-text-muted">{t('modal.memberSince')}</dt>
-                      <dd className="mt-0.5 text-label text-text-secondary">{formatProfileDate(details.details.memberSince)}</dd>
+                      <dd className="mt-0.5 text-label text-text-secondary">{formatProfileDate(details.details.memberSince, language)}</dd>
                     </div>
                   )}
                 </dl>

@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 import { i18n } from '@/shared/i18n/init';
+import { useLanguage } from '@/shared/i18n/useLanguage';
 
 // Built from emojibase-data by web/scripts/buildEmojiData.mjs and served by
 // us (public/emoji-data/<lang>/emojis.json), never by a CDN. ~60 KB gzipped,
@@ -51,6 +52,12 @@ export function buildEmojiData(raw: RawEntry[]): EmojiData {
 
 const loads = new Map<EmojiDataLang, Promise<EmojiData>>();
 const loaded = new Map<EmojiDataLang, EmojiData>();
+const listeners = new Set<() => void>();
+
+function subscribe(listener: () => void) {
+  listeners.add(listener);
+  return () => { listeners.delete(listener); };
+}
 
 function loadEmojiData(lang: EmojiDataLang = emojiDataLang()): Promise<EmojiData> {
   let pending = loads.get(lang);
@@ -63,6 +70,7 @@ function loadEmojiData(lang: EmojiDataLang = emojiDataLang()): Promise<EmojiData
       .then(({ emojis }) => {
         const data = buildEmojiData(emojis);
         loaded.set(lang, data);
+        for (const listener of listeners) listener();
         return data;
       });
     // a failed fetch is forgotten, so the next use tries again
@@ -74,19 +82,16 @@ function loadEmojiData(lang: EmojiDataLang = emojiDataLang()): Promise<EmojiData
 
 /** The dataset once `enabled` has asked for it; null until it arrives. */
 export function useEmojiData(enabled = true): EmojiData | null {
-  const lang = emojiDataLang();
-  const [, setArrived] = useState(0);
+  const lang = emojiDataLang(useLanguage());
   useEffect(() => {
-    if (!enabled || loaded.has(lang)) return;
-    let cancelled = false;
-    loadEmojiData(lang).then(() => { if (!cancelled) setArrived((n) => n + 1); }).catch(() => {});
-    return () => { cancelled = true; };
+    if (enabled && !loaded.has(lang)) loadEmojiData(lang).catch(() => {});
   }, [enabled, lang]);
-  return loaded.get(lang) ?? null;
+  return useSyncExternalStore(subscribe, () => loaded.get(lang) ?? null);
 }
 
 /** For tests: start from a dataset without fetching. */
 export function primeEmojiData(data: EmojiData, lang: EmojiDataLang = emojiDataLang()): void {
   loaded.set(lang, data);
   loads.set(lang, Promise.resolve(data));
+  for (const listener of listeners) listener();
 }

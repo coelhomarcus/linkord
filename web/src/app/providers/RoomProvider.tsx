@@ -242,19 +242,21 @@ export function RoomProvider({ children }: { children: ReactNode }) {
    * (chatMessages) plus telling the server. Composed here, not inside
    * either hook, because it's the one operation that genuinely spans both
    * of their state. */
+  const { setActiveConversation, removeConversation } = conversationsList;
+  const { clearUnread, setReplyingTo, setEditingMsgId } = chatMessages;
   const openConversation = useCallback((conversationId: string) => {
-    conversationsList.setActiveConversation(conversationId);
-    chatMessages.clearUnread(conversationId);
-    chatMessages.setReplyingTo(null);
-    chatMessages.setEditingMsgId(null);
+    setActiveConversation(conversationId);
+    clearUnread(conversationId);
+    setReplyingTo(null);
+    setEditingMsgId(null);
     sendWs({ t: 'conversation-open', conversationId });
-  }, [conversationsList.setActiveConversation, chatMessages.clearUnread, chatMessages.setReplyingTo, chatMessages.setEditingMsgId, sendWs]);
+  }, [setActiveConversation, clearUnread, setReplyingTo, setEditingMsgId, sendWs]);
 
   const closeConversation = useCallback((conversationId: string) => {
-    conversationsList.removeConversation(conversationId);
-    chatMessages.clearUnread(conversationId);
+    removeConversation(conversationId);
+    clearUnread(conversationId);
     sendWs({ t: 'conversation-close', conversationId });
-  }, [conversationsList.removeConversation, chatMessages.clearUnread, sendWs]);
+  }, [removeConversation, clearUnread, sendWs]);
 
 
   const disconnectIntentionally = useCallback(() => {
@@ -543,7 +545,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
     dispatch, conversationsList, serversList, presence, openConversation, sendWs, callLifecycle, dmCall,
     messageSearch, chatMessages, typingIndicator, disconnectIntentionally, profileUpdate, soundboardEvents, livekitRoom,
     onStatusSnapshot, onMyStatus, onPresenceResult, onIdleWelcome, refreshAuth, onNotificationSettingsWelcome, onNotificationSettingsChanged,
-    onCallElsewhereRefused,
+    onCallElsewhereRefused, onActivityWelcome, onActivitySettingsWelcome, onActivitySettingsChanged, onActivitySettingsResult,
   ]);
 
   const { retryConnection } = useSocketConnection({ socketRef, intentionalCloseRef, sendWs, dispatch, refreshAuth, onMessage: handleServerMessage });

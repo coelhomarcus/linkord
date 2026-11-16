@@ -12,6 +12,7 @@ import type { AdminDetailStatus } from './useAdminDetail';
 import { AppLink } from '@/shared/ui/app-link';
 import { SkeletonGroup } from '@/shared/ui/primitives/skeleton';
 import { AdminDetailSkeleton, AdminStackedSkeleton } from './AdminSkeletons';
+import { useLanguage } from '@/shared/i18n/useLanguage';
 
 const TONES: Record<string, string> = {
   active: 'bg-green/15 text-green', suspended: 'bg-red/15 text-red-text',
@@ -49,6 +50,7 @@ export function Badge({ value }: { value: string }) {
 }
 
 export function AuditList({ items, empty }: { items: AuditRow[]; empty?: string }) {
+  const language = useLanguage();
   const { t } = useTranslation('admin');
   if (items.length === 0) return <EmptyState size="compact" illustration="document" title={empty ?? t('audit.empty')} />;
   return (
@@ -56,9 +58,9 @@ export function AuditList({ items, empty }: { items: AuditRow[]; empty?: string 
       {items.map((row) => (
         <li key={row.id} className="flex flex-col gap-1 py-3.5 text-label first:pt-0 last:pb-0">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="font-medium text-text-primary">{actionLabel(row.action)}</span>
+            <span className="font-medium text-text-primary">{actionLabel(row.action, language)}</span>
             {row.result === 'failed' && <Badge value="failed" />}
-            <span className="text-caption text-text-muted">{formatWhen(row.at)}</span>
+            <span className="text-caption text-text-muted">{formatWhen(row.at, language)}</span>
           </div>
           <p className="text-caption text-text-muted">
             {t('common.by')} {row.actorLabel || t('common.system')}{row.targetLabel ? ` · ${t('common.target')}: ${row.targetLabel}` : ''}

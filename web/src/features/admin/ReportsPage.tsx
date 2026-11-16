@@ -16,6 +16,7 @@ import type { QuerySchema } from './useAdminQuery';
 import { AppLink } from '@/shared/ui/app-link';
 import { AdminStackedSkeleton, AdminTableSkeleton } from './AdminSkeletons';
 import { AdminPageTitle } from './AdminSection';
+import { useLanguage } from '@/shared/i18n/useLanguage';
 
 type Queue = 'open' | 'reviewing' | 'closed';
 type TargetFilter = 'all' | 'user' | 'server' | 'message';
@@ -26,10 +27,11 @@ const QUERY: QuerySchema<'status' | 'targetType'> = {
 };
 
 function ReportLink({ report, from }: { report: AdminReportRow; from: { from: string } }) {
+  const language = useLanguage();
   return (
     <AppLink to={`/admin/reports/${report.id}`} state={from} className="block min-w-0 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring">
       <span className="block truncate text-body font-medium text-text-primary">{report.targetLabel || report.targetId}</span>
-      <span className="block truncate text-caption text-text-muted">{reportTargetLabel(report.targetType)}</span>
+      <span className="block truncate text-caption text-text-muted">{reportTargetLabel(report.targetType, language)}</span>
     </AppLink>
   );
 }
@@ -37,6 +39,7 @@ function ReportLink({ report, from }: { report: AdminReportRow; from: { from: st
 const assignee = (report: AdminReportRow) => (report.assignee ? `@${report.assignee}` : '-');
 
 export function ReportsPage() {
+  const language = useLanguage();
   const { t } = useTranslation('admin');
   const { filters, update, clear, active, identity } = useAdminQuery(QUERY);
   const { pathname, search } = useLocation();
@@ -80,7 +83,7 @@ export function ReportsPage() {
                   <AdminTd>{categoryLabel(r.category)}</AdminTd>
                   <AdminTd><Badge value={r.status} /></AdminTd>
                   <AdminTd className="max-w-40 truncate">{assignee(r)}</AdminTd>
-                  <AdminTd className="whitespace-nowrap">{formatWhenShort(r.createdAt)}</AdminTd>
+                  <AdminTd className="whitespace-nowrap">{formatWhenShort(r.createdAt, language)}</AdminTd>
                 </AdminTr>
               ))}
             </tbody>
@@ -94,7 +97,7 @@ export function ReportsPage() {
                   <Badge value={r.status} />
                   <span>{categoryLabel(r.category)}</span>
                   <span>{t('ui.responsiblePrefix', { value: assignee(r) })}</span>
-                  <span>{formatWhen(r.createdAt)}</span>
+                  <span>{formatWhen(r.createdAt, language)}</span>
                 </div>
               </li>
             ))}

@@ -10,6 +10,7 @@ import { presentFile } from '@/features/media/filePresentation';
 import { LinkPreview } from '@/features/media/LinkPreview';
 import { viewerItemOf } from './viewerItem';
 import { formatMediaDate } from './mediaRows';
+import { useLanguage } from '@/shared/i18n/useLanguage';
 
 // touch screens have no hover, so the controls stay visible there
 const REVEAL = 'opacity-0 transition-opacity group-hover:opacity-100 group-has-[:focus-visible]:opacity-100 [@media(hover:none)]:opacity-100';
@@ -77,6 +78,7 @@ function TileFace({ item }: { item: MediaItem }) {
  * cannot show), and on hover says who sent it and when. */
 export function MediaTile({ item, onOpen, onJump }: { item: MediaItem; onOpen: (item: MediaItem) => void; onJump: (item: MediaItem) => void }) {
   const { t } = useTranslation('conversations');
+  const language = useLanguage();
   const label = item.attachment?.name ?? 'GIF';
   const viewable = viewerItemOf(item) !== null;
   const faceClass = 'absolute inset-0 block overflow-hidden';
@@ -93,7 +95,7 @@ export function MediaTile({ item, onOpen, onJump }: { item: MediaItem; onOpen: (
       )}
       <div className={cn('pointer-events-none absolute inset-x-0 bottom-0 bg-linear-to-t from-black/80 to-transparent px-2 pb-1.5 pt-8', REVEAL)}>
         <p className="truncate text-caption font-medium text-white">{item.authorName}</p>
-        <p className="truncate text-micro text-white/75">{formatMediaDate(item.ts)}</p>
+        <p className="truncate text-micro text-white/75">{formatMediaDate(item.ts, language)}</p>
       </div>
       <JumpButton onJump={() => onJump(item)} className={cn('absolute right-1.5 top-1.5 px-1.5', REVEAL)} />
     </div>
@@ -101,11 +103,12 @@ export function MediaTile({ item, onOpen, onJump }: { item: MediaItem; onOpen: (
 }
 
 function ItemMeta({ item, onJump }: { item: MediaItem; onJump: (item: MediaItem) => void }) {
+  const language = useLanguage();
   const { t } = useTranslation('conversations');
   return (
     <div className="flex items-center gap-2">
       <p className="min-w-0 flex-1 truncate text-caption text-text-muted">
-        {item.authorName} · {formatMediaDate(item.ts)}
+        {item.authorName} · {formatMediaDate(item.ts, language)}
       </p>
       <JumpButton onJump={() => onJump(item)} label={t('media.jumpToMessage')} className={cn('flex-none bg-fill-active text-text-secondary hover:bg-fill-hover', REVEAL)} />
     </div>

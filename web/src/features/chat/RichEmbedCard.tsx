@@ -1,22 +1,23 @@
 import { cn } from '@/shared/lib/utils';
-import { i18n } from '@/shared/i18n/init';
 import type { RichEmbed } from '@/shared/types/protocol';
 import { ChatMessageText } from './ChatMessageText';
+import { useLanguage } from '@/shared/i18n/useLanguage';
 
 function hexColor(color: number): string {
   return `#${color.toString(16).padStart(6, '0')}`;
 }
 
-function formatEmbedTime(iso: string): string {
+function formatEmbedTime(iso: string, language: string): string {
   const date = new Date(iso);
-  return Number.isNaN(date.getTime()) ? '' : date.toLocaleString(i18n.language, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  return Number.isNaN(date.getTime()) ? '' : date.toLocaleString(language, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
 /** A bot's structured card: an accent bar in its color, a title (a link when it
  * has a url), markdown body, a grid of fields and a footer line. Inline fields
  * share a row, up to three; any other field takes a row of its own. */
 export function RichEmbedCard({ embed }: { embed: RichEmbed }) {
-  const footer = [embed.footer, embed.timestamp ? formatEmbedTime(embed.timestamp) : ''].filter(Boolean).join(' • ');
+  const language = useLanguage();
+  const footer = [embed.footer, embed.timestamp ? formatEmbedTime(embed.timestamp, language) : ''].filter(Boolean).join(' • ');
   return (
     <div
       data-rich-embed
