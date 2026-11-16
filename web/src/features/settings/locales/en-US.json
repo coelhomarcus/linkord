@@ -20,6 +20,7 @@
       "account": "My account",
       "security": "Security",
       "connections": "Connections",
+      "activity": "Activity",
       "privacy": "Data & privacy",
       "appearance": "Appearance",
       "av": "Voice & video",
@@ -53,8 +54,7 @@
       "dataExport": "Your data",
       "desktopStartup": "Startup",
       "desktopWindow": "Window",
-      "desktopUpdates": "Updates",
-      "activity": "Activity"
+      "desktopUpdates": "Updates"
     }
   },
   "search": {
@@ -167,7 +167,7 @@
       "keywords": "update, updates, version, new, download"
     },
     "activity": {
-      "title": "Activity",
+      "title": "Share activity",
       "keywords": "playing, game, games, app, apps, activity, share, hide, steam, rich presence"
     }
   },

@@ -3,8 +3,8 @@ import type { SettingsTab } from '@/shared/lib/routes';
 export interface SearchEntry {
   categoryId: SettingsTab;
   /** Matches a `<SettingsSection id="...">` — the destination becomes
-   * `/app/settings/:categoryId#:sectionId`. Connections has none: it is a
-   * single page, not a sequence of SettingsSection blocks. */
+   * `/app/settings/:categoryId#:sectionId`. Without one the result opens the
+   * tab at its top: Connections is a single page, and Activity is the whole tab. */
   sectionId?: string;
   /** `search.<searchKey>.title` / `.keywords` (comma separated) in the
    * settings locale files. */
@@ -33,8 +33,8 @@ export const SETTINGS_SEARCH_INDEX: SearchEntry[] = [
   { categoryId: 'security', sectionId: 'login-alerts', searchKey: 'loginAlerts' },
   { categoryId: 'security', sectionId: 'sessions', searchKey: 'sessions' },
   { categoryId: 'connections', searchKey: 'connections' },
+  { categoryId: 'activity', searchKey: 'activity' },
   { categoryId: 'privacy', sectionId: 'presence', searchKey: 'presence' },
-  { categoryId: 'privacy', sectionId: 'activity', searchKey: 'activity' },
   { categoryId: 'privacy', sectionId: 'blocked', searchKey: 'blocked' },
   { categoryId: 'privacy', sectionId: 'data-export', searchKey: 'dataExport' },
   { categoryId: 'appearance', sectionId: 'theme', searchKey: 'theme' },

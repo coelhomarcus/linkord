@@ -6,7 +6,7 @@ import { desktopApp } from '@/shared/desktop';
 import { ErrorBanner } from '@/shared/ErrorBanner';
 import { Button } from '@/shared/ui/primitives/button';
 import { Switch } from '@/shared/ui/primitives/switch';
-import { SettingsRow, SettingsRowList, SettingsSubheading } from '@/shared/ui/settings-layout';
+import { SettingsRow, SettingsRowList, SettingsSection, SettingsSections, SettingsSubheading } from '@/shared/ui/settings-layout';
 
 interface Known { key: string; kind: 'playing' | 'using'; name: string }
 
@@ -28,22 +28,26 @@ function useRecentActivities(): Known[] {
   return recent;
 }
 
-/** Settings → Data & privacy → Activity: share it or not, and hide single games and apps. */
+type Section = 'sharing' | 'games';
+
+/** Settings → Activity: share it or not, and hide single games and apps. */
 export function ActivitySettings() {
   const { t } = useTranslation('activity');
   const { activitySettings, updateActivitySettings } = useRoom();
-  const [error, setError] = useState<string | null>(null);
+  // shown in the section whose control failed, beside what the person just touched
+  const [error, setError] = useState<{ section: Section; text: string } | null>(null);
   const recent = useRecentActivities();
   const inDesktop = !!desktopApp()?.activity;
   const hidden = new Set(activitySettings.hidden);
 
-  const save = (patch: Parameters<typeof updateActivitySettings>[0]) => {
+  const save = (section: Section, patch: Parameters<typeof updateActivitySettings>[0]) => {
     setError(null);
-    updateActivitySettings(patch).catch((err: Error) => setError(err.message));
+    updateActivitySettings(patch).catch((err: Error) => setError({ section, text: err.message }));
   };
-  const toggle = (key: string) => save({ hidden: hidden.has(key) ? activitySettings.hidden.filter((k) => k !== key) : [...activitySettings.hidden, key] });
+  const toggle = (key: string) => save('games', { hidden: hidden.has(key) ? activitySettings.hidden.filter((k) => k !== key) : [...activitySettings.hidden, key] });
   const nameOf = (key: string) => recent.find((item) => item.key === key)?.name ?? key;
   const hiddenElsewhere = activitySettings.hidden.filter((key) => !recent.some((item) => item.key === key));
+  const errorIn = (section: Section) => error?.section === section && <ErrorBanner>{error.text}</ErrorBanner>;
 
   const row = (key: string, name: string, kind: Known['kind'] | null) => {
     const isHidden = hidden.has(key);
@@ -60,25 +64,30 @@ export function ActivitySettings() {
   };
 
   return (
-    <div className="flex flex-col gap-5">
-      <SettingsRow label={t('settings.share.label')} description={t('settings.share.description')}>
-        <Switch size="lg" checked={activitySettings.sharing} onCheckedChange={(sharing) => save({ sharing })} aria-label={t('settings.share.label')} />
-      </SettingsRow>
-      {error && <ErrorBanner>{error}</ErrorBanner>}
-      {inDesktop ? (
-        <div className="flex flex-col gap-2">
-          <SettingsSubheading>{t('settings.detected')}</SettingsSubheading>
-          {recent.length === 0
-            ? <p className="text-label text-text-muted">{t('settings.detectedEmpty')}</p>
-            : <SettingsRowList>{recent.map((item) => row(item.key, item.name, item.kind))}</SettingsRowList>}
-        </div>
-      ) : <p className="text-label text-text-muted">{t('settings.desktopOnly')}</p>}
-      {hiddenElsewhere.length > 0 && (
-        <div className="flex flex-col gap-2">
-          <SettingsSubheading>{t('settings.hidden')}</SettingsSubheading>
-          <SettingsRowList>{hiddenElsewhere.map((key) => row(key, nameOf(key), null))}</SettingsRowList>
-        </div>
-      )}
-    </div>
+    <SettingsSections>
+      <SettingsSection id="sharing" title={t('settings.sections.sharing')}>
+        <SettingsRow label={t('settings.share.label')} description={t('settings.share.description')}>
+          <Switch size="lg" checked={activitySettings.sharing} onCheckedChange={(sharing) => save('sharing', { sharing })} aria-label={t('settings.share.label')} />
+        </SettingsRow>
+        {errorIn('sharing')}
+      </SettingsSection>
+      <SettingsSection id="games" title={t('settings.sections.games')} description={t('settings.gamesDescription')} contentClassName="gap-5">
+        {errorIn('games')}
+        {inDesktop ? (
+          <div className="flex flex-col gap-2">
+            <SettingsSubheading>{t('settings.detected')}</SettingsSubheading>
+            {recent.length === 0
+              ? <p className="text-label text-text-muted">{t('settings.detectedEmpty')}</p>
+              : <SettingsRowList>{recent.map((item) => row(item.key, item.name, item.kind))}</SettingsRowList>}
+          </div>
+        ) : <p className="text-label text-text-muted">{t('settings.desktopOnly')}</p>}
+        {hiddenElsewhere.length > 0 && (
+          <div className="flex flex-col gap-2">
+            <SettingsSubheading>{t('settings.hidden')}</SettingsSubheading>
+            <SettingsRowList>{hiddenElsewhere.map((key) => row(key, nameOf(key), null))}</SettingsRowList>
+          </div>
+        )}
+      </SettingsSection>
+    </SettingsSections>
   );
 }

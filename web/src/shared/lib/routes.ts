@@ -1,11 +1,15 @@
 // Shared because the router and feature links need the same paths; features must not import app/.
 
-const SETTINGS_TABS = ['account', 'security', 'connections', 'privacy', 'appearance', 'av', 'chat', 'notifications', 'language', 'desktop', 'moderation'] as const;
+const SETTINGS_TABS = ['account', 'security', 'connections', 'activity', 'privacy', 'appearance', 'av', 'chat', 'notifications', 'language', 'desktop', 'moderation'] as const;
 export type SettingsTab = (typeof SETTINGS_TABS)[number];
 
 /** Tabs that were split up: an old link (or a bookmark) still lands on the
  * page that now holds most of what the old tab had. */
 export const LEGACY_SETTINGS_TABS: Readonly<Record<string, SettingsTab>> = { prefs: 'appearance' };
+
+/** Sections that became tabs of their own, as `tab#section`: an old link to
+ * the section opens the tab that now holds it. */
+export const LEGACY_SETTINGS_SECTIONS: Readonly<Record<string, SettingsTab>> = { 'privacy#activity': 'activity' };
 
 export function isSettingsTab(value: string | undefined): value is SettingsTab {
   return !!value && (SETTINGS_TABS as readonly string[]).includes(value);
