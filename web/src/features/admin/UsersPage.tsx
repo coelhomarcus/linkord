@@ -21,6 +21,7 @@ import type { QuerySchema } from './useAdminQuery';
 import { AppLink } from '@/shared/ui/app-link';
 import { AdminStackedSkeleton, AdminTableSkeleton } from './AdminSkeletons';
 import { AdminPageTitle } from './AdminSection';
+import { useLanguage } from '@/shared/i18n/useLanguage';
 
 type StatusFilter = 'all' | 'active' | 'suspended';
 type RoleFilter = 'all' | 'admin' | 'user';
@@ -33,8 +34,8 @@ const QUERY: QuerySchema<'q' | 'status' | 'role' | 'from' | 'to'> = {
   to: { default: '' },
 };
 
-function lastSeenLabel(user: AdminUserRow, onlineLabel: string): string {
-  return user.online ? onlineLabel : formatWhenShort(user.lastSeenAt);
+function lastSeenLabel(user: AdminUserRow, onlineLabel: string, language: string): string {
+  return user.online ? onlineLabel : formatWhenShort(user.lastSeenAt, language);
 }
 
 function RowActions({ user }: { user: AdminUserRow }) {
@@ -62,6 +63,7 @@ function UserIdentity({ user, from }: { user: AdminUserRow; from: { from: string
 }
 
 export function UsersPage() {
+  const language = useLanguage();
   const { t } = useTranslation('admin');
   const { filters, update, clear, active, identity } = useAdminQuery(QUERY);
   const { pathname, search } = useLocation();
@@ -114,8 +116,8 @@ export function UsersPage() {
                   <AdminTd className="max-w-0 w-[40%]"><UserIdentity user={u} from={origin} /></AdminTd>
                   <AdminTd><Badge value={u.status} /></AdminTd>
                   <AdminTd><Badge value={u.role} /></AdminTd>
-                  <AdminTd className="whitespace-nowrap">{formatDateShort(u.createdAt)}</AdminTd>
-                  <AdminTd className="whitespace-nowrap">{lastSeenLabel(u, t('ui.online'))}</AdminTd>
+                  <AdminTd className="whitespace-nowrap">{formatDateShort(u.createdAt, language)}</AdminTd>
+                  <AdminTd className="whitespace-nowrap">{lastSeenLabel(u, t('ui.online'), language)}</AdminTd>
                   <AdminTd><RowActions user={u} /></AdminTd>
                 </AdminTr>
               ))}
@@ -132,8 +134,8 @@ export function UsersPage() {
                 <div className="flex flex-wrap items-center gap-2 text-caption text-text-muted">
                   <Badge value={u.status} />
                   <Badge value={u.role} />
-                  <span>{t('ui.created')} {formatWhen(u.createdAt)}</span>
-                  <span>{u.online ? t('ui.online') : t('ui.lastSeenLower', { value: formatWhenShort(u.lastSeenAt) })}</span>
+                  <span>{t('ui.created')} {formatWhen(u.createdAt, language)}</span>
+                  <span>{u.online ? t('ui.online') : t('ui.lastSeenLower', { value: formatWhenShort(u.lastSeenAt, language) })}</span>
                 </div>
               </li>
             ))}

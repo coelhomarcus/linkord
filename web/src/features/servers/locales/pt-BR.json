@@ -325,7 +325,14 @@
     "previewOf": "Tela de {{name}}",
     "previewLoading": "Carregando prévia",
     "previewUnavailable": "Prévia indisponível",
+    "watch": {
+      "badge": "Ao vivo: assistir à transmissão de {{name}}",
+      "own": "Ao vivo: ver sua transmissão em destaque",
+      "button": "Assistir",
+      "buttonLabel": "Assistir à transmissão de {{name}}"
+    },
     "menu": {
+      "watch": "Assistir à transmissão",
       "profile": "Ver perfil",
       "message": "Enviar mensagem",
       "muteForMe": "Silenciar para mim",

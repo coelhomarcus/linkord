@@ -10,8 +10,10 @@ import type { PublicUser } from '@/shared/types/protocol';
 import { bannerStyle } from './profileLinks';
 import type { ProfileTab } from './ProfileSidebar';
 import { formatProfileDate, useProfileDetails } from './useProfileDetails';
+import { rememberProfilePreview } from './profileCache';
 import { UserCustomStatusBubble, UserStatusDot } from '@/features/status/UserStatus';
 import { UserActivityCard } from '@/features/activity/ActivityLine';
+import { useLanguage } from '@/shared/i18n/useLanguage';
 
 const SHOWN_MUTUALS = 5;
 const SECTION = 'flex flex-col gap-1';
@@ -20,6 +22,7 @@ const MUTUAL_LINK = 'rounded-sm hover:text-text-primary hover:underline focus-vi
 /** The profile beside a DM, as Discord draws it: banner, avatar, bio, since
  * when, and what you have in common, with the full profile one click away. */
 export function DirectProfilePanel({ user, onOpenProfile }: { user: PublicUser; onOpenProfile: (userId: string, tab?: ProfileTab) => void }) {
+  const language = useLanguage();
   const { t } = useTranslation('profile');
   const navigate = useNavigate();
   const { details } = useProfileDetails(user.id);
@@ -77,7 +80,7 @@ export function DirectProfilePanel({ user, onOpenProfile }: { user: PublicUser; 
             {details && (
               <div className={SECTION}>
                 <h3 className="text-caption font-semibold text-text-primary">{t('modal.memberSince')}</h3>
-                <p className="text-label text-text-secondary">{formatProfileDate(details.memberSince)}</p>
+                <p className="text-label text-text-secondary">{formatProfileDate(details.memberSince, language)}</p>
               </div>
             )}
           </section>
@@ -102,7 +105,7 @@ export function DirectProfilePanel({ user, onOpenProfile }: { user: PublicUser; 
               <ul className="flex flex-col gap-1">
                 {friends.items.slice(0, SHOWN_MUTUALS).map((friend) => (
                   <li key={friend.id}>
-                    <button type="button" onClick={() => onOpenProfile(friend.id)} className="flex w-full items-center gap-2.5 rounded-md p-1 text-left hover:bg-fill-hover">
+                    <button type="button" onClick={() => { rememberProfilePreview(friend); onOpenProfile(friend.id); }} className="flex w-full items-center gap-2.5 rounded-md p-1 text-left hover:bg-fill-hover">
                       <Avatar id={friend.id} name={friend.displayName} avatar={friend.avatar} avatarColor={friend.avatarColor} size={32} />
                       <span className="min-w-0 flex-1 truncate text-label font-medium text-text-primary">{friend.displayName}</span>
                     </button>

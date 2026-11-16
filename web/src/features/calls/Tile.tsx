@@ -1,5 +1,5 @@
 import { CellSignalLowIcon, CellSignalNoneIcon, CircleNotchIcon, EyeSlashIcon, MicrophoneSlashIcon, MonitorIcon, MonitorPlayIcon, SpeakerSlashIcon } from '@phosphor-icons/react';
-import { useCallback, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ConnectionQuality } from 'livekit-client';
@@ -85,30 +85,30 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
 
   const isFocused = state.focusedId === key;
 
-  const handleClick = useCallback(() => {
-    dispatch({ type: 'SET_FOCUSED', id: state.focusedId === key ? null : key, origin: 'manual' });
-  }, [dispatch, key, state.focusedId]);
+  const handleClick = () => {
+    dispatch({ type: 'SET_FOCUSED', id: isFocused ? null : key, origin: 'manual' });
+  };
 
   // Enter/Space on the tile itself toggle focus, same as a click — but not
   // when they land on a nested real <button> (unmute), which already
   // handles its own activation and would otherwise double-fire.
-  const handleKeyDown = useCallback((e: ReactKeyboardEvent<HTMLDivElement>) => {
+  const handleKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
     if (e.target !== e.currentTarget) return;
     if (e.key !== 'Enter' && e.key !== ' ') return;
     e.preventDefault();
     handleClick();
-  }, [handleClick]);
+  };
 
-  const handleContextMenu = useCallback((e: MouseEvent) => {
+  const handleContextMenu = (e: MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     openTileMenu(key, participantId, kind, { left: e.clientX, top: e.clientY, right: e.clientX, bottom: e.clientY });
-  }, [key, participantId, kind, openTileMenu]);
+  };
 
-  const handleUnmuteClick = useCallback((e: MouseEvent<HTMLButtonElement>) => {
+  const handleUnmuteClick = (e: MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
     toggleMuteForMe();
-  }, [toggleMuteForMe]);
+  };
 
   // Keep banners on a separate layer to avoid hairline gaps at rounded corners.
   const rootStyle = showsVideo || kind === 'screen' || banner

@@ -1,6 +1,5 @@
 import { useTranslation } from 'react-i18next';
 import { useEffect, useRef } from 'react';
-import type { RefObject } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { DocumentAttachmentCard } from '@/features/media/DocumentAttachmentCard';
@@ -10,14 +9,14 @@ import type { PendingAttachment } from './conversationDrafts';
 interface ComposerAttachmentTrayProps {
   files: PendingAttachment[];
   onRemove: (id: string) => void;
-  /** Where focus goes when the removed tile was the last one left. */
-  fallbackFocusRef: RefObject<HTMLElement | null>;
+  /** Moves focus somewhere sensible when the removed tile was the last one left. */
+  onFocusFallback: () => void;
 }
 
 /** The composer's not-yet-sent files — image previews plus a horizontal-
  * scrolling row of document tiles, each wide enough to read its name and
  * type before sending (see DocumentAttachmentCard). */
-export function ComposerAttachmentTray({ files, onRemove, fallbackFocusRef }: ComposerAttachmentTrayProps) {
+export function ComposerAttachmentTray({ files, onRemove, onFocusFallback }: ComposerAttachmentTrayProps) {
   const { t } = useTranslation('chat');
   // keyed by file id, not array index — an index shifts under every removal
   // (the tile after the removed one slides left), a stable id doesn't
@@ -38,11 +37,11 @@ export function ComposerAttachmentTray({ files, onRemove, fallbackFocusRef }: Co
     if (files.length < prevLengthRef.current) {
       const id = pendingFocusIdRef.current;
       const target = id ? removeButtonRefs.current.get(id) : null;
-      (target ?? fallbackFocusRef.current)?.focus();
+      if (target) target.focus(); else onFocusFallback();
       pendingFocusIdRef.current = null;
     }
     prevLengthRef.current = files.length;
-  }, [files, fallbackFocusRef]);
+  }, [files, onFocusFallback]);
 
   return (
     <AnimatePresence initial={false}>

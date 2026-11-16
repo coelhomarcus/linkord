@@ -8,7 +8,7 @@ import { ConversationSidebar } from '@/features/conversations/ConversationSideba
 import { channelConversation } from '@/features/servers/useServersList';
 import { PERMISSIONS } from '@/features/servers/permissionBits';
 import { initialRoomState } from '@/state/roomReducer';
-import type { Conversation, Participant, PublicUser, ServerSummary } from '@/shared/types/protocol';
+import type { Conversation, Participant, PublicUser, ServerSummary, VisiblePresence } from '@/shared/types/protocol';
 
 const meState = { ...initialRoomState, me: { ...initialRoomState.me, id: 'c', userId: 'me', name: 'fulana', displayName: 'Fulana' } };
 const bea: PublicUser = { id: 'u-bea', username: 'bea', displayName: 'Bea', avatar: '', avatarColor: 'green', banner: '', bio: '', profileLinks: [], role: 'user' as const };
@@ -38,7 +38,7 @@ function inVoice(): Participant {
 
 function CurrentPath() { return <span data-testid="current-path">{useLocation().pathname}</span>; }
 
-function renderSidebar(path = '/app/channels/@me', overrides: { unreadByConversation?: Map<string, number>; participants?: Map<string, Participant>; openCall?: () => void; activeCallConversationId?: string | null } = {}) {
+function renderSidebar(path = '/app/channels/@me', overrides: { presenceByUser?: Map<string, VisiblePresence>; unreadByConversation?: Map<string, number>; participants?: Map<string, Participant>; openCall?: () => void; activeCallConversationId?: string | null } = {}) {
   const conversations = [direct('dm-bea', 'u-bea'), direct('dm-caio', 'u-caio'), ...server.channels.map((c) => channelConversation(server, c))];
   return renderSocial(
     <SidebarProvider open onOpenChange={vi.fn()} openMobile={false} onOpenMobileChange={vi.fn()}>
@@ -52,6 +52,7 @@ function renderSidebar(path = '/app/channels/@me', overrides: { unreadByConversa
         servers: [server],
         allUsers: new Map([['u-bea', bea], ['u-caio', caio]]),
         unreadByConversation: overrides.unreadByConversation ?? new Map(),
+        ...(overrides.presenceByUser ? { presenceByUser: overrides.presenceByUser, onlineUserIds: new Set(overrides.presenceByUser.keys()) } : {}),
         ...(overrides.activeCallConversationId !== undefined ? { activeCallConversationId: overrides.activeCallConversationId } : {}),
         ...(overrides.openCall ? { openCall: overrides.openCall } : {}),
       },
@@ -71,6 +72,17 @@ function setViewport(width: number) {
 }
 
 describe('ConversationSidebar — home', () => {
+  it('shows what the other person is playing in place of their custom status', () => {
+    const activity = { key: 'minecraft', kind: 'playing' as const, name: 'Minecraft', icon: null, startedAt: new Date().toISOString() };
+    renderSidebar('/app/channels/@me', { presenceByUser: new Map([
+      ['u-bea', { status: 'online', customStatus: { emoji: '', text: 'estudando', expiresAt: null }, activity }],
+      ['u-caio', { status: 'online', customStatus: { emoji: '', text: 'estudando', expiresAt: null } }],
+    ]) });
+    expect(screen.getByRole('button', { name: 'Bea' })).toHaveTextContent('Jogando Minecraft');
+    expect(screen.getByRole('button', { name: 'Bea' })).not.toHaveTextContent('estudando');
+    expect(screen.getByRole('button', { name: 'Caio' })).toHaveTextContent('estudando');
+  });
+
   it('lists Friends and the DMs by the other person, never a channel', () => {
     renderSidebar();
     expect(screen.getByRole('button', { name: /Amigos/ })).toBeInTheDocument();

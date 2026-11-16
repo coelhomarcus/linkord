@@ -21,6 +21,7 @@ import { AppLink } from '@/shared/ui/app-link';
 import { AuditListSkeleton } from './AdminSkeletons';
 import { EmptyState } from '@/shared/ui/empty-state';
 import { SettingsNotice } from '@/shared/ui/settings-layout';
+import { useLanguage } from '@/shared/i18n/useLanguage';
 
 type Dialog = 'suspend' | 'reactivate' | 'revoke' | 'delete' | 'grant-admin' | 'revoke-admin' | null;
 
@@ -49,6 +50,7 @@ function UserHistory({ id, revision }: { id: string; revision: string }) {
 }
 
 function UserDetail({ id }: { id: string }) {
+  const language = useLanguage();
   const { t } = useTranslation('admin');
   const state = useRoomState('me');
   const back = useAdminBack('/admin/users');
@@ -105,10 +107,10 @@ function UserDetail({ id }: { id: string }) {
         <AdminSection title={t('detail.account')}>
           <AdminFields>
             <AdminFieldRow label={t('detail.email')}>{user.email ?? '-'}</AdminFieldRow>
-            <AdminFieldRow label={t('detail.createdAt')}>{formatWhen(user.createdAt)}</AdminFieldRow>
-            <AdminFieldRow label={t('detail.lastOnline')}>{user.online ? t('detail.onlineNow') : formatWhen(user.lastSeenAt)}</AdminFieldRow>
+            <AdminFieldRow label={t('detail.createdAt')}>{formatWhen(user.createdAt, language)}</AdminFieldRow>
+            <AdminFieldRow label={t('detail.lastOnline')}>{user.online ? t('detail.onlineNow') : formatWhen(user.lastSeenAt, language)}</AdminFieldRow>
             <AdminFieldRow label={t('detail.status')}>
-              {suspended ? t('detail.suspendedAt', { when: formatWhen(user.statusChangedAt), reason: user.statusReason }) : t('detail.active')}
+              {suspended ? t('detail.suspendedAt', { when: formatWhen(user.statusChangedAt, language), reason: user.statusReason }) : t('detail.active')}
             </AdminFieldRow>
             <AdminFieldRow label={t('ui.role')}>{isAdmin ? t('detail.administrator') : t('detail.regularAccount')}</AdminFieldRow>
             <AdminFieldRow label={t('detail.storage')}>{t('detail.storageValue', { size: formatFileSize(storage.bytes), count: storage.files })}</AdminFieldRow>
@@ -141,7 +143,7 @@ function UserDetail({ id }: { id: string }) {
           <AdminSection title={t('detail.access')} description={t('detail.accessDescription')}>
             <div className="flex flex-col divide-y divide-border-subtle">
               {suspended ? (
-                <AdminActionRow title={t('detail.suspended')} description={t('detail.suspendedDescription', { when: formatWhen(user.statusChangedAt), reason: user.statusReason })}>
+                <AdminActionRow title={t('detail.suspended')} description={t('detail.suspendedDescription', { when: formatWhen(user.statusChangedAt, language), reason: user.statusReason })}>
                   <Button type="button" size="sm" onClick={() => setDialog('reactivate')}>{t('detail.reactivateAccount')}</Button>
                 </AdminActionRow>
               ) : (

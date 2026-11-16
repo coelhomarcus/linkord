@@ -1,9 +1,8 @@
-import { Notification } from 'electron';
 import electronUpdater from 'electron-updater';
-import { format, type Strings } from './strings.js';
 import {
   CHECK_INTERVAL_MS,
   FIRST_CHECK_DELAY_MS,
+  progressPercent,
   type UpdateCheckOutcome,
   type UpdateMode,
   type UpdateStatus,
@@ -12,33 +11,33 @@ import {
 export interface Updater {
   readonly mode: UpdateMode;
   status(): UpdateStatus;
-  /** What a check asked for by a person found; the caller says so (a dialog from the menu, a line in settings). */
+  /** What a check found; an update found starts downloading at once. */
   check(): Promise<UpdateCheckOutcome>;
-  /** restart into a downloaded update */
+  /** Settles once the download the last check started is over: true when it is ready to install. */
+  download(): Promise<boolean>;
+  /** restart into a downloaded update, with no installer window */
   apply(): void;
-}
-
-function notify(title: string, body: string, onClick: () => void): void {
-  if (!Notification.isSupported()) return;
-  const notification = new Notification({ title, body });
-  notification.on('click', onClick);
-  notification.show();
 }
 
 export function installUpdater(options: {
   mode: UpdateMode;
-  strings: Strings;
   onChange: () => void;
 }): Updater {
-  const { mode, strings } = options;
+  const { mode } = options;
   let status: UpdateStatus = { kind: 'idle' };
-  const setStatus = (next: UpdateStatus) => { status = next; options.onChange(); };
+  const setStatus = (next: UpdateStatus) => {
+    // progress events come many times a second; the tray, menu and page only care about whole percents
+    if (next.kind === 'downloading' && status.kind === 'downloading' && next.percent === status.percent) return;
+    status = next;
+    options.onChange();
+  };
   const failed = (error: unknown): UpdateCheckOutcome => {
     console.error('[desktop] update check failed', error);
     return { kind: 'failed' };
   };
 
   let check: () => Promise<UpdateCheckOutcome> = async () => ({ kind: 'off' });
+  let download: Promise<boolean> = Promise.resolve(false);
   let apply: () => void = () => {};
 
   if (mode === 'install') {
@@ -50,20 +49,32 @@ export function installUpdater(options: {
     autoUpdater.autoInstallOnAppQuit = true;
     // Also reported by the rejected checkForUpdates; without a listener an
     // 'error' event would throw
-    autoUpdater.on('error', (error) => console.error('[desktop] updater', error));
-    autoUpdater.on('update-downloaded', (info) => {
-      setStatus({ kind: 'downloaded', version: info.version });
-      notify(strings.updateReadyTitle, format(strings.updateReadyBody, { version: info.version }), () => apply());
+    autoUpdater.on('error', (error) => {
+      console.error('[desktop] updater', error);
+      if (status.kind === 'downloading') setStatus({ kind: 'idle' });
     });
+    autoUpdater.on('update-available', (info) => {
+      if (status.kind !== 'downloaded') setStatus({ kind: 'downloading', version: info.version, percent: 0 });
+    });
+    autoUpdater.on('download-progress', (progress) => {
+      if (status.kind === 'downloading') setStatus({ ...status, percent: progressPercent(progress.percent) });
+    });
+    autoUpdater.on('update-downloaded', (info) => setStatus({ kind: 'downloaded', version: info.version }));
     check = () => autoUpdater.checkForUpdates().then(
-      (result): UpdateCheckOutcome => (result?.isUpdateAvailable ? { kind: 'update', version: result.updateInfo.version } : { kind: 'up-to-date' }),
+      (result): UpdateCheckOutcome => {
+        if (!result?.isUpdateAvailable) return { kind: 'up-to-date' };
+        if (result.downloadPromise) download = result.downloadPromise.then(() => true, () => false);
+        return { kind: 'update', version: result.updateInfo.version };
+      },
       failed,
     );
-    apply = () => { if (status.kind === 'downloaded') autoUpdater.quitAndInstall(); };
+    // Silent: the one-click installer would otherwise show its own window
+    // while it copies the files; it starts the app again when it is done
+    apply = () => { if (status.kind === 'downloaded') autoUpdater.quitAndInstall(true, true); };
   }
 
   if (mode !== 'off') {
-    const automatic = () => { if (status.kind !== 'downloaded') void check(); };
+    const automatic = () => { if (status.kind === 'idle') void check(); };
     setTimeout(automatic, FIRST_CHECK_DELAY_MS);
     setInterval(automatic, CHECK_INTERVAL_MS);
   }
@@ -72,6 +83,7 @@ export function installUpdater(options: {
     mode,
     status: () => status,
     check: () => check(),
+    download: () => (status.kind === 'downloaded' ? Promise.resolve(true) : download),
     apply: () => apply(),
   };
 }

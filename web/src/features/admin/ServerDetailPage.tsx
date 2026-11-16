@@ -20,6 +20,7 @@ import { useAdminQuery } from './useAdminQuery';
 import type { QuerySchema } from './useAdminQuery';
 import { AuditListSkeleton } from './AdminSkeletons';
 import { AppLink } from '@/shared/ui/app-link';
+import { useLanguage } from '@/shared/i18n/useLanguage';
 
 type Dialog = 'suspend' | 'reactivate' | 'delete' | { owner: AdminServerMember } | null;
 
@@ -53,6 +54,7 @@ function ServerHistory({ id, revision }: { id: string; revision: string }) {
 /** Administrative detail of a server. Deliberately offers no way to open its
  * channels: an admin sees who is in it and acts on it, without joining. */
 function ServerDetail({ id }: { id: string }) {
+  const language = useLanguage();
   const { t } = useTranslation('admin');
   const back = useAdminBack('/admin/servers');
   const { filters } = useAdminQuery(QUERY);
@@ -124,10 +126,10 @@ function ServerDetail({ id }: { id: string }) {
               {server.ownerId ? <AppLink to={`/admin/users/${server.ownerId}`} className="hover:underline">@{server.ownerUsername}</AppLink> : t('entity.noServerOwner')}
             </AdminFieldRow>
             <AdminFieldRow label={t('detail.status')}>{suspended ? `${t('status.suspended')}: “${server.statusReason}”` : t('detail.active')}</AdminFieldRow>
-            <AdminFieldRow label={t('entity.createdAt')}>{formatWhen(server.createdAt)}</AdminFieldRow>
+            <AdminFieldRow label={t('entity.createdAt')}>{formatWhen(server.createdAt, language)}</AdminFieldRow>
             <AdminFieldRow label={t('ui.members')}>{server.memberCount}</AdminFieldRow>
             <AdminFieldRow label={t('ui.channels')}>{server.channelCount}</AdminFieldRow>
-            <AdminFieldRow label={t('entity.lastMessage')}>{server.lastMessageAt ? formatWhen(new Date(server.lastMessageAt).toISOString()) : '-'}</AdminFieldRow>
+            <AdminFieldRow label={t('entity.lastMessage')}>{server.lastMessageAt ? formatWhen(new Date(server.lastMessageAt).toISOString(), language) : '-'}</AdminFieldRow>
           </AdminFields>
         </AdminSection>
       )}

@@ -74,12 +74,13 @@ export interface ActivitySettings {
   hidden: string[];
 }
 
-/** What a desktop app sends for its current activity; the server builds the icon's path itself. */
+/** What a desktop app sends for its current activity; the server builds the icon's path itself.
+ * `local` is a stored icon id (a game's SteamGridDB icon, or the program's own). */
 export interface ActivityReport {
   key: string;
   kind: 'playing' | 'using';
   name: string;
-  icon: { igdb: string } | { local: string } | null;
+  icon: { local: string } | null;
   /** ms */
   startedAt: number;
 }

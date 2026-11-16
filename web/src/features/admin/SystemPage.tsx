@@ -12,6 +12,7 @@ import { formatWhen } from './adminFormat';
 import { AdminTextLink, DetailStatusView } from './adminUi';
 import { AdminSectionsSkeleton } from './AdminSkeletons';
 import { useAdminDetail } from './useAdminDetail';
+import { useLanguage } from '@/shared/i18n/useLanguage';
 
 const AUDIT_SWEEP_FAILURES = '/admin/audit?action=storage.orphan_delete';
 
@@ -47,11 +48,12 @@ function StorageMeter({ used, max }: { used: number; max: number }) {
 
 function SweepCard({ title, result, tone }: { title: string; result: SweepResult; tone?: 'danger' }) {
   const { t } = useTranslation('admin');
+  const language = useLanguage();
   return (
     <div className="flex flex-col gap-2 rounded-xl border border-border-subtle bg-fill-subtle p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <p className="text-body font-medium text-text-primary">{title}</p>
-        <p className="text-caption text-text-muted">{t('system.sweepAt', { when: formatWhen(result.at) })}</p>
+        <p className="text-caption text-text-muted">{t('system.sweepAt', { when: formatWhen(result.at, language) })}</p>
       </div>
       <p className="text-label text-text-secondary">
         {t('system.sweepFound', { count: result.orphanCount, size: formatFileSize(result.orphanBytes), scanned: result.scanned })}
@@ -69,6 +71,7 @@ function SweepCard({ title, result, tone }: { title: string; result: SweepResult
 
 function RetentionSection({ retention }: { retention: RetentionInfo }) {
   const { t } = useTranslation('admin');
+  const language = useLanguage();
   const last = retention.last;
   const lastByKey = new Map(last?.targets.map((target) => [target.key, target]));
   const totalDeleted = last?.targets.reduce((sum, target) => sum + target.deleted, 0) ?? 0;
@@ -87,7 +90,7 @@ function RetentionSection({ retention }: { retention: RetentionInfo }) {
         })}
       </AdminFields>
       <p className="text-label text-text-muted">
-        {last ? t(totalDeleted > 0 ? 'system.retentionLast' : 'system.retentionLastNone', { when: formatWhen(last.at), count: totalDeleted }) : t('system.retentionNever')}
+        {last ? t(totalDeleted > 0 ? 'system.retentionLast' : 'system.retentionLastNone', { when: formatWhen(last.at, language), count: totalDeleted }) : t('system.retentionNever')}
       </p>
     </AdminSection>
   );
@@ -96,6 +99,7 @@ function RetentionSection({ retention }: { retention: RetentionInfo }) {
 /** Operational view of the instance — the numbers an administrator acts on, read when the page opens or
  * on "Refresh", never polled. The instance-wide storage figure only exists here. */
 export function SystemPage() {
+  const language = useLanguage();
   const { t, i18n } = useTranslation('admin');
   const graceText = useGraceText();
   // the timestamp travels with the read it belongs to: "last observed" is when that read landed
@@ -213,7 +217,7 @@ export function SystemPage() {
       </div>
 
       <ReasonDialog open={confirmOpen} onOpenChange={setConfirmOpen} title={t('common.deleteOrphanTitle')}
-        description={t('system.deleteDialog', { when: preview ? formatWhen(preview.at) : '-', count: preview?.orphanCount ?? 0, size: formatFileSize(preview?.orphanBytes ?? 0) })}
+        description={t('system.deleteDialog', { when: preview ? formatWhen(preview.at, language) : '-', count: preview?.orphanCount ?? 0, size: formatFileSize(preview?.orphanBytes ?? 0) })}
         confirmLabel={t('common.delete')} destructive
         onSubmit={async (reason) => {
           const { result } = await sweepOrphans({ dryRun: false, reason });

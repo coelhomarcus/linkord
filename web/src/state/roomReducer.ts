@@ -27,6 +27,10 @@ export interface RoomState {
    * capacity fallback (TileGrid can't fit everyone legibly) can retract
    * ONLY its own focus when space recovers, never one it didn't cause. */
   focusOrigin: 'manual' | 'automatic' | 'capacity' | null;
+  /** A screen share someone asked to watch from outside the stage (the "ao vivo" badge): the stage
+   * focuses it once the call it belongs to is shown and its tile is there, or drops it when the share
+   * ends first. Set by every openCall, so a later plain open forgets an earlier request. */
+  pendingScreenFocus: { conversationId: string; participantId: string } | null;
   /** Tile keys hidden locally for this session. Cleared when that participant leaves. */
   hiddenVideoKeys: Set<string>;
   /** Screen shares unsubscribed locally for this session; never changes the presenter's
@@ -59,6 +63,7 @@ export const initialRoomState: RoomState = {
   participants: new Map(),
   focusedId: null,
   focusOrigin: null,
+  pendingScreenFocus: null,
   hiddenVideoKeys: new Set(),
   unwatchedScreenKeys: new Set(),
   reconnecting: false,
@@ -96,6 +101,9 @@ export type RoomAction =
   // a manual choice; the reducer nulls it out itself whenever id is null,
   // so callers never have to remember to pair them.
   | { type: 'SET_FOCUSED'; id: string | null; origin: 'manual' | 'automatic' | 'capacity' }
+  | { type: 'SET_PENDING_SCREEN_FOCUS'; target: RoomState['pendingScreenFocus'] }
+  // only that very request: a newer one set meanwhile stays
+  | { type: 'DROP_PENDING_SCREEN_FOCUS'; target: NonNullable<RoomState['pendingScreenFocus']> }
   | { type: 'TOGGLE_HIDDEN_VIDEO'; key: string }
   | { type: 'TOGGLE_SCREEN_WATCH'; key: string }
   | { type: 'SET_SHARE_ERROR'; message: string | null }
@@ -235,6 +243,10 @@ export function roomReducer(state: RoomState, action: RoomAction): RoomState {
       return { ...state, me: { ...state.me, cameraOn: action.on } };
     case 'SET_FOCUSED':
       return { ...state, focusedId: action.id, focusOrigin: action.id ? action.origin : null };
+    case 'SET_PENDING_SCREEN_FOCUS':
+      return state.pendingScreenFocus === action.target ? state : { ...state, pendingScreenFocus: action.target };
+    case 'DROP_PENDING_SCREEN_FOCUS':
+      return state.pendingScreenFocus === action.target ? { ...state, pendingScreenFocus: null } : state;
     case 'TOGGLE_HIDDEN_VIDEO': {
       const hiddenVideoKeys = new Set(state.hiddenVideoKeys);
       if (hiddenVideoKeys.has(action.key)) hiddenVideoKeys.delete(action.key); else hiddenVideoKeys.add(action.key);
@@ -249,8 +261,11 @@ export function roomReducer(state: RoomState, action: RoomAction): RoomState {
       return { ...state, shareError: action.message };
     case 'SET_MIC_PROBLEM':
       return { ...state, micProblem: action.problem };
-    case 'SET_CALL_JOIN_ERROR':
-      return { ...state, callJoinError: action.error };
+    case 'SET_CALL_JOIN_ERROR': {
+      // a call that never started has no stage to focus anything on
+      const failed = action.error && state.pendingScreenFocus?.conversationId === action.error.conversationId;
+      return { ...state, callJoinError: action.error, pendingScreenFocus: failed ? null : state.pendingScreenFocus };
+    }
     default:
       return state;
   }

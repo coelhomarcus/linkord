@@ -1,3 +1,4 @@
+import { useSyncExternalStore } from 'react';
 import { graphemeSegmenter, isEmojiGrapheme } from '@/shared/lib/isSingleEmoji';
 
 // Unicode emojis drawn as Twemoji pictures, the same on every system (a
@@ -42,6 +43,12 @@ export function splitEmoji(text: string): EmojiPart[] {
 type Resolved = { url: string } | 'missing';
 const resolved = new Map<string, Resolved>();
 const pending = new Map<string, Promise<Resolved>>();
+const listeners = new Set<() => void>();
+
+function subscribe(listener: () => void) {
+  listeners.add(listener);
+  return () => { listeners.delete(listener); };
+}
 
 function probe(url: string): Promise<boolean> {
   return new Promise((done) => {
@@ -54,6 +61,11 @@ function probe(url: string): Promise<boolean> {
 
 export function resolvedTwemoji(emoji: string): Resolved | undefined {
   return resolved.get(emoji);
+}
+
+/** Re-renders once the emoji's picture is found (or known to be missing). */
+export function useResolvedTwemoji(emoji: string): Resolved | undefined {
+  return useSyncExternalStore(subscribe, () => resolved.get(emoji));
 }
 
 /** Finds the picture that exists (the browser caches it for the CSS that draws it). */
@@ -70,6 +82,7 @@ export function resolveTwemoji(emoji: string): Promise<Resolved> {
     })().then((result) => {
       resolved.set(emoji, result);
       pending.delete(emoji);
+      for (const listener of listeners) listener();
       return result;
     });
     pending.set(emoji, request);

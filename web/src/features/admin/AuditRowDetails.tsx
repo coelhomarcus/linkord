@@ -5,6 +5,7 @@ import type { AuditRow } from './adminApi';
 import { i18n } from '@/shared/i18n/init';
 import { ACTION_LABELS, reportResolutionLabel } from './adminFormat';
 import { AdminFieldRow, AdminFields } from './AdminSection';
+import { useLanguage } from '@/shared/i18n/useLanguage';
 
 /** Past this, the raw JSON is cut: a metadata blob must not take over the screen. */
 const JSON_LIMIT = 2000;
@@ -15,23 +16,23 @@ const KNOWN_KEYS = ['resolution', 'newOwnerId', 'previousOwnerIds', 'deleted', '
 type Primitive = string | number | boolean;
 const isPrimitive = (value: unknown): value is Primitive => ['string', 'number', 'boolean'].includes(typeof value);
 
-function renderValue(key: string, value: Primitive | Primitive[]): ReactNode {
+function renderValue(key: string, value: Primitive | Primitive[], language: string): ReactNode {
   if (Array.isArray(value)) return value.length === 0 ? '-' : <span className="break-all">{value.join(', ')}</span>;
-  if (key === 'resolution' && typeof value === 'string') return reportResolutionLabel(value);
+  if (key === 'resolution' && typeof value === 'string') return reportResolutionLabel(value, language);
   if (key === 'orphanBytes' && typeof value === 'number') return formatFileSize(value);
-  if (typeof value === 'boolean') return i18n.t(value ? 'admin:auditDetails.yes' : 'admin:auditDetails.no');
+  if (typeof value === 'boolean') return i18n.t(value ? 'admin:auditDetails.yes' : 'admin:auditDetails.no', { lng: language });
   return <span className="break-all">{String(value)}</span>;
 }
 
 /** Known, flat metadata becomes labelled rows; whatever is nested or unfamiliar
  * stays available as formatted JSON behind a disclosure — never dropped, never
  * dumped inline. */
-function splitDetail(detail: Record<string, unknown>): { pairs: { key: string; label: string; value: ReactNode }[]; rest: Record<string, unknown> | null } {
+function splitDetail(detail: Record<string, unknown>, language: string): { pairs: { key: string; label: string; value: ReactNode }[]; rest: Record<string, unknown> | null } {
   const pairs: { key: string; label: string; value: ReactNode }[] = [];
   const rest: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(detail)) {
     if (isPrimitive(value) || (Array.isArray(value) && value.every(isPrimitive))) {
-      pairs.push({ key, label: KNOWN_KEYS.includes(key) ? i18n.t(`admin:auditDetails.keys.${key}` as never) : key, value: renderValue(key, value) });
+      pairs.push({ key, label: KNOWN_KEYS.includes(key) ? i18n.t(`admin:auditDetails.keys.${key}` as never, { lng: language }) : key, value: renderValue(key, value, language) });
     } else {
       rest[key] = value;
     }
@@ -55,7 +56,8 @@ function RawJson({ value }: { value: Record<string, unknown> }) {
 /** Everything a record carries that the row itself doesn't show. */
 export function AuditRowDetails({ row }: { row: AuditRow }) {
   const { t } = useTranslation('admin');
-  const { pairs, rest } = splitDetail(row.detail);
+  const language = useLanguage();
+  const { pairs, rest } = splitDetail(row.detail, language);
   return (
     <div className="flex flex-col gap-2">
       <AdminFields>

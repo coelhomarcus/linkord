@@ -25,6 +25,8 @@ import { CustomStatusText } from '@/features/status/CustomStatusText';
 import { useCustomStatus, useUserStatus } from '@/features/status/statusDisplay';
 import { NotificationMenuItems, type NotificationTarget } from '@/features/notifications/NotificationMenuItems';
 import { mutedUntilText } from '@/features/notifications/mutedUntilText';
+import { useLanguage } from '@/shared/i18n/useLanguage';
+import { useTimeFormat } from '@/shared/lib/timeFormat';
 
 // Discord's header icons: bare 24px glyphs, gray at rest, white while hovered
 // or while the panel they toggle is open
@@ -44,6 +46,8 @@ function HeaderIcon({ label, pressed, onClick, className, children }: { label: s
 /** The channel or DM's notification menu. The bell crosses out while the conversation is muted, on its own
  * or through its server; the tooltip then says until when. */
 function NotificationHeaderButton({ target }: { target: Extract<NotificationTarget, { scope: 'conversation' }> }) {
+  const language = useLanguage();
+  const timeFormat = useTimeFormat();
   const { t } = useTranslation('notifications');
   const { notificationSettings, notificationPolicyFor, isNotificationMuted } = useRoom('notificationSettings', 'notificationPolicyFor', 'isNotificationMuted');
   const [open, setOpen] = useState(false);
@@ -51,7 +55,7 @@ function NotificationHeaderButton({ target }: { target: Extract<NotificationTarg
   const own = notificationSettings.conversations[target.id];
   const label = t('preferences.headerButton');
   const hint = !muted ? label
-    : isNotificationMuted('conversation', target.id) ? mutedUntilText(own?.mutedUntil ?? null) : t('preferences.mutedByServer');
+    : isNotificationMuted('conversation', target.id) ? mutedUntilText(own?.mutedUntil ?? null, language, timeFormat) : t('preferences.mutedByServer');
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <Tooltip disabled={open}>

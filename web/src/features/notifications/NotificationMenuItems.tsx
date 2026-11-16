@@ -8,6 +8,8 @@ import { logger } from '@/shared/lib/logger';
 import { useRoom } from '@/state/RoomContext';
 import { mutedUntilText } from './mutedUntilText';
 import { MUTE_DURATIONS_MINUTES, NOTIFICATION_LEVELS, type MuteDuration, type NotificationLevel, type NotificationSettingChange } from './notificationSettings';
+import { useLanguage } from '@/shared/i18n/useLanguage';
+import { useTimeFormat } from '@/shared/lib/timeFormat';
 
 const log = logger.child({ component: 'notification-settings' });
 
@@ -21,6 +23,8 @@ const INHERIT = 'inherit';
 /** "Mute …" (a submenu of durations) or "Unmute …", then the level, for any menu built on Base UI's Menu:
  * the global context menu (a row or a server icon) and the dropdowns (server header, channel header). */
 export function NotificationMenuItems({ target }: { target: NotificationTarget }) {
+  const language = useLanguage();
+  const timeFormat = useTimeFormat();
   const { t } = useTranslation('notifications');
   const { notificationSettings, updateNotificationSetting, isNotificationMuted } = useRoom('notificationSettings', 'updateNotificationSetting', 'isNotificationMuted');
   const kind = target.scope === 'server' ? 'server' : target.serverId ? 'channel' : 'direct';
@@ -53,7 +57,7 @@ export function NotificationMenuItems({ target }: { target: NotificationTarget }
           <BellIcon size={16} />
           <span className="flex min-w-0 flex-col">
             <span>{t(`preferences.unmute.${kind}`)}</span>
-            <span className="text-caption text-text-muted">{mutedUntilText(own?.mutedUntil ?? null)}</span>
+            <span className="text-caption text-text-muted">{mutedUntilText(own?.mutedUntil ?? null, language, timeFormat)}</span>
           </span>
         </DropdownMenuItem>
       ) : (

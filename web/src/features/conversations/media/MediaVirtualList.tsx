@@ -8,6 +8,7 @@ import { cn } from '@/shared/lib/utils';
 import type { MediaItem } from '@/shared/api/api';
 import { buildRows } from './mediaRows';
 import type { MediaLayout, MediaRow } from './mediaRows';
+import { useLanguage } from '@/shared/i18n/useLanguage';
 
 const GAP = 8;
 const MIN_TILE = 150;
@@ -37,6 +38,7 @@ interface MediaVirtualListProps {
 export function MediaVirtualList({
   items, layout, hasMore, loading, error, onLoadMore, emptyState, ariaLabel, renderTile, renderItem, className,
 }: MediaVirtualListProps) {
+  const language = useLanguage();
   const { t } = useTranslation('conversations');
   const scrollRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
@@ -55,7 +57,7 @@ export function MediaVirtualList({
 
   const columns = Math.min(MAX_COLUMNS, Math.max(2, Math.floor((width + GAP) / (MIN_TILE + GAP))));
   const tileSize = (width - GAP * (columns - 1)) / columns;
-  const rows = useMemo(() => buildRows(items, layout, columns), [items, layout, columns]);
+  const rows = useMemo(() => buildRows(items, layout, columns, language), [items, layout, columns, language]);
 
   // one extra row at the end for the loading line or the error
   const hasTail = loading || error != null;

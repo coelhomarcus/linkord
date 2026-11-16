@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { Room } from 'livekit-client';
 import type { Socket } from 'socket.io-client';
 import { RoomStoreProvider } from '@/state/RoomStoreProvider';
-import type { AudioHandle, TileDomHandle } from '@/state/RoomContext';
+import type { AudioHandle, OpenCallOptions, TileDomHandle } from '@/state/RoomContext';
 import { roomReducer, initialRoomState } from '@/state/roomReducer';
 import { useAuth } from '@/state/AuthContext';
 import { saveIdentity } from '@/shared/lib/identitySession';
@@ -49,6 +49,7 @@ import { invalidateMyEmojis } from '@/features/emoji/myEmojis';
 import { invalidateMyStickers } from '@/features/stickers/myStickers';
 import { invalidateServerStickers } from '@/features/stickers/useServerStickers';
 import { invalidateMySounds } from '@/features/soundboard/useMySounds';
+import { forgetProfile } from '@/features/profile/profileCache';
 
 const log = logger.child({ component: 'room' });
 
@@ -104,9 +105,9 @@ export function RoomProvider({ children }: { children: ReactNode }) {
   const requestChatViewRef = useRef<((conversationId?: string) => void) | null>(null);
   const registerRequestChatView = useCallback((fn: (conversationId?: string) => void) => { requestChatViewRef.current = fn; }, []);
   const requestChatView = useCallback((conversationId?: string) => { requestChatViewRef.current?.(conversationId); }, []);
-  const openCallRef = useRef<((conversationId: string) => void) | null>(null);
-  const registerOpenCall = useCallback((fn: (conversationId: string) => void) => { openCallRef.current = fn; }, []);
-  const openCall = useCallback((conversationId: string) => { openCallRef.current?.(conversationId); }, []);
+  const openCallRef = useRef<((conversationId: string, options?: OpenCallOptions) => void) | null>(null);
+  const registerOpenCall = useCallback((fn: (conversationId: string, options?: OpenCallOptions) => void) => { openCallRef.current = fn; }, []);
+  const openCall = useCallback((conversationId: string, options?: OpenCallOptions) => { openCallRef.current?.(conversationId, options); }, []);
 
   // a refusal the socket sent without a request to answer (a call kick the
   // actor may not do, a quota) — shown as a banner, since nothing else waits on it
@@ -242,19 +243,21 @@ export function RoomProvider({ children }: { children: ReactNode }) {
    * (chatMessages) plus telling the server. Composed here, not inside
    * either hook, because it's the one operation that genuinely spans both
    * of their state. */
+  const { setActiveConversation, removeConversation } = conversationsList;
+  const { clearUnread, setReplyingTo, setEditingMsgId } = chatMessages;
   const openConversation = useCallback((conversationId: string) => {
-    conversationsList.setActiveConversation(conversationId);
-    chatMessages.clearUnread(conversationId);
-    chatMessages.setReplyingTo(null);
-    chatMessages.setEditingMsgId(null);
+    setActiveConversation(conversationId);
+    clearUnread(conversationId);
+    setReplyingTo(null);
+    setEditingMsgId(null);
     sendWs({ t: 'conversation-open', conversationId });
-  }, [conversationsList.setActiveConversation, chatMessages.clearUnread, chatMessages.setReplyingTo, chatMessages.setEditingMsgId, sendWs]);
+  }, [setActiveConversation, clearUnread, setReplyingTo, setEditingMsgId, sendWs]);
 
   const closeConversation = useCallback((conversationId: string) => {
-    conversationsList.removeConversation(conversationId);
-    chatMessages.clearUnread(conversationId);
+    removeConversation(conversationId);
+    clearUnread(conversationId);
     sendWs({ t: 'conversation-close', conversationId });
-  }, [conversationsList.removeConversation, chatMessages.clearUnread, sendWs]);
+  }, [removeConversation, clearUnread, sendWs]);
 
 
   const disconnectIntentionally = useCallback(() => {
@@ -499,6 +502,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         break;
       case 'user-deleted':
         presence.onUserDeleted(m);
+        forgetProfile(m.userId);
         break;
       case 'profile-result':
         profileUpdate.handleProfileResult(m);
@@ -543,7 +547,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
     dispatch, conversationsList, serversList, presence, openConversation, sendWs, callLifecycle, dmCall,
     messageSearch, chatMessages, typingIndicator, disconnectIntentionally, profileUpdate, soundboardEvents, livekitRoom,
     onStatusSnapshot, onMyStatus, onPresenceResult, onIdleWelcome, refreshAuth, onNotificationSettingsWelcome, onNotificationSettingsChanged,
-    onCallElsewhereRefused,
+    onCallElsewhereRefused, onActivityWelcome, onActivitySettingsWelcome, onActivitySettingsChanged, onActivitySettingsResult,
   ]);
 
   const { retryConnection } = useSocketConnection({ socketRef, intentionalCloseRef, sendWs, dispatch, refreshAuth, onMessage: handleServerMessage });

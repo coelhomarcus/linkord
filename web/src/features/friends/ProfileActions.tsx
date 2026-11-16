@@ -1,4 +1,4 @@
-import { ChatCircleIcon, CircleNotchIcon, DotsThreeIcon, FlagIcon, PencilSimpleIcon, ProhibitIcon, UserCheckIcon, UserMinusIcon, UserPlusIcon } from '@phosphor-icons/react';
+import { ChatCircleIcon, DotsThreeIcon, FlagIcon, PencilSimpleIcon, ProhibitIcon, UserCheckIcon, UserMinusIcon, UserPlusIcon } from '@phosphor-icons/react';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -7,14 +7,25 @@ import { useRoom } from '@/state/RoomContext';
 import {
   acceptFriendRequest, blockUser, cancelFriendRequest, declineFriendRequest, removeFriend, sendFriendRequest, unblockUser,
 } from '@/shared/api/api';
+import type { FriendRequestOutcome, Relation } from '@/shared/api/api';
 import { Button } from '@/shared/ui/primitives/button';
+import { Skeleton, SkeletonGroup } from '@/shared/ui/primitives/skeleton';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/primitives/dropdown-menu';
 import { cn } from '@/shared/lib/utils';
 import { describeSendError, formatRetryAfter } from './friendsText';
 import { SocialConfirmDialog } from './SocialConfirmDialog';
 import type { SocialConfirm } from './SocialConfirmDialog';
 import { useFriends } from './FriendsContext';
-import { useRelationship } from './useRelationship';
+import { changeRelationship, SupersededChange, useRelationship } from './useRelationship';
+import { useLanguage } from '@/shared/i18n/useLanguage';
+import { useTimeFormat } from '@/shared/lib/timeFormat';
+
+/** A request to someone who had already asked you, or was already a friend, lands where the server says. */
+function relationAfterRequest(outcome: FriendRequestOutcome): Relation {
+  if (outcome === 'already_friends') return 'friends';
+  if (outcome === 'pending_received') return 'incoming';
+  return 'outgoing';
+}
 
 /** Takes you from a glimpse of your own profile to the full one, where it is edited. */
 function EditProfileButton({ onClick }: { onClick: () => void }) {
@@ -42,30 +53,34 @@ export function ProfileActions({ userId, username, displayName, onNavigate, onRe
   showMessage?: boolean;
   showFriendRequestActions?: boolean;
 }) {
+  const language = useLanguage();
+  const timeFormat = useTimeFormat();
   const { t } = useTranslation('friends');
   const { openDirect, requestChatView } = useRoom('openDirect', 'requestChatView');
   const { bump } = useFriends();
   const { state, retry } = useRelationship(userId);
-  const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<SocialConfirm | null>(null);
 
-  async function run(action: () => Promise<unknown>, failure: 'send' | 'action' = 'action') {
-    if (pending) return;
-    setPending(true);
+  // the button changes at once; a refusal puts the previous state back and says why
+  async function change<R>(optimistic: Relation, action: () => Promise<R>, failure: 'send' | 'action' = 'action', confirmed?: (result: R) => Relation) {
     setError(null);
     try {
-      await action();
+      await changeRelationship(userId, optimistic, action, confirmed);
       bump();
     } catch (err) {
+      if (err instanceof SupersededChange) return;
       setError(failure === 'send' ? describeSendError(err) : t('feedback.actionFailed'));
-    } finally {
-      setPending(false);
     }
   }
 
   if (state.status === 'loading') {
-    return <p className={cn('px-4 pb-4 text-label text-text-muted', className)} aria-live="polite">{t('profile.loading')}</p>;
+    // the size of one small button, where the buttons will be: nothing moves when they arrive
+    return (
+      <SkeletonGroup label={t('profile.loading')} className={cn('flex flex-col gap-2 px-4 pb-4', className)}>
+        <Skeleton className="h-8 w-28" />
+      </SkeletonGroup>
+    );
   }
   if (state.status === 'error') {
     return (
@@ -77,7 +92,6 @@ export function ProfileActions({ userId, username, displayName, onNavigate, onRe
   }
 
   const { relation, retryAfter } = state.value;
-  const spinner = pending ? <CircleNotchIcon size={20} className="animate-spin" /> : null;
 
   // the menu behind the "…" button: what is rarely wanted and not a friendship
   // state. Without anything to put in it, no button.
@@ -127,15 +141,15 @@ export function ProfileActions({ userId, username, displayName, onNavigate, onRe
       actions = (
         <>
           <span className="flex items-center gap-1.5 text-label text-text-muted"><UserCheckIcon size={16} />{t('profile.requestSent')}</span>
-          <Button type="button" variant="ghost" size="sm" disabled={pending} onClick={() => void run(() => cancelFriendRequest(userId))}>{spinner}<span>{t('profile.cancel')}</span></Button>
+          <Button type="button" variant="ghost" size="sm" onClick={() => void change('none', () => cancelFriendRequest(userId))}><span>{t('profile.cancel')}</span></Button>
         </>
       );
       break;
     case 'incoming':
       actions = showFriendRequestActions ? (
         <>
-          <Button type="button" size="sm" disabled={pending} onClick={() => void run(() => acceptFriendRequest(userId))}>{spinner}<span>{t('profile.accept')}</span></Button>
-          <Button type="button" variant="ghost" size="sm" disabled={pending} onClick={() => void run(() => declineFriendRequest(userId))}><span>{t('profile.decline')}</span></Button>
+          <Button type="button" size="sm" onClick={() => void change('friends', () => acceptFriendRequest(userId))}><span>{t('profile.accept')}</span></Button>
+          <Button type="button" variant="ghost" size="sm" onClick={() => void change('none', () => declineFriendRequest(userId))}><span>{t('profile.decline')}</span></Button>
         </>
       ) : null;
       break;
@@ -143,16 +157,16 @@ export function ProfileActions({ userId, username, displayName, onNavigate, onRe
       actions = (
         <>
           <span className="flex items-center gap-1.5 text-label text-text-muted"><ProhibitIcon size={16} />{t('profile.blockedByYou')}</span>
-          <Button type="button" variant="secondary" size="sm" disabled={pending} onClick={() => void run(() => unblockUser(userId))}>{spinner}<span>{t('profile.unblock')}</span></Button>
+          <Button type="button" variant="secondary" size="sm" onClick={() => void change('none', () => unblockUser(userId))}><span>{t('profile.unblock')}</span></Button>
         </>
       );
       break;
     default:
       actions = retryAfter ? (
-        <span className="text-label text-text-muted">{t('profile.retryAfter', { when: formatRetryAfter(retryAfter) })}</span>
+        <span className="text-label text-text-muted">{t('profile.retryAfter', { when: formatRetryAfter(retryAfter, language, timeFormat) })}</span>
       ) : (
-        <Button type="button" size="sm" disabled={pending} onClick={() => void run(() => sendFriendRequest(username), 'send')}>
-          {spinner ?? <UserPlusIcon size={20} weight="fill" />}<span>{t('profile.add')}</span>
+        <Button type="button" size="sm" onClick={() => void change('outgoing', () => sendFriendRequest(username), 'send', relationAfterRequest)}>
+          <UserPlusIcon size={20} weight="fill" /><span>{t('profile.add')}</span>
         </Button>
       );
   }
@@ -167,7 +181,9 @@ export function ProfileActions({ userId, username, displayName, onNavigate, onRe
       <SocialConfirmDialog
         target={confirm}
         onCancel={() => setConfirm(null)}
-        onConfirm={(target) => void run(() => (target.kind === 'remove' ? removeFriend(target.userId) : blockUser(target.userId)))}
+        onConfirm={(target) => void (target.kind === 'remove'
+          ? change('none', () => removeFriend(target.userId))
+          : change('blocked', () => blockUser(target.userId)))}
       />
     </div>
   );

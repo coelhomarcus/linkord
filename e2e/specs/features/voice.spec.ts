@@ -47,6 +47,38 @@ test.describe('voice channels', () => {
     await expect(a.page.locator('[data-tile-kind="screen"]')).toHaveCount(0);
   });
 
+  test('"ao vivo" in the channel list joins the call focused on that share, and focuses it again from inside', async ({ users }) => {
+    const alice = await users.create('alice');
+    const bob = await users.create('bob');
+    const server = await createServer(alice.api, 'E2E watch');
+    await acceptInvite(bob.api, await createInvite(alice.api, server.id));
+    const a = await alice.app();
+    const b = await bob.app();
+    await a.openChannel(server.id, server.text.id);
+    await b.openChannel(server.id, server.text.id);
+    await a.joinVoice(server.voice.name);
+    // Sharing is refused until the tab reaches LiveKit, and alone in the call there is no audio to wait for.
+    await expect(async () => {
+      await a.page.getByRole('button', { name: 'Compartilhar tela' }).first().click();
+      await expect(a.page.locator('[data-tile-kind="screen"]')).toBeVisible({ timeout: 2_000 });
+    }).toPass();
+
+    // bob is not in the call: hovering the badge shows the still with "Assistir" over it
+    const badge = b.page.getByRole('button', { name: `Ao vivo: assistir à transmissão de ${alice.username}` });
+    await badge.hover();
+    // exact: the badge's own name ends with the same words
+    await b.page.getByRole('button', { name: `Assistir à transmissão de ${alice.username}`, exact: true }).click();
+    await expect(b.page.getByText('Em chamada')).toBeVisible();
+    const share = b.page.locator('[data-tile-kind="screen"]').filter({ hasText: alice.username });
+    await expect(share).toHaveAttribute('aria-pressed', 'true');
+
+    // in the call, the badge itself focuses the share again
+    await b.page.keyboard.press('Escape');
+    await expect(share).toHaveAttribute('aria-pressed', 'false');
+    await badge.click();
+    await expect(share).toHaveAttribute('aria-pressed', 'true');
+  });
+
   test('leaving the call removes the tile for the other member', async ({ users }) => {
     const { bob, a, b } = await twoInVoice(users);
     await a.expectTilesFor([bob.username]);

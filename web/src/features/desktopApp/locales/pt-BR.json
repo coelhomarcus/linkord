@@ -9,5 +9,7 @@
   "download": "Baixar para Windows",
   "version": "Versão {{version}}",
   "allVersions": "Todas as versões",
-  "later": "Agora não"
+  "later": "Agora não",
+  "openInApp": "Abrir no app",
+  "updateReady": "Atualização pronta! Reiniciar para atualizar"
 }

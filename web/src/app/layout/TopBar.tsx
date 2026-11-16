@@ -3,6 +3,7 @@ import { UsersIcon } from '@phosphor-icons/react';
 import { cn } from '@/shared/lib/utils';
 import { useContentLocation } from '@/shared/lib/contentLocation';
 import { ROUTES, isHomePath } from '@/shared/lib/routes';
+import { DesktopUpdateButton } from '@/features/desktopApp/DesktopUpdateButton';
 import { NotificationBell } from '@/features/notifications/NotificationBell';
 import { ServerIcon } from '@/features/servers/ServerIcon';
 import type { ServerSummary } from '@/shared/types/protocol';
@@ -27,6 +28,7 @@ export function TopBar({ className, title, server }: { className?: string; title
         <span className="truncate">{label}</span>
       </span>
       <span className={cn('absolute inset-y-0 right-0 flex items-center', !host && 'pr-2')}>
+        {host && <DesktopUpdateButton className="mr-1" />}
         <span className="app-no-drag flex items-center"><NotificationBell collapsed /></span>
         {host && <WindowControls controls={host.controls} platform={host.platform} className="ml-1" />}
       </span>

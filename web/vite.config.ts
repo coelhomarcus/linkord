@@ -2,7 +2,8 @@ import fs from 'fs';
 import path from 'path';
 import type { Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
-import react from '@vitejs/plugin-react';
+import react, { reactCompilerPreset } from '@vitejs/plugin-react';
+import babel from '@rolldown/plugin-babel';
 import tailwindcss from '@tailwindcss/vite';
 import { reactEasyCropStyleSource } from './scripts/cspStyleSources.ts';
 
@@ -55,8 +56,24 @@ function twemojiAssets(): Plugin {
   };
 }
 
+// REACT_COMPILER_LOG=1 lists every component or hook the compiler left as
+// written (a Rules of React violation, or syntax it does not handle yet such
+// as try/finally); those still work, they are just not memoized.
+function reactCompilerOptions() {
+  if (!process.env.REACT_COMPILER_LOG) return {};
+  return {
+    logger: {
+      logEvent(file: string | null, event: { kind: string; fnLoc?: { start: { line: number } } | null; detail?: { reason?: string; options?: { reason?: string } } }) {
+        if (event.kind !== 'CompileError' && event.kind !== 'PipelineError') return;
+        const reason = event.detail?.options?.reason ?? event.detail?.reason ?? event.kind;
+        console.warn(`[react-compiler] ${path.relative(import.meta.dirname, file ?? '')}:${event.fnLoc?.start.line ?? '?'} ${reason}`);
+      },
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [react(), tailwindcss(), twemojiAssets(), cspStyleSources()],
+  plugins: [react(), babel({ presets: [reactCompilerPreset(reactCompilerOptions())] }), tailwindcss(), twemojiAssets(), cspStyleSources()],
   define: {
     __TWEMOJI_PATH__: JSON.stringify(TWEMOJI_PATH),
     __EMOJI_DATA_VERSION__: JSON.stringify(`${EMOJIBASE_VERSION}-${TWEMOJI_VERSION}`),

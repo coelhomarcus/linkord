@@ -21,6 +21,7 @@ import type { QuerySchema } from './useAdminQuery';
 import { AppLink } from '@/shared/ui/app-link';
 import { AdminStackedSkeleton, AdminTableSkeleton } from './AdminSkeletons';
 import { AdminPageTitle } from './AdminSection';
+import { useLanguage } from '@/shared/i18n/useLanguage';
 
 type StatusFilter = 'all' | 'active' | 'suspended' | 'orphan';
 
@@ -60,6 +61,7 @@ function Owner({ server }: { server: AdminServerRow }) {
 }
 
 export function ServersPage() {
+  const language = useLanguage();
   const { t } = useTranslation('admin');
   const { filters, update, clear, active, identity } = useAdminQuery(QUERY);
   const { pathname, search } = useLocation();
@@ -101,7 +103,7 @@ export function ServersPage() {
                   <AdminTd className="max-w-40"><Owner server={g} /></AdminTd>
                   <AdminTd>{g.memberCount}</AdminTd>
                   <AdminTd>{g.channelCount}</AdminTd>
-                  <AdminTd className="whitespace-nowrap">{formatDateShort(g.createdAt)}</AdminTd>
+                  <AdminTd className="whitespace-nowrap">{formatDateShort(g.createdAt, language)}</AdminTd>
                   <AdminTd><RowActions server={g} /></AdminTd>
                 </AdminTr>
               ))}
@@ -119,7 +121,7 @@ export function ServersPage() {
                   <Badge value={g.status} />
                   <Owner server={g} />
                   <span>{g.memberCount} {t('ui.member', { count: g.memberCount })}</span>
-                  <span>{t('ui.created')} {formatWhen(g.createdAt)}</span>
+                  <span>{t('ui.created')} {formatWhen(g.createdAt, language)}</span>
                 </div>
               </li>
             ))}

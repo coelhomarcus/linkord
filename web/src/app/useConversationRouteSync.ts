@@ -1,17 +1,18 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { useRoom, useRoomState } from '@/state/RoomContext';
-import { ROUTES, callConversationIdFromPath, conversationIdFromPath, conversationPath, isAwaitingOpen, serverIdFromPath } from '@/shared/lib/routes';
+import { ROUTES, callConversationIdFromPath, conversationIdFromPath, conversationPath, isAwaitingOpen, messageIdFromSearch, serverIdFromPath } from '@/shared/lib/routes';
 import { rememberChannel } from '@/features/servers/serverUtils';
 
 /** Keeps the current URL and room selection in sync without promoting the
  * automatic first selection into a phone navigation. */
 export function useConversationRouteSync(): void {
-  const { conversations, activeConversationId, openConversation } = useRoom('conversations', 'activeConversationId', 'openConversation');
+  const { conversations, activeConversationId, openConversation, jumpToMessage } = useRoom('conversations', 'activeConversationId', 'openConversation', 'jumpToMessage');
   const state = useRoomState('joined');
   const location = useLocation();
   const navigate = useNavigate();
   const requestedId = conversationIdFromPath(location.pathname) ?? callConversationIdFromPath(location.pathname);
+  const requestedMessageId = messageIdFromSearch(location.search);
   const knownIds = useMemo(() => new Set(conversations.map((c) => c.id)), [conversations]);
   const conversationsRef = useRef(conversations);
   conversationsRef.current = conversations;
@@ -20,6 +21,10 @@ export function useConversationRouteSync(): void {
   const stateRef = useRef(location.state);
   const navigateRef = useRef(navigate);
   const openRef = useRef(openConversation);
+  const jumpRef = useRef(jumpToMessage);
+  // the conversation a message link just opened: the jump selects it, and it
+  // must not be opened again once the address loses `?message=`
+  const jumpedRef = useRef<string | null>(null);
 
   useEffect(() => {
     activeRef.current = activeConversationId;
@@ -27,7 +32,8 @@ export function useConversationRouteSync(): void {
     stateRef.current = location.state;
     navigateRef.current = navigate;
     openRef.current = openConversation;
-  }, [activeConversationId, location.pathname, location.state, navigate, openConversation]);
+    jumpRef.current = jumpToMessage;
+  }, [activeConversationId, location.pathname, location.state, navigate, openConversation, jumpToMessage]);
 
   useEffect(() => {
     if (!state.joined || requestedId === null) return;
@@ -42,8 +48,18 @@ export function useConversationRouteSync(): void {
     if (conversation?.serverId && conversation.type === 'text') rememberChannel(conversation.serverId, conversation.id);
     // a voice channel's chat opens with its call, not by visiting it
     if (conversation?.type === 'voice') return;
-    if (requestedId !== activeRef.current) openRef.current(requestedId);
-  }, [state.joined, requestedId, knownIds]);
+    // a link to a message (`?message=`) opens the conversation there, the way
+    // a search result does; the address then goes back to the conversation's
+    if (requestedMessageId !== null) {
+      jumpedRef.current = requestedId;
+      jumpRef.current(requestedId, requestedMessageId);
+      navigateRef.current(pathRef.current, { replace: true });
+      return;
+    }
+    const jumped = jumpedRef.current === requestedId;
+    jumpedRef.current = null;
+    if (!jumped && requestedId !== activeRef.current) openRef.current(requestedId);
+  }, [state.joined, requestedId, requestedMessageId, knownIds]);
 
   const skippedInitialRef = useRef(false);
   useEffect(() => {

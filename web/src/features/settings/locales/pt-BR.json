@@ -532,6 +532,7 @@
       "checking": "Procurando atualizações…",
       "upToDate": "Você está na versão mais recente.",
       "downloading": "Baixando a versão {{version}}. Ela será instalada quando o Linkord reiniciar.",
+      "downloadingPercent": "Baixando a versão {{version}}… {{percent}}%",
       "failed": "Não foi possível procurar atualizações.",
       "available": "A versão {{version}} está disponível.",
       "ready": "A versão {{version}} está pronta para instalar.",

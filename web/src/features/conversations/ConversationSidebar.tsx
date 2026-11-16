@@ -24,6 +24,8 @@ import { NewDirectDialog } from './NewDirectDialog';
 import { StatusDot } from '@/features/status/StatusDot';
 import { CustomStatusText } from '@/features/status/CustomStatusText';
 import { useCustomStatus, useUserStatus } from '@/features/status/statusDisplay';
+import { useUserActivity } from '@/features/activity/activityDisplay';
+import { UserActivityInline } from '@/features/activity/ActivityLine';
 
 function DirectRow({ conversation, active, onClick, onClose }: {
   conversation: Conversation; active: boolean; onClick: () => void; onClose: () => void;
@@ -38,6 +40,7 @@ function DirectRow({ conversation, active, onClick, onClose }: {
   const muted = notificationPolicyFor({ id: conversation.id }).muted;
   const status = useUserStatus(other?.id);
   const customStatus = useCustomStatus(other?.id);
+  const activity = useUserActivity(other?.id);
   const inCall = activeCallConversationId === conversation.id;
   return (
     <li data-conversation-id={conversation.id} data-user-id={other?.id} className="group/dm relative mx-2">
@@ -74,6 +77,9 @@ function DirectRow({ conversation, active, onClick, onClose }: {
           </span>
           {inCall ? (
             <span className="block truncate text-label text-green">{t('sidebar.inThisCall')}</span>
+          ) : activity && other ? (
+            // what they are playing takes the custom status's place, as in the member list
+            <UserActivityInline userId={other.id} />
           ) : (
             <CustomStatusText custom={customStatus} className="text-caption text-text-muted" />
           )}

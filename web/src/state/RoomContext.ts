@@ -33,6 +33,11 @@ export interface AnchorRect {
   bottom: number;
 }
 
+export interface OpenCallOptions {
+  /** A participant whose screen share the stage opens focused on, once it is there. */
+  watchScreenOf?: string;
+}
+
 export interface RoomContextValue {
   state: RoomState;
   dispatch: Dispatch<RoomAction>;
@@ -67,8 +72,8 @@ export interface RoomContextValue {
   requestChatView: (conversationId?: string) => void;
   /** Joins (or returns to) a conversation's call and shows its stage — the
    * same path as the conversation header's call button. */
-  registerOpenCall: (fn: (conversationId: string) => void) => void;
-  openCall: (conversationId: string) => void;
+  registerOpenCall: (fn: (conversationId: string, options?: OpenCallOptions) => void) => void;
+  openCall: (conversationId: string, options?: OpenCallOptions) => void;
   activeCallConversationId: string | null;
   /** Asks first (callMove) when the account is in a call on another tab or device: `onSent` runs
    * when the join actually goes out, `onDropped` when the person keeps the call where it is. */

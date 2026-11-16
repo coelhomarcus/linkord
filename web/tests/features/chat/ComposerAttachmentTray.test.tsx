@@ -21,24 +21,24 @@ function TrayHarness({ initial, fallback }: { initial: PendingAttachment[]; fall
   return (
     <>
       <textarea ref={fallback} aria-label="Mensagem" />
-      <ComposerAttachmentTray files={files} onRemove={(id) => setFiles((prev) => prev.filter((f) => f.id !== id))} fallbackFocusRef={fallback} />
+      <ComposerAttachmentTray files={files} onRemove={(id) => setFiles((prev) => prev.filter((f) => f.id !== id))} onFocusFallback={() => fallback.current?.focus()} />
     </>
   );
 }
 
 describe('ComposerAttachmentTray', () => {
   it('remove label includes the file name', () => {
-    render(<ComposerAttachmentTray files={[doc('a', 'contrato.pdf')]} onRemove={vi.fn()} fallbackFocusRef={createRef()} />);
+    render(<ComposerAttachmentTray files={[doc('a', 'contrato.pdf')]} onRemove={vi.fn()} onFocusFallback={vi.fn()} />);
     expect(screen.getByRole('button', { name: 'Remover contrato.pdf' })).toBeInTheDocument();
   });
 
   it('document tile does not overlap the remove button with name/size (no absolute positioning)', () => {
-    render(<ComposerAttachmentTray files={[doc('a', 'contrato.pdf')]} onRemove={vi.fn()} fallbackFocusRef={createRef()} />);
+    render(<ComposerAttachmentTray files={[doc('a', 'contrato.pdf')]} onRemove={vi.fn()} onFocusFallback={vi.fn()} />);
     expect(screen.getByRole('button', { name: 'Remover contrato.pdf' }).className).not.toMatch(/absolute/);
   });
 
   it('image tile keeps the button overlaid, since the thumbnail fills the space', () => {
-    render(<ComposerAttachmentTray files={[image('a', 'foto.png')]} onRemove={vi.fn()} fallbackFocusRef={createRef()} />);
+    render(<ComposerAttachmentTray files={[image('a', 'foto.png')]} onRemove={vi.fn()} onFocusFallback={vi.fn()} />);
     expect(screen.getByRole('button', { name: 'Remover foto.png' }).className).toMatch(/absolute/);
   });
 

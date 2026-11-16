@@ -33,9 +33,9 @@ function loadCollapsed(serverId: string): Set<string> {
   try { return new Set(JSON.parse(localStorageStore.get(LOCAL_STORAGE_KEYS.collapsedCategories(serverId)) ?? '[]') as string[]); } catch { return new Set(); }
 }
 
-function ChannelRow({ server, channel, active, onOpen, onInvite, onOpenProfile, drag, onDragChange }: {
+function ChannelRow({ server, channel, active, onOpen, onInvite, onOpenProfile, onNavigate, drag, onDragChange }: {
   server: ServerSummary; channel: ChannelSummary; active: boolean; onOpen: () => void; onInvite: () => void;
-  onOpenProfile: (userId: string) => void; drag: VoiceDrag | null; onDragChange: (drag: VoiceDrag | null) => void;
+  onOpenProfile: (userId: string) => void; onNavigate?: () => void; drag: VoiceDrag | null; onDragChange: (drag: VoiceDrag | null) => void;
 }) {
   const { t } = useTranslation('servers');
   const { t: tn } = useTranslation('notifications');
@@ -97,7 +97,7 @@ function ChannelRow({ server, channel, active, onOpen, onInvite, onOpenProfile, 
           )}
         </span>
       </div>
-      {channel.type === 'voice' && <VoiceMembers server={server} channel={channel} onOpenProfile={onOpenProfile} drag={drag} onDragChange={onDragChange} />}
+      {channel.type === 'voice' && <VoiceMembers server={server} channel={channel} onOpenProfile={onOpenProfile} onNavigate={onNavigate} drag={drag} onDragChange={onDragChange} />}
     </li>
   );
 }
@@ -213,7 +213,7 @@ export function ChannelList({ server, activeChannelId, onNavigate, onOpenProfile
                   {shown.map((channel) => (
                     <ChannelRow key={channel.id} server={server} channel={channel} active={channel.id === activeChannelId}
                       onOpen={() => open(channel)} onInvite={() => setInviteOpen({ channelId: channel.id })}
-                      onOpenProfile={onOpenProfile} drag={drag} onDragChange={setDrag} />
+                      onOpenProfile={onOpenProfile} onNavigate={onNavigate} drag={drag} onDragChange={setDrag} />
                   ))}
                 </ul>
               </section>

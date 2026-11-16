@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { ArrowBendUpLeftIcon, ArrowsInSimpleIcon, ArrowUpIcon, AtIcon, GifIcon, ImageSquareIcon, PaperclipIcon, PlusCircleIcon, ShieldIcon, SmileyIcon, StickerIcon } from '@phosphor-icons/react';
-import { forwardRef, useCallback, useEffect, useId, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import type { ChangeEvent, KeyboardEvent as ReactKeyboardEvent, RefObject } from 'react';
+import { forwardRef, useCallback, useEffect, useEffectEvent, useId, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import type { ChangeEvent, KeyboardEvent as ReactKeyboardEvent } from 'react';
 
 import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { Button } from '@/shared/ui/primitives/button';
@@ -39,12 +39,7 @@ import { customEmojisAsText, encodeCustomEmojis } from '@/features/emoji/customE
 import type { TextEdit } from './emojiAutocomplete';
 import { EmojiText } from '@/features/emoji/Emoji';
 import { MessageField, type MessageFieldHandle } from './messageField/MessageField';
-
-// How often notifyTyping actually emits typing:true while the user keeps
-// typing (leading-edge: fires right away after being idle, then throttles),
-// and how long without a keystroke before it emits typing:false on its own.
-const TYPING_THROTTLE_MS = 3000;
-const TYPING_IDLE_MS = 5000;
+import { useTypingSignal } from './useTypingSignal';
 
 const MAX_MENTION_RESULTS = 8;
 // mirrors the server's MAX_CHAT_LEN; the counter only shows near the end so
@@ -115,17 +110,15 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
   const counterId = useId();
   const fieldRef = useRef<MessageFieldHandle | null>(null);
   // the attachment tray gives focus back to the field's own element
-  const fieldElementRef = useMemo<RefObject<HTMLElement | null>>(() => ({ get current() { return fieldRef.current?.element ?? null; } }), []);
+  const focusFieldElement = useCallback(() => fieldRef.current?.element?.focus(), []);
   const { byName } = emojiSuggestions;
   const resolveCustomEmoji = useCallback((name: string, nth: number | null) => byName.get(name)?.[nth ? nth - 1 : 0] ?? null, [byName]);
   // an upload can finish after the user moved to another conversation; the
   // reply target is global, so it's only cleared if they're still here
   const conversationIdRef = useRef(conversationId);
   useEffect(() => { conversationIdRef.current = conversationId; }, [conversationId]);
-  const typingThrottleRef = useRef<number | null>(null); // Date.now() of the last emitted typing:true
-  const typingIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isTypingRef = useRef(false);
   const disabled = !state.joined;
+  const { notify: notifyTyping, stop: stopTyping } = useTypingSignal(conversationId, disabled, sendTyping);
   // a channel without ATTACH_FILES: no files, pictures or voice messages
   // (one is an attachment too) — the server would refuse the upload
   const channelBits = conversations.find((c) => c.id === conversationId)?.permissions;
@@ -175,35 +168,12 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
     mentionOptionRefs.current[mentionSelectedIndex]?.scrollIntoView({ block: 'nearest' });
   }, [mentionSelectedIndex, mentionQuery]);
 
-  function notifyTyping() {
-    if (disabled) return;
-    const now = Date.now();
-    if (!isTypingRef.current || typingThrottleRef.current === null || now - typingThrottleRef.current >= TYPING_THROTTLE_MS) {
-      sendTyping(conversationId, true);
-      typingThrottleRef.current = now;
-      isTypingRef.current = true;
-    }
-    if (typingIdleTimerRef.current !== null) clearTimeout(typingIdleTimerRef.current);
-    typingIdleTimerRef.current = setTimeout(() => {
-      isTypingRef.current = false;
-      typingThrottleRef.current = null;
-      sendTyping(conversationId, false);
-    }, TYPING_IDLE_MS);
-  }
-
-  function stopTyping() {
-    if (typingIdleTimerRef.current !== null) { clearTimeout(typingIdleTimerRef.current); typingIdleTimerRef.current = null; }
-    if (isTypingRef.current) sendTyping(conversationId, false);
-    isTypingRef.current = false;
-    typingThrottleRef.current = null;
-  }
-
   // Composer isn't remounted when switching conversations (ConversationPanel
   // renders one persistent instance) — this cleanup fires on conversationId
   // change too, flushing typing:false for the conversation being LEFT before
   // sendTyping starts targeting the new one, and dismissing any dropdown
   // left open from the conversation being left.
-  useEffect(() => () => { stopTyping(); setMentionQuery(null); closeEmojiSuggestions(); }, [conversationId, closeEmojiSuggestions]);
+  useEffect(() => () => { stopTyping(); setMentionQuery(null); closeEmojiSuggestions(); }, [conversationId, stopTyping, closeEmojiSuggestions]);
 
   // Scoped to this conversation's actual members (not every registered
   // user in the room) — a big roster elsewhere shouldn't show up as
@@ -327,13 +297,15 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
   // A share chosen on the "send to" page: it was queued before this composer existed for the
   // conversation, so it lands once, as if the text had been typed and the files dropped here.
   const hasPendingShare = useHasPendingShare(accountId, conversationId);
-  useEffect(() => {
-    if (!hasPendingShare) return;
+  // the queue is the trigger, not a new draft or file list
+  const landShare = useEffectEvent(() => {
     const share = takeShare(accountId, conversationId);
     if (!share) return;
     if (share.text) updateDraft((d) => ({ text: d.text ? `${d.text}\n${share.text}` : share.text }));
     addFiles(share.files);
-    // addFiles is a fresh closure every render; the queue itself is the trigger
+  });
+  useEffect(() => {
+    if (hasPendingShare) landShare();
   }, [hasPendingShare, accountId, conversationId]);
 
   function removeFile(id: string) {
@@ -510,7 +482,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
           </div>
         )}
 
-        <ComposerAttachmentTray files={pendingFiles} onRemove={removeFile} fallbackFocusRef={fieldElementRef} />
+        <ComposerAttachmentTray files={pendingFiles} onRemove={removeFile} onFocusFallback={focusFieldElement} />
 
         {attachError && <p role="alert" className="mx-2 mt-2 rounded-md border border-red/20 bg-red/10 px-3 py-2 text-label text-red-text">{attachError}</p>}
         {voice.noticeText && <VoiceNoticeBanner text={voice.noticeText} onDismiss={voice.dismissNotice} />}

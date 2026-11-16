@@ -21,6 +21,7 @@ import type { QuerySchema } from './useAdminQuery';
 import { AppLink } from '@/shared/ui/app-link';
 import { AdminStackedSkeleton, AdminTableSkeleton } from './AdminSkeletons';
 import { AdminPageTitle } from './AdminSection';
+import { useLanguage } from '@/shared/i18n/useLanguage';
 
 const QUERY: QuerySchema<'q'> = { q: { default: '' } };
 
@@ -56,6 +57,7 @@ function Destination({ webhook }: { webhook: AdminWebhookRow }) {
 
 /** Every channel webhook on the instance: where it posts and how much. */
 export function WebhooksPage() {
+  const language = useLanguage();
   const { t } = useTranslation('admin');
   const { filters, update, clear, active, identity } = useAdminQuery(QUERY);
   const { pathname, search } = useLocation();
@@ -64,7 +66,7 @@ export function WebhooksPage() {
   const fetchPage = useCallback((cursor: string | null) => fetchAdminWebhooks({ q: filters.q }, cursor), [filters.q]);
   const list = useAdminList(fetchPage, identity, (w) => w.id);
   const origin = fromList(pathname, search);
-  const lastUsed = (w: AdminWebhookRow) => (w.lastUsedAt ? formatWhenShort(w.lastUsedAt) : t('ui.never'));
+  const lastUsed = (w: AdminWebhookRow) => (w.lastUsedAt ? formatWhenShort(w.lastUsedAt, language) : t('ui.never'));
 
   return (
     <div className="flex flex-col gap-4">
@@ -90,7 +92,7 @@ export function WebhooksPage() {
                   <AdminTd className="max-w-56"><Destination webhook={w} /></AdminTd>
                   <AdminTd>{w.messageCount}</AdminTd>
                   <AdminTd className="whitespace-nowrap">{lastUsed(w)}</AdminTd>
-                  <AdminTd className="whitespace-nowrap">{formatDateShort(w.createdAt)}</AdminTd>
+                  <AdminTd className="whitespace-nowrap">{formatDateShort(w.createdAt, language)}</AdminTd>
                   <AdminTd><RowActions webhook={w} /></AdminTd>
                 </AdminTr>
               ))}
@@ -107,7 +109,7 @@ export function WebhooksPage() {
                 <div className="flex flex-wrap items-center gap-2 text-caption text-text-muted">
                   <Destination webhook={w} />
                   <span>{w.messageCount} {t('ui.message', { count: w.messageCount })}</span>
-                  <span>{t('ui.created')} {formatWhen(w.createdAt)}</span>
+                  <span>{t('ui.created')} {formatWhen(w.createdAt, language)}</span>
                 </div>
               </li>
             ))}

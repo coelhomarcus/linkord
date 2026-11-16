@@ -10,6 +10,7 @@ import {
   serverMemberRoles, serverMembers, serverRoles, servers, userBlocks, users,
 } from '../../db/schema.js';
 import { filePathFor } from '../attachments/attachmentStorage.js';
+import { exportActivityHistory } from '../activity/activityHistory.js';
 
 // Builds the ZIP of a data export: what the account is (profile, settings, connections), who it knows
 // (friends, blocks, servers) and what it sent (messages and their files). JSON for the records, the
@@ -36,10 +37,11 @@ async function readRecords(userId: string) {
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
   if (!user) return null;
 
-  const [connections, wallWidgets, games] = await Promise.all([
+  const [connections, wallWidgets, games, activity] = await Promise.all([
     db.select().from(profileConnections).where(eq(profileConnections.userId, userId)).orderBy(asc(profileConnections.position)),
     db.select().from(profileWallWidgets).where(eq(profileWallWidgets.userId, userId)).orderBy(asc(profileWallWidgets.position)),
     db.select().from(profileGames).where(eq(profileGames.userId, userId)).orderBy(asc(profileGames.list), asc(profileGames.position)),
+    exportActivityHistory(userId),
   ]);
 
   const other = aliasedTable(users, 'other');
@@ -66,7 +68,7 @@ async function readRecords(userId: string) {
   const notificationRows = await db.select().from(notificationSettings).where(eq(notificationSettings.userId, userId))
     .orderBy(asc(notificationSettings.updatedAt));
 
-  return { user, connections, wallWidgets, games, friendRows, blockRows, serverRows, roleRows, notificationRows };
+  return { user, connections, wallWidgets, games, activity, friendRows, blockRows, serverRows, roleRows, notificationRows };
 }
 
 /** Where each conversation the account wrote in is, named for a person: a server channel or a DM partner. */
@@ -156,7 +158,7 @@ Dates are in UTC (ISO 8601). Messages other people sent are not included.
 export async function writeExportArchive(userId: string, destination: string, now = new Date()): Promise<number | null> {
   const records = await readRecords(userId);
   if (!records) return null;
-  const { user, connections, wallWidgets, games, friendRows, blockRows, serverRows, roleRows, notificationRows } = records;
+  const { user, connections, wallWidgets, games, activity, friendRows, blockRows, serverRows, roleRows, notificationRows } = records;
 
   const files: StoredFile[] = [];
 
@@ -210,7 +212,10 @@ export async function writeExportArchive(userId: string, destination: string, no
     settings: {
       language: user.locale, presenceStatus: user.presenceStatus, pushShowsMessageText: user.pushShowContent,
       twoStepLogin: user.twoFactorEmail, newSignInAlerts: user.loginAlertEmail,
-      activity: { sharing: user.activitySharing, hidden: user.hiddenActivities },
+      activity: {
+        sharing: user.activitySharing, hidden: user.hiddenActivities,
+        recent: activity.map((a) => ({ key: a.key, kind: a.kind, name: a.name, lastPlayedAt: a.lastPlayedAt })),
+      },
       // per server and per channel or DM; a null level inherits, a muted row without an end lasts until turned off
       notifications: notificationRows.map((n) => ({
         serverId: n.serverId, conversationId: n.conversationId, level: n.level, muted: n.muted, mutedUntil: iso(n.mutedUntil),

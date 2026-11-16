@@ -11,6 +11,7 @@ import {
   sanitizeActivityReport, sanitizeActivitySettings, setActivitySettings, HIDDEN_ACTIVITIES_MAX, type Activity, type ActivitySettings,
 } from './activity.js';
 import { runSerialized } from './profileQueue.js';
+import { databaseActivityHistoryStore, type ActivityHistoryStore } from '../activity/activityHistory.js';
 import {
   forgetAccountStatus, getAccountStatus, hasAccountStatus, isCustomStatusExpired, isPresenceStatus, sameCustomStatus,
   sanitizeCustomStatus, setAccountStatus, type AccountStatus, type CustomStatus, type PresenceStatus,
@@ -101,6 +102,38 @@ export function activitySettingsPayload(userId: string): ActivitySettings {
   return getActivitySettings(userId);
 }
 
+let historyStore: ActivityHistoryStore = databaseActivityHistoryStore;
+export function setActivityHistoryStore(next: ActivityHistoryStore): void {
+  historyStore = next;
+}
+
+// one write at a time, in the order things happened; a failure is only logged, as for calls:
+// the history is a nicety, and a database problem must not break presence
+let historyWrites: Promise<void> = Promise.resolve();
+
+/** Notes in the account's history that others saw it with `activity` until now: when it starts, when
+ * it changes (an icon found later) and when it ends, so the row ends up dated by the last of these. */
+function recordActivity(userId: string, activity: Activity): void {
+  const at = new Date();
+  const target = historyStore;
+  historyWrites = historyWrites
+    .then(() => target.record(userId, activity, at))
+    .catch((err) => log.error('failed to record activity history', err, { userId, key: activity.key }));
+}
+
+/** Resolves once every history write queued so far is done (tests, shutdown). */
+export function activityHistoryWritten(): Promise<void> {
+  return historyWrites;
+}
+
+/** The history follows what peers see: only an activity shown to them (sharing on, not hidden, the
+ * account visibly online) is written, so the history never reveals more than presence did. */
+function recordActivityChange(userId: string, before: Activity | undefined, now: Activity | undefined): void {
+  if (sameActivity(before, now)) return;
+  if (before && before.key !== now?.key) recordActivity(userId, before);
+  if (now) recordActivity(userId, now);
+}
+
 let store: AccountStatusStore = databaseAccountStatusStore;
 export function setAccountStatusStore(next: AccountStatusStore): void {
   store = next;
@@ -131,6 +164,7 @@ export function syncPresence(userId: string): void {
   const before = toPeers.get(userId) ?? null;
   const now = visiblePresenceOf(userId);
   toPeers.set(userId, now);
+  recordActivityChange(userId, before?.activity, now?.activity);
   if (now && !samePresence(before, now) && (before || now.status !== 'online' || now.customStatus || now.activity)) {
     // `activity` only when there is one or there was one, so a client hears it end
     const activity = now.activity || before?.activity ? { activity: now.activity ?? null } : {};
@@ -328,7 +362,10 @@ function onConnectionsChanged(userId: string): void {
       return;
     }
   }
-  // the account's last connection is gone: its next one reads the status back from the database
+  // the account's last connection is gone: what it was seen playing ends here
+  const lastSeenActivity = toPeers.get(userId)?.activity;
+  if (lastSeenActivity) recordActivity(userId, lastSeenActivity);
+  // its next connection reads the status back from the database
   const timer = expiryTimers.get(userId);
   if (timer) clearTimeout(timer);
   expiryTimers.delete(userId);

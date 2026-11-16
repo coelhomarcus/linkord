@@ -10,10 +10,14 @@ import { formatTime } from '@/shared/lib/formatChatTime';
 import { Button } from '@/shared/ui/primitives/button';
 import { SETTINGS_ACTION_BUTTON } from '@/shared/ui/settings-layout';
 import { describeUserAgent } from './describeUserAgent';
+import { useLanguage } from '@/shared/i18n/useLanguage';
+import { useTimeFormat } from '@/shared/lib/timeFormat';
 
 /** The account's signed-in browsers, this one first. Ending one signs that browser out on the spot (the
  * server cuts its socket too). */
 export function SessionsSettings({ sessions, onEnded }: { sessions: AccountSession[]; onEnded: (ids: string[]) => void }) {
+  const language = useLanguage();
+  const timeFormat = useTimeFormat();
   const { t } = useTranslation('settings');
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [confirmAll, setConfirmAll] = useState(false);
@@ -73,10 +77,10 @@ export function SessionsSettings({ sessions, onEnded }: { sessions: AccountSessi
                 <p className="text-label text-text-muted">
                   {[
                     session.ip && session.ip !== '?' ? session.ip : null,
-                    session.current ? t('security.sessions.activeNow') : t('security.sessions.lastSeen', { time: formatTime(Date.parse(session.lastSeenAt)) }),
+                    session.current ? t('security.sessions.activeNow') : t('security.sessions.lastSeen', { time: formatTime(Date.parse(session.lastSeenAt), language, timeFormat) }),
                   ].filter(Boolean).join(' · ')}
                 </p>
-                <p className="text-caption text-text-muted">{t('security.sessions.createdAt', { time: formatTime(Date.parse(session.createdAt)) })}</p>
+                <p className="text-caption text-text-muted">{t('security.sessions.createdAt', { time: formatTime(Date.parse(session.createdAt), language, timeFormat) })}</p>
               </div>
               {!session.current && (
                 <Button

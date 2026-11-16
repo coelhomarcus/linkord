@@ -9,8 +9,10 @@ import { ServerIcon } from '@/features/servers/ServerIcon';
 import { ProfileWall, type WallDraft } from './ProfileWall';
 import type { ProfileDetails } from '@/shared/api/api';
 import { UserStatusDot } from '@/features/status/UserStatus';
+import { rememberProfilePreview } from './profileCache';
+import { ProfileActivity } from '@/features/activity/ProfileActivity';
 
-export type ProfileTab = 'wall' | 'common';
+export type ProfileTab = 'wall' | 'activity' | 'common';
 
 const TAB = 'touch-target relative h-11 shrink-0 rounded-none px-0 text-body font-semibold text-text-muted hover:text-text-secondary data-active:text-text-primary';
 const ROW = 'flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-fill-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
@@ -23,8 +25,10 @@ function Truncated({ shown, total }: { shown: number; total: number }) {
 }
 
 /** Keeps the Wall and mutual relationships beside the profile card. */
-export function ProfileSidebar({ userId, owner, accent, initialTab = 'wall', status, details, onRetry, onOpenProfile, onOpenServer, onLeave, onWallDraftChange }: {
+export function ProfileSidebar({ userId, name, owner, accent, initialTab = 'wall', status, details, onRetry, onOpenProfile, onOpenServer, onLeave, onWallDraftChange }: {
   userId: string;
+  /** the display name, for what the Activity tab says about them; only others' profiles have that tab */
+  name?: string;
   /** read once, on mount: the modal opened from "what you have in common" starts there */
   initialTab?: ProfileTab;
   owner: boolean;
@@ -40,6 +44,7 @@ export function ProfileSidebar({ userId, owner, accent, initialTab = 'wall', sta
   onWallDraftChange?: (draft: WallDraft | null) => void;
 }) {
   const { t } = useTranslation('profile');
+  const { t: tActivity } = useTranslation('activity');
   const { onlineUserIds } = useRoom('onlineUserIds');
   const [tab, setTab] = useState<ProfileTab>(initialTab);
   const friends = details?.mutualFriends;
@@ -69,7 +74,7 @@ export function ProfileSidebar({ userId, owner, accent, initialTab = 'wall', sta
   return (
     <Tabs
       value={owner ? 'wall' : tab}
-      onValueChange={(value) => { if (value === 'wall' || value === 'common') setTab(value); }}
+      onValueChange={(value) => { if (value === 'wall' || value === 'activity' || value === 'common') setTab(value); }}
       className="min-h-0 min-w-0 flex-1 flex-col items-stretch gap-3 p-4 md:p-5"
     >
       {/* underlined text tabs over a full-width rule drawn as an inset shadow, so the
@@ -78,6 +83,7 @@ export function ProfileSidebar({ userId, owner, accent, initialTab = 'wall', sta
       <TabsList aria-label={t('wall.profileTabs')} className="scrollbar-none flex h-auto min-w-0 w-full flex-none justify-start gap-4 overflow-x-auto overflow-y-hidden rounded-none border-0 bg-transparent p-0 shadow-[inset_0_-1px_0_var(--color-border)] whitespace-nowrap">
         <TabsIndicator className="top-auto bottom-0 h-0.5 rounded-full bg-text-primary" />
         <TabsTrigger value="wall" className={TAB}>{t('wall.title')}</TabsTrigger>
+        {!owner && <TabsTrigger value="activity" className={TAB}>{tActivity('profile.tab')}</TabsTrigger>}
         {!owner && <TabsTrigger value="common" className={TAB}>{t('mutuals.title')}</TabsTrigger>}
       </TabsList>
 
@@ -89,6 +95,11 @@ export function ProfileSidebar({ userId, owner, accent, initialTab = 'wall', sta
         <TabsPanel value="wall" keepMounted>
           <ProfileWall userId={userId} owner={owner} accent={accent} onLeave={onLeave} onDraftChange={onWallDraftChange} />
         </TabsPanel>
+        {!owner && (
+          <TabsPanel value="activity">
+            <ProfileActivity userId={userId} name={name ?? ''} />
+          </TabsPanel>
+        )}
         {!owner && (
           <TabsPanel value="common" keepMounted aria-busy={status === 'loading'}>
             {mutualsFallback ?? (
@@ -124,7 +135,7 @@ export function ProfileSidebar({ userId, owner, accent, initialTab = 'wall', sta
                         const online = onlineUserIds.has(friend.id);
                         return (
                           <li key={friend.id}>
-                            <button type="button" onClick={() => onOpenProfile(friend.id)} className={ROW}>
+                            <button type="button" onClick={() => { rememberProfilePreview(friend); onOpenProfile(friend.id); }} className={ROW}>
                               <span className="relative flex-none">
                                 <Avatar id={friend.id} name={friend.displayName} avatar={friend.avatar} avatarColor={friend.avatarColor} size={40} />
                                 <UserStatusDot userId={friend.id} className="absolute -bottom-0.5 -right-0.5 size-3.5 border-2 text-bg-modal" />

@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import type { ReactNode } from 'react';
 import { desktopApp } from '@/shared/desktop';
+import { DesktopUpdateButton } from '@/features/desktopApp/DesktopUpdateButton';
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
 import { WindowControls } from '@/app/layout/WindowControls';
 import { TOP_BAR_QUERY, TitleBarHostContext, hostFor } from '@/app/layout/titleBar';
@@ -28,6 +29,7 @@ export function DesktopFrame({ children }: { children: ReactNode }) {
       <div className="flex h-full flex-col bg-surface-rail">
         {!topBarShown && (
           <div data-testid="desktop-title-bar" onDoubleClick={host.onDoubleClick} className="app-drag flex h-titlebar flex-none items-stretch justify-end">
+            <span className="flex items-center pr-1"><DesktopUpdateButton /></span>
             <WindowControls controls={controls} platform={desktop.platform} />
           </div>
         )}

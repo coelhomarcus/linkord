@@ -31,7 +31,7 @@ The variables a production instance needs:
 | `PUSH_VAPID_PUBLIC_KEY`, `PUSH_VAPID_PRIVATE_KEY`, `PUSH_VAPID_SUBJECT` | All three or none. Generate them once (`npx web-push generate-vapid-keys`) and keep them: new keys break every existing subscription. |
 | `RESEND_API_KEY`, `RESEND_FROM_EMAIL` | Optional. Without them, password recovery, email changes and two-step login are unavailable, and older accounts that still have no email cannot get past the screen asking them to link one. Once people turn two-step login on, removing them locks those accounts out ([Resend](INTEGRATIONS.md#resend)). |
 
-Optional services (KLIPY, MyAnimeList, IGDB) and every limit are in `.env.example`. Covers, GitHub avatars, link preview pictures and YouTube thumbnails are downloaded by the server and served from its own domain, which costs outbound bandwidth and up to 64 MB of memory for the cache; `MEDIA_PROXY=0` sends browsers to those services instead ([media proxy](INTEGRATIONS.md#media-proxy)). After the first start, make yourself an administrator: `node server/dist/scripts/adminRole.js grant <username>` inside the container (`npm run admin:grant -- <username>` from a checkout).
+Optional services (KLIPY, MyAnimeList, IGDB, SteamGridDB) and every limit are in `.env.example`. Covers, GitHub avatars, link preview pictures and YouTube thumbnails are downloaded by the server and served from its own domain, which costs outbound bandwidth and up to 64 MB of memory for the cache; `MEDIA_PROXY=0` sends browsers to those services instead ([media proxy](INTEGRATIONS.md#media-proxy)). After the first start, make yourself an administrator: `node server/dist/scripts/adminRole.js grant <username>` inside the container (`npm run admin:grant -- <username>` from a checkout).
 
 ## The complete stack on one server
 
@@ -119,7 +119,7 @@ The app writes to two places and nothing else:
 
 | Container path | What is there |
 | --- | --- |
-| `/app/uploads` | Every stored file: attachments, thumbnails, profile images, soundboard sounds, server emojis and stickers, and the app icons shown with someone's activity (`activity-icons/`). `tmp/` inside it holds the chunks of uploads still in progress, one folder per upload. `exports/` holds the ZIPs of "Download my data" (`EXPORT_DIR`, see below). |
+| `/app/uploads` | Every stored file: attachments, thumbnails, profile images, soundboard sounds, server emojis and stickers, and the icons shown with someone's activity, games' and apps' alike (`activity-icons/`). `tmp/` inside it holds the chunks of uploads still in progress, one folder per upload. `exports/` holds the ZIPs of "Download my data" (`EXPORT_DIR`, see below). |
 | `/app/backups` | One dated folder per backup (`BACKUP_DIR`). |
 
 **Data exports.** A person can ask for a copy of their data in Settings → Data & privacy. A background job builds a ZIP of their profile, settings, friends, blocks, servers, the messages they sent and those messages' files, writes it to `EXPORT_DIR` (default `/app/uploads/exports`, created on first use) and emails a link; the file can be downloaded by that account for 7 days, then an hourly sweep deletes it. Each ZIP is about the size of the person's attachments, so budget disk for the largest accounts asking at once (one request per account per day). Leaving `EXPORT_DIR` at its default keeps the files on the uploads volume, so a redeploy does not lose a ready export; a path outside a mounted volume works too, but a deploy then drops the ready files and their links answer 404 until the person asks again. Backups leave `exports/` out: the copies expire within days and can be rebuilt on request.
@@ -201,9 +201,9 @@ npm install --prefix desktop
 LINKORD_URL=https://chat.example.com npm run package:desktop
 ```
 
-The installer lands in `desktop/release/` as `Linkord-<version>-win-x64.exe`. It installs for the current user, with no administrator prompt.
+The installer lands in `desktop/release/` as `Linkord-<version>-win-x64.exe`. It installs for the current user, with no administrator prompt, and registers `linkord://` links for that user (`HKCU\Software\Classes\linkord`, written by `desktop/resources/installer.nsh`, since electron-builder's NSIS target does not write `protocols`); uninstalling removes the key, an update keeps it. The app writes the same key again at every start. What the links open is in [DEVELOPMENT.md](DEVELOPMENT.md#desktop-app).
 
-- `LINKORD_URL` must be `https` (plain `http` only for `localhost`); the build refuses to run without it. A different server needs its own build. Someone who has the app can still point it elsewhere with `LINKORD_URL` or `--url=<address>` at launch.
+- `LINKORD_URL` must be `https` (plain `http` only for `localhost`); the build refuses to run without it. A different server needs its own build. Someone who has the app can still point it elsewhere with `LINKORD_URL` or `--url=<address>` at launch; a start from a `linkord://` link ignores `--url`.
 - The build always targets Windows (`--win`). Anything after `--` goes to electron-builder, for example `npm run package:desktop -- --dir` for an unpacked folder. On macOS or Linux electron-builder may need Wine to build it; the workflow below builds it on a Windows runner.
 - The first build downloads Electron and the packaging tools.
 - The version in the file name is `desktop/package.json`'s.
@@ -218,7 +218,7 @@ The installer has no code signing certificate. It works, but Windows treats it a
 
 Most changes do not need a new version. The interface comes from the server, so a server deploy updates it. A desktop build older than the server keeps working, because the web app checks each feature the desktop app offers before using it. A new installer is needed only for changes in `desktop/`.
 
-An installed app looks for a newer version 30 seconds after it starts and every 6 hours, and on demand from **Check for updates…** in the tray or the menu. It reads the latest published release of the repository it was built for (`LINKORD_UPDATE_REPO`, which the workflow sets to its own repository), and only a version number greater than its own counts. It downloads the new installer in the background and installs it when Linkord quits or on **Restart to update**.
+An installed app checks for a newer version every time it opens, in a small window of its own (`desktop/src/main/updaterWindow.ts`, `desktop/assets/updater.html`) that shows the check and the download; an update found then is installed before the app's window opens. A check that takes more than 8 seconds or fails only opens the app. A start with the system that stays in the tray skips the window and checks in the background. After that it checks every 6 hours in the background, and on demand from **Check for updates…** in the tray or the menu, which opens the same window and ends with **Restart now** or **Later**. It reads the latest published release of the repository it was built for (`LINKORD_UPDATE_REPO`, which the workflow sets to its own repository), and only a version number greater than its own counts. An update downloaded in the background shows as a green arrow in the title bar (`DesktopUpdateButton` in `web/src/features/desktopApp/`) and as **Restart to update** in the tray; it is installed on that click or when Linkord quits. The installer runs silently (no installer window) and starts Linkord again.
 
 No key or secret is involved. The update is checked against the SHA-512 in the release's `latest.yml`, served over HTTPS by GitHub; the release is created with the workflow's own `GITHUB_TOKEN`. Anyone who can publish releases on the repository can therefore ship an update to every installed app, so keep that permission as tight as the deploy itself.
 

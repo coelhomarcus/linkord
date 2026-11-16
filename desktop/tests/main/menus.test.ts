@@ -157,8 +157,10 @@ describe('trayMenuItems', () => {
     runTrayItem(state(), actions, 'startAtLogin', true);
     runTrayItem(state(), actions, 'update');
     runTrayItem(state({ update: { mode: 'install', status: { kind: 'downloaded', version: '1.0.0' } } }), actions, 'update');
+    // a download under way: the check opens the updater window on its progress
+    runTrayItem(state({ update: { mode: 'install', status: { kind: 'downloading', version: '1.0.0', percent: 40 } } }), actions, 'update');
     runTrayItem(state(), actions, 'quit');
     runTrayItem(state(), actions, 'unknown');
-    assert.deepEqual(calls, ['show', 'login:true', 'check', 'apply', 'quit']);
+    assert.deepEqual(calls, ['show', 'login:true', 'check', 'apply', 'check', 'quit']);
   });
 });

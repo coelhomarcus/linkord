@@ -2,11 +2,14 @@ import '@testing-library/jest-dom/vitest';
 import { afterEach } from 'vitest';
 import { cleanup } from '@testing-library/react';
 import { initI18n } from '@/shared/i18n/init';
+import { clearResourceCaches } from '@/shared/lib/resourceCache';
 
 // jsdom reports en-US; the suite asserts the Portuguese UI text.
 initI18n('pt-BR');
 
 afterEach(() => {
+  // profiles and relationships are cached per module, and would leak into the next test
+  clearResourceCaches();
   if (typeof document === 'undefined') return;
   cleanup();
   // the live region lives on <body>, outside what cleanup unmounts, and outlasts a test

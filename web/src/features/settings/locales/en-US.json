@@ -532,6 +532,7 @@
       "checking": "Checking for updates…",
       "upToDate": "You are on the latest version.",
       "downloading": "Downloading version {{version}}. It installs when Linkord restarts.",
+      "downloadingPercent": "Downloading version {{version}}… {{percent}}%",
       "failed": "Could not check for updates.",
       "available": "Version {{version}} is available.",
       "ready": "Version {{version}} is ready to install.",

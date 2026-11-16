@@ -43,6 +43,7 @@ import { dmCallLine } from './dmCallLine';
 import { Emoji, EmojiText } from '@/features/emoji/Emoji';
 import { useSwipeToReply } from './useSwipeToReply';
 import { SWIPE } from '@/shared/lib/swipe';
+import { useLanguage } from '@/shared/i18n/useLanguage';
 
 // A bot's message is usually something to acknowledge or flag — a deploy, an
 // alert — so its toolbar answers in one click, before the rest of the actions.
@@ -141,10 +142,11 @@ function PendingStatus({ entry, offline, onRetry, onDiscard }: { entry: OutboxEn
 
 // memo: a new message, or a change to another row, re-renders the timeline but not every row in it
 export const MessageRow = memo(function MessageRow({ message, showHeader, highlighted, allUsers, mentionLookup, onOpenProfile, onReply: replyTo, onJumpTo, pending }: MessageRowProps) {
+  // the timestamp follows the language and the time format chosen in settings
+  const language = useLanguage();
+  const timeFormat = useTimeFormat();
   const { t } = useTranslation('chat');
   const onReply = useCallback(() => replyTo(message), [replyTo, message]);
-  // re-renders the timestamp when the time format changes in settings
-  useTimeFormat();
   const deletedAuthorName = t('deletedAuthor');
   const {
     conversations, servers, serverMemberRoleIds, editChatMessage, reactToChatMessage, editingMsgId, setEditingMsgId, retryPendingMessage, discardPendingMessage,
@@ -193,16 +195,16 @@ export const MessageRow = memo(function MessageRow({ message, showHeader, highli
 
   // the editor shows server emojis as :name:; each keeps pointing at the
   // emoji it was, even when another of the account's has the same name
-  const editByName = useMemo(() => emojisByName(myEmojis.servers, conversation?.serverId), [myEmojis.servers, conversation?.serverId]);
-  const editKeep = useMemo(() => tokensByName(message.text), [message.text]);
-  const resolveEditEmoji = useCallback((name: string, nth: number | null) => (
+  const editByName = emojisByName(myEmojis.servers, conversation?.serverId);
+  const editKeep = tokensByName(message.text);
+  const resolveEditEmoji = (name: string, nth: number | null) => (
     (!nth && editKeep.get(name)) || editByName.get(name)?.[nth ? nth - 1 : 0] || null
-  ), [editByName, editKeep]);
+  );
 
-  const resolveEditRole = useCallback((roleId: string) => {
+  const resolveEditRole = (roleId: string) => {
     const role = messageServer?.roles.find((r) => r.id === roleId);
     return role ? { id: role.id, name: role.name, color: role.color } : null;
-  }, [messageServer]);
+  };
 
   async function saveEdit() {
     const trimmed = encodeCustomEmojis(editText, editByName, editKeep).trim();
@@ -216,9 +218,8 @@ export const MessageRow = memo(function MessageRow({ message, showHeader, highli
     } catch (err) {
       // the editor stays open with the text as typed, so nothing is lost
       setEditError(err instanceof Error ? err.message : t('edit.saveFailed'));
-    } finally {
-      setEditSaving(false);
     }
+    setEditSaving(false);
   }
 
   function startEdit() {
@@ -249,7 +250,7 @@ export const MessageRow = memo(function MessageRow({ message, showHeader, highli
       <div className="flex items-center gap-2 px-4 py-1 text-label text-text-secondary" data-msg-id={message.msgId}>
         <PhoneIcon size={16} weight="fill" className={cn('block shrink-0', answered ? 'text-green' : 'text-red')} aria-hidden />
         <span>{dmCallLine({ viewerId: state.me.userId, callerId: message.id, callerName: message.name, durationSeconds: message.callDurationSeconds ?? null }, t)}</span>
-        <time className="text-caption text-text-muted" dateTime={new Date(message.ts).toISOString()}>{formatTime(message.ts)}</time>
+        <time className="text-caption text-text-muted" dateTime={new Date(message.ts).toISOString()}>{formatTime(message.ts, language, timeFormat)}</time>
       </div>
     );
   }
@@ -316,7 +317,7 @@ export const MessageRow = memo(function MessageRow({ message, showHeader, highli
               // a webhook is no account: tagged the way Discord tags its apps
               <span className="inline-flex h-[15px] flex-none select-none items-center self-center rounded-[4px] bg-accent-primary px-[5px] text-[10px] font-semibold uppercase leading-none tracking-[0.02em] text-primary-foreground">{t('bot')}</span>
             )}
-            <span className="flex-none select-none text-caption text-text-muted">{formatTime(message.ts)}</span>
+            <span className="flex-none select-none text-caption text-text-muted">{formatTime(message.ts, language, timeFormat)}</span>
           </div>
         )}
 

@@ -1,6 +1,7 @@
 import { Avatar } from '@/shared/Avatar';
 import { formatTypingLabel } from '@/shared/lib/formatTypingLabel';
 import { useRoom } from '@/state/RoomContext';
+import { useLanguage } from '@/shared/i18n/useLanguage';
 
 const MAX_AVATARS = 3;
 
@@ -23,11 +24,12 @@ function TypingDots() {
  * you're about to reply to belongs next to where you type, not competing
  * with the person/group you're talking to for the same line. */
 export function TypingIndicator({ conversationId }: { conversationId: string }) {
+  const language = useLanguage();
   const { typingByConversation, allUsers } = useRoom('typingByConversation', 'allUsers');
   const typingUsers = [...(typingByConversation.get(conversationId) ?? [])]
     .map((id) => allUsers.get(id))
     .filter((user): user is NonNullable<typeof user> => !!user);
-  const label = formatTypingLabel(typingUsers.map((user) => user.displayName));
+  const label = formatTypingLabel(typingUsers.map((user) => user.displayName), language);
 
   // The live region stays mounted even when empty: one created together
   // with its first text is often not announced at all.

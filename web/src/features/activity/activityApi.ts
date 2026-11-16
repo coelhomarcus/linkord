@@ -1,10 +1,12 @@
 import { apiFetch } from '@/shared/api/api';
 
-/** The IGDB name and cover of a detected game (server/src/modules/activity/activityGames.ts). */
-export function lookupActivityGame(query: { steamAppId?: number; name: string }): Promise<{ name: string; image: string | null }> {
+/** A detected game's IGDB name and stored icon id (server/src/modules/activity/), `icon` absent from a
+ * server before game icons. `ref` is the program's own icon, stored, which the server picks the icon by. */
+export function lookupActivityGame(query: { steamAppId?: number; name: string; ref?: string | null }): Promise<{ name: string; icon?: string | null }> {
   const params = new URLSearchParams();
   if (query.steamAppId) params.set('steam', String(query.steamAppId));
   if (query.name) params.set('name', query.name);
+  if (query.ref) params.set('ref', query.ref);
   return apiFetch(`/api/activity/game?${params}`);
 }
 
@@ -13,4 +15,19 @@ export async function uploadActivityIcon(dataUrl: string): Promise<string> {
   const blob = await (await fetch(dataUrl)).blob();
   const { id } = await apiFetch<{ id: string }>('/api/activity/icons', { method: 'POST', body: blob, headers: { 'Content-Type': blob.type || 'image/png' } });
   return id;
+}
+
+/** One game or app from someone's history (`GET /api/users/:userId/activity`). */
+export interface ActivityHistoryItem {
+  key: string;
+  kind: 'playing' | 'using';
+  name: string;
+  icon: string | null;
+  /** ISO time they were last seen with it */
+  lastPlayedAt: string;
+}
+
+/** What someone played or used lately, newest first; empty with `sharing: false` while they do not share it. */
+export function fetchActivityHistory(userId: string, signal?: AbortSignal): Promise<{ sharing: boolean; items: ActivityHistoryItem[] }> {
+  return apiFetch(`/api/users/${encodeURIComponent(userId)}/activity`, { signal });
 }

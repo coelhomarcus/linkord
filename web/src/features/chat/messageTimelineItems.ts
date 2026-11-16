@@ -1,3 +1,4 @@
+import { i18n } from '@/shared/i18n/init';
 import { formatDateHeading } from '@/shared/lib/formatChatTime';
 import type { ChatMessage } from '@/shared/types/protocol';
 import type { OutboxEntry } from './useMessageOutbox';
@@ -21,7 +22,7 @@ function messageKey(message: ChatMessage): string {
  * new-messages line then goes in only where both sides of it are loaded: a
  * first unread message older than the window sits in a page not fetched yet,
  * and a line at the window's top would mark the wrong place. */
-export function buildTimelineItems(messages: ChatMessage[], pending: OutboxEntry[] = [], author?: PendingAuthor, firstUnreadMessageId?: number, hasOlder = false): TimelineItem[] {
+export function buildTimelineItems(messages: ChatMessage[], pending: OutboxEntry[] = [], author?: PendingAuthor, firstUnreadMessageId?: number, hasOlder = false, language: string = i18n.language): TimelineItem[] {
   const stored = new Set(messages.flatMap((message) => (message.clientMessageId ? [message.clientMessageId] : [])));
   const rows: { message: ChatMessage; pending?: OutboxEntry }[] = messages.map((message) => ({ message }));
   pending.forEach((entry, index) => {
@@ -52,7 +53,7 @@ export function buildTimelineItems(messages: ChatMessage[], pending: OutboxEntry
   for (const { message, pending: entry } of rows) {
     const dateKey = new Date(message.ts).toDateString();
     if (dateKey !== lastDateKey) {
-      items.push({ type: 'date', key: `date-${dateKey}`, label: formatDateHeading(message.ts) });
+      items.push({ type: 'date', key: `date-${dateKey}`, label: formatDateHeading(message.ts, language) });
       lastDateKey = dateKey;
       lastMsg = null;
     }

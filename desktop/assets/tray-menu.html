@@ -41,6 +41,9 @@
     transition: opacity 150ms cubic-bezier(0.16, 1, 0.3, 1), transform 150ms cubic-bezier(0.16, 1, 0.3, 1);
   }
   .menu.open { opacity: 1; transform: none; }
+  /* it takes focus so the arrow keys work; Chromium would ring it in white
+     every time it opens, since nothing was clicked yet */
+  .menu:focus { outline: none; }
   @media (prefers-reduced-motion: reduce) { .menu { transform: none; } }
   .header { display: flex; align-items: center; gap: 10px; height: 52px; padding: 0 8px; }
   .header svg { width: 26px; height: 26px; flex: none; }

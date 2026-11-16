@@ -25,25 +25,25 @@ export const itemKey = (item: MediaItem): string => `${item.msgId}:${item.attach
 const DAY_MS = 86_400_000;
 
 /** The heading a day's items sit under: recent days by name, older ones by month. */
-export function dateGroupLabel(ts: number, now: number = Date.now()): string {
+export function dateGroupLabel(ts: number, language: string, now: number = Date.now()): string {
   const startOfToday = new Date(now).setHours(0, 0, 0, 0);
   const startOfDay = new Date(ts).setHours(0, 0, 0, 0);
   const daysAgo = Math.round((startOfToday - startOfDay) / DAY_MS);
-  if (daysAgo <= 0) return i18n.t('conversations:media.today');
-  if (daysAgo === 1) return i18n.t('conversations:media.yesterday');
-  if (daysAgo < 7) return i18n.t('conversations:media.thisWeek');
-  const month = new Date(ts).toLocaleDateString(i18n.language, { month: 'long', year: 'numeric' });
+  if (daysAgo <= 0) return i18n.t('conversations:media.today', { lng: language });
+  if (daysAgo === 1) return i18n.t('conversations:media.yesterday', { lng: language });
+  if (daysAgo < 7) return i18n.t('conversations:media.thisWeek', { lng: language });
+  const month = new Date(ts).toLocaleDateString(language, { month: 'long', year: 'numeric' });
   return month.charAt(0).toUpperCase() + month.slice(1);
 }
 
-export function formatMediaDate(ts: number): string {
-  return new Date(ts).toLocaleString(i18n.language, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+export function formatMediaDate(ts: number, language: string): string {
+  return new Date(ts).toLocaleString(language, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
 /** Items arrive newest first, so each heading's items are contiguous: a
  * heading is added wherever the label changes, and tiles are cut into rows of
  * `columns` that never straddle a heading. */
-export function buildRows(items: MediaItem[], layout: MediaLayout, columns: number, now: number = Date.now()): MediaRow[] {
+export function buildRows(items: MediaItem[], layout: MediaLayout, columns: number, language: string, now: number = Date.now()): MediaRow[] {
   const rows: MediaRow[] = [];
   let label: string | null = null;
   let pending: MediaItem[] = [];
@@ -54,7 +54,7 @@ export function buildRows(items: MediaItem[], layout: MediaLayout, columns: numb
   };
 
   for (const item of items) {
-    const itemLabel = dateGroupLabel(item.ts, now);
+    const itemLabel = dateGroupLabel(item.ts, language, now);
     if (itemLabel !== label) {
       flushTiles();
       label = itemLabel;

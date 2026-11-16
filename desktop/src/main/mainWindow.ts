@@ -1,7 +1,9 @@
 import fs from 'node:fs';
+import path from 'node:path';
 import { BrowserWindow, screen } from 'electron';
 import { SECURE_WEB_PREFERENCES } from './contentsGuard.js';
-import { isLoadFailure, retryDelayMs } from './loadRetry.js';
+import { NO_CRASHES, isLoadFailure, pageCrashed, pageLoaded, retryDelayMs } from './loadRetry.js';
+import type { Strings } from './strings.js';
 import { titleBarOptions } from './titleBar.js';
 import { MIN_SIZE, parseWindowState, placeWindow, type WindowState } from './windowState.js';
 
@@ -9,6 +11,7 @@ import { MIN_SIZE, parseWindowState, placeWindow, type WindowState } from './win
 // flash white before the page paints
 const BACKGROUND = '#000000';
 const SAVE_DELAY_MS = 500;
+const STOPPED_PAGE = path.join(import.meta.dirname, '../../assets/stopped.html');
 
 function readState(file: string): WindowState | null {
   try { return parseWindowState(JSON.parse(fs.readFileSync(file, 'utf8'))); } catch { return null; }
@@ -19,15 +22,26 @@ function writeState(file: string, window: BrowserWindow): void {
   try { fs.writeFileSync(file, JSON.stringify(state)); } catch (error) { console.error('[desktop] could not save the window state', error); }
 }
 
+export interface MainWindow {
+  window: BrowserWindow;
+  /** loads another page of the app, with the same retries as the first load */
+  load: (url: URL) => void;
+}
+
 export function createMainWindow(options: {
   appUrl: URL;
+  /** a page of the app to open first instead of appUrl (a `linkord://` link) */
+  startUrl?: URL | null;
   stateFile: string;
   preload: string;
   /** Read by the preload from process.argv: it cannot ask the main process synchronously. */
   preloadArguments: string[];
   /** a start with the system: the window waits in the tray until it is opened */
   startHidden: boolean;
-}): BrowserWindow {
+  /** held back until the start's update check settles; false: an update is being installed, never show */
+  showWhen?: Promise<boolean>;
+  strings: Strings;
+}): MainWindow {
   const placement = placeWindow(readState(options.stateFile), screen.getAllDisplays().map((d) => d.workArea));
   const window = new BrowserWindow({
     ...placement.bounds,
@@ -49,7 +63,12 @@ export function createMainWindow(options: {
 
   // Also on a failed load, so the retry is not an empty, invisible window;
   // a start with the system keeps quiet until the person opens it
-  const reveal = () => { if (!options.startHidden && !window.isVisible()) window.show(); };
+  const reveal = () => {
+    if (options.startHidden) return;
+    void (options.showWhen ?? Promise.resolve(true)).then((show) => {
+      if (show && !window.isDestroyed() && !window.isVisible()) window.show();
+    });
+  };
   window.once('ready-to-show', reveal);
 
   let saveTimer: NodeJS.Timeout | undefined;
@@ -66,8 +85,9 @@ export function createMainWindow(options: {
   const contents = window.webContents;
   let attempt = 0;
   let retryTimer: NodeJS.Timeout | undefined;
+  let target = options.startUrl ?? options.appUrl;
   const load = () => {
-    contents.loadURL(options.appUrl.href).catch(() => {
+    contents.loadURL(target.href).catch(() => {
       // did-fail-load reports the failure and schedules the retry
     });
   };
@@ -79,14 +99,38 @@ export function createMainWindow(options: {
     clearTimeout(retryTimer);
     retryTimer = setTimeout(load, delay);
   });
-  contents.on('did-finish-load', () => { attempt = 0; });
+  let crashes = NO_CRASHES;
+  contents.on('did-finish-load', () => {
+    attempt = 0;
+    crashes = pageLoaded(crashes, Date.now());
+  });
   contents.on('render-process-gone', (_event, details) => {
     if (details.reason === 'clean-exit') return;
-    console.error(`[desktop] page process gone (${details.reason}); reloading`);
-    load();
+    const result = pageCrashed(crashes, Date.now());
+    crashes = result.history;
+    clearTimeout(retryTimer);
+    if (result.decision.kind === 'give-up') {
+      console.error(`[desktop] page process gone (${details.reason}) too many times in a row; stopped`);
+      const { strings } = options;
+      // Its button goes back to the app's address, which the navigation guard lets through
+      contents.loadFile(STOPPED_PAGE, { query: { title: strings.crashedTitle, body: strings.crashedBody, action: strings.reload, url: target.href } })
+        .catch((error: unknown) => console.error('[desktop] could not show the stopped screen', error));
+      return;
+    }
+    const { delayMs } = result.decision;
+    console.error(`[desktop] page process gone (${details.reason}); reloading in ${delayMs} ms`);
+    retryTimer = setTimeout(load, delayMs);
   });
   window.on('closed', () => { clearTimeout(retryTimer); clearTimeout(saveTimer); });
 
   load();
-  return window;
+  return {
+    window,
+    load: (url) => {
+      target = url;
+      attempt = 0;
+      clearTimeout(retryTimer);
+      load();
+    },
+  };
 }

@@ -41,7 +41,7 @@ Linkord is a self-hosted place to chat and call with friends. Talk in direct mes
 **People**
 - Friends by exact `@username`, friend requests, and blocking.
 - Presence (available, idle, do not disturb, invisible) and custom statuses.
-- Activity: the desktop app shows what you are playing or using ("Jogando Minecraft", with the game's cover or the app's icon) on your profile, in member lists and in your friends' Active Now. It only recognizes Steam games and a known list of games and apps, is on by default, and can be turned off or limited per game in Settings → Activity.
+- Activity: the desktop app shows what you are playing or using ("Jogando Minecraft", with the game's icon or the app's, and a running timer) on your profile, in member lists, in DM and friends rows, next to your name in a voice channel (hover or tap the icon for a "Jogando agora" card) and in your friends' Active Now. The full profile has an Activity tab with the current activity and the games and apps played lately ("2d atrás"). It only recognizes Steam games and a known list of games and apps, is on by default, and can be turned off or limited per game in Settings → Activity; turning it off or hiding a game also hides it from the recent list.
 - Profile with connected accounts and a Wall of widgets: MyAnimeList, GitHub, and games from IGDB.
 
 **Notifications**
@@ -73,7 +73,7 @@ Open [http://localhost:3000](http://localhost:3000) and create an account with t
 
 For local development, the frontend and backend run on the host, and `docker compose up -d` brings up the services they use (PostgreSQL, LiveKit and a mail sink). Follow the [local development guide](docs/DEVELOPMENT.md) for setup and run instructions.
 
-A desktop app for Windows is in progress in `desktop/`: an Electron window that opens your Linkord server. See [Desktop app](docs/DEVELOPMENT.md#desktop-app) for running it and [building its installer](docs/DEPLOY.md#desktop-app) for your server.
+A desktop app for Windows is in progress in `desktop/`: an Electron window that opens your Linkord server, where `linkord://` links open invites and conversations. See [Desktop app](docs/DEVELOPMENT.md#desktop-app) for running it and [building its installer](docs/DEPLOY.md#desktop-app) for your server.
 
 ## 🐳 Deployment
 

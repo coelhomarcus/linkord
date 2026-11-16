@@ -17,6 +17,7 @@ import type { QuerySchema } from './useAdminQuery';
 import { AppLink } from '@/shared/ui/app-link';
 import { AdminStackedSkeleton, AdminTableSkeleton } from './AdminSkeletons';
 import { AdminPageTitle } from './AdminSection';
+import { useLanguage } from '@/shared/i18n/useLanguage';
 
 // group and bot stay filterable: records from before servers still carry them
 const TARGET_TYPES = ['all', 'user', 'server', 'webhook', 'group', 'bot', 'message', 'report', 'system'] as const;
@@ -59,40 +60,43 @@ function Actor({ row }: { row: AuditRow }) {
 }
 
 function Target({ row, inline }: { row: AuditRow; inline?: boolean }) {
+  const language = useLanguage();
   const href = entityHref(row.targetType, row.targetId, row.action);
   const label = row.targetLabel || row.targetId || '-';
   const name = href ? <AppLink to={href} className="hover:underline">{label}</AppLink> : <span>{label}</span>;
-  if (inline) return <span className="min-w-0 break-words">{reportTargetLabel(row.targetType)}: {name}</span>;
+  if (inline) return <span className="min-w-0 break-words">{reportTargetLabel(row.targetType, language)}: {name}</span>;
   return (
     <span className="min-w-0">
-      <span className="block text-caption text-text-muted">{reportTargetLabel(row.targetType)}</span>
+      <span className="block text-caption text-text-muted">{reportTargetLabel(row.targetType, language)}</span>
       {href ? <AppLink to={href} className="block truncate hover:underline">{label}</AppLink> : <span className="block truncate">{label}</span>}
     </span>
   );
 }
 
 function Toggle({ row, open, onToggle, controls }: { row: AuditRow; open: boolean; onToggle: () => void; controls: string }) {
+  const language = useLanguage();
   return (
     <button type="button" aria-expanded={open} aria-controls={controls} onClick={onToggle} className="flex items-center gap-1.5 rounded-md text-left outline-none focus-visible:ring-2 focus-visible:ring-ring">
       {open ? <CaretDownIcon size={16} aria-hidden className="flex-none text-text-muted" /> : <CaretRightIcon size={16} aria-hidden className="flex-none text-text-muted" />}
-      <span>{formatWhenShort(row.at)}</span>
-      <span className="sr-only">{i18nActionDetails(row.action)}</span>
+      <span>{formatWhenShort(row.at, language)}</span>
+      <span className="sr-only">{i18nActionDetails(row.action, language)}</span>
     </button>
   );
 }
 
-function i18nActionDetails(action: string): string {
-  return `: ${actionLabel(action)}`;
+function i18nActionDetails(action: string, language: string): string {
+  return `: ${actionLabel(action, language)}`;
 }
 
 function WideRow({ row }: { row: AuditRow }) {
+  const language = useLanguage();
   const [open, setOpen] = useState(false);
   const detailsId = `audit-${row.id}`;
   return (
     <>
       <AdminTr>
         <AdminTd><Toggle row={row} open={open} onToggle={() => setOpen((v) => !v)} controls={detailsId} /></AdminTd>
-        <AdminTd className="font-medium text-text-primary">{actionLabel(row.action)}</AdminTd>
+        <AdminTd className="font-medium text-text-primary">{actionLabel(row.action, language)}</AdminTd>
         <AdminTd className="truncate"><Actor row={row} /></AdminTd>
         <AdminTd className="truncate"><Target row={row} /></AdminTd>
         <AdminTd><Result row={row} /></AdminTd>
@@ -108,12 +112,13 @@ function WideRow({ row }: { row: AuditRow }) {
 
 function CompactRow({ row }: { row: AuditRow }) {
   const { t } = useTranslation('admin');
+  const language = useLanguage();
   const [open, setOpen] = useState(false);
   const detailsId = `audit-${row.id}`;
   return (
     <li className="flex flex-col gap-2 p-3 text-label text-text-secondary">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="font-medium text-text-primary">{actionLabel(row.action)}</span>
+        <span className="font-medium text-text-primary">{actionLabel(row.action, language)}</span>
         <Result row={row} />
       </div>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-caption">
@@ -129,6 +134,7 @@ function CompactRow({ row }: { row: AuditRow }) {
 /** Read-only by construction: there is no edit or delete anywhere in this
  * feature or its API. A record is shown as it was written. */
 export function AuditPage() {
+  const language = useLanguage();
   const { t } = useTranslation('admin');
   const { filters, update, clear, active, identity } = useAdminQuery(QUERY);
   const tableFits = useAdminTableFits();
@@ -146,7 +152,7 @@ export function AuditPage() {
   const list = useAdminList(fetchPage, identity, (row) => row.id);
 
   // a code the labels don't know (a link, an older record) is kept, not silently reset
-  const actionOptions = [{ value: '', label: t('ui.allActions') }, ...(action && !ACTION_LABELS[action] ? [{ value: action, label: `${action} (${t('audit.unknownCode')})` }] : []), ...Object.keys(ACTION_LABELS).sort((a, b) => actionLabel(a).localeCompare(actionLabel(b), undefined, { sensitivity: 'base' })).map((value) => ({ value, label: actionLabel(value) }))];
+  const actionOptions = [{ value: '', label: t('ui.allActions') }, ...(action && !ACTION_LABELS[action] ? [{ value: action, label: `${action} (${t('audit.unknownCode')})` }] : []), ...Object.keys(ACTION_LABELS).sort((a, b) => actionLabel(a, language).localeCompare(actionLabel(b, language), undefined, { sensitivity: 'base' })).map((value) => ({ value, label: actionLabel(value, language) }))];
 
   return (
     <div className="flex flex-col gap-4">
@@ -156,7 +162,7 @@ export function AuditPage() {
           <>
             <AdminSelectField<string> label={t('ui.action')} value={action} onChange={(next) => update({ action: next })} options={actionOptions} />
             <AdminSelectField<string> label={t('ui.targetType')} value={filters.targetType} onChange={(next) => update({ targetType: next })}
-              options={[{ value: 'all', label: t('ui.all') }, ...TARGET_TYPES.filter((targetType) => targetType !== 'all').map((targetType) => ({ value: targetType, label: reportTargetLabel(targetType) }))]} />
+              options={[{ value: 'all', label: t('ui.all') }, ...TARGET_TYPES.filter((targetType) => targetType !== 'all').map((targetType) => ({ value: targetType, label: reportTargetLabel(targetType, language) }))]} />
             <AdminTextField label={t('ui.administrator')} placeholder={t('ui.userOrId')} value={actor.value} onChange={actor.setValue} />
             <AdminTextField label={t('ui.targetId')} placeholder={t('ui.exactId')} value={target.value} onChange={target.setValue} />
           </>
