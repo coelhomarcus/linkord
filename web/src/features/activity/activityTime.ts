@@ -9,7 +9,7 @@ export function formatActivityTimer(elapsedMs: number): string {
   return `${hours}:${String(minutes).padStart(2, '0')}:${ss}`;
 }
 
-export type PlayedAgoUnit = 'now' | 'minutes' | 'hours' | 'days' | 'weeks' | 'months' | 'years';
+type PlayedAgoUnit = 'now' | 'minutes' | 'hours' | 'days' | 'weeks' | 'months' | 'years';
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
