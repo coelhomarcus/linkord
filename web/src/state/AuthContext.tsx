@@ -98,6 +98,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [status, user]);
 
   const signIn = useCallback((result: SignedIn) => {
+    // a session that expired never went through signOut: whatever was cached may be another account's
+    clearResourceCaches();
     setAccountNotice(result.deletionCancelled ? { kind: 'deletionCancelled' } : null);
     setUser(result.user);
     setStatus('authed');
@@ -116,6 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const register = useCallback(async (username: string, email: string, password: string, confirmPassword: string, code: string) => {
     const { user: u } = await apiRegister(username, email, password, confirmPassword, code);
+    clearResourceCaches();
     setUser(u);
     setStatus('authed');
   }, []);

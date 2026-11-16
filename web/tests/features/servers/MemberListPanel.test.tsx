@@ -113,6 +113,21 @@ describe('MemberListPanel', () => {
     expect(screen.getByRole('heading', { name: 'Bio' })).toBeInTheDocument();
   });
 
+  it('reopened, the compact profile shows the bio read before while it is read again', async () => {
+    const user = userEvent.setup();
+    mockedApi.fetchUserProfile.mockResolvedValue({ user: { ...member('u-bia', 'Bia').user, banner: '', bio: 'plays too much chess', profileLinks: [], role: 'user' } });
+    renderWithRoom(<MemberListPanel server={server} onOpenProfile={vi.fn()} />);
+    await user.click(await screen.findByRole('button', { name: 'Abrir perfil de Bia' }));
+    expect(await screen.findByText('plays too much chess')).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByText('plays too much chess')).not.toBeInTheDocument());
+
+    mockedApi.fetchUserProfile.mockReturnValue(new Promise(() => {}));
+    await user.click(screen.getAllByRole('button', { name: 'Abrir perfil de Bia' })[0]!);
+    expect(screen.getByText('plays too much chess')).toBeInTheDocument();
+    expect(mockedApi.fetchUserProfile).toHaveBeenCalledTimes(2);
+  });
+
   it('shows no bio title for a member without a bio', async () => {
     const user = userEvent.setup();
     mockedApi.fetchUserProfile.mockResolvedValue({ user: { ...member('u-bia', 'Bia').user, banner: '', bio: '', profileLinks: [], role: 'user' } });
