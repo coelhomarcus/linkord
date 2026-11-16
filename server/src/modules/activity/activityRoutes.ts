@@ -3,7 +3,8 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { config } from '../../config/env.js';
 import { sendError, sendJson } from '../../http/respond.js';
 import { createIgdbClient } from '../../integrations/igdb/igdb.js';
-import { createSteamGridDbClient } from '../../integrations/steamgriddb/steamgriddb.js';
+import { STEAM_ASSET_HOST } from '../../integrations/steam/steamAssets.js';
+import { createSteamGridDbClient, STEAMGRIDDB_IMAGE_HOST } from '../../integrations/steamgriddb/steamgriddb.js';
 import { fetchImage } from '../media-proxy/mediaProxy.js';
 import * as floodControl from '../../realtime/floodControl.js';
 import { postponeIgdb, reserveIgdbSlot } from '../games/igdbLimiter.js';
@@ -19,8 +20,12 @@ const lookup = createActivityGameLookup({
 });
 const lookupIcon = createActivityGameIconLookup({
   client: createSteamGridDbClient({ apiKey: config.STEAMGRIDDB_API_KEY }),
-  // a fixed host answers directly: a redirect could only lead somewhere else
-  download: async (url) => (await fetchImage({ url, redirects: 0 })).body,
+  download: async (url) => {
+    const { protocol, hostname } = new URL(url);
+    if (protocol !== 'https:' || (hostname !== STEAMGRIDDB_IMAGE_HOST && hostname !== STEAM_ASSET_HOST)) throw new Error('not an image host');
+    // a fixed host answers directly: a redirect could only lead somewhere else
+    return (await fetchImage({ url, redirects: 0 })).body;
+  },
   storeIcon: storeActivityIcon,
 });
 const ICON_RULE = { windowMs: 60_000, max: 10 };
