@@ -7,8 +7,10 @@ import {
 } from '../../../src/modules/presence/participants.js';
 import {
   handlers, loadAccountStatus, setAccountStatusStore, syncPresence, releaseAccountStatusIfUnused, databaseAccountStatusStore,
-  type AccountStatusStore,
+  loadActivitySettings, setActivitySettingsStore, databaseActivitySettingsStore,
+  type AccountStatusStore, type ActivitySettingsStore,
 } from '../../../src/modules/presence/presenceStatus.js';
+import type { ActivitySettings } from '../../../src/modules/presence/activity.js';
 import { getAccountStatus, hasAccountStatus, type AccountStatus } from '../../../src/modules/presence/userStatus.js';
 
 type Sent = { t: string; [key: string]: unknown };
@@ -291,5 +293,133 @@ describe('custom status expiry', () => {
     assert.equal(getAccountStatus(alice).customStatus, null);
     assert.deepEqual(messages(b.socket, 'presence-status').at(-1), { t: 'presence-status', userId: alice, status: 'online', customStatus: null });
     assert.deepEqual(mem.rows.get(alice), { status: 'online', customStatus: null });
+  });
+});
+
+describe('activity', () => {
+  let saved: Map<string, ActivitySettings>;
+  let failSaves: boolean;
+
+  beforeEach(() => {
+    saved = new Map();
+    failSaves = false;
+    const store: ActivitySettingsStore = {
+      async load(userId) { return saved.get(userId) ?? null; },
+      async save(userId, value) {
+        if (failSaves) throw new Error('db down');
+        saved.set(userId, value);
+      },
+    };
+    setActivitySettingsStore(store);
+  });
+
+  afterEach(() => setActivitySettingsStore(databaseActivitySettingsStore));
+
+  const minecraft = { key: 'minecraft', kind: 'playing', name: 'Minecraft', icon: { igdb: 'co49x5' }, startedAt: Date.now() - 60_000 };
+
+  async function connectWithSettings(userId: string, knownPeers: string[] = []) {
+    await loadActivitySettings(userId);
+    return connect(userId, knownPeers);
+  }
+
+  async function report(socket: FakeSocket, activity: unknown) {
+    await handlers['activity-set']!(socket, { activity });
+  }
+
+  test('peers and the account see what the desktop app reports, with a server-built icon', async () => {
+    const alice = uid('alice');
+    const bob = uid('bob');
+    const a = await connectWithSettings(alice);
+    const b = await connectWithSettings(bob, [alice]);
+
+    await report(a.socket, minecraft);
+
+    const [status] = messages(b.socket, 'presence-status');
+    const activity = (status as unknown as { activity: { key: string; name: string; icon: string; kind: string } }).activity;
+    assert.equal(activity.key, 'minecraft');
+    assert.equal(activity.name, 'Minecraft');
+    assert.equal(activity.kind, 'playing');
+    assert.equal(activity.icon, '/api/media-proxy/igdb/cover_small/co49x5');
+    assert.equal(visiblePresenceOf(alice)?.activity?.key, 'minecraft');
+  });
+
+  test('ending the activity tells peers it ended', async () => {
+    const alice = uid('alice');
+    const bob = uid('bob');
+    const a = await connectWithSettings(alice);
+    const b = await connectWithSettings(bob, [alice]);
+    await report(a.socket, minecraft);
+
+    await report(a.socket, null);
+
+    assert.deepEqual(messages(b.socket, 'presence-status').at(-1), { t: 'presence-status', userId: alice, status: 'online', customStatus: null, activity: null });
+    assert.equal(visiblePresenceOf(alice)?.activity, undefined);
+  });
+
+  test('a malformed report counts as no activity, and an unknown icon as none', async () => {
+    const alice = uid('alice');
+    const a = await connectWithSettings(alice);
+    await report(a.socket, { key: 'Bad Key!', kind: 'playing', name: 'x' });
+    assert.equal(visiblePresenceOf(alice)?.activity, undefined);
+    await report(a.socket, { ...minecraft, icon: { url: 'https://evil.example/x.png' } });
+    assert.equal(visiblePresenceOf(alice)?.activity?.icon, null);
+  });
+
+  test('turning sharing off or hiding the key keeps it from peers', async () => {
+    const alice = uid('alice');
+    const bob = uid('bob');
+    const a = await connectWithSettings(alice);
+    const b = await connectWithSettings(bob, [alice]);
+    await report(a.socket, minecraft);
+
+    await handlers['activity-settings-set']!(a.socket, { requestId: 'r1', hidden: ['minecraft'] });
+    assert.deepEqual(saved.get(alice), { sharing: true, hidden: ['minecraft'] });
+    assert.equal(visiblePresenceOf(alice)?.activity, undefined);
+    assert.deepEqual(messages(b.socket, 'presence-status').at(-1), { t: 'presence-status', userId: alice, status: 'online', customStatus: null, activity: null });
+    assert.deepEqual(messages(a.socket, 'my-activity-settings').at(-1), { t: 'my-activity-settings', sharing: true, hidden: ['minecraft'] });
+    assert.deepEqual(messages(a.socket, 'activity-settings-result'), [{ t: 'activity-settings-result', requestId: 'r1', ok: true }]);
+
+    await handlers['activity-settings-set']!(a.socket, { hidden: [], sharing: false });
+    assert.equal(visiblePresenceOf(alice)?.activity, undefined);
+  });
+
+  test('settings saved before are applied from the first moment', async () => {
+    const alice = uid('alice');
+    saved.set(alice, { sharing: false, hidden: [] });
+    const a = await connectWithSettings(alice);
+    await report(a.socket, minecraft);
+    assert.equal(visiblePresenceOf(alice)?.activity, undefined);
+  });
+
+  test('a failed save changes nothing', async () => {
+    const alice = uid('alice');
+    const a = await connectWithSettings(alice);
+    await report(a.socket, minecraft);
+    failSaves = true;
+    await handlers['activity-settings-set']!(a.socket, { requestId: 'r', sharing: false });
+    assert.equal(visiblePresenceOf(alice)?.activity?.key, 'minecraft');
+    assert.deepEqual(messages(a.socket, 'activity-settings-result'), [{ t: 'activity-settings-result', requestId: 'r', ok: false }]);
+  });
+
+  test('the newest report among the account\'s connections wins, and leaves with its connection', async () => {
+    const alice = uid('alice');
+    const desktop = await connectWithSettings(alice);
+    const laptop = await connectWithSettings(alice);
+    await report(desktop.socket, minecraft);
+    await report(laptop.socket, { ...minecraft, key: 'steam:570', name: 'Dota 2', icon: null });
+    assert.equal(visiblePresenceOf(alice)?.activity?.name, 'Dota 2');
+
+    participants.delete(laptop.p.id);
+    created = created.filter((p) => p !== laptop.p);
+    releaseAccountStatusIfUnused(alice);
+    assert.equal(visiblePresenceOf(alice)?.activity?.name, 'Minecraft');
+  });
+
+  test('nobody sees the activity of an invisible account', async () => {
+    const alice = uid('alice');
+    const a = await connectWithSettings(alice);
+    await report(a.socket, minecraft);
+    await setPresence(a.socket, { status: 'invisible' });
+    assert.equal(visiblePresenceOf(alice), null);
   });
 });

@@ -56,9 +56,13 @@
 // Version 23 adds an optional `imageAnimated` to link previews, and `||spoiler||` inside message text
 // (a link inside one still gets its preview). An old tab ignores the field, keeps GIFs animated, and
 // shows a spoiler's `||` as text, so the minimum stays at 7.
+// Version 24 adds activity ("Jogando Minecraft"): `activity-set` and `activity-settings-set` from the
+// client, an optional `activity` in `presence-status`, `my-status` and the presence snapshot,
+// `welcome.activitySettings`, `my-activity-settings` and `activity-settings-result`. An old tab ignores
+// all of it and shows no activity, so the minimum stays at 7.
 // Raising MIN_PROTOCOL_VERSION also drops open tabs out of their calls (they are refused and
 // disconnect), so keep it for changes an old client cannot tolerate.
-export const PROTOCOL_VERSION = 23;
+export const PROTOCOL_VERSION = 24;
 export const MIN_PROTOCOL_VERSION = 7;
 export const MIC_STARTING_PROTOCOL_VERSION = 18;
 export const CALL_ELSEWHERE_PROTOCOL_VERSION = 20;

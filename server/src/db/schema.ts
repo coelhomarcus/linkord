@@ -58,6 +58,10 @@ export const users = pgTable('users', {
   customStatusEmoji: varchar('custom_status_emoji', { length: 64 }).notNull().default(''),
   customStatusText: varchar('custom_status_text', { length: 128 }).notNull().default(''),
   customStatusExpiresAt: timestamp('custom_status_expires_at', { withTimezone: true }),
+  // what others see of the game or app the desktop app detects (modules/presence/activity.ts):
+  // shared unless turned off, minus the keys listed here
+  activitySharing: boolean('activity_sharing').notNull().default(true),
+  hiddenActivities: jsonb('hidden_activities').$type<string[]>().notNull().default([]),
   // Last time the account actually went offline (last live socket gone,
   // after the reconnect grace). Null until the first disconnect after this
   // column existed — the migration backfills from sessions.last_seen_at.
