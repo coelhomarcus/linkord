@@ -10,5 +10,6 @@
   "version": "Version {{version}}",
   "allVersions": "All versions",
   "later": "Not now",
-  "openInApp": "Open in the app"
+  "openInApp": "Open in the app",
+  "updateReady": "Update ready! Restart to update"
 }

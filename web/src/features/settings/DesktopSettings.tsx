@@ -52,6 +52,7 @@ function UpdateStatusLine({ settings, check }: { settings: DesktopSettingsSnapsh
   if (mode === 'off') return <>{t('desktop.updates.off')}</>;
   if (status.kind === 'downloaded') return <>{t('desktop.updates.ready', { version: status.version })}</>;
   if (status.kind === 'available') return <>{t('desktop.updates.available', { version: status.version })}</>;
+  if (status.kind === 'downloading') return <span aria-live="polite">{t('desktop.updates.downloadingPercent', { version: status.version, percent: status.percent })}</span>;
   switch (check.kind) {
     case 'checking': return <span aria-live="polite">{t('desktop.updates.checking')}</span>;
     case 'up-to-date': return <span aria-live="polite" className="inline-flex items-center gap-1 text-green"><CheckCircleIcon size={14} weight="fill" aria-hidden />{t('desktop.updates.upToDate')}</span>;

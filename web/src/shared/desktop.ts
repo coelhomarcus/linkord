@@ -39,9 +39,11 @@ export interface DesktopWindowControls {
   onStateChange: (callback: (state: DesktopWindowState) => void) => () => void;
 }
 
-type DesktopUpdateStatus =
+export type DesktopUpdateStatus =
   | { kind: 'idle' }
   | { kind: 'available'; version: string; url: string }
+  /** only from builds with the updater window; older ones go from idle to downloaded */
+  | { kind: 'downloading'; version: string; percent: number }
   | { kind: 'downloaded'; version: string };
 
 /** The desktop app's own settings, as features/settings/DesktopSettings shows them. */

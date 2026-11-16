@@ -72,8 +72,8 @@ export function runTrayItem(state: MenuState, actions: MenuActions, id: string, 
   else if (id === 'quit') actions.quit();
   else if (id === 'startAtLogin') actions.setStartAtLogin(checked ?? !state.startAtLogin.enabled);
   else if (id === 'update') {
-    if (state.update.status.kind === 'idle') actions.checkForUpdates();
-    else actions.applyUpdate();
+    if (state.update.status.kind === 'downloaded') actions.applyUpdate();
+    else actions.checkForUpdates();
   }
 }
 

@@ -35,6 +35,8 @@ export function createMainWindow(options: {
   preloadArguments: string[];
   /** a start with the system: the window waits in the tray until it is opened */
   startHidden: boolean;
+  /** held back until the start's update check settles; false: an update is being installed, never show */
+  showWhen?: Promise<boolean>;
 }): MainWindow {
   const placement = placeWindow(readState(options.stateFile), screen.getAllDisplays().map((d) => d.workArea));
   const window = new BrowserWindow({
@@ -57,7 +59,12 @@ export function createMainWindow(options: {
 
   // Also on a failed load, so the retry is not an empty, invisible window;
   // a start with the system keeps quiet until the person opens it
-  const reveal = () => { if (!options.startHidden && !window.isVisible()) window.show(); };
+  const reveal = () => {
+    if (options.startHidden) return;
+    void (options.showWhen ?? Promise.resolve(true)).then((show) => {
+      if (show && !window.isDestroyed() && !window.isVisible()) window.show();
+    });
+  };
   window.once('ready-to-show', reveal);
 
   let saveTimer: NodeJS.Timeout | undefined;

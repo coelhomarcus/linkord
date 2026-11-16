@@ -104,6 +104,14 @@ describe('DesktopSettings', () => {
     expect(await screen.findByRole('button', { name: 'Baixar a versão 0.4.0' })).toBeInTheDocument();
   });
 
+  it('follows a download the app reports', async () => {
+    const { push } = stubSettings(snapshot());
+    render(<DesktopSettings />);
+    await screen.findByRole('button', { name: 'Procurar atualizações' });
+    push(snapshot({ update: { mode: 'install', status: { kind: 'downloading', version: '0.4.0', percent: 42 } } }));
+    expect(screen.getByText('Baixando a versão 0.4.0… 42%')).toBeInTheDocument();
+  });
+
   it('says a build that does not check for updates does not', async () => {
     stubSettings(snapshot({ update: { mode: 'off', status: { kind: 'idle' } } }));
     render(<DesktopSettings />);
