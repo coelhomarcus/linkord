@@ -9,11 +9,13 @@ import type { Conversation, Participant } from '@/shared/types/protocol';
 
 interface ActiveCall { conversation: Conversation; friends: Participant[] }
 
+type CallMember = Pick<Participant, 'userId' | 'displayName' | 'avatar' | 'avatarPoster' | 'avatarColor'>;
+
 /** Discord's "Ativo agora": the voice calls your friends are in right now,
  * one card per call, each a click away from joining. */
 export function ActiveNowPanel() {
   const { t } = useTranslation('friends');
-  const { state, conversations, servers, friendUserIds, openCall } = useRoom();
+  const { state, conversations, servers, friendUserIds, openCall, activeCallConversationId } = useRoom();
 
   const calls = useMemo(() => {
     const byConversation = new Map<string, ActiveCall>();
@@ -28,6 +30,26 @@ export function ActiveNowPanel() {
     }
     return [...byConversation.values()].sort((a, b) => b.friends.length - a.friends.length);
   }, [state.participants, conversations, friendUserIds]);
+
+  // Everyone in the call, not only friends: whoever else is there, and you
+  // when you are in it too (you are not among the participants)
+  const members = useMemo(() => {
+    const byConversation = new Map<string, CallMember[]>();
+    const add = (conversationId: string, member: CallMember) => {
+      const list = byConversation.get(conversationId) ?? [];
+      if (!list.some((m) => m.userId === member.userId)) list.push(member);
+      byConversation.set(conversationId, list);
+    };
+    for (const { conversation, friends } of calls) friends.forEach((friend) => add(conversation.id, friend));
+    for (const participant of state.participants.values()) {
+      if (participant.callConversationId && byConversation.has(participant.callConversationId)) add(participant.callConversationId, participant);
+    }
+    const { me } = state;
+    if (activeCallConversationId && byConversation.has(activeCallConversationId) && me.userId) {
+      add(activeCallConversationId, { userId: me.userId, displayName: me.displayName, avatar: me.avatar, avatarPoster: me.avatarPoster, avatarColor: me.avatarColor });
+    }
+    return byConversation;
+  }, [calls, state, activeCallConversationId]);
 
   return (
     <aside aria-label={t('activeNow.title')} className="flex w-[360px] flex-none flex-col overflow-y-auto border-l border-border-subtle px-4 py-4">
@@ -60,7 +82,7 @@ export function ActiveNowPanel() {
                   <span className="mt-3 flex items-center gap-1.5 text-caption text-text-secondary">
                     <SpeakerHighIcon size={16} weight="fill" className="flex-none text-green" />
                     <span className="flex -space-x-1.5">
-                      {friends.slice(0, 5).map((friend) => (
+                      {(members.get(conversation.id) ?? friends).slice(0, 5).map((friend) => (
                         <Avatar key={friend.userId} id={friend.userId} name={friend.displayName} avatar={friend.avatar} poster={friend.avatarPoster} avatarColor={friend.avatarColor} size={20} className="ring-2 ring-surface-app" />
                       ))}
                     </span>

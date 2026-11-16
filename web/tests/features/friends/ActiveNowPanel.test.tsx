@@ -11,12 +11,16 @@ const server = { id: 's1', name: 'Squad', icon: '', channels: [], categories: []
 const inCall = (userId: string, name: string, callConversationId: string | null = 'voz') =>
   ({ id: `p-${userId}`, userId, displayName: name, avatar: '', avatarPoster: '', avatarColor: '', callConversationId }) as Participant;
 
-function renderPanel(participants: Participant[], friends: string[], openCall = vi.fn()) {
-  renderWithRoom(<ActiveNowPanel />, {
-    state: { ...initialRoomState, participants: new Map(participants.map((p) => [p.id, p])) },
-    conversations: [voice], servers: [server], friendUserIds: new Set(friends), openCall,
+function renderPanel(participants: Participant[], friends: string[], openCall = vi.fn(), activeCallConversationId: string | null = null) {
+  const { container } = renderWithRoom(<ActiveNowPanel />, {
+    state: {
+      ...initialRoomState,
+      me: { ...initialRoomState.me, id: 'p-me', userId: 'me', displayName: 'Eu' },
+      participants: new Map(participants.map((p) => [p.id, p])),
+    },
+    conversations: [voice], servers: [server], friendUserIds: new Set(friends), openCall, activeCallConversationId,
   });
-  return openCall;
+  return Object.assign(openCall, { container });
 }
 
 describe('ActiveNowPanel', () => {
@@ -32,5 +36,12 @@ describe('ActiveNowPanel', () => {
   it('says it is quiet when no friend is in a call you can see', () => {
     renderPanel([inCall('ana', 'Ana', null), inCall('bia', 'Bia', 'somewhere-else')], ['ana', 'bia']);
     expect(screen.getByText('Está tranquilo por enquanto…')).toBeInTheDocument();
+  });
+
+  it('puts everyone in the call in its avatars, you included when you are in it', () => {
+    const { container } = renderPanel([inCall('ana', 'Ana'), inCall('stranger', 'Zé Ninguém')], ['ana'], vi.fn(), 'voz');
+    // the lead's avatar, then the call's group: Ana, the stranger and you
+    const group = container.querySelector('.-space-x-1\\.5');
+    expect(group?.textContent).toBe('AZNE');
   });
 });
