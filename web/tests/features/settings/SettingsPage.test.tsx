@@ -8,6 +8,7 @@ import type { RoomContextValue } from '@/state/RoomContext';
 import { SettingsPage } from '@/features/settings/SettingsPage';
 
 vi.mock('@/features/profile/ConnectionsSettings', () => ({ ConnectionsSettings: () => <section>Conexões</section> }));
+vi.mock('@/features/activity/ActivitySettings', () => ({ ActivitySettings: () => <p>compartilhar atividade</p> }));
 
 vi.mock('@/state/AuthContext', () => ({
   useAuth: () => ({ logout: vi.fn() }),
@@ -27,6 +28,29 @@ function renderSettings(overrides: Partial<RoomContextValue> = {}, path = '/app/
   );
   return { ...renderWithRoom(<RouterProvider router={router} />, overrides), router };
 }
+
+describe('SettingsPage — activity', () => {
+  it('has a tab of its own, outside Data & privacy', () => {
+    renderSettings({}, '/app/settings/activity');
+    expect(screen.getByText('compartilhar atividade')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Atividade' })).toBeInTheDocument();
+    expect(screen.queryByText('lista de bloqueados')).not.toBeInTheDocument();
+  });
+
+  it('opens the tab from an old link to the Data & privacy section', () => {
+    const { router } = renderSettings({}, '/app/settings/privacy#activity');
+    expect(router.state.location.pathname).toBe('/app/settings/activity');
+    expect(screen.getByText('compartilhar atividade')).toBeInTheDocument();
+  });
+
+  it('is found by searching for a game', async () => {
+    const user = userEvent.setup();
+    renderRouted({}, '/app/settings/account');
+    await user.type(screen.getByLabelText('Buscar'), 'jogando');
+    await user.click(screen.getByText('Compartilhar atividade'));
+    expect(screen.getByTestId('where')).toHaveTextContent('/app/settings/activity');
+  });
+});
 
 describe('SettingsPage — connections', () => {
   it('lists the connections on their own tab', () => {
@@ -97,7 +121,7 @@ describe('SettingsPage — category navigation', () => {
     renderSettings({ state: userState });
     const nav = screen.getByRole('navigation', { name: 'Categorias de ajustes' });
     expect(within(nav).getAllByRole('link').map((link) => link.textContent)).toEqual([
-      'Minha conta', 'Conexões', 'Dados e privacidade', 'Segurança', 'Aparência', 'Voz e vídeo', 'Chat', 'Notificações', 'Idioma e hora',
+      'Minha conta', 'Conexões', 'Atividade', 'Dados e privacidade', 'Segurança', 'Aparência', 'Voz e vídeo', 'Chat', 'Notificações', 'Idioma e hora',
     ]);
     expect(within(nav).getByText('Configurações de usuário')).toBeInTheDocument();
     expect(within(nav).getByText('Configurações do app')).toBeInTheDocument();

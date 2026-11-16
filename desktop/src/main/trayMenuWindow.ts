@@ -2,7 +2,7 @@ import path from 'node:path';
 import { BrowserWindow, ipcMain, screen } from 'electron';
 import { SECURE_WEB_PREFERENCES } from './contentsGuard.js';
 import type { TrayMenuItem } from './menus.js';
-import { trayMenuPosition, trayMenuSize } from './trayMenuLayout.js';
+import { echoesTrayClick, trayMenuPosition, trayMenuSize } from './trayMenuLayout.js';
 
 // Windows draws a tray's context menu as a classic Win32 menu, which looks
 // nothing like the app. There the tray opens this small window instead: the
@@ -21,6 +21,7 @@ export interface TrayMenuModel {
 export function createTrayMenuWindow(onChoose: (id: string, checked: boolean) => void) {
   let window: BrowserWindow | null = null;
   let ready: Promise<void> | null = null;
+  let openedAt: number | null = null;
 
   const ensure = () => {
     if (window && !window.isDestroyed()) return window;
@@ -57,6 +58,12 @@ export function createTrayMenuWindow(onChoose: (id: string, checked: boolean) =>
     async show(model: TrayMenuModel) {
       const menu = ensure();
       await ready;
+      if (echoesTrayClick(openedAt, Date.now())) {
+        if (!menu.isVisible()) menu.show();
+        menu.focus();
+        return;
+      }
+      openedAt = Date.now();
       const pointer = screen.getCursorScreenPoint();
       const size = trayMenuSize(model.items);
       const { x, y } = trayMenuPosition(pointer, size, screen.getDisplayNearestPoint(pointer).workArea);

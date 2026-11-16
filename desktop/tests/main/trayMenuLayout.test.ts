@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { TRAY_MENU, drawsTrayMenu, trayMenuPosition, trayMenuSize } from '../../src/main/trayMenuLayout.js';
+import { TRAY_CLICK_ECHO_MS, TRAY_MENU, drawsTrayMenu, echoesTrayClick, trayMenuPosition, trayMenuSize } from '../../src/main/trayMenuLayout.js';
 
 const workArea = { x: 0, y: 0, width: 1920, height: 1040 };
 const size = { width: 296, height: 220 };
@@ -37,5 +37,20 @@ describe('drawsTrayMenu', () => {
     assert.equal(drawsTrayMenu({ platform: 'darwin', env: {}, isPackaged: true }), false);
     assert.equal(drawsTrayMenu({ platform: 'linux', env: { LINKORD_TRAY_MENU: 'drawn' }, isPackaged: false }), true);
     assert.equal(drawsTrayMenu({ platform: 'linux', env: { LINKORD_TRAY_MENU: 'drawn' }, isPackaged: true }), false);
+  });
+});
+
+describe('echoesTrayClick', () => {
+  it('takes the second report of the same right click for an echo', () => {
+    assert.equal(echoesTrayClick(1000, 1120), true);
+  });
+
+  it('opens again for a right click after the echo window', () => {
+    assert.equal(echoesTrayClick(1000, 1000 + TRAY_CLICK_ECHO_MS), false);
+  });
+
+  it('opens when the menu was never shown or the clock went back', () => {
+    assert.equal(echoesTrayClick(null, 1000), false);
+    assert.equal(echoesTrayClick(2000, 1000), false);
   });
 });

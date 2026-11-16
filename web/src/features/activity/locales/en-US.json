@@ -15,10 +15,15 @@
   },
   "settings": {
     "title": "Activity",
+    "sections": {
+      "sharing": "Sharing",
+      "games": "Games and apps"
+    },
     "share": {
       "label": "Share my activity",
       "description": "Shows on your profile the game or app you are using, like \"Playing Minecraft\". It works in the Linkord desktop app, which only recognizes games and apps from a known list."
     },
+    "gamesDescription": "A hidden game or app is never shown to others, even with sharing on.",
     "detected": "Detected on this computer",
     "detectedEmpty": "No game or app detected yet. Open one while Linkord is running and it shows up here.",
     "hidden": "Hidden",
