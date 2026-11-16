@@ -29,7 +29,7 @@ export type ReactionEmoji = string;
 /** Wire protocol version this build speaks; the server refuses older ones
  * (client_outdated). Keep in sync with server/src/realtime/protocolVersion.ts
  * — version 23 adds `imageAnimated` to link previews and `||spoiler||` text. */
-export const PROTOCOL_VERSION = 23;
+export const PROTOCOL_VERSION = 24;
 
 /** One server's or one channel/DM's notification setting (protocol 19). `level` null inherits: a channel
  * from its server, a server or a DM from "all". `mutedUntil` (ISO) is only read while `muted`, and null
@@ -57,10 +57,39 @@ export interface CustomStatus {
   expiresAt: string | null;
 }
 
+/** What someone is playing or using, as their desktop app reports it (server/src/modules/presence/activity.ts). */
+export interface Activity {
+  key: string;
+  kind: 'playing' | 'using';
+  name: string;
+  /** an image path on the server, or null */
+  icon: string | null;
+  /** ISO time it started */
+  startedAt: string;
+}
+
+/** Whether the account shows its activity, and which never show. */
+export interface ActivitySettings {
+  sharing: boolean;
+  hidden: string[];
+}
+
+/** What a desktop app sends for its current activity; the server builds the icon's path itself. */
+export interface ActivityReport {
+  key: string;
+  kind: 'playing' | 'using';
+  name: string;
+  icon: { igdb: string } | { local: string } | null;
+  /** ms */
+  startedAt: number;
+}
+
 /** Someone else's status while they appear online. */
 export interface VisiblePresence {
   status: VisibleStatus;
   customStatus: CustomStatus | null;
+  /** absent when there is none, and from servers before protocol 24 */
+  activity?: Activity | null;
 }
 
 /** The account's own status: `status` is what was picked, `effective` adds automatic idle. */
@@ -68,6 +97,8 @@ export interface OwnStatus {
   status: PresenceStatus;
   effective: PresenceStatus;
   customStatus: CustomStatus | null;
+  /** as others see it (protocol 24) */
+  activity?: Activity | null;
 }
 
 export interface ChatReplyRef {
@@ -314,6 +345,8 @@ export type ClientMessage =
   | { t: 'presence-set'; requestId?: string; status?: PresenceStatus; customStatus?: CustomStatus | null }
   // this tab stopped (or started again) being used; feeds automatic idle
   | { t: 'presence-activity'; idle: boolean }
+  | { t: 'activity-set'; activity: ActivityReport | null }
+  | { t: 'activity-settings-set'; requestId: string; sharing?: boolean; hidden?: string[] }
   | { t: 'deafened'; value: boolean }
   | { t: 'mic-state'; activated: boolean; muted: boolean; starting?: boolean }
   | { t: 'camera'; on: boolean }
@@ -389,6 +422,8 @@ export type ServerMessage =
       // both absent from servers before protocol 10: everyone online reads as plain "online"
       presence?: Record<string, VisiblePresence>;
       myStatus?: OwnStatus;
+      // absent from servers before protocol 24: activity is shared, nothing hidden
+      activitySettings?: ActivitySettings;
       dmCall?: DmCallView;
     }
   | { t: 'call-token'; conversationId: string; livekitUrl: string; livekitToken: string }
@@ -456,6 +491,8 @@ export type ServerMessage =
   // this account's status, changed from another tab or device, by automatic idle, or by expiry
   | ({ t: 'my-status' } & OwnStatus)
   | { t: 'presence-result'; requestId: string; ok: boolean }
+  | ({ t: 'my-activity-settings' } & ActivitySettings)
+  | { t: 'activity-settings-result'; requestId: string; ok: boolean }
   | { t: 'user-online'; userId: string }
   | { t: 'user-offline'; userId: string; lastSeenAt?: string | null }
   | { t: 'user-deleted'; userId: string }

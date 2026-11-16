@@ -67,6 +67,28 @@ export interface DesktopSettingsApi {
   onChange: (callback: (settings: DesktopSettingsSnapshot) => void) => () => void;
 }
 
+/** What the desktop app found running (desktop/src/main/activityWatcher.ts). */
+export interface DesktopActivity {
+  key: string;
+  kind: 'playing' | 'using';
+  /** empty for a Steam game whose name the app could not read: the server's lookup names it */
+  name: string;
+  steamAppId?: number;
+  /** ms */
+  startedAt: number;
+}
+
+export interface DesktopActivityApi {
+  /** turns detection on (while the account shares its activity) or off */
+  watch: (on: boolean) => Promise<void>;
+  current: () => Promise<DesktopActivity | null>;
+  /** the last ones found, newest first, for hiding them in settings */
+  recent: () => Promise<{ key: string; kind: 'playing' | 'using'; name: string }[]>;
+  /** the current program's own icon as a data URL, or null */
+  icon: () => Promise<string | null>;
+  onChange: (callback: (activity: DesktopActivity | null) => void) => () => void;
+}
+
 export interface LinkordDesktop {
   platform: string;
   version: string;
@@ -79,6 +101,8 @@ export interface LinkordDesktop {
   windowControls?: DesktopWindowControls;
   /** absent in builds without the app's own settings */
   settings?: DesktopSettingsApi;
+  /** absent in builds that detect nothing */
+  activity?: DesktopActivityApi;
 }
 
 declare global {

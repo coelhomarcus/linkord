@@ -11,6 +11,7 @@ import { bannerStyle } from './profileLinks';
 import type { ProfileTab } from './ProfileSidebar';
 import { formatProfileDate, useProfileDetails } from './useProfileDetails';
 import { UserCustomStatusBubble, UserStatusDot } from '@/features/status/UserStatus';
+import { UserActivityCard } from '@/features/activity/ActivityLine';
 
 const SHOWN_MUTUALS = 5;
 const SECTION = 'flex flex-col gap-1';
@@ -66,6 +67,7 @@ export function DirectProfilePanel({ user, onOpenProfile }: { user: PublicUser; 
         </div>
         <div className="mt-4 flex flex-col gap-4">
           <section className="flex flex-col gap-3">
+            <UserActivityCard userId={user.id} className={SECTION} />
             {user.bio && (
               <div className={SECTION}>
                 <h3 className="text-caption font-semibold text-text-primary">{t('card.bio')}</h3>

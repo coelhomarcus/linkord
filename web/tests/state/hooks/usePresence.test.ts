@@ -60,4 +60,15 @@ describe('usePresence', () => {
     act(() => result.current.setInitial([peer], ['peer'], ['peer']));
     expect(result.current.presenceByUser.size).toBe(0);
   });
+
+  it('keeps what someone is playing until it ends, even when only their status changes', () => {
+    const { result } = renderHook(() => usePresence());
+    const activity = { key: 'minecraft', kind: 'playing' as const, name: 'Minecraft', icon: null, startedAt: '2026-11-15T12:00:00.000Z' };
+    act(() => result.current.onPresenceStatus({ t: 'presence-status', userId: 'ana', status: 'online', customStatus: null, activity }));
+    expect(result.current.presenceByUser.get('ana')?.activity).toEqual(activity);
+    act(() => result.current.onPresenceStatus({ t: 'presence-status', userId: 'ana', status: 'dnd', customStatus: null }));
+    expect(result.current.presenceByUser.get('ana')?.activity).toEqual(activity);
+    act(() => result.current.onPresenceStatus({ t: 'presence-status', userId: 'ana', status: 'online', customStatus: null, activity: null }));
+    expect(result.current.presenceByUser.has('ana')).toBe(false);
+  });
 });

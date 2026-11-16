@@ -5,7 +5,9 @@ import { useTranslation } from 'react-i18next';
 import { Avatar } from '@/shared/Avatar';
 import { EmptyState } from '@/shared/ui/empty-state';
 import { useRoom } from '@/state/RoomContext';
-import type { Conversation, Participant } from '@/shared/types/protocol';
+import type { Activity, Conversation, Participant, PublicUser } from '@/shared/types/protocol';
+import { ActivityIcon } from '@/features/activity/ActivityLine';
+import { cn } from '@/shared/lib/utils';
 
 interface ActiveCall { conversation: Conversation; friends: Participant[] }
 
@@ -15,7 +17,19 @@ type CallMember = Pick<Participant, 'userId' | 'displayName' | 'avatar' | 'avata
  * one card per call, each a click away from joining. */
 export function ActiveNowPanel() {
   const { t } = useTranslation('friends');
-  const { state, conversations, servers, friendUserIds, openCall, activeCallConversationId } = useRoom();
+  const { t: tActivity } = useTranslation('activity');
+  const { state, conversations, servers, friendUserIds, openCall, activeCallConversationId, presenceByUser, onlineUserIds, allUsers } = useRoom();
+
+  // friends playing or using something, longest first, as in Discord
+  const playing = useMemo(() => {
+    const list: { user: PublicUser; activity: Activity }[] = [];
+    for (const userId of friendUserIds) {
+      const activity = onlineUserIds.has(userId) ? presenceByUser.get(userId)?.activity : null;
+      const user = allUsers.get(userId);
+      if (activity && user) list.push({ user, activity });
+    }
+    return list.sort((a, b) => Date.parse(a.activity.startedAt) - Date.parse(b.activity.startedAt));
+  }, [friendUserIds, onlineUserIds, presenceByUser, allUsers]);
 
   const calls = useMemo(() => {
     const byConversation = new Map<string, ActiveCall>();
@@ -54,7 +68,7 @@ export function ActiveNowPanel() {
   return (
     <aside aria-label={t('activeNow.title')} className="flex w-[360px] flex-none flex-col overflow-y-auto border-l border-border-subtle px-4 py-4">
       <h2 className="mb-4 text-[1.25rem] font-bold leading-[1.2] text-text-primary">{t('activeNow.title')}</h2>
-      {calls.length === 0 ? (
+      {calls.length === 0 && playing.length === 0 ? (
         <EmptyState size="compact" illustration="speaker" title={t('activeNow.emptyTitle')} description={t('activeNow.emptyText')} />
       ) : (
         <ul className="flex flex-col gap-2">
@@ -91,6 +105,22 @@ export function ActiveNowPanel() {
               </li>
             );
           })}
+        </ul>
+      )}
+      {playing.length > 0 && (
+        <ul className={cn('flex flex-col gap-2', calls.length > 0 && 'mt-2')}>
+          {playing.map(({ user, activity }) => (
+            <li key={user.id} className="rounded-[12px] border border-border-subtle bg-surface-app p-4">
+              <span className="flex items-center gap-3">
+                <Avatar id={user.id} name={user.displayName} avatar={user.avatar} poster={user.avatarPoster} avatarColor={user.avatarColor} size={32} />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-label font-semibold text-text-primary">{user.displayName}</span>
+                  <span className="block truncate text-caption text-text-muted">{tActivity(`line.${activity.kind}`, { name: activity.name })}</span>
+                </span>
+                <ActivityIcon activity={activity} size={40} />
+              </span>
+            </li>
+          ))}
         </ul>
       )}
     </aside>

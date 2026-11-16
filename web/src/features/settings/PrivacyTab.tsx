@@ -14,6 +14,7 @@ import type { SocialEntry } from '@/shared/api/api';
 import { SettingsSection, SettingsSections } from '@/shared/ui/settings-layout';
 import { Skeleton, SkeletonGroup } from '@/shared/ui/primitives/skeleton';
 import { AutoIdleSetting } from '@/features/status/AutoIdleSetting';
+import { ActivitySettings } from '@/features/activity/ActivitySettings';
 import { DataExportSettings } from './DataExportSettings';
 import { LoadError } from './LoadError';
 
@@ -47,6 +48,9 @@ export function PrivacyTab({ onOpenProfile }: { onOpenProfile: (userId: string) 
     <SettingsSections>
       <SettingsSection id="presence" title={t('catalog.sections.presence')}>
         <AutoIdleSetting />
+      </SettingsSection>
+      <SettingsSection id="activity" title={t('catalog.sections.activity')}>
+        <ActivitySettings />
       </SettingsSection>
       <SettingsSection id="blocked" title={t('catalog.sections.blocked')} description={t('privacy.description')} contentClassName="gap-3">
         <ActionFeedback feedback={feedback} onClear={clearFeedback} />

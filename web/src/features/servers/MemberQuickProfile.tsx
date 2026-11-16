@@ -18,6 +18,8 @@ import { hasPermission, PERMISSIONS } from './permissionBits';
 import { setMemberRoles, type ServerMemberEntry } from './serversApi';
 import { memberColor } from './serverUtils';
 import { UserCustomStatus, UserCustomStatusBubble, UserStatusDot } from '@/features/status/UserStatus';
+import { UserActivityCard, UserActivityInline } from '@/features/activity/ActivityLine';
+import { useUserActivity } from '@/features/activity/activityDisplay';
 import { canAssignRole, canManageRole, outranks } from './roleHierarchy';
 
 interface MemberQuickProfileProps {
@@ -44,6 +46,7 @@ export function MemberQuickProfile({ server, member, currentUser, offline, open,
   const sentQueuedMessageRef = useRef(false);
   const bannerRequestedRef = useRef(false);
   const user = currentUser ?? member.user;
+  const activity = useUserActivity(user.id);
   const banner = currentUser?.banner || fetchedProfile.banner;
   const bio = currentUser?.bio || fetchedProfile.bio;
   const avatarPoster = 'avatarPoster' in user && typeof user.avatarPoster === 'string' ? user.avatarPoster : undefined;
@@ -126,7 +129,10 @@ export function MemberQuickProfile({ server, member, currentUser, offline, open,
         </span>
         <span className="min-w-0 flex-1 leading-tight">
           <span className="block truncate text-body font-medium text-text-primary" style={color ? { color } : undefined}>{user.displayName}</span>
-          {!offline && <UserCustomStatus userId={user.id} className="text-caption text-text-muted" />}
+          {/* what they are playing takes the custom status's place, as in Discord */}
+          {!offline && (activity
+            ? <UserActivityInline userId={user.id} />
+            : <UserCustomStatus userId={user.id} className="text-caption text-text-muted" />)}
         </span>
         {member.isOwner && <CrownIcon size={14} weight="fill" className="flex-none text-yellow" aria-label={t('members.owner')} />}
       </PopoverTrigger>
@@ -169,6 +175,8 @@ export function MemberQuickProfile({ server, member, currentUser, offline, open,
               <p className="truncate text-label text-text-secondary">@{user.username}</p>
             </div>
           </div>
+
+          <UserActivityCard userId={user.id} className="mt-4" />
 
           {bio && (
             <div className="mt-4">

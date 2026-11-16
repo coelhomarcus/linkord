@@ -53,7 +53,8 @@
       "dataExport": "Your data",
       "desktopStartup": "Startup",
       "desktopWindow": "Window",
-      "desktopUpdates": "Updates"
+      "desktopUpdates": "Updates",
+      "activity": "Activity"
     }
   },
   "search": {
@@ -164,6 +165,10 @@
     "desktopUpdates": {
       "title": "App updates",
       "keywords": "update, updates, version, new, download"
+    },
+    "activity": {
+      "title": "Activity",
+      "keywords": "playing, game, games, app, apps, activity, share, hide, steam, rich presence"
     }
   },
   "account": {

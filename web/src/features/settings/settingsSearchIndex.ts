@@ -18,7 +18,7 @@ type SearchKey =
   | 'accountInfo' | 'email' | 'session' | 'deleteAccount' | 'dataExport' | 'password' | 'twoFactor' | 'loginAlerts' | 'sessions' | 'connections' | 'blocked' | 'presence'
   | 'theme' | 'voice' | 'inputProfile' | 'video' | 'calls' | 'uploads'
   | 'desktopNotifications' | 'sounds' | 'language' | 'timeFormat' | 'adminArea' | 'install'
-  | 'desktopStartup' | 'desktopWindow' | 'desktopUpdates';
+  | 'desktopStartup' | 'desktopWindow' | 'desktopUpdates' | 'activity';
 
 // One entry per SettingsSection that exists today (grep '<SettingsSection id='
 // across features/settings/*.tsx to keep this honest) — curated, not
@@ -34,6 +34,7 @@ export const SETTINGS_SEARCH_INDEX: SearchEntry[] = [
   { categoryId: 'security', sectionId: 'sessions', searchKey: 'sessions' },
   { categoryId: 'connections', searchKey: 'connections' },
   { categoryId: 'privacy', sectionId: 'presence', searchKey: 'presence' },
+  { categoryId: 'privacy', sectionId: 'activity', searchKey: 'activity' },
   { categoryId: 'privacy', sectionId: 'blocked', searchKey: 'blocked' },
   { categoryId: 'privacy', sectionId: 'data-export', searchKey: 'dataExport' },
   { categoryId: 'appearance', sectionId: 'theme', searchKey: 'theme' },
