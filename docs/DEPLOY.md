@@ -201,9 +201,9 @@ npm install --prefix desktop
 LINKORD_URL=https://chat.example.com npm run package:desktop
 ```
 
-The installer lands in `desktop/release/` as `Linkord-<version>-win-x64.exe`. It installs for the current user, with no administrator prompt.
+The installer lands in `desktop/release/` as `Linkord-<version>-win-x64.exe`. It installs for the current user, with no administrator prompt, and registers `linkord://` links for that user (`HKCU\Software\Classes\linkord`, written by `desktop/resources/installer.nsh`, since electron-builder's NSIS target does not write `protocols`); uninstalling removes the key, an update keeps it. The app writes the same key again at every start. What the links open is in [DEVELOPMENT.md](DEVELOPMENT.md#desktop-app).
 
-- `LINKORD_URL` must be `https` (plain `http` only for `localhost`); the build refuses to run without it. A different server needs its own build. Someone who has the app can still point it elsewhere with `LINKORD_URL` or `--url=<address>` at launch.
+- `LINKORD_URL` must be `https` (plain `http` only for `localhost`); the build refuses to run without it. A different server needs its own build. Someone who has the app can still point it elsewhere with `LINKORD_URL` or `--url=<address>` at launch; a start from a `linkord://` link ignores `--url`.
 - The build always targets Windows (`--win`). Anything after `--` goes to electron-builder, for example `npm run package:desktop -- --dir` for an unpacked folder. On macOS or Linux electron-builder may need Wine to build it; the workflow below builds it on a Windows runner.
 - The first build downloads Electron and the packaging tools.
 - The version in the file name is `desktop/package.json`'s.

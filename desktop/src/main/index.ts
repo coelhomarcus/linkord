@@ -6,6 +6,8 @@ import { createActivityWatcher } from './activityWatcher.js';
 import { forwardWindowState, installAppBridge } from './appBridge.js';
 import { parseAppConfig, resolveAppUrl } from './appUrl.js';
 import { guardContents } from './contentsGuard.js';
+import { deepLinkFromArgv, deepLinkPath, protocolRegistration } from './deepLink.js';
+import { installDeepLinkBridge } from './deepLinkBridge.js';
 import { capturesSystemAudio, sharePicker } from './displayMedia.js';
 import { createMainWindow } from './mainWindow.js';
 import { appMenuTemplate, runTrayItem, trayMenuItems, trayMenuTemplate, type MenuActions, type MenuState } from './menus.js';
@@ -67,8 +69,37 @@ if (!resolved.ok) {
 
   if (process.platform === 'win32') app.setAppUserModelId('app.linkord.desktop');
 
+  // `linkord://` links (deepLink.ts). One that started the app is the first
+  // page it loads; later ones reach this instance through second-instance
+  // (Windows, Linux) or open-url (macOS)
+  const registration = protocolRegistration({
+    isPackaged: app.isPackaged,
+    defaultApp: process.defaultApp === true,
+    argv: process.argv,
+    execPath: process.execPath,
+    resolvePath: (value) => path.resolve(value),
+  });
+  if (registration && !app.setAsDefaultProtocolClient(registration.scheme, registration.path, registration.args)) {
+    console.warn(`[desktop] could not register ${registration.scheme}://`);
+  }
+  let pendingLink = deepLinkFromArgv(process.argv);
+  let openLink: ((path: string) => void) | null = null;
+  const followLink = (path: string | null) => {
+    if (!path) return;
+    if (!openLink) { pendingLink = path; return; }
+    showMainWindow();
+    openLink(path);
+  };
+
   app.on('web-contents-created', (_event, contents) => guardContents(contents, appUrl.origin));
-  app.on('second-instance', showMainWindow);
+  app.on('second-instance', (_event, argv) => {
+    showMainWindow();
+    followLink(deepLinkFromArgv(argv));
+  });
+  app.on('open-url', (event, link) => {
+    event.preventDefault();
+    followLink(deepLinkPath(link));
+  });
   app.on('before-quit', () => { quitting = true; });
   app.on('activate', showMainWindow);
   app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
@@ -153,8 +184,9 @@ if (!resolved.ok) {
       checkForUpdates: () => updater.check(),
       applyUpdate: () => updater.apply(),
     });
-    mainWindow = createMainWindow({
+    const main = createMainWindow({
       appUrl,
+      startUrl: pendingLink ? new URL(pendingLink, appUrl.origin) : null,
       stateFile: path.join(app.getPath('userData'), 'window-state.json'),
       preload: path.join(import.meta.dirname, '../preload/index.cjs'),
       startHidden: launchedAtLogin() && preferences.startMinimized,
@@ -165,6 +197,9 @@ if (!resolved.ok) {
         `--linkord-title-bar=${barStyle}`,
       ],
     });
+    mainWindow = main.window;
+    pendingLink = null;
+    openLink = installDeepLinkBridge(main, appUrl.origin);
     // Previewing another system's bar on a Mac: its buttons replace the traffic lights
     if (process.platform === 'darwin' && barStyle !== 'mac') mainWindow.setWindowButtonVisibility(false);
     forwardWindowState(mainWindow);
@@ -181,6 +216,6 @@ if (!resolved.ok) {
     // open would hold the system up
     mainWindow.on('session-end', () => { quitting = true; });
     powerMonitor.on('shutdown', () => { quitting = true; app.quit(); });
-    mainWindow.on('closed', () => { mainWindow = null; });
+    mainWindow.on('closed', () => { mainWindow = null; openLink = null; });
   });
 }

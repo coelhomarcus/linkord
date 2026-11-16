@@ -20,7 +20,7 @@ function Probe() {
   const navigate = useNavigate();
   const location = useLocation();
   return <>
-    <p data-testid="path">{location.pathname}</p>
+    <p data-testid="path">{location.pathname}{location.search}</p>
     <button type="button" onClick={() => navigate('/app/friends')}>go to friends</button>
   </>;
 }
@@ -38,6 +38,23 @@ describe('useConversationRouteSync', () => {
     render(tree('/app/channels/s1/c2', { state: joined, conversations: [conv('c1'), conv('c2')], activeConversationId: 'c1', openConversation }));
     expect(openConversation).toHaveBeenCalledWith('c2');
     expect(path()).toBe('/app/channels/s1/c2');
+  });
+
+  it('opens a link to a message at that message, then drops it from the address', () => {
+    const openConversation = vi.fn();
+    const jumpToMessage = vi.fn();
+    render(tree('/app/channels/s1/c2?message=42', { state: joined, conversations: [conv('c1'), conv('c2')], activeConversationId: 'c1', openConversation, jumpToMessage }));
+    expect(jumpToMessage).toHaveBeenCalledWith('c2', 42);
+    expect(openConversation).not.toHaveBeenCalled();
+    expect(path()).toBe('/app/channels/s1/c2');
+  });
+
+  it('ignores a message id that is not one', () => {
+    const openConversation = vi.fn();
+    const jumpToMessage = vi.fn();
+    render(tree('/app/channels/s1/c2?message=abc', { state: joined, conversations: [conv('c1'), conv('c2')], activeConversationId: 'c1', openConversation, jumpToMessage }));
+    expect(jumpToMessage).not.toHaveBeenCalled();
+    expect(openConversation).toHaveBeenCalledWith('c2');
   });
 
   it('does not reopen the already active conversation', () => {

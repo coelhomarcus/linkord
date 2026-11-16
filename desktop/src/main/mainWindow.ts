@@ -19,15 +19,23 @@ function writeState(file: string, window: BrowserWindow): void {
   try { fs.writeFileSync(file, JSON.stringify(state)); } catch (error) { console.error('[desktop] could not save the window state', error); }
 }
 
+export interface MainWindow {
+  window: BrowserWindow;
+  /** loads another page of the app, with the same retries as the first load */
+  load: (url: URL) => void;
+}
+
 export function createMainWindow(options: {
   appUrl: URL;
+  /** a page of the app to open first instead of appUrl (a `linkord://` link) */
+  startUrl?: URL | null;
   stateFile: string;
   preload: string;
   /** Read by the preload from process.argv: it cannot ask the main process synchronously. */
   preloadArguments: string[];
   /** a start with the system: the window waits in the tray until it is opened */
   startHidden: boolean;
-}): BrowserWindow {
+}): MainWindow {
   const placement = placeWindow(readState(options.stateFile), screen.getAllDisplays().map((d) => d.workArea));
   const window = new BrowserWindow({
     ...placement.bounds,
@@ -66,8 +74,9 @@ export function createMainWindow(options: {
   const contents = window.webContents;
   let attempt = 0;
   let retryTimer: NodeJS.Timeout | undefined;
+  let target = options.startUrl ?? options.appUrl;
   const load = () => {
-    contents.loadURL(options.appUrl.href).catch(() => {
+    contents.loadURL(target.href).catch(() => {
       // did-fail-load reports the failure and schedules the retry
     });
   };
@@ -88,5 +97,13 @@ export function createMainWindow(options: {
   window.on('closed', () => { clearTimeout(retryTimer); clearTimeout(saveTimer); });
 
   load();
-  return window;
+  return {
+    window,
+    load: (url) => {
+      target = url;
+      attempt = 0;
+      clearTimeout(retryTimer);
+      load();
+    },
+  };
 }

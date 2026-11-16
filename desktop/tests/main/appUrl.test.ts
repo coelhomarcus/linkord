@@ -11,6 +11,16 @@ describe('resolveAppUrl', () => {
     assert.equal(result.ok && result.url.origin, 'https://a.example');
   });
 
+  it('ignores --url on a start from a linkord:// link', () => {
+    const result = resolveAppUrl({
+      argv: ['Linkord.exe', '--url=https://evil.example', 'linkord://invite/abcd2345'],
+      env: {},
+      isPackaged: true,
+      bundledUrl: 'https://baked.example',
+    });
+    assert.equal(result.ok && result.url.origin, 'https://baked.example');
+  });
+
   it('reads LINKORD_URL', () => {
     const result = resolve([], { LINKORD_URL: ' https://chat.example/ ' });
     assert.equal(result.ok && result.url.origin, 'https://chat.example');

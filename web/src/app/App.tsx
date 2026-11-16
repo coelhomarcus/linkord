@@ -14,6 +14,7 @@ import { OutdatedClientScreen } from '@/app/layout/OutdatedClientScreen';
 import { LoadingScreen } from '@/app/layout/LoadingScreen';
 import { AccessNotice, AccountNotice } from '@/app/layout/AccessNotice';
 import { DesktopAppAnnouncement } from '@/features/desktopApp/DesktopAppAnnouncement';
+import { useDesktopLinks } from '@/features/desktopApp/useDesktopLinks';
 import { ConversationSidebar } from '@/features/conversations/ConversationSidebar';
 import { ServerRail } from '@/features/servers/ServerRail';
 import { MemberListPanel } from '@/features/servers/MemberListPanel';
@@ -486,6 +487,7 @@ function AppProviders() {
     navigator.serviceWorker.addEventListener('message', onPushNavigation);
     return () => navigator.serviceWorker.removeEventListener('message', onPushNavigation);
   }, [navigate]);
+  useDesktopLinks();
   // "user": with reduced motion asked for, Motion drops transforms and layout moves and keeps fades, the
   // same rule styles/index.css applies to the CSS animations
   return (
