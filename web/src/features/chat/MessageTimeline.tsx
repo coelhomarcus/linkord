@@ -35,6 +35,17 @@ const PREPEND_SETTLE_FRAMES = 3;
 // this many frames in a row — and gives up waiting after the cap.
 const PLACEMENT_STABLE_FRAMES = 2;
 const PLACEMENT_MAX_FRAMES = 30;
+
+/**
+ * Ends the placement's scroll. `scrollToIndex` leaves the virtualizer chasing
+ * that row for a few frames, and a reader's own scroll does not stop it: rows
+ * measured as they scroll in moved the target, and the list was pulled back to
+ * the end. Aiming at the offset the list already sits on ends that chase, and
+ * an offset never moves with measurements.
+ */
+function releasePlacementTarget(virtualizer: { scrollToOffset: (offset: number) => void }, el: HTMLElement | null): void {
+  if (el) virtualizer.scrollToOffset(el.scrollTop);
+}
 // the surface's width before ChatSurface has measured it (and in tests)
 const FALLBACK_SURFACE_WIDTH = 800;
 
@@ -273,6 +284,7 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
         handle = requestAnimationFrame(settle);
         return;
       }
+      releasePlacementTarget(virtualizer, el);
       // the ref too, right away: a scroll landing before the effect above
       // syncs it would otherwise still be ignored as part of the placement
       readyRef.current = true;
@@ -318,6 +330,7 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
       virtualizerRef.current.measure();
       // revealed where the placement would have ended, not wherever it was
       placeRef.current?.();
+      releasePlacementTarget(virtualizerRef.current, scrollRef.current);
       scrollRef.current?.dispatchEvent(new Event('scroll'));
       readyRef.current = true;
       setReady(true);
