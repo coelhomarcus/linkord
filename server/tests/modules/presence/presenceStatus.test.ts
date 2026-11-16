@@ -8,9 +8,11 @@ import {
 import {
   handlers, loadAccountStatus, setAccountStatusStore, syncPresence, releaseAccountStatusIfUnused, databaseAccountStatusStore,
   loadActivitySettings, setActivitySettingsStore, databaseActivitySettingsStore,
+  setActivityHistoryStore, activityHistoryWritten,
   type AccountStatusStore, type ActivitySettingsStore,
 } from '../../../src/modules/presence/presenceStatus.js';
-import type { ActivitySettings } from '../../../src/modules/presence/activity.js';
+import type { Activity, ActivitySettings } from '../../../src/modules/presence/activity.js';
+import { databaseActivityHistoryStore } from '../../../src/modules/activity/activityHistory.js';
 import { getAccountStatus, hasAccountStatus, type AccountStatus } from '../../../src/modules/presence/userStatus.js';
 
 type Sent = { t: string; [key: string]: unknown };
@@ -68,10 +70,23 @@ async function setPresence(socket: FakeSocket, body: Record<string, unknown>): P
 }
 
 let mem: ReturnType<typeof memoryStore>;
+/** What the activity history was told, in order. */
+let history: Array<{ userId: string; key: string; at: Date }>;
+let failHistory = false;
 
 beforeEach(() => {
   mem = memoryStore();
   setAccountStatusStore(mem.store);
+  // this test's own list: a write queued as the previous test cleaned up must not land in it
+  const written: typeof history = [];
+  history = written;
+  failHistory = false;
+  setActivityHistoryStore({
+    async record(userId: string, activity: Activity, at: Date) {
+      if (failHistory) throw new Error('db down');
+      written.push({ userId, key: activity.key, at });
+    },
+  });
 });
 
 afterEach(() => {
@@ -83,6 +98,7 @@ afterEach(() => {
   for (const userId of userIds) releaseAccountStatusIfUnused(userId);
   created = [];
   setAccountStatusStore(databaseAccountStatusStore);
+  setActivityHistoryStore(databaseActivityHistoryStore);
 });
 
 const uid = (name: string) => `${name}-${Math.random()}`;
@@ -315,7 +331,7 @@ describe('activity', () => {
 
   afterEach(() => setActivitySettingsStore(databaseActivitySettingsStore));
 
-  const minecraft = { key: 'minecraft', kind: 'playing', name: 'Minecraft', icon: { igdb: 'co49x5' }, startedAt: Date.now() - 60_000 };
+  const minecraft = { key: 'minecraft', kind: 'playing', name: 'Minecraft', icon: { local: 'a'.repeat(64) }, startedAt: Date.now() - 60_000 };
 
   async function connectWithSettings(userId: string, knownPeers: string[] = []) {
     await loadActivitySettings(userId);
@@ -339,7 +355,7 @@ describe('activity', () => {
     assert.equal(activity.key, 'minecraft');
     assert.equal(activity.name, 'Minecraft');
     assert.equal(activity.kind, 'playing');
-    assert.equal(activity.icon, '/api/media-proxy/igdb/cover_small/co49x5');
+    assert.equal(activity.icon, `/api/activity/icons/${'a'.repeat(64)}.webp`);
     assert.equal(visiblePresenceOf(alice)?.activity?.key, 'minecraft');
   });
 
@@ -362,6 +378,9 @@ describe('activity', () => {
     await report(a.socket, { key: 'Bad Key!', kind: 'playing', name: 'x' });
     assert.equal(visiblePresenceOf(alice)?.activity, undefined);
     await report(a.socket, { ...minecraft, icon: { url: 'https://evil.example/x.png' } });
+    assert.equal(visiblePresenceOf(alice)?.activity?.icon, null);
+    // what older tabs still send: a portrait cover is not an icon, so it shows the glyph instead
+    await report(a.socket, { ...minecraft, icon: { igdb: 'co49x5' } });
     assert.equal(visiblePresenceOf(alice)?.activity?.icon, null);
   });
 
@@ -399,6 +418,52 @@ describe('activity', () => {
     await handlers['activity-settings-set']!(a.socket, { requestId: 'r', sharing: false });
     assert.equal(visiblePresenceOf(alice)?.activity?.key, 'minecraft');
     assert.deepEqual(messages(a.socket, 'activity-settings-result'), [{ t: 'activity-settings-result', requestId: 'r', ok: false }]);
+  });
+
+  test('the history notes an activity when it starts and when it ends', async () => {
+    const alice = uid('alice');
+    const a = await connectWithSettings(alice);
+    await report(a.socket, minecraft);
+    await report(a.socket, { ...minecraft, key: 'steam:570', name: 'Dota 2', icon: null });
+    await report(a.socket, null);
+    await activityHistoryWritten();
+    assert.deepEqual(history.map((h) => [h.userId, h.key]), [
+      [alice, 'minecraft'], [alice, 'minecraft'], [alice, 'steam:570'], [alice, 'steam:570'],
+    ]);
+  });
+
+  test('the history notes the end when the last connection leaves', async () => {
+    const alice = uid('alice');
+    const a = await connectWithSettings(alice);
+    await report(a.socket, minecraft);
+    participants.delete(a.p.id);
+    created = created.filter((p) => p !== a.p);
+    releaseAccountStatusIfUnused(alice);
+    await activityHistoryWritten();
+    assert.deepEqual(history.map((h) => h.key), ['minecraft', 'minecraft']);
+  });
+
+  test('the history never notes what others could not see', async () => {
+    const alice = uid('alice');
+    saved.set(alice, { sharing: true, hidden: ['minecraft'] });
+    const a = await connectWithSettings(alice);
+    await report(a.socket, minecraft);
+    await setPresence(a.socket, { status: 'invisible' });
+    await report(a.socket, { ...minecraft, key: 'steam:570', name: 'Dota 2', icon: null });
+    await activityHistoryWritten();
+    assert.deepEqual(history, []);
+  });
+
+  test('a failed history write leaves presence as it was', async () => {
+    const alice = uid('alice');
+    const bob = uid('bob');
+    const a = await connectWithSettings(alice);
+    const b = await connectWithSettings(bob, [alice]);
+    failHistory = true;
+    await report(a.socket, minecraft);
+    await activityHistoryWritten();
+    assert.equal(visiblePresenceOf(alice)?.activity?.key, 'minecraft');
+    assert.equal(messages(b.socket, 'presence-status').length, 1);
   });
 
   test('the newest report among the account\'s connections wins, and leaves with its connection', async () => {

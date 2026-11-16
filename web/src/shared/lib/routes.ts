@@ -117,6 +117,24 @@ export function inviteCodeFromPath(pathname: string): string | null {
   return match ? decode(match[1]) : null;
 }
 
+// a message's msgId, a positive safe integer
+const MESSAGE_ID = /^[1-9][0-9]{0,14}$/;
+
+/** A link to a message is its conversation's URL with `?message=<msgId>`:
+ * the conversation opens at that message. */
+export function messageIdFromSearch(search: string): number | null {
+  const raw = new URLSearchParams(search).get('message');
+  return raw && MESSAGE_ID.test(raw) ? Number(raw) : null;
+}
+
+/** Whether a path the desktop app hands over for a `linkord://` link
+ * (desktop/src/main/deepLink.ts builds it) is one it may open: an invite, or
+ * a conversation, optionally at a message. Never anything else in the app. */
+export function isDesktopLinkPath(path: string): boolean {
+  return /^\/invite\/[A-Za-z0-9]{4,16}$/.test(path)
+    || /^\/app\/channels\/[A-Za-z0-9_@-]{1,64}\/[A-Za-z0-9_-]{1,64}(?:\?message=[1-9][0-9]{0,14})?$/.test(path);
+}
+
 /** A new direct conversation is being created before its id is known. */
 export const AWAITING_OPEN = { state: { awaitingOpen: true } } as const;
 

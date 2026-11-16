@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseUpdateRepo, updateMode } from '../../src/main/updates.js';
+import { checksAtStart, parseUpdateRepo, progressPercent, updateMode } from '../../src/main/updates.js';
 
 const repo = { owner: 'acme', repo: 'linkord' };
 
@@ -30,5 +30,28 @@ describe('updateMode', () => {
     assert.equal(mode('linux'), 'off');
     assert.equal(mode('win32', { isPackaged: false }), 'off');
     assert.equal(mode('win32', { noRepo: true }), 'off');
+  });
+});
+
+describe('progressPercent', () => {
+  it('keeps whole percents between 0 and 100', () => {
+    assert.equal(progressPercent(42.9), 42);
+    assert.equal(progressPercent(-3), 0);
+    assert.equal(progressPercent(100.4), 100);
+  });
+
+  it('reads anything else as 0', () => {
+    for (const value of [Number.NaN, Number.POSITIVE_INFINITY, '50', undefined, null]) assert.equal(progressPercent(value), 0, String(value));
+  });
+});
+
+describe('checksAtStart', () => {
+  it('shows the check when the app opens a window and installs updates', () => {
+    assert.equal(checksAtStart({ mode: 'install', startHidden: false }), true);
+  });
+
+  it('stays quiet for a start in the tray or a build that does not update', () => {
+    assert.equal(checksAtStart({ mode: 'install', startHidden: true }), false);
+    assert.equal(checksAtStart({ mode: 'off', startHidden: false }), false);
   });
 });

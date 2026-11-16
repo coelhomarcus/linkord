@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
 import { splitEmoji, twemojiUrls } from '@/features/emoji/twemoji';
 import { Emoji, EmojiText } from '@/features/emoji/Emoji';
 
@@ -40,5 +40,21 @@ describe('Emoji', () => {
     const { container } = render(<p><EmojiText text="valeu 🙏 pessoal" /></p>);
     expect(container.querySelectorAll('[data-emoji]')).toHaveLength(1);
     expect(container.textContent).toBe('valeu 🙏 pessoal');
+  });
+});
+
+describe('Emoji — a picture Twemoji lacks', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('falls back to the system font once the lookup fails, without remounting', async () => {
+    // no Twemoji file answers: every probe errors
+    vi.stubGlobal('Image', class {
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      set src(_url: string) { queueMicrotask(() => this.onerror?.()); }
+    });
+    render(<Emoji emoji="🫨" />);
+    expect(screen.getByText('🫨')).toHaveAttribute('data-emoji');
+    await waitFor(() => expect(screen.getByText('🫨')).not.toHaveAttribute('data-emoji'));
   });
 });

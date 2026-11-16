@@ -10,6 +10,7 @@ import * as api from '@/shared/api/api';
 import * as wallApi from '@/features/profile/profileApi';
 import type { ProfileDetails } from '@/shared/api/api';
 import { initialRoomState } from '@/state/roomReducer';
+import { rememberProfilePreview } from '@/features/profile/profileCache';
 
 // the relationship actions need the router and the friends provider — they
 // have their own tests (tests/features/friends/ProfileActions.test.tsx)
@@ -19,6 +20,7 @@ vi.mock('@/features/friends/ProfileActions', () => ({
 vi.mock('@/shared/api/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/shared/api/api')>()),
   fetchProfileDetails: vi.fn(),
+  fetchUserProfile: vi.fn(),
 }));
 vi.mock('@/features/profile/profileApi', () => ({ fetchWall: vi.fn(), saveWall: vi.fn() }));
 const mocked = vi.mocked(api);
@@ -36,6 +38,7 @@ const NOTHING: ProfileDetails = {
 };
 beforeEach(() => {
   mocked.fetchProfileDetails.mockReset().mockResolvedValue(NOTHING);
+  mocked.fetchUserProfile.mockReset();
   vi.mocked(wallApi.fetchWall).mockReset().mockResolvedValue({ widgets: [], available: [] });
 });
 
@@ -131,7 +134,7 @@ describe('ProfileModal — since when and what you have in common', () => {
     renderProfile();
     await screen.findByRole('tab', { name: 'Em comum' });
     const tabs = within(screen.getByRole('tablist', { name: 'Abas do perfil' })).getAllByRole('tab');
-    expect(tabs.map((t) => t.textContent)).toEqual(['Mural', 'Em comum']);
+    expect(tabs.map((t) => t.textContent)).toEqual(['Mural', 'Atividade', 'Em comum']);
     expect(screen.getAllByRole('tablist')).toHaveLength(1);
     expect(screen.queryByRole('tab', { name: 'Sobre' })).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Marcus' })).toBeInTheDocument();
@@ -304,6 +307,8 @@ describe('ProfileModal — since when and what you have in common', () => {
     const interaction = userEvent.setup();
     await interaction.click(screen.getByRole('tab', { name: 'Mural' }));
     await interaction.keyboard('{ArrowRight}');
+    expect(screen.getByRole('tab', { name: 'Atividade' })).toHaveFocus();
+    await interaction.keyboard('{ArrowRight}');
     expect(screen.getByRole('tab', { name: 'Em comum' })).toHaveFocus();
     await interaction.keyboard('{Enter}');
     expect(screen.getByRole('tab', { name: 'Em comum' })).toHaveAttribute('aria-selected', 'true');
@@ -315,5 +320,58 @@ describe('ProfileModal — since when and what you have in common', () => {
     renderProfile();
     expect(await screen.findByRole('tab', { name: 'Em comum' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /amigos e servidores em comum/ })).not.toBeInTheDocument();
+  });
+});
+
+describe('ProfileModal — what is already known opens at once', () => {
+  const stranger: PublicUser = { ...user, id: 'u9', username: 'nina', displayName: 'Nina', bio: 'Oi, sou a Nina' };
+  const never = () => new Promise<never>(() => {});
+  const renderStranger = () => renderWithRoom(<MemoryRouter><ProfileModal userId="u9" onClose={vi.fn()} onOpenProfile={vi.fn()} /></MemoryRouter>);
+
+  it('the first open of someone never seen holds the shape of the profile, then shows it', async () => {
+    mocked.fetchUserProfile.mockResolvedValue({ user: stranger });
+    renderStranger();
+    expect(screen.getByRole('status')).toHaveTextContent('Carregando perfil…');
+    expect(await screen.findByRole('heading', { name: 'Nina' })).toBeInTheDocument();
+    expect(screen.queryByText('Carregando perfil…')).not.toBeInTheDocument();
+  });
+
+  it('a profile seen before opens with no loading, and is read again behind it', async () => {
+    mocked.fetchUserProfile.mockResolvedValue({ user: stranger });
+    const first = renderStranger();
+    expect(await screen.findByText('Oi, sou a Nina')).toBeInTheDocument();
+    first.unmount();
+
+    mocked.fetchUserProfile.mockImplementation(never);
+    mocked.fetchProfileDetails.mockImplementation(never);
+    renderStranger();
+    expect(screen.getByRole('heading', { name: 'Nina' })).toBeInTheDocument();
+    expect(screen.getByText('Oi, sou a Nina')).toBeInTheDocument();
+    expect(screen.queryByText('Carregando perfil…')).not.toBeInTheDocument();
+    expect(mocked.fetchUserProfile).toHaveBeenCalledTimes(2);
+  });
+
+  it('someone opened from a list row shows their name and avatar while the rest is read', async () => {
+    let answer!: (value: { user: PublicUser }) => void;
+    mocked.fetchUserProfile.mockReturnValue(new Promise((resolve) => { answer = resolve; }));
+    rememberProfilePreview({ id: 'u9', username: 'nina', displayName: 'Nina', avatar: '', avatarColor: 'green' });
+    renderStranger();
+    expect(screen.getByRole('heading', { name: 'Nina' })).toBeInTheDocument();
+    answer({ user: stranger });
+    expect(await screen.findByText('Oi, sou a Nina')).toBeInTheDocument();
+  });
+
+  it('details seen before show at once on the next open', async () => {
+    mocked.fetchProfileDetails.mockResolvedValue({ ...NOTHING, memberSince: '2023-05-04T12:00:00.000Z' });
+    const first = renderWithRoom(<MemoryRouter><ProfileModal userId="u1" onClose={vi.fn()} onOpenProfile={vi.fn()} /></MemoryRouter>, { allUsers: new Map([[user.id, user]]) });
+    expect(await screen.findByText('Membro desde')).toBeInTheDocument();
+    first.unmount();
+
+    mocked.fetchProfileDetails.mockImplementation(never);
+    vi.mocked(wallApi.fetchWall).mockImplementation(never);
+    renderWithRoom(<MemoryRouter><ProfileModal userId="u1" onClose={vi.fn()} onOpenProfile={vi.fn()} /></MemoryRouter>, { allUsers: new Map([[user.id, user]]) });
+    expect(screen.getByText('Membro desde')).toBeInTheDocument();
+    expect(screen.getByText('Este usuário ainda não publicou widgets no Mural.')).toBeInTheDocument();
+    expect(screen.queryByText('Carregando Mural…')).not.toBeInTheDocument();
   });
 });

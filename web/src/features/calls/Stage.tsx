@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useRoom, useRoomState } from '../../state/RoomContext';
 import { useCallTiles } from './useCallTiles';
 import { useAutoFocusScreenShare } from './useAutoFocusScreenShare';
+import { useWatchedScreenFocus } from './useWatchedScreenFocus';
 import { TileGrid } from './TileGrid';
 import { CallControlBar } from './CallControlBar';
 import { CallInviteTile } from './CallInviteTile';
@@ -31,6 +32,8 @@ export function Stage({ allIds, onBack }: StageProps) {
   const descriptors = hideAudioOnlyTiles ? allDescriptors.filter((d) => d.kind !== 'avatar') : allDescriptors;
   const focusScreenShare = useCallback((key: string) => dispatch({ type: 'SET_FOCUSED', id: key, origin: 'automatic' }), [dispatch]);
   useAutoFocusScreenShare(allDescriptors, state.focusOrigin, focusScreenShare);
+  // after the automatic focus, so a share asked for by name wins over whichever one appeared first
+  useWatchedScreenFocus(allDescriptors);
   // Explain an empty stage caused by the audio-only filter and offer a way back.
   const allHiddenByFilter = allDescriptors.length > 0 && descriptors.length === 0;
   // allIds always holds you, so one id means nobody else is here yet

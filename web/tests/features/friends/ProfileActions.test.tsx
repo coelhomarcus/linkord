@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderSocial } from '@tests/fixtures/socialFixture';
 import { ProfileActions } from '@/features/friends/ProfileActions';
@@ -8,7 +8,7 @@ import * as api from '@/shared/api/api';
 vi.mock('@/shared/api/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/shared/api/api')>()),
   fetchRelationship: vi.fn(), fetchRequestSummary: vi.fn(), sendFriendRequest: vi.fn(), acceptFriendRequest: vi.fn(),
-  declineFriendRequest: vi.fn(), cancelFriendRequest: vi.fn(), unblockUser: vi.fn(),
+  declineFriendRequest: vi.fn(), cancelFriendRequest: vi.fn(), unblockUser: vi.fn(), removeFriend: vi.fn(),
 }));
 const mocked = vi.mocked(api);
 
@@ -128,5 +128,96 @@ describe('ProfileActions — what shows up only depends on the relationship', ()
 
     await user.click(await screen.findByRole('button', { name: 'Adicionar amigo' }));
     expect(await screen.findByRole('alert')).toHaveTextContent(/Confira o nome de usuário/);
+  });
+});
+
+describe('ProfileActions — optimistic', () => {
+  function never<T>(): Promise<T> { return new Promise<T>(() => {}); }
+
+  it('a friend from the live friends list gets the friend actions before the relationship is read', () => {
+    mocked.fetchRelationship.mockReturnValue(never());
+    renderSocial(<ProfileActions userId="u-ana" username="ana" displayName="Ana" />, { room: { friendUserIds: new Set(['u-ana']) } });
+    expect(screen.getByRole('button', { name: 'Mensagem' })).toBeInTheDocument();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
+  it('someone never seen holds the place of the buttons, and says it is loading', () => {
+    mocked.fetchRelationship.mockReturnValue(never());
+    renderSocial(<ProfileActions userId="u-ana" username="ana" displayName="Ana" />);
+    expect(screen.getByRole('status')).toHaveTextContent('Carregando…');
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  });
+
+  it('a relationship read once opens at once on the next profile, and is read again behind it', async () => {
+    mocked.fetchRelationship.mockResolvedValue({ relation: 'outgoing', retryAfter: null });
+    const first = renderSocial(<ProfileActions userId="u-ana" username="ana" displayName="Ana" />);
+    expect(await screen.findByText('Solicitação enviada')).toBeInTheDocument();
+    first.unmount();
+
+    mocked.fetchRelationship.mockReturnValue(never());
+    renderSocial(<ProfileActions userId="u-ana" username="ana" displayName="Ana" />);
+    expect(screen.getByText('Solicitação enviada')).toBeInTheDocument();
+    expect(mocked.fetchRelationship).toHaveBeenCalledTimes(2);
+  });
+
+  it('Adicionar amigo turns into "Solicitação enviada" before the server answers', async () => {
+    const user = userEvent.setup();
+    mocked.sendFriendRequest.mockReturnValue(never());
+    renderActions('none');
+
+    await user.click(await screen.findByRole('button', { name: 'Adicionar amigo' }));
+    expect(screen.getByText('Solicitação enviada')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Cancelar' })).toBeEnabled();
+  });
+
+  it('a refused request puts Adicionar amigo back and says why', async () => {
+    const user = userEvent.setup();
+    let refuse!: (error: unknown) => void;
+    mocked.sendFriendRequest.mockReturnValue(new Promise((_, reject) => { refuse = reject; }));
+    renderActions('none');
+
+    await user.click(await screen.findByRole('button', { name: 'Adicionar amigo' }));
+    expect(screen.getByText('Solicitação enviada')).toBeInTheDocument();
+    refuse(new api.ApiError(404, 'user_unavailable', 'x'));
+    expect(await screen.findByRole('alert')).toHaveTextContent(/Confira o nome de usuário/);
+    expect(await screen.findByRole('button', { name: 'Adicionar amigo' })).toBeInTheDocument();
+  });
+
+  it('Aceitar makes them a friend at once, and a refusal brings the request back', async () => {
+    const user = userEvent.setup();
+    let refuse!: (error: unknown) => void;
+    mocked.acceptFriendRequest.mockReturnValue(new Promise((_, reject) => { refuse = reject; }));
+    renderActions('incoming');
+
+    await user.click(await screen.findByRole('button', { name: 'Aceitar' }));
+    expect(screen.getByRole('button', { name: 'Mensagem' })).toBeInTheDocument();
+    refuse(new Error('offline'));
+    expect(await screen.findByRole('button', { name: 'Aceitar' })).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+  });
+
+  it('a request sent while the other side had already asked lands as a request received', async () => {
+    const user = userEvent.setup();
+    mocked.sendFriendRequest.mockResolvedValue('pending_received');
+    renderActions('none');
+    mocked.fetchRelationship.mockReturnValue(never());
+
+    await user.click(await screen.findByRole('button', { name: 'Adicionar amigo' }));
+    expect(await screen.findByRole('button', { name: 'Aceitar' })).toBeInTheDocument();
+  });
+
+  it('a change clicked while the previous one is on its way waits for it, in order', async () => {
+    const user = userEvent.setup();
+    let accept!: (value: unknown) => void;
+    mocked.sendFriendRequest.mockReturnValue(new Promise((resolve) => { accept = () => resolve('created'); }));
+    mocked.cancelFriendRequest.mockResolvedValue({});
+    renderActions('none');
+
+    await user.click(await screen.findByRole('button', { name: 'Adicionar amigo' }));
+    await user.click(screen.getByRole('button', { name: 'Cancelar' }));
+    expect(screen.getByRole('button', { name: 'Adicionar amigo' })).toBeInTheDocument();
+    expect(mocked.cancelFriendRequest).not.toHaveBeenCalled();
+    accept(undefined);
+    await waitFor(() => expect(mocked.cancelFriendRequest).toHaveBeenCalledWith('u-ana'));
   });
 });

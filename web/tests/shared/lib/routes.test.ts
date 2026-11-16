@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  ROUTES, callConversationIdFromPath, conversationIdFromPath, conversationPath, friendsSection, friendsView, inviteCodeFromPath, isAwaitingOpen, isHomePath, isSettingsTab, modalForPath, parseFriendsView, serverIdFromPath,
+  ROUTES, callConversationIdFromPath, conversationIdFromPath, conversationPath, friendsSection, friendsView, inviteCodeFromPath, isAwaitingOpen, isDesktopLinkPath, isHomePath, isSettingsTab, messageIdFromSearch, modalForPath, parseFriendsView, serverIdFromPath,
 } from '@/shared/lib/routes';
 
 describe('conversationIdFromPath', () => {
@@ -45,6 +45,37 @@ describe('inviteCodeFromPath', () => {
   it('reads the code of an invite link', () => {
     expect(inviteCodeFromPath('/invite/hTKzmak')).toBe('hTKzmak');
     expect(inviteCodeFromPath('/invite')).toBeNull();
+  });
+});
+
+describe('messageIdFromSearch', () => {
+  it('reads a positive message id', () => {
+    expect(messageIdFromSearch('?message=42')).toBe(42);
+    expect(messageIdFromSearch('?x=1&message=7')).toBe(7);
+  });
+
+  it('is null without one or with anything that is not a msgId', () => {
+    for (const search of ['', '?message=', '?message=0', '?message=-1', '?message=1e3', '?message=abc', '?message=1234567890123456']) {
+      expect(messageIdFromSearch(search)).toBeNull();
+    }
+  });
+});
+
+describe('isDesktopLinkPath', () => {
+  const id = '0b6f3c1e-2d4a-4c8e-9f10-1a2b3c4d5e6f';
+
+  it('accepts an invite and a conversation, optionally at a message', () => {
+    expect(isDesktopLinkPath('/invite/aB3dEf7h')).toBe(true);
+    expect(isDesktopLinkPath(`/app/channels/@me/${id}`)).toBe(true);
+    expect(isDesktopLinkPath(`/app/channels/${id}/${id}?message=42`)).toBe(true);
+  });
+
+  it('refuses every other path of the app and anything off it', () => {
+    for (const path of [
+      '/app/settings/account', '/admin/users', '/invite/ab', '/invite/abcd/..', '//evil.example/invite/abcd',
+      'https://evil.example/invite/abcd', `/app/channels/@me/${id}?next=/admin`, `/app/channels/@me/${id}#x`,
+      `/app/channels/@me/..`, `/app/channels/@me/${id}/extra`, '',
+    ]) expect(isDesktopLinkPath(path), path).toBe(false);
   });
 });
 

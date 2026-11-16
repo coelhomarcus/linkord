@@ -12,11 +12,8 @@ type NotificationTextKey =
   | 'mentionDirect'
   | 'mentionChannel';
 
-function text(key: NotificationTextKey, options?: Record<string, string>): string {
-  return i18n.t(`notifications:text.${key}`, options);
-}
-
-export function describeNotification(entry: NotificationEntry): string {
+export function describeNotification(entry: NotificationEntry, language: string): string {
+  const text = (key: NotificationTextKey, options?: Record<string, string>) => i18n.t(`notifications:text.${key}`, { ...options, lng: language });
   const who = entry.actor?.displayName ?? text('unknownActor');
   switch (entry.kind) {
     case 'friend_request': return text('friendRequest', { name: who });
@@ -45,15 +42,15 @@ export function notificationTarget(entry: NotificationEntry): string {
   }
 }
 
-export function formatRelativeTime(iso: string, now = Date.now()): string {
+export function formatRelativeTime(iso: string, language: string, now = Date.now()): string {
   const then = new Date(iso).getTime();
   if (Number.isNaN(then)) return '';
   const minutes = Math.floor((now - then) / 60_000);
-  if (minutes < 1) return i18n.t('notifications:relative.now');
-  if (minutes < 60) return i18n.t('notifications:relative.minutes', { count: minutes });
+  if (minutes < 1) return i18n.t('notifications:relative.now', { lng: language });
+  if (minutes < 60) return i18n.t('notifications:relative.minutes', { count: minutes, lng: language });
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return i18n.t('notifications:relative.hours', { count: hours });
+  if (hours < 24) return i18n.t('notifications:relative.hours', { count: hours, lng: language });
   const days = Math.floor(hours / 24);
-  if (days < 7) return i18n.t('notifications:relative.days', { count: days });
-  return new Date(then).toLocaleDateString(i18n.language, { day: '2-digit', month: 'short' });
+  if (days < 7) return i18n.t('notifications:relative.days', { count: days, lng: language });
+  return new Date(then).toLocaleDateString(language, { day: '2-digit', month: 'short' });
 }

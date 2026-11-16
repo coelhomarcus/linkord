@@ -10,9 +10,11 @@ import type { ReactionEmoji } from '@/shared/types/protocol';
 import { Emoji } from '@/features/emoji/Emoji';
 import { CustomEmojiImage } from '@/features/emoji/CustomEmojiImage';
 import { customReactionId } from '@/features/emoji/customEmojiText';
+import { useLanguage } from '@/shared/i18n/useLanguage';
 
 /** Open the full reaction list from the message actions menu, not the hover tooltip. */
 export function ReactionParticipantsDialog() {
+  const language = useLanguage();
   const { t } = useTranslation('chat');
   const { reactionParticipantsTarget: target, closeReactionParticipants, messagesByConversation, allUsers, pendingReactions } = useRoom('reactionParticipantsTarget', 'closeReactionParticipants', 'messagesByConversation', 'allUsers', 'pendingReactions');
   const state = useRoomState('me');
@@ -65,7 +67,7 @@ export function ReactionParticipantsDialog() {
             <ul role="tabpanel" className="max-h-72 space-y-1 overflow-y-auto">
               {(shownEmoji ? reactions[shownEmoji] ?? [] : []).map((userId) => {
                 const user = allUsers.get(userId);
-                const name = reactionParticipantName(userId, user, state.me.userId);
+                const name = reactionParticipantName(userId, user, state.me.userId, language);
                 return (
                   <li key={userId} className="flex items-center gap-2 rounded-md px-1 py-1 text-body">
                     <Avatar id={userId} name={name} avatar={user?.avatar ?? ''} avatarColor={user?.avatarColor} size={24} />

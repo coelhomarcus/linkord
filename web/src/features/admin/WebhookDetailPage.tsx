@@ -17,6 +17,7 @@ import { useAdminQuery } from './useAdminQuery';
 import type { QuerySchema } from './useAdminQuery';
 import { AuditListSkeleton } from './AdminSkeletons';
 import { AppLink } from '@/shared/ui/app-link';
+import { useLanguage } from '@/shared/i18n/useLanguage';
 
 const TABS = ['overview', 'moderation', 'history'] as const;
 type Tab = (typeof TABS)[number];
@@ -44,6 +45,7 @@ function WebhookHistory({ id, revision }: { id: string; revision: string }) {
  * the server's business (suspend the server, or its managers delete it);
  * the admin's lever here is cutting off a leaked URL. */
 function WebhookDetail({ id }: { id: string }) {
+  const language = useLanguage();
   const { t } = useTranslation('admin');
   const back = useAdminBack('/admin/webhooks');
   const { filters } = useAdminQuery(QUERY);
@@ -83,9 +85,9 @@ function WebhookDetail({ id }: { id: string }) {
             <AdminFieldRow label={t('entity.postsTo')}>
               <AppLink to={`/admin/servers/${webhook.serverId}`} className="hover:underline">#{webhook.channelName} · {webhook.serverName}</AppLink>
             </AdminFieldRow>
-            <AdminFieldRow label={t('entity.createdAt')}>{formatWhen(webhook.createdAt)}</AdminFieldRow>
-            <AdminFieldRow label={t('entity.tokenRotatedAt')}>{formatWhen(webhook.tokenRotatedAt)}</AdminFieldRow>
-            <AdminFieldRow label={t('ui.lastUsed')}>{webhook.lastUsedAt ? formatWhen(webhook.lastUsedAt) : t('ui.never')}</AdminFieldRow>
+            <AdminFieldRow label={t('entity.createdAt')}>{formatWhen(webhook.createdAt, language)}</AdminFieldRow>
+            <AdminFieldRow label={t('entity.tokenRotatedAt')}>{formatWhen(webhook.tokenRotatedAt, language)}</AdminFieldRow>
+            <AdminFieldRow label={t('ui.lastUsed')}>{webhook.lastUsedAt ? formatWhen(webhook.lastUsedAt, language) : t('ui.never')}</AdminFieldRow>
             <AdminFieldRow label={t('ui.messages')}>{t('entity.totalMessages', { total: webhook.messageCount, recent: webhook.messagesLast24h })}</AdminFieldRow>
           </AdminFields>
         </AdminSection>

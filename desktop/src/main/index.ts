@@ -6,6 +6,8 @@ import { createActivityWatcher } from './activityWatcher.js';
 import { forwardWindowState, installAppBridge } from './appBridge.js';
 import { parseAppConfig, resolveAppUrl } from './appUrl.js';
 import { guardContents } from './contentsGuard.js';
+import { deepLinkFromArgv, deepLinkPath, protocolRegistration } from './deepLink.js';
+import { installDeepLinkBridge } from './deepLinkBridge.js';
 import { capturesSystemAudio, sharePicker } from './displayMedia.js';
 import { createMainWindow } from './mainWindow.js';
 import { appMenuTemplate, runTrayItem, trayMenuItems, trayMenuTemplate, type MenuActions, type MenuState } from './menus.js';
@@ -19,7 +21,9 @@ import { createTray } from './tray.js';
 import { drawsTrayMenu } from './trayMenuLayout.js';
 import { createTrayMenuWindow } from './trayMenuWindow.js';
 import { installUpdater } from './updater.js';
-import { updateMode } from './updates.js';
+import type { UpdaterAction } from './updaterScreen.js';
+import { createUpdaterWindow } from './updaterWindow.js';
+import { INSTALL_DELAY_MS, RESULT_LINGER_MS, STARTUP_CHECK_TIMEOUT_MS, checksAtStart, updateMode } from './updates.js';
 
 // A development run keeps its own session and window state, and its own
 // single-instance lock, so it can run next to an installed Linkord
@@ -67,8 +71,37 @@ if (!resolved.ok) {
 
   if (process.platform === 'win32') app.setAppUserModelId('app.linkord.desktop');
 
+  // `linkord://` links (deepLink.ts). One that started the app is the first
+  // page it loads; later ones reach this instance through second-instance
+  // (Windows, Linux) or open-url (macOS)
+  const registration = protocolRegistration({
+    isPackaged: app.isPackaged,
+    defaultApp: process.defaultApp === true,
+    argv: process.argv,
+    execPath: process.execPath,
+    resolvePath: (value) => path.resolve(value),
+  });
+  if (registration && !app.setAsDefaultProtocolClient(registration.scheme, registration.path, registration.args)) {
+    console.warn(`[desktop] could not register ${registration.scheme}://`);
+  }
+  let pendingLink = deepLinkFromArgv(process.argv);
+  let openLink: ((path: string) => void) | null = null;
+  const followLink = (path: string | null) => {
+    if (!path) return;
+    if (!openLink) { pendingLink = path; return; }
+    showMainWindow();
+    openLink(path);
+  };
+
   app.on('web-contents-created', (_event, contents) => guardContents(contents, appUrl.origin));
-  app.on('second-instance', showMainWindow);
+  app.on('second-instance', (_event, argv) => {
+    showMainWindow();
+    followLink(deepLinkFromArgv(argv));
+  });
+  app.on('open-url', (event, link) => {
+    event.preventDefault();
+    followLink(deepLinkPath(link));
+  });
   app.on('before-quit', () => { quitting = true; });
   app.on('activate', showMainWindow);
   app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
@@ -81,7 +114,6 @@ if (!resolved.ok) {
     const repo = config.updateRepo ?? null;
     const updater = installUpdater({
       mode: updateMode({ platform: process.platform, isPackaged: app.isPackaged, repo }),
-      strings,
       onChange: () => refresh(),
     });
     const settings = (): DesktopSettings => ({
@@ -99,20 +131,89 @@ if (!resolved.ok) {
       }
       refresh();
     };
-    // From the menu the answer is a dialog; the settings page shows its own
+
+    // The updater window follows one check at a time: the start's, or one
+    // asked for from the tray or the menu (the settings page shows its own).
+    // Each takes a new turn, and closing the window ends the turn, so a check
+    // that settles after that shows nothing.
+    let turn = 0;
+    let followProgress = false;
+    let lingerTimer: NodeJS.Timeout | undefined;
+    let startupSettled: ((showApp: boolean) => void) | null = null;
+    const installNow = () => {
+      if (updater.status().kind !== 'downloaded') return;
+      turn++;
+      followProgress = false;
+      clearTimeout(lingerTimer);
+      updaterWindow?.show({ kind: 'installing' });
+      setTimeout(() => updater.apply(), updaterWindow ? INSTALL_DELAY_MS : 0);
+    };
+    const onUpdaterAction = (action: UpdaterAction) => {
+      if (action === 'restart') return installNow();
+      turn++;
+      followProgress = false;
+      clearTimeout(lingerTimer);
+      updaterWindow?.close();
+      startupSettled?.(true);
+      startupSettled = null;
+    };
+    const updaterWindow = updater.mode === 'install' ? createUpdaterWindow(strings, onUpdaterAction) : null;
+    const timedOut = Symbol('timed out');
+    const findAndDownload = async (timeoutMs?: number): Promise<'none' | 'failed' | 'ready' | typeof timedOut> => {
+      const status = updater.status();
+      if (status.kind === 'downloaded') return 'ready';
+      if (status.kind === 'idle') {
+        const outcome = await (timeoutMs === undefined ? updater.check() : Promise.race([
+          updater.check(),
+          new Promise<typeof timedOut>((resolve) => setTimeout(() => resolve(timedOut), timeoutMs)),
+        ]));
+        if (outcome === timedOut) return timedOut;
+        if (outcome.kind !== 'update') return outcome.kind === 'failed' ? 'failed' : 'none';
+      }
+      return (await updater.download()) ? 'ready' : 'failed';
+    };
+    // As Discord does: a start shows the check, and an update found is
+    // installed before the app opens. The window waits for the answer; a
+    // slow or failed check only opens the app.
+    const startupCheck = () => new Promise<boolean>((resolve) => {
+      const own = ++turn;
+      startupSettled = resolve;
+      followProgress = true;
+      updaterWindow?.show({ kind: 'checking' });
+      void findAndDownload(STARTUP_CHECK_TIMEOUT_MS).then((result) => {
+        if (own !== turn) return;
+        startupSettled = null;
+        if (result === 'ready') {
+          installNow();
+          resolve(false);
+          return;
+        }
+        followProgress = false;
+        updaterWindow?.close();
+        resolve(true);
+      });
+    });
     const checkFromMenu = () => {
-      void updater.check().then((outcome) => {
-        const message = outcome.kind === 'up-to-date' ? format(strings.updateUpToDate, { version: app.getVersion() })
-          : outcome.kind === 'failed' ? strings.updateFailed
-            : null;
-        if (message) dialog.showMessageBox({ type: 'info', message, buttons: [strings.ok] }).catch(() => {});
+      if (!updaterWindow) return;
+      const own = ++turn;
+      clearTimeout(lingerTimer);
+      followProgress = true;
+      updaterWindow.show({ kind: 'checking' });
+      void findAndDownload().then((result) => {
+        if (own !== turn) return;
+        followProgress = false;
+        const status = updater.status();
+        if (result === 'ready' && status.kind === 'downloaded') return updaterWindow.show({ kind: 'ready', version: status.version });
+        if (result === 'failed') return updaterWindow.show({ kind: 'failed' });
+        updaterWindow.show({ kind: 'up-to-date', version: app.getVersion() });
+        lingerTimer = setTimeout(() => { if (own === turn) onUpdaterAction('later'); }, RESULT_LINGER_MS);
       });
     };
     const actions: MenuActions = {
       showWindow: showMainWindow,
       setStartAtLogin: (enabled) => changeSettings({ startAtLogin: enabled }),
       checkForUpdates: checkFromMenu,
-      applyUpdate: () => updater.apply(),
+      applyUpdate: installNow,
       openInBrowser: () => { shell.openExternal(appUrl.href).catch((error: unknown) => console.error('[desktop] could not open the browser', error)); },
       quit: () => app.quit(),
     };
@@ -131,6 +232,8 @@ if (!resolved.ok) {
       Menu.setApplicationMenu(Menu.buildFromTemplate(appMenuTemplate(state, actions)));
       if (!drawnMenu) tray?.setContextMenu(Menu.buildFromTemplate(trayMenuTemplate(state, actions)));
       sendSettings(mainWindow, settings());
+      const status = updater.status();
+      if (followProgress && status.kind === 'downloading') updaterWindow?.show({ kind: 'downloading', version: status.version, percent: status.percent });
     };
     tray = createTray(showMainWindow, drawnMenu && (() => {
       void drawnMenu.show({ title: 'Linkord', version: format(strings.version, { version: app.getVersion() }), items: trayMenuItems(menuState()) });
@@ -151,13 +254,18 @@ if (!resolved.ok) {
       read: settings,
       change: changeSettings,
       checkForUpdates: () => updater.check(),
-      applyUpdate: () => updater.apply(),
+      applyUpdate: installNow,
     });
-    mainWindow = createMainWindow({
+    const startHidden = launchedAtLogin() && preferences.startMinimized;
+    const showWhen = checksAtStart({ mode: updater.mode, startHidden }) ? startupCheck() : undefined;
+    const main = createMainWindow({
       appUrl,
+      startUrl: pendingLink ? new URL(pendingLink, appUrl.origin) : null,
       stateFile: path.join(app.getPath('userData'), 'window-state.json'),
       preload: path.join(import.meta.dirname, '../preload/index.cjs'),
-      startHidden: launchedAtLogin() && preferences.startMinimized,
+      startHidden,
+      showWhen,
+      strings,
       preloadArguments: [
         `--linkord-desktop-version=${app.getVersion()}`,
         `--linkord-share-picker=${picker}`,
@@ -165,6 +273,9 @@ if (!resolved.ok) {
         `--linkord-title-bar=${barStyle}`,
       ],
     });
+    mainWindow = main.window;
+    pendingLink = null;
+    openLink = installDeepLinkBridge(main, appUrl.origin);
     // Previewing another system's bar on a Mac: its buttons replace the traffic lights
     if (process.platform === 'darwin' && barStyle !== 'mac') mainWindow.setWindowButtonVisibility(false);
     forwardWindowState(mainWindow);
@@ -181,6 +292,6 @@ if (!resolved.ok) {
     // open would hold the system up
     mainWindow.on('session-end', () => { quitting = true; });
     powerMonitor.on('shutdown', () => { quitting = true; app.quit(); });
-    mainWindow.on('closed', () => { mainWindow = null; });
+    mainWindow.on('closed', () => { mainWindow = null; openLink = null; });
   });
 }

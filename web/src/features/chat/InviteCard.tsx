@@ -52,9 +52,8 @@ function LiveInviteCard({ invitation }: { invitation: InvitationCard }) {
       if (err instanceof ApiError && err.code === ERROR_CODES.server_full) setOutcome('server_full');
       else if (err instanceof ApiError && err.code === ERROR_CODES.quota_exceeded) setError(t('invite.quotaExceeded'));
       else setError(t('invite.failed'));
-    } finally {
-      setBusy(null);
     }
+    setBusy(null);
   }
 
   let footer: React.ReactNode;

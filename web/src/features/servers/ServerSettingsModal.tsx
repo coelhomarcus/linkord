@@ -35,6 +35,7 @@ import { RoleColorPicker } from './RoleColorPicker';
 import { canAssignRole, canManageRole, grantableBits, outranks } from './roleHierarchy';
 import { ServerAuditLog } from './ServerAuditLog';
 import { useSaveBar } from '@/shared/hooks/useSaveBar';
+import { rememberProfilePreview } from '@/features/profile/profileCache';
 
 type TabKey = ServerSettingsTab;
 
@@ -312,7 +313,7 @@ function Members({ server, onOpenProfile }: { server: ServerSummary; onOpenProfi
           return (
           <li key={member.user.id} className="flex flex-wrap items-center gap-3 py-3">
             {/* a 12rem basis, so the role chips and actions wrap under the name instead of squeezing it to a letter */}
-            <button type="button" onClick={() => onOpenProfile(member.user.id)} className="flex min-w-0 flex-[1_1_12rem] items-center gap-3 text-left">
+            <button type="button" onClick={() => { rememberProfilePreview(member.user); onOpenProfile(member.user.id); }} className="flex min-w-0 flex-[1_1_12rem] items-center gap-3 text-left">
               <Avatar id={member.user.id} name={member.user.displayName} avatar={member.user.avatar} avatarColor={member.user.avatarColor} size={36} />
               <span className="min-w-0">
                 <span className="flex items-center gap-1 truncate text-label font-semibold" style={{ color: memberColor(server, member.roleIds) || undefined }}>

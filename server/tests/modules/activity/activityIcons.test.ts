@@ -11,7 +11,7 @@ async function png(color: { r: number; g: number; b: number }, size = 48): Promi
 }
 
 describe('storeActivityIcon', () => {
-  test('stores a 64px WebP under the hash of what it stored, once for the same picture', async () => {
+  test('stores a 96px WebP under the hash of what it stored, once for the same picture', async () => {
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'activity-icons-'));
     try {
       const first = await storeActivityIcon(await png({ r: 30, g: 200, b: 90 }), dir);
@@ -20,7 +20,7 @@ describe('storeActivityIcon', () => {
       assert.deepEqual(again, first);
       const meta = await sharp(await fs.readFile(activityIconPath(first.id, dir))).metadata();
       assert.equal(meta.format, 'webp');
-      assert.equal(meta.width, 64);
+      assert.equal(meta.width, 96);
       assert.equal((await fs.readdir(dir)).length, 1);
     } finally {
       await fs.rm(dir, { recursive: true, force: true });

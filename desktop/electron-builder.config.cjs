@@ -19,6 +19,11 @@ module.exports = {
   // releases. Uploading them is the workflow's job (--publish never).
   publish: updateRepo ? { provider: 'github', owner: updateRepo.owner, repo: updateRepo.repo } : null,
 
+  // linkord:// links (src/main/deepLink.ts). This entry covers macOS and
+  // Linux builds; the Windows installer ignores it and registers the scheme
+  // in resources/installer.nsh
+  protocols: [{ name: 'Linkord', schemes: ['linkord'] }],
+
   win: {
     target: [{ target: 'nsis', arch: ['x64'] }],
     icon: 'resources/icon.png',
@@ -28,5 +33,6 @@ module.exports = {
     oneClick: true,
     perMachine: false,
     differentialPackage: false,
+    include: 'resources/installer.nsh',
   },
 };

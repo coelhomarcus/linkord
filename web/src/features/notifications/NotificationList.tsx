@@ -15,6 +15,7 @@ import { describeNotification, formatRelativeTime } from './notificationText';
 import { customEmojisAsText } from '@/features/emoji/customEmojiText';
 import { roleMentionsAsText } from '@/features/chat/roleMentionText';
 import { useRoom } from '@/state/RoomContext';
+import { useLanguage } from '@/shared/i18n/useLanguage';
 
 function NotificationIcon({ entry }: { entry: NotificationEntry }) {
   if (entry.kind === 'server_invitation' && entry.server) return <ServerIcon id={entry.server.id} name={entry.server.name} icon={entry.server.icon} size={36} active />;
@@ -28,6 +29,7 @@ function NotificationIcon({ entry }: { entry: NotificationEntry }) {
 const notificationKey = (entry: NotificationEntry) => entry.id;
 
 export function NotificationList({ onSelect, onDismiss, fullPage = false }: { onSelect: (entry: NotificationEntry) => void; onDismiss: (entry: NotificationEntry) => void; fullPage?: boolean }) {
+  const language = useLanguage();
   const { t } = useTranslation('notifications');
   const { revision } = useFriends();
   const { servers } = useRoom('servers');
@@ -64,9 +66,9 @@ export function NotificationList({ onSelect, onDismiss, fullPage = false }: { on
           >
             <NotificationIcon entry={entry} />
             <span className="min-w-0 flex-1">
-              <span className={cn('block text-label text-text-primary', !entry.read && 'font-medium')}>{describeNotification(entry)}</span>
+              <span className={cn('block text-label text-text-primary', !entry.read && 'font-medium')}>{describeNotification(entry, language)}</span>
               {entry.mention?.excerpt && <span className="mt-0.5 line-clamp-2 block text-caption text-text-secondary">{roleMentionsAsText(customEmojisAsText(entry.mention.excerpt), servers)}</span>}
-              <span className="block text-caption text-text-muted">{formatRelativeTime(entry.at)}</span>
+              <span className="block text-caption text-text-muted">{formatRelativeTime(entry.at, language)}</span>
             </span>
             {!entry.read && <span aria-label={t('actions.unread')} className="size-2 flex-none rounded-full bg-primary" />}
           </button>

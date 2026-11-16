@@ -279,6 +279,30 @@ describe('roomReducer', () => {
     });
   });
 
+  describe('pendingScreenFocus (a share asked for from outside the stage)', () => {
+    const target = { conversationId: 'v1', participantId: 'p1' };
+
+    it('SET_PENDING_SCREEN_FOCUS sets it and replaces an older one', () => {
+      const set = roomReducer(initialRoomState, { type: 'SET_PENDING_SCREEN_FOCUS', target });
+      expect(set.pendingScreenFocus).toBe(target);
+      expect(roomReducer(set, { type: 'SET_PENDING_SCREEN_FOCUS', target: null }).pendingScreenFocus).toBeNull();
+    });
+
+    it('DROP_PENDING_SCREEN_FOCUS drops only that very request, never a newer one equal to it', () => {
+      const set = roomReducer(initialRoomState, { type: 'SET_PENDING_SCREEN_FOCUS', target });
+      expect(roomReducer(set, { type: 'DROP_PENDING_SCREEN_FOCUS', target }).pendingScreenFocus).toBeNull();
+      expect(roomReducer(set, { type: 'DROP_PENDING_SCREEN_FOCUS', target: { ...target } })).toBe(set);
+    });
+
+    it('a call that fails to start drops the request for it, and only for it', () => {
+      const set = roomReducer(initialRoomState, { type: 'SET_PENDING_SCREEN_FOCUS', target });
+      const otherFailed = roomReducer(set, { type: 'SET_CALL_JOIN_ERROR', error: { conversationId: 'v2', message: 'x' } });
+      expect(otherFailed.pendingScreenFocus).toBe(target);
+      expect(roomReducer(set, { type: 'SET_CALL_JOIN_ERROR', error: { conversationId: 'v1', message: 'x' } }).pendingScreenFocus).toBeNull();
+      expect(roomReducer(set, { type: 'SET_CALL_JOIN_ERROR', error: null }).pendingScreenFocus).toBe(target);
+    });
+  });
+
   it('SET_SHARE_ERROR sets and clears (null) the sharing/mic error', () => {
     const withError = roomReducer(initialRoomState, { type: 'SET_SHARE_ERROR', message: 'no microphone permission' });
     expect(withError.shareError).toBe('no microphone permission');

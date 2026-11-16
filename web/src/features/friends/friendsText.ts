@@ -1,5 +1,5 @@
 import { i18n } from '@/shared/i18n/init';
-import { timeOptions } from '@/shared/lib/timeFormat';
+import { getTimeFormat, timeOptions, type TimeFormat } from '@/shared/lib/timeFormat';
 import { ApiError } from '@/shared/api/api';
 import type { FriendRequestOutcome } from '@/shared/api/api';
 import { ERROR_CODES } from '@/shared/api/errorCodes';
@@ -11,10 +11,10 @@ export function normalizeUsernameInput(raw: string): string {
   return raw.trim().replace(/^@+/, '').trim();
 }
 
-export function formatRetryAfter(iso: string): string {
+export function formatRetryAfter(iso: string, language: string, timeFormat: TimeFormat): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleString(i18n.language, { day: '2-digit', month: '2-digit', ...timeOptions(i18n.language) });
+  return date.toLocaleString(language, { day: '2-digit', month: '2-digit', ...timeOptions(language, timeFormat) });
 }
 
 export function describeSendError(err: unknown): string {
@@ -23,7 +23,7 @@ export function describeSendError(err: unknown): string {
     // reached" — the server never says which (a block must not be revealed)
     if (err.code === ERROR_CODES.user_unavailable) return i18n.t('friends:send.unavailable');
     if (err.code === ERROR_CODES.cooldown) {
-      const when = err.retryAfter ? formatRetryAfter(err.retryAfter) : '';
+      const when = err.retryAfter ? formatRetryAfter(err.retryAfter, i18n.language, getTimeFormat()) : '';
       return when ? i18n.t('friends:send.cooldownAt', { when }) : i18n.t('friends:send.cooldown');
     }
     if (err.code === ERROR_CODES.rate_limited || err.code === ERROR_CODES.quota_exceeded) return err.message;

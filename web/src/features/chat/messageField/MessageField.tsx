@@ -1,5 +1,5 @@
 import { useEffect, useImperativeHandle, useLayoutEffect, useRef } from 'react';
-import type { AriaAttributes, Ref } from 'react';
+import type { AriaAttributes, Ref, RefObject } from 'react';
 import { LexicalComposer } from '@lexical/react/LexicalComposer';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { ContentEditable } from '@lexical/react/LexicalContentEditable';
@@ -7,7 +7,7 @@ import { LexicalErrorBoundary } from '@lexical/react/LexicalErrorBoundary';
 import { HistoryPlugin } from '@lexical/react/LexicalHistoryPlugin';
 import { PlainTextPlugin } from '@lexical/react/LexicalPlainTextPlugin';
 import { mergeRegister } from '@lexical/utils';
-import { $getRoot, COMMAND_PRIORITY_CRITICAL, KEY_DOWN_COMMAND, PASTE_COMMAND, TextNode } from 'lexical';
+import { $getRoot, COMMAND_PRIORITY_CRITICAL, KEY_DOWN_COMMAND, PASTE_COMMAND, TextNode, type LexicalEditor } from 'lexical';
 
 import { cn } from '@/shared/lib/utils';
 import { CustomEmojiNode, TwemojiNode } from './emojiNodes';
@@ -84,6 +84,21 @@ export function MessageField(props: MessageFieldProps) {
   );
 }
 
+/** Built outside the component: the compiler does not handle getters in an object literal. */
+function fieldHandle(editor: LexicalEditor, textRef: RefObject<string>): MessageFieldHandle {
+  return {
+    get value() { return textRef.current; },
+    get selectionStart() { return editor.getEditorState().read(() => $fieldSelection().start); },
+    get selectionEnd() { return editor.getEditorState().read(() => $fieldSelection().end); },
+    get element() { return editor.getRootElement(); },
+    focus() { editor.focus(undefined, { defaultSelection: 'rootEnd' }); },
+    setSelectionRange(start: number) {
+      editor.update(() => $setFieldCaret(start), { discrete: true });
+      editor.getRootElement()?.focus({ preventScroll: true });
+    },
+  };
+}
+
 function FieldBridge({ ref, value, onChange, onSelect, onKeyDown, onPaste, resolveCustomEmoji, resolveRole, placeholder, disabled, autoFocus }: MessageFieldProps) {
   const [editor] = useLexicalComposerContext();
   // the text as last reported or set: a value prop equal to it is no news
@@ -99,17 +114,7 @@ function FieldBridge({ ref, value, onChange, onSelect, onKeyDown, onPaste, resol
     resolveRoleRef.current = resolveRole;
   });
 
-  useImperativeHandle(ref, () => ({
-    get value() { return textRef.current; },
-    get selectionStart() { return editor.getEditorState().read(() => $fieldSelection().start); },
-    get selectionEnd() { return editor.getEditorState().read(() => $fieldSelection().end); },
-    get element() { return editor.getRootElement(); },
-    focus() { editor.focus(undefined, { defaultSelection: 'rootEnd' }); },
-    setSelectionRange(start: number) {
-      editor.update(() => $setFieldCaret(start), { discrete: true });
-      editor.getRootElement()?.focus({ preventScroll: true });
-    },
-  }), [editor]);
+  useImperativeHandle(ref, () => fieldHandle(editor, textRef), [editor]);
 
   useEffect(() => mergeRegister(
     editor.registerNodeTransform(TextNode, (node) => $convertEmojis(node, (name, nth) => resolveRef.current(name, nth))),

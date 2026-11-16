@@ -8,11 +8,11 @@ const MAX_NAMED = 3;
 
 /** "Ana is typing...", "Ana and Bia are typing...", "Ana, Bia and Caio are
  * typing...", or, beyond 3 people, "Several people are typing...". */
-export function formatTypingLabel(names: string[]): string | null {
+export function formatTypingLabel(names: string[], language: string): string | null {
   if (names.length === 0) return null;
-  if (names.length === 1) return i18n.t('common:typing.one', { name: names[0] });
+  if (names.length === 1) return i18n.t('common:typing.one', { name: names[0], lng: language });
   if (names.length <= MAX_NAMED) {
-    return i18n.t('common:typing.some', { names: new Intl.ListFormat(i18n.language, { style: 'long', type: 'conjunction' }).format(names) });
+    return i18n.t('common:typing.some', { names: new Intl.ListFormat(language, { style: 'long', type: 'conjunction' }).format(names), lng: language });
   }
-  return i18n.t('common:typing.many');
+  return i18n.t('common:typing.many', { lng: language });
 }

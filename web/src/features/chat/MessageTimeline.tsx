@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { useLanguage } from '@/shared/i18n/useLanguage';
 import { ArrowDownIcon, ArrowUpIcon } from '@phosphor-icons/react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { defaultRangeExtractor, measureElement as measureRowElement, useVirtualizer, type Range } from '@tanstack/react-virtual';
@@ -96,9 +97,10 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
   const { userId: myUserId, displayName: myName, avatar: myAvatar } = state.me;
   const conversation = conversations.find((c) => c.id === conversationId);
   const firstUnreadId = unreadStartByConversation.get(conversationId);
+  const language = useLanguage();
   const items = useMemo(
-    () => buildTimelineItems(messages, pending, { userId: myUserId, name: myName, avatar: myAvatar }, firstUnreadId, hasMoreBefore),
-    [messages, pending, myUserId, myName, myAvatar, firstUnreadId, hasMoreBefore],
+    () => buildTimelineItems(messages, pending, { userId: myUserId, name: myName, avatar: myAvatar }, firstUnreadId, hasMoreBefore, language),
+    [messages, pending, myUserId, myName, myAvatar, firstUnreadId, hasMoreBefore, language],
   );
   const unreadIndex = items.findIndex((item) => item.type === 'unread');
   // the first unread message is in an older page than the window holds:

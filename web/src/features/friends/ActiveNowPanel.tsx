@@ -8,7 +8,7 @@ import { useRoom, useRoomState } from '@/state/RoomContext';
 import { useCallRoster } from '@/features/calls/callRoster';
 import type { RosterParticipant } from '@/features/calls/callRoster';
 import type { Activity, Conversation, Participant, PublicUser } from '@/shared/types/protocol';
-import { ActivityIcon } from '@/features/activity/ActivityLine';
+import { ActivityIcon, ActivityTimer } from '@/features/activity/ActivityLine';
 import { cn } from '@/shared/lib/utils';
 
 interface ActiveCall { conversation: Conversation; friends: RosterParticipant[] }
@@ -119,6 +119,7 @@ export function ActiveNowPanel() {
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-label font-semibold text-text-primary">{user.displayName}</span>
                   <span className="block truncate text-caption text-text-muted">{tActivity(`line.${activity.kind}`, { name: activity.name })}</span>
+                  <ActivityTimer activity={activity} className="mt-0.5" />
                 </span>
                 <ActivityIcon activity={activity} size={40} />
               </span>

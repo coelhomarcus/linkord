@@ -20,7 +20,7 @@ export function setTimeFormat(value: TimeFormat): void {
 
 /** Hour and minute options for toLocale*String. A 12-hour clock reads "9:05 PM",
  * a 24-hour one "21:05" / "09:05": the leading zero only belongs to the latter. */
-export function timeOptions(language: string, format: TimeFormat = getTimeFormat()): Intl.DateTimeFormatOptions {
+export function timeOptions(language: string, format: TimeFormat): Intl.DateTimeFormatOptions {
   const twelve = format === 'auto'
     ? new Intl.DateTimeFormat(language, { hour: 'numeric' }).resolvedOptions().hour12 ?? false
     : format === '12h';

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { formatTime } from '@/shared/lib/formatChatTime';
+import { i18n } from '@/shared/i18n/init';
 import { getTimeFormat, setTimeFormat, timeOptions, useTimeFormat } from '@/shared/lib/timeFormat';
 
 afterEach(() => setTimeFormat('auto'));
@@ -14,14 +15,14 @@ function todayAt(hour: number, minute: number): number {
 describe('time format', () => {
   it('defaults to auto, which follows the language (24 hours in pt-BR)', () => {
     expect(getTimeFormat()).toBe('auto');
-    expect(formatTime(todayAt(21, 5))).toBe('21:05');
+    expect(formatTime(todayAt(21, 5), i18n.language, getTimeFormat())).toBe('21:05');
   });
 
   it('12 hours drops the leading zero and adds the period; 24 hours keeps it', () => {
     setTimeFormat('12h');
-    expect(formatTime(todayAt(9, 5))).toMatch(/^9:05\s?AM$/i);
+    expect(formatTime(todayAt(9, 5), i18n.language, getTimeFormat())).toMatch(/^9:05\s?AM$/i);
     setTimeFormat('24h');
-    expect(formatTime(todayAt(9, 5))).toBe('09:05');
+    expect(formatTime(todayAt(9, 5), i18n.language, getTimeFormat())).toBe('09:05');
   });
 
   it('auto in en-US is 12 hours', () => {

@@ -15,6 +15,8 @@ import { Switch } from '@/shared/ui/primitives/switch';
 import { Label } from '@/shared/ui/primitives/label';
 import { Button } from '@/shared/ui/primitives/button';
 import { EmptyState } from '@/shared/ui/empty-state';
+import { useLanguage } from '@/shared/i18n/useLanguage';
+import { useTimeFormat } from '@/shared/lib/timeFormat';
 
 const DEBOUNCE_MS = 300;
 
@@ -26,6 +28,8 @@ interface ChatSearchDialogProps {
 }
 
 function SearchResultRow({ result, showConversation, onSelect }: { result: SearchResult; showConversation: boolean; onSelect: () => void }) {
+  const language = useLanguage();
+  const timeFormat = useTimeFormat();
   const { allUsers, servers } = useRoom('allUsers', 'servers');
   const author = result.id ? allUsers.get(result.id) : undefined;
   const displayedName = author?.displayName ?? result.name;
@@ -45,7 +49,7 @@ function SearchResultRow({ result, showConversation, onSelect }: { result: Searc
           {showConversation && (
             <span className="flex-none truncate rounded-sm bg-bg-tertiary px-1.5 py-0.5 text-caption text-text-muted">{result.conversationName}</span>
           )}
-          <span className="flex-none text-caption text-text-muted">{formatTime(result.ts)}</span>
+          <span className="flex-none text-caption text-text-muted">{formatTime(result.ts, language, timeFormat)}</span>
         </div>
         <p className="truncate text-body text-text-secondary">{renderSearchSnippet(roleMentionsAsText(customEmojisAsText(result.snippet), servers))}</p>
       </div>

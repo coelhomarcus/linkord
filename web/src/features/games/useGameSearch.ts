@@ -48,7 +48,10 @@ export function useGameSearch(query: string): GameSearchState & { retry: () => v
     if (settled.length < MIN_QUERY_LENGTH || cache.has(settled)) return;
     const controller = new AbortController();
     searchGames(settled, controller.signal).then(
-      ({ games }) => { remember(settled, games); setOutcome({ query: settled, attempt, state: { status: 'ready', games } }); },
+      ({ games }) => {
+        remember(settled, games);
+        if (!controller.signal.aborted) setOutcome({ query: settled, attempt, state: { status: 'ready', games } });
+      },
       (error: unknown) => { if (!controller.signal.aborted) setOutcome({ query: settled, attempt, state: { status: 'error', reason: failureOf(error) } }); },
     );
     return () => controller.abort();

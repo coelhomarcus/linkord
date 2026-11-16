@@ -39,9 +39,11 @@ export interface DesktopWindowControls {
   onStateChange: (callback: (state: DesktopWindowState) => void) => () => void;
 }
 
-type DesktopUpdateStatus =
+export type DesktopUpdateStatus =
   | { kind: 'idle' }
   | { kind: 'available'; version: string; url: string }
+  /** only from builds with the updater window; older ones go from idle to downloaded */
+  | { kind: 'downloading'; version: string; percent: number }
   | { kind: 'downloaded'; version: string };
 
 /** The desktop app's own settings, as features/settings/DesktopSettings shows them. */
@@ -96,6 +98,9 @@ export interface LinkordDesktop {
   screenShare?: DesktopScreenShare;
   /** brings the window back, hidden or minimised included */
   focusWindow?: () => Promise<void>;
+  /** `linkord://` links opened while the app runs, as paths on this origin (an invite, a
+   * conversation); returns the unsubscribe. Absent in builds without deep links. */
+  onDeepLink?: (callback: (path: string) => void) => () => void;
   /** the count on the dock or launcher icon; false where the system shows none (Windows) */
   setBadgeCount?: (count: number) => Promise<boolean>;
   /** absent in builds that keep the system title bar */

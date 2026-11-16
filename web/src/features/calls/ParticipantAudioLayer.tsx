@@ -25,6 +25,7 @@ function ParticipantAudio({ participantId }: { participantId: string }) {
   }, [audioUnlocked, deafened, media.micTrack, media.screenAudioTrack]);
 
   useEffect(() => {
+    const registry = audioRegistry.current;
     const screenKey = `${participantId}:screen`;
     const micEl = micRef.current;
     const screenEl = screenRef.current;
@@ -37,19 +38,19 @@ function ParticipantAudio({ participantId }: { participantId: string }) {
     }
     if (micEl) {
       setParticipantVolume(micEl, userId ? loadCallVolume(userId) : 1);
-      audioRegistry.current.set(participantId, { element: micEl });
+      registry.set(participantId, { element: micEl });
     }
     // Register screen audio only when a track exists so a missing share is not
     // exposed as a mutable audio control in the tile menu.
     if (screenEl && media.screenAudioTrack) {
       setParticipantVolume(screenEl, userId ? loadCallVolume(`${userId}:screen`) : 1);
-      audioRegistry.current.set(screenKey, { element: screenEl });
+      registry.set(screenKey, { element: screenEl });
     } else {
-      audioRegistry.current.delete(screenKey);
+      registry.delete(screenKey);
     }
     return () => {
-      audioRegistry.current.delete(participantId);
-      audioRegistry.current.delete(screenKey);
+      registry.delete(participantId);
+      registry.delete(screenKey);
     };
   }, [participantId, userId, audioRegistry, media.screenAudioTrack]);
 
