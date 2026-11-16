@@ -4,7 +4,7 @@ import type { PointerEvent as ReactPointerEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 
-import { useRoom } from '../../state/RoomContext';
+import { useRoomState } from '../../state/RoomContext';
 import { useCallTiles } from './useCallTiles';
 import { Tile } from './Tile';
 import { Button } from '@/shared/ui/primitives/button';
@@ -25,7 +25,7 @@ interface FloatingPipProps {
 
 export function FloatingPip({ allIds, onExpand, hideOnMobile = false }: FloatingPipProps) {
   const { t } = useTranslation('calls');
-  const { state } = useRoom();
+  const state = useRoomState('focusedId', 'reconnecting', 'me');
   const { isMobile } = useSidebar();
   const descriptors = useCallTiles(allIds).filter((d) => d.kind !== 'avatar');
   // The user's own explicit prev/next pick — takes priority over following

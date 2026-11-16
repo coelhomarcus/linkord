@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { RoomContext } from '@/state/RoomContext';
+import { RoomStoreProvider } from '@/state/RoomStoreProvider';
 import type { RoomContextValue } from '@/state/RoomContext';
 import { createFakeRoomContextValue } from '@tests/fixtures/roomContextFixture';
 import type { ChatMessage } from '@/shared/types/protocol';
@@ -63,13 +63,13 @@ const message = (msgId: number, over: Partial<ChatMessage> = {}): ChatMessage =>
 function renderTimeline(overrides: Partial<RoomContextValue>, surfaces = 1) {
   const value = createFakeRoomContextValue(overrides);
   return render(
-    <RoomContext.Provider value={value}>
+    <RoomStoreProvider value={value}>
       {Array.from({ length: surfaces }, (_, i) => (
         <div key={i} data-surface={i}>
           <MessageTimeline conversationId="conv-1" onReply={() => {}} onOpenProfile={() => {}} bottomPadding={24} />
         </div>
       ))}
-    </RoomContext.Provider>,
+    </RoomStoreProvider>,
   );
 }
 
@@ -269,9 +269,9 @@ describe('MessageTimeline — the reader takes over', { timeout: HEAVY_RENDER_TI
     const messages = Array.from({ length: 50 }, (_, i) => message(i + 1));
     const roomWith = (list: ChatMessage[]) => createFakeRoomContextValue({ messagesByConversation: new Map([['conv-1', list]]) });
     const timeline = (list: ChatMessage[]) => (
-      <RoomContext.Provider value={roomWith(list)}>
+      <RoomStoreProvider value={roomWith(list)}>
         <MessageTimeline conversationId="conv-1" onReply={() => {}} onOpenProfile={() => {}} bottomPadding={24} />
-      </RoomContext.Provider>
+      </RoomStoreProvider>
     );
     const { container, rerender } = render(timeline(messages));
     const root = container.querySelector('[data-scroll-root]') as HTMLElement;

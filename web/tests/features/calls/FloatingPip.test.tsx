@@ -2,7 +2,7 @@ import type { ComponentProps } from 'react';
 import { fireEvent, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { initialRoomState } from '@/state/roomReducer';
-import { RoomContext } from '@/state/RoomContext';
+import { RoomStoreProvider } from '@/state/RoomStoreProvider';
 import { createFakeRoomContextValue, renderWithRoom } from '@tests/fixtures/roomContextFixture';
 import { FloatingPip } from '@/features/calls/FloatingPip';
 import { SidebarProvider } from '@/shared/ui/motion/sidebar';
@@ -90,9 +90,9 @@ describe('FloatingPip — selection by stable identity', () => {
       descriptor({ key: 'p-3:participant', participantId: 'p-3', kind: 'camera' }),
     ]);
     rerender(
-      <RoomContext.Provider value={value}>
+      <RoomStoreProvider value={value}>
         <TestPip allIds={['p-2', 'p-3']} />
-      </RoomContext.Provider>
+      </RoomStoreProvider>
     );
     expect(currentTile()).toHaveAttribute('data-participant', 'p-3');
   });

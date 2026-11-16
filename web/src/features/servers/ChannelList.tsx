@@ -17,7 +17,7 @@ import { EmptyState } from '@/shared/ui/empty-state';
 import { describeApiError } from '@/shared/api/errorText';
 import { ROUTES } from '@/shared/lib/routes';
 import { cn } from '@/shared/lib/utils';
-import { useRoom } from '@/state/RoomContext';
+import { useRoom, useRoomState } from '@/state/RoomContext';
 import { LOCAL_STORAGE_KEYS, localStorageStore } from '@/shared/lib/localStorage';
 import type { ChannelSummary, ServerSummary } from '@/shared/types/protocol';
 import { PERMISSIONS } from './permissionBits';
@@ -39,7 +39,8 @@ function ChannelRow({ server, channel, active, onOpen, onInvite, onOpenProfile, 
 }) {
   const { t } = useTranslation('servers');
   const { t: tn } = useTranslation('notifications');
-  const { state, badgeByConversation, mentionsByConversation, notificationPolicyFor, moveToCall } = useRoom();
+  const { badgeByConversation, mentionsByConversation, notificationPolicyFor, moveToCall } = useRoom('badgeByConversation', 'mentionsByConversation', 'notificationPolicyFor', 'moveToCall');
+  const state = useRoomState('me');
   const { openChannelSettings } = useServerSettings();
   const [dropping, setDropping] = useState(false);
   const unread = channel.type === 'text' ? badgeByConversation.get(channel.id) ?? 0 : 0;
@@ -108,7 +109,8 @@ export function ChannelList({ server, activeChannelId, onNavigate, onOpenProfile
 }) {
   const { t } = useTranslation('servers');
   const navigate = useNavigate();
-  const { state, openCall, activeCallConversationId, unreadByConversation, unreadStartByConversation, markServerRead } = useRoom();
+  const { openCall, activeCallConversationId, unreadByConversation, unreadStartByConversation, markServerRead } = useRoom('openCall', 'activeCallConversationId', 'unreadByConversation', 'unreadStartByConversation', 'markServerRead');
+  const state = useRoomState('me');
   const { openServerSettings } = useServerSettings();
   const hasUnread = serverUnread(server, unreadByConversation) > 0 || server.channels.some((c) => unreadStartByConversation.has(c.id));
   const [collapsed, setCollapsed] = useState(() => loadCollapsed(server.id));

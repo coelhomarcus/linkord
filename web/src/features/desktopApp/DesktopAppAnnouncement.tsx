@@ -28,7 +28,7 @@ function alreadyAnnounced(): boolean {
  */
 export function DesktopAppAnnouncement() {
   const { t } = useTranslation('desktopApp');
-  const { activeCallConversationId, dmCall } = useRoom();
+  const { activeCallConversationId, dmCall } = useRoom('activeCallConversationId', 'dmCall');
   const inCall = !!activeCallConversationId || (dmCall !== null && dmCall.phase !== 'ended');
   const [offer, setOffer] = useState<Offer | null>(null);
   const [closed, setClosed] = useState(false);

@@ -8,7 +8,8 @@ import { resetFrequentExpressions } from '@/features/emoji/frequentExpressions';
 import { setSkinTone } from '@/features/emoji/skinTone';
 import { registerEmojiUploadOpener } from '@/features/emoji/emojiUploadRequest';
 import { PERMISSIONS } from '@/features/servers/permissionBits';
-import { RoomContext, type RoomContextValue } from '@/state/RoomContext';
+import { type RoomContextValue } from '@/state/RoomContext';
+import { RoomStoreProvider } from '@/state/RoomStoreProvider';
 import { primeTestEmojiData } from '@tests/fixtures/emojiDataFixture';
 
 const party = { id: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', name: 'party_cat', animated: true, serverId: 's1' };
@@ -23,7 +24,7 @@ function frequentResponse(emojis: { key: string; count: number }[]) {
 
 function inRoom(children: ReactNode, permissions = 0) {
   const servers = [{ id: 's1', name: 'Equipe', icon: '', permissions }] as unknown as RoomContextValue['servers'];
-  return <RoomContext.Provider value={{ state: { me: { userId: 'me' } }, servers } as unknown as RoomContextValue}>{children}</RoomContext.Provider>;
+  return <RoomStoreProvider value={{ state: { me: { userId: 'me' } }, servers } as unknown as RoomContextValue}>{children}</RoomStoreProvider>;
 }
 
 // jsdom has no layout: give elements the size the virtualizer reads

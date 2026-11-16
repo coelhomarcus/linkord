@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router';
-import { useRoom } from '@/state/RoomContext';
+import { useRoom, useRoomState } from '@/state/RoomContext';
 import { ROUTES, callConversationIdFromPath, conversationIdFromPath, conversationPath, isAwaitingOpen, serverIdFromPath } from '@/shared/lib/routes';
 import { rememberChannel } from '@/features/servers/serverUtils';
 
 /** Keeps the current URL and room selection in sync without promoting the
  * automatic first selection into a phone navigation. */
 export function useConversationRouteSync(): void {
-  const { conversations, activeConversationId, openConversation, state } = useRoom();
+  const { conversations, activeConversationId, openConversation } = useRoom('conversations', 'activeConversationId', 'openConversation');
+  const state = useRoomState('joined');
   const location = useLocation();
   const navigate = useNavigate();
   const requestedId = conversationIdFromPath(location.pathname) ?? callConversationIdFromPath(location.pathname);

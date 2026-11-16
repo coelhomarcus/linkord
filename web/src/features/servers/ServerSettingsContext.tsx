@@ -16,7 +16,7 @@ export const useServerSettings = () => useContext(ServerSettingsContext);
 /** Server and channel settings open over whatever is on screen, from the
  * channel list, the header menu or a channel's gear. */
 export function ServerSettingsProvider({ children, onOpenProfile }: { children: ReactNode; onOpenProfile: (userId: string) => void }) {
-  const { servers } = useRoom();
+  const { servers } = useRoom('servers');
   const [serverOpen, setServerOpen] = useState<string | null>(null);
   const [channelOpen, setChannelOpen] = useState<{ serverId: string; channelId: string } | null>(null);
   const openServerSettings = useCallback((serverId: string) => setServerOpen(serverId), []);

@@ -3,7 +3,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event';
 import { initialRoomState } from '@/state/roomReducer';
 import { createFakeRoomContextValue, renderWithRoom } from '@tests/fixtures/roomContextFixture';
-import { RoomContext } from '@/state/RoomContext';
+import { RoomStoreProvider } from '@/state/RoomStoreProvider';
 import { MessageComposer } from '@/features/chat/MessageComposer';
 import { clearAllDrafts } from '@/features/chat/conversationDrafts';
 import type { Conversation, PublicUser, RoleSummary, ServerSummary } from '@/shared/types/protocol';
@@ -523,10 +523,10 @@ describe('MessageComposer — group and role mentions', () => {
 describe('MessageComposer — per-conversation draft', () => {
   function renderComposer(conversationId: string, overrides: Parameters<typeof createFakeRoomContextValue>[0] = {}) {
     const value = createFakeRoomContextValue({ state: joinedState, compressImagesDefault: false, ...overrides });
-    const view = render(<RoomContext.Provider value={value}><MessageComposer conversationId={conversationId} /></RoomContext.Provider>);
+    const view = render(<RoomStoreProvider value={value}><MessageComposer conversationId={conversationId} /></RoomStoreProvider>);
     return {
       ...view,
-      switchTo: (id: string) => view.rerender(<RoomContext.Provider value={value}><MessageComposer conversationId={id} /></RoomContext.Provider>),
+      switchTo: (id: string) => view.rerender(<RoomStoreProvider value={value}><MessageComposer conversationId={id} /></RoomStoreProvider>),
     };
   }
 

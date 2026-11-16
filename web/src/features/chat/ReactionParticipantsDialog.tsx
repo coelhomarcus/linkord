@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { Avatar } from '@/shared/Avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/primitives/dialog';
 import { cn } from '@/shared/lib/utils';
-import { useRoom } from '@/state/RoomContext';
+import { useRoom, useRoomState } from '@/state/RoomContext';
 import { withPendingReactions } from './reactionState';
 import { reactionParticipantName } from './reactionParticipants';
 import type { ReactionEmoji } from '@/shared/types/protocol';
@@ -14,7 +14,8 @@ import { customReactionId } from '@/features/emoji/customEmojiText';
 /** Open the full reaction list from the message actions menu, not the hover tooltip. */
 export function ReactionParticipantsDialog() {
   const { t } = useTranslation('chat');
-  const { reactionParticipantsTarget: target, closeReactionParticipants, messagesByConversation, allUsers, pendingReactions, state } = useRoom();
+  const { reactionParticipantsTarget: target, closeReactionParticipants, messagesByConversation, allUsers, pendingReactions } = useRoom('reactionParticipantsTarget', 'closeReactionParticipants', 'messagesByConversation', 'allUsers', 'pendingReactions');
+  const state = useRoomState('me');
   const [activeEmoji, setActiveEmoji] = useState<ReactionEmoji | null>(null);
 
   const message = target ? messagesByConversation.get(target.conversationId)?.find((m) => m.msgId === target.msgId) : undefined;

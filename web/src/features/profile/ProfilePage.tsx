@@ -4,11 +4,11 @@ import { useTranslation } from 'react-i18next';
 import { Avatar } from '@/shared/Avatar';
 import { PageHeader } from '@/shared/PageHeader';
 import { ROUTES } from '@/shared/lib/routes';
-import { useRoom } from '@/state/RoomContext';
+import { useRoomState } from '@/state/RoomContext';
 
 export function ProfilePage({ onOpenProfile }: { onOpenProfile: (userId: string) => void }) {
   const { t } = useTranslation('profile');
-  const { state } = useRoom();
+  const state = useRoomState('me');
   const navigate = useNavigate();
   const me = state.me;
   return (

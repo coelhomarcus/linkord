@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { iconWeight } from '@/shared/ui/icons';
 
 import { CloseButton } from '@/shared/ui/primitives/close-button';
-import { useRoom } from '../../state/RoomContext';
+import { useRoom, useRoomState } from '../../state/RoomContext';
 import type { MicProblem } from '@/state/roomReducer';
 import { useOwnMic } from './micState';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
@@ -41,10 +41,11 @@ const BAR_ICON = 'size-[22px] max-[480px]:size-5 max-[360px]:size-[19px]';
 export const CallControlBar = forwardRef<HTMLDivElement>(function CallControlBar(_props, ref) {
   const { t } = useTranslation('calls');
   const {
-    state, dispatch, startCamera, stopCamera, startSharing, stopSharing, activateMic, toggleMicMuted, deafened, toggleDeafened, preferMuted, setPreferMuted,
+    dispatch, startCamera, stopCamera, startSharing, stopSharing, activateMic, toggleMicMuted, deafened, toggleDeafened, preferMuted, setPreferMuted,
     leaveCall, reconnecting, isCallFullscreen, toggleCallFullscreen,
     activeCallConversationId, conversations, servers,
-  } = useRoom();
+  } = useRoom('dispatch', 'startCamera', 'stopCamera', 'startSharing', 'stopSharing', 'activateMic', 'toggleMicMuted', 'deafened', 'toggleDeafened', 'preferMuted', 'setPreferMuted', 'leaveCall', 'reconnecting', 'isCallFullscreen', 'toggleCallFullscreen', 'activeCallConversationId', 'conversations', 'servers');
+  const state = useRoomState('me', 'micProblem', 'shareError');
   // sounds come from any server the person may use the soundboard of, so a
   // DM call has one too; in a voice channel, the channel must allow it
   const callConversation = conversations.find((c) => c.id === activeCallConversationId);

@@ -10,7 +10,7 @@ import { FriendPicker } from './FriendPicker';
  * the first time). */
 export function NewDirectDialog({ open, onOpenChange, onOpened }: { open: boolean; onOpenChange: (open: boolean) => void; onOpened?: () => void }) {
   const { t } = useTranslation('conversations');
-  const { openDirect, requestChatView } = useRoom();
+  const { openDirect, requestChatView } = useRoom('openDirect', 'requestChatView');
   const [selected, setSelected] = useState<Map<string, SocialUser>>(new Map());
   const first = [...selected.keys()][0];
 

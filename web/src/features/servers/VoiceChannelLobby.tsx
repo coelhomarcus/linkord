@@ -2,7 +2,8 @@ import { SpeakerHighIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { Avatar } from '@/shared/Avatar';
 import { Button } from '@/shared/ui/primitives/button';
-import { useRoom } from '@/state/RoomContext';
+import { useRoom, useRoomState } from '@/state/RoomContext';
+import { useCallRoster } from '@/features/calls/callRoster';
 import type { Conversation } from '@/shared/types/protocol';
 import { PERMISSIONS } from './permissionBits';
 import { canInChannel } from './serverUtils';
@@ -10,8 +11,10 @@ import { canInChannel } from './serverUtils';
 /** A voice channel you aren't in: who is there, and the button to join. */
 export function VoiceChannelLobby({ channel, onJoin }: { channel: Conversation; onJoin: () => void }) {
   const { t } = useTranslation('servers');
-  const { state, allUsers } = useRoom();
-  const inside = [...state.participants.values()].filter((p) => p.callConversationId === channel.id);
+  const { allUsers } = useRoom('allUsers');
+  const state = useRoomState('callJoinError');
+  const roster = useCallRoster();
+  const inside = [...roster.values()].filter((p) => p.callConversationId === channel.id);
   const error = state.callJoinError?.conversationId === channel.id ? state.callJoinError.message : null;
   return (
     <main className="flex h-full flex-col items-center justify-center gap-5 bg-bg-call p-6 text-center text-white">

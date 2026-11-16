@@ -15,7 +15,7 @@ import {
 import { Slider } from '@/shared/ui/primitives/slider';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
 import { cn } from '@/shared/lib/utils';
-import { useRoom } from '@/state/RoomContext';
+import { useRoom, useRoomState } from '@/state/RoomContext';
 import type { ChannelSummary, ServerSummary } from '@/shared/types/protocol';
 import { useIsSpeaking } from '@/features/calls/useLiveKitTrack';
 import { useMuteForMe } from '@/features/calls/useMuteForMe';
@@ -50,7 +50,8 @@ interface VoicePerson {
  * comes from the local LiveKit room, the same way the call's own tile and
  * the dock read it: speaking lights up for you too, not just for the others. */
 function useMyVoicePerson(): VoicePerson {
-  const { state, deafened } = useRoom();
+  const { deafened } = useRoom('deafened');
+  const state = useRoomState('me');
   const myMic = useOwnMic();
   const speaking = useIsSpeaking(state.me.id ?? '');
   return {
@@ -65,7 +66,7 @@ function useMyVoicePerson(): VoicePerson {
  * an older still stays up while the fresh one is on its way. */
 function StreamPreviewImage({ participantId, name }: { participantId: string; name: string }) {
   const { t } = useTranslation('servers');
-  const { sendWs } = useRoom();
+  const { sendWs } = useRoom('sendWs');
   const preview = useStreamPreview(participantId);
   const [openedAt] = useState(() => Date.now());
   useEffect(() => { sendWs({ t: 'stream-preview-request', participantId }); }, [participantId, sendWs]);
@@ -126,7 +127,8 @@ function VoiceMemberMenu({ target, server, channel, onClose, onOpenProfile }: {
   target: MenuTarget; server: ServerSummary; channel: ChannelSummary; onClose: () => void; onOpenProfile: (userId: string) => void;
 }) {
   const { t } = useTranslation('servers');
-  const { state, activeCallConversationId, friendUserIds, openDirect, requestChatView, kickFromCall, moveToCall } = useRoom();
+  const { activeCallConversationId, friendUserIds, openDirect, requestChatView, kickFromCall, moveToCall } = useRoom('activeCallConversationId', 'friendUserIds', 'openDirect', 'requestChatView', 'kickFromCall', 'moveToCall');
+  const state = useRoomState('me');
   const { person } = target;
   const sharesMyCall = !person.isMe && activeCallConversationId === channel.id;
   const { hasAudio, volume, muted, setVolume, toggleMute } = useMuteForMe(sharesMyCall ? person.id : null, 'camera', false);
@@ -193,7 +195,8 @@ export function VoiceMembers({ server, channel, onOpenProfile, drag, onDragChang
   drag: VoiceDrag | null; onDragChange: (drag: VoiceDrag | null) => void;
 }) {
   const { t } = useTranslation('servers');
-  const { state, activeCallConversationId } = useRoom();
+  const { activeCallConversationId } = useRoom('activeCallConversationId');
+  const state = useRoomState('participants', 'me');
   const me = useMyVoicePerson();
   const [menu, setMenu] = useState<MenuTarget | null>(null);
   const inThisCall = activeCallConversationId === channel.id;

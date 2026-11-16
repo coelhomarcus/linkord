@@ -12,7 +12,7 @@ import { landingChannel } from './serverUtils';
 export function ServerLanding() {
   const { t } = useTranslation('servers');
   const { serverId = '' } = useParams();
-  const { servers } = useRoom();
+  const { servers } = useRoom('servers');
   const { isMobile } = useSidebar();
   const server = servers.find((s) => s.id === serverId);
   if (!server) return <Navigate to={ROUTES.home} replace />;

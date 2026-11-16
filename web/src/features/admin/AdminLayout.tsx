@@ -27,7 +27,7 @@ const ADMIN_TABLE_MIN = 820;
  * leaving also fixes the stale role so the guard and the rail agree. */
 function AccessLost() {
   const { t } = useTranslation('admin');
-  const { dispatch } = useRoom();
+  const { dispatch } = useRoom('dispatch');
   const navigate = useNavigate();
   return (
     <div role="alert" className="flex flex-col items-center gap-3 py-12 text-center">

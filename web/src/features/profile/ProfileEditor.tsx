@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 
 import { ImageCropDialog } from '@/shared/ImageCropDialog';
-import { useRoom } from '@/state/RoomContext';
+import { useRoom, useRoomState } from '@/state/RoomContext';
 import { cn } from '@/shared/lib/utils';
 import { ROUTES } from '@/shared/lib/routes';
 import { DEFAULT_AVATAR_COLOR, colorFor, normalizeAvatarColor } from '@/shared/Avatar';
@@ -47,7 +47,8 @@ export function ProfileEditor({ status, customStatus, details, onClose, register
 }) {
   const { t } = useTranslation('profile');
   const navigate = useNavigate();
-  const { state, updateProfile, uploadProfileImage, removeProfileImage } = useRoom();
+  const { updateProfile, uploadProfileImage, removeProfileImage } = useRoom('updateProfile', 'uploadProfileImage', 'removeProfileImage');
+  const state = useRoomState('me');
   const [avatar, setAvatar] = useState(state.me.avatar);
   const [avatarPoster, setAvatarPoster] = useState(state.me.avatarPoster);
   const [banner, setBanner] = useState(state.me.banner);

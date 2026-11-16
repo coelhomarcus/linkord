@@ -5,7 +5,8 @@ import { ChatMessageText } from '@/features/chat/ChatMessageText';
 import { buildMentionLookup } from '@/shared/lib/mentions';
 import type { PublicUser, RoleSummary } from '@/shared/types/protocol';
 import { resetMyEmojis, setMyEmojisForTests } from '@/features/emoji/myEmojis';
-import { RoomContext, type RoomContextValue } from '@/state/RoomContext';
+import { type RoomContextValue } from '@/state/RoomContext';
+import { RoomStoreProvider } from '@/state/RoomStoreProvider';
 import { liveAnnouncements } from '@tests/fixtures/announcerFixture';
 
 describe('ChatMessageText', () => {
@@ -155,7 +156,7 @@ describe('ChatMessageText — server emojis', () => {
     const user = userEvent.setup();
     setMyEmojisForTests('me', [{ serverId: 's1', emojis: [{ id: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', name: 'wave', animated: false, serverId: 's1' }] }]);
     const servers = [{ id: 's1', name: 'Equipe' }] as RoomContextValue['servers'];
-    render(<RoomContext.Provider value={{ servers } as RoomContextValue}><ChatMessageText text="<:wave:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa> oi" /></RoomContext.Provider>);
+    render(<RoomStoreProvider value={{ servers } as RoomContextValue}><ChatMessageText text="<:wave:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa> oi" /></RoomStoreProvider>);
     await user.hover(screen.getByRole('img', { name: ':wave:' }));
     expect(await screen.findByText('De Equipe')).toBeInTheDocument();
   });

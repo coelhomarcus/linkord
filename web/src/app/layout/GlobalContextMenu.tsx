@@ -17,7 +17,7 @@ import { messagePermissions } from '@/features/chat/messageActions';
 import { useMessageDeleteConfirm } from '@/features/chat/useMessageDeleteConfirm';
 import { serverUnread } from '@/features/servers/serverUtils';
 import { NotificationMenuItems } from '@/features/notifications/NotificationMenuItems';
-import { useRoom } from '@/state/RoomContext';
+import { useRoom, useRoomState } from '@/state/RoomContext';
 import { copyToClipboard } from '@/shared/lib/clipboard';
 import { downloadFile } from '@/shared/lib/download';
 import { isTouchContextMenu, LONG_PRESS_DELAY_MS, useLongPress } from '@/shared/hooks/useLongPress';
@@ -64,11 +64,11 @@ const PRESS_FEEDBACK = '[data-message-id], [data-conversation-id], [data-voice-m
 export function GlobalContextMenu({ children, onOpenProfile }: GlobalContextMenuProps) {
   const { t } = useTranslation('common');
   const {
-    state,
     activeConversationId, messagesByConversation, reactToChatMessage, setReplyingTo, setEditingMsgId,
     conversations, servers, closeConversation, openReactionParticipants, removeChatAttachment, suppressChatEmbed,
     unreadByConversation, unreadStartByConversation, markConversationRead, markServerRead,
-  } = useRoom();
+  } = useRoom('activeConversationId', 'messagesByConversation', 'reactToChatMessage', 'setReplyingTo', 'setEditingMsgId', 'conversations', 'servers', 'closeConversation', 'openReactionParticipants', 'removeChatAttachment', 'suppressChatEmbed', 'unreadByConversation', 'unreadStartByConversation', 'markConversationRead', 'markServerRead');
+  const state = useRoomState('me');
   const [hasSelection, setHasSelection] = useState(false);
   const [downloadTarget, setDownloadTarget] = useState<{ url: string; name: string } | null>(null);
   const { requestDelete, confirmDialog } = useMessageDeleteConfirm();

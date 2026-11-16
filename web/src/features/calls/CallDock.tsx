@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { iconWeight } from '@/shared/ui/icons';
 import { Avatar } from '@/shared/Avatar';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
-import { useRoom } from '@/state/RoomContext';
+import { useRoom, useRoomState } from '@/state/RoomContext';
 import { conversationTitle } from '@/features/conversations/conversationUtils';
 import { useOwnMic } from './micState';
 import { CallPingIndicator } from './CallPingIndicator';
@@ -74,11 +74,12 @@ export function CallDock({ onReturnToCall, onOpenProfile, layout = 'wide', onNav
   const { t } = useTranslation('calls');
   const { t: tStatus } = useTranslation('status');
   const {
-    state, conversations, allUsers, activeCallConversationId, dmStartedAt,
+    conversations, allUsers, activeCallConversationId, dmStartedAt,
     startCamera, stopCamera, startSharing, stopSharing, activateMic, toggleMicMuted,
     deafened, toggleDeafened, leaveCall, preferMuted, setPreferMuted, reconnecting, ownStatus,
     callElsewhere, openCall, startDmCall,
-  } = useRoom();
+  } = useRoom('conversations', 'allUsers', 'activeCallConversationId', 'dmStartedAt', 'startCamera', 'stopCamera', 'startSharing', 'stopSharing', 'activateMic', 'toggleMicMuted', 'deafened', 'toggleDeafened', 'leaveCall', 'preferMuted', 'setPreferMuted', 'reconnecting', 'ownStatus', 'callElsewhere', 'openCall', 'startDmCall');
+  const state = useRoomState('me', 'micProblem');
   const customStatus = useCustomStatus(state.me.userId);
   const [statusError, setStatusError] = useTransientError();
   const { pathname } = useLocation();

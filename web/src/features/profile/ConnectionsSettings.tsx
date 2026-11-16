@@ -7,7 +7,7 @@ import { Switch } from '@/shared/ui/primitives/switch';
 import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/ui/primitives/dialog';
-import { useRoom } from '@/state/RoomContext';
+import { useRoom, useRoomState } from '@/state/RoomContext';
 import { connectionBrand } from './connectionBrands';
 import { BrandIcon } from './profileLinks';
 import { describeConnectionError } from './connectionErrors';
@@ -20,7 +20,8 @@ const PROVIDERS = ['url', 'myanimelist', 'github'] as const;
 export function ConnectionsSettings() {
   const { t, i18n } = useTranslation('profile');
   const { t: tSettings } = useTranslation('settings');
-  const { state, dispatch } = useRoom();
+  const { dispatch } = useRoom('dispatch');
+  const state = useRoomState('me');
   const [data, setData] = useState<ConnectionsResponse | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [error, setError] = useState<string | null>(null);

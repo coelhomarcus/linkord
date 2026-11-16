@@ -23,7 +23,7 @@ function TypingDots() {
  * you're about to reply to belongs next to where you type, not competing
  * with the person/group you're talking to for the same line. */
 export function TypingIndicator({ conversationId }: { conversationId: string }) {
-  const { typingByConversation, allUsers } = useRoom();
+  const { typingByConversation, allUsers } = useRoom('typingByConversation', 'allUsers');
   const typingUsers = [...(typingByConversation.get(conversationId) ?? [])]
     .map((id) => allUsers.get(id))
     .filter((user): user is NonNullable<typeof user> => !!user);

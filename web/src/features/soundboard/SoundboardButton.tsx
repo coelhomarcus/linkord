@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/primitives/popover';
 import { Slider } from '@/shared/ui/primitives/slider';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
-import { useRoom } from '@/state/RoomContext';
+import { useRoom, useRoomState } from '@/state/RoomContext';
 import { cn } from '@/shared/lib/utils';
 import { ServerIcon } from '@/features/servers/ServerIcon';
 import { noteExpressionUse, useFrequentExpressions } from '@/features/emoji/frequentExpressions';
@@ -43,7 +43,8 @@ interface Section {
  * or not. */
 export function SoundboardButton({ conversationId, callServerId, className, activeClassName, iconClassName }: SoundboardButtonProps) {
   const { t } = useTranslation('soundboard');
-  const { sendWs, fullscreenElement, state, servers } = useRoom();
+  const { sendWs, fullscreenElement, servers } = useRoom('sendWs', 'fullscreenElement', 'servers');
+  const state = useRoomState('me');
   const accountId = state.me.userId ?? null;
   const [open, setOpen] = useState(false);
   const { status, servers: soundboards, maxSounds } = useMySounds(accountId, open);

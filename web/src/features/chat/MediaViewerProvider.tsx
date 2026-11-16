@@ -1,9 +1,9 @@
 import { ArrowBendUpLeftIcon, ChatTextIcon, FileXIcon, TrashIcon } from '@phosphor-icons/react';
-import { useCallback, useContext, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ConfirmDialog } from '@/shared/ConfirmDialog';
-import { RoomContext, useRoom } from '@/state/RoomContext';
+import { useHasRoom, useRoom, useRoomState } from '@/state/RoomContext';
 import { MediaViewer } from '@/features/media/viewer/MediaViewer';
 import type { ViewerAction } from '@/features/media/viewer/ViewerActions';
 import type { ViewerContext, ViewerItem } from '@/features/media/viewer/viewerItem';
@@ -40,7 +40,7 @@ interface MessageMediaViewerProps {
 /** The viewer with the actions on the message the shown item came from, when it has one and the
  * room is there to act on it. */
 export function MessageMediaViewer({ state, onChange, onJumpToMessage }: MessageMediaViewerProps) {
-  const room = useContext(RoomContext);
+  const hasRoom = useHasRoom();
   const viewer = (extraActions: ViewerAction[], dialogs: ReactNode) => (
     <MediaViewer
       items={state?.items ?? []}
@@ -54,7 +54,7 @@ export function MessageMediaViewer({ state, onChange, onJumpToMessage }: Message
     </MediaViewer>
   );
   // the same tree whether or not the item has a message, so moving between them never remounts the viewer
-  if (!room) return viewer([], null);
+  if (!hasRoom) return viewer([], null);
   return (
     <MessageActions item={state ? state.items[state.index] : undefined} close={() => onChange(null)} onJumpToMessage={onJumpToMessage}>
       {viewer}
@@ -70,7 +70,8 @@ function MessageActions({ item, close, onJumpToMessage, children }: {
 }) {
   const { t } = useTranslation('media');
   const { t: tc } = useTranslation('common');
-  const { state, conversations, messagesByConversation, activeConversationId, jumpToMessage, setReplyingTo, removeChatAttachment } = useRoom();
+  const { conversations, messagesByConversation, activeConversationId, jumpToMessage, setReplyingTo, removeChatAttachment } = useRoom('conversations', 'messagesByConversation', 'activeConversationId', 'jumpToMessage', 'setReplyingTo', 'removeChatAttachment');
+  const state = useRoomState('me');
   const { requestDelete, confirmDialog } = useMessageDeleteConfirm({ onConfirmed: close });
   const [removal, setRemoval] = useState<{ msgId: number; id: string; name: string } | null>(null);
   const context = item?.message;

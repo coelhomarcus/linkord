@@ -50,7 +50,7 @@ const CALL_TILE_EVENTS = [
 ];
 
 export function useCallTiles(participantIds: string[]): TileDescriptor[] {
-  const { livekitRoom } = useRoom();
+  const { livekitRoom } = useRoom('livekitRoom');
   const [descriptors, setDescriptors] = useState<TileDescriptor[]>([]);
   const idsKey = participantIds.join(',');
 

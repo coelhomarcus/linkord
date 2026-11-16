@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { RoomEvent, Track } from 'livekit-client';
 import type { Room as LKRoom } from 'livekit-client';
 import { initialRoomState } from '@/state/roomReducer';
-import { RoomContext } from '@/state/RoomContext';
+import { RoomStoreProvider } from '@/state/RoomStoreProvider';
 import { createFakeRoomContextValue, renderWithRoom } from '@tests/fixtures/roomContextFixture';
 import { PERMISSIONS } from '@/features/servers/permissionBits';
 import { TileMenu } from '@/features/calls/TileMenu';
@@ -274,9 +274,9 @@ describe('TileMenu — target invalidation', () => {
     expect(closeTileMenu).not.toHaveBeenCalled();
 
     rerender(
-      <RoomContext.Provider value={{ ...value, state: { ...value.state, participants: new Map() } }}>
+      <RoomStoreProvider value={{ ...value, state: { ...value.state, participants: new Map() } }}>
         <TileMenu onOpenProfile={vi.fn()} />
-      </RoomContext.Provider>
+      </RoomStoreProvider>
     );
     await waitFor(() => expect(closeTileMenu).toHaveBeenCalled());
   });
@@ -298,9 +298,9 @@ describe('TileMenu — target invalidation', () => {
     expect(closeTileMenu).not.toHaveBeenCalled();
 
     rerender(
-      <RoomContext.Provider value={{ ...value, activeCallConversationId: 'conv-2' }}>
+      <RoomStoreProvider value={{ ...value, activeCallConversationId: 'conv-2' }}>
         <TileMenu onOpenProfile={vi.fn()} />
-      </RoomContext.Provider>
+      </RoomStoreProvider>
     );
     await waitFor(() => expect(closeTileMenu).toHaveBeenCalled());
   });
@@ -341,9 +341,9 @@ describe('TileMenu — target invalidation', () => {
     // speaking/mic state changing) re-running the invalidation effect while
     // the screen stays paused — must still not close.
     rerender(
-      <RoomContext.Provider value={{ ...value, state: { ...value.state, participants: new Map([['p-2', fakeParticipant()]]) } }}>
+      <RoomStoreProvider value={{ ...value, state: { ...value.state, participants: new Map([['p-2', fakeParticipant()]]) } }}>
         <TileMenu onOpenProfile={vi.fn()} />
-      </RoomContext.Provider>
+      </RoomStoreProvider>
     );
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(closeTileMenu).not.toHaveBeenCalled();

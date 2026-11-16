@@ -10,7 +10,7 @@ export interface CallElsewhere {
 /** Another connection of this account in a call, or null. The server keeps an account in one call
  * at a time, so there is at most one; a tab that is in a call itself never has one. */
 export function findCallElsewhere(
-  participants: Iterable<Participant>,
+  participants: Iterable<Pick<Participant, 'id' | 'userId' | 'callConversationId'>>,
   me: { id: string | null; userId: string | null },
   conversations: readonly Pick<Conversation, 'id' | 'type'>[],
 ): CallElsewhere | null {

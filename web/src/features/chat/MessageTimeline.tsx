@@ -4,7 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { defaultRangeExtractor, measureElement as measureRowElement, useVirtualizer, type Range } from '@tanstack/react-virtual';
 
 import { buildMentionLookup } from '@/shared/lib/mentions';
-import { useRoom } from '@/state/RoomContext';
+import { useRoom, useRoomState } from '@/state/RoomContext';
 import { EmptyState } from '@/shared/ui/empty-state';
 import { conversationTitle } from '@/features/conversations/conversationUtils';
 import type { ChatMessage } from '@/shared/types/protocol';
@@ -66,8 +66,8 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
     pendingByConversation,
     unreadStartByConversation,
     editingMsgId,
-    state,
-  } = useRoom();
+  } = useRoom('messagesByConversation', 'allUsers', 'conversations', 'hasMoreByConversation', 'loadingOlderByConversation', 'loadOlderMessages', 'hasMoreAfterByConversation', 'loadingNewerByConversation', 'loadNewerMessages', 'newerCountByConversation', 'pendingJumpTarget', 'clearPendingJumpTarget', 'jumpToMessage', 'openConversation', 'pendingByConversation', 'unreadStartByConversation', 'editingMsgId');
+  const state = useRoomState('me');
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const surfaceWidth = useChatSurfaceWidth(FALLBACK_SURFACE_WIDTH);
   const [highlightedMsgId, setHighlightedMsgId] = useState<number | null>(null);

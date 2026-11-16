@@ -15,7 +15,7 @@ import type { DesktopSource } from '@/shared/desktop';
 /** The desktop app's stand-in for the browser's screen picker (see desktopCapture.ts). */
 export function DesktopSourcePicker() {
   const request = useDesktopSourceRequest();
-  const { fullscreenElement } = useRoom();
+  const { fullscreenElement } = useRoom('fullscreenElement');
   return (
     <Dialog open={request !== null} onOpenChange={(open) => { if (!open) answerDesktopSource(null); }}>
       {request && (

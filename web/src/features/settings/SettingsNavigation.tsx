@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { iconWeight } from '@/shared/ui/icons';
 
 import { Avatar } from '@/shared/Avatar';
-import { useRoom } from '@/state/RoomContext';
+import { useRoomState } from '@/state/RoomContext';
 import { ROUTES } from '@/shared/lib/routes';
 import type { SettingsTab } from '@/shared/lib/routes';
 import { cn } from '@/shared/lib/utils';
@@ -24,8 +24,7 @@ function GroupLabel({ children }: { children: string }) {
  * opens your own profile modal, where the profile is edited in place. */
 function ProfileShortcut({ onOpenProfile }: { onOpenProfile: (userId: string) => void }) {
   const { t } = useTranslation('settings');
-  const { state } = useRoom();
-  const { me } = state;
+  const { me } = useRoomState('me');
   return (
     <button
       type="button"

@@ -43,7 +43,7 @@ export function ProfileActions({ userId, username, displayName, onNavigate, onRe
   showFriendRequestActions?: boolean;
 }) {
   const { t } = useTranslation('friends');
-  const { openDirect, requestChatView } = useRoom();
+  const { openDirect, requestChatView } = useRoom('openDirect', 'requestChatView');
   const { bump } = useFriends();
   const { state, retry } = useRelationship(userId);
   const [pending, setPending] = useState(false);

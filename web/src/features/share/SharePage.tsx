@@ -15,7 +15,7 @@ import { conversationPath, ROUTES } from '@/shared/lib/routes';
 import { PageHeader } from '@/shared/PageHeader';
 import type { Conversation } from '@/shared/types/protocol';
 import { Button } from '@/shared/ui/primitives/button';
-import { useRoom } from '@/state/RoomContext';
+import { useRoom, useRoomState } from '@/state/RoomContext';
 import { discardSharedPayload, isShareId, readSharedPayload, type SharedPayload } from './sharedPayload';
 
 type Load = { status: 'loading' } | { status: 'ready'; payload: SharedPayload } | { status: 'missing' } | { status: 'failed' };
@@ -77,7 +77,8 @@ export function SharePage() {
 
 function TargetPicker({ payload, onPick }: { payload: SharedPayload; onPick: (conversation: Conversation, accountId: string) => void }) {
   const { t } = useTranslation('share');
-  const { state, conversations, servers, allUsers } = useRoom();
+  const { conversations, servers, allUsers } = useRoom('conversations', 'servers', 'allUsers');
+  const state = useRoomState('me');
   const [query, setQuery] = useState('');
   const accountId = state.me.userId ?? '';
   const needsFiles = payload.files.length > 0;

@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useRoom } from '../../state/RoomContext';
+import { useRoomState } from '../../state/RoomContext';
 import { Tile } from './Tile';
 import { fitGrid, gridGap } from './callLayoutMetrics';
 import type { TileDescriptor } from './tileTypes';
@@ -34,7 +34,7 @@ const MAX_VISIBLE_THUMB_ROWS = 2;
 
 export function TileGrid({ descriptors, focusedId, minTileWidth = DEFAULT_MIN_TILE_WIDTH, onCapacityChange, extraTile }: TileGridProps) {
   const { t } = useTranslation('calls');
-  const { state } = useRoom();
+  const state = useRoomState('me');
   const keys = useMemo(() => descriptors.map((d) => d.key), [descriptors]);
   const focus = focusedId && keys.includes(focusedId) ? focusedId : null;
 

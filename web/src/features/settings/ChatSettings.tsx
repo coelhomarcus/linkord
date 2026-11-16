@@ -5,7 +5,7 @@ import { SettingsRow, SettingsSection, SettingsSections } from '@/shared/ui/sett
 
 export function ChatSettings() {
   const { t } = useTranslation('settings');
-  const { compressImagesDefault, setCompressImagesDefault } = useRoom();
+  const { compressImagesDefault, setCompressImagesDefault } = useRoom('compressImagesDefault', 'setCompressImagesDefault');
   return (
     <SettingsSections>
       <SettingsSection id="uploads" title={t('catalog.sections.uploads')}>

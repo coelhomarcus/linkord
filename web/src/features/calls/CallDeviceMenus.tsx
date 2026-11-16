@@ -12,7 +12,7 @@ import {
 } from '@/shared/ui/primitives/dropdown-menu';
 import { Slider } from '@/shared/ui/primitives/slider';
 import { useMediaDevices } from '@/features/settings/useMediaDevices';
-import { useRoom } from '@/state/RoomContext';
+import { useRoom, useRoomState } from '@/state/RoomContext';
 import { logger } from '@/shared/lib/logger';
 import { useParticipantMedia } from './useLiveKitTrack';
 import { SHARE_QUALITY_PRESETS } from './shareQualityPresets';
@@ -47,7 +47,7 @@ const METER_SEGMENTS = 24;
 
 /** A row that opens a submenu, showing its current value under the title. */
 function ValueSubmenu({ title, value, children }: { title: string; value: string; children: ReactNode }) {
-  const { fullscreenElement } = useRoom();
+  const { fullscreenElement } = useRoom('fullscreenElement');
   return (
     <DropdownMenuSub>
       <DropdownMenuSubTrigger className="gap-3 whitespace-normal px-2 py-2 [&>svg]:text-text-muted">
@@ -103,7 +103,7 @@ const INPUT_PROFILES: InputProfile[] = ['voice-isolation', 'studio'];
 
 function InputProfileSubmenu() {
   const { t } = useTranslation('calls');
-  const { livekitRoom } = useRoom();
+  const { livekitRoom } = useRoom('livekitRoom');
   const { inputProfile } = useAudioPreferences();
 
   function pick(profile: InputProfile) {
@@ -145,7 +145,7 @@ function VolumeRow({ label, value, onChange }: { label: string; value: number; o
 
 function InputVolumeRow() {
   const { t } = useTranslation('calls');
-  const { livekitRoom } = useRoom();
+  const { livekitRoom } = useRoom('livekitRoom');
   const { inputVolume } = useAudioPreferences();
 
   function change(value: number) {
@@ -159,7 +159,7 @@ function InputVolumeRow() {
 
 function InputLevelMeter() {
   const { t } = useTranslation('calls');
-  const { state } = useRoom();
+  const state = useRoomState('me');
   const media = useParticipantMedia(state.me.id ?? '');
   const level = useMicInputLevel(media.micTrack);
   const lit = Math.round(level * METER_SEGMENTS);
@@ -197,7 +197,7 @@ function SettingsShortcutItem({ label }: { label: string }) {
 
 export function MicQuickMenu({ className }: { className?: string }) {
   const { t } = useTranslation('calls');
-  const { livekitRoom, fullscreenElement } = useRoom();
+  const { livekitRoom, fullscreenElement } = useRoom('livekitRoom', 'fullscreenElement');
   return (
     <DropdownMenu>
       <DropdownMenuTrigger aria-label={t('devices.micSettings')} className={cn(CORNER_TRIGGER, className)}>
@@ -218,7 +218,7 @@ export function MicQuickMenu({ className }: { className?: string }) {
 
 export function SpeakerQuickMenu({ className }: { className?: string }) {
   const { t } = useTranslation('calls');
-  const { livekitRoom, fullscreenElement } = useRoom();
+  const { livekitRoom, fullscreenElement } = useRoom('livekitRoom', 'fullscreenElement');
   const { outputVolume } = useAudioPreferences();
   return (
     <DropdownMenu>
@@ -238,7 +238,8 @@ export function SpeakerQuickMenu({ className }: { className?: string }) {
 
 export function ScreenShareQuickMenu({ className }: { className?: string }) {
   const { t } = useTranslation('calls');
-  const { state, shareQuality, setShareQuality, changeSource, pauseSharePreview, resumeSharePreview, fullscreenElement } = useRoom();
+  const { shareQuality, setShareQuality, changeSource, pauseSharePreview, resumeSharePreview, fullscreenElement } = useRoom('shareQuality', 'setShareQuality', 'changeSource', 'pauseSharePreview', 'resumeSharePreview', 'fullscreenElement');
+  const state = useRoomState('me');
   const sharing = state.me.sharing;
   const myMedia = useParticipantMedia(state.me.id ?? '');
   return (
@@ -277,7 +278,7 @@ export function ScreenShareQuickMenu({ className }: { className?: string }) {
 
 export function CameraQuickMenu({ className }: { className?: string }) {
   const { t } = useTranslation('calls');
-  const { livekitRoom, mirrorCameraPreview, setMirrorCameraPreview, fullscreenElement } = useRoom();
+  const { livekitRoom, mirrorCameraPreview, setMirrorCameraPreview, fullscreenElement } = useRoom('livekitRoom', 'mirrorCameraPreview', 'setMirrorCameraPreview', 'fullscreenElement');
   return (
     <DropdownMenu>
       <DropdownMenuTrigger aria-label={t('devices.cameraSettings')} className={cn(CORNER_TRIGGER, className)}>

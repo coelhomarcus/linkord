@@ -26,7 +26,7 @@ import { groupMentionsMe, mentionsUser } from '@/shared/lib/mentions';
 import { copyToClipboard } from '@/shared/lib/clipboard';
 import { cn } from '@/shared/lib/utils';
 import { useKeepPopoverWarm } from '@/shared/hooks/useKeepPopoverWarm';
-import { useRoom } from '@/state/RoomContext';
+import { useRoom, useRoomState } from '@/state/RoomContext';
 import type { ChatMessage, PublicUser } from '@/shared/types/protocol';
 import type { OutboxEntry } from './useMessageOutbox';
 import { PendingAttachments } from './PendingAttachments';
@@ -145,9 +145,10 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
   useTimeFormat();
   const deletedAuthorName = t('deletedAuthor');
   const {
-    state, conversations, servers, serverMemberRoleIds, editChatMessage, reactToChatMessage, editingMsgId, setEditingMsgId, retryPendingMessage, discardPendingMessage,
+    conversations, servers, serverMemberRoleIds, editChatMessage, reactToChatMessage, editingMsgId, setEditingMsgId, retryPendingMessage, discardPendingMessage,
     deletingMsgIds, messageActionErrors, dismissMessageActionError, pendingReactions, openReactionParticipants,
-  } = useRoom();
+  } = useRoom('conversations', 'servers', 'serverMemberRoleIds', 'editChatMessage', 'reactToChatMessage', 'editingMsgId', 'setEditingMsgId', 'retryPendingMessage', 'discardPendingMessage', 'deletingMsgIds', 'messageActionErrors', 'dismissMessageActionError', 'pendingReactions', 'openReactionParticipants');
+  const state = useRoomState('me', 'reconnecting');
   const [editText, setEditText] = useState(() => customEmojisAsText(message.text));
   const myEmojis = useMyEmojis(state.me.userId ?? null, false);
   const [editSaving, setEditSaving] = useState(false);

@@ -49,7 +49,7 @@ export function AudioVideoSettings() {
   const {
     livekitRoom, mirrorCameraPreview, setMirrorCameraPreview,
     showTileBanners, setShowTileBanners, showStats, setShowStats, hideAudioOnlyTiles, setHideAudioOnlyTiles,
-  } = useRoom();
+  } = useRoom('livekitRoom', 'mirrorCameraPreview', 'setMirrorCameraPreview', 'showTileBanners', 'setShowTileBanners', 'showStats', 'setShowStats', 'hideAudioOnlyTiles', 'setHideAudioOnlyTiles');
   const mic = useMediaDevices(livekitRoom, 'audioinput');
   const speaker = useMediaDevices(livekitRoom, 'audiooutput');
   const camera = useMediaDevices(livekitRoom, 'videoinput');

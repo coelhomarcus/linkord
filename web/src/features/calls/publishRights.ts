@@ -36,7 +36,7 @@ export function callPublishRights(conversation: { permissions?: number } | null 
 }
 
 export function useCallPublishRights(): CallPublishRights {
-  const { conversations, activeCallConversationId } = useRoom();
+  const { conversations, activeCallConversationId } = useRoom('conversations', 'activeCallConversationId');
   return callPublishRights(conversations.find((c) => c.id === activeCallConversationId));
 }
 

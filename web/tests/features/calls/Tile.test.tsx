@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Track } from 'livekit-client';
 import type { Room } from 'livekit-client';
 import { initialRoomState } from '@/state/roomReducer';
-import { RoomContext } from '@/state/RoomContext';
+import { RoomStoreProvider } from '@/state/RoomStoreProvider';
 import { createFakeRoomContextValue, renderWithRoom } from '@tests/fixtures/roomContextFixture';
 import { Tile } from '@/features/calls/Tile';
 import type { Participant } from '@/shared/types/protocol';
@@ -205,9 +205,9 @@ describe('Tile — focused source sizing', () => {
   it('resets the old ratio when the source changes and restores paused screen video', () => {
     const value = createFakeRoomContextValue();
     const renderTile = (kind: 'camera' | 'screen', paused = false) => (
-      <RoomContext.Provider value={value}>
+      <RoomStoreProvider value={value}>
         <Tile participantId="p-2" kind={kind} isMine={false} sizing="source" paused={paused} />
-      </RoomContext.Provider>
+      </RoomStoreProvider>
     );
     const { container, rerender } = renderWithRoom(renderTile('camera'), value);
     setVideoSize(container.querySelector('video')!, 720, 1280);
@@ -236,11 +236,11 @@ describe('Tile — focused source sizing', () => {
         getTrackPublication: (source: Track.Source) => source === Track.Source.Camera ? { isMuted: false, track: camera } : undefined,
       }),
     } as unknown as Room;
-    const value = createFakeRoomContextValue({ livekitRoom: room });
+    let value = createFakeRoomContextValue({ livekitRoom: room });
     const renderTile = () => (
-      <RoomContext.Provider value={value}>
+      <RoomStoreProvider value={value}>
         <Tile participantId="p-2" kind="camera" isMine={false} sizing="source" />
-      </RoomContext.Provider>
+      </RoomStoreProvider>
     );
     const { container, rerender } = renderWithRoom(renderTile(), value);
     const firstVideo = container.querySelector('video')!;
@@ -250,10 +250,10 @@ describe('Tile — focused source sizing', () => {
     expect(first.detach).toHaveBeenCalledWith(firstVideo);
     expect(second.attach).toHaveBeenCalledWith(firstVideo);
     expect(container.querySelector('[data-tile-kind]')).toHaveStyle({ width: '800px', height: '450px' });
-    value.state = { ...value.state, hiddenVideoKeys: new Set(['p-2:participant']) };
+    value = { ...value, state: { ...value.state, hiddenVideoKeys: new Set(['p-2:participant']) } };
     rerender(renderTile());
     expect(second.detach).toHaveBeenCalledWith(firstVideo);
-    value.state = { ...value.state, hiddenVideoKeys: new Set() };
+    value = { ...value, state: { ...value.state, hiddenVideoKeys: new Set() } };
     rerender(renderTile());
     const restoredVideo = container.querySelector('video')!;
     expect(restoredVideo).not.toBe(firstVideo);

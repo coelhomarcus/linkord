@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useCursorList } from '@/shared/hooks/useCursorList';
 import type { ListSnapshot } from '@/shared/hooks/useCursorList';
-import { useRoom } from '@/state/RoomContext';
+import { useRoomState } from '@/state/RoomContext';
 
 // In memory only, and keyed by account, so a second login in the same tab never
 // sees the first one's rows. A restored window is re-read at once (see
@@ -23,7 +23,7 @@ export function useRememberedList<T>(
   identity: string,
   options: { revision?: string | number; getKey: (item: T) => string },
 ) {
-  const { state } = useRoom();
+  const state = useRoomState('me');
   const key = `${state.me.userId ?? ''}|${identity}`;
   // read once, as the view opens
   const [seed] = useState(() => windows.get(key) as ListSnapshot<T> | undefined);

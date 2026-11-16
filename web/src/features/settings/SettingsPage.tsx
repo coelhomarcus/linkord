@@ -3,7 +3,7 @@ import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Navigate, useLocation, useNavigate, useParams } from 'react-router';
-import { useRoom } from '@/state/RoomContext';
+import { useRoomState } from '@/state/RoomContext';
 import { PageHeader } from '@/shared/PageHeader';
 import { Button } from '@/shared/ui/primitives/button';
 import { useAppModalClose } from '@/shared/ui/app-modal';
@@ -54,7 +54,7 @@ function CategoryPage({ tab, onOpenProfile }: { tab: SettingsTab; onOpenProfile:
  * an index of categories that opens one at a time. */
 export function SettingsPage({ onOpenProfile }: SettingsPageProps) {
   const { t } = useTranslation('settings');
-  const { state } = useRoom();
+  const state = useRoomState('me');
   const { tab } = useParams<{ tab?: string }>();
   const navigate = useNavigate();
   const location = useLocation();

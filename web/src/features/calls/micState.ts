@@ -1,5 +1,5 @@
 import type { Participant } from '@/shared/types/protocol';
-import { useRoom } from '@/state/RoomContext';
+import { useRoom, useRoomState } from '@/state/RoomContext';
 import { useParticipantMedia } from './useLiveKitTrack';
 
 export interface OwnMic {
@@ -14,7 +14,8 @@ export interface OwnMic {
  * published there is nothing to read it from, and it would show as muted for
  * that whole wait; meanwhile it shows what the join is about to do. */
 export function useOwnMic(): OwnMic {
-  const { state, micStarting, preferMuted, deafened } = useRoom();
+  const { micStarting, preferMuted, deafened } = useRoom('micStarting', 'preferMuted', 'deafened');
+  const state = useRoomState('me');
   const media = useParticipantMedia(state.me.id ?? '');
   const starting = micStarting && !media.micActivated;
   return { activated: media.micActivated, muted: starting ? preferMuted || deafened : media.micMuted, starting };

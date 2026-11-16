@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRoom } from '../../state/RoomContext';
+import { useCallRoster } from './callRoster';
 import type { TileKind } from './tileTypes';
 import { saveCallVolume } from '../settings/useCallVolumePreference';
 import { getParticipantVolume, setParticipantVolume } from './participantVolume';
@@ -10,9 +11,10 @@ import { getParticipantVolume, setParticipantVolume } from './participantVolume'
 // component (the tile's own indicator button, the settings menu) can read
 // and drive the same value without duplicating the mute/restore semantics.
 export function useMuteForMe(participantId: string | null, kind: TileKind, isMine: boolean) {
-  const { state, audioRegistry } = useRoom();
+  const { audioRegistry } = useRoom('audioRegistry');
+  const roster = useCallRoster();
   const audioKey = participantId === null ? null : (kind === 'screen' ? `${participantId}:screen` : participantId);
-  const targetUserId = participantId !== null ? (state.participants.get(participantId)?.userId ?? null) : null;
+  const targetUserId = participantId !== null ? (roster.get(participantId)?.userId ?? null) : null;
   const volumeStorageKey = targetUserId ? (kind === 'screen' ? `${targetUserId}:screen` : targetUserId) : null;
   const hasAudio = !isMine && !!audioKey && audioRegistry.current.has(audioKey);
 

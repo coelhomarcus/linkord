@@ -30,7 +30,7 @@ const notificationKey = (entry: NotificationEntry) => entry.id;
 export function NotificationList({ onSelect, onDismiss, fullPage = false }: { onSelect: (entry: NotificationEntry) => void; onDismiss: (entry: NotificationEntry) => void; fullPage?: boolean }) {
   const { t } = useTranslation('notifications');
   const { revision } = useFriends();
-  const { servers } = useRoom();
+  const { servers } = useRoom('servers');
   const fetchPage = useCallback((cursor: string | null) => fetchNotifications(cursor), []);
   const list = useCursorList(fetchPage, 'notifications', { revision, getKey: notificationKey });
 
