@@ -12,7 +12,7 @@ export function useNotificationActions() {
   const navigate = useNavigate();
   const { pathname, search, hash } = useLocation();
   const { bump } = useFriends();
-  const { jumpToMessage } = useRoom();
+  const { jumpToMessage } = useRoom('jumpToMessage');
   const { unread, setUnread } = useUnreadNotifications();
   const [error, setError] = useState(false);
 

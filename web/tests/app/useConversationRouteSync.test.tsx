@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter, useLocation, useNavigate } from 'react-router';
 import userEvent from '@testing-library/user-event';
 import { initialRoomState } from '@/state/roomReducer';
-import { RoomContext } from '@/state/RoomContext';
+import { RoomStoreProvider } from '@/state/RoomStoreProvider';
 import type { RoomContextValue } from '@/state/RoomContext';
 import type { Conversation } from '@/shared/types/protocol';
 import { createFakeRoomContextValue } from '@tests/fixtures/roomContextFixture';
@@ -26,9 +26,9 @@ function Probe() {
 }
 
 function tree(entry: string, room: Partial<RoomContextValue>) {
-  return <RoomContext.Provider value={createFakeRoomContextValue(room)}>
+  return <RoomStoreProvider value={createFakeRoomContextValue(room)}>
     <MemoryRouter initialEntries={[entry]}><Probe /></MemoryRouter>
-  </RoomContext.Provider>;
+  </RoomStoreProvider>;
 }
 const path = () => screen.getByTestId('path').textContent;
 
@@ -58,7 +58,7 @@ describe('useConversationRouteSync', () => {
 
   it('a later explicit opening navigates to the conversation URL', () => {
     const room = (active: string) => createFakeRoomContextValue({ state: joined, conversations: [conv('c1'), conv('c2')], activeConversationId: active });
-    const view = (active: string) => <RoomContext.Provider value={room(active)}><MemoryRouter initialEntries={['/app/friends']}><Probe /></MemoryRouter></RoomContext.Provider>;
+    const view = (active: string) => <RoomStoreProvider value={room(active)}><MemoryRouter initialEntries={['/app/friends']}><Probe /></MemoryRouter></RoomStoreProvider>;
     const { rerender } = render(view('c1'));
     rerender(view('c2'));
     expect(path()).toBe('/app/channels/s1/c2');

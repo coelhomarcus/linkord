@@ -193,7 +193,7 @@ const IGDB_CLIENT_SECRET = (process.env.IGDB_CLIENT_SECRET || '').trim();
 
 // The GitHub repository ("owner/repo") whose releases carry the desktop app's installers, the same one
 // the installers update from (LINKORD_UPDATE_REPO when they are built). Set, the web app announces the
-// desktop app once and links each person to their system's installer; empty, it never mentions it.
+// desktop app once on Windows computers and links to the installer; empty, it never mentions it.
 const desktopReleasesRepo = (process.env.DESKTOP_RELEASES_REPO || '').trim();
 const DESKTOP_RELEASES_REPO = /^[\w.-]+\/[\w.-]+$/.test(desktopReleasesRepo) ? desktopReleasesRepo : '';
 

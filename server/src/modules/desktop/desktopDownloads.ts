@@ -1,7 +1,7 @@
 import { fetchConnectionJson, list, record, textValue, type RequestJson } from '../../integrations/connectionHttp.js';
 
-// Where the web app's "the desktop app is here" announcement sends people: the installers of the
-// latest published release of DESKTOP_RELEASES_REPO, the same releases the installed apps update
+// Where the web app's "the desktop app is here" announcement sends people: the Windows installer of
+// the latest published release of DESKTOP_RELEASES_REPO (Windows is the only system the app ships for), the same releases the installed apps update
 // from (docs/DEPLOY.md, "Desktop app"). Read from GitHub's public API, without a token, and kept
 // for a while so a server full of people asks GitHub a handful of times an hour.
 
@@ -13,23 +13,11 @@ export interface DesktopDownloads {
   version: string;
   /** the release's page */
   page: string;
-  files: {
-    windows?: string;
-    macArm?: string;
-    macIntel?: string;
-    appImage?: string;
-    deb?: string;
-  };
+  files: { windows?: string };
 }
 
-// The installers' names (desktop/electron-builder.config.cjs artifactName)
-const FILES: [keyof DesktopDownloads['files'], RegExp][] = [
-  ['windows', /^Linkord-[\w.-]+-win-x64\.exe$/],
-  ['macArm', /^Linkord-[\w.-]+-mac-arm64\.dmg$/],
-  ['macIntel', /^Linkord-[\w.-]+-mac-x64\.dmg$/],
-  ['appImage', /^Linkord-[\w.-]+-linux-x86_64\.AppImage$/],
-  ['deb', /^Linkord-[\w.-]+-linux-amd64\.deb$/],
-];
+// The installer's name (desktop/electron-builder.config.cjs artifactName)
+const WINDOWS_INSTALLER = /^Linkord-[\w.-]+-win-x64\.exe$/;
 
 /** GitHub's "latest release" answer, keeping only links into that repository's releases. */
 export function parseLatestRelease(body: unknown, repo: string): DesktopDownloads | null {
@@ -38,17 +26,15 @@ export function parseLatestRelease(body: unknown, repo: string): DesktopDownload
   const page = textValue(release.html_url);
   const prefix = `https://github.com/${repo}/releases/`;
   if (!tag || !page?.startsWith(prefix) || release.draft === true || release.prerelease === true) return null;
-  const files: DesktopDownloads['files'] = {};
   for (const asset of list(release.assets)) {
     const { name, browser_download_url: url } = record(asset);
     const fileName = textValue(name);
     const link = textValue(url);
-    if (!fileName || !link?.startsWith(`${prefix}download/`)) continue;
-    const kind = FILES.find(([, pattern]) => pattern.test(fileName))?.[0];
-    if (kind) files[kind] = link;
+    if (fileName && WINDOWS_INSTALLER.test(fileName) && link?.startsWith(`${prefix}download/`)) {
+      return { version: tag.replace(/^v/, ''), page, files: { windows: link } };
+    }
   }
-  if (Object.keys(files).length === 0) return null;
-  return { version: tag.replace(/^v/, ''), page, files };
+  return null;
 }
 
 export function createDesktopDownloads(options: { repo: string; request?: RequestJson; now?: () => number }) {
@@ -70,7 +56,7 @@ export function createDesktopDownloads(options: { repo: string; request?: Reques
     }
   }
 
-  /** The latest installers, or null when there is no repository, no release, or GitHub cannot be reached. */
+  /** The latest installer, or null when there is no repository, no release with one, or GitHub cannot be reached. */
   return async function latest(): Promise<DesktopDownloads | null> {
     if (!repo) return null;
     if (cached && cached.until > now()) return cached.value;

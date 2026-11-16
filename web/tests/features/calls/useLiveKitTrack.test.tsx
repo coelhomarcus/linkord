@@ -6,7 +6,7 @@ import type { Participant, Room } from 'livekit-client';
 import {
   activeTrack, getParticipant, isScreenPaused, useConnectionQuality, useParticipantMedia, useWatchScreenShare,
 } from '@/features/calls/useLiveKitTrack';
-import { RoomContext } from '@/state/RoomContext';
+import { RoomStoreProvider } from '@/state/RoomStoreProvider';
 import { createFakeRoomContextValue } from '@tests/fixtures/roomContextFixture';
 
 /** A minimal but real pub-sub fake — `on`/`off` are spies wrapping an actual
@@ -37,7 +37,7 @@ function fakeEventRoom() {
 
 function roomWrapper(room: Room) {
   return ({ children }: { children: ReactNode }) => (
-    <RoomContext.Provider value={createFakeRoomContextValue({ livekitRoom: room })}>{children}</RoomContext.Provider>
+    <RoomStoreProvider value={createFakeRoomContextValue({ livekitRoom: room })}>{children}</RoomStoreProvider>
   );
 }
 

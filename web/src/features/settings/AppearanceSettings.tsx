@@ -17,7 +17,7 @@ const THEME_SWATCH: Record<ColorThemeId, string> = {
 
 export function AppearanceSettings() {
   const { t } = useTranslation('settings');
-  const { colorTheme, setColorTheme } = useRoom();
+  const { colorTheme, setColorTheme } = useRoom('colorTheme', 'setColorTheme');
 
   return (
     <SettingsSections>

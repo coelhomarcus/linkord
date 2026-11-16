@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
-import { useRoom } from '@/state/RoomContext';
+import { useRoomState } from '@/state/RoomContext';
 import { friendsSection } from '@/shared/lib/routes';
 import { AddFriendForm } from './AddFriendForm';
 import { CopyUsernameButton } from './CopyUsernameButton';
@@ -12,7 +12,7 @@ import { AppLink } from '@/shared/ui/app-link';
  * catalog: nothing here lists accounts. */
 export function AddFriendView() {
   const { t } = useTranslation('friends');
-  const { state } = useRoom();
+  const state = useRoomState('me');
   const { bump, pendingFriendRequestCount } = useFriends();
 
   return (

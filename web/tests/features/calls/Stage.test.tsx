@@ -2,7 +2,7 @@ import { act, render } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { forwardRef } from 'react';
 import { initialRoomState } from '@/state/roomReducer';
-import { RoomContext } from '@/state/RoomContext';
+import { RoomStoreProvider } from '@/state/RoomStoreProvider';
 import type { RoomContextValue } from '@/state/RoomContext';
 import { createFakeRoomContextValue } from '@tests/fixtures/roomContextFixture';
 import { SidebarProvider } from '@/shared/ui/motion/sidebar';
@@ -39,11 +39,11 @@ function lastOnCapacityChange(): (meetsMinimum: boolean, key: string | null) => 
 
 function renderStage(props: { allIds: string[] }, overrides: Partial<RoomContextValue> = {}) {
   return render(
-    <RoomContext.Provider value={createFakeRoomContextValue(overrides)}>
+    <RoomStoreProvider value={createFakeRoomContextValue(overrides)}>
       <SidebarProvider>
         <Stage {...props} onBack={() => {}} />
       </SidebarProvider>
-    </RoomContext.Provider>
+    </RoomStoreProvider>
   );
 }
 

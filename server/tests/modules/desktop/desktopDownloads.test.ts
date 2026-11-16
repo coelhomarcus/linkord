@@ -17,12 +17,13 @@ const release = (overrides: Record<string, unknown> = {}) => ({
 });
 
 describe('parseLatestRelease', () => {
-  test('picks each system\'s installer and the release page', () => {
+  test('picks the Windows installer and the release page, leaving older systems\' files out', () => {
     const downloads = parseLatestRelease(release(), REPO);
-    assert.equal(downloads?.version, '0.3.0');
-    assert.equal(downloads?.page, `https://github.com/${REPO}/releases/tag/v0.3.0`);
-    assert.deepEqual(Object.keys(downloads?.files ?? {}).sort(), ['appImage', 'deb', 'macArm', 'macIntel', 'windows']);
-    assert.equal(downloads?.files.windows, `https://github.com/${REPO}/releases/download/v0.3.0/Linkord-0.3.0-win-x64.exe`);
+    assert.deepEqual(downloads, {
+      version: '0.3.0',
+      page: `https://github.com/${REPO}/releases/tag/v0.3.0`,
+      files: { windows: `https://github.com/${REPO}/releases/download/v0.3.0/Linkord-0.3.0-win-x64.exe` },
+    });
   });
 
   test('takes no link outside the repository\'s releases', () => {
@@ -31,10 +32,11 @@ describe('parseLatestRelease', () => {
     assert.equal(parseLatestRelease(release({ html_url: 'https://evil.example/x' }), REPO), null);
   });
 
-  test('ignores drafts, prereleases and releases without installers', () => {
+  test('ignores drafts, prereleases and releases without a Windows installer', () => {
     assert.equal(parseLatestRelease(release({ draft: true }), REPO), null);
     assert.equal(parseLatestRelease(release({ prerelease: true }), REPO), null);
     assert.equal(parseLatestRelease(release({ assets: [asset('notes.txt')] }), REPO), null);
+    assert.equal(parseLatestRelease(release({ assets: [asset('Linkord-0.3.0-mac-arm64.dmg')] }), REPO), null);
   });
 });
 

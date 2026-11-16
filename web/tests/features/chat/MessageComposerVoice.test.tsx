@@ -3,7 +3,8 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import userEvent from '@testing-library/user-event';
 import type { ReactElement } from 'react';
 import { initialRoomState } from '@/state/roomReducer';
-import { RoomContext, type RoomContextValue } from '@/state/RoomContext';
+import { type RoomContextValue } from '@/state/RoomContext';
+import { RoomStoreProvider } from '@/state/RoomStoreProvider';
 import { createFakeRoomContextValue } from '@tests/fixtures/roomContextFixture';
 import { FakeRecorder, FakeTrack } from '@tests/fixtures/fakeRecorderEnv';
 import { MessageComposer } from '@/features/chat/MessageComposer';
@@ -44,7 +45,7 @@ afterEach(async () => {
 function renderComposer(overrides: Partial<RoomContextValue> = {}, conversationId = 'conv-1') {
   const value = createFakeRoomContextValue({ state: joinedState, ...overrides });
   const wrap = (ui: ReactElement, next: Partial<RoomContextValue> = {}) => (
-    <RoomContext.Provider value={{ ...value, ...next }}>{ui}</RoomContext.Provider>
+    <RoomStoreProvider value={{ ...value, ...next }}>{ui}</RoomStoreProvider>
   );
   const view = render(wrap(<MessageComposer conversationId={conversationId} />));
   return {

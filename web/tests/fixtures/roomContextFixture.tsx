@@ -2,7 +2,7 @@ import type { ReactElement } from 'react';
 import { render } from '@testing-library/react';
 import type { RenderResult } from '@testing-library/react';
 import { Room } from 'livekit-client';
-import { RoomContext } from '@/state/RoomContext';
+import { RoomStoreProvider } from '@/state/RoomStoreProvider';
 import type { RoomContextValue } from '@/state/RoomContext';
 import { initialRoomState } from '@/state/roomReducer';
 import { DEFAULT_MAX_ATTACHMENT_BYTES } from '@/shared/types/protocol';
@@ -166,5 +166,5 @@ export function createFakeRoomContextValue(overrides: Partial<RoomContextValue> 
 }
 
 export function renderWithRoom(ui: ReactElement, overrides: Partial<RoomContextValue> = {}): RenderResult {
-  return render(<RoomContext.Provider value={createFakeRoomContextValue(overrides)}>{ui}</RoomContext.Provider>);
+  return render(<RoomStoreProvider value={createFakeRoomContextValue(overrides)}>{ui}</RoomStoreProvider>);
 }

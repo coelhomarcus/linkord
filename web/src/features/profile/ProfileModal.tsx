@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import { ROUTES } from '@/shared/lib/routes';
-import { useRoom } from '@/state/RoomContext';
+import { useRoom, useRoomState } from '@/state/RoomContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/primitives/dialog';
 import { Button } from '@/shared/ui/primitives/button';
 import { fetchUserProfile } from '@/shared/api/api';
@@ -32,7 +32,8 @@ interface ProfileModalProps {
 /** Fetch uncached profiles on demand, such as authors of older messages who have left the conversation. */
 export function ProfileModal({ userId, initialTab, onClose, onOpenProfile }: ProfileModalProps) {
   const { t } = useTranslation('profile');
-  const { state, allUsers } = useRoom();
+  const { allUsers } = useRoom('allUsers');
+  const state = useRoomState('me');
   const navigate = useNavigate();
   const [reportOpen, setReportOpen] = useState(false);
   const cachedUser = userId ? allUsers.get(userId) : null;

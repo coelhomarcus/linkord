@@ -3,7 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { Track as LKTrack } from 'livekit-client';
-import { useRoom } from '../../state/RoomContext';
+import { useRoom, useRoomState } from '../../state/RoomContext';
+import { useCallRoster } from './callRoster';
 import type { AnchorRect } from '../../state/RoomContext';
 import { useParticipantMedia } from './useLiveKitTrack';
 import { useMuteForMe } from './useMuteForMe';
@@ -70,10 +71,12 @@ interface TileMenuProps {
 export function TileMenu({ onOpenProfile }: TileMenuProps) {
   const { t } = useTranslation('calls');
   const {
-    state, dispatch, menuTarget, closeTileMenu, tileDomRegistry, showStats, kickFromCall,
+    dispatch, menuTarget, closeTileMenu, tileDomRegistry, showStats, kickFromCall,
     activeCallConversationId, conversations, mirrorCameraPreview, setMirrorCameraPreview, stopCamera,
     stopSharing, changeSource, pauseSharePreview, resumeSharePreview, shareQuality, setShareQuality, fullscreenElement,
-  } = useRoom();
+  } = useRoom('dispatch', 'menuTarget', 'closeTileMenu', 'tileDomRegistry', 'showStats', 'kickFromCall', 'activeCallConversationId', 'conversations', 'mirrorCameraPreview', 'setMirrorCameraPreview', 'stopCamera', 'stopSharing', 'changeSource', 'pauseSharePreview', 'resumeSharePreview', 'shareQuality', 'setShareQuality', 'fullscreenElement');
+  const state = useRoomState('me', 'focusedId', 'hiddenVideoKeys', 'unwatchedScreenKeys');
+  const roster = useCallRoster();
   const [bitrateKbps, setBitrateKbps] = useState(0);
   const [elapsedSec, setElapsedSec] = useState(0);
   const [resolution, setResolution] = useState<string | null>(null);
@@ -82,7 +85,7 @@ export function TileMenu({ onOpenProfile }: TileMenuProps) {
   const participantId = menuTarget?.participantId ?? null;
   const kind = menuTarget?.kind ?? null;
   const isMe = participantId !== null && participantId === state.me.id;
-  const targetUserId = isMe ? state.me.userId : (participantId ? state.participants.get(participantId)?.userId : undefined);
+  const targetUserId = isMe ? state.me.userId : (participantId ? roster.get(participantId)?.userId : undefined);
 
   const media = useParticipantMedia(participantId ?? '');
   const mainTrack = kind === 'screen' ? media.screenTrack : kind === 'camera' ? media.cameraTrack : media.micTrack;
@@ -101,13 +104,13 @@ export function TileMenu({ onOpenProfile }: TileMenuProps) {
       openedConversationIdRef.current = activeCallConversationId;
       return;
     }
-    const participantGone = !isMe && !state.participants.has(participantId);
+    const participantGone = !isMe && !roster.has(participantId);
     // A muted screen share has no track but is not ended; keep the menu open
     // while its pause action is active.
     const sourceEnded = (kind === 'camera' && !media.cameraTrack) || (kind === 'screen' && !media.screenTrack && !media.screenPaused);
     const conversationChanged = activeCallConversationId !== openedConversationIdRef.current;
     if (participantGone || sourceEnded || conversationChanged) closeTileMenu();
-  }, [menuTarget, participantId, isMe, kind, state.participants, media.cameraTrack, media.screenTrack, media.screenPaused, activeCallConversationId, closeTileMenu]);
+  }, [menuTarget, participantId, isMe, kind, roster, media.cameraTrack, media.screenTrack, media.screenPaused, activeCallConversationId, closeTileMenu]);
 
   useEffect(() => {
     if (!key || !showStats || !mainTrack) { setBitrateKbps(0); setResolution(null); return; }
@@ -153,7 +156,7 @@ export function TileMenu({ onOpenProfile }: TileMenuProps) {
     isMe,
     conversation: conversations.find((c) => c.id === activeCallConversationId),
     meIsAdmin: state.me.role === 'admin',
-    targetUserId: participantId ? state.participants.get(participantId)?.userId : undefined,
+    targetUserId: participantId ? roster.get(participantId)?.userId : undefined,
   });
   const pipSupported = typeof document !== 'undefined' && document.pictureInPictureEnabled
     && !!handle?.video && !handle.video.disablePictureInPicture;

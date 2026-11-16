@@ -4,13 +4,14 @@ import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { StickerMessage } from '@/features/stickers/StickerMessage';
 import { resetMyStickers, setMyStickersForTests } from '@/features/stickers/myStickers';
-import { RoomContext, type RoomContextValue } from '@/state/RoomContext';
+import { type RoomContextValue } from '@/state/RoomContext';
+import { RoomStoreProvider } from '@/state/RoomStoreProvider';
 
 const card = { id: 'a'.repeat(32), name: 'abraço', description: 'dois gatos se abraçando', animated: false };
 
 function inRoom(children: ReactNode) {
   const servers = [{ id: 's1', name: 'Equipe', icon: '', permissions: 0 }] as unknown as RoomContextValue['servers'];
-  return <RoomContext.Provider value={{ state: { me: { userId: 'me' } }, servers } as unknown as RoomContextValue}>{children}</RoomContext.Provider>;
+  return <RoomStoreProvider value={{ state: { me: { userId: 'me' } }, servers } as unknown as RoomContextValue}>{children}</RoomStoreProvider>;
 }
 
 afterEach(() => resetMyStickers());

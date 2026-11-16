@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { initialRoomState } from '@/state/roomReducer';
 import { createFakeRoomContextValue, renderWithRoom } from '@tests/fixtures/roomContextFixture';
-import { RoomContext } from '@/state/RoomContext';
+import { RoomStoreProvider } from '@/state/RoomStoreProvider';
 import type { Conversation, PublicUser } from '@/shared/types/protocol';
 import { PERMISSIONS } from '@/features/servers/permissionBits';
 import { ChatSurface } from '@/features/chat/ChatSurface';
@@ -184,14 +184,14 @@ describe('ChatSurface — typing does not shift the list', () => {
       disconnect() {}
     });
     const surface = (typing: Set<string>) => (
-      <RoomContext.Provider value={createFakeRoomContextValue({
+      <RoomStoreProvider value={createFakeRoomContextValue({
         state: joinedState,
         allUsers: new Map([['u1', fulano]]),
         typingByConversation: new Map([['conv-1', typing]]),
         messagesByConversation: new Map([['conv-1', [{ msgId: 1, conversationId: 'conv-1', id: 'u1', name: 'Fulano', avatar: '', text: 'oi', ts: 1 }]]]),
       })}>
         <ChatSurface conversationId="conv-1" onOpenProfile={() => {}} />
-      </RoomContext.Provider>
+      </RoomStoreProvider>
     );
     const { container, rerender } = render(surface(new Set()));
     const scrollEl = container.querySelector('[data-scroll-root]') as HTMLElement;

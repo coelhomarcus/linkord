@@ -47,7 +47,7 @@ export function conversationMatchesQuery(
   return conversationTitle(conversation, meUserId, users).toLowerCase().includes(normalized);
 }
 
-export function callParticipantIds(meParticipantId: string | null, participants: Map<string, Participant>, conversationId: string | null): string[] {
+export function callParticipantIds(meParticipantId: string | null, participants: ReadonlyMap<string, Pick<Participant, 'id' | 'callConversationId'>>, conversationId: string | null): string[] {
   if (!conversationId) return [];
   const ids: string[] = [];
   if (meParticipantId) ids.push(meParticipantId);

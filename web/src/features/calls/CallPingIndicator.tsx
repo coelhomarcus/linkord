@@ -1,6 +1,6 @@
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
 import { i18n } from '@/shared/i18n/init';
-import { useRoom } from '@/state/RoomContext';
+import { useRoom, useRoomState } from '@/state/RoomContext';
 import { cn } from '@/shared/lib/utils';
 import { connectionStrength } from './connectionStrength';
 import type { ConnectionTone } from './connectionStrength';
@@ -29,7 +29,8 @@ function SignalBars({ bars }: { bars: number }) {
 }
 
 export function CallPingIndicator() {
-  const { state, reconnecting } = useRoom();
+  const { reconnecting } = useRoom('reconnecting');
+  const state = useRoomState('me');
   const ping = useCallPing();
   const quality = useConnectionQuality(state.me.id ?? '');
   const strength = connectionStrength(ping, quality, reconnecting);

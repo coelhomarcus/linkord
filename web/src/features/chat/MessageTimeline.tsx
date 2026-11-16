@@ -4,7 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { defaultRangeExtractor, measureElement as measureRowElement, useVirtualizer, type Range } from '@tanstack/react-virtual';
 
 import { buildMentionLookup } from '@/shared/lib/mentions';
-import { useRoom } from '@/state/RoomContext';
+import { useRoom, useRoomState } from '@/state/RoomContext';
 import { EmptyState } from '@/shared/ui/empty-state';
 import { conversationTitle } from '@/features/conversations/conversationUtils';
 import type { ChatMessage } from '@/shared/types/protocol';
@@ -35,6 +35,17 @@ const PREPEND_SETTLE_FRAMES = 3;
 // this many frames in a row — and gives up waiting after the cap.
 const PLACEMENT_STABLE_FRAMES = 2;
 const PLACEMENT_MAX_FRAMES = 30;
+
+/**
+ * Ends the placement's scroll. `scrollToIndex` leaves the virtualizer chasing
+ * that row for a few frames, and a reader's own scroll does not stop it: rows
+ * measured as they scroll in moved the target, and the list was pulled back to
+ * the end. Aiming at the offset the list already sits on ends that chase, and
+ * an offset never moves with measurements.
+ */
+function releasePlacementTarget(virtualizer: { scrollToOffset: (offset: number) => void }, el: HTMLElement | null): void {
+  if (el) virtualizer.scrollToOffset(el.scrollTop);
+}
 // the surface's width before ChatSurface has measured it (and in tests)
 const FALLBACK_SURFACE_WIDTH = 800;
 
@@ -66,8 +77,8 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
     pendingByConversation,
     unreadStartByConversation,
     editingMsgId,
-    state,
-  } = useRoom();
+  } = useRoom('messagesByConversation', 'allUsers', 'conversations', 'hasMoreByConversation', 'loadingOlderByConversation', 'loadOlderMessages', 'hasMoreAfterByConversation', 'loadingNewerByConversation', 'loadNewerMessages', 'newerCountByConversation', 'pendingJumpTarget', 'clearPendingJumpTarget', 'jumpToMessage', 'openConversation', 'pendingByConversation', 'unreadStartByConversation', 'editingMsgId');
+  const state = useRoomState('me');
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const surfaceWidth = useChatSurfaceWidth(FALLBACK_SURFACE_WIDTH);
   const [highlightedMsgId, setHighlightedMsgId] = useState<number | null>(null);
@@ -273,6 +284,7 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
         handle = requestAnimationFrame(settle);
         return;
       }
+      releasePlacementTarget(virtualizer, el);
       // the ref too, right away: a scroll landing before the effect above
       // syncs it would otherwise still be ignored as part of the placement
       readyRef.current = true;
@@ -318,6 +330,7 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
       virtualizerRef.current.measure();
       // revealed where the placement would have ended, not wherever it was
       placeRef.current?.();
+      releasePlacementTarget(virtualizerRef.current, scrollRef.current);
       scrollRef.current?.dispatchEvent(new Event('scroll'));
       readyRef.current = true;
       setReady(true);
@@ -464,10 +477,14 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
     return true;
   }, [items, virtualizer, highlight]);
 
+  // read through a ref: `scrollToMessage` changes with every message, and a new
+  // `onJumpTo` would re-render every (memoized) row
+  const scrollToMessageRef = useRef(scrollToMessage);
+  useLayoutEffect(() => { scrollToMessageRef.current = scrollToMessage; }, [scrollToMessage]);
   const onJumpTo = useCallback((msgId: number) => {
     // not in this window: load one around it (then the effect below lands)
-    if (!scrollToMessage(msgId)) jumpToMessage(conversationId, msgId);
-  }, [scrollToMessage, jumpToMessage, conversationId]);
+    if (!scrollToMessageRef.current(msgId)) jumpToMessage(conversationId, msgId);
+  }, [jumpToMessage, conversationId]);
 
   useEffect(() => {
     if (!ready || !pendingJumpTarget || pendingJumpTarget.conversationId !== conversationId) return;
@@ -549,7 +566,7 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
                         pending={item.pending}
                         allUsers={allUsers}
                         mentionLookup={mentionLookup}
-                        onReply={() => onReply(item.message)}
+                        onReply={onReply}
                         onOpenProfile={onOpenProfile}
                         onJumpTo={onJumpTo}
                       />

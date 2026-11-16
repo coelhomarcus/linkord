@@ -12,7 +12,8 @@ import { useDrawerEdgeSwipe } from './useDrawerEdgeSwipe';
 import { Button } from '@/shared/ui/primitives/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
 import { Avatar } from '@/shared/Avatar';
-import { useRoom } from '@/state/RoomContext';
+import { useRoom, useRoomState } from '@/state/RoomContext';
+import { useCallRoster } from '@/features/calls/callRoster';
 import { callParticipantIds, conversationTitle, directUser } from './conversationUtils';
 import { ChatSurface } from '@/features/chat/ChatSurface';
 import { DmCallPane } from '@/features/calls/DmCallPane';
@@ -44,7 +45,7 @@ function HeaderIcon({ label, pressed, onClick, className, children }: { label: s
  * or through its server; the tooltip then says until when. */
 function NotificationHeaderButton({ target }: { target: Extract<NotificationTarget, { scope: 'conversation' }> }) {
   const { t } = useTranslation('notifications');
-  const { notificationSettings, notificationPolicyFor, isNotificationMuted } = useRoom();
+  const { notificationSettings, notificationPolicyFor, isNotificationMuted } = useRoom('notificationSettings', 'notificationPolicyFor', 'isNotificationMuted');
   const [open, setOpen] = useState(false);
   const muted = notificationPolicyFor(target).muted;
   const own = notificationSettings.conversations[target.id];
@@ -81,7 +82,9 @@ interface ConversationPanelProps {
 
 export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, detailsOpen, mediaOpen, onToggleDetails, onToggleMedia }: ConversationPanelProps) {
   const { t } = useTranslation('conversations');
-  const { state, dispatch, conversations, activeConversationId, allUsers, activeCallConversationId, startDmCall } = useRoom();
+  const { dispatch, conversations, activeConversationId, allUsers, activeCallConversationId, startDmCall } = useRoom('dispatch', 'conversations', 'activeConversationId', 'allUsers', 'activeCallConversationId', 'startDmCall');
+  const state = useRoomState('me', 'callJoinError');
+  const roster = useCallRoster();
   const navigate = useNavigate();
   const { pathname, state: locationState } = useLocation();
   const { isMobile, isOverlay, openMobile, setOpenMobile } = useSidebar();
@@ -120,10 +123,10 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
   const inThisCall = !!conversation && activeCallConversationId === conversation.id;
   const inThisDmCall = conversation?.type === 'direct' && activeCallConversationId === conversation.id;
   const callActionLabel = t('panel.voiceCall');
-  const dmCallIds = inThisDmCall && conversation ? callParticipantIds(state.me.id, state.participants, conversation.id) : [];
+  const dmCallIds = inThisDmCall && conversation ? callParticipantIds(state.me.id, roster, conversation.id) : [];
   const dmCallPeers = dmCallIds.map((id) => {
     if (id === state.me.id) return { id, name: state.me.displayName, avatar: state.me.avatar, avatarPoster: state.me.avatarPoster, avatarColor: state.me.avatarColor };
-    const participant = state.participants.get(id);
+    const participant = roster.get(id);
     return { id, name: participant?.displayName ?? '', avatar: participant?.avatar ?? '', avatarPoster: participant?.avatarPoster, avatarColor: participant?.avatarColor ?? '' };
   });
   function startThisCall(video: boolean) {

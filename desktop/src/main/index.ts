@@ -80,9 +80,7 @@ if (!resolved.ok) {
     let preferences = loadPreferences(preferencesFile);
     const repo = config.updateRepo ?? null;
     const updater = installUpdater({
-      mode: updateMode({ platform: process.platform, isPackaged: app.isPackaged, repo, appImage: process.env.APPIMAGE }),
-      repo,
-      currentVersion: app.getVersion(),
+      mode: updateMode({ platform: process.platform, isPackaged: app.isPackaged, repo }),
       strings,
       onChange: () => refresh(),
     });

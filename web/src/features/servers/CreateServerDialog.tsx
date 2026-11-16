@@ -8,7 +8,7 @@ import { Input } from '@/shared/ui/primitives/input';
 import { Label } from '@/shared/ui/primitives/label';
 import { describeApiError } from '@/shared/api/errorText';
 import { ROUTES } from '@/shared/lib/routes';
-import { useRoom } from '@/state/RoomContext';
+import { useRoomState } from '@/state/RoomContext';
 import { acceptInviteLink, createServer } from './serversApi';
 import { parseInviteCode } from './inviteCode';
 
@@ -19,7 +19,7 @@ type Step = 'choose' | 'create' | 'join';
 export function CreateServerDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const { t } = useTranslation('servers');
   const navigate = useNavigate();
-  const { state } = useRoom();
+  const state = useRoomState('me');
   const [step, setStep] = useState<Step>('choose');
   const [name, setName] = useState('');
   const [link, setLink] = useState('');

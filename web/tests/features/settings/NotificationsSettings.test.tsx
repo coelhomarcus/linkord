@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
-import { RoomContext } from '@/state/RoomContext';
+import { RoomStoreProvider } from '@/state/RoomStoreProvider';
 import { createFakeRoomContextValue } from '@tests/fixtures/roomContextFixture';
 import { NotificationsSettings } from '@/features/settings/NotificationsSettings';
 import { setPushSubscriptionActive } from '@/shared/notifications';
@@ -33,9 +33,9 @@ async function waitForPreparation() {
 function renderNotifications(overrides: Parameters<typeof createFakeRoomContextValue>[0] = {}) {
   return render(
     <MemoryRouter>
-      <RoomContext.Provider value={createFakeRoomContextValue(overrides)}>
+      <RoomStoreProvider value={createFakeRoomContextValue(overrides)}>
         <NotificationsSettings />
-      </RoomContext.Provider>
+      </RoomStoreProvider>
     </MemoryRouter>,
   );
 }

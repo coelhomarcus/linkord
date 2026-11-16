@@ -11,7 +11,7 @@ import type { ServerSummary } from '@/shared/types/protocol';
 import { ProfileActions } from '@/features/friends/ProfileActions';
 import { BANNER_ASPECT_RATIO, bannerStyle } from '@/features/profile/profileLinks';
 import { fetchUserProfile } from '@/shared/api/api';
-import { useRoom } from '@/state/RoomContext';
+import { useRoom, useRoomState } from '@/state/RoomContext';
 import type { PublicUser } from '@/shared/types/protocol';
 import { cn } from '@/shared/lib/utils';
 import { hasPermission, PERMISSIONS } from './permissionBits';
@@ -36,7 +36,8 @@ interface MemberQuickProfileProps {
 export function MemberQuickProfile({ server, member, currentUser, offline, open, onOpenChange, onOpenProfile, onRoleIdsChange }: MemberQuickProfileProps) {
   const { t } = useTranslation('servers');
   const { t: tChat } = useTranslation('chat');
-  const { state, conversations, friendUserIds, openDirect, sendChatMessage } = useRoom();
+  const { conversations, friendUserIds, openDirect, sendChatMessage } = useRoom('conversations', 'friendUserIds', 'openDirect', 'sendChatMessage');
+  const state = useRoomState('me', 'joined');
   const [savingRoleId, setSavingRoleId] = useState<string | null>(null);
   const [roleError, setRoleError] = useState(false);
   const [messageDraft, setMessageDraft] = useState('');

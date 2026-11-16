@@ -26,7 +26,7 @@ const SOUND_ROWS: { key: Exclude<keyof SoundPreferences, 'muteAll'>; preview: So
 
 export function NotificationsSettings() {
   const { t } = useTranslation('settings');
-  const { notifyVolume, setNotifyVolume, notificationsEnabled, setNotificationsEnabled } = useRoom();
+  const { notifyVolume, setNotifyVolume, notificationsEnabled, setNotificationsEnabled } = useRoom('notifyVolume', 'setNotifyVolume', 'notificationsEnabled', 'setNotificationsEnabled');
   const [notificationsError, setNotificationsError] = useState<string | null>(null);
   const [permission, setPermission] = useState<NotificationPermissionState>(() => notificationPermissionState());
   const [setup, setSetup] = useState<PushSetup | null>(null);

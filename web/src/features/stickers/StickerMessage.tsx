@@ -1,9 +1,9 @@
 import { StickerIcon } from '@phosphor-icons/react';
-import { useContext, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/primitives/popover';
-import { RoomContext } from '@/state/RoomContext';
+import { useOptionalRoomSelector } from '@/state/RoomContext';
 import type { StickerCard } from '@/shared/types/protocol';
 import { useKnownSticker, useMyStickers } from './myStickers';
 import { stickerImageUrl } from './stickersApi';
@@ -14,11 +14,10 @@ import { stickerImageUrl } from './stickersApi';
 export function StickerMessage({ sticker }: { sticker: StickerCard | null }) {
   const { t } = useTranslation('stickers');
   const [broken, setBroken] = useState(false);
-  const room = useContext(RoomContext);
   // the account's own list says whether the viewer is a member of the sticker's server
-  const mine = useMyStickers(room?.state.me.userId ?? null, !!sticker);
+  const mine = useMyStickers(useOptionalRoomSelector((room) => room.state.me.userId) ?? null, !!sticker);
   const known = useKnownSticker(sticker?.id ?? '');
-  const server = room?.servers.find((s) => s.id === known?.serverId);
+  const server = useOptionalRoomSelector((room) => room.servers.find((s) => s.id === known?.serverId));
 
   if (!sticker || broken) {
     return (

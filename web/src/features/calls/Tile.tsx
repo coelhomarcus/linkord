@@ -4,7 +4,7 @@ import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ConnectionQuality } from 'livekit-client';
 
-import { useRoom } from '@/state/RoomContext';
+import { useRoom, useRoomSelector, useRoomState } from '@/state/RoomContext';
 import { getParticipant, useParticipantMedia, useAttachTrack, useIsSpeaking, useConnectionQuality, useWatchScreenShare } from './useLiveKitTrack';
 import { participantMicMuted, useOwnMic } from './micState';
 import { useMuteForMe } from './useMuteForMe';
@@ -34,12 +34,14 @@ interface TileProps {
 
 export function Tile({ participantId, kind, isMine, loading = false, paused = false, fit = 'contain', sizing = 'fill', avatarSize = 96, nameSize = 'body' }: TileProps) {
   const { t } = useTranslation('calls');
-  const { state, dispatch, openTileMenu, tileDomRegistry, deafened, showTileBanners, mirrorCameraPreview, livekitRoom } = useRoom();
+  const { dispatch, openTileMenu, tileDomRegistry, deafened, showTileBanners, mirrorCameraPreview, livekitRoom } = useRoom('dispatch', 'openTileMenu', 'tileDomRegistry', 'deafened', 'showTileBanners', 'mirrorCameraPreview', 'livekitRoom');
+  const state = useRoomState('me', 'hiddenVideoKeys', 'unwatchedScreenKeys', 'focusedId');
   const key = tileKey(participantId, kind);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
-  const participant = isMine ? null : state.participants.get(participantId);
+  // only this tile's participant: another one starting to speak leaves this tile alone
+  const participant = useRoomSelector((room) => (isMine ? null : room.state.participants.get(participantId)));
   // a LiveKit connection the server has not listed (see useCallTiles) still shows who it is
   const name = isMine ? state.me.displayName : (participant?.displayName ?? getParticipant(livekitRoom, participantId)?.name ?? '');
   const avatar = isMine ? state.me.avatar : (participant?.avatar ?? '');

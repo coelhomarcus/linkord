@@ -52,7 +52,8 @@ export interface DesktopSettingsSnapshot {
   closeToTray: boolean;
   /** a start with the system stays in the tray */
   startMinimized: boolean;
-  /** 'install': Windows and AppImage update themselves; 'notify': a page to download from; 'off': a build that does not check */
+  /** 'install': the Windows build updates itself; 'off': a build that does not check. 'notify' (and
+   * the 'available' status) only come from older macOS and Linux builds, sent to a page to download from */
   update: { mode: 'install' | 'notify' | 'off'; status: DesktopUpdateStatus };
 }
 

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { DragEvent } from 'react';
 
 import { ChatSurfaceWidthProvider, useMeasuredWidth } from '@/shared/lib/chatSurfaceWidth';
-import { useRoom } from '@/state/RoomContext';
+import { useRoom, useRoomState } from '@/state/RoomContext';
 import { DirectComposerGate } from '@/features/friends/DirectComposerGate';
 import { MessageComposer, type MessageComposerHandle } from './MessageComposer';
 import { MessageTimeline } from './MessageTimeline';
@@ -24,9 +24,10 @@ const RAIL_GAP = 4;
 
 export function ChatSurface({ conversationId, onOpenProfile }: { conversationId: string; onOpenProfile: (userId: string) => void }) {
   const {
-    state, setReplyingTo, windowGenerationByConversation, conversations, typingByConversation, allUsers,
+    setReplyingTo, windowGenerationByConversation, conversations, typingByConversation, allUsers,
     activeConversationId, unreadByConversation, unreadStartByConversation, markConversationRead,
-  } = useRoom();
+  } = useRoom('setReplyingTo', 'windowGenerationByConversation', 'conversations', 'typingByConversation', 'allUsers', 'activeConversationId', 'unreadByConversation', 'unreadStartByConversation', 'markConversationRead');
+  const state = useRoomState('me', 'joined');
   // the same people TypingIndicator names: someone it can't show raises no background
   const someoneTyping = [...(typingByConversation.get(conversationId) ?? [])].some((id) => allUsers.has(id));
   // a channel the viewer can't write in (a webhook's announcements, say):

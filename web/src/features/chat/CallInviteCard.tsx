@@ -5,7 +5,8 @@ import { Avatar } from '@/shared/Avatar';
 import { Button } from '@/shared/ui/primitives/button';
 import { ServerIcon } from '@/features/servers/ServerIcon';
 import { cn } from '@/shared/lib/utils';
-import { useRoom } from '@/state/RoomContext';
+import { useRoom, useRoomState } from '@/state/RoomContext';
+import { useCallRoster } from '@/features/calls/callRoster';
 import type { CallInviteCard as CallInvite } from '@/shared/types/protocol';
 
 const SHOWN_PARTICIPANTS = 5;
@@ -15,7 +16,9 @@ const SHOWN_PARTICIPANTS = 5;
  * inviting into an empty room. */
 export function CallInviteCard({ callInvite }: { callInvite: CallInvite | null | undefined }) {
   const { t } = useTranslation('chat');
-  const { state, conversations, activeCallConversationId, openCall } = useRoom();
+  const { conversations, activeCallConversationId, openCall } = useRoom('conversations', 'activeCallConversationId', 'openCall');
+  const state = useRoomState('me');
+  const roster = useCallRoster();
   if (!callInvite) {
     return (
       <div className="mt-1 max-w-[380px] rounded-lg border border-border bg-fill-subtle px-4 py-3 text-label text-text-muted">
@@ -28,8 +31,8 @@ export function CallInviteCard({ callInvite }: { callInvite: CallInvite | null |
   // the channel as this reader sees it: absent when they can't
   const group = conversations.find((c) => c.id === groupId);
   const inThisCall = activeCallConversationId === groupId;
-  // `state.participants` never holds yourself
-  const others = [...state.participants.values()].filter((p) => p.callConversationId === groupId);
+  // `roster` never holds yourself
+  const others = [...roster.values()].filter((p) => p.callConversationId === groupId);
   const people = inThisCall
     ? [{ id: state.me.userId ?? 'me', displayName: state.me.displayName, avatar: state.me.avatar, avatarPoster: state.me.avatarPoster, avatarColor: state.me.avatarColor }, ...others]
     : others;

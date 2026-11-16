@@ -1,12 +1,13 @@
 import { useTranslation } from 'react-i18next';
 import { ConfirmDialog } from '@/shared/ConfirmDialog';
 import { conversationTitle } from '@/features/conversations/conversationUtils';
-import { useRoom } from '@/state/RoomContext';
+import { useRoom, useRoomState } from '@/state/RoomContext';
 
 /** Asked before this tab takes the account's call from another tab or device: that one leaves it. */
 export function CallMoveDialog() {
   const { t } = useTranslation('calls');
-  const { callMove, callElsewhere, conversations, allUsers, state } = useRoom();
+  const { callMove, callElsewhere, conversations, allUsers } = useRoom('callMove', 'callElsewhere', 'conversations', 'allUsers');
+  const state = useRoomState('me');
   const conversation = callElsewhere ? conversations.find((c) => c.id === callElsewhere.conversationId) : undefined;
   const name = conversation ? conversationTitle(conversation, state.me.userId, allUsers) : '';
   const description = !callElsewhere || !name

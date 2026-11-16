@@ -11,7 +11,7 @@ function readPing(rtt: number | undefined): number | null {
  * own signal ping (every few seconds) and keeps only the number, with no
  * event, so it is read on an interval. Null until the first answer arrives. */
 export function useCallPing(): number | null {
-  const { livekitRoom } = useRoom();
+  const { livekitRoom } = useRoom('livekitRoom');
   const [ping, setPing] = useState(() => readPing(livekitRoom.engine?.client?.rtt));
   useEffect(() => {
     const timer = window.setInterval(() => setPing(readPing(livekitRoom.engine?.client?.rtt)), POLL_MS);

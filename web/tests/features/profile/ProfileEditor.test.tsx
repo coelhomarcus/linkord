@@ -5,7 +5,7 @@ import { MemoryRouter } from 'react-router';
 import userEvent from '@testing-library/user-event';
 import { initialRoomState } from '@/state/roomReducer';
 import { createFakeRoomContextValue, renderWithRoom } from '@tests/fixtures/roomContextFixture';
-import { RoomContext } from '@/state/RoomContext';
+import { RoomStoreProvider } from '@/state/RoomStoreProvider';
 import type { RoomContextValue } from '@/state/RoomContext';
 import { ProfileModal } from '@/features/profile/ProfileModal';
 import { ProfileSaveRefused } from '@/features/profile/useProfileUpdate';
@@ -381,9 +381,9 @@ describe('ProfileEditor', () => {
         return createFakeRoomContextValue({ state: { ...initialRoomState, me }, updateProfile, allUsers: new Map([[me.userId, publicUserOf(me)]]) });
       }, [me]);
       return (
-        <RoomContext.Provider value={room}>
+        <RoomStoreProvider value={room}>
           <MemoryRouter><ProfileModal userId={baseMe.userId} onClose={vi.fn()} onOpenProfile={vi.fn()} /></MemoryRouter>
-        </RoomContext.Provider>
+        </RoomStoreProvider>
       );
     }
 

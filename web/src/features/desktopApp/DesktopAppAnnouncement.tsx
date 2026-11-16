@@ -7,13 +7,12 @@ import { cn } from '@/shared/lib/utils';
 import { buttonVariants } from '@/shared/ui/primitives/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/primitives/dialog';
 import { useRoom } from '@/state/RoomContext';
-import { detectPlatform, downloadsFor, fetchDesktopDownloads, type DesktopDownloads, type DesktopPlatform, type DownloadKind } from './desktopDownloads';
+import { fetchDesktopDownloads, isWindowsComputer } from './desktopDownloads';
 
 interface Offer {
-  downloads: DesktopDownloads;
-  platform: DesktopPlatform;
-  primary: DownloadKind;
-  others: DownloadKind[];
+  version: string;
+  page: string;
+  installer: string;
 }
 
 /** Whether this browser was already told about the desktop app. */
@@ -22,13 +21,14 @@ function alreadyAnnounced(): boolean {
 }
 
 /**
- * Tells each person once, in the browser on a computer, that Linkord has a desktop app, with the
- * button straight to their system's installer. Never inside the desktop app, on a phone, during a
- * call, or when the server has no published release (DESKTOP_RELEASES_REPO).
+ * Tells each person once, in the browser on a Windows computer (the only system the app ships for),
+ * that Linkord has a desktop app, with the button straight to its installer. Never inside the
+ * desktop app, on another system, during a call, or when the server has no published release
+ * (DESKTOP_RELEASES_REPO).
  */
 export function DesktopAppAnnouncement() {
   const { t } = useTranslation('desktopApp');
-  const { activeCallConversationId, dmCall } = useRoom();
+  const { activeCallConversationId, dmCall } = useRoom('activeCallConversationId', 'dmCall');
   const inCall = !!activeCallConversationId || (dmCall !== null && dmCall.phase !== 'ended');
   const [offer, setOffer] = useState<Offer | null>(null);
   const [closed, setClosed] = useState(false);
@@ -37,12 +37,10 @@ export function DesktopAppAnnouncement() {
   const setOpen = (next: boolean) => { if (!next) setClosed(true); };
 
   useEffect(() => {
-    if (isDesktopApp() || alreadyAnnounced()) return;
+    if (isDesktopApp() || alreadyAnnounced() || !isWindowsComputer()) return;
     let live = true;
-    void Promise.all([detectPlatform(), fetchDesktopDownloads()]).then(([platform, downloads]) => {
-      if (!live || !platform) return;
-      const { primary, others } = downloadsFor(downloads, platform);
-      if (primary) setOffer({ downloads, platform, primary, others });
+    void fetchDesktopDownloads().then(({ version, page, files }) => {
+      if (live && files.windows) setOffer({ version, page, installer: files.windows });
     }, () => {});
     return () => { live = false; };
   }, []);
@@ -53,7 +51,6 @@ export function DesktopAppAnnouncement() {
   }, [open]);
 
   if (!offer) return null;
-  const { downloads, primary, others } = offer;
   const features = [
     { icon: BellRingingIcon, text: t('features.notifications') },
     { icon: GameControllerIcon, text: t('features.activity') },
@@ -82,24 +79,18 @@ export function DesktopAppAnnouncement() {
         </ul>
         <div className="flex flex-col gap-3 px-6 pb-6 pt-5">
           <a
-            href={downloads.files[primary]}
+            href={offer.installer}
             download
             onClick={() => setOpen(false)}
             className={cn(buttonVariants({ size: 'lg' }), 'h-11 w-full text-body')}
           >
             <DownloadSimpleIcon weight="bold" aria-hidden />
-            {t(`download.${primary}`)}
+            {t('download')}
           </a>
           <p className="text-center text-caption text-text-muted">
-            {t('version', { version: downloads.version })}
-            {others.map((kind) => (
-              <span key={kind}>
-                {' · '}
-                <a href={downloads.files[kind]} download onClick={() => setOpen(false)} className="text-link hover:underline">{t(`other.${kind}`)}</a>
-              </span>
-            ))}
+            {t('version', { version: offer.version })}
             {' · '}
-            <a href={downloads.page} target="_blank" rel="noreferrer" className="text-link hover:underline">{t('allVersions')}</a>
+            <a href={offer.page} target="_blank" rel="noreferrer" className="text-link hover:underline">{t('allVersions')}</a>
           </p>
           <button type="button" onClick={() => setOpen(false)} className="mx-auto rounded-md px-2 py-1 text-label text-text-muted hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
             {t('later')}

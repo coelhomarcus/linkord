@@ -1,4 +1,4 @@
-import { createContext, useContext } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 import type { Dispatch, MutableRefObject } from 'react';
 import type { Room } from 'livekit-client';
 import type { ActivitySettings, ChatMessage, ClientMessage, Conversation, OwnStatus, PublicUser, ReactionEmoji, SearchResult, ServerSummary, StickerCard, VisiblePresence } from '@/shared/types/protocol';
@@ -254,10 +254,108 @@ export interface RoomContextValue {
   maxAttachmentBytes: number;
 }
 
-export const RoomContext = createContext<RoomContextValue | null>(null);
+/**
+ * The room is delivered as a store, not as a context value: RoomProvider
+ * rebuilds this object on every event (a speaking flag flips many times a
+ * second in a call), and a context would re-render every reader each time.
+ * A reader names what it reads and re-renders only when that changes.
+ */
+export interface RoomStore {
+  get: () => RoomContextValue;
+  subscribe: (listener: () => void) => () => void;
+  set: (value: RoomContextValue) => void;
+}
 
-export function useRoom(): RoomContextValue {
-  const ctx = useContext(RoomContext);
-  if (!ctx) throw new Error('useRoom() usado fora de <RoomProvider>');
-  return ctx;
+export function createRoomStore(initial: RoomContextValue): RoomStore {
+  let value = initial;
+  const listeners = new Set<() => void>();
+  return {
+    get: () => value,
+    subscribe: (listener) => {
+      listeners.add(listener);
+      return () => { listeners.delete(listener); };
+    },
+    set: (next) => {
+      if (next === value) return;
+      value = next;
+      for (const listener of listeners) listener();
+    },
+  };
+}
+
+export const RoomStoreContext = createContext<RoomStore | null>(null);
+
+const noStore = () => undefined;
+const subscribeNothing = () => () => {};
+
+/** Same memoization as use-sync-external-store's `useSyncExternalStoreWithSelector`, so a selector
+ * that depends on props may be written inline. With no store it reads `undefined`. */
+function useStoreSelector<T>(store: RoomStore | null, selector: (room: RoomContextValue) => T, isEqual: (a: T, b: T) => boolean): T | undefined {
+  // the last value rendered, so a selector rebuilt on a later render still returns it while equal
+  const committed = useRef<{ selection: T } | null>(null);
+  const getSelection = useMemo(() => {
+    if (!store) return noStore;
+    let memo: { room: RoomContextValue; selection: T } | null = null;
+    return () => {
+      const room = store.get();
+      if (memo && memo.room === room) return memo.selection;
+      const next = selector(room);
+      const previous = memo ?? committed.current;
+      const selection = previous && isEqual(previous.selection, next) ? previous.selection : next;
+      memo = { room, selection };
+      return selection;
+    };
+  }, [store, selector, isEqual]);
+  const value = useSyncExternalStore(store ? store.subscribe : subscribeNothing, getSelection, getSelection);
+  useEffect(() => { if (store) committed.current = { selection: value as T }; }, [store, value]);
+  return value;
+}
+
+function useRoomStore(): RoomStore {
+  const store = useContext(RoomStoreContext);
+  if (!store) throw new Error('useRoom() used outside <RoomProvider>');
+  return store;
+}
+
+/** Reads something derived from the room and re-renders only when `isEqual` says it changed. */
+export function useRoomSelector<T>(selector: (room: RoomContextValue) => T, isEqual: (a: T, b: T) => boolean = Object.is): T {
+  return useStoreSelector(useRoomStore(), selector, isEqual) as T;
+}
+
+/** `useRoomSelector` for components that also render outside RoomProvider: `undefined` there. */
+export function useOptionalRoomSelector<T>(selector: (room: RoomContextValue) => T, isEqual: (a: T, b: T) => boolean = Object.is): T | undefined {
+  return useStoreSelector(useContext(RoomStoreContext), selector, isEqual);
+}
+
+export function useHasRoom(): boolean {
+  return useContext(RoomStoreContext) !== null;
+}
+
+function shallowEqual<T extends object>(a: T, b: T): boolean {
+  if (Object.is(a, b)) return true;
+  const keys = Object.keys(a) as (keyof T)[];
+  if (keys.length !== Object.keys(b).length) return false;
+  return keys.every((key) => Object.prototype.hasOwnProperty.call(b, key) && Object.is(a[key], b[key]));
+}
+
+function pick<T extends object, K extends keyof T>(source: T, keys: readonly K[]): Pick<T, K> {
+  const picked = {} as Pick<T, K>;
+  for (const key of keys) picked[key] = source[key];
+  return picked;
+}
+
+/** The named fields of the room; the component re-renders only when one of them changes. */
+export function useRoom<K extends keyof RoomContextValue>(...keys: [K, ...K[]]): Pick<RoomContextValue, K> {
+  const signature = keys.join(',');
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- `keys` is a fresh array each render; its contents are `signature`
+  const selector = useMemo(() => (room: RoomContextValue) => pick(room, keys), [signature]);
+  return useRoomSelector(selector, shallowEqual);
+}
+
+/** The named fields of the room reducer's state, compared one by one like `useRoom`. */
+export function useRoomState<K extends keyof RoomState>(...keys: [K, ...K[]]): Pick<RoomState, K> {
+  const signature = keys.join(',');
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- see useRoom
+  const selector = useMemo(() => (room: RoomContextValue) => pick(room.state, keys), [signature]);
+  return useRoomSelector(selector, shallowEqual);
 }

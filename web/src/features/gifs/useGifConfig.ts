@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { fetchGifConfig } from '@/shared/api/api';
 import type { GifConfig } from '@/shared/api/api';
-import { useRoom } from '@/state/RoomContext';
+import { useRoomState } from '@/state/RoomContext';
 
 // One read per account and page load: every composer asks, only the first fetches.
 let cached: { userId: string; promise: Promise<GifConfig> } | null = null;
@@ -19,7 +19,7 @@ function loadFor(userId: string): Promise<GifConfig> {
 
 /** null while unknown; `{ enabled: false }` when the server has no KLIPY key. */
 export function useGifConfig(): GifConfig | null {
-  const { state } = useRoom();
+  const state = useRoomState('me');
   const userId = state.me.userId;
   const [config, setConfig] = useState<{ userId: string; value: GifConfig } | null>(null);
 

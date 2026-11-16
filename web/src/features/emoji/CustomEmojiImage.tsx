@@ -1,9 +1,9 @@
-import { useContext, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/primitives/tooltip';
 import { cn } from '@/shared/lib/utils';
-import { RoomContext } from '@/state/RoomContext';
+import { useOptionalRoomSelector } from '@/state/RoomContext';
 import { useKnownCustomEmoji } from './myEmojis';
 import { emojiImageUrl } from './serverEmojisApi';
 
@@ -30,7 +30,7 @@ export function CustomEmojiImage({ id, name, size = 'inline', tooltip = true, cl
   const { t } = useTranslation('emoji');
   const [broken, setBroken] = useState(false);
   const known = useKnownCustomEmoji(id);
-  const server = useContext(RoomContext)?.servers.find((s) => s.id === known?.serverId);
+  const server = useOptionalRoomSelector((room) => room.servers.find((s) => s.id === known?.serverId));
   const label = `:${known?.name ?? name}:`;
   if (broken) return <span className={className}>{label}</span>;
   const image = (

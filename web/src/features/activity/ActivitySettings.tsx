@@ -33,7 +33,7 @@ type Section = 'sharing' | 'games';
 /** Settings → Activity: share it or not, and hide single games and apps. */
 export function ActivitySettings() {
   const { t } = useTranslation('activity');
-  const { activitySettings, updateActivitySettings } = useRoom();
+  const { activitySettings, updateActivitySettings } = useRoom('activitySettings', 'updateActivitySettings');
   // shown in the section whose control failed, beside what the person just touched
   const [error, setError] = useState<{ section: Section; text: string } | null>(null);
   const recent = useRecentActivities();
