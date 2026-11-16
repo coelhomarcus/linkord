@@ -265,6 +265,7 @@ if (!resolved.ok) {
       preload: path.join(import.meta.dirname, '../preload/index.cjs'),
       startHidden,
       showWhen,
+      strings,
       preloadArguments: [
         `--linkord-desktop-version=${app.getVersion()}`,
         `--linkord-share-picker=${picker}`,
