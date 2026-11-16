@@ -331,7 +331,7 @@ export function useHasRoom(): boolean {
   return useContext(RoomStoreContext) !== null;
 }
 
-export function shallowEqual<T extends object>(a: T, b: T): boolean {
+function shallowEqual<T extends object>(a: T, b: T): boolean {
   if (Object.is(a, b)) return true;
   const keys = Object.keys(a) as (keyof T)[];
   if (keys.length !== Object.keys(b).length) return false;
