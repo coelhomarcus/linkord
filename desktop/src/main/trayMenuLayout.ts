@@ -34,3 +34,15 @@ export function drawsTrayMenu(input: { platform: NodeJS.Platform; env: Readonly<
   if (!input.isPackaged && input.env.LINKORD_TRAY_MENU === 'drawn') return true;
   return input.platform === 'win32';
 }
+
+// Electron on Windows reports one right click on the tray icon twice: on the
+// button going down (WM_RBUTTONDOWN) and again as the shell's WM_CONTEXTMENU
+// once it comes up. Drawing the menu again for the second one replays its
+// opening, so it looked like it opened, closed and opened. Long enough for a
+// slow click, short enough that a deliberate second click still reopens it.
+export const TRAY_CLICK_ECHO_MS = 600;
+
+/** Whether a right click on the tray is the echo of the one that opened the menu at `openedAt`. */
+export function echoesTrayClick(openedAt: number | null, now: number): boolean {
+  return openedAt !== null && now >= openedAt && now - openedAt < TRAY_CLICK_ECHO_MS;
+}
