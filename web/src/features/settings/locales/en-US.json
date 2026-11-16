@@ -26,6 +26,7 @@
       "chat": "Chat",
       "notifications": "Notifications",
       "language": "Language & time",
+      "desktop": "App",
       "moderation": "Administration"
     },
     "sections": {
@@ -49,7 +50,11 @@
       "sessions": "Active sessions",
       "install": "Install the app",
       "deleteAccount": "Delete account",
-      "dataExport": "Your data"
+      "dataExport": "Your data",
+      "desktopStartup": "Startup",
+      "desktopWindow": "Window",
+      "desktopUpdates": "Updates",
+      "activity": "Activity"
     }
   },
   "search": {
@@ -148,6 +153,22 @@
     "dataExport": {
       "title": "Download my data",
       "keywords": "download data, export, copy of my data, backup, gdpr, lgpd, portability"
+    },
+    "desktopStartup": {
+      "title": "Start with the computer",
+      "keywords": "start, startup, login, boot, computer, system, minimized, tray"
+    },
+    "desktopWindow": {
+      "title": "Keep running when the window closes",
+      "keywords": "close, tray, menu bar, background, window, quit"
+    },
+    "desktopUpdates": {
+      "title": "App updates",
+      "keywords": "update, updates, version, new, download"
+    },
+    "activity": {
+      "title": "Activity",
+      "keywords": "playing, game, games, app, apps, activity, share, hide, steam, rich presence"
     }
   },
   "account": {
@@ -313,7 +334,7 @@
   "notifications": {
     "label": "Enable desktop notifications",
     "description": "Messages, mentions, friend requests and invitations, even with the app closed.",
-    "descriptionDesktop": "Messages and mentions while Linkord is running, even with its window closed on a Mac.",
+    "descriptionDesktop": "Messages and mentions while Linkord is running, even with its window closed.",
     "status": {
       "default": "Permission required. The browser will ask when you turn this on.",
       "denied": "Blocked in the browser. Allow access in your browser settings for this site.",
@@ -482,6 +503,41 @@
       "endOthersDescription_one": "{{count}} other browser will be signed out of your account right away.",
       "endOthersDescription_other": "{{count}} other browsers will be signed out of your account right away.",
       "onlyThis": "No other active sessions."
+    }
+  },
+  "desktop": {
+    "startAtLogin": {
+      "label": "Start with the computer",
+      "description": "Opens Linkord when you sign in to your computer."
+    },
+    "startMinimized": {
+      "label": "Start minimized",
+      "description": {
+        "mac": "When it starts with the computer, Linkord waits in the menu bar until you open it.",
+        "other": "When it starts with the computer, Linkord waits in the system tray until you open it."
+      }
+    },
+    "closeToTray": {
+      "label": "Keep running when the window closes",
+      "description": {
+        "mac": "Linkord stays in the menu bar and you keep getting messages and calls. Turned off, closing the window quits the app.",
+        "other": "Linkord stays in the system tray and you keep getting messages and calls. Turned off, closing the window quits the app."
+      }
+    },
+    "updates": {
+      "version": "Version {{version}}",
+      "automatic": "Updates download on their own and install when Linkord restarts.",
+      "manual": "When there is a new version, Linkord tells you and opens the page to download it.",
+      "off": "This build does not look for updates.",
+      "checking": "Checking for updates…",
+      "upToDate": "You are on the latest version.",
+      "downloading": "Downloading version {{version}}. It installs when Linkord restarts.",
+      "failed": "Could not check for updates.",
+      "available": "Version {{version}} is available.",
+      "ready": "Version {{version}} is ready to install.",
+      "check": "Check for updates",
+      "restart": "Restart and update",
+      "download": "Download version {{version}}"
     }
   }
 }

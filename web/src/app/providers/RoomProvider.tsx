@@ -31,6 +31,8 @@ import { streamPreviewStore } from '@/features/calls/streamPreviewStore';
 import { useRoomSettings } from '@/features/settings/useRoomSettings';
 import { useProfileUpdate } from '@/features/profile/useProfileUpdate';
 import { useOwnStatus } from '@/features/status/useOwnStatus';
+import { useActivitySettings } from '@/features/activity/useActivitySettings';
+import { useActivityReporter } from '@/features/activity/useActivityReporter';
 import { useIdleReporter } from '@/features/status/useIdleReporter';
 import { useNotificationSettings } from '@/features/notifications/useNotificationSettings';
 import { badgeCounts, policyAlerts } from '@/features/notifications/notificationSettings';
@@ -223,6 +225,9 @@ export function RoomProvider({ children }: { children: ReactNode }) {
   const tileMenu = useTileMenu();
   const { ownStatus, setPresence, onSnapshot: onStatusSnapshot, onMyStatus, onResult: onPresenceResult } = useOwnStatus({ sendWs });
   const { onWelcome: onIdleWelcome } = useIdleReporter({ sendWs });
+  const activitySettings = useActivitySettings({ sendWs });
+  const { onWelcome: onActivitySettingsWelcome, onChanged: onActivitySettingsChanged, onResult: onActivitySettingsResult } = activitySettings;
+  const { onWelcome: onActivityWelcome } = useActivityReporter({ sendWs, settings: activitySettings.settings });
 
   /** The FULL "open a conversation" behavior — cursor move (conversationsList)
    * plus resetting this conversation's unread/reply/editing state
@@ -280,6 +285,8 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         presence.setInitial(m.knownUsers, m.onlineUserIds, m.friendIds, m.presence);
         onStatusSnapshot(m.myStatus);
         onIdleWelcome();
+        onActivitySettingsWelcome(m.activitySettings);
+        onActivityWelcome();
         setMaxAttachmentBytes(m.maxAttachmentBytes ?? DEFAULT_MAX_ATTACHMENT_BYTES);
         // the first welcome opens nothing: the URL says what to show (the
         // route sync opens it). A reconnect reloads what was open.
@@ -470,6 +477,12 @@ export function RoomProvider({ children }: { children: ReactNode }) {
       case 'presence-result':
         onPresenceResult(m);
         break;
+      case 'my-activity-settings':
+        onActivitySettingsChanged(m);
+        break;
+      case 'activity-settings-result':
+        onActivitySettingsResult(m);
+        break;
       case 'user-online':
         presence.onUserOnline(m);
         break;
@@ -590,6 +603,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         typingByConversation: typingIndicator.typingByConversation, sendTyping: typingIndicator.sendTyping,
         allUsers: presence.allUsers, onlineUserIds: presence.onlineUserIds, friendUserIds: presence.friendUserIds,
         presenceByUser: presence.presenceByUser, ownStatus, setPresence,
+        activitySettings: activitySettings.settings, updateActivitySettings: activitySettings.update,
         kickFromCall: callLifecycle.kickFromCall, moveToCall: callLifecycle.moveToCall,
         actionError, clearActionError: () => setActionError(null),
         accessNotice, clearAccessNotice: () => setAccessNotice(null),

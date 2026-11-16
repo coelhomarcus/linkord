@@ -38,7 +38,7 @@ export function useOwnStatus({ sendWs }: OwnStatusDeps) {
   const onSnapshot = useCallback((myStatus: OwnStatus | undefined) => { apply(myStatus ?? DEFAULT_OWN_STATUS); }, [apply]);
 
   const onMyStatus = useCallback((m: Extract<ServerMessage, { t: 'my-status' }>) => {
-    apply({ status: m.status, effective: m.effective, customStatus: m.customStatus });
+    apply({ status: m.status, effective: m.effective, customStatus: m.customStatus, activity: m.activity === undefined ? confirmedRef.current.activity : m.activity });
   }, [apply]);
 
   const onResult = useCallback((m: Extract<ServerMessage, { t: 'presence-result' }>) => {
@@ -57,7 +57,7 @@ export function useOwnStatus({ sendWs }: OwnStatusDeps) {
     const status = patch.status ?? before.status;
     // automatic idle only applies to "online"; picking anything else is what shows from now on
     const effective = status === 'online' && before.effective === 'idle' ? 'idle' : status;
-    setOwnStatus({ status, effective, customStatus: patch.customStatus !== undefined ? patch.customStatus : before.customStatus });
+    setOwnStatus({ status, effective, customStatus: patch.customStatus !== undefined ? patch.customStatus : before.customStatus, activity: before.activity });
     return new Promise<void>((resolve, reject) => {
       const timer = setTimeout(() => {
         pendingRef.current.delete(requestId);

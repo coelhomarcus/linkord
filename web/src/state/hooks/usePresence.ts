@@ -51,8 +51,10 @@ export function usePresence() {
   const onPresenceStatus = useCallback((m: Extract<ServerMessage, { t: 'presence-status' }>) => {
     setPresenceByUser((prev) => {
       const next = new Map(prev);
-      if (m.status === 'online' && !m.customStatus) next.delete(m.userId);
-      else next.set(m.userId, { status: m.status, customStatus: m.customStatus });
+      // a message without `activity` comes from a server before protocol 24, or means it did not change from none
+      const activity = m.activity === undefined ? prev.get(m.userId)?.activity ?? null : m.activity;
+      if (m.status === 'online' && !m.customStatus && !activity) next.delete(m.userId);
+      else next.set(m.userId, { status: m.status, customStatus: m.customStatus, ...(activity ? { activity } : {}) });
       return next;
     });
   }, []);

@@ -8,12 +8,18 @@ describe('settings catalog', () => {
   });
 
   it('opens with the account: the profile is edited in your own profile modal, not here', () => {
-    const ids = visibleGroups(false).flatMap((group) => group.categories.map((category) => category.id));
+    const ids = visibleGroups(false, false).flatMap((group) => group.categories.map((category) => category.id));
     expect(ids[0]).toBe('account');
     expect(ids).not.toContain('profile');
   });
 
+  it('lists the app\'s own settings only inside the desktop app', () => {
+    const ids = (isDesktop: boolean) => visibleGroups(false, isDesktop).flatMap((group) => group.categories.map((category) => category.id));
+    expect(ids(false)).not.toContain('desktop');
+    expect(ids(true)).toContain('desktop');
+  });
+
   it('gives connections their own category right after the account', () => {
-    expect(visibleGroups(false)[0]?.categories.slice(0, 2).map((category) => category.id)).toEqual(['account', 'connections']);
+    expect(visibleGroups(false, false)[0]?.categories.slice(0, 2).map((category) => category.id)).toEqual(['account', 'connections']);
   });
 });

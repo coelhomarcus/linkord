@@ -58,6 +58,10 @@ export const users = pgTable('users', {
   customStatusEmoji: varchar('custom_status_emoji', { length: 64 }).notNull().default(''),
   customStatusText: varchar('custom_status_text', { length: 128 }).notNull().default(''),
   customStatusExpiresAt: timestamp('custom_status_expires_at', { withTimezone: true }),
+  // what others see of the game or app the desktop app detects (modules/presence/activity.ts):
+  // shared unless turned off, minus the keys listed here
+  activitySharing: boolean('activity_sharing').notNull().default(true),
+  hiddenActivities: jsonb('hidden_activities').$type<string[]>().notNull().default([]),
   // Last time the account actually went offline (last live socket gone,
   // after the reconnect grace). Null until the first disconnect after this
   // column existed — the migration backfills from sessions.last_seen_at.
@@ -975,6 +979,15 @@ export const rateLimitWindows = pgTable('rate_limit_windows', {
 }, (t) => [
   index('rate_limit_windows_window_ends_idx').on(t.windowEndsAt),
 ]);
+
+// The IGDB name and cover of a game someone's desktop app detected (modules/activity/activityGames.ts),
+// keyed `steam:<app id>` or `name:<normalized name>`. A miss is stored too, dated so it expires sooner.
+export const activityGames = pgTable('activity_games', {
+  key: varchar('key', { length: 96 }).primaryKey(),
+  name: text('name').notNull(),
+  imageId: varchar('image_id', { length: 40 }),
+  resolvedAt: timestamp('resolved_at', { withTimezone: true }).notNull(),
+});
 
 export const connectionSyncLimits = pgTable('connection_sync_limits', {
   provider: varchar('provider', { length: 16 }).primaryKey(),

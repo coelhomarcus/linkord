@@ -76,7 +76,8 @@ test('tabs opened on the production version keep working with tabs on the new on
   // a friend request across versions, accepted in the old tab
   expect((await carol.api.post('/api/friend-requests', { data: { username: bob.username } })).ok()).toBe(true);
   await b.page.getByRole('button', { name: 'Mensagens diretas' }).first().click();
-  await b.page.getByText('Amigos', { exact: true }).first().click();
+  // the list's own button, not the top bar's title (which reads the same)
+  await b.page.getByRole('button', { name: /^Amigos(\s|$)/ }).first().click();
   await b.page.getByRole('link', { name: /^Pendentes/ }).click();
   await b.page.getByRole('button', { name: 'Aceitar' }).first().click();
   await expect(b.page.getByText('Solicitação aceita.')).toBeVisible();

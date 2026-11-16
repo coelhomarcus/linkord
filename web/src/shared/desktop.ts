@@ -39,6 +39,56 @@ export interface DesktopWindowControls {
   onStateChange: (callback: (state: DesktopWindowState) => void) => () => void;
 }
 
+type DesktopUpdateStatus =
+  | { kind: 'idle' }
+  | { kind: 'available'; version: string; url: string }
+  | { kind: 'downloaded'; version: string };
+
+/** The desktop app's own settings, as features/settings/DesktopSettings shows them. */
+export interface DesktopSettingsSnapshot {
+  version: string;
+  startAtLogin: { available: boolean; enabled: boolean };
+  /** closing the window keeps the app in the tray instead of quitting */
+  closeToTray: boolean;
+  /** a start with the system stays in the tray */
+  startMinimized: boolean;
+  /** 'install': Windows and AppImage update themselves; 'notify': a page to download from; 'off': a build that does not check */
+  update: { mode: 'install' | 'notify' | 'off'; status: DesktopUpdateStatus };
+}
+
+export type DesktopUpdateCheck = { kind: 'up-to-date' } | { kind: 'update'; version: string } | { kind: 'failed' } | { kind: 'off' };
+
+export interface DesktopSettingsApi {
+  get: () => Promise<DesktopSettingsSnapshot | null>;
+  set: (change: Partial<{ startAtLogin: boolean; closeToTray: boolean; startMinimized: boolean }>) => Promise<DesktopSettingsSnapshot | null>;
+  checkForUpdates: () => Promise<DesktopUpdateCheck>;
+  applyUpdate: () => Promise<void>;
+  /** the tray or the menu changed something; returns the unsubscribe */
+  onChange: (callback: (settings: DesktopSettingsSnapshot) => void) => () => void;
+}
+
+/** What the desktop app found running (desktop/src/main/activityWatcher.ts). */
+export interface DesktopActivity {
+  key: string;
+  kind: 'playing' | 'using';
+  /** empty for a Steam game whose name the app could not read: the server's lookup names it */
+  name: string;
+  steamAppId?: number;
+  /** ms */
+  startedAt: number;
+}
+
+export interface DesktopActivityApi {
+  /** turns detection on (while the account shares its activity) or off */
+  watch: (on: boolean) => Promise<void>;
+  current: () => Promise<DesktopActivity | null>;
+  /** the last ones found, newest first, for hiding them in settings */
+  recent: () => Promise<{ key: string; kind: 'playing' | 'using'; name: string }[]>;
+  /** the current program's own icon as a data URL, or null */
+  icon: () => Promise<string | null>;
+  onChange: (callback: (activity: DesktopActivity | null) => void) => () => void;
+}
+
 export interface LinkordDesktop {
   platform: string;
   version: string;
@@ -49,6 +99,10 @@ export interface LinkordDesktop {
   setBadgeCount?: (count: number) => Promise<boolean>;
   /** absent in builds that keep the system title bar */
   windowControls?: DesktopWindowControls;
+  /** absent in builds without the app's own settings */
+  settings?: DesktopSettingsApi;
+  /** absent in builds that detect nothing */
+  activity?: DesktopActivityApi;
 }
 
 declare global {

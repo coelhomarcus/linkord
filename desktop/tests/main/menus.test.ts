@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import type { MenuItemConstructorOptions } from 'electron';
-import { appMenuTemplate, trayMenuTemplate, type MenuActions, type MenuState } from '../../src/main/menus.js';
+import { appMenuTemplate, runTrayItem, trayMenuItems, trayMenuTemplate, type MenuActions, type MenuState } from '../../src/main/menus.js';
 import { STRINGS } from '../../src/main/strings.js';
 
 const strings = STRINGS['en-US'];
@@ -142,5 +142,25 @@ describe('update items', () => {
     click(find(trayMenuTemplate(state(), actions), strings.checkForUpdates));
     click(find(trayMenuTemplate(state({ update: { mode: 'install', status: { kind: 'downloaded', version: '1.2.0' } } }), actions), strings.restartToUpdate));
     assert.deepEqual(calls, ['check', 'apply']);
+  });
+});
+
+describe('trayMenuItems', () => {
+  it('lists open, start at login, updates and quit, with no separator at an edge or doubled', () => {
+    const items = trayMenuItems(state());
+    assert.deepEqual(items.map((item) => item.kind === 'separator' ? '-' : item.id), ['open', '-', 'startAtLogin', 'update', '-', 'quit']);
+    const bare = trayMenuItems(state({ startAtLogin: { available: false, enabled: false }, update: { mode: 'off', status: { kind: 'idle' } } }));
+    assert.deepEqual(bare.map((item) => item.kind === 'separator' ? '-' : item.id), ['open', '-', 'quit']);
+  });
+
+  it('runs what the drawn menu sends back', () => {
+    const { calls, actions } = recorder();
+    runTrayItem(state(), actions, 'open');
+    runTrayItem(state(), actions, 'startAtLogin', true);
+    runTrayItem(state(), actions, 'update');
+    runTrayItem(state({ update: { mode: 'install', status: { kind: 'downloaded', version: '1.0.0' } } }), actions, 'update');
+    runTrayItem(state(), actions, 'quit');
+    runTrayItem(state(), actions, 'unknown');
+    assert.deepEqual(calls, ['show', 'login:true', 'check', 'apply', 'quit']);
   });
 });

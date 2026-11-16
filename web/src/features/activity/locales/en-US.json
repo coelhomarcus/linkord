@@ -1,0 +1,36 @@
+{
+  "kind": {
+    "playing": "Playing",
+    "using": "Using"
+  },
+  "line": {
+    "playing": "Playing {{name}}",
+    "using": "Using {{name}}"
+  },
+  "elapsed": {
+    "minutes_one": "for {{count}} minute",
+    "minutes_other": "for {{count}} minutes",
+    "hours": "for {{hours}} h {{minutes}} min",
+    "justNow": "just now"
+  },
+  "settings": {
+    "title": "Activity",
+    "share": {
+      "label": "Share my activity",
+      "description": "Shows on your profile the game or app you are using, like \"Playing Minecraft\". It works in the Linkord desktop app, which only recognizes games and apps from a known list."
+    },
+    "detected": "Detected on this computer",
+    "detectedEmpty": "No game or app detected yet. Open one while Linkord is running and it shows up here.",
+    "hidden": "Hidden",
+    "hiddenEmpty": "Nothing hidden.",
+    "hide": "Hide",
+    "show": "Show",
+    "hideLabel": "Hide {{name}}",
+    "showLabel": "Show {{name}}",
+    "desktopOnly": "Detection happens in the Linkord desktop app. In the browser you only choose whether to share."
+  },
+  "errors": {
+    "saveFailed": "Could not save. Try again.",
+    "offline": "No connection to the server. Try again in a moment."
+  }
+}

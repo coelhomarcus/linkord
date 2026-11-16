@@ -4,8 +4,12 @@ import { users } from '../../db/schema.js';
 import { recordUserLastSeen } from '../users/users.js';
 import {
   participants, broadcastToPeers, sendToUser, send, publicParticipant, isUserOnline, ownEffectiveStatus,
-  visiblePresenceOf, setAccountConnectionsChangedHook, type VisiblePresence,
+  visiblePresenceOf, shownActivityOf, setAccountConnectionsChangedHook, type VisiblePresence,
 } from './participants.js';
+import {
+  DEFAULT_ACTIVITY_SETTINGS, forgetActivitySettings, getActivitySettings, hasActivitySettings, isActivityKey, sameActivity,
+  sanitizeActivityReport, sanitizeActivitySettings, setActivitySettings, HIDDEN_ACTIVITIES_MAX, type Activity, type ActivitySettings,
+} from './activity.js';
 import { runSerialized } from './profileQueue.js';
 import {
   forgetAccountStatus, getAccountStatus, hasAccountStatus, isCustomStatusExpired, isPresenceStatus, sameCustomStatus,
@@ -19,7 +23,7 @@ const log = logger.child({ component: 'presence-status' });
 // What peers and the account's own tabs were last told, so a change is announced once, and only when
 // it is one: activity reports from several tabs mostly change nothing anyone can see.
 const toPeers = new Map<string, VisiblePresence | null>();
-interface OwnStatus { status: PresenceStatus; effective: PresenceStatus; customStatus: CustomStatus | null }
+interface OwnStatus { status: PresenceStatus; effective: PresenceStatus; customStatus: CustomStatus | null; activity?: Activity }
 const toSelf = new Map<string, OwnStatus>();
 const expiryTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
@@ -55,6 +59,48 @@ export const databaseAccountStatusStore: AccountStatusStore = {
   },
 };
 
+/** Where the activity settings live (the users table). Injected for the same reason as AccountStatusStore. */
+export interface ActivitySettingsStore {
+  load(userId: string): Promise<ActivitySettings | null>;
+  save(userId: string, value: ActivitySettings): Promise<void>;
+}
+
+export const databaseActivitySettingsStore: ActivitySettingsStore = {
+  async load(userId) {
+    const [row] = await db.select({ sharing: users.activitySharing, hidden: users.hiddenActivities }).from(users).where(eq(users.id, userId)).limit(1);
+    if (!row) return null;
+    return { sharing: row.sharing, hidden: Array.isArray(row.hidden) ? row.hidden.filter(isActivityKey).slice(0, HIDDEN_ACTIVITIES_MAX) : [] };
+  },
+  async save(userId, value) {
+    await db.update(users).set({ activitySharing: value.sharing, hiddenActivities: value.hidden, updatedAt: new Date() }).where(eq(users.id, userId));
+  },
+};
+
+let activityStore: ActivitySettingsStore = databaseActivitySettingsStore;
+export function setActivitySettingsStore(next: ActivitySettingsStore): void {
+  activityStore = next;
+}
+
+/** Reads the activity settings with the status, before the connection is announced, so a hidden
+ * activity is never shown for an instant. */
+export async function loadActivitySettings(userId: string): Promise<void> {
+  if (hasActivitySettings(userId)) return;
+  let loaded: ActivitySettings | null = null;
+  try {
+    loaded = await activityStore.load(userId);
+  } catch (err) {
+    // read as "not sharing" until the next connection: a failed read must not show what was hidden
+    log.error('failed to load activity settings', err, { userId });
+    loaded = { sharing: false, hidden: [] };
+  }
+  if (!hasActivitySettings(userId)) setActivitySettings(userId, loaded ?? DEFAULT_ACTIVITY_SETTINGS);
+}
+
+/** The welcome's `activitySettings` (protocol 24). */
+export function activitySettingsPayload(userId: string): ActivitySettings {
+  return getActivitySettings(userId);
+}
+
 let store: AccountStatusStore = databaseAccountStatusStore;
 export function setAccountStatusStore(next: AccountStatusStore): void {
   store = next;
@@ -62,7 +108,9 @@ export function setAccountStatusStore(next: AccountStatusStore): void {
 
 function ownStatusOf(userId: string): OwnStatus {
   const { status, customStatus } = getAccountStatus(userId);
-  return { status, effective: ownEffectiveStatus(userId), customStatus };
+  // the activity as others see it, so the account's own profile shows what theirs does
+  const activity = shownActivityOf(userId);
+  return { status, effective: ownEffectiveStatus(userId), customStatus, ...(activity ? { activity } : {}) };
 }
 
 /** The `my-status` message for an account's own tabs (also the `welcome`/`presence-sync` field). */
@@ -72,7 +120,7 @@ export function ownStatusPayload(userId: string): OwnStatus {
 
 function samePresence(a: VisiblePresence | null, b: VisiblePresence | null): boolean {
   if (!a || !b) return a === b;
-  return a.status === b.status && sameCustomStatus(a.customStatus, b.customStatus);
+  return a.status === b.status && sameCustomStatus(a.customStatus, b.customStatus) && sameActivity(a.activity, b.activity);
 }
 
 /** Tells peers and the account's own tabs about whatever changed since they were last told. Peers
@@ -83,15 +131,19 @@ export function syncPresence(userId: string): void {
   const before = toPeers.get(userId) ?? null;
   const now = visiblePresenceOf(userId);
   toPeers.set(userId, now);
-  if (now && !samePresence(before, now) && (before || now.status !== 'online' || now.customStatus)) {
-    broadcastToPeers(userId, { t: 'presence-status', userId, status: now.status, customStatus: now.customStatus });
+  if (now && !samePresence(before, now) && (before || now.status !== 'online' || now.customStatus || now.activity)) {
+    // `activity` only when there is one or there was one, so a client hears it end
+    const activity = now.activity || before?.activity ? { activity: now.activity ?? null } : {};
+    broadcastToPeers(userId, { t: 'presence-status', userId, status: now.status, customStatus: now.customStatus, ...activity });
   }
   const own = ownStatusOf(userId);
   const told = toSelf.get(userId);
-  if (!told || told.status !== own.status || told.effective !== own.effective || !sameCustomStatus(told.customStatus, own.customStatus)) {
+  if (!told || told.status !== own.status || told.effective !== own.effective || !sameCustomStatus(told.customStatus, own.customStatus)
+    || !sameActivity(told.activity, own.activity)) {
     toSelf.set(userId, own);
     // a tab that joins gets this in its welcome; the message is for the tabs already open
-    if (told) sendToUser(userId, { t: 'my-status', ...own });
+    const activity = own.activity || told?.activity ? { activity: own.activity ?? null } : {};
+    if (told) sendToUser(userId, { t: 'my-status', ...own, ...activity });
   }
 }
 
@@ -220,6 +272,50 @@ function handlePresenceActivity(socket: AppSocket, msg: { idle?: unknown } | nul
   syncPresence(p.userId);
 }
 
+/** `activity-set`: what this connection's desktop app sees the person playing or using now, or
+ * null. Kept in memory with the connection; a reconnecting app reports it again after `welcome`. */
+function handleActivitySet(socket: AppSocket, msg: { activity?: unknown } | null | undefined): void {
+  const p = participants.get(socket.participantId ?? '');
+  if (!p || p.socket !== socket) return;
+  const activity = sanitizeActivityReport(msg?.activity ?? null);
+  if (sameActivity(p.activity, activity)) return;
+  p.activity = activity;
+  // a counter, not the clock: two reports in the same millisecond still have an order
+  p.activityAt = ++activityReports;
+  syncPresence(p.userId);
+}
+
+let activityReports = 0;
+
+interface ActivitySettingsBody { requestId?: unknown; sharing?: unknown; hidden?: unknown }
+
+/** `activity-settings-set`: share the activity or not, and which ones never show. Saved first, then
+ * the account's tabs hear `my-activity-settings` and peers see the change. */
+async function handleActivitySettingsSet(socket: AppSocket, msg: ActivitySettingsBody | null | undefined): Promise<void> {
+  const p = participants.get(socket.participantId ?? '');
+  if (!p || p.socket !== socket) return;
+  const requestId = typeof msg?.requestId === 'string' ? msg.requestId.slice(0, 64) : null;
+  const reply = (ok: boolean) => { if (requestId) send(socket, { t: 'activity-settings-result', requestId, ok }); };
+  await runSerialized(`activity:${p.userId}`, async () => {
+    const next = sanitizeActivitySettings(msg, getActivitySettings(p.userId));
+    if (!next) {
+      reply(false);
+      return;
+    }
+    try {
+      await activityStore.save(p.userId, next);
+    } catch (err) {
+      log.error('failed to save activity settings', err, { userId: p.userId });
+      reply(false);
+      return;
+    }
+    setActivitySettings(p.userId, next);
+    sendToUser(p.userId, { t: 'my-activity-settings', ...next });
+    syncPresence(p.userId);
+    reply(true);
+  });
+}
+
 /** Called when a connection goes away, and when a join that loaded the status was refused. */
 export function releaseAccountStatusIfUnused(userId: string): void {
   onConnectionsChanged(userId);
@@ -237,6 +333,7 @@ function onConnectionsChanged(userId: string): void {
   if (timer) clearTimeout(timer);
   expiryTimers.delete(userId);
   forgetAccountStatus(userId);
+  forgetActivitySettings(userId);
   toPeers.delete(userId);
   toSelf.delete(userId);
 }
@@ -246,4 +343,6 @@ setAccountConnectionsChangedHook(onConnectionsChanged);
 export const handlers: HandlerTable = {
   'presence-set': handlePresenceSet,
   'presence-activity': handlePresenceActivity,
+  'activity-set': handleActivitySet,
+  'activity-settings-set': handleActivitySettingsSet,
 };

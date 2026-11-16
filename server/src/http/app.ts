@@ -40,6 +40,7 @@ import { registerServerEmojiRoutes } from '../modules/emojis/serverEmojis.js';
 import { registerServerStickerRoutes } from '../modules/stickers/serverStickers.js';
 import { registerGifRoutes } from '../modules/gifs/gifs.js';
 import { registerGameRoutes } from '../modules/games/games.js';
+import { registerActivityRoutes } from '../modules/activity/activityRoutes.js';
 import { registerBotRoutes } from '../modules/bots/bots.js';
 import { registerWebhookIngressRoutes } from '../modules/bots/webhookIngress.js';
 import { logger } from '../lib/logger.js';
@@ -107,6 +108,7 @@ export function createApp(): FastifyInstance {
   registerMediaProxyRoutes(fastify);
   registerGifRoutes(fastify);
   registerGameRoutes(fastify);
+  registerActivityRoutes(fastify);
   registerFriendshipRoutes(fastify, { onlineUserIds: listVisibleOnlineUserIds });
   registerBlockRoutes(fastify);
   registerUserRoutes(fastify);

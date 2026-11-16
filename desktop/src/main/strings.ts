@@ -4,6 +4,7 @@
 
 const PT_BR = {
   open: 'Abrir o Linkord',
+  version: 'Versão {{version}}',
   openInBrowser: 'Abrir no navegador',
   startAtLogin: 'Iniciar com o sistema',
   checkForUpdates: 'Procurar atualizações…',
@@ -49,6 +50,7 @@ export type Strings = typeof PT_BR;
 
 const EN_US: Strings = {
   open: 'Open Linkord',
+  version: 'Version {{version}}',
   openInBrowser: 'Open in browser',
   startAtLogin: 'Start at login',
   checkForUpdates: 'Check for updates…',

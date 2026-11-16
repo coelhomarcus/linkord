@@ -37,14 +37,8 @@ const BAR_BUTTON_GREEN = 'bg-green/16 text-green hover:bg-green/24';
 const BAR_BUTTON_LOCKED = 'cursor-not-allowed bg-white/5 text-white/35';
 const BAR_ICON = 'size-[22px] max-[480px]:size-5 max-[360px]:size-[19px]';
 
-interface CallControlBarProps {
-  /** Fades out (but stays mounted, never affecting layout) when the HUD
-   * auto-hides after inactivity — see useCallHud.ts. */
-  hudVisible?: boolean;
-}
-
 // Stage measures the rendered height to reserve space for the bar and any banners.
-export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(function CallControlBar({ hudVisible = true }, ref) {
+export const CallControlBar = forwardRef<HTMLDivElement>(function CallControlBar(_props, ref) {
   const { t } = useTranslation('calls');
   const {
     state, dispatch, startCamera, stopCamera, startSharing, stopSharing, activateMic, toggleMicMuted, deafened, toggleDeafened, preferMuted, setPreferMuted,
@@ -76,10 +70,8 @@ export const CallControlBar = forwardRef<HTMLDivElement, CallControlBarProps>(fu
   return (
     <div
       ref={ref}
-      className={cn(
-        'absolute bottom-[calc(0.25rem+env(safe-area-inset-bottom))] left-1/2 z-20 flex -translate-x-1/2 flex-col items-center gap-2 transition-opacity duration-200 motion-reduce:transition-none',
-        hudVisible ? 'opacity-100' : 'pointer-events-none opacity-0'
-      )}
+      // always on screen: it never fades out while the call sits idle
+      className="absolute bottom-[calc(0.25rem+env(safe-area-inset-bottom))] left-1/2 z-20 flex -translate-x-1/2 flex-col items-center gap-2"
     >
       {reconnecting && (
         <div className="rounded-md border border-border-strong bg-bg-floating px-3 py-2 text-label text-text-secondary shadow-popover">

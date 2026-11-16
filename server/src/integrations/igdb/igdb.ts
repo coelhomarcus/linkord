@@ -88,6 +88,8 @@ export interface IgdbClient {
   /** false when the credentials are missing: nothing is requested and every search is `unavailable`. */
   readonly configured: boolean;
   searchGames(query: string): Promise<GameSnapshot[]>;
+  /** The IGDB game listed for a Steam app id, or null (the activity of a Steam game, modules/activity). */
+  findSteamGame(appId: number): Promise<GameSnapshot | null>;
 }
 
 /** IGDB signs requests with a Twitch app token. It is kept until it nears its expiry
@@ -121,26 +123,37 @@ export function createIgdbClient(options: { clientId: string; clientSecret: stri
     return renewal;
   }
 
+  /** One Apicalypse query on GAMES_URL, signed, retried once with a new token after a 401. */
+  async function queryGames(body: string): Promise<unknown[]> {
+    if (!configured) throw new ConnectionFetchError('unavailable');
+    for (let attempt = 0; ; attempt++) {
+      const used = await accessToken();
+      try {
+        const games = await request(GAMES_URL, {
+          method: 'POST',
+          headers: { 'Client-ID': clientId, Authorization: `Bearer ${used}`, Accept: 'application/json' },
+          body,
+        });
+        if (!Array.isArray(games)) throw new ConnectionFetchError('invalid_response');
+        return games;
+      } catch (error) {
+        if (!(error instanceof ConnectionFetchError) || error.code !== 'unauthorized' || attempt > 0) throw error;
+        if (token?.value === used) token = null;
+      }
+    }
+  }
+
   return {
     configured,
     async searchGames(query) {
-      if (!configured) throw new ConnectionFetchError('unavailable');
-      const body = `search ${quote(query)}; fields name,slug,first_release_date,cover.image_id; where version_parent = null; limit ${SEARCH_LIMIT};`;
-      for (let attempt = 0; ; attempt++) {
-        const used = await accessToken();
-        try {
-          const games = await request(GAMES_URL, {
-            method: 'POST',
-            headers: { 'Client-ID': clientId, Authorization: `Bearer ${used}`, Accept: 'application/json' },
-            body,
-          });
-          if (!Array.isArray(games)) throw new ConnectionFetchError('invalid_response');
-          return games.slice(0, SEARCH_LIMIT).map(parseGame);
-        } catch (error) {
-          if (!(error instanceof ConnectionFetchError) || error.code !== 'unauthorized' || attempt > 0) throw error;
-          if (token?.value === used) token = null;
-        }
-      }
+      const games = await queryGames(`search ${quote(query)}; fields name,slug,first_release_date,cover.image_id; where version_parent = null; limit ${SEARCH_LIMIT};`);
+      return games.slice(0, SEARCH_LIMIT).map(parseGame);
+    },
+    async findSteamGame(appId) {
+      if (!Number.isSafeInteger(appId) || appId <= 0) return null;
+      // external_game_source 1 is Steam; the uid is the app id as text
+      const games = await queryGames(`fields name,slug,first_release_date,cover.image_id; where external_games.uid = "${appId}" & external_games.external_game_source = 1; limit 1;`);
+      return games.length > 0 ? parseGame(games[0]) : null;
     },
   };
 }

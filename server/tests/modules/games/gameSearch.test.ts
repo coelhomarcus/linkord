@@ -12,6 +12,7 @@ function setup(options: { configured?: boolean; search?: (query: string) => Prom
   const client: IgdbClient = {
     configured: options.configured ?? true,
     async searchGames(query) { searched.push(query); return options.search ? options.search(query) : [game(1)]; },
+    async findSteamGame() { return null; },
   };
   const search = createGameSearch({
     client, now: options.now,

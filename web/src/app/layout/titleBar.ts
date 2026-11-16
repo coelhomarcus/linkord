@@ -46,7 +46,8 @@ export function hostFor(controls: DesktopWindowControls, platform: string): Titl
     controls,
     platform,
     onDoubleClick: (event) => {
-      if (titleBarStyle(platform, controls) !== 'linux' || event.target !== event.currentTarget) return;
+      // on the bar or its text, not on a button or link inside it
+      if (titleBarStyle(platform, controls) !== 'linux' || (event.target as Element).closest?.('button, a, input, [role="button"]')) return;
       void controls.toggleMaximize();
     },
   };

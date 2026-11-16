@@ -31,6 +31,8 @@ export interface SessionUser {
 /** The single room's participant (see realtime/participants.ts). `id` is
  * per-CONNECTION (not per-account) — see the note in participants.ts.
  * `socket` is null during the reconnect grace window. */
+import type { Activity } from './modules/presence/activity.js';
+
 export interface Participant {
   id: string;
   token: string;
@@ -74,6 +76,10 @@ export interface Participant {
   // reported by this connection's client after a stretch without input (see 'presence-activity');
   // an account set to "online" reads as idle only while all its live connections are idle
   idle: boolean;
+  // what this connection's desktop app last reported the person playing or using (see 'activity-set'),
+  // and the order it came in; an account shows the newest of its connections' reports
+  activity: Activity | null;
+  activityAt: number;
   graceTimer: ReturnType<typeof setTimeout> | null;
   // Friends ∪ members of every conversation this account is in — computed
   // ONCE per connection (handleJoin, realtime/socket.ts), not on every
