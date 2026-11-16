@@ -4,13 +4,13 @@ import {
 } from '@phosphor-icons/react';
 import type { Icon } from '@phosphor-icons/react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from '@/shared/ui/primitives/dropdown-menu';
 import { cn } from '@/shared/lib/utils';
-import { RoomContext } from '@/state/RoomContext';
+import { useOptionalRoomSelector } from '@/state/RoomContext';
 import { ServerIcon } from '@/features/servers/ServerIcon';
 import { can } from '@/features/servers/serverUtils';
 import { PERMISSIONS } from '@/features/servers/permissionBits';
@@ -66,9 +66,9 @@ function toPick(item: PickerItem): EmojiPick {
 export function EmojiPicker({ onPick, allowCustom = true, className, autoFocus = true }: EmojiPickerProps) {
   const { t } = useTranslation('emoji');
   const pickerId = useId();
-  const room = useContext(RoomContext);
-  const accountId = room?.state.me.userId ?? null;
-  const servers = useMemo(() => room?.servers ?? [], [room?.servers]);
+  const accountId = useOptionalRoomSelector((room) => room.state.me.userId) ?? null;
+  const roomServers = useOptionalRoomSelector((room) => room.servers);
+  const servers = useMemo(() => roomServers ?? [], [roomServers]);
   const data = useEmojiData();
   const myEmojis = useMyEmojis(accountId, allowCustom);
   const frequent = useFrequentExpressions(accountId, 'emojis');

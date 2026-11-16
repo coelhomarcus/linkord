@@ -22,7 +22,7 @@ const INHERIT = 'inherit';
  * the global context menu (a row or a server icon) and the dropdowns (server header, channel header). */
 export function NotificationMenuItems({ target }: { target: NotificationTarget }) {
   const { t } = useTranslation('notifications');
-  const { notificationSettings, updateNotificationSetting, isNotificationMuted } = useRoom();
+  const { notificationSettings, updateNotificationSetting, isNotificationMuted } = useRoom('notificationSettings', 'updateNotificationSetting', 'isNotificationMuted');
   const kind = target.scope === 'server' ? 'server' : target.serverId ? 'channel' : 'direct';
   const own = target.scope === 'server' ? notificationSettings.servers[target.id] : notificationSettings.conversations[target.id];
   const muted = isNotificationMuted(target.scope, target.id);

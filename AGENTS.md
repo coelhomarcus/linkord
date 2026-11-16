@@ -23,7 +23,8 @@ web/src/
   shared/                # see criteria below
     api/ hooks/ i18n/ lib/ types/ ui/{primitives,motion}/
     Avatar.tsx, ConfirmDialog.tsx, notifications.ts, sounds.ts, ...
-  state/                 # RoomContext, AuthContext, roomReducer + state/hooks/ (cross-cutting)
+  state/                 # RoomContext (the room store and its readers), RoomStoreProvider, AuthContext,
+                         # roomReducer + state/hooks/ (cross-cutting)
   styles/                # global CSS
 web/tests/               # mirrors web/src/ — NO tests inside src/
 ```
@@ -33,6 +34,16 @@ web/tests/               # mirrors web/src/ — NO tests inside src/
 - **`state/hooks/`** is for the rare case of a cross-cutting hook with no owning feature at all (e.g. `usePresence`, `useTypingIndicator`, `useSocketConnection` — only used by `RoomProvider`, but don't belong to any specific feature).
 - **Alias `@/`** → `web/src`; **`@tests/`** → `web/tests` (configured in `vite.config.ts` and `tsconfig.app.json`). An import of a file in the same directory stays relative (`./Sibling`); any import that would need to climb out with `../` becomes `@/full/path` instead.
 - Tests ALWAYS in `web/tests/`, never inside `web/src/`.
+
+### Reading the room
+
+`RoomProvider` publishes one `RoomContextValue` through a store (`state/RoomContext.ts`), rebuilt on every event: in a call a `speaking` flag flips several times a second. A component re-renders only when what it read changes, so it says what it reads:
+
+- `useRoom('servers', 'openCall')` for fields of the value, `useRoomState('me', 'focusedId')` for the reducer's state; both compare each field by identity.
+- `useRoomSelector((room) => …, isEqual?)` for anything derived (one participant, one count, a lookup by a prop), so a row does not re-render for every other row's change. `useOptionalRoomSelector` where the component also renders outside `RoomProvider`.
+- Who is in which call without their media: `useCallRoster()` (`features/calls/callRoster.ts`), which keeps its identity while people only speak, mute or share. Only call UI reads `participants` itself.
+- A value or callback the provider hands out must keep its identity until it really changes (`useCallback`/`useMemo`, no inline lambdas or object literals), or everyone who reads it re-renders on every event.
+- Tests pass a fake value to `RoomStoreProvider` (`renderWithRoom` in `tests/fixtures/roomContextFixture.tsx`); to change it, pass a new object rather than mutating the old one.
 
 ### Touch: long press, selection, sliders
 

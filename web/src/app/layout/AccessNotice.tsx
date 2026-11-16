@@ -29,7 +29,7 @@ function TopNotice({ icon, text, onClear }: { icon: ReactNode; text: string; onC
 
 /** Losing access to a server. */
 export function AccessNotice() {
-  const { accessNotice, clearAccessNotice } = useRoom();
+  const { accessNotice, clearAccessNotice } = useRoom('accessNotice', 'clearAccessNotice');
   if (!accessNotice) return null;
   return <TopNotice icon={<UserMinusIcon size={15} className="flex-none text-red-text" />} text={accessNotice} onClear={clearAccessNotice} />;
 }

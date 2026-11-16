@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { ArrowBendUpLeftIcon, CopyIcon, DotsThreeIcon, FlagIcon, PencilSimpleIcon, PhoneIcon, SmileyIcon, TrashIcon, UsersIcon } from '@phosphor-icons/react';
 import { GroupAvatar } from '@/features/conversations/GroupAvatar';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { Avatar } from '@/shared/Avatar';
 import { MessageMedia } from './MessageMedia';
@@ -26,7 +26,7 @@ import { groupMentionsMe, mentionsUser } from '@/shared/lib/mentions';
 import { copyToClipboard } from '@/shared/lib/clipboard';
 import { cn } from '@/shared/lib/utils';
 import { useKeepPopoverWarm } from '@/shared/hooks/useKeepPopoverWarm';
-import { useRoom } from '@/state/RoomContext';
+import { useRoom, useRoomState } from '@/state/RoomContext';
 import type { ChatMessage, PublicUser } from '@/shared/types/protocol';
 import type { OutboxEntry } from './useMessageOutbox';
 import { PendingAttachments } from './PendingAttachments';
@@ -116,7 +116,7 @@ interface MessageRowProps {
   allUsers: Map<string, PublicUser>;
   mentionLookup: Map<string, PublicUser>;
   onOpenProfile: (userId: string) => void;
-  onReply: () => void;
+  onReply: (message: ChatMessage) => void;
   onJumpTo: (msgId: number) => void;
   /** Set while the server hasn't confirmed this send: no msgId-based
    * actions yet, just its delivery state. */
@@ -139,15 +139,18 @@ function PendingStatus({ entry, offline, onRetry, onDiscard }: { entry: OutboxEn
   );
 }
 
-export function MessageRow({ message, showHeader, highlighted, allUsers, mentionLookup, onOpenProfile, onReply, onJumpTo, pending }: MessageRowProps) {
+// memo: a new message, or a change to another row, re-renders the timeline but not every row in it
+export const MessageRow = memo(function MessageRow({ message, showHeader, highlighted, allUsers, mentionLookup, onOpenProfile, onReply: replyTo, onJumpTo, pending }: MessageRowProps) {
   const { t } = useTranslation('chat');
+  const onReply = useCallback(() => replyTo(message), [replyTo, message]);
   // re-renders the timestamp when the time format changes in settings
   useTimeFormat();
   const deletedAuthorName = t('deletedAuthor');
   const {
-    state, conversations, servers, serverMemberRoleIds, editChatMessage, reactToChatMessage, editingMsgId, setEditingMsgId, retryPendingMessage, discardPendingMessage,
+    conversations, servers, serverMemberRoleIds, editChatMessage, reactToChatMessage, editingMsgId, setEditingMsgId, retryPendingMessage, discardPendingMessage,
     deletingMsgIds, messageActionErrors, dismissMessageActionError, pendingReactions, openReactionParticipants,
-  } = useRoom();
+  } = useRoom('conversations', 'servers', 'serverMemberRoleIds', 'editChatMessage', 'reactToChatMessage', 'editingMsgId', 'setEditingMsgId', 'retryPendingMessage', 'discardPendingMessage', 'deletingMsgIds', 'messageActionErrors', 'dismissMessageActionError', 'pendingReactions', 'openReactionParticipants');
+  const state = useRoomState('me', 'reconnecting');
   const [editText, setEditText] = useState(() => customEmojisAsText(message.text));
   const myEmojis = useMyEmojis(state.me.userId ?? null, false);
   const [editSaving, setEditSaving] = useState(false);
@@ -488,4 +491,4 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
     </div>
     </div>
   );
-}
+});

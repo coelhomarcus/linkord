@@ -8,7 +8,7 @@ import { Label } from '@/shared/ui/primitives/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/primitives/popover';
 import { EmojiPicker } from '@/features/emoji/EmojiPicker';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/primitives/select';
-import { useRoom } from '@/state/RoomContext';
+import { useRoom, useRoomState } from '@/state/RoomContext';
 import { fetchWall } from '@/features/profile/profileApi';
 import type { GameItem } from '@/features/games/types';
 import { timeOptions } from '@/shared/lib/timeFormat';
@@ -39,7 +39,8 @@ function useRotationGames(userId: string | null, enabled: boolean): GameItem[] {
 
 export function CustomStatusDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const { t, i18n } = useTranslation('status');
-  const { state, ownStatus, setPresence } = useRoom();
+  const { ownStatus, setPresence } = useRoom('ownStatus', 'setPresence');
+  const state = useRoomState('me');
   const current = liveCustomStatus(ownStatus.customStatus);
   const [emoji, setEmoji] = useState('');
   const [text, setText] = useState('');

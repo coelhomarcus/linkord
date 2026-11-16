@@ -5,7 +5,7 @@ import { useUnreadNotifications } from './useUnreadNotifications';
 
 export function AppBadgeSync() {
   // the server counts the icon from the same settings, so a mute changed anywhere refreshes it too
-  const { unreadByConversation, messagesByConversation, notificationsEnabled, notificationSettings } = useRoom();
+  const { unreadByConversation, messagesByConversation, notificationsEnabled, notificationSettings } = useRoom('unreadByConversation', 'messagesByConversation', 'notificationsEnabled', 'notificationSettings');
   const { unread } = useUnreadNotifications();
   const messageUnread = useMemo(() => [...unreadByConversation.values()].reduce((total, count) => total + count, 0), [unreadByConversation]);
   const newestMessageId = useMemo(() => [...messagesByConversation.values()].reduce((latest, messages) => Math.max(latest, messages.at(-1)?.msgId ?? 0), 0), [messagesByConversation]);

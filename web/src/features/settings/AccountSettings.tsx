@@ -2,7 +2,7 @@ import { SignOutIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '@/state/AuthContext';
-import { useRoom } from '@/state/RoomContext';
+import { useRoom, useRoomState } from '@/state/RoomContext';
 import { Button } from '@/shared/ui/primitives/button';
 import { DeleteAccountSettings } from './DeleteAccountSettings';
 import { EmailSettings } from './EmailSettings';
@@ -11,7 +11,8 @@ import { SETTINGS_ACTION_BUTTON, SettingsRow, SettingsSection, SettingsSections 
 
 export function AccountSettings({ onOpenProfile }: { onOpenProfile: (userId: string) => void }) {
   const { t } = useTranslation('settings');
-  const { state, activeCallConversationId } = useRoom();
+  const { activeCallConversationId } = useRoom('activeCallConversationId');
+  const state = useRoomState('me');
   const { logout, user } = useAuth();
   const inCall = activeCallConversationId !== null;
 

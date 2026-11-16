@@ -26,7 +26,7 @@ interface ChatSearchDialogProps {
 }
 
 function SearchResultRow({ result, showConversation, onSelect }: { result: SearchResult; showConversation: boolean; onSelect: () => void }) {
-  const { allUsers, servers } = useRoom();
+  const { allUsers, servers } = useRoom('allUsers', 'servers');
   const author = result.id ? allUsers.get(result.id) : undefined;
   const displayedName = author?.displayName ?? result.name;
   const displayedAvatar = author?.avatar ?? result.avatar;
@@ -55,7 +55,7 @@ function SearchResultRow({ result, showConversation, onSelect }: { result: Searc
 
 export function ChatSearchDialog({ open, onOpenChange, activeConversationId, activeConversationName }: ChatSearchDialogProps) {
   const { t } = useTranslation('chat');
-  const { searchResults, searchLoading, searchError, clearSearchError, searchMessages, jumpToMessage } = useRoom();
+  const { searchResults, searchLoading, searchError, clearSearchError, searchMessages, jumpToMessage } = useRoom('searchResults', 'searchLoading', 'searchError', 'clearSearchError', 'searchMessages', 'jumpToMessage');
   const [query, setQuery] = useState('');
   const [scopeAll, setScopeAll] = useState(false);
   const debounceRef = useRef<number | null>(null);

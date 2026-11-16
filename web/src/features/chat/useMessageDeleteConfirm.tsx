@@ -8,7 +8,7 @@ import { useRoom } from '@/state/RoomContext';
  * out for someone clearing several messages in a row. */
 export function useMessageDeleteConfirm({ onConfirmed }: { onConfirmed?: () => void } = {}) {
   const { t } = useTranslation('chat');
-  const { deleteChatMessage } = useRoom();
+  const { deleteChatMessage } = useRoom('deleteChatMessage');
   // kept after closing so the text doesn't change while the dialog fades out
   const [target, setTarget] = useState<{ msgId: number; shiftHint: boolean } | null>(null);
   const [open, setOpen] = useState(false);

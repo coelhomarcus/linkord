@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { useRoom } from '../../state/RoomContext';
+import { useRoom, useRoomSelector, useRoomState } from '../../state/RoomContext';
 import { useParticipantMedia, useAttachTrack } from './useLiveKitTrack';
 import { loadCallVolume } from '../settings/useCallVolumePreference';
 import { loadDevicePreference } from '../settings/useDevicePreference';
@@ -7,8 +7,8 @@ import { useAudioPreferences } from './audioPreferences';
 import { getParticipantVolume, setParticipantVolume } from './participantVolume';
 
 function ParticipantAudio({ participantId }: { participantId: string }) {
-  const { state, audioRegistry, audioUnlocked, deafened } = useRoom();
-  const userId = state.participants.get(participantId)?.userId ?? null;
+  const { audioRegistry, audioUnlocked, deafened } = useRoom('audioRegistry', 'audioUnlocked', 'deafened');
+  const userId = useRoomSelector((room) => room.state.participants.get(participantId)?.userId ?? null);
   const media = useParticipantMedia(participantId);
   const { outputVolume } = useAudioPreferences();
   const micRef = useRef<HTMLAudioElement | null>(null);
@@ -68,7 +68,7 @@ function ParticipantAudio({ participantId }: { participantId: string }) {
 }
 
 export function ParticipantAudioLayer({ participantIds }: { participantIds: string[] }) {
-  const { state } = useRoom();
+  const state = useRoomState('me');
   return (
     <>
       {participantIds

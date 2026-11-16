@@ -148,7 +148,7 @@ function createPerIdentityStore<T>(compute: (room: Room, identity: string) => T,
 const mediaStore = createPerIdentityStore(readMedia, MEDIA_EVENTS);
 
 export function useParticipantMedia(identity: string): ParticipantMedia {
-  const { livekitRoom } = useRoom();
+  const { livekitRoom } = useRoom('livekitRoom');
   // Both callbacks MUST stay referentially stable across renders (not fresh
   // closures every time) — otherwise React treats "subscribe changed" as a
   // reason to unsubscribe/resubscribe on every render, and since `readMedia`
@@ -231,7 +231,7 @@ const qualityStore = createPerIdentityStore(readConnectionQuality, [RoomEvent.Co
  * screen tile (2 watchers, same identity) don't each register their own
  * room-wide listener for it. */
 export function useConnectionQuality(identity: string): ConnectionQuality {
-  const { livekitRoom } = useRoom();
+  const { livekitRoom } = useRoom('livekitRoom');
   const subscribe = useCallback((callback: () => void) => qualityStore.subscribe(livekitRoom, identity, callback), [livekitRoom, identity]);
   const getSnapshot = useCallback(() => qualityStore.getSnapshot(livekitRoom, identity), [livekitRoom, identity]);
   return useSyncExternalStore(subscribe, getSnapshot);

@@ -40,7 +40,7 @@ export function ProfileSidebar({ userId, owner, accent, initialTab = 'wall', sta
   onWallDraftChange?: (draft: WallDraft | null) => void;
 }) {
   const { t } = useTranslation('profile');
-  const { onlineUserIds } = useRoom();
+  const { onlineUserIds } = useRoom('onlineUserIds');
   const [tab, setTab] = useState<ProfileTab>(initialTab);
   const friends = details?.mutualFriends;
   const servers = details?.mutualServers;

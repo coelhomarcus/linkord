@@ -7,14 +7,15 @@ import { resetMyStickers, setMyStickersForTests } from '@/features/stickers/mySt
 import { resetFrequentExpressions } from '@/features/emoji/frequentExpressions';
 import { registerStickerEditorOpener } from '@/features/stickers/stickerEditorRequest';
 import { PERMISSIONS } from '@/features/servers/permissionBits';
-import { RoomContext, type RoomContextValue } from '@/state/RoomContext';
+import { type RoomContextValue } from '@/state/RoomContext';
+import { RoomStoreProvider } from '@/state/RoomStoreProvider';
 
 const hug = { id: 'a'.repeat(32), name: 'abraço', description: 'dois gatos', emoji: '🤗', animated: false, serverId: 's1' };
 const wave = { id: 'b'.repeat(32), name: 'tchau', description: '', emoji: '👋', animated: true, serverId: 's1' };
 
 function inRoom(children: ReactNode, permissions = 0) {
   const servers = [{ id: 's1', name: 'Equipe', icon: '', permissions }] as unknown as RoomContextValue['servers'];
-  return <RoomContext.Provider value={{ state: { me: { userId: 'me' } }, servers } as unknown as RoomContextValue}>{children}</RoomContext.Provider>;
+  return <RoomStoreProvider value={{ state: { me: { userId: 'me' } }, servers } as unknown as RoomContextValue}>{children}</RoomStoreProvider>;
 }
 
 beforeEach(() => {

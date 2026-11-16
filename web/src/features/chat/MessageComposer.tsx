@@ -13,7 +13,7 @@ import { ComposerAttachmentTray } from './ComposerAttachmentTray';
 import { useKeepPopoverWarm } from '@/shared/hooks/useKeepPopoverWarm';
 import { formatSizeLimit } from '@/shared/lib/formatBytes';
 import { cn } from '@/shared/lib/utils';
-import { useRoom } from '@/state/RoomContext';
+import { useRoom, useRoomState } from '@/state/RoomContext';
 import { readDraft, updateConversationDraft, useConversationDraft, type PendingAttachment } from './conversationDrafts';
 import { takeShare, useHasPendingShare } from './pendingShare';
 import { MAX_ATTACHMENTS_PER_MESSAGE } from '@/shared/types/protocol';
@@ -71,7 +71,8 @@ export interface MessageComposerHandle {
 
 export const MessageComposer = forwardRef<MessageComposerHandle, { conversationId: string }>(function MessageComposer({ conversationId }, ref) {
   const { t } = useTranslation('chat');
-  const { state, allUsers, conversations, servers, serverMemberRevision, sendChatMessage, sendSticker: sendStickerMessage, queueMessageWithFiles, sendTyping, replyingTo, setReplyingTo, compressImagesDefault, setCompressImagesDefault, maxAttachmentBytes, activeCallConversationId, callElsewhere } = useRoom();
+  const { allUsers, conversations, servers, serverMemberRevision, sendChatMessage, sendSticker: sendStickerMessage, queueMessageWithFiles, sendTyping, replyingTo, setReplyingTo, compressImagesDefault, setCompressImagesDefault, maxAttachmentBytes, activeCallConversationId, callElsewhere } = useRoom('allUsers', 'conversations', 'servers', 'serverMemberRevision', 'sendChatMessage', 'sendSticker', 'queueMessageWithFiles', 'sendTyping', 'replyingTo', 'setReplyingTo', 'compressImagesDefault', 'setCompressImagesDefault', 'maxAttachmentBytes', 'activeCallConversationId', 'callElsewhere');
+  const state = useRoomState('me', 'joined');
   const accountId = state.me.userId ?? '';
   const [draft, updateDraft] = useConversationDraft(accountId, conversationId);
   const { text, pendingFiles, attachError, voice: voiceTake } = draft;

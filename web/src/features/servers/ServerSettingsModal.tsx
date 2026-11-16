@@ -13,7 +13,7 @@ import { Switch } from '@/shared/ui/primitives/switch';
 import { describeApiError } from '@/shared/api/errorText';
 import { ROUTES } from '@/shared/lib/routes';
 import { cn } from '@/shared/lib/utils';
-import { useRoom } from '@/state/RoomContext';
+import { useRoom, useRoomState } from '@/state/RoomContext';
 import type { RoleSummary, ServerSummary } from '@/shared/types/protocol';
 import { ImageCropDialog } from '@/shared/ImageCropDialog';
 import { uploadCroppedProfileImage } from '@/shared/api/uploadCroppedProfileImage';
@@ -145,7 +145,8 @@ function PermissionSwitches({ value, onChange, disabled, grantable }: { value: n
 
 function Roles({ server }: { server: ServerSummary }) {
   const { t } = useTranslation('servers');
-  const { state, serverMemberRevision } = useRoom();
+  const { serverMemberRevision } = useRoom('serverMemberRevision');
+  const state = useRoomState('me');
   const me = state.me.userId;
   const sorted = [...server.roles].sort((a, b) => b.position - a.position);
   // open on the highest role this member can actually change
@@ -288,7 +289,8 @@ function Roles({ server }: { server: ServerSummary }) {
 
 function Members({ server, onOpenProfile }: { server: ServerSummary; onOpenProfile: (userId: string) => void }) {
   const { t } = useTranslation('servers');
-  const { state, serverMemberRevision } = useRoom();
+  const { serverMemberRevision } = useRoom('serverMemberRevision');
+  const state = useRoomState('me');
   const [members, setMembers] = useState<ServerMemberEntry[]>([]);
   const [confirm, setConfirm] = useState<{ kind: 'kick' | 'ban' | 'transfer'; member: ServerMemberEntry } | null>(null);
   const { error, run } = useAction();
@@ -431,7 +433,7 @@ function Bans({ server }: { server: ServerSummary }) {
 
 export function ServerSettingsModal({ server, onClose, onOpenProfile }: { server: ServerSummary; onClose: () => void; onOpenProfile: (userId: string) => void }) {
   const { t } = useTranslation('servers');
-  const { state } = useRoom();
+  const state = useRoomState('me');
   const navigate = useNavigate();
   type Tab = SettingsTab & { key: TabKey };
   // Discord's column: the server's own pages, then each group under its heading

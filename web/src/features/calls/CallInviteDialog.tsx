@@ -2,7 +2,8 @@ import { CheckIcon, MagnifyingGlassIcon } from '@phosphor-icons/react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useRoom } from '@/state/RoomContext';
+import { useRoom, useRoomState } from '@/state/RoomContext';
+import { useCallRoster } from './callRoster';
 import { Avatar } from '@/shared/Avatar';
 import { Button } from '@/shared/ui/primitives/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/ui/primitives/dialog';
@@ -33,16 +34,18 @@ function errorKey(err: unknown): 'failed' | 'notFriends' | 'alreadyInCall' | 'ra
  * bringing someone new into the group is the group invitation's job. */
 export function CallInviteDialog({ open, onOpenChange, conversationId }: CallInviteDialogProps) {
   const { t } = useTranslation('calls');
-  const { state, conversations, allUsers, friendUserIds, fullscreenElement } = useRoom();
+  const { conversations, allUsers, friendUserIds, fullscreenElement } = useRoom('conversations', 'allUsers', 'friendUserIds', 'fullscreenElement');
+  const state = useRoomState('me');
+  const roster = useCallRoster();
   const [query, setQuery] = useState('');
   const [rows, setRows] = useState<Map<string, RowState>>(new Map());
   const conversation = conversations.find((c) => c.id === conversationId);
 
   const inCall = useMemo(() => {
     const ids = new Set<string>();
-    for (const p of state.participants.values()) if (p.callConversationId === conversationId) ids.add(p.userId);
+    for (const p of roster.values()) if (p.callConversationId === conversationId) ids.add(p.userId);
     return ids;
-  }, [state.participants, conversationId]);
+  }, [roster, conversationId]);
   // the server's members: who could be in this voice channel (the server
   // still checks each one can connect there)
   const [members, setMembers] = useState<PublicUser[]>([]);

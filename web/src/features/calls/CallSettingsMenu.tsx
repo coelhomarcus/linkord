@@ -19,7 +19,7 @@ export function CallSettingsMenu({ triggerClassName }: CallSettingsMenuProps) {
   const { t } = useTranslation('calls');
   const {
     showTileBanners, setShowTileBanners, hideAudioOnlyTiles, setHideAudioOnlyTiles, showStats, setShowStats, fullscreenElement,
-  } = useRoom();
+  } = useRoom('showTileBanners', 'setShowTileBanners', 'hideAudioOnlyTiles', 'setHideAudioOnlyTiles', 'showStats', 'setShowStats', 'fullscreenElement');
   const label = t('controls.callSettings');
   const [open, setOpen] = useState(false);
 

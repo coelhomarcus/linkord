@@ -27,7 +27,7 @@ const FriendsContext = createContext<FriendsContextValue | null>(null);
 // Forward only server-provided friend data; do not reconstruct relationship state in the client.
 // payload-free signal as `socialRevision`, everything else lives here.
 export function FriendsProvider({ children }: { children: ReactNode }) {
-  const { socialRevision } = useRoom();
+  const { socialRevision } = useRoom('socialRevision');
   const [localBumps, setLocalBumps] = useState(0);
   const [focusReads, setFocusReads] = useState(0);
   const [summary, setSummary] = useState({ incoming: 0, invitations: 0 });

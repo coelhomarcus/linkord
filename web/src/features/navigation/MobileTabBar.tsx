@@ -10,7 +10,7 @@ import { serverUnread } from '@/features/servers/serverUtils';
 import { useContentLocation } from '@/shared/lib/contentLocation';
 import { ROUTES, isHomePath, serverIdFromPath } from '@/shared/lib/routes';
 import { AppLink } from '@/shared/ui/app-link';
-import { useRoom } from '@/state/RoomContext';
+import { useRoom, useRoomState } from '@/state/RoomContext';
 
 /** The phone's top-level sections. Switching one replaces the history entry:
  * they are siblings, so a back swipe leaves the section instead of walking
@@ -18,7 +18,8 @@ import { useRoom } from '@/state/RoomContext';
 export function MobileTabBar({ activeCallConversationId, onReturnToCall }: { activeCallConversationId: string | null; onReturnToCall: () => void }) {
   const { t } = useTranslation('navigation');
   const { pathname } = useContentLocation();
-  const { state, conversations, servers, badgeByConversation, allUsers } = useRoom();
+  const { conversations, servers, badgeByConversation, allUsers } = useRoom('conversations', 'servers', 'badgeByConversation', 'allUsers');
+  const state = useRoomState('me');
   const { pendingIncomingCount } = useFriends();
   const { unread: notificationsUnread } = useUnreadNotifications();
   const directUnread = useMemo(

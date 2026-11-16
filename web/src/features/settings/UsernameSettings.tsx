@@ -4,7 +4,7 @@ import type { FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '@/state/AuthContext';
-import { useRoom } from '@/state/RoomContext';
+import { useRoom, useRoomState } from '@/state/RoomContext';
 import { ApiError, changeUsername } from '@/shared/api/api';
 import { describeApiError } from '@/shared/api/errorText';
 import { ERROR_CODES } from '@/shared/api/errorCodes';
@@ -31,7 +31,8 @@ function describeSaveError(err: unknown): string {
  * signs in from then on. */
 export function UsernameSettings() {
   const { t } = useTranslation('settings');
-  const { state, dispatch } = useRoom();
+  const { dispatch } = useRoom('dispatch');
+  const state = useRoomState('me');
   const { refresh } = useAuth();
   const current = state.me.name;
   const [open, setOpen] = useState(false);

@@ -1,5 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router';
-import { useRoom } from '@/state/RoomContext';
+import { useRoomState } from '@/state/RoomContext';
 import { ROUTES } from '@/shared/lib/routes';
 import { AuditPage } from './AuditPage';
 import { AdminLayout } from './AdminLayout';
@@ -27,7 +27,7 @@ function AdminEntry() {
 
 /** Loaded on demand under the app shell; server endpoints enforce admin access independently. */
 export default function AdminArea() {
-  const { state } = useRoom();
+  const state = useRoomState('me');
   if (state.me.role !== 'admin') return <Navigate to={ROUTES.home} replace />;
 
   return (

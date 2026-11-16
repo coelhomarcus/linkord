@@ -8,7 +8,7 @@ import {
 import { cn } from '@/shared/lib/utils';
 import { CopyLabel, CopyStatusIcon } from '@/shared/CopyFeedback';
 import { useCopyToClipboard } from '@/shared/hooks/useCopyToClipboard';
-import { useRoom } from '@/state/RoomContext';
+import { useRoom, useRoomState } from '@/state/RoomContext';
 import type { PresenceStatus } from '@/shared/types/protocol';
 import { ProfileCard } from '@/features/profile/ProfileCard';
 import { StatusDot } from './StatusDot';
@@ -33,7 +33,8 @@ export function StatusMenu({ trigger, onOpenProfile, side = 'top', onError }: {
   onError: (message: string) => void;
 }) {
   const { t } = useTranslation('status');
-  const { state, ownStatus, setPresence, reconnecting } = useRoom();
+  const { ownStatus, setPresence, reconnecting } = useRoom('ownStatus', 'setPresence', 'reconnecting');
+  const state = useRoomState('me');
   const [open, setOpen] = useState(false);
   const [statusMenuOpen, setStatusMenuOpen] = useState(false);
   const { copied, copy } = useCopyToClipboard();

@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Avatar } from '@/shared/Avatar';
 import { cn } from '@/shared/lib/utils';
-import { useRoom } from '@/state/RoomContext';
+import { useRoom, useRoomState } from '@/state/RoomContext';
 import { useIsSpeaking } from './useLiveKitTrack';
 import { participantMicMuted, useOwnMic } from './micState';
 import { tileKey } from './tileTypes';
@@ -31,7 +31,8 @@ interface DmCallAvatarProps {
  * while they talk and a red badge while they are muted or deafened. */
 export function DmCallAvatar({ peer, isMine, size, loading = false }: DmCallAvatarProps) {
   const { t } = useTranslation('calls');
-  const { state, deafened, openTileMenu } = useRoom();
+  const { deafened, openTileMenu } = useRoom('deafened', 'openTileMenu');
+  const state = useRoomState('participants');
   const myMic = useOwnMic();
   const speaking = useIsSpeaking(peer.id);
   const participant = isMine ? null : state.participants.get(peer.id);

@@ -2,7 +2,7 @@ import { ArrowLeftIcon, VideoCameraSlashIcon } from '@phosphor-icons/react';
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useRoom } from '../../state/RoomContext';
+import { useRoom, useRoomState } from '../../state/RoomContext';
 import { useCallTiles } from './useCallTiles';
 import { useAutoFocusScreenShare } from './useAutoFocusScreenShare';
 import { TileGrid } from './TileGrid';
@@ -25,7 +25,8 @@ const BAR_GRID_GAP = 12;
 
 export function Stage({ allIds, onBack }: StageProps) {
   const { t } = useTranslation('calls');
-  const { state, dispatch, hideAudioOnlyTiles, setHideAudioOnlyTiles, callStageRef, activeCallConversationId, conversations } = useRoom();
+  const { dispatch, hideAudioOnlyTiles, setHideAudioOnlyTiles, callStageRef, activeCallConversationId, conversations } = useRoom('dispatch', 'hideAudioOnlyTiles', 'setHideAudioOnlyTiles', 'callStageRef', 'activeCallConversationId', 'conversations');
+  const state = useRoomState('focusOrigin', 'focusedId');
   const allDescriptors = useCallTiles(allIds);
   const descriptors = hideAudioOnlyTiles ? allDescriptors.filter((d) => d.kind !== 'avatar') : allDescriptors;
   const focusScreenShare = useCallback((key: string) => dispatch({ type: 'SET_FOCUSED', id: key, origin: 'automatic' }), [dispatch]);

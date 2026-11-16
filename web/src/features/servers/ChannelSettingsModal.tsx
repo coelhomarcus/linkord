@@ -20,7 +20,7 @@ import { uploadCroppedProfileImage } from '@/shared/api/uploadCroppedProfileImag
 import { bitOf, channelPermissionNames } from './permissionCatalog';
 import { hasPermission, PERMISSIONS } from './permissionBits';
 import { canManageRole, grantableBits } from './roleHierarchy';
-import { useRoom } from '@/state/RoomContext';
+import { useRoomState } from '@/state/RoomContext';
 import { SectionTitle, SettingsShell, type SettingsTab } from './SettingsShell';
 import {
   createWebhook, deleteChannel, deleteWebhook, fetchOverwrites, fetchWebhooks, rotateWebhook, setOverwrite, updateChannel, updateWebhook,
@@ -53,7 +53,7 @@ function TriState({ value, onChange, disabled }: { value: Tri; onChange: (next: 
 
 function Permissions({ server, channel }: { server: ServerSummary; channel: ChannelSummary }) {
   const { t } = useTranslation('servers');
-  const { state } = useRoom();
+  const state = useRoomState('me');
   const roles = [...server.roles].sort((a, b) => b.position - a.position);
   // what the server lets this member put in a channel's overwrite: bits they hold there
   const grantable = hasPermission(server.permissions, PERMISSIONS.ADMINISTRATOR) ? grantableBits(server) : channel.permissions;

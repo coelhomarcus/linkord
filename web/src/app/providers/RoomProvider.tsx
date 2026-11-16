@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useReducer } from 'r
 import type { ReactNode } from 'react';
 import { Room } from 'livekit-client';
 import type { Socket } from 'socket.io-client';
-import { RoomContext } from '@/state/RoomContext';
+import { RoomStoreProvider } from '@/state/RoomStoreProvider';
 import type { AudioHandle, TileDomHandle } from '@/state/RoomContext';
 import { roomReducer, initialRoomState } from '@/state/roomReducer';
 import { useAuth } from '@/state/AuthContext';
@@ -26,6 +26,7 @@ import { useCallLifecycle } from '@/features/calls/useCallLifecycle';
 import { useDmCall } from '@/features/calls/useDmCall';
 import { useCallMoveGate } from '@/features/calls/useCallMoveGate';
 import { findCallElsewhere } from '@/features/calls/callElsewhere';
+import { useStableRoster } from '@/features/calls/callRoster';
 import { captureScreenPreview } from '@/features/calls/captureScreenPreview';
 import { streamPreviewStore } from '@/features/calls/streamPreviewStore';
 import { useRoomSettings } from '@/features/settings/useRoomSettings';
@@ -111,6 +112,8 @@ export function RoomProvider({ children }: { children: ReactNode }) {
   // actor may not do, a quota) — shown as a banner, since nothing else waits on it
   const [actionError, setActionError] = useState<string | null>(null);
   const [accessNotice, setAccessNotice] = useState<string | null>(null);
+  const clearActionError = useCallback(() => setActionError(null), []);
+  const clearAccessNotice = useCallback(() => setAccessNotice(null), []);
   // bumped whenever the server says friends/requests/blocks changed — the
   // friends feature refetches its own lists off this, so social state never
   // has to live inside the room reducer
@@ -188,14 +191,19 @@ export function RoomProvider({ children }: { children: ReactNode }) {
   });
   // The server keeps an account in one call: the one another tab or device is in shows in this tab,
   // and taking it from there is asked first.
+  const roster = useStableRoster(state.participants);
   const callElsewhere = useMemo(
-    () => findCallElsewhere(state.participants.values(), { id: state.me.id, userId: state.me.userId }, allConversations),
-    [state.participants, state.me.id, state.me.userId, allConversations],
+    () => findCallElsewhere(roster.values(), { id: state.me.id, userId: state.me.userId }, allConversations),
+    [roster, state.me.id, state.me.userId, allConversations],
   );
   const callElsewhereRef = useRef(callElsewhere);
   useEffect(() => { callElsewhereRef.current = callElsewhere; }, [callElsewhere]);
   const callMove = useCallMoveGate(() => callElsewhereRef.current !== null);
   const { request: requestCall, onRefused: onCallElsewhereRefused } = callMove;
+  const callMoveDialog = useMemo(
+    () => ({ open: callMove.open, confirm: callMove.confirm, cancel: callMove.cancel }),
+    [callMove.open, callMove.confirm, callMove.cancel],
+  );
   const { joinCall: joinCallNow } = callLifecycle;
   const { startDmCall: startDmCallNow, acceptDmCall: acceptDmCallNow } = dmCall;
   const joinCall = useCallback((conversationId: string, hooks?: { onSent?: () => void; onDropped?: () => void }) => {
@@ -557,7 +565,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
   }, [livekitRoom]);
 
   return (
-    <RoomContext.Provider
+    <RoomStoreProvider
       value={{
         state, dispatch, sendWs, retryConnection, tileDomRegistry, audioRegistry,
         callStageRef, isCallFullscreen, toggleCallFullscreen, fullscreenElement,
@@ -567,7 +575,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         livekitRoom, notifyActiveView,
         registerRequestChatView, requestChatView, registerOpenCall, openCall,
         activeCallConversationId: callLifecycle.activeCallConversationId, joinCall, leaveCall: callLifecycle.leaveCall,
-        callElsewhere, callMove: { open: callMove.open, confirm: callMove.confirm, cancel: callMove.cancel },
+        callElsewhere, callMove: callMoveDialog,
         startDmCall, acceptDmCall, declineDmCall: dmCall.declineDmCall, cancelDmCall: dmCall.cancelDmCall, dismissDmCallNotice: dmCall.dismissDmCallNotice,
         dmCall: dmCall.dmCall, dmStartedAt: dmCall.dmStartedAt, dmStageConversationId: dmCall.dmStageConversationId, clearDmStage: dmCall.clearDmStage,
         startSharing, stopSharing, changeSource, pauseSharePreview, resumeSharePreview,
@@ -605,8 +613,8 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         presenceByUser: presence.presenceByUser, ownStatus, setPresence,
         activitySettings: activitySettings.settings, updateActivitySettings: activitySettings.update,
         kickFromCall: callLifecycle.kickFromCall, moveToCall: callLifecycle.moveToCall,
-        actionError, clearActionError: () => setActionError(null),
-        accessNotice, clearAccessNotice: () => setAccessNotice(null),
+        actionError, clearActionError,
+        accessNotice, clearAccessNotice,
         socialRevision,
         sendChatMessage: chatMessages.sendChatMessage, sendSticker: chatMessages.sendSticker, deleteChatMessage: chatMessages.deleteChatMessage,
         pendingByConversation: chatMessages.pendingByConversation,
@@ -629,6 +637,6 @@ export function RoomProvider({ children }: { children: ReactNode }) {
       }}
     >
       {children}
-    </RoomContext.Provider>
+    </RoomStoreProvider>
   );
 }

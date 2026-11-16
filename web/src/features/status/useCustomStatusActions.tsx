@@ -6,7 +6,7 @@ import { CustomStatusDialog } from './CustomStatusDialog';
 /** What the owner's CustomStatusBubble needs: open the editor, clear the status, and the editor
  * itself (`dialog`), which the caller renders somewhere that outlives a closing popover. */
 export function useCustomStatusActions(onError: (message: string) => void) {
-  const { setPresence } = useRoom();
+  const { setPresence } = useRoom('setPresence');
   const [editorOpen, setEditorOpen] = useState(false);
 
   function clear() {

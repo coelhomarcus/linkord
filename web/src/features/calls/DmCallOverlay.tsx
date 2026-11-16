@@ -10,7 +10,7 @@ import { useRoom } from '@/state/RoomContext';
 
 export function DmCallOverlay() {
   const { t } = useTranslation('calls');
-  const { dmCall, acceptDmCall, declineDmCall, cancelDmCall, dismissDmCallNotice, allUsers } = useRoom();
+  const { dmCall, acceptDmCall, declineDmCall, cancelDmCall, dismissDmCallNotice, allUsers } = useRoom('dmCall', 'acceptDmCall', 'declineDmCall', 'cancelDmCall', 'dismissDmCallNotice', 'allUsers');
   const popupRef = useRef<HTMLDivElement>(null);
   const ringPhase = dmCall?.phase === 'incoming' || dmCall?.phase === 'outgoing' ? dmCall.phase : null;
   const ringCallId = ringPhase ? dmCall?.callId : null;

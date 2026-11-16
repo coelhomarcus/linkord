@@ -4,7 +4,8 @@ import type { CSSProperties } from 'react';
 import type { Location } from 'react-router';
 import { MotionConfig } from 'motion/react';
 import { RoomProvider } from '@/app/providers/RoomProvider';
-import { useRoom } from '@/state/RoomContext';
+import { useRoom, useRoomState } from '@/state/RoomContext';
+import { useCallRoster } from '@/features/calls/callRoster';
 import { AuthProvider, useAuth } from '@/state/AuthContext';
 import { AuthScreen } from '@/features/auth/AuthScreen';
 import { EmailRequiredModal } from '@/features/auth/EmailRequiredModal';
@@ -81,7 +82,7 @@ const DEFAULT_CONTENT_LOCATION: Location = { pathname: ROUTES.home, search: '', 
  * so an old conversation URL still finds what it named. */
 function LegacyConversationRedirect() {
   const { conversationId = '' } = useParams();
-  const { conversations } = useRoom();
+  const { conversations } = useRoom('conversations');
   const conversation = conversations.find((c) => c.id === conversationId);
   return <Navigate to={conversation ? conversationPath(conversation) : ROUTES.home} replace />;
 }
@@ -100,11 +101,13 @@ function currentPath(): string {
 
 function Shell() {
   const {
-    state, dispatch, livekitRoom, closeTileMenu, sendWs, retryConnection, notifyActiveView, registerRequestChatView, registerOpenCall,
+    dispatch, livekitRoom, closeTileMenu, sendWs, retryConnection, notifyActiveView, registerRequestChatView, registerOpenCall,
     activeCallConversationId, activeConversationId, joinCall, leaveCall, toggleMicMuted, conversations, allUsers, servers,
     dmStageConversationId, clearDmStage, dmCall,
     serverMemberRevision, setServerMemberSnapshot,
-  } = useRoom();
+  } = useRoom('dispatch', 'livekitRoom', 'closeTileMenu', 'sendWs', 'retryConnection', 'notifyActiveView', 'registerRequestChatView', 'registerOpenCall', 'activeCallConversationId', 'activeConversationId', 'joinCall', 'leaveCall', 'toggleMicMuted', 'conversations', 'allUsers', 'servers', 'dmStageConversationId', 'clearDmStage', 'dmCall', 'serverMemberRevision', 'setServerMemberSnapshot');
+  const state = useRoomState('roomError', 'me', 'joined', 'callJoinError', 'focusedId', 'clientOutdated', 'reconnecting');
+  const roster = useCallRoster();
   const roomError = state.roomError;
   const navigate = useNavigate();
   const location = useLocation();
@@ -173,8 +176,8 @@ function Shell() {
   });
 
   const callIds = useMemo(
-    () => callParticipantIds(state.me.id, state.participants, activeCallConversationId),
-    [activeCallConversationId, state.me.id, state.participants]
+    () => callParticipantIds(state.me.id, roster, activeCallConversationId),
+    [activeCallConversationId, state.me.id, roster]
   );
 
   /** Where a call shows: a voice channel's own URL, or the DM the call belongs to. */

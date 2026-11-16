@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useRoom } from '@/state/RoomContext';
+import { useRoom, useRoomState } from '@/state/RoomContext';
 import type { ServerSummary } from '@/shared/types/protocol';
 import { fetchAllServerMembers, type ServerMemberEntry } from './serversApi';
 import { Skeleton, SkeletonGroup } from '@/shared/ui/primitives/skeleton';
@@ -30,7 +30,8 @@ export function groupMembers(server: ServerSummary, members: ServerMemberEntry[]
  * animation: nothing is fetched until it is shown. */
 export function MemberListPanel({ server, onOpenProfile, active = true }: { server: ServerSummary; onOpenProfile: (userId: string) => void; active?: boolean }) {
   const { t } = useTranslation('servers');
-  const { state, onlineUserIds, serverMemberRevision, allUsers, setServerMemberSnapshot, ownStatus } = useRoom();
+  const { onlineUserIds, serverMemberRevision, allUsers, setServerMemberSnapshot, ownStatus } = useRoom('onlineUserIds', 'serverMemberRevision', 'allUsers', 'setServerMemberSnapshot', 'ownStatus');
+  const state = useRoomState('me');
   const revision = serverMemberRevision.get(server.id) ?? 0;
   const [members, setMembers] = useState<ServerMemberEntry[] | null>(null);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);

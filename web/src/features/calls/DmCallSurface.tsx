@@ -1,6 +1,6 @@
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import type { RefObject } from 'react';
-import { useRoom } from '@/state/RoomContext';
+import { useRoom, useRoomState } from '@/state/RoomContext';
 import { CallControlBar } from './CallControlBar';
 import { DmCallAvatar } from './DmCallAvatar';
 import type { DmCallPeer } from './DmCallAvatar';
@@ -31,7 +31,8 @@ function useSize(ref: RefObject<HTMLElement | null>) {
 /** The private call inside its DM, laid out like Discord's: only a screen
  * share or a live camera is a video tile, everyone else stays a round avatar. */
 export function DmCallSurface({ participantIds, peers }: { participantIds: string[]; peers: DmCallPeer[] }) {
-  const { state, dispatch } = useRoom();
+  const { dispatch } = useRoom('dispatch');
+  const state = useRoomState('focusOrigin', 'focusedId', 'me');
   const descriptors = useCallTiles(participantIds);
   const focusScreenShare = useCallback((key: string) => dispatch({ type: 'SET_FOCUSED', id: key, origin: 'automatic' }), [dispatch]);
   useAutoFocusScreenShare(descriptors, state.focusOrigin, focusScreenShare);

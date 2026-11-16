@@ -13,7 +13,7 @@ import { Avatar } from '@/shared/Avatar';
 import { cn } from '@/shared/lib/utils';
 import { useContentLocation } from '@/shared/lib/contentLocation';
 import { CountBadge } from '@/shared/CountBadge';
-import { useRoom } from '@/state/RoomContext';
+import { useRoom, useRoomState } from '@/state/RoomContext';
 import type { Conversation } from '@/shared/types/protocol';
 import { ROUTES, conversationIdFromPath, isHomePath, serverIdFromPath } from '@/shared/lib/routes';
 import { useFriends } from '@/features/friends/FriendsContext';
@@ -30,7 +30,8 @@ function DirectRow({ conversation, active, onClick, onClose }: {
 }) {
   const { t } = useTranslation('conversations');
   const { t: tn } = useTranslation('notifications');
-  const { state, allUsers, badgeByConversation, notificationPolicyFor, activeCallConversationId } = useRoom();
+  const { allUsers, badgeByConversation, notificationPolicyFor, activeCallConversationId } = useRoom('allUsers', 'badgeByConversation', 'notificationPolicyFor', 'activeCallConversationId');
+  const state = useRoomState('me');
   const title = conversationTitle(conversation, state.me.userId, allUsers);
   const other = directUser(conversation, state.me.userId, allUsers);
   const unread = badgeByConversation.get(conversation.id) ?? 0;
@@ -94,7 +95,8 @@ function DirectRow({ conversation, active, onClick, onClose }: {
 /** Home's column: find a conversation, Friends, and the DMs. */
 function DirectList({ onNavigate }: { onNavigate: () => void }) {
   const { t } = useTranslation('conversations');
-  const { state, conversations, allUsers, closeConversation } = useRoom();
+  const { conversations, allUsers, closeConversation } = useRoom('conversations', 'allUsers', 'closeConversation');
+  const state = useRoomState('me');
   const { pendingIncomingCount } = useFriends();
   const { isMobile } = useSidebar();
   const navigate = useNavigate();
@@ -181,7 +183,7 @@ function DirectList({ onNavigate }: { onNavigate: () => void }) {
  * it is the main page of the Servers/Messages tabs, drawn next to the rail. */
 export function ConversationSidebar({ onOpenProfile }: { onOpenProfile: (userId: string) => void }) {
   const { t } = useTranslation('conversations');
-  const { servers } = useRoom();
+  const { servers } = useRoom('servers');
   const { isMobile, isOverlay, setOpenMobile } = useSidebar();
   const { pathname } = useContentLocation();
   const serverId = serverIdFromPath(pathname);

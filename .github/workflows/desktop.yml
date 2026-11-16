@@ -1,9 +1,9 @@
-name: Desktop installers
+name: Desktop installer
 
-# Builds the desktop installers for one server, by hand from the Actions tab.
-# Each system builds its own: only macOS can make the dmg. Nothing is signed
+# Builds the Windows installer for one server, by hand from the Actions tab;
+# Windows is the only system the app ships for. Nothing is signed
 # (docs/DEPLOY.md, "Desktop app"), so the jobs need no secrets. With `release`
-# they also become a draft GitHub release, which is where installed apps look
+# it also becomes a draft GitHub release, which is where installed apps look
 # for updates once it is published.
 on:
   workflow_dispatch:
@@ -13,7 +13,7 @@ on:
         type: string
         required: true
       release:
-        description: Create a draft release v<desktop/package.json version> with the installers
+        description: Create a draft release v<desktop/package.json version> with the installer
         type: boolean
         default: false
 
@@ -22,22 +22,9 @@ permissions:
 
 jobs:
   package:
-    name: Package (${{ matrix.name }})
-    runs-on: ${{ matrix.os }}
+    name: Package (windows)
+    runs-on: windows-latest
     timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: macos
-            os: macos-latest
-            target: --mac
-          - name: windows
-            os: windows-latest
-            target: --win
-          - name: linux
-            os: ubuntu-latest
-            target: --linux
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -49,21 +36,18 @@ jobs:
       # scripts/package.mjs refuses a missing or non-https address before
       # electron-builder runs; the input goes through env so it never becomes shell
       - name: Package
-        run: npm run package --prefix desktop -- ${{ matrix.target }}
+        run: npm run package --prefix desktop
         env:
           LINKORD_URL: ${{ inputs.url }}
           # the apps look for updates in this repository's releases
           LINKORD_UPDATE_REPO: ${{ github.repository }}
-      - name: Upload installers
+      - name: Upload installer
         uses: actions/upload-artifact@v7
         with:
-          name: linkord-desktop-${{ matrix.name }}
+          name: linkord-desktop-windows
           if-no-files-found: error
           path: |
-            desktop/release/*.dmg
             desktop/release/*.exe
-            desktop/release/*.AppImage
-            desktop/release/*.deb
             desktop/release/*.blockmap
             desktop/release/latest*.yml
 
@@ -79,9 +63,8 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/download-artifact@v7
         with:
-          pattern: linkord-desktop-*
+          name: linkord-desktop-windows
           path: installers
-          merge-multiple: true
       # Fails when the version already has a release: bump desktop/package.json first
       - name: Create draft release
         run: |

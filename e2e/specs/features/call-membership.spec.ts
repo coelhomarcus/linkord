@@ -104,6 +104,28 @@ async function watchForTile(app: AppPage, username: string): Promise<void> {
 // The server sweeps its rooms every 15 s; an identity it already removed goes on the first sweep.
 const SWEEP_WINDOW_MS = 35_000;
 
+const sawTile = (app: AppPage) => app.page.evaluate(() => (window as unknown as { sawTile: boolean }).sawTile);
+
+/**
+ * Connects the kept client until `app` shows it. LiveKit announces a participant that publishes
+ * nothing on the room's next 3 s batch tick, and a leave replaces a join still waiting for it: a
+ * connection the sweep removes before that tick is never announced, so no screen can show it.
+ * Coming back right after a sweep leaves the next one 15 s away, well past a tick.
+ */
+async function connectUntilSeen(kept: KeptTokenClient, token: CallToken, app: AppPage): Promise<void> {
+  for (let attempt = 1; ; attempt++) {
+    await kept.connect(token, 'retry');
+    let outcome = '';
+    await expect.poll(async () => {
+      if (await sawTile(app)) return (outcome = 'seen');
+      const s = await kept.state();
+      return (outcome = s.connected ? 'waiting' : 'removed unseen');
+    }, { timeout: SWEEP_WINDOW_MS }).not.toBe('waiting');
+    if (outcome === 'seen') return;
+    if (attempt === 3) throw new Error('the kept client was removed before any screen showed it, three times');
+  }
+}
+
 test.describe('call membership on LiveKit', () => {
   test('a client that leaves over the socket but keeps its token is removed from the room, and shown while it is there', async ({ users, browser }) => {
     const { bob, a, b, bobToken } = await twoInVoice(users);
@@ -115,13 +137,12 @@ test.describe('call membership on LiveKit', () => {
       await expect(b.page.getByText('Em chamada')).toHaveCount(0);
       await kept.expectRemoved(10_000);
 
-      // The token is still valid: coming back with it works, but never unseen and not for long.
+      // The token is still valid: coming back with it works, but not for long, and it is shown.
       // The sweep can land any moment after connecting, so the tile may live too briefly to be
       // caught visible: Alice's page records whether it ever showed one.
       await expect(a.participant(bob.username)).toHaveCount(0);
       await watchForTile(a, bob.username);
-      await kept.connect(bobToken, 'retry');
-      await expect.poll(() => a.page.evaluate(() => (window as unknown as { sawTile: boolean }).sawTile), { timeout: 20_000 }).toBe(true);
+      await connectUntilSeen(kept, bobToken, a);
       await kept.expectRemoved(SWEEP_WINDOW_MS);
       await expect(a.participant(bob.username)).toHaveCount(0);
     } finally {

@@ -3,7 +3,7 @@ import { act, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { RoomEvent, Track } from 'livekit-client';
 import type { Room } from 'livekit-client';
-import { RoomContext } from '@/state/RoomContext';
+import { RoomStoreProvider } from '@/state/RoomStoreProvider';
 import { createFakeRoomContextValue } from '@tests/fixtures/roomContextFixture';
 import { useCallTiles } from '@/features/calls/useCallTiles';
 
@@ -51,7 +51,7 @@ describe('useCallTiles', () => {
   it("alone and without a microphone, one's own tile appears as soon as the connection completes", () => {
     const livekitRoom = fakeRoom();
     const wrapper = ({ children }: { children: ReactNode }) => (
-      <RoomContext.Provider value={createFakeRoomContextValue({ livekitRoom })}>{children}</RoomContext.Provider>
+      <RoomStoreProvider value={createFakeRoomContextValue({ livekitRoom })}>{children}</RoomStoreProvider>
     );
     const { result } = renderHook(() => useCallTiles(['me']), { wrapper });
     expect(result.current).toEqual([]);
@@ -67,7 +67,7 @@ describe('useCallTiles', () => {
     livekitRoom.addRemote('bia');
     livekitRoom.addRemote('stray');
     const wrapper = ({ children }: { children: ReactNode }) => (
-      <RoomContext.Provider value={createFakeRoomContextValue({ livekitRoom })}>{children}</RoomContext.Provider>
+      <RoomStoreProvider value={createFakeRoomContextValue({ livekitRoom })}>{children}</RoomStoreProvider>
     );
     const { result } = renderHook(() => useCallTiles(['bia']), { wrapper });
 
@@ -78,7 +78,7 @@ describe('useCallTiles', () => {
     const livekitRoom = fakeRoom();
     const remote = livekitRoom.addRemote('bia');
     const wrapper = ({ children }: { children: ReactNode }) => (
-      <RoomContext.Provider value={createFakeRoomContextValue({ livekitRoom })}>{children}</RoomContext.Provider>
+      <RoomStoreProvider value={createFakeRoomContextValue({ livekitRoom })}>{children}</RoomStoreProvider>
     );
     const { result } = renderHook(() => useCallTiles(['bia']), { wrapper });
     act(() => { livekitRoom.emit(RoomEvent.ParticipantConnected); });
@@ -95,7 +95,7 @@ describe('useCallTiles', () => {
     const livekitRoom = fakeRoom();
     const remote = livekitRoom.addRemote('bia');
     const wrapper = ({ children }: { children: ReactNode }) => (
-      <RoomContext.Provider value={createFakeRoomContextValue({ livekitRoom })}>{children}</RoomContext.Provider>
+      <RoomStoreProvider value={createFakeRoomContextValue({ livekitRoom })}>{children}</RoomStoreProvider>
     );
     const { result } = renderHook(() => useCallTiles(['bia']), { wrapper });
 
@@ -115,7 +115,7 @@ describe('useCallTiles', () => {
     const livekitRoom = fakeRoom();
     const remote = livekitRoom.addRemote('bia');
     const wrapper = ({ children }: { children: ReactNode }) => (
-      <RoomContext.Provider value={createFakeRoomContextValue({ livekitRoom })}>{children}</RoomContext.Provider>
+      <RoomStoreProvider value={createFakeRoomContextValue({ livekitRoom })}>{children}</RoomStoreProvider>
     );
     const { result } = renderHook(() => useCallTiles(['bia']), { wrapper });
 
@@ -129,7 +129,7 @@ describe('useCallTiles', () => {
     const livekitRoom = fakeRoom();
     const remote = livekitRoom.addRemote('bia');
     const wrapper = ({ children }: { children: ReactNode }) => (
-      <RoomContext.Provider value={createFakeRoomContextValue({ livekitRoom })}>{children}</RoomContext.Provider>
+      <RoomStoreProvider value={createFakeRoomContextValue({ livekitRoom })}>{children}</RoomStoreProvider>
     );
     const { result } = renderHook(() => useCallTiles(['bia']), { wrapper });
 
@@ -144,7 +144,7 @@ describe('useCallTiles', () => {
     const livekitRoom = fakeRoom();
     const remote = livekitRoom.addRemote('bia');
     const wrapper = ({ children }: { children: ReactNode }) => (
-      <RoomContext.Provider value={createFakeRoomContextValue({ livekitRoom })}>{children}</RoomContext.Provider>
+      <RoomStoreProvider value={createFakeRoomContextValue({ livekitRoom })}>{children}</RoomStoreProvider>
     );
     const { result } = renderHook(() => useCallTiles(['bia']), { wrapper });
 
@@ -163,7 +163,7 @@ describe('useCallTiles', () => {
     const livekitRoom = fakeRoom();
     const remote = livekitRoom.addRemote('bia');
     const wrapper = ({ children }: { children: ReactNode }) => (
-      <RoomContext.Provider value={createFakeRoomContextValue({ livekitRoom })}>{children}</RoomContext.Provider>
+      <RoomStoreProvider value={createFakeRoomContextValue({ livekitRoom })}>{children}</RoomStoreProvider>
     );
     const { result } = renderHook(() => useCallTiles(['bia']), { wrapper });
 

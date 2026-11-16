@@ -15,7 +15,8 @@ import { useSidebar } from '@/shared/ui/motion/sidebar-context';
 import { CountBadge } from '@/shared/CountBadge';
 import { Avatar } from '@/shared/Avatar';
 import { useFriends } from '@/features/friends/FriendsContext';
-import { useRoom } from '@/state/RoomContext';
+import { useRoom, useRoomState } from '@/state/RoomContext';
+import { useCallRoster } from '@/features/calls/callRoster';
 import { ServerIcon } from './ServerIcon';
 import { CreateServerDialog } from './CreateServerDialog';
 import { liveCallIds, serverHasLiveCall, serverUnread } from './serverUtils';
@@ -128,8 +129,10 @@ export function ServerRail({ className }: { className?: string }) {
   const { t } = useTranslation('servers');
   const navigate = useNavigate();
   const { pathname } = useContentLocation();
-  const { state, servers, conversations, badgeByConversation, reorderServers, activeCallConversationId, allUsers, dmCall } = useRoom();
-  const callIds = useMemo(() => liveCallIds(state.participants.values(), activeCallConversationId), [state.participants, activeCallConversationId]);
+  const { servers, conversations, badgeByConversation, reorderServers, activeCallConversationId, allUsers, dmCall } = useRoom('servers', 'conversations', 'badgeByConversation', 'reorderServers', 'activeCallConversationId', 'allUsers', 'dmCall');
+  const state = useRoomState('me');
+  const roster = useCallRoster();
+  const callIds = useMemo(() => liveCallIds(roster.values(), activeCallConversationId), [roster, activeCallConversationId]);
   // a press only becomes a drag past a few pixels, so a click still opens the server
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   const draggedAtRef = useRef(0);

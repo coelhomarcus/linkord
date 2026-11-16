@@ -26,7 +26,7 @@ const SEARCH_DEBOUNCE_MS = 300;
 
 export function ConversationMediaPanel({ conversationId, open, onOpenChange }: ConversationMediaPanelProps) {
   const { t } = useTranslation('conversations');
-  const { jumpToMessage } = useRoom();
+  const { jumpToMessage } = useRoom('jumpToMessage');
   const [kind, setKind] = useState<MediaKind>('uploads');
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');

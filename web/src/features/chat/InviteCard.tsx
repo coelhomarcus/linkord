@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router';
 import { ROUTES } from '@/shared/lib/routes';
 import { Button } from '@/shared/ui/primitives/button';
 import { acceptInvitation, ApiError, declineInvitation, revokeInvitation } from '@/shared/api/api';
-import { useRoom } from '@/state/RoomContext';
+import { useRoom, useRoomState } from '@/state/RoomContext';
 import type { InvitationCard, InvitationStatus } from '@/shared/types/protocol';
 import { ERROR_CODES } from '@/shared/api/errorCodes';
 
@@ -28,7 +28,8 @@ export function InviteCard({ invitation }: { invitation: InvitationCard | null |
 
 function LiveInviteCard({ invitation }: { invitation: InvitationCard }) {
   const { t } = useTranslation('chat');
-  const { state, servers } = useRoom();
+  const { servers } = useRoom('servers');
+  const state = useRoomState('me');
   const navigate = useNavigate();
   const [busy, setBusy] = useState<'accept' | 'decline' | 'revoke' | null>(null);
   const [outcome, setOutcome] = useState<LocalOutcome>(null);

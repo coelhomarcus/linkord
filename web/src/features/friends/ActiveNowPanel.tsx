@@ -4,12 +4,14 @@ import { useTranslation } from 'react-i18next';
 
 import { Avatar } from '@/shared/Avatar';
 import { EmptyState } from '@/shared/ui/empty-state';
-import { useRoom } from '@/state/RoomContext';
+import { useRoom, useRoomState } from '@/state/RoomContext';
+import { useCallRoster } from '@/features/calls/callRoster';
+import type { RosterParticipant } from '@/features/calls/callRoster';
 import type { Activity, Conversation, Participant, PublicUser } from '@/shared/types/protocol';
 import { ActivityIcon } from '@/features/activity/ActivityLine';
 import { cn } from '@/shared/lib/utils';
 
-interface ActiveCall { conversation: Conversation; friends: Participant[] }
+interface ActiveCall { conversation: Conversation; friends: RosterParticipant[] }
 
 type CallMember = Pick<Participant, 'userId' | 'displayName' | 'avatar' | 'avatarPoster' | 'avatarColor'>;
 
@@ -18,7 +20,9 @@ type CallMember = Pick<Participant, 'userId' | 'displayName' | 'avatar' | 'avata
 export function ActiveNowPanel() {
   const { t } = useTranslation('friends');
   const { t: tActivity } = useTranslation('activity');
-  const { state, conversations, servers, friendUserIds, openCall, activeCallConversationId, presenceByUser, onlineUserIds, allUsers } = useRoom();
+  const { conversations, servers, friendUserIds, openCall, activeCallConversationId, presenceByUser, onlineUserIds, allUsers } = useRoom('conversations', 'servers', 'friendUserIds', 'openCall', 'activeCallConversationId', 'presenceByUser', 'onlineUserIds', 'allUsers');
+  const { me } = useRoomState('me');
+  const roster = useCallRoster();
 
   // friends playing or using something, longest first, as in Discord
   const playing = useMemo(() => {
@@ -33,7 +37,7 @@ export function ActiveNowPanel() {
 
   const calls = useMemo(() => {
     const byConversation = new Map<string, ActiveCall>();
-    for (const participant of state.participants.values()) {
+    for (const participant of roster.values()) {
       const conversationId = participant.callConversationId;
       if (!conversationId || !friendUserIds.has(participant.userId)) continue;
       const conversation = conversations.find((c) => c.id === conversationId);
@@ -43,7 +47,7 @@ export function ActiveNowPanel() {
       byConversation.set(conversationId, entry);
     }
     return [...byConversation.values()].sort((a, b) => b.friends.length - a.friends.length);
-  }, [state.participants, conversations, friendUserIds]);
+  }, [roster, conversations, friendUserIds]);
 
   // Everyone in the call, not only friends: whoever else is there, and you
   // when you are in it too (you are not among the participants)
@@ -55,15 +59,14 @@ export function ActiveNowPanel() {
       byConversation.set(conversationId, list);
     };
     for (const { conversation, friends } of calls) friends.forEach((friend) => add(conversation.id, friend));
-    for (const participant of state.participants.values()) {
+    for (const participant of roster.values()) {
       if (participant.callConversationId && byConversation.has(participant.callConversationId)) add(participant.callConversationId, participant);
     }
-    const { me } = state;
     if (activeCallConversationId && byConversation.has(activeCallConversationId) && me.userId) {
       add(activeCallConversationId, { userId: me.userId, displayName: me.displayName, avatar: me.avatar, avatarPoster: me.avatarPoster, avatarColor: me.avatarColor });
     }
     return byConversation;
-  }, [calls, state, activeCallConversationId]);
+  }, [calls, roster, me, activeCallConversationId]);
 
   return (
     <aside aria-label={t('activeNow.title')} className="flex w-[360px] flex-none flex-col overflow-y-auto border-l border-border-subtle px-4 py-4">

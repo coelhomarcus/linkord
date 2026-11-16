@@ -3,7 +3,7 @@ import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 
-import { useRoom } from '@/state/RoomContext';
+import { useRoom, useRoomState } from '@/state/RoomContext';
 import { blockUser, fetchFriends, removeFriend } from '@/shared/api/api';
 import type { SocialEntry, SocialUser } from '@/shared/api/api';
 import { Button } from '@/shared/ui/primitives/button';
@@ -42,7 +42,8 @@ export function FriendsList({ view, query, onQueryChange, onOpenProfile }: {
   onOpenProfile: (userId: string) => void;
 }) {
   const { t } = useTranslation('friends');
-  const { state, onlineUserIds, openDirect, requestChatView } = useRoom();
+  const { onlineUserIds, openDirect, requestChatView } = useRoom('onlineUserIds', 'openDirect', 'requestChatView');
+  const state = useRoomState('me');
   const { revision, bump } = useFriends();
   const navigate = useNavigate();
   const { value, setValue, search } = useUrlSearch(query, onQueryChange);

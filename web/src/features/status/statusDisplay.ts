@@ -1,4 +1,4 @@
-import { useRoom } from '@/state/RoomContext';
+import { useRoom, useRoomState } from '@/state/RoomContext';
 import type { CustomStatus, PresenceStatus } from '@/shared/types/protocol';
 
 /** What a dot shows. `invisible` only ever describes yourself; to everyone else you are `offline`. */
@@ -33,7 +33,8 @@ export function liveCustomStatus(custom: CustomStatus | null | undefined, now = 
 
 /** Someone's status as this account sees it; for the account itself, its own (automatic idle included). */
 export function useUserStatus(userId: string | null | undefined): DisplayStatus {
-  const { state, onlineUserIds, presenceByUser, ownStatus } = useRoom();
+  const { onlineUserIds, presenceByUser, ownStatus } = useRoom('onlineUserIds', 'presenceByUser', 'ownStatus');
+  const state = useRoomState('me');
   if (!userId) return 'offline';
   if (userId === state.me.userId) return ownStatus.effective;
   if (!onlineUserIds.has(userId)) return 'offline';
@@ -41,7 +42,8 @@ export function useUserStatus(userId: string | null | undefined): DisplayStatus 
 }
 
 export function useCustomStatus(userId: string | null | undefined): CustomStatus | null {
-  const { state, onlineUserIds, presenceByUser, ownStatus } = useRoom();
+  const { onlineUserIds, presenceByUser, ownStatus } = useRoom('onlineUserIds', 'presenceByUser', 'ownStatus');
+  const state = useRoomState('me');
   if (!userId) return null;
   if (userId === state.me.userId) return liveCustomStatus(ownStatus.customStatus);
   if (!onlineUserIds.has(userId)) return null;

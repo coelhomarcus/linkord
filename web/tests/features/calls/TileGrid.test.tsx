@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import userEvent from '@testing-library/user-event';
 import type { TileDescriptor } from '@/features/calls/tileTypes';
 import { TileGrid } from '@/features/calls/TileGrid';
-import { RoomContext } from '@/state/RoomContext';
+import { RoomStoreProvider } from '@/state/RoomStoreProvider';
 import { createFakeRoomContextValue, renderWithRoom } from '@tests/fixtures/roomContextFixture';
 
 let resizeContainer: (width: number, height: number) => void = () => {};
@@ -60,7 +60,7 @@ describe('TileGrid', () => {
     }
     const value = createFakeRoomContextValue();
     const renderGrid = (focusedId: string) => (
-      <RoomContext.Provider value={value}><TileGrid descriptors={all} focusedId={focusedId} /></RoomContext.Provider>
+      <RoomStoreProvider value={value}><TileGrid descriptors={all} focusedId={focusedId} /></RoomStoreProvider>
     );
     rerender(renderGrid(all[0]!.key));
     expect(container.querySelector('[data-testid="tile-p-0"]')).toHaveAttribute('data-sizing', 'source');

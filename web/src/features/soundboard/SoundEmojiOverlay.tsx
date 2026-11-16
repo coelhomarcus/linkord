@@ -1,17 +1,20 @@
-import { useRoom } from '@/state/RoomContext';
+import { useRoom, useRoomState } from '@/state/RoomContext';
+import { useCallRoster } from '@/features/calls/callRoster';
 import { Emoji } from '@/features/emoji/Emoji';
 
 /** The emoji of each sound played in the call, floating up over the screen
  * with the name of who played it. */
 export function SoundEmojiOverlay() {
-  const { state, soundEmojis } = useRoom();
+  const { soundEmojis } = useRoom('soundEmojis');
+  const state = useRoomState('me');
+  const roster = useCallRoster();
 
   if (!soundEmojis.length) return null;
 
   return (
     <div className="pointer-events-none absolute inset-0 z-40 overflow-hidden">
       {soundEmojis.map((e) => {
-        const name = e.participantId === state.me.id ? state.me.displayName : (state.participants.get(e.participantId)?.displayName ?? '');
+        const name = e.participantId === state.me.id ? state.me.displayName : (roster.get(e.participantId)?.displayName ?? '');
         return (
           <div
             key={e.key}

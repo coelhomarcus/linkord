@@ -5,7 +5,7 @@ import { Avatar } from '@/shared/Avatar';
 import { Button } from '@/shared/ui/primitives/button';
 import { formatFileSize } from '@/shared/lib/formatBytes';
 import { useCursorList } from '@/shared/hooks/useCursorList';
-import { useRoom } from '@/state/RoomContext';
+import { useRoomState } from '@/state/RoomContext';
 import { deleteUser, fetchAdminUser, fetchAudit, grantAdmin, reactivateUser, revokeAdmin, revokeUserSessions, suspendUser } from './adminApi';
 import { AdminDetailTabs } from './AdminDetailTabs';
 import { AdminEntityHeader } from './AdminEntityHeader';
@@ -50,7 +50,7 @@ function UserHistory({ id, revision }: { id: string; revision: string }) {
 
 function UserDetail({ id }: { id: string }) {
   const { t } = useTranslation('admin');
-  const { state } = useRoom();
+  const state = useRoomState('me');
   const back = useAdminBack('/admin/users');
   const { filters } = useAdminQuery(QUERY);
   const tab = filters.tab as Tab;

@@ -1,14 +1,11 @@
-import { Notification, net, shell } from 'electron';
+import { Notification } from 'electron';
 import electronUpdater from 'electron-updater';
 import { format, type Strings } from './strings.js';
 import {
   CHECK_INTERVAL_MS,
   FIRST_CHECK_DELAY_MS,
-  latestReleaseApiUrl,
-  newerRelease,
   type UpdateCheckOutcome,
   type UpdateMode,
-  type UpdateRepo,
   type UpdateStatus,
 } from './updates.js';
 
@@ -17,7 +14,7 @@ export interface Updater {
   status(): UpdateStatus;
   /** What a check asked for by a person found; the caller says so (a dialog from the menu, a line in settings). */
   check(): Promise<UpdateCheckOutcome>;
-  /** restart into a downloaded update, or open the page of an available one */
+  /** restart into a downloaded update */
   apply(): void;
 }
 
@@ -30,12 +27,10 @@ function notify(title: string, body: string, onClick: () => void): void {
 
 export function installUpdater(options: {
   mode: UpdateMode;
-  repo: UpdateRepo | null;
-  currentVersion: string;
   strings: Strings;
   onChange: () => void;
 }): Updater {
-  const { mode, repo, currentVersion, strings } = options;
+  const { mode, strings } = options;
   let status: UpdateStatus = { kind: 'idle' };
   const setStatus = (next: UpdateStatus) => { status = next; options.onChange(); };
   const failed = (error: unknown): UpdateCheckOutcome => {
@@ -47,8 +42,8 @@ export function installUpdater(options: {
   let apply: () => void = () => {};
 
   if (mode === 'install') {
-    // Read only here: the getter picks the platform's updater, which on macOS
-    // would set up Squirrel.Mac for nothing
+    // Read only here: the getter picks the platform's updater, which a
+    // development run on macOS would set up as Squirrel.Mac for nothing
     const { autoUpdater } = electronUpdater;
     autoUpdater.logger = console;
     autoUpdater.autoDownload = true;
@@ -65,25 +60,6 @@ export function installUpdater(options: {
       failed,
     );
     apply = () => { if (status.kind === 'downloaded') autoUpdater.quitAndInstall(); };
-  } else if (mode === 'notify' && repo) {
-    check = () => net.fetch(latestReleaseApiUrl(repo), { headers: { Accept: 'application/vnd.github+json' } })
-      .then(async (response) => {
-        // No published release yet
-        if (response.status === 404) return null;
-        if (!response.ok) throw new Error(`GitHub answered ${response.status}`);
-        return newerRelease(await response.json(), currentVersion, repo);
-      })
-      .then((release): UpdateCheckOutcome => {
-        if (!release) return { kind: 'up-to-date' };
-        const known = status.kind === 'available' && status.version === release.version;
-        setStatus({ kind: 'available', ...release });
-        if (!known) notify(strings.updateAvailableTitle, format(strings.updateAvailableBody, { version: release.version }), () => apply());
-        return { kind: 'update', version: release.version };
-      }, failed);
-    apply = () => {
-      if (status.kind !== 'available') return;
-      shell.openExternal(status.url).catch((error: unknown) => console.error('[desktop] could not open the release', error));
-    };
   }
 
   if (mode !== 'off') {
