@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
+import { clearResourceCaches } from '@/shared/lib/resourceCache';
 import { fetchMe, login as apiLogin, logout as apiLogout, register as apiRegister, verifyLoginCode } from '@/shared/api/api';
 import type { ApiUser, LoginChallenge, SignedIn } from '@/shared/api/api';
 import { clearAllDrafts } from '@/features/chat/conversationDrafts';
@@ -127,6 +128,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (endSession) try { await apiLogout(); } catch {  }
     clearAllDrafts();
     clearPendingShares();
+    // profiles and relationships were read as this account
+    clearResourceCaches();
     setUser(null);
     setStatus('anon');
   }, []);

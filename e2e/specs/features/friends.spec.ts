@@ -1,5 +1,5 @@
 import { test, expect } from '../../fixtures/test';
-import { befriend } from '../../fixtures/api';
+import { acceptInvite, befriend, createInvite, createServer } from '../../fixtures/api';
 
 test.describe('friends', () => {
   test('a request sent from the form is accepted from Pending, and both can message', async ({ users }) => {
@@ -23,6 +23,52 @@ test.describe('friends', () => {
     await a.send('agora somos amigos');
     await b.openDm(dm);
     await b.expectMessage('agora somos amigos');
+  });
+
+  test('a server member\'s mini profile sends a request at once, keeps it on reopening, and undoes a refused one', async ({ users }) => {
+    const alice = await users.create('alice');
+    const bob = await users.create('bob');
+    const carol = await users.create('carol');
+    const server = await createServer(alice.api, 'E2E mini profile');
+    await acceptInvite(bob.api, await createInvite(alice.api, server.id));
+    await acceptInvite(carol.api, await createInvite(alice.api, server.id));
+    const a = await alice.app();
+    await a.openChannel(server.id, server.text.id);
+    const members = a.page.getByRole('complementary', { name: 'Membros' });
+    const card = a.page.locator('[data-slot="popover-content"]');
+    const open = async (username: string) => {
+      await members.getByRole('button', { name: `Abrir perfil de ${username}` }).click();
+      await expect(card).toBeVisible();
+    };
+
+    // the server is held back, so what shows comes from the click alone
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => { release = resolve; });
+    await a.page.route('**/api/friend-requests', async (route) => { await held; await route.continue(); });
+    await open(bob.username);
+    await card.getByRole('button', { name: 'Adicionar amigo' }).click();
+    await expect(card.getByText('Solicitação enviada')).toBeVisible();
+    release();
+    await expect.poll(async () => ((await (await bob.api.get('/api/friend-requests?direction=incoming')).json()) as { items: unknown[] }).items.length).toBe(1);
+    await a.page.unroute('**/api/friend-requests');
+
+    // reopened while the server does not answer, the card shows what it already knows
+    await a.page.keyboard.press('Escape');
+    await expect(card).toHaveCount(0);
+    await a.page.route('**/api/relationships/**', () => { /* never answered */ });
+    await open(bob.username);
+    await expect(card.getByText('Solicitação enviada')).toBeVisible();
+    await expect(card.getByText('Carregando…')).toHaveCount(0);
+    await a.page.unroute('**/api/relationships/**');
+
+    // a refusal puts the button back and says so
+    await a.page.keyboard.press('Escape');
+    await a.page.route('**/api/friend-requests', (route) => route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ error: { code: 'internal', message: 'x' } }) }));
+    await open(carol.username);
+    await card.getByRole('button', { name: 'Adicionar amigo' }).click();
+    await expect(card.getByRole('alert')).toBeVisible();
+    await expect(card.getByRole('button', { name: 'Adicionar amigo' })).toBeVisible();
+    await a.page.unroute('**/api/friend-requests');
   });
 
   test('a declined or cancelled request leaves no friendship', async ({ users }) => {
