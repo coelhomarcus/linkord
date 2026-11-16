@@ -13,7 +13,7 @@ const ICON_FILTERS = new URLSearchParams({ types: 'static', nsfw: 'false', humor
 const SEARCH_LIMIT = 10;
 const STEAM_HASH = /^[0-9a-f]{40}$/;
 
-export interface SteamAppAssets {
+interface SteamAppAssets {
   appId: number;
   /** hash of the Steam client's .ico for the game (up to 256 px), or null */
   clientIcon: string | null;
