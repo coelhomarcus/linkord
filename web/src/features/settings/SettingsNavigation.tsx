@@ -10,6 +10,7 @@ import { cn } from '@/shared/lib/utils';
 import { ActiveFill } from '@/shared/ui/active-fill';
 import { CloseButton } from '@/shared/ui/primitives/close-button';
 import { FROM_INDEX_STATE, findCategory, visibleGroups } from './settingsCatalog';
+import { hasDesktopSettings } from './useDesktopSettings';
 import { useSettingsSearch } from './useSettingsSearch';
 import type { SettingsSearchResult } from './useSettingsSearch';
 import { AppLink } from '@/shared/ui/app-link';
@@ -106,7 +107,7 @@ export function SettingsSidebar({ active, isAdmin, onOpenProfile }: { active: Se
         <SettingsSearchResults results={results} query={query} />
       ) : (
         <div className="flex flex-col">
-          {visibleGroups(isAdmin).map((group, index) => (
+          {visibleGroups(isAdmin, hasDesktopSettings()).map((group, index) => (
             <div key={group.labelKey} className="flex flex-col">
               {index > 0 && <span aria-hidden className="mx-2.5 my-2 h-px flex-none bg-border-subtle" />}
               <GroupLabel>{t(group.labelKey)}</GroupLabel>
@@ -151,7 +152,7 @@ export function SettingsIndex({ isAdmin, onOpenProfile }: { isAdmin: boolean; on
         <SettingsSearchResults results={results} query={query} />
       ) : (
         <div className="flex flex-col gap-1">
-          {visibleGroups(isAdmin).map((group) => (
+          {visibleGroups(isAdmin, hasDesktopSettings()).map((group) => (
             <div key={group.labelKey} className="flex flex-col gap-0.5 pt-4 first:pt-0">
               <GroupLabel>{t(group.labelKey)}</GroupLabel>
               {group.categories.map((category) => {

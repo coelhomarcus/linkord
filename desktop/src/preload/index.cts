@@ -28,6 +28,18 @@ contextBridge.exposeInMainWorld('linkordDesktop', Object.freeze({
       return () => { ipcRenderer.removeListener('linkord:window:state', listener); };
     },
   }),
+  // The app's own settings (start at login, closing to the tray, updates)
+  settings: Object.freeze({
+    get: () => ipcRenderer.invoke('linkord:settings:get'),
+    set: (change: unknown) => ipcRenderer.invoke('linkord:settings:set', change),
+    checkForUpdates: () => ipcRenderer.invoke('linkord:settings:check-updates'),
+    applyUpdate: () => ipcRenderer.invoke('linkord:settings:apply-update'),
+    onChange: (callback: (settings: unknown) => void) => {
+      const listener = (_event: unknown, settings: unknown) => callback(settings);
+      ipcRenderer.on('linkord:settings:changed', listener);
+      return () => { ipcRenderer.removeListener('linkord:settings:changed', listener); };
+    },
+  }),
   screenShare: Object.freeze({
     picker: flag('linkord-share-picker') === 'system' ? 'system' : 'app',
     systemAudio: flag('linkord-system-audio') === '1',

@@ -39,6 +39,34 @@ export interface DesktopWindowControls {
   onStateChange: (callback: (state: DesktopWindowState) => void) => () => void;
 }
 
+type DesktopUpdateStatus =
+  | { kind: 'idle' }
+  | { kind: 'available'; version: string; url: string }
+  | { kind: 'downloaded'; version: string };
+
+/** The desktop app's own settings, as features/settings/DesktopSettings shows them. */
+export interface DesktopSettingsSnapshot {
+  version: string;
+  startAtLogin: { available: boolean; enabled: boolean };
+  /** closing the window keeps the app in the tray instead of quitting */
+  closeToTray: boolean;
+  /** a start with the system stays in the tray */
+  startMinimized: boolean;
+  /** 'install': Windows and AppImage update themselves; 'notify': a page to download from; 'off': a build that does not check */
+  update: { mode: 'install' | 'notify' | 'off'; status: DesktopUpdateStatus };
+}
+
+export type DesktopUpdateCheck = { kind: 'up-to-date' } | { kind: 'update'; version: string } | { kind: 'failed' } | { kind: 'off' };
+
+export interface DesktopSettingsApi {
+  get: () => Promise<DesktopSettingsSnapshot | null>;
+  set: (change: Partial<{ startAtLogin: boolean; closeToTray: boolean; startMinimized: boolean }>) => Promise<DesktopSettingsSnapshot | null>;
+  checkForUpdates: () => Promise<DesktopUpdateCheck>;
+  applyUpdate: () => Promise<void>;
+  /** the tray or the menu changed something; returns the unsubscribe */
+  onChange: (callback: (settings: DesktopSettingsSnapshot) => void) => () => void;
+}
+
 export interface LinkordDesktop {
   platform: string;
   version: string;
@@ -49,6 +77,8 @@ export interface LinkordDesktop {
   setBadgeCount?: (count: number) => Promise<boolean>;
   /** absent in builds that keep the system title bar */
   windowControls?: DesktopWindowControls;
+  /** absent in builds without the app's own settings */
+  settings?: DesktopSettingsApi;
 }
 
 declare global {

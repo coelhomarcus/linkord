@@ -1,4 +1,4 @@
-import { Notification, dialog, net, shell } from 'electron';
+import { Notification, net, shell } from 'electron';
 import electronUpdater from 'electron-updater';
 import { format, type Strings } from './strings.js';
 import {
@@ -6,6 +6,7 @@ import {
   FIRST_CHECK_DELAY_MS,
   latestReleaseApiUrl,
   newerRelease,
+  type UpdateCheckOutcome,
   type UpdateMode,
   type UpdateRepo,
   type UpdateStatus,
@@ -14,8 +15,8 @@ import {
 export interface Updater {
   readonly mode: UpdateMode;
   status(): UpdateStatus;
-  /** manual: a person asked from the menu, so "up to date" and failures are shown */
-  check(manual: boolean): void;
+  /** What a check asked for by a person found; the caller says so (a dialog from the menu, a line in settings). */
+  check(): Promise<UpdateCheckOutcome>;
   /** restart into a downloaded update, or open the page of an available one */
   apply(): void;
 }
@@ -25,10 +26,6 @@ function notify(title: string, body: string, onClick: () => void): void {
   const notification = new Notification({ title, body });
   notification.on('click', onClick);
   notification.show();
-}
-
-function tell(message: string, strings: Strings): void {
-  dialog.showMessageBox({ type: 'info', message, buttons: [strings.ok] }).catch(() => {});
 }
 
 export function installUpdater(options: {
@@ -41,13 +38,12 @@ export function installUpdater(options: {
   const { mode, repo, currentVersion, strings } = options;
   let status: UpdateStatus = { kind: 'idle' };
   const setStatus = (next: UpdateStatus) => { status = next; options.onChange(); };
-  const upToDate = () => tell(format(strings.updateUpToDate, { version: currentVersion }), strings);
-  const failed = (error: unknown, manual: boolean) => {
+  const failed = (error: unknown): UpdateCheckOutcome => {
     console.error('[desktop] update check failed', error);
-    if (manual) tell(strings.updateFailed, strings);
+    return { kind: 'failed' };
   };
 
-  let check: (manual: boolean) => void = () => {};
+  let check: () => Promise<UpdateCheckOutcome> = async () => ({ kind: 'off' });
   let apply: () => void = () => {};
 
   if (mode === 'install') {
@@ -64,33 +60,26 @@ export function installUpdater(options: {
       setStatus({ kind: 'downloaded', version: info.version });
       notify(strings.updateReadyTitle, format(strings.updateReadyBody, { version: info.version }), () => apply());
     });
-    check = (manual) => {
-      autoUpdater.checkForUpdates().then((result) => {
-        if (manual && !result?.isUpdateAvailable) upToDate();
-      }, (error: unknown) => failed(error, manual));
-    };
+    check = () => autoUpdater.checkForUpdates().then(
+      (result): UpdateCheckOutcome => (result?.isUpdateAvailable ? { kind: 'update', version: result.updateInfo.version } : { kind: 'up-to-date' }),
+      failed,
+    );
     apply = () => { if (status.kind === 'downloaded') autoUpdater.quitAndInstall(); };
   } else if (mode === 'notify' && repo) {
-    check = (manual) => {
-      net.fetch(latestReleaseApiUrl(repo), { headers: { Accept: 'application/vnd.github+json' } })
-        .then(async (response) => {
-          // No published release yet
-          if (response.status === 404) return null;
-          if (!response.ok) throw new Error(`GitHub answered ${response.status}`);
-          return newerRelease(await response.json(), currentVersion, repo);
-        })
-        .then((release) => {
-          if (!release) {
-            if (manual) upToDate();
-            return;
-          }
-          const known = status.kind === 'available' && status.version === release.version;
-          setStatus({ kind: 'available', ...release });
-          if (!known || manual) {
-            notify(strings.updateAvailableTitle, format(strings.updateAvailableBody, { version: release.version }), () => apply());
-          }
-        }, (error: unknown) => failed(error, manual));
-    };
+    check = () => net.fetch(latestReleaseApiUrl(repo), { headers: { Accept: 'application/vnd.github+json' } })
+      .then(async (response) => {
+        // No published release yet
+        if (response.status === 404) return null;
+        if (!response.ok) throw new Error(`GitHub answered ${response.status}`);
+        return newerRelease(await response.json(), currentVersion, repo);
+      })
+      .then((release): UpdateCheckOutcome => {
+        if (!release) return { kind: 'up-to-date' };
+        const known = status.kind === 'available' && status.version === release.version;
+        setStatus({ kind: 'available', ...release });
+        if (!known) notify(strings.updateAvailableTitle, format(strings.updateAvailableBody, { version: release.version }), () => apply());
+        return { kind: 'update', version: release.version };
+      }, failed);
     apply = () => {
       if (status.kind !== 'available') return;
       shell.openExternal(status.url).catch((error: unknown) => console.error('[desktop] could not open the release', error));
@@ -98,7 +87,7 @@ export function installUpdater(options: {
   }
 
   if (mode !== 'off') {
-    const automatic = () => { if (status.kind !== 'downloaded') check(false); };
+    const automatic = () => { if (status.kind !== 'downloaded') void check(); };
     setTimeout(automatic, FIRST_CHECK_DELAY_MS);
     setInterval(automatic, CHECK_INTERVAL_MS);
   }
@@ -106,7 +95,7 @@ export function installUpdater(options: {
   return {
     mode,
     status: () => status,
-    check: (manual) => check(manual),
+    check: () => check(),
     apply: () => apply(),
   };
 }

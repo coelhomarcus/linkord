@@ -18,6 +18,13 @@ export type UpdateStatus =
   | { kind: 'available'; version: string; url: string }
   | { kind: 'downloaded'; version: string };
 
+/** What a check found: an update (downloading, or to download from its page), none, or an error. */
+export type UpdateCheckOutcome =
+  | { kind: 'up-to-date' }
+  | { kind: 'update'; version: string }
+  | { kind: 'failed' }
+  | { kind: 'off' };
+
 export const FIRST_CHECK_DELAY_MS = 30_000;
 export const CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
 

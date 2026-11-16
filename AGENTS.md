@@ -99,7 +99,8 @@ desktop/
   src/main/      # Electron main process: index.ts (app lifecycle), mainWindow.ts, session.ts
                  # (permission handlers), contentsGuard.ts (navigation and popups), plus the
                  # rules they apply as plain modules: appUrl, navigation, permissions, windowState, loadRetry,
-                 # titleBar, loginItem, menus, strings, updates (tray.ts, startAtLogin.ts, updater.ts wire them)
+                 # titleBar, loginItem, menus, strings, updates, preferences (tray.ts, startAtLogin.ts,
+                 # updater.ts, settingsBridge.ts wire them)
   src/preload/   # index.cts, the only bridge into the page
   scripts/       # package.mjs (`npm run package`: bakes LINKORD_URL in, runs electron-builder)
   resources/     # installer icons; electron-builder.config.cjs sits next to package.json

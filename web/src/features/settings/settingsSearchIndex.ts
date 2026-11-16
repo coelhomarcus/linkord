@@ -17,7 +17,8 @@ export interface SearchEntry {
 type SearchKey =
   | 'accountInfo' | 'email' | 'session' | 'deleteAccount' | 'dataExport' | 'password' | 'twoFactor' | 'loginAlerts' | 'sessions' | 'connections' | 'blocked' | 'presence'
   | 'theme' | 'voice' | 'inputProfile' | 'video' | 'calls' | 'uploads'
-  | 'desktopNotifications' | 'sounds' | 'language' | 'timeFormat' | 'adminArea' | 'install';
+  | 'desktopNotifications' | 'sounds' | 'language' | 'timeFormat' | 'adminArea' | 'install'
+  | 'desktopStartup' | 'desktopWindow' | 'desktopUpdates';
 
 // One entry per SettingsSection that exists today (grep '<SettingsSection id='
 // across features/settings/*.tsx to keep this honest) — curated, not
@@ -46,5 +47,8 @@ export const SETTINGS_SEARCH_INDEX: SearchEntry[] = [
   { categoryId: 'notifications', sectionId: 'install', searchKey: 'install', requiresInstall: true },
   { categoryId: 'language', sectionId: 'language', searchKey: 'language' },
   { categoryId: 'language', sectionId: 'time-format', searchKey: 'timeFormat' },
+  { categoryId: 'desktop', sectionId: 'desktop-startup', searchKey: 'desktopStartup' },
+  { categoryId: 'desktop', sectionId: 'desktop-window', searchKey: 'desktopWindow' },
+  { categoryId: 'desktop', sectionId: 'desktop-updates', searchKey: 'desktopUpdates' },
   { categoryId: 'moderation', sectionId: 'admin-area', searchKey: 'adminArea', adminOnly: true },
 ];
