@@ -464,10 +464,14 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
     return true;
   }, [items, virtualizer, highlight]);
 
+  // read through a ref: `scrollToMessage` changes with every message, and a new
+  // `onJumpTo` would re-render every (memoized) row
+  const scrollToMessageRef = useRef(scrollToMessage);
+  useLayoutEffect(() => { scrollToMessageRef.current = scrollToMessage; }, [scrollToMessage]);
   const onJumpTo = useCallback((msgId: number) => {
     // not in this window: load one around it (then the effect below lands)
-    if (!scrollToMessage(msgId)) jumpToMessage(conversationId, msgId);
-  }, [scrollToMessage, jumpToMessage, conversationId]);
+    if (!scrollToMessageRef.current(msgId)) jumpToMessage(conversationId, msgId);
+  }, [jumpToMessage, conversationId]);
 
   useEffect(() => {
     if (!ready || !pendingJumpTarget || pendingJumpTarget.conversationId !== conversationId) return;
@@ -549,7 +553,7 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
                         pending={item.pending}
                         allUsers={allUsers}
                         mentionLookup={mentionLookup}
-                        onReply={() => onReply(item.message)}
+                        onReply={onReply}
                         onOpenProfile={onOpenProfile}
                         onJumpTo={onJumpTo}
                       />

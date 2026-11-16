@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { ArrowBendUpLeftIcon, CopyIcon, DotsThreeIcon, FlagIcon, PencilSimpleIcon, PhoneIcon, SmileyIcon, TrashIcon, UsersIcon } from '@phosphor-icons/react';
 import { GroupAvatar } from '@/features/conversations/GroupAvatar';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { Avatar } from '@/shared/Avatar';
 import { MessageMedia } from './MessageMedia';
@@ -116,7 +116,7 @@ interface MessageRowProps {
   allUsers: Map<string, PublicUser>;
   mentionLookup: Map<string, PublicUser>;
   onOpenProfile: (userId: string) => void;
-  onReply: () => void;
+  onReply: (message: ChatMessage) => void;
   onJumpTo: (msgId: number) => void;
   /** Set while the server hasn't confirmed this send: no msgId-based
    * actions yet, just its delivery state. */
@@ -139,8 +139,10 @@ function PendingStatus({ entry, offline, onRetry, onDiscard }: { entry: OutboxEn
   );
 }
 
-export function MessageRow({ message, showHeader, highlighted, allUsers, mentionLookup, onOpenProfile, onReply, onJumpTo, pending }: MessageRowProps) {
+// memo: a new message, or a change to another row, re-renders the timeline but not every row in it
+export const MessageRow = memo(function MessageRow({ message, showHeader, highlighted, allUsers, mentionLookup, onOpenProfile, onReply: replyTo, onJumpTo, pending }: MessageRowProps) {
   const { t } = useTranslation('chat');
+  const onReply = useCallback(() => replyTo(message), [replyTo, message]);
   // re-renders the timestamp when the time format changes in settings
   useTimeFormat();
   const deletedAuthorName = t('deletedAuthor');
@@ -489,4 +491,4 @@ export function MessageRow({ message, showHeader, highlighted, allUsers, mention
     </div>
     </div>
   );
-}
+});
