@@ -26,13 +26,15 @@ async function icoOf(side: number): Promise<Buffer> {
 function setup(client: Partial<SteamGridDbClient>, options: {
   files?: Record<string, Buffer | Error>;
   distances?: Record<string, number>;
+  /** stored icons by id, what the page sends as a program icon */
+  stored?: Record<string, Buffer>;
   now?: () => number;
 } = {}) {
   const calls: string[] = [];
   const rows = new Map<string, ActivityGameIconRow>();
   const store: ActivityGameIconStore = {
     async get(key) { return rows.get(key) ?? null; },
-    async set(key, iconId, resolvedAt) { rows.set(key, { iconId, resolvedAt }); },
+    async set(key, value, resolvedAt) { rows.set(key, { ...value, resolvedAt }); },
   };
   const full: SteamGridDbClient = {
     configured: client.configured ?? true,
@@ -55,11 +57,12 @@ function setup(client: Partial<SteamGridDbClient>, options: {
     },
     // what is stored is named after where it came from
     storeIcon: async (bytes) => ({ id: `id:${named.get(bytes) ?? 'steam-ico'}` }),
+    readIcon: async (id) => options.stored?.[id] ?? null,
     distance: async (_reference, bytes) => options.distances?.[named.get(bytes) ?? ''] ?? 0.5,
     store,
     now: options.now ?? (() => NOW),
   });
-  const lookup = (query: { steamAppId?: string; name?: string }, userId = `u-${Math.random()}`) => inner(userId, parseActivityGameQuery(query));
+  const lookup = (query: { steamAppId?: string; name?: string }, userId = `u-${Math.random()}`, referenceId: string | null = null) => inner(userId, parseActivityGameQuery(query), referenceId);
   return { lookup, calls, rows, downloaded };
 }
 
@@ -67,13 +70,13 @@ const steamIco = (appId: number) => `https://shared.fastly.steamstatic.com/commu
 const steamJpg = (appId: number) => `https://shared.fastly.steamstatic.com/community_assets/images/apps/${appId}/${COMMUNITY}.jpg`;
 
 describe('activity game icon lookup', () => {
-  test('uses Steam\'s own icon when it is large enough, once for everyone', async () => {
+  test('uses Steam\'s own icon when it is large enough, once for everyone, whatever program icon comes', async () => {
     const { lookup, calls, rows, downloaded } = setup(
       { steamGame: async () => onSteam(5277816, 'Elden Ring', 1245620) },
       { files: { [steamIco(1245620)]: await icoOf(256) } },
     );
     assert.equal(await lookup({ steamAppId: '1245620', name: 'ELDEN RING' }), 'id:steam-ico');
-    assert.equal(await lookup({ steamAppId: '1245620' }), 'id:steam-ico');
+    assert.equal(await lookup({ steamAppId: '1245620' }, 'u', 'e'.repeat(64)), 'id:steam-ico');
     assert.deepEqual(calls, ['steam:1245620']);
     assert.deepEqual(downloaded, [steamIco(1245620)]);
     assert.equal(rows.get('steam:1245620')?.resolvedAt, NOW);
@@ -107,6 +110,41 @@ describe('activity game icon lookup', () => {
     });
     assert.equal(await lookup({ name: 'Fortnite' }), `id:${gridIcon('official').thumb}`);
     assert.deepEqual(calls, ['search:Fortnite', 'game:36136', 'icons:36136']);
+  });
+
+  test('outside Steam, takes the community icon that looks like the program\'s own', async () => {
+    const icons = [gridIcon('fan-art'), gridIcon('real', 'custom')];
+    const program = 'e'.repeat(64);
+    const { lookup, rows } = setup(
+      { searchGames: async () => [game(36136, 'Fortnite')], gameById: async (id) => game(id, 'Fortnite'), gameIcons: async () => icons },
+      { stored: { [program]: Buffer.from('exe icon') }, distances: { [icons[1]!.thumb!]: 0.05 } },
+    );
+    assert.equal(await lookup({ name: 'Fortnite' }, 'u', program), `id:${icons[1]!.thumb}`);
+    assert.equal(rows.get('name:fortnite')?.referenced, true);
+  });
+
+  test('with a program icon nothing looks like, falls back to the first official, never to the program\'s', async () => {
+    const program = 'e'.repeat(64);
+    const { lookup, rows } = setup(
+      { searchGames: async () => [game(7, 'VALORANT')], gameIcons: async () => [gridIcon('official')] },
+      { stored: { [program]: Buffer.from('unreal engine icon') } },
+    );
+    assert.equal(await lookup({ name: 'VALORANT' }, 'u', program), `id:${gridIcon('official').thumb}`);
+    assert.equal(rows.get('name:valorant')?.referenced, true);
+  });
+
+  test('works an answer out again once a program icon comes, and only once', async () => {
+    const icons = [gridIcon('fan-art'), gridIcon('real', 'custom')];
+    const program = 'e'.repeat(64);
+    const { lookup, calls } = setup(
+      { searchGames: async () => [game(9, 'Roblox')], gameIcons: async () => icons },
+      { stored: { [program]: Buffer.from('exe icon') }, distances: { [icons[1]!.thumb!]: 0.05 } },
+    );
+    assert.equal(await lookup({ name: 'Roblox' }), `id:${icons[0]!.thumb}`);
+    assert.equal(await lookup({ name: 'Roblox' }, 'u', program), `id:${icons[1]!.thumb}`);
+    assert.equal(await lookup({ name: 'Roblox' }, 'u2', program), `id:${icons[1]!.thumb}`);
+    assert.equal(await lookup({ name: 'Roblox' }), `id:${icons[1]!.thumb}`);
+    assert.equal(calls.filter((call) => call.startsWith('search:')).length, 2);
   });
 
   test('moves on from a community icon that cannot be read', async () => {

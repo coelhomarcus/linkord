@@ -46,13 +46,14 @@ beforeEach(() => {
 afterEach(() => { delete window.linkordDesktop; });
 
 describe('useActivityReporter', () => {
-  it('sends a detected game with the icon the server stored for it', async () => {
-    const { api } = stubDesktop(minecraft);
+  it('sends a detected game with the icon the server picked by the program\'s own', async () => {
+    stubDesktop(minecraft);
+    upload.mockResolvedValue('c'.repeat(64));
     lookup.mockResolvedValue({ name: 'Minecraft', image: 'co49x5', icon: 'b'.repeat(64) });
     const { reports } = render();
     await waitFor(() => expect(reports().at(-1)).toEqual({ key: 'minecraft', kind: 'playing', name: 'Minecraft', icon: { local: 'b'.repeat(64) }, startedAt: 1000 }));
-    expect(api.icon).not.toHaveBeenCalled();
-    expect(upload).not.toHaveBeenCalled();
+    expect(lookup).toHaveBeenCalledWith({ steamAppId: undefined, name: 'Minecraft', ref: 'c'.repeat(64) });
+    expect(upload).toHaveBeenCalledTimes(1);
   });
 
   it('falls back to the program\'s own icon for a game without one, never to the cover', async () => {
@@ -91,7 +92,7 @@ describe('useActivityReporter', () => {
     upload.mockResolvedValue(null);
     const { reports } = render();
     await waitFor(() => expect(reports().at(-1)).toMatchObject({ key: 'steam:570', name: 'Dota 2', icon: null }));
-    expect(lookup).toHaveBeenCalledWith({ steamAppId: 570, name: '' });
+    expect(lookup).toHaveBeenCalledWith({ steamAppId: 570, name: '', ref: null });
   });
 
   it('sends nothing for a hidden activity, and the activity again once shown', async () => {

@@ -23,21 +23,24 @@ function rememberIcon(key: string, icon: IconRef): void {
   try { localStorage.setItem(ICON_CACHE_KEY, JSON.stringify({ ...readIconCache(), [key]: icon })); } catch { /* storage refused: looked up again next time */ }
 }
 
-/** The name and icon a detected activity shows with: a game's IGDB name and SteamGridDB icon when the
- * server finds them, the program's own icon otherwise. */
+/** The name and icon a detected activity shows with: a game's IGDB name and icon when the server finds
+ * them, the program's own icon otherwise. For a game the program's icon also goes to the server as the
+ * reference it picks the game's icon by (server/src/modules/activity/activityGameIcons.ts). */
 async function describe(activity: DesktopActivity, readIcon: () => Promise<string | null>): Promise<ActivityReport> {
   let name = activity.name;
   let icon: IconRef = readIconCache()[activity.key] ?? null;
+  let uploaded: Promise<string | null> | null = null;
+  const programIcon = () => (uploaded ??= readIcon().then((dataUrl) => (dataUrl ? uploadActivityIcon(dataUrl) : null)).catch(() => null));
   if (activity.kind === 'playing' && (!icon || !name)) {
-    const game = await lookupActivityGame({ steamAppId: activity.steamAppId, name }).catch(() => null);
+    const ref = icon ? null : await programIcon();
+    const game = await lookupActivityGame({ steamAppId: activity.steamAppId, name, ref }).catch(() => null);
     if (game) {
       name = name || game.name;
       if (!icon && game.icon) icon = { local: game.icon };
     }
   }
   if (!icon) {
-    const dataUrl = await readIcon().catch(() => null);
-    const id = dataUrl ? await uploadActivityIcon(dataUrl).catch(() => null) : null;
+    const id = await programIcon();
     if (id) icon = { local: id };
   }
   if (icon) rememberIcon(activity.key, icon);

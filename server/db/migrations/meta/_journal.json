@@ -512,6 +512,13 @@
       "when": 1794854415599,
       "tag": "0072_activity_game_icons",
       "breakpoints": true
+    },
+    {
+      "idx": 73,
+      "version": "7",
+      "when": 1794857501067,
+      "tag": "0073_activity_game_icon_reference",
+      "breakpoints": true
     }
   ]
 }

@@ -30,12 +30,12 @@ const lookupIcon = createActivityGameIconLookup({
 });
 const ICON_RULE = { windowMs: 60_000, max: 10 };
 
-async function handleGame(request: FastifyRequest<{ Querystring: { steam?: string; name?: string } }>, reply: FastifyReply): Promise<void> {
+async function handleGame(request: FastifyRequest<{ Querystring: { steam?: string; name?: string; ref?: string } }>, reply: FastifyReply): Promise<void> {
   const sess = await requireSession(request, reply);
   if (!sess) return;
   try {
     const query = parseActivityGameQuery({ steamAppId: request.query.steam, name: request.query.name });
-    const [game, icon] = await Promise.all([lookup(sess.userId, query), lookupIcon(sess.userId, query)]);
+    const [game, icon] = await Promise.all([lookup(sess.userId, query), lookupIcon(sess.userId, query, isActivityIconId(request.query.ref) ? request.query.ref : null)]);
     sendJson(reply, 200, { ...game, icon });
   } catch (error) {
     if (!(error instanceof ActivityGameError)) throw error;

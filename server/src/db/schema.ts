@@ -995,6 +995,8 @@ export const activityGames = pgTable('activity_games', {
 export const activityGameIcons = pgTable('activity_game_icons', {
   key: varchar('key', { length: 96 }).primaryKey(),
   iconId: varchar('icon_id', { length: 64 }),
+  // chosen against a reference (Steam's icon or the program's); see activityGameIcons.ts
+  referenced: boolean('referenced').notNull().default(false),
   resolvedAt: timestamp('resolved_at', { withTimezone: true }).notNull(),
 });
 
