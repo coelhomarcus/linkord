@@ -1,8 +1,9 @@
 // Updates come from the GitHub releases of the repository the installer was
 // built for (LINKORD_UPDATE_REPO, baked into app-config.json). Windows is the
-// only system the app ships for: the NSIS build checks at every start, with
-// its own small window (updaterWindow.ts), and installs what it finds before
-// opening; later checks download in the background and wait for a restart.
+// only system the app ships for: the NSIS build checks at every start, in the
+// small window every start opens with (updaterWindow.ts), and installs what it
+// finds before opening; later checks download in the background and wait for
+// a restart.
 
 export type UpdateMode = 'install' | 'off';
 
@@ -35,20 +36,25 @@ export const INSTALL_DELAY_MS = 700;
 export const INSTALL_FALLBACK_MS = 30_000;
 
 /**
- * Where a start is with its update check. The app's window waits for 'open':
- * a start that finds an update downloads and installs it first, with the
- * updater window on screen the whole time, and never shows the app meanwhile.
+ * Where a start is. Until 'open' only the updater window is on screen: it
+ * shows the update check and, when one is found, the download and install,
+ * then the connection to the server while the app's page loads hidden.
  */
-export type StartupPhase = 'checking' | 'updating' | 'open';
+export type StartupPhase = 'checking' | 'updating' | 'connecting' | 'open';
 
 /** Asking for the app (the tray, a second launch) before 'open' brings the updater window forward instead. */
 export function mainWindowMayShow(phase: StartupPhase): boolean {
   return phase === 'open';
 }
 
-/** Closing the updater window mid-update would open the app halfway through it; quitting still closes it. */
-export function updaterMayClose(input: { phase: StartupPhase; quitting: boolean }): boolean {
-  return input.quitting || input.phase !== 'updating';
+/**
+ * What closing the updater window does. During a start it is the only window
+ * on screen, so closing it quits Linkord, except mid-update, which it would
+ * leave half done; after the start it only closes.
+ */
+export function startWindowClose(input: { phase: StartupPhase; quitting: boolean }): 'close' | 'quit' | 'refuse' {
+  if (input.quitting || input.phase === 'open') return 'close';
+  return input.phase === 'updating' ? 'refuse' : 'quit';
 }
 
 /** A download's progress as a whole percentage. */

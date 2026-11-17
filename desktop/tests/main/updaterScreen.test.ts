@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { STRINGS } from '../../src/main/strings.js';
-import { updaterView } from '../../src/main/updaterScreen.js';
+import { startScreen, updaterView } from '../../src/main/updaterScreen.js';
 
 const strings = STRINGS['en-US'];
 
@@ -32,5 +32,34 @@ describe('updaterView', () => {
     const failed = updaterView({ kind: 'failed' }, strings);
     assert.equal(failed.tone, 'error');
     assert.deepEqual(failed.actions.map((action) => action.id), ['later']);
+  });
+});
+
+describe('the start window while it connects', () => {
+  it('shows a moving bar while it reaches the server', () => {
+    const view = updaterView({ kind: 'connecting' }, strings);
+    assert.equal(view.title, 'Connecting…');
+    assert.equal(view.progress, null);
+    assert.deepEqual(view.actions, []);
+  });
+
+  it('counts down to the next try, apart from what is read out, and offers to try now', () => {
+    const view = updaterView({ kind: 'waiting', seconds: 4 }, strings);
+    assert.equal(view.title, 'Could not connect');
+    assert.equal(view.countdown, 'Trying again in 4 s');
+    assert.doesNotMatch(view.detail, /4/);
+    assert.deepEqual(view.actions.map((action) => [action.id, action.primary]), [['retry', true]]);
+  });
+
+  it('offers a reload once the page has crashed too often', () => {
+    const view = updaterView({ kind: 'crashed' }, strings);
+    assert.equal(view.tone, 'error');
+    assert.deepEqual(view.actions.map((action) => [action.id, action.label]), [['retry', 'Reload']]);
+  });
+
+  it('turns the time of the next try into seconds left', () => {
+    assert.deepEqual(startScreen({ kind: 'waiting', retryAt: 10_500 }, 7_000), { kind: 'waiting', seconds: 4 });
+    assert.deepEqual(startScreen({ kind: 'connecting' }, 0), { kind: 'connecting' });
+    assert.deepEqual(startScreen({ kind: 'crashed' }, 0), { kind: 'crashed' });
   });
 });
