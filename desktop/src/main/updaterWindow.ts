@@ -17,10 +17,15 @@ export interface UpdaterWindow {
   show(screen: UpdaterScreen): void;
   close(): void;
   isOpen(): boolean;
+  /** brings the window to the front, when it is up */
+  focus(): void;
 }
 
-/** onAction also hears 'later' when the window is closed some other way (Alt+F4). */
-export function createUpdaterWindow(strings: Strings, onAction: (action: UpdaterAction) => void): UpdaterWindow {
+/**
+ * onAction also hears 'later' when the window is closed some other way
+ * (Alt+F4), unless mayClose refuses it.
+ */
+export function createUpdaterWindow(strings: Strings, onAction: (action: UpdaterAction) => void, mayClose: () => boolean): UpdaterWindow {
   let window: BrowserWindow | null = null;
   let ready: Promise<void> = Promise.resolve();
   let closingOurselves = false;
@@ -38,6 +43,9 @@ export function createUpdaterWindow(strings: Strings, onAction: (action: Updater
       title: 'Linkord',
       backgroundColor: BACKGROUND,
       webPreferences: { ...SECURE_WEB_PREFERENCES, preload: PRELOAD, spellcheck: false },
+    });
+    created.on('close', (event) => {
+      if (!closingOurselves && !mayClose()) event.preventDefault();
     });
     created.on('closed', () => {
       if (window === created) window = null;
@@ -70,5 +78,11 @@ export function createUpdaterWindow(strings: Strings, onAction: (action: Updater
       window.close();
     },
     isOpen: () => window !== null && !window.isDestroyed(),
+    focus() {
+      if (!window || window.isDestroyed()) return;
+      if (window.isMinimized()) window.restore();
+      window.show();
+      window.focus();
+    },
   };
 }

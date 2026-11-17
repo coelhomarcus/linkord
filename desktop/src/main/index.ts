@@ -24,7 +24,7 @@ import { createTrayMenuWindow } from './trayMenuWindow.js';
 import { installUpdater } from './updater.js';
 import type { UpdaterAction } from './updaterScreen.js';
 import { createUpdaterWindow } from './updaterWindow.js';
-import { INSTALL_DELAY_MS, RESULT_LINGER_MS, STARTUP_CHECK_TIMEOUT_MS, checksAtStart, updateMode } from './updates.js';
+import { INSTALL_DELAY_MS, INSTALL_FALLBACK_MS, RESULT_LINGER_MS, STARTUP_CHECK_TIMEOUT_MS, checksAtStart, mainWindowMayShow, updateMode, updaterMayClose, type StartupPhase } from './updates.js';
 
 const debugSwitch = forbiddenSwitch({ isPackaged: app.isPackaged, hasSwitch: (name) => app.commandLine.hasSwitch(name) });
 if (debugSwitch) {
@@ -69,7 +69,11 @@ if (!resolved.ok) {
   let tray: Tray | null = null;
   let quitting = false;
 
+  // The start's update check holds the app's window back (updates.ts)
+  let startupPhase: StartupPhase = 'open';
+  let focusUpdater = () => {};
   const showMainWindow = () => {
+    if (!mainWindowMayShow(startupPhase)) return focusUpdater();
     if (!mainWindow) return;
     if (mainWindow.isMinimized()) mainWindow.restore();
     mainWindow.show();
@@ -164,9 +168,13 @@ if (!resolved.ok) {
       startupSettled?.(true);
       startupSettled = null;
     };
-    const updaterWindow = updater.mode === 'install' ? createUpdaterWindow(strings, onUpdaterAction) : null;
+    const updaterWindow = updater.mode === 'install'
+      ? createUpdaterWindow(strings, onUpdaterAction, () => updaterMayClose({ phase: startupPhase, quitting }))
+      : null;
+    focusUpdater = () => updaterWindow?.focus();
     const timedOut = Symbol('timed out');
-    const findAndDownload = async (timeoutMs?: number): Promise<'none' | 'failed' | 'ready' | typeof timedOut> => {
+    /** The timeout only bounds the question; an update found is waited for until it is downloaded. */
+    const findAndDownload = async (timeoutMs?: number, onFound?: () => void): Promise<'none' | 'failed' | 'ready' | typeof timedOut> => {
       const status = updater.status();
       if (status.kind === 'downloaded') return 'ready';
       if (status.kind === 'idle') {
@@ -177,27 +185,43 @@ if (!resolved.ok) {
         if (outcome === timedOut) return timedOut;
         if (outcome.kind !== 'update') return outcome.kind === 'failed' ? 'failed' : 'none';
       }
+      onFound?.();
       return (await updater.download()) ? 'ready' : 'failed';
     };
     // As Discord does: a start shows the check, and an update found is
-    // installed before the app opens. The window waits for the answer; a
-    // slow or failed check only opens the app.
+    // downloaded and installed before the app opens, with the updater window
+    // on screen until the installer takes over. A slow, failed or empty check
+    // only opens the app.
     const startupCheck = () => new Promise<boolean>((resolve) => {
       const own = ++turn;
-      startupSettled = resolve;
+      startupPhase = 'checking';
+      const open = () => {
+        startupSettled = null;
+        startupPhase = 'open';
+        resolve(true);
+      };
+      startupSettled = open;
       followProgress = true;
       updaterWindow?.show({ kind: 'checking' });
-      void findAndDownload(STARTUP_CHECK_TIMEOUT_MS).then((result) => {
+      const found = () => { if (own === turn) startupPhase = 'updating'; };
+      void findAndDownload(STARTUP_CHECK_TIMEOUT_MS, found).then((result) => {
         if (own !== turn) return;
-        startupSettled = null;
         if (result === 'ready') {
+          startupSettled = null;
           installNow();
-          resolve(false);
+          // The installer quits the app; if it never does, the app still opens
+          setTimeout(() => {
+            if (startupPhase !== 'updating') return;
+            console.error('[desktop] the update did not install; opening the app');
+            updaterWindow?.close();
+            open();
+            showMainWindow();
+          }, INSTALL_FALLBACK_MS).unref();
           return;
         }
         followProgress = false;
         updaterWindow?.close();
-        resolve(true);
+        open();
       });
     });
     const checkFromMenu = () => {
