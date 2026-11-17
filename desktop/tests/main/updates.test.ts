@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { checksAtStart, parseUpdateRepo, progressPercent, updateMode } from '../../src/main/updates.js';
+import { checksAtStart, mainWindowMayShow, parseUpdateRepo, progressPercent, updateMode, updaterMayClose } from '../../src/main/updates.js';
 
 const repo = { owner: 'acme', repo: 'linkord' };
 
@@ -53,5 +53,25 @@ describe('checksAtStart', () => {
   it('stays quiet for a start in the tray or a build that does not update', () => {
     assert.equal(checksAtStart({ mode: 'install', startHidden: true }), false);
     assert.equal(checksAtStart({ mode: 'off', startHidden: false }), false);
+  });
+});
+
+describe('mainWindowMayShow', () => {
+  it('keeps the app hidden while the start checks for or installs an update', () => {
+    assert.equal(mainWindowMayShow('checking'), false);
+    assert.equal(mainWindowMayShow('updating'), false);
+    assert.equal(mainWindowMayShow('open'), true);
+  });
+});
+
+describe('updaterMayClose', () => {
+  it('cannot be closed once an update is on its way', () => {
+    assert.equal(updaterMayClose({ phase: 'updating', quitting: false }), false);
+  });
+
+  it('can be closed during the check, after the start, and when the app quits', () => {
+    assert.equal(updaterMayClose({ phase: 'checking', quitting: false }), true);
+    assert.equal(updaterMayClose({ phase: 'open', quitting: false }), true);
+    assert.equal(updaterMayClose({ phase: 'updating', quitting: true }), true);
   });
 });
