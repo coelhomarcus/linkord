@@ -39,7 +39,7 @@ export function AppearanceSettings() {
                         aria-label={t('appearance.themeAria', { name })}
                         onClick={() => setColorTheme(id)}
                         className={cn(
-                          'relative size-11 rounded-lg border outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-surface-app',
+                          'relative size-11 rounded-lg border focus-ring transition-shadow focus-visible:ring-offset-2 focus-visible:ring-offset-surface-app',
                           selected ? 'border-transparent ring-2 ring-accent-primary' : 'border-border-strong hover:border-text-muted',
                         )}
                         style={{ background: THEME_SWATCH[id] }}

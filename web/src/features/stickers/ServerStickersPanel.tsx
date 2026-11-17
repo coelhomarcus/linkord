@@ -103,7 +103,7 @@ export function ServerStickersPanel({ serverId, myUserId, canUpload, canManage }
                     type="button"
                     onClick={() => { setError(null); requestStickerEditor(serverId); }}
                     aria-label={t('panel.upload')}
-                    className="grid h-full min-h-40 w-full place-items-center rounded-lg border border-dashed border-border-strong text-text-muted transition-colors duration-100 hover:border-text-secondary hover:text-text-primary focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                    className="grid h-full min-h-40 w-full place-items-center rounded-lg border border-dashed border-border-strong text-text-muted transition-colors duration-100 hover:border-text-secondary hover:text-text-primary focus-ring"
                   >
                     <PlusIcon size={28} aria-hidden />
                   </button>

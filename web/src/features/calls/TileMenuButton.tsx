@@ -29,7 +29,7 @@ export function TileMenuButton({ name, onOpen, className }: {
       onClick={open}
       className={cn(
         'pointer-events-none absolute z-10 grid size-7 place-items-center rounded-md border border-white/10 bg-black/85 text-white opacity-0 outline-none',
-        'focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:ring-3 focus-visible:ring-ring/50',
+        'focus-visible:pointer-events-auto focus-visible:opacity-100 focus-ring',
         className,
       )}
     >

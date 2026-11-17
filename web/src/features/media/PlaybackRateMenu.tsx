@@ -23,7 +23,7 @@ export function PlaybackRateMenu({ rate, onRateChange, onOpenChange, className }
       <DropdownMenuTrigger
         aria-label={t('player.playbackRateValue', { rate: format(rate) })}
         className={cn(
-          'flex h-7 min-w-7 flex-none items-center justify-center rounded-md px-1 text-caption font-semibold tabular-nums outline-none transition-colors duration-100 hover:bg-white/10 hover:text-white focus-visible:ring-3 focus-visible:ring-ring/50 data-popup-open:bg-white/10 data-popup-open:text-white',
+          'flex h-7 min-w-7 flex-none items-center justify-center rounded-md px-1 text-caption font-semibold tabular-nums focus-ring transition-colors duration-100 hover:bg-white/10 hover:text-white data-popup-open:bg-white/10 data-popup-open:text-white',
           className,
         )}
       >

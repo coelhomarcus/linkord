@@ -165,7 +165,7 @@ export function CallDock({ onReturnToCall, onOpenProfile, layout = 'wide', onNav
               <CallPingIndicator />
               <p className="text-label font-semibold text-green">{duration ? t('controls.inCallFor', { time: duration }) : t('controls.inCall')}</p>
             </div>
-            <button type="button" onClick={onReturnToCall} className="block max-w-full truncate text-left text-caption text-text-secondary hover:text-text-primary hover:underline">{title}</button>
+            <button type="button" onClick={onReturnToCall} className="block max-w-full truncate rounded-sm text-left text-caption text-text-secondary focus-ring hover:text-text-primary hover:underline">{title}</button>
           </div>
           {leaveButton}
         </div>
@@ -202,7 +202,7 @@ export function CallDock({ onReturnToCall, onOpenProfile, layout = 'wide', onNav
               type="button"
               aria-label={tStatus('menu.trigger')}
               className={cn(
-                'flex items-center gap-2 rounded-lg text-left transition-colors hover:bg-fill-hover data-popup-open:bg-fill-hover',
+                'flex items-center gap-2 rounded-lg text-left transition-colors focus-ring hover:bg-fill-hover data-popup-open:bg-fill-hover',
                 compact ? 'p-0.5' : 'min-w-0 flex-1 py-1 pl-1 pr-2',
               )}
             >

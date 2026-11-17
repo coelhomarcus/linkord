@@ -29,7 +29,7 @@ function ProfileShortcut({ onOpenProfile }: { onOpenProfile: (userId: string) =>
     <button
       type="button"
       onClick={() => { if (me.userId) onOpenProfile(me.userId); }}
-      className="group/profile mb-3 flex flex-none items-center gap-3 rounded-lg border border-border bg-fill-subtle p-2.5 text-left outline-none hover:bg-nav-hover focus-visible:ring-2 focus-visible:ring-ring"
+      className="group/profile mb-3 flex flex-none items-center gap-3 rounded-lg border border-border bg-fill-subtle p-2.5 text-left focus-ring hover:bg-nav-hover"
     >
       <Avatar id={me.userId ?? me.id ?? 'me'} name={me.displayName} avatar={me.avatar} poster={me.avatarPoster} avatarColor={me.avatarColor} size={40} />
       <span className="min-w-0 flex-1">
@@ -78,7 +78,7 @@ function SettingsSearchResults({ results, query }: { results: SettingsSearchResu
           <AppLink
             key={entry.searchKey}
             to={to}
-            className="flex min-h-11 items-center gap-3 rounded-md px-2.5 text-body font-medium text-text-primary outline-none hover:bg-nav-hover focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex min-h-11 items-center gap-3 rounded-md px-2.5 text-body font-medium text-text-primary focus-ring hover:bg-nav-hover"
           >
             <Icon size={20} aria-hidden className="flex-none text-text-muted" />
             <span className="min-w-0 flex-1">
@@ -119,7 +119,7 @@ export function SettingsSidebar({ active, isAdmin, onOpenProfile }: { active: Se
                     to={ROUTES.settingsTab(category.id)}
                     aria-current={current ? 'page' : undefined}
                     className={cn(
-                      'relative isolate mb-0.5 flex h-8 flex-none items-center gap-2 rounded-lg px-2.5 text-body font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                      'relative isolate mb-0.5 flex h-8 flex-none items-center gap-2 rounded-lg px-2.5 text-body font-medium focus-ring',
                       current ? 'text-text-strong' : 'text-text-secondary hover:bg-nav-hover hover:text-text-primary',
                     )}
                   >
@@ -161,7 +161,7 @@ export function SettingsIndex({ isAdmin, onOpenProfile }: { isAdmin: boolean; on
                     key={category.id}
                     to={ROUTES.settingsTab(category.id)}
                     state={FROM_INDEX_STATE}
-                    className="flex min-h-11 items-center gap-3 rounded-md px-2.5 text-body font-medium text-text-primary outline-none hover:bg-nav-hover focus-visible:ring-2 focus-visible:ring-ring"
+                    className="flex min-h-11 items-center gap-3 rounded-md px-2.5 text-body font-medium text-text-primary focus-ring hover:bg-nav-hover"
                   >
                     <Icon size={20} aria-hidden className="flex-none text-text-muted" />
                     <span className="min-w-0 flex-1 truncate">{t(category.labelKey)}</span>

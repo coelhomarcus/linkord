@@ -52,7 +52,7 @@ function RowActions({ user }: { user: AdminUserRow }) {
 
 function UserIdentity({ user, from }: { user: AdminUserRow; from: { from: string } }) {
   return (
-    <AppLink to={`/admin/users/${user.id}`} state={from} className="flex min-w-0 items-center gap-3 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring">
+    <AppLink to={`/admin/users/${user.id}`} state={from} className="flex min-w-0 items-center gap-3 rounded-md focus-ring">
       <Avatar id={user.id} name={user.displayName} avatar={user.avatar} avatarColor={user.avatarColor} size={36} />
       <span className="min-w-0">
         <span className="block truncate text-body font-medium text-text-primary">{user.displayName}</span>

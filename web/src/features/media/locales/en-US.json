@@ -49,6 +49,7 @@
     "altText": "Show the image's alt text",
     "moreActions": "More embed actions",
     "spoiler": "Spoiler",
+    "openImage": "Open image",
     "galleryImage": "Open image {{index}} of {{count}}",
     "galleryMore_one": "Open gallery, {{count}} more image",
     "galleryMore_other": "Open gallery, {{count}} more images"

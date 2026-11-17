@@ -13,7 +13,7 @@ export function LoadMoreFooter({ list, className }: { list: ListLike; className?
       {list.stale && (
         <p role="status" className="flex items-center gap-2 text-caption text-text-muted">
           <span>{t('loadMore.refreshFailed')}</span>
-          <button type="button" onClick={list.retry} className="font-medium underline-offset-2 hover:underline">{t('loadMore.retry')}</button>
+          <button type="button" onClick={list.retry} className="relative touch-target rounded-sm font-medium underline-offset-2 focus-ring hover:underline">{t('loadMore.retry')}</button>
         </p>
       )}
       {list.loadMoreError && <p role="alert" className="text-caption text-red-text">{t('loadMore.moreFailed')}</p>}

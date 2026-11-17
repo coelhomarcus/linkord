@@ -59,7 +59,7 @@ function EmbedFailedFallback({ url, className }: { url: string; className: strin
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className={`flex w-full max-w-sm items-center gap-2 rounded-md border border-border bg-bg-tertiary px-3 py-2.5 text-label text-text-muted transition-colors hover:bg-bg-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 ${className}`}
+      className={`flex w-full max-w-sm items-center gap-2 rounded-md border border-border bg-bg-tertiary px-3 py-2.5 text-label text-text-muted transition-colors hover:bg-bg-hover focus-ring ${className}`}
     >
       <ImageBrokenIcon size={14} className="flex-none" />
       <span className="truncate">{t('embed.previewFailed')} {t('embed.openLink')}</span>
@@ -103,6 +103,7 @@ export function LinkPreview(props: LinkPreviewProps) {
 }
 
 function LinkPreviewCard({ embed, className = '', edgeToEdge, fitContainer, preview, imageUrl, menu }: LinkPreviewProps) {
+  const { t } = useTranslation('media');
   const [failed, setFailed] = useState(false);
   const openMedia = useOpenMedia();
   const surfaceWidth = useChatSurfaceWidth(384 + 120);
@@ -148,10 +149,11 @@ function LinkPreviewCard({ embed, className = '', edgeToEdge, fitContainer, prev
       <button
         ref={boxRef}
         type="button"
+        aria-label={t('embed.openImage')}
         onClick={openImage}
         {...hoverWarmHandlers(image.src, { animated: image.animated })}
         style={fitContainer ? undefined : { width: box.width, maxWidth: '100%', height: box.height }}
-        className={`block max-w-full cursor-zoom-in ${fitContainer ? '' : `overflow-hidden bg-fill-subtle ${rounding}`} ${className}`}
+        className={`block max-w-full cursor-zoom-in focus-ring ${fitContainer ? '' : `overflow-hidden bg-fill-subtle ${rounding}`} ${className}`}
       >
         <PreviewImage
           src={drawnSrc ?? undefined}

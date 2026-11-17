@@ -1,17 +1,26 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { BrowserWindow, screen } from 'electron';
+import { pathToFileURL } from 'node:url';
+import { BrowserWindow, ipcMain, screen, type IpcMainEvent } from 'electron';
+import { connectionView, isScreenFrame, isScreenUrl, parseConnectionAction, type ConnectionScreen } from './connectionScreen.js';
 import { SECURE_WEB_PREFERENCES } from './contentsGuard.js';
-import { NO_CRASHES, isLoadFailure, pageCrashed, pageLoaded, retryDelayMs } from './loadRetry.js';
+import { NO_CRASHES, isLoadFailure, isServerReady, pageCrashed, pageLoaded, retryDelayMs } from './loadRetry.js';
 import type { Strings } from './strings.js';
-import { titleBarOptions } from './titleBar.js';
+import { titleBarOptions, type TitleBarStyle } from './titleBar.js';
 import { MIN_SIZE, parseWindowState, placeWindow, type WindowState } from './windowState.js';
 
 // The default theme's shell colour (web/index.html), so the window does not
 // flash white before the page paints
 const BACKGROUND = '#000000';
 const SAVE_DELAY_MS = 500;
-const STOPPED_PAGE = path.join(import.meta.dirname, '../../assets/stopped.html');
+const SCREEN_PAGE = path.join(import.meta.dirname, '../../assets/connection.html');
+const SCREEN_URL = pathToFileURL(SCREEN_PAGE).href;
+// The same names are spelled out in src/preload/index.cts, which cannot import this file
+const RENDER = 'linkord:connection:render';
+const ACTION = 'linkord:connection:action';
+const CHECK_TIMEOUT_MS = 10_000;
+// A start that has not heard from the server by then shows the screen meanwhile
+const SLOW_CHECK_MS = 1_000;
 
 function readState(file: string): WindowState | null {
   try { return parseWindowState(JSON.parse(fs.readFileSync(file, 'utf8'))); } catch { return null; }
@@ -41,6 +50,8 @@ export function createMainWindow(options: {
   /** held back until the start's update check settles; false: an update is being installed, never show */
   showWhen?: Promise<boolean>;
   strings: Strings;
+  /** which system's buttons the page draws; the connecting screen draws the same */
+  titleBar: TitleBarStyle;
 }): MainWindow {
   const placement = placeWindow(readState(options.stateFile), screen.getAllDisplays().map((d) => d.workArea));
   const window = new BrowserWindow({
@@ -61,8 +72,8 @@ export function createMainWindow(options: {
   });
   if (placement.maximized) window.maximize();
 
-  // Also on a failed load, so the retry is not an empty, invisible window;
-  // a start with the system keeps quiet until the person opens it
+  // Also once the connecting screen is up, so the retry is not an empty,
+  // invisible window; a start with the system keeps quiet until it is opened
   const reveal = () => {
     if (options.startHidden) return;
     void (options.showWhen ?? Promise.resolve(true)).then((show) => {
@@ -80,57 +91,158 @@ export function createMainWindow(options: {
   window.on('move', saveSoon);
   window.on('close', () => { clearTimeout(saveTimer); writeState(options.stateFile, window); });
 
-  // The server may be down or mid-deploy when the app starts: keep retrying
-  // instead of leaving an empty window behind
+  // The server may be down or mid-deploy when the app starts. The window then
+  // shows its own screen (connectionScreen.ts, assets/connection.html) and
+  // checks again, 1 to 30 s apart, before loading the page: loading a server
+  // that does not answer would show Chromium's error page instead.
+  const { strings, titleBar } = options;
   const contents = window.webContents;
   let attempt = 0;
   let retryTimer: NodeJS.Timeout | undefined;
+  let slowTimer: NodeJS.Timeout | undefined;
+  let tickTimer: NodeJS.Timeout | undefined;
   let target = options.startUrl ?? options.appUrl;
-  const load = () => {
+  // What the screen shows; null once the app's page is on its way
+  let shown: ConnectionScreen | null = null;
+  // The screen's page, true once loaded; null when another page replaced it
+  let screenPage: Promise<boolean> | null = null;
+  // A check that answers after something else happened does nothing
+  let turn = 0;
+
+  const render = () => {
+    void screenPage?.then((loaded) => {
+      if (!loaded || !shown || window.isDestroyed() || !isScreenUrl(contents.getURL(), SCREEN_URL)) return;
+      contents.send(RENDER, connectionView(shown, strings, { now: Date.now(), titleBar, maximized: window.isMaximized() }));
+    });
+  };
+  const show = (next: ConnectionScreen) => {
+    shown = next;
+    clearInterval(tickTimer);
+    if (next.kind === 'waiting') tickTimer = setInterval(render, 1_000);
+    // A failure here is another load replacing it, or did-fail-load's to report
+    screenPage ??= contents.loadFile(SCREEN_PAGE).then(() => true, () => false);
+    render();
+  };
+  const settle = () => {
+    turn++;
+    clearTimeout(retryTimer);
+    clearTimeout(slowTimer);
+  };
+  const loadApp = () => {
+    settle();
+    shown = null;
+    screenPage = null;
+    clearInterval(tickTimer);
     contents.loadURL(target.href).catch(() => {
       // did-fail-load reports the failure and schedules the retry
     });
   };
-  contents.on('did-fail-load', (_event, errorCode, errorDescription, _url, isMainFrame) => {
-    if (!isLoadFailure(errorCode, isMainFrame)) return;
-    reveal();
+  const serverReady = async () => {
+    try {
+      const response = await contents.session.fetch(options.appUrl.href, { cache: 'no-store', signal: AbortSignal.timeout(CHECK_TIMEOUT_MS) });
+      await response.body?.cancel();
+      return isServerReady(response.status);
+    } catch {
+      return false;
+    }
+  };
+  const connect = () => {
+    settle();
+    const own = turn;
+    // A start shows nothing until the check answers, unless it is slow
+    if (screenPage) show({ kind: 'connecting' });
+    else slowTimer = setTimeout(() => show({ kind: 'connecting' }), SLOW_CHECK_MS);
+    void serverReady().then((ready) => {
+      if (own !== turn || window.isDestroyed()) return;
+      if (ready) loadApp();
+      else scheduleRetry('no answer');
+    });
+  };
+  const scheduleRetry = (reason: string) => {
+    settle();
     const delay = retryDelayMs(attempt++);
-    console.warn(`[desktop] could not load ${options.appUrl.origin} (${errorDescription}); retrying in ${delay} ms`);
-    clearTimeout(retryTimer);
-    retryTimer = setTimeout(load, delay);
+    console.warn(`[desktop] could not load ${options.appUrl.origin} (${reason}); retrying in ${delay} ms`);
+    retryTimer = setTimeout(connect, delay);
+    show({ kind: 'waiting', retryAt: Date.now() + delay });
+  };
+
+  contents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL, isMainFrame) => {
+    if (!isLoadFailure(errorCode, isMainFrame)) return;
+    if (isScreenUrl(validatedURL, SCREEN_URL)) {
+      // Only a broken build: the retries go on behind whatever shows instead
+      console.error(`[desktop] could not show the connecting screen (${errorDescription})`);
+      screenPage = null;
+      reveal();
+      return;
+    }
+    scheduleRetry(errorDescription);
   });
   let crashes = NO_CRASHES;
   contents.on('did-finish-load', () => {
+    if (isScreenUrl(contents.getURL(), SCREEN_URL)) {
+      reveal();
+      // Also after a reload from the menu, which starts the page over
+      render();
+      return;
+    }
     attempt = 0;
     crashes = pageLoaded(crashes, Date.now());
   });
   contents.on('render-process-gone', (_event, details) => {
+    screenPage = null;
     if (details.reason === 'clean-exit') return;
     const result = pageCrashed(crashes, Date.now());
     crashes = result.history;
-    clearTimeout(retryTimer);
+    settle();
     if (result.decision.kind === 'give-up') {
       console.error(`[desktop] page process gone (${details.reason}) too many times in a row; stopped`);
-      const { strings } = options;
-      // Its button goes back to the app's address, which the navigation guard lets through
-      contents.loadFile(STOPPED_PAGE, { query: { title: strings.crashedTitle, body: strings.crashedBody, action: strings.reload, url: target.href } })
-        .catch((error: unknown) => console.error('[desktop] could not show the stopped screen', error));
+      show({ kind: 'crashed' });
       return;
     }
     const { delayMs } = result.decision;
     console.error(`[desktop] page process gone (${details.reason}); reloading in ${delayMs} ms`);
-    retryTimer = setTimeout(load, delayMs);
+    retryTimer = setTimeout(connect, delayMs);
   });
-  window.on('closed', () => { clearTimeout(retryTimer); clearTimeout(saveTimer); });
 
-  load();
+  // The screen's only messages: try now, and the window's own buttons
+  const onAction = (event: IpcMainEvent, value: unknown) => {
+    if (event.sender !== contents || !isScreenFrame(event.senderFrame, SCREEN_URL)) return;
+    switch (parseConnectionAction(value)) {
+      case 'retry':
+        if (shown && shown.kind !== 'connecting') connect();
+        return;
+      case 'minimize':
+        window.minimize();
+        return;
+      case 'toggle-maximize':
+        if (window.isMaximized()) window.unmaximize();
+        else window.maximize();
+        return;
+      // The window's close handler decides what closing means (hide to the tray)
+      case 'close':
+        window.close();
+        return;
+    }
+  };
+  ipcMain.on(ACTION, onAction);
+  window.on('maximize', render);
+  window.on('unmaximize', render);
+  window.on('closed', () => {
+    settle();
+    clearInterval(tickTimer);
+    clearTimeout(saveTimer);
+    ipcMain.removeListener(ACTION, onAction);
+  });
+
+  connect();
   return {
     window,
     load: (url) => {
       target = url;
       attempt = 0;
-      clearTimeout(retryTimer);
-      load();
+      // On the screen, check first, as a retry would
+      if (shown) connect();
+      else loadApp();
     },
   };
 }

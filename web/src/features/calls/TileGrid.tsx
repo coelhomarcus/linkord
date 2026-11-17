@@ -147,7 +147,7 @@ export function TileGrid({ descriptors, focusedId, minTileWidth = DEFAULT_MIN_TI
             onClick={() => setThumbsCollapsed((v) => !v)}
             aria-expanded={!thumbsCollapsed}
             aria-label={thumbsCollapsed ? t('stage.showParticipants') : t('stage.hideParticipants')}
-            className="flex items-center gap-1 rounded-full px-2 py-0.5 text-caption text-text-muted transition-colors hover:bg-fill-subtle hover:text-text-secondary"
+            className="relative flex touch-target items-center gap-1 rounded-full px-2 py-0.5 text-caption text-text-muted transition-colors focus-ring hover:bg-fill-subtle hover:text-text-secondary"
           >
             {thumbsCollapsed ? <CaretUpIcon size={12} /> : <CaretDownIcon size={12} />}
             {t('tileGrid.participants', { count: thumbs.length })}

@@ -39,7 +39,7 @@ function RowActions({ webhook }: { webhook: AdminWebhookRow }) {
 
 function WebhookIdentity({ webhook, from }: { webhook: AdminWebhookRow; from: { from: string } }) {
   return (
-    <AppLink to={`/admin/webhooks/${webhook.id}`} state={from} className="flex min-w-0 items-center gap-3 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring">
+    <AppLink to={`/admin/webhooks/${webhook.id}`} state={from} className="flex min-w-0 items-center gap-3 rounded-md focus-ring">
       <Avatar id={webhook.id} name={webhook.name} avatar={webhook.avatar} size={36} />
       <span className="block min-w-0 truncate text-body font-medium text-text-primary">{webhook.name}</span>
     </AppLink>

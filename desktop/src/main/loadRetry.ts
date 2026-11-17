@@ -13,10 +13,20 @@ export function isLoadFailure(errorCode: number, isMainFrame: boolean): boolean 
   return isMainFrame && errorCode !== ABORTED;
 }
 
+/**
+ * Whether the server's answer to the check made before loading the page means
+ * the page will load. During a deploy the proxy answers for the missing
+ * container (404, 502), and loading that would show the proxy's error page.
+ */
+export function isServerReady(status: number): boolean {
+  return status >= 200 && status < 300;
+}
+
 // A page whose process dies is reloaded, but a page that dies as soon as it
 // loads (a GPU driver fault, a bad deploy) would otherwise reload in a tight
 // loop. Crashes are counted until the page has stayed up for a while; past a
-// few in a row the app stops and shows a screen with a reload button.
+// few in a row the app stops and shows a screen with a reload button
+// (connectionScreen.ts).
 export const MAX_CRASHES = 3;
 export const HEALTHY_AFTER_MS = 30_000;
 

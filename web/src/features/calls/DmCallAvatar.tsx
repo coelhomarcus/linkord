@@ -55,7 +55,7 @@ export function DmCallAvatar({ peer, isMine, size, loading = false }: DmCallAvat
       data-speaking={speaking || undefined}
       aria-label={status ? `${peer.name}, ${status}` : peer.name}
       onContextMenu={handleContextMenu}
-      className="relative flex-none rounded-full outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+      className="relative flex-none rounded-full focus-ring"
       style={{ width: size, height: size }}
     >
       <Avatar

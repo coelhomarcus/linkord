@@ -214,6 +214,23 @@ The installer lands in `desktop/release/` as `Linkord-<version>-win-x64.exe`. It
 
 The installer has no code signing certificate. It works, but Windows treats it as from an unknown developer: SmartScreen shows "Windows protected your PC", and the person chooses **More info** → **Run anyway**. Each new version shows it again, and some antivirus tools are quicker to flag unsigned programs.
 
+### Electron fuses
+
+The build flips Electron's fuses in `Linkord.exe` (`electronFuses` in `desktop/electron-builder.config.cjs`), so the installed binary cannot be used to run someone else's code under its name:
+
+| Fuse | Value | Effect |
+| --- | --- | --- |
+| `runAsNode` | off | `ELECTRON_RUN_AS_NODE` does not turn it into a Node interpreter |
+| `enableNodeOptionsEnvironmentVariable` | off | `NODE_OPTIONS` is ignored |
+| `enableNodeCliInspectArguments` | off | `--inspect` and its kin do not attach a debugger |
+| `enableEmbeddedAsarIntegrityValidation` | on | a changed `resources\app.asar` stops the app at start ("Integrity check failed") |
+| `onlyLoadAppFromAsar` | on | the app loads only from `app.asar`, never from a loose `app` folder |
+| `enableCookieEncryption` | on | the session cookie is encrypted on disk with the Windows user's key (DPAPI) |
+
+- Cookie encryption does not sign anyone out: a cookie stored unencrypted by an earlier version is still read, and is encrypted the next time it is written. It is one way, though: a later build with the fuse off cannot read the encrypted cookies, and everyone would have to sign in again.
+- No fuse covers Chromium's remote debugging (`--remote-debugging-port`, `--remote-debugging-pipe`), which would hand over the page and its session cookie, so an installed build exits at once when started with either (`desktop/src/main/debugSwitches.ts`). A development run (`npm run dev:desktop`) still accepts them.
+- To check a build: `npx electron-fuses read --app desktop/release/win-unpacked/Linkord.exe` (from `desktop/`, after `npm run package:desktop -- --dir`).
+
 ### Updates and data
 
 Most changes do not need a new version. The interface comes from the server, so a server deploy updates it. A desktop build older than the server keeps working, because the web app checks each feature the desktop app offers before using it. A new installer is needed only for changes in `desktop/`.

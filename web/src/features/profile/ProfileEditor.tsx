@@ -315,7 +315,7 @@ export function ProfileEditor({ status, customStatus, details, onClose, register
                   <button
                     type="button"
                     onClick={() => leave(() => { navigate(ROUTES.settingsTab('connections')); onClose(); })}
-                    className="touch-target relative inline-flex w-fit items-center gap-1.5 rounded-md py-1 text-label text-text-secondary transition-colors hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="touch-target relative inline-flex w-fit items-center gap-1.5 rounded-md py-1 text-label text-text-secondary transition-colors hover:text-text-primary focus-ring"
                   >
                     <PlusIcon size={14} aria-hidden />
                     {t('integration.addLink')}

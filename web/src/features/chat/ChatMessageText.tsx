@@ -73,7 +73,7 @@ function Mention({ name, ctx }: { name: string; ctx: RenderContext }) {
         // few px off the text baseline no matter how align-middle/a
         // manual translate tried to compensate.
         // a button, but part of the sentence: copying the message must keep the name
-        'inline-flex h-6 select-text items-center gap-1 rounded-sm px-1 align-middle font-medium',
+        'inline-flex h-6 select-text items-center gap-1 rounded-sm px-1 align-middle font-medium focus-ring',
         isMe ? 'bg-yellow/25 text-yellow' : 'bg-primary/15 text-accent-text',
         ctx.onOpenProfile && (isMe ? 'hover:bg-yellow/35' : 'hover:bg-primary/25')
       )}
@@ -122,7 +122,7 @@ function Spoiler({ children }: { children: ReactNode }) {
         event.preventDefault();
         setRevealed(true);
       }}
-      className="cursor-pointer rounded-sm bg-text-muted outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+      className="cursor-pointer rounded-sm bg-text-muted focus-ring"
     >
       <span inert className="invisible">{children}</span>
     </span>
@@ -164,7 +164,7 @@ function CopyCodeButton({ code }: { code: string }) {
       onClick={() => void copy(code)}
       aria-label={t('code.copy')}
       className={cn(
-        'absolute right-2 top-2 flex items-center gap-1 rounded-md border border-border bg-surface-overlay px-2 py-1 text-caption font-medium text-text-secondary transition-opacity hover:text-text-primary focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [@media(hover:none)]:opacity-100',
+        'absolute right-2 top-2 flex items-center gap-1 rounded-md border border-border bg-surface-overlay px-2 py-1 text-caption font-medium text-text-secondary transition-opacity hover:text-text-primary focus-visible:opacity-100 focus-ring [@media(hover:none)]:opacity-100',
         copied ? 'opacity-100' : 'opacity-0 group-hover/code:opacity-100',
       )}
     >
@@ -237,6 +237,7 @@ export function ChatMessageText({ text, mentionLookup, myUserId, onOpenProfile, 
       {blocks.map((block, index) => {
         switch (block.type) {
           case 'paragraph':
+            // off-scale: a jumbo emoji-only message, glyphs rather than type
             return <p key={index} className={cn('whitespace-pre-wrap wrap-break-word', jumbo && 'text-[48px] leading-none')}>{renderInline(block.children, ctx)}</p>;
           case 'code':
             return <CodeBlock key={index} code={block.code} lang={block.lang} />;

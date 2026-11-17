@@ -24,10 +24,10 @@ export function ProfilePage({ onOpenProfile }: { onOpenProfile: (userId: string)
             </div>
           </div>
           <nav aria-label={t('page.options')} className="overflow-hidden rounded-xl border border-border bg-bg-secondary">
-            <button type="button" onClick={() => { if (me.userId) onOpenProfile(me.userId); }} className="flex min-h-14 w-full items-center gap-3 border-b border-border px-4 text-left text-label hover:bg-fill-hover">
+            <button type="button" onClick={() => { if (me.userId) onOpenProfile(me.userId); }} className="flex min-h-14 w-full items-center gap-3 border-b border-border px-4 text-left text-label focus-ring focus-visible:ring-inset hover:bg-fill-hover">
               <UserCircleIcon size={22} aria-hidden /> {t('page.myProfile')}
             </button>
-            <button type="button" onClick={() => navigate(ROUTES.settings)} className="flex min-h-14 w-full items-center gap-3 px-4 text-left text-label hover:bg-fill-hover">
+            <button type="button" onClick={() => navigate(ROUTES.settings)} className="flex min-h-14 w-full items-center gap-3 px-4 text-left text-label focus-ring focus-visible:ring-inset hover:bg-fill-hover">
               <GearIcon size={22} aria-hidden /> {t('page.settings')}
             </button>
           </nav>

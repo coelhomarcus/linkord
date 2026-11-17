@@ -23,7 +23,7 @@ function JumpButton({ onJump, label, className }: { onJump: () => void; label?: 
       aria-label={t('media.jumpToMessage')}
       onClick={onJump}
       className={cn(
-        'z-10 inline-flex items-center gap-1.5 rounded-md bg-black/65 px-2 py-1.5 text-caption font-medium text-white backdrop-blur-sm transition-colors hover:bg-black/80 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/60',
+        'z-10 inline-flex items-center gap-1.5 rounded-md bg-black/65 px-2 py-1.5 text-caption font-medium text-white backdrop-blur-sm transition-colors hover:bg-black/80 focus-ring',
         className,
       )}
     >
@@ -85,11 +85,11 @@ export function MediaTile({ item, onOpen, onJump }: { item: MediaItem; onOpen: (
   return (
     <div className="group relative aspect-square overflow-hidden rounded-lg border border-border bg-bg-tertiary">
       {viewable ? (
-        <button type="button" aria-label={t('media.open', { name: label })} onClick={() => onOpen(item)} className={cn(faceClass, 'cursor-zoom-in transition-opacity focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-inset focus-visible:ring-ring/60')}>
+        <button type="button" aria-label={t('media.open', { name: label })} onClick={() => onOpen(item)} className={cn(faceClass, 'cursor-zoom-in transition-opacity focus-ring focus-visible:ring-inset')}>
           <TileFace item={item} />
         </button>
       ) : (
-        <a href={`/uploads/${item.attachment?.id}`} download={item.attachment?.name} aria-label={t('media.download', { name: label })} className={cn(faceClass, 'transition-colors hover:bg-bg-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-inset focus-visible:ring-ring/60')}>
+        <a href={`/uploads/${item.attachment?.id}`} download={item.attachment?.name} aria-label={t('media.download', { name: label })} className={cn(faceClass, 'transition-colors hover:bg-bg-hover focus-ring focus-visible:ring-inset')}>
           <TileFace item={item} />
         </a>
       )}
@@ -127,7 +127,7 @@ export function MediaListItem({ item, onJump }: { item: MediaItem; onJump: (item
           target="_blank"
           rel="noopener noreferrer"
           download={attachment.name}
-          className="flex w-full items-center rounded-lg border border-border bg-bg-tertiary px-3 py-3 transition-colors hover:bg-bg-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/60"
+          className="flex w-full items-center rounded-lg border border-border bg-bg-tertiary px-3 py-3 transition-colors hover:bg-bg-hover focus-ring"
         >
           <DocumentAttachmentCard name={attachment.name} size={attachment.size} mime={attachment.mime} className="min-w-0 flex-1" />
         </a>

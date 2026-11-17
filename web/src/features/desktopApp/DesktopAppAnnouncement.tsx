@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { isDesktopApp } from '@/shared/desktop';
 import { LOCAL_STORAGE_KEYS, localStorageStore } from '@/shared/lib/localStorage';
 import { cn } from '@/shared/lib/utils';
-import { buttonVariants } from '@/shared/ui/primitives/button';
+import { Button, buttonVariants } from '@/shared/ui/primitives/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/primitives/dialog';
 import { useRoom } from '@/state/RoomContext';
 import { fetchDesktopDownloads, isWindowsComputer } from './desktopDownloads';
@@ -64,7 +64,7 @@ export function DesktopAppAnnouncement() {
           <span className="flex size-20 items-center justify-center rounded-[22px] border border-border-default bg-surface-rail shadow-popover">
             <img src="/logo.svg" alt="" className="size-12" />
           </span>
-          <DialogTitle className="mt-5 text-[1.375rem] font-bold leading-tight text-text-strong">{t('title')}</DialogTitle>
+          <DialogTitle className="mt-5 text-display font-bold text-text-strong">{t('title')}</DialogTitle>
           <DialogDescription className="mt-2 text-body text-text-secondary">{t('description')}</DialogDescription>
         </div>
         <ul className="flex flex-col gap-3 px-6 pb-2">
@@ -92,9 +92,9 @@ export function DesktopAppAnnouncement() {
             {' · '}
             <a href={offer.page} target="_blank" rel="noreferrer" className="text-link hover:underline">{t('allVersions')}</a>
           </p>
-          <button type="button" onClick={() => setOpen(false)} className="mx-auto rounded-md px-2 py-1 text-label text-text-muted hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
+          <Button type="button" variant="quiet" onClick={() => setOpen(false)} className="mx-auto">
             {t('later')}
-          </button>
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

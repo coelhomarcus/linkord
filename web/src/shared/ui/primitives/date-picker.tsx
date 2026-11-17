@@ -129,7 +129,7 @@ function Calendar({ focused, onFocusedChange, range, min, max, today, onPick, on
                       onClick={() => { onFocusedChange(day); if (!disabled) onPick(day); }}
                       onMouseEnter={() => { if (!disabled) onHover(day); }}
                       className={cn(
-                        'grid size-9 place-items-center rounded-md text-label tabular-nums text-text-primary outline-none transition-colors duration-100 focus-visible:ring-2 focus-visible:ring-ring touch-first:size-10',
+                        'grid size-9 place-items-center rounded-md text-label tabular-nums text-text-primary focus-ring transition-colors duration-100 touch-first:size-10',
                         !isEdge && !isInside && !disabled && 'hover:bg-fill-hover',
                         isInside && 'rounded-none bg-accent-primary/15',
                         isEdge && 'bg-primary font-semibold text-primary-foreground',

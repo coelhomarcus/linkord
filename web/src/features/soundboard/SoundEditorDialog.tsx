@@ -288,8 +288,9 @@ export function SoundEditorDialog({ serverId, open, onOpenChange, sound = null, 
                     <PopoverTrigger
                       type="button"
                       aria-label={t('editor.emoji')}
-                      className="flex h-10 w-full items-center gap-2 rounded-md border border-border-strong bg-fill-subtle px-3 text-left text-label transition-colors hover:bg-fill-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                      className="flex h-10 w-full items-center gap-2 rounded-md border border-border-strong bg-fill-subtle px-3 text-left text-label transition-colors hover:bg-fill-hover focus-ring"
                     >
+                      {/* off-scale: an emoji glyph, sized like the icon it stands in for */}
                       {emoji ? <span className="text-[20px] leading-none"><Emoji emoji={emoji} /></span> : <SmileyIcon size={18} className="flex-none text-text-muted" />}
                       {!emoji && <span className="truncate text-text-muted">{t('editor.emojiPlaceholder')}</span>}
                     </PopoverTrigger>
@@ -302,7 +303,7 @@ export function SoundEditorDialog({ serverId, open, onOpenChange, sound = null, 
                       type="button"
                       aria-label={t('editor.clearEmoji')}
                       onClick={() => setEmoji('')}
-                      className="absolute top-1/2 right-2 grid size-6 -translate-y-1/2 place-items-center rounded-md text-text-muted transition-colors hover:bg-fill-hover hover:text-text-primary"
+                      className="absolute top-1/2 right-2 grid size-6 -translate-y-1/2 touch-target place-items-center rounded-md text-text-muted transition-colors focus-ring hover:bg-fill-hover hover:text-text-primary"
                     >
                       <XIcon size={14} />
                     </button>

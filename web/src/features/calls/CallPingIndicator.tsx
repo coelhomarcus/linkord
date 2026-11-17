@@ -43,7 +43,7 @@ export function CallPingIndicator() {
         aria-label={`${strength.label}. ${pingLabel}`}
         data-tone={strength.tone}
         data-bars={strength.bars}
-        className={cn('inline-flex rounded-sm focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50', TONE_TEXT[strength.tone])}
+        className={cn('inline-flex rounded-sm focus-ring', TONE_TEXT[strength.tone])}
       >
         <SignalBars bars={strength.bars} />
       </TooltipTrigger>

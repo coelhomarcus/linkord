@@ -17,7 +17,7 @@ export function AdminEntityHeader({ avatar, title, subtitle, id, badges }: {
     <header className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-xl border border-border-subtle bg-fill-subtle p-4">
       <div className="flex-none">{avatar}</div>
       <div className="min-w-0 flex-1 basis-60">
-        <h2 className="truncate text-[1.25rem] font-semibold leading-[1.2] text-text-strong">{title}</h2>
+        <h2 className="truncate text-heading font-semibold text-text-strong">{title}</h2>
         {subtitle && <p className="mt-0.5 truncate text-label text-text-muted">{subtitle}</p>}
         <p className="mt-1.5 flex items-center gap-1 text-caption text-text-muted">
           <span className="min-w-0 break-all font-mono">{id}</span>

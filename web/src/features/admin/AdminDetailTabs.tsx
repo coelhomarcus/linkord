@@ -29,7 +29,7 @@ export function AdminDetailTabs<T extends string>({ label, tabs, active, default
                 state={state}
                 aria-current={current ? 'page' : undefined}
                 className={cn(
-                  'flex h-11 items-center border-b-2 text-body font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring',
+                  'flex h-11 items-center border-b-2 text-body font-semibold focus-ring transition-colors',
                   current ? 'border-text-primary text-text-primary' : 'border-transparent text-text-muted hover:text-text-secondary',
                 )}
               >

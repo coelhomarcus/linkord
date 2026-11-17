@@ -22,4 +22,11 @@ describe('CloseButton', () => {
     expect(screen.getByRole('button', { name: 'Fechar' }).className).toContain('border-border-control');
     expect(screen.getByRole('button', { name: 'Fechar' }).className).toContain('rounded-lg');
   });
+
+  it('takes a 44px tap on a touch screen and draws the shared focus ring', () => {
+    render(<CloseButton size="xs" />);
+    const button = screen.getByRole('button', { name: 'Fechar' });
+    expect(button.className).toContain('touch-target');
+    expect(button.className).toContain('focus-ring');
+  });
 });

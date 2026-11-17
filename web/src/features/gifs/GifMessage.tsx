@@ -43,7 +43,7 @@ function GifMessageBody({ url }: { url: string }) {
       type="button"
       aria-label={t('message.open')}
       onClick={open}
-      className="mt-0.5 block max-w-[min(100%,20rem)] cursor-zoom-in rounded-lg focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/60"
+      className="mt-0.5 block max-w-[min(100%,20rem)] cursor-zoom-in rounded-lg focus-ring"
     >
       {showing ? (
         <img

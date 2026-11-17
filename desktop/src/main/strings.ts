@@ -1,4 +1,5 @@
-// The few words the desktop app itself shows (tray, menu, update prompts).
+// The few words the desktop app itself shows (tray, menu, update prompts,
+// the connecting screen).
 // It follows the system's language: the account's language lives in the
 // page, which the menu is built before. pt-BR is the source, as in web/.
 
@@ -38,6 +39,14 @@ const PT_BR = {
   help: 'Ajuda',
   crashedTitle: 'O Linkord parou de funcionar',
   crashedBody: 'A página fechou sozinha várias vezes seguidas.',
+  connecting: 'Conectando…',
+  connectFailed: 'Não foi possível conectar',
+  connectFailedDetail: 'O servidor do Linkord não respondeu.',
+  connectRetryIn: 'Tentando de novo em {{seconds}} s',
+  tryNow: 'Tentar agora',
+  maximize: 'Maximizar',
+  restore: 'Restaurar',
+  windowControls: 'Controles da janela',
   updateChecking: 'Procurando atualizações…',
   updateDownloading: 'Baixando atualização…',
   updateDownloadingDetail: 'Versão {{version}} · {{percent}}%',
@@ -92,6 +101,14 @@ const EN_US: Strings = {
   help: 'Help',
   crashedTitle: 'Linkord stopped working',
   crashedBody: 'The page closed by itself several times in a row.',
+  connecting: 'Connecting…',
+  connectFailed: 'Could not connect',
+  connectFailedDetail: 'The Linkord server did not answer.',
+  connectRetryIn: 'Trying again in {{seconds}} s',
+  tryNow: 'Try now',
+  maximize: 'Maximize',
+  restore: 'Restore',
+  windowControls: 'Window controls',
   updateChecking: 'Checking for updates…',
   updateDownloading: 'Downloading update…',
   updateDownloadingDetail: 'Version {{version}} · {{percent}}%',

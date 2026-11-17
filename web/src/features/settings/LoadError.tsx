@@ -6,7 +6,7 @@ export function LoadError({ message, onRetry }: { message: string; onRetry: () =
   return (
     <div className="flex items-center gap-2 rounded-md bg-red/12 px-2.5 py-1.5 text-label text-red-text">
       <span className="min-w-0 flex-1">{message}</span>
-      <button type="button" onClick={onRetry} className="flex-none font-medium underline-offset-2 hover:underline">{t('page.retry')}</button>
+      <button type="button" onClick={onRetry} className="relative flex-none touch-target rounded-sm font-medium underline-offset-2 focus-ring hover:underline">{t('page.retry')}</button>
     </div>
   );
 }

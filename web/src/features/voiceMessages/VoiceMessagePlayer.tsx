@@ -112,7 +112,7 @@ export function VoiceMessagePlayer({ src, durationMs, waveform, name, className 
         aria-label={playing ? t('player.pause') : t('player.play')}
         disabled={!src}
         onClick={() => void togglePlay()}
-        className="flex size-9 flex-none items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
+        className="flex size-9 flex-none items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors hover:bg-primary/90 focus-ring disabled:opacity-50"
       >
         {playing ? <PauseIcon size={16} weight="fill" /> : <PlayIcon size={16} weight="fill" className="ml-0.5" />}
       </button>
@@ -133,7 +133,7 @@ export function VoiceMessagePlayer({ src, durationMs, waveform, name, className 
         }}
         onPointerMove={(event) => { if (src && event.buttons === 1) seekFromPointer(event); }}
         onKeyDown={src ? handleKeyDown : undefined}
-        className={cn('flex h-8 min-w-0 flex-1 touch-none items-center gap-px overflow-hidden rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50', src && 'cursor-pointer')}
+        className={cn('flex h-8 min-w-0 flex-1 touch-none items-center gap-px overflow-hidden rounded focus-ring', src && 'cursor-pointer')}
       >
         {bars.map((value, i) => (
           <span
@@ -154,7 +154,7 @@ export function VoiceMessagePlayer({ src, durationMs, waveform, name, className 
           onClick={cycleSpeed}
           disabled={!src}
           aria-label={t('player.speed', { speed: SPEEDS[speedIndex] })}
-          className="w-9 flex-none rounded-md px-1 py-0.5 text-caption font-semibold tabular-nums text-text-secondary hover:bg-fill-hover disabled:opacity-50"
+          className="relative w-9 flex-none touch-target rounded-md px-1 py-0.5 text-caption font-semibold tabular-nums text-text-secondary focus-ring hover:bg-fill-hover disabled:opacity-50"
         >
           {SPEEDS[speedIndex]}×
         </button>

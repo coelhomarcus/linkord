@@ -233,7 +233,8 @@ export function EmojiPicker({ onPick, allowCustom = true, className, autoFocus =
         <DropdownMenu>
           <DropdownMenuTrigger
             aria-label={t('picker.skinTone')}
-            className="grid size-10 flex-none place-items-center rounded-lg text-[22px] leading-none transition-colors duration-100 hover:bg-fill-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            // off-scale: an emoji glyph, sized to its box, not type
+            className="grid size-10 flex-none place-items-center rounded-lg text-[22px] leading-none transition-colors duration-100 hover:bg-fill-hover focus-ring"
           >
             <Emoji emoji={TONE_HANDS[skinTone] ?? SIDEBAR_HAND} />
           </DropdownMenuTrigger>
@@ -241,6 +242,7 @@ export function EmojiPicker({ onPick, allowCustom = true, className, autoFocus =
             <DropdownMenuRadioGroup value={String(skinTone)} onValueChange={(value) => setSkinTone(Number(value))}>
               {TONE_HANDS.map((hand, tone) => (
                 <DropdownMenuRadioItem key={hand} value={String(tone)} aria-label={t(`picker.tones.${tone}` as 'picker.tones.0')}>
+                  {/* off-scale: an emoji glyph, sized to its box, not type */}
                   <span className="text-[20px] leading-none"><Emoji emoji={hand} /></span>
                 </DropdownMenuRadioItem>
               ))}
@@ -264,7 +266,7 @@ export function EmojiPicker({ onPick, allowCustom = true, className, autoFocus =
                   aria-current={isActive ? 'true' : undefined}
                   onClick={() => jumpTo(section.key)}
                   className={cn(
-                    'grid size-8 place-items-center rounded-md text-text-muted transition-colors duration-100 hover:bg-fill-hover hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                    'grid size-8 place-items-center rounded-md text-text-muted transition-colors duration-100 hover:bg-fill-hover hover:text-text-primary focus-ring pointer-coarse:size-11',
                     isActive && 'bg-fill-hover text-text-primary',
                   )}
                 >
@@ -320,6 +322,7 @@ export function EmojiPicker({ onPick, allowCustom = true, className, autoFocus =
                         onClick={() => pick(item)}
                         onPointerEnter={() => setHovered(item)}
                         className={cn(
+                          // off-scale: an emoji glyph, sized to its box, not type
                           'grid flex-none place-items-center rounded-md text-[26px] leading-none hover:bg-fill-hover',
                           isActive && 'bg-fill-hover ring-2 ring-ring/60',
                         )}
@@ -361,6 +364,7 @@ export function EmojiPicker({ onPick, allowCustom = true, className, autoFocus =
           <>
             {preview.custom
               ? <img src={emojiImageUrl(preview.custom.id)} alt="" className="size-7 flex-none object-contain" />
+              // off-scale: an emoji glyph, sized to its box, not type
               : <span aria-hidden className="text-[26px] leading-none"><Emoji emoji={preview.emoji!} /></span>}
             <span className="min-w-0 truncate text-label font-semibold text-text-primary">:{preview.shortcode}:</span>
             {preview.custom && <span className="min-w-0 truncate text-caption text-text-muted">{serverById.get(preview.custom.serverId)?.name}</span>}

@@ -27,7 +27,7 @@ export function SocialUserRow({ user, online, subtitle, onOpenProfile, children 
         // the row already knows the name and avatar: the profile opens with them while the rest is read
         onClick={() => { rememberProfilePreview(user); onOpenProfile(); }}
         aria-label={t('row.viewProfile', { name: user.displayName })}
-        className="flex min-w-0 flex-1 items-center gap-3 rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="flex min-w-0 flex-1 items-center gap-3 rounded-md text-left focus-ring"
       >
         <div className="relative flex-none">
           <Avatar id={user.id} name={user.displayName} avatar={user.avatar} avatarColor={user.avatarColor} size={32} />

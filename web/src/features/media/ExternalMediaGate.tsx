@@ -37,7 +37,7 @@ export function ExternalMediaGate({ url, kind, className = '', poster, style, ch
       type="button"
       onClick={() => setLoaded(true)}
       style={style}
-      className={cn('relative flex w-full max-w-sm items-center gap-3 overflow-hidden rounded-md border border-border bg-bg-tertiary px-3 py-2.5 text-left transition-colors hover:bg-bg-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50', poster && 'aspect-video justify-center', className)}
+      className={cn('relative flex w-full max-w-sm items-center gap-3 overflow-hidden rounded-md border border-border bg-bg-tertiary px-3 py-2.5 text-left transition-colors hover:bg-bg-hover focus-ring', poster && 'aspect-video justify-center', className)}
     >
       {poster && <img src={poster} alt="" className="absolute inset-0 size-full object-cover opacity-60" />}
       <span className="relative flex size-10 flex-none items-center justify-center rounded-full bg-black/60 text-white">

@@ -17,7 +17,7 @@ import { useLanguage } from '@/shared/i18n/useLanguage';
 
 const SHOWN_MUTUALS = 5;
 const SECTION = 'flex flex-col gap-1';
-const MUTUAL_LINK = 'rounded-sm hover:text-text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
+const MUTUAL_LINK = 'rounded-sm hover:text-text-primary hover:underline focus-ring';
 
 /** The profile beside a DM, as Discord draws it: banner, avatar, bio, since
  * when, and what you have in common, with the full profile one click away. */
@@ -46,7 +46,7 @@ export function DirectProfilePanel({ user, onOpenProfile }: { user: PublicUser; 
           <UserCustomStatusBubble userId={user.id} />
         </div>
         <div className="pt-12">
-          <h2 className="truncate text-[1.25rem] font-bold leading-[1.3] text-text-strong">{user.displayName}</h2>
+          <h2 className="truncate text-heading font-bold text-text-strong">{user.displayName}</h2>
           {/* the same @ handle the profile modal draws, so the two read as one profile */}
           <p className="flex min-w-0 items-center gap-0.5 text-label text-text-muted">
             <AtIcon size={14} aria-hidden className="flex-none" />
@@ -90,7 +90,7 @@ export function DirectProfilePanel({ user, onOpenProfile }: { user: PublicUser; 
               <ul className="flex flex-col gap-1">
                 {servers.items.slice(0, SHOWN_MUTUALS).map((server) => (
                   <li key={server.id}>
-                    <button type="button" onClick={() => navigate(ROUTES.server(server.id))} className="flex w-full items-center gap-2.5 rounded-md p-1 text-left hover:bg-fill-hover">
+                    <button type="button" onClick={() => navigate(ROUTES.server(server.id))} className="flex w-full items-center gap-2.5 rounded-md p-1 text-left focus-ring hover:bg-fill-hover">
                       <ServerIcon id={server.id} name={server.name} icon={server.icon} size={32} active />
                       <span className="min-w-0 flex-1 truncate text-label font-medium text-text-primary">{server.name}</span>
                     </button>
@@ -105,7 +105,7 @@ export function DirectProfilePanel({ user, onOpenProfile }: { user: PublicUser; 
               <ul className="flex flex-col gap-1">
                 {friends.items.slice(0, SHOWN_MUTUALS).map((friend) => (
                   <li key={friend.id}>
-                    <button type="button" onClick={() => { rememberProfilePreview(friend); onOpenProfile(friend.id); }} className="flex w-full items-center gap-2.5 rounded-md p-1 text-left hover:bg-fill-hover">
+                    <button type="button" onClick={() => { rememberProfilePreview(friend); onOpenProfile(friend.id); }} className="flex w-full items-center gap-2.5 rounded-md p-1 text-left focus-ring hover:bg-fill-hover">
                       <Avatar id={friend.id} name={friend.displayName} avatar={friend.avatar} avatarColor={friend.avatarColor} size={32} />
                       <span className="min-w-0 flex-1 truncate text-label font-medium text-text-primary">{friend.displayName}</span>
                     </button>

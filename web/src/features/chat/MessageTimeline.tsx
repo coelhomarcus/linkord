@@ -7,6 +7,7 @@ import { defaultRangeExtractor, measureElement as measureRowElement, useVirtuali
 import { buildMentionLookup } from '@/shared/lib/mentions';
 import { useRoom, useRoomState } from '@/state/RoomContext';
 import { EmptyState } from '@/shared/ui/empty-state';
+import { Button } from '@/shared/ui/primitives/button';
 import { conversationTitle } from '@/features/conversations/conversationUtils';
 import type { ChatMessage } from '@/shared/types/protocol';
 import { MessageRow } from './MessageRow';
@@ -581,25 +582,25 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
         )}
       </div>
       {showJumpToUnread && (
-        <button
+        <Button
           type="button"
           onClick={jumpToFirstUnread}
-          className="absolute left-1/2 top-3 z-10 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-label font-medium text-primary-foreground shadow-popover"
+          className="absolute left-1/2 top-3 z-10 -translate-x-1/2 touch-target rounded-full shadow-popover"
         >
-          <ArrowUpIcon size={14} weight="fill" />
+          <ArrowUpIcon weight="fill" className="size-3.5" />
           {t('timeline.jumpToFirstUnread')}
-        </button>
+        </Button>
       )}
       {pill && (
-        <button
+        <Button
           type="button"
           onClick={pill.onClick}
           style={{ bottom: bottomPadding + 16 }}
-          className="absolute left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-label font-medium text-primary-foreground shadow-popover"
+          className="absolute left-1/2 -translate-x-1/2 touch-target rounded-full shadow-popover"
         >
-          <ArrowDownIcon size={14} weight="fill" />
+          <ArrowDownIcon weight="fill" className="size-3.5" />
           {pill.label}
-        </button>
+        </Button>
       )}
     </div>
   );
