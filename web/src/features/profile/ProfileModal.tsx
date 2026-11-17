@@ -62,12 +62,18 @@ export function ProfileModal({ userId, initialTab, onClose, onOpenProfile }: Pro
   const state = useRoomState('me');
   const navigate = useNavigate();
   const [reportOpen, setReportOpen] = useState(false);
+  // Closing clears userId while the modal is still animating out: it keeps
+  // drawing the profile it showed, rather than a skeleton for "nobody" that
+  // would mount into the closing dialog and stay on screen.
+  const [lastUserId, setLastUserId] = useState(userId);
+  if (userId && userId !== lastUserId) setLastUserId(userId);
+  const shownId = userId ?? lastUserId;
   // the room's known users first; anyone else from the shared profile cache, read again on every open
-  const knownUser = userId ? allUsers.get(userId) : undefined;
-  const fetched = useUserProfile(userId && !knownUser ? userId : null);
+  const knownUser = shownId ? allUsers.get(shownId) : undefined;
+  const fetched = useUserProfile(shownId && !knownUser ? shownId : null);
   const user = knownUser ?? fetched.value ?? null;
   const open = !!userId;
-  const details = useProfileDetails(userId);
+  const details = useProfileDetails(shownId);
   const owner = !!user && user.id === state.me.userId;
   const status = useUserStatus(user?.id);
   const customStatus = useCustomStatus(user?.id);
@@ -88,7 +94,7 @@ export function ProfileModal({ userId, initialTab, onClose, onOpenProfile }: Pro
 
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!next) requestClose(); }}>
-      {!user && fetched.status === 'loading' && (
+      {shownId && !user && fetched.status === 'loading' && (
         // the modal at its full size, so the profile lands in place rather than growing out of a small box
         <DialogContent className={FULL_PROFILE}>
           <DialogHeader className="sr-only">
@@ -97,7 +103,7 @@ export function ProfileModal({ userId, initialTab, onClose, onOpenProfile }: Pro
           <ProfileSkeleton label={t('modal.loading')} />
         </DialogContent>
       )}
-      {!user && fetched.status === 'error' && (
+      {shownId && !user && fetched.status === 'error' && (
         <DialogContent className="max-w-[calc(100%-2rem)] bg-bg-modal sm:max-w-130">
           <DialogHeader className="sr-only">
             <DialogTitle>{t('modal.loadFailedTitle')}</DialogTitle>
