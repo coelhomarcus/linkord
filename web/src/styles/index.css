@@ -326,6 +326,14 @@
   --cutout: var(--cutout-active, color-mix(in srgb, var(--surface-base, var(--color-surface-app)), white 10%));
 }
 
+/* The keyboard focus ring of a control that is not the Button primitive (a clickable row, a chip, a
+   tile, a small icon button drawn its own way): the same ring Button draws, in one place. Something
+   that fills a box clipping its overflow (a media cell, a full-width row in a scroller) adds
+   focus-visible:ring-inset. */
+@utility focus-ring {
+  @apply outline-none focus-visible:ring-3 focus-visible:ring-ring/50;
+}
+
 /* A control drawn smaller than a fingertip still takes a 44px tap on a touch screen: the hit area
    grows around it, the drawing does not. The element must be positioned (relative or absolute), have
    no ::after of its own, and sit at least 44px from the centre of any neighbour that does the same. */

@@ -19,6 +19,10 @@ const buttonVariants = cva(
         ghost:
           "hover:bg-fill-hover hover:text-foreground aria-expanded:bg-fill-hover aria-expanded:text-foreground",
         destructive: "bg-red text-white hover:bg-red-hover",
+        // A way out that is not the action ("Agora não", "Voltar"): plain text, a box only on focus.
+        // Nothing is drawn around it, so its tap area grows to 44px on a touch screen.
+        quiet:
+          "relative touch-target font-normal text-text-muted hover:text-text-primary aria-expanded:text-text-primary",
         link: "text-accent-text underline-offset-4 hover:underline",
       },
       size: {
