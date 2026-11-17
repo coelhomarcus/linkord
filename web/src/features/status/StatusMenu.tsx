@@ -22,9 +22,10 @@ const ROW = cn(
   'disabled:cursor-default disabled:hover:bg-transparent [&>svg]:flex-none [&>svg]:text-text-secondary',
 );
 
-/** The user panel's card: who you are (banner, avatar, name, links), your custom status as the
- * bubble beside the avatar, and below it your status (a submenu with the four), editing your
- * profile and copying your ID. `trigger` is the panel's avatar-and-name button. */
+/** The user panel's card: who you are (banner, avatar, name, links; the avatar or banner opens your
+ * full profile), your custom status as the bubble beside the avatar, and below it your status (a
+ * submenu with the four), editing your profile and copying your ID. `trigger` is the panel's
+ * avatar-and-name button. */
 export function StatusMenu({ trigger, onOpenProfile, side = 'top', onError }: {
   trigger: ReactElement;
   onOpenProfile: () => void;
@@ -63,7 +64,8 @@ export function StatusMenu({ trigger, onOpenProfile, side = 'top', onError }: {
   function moveFocus(e: KeyboardEvent<HTMLDivElement>) {
     if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp' && e.key !== 'Home' && e.key !== 'End') return;
     if (!(e.target instanceof Node) || !e.currentTarget.contains(e.target)) return;
-    const items = [...e.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled), a[href]')];
+    // the banner's button is the avatar's twin for the mouse, out of the keyboard's way
+    const items = [...e.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled):not([tabindex="-1"]), a[href]')];
     if (items.length === 0) return;
     e.preventDefault();
     e.stopPropagation();
@@ -105,6 +107,7 @@ export function StatusMenu({ trigger, onOpenProfile, side = 'top', onError }: {
             }}
             status={shown}
             customStatus={custom}
+            onOpenProfile={() => { setOpen(false); onOpenProfile(); }}
             onEditCustomStatus={() => { setOpen(false); customActions.openEditor(); }}
             onClearCustomStatus={clearCustom}
             footer={(

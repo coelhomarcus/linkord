@@ -32,6 +32,7 @@
     "recent": "Recent activity",
     "empty": "No recent activity.",
     "private": "{{name}} doesn't share their activity.",
+    "privateSelf": "You don't share your activity.",
     "loadFailed": "Couldn't load the activity.",
     "retry": "Try again",
     "loading": "Loading activity"

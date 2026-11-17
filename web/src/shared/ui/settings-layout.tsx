@@ -153,7 +153,7 @@ export function SettingsRadioGroup<T extends string>({ label, value, options, on
                 checked ? 'border-accent-primary bg-accent-primary' : 'border-text-muted group-hover/radio:border-text-secondary',
               )}
             >
-              {checked && <span className="size-2 rounded-full bg-white" />}
+              {checked && <span className="size-2 rounded-full bg-primary-foreground" />}
             </span>
             <span className="min-w-0">
               <span className="block text-body font-medium text-text-primary">{option.label}</span>

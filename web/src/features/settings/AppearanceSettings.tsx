@@ -13,6 +13,10 @@ const THEME_SWATCH: Record<ColorThemeId, string> = {
   black: '#000000',
   old: 'oklch(16% 0.004 275)',
   graphite: 'oklch(25% 0.007 265)',
+  latte: '#e6e9ef',
+  frappe: '#292c3c',
+  macchiato: '#1e2030',
+  mocha: '#181825',
 };
 
 export function AppearanceSettings() {
@@ -47,7 +51,7 @@ export function AppearanceSettings() {
                     }
                   >
                     {selected && (
-                      <span aria-hidden className="absolute -right-2 -top-2 grid size-5 place-items-center rounded-full bg-accent-primary text-white ring-2 ring-surface-app">
+                      <span aria-hidden className="absolute -right-2 -top-2 grid size-5 place-items-center rounded-full bg-accent-primary text-primary-foreground ring-2 ring-surface-app">
                         <CheckIcon size={12} weight="bold" />
                       </span>
                     )}

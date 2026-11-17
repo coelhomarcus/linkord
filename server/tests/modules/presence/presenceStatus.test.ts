@@ -8,11 +8,12 @@ import {
 import {
   handlers, loadAccountStatus, setAccountStatusStore, syncPresence, releaseAccountStatusIfUnused, databaseAccountStatusStore,
   loadActivitySettings, setActivitySettingsStore, databaseActivitySettingsStore,
-  setActivityHistoryStore, activityHistoryWritten,
+  setActivityHistoryStore, activityHistoryWritten, setSharedIconSource,
   type AccountStatusStore, type ActivitySettingsStore,
 } from '../../../src/modules/presence/presenceStatus.js';
 import type { Activity, ActivitySettings } from '../../../src/modules/presence/activity.js';
 import { databaseActivityHistoryStore } from '../../../src/modules/activity/activityHistory.js';
+import { databaseSharedIconSource } from '../../../src/modules/activity/sharedGameIcons.js';
 import { getAccountStatus, hasAccountStatus, type AccountStatus } from '../../../src/modules/presence/userStatus.js';
 
 type Sent = { t: string; [key: string]: unknown };
@@ -73,8 +74,21 @@ let mem: ReturnType<typeof memoryStore>;
 /** What the activity history was told, in order. */
 let history: Array<{ userId: string; key: string; at: Date }>;
 let failHistory = false;
+/** The games' shared icons, by game key, and a hold on the next lookup. */
+let sharedIcons: Map<string, string>;
+let holdSharedIcons: Promise<void> | null = null;
 
 beforeEach(() => {
+  sharedIcons = new Map();
+  holdSharedIcons = null;
+  setSharedIconSource({
+    async iconIds(keys) {
+      const hold = holdSharedIcons;
+      holdSharedIcons = null;
+      if (hold) await hold;
+      return new Map(keys.flatMap((key) => (sharedIcons.has(key) ? [[key, sharedIcons.get(key)!] as const] : [])));
+    },
+  });
   mem = memoryStore();
   setAccountStatusStore(mem.store);
   // this test's own list: a write queued as the previous test cleaned up must not land in it
@@ -99,6 +113,7 @@ afterEach(() => {
   created = [];
   setAccountStatusStore(databaseAccountStatusStore);
   setActivityHistoryStore(databaseActivityHistoryStore);
+  setSharedIconSource(databaseSharedIconSource);
 });
 
 const uid = (name: string) => `${name}-${Math.random()}`;
@@ -478,6 +493,45 @@ describe('activity', () => {
     created = created.filter((p) => p !== laptop.p);
     releaseAccountStatusIfUnused(alice);
     assert.equal(visiblePresenceOf(alice)?.activity?.name, 'Minecraft');
+  });
+
+  test('a game shows with its shared icon, whatever icon the client sent; an app keeps its own', async () => {
+    const alice = uid('alice');
+    const bob = uid('bob');
+    sharedIcons.set('name:minecraft', 'c'.repeat(64));
+    sharedIcons.set('steam:570', 'd'.repeat(64));
+    const a = await connectWithSettings(alice);
+    const b = await connectWithSettings(bob, [alice]);
+
+    await report(a.socket, minecraft);
+    const shared = `/api/activity/icons/${'c'.repeat(64)}.webp`;
+    assert.equal(visiblePresenceOf(alice)?.activity?.icon, shared);
+    assert.equal((messages(b.socket, 'presence-status').at(-1)?.activity as Activity).icon, shared);
+
+    await report(a.socket, { ...minecraft, key: 'steam:570', name: 'Dota 2', icon: null });
+    assert.equal(visiblePresenceOf(alice)?.activity?.icon, `/api/activity/icons/${'d'.repeat(64)}.webp`);
+
+    await report(a.socket, { ...minecraft, key: 'spotify', kind: 'using', name: 'Spotify' });
+    assert.equal(visiblePresenceOf(alice)?.activity?.icon, `/api/activity/icons/${'a'.repeat(64)}.webp`);
+  });
+
+  test('a game without a shared icon keeps the one reported', async () => {
+    const alice = uid('alice');
+    const a = await connectWithSettings(alice);
+    await report(a.socket, minecraft);
+    assert.equal(visiblePresenceOf(alice)?.activity?.icon, `/api/activity/icons/${'a'.repeat(64)}.webp`);
+  });
+
+  test('a report still looking up its icon is overtaken by a later one', async () => {
+    const alice = uid('alice');
+    const a = await connectWithSettings(alice);
+    let release!: () => void;
+    holdSharedIcons = new Promise((resolve) => { release = resolve; });
+    const slow = report(a.socket, minecraft);
+    await report(a.socket, null);
+    release();
+    await slow;
+    assert.equal(visiblePresenceOf(alice)?.activity, undefined);
   });
 
   test('nobody sees the activity of an invisible account', async () => {

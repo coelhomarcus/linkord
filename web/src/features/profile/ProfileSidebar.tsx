@@ -27,7 +27,7 @@ function Truncated({ shown, total }: { shown: number; total: number }) {
 /** Keeps the Wall and mutual relationships beside the profile card. */
 export function ProfileSidebar({ userId, name, owner, accent, initialTab = 'wall', status, details, onRetry, onOpenProfile, onOpenServer, onLeave, onWallDraftChange }: {
   userId: string;
-  /** the display name, for what the Activity tab says about them; only others' profiles have that tab */
+  /** the display name, for what the Activity tab says about them */
   name?: string;
   /** read once, on mount: the modal opened from "what you have in common" starts there */
   initialTab?: ProfileTab;
@@ -73,7 +73,8 @@ export function ProfileSidebar({ userId, name, owner, accent, initialTab = 'wall
 
   return (
     <Tabs
-      value={owner ? 'wall' : tab}
+      // your own profile has no "in common" tab
+      value={owner && tab === 'common' ? 'wall' : tab}
       onValueChange={(value) => { if (value === 'wall' || value === 'activity' || value === 'common') setTab(value); }}
       className="min-h-0 min-w-0 flex-1 flex-col items-stretch gap-3 p-4 md:p-5"
     >
@@ -83,7 +84,7 @@ export function ProfileSidebar({ userId, name, owner, accent, initialTab = 'wall
       <TabsList aria-label={t('wall.profileTabs')} className="scrollbar-none flex h-auto min-w-0 w-full flex-none justify-start gap-4 overflow-x-auto overflow-y-hidden rounded-none border-0 bg-transparent p-0 shadow-[inset_0_-1px_0_var(--color-border)] whitespace-nowrap">
         <TabsIndicator className="top-auto bottom-0 h-0.5 rounded-full bg-text-primary" />
         <TabsTrigger value="wall" className={TAB}>{t('wall.title')}</TabsTrigger>
-        {!owner && <TabsTrigger value="activity" className={TAB}>{tActivity('profile.tab')}</TabsTrigger>}
+        <TabsTrigger value="activity" className={TAB}>{tActivity('profile.tab')}</TabsTrigger>
         {!owner && <TabsTrigger value="common" className={TAB}>{t('mutuals.title')}</TabsTrigger>}
       </TabsList>
 
@@ -95,11 +96,9 @@ export function ProfileSidebar({ userId, name, owner, accent, initialTab = 'wall
         <TabsPanel value="wall" keepMounted>
           <ProfileWall userId={userId} owner={owner} accent={accent} onLeave={onLeave} onDraftChange={onWallDraftChange} />
         </TabsPanel>
-        {!owner && (
-          <TabsPanel value="activity">
-            <ProfileActivity userId={userId} name={name ?? ''} />
-          </TabsPanel>
-        )}
+        <TabsPanel value="activity">
+          <ProfileActivity userId={userId} name={name ?? ''} self={owner} />
+        </TabsPanel>
         {!owner && (
           <TabsPanel value="common" keepMounted aria-busy={status === 'loading'}>
             {mutualsFallback ?? (

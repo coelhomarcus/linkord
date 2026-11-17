@@ -10,6 +10,7 @@ import type { RoomContextValue } from '@/state/RoomContext';
 import { ProfileModal } from '@/features/profile/ProfileModal';
 import { ProfileSaveRefused } from '@/features/profile/useProfileUpdate';
 import * as profileApi from '@/features/profile/profileApi';
+import * as activityApi from '@/features/activity/activityApi';
 import type { WallWidget } from '@/features/profile/connectionsTypes';
 import type { PublicUser } from '@/shared/types/protocol';
 
@@ -34,6 +35,12 @@ vi.mock('@/shared/api/api', async (importOriginal) => {
     })),
   };
 });
+
+vi.mock('@/features/activity/activityApi', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/features/activity/activityApi')>()),
+  fetchActivityHistory: vi.fn(async () => ({ sharing: true, items: [] })),
+}));
+const fetchActivityHistory = vi.mocked(activityApi.fetchActivityHistory);
 
 vi.mock('@/shared/ImageCropDialog', () => ({
   ImageCropDialog: ({ open, onConfirm, onCancel }: { open: boolean; onConfirm: (crop: { x: number; y: number; width: number; height: number }) => void; onCancel: () => void }) =>
@@ -66,16 +73,23 @@ function renderEditor(overrides: Partial<RoomContextValue> & { state: RoomContex
 }
 
 describe('ProfileEditor', () => {
-  it('lays the editor out like the profile, with the wall and without the shared tab', async () => {
+  it('lays the editor out like the profile, with the wall and activity and without the shared tab', async () => {
     renderEditor({ state: { ...initialRoomState, me: { ...initialRoomState.me, id: 'c', userId: 'u', name: 'Fulana', displayName: 'Fulana', avatarColor: 'green' } } });
     expect(await screen.findByRole('tab', { name: 'Mural' })).toBeInTheDocument();
-    expect(screen.getAllByRole('tab')).toHaveLength(1);
+    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Mural', 'Atividade']);
     expect(screen.getByRole('heading', { name: 'Seus Widgets' })).toBeInTheDocument();
     expect(await screen.findByText('Membro desde')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Adicionar conexão' })).toBeInTheDocument();
-    expect(screen.queryByText('Atividade')).not.toBeInTheDocument();
     expect(screen.queryByText('Lista de desejos')).not.toBeInTheDocument();
     expect(screen.queryByText('Conexões', { selector: 'section' })).not.toBeInTheDocument();
+  });
+
+  it('shows your own activity in its tab, saying "you" while it is not shared', async () => {
+    fetchActivityHistory.mockResolvedValueOnce({ sharing: false, items: [] });
+    renderEditor({ state: { ...initialRoomState, me: { ...initialRoomState.me, id: 'c', userId: 'u', name: 'Fulana', displayName: 'Fulana' } } });
+    await userEvent.click(await screen.findByRole('tab', { name: 'Atividade' }));
+    expect(await screen.findByText('Você não compartilha sua atividade.')).toBeInTheDocument();
+    expect(fetchActivityHistory).toHaveBeenCalledWith('u', expect.any(AbortSignal));
   });
 
   it('brings the edited field back above the save bar when the bar appears', async () => {

@@ -3,12 +3,13 @@
 //
 // presence/presenceStatus.ts writes it when an activity others see starts or ends, through the
 // store it is given (so the presence tests run without a database); this file reads it for the
-// profile route, under the account's activity settings as they are now.
+// profile route, under the account's activity settings as they are now, a game with its shared icon.
 
 import { and, desc, eq, notInArray, sql } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { activityHistory, users } from '../../db/schema.js';
 import { isActivityKey, type Activity } from '../presence/activity.js';
+import { withSharedIcons } from './sharedGameIcons.js';
 
 /** How many games and apps an account's history keeps; older ones are dropped as new ones come. */
 export const ACTIVITY_HISTORY_MAX = 20;
@@ -57,10 +58,11 @@ export async function readActivityHistory(userId: string, limit = ACTIVITY_HISTO
     .where(eq(activityHistory.userId, userId))
     .orderBy(desc(activityHistory.lastPlayedAt))
     .limit(ACTIVITY_HISTORY_MAX);
-  const items = rows
+  // a game shows its own icon, not whichever one the account's client reported (sharedGameIcons.ts)
+  const items = await withSharedIcons(rows
     .filter((row) => !hidden.has(row.key) && isActivityKey(row.key) && (row.kind === 'playing' || row.kind === 'using'))
     .slice(0, limit)
-    .map((row) => ({ key: row.key, kind: row.kind as Activity['kind'], name: row.name, icon: row.icon, lastPlayedAt: row.lastPlayedAt.toISOString() }));
+    .map((row) => ({ key: row.key, kind: row.kind as Activity['kind'], name: row.name, icon: row.icon, lastPlayedAt: row.lastPlayedAt.toISOString() })));
   return { sharing: true, items };
 }
 

@@ -3,7 +3,7 @@ import { after, before, describe, it } from 'node:test';
 import { eq } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { config } from '../../src/config/env.js';
-import { activityHistory, users } from '../../src/db/schema.js';
+import { activityGameIcons, activityHistory, users } from '../../src/db/schema.js';
 import { createApp } from '../../src/http/app.js';
 import { createSession } from '../../src/modules/auth/session.js';
 import { ACTIVITY_HISTORY_MAX, databaseActivityHistoryStore, readActivityHistory } from '../../src/modules/activity/activityHistory.js';
@@ -39,6 +39,15 @@ describe('activity history store (real Postgres)', () => {
     await databaseActivityHistoryStore.record(me.id, game('minecraft', 'Minecraft', icon), minutesAgo(10));
     await databaseActivityHistoryStore.record(me.id, game('minecraft', 'Minecraft', null), minutesAgo(1));
     assert.equal((await readActivityHistory(me.id))?.items[0]?.icon, icon);
+  });
+
+  it('shows a game with its shared icon, not the one the account\'s client reported', async () => {
+    const me = await makeUser('ah');
+    const gameKey = `name:shared icon game ${me.id.toLowerCase()}`;
+    await databaseActivityHistoryStore.record(me.id, game('stardew-valley', `Shared Icon Game ${me.id}`, `/api/activity/icons/${'a'.repeat(64)}.webp`), minutesAgo(5));
+    await db.insert(activityGameIcons).values({ key: gameKey, iconId: 'c'.repeat(64), referenced: true, resolvedAt: new Date() })
+      .onConflictDoUpdate({ target: activityGameIcons.key, set: { iconId: 'c'.repeat(64) } });
+    assert.equal((await readActivityHistory(me.id))?.items[0]?.icon, `/api/activity/icons/${'c'.repeat(64)}.webp`);
   });
 
   it(`drops the oldest beyond ${ACTIVITY_HISTORY_MAX} games`, async () => {

@@ -12,6 +12,7 @@ import {
 } from './activity.js';
 import { runSerialized } from './profileQueue.js';
 import { databaseActivityHistoryStore, type ActivityHistoryStore } from '../activity/activityHistory.js';
+import { databaseSharedIconSource, withSharedIcons, type SharedIconSource } from '../activity/sharedGameIcons.js';
 import {
   forgetAccountStatus, getAccountStatus, hasAccountStatus, isCustomStatusExpired, isPresenceStatus, sameCustomStatus,
   sanitizeCustomStatus, setAccountStatus, type AccountStatus, type CustomStatus, type PresenceStatus,
@@ -308,18 +309,31 @@ function handlePresenceActivity(socket: AppSocket, msg: { idle?: unknown } | nul
 
 /** `activity-set`: what this connection's desktop app sees the person playing or using now, or
  * null. Kept in memory with the connection; a reconnecting app reports it again after `welcome`. */
-function handleActivitySet(socket: AppSocket, msg: { activity?: unknown } | null | undefined): void {
+async function handleActivitySet(socket: AppSocket, msg: { activity?: unknown } | null | undefined): Promise<void> {
   const p = participants.get(socket.participantId ?? '');
   if (!p || p.socket !== socket) return;
-  const activity = sanitizeActivityReport(msg?.activity ?? null);
+  // a counter, not the clock: two reports in the same millisecond still have an order
+  const at = ++activityReports;
+  latestReport.set(p, at);
+  const reported = sanitizeActivityReport(msg?.activity ?? null);
+  // a game shows with its own icon, the same for everyone, whatever icon this client sent
+  const activity = reported ? (await withSharedIcons([reported], sharedIconSource))[0]! : null;
+  // a later report from this connection, or the connection leaving, overtook this one
+  if (latestReport.get(p) !== at || p.socket !== socket || participants.get(p.id) !== p) return;
   if (sameActivity(p.activity, activity)) return;
   p.activity = activity;
-  // a counter, not the clock: two reports in the same millisecond still have an order
-  p.activityAt = ++activityReports;
+  p.activityAt = at;
   syncPresence(p.userId);
 }
 
 let activityReports = 0;
+const latestReport = new WeakMap<object, number>();
+
+let sharedIconSource: SharedIconSource = databaseSharedIconSource;
+/** Where a game's shared icon is read (the database). Injected so the presence tests run without one. */
+export function setSharedIconSource(next: SharedIconSource): void {
+  sharedIconSource = next;
+}
 
 interface ActivitySettingsBody { requestId?: unknown; sharing?: unknown; hidden?: unknown }
 
