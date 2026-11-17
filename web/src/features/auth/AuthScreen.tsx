@@ -22,7 +22,7 @@ import { useTransientFlag } from '@/shared/hooks/useTransientFlag';
 function PasswordToggle({ visible, onToggle }: { visible: boolean; onToggle: () => void }) {
   const { t } = useTranslation('auth');
   return (
-    <button type="button" onClick={onToggle} aria-label={visible ? t('password.hide') : t('password.show')}>
+    <button type="button" onClick={onToggle} aria-label={visible ? t('password.hide') : t('password.show')} className="rounded-lg focus-ring focus-visible:ring-inset">
       {visible ? <EyeSlashIcon size={20} /> : <EyeIcon size={20} />}
     </button>
   );

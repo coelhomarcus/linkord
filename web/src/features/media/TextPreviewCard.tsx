@@ -112,12 +112,12 @@ export function TextPreviewCard({ attachment, maxWidth }: { attachment: ChatAtta
             )}
           </div>
           <div className="flex items-center justify-between gap-3 border-t border-border px-3 py-1.5 text-caption text-text-muted">
-            <button type="button" onClick={() => setExpanded((v) => !v)} className="flex items-center gap-1 hover:text-text-primary">
+            <button type="button" onClick={() => setExpanded((v) => !v)} className="flex items-center gap-1 rounded-sm focus-ring hover:text-text-primary">
               {expanded ? <CaretUpIcon size={12} /> : <CaretDownIcon size={12} />}
               {expanded ? t('preview.showLess') : t('preview.showMore')}
             </button>
             {preview.truncated && (
-              <button type="button" onClick={() => downloadFile(url, attachment.name)} className="hover:text-text-primary">
+              <button type="button" onClick={() => downloadFile(url, attachment.name)} className="rounded-sm focus-ring hover:text-text-primary">
                 {t('preview.downloadFull')}
               </button>
             )}

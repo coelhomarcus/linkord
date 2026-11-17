@@ -314,7 +314,7 @@ export function VoiceMembers({ server, channel, onOpenProfile, onNavigate, drag,
               )}
             >
               <button type="button" onClick={() => onOpenProfile(person.userId)}
-                className="flex min-w-0 flex-1 items-center gap-2 text-left text-label text-text-secondary group-hover/member:text-text-primary">
+                className="flex min-w-0 flex-1 items-center gap-2 rounded-sm text-left text-label text-text-secondary focus-ring group-hover/member:text-text-primary">
                 {/* the name beside it already says who: the avatar's initials would only repeat it */}
                 <span aria-hidden data-speaking={person.speaking || undefined}
                   className={cn('inline-flex flex-none rounded-full ring-2 transition-shadow', person.speaking ? 'ring-current' : 'ring-transparent')}

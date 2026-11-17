@@ -154,7 +154,7 @@ export function VoiceMessagePlayer({ src, durationMs, waveform, name, className 
           onClick={cycleSpeed}
           disabled={!src}
           aria-label={t('player.speed', { speed: SPEEDS[speedIndex] })}
-          className="w-9 flex-none rounded-md px-1 py-0.5 text-caption font-semibold tabular-nums text-text-secondary hover:bg-fill-hover disabled:opacity-50"
+          className="relative w-9 flex-none touch-target rounded-md px-1 py-0.5 text-caption font-semibold tabular-nums text-text-secondary focus-ring hover:bg-fill-hover disabled:opacity-50"
         >
           {SPEEDS[speedIndex]}×
         </button>

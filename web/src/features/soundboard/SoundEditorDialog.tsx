@@ -303,7 +303,7 @@ export function SoundEditorDialog({ serverId, open, onOpenChange, sound = null, 
                       type="button"
                       aria-label={t('editor.clearEmoji')}
                       onClick={() => setEmoji('')}
-                      className="absolute top-1/2 right-2 grid size-6 -translate-y-1/2 place-items-center rounded-md text-text-muted transition-colors hover:bg-fill-hover hover:text-text-primary"
+                      className="absolute top-1/2 right-2 grid size-6 -translate-y-1/2 touch-target place-items-center rounded-md text-text-muted transition-colors focus-ring hover:bg-fill-hover hover:text-text-primary"
                     >
                       <XIcon size={14} />
                     </button>

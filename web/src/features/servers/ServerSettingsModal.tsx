@@ -227,7 +227,7 @@ function Roles({ server }: { server: ServerSummary }) {
               const movableIndex = movable.findIndex((item) => item.id === r.id);
               return (
               <div key={r.id} className={cn('group/role flex min-h-10 items-center gap-1 rounded-lg pr-1', r.id === selectedId ? 'bg-nav-active text-text-strong' : 'text-text-secondary hover:bg-nav-hover hover:text-text-primary')}>
-                <button type="button" onClick={() => setSelectedId(r.id)} className="flex min-h-10 min-w-0 flex-1 items-center gap-2 px-2 text-left text-body font-medium">
+                <button type="button" onClick={() => setSelectedId(r.id)} className="flex min-h-10 min-w-0 flex-1 items-center gap-2 rounded-lg px-2 text-left text-body font-medium focus-ring focus-visible:ring-inset">
                   <ShieldIcon size={18} weight="fill" className="flex-none" style={{ color: r.color || 'var(--color-text-muted)' }} />
                   <span className="min-w-0 flex-1 truncate">{r.name}</span>
                   <span className="flex flex-none items-center gap-1 text-caption text-text-muted" aria-label={t('roles.memberCount', { count: memberCounts.get(r.id) ?? 0 })}>
@@ -237,8 +237,8 @@ function Roles({ server }: { server: ServerSummary }) {
                 {!r.isDefault && (
                   <span className="flex gap-0.5">
                     {/* a move swaps two neighbours, so both have to be below the member's own role */}
-                    <button type="button" aria-label={t('roles.up')} disabled={movableIndex === 0 || !canManageRole(server, me, r) || !canManageRole(server, me, movable[movableIndex - 1]!)} onClick={() => void move(r.id, 1)} className="rounded p-1 text-text-muted hover:text-text-primary disabled:opacity-30"><ArrowUpIcon size={14} /></button>
-                    <button type="button" aria-label={t('roles.down')} disabled={movableIndex === movable.length - 1 || !canManageRole(server, me, r)} onClick={() => void move(r.id, -1)} className="rounded p-1 text-text-muted hover:text-text-primary disabled:opacity-30"><ArrowDownIcon size={14} /></button>
+                    <button type="button" aria-label={t('roles.up')} disabled={movableIndex === 0 || !canManageRole(server, me, r) || !canManageRole(server, me, movable[movableIndex - 1]!)} onClick={() => void move(r.id, 1)} className="rounded p-1 text-text-muted focus-ring hover:text-text-primary disabled:opacity-30"><ArrowUpIcon size={14} /></button>
+                    <button type="button" aria-label={t('roles.down')} disabled={movableIndex === movable.length - 1 || !canManageRole(server, me, r)} onClick={() => void move(r.id, -1)} className="rounded p-1 text-text-muted focus-ring hover:text-text-primary disabled:opacity-30"><ArrowDownIcon size={14} /></button>
                   </span>
                 )}
               </div>
@@ -313,7 +313,7 @@ function Members({ server, onOpenProfile }: { server: ServerSummary; onOpenProfi
           return (
           <li key={member.user.id} className="flex flex-wrap items-center gap-3 py-3">
             {/* a 12rem basis, so the role chips and actions wrap under the name instead of squeezing it to a letter */}
-            <button type="button" onClick={() => { rememberProfilePreview(member.user); onOpenProfile(member.user.id); }} className="flex min-w-0 flex-[1_1_12rem] items-center gap-3 text-left">
+            <button type="button" onClick={() => { rememberProfilePreview(member.user); onOpenProfile(member.user.id); }} className="flex min-w-0 flex-[1_1_12rem] items-center gap-3 rounded-md text-left focus-ring">
               <Avatar id={member.user.id} name={member.user.displayName} avatar={member.user.avatar} avatarColor={member.user.avatarColor} size={36} />
               <span className="min-w-0">
                 <span className="flex items-center gap-1 truncate text-label font-semibold" style={{ color: memberColor(server, member.roleIds) || undefined }}>
@@ -330,7 +330,7 @@ function Members({ server, onOpenProfile }: { server: ServerSummary; onOpenProfi
                   return (
                     <button key={role.id} type="button" aria-pressed={held} disabled={!changeable}
                       onClick={() => void run(() => setMemberRoles(server.id, member.user.id, held ? member.roleIds.filter((id) => id !== role.id) : [...member.roleIds, role.id]))}
-                      className={cn('flex items-center gap-1 rounded-full border px-2 py-0.5 text-caption disabled:cursor-not-allowed disabled:opacity-50', held ? 'border-border-strong bg-fill-active text-text-primary' : 'border-dashed border-border text-text-muted enabled:hover:text-text-primary')}>
+                      className={cn('flex items-center gap-1 rounded-full border px-2 py-0.5 text-caption focus-ring disabled:cursor-not-allowed disabled:opacity-50', held ? 'border-border-strong bg-fill-active text-text-primary' : 'border-dashed border-border text-text-muted enabled:hover:text-text-primary')}>
                       <span className="size-2 rounded-full" style={{ background: role.color || 'var(--color-text-muted)' }} />{role.name}
                     </button>
                   );

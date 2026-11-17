@@ -85,7 +85,7 @@ export function ReportDialog({ target, open, onOpenChange }: {
                   aria-checked={category === option.value}
                   onClick={() => setCategory(option.value)}
                   className={cn(
-                    'flex items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-label transition-colors',
+                    'flex items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-label transition-colors focus-ring',
                     category === option.value ? 'bg-primary/12 text-text-primary' : 'text-text-secondary hover:bg-fill-hover',
                   )}
                 >

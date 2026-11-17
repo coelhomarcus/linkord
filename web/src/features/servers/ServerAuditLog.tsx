@@ -102,7 +102,7 @@ function Entry({ entry, onFilterActor, onFilterTarget }: {
   const changes = entry.detail.changes ?? [];
   const extra = entry.detail as Record<string, unknown>;
   const name = (button: boolean, onClick?: () => void) => (button && onClick
-    ? <button type="button" onClick={onClick} className="font-semibold text-text-strong hover:underline" />
+    ? <button type="button" onClick={onClick} className="rounded-sm font-semibold text-text-strong focus-ring hover:underline" />
     : <strong className="font-semibold text-text-strong" />);
   const values = {
     actor: actorName,
@@ -243,7 +243,7 @@ export function ServerAuditLog({ server }: { server: ServerSummary }) {
               <span className="inline-flex items-center gap-1 rounded-full border border-border bg-fill-subtle py-0.5 pl-3 pr-1 text-caption text-text-primary">
                 {t('auditLog.filters.target', { name: filters.target.label })}
                 <button type="button" aria-label={t('auditLog.filters.clearTarget')} onClick={() => setFilters((f) => ({ ...f, target: null }))}
-                  className="grid size-5 place-items-center rounded-full text-text-muted hover:bg-fill-hover hover:text-text-primary">
+                  className="relative grid size-5 touch-target place-items-center rounded-full text-text-muted focus-ring hover:bg-fill-hover hover:text-text-primary">
                   <XIcon size={12} weight="bold" />
                 </button>
               </span>

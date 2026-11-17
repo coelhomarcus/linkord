@@ -83,7 +83,7 @@ export function ActiveNowPanel() {
                 <button
                   type="button"
                   onClick={() => openCall(conversation.id)}
-                  className="w-full rounded-[12px] border border-border-subtle bg-surface-app p-4 text-left transition-colors hover:bg-message-hover"
+                  className="w-full rounded-[12px] border border-border-subtle bg-surface-app p-4 text-left transition-colors focus-ring hover:bg-message-hover"
                 >
                   <span className="flex items-center gap-3">
                     <Avatar id={lead.userId} name={lead.displayName} avatar={lead.avatar} poster={lead.avatarPoster} avatarColor={lead.avatarColor} size={32} />

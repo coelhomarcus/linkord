@@ -51,7 +51,7 @@ function DirectRow({ conversation, active, onClick, onClose }: {
         aria-label={`${unread > 0 ? t('sidebar.rowUnread', { name: title, count: unread }) : title}${muted ? `, ${tn('preferences.muted')}` : ''}`}
         aria-current={active ? 'page' : undefined}
         className={cn(
-          'relative isolate flex w-full items-center gap-3 rounded-lg px-2 text-left',
+          'relative isolate flex w-full items-center gap-3 rounded-lg px-2 text-left focus-ring',
           inCall ? 'h-auto min-h-11 py-1' : 'h-11',
           unread > 0 ? 'pr-10' : 'group-hover/dm:pr-10 group-focus-within/dm:pr-10',
           active ? 'cutout-active text-text-primary' : cn('cutout md:hover:cutout-subtle md:hover:bg-nav-hover', unread ? 'text-text-primary' : 'text-text-muted md:hover:text-text-primary'),
@@ -136,7 +136,7 @@ function DirectList({ onNavigate }: { onNavigate: () => void }) {
       <div className="min-h-0 flex-1 overflow-y-auto pb-[max(0.75rem,var(--dock-list-clearance,0px))] pt-2">
         <div className="mx-2">
           <button type="button" onClick={() => { navigate(isMobile ? ROUTES.friends : ROUTES.home); onNavigate(); }} aria-current={onFriends ? 'page' : undefined}
-            className={cn('relative isolate flex h-[38px] w-full items-center gap-3 rounded-lg px-2 text-left text-body font-medium', onFriends ? 'text-text-primary' : 'text-text-muted hover:bg-nav-hover hover:text-text-primary')}>
+            className={cn('relative isolate flex h-[38px] w-full items-center gap-3 rounded-lg px-2 text-left text-body font-medium focus-ring', onFriends ? 'text-text-primary' : 'text-text-muted hover:bg-nav-hover hover:text-text-primary')}>
             {onFriends && <ActiveFill />}
             <UsersIcon size={20} weight="fill" />
             <span className="flex-1">{t('sidebar.friends')}</span>

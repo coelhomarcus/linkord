@@ -55,7 +55,7 @@ export function ReactionParticipantsDialog() {
                   role="tab"
                   aria-selected={emoji === shownEmoji}
                   onClick={() => setActiveEmoji(emoji)}
-                  className={cn('flex items-center gap-1 rounded-full border px-2 py-0.5 text-label', emoji === shownEmoji ? 'border-primary/50 bg-primary/15' : 'border-border hover:bg-fill-hover')}
+                  className={cn('flex items-center gap-1 rounded-full border px-2 py-0.5 text-label focus-ring', emoji === shownEmoji ? 'border-primary/50 bg-primary/15' : 'border-border hover:bg-fill-hover')}
                 >
                   {customReactionId(emoji)
                     ? <CustomEmojiImage id={customReactionId(emoji)!} name="emoji" size="reaction" tooltip={false} />

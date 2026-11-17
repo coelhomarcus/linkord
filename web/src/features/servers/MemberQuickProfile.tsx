@@ -112,7 +112,7 @@ export function MemberQuickProfile({ server, member, currentUser, offline, open,
             type="button"
             data-avatar-hover
             aria-label={t('members.openProfile', { name: user.displayName })}
-            className={cn('cutout flex h-[42px] w-full items-center gap-3 rounded-lg px-2 text-left hover:cutout-subtle hover:bg-nav-hover', offline && 'opacity-30 hover:opacity-100', open && 'bg-nav-active')}
+            className={cn('cutout flex h-[42px] w-full items-center gap-3 rounded-lg px-2 text-left focus-ring hover:cutout-subtle hover:bg-nav-hover', offline && 'opacity-30 hover:opacity-100', open && 'bg-nav-active')}
           />
         }
       >
@@ -135,7 +135,7 @@ export function MemberQuickProfile({ server, member, currentUser, offline, open,
             type="button"
             aria-label={t('members.openProfile', { name: user.displayName })}
             onClick={openFullProfile}
-            className="absolute inset-0 block h-full w-full cursor-pointer border-0 bg-transparent p-0"
+            className="absolute inset-0 block h-full w-full cursor-pointer border-0 bg-transparent p-0 focus-ring focus-visible:ring-inset"
           />
           <div className="absolute right-3 top-3 z-10 flex max-w-[calc(100%-1.5rem)] flex-wrap items-center justify-end gap-1.5">
             <Button type="button" variant="outline" size="icon-sm" aria-label={t('members.viewProfile')} onClick={openFullProfile}>

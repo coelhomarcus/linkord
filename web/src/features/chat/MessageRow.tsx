@@ -135,8 +135,8 @@ function PendingStatus({ entry, offline, onRetry, onDiscard }: { entry: OutboxEn
   return (
     <p role="alert" className="mt-0.5 flex flex-wrap items-center gap-x-2 text-caption text-red-text">
       <span>{entry.error ? t('pending.notSentWithError', { error: entry.error }) : t('pending.notSent')}</span>
-      <button type="button" onClick={() => onRetry(entry.clientMessageId)} className="font-medium underline hover:text-text-primary">{t('pending.retry')}</button>
-      <button type="button" onClick={() => onDiscard(entry.clientMessageId)} className="text-text-muted underline hover:text-text-secondary">{t('pending.discard')}</button>
+      <button type="button" onClick={() => onRetry(entry.clientMessageId)} className="rounded-sm font-medium underline focus-ring hover:text-text-primary">{t('pending.retry')}</button>
+      <button type="button" onClick={() => onDiscard(entry.clientMessageId)} className="rounded-sm text-text-muted underline focus-ring hover:text-text-secondary">{t('pending.discard')}</button>
     </p>
   );
 }
@@ -308,7 +308,7 @@ export const MessageRow = memo(function MessageRow({ message, showHeader, highli
         {showHeader && (
           <div className="flex items-baseline gap-2">
             {message.id ? (
-              <button type="button" onClick={() => onOpenProfile(message.id!)} className="truncate text-body font-medium text-text-primary hover:underline" style={authorRoleColor ? { color: authorRoleColor } : undefined}>
+              <button type="button" onClick={() => onOpenProfile(message.id!)} className="truncate rounded-sm text-body font-medium text-text-primary focus-ring hover:underline" style={authorRoleColor ? { color: authorRoleColor } : undefined}>
                 {displayedName}
               </button>
             ) : (
@@ -328,7 +328,7 @@ export const MessageRow = memo(function MessageRow({ message, showHeader, highli
               <button
                 type="button"
                 onClick={() => onJumpTo(message.replyTo!.msgId)}
-                className="mb-1 flex max-w-full items-center gap-1.5 truncate text-caption text-text-muted hover:text-text-secondary"
+                className="mb-1 flex max-w-full items-center gap-1.5 truncate rounded-sm text-caption text-text-muted focus-ring hover:text-text-secondary"
               >
                 <ArrowBendUpLeftIcon size={12} className="flex-none -scale-x-100" />
                 {message.replyTo.authorId && (
@@ -366,7 +366,7 @@ export const MessageRow = memo(function MessageRow({ message, showHeader, highli
                 {editError && <p role="alert" className="text-caption text-red-text">{editError}</p>}
                 <p className="text-caption text-text-muted">
                   {editSaving ? t('edit.saving') : (
-                    <>{t('edit.escapeTo')} <button type="button" onClick={() => setEditingMsgId(null)} className="underline hover:text-text-secondary">{t('edit.cancel')}</button> · {t('edit.enterTo')} <button type="button" onClick={() => void saveEdit()} className="underline hover:text-text-secondary">{t('edit.save')}</button></>
+                    <>{t('edit.escapeTo')} <button type="button" onClick={() => setEditingMsgId(null)} className="rounded-sm underline focus-ring hover:text-text-secondary">{t('edit.cancel')}</button> · {t('edit.enterTo')} <button type="button" onClick={() => void saveEdit()} className="rounded-sm underline focus-ring hover:text-text-secondary">{t('edit.save')}</button></>
                   )}
                 </p>
               </div>

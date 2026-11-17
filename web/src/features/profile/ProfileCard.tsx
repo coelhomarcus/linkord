@@ -147,7 +147,7 @@ export function ProfileCard({
           type="button"
           aria-label={t('card.viewBanner')}
           onClick={onBannerClick}
-          className="block w-full cursor-zoom-in"
+          className="block w-full cursor-zoom-in focus-ring focus-visible:ring-inset"
           style={{ ...bannerStyle(user), aspectRatio: BANNER_ASPECT_RATIO }}
         />
       ) : (

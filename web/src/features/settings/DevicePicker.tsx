@@ -106,7 +106,7 @@ export function SpeakerTestLink({ deviceId }: { deviceId: string | undefined }) 
   const { testing, error, test } = useSpeakerTest();
   return (
     <>
-      <button type="button" disabled={testing} onClick={() => void test(deviceId)} className="font-medium text-accent-text hover:underline disabled:opacity-60">
+      <button type="button" disabled={testing} onClick={() => void test(deviceId)} className="relative touch-target rounded-sm font-medium text-accent-text focus-ring hover:underline disabled:opacity-60">
         {testing ? t('av.playing') : t('av.speakerTest')}
       </button>
       {error && <span role="alert" className="block text-red-text">{error}</span>}

@@ -171,7 +171,7 @@ export function SoundboardButton({ conversationId, callServerId, className, acti
                     aria-expanded={!isCollapsed}
                     aria-label={t(isCollapsed ? 'picker.expand' : 'picker.collapse', { section: label(section) })}
                     onClick={() => toggle(section.key)}
-                    className="sticky top-0 z-10 flex w-full items-center gap-1.5 bg-surface-overlay py-2 text-left text-caption font-semibold uppercase text-text-secondary hover:text-text-primary"
+                    className="sticky top-0 z-10 flex w-full items-center gap-1.5 bg-surface-overlay py-2 text-left text-caption font-semibold uppercase text-text-secondary focus-ring focus-visible:ring-inset hover:text-text-primary"
                   >
                     {server ? <ServerIcon id={server.id} name={server.name} icon={server.icon} size={16} /> : <ClockIcon size={14} weight="bold" aria-hidden />}
                     <span className="min-w-0 truncate">{label(section)}</span>

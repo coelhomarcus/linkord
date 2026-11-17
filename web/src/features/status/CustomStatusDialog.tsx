@@ -146,7 +146,7 @@ export function CustomStatusDialog({ open, onOpenChange }: { open: boolean; onOp
                       key={game.igdbId}
                       type="button"
                       onClick={() => { setEmoji(GAME_EMOJI); setText(t('custom.playing', { game: game.name }).slice(0, CUSTOM_STATUS_TEXT_MAX)); }}
-                      className="flex max-w-full items-center gap-1.5 rounded-full border border-border-strong bg-fill-subtle px-2.5 py-1 text-label transition-colors hover:bg-fill-hover"
+                      className="flex max-w-full items-center gap-1.5 rounded-full border border-border-strong bg-fill-subtle px-2.5 py-1 text-label transition-colors focus-ring hover:bg-fill-hover"
                     >
                       <GameControllerIcon size={14} className="flex-none text-text-muted" />
                       <span className="truncate">{game.name}</span>

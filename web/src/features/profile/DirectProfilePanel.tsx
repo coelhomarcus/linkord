@@ -90,7 +90,7 @@ export function DirectProfilePanel({ user, onOpenProfile }: { user: PublicUser; 
               <ul className="flex flex-col gap-1">
                 {servers.items.slice(0, SHOWN_MUTUALS).map((server) => (
                   <li key={server.id}>
-                    <button type="button" onClick={() => navigate(ROUTES.server(server.id))} className="flex w-full items-center gap-2.5 rounded-md p-1 text-left hover:bg-fill-hover">
+                    <button type="button" onClick={() => navigate(ROUTES.server(server.id))} className="flex w-full items-center gap-2.5 rounded-md p-1 text-left focus-ring hover:bg-fill-hover">
                       <ServerIcon id={server.id} name={server.name} icon={server.icon} size={32} active />
                       <span className="min-w-0 flex-1 truncate text-label font-medium text-text-primary">{server.name}</span>
                     </button>
@@ -105,7 +105,7 @@ export function DirectProfilePanel({ user, onOpenProfile }: { user: PublicUser; 
               <ul className="flex flex-col gap-1">
                 {friends.items.slice(0, SHOWN_MUTUALS).map((friend) => (
                   <li key={friend.id}>
-                    <button type="button" onClick={() => { rememberProfilePreview(friend); onOpenProfile(friend.id); }} className="flex w-full items-center gap-2.5 rounded-md p-1 text-left hover:bg-fill-hover">
+                    <button type="button" onClick={() => { rememberProfilePreview(friend); onOpenProfile(friend.id); }} className="flex w-full items-center gap-2.5 rounded-md p-1 text-left focus-ring hover:bg-fill-hover">
                       <Avatar id={friend.id} name={friend.displayName} avatar={friend.avatar} avatarColor={friend.avatarColor} size={32} />
                       <span className="min-w-0 flex-1 truncate text-label font-medium text-text-primary">{friend.displayName}</span>
                     </button>

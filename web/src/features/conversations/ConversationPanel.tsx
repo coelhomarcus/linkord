@@ -156,7 +156,7 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
               <button
                 type="button"
                 onClick={() => onOpenProfile(other.id)}
-                className="relative flex-none transition-opacity hover:opacity-80"
+                className="relative flex-none touch-target rounded-full transition-opacity focus-ring hover:opacity-80"
                 aria-label={t('panel.viewProfile')}
               >
                 <Avatar id={other.id} name={other.displayName} avatar={other.avatar} poster={other.avatarPoster} animateOnHover avatarColor={other.avatarColor} size={24} />
@@ -169,7 +169,7 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
               {isChannel ? (
                 <h2 className="flex-none truncate text-body font-semibold text-text-strong">{title}</h2>
               ) : (
-                <button type="button" onClick={other ? () => onOpenProfile(other.id) : undefined} className="min-w-0 flex-none truncate text-left text-body font-semibold text-text-strong">
+                <button type="button" onClick={other ? () => onOpenProfile(other.id) : undefined} className="min-w-0 flex-none truncate rounded-sm text-left text-body font-semibold text-text-strong focus-ring">
                   <h2 className="truncate">{title}</h2>
                 </button>
               )}
