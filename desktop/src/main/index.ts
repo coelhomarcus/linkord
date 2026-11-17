@@ -266,6 +266,7 @@ if (!resolved.ok) {
       startHidden,
       showWhen,
       strings,
+      titleBar: barStyle,
       preloadArguments: [
         `--linkord-desktop-version=${app.getVersion()}`,
         `--linkord-share-picker=${picker}`,
