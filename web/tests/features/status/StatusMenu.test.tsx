@@ -96,6 +96,23 @@ describe('StatusMenu', () => {
     expect(onOpenProfile).toHaveBeenCalled();
   });
 
+  it('the avatar opens your full profile, closing the card', async () => {
+    const { user, onOpenProfile } = renderMenu();
+    const card = await openCard(user);
+    await user.click(within(card).getByRole('button', { name: 'Abrir perfil' }));
+    expect(onOpenProfile).toHaveBeenCalledTimes(1);
+    await vi.waitFor(() => expect(screen.queryByRole('dialog', { name: 'Status e perfil' })).not.toBeInTheDocument());
+  });
+
+  it('so does the banner, which stays out of the keyboard\'s way', async () => {
+    const { user, onOpenProfile } = renderMenu();
+    const card = await openCard(user);
+    const banner = card.querySelector<HTMLButtonElement>('button[aria-hidden]')!;
+    expect(banner).toHaveAttribute('tabindex', '-1');
+    await user.click(banner);
+    expect(onOpenProfile).toHaveBeenCalledTimes(1);
+  });
+
   it('copies the user ID and says so', async () => {
     const { user } = renderMenu();
     const card = await openCard(user);
