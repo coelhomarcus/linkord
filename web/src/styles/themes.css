@@ -119,7 +119,7 @@ html[data-theme="graphite"] {
   --shadow-panel: 0 1px 3px rgb(0 0 0 / 0.45);
 }
 
-/* Catppuccin (Frappé, Macchiato, Mocha), adapted from catppuccin/discord:
+/* Catppuccin dark flavours (Frappé, Macchiato, Mocha), adapted from catppuccin/discord:
    crust is the rail, mantle the channel list and the user panel, base the
    conversation, crust again under fields. The accent is the flavour's blue
    with a crust label, since white on a pastel fails contrast. Red and green
@@ -307,4 +307,69 @@ html[data-theme="mocha"] {
   --color-yellow: #f9e2af;
 
   --shadow-popover: 0 8px 24px rgb(0 0 0 / 0.45);
+}
+/* Catppuccin Latte, the light flavour. The same layout as the dark ones, with
+   borders darker than every surface instead of the crust hairline. Latte's own
+   blue, red, green and muted text fall just under 4.5:1 on its surfaces, so
+   the words use a shade darkened to that line, and the fills keep the
+   palette's tones under white labels. The call stage stays light: tiles draw
+   their own dark plates over video. */
+html[data-theme="latte"] {
+  --color-surface-rail: #dce0e8;
+  --color-surface-000: #e6e9ef;
+  --color-surface-100: #eff1f5;
+  --color-surface-200: #e6e9ef;
+  --color-surface-300: #ccd0da;
+  --color-surface-400: #bcc0cc;
+  --color-surface-500: #acb0be;
+
+  --color-surface-app: var(--color-surface-000);
+  --color-surface-panel: var(--color-surface-100);
+  --color-surface-raised: var(--color-surface-200);
+  --color-surface-overlay: #eff1f5;
+  --color-bg-modal: #eff1f5;
+  --color-bg-card: #e6e9ef;
+  --color-bg-textarea: #dce0e8;
+  --color-bg-control: #ccd0da;
+  --color-bg-control-hover: #bcc0cc;
+  --color-border-control: #bcc0cc;
+  --color-bg-call: #dce0e8;
+
+  --color-message-hover: #e6e9ef;
+  --cutout-hover: color-mix(in srgb, var(--surface-base, var(--color-surface-app)), #7c7f93 12%);
+  --cutout-active: color-mix(in srgb, var(--surface-base, var(--color-surface-app)), #7c7f93 20%);
+
+  --color-text-primary: #4c4f69;
+  --color-text-strong: #4c4f69;
+  --color-text-secondary: #5c5f77;
+  --color-text-muted: #5f6275;
+  --color-text-faint: #6b6d7e;
+
+  --color-fill-subtle: rgb(124 127 147 / 0.06);
+  --color-fill-hover: rgb(124 127 147 / 0.12);
+  --color-fill-active: rgb(124 127 147 / 0.2);
+  --color-fill-inset: rgb(124 127 147 / 0.08);
+  --color-fill-code: #dce0e8;
+
+  --color-border-subtle: #ccd0da;
+  --color-border-default: #bcc0cc;
+  --color-border-strong: #acb0be;
+  --color-border-field: #bcc0cc;
+  --color-border-panel: #ccd0da;
+
+  --color-accent-primary: #1e66f5;
+  --color-accent-hover: #1a57d0;
+  --color-accent-text: #1a5ad8;
+  --color-border-accent: #1e66f5;
+
+  --color-green: #307820;
+  --color-green-solid: #368624;
+  --color-green-hover: #307620;
+  --color-red: #d20f39;
+  --color-red-hover: #b90d32;
+  --color-red-text: #c50e36;
+  --color-yellow: #df8e1d;
+
+  --shadow-panel: 0 1px 2px rgb(76 79 105 / 0.12);
+  --shadow-popover: 0 8px 24px rgb(76 79 105 / 0.2);
 }

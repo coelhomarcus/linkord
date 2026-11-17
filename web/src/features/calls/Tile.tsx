@@ -167,12 +167,12 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
       ) : kind === 'screen' ? (
         <div className="relative flex h-full w-full flex-col items-center justify-center gap-2 bg-bg-call">
           {notWatching ? (
-            <span className="flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 text-caption text-text-muted">
+            <span className="flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 text-caption text-white/75">
               <MonitorIcon size={16} />
               {t('tile.stoppedWatching')}
             </span>
           ) : (
-            <span className="flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 text-caption text-text-muted">
+            <span className="flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 text-caption text-white/75">
               <MonitorPlayIcon size={16} />
               {t('tile.previewPaused')}
             </span>
@@ -190,7 +190,7 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
           )}
           {/* Hiding a tile is presentation-only; the media subscription remains active. */}
           {hiddenForMe && (
-            <span className="flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 text-caption text-text-muted">
+            <span className="flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 text-caption text-white/75">
               <EyeSlashIcon size={12} />
               {t('tile.hiddenVideo')}
             </span>
@@ -204,7 +204,7 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
       )}>
         {kind === 'screen' && <MonitorIcon size={16} weight="fill" className="flex-none text-green" />}
         {kind !== 'screen' && showsVideo && <Avatar id={participantId} name={name} avatar={avatar} poster={avatarPoster} frozen={!isSpeaking} avatarColor={avatarColor} size={20} />}
-        <span className={cn('select-none truncate font-medium text-text-primary', nameSize === 'label' ? 'text-label' : 'text-caption')}>{name}</span>
+        <span className={cn('select-none truncate font-medium text-white', nameSize === 'label' ? 'text-label' : 'text-caption')}>{name}</span>
         {isDeafened ? (
           <SpeakerSlashIcon size={16} weight="fill" className="flex-none text-red" />
         ) : (
