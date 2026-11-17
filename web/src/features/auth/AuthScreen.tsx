@@ -104,12 +104,12 @@ function TwoFactorStep({ challenge, onBack }: { challenge: LoginChallenge; onBac
       </Button>
       {message && status !== 'error' && <ErrorBanner>{message}</ErrorBanner>}
       <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
-        <button type="button" disabled={pending} onClick={() => void resend()} className="text-label text-text-muted hover:text-text-primary disabled:opacity-50">
+        <Button type="button" variant="quiet" disabled={pending} onClick={() => void resend()}>
           {resent ? t('twoFactor.resent') : t('twoFactor.resend')}
-        </button>
-        <button type="button" onClick={() => onBack(false)} className="flex items-center gap-1.5 text-label text-text-muted hover:text-text-primary">
-          <ArrowLeftIcon size={16} /> {t('twoFactor.back')}
-        </button>
+        </Button>
+        <Button type="button" variant="quiet" onClick={() => onBack(false)}>
+          <ArrowLeftIcon className="size-4" /> {t('twoFactor.back')}
+        </Button>
       </div>
     </div>
   );
@@ -178,9 +178,9 @@ function LoginForm({ onForgotPassword }: { onForgotPassword: () => void }) {
         <span>{pending ? t('login.pending') : t('login.submit')}</span>
         {!pending && <ArrowRightIcon size={20} weight="fill" className="ml-auto" />}
       </Button>
-      <button type="button" onClick={onForgotPassword} className="self-center text-label text-text-muted transition-colors hover:text-text-primary">
+      <Button type="button" variant="quiet" onClick={onForgotPassword} className="self-center">
         {t('login.forgot')}
-      </button>
+      </Button>
       {error && <ErrorBanner>{error}</ErrorBanner>}
     </form>
   );
@@ -363,7 +363,7 @@ function RecoveryForm({ onBack }: { onBack: () => void }) {
           {!pending && <ArrowRightIcon size={20} weight="fill" className="ml-auto" />}
         </Button>
         {message && <ErrorBanner>{message}</ErrorBanner>}
-        <button type="button" onClick={onBack} className="flex items-center justify-center gap-1.5 text-label text-text-muted hover:text-text-primary"><ArrowLeftIcon size={16} /> {t('recovery.backToLogin')}</button>
+        <Button type="button" variant="quiet" onClick={onBack}><ArrowLeftIcon className="size-4" /> {t('recovery.backToLogin')}</Button>
       </form>
     );
   }
@@ -394,11 +394,11 @@ function RecoveryForm({ onBack }: { onBack: () => void }) {
         <span>{pending ? t('recovery.saving') : status === 'success' ? t('recovery.resetDone') : t('recovery.reset')}</span>
       </Button>
       {status === 'success' ? (
-        <button type="button" onClick={onBack} className="text-label text-text-muted hover:text-text-primary">{t('recovery.backToLogin')}</button>
+        <Button type="button" variant="quiet" onClick={onBack}>{t('recovery.backToLogin')}</Button>
       ) : (
-        <button type="button" onClick={() => { setRequested(false); setStatus('idle'); setMessage(null); }} className="text-label text-text-muted hover:text-text-primary">
+        <Button type="button" variant="quiet" onClick={() => { setRequested(false); setStatus('idle'); setMessage(null); }}>
           {identifierType === 'email' ? t('recovery.useOtherEmail') : t('recovery.useOtherUsername')}
-        </button>
+        </Button>
       )}
     </div>
   );

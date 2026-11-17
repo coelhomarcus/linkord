@@ -123,14 +123,16 @@ export function CustomStatusDialog({ open, onOpenChange }: { open: boolean; onOp
                   className="h-8 min-w-0 flex-1 border-0 bg-transparent px-1 shadow-none focus-visible:ring-0"
                 />
                 {(emoji || text) && (
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="icon-xs"
                     aria-label={t('custom.clear')}
                     onClick={() => { setEmoji(''); setText(''); }}
-                    className="grid size-7 flex-none place-items-center rounded-md text-text-muted transition-colors hover:bg-fill-hover hover:text-text-primary"
+                    className="relative touch-target rounded-md text-text-muted"
                   >
                     <XIcon size={14} />
-                  </button>
+                  </Button>
                 )}
               </div>
             </div>

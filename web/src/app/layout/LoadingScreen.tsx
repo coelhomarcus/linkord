@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { Button } from '@/shared/ui/primitives/button';
 
 export function LoadingScreen({ reconnecting = false, onRetry }: { reconnecting?: boolean; onRetry?: () => void }) {
   const { t } = useTranslation('common');
@@ -15,9 +16,9 @@ export function LoadingScreen({ reconnecting = false, onRetry }: { reconnecting?
         {reconnecting && (
           <div className="flex flex-col items-center gap-3 text-center">
             <p className="text-label text-text-muted">{t('layout.waitingForServer')}</p>
-            <button type="button" onClick={onRetry} className="min-h-11 rounded-lg border border-border-strong px-4 text-label font-medium text-text-primary hover:bg-bg-secondary">
+            <Button type="button" variant="outline" size="lg" onClick={onRetry} className="min-h-11">
               {t('layout.retryNow')}
-            </button>
+            </Button>
           </div>
         )}
       </div>
