@@ -9,9 +9,9 @@ import { useTranslation } from 'react-i18next';
 const SLIDE = { duration: 0.36, ease: EASE_DRAWER } as const;
 const FADE = { duration: 0.16, ease: EASE_OUT } as const;
 // `--shadow-popover` blurs 60px (styles/index.css). A -100% slide parks the
-// box's right edge on the screen edge; this much empty width after the panel
-// parks the shadow past that edge too, so nothing is left when visibility
-// turns hidden.
+// box's right edge on the edge it slid behind; this much empty width after the
+// panel parks the shadow past that edge too, so no smudge is left along it
+// while the slide settles.
 const SLIDE_BLEED = '64px';
 
 const FOCUSABLE = [
@@ -86,11 +86,11 @@ function trapTab(event: KeyboardEvent<HTMLDivElement>, panel: HTMLDivElement | n
  * hides itself once the slide out ends: `visibility` rides the same animation,
  * so nothing has to keep a duration in sync. While closed it is inert.
  *
- * A left sheet inset from the screen edge (`leadingInset`, the server rail on
- * a tablet) slides as a wider box. The inset sits inside that box, ahead of
- * the panel: the close move is -100% of the box, and translating the inset
- * panel alone would leave the inset painted until visibility hides it. */
-export function Sheet({ open, onOpenChange, side, ariaLabel, dismissLabel, className, backdropClassName, style, leadingInset, children }: {
+ * A `contained` left sheet is not portaled: it fills its positioned parent and
+ * is clipped by it, so it slides out from behind that parent's left edge (the
+ * tablet conversation list coming out of the server rail) instead of crossing
+ * the screen from its edge. */
+export function Sheet({ open, onOpenChange, side, ariaLabel, dismissLabel, className, style, contained = false, children }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   side: 'left' | 'right' | 'bottom';
@@ -98,11 +98,10 @@ export function Sheet({ open, onOpenChange, side, ariaLabel, dismissLabel, class
   /** the backdrop's label: it is a button that closes the sheet */
   dismissLabel?: string;
   className?: string;
-  backdropClassName?: string;
   /** CSS variables the panel's classes read: it is portaled, so it inherits none */
   style?: CSSProperties;
-  /** CSS length the open panel sits in from the screen edge it slides from */
-  leadingInset?: string;
+  /** render in place, over and clipped by the nearest positioned ancestor (left only) */
+  contained?: boolean;
   children: ReactNode;
 }) {
   const { t } = useTranslation('common');
@@ -113,14 +112,13 @@ export function Sheet({ open, onOpenChange, side, ariaLabel, dismissLabel, class
   const visibility = open ? 'visible' : 'hidden';
   const offscreen = side === 'left' ? '-100%' : '100%';
   const slide = side === 'bottom' ? { y: open ? '0%' : offscreen } : { x: open ? '0%' : offscreen };
-  // Only a left sheet is inset from the edge it enters from. The rail stays
-  // put; the drawer has to finish its slide clear of it.
-  const inset = side === 'left' ? leadingInset : undefined;
+  const inPlace = contained && side === 'left';
 
-  // Two fixed layers in a box-less wrapper: the backdrop spans the viewport and
-  // paints the scrim, the panel is inset off one side and paints its own surface.
-  return createPortal(
-    <div style={style} className="pointer-events-none fixed left-0 top-0 z-50 size-0">
+  // Two layers: the backdrop paints the scrim, the panel is inset off one side
+  // and paints its own surface. Portaled, they are fixed to the viewport in a
+  // box-less wrapper; in place, they fill a wrapper that clips them.
+  const sheet = (
+    <div style={style} className={inPlace ? 'pointer-events-none absolute inset-0 z-40 overflow-hidden' : 'pointer-events-none fixed left-0 top-0 z-50 size-0'}>
       <motion.button
         type="button"
         aria-label={dismissLabel ?? t('page.close')}
@@ -129,7 +127,7 @@ export function Sheet({ open, onOpenChange, side, ariaLabel, dismissLabel, class
         animate={{ opacity: open ? 1 : 0, visibility }}
         transition={reduce ? FADE : SLIDE}
         onClick={() => onOpenChange(false)}
-        className={cn('fixed inset-0 cursor-default bg-black/40', open ? 'pointer-events-auto' : 'pointer-events-none', backdropClassName)}
+        className={cn(inPlace ? 'absolute' : 'fixed', 'inset-0 cursor-default bg-black/40', open ? 'pointer-events-auto' : 'pointer-events-none')}
       />
       <motion.div
         ref={panelRef}
@@ -149,8 +147,8 @@ export function Sheet({ open, onOpenChange, side, ariaLabel, dismissLabel, class
             trapTab(event, panelRef.current);
           }
         }}
-        className={inset
-          ? 'pointer-events-none fixed inset-y-0 left-0 flex h-dvh w-fit flex-row outline-none will-change-transform'
+        className={inPlace
+          ? 'pointer-events-none absolute inset-y-0 left-0 flex w-fit flex-row outline-none will-change-transform'
           : cn(
             'fixed flex flex-col overflow-hidden pb-[env(safe-area-inset-bottom)] shadow-popover outline-none will-change-transform',
             side === 'bottom' ? 'inset-x-0 bottom-0 max-h-[85dvh] rounded-t-2xl border-t border-border' : 'inset-y-0 h-dvh pt-[env(safe-area-inset-top)]',
@@ -160,11 +158,10 @@ export function Sheet({ open, onOpenChange, side, ariaLabel, dismissLabel, class
             className,
           )}
       >
-        {inset ? (
+        {inPlace ? (
           <>
-            <div data-sheet-inset aria-hidden className="h-full shrink-0" style={{ width: inset }} />
             <div className={cn(
-              'flex h-full min-h-0 shrink-0 flex-col overflow-hidden border-r border-border pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] shadow-popover',
+              'flex h-full min-h-0 shrink-0 flex-col overflow-hidden border-r border-border pb-[env(safe-area-inset-bottom)] shadow-popover',
               open ? 'pointer-events-auto' : 'pointer-events-none',
               className,
             )}>
@@ -174,7 +171,7 @@ export function Sheet({ open, onOpenChange, side, ariaLabel, dismissLabel, class
           </>
         ) : children}
       </motion.div>
-    </div>,
-    document.body,
+    </div>
   );
+  return inPlace ? sheet : createPortal(sheet, document.body);
 }
