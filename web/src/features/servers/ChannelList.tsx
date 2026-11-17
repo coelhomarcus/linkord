@@ -161,7 +161,7 @@ export function ChannelList({ server, activeChannelId, onNavigate, onOpenProfile
             <span className="min-w-0 truncate text-body font-semibold">{server.name}</span>
             <CaretDownIcon size={14} weight="bold" className="flex-none transition-transform group-aria-expanded/server-menu:rotate-180" />
           </DropdownMenuTrigger>
-          <DropdownMenuContent anchor={headerRef} align="center" sideOffset={-6} className="w-[220px]">
+          <DropdownMenuContent anchor={headerRef} align="center" sideOffset={-6} className="min-w-[220px]">
             <DropdownMenuItem disabled={!hasUnread} onClick={() => markServerRead(server.id)}><ChecksIcon size={18} weight="bold" />{t('menu.markAsRead')}</DropdownMenuItem>
             <DropdownMenuSeparator />
             <NotificationMenuItems target={{ scope: 'server', id: server.id }} />

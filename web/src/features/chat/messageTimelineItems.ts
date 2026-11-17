@@ -7,7 +7,7 @@ const GROUP_GAP_MS = 5 * 60 * 1000;
 export type TimelineItem =
   | { type: 'date'; key: string; label: string }
   | { type: 'unread'; key: string }
-  | { type: 'message'; key: string; message: ChatMessage; showHeader: boolean; pending?: OutboxEntry };
+  | { type: 'message'; key: string; message: ChatMessage; showHeader: boolean; pending?: OutboxEntry; afterDivider?: true };
 
 /** Who the pending copies are drawn as — they have no server row yet. */
 export interface PendingAuthor { userId: string | null; name: string; avatar: string }
@@ -70,7 +70,11 @@ export function buildTimelineItems(messages: ChatMessage[], pending: OutboxEntry
     if (!entry) storedBefore = true;
     const isCallLog = message.kind === 'dm_call';
     const showHeader = !isCallLog && (!lastMsg || lastMsg.id !== message.id || message.ts - lastMsg.ts > GROUP_GAP_MS);
-    items.push({ type: 'message', key: messageKey(message), message, showHeader, ...(entry ? { pending: entry } : {}) });
+    // a date or new-messages line already spaces the group below it: the
+    // group's own gap on top of the line's would leave it hanging off the
+    // message above
+    const afterDivider = items.at(-1)?.type !== 'message';
+    items.push({ type: 'message', key: messageKey(message), message, showHeader, ...(entry ? { pending: entry } : {}), ...(afterDivider ? { afterDivider: true as const } : {}) });
     lastMsg = isCallLog ? null : message;
   }
   return items;

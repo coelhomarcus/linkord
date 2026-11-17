@@ -167,14 +167,14 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
             )}
             <div className="flex min-w-0 flex-1 items-center gap-2">
               {isChannel ? (
-                <h2 className="flex-none truncate text-body font-semibold text-text-strong">{title}</h2>
+                <h2 className="min-w-0 flex-initial truncate text-body font-semibold text-text-strong">{title}</h2>
               ) : (
-                <button type="button" onClick={other ? () => onOpenProfile(other.id) : undefined} className="min-w-0 flex-none truncate rounded-sm text-left text-body font-semibold text-text-strong focus-ring">
+                <button type="button" onClick={other ? () => onOpenProfile(other.id) : undefined} className="min-w-0 flex-initial truncate rounded-sm text-left text-body font-semibold text-text-strong focus-ring">
                   <h2 className="truncate">{title}</h2>
                 </button>
               )}
               {subtitle && <span aria-hidden className="mx-1 h-6 w-px flex-none bg-border-default max-md:hidden" />}
-              {subtitle && <p className="min-w-0 truncate text-label text-text-secondary max-md:hidden">{subtitle}</p>}
+              {subtitle && <p className="min-w-0 flex-1 basis-0 truncate text-label text-text-secondary max-md:hidden">{subtitle}</p>}
               {!isChannel && customStatus && (
                 <>
                   <span aria-hidden className="mx-1 h-6 w-px flex-none bg-border-default max-md:hidden" />

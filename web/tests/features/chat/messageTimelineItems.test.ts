@@ -19,6 +19,12 @@ describe('buildTimelineItems', () => {
     expect(items.filter((item) => item.type === 'message').map((item) => item.type === 'message' && item.showHeader)).toEqual([true, true]);
   });
 
+  it('marks only the message right under a date or new-messages line, which spaces it already', () => {
+    const items = buildTimelineItems([msg(1, 'ana', 0), msg(2, 'bia', 1), msg(3, 'ana', 24 * 60), msg(4, 'bia', 24 * 60 + 1)], [], undefined, 4);
+    expect(items.map((item) => item.type === 'message' ? `${item.message.msgId}:${item.afterDivider ?? false}` : item.type))
+      .toEqual(['date', '1:true', '2:false', 'date', '3:true', 'unread', '4:true']);
+  });
+
   it('a day change creates a new divider and breaks the grouping', () => {
     const items = buildTimelineItems([msg(1, 'ana', 0), msg(2, 'ana', 24 * 60)]);
     expect(items.map((item) => item.type)).toEqual(['date', 'message', 'date', 'message']);
