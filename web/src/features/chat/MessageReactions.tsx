@@ -156,7 +156,7 @@ function ReactionChip({ emoji, userIds, entering, leaving, onGone, myUserId, all
               aria-label={t(mine ? 'reactions.chipRemove' : 'reactions.chipAdd', { emoji: label, count, names: summarizeReactionParticipants(names, language) })}
               onClick={() => onToggle(emoji)}
               className={cn(
-                'flex h-6 items-center gap-1 rounded-full border px-1.5 text-label transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50',
+                'flex h-6 items-center gap-1 rounded-full border px-1.5 text-label transition-colors focus-ring',
                 mine ? 'border-primary/50 bg-primary/15 text-text-primary' : 'border-border bg-fill-subtle text-text-secondary hover:bg-fill-hover'
               )}
             />

@@ -293,7 +293,7 @@ export const MessageRow = memo(function MessageRow({ message, showHeader, highli
       <div className="w-10 flex-none">
         {showHeader && (
           message.id ? (
-            <button type="button" onClick={() => onOpenProfile(message.id!)} className="mt-0.5 block rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <button type="button" onClick={() => onOpenProfile(message.id!)} className="mt-0.5 block rounded-full focus-ring">
               <Avatar id={message.id} name={displayedName} avatar={displayedAvatar} poster={displayedPoster} animateOnHover avatarColor={author?.avatarColor} size={40} />
             </button>
           ) : message.bot ? (

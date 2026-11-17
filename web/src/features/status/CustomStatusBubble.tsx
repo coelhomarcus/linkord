@@ -37,7 +37,7 @@ export function CustomStatusBubble({ custom, onEdit, onClear, className }: {
           aria-label={t('menu.setCustom')}
           className={cn(
             SHELL,
-            'touch-target relative flex max-w-full items-center gap-1.5 rounded-2xl px-3 py-1.5 text-left text-label text-text-muted transition-colors hover:text-text-primary focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none',
+            'touch-target relative flex max-w-full items-center gap-1.5 rounded-2xl px-3 py-1.5 text-left text-label text-text-muted transition-colors hover:text-text-primary focus-ring',
           )}
         >
           <PlusIcon size={14} weight="bold" className="flex-none" />
@@ -82,7 +82,7 @@ export function CustomStatusBubble({ custom, onEdit, onClear, className }: {
             type="button"
             onClick={onEdit}
             aria-label={t('menu.editCustom')}
-            className="touch-target relative grid size-6 place-items-center rounded-sm pointer-coarse:size-9 text-text-secondary hover:bg-fill-hover hover:text-text-primary focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
+            className="touch-target relative grid size-6 place-items-center rounded-sm pointer-coarse:size-9 text-text-secondary hover:bg-fill-hover hover:text-text-primary focus-ring"
           >
             <PencilSimpleIcon size={14} />
           </button>
@@ -91,7 +91,7 @@ export function CustomStatusBubble({ custom, onEdit, onClear, className }: {
               type="button"
               onClick={onClear}
               aria-label={t('menu.clearCustom')}
-              className="touch-target relative grid size-6 place-items-center rounded-sm pointer-coarse:size-9 text-text-secondary hover:bg-red/12 hover:text-red-text focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
+              className="touch-target relative grid size-6 place-items-center rounded-sm pointer-coarse:size-9 text-text-secondary hover:bg-red/12 hover:text-red-text focus-ring"
             >
               <TrashIcon size={14} />
             </button>

@@ -30,7 +30,7 @@ export function YouTubePlayer({ embed, thumbnail, placeholder }: { embed: Detect
       type="button"
       onClick={play}
       aria-label={t('player.playVideo')}
-      className="relative flex size-full items-center justify-center focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+      className="relative flex size-full items-center justify-center focus-ring"
     >
       <PreviewImage src={thumbnail} placeholder={placeholder} frameClassName="absolute inset-0 size-full" className="size-full object-cover" />
       <span className="relative flex h-12 w-12 items-center justify-center rounded-full bg-red text-white">
@@ -56,7 +56,7 @@ export function TwitchPlayer({ embed }: { embed: DetectedEmbed }) {
       <button
         type="button"
         onClick={play}
-        className="flex aspect-video w-full items-center justify-center gap-2.5 bg-black/40 text-left transition-colors hover:bg-black/55 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+        className="flex aspect-video w-full items-center justify-center gap-2.5 bg-black/40 text-left transition-colors hover:bg-black/55 focus-ring"
       >
         <span className="flex h-12 w-12 flex-none items-center justify-center rounded-full bg-[#9146FF] text-white">
           <PlayIcon size={18} fill="currentColor" />
@@ -123,7 +123,7 @@ export function LinkPlayer({ src, kind, title, thumbnail, placeholder }: {
         type="button"
         onClick={play}
         style={boxStyle}
-        className={cn(box, 'group/play flex items-center gap-3 bg-black/40 text-left transition-colors hover:bg-black/55 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-inset focus-visible:ring-ring/50')}
+        className={cn(box, 'group/play flex items-center gap-3 bg-black/40 text-left transition-colors hover:bg-black/55 focus-ring focus-visible:ring-inset')}
       >
         {thumbnail && (
           <PreviewImage src={thumbnail} placeholder={placeholder} frameClassName="relative aspect-square h-full flex-none" className="size-full object-cover" />
@@ -140,7 +140,7 @@ export function LinkPlayer({ src, kind, title, thumbnail, placeholder }: {
       type="button"
       onClick={play}
       aria-label={t('player.playVideo')}
-      className={cn(box, 'group/play relative flex items-center justify-center bg-black focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-inset focus-visible:ring-ring/50')}
+      className={cn(box, 'group/play relative flex items-center justify-center bg-black focus-ring focus-visible:ring-inset')}
     >
       {thumbnail && <PreviewImage src={thumbnail} placeholder={placeholder} frameClassName="absolute inset-0 size-full" className="size-full object-cover" />}
       {playIcon}

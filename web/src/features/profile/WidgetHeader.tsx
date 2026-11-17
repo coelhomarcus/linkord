@@ -16,7 +16,7 @@ export function WidgetHeader({ title, account }: {
           target="_blank"
           rel="noreferrer"
           aria-label={account.accessibleName}
-          className="flex max-w-[55%] min-w-0 flex-none items-center gap-1.5 rounded-full bg-bg-tertiary px-2.5 py-1 text-caption font-medium text-text-primary transition-colors hover:bg-fill-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex max-w-[55%] min-w-0 flex-none items-center gap-1.5 rounded-full bg-bg-tertiary px-2.5 py-1 text-caption font-medium text-text-primary transition-colors hover:bg-fill-hover focus-ring"
         >
           <span aria-hidden className="flex flex-none"><BrandIcon kind={account.brand.kind} size={14} /></span>
           <span aria-hidden className="truncate">@{account.username}</span>

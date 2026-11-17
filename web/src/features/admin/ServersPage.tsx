@@ -46,7 +46,7 @@ function RowActions({ server }: { server: AdminServerRow }) {
 function ServerIdentity({ server, from }: { server: AdminServerRow; from: { from: string } }) {
   const { t } = useTranslation('admin');
   return (
-    <AppLink to={`/admin/servers/${server.id}`} state={from} className="flex min-w-0 items-center gap-3 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring">
+    <AppLink to={`/admin/servers/${server.id}`} state={from} className="flex min-w-0 items-center gap-3 rounded-md focus-ring">
       <ServerIcon id={server.id} name={server.name} icon={server.icon} size={36} active />
       <span className="block min-w-0 truncate text-body font-medium text-text-primary">{server.name || t('ui.noName', { kind: t('ui.server').toLowerCase() })}</span>
     </AppLink>

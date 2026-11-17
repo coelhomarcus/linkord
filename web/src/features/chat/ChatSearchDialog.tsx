@@ -38,7 +38,7 @@ function SearchResultRow({ result, showConversation, onSelect }: { result: Searc
     <button
       type="button"
       onClick={onSelect}
-      className="flex w-full items-start gap-3 rounded-md px-3 py-2 text-left transition-colors hover:bg-bg-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+      className="flex w-full items-start gap-3 rounded-md px-3 py-2 text-left transition-colors hover:bg-bg-hover focus-ring"
     >
       <div className="mt-0.5 flex-none">
         <Avatar id={result.id ?? result.name} name={displayedName} avatar={displayedAvatar} avatarColor={author?.avatarColor} size={32} />

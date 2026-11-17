@@ -21,7 +21,7 @@ export function SpoilerCover({ hidden, children }: { hidden: boolean; children: 
         <button
           type="button"
           onClick={() => setRevealed(true)}
-          className="absolute inset-0 z-10 flex items-center justify-center rounded-md bg-black/20 outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="absolute inset-0 z-10 flex items-center justify-center rounded-md bg-black/20 focus-ring"
         >
           <span className="flex items-center gap-1.5 rounded-full bg-black/75 px-3 py-1.5 text-label font-semibold text-white">
             <EyeSlashIcon size={16} />

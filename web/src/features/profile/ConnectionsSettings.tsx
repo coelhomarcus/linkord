@@ -97,7 +97,7 @@ export function ConnectionsSettings() {
                       aria-label={providerName(provider)}
                       disabled={unavailable}
                       onClick={() => open(provider)}
-                      className="grid size-12 place-items-center rounded-lg border border-border-strong bg-fill-subtle text-text-primary transition-colors hover:bg-fill-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-40"
+                      className="grid size-12 place-items-center rounded-lg border border-border-strong bg-fill-subtle text-text-primary transition-colors hover:bg-fill-hover focus-ring disabled:pointer-events-none disabled:opacity-40"
                     />
                   }
                 >

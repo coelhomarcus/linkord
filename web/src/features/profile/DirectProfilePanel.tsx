@@ -17,7 +17,7 @@ import { useLanguage } from '@/shared/i18n/useLanguage';
 
 const SHOWN_MUTUALS = 5;
 const SECTION = 'flex flex-col gap-1';
-const MUTUAL_LINK = 'rounded-sm hover:text-text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
+const MUTUAL_LINK = 'rounded-sm hover:text-text-primary hover:underline focus-ring';
 
 /** The profile beside a DM, as Discord draws it: banner, avatar, bio, since
  * when, and what you have in common, with the full profile one click away. */

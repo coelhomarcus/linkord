@@ -151,7 +151,7 @@ export function MemberQuickProfile({ server, member, currentUser, offline, open,
                 type="button"
                 aria-label={t('members.openProfile', { name: user.displayName })}
                 onClick={openFullProfile}
-                className="block cursor-pointer rounded-full border-0 bg-transparent p-0 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                className="block cursor-pointer rounded-full border-0 bg-transparent p-0 focus-ring"
               >
                 <Avatar id={user.id} name={user.displayName} avatar={user.avatar} poster={avatarPoster} animateOnHover avatarColor={user.avatarColor} size={72} />
               </button>

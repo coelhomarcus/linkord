@@ -88,7 +88,7 @@ function MessageMediaBody({ attachments }: { attachments: ChatAttachmentData[] }
   const { visual, files } = splitAttachments(attachments);
   const viewerItems = visual.map(attachmentViewerItem).filter((item): item is ViewerItem => item !== null);
   const openAt = (index: number) => openMedia(viewerItems, index);
-  const cellButton = 'block cursor-zoom-in overflow-hidden bg-fill-subtle focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-inset focus-visible:ring-ring/60';
+  const cellButton = 'block cursor-zoom-in overflow-hidden bg-fill-subtle focus-ring focus-visible:ring-inset';
 
   let pictures = null;
   if (visual.length === 1) {

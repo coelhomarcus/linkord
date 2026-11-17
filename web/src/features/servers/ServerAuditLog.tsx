@@ -133,7 +133,7 @@ function Entry({ entry, onFilterActor, onFilterTarget }: {
           <time dateTime={entry.at}>{new Date(entry.at).toLocaleString(i18n.language, { dateStyle: 'short', timeStyle: 'short' })}</time>
           {hasDetails && (
             <button type="button" aria-expanded={open} aria-controls={detailsId} onClick={() => setOpen((value) => !value)}
-              className="inline-flex items-center gap-1 rounded hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              className="inline-flex items-center gap-1 rounded hover:text-text-primary focus-ring">
               {open ? <CaretDownIcon size={12} aria-hidden /> : <CaretRightIcon size={12} aria-hidden />}
               {t('auditLog.details')}
             </button>

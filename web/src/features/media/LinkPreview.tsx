@@ -59,7 +59,7 @@ function EmbedFailedFallback({ url, className }: { url: string; className: strin
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className={`flex w-full max-w-sm items-center gap-2 rounded-md border border-border bg-bg-tertiary px-3 py-2.5 text-label text-text-muted transition-colors hover:bg-bg-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 ${className}`}
+      className={`flex w-full max-w-sm items-center gap-2 rounded-md border border-border bg-bg-tertiary px-3 py-2.5 text-label text-text-muted transition-colors hover:bg-bg-hover focus-ring ${className}`}
     >
       <ImageBrokenIcon size={14} className="flex-none" />
       <span className="truncate">{t('embed.previewFailed')} {t('embed.openLink')}</span>

@@ -24,7 +24,7 @@ export function RoleColorPicker({ value, disabled, onChange }: { value: string; 
       disabled={disabled}
       onChange={onChange}
       triggerLabel={t('roles.colorTrigger', { name })}
-      triggerClassName="flex h-10 w-14 items-center justify-center rounded-lg border border-border-field bg-bg-textarea transition-colors hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60 data-popup-open:border-border-accent"
+      triggerClassName="flex h-10 w-14 items-center justify-center rounded-lg border border-border-field bg-bg-textarea transition-colors hover:border-border-strong focus-ring disabled:opacity-60 data-popup-open:border-border-accent"
     >
       {color
         ? <span aria-hidden className="size-6 rounded-md border border-white/15" style={{ background: color }} />

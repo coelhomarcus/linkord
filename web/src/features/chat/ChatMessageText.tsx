@@ -122,7 +122,7 @@ function Spoiler({ children }: { children: ReactNode }) {
         event.preventDefault();
         setRevealed(true);
       }}
-      className="cursor-pointer rounded-sm bg-text-muted outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+      className="cursor-pointer rounded-sm bg-text-muted focus-ring"
     >
       <span inert className="invisible">{children}</span>
     </span>
@@ -164,7 +164,7 @@ function CopyCodeButton({ code }: { code: string }) {
       onClick={() => void copy(code)}
       aria-label={t('code.copy')}
       className={cn(
-        'absolute right-2 top-2 flex items-center gap-1 rounded-md border border-border bg-surface-overlay px-2 py-1 text-caption font-medium text-text-secondary transition-opacity hover:text-text-primary focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [@media(hover:none)]:opacity-100',
+        'absolute right-2 top-2 flex items-center gap-1 rounded-md border border-border bg-surface-overlay px-2 py-1 text-caption font-medium text-text-secondary transition-opacity hover:text-text-primary focus-visible:opacity-100 focus-ring [@media(hover:none)]:opacity-100',
         copied ? 'opacity-100' : 'opacity-0 group-hover/code:opacity-100',
       )}
     >

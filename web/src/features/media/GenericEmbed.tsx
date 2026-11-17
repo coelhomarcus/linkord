@@ -139,7 +139,7 @@ function GenericEmbedCard({ embed, className = '', edgeToEdge, preview, menu }: 
         target="_blank"
         rel="noopener noreferrer"
         style={{ maxWidth }}
-        className={`flex w-full items-center gap-2 ${cardBorderClass} bg-bg-tertiary px-3 py-2.5 text-label text-text-muted transition-colors hover:bg-bg-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 ${className}`}
+        className={`flex w-full items-center gap-2 ${cardBorderClass} bg-bg-tertiary px-3 py-2.5 text-label text-text-muted transition-colors hover:bg-bg-hover focus-ring ${className}`}
       >
         <ArrowSquareOutIcon size={14} className="flex-none" />
         <span className="truncate">{data.siteName}</span>
@@ -159,7 +159,7 @@ function GenericEmbedCard({ embed, className = '', edgeToEdge, preview, menu }: 
   const asThumbnail = layout === 'link' && images.length === 1;
   const picture = drawnImage && !imageFailed ? (
     <ImageFrame size={asThumbnail ? null : previewImageSize(data)} fill={asThumbnail}>
-      <button type="button" onClick={() => openImage(0)} {...hoverWarmHandlers(images[0], { animated: data.imageAnimated })} aria-label={alt ?? title} className="block size-full cursor-zoom-in outline-none focus-visible:ring-3 focus-visible:ring-inset focus-visible:ring-ring/50">
+      <button type="button" onClick={() => openImage(0)} {...hoverWarmHandlers(images[0], { animated: data.imageAnimated })} aria-label={alt ?? title} className="block size-full cursor-zoom-in focus-ring focus-visible:ring-inset">
         <PreviewImage src={drawnImage} placeholder={data.imagePlaceholder} alt={alt ?? ''} onError={() => setImageFailed(true)} className="size-full object-cover" />
       </button>
       {alt && <AltTextBadge text={alt} />}

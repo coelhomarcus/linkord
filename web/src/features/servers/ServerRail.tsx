@@ -78,7 +78,7 @@ function RailItem({ label, active, unread, badge, badgeLabel, badgeClassName, li
         aria-label={accessibleName}
         aria-current={active ? 'page' : undefined}
         className={cn(
-          'group/server relative grid size-10 flex-none touch-none select-none place-items-center rounded-[12px] outline-none [-webkit-user-drag:none] focus-visible:ring-2 focus-visible:ring-ring',
+          'group/server relative grid size-10 flex-none touch-none select-none place-items-center rounded-[12px] focus-ring [-webkit-user-drag:none]',
           dragging && 'z-10 cursor-grabbing',
         )}
       >
@@ -166,7 +166,7 @@ export function ServerRail({ className }: { className?: string }) {
       {drawer && (
         <Tooltip>
           <TooltipTrigger onClick={toggleSidebar} aria-label={t('rail.showList')} aria-expanded={openMobile}
-            className="grid size-10 flex-none place-items-center rounded-[12px] bg-surface-300 text-text-secondary outline-none hover:bg-surface-400 hover:text-text-primary focus-visible:ring-2 focus-visible:ring-ring">
+            className="grid size-10 flex-none place-items-center rounded-[12px] bg-surface-300 text-text-secondary focus-ring hover:bg-surface-400 hover:text-text-primary">
             <SidebarSimpleIcon size={24} aria-hidden />
           </TooltipTrigger>
           <TooltipContent side="right">{t('rail.showList')}</TooltipContent>

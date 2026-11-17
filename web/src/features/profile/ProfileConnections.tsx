@@ -21,7 +21,7 @@ export function ProfileConnections({ links, hideHeading = false }: { links: stri
               target="_blank"
               rel="noreferrer"
               aria-label={t('card.openLink', { name: link.label })}
-              className="flex min-w-0 items-center gap-2 rounded-md py-1 text-caption text-text-secondary transition-colors hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="flex min-w-0 items-center gap-2 rounded-md py-1 text-caption text-text-secondary transition-colors hover:text-text-primary focus-ring"
             >
               <BrandIcon kind={link.kind} size={14} />
               <span className="min-w-0 truncate">{link.label}</span>

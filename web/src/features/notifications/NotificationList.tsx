@@ -60,7 +60,7 @@ export function NotificationList({ onSelect, onDismiss, fullPage = false }: { on
             type="button"
             onClick={() => onSelect(entry)}
             className={cn(
-              'flex w-full items-center gap-3 rounded-lg py-2 pl-2 pr-9 text-left transition-colors hover:bg-nav-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              'flex w-full items-center gap-3 rounded-lg py-2 pl-2 pr-9 text-left transition-colors hover:bg-nav-hover focus-ring',
               !entry.read && 'bg-accent-primary/[0.08]',
             )}
           >

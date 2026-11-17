@@ -156,7 +156,7 @@ export function StickerEditorDialog({ serverId, open, onOpenChange, sticker = nu
                 <PopoverTrigger
                   type="button"
                   aria-label={emoji ? t('editor.emojiChosen', { emoji }) : t('editor.emoji')}
-                  className="flex h-10 w-full items-center gap-2 rounded-md border border-border-strong bg-fill-subtle px-3 text-left text-label transition-colors duration-100 hover:bg-fill-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                  className="flex h-10 w-full items-center gap-2 rounded-md border border-border-strong bg-fill-subtle px-3 text-left text-label transition-colors duration-100 hover:bg-fill-hover focus-ring"
                 >
                   {/* off-scale: an emoji glyph, sized like the icon it stands in for */}
                   {emoji ? <span className="text-[20px] leading-none"><Emoji emoji={emoji} /></span> : <SmileyIcon size={18} className="flex-none text-text-muted" />}

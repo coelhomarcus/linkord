@@ -82,7 +82,7 @@ function StreamPreview({ participantId, name, onWatch }: { participantId: string
       <div className="relative flex flex-col items-center gap-2">
         {!preview?.image && answered && <span>{t('voiceMembers.previewUnavailable')}</span>}
         <button type="button" onClick={onWatch} aria-label={t('voiceMembers.watch.buttonLabel', { name })}
-          className="rounded-md bg-black/55 px-4 py-1.5 text-label font-semibold text-white outline-none backdrop-blur-sm transition-colors duration-100 hover:bg-black/75 focus-visible:ring-2 focus-visible:ring-ring">
+          className="rounded-md bg-black/55 px-4 py-1.5 text-label font-semibold text-white focus-ring backdrop-blur-sm transition-colors duration-100 hover:bg-black/75">
           {t('voiceMembers.watch.button')}
         </button>
       </div>
@@ -91,7 +91,7 @@ function StreamPreview({ participantId, name, onWatch }: { participantId: string
 }
 
 // under a finger the badge takes a larger target without moving the row (padding paid back by margin)
-const BADGE_TRIGGER = 'flex rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:-m-2 pointer-coarse:p-2';
+const BADGE_TRIGGER = 'flex rounded-sm focus-ring pointer-coarse:-m-2 pointer-coarse:p-2';
 
 /** "Ao vivo" beside someone sharing. A click watches: in the call it puts their share in focus, outside
  * it joins and opens the call focused on it. Hovering shows a still of the share with "Assistir" over
@@ -134,7 +134,7 @@ function VoiceActivity({ person }: { person: VoicePerson }) {
   return (
     <Popover>
       <PopoverTrigger openOnHover delay={150} aria-label={t(`line.${activity.kind}`, { name: activity.name })}
-        className="flex flex-none rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring">
+        className="flex flex-none rounded-sm focus-ring">
         <ActivityIcon activity={activity} size={16} />
       </PopoverTrigger>
       <PopoverContent side="right" align="center" sideOffset={8} className="w-72 p-0">
@@ -329,7 +329,7 @@ export function VoiceMembers({ server, channel, onOpenProfile, onNavigate, drag,
                   for a keyboard or a screen reader, shown only once focused */}
               <button type="button" aria-label={t('voiceMembers.menu.more', { name: person.displayName })} aria-haspopup="menu"
                 onClick={(event) => openMenuFromButton(person, event)}
-                className="sr-only flex-none rounded-sm text-text-muted outline-none focus-visible:not-sr-only focus-visible:ring-2 focus-visible:ring-ring">
+                className="sr-only flex-none rounded-sm text-text-muted focus-ring focus-visible:not-sr-only">
                 <DotsThreeIcon size={16} weight="bold" />
               </button>
             </li>

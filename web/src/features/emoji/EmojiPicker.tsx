@@ -234,7 +234,7 @@ export function EmojiPicker({ onPick, allowCustom = true, className, autoFocus =
           <DropdownMenuTrigger
             aria-label={t('picker.skinTone')}
             // off-scale: an emoji glyph, sized to its box, not type
-            className="grid size-10 flex-none place-items-center rounded-lg text-[22px] leading-none transition-colors duration-100 hover:bg-fill-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="grid size-10 flex-none place-items-center rounded-lg text-[22px] leading-none transition-colors duration-100 hover:bg-fill-hover focus-ring"
           >
             <Emoji emoji={TONE_HANDS[skinTone] ?? SIDEBAR_HAND} />
           </DropdownMenuTrigger>
@@ -266,7 +266,7 @@ export function EmojiPicker({ onPick, allowCustom = true, className, autoFocus =
                   aria-current={isActive ? 'true' : undefined}
                   onClick={() => jumpTo(section.key)}
                   className={cn(
-                    'grid size-8 place-items-center rounded-md text-text-muted transition-colors duration-100 hover:bg-fill-hover hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                    'grid size-8 place-items-center rounded-md text-text-muted transition-colors duration-100 hover:bg-fill-hover hover:text-text-primary focus-ring',
                     isActive && 'bg-fill-hover text-text-primary',
                   )}
                 >

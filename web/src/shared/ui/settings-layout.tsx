@@ -109,7 +109,7 @@ export function SettingsLinkRow({ to, onClick, icon, label, description, value }
       <CaretRightIcon size={20} aria-hidden className="flex-none text-text-secondary" />
     </>
   );
-  const className = 'flex w-full items-center gap-4 rounded-lg text-left outline-none focus-visible:ring-2 focus-visible:ring-ring [&:hover_svg:last-child]:text-text-primary';
+  const className = 'flex w-full items-center gap-4 rounded-lg text-left focus-ring [&:hover_svg:last-child]:text-text-primary';
   return to
     ? <AppLink to={to} className={className}>{body}</AppLink>
     : <button type="button" onClick={onClick} className={className}>{body}</button>;

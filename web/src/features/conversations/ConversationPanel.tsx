@@ -30,7 +30,7 @@ import { useTimeFormat } from '@/shared/lib/timeFormat';
 
 // Discord's header icons: bare 24px glyphs, gray at rest, white while hovered
 // or while the panel they toggle is open
-const HEADER_ICON = 'grid size-8 flex-none place-items-center rounded-lg text-text-secondary transition-colors hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-pressed:text-text-strong';
+const HEADER_ICON = 'grid size-8 flex-none place-items-center rounded-lg text-text-secondary transition-colors hover:text-text-primary focus-ring aria-pressed:text-text-strong';
 
 function HeaderIcon({ label, pressed, onClick, className, children }: { label: string; pressed?: boolean; onClick: () => void; className?: string; children: ReactNode }) {
   return (
@@ -187,7 +187,7 @@ export function ConversationPanel({ onOpenProfile, onOpenCall, onOpenSearch, det
               {isChannel ? null : callBlockedReason ? (
                 <Tooltip>
                   {/* a disabled button gets no pointer events, so the tooltip hangs off a wrapper */}
-                  <TooltipTrigger render={<span tabIndex={0} className="inline-flex rounded-lg focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 max-md:hidden" />}>
+                  <TooltipTrigger render={<span tabIndex={0} className="inline-flex rounded-lg focus-ring max-md:hidden" />}>
                     <button type="button" disabled aria-label={t('panel.voiceCall')} className={cn(HEADER_ICON, 'opacity-40')}>
                       <PhoneIcon size={24} weight="fill" />
                     </button>

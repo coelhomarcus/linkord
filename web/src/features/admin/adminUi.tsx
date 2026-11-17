@@ -38,7 +38,7 @@ export function AdminTextLink({ to, state, children, className }: {
 /** The way back to the list a detail page was opened from, above its header. */
 export function AdminBackLink({ to, state, children }: { to: LinkProps['to']; state?: unknown; children: ReactNode }) {
   return (
-    <AppLink to={to} state={state} className="w-fit rounded-md text-label font-medium text-text-muted outline-none transition-colors hover:text-text-primary focus-visible:ring-2 focus-visible:ring-ring">
+    <AppLink to={to} state={state} className="w-fit rounded-md text-label font-medium text-text-muted focus-ring transition-colors hover:text-text-primary">
       {children}
     </AppLink>
   );
