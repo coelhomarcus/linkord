@@ -182,10 +182,10 @@ describe('ProfileModal — since when and what you have in common', () => {
     expect(screen.getByText('Nenhum amigo mútuo.')).toBeInTheDocument();
   });
 
-  it('shows the sidebar on your own profile with only the editable Wall', async () => {
+  it('shows the sidebar on your own profile with the editable Wall and the activity, nothing in common', async () => {
     renderProfile({ state: { ...initialRoomState, me: { ...initialRoomState.me, userId: 'u1' } } });
     expect(await screen.findByText('Membro desde')).toBeInTheDocument();
-    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Mural']);
+    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Mural', 'Atividade']);
     expect(screen.getByRole('tab', { name: 'Mural' })).toHaveAttribute('aria-selected', 'true');
     expect(await screen.findByRole('button', { name: 'Adicionar widget' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Seus Widgets' })).toBeInTheDocument();

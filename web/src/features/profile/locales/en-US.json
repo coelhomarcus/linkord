@@ -12,10 +12,9 @@
     "changeBanner": "Change banner",
     "uploadFromComputer": "Upload from computer",
     "removeBanner": "Remove banner",
-    "viewBanner": "View banner full screen",
     "changeAvatar": "Change profile picture",
     "removeAvatar": "Remove picture",
-    "viewAvatar": "View profile picture full screen",
+    "openProfile": "Open profile",
     "displayName": "Display name",
     "openLink": "Open {{name}}",
     "admin": "Admin"

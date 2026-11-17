@@ -12,10 +12,9 @@
     "changeBanner": "Alterar banner",
     "uploadFromComputer": "Enviar do computador",
     "removeBanner": "Remover banner",
-    "viewBanner": "Ver banner em tela cheia",
     "changeAvatar": "Alterar foto de perfil",
     "removeAvatar": "Remover foto",
-    "viewAvatar": "Ver foto de perfil em tela cheia",
+    "openProfile": "Abrir perfil",
     "displayName": "Nome de exibição",
     "openLink": "Abrir {{name}}",
     "admin": "Admin"

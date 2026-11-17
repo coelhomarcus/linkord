@@ -37,8 +37,8 @@ interface ProfileCardProps {
   /** makes the custom status bubble the owner's: edit and clear it, or an invitation when there is none */
   onEditCustomStatus?: () => void;
   onClearCustomStatus?: () => void;
-  onAvatarClick?: () => void;
-  onBannerClick?: () => void;
+  /** makes the avatar and the banner open the full profile (the quick card's) */
+  onOpenProfile?: () => void;
   onAvatarUpload?: () => void;
   onAvatarRemove?: () => void;
   avatarUploading?: boolean;
@@ -98,7 +98,7 @@ function EditableBio({ value, onChange, disabled }: { value: string; onChange: (
 }
 
 export function ProfileCard({
-  user, status, customStatus, onEditCustomStatus, onClearCustomStatus, onAvatarClick, onBannerClick,
+  user, status, customStatus, onEditCustomStatus, onClearCustomStatus, onOpenProfile,
   onAvatarUpload, onAvatarRemove, avatarUploading,
   onBannerUpload, onBannerRemove, bannerUploading,
   className,
@@ -142,12 +142,14 @@ export function ProfileCard({
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-      ) : onBannerClick ? (
+      ) : onOpenProfile ? (
+        // the avatar's button below is the one keyboards and screen readers get: both do the same
         <button
           type="button"
-          aria-label={t('card.viewBanner')}
-          onClick={onBannerClick}
-          className="block w-full cursor-zoom-in focus-ring focus-visible:ring-inset"
+          tabIndex={-1}
+          aria-hidden
+          onClick={onOpenProfile}
+          className="block w-full cursor-pointer"
           style={{ ...bannerStyle(user), aspectRatio: BANNER_ASPECT_RATIO }}
         />
       ) : (
@@ -188,12 +190,12 @@ export function ProfileCard({
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
-            ) : user.avatar && onAvatarClick ? (
+            ) : onOpenProfile ? (
               <button
                 type="button"
-                aria-label={t('card.viewAvatar')}
-                onClick={onAvatarClick}
-                className="block cursor-zoom-in rounded-full focus-ring"
+                aria-label={t('card.openProfile')}
+                onClick={onOpenProfile}
+                className="block cursor-pointer rounded-full focus-ring"
               >
                 <Avatar id={user.id} name={user.displayName} avatar={user.avatar} avatarColor={user.avatarColor} size={92} />
               </button>

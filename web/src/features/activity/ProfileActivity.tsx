@@ -48,7 +48,12 @@ function RecentSkeleton({ label }: { label: string }) {
 
 /** The profile's Activity tab, as Discord draws it: what they are doing now, large, with its timer, and the
  * games and apps they were seen with lately ("2d atrás"). */
-export function ProfileActivity({ userId, name }: { userId: string; name: string }) {
+export function ProfileActivity({ userId, name, self = false }: {
+  userId: string;
+  name: string;
+  /** the account's own profile, which says "you" when the activity is not shared */
+  self?: boolean;
+}) {
   const { t } = useTranslation('activity');
   const current = useUserActivity(userId);
   const history = useActivityHistory(userId);
@@ -67,7 +72,7 @@ export function ProfileActivity({ userId, name }: { userId: string; name: string
       </div>
     );
   } else if (history.value && !history.value.sharing) {
-    recentBody = <p className="py-2 text-label text-text-muted">{t('profile.private', { name })}</p>;
+    recentBody = <p className="py-2 text-label text-text-muted">{self ? t('profile.privateSelf') : t('profile.private', { name })}</p>;
   } else if (recent.length === 0) {
     recentBody = <p className="py-2 text-label text-text-muted">{t('profile.empty')}</p>;
   } else {
