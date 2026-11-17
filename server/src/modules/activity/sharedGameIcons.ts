@@ -25,7 +25,7 @@ export const databaseSharedIconSource: SharedIconSource = {
 
 const STEAM_KEY = /^steam:(\d{1,10})$/;
 
-export function activityIconUrl(iconId: string): string {
+function activityIconUrl(iconId: string): string {
   return `/api/activity/icons/${iconId}.webp`;
 }
 
