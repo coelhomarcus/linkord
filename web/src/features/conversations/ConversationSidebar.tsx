@@ -212,7 +212,7 @@ export function ConversationSidebar({ onOpenProfile }: { onOpenProfile: (userId:
     }
     // in a conversation the same list is a drawer, opened by the edge swipe
     return (
-      <Sidebar ariaLabel={server?.name ?? t('sidebar.title')} leadingInset={false} className="text-text-primary">
+      <Sidebar ariaLabel={server?.name ?? t('sidebar.title')} fromRail={false} className="text-text-primary">
         <div className="flex h-full min-h-0">
           <ServerRail />
           <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-bg-secondary">{content}</div>

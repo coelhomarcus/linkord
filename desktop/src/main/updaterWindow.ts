@@ -4,9 +4,11 @@ import { SECURE_WEB_PREFERENCES } from './contentsGuard.js';
 import type { Strings } from './strings.js';
 import { updaterView, type UpdaterAction, type UpdaterScreen } from './updaterScreen.js';
 
-// The app's own small window for updates, as Discord has: it shows the check
-// and the download when the app starts or the tray asks, and replaces the
-// system's dialogs and notifications (assets/updater.html draws it).
+// The app's own small window, as Discord has: every start opens with it alone
+// on screen, through the update check, the download and install of an update
+// found, and the connection to the server, until the app's page has loaded.
+// It also shows a check the tray asks for, and replaces the system's dialogs
+// and notifications (assets/updater.html draws it).
 
 const PAGE = path.join(import.meta.dirname, '../../assets/updater.html');
 const PRELOAD = path.join(import.meta.dirname, '../preload/updater.cjs');
@@ -59,7 +61,7 @@ export function createUpdaterWindow(strings: Strings, onAction: (action: Updater
 
   ipcMain.on('linkord:updater:action', (event, action: unknown) => {
     if (!window || event.sender !== window.webContents) return;
-    if (action === 'restart' || action === 'later') onAction(action);
+    if (action === 'restart' || action === 'later' || action === 'retry') onAction(action);
   });
 
   return {

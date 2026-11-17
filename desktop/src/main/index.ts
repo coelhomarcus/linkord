@@ -10,7 +10,7 @@ import { forbiddenSwitch } from './debugSwitches.js';
 import { deepLinkFromArgv, deepLinkPath, protocolRegistration } from './deepLink.js';
 import { installDeepLinkBridge } from './deepLinkBridge.js';
 import { capturesSystemAudio, sharePicker } from './displayMedia.js';
-import { createMainWindow } from './mainWindow.js';
+import { createMainWindow, type MainWindow } from './mainWindow.js';
 import { appMenuTemplate, runTrayItem, trayMenuItems, trayMenuTemplate, type MenuActions, type MenuState } from './menus.js';
 import { installScreenShare } from './screenShare.js';
 import { installPermissionHandlers } from './session.js';
@@ -22,9 +22,9 @@ import { createTray } from './tray.js';
 import { drawsTrayMenu } from './trayMenuLayout.js';
 import { createTrayMenuWindow } from './trayMenuWindow.js';
 import { installUpdater } from './updater.js';
-import type { UpdaterAction } from './updaterScreen.js';
+import { startScreen, type UpdaterAction } from './updaterScreen.js';
 import { createUpdaterWindow } from './updaterWindow.js';
-import { INSTALL_DELAY_MS, INSTALL_FALLBACK_MS, RESULT_LINGER_MS, STARTUP_CHECK_TIMEOUT_MS, checksAtStart, mainWindowMayShow, updateMode, updaterMayClose, type StartupPhase } from './updates.js';
+import { INSTALL_DELAY_MS, INSTALL_FALLBACK_MS, RESULT_LINGER_MS, STARTUP_CHECK_TIMEOUT_MS, checksAtStart, mainWindowMayShow, startWindowClose, updateMode, type StartupPhase } from './updates.js';
 
 const debugSwitch = forbiddenSwitch({ isPackaged: app.isPackaged, hasSwitch: (name) => app.commandLine.hasSwitch(name) });
 if (debugSwitch) {
@@ -65,18 +65,18 @@ if (!resolved.ok) {
   app.quit();
 } else {
   const appUrl = resolved.url;
+  let main: MainWindow | null = null;
   let mainWindow: BrowserWindow | null = null;
   let tray: Tray | null = null;
   let quitting = false;
 
-  // The start's update check holds the app's window back (updates.ts)
+  // A start shows only the updater window until the app's page has loaded (updates.ts)
   let startupPhase: StartupPhase = 'open';
   let focusUpdater = () => {};
   const showMainWindow = () => {
     if (!mainWindowMayShow(startupPhase)) return focusUpdater();
-    if (!mainWindow) return;
-    if (mainWindow.isMinimized()) mainWindow.restore();
-    mainWindow.show();
+    if (!main || !mainWindow) return;
+    main.show();
     mainWindow.focus();
   };
 
@@ -150,39 +150,31 @@ if (!resolved.ok) {
     let turn = 0;
     let followProgress = false;
     let lingerTimer: NodeJS.Timeout | undefined;
-    let startupSettled: ((showApp: boolean) => void) | null = null;
     const installNow = () => {
       if (updater.status().kind !== 'downloaded') return;
       turn++;
       followProgress = false;
       clearTimeout(lingerTimer);
-      updaterWindow?.show({ kind: 'installing' });
-      setTimeout(() => updater.apply(), updaterWindow ? INSTALL_DELAY_MS : 0);
+      updaterWindow.show({ kind: 'installing' });
+      setTimeout(() => updater.apply(), INSTALL_DELAY_MS);
     };
     const onUpdaterAction = (action: UpdaterAction) => {
       if (action === 'restart') return installNow();
+      if (action === 'retry') return main?.retry();
+      if (startWindowClose({ phase: startupPhase, quitting }) === 'quit') return app.quit();
       turn++;
       followProgress = false;
       clearTimeout(lingerTimer);
-      updaterWindow?.close();
-      startupSettled?.(true);
-      startupSettled = null;
+      updaterWindow.close();
     };
-    const updaterWindow = updater.mode === 'install'
-      ? createUpdaterWindow(strings, onUpdaterAction, () => updaterMayClose({ phase: startupPhase, quitting }))
-      : null;
-    focusUpdater = () => updaterWindow?.focus();
-    const timedOut = Symbol('timed out');
-    /** The timeout only bounds the question; an update found is waited for until it is downloaded. */
-    const findAndDownload = async (timeoutMs?: number, onFound?: () => void): Promise<'none' | 'failed' | 'ready' | typeof timedOut> => {
+    const updaterWindow = createUpdaterWindow(strings, onUpdaterAction, () => startWindowClose({ phase: startupPhase, quitting }) !== 'refuse');
+    focusUpdater = () => updaterWindow.focus();
+    /** An update found is downloaded before this settles. */
+    const findAndDownload = async (onFound?: () => void): Promise<'none' | 'failed' | 'ready'> => {
       const status = updater.status();
       if (status.kind === 'downloaded') return 'ready';
       if (status.kind === 'idle') {
-        const outcome = await (timeoutMs === undefined ? updater.check() : Promise.race([
-          updater.check(),
-          new Promise<typeof timedOut>((resolve) => setTimeout(() => resolve(timedOut), timeoutMs)),
-        ]));
-        if (outcome === timedOut) return timedOut;
+        const outcome = await updater.check();
         if (outcome.kind !== 'update') return outcome.kind === 'failed' ? 'failed' : 'none';
       }
       onFound?.();
@@ -190,42 +182,45 @@ if (!resolved.ok) {
     };
     // As Discord does: a start shows the check, and an update found is
     // downloaded and installed before the app opens, with the updater window
-    // on screen until the installer takes over. A slow, failed or empty check
-    // only opens the app.
-    const startupCheck = () => new Promise<boolean>((resolve) => {
+    // on screen until the installer takes over. A failed or empty check goes
+    // on to the connection, and so does a slow one, but an update it still
+    // finds before the app's window opens is installed first.
+    const startUp = () => {
+      if (!checksAtStart({ mode: updater.mode, startHidden })) return connectApp();
       const own = ++turn;
       startupPhase = 'checking';
-      const open = () => {
-        startupSettled = null;
-        startupPhase = 'open';
-        resolve(true);
-      };
-      startupSettled = open;
       followProgress = true;
-      updaterWindow?.show({ kind: 'checking' });
-      const found = () => { if (own === turn) startupPhase = 'updating'; };
-      void findAndDownload(STARTUP_CHECK_TIMEOUT_MS, found).then((result) => {
+      updaterWindow.show({ kind: 'checking' });
+      const slow = setTimeout(() => {
+        if (own === turn && startupPhase === 'checking') connectApp();
+      }, STARTUP_CHECK_TIMEOUT_MS);
+      const found = () => {
+        // Once the app is open, the download goes on in the background as any other
+        if (own !== turn || startupPhase === 'open') return;
+        if (startupPhase === 'connecting') discardApp();
+        startupPhase = 'updating';
+        followProgress = true;
+        refresh();
+      };
+      void findAndDownload(found).then((result) => {
+        clearTimeout(slow);
         if (own !== turn) return;
-        if (result === 'ready') {
-          startupSettled = null;
-          installNow();
-          // The installer quits the app; if it never does, the app still opens
-          setTimeout(() => {
-            if (startupPhase !== 'updating') return;
-            console.error('[desktop] the update did not install; opening the app');
-            updaterWindow?.close();
-            open();
-            showMainWindow();
-          }, INSTALL_FALLBACK_MS).unref();
-          return;
-        }
-        followProgress = false;
-        updaterWindow?.close();
-        open();
+        if (startupPhase === 'checking') return connectApp();
+        if (startupPhase !== 'updating') return;
+        if (result !== 'ready') return connectApp();
+        installNow();
+        // The installer quits the app; if it never does, the app still opens
+        setTimeout(() => {
+          if (startupPhase !== 'updating') return;
+          console.error('[desktop] the update did not install; opening the app');
+          connectApp();
+        }, INSTALL_FALLBACK_MS).unref();
       });
-    });
+    };
     const checkFromMenu = () => {
-      if (!updaterWindow) return;
+      if (updater.mode !== 'install') return;
+      // The start's own check is on screen already
+      if (startupPhase !== 'open') return focusUpdater();
       const own = ++turn;
       clearTimeout(lingerTimer);
       followProgress = true;
@@ -264,7 +259,7 @@ if (!resolved.ok) {
       if (!drawnMenu) tray?.setContextMenu(Menu.buildFromTemplate(trayMenuTemplate(state, actions)));
       sendSettings(mainWindow, settings());
       const status = updater.status();
-      if (followProgress && status.kind === 'downloading') updaterWindow?.show({ kind: 'downloading', version: status.version, percent: status.percent });
+      if (followProgress && status.kind === 'downloading') updaterWindow.show({ kind: 'downloading', version: status.version, percent: status.percent });
     };
     tray = createTray(showMainWindow, drawnMenu && (() => {
       void drawnMenu.show({ title: 'Linkord', version: format(strings.version, { version: app.getVersion() }), items: trayMenuItems(menuState()) });
@@ -288,48 +283,82 @@ if (!resolved.ok) {
       applyUpdate: installNow,
     });
     const startHidden = launchedAtLogin() && preferences.startMinimized;
-    const showWhen = checksAtStart({ mode: updater.mode, startHidden }) ? startupCheck() : undefined;
-    const main = createMainWindow({
-      appUrl,
-      startUrl: pendingLink ? new URL(pendingLink, appUrl.origin) : null,
-      stateFile: path.join(app.getPath('userData'), 'window-state.json'),
-      preload: path.join(import.meta.dirname, '../preload/index.cjs'),
-      startHidden,
-      showWhen,
-      strings,
-      titleBar: barStyle,
-      preloadArguments: [
-        `--linkord-desktop-version=${app.getVersion()}`,
-        `--linkord-share-picker=${picker}`,
-        `--linkord-system-audio=${capturesSystemAudio(process.platform) ? '1' : '0'}`,
-        `--linkord-title-bar=${barStyle}`,
-      ],
-    });
-    mainWindow = main.window;
-    pendingLink = null;
-    openLink = installDeepLinkBridge(main, appUrl.origin);
-    // Previewing another system's bar on a Mac: its buttons replace the traffic lights
-    if (process.platform === 'darwin' && barStyle !== 'mac') mainWindow.setWindowButtonVisibility(false);
-    forwardWindowState(mainWindow);
-    // Closing the window only hides it (to the tray, the menu bar and dock
-    // on macOS), so a call keeps going; quitting is in the tray and menu.
-    // Turned off in settings, closing quits.
-    mainWindow.on('close', (event) => {
-      if (quitting) return;
-      event.preventDefault();
-      if (preferences.closeToTray) mainWindow?.hide();
-      else app.quit();
-    });
-    // In a call the page holds itself open with beforeunload, which in Electron
-    // silently cancels the close and with it the quit. Quitting overrides it:
-    // the page's pagehide still leaves the call on the way out.
-    mainWindow.webContents.on('will-prevent-unload', (event) => {
-      if (quitting) event.preventDefault();
-    });
-    // A logout or shutdown closes the window without before-quit: holding it
-    // open would hold the system up
-    mainWindow.on('session-end', () => { quitting = true; });
+    const connectApp = () => {
+      followProgress = false;
+      startupPhase = 'connecting';
+      updaterWindow.show({ kind: 'connecting' });
+      openApp(true);
+    };
+    /** An update found while the app's page loads hidden: that window will not be shown. */
+    const discardApp = () => {
+      const window = mainWindow;
+      main = null;
+      mainWindow = null;
+      openLink = null;
+      window?.destroy();
+    };
+    const finishStart = () => {
+      startupPhase = 'open';
+      showMainWindow();
+      updaterWindow.close();
+    };
+    const openApp = (start: boolean) => {
+      const created = createMainWindow({
+        appUrl,
+        startUrl: pendingLink ? new URL(pendingLink, appUrl.origin) : null,
+        stateFile: path.join(app.getPath('userData'), 'window-state.json'),
+        preload: path.join(import.meta.dirname, '../preload/index.cjs'),
+        startHidden,
+        start: start ? { show: (screen) => updaterWindow.show(startScreen(screen, Date.now())), loaded: finishStart } : undefined,
+        strings,
+        titleBar: barStyle,
+        preloadArguments: [
+          `--linkord-desktop-version=${app.getVersion()}`,
+          `--linkord-share-picker=${picker}`,
+          `--linkord-system-audio=${capturesSystemAudio(process.platform) ? '1' : '0'}`,
+          `--linkord-title-bar=${barStyle}`,
+        ],
+      });
+      const window = created.window;
+      main = created;
+      mainWindow = window;
+      pendingLink = null;
+      openLink = installDeepLinkBridge(created, appUrl.origin);
+      // Previewing another system's bar on a Mac: its buttons replace the traffic lights
+      if (process.platform === 'darwin' && barStyle !== 'mac') window.setWindowButtonVisibility(false);
+      forwardWindowState(window);
+      // Closing the window only hides it (to the tray, the menu bar and dock
+      // on macOS), so a call keeps going; quitting is in the tray and menu.
+      // Turned off in settings, closing quits.
+      window.on('close', (event) => {
+        if (quitting) return;
+        event.preventDefault();
+        if (preferences.closeToTray) window.hide();
+        else app.quit();
+      });
+      // In a call the page holds itself open with beforeunload, which in Electron
+      // silently cancels the close and with it the quit. Quitting overrides it:
+      // the page's pagehide still leaves the call on the way out.
+      window.webContents.on('will-prevent-unload', (event) => {
+        if (quitting) event.preventDefault();
+      });
+      // A logout or shutdown closes the window without before-quit: holding it
+      // open would hold the system up
+      window.on('session-end', () => { quitting = true; });
+      window.on('closed', () => {
+        if (mainWindow !== window) return;
+        main = null;
+        mainWindow = null;
+        openLink = null;
+      });
+    };
     powerMonitor.on('shutdown', () => { quitting = true; app.quit(); });
-    mainWindow.on('closed', () => { mainWindow = null; openLink = null; });
+
+    // Every start that opens a window shows only the updater window, through
+    // the update check and then the connection, and the app's window once its
+    // page has loaded. A start with the system that stays in the tray loads
+    // the page hidden and checks for updates in the background.
+    if (startHidden) openApp(false);
+    else startUp();
   });
 }

@@ -11,7 +11,6 @@ describe('Sheet', () => {
     );
 
     const panel = screen.getByRole('dialog', { name: 'Membros' });
-    expect(panel.querySelector('[data-sheet-inset]')).toBeNull();
     expect(panel.querySelector('[data-sheet-bleed]')).toBeNull();
     expect(panel).toHaveClass('right-0');
     expect(panel).toHaveTextContent('membros');
