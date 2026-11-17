@@ -18,6 +18,7 @@ import { EASE_OUT } from '@/shared/lib/ease';
 import { OTPInput, type OTPStatus } from '@/shared/ui/motion/otp-input';
 import { ERROR_CODES } from '@/shared/api/errorCodes';
 import { useTransientFlag } from '@/shared/hooks/useTransientFlag';
+import { LinkordMark } from '@/shared/ui/LinkordMark';
 
 function PasswordToggle({ visible, onToggle }: { visible: boolean; onToggle: () => void }) {
   const { t } = useTranslation('auth');
@@ -416,7 +417,7 @@ export function AuthScreen() {
     <div className="flex min-h-full items-center justify-center bg-bg-primary p-4">
       <div className="flex w-full max-w-100 flex-col items-center gap-6">
         <div className="flex flex-col items-center gap-2 text-center">
-          <img src="/logo.svg" alt="" className="h-auto w-24" />
+          <LinkordMark className="h-auto w-24 text-logo" />
           <div>
             <h1 className="text-display font-bold tracking-tight text-text-primary">Linkord</h1>
             <p className="text-label text-text-muted">{t('tagline')}</p>

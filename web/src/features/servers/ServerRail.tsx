@@ -17,6 +17,7 @@ import { Avatar } from '@/shared/Avatar';
 import { useFriends } from '@/features/friends/FriendsContext';
 import { useRoom, useRoomState } from '@/state/RoomContext';
 import { useCallRoster } from '@/features/calls/callRoster';
+import { LinkordMark } from '@/shared/ui/LinkordMark';
 import { ServerIcon } from './ServerIcon';
 import { CreateServerDialog } from './CreateServerDialog';
 import { liveCallIds, serverHasLiveCall, serverUnread } from './serverUtils';
@@ -173,11 +174,11 @@ export function ServerRail({ className }: { className?: string }) {
         </Tooltip>
       )}
       <RailItem label={t('rail.home')} active={home} unread={false} badge={pendingIncomingCount} onClick={() => go(ROUTES.home)}>
-        {/* The home tile fills with the accent while it is open or hovered.
-            The logo's eyes are cut out, so the tile shows through them; the
-            mark itself is forced white on that fill. */}
+        {/* The home tile fills with the accent while it is open or hovered, and
+            the mark takes the accent's label colour on it. Its eyes are holes,
+            so the tile shows through them. */}
         <span className={cn('grid size-10 place-items-center rounded-[12px] transition-colors duration-150', home ? 'bg-accent-primary' : 'bg-surface-300 group-hover/server:bg-accent-primary')}>
-          <img src="/logo.svg" alt="" draggable={false} className={cn('h-auto w-6', home ? '[filter:var(--accent-mark-filter)]' : 'group-hover/server:[filter:var(--accent-mark-filter)]')} />
+          <LinkordMark className={cn('h-auto w-6 transition-colors duration-150', home ? 'text-primary-foreground' : 'text-logo group-hover/server:text-primary-foreground')} />
         </span>
       </RailItem>
       {directs.map((row) => {

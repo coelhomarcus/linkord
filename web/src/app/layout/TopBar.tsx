@@ -9,6 +9,7 @@ import { ServerIcon } from '@/features/servers/ServerIcon';
 import type { ServerSummary } from '@/shared/types/protocol';
 import { useTitleBarHost } from '@/app/layout/titleBar';
 import { WindowControls } from '@/app/layout/WindowControls';
+import { LinkordMark } from '@/shared/ui/LinkordMark';
 
 /**
  * Discord's window title strip: where you are, centred, and the inbox on the
@@ -24,7 +25,7 @@ export function TopBar({ className, title, server }: { className?: string; title
   return (
     <header onDoubleClick={host?.onDoubleClick} className={cn('relative h-titlebar flex-none items-center justify-center bg-surface-rail px-3', host && 'app-drag', className)}>
       <span className="flex min-w-0 items-center gap-2 text-label font-medium text-text-primary">
-        {server ? <ServerIcon id={server.id} name={server.name} icon={server.icon} size={18} /> : onFriends ? <UsersIcon size={18} weight="fill" /> : <img src="/logo.svg" alt="" className="size-4" />}
+        {server ? <ServerIcon id={server.id} name={server.name} icon={server.icon} size={18} /> : onFriends ? <UsersIcon size={18} weight="fill" /> : <LinkordMark className="size-4 text-logo" />}
         <span className="truncate">{label}</span>
       </span>
       <span className={cn('absolute inset-y-0 right-0 flex items-center', !host && 'pr-2')}>

@@ -7,6 +7,7 @@ import { cn } from '@/shared/lib/utils';
 import { Button, buttonVariants } from '@/shared/ui/primitives/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/primitives/dialog';
 import { useRoom } from '@/state/RoomContext';
+import { LinkordMark } from '@/shared/ui/LinkordMark';
 import { fetchDesktopDownloads, isWindowsComputer } from './desktopDownloads';
 
 interface Offer {
@@ -62,7 +63,7 @@ export function DesktopAppAnnouncement() {
       <DialogContent className="max-w-md gap-0 overflow-hidden p-0 sm:max-w-md">
         <div className="flex flex-col items-center bg-[radial-gradient(ellipse_at_top,color-mix(in_oklch,var(--color-accent-primary)_30%,transparent),transparent_70%)] px-6 pb-5 pt-9 text-center">
           <span className="flex size-20 items-center justify-center rounded-[22px] border border-border-default bg-surface-rail shadow-popover">
-            <img src="/logo.svg" alt="" className="size-12" />
+            <LinkordMark className="size-12 text-logo" />
           </span>
           <DialogTitle className="mt-5 text-display font-bold text-text-strong">{t('title')}</DialogTitle>
           <DialogDescription className="mt-2 text-body text-text-secondary">{t('description')}</DialogDescription>

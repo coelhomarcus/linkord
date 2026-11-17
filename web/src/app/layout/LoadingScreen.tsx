@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/shared/ui/primitives/button';
+import { LinkordMark } from '@/shared/ui/LinkordMark';
 
 export function LoadingScreen({ reconnecting = false, onRetry }: { reconnecting?: boolean; onRetry?: () => void }) {
   const { t } = useTranslation('common');
@@ -7,7 +8,7 @@ export function LoadingScreen({ reconnecting = false, onRetry }: { reconnecting?
     <div className="flex min-h-full items-center justify-center bg-bg-primary">
       <div className="flex flex-col items-center gap-5">
         <div className="flex flex-col items-center gap-3 select-none">
-          <img src="/logo.svg" alt="" className="h-auto w-28 flex-none" />
+          <LinkordMark className="h-auto w-28 flex-none text-logo" />
           <span className="text-display font-bold tracking-tight text-text-primary">Linkord</span>
         </div>
         <div className="relative h-1 w-40 overflow-hidden rounded-full bg-bg-secondary">
