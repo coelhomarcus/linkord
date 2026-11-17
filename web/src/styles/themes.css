@@ -61,8 +61,8 @@ html[data-theme="black"] {
   /* the user panel's edge, a shade darker than the shell's hairlines */
   --color-border-panel: #181819;
 
-  /* exact logo blue. Accent labels are white in every theme, so a blue
-     button never carries black type. The home mark stays white too. */
+  /* exact logo blue, with white labels (and a white mark on the home tile),
+     so a blue button never carries black type */
   --color-accent-primary: #2b99e7;
   /* same hue, darker: a pressed or hovered fill */
   --color-accent-hover: #177bc3;
@@ -70,8 +70,6 @@ html[data-theme="black"] {
   --color-accent-text: #3ea2e9;
   --color-border-accent: #2b99e7;
   --primary-foreground: #ffffff;
-  /* the home tile's logo is white on the blue, in every theme */
-  --accent-mark-filter: brightness(0) invert(1);
 
   --color-red-text: #da6863;
 
@@ -173,8 +171,8 @@ html[data-theme="frappe"] {
   --color-accent-hover: #7c96d2;
   --color-accent-text: #8caaee;
   --color-border-accent: #8caaee;
+  --color-logo: var(--color-accent-primary);
   --primary-foreground: #232634;
-  --accent-mark-filter: brightness(0);
 
   --color-green: #a6d189;
   --color-green-solid: oklch(58% 0.13 133.39);
@@ -234,8 +232,8 @@ html[data-theme="macchiato"] {
   --color-accent-hover: #7997d5;
   --color-accent-text: #8aadf4;
   --color-border-accent: #8aadf4;
+  --color-logo: var(--color-accent-primary);
   --primary-foreground: #181926;
-  --accent-mark-filter: brightness(0);
 
   --color-green: #a6da95;
   --color-green-solid: oklch(58% 0.13 138.15);
@@ -295,8 +293,8 @@ html[data-theme="mocha"] {
   --color-accent-hover: #779cd9;
   --color-accent-text: #89b4fa;
   --color-border-accent: #89b4fa;
+  --color-logo: var(--color-accent-primary);
   --primary-foreground: #11111b;
-  --accent-mark-filter: brightness(0);
 
   --color-green: #a6e3a1;
   --color-green-solid: oklch(58% 0.13 142.72);
@@ -361,6 +359,7 @@ html[data-theme="latte"] {
   --color-accent-hover: #1a57d0;
   --color-accent-text: #1a5ad8;
   --color-border-accent: #1e66f5;
+  --color-logo: var(--color-accent-primary);
 
   --color-green: #307820;
   --color-green-solid: #368624;
