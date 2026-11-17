@@ -47,7 +47,7 @@ function SearchResultRow({ result, showConversation, onSelect }: { result: Searc
         <div className="flex min-w-0 items-center gap-2">
           <span className="truncate text-label font-medium text-text-primary">{displayedName}</span>
           {showConversation && (
-            <span className="flex-none truncate rounded-sm bg-bg-tertiary px-1.5 py-0.5 text-caption text-text-muted">{result.conversationName}</span>
+            <span className="min-w-0 max-w-[45%] flex-none truncate rounded-sm bg-bg-tertiary px-1.5 py-0.5 text-caption text-text-muted">{result.conversationName}</span>
           )}
           <span className="flex-none text-caption text-text-muted">{formatTime(result.ts, language, timeFormat)}</span>
         </div>

@@ -320,6 +320,12 @@ if (!resolved.ok) {
       if (preferences.closeToTray) mainWindow?.hide();
       else app.quit();
     });
+    // In a call the page holds itself open with beforeunload, which in Electron
+    // silently cancels the close and with it the quit. Quitting overrides it:
+    // the page's pagehide still leaves the call on the way out.
+    mainWindow.webContents.on('will-prevent-unload', (event) => {
+      if (quitting) event.preventDefault();
+    });
     // A logout or shutdown closes the window without before-quit: holding it
     // open would hold the system up
     mainWindow.on('session-end', () => { quitting = true; });

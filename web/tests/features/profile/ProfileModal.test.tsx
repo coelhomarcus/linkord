@@ -375,3 +375,25 @@ describe('ProfileModal — what is already known opens at once', () => {
     expect(screen.queryByText('Carregando Mural…')).not.toBeInTheDocument();
   });
 });
+
+describe('ProfileModal — closing', () => {
+  function Harness() {
+    const [userId, setUserId] = useState<string | null>('u1');
+    return <MemoryRouter><ProfileModal userId={userId} onClose={() => setUserId(null)} onOpenProfile={vi.fn()} /></MemoryRouter>;
+  }
+
+  it('keeps the profile it showed while it animates out, never a loading skeleton', async () => {
+    // hold the exit animation open, as a browser would while it plays
+    const getAnimations = vi.fn(() => [{ finished: new Promise<Animation>(() => {}) } as unknown as Animation]);
+    Object.defineProperty(Element.prototype, 'getAnimations', { configurable: true, value: getAnimations });
+    try {
+      renderWithRoom(<Harness />, { allUsers: new Map([[user.id, user]]) });
+      await userEvent.setup().click(screen.getByRole('button', { name: 'Fechar' }));
+
+      expect(screen.queryByText('Carregando perfil…')).not.toBeInTheDocument();
+      expect(document.querySelector('[data-slot="dialog-content"] [data-slot="skeleton"]')).toBeNull();
+    } finally {
+      delete (Element.prototype as { getAnimations?: unknown }).getAnimations;
+    }
+  });
+});

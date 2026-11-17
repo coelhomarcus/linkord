@@ -114,6 +114,8 @@ function ReactionButton({ onPick }: { onPick: (emoji: string) => void }) {
 interface MessageRowProps {
   message: ChatMessage;
   showHeader: boolean;
+  /** right under a date or new-messages line, which spaces it already */
+  afterDivider?: boolean;
   highlighted: boolean;
   allUsers: Map<string, PublicUser>;
   mentionLookup: Map<string, PublicUser>;
@@ -142,7 +144,7 @@ function PendingStatus({ entry, offline, onRetry, onDiscard }: { entry: OutboxEn
 }
 
 // memo: a new message, or a change to another row, re-renders the timeline but not every row in it
-export const MessageRow = memo(function MessageRow({ message, showHeader, highlighted, allUsers, mentionLookup, onOpenProfile, onReply: replyTo, onJumpTo, pending }: MessageRowProps) {
+export const MessageRow = memo(function MessageRow({ message, showHeader, afterDivider = false, highlighted, allUsers, mentionLookup, onOpenProfile, onReply: replyTo, onJumpTo, pending }: MessageRowProps) {
   // the timestamp follows the language and the time format chosen in settings
   const language = useLanguage();
   const timeFormat = useTimeFormat();
@@ -257,7 +259,7 @@ export const MessageRow = memo(function MessageRow({ message, showHeader, highli
   }
 
   return (
-    <div className={cn('relative', showHeader ? 'mt-[17px]' : 'mt-0')}>
+    <div className={cn('relative', showHeader && !afterDivider ? 'mt-[17px]' : 'mt-0')}>
       {swipe.enabled && (
         <div
           aria-hidden

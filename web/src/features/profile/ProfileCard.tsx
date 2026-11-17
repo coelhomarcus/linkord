@@ -232,7 +232,7 @@ export function ProfileCard({
             </label>
           ) : (
             <div className="flex min-w-0 items-center gap-3">
-              <h2 className="min-w-0 flex-1 truncate text-display font-bold text-text-primary">{user.displayName}</h2>
+              <h2 className="min-w-0 flex-1 text-display font-bold break-words text-text-primary">{user.displayName}</h2>
               {nameAction && <div className="flex-none">{nameAction}</div>}
             </div>
           )}

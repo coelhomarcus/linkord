@@ -565,6 +565,7 @@ export function MessageTimeline({ surfaceId = 'main', conversationId, onReply, o
                       <MessageRow
                         message={item.message}
                         showHeader={item.showHeader}
+                        afterDivider={item.afterDivider}
                         highlighted={highlightedMsgId === item.message.msgId}
                         pending={item.pending}
                         allUsers={allUsers}
