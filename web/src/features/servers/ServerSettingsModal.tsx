@@ -237,8 +237,8 @@ function Roles({ server }: { server: ServerSummary }) {
                 {!r.isDefault && (
                   <span className="flex gap-0.5">
                     {/* a move swaps two neighbours, so both have to be below the member's own role */}
-                    <button type="button" aria-label={t('roles.up')} disabled={movableIndex === 0 || !canManageRole(server, me, r) || !canManageRole(server, me, movable[movableIndex - 1]!)} onClick={() => void move(r.id, 1)} className="rounded p-1 text-text-muted focus-ring hover:text-text-primary disabled:opacity-30"><ArrowUpIcon size={14} /></button>
-                    <button type="button" aria-label={t('roles.down')} disabled={movableIndex === movable.length - 1 || !canManageRole(server, me, r)} onClick={() => void move(r.id, -1)} className="rounded p-1 text-text-muted focus-ring hover:text-text-primary disabled:opacity-30"><ArrowDownIcon size={14} /></button>
+                    <button type="button" aria-label={t('roles.up')} disabled={movableIndex === 0 || !canManageRole(server, me, r) || !canManageRole(server, me, movable[movableIndex - 1]!)} onClick={() => void move(r.id, 1)} className="grid place-items-center rounded p-1 text-text-muted focus-ring hover:text-text-primary disabled:opacity-30 pointer-coarse:size-11"><ArrowUpIcon size={14} /></button>
+                    <button type="button" aria-label={t('roles.down')} disabled={movableIndex === movable.length - 1 || !canManageRole(server, me, r)} onClick={() => void move(r.id, -1)} className="grid place-items-center rounded p-1 text-text-muted focus-ring hover:text-text-primary disabled:opacity-30 pointer-coarse:size-11"><ArrowDownIcon size={14} /></button>
                   </span>
                 )}
               </div>
@@ -396,7 +396,7 @@ function Invites({ server }: { server: ServerSummary }) {
               <span role="cell" className="truncate font-mono text-text-primary">{invite.expiresAt ? new Date(invite.expiresAt).toLocaleString(i18n.language, { dateStyle: 'short', timeStyle: 'short' }) : t('invites.never')}</span>
               <span role="cell" className="flex justify-end">
                 <button type="button" aria-label={t('invites.revoke')} onClick={() => void run(async () => { await revokeInviteLink(invite.code); await load(); })}
-                  className="grid size-6 place-items-center rounded-full bg-red text-white opacity-0 transition-opacity group-hover/invite:opacity-100 focus-visible:opacity-100">
+                  className="relative grid size-6 place-items-center rounded-full bg-red text-white opacity-0 transition-opacity touch-target focus-ring group-hover/invite:opacity-100 focus-visible:opacity-100 touch-first:opacity-100">
                   <XIcon size={14} weight="bold" />
                 </button>
               </span>

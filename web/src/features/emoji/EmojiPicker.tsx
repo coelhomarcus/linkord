@@ -266,7 +266,7 @@ export function EmojiPicker({ onPick, allowCustom = true, className, autoFocus =
                   aria-current={isActive ? 'true' : undefined}
                   onClick={() => jumpTo(section.key)}
                   className={cn(
-                    'grid size-8 place-items-center rounded-md text-text-muted transition-colors duration-100 hover:bg-fill-hover hover:text-text-primary focus-ring',
+                    'grid size-8 place-items-center rounded-md text-text-muted transition-colors duration-100 hover:bg-fill-hover hover:text-text-primary focus-ring pointer-coarse:size-11',
                     isActive && 'bg-fill-hover text-text-primary',
                   )}
                 >

@@ -43,7 +43,7 @@ function TriState({ value, onChange, disabled }: { value: Tri; onChange: (next: 
     <span role="radiogroup" className="flex overflow-hidden rounded-md border border-border">
       {options.map(({ key, icon: Icon, active }) => (
         <button key={key} type="button" role="radio" aria-checked={value === key} aria-label={t(`overwrite.${key}`)} disabled={disabled} onClick={() => onChange(key)}
-          className={cn('grid size-8 place-items-center focus-ring focus-visible:ring-inset disabled:cursor-not-allowed', value === key ? active : 'text-text-muted enabled:hover:bg-fill-hover', disabled && 'opacity-50')}>
+          className={cn('grid size-8 place-items-center focus-ring focus-visible:ring-inset disabled:cursor-not-allowed pointer-coarse:size-11', value === key ? active : 'text-text-muted enabled:hover:bg-fill-hover', disabled && 'opacity-50')}>
           <Icon size={16} weight="bold" />
         </button>
       ))}

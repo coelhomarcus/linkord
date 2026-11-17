@@ -151,7 +151,7 @@ export function SoundboardButton({ conversationId, callServerId, className, acti
                     type="button"
                     aria-label={label(section)}
                     onClick={() => sectionRefs.current.get(section.key)?.scrollIntoView({ block: 'start', behavior: 'smooth' })}
-                    className="grid size-8 flex-none place-items-center rounded-md text-text-muted transition-colors duration-100 hover:bg-fill-hover hover:text-text-primary focus-ring"
+                    className="grid size-8 flex-none place-items-center rounded-md text-text-muted transition-colors duration-100 hover:bg-fill-hover hover:text-text-primary focus-ring pointer-coarse:size-11"
                   >
                     {server ? <ServerIcon id={server.id} name={server.name} icon={server.icon} size={24} /> : <ClockIcon size={20} weight="bold" aria-hidden />}
                   </button>
