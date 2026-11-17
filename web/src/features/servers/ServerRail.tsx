@@ -166,7 +166,7 @@ export function ServerRail({ className }: { className?: string }) {
       {drawer && (
         <Tooltip>
           <TooltipTrigger onClick={toggleSidebar} aria-label={t('rail.showList')} aria-expanded={openMobile}
-            className="grid size-10 flex-none place-items-center rounded-[12px] bg-surface-300 text-text-secondary focus-ring hover:bg-surface-400 hover:text-text-primary">
+            className={cn('grid size-10 flex-none place-items-center rounded-[12px] text-text-secondary transition-colors duration-100 focus-ring hover:bg-surface-400 hover:text-text-primary', openMobile ? 'bg-surface-400 text-text-primary' : 'bg-surface-300')}>
             <SidebarSimpleIcon size={24} aria-hidden />
           </TooltipTrigger>
           <TooltipContent side="right">{t('rail.showList')}</TooltipContent>

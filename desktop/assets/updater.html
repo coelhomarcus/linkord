@@ -40,6 +40,8 @@
   [data-tone="success"] .title { color: var(--success); }
   [data-tone="error"] .title { color: var(--danger); }
   .detail { margin-top: 4px; color: var(--muted); font-size: 12px; min-height: 17px; font-variant-numeric: tabular-nums; }
+  .countdown { margin-top: 2px; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+  .countdown:empty { display: none; }
   .bar { position: relative; width: 180px; height: 6px; margin-top: 16px; border-radius: 3px; background: var(--track); overflow: hidden; }
   .bar[hidden] { display: block; visibility: hidden; }
   .fill { position: absolute; inset: 0 auto 0 0; width: 0; border-radius: inherit; background: var(--accent); transition: width 200ms var(--ease-out); }
@@ -66,21 +68,35 @@
   <div class="title" id="title"></div>
   <div class="detail" id="detail"></div>
 </div>
+<div class="countdown" id="countdown"></div>
 <div class="bar" id="bar" hidden><div class="fill" id="fill"></div></div>
 <div class="actions" id="actions"></div>
 <script>
   const bar = document.getElementById('bar');
   const fill = document.getElementById('fill');
   const actions = document.getElementById('actions');
+  let shownActions = '';
+  let dismissable = false;
+  // Replacing a live region's text with the same words would read them out again every second
+  const setText = (id, text) => {
+    const element = document.getElementById(id);
+    if (element.textContent !== text) element.textContent = text;
+  };
 
   function render(view) {
     document.body.dataset.tone = view.tone;
-    document.getElementById('title').textContent = view.title;
-    document.getElementById('detail').textContent = view.detail;
+    setText('title', view.title);
+    setText('detail', view.detail);
     const hasBar = view.progress !== undefined;
     bar.hidden = !hasBar;
     bar.classList.toggle('indeterminate', view.progress === null);
     fill.style.width = typeof view.progress === 'number' ? view.progress + '%' : '';
+    setText('countdown', view.countdown ?? '');
+    dismissable = view.actions.some((action) => action.id === 'later');
+    // A countdown redraws every second: rebuilding the same buttons would drop their hover and focus
+    const nextActions = JSON.stringify(view.actions);
+    if (nextActions === shownActions) return;
+    shownActions = nextActions;
     actions.replaceChildren(...view.actions.map((action) => {
       const button = document.createElement('button');
       button.type = 'button';
@@ -94,7 +110,7 @@
 
   window.linkordUpdater?.onRender(render);
   document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && actions.childElementCount > 0) window.linkordUpdater?.act('later');
+    if (event.key === 'Escape' && dismissable) window.linkordUpdater?.act('later');
   });
 </script>
 </body>

@@ -31,8 +31,6 @@ type SidebarStyle = CSSProperties & {
   '--sidebar-width'?: string;
   /** the list as a drawer */
   '--sidebar-width-mobile'?: string;
-  /** from 768px the drawer opens beside the rail, which stays on screen */
-  '--sidebar-overlay-offset'?: string;
 };
 
 /** Owns the conversation list: a column that stays open from 1024px, and a
@@ -83,11 +81,10 @@ export function SidebarProvider({ open, defaultOpen = true, onOpenChange, openMo
   }, [toggleSidebar]);
 
   const mobileWidth = style?.['--sidebar-width-mobile'] ?? '18rem';
-  const overlayOffset = style?.['--sidebar-overlay-offset'] ?? '0px';
   const value = useMemo<SidebarContextValue>(() => ({
     isMobile, isOverlay, open: columnOpen, openMobile: drawerOpen, setOpen, setOpenMobile, toggleSidebar,
-    sheetVars: { '--sidebar-width-mobile': mobileWidth, '--sidebar-overlay-offset': overlayOffset } as CSSProperties,
-  }), [columnOpen, drawerOpen, isMobile, isOverlay, mobileWidth, overlayOffset, setOpen, setOpenMobile, toggleSidebar]);
+    sheetVars: { '--sidebar-width-mobile': mobileWidth } as CSSProperties,
+  }), [columnOpen, drawerOpen, isMobile, isOverlay, mobileWidth, setOpen, setOpenMobile, toggleSidebar]);
 
   return (
     <SidebarContext.Provider value={value}>
@@ -99,21 +96,28 @@ export function SidebarProvider({ open, defaultOpen = true, onOpenChange, openMo
 }
 
 /** The conversation list: a column beside the content from 1024px, a drawer
- * from the left below that. */
-export function Sidebar({ ariaLabel, className, panelClassName, leadingInset, children }: {
+ * from the left below that.
+ *
+ * On a tablet the rail stays on screen and the drawer is the column it would
+ * be on desktop, pulled out of the rail: it renders in place inside the framed
+ * panel next to the rail (which must be positioned), so it starts under the
+ * title bar, slides out from behind the rail's edge, is clipped by the frame's
+ * rounded corner and wears the column's surface. A phone drawer carries the
+ * rail inside it, so it covers the screen from its edge. */
+export function Sidebar({ ariaLabel, className, panelClassName, fromRail = true, children }: {
   ariaLabel: string;
   /** both forms: the column's frame and the drawer's panel */
   className?: string;
-  /** the column's panel only (the drawer paints its own surface) */
+  /** the column's panel, and the drawer's when it comes out of the rail */
   panelClassName?: string;
-  /** On a tablet the rail stays on screen and the drawer is inset by it. A
-   * phone conversation drawer carries the rail inside, so it starts at 0. */
-  leadingInset?: string | false;
+  /** false for a drawer that brings its own rail (the phone's) */
+  fromRail?: boolean;
   children: ReactNode;
 }) {
   const { t } = useTranslation('common');
-  const { isOverlay, open, openMobile, setOpenMobile, sheetVars } = useSidebar();
+  const { isMobile, isOverlay, open, openMobile, setOpenMobile, sheetVars } = useSidebar();
   if (isOverlay) {
+    const inFrame = fromRail && !isMobile;
     return (
       <Sheet
         side="left"
@@ -122,11 +126,8 @@ export function Sidebar({ ariaLabel, className, panelClassName, leadingInset, ch
         ariaLabel={ariaLabel}
         dismissLabel={t('accessibility.navigationClose')}
         style={sheetVars}
-        // The rail stays on screen. The inset lives inside the sliding box, so
-        // the close translation clears it instead of stopping on top of the rail.
-        leadingInset={leadingInset === false ? undefined : (leadingInset ?? 'var(--sidebar-overlay-offset, 0px)')}
-        backdropClassName="md:left-(--sidebar-overlay-offset,0px)"
-        className={cn('w-(--sidebar-width-mobile) max-w-[88vw] bg-background', className)}
+        contained={inFrame}
+        className={cn('w-(--sidebar-width-mobile) max-w-[88vw] bg-background', inFrame && panelClassName, className)}
       >
         {children}
       </Sheet>

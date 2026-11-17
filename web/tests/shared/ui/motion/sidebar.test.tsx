@@ -89,37 +89,48 @@ describe('SidebarProvider', () => {
     expect(localStorage.getItem('ss-channel-list-open:overlay')).toBeNull();
   });
 
-  it('slides the tablet drawer off the screen, rail inset included', () => {
+  it('opens the tablet drawer in place, out of the rail, wearing the column surface', () => {
     setViewport(900);
-    render(
-      <SidebarProvider style={{ '--sidebar-width-mobile': '24rem', '--sidebar-overlay-offset': '4.5rem' }}>
-        <Sidebar ariaLabel="Conversas"><p>lista</p></Sidebar>
+    const { container } = render(
+      <SidebarProvider style={{ '--sidebar-width-mobile': '24rem' }}>
+        <div data-testid="frame" className="relative">
+          <Sidebar ariaLabel="Conversas" panelClassName="bg-surface-app"><p>lista</p></Sidebar>
+        </div>
       </SidebarProvider>,
     );
 
-    // Close translates this box by its own width (-100%). The open panel is
-    // inset by the rail, so the box has to start at the screen edge and carry
-    // that inset — otherwise a rail-wide strip is still painted when the slide
-    // ends and visibility:hidden pops it away. The trailing gap carries the
-    // popover shadow off with it.
+    // Not portaled: it lives inside the framed panel beside the rail, so the
+    // frame clips it at the rail's edge and under the title bar.
     const panel = drawer() as HTMLElement;
-    expect(panel).toHaveClass('left-0');
-    expect(panel.className).not.toContain('sidebar-overlay-offset');
-    expect(panel).toHaveClass('pointer-events-none');
-    const lead = panel.firstElementChild as HTMLElement;
-    const face = lead.nextElementSibling as HTMLElement;
+    expect(container.contains(panel)).toBe(true);
+    expect(screen.getByTestId('frame').contains(panel)).toBe(true);
+    expect(panel).toHaveClass('absolute', 'left-0', 'pointer-events-none');
+    expect(panel.parentElement).toHaveClass('absolute', 'inset-0', 'overflow-hidden');
+
+    // The face first, then the empty bleed that carries its shadow off with it.
+    const face = panel.firstElementChild as HTMLElement;
     const bleed = panel.lastElementChild as HTMLElement;
-    expect(lead).toHaveAttribute('data-sheet-inset');
-    expect(lead.style.width).toBe('var(--sidebar-overlay-offset, 0px)');
     expect(face).toHaveTextContent('lista');
-    expect(face.className).not.toContain('sidebar-overlay-offset');
+    expect(face).toHaveClass('bg-surface-app');
     expect(bleed).toHaveAttribute('data-sheet-bleed');
     expect(bleed.style.width).toBe('64px');
 
     fireEvent.keyDown(window, { key: 'b', ctrlKey: true });
     expect(face).toHaveClass('pointer-events-auto');
-    expect(panel).toHaveClass('pointer-events-none');
-    fireEvent.keyDown(window, { key: 'b', ctrlKey: true });
-    expect(drawer()?.firstElementChild).toHaveAttribute('data-sheet-inset');
+    expect(panel).not.toHaveAttribute('inert');
+  });
+
+  it('keeps the phone drawer, which brings its own rail, portaled over the screen', () => {
+    setViewport(390);
+    const { container } = render(
+      <SidebarProvider>
+        <Sidebar ariaLabel="Conversas" fromRail={false}><p>lista</p></Sidebar>
+      </SidebarProvider>,
+    );
+
+    const panel = drawer() as HTMLElement;
+    expect(container.contains(panel)).toBe(false);
+    expect(panel).toHaveClass('fixed', 'left-0');
+    expect(panel.querySelector('[data-sheet-bleed]')).toBeNull();
   });
 });

@@ -26,8 +26,8 @@ function readState(file: string): WindowState | null {
   try { return parseWindowState(JSON.parse(fs.readFileSync(file, 'utf8'))); } catch { return null; }
 }
 
-function writeState(file: string, window: BrowserWindow): void {
-  const state: WindowState = { bounds: window.getNormalBounds(), maximized: window.isMaximized() };
+function writeState(file: string, window: BrowserWindow, maximized: boolean): void {
+  const state: WindowState = { bounds: window.getNormalBounds(), maximized };
   try { fs.writeFileSync(file, JSON.stringify(state)); } catch (error) { console.error('[desktop] could not save the window state', error); }
 }
 
@@ -35,6 +35,20 @@ export interface MainWindow {
   window: BrowserWindow;
   /** loads another page of the app, with the same retries as the first load */
   load: (url: URL) => void;
+  /** shows the window, maximized the first time when it was left that way */
+  show: () => void;
+  /** "try now" from a screen shown elsewhere (the start's, in the updater window) */
+  retry: () => void;
+}
+
+/**
+ * A start's own window, which shows what the main window would until the
+ * app's page has loaded once: the main window stays hidden meanwhile.
+ */
+export interface StartScreen {
+  show(screen: ConnectionScreen): void;
+  /** the app's page has loaded: the main window is ready to be shown */
+  loaded(): void;
 }
 
 export function createMainWindow(options: {
@@ -47,8 +61,8 @@ export function createMainWindow(options: {
   preloadArguments: string[];
   /** a start with the system: the window waits in the tray until it is opened */
   startHidden: boolean;
-  /** held back until the start's update check settles; false: an update is being installed, never show */
-  showWhen?: Promise<boolean>;
+  /** shows the connection while the start's own window is up, and is told when the page has loaded */
+  start?: StartScreen;
   strings: Strings;
   /** which system's buttons the page draws; the connecting screen draws the same */
   titleBar: TitleBarStyle;
@@ -70,31 +84,46 @@ export function createMainWindow(options: {
       additionalArguments: options.preloadArguments,
     },
   });
-  if (placement.maximized) window.maximize();
+  // maximize() also shows a hidden window, which would put the app on screen
+  // behind the updater window or at a start in the tray: a window left
+  // maximized is maximized as it is first shown instead
+  let maximizeOnShow = placement.maximized;
+  const showWindow = () => {
+    if (window.isDestroyed()) return;
+    if (maximizeOnShow) {
+      maximizeOnShow = false;
+      window.maximize();
+      return;
+    }
+    if (window.isMinimized()) window.restore();
+    window.show();
+  };
+  const saveState = () => writeState(options.stateFile, window, maximizeOnShow || window.isMaximized());
 
+  let start = options.start ?? null;
   // Also once the connecting screen is up, so the retry is not an empty,
-  // invisible window; a start with the system keeps quiet until it is opened
+  // invisible window; a start with the system keeps quiet until it is opened,
+  // and a start with its own window is shown by whoever made it
   const reveal = () => {
-    if (options.startHidden) return;
-    void (options.showWhen ?? Promise.resolve(true)).then((show) => {
-      if (show && !window.isDestroyed() && !window.isVisible()) window.show();
-    });
+    if (options.startHidden || start || window.isDestroyed() || window.isVisible()) return;
+    showWindow();
   };
   window.once('ready-to-show', reveal);
 
   let saveTimer: NodeJS.Timeout | undefined;
   const saveSoon = () => {
     clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => writeState(options.stateFile, window), SAVE_DELAY_MS);
+    saveTimer = setTimeout(saveState, SAVE_DELAY_MS);
   };
   window.on('resize', saveSoon);
   window.on('move', saveSoon);
-  window.on('close', () => { clearTimeout(saveTimer); writeState(options.stateFile, window); });
+  window.on('close', () => { clearTimeout(saveTimer); saveState(); });
 
   // The server may be down or mid-deploy when the app starts. The window then
   // shows its own screen (connectionScreen.ts, assets/connection.html) and
   // checks again, 1 to 30 s apart, before loading the page: loading a server
-  // that does not answer would show Chromium's error page instead.
+  // that does not answer would show Chromium's error page instead. Until the
+  // page has loaded once, a start with its own window shows it there instead.
   const { strings, titleBar } = options;
   const contents = window.webContents;
   let attempt = 0;
@@ -110,6 +139,10 @@ export function createMainWindow(options: {
   let turn = 0;
 
   const render = () => {
+    if (start) {
+      if (shown) start.show(shown);
+      return;
+    }
     void screenPage?.then((loaded) => {
       if (!loaded || !shown || window.isDestroyed() || !isScreenUrl(contents.getURL(), SCREEN_URL)) return;
       contents.send(RENDER, connectionView(shown, strings, { now: Date.now(), titleBar, maximized: window.isMaximized() }));
@@ -119,6 +152,7 @@ export function createMainWindow(options: {
     shown = next;
     clearInterval(tickTimer);
     if (next.kind === 'waiting') tickTimer = setInterval(render, 1_000);
+    if (start) return render();
     // A failure here is another load replacing it, or did-fail-load's to report
     screenPage ??= contents.loadFile(SCREEN_PAGE).then(() => true, () => false);
     render();
@@ -150,7 +184,7 @@ export function createMainWindow(options: {
     settle();
     const own = turn;
     // A start shows nothing until the check answers, unless it is slow
-    if (screenPage) show({ kind: 'connecting' });
+    if (screenPage || start) show({ kind: 'connecting' });
     else slowTimer = setTimeout(() => show({ kind: 'connecting' }), SLOW_CHECK_MS);
     void serverReady().then((ready) => {
       if (own !== turn || window.isDestroyed()) return;
@@ -187,6 +221,9 @@ export function createMainWindow(options: {
     }
     attempt = 0;
     crashes = pageLoaded(crashes, Date.now());
+    const started = start;
+    start = null;
+    started?.loaded();
   });
   contents.on('render-process-gone', (_event, details) => {
     screenPage = null;
@@ -204,12 +241,16 @@ export function createMainWindow(options: {
     retryTimer = setTimeout(connect, delayMs);
   });
 
+  const retry = () => {
+    if (shown && shown.kind !== 'connecting') connect();
+  };
+
   // The screen's only messages: try now, and the window's own buttons
   const onAction = (event: IpcMainEvent, value: unknown) => {
     if (event.sender !== contents || !isScreenFrame(event.senderFrame, SCREEN_URL)) return;
     switch (parseConnectionAction(value)) {
       case 'retry':
-        if (shown && shown.kind !== 'connecting') connect();
+        retry();
         return;
       case 'minimize':
         window.minimize();
@@ -244,5 +285,7 @@ export function createMainWindow(options: {
       if (shown) connect();
       else loadApp();
     },
+    show: showWindow,
+    retry,
   };
 }

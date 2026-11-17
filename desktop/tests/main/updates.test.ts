@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { checksAtStart, mainWindowMayShow, parseUpdateRepo, progressPercent, updateMode, updaterMayClose } from '../../src/main/updates.js';
+import { checksAtStart, mainWindowMayShow, parseUpdateRepo, progressPercent, startWindowClose, updateMode } from '../../src/main/updates.js';
 
 const repo = { owner: 'acme', repo: 'linkord' };
 
@@ -57,21 +57,27 @@ describe('checksAtStart', () => {
 });
 
 describe('mainWindowMayShow', () => {
-  it('keeps the app hidden while the start checks for or installs an update', () => {
+  it('keeps the app hidden for the whole start', () => {
     assert.equal(mainWindowMayShow('checking'), false);
     assert.equal(mainWindowMayShow('updating'), false);
+    assert.equal(mainWindowMayShow('connecting'), false);
     assert.equal(mainWindowMayShow('open'), true);
   });
 });
 
-describe('updaterMayClose', () => {
-  it('cannot be closed once an update is on its way', () => {
-    assert.equal(updaterMayClose({ phase: 'updating', quitting: false }), false);
+describe('startWindowClose', () => {
+  it('quits when the start window is closed before the app opens', () => {
+    assert.equal(startWindowClose({ phase: 'checking', quitting: false }), 'quit');
+    assert.equal(startWindowClose({ phase: 'connecting', quitting: false }), 'quit');
   });
 
-  it('can be closed during the check, after the start, and when the app quits', () => {
-    assert.equal(updaterMayClose({ phase: 'checking', quitting: false }), true);
-    assert.equal(updaterMayClose({ phase: 'open', quitting: false }), true);
-    assert.equal(updaterMayClose({ phase: 'updating', quitting: true }), true);
+  it('cannot be closed once an update is on its way', () => {
+    assert.equal(startWindowClose({ phase: 'updating', quitting: false }), 'refuse');
+  });
+
+  it('only closes after the start, and whenever the app quits', () => {
+    assert.equal(startWindowClose({ phase: 'open', quitting: false }), 'close');
+    assert.equal(startWindowClose({ phase: 'updating', quitting: true }), 'close');
+    assert.equal(startWindowClose({ phase: 'connecting', quitting: true }), 'close');
   });
 });
