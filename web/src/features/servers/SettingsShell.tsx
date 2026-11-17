@@ -49,7 +49,7 @@ export function SettingsShell({ label, heading, tabs, current, onSelect, onClose
 export function SectionTitle({ children, description }: { children: ReactNode; description?: ReactNode }) {
   return (
     <div className="flex flex-col gap-2">
-      <h2 className="text-[1.25rem] font-semibold leading-[1.2] text-text-strong">{children}</h2>
+      <h2 className="text-heading font-semibold text-text-strong">{children}</h2>
       {description && <p className="text-label text-text-primary">{description}</p>}
     </div>
   );

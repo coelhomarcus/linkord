@@ -8,7 +8,7 @@ export function AdminPageTitle({ title, description, actions }: { title: string;
   return (
     <header className="mb-2 flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
       <div className="min-w-0 flex-1 basis-72">
-        <h2 className="text-[1.25rem] font-semibold leading-[1.2] text-text-strong">{title}</h2>
+        <h2 className="text-heading font-semibold text-text-strong">{title}</h2>
         {description && <p className="mt-2 text-label text-text-muted">{description}</p>}
       </div>
       {actions && <div className="flex flex-none flex-wrap items-center gap-2">{actions}</div>}
@@ -32,7 +32,7 @@ export function AdminSection({ id, title, description, danger, children, classNa
   return (
     // the hairline only goes between two sections; what comes before the first (a title, tabs) is spaced by the page
     <section id={id} aria-labelledby={headingId} className={cn('flex scroll-mt-10 flex-col border-border-subtle pb-10 last:pb-0 [section+&]:border-t [section+&]:pt-10', className)}>
-      <h3 id={headingId} className={cn('text-[1.25rem] font-semibold leading-[1.2]', danger ? 'text-red-text' : 'text-text-strong')}>{title}</h3>
+      <h3 id={headingId} className={cn('text-heading font-semibold', danger ? 'text-red-text' : 'text-text-strong')}>{title}</h3>
       {description && <p className="mt-2 text-label text-text-muted">{description}</p>}
       <div className="mt-6 flex flex-col gap-4">{children}</div>
     </section>

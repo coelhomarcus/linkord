@@ -42,7 +42,7 @@ function NotificationBellContent({ collapsed, onNavigate }: { collapsed: boolean
       <PopoverContent side="bottom" align="end" sideOffset={6} className="w-[min(30rem,calc(100vw-1.5rem))] gap-0 rounded-[12px] border-border-default bg-bg-modal p-0">
         <div className="flex items-center gap-2 border-b border-border-default px-4 py-4">
           <TrayIcon size={24} weight="fill" className="flex-none text-text-primary" aria-hidden />
-          <h2 className="flex-1 select-none text-[1.25rem] font-bold leading-[1.2] text-text-strong">{t('title')}</h2>
+          <h2 className="flex-1 select-none text-heading font-bold text-text-strong">{t('title')}</h2>
           <Tooltip>
             <TooltipTrigger
               aria-label={t('actions.markAllRead')}

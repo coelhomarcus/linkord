@@ -77,7 +77,7 @@ export function CreateServerDialog({ open, onOpenChange }: { open: boolean; onOp
                 <span className="flex-1 text-body font-semibold text-text-primary">{t('create.own')}</span>
                 <CaretRightIcon size={20} weight="bold" className="flex-none text-text-secondary" />
               </button>
-              <p className="mt-4 text-center text-[1.25rem] font-semibold text-text-strong">{t('join.question')}</p>
+              <p className="mt-4 text-center text-heading font-semibold text-text-strong">{t('join.question')}</p>
               <Button type="button" variant="secondary" size="lg" onClick={() => setStep('join')}>
                 <LinkIcon size={18} /> {t('join.title')}
               </Button>

@@ -70,7 +70,7 @@ export function ActiveNowPanel() {
 
   return (
     <aside aria-label={t('activeNow.title')} className="flex w-[360px] flex-none flex-col overflow-y-auto border-l border-border-subtle px-4 py-4">
-      <h2 className="mb-4 text-[1.25rem] font-bold leading-[1.2] text-text-primary">{t('activeNow.title')}</h2>
+      <h2 className="mb-4 text-heading font-bold text-text-primary">{t('activeNow.title')}</h2>
       {calls.length === 0 && playing.length === 0 ? (
         <EmptyState size="compact" illustration="speaker" title={t('activeNow.emptyTitle')} description={t('activeNow.emptyText')} />
       ) : (

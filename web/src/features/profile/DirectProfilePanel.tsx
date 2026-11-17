@@ -46,7 +46,7 @@ export function DirectProfilePanel({ user, onOpenProfile }: { user: PublicUser; 
           <UserCustomStatusBubble userId={user.id} />
         </div>
         <div className="pt-12">
-          <h2 className="truncate text-[1.25rem] font-bold leading-[1.3] text-text-strong">{user.displayName}</h2>
+          <h2 className="truncate text-heading font-bold text-text-strong">{user.displayName}</h2>
           {/* the same @ handle the profile modal draws, so the two read as one profile */}
           <p className="flex min-w-0 items-center gap-0.5 text-label text-text-muted">
             <AtIcon size={14} aria-hidden className="flex-none" />
