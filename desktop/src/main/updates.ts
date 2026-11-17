@@ -31,6 +31,25 @@ export const STARTUP_CHECK_TIMEOUT_MS = 8_000;
 export const RESULT_LINGER_MS = 2_500;
 /** Long enough to read "Installing…" before the window closes and the installer runs. */
 export const INSTALL_DELAY_MS = 700;
+/** An install that has not quit the app by then failed to start: the app opens instead of staying hidden. */
+export const INSTALL_FALLBACK_MS = 30_000;
+
+/**
+ * Where a start is with its update check. The app's window waits for 'open':
+ * a start that finds an update downloads and installs it first, with the
+ * updater window on screen the whole time, and never shows the app meanwhile.
+ */
+export type StartupPhase = 'checking' | 'updating' | 'open';
+
+/** Asking for the app (the tray, a second launch) before 'open' brings the updater window forward instead. */
+export function mainWindowMayShow(phase: StartupPhase): boolean {
+  return phase === 'open';
+}
+
+/** Closing the updater window mid-update would open the app halfway through it; quitting still closes it. */
+export function updaterMayClose(input: { phase: StartupPhase; quitting: boolean }): boolean {
+  return input.quitting || input.phase !== 'updating';
+}
 
 /** A download's progress as a whole percentage. */
 export function progressPercent(value: unknown): number {

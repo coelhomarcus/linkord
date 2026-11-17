@@ -68,9 +68,10 @@ export function installUpdater(options: {
       },
       failed,
     );
-    // Silent: the one-click installer would otherwise show its own window
-    // while it copies the files; it starts the app again when it is done
-    apply = () => { if (status.kind === 'downloaded') autoUpdater.quitAndInstall(true, true); };
+    // Not silent: the app has to quit before its files can be replaced, and
+    // the one-click installer's small progress banner is then the only sign
+    // that Linkord is updating. It starts the app again when it is done.
+    apply = () => { if (status.kind === 'downloaded') autoUpdater.quitAndInstall(false, true); };
   }
 
   if (mode !== 'off') {
