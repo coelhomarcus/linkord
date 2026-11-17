@@ -26,7 +26,7 @@ export type UpdateCheckOutcome =
 
 export const FIRST_CHECK_DELAY_MS = 30_000;
 export const CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
-/** How long a start waits to hear whether there is an update before opening the app anyway. */
+/** How long a start waits to hear whether there is an update before it connects meanwhile; one found before the app opens still installs first. */
 export const STARTUP_CHECK_TIMEOUT_MS = 8_000;
 /** How long the updater window stays up to say a check from the tray found nothing. */
 export const RESULT_LINGER_MS = 2_500;

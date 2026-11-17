@@ -169,17 +169,12 @@ if (!resolved.ok) {
     };
     const updaterWindow = createUpdaterWindow(strings, onUpdaterAction, () => startWindowClose({ phase: startupPhase, quitting }) !== 'refuse');
     focusUpdater = () => updaterWindow.focus();
-    const timedOut = Symbol('timed out');
-    /** The timeout only bounds the question; an update found is waited for until it is downloaded. */
-    const findAndDownload = async (timeoutMs?: number, onFound?: () => void): Promise<'none' | 'failed' | 'ready' | typeof timedOut> => {
+    /** An update found is downloaded before this settles. */
+    const findAndDownload = async (onFound?: () => void): Promise<'none' | 'failed' | 'ready'> => {
       const status = updater.status();
       if (status.kind === 'downloaded') return 'ready';
       if (status.kind === 'idle') {
-        const outcome = await (timeoutMs === undefined ? updater.check() : Promise.race([
-          updater.check(),
-          new Promise<typeof timedOut>((resolve) => setTimeout(() => resolve(timedOut), timeoutMs)),
-        ]));
-        if (outcome === timedOut) return timedOut;
+        const outcome = await updater.check();
         if (outcome.kind !== 'update') return outcome.kind === 'failed' ? 'failed' : 'none';
       }
       onFound?.();
@@ -187,27 +182,41 @@ if (!resolved.ok) {
     };
     // As Discord does: a start shows the check, and an update found is
     // downloaded and installed before the app opens, with the updater window
-    // on screen until the installer takes over. A slow, failed or empty check
-    // goes on to the connection.
-    const startupCheck = () => new Promise<void>((resolve) => {
+    // on screen until the installer takes over. A failed or empty check goes
+    // on to the connection, and so does a slow one, but an update it still
+    // finds before the app's window opens is installed first.
+    const startUp = () => {
+      if (!checksAtStart({ mode: updater.mode, startHidden })) return connectApp();
       const own = ++turn;
       startupPhase = 'checking';
       followProgress = true;
       updaterWindow.show({ kind: 'checking' });
-      const found = () => { if (own === turn) startupPhase = 'updating'; };
-      void findAndDownload(STARTUP_CHECK_TIMEOUT_MS, found).then((result) => {
+      const slow = setTimeout(() => {
+        if (own === turn && startupPhase === 'checking') connectApp();
+      }, STARTUP_CHECK_TIMEOUT_MS);
+      const found = () => {
+        // Once the app is open, the download goes on in the background as any other
+        if (own !== turn || startupPhase === 'open') return;
+        if (startupPhase === 'connecting') discardApp();
+        startupPhase = 'updating';
+        followProgress = true;
+        refresh();
+      };
+      void findAndDownload(found).then((result) => {
+        clearTimeout(slow);
         if (own !== turn) return;
-        followProgress = false;
-        if (result !== 'ready') return resolve();
+        if (startupPhase === 'checking') return connectApp();
+        if (startupPhase !== 'updating') return;
+        if (result !== 'ready') return connectApp();
         installNow();
         // The installer quits the app; if it never does, the app still opens
         setTimeout(() => {
           if (startupPhase !== 'updating') return;
           console.error('[desktop] the update did not install; opening the app');
-          resolve();
+          connectApp();
         }, INSTALL_FALLBACK_MS).unref();
       });
-    });
+    };
     const checkFromMenu = () => {
       if (updater.mode !== 'install') return;
       // The start's own check is on screen already
@@ -274,6 +283,20 @@ if (!resolved.ok) {
       applyUpdate: installNow,
     });
     const startHidden = launchedAtLogin() && preferences.startMinimized;
+    const connectApp = () => {
+      followProgress = false;
+      startupPhase = 'connecting';
+      updaterWindow.show({ kind: 'connecting' });
+      openApp(true);
+    };
+    /** An update found while the app's page loads hidden: that window will not be shown. */
+    const discardApp = () => {
+      const window = mainWindow;
+      main = null;
+      mainWindow = null;
+      openLink = null;
+      window?.destroy();
+    };
     const finishStart = () => {
       startupPhase = 'open';
       showMainWindow();
@@ -335,15 +358,7 @@ if (!resolved.ok) {
     // the update check and then the connection, and the app's window once its
     // page has loaded. A start with the system that stays in the tray loads
     // the page hidden and checks for updates in the background.
-    if (startHidden) {
-      openApp(false);
-    } else {
-      void (async () => {
-        if (checksAtStart({ mode: updater.mode, startHidden })) await startupCheck();
-        startupPhase = 'connecting';
-        updaterWindow.show({ kind: 'connecting' });
-        openApp(true);
-      })();
-    }
+    if (startHidden) openApp(false);
+    else startUp();
   });
 }
