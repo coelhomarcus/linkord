@@ -26,8 +26,8 @@ function readState(file: string): WindowState | null {
   try { return parseWindowState(JSON.parse(fs.readFileSync(file, 'utf8'))); } catch { return null; }
 }
 
-function writeState(file: string, window: BrowserWindow): void {
-  const state: WindowState = { bounds: window.getNormalBounds(), maximized: window.isMaximized() };
+function writeState(file: string, window: BrowserWindow, maximized: boolean): void {
+  const state: WindowState = { bounds: window.getNormalBounds(), maximized };
   try { fs.writeFileSync(file, JSON.stringify(state)); } catch (error) { console.error('[desktop] could not save the window state', error); }
 }
 
@@ -35,6 +35,8 @@ export interface MainWindow {
   window: BrowserWindow;
   /** loads another page of the app, with the same retries as the first load */
   load: (url: URL) => void;
+  /** shows the window, maximized the first time when it was left that way */
+  show: () => void;
 }
 
 export function createMainWindow(options: {
@@ -70,14 +72,28 @@ export function createMainWindow(options: {
       additionalArguments: options.preloadArguments,
     },
   });
-  if (placement.maximized) window.maximize();
+  // maximize() also shows a hidden window, which would put the app on screen
+  // behind the updater window or at a start in the tray: a window left
+  // maximized is maximized as it is first shown instead
+  let maximizeOnShow = placement.maximized;
+  const showWindow = () => {
+    if (window.isDestroyed()) return;
+    if (maximizeOnShow) {
+      maximizeOnShow = false;
+      window.maximize();
+      return;
+    }
+    if (window.isMinimized()) window.restore();
+    window.show();
+  };
+  const saveState = () => writeState(options.stateFile, window, maximizeOnShow || window.isMaximized());
 
   // Also once the connecting screen is up, so the retry is not an empty,
   // invisible window; a start with the system keeps quiet until it is opened
   const reveal = () => {
     if (options.startHidden) return;
     void (options.showWhen ?? Promise.resolve(true)).then((show) => {
-      if (show && !window.isDestroyed() && !window.isVisible()) window.show();
+      if (show && !window.isDestroyed() && !window.isVisible()) showWindow();
     });
   };
   window.once('ready-to-show', reveal);
@@ -85,11 +101,11 @@ export function createMainWindow(options: {
   let saveTimer: NodeJS.Timeout | undefined;
   const saveSoon = () => {
     clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => writeState(options.stateFile, window), SAVE_DELAY_MS);
+    saveTimer = setTimeout(saveState, SAVE_DELAY_MS);
   };
   window.on('resize', saveSoon);
   window.on('move', saveSoon);
-  window.on('close', () => { clearTimeout(saveTimer); writeState(options.stateFile, window); });
+  window.on('close', () => { clearTimeout(saveTimer); saveState(); });
 
   // The server may be down or mid-deploy when the app starts. The window then
   // shows its own screen (connectionScreen.ts, assets/connection.html) and
@@ -244,5 +260,6 @@ export function createMainWindow(options: {
       if (shown) connect();
       else loadApp();
     },
+    show: showWindow,
   };
 }

@@ -10,7 +10,7 @@ import { forbiddenSwitch } from './debugSwitches.js';
 import { deepLinkFromArgv, deepLinkPath, protocolRegistration } from './deepLink.js';
 import { installDeepLinkBridge } from './deepLinkBridge.js';
 import { capturesSystemAudio, sharePicker } from './displayMedia.js';
-import { createMainWindow } from './mainWindow.js';
+import { createMainWindow, type MainWindow } from './mainWindow.js';
 import { appMenuTemplate, runTrayItem, trayMenuItems, trayMenuTemplate, type MenuActions, type MenuState } from './menus.js';
 import { installScreenShare } from './screenShare.js';
 import { installPermissionHandlers } from './session.js';
@@ -65,6 +65,7 @@ if (!resolved.ok) {
   app.quit();
 } else {
   const appUrl = resolved.url;
+  let main: MainWindow | null = null;
   let mainWindow: BrowserWindow | null = null;
   let tray: Tray | null = null;
   let quitting = false;
@@ -74,9 +75,8 @@ if (!resolved.ok) {
   let focusUpdater = () => {};
   const showMainWindow = () => {
     if (!mainWindowMayShow(startupPhase)) return focusUpdater();
-    if (!mainWindow) return;
-    if (mainWindow.isMinimized()) mainWindow.restore();
-    mainWindow.show();
+    if (!main || !mainWindow) return;
+    main.show();
     mainWindow.focus();
   };
 
@@ -289,7 +289,7 @@ if (!resolved.ok) {
     });
     const startHidden = launchedAtLogin() && preferences.startMinimized;
     const showWhen = checksAtStart({ mode: updater.mode, startHidden }) ? startupCheck() : undefined;
-    const main = createMainWindow({
+    main = createMainWindow({
       appUrl,
       startUrl: pendingLink ? new URL(pendingLink, appUrl.origin) : null,
       stateFile: path.join(app.getPath('userData'), 'window-state.json'),
@@ -330,6 +330,6 @@ if (!resolved.ok) {
     // open would hold the system up
     mainWindow.on('session-end', () => { quitting = true; });
     powerMonitor.on('shutdown', () => { quitting = true; app.quit(); });
-    mainWindow.on('closed', () => { mainWindow = null; openLink = null; });
+    mainWindow.on('closed', () => { main = null; mainWindow = null; openLink = null; });
   });
 }
