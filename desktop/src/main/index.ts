@@ -6,6 +6,7 @@ import { createActivityWatcher } from './activityWatcher.js';
 import { forwardWindowState, installAppBridge } from './appBridge.js';
 import { parseAppConfig, resolveAppUrl } from './appUrl.js';
 import { guardContents } from './contentsGuard.js';
+import { forbiddenSwitch } from './debugSwitches.js';
 import { deepLinkFromArgv, deepLinkPath, protocolRegistration } from './deepLink.js';
 import { installDeepLinkBridge } from './deepLinkBridge.js';
 import { capturesSystemAudio, sharePicker } from './displayMedia.js';
@@ -24,6 +25,12 @@ import { installUpdater } from './updater.js';
 import type { UpdaterAction } from './updaterScreen.js';
 import { createUpdaterWindow } from './updaterWindow.js';
 import { INSTALL_DELAY_MS, RESULT_LINGER_MS, STARTUP_CHECK_TIMEOUT_MS, checksAtStart, updateMode } from './updates.js';
+
+const debugSwitch = forbiddenSwitch({ isPackaged: app.isPackaged, hasSwitch: (name) => app.commandLine.hasSwitch(name) });
+if (debugSwitch) {
+  console.error(`[desktop] refusing to start with --${debugSwitch}`);
+  app.exit(1);
+}
 
 // A development run keeps its own session and window state, and its own
 // single-instance lock, so it can run next to an installed Linkord
