@@ -11,7 +11,20 @@ describe('Button', () => {
     expect(button.className).not.toContain('font-medium');
     expect(button.className).not.toMatch(/(^|\s)bg-(?!clip-)/);
     expect(button.className).toContain('focus-visible:ring-3');
+  });
+
+  it('every size takes a 44px tap on a touch screen', () => {
+    render(<Button size="icon-xs" aria-label="Fechar" />);
+    const button = screen.getByRole('button', { name: 'Fechar' });
     expect(button.className).toContain('touch-target');
+    expect(button.className).toMatch(/(^|\s)relative(\s|$)/);
+  });
+
+  it('a button placed absolutely keeps its own position', () => {
+    render(<Button className="absolute bottom-3">Parar</Button>);
+    const button = screen.getByRole('button', { name: 'Parar' });
+    expect(button.className).toMatch(/(^|\s)absolute(\s|$)/);
+    expect(button.className).not.toMatch(/(^|\s)relative(\s|$)/);
   });
 
   it('a class passed in wins over the variant', () => {

@@ -10,7 +10,7 @@ import { useTranslation } from 'react-i18next';
 // an item. `overlay` is for sitting on top of an image or banner, where a bare
 // icon can vanish into the picture.
 const closeButtonVariants = cva(
-  "inline-flex shrink-0 items-center justify-center rounded-full focus-ring transition-colors select-none disabled:pointer-events-none disabled:opacity-50",
+  "relative touch-target inline-flex shrink-0 items-center justify-center rounded-full focus-ring transition-colors select-none disabled:pointer-events-none disabled:opacity-50",
   {
     variants: {
       variant: {

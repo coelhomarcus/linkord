@@ -335,8 +335,9 @@
 }
 
 /* A control drawn smaller than a fingertip still takes a 44px tap on a touch screen: the hit area
-   grows around it, the drawing does not. The element must be positioned (relative or absolute), have
-   no ::after of its own, and sit at least 44px from the centre of any neighbour that does the same. */
+   grows around it, the drawing does not. The element must be positioned (relative or absolute) and have
+   no ::after of its own. Every Button and CloseButton has it; where two sit closer than 44px apart the
+   later one takes the strip they share, so the middle of each still reaches its own. */
 @utility touch-target {
   @media (pointer: coarse) {
     &::after {
