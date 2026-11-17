@@ -103,6 +103,7 @@ export function LinkPreview(props: LinkPreviewProps) {
 }
 
 function LinkPreviewCard({ embed, className = '', edgeToEdge, fitContainer, preview, imageUrl, menu }: LinkPreviewProps) {
+  const { t } = useTranslation('media');
   const [failed, setFailed] = useState(false);
   const openMedia = useOpenMedia();
   const surfaceWidth = useChatSurfaceWidth(384 + 120);
@@ -148,10 +149,11 @@ function LinkPreviewCard({ embed, className = '', edgeToEdge, fitContainer, prev
       <button
         ref={boxRef}
         type="button"
+        aria-label={t('embed.openImage')}
         onClick={openImage}
         {...hoverWarmHandlers(image.src, { animated: image.animated })}
         style={fitContainer ? undefined : { width: box.width, maxWidth: '100%', height: box.height }}
-        className={`block max-w-full cursor-zoom-in ${fitContainer ? '' : `overflow-hidden bg-fill-subtle ${rounding}`} ${className}`}
+        className={`block max-w-full cursor-zoom-in focus-ring ${fitContainer ? '' : `overflow-hidden bg-fill-subtle ${rounding}`} ${className}`}
       >
         <PreviewImage
           src={drawnSrc ?? undefined}
