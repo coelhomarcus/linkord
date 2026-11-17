@@ -188,6 +188,7 @@ export function SoundboardButton({ conversationId, callServerId, className, acti
                           aria-label={t('picker.play', { name: sound.name })}
                           className="flex min-h-12 min-w-0 items-center justify-center gap-2 rounded-lg bg-fill-subtle px-2.5 py-2 text-label font-medium text-text-primary transition-colors hover:bg-fill-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 active:translate-y-px motion-reduce:active:translate-y-0"
                         >
+                          {/* off-scale: an emoji glyph, sized like the icon it stands in for */}
                           {sound.emoji ? <span className="flex-none text-[20px] leading-none"><Emoji emoji={sound.emoji} /></span> : <SpeakerHighIcon size={18} className="flex-none text-text-muted" />}
                           <span title={sound.name} className="min-w-0 truncate text-left leading-tight">{sound.name}</span>
                         </button>

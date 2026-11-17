@@ -105,6 +105,7 @@ export function CustomStatusDialog({ open, onOpenChange }: { open: boolean; onOp
                     aria-label={emoji ? `${t('custom.chooseEmoji')}: ${emoji}` : t('custom.chooseEmoji')}
                     className="grid size-8 flex-none place-items-center rounded-md text-text-muted transition-colors hover:bg-fill-hover hover:text-text-primary"
                   >
+                    {/* off-scale: an emoji glyph, sized like the icon it stands in for */}
                     {emoji ? <span className="text-[20px] leading-none"><Emoji emoji={emoji} /></span> : <SmileyIcon size={20} />}
                   </PopoverTrigger>
                   <PopoverContent className="w-[22rem] max-w-[calc(100vw-1rem)] p-0" side="bottom" align="start">

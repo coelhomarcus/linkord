@@ -61,6 +61,7 @@ export function EmojiSuggestions({ id, query, items, activeIndex, onPick, onHove
           >
             {item.imageUrl
               ? <img src={item.imageUrl} alt="" className="size-6 flex-none object-contain" draggable={false} />
+              // off-scale: an emoji glyph, sized to its box, not type
               : <span className="w-6 flex-none text-center text-[20px] leading-none"><Emoji emoji={item.emoji!} /></span>}
             <span className="min-w-0 flex-1 truncate text-label font-medium">:{item.shortcode}:</span>
             {item.detail && <span className="max-w-[40%] flex-none truncate text-caption text-text-muted">{item.detail}</span>}

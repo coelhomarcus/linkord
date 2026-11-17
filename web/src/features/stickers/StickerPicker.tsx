@@ -291,6 +291,7 @@ export function StickerPicker({ onPick, className, autoFocus = true }: StickerPi
               <span className="truncate text-label font-semibold text-text-primary">{preview.name}</span>
               <span className="truncate text-caption text-text-muted">{t('from', { server: serverById.get(preview.serverId)?.name ?? '' })}</span>
             </div>
+            {/* off-scale: an emoji glyph, sized to its box, not type */}
             <span aria-hidden className="flex-none text-[22px] leading-none"><Emoji emoji={preview.emoji} /></span>
           </>
         ) : (

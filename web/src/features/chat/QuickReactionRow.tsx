@@ -21,6 +21,7 @@ export function QuickReactionRow({ onPick, onMore, className }: { onPick: (emoji
           onClick={() => onPick(emoji)}
           aria-label={t('reactWith', { emoji })}
           // Discord's quick reactions: square tiles at the top of the menu
+          // off-scale: an emoji glyph, sized to its box, not type
           className="grid size-9 place-items-center rounded-lg bg-bg-control text-[20px] leading-none transition-colors hover:bg-bg-control-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <Emoji emoji={emoji} />

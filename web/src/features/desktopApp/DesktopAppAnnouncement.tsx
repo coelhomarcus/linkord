@@ -64,7 +64,7 @@ export function DesktopAppAnnouncement() {
           <span className="flex size-20 items-center justify-center rounded-[22px] border border-border-default bg-surface-rail shadow-popover">
             <img src="/logo.svg" alt="" className="size-12" />
           </span>
-          <DialogTitle className="mt-5 text-[1.375rem] font-bold leading-tight text-text-strong">{t('title')}</DialogTitle>
+          <DialogTitle className="mt-5 text-display font-bold text-text-strong">{t('title')}</DialogTitle>
           <DialogDescription className="mt-2 text-body text-text-secondary">{t('description')}</DialogDescription>
         </div>
         <ul className="flex flex-col gap-3 px-6 pb-2">

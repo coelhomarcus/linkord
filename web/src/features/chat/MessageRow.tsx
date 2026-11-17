@@ -62,6 +62,7 @@ function BotQuickReactions({ reacted, onPick }: { reacted: (emoji: string) => bo
           aria-label={t('reactWith', { emoji })}
           aria-pressed={reacted(emoji)}
           onClick={() => onPick(emoji)}
+          // off-scale: an emoji glyph, sized to its box, not type
           className={cn('text-[18px] leading-none', reacted(emoji) && 'bg-fill-active')}
         >
           <Emoji emoji={emoji} />
@@ -315,7 +316,7 @@ export const MessageRow = memo(function MessageRow({ message, showHeader, highli
             )}
             {message.bot && (
               // a webhook is no account: tagged the way Discord tags its apps
-              <span className="inline-flex h-[15px] flex-none select-none items-center self-center rounded-[4px] bg-accent-primary px-[5px] text-[10px] font-semibold uppercase leading-none tracking-[0.02em] text-primary-foreground">{t('bot')}</span>
+              <span className="inline-flex h-[15px] flex-none select-none items-center self-center rounded-[4px] bg-accent-primary px-[5px] text-micro font-semibold uppercase leading-none tracking-[0.02em] text-primary-foreground">{t('bot')}</span>
             )}
             <span className="flex-none select-none text-caption text-text-muted">{formatTime(message.ts, language, timeFormat)}</span>
           </div>
@@ -381,7 +382,7 @@ export const MessageRow = memo(function MessageRow({ message, showHeader, highli
                 </div>
               ) : (
               <>
-                <div className={cn('message-press-text text-body leading-[1.375rem] text-text-secondary', pending && pending.state !== 'failed' && 'opacity-60')}>
+                <div className={cn('message-press-text text-body leading-5.5 text-text-secondary', pending && pending.state !== 'failed' && 'opacity-60')}>
                   <ChatMessageText
                     text={message.text}
                     mentionLookup={mentionLookup}

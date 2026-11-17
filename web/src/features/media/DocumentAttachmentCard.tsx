@@ -23,6 +23,7 @@ export function DocumentAttachmentCard({ name, size, mime, className }: Document
       <div className={cn('relative grid size-10 flex-none place-items-center rounded-md', iconBgClassName)}>
         <Icon size={20} className={iconTextClassName} />
         {badge && (
+          // off-scale: part of the file icon, sized to its 40px box
           <span className="absolute -bottom-1 -right-1 rounded-sm bg-red px-1 text-[9px] font-bold leading-3.5 text-white">
             {badge}
           </span>

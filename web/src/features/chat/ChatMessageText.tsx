@@ -237,6 +237,7 @@ export function ChatMessageText({ text, mentionLookup, myUserId, onOpenProfile, 
       {blocks.map((block, index) => {
         switch (block.type) {
           case 'paragraph':
+            // off-scale: a jumbo emoji-only message, glyphs rather than type
             return <p key={index} className={cn('whitespace-pre-wrap wrap-break-word', jumbo && 'text-[48px] leading-none')}>{renderInline(block.children, ctx)}</p>;
           case 'code':
             return <CodeBlock key={index} code={block.code} lang={block.lang} />;

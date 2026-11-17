@@ -102,7 +102,7 @@ function LiveBadge({ person, previewable, tapOpensPreview, onWatch }: {
 }) {
   const { t } = useTranslation('servers');
   const [open, setOpen] = useState(false);
-  const badge = <span className="rounded-sm bg-red px-1 text-[10px] font-bold uppercase leading-4 text-white">{t('voiceMembers.status.live')}</span>;
+  const badge = <span className="rounded-sm bg-red px-1 text-micro font-bold uppercase leading-4 text-white">{t('voiceMembers.status.live')}</span>;
   if (!onWatch) return <span role="img" aria-label={t('voiceMembers.status.live')} className="flex">{badge}</span>;
   const label = person.isMe ? t('voiceMembers.watch.own') : t('voiceMembers.watch.badge', { name: person.displayName });
   if (!previewable) return <button type="button" aria-label={label} onClick={onWatch} className={BADGE_TRIGGER}>{badge}</button>;

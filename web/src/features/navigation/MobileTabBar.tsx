@@ -55,7 +55,7 @@ export function MobileTabBar({ activeCallConversationId, onReturnToCall }: { act
               {active && <span aria-hidden className="absolute inset-x-4 top-0 h-0.5 rounded-full bg-primary" />}
               <span className="relative">
                 {key === 'profile' ? <Avatar id={state.me.userId ?? state.me.id ?? 'me'} name={state.me.displayName} avatar={state.me.avatar} avatarColor={state.me.avatarColor} size={24} /> : <Icon size={24} weight={active ? 'fill' : 'regular'} aria-hidden />}
-                {count > 0 && <CountBadge decorative className="absolute -right-3 -top-1 min-w-4 px-1 text-[10px]">{count > 99 ? '99+' : count}</CountBadge>}
+                {count > 0 && <CountBadge decorative className="absolute -right-3 -top-1 min-w-4 px-1">{count > 99 ? '99+' : count}</CountBadge>}
               </span>
               <span className="truncate">{label}</span>
             </AppLink>
