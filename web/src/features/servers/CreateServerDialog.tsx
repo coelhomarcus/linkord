@@ -72,12 +72,12 @@ export function CreateServerDialog({ open, onOpenChange }: { open: boolean; onOp
               <DialogDescription>{t('create.description')}</DialogDescription>
             </DialogHeader>
             <div className="flex flex-col gap-2">
-              <button type="button" onClick={() => { setStep('create'); setName(t('create.defaultName', { name: state.me.displayName || state.me.name })); }} className="flex h-14 items-center gap-3 rounded-lg border border-border-strong bg-surface-300 px-4 text-left transition-colors hover:bg-bg-control-hover">
+              <button type="button" onClick={() => { setStep('create'); setName(t('create.defaultName', { name: state.me.displayName || state.me.name })); }} className="flex h-14 items-center gap-3 rounded-lg border border-border-strong bg-surface-300 px-4 text-left transition-colors focus-ring hover:bg-bg-control-hover">
                 <PlusCircleIcon size={32} weight="fill" className="flex-none text-green" />
                 <span className="flex-1 text-body font-semibold text-text-primary">{t('create.own')}</span>
                 <CaretRightIcon size={20} weight="bold" className="flex-none text-text-secondary" />
               </button>
-              <p className="mt-4 text-center text-[1.25rem] font-semibold text-text-strong">{t('join.question')}</p>
+              <p className="mt-4 text-center text-heading font-semibold text-text-strong">{t('join.question')}</p>
               <Button type="button" variant="secondary" size="lg" onClick={() => setStep('join')}>
                 <LinkIcon size={18} /> {t('join.title')}
               </Button>

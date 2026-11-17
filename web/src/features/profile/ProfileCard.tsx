@@ -147,7 +147,7 @@ export function ProfileCard({
           type="button"
           aria-label={t('card.viewBanner')}
           onClick={onBannerClick}
-          className="block w-full cursor-zoom-in"
+          className="block w-full cursor-zoom-in focus-ring focus-visible:ring-inset"
           style={{ ...bannerStyle(user), aspectRatio: BANNER_ASPECT_RATIO }}
         />
       ) : (
@@ -193,7 +193,7 @@ export function ProfileCard({
                 type="button"
                 aria-label={t('card.viewAvatar')}
                 onClick={onAvatarClick}
-                className="block cursor-zoom-in rounded-full focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                className="block cursor-zoom-in rounded-full focus-ring"
               >
                 <Avatar id={user.id} name={user.displayName} avatar={user.avatar} avatarColor={user.avatarColor} size={92} />
               </button>
@@ -274,7 +274,7 @@ export function ProfileCard({
                         target="_blank"
                         rel="noreferrer"
                         aria-label={t('card.openLink', { name: link.label })}
-                        className="flex h-9 w-9 items-center justify-center rounded-md border border-border-strong bg-bg-tertiary text-text-primary transition-colors hover:bg-bg-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                        className="flex h-9 w-9 items-center justify-center rounded-md border border-border-strong bg-bg-tertiary text-text-primary transition-colors hover:bg-bg-hover focus-ring"
                       />
                     }
                   >

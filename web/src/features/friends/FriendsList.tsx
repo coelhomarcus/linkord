@@ -24,7 +24,7 @@ import { useFriends } from './FriendsContext';
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
 
 // Discord's round row actions, which darken to the row's own fill on hover
-const ROW_ACTION = 'grid size-9 place-items-center rounded-full bg-surface-300 text-text-secondary transition-colors hover:text-text-primary group-hover/row:bg-surface-app disabled:opacity-50';
+const ROW_ACTION = 'relative grid size-9 touch-target place-items-center rounded-full bg-surface-300 text-text-secondary transition-colors focus-ring hover:text-text-primary group-hover/row:bg-surface-app disabled:opacity-50';
 import { usePendingIds } from './usePendingIds';
 import { useUrlSearch } from '@/shared/hooks/useUrlSearch';
 import { FadeIn, RevealList, RevealRow, SocialRowsSkeleton } from './listReveal';

@@ -15,7 +15,7 @@ export function CoverFace({ item }: { item: Cover }) {
 
 export function CoverLink({ item, aspect }: { item: Cover; aspect: string }) {
   return (
-    <a href={item.url} target="_blank" rel="noreferrer" aria-label={item.title} title={item.title} className={`group ${COVER_BOX} ${aspect} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring`}>
+    <a href={item.url} target="_blank" rel="noreferrer" aria-label={item.title} title={item.title} className={`group ${COVER_BOX} ${aspect} focus-ring`}>
       <CoverFace item={item} />
     </a>
   );

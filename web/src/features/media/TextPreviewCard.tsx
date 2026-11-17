@@ -30,7 +30,7 @@ const MARKDOWN_STYLES = [
   '[&_ul]:my-1 [&_ul]:list-disc [&_ul]:pl-4',
   '[&_ol]:my-1 [&_ol]:list-decimal [&_ol]:pl-4',
   '[&_a]:text-link [&_a]:underline [&_a]:underline-offset-2',
-  '[&_code]:rounded-sm [&_code]:bg-fill-inset [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[0.9em]',
+  '[&_code]:rounded-sm [&_code]:bg-fill-inset [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[0.875em]',
   '[&_pre]:my-1 [&_pre]:overflow-x-auto [&_pre]:rounded-md [&_pre]:bg-fill-inset [&_pre]:p-2 [&_pre_code]:bg-transparent [&_pre_code]:p-0',
   '[&_blockquote]:my-1 [&_blockquote]:border-l-2 [&_blockquote]:border-border-strong [&_blockquote]:pl-2 [&_blockquote]:text-text-muted',
   '[&_table]:my-1 [&_table]:w-full [&_th]:text-left [&_td]:border-t [&_td]:border-border [&_td]:py-1 [&_th]:py-1',
@@ -112,12 +112,12 @@ export function TextPreviewCard({ attachment, maxWidth }: { attachment: ChatAtta
             )}
           </div>
           <div className="flex items-center justify-between gap-3 border-t border-border px-3 py-1.5 text-caption text-text-muted">
-            <button type="button" onClick={() => setExpanded((v) => !v)} className="flex items-center gap-1 hover:text-text-primary">
+            <button type="button" onClick={() => setExpanded((v) => !v)} className="flex items-center gap-1 rounded-sm focus-ring hover:text-text-primary">
               {expanded ? <CaretUpIcon size={12} /> : <CaretDownIcon size={12} />}
               {expanded ? t('preview.showLess') : t('preview.showMore')}
             </button>
             {preview.truncated && (
-              <button type="button" onClick={() => downloadFile(url, attachment.name)} className="hover:text-text-primary">
+              <button type="button" onClick={() => downloadFile(url, attachment.name)} className="rounded-sm focus-ring hover:text-text-primary">
                 {t('preview.downloadFull')}
               </button>
             )}

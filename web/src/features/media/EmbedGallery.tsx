@@ -29,7 +29,7 @@ export function EmbedGallery({ images, width, onOpen }: { images: string[]; widt
             {...hoverWarmHandlers(src)}
             aria-label={more ? t('embed.galleryMore', { count: hidden }) : t('embed.galleryImage', { index: index + 1, count: images.length })}
             style={{ gridArea: layout.areas[index] }}
-            className="relative min-h-0 min-w-0 cursor-zoom-in overflow-hidden bg-fill-subtle outline-none focus-visible:ring-3 focus-visible:ring-inset focus-visible:ring-ring/50"
+            className="relative min-h-0 min-w-0 cursor-zoom-in overflow-hidden bg-fill-subtle focus-ring focus-visible:ring-inset"
           >
             {/* the first cell spans the height of a three-cell mosaic: asked for wide enough for either */}
             <img src={proxiedImageVariant(src, { width: index === 0 ? width : width / 2 })} alt="" loading="lazy" className="size-full object-cover" />

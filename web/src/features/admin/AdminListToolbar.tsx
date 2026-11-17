@@ -10,7 +10,7 @@ import { Skeleton } from '@/shared/ui/primitives/skeleton';
 import { todayKey } from '@/shared/lib/calendarDay';
 import { cn } from '@/shared/lib/utils';
 
-const FIELD = 'h-10 rounded-lg border border-border bg-fill-subtle px-3 text-label text-text-primary outline-none focus-visible:ring-2 focus-visible:ring-ring';
+const FIELD = 'h-10 rounded-lg border border-border bg-fill-subtle px-3 text-label text-text-primary focus-ring';
 const FIELD_LABEL = 'flex min-w-0 flex-col gap-1.5 text-caption font-medium text-text-muted';
 
 export function AdminSelectField<T extends string>({ label, value, onChange, options }: {

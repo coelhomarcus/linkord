@@ -43,7 +43,7 @@ export function SettingsSection({ id, title, description, children, className, c
       tabIndex={id ? -1 : undefined}
       className={cn('flex scroll-mt-10 flex-col border-t border-border-subtle py-10 outline-none first:border-t-0 first:pt-0', className)}
     >
-      <h3 id={headingId} className="text-[1.25rem] font-semibold leading-[1.2] text-text-strong">{title}</h3>
+      <h3 id={headingId} className="text-heading font-semibold text-text-strong">{title}</h3>
       {description && <p className="mt-2 text-label text-text-muted">{description}</p>}
       {children && <div className={cn('mt-6 flex flex-col gap-7', contentClassName)}>{children}</div>}
     </section>
@@ -109,7 +109,7 @@ export function SettingsLinkRow({ to, onClick, icon, label, description, value }
       <CaretRightIcon size={20} aria-hidden className="flex-none text-text-secondary" />
     </>
   );
-  const className = 'flex w-full items-center gap-4 rounded-lg text-left outline-none focus-visible:ring-2 focus-visible:ring-ring [&:hover_svg:last-child]:text-text-primary';
+  const className = 'flex w-full items-center gap-4 rounded-lg text-left focus-ring [&:hover_svg:last-child]:text-text-primary';
   return to
     ? <AppLink to={to} className={className}>{body}</AppLink>
     : <button type="button" onClick={onClick} className={className}>{body}</button>;

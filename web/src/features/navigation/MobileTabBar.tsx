@@ -41,7 +41,7 @@ export function MobileTabBar({ activeCallConversationId, onReturnToCall }: { act
   return (
     <div className="absolute inset-x-0 bottom-0 z-30 bg-bg-primary md:hidden">
       {activeCallConversationId && (
-        <button type="button" onClick={onReturnToCall} className="flex h-12 w-full items-center gap-2 border-b border-border bg-bg-secondary px-4 text-left text-label">
+        <button type="button" onClick={onReturnToCall} className="flex h-12 w-full items-center gap-2 border-b border-border bg-bg-secondary px-4 text-left text-label focus-ring focus-visible:ring-inset">
           <PhoneIcon size={18} weight="fill" className="flex-none text-green" aria-hidden />
           <span className="min-w-0 flex-1 truncate">{t('inCall', { title: conversationTitle(call, state.me.userId, allUsers) })}</span>
           <span className="font-semibold text-green">{t('returnToCall')}</span>
@@ -55,7 +55,7 @@ export function MobileTabBar({ activeCallConversationId, onReturnToCall }: { act
               {active && <span aria-hidden className="absolute inset-x-4 top-0 h-0.5 rounded-full bg-primary" />}
               <span className="relative">
                 {key === 'profile' ? <Avatar id={state.me.userId ?? state.me.id ?? 'me'} name={state.me.displayName} avatar={state.me.avatar} avatarColor={state.me.avatarColor} size={24} /> : <Icon size={24} weight={active ? 'fill' : 'regular'} aria-hidden />}
-                {count > 0 && <CountBadge decorative className="absolute -right-3 -top-1 min-w-4 px-1 text-[10px]">{count > 99 ? '99+' : count}</CountBadge>}
+                {count > 0 && <CountBadge decorative className="absolute -right-3 -top-1 min-w-4 px-1">{count > 99 ? '99+' : count}</CountBadge>}
               </span>
               <span className="truncate">{label}</span>
             </AppLink>

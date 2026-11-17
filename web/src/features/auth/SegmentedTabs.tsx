@@ -27,7 +27,7 @@ export function SegmentedTabs<T extends string>({ value, onChange, options, aria
             aria-selected={active}
             onClick={() => onChange(option.value)}
             className={cn(
-              'relative isolate inline-flex w-full items-center justify-center rounded-md px-3.5 py-1.5 text-label font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring',
+              'relative isolate inline-flex w-full items-center justify-center rounded-md px-3.5 py-1.5 text-label font-medium focus-ring transition-colors',
               active ? 'text-primary-foreground' : 'text-text-muted hover:text-text-primary',
             )}
           >

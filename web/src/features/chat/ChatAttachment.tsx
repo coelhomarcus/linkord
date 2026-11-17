@@ -60,13 +60,13 @@ export function ChatAttachment({ attachment, edgeToEdge }: ChatAttachmentProps) 
   if (isImage) {
     return (
       <>
-        <button type="button" onClick={() => setLightboxOpen(true)} className={cn('block max-w-full cursor-zoom-in', !edgeToEdge && 'mt-1.5')}>
+        <button type="button" onClick={() => setLightboxOpen(true)} className={cn('group block max-w-full cursor-zoom-in outline-none', !edgeToEdge && 'mt-1.5')}>
           <img
             src={cachedThumbUrl ?? undefined}
             alt={attachment.name}
             style={{ maxWidth }}
             className={cn(
-              'block h-auto max-h-80 max-w-full object-contain',
+              'block h-auto max-h-80 max-w-full object-contain group-focus-visible:ring-3 group-focus-visible:ring-ring/50',
               edgeToEdge ? 'rounded-lg' : 'rounded-md border border-border'
             )}
           />

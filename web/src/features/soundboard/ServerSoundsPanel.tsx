@@ -95,6 +95,7 @@ export function ServerSoundsPanel({ serverId, myUserId, canUpload, canManage }: 
           </div>
           {sounds.map((sound) => (
             <div key={sound.id} role="row" className="group grid grid-cols-[2.5rem_minmax(0,1fr)_minmax(0,0.8fr)_4rem] items-center gap-3 border-b border-border px-1.5 py-2.5 last:border-b-0">
+              {/* off-scale: an emoji glyph, sized like the icon it stands in for */}
               <span role="cell" className="text-[24px] leading-none">{sound.emoji ? <Emoji emoji={sound.emoji} /> : <SpeakerHighIcon size={22} className="text-text-muted" />}</span>
               <span role="cell" className="flex min-w-0 items-center gap-1.5">
                 <span className="truncate text-label font-medium">{sound.name}</span>

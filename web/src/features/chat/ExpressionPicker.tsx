@@ -47,7 +47,7 @@ export function ExpressionPicker({ tab, onTabChange, gifConfig, onGif, onSticker
             aria-controls={`expression-panel-${key}`}
             onClick={() => onTabChange(key)}
             className={cn(
-              'rounded-md px-3 py-1.5 text-label font-semibold transition-colors duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              'rounded-md px-3 py-1.5 text-label font-semibold transition-colors duration-100 focus-ring',
               current === key ? 'bg-fill-hover text-text-primary' : 'text-text-secondary hover:bg-fill-subtle hover:text-text-primary',
             )}
           >

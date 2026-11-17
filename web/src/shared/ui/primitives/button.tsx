@@ -4,7 +4,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/shared/lib/utils"
 
 const buttonVariants = cva(
-  "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-label font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5",
+  "group/button relative touch-target inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-label font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5",
   {
     variants: {
       variant: {
@@ -19,6 +19,9 @@ const buttonVariants = cva(
         ghost:
           "hover:bg-fill-hover hover:text-foreground aria-expanded:bg-fill-hover aria-expanded:text-foreground",
         destructive: "bg-red text-white hover:bg-red-hover",
+        // A way out that is not the action ("Agora não", "Voltar"): plain text, a box only on focus.
+        quiet:
+          "font-normal text-text-muted hover:text-text-primary aria-expanded:text-text-primary",
         link: "text-accent-text underline-offset-4 hover:underline",
       },
       size: {

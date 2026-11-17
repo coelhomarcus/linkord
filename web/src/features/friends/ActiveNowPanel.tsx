@@ -70,7 +70,7 @@ export function ActiveNowPanel() {
 
   return (
     <aside aria-label={t('activeNow.title')} className="flex w-[360px] flex-none flex-col overflow-y-auto border-l border-border-subtle px-4 py-4">
-      <h2 className="mb-4 text-[1.25rem] font-bold leading-[1.2] text-text-primary">{t('activeNow.title')}</h2>
+      <h2 className="mb-4 text-heading font-bold text-text-primary">{t('activeNow.title')}</h2>
       {calls.length === 0 && playing.length === 0 ? (
         <EmptyState size="compact" illustration="speaker" title={t('activeNow.emptyTitle')} description={t('activeNow.emptyText')} />
       ) : (
@@ -83,7 +83,7 @@ export function ActiveNowPanel() {
                 <button
                   type="button"
                   onClick={() => openCall(conversation.id)}
-                  className="w-full rounded-[12px] border border-border-subtle bg-surface-app p-4 text-left transition-colors hover:bg-message-hover"
+                  className="w-full rounded-[12px] border border-border-subtle bg-surface-app p-4 text-left transition-colors focus-ring hover:bg-message-hover"
                 >
                   <span className="flex items-center gap-3">
                     <Avatar id={lead.userId} name={lead.displayName} avatar={lead.avatar} poster={lead.avatarPoster} avatarColor={lead.avatarColor} size={32} />

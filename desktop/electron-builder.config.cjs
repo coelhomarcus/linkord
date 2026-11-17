@@ -24,6 +24,20 @@ module.exports = {
   // in resources/installer.nsh
   protocols: [{ name: 'Linkord', schemes: ['linkord'] }],
 
+  // Without these the installed, familiar binary would run any script as Node
+  // (ELECTRON_RUN_AS_NODE, NODE_OPTIONS), take a debugger (--inspect) or load
+  // a swapped app.asar or loose app folder. docs/DEPLOY.md, "Desktop app".
+  electronFuses: {
+    runAsNode: false,
+    enableNodeOptionsEnvironmentVariable: false,
+    enableNodeCliInspectArguments: false,
+    enableEmbeddedAsarIntegrityValidation: true,
+    onlyLoadAppFromAsar: true,
+    // One way: cookies written plain stay readable and are encrypted when next
+    // written, but turning this off again would leave the store unreadable
+    enableCookieEncryption: true,
+  },
+
   win: {
     target: [{ target: 'nsis', arch: ['x64'] }],
     icon: 'resources/icon.png',

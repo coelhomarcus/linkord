@@ -79,7 +79,7 @@ export function ServerInvitationsView({ search, onOpenProfile }: { search: strin
                   <p className="truncate text-body font-medium text-text-primary">{entry.server.name}</p>
                   <p className="truncate text-caption text-text-muted">
                     {t('invitations.from')}{' '}
-                    <button type="button" onClick={() => onOpenProfile(entry.inviter.id)} className="hover:underline">{entry.inviter.displayName}</button>
+                    <button type="button" onClick={() => onOpenProfile(entry.inviter.id)} className="rounded-sm focus-ring hover:underline">{entry.inviter.displayName}</button>
                     {` · ${t('invitations.members', { count: entry.server.memberCount })}`}
                   </p>
                 </div>

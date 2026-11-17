@@ -136,7 +136,7 @@ export function Tile({ participantId, kind, isMine, loading = false, paused = fa
       aria-pressed={isFocused}
       aria-label={isFocused ? t('tile.unfocusLabel', { name: name || t('tile.participant') }) : t('tile.focusLabel', { name: name || t('tile.participant') })}
       className={cn(
-        'tile-fullscreen-target relative h-full w-full shrink-0 cursor-pointer overflow-hidden rounded-lg border-[3.5px] transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50',
+        'tile-fullscreen-target relative h-full w-full shrink-0 cursor-pointer overflow-hidden rounded-lg border-[3.5px] transition-colors focus-ring',
         showsVideo || kind === 'screen' ? 'bg-bg-call' : 'bg-bg-tertiary',
         !showSpeakingBorder && 'border-white/10',
       )}

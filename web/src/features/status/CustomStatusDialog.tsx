@@ -105,6 +105,7 @@ export function CustomStatusDialog({ open, onOpenChange }: { open: boolean; onOp
                     aria-label={emoji ? `${t('custom.chooseEmoji')}: ${emoji}` : t('custom.chooseEmoji')}
                     className="grid size-8 flex-none place-items-center rounded-md text-text-muted transition-colors hover:bg-fill-hover hover:text-text-primary"
                   >
+                    {/* off-scale: an emoji glyph, sized like the icon it stands in for */}
                     {emoji ? <span className="text-[20px] leading-none"><Emoji emoji={emoji} /></span> : <SmileyIcon size={20} />}
                   </PopoverTrigger>
                   <PopoverContent className="w-[22rem] max-w-[calc(100vw-1rem)] p-0" side="bottom" align="start">
@@ -122,14 +123,16 @@ export function CustomStatusDialog({ open, onOpenChange }: { open: boolean; onOp
                   className="h-8 min-w-0 flex-1 border-0 bg-transparent px-1 shadow-none focus-visible:ring-0"
                 />
                 {(emoji || text) && (
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="icon-xs"
                     aria-label={t('custom.clear')}
                     onClick={() => { setEmoji(''); setText(''); }}
-                    className="grid size-7 flex-none place-items-center rounded-md text-text-muted transition-colors hover:bg-fill-hover hover:text-text-primary"
+                    className="relative touch-target rounded-md text-text-muted"
                   >
                     <XIcon size={14} />
-                  </button>
+                  </Button>
                 )}
               </div>
             </div>
@@ -143,7 +146,7 @@ export function CustomStatusDialog({ open, onOpenChange }: { open: boolean; onOp
                       key={game.igdbId}
                       type="button"
                       onClick={() => { setEmoji(GAME_EMOJI); setText(t('custom.playing', { game: game.name }).slice(0, CUSTOM_STATUS_TEXT_MAX)); }}
-                      className="flex max-w-full items-center gap-1.5 rounded-full border border-border-strong bg-fill-subtle px-2.5 py-1 text-label transition-colors hover:bg-fill-hover"
+                      className="flex max-w-full items-center gap-1.5 rounded-full border border-border-strong bg-fill-subtle px-2.5 py-1 text-label transition-colors focus-ring hover:bg-fill-hover"
                     >
                       <GameControllerIcon size={14} className="flex-none text-text-muted" />
                       <span className="truncate">{game.name}</span>

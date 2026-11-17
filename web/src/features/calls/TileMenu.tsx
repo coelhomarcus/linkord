@@ -304,7 +304,7 @@ export function TileMenu({ onOpenProfile }: TileMenuProps) {
                 type="button"
                 onClick={toggleMute}
                 aria-label={muted ? t('menu.unmuteAudio') : t('menu.muteAudio')}
-                className="flex-none text-text-secondary transition-colors hover:text-text-primary"
+                className="relative flex-none touch-target rounded-sm text-text-secondary transition-colors focus-ring hover:text-text-primary"
               >
                 {muted ? <SpeakerSlashIcon size={16} /> : <SpeakerHighIcon size={16} />}
               </button>

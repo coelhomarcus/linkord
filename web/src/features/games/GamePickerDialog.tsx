@@ -49,7 +49,7 @@ function Results({ query, taken, onPick }: { query: string; taken: number[]; onP
               disabled={already}
               aria-label={t(already ? 'picker.alreadyAdded' : 'picker.choose', { name })}
               onClick={() => onPick(game)}
-              className="flex w-full min-w-0 items-center gap-3 rounded-lg p-1.5 text-left transition-colors hover:bg-fill-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+              className="flex w-full min-w-0 items-center gap-3 rounded-lg p-1.5 text-left transition-colors hover:bg-fill-hover focus-ring disabled:pointer-events-none disabled:opacity-50"
             >
               <Cover game={game} />
               <span className="min-w-0 flex-1">

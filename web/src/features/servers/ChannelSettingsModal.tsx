@@ -43,7 +43,7 @@ function TriState({ value, onChange, disabled }: { value: Tri; onChange: (next: 
     <span role="radiogroup" className="flex overflow-hidden rounded-md border border-border">
       {options.map(({ key, icon: Icon, active }) => (
         <button key={key} type="button" role="radio" aria-checked={value === key} aria-label={t(`overwrite.${key}`)} disabled={disabled} onClick={() => onChange(key)}
-          className={cn('grid size-8 place-items-center disabled:cursor-not-allowed', value === key ? active : 'text-text-muted enabled:hover:bg-fill-hover', disabled && 'opacity-50')}>
+          className={cn('grid size-8 place-items-center focus-ring focus-visible:ring-inset disabled:cursor-not-allowed pointer-coarse:size-11', value === key ? active : 'text-text-muted enabled:hover:bg-fill-hover', disabled && 'opacity-50')}>
           <Icon size={16} weight="bold" />
         </button>
       ))}
@@ -91,7 +91,7 @@ function Permissions({ server, channel }: { server: ServerSummary; channel: Chan
         <ul className="flex w-48 flex-none flex-col gap-0.5">
           {roles.map((role) => (
             <li key={role.id}>
-              <button type="button" onClick={() => setRoleId(role.id)} className={cn('flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-label', role.id === roleId ? 'bg-fill-active' : 'hover:bg-fill-hover')}>
+              <button type="button" onClick={() => setRoleId(role.id)} className={cn('flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-label focus-ring', role.id === roleId ? 'bg-fill-active' : 'hover:bg-fill-hover')}>
                 <span className="size-3 rounded-full" style={{ background: role.color || 'var(--color-text-muted)' }} />
                 <span className="truncate">{role.name}</span>
               </button>
@@ -155,7 +155,7 @@ function WebhookCard({ channel, webhook, onChanged, onReveal, onError }: {
   return (
     <li className="flex items-start gap-4 rounded-lg border border-border-subtle bg-bg-card p-4 max-sm:flex-col">
       <button type="button" disabled={uploading} onClick={() => fileRef.current?.click()} aria-label={t('webhooks.avatarFor', { name: webhook.name })}
-        className="group/avatar relative flex-none rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+        className="group/avatar relative flex-none rounded-full focus-ring">
         <GroupAvatar id={channel.id} title={webhook.name} avatar={webhook.avatar} size={80} />
         <span aria-hidden className="absolute inset-0 grid place-items-center rounded-full bg-black/60 text-white opacity-0 transition-opacity group-hover/avatar:opacity-100 group-focus-visible/avatar:opacity-100">
           <CameraIcon size={24} weight="fill" />

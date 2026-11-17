@@ -196,7 +196,7 @@ export function StickerPicker({ onPick, className, autoFocus = true }: StickerPi
                     aria-current={isActive ? 'true' : undefined}
                     onClick={() => jumpTo(key)}
                     className={cn(
-                      'grid size-8 place-items-center rounded-md text-text-muted transition-colors duration-100 hover:bg-fill-hover hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                      'grid size-8 place-items-center rounded-md text-text-muted transition-colors duration-100 hover:bg-fill-hover hover:text-text-primary focus-ring pointer-coarse:size-11',
                       isActive && 'bg-fill-hover text-text-primary',
                     )}
                   >
@@ -291,6 +291,7 @@ export function StickerPicker({ onPick, className, autoFocus = true }: StickerPi
               <span className="truncate text-label font-semibold text-text-primary">{preview.name}</span>
               <span className="truncate text-caption text-text-muted">{t('from', { server: serverById.get(preview.serverId)?.name ?? '' })}</span>
             </div>
+            {/* off-scale: an emoji glyph, sized to its box, not type */}
             <span aria-hidden className="flex-none text-[22px] leading-none"><Emoji emoji={preview.emoji} /></span>
           </>
         ) : (

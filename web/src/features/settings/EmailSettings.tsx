@@ -157,7 +157,7 @@ export function EmailSettings({ currentEmail }: { currentEmail: string | null })
       <span className="flex min-w-0 flex-wrap items-baseline justify-end gap-x-2">
         <span className={cn('break-all text-body font-medium text-text-primary', revealed && 'select-text')}>{shown ?? t('email.none')}</span>
         {currentEmail && (
-          <button type="button" onClick={() => setRevealed((value) => !value)} className="text-body font-medium text-accent-text hover:underline">
+          <button type="button" onClick={() => setRevealed((value) => !value)} className="relative touch-target rounded-sm text-body font-medium text-accent-text focus-ring hover:underline">
             {revealed ? t('email.hide') : t('email.show')}
           </button>
         )}

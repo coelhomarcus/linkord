@@ -66,7 +66,7 @@ export function CreateChannelDialog({ server, target, onClose }: { server: Serve
                   // Discord's channel type: a radio on the left, the type and its
                   // one-line pitch beside it, no box around the option
                   <button key={option} type="button" role="radio" aria-checked={checked} onClick={() => setType(option)}
-                    className="group/option flex items-start gap-4 text-left">
+                    className="group/option flex items-start gap-4 rounded-md text-left focus-ring">
                     <span aria-hidden className={cn('mt-0.5 grid size-5 flex-none place-items-center rounded-full', checked ? 'bg-accent-primary' : 'border-2 border-text-faint group-hover/option:border-text-secondary')}>
                       {checked && <span className="size-2 rounded-full bg-primary-foreground" />}
                     </span>

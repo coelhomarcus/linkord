@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { HEALTHY_AFTER_MS, MAX_CRASHES, NO_CRASHES, isLoadFailure, pageCrashed, pageLoaded, retryDelayMs, type CrashHistory } from '../../src/main/loadRetry.js';
+import { HEALTHY_AFTER_MS, MAX_CRASHES, NO_CRASHES, isLoadFailure, isServerReady, pageCrashed, pageLoaded, retryDelayMs, type CrashHistory } from '../../src/main/loadRetry.js';
 
 describe('retryDelayMs', () => {
   it('doubles from one second up to thirty', () => {
@@ -13,6 +13,14 @@ describe('isLoadFailure', () => {
     assert.equal(isLoadFailure(-102, true), true);
     assert.equal(isLoadFailure(-3, true), false);
     assert.equal(isLoadFailure(-102, false), false);
+  });
+});
+
+describe('isServerReady', () => {
+  it('loads the page only on a success, not on the proxy\'s answer for a missing container', () => {
+    assert.equal(isServerReady(200), true);
+    assert.equal(isServerReady(204), true);
+    for (const status of [304, 404, 500, 502, 503]) assert.equal(isServerReady(status), false, String(status));
   });
 });
 

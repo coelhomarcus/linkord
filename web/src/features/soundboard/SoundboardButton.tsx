@@ -151,7 +151,7 @@ export function SoundboardButton({ conversationId, callServerId, className, acti
                     type="button"
                     aria-label={label(section)}
                     onClick={() => sectionRefs.current.get(section.key)?.scrollIntoView({ block: 'start', behavior: 'smooth' })}
-                    className="grid size-8 flex-none place-items-center rounded-md text-text-muted transition-colors duration-100 hover:bg-fill-hover hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="grid size-8 flex-none place-items-center rounded-md text-text-muted transition-colors duration-100 hover:bg-fill-hover hover:text-text-primary focus-ring pointer-coarse:size-11"
                   >
                     {server ? <ServerIcon id={server.id} name={server.name} icon={server.icon} size={24} /> : <ClockIcon size={20} weight="bold" aria-hidden />}
                   </button>
@@ -171,7 +171,7 @@ export function SoundboardButton({ conversationId, callServerId, className, acti
                     aria-expanded={!isCollapsed}
                     aria-label={t(isCollapsed ? 'picker.expand' : 'picker.collapse', { section: label(section) })}
                     onClick={() => toggle(section.key)}
-                    className="sticky top-0 z-10 flex w-full items-center gap-1.5 bg-surface-overlay py-2 text-left text-caption font-semibold uppercase text-text-secondary hover:text-text-primary"
+                    className="sticky top-0 z-10 flex w-full items-center gap-1.5 bg-surface-overlay py-2 text-left text-caption font-semibold uppercase text-text-secondary focus-ring focus-visible:ring-inset hover:text-text-primary"
                   >
                     {server ? <ServerIcon id={server.id} name={server.name} icon={server.icon} size={16} /> : <ClockIcon size={14} weight="bold" aria-hidden />}
                     <span className="min-w-0 truncate">{label(section)}</span>
@@ -186,8 +186,9 @@ export function SoundboardButton({ conversationId, callServerId, className, acti
                           onClick={() => play(sound, serverId)}
                           onPointerEnter={() => void loadSoundBuffer(serverId, sound.id).catch(() => {})}
                           aria-label={t('picker.play', { name: sound.name })}
-                          className="flex min-h-12 min-w-0 items-center justify-center gap-2 rounded-lg bg-fill-subtle px-2.5 py-2 text-label font-medium text-text-primary transition-colors hover:bg-fill-hover focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 active:translate-y-px motion-reduce:active:translate-y-0"
+                          className="flex min-h-12 min-w-0 items-center justify-center gap-2 rounded-lg bg-fill-subtle px-2.5 py-2 text-label font-medium text-text-primary transition-colors hover:bg-fill-hover focus-ring active:translate-y-px motion-reduce:active:translate-y-0"
                         >
+                          {/* off-scale: an emoji glyph, sized like the icon it stands in for */}
                           {sound.emoji ? <span className="flex-none text-[20px] leading-none"><Emoji emoji={sound.emoji} /></span> : <SpeakerHighIcon size={18} className="flex-none text-text-muted" />}
                           <span title={sound.name} className="min-w-0 truncate text-left leading-tight">{sound.name}</span>
                         </button>

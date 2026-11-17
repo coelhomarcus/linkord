@@ -90,7 +90,7 @@ export function AdminDetailSkeleton({ tabs = true }: { tabs?: boolean }) {
       <div className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-xl border border-border-subtle bg-fill-subtle p-4">
         <Skeleton shape="circle" className="size-16" />
         <div className="min-w-0 flex-1 basis-60">
-          <span className={cn(LINE, 'text-[1.25rem] leading-[1.2]')}><Skeleton shape="text" className="h-4 w-48" /></span>
+          <span className={cn(LINE, 'text-heading')}><Skeleton shape="text" className="h-4 w-48" /></span>
           <span className={cn(LINE, 'mt-0.5 text-label')}><Skeleton shape="text" className="w-28" /></span>
           {/* the id and its copy button */}
           <span className="mt-1.5 flex h-8 items-center"><Skeleton shape="text" className="h-2.5 w-56" /></span>

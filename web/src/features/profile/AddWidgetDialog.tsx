@@ -57,7 +57,7 @@ function Option({ type, state, onPick }: { type: WidgetType; state: 'available' 
       aria-label={name}
       aria-describedby={descriptionId}
       onClick={onPick}
-      className="group relative flex w-full min-w-0 items-center gap-4 rounded-xl border border-border bg-bg-secondary p-4 text-left transition-colors hover:border-border-strong hover:bg-fill-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-60"
+      className="group relative flex w-full min-w-0 items-center gap-4 rounded-xl border border-border bg-bg-secondary p-4 text-left transition-colors hover:border-border-strong hover:bg-fill-hover focus-ring disabled:pointer-events-none disabled:opacity-60"
     >
       {/* narrower on a phone, where the name needs the room; the name wraps rather than being cut */}
       <span aria-hidden className="w-24 flex-none sm:w-32"><WidgetPreview type={type} /></span>
@@ -126,7 +126,7 @@ function Body({ available, added, onPick, onManage, onConnect }: {
             type="button"
             aria-current={service === current ? 'true' : undefined}
             onClick={() => setCurrent(service)}
-            className={cn('touch-target relative flex flex-none items-center rounded-md px-3 py-2 text-left text-label font-medium transition-colors hover:bg-fill-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring', service === current ? 'bg-fill-hover text-text-primary' : 'text-text-secondary')}
+            className={cn('touch-target relative flex flex-none items-center rounded-md px-3 py-2 text-left text-label font-medium transition-colors hover:bg-fill-hover focus-ring', service === current ? 'bg-fill-hover text-text-primary' : 'text-text-secondary')}
           >
             {t(`wall.groups.${service}`)}
           </button>

@@ -1,6 +1,6 @@
 // A sandboxed preload must be CommonJS and cannot require local files, so this
 // stays one self-contained file. The channel names match src/main/screenShare.ts,
-// src/main/appBridge.ts and src/main/deepLinkBridge.ts.
+// src/main/appBridge.ts, src/main/deepLinkBridge.ts and src/main/mainWindow.ts.
 const { contextBridge, ipcRenderer } = require('electron') as typeof import('electron');
 
 function flag(name: string): string | undefined {
@@ -78,3 +78,15 @@ contextBridge.exposeInMainWorld('linkordDesktop', Object.freeze({
     select: (id: string, audio: boolean) => ipcRenderer.invoke('linkord:screen-share:select', String(id), audio === true),
   }),
 }));
+
+// The window's own connecting screen (assets/connection.html, src/main/mainWindow.ts),
+// shown while the server cannot be reached. Only that local page gets this, and
+// the main process still checks that each message comes from it.
+if (location.protocol === 'file:') {
+  contextBridge.exposeInMainWorld('linkordConnection', Object.freeze({
+    onRender: (callback: (view: unknown) => void) => {
+      ipcRenderer.on('linkord:connection:render', (_event, view: unknown) => callback(view));
+    },
+    act: (action: string) => ipcRenderer.send('linkord:connection:action', String(action)),
+  }));
+}

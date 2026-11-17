@@ -35,7 +35,7 @@ export function StickerMessage({ sticker }: { sticker: StickerCard | null }) {
       <PopoverTrigger
         type="button"
         aria-label={t('message.open', { name })}
-        className="mt-0.5 block size-40 rounded-lg focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/60"
+        className="mt-0.5 block size-40 rounded-lg focus-ring"
       >
         <img
           src={stickerImageUrl(sticker.id)}

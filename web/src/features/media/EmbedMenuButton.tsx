@@ -37,7 +37,7 @@ export function EmbedMenuButton({ className }: { className?: string }) {
       onClick={open}
       className={cn(
         'absolute top-1.5 right-1.5 z-10 grid size-7 place-items-center rounded-md bg-bg-floating/90 text-text-secondary opacity-0 outline-none',
-        'transition-opacity duration-100 motion-reduce:transition-none hover:text-text-primary focus-visible:opacity-100 focus-visible:ring-3 focus-visible:ring-ring/50',
+        'transition-opacity duration-100 motion-reduce:transition-none hover:text-text-primary focus-visible:opacity-100 focus-ring',
         'pointer-fine:group-hover/embed:opacity-100',
         className,
       )}

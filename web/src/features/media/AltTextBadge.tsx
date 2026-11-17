@@ -10,7 +10,7 @@ export function AltTextBadge({ text }: { text: string }) {
     <Popover>
       <PopoverTrigger
         aria-label={t('embed.altText')}
-        className="absolute bottom-1.5 left-1.5 z-10 rounded-sm bg-black/75 px-1.5 py-0.5 text-caption font-semibold text-white outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+        className="absolute bottom-1.5 left-1.5 z-10 rounded-sm bg-black/75 px-1.5 py-0.5 text-caption font-semibold text-white focus-ring"
         onClick={(event) => event.stopPropagation()}
       >
         ALT

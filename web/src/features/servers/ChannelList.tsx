@@ -71,7 +71,7 @@ function ChannelRow({ server, channel, active, onOpen, onInvite, onOpenProfile, 
       )}>
         {active && <ActiveFill />}
         {unread > 0 && !active && <span aria-hidden className="absolute -left-2 top-1/2 h-2 w-1 -translate-y-1/2 rounded-r-full bg-text-primary" />}
-        <button type="button" onClick={onOpen} aria-current={active ? 'page' : undefined} className="flex h-full min-w-0 flex-1 items-center gap-1.5 px-2 text-left">
+        <button type="button" onClick={onOpen} aria-current={active ? 'page' : undefined} className="flex h-full min-w-0 flex-1 items-center gap-1.5 rounded-lg px-2 text-left focus-ring">
           <Icon size={20} className={cn('flex-none', active || unread > 0 ? 'text-text-secondary' : 'text-text-muted')} />
           <span className={cn('truncate text-body', unread > 0 ? 'font-semibold' : 'font-medium')}>{channel.name}</span>
           {muted && <BellSlashIcon size={14} className="flex-none text-text-muted" aria-label={tn('preferences.muted')} role="img" />}
@@ -197,7 +197,7 @@ export function ChannelList({ server, activeChannelId, onNavigate, onOpenProfile
                 {category && (
                   <div className="group/category flex h-6 items-center pl-4 pr-4 mb-1">
                     <button type="button" onClick={() => toggleCategory(category.id)} aria-expanded={!isCollapsed}
-                      className="flex min-w-0 flex-1 items-center gap-1 text-left text-label font-medium text-text-muted hover:text-text-primary">
+                      className="flex min-w-0 flex-1 items-center gap-1 rounded-sm text-left text-label font-medium text-text-muted focus-ring hover:text-text-primary">
                       <span className="truncate">{category.name}</span>
                       {isCollapsed ? <CaretRightIcon size={12} weight="bold" className="flex-none" /> : <CaretDownIcon size={12} weight="bold" className="flex-none" />}
                     </button>

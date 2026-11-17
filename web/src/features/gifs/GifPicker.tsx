@@ -71,7 +71,7 @@ function GifTile({ gif, onPick }: { gif: Gif; onPick: (gif: Gif) => void }) {
       onClick={() => onPick(gif)}
       aria-label={gif.title || t('picker.tabs')}
       style={{ aspectRatio: `${gif.preview.width} / ${gif.preview.height}`, backgroundImage: gif.placeholder ? `url("${gif.placeholder}")` : undefined }}
-      className="block w-full overflow-hidden rounded-md bg-fill-subtle bg-cover bg-center outline-none transition-[filter,box-shadow] hover:brightness-110 focus-visible:ring-2 focus-visible:ring-ring"
+      className="block w-full overflow-hidden rounded-md bg-fill-subtle bg-cover bg-center focus-ring transition-[filter,box-shadow] hover:brightness-110"
     >
       <img src={gif.preview.url} alt="" loading="lazy" decoding="async" className="block size-full object-cover" />
     </button>
@@ -115,7 +115,7 @@ export function GifPicker({ config, onPick }: { config: EnabledConfig; onPick: (
               aria-selected={tab === id}
               onClick={() => setTab(id)}
               className={cn(
-                'relative isolate flex h-8 items-center rounded-lg px-3 text-label font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                'relative isolate flex h-8 items-center rounded-lg px-3 text-label font-medium focus-ring',
                 tab === id ? 'text-text-strong' : 'text-text-secondary hover:bg-nav-hover hover:text-text-primary',
               )}
             >

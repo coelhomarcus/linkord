@@ -20,7 +20,7 @@ const verticalOnly: Modifier = ({ transform }) => ({ ...transform, x: 0 });
 // shown while the widget is hovered or a control has keyboard focus; always where there is no hover
 const REVEAL = 'pointer-events-none opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100';
 // touch-target: drawn at 28px, tapped at 44px; the column's gap keeps the two hit areas apart
-const FLOATING = 'touch-target relative flex size-7 items-center justify-center rounded-full border border-border-strong bg-bg-floating shadow-popover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50';
+const FLOATING = 'touch-target relative flex size-7 items-center justify-center rounded-full border border-border-strong bg-bg-floating shadow-popover transition-colors focus-ring disabled:pointer-events-none disabled:opacity-50';
 
 const MENU_ITEM = 'pointer-coarse:min-h-11';
 

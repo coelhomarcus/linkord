@@ -197,7 +197,7 @@ export function NotificationsSettings() {
                 description={(
                   <>
                     {described && <span className="block">{t('notifications.sounds.call.description')}</span>}
-                    <button type="button" onClick={() => playSound(preview, { force: true })} className="font-medium text-accent-text hover:underline">
+                    <button type="button" onClick={() => playSound(preview, { force: true })} className="relative touch-target rounded-sm font-medium text-accent-text focus-ring hover:underline">
                       {t('notifications.preview')}
                     </button>
                   </>

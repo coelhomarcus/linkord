@@ -573,6 +573,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, { conversationI
                 <PopoverTrigger
                   render={<Button type="button" variant="ghost" size="icon" aria-label={t('composer.sendGif')} disabled={disabled} className={`${iconButton} max-md:hidden`} />}
                 >
+                  {/* off-scale: an icon drawn in type, sized to the icons beside it */}
                   <span aria-hidden className="rounded-[4px] border-2 border-current px-[3px] py-[2px] text-[9px] font-extrabold leading-none tracking-wide">GIF</span>
                 </PopoverTrigger>
                 <PopoverContent className="w-[28rem] max-w-[calc(100vw-1.5rem)] rounded-[12px] border-border-default bg-bg-modal p-0" side="top" align="end" sideOffset={12}>

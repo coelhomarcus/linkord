@@ -47,7 +47,7 @@ function SaturationArea({ hsv, onChange }: { hsv: Hsv; onChange: (hsv: Hsv) => v
       onPointerDown={(event) => { event.currentTarget.setPointerCapture?.(event.pointerId); fromPointer(event); }}
       onPointerMove={(event) => { if (event.buttons & 1) fromPointer(event); }}
       onKeyDown={onKeyDown}
-      className="relative h-36 w-full cursor-crosshair touch-none rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="relative h-36 w-full cursor-crosshair touch-none rounded-lg focus-ring"
       style={{ background: `linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, hsl(${hsv.h} 100% 50%))` }}
     >
       <span aria-hidden className={THUMB} style={{ left: `${hsv.s * 100}%`, top: `${(1 - hsv.v) * 100}%`, background: hsvToHex(hsv) }} />
@@ -84,7 +84,7 @@ function HueSlider({ hsv, onChange }: { hsv: Hsv; onChange: (hsv: Hsv) => void }
       onPointerMove={(event) => { if (event.buttons & 1) fromPointer(event); }}
       onKeyDown={onKeyDown}
       // a 12px bar is too thin to land a finger on: on a touch screen it takes touches 16px above and below
-      className="relative h-3 w-full cursor-pointer touch-none rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:my-2 pointer-coarse:after:absolute pointer-coarse:after:inset-x-0 pointer-coarse:after:-inset-y-4 pointer-coarse:after:content-['']"
+      className="relative h-3 w-full cursor-pointer touch-none rounded-full focus-ring pointer-coarse:my-2 pointer-coarse:after:absolute pointer-coarse:after:inset-x-0 pointer-coarse:after:-inset-y-4 pointer-coarse:after:content-['']"
       style={{ background: 'linear-gradient(to right, #f00 0%, #ff0 17%, #0f0 33%, #0ff 50%, #00f 67%, #f0f 83%, #f00 100%)' }}
     >
       <span aria-hidden className={cn(THUMB, 'top-1/2')} style={{ left: `${(hsv.h / 360) * 100}%`, background: `hsl(${hsv.h} 100% 50%)` }} />
@@ -92,7 +92,7 @@ function HueSlider({ hsv, onChange }: { hsv: Hsv; onChange: (hsv: Hsv) => void }
   );
 }
 
-const SWATCH = 'flex aspect-square w-full items-center justify-center rounded-full transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
+const SWATCH = 'flex aspect-square w-full items-center justify-center rounded-full transition-transform hover:scale-110 focus-ring';
 const SELECTED = 'ring-2 ring-text-primary ring-offset-2 ring-offset-popover';
 
 function Panel({ value, current, presets, noneLabel, note, onChange }: {
@@ -158,7 +158,7 @@ function Panel({ value, current, presets, noneLabel, note, onChange }: {
         </div>
         {eyeDropper && (
           <button type="button" aria-label={t('colorPicker.eyedropper')} title={t('colorPicker.eyedropper')} onClick={() => void sample()}
-            className="flex size-9 flex-none items-center justify-center rounded-lg border border-border-control pointer-coarse:size-11 bg-bg-control text-text-strong transition-colors hover:bg-bg-control-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            className="flex size-9 flex-none items-center justify-center rounded-lg border border-border-control pointer-coarse:size-11 bg-bg-control text-text-strong transition-colors hover:bg-bg-control-hover focus-ring">
             <EyedropperIcon size={16} />
           </button>
         )}

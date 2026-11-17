@@ -39,7 +39,7 @@ export interface MediaViewerProps {
   children?: ReactNode;
 }
 
-const navButton = 'grid size-11 place-items-center rounded-full bg-black/55 text-white transition-colors duration-100 ease-out-expo hover:bg-black/75 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/60 disabled:pointer-events-none disabled:opacity-30 motion-reduce:transition-none';
+const navButton = 'grid size-11 place-items-center rounded-full bg-black/55 text-white transition-colors duration-100 ease-out-expo hover:bg-black/75 focus-ring disabled:pointer-events-none disabled:opacity-30 motion-reduce:transition-none';
 
 /** The full-size viewer for a set of pictures, GIFs and videos — a message's, or the media panel's:
  * zoom, pan and rotation for pictures, the regular player for videos, a strip of every item, and the
