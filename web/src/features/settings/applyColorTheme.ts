@@ -6,6 +6,9 @@ const SHELL_BACKGROUND: Record<ColorThemeId, string> = {
   black: '#000000',
   old: '#0d0d0f',
   graphite: '#202225',
+  frappe: '#232634',
+  macchiato: '#181926',
+  mocha: '#11111b',
 };
 
 export function applyColorTheme(id: ColorThemeId): void {

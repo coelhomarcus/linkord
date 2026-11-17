@@ -118,3 +118,193 @@ html[data-theme="graphite"] {
 
   --shadow-panel: 0 1px 3px rgb(0 0 0 / 0.45);
 }
+
+/* Catppuccin (Frappé, Macchiato, Mocha), adapted from catppuccin/discord:
+   crust is the rail, mantle the channel list and the user panel, base the
+   conversation, crust again under fields. The accent is the flavour's blue
+   with a crust label, since white on a pastel fails contrast. Red and green
+   fills are a deeper shade of the flavour's hue because several call sites
+   put white text on them; the pastels stay for words (--color-red-text) and
+   status (--color-green). */
+html[data-theme="frappe"] {
+  --color-surface-rail: #232634;
+  --color-surface-000: #292c3c;
+  --color-surface-100: #303446;
+  --color-surface-200: #292c3c;
+  --color-surface-300: #414559;
+  --color-surface-400: #51576d;
+  --color-surface-500: #626880;
+
+  --color-surface-app: var(--color-surface-000);
+  --color-surface-panel: var(--color-surface-100);
+  --color-surface-raised: var(--color-surface-200);
+  --color-surface-overlay: #3b3f52;
+  --color-bg-modal: #303446;
+  --color-bg-card: #292c3c;
+  --color-bg-textarea: #232634;
+  --color-bg-control: #414559;
+  --color-bg-control-hover: #51576d;
+  --color-border-control: #51576d;
+  --color-bg-call: #232634;
+
+  --color-message-hover: #2c3041;
+  --cutout-hover: color-mix(in srgb, var(--surface-base, var(--color-surface-app)), #949cbb 12%);
+  --cutout-active: color-mix(in srgb, var(--surface-base, var(--color-surface-app)), #949cbb 20%);
+
+  --color-text-primary: #c6d0f5;
+  --color-text-strong: #c6d0f5;
+  --color-text-secondary: #b5bfe2;
+  --color-text-muted: #a5adce;
+  --color-text-faint: #949cbb;
+
+  --color-fill-subtle: rgb(148 156 187 / 0.06);
+  --color-fill-hover: rgb(148 156 187 / 0.12);
+  --color-fill-active: rgb(148 156 187 / 0.2);
+  --color-fill-inset: rgb(35 38 52 / 0.4);
+  --color-fill-code: #232634;
+
+  --color-border-subtle: #232634;
+  --color-border-default: #414559;
+  --color-border-strong: #51576d;
+  --color-border-field: #414559;
+  --color-border-panel: #232634;
+
+  --color-accent-primary: #8caaee;
+  --color-accent-hover: #7c96d2;
+  --color-accent-text: #8caaee;
+  --color-border-accent: #8caaee;
+  --primary-foreground: #232634;
+  --accent-mark-filter: brightness(0);
+
+  --color-green: #a6d189;
+  --color-green-solid: oklch(58% 0.13 133.39);
+  --color-green-hover: oklch(52% 0.13 133.39);
+  --color-red: oklch(60% 0.17 19.39);
+  --color-red-hover: oklch(53% 0.17 19.39);
+  --color-red-text: #e78284;
+  --color-yellow: #e5c890;
+
+  --shadow-popover: 0 8px 24px rgb(0 0 0 / 0.45);
+}
+
+html[data-theme="macchiato"] {
+  --color-surface-rail: #181926;
+  --color-surface-000: #1e2030;
+  --color-surface-100: #24273a;
+  --color-surface-200: #1e2030;
+  --color-surface-300: #363a4f;
+  --color-surface-400: #494d64;
+  --color-surface-500: #5b6078;
+
+  --color-surface-app: var(--color-surface-000);
+  --color-surface-panel: var(--color-surface-100);
+  --color-surface-raised: var(--color-surface-200);
+  --color-surface-overlay: #303348;
+  --color-bg-modal: #24273a;
+  --color-bg-card: #1e2030;
+  --color-bg-textarea: #181926;
+  --color-bg-control: #363a4f;
+  --color-bg-control-hover: #494d64;
+  --color-border-control: #494d64;
+  --color-bg-call: #181926;
+
+  --color-message-hover: #202334;
+  --cutout-hover: color-mix(in srgb, var(--surface-base, var(--color-surface-app)), #939ab7 12%);
+  --cutout-active: color-mix(in srgb, var(--surface-base, var(--color-surface-app)), #939ab7 20%);
+
+  --color-text-primary: #cad3f5;
+  --color-text-strong: #cad3f5;
+  --color-text-secondary: #b8c0e0;
+  --color-text-muted: #a5adcb;
+  --color-text-faint: #939ab7;
+
+  --color-fill-subtle: rgb(147 154 183 / 0.06);
+  --color-fill-hover: rgb(147 154 183 / 0.12);
+  --color-fill-active: rgb(147 154 183 / 0.2);
+  --color-fill-inset: rgb(24 25 38 / 0.4);
+  --color-fill-code: #181926;
+
+  --color-border-subtle: #181926;
+  --color-border-default: #363a4f;
+  --color-border-strong: #494d64;
+  --color-border-field: #363a4f;
+  --color-border-panel: #181926;
+
+  --color-accent-primary: #8aadf4;
+  --color-accent-hover: #7997d5;
+  --color-accent-text: #8aadf4;
+  --color-border-accent: #8aadf4;
+  --primary-foreground: #181926;
+  --accent-mark-filter: brightness(0);
+
+  --color-green: #a6da95;
+  --color-green-solid: oklch(58% 0.13 138.15);
+  --color-green-hover: oklch(52% 0.13 138.15);
+  --color-red: oklch(60% 0.17 11.19);
+  --color-red-hover: oklch(53% 0.17 11.19);
+  --color-red-text: #ed8796;
+  --color-yellow: #eed49f;
+
+  --shadow-popover: 0 8px 24px rgb(0 0 0 / 0.45);
+}
+
+html[data-theme="mocha"] {
+  --color-surface-rail: #11111b;
+  --color-surface-000: #181825;
+  --color-surface-100: #1e1e2e;
+  --color-surface-200: #181825;
+  --color-surface-300: #313244;
+  --color-surface-400: #45475a;
+  --color-surface-500: #585b70;
+
+  --color-surface-app: var(--color-surface-000);
+  --color-surface-panel: var(--color-surface-100);
+  --color-surface-raised: var(--color-surface-200);
+  --color-surface-overlay: #2a2b3c;
+  --color-bg-modal: #1e1e2e;
+  --color-bg-card: #181825;
+  --color-bg-textarea: #11111b;
+  --color-bg-control: #313244;
+  --color-bg-control-hover: #45475a;
+  --color-border-control: #45475a;
+  --color-bg-call: #11111b;
+
+  --color-message-hover: #1a1a28;
+  --cutout-hover: color-mix(in srgb, var(--surface-base, var(--color-surface-app)), #9399b2 12%);
+  --cutout-active: color-mix(in srgb, var(--surface-base, var(--color-surface-app)), #9399b2 20%);
+
+  --color-text-primary: #cdd6f4;
+  --color-text-strong: #cdd6f4;
+  --color-text-secondary: #bac2de;
+  --color-text-muted: #a6adc8;
+  --color-text-faint: #9399b2;
+
+  --color-fill-subtle: rgb(147 153 178 / 0.06);
+  --color-fill-hover: rgb(147 153 178 / 0.12);
+  --color-fill-active: rgb(147 153 178 / 0.2);
+  --color-fill-inset: rgb(17 17 27 / 0.4);
+  --color-fill-code: #11111b;
+
+  --color-border-subtle: #11111b;
+  --color-border-default: #313244;
+  --color-border-strong: #45475a;
+  --color-border-field: #313244;
+  --color-border-panel: #11111b;
+
+  --color-accent-primary: #89b4fa;
+  --color-accent-hover: #779cd9;
+  --color-accent-text: #89b4fa;
+  --color-border-accent: #89b4fa;
+  --primary-foreground: #11111b;
+  --accent-mark-filter: brightness(0);
+
+  --color-green: #a6e3a1;
+  --color-green-solid: oklch(58% 0.13 142.72);
+  --color-green-hover: oklch(52% 0.13 142.72);
+  --color-red: oklch(60% 0.17 2.76);
+  --color-red-hover: oklch(53% 0.17 2.76);
+  --color-red-text: #f38ba8;
+  --color-yellow: #f9e2af;
+
+  --shadow-popover: 0 8px 24px rgb(0 0 0 / 0.45);
+}
